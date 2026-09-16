@@ -88,10 +88,11 @@ test.concurrent(
 			},
 		});
 		expect(calls).toEqual(["ready", "load", "initialize", "report", "stop"]);
-		expect(Object.keys(initialization!.state.featureStatesById)).toEqual([
-			"messages",
-			"tokens",
-		]);
+		expect(
+			Object.values(initialization!.state.customerEntitlements).map(
+				({ featureId }) => featureId,
+			),
+		).toEqual(["messages", "tokens"]);
 		expect(initialization!.identity).toEqual(identity);
 		expect(results).toMatchObject([
 			{ status: "equal_at_read", featureIds: ["messages", "tokens"] },

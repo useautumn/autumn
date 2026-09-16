@@ -2,11 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-	createCustomerMeteringState,
-	executeTrack,
-	parseTrackCommand,
-} from "@autumn/balance-engine";
+import { applyMutation, parseTrackCommand } from "@autumn/balance-engine";
 import {
 	createKafkaClient as balanceWorkerKafkaConfigOf,
 	createProducerSession,
@@ -39,20 +35,22 @@ import {
 	createS3PartitionCheckpointStorage,
 	partitionCheckpointObjectKeyOf,
 } from "../../../src/s3/s3PartitionCheckpointStorage.js";
+import { openStateStore } from "../../../src/state/openStateStore.js";
+import type { StateStore } from "../../../src/state/types/stateStore.js";
 import {
-	openSqliteBalanceStateStore,
-	type SqliteBalanceStateStore,
-} from "../../../src/state/sqliteBalanceStateStore.js";
+	applyDurableMutation,
+	createInitializeMutation,
+	restoreCustomerStates,
+} from "../../fixtures/mutations.js";
 import {
 	createKafkaCommittedMutationAppender,
 	createKafkaOwnedPartitionGroup,
 	createKafkaOwnedPartitionProducer,
 	createKafkaOwnedPartitionRuntimeFactory,
-	createOutcome,
+	createMutation,
 	createOwnedPartitionRuntime,
 	createState,
-	serializeKafkaStateInitializedRecord,
-	serializeKafkaTrackOutcomeRecord,
+	serializeKafkaMutationRecord,
 } from "../../unit/kafka/kafka-test-fixtures.js";
 
 const brokers = (process.env.KAFKA_BROKERS ?? "127.0.0.1:19092").split(",");
@@ -211,29 +209,10 @@ const createStore = ({
 	initializePartition?: boolean;
 }) => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-kafka-fence-"));
-	const store = openSqliteBalanceStateStore({
+	const store = openStateStore({
 		databasePath: join(directory, "balance-state.sqlite"),
 	});
-	const state = createCustomerMeteringState({
-		identity: { orgId: "org_1", env: "sandbox", customerId: "cus_1" },
-		featureStatesById: {
-			messages: {
-				kind: "direct_metered_v1",
-				customerEntitlements: [
-					{
-						id: "messages_monthly",
-						balance: 10,
-						usage: 0,
-						granted: 10,
-						externalId: null,
-						planId: null,
-						reset: null,
-						expiresAt: null,
-					},
-				],
-			},
-		},
-	});
+	const state = createState();
 	if (initializePartition) {
 		store.initializePartition({ topic, partition, nextOffset: 0n });
 	}
@@ -241,12 +220,7 @@ const createStore = ({
 		if (!initializePartition) {
 			throw new Error("Cannot initialize a customer without its partition");
 		}
-		store.restoreState({
-			topic,
-			partition,
-			initializationId: "init_1",
-			state,
-		});
+		restoreCustomerStates({ store, topic, partition, states: [state] });
 	}
 	return {
 		store,
@@ -273,7 +247,7 @@ const createTestRuntimeFactory = ({
 }: {
 	kafka: Kafka;
 	deploymentPrefix: string;
-	stateStore: SqliteBalanceStateStore;
+	stateStore: StateStore;
 	checkpointSource?: PartitionCheckpointSource;
 }) =>
 	createKafkaOwnedPartitionRuntimeFactory({
@@ -329,14 +303,21 @@ describe("Kafka transaction boundary", () => {
 				maxRetryTimeMs: 1_000,
 			},
 		});
-		const initialState = storeFixture.state;
-		const firstOutcome = createOutcome({ state: initialState });
-		const firstExecution = executeTrack({
-			state: initialState,
-			outcome: firstOutcome,
+		const initialization = createInitializeMutation({
+			state: storeFixture.state,
+			commandId: "init_1",
 		});
-		const tailOutcome = createOutcome({
-			state: firstExecution.state,
+		const initialState = applyMutation({
+			state: null,
+			mutation: initialization,
+		});
+		const firstOutcome = createMutation({ state: initialState });
+		const stateAfterFirst = applyMutation({
+			state: initialState,
+			mutation: firstOutcome,
+		});
+		const tailOutcome = createMutation({
+			state: stateAfterFirst,
 			commandId: "cmd_tail",
 			requestId: "req_tail",
 		});
@@ -364,24 +345,17 @@ describe("Kafka transaction boundary", () => {
 		try {
 			await createS3Bucket({ client: s3, bucket: checkpointBucket });
 			await seedProducer.connect();
-			const initialization = {
-				schemaVersion: 1,
-				type: "state_initialized",
-				initializationId: "init_1",
-				initializedAt: 1_700_000_000_000,
-				state: initialState,
-			} as const;
 			const seedTransaction = await seedProducer.transaction();
 			const seedMetadata = await seedTransaction.send({
 				topic: topicFixture.topic,
 				acks: -1,
 				messages: [
 					{
-						...serializeKafkaStateInitializedRecord({ initialization }),
+						...serializeKafkaMutationRecord({ mutation: initialization }),
 						partition,
 					},
 					{
-						...serializeKafkaTrackOutcomeRecord({ outcome: firstOutcome }),
+						...serializeKafkaMutationRecord({ mutation: firstOutcome }),
 						partition,
 					},
 				],
@@ -401,21 +375,19 @@ describe("Kafka transaction boundary", () => {
 				partition,
 				nextOffset: seedBaseOffset,
 			});
-			oldOwnerStoreFixture.store.applyDurableStateInitialization({
-				position: {
-					topic: topicFixture.topic,
-					partition,
-					offset: seedBaseOffset,
-				},
-				initialization,
+			applyDurableMutation({
+				store: oldOwnerStoreFixture.store,
+				topic: topicFixture.topic,
+				partition,
+				offset: seedBaseOffset,
+				mutation: initialization,
 			});
-			oldOwnerStoreFixture.store.applyDurableTrackOutcome({
-				position: {
-					topic: topicFixture.topic,
-					partition,
-					offset: seedBaseOffset + 1n,
-				},
-				outcome: firstOutcome,
+			applyDurableMutation({
+				store: oldOwnerStoreFixture.store,
+				topic: topicFixture.topic,
+				partition,
+				offset: seedBaseOffset + 1n,
+				mutation: firstOutcome,
 			});
 			const exporter = createPartitionCheckpointExporter({
 				stateStore: oldOwnerStoreFixture.store,
@@ -464,8 +436,7 @@ describe("Kafka transaction boundary", () => {
 			expect(
 				storeFixture.store.readState({ identity: initialState.identity }),
 			).toEqual(
-				executeTrack({ state: firstExecution.state, outcome: tailOutcome })
-					.state,
+				applyMutation({ state: stateAfterFirst, mutation: tailOutcome }),
 			);
 			expect(
 				storeFixture.store.readNextOffset({
@@ -496,7 +467,7 @@ describe("Kafka transaction boundary", () => {
 			expect(
 				storeFixture.store.readState({ identity: initialState.identity })
 					?.revision,
-			).toBe(2);
+			).toBe(3);
 		} finally {
 			await seedProducer.disconnect().catch(() => undefined);
 			await group?.stop().catch(() => undefined);
@@ -576,26 +547,23 @@ describe("Kafka transaction boundary", () => {
 
 		try {
 			await seedProducer.connect();
-			const outcome = createOutcome({ state: storeFixture.state });
+			const outcome = createMutation({ state: storeFixture.state });
 			const transaction = await seedProducer.transaction();
 			await transaction.send({
 				topic: topicFixture.topic,
 				acks: -1,
 				messages: [
 					{
-						...serializeKafkaStateInitializedRecord({
-							initialization: {
-								schemaVersion: 1,
-								type: "state_initialized",
-								initializationId: "init_1",
-								initializedAt: 1_700_000_000_000,
+						...serializeKafkaMutationRecord({
+							mutation: createInitializeMutation({
 								state: storeFixture.state,
-							},
+								commandId: "init_1",
+							}),
 						}),
 						partition,
 					},
 					{
-						...serializeKafkaTrackOutcomeRecord({ outcome }),
+						...serializeKafkaMutationRecord({ mutation: outcome }),
 						partition,
 					},
 				],
@@ -656,8 +624,8 @@ describe("Kafka transaction boundary", () => {
 		try {
 			await producer.connect();
 			const state = createState();
-			const outcome = createOutcome({ state });
-			const serialized = serializeKafkaTrackOutcomeRecord({ outcome });
+			const outcome = createMutation({ state });
+			const serialized = serializeKafkaMutationRecord({ mutation: outcome });
 			const abortedTransaction = await producer.transaction();
 			const abortedMetadata = await abortedTransaction.send({
 				topic: topicFixture.topic,
@@ -762,8 +730,8 @@ describe("Kafka transaction boundary", () => {
 		try {
 			await seedProducer.connect();
 			const state = createState();
-			const serialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({ state }),
+			const serialized = serializeKafkaMutationRecord({
+				mutation: createMutation({ state }),
 			});
 			const abortedTransaction = await seedProducer.transaction();
 			await abortedTransaction.send({
@@ -880,7 +848,7 @@ function createReplaySession({
 }: {
 	kafka: Kafka;
 	topic: string;
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 }): PartitionOutcomeFollowerPort {
 	const consumer = kafka.consumer(
 		balanceWorkerConsumerConfigOf({
@@ -1028,13 +996,10 @@ test("prepares without fencing and activates from the committed tail", async fun
 				{
 					partition,
 					...serializeMeteringRecord({
-						record: {
-							schemaVersion: 1,
-							type: "state_initialized",
-							initializationId: "init_1",
-							initializedAt: 1_700_000_000_000,
+						record: createInitializeMutation({
 							state: local.state,
-						},
+							commandId: "init_1",
+						}),
 					}),
 				},
 			],
@@ -1043,10 +1008,23 @@ test("prepares without fencing and activates from the committed tail", async fun
 		await runtime.prepare({ follower: preparation });
 		expect(runtime.getStatus()).toBe("prepared");
 		expect(local.store.readState({ identity: local.state.identity })).toEqual(
-			local.state,
+			applyMutation({
+				state: null,
+				mutation: createInitializeMutation({
+					state: local.state,
+					commandId: "init_1",
+				}),
+			}),
 		);
-		const outcome = createOutcome({
-			state: local.state,
+		const seededState = applyMutation({
+			state: null,
+			mutation: createInitializeMutation({
+				state: local.state,
+				commandId: "init_1",
+			}),
+		});
+		const outcome = createMutation({
+			state: seededState,
 			commandId: "cmd_handoff",
 			requestId: "req_handoff",
 		});
@@ -1059,7 +1037,7 @@ test("prepares without fencing and activates from the committed tail", async fun
 		});
 		await runtime.activate();
 		expect(local.store.readState({ identity: local.state.identity })).toEqual(
-			executeTrack({ state: local.state, outcome }).state,
+			applyMutation({ state: seededState, mutation: outcome }),
 		);
 		expect(runtime.getStatus()).toBe("ready");
 		const command = parseTrackCommand({

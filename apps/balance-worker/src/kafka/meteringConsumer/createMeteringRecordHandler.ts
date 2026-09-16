@@ -6,7 +6,7 @@ import {
 	type TopicResumePosition,
 } from "@autumn/kafka";
 import type { Admin } from "kafkajs";
-import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
+import type { StateStore } from "../../state/types/stateStore.js";
 import {
 	isPartitionInvariantCause,
 	KafkaPartitionInvariantError,
@@ -17,7 +17,7 @@ export function createMeteringRecordHandler({
 	ctx,
 }: {
 	ctx: {
-		stateStore: SqliteBalanceStateStore;
+		stateStore: StateStore;
 		partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
 	};
 }): MeteringRecordHandler {

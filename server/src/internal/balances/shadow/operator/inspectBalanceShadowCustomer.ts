@@ -1,12 +1,13 @@
 import { isDeepStrictEqual } from "node:util";
-import type {
-	InitializationDecision,
-	LeanCustomerEntitlement,
+import {
+	findCustomerEntitlementsForFeature,
+	type InitializationDecision,
+	type LeanCustomerEntitlement,
 } from "@autumn/balance-engine";
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import type { FullSubject } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { fullSubjectToMeteringState } from "../../balanceWorker/fullSubjectToMeteringState.js";
+import { fullSubjectToCustomerState } from "../../balanceWorker/fullSubjectToCustomerState.js";
 import { initializeBalanceWorkerCustomer } from "../../balanceWorker/initializeBalanceWorkerCustomer.js";
 import { checkParamsToCheckCommand } from "../../check/balanceWorker/balanceWorkerCheckRequest.js";
 
@@ -44,11 +45,11 @@ export async function inspectBalanceShadowCustomer({
 		const fullSubject = await loadSubject();
 		if (fullSubject.customerId !== customerId)
 			throw new Error("Redis customer identity does not match the cohort");
-		const state = fullSubjectToMeteringState({ ctx, fullSubject, featureIds });
+		const state = fullSubjectToCustomerState({ ctx, fullSubject, featureIds });
 		result.redis = Object.fromEntries(
 			featureIds.map((featureId) => [
 				featureId,
-				state.featureStatesById[featureId].customerEntitlements[0],
+				findCustomerEntitlementsForFeature({ state, featureId })[0],
 			]),
 		);
 		for (const entitlement of Object.values(result.redis)) {
@@ -68,7 +69,7 @@ export async function inspectBalanceShadowCustomer({
 				fullSubject,
 				featureIds,
 				client,
-				initializationId: JSON.stringify(["shadow", runId, state.identity]),
+				commandId: JSON.stringify(["shadow", runId, state.identity]),
 			});
 			result.initialization = initialization.kind;
 			if (initialization.kind === "already_initialized")
@@ -108,7 +109,7 @@ export async function inspectBalanceShadowCustomer({
 			after.subjectViewEpoch !== fullSubject.subjectViewEpoch ||
 			!isDeepStrictEqual(
 				state,
-				fullSubjectToMeteringState({ ctx, fullSubject: after, featureIds }),
+				fullSubjectToCustomerState({ ctx, fullSubject: after, featureIds }),
 			)
 		)
 			throw new Error("Redis baseline changed during the operation");

@@ -2,15 +2,17 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
-import {
-	computeTrack,
-	createCustomerMeteringState,
-	parseTrackCommand,
-} from "@autumn/balance-engine";
 import { createCheckpointThreadExporter } from "../../../../src/checkpoint/background/createCheckpointThreadExporter.js";
 import { decodePartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpointEncoding.js";
-import { openSqliteBalanceStateStore } from "../../../../src/state/sqliteBalanceStateStore.js";
+import { openStateStore } from "../../../../src/state/openStateStore.js";
 import type { CheckpointThreadFixtureConfig } from "../../../fixtures/checkpoint-thread.js";
+import {
+	applyDurableMutation,
+	createCustomerEntitlement,
+	createInitializeMutation,
+	createState,
+	createTrackMutation,
+} from "../../../fixtures/mutations.js";
 
 export const topic = "checkpoint-background-test";
 export const limits = {
@@ -23,6 +25,13 @@ export const identity = {
 	env: "sandbox",
 	customerId: "customer_1",
 } as const;
+
+const seedState = createState({
+	identity,
+	customerEntitlements: [
+		createCustomerEntitlement({ id: "messages", balance: 100 }),
+	],
+});
 
 export const waitForGate = async (
 	gate: Int32Array<SharedArrayBuffer>,
@@ -50,36 +59,18 @@ export const createThreadFixture = ({
 	const directory = mkdtempSync(join(tmpdir(), "autumn-checkpoint-thread-"));
 	const databasePath = join(directory, "balances.sqlite");
 	const outputPath = join(directory, "checkpoint.gz");
-	const store = openSqliteBalanceStateStore({ databasePath });
+	const store = openStateStore({ databasePath });
 	store.initializePartition({ topic, partition: 0, nextOffset: 0n });
-	store.applyDurableStateInitialization({
-		position: { topic, partition: 0, offset: 0n },
-		initialization: {
-			schemaVersion: 1,
-			type: "state_initialized",
-			initializationId: "seed",
-			initializedAt: Date.now(),
-			state: createCustomerMeteringState({
-				identity,
-				featureStatesById: {
-					messages: {
-						kind: "direct_metered_v1",
-						customerEntitlements: [
-							{
-								id: "messages",
-								balance: 100,
-								usage: 0,
-								granted: 100,
-								externalId: null,
-								planId: null,
-								reset: null,
-								expiresAt: null,
-							},
-						],
-					},
-				},
-			}),
-		},
+	applyDurableMutation({
+		store,
+		topic,
+		partition: 0,
+		offset: 0n,
+		mutation: createInitializeMutation({
+			state: seedState,
+			commandId: "seed",
+			deduplicationExpiresAt: Date.now() + 3_600_000,
+		}),
 	});
 	const gate = new Int32Array(
 		new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT),
@@ -111,31 +102,14 @@ export const createThreadFixture = ({
 	}) => {
 		const state = store.readState({ identity });
 		if (!state) throw new Error("Expected customer state");
-		const decision = computeTrack({
+		const mutation = createTrackMutation({
 			state,
+			commandId,
+			requestId: commandId,
 			deduplicationExpiresAt: Date.now() + 3_600_000,
-			command: parseTrackCommand({
-				input: {
-					schemaVersion: 1,
-					type: "track",
-					commandId,
-					requestId: commandId,
-					identity,
-					entityId: null,
-					featureId: "messages",
-					value: 5,
-					overageBehavior: "reject",
-					properties: null,
-					occurredAt: Date.now(),
-				},
-			}),
 		});
-		if (decision.kind !== "new") throw new Error("Expected new track");
-		store.applyDurableTrackOutcome({
-			position: { topic, partition: 0, offset },
-			outcome: decision.outcome,
-		});
-		return decision.outcome;
+		applyDurableMutation({ store, topic, partition: 0, offset, mutation });
+		return mutation;
 	};
 	return {
 		store,

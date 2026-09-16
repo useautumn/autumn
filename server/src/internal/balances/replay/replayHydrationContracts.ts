@@ -1,7 +1,7 @@
 import type {
 	CheckCommand,
 	CheckDecision,
-	CustomerMeteringState,
+	CustomerState,
 	InitializationDecision,
 	MeteringIdentity,
 	TrackCommand,
@@ -23,7 +23,7 @@ export type ReplayHydrationSelection = Readonly<{
 export type ReplayHydrationSourceRefusalCategory = "missing" | "unsupported";
 
 export type ReplayHydrationSourceResult =
-	| Readonly<{ kind: "loaded"; state: CustomerMeteringState }>
+	| Readonly<{ kind: "loaded"; state: CustomerState }>
 	| Readonly<{
 			kind: "refused";
 			category: ReplayHydrationSourceRefusalCategory;

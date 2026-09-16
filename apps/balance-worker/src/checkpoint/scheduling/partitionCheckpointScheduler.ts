@@ -1,5 +1,5 @@
-import { PartitionProgressNotFoundError } from "../../state/sqliteBalanceStateErrors.js";
-import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
+import { PartitionProgressNotFoundError } from "../../state/stateStoreErrors.js";
+import type { StateStore } from "../../state/types/stateStore.js";
 import type { PartitionCheckpointExporter } from "../partitionCheckpointExporter.js";
 import { executePartitionCheckpointExport } from "./executePartitionCheckpointExport.js";
 import {
@@ -25,10 +25,7 @@ export const createPartitionCheckpointScheduler = ({
 	clock = partitionCheckpointSchedulerClock,
 	config = defaultPartitionCheckpointSchedulerConfig,
 }: {
-	stateStore: Pick<
-		SqliteBalanceStateStore,
-		"readNextOffset" | "pruneExpiredTrackReceipts"
-	>;
+	stateStore: Pick<StateStore, "readNextOffset" | "pruneExpiredReceipts">;
 	exporter?: PartitionCheckpointExporter;
 	clock?: PartitionCheckpointSchedulerClock;
 	config?: PartitionCheckpointSchedulerConfig;

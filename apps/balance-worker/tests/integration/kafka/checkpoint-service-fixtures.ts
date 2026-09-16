@@ -1,10 +1,6 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-	createCustomerMeteringState,
-	parseTrackCommand,
-} from "@autumn/balance-engine";
 import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
 import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import {
@@ -25,6 +21,12 @@ import {
 	createS3PartitionCheckpointStorage,
 	partitionCheckpointObjectKeyOf,
 } from "../../../src/s3/s3PartitionCheckpointStorage.js";
+import {
+	createCustomerEntitlement,
+	createInitializeMutation,
+	createState,
+	createTrackCommand,
+} from "../../fixtures/mutations.js";
 
 export const waitForCheckpointService = async ({
 	ready,
@@ -81,25 +83,9 @@ export const createCheckpointServiceFixture = async () => {
 		config: { topic: ownershipTopic },
 	});
 	const errors: unknown[] = [];
-	const state = createCustomerMeteringState({
+	const state = createState({
 		identity: { orgId: "org", env: "sandbox", customerId: "customer" },
-		featureStatesById: {
-			messages: {
-				kind: "direct_metered_v1",
-				customerEntitlements: [
-					{
-						id: "messages",
-						balance: 10,
-						usage: 0,
-						granted: 10,
-						externalId: null,
-						planId: null,
-						reset: null,
-						expiresAt: null,
-					},
-				],
-			},
-		},
+		customerEntitlements: [createCustomerEntitlement({ id: "messages" })],
 	});
 	const producer = kafka.producer();
 	const close = async (): Promise<void> => {
@@ -145,13 +131,12 @@ export const createCheckpointServiceFixture = async () => {
 				{
 					partition: 0,
 					...serializeMeteringRecord({
-						record: {
-							schemaVersion: 1,
-							type: "state_initialized",
-							initializationId: id,
-							initializedAt: Date.now(),
+						record: createInitializeMutation({
 							state,
-						},
+							commandId: id,
+							occurredAt: Date.now(),
+							deduplicationExpiresAt: Date.now() + 86_400_000,
+						}),
 					}),
 				},
 			],
@@ -173,20 +158,12 @@ export const createCheckpointServiceFixture = async () => {
 		commandId: string;
 		value: number;
 	}) =>
-		parseTrackCommand({
-			input: {
-				schemaVersion: 1,
-				type: "track",
-				commandId,
-				requestId: commandId,
-				identity: state.identity,
-				entityId: null,
-				featureId: "messages",
-				value,
-				overageBehavior: "reject",
-				properties: null,
-				occurredAt: Date.now(),
-			},
+		createTrackCommand({
+			identity: state.identity,
+			commandId,
+			requestId: commandId,
+			value,
+			occurredAt: Date.now(),
 		});
 	const start = async ({
 		mode,

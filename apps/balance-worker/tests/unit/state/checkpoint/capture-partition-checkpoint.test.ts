@@ -3,19 +3,21 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-	computeTrack,
-	createCustomerMeteringState,
-	executeTrack,
-	parseTrackCommand,
-	type TrackOutcome,
+	applyMutation,
+	type CustomerState,
+	type CustomerStateMutation,
 } from "@autumn/balance-engine";
 import { parsePartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { planPartitionBootstrap } from "../../../../src/runtime/bootstrap/plan/planPartitionBootstrap.js";
 import { PartitionCheckpointLimitExceededError } from "../../../../src/state/actions/checkpoint/restorePartitionCheckpoint.js";
+import { openStateStore } from "../../../../src/state/openStateStore.js";
+import type { StateStore } from "../../../../src/state/types/stateStore.js";
 import {
-	openSqliteBalanceStateStore,
-	type SqliteBalanceStateStore,
-} from "../../../../src/state/sqliteBalanceStateStore.js";
+	applyDurableMutation,
+	createInitializeMutation,
+	createState,
+	createTrackMutation,
+} from "../../../fixtures/mutations.js";
 
 const topic = "metering-events-v1";
 const partition = 0;
@@ -33,10 +35,10 @@ const limits = {
 
 const createStore = (): {
 	directory: string;
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 } => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-checkpoint-capture-"));
-	const store = openSqliteBalanceStateStore({
+	const store = openStateStore({
 		databasePath: join(directory, "balance-state.sqlite"),
 	});
 	store.initializePartition({ topic, partition, nextOffset: 0n });
@@ -48,60 +50,53 @@ const closeStore = ({
 	store,
 }: {
 	directory: string;
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 }): void => {
 	store.close();
 	rmSync(directory, { recursive: true, force: true });
 };
 
-const outcomeFor = ({
+const mutationFor = ({
 	state,
 	commandId,
 	deduplicationExpiresAt,
 }: {
-	state: ReturnType<typeof createCustomerMeteringState>;
+	state: CustomerState;
 	commandId: string;
 	deduplicationExpiresAt: number;
-}): TrackOutcome => {
-	const decision = computeTrack({
+}): CustomerStateMutation =>
+	createTrackMutation({
 		state,
+		commandId,
+		value: 1,
+		occurredAt: checkpointCreatedAt - 1,
 		deduplicationExpiresAt,
-		command: parseTrackCommand({
-			input: {
-				schemaVersion: 1,
-				type: "track",
-				commandId,
-				requestId: `req_${commandId}`,
-				identity,
-				entityId: null,
-				featureId: "messages",
-				value: 1,
-				overageBehavior: "reject",
-				properties: null,
-				occurredAt: checkpointCreatedAt - 1,
-			},
-		}),
 	});
-	if (decision.kind !== "new") throw new Error("Expected a new track outcome");
-	return decision.outcome;
-};
+
+const emptyState = ({
+	customerId = identity.customerId as string,
+}: {
+	customerId?: string;
+} = {}): CustomerState =>
+	createState({
+		identity: { ...identity, customerId },
+		customerEntitlements: [],
+	});
 
 describe("capture partition checkpoint", () => {
 	test("does not rewind locally applied progress to a lagging follower", () => {
 		const fixture = createStore();
 		try {
-			fixture.store.applyDurableStateInitialization({
-				position: { topic, partition, offset: 5n },
-				initialization: {
-					schemaVersion: 1,
-					type: "state_initialized",
-					initializationId: "init_ahead_of_follower",
-					initializedAt: checkpointCreatedAt - 1,
-					state: createCustomerMeteringState({
-						identity,
-						featureStatesById: {},
-					}),
-				},
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 5n,
+				mutation: createInitializeMutation({
+					state: emptyState(),
+					commandId: "init_ahead_of_follower",
+					occurredAt: checkpointCreatedAt - 1,
+				}),
 			});
 			const checkpoint = fixture.store.capturePartitionCheckpoint({
 				topic,
@@ -129,18 +124,16 @@ describe("capture partition checkpoint", () => {
 	test("preserves a verified marker-only replay position in a read-only checkpoint", () => {
 		const fixture = createStore();
 		try {
-			fixture.store.applyDurableStateInitialization({
-				position: { topic, partition, offset: 0n },
-				initialization: {
-					schemaVersion: 1,
-					type: "state_initialized",
-					initializationId: "init_before_marker",
-					initializedAt: checkpointCreatedAt - 1,
-					state: createCustomerMeteringState({
-						identity,
-						featureStatesById: {},
-					}),
-				},
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 0n,
+				mutation: createInitializeMutation({
+					state: emptyState(),
+					commandId: "init_before_marker",
+					occurredAt: checkpointCreatedAt - 1,
+				}),
 			});
 
 			const checkpoint = fixture.store.capturePartitionCheckpoint({
@@ -171,57 +164,48 @@ describe("capture partition checkpoint", () => {
 	test("captures one read-only cut and filters receipts using its createdAt", () => {
 		const fixture = createStore();
 		try {
-			const initialState = createCustomerMeteringState({
-				identity,
-				featureStatesById: {
-					messages: {
-						kind: "direct_metered_v1",
-						customerEntitlements: [
-							{
-								id: "messages_monthly",
-								balance: 10,
-								usage: 0,
-								granted: 10,
-								externalId: null,
-								planId: null,
-								reset: null,
-								expiresAt: null,
-							},
-						],
-					},
-				},
+			const initialization = createInitializeMutation({
+				state: createState({ identity }),
+				commandId: "init_1",
+				occurredAt: checkpointCreatedAt - 10,
 			});
-			fixture.store.applyDurableStateInitialization({
-				position: { topic, partition, offset: 0n },
-				initialization: {
-					schemaVersion: 1,
-					type: "state_initialized",
-					initializationId: "init_1",
-					initializedAt: checkpointCreatedAt - 10,
-					state: initialState,
-				},
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 0n,
+				mutation: initialization,
 			});
-			const expiredOutcome = outcomeFor({
+			const initialState = applyMutation({
+				state: null,
+				mutation: initialization,
+			});
+			const expiredMutation = mutationFor({
 				state: initialState,
 				commandId: "cmd_expired",
 				deduplicationExpiresAt: checkpointCreatedAt,
 			});
-			fixture.store.applyDurableTrackOutcome({
-				position: { topic, partition, offset: 1n },
-				outcome: expiredOutcome,
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 1n,
+				mutation: expiredMutation,
 			});
-			const stateAfterExpiredOutcome = executeTrack({
-				state: initialState,
-				outcome: expiredOutcome,
-			}).state;
-			const retainedOutcome = outcomeFor({
-				state: stateAfterExpiredOutcome,
+			const retainedMutation = mutationFor({
+				state: applyMutation({
+					state: initialState,
+					mutation: expiredMutation,
+				}),
 				commandId: "cmd_retained",
 				deduplicationExpiresAt: checkpointCreatedAt + 1,
 			});
-			fixture.store.applyDurableTrackOutcome({
-				position: { topic, partition, offset: 2n },
-				outcome: retainedOutcome,
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 2n,
+				mutation: retainedMutation,
 			});
 
 			const checkpoint = fixture.store.capturePartitionCheckpoint({
@@ -236,20 +220,15 @@ describe("capture partition checkpoint", () => {
 			).toMatchObject({
 				createdAt: checkpointCreatedAt,
 				nextOffset: 3n,
-				states: [{ state: { revision: 2 } }],
+				states: [{ state: { revision: 3 } }],
 				receipts: [
-					{
-						recordOffset: 2n,
-						outcome: { commandId: "cmd_retained" },
-					},
+					{ recordOffset: 0n, mutation: { id: "init_1" } },
+					{ recordOffset: 2n, mutation: { id: "cmd_retained" } },
 				],
 			});
 			expect(
-				fixture.store.readTrackReceipt({
-					identity,
-					commandId: "cmd_expired",
-				}),
-			).toEqual(expiredOutcome);
+				fixture.store.readReceipt({ identity, mutationId: "cmd_expired" }),
+			).toEqual(expiredMutation);
 		} finally {
 			closeStore(fixture);
 		}
@@ -259,19 +238,16 @@ describe("capture partition checkpoint", () => {
 		const fixture = createStore();
 		try {
 			for (const [offset, customerId] of ["cus_1", "cus_2"].entries()) {
-				const state = createCustomerMeteringState({
-					identity: { ...identity, customerId },
-					featureStatesById: {},
-				});
-				fixture.store.applyDurableStateInitialization({
-					position: { topic, partition, offset: BigInt(offset) },
-					initialization: {
-						schemaVersion: 1,
-						type: "state_initialized",
-						initializationId: `init_${customerId}`,
-						initializedAt: checkpointCreatedAt - 1,
-						state,
-					},
+				applyDurableMutation({
+					store: fixture.store,
+					topic,
+					partition,
+					offset: BigInt(offset),
+					mutation: createInitializeMutation({
+						state: emptyState({ customerId }),
+						commandId: `init_${customerId}`,
+						occurredAt: checkpointCreatedAt - 1,
+					}),
 				});
 			}
 
@@ -300,61 +276,52 @@ describe("capture partition checkpoint", () => {
 	test("prunes expired receipts in bounded batches without changing state", () => {
 		const fixture = createStore();
 		try {
-			const initialState = createCustomerMeteringState({
-				identity,
-				featureStatesById: {
-					messages: {
-						kind: "direct_metered_v1",
-						customerEntitlements: [
-							{
-								id: "messages_monthly",
-								balance: 10,
-								usage: 0,
-								granted: 10,
-								externalId: null,
-								planId: null,
-								reset: null,
-								expiresAt: null,
-							},
-						],
-					},
-				},
+			const initialization = createInitializeMutation({
+				state: createState({ identity }),
+				commandId: "init_1",
+				occurredAt: checkpointCreatedAt - 10,
 			});
-			fixture.store.applyDurableStateInitialization({
-				position: { topic, partition, offset: 0n },
-				initialization: {
-					schemaVersion: 1,
-					type: "state_initialized",
-					initializationId: "init_1",
-					initializedAt: checkpointCreatedAt - 10,
-					state: initialState,
-				},
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 0n,
+				mutation: initialization,
 			});
-			const oldestOutcome = outcomeFor({
+			const initialState = applyMutation({
+				state: null,
+				mutation: initialization,
+			});
+			const oldestMutation = mutationFor({
 				state: initialState,
 				commandId: "cmd_oldest",
 				deduplicationExpiresAt: checkpointCreatedAt - 2,
 			});
-			fixture.store.applyDurableTrackOutcome({
-				position: { topic, partition, offset: 1n },
-				outcome: oldestOutcome,
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 1n,
+				mutation: oldestMutation,
 			});
-			const stateAfterOldest = executeTrack({
-				state: initialState,
-				outcome: oldestOutcome,
-			}).state;
-			const newerOutcome = outcomeFor({
-				state: stateAfterOldest,
+			const newerMutation = mutationFor({
+				state: applyMutation({
+					state: initialState,
+					mutation: oldestMutation,
+				}),
 				commandId: "cmd_newer",
 				deduplicationExpiresAt: checkpointCreatedAt - 1,
 			});
-			fixture.store.applyDurableTrackOutcome({
-				position: { topic, partition, offset: 2n },
-				outcome: newerOutcome,
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 2n,
+				mutation: newerMutation,
 			});
 
 			expect(
-				fixture.store.pruneExpiredTrackReceipts({
+				fixture.store.pruneExpiredReceipts({
 					topic,
 					partition,
 					expiresAtOrBefore: checkpointCreatedAt,
@@ -362,19 +329,13 @@ describe("capture partition checkpoint", () => {
 				}),
 			).toEqual({ deletedCount: 1 });
 			expect(
-				fixture.store.readTrackReceipt({
-					identity,
-					commandId: "cmd_oldest",
-				}),
+				fixture.store.readReceipt({ identity, mutationId: "cmd_oldest" }),
 			).toBeNull();
 			expect(
-				fixture.store.readTrackReceipt({
-					identity,
-					commandId: "cmd_newer",
-				}),
-			).toEqual(newerOutcome);
+				fixture.store.readReceipt({ identity, mutationId: "cmd_newer" }),
+			).toEqual(newerMutation);
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(3n);
-			expect(fixture.store.readState({ identity })?.revision).toBe(2);
+			expect(fixture.store.readState({ identity })?.revision).toBe(3);
 		} finally {
 			closeStore(fixture);
 		}

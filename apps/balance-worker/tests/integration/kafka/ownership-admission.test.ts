@@ -2,10 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-	createCustomerMeteringState,
-	parseTrackCommand,
-} from "@autumn/balance-engine";
+import { createCustomerState, parseTrackCommand } from "@autumn/balance-engine";
 import {
 	createOwnershipConsumer,
 	createProducerSession,
@@ -20,7 +17,8 @@ import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
-import { openSqliteBalanceStateStore } from "../../../src/state/sqliteBalanceStateStore.js";
+import { openStateStore } from "../../../src/state/openStateStore.js";
+import { restoreCustomerStates } from "../../fixtures/mutations.js";
 
 if (!process.env.KAFKA_BROKERS?.trim())
 	throw new Error("Run test:kafka with an environment broker");
@@ -75,37 +73,28 @@ describe("Real ownership admission", () => {
 			],
 		});
 		const directory = mkdtempSync(join(tmpdir(), "ownership-admitted-"));
-		const store = openSqliteBalanceStateStore({
+		const store = openStateStore({
 			databasePath: join(directory, "state.sqlite"),
 		});
 		for (const partition of [0, 1, 2])
 			store.initializePartition({ topic, partition, nextOffset: 0n });
-		const state = createCustomerMeteringState({
+		const state = createCustomerState({
 			identity: { orgId: "org_1", env: "sandbox", customerId: "customer" },
-			featureStatesById: {
-				messages: {
-					kind: "direct_metered_v1",
-					customerEntitlements: [
-						{
-							id: "balance",
-							balance: 10,
-							usage: 0,
-							granted: 10,
-							externalId: null,
-							planId: null,
-							reset: null,
-							expiresAt: null,
-						},
-					],
+			customerEntitlements: [
+				{
+					id: "balance",
+					externalId: null,
+					featureId: "messages",
+					balance: 10,
+					usage: 0,
+					granted: 10,
+					planId: null,
+					reset: null,
+					expiresAt: null,
 				},
-			},
+			],
 		});
-		store.restoreState({
-			topic,
-			partition,
-			initializationId: "initial",
-			state,
-		});
+		restoreCustomerStates({ store, topic, partition, states: [state] });
 		const lifecycle: string[] = [];
 		const errors: unknown[] = [];
 		const factory = createPartitionRuntimeFactory({

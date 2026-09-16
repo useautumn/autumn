@@ -3,7 +3,7 @@
  * is per waiter, and physical work retains capacity until it really settles.
  */
 import { expect, test } from "bun:test";
-import type { CustomerMeteringState } from "@autumn/balance-engine";
+import type { CustomerState } from "@autumn/balance-engine";
 import { createReplayHydrationCoordinator } from "@/internal/balances/replay/createReplayHydrationCoordinator.js";
 import type { ReplayHydrationSource } from "@/internal/balances/replay/replayHydrationContracts.js";
 import {
@@ -21,11 +21,10 @@ function missingClient() {
 		track: async () => {
 			throw createNotInitializedError();
 		},
-		initialize: async ({
-			command,
-		}: {
-			command: { state: CustomerMeteringState };
-		}) => ({ kind: "initialized" as const, state: command.state }),
+		initialize: async ({ command }: { command: { state: CustomerState } }) => ({
+			kind: "initialized" as const,
+			state: command.state,
+		}),
 	};
 }
 

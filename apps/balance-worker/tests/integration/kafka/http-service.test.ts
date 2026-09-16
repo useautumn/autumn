@@ -3,10 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-	createCustomerMeteringState,
-	parseTrackCommand,
-} from "@autumn/balance-engine";
+import { parseTrackCommand } from "@autumn/balance-engine";
 import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
 import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import {
@@ -16,6 +13,11 @@ import {
 } from "@autumn/kafka";
 import { Kafka, logLevel } from "kafkajs";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
+import {
+	createCustomerEntitlement,
+	createInitializeMutation,
+	createState,
+} from "../../fixtures/mutations.js";
 
 function ignoreLog(): void {}
 
@@ -69,25 +71,11 @@ describe("Real balance worker HTTP service", () => {
 				},
 			],
 		});
-		const state = createCustomerMeteringState({
+		const state = createState({
 			identity: { orgId: "org", env: "sandbox", customerId: "customer" },
-			featureStatesById: {
-				messages: {
-					kind: "direct_metered_v1",
-					customerEntitlements: [
-						{
-							id: "balance",
-							balance: 10,
-							usage: 0,
-							granted: 10,
-							externalId: null,
-							planId: null,
-							reset: null,
-							expiresAt: null,
-						},
-					],
-				},
-			},
+			customerEntitlements: [
+				createCustomerEntitlement({ id: "balance", balance: 10 }),
+			],
 		});
 		const producer = kafka.producer();
 		await producer.connect();
@@ -97,13 +85,10 @@ describe("Real balance worker HTTP service", () => {
 				{
 					partition: 0,
 					...serializeMeteringRecord({
-						record: {
-							schemaVersion: 1,
-							type: "state_initialized",
-							initializationId: id,
-							initializedAt: 0,
+						record: createInitializeMutation({
 							state,
-						},
+							commandId: id,
+						}),
 					}),
 				},
 			],
@@ -169,12 +154,14 @@ describe("Real balance worker HTTP service", () => {
 			expect(first.decision.kind).toBe("new");
 			if (first.decision.kind !== "new")
 				throw new Error("Expected a new decision");
-			expect(first.decision.outcome.balanceAfter).toBe(7);
+			expect(first.decision.mutation.result).toMatchObject({
+				balanceAfter: 7,
+			});
 			const duplicate = { decision: await client.track({ command }) };
 			expect(duplicate.decision.kind).toBe("duplicate");
 			if (duplicate.decision.kind !== "duplicate")
 				throw new Error("Expected a duplicate decision");
-			expect(duplicate.decision.outcome).toEqual(first.decision.outcome);
+			expect(duplicate.decision.mutation).toEqual(first.decision.mutation);
 			const stale = await post((BigInt(owner.routeEpoch) + 1n).toString());
 			expect(stale.status).toBe(409);
 			expect((await stale.json()).error.code).toBe("NOT_OWNER");

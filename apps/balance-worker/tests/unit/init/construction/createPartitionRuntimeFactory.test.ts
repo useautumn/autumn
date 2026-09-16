@@ -8,6 +8,7 @@ import type {
 	PartitionOutcomeFollowerPort,
 	PartitionRuntime,
 } from "../../../../src/runtime/types/partitionRuntime.js";
+import { restoreCustomerStates } from "../../../fixtures/mutations.js";
 import {
 	closeStoreFixture,
 	createState,
@@ -64,11 +65,11 @@ describe("Kafka owned partition runtime factory", () => {
 				logs.push(args);
 			}
 			try {
-				fixture.store.restoreState({
+				restoreCustomerStates({
+					store: fixture.store,
 					topic,
 					partition: 0,
-					initializationId: "baseline",
-					state: createState(),
+					states: [createState()],
 				});
 				const producer: KafkaProducerClient = {
 					connect: async () => {},
@@ -133,7 +134,7 @@ describe("Kafka owned partition runtime factory", () => {
 				releaseCommit.resolve();
 				await expect(pending).resolves.toMatchObject({
 					kind: "new",
-					outcome: { status: "applied" },
+					mutation: { result: { status: "applied" } },
 				});
 				expect(logs).toHaveLength(2);
 				for (const [index, phase, result] of [

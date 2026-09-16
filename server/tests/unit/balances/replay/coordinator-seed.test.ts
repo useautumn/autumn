@@ -67,7 +67,7 @@ test.concurrent(
 	async () => {
 		const first = createReplayHydrationFixture();
 		const changedState = structuredClone(first.state);
-		changedState.featureStatesById.messages.customerEntitlements[0].balance = 71;
+		changedState.customerEntitlements.messages_grant.balance = 71;
 		const commands: InitializeCommand[] = [];
 		for (const { selection, state } of [
 			{ selection: first.selection, state: first.state },
@@ -95,8 +95,8 @@ test.concurrent(
 			await coordinator.prewarm({ selection });
 			await coordinator.close();
 		}
-		expect(commands[0].initializationId).toBe(commands[1].initializationId);
-		expect(commands[0].initializationId).not.toBe(commands[2].initializationId);
+		expect(commands[0].commandId).toBe(commands[1].commandId);
+		expect(commands[0].commandId).not.toBe(commands[2].commandId);
 		expect(commands[0].requestId).toBe(commands[1].requestId);
 		expect(commands[0].state).not.toEqual(commands[1].state);
 	},

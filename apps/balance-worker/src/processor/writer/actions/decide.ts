@@ -1,31 +1,25 @@
 import {
-	type CustomerMeteringState,
+	type CustomerState,
+	type CustomerStateMutation,
 	type MeteringIdentity,
 	meteringPartitionKeyOf,
-	type StateInitializedEvent,
-	stateInitializationFingerprintOf,
 } from "@autumn/balance-engine";
-import type { MeteringRecord } from "@autumn/kafka";
-import { ConflictingMeteringStateInitializationError } from "../../../state/sqliteBalanceStateErrors.js";
 import {
-	enqueueOutcome,
+	enqueueMutation,
 	pendingCommitsFor,
 	pendingKeyOf,
-} from "../pendingOutcomes.js";
+} from "../pendingMutations.js";
 import type {
 	CommittedMutation,
 	DecidedMutation,
 	MutationSubmission,
 } from "../types/mutation.js";
 import type { PartitionWriterScope } from "../types/partitionWriter.js";
-import {
-	PartitionWriterCommandConflictError,
-	PartitionWriterStateNotFoundError,
-} from "../writerErrors.js";
+import { PartitionWriterCommandConflictError } from "../writerErrors.js";
 import { scheduleCommit } from "./commit.js";
 
 /**
- * Synchronous until the outcome is enqueued: no await may separate reading the
+ * Synchronous until the mutation is enqueued: no await may separate reading the
  * projection from recording the next one, or concurrent commands would interleave.
  */
 export function decide<Reply>({
@@ -43,27 +37,28 @@ export function decide<Reply>({
 
 	const inFlight = state.pendingByKey.get(pendingKey);
 	if (inFlight) {
-		assertSameRequest({ commandId, fingerprint, outcome: inFlight.outcome });
+		assertSameRequest({ commandId, fingerprint, mutation: inFlight.mutation });
 		return decidedWith<Reply>(inFlight.settlement.join({ kind: "duplicate" }));
 	}
 
-	const currentState = readFreshestState({ scope, customerKey, identity });
-	if (!currentState)
-		throw new PartitionWriterStateNotFoundError({ customerKey });
-
-	const receipt = ctx.stateStore.readTrackReceipt({ identity, commandId });
+	const receipt = ctx.stateStore.readReceipt({
+		identity,
+		mutationId: commandId,
+	});
 	if (receipt) {
-		assertSameRequest({ commandId, fingerprint, outcome: receipt });
+		assertSameRequest({ commandId, fingerprint, mutation: receipt });
 		return decidedWith<Reply>(
-			Promise.resolve({ kind: "duplicate", outcome: receipt }),
+			Promise.resolve({ kind: "duplicate", mutation: receipt }),
 		);
 	}
 
+	// A null state is legal here: initialize is the command that creates one.
+	const currentState = readFreshestState({ scope, customerKey, identity });
 	const result = submission.mutate({ state: currentState });
 	if (result.kind === "reply")
 		return decidedWith<Reply>(Promise.resolve(result.reply));
 
-	const committed = enqueueOutcome({
+	const committed = enqueueMutation({
 		scope,
 		pendingKey,
 		customerKey,
@@ -82,7 +77,7 @@ function decidedWith<Reply>(
 	return { waitForCommit };
 }
 
-/** Snapshot at call time: outcomes enqueued after this returns do not extend the wait. */
+/** Snapshot at call time: mutations enqueued after this returns do not extend the wait. */
 export async function waitForPendingCommits({
 	scope,
 	customerKey,
@@ -95,57 +90,6 @@ export async function waitForPendingCommits({
 	if (scope.state.recoveryError) throw scope.state.recoveryError;
 }
 
-export function submitInitialization({
-	scope,
-	initialization,
-}: {
-	scope: PartitionWriterScope;
-	initialization: StateInitializedEvent;
-}): Promise<CommittedMutation | { kind: "already_initialized" }> {
-	const { state } = scope;
-	if (state.recoveryError) throw state.recoveryError;
-	const { identity } = initialization.state;
-	const customerKey = meteringPartitionKeyOf({ identity });
-	const pendingKey = pendingKeyOf({
-		customerKey,
-		commandId: initialization.initializationId,
-	});
-	const inFlight = state.pendingByKey.get(pendingKey);
-
-	if (inFlight) {
-		if (!isSameBaseline({ pending: inFlight.outcome, initialization })) {
-			throw new ConflictingMeteringStateInitializationError({
-				partitionKey: customerKey,
-			});
-		}
-		return inFlight.settlement.join({ kind: "duplicate" });
-	}
-	const receipt = scope.ctx.stateStore.readInitializationReceipt({ identity });
-	if (receipt?.initializationId === initialization.initializationId) {
-		if (
-			receipt.initializationFingerprint !==
-			stateInitializationFingerprintOf({ initialization })
-		) {
-			throw new ConflictingMeteringStateInitializationError({
-				partitionKey: customerKey,
-			});
-		}
-		return Promise.resolve({ kind: "duplicate", outcome: initialization });
-	}
-	if (readFreshestState({ scope, customerKey, identity })) {
-		return Promise.resolve({ kind: "already_initialized" });
-	}
-	const committed = enqueueOutcome({
-		scope,
-		pendingKey,
-		customerKey,
-		outcome: initialization,
-		nextState: initialization.state,
-	});
-	scheduleCommit({ scope });
-	return committed;
-}
-
 /** Pending projection first, so same-customer commands see uncommitted deductions. */
 function readFreshestState({
 	scope,
@@ -155,41 +99,23 @@ function readFreshestState({
 	scope: PartitionWriterScope;
 	customerKey: string;
 	identity: MeteringIdentity;
-}): CustomerMeteringState | null {
+}): CustomerState | null {
 	return (
 		scope.state.projectedStateByCustomerKey.get(customerKey) ??
 		scope.ctx.stateStore.readState({ identity })
 	);
 }
 
-/** A known outcome for this commandId must have been produced by the same request. */
+/** A known mutation for this commandId must have been produced by the same request. */
 function assertSameRequest({
 	commandId,
 	fingerprint,
-	outcome,
+	mutation,
 }: {
 	commandId: string;
 	fingerprint: string;
-	outcome: MeteringRecord;
+	mutation: CustomerStateMutation;
 }): void {
-	const sameRequest =
-		outcome.type === "track_outcome" &&
-		outcome.commandFingerprint === fingerprint;
-	if (!sameRequest)
-		throw new PartitionWriterCommandConflictError({ commandId });
-}
-
-/** Same initializationId must carry the same baseline, mirroring the store's committed check. */
-function isSameBaseline({
-	pending,
-	initialization,
-}: {
-	pending: MeteringRecord;
-	initialization: StateInitializedEvent;
-}): boolean {
-	return (
-		pending.type === "state_initialized" &&
-		stateInitializationFingerprintOf({ initialization: pending }) ===
-			stateInitializationFingerprintOf({ initialization })
-	);
+	if (mutation.receipt.fingerprint === fingerprint) return;
+	throw new PartitionWriterCommandConflictError({ commandId });
 }

@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { UnsupportedBalanceStateSchemaVersionError } from "./sqliteBalanceStateErrors.js";
+import { UnsupportedBalanceStateSchemaVersionError } from "./stateStoreErrors.js";
 
 export const SQLITE_SCHEMA_VERSION = 1;
 
@@ -33,12 +33,10 @@ const initializeSchema = ({ database }: { database: Database }) => {
 			)
 		`);
 		database.run(`
-			CREATE TABLE IF NOT EXISTS customer_states (
+			CREATE TABLE IF NOT EXISTS subject_states (
 				partition_key TEXT PRIMARY KEY,
 				topic TEXT NOT NULL,
 				partition_id INTEGER NOT NULL CHECK (partition_id >= 0),
-				initialization_id TEXT NOT NULL,
-				initialization_fingerprint TEXT NOT NULL,
 				revision INTEGER NOT NULL CHECK (revision >= 0),
 				state_json TEXT NOT NULL,
 				UNIQUE (partition_key, topic, partition_id),
@@ -48,28 +46,28 @@ const initializeSchema = ({ database }: { database: Database }) => {
 			)
 		`);
 		database.run(`
-			CREATE TABLE IF NOT EXISTS track_receipts (
+			CREATE TABLE IF NOT EXISTS mutation_receipts (
 				partition_key TEXT NOT NULL,
-				command_id TEXT NOT NULL,
+				mutation_id TEXT NOT NULL,
 				topic TEXT NOT NULL,
 				partition_id INTEGER NOT NULL CHECK (partition_id >= 0),
 				record_offset INTEGER NOT NULL CHECK (record_offset >= 0),
-				deduplication_expires_at INTEGER NOT NULL
-					CHECK (deduplication_expires_at >= 0),
-				outcome_json TEXT NOT NULL,
-				PRIMARY KEY (partition_key, command_id),
+				fingerprint TEXT NOT NULL,
+				expires_at INTEGER NOT NULL CHECK (expires_at >= 0),
+				mutation_json TEXT NOT NULL,
+				PRIMARY KEY (partition_key, mutation_id),
 				FOREIGN KEY (partition_key, topic, partition_id)
-					REFERENCES customer_states(partition_key, topic, partition_id)
+					REFERENCES subject_states(partition_key, topic, partition_id)
 					ON DELETE CASCADE
 			)
 		`);
 		database.run(`
-			CREATE INDEX IF NOT EXISTS customer_states_by_partition
-			ON customer_states (topic, partition_id)
+			CREATE INDEX IF NOT EXISTS subject_states_by_partition
+			ON subject_states (topic, partition_id)
 		`);
 		database.run(`
-			CREATE INDEX IF NOT EXISTS track_receipts_by_partition_expiry
-			ON track_receipts (topic, partition_id, deduplication_expires_at)
+			CREATE INDEX IF NOT EXISTS mutation_receipts_by_partition_expiry
+			ON mutation_receipts (topic, partition_id, expires_at)
 		`);
 		database.run(`PRAGMA user_version = ${SQLITE_SCHEMA_VERSION}`);
 	});

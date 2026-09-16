@@ -76,10 +76,10 @@ describe("background checkpoint exporter", () => {
 				releaseGate(fixture.gate);
 				expect(await replacement).toMatchObject({
 					nextOffset: 2n,
-					receiptCount: 0,
+					receiptCount: 1,
 				});
 				expect((await fixture.readCheckpoint()).states[0]?.state.revision).toBe(
-					0,
+					1,
 				);
 				expect(fixture.starts()).toBe(2);
 			} finally {
@@ -102,21 +102,24 @@ describe("background checkpoint exporter", () => {
 				});
 				await waitForGate(fixture.gate);
 				fixture.applyTrack({ offset: 3n, commandId: "after" });
-				expect(fixture.store.readState({ identity })?.revision).toBe(2);
+				expect(fixture.store.readState({ identity })?.revision).toBe(3);
 				releaseGate(fixture.gate);
 				const result = await exporting;
 				expect(result).toMatchObject({
 					nextOffset: 3n,
 					stateCount: 1,
-					receiptCount: 1,
+					receiptCount: 2,
 				});
 				expect(result).not.toHaveProperty("serialized");
 				expect(result).not.toHaveProperty("states");
 				const checkpoint = await fixture.readCheckpoint();
 				expect(checkpoint).toMatchObject({
 					nextOffset: 3n,
-					states: [{ state: { revision: 1 } }],
-					receipts: [{ recordOffset: 1n, outcome: { commandId: "before" } }],
+					states: [{ state: { revision: 2 } }],
+					receipts: [
+						{ recordOffset: 0n, mutation: { id: "seed" } },
+						{ recordOffset: 1n, mutation: { id: "before" } },
+					],
 				});
 				expect(fixture.store.readNextOffset({ topic, partition: 0 })).toBe(4n);
 			} finally {
@@ -141,10 +144,10 @@ describe("background checkpoint exporter", () => {
 				releaseGate(fixture.gate);
 				expect(await exporting).toMatchObject({
 					nextOffset: 3n,
-					receiptCount: 1,
+					receiptCount: 2,
 				});
 				expect((await fixture.readCheckpoint()).states[0]?.state.revision).toBe(
-					1,
+					2,
 				);
 			} finally {
 				await fixture.close();
@@ -213,7 +216,7 @@ describe("background checkpoint exporter", () => {
 				await expect(exporting).rejects.toBe(reason);
 				expect(await Bun.file(fixture.outputPath).exists()).toBe(false);
 				fixture.applyTrack({ offset: 1n });
-				expect(fixture.store.readState({ identity })?.revision).toBe(1);
+				expect(fixture.store.readState({ identity })?.revision).toBe(2);
 			} finally {
 				await fixture.close();
 			}
@@ -239,7 +242,7 @@ describe("background checkpoint exporter", () => {
 						partition: 0,
 						signal: new AbortController().signal,
 					}),
-				).toMatchObject({ nextOffset: 2n, receiptCount: 1 });
+				).toMatchObject({ nextOffset: 2n, receiptCount: 2 });
 				expect(fixture.starts()).toBe(2);
 			} finally {
 				await fixture.close();

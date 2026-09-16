@@ -11,11 +11,12 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type {
-	CheckDecision,
-	CustomerMeteringState,
-	InitializationDecision,
-	InitializeCommand,
+import {
+	type CheckDecision,
+	type CustomerState,
+	findCustomerEntitlementsForFeature,
+	type InitializationDecision,
+	type InitializeCommand,
 } from "@autumn/balance-engine";
 import { createReplayHydrationCoordinator } from "@/internal/balances/replay/createReplayHydrationCoordinator.js";
 import type {
@@ -161,13 +162,11 @@ function rejectionCauseOf<Value>({
 	return state.kind === "rejected" ? state.cause : state;
 }
 
-function checkDecisionOf({
-	state,
-}: {
-	state: CustomerMeteringState;
-}): CheckDecision {
-	const balanceSnapshot =
-		state.featureStatesById.messages?.customerEntitlements[0];
+function checkDecisionOf({ state }: { state: CustomerState }): CheckDecision {
+	const [balanceSnapshot] = findCustomerEntitlementsForFeature({
+		state,
+		featureId: "messages",
+	});
 	if (!balanceSnapshot)
 		throw new Error("Fixture state must expose a messages entitlement");
 	return {

@@ -36,8 +36,12 @@ function logRequestResult({
 	startedAt: number;
 }): void {
 	const { id, command, decision, error, errorCode } = context.get("requestLog");
-	const outcome =
-		decision && "outcome" in decision ? decision.outcome : undefined;
+	const trackResult =
+		decision &&
+		"mutation" in decision &&
+		decision.mutation.result.type === "track"
+			? decision.mutation.result
+			: undefined;
 	const statusCode = context.res.status;
 	const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
 	const event = {
@@ -61,11 +65,13 @@ function logRequestResult({
 			value: command?.value,
 			route: context.get("request")?.route,
 			decision: decision?.kind,
-			status: outcome?.status,
+			status: trackResult?.status,
 			reason:
-				decision?.kind === "unsupported" ? decision.reason : outcome?.reason,
-			appliedValue: outcome?.appliedValue,
-			balanceAfter: outcome?.balanceAfter,
+				decision?.kind === "unsupported"
+					? decision.reason
+					: trackResult?.reason,
+			appliedValue: trackResult?.appliedValue,
+			balanceAfter: trackResult?.balanceAfter,
 			errorCode,
 			error,
 		},

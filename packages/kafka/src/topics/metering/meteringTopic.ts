@@ -1,8 +1,6 @@
 import {
 	meteringPartitionKeyOf,
-	parseStateInitializedEvent,
-	parseTrackOutcome,
-	type TrackOutcome,
+	parseCustomerStateMutation,
 } from "@autumn/balance-engine";
 import { InvalidRecordError } from "../../lib/recordErrors.js";
 import {
@@ -17,28 +15,17 @@ import type {
 import type { MeteringRecord } from "./types/meteringRecord.js";
 
 function meteringRecordToKey({ record }: { record: MeteringRecord }): string {
-	const identity =
-		record.type === "state_initialized"
-			? record.state.identity
-			: record.identity;
-	return meteringPartitionKeyOf({ identity });
+	return meteringPartitionKeyOf({ identity: record.identity });
 }
 
 function parseMeteringPayload({
 	type,
 	payload,
 }: Pick<TopicRecordEnvelope, "type" | "payload">): MeteringRecord {
+	if (type !== "mutation") throw new InvalidRecordError();
 	try {
-		switch (type) {
-			case "state_initialized":
-				return parseStateInitializedEvent({ input: payload });
-			case "track_outcome":
-				return parseTrackOutcome({ input: payload });
-			default:
-				throw new InvalidRecordError();
-		}
+		return parseCustomerStateMutation({ input: payload });
 	} catch (cause) {
-		if (cause instanceof InvalidRecordError) throw cause;
 		throw new InvalidRecordError({ cause });
 	}
 }
@@ -73,15 +60,3 @@ export const meteringTopic: TopicSchema<MeteringRecord> = {
 	parse: parseMeteringRecord,
 	serialize: serializeMeteringRecord,
 };
-
-export function parseMeteringTrackOutcome({
-	key,
-	value,
-}: {
-	key: Buffer | null;
-	value: Buffer | null;
-}): TrackOutcome {
-	const record = parseMeteringRecord({ key, value });
-	if (record.type !== "track_outcome") throw new InvalidRecordError();
-	return record;
-}

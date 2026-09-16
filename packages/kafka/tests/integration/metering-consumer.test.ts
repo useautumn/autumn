@@ -1,10 +1,5 @@
 import { expect, test } from "bun:test";
-import {
-	computeTrack,
-	createCustomerMeteringState,
-	parseTrackCommand,
-	type TrackOutcome,
-} from "@autumn/balance-engine";
+import type { CustomerStateMutation } from "@autumn/balance-engine";
 import { Kafka, logLevel, type Producer } from "kafkajs";
 import {
 	createMeteringConsumer,
@@ -15,6 +10,7 @@ import {
 	readPartitionLogRange,
 	serializeMeteringRecord,
 } from "../../src/kafka.js";
+import { createState, createTrackMutation } from "../meteringFixtures.js";
 
 const partition = 0;
 
@@ -38,53 +34,22 @@ function createTestKafka(): Kafka {
 	});
 }
 
-function createOutcome({ commandId }: { commandId: string }): TrackOutcome {
-	const identity = {
-		orgId: "org_consumer_test",
-		env: "sandbox" as const,
-		customerId: "customer_consumer_test",
-	};
-	const state = createCustomerMeteringState({
-		identity,
-		featureStatesById: {
-			messages: {
-				kind: "direct_metered_v1",
-				customerEntitlements: [
-					{
-						id: "messages_monthly",
-						balance: 10,
-						usage: 0,
-						granted: 10,
-						externalId: null,
-						planId: null,
-						reset: null,
-						expiresAt: null,
-					},
-				],
-			},
-		},
-	});
-	const decision = computeTrack({
-		deduplicationExpiresAt: 1_700_086_400_000,
-		state,
-		command: parseTrackCommand({
-			input: {
-				schemaVersion: 1,
-				type: "track",
-				commandId,
-				requestId: `request-${commandId}`,
-				identity,
-				entityId: null,
-				featureId: "messages",
-				value: 1,
-				overageBehavior: "reject",
-				properties: null,
-				occurredAt: 1_700_000_000_000,
+function createOutcome({
+	commandId,
+}: {
+	commandId: string;
+}): CustomerStateMutation {
+	return createTrackMutation({
+		state: createState({
+			identity: {
+				orgId: "org_consumer_test",
+				env: "sandbox",
+				customerId: "customer_consumer_test",
 			},
 		}),
+		commandId,
+		value: 1,
 	});
-	if (decision.kind !== "new") throw new Error("Expected a new outcome");
-	return decision.outcome;
 }
 
 async function appendAbortedOutcome({
@@ -94,7 +59,7 @@ async function appendAbortedOutcome({
 }: {
 	producer: Producer;
 	topic: string;
-	record: TrackOutcome;
+	record: CustomerStateMutation;
 }): Promise<bigint> {
 	const transaction = await producer.transaction();
 	try {
@@ -118,7 +83,7 @@ async function appendCommittedOutcome({
 }: {
 	producer: Producer;
 	topic: string;
-	record: TrackOutcome;
+	record: CustomerStateMutation;
 }): Promise<{ baseOffset: bigint }> {
 	const publisher = createMeteringPublisher({ ctx: { producer } });
 	return publisher.append({ topic, partition, records: [record] });

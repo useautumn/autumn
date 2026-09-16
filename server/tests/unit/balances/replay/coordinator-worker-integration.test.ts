@@ -5,7 +5,7 @@
 import { expect, test } from "bun:test";
 import type { MeteringRecord } from "@autumn/kafka";
 import { createReplayHydrationCoordinator } from "@/internal/balances/replay/createReplayHydrationCoordinator.js";
-import { openSqliteBalanceStateStore } from "../../../../../apps/balance-worker/src/state/sqliteBalanceStateStore.js";
+import { openStateStore } from "../../../../../apps/balance-worker/src/state/openStateStore.js";
 import {
 	createWorkerFixture,
 	partition,
@@ -21,7 +21,7 @@ test.concurrent(
 	async () => {
 		const fixture = createReplayHydrationFixture();
 		const records: MeteringRecord[] = [];
-		const store = openSqliteBalanceStateStore({ databasePath: ":memory:" });
+		const store = openStateStore({ databasePath: ":memory:" });
 		store.initializePartition({ topic, partition, nextOffset: 0n });
 		const worker = createWorkerFixture({
 			stateStore: store,
@@ -47,7 +47,7 @@ test.concurrent(
 				}),
 			).toMatchObject({
 				kind: "new",
-				outcome: { status: "applied", balanceAfter: 67 },
+				mutation: { result: { status: "applied", balanceAfter: 67 } },
 			});
 			expect(
 				await coordinator.check({
@@ -56,9 +56,9 @@ test.concurrent(
 				}),
 			).toMatchObject({ kind: "decided", balance: 67 });
 			expect(sourceCalls).toBe(1);
-			expect(records.map((record) => record.type)).toEqual([
-				"state_initialized",
-				"track_outcome",
+			expect(records.map((record) => record.command.type)).toEqual([
+				"initialize",
+				"track",
 			]);
 		} finally {
 			await coordinator.close();
@@ -73,7 +73,7 @@ test.concurrent(
 	async () => {
 		const fixture = createReplayHydrationFixture();
 		const records: MeteringRecord[] = [];
-		const store = openSqliteBalanceStateStore({ databasePath: ":memory:" });
+		const store = openStateStore({ databasePath: ":memory:" });
 		store.initializePartition({ topic, partition, nextOffset: 0n });
 		const worker = createWorkerFixture({
 			stateStore: store,
@@ -104,26 +104,24 @@ test.concurrent(
 				"duplicate",
 				"new",
 			]);
-			if (!("outcome" in results[0]) || !("outcome" in results[1]))
+			if (!("mutation" in results[0]) || !("mutation" in results[1]))
 				throw new Error("Expected both track commands to reach the worker");
-			expect(results[0].outcome).toEqual(results[1].outcome);
+			expect(results[0].mutation).toEqual(results[1].mutation);
 			expect(results[0]).toMatchObject({
-				outcome: { status: "applied", balanceAfter: 67 },
+				mutation: { result: { status: "applied", balanceAfter: 67 } },
 			});
 			expect(
-				records.filter((record) => record.type === "state_initialized"),
+				records.filter((record) => record.command.type === "initialize"),
 			).toHaveLength(1);
 			expect(
-				records.filter((record) => record.type === "track_outcome"),
+				records.filter((record) => record.command.type === "track"),
 			).toHaveLength(1);
 			expect(
 				store.readState({ identity: fixture.selection.identity }),
 			).toMatchObject({
-				revision: 1,
-				featureStatesById: {
-					messages: {
-						customerEntitlements: [{ balance: 67, usage: 43 }],
-					},
+				revision: 2,
+				customerEntitlements: {
+					messages_grant: { balance: 67, usage: 43 },
 				},
 			});
 		} finally {

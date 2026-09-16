@@ -1,11 +1,15 @@
 import { expect, spyOn, test } from "bun:test";
-import type { MeteringRecord } from "@autumn/kafka";
 import { createPartitionCommitLogging } from "../../../src/logging/createPartitionCommitLogging.js";
 import { MutationBatchNotCommittedError } from "../../../src/processor/writer/writerErrors.js";
-import type { DurableMutationRecord } from "../../../src/state/sqliteBalanceStateStore.js";
+import type { DurableMutationRecord } from "../../../src/state/types/durableMutation.js";
+import {
+	createInitializeMutation,
+	createTrackMutation,
+	seedCustomerState,
+} from "../../fixtures/mutations.js";
 import {
 	closeStoreFixture,
-	createOutcome,
+	createMutation,
 	createState,
 	createStoreFixture,
 	identity,
@@ -40,7 +44,7 @@ test.concurrent(
 		const params = {
 			topic,
 			partition,
-			outcomes: [createOutcome({ state: createState() })],
+			outcomes: [createMutation({ state: createState() })],
 		};
 		const result = { baseOffset: 9007199254740993n };
 		try {
@@ -95,18 +99,17 @@ test.concurrent(
 	() => {
 		const fixture = createStoreFixture();
 		const state = createState();
-		const initialization: MeteringRecord = {
-			schemaVersion: 1,
-			type: "state_initialized",
-			initializationId: "private_baseline",
-			initializedAt: 1_700_000_000_000,
+		const initialization = createInitializeMutation({
 			state,
-		};
+			commandId: "private_baseline",
+		});
 		const records: DurableMutationRecord[] = [
 			{ position: { topic, partition, offset: 0n }, mutation: initialization },
 			{
 				position: { topic, partition, offset: 1n },
-				mutation: createOutcome({ state }),
+				mutation: createTrackMutation({
+					state: { ...state, revision: 1 },
+				}),
 			},
 		];
 		const logs: unknown[][] = [];
@@ -146,7 +149,7 @@ test.concurrent(
 				baseOffset: "0",
 				durationMs: 0.38,
 			});
-			expect(stateStore.readState({ identity })?.revision).toBe(1);
+			expect(stateStore.readState({ identity })?.revision).toBe(2);
 			expect(stateStore.readNextOffset({ topic, partition })).toBe(2n);
 			expect(stateStore.readState({ identity })).toEqual(
 				fixture.store.readState({ identity }),
@@ -198,7 +201,7 @@ for (const result of ["not_committed", "unknown"] as const) {
 					appender.appendCommitted({
 						topic,
 						partition,
-						outcomes: [createOutcome({ state: createState() })],
+						outcomes: [createMutation({ state: createState() })],
 					}),
 				).rejects.toBe(cause);
 				expect(logs).toHaveLength(1);
@@ -241,17 +244,17 @@ test.concurrent(
 					records: [
 						{
 							position: { topic, partition, offset: 0n },
-							mutation: createOutcome({ state: createState() }),
+							mutation: createMutation({ state: createState() }),
 						},
 					],
 				}),
-			).toThrow("Metering state not found");
+			).toThrow("Mutation does not match current state");
 			expect(logs).toHaveLength(1);
 			expect(logs[0]?.[0]).toMatchObject({
 				phase: "sqlite_apply",
 				result: "failed",
 				durationMs: expect.any(Number),
-				errorName: "MeteringStateNotFoundError",
+				errorName: "StaleMutationError",
 			});
 			expect(stateStore.readNextOffset({ topic, partition })).toBe(0n);
 		} finally {
@@ -264,7 +267,6 @@ test.concurrent(
 	"throwing loggers cannot change committed results or original failures",
 	async () => {
 		const fixture = createStoreFixture();
-		const outcome = createOutcome({ state: createState() });
 		const cause = new MutationBatchNotCommittedError({
 			cause: new Error("aborted"),
 		});
@@ -273,12 +275,14 @@ test.concurrent(
 			throw new Error("logging unavailable");
 		}
 		try {
-			fixture.store.restoreState({
+			const seededState = seedCustomerState({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "baseline",
 				state: createState(),
+				commandId: "baseline",
 			});
+			const mutation = createTrackMutation({ state: seededState });
 			const { appender, stateStore } = createPartitionCommitLogging({
 				ctx: {
 					stateStore: fixture.store,
@@ -293,36 +297,33 @@ test.concurrent(
 				config,
 			});
 			await expect(
-				appender.appendCommitted({ topic, partition, outcomes: [outcome] }),
+				appender.appendCommitted({ topic, partition, outcomes: [mutation] }),
 			).resolves.toEqual({ baseOffset: 0n });
 			expect(
 				stateStore.applyDurableMutations({
-					records: [
-						{ position: { topic, partition, offset: 0n }, mutation: outcome },
-					],
+					records: [{ position: { topic, partition, offset: 1n }, mutation }],
 				}),
 			).toHaveLength(1);
-			expect(stateStore.readState({ identity })?.revision).toBe(1);
+			expect(stateStore.readState({ identity })?.revision).toBe(2);
 			fail = true;
 			await expect(
-				appender.appendCommitted({ topic, partition, outcomes: [outcome] }),
+				appender.appendCommitted({ topic, partition, outcomes: [mutation] }),
 			).rejects.toBe(cause);
 			expect(() =>
 				stateStore.applyDurableMutations({
 					records: [
 						{
-							position: { topic, partition, offset: 1n },
-							mutation: createOutcome({
-								state: {
-									...createState(),
+							position: { topic, partition, offset: 2n },
+							mutation: createMutation({
+								state: createState({
 									identity: { ...identity, customerId: "missing" },
-								},
+								}),
 							}),
 						},
 					],
 				}),
-			).toThrow("Metering state not found");
-			expect(stateStore.readNextOffset({ topic, partition })).toBe(1n);
+			).toThrow("Mutation does not match current state");
+			expect(stateStore.readNextOffset({ topic, partition })).toBe(2n);
 		} finally {
 			closeStoreFixture(fixture);
 		}

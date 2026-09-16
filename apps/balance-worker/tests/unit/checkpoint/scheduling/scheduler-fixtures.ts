@@ -6,8 +6,12 @@ import type {
 	PartitionCheckpointSchedulerConfig,
 } from "../../../../src/checkpoint/scheduling/partitionCheckpointSchedulerConfig.js";
 import { defaultPartitionCheckpointSchedulerConfig } from "../../../../src/checkpoint/scheduling/partitionCheckpointSchedulerConfig.js";
-import { openSqliteBalanceStateStore } from "../../../../src/state/sqliteBalanceStateStore.js";
-import { createState } from "../../kafka/kafka-test-fixtures.js";
+import { openStateStore } from "../../../../src/state/openStateStore.js";
+import {
+	createCustomerEntitlement,
+	createState,
+	seedCustomerState,
+} from "../../../fixtures/mutations.js";
 
 export class SchedulerClock implements PartitionCheckpointSchedulerClock {
 	time = 1_700_000_000_000;
@@ -70,7 +74,7 @@ export const createSchedulerFixture = ({
 } = {}) => {
 	const topic = "metering-events-v1";
 	const clock = new SchedulerClock();
-	const store = openSqliteBalanceStateStore({ databasePath: ":memory:" });
+	const store = openStateStore({ databasePath: ":memory:" });
 	const limits = {
 		maxSerializedBytes: 1_000_000,
 		maxStates: 100,
@@ -101,19 +105,21 @@ export const createSchedulerFixture = ({
 	const failures: unknown[] = [];
 	const initialize = ({ partition }: { partition: number }) => {
 		store.initializePartition({ topic, partition, nextOffset: 0n });
-		const state = createState();
-		state.identity.customerId = `cus_${partition}`;
-		store.applyDurableStateInitialization({
-			position: { topic, partition, offset: 0n },
-			initialization: {
-				schemaVersion: 1,
-				type: "state_initialized",
-				initializationId: `init_${partition}`,
-				initializedAt: clock.now(),
-				state,
-			},
+		return seedCustomerState({
+			store,
+			topic,
+			partition,
+			state: createState({
+				identity: {
+					orgId: "org_1",
+					env: "sandbox",
+					customerId: `cus_${partition}`,
+				},
+				customerEntitlements: [createCustomerEntitlement()],
+			}),
+			commandId: `init_${partition}`,
+			deduplicationExpiresAt: clock.now() + 86_400_000,
 		});
-		return state;
 	};
 	const start = ({
 		partition,

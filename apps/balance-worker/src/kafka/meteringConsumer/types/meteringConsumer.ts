@@ -1,6 +1,6 @@
 import type { KafkaConsumerClient, ProgressTracker } from "@autumn/kafka";
 import type { Admin } from "kafkajs";
-import type { SqliteBalanceStateStore } from "../../../state/sqliteBalanceStateStore.js";
+import type { StateStore } from "../../../state/types/stateStore.js";
 import type { PartitionReplay } from "./partitionReplay.js";
 
 export type MeteringConsumer = {
@@ -14,6 +14,6 @@ export type MeteringConsumer = {
 export type MeteringConsumerContext = {
 	consumer: KafkaConsumerClient;
 	partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
-	stateStore: SqliteBalanceStateStore;
+	stateStore: StateStore;
 	positionTracker: ProgressTracker;
 };

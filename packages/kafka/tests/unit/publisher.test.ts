@@ -1,11 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import type { CustomerStateMutation } from "@autumn/balance-engine";
 import {
-	computeTrack,
-	createCustomerMeteringState,
-	parseTrackCommand,
-	type TrackOutcome,
-} from "@autumn/balance-engine";
-import { CompressionTypes, type ProducerRecord, type RecordMetadata } from "kafkajs";
+	CompressionTypes,
+	type ProducerRecord,
+	type RecordMetadata,
+} from "kafkajs";
 import {
 	createMeteringPublisher,
 	KafkaBatchNotCommittedError,
@@ -14,6 +13,7 @@ import {
 	KafkaTransactionStateUnknownError,
 	sendTransactionalBatch,
 } from "../../src/kafka.js";
+import { createState, createTrackMutation } from "../meteringFixtures.js";
 
 function transactionalBatchTests(): void {
 	const topic = "metering-events-v1";
@@ -263,48 +263,12 @@ function meteringPublisherTests(): void {
 	const partition = 4;
 	const baseOffset = "9007199254740993";
 
-	function createOutcome({ commandId }: { commandId: string }): TrackOutcome {
-		const state = createCustomerMeteringState({
-			identity,
-			featureStatesById: {
-				messages: {
-					kind: "direct_metered_v1",
-					customerEntitlements: [
-						{
-							id: "messages_monthly",
-							balance: 10,
-							usage: 0,
-							granted: 10,
-							externalId: null,
-							planId: null,
-							reset: null,
-							expiresAt: null,
-						},
-					],
-				},
-			},
-		});
-		const decision = computeTrack({
-			deduplicationExpiresAt: 1_700_086_400_000,
-			state,
-			command: parseTrackCommand({
-				input: {
-					schemaVersion: 1,
-					type: "track",
-					commandId,
-					requestId: `request-${commandId}`,
-					identity,
-					entityId: null,
-					featureId: "messages",
-					value: 5,
-					overageBehavior: "reject",
-					properties: null,
-					occurredAt: 1_700_000_000_000,
-				},
-			}),
-		});
-		if (decision.kind !== "new") throw new Error("Expected a new outcome");
-		return decision.outcome;
+	function createOutcome({
+		commandId,
+	}: {
+		commandId: string;
+	}): CustomerStateMutation {
+		return createTrackMutation({ state: createState({ identity }), commandId });
 	}
 
 	function createProducerFixture({
@@ -363,7 +327,7 @@ function meteringPublisherTests(): void {
 				partition,
 				key: Buffer.from('["org_1","sandbox","cus_1"]', "utf8"),
 				value: Buffer.from(
-					JSON.stringify({ schemaVersion: 1, type: "track_outcome", payload }),
+					JSON.stringify({ schemaVersion: 1, type: "mutation", payload }),
 					"utf8",
 				),
 			});

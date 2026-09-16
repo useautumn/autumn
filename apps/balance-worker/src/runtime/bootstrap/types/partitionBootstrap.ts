@@ -4,7 +4,7 @@ import type {
 } from "../../../checkpoint/partitionCheckpoint.js";
 import type { PartitionCheckpointSource } from "../../../checkpoint/partitionCheckpointSource.js";
 import type { PartitionCheckpointRestoreLimits } from "../../../state/actions/checkpoint/restorePartitionCheckpoint.js";
-import type { SqliteBalanceStateStore } from "../../../state/sqliteBalanceStateStore.js";
+import type { StateStore } from "../../../state/types/stateStore.js";
 
 export type PartitionBootstrapRetryPolicy = {
 	maxAttempts: number;
@@ -23,7 +23,7 @@ export type PartitionBootstrapSleeper = (
 
 export type PartitionBootstrapOptions = {
 	stateStore: Pick<
-		SqliteBalanceStateStore,
+		StateStore,
 		"initializePartition" | "readNextOffset" | "restorePartitionCheckpoint"
 	>;
 	checkpointSource: PartitionCheckpointSource;

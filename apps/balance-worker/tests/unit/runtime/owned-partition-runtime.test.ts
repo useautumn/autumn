@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	type CheckCommand,
-	createCustomerMeteringState,
 	type MeteringIdentity,
 	parseCheckCommand,
 	parseTrackCommand,
@@ -13,7 +12,7 @@ import {
 } from "@autumn/balance-engine";
 import {
 	createProducerSession,
-	type KafkaTransaction as KafkaTrackOutcomeTransactionPort,
+	type KafkaTransaction as KafkaMutationTransactionPort,
 	type KafkaProducerClient as OwnedPartitionProducerPort,
 } from "@autumn/kafka";
 import { Glob } from "bun";
@@ -36,10 +35,12 @@ import {
 	OwnedPartitionRecoveryRequiredError,
 } from "../../../src/runtime/runtimeErrors.js";
 import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
+import { openStateStore } from "../../../src/state/openStateStore.js";
+import type { StateStore } from "../../../src/state/types/stateStore.js";
 import {
-	openSqliteBalanceStateStore,
-	type SqliteBalanceStateStore,
-} from "../../../src/state/sqliteBalanceStateStore.js";
+	createState as createCustomerState,
+	restoreCustomerStates,
+} from "../../fixtures/mutations.js";
 import * as preparationFixtures from "../kafka/kafka-test-fixtures.js";
 
 const topic = "metering-events-v1";
@@ -58,27 +59,7 @@ const createState = ({
 }: {
 	stateIdentity?: MeteringIdentity;
 	balance?: number;
-} = {}) =>
-	createCustomerMeteringState({
-		identity: stateIdentity,
-		featureStatesById: {
-			messages: {
-				kind: "direct_metered_v1",
-				customerEntitlements: [
-					{
-						id: "messages_monthly",
-						balance,
-						usage: 0,
-						granted: balance,
-						externalId: null,
-						planId: null,
-						reset: null,
-						expiresAt: null,
-					},
-				],
-			},
-		},
-	});
+} = {}) => createCustomerState({ identity: stateIdentity, balance });
 
 const createTrackCommand = ({
 	commandId,
@@ -182,7 +163,7 @@ const createFakeProducer = ({
 					: "producer:append-transaction",
 			);
 
-			const transaction: KafkaTrackOutcomeTransactionPort = {
+			const transaction: KafkaMutationTransactionPort = {
 				send: async (record) => {
 					if (currentTransaction === 0) {
 						throw new Error("Fence transaction cannot send records");
@@ -284,18 +265,17 @@ const createFollower = ({
 
 const createStoreFixture = (): {
 	directory: string;
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 } => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-owned-partition-"));
-	const store = openSqliteBalanceStateStore({
+	const store = openStateStore({
 		databasePath: join(directory, "balance-state.sqlite"),
 	});
-	store.initializePartition({ topic, partition, nextOffset: 0n });
-	store.restoreState({
+	restoreCustomerStates({
+		store,
 		topic,
 		partition,
-		initializationId: "init_1",
-		state: createState(),
+		states: [createState()],
 	});
 	return { directory, store };
 };
@@ -305,7 +285,7 @@ const closeStoreFixture = ({
 	store,
 }: {
 	directory: string;
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 }): void => {
 	store.close();
 	rmSync(directory, { recursive: true, force: true });
@@ -329,7 +309,7 @@ const createRuntime = ({
 	partitionForIdentity = () => partition,
 	recoveryDrainTimeoutMs = 1_000,
 }: {
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 	producer: OwnedPartitionProducerPort;
 	follower: PartitionOutcomeFollowerPort;
 	bootstrap?: OwnedPartitionBootstrapPort["bootstrap"];
@@ -612,7 +592,7 @@ describe("owned partition runtime", () => {
 			commit.resolve(undefined);
 			await expect(trackPromise).resolves.toMatchObject({
 				kind: "new",
-				outcome: { status: "applied", balanceAfter: 5 },
+				mutation: { result: { status: "applied", balanceAfter: 5 } },
 			});
 			await expect(checkPromise).resolves.toMatchObject({
 				kind: "decided",
@@ -714,7 +694,7 @@ describe("owned partition runtime", () => {
 
 				expect(await track).toMatchObject({
 					kind: "new",
-					outcome: { status: "applied", balanceAfter: 5 },
+					mutation: { result: { status: "applied", balanceAfter: 5 } },
 				});
 				expect(await check).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
 				expect(runtime.getStatus()).toBe("recovery_required");
@@ -803,7 +783,7 @@ describe("owned partition runtime", () => {
 			commit.resolve(undefined);
 			await expect(trackPromise).resolves.toMatchObject({
 				kind: "new",
-				outcome: { status: "applied", balanceAfter: 5 },
+				mutation: { result: { status: "applied", balanceAfter: 5 } },
 			});
 			await runtime.stop();
 

@@ -13,7 +13,7 @@ import type {
 	ReplayRequestBody,
 } from "@/internal/balances/replay/manifest/replayManifestContracts.js";
 import { executeReplayRequest } from "@/internal/balances/replay/operator/executeReplayRequest.js";
-import { openSqliteBalanceStateStore } from "../../../../../apps/balance-worker/src/state/sqliteBalanceStateStore.js";
+import { openStateStore } from "../../../../../apps/balance-worker/src/state/openStateStore.js";
 import {
 	createWorkerFixture,
 	partition,
@@ -54,19 +54,19 @@ function balanceAfterOf({ result }: { result: ReplayExecutionResult }) {
 	if (result.kind !== "completed")
 		throw new Error(`expected completion, received ${JSON.stringify(result)}`);
 	const { decision } = result;
-	if (!("outcome" in decision))
-		throw new Error("expected a track decision carrying an outcome");
-	return decision.outcome.balanceAfter;
+	if (!("mutation" in decision) || decision.mutation.result.type !== "track")
+		throw new Error("expected a track decision carrying a track mutation");
+	return decision.mutation.result.balanceAfter;
 }
 
-function trackOutcomesOf({ records }: { records: MeteringRecord[] }) {
-	return records.filter((record) => record.type === "track_outcome");
+function trackMutationsOf({ records }: { records: MeteringRecord[] }) {
+	return records.filter((record) => record.command.type === "track");
 }
 
 function createCompositionHarness() {
 	const fixture = createReplayHydrationFixture();
 	const records: MeteringRecord[] = [];
-	const store = openSqliteBalanceStateStore({ databasePath: ":memory:" });
+	const store = openStateStore({ databasePath: ":memory:" });
 	store.initializePartition({ topic, partition, nextOffset: 0n });
 	const worker = createWorkerFixture({
 		stateStore: store,
@@ -153,9 +153,9 @@ test.concurrent(
 			const duplicate = await harness.execute({ record: track });
 			expect(remainingOf({ result: duplicate })).toBe(67);
 			expect(harness.loads.count).toBe(1);
-			expect(harness.records.map((record) => record.type)).toEqual([
-				"state_initialized",
-				"track_outcome",
+			expect(harness.records.map((record) => record.command.type)).toEqual([
+				"initialize",
+				"track",
 			]);
 		} finally {
 			await harness.close();
@@ -183,7 +183,7 @@ test.concurrent(
 			expect(result.kind).toBe("completed");
 			expect(replyTextOf({ result })).toContain("insufficient_balance");
 			expect(balanceAfterOf({ result })).toBe(72);
-			expect(trackOutcomesOf({ records: harness.records })).toHaveLength(1);
+			expect(trackMutationsOf({ records: harness.records })).toHaveLength(1);
 			expect(harness.loads.count).toBe(1);
 		} finally {
 			await harness.close();

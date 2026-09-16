@@ -12,7 +12,7 @@ import {
 	PartitionWriterStateNotFoundError,
 } from "../../../processor/writer/writerErrors.js";
 import { OwnedPartitionNotReadyError } from "../../../runtime/runtimeErrors.js";
-import { ConflictingMeteringStateInitializationError } from "../../../state/sqliteBalanceStateErrors.js";
+import { ConflictingMutationReceiptError } from "../../../state/stateStoreErrors.js";
 import {
 	PartitionRouteMismatchError,
 	PartitionRouteNotOwnedError,
@@ -37,11 +37,14 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 		) {
 			status = 400;
 			error = { code: "INVALID_REQUEST", message: "Invalid worker request" };
-		} else if (cause instanceof ConflictingMeteringStateInitializationError) {
+		} else if (
+			cause instanceof ConflictingMutationReceiptError ||
+			cause instanceof PartitionWriterCommandConflictError
+		) {
 			status = 409;
 			error = {
-				code: "INITIALIZATION_CONFLICT",
-				message: "Initialization id reused with a different baseline",
+				code: "COMMAND_CONFLICT",
+				message: "Command id reused with a different request",
 			};
 		} else if (
 			cause instanceof PartitionWriterStateNotFoundError ||
@@ -51,12 +54,6 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 			error = {
 				code: "NOT_INITIALIZED",
 				message: "Customer must be initialized before check or track",
-			};
-		} else if (cause instanceof PartitionWriterCommandConflictError) {
-			status = 400;
-			error = {
-				code: "INVALID_REQUEST",
-				message: "Command id reused with different input",
 			};
 		} else if (cause instanceof PartitionRouteNotOwnedError) {
 			status = 409;

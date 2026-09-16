@@ -13,10 +13,9 @@ import {
 import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
 import { OwnedPartitionProducerFencedError } from "../../../src/runtime/runtimeErrors.js";
 import type { PartitionRuntime } from "../../../src/runtime/types/partitionRuntime.js";
-import {
-	openSqliteBalanceStateStore,
-	type SqliteBalanceStateStore,
-} from "../../../src/state/sqliteBalanceStateStore.js";
+import { openStateStore } from "../../../src/state/openStateStore.js";
+import type { StateStore } from "../../../src/state/types/stateStore.js";
+import { restoreCustomerStates } from "../../fixtures/mutations.js";
 import {
 	createState,
 	identity,
@@ -46,7 +45,7 @@ function createTestRuntime({
 }: {
 	kafka: Kafka;
 	topic: string;
-	stateStore: SqliteBalanceStateStore;
+	stateStore: StateStore;
 }): PartitionRuntime {
 	const session = createProducerSession({
 		ctx: { kafka },
@@ -109,7 +108,7 @@ async function replacementFencesPreviousRuntime(): Promise<void> {
 	const topic = `runtime-fencing-${crypto.randomUUID()}`;
 	const admin = kafka.admin();
 	const directory = mkdtempSync(join(tmpdir(), "autumn-runtime-fencing-"));
-	const stores: SqliteBalanceStateStore[] = [];
+	const stores: StateStore[] = [];
 	const runtimes: PartitionRuntime[] = [];
 	const cleanup: unknown[] = [];
 	let topicCreated = false;
@@ -121,16 +120,16 @@ async function replacementFencesPreviousRuntime(): Promise<void> {
 		});
 		topicCreated = true;
 		for (const name of ["previous", "replacement"]) {
-			const store = openSqliteBalanceStateStore({
+			const store = openStateStore({
 				databasePath: join(directory, `${name}.sqlite`),
 			});
 			stores.push(store);
 			store.initializePartition({ topic, partition, nextOffset: 0n });
-			store.restoreState({
+			restoreCustomerStates({
+				store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state: createState(),
+				states: [createState()],
 			});
 			runtimes.push(createTestRuntime({ kafka, topic, stateStore: store }));
 		}
@@ -162,7 +161,7 @@ async function replacementFencesPreviousRuntime(): Promise<void> {
 			replacement.process((processor) => processor.track({ command })),
 		).resolves.toMatchObject({
 			kind: "new",
-			outcome: { status: "applied", balanceAfter: 5 },
+			mutation: { result: { status: "applied", balanceAfter: 5 } },
 		});
 		expect(replacement.getStatus()).toBe("ready");
 		expect(stores[1].readState({ identity })?.revision).toBe(1);

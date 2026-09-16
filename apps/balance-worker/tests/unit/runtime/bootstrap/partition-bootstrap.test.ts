@@ -10,10 +10,8 @@ import {
 import { PartitionCheckpointSourceError } from "../../../../src/checkpoint/partitionCheckpointSource.js";
 import { createPartitionBootstrapper } from "../../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
 import type { PartitionBootstrapRetryPolicy } from "../../../../src/runtime/bootstrap/types/partitionBootstrap.js";
-import {
-	openSqliteBalanceStateStore,
-	type SqliteBalanceStateStore,
-} from "../../../../src/state/sqliteBalanceStateStore.js";
+import { openStateStore } from "../../../../src/state/openStateStore.js";
+import type { StateStore } from "../../../../src/state/types/stateStore.js";
 
 const topic = "metering-events-v1";
 const partition = 0;
@@ -41,12 +39,12 @@ const checkpointAt = (nextOffset: bigint) =>
 
 const createStore = (): {
 	directory: string;
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 } => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-bootstrap-"));
 	return {
 		directory,
-		store: openSqliteBalanceStateStore({
+		store: openStateStore({
 			databasePath: join(directory, "balance-state.sqlite"),
 		}),
 	};
@@ -57,7 +55,7 @@ const closeStore = ({
 	store,
 }: {
 	directory: string;
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 }): void => {
 	store.close();
 	rmSync(directory, { recursive: true, force: true });
@@ -68,7 +66,7 @@ const createBootstrapper = ({
 	latest,
 	sleep = async () => undefined,
 }: {
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 	latest: (
 		signal: AbortSignal,
 	) => ReturnType<

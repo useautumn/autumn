@@ -30,12 +30,12 @@ export function rethrowBalanceWorkerError({
 	}
 	if (
 		cause instanceof BalanceWorkerClientError &&
-		cause.workerCode === "INITIALIZATION_CONFLICT"
+		cause.workerCode === "COMMAND_CONFLICT"
 	) {
 		throw new RecaseError({
-			code: "balance_worker_initialization_conflict",
+			code: ErrCode.DuplicateIdempotencyKey,
 			statusCode: 409,
-			message: "Initialization id reused with a different baseline",
+			message: "Command id reused with a different request",
 		});
 	}
 	throw cause;

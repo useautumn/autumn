@@ -1,6 +1,3 @@
-import type {
-	StateInitializedEvent,
-	TrackOutcome,
-} from "@autumn/balance-engine";
+import type { CustomerStateMutation } from "@autumn/balance-engine";
 
-export type MeteringRecord = StateInitializedEvent | TrackOutcome;
+export type MeteringRecord = CustomerStateMutation;

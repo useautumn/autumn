@@ -4,7 +4,7 @@ import type { Admin, Kafka } from "kafkajs";
 import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
 import type { Partitions } from "../../partitions/types/partitions.js";
 import type { MeteringPartitionResolver } from "../../runtime/types/partitionRuntime.js";
-import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
+import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerCheckpointResources } from "./workerCheckpointResources.js";
 
 export type BalanceWorker = {
@@ -39,7 +39,7 @@ export type WorkerLifecycleContext = {
 export type WorkerResourcesContext = {
 	kafka: Pick<Kafka, "producer" | "consumer" | "admin">;
 	admin: Pick<Admin, "disconnect" | "fetchTopicOffsets">;
-	stateStore: SqliteBalanceStateStore;
+	stateStore: StateStore;
 	partitionResolver: MeteringPartitionResolver;
 	checkpoints?: WorkerCheckpointResources;
 };

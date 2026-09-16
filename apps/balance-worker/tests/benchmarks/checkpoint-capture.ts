@@ -3,13 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
 import {
+	applyMutation,
 	computeCheck,
 	computeTrack,
-	createCustomerMeteringState,
-	executeTrack,
 	meteringPartitionKeyOf,
 	parseTrackCommand,
-	stateInitializationFingerprintOf,
 } from "@autumn/balance-engine";
 import { createCheckpointThreadExporter } from "../../src/checkpoint/background/createCheckpointThreadExporter.js";
 import {
@@ -19,8 +17,14 @@ import {
 } from "../../src/checkpoint/partitionCheckpoint.js";
 import { encodePartitionCheckpoint } from "../../src/checkpoint/partitionCheckpointEncoding.js";
 import { createPartitionCheckpointExporter } from "../../src/checkpoint/partitionCheckpointExporter.js";
-import { openSqliteBalanceStateStore } from "../../src/state/sqliteBalanceStateStore.js";
+import { openStateStore } from "../../src/state/openStateStore.js";
 import type { CheckpointThreadFixtureConfig } from "../fixtures/checkpoint-thread.js";
+import {
+	applyDurableMutation,
+	createCustomerEntitlement,
+	createState,
+	restoreCustomerStates,
+} from "../fixtures/mutations.js";
 
 const topic = "checkpoint-benchmark";
 const sizes = [100, 1_000, 5_000, 10_000];
@@ -51,7 +55,7 @@ const pause = (): Promise<void> =>
 
 for (const customers of sizes) {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-checkpoint-benchmark-"));
-	const store = openSqliteBalanceStateStore({
+	const store = openStateStore({
 		databasePath: join(directory, "balances.sqlite"),
 	});
 	const outputPath = join(directory, "checkpoint.gz");
@@ -101,25 +105,14 @@ for (const customers of sizes) {
 				env: "sandbox",
 				customerId: `customer_${index}`,
 			} as const;
-			const state = createCustomerMeteringState({
+			const state = createState({
 				identity,
-				featureStatesById: {
-					messages: {
-						kind: "direct_metered_v1",
-						customerEntitlements: [
-							{
-								id: `entitlement_${index}`,
-								balance: 100,
-								usage: 0,
-								granted: 100,
-								externalId: null,
-								planId: null,
-								reset: null,
-								expiresAt: null,
-							},
-						],
-					},
-				},
+				customerEntitlements: [
+					createCustomerEntitlement({
+						id: `entitlement_${index}`,
+						balance: 100,
+					}),
+				],
 			});
 			const command = parseTrackCommand({
 				input: {
@@ -146,22 +139,12 @@ for (const customers of sizes) {
 			const partitionKey = meteringPartitionKeyOf({ identity });
 			states.push({
 				partitionKey,
-				initializationId: `initialization_${index}`,
-				initializationFingerprint: stateInitializationFingerprintOf({
-					initialization: {
-						schemaVersion: 1,
-						type: "state_initialized",
-						initializationId: `initialization_${index}`,
-						initializedAt: now,
-						state,
-					},
-				}),
-				state: executeTrack({ state, outcome: decision.outcome }).state,
+				state: applyMutation({ state, mutation: decision.mutation }),
 			});
 			receipts.push({
 				partitionKey,
 				recordOffset: BigInt(index),
-				outcome: decision.outcome,
+				mutation: decision.mutation,
 			});
 		}
 		const checkpoint = createPartitionCheckpoint({
@@ -185,30 +168,21 @@ for (const customers of sizes) {
 			customerId: "hot_customer",
 		} as const;
 		store.initializePartition({ topic, partition: 1, nextOffset: 0n });
-		store.restoreState({
+		restoreCustomerStates({
+			store,
 			topic,
 			partition: 1,
-			initializationId: "hot_initialization",
-			state: createCustomerMeteringState({
-				identity,
-				featureStatesById: {
-					messages: {
-						kind: "direct_metered_v1",
-						customerEntitlements: [
-							{
-								id: "hot_entitlement",
-								balance: 1_000_000,
-								usage: 0,
-								granted: 1000000,
-								externalId: null,
-								planId: null,
-								reset: null,
-								expiresAt: null,
-							},
-						],
-					},
-				},
-			}),
+			states: [
+				createState({
+					identity,
+					customerEntitlements: [
+						createCustomerEntitlement({
+							id: "hot_entitlement",
+							balance: 1_000_000,
+						}),
+					],
+				}),
+			],
 		});
 		let offset = 0n;
 		const measureRequest = (): number => {
@@ -237,9 +211,12 @@ for (const customers of sizes) {
 			});
 			if (decision.kind !== "new")
 				throw new Error("Expected new hot deduction");
-			store.applyDurableTrackOutcome({
-				position: { topic, partition: 1, offset: offset++ },
-				outcome: decision.outcome,
+			applyDurableMutation({
+				store,
+				topic,
+				partition: 1,
+				offset: offset++,
+				mutation: decision.mutation,
 			});
 			const after = store.readState({ identity });
 			if (!after) throw new Error("Missing hot customer after track");

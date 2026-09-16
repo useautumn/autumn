@@ -5,7 +5,7 @@ import { initializeBalanceWorkerCustomer } from "@/internal/balances/balanceWork
 import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
 import { createBalanceShadow } from "@/internal/balances/shadow/createBalanceShadow.js";
 import { runWithBalanceShadow } from "@/internal/balances/shadow/runWithBalanceShadow.js";
-import { openSqliteBalanceStateStore } from "../../../../../apps/balance-worker/src/state/sqliteBalanceStateStore.js";
+import { openStateStore } from "../../../../../apps/balance-worker/src/state/openStateStore.js";
 import { createCustomerFixture } from "../balanceWorker/customer-fixture.js";
 import {
 	createWorkerFixture,
@@ -18,7 +18,7 @@ test.concurrent(
 	async () => {
 		const { ctx, fullSubject } = createCustomerFixture();
 		const records: MeteringRecord[] = [];
-		const stateStore = openSqliteBalanceStateStore({
+		const stateStore = openStateStore({
 			databasePath: ":memory:",
 		});
 		stateStore.initializePartition({ topic, partition, nextOffset: 0n });
@@ -84,7 +84,7 @@ test.concurrent(
 				ctx,
 				fullSubject,
 				featureIds: ["messages"],
-				initializationId: "manual-baseline",
+				commandId: "manual-baseline",
 				client: worker.client,
 			});
 			expect(
@@ -105,9 +105,9 @@ test.concurrent(
 			expect(
 				await runBalanceWorkerCheck({ ctx, body, client: worker.client }),
 			).toMatchObject({ balance: { remaining: 67, usage: 43 } });
-			expect(records.map((record) => record.type)).toEqual([
-				"state_initialized",
-				"track_outcome",
+			expect(records.map((record) => record.command.type)).toEqual([
+				"initialize",
+				"track",
 			]);
 			expect(events.filter((event) => event.event === "failed")).toHaveLength(
 				1,

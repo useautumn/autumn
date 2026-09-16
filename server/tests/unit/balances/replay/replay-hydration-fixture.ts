@@ -1,11 +1,11 @@
 import type {
 	CheckCommand,
-	CustomerMeteringState,
+	CustomerState,
 	MeteringIdentity,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
-import { fullSubjectToMeteringState } from "@/internal/balances/balanceWorker/fullSubjectToMeteringState.js";
+import { fullSubjectToCustomerState } from "@/internal/balances/balanceWorker/fullSubjectToCustomerState.js";
 import type {
 	ReplayHydrationSelection,
 	ReplayHydrationSource,
@@ -37,7 +37,7 @@ export function createReplayHydrationFixture({
 	fixture.fullSubject.customer.env =
 		selectedIdentity.env as typeof fixture.fullSubject.customer.env;
 	fixture.fullSubject.customerId = selectedIdentity.customerId;
-	const state = fullSubjectToMeteringState({
+	const state = fullSubjectToCustomerState({
 		ctx: fixture.ctx,
 		fullSubject: fixture.fullSubject,
 		featureIds,
@@ -125,7 +125,7 @@ export function createLoadedSource({
 	state,
 	onLoad,
 }: {
-	state: CustomerMeteringState;
+	state: CustomerState;
 	onLoad?: ReplayHydrationSource["load"];
 }): ReplayHydrationSource {
 	return {

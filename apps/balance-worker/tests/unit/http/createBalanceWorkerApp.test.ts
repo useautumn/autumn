@@ -2,7 +2,7 @@ import { describe, expect, spyOn, test } from "bun:test";
 import {
 	computeCheck,
 	computeTrack,
-	createCustomerMeteringState,
+	createCustomerState,
 	parseCheckCommand,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
@@ -43,25 +43,21 @@ const command = parseTrackCommand({
 		occurredAt: 1,
 	},
 });
-const state = createCustomerMeteringState({
+const state = createCustomerState({
 	identity: command.identity,
-	featureStatesById: {
-		messages: {
-			kind: "direct_metered_v1",
-			customerEntitlements: [
-				{
-					id: "balance",
-					balance: 10,
-					usage: 0,
-					granted: 10,
-					externalId: null,
-					planId: null,
-					reset: null,
-					expiresAt: null,
-				},
-			],
+	customerEntitlements: [
+		{
+			id: "balance",
+			externalId: null,
+			featureId: "messages",
+			balance: 10,
+			usage: 0,
+			granted: 10,
+			planId: null,
+			reset: null,
+			expiresAt: null,
 		},
-	},
+	],
 });
 const decision = computeTrack({ state, command, deduplicationExpiresAt: 1000 });
 const route = { partition: 2, routeEpoch: "9007199254740993" };

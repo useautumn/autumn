@@ -1,10 +1,8 @@
-import type { StateInitializedEvent } from "@autumn/balance-engine";
 import {
-	decide as decideOutcome,
-	submitInitialization as submitInitializationToPartition,
+	decide as decideMutation,
 	waitForPendingCommits as waitForCustomerCommits,
 } from "./actions/decide.js";
-import { createPartitionWriterState } from "./pendingOutcomes.js";
+import { createPartitionWriterState } from "./pendingMutations.js";
 import type { DecidedMutation, MutationSubmission } from "./types/mutation.js";
 import type {
 	PartitionWriter,
@@ -30,7 +28,7 @@ export function createPartitionWriter({
 	function decide<Reply>(
 		submission: MutationSubmission<Reply>,
 	): DecidedMutation<Reply> {
-		return decideOutcome({ scope, submission });
+		return decideMutation({ scope, submission });
 	}
 
 	function waitForPendingCommits({
@@ -41,16 +39,7 @@ export function createPartitionWriter({
 		return waitForCustomerCommits({ scope, customerKey });
 	}
 
-	// Async wrapper so every failure surfaces as a rejection; the action never awaits.
-	async function submitInitialization({
-		initialization,
-	}: {
-		initialization: StateInitializedEvent;
-	}) {
-		return submitInitializationToPartition({ scope, initialization });
-	}
-
-	return { decide, waitForPendingCommits, submitInitialization };
+	return { decide, waitForPendingCommits };
 }
 
 function validateWriterConfig(config: PartitionWriterConfig): void {

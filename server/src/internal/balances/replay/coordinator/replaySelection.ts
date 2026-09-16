@@ -93,7 +93,7 @@ export function selectionKeyOf({
 	]);
 }
 
-export function initializationIdOf({
+export function commandIdOf({
 	selection,
 }: {
 	selection: NormalizedSelection;

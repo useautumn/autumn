@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { executeTrack } from "@autumn/balance-engine";
+import { applyMutation } from "@autumn/balance-engine";
 import {
 	createProgressTracker,
 	InvalidRecordError,
@@ -24,14 +24,18 @@ import {
 	StateBehindKafkaLogStartError,
 } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import {
+	applyDurableMutation,
+	createInitializeMutation,
+	restoreCustomerStates,
+} from "../../fixtures/mutations.js";
+import {
 	closeStoreFixture,
-	createOutcome,
+	createMutation,
 	createState,
 	createStoreFixture,
 	identity,
 	partition,
-	serializeKafkaStateInitializedRecord,
-	serializeKafkaTrackOutcomeRecord,
+	serializeKafkaMutationRecord,
 	topic,
 } from "./kafka-test-fixtures.js";
 
@@ -89,7 +93,7 @@ const createFakeKafkaPartitionOffsets = ({
 function createKafkaMeteringConsumer(params: {
 	consumer: KafkaConsumerClient;
 	partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
-	stateStore: import("../../../src/state/sqliteBalanceStateStore.js").SqliteBalanceStateStore;
+	stateStore: import("../../../src/state/types/stateStore.js").StateStore;
 	topic: string;
 	positionTracker?: ProgressTracker;
 	partitionsConsumedConcurrently?: number;
@@ -299,7 +303,13 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			const outcome = createOutcome({ state });
+			const initialization = createInitializeMutation({
+				state,
+				commandId: "init_1",
+			});
+			const outcome = createMutation({
+				state: applyMutation({ state: null, mutation: initialization }),
+			});
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaMeteringConsumer({
 				consumer: consumerPort,
@@ -313,30 +323,20 @@ describe("Kafka metering consumer", () => {
 				records: [
 					{
 						offset: "0",
-						...serializeKafkaStateInitializedRecord({
-							initialization: {
-								schemaVersion: 1,
-								type: "state_initialized",
-								initializationId: "init_1",
-								initializedAt: 1_700_000_000_000,
-								state,
-							},
+						...serializeKafkaMutationRecord({
+							mutation: initialization,
 						}),
 					},
 					{
 						offset: "1",
-						...serializeKafkaTrackOutcomeRecord({ outcome }),
+						...serializeKafkaMutationRecord({ mutation: outcome }),
 					},
 				],
 			});
 
 			expect(fixture.store.readState({ identity })).toMatchObject({
-				revision: 1,
-				featureStatesById: {
-					messages: {
-						customerEntitlements: [{ balance: 5, usage: 5 }],
-					},
-				},
+				revision: 2,
+				customerEntitlements: { messages_monthly: { balance: 5, usage: 5 } },
 			});
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
 		} finally {
@@ -348,14 +348,14 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state,
+				states: [state],
 			});
-			const serialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({ state }),
+			const serialized = serializeKafkaMutationRecord({
+				mutation: createMutation({ state }),
 			});
 			const positionTracker = createProgressTracker();
 			const consumerPort = createFakeKafkaConsumer({
@@ -384,7 +384,13 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			const outcome = createOutcome({ state });
+			const initialization = createInitializeMutation({
+				state,
+				commandId: "init_1",
+			});
+			const outcome = createMutation({
+				state: applyMutation({ state: null, mutation: initialization }),
+			});
 			const positionTracker = createProgressTracker();
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaMeteringConsumer({
@@ -401,19 +407,13 @@ describe("Kafka metering consumer", () => {
 				records: [
 					{
 						offset: "0",
-						...serializeKafkaStateInitializedRecord({
-							initialization: {
-								schemaVersion: 1,
-								type: "state_initialized",
-								initializationId: "init_1",
-								initializedAt: 1_700_000_000_000,
-								state,
-							},
+						...serializeKafkaMutationRecord({
+							mutation: initialization,
 						}),
 					},
 					{
 						offset: "1",
-						...serializeKafkaTrackOutcomeRecord({ outcome }),
+						...serializeKafkaMutationRecord({ mutation: outcome }),
 					},
 				],
 			});
@@ -433,11 +433,11 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state,
+				states: [state],
 			});
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaMeteringConsumer({
@@ -453,8 +453,8 @@ describe("Kafka metering consumer", () => {
 				records: [
 					{
 						offset: "0",
-						...serializeKafkaTrackOutcomeRecord({
-							outcome: createOutcome({ state }),
+						...serializeKafkaMutationRecord({
+							mutation: createMutation({ state }),
 						}),
 					},
 				],
@@ -501,14 +501,14 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state,
+				states: [state],
 			});
-			const serialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({ state }),
+			const serialized = serializeKafkaMutationRecord({
+				mutation: createMutation({ state }),
 			});
 			const consumerPort = createFakeKafkaConsumer({
 				onCommit: () => {
@@ -536,11 +536,7 @@ describe("Kafka metering consumer", () => {
 			]);
 			expect(fixture.store.readState({ identity })).toMatchObject({
 				revision: 1,
-				featureStatesById: {
-					messages: {
-						customerEntitlements: [{ balance: 5, usage: 5 }],
-					},
-				},
+				customerEntitlements: { messages_monthly: { balance: 5, usage: 5 } },
 			});
 		} finally {
 			closeStoreFixture(fixture);
@@ -551,23 +547,18 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state: initialState,
+				states: [initialState],
 			});
-			const firstOutcome = createOutcome({ state: initialState });
-			const firstExecution = executeTrack({
-				state: initialState,
-				outcome: firstOutcome,
-				existingReceipt: null,
-			});
-			if (firstExecution.kind !== "applied") {
-				throw new Error("Expected first outcome to apply");
-			}
-			const secondOutcome = createOutcome({
-				state: firstExecution.state,
+			const firstOutcome = createMutation({ state: initialState });
+			const secondOutcome = createMutation({
+				state: applyMutation({
+					state: initialState,
+					mutation: firstOutcome,
+				}),
 				commandId: "cmd_2",
 				requestId: "req_2",
 			});
@@ -602,11 +593,7 @@ describe("Kafka metering consumer", () => {
 			]);
 			expect(fixture.store.readState({ identity })).toMatchObject({
 				revision: 2,
-				featureStatesById: {
-					messages: {
-						customerEntitlements: [{ balance: 0, usage: 10 }],
-					},
-				},
+				customerEntitlements: { messages_monthly: { balance: 0, usage: 10 } },
 			});
 		} finally {
 			closeStoreFixture(fixture);
@@ -617,23 +604,18 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state: initialState,
+				states: [initialState],
 			});
-			const firstOutcome = createOutcome({ state: initialState });
-			const firstExecution = executeTrack({
-				state: initialState,
-				outcome: firstOutcome,
-				existingReceipt: null,
-			});
-			if (firstExecution.kind !== "applied") {
-				throw new Error("Expected first outcome to apply");
-			}
-			const secondOutcome = createOutcome({
-				state: firstExecution.state,
+			const firstOutcome = createMutation({ state: initialState });
+			const secondOutcome = createMutation({
+				state: applyMutation({
+					state: initialState,
+					mutation: firstOutcome,
+				}),
 				commandId: "cmd_2",
 				requestId: "req_2",
 			});
@@ -679,13 +661,13 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state: initialState,
+				states: [initialState],
 			});
-			const firstOutcome = createOutcome({ state: initialState });
+			const firstOutcome = createMutation({ state: initialState });
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaMeteringConsumer({
 				consumer: consumerPort,
@@ -701,14 +683,17 @@ describe("Kafka metering consumer", () => {
 
 			const currentState = fixture.store.readState({ identity });
 			if (!currentState) throw new Error("Expected current state");
-			const secondOutcome = createOutcome({
+			const secondOutcome = createMutation({
 				state: currentState,
 				commandId: "cmd_2",
 				requestId: "req_2",
 			});
-			fixture.store.applyDurableTrackOutcome({
-				position: { topic, partition, offset: 1n },
-				outcome: secondOutcome,
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 1n,
+				mutation: secondOutcome,
 			});
 
 			await consumerPort.deliver({
@@ -729,14 +714,14 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state,
+				states: [state],
 			});
-			const serialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({ state }),
+			const serialized = serializeKafkaMutationRecord({
+				mutation: createMutation({ state }),
 			});
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaMeteringConsumer({
@@ -771,20 +756,23 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state: initialState,
+				states: [initialState],
 			});
-			fixture.store.applyDurableTrackOutcome({
-				position: { topic, partition, offset: 0n },
-				outcome: createOutcome({ state: initialState }),
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 0n,
+				mutation: createMutation({ state: initialState }),
 			});
 			const restoredState = fixture.store.readState({ identity });
 			if (!restoredState) throw new Error("Expected restored state");
 			const serialized = serializeMeteringRecord({
-				record: createOutcome({
+				record: createMutation({
 					state: restoredState,
 					commandId: "cmd_2",
 					requestId: "req_2",
@@ -821,14 +809,14 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state,
+				states: [state],
 			});
-			const serialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({ state }),
+			const serialized = serializeKafkaMutationRecord({
+				mutation: createMutation({ state }),
 			});
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaMeteringConsumer({
@@ -863,20 +851,23 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state: initialState,
+				states: [initialState],
 			});
-			fixture.store.applyDurableTrackOutcome({
-				position: { topic, partition, offset: 0n },
-				outcome: createOutcome({ state: initialState }),
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 0n,
+				mutation: createMutation({ state: initialState }),
 			});
 			const restoredState = fixture.store.readState({ identity });
 			if (!restoredState) throw new Error("Expected restored state");
 			const serialized = serializeMeteringRecord({
-				record: createOutcome({
+				record: createMutation({
 					state: restoredState,
 					commandId: "cmd_2",
 					requestId: "req_2",
@@ -914,14 +905,14 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state: initialState,
+				states: [initialState],
 			});
-			const firstSerialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({ state: initialState }),
+			const firstSerialized = serializeKafkaMutationRecord({
+				mutation: createMutation({ state: initialState }),
 			});
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaMeteringConsumer({
@@ -936,7 +927,7 @@ describe("Kafka metering consumer", () => {
 			const restoredState = fixture.store.readState({ identity });
 			if (!restoredState) throw new Error("Expected restored state");
 			const secondSerialized = serializeMeteringRecord({
-				record: createOutcome({
+				record: createMutation({
 					state: restoredState,
 					commandId: "cmd_2",
 					requestId: "req_2",
@@ -960,11 +951,11 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state,
+				states: [state],
 			});
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaMeteringConsumer({
@@ -998,14 +989,14 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state,
+				states: [state],
 			});
-			const serialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({ state }),
+			const serialized = serializeKafkaMutationRecord({
+				mutation: createMutation({ state }),
 			});
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaMeteringConsumer({
@@ -1030,18 +1021,21 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.restoreState({
+			restoreCustomerStates({
+				store: fixture.store,
 				topic,
 				partition,
-				initializationId: "init_1",
-				state: initialState,
+				states: [initialState],
 			});
-			const firstOutcome = createOutcome({ state: initialState });
-			fixture.store.applyDurableTrackOutcome({
-				position: { topic, partition, offset: 0n },
-				outcome: firstOutcome,
+			const firstOutcome = createMutation({ state: initialState });
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 0n,
+				mutation: firstOutcome,
 			});
-			const staleOutcome = createOutcome({
+			const staleOutcome = createMutation({
 				state: initialState,
 				commandId: "cmd_2",
 				requestId: "req_2",
@@ -1123,7 +1117,7 @@ test("withdrawal settles a pending batch without seeking or publishing its stale
 		const batch = port.deliver({
 			offset: "1",
 			...serializeMeteringRecord({
-				record: createOutcome({ state: createState() }),
+				record: createMutation({ state: createState() }),
 			}),
 		});
 		let settled = false;
@@ -1166,14 +1160,14 @@ async function replayStopSettlesBatchesBeforeReplacement(): Promise<void> {
 	const replay = consumer.createReplay({ partition });
 	try {
 		const state = createState();
-		fixture.store.restoreState({
+		restoreCustomerStates({
+			store: fixture.store,
 			topic,
 			partition,
-			initializationId: "init_1",
-			state,
+			states: [state],
 		});
 		const record = serializeMeteringRecord({
-			record: createOutcome({ state }),
+			record: createMutation({ state }),
 		});
 		await consumer.start();
 		await replay.startAndCatchUp({
@@ -1245,17 +1239,16 @@ describe("recordApplication", function recordApplicationTests() {
 			expect(
 				handler.applyRecord({
 					position: { topic, partition, offset: 3n },
-					record: {
-						schemaVersion: 1,
-						type: "state_initialized",
-						initializationId: "initial",
-						initializedAt: 1_700_000_000_000,
+					record: createInitializeMutation({
 						state,
-					},
+						commandId: "initial",
+					}),
 				}),
 			).toBeUndefined();
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(4n);
-			const record = createOutcome({ state });
+			const record = createMutation({
+				state: { ...state, revision: 1 },
+			});
 			expect(
 				handler.applyRecord({
 					position: { topic, partition, offset: 4n },
@@ -1264,7 +1257,7 @@ describe("recordApplication", function recordApplicationTests() {
 			).toBeUndefined();
 			expect(
 				fixture.store.readState({ identity: state.identity })?.revision,
-			).toBe(1);
+			).toBe(2);
 			expect(
 				handler.applyRecord({
 					position: { topic, partition, offset: 4n },

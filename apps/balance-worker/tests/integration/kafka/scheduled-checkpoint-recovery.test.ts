@@ -2,10 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-	createCustomerMeteringState,
-	parseTrackCommand,
-} from "@autumn/balance-engine";
+import { createCustomerState, parseTrackCommand } from "@autumn/balance-engine";
 import { createProducerSession, serializeMeteringRecord } from "@autumn/kafka";
 import {
 	CreateBucketCommand,
@@ -30,7 +27,8 @@ import {
 	createS3PartitionCheckpointStorage,
 	partitionCheckpointObjectKeyOf,
 } from "../../../src/s3/s3PartitionCheckpointStorage.js";
-import { openSqliteBalanceStateStore } from "../../../src/state/sqliteBalanceStateStore.js";
+import { openStateStore } from "../../../src/state/openStateStore.js";
+import { createInitializeMutation } from "../../fixtures/mutations.js";
 
 const timings = {
 	fetchMaxWaitTimeMs: 100,
@@ -80,7 +78,7 @@ const createOwner = ({
 	storage: ReturnType<typeof createS3PartitionCheckpointStorage>;
 	checkpointThread: Omit<S3CheckpointThreadConfig, "databasePath">;
 }) => {
-	const store = openSqliteBalanceStateStore({
+	const store = openStateStore({
 		databasePath: join(directory, `${name}.sqlite`),
 	});
 	const exporter = createS3CheckpointThreadExporter({
@@ -264,25 +262,21 @@ describe("automatic checkpoint recovery", () => {
 					env: "sandbox",
 					customerId: "customer_1",
 				} as const;
-				const state = createCustomerMeteringState({
+				const state = createCustomerState({
 					identity,
-					featureStatesById: {
-						messages: {
-							kind: "direct_metered_v1",
-							customerEntitlements: [
-								{
-									id: "messages",
-									balance: 10,
-									usage: 0,
-									granted: 10,
-									externalId: null,
-									planId: null,
-									reset: null,
-									expiresAt: null,
-								},
-							],
+					customerEntitlements: [
+						{
+							id: "messages",
+							externalId: null,
+							featureId: "messages",
+							balance: 10,
+							usage: 0,
+							granted: 10,
+							planId: null,
+							reset: null,
+							expiresAt: null,
 						},
-					},
+					],
 				});
 				const transaction = await seedProducer.transaction();
 				await transaction.send({
@@ -291,13 +285,10 @@ describe("automatic checkpoint recovery", () => {
 					messages: [
 						{
 							...serializeMeteringRecord({
-								record: {
-									schemaVersion: 1,
-									type: "state_initialized",
-									initializationId: "seed",
-									initializedAt: Date.now(),
+								record: createInitializeMutation({
 									state,
-								},
+									commandId: "seed",
+								}),
 							}),
 							partition: 0,
 						},

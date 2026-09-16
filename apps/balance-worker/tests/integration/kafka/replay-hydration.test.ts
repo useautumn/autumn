@@ -5,13 +5,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	type CheckCommand,
-	type CustomerMeteringState,
-	createCustomerMeteringState,
+	type CustomerState,
+	type CustomerStateMutation,
+	createCustomerState,
 	type MeteringIdentity,
 	parseCheckCommand,
 	parseTrackCommand,
 	type TrackCommand,
-	type TrackOutcome,
 } from "@autumn/balance-engine";
 import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
 import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
@@ -73,7 +73,7 @@ const BASELINE_USAGE = 28;
 const TRACKED_VALUE = 5;
 const BALANCE_AFTER_TRACK = 67;
 const USAGE_AFTER_TRACK = 33;
-const REVISION_AFTER_TRACK = 1;
+const REVISION_AFTER_TRACK = 2;
 const TRACK_COMMAND_ID = "replay-hydration-track-command";
 const TRACK_REQUEST_ID = "replay-hydration-track-request";
 
@@ -115,7 +115,7 @@ type ReplayScope = {
 	workers: WorkerFixture[];
 	coordinators: ReplayHydrationCoordinator[];
 	baselineSource: RecordingReplaySource;
-	firstOutcome?: TrackOutcome;
+	firstMutation?: CustomerStateMutation;
 };
 
 type PersistedReplayRows = { state: unknown; receipts: unknown };
@@ -132,26 +132,22 @@ function isRejectedResult(
 	return result.status === "rejected";
 }
 
-function createBaselineState(): CustomerMeteringState {
-	return createCustomerMeteringState({
+function createBaselineState(): CustomerState {
+	return createCustomerState({
 		identity: REPLAY_IDENTITY,
-		featureStatesById: {
-			[FEATURE_ID]: {
-				kind: "direct_metered_v1",
-				customerEntitlements: [
-					{
-						id: CUSTOMER_ENTITLEMENT_ID,
-						balance: BASELINE_BALANCE,
-						usage: BASELINE_USAGE,
-						granted: BASELINE_GRANTED,
-						externalId: null,
-						planId: null,
-						reset: null,
-						expiresAt: null,
-					},
-				],
+		customerEntitlements: [
+			{
+				id: CUSTOMER_ENTITLEMENT_ID,
+				externalId: null,
+				featureId: FEATURE_ID,
+				balance: BASELINE_BALANCE,
+				usage: BASELINE_USAGE,
+				granted: BASELINE_GRANTED,
+				planId: null,
+				reset: null,
+				expiresAt: null,
 			},
-		},
+		],
 	});
 }
 
@@ -423,9 +419,9 @@ function readReplayRows({
 	const database = new Database(databasePath, { readonly: true });
 	try {
 		return {
-			state: database.query("SELECT revision FROM customer_states").get(),
+			state: database.query("SELECT revision FROM subject_states").get(),
 			receipts: database
-				.query("SELECT COUNT(*) AS count FROM track_receipts")
+				.query("SELECT COUNT(*) AS count FROM mutation_receipts")
 				.get(),
 		};
 	} finally {
@@ -495,11 +491,13 @@ async function hydrateColdCustomerFromSource({
 	});
 	expect(tracked.kind).toBe("new");
 	if (tracked.kind !== "new") throw new Error("Expected a new track decision");
-	expect(tracked.outcome.status).toBe("applied");
-	expect(tracked.outcome.balanceBefore).toBe(BASELINE_BALANCE);
-	expect(tracked.outcome.balanceAfter).toBe(BALANCE_AFTER_TRACK);
-	expect(tracked.outcome.revisionAfter).toBe(REVISION_AFTER_TRACK);
-	scope.firstOutcome = tracked.outcome;
+	expect(tracked.mutation.result).toMatchObject({
+		status: "applied",
+		balanceBefore: BASELINE_BALANCE,
+		balanceAfter: BALANCE_AFTER_TRACK,
+	});
+	expect(tracked.mutation.revision.after).toBe(REVISION_AFTER_TRACK);
+	scope.firstMutation = tracked.mutation;
 	await expectCheckedBalance({
 		coordinator,
 		requestId: "replay-hydration-check-hydrated",
@@ -511,11 +509,11 @@ async function hydrateColdCustomerFromSource({
 	expect(duplicate.kind).toBe("duplicate");
 	if (duplicate.kind !== "duplicate")
 		throw new Error("Expected a duplicate track decision");
-	expect(duplicate.outcome).toEqual(tracked.outcome);
+	expect(duplicate.mutation).toEqual(tracked.mutation);
 	expect(scope.baselineSource.readLoadCount()).toBe(1);
 	expect(readReplayRows({ databasePath: worker.databasePath })).toEqual({
 		state: { revision: REVISION_AFTER_TRACK },
-		receipts: { count: 1 },
+		receipts: { count: 2 },
 	});
 	expect(worker.errors).toEqual([]);
 }
@@ -526,7 +524,7 @@ async function serveReplayFromKafkaLogAfterRestart({
 }: {
 	scope: ReplayScope;
 }): Promise<void> {
-	const recorded = scope.firstOutcome;
+	const recorded = scope.firstMutation;
 	if (!recorded)
 		throw new Error("Cold hydration must record the first outcome");
 	await retireReplayRuntime({ scope });
@@ -546,10 +544,10 @@ async function serveReplayFromKafkaLogAfterRestart({
 	expect(duplicate.kind).toBe("duplicate");
 	if (duplicate.kind !== "duplicate")
 		throw new Error("Expected a duplicate track decision");
-	expect(duplicate.outcome).toEqual(recorded);
+	expect(duplicate.mutation).toEqual(recorded);
 	expect(readReplayRows({ databasePath: worker.databasePath })).toEqual({
 		state: { revision: REVISION_AFTER_TRACK },
-		receipts: { count: 1 },
+		receipts: { count: 2 },
 	});
 	expect(worker.errors).toEqual([]);
 }

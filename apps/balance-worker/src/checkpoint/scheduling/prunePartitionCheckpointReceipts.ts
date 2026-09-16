@@ -1,4 +1,4 @@
-import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
+import type { StateStore } from "../../state/types/stateStore.js";
 import {
 	checkpointFailureOf,
 	type PartitionCheckpointEntry,
@@ -18,7 +18,7 @@ export const prunePartitionCheckpointReceipts = async ({
 	onStateFailure,
 }: {
 	entries: readonly PartitionCheckpointEntry[];
-	stateStore: Pick<SqliteBalanceStateStore, "pruneExpiredTrackReceipts">;
+	stateStore: Pick<StateStore, "pruneExpiredReceipts">;
 	clock: PartitionCheckpointSchedulerClock;
 	config: PartitionCheckpointSchedulerConfig;
 	isCurrent(entry: PartitionCheckpointEntry): boolean;
@@ -50,7 +50,7 @@ export const prunePartitionCheckpointReceipts = async ({
 		const startedAt = clock.monotonicNow();
 		entry.health.cleanup.lastAttemptAt = clock.now();
 		try {
-			const { deletedCount } = stateStore.pruneExpiredTrackReceipts({
+			const { deletedCount } = stateStore.pruneExpiredReceipts({
 				topic: entry.topic,
 				partition: entry.partition,
 				expiresAtOrBefore: cutoff,

@@ -1,8 +1,11 @@
-import type { TrackCommand } from "@autumn/balance-engine";
+import {
+	findCustomerEntitlementsForFeature,
+	type TrackCommand,
+} from "@autumn/balance-engine";
 import type { FullSubject, TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { BalanceWorkerUnsupportedError } from "../balanceWorker/balanceWorkerErrors.js";
-import { fullSubjectToMeteringState } from "../balanceWorker/fullSubjectToMeteringState.js";
+import { fullSubjectToCustomerState } from "../balanceWorker/fullSubjectToCustomerState.js";
 import { validateBalanceWorkerRequest } from "../balanceWorker/validateBalanceWorkerRequest.js";
 import { trackParamsToTrackCommand } from "../track/balanceWorker/balanceWorkerTrackRequest.js";
 import type { BalanceShadowConfig } from "./balanceShadowTypes.js";
@@ -41,15 +44,15 @@ export function prepareBalanceShadowTrack({
 		return { kind: "skip", reason: "value_not_supported" };
 	try {
 		validateBalanceWorkerRequest({ ctx, body });
-		const state = fullSubjectToMeteringState({
+		const state = fullSubjectToCustomerState({
 			ctx,
 			fullSubject,
 			featureIds: [body.feature_id],
 		});
-		const feature = state.featureStatesById[body.feature_id];
-		if (feature.kind !== "direct_metered_v1")
-			return { kind: "skip", reason: "feature_not_supported" };
-		const entitlement = feature.customerEntitlements[0];
+		const entitlement = findCustomerEntitlementsForFeature({
+			state,
+			featureId: body.feature_id,
+		})[0];
 		if (
 			(entitlement.reset?.nextResetAt != null &&
 				entitlement.reset.nextResetAt <= config.expiresAt) ||

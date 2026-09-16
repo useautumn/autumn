@@ -100,7 +100,6 @@ export type {
 export {
 	meteringTopic,
 	parseMeteringRecord,
-	parseMeteringTrackOutcome,
 	serializeMeteringRecord,
 } from "./topics/metering/meteringTopic.js";
 export { createMeteringPublisher } from "./topics/metering/publisher/createMeteringPublisher.js";

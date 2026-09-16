@@ -2,7 +2,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { CommittedOutcomeAppender } from "../processor/writer/types/partitionWriter.js";
 import { MutationBatchNotCommittedError } from "../processor/writer/writerErrors.js";
 import type { PartitionRuntimeDependencies } from "../runtime/types/partitionRuntime.js";
-import type { SqliteBalanceStateStore } from "../state/sqliteBalanceStateStore.js";
+import type { StateStore } from "../state/types/stateStore.js";
 
 type CommitLog = {
 	topic: string;
@@ -87,8 +87,8 @@ export function createPartitionCommitLogging({
 	}
 
 	function applyDurableMutations(
-		params: Parameters<SqliteBalanceStateStore["applyDurableMutations"]>[0],
-	): ReturnType<SqliteBalanceStateStore["applyDurableMutations"]> {
+		params: Parameters<StateStore["applyDurableMutations"]>[0],
+	): ReturnType<StateStore["applyDurableMutations"]> {
 		const position = params.records[0]?.position;
 		if (!position) return ctx.stateStore.applyDurableMutations(params);
 		const metadata = {
@@ -99,7 +99,7 @@ export function createPartitionCommitLogging({
 			startedAt: now(),
 			phase: "sqlite_apply" as const,
 		};
-		let result: ReturnType<SqliteBalanceStateStore["applyDurableMutations"]>;
+		let result: ReturnType<StateStore["applyDurableMutations"]>;
 		try {
 			result = ctx.stateStore.applyDurableMutations(params);
 		} catch (cause) {
@@ -118,10 +118,7 @@ export function createPartitionCommitLogging({
 		appender: { appendCommitted },
 		stateStore: {
 			readState: ctx.stateStore.readState.bind(ctx.stateStore),
-			readTrackReceipt: ctx.stateStore.readTrackReceipt.bind(ctx.stateStore),
-			readInitializationReceipt: ctx.stateStore.readInitializationReceipt.bind(
-				ctx.stateStore,
-			),
+			readReceipt: ctx.stateStore.readReceipt.bind(ctx.stateStore),
 			readNextOffset: ctx.stateStore.readNextOffset.bind(ctx.stateStore),
 			applyDurableMutations,
 		},

@@ -5,7 +5,7 @@ export type WorkerErrorCode =
 	| "NOT_OWNER"
 	| "NOT_READY"
 	| "NOT_INITIALIZED"
-	| "INITIALIZATION_CONFLICT"
+	| "COMMAND_CONFLICT"
 	| "INTERNAL";
 export type WorkerErrorResponse = {
 	error: { code: WorkerErrorCode; message: string };
@@ -76,7 +76,7 @@ export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
 			return 400;
 		case "NOT_OWNER":
 		case "NOT_INITIALIZED":
-		case "INITIALIZATION_CONFLICT":
+		case "COMMAND_CONFLICT":
 			return 409;
 		case "NOT_READY":
 			return 503;

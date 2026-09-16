@@ -10,12 +10,14 @@ import type {
 
 function summarizeDecision({ decision }: { decision: TrackDecision }) {
 	if (decision.kind === "unsupported") return decision;
+	const { result } = decision.mutation;
+	if (result.type !== "track") return { kind: decision.kind };
 	return {
 		kind: decision.kind,
-		status: decision.outcome.status,
-		remaining: decision.outcome.balanceAfter,
-		usage: decision.outcome.balanceSnapshot.usage,
-		appliedValue: decision.outcome.appliedValue,
+		status: result.status,
+		remaining: result.balanceAfter,
+		usage: result.balanceSnapshot.usage,
+		appliedValue: result.appliedValue,
 	};
 }
 

@@ -1,135 +1,137 @@
 import { describe, expect, test } from "bun:test";
 import * as balanceEngine from "../../src/balanceEngine.js";
 import {
-	computeCheck,
-	computeTrack as computeTrackOutcome,
-	createCustomerMeteringState,
-	parseCheckCommand,
-	parseCustomerMeteringState,
-	parseStateInitializedEvent,
+	type CustomerStateMutation,
+	computeInitialize,
+	computeTrack,
+	meteringPartitionKeyOf,
+	mutationFingerprintOf,
+	parseCustomerState,
+	parseCustomerStateMutation,
 	parseTrackCommand,
-	parseTrackOutcome,
-	stateInitializationFingerprintOf,
+	shadowComparisonKeyOf,
 } from "../../src/balanceEngine.js";
+import {
+	createCustomerEntitlement,
+	createInitializeCommand,
+	createState,
+	createTrackCommand,
+	deduplicationExpiresAt,
+	identity,
+	requireNewMutation,
+} from "./engineFixtures.js";
 
-const identity = {
-	orgId: "org_1",
-	env: "sandbox",
-	customerId: "cus_1",
-} as const;
+const trackMutation = requireNewMutation(
+	computeTrack({
+		state: createState(),
+		command: createTrackCommand(),
+		deduplicationExpiresAt,
+	}),
+);
+const initializeMutation = computeInitialize({
+	command: createInitializeCommand(),
+	deduplicationExpiresAt,
+});
 
-const defaultDeduplicationExpiresAt = 1_700_086_400_000;
+const refingerprinted = ({
+	mutation,
+}: {
+	mutation: CustomerStateMutation;
+}): CustomerStateMutation => ({
+	...mutation,
+	receipt: {
+		...mutation.receipt,
+		fingerprint: mutationFingerprintOf({ mutation }),
+	},
+});
 
-const computeTrack = ({
-	deduplicationExpiresAt = defaultDeduplicationExpiresAt,
-	...input
-}: Omit<Parameters<typeof computeTrackOutcome>[0], "deduplicationExpiresAt"> & {
-	deduplicationExpiresAt?: number;
-}) => computeTrackOutcome({ ...input, deduplicationExpiresAt });
+describe("balance engine contract boundaries", () => {
+	test("round-trips every record through JSON", () => {
+		for (const mutation of [trackMutation, initializeMutation]) {
+			expect(
+				parseCustomerStateMutation({
+					input: JSON.parse(JSON.stringify(mutation)),
+				}),
+			).toEqual(mutation);
+		}
+		expect(
+			parseCustomerState({ input: JSON.parse(JSON.stringify(createState())) }),
+		).toEqual(createState());
+	});
 
-const createState = ({ balance = 10 }: { balance?: number } = {}) =>
-	createCustomerMeteringState({
-		identity,
-		featureStatesById: {
-			messages: {
-				kind: "direct_metered_v1",
-				customerEntitlements: [
+	test("refuses mutations whose envelope contradicts itself", () => {
+		const revisionGap = {
+			...trackMutation,
+			revision: { before: 0, after: 2 },
+		};
+		const kindMismatch = {
+			...initializeMutation,
+			result: trackMutation.result,
+		};
+		const initializeWithUpdate = refingerprinted({
+			mutation: {
+				...initializeMutation,
+				changes: [
 					{
+						table: "customerEntitlements",
+						op: "update",
 						id: "messages_monthly",
-						balance,
-						usage: 0,
-						granted: balance,
-						externalId: null,
-						planId: null,
-						reset: null,
-						expiresAt: null,
+						before: { balance: 10 },
+						after: { balance: 5 },
 					},
 				],
 			},
-		},
+		});
+		const initializeAfterRevisionZero = {
+			...initializeMutation,
+			revision: { before: 1, after: 2 },
+		};
+		const wrongFingerprint = {
+			...trackMutation,
+			receipt: { ...trackMutation.receipt, fingerprint: "not_the_command" },
+		};
+
+		for (const input of [
+			revisionGap,
+			kindMismatch,
+			initializeWithUpdate,
+			initializeAfterRevisionZero,
+			wrongFingerprint,
+		]) {
+			expect(() => parseCustomerStateMutation({ input })).toThrow();
+		}
 	});
 
-const createTrackCommand = ({
-	requestId = "req_1",
-	properties = null,
-	occurredAt = 1_700_000_000_000,
-	overageBehavior = "reject",
-}: {
-	requestId?: string;
-	properties?: Record<string, unknown> | null;
-	occurredAt?: number;
-	overageBehavior?: "cap" | "reject" | "overflow";
-} = {}) =>
-	parseTrackCommand({
-		input: {
-			schemaVersion: 1,
-			type: "track",
-			commandId: "cmd_1",
-			requestId,
-			identity,
-			entityId: null,
-			featureId: "messages",
-			value: 5,
-			overageBehavior,
-			properties,
-			occurredAt,
-		},
-	});
-
-const createCheckCommand = ({
-	properties = null,
-}: {
-	properties?: Record<string, unknown> | null;
-} = {}) =>
-	parseCheckCommand({
-		input: {
-			schemaVersion: 1,
-			type: "check",
-			requestId: "req_check_1",
-			identity,
-			entityId: null,
-			featureId: "messages",
-			requiredBalance: 1,
-			properties,
-			occurredAt: 1_700_000_000_000,
-		},
-	});
-
-const requireNewOutcome = (decision: ReturnType<typeof computeTrack>) => {
-	if (decision.kind !== "new") {
-		throw new Error(`Expected a new outcome, received ${decision.kind}`);
-	}
-	return decision.outcome;
-};
-
-describe("balance engine contract boundaries", () => {
-	test("keeps receipt-retention policy out of caller track commands", () => {
-		const input: Record<string, unknown> = { ...createTrackCommand() };
-
-		expect(() => parseTrackCommand({ input })).not.toThrow();
+	test("keys customer state rows by their own id", () => {
 		expect(() =>
-			parseTrackCommand({
+			parseCustomerState({
 				input: {
-					...input,
-					deduplicationExpiresAt: 1_700_086_400_000,
+					...createState(),
+					customerEntitlements: {
+						messages_rollover: createCustomerEntitlement(),
+					},
 				},
 			}),
 		).toThrow();
 	});
 
-	test("names property-sensitive commands as unsupported", () => {
-		expect(
-			computeTrack({
-				state: createState(),
-				command: createTrackCommand({ properties: { region: "eu" } }),
+	test("keeps receipt-retention policy out of caller track commands", () => {
+		expect(() =>
+			parseTrackCommand({ input: { ...createTrackCommand() } }),
+		).not.toThrow();
+		expect(() =>
+			parseTrackCommand({
+				input: { ...createTrackCommand(), deduplicationExpiresAt },
 			}),
-		).toEqual({ kind: "unsupported", reason: "properties_not_supported" });
-		expect(
-			computeCheck({
-				state: createState(),
-				command: createCheckCommand({ properties: { region: "eu" } }),
+		).toThrow();
+		expect(() =>
+			parseTrackCommand({
+				input: { ...createTrackCommand(), schemaVersion: 2 },
 			}),
-		).toEqual({ kind: "unsupported", reason: "properties_not_supported" });
+		).toThrow();
+		expect(() =>
+			parseTrackCommand({ input: { ...createTrackCommand(), value: 0 } }),
+		).toThrow();
 	});
 
 	test("rejects properties that cannot survive JSON transport", () => {
@@ -139,211 +141,13 @@ describe("balance engine contract boundaries", () => {
 		).toThrow();
 	});
 
-	test("stamps the resolved deduplication deadline onto the outcome", () => {
-		const outcome = requireNewOutcome(
-			computeTrack({
-				state: createState(),
-				command: createTrackCommand(),
-				deduplicationExpiresAt: 1_700_086_400_000,
-			}),
+	test("builds customer ordering and exact shadow comparison keys", () => {
+		expect(meteringPartitionKeyOf({ identity })).toBe(
+			'["org_1","sandbox","cus_1"]',
 		);
-
-		expect(outcome.deduplicationExpiresAt).toBe(1_700_086_400_000);
-	});
-
-	test("validates a versioned initial-state event", () => {
-		const event = parseStateInitializedEvent({
-			input: {
-				schemaVersion: 1,
-				type: "state_initialized",
-				initializationId: "init_1",
-				initializedAt: 1_700_000_000_000,
-				state: createState(),
-			},
-		});
-
-		expect(event.state.revision).toBe(0);
-		expect(() =>
-			parseStateInitializedEvent({
-				input: {
-					...event,
-					state: { ...event.state, revision: 1 },
-				},
-			}),
-		).toThrow();
-	});
-
-	test("fingerprints the complete state independent of entitlement order", () => {
-		const state = createCustomerMeteringState({
-			identity,
-			featureStatesById: {
-				messages: {
-					kind: "direct_metered_v1",
-					customerEntitlements: [
-						{
-							id: "messages_monthly",
-							balance: 10,
-							usage: 0,
-							granted: 10,
-							externalId: null,
-							planId: null,
-							reset: null,
-							expiresAt: null,
-						},
-						{
-							id: "messages_rollover",
-							balance: 5,
-							usage: 2,
-							granted: 7,
-							externalId: null,
-							planId: null,
-							reset: null,
-							expiresAt: null,
-						},
-					],
-				},
-			},
-		});
-		const initialization = parseStateInitializedEvent({
-			input: {
-				schemaVersion: 1,
-				type: "state_initialized",
-				initializationId: "init_1",
-				initializedAt: 1_700_000_000_000,
-				state,
-			},
-		});
-		const reorderedInitialization = parseStateInitializedEvent({
-			input: {
-				...initialization,
-				state: {
-					...state,
-					featureStatesById: {
-						messages: {
-							...state.featureStatesById.messages,
-							customerEntitlements: [
-								...state.featureStatesById.messages.customerEntitlements,
-							].reverse(),
-						},
-					},
-				},
-			},
-		});
-
-		expect(stateInitializationFingerprintOf({ initialization })).toBe(
-			stateInitializationFingerprintOf({
-				initialization: reorderedInitialization,
-			}),
+		expect(shadowComparisonKeyOf({ command: createTrackCommand() })).toBe(
+			'["org_1","sandbox","cus_1","messages","cmd_1"]',
 		);
-	});
-
-	test("rejects outcomes whose metadata contradicts their mutations", () => {
-		const outcome = requireNewOutcome(
-			computeTrack({ state: createState(), command: createTrackCommand() }),
-		);
-
-		for (const input of [
-			{ ...outcome, appliedValue: 4 },
-			{ ...outcome, balanceAfter: 6 },
-			{
-				...outcome,
-				mutations: [{ ...outcome.mutations[0], usageAfter: 4 }],
-			},
-			{ ...outcome, commandFingerprint: "incorrect" },
-		]) {
-			expect(() => parseTrackOutcome({ input })).toThrow();
-		}
-	});
-
-	test("rejects capped outcomes that exceed available balance", () => {
-		const outcome = requireNewOutcome(
-			computeTrack({
-				state: createState({ balance: 3 }),
-				command: createTrackCommand({ overageBehavior: "cap" }),
-			}),
-		);
-
-		expect(() =>
-			parseTrackOutcome({
-				input: {
-					...outcome,
-					appliedValue: 4,
-					balanceAfter: -1,
-					mutations: [
-						{
-							...outcome.mutations[0],
-							balanceAfter: -1,
-							usageAfter: 4,
-						},
-					],
-				},
-			}),
-		).toThrow();
-	});
-
-	test("returns API-compatible remaining balance after overflow", () => {
-		const result = computeCheck({
-			state: createState({ balance: -2 }),
-			command: createCheckCommand(),
-		});
-
-		expect(result).toMatchObject({
-			kind: "decided",
-			allowed: false,
-			balance: 0,
-		});
-	});
-
-	test("uses an explicitly versioned direct-metered state shape", () => {
-		expect(() =>
-			parseCustomerMeteringState({
-				input: {
-					schemaVersion: 1,
-					identity,
-					revision: 0,
-					featureStatesById: {
-						messages: {
-							kind: "direct_metered_v1",
-							customerEntitlements: [
-								{
-									id: "messages_monthly",
-									balance: 10,
-									usage: 0,
-									granted: 10,
-									externalId: null,
-									planId: null,
-									reset: null,
-									expiresAt: null,
-								},
-							],
-						},
-					},
-				},
-			}),
-		).not.toThrow();
-		expect(() =>
-			parseCustomerMeteringState({
-				input: {
-					...createState(),
-					featureStatesById: {
-						messages: {
-							customerEntitlements: [
-								{
-									id: "messages_monthly",
-									balance: 10,
-									usage: 0,
-									granted: 10,
-									externalId: null,
-									planId: null,
-									reset: null,
-									expiresAt: null,
-								},
-							],
-						},
-					},
-				},
-			}),
-		).toThrow();
 	});
 
 	test("keeps validation libraries behind parser functions", () => {
@@ -352,9 +156,5 @@ describe("balance engine contract boundaries", () => {
 				exportName.endsWith("Schema"),
 			),
 		).toEqual([]);
-	});
-
-	test("keeps receipts outside the bounded customer balance state", () => {
-		expect(createState()).not.toHaveProperty("receipts");
 	});
 });

@@ -5,7 +5,7 @@ import {
 import {
 	PartitionProgressNotFoundError,
 	UnexpectedKafkaOffsetError,
-} from "../../sqliteBalanceStateErrors.js";
+} from "../../stateStoreErrors.js";
 import type { KafkaRecordPosition } from "../../types/kafkaRecordPosition.js";
 import type { StateStoreContext } from "../../types/stateStoreContext.js";
 

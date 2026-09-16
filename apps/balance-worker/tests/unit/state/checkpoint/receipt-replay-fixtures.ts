@@ -1,19 +1,22 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-	createCustomerMeteringState,
-	parseTrackCommand,
-	type StateInitializedEvent,
-	type TrackDecision,
+import type {
+	CustomerStateMutation,
+	TrackDecision,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import { parsePartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { createPartitionProcessor } from "../../../../src/processor/createPartitionProcessor.js";
+import { openStateStore } from "../../../../src/state/openStateStore.js";
+import type { StateStore } from "../../../../src/state/types/stateStore.js";
 import {
-	openSqliteBalanceStateStore,
-	type SqliteBalanceStateStore,
-} from "../../../../src/state/sqliteBalanceStateStore.js";
+	applyDurableMutation,
+	createCustomerEntitlement,
+	createInitializeMutation,
+	createState,
+	createTrackCommand,
+} from "../../../fixtures/mutations.js";
 
 export const topic = "metering-receipt-replay";
 export const partition = 0;
@@ -34,26 +37,15 @@ export const createCommand = ({
 }: {
 	commandId?: string;
 	value?: number;
-} = {}) =>
-	parseTrackCommand({
-		input: {
-			schemaVersion: 1,
-			type: "track",
-			commandId,
-			requestId: `req_${commandId}`,
-			identity,
-			entityId: null,
-			featureId: "messages",
-			value,
-			overageBehavior: "reject",
-			properties: null,
-			occurredAt: 1_700_000_000_000,
-		},
-	});
+} = {}) => createTrackCommand({ identity, commandId, value });
 
-const requireNewOutcome = ({ decision }: { decision: TrackDecision }) => {
-	if (decision.kind !== "new") throw new Error("Expected a new track outcome");
-	return decision.outcome;
+const requireNewMutation = ({
+	decision,
+}: {
+	decision: TrackDecision;
+}): CustomerStateMutation => {
+	if (decision.kind !== "new") throw new Error("Expected a new track mutation");
+	return decision.mutation;
 };
 
 export const createReceiptReplayFixture = async ({
@@ -62,43 +54,33 @@ export const createReceiptReplayFixture = async ({
 	checkpointCut?: "before_first_track" | "before_expiry" | "after_expiry";
 } = {}) => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-receipt-replay-"));
-	const liveStore = openSqliteBalanceStateStore({
+	const liveStore = openStateStore({
 		databasePath: join(directory, "live.sqlite"),
 	});
-	const restoredStore = openSqliteBalanceStateStore({
+	const restoredStore = openStateStore({
 		databasePath: join(directory, "restored.sqlite"),
 	});
 	let now = 1_700_000_000_000;
-	const initialization: StateInitializedEvent = {
-		schemaVersion: 1,
-		type: "state_initialized",
-		initializationId: "init_1",
-		initializedAt: now,
-		state: createCustomerMeteringState({
-			identity,
-			featureStatesById: {
-				messages: {
-					kind: "direct_metered_v1",
-					customerEntitlements: [
-						{
-							id: "messages_monthly",
-							externalId: "monthly-grant",
-							balance: 10,
-							usage: 0,
-							granted: 10,
-							planId: "pro",
-							reset: {
-								interval: "month",
-								intervalCount: 1,
-								nextResetAt: 1_800_000_000_000,
-							},
-							expiresAt: null,
-						},
-					],
+	const baselineState = createState({
+		identity,
+		customerEntitlements: [
+			createCustomerEntitlement({
+				externalId: "monthly-grant",
+				planId: "pro",
+				balance: 10,
+				reset: {
+					interval: "month",
+					intervalCount: 1,
+					nextResetAt: 1_800_000_000_000,
 				},
-			},
-		}),
-	};
+			}),
+		],
+	});
+	const initialization = createInitializeMutation({
+		state: baselineState,
+		occurredAt: now,
+		deduplicationExpiresAt: now + 86_400_000,
+	});
 	const records: MeteringRecord[] = [initialization];
 	const appender = {
 		appendCommitted: async ({
@@ -111,11 +93,7 @@ export const createReceiptReplayFixture = async ({
 			return { baseOffset };
 		},
 	};
-	const createProcessor = ({
-		stateStore,
-	}: {
-		stateStore: SqliteBalanceStateStore;
-	}) =>
+	const createProcessor = ({ stateStore }: { stateStore: StateStore }) =>
 		createPartitionProcessor({
 			ctx: {
 				stateStore,
@@ -153,26 +131,30 @@ export const createReceiptReplayFixture = async ({
 
 	try {
 		liveStore.initializePartition({ topic, partition, nextOffset: 0n });
-		liveStore.applyDurableStateInitialization({
-			position: { topic, partition, offset: 0n },
-			initialization,
+		applyDurableMutation({
+			store: liveStore,
+			topic,
+			partition,
+			offset: 0n,
+			mutation: initialization,
 		});
 		let checkpoint = checkpointCut === "before_first_track" ? capture() : null;
-		const firstOutcome = requireNewOutcome({
+		const firstMutation = requireNewMutation({
 			decision: await liveProcessor.track({ command: createCommand() }),
 		});
 		if (checkpointCut === "before_expiry") checkpoint = capture();
-		now = firstOutcome.deduplicationExpiresAt;
+		now = firstMutation.receipt.expiresAt;
 		if (checkpointCut === "after_expiry") checkpoint = capture();
 		if (!checkpoint) throw new Error("Expected a checkpoint cut");
-		const pruned = liveStore.pruneExpiredTrackReceipts({
+		const pruned = liveStore.pruneExpiredReceipts({
 			topic,
 			partition,
 			expiresAtOrBefore: now,
-			limit: 1,
+			limit: 2,
 		});
-		const reusedCommand = createCommand({ value: 3 });
-		const reusedOutcome = requireNewOutcome({
+		// Same request, recomputed after the owner pruned its receipt.
+		const reusedCommand = createCommand();
+		const reusedMutation = requireNewMutation({
 			decision: await liveProcessor.track({ command: reusedCommand }),
 		});
 		restoredStore.restorePartitionCheckpoint({
@@ -188,13 +170,14 @@ export const createReceiptReplayFixture = async ({
 		);
 		return {
 			initialization,
+			baselineState,
 			liveStore,
 			restoredStore,
 			restoredProcessor,
 			checkpoint,
-			firstOutcome,
+			firstMutation,
 			reusedCommand,
-			reusedOutcome,
+			reusedMutation,
 			tail,
 			records,
 			pruned,

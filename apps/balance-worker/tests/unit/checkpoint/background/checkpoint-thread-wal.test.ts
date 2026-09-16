@@ -45,7 +45,9 @@ test.concurrent(
 					log: 0n,
 					checkpointed: 0n,
 				});
-				expect(fixture.store.readState({ identity })?.revision).toBe(attempt);
+				expect(fixture.store.readState({ identity })?.revision).toBe(
+					attempt + 1,
+				);
 			}
 			expect(fixture.starts()).toBe(3);
 		} finally {

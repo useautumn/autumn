@@ -3,28 +3,27 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+	applyMutation,
+	type CustomerState,
 	computeTrack,
-	createCustomerMeteringState,
-	executeTrack,
+	createCustomerState,
+	type InitializationDecision,
+	type InitializeCommand,
 	type MeteringIdentity,
 	meteringPartitionKeyOf,
-	parseStateInitializedEvent,
 	parseTrackCommand,
-	type StateInitializedEvent,
 	type TrackCommand,
 	type TrackDecision,
 	trackCommandFingerprintOf,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
-import {
-	type InitializationDecision,
-	initialize,
-} from "../../../../src/processor/commands/initialize.js";
+import { initialize } from "../../../../src/processor/commands/initialize.js";
 import {
 	type TrackReceiptPolicy,
 	track,
 } from "../../../../src/processor/commands/track.js";
 import { createAcceptedCommands } from "../../../../src/processor/common/acceptedCommands.js";
+import { PartitionProcessorStateNotFoundError } from "../../../../src/processor/common/processorErrors.js";
 import type { PartitionProcessorScope } from "../../../../src/processor/types/partitionProcessor.js";
 import { createPartitionWriter as createPartitionWriterCore } from "../../../../src/processor/writer/createPartitionWriter.js";
 import type {
@@ -43,13 +42,14 @@ import {
 	PartitionWriterCapacityError,
 	PartitionWriterCommandConflictError,
 	PartitionWriterRecoveryRequiredError,
-	PartitionWriterStateNotFoundError,
 } from "../../../../src/processor/writer/writerErrors.js";
-import { ConflictingMeteringStateInitializationError } from "../../../../src/state/sqliteBalanceStateErrors.js";
+import { openStateStore } from "../../../../src/state/openStateStore.js";
+import type { StateStore } from "../../../../src/state/types/stateStore.js";
 import {
-	openSqliteBalanceStateStore,
-	type SqliteBalanceStateStore,
-} from "../../../../src/state/sqliteBalanceStateStore.js";
+	applyDurableMutation,
+	createInitializeCommand,
+	restoreCustomerStates,
+} from "../../../fixtures/mutations.js";
 
 const topic = "metering-events-v1";
 const partition = 0;
@@ -66,26 +66,22 @@ const createState = ({
 }: {
 	identity: MeteringIdentity;
 	balance?: number;
-}) =>
-	createCustomerMeteringState({
+}): CustomerState =>
+	createCustomerState({
 		identity,
-		featureStatesById: {
-			messages: {
-				kind: "direct_metered_v1",
-				customerEntitlements: [
-					{
-						id: "messages_monthly",
-						balance,
-						usage: 0,
-						granted: balance,
-						externalId: null,
-						planId: null,
-						reset: null,
-						expiresAt: null,
-					},
-				],
+		customerEntitlements: [
+			{
+				id: "messages_monthly",
+				externalId: null,
+				featureId: "messages",
+				balance,
+				usage: 0,
+				granted: balance,
+				planId: null,
+				reset: null,
+				expiresAt: null,
 			},
-		},
+		],
 	});
 
 const createCommand = ({
@@ -119,35 +115,31 @@ const readBalance = ({
 	store,
 	identity,
 }: {
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 	identity: MeteringIdentity;
 }) => {
 	const state = store.readState({ identity });
 	if (!state) throw new Error("Expected persisted metering state");
 	return {
-		balance: state.featureStatesById.messages?.customerEntitlements[0]?.balance,
-		usage: state.featureStatesById.messages?.customerEntitlements[0]?.usage,
+		balance: state.customerEntitlements.messages_monthly?.balance,
+		usage: state.customerEntitlements.messages_monthly?.usage,
 		revision: state.revision,
 	};
 };
 
 const createInitialization = ({
 	identity,
-	initializationId = `init_${identity.customerId}`,
+	commandId = `init_${identity.customerId}`,
 	balance = 10,
 }: {
 	identity: MeteringIdentity;
-	initializationId?: string;
+	commandId?: string;
 	balance?: number;
-}): StateInitializedEvent =>
-	parseStateInitializedEvent({
-		input: {
-			schemaVersion: 1,
-			type: "state_initialized",
-			initializationId,
-			initializedAt: 1_700_000_000_000,
-			state: createState({ identity, balance }),
-		},
+}): InitializeCommand =>
+	createInitializeCommand({
+		state: createState({ identity, balance }),
+		commandId,
+		requestId: commandId,
 	});
 
 class RecordingCommittedAppender implements CommittedOutcomeAppender {
@@ -200,19 +192,19 @@ const createFixture = ({
 	identities?: MeteringIdentity[];
 } = {}): {
 	directory: string;
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 } => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-partition-writer-"));
-	const store = openSqliteBalanceStateStore({
+	const store = openStateStore({
 		databasePath: join(directory, "balance-state.sqlite"),
 	});
 	store.initializePartition({ topic, partition, nextOffset: 0n });
-	for (const identity of identities) {
-		store.restoreState({
+	if (identities.length > 0) {
+		restoreCustomerStates({
+			store,
 			topic,
 			partition,
-			initializationId: `init_${identity.customerId}`,
-			state: createState({ identity }),
+			states: identities.map((identity) => createState({ identity })),
 		});
 	}
 	return { directory, store };
@@ -223,18 +215,14 @@ const closeFixture = ({
 	store,
 }: {
 	directory: string;
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 }) => {
 	store.close();
 	rmSync(directory, { recursive: true, force: true });
 };
 
 const batchKeys = (batch: MeteringRecord[] | undefined) =>
-	batch?.map((mutation) =>
-		mutation.type === "track_outcome"
-			? mutation.commandId
-			: mutation.initializationId,
-	);
+	batch?.map((mutation) => mutation.id);
 
 const waitForBatch = async (): Promise<void> => {
 	await new Promise<void>((resolve) => setImmediate(resolve));
@@ -254,7 +242,7 @@ const defaultReceiptPolicy = {
 type TestWriter = {
 	submitTrack(params: { command: TrackCommand }): Promise<TrackDecision>;
 	submitInitialization(params: {
-		initialization: StateInitializedEvent;
+		initialization: InitializeCommand;
 	}): Promise<InitializationDecision>;
 };
 
@@ -291,18 +279,7 @@ const createPartitionTrackWriter = ({
 	return {
 		submitTrack: ({ command }) => track({ scope, command }),
 		submitInitialization: ({ initialization }) =>
-			initialize({
-				writer,
-				command: {
-					schemaVersion: 1,
-					type: "initialize",
-					requestId: initialization.initializationId,
-					identity: initialization.state.identity,
-					initializationId: initialization.initializationId,
-					state: initialization.state,
-					occurredAt: initialization.initializedAt,
-				},
-			}),
+			initialize({ scope, command: initialization }),
 	};
 };
 
@@ -310,17 +287,20 @@ function decideForTest({
 	state,
 	command,
 }: MutateParams & { command: TrackCommand }): MutationResult<TrackDecision> {
+	if (!state) throw new Error("Expected projected state");
 	const decision = computeTrack({
 		state,
 		command,
 		deduplicationExpiresAt: 1_700_086_400_000,
 	});
 	if (decision.kind !== "new") return { kind: "reply", reply: decision };
-	const { state: nextState } = executeTrack({
-		state,
-		outcome: decision.outcome,
-	});
-	return { kind: "write", outcome: decision.outcome, nextState };
+
+	const { mutation } = decision;
+	return {
+		kind: "write",
+		mutation,
+		nextState: applyMutation({ state, mutation }),
+	};
 }
 
 describe("partition writer", () => {
@@ -343,10 +323,10 @@ describe("partition writer", () => {
 
 			expect(decision).toMatchObject({
 				kind: "new",
-				outcome: { deduplicationExpiresAt: 1_700_086_400_000 },
+				mutation: { receipt: { expiresAt: 1_700_086_400_000 } },
 			});
 			expect(appender.batches[0]?.[0]).toMatchObject({
-				deduplicationExpiresAt: 1_700_086_400_000,
+				receipt: { expiresAt: 1_700_086_400_000 },
 			});
 		} finally {
 			closeFixture(fixture);
@@ -374,7 +354,9 @@ describe("partition writer", () => {
 			expect(decisions.map(({ kind }) => kind)).toEqual(["new", "new", "new"]);
 			expect(
 				decisions.map((decision) =>
-					decision.kind === "new" ? decision.outcome.status : null,
+					decision.kind === "new" && decision.mutation.result.type === "track"
+						? decision.mutation.result.status
+						: null,
 				),
 			).toEqual(["applied", "applied", "rejected"]);
 			expect(appender.batches).toHaveLength(1);
@@ -510,18 +492,23 @@ describe("partition writer", () => {
 			});
 
 			await waitForBatch();
-			const outcome = appender.batches[0]?.[0];
-			if (!outcome || outcome.type !== "track_outcome")
-				throw new Error("Expected an appended track outcome");
+			const mutation = appender.batches[0]?.[0];
+			if (!mutation) throw new Error("Expected an appended mutation");
 			expect(
-				fixture.store.applyDurableTrackOutcome({
-					position: { topic, partition, offset: 0n },
-					outcome,
+				applyDurableMutation({
+					store: fixture.store,
+					topic,
+					partition,
+					offset: 0n,
+					mutation,
 				}),
 			).toMatchObject({ kind: "applied", nextOffset: 1n });
 
 			appender.resolve();
-			await expect(decisionPromise).resolves.toEqual({ kind: "new", outcome });
+			await expect(decisionPromise).resolves.toEqual({
+				kind: "new",
+				mutation,
+			});
 			expect(
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
@@ -560,16 +547,17 @@ describe("partition writer", () => {
 			await waitForBatch();
 			expect(appender.batches).toHaveLength(2);
 			expect(appender.batches[1]?.[0]).toMatchObject({
-				commandId: "cmd_2",
-				status: "rejected",
-				balanceBefore: 4,
+				id: "cmd_2",
+				result: { status: "rejected", balanceBefore: 4 },
 			});
 			appender.resolve({ baseOffset: 1n });
 
 			const decisions = await Promise.all([firstPromise, secondPromise]);
 			expect(
 				decisions.map((decision) =>
-					decision.kind === "new" ? decision.outcome.status : null,
+					decision.kind === "new" && decision.mutation.result.type === "track"
+						? decision.mutation.result.status
+						: null,
 				),
 			).toEqual(["applied", "rejected"]);
 			expect(
@@ -612,9 +600,9 @@ describe("partition writer", () => {
 			expect(firstDecision.value.kind).toBe("new");
 			expect(retryDecision.value).toMatchObject({
 				kind: "duplicate",
-				outcome:
+				mutation:
 					firstDecision.value.kind === "new"
-						? firstDecision.value.outcome
+						? firstDecision.value.mutation
 						: undefined,
 			});
 			expect(conflict.status).toBe("rejected");
@@ -877,11 +865,8 @@ describe("partition writer", () => {
 			const appender = new RecordingCommittedAppender();
 			const stateStore = {
 				readState: fixture.store.readState.bind(fixture.store),
-				readInitializationReceipt: fixture.store.readInitializationReceipt.bind(
-					fixture.store,
-				),
-				readTrackReceipt: fixture.store.readTrackReceipt.bind(fixture.store),
-				applyDurableMutations: () => {
+				readReceipt: fixture.store.readReceipt.bind(fixture.store),
+				applyDurableMutations: (): never => {
 					throw new Error("disk write failed");
 				},
 			};
@@ -954,14 +939,14 @@ describe("partition writer", () => {
 
 			await expect(
 				writer.submitTrack({ command: createCommand({ commandId: "cmd_1" }) }),
-			).rejects.toBeInstanceOf(PartitionWriterStateNotFoundError);
+			).rejects.toBeInstanceOf(PartitionProcessorStateNotFoundError);
 			expect(appender.batches).toHaveLength(0);
 		} finally {
 			closeFixture(fixture);
 		}
 	});
 
-	test("commits an initialization then serves tracks against it in one batch", async () => {
+	test("commits an initialization and serves a concurrent track against its pending baseline", async () => {
 		const fixture = createFixture({ identities: [] });
 		try {
 			const appender = new RecordingCommittedAppender();
@@ -981,15 +966,20 @@ describe("partition writer", () => {
 			]);
 
 			expect(initialized).toMatchObject({ kind: "initialized" });
-			expect(tracked).toMatchObject({
-				kind: "new",
-				outcome: { status: "applied", balanceBefore: 10, balanceAfter: 5 },
+			expect(tracked.kind).toBe("new");
+			expect(
+				tracked.kind === "new" ? tracked.mutation.result : null,
+			).toMatchObject({
+				status: "applied",
+				balanceBefore: 10,
+				balanceAfter: 5,
 			});
-			expect(appender.batches).toHaveLength(1);
-			expect(batchKeys(appender.batches[0])).toEqual(["init_cus_1", "cmd_1"]);
+			expect(
+				appender.batches.flatMap((batch) => batchKeys(batch) ?? []),
+			).toEqual(["init_cus_1", "cmd_1"]);
 			expect(
 				readBalance({ store: fixture.store, identity: firstIdentity }),
-			).toEqual({ balance: 5, usage: 5, revision: 1 });
+			).toEqual({ balance: 5, usage: 5, revision: 2 });
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
 		} finally {
 			closeFixture(fixture);
@@ -1022,19 +1012,19 @@ describe("partition writer", () => {
 				const decision = await replacementWriter.submitInitialization({
 					initialization: {
 						...initialization,
-						initializedAt: initialization.initializedAt + 1_000,
+						occurredAt: initialization.occurredAt + 1_000,
 					},
 				});
 
 				expect(decision).toEqual({
 					kind: "duplicate",
-					state: initialization.state,
+					state: { ...initialization.state, revision: 1 },
 				});
 				expect(appender.batches).toHaveLength(2);
 				expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
 				expect(
 					readBalance({ store: fixture.store, identity: firstIdentity }),
-				).toEqual({ balance: 5, usage: 5, revision: 1 });
+				).toEqual({ balance: 5, usage: 5, revision: 2 });
 			} finally {
 				closeFixture(fixture);
 			}
@@ -1068,20 +1058,23 @@ describe("partition writer", () => {
 							balance: 99,
 						}),
 					}),
-				).rejects.toBeInstanceOf(ConflictingMeteringStateInitializationError);
+				).rejects.toBeInstanceOf(PartitionWriterCommandConflictError);
 
 				expect(appender.batches).toHaveLength(2);
 				expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
 				expect(
 					readBalance({ store: fixture.store, identity: firstIdentity }),
-				).toEqual({ balance: 5, usage: 5, revision: 1 });
+				).toEqual({ balance: 5, usage: 5, revision: 2 });
 				await expect(
 					writer.submitTrack({
 						command: createCommand({ commandId: "after_conflict", value: 1 }),
 					}),
 				).resolves.toMatchObject({
 					kind: "new",
-					outcome: { balanceAfter: 4, revisionAfter: 2 },
+					mutation: {
+						revision: { after: 3 },
+						result: { balanceAfter: 4 },
+					},
 				});
 			} finally {
 				closeFixture(fixture);
@@ -1104,7 +1097,7 @@ describe("partition writer", () => {
 			const decision = await writer.submitInitialization({
 				initialization: createInitialization({
 					identity: firstIdentity,
-					initializationId: "init_other",
+					commandId: "init_other",
 					balance: 99,
 				}),
 			});
@@ -1138,7 +1131,7 @@ describe("partition writer", () => {
 				writer.submitInitialization({
 					initialization: createInitialization({
 						identity: firstIdentity,
-						initializationId: "init_other",
+						commandId: "init_other",
 						balance: 99,
 					}),
 				}),
@@ -1163,16 +1156,16 @@ describe("partition writer", () => {
 				status: "fulfilled",
 				value: { kind: "already_initialized" },
 			});
-			// Same initializationId with a different baseline is a caller bug.
+			// Same commandId with a different baseline is a caller bug.
 			expect(conflict).toMatchObject({
 				status: "rejected",
-				reason: expect.any(ConflictingMeteringStateInitializationError),
+				reason: expect.any(PartitionWriterCommandConflictError),
 			});
 			expect(appender.batches).toHaveLength(1);
 			expect(appender.batches[0]).toHaveLength(1);
 			expect(
 				readBalance({ store: fixture.store, identity: firstIdentity }),
-			).toEqual({ balance: 10, usage: 0, revision: 0 });
+			).toEqual({ balance: 10, usage: 0, revision: 1 });
 		} finally {
 			closeFixture(fixture);
 		}
@@ -1193,18 +1186,23 @@ describe("partition writer", () => {
 			const decisionPromise = writer.submitInitialization({ initialization });
 
 			await waitForBatch();
+			const appended = appender.batches[0]?.[0];
+			if (!appended) throw new Error("Expected an appended mutation");
 			expect(
-				fixture.store.applyDurableStateInitialization({
-					position: { topic, partition, offset: 0n },
-					initialization,
+				applyDurableMutation({
+					store: fixture.store,
+					topic,
+					partition,
+					offset: 0n,
+					mutation: appended,
 				}),
-			).toMatchObject({ kind: "initialized", nextOffset: 1n });
+			).toMatchObject({ kind: "applied", nextOffset: 1n });
 
 			appender.resolve();
 			// The submitter wrote it; who applied the position first does not change that.
 			await expect(decisionPromise).resolves.toMatchObject({
 				kind: "initialized",
-				state: { revision: 0 },
+				state: { revision: 1 },
 			});
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
 		} finally {

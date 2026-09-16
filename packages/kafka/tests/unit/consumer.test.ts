@@ -1,9 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import {
-	computeTrack,
-	createCustomerMeteringState,
-	parseTrackCommand,
-} from "@autumn/balance-engine";
 import type {
 	ConsumerEndBatchProcessEvent,
 	ConsumerRunConfig,
@@ -25,6 +20,11 @@ import type {
 	MeteringRecordFailure,
 } from "../../src/topics/metering/consumer/types/meteringConsumer.js";
 import { serializeMeteringRecord } from "../../src/topics/metering/meteringTopic.js";
+import {
+	createInitializeMutation,
+	createState,
+	createTrackMutation,
+} from "../meteringFixtures.js";
 
 const topic = "test-topic";
 
@@ -656,60 +656,16 @@ function topicConsumerTests(): void {
 }
 
 function createMeteringRecords() {
-	const identity = {
-		orgId: "org_1",
-		env: "sandbox",
-		customerId: "cus_1",
-	} as const;
-	const state = createCustomerMeteringState({
-		identity,
-		featureStatesById: {
-			messages: {
-				kind: "direct_metered_v1",
-				customerEntitlements: [
-					{
-						id: "balance",
-						balance: 10,
-						usage: 0,
-						granted: 10,
-						externalId: null,
-						planId: null,
-						reset: null,
-						expiresAt: null,
-					},
-				],
-			},
-		},
-	});
-	const command = parseTrackCommand({
-		input: {
-			schemaVersion: 1,
-			type: "track",
-			commandId: "command",
-			requestId: "request",
-			identity,
-			entityId: null,
-			featureId: "messages",
-			value: 5,
-			overageBehavior: "reject",
-			properties: null,
-			occurredAt: 1_700_000_000_000,
-		},
-	});
-	const decision = computeTrack({
-		deduplicationExpiresAt: 1_700_086_400_000,
+	const state = createState();
+	const initialization = createInitializeMutation({
 		state,
-		command,
+		commandId: "initial",
 	});
-	if (decision.kind !== "new") throw new Error("Expected a new outcome");
-	const initialization = {
-		schemaVersion: 1,
-		type: "state_initialized",
-		initializationId: "initial",
-		initializedAt: 1_700_000_000_000,
-		state,
-	} as const;
-	return { initialization, outcome: decision.outcome };
+	const outcome = createTrackMutation({
+		state: { ...state, revision: 1 },
+		commandId: "command",
+	});
+	return { initialization, outcome };
 }
 
 async function deliversTypedRecordsWithoutChangingOffsets(): Promise<void> {

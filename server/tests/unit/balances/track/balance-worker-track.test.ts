@@ -1,8 +1,12 @@
 import { beforeEach, expect, test } from "bun:test";
-import type {
-	TrackCommand,
-	TrackDecision,
-	TrackOutcome,
+import {
+	type CustomerState,
+	type CustomerStateMutation,
+	computeTrack,
+	createCustomerState,
+	type OverageBehavior,
+	type TrackCommand,
+	type TrackDecision,
 } from "@autumn/balance-engine";
 import {
 	type ApiBalanceV1,
@@ -19,8 +23,14 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { trackParamsToTrackCommand } from "@/internal/balances/track/balanceWorker/balanceWorkerTrackRequest.js";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
+const trackIdentity = {
+	orgId: "org",
+	env: "sandbox",
+	customerId: "customer",
+} as const;
+
 const execution = {
-	decision: { kind: "new", outcome: trackOutcome() } as TrackDecision,
+	decision: { kind: "new", mutation: trackMutation({}) } as TrackDecision,
 	commands: [] as TrackCommand[],
 	failure: undefined as Error | undefined,
 };
@@ -47,16 +57,13 @@ test(
 );
 beforeEach(resetExecution);
 test("new and duplicate decisions return the API track shape", successContract);
-test(
-	"capped, zero-mutation and entity responses use only the outcome",
-	outcomeContract,
-);
+test("responses read the committed mutation, not the request", outcomeContract);
 test("worker decisions become existing API errors", errorContract);
 test("track responses respect the requested API version", versionContract);
 test("transport failures propagate without retry", failureContract);
 
 function resetExecution(): void {
-	execution.decision = { kind: "new", outcome: trackOutcome() };
+	execution.decision = { kind: "new", mutation: trackMutation({}) };
 	execution.commands.length = 0;
 	execution.failure = undefined;
 }
@@ -142,9 +149,9 @@ function commandContract() {
 
 async function successContract() {
 	const { ctx, body } = fixture();
-	const outcome = trackOutcome();
+	const mutation = trackMutation({});
 	for (const kind of ["new", "duplicate"] as const) {
-		execution.decision = { kind, outcome };
+		execution.decision = { kind, mutation };
 		expect(await runBalanceWorkerTrack({ ctx, body })).toEqual({
 			customer_id: "customer",
 			entity_id: undefined,
@@ -160,52 +167,42 @@ async function successContract() {
 
 async function outcomeContract() {
 	const { ctx, body } = fixture();
-	for (const appliedValue of [0, 1]) {
+	// Capping at an exhausted, then a partial, balance: the reply is the snapshot.
+	for (const [balance, usage, remaining, committedUsage] of [
+		[0, 13, 0, 13],
+		[2, 13, 0, 15],
+	] as const) {
 		execution.decision = {
 			kind: "new",
-			outcome: {
-				...trackOutcome(),
-				identity: {
-					orgId: "org",
-					env: "sandbox",
-					customerId: "receipt-customer",
-				},
-				entityId: "entity",
-				appliedValue,
-				balanceAfter: 10 - appliedValue,
-				balanceSnapshot: {
-					...trackOutcome().balanceSnapshot,
-					balance: 10 - appliedValue,
-					usage: 13 + appliedValue,
-				},
-				mutations: [],
-			},
+			mutation: trackMutation({ state: customerState({ balance, usage }) }),
 		};
 		expect(await runBalanceWorkerTrack({ ctx, body })).toEqual({
-			customer_id: "receipt-customer",
-			entity_id: "entity",
+			customer_id: "customer",
+			entity_id: undefined,
 			value: 3,
-			balance: expectedBalance({
-				remaining: 10 - appliedValue,
-				usage: 13 + appliedValue,
-			}),
+			balance: expectedBalance({ remaining, usage: committedUsage }),
 		});
 	}
+	execution.decision = {
+		kind: "new",
+		mutation: echoedElsewhere({ mutation: trackMutation({}) }),
+	};
+	expect(await runBalanceWorkerTrack({ ctx, body })).toEqual({
+		customer_id: "receipt-customer",
+		entity_id: "entity",
+		value: 3,
+		balance: expectedBalance({ remaining: 7, usage: 3 }),
+	});
 }
 
 async function errorContract() {
 	const { ctx, body } = fixture();
+	const rejected = trackMutation({
+		state: customerState({ balance: 2, usage: 13 }),
+		overageBehavior: "reject",
+	});
 	for (const kind of ["new", "duplicate"] as const) {
-		execution.decision = {
-			kind,
-			outcome: {
-				...trackOutcome(),
-				status: "rejected",
-				reason: "insufficient_balance",
-				appliedValue: 0,
-				mutations: [],
-			},
-		};
+		execution.decision = { kind, mutation: rejected };
 		await expect(runBalanceWorkerTrack({ ctx, body })).rejects.toBeInstanceOf(
 			InsufficientBalanceError,
 		);
@@ -280,51 +277,77 @@ function fixture() {
 	return { ctx, body };
 }
 
-function trackOutcome(): TrackOutcome {
-	return {
-		schemaVersion: 1,
-		type: "track_outcome",
-		commandId: "request",
-		commandFingerprint: "fingerprint",
-		requestId: "request",
-		identity: { orgId: "org", env: "sandbox", customerId: "customer" },
-		entityId: null,
-		featureId: "messages",
-		requestedValue: 3,
-		appliedValue: 3,
-		overageBehavior: "cap",
-		properties: null,
-		status: "applied",
-		reason: null,
-		balanceBefore: 10,
-		balanceAfter: 7,
-		balanceSnapshot: {
-			id: "balance",
-			externalId: "messages-grant",
-			balance: 7,
-			usage: 3,
-			granted: 100,
-			planId: "pro",
-			reset: {
-				interval: "month",
-				intervalCount: 1,
-				nextResetAt: 1_800_000_000_000,
-			},
-			expiresAt: null,
-		},
-		revisionBefore: 0,
-		revisionAfter: 1,
-		occurredAt: 1000,
-		deduplicationExpiresAt: 10000,
-		mutations: [
+function customerState({
+	balance,
+	usage,
+}: {
+	balance: number;
+	usage: number;
+}): CustomerState {
+	return createCustomerState({
+		identity: trackIdentity,
+		customerEntitlements: [
 			{
-				customerEntitlementId: "balance",
-				balanceBefore: 10,
-				balanceAfter: 7,
-				usageBefore: 0,
-				usageAfter: 3,
+				id: "balance",
+				externalId: "messages-grant",
+				featureId: "messages",
+				balance,
+				usage,
+				granted: 100,
+				planId: "pro",
+				reset: {
+					interval: "month",
+					intervalCount: 1,
+					nextResetAt: 1_800_000_000_000,
+				},
+				expiresAt: null,
 			},
 		],
+	});
+}
+
+function trackMutation({
+	state = customerState({ balance: 10, usage: 0 }),
+	overageBehavior = "cap",
+}: {
+	state?: CustomerState;
+	overageBehavior?: OverageBehavior;
+}): CustomerStateMutation {
+	const command: TrackCommand = {
+		schemaVersion: 1,
+		type: "track",
+		commandId: "request",
+		requestId: "request",
+		identity: trackIdentity,
+		entityId: null,
+		featureId: "messages",
+		value: 3,
+		overageBehavior,
+		properties: null,
+		occurredAt: 1000,
+	};
+	const decision = computeTrack({
+		state,
+		command,
+		deduplicationExpiresAt: 10_000,
+	});
+	if (decision.kind !== "new")
+		throw new Error(`Expected a new track mutation, got ${decision.kind}`);
+	return decision.mutation;
+}
+
+/** The engine refuses entity tracks today, so the echo is patched onto a computed mutation. */
+function echoedElsewhere({
+	mutation,
+}: {
+	mutation: CustomerStateMutation;
+}): CustomerStateMutation {
+	if (mutation.command.type !== "track")
+		throw new Error("Expected a track mutation");
+	return {
+		...mutation,
+		identity: { ...trackIdentity, customerId: "receipt-customer" },
+		command: { ...mutation.command, entityId: "entity" },
 	};
 }
 

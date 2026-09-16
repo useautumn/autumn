@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { TrackCommand } from "@autumn/balance-engine";
 import {
-	createCustomerMeteringState,
+	createCustomerState,
 	parseCheckCommand,
 	parseInitializeCommand,
 } from "@autumn/balance-engine";
@@ -280,32 +280,28 @@ test(
 );
 test("a canceled request never sends", respectsCallerCancellation);
 
-const initialState = createCustomerMeteringState({
+const initialState = createCustomerState({
 	identity: command.identity,
-	featureStatesById: {
-		feature: {
-			kind: "direct_metered_v1",
-			customerEntitlements: [
-				{
-					id: "grant",
-					balance: 10,
-					usage: 0,
-					granted: 10,
-					externalId: null,
-					planId: null,
-					reset: null,
-					expiresAt: null,
-				},
-			],
+	customerEntitlements: [
+		{
+			id: "grant",
+			externalId: null,
+			featureId: "feature",
+			balance: 10,
+			usage: 0,
+			granted: 10,
+			planId: null,
+			reset: null,
+			expiresAt: null,
 		},
-	},
+	],
 });
 const initializeCommand = parseInitializeCommand({
 	input: {
 		schemaVersion: 1,
 		type: "initialize",
 		requestId: "initialize",
-		initializationId: "baseline",
+		commandId: "baseline",
 		identity: command.identity,
 		state: initialState,
 		occurredAt: 0,
@@ -336,8 +332,7 @@ test.concurrent(
 			balance: 10,
 			requiredBalance: 1,
 			revision: 0,
-			balanceSnapshot:
-				initialState.featureStatesById.feature.customerEntitlements[0],
+			balanceSnapshot: initialState.customerEntitlements.grant,
 		};
 		const fixture = createFixture({
 			responses: [
@@ -390,7 +385,8 @@ test.concurrent(
 		const input = structuredClone(initializeCommand);
 		const pending = fixture.client.initialize({ command: input });
 		await fixture.refreshed;
-		input.state.featureStatesById.feature.customerEntitlements[0].balance = 999;
+		const grant = input.state.customerEntitlements.grant;
+		if (grant) grant.balance = 999;
 		gate.resolve();
 		expect(await pending).toMatchObject({
 			kind: "duplicate",
@@ -407,10 +403,7 @@ test.concurrent(
 test.concurrent(
 	"missing initialization and conflicting baselines are named errors without rerouting",
 	async () => {
-		for (const workerCode of [
-			"NOT_INITIALIZED",
-			"INITIALIZATION_CONFLICT",
-		] as const) {
+		for (const workerCode of ["NOT_INITIALIZED", "COMMAND_CONFLICT"] as const) {
 			const fixture = createFixture({
 				responses: [
 					{

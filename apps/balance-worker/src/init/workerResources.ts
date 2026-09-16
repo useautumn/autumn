@@ -7,10 +7,8 @@ import {
 	meteringIdentityToPartition,
 } from "@autumn/kafka";
 import { Kafka } from "kafkajs";
-import {
-	openSqliteBalanceStateStore,
-	type SqliteBalanceStateStore,
-} from "../state/sqliteBalanceStateStore.js";
+import { openStateStore } from "../state/openStateStore.js";
+import type { StateStore } from "../state/types/stateStore.js";
 import { createWorkerCheckpointResources } from "./construction/createWorkerCheckpointResources.js";
 import type {
 	BalanceWorkerConfig,
@@ -59,13 +57,13 @@ export async function openWorkerResources({
 		});
 	}
 	const partitionResolver = { partitionForIdentity };
-	let stateStore: SqliteBalanceStateStore | undefined;
+	let stateStore: StateStore | undefined;
 	let checkpoints: WorkerCheckpointResources | undefined;
 	try {
 		await admin.connect();
 		await validateBalanceWorkerTopics({ admin, env });
 		mkdirSync(dirname(env.BALANCE_WORKER_SQLITE_PATH), { recursive: true });
-		stateStore = openSqliteBalanceStateStore({
+		stateStore = openStateStore({
 			databasePath: env.BALANCE_WORKER_SQLITE_PATH,
 		});
 		checkpoints = await createWorkerCheckpointResources({
@@ -89,7 +87,7 @@ export async function closeFailedWorkerResources({
 	cause,
 }: {
 	ctx: {
-		stateStore?: Pick<SqliteBalanceStateStore, "close">;
+		stateStore?: Pick<StateStore, "close">;
 		checkpoints?: Pick<WorkerCheckpointResources, "stop">;
 		admin: Pick<WorkerResourcesContext["admin"], "disconnect">;
 	};

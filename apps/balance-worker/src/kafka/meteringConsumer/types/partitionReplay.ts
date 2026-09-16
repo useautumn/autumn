@@ -7,7 +7,7 @@ import type {
 import type { Admin } from "kafkajs";
 import type { PartitionLogRange } from "../../../runtime/bootstrap/types/partitionBootstrap.js";
 import type { RuntimeUnavailableListener } from "../../../runtime/types/partitionRuntime.js";
-import type { SqliteBalanceStateStore } from "../../../state/sqliteBalanceStateStore.js";
+import type { StateStore } from "../../../state/types/stateStore.js";
 
 export type PartitionReplay = {
 	readLogRange(params: {
@@ -28,7 +28,7 @@ export type PartitionReplay = {
 
 export type PartitionReplayContext = {
 	partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
-	stateStore: Pick<SqliteBalanceStateStore, "readNextOffset">;
+	stateStore: Pick<StateStore, "readNextOffset">;
 	positionTracker: ProgressTracker;
 	consumption: Pick<
 		TopicConsumer,

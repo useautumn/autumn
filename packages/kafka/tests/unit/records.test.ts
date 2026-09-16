@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import {
-	computeTrack,
-	createCustomerMeteringState,
-	parseTrackCommand,
-} from "@autumn/balance-engine";
-import {
 	InvalidRecordError,
 	RecordKeyMismatchError,
 	UnsupportedRecordVersionError,
@@ -15,9 +10,12 @@ import {
 } from "../../src/lib/topicEnvelope.js";
 import {
 	parseMeteringRecord,
-	parseMeteringTrackOutcome,
 	serializeMeteringRecord,
 } from "../../src/topics/metering/meteringTopic.js";
+import {
+	createInitializeMutation,
+	createTrackMutation,
+} from "../meteringFixtures.js";
 
 function rejectsMalformedEnvelopes(): void {
 	for (const input of [
@@ -101,64 +99,14 @@ function topicEnvelopeTests(): void {
 	);
 }
 
-const identity = {
-	orgId: "org_1",
-	env: "sandbox",
-	customerId: "cus_1",
-} as const;
-
-const createState = () =>
-	createCustomerMeteringState({
-		identity,
-		featureStatesById: {
-			messages: {
-				kind: "direct_metered_v1",
-				customerEntitlements: [
-					{
-						id: "messages_monthly",
-						balance: 10,
-						usage: 0,
-						granted: 10,
-						externalId: null,
-						planId: null,
-						reset: null,
-						expiresAt: null,
-					},
-				],
-			},
-		},
-	});
-
-const createOutcome = () => {
-	const decision = computeTrack({
-		deduplicationExpiresAt: 1_700_086_400_000,
-		state: createState(),
-		command: parseTrackCommand({
-			input: {
-				schemaVersion: 1,
-				type: "track",
-				commandId: "cmd_1",
-				requestId: "req_1",
-				identity,
-				entityId: null,
-				featureId: "messages",
-				value: 5,
-				overageBehavior: "reject",
-				properties: null,
-				occurredAt: 1_700_000_000_000,
-			},
-		}),
-	});
-	if (decision.kind !== "new") throw new Error("Expected a new outcome");
-	return decision.outcome;
-};
+const createMutation = () => createTrackMutation({});
 
 function rejectsInvalidMeteringPayloads(): void {
-	const serialized = serializeMeteringRecord({ record: createOutcome() });
+	const serialized = serializeMeteringRecord({ record: createMutation() });
 	const envelope = JSON.parse(serialized.value.toString("utf8"));
 	for (const invalid of [
 		{ ...envelope, type: "unknown_record" },
-		{ ...envelope, type: "state_initialized" },
+		{ ...envelope, type: "track_outcome" },
 		{ ...envelope, payload: { ...envelope.payload, schemaVersion: 2 } },
 	]) {
 		function parse(): void {
@@ -184,24 +132,24 @@ function rejectsInvalidMeteringPayloads(): void {
 
 describe("topicEnvelope", topicEnvelopeTests);
 describe("meteringTopic", () => {
-	test("round-trips a versioned outcome with its customer partition key", () => {
-		const outcome = createOutcome();
-		const serialized = serializeMeteringRecord({ record: outcome });
+	test("round-trips a versioned mutation with its customer partition key", () => {
+		const mutation = createMutation();
+		const serialized = serializeMeteringRecord({ record: mutation });
 
 		expect(
-			parseMeteringTrackOutcome({
+			parseMeteringRecord({
 				key: serialized.key,
 				value: serialized.value,
 			}),
-		).toEqual(outcome);
+		).toEqual(mutation);
 	});
 
 	test("rejects an unsupported envelope version", () => {
-		const serialized = serializeMeteringRecord({ record: createOutcome() });
+		const serialized = serializeMeteringRecord({ record: createMutation() });
 		const envelope = JSON.parse(serialized.value.toString("utf8"));
 
 		expect(() =>
-			parseMeteringTrackOutcome({
+			parseMeteringRecord({
 				key: serialized.key,
 				value: Buffer.from(
 					JSON.stringify({ ...envelope, schemaVersion: 2 }),
@@ -212,10 +160,10 @@ describe("meteringTopic", () => {
 	});
 
 	test("rejects a record whose Kafka key names another customer", () => {
-		const serialized = serializeMeteringRecord({ record: createOutcome() });
+		const serialized = serializeMeteringRecord({ record: createMutation() });
 
 		expect(() =>
-			parseMeteringTrackOutcome({
+			parseMeteringRecord({
 				key: Buffer.from('["org_1","sandbox","cus_2"]', "utf8"),
 				value: serialized.value,
 			}),
@@ -224,7 +172,7 @@ describe("meteringTopic", () => {
 
 	test("rejects malformed envelopes", () => {
 		expect(() =>
-			parseMeteringTrackOutcome({
+			parseMeteringRecord({
 				key: Buffer.from("key"),
 				value: Buffer.from("not-json", "utf8"),
 			}),
@@ -236,14 +184,8 @@ test(
 	rejectsInvalidMeteringPayloads,
 );
 
-test("round-trips a versioned state initialization", function roundTripsInitialization() {
-	const initialization = {
-		schemaVersion: 1 as const,
-		type: "state_initialized" as const,
-		initializationId: "init_1",
-		initializedAt: 1_700_000_000_000,
-		state: createState(),
-	};
+test("round-trips an initialize mutation", function roundTripsInitialization() {
+	const initialization = createInitializeMutation({});
 	const serialized = serializeMeteringRecord({ record: initialization });
 
 	expect(

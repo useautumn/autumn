@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-	executeTrack,
-	meteringPartitionKeyOf,
-	stateInitializationFingerprintOf,
-} from "@autumn/balance-engine";
+import { applyMutation, meteringPartitionKeyOf } from "@autumn/balance-engine";
 import {
 	assertPartitionCheckpointOwnership,
 	createPartitionCheckpoint,
@@ -14,7 +10,7 @@ import {
 	UnsupportedPartitionCheckpointSchemaVersionError,
 } from "../../../src/checkpoint/partitionCheckpoint.js";
 import {
-	createOutcome,
+	createMutation,
 	createState,
 	partition,
 	topic,
@@ -24,10 +20,9 @@ const checkpointCreatedAt = 1_700_000_000_000;
 
 const createCheckpoint = () => {
 	const initialState = createState();
-	const outcome = createOutcome({ state: initialState });
-	const state = executeTrack({ state: initialState, outcome }).state;
+	const mutation = createMutation({ state: initialState });
+	const state = applyMutation({ state: initialState, mutation });
 	const partitionKey = meteringPartitionKeyOf({ identity: state.identity });
-	const initializationId = "init_1";
 
 	return createPartitionCheckpoint({
 		engineSchemaVersion: 1,
@@ -35,23 +30,8 @@ const createCheckpoint = () => {
 		topic,
 		partition,
 		nextOffset: 2n,
-		states: [
-			{
-				partitionKey,
-				initializationId,
-				initializationFingerprint: stateInitializationFingerprintOf({
-					initialization: {
-						schemaVersion: 1,
-						type: "state_initialized",
-						initializationId,
-						initializedAt: checkpointCreatedAt,
-						state: initialState,
-					},
-				}),
-				state,
-			},
-		],
-		receipts: [{ partitionKey, recordOffset: 1n, outcome }],
+		states: [{ partitionKey, state }],
+		receipts: [{ partitionKey, recordOffset: 1n, mutation }],
 	});
 };
 
@@ -137,7 +117,7 @@ describe("partition checkpoint", () => {
 		expect(() =>
 			createPartitionCheckpoint({
 				...checkpoint,
-				createdAt: receipt.outcome.deduplicationExpiresAt,
+				createdAt: receipt.mutation.receipt.expiresAt,
 			}),
 		).toThrow(InvalidPartitionCheckpointError);
 	});

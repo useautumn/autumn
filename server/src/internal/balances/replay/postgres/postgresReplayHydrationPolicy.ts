@@ -1,7 +1,4 @@
-import type {
-	CustomerMeteringState,
-	MeteringIdentity,
-} from "@autumn/balance-engine";
+import type { CustomerState, MeteringIdentity } from "@autumn/balance-engine";
 import { AppEnv, CusProductStatus, type FullSubject } from "@autumn/shared";
 import { BalanceWorkerUnsupportedError } from "../../balanceWorker/balanceWorkerErrors.js";
 import type { ReplayHydrationSourceResult } from "../replayHydrationContracts.js";
@@ -80,7 +77,7 @@ export function stateMatchesIdentity({
 	state,
 	identity,
 }: {
-	state: CustomerMeteringState;
+	state: CustomerState;
 	identity: MeteringIdentity;
 }): boolean {
 	return (

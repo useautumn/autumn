@@ -1,7 +1,7 @@
 import { type PartitionPosition, readPartitionLogRange } from "@autumn/kafka";
 import type { PartitionLogRange } from "../../../runtime/bootstrap/types/partitionBootstrap.js";
 import type { RuntimeUnavailableListener } from "../../../runtime/types/partitionRuntime.js";
-import { PartitionProgressNotFoundError } from "../../../state/sqliteBalanceStateErrors.js";
+import { PartitionProgressNotFoundError } from "../../../state/stateStoreErrors.js";
 import { StateAheadOfKafkaLogEndError } from "../meteringErrors.js";
 import type {
 	PartitionReplayContext,

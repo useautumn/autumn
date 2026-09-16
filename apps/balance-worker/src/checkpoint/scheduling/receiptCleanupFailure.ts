@@ -3,7 +3,7 @@ import {
 	MeteringStatePartitionMismatchError,
 	PartitionProgressNotFoundError,
 	UnsupportedBalanceStateSchemaVersionError,
-} from "../../state/sqliteBalanceStateErrors.js";
+} from "../../state/stateStoreErrors.js";
 
 export const receiptCleanupRequiresRecovery = ({
 	cause,

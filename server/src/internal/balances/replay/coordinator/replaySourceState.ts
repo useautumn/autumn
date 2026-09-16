@@ -1,23 +1,29 @@
-import {
-	type CustomerMeteringState,
-	parseCustomerMeteringState,
-} from "@autumn/balance-engine";
+import { type CustomerState, parseCustomerState } from "@autumn/balance-engine";
 import { ReplayHydrationSourceMismatchError } from "../replayHydrationErrors.js";
 import {
 	identitiesEqual,
 	type NormalizedSelection,
 } from "./replaySelection.js";
 
+const featureIdsOf = ({ state }: { state: CustomerState }): string[] =>
+	[
+		...new Set(
+			Object.values(state.customerEntitlements).map(
+				({ featureId }) => featureId,
+			),
+		),
+	].sort();
+
 export function validateSourceState({
 	input,
 	selection,
 }: {
-	input: CustomerMeteringState;
+	input: CustomerState;
 	selection: NormalizedSelection;
-}): CustomerMeteringState {
-	let state: CustomerMeteringState;
+}): CustomerState {
+	let state: CustomerState;
 	try {
-		state = parseCustomerMeteringState({ input });
+		state = parseCustomerState({ input });
 	} catch (cause) {
 		throw new ReplayHydrationSourceMismatchError({
 			reason: cause instanceof Error ? cause.message : "invalid_state",
@@ -26,7 +32,7 @@ export function validateSourceState({
 	if (!identitiesEqual({ left: state.identity, right: selection.identity })) {
 		throw new ReplayHydrationSourceMismatchError({ reason: "identity" });
 	}
-	const actualFeatureIds = Object.keys(state.featureStatesById).sort();
+	const actualFeatureIds = featureIdsOf({ state });
 	if (
 		actualFeatureIds.length !== selection.featureIds.length ||
 		actualFeatureIds.some(

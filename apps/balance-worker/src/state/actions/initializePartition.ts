@@ -7,7 +7,7 @@ import {
 	insertPartitionProgress,
 	readNextOffset,
 } from "../repos/partitionProgress.js";
-import { ConflictingPartitionInitializationError } from "../sqliteBalanceStateErrors.js";
+import { ConflictingPartitionInitializationError } from "../stateStoreErrors.js";
 import type { StateStoreContext } from "../types/stateStoreContext.js";
 
 export const initializePartition = ({

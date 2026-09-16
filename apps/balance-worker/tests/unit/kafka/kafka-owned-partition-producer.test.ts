@@ -18,7 +18,7 @@ import {
 } from "../../../src/kafka/createWorkerProducer.js";
 import { OwnedPartitionProducerFencedError } from "../../../src/runtime/runtimeErrors.js";
 import {
-	createOutcome,
+	createMutation,
 	createState,
 	partition,
 	topic,
@@ -211,7 +211,7 @@ describe("Runtime producer error adapter", function runtimeProducerTests() {
 				topic,
 				partition,
 				outcomes: [
-					createOutcome({ state: createState(), commandId: "fenced" }),
+					createMutation({ state: createState(), commandId: "fenced" }),
 				],
 			}),
 		).rejects.toMatchObject({

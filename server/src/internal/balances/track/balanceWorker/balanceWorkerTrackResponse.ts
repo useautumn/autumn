@@ -27,27 +27,33 @@ export function trackDecisionToTrackResponse({
 			statusCode: isCommandConflict ? 409 : 400,
 		});
 	}
-	const outcome = decision.outcome;
-	if (outcome.status === "rejected") {
+	const { command, result } = decision.mutation;
+	if (command.type !== "track" || result.type !== "track")
+		throw new RecaseError({
+			message: "Balance worker returned a non-track mutation for a track",
+			code: ErrCode.InternalError,
+			statusCode: 500,
+		});
+	if (result.status === "rejected") {
 		throw new InsufficientBalanceError({
-			featureId: outcome.featureId,
-			value: outcome.requestedValue,
-			balance: outcome.balanceBefore,
+			featureId: command.featureId,
+			value: result.requestedValue,
+			balance: result.balanceBefore,
 		});
 	}
 	return applyResponseVersionChanges<TrackResponseV3>({
 		ctx,
 		input: {
-			customer_id: outcome.identity.customerId,
-			entity_id: outcome.entityId ?? undefined,
-			value: outcome.requestedValue,
+			customer_id: decision.mutation.identity.customerId,
+			entity_id: command.entityId ?? undefined,
+			value: result.requestedValue,
 			balance: meteringBalanceToApiBalance({
-				featureId: outcome.featureId,
-				snapshot: outcome.balanceSnapshot,
+				featureId: command.featureId,
+				snapshot: result.balanceSnapshot,
 			}),
 		},
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Track,
-		legacyData: { feature_id: outcome.featureId },
+		legacyData: { feature_id: command.featureId },
 	});
 }

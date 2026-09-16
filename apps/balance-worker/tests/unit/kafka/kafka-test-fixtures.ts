@@ -1,91 +1,47 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-	type CustomerMeteringState,
-	computeTrack,
-	createCustomerMeteringState,
-	parseTrackCommand,
-	type TrackOutcome,
+import type {
+	CustomerState,
+	CustomerStateMutation,
+	MeteringIdentity,
 } from "@autumn/balance-engine";
 import {
 	type OwnedPartitionHealth,
 	ownedPartitionHealthOf,
 } from "../../../src/health/ownedPartitionHealth.js";
+import { openStateStore } from "../../../src/state/openStateStore.js";
+import type { StateStore } from "../../../src/state/types/stateStore.js";
 import {
-	openSqliteBalanceStateStore,
-	type SqliteBalanceStateStore,
-} from "../../../src/state/sqliteBalanceStateStore.js";
+	createState as createCustomerStateFixture,
+	createTrackMutation,
+	testIdentity,
+} from "../../fixtures/mutations.js";
 
-export const identity = {
-	orgId: "org_1",
-	env: "sandbox",
-	customerId: "cus_1",
-} as const;
+export const identity = testIdentity;
 
 export const topic = "metering-events-v1";
 export const partition = 0;
 
 export const createState = ({
 	balance = 10,
+	identity: stateIdentity = testIdentity,
 }: {
 	balance?: number;
-} = {}): CustomerMeteringState =>
-	createCustomerMeteringState({
-		identity,
-		featureStatesById: {
-			messages: {
-				kind: "direct_metered_v1",
-				customerEntitlements: [
-					{
-						id: "messages_monthly",
-						balance,
-						usage: 0,
-						granted: balance,
-						externalId: null,
-						planId: null,
-						reset: null,
-						expiresAt: null,
-					},
-				],
-			},
-		},
-	});
+	identity?: MeteringIdentity;
+} = {}): CustomerState =>
+	createCustomerStateFixture({ balance, identity: stateIdentity });
 
-export const createOutcome = ({
+export const createMutation = ({
 	state,
 	commandId = "cmd_1",
 	requestId = "req_1",
 }: {
-	state: CustomerMeteringState;
+	state: CustomerState;
 	commandId?: string;
 	requestId?: string;
-}): TrackOutcome => {
-	const decision = computeTrack({
-		state,
-		deduplicationExpiresAt: 1_700_086_400_000,
-		command: parseTrackCommand({
-			input: {
-				schemaVersion: 1,
-				type: "track",
-				commandId,
-				requestId,
-				identity: state.identity,
-				entityId: null,
-				featureId: "messages",
-				value: 5,
-				overageBehavior: "reject",
-				properties: null,
-				occurredAt: 1_700_000_000_000,
-			},
-		}),
-	});
-
-	if (decision.kind !== "new") {
-		throw new Error(`Expected a new outcome, received ${decision.kind}`);
-	}
-	return decision.outcome;
-};
+}): CustomerStateMutation =>
+	createTrackMutation({ state, commandId, requestId });
 
 export const createStoreFixture = ({
 	nextOffset = 0n,
@@ -93,10 +49,10 @@ export const createStoreFixture = ({
 	nextOffset?: bigint;
 } = {}): {
 	directory: string;
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 } => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-kafka-consumer-"));
-	const store = openSqliteBalanceStateStore({
+	const store = openStateStore({
 		databasePath: join(directory, "balance-state.sqlite"),
 	});
 
@@ -115,7 +71,7 @@ export const closeStoreFixture = ({
 	store,
 }: {
 	directory: string;
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 }): void => {
 	store.close();
 	rmSync(directory, { recursive: true, force: true });
@@ -277,7 +233,7 @@ export function createKafkaPartitionOutcomeFollower({
 	assignedPartition?: number;
 	consumer: KafkaPartitionControlPort;
 	partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
-	stateStore: Pick<SqliteBalanceStateStore, "readNextOffset">;
+	stateStore: Pick<StateStore, "readNextOffset">;
 	positionTracker: ProgressTracker;
 }) {
 	async function withdrawPartition(): Promise<void> {}
@@ -336,12 +292,12 @@ export function createKafkaCommittedMutationAppender({
 }) {
 	return createMutationPublisher({ ctx: { producer } });
 }
-export function serializeKafkaTrackOutcomeRecord({
-	outcome,
+export function serializeKafkaMutationRecord({
+	mutation,
 }: {
-	outcome: TrackOutcome;
+	mutation: CustomerStateMutation;
 }) {
-	return serializeMeteringRecord({ record: outcome });
+	return serializeMeteringRecord({ record: mutation });
 }
 export function createOwnedPartitionRuntime(
 	params: Omit<PartitionRuntimeDependencies, "appender"> &
@@ -360,14 +316,6 @@ export function createOwnedPartitionRuntime(
 		},
 		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
 	});
-}
-
-export function serializeKafkaStateInitializedRecord({
-	initialization,
-}: {
-	initialization: import("@autumn/balance-engine").StateInitializedEvent;
-}) {
-	return serializeMeteringRecord({ record: initialization });
 }
 
 function ignoreUnhealthy(): void {}

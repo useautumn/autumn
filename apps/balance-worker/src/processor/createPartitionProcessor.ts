@@ -66,7 +66,7 @@ export function createPartitionProcessor({
 	function initialize({ command }: { command: InitializeCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: initializePartition({ writer: scope.ctx.writer, command }),
+			operation: initializePartition({ scope, command }),
 		});
 	}
 

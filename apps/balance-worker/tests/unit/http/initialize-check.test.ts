@@ -1,7 +1,10 @@
 import { expect, test } from "bun:test";
 import {
-	createCustomerMeteringState,
+	applyMutation,
+	computeInitialize,
+	createCustomerState,
 	parseCheckCommand,
+	parseInitializeCommand,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
@@ -9,42 +12,46 @@ import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp
 import type { BalanceWorkerRequestContext } from "../../../src/http/types/balanceWorkerHttp.js";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
 import { OwnedPartitionNotReadyError } from "../../../src/runtime/runtimeErrors.js";
-import { openSqliteBalanceStateStore } from "../../../src/state/sqliteBalanceStateStore.js";
+import { openStateStore } from "../../../src/state/openStateStore.js";
 
 const identity = {
 	orgId: "org",
 	env: "sandbox",
 	customerId: "external_customer",
 };
-const state = createCustomerMeteringState({
+const state = createCustomerState({
 	identity,
-	featureStatesById: {
-		messages: {
-			kind: "direct_metered_v1",
-			customerEntitlements: [
-				{
-					id: "grant",
-					balance: 10,
-					usage: 0,
-					granted: 10,
-					externalId: null,
-					planId: "pro",
-					reset: null,
-					expiresAt: null,
-				},
-			],
+	customerEntitlements: [
+		{
+			id: "grant",
+			externalId: null,
+			featureId: "messages",
+			balance: 10,
+			usage: 0,
+			granted: 10,
+			planId: "pro",
+			reset: null,
+			expiresAt: null,
 		},
-	},
+	],
 });
 const initialization = {
 	schemaVersion: 1,
 	type: "initialize",
 	requestId: "initialize",
-	initializationId: "baseline",
+	commandId: "baseline",
 	identity,
 	state,
 	occurredAt: 1_700_000_000_000,
 };
+/** What the store holds once the baseline mutation is applied. */
+const initializedState = applyMutation({
+	state: null,
+	mutation: computeInitialize({
+		command: parseInitializeCommand({ input: initialization }),
+		deduplicationExpiresAt: 1_700_000_000_000 + 86_400_000,
+	}),
+});
 const checkCommand = parseCheckCommand({
 	input: {
 		schemaVersion: 1,
@@ -81,7 +88,7 @@ function createFixture({
 	commitGate?: Promise<void>;
 	ready?: boolean;
 } = {}) {
-	const store = openSqliteBalanceStateStore({ databasePath: ":memory:" });
+	const store = openStateStore({ databasePath: ":memory:" });
 	store.initializePartition({
 		topic: "outcomes",
 		partition: 0,
@@ -177,7 +184,7 @@ test.concurrent(
 			});
 			expect(initialized.status).toBe(200);
 			expect(await initialized.json()).toMatchObject({
-				decision: { kind: "initialized", state },
+				decision: { kind: "initialized", state: initializedState },
 			});
 			const tracked = await fixture.post({
 				path: "track",
@@ -185,7 +192,7 @@ test.concurrent(
 			});
 			expect(tracked.status).toBe(200);
 			expect(await tracked.json()).toMatchObject({
-				decision: { kind: "new", outcome: { balanceAfter: 5 } },
+				decision: { kind: "new", mutation: { result: { balanceAfter: 5 } } },
 			});
 			const checked = await fixture.post({
 				path: "check",
@@ -195,7 +202,7 @@ test.concurrent(
 			expect(await checked.json()).toMatchObject({
 				decision: {
 					allowed: true,
-					revision: 1,
+					revision: 2,
 					balanceSnapshot: { granted: 10, balance: 5, usage: 5 },
 				},
 			});
@@ -205,22 +212,22 @@ test.concurrent(
 				command: { ...initialization, requestId: "retry" },
 			});
 			expect(await duplicate.json()).toMatchObject({
-				decision: { kind: "duplicate", state },
+				decision: { kind: "duplicate", state: initializedState },
 			});
 			const conflict = await fixture.post({
 				path: "initialize",
 				command: {
 					...initialization,
-					state: { ...state, featureStatesById: {} },
+					state: { ...state, customerEntitlements: {} },
 				},
 			});
 			expect(conflict.status).toBe(409);
 			expect(await conflict.json()).toMatchObject({
-				error: { code: "INITIALIZATION_CONFLICT" },
+				error: { code: "COMMAND_CONFLICT" },
 			});
 			const differentBaseline = await fixture.post({
 				path: "initialize",
-				command: { ...initialization, initializationId: "other_baseline" },
+				command: { ...initialization, commandId: "other_baseline" },
 			});
 			expect(await differentBaseline.json()).toEqual({
 				decision: { kind: "already_initialized" },
@@ -230,13 +237,15 @@ test.concurrent(
 				command: trackCommand,
 			});
 			expect(await trackedAgain.json()).toMatchObject({
-				decision: { kind: "duplicate", outcome: { balanceAfter: 5 } },
+				decision: {
+					kind: "duplicate",
+					mutation: { result: { balanceAfter: 5 } },
+				},
 			});
-			expect(fixture.batches.flat().map((record) => record.type)).toEqual([
-				"state_initialized",
-				"track_outcome",
-			]);
-			expect(fixture.store.readState({ identity })?.revision).toBe(1);
+			expect(
+				fixture.batches.flat().map((record) => record.command.type),
+			).toEqual(["initialize", "track"]);
+			expect(fixture.store.readState({ identity })?.revision).toBe(2);
 		} finally {
 			await fixture.close();
 		}
@@ -324,7 +333,7 @@ test.concurrent(
 			gate.resolve();
 			expect((await initializePromise).status).toBe(200);
 			expect(await (await checkPromise).json()).toMatchObject({
-				decision: { balance: 10, revision: 0 },
+				decision: { balance: 10, revision: 1 },
 			});
 			await draining;
 		} finally {

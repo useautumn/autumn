@@ -3,20 +3,20 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-	computeTrack,
-	createCustomerMeteringState,
-	executeTrack,
+	applyMutation,
+	type CustomerState,
 	type MeteringIdentity,
 	meteringPartitionKeyOf,
-	parseTrackCommand,
-	stateInitializationFingerprintOf,
 } from "@autumn/balance-engine";
 import { createPartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { PartitionCheckpointLimitExceededError } from "../../../../src/state/actions/checkpoint/restorePartitionCheckpoint.js";
+import { openStateStore } from "../../../../src/state/openStateStore.js";
+import type { StateStore } from "../../../../src/state/types/stateStore.js";
 import {
-	openSqliteBalanceStateStore,
-	type SqliteBalanceStateStore,
-} from "../../../../src/state/sqliteBalanceStateStore.js";
+	createState,
+	createTrackMutation,
+	seedCustomerState,
+} from "../../../fixtures/mutations.js";
 
 const topic = "metering-events-v1";
 const checkpointCreatedAt = 1_700_000_000_000;
@@ -38,27 +38,32 @@ const stateOf = ({
 }: {
 	identity: MeteringIdentity;
 	balance?: number;
-}) =>
-	createCustomerMeteringState({
-		identity,
-		featureStatesById: {
-			messages: {
-				kind: "direct_metered_v1",
-				customerEntitlements: [
-					{
-						id: "messages_monthly",
-						balance,
-						usage: 0,
-						granted: balance,
-						externalId: null,
-						planId: null,
-						reset: null,
-						expiresAt: null,
-					},
-				],
-			},
-		},
+}): CustomerState => createState({ identity, balance });
+
+/** Leaves the partition at `nextOffset` with the customer seeded by its initialize mutation. */
+const seedPartition = ({
+	store,
+	partition,
+	nextOffset,
+	state,
+	commandId,
+}: {
+	store: StateStore;
+	partition: number;
+	nextOffset: bigint;
+	state: CustomerState;
+	commandId: string;
+}): void => {
+	store.initializePartition({ topic, partition, nextOffset: nextOffset - 1n });
+	seedCustomerState({
+		store,
+		topic,
+		partition,
+		offset: nextOffset - 1n,
+		state,
+		commandId,
 	});
+};
 
 const checkpointWithReceipt = ({
 	partition,
@@ -70,32 +75,14 @@ const checkpointWithReceipt = ({
 	nextOffset?: bigint;
 }) => {
 	const initialState = stateOf({ identity });
-	const decision = computeTrack({
+	const mutation = createTrackMutation({
 		state: initialState,
+		commandId: `cmd_${identity.customerId}`,
+		occurredAt: checkpointCreatedAt,
 		deduplicationExpiresAt: checkpointCreatedAt + 86_400_000,
-		command: parseTrackCommand({
-			input: {
-				schemaVersion: 1,
-				type: "track",
-				commandId: `cmd_${identity.customerId}`,
-				requestId: `req_${identity.customerId}`,
-				identity,
-				entityId: null,
-				featureId: "messages",
-				value: 5,
-				overageBehavior: "reject",
-				properties: null,
-				occurredAt: checkpointCreatedAt,
-			},
-		}),
 	});
-	if (decision.kind !== "new") throw new Error("Expected a track outcome");
-	const state = executeTrack({
-		state: initialState,
-		outcome: decision.outcome,
-	}).state;
+	const state = applyMutation({ state: initialState, mutation });
 	const partitionKey = meteringPartitionKeyOf({ identity });
-	const initializationId = `init_${identity.customerId}`;
 
 	return createPartitionCheckpoint({
 		engineSchemaVersion: 1,
@@ -103,29 +90,8 @@ const checkpointWithReceipt = ({
 		topic,
 		partition,
 		nextOffset,
-		states: [
-			{
-				partitionKey,
-				initializationId,
-				initializationFingerprint: stateInitializationFingerprintOf({
-					initialization: {
-						schemaVersion: 1,
-						type: "state_initialized",
-						initializationId,
-						initializedAt: checkpointCreatedAt,
-						state: initialState,
-					},
-				}),
-				state,
-			},
-		],
-		receipts: [
-			{
-				partitionKey,
-				recordOffset: nextOffset - 1n,
-				outcome: decision.outcome,
-			},
-		],
+		states: [{ partitionKey, state }],
+		receipts: [{ partitionKey, recordOffset: nextOffset - 1n, mutation }],
 	});
 };
 
@@ -140,41 +106,25 @@ const checkpointWithoutReceipts = ({
 }) => {
 	const state = stateOf({ identity });
 	const partitionKey = meteringPartitionKeyOf({ identity });
-	const initializationId = `init_${identity.customerId}`;
 	return createPartitionCheckpoint({
 		engineSchemaVersion: 1,
 		createdAt: checkpointCreatedAt,
 		topic,
 		partition,
 		nextOffset,
-		states: [
-			{
-				partitionKey,
-				initializationId,
-				initializationFingerprint: stateInitializationFingerprintOf({
-					initialization: {
-						schemaVersion: 1,
-						type: "state_initialized",
-						initializationId,
-						initializedAt: checkpointCreatedAt,
-						state,
-					},
-				}),
-				state,
-			},
-		],
+		states: [{ partitionKey, state }],
 		receipts: [],
 	});
 };
 
 const createStore = (): {
 	directory: string;
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 } => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-checkpoint-restore-"));
 	return {
 		directory,
-		store: openSqliteBalanceStateStore({
+		store: openStateStore({
 			databasePath: join(directory, "balance-state.sqlite"),
 		}),
 	};
@@ -185,7 +135,7 @@ const closeStore = ({
 	store,
 }: {
 	directory: string;
-	store: SqliteBalanceStateStore;
+	store: StateStore;
 }): void => {
 	store.close();
 	rmSync(directory, { recursive: true, force: true });
@@ -218,18 +168,16 @@ describe("restore partition checkpoint", () => {
 			expect(fixture.store.readNextOffset({ topic, partition: 0 })).toBe(2n);
 			expect(fixture.store.readState({ identity })).toMatchObject({
 				revision: 1,
-				featureStatesById: {
-					messages: {
-						customerEntitlements: [{ balance: 5, usage: 5 }],
-					},
+				customerEntitlements: {
+					messages_monthly: { balance: 5, usage: 5 },
 				},
 			});
 			expect(
-				fixture.store.readTrackReceipt({
+				fixture.store.readReceipt({
 					identity,
-					commandId: `cmd_${identity.customerId}`,
+					mutationId: `cmd_${identity.customerId}`,
 				}),
-			).toEqual(checkpoint.receipts[0]?.outcome);
+			).toEqual(checkpoint.receipts[0]?.mutation);
 		} finally {
 			closeStore(fixture);
 		}
@@ -240,27 +188,19 @@ describe("restore partition checkpoint", () => {
 		const replacedIdentity = identityOf("cus_replaced");
 		const retainedIdentity = identityOf("cus_retained");
 		try {
-			fixture.store.initializePartition({
-				topic,
+			seedPartition({
+				store: fixture.store,
 				partition: 0,
 				nextOffset: 42n,
-			});
-			fixture.store.restoreState({
-				topic,
-				partition: 0,
-				initializationId: "old_init",
 				state: stateOf({ identity: replacedIdentity, balance: 3 }),
+				commandId: "old_init",
 			});
-			fixture.store.initializePartition({
-				topic,
+			seedPartition({
+				store: fixture.store,
 				partition: 1,
 				nextOffset: 7n,
-			});
-			fixture.store.restoreState({
-				topic,
-				partition: 1,
-				initializationId: "retained_init",
 				state: stateOf({ identity: retainedIdentity, balance: 9 }),
+				commandId: "retained_init",
 			});
 
 			fixture.store.restorePartitionCheckpoint({
@@ -282,17 +222,13 @@ describe("restore partition checkpoint", () => {
 				fixture.store.readState({ identity: replacedIdentity }),
 			).toMatchObject({
 				revision: 1,
-				featureStatesById: {
-					messages: { customerEntitlements: [{ balance: 5 }] },
-				},
+				customerEntitlements: { messages_monthly: { balance: 5 } },
 			});
 			expect(fixture.store.readNextOffset({ topic, partition: 1 })).toBe(7n);
 			expect(
 				fixture.store.readState({ identity: retainedIdentity }),
 			).toMatchObject({
-				featureStatesById: {
-					messages: { customerEntitlements: [{ balance: 9 }] },
-				},
+				customerEntitlements: { messages_monthly: { balance: 9 } },
 			});
 		} finally {
 			closeStore(fixture);
@@ -304,27 +240,19 @@ describe("restore partition checkpoint", () => {
 		const oldIdentity = identityOf("cus_old");
 		const conflictingIdentity = identityOf("cus_conflict");
 		try {
-			fixture.store.initializePartition({
-				topic,
+			seedPartition({
+				store: fixture.store,
 				partition: 0,
 				nextOffset: 42n,
-			});
-			fixture.store.restoreState({
-				topic,
-				partition: 0,
-				initializationId: "old_init",
 				state: stateOf({ identity: oldIdentity, balance: 3 }),
+				commandId: "old_init",
 			});
-			fixture.store.initializePartition({
-				topic,
+			seedPartition({
+				store: fixture.store,
 				partition: 1,
 				nextOffset: 7n,
-			});
-			fixture.store.restoreState({
-				topic,
-				partition: 1,
-				initializationId: "conflicting_init",
 				state: stateOf({ identity: conflictingIdentity }),
+				commandId: "conflicting_init",
 			});
 
 			expect(() =>
@@ -341,9 +269,7 @@ describe("restore partition checkpoint", () => {
 			).toThrow();
 			expect(fixture.store.readNextOffset({ topic, partition: 0 })).toBe(42n);
 			expect(fixture.store.readState({ identity: oldIdentity })).toMatchObject({
-				featureStatesById: {
-					messages: { customerEntitlements: [{ balance: 3 }] },
-				},
+				customerEntitlements: { messages_monthly: { balance: 3 } },
 			});
 			expect(fixture.store.readNextOffset({ topic, partition: 1 })).toBe(7n);
 		} finally {
@@ -356,16 +282,12 @@ describe("restore partition checkpoint", () => {
 		const oldIdentity = identityOf("cus_old");
 		const replacementIdentity = identityOf("cus_replacement");
 		try {
-			fixture.store.initializePartition({
-				topic,
+			seedPartition({
+				store: fixture.store,
 				partition: 0,
 				nextOffset: 42n,
-			});
-			fixture.store.restoreState({
-				topic,
-				partition: 0,
-				initializationId: "old_init",
 				state: stateOf({ identity: oldIdentity }),
+				commandId: "old_init",
 			});
 
 			let error: unknown;

@@ -1,12 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
-	ConflictingTrackReceiptError,
+	applyMutation,
 	computeTrack,
-	OutOfOrderTrackOutcomeError,
+	OutOfOrderMutationError,
 	parseCheckCommand,
 	parseInitializeCommand,
 } from "@autumn/balance-engine";
 import { parsePartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
+import { ConflictingMutationReceiptError } from "../../../../src/state/stateStoreErrors.js";
+import { applyDurableMutation } from "../../../fixtures/mutations.js";
 import {
 	checkpointLimits,
 	createCommand,
@@ -27,9 +29,11 @@ describe("receipt reuse during checkpoint replay", () => {
 		async (checkpointCut) => {
 			const fixture = await createReceiptReplayFixture({ checkpointCut });
 			try {
-				expect(fixture.pruned).toEqual({ deletedCount: 1 });
+				expect(fixture.pruned).toEqual({ deletedCount: 2 });
 				expect(fixture.checkpoint.receipts).toHaveLength(
-					checkpointCut === "before_expiry" ? 1 : 0,
+					{ before_first_track: 1, before_expiry: 2, after_expiry: 0 }[
+						checkpointCut
+					],
 				);
 				fixture.restoredStore.applyDurableMutations({ records: fixture.tail });
 
@@ -37,9 +41,9 @@ describe("receipt reuse during checkpoint replay", () => {
 					fixture.liveStore.readState({ identity }),
 				);
 				expect(fixture.restoredStore.readState({ identity })).toMatchObject({
-					revision: 2,
-					featureStatesById: {
-						messages: { customerEntitlements: [{ balance: 2, usage: 8 }] },
+					revision: 3,
+					customerEntitlements: {
+						messages_monthly: { balance: 0, usage: 10 },
 					},
 				});
 				expect(fixture.restoredStore.readNextOffset({ topic, partition })).toBe(
@@ -50,7 +54,7 @@ describe("receipt reuse during checkpoint replay", () => {
 				});
 				expect(retry).toEqual({
 					kind: "duplicate",
-					outcome: fixture.reusedOutcome,
+					mutation: fixture.reusedMutation,
 				});
 				expect(fixture.records).toHaveLength(3);
 				const initializationRetry = await fixture.restoredProcessor.initialize({
@@ -60,16 +64,24 @@ describe("receipt reuse during checkpoint replay", () => {
 							type: "initialize",
 							requestId: "restore-initialize-retry",
 							identity,
-							initializationId: fixture.initialization.initializationId,
-							state: fixture.initialization.state,
+							commandId: fixture.initialization.id,
+							state: fixture.baselineState,
 							occurredAt: fixture.now,
 						},
 					}),
 				});
-				expect(initializationRetry).toEqual({
-					kind: "duplicate",
-					state: fixture.initialization.state,
-				});
+				// Once the initialize receipt expires, a replay only sees that state exists.
+				expect(initializationRetry).toEqual(
+					checkpointCut === "after_expiry"
+						? { kind: "already_initialized" }
+						: {
+								kind: "duplicate",
+								state: applyMutation({
+									state: null,
+									mutation: fixture.initialization,
+								}),
+							},
+				);
 				const checked = await fixture.restoredProcessor.check({
 					command: parseCheckCommand({
 						input: {
@@ -87,13 +99,14 @@ describe("receipt reuse during checkpoint replay", () => {
 				});
 				expect(checked).toMatchObject({
 					kind: "decided",
-					balance: 2,
-					revision: 2,
+					balance: 0,
+					revision: 3,
 					balanceSnapshot: {
 						id: "messages_monthly",
+						featureId: "messages",
 						externalId: "monthly-grant",
-						balance: 2,
-						usage: 8,
+						balance: 0,
+						usage: 10,
 						granted: 10,
 						planId: "pro",
 						reset: {
@@ -114,16 +127,20 @@ describe("receipt reuse during checkpoint replay", () => {
 					}).serialized,
 				});
 				expect(checkpoint.receipts).toMatchObject([
-					{ recordOffset: 2n, outcome: fixture.reusedOutcome },
+					{ recordOffset: 2n, mutation: fixture.reusedMutation },
 				]);
+				fixture.restoredStore.pruneExpiredReceipts({
+					topic,
+					partition,
+					expiresAtOrBefore: fixture.firstMutation.receipt.expiresAt,
+					limit: 10,
+				});
 				expect(
-					fixture.restoredStore.pruneExpiredTrackReceipts({
-						topic,
-						partition,
-						expiresAtOrBefore: fixture.firstOutcome.deduplicationExpiresAt,
-						limit: 1,
+					fixture.restoredStore.readReceipt({
+						identity,
+						mutationId: fixture.reusedCommand.commandId,
 					}),
-				).toEqual({ deletedCount: 0 });
+				).toEqual(fixture.reusedMutation);
 			} finally {
 				await fixture.close();
 			}
@@ -140,21 +157,21 @@ describe("receipt reuse during checkpoint replay", () => {
 				const staleDecision = computeTrack({
 					state: stateBefore,
 					command: createCommand({ commandId: "cmd_stale", value: 1 }),
-					deduplicationExpiresAt: fixture.reusedOutcome.deduplicationExpiresAt,
+					deduplicationExpiresAt: fixture.reusedMutation.receipt.expiresAt,
 				});
 				if (staleDecision.kind !== "new")
-					throw new Error("Expected a track outcome");
+					throw new Error("Expected a track mutation");
 				expect(() =>
 					fixture.restoredStore.applyDurableMutations({
 						records: [
 							...fixture.tail,
 							{
 								position: { topic, partition, offset: 3n },
-								mutation: staleDecision.outcome,
+								mutation: staleDecision.mutation,
 							},
 						],
 					}),
-				).toThrow(OutOfOrderTrackOutcomeError);
+				).toThrow(OutOfOrderMutationError);
 				expect(fixture.restoredStore.readState({ identity })).toEqual(
 					stateBefore,
 				);
@@ -162,11 +179,11 @@ describe("receipt reuse during checkpoint replay", () => {
 					2n,
 				);
 				expect(
-					fixture.restoredStore.readTrackReceipt({
+					fixture.restoredStore.readReceipt({
 						identity,
-						commandId: fixture.reusedCommand.commandId,
+						mutationId: fixture.reusedCommand.commandId,
 					}),
-				).toEqual(fixture.firstOutcome);
+				).toEqual(fixture.firstMutation);
 
 				fixture.restoredStore.applyDurableMutations({ records: fixture.tail });
 				expect(fixture.restoredStore.readState({ identity })).toEqual(
@@ -184,12 +201,27 @@ describe("receipt reuse during checkpoint replay", () => {
 			const fixture = await createReceiptReplayFixture();
 			try {
 				fixture.restoredStore.applyDurableMutations({ records: fixture.tail });
-				expect(() =>
-					fixture.restoredStore.applyDurableTrackOutcome({
-						position: { topic, partition, offset: 3n },
-						outcome: { ...fixture.firstOutcome, requestId: "req_conflict" },
+				const currentState = fixture.restoredStore.readState({ identity });
+				if (!currentState) throw new Error("Expected restored state");
+				const conflicting = computeTrack({
+					state: currentState,
+					command: createCommand({
+						commandId: fixture.reusedCommand.commandId,
+						value: 1,
 					}),
-				).toThrow(ConflictingTrackReceiptError);
+					deduplicationExpiresAt: fixture.reusedMutation.receipt.expiresAt,
+				});
+				if (conflicting.kind !== "new")
+					throw new Error("Expected a track mutation");
+				expect(() =>
+					applyDurableMutation({
+						store: fixture.restoredStore,
+						topic,
+						partition,
+						offset: 3n,
+						mutation: conflicting.mutation,
+					}),
+				).toThrow(ConflictingMutationReceiptError);
 				expect(fixture.restoredStore.readState({ identity })).toEqual(
 					fixture.liveStore.readState({ identity }),
 				);
@@ -197,11 +229,11 @@ describe("receipt reuse during checkpoint replay", () => {
 					3n,
 				);
 				expect(
-					fixture.restoredStore.readTrackReceipt({
+					fixture.restoredStore.readReceipt({
 						identity,
-						commandId: fixture.reusedCommand.commandId,
+						mutationId: fixture.reusedCommand.commandId,
 					}),
-				).toEqual(fixture.reusedOutcome);
+				).toEqual(fixture.reusedMutation);
 			} finally {
 				await fixture.close();
 			}

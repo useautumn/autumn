@@ -16,14 +16,14 @@ test.concurrent(
 			});
 			expect(firstTrack).toMatchObject({
 				kind: "new",
-				outcome: { balanceAfter: 5 },
+				mutation: { result: { balanceAfter: 5 } },
 			});
 			await waitForCheckpointService({
 				ready: async () => {
 					const checkpoint = await fixture.latest();
 					return (
 						checkpoint?.receipts.some(
-							(receipt) => receipt.outcome.commandId === "checkpointed",
+							(receipt) => receipt.mutation.id === "checkpointed",
 						) ?? false
 					);
 				},
@@ -62,23 +62,23 @@ test.concurrent(
 			const retry = await fixture.client.track({ command });
 			expect(retry).toMatchObject({
 				kind: "duplicate",
-				outcome: { balanceAfter: 2 },
+				mutation: { result: { balanceAfter: 2 } },
 			});
 			if (tail.kind !== "new" || retry.kind !== "duplicate")
-				throw new Error("Expected original and replayed outcomes");
-			expect(retry.outcome).toEqual(tail.outcome);
+				throw new Error("Expected original and replayed mutations");
+			expect(retry.mutation).toEqual(tail.mutation);
 			const database = new Database(replacement.databasePath, {
 				readonly: true,
 			});
 			try {
 				expect(
-					database.query("SELECT revision FROM customer_states").get(),
-				).toEqual({ revision: 2 });
+					database.query("SELECT revision FROM subject_states").get(),
+				).toEqual({ revision: 3 });
 				expect(
 					database
-						.query("SELECT count(*) AS receipts FROM track_receipts")
+						.query("SELECT count(*) AS receipts FROM mutation_receipts")
 						.get(),
-				).toEqual({ receipts: 2 });
+				).toEqual({ receipts: 3 });
 			} finally {
 				database.close();
 			}

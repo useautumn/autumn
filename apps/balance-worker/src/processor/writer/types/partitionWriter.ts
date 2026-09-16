@@ -1,9 +1,9 @@
 import type {
-	CustomerMeteringState,
-	StateInitializedEvent,
+	CustomerState,
+	CustomerStateMutation,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
-import type { SqliteBalanceStateStore } from "../../../state/sqliteBalanceStateStore.js";
+import type { StateStore } from "../../../state/types/stateStore.js";
 import type {
 	CommittedMutation,
 	DecidedMutation,
@@ -13,19 +13,15 @@ import type {
 export type PartitionWriter = {
 	/**
 	 * Synchronous: decides against the customer's freshest state and enqueues the
-	 * outcome before returning. `.committed` resolves after Kafka commit + SQLite apply.
+	 * mutation before returning. `.committed` resolves after Kafka commit + SQLite apply.
 	 */
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
-	/** Snapshot: waits for the outcomes pending for this customer when called, not ones enqueued later. */
+	/** Snapshot: waits for the mutations pending for this customer when called, not ones enqueued later. */
 	waitForPendingCommits(params: { customerKey: string }): Promise<void>;
-	/** Writes a first baseline or acknowledges the original initialization identity. */
-	submitInitialization(params: {
-		initialization: StateInitializedEvent;
-	}): Promise<CommittedMutation | { kind: "already_initialized" }>;
 };
 
 export type CommittedOutcomeAppender = {
-	/** Atomically commits all outcomes contiguously and returns the first record's offset. */
+	/** Atomically commits all mutations contiguously and returns the first record's offset. */
 	appendCommitted(params: {
 		topic: string;
 		partition: number;
@@ -35,11 +31,8 @@ export type CommittedOutcomeAppender = {
 
 export type PartitionWriterContext = {
 	stateStore: Pick<
-		SqliteBalanceStateStore,
-		| "readState"
-		| "readInitializationReceipt"
-		| "readTrackReceipt"
-		| "applyDurableMutations"
+		StateStore,
+		"readState" | "readReceipt" | "applyDurableMutations"
 	>;
 	appender: CommittedOutcomeAppender;
 };
@@ -56,28 +49,28 @@ export type PartitionWriterConfig = {
 	limits: PartitionWriterLimits;
 };
 
-/** Callers waiting on one queued outcome; the writer is "new", joiners are "duplicate". */
+/** Callers waiting on one queued mutation; the writer is "new", joiners are "duplicate". */
 export type PendingSettlement = {
 	join(params: { kind: CommittedMutation["kind"] }): Promise<CommittedMutation>;
-	settle(params: { outcome: MeteringRecord }): void;
+	settle(params: { mutation: CustomerStateMutation }): void;
 	reject(params: { error: unknown }): void;
 };
 
-export type PendingOutcome = {
+export type PendingMutation = {
 	pendingKey: string;
 	customerKey: string;
-	outcome: MeteringRecord;
+	mutation: CustomerStateMutation;
 	settlement: PendingSettlement;
 	/** What `waitForPendingCommits()` snapshots for this customer. */
 	committed: Promise<CommittedMutation>;
 };
 
-/** Mutable writer state: speculative projections and outcomes awaiting commit. */
+/** Mutable writer state: speculative projections and mutations awaiting commit. */
 export type PartitionWriterState = {
-	projectedStateByCustomerKey: Map<string, CustomerMeteringState>;
-	pendingByKey: Map<string, PendingOutcome>;
-	pendingByCustomerKey: Map<string, Set<PendingOutcome>>;
-	queue: PendingOutcome[];
+	projectedStateByCustomerKey: Map<string, CustomerState>;
+	pendingByKey: Map<string, PendingMutation>;
+	pendingByCustomerKey: Map<string, Set<PendingMutation>>;
+	queue: PendingMutation[];
 	draining: boolean;
 	drainScheduled: boolean;
 	recoveryError: Error | null;

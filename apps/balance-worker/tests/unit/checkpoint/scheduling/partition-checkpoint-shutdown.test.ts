@@ -11,7 +11,7 @@ describe("checkpoint scheduler shutdown", () => {
 			try {
 				fixture.initialize({ partition: 0 });
 				fixture.clock.yield = () => yielded.promise;
-				fixture.store.pruneExpiredTrackReceipts = () => {
+				fixture.store.pruneExpiredReceipts = () => {
 					stopping = fixture.scheduler.stop();
 					return { deletedCount: 0 };
 				};
@@ -78,11 +78,9 @@ describe("checkpoint scheduler shutdown", () => {
 				fixture.initialize({ partition: 0 });
 				fixture.initialize({ partition: 1 });
 				fixture.clock.yield = () => yielded.promise;
-				const prune = fixture.store.pruneExpiredTrackReceipts.bind(
-					fixture.store,
-				);
+				const prune = fixture.store.pruneExpiredReceipts.bind(fixture.store);
 				const deletes: number[] = [];
-				fixture.store.pruneExpiredTrackReceipts = (params) => {
+				fixture.store.pruneExpiredReceipts = (params) => {
 					deletes.push(params.partition);
 					return prune(params);
 				};

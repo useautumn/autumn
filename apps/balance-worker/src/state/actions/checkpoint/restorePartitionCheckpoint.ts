@@ -10,13 +10,13 @@ import {
 	PartitionCheckpointLimitExceededError,
 	type PartitionCheckpointLimits,
 } from "../../../checkpoint/partitionCheckpointLimits.js";
-import { insertState } from "../../repos/customerStates/customerStates.js";
+import { insertReceipt } from "../../repos/mutationReceipts/mutationReceipts.js";
 import {
 	deletePartitionProgress,
 	insertPartitionProgress,
 	readNextOffset,
 } from "../../repos/partitionProgress.js";
-import { insertTrackReceipt } from "../../repos/trackReceipts/trackReceipts.js";
+import { insertState } from "../../repos/subjectStates/subjectStates.js";
 import type { StateStoreContext } from "../../types/stateStoreContext.js";
 
 export type PartitionCheckpointRestoreMode = "replace" | "restore";
@@ -132,13 +132,11 @@ export const restorePartitionCheckpoint = ({
 					partitionKey: checkpointState.partitionKey,
 					topic: checkpoint.topic,
 					partition: checkpoint.partition,
-					initializationId: checkpointState.initializationId,
-					initializationFingerprint: checkpointState.initializationFingerprint,
 					state: checkpointState.state,
 				});
 			}
 			for (const checkpointReceipt of checkpoint.receipts) {
-				insertTrackReceipt({
+				insertReceipt({
 					ctx,
 					partitionKey: checkpointReceipt.partitionKey,
 					position: {
@@ -146,7 +144,7 @@ export const restorePartitionCheckpoint = ({
 						partition: checkpoint.partition,
 						offset: checkpointReceipt.recordOffset,
 					},
-					receipt: checkpointReceipt.outcome,
+					mutation: checkpointReceipt.mutation,
 				});
 			}
 		})

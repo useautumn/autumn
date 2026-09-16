@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { MeteringRecord } from "@autumn/kafka";
 import { inspectBalanceShadowCustomer } from "@/internal/balances/shadow/operator/inspectBalanceShadowCustomer.js";
-import { openSqliteBalanceStateStore } from "../../../../../apps/balance-worker/src/state/sqliteBalanceStateStore.js";
+import { openStateStore } from "../../../../../apps/balance-worker/src/state/openStateStore.js";
 import { createCustomerFixture } from "../balanceWorker/customer-fixture.js";
 import {
 	createWorkerFixture,
@@ -12,7 +12,7 @@ import {
 function setup() {
 	const fixture = createCustomerFixture();
 	const records: MeteringRecord[] = [];
-	const stateStore = openSqliteBalanceStateStore({ databasePath: ":memory:" });
+	const stateStore = openStateStore({ databasePath: ":memory:" });
 	stateStore.initializePartition({ topic, partition, nextOffset: 0n });
 	const worker = createWorkerFixture({
 		stateStore,
@@ -72,7 +72,7 @@ test.concurrent(
 			).toMatchObject({
 				status: "equal_at_read",
 				initialization: "initialized",
-				worker: { messages: { balance: 72, usage: 38, revision: 0 } },
+				worker: { messages: { balance: 72, usage: 38, revision: 1 } },
 			});
 			expect(
 				await inspectBalanceShadowCustomer({
@@ -109,7 +109,7 @@ test.concurrent(
 			).toMatchObject({
 				status: "equal_at_read",
 				redis: { messages: { balance: 67, usage: 43 } },
-				worker: { messages: { balance: 67, usage: 43, revision: 1 } },
+				worker: { messages: { balance: 67, usage: 43, revision: 2 } },
 			});
 			const count = fixture.records.length;
 			expect(
@@ -172,8 +172,8 @@ test.concurrent(
 				status: "inconclusive",
 				reason: "Redis baseline changed during the operation",
 			});
-			expect(fixture.records.map(({ type }) => type)).toEqual([
-				"state_initialized",
+			expect(fixture.records.map(({ command }) => command.type)).toEqual([
+				"initialize",
 			]);
 		} finally {
 			await fixture.close();

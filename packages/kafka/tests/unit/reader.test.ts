@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import {
-	computeTrack,
-	createCustomerMeteringState,
-	parseTrackCommand,
-} from "@autumn/balance-engine";
-import {
 	type Batch,
 	type ConsumerConfig,
 	type ConsumerRunConfig,
@@ -17,6 +12,7 @@ import type { PartitionReaderConsumer } from "../../src/consumer/reader/types/re
 import { RecordKeyMismatchError } from "../../src/lib/recordErrors.js";
 import { createMeteringReader } from "../../src/topics/metering/consumer/createMeteringReader.js";
 import { serializeMeteringRecord } from "../../src/topics/metering/meteringTopic.js";
+import { createState, createTrackMutation } from "../meteringFixtures.js";
 
 function createDeferred() {
 	let resolve!: () => void;
@@ -454,53 +450,13 @@ function partitionReaderTests(): void {
 }
 
 function createOutcome() {
-	const identity = {
-		orgId: "org_1",
-		env: "sandbox" as const,
-		customerId: "customer_1",
-	};
-	const state = createCustomerMeteringState({
-		identity,
-		featureStatesById: {
-			messages: {
-				kind: "direct_metered_v1",
-				customerEntitlements: [
-					{
-						id: "balance",
-						balance: 10,
-						usage: 0,
-						granted: 10,
-						externalId: null,
-						planId: null,
-						reset: null,
-						expiresAt: null,
-					},
-				],
-			},
-		},
+	return createTrackMutation({
+		state: createState({
+			identity: { orgId: "org_1", env: "sandbox", customerId: "customer_1" },
+		}),
+		commandId: "command",
+		value: 1,
 	});
-	const command = parseTrackCommand({
-		input: {
-			schemaVersion: 1,
-			type: "track",
-			commandId: "command",
-			requestId: "request",
-			identity,
-			entityId: null,
-			featureId: "messages",
-			value: 1,
-			overageBehavior: "reject",
-			properties: null,
-			occurredAt: 1_700_000_000_000,
-		},
-	});
-	const decision = computeTrack({
-		deduplicationExpiresAt: 1_700_086_400_000,
-		state,
-		command,
-	});
-	if (decision.kind !== "new") throw new Error("Expected a new outcome");
-	return decision.outcome;
 }
 
 async function readsTypedRecordsWithoutAStore(): Promise<void> {

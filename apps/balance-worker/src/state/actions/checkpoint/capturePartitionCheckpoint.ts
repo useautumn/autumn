@@ -7,10 +7,10 @@ import {
 	assertPartitionCheckpointWithinLimit,
 	type PartitionCheckpointLimits,
 } from "../../../checkpoint/partitionCheckpointLimits.js";
-import { readPartitionStates } from "../../repos/customerStates/customerStates.js";
+import { readPartitionReceipts } from "../../repos/mutationReceipts/mutationReceipts.js";
 import { readNextOffset } from "../../repos/partitionProgress.js";
-import { readPartitionReceipts } from "../../repos/trackReceipts/trackReceipts.js";
-import { PartitionProgressNotFoundError } from "../../sqliteBalanceStateErrors.js";
+import { readPartitionStates } from "../../repos/subjectStates/subjectStates.js";
+import { PartitionProgressNotFoundError } from "../../stateStoreErrors.js";
 import type { StateStoreContext } from "../../types/stateStoreContext.js";
 
 export type PartitionCheckpointCaptureLimits = PartitionCheckpointLimits;
@@ -83,19 +83,10 @@ export const capturePartitionCheckpoint = ({
 				consumedNextOffset !== null && consumedNextOffset > cut.nextOffset
 					? consumedNextOffset
 					: cut.nextOffset,
-			states: cut.states.map(
-				({
-					partitionKey,
-					initializationId,
-					initializationFingerprint,
-					state,
-				}) => ({
-					partitionKey,
-					initializationId,
-					initializationFingerprint,
-					state,
-				}),
-			),
+			states: cut.states.map(({ partitionKey, state }) => ({
+				partitionKey,
+				state,
+			})),
 			receipts: cut.receipts,
 		},
 	});

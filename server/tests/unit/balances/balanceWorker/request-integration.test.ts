@@ -1,11 +1,15 @@
 import { expect, test } from "bun:test";
 import type { MeteringRecord } from "@autumn/kafka";
-import { InsufficientBalanceError, type TrackParams } from "@autumn/shared";
+import {
+	ErrCode,
+	InsufficientBalanceError,
+	type TrackParams,
+} from "@autumn/shared";
 import { initializeBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/initializeBalanceWorkerCustomer.js";
 import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
 import { runBalanceWorkerTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js";
 import { parsePartitionCheckpoint } from "../../../../../apps/balance-worker/src/checkpoint/partitionCheckpoint.js";
-import { openSqliteBalanceStateStore } from "../../../../../apps/balance-worker/src/state/sqliteBalanceStateStore.js";
+import { openStateStore } from "../../../../../apps/balance-worker/src/state/openStateStore.js";
 import { createCustomerFixture } from "./customer-fixture.js";
 import {
 	checkpointLimits,
@@ -26,8 +30,8 @@ test.concurrent(
 			customerId: fullSubject.customerId,
 		};
 		const records: MeteringRecord[] = [];
-		const liveStore = openSqliteBalanceStateStore({ databasePath: ":memory:" });
-		const restoredStore = openSqliteBalanceStateStore({
+		const liveStore = openStateStore({ databasePath: ":memory:" });
+		const restoredStore = openStateStore({
 			databasePath: ":memory:",
 		});
 		liveStore.initializePartition({ topic, partition, nextOffset: 0n });
@@ -45,7 +49,7 @@ test.concurrent(
 			ctx,
 			fullSubject,
 			featureIds: ["messages"],
-			initializationId: "baseline",
+			commandId: "baseline",
 		};
 		const body: TrackParams = {
 			customer_id: fullSubject.customerId,
@@ -68,7 +72,7 @@ test.concurrent(
 				}),
 			).toMatchObject({
 				kind: "initialized",
-				state: { identity, revision: 0 },
+				state: { identity, revision: 1 },
 			});
 			expect(
 				await runBalanceWorkerCheck({ ctx, body, client: live.client }),
@@ -113,12 +117,12 @@ test.concurrent(
 				status: "rejected",
 				reason: expect.any(InsufficientBalanceError),
 			});
-			expect(liveStore.readState({ identity })).toMatchObject({ revision: 3 });
-			expect(records.map((record) => record.type)).toEqual([
-				"state_initialized",
-				"track_outcome",
-				"track_outcome",
-				"track_outcome",
+			expect(liveStore.readState({ identity })).toMatchObject({ revision: 4 });
+			expect(records.map((record) => record.command.type)).toEqual([
+				"initialize",
+				"track",
+				"track",
+				"track",
 			]);
 			const firstResult = results[0];
 			if (firstResult.status !== "fulfilled")
@@ -135,7 +139,7 @@ test.concurrent(
 			expect(
 				await initializeBalanceWorkerCustomer({
 					...initialization,
-					initializationId: "different_baseline",
+					commandId: "different_baseline",
 					client: live.client,
 				}),
 			).toEqual({ kind: "already_initialized" });
@@ -148,7 +152,7 @@ test.concurrent(
 					client: live.client,
 				}),
 			).rejects.toMatchObject({
-				code: "balance_worker_initialization_conflict",
+				code: ErrCode.DuplicateIdempotencyKey,
 				statusCode: 409,
 			});
 			const checked = await runBalanceWorkerCheck({

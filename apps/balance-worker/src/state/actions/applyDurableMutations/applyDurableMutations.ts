@@ -1,4 +1,4 @@
-import { parseTrackOutcome } from "@autumn/balance-engine";
+import { parseCustomerStateMutation } from "@autumn/balance-engine";
 import {
 	assertOffset,
 	assertPartition,
@@ -9,13 +9,21 @@ import type {
 	DurableMutationRecord,
 } from "../../types/durableMutation.js";
 import type { StateStoreContext } from "../../types/stateStoreContext.js";
-import {
-	applyStateInitialization,
-	parsePersistedInitialization,
-} from "./applyStateInitialization.js";
-import { applyTrackOutcome } from "./applyTrackOutcome.js";
+import { applyRecord } from "./applyRecord.js";
 
-/** Applies a committed batch of mixed records in one transaction, in log order. */
+/** Re-parsed through JSON so an in-memory mutation and a replayed one persist identically. */
+const parsePersistedMutation = ({
+	record,
+}: {
+	record: DurableMutationRecord;
+}): DurableMutationRecord => ({
+	position: record.position,
+	mutation: parseCustomerStateMutation({
+		input: JSON.parse(JSON.stringify(record.mutation)),
+	}),
+});
+
+/** Applies a committed batch in one transaction, in log order. */
 export const applyDurableMutations = ({
 	ctx,
 	records,
@@ -24,45 +32,19 @@ export const applyDurableMutations = ({
 	records: readonly DurableMutationRecord[];
 }): DurableMutationApplyResult[] => {
 	const parsedRecords: DurableMutationRecord[] = [];
-	for (const { position, mutation } of records) {
-		assertTopic({ topic: position.topic });
-		assertPartition({ partition: position.partition });
-		assertOffset({ offset: position.offset });
-		parsedRecords.push({
-			position,
-			mutation:
-				mutation.type === "state_initialized"
-					? parsePersistedInitialization({ initialization: mutation })
-					: parseTrackOutcome({ input: mutation }),
-		});
+	for (const record of records) {
+		assertTopic({ topic: record.position.topic });
+		assertPartition({ partition: record.position.partition });
+		assertOffset({ offset: record.position.offset });
+		parsedRecords.push(parsePersistedMutation({ record }));
 	}
 	if (parsedRecords.length === 0) return [];
 
 	return ctx.sqliteDb
-		.transaction(() => {
-			const results: DurableMutationApplyResult[] = [];
-			for (const { position, mutation } of parsedRecords) {
-				if (mutation.type === "state_initialized") {
-					const initialized = applyStateInitialization({
-						ctx,
-						position,
-						initialization: mutation,
-					});
-					results.push(
-						initialized.kind === "position_already_applied"
-							? initialized
-							: { type: "state_initialized", ...initialized },
-					);
-					continue;
-				}
-				const tracked = applyTrackOutcome({ ctx, position, outcome: mutation });
-				results.push(
-					tracked.kind === "position_already_applied"
-						? tracked
-						: { type: "track_outcome", ...tracked },
-				);
-			}
-			return results;
-		})
+		.transaction(() =>
+			parsedRecords.map(({ position, mutation }) =>
+				applyRecord({ ctx, position, mutation }),
+			),
+		)
 		.immediate();
 };

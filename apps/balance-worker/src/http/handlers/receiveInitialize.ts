@@ -15,7 +15,7 @@ export async function receiveInitialize(
 	requestLog.command = {
 		requestId: command.requestId,
 		identity: command.identity,
-		commandId: command.initializationId,
+		commandId: command.commandId,
 	};
 	function runInitialize(processor: PartitionProcessor) {
 		return processor.initialize({ command });

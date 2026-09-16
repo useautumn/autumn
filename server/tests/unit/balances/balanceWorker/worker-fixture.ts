@@ -2,7 +2,7 @@ import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
 import type { MeteringRecord } from "@autumn/kafka";
 import { createBalanceWorkerApp } from "../../../../../apps/balance-worker/src/http/createBalanceWorkerApp.js";
 import { createPartitionProcessor } from "../../../../../apps/balance-worker/src/processor/createPartitionProcessor.js";
-import type { SqliteBalanceStateStore } from "../../../../../apps/balance-worker/src/state/sqliteBalanceStateStore.js";
+import type { StateStore } from "../../../../../apps/balance-worker/src/state/types/stateStore.js";
 
 export const topic = "request-integration";
 export const partition = 0;
@@ -17,7 +17,7 @@ export function createWorkerFixture({
 	records,
 	now,
 }: {
-	stateStore: SqliteBalanceStateStore;
+	stateStore: StateStore;
 	records: MeteringRecord[];
 	now: number;
 }) {

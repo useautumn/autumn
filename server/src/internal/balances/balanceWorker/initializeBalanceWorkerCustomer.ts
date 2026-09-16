@@ -7,27 +7,27 @@ import type { FullSubject } from "@autumn/shared";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { rethrowBalanceWorkerError } from "./balanceWorkerErrors.js";
-import { fullSubjectToMeteringState } from "./fullSubjectToMeteringState.js";
+import { fullSubjectToCustomerState } from "./fullSubjectToCustomerState.js";
 
 export async function initializeBalanceWorkerCustomer({
 	ctx,
 	fullSubject,
 	featureIds,
-	initializationId,
+	commandId,
 	client,
 }: {
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	featureIds: readonly string[];
-	initializationId: string;
+	commandId: string;
 	client?: Pick<BalanceWorkerClient, "initialize">;
 }): Promise<InitializationDecision> {
-	const state = fullSubjectToMeteringState({ ctx, fullSubject, featureIds });
+	const state = fullSubjectToCustomerState({ ctx, fullSubject, featureIds });
 	const command = parseInitializeCommand({
 		input: {
 			schemaVersion: 1,
 			type: "initialize",
-			initializationId,
+			commandId,
 			requestId: ctx.id,
 			identity: state.identity,
 			state,

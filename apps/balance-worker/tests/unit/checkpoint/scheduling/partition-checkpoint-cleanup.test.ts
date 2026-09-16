@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { createOutcome } from "../../kafka/kafka-test-fixtures.js";
+import { applyDurableMutation } from "../../../fixtures/mutations.js";
+import { createMutation } from "../../kafka/kafka-test-fixtures.js";
 import { createSchedulerFixture } from "./scheduler-fixtures.js";
 
 const addReceipts = (fixture: ReturnType<typeof createSchedulerFixture>) => {
@@ -7,17 +8,22 @@ const addReceipts = (fixture: ReturnType<typeof createSchedulerFixture>) => {
 	for (let index = 0; index < 4; index++) {
 		const current = fixture.store.readState({ identity: state.identity });
 		if (!current) throw new Error("Expected seeded state");
-		const outcome = {
-			...createOutcome({ state: current, commandId: `receipt_${index}` }),
-			deduplicationExpiresAt: fixture.clock.now() + (index === 3 ? 1_000 : -1),
-		};
-		fixture.store.applyDurableTrackOutcome({
-			position: {
-				topic: fixture.topic,
-				partition: 0,
-				offset: BigInt(index + 1),
+		const tracked = createMutation({
+			state: current,
+			commandId: `receipt_${index}`,
+		});
+		applyDurableMutation({
+			store: fixture.store,
+			topic: fixture.topic,
+			partition: 0,
+			offset: BigInt(index + 1),
+			mutation: {
+				...tracked,
+				receipt: {
+					...tracked.receipt,
+					expiresAt: fixture.clock.now() + (index === 3 ? 1_000 : 0),
+				},
 			},
-			outcome,
 		});
 	}
 	return state.identity;
@@ -31,8 +37,8 @@ describe("scheduled receipt cleanup", () => {
 		try {
 			const identity = addReceipts(fixture);
 			const before = fixture.store.readState({ identity });
-			const prune = fixture.store.pruneExpiredTrackReceipts.bind(fixture.store);
-			fixture.store.pruneExpiredTrackReceipts = (params) => {
+			const prune = fixture.store.pruneExpiredReceipts.bind(fixture.store);
+			fixture.store.pruneExpiredReceipts = (params) => {
 				fixture.clock.workTime += 6;
 				return prune(params);
 			};
@@ -49,7 +55,7 @@ describe("scheduled receipt cleanup", () => {
 				backlog: "clear",
 			});
 			expect(
-				fixture.store.readTrackReceipt({ identity, commandId: "receipt_3" }),
+				fixture.store.readReceipt({ identity, mutationId: "receipt_3" }),
 			).not.toBeNull();
 			expect(fixture.store.readState({ identity })).toEqual(before);
 			expect(

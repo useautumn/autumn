@@ -1,13 +1,17 @@
 import { isDeepStrictEqual } from "node:util";
+import type { CustomerStateMutation } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import type {
 	DurableMutationApplyResult,
 	DurableMutationRecord,
-} from "../../../state/sqliteBalanceStateStore.js";
-import { rejectAllPending, removePendingOutcome } from "../pendingOutcomes.js";
+} from "../../../state/types/durableMutation.js";
+import {
+	rejectAllPending,
+	removePendingMutation,
+} from "../pendingMutations.js";
 import type {
 	PartitionWriterScope,
-	PendingOutcome,
+	PendingMutation,
 } from "../types/partitionWriter.js";
 import {
 	MutationBatchAppendError,
@@ -57,14 +61,14 @@ async function appendBatch({
 	batch,
 }: {
 	scope: PartitionWriterScope;
-	batch: PendingOutcome[];
+	batch: PendingMutation[];
 }): Promise<bigint | null> {
 	const { ctx, config, state } = scope;
 	try {
 		const { baseOffset } = await ctx.appender.appendCommitted({
 			topic: config.topic,
 			partition: config.partition,
-			outcomes: batch.map(outcomeOf),
+			outcomes: batch.map(mutationOf),
 		});
 		if (typeof baseOffset !== "bigint" || baseOffset < 0n) {
 			throw new RangeError("Invalid appended Kafka offset");
@@ -90,7 +94,7 @@ function applyBatch({
 	baseOffset,
 }: {
 	scope: PartitionWriterScope;
-	batch: PendingOutcome[];
+	batch: PendingMutation[];
 	baseOffset: bigint;
 }): boolean {
 	try {
@@ -102,9 +106,9 @@ function applyBatch({
 		for (const [index, pending] of batch.entries()) {
 			const result = results[index];
 			if (!result) throw new Error("Expected durable apply result");
-			const outcome = persistedOutcomeOf({ scope, result, pending });
-			removePendingOutcome({ state: scope.state, pending });
-			pending.settlement.settle({ outcome });
+			const mutation = persistedMutationOf({ scope, result, pending });
+			removePendingMutation({ state: scope.state, pending });
+			pending.settlement.settle({ mutation });
 		}
 		return true;
 	} catch (cause) {
@@ -125,8 +129,8 @@ function enterRecovery({
 	rejectAllPending({ state: scope.state, error });
 }
 
-function outcomeOf(pending: PendingOutcome): MeteringRecord {
-	return pending.outcome;
+function mutationOf(pending: PendingMutation): MeteringRecord {
+	return pending.mutation;
 }
 
 function durableRecordsOf({
@@ -135,7 +139,7 @@ function durableRecordsOf({
 	baseOffset,
 }: {
 	scope: PartitionWriterScope;
-	batch: PendingOutcome[];
+	batch: PendingMutation[];
 	baseOffset: bigint;
 }): DurableMutationRecord[] {
 	const { topic, partition } = scope.config;
@@ -143,45 +147,31 @@ function durableRecordsOf({
 	for (const [index, pending] of batch.entries()) {
 		records.push({
 			position: { topic, partition, offset: baseOffset + BigInt(index) },
-			mutation: pending.outcome,
+			mutation: pending.mutation,
 		});
 	}
 	return records;
 }
 
 /** The follower may apply a position first; then SQLite must hold exactly what we appended. */
-function persistedOutcomeOf({
+function persistedMutationOf({
 	scope,
 	result,
 	pending,
 }: {
 	scope: PartitionWriterScope;
 	result: DurableMutationApplyResult;
-	pending: PendingOutcome;
-}): MeteringRecord {
-	const { outcome } = pending;
-	if (result.kind !== "position_already_applied") {
-		return result.type === "track_outcome" ? result.receipt : outcome;
-	}
-	if (outcome.type === "state_initialized") {
-		const state = scope.ctx.stateStore.readState({
-			identity: outcome.state.identity,
-		});
-		if (!state) {
-			throw new Error(
-				`Applied position has no initialized state: ${outcome.initializationId}`,
-			);
-		}
-		return outcome;
-	}
-	const receipt = scope.ctx.stateStore.readTrackReceipt({
-		identity: outcome.identity,
-		commandId: outcome.commandId,
+	pending: PendingMutation;
+}): CustomerStateMutation {
+	if (result.kind !== "position_already_applied") return result.mutation;
+
+	const { mutation } = pending;
+	const receipt = scope.ctx.stateStore.readReceipt({
+		identity: mutation.identity,
+		mutationId: mutation.id,
 	});
-	if (!receipt || !isDeepStrictEqual(receipt, outcome)) {
-		throw new Error(
-			`Applied position has no matching receipt: ${outcome.commandId}`,
-		);
+	if (!receipt || !isDeepStrictEqual(receipt, mutation)) {
+		throw new Error(`Applied position has no matching receipt: ${mutation.id}`);
 	}
 	return receipt;
 }

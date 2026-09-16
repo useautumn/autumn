@@ -37,7 +37,7 @@ test.concurrent(
 				await initializeBalanceWorkerCustomer({
 					...fixture,
 					featureIds: ["messages"],
-					initializationId: "baseline",
+					commandId: "baseline",
 					client,
 				}),
 			).toMatchObject({ kind });
@@ -45,13 +45,16 @@ test.concurrent(
 		expect(commands[0]).toMatchObject({
 			type: "initialize",
 			requestId: fixture.ctx.id,
-			initializationId: "baseline",
+			commandId: "baseline",
 			identity: { customerId: "cus_test" },
 			state: {
 				revision: 0,
-				featureStatesById: {
-					messages: {
-						customerEntitlements: [{ granted: 110, balance: 72, usage: 38 }],
+				customerEntitlements: {
+					messages_grant: {
+						featureId: "messages",
+						granted: 110,
+						balance: 72,
+						usage: 38,
 					},
 				},
 			},
@@ -75,7 +78,7 @@ test.concurrent(
 		const initialization = {
 			...fixture,
 			featureIds: ["messages"],
-			initializationId: "baseline",
+			commandId: "baseline",
 			client,
 		};
 		// Public remaining clamps negatives to zero; initialization must inspect the raw balance.
@@ -96,10 +99,8 @@ test.concurrent(
 			{
 				kind: "initialized",
 				state: {
-					featureStatesById: {
-						messages: {
-							customerEntitlements: [{ balance: 0, granted: 110, usage: 110 }],
-						},
+					customerEntitlements: {
+						messages_grant: { balance: 0, granted: 110, usage: 110 },
 					},
 				},
 			},
@@ -126,6 +127,7 @@ test.concurrent(
 					balanceSnapshot: {
 						id: "internal_grant",
 						externalId: "public_grant",
+						featureId: "messages",
 						balance: -2,
 						usage: 112,
 						granted: 110,
@@ -279,7 +281,7 @@ test.concurrent(
 					initializeBalanceWorkerCustomer({
 						...fixture,
 						featureIds: ["messages"],
-						initializationId: "baseline",
+						commandId: "baseline",
 						client,
 					}),
 			];

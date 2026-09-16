@@ -1,8 +1,7 @@
 import {
-	ConflictingTrackReceiptError,
-	OutOfOrderTrackOutcomeError,
-	StaleTrackOutcomeError,
-	TrackOutcomeSubjectMismatchError,
+	MutationSubjectMismatchError,
+	OutOfOrderMutationError,
+	StaleMutationError,
 } from "@autumn/balance-engine";
 import {
 	InvalidKafkaOffsetError,
@@ -11,13 +10,12 @@ import {
 	UnsupportedRecordVersionError,
 } from "@autumn/kafka";
 import {
-	ConflictingMeteringStateInitializationError,
+	ConflictingMutationReceiptError,
 	CorruptBalanceStateError,
-	MeteringStateNotFoundError,
 	MeteringStatePartitionMismatchError,
 	PartitionProgressNotFoundError,
 	UnexpectedKafkaOffsetError,
-} from "../../state/sqliteBalanceStateErrors.js";
+} from "../../state/stateStoreErrors.js";
 
 export class StateAheadOfKafkaLogEndError extends Error {
 	readonly retriable = false;
@@ -85,13 +83,11 @@ export function isPartitionInvariantCause(cause: unknown): cause is Error {
 		cause instanceof InvalidRecordError ||
 		cause instanceof UnsupportedRecordVersionError ||
 		cause instanceof RecordKeyMismatchError ||
-		cause instanceof ConflictingTrackReceiptError ||
-		cause instanceof ConflictingMeteringStateInitializationError ||
-		cause instanceof OutOfOrderTrackOutcomeError ||
-		cause instanceof StaleTrackOutcomeError ||
-		cause instanceof TrackOutcomeSubjectMismatchError ||
+		cause instanceof StaleMutationError ||
+		cause instanceof OutOfOrderMutationError ||
+		cause instanceof MutationSubjectMismatchError ||
+		cause instanceof ConflictingMutationReceiptError ||
 		cause instanceof CorruptBalanceStateError ||
-		cause instanceof MeteringStateNotFoundError ||
 		cause instanceof MeteringStatePartitionMismatchError ||
 		cause instanceof PartitionProgressNotFoundError ||
 		cause instanceof UnexpectedKafkaOffsetError

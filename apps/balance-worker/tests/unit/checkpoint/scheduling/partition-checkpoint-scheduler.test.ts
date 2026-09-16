@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { createOutcome } from "../../kafka/kafka-test-fixtures.js";
+import { applyDurableMutation } from "../../../fixtures/mutations.js";
+import { createMutation } from "../../kafka/kafka-test-fixtures.js";
 import { createSchedulerFixture } from "./scheduler-fixtures.js";
 
 describe("partition checkpoint scheduler", () => {
@@ -68,9 +69,12 @@ describe("partition checkpoint scheduler", () => {
 			const { lease } = fixture.start({ partition: 0 });
 			fixture.start({ partition: 1 });
 			await fixture.clock.advance(100);
-			fixture.store.applyDurableTrackOutcome({
-				position: { topic: fixture.topic, partition: 0, offset: 1n },
-				outcome: createOutcome({ state }),
+			applyDurableMutation({
+				store: fixture.store,
+				topic: fixture.topic,
+				partition: 0,
+				offset: 1n,
+				mutation: createMutation({ state }),
 			});
 			await fixture.clock.advance(50);
 			expect(offsets).toEqual([1n]);

@@ -1,6 +1,6 @@
 import {
 	type CheckCommand,
-	type CustomerMeteringState,
+	type CustomerState,
 	type InitializeCommand,
 	parseCheckCommand,
 	parseInitializeCommand,
@@ -9,8 +9,8 @@ import {
 } from "@autumn/balance-engine";
 import { ReplayHydrationInvalidSelectionError } from "../replayHydrationErrors.js";
 import {
+	commandIdOf,
 	identitiesEqual,
-	initializationIdOf,
 	type NormalizedSelection,
 } from "./replaySelection.js";
 
@@ -69,7 +69,7 @@ export function buildProbeCommand({
 		input: {
 			schemaVersion: 1,
 			type: "check",
-			requestId: `${initializationIdOf({ selection })}:probe`,
+			requestId: `${commandIdOf({ selection })}:probe`,
 			identity: selection.identity,
 			entityId: null,
 			featureId: selection.featureIds[0],
@@ -85,16 +85,16 @@ export function buildInitializeCommand({
 	state,
 }: {
 	selection: NormalizedSelection;
-	state: CustomerMeteringState;
+	state: CustomerState;
 }): InitializeCommand {
-	const initializationId = initializationIdOf({ selection });
+	const commandId = commandIdOf({ selection });
 	return deepFreeze(
 		parseInitializeCommand({
 			input: {
 				schemaVersion: 1,
 				type: "initialize",
-				initializationId,
-				requestId: `${initializationId}:initialize`,
+				commandId,
+				requestId: `${commandId}:initialize`,
 				identity: selection.identity,
 				state,
 				occurredAt: selection.baseline.capturedAtMs,

@@ -119,10 +119,8 @@ describe("Postgres replay hydration source", () => {
 				kind: "loaded",
 				state: {
 					identity: harness.selection.identity,
-					featureStatesById: {
-						messages: {
-							customerEntitlements: [{ balance: 72 }],
-						},
+					customerEntitlements: {
+						messages_grant: { featureId: "messages", balance: 72 },
 					},
 				},
 			});

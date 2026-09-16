@@ -1,12 +1,12 @@
 import type {
-	CustomerMeteringState,
+	CustomerState,
+	CustomerStateMutation,
 	MeteringIdentity,
 } from "@autumn/balance-engine";
-import type { MeteringRecord } from "@autumn/kafka";
 
-/** What the writer hands `mutate`: the customer's freshest state. */
+/** What the writer hands `mutate`: the customer's freshest state, null before initialize. */
 export type MutateParams = {
-	state: CustomerMeteringState;
+	state: CustomerState | null;
 };
 
 /** What a command hands the writer: who, which request, and how to decide it. */
@@ -20,16 +20,20 @@ export type MutationSubmission<Reply> = {
 };
 
 export type MutationResult<Reply> =
-	/** Append this outcome; the customer's projection becomes nextState now. */
-	| { kind: "write"; outcome: MeteringRecord; nextState: CustomerMeteringState }
+	/** Append this mutation; the customer's projection becomes nextState now. */
+	| {
+			kind: "write";
+			mutation: CustomerStateMutation;
+			nextState: CustomerState;
+	  }
 	/** Nothing to write: reply immediately. */
 	| { kind: "reply"; reply: Reply };
 
-/** Resolved once the outcome is committed to Kafka and applied to SQLite. */
+/** Resolved once the mutation is committed to Kafka and applied to SQLite. */
 export type CommittedMutation = {
 	/** "new" for the submission that wrote it, "duplicate" for retries of it. */
 	kind: "new" | "duplicate";
-	outcome: MeteringRecord;
+	mutation: CustomerStateMutation;
 };
 
 /** Returned synchronously by `decide`: the decision is made, durability is not. */

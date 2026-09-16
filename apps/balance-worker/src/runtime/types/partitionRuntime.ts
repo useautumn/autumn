@@ -11,7 +11,7 @@ import type {
 	PartitionWriterContext,
 	PartitionWriterLimits,
 } from "../../processor/writer/types/partitionWriter.js";
-import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
+import type { StateStore } from "../../state/types/stateStore.js";
 import type {
 	PartitionBootstrapper,
 	PartitionLogRange,
@@ -49,7 +49,7 @@ export type MeteringPartitionResolver = {
 
 export type PartitionRuntimeDependencies = {
 	stateStore: PartitionWriterContext["stateStore"] &
-		Pick<SqliteBalanceStateStore, "readNextOffset">;
+		Pick<StateStore, "readNextOffset">;
 	producer: OwnedPartitionProducer;
 	appender: CommittedOutcomeAppender;
 	follower: PartitionOutcomeFollowerPort;

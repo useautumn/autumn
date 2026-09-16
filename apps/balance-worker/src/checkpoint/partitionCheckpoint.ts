@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import {
-	type CustomerMeteringState,
+	type CustomerState,
+	type CustomerStateMutation,
 	meteringPartitionKeyOf,
-	parseCustomerMeteringState,
-	parseTrackOutcome,
-	type TrackOutcome,
+	parseCustomerState,
+	parseCustomerStateMutation,
 } from "@autumn/balance-engine";
 
 const CHECKPOINT_SCHEMA_VERSION = 1 as const;
@@ -14,15 +14,13 @@ const offsetPattern = /^(0|[1-9][0-9]*)$/;
 
 export type PartitionCheckpointStateV1 = {
 	partitionKey: string;
-	initializationId: string;
-	initializationFingerprint: string;
-	state: CustomerMeteringState;
+	state: CustomerState;
 };
 
 export type PartitionCheckpointReceiptV1 = {
 	partitionKey: string;
 	recordOffset: bigint;
-	outcome: TrackOutcome;
+	mutation: CustomerStateMutation;
 };
 
 export type PartitionCheckpointContentsV1 = {
@@ -61,7 +59,7 @@ export type PartitionCheckpointPartitionResolver = {
 	partitionForIdentity({
 		identity,
 	}: {
-		identity: CustomerMeteringState["identity"];
+		identity: CustomerState["identity"];
 	}): number;
 };
 
@@ -170,9 +168,9 @@ const requireOffset = ({
 	return BigInt(value);
 };
 
-const parseState = ({ input }: { input: unknown }): CustomerMeteringState => {
+const parseState = ({ input }: { input: unknown }): CustomerState => {
 	try {
-		return parseCustomerMeteringState({ input });
+		return parseCustomerState({ input });
 	} catch (cause) {
 		throw new InvalidPartitionCheckpointError({
 			message: "Partition checkpoint contains invalid customer state",
@@ -181,12 +179,16 @@ const parseState = ({ input }: { input: unknown }): CustomerMeteringState => {
 	}
 };
 
-const parseOutcome = ({ input }: { input: unknown }): TrackOutcome => {
+const parseReceiptMutation = ({
+	input,
+}: {
+	input: unknown;
+}): CustomerStateMutation => {
 	try {
-		return parseTrackOutcome({ input });
+		return parseCustomerStateMutation({ input });
 	} catch (cause) {
 		throw new InvalidPartitionCheckpointError({
-			message: "Partition checkpoint contains an invalid track receipt",
+			message: "Partition checkpoint contains an invalid mutation receipt",
 			cause,
 		});
 	}
@@ -261,7 +263,7 @@ const normalizedContentsOf = ({
 		});
 	}
 
-	const stateByPartitionKey = new Map<string, CustomerMeteringState>();
+	const stateByPartitionKey = new Map<string, CustomerState>();
 	const normalizedStates = states
 		.map((entry) => {
 			const partitionKey = requireNonEmptyString({
@@ -282,18 +284,7 @@ const normalizedContentsOf = ({
 				});
 			}
 			stateByPartitionKey.set(partitionKey, state);
-			return {
-				partitionKey,
-				initializationId: requireNonEmptyString({
-					name: "Checkpoint state initializationId",
-					value: entry.initializationId,
-				}),
-				initializationFingerprint: requireNonEmptyString({
-					name: "Checkpoint state initializationFingerprint",
-					value: entry.initializationFingerprint,
-				}),
-				state,
-			};
+			return { partitionKey, state };
 		})
 		.sort(({ partitionKey: left }, { partitionKey: right }) =>
 			left < right ? -1 : left > right ? 1 : 0,
@@ -324,32 +315,32 @@ const normalizedContentsOf = ({
 				});
 			}
 			recordOffsets.add(entry.recordOffset);
-			const outcome = parseOutcome({ input: entry.outcome });
+			const mutation = parseReceiptMutation({ input: entry.mutation });
 			if (
-				meteringPartitionKeyOf({ identity: outcome.identity }) !== partitionKey
+				meteringPartitionKeyOf({ identity: mutation.identity }) !== partitionKey
 			) {
 				throw new InvalidPartitionCheckpointError({
 					message: `Checkpoint receipt identity does not match ${partitionKey}`,
 				});
 			}
-			if (outcome.revisionAfter > state.revision) {
+			if (mutation.revision.after > state.revision) {
 				throw new InvalidPartitionCheckpointError({
 					message: `Checkpoint receipt is newer than state: ${partitionKey}`,
 				});
 			}
-			if (outcome.deduplicationExpiresAt <= normalizedCreatedAt) {
+			if (mutation.receipt.expiresAt <= normalizedCreatedAt) {
 				throw new InvalidPartitionCheckpointError({
-					message: `Checkpoint receipt was expired at export: ${outcome.commandId}`,
+					message: `Checkpoint receipt was expired at export: ${mutation.id}`,
 				});
 			}
-			const receiptKey = JSON.stringify([partitionKey, outcome.commandId]);
+			const receiptKey = JSON.stringify([partitionKey, mutation.id]);
 			if (receiptKeys.has(receiptKey)) {
 				throw new InvalidPartitionCheckpointError({
-					message: `Duplicate checkpoint receipt: ${outcome.commandId}`,
+					message: `Duplicate checkpoint receipt: ${mutation.id}`,
 				});
 			}
 			receiptKeys.add(receiptKey);
-			return { partitionKey, recordOffset: entry.recordOffset, outcome };
+			return { partitionKey, recordOffset: entry.recordOffset, mutation };
 		})
 		.sort((left, right) =>
 			left.recordOffset < right.recordOffset
@@ -449,11 +440,11 @@ export const assertPartitionCheckpointOwnership = ({
 	}
 	for (const receipt of checkpoint.receipts) {
 		const resolvedPartition = partitionResolver.partitionForIdentity({
-			identity: receipt.outcome.identity,
+			identity: receipt.mutation.identity,
 		});
 		if (resolvedPartition !== partition) {
 			throw new InvalidPartitionCheckpointError({
-				message: `Checkpoint receipt ${receipt.outcome.commandId} resolves to partition ${resolvedPartition}`,
+				message: `Checkpoint receipt ${receipt.mutation.id} resolves to partition ${resolvedPartition}`,
 			});
 		}
 	}
@@ -521,18 +512,11 @@ export const parsePartitionCheckpoint = ({
 		assertExactKeys({
 			name: `Checkpoint state ${index}`,
 			value: stateEntry,
-			keys: [
-				"partitionKey",
-				"initializationId",
-				"initializationFingerprint",
-				"state",
-			],
+			keys: ["partitionKey", "state"],
 		});
 		return {
 			partitionKey: stateEntry.partitionKey as string,
-			initializationId: stateEntry.initializationId as string,
-			initializationFingerprint: stateEntry.initializationFingerprint as string,
-			state: stateEntry.state as CustomerMeteringState,
+			state: stateEntry.state as CustomerState,
 		};
 	});
 	const receipts = parsedCheckpoint.receipts.map((entry, index) => {
@@ -543,7 +527,7 @@ export const parsePartitionCheckpoint = ({
 		assertExactKeys({
 			name: `Checkpoint receipt ${index}`,
 			value: receiptEntry,
-			keys: ["partitionKey", "recordOffset", "outcome"],
+			keys: ["partitionKey", "recordOffset", "mutation"],
 		});
 		return {
 			partitionKey: receiptEntry.partitionKey as string,
@@ -551,7 +535,7 @@ export const parsePartitionCheckpoint = ({
 				name: `Checkpoint receipt ${index} recordOffset`,
 				value: receiptEntry.recordOffset,
 			}),
-			outcome: receiptEntry.outcome as TrackOutcome,
+			mutation: receiptEntry.mutation as CustomerStateMutation,
 		};
 	});
 	const checkpoint = createPartitionCheckpoint({

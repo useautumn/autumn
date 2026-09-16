@@ -93,34 +93,71 @@ track api_calls 5, cus_abc, entity ent_42
 
 The engine's compute functions take a `SubjectView`: the customer blob plus the named entity's blob. Apply is generic because `changes` keys are the blob keys (`insertCustomerEntitlements` → `customerEntitlements`, and so on); a row's `internal_entity_id` says which blob owns it. Revision lives on the customer blob so the customer's mutations stay totally ordered. The customer-view aggregate across entities is out of scope until entity tracks are supported; Redis's `_aggregated` is likely deprecated, so the worker should not mirror it. The legacy `entities` jsonb map on one cusEnt stays an opaque field, same as the Redis hash field today.
 
-### Mutation: one record, row-ops inside
+### Catalog: a compute-time cache, not state
+
+Catalog is a read-only input to *compute* (deciding a track), never to *apply* (replaying a mutation): `before → after` changes replay without it. So catalog is not state, not in the log, not in checkpoints. It is a worker-level cache of Postgres rows.
 
 ```
-┌─ CustomerStateMutation (the Kafka record, the receipt) ─────────┐
-│ mutationId · fingerprint · requestId · identity · occurredAt    │
-│ revisionBefore: 7 → revisionAfter: 8                            │
-│ command:  { kind: "track", featureId, value, overageBehavior }  │
-│ changes:  ┌───────────────────────────────────────────────┐     │
-│           │ insertCustomerEntitlements   [rows]           │     │
-│           │ updateCustomerEntitlements   [{id,before,after}]    │
-│           │ deleteCustomerEntitlementIds [ids]            │     │
-│           │ …Rollovers · …CustomerProducts · …UsageWindows│     │
-│           └───────────────────────────────────────────────┘     │
-│ result:   { status: "applied", appliedValue: 5 }   (per kind)   │
-│ deduplicationExpiresAt                                          │
-└─────────────────────────────────────────────────────────────────┘
+worker process
+┌─ partition 17 ─────────────┐      ┌─ catalog (worker-level, one SQLite DB per worker) ──────┐
+│ subject_states             │      │ catalog_rows (org, env, table, id) → row, loaded_at      │
+│ mutation_receipts          │ ──►  │ entitlements · products · features · orgs                │
+│ checkpointed to S3         │      │ never checkpointed, never in the log; rebuilt on demand  │
+└────────────────────────────┘      └─────────────────────────────────────────────────────────┘
+
+hydrate cus_abc        the subject envelope query already returns the referenced catalog rows → upsert both stores, one round-trip
+track on cus_abc       readSubjectView → referenced ids → readCatalogRows (hit ≈ always) → miss: getCatalogRows({ ids }) from Postgres
+                       → computeTrack({ view, catalog, command })
+```
+
+- **Which partition:** none. Catalog is org-level and an org's customers hash across all 512 partitions, so one worker-level store beats 512 copies. Custom rows (usually one referrer) sit in the same table and only load on the worker that hydrated their customer.
+- **Staleness:** rows are fresh for a TTL (~10 min); past it the next read is a miss. A sweep deletes rows unread for a day. Later, `plans.update` publishes "org X catalog changed" and workers drop that org's rows; TTL stays the backstop. Staleness affects `granted`, resets and limits, never the balance being deducted.
+- **Followers and restarts:** followers only apply, so they need no catalog; on promotion or restart the store is on disk or refills on first commands.
+- **Engine signature:** `computeTrack({ view, catalog, command })`, `catalog = { entitlements, products, features, org }` as records by id. Compute never knows a cache exists.
+- **Sequencing:** unit 2 adds the store and the signature with rows arriving on the initialize command (no Postgres yet); unit 3 adds Postgres as the second loader, the on-miss read and the TTL sweep.
+
+Known gaps, both shadow-safe and owned by the later "structural mutations" work: a plan edit reaches the worker within the TTL rather than immediately, and a customer whose structure changes after hydration (attach) is stale in the worker until attach is itself a mutation.
+
+### Mutation: one record, an ordered list of row changes
+
+```
+┌─ CustomerStateMutation (the Kafka record, the receipt) ────────────────┐
+│ id · identity                          index keys the store looks up by │
+│ revision: { before: 7, after: 8 }      ordering guard                   │
+│ command: { kind: "track", requestId, occurredAt, featureId, value, … }  │
+│                                        request echo, no bulk payload    │
+│ changes: [                             applied in order                 │
+│   { table: "customerEntitlements", op: "update", id: "ce_1",            │
+│     before: { balance: 100 }, after: { balance: 95 } } ]                │
+│ result: { kind: "track", status: "applied", appliedValue: 5, … }        │
+│ receipt: { fingerprint, expiresAt }    exactly what mutation_receipts   │
+│                                        stores                           │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+```ts
+type TableRowChange<Table, Row> =
+  | { table: Table; op: "insert"; row: Row }
+  | { table: Table; op: "update"; id: string; before: Partial<Row>; after: Partial<Row> }
+  | { table: Table; op: "delete"; id: string };
+
+type RowChange =
+  | TableRowChange<"customerProducts",     CustomerProductRow>
+  | TableRowChange<"customerEntitlements", CustomerEntitlementRow>
+  | TableRowChange<"rollovers",            RolloverRow>
+  | TableRowChange<"entities",             EntityRow>;
 ```
 
 ```
-command                                   changes it fills
-initialize                          ──►   insert* for every row, from empty state
-track 5, balance 100                ──►   updateCustomerEntitlements [{ balance: 100 → 95 }]
-track 5, reject, balance 3          ──►   nothing (result.status = "rejected")
-balances.create (future)            ──►   insertCustomerEntitlements
-attach (future)                     ──►   insertCustomerProducts + insertCustomerEntitlements
+command                              changes
+initialize                     ──►   insert every row, in order
+track 5, balance 100           ──►   [ update customerEntitlements ce_1 { balance: 100 → 95 } ]
+track 5, reject, balance 3     ──►   [ ]   (result.status = "rejected")
+balances.create (future)       ──►   [ insert customerEntitlements ]
+attach (future)                ──►   [ insert customerProducts, insert customerEntitlements, … ]
 ```
 
-`before` on an update is the stale guard `applyDeduction` does by hand today. `applyChanges` is generic: verify `before`, set `after`, insert, delete. It never knows what a track is.
+`before` on an update is the stale guard `applyDeduction` does by hand today. `applyChanges` is a `for` over the list with a `switch` on `op`; it never knows what a track is. One writer per partition applies in order, so before → after replaces every delta the billing plan needs for racing writers. Flexibility lives in `command` (any input shape) and `result` (any reply shape), never in a new change op.
 
 ### Flow after the change
 
@@ -137,7 +174,7 @@ rows + catalog → ApiBalance via getApiBalance
 
 ## Plan
 
-Order: prove the mutation stream first, then swap the row vocabulary under it. The store restructure goes first because it has no design risk and every later diff shrinks.
+Order: prove the mutation stream first, swap the row vocabulary under it, then let the worker hydrate itself from Postgres. Hydration needs the row model (unit 2) because `subjectRowsToSubjectState` is the same function the server's initialize uses; doing it under the lean `featureStatesById` shape would be throwaway.
 
 ### 0 · [ ] worker → `state/` as repos, actions, facade (pure move)
 
@@ -150,7 +187,7 @@ Order: prove the mutation stream first, then swap the row vocabulary under it. T
 ### 1 · [ ] data model → one `CustomerStateMutation` record, end to end
 
 **goal** — one record type on the log; the store applies row-ops without knowing the command
-**steps** — engine `models/customerStateMutation.ts` (id, fingerprint, revisions, `command`, `changes`, `result`) · state becomes `customerEntitlements: Record<id, LeanCustomerEntitlement>` so changes address rows by id · generic `applyChanges` with `before` guards · `computeTrack` and `computeInitialize` return a mutation (revision 0 → 1 on initialize) · track invariants move from `superRefine` into compute tests · `MeteringRecord = CustomerStateMutation` · SQLite `mutation_receipts` replaces `track_receipts` and the initialization columns · `decide` absorbs `submitInitialization` · checkpoint carries states and receipts as opaque JSON, `ENGINE_SCHEMA_VERSION` stays 1 · follower handler has no type branch · fix the six shared fixture builders first
+**steps** — engine `models/customerStateMutation.ts` (id, identity, `revision`, `command` echo, `changes: RowChange[]`, `result`, `receipt`) · state becomes `customerEntitlements: Record<id, LeanCustomerEntitlement>` (row gains `featureId`) so changes address rows by id · generic `applyChanges` with `before` guards · `computeTrack` and `computeInitialize` return a mutation (revision 0 → 1 on initialize) · track invariants move from `superRefine` into compute tests · `MeteringRecord = CustomerStateMutation` · SQLite `mutation_receipts` replaces `track_receipts` and the initialization columns · `decide` absorbs `submitInitialization` · checkpoint carries states and receipts as opaque JSON, `ENGINE_SCHEMA_VERSION` stays 1 · follower handler has no type branch · fix the six shared fixture builders first
 **verify** — engine unit tests · `bun test apps/balance-worker` · `packages/kafka` unit + integration · `server/tests/unit/balances/balanceWorker/request-integration.test.ts`
 
 **scenarios** — track 5 on balance 100
@@ -178,10 +215,83 @@ Order: prove the mutation stream first, then swap the row vocabulary under it. T
 - entity-level cusEnt → lives in `cus_abc:ent_42`, not the customer blob; track refuses
 - 100k entities → 100k small `subject_states` rows; a customer-level track reads the customer blob only
 
-### 3 · [ ] server → rows out, ApiBalance via shared utils
+### 3 · [ ] worker → hydrate a customer from Postgres when it has no state
+
+**goal** — the first check or track for a customer works: the worker reads the customer's rows from Postgres itself, appends the initialize mutation, then decides. No server initialize round-trip on the request path.
+
+**why the worker, not the server** — Owen's replay branch (`og/balance-replay-hydration`, PR #3466) hydrates from the server: `not_initialized` → `getFullSubjectNormalized` → `fullSubjectToMeteringState` → `initialize` → resend. Right for a staging replay tool; wrong for the live path.
+
+```
+                         server hydrates (#3466)        worker hydrates (this unit)
+first touch              2 worker round-trips           1
+who can rebuild state    only the API layer             the worker alone (checkpoint loss, wipe)
+FullSubject on server    still needed per customer      gone from the request path
+worker dependencies      none                           packages/postgres, one query
+```
+
+Keep #3466's semantics, move them into the worker: hydrate only after a confirmed miss, coalesce concurrent loads per customer, never overwrite existing state, read one repeatable-read snapshot with the expiry clock injected (`asOfTimestampMs`).
+
+**structure**
+
+```
+packages/postgres/                         shared client + repos, no business logic
+├── src/createPostgresClient.ts            Bun.sql: max · idleTimeout · connectionTimeout · maxLifetime · application_name · onconnect
+├── src/client/                            what initDrizzle.ts earned and must not lose, rewritten for Bun.sql:
+│   ├── retryConnectRefused.ts             one jittered retry on bouncer refusal (connectRetry.ts)
+│   ├── poolBudget.ts                      fleet budget warning incl. worker pods (initDrizzle.ts:150-210)
+│   └── poolHealth.ts                      acquire stats via onconnect/onclose (pgPoolMonitor.ts, reduced)
+├── src/types/
+└── src/subjects/repos/getSubjectRows/     the one complex query, its own folder
+    ├── getSubjectRows.ts                  { ctx, identity, asOfTimestampMs } → SubjectRowsEnvelope
+    └── subjectRowsSql.ts                  lean port of getFullSubjectRowsQuery: customer · customer_products ·
+                                           customer_entitlements (+extra) · rollovers · catalog(products, entitlements+feature, features)
+                                           no licenses, invoices, subscriptions, usage windows, entity aggregations
+
+apps/balance-worker/src/
+├── external/postgres/
+│   ├── getPostgresClient.ts               memoized get* accessor; pool max ~4 per worker
+│   └── createPostgresSubjectSource.ts     implements SubjectSource: getSubjectRows → subjectRowsToSubjectState (engine)
+├── processor/
+│   ├── types/subjectSource.ts             the interface: load({ identity, asOfTimestampMs }) → { state, catalog } | refusal
+│   ├── hydration/                         an abstraction, so a folder
+│   │   ├── createSubjectHydrator.ts       ensureSubjectState({ identity }): read → miss → coalesced load → decide(initialize)
+│   │   └── types/
+│   └── commands/{track,check}.ts          call ensureSubjectState before decide
+```
+
+The engine owns `subjectRowsToSubjectState`; the server's initialize (unit 2's pick) and the worker's hydrate both call it, so there is one definition of "a customer's state from its rows". The server's `initializeBalanceWorkerCustomer` survives only for the shadow operator.
+
+```
+track api_calls 5, cus_abc (no SQLite state)
+  ensureSubjectState        readSubjectView → null
+                            hydrator.load (coalesced per customer, repeatable read, asOf = command.occurredAt)
+                            subjectRowsToSubjectState → initialize mutation → writer.decide
+  decide track              as today
+```
+
+**Bun.sql** — pool options exist (`max`, `idleTimeout`, `connectionTimeout`, `maxLifetime`, `onconnect`, `prepare`), `begin("read only")` and `reserve()` exist. Spike first: composing the envelope query from fragments, and whether `prepare: true` keeps the statement text stable the way `executePrepared` relies on today.
+
+**steps** — spike Bun.sql fragments (½ day, throwaway) · `packages/postgres` scaffold from `origin/john/ledger-projector` shape, Bun.sql instead of pg/drizzle · port `createPostgresClient` from `initDrizzle` · `getSubjectRows` lean query + `subjectRowsToSubjectState` in the engine · worker `SubjectSource` + hydrator + `external/postgres` · shadow operator keeps server-side initialize · budget: add worker pods to `computePoolBudgetWarnings`
+
+**verify** — `packages/postgres` unit tests against a local Postgres (row shape, asOf expiry, refusals) · worker unit tests with a fake `SubjectSource` (miss → load → initialize → decide; two concurrent tracks load once; existing state never overwritten) · `request-integration.test.ts` on an uninitialized customer · one EXPLAIN of `getSubjectRows` on staging per `autumn-tdd-query`
+
+**scenarios** — first track on cus_abc
+- no state, rows in Postgres → initialize (revision 0 → 1) then track applied, one Postgres read
+- two tracks arrive together → one load, both decide against the same projection
+- state exists → no Postgres read at all
+- customer missing in Postgres → refusal, command fails with `customer_not_found`, nothing appended
+- unsupported shape (entity-level cusEnt, credit system) → refusal with reason, nothing appended
+
+**open**
+- ? Redis is still authoritative during shadow, so Postgres lags by the SyncV4 flush window; a hydrate can seed a stale balance. Fine for shadow comparison (Owen's operator flushes first). For cutover, the seed must run after a per-customer flush or read Redis once. Decide before unit 6.
+- ? primary vs replica for hydration reads; the fleet budget (`PGBOUNCER_MAX_CLIENT_CONN` 12,000, already 8.8k committed) decides the worker pool size
+- ? does the catalog come from the same query (one round trip, catalog repeated per customer) or a separate cached read per org
+
+### 4 · [ ] server → rows out, ApiBalance via shared utils
 
 **goal** — the server speaks params and API; the worker speaks rows; no hand-rolled projection
 **steps** — `validateBalanceWorkerRequest` stays · `validateMeteringEntitlement` deleted; engine `classifyTrackCommand` owns state-shape reasons · decision returns `{ mutation, customerEntitlements after, catalog refs }` · server builds the touched `FullCustomerEntitlement` and calls `getApiBalance` · delete `meteringBalanceToApiBalance` · shadow operator compares rows
+**decisions become one shape** — `Decision<Result> = { result, mutation: CustomerStateMutation | null, applied: boolean }` for track, initialize and check; `unsupported` leaves the type and becomes `UnsupportedCommandError` caught once at the HTTP boundary; `duplicate` / `already_initialized` become `applied: false`. `CheckResult` is designed next to the row model here, not around the lean snapshot.
 **verify** — `request-flow.test.ts`, `balance-worker-track.test.ts`, `shadow/*.test.ts` · one Redis-vs-worker response equality assertion
 
 **scenarios** — track 5 on pro api_calls 1000/mo, apiVersion v2
@@ -192,24 +302,24 @@ Order: prove the mutation stream first, then swap the row vocabulary under it. T
 **open**
 - ? wire shape: rows + catalog refs (recommended) vs `ApiBalanceV1` computed in the worker
 
-### 4 · [ ] worker → `infra/`
+### 5 · [ ] worker → `infra/`
 
 **goal** — layers that know nothing about balances stop importing the engine
 **steps** — `infra/{checkpoint,s3,health,logging}` now that states and receipts are opaque · `partitions/` drops its processor type import · import-boundary unit test like `functionConventions.test.ts`
 
-### 5 · [ ] sweep → integration pass + staging shadow
+### 6 · [ ] sweep → integration pass + staging shadow
 
 **steps** — `bun t` on `server/tests/integration/balances/{track,check}` · fresh SQLite + checkpoint namespace on staging · one shadow cohort window against STG-016
 **verify** — shadow operator reports full-state match; cold checkpoint restore works
 
 ## Ordering and stacking
 
-One stacked branch per unit (`gh stack`, base `og/balance-worker-observability`): `state-structure`, `one-record`, `state-rows`, `server-rows-out`, `worker-infra`.
+One stacked branch per unit (`gh stack`, base `og/balance-worker-observability`): `state-structure`, `one-record`, `state-rows`, `postgres-hydrate`, `server-rows-out`, `worker-infra`.
 
 ## Decisions to make before unit 1 (unit 0 needs none)
 
-1. **Names.** `CustomerState` + `CustomerStateMutation` + `changes` (this doc), or keep `MeteringState` / `MeteringMutation`? The billing analogue is `AutumnBillingPlan`; "plan" reads as pre-execution, and here the record is post-decision, so `mutation` fits.
+1. **Names.** Decided: `CustomerState`, `CustomerStateMutation`, `changes: RowChange[]` with `table` / `op`.
 2. **Catalog source.** Initialize carries `SubjectCatalog` now; the worker reads catalog from Postgres when it starts reading Postgres. State never embeds catalog fields.
 3. **Row schemas.** Decided: engine-owned lean zod mirror per table, DB column names, only the columns the engine reads.
 4. **Response projection.** Server-side via `getApiBalance` on rows + catalog (recommended) vs worker-side.
-5. **Revision semantics.** No state ≡ revision 0; initialize is the mutation 0 → 1. Shadow and tests currently expect an initialized customer at revision 0.
+5. **Revision semantics.** Decided: no state ≡ revision 0; initialize is the mutation 0 → 1.

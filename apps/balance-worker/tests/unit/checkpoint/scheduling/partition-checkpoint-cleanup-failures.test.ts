@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { CorruptBalanceStateError } from "../../../../src/state/sqliteBalanceStateErrors.js";
+import { CorruptBalanceStateError } from "../../../../src/state/stateStoreErrors.js";
 import { createSchedulerFixture } from "./scheduler-fixtures.js";
 
 describe("receipt cleanup failures", () => {
@@ -9,14 +9,12 @@ describe("receipt cleanup failures", () => {
 			const fixture = createSchedulerFixture();
 			try {
 				fixture.initialize({ partition: 0 });
-				const prune = fixture.store.pruneExpiredTrackReceipts.bind(
-					fixture.store,
-				);
+				const prune = fixture.store.pruneExpiredReceipts.bind(fixture.store);
 				const cause = Object.assign(new Error("database is busy"), {
 					code: "SQLITE_BUSY",
 				});
 				let attempts = 0;
-				fixture.store.pruneExpiredTrackReceipts = (params) => {
+				fixture.store.pruneExpiredReceipts = (params) => {
 					attempts++;
 					if (attempts === 1) throw cause;
 					return prune(params);
@@ -52,7 +50,7 @@ describe("receipt cleanup failures", () => {
 				const cause = new CorruptBalanceStateError({
 					partitionKey: "customer",
 				});
-				fixture.store.pruneExpiredTrackReceipts = () => {
+				fixture.store.pruneExpiredReceipts = () => {
 					throw cause;
 				};
 				const { controller } = fixture.start({ partition: 0 });
@@ -78,7 +76,7 @@ describe("receipt cleanup failures", () => {
 				fixture.initialize({ partition: 0 });
 				fixture.initialize({ partition: 1 });
 				const attempts: number[] = [];
-				fixture.store.pruneExpiredTrackReceipts = ({ partition }) => {
+				fixture.store.pruneExpiredReceipts = ({ partition }) => {
 					attempts.push(partition);
 					fixture.clock.workTime += workMs;
 					throw new Error("receipt cleanup temporarily unavailable");

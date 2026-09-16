@@ -1,13 +1,10 @@
-import type {
-	CustomerMeteringState,
-	MeteringIdentity,
-} from "@autumn/balance-engine";
+import type { CustomerState, MeteringIdentity } from "@autumn/balance-engine";
 import type { AppEnv, FullSubject } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { fullSubjectToMeteringState } from "../../balanceWorker/fullSubjectToMeteringState.js";
+import { fullSubjectToCustomerState } from "../../balanceWorker/fullSubjectToCustomerState.js";
 import type {
 	ReplayHydrationBaseline,
 	ReplayHydrationSelection,
@@ -60,7 +57,7 @@ type SnapshotOutcome =
 	| ReplayHydrationRefusal
 	| Readonly<{
 			kind: "loaded";
-			state: CustomerMeteringState;
+			state: CustomerState;
 			metadata: ReplayContextMetadata;
 	  }>;
 
@@ -128,9 +125,9 @@ function convertSnapshot({
 	const { identity, baseline, featureIds } = selection;
 	if (!subjectMatchesIdentity({ fullSubject, identity }))
 		return refuseUnsupported({ reason: "subject_mismatch" });
-	let state: CustomerMeteringState;
+	let state: CustomerState;
 	try {
-		state = fullSubjectToMeteringState({ ctx, fullSubject, featureIds });
+		state = fullSubjectToCustomerState({ ctx, fullSubject, featureIds });
 	} catch (cause) {
 		const refusal = refusalFromConverterError({ cause });
 		if (!refusal) throw cause;
