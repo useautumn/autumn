@@ -9,7 +9,8 @@ import {
 	type TrackCommand,
 	type TrackDecision,
 } from "@autumn/balance-engine";
-import { PartitionTrackWriterRecoveryRequiredError } from "../../writer/partitionTrackWriter.js";
+import { submitTrack as submitTrackMutation } from "../../processor/commands/track.js";
+import { PartitionWriterRecoveryRequiredError } from "../../processor/writer/writerErrors.js";
 import { assertRuntimeReady } from "../getRuntimeHealth.js";
 import { enterRuntimeRecovery } from "../lifecycle/enterRuntimeRecovery.js";
 import {
@@ -63,11 +64,15 @@ async function writeRuntimeTrack({
 	command,
 }: PartitionRuntimeScope & { command: TrackCommand }): Promise<TrackDecision> {
 	try {
-		return await ctx.writer.submitTrack({ command });
+		return await submitTrackMutation({
+			writer: ctx.writer,
+			command,
+			receiptPolicy: ctx.trackReceiptPolicy,
+		});
 	} catch (cause) {
 		if (state.terminalError) throw state.terminalError;
 		if (
-			cause instanceof PartitionTrackWriterRecoveryRequiredError ||
+			cause instanceof PartitionWriterRecoveryRequiredError ||
 			cause instanceof OwnedPartitionProducerFencedError
 		) {
 			throw await enterRuntimeRecovery({ ctx, state, cause });

@@ -130,7 +130,7 @@ import type {
 	WorkerPartitionsConfig,
 	WorkerPartitionsContext,
 } from "../../../src/init/types/workerPartitions.js";
-import { createTrackOutcomePublisher } from "../../../src/kafka/createTrackOutcomePublisher.js";
+import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
 import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
@@ -322,12 +322,12 @@ export function createKafkaOwnedPartitionProducer({
 	});
 	return createWorkerProducer({ ctx: { session }, config: params });
 }
-export function createKafkaCommittedTrackOutcomeAppender({
+export function createKafkaCommittedMutationAppender({
 	producer,
 }: {
 	producer: KafkaProducerClient;
 }) {
-	return createTrackOutcomePublisher({ ctx: { producer } });
+	return createMutationPublisher({ ctx: { producer } });
 }
 export function serializeKafkaTrackOutcomeRecord({
 	outcome,
@@ -347,7 +347,7 @@ export function createOwnedPartitionRuntime(
 	return createPartitionRuntime({
 		ctx: {
 			...ctx,
-			appender: createTrackOutcomePublisher({
+			appender: createMutationPublisher({
 				ctx: { producer: ctx.producer },
 			}),
 		},
