@@ -248,7 +248,7 @@ function UnlimitedBalanceForm({
 			<SheetSection withSeparator={false}>
 				<div className="flex flex-col gap-3">
 					<LabelInput
-						label="Used"
+						label="Usage"
 						placeholder="Enter usage"
 						className="w-full"
 						type="number"
