@@ -3,7 +3,6 @@ import {
 	billingToItemInterval,
 	EntInterval,
 	entToItemInterval,
-	Infinite,
 	isFeaturePriceItem,
 	itemToBillingInterval,
 	itemToEntInterval,
@@ -34,7 +33,6 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 	if (!item) return null;
 
 	const isFeaturePrice = isFeaturePriceItem(item);
-	const isUnlimited = item.included_usage === Infinite;
 
 	// When a prepaid feature resets on a different cycle to billing, this dropdown
 	// drives the billing interval (price_interval); the reset lives in `interval`.
@@ -148,7 +146,7 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 					size="default"
 					checked={isOneOff}
 					onCheckedChange={handleOneOffToggle}
-					disabled={isUnlimited || isSeparateResetActive}
+					disabled={isSeparateResetActive}
 					className="py-1 w-26 text-subtle gap-2 justify-start"
 				>
 					One-off
