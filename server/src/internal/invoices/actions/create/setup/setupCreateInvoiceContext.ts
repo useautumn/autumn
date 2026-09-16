@@ -40,6 +40,23 @@ export type CreateInvoiceContext = {
 
 const DEFAULT_NET_TERMS_DAYS = 30;
 
+// Stripe cannot apply a `repeating` coupon to a one-off invoice.
+const rejectRepeatingCoupons = ({
+	discounts,
+}: {
+	discounts: StripeDiscountWithCoupon[];
+}) => {
+	const repeating = discounts.find(
+		(discount) => discount.source.coupon.duration === "repeating",
+	);
+	if (!repeating) return;
+	throw new RecaseError({
+		message: `Coupon ${repeating.source.coupon.id} repeats monthly and cannot be applied to a one-off invoice. Use a coupon with duration "once" or "forever".`,
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
+};
+
 export const setupCreateInvoiceContext = async ({
 	ctx,
 	params,
@@ -119,6 +136,12 @@ export const setupCreateInvoiceContext = async ({
 		resolveParamDiscounts({ stripeCli, discounts: params.discounts ?? [] }),
 		fetchStripeTaxRateForBilling({ ctx, taxRateId: params.tax_rate_id }),
 	]);
+	rejectRepeatingCoupons({
+		discounts: [
+			...invoiceDiscounts,
+			...plans.flatMap((plan) => plan.discounts),
+		],
+	});
 
 	return {
 		params,

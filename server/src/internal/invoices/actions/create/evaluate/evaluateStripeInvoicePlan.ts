@@ -102,8 +102,9 @@ export const evaluateStripeInvoicePlan = ({
 						},
 					}
 				: { amount: minorAmount }),
-			// Line-level coupons are attached explicitly; nothing else may discount the line.
-			discountable: lineCoupons.length > 0,
+			// Invoice-level coupons only reach discountable lines; the invoice's explicit
+			// discounts array keeps customer-level coupons out.
+			discountable: true,
 			discounts: lineCoupons.map((coupon) => ({ coupon: coupon.id })),
 			period: lineItem.context.effectivePeriod
 				? {

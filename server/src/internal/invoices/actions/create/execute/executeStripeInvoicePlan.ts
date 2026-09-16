@@ -1,4 +1,4 @@
-import type { Invoice, LineItem } from "@autumn/shared";
+import type { FullProduct, Invoice, LineItem } from "@autumn/shared";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -28,7 +28,7 @@ export const executeStripeInvoicePlan = async ({
 	invoiceContext: CreateInvoiceContext;
 	lines: InvoiceLine[];
 	stripePlan: StripeInvoicePlan;
-}): Promise<Invoice> => {
+}): Promise<{ invoice: Invoice; dueDateMs: number | null }> => {
 	const { stripeCustomer, fullCustomer, template, currency } = invoiceContext;
 	if (!stripeCustomer) {
 		throw new RecaseError({
@@ -79,7 +79,15 @@ export const executeStripeInvoicePlan = async ({
 		autoAdvance: true,
 	});
 
-	const fullProducts = invoiceContext.plans.map((plan) => plan.fullProduct);
+	// License lines carry their own product, so derive products from the lines.
+	const fullProducts = [
+		...new Map(
+			lines
+				.map((line) => line.lineItem.context.product as FullProduct)
+				.filter((product) => Boolean(product.internal_id))
+				.map((product) => [product.internal_id, product] as const),
+		).values(),
+	];
 	const autumnInvoice = await upsertInvoiceFromStripe({
 		ctx,
 		stripeInvoice: finalized,
@@ -109,5 +117,8 @@ export const executeStripeInvoicePlan = async ({
 		source: "createInvoice",
 	});
 
-	return autumnInvoice;
+	return {
+		invoice: autumnInvoice,
+		dueDateMs: finalized.due_date ? finalized.due_date * 1000 : null,
+	};
 };
