@@ -1,8 +1,12 @@
-import { MetadataType } from "@autumn/shared";
+import { MetadataType, ms } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { expirePendingCustomerProducts } from "./expirePendingCustomerProducts";
+
+// Pending rows are inserted after the metadata row; a void that lands in between
+// must not delete the metadata, so the cron re-checks shortly instead.
+const RECHECK_DELAY_MS = ms.minutes(10);
 
 /**
  * A voided invoice can no longer be paid, so the deferred plan waiting on it
@@ -25,7 +29,20 @@ export const expirePendingForVoidedStripeInvoice = async ({
 	});
 	if (!metadata) return false;
 
-	await expirePendingCustomerProducts({ ctx, metadataId: metadata.id });
+	const expiredCount = await expirePendingCustomerProducts({
+		ctx,
+		metadataId: metadata.id,
+	});
+
+	if (expiredCount === 0) {
+		await MetadataService.update({
+			db: ctx.db,
+			id: metadata.id,
+			updates: { expires_at: Date.now() + RECHECK_DELAY_MS },
+		});
+		return false;
+	}
+
 	await MetadataService.delete({ db: ctx.db, id: metadata.id });
 
 	if (customerId) {
@@ -37,7 +54,7 @@ export const expirePendingForVoidedStripeInvoice = async ({
 	}
 
 	ctx.logger.info(
-		`[expirePendingForVoidedStripeInvoice] Expired pending plans for voided invoice ${stripeInvoiceId}`,
+		`[expirePendingForVoidedStripeInvoice] Expired ${expiredCount} pending plan(s) for voided invoice ${stripeInvoiceId}`,
 	);
 	return true;
 };
