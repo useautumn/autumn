@@ -11,7 +11,7 @@ export function startRuntime({
 			new OwnedPartitionNotReadyError({ status: state.status }),
 		);
 	}
-	state.status = "starting";
+	state.status = "fencing";
 	state.startPromise = completeRuntimeStartup({ ctx, state });
 	return state.startPromise;
 }
