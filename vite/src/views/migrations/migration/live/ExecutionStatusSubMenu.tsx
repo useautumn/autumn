@@ -35,9 +35,11 @@ export function hasActiveExecutionFilters(
 export function ExecutionStatusSubMenu({
 	selected,
 	onChange,
+	options = EXECUTION_STATUS_VALUES,
 }: {
 	selected: ExecutionStatus[];
 	onChange: (statuses: ExecutionStatus[]) => void;
+	options?: readonly ExecutionStatus[];
 }) {
 	const hasSelections = selected.length > 0;
 
@@ -60,7 +62,7 @@ export function ExecutionStatusSubMenu({
 				)}
 			</DropdownMenuSubTrigger>
 			<DropdownMenuSubContent>
-				{EXECUTION_STATUS_VALUES.map((status) => {
+				{options.map((status) => {
 					const isActive = selected.includes(status);
 					return (
 						<DropdownMenuItem

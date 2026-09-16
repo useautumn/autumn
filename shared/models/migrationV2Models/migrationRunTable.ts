@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
+	index,
 	numeric,
 	pgTable,
 	text,
@@ -25,6 +26,17 @@ export const ACTIVE_MIGRATION_RUN_STATUSES = [
 	MigrationRunStatus.Queued,
 	MigrationRunStatus.Running,
 ] as const;
+
+/** Computed from migration_runs on read; never stored on the migration. */
+export const MigrationStatus = {
+	Draft: "draft",
+	Waiting: "waiting",
+	Running: "running",
+	Run: "run",
+} as const;
+
+export type MigrationStatus =
+	(typeof MigrationStatus)[keyof typeof MigrationStatus];
 
 export const migrationRuns = pgTable(
 	"migration_runs",
@@ -66,6 +78,14 @@ export const migrationRuns = pgTable(
 		uniqueIndex("migration_runs_active_per_migration_unique")
 			.on(table.migration_internal_id)
 			.where(sql`${table.status} IN ('queued', 'running')`),
+		index("migration_runs_migration_internal_id_idx")
+			.on(table.migration_internal_id)
+			.concurrently(),
+		// Org-wide "who is running right now" for the computed migration status.
+		index("migration_runs_active_org_idx")
+			.on(table.org_id, table.env)
+			.where(sql`${table.status} IN ('queued', 'running')`)
+			.concurrently(),
 	],
 );
 

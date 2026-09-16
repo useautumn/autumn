@@ -2,6 +2,7 @@ import {
 	BillingVersion,
 	type FullCusProduct,
 	type FullCustomer,
+	MigrationItemRunSkipReason,
 	orgDisableStripeWrites,
 	resolveCustomerCurrency,
 	type UpdateSubscriptionBillingContext,
@@ -21,7 +22,7 @@ import type { MigrateCustomerContext } from "../../types/index.js";
 import { applyPrepareResultsToUpdatePlan } from "../applyPrepareResults/index.js";
 import { resolveFeatureQuantityStrategy } from "../compute/resolveFeatureQuantityStrategy.js";
 import { itemAlreadyExists } from "./itemAlreadyExists.js";
-import type { UpdatePlanProductContext } from "./types.js";
+import type { UpdatePlanProductSetup } from "./types.js";
 
 export const setupUpdatePlanProductContext = async ({
 	ctx,
@@ -37,7 +38,7 @@ export const setupUpdatePlanProductContext = async ({
 	opIndex: number;
 	projectedFullCustomer: FullCustomer;
 	customerProduct: FullCusProduct;
-}): Promise<UpdatePlanProductContext | undefined> => {
+}): Promise<UpdatePlanProductSetup> => {
 	const {
 		op: preparedOp,
 		preparedIds,
@@ -81,7 +82,10 @@ export const setupUpdatePlanProductContext = async ({
 		(customize.upsert_licenses === undefined ||
 			customize.upsert_licenses.length === 0)
 	) {
-		return undefined;
+		return {
+			outcome: "skipped",
+			skipReason: MigrationItemRunSkipReason.NoUpdatesNeeded,
+		};
 	}
 
 	const customerId =
@@ -166,7 +170,10 @@ export const setupUpdatePlanProductContext = async ({
 		ctx.logger.warn(
 			`[migration] skipping customer product ${customerProduct.id}: target plan has no '${customerCurrency}' price`,
 		);
-		return undefined;
+		return {
+			outcome: "skipped",
+			skipReason: MigrationItemRunSkipReason.Ineligible,
+		};
 	}
 
 	const featureQuantities = setupFeatureQuantitiesContext({
@@ -231,9 +238,12 @@ export const setupUpdatePlanProductContext = async ({
 	};
 
 	return {
-		customerProduct: targetCustomerProduct,
-		params,
-		billingContext,
-		preparedIds,
+		outcome: "ready",
+		context: {
+			customerProduct: targetCustomerProduct,
+			params,
+			billingContext,
+			preparedIds,
+		},
 	};
 };

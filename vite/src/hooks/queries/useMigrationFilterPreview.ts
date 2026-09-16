@@ -26,6 +26,9 @@ export type MigrationPreviewCustomer = CustomerWithProducts & {
 	migration_item_run?: MigrationItemRun | null;
 };
 
+/** "item_runs" pages the customers a live run claimed instead of the filter. */
+export type MigrationPreviewSource = "filter" | "item_runs";
+
 type CustomerListFilters = {
 	status?: string[];
 	version?: string[];
@@ -46,6 +49,7 @@ export const useMigrationFilterPreview = ({
 	cursor = "",
 	pageSize = DEFAULT_CUSTOMER_LIST_PAGE_SIZE,
 	migrationId,
+	source = "filter",
 	executionStatuses = [],
 	migrationRunId,
 	migrationRunDryRun,
@@ -58,6 +62,7 @@ export const useMigrationFilterPreview = ({
 	cursor?: string;
 	pageSize?: number;
 	migrationId?: string;
+	source?: MigrationPreviewSource;
 	executionStatuses?: ExecutionStatus[];
 	migrationRunId?: string;
 	migrationRunDryRun?: boolean;
@@ -81,6 +86,7 @@ export const useMigrationFilterPreview = ({
 		search,
 		customerFiltersKey,
 		migrationId,
+		source,
 		executionKey,
 		migrationRunId,
 		migrationRunDryRun,
@@ -99,6 +105,7 @@ export const useMigrationFilterPreview = ({
 					cursor,
 					pageSize,
 					migrationId,
+					source,
 					executionStatuses,
 					migrationRunId,
 					migrationRunDryRun,
@@ -142,6 +149,7 @@ export const useMigrationFilterPreview = ({
 			countSearch ?? "",
 			customerFiltersKey,
 			migrationId,
+			source,
 			executionKey,
 			migrationRunId,
 			migrationRunDryRun,
@@ -155,6 +163,7 @@ export const useMigrationFilterPreview = ({
 					customerFilters: countCustomerFilters,
 					pageSize: 1,
 					migrationId,
+					source,
 					executionStatuses,
 					migrationRunId,
 					migrationRunDryRun,

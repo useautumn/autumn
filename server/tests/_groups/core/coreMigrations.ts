@@ -28,5 +28,13 @@ export const coreMigrations: TestGroup = {
 		"integration/billing/migrations-v2/batch-migrations/version-repoint/core/version-repoint-customize.test.ts",
 		"integration/billing/migrations-v2/batch-migrations/version-repoint/core/repoint-scope-lifecycle.test.ts",
 		"integration/billing/migrations-v2/batch-migrations/version-repoint/fallbacks/operation-input-fallbacks.test.ts",
+		// Computed migration status (draft/waiting/running/run).
+		"integration/billing/migrations-v2/status/migration-run-claim-status.test.ts",
+		"integration/billing/migrations-v2/status/migration-status-lifecycle.test.ts",
+		// Frozen post-run customer list (filter.preview source=item_runs).
+		"integration/billing/migrations-v2/preview/filter-preview-item-runs-source.test.ts",
+		// skip_reason on skipped item runs, both lanes.
+		"integration/billing/migrations-v2/skip-reason/per-customer-skip-reason.test.ts",
+		"integration/billing/migrations-v2/batch-migrations/item-events/batch-skip-reason.test.ts",
 	],
 };

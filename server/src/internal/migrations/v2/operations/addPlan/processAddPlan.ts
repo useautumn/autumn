@@ -48,6 +48,7 @@ export const processAddPlan: OperationProcessor<AddPlanOp> = async ({
 			plan,
 			projectedFullCustomer,
 			matchedCustomerProducts: 0,
+			unchangedCustomerProducts: 1,
 			billingContexts: [],
 		};
 
@@ -146,6 +147,7 @@ export const processAddPlan: OperationProcessor<AddPlanOp> = async ({
 		}),
 		projectedFullCustomer,
 		matchedCustomerProducts: 1,
+		unchangedCustomerProducts: 0,
 		billingContexts: [],
 	};
 };

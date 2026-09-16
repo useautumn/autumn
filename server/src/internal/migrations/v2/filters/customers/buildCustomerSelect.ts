@@ -25,6 +25,8 @@ import {
 export type IncludeProcessed = {
 	migrationInternalId: string;
 	executionFilter?: CustomerExecutionStatusFilter;
+	/** Page the processed set alone; the live filter is never compiled. */
+	sourceOnlyProcessed?: boolean;
 };
 
 export type CustomerExecutionStatus =
@@ -297,6 +299,7 @@ const buildExecutionStatusWhere = (
 const getExecutionFilterMode = (
 	includeProcessed: IncludeProcessed,
 ): "all" | "explicit_only" | "not_run_only" | "mixed" => {
+	if (includeProcessed.sourceOnlyProcessed) return "explicit_only";
 	const statuses = includeProcessed.executionFilter?.statuses;
 	if (!statuses || statuses.length === 0) return "all";
 
@@ -471,7 +474,6 @@ export const buildProcessedPreviewSelect = ({
 		);
 	}
 
-	const candidate = compileCustomerCandidate({ orgId, env, filter, ctx });
 	const processed = buildProcessedIn(includeProcessed);
 	const limitClause = limit !== undefined ? sql`LIMIT ${limit}` : sql``;
 
@@ -484,6 +486,8 @@ export const buildProcessedPreviewSelect = ({
 			${limitClause}
 		`;
 	}
+
+	const candidate = compileCustomerCandidate({ orgId, env, filter, ctx });
 
 	if (mode === "not_run_only") {
 		return sql`
@@ -542,7 +546,6 @@ export const buildProcessedPreviewCount = ({
 		);
 	}
 
-	const candidate = compileCustomerCandidate({ orgId, env, filter, ctx });
 	const processed = buildProcessedIn(includeProcessed);
 
 	if (mode === "explicit_only") {
@@ -552,6 +555,8 @@ export const buildProcessedPreviewCount = ({
 			WHERE (${processed}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, includeProcessed, includeNotRun: false })}
 		`;
 	}
+
+	const candidate = compileCustomerCandidate({ orgId, env, filter, ctx });
 
 	if (mode === "not_run_only") {
 		return sql`

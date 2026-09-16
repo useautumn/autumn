@@ -27,6 +27,7 @@ import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import {
 	parsePlanKey,
 	planFilterToPlanKeys,
@@ -37,6 +38,10 @@ import {
 	migrationItemToProductItem,
 	productItemToMigrationItem,
 } from "../shared/migrationItemUtils";
+import {
+	needsVersionOnlyWarning,
+	versionWarningText,
+} from "../shared/operationUtils";
 import { PlanVersionPicker } from "../shared/PlanVersionPicker";
 import { ItemSummaryRow } from "./ItemSummaryRow";
 import {
@@ -234,6 +239,10 @@ export function UpdatePlanOpForm({
 					</Select>
 					<RemoveButton onClick={() => update({ version: undefined })} />
 				</div>
+			)}
+
+			{value.version !== undefined && needsVersionOnlyWarning(value) && (
+				<InfoBox variant="warning">{versionWarningText(value.version)}</InfoBox>
 			)}
 
 			{customize?.price !== undefined && (

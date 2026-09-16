@@ -3,9 +3,11 @@ import {
 	CustomerListFiltersSchema,
 	customerProducts,
 	customers,
+	ErrCode,
 	MigrationItemKind,
 	products,
 	RELEVANT_STATUSES,
+	RecaseError,
 	Scopes,
 } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
@@ -38,6 +40,8 @@ const PreviewFilterBody = z.object({
 		.optional()
 		.default(DEFAULT_PAGE_SIZE),
 	migrationId: z.string().optional(),
+	/** "item_runs" pages the customers a live run claimed instead of the filter. */
+	source: z.enum(["filter", "item_runs"]).optional().default("filter"),
 	executionStatuses: z
 		.array(
 			z.enum([
@@ -70,19 +74,28 @@ export const handlePreviewMigrationFilter = createRoute({
 			countOnly,
 			pageSize,
 			migrationId,
+			source,
 			executionStatuses,
 			migrationRunId,
 			migrationRunDryRun,
 		} = c.req.valid("json");
 
 		const searchTerm = search || undefined;
+		const sourceOnlyProcessed = source === "item_runs";
+		if (sourceOnlyProcessed && !migrationId) {
+			throw new RecaseError({
+				message: "filter preview with source item_runs requires migrationId",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
 
 		// An empty customer scope compiles to nothing (wrapAnd throws). Treat "no
 		// active filter" as selecting nobody rather than 500ing the preview.
 		const hasAnyField = Object.values(filter ?? {}).some(
 			(v) => v !== undefined,
 		);
-		if (!hasAnyField) {
+		if (!hasAnyField && !sourceOnlyProcessed) {
 			return c.json({
 				count: includeCount ? 0 : null,
 				customers: [],
@@ -95,9 +108,11 @@ export const handlePreviewMigrationFilter = createRoute({
 		if (migrationId) {
 			const migration = await migrationRepo.find({ ctx, id: migrationId });
 			migrationInternalId = migration.internal_id;
-			const needsActiveRun = executionStatuses.some((status) =>
-				["queued", "not_run"].includes(status),
-			);
+			const needsActiveRun =
+				!sourceOnlyProcessed &&
+				executionStatuses.some((status) =>
+					["queued", "not_run"].includes(status),
+				);
 			const [activeRun] = needsActiveRun
 				? await migrationRunRepo.list({
 						ctx,
@@ -107,6 +122,7 @@ export const handlePreviewMigrationFilter = createRoute({
 				: [];
 			includeProcessed = {
 				migrationInternalId: migration.internal_id,
+				sourceOnlyProcessed,
 				executionFilter:
 					executionStatuses.length > 0
 						? {
@@ -135,6 +151,7 @@ export const handlePreviewMigrationFilter = createRoute({
 					includeProcessed,
 					cacheScope: {
 						migrationId,
+						source,
 						executionStatuses,
 						migrationRunId,
 						migrationRunDryRun,
