@@ -17,6 +17,7 @@ import { memo, useCallback, useMemo, useRef } from "react";
 
 const DEFAULT_ROW_HEIGHT = 40;
 const SKELETON_ROW_BORDER_PX = 1;
+const FALLBACK_CHROME_PX = 260;
 const DEFAULT_OVERSCAN = 30;
 
 interface VirtualRowProps<T> {
@@ -184,7 +185,15 @@ export function TableBodyVirtualized() {
 
 	const configuredSkeletonRows = virtualization?.skeletonRowCount;
 	const headerPx = scrollContainer?.querySelector("thead")?.offsetHeight ?? 0;
-	const containerPx = (scrollContainer?.clientHeight ?? 0) - headerPx;
+	// The container measures 0 before it mounts; fall back to the viewport so
+	// the first skeleton fills the same space the loaded rows will.
+	const measuredPx = (scrollContainer?.clientHeight ?? 0) - headerPx;
+	const containerPx =
+		measuredPx > 0
+			? measuredPx
+			: typeof window === "undefined"
+				? 0
+				: window.innerHeight - FALLBACK_CHROME_PX;
 
 	let skeletonRowCount: number;
 	if (hasLoadedRef.current) {
