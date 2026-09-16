@@ -22,9 +22,9 @@ test("the list status column renders the computed status", () => {
 	expect(renderStatusCell({ status: "draft", blocked_by: null })).toContain(
 		"Draft",
 	);
-	expect(
-		renderStatusCell({ status: "waiting", blocked_by: "pro-v3" }),
-	).toContain("Waiting on pro-v3");
+	const waiting = renderStatusCell({ status: "waiting", blocked_by: "pro-v3" });
+	expect(waiting).toContain(">Waiting<");
+	expect(waiting).toContain('title="Waiting on pro-v3"');
 	expect(renderStatusCell({ status: "run", blocked_by: null })).toContain(
 		">Run<",
 	);

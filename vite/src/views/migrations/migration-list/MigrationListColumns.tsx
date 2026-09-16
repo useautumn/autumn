@@ -23,10 +23,15 @@ export const createMigrationListColumns = (): ColumnDef<
 		header: "Status",
 		size: 140,
 		cell: ({ row }: { row: Row<MigrationWithRunInfo> }) => (
-			<MigrationStatusBadge
-				status={row.original.status}
-				blockedBy={row.original.blocked_by}
-			/>
+			<span
+				title={
+					row.original.blocked_by
+						? `Waiting on ${row.original.blocked_by}`
+						: undefined
+				}
+			>
+				<MigrationStatusBadge status={row.original.status} blockedBy={null} />
+			</span>
 		),
 	},
 	{
