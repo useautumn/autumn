@@ -57,6 +57,8 @@ import {
 import {
 	insertInvoicesContract,
 	listInvoicesContract,
+	payInvoiceContract,
+	voidInvoiceContract,
 } from "./invoicesContract.js";
 import {
 	keysMintContract,
@@ -163,6 +165,8 @@ export const v2_3ContractRouter = oc.router({
 	// Invoices
 	invoicesInsert: insertInvoicesContract,
 	invoicesList: listInvoicesContract,
+	invoicesPay: payInvoiceContract,
+	invoicesVoid: voidInvoiceContract,
 
 	// Licenses
 	licensesAttach: attachLicenseContract,

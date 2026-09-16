@@ -7,6 +7,10 @@ import {
 	PayInvoiceParamsSchema,
 	PayInvoiceResponseSchema,
 } from "@api/others/apiInvoice/payInvoiceParams.js";
+import {
+	VoidInvoiceParamsSchema,
+	VoidInvoiceResponseSchema,
+} from "@api/others/apiInvoice/voidInvoiceParams.js";
 import { oc } from "@orpc/contract";
 
 const LIST_INVOICE_EXAMPLE = {
@@ -172,5 +176,30 @@ export const payInvoiceContract = oc
 	.output(
 		PayInvoiceResponseSchema.meta({
 			examples: [{ invoice: { ...LIST_INVOICE_EXAMPLE, status: "paid" } }],
+		}),
+	);
+
+export const voidInvoiceContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/invoices.void",
+		operationId: "voidInvoice",
+		tags: ["invoices"],
+		description:
+			"Voids an open or uncollectible Stripe invoice. Any plan still waiting on the invoice to be paid expires. Voiding an unpaid subscription invoice lets Stripe re-derive the subscription status from its remaining invoices, which can move a past-due subscription back to active. Already-void invoices are returned unchanged.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "void",
+		}),
+	})
+	.input(
+		VoidInvoiceParamsSchema.meta({
+			title: "VoidInvoiceParams",
+			examples: [{ invoice_id: "inv_2b3c4d5e6f7g8h" }],
+		}),
+	)
+	.output(
+		VoidInvoiceResponseSchema.meta({
+			examples: [{ invoice: { ...LIST_INVOICE_EXAMPLE, status: "void" } }],
 		}),
 	);
