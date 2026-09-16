@@ -1,5 +1,6 @@
 import {
 	addCusProductToCusEnt,
+	cusEntsToUnlimitedUsage,
 	cusEntsToUsage,
 	cusEntToBalance,
 	ErrCode,
@@ -20,12 +21,14 @@ export const cusProductToExistingUsages = ({
 
 	carryAllConsumableFeatures,
 	consumableFeatureIdsToCarry = [],
+	carryUnlimitedUsage = false,
 }: {
 	cusProduct?: FullCusProduct;
 	entityId?: string;
 
 	carryAllConsumableFeatures?: boolean;
 	consumableFeatureIdsToCarry?: string[];
+	carryUnlimitedUsage?: boolean;
 }): ExistingUsages => {
 	if (!cusProduct) return {};
 
@@ -36,7 +39,8 @@ export const cusProductToExistingUsages = ({
 	for (const cusEnt of cusEnts) {
 		if (isBooleanCusEnt({ cusEnt })) continue;
 
-		if (isUnlimitedCusEnt(cusEnt)) continue;
+		const isUnlimited = isUnlimitedCusEnt(cusEnt);
+		if (isUnlimited && !carryUnlimitedUsage) continue;
 
 		const cusEntWithCusProduct = addCusProductToCusEnt({
 			cusEnt,
@@ -110,6 +114,22 @@ export const cusProductToExistingUsages = ({
 					.toNumber();
 				currentExistingUsage.entityUsages![entityId] = entityUsage;
 			}
+			continue;
+		}
+
+		// Unlimited rows track usage as a raw negative balance that the granted
+		// balance helpers zero out, so read it directly. Never owed, so no overage.
+		if (isUnlimited) {
+			existingUsages[internalFeatureId].usage = new Decimal(
+				existingUsages[internalFeatureId].usage,
+			)
+				.add(
+					cusEntsToUnlimitedUsage({
+						cusEnts: [cusEntWithCusProduct],
+						entityId,
+					}),
+				)
+				.toNumber();
 			continue;
 		}
 

@@ -174,9 +174,22 @@ const monthlyCredits = ({
  * Generic unlimited feature - no usage cap
  * @param featureId - Feature ID
  */
-const unlimited = ({ featureId }: { featureId: string }) =>
+const unlimited = ({
+	featureId,
+	entityFeatureId,
+	interval,
+	intervalCount,
+}: {
+	featureId: string;
+	entityFeatureId?: string;
+	interval?: ProductItemInterval | null;
+	intervalCount?: number;
+}) =>
 	constructFeatureItem({
 		featureId,
+		entityFeatureId,
+		interval,
+		intervalCount,
 		unlimited: true,
 	});
 

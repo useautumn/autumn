@@ -23,6 +23,7 @@ export interface ExistingUsagesConfig {
 	fromCustomerProduct: FullCusProduct;
 	carryAllConsumableFeatures?: boolean;
 	consumableFeatureIdsToCarry?: string[];
+	carryUnlimitedUsage?: boolean;
 }
 
 export interface ExistingRolloversConfig {

@@ -6,7 +6,6 @@ import {
 	isCustomerProductPaidRecurring,
 	isLifetimeEntitlement,
 	isProductPaidAndRecurring,
-	isUnlimitedEntitlement,
 } from "@autumn/shared";
 
 export const productToBillingCycleAnchor = ({
@@ -47,7 +46,6 @@ export const entitlementToResetCycleAnchor = ({
 	now: number;
 }): number | null => {
 	if (isBooleanEntitlement({ entitlement })) return null;
-	if (isUnlimitedEntitlement({ entitlement })) return null;
 	if (isLifetimeEntitlement({ entitlement })) return null;
 
 	return resetCycleAnchor === "now" ? now : resetCycleAnchor;

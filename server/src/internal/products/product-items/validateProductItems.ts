@@ -72,13 +72,9 @@ const validateProductItem = ({
 
 	validateItemFeatureOverride({ item, feature, features });
 
-	if (
-		item.pooled &&
-		isFeaturePriceItem(item) &&
-		item.included_usage === Infinite
-	) {
+	if (isFeaturePriceItem(item) && item.included_usage === Infinite) {
 		throw new RecaseError({
-			message: "Pooled unlimited items cannot include pricing",
+			message: "Unlimited items cannot include pricing",
 			code: ErrCode.InvalidProductItem,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
@@ -343,6 +339,14 @@ const validateProductItem = ({
 	// Authoring-time checks only: billing paths revalidate items round-tripped
 	// from persisted entitlements, which no longer answer for their own shape.
 	if (!validateRollover) return;
+
+	if (item.included_usage === Infinite) {
+		throw new RecaseError({
+			message: "Unlimited items cannot have rollover",
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
 
 	const rolloverIssue = rolloverConfigToIssue({ rollover });
 	if (rolloverIssue) {

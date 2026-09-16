@@ -17,7 +17,7 @@ import {
 export const constructFeatureItem = ({
 	featureId,
 	includedUsage = 150,
-	interval = ProductItemInterval.Month,
+	interval: intervalParam,
 	intervalCount = 1,
 	entityFeatureId,
 	isBoolean = false,
@@ -42,10 +42,21 @@ export const constructFeatureItem = ({
 		};
 	}
 
+	// Unlimited defaults to one-off (no reset); limited defaults to monthly.
+	const interval =
+		intervalParam === undefined
+			? unlimited
+				? null
+				: ProductItemInterval.Month
+			: intervalParam;
+
 	if (unlimited) {
 		return {
 			feature_id: featureId,
 			included_usage: "inf",
+			interval,
+			interval_count: intervalCount,
+			entity_feature_id: entityFeatureId,
 		} as ProductItem;
 	}
 	const item: LimitedItem = {
