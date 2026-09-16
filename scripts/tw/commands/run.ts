@@ -27,7 +27,6 @@
  */
 
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { deleteSvixApp as serverDeleteSvixApp } from "@server/external/svix/svixHelpers.js";
 import {
@@ -132,6 +131,7 @@ import {
 	createSvixApp as orchestratorCreateSvixApp,
 	partitionShards,
 } from "../helpers/svix.ts";
+import { createTestFileResolver } from "../testDiscovery/createTestFileResolver";
 import { runShardTests } from "../tui/runShardTests.ts";
 import {
 	bumpAccountDone,
@@ -443,118 +443,6 @@ const timeBoxed = async (
 
 const TESTS_DIR = join(PROJECT_ROOT, "server", "tests");
 
-/** Recursively collect `*.test.ts` files under a directory (mirrors the dispatcher). */
-const collectTestFilesFromDir = async (dir: string): Promise<string[]> => {
-	const files: string[] = [];
-	const walk = async (current: string): Promise<void> => {
-		const entries = await readdir(current);
-		for (const entry of entries) {
-			const fullPath = join(current, entry);
-			const entryStat = await stat(fullPath);
-			if (entryStat.isDirectory()) {
-				await walk(fullPath);
-			} else if (entry.endsWith(".test.ts")) {
-				files.push(fullPath);
-			}
-		}
-	};
-	await walk(dir);
-	return files;
-};
-
-/**
- * Recursively find the first file under `baseDir` whose path ends with
- * `/${pathSuffix}` (mirrors the dispatcher's `findFileByPath`). `_groups` file
- * paths are relative to the test ROOT (e.g. `billing/attach/...test.ts`) but the
- * files actually live under a sub-tree (`server/tests/integration/billing/...`),
- * so a plain `join(TESTS_DIR, groupPath)` misses them — we suffix-search instead.
- */
-const findFileBySuffix = async (
-	baseDir: string,
-	pathSuffix: string,
-): Promise<string | undefined> => {
-	const normalizedSuffix = `/${pathSuffix}`;
-	const walk = async (current: string): Promise<string | undefined> => {
-		const entries = await readdir(current);
-		for (const entry of entries) {
-			const fullPath = join(current, entry);
-			const entryStat = await stat(fullPath);
-			if (entryStat.isDirectory()) {
-				const found = await walk(fullPath);
-				if (found) {
-					return found;
-				}
-			} else if (fullPath.endsWith(normalizedSuffix)) {
-				return fullPath;
-			}
-		}
-		return undefined;
-	};
-	return walk(baseDir);
-};
-
-/**
- * Recursively find the first directory under `baseDir` whose path ends with
- * `/${pathSuffix}` (mirrors the dispatcher's `findFolderByPath`), for
- * directory-style `_groups` paths nested below the test root.
- */
-const findFolderBySuffix = async (
-	baseDir: string,
-	pathSuffix: string,
-): Promise<string | undefined> => {
-	const normalizedSuffix = `/${pathSuffix}`;
-	const walk = async (current: string): Promise<string | undefined> => {
-		const entries = await readdir(current);
-		for (const entry of entries) {
-			const fullPath = join(current, entry);
-			const entryStat = await stat(fullPath);
-			if (entryStat.isDirectory()) {
-				if (fullPath.endsWith(normalizedSuffix)) {
-					return fullPath;
-				}
-				const found = await walk(fullPath);
-				if (found) {
-					return found;
-				}
-			}
-		}
-		return undefined;
-	};
-	return walk(baseDir);
-};
-
-/**
- * Resolve one `_groups` path to absolute test files. A path can be either a
- * single `.test.ts` FILE or a DIRECTORY, and it may sit at the exact
- * `server/tests/<groupPath>` location OR nested deeper (e.g. under
- * `server/tests/integration/`). Try the exact location first (cheap), then fall
- * back to a recursive suffix search — the same two-step the `bun t` dispatcher
- * uses, so file-list groups (whose paths are individual files) resolve too.
- */
-const resolveGroupPath = async (groupPath: string): Promise<string[]> => {
-	const exactPath = join(TESTS_DIR, groupPath);
-	try {
-		const entryStat = await stat(exactPath);
-		if (entryStat.isFile() && groupPath.endsWith(".test.ts")) {
-			return [exactPath];
-		}
-		if (entryStat.isDirectory()) {
-			return collectTestFilesFromDir(exactPath);
-		}
-	} catch {
-		// Falls through — the path doesn't exist at the exact location.
-	}
-
-	// Not at the exact location: suffix-search the test tree (mirrors the
-	// dispatcher). Files resolve to themselves; directories are walked.
-	if (groupPath.endsWith(".test.ts")) {
-		const found = await findFileBySuffix(TESTS_DIR, groupPath);
-		return found ? [found] : [];
-	}
-	const foundDir = await findFolderBySuffix(TESTS_DIR, groupPath);
-	return foundDir ? collectTestFilesFromDir(foundDir) : [];
-};
-
 /**
  * Resolve the positional args (group/suite names, or `server/tests`-relative
  * paths) to a de-duplicated, sorted list of absolute test files — the SAME
@@ -567,6 +455,7 @@ const resolveTestFiles = async (
 ): Promise<string[]> => {
 	const args = groupsOrPatterns.length > 0 ? groupsOrPatterns : ["core"];
 	const files = new Set<string>();
+	const resolver = await createTestFileResolver({ rootDir: TESTS_DIR });
 
 	for (const arg of args) {
 		const groupPaths = resolveTestPaths({ name: arg });
@@ -576,7 +465,7 @@ const resolveTestFiles = async (
 			const label = matchedGroup ? "group" : suiteGroups ? "suite" : "paths";
 			log(`matched ${label} "${arg}" (${groupPaths.length} path(s))`);
 			for (const groupPath of groupPaths) {
-				for (const file of await resolveGroupPath(groupPath)) {
+				for (const file of resolver.resolvePath({ path: groupPath })) {
 					files.add(file);
 				}
 			}
@@ -584,7 +473,7 @@ const resolveTestFiles = async (
 		}
 
 		// Not a known group/suite — treat the arg itself as a server/tests path.
-		const resolved = await resolveGroupPath(arg);
+		const resolved = resolver.resolvePath({ path: arg });
 		if (resolved.length === 0) {
 			warn(`no test files matched "${arg}"`);
 		}
