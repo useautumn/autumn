@@ -1,5 +1,6 @@
 import { afterAll } from "bun:test";
 import { type Browser, chromium } from "playwright-core";
+import { createTestWait } from "../testWait/createTestWait";
 import { getChromiumPath, HEADLESS } from "./browserConfig.js";
 import { limitStripeBrowserRequests } from "./limitStripeBrowserRequests.js";
 
@@ -34,12 +35,15 @@ class PlaywrightPool {
 				],
 			});
 			this.browser = browser;
-			this.initPromise = null;
 			console.log("[PlaywrightPool] Chromium launched");
 			return browser;
 		})();
 
-		return this.initPromise;
+		try {
+			return await this.initPromise;
+		} finally {
+			this.initPromise = null;
+		}
 	}
 
 	/**
@@ -49,21 +53,31 @@ class PlaywrightPool {
 	async runInPage({
 		fn,
 		args,
+		timeoutMs = 120_000,
+		signal,
 	}: {
 		// biome-ignore lint/suspicious/noExplicitAny: must accept any self-contained playwright function
 		fn: (params: any) => Promise<any>;
 		args: Record<string, unknown>;
+		timeoutMs?: number;
+		signal?: AbortSignal;
 	}): Promise<unknown> {
 		const browser = await this.getBrowser();
 		const context = await browser.newContext({
 			viewport: { width: 1280, height: 800 },
 		});
+		const wait = createTestWait({
+			timeoutMs,
+			signal,
+			description: "Browser checkout",
+		});
 		let admission: Awaited<ReturnType<typeof limitStripeBrowserRequests>>;
 		try {
 			admission = await limitStripeBrowserRequests({ context });
 			const page = await context.newPage();
-			return await fn({ page, ...args });
+			return await wait.run(() => fn({ ...args, page }));
 		} finally {
+			wait.close();
 			try {
 				await context.close();
 			} finally {
@@ -74,6 +88,7 @@ class PlaywrightPool {
 
 	/** Close the shared browser */
 	async close(): Promise<void> {
+		await this.initPromise?.catch(() => undefined);
 		if (this.browser) {
 			await this.browser.close();
 			this.browser = null;

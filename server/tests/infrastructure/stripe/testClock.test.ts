@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
+import { addMonths } from "date-fns";
 import type Stripe from "stripe";
+import { advanceTestClock } from "../../utils/stripeUtils";
 import { advanceStripeTestClock } from "../../utils/stripeUtils/testClock/advanceStripeTestClock";
 import { waitForStripeClockReady } from "../../utils/stripeUtils/testClock/waitForStripeClockReady";
 import { createTestWait } from "../../utils/testWait/createTestWait";
@@ -21,6 +23,26 @@ const createClockFixture = () => {
 	} as unknown as Stripe;
 	return { stripeCli, targets, testClockId: randomUUID() };
 };
+
+test("the legacy caller migration preserves the target and overlaps its existing wait", async () => {
+	const fixture = createClockFixture();
+	const startingFrom = new Date("2026-01-31T12:00:00.000Z");
+	const expectedTarget = addMonths(startingFrom, 1).getTime();
+	const retrieve = fixture.stripeCli.testHelpers.testClocks.retrieve;
+	fixture.stripeCli.testHelpers.testClocks.retrieve = async (id) => {
+		if (fixture.targets.length) await Bun.sleep(300);
+		return retrieve(id);
+	};
+	const target = await advanceTestClock({
+		...fixture,
+		startingFrom,
+		numberOfMonths: 1,
+		minimumWaitForSeconds: 0.4,
+		timeoutMs: 600,
+	});
+	expect(target).toBe(expectedTarget);
+	expect(fixture.targets).toEqual([expectedTarget / 1000]);
+});
 
 test("an aborted clock operation never submits a Stripe request", async () => {
 	const fixture = createClockFixture();

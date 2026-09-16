@@ -157,6 +157,9 @@ export const DYNAMODB_PORT = 8000;
  * v2-cache rollout to 100% — mirrors ADMIN_ROLLOUT_CONFIG_KEY on the server. */
 export const EDGE_CONFIG_OVERRIDE_B64 = Buffer.from(
 	JSON.stringify({
+		"admin/job-queue-config.json": {
+			queues: { stripeWebhookReplay: { enabled: true } },
+		},
 		"admin/rollout-config.json": {
 			rollouts: {
 				"v2-cache": {

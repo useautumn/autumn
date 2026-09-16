@@ -2,6 +2,8 @@ import type { TestGroup } from "./types";
 
 /** Scratch group for tw leftovers. Keep empty on trunk. */
 const activeTempPaths: string[] = [
+	// Cleanup deletes customers while invoice.paid is still writing their invoices.
+	"integration/catalog-v2/plans/aliases/alias-billing-endpoints.test.ts",
 	"integration/crud/plans/update/in-place/in-place-isolation.test.ts",
 	"integration/crud/plans/update/update-plan-allocated-v1-compat.test.ts",
 	// Deferred logic review: loading another entity overwrites shared tracked usage.

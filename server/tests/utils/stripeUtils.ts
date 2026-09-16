@@ -170,6 +170,7 @@ export const advanceTestClock = async ({
 	numberOfMonths,
 	advanceTo,
 	waitForSeconds,
+	minimumWaitForSeconds,
 	signal,
 	timeoutMs,
 }: {
@@ -182,6 +183,7 @@ export const advanceTestClock = async ({
 	numberOfMonths?: number;
 	advanceTo?: number;
 	waitForSeconds?: number;
+	minimumWaitForSeconds?: number;
 	signal?: AbortSignal;
 	timeoutMs?: number;
 }) => {
@@ -218,11 +220,14 @@ export const advanceTestClock = async ({
 	}
 
 	console.log("   - Advancing to: ", format(advanceTo, "dd MMM yyyy HH:mm:ss"));
+	const defaultSettleSeconds =
+		minimumWaitForSeconds === undefined ? STRIPE_TEST_CLOCK_TIMING / 1000 : 0;
 	await advanceStripeTestClock({
 		stripeCli,
 		testClockId,
 		targetSeconds: Math.floor(advanceTo / 1000),
-		settleMs: (waitForSeconds ?? STRIPE_TEST_CLOCK_TIMING / 1000) * 1000,
+		minimumWaitMs: (minimumWaitForSeconds ?? 0) * 1000,
+		settleMs: (waitForSeconds ?? defaultSettleSeconds) * 1000,
 		signal,
 		timeoutMs,
 	});
