@@ -1,20 +1,16 @@
 import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
 import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { parseBalanceShadowConfig } from "@/internal/balances/shadow/parseBalanceShadowConfig.js";
-import type { BalanceShadowSession } from "@/internal/balances/shadow/runWithBalanceShadow.js";
+import { balanceShadowStore } from "@/internal/balances/shadow/balanceShadowStore.js";
+import { createBalanceShadowController } from "@/internal/balances/shadow/createBalanceShadowController.js";
 import { startBalanceShadowSession } from "@/internal/balances/shadow/startBalanceShadowSession.js";
+import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
 import { createServerOwnershipConsumer } from "./getOwnershipConsumer.js";
 
-let session: ReturnType<typeof startBalanceShadowSession> | undefined;
-let started = false;
-
-export function startBalanceShadow(): void {
-	if (started) return;
-	started = true;
-	try {
-		const config = parseBalanceShadowConfig({ runtimeEnv: process.env });
-		if (!config) return;
+const controller = createBalanceShadowController({
+	readConfig: balanceShadowStore.get,
+	runtimeEnv: process.env,
+	startSession: ({ config }) => {
 		const env = getBalanceWorkerClientEnv();
 		const owners = createServerOwnershipConsumer({
 			topic: config.ownershipTopic,
@@ -28,7 +24,7 @@ export function startBalanceShadow(): void {
 			},
 		});
 		const observerId = crypto.randomUUID();
-		session = startBalanceShadowSession({
+		return startBalanceShadowSession({
 			config,
 			dependencies: {
 				owners,
@@ -46,18 +42,24 @@ export function startBalanceShadow(): void {
 					),
 			},
 		});
-	} catch (error) {
+	},
+	report: (error) => {
 		logger.warn(
-			{ error, component: "balance-shadow", event: "disabled_invalid_config" },
+			{ error, component: "balance-shadow", event: "configuration_failed" },
 			"[balance-shadow] Disabled; live routing unchanged",
 		);
-	}
-}
+	},
+});
 
-export function getBalanceShadowSession(): BalanceShadowSession | undefined {
-	return session;
-}
+registerEdgeConfig({
+	store: {
+		refresh: async (options) => {
+			await balanceShadowStore.refresh(options);
+			await controller.refresh();
+		},
+	},
+});
 
-export async function stopBalanceShadow(): Promise<void> {
-	await session?.stop();
-}
+export const startBalanceShadow = controller.start;
+export const getBalanceShadowSession = controller.getSession;
+export const stopBalanceShadow = controller.stop;

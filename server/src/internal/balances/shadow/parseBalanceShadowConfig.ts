@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 import type { BalanceShadowConfig } from "./balanceShadowTypes.js";
 
 const identifier = z.string().min(1).max(200);
-const schema = z.strictObject({
+export const BalanceShadowConfigSchema = z.strictObject({
 	runId: identifier,
 	ownershipTopic: identifier,
 	expiresAt: z.number().int().positive(),
@@ -32,7 +32,7 @@ export function parseBalanceShadowConfig({
 	if (!raw) return undefined;
 	if (Buffer.byteLength(raw) > 16_384)
 		throw new Error("Shadow config exceeds 16 KiB");
-	const config = schema.parse(JSON.parse(raw));
+	const config = BalanceShadowConfigSchema.parse(JSON.parse(raw));
 	if (runtimeEnv.BALANCE_WORKER_ROLLOUT_ENABLED === "true")
 		throw new Error("Shadow requires direct routing to remain disabled");
 	if (

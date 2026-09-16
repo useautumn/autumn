@@ -449,6 +449,7 @@ async function startDev() {
 			...(useLocalAuthUrls && {
 				...(!isCloudAgent() && {
 					KAFKA_BROKERS: process.env.KAFKA_BROKERS ?? "127.0.0.1:19092",
+					KAFKA_AUTH_MODE: process.env.KAFKA_AUTH_MODE ?? "none",
 				}),
 				CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
 				VITE_BACKEND_URL: localUrl(

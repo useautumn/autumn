@@ -18,9 +18,11 @@ function createLifecycleFixture({ ctx }: { ctx: WorkerLifecycleContext }) {
 const fixture = ({
 	failStart = false,
 	failQuiescence = false,
+	healthReporter,
 }: {
 	failStart?: boolean;
 	failQuiescence?: boolean;
+	healthReporter?: { start(): void; stop(): void };
 } = {}) => {
 	const calls: string[] = [];
 	let finishDrain: () => void = () => undefined;
@@ -29,6 +31,7 @@ const fixture = ({
 	});
 	const process = createLifecycleFixture({
 		ctx: {
+			healthReporter,
 			partitions: {
 				start: async () => {
 					calls.push("start");
@@ -144,4 +147,47 @@ async function reusesShutdownPromise(): Promise<void> {
 test(
 	"worker shutdown is idempotent and stopped workers cannot restart",
 	reusesShutdownPromise,
+);
+
+test.concurrent(
+	"health reporting starts with the worker and stops before draining state",
+	async () => {
+		const reportCalls: string[] = [];
+		const { process, calls, finishDrain } = fixture({
+			healthReporter: {
+				start: () => reportCalls.push("start"),
+				stop: () => {
+					expect(calls).not.toContain("withdraw");
+					expect(calls).not.toContain("store-close");
+					reportCalls.push("stop");
+				},
+			},
+		});
+		await process.start();
+		expect(reportCalls).toEqual(["start"]);
+		const stopping = process.stop();
+		expect(reportCalls).toEqual(["start", "stop"]);
+		finishDrain();
+		await stopping;
+		await process.stop();
+		expect(reportCalls).toEqual(["start", "stop"]);
+	},
+);
+
+test.concurrent(
+	"failed startup cancels health reporting before SQLite closes",
+	async () => {
+		const reportCalls: string[] = [];
+		const { process, finishDrain } = fixture({
+			failStart: true,
+			healthReporter: {
+				start: () => reportCalls.push("start"),
+				stop: () => reportCalls.push("stop"),
+			},
+		});
+		finishDrain();
+		await expect(process.start()).rejects.toThrow("startup");
+		await process.stop();
+		expect(reportCalls).toEqual(["start", "stop"]);
+	},
 );

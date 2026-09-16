@@ -4,10 +4,10 @@ import { validateBalanceWorkerTopics } from "../../../src/init/workerConfig.js";
 
 const env = createBalanceWorkerEnv({
 	KAFKA_BROKERS: "127.0.0.1:19092",
-	BALANCE_WORKER_PARTITION_COUNT: "2",
+	KAFKA_AUTH_MODE: "none",
 });
 const admin = ({
-	count = 2,
+	count = 512,
 	policy = "compact",
 }: {
 	count?: number;
@@ -60,15 +60,17 @@ describe("balance worker topic validation", () => {
 			}),
 		).resolves.toBeUndefined();
 	});
-	test.each([{ count: 1 }, { policy: "compact,delete" }, { policy: "delete" }])(
-		"rejects unsafe topic layout %j",
-		async (options) => {
-			await expect(
-				validateBalanceWorkerTopics({
-					admin: admin(options),
-					env,
-				}),
-			).rejects.toThrow();
-		},
-	);
+	test.each([
+		{ count: 1 },
+		{ count: 8 },
+		{ policy: "compact,delete" },
+		{ policy: "delete" },
+	])("rejects unsafe topic layout %j", async (options) => {
+		await expect(
+			validateBalanceWorkerTopics({
+				admin: admin(options),
+				env,
+			}),
+		).rejects.toThrow();
+	});
 });

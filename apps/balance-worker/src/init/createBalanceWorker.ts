@@ -1,4 +1,5 @@
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
+import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
 import { startWorker } from "./lifecycle/startWorker.js";
@@ -101,13 +102,28 @@ export async function createBalanceWorker({
 			return listener;
 		}
 
+		const state: BalanceWorkerState = { status: "created" };
+		function readWorkerStatus(): BalanceWorkerState["status"] {
+			return state.status;
+		}
+		const healthReporter = createWorkerHealthReporter({
+			ctx: {
+				logger: dependencies.logger,
+				readPartitions: partitions.partitions,
+				readWorkerStatus,
+			},
+			config: {
+				deployment: env.BALANCE_WORKER_DEPLOYMENT,
+				endpoint: address.endpoint,
+			},
+		});
 		const ctx: WorkerLifecycleContext = {
 			partitions,
+			healthReporter,
 			listen,
 			settleResources: resources.settleResources,
 			closeStore: resources.closeStore,
 		};
-		const state: BalanceWorkerState = { status: "created" };
 		function start(): Promise<void> {
 			return startWorker({ ctx, state });
 		}

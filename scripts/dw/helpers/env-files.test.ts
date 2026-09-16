@@ -30,8 +30,10 @@ describe("urlsForEntry", () => {
 		delete process.env.CLOUD_AGENT;
 		delete process.env.DW_HEADLESS;
 		expect(provisionedInfraEnv(6).KAFKA_BROKERS).toBe("127.0.0.1:19592");
+		expect(provisionedInfraEnv(6).KAFKA_AUTH_MODE).toBe("none");
 		process.env.CLOUD_AGENT = "1";
 		expect(provisionedInfraEnv(6).KAFKA_BROKERS).toBeUndefined();
+		expect(provisionedInfraEnv(6).KAFKA_AUTH_MODE).toBeUndefined();
 	});
 
 	test("laptop UI and browser API stay on portless; public API is inbound-only", () => {

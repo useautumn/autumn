@@ -30,6 +30,7 @@ export type WorkerListener = { stop(): Promise<void> | void };
 
 export type WorkerLifecycleContext = {
 	partitions: Pick<Partitions, "start" | "stop">;
+	healthReporter?: { start(): void; stop(): void };
 	listen(): WorkerListener;
 	settleResources(): Promise<void>;
 	closeStore(): void;

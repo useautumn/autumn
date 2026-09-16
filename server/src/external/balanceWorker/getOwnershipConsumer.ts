@@ -1,4 +1,7 @@
-import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
+import {
+	getBalanceWorkerClientEnv,
+	getBalanceWorkerRolloutEnabled,
+} from "@autumn/env/balanceWorkerClient";
 import {
 	createKafkaClient,
 	createKafkaTransport,
@@ -55,13 +58,13 @@ export function createServerOwnershipConsumer({
 }
 
 export async function startOwnershipConsumer(): Promise<void> {
-	const env = getBalanceWorkerClientEnv();
-	if (!env.BALANCE_WORKER_ROLLOUT_ENABLED) {
+	if (!getBalanceWorkerRolloutEnabled()) {
 		logger.info(
 			"[balance-worker] Ownership consumer skipped: rollout disabled",
 		);
 		return;
 	}
+	const env = getBalanceWorkerClientEnv();
 	const startedAt = performance.now();
 	logger.info(
 		{ brokers: env.KAFKA_BROKERS, topic: env.BALANCE_WORKER_OWNERSHIP_TOPIC },
