@@ -6,6 +6,7 @@ import {
 	featureUtils,
 	isBooleanEntitlement,
 	isOneOffPrepaidConsumableCustomerEntitlement,
+	isResettingEntitlement,
 	isUnlimitedEntitlement,
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
@@ -43,7 +44,8 @@ export const computeRetainedCustomerEntitlementUpdates = ({
 		const { entitlement } = customerEntitlement;
 		const resetsCustomerEntitlementUsage =
 			!isBooleanEntitlement({ entitlement }) &&
-			!isUnlimitedEntitlement({ entitlement }) &&
+			(!isUnlimitedEntitlement({ entitlement }) ||
+				isResettingEntitlement({ entitlement })) &&
 			!featureUtils.isAllocated(entitlement.feature) &&
 			!isOneOffPrepaidConsumableCustomerEntitlement(
 				addCusProductToCusEnt({

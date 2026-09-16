@@ -1,4 +1,4 @@
-import { Infinite, type ProductItem } from "@autumn/shared";
+import type { ProductItem } from "@autumn/shared";
 import {
 	Button,
 	FieldLabel,
@@ -39,9 +39,7 @@ export const CustomiseIntervalPopover = ({
 				<Button
 					className="w-full justify-start px-2 group-hover:text-primary active:border-0"
 					variant="skeleton"
-					disabled={
-						item.included_usage === Infinite || item[intervalField] == null
-					}
+					disabled={item[intervalField] == null}
 				>
 					<p className="text-tertiary-foreground group-hover/btn:text-primary">
 						Customize Interval

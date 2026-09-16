@@ -1,7 +1,9 @@
 import type { ApiFeatureV1 } from "@api/features/apiFeatureV1";
 import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct";
 import {
+	cusEntsToNextResetAt,
 	cusEntsToPlanId,
+	cusEntsToReset,
 	cusEntsToRollovers,
 	cusEntsToUnlimitedUsage,
 } from "@utils/index.js";
@@ -79,7 +81,7 @@ export const getUnlimitedApiBalance = ({
 		remaining: 0,
 		usage,
 
-		next_reset_at: null,
+		next_reset_at: cusEntsToNextResetAt({ cusEnts }),
 		max_purchase: null,
 		overage_allowed: false,
 
@@ -93,7 +95,7 @@ export const getUnlimitedApiBalance = ({
 				remaining: 0,
 				usage,
 				unlimited: true,
-				reset: null,
+				reset: cusEntsToReset({ cusEnts }),
 				expires_at: null,
 				price: null,
 				overage: 0,

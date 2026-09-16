@@ -76,7 +76,7 @@ export function IncludedUsage() {
 							checked={includedUsage === Infinite}
 							onCheckedChange={(checked) => {
 								if (checked) {
-									// Set to unlimited
+									// Unlimited defaults to one-off; the reset can still be set
 									setItem({
 										...item,
 										included_usage: Infinite,

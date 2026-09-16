@@ -47,7 +47,6 @@ export const isResettingEntitlement = ({
 }) => {
 	return (
 		!isBooleanEntitlement({ entitlement }) &&
-		!isUnlimitedEntitlement({ entitlement }) &&
 		!isLifetimeEntitlement({ entitlement })
 	);
 };

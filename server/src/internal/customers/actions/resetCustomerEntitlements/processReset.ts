@@ -4,7 +4,6 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullCusEntWithProduct,
 	isLifetimeEntitlement,
-	isUnlimitedEntitlement,
 	orgPersistFreeOverage,
 	type Rollover,
 	type UsageAttribution,
@@ -48,12 +47,9 @@ export const processReset = async ({
 	const ent = cusEnt.entitlement;
 	const cusProduct = cusEnt.customer_product;
 
-	// Unlimited / lifetime cusEnts should never reach here
+	// Lifetime cusEnts should never reach here
 	// (getCusEntsNeedingReset filters them out), but guard defensively
-	if (
-		isUnlimitedEntitlement({ entitlement: ent }) ||
-		isLifetimeEntitlement({ entitlement: ent })
-	) {
+	if (isLifetimeEntitlement({ entitlement: ent })) {
 		return null;
 	}
 
