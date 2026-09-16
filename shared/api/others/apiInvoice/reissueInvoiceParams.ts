@@ -14,6 +14,10 @@ export const ReissueInvoiceParamsSchema = z.object({
 		description:
 			"Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed.",
 	}),
+	update_customer_email: z.email().optional().meta({
+		description:
+			"Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address.",
+	}),
 });
 
 export const ReissueInvoiceResponseSchema = z.object({

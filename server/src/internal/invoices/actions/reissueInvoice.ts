@@ -196,6 +196,25 @@ const createReplacementDraft = async ({
 	return withLines;
 };
 
+const updateStripeCustomerEmail = async ({
+	stripeCli,
+	stripeInvoice,
+	email,
+}: {
+	stripeCli: Stripe;
+	stripeInvoice: Stripe.Invoice;
+	email: string;
+}) => {
+	const stripeCusId =
+		typeof stripeInvoice.customer === "string"
+			? stripeInvoice.customer
+			: stripeInvoice.customer?.id;
+	if (!stripeCusId) {
+		throw invalidRequest("Original invoice has no Stripe customer");
+	}
+	await stripeCli.customers.update(stripeCusId, { email });
+};
+
 /** Moves the deferred plan's pointers so paying the replacement fulfils it. */
 const repointDeferredReferences = async ({
 	ctx,
@@ -345,11 +364,13 @@ export const reissueInvoice = async ({
 	invoiceId,
 	invoiceTemplateId,
 	netTermsDays,
+	updateCustomerEmail,
 }: {
 	ctx: AutumnContext;
 	invoiceId: string;
 	invoiceTemplateId?: string;
 	netTermsDays?: number;
+	updateCustomerEmail?: string;
 }): Promise<ReissueInvoiceResult> => {
 	const row = await InvoiceService.getListRowById({ ctx, id: invoiceId });
 	if (!row) throw invalidRequest(`Invoice ${invoiceId} not found`);
@@ -375,6 +396,15 @@ export const reissueInvoice = async ({
 		netTermsDays,
 		nowMs: Date.now(),
 	});
+
+	// Stripe snapshots customer_email at finalization, so this must precede the draft.
+	if (updateCustomerEmail) {
+		await updateStripeCustomerEmail({
+			stripeCli,
+			stripeInvoice,
+			email: updateCustomerEmail,
+		});
+	}
 
 	const draft = await createReplacementDraft({
 		stripeCli,

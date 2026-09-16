@@ -24,14 +24,19 @@ export const handleReissueInvoice = createRoute({
 	},
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { invoice_id, invoice_template_id, net_terms_days } =
-			c.req.valid("json");
+		const {
+			invoice_id,
+			invoice_template_id,
+			net_terms_days,
+			update_customer_email,
+		} = c.req.valid("json");
 
 		const { replacement, voidedInvoiceId } = await invoiceActions.reissue({
 			ctx,
 			invoiceId: invoice_id,
 			invoiceTemplateId: invoice_template_id,
 			netTermsDays: net_terms_days,
+			updateCustomerEmail: update_customer_email,
 		});
 		const lineItems = await invoiceLineItemRepo.getByInvoiceIds({
 			db: ctx.db,

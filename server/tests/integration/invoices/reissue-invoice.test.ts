@@ -29,6 +29,7 @@ import { generateId } from "@/utils/genUtils";
 type ReissueResponse = { invoice: ApiListInvoiceV1; voided_invoice_id: string };
 
 const FOOTER = "Pay by bank transfer: IBAN TEST0000";
+const NEW_EMAIL = "accounts-payable@example.com";
 
 const createTemplate = async () => {
 	const id = generateId("inv_tmpl");
@@ -105,7 +106,11 @@ test.concurrent(
 
 		const { invoice, voided_invoice_id } = (await autumnV2_3.post(
 			"/invoices.reissue",
-			{ invoice_id: originalId, invoice_template_id: templateId },
+			{
+				invoice_id: originalId,
+				invoice_template_id: templateId,
+				update_customer_email: NEW_EMAIL,
+			},
 		)) as ReissueResponse;
 
 		expect(voided_invoice_id).toBe(originalId);
@@ -130,6 +135,7 @@ test.concurrent(
 		expect(replacement.footer).toBe(FOOTER);
 		expect(replacement.auto_advance).toBe(true);
 		expect(replacement.due_date).toBe(original.due_date);
+		expect(replacement.customer_email).toBe(NEW_EMAIL);
 		expect(replacement.parent?.subscription_details?.subscription).toBe(
 			original.parent?.subscription_details?.subscription,
 		);
