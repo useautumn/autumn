@@ -22,7 +22,7 @@ import {
 import { CaretDownIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { addDays } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	AdvancedSection,
 	AdvancedToggleRow,
@@ -141,6 +141,7 @@ export function AttachAdvancedSection() {
 		trialEnabled,
 		startDate,
 		endDate,
+		refundLastPayment,
 	} = formValues;
 	const hasCustomerEntitlements =
 		customer?.customer_products?.some(
@@ -209,6 +210,31 @@ export function AttachAdvancedSection() {
 	const endDateMin = Math.max(Date.now(), attachStartsAt ?? 0);
 	const resetsBillingCycleNow =
 		resetBillingCycle && billingCycleAnchorMode === "now";
+
+	// Only an immediate, prorated switch off an outgoing plan produces credit
+	// that can go back to the card. Multi-plan attach has no refund support.
+	const canRefundOutgoingPlan =
+		hasOutgoing &&
+		!isMultiPlan &&
+		rules.proration.visible &&
+		!rules.proration.disabled &&
+		showProrationBehavior &&
+		effectiveProrationBehavior === "prorate_immediately" &&
+		effectivePlanSchedule !== "end_of_cycle";
+
+	// Wait for the preview before clearing, so a hydrated approval link keeps its
+	// refund while `hasOutgoing` is still unknown.
+	const previewSettled = Boolean(previewQuery.data);
+
+	useEffect(() => {
+		if (
+			previewSettled &&
+			!canRefundOutgoingPlan &&
+			refundLastPayment !== null
+		) {
+			form.setFieldValue("refundLastPayment", null);
+		}
+	}, [previewSettled, canRefundOutgoingPlan, refundLastPayment, form]);
 
 	const handleAddDiscount = () => {
 		form.setFieldValue("discounts", addDiscount(discounts));
@@ -542,6 +568,24 @@ export function AttachAdvancedSection() {
 							onCheckedChange={(checked) =>
 								handleProrationBehaviorChange(
 									checked ? "prorate_immediately" : "none",
+								)
+							}
+						/>
+					}
+				/>
+			)}
+
+			{canRefundOutgoingPlan && (
+				<ConfigRow
+					title="Refund Instead of Credit"
+					description="Return prorated credit to the payment method rather than holding it on the customer's balance"
+					action={
+						<Switch
+							checked={refundLastPayment === "prorated"}
+							onCheckedChange={(checked) =>
+								form.setFieldValue(
+									"refundLastPayment",
+									checked ? "prorated" : null,
 								)
 							}
 						/>

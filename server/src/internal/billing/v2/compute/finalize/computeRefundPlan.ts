@@ -1,7 +1,7 @@
 import type {
 	AutumnBillingPlan,
+	BillingContext,
 	LineItem,
-	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
@@ -16,7 +16,7 @@ export const computeRefundPlan = async ({
 	lineItems,
 }: {
 	ctx: AutumnContext;
-	billingContext: UpdateSubscriptionBillingContext;
+	billingContext: BillingContext;
 	lineItems: LineItem[];
 }): Promise<{
 	lineItems: LineItem[];

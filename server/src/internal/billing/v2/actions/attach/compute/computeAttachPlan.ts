@@ -22,7 +22,7 @@ import { finalizeAttachPlan } from "./finalizeAttachPlan";
 import { shouldBuildImmediateLineItems } from "./shouldBuildImmediateLineItems";
 
 /** Computes new attachments and immediate or scheduled product transitions. */
-export const computeAttachPlan = ({
+export const computeAttachPlan = async ({
 	ctx,
 	attachBillingContext,
 	params,
@@ -32,7 +32,7 @@ export const computeAttachPlan = ({
 	attachBillingContext: AttachBillingContext;
 	params: AttachParamsV1;
 	hasFullCustomerOverride?: boolean;
-}): AutumnBillingPlan => {
+}): Promise<AutumnBillingPlan> => {
 	const {
 		currentCustomerProduct,
 		carryOverSourceCustomerProduct,
@@ -192,7 +192,7 @@ export const computeAttachPlan = ({
 		oneOffPurchaseRebalance,
 	};
 
-	plan = finalizeAttachPlan({
+	plan = await finalizeAttachPlan({
 		ctx,
 		plan,
 		attachBillingContext,
