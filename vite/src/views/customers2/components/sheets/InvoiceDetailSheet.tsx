@@ -12,6 +12,7 @@ import {
 	CalendarBlankIcon,
 	CreditCardIcon,
 	HashIcon,
+	ProhibitIcon,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
@@ -33,6 +34,7 @@ import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccou
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
 import { RefundInvoiceDialog } from "./RefundInvoiceDialog";
+import { VoidInvoiceDialog } from "./VoidInvoiceDialog";
 
 type LineItemGroup = {
 	groupKey: string;
@@ -92,6 +94,7 @@ export function InvoiceDetailSheet({
 	const { isAdmin } = useAdmin();
 	const { masterStripeAccount } = useMasterStripeAccount();
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+	const [voidDialogOpen, setVoidDialogOpen] = useState(false);
 
 	const productGroups = useMemo(() => {
 		// Bucket line items by product_id, then group within each bucket.
@@ -181,6 +184,10 @@ export function InvoiceDetailSheet({
 		invoiceIsStripe &&
 		invoice.status === InvoiceStatus.Paid &&
 		!isFullyRefunded;
+	const canVoid =
+		invoiceIsStripe &&
+		(invoice.status === InvoiceStatus.Open ||
+			invoice.status === InvoiceStatus.Uncollectible);
 	const stripeConnectViewAsInvoiceLink =
 		invoiceIsStripe && isAdmin && masterStripeAccount?.id && stripeAccount?.id
 			? getStripeConnectViewAsLink({
@@ -403,11 +410,28 @@ export function InvoiceDetailSheet({
 						Refund Invoice
 					</Button>
 				)}
+				{canVoid && (
+					<Button
+						variant="destructive"
+						className="flex-1"
+						onClick={() => setVoidDialogOpen(true)}
+					>
+						<ProhibitIcon size={16} className="mr-1.5" />
+						Void Invoice
+					</Button>
+				)}
 			</div>
 			{canRefund && (
 				<RefundInvoiceDialog
 					open={refundDialogOpen}
 					onOpenChange={setRefundDialogOpen}
+					invoice={invoice}
+				/>
+			)}
+			{canVoid && (
+				<VoidInvoiceDialog
+					open={voidDialogOpen}
+					onOpenChange={setVoidDialogOpen}
 					invoice={invoice}
 				/>
 			)}
