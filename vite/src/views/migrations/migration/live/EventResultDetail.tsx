@@ -414,11 +414,23 @@ export function EventResultDetail({ event }: { event: MigrationItemEvent }) {
 	if (preview) return <PreviewSummary preview={preview} />;
 
 	if (event.status === "skipped") {
-		const skipped = response.skipped as { reason?: unknown } | undefined;
+		const skipped = response.skipped as
+			| { reason?: unknown; error?: unknown }
+			| undefined;
 		const guard = response.guard as { reason?: unknown } | undefined;
 		const reason = formatUnknownError(skipped?.reason ?? guard?.reason);
+		const detail = formatUnknownError(skipped?.error);
 		if (reason)
-			return <span className="text-sm text-tertiary-foreground">{reason}</span>;
+			return (
+				<div className="flex flex-col gap-1 text-sm text-tertiary-foreground">
+					<span>{reason}</span>
+					{detail && (
+						<span className="break-words text-xs whitespace-pre-wrap">
+							{detail}
+						</span>
+					)}
+				</div>
+			);
 	}
 
 	return null;

@@ -4,6 +4,7 @@ import {
 	customerEntitlements,
 	customerProducts,
 	customers,
+	type MigrationItemRunSkipReason,
 	type MigrationItemRunStatus,
 } from "@autumn/shared";
 import type { initScenario } from "@tests/utils/testInitUtils/initScenario";
@@ -36,12 +37,15 @@ export const expectMigrationItemRunStatus = async ({
 	migrationRunId,
 	customerId,
 	status,
+	skipReason,
 }: {
 	ctx: ScenarioCtx;
 	migrationInternalId: string;
 	migrationRunId: string;
 	customerId: string;
 	status: MigrationItemRunStatus;
+	/** Asserted only when passed; pass `null` to require it cleared. */
+	skipReason?: MigrationItemRunSkipReason | null;
 }) => {
 	const internalCustomerId = await getInternalCustomerId({ ctx, customerId });
 	const itemRun = await migrationItemRunRepo.getCustomer({
@@ -51,7 +55,10 @@ export const expectMigrationItemRunStatus = async ({
 		dryRun: false,
 		migrationRunId,
 	});
-	expect(itemRun).toMatchObject({ status });
+	expect(itemRun).toMatchObject({
+		status,
+		...(skipReason !== undefined ? { skip_reason: skipReason } : {}),
+	});
 };
 
 /** cusEnt rows for one feature on the customer's live products for a plan.

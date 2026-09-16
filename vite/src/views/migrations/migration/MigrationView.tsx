@@ -6,7 +6,7 @@ import {
 	SheetBackdrop,
 } from "@autumn/ui";
 import { motion } from "motion/react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate, useParams } from "react-router";
 import { AdminHover } from "@/components/general/AdminHover";
@@ -30,6 +30,7 @@ export function MigrationView() {
 		(s) => s.setSelectedCustomer,
 	);
 	const liveFormState = useMigrationSheetStore((s) => s.liveFormState);
+	const [footerSlot, setFooterSlot] = useState<HTMLDivElement | null>(null);
 	const closeSheet = useCallback(
 		() => setSelectedCustomer(null),
 		[setSelectedCustomer],
@@ -87,10 +88,11 @@ export function MigrationView() {
 									</BreadcrumbItem>
 								</BreadcrumbList>
 							</Breadcrumb>
-							<MigrationEditor migration={migration} />
+							<MigrationEditor migration={migration} footerSlot={footerSlot} />
 						</div>
 					</div>
 				</div>
+				<div ref={setFooterSlot} className="absolute inset-x-0 bottom-0 z-60" />
 			</motion.div>
 
 			<SheetBackdrop isOpen={!!selectedCustomer} onClose={closeSheet} />

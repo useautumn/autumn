@@ -8,8 +8,8 @@ import { carryOverUsagesToExistingUsagesConfig } from "./carryOverUtils";
 
 /**
  * Resolves the existing-usages carry config for an updateSubscription new product.
- * Unlike attach, update DEFAULTS to carrying all usage when the param is absent.
- * `feature_ids` are global feature IDs, applied per the supplied currentCustomerProduct.
+ * Unlike attach, update DEFAULTS to carrying all usage when the param is absent,
+ * and is the only flow that carries usage recorded on unlimited grants.
  */
 export const resolveUpdateExistingUsagesConfig = ({
 	ctx,
@@ -28,11 +28,15 @@ export const resolveUpdateExistingUsagesConfig = ({
 		return {
 			fromCustomerProduct: currentCustomerProduct,
 			carryAllConsumableFeatures: true,
+			carryUnlimitedUsage: true,
 		};
 
-	return carryOverUsagesToExistingUsagesConfig({
+	const config = carryOverUsagesToExistingUsagesConfig({
 		ctx,
 		params: { carry_over_usages: carryOverUsages },
 		currentCustomerProduct,
 	});
+	if (!config) return undefined;
+
+	return { ...config, carryUnlimitedUsage: true };
 };

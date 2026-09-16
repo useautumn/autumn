@@ -23,15 +23,11 @@ export const classifyResetCandidate = ({
 	const noAction = classifyNoAction({ customerEntitlement });
 	if (noAction) return noAction;
 
-	if (isUnlimitedEntitlement({ entitlement })) {
-		return { kind: "clear_next_reset", customerEntitlementId, unlimited: true };
-	}
-
 	if (isLifetimeEntitlement({ entitlement })) {
 		return {
 			kind: "clear_next_reset",
 			customerEntitlementId,
-			unlimited: false,
+			unlimited: isUnlimitedEntitlement({ entitlement }),
 		};
 	}
 

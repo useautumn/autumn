@@ -81,6 +81,7 @@ export const applyCustomerProductPatch = ({
 		customerProduct,
 		insertCustomerPrices: patch.insertCustomerPrices,
 		insertCustomerEntitlements: patch.insertCustomerEntitlements,
+		insertCustomerLicenses: patch.insertCustomerLicenses,
 		deleteCustomerPrices: patch.deleteCustomerPrices,
 		deleteCustomerEntitlements: patch.deleteCustomerEntitlements,
 	});

@@ -121,7 +121,7 @@ test.concurrent(
 					billing_method: BillingMethod.Prepaid,
 				},
 			},
-			errMessage: "Pooled unlimited items cannot include pricing",
+			errMessage: "Unlimited items cannot include pricing",
 		});
 	},
 );
@@ -213,6 +213,25 @@ test.concurrent(
 					billing_method: BillingMethod.Prepaid,
 				},
 			},
+		});
+	},
+);
+
+test.concurrent(
+	"unlimited item validation: rejects priced unlimited features",
+	async () => {
+		await expectPooledItemRejected({
+			planId: `priced-unlimited-${crypto.randomUUID()}`,
+			item: {
+				feature_id: TestFeature.Messages,
+				unlimited: true,
+				price: {
+					amount: 10,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.Prepaid,
+				},
+			},
+			errMessage: "Unlimited items cannot include pricing",
 		});
 	},
 );

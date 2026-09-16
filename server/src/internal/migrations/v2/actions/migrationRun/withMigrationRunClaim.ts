@@ -7,17 +7,43 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { migrationRunRepo } from "../../repos/index.js";
+import {
+	type TriggerRunLookup,
+	verifyTriggerRunExists,
+} from "./verifyTriggerRunExists.js";
+
+const failRun = async ({
+	ctx,
+	migrationRunId,
+	message,
+}: {
+	ctx: AutumnContext;
+	migrationRunId: string;
+	message: string;
+}) =>
+	migrationRunRepo.update({
+		ctx,
+		internalId: migrationRunId,
+		updates: {
+			status: MigrationRunStatus.Failed,
+			error_message: message,
+			finished_at: Date.now(),
+		},
+	});
 
 /** Two-phase claim for a migration run.
  *
  *  1. Insert with `status='queued'` — the partial unique index (one live run
  *     per migration) blocks concurrent claims of the same migration.
  *  2. Run `claimed` (e.g. `prepare`, or trigger.dev dispatch).
- *  3. On success, flip to `status='running'` with `started_at=now` (note:
- *     dispatch ≠ execution — the per-org run queue may hold the trigger task
- *     behind another migration's run first). On failure, flip to `failed` so
- *     the constraint releases.
- *  4. `claimed` may return `{ triggerRunId }` to persist a handle. */
+ *  3. On success the row stays `queued` — dispatch ≠ execution, and
+ *     `withMigrationRunTracking` flips it to `running` when the task starts.
+ *     Lazy runs are live as soon as prepare completes, so they flip here.
+ *     On failure, flip to `failed` so the constraint releases.
+ *  4. `claimed` may return `{ triggerRunId }` to persist a handle. The SDK
+ *     mints that id locally, so a handle alone does not prove the task was
+ *     enqueued; `verifyDispatch` reads it back and a run that never reached
+ *     the platform fails here instead of sitting `queued` forever. */
 export const withMigrationRunClaim = async ({
 	ctx,
 	migration,
@@ -26,6 +52,7 @@ export const withMigrationRunClaim = async ({
 	onlyIds,
 	targetLimit,
 	claimed,
+	verifyDispatch = verifyTriggerRunExists,
 }: {
 	ctx: AutumnContext;
 	migration: Migration;
@@ -36,6 +63,7 @@ export const withMigrationRunClaim = async ({
 	claimed: (
 		migrationRunId: string,
 	) => Promise<{ triggerRunId?: string } | undefined>;
+	verifyDispatch?: (triggerRunId: string) => Promise<TriggerRunLookup>;
 }): Promise<{ migrationRunId: string; triggerRunId?: string }> => {
 	const migrationRun = await migrationRunRepo.insert({
 		ctx,
@@ -61,26 +89,41 @@ export const withMigrationRunClaim = async ({
 	try {
 		result = await claimed(migrationRun.internal_id);
 	} catch (error) {
-		await migrationRunRepo.update({
+		await failRun({
 			ctx,
-			internalId: migrationRun.internal_id,
-			updates: {
-				status: MigrationRunStatus.Failed,
-				error_message: error instanceof Error ? error.message : String(error),
-				finished_at: Date.now(),
-			},
+			migrationRunId: migrationRun.internal_id,
+			message: error instanceof Error ? error.message : String(error),
 		});
 		throw error;
 	}
 
-	await migrationRunRepo.update({
-		ctx,
-		internalId: migrationRun.internal_id,
-		updates: {
-			status: MigrationRunStatus.Running,
-			started_at: Date.now(),
-		},
-	});
+	if (result?.triggerRunId) {
+		const dispatched = await verifyDispatch(result.triggerRunId);
+		if (dispatched === "not_found") {
+			const message = `Migration run dispatch could not be verified: trigger run ${result.triggerRunId} was not found`;
+			await failRun({
+				ctx,
+				migrationRunId: migrationRun.internal_id,
+				message,
+			});
+			throw new RecaseError({
+				message,
+				code: ErrCode.InternalError,
+				statusCode: 500,
+			});
+		}
+	}
+
+	if (lazyRun) {
+		await migrationRunRepo.update({
+			ctx,
+			internalId: migrationRun.internal_id,
+			updates: {
+				status: MigrationRunStatus.Running,
+				started_at: Date.now(),
+			},
+		});
+	}
 
 	if (result?.triggerRunId) {
 		try {

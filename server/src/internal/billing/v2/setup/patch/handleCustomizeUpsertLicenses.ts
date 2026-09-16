@@ -1,6 +1,7 @@
 import type {
 	CustomerLicenseQuantity,
 	FullCusProduct,
+	FullCustomerLicense,
 	FullProduct,
 	InsertPlanLicenseSpec,
 	PatchContext,
@@ -10,6 +11,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupUpdateLicenseQuantities } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateLicenseQuantities";
 import { setupCustomizeLicenses } from "@/internal/billing/v2/setup/setupCustomizeLicenses";
 import { convergeCustomerLicense } from "@/internal/billing/v2/utils/convergeCustomerLicense";
+import { initCustomerLicenses } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerLicenses/initCustomerLicenses";
 
 /**
  * Patch-path licenses handler — the upsert_licenses sibling of the
@@ -18,6 +20,7 @@ import { convergeCustomerLicense } from "@/internal/billing/v2/utils/convergeCus
  * converges the working copy's pools onto them. The original row stays
  * pristine, so computeCustomerLicenseTransitions reads the change as a
  * SAME-ROW transition: outgoing = original, incoming = patched clone.
+ * Links with no pool yet mint one, recorded on the patch for insertion.
  */
 export const handleCustomizeUpsertLicenses = async ({
 	ctx,
@@ -50,7 +53,7 @@ export const handleCustomizeUpsertLicenses = async ({
 		customerProduct,
 	});
 
-	convergePatchedCustomerLicenses({
+	patchContext.insertCustomerLicenses = convergePatchedCustomerLicenses({
 		targetCustomerProduct: patchContext.finalCustomerProduct,
 		fullProduct,
 		customerLicenseQuantities,
@@ -59,8 +62,9 @@ export const handleCustomizeUpsertLicenses = async ({
 	return { insertPlanLicenses, customerLicenseQuantities };
 };
 
-/** Mutates the working copy's pools onto the effective definitions and
- * requested paid counts; untouched pools pass through unchanged. */
+/** Walks the effective links: an existing pool converges in place (its
+ * link_id anchors assigned seats), a link without one mints a fresh pool.
+ * Returns the minted pools. */
 const convergePatchedCustomerLicenses = ({
 	targetCustomerProduct,
 	fullProduct,
@@ -69,27 +73,49 @@ const convergePatchedCustomerLicenses = ({
 	targetCustomerProduct: FullCusProduct;
 	fullProduct: FullProduct;
 	customerLicenseQuantities: CustomerLicenseQuantity[];
-}) => {
-	targetCustomerProduct.customer_licenses =
-		targetCustomerProduct.customer_licenses?.map((customerLicense) => {
-			const licensePlanId = customerLicense.planLicense?.product.id;
-			const planLicense = fullProduct.licenses?.find(
-				(link) => link.product.id === licensePlanId,
-			);
-			if (!planLicense) return customerLicense;
+}): FullCustomerLicense[] => {
+	const existingPools = targetCustomerProduct.customer_licenses ?? [];
+	const mintedPools: FullCustomerLicense[] = [];
 
-			const totalQuantity = customerLicenseQuantities.find(
-				(quantity) => quantity.licensePlanId === licensePlanId,
-			)?.totalQuantity;
-			const paidQuantity =
-				totalQuantity === undefined
-					? customerLicense.paid_quantity
-					: Math.max(0, totalQuantity - planLicense.included);
+	const convergedPools = (fullProduct.licenses ?? []).flatMap((planLicense) => {
+		const licensePlanId = planLicense.product.id;
+		const existingPool = existingPools.find(
+			(customerLicense) =>
+				customerLicense.planLicense?.product.id === licensePlanId,
+		);
+		const totalQuantity = customerLicenseQuantities.find(
+			(quantity) => quantity.licensePlanId === licensePlanId,
+		)?.totalQuantity;
 
-			return convergeCustomerLicense({
-				customerLicense,
+		if (!existingPool) {
+			const minted = initCustomerLicenses({
+				customerProduct: targetCustomerProduct,
+				fullProduct: { ...fullProduct, licenses: [planLicense] },
+				customerLicenseQuantities,
+			});
+			mintedPools.push(...minted);
+			return minted;
+		}
+
+		const paidQuantity =
+			totalQuantity === undefined
+				? existingPool.paid_quantity
+				: Math.max(0, totalQuantity - planLicense.included);
+		return [
+			convergeCustomerLicense({
+				customerLicense: existingPool,
 				planLicense,
 				paidQuantity,
-			});
-		});
+			}),
+		];
+	});
+
+	// Pools whose link the customize dropped pass through untouched.
+	const convergedIds = new Set(convergedPools.map((pool) => pool.id));
+	targetCustomerProduct.customer_licenses = [
+		...existingPools.filter((pool) => !convergedIds.has(pool.id)),
+		...convergedPools,
+	];
+
+	return mintedPools;
 };

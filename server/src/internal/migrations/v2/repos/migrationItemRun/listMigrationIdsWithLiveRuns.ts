@@ -4,8 +4,9 @@ import type { RepoContext } from "@/db/repoContext.js";
 
 /**
  * Which of the given migrations have run at least once for real. The LATERAL
- * `LIMIT 1` is load-bearing: it blocks the semi-join pull-up that makes the
- * planner scan every item run row, so each id costs one index seek instead.
+ * `LIMIT 1` blocks the semi-join pull-up, and the ORDER BY on the live-unique
+ * index columns is load-bearing: without it the planner reads `LIMIT 1` as a
+ * cheap early exit and sequentially scans every item run row instead.
  */
 export const listMigrationIdsWithLiveRuns = async ({
 	ctx,
@@ -28,6 +29,10 @@ export const listMigrationIdsWithLiveRuns = async ({
 			WHERE item_run.migration_internal_id = candidate.migration_internal_id
 				AND item_run.item_kind = ${itemKind}
 				AND item_run.dry_run = false
+			ORDER BY
+				item_run.migration_internal_id,
+				item_run.item_kind,
+				item_run.item_id
 			LIMIT 1
 		) AS live_run(found)
 	`)) as Array<{ migration_internal_id: string }>;

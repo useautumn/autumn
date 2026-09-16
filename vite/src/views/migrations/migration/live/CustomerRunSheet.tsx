@@ -81,6 +81,7 @@ function StatusValue({
 					status={status.status}
 					dryRun={status.dryRun}
 					response={status.response}
+					skipReason={status.skipReason}
 				/>
 			</div>
 		);

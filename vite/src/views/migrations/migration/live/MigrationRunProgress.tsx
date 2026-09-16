@@ -1,0 +1,139 @@
+import { UsersIcon } from "@phosphor-icons/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useRef } from "react";
+import { createPortal } from "react-dom";
+import { cn } from "@/lib/utils";
+import { migrationProgress } from "./migrationProgress";
+
+const EASE_OUT = [0.32, 0.72, 0, 1] as const;
+const ENTER_TRANSITION = { duration: 0.3, ease: EASE_OUT };
+/** Held back so the bar visibly completes before the footer collapses. */
+const EXIT_TRANSITION = { duration: 0.25, ease: EASE_OUT, delay: 0.55 };
+const FILL_TRANSITION = { duration: 0.45, ease: EASE_OUT };
+
+export function MigrationRunProgress({
+	completed,
+	running,
+	total,
+	expected,
+	label,
+	active,
+	waiting = false,
+	runKey,
+	slot,
+}: {
+	completed: number;
+	running: number;
+	total: number;
+	expected: number | null;
+	label: string;
+	active: boolean;
+	waiting?: boolean;
+	/** Resets the held running count when a new run starts. */
+	runKey?: string | null;
+	slot?: HTMLElement | null;
+}) {
+	const shouldReduceMotion = useReducedMotion();
+	const lastRunningRef = useRef(running);
+	const runKeyRef = useRef(runKey);
+	if (runKeyRef.current !== runKey) {
+		runKeyRef.current = runKey;
+		lastRunningRef.current = 0;
+	}
+	if (running > 0) lastRunningRef.current = running;
+	const peakRunning = running > 0 ? running : lastRunningRef.current;
+	const { percent, denominator } = migrationProgress({
+		completed,
+		total,
+		expected,
+	});
+
+	const footer = (
+		<AnimatePresence initial={false}>
+			{active && (
+				<motion.output
+					key="migration-progress"
+					aria-live="off"
+					className="block overflow-hidden border-t bg-background"
+					initial={{ opacity: 0, height: 0 }}
+					animate={{ opacity: 1, height: "auto" }}
+					exit={{
+						opacity: 0,
+						height: 0,
+						transition: shouldReduceMotion ? { duration: 0 } : EXIT_TRANSITION,
+					}}
+					transition={shouldReduceMotion ? { duration: 0 } : ENTER_TRANSITION}
+				>
+					<div className="mx-auto flex w-full max-w-5xl flex-col gap-1.5 px-4 pt-3 pb-4 sm:px-10">
+						<div className="flex items-center justify-between gap-3 text-xs">
+							<span className="flex items-center gap-2 text-foreground">
+								<UsersIcon
+									size={14}
+									weight="fill"
+									className="text-tertiary-foreground"
+								/>
+								{label}
+							</span>
+							<span className="flex items-center gap-3 text-tertiary-foreground tabular-nums">
+								{!waiting && (
+									<span
+										aria-hidden={running === 0}
+										className={cn(
+											"flex items-center gap-1.5 transition-opacity duration-200 ease-out",
+											running > 0 ? "opacity-100" : "opacity-0",
+										)}
+									>
+										<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
+										{peakRunning.toLocaleString()} running
+									</span>
+								)}
+								<span>
+									<span className="font-medium text-foreground">
+										{completed.toLocaleString()}
+									</span>{" "}
+									of{" "}
+									<span className="font-medium text-foreground">
+										{denominator === null ? "…" : denominator.toLocaleString()}
+									</span>{" "}
+									customers
+								</span>
+							</span>
+						</div>
+						<div
+							role="progressbar"
+							aria-label={label}
+							aria-valuemin={0}
+							aria-valuemax={denominator ?? undefined}
+							aria-valuenow={denominator === null ? undefined : completed}
+							className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+						>
+							<motion.div
+								className={cn(
+									"h-full rounded-full bg-primary",
+									(waiting || denominator === null) &&
+										"animate-pulse bg-primary/40",
+								)}
+								initial={false}
+								animate={{
+									width:
+										waiting || denominator === null ? "100%" : `${percent}%`,
+								}}
+								exit={{
+									width: "100%",
+									transition: shouldReduceMotion
+										? { duration: 0 }
+										: FILL_TRANSITION,
+								}}
+								transition={
+									shouldReduceMotion ? { duration: 0 } : FILL_TRANSITION
+								}
+							/>
+						</div>
+					</div>
+				</motion.output>
+			)}
+		</AnimatePresence>
+	);
+
+	return slot ? createPortal(footer, slot) : footer;
+}
