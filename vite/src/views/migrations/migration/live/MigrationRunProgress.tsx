@@ -1,4 +1,4 @@
-import { CircleNotchIcon } from "@phosphor-icons/react";
+import { UsersIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createPortal } from "react-dom";
 import { migrationProgress } from "./migrationProgress";
@@ -53,10 +53,10 @@ export function MigrationRunProgress({
 					<div className="mx-auto flex w-full max-w-5xl flex-col gap-1.5 px-4 pt-3 pb-4 sm:px-10">
 						<div className="flex items-center justify-between gap-3 text-xs">
 							<span className="flex items-center gap-2 text-foreground">
-								<CircleNotchIcon
+								<UsersIcon
 									size={14}
-									weight="bold"
-									className="animate-spin text-primary"
+									weight="fill"
+									className="text-tertiary-foreground"
 								/>
 								{label}
 							</span>
