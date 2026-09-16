@@ -102,7 +102,26 @@ export const invoiceCheckout = async ({
 			.map((text) => text.trim())
 			.filter(Boolean)
 			.join("; ");
-		if (message) throw new Error(`Stripe invoice payment rejected: ${message}`);
+		if (message) {
+			const fields = await paymentFrame.locator("input").evaluateAll((inputs) =>
+				inputs
+					.filter(
+						(input): input is HTMLInputElement =>
+							input instanceof HTMLInputElement,
+					)
+					.map((input) => ({
+						name: input.name,
+						stableName: input.getAttribute("data-elements-stable-field-name"),
+						type: input.type,
+						autocomplete: input.autocomplete,
+						visible: input.getClientRects().length > 0,
+						checked: input.type === "checkbox" ? input.checked : undefined,
+					})),
+			);
+			throw new Error(
+				`Stripe invoice payment rejected: ${message}; fields=${JSON.stringify(fields)}`,
+			);
+		}
 		await page.waitForTimeout(250);
 	}
 	throw new Error(
