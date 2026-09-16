@@ -113,7 +113,6 @@ type CustomerRow = MigrationPreviewCustomer & {
 	_waitingOnOtherMigration?: boolean;
 };
 
-// The page already pads 32px below the table; reserve only the remainder.
 const PROGRESS_FOOTER_PX = 26;
 
 const statusColumn: ColumnDef<CustomerRow, unknown> = {
@@ -338,8 +337,6 @@ export function MigrationLiveView({
 		executionStatuses: activeExecutionStatuses,
 		isActive: hasActiveRun || hasRealtimeActive,
 	});
-	// The run scope is the whole migration filter, never the table's search,
-	// list filters or execution statuses.
 	const { count: runScopeCount } = useMigrationFilterPreview({
 		filter: filter.customer ?? {},
 		migrationId,

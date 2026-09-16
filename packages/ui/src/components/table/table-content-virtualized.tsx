@@ -42,14 +42,12 @@ export function TableContentVirtualized({
 	// Small tables stay as short as their content; taller ones get a usable floor.
 	const MIN_TABLE_HEIGHT = 400;
 	const containerHeight = virtualization?.containerHeight;
-	// A calc() container has no numeric height here, so treat it as tall.
 	const containerHeightPx =
 		containerHeight && !containerHeight.startsWith("calc")
 			? Number.parseInt(containerHeight, 10)
 			: undefined;
 	const isShortContainer =
 		containerHeightPx !== undefined && containerHeightPx < MIN_TABLE_HEIGHT;
-	// Hold the floor while loading too, so the box does not grow when rows land.
 	const minHeight =
 		isShortContainer || isFlexFill
 			? undefined
@@ -111,7 +109,11 @@ export function TableContentVirtualized({
 					)}
 					style={{
 						minHeight: isFlexFill ? undefined : minHeight,
-						maxHeight: isFlexFill ? undefined : virtualization?.containerHeight,
+						maxHeight: isFlexFill ? undefined : containerHeight,
+						height:
+							!isFlexFill && showsSkeleton && containerHeight
+								? containerHeight
+								: undefined,
 						willChange: "scroll-position",
 					}}
 				>
