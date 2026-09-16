@@ -9,6 +9,8 @@ import {
 	parseTrackCommand,
 	type TrackOutcome,
 } from "@autumn/balance-engine";
+import { parsePartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
+import { planPartitionBootstrap } from "../../../../src/runtime/bootstrap/plan/planPartitionBootstrap.js";
 import { PartitionCheckpointLimitExceededError } from "../../../../src/state/checkpoint/restorePartitionCheckpoint.js";
 import {
 	openSqliteBalanceStateStore,
@@ -85,6 +87,87 @@ const outcomeFor = ({
 };
 
 describe("capture partition checkpoint", () => {
+	test("does not rewind locally applied progress to a lagging follower", () => {
+		const fixture = createStore();
+		try {
+			fixture.store.applyDurableStateInitialization({
+				position: { topic, partition, offset: 5n },
+				initialization: {
+					schemaVersion: 1,
+					type: "state_initialized",
+					initializationId: "init_ahead_of_follower",
+					initializedAt: checkpointCreatedAt - 1,
+					state: createCustomerMeteringState({
+						identity,
+						featureStatesById: {},
+					}),
+				},
+			});
+			const checkpoint = fixture.store.capturePartitionCheckpoint({
+				topic,
+				partition,
+				createdAt: checkpointCreatedAt,
+				limits,
+				consumedNextOffset: 2n,
+			});
+			expect(checkpoint.nextOffset).toBe(6n);
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(6n);
+			expect(() =>
+				fixture.store.capturePartitionCheckpoint({
+					topic,
+					partition,
+					createdAt: checkpointCreatedAt,
+					limits,
+					consumedNextOffset: -1n,
+				}),
+			).toThrow(RangeError);
+		} finally {
+			closeStore(fixture);
+		}
+	});
+
+	test("preserves a verified marker-only replay position in a read-only checkpoint", () => {
+		const fixture = createStore();
+		try {
+			fixture.store.applyDurableStateInitialization({
+				position: { topic, partition, offset: 0n },
+				initialization: {
+					schemaVersion: 1,
+					type: "state_initialized",
+					initializationId: "init_before_marker",
+					initializedAt: checkpointCreatedAt - 1,
+					state: createCustomerMeteringState({
+						identity,
+						featureStatesById: {},
+					}),
+				},
+			});
+
+			const checkpoint = fixture.store.capturePartitionCheckpoint({
+				topic,
+				partition,
+				createdAt: checkpointCreatedAt,
+				limits,
+				consumedNextOffset: 2n,
+			});
+
+			expect(checkpoint.nextOffset).toBe(2n);
+			expect(checkpoint).toHaveProperty("serialized", expect.any(String));
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
+			expect(
+				planPartitionBootstrap({
+					localNextOffset: null,
+					checkpoint: parsePartitionCheckpoint({
+						input: checkpoint.serialized,
+					}),
+					logRange: { logStartOffset: 2n, logEndOffset: 2n },
+				}).kind,
+			).toBe("restore");
+		} finally {
+			closeStore(fixture);
+		}
+	});
+
 	test("captures one read-only cut and filters receipts using its createdAt", () => {
 		const fixture = createStore();
 		try {
@@ -139,7 +222,9 @@ describe("capture partition checkpoint", () => {
 				limits,
 			});
 
-			expect(checkpoint).toMatchObject({
+			expect(
+				parsePartitionCheckpoint({ input: checkpoint.serialized }),
+			).toMatchObject({
 				createdAt: checkpointCreatedAt,
 				nextOffset: 3n,
 				states: [{ state: { revision: 2 } }],

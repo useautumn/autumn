@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createPartitionCheckpoint } from "../../../src/checkpoint/partitionCheckpoint.js";
+import { preparePartitionCheckpoint } from "../../../src/checkpoint/partitionCheckpoint.js";
 import { createPartitionCheckpointExporter } from "../../../src/checkpoint/partitionCheckpointExporter.js";
 
 const topic = "metering-events-v1";
@@ -14,14 +14,16 @@ const limits = {
 describe("partition checkpoint exporter", () => {
 	test("stamps, captures, and publishes one checkpoint in order", async () => {
 		const calls: string[] = [];
-		const checkpoint = createPartitionCheckpoint({
-			engineSchemaVersion: 1,
-			createdAt,
-			topic,
-			partition,
-			nextOffset: 42n,
-			states: [],
-			receipts: [],
+		const checkpoint = preparePartitionCheckpoint({
+			checkpoint: {
+				engineSchemaVersion: 1,
+				createdAt,
+				topic,
+				partition,
+				nextOffset: 42n,
+				states: [],
+				receipts: [],
+			},
 		});
 		const exporter = createPartitionCheckpointExporter({
 			clock: {
@@ -39,6 +41,7 @@ describe("partition checkpoint exporter", () => {
 						partition,
 						createdAt,
 						limits,
+						consumedNextOffset: null,
 					});
 					return checkpoint;
 				},
@@ -65,6 +68,7 @@ describe("partition checkpoint exporter", () => {
 			nextOffset: 42n,
 			stateCount: 0,
 			receiptCount: 0,
+			serializedBytes: checkpoint.serializedBytes,
 		});
 		expect(calls).toEqual(["stamp", "capture", "publish"]);
 	});
