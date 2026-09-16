@@ -179,6 +179,17 @@ function compileLeaf({
 		params.push(leaf.value);
 		return `${col} <> ?`;
 	}
+	if (leaf.op === "startsWith" || leaf.op === "regex") {
+		if (typeof leaf.value !== "string")
+			throw new Error(`$${leaf.op} expects a string on field "${leaf.field}"`);
+		if (leaf.op === "regex") {
+			params.push(leaf.value);
+			return `${col} ~ ?`;
+		}
+		// A literal prefix: escape LIKE's own wildcards so they match themselves.
+		params.push(`${leaf.value.replace(/[\\%_]/g, "\\$&")}%`);
+		return `${col} LIKE ?`;
+	}
 	if (leaf.op === "in" || leaf.op === "nin") {
 		if (!Array.isArray(leaf.value))
 			throw new Error(`$${leaf.op} expects an array on field "${leaf.field}"`);
