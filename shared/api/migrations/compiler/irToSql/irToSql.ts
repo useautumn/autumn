@@ -182,6 +182,14 @@ function compileLeaf({
 	if (leaf.op === "regex") {
 		if (typeof leaf.value !== "string")
 			throw new Error(`$regex expects a string on field "${leaf.field}"`);
+		// Reject here rather than letting Postgres raise mid-migration.
+		try {
+			new RegExp(leaf.value);
+		} catch {
+			throw new Error(
+				`$regex on field "${leaf.field}" is not a valid regular expression`,
+			);
+		}
 		params.push(leaf.value);
 		return `${col} ~ ?`;
 	}
@@ -190,14 +198,17 @@ function compileLeaf({
 			throw new Error(`$startsWith expects a string on field "${leaf.field}"`);
 		if (leaf.value === "") return "TRUE";
 		const upperBound = prefixUpperBound(leaf.value);
-		// A range, not LIKE: under a non-C collation LIKE cannot use a btree
-		// index, so a prefix match would seq-scan the whole table.
+		// A range, not LIKE: LIKE cannot use a btree index under a non-C
+		// collation, so a prefix match would scan the whole table.
+		const byteCol = `${col} COLLATE "C"`;
 		if (upperBound === null) {
-			params.push(leaf.value);
-			return `${col} >= ?`;
+			params.push(leaf.value, leaf.value);
+			return `(${col} >= ? AND ${byteCol} >= ?)`;
 		}
-		params.push(leaf.value, upperBound);
-		return `(${col} >= ? AND ${col} < ?)`;
+		params.push(leaf.value, upperBound, leaf.value, upperBound);
+		// The uncollated bounds are the index seek; the C-collated pair is the
+		// exact prefix test, since en_US sorts 'aB' inside ['ab','ac').
+		return `(${col} >= ? AND ${col} < ? AND ${byteCol} >= ? AND ${byteCol} < ?)`;
 	}
 	if (leaf.op === "in" || leaf.op === "nin") {
 		if (!Array.isArray(leaf.value))

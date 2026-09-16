@@ -7,7 +7,10 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { migrationRunRepo } from "../../repos/index.js";
-import { verifyTriggerRunExists } from "./verifyTriggerRunExists.js";
+import {
+	type TriggerRunLookup,
+	verifyTriggerRunExists,
+} from "./verifyTriggerRunExists.js";
 
 const failRun = async ({
 	ctx,
@@ -60,7 +63,7 @@ export const withMigrationRunClaim = async ({
 	claimed: (
 		migrationRunId: string,
 	) => Promise<{ triggerRunId?: string } | undefined>;
-	verifyDispatch?: (triggerRunId: string) => Promise<boolean>;
+	verifyDispatch?: (triggerRunId: string) => Promise<TriggerRunLookup>;
 }): Promise<{ migrationRunId: string; triggerRunId?: string }> => {
 	const migrationRun = await migrationRunRepo.insert({
 		ctx,
@@ -96,7 +99,7 @@ export const withMigrationRunClaim = async ({
 
 	if (result?.triggerRunId) {
 		const dispatched = await verifyDispatch(result.triggerRunId);
-		if (!dispatched) {
+		if (dispatched === "not_found") {
 			const message = `Migration run dispatch could not be verified: trigger run ${result.triggerRunId} was not found`;
 			await failRun({
 				ctx,

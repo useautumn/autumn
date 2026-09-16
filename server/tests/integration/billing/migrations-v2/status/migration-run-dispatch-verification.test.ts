@@ -6,7 +6,9 @@
  * items, which is indistinguishable from a healthy run.
  *
  * Red (current):  an unverifiable handle leaves the row `queued`.
- * Green (after):  the claim fails the row and surfaces the error.
+ * Green (after):  a definite "not found" fails the row and surfaces the error,
+ *                 while an inconclusive lookup leaves the run alone — failing
+ *                 it there could double-run a migration that did dispatch.
  */
 
 import { expect, test } from "bun:test";
@@ -39,7 +41,7 @@ test.concurrent(
 				migration,
 				dryRun: false,
 				claimed: async () => ({ triggerRunId: MISSING_TRIGGER_RUN_ID }),
-				verifyDispatch: async () => false,
+				verifyDispatch: async () => "not_found" as const,
 			}),
 		).rejects.toThrow(/could not be verified|not found/i);
 
@@ -52,6 +54,49 @@ test.concurrent(
 			started_at: null,
 		});
 		expect(run.error_message).toContain(MISSING_TRIGGER_RUN_ID);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("migration run dispatch: an inconclusive lookup leaves the run queued")}`,
+	async () => {
+		const customerId = "mig-dispatch-inconclusive";
+		const migrationId = `${customerId}-mig`;
+
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer()],
+			actions: [],
+		});
+		const migration = await autumnV2_2.migrationsV2.deleteAndCreate({
+			id: migrationId,
+		});
+
+		const { migrationRunId } = await withMigrationRunClaim({
+			ctx,
+			migration,
+			dryRun: false,
+			claimed: async () => ({ triggerRunId: "run_lookup_flaky" }),
+			verifyDispatch: async () => "inconclusive" as const,
+		});
+
+		const [run] = await migrationRunRepo.list({
+			ctx,
+			internalId: migrationRunId,
+		});
+		expect(run).toMatchObject({
+			status: MigrationRunStatus.Queued,
+			trigger_run_id: "run_lookup_flaky",
+		});
+
+		await migrationRunRepo.update({
+			ctx,
+			internalId: migrationRunId,
+			updates: {
+				status: MigrationRunStatus.Succeeded,
+				finished_at: Date.now(),
+			},
+		});
 	},
 );
 
@@ -75,7 +120,7 @@ test.concurrent(
 			migration,
 			dryRun: false,
 			claimed: async () => ({ triggerRunId: "run_enqueued_ok" }),
-			verifyDispatch: async () => true,
+			verifyDispatch: async () => "found" as const,
 		});
 
 		const [run] = await migrationRunRepo.list({

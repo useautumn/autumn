@@ -19,6 +19,7 @@ export function MigrationRunProgress({
 	label,
 	active,
 	waiting = false,
+	runKey,
 	slot,
 }: {
 	completed: number;
@@ -28,10 +29,17 @@ export function MigrationRunProgress({
 	label: string;
 	active: boolean;
 	waiting?: boolean;
+	/** Resets the held running count when a new run starts. */
+	runKey?: string | null;
 	slot?: HTMLElement | null;
 }) {
 	const shouldReduceMotion = useReducedMotion();
 	const lastRunningRef = useRef(running);
+	const runKeyRef = useRef(runKey);
+	if (runKeyRef.current !== runKey) {
+		runKeyRef.current = runKey;
+		lastRunningRef.current = 0;
+	}
 	if (running > 0) lastRunningRef.current = running;
 	const peakRunning = running > 0 ? running : lastRunningRef.current;
 	const { percent, denominator } = migrationProgress({
@@ -68,6 +76,7 @@ export function MigrationRunProgress({
 							<span className="flex items-center gap-3 text-tertiary-foreground tabular-nums">
 								{!waiting && (
 									<span
+										aria-hidden={running === 0}
 										className={cn(
 											"flex items-center gap-1.5 transition-opacity",
 											running > 0 ? "opacity-100" : "opacity-0",

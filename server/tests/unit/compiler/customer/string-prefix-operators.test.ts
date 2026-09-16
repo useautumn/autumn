@@ -29,17 +29,27 @@ const compile = (filter: Record<string, unknown>) =>
 test("customer_id $startsWith compiles to an index-usable range", () => {
 	const result = compile({ customer_id: { $startsWith: "bench-c-12" } });
 	expect(result.sql).toContain("c.id >= ?");
-	expect(result.sql).toContain("c.id < ?");
-	expect(result.sql).not.toContain("LIKE");
+	expect(result.sql).toContain('c.id COLLATE "C" < ?');
 	expect(result.params).toContain("bench-c-12");
 	expect(result.params).toContain("bench-c-13");
+});
+
+test("the range seeks in the index collation and rechecks byte order", () => {
+	// Under en_US, 'a-bz' and 'aB' sort inside ['ab','ac') but lack the prefix,
+	// so the index-usable bounds are narrowed by a C-collated recheck.
+	const result = compile({ customer_id: { $startsWith: "ab" } });
+	expect(result.sql).toContain("c.id >= ?");
+	expect(result.sql).toContain("c.id < ?");
+	expect((result.sql.match(/COLLATE "C"/g) ?? []).length).toBe(2);
+	expect(result.params.filter((p) => p === "ab")).toHaveLength(2);
+	expect(result.params.filter((p) => p === "ac")).toHaveLength(2);
 });
 
 test("a prefix ending at the maximum code point leaves the range open", () => {
 	const maxChar = String.fromCodePoint(0x10ffff);
 	const result = compile({ customer_id: { $startsWith: maxChar } });
 	expect(result.sql).toContain("c.id >= ?");
-	expect(result.sql).not.toContain("c.id < ?");
+	expect(result.sql).not.toContain("< ?");
 	expect(result.params).toContain(maxChar);
 });
 

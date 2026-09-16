@@ -346,10 +346,8 @@ export function MigrationLiveView({
 		previewSource === "filter" &&
 		deferredSearch === "" &&
 		activeExecutionStatuses.length === 0 &&
-		Object.keys(previewCustomerFilters).every(
-			(key) =>
-				previewCustomerFilters[key as keyof typeof previewCustomerFilters] ===
-				undefined,
+		Object.values(previewCustomerFilters).every((value) =>
+			Array.isArray(value) ? value.length === 0 : !value,
 		);
 	const runScopeCount =
 		unfilteredCount ?? (tableCountIsRunScope ? count : null);
@@ -869,6 +867,7 @@ export function MigrationLiveView({
 				label={runProgressLabel({ migrationStatus, activeRun, blockedBy })}
 				active={!!activeRun}
 				waiting={migrationStatus === "waiting"}
+				runKey={activeRun?.internal_id ?? null}
 				slot={footerSlot}
 			/>
 		</div>
