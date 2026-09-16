@@ -1,6 +1,3 @@
-/** Regression: the product cron must not expire a trial that Stripe or a priced license bills.
- * Red: the trial row is selected and expired; green: it stays active. */
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,

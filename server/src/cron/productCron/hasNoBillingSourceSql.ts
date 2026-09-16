@@ -9,10 +9,6 @@ import {
 import { and, eq, isNotNull, notExists, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
-/**
- * SQL predicate: the customer product has nothing that bills it, so Autumn owns
- * its trial expiry. Mirrors `customerProductToEffectivePrices` plus Stripe ownership.
- */
 export const hasNoBillingSource = ({ db }: { db: DrizzleCli }) => {
 	const hasNoStripeSubscription = sql`coalesce(array_length(${customerProducts.subscription_ids}, 1), 0) = 0`;
 
@@ -23,8 +19,6 @@ export const hasNoBillingSource = ({ db }: { db: DrizzleCli }) => {
 			.where(eq(customerPrices.customer_product_id, customerProducts.id)),
 	);
 
-	// customer_products.id is COLLATE "C"; matching the license column's collation
-	// keeps this lookup on unique_customer_license instead of a seq scan.
 	const parentCustomerProductId = sql`${customerProducts.id} COLLATE "default"`;
 	const hasNoPricedLicense = notExists(
 		db
