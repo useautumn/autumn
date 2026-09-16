@@ -13,13 +13,14 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { subMinutes } from "date-fns";
 import { eq } from "drizzle-orm";
 import { fetchExpiredTrialProducts } from "@/cron/productCron/fetchExpiredTrialProducts";
 import { runProductCron } from "@/cron/productCron/runProductCron";
 import { logger } from "@/external/logtail/logtailUtils";
 import { CusService } from "@/internal/customers/CusService";
 
-const pastTrialEnd = () => Date.now() - 60_000;
+const pastTrialEnd = () => subMinutes(new Date(), 1).getTime();
 
 test.concurrent(
 	`${chalk.yellowBright("product-cron: a Stripe-backed trial without customer prices is not expired")}`,

@@ -1,4 +1,5 @@
 import { getCycleEnd } from "@autumn/shared";
+import { fromUnixTime, isAfter } from "date-fns";
 import type Stripe from "stripe";
 import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { stripeSubscriptionToLargestInterval } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
@@ -32,8 +33,8 @@ export const getTrialEndsAtFromStripe = ({
 	nowMs?: number;
 }): number | undefined => {
 	if (!stripeSubscription.trial_end) return undefined;
-	const trialEndsAt = secondsToMs(stripeSubscription.trial_end);
-	return trialEndsAt > nowMs ? trialEndsAt : undefined;
+	const trialEndsAt = fromUnixTime(stripeSubscription.trial_end);
+	return isAfter(trialEndsAt, nowMs) ? trialEndsAt.getTime() : undefined;
 };
 
 /** Derive cancel/end timestamps from the Stripe subscription. */
