@@ -1,11 +1,11 @@
 import { insertMigrationRun } from "./insertMigrationRun.js";
-import { listMigrationIdsWithStartedRunAll } from "./listMigrationIdsWithStartedRunAll.js";
+import { listMigrationIdsWithRunAllStarted } from "./listMigrationIdsWithRunAllStarted.js";
 import { listMigrationRuns } from "./listMigrationRuns.js";
 import { updateMigrationRun } from "./updateMigrationRun.js";
 
 export const migrationRunRepo = {
 	insert: insertMigrationRun,
 	list: listMigrationRuns,
-	listIdsWithStartedRunAll: listMigrationIdsWithStartedRunAll,
+	listIdsWithRunAllStarted: listMigrationIdsWithRunAllStarted,
 	update: updateMigrationRun,
 };

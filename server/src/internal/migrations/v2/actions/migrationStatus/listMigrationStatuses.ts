@@ -38,7 +38,7 @@ export const listMigrationStatuses = async ({
 
 	const [orgActiveRuns, startedRunAllIds] = await Promise.all([
 		migrationRunRepo.list({ ctx, active: true }),
-		migrationRunRepo.listIdsWithStartedRunAll({
+		migrationRunRepo.listIdsWithRunAllStarted({
 			ctx,
 			migrationInternalIds: migrations.map((m) => m.internal_id),
 		}),

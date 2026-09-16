@@ -4,7 +4,7 @@ import type { RepoContext } from "@/db/repoContext.js";
 
 /** Migrations where a live, unscoped run reached execution (`started_at`
  * is only written when execution starts, not at dispatch). */
-export const listMigrationIdsWithStartedRunAll = async ({
+export const listMigrationIdsWithRunAllStarted = async ({
 	ctx,
 	migrationInternalIds,
 }: {
