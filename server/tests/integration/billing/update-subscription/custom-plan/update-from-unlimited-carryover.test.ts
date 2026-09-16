@@ -69,6 +69,78 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("p2p: entity-scoped unlimited -> finite keeps usage on each entity")}`,
+	async () => {
+		const customerId = "unlim-to-finite-entity";
+		const plan = products.pro({
+			id: "unlim-to-finite-entity-pro",
+			items: [
+				items.unlimited({
+					featureId: TestFeature.Messages,
+					entityFeatureId: TestFeature.Users,
+				}),
+			],
+		});
+		const entityUsages = [10, 25];
+
+		const { autumnV1, autumnV2_3, entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [plan] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [s.billing.attach({ productId: plan.id })],
+		});
+
+		for (const [index, entity] of entities.entries()) {
+			await autumnV1.track(
+				{
+					customer_id: customerId,
+					entity_id: entity.id,
+					feature_id: TestFeature.Messages,
+					value: entityUsages[index],
+				},
+				{ timeout: 3000 },
+			);
+		}
+
+		for (const [index, entity] of entities.entries()) {
+			await expectBalanceCorrect({
+				customerId,
+				entityId: entity.id,
+				autumn: autumnV2_3,
+				featureId: TestFeature.Messages,
+				usage: entityUsages[index],
+			});
+		}
+
+		await autumnV1.subscriptions.update({
+			customer_id: customerId,
+			product_id: plan.id,
+			items: [
+				items.monthlyMessages({
+					includedUsage: MESSAGES_ALLOWANCE,
+					entityFeatureId: TestFeature.Users,
+				}),
+			],
+		});
+
+		for (const [index, entity] of entities.entries()) {
+			await expectBalanceCorrect({
+				customerId,
+				entityId: entity.id,
+				autumn: autumnV2_3,
+				featureId: TestFeature.Messages,
+				granted: MESSAGES_ALLOWANCE,
+				usage: entityUsages[index],
+				remaining: MESSAGES_ALLOWANCE - entityUsages[index],
+			});
+		}
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("p2p: unlimited -> finite carries usage exceeding the new allowance")}`,
 	async () => {
 		const customerId = "unlim-to-finite-exceed";

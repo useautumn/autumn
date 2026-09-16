@@ -103,6 +103,20 @@ export const cusProductToExistingUsages = ({
 			currentExistingUsage.usageAttribution = mergedUsageAttribution;
 		}
 
+		// 1. If it's entity scoped
+		if (isEntityScopedCusEnt(cusEnt)) {
+			const entityAllowance = cusEnt.entitlement.allowance ?? 0;
+			for (const [entityId, entityBalance] of Object.entries(cusEnt.entities)) {
+				// Usage = startingBalance + adjustment - currentBalance
+				const entityUsage = new Decimal(entityAllowance)
+					.add(entityBalance.adjustment ?? 0)
+					.sub(entityBalance.balance)
+					.toNumber();
+				currentExistingUsage.entityUsages![entityId] = entityUsage;
+			}
+			continue;
+		}
+
 		// Unlimited rows track usage as a raw negative balance that the granted
 		// balance helpers zero out, so read it directly. Never owed, so no overage.
 		if (isUnlimited) {
@@ -116,20 +130,6 @@ export const cusProductToExistingUsages = ({
 					}),
 				)
 				.toNumber();
-			continue;
-		}
-
-		// 1. If it's entity scoped
-		if (isEntityScopedCusEnt(cusEnt)) {
-			const entityAllowance = cusEnt.entitlement.allowance ?? 0;
-			for (const [entityId, entityBalance] of Object.entries(cusEnt.entities)) {
-				// Usage = startingBalance + adjustment - currentBalance
-				const entityUsage = new Decimal(entityAllowance)
-					.add(entityBalance.adjustment ?? 0)
-					.sub(entityBalance.balance)
-					.toNumber();
-				currentExistingUsage.entityUsages![entityId] = entityUsage;
-			}
 			continue;
 		}
 
