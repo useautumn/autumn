@@ -113,8 +113,6 @@ type CustomerRow = MigrationPreviewCustomer & {
 	_waitingOnOtherMigration?: boolean;
 };
 
-const PROGRESS_FOOTER_PX = 56;
-
 const statusColumn: ColumnDef<CustomerRow, unknown> = {
 	id: "migration_status",
 	header: "Status",
@@ -358,9 +356,8 @@ export function MigrationLiveView({
 		(r) => r.status === "queued" || r.status === "running",
 	);
 	const progressRun = activeRun ?? (isSettling ? latestRun : undefined);
-	const tableOffsetPx =
-		(env === AppEnv.Sandbox ? 260 : 220) + (activeRun ? PROGRESS_FOOTER_PX : 0);
-	const tableContainerHeight = `calc(100vh - ${tableOffsetPx}px)`;
+	const tableContainerHeight =
+		env === AppEnv.Sandbox ? "calc(100vh - 260px)" : "calc(100vh - 220px)";
 	const progressCounts = (progressRun ?? latestRun)?.item_run_counts;
 	const canShowPendingStatus =
 		executionStatuses.length === 0 || executionStatuses.includes("queued");
