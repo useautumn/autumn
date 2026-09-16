@@ -264,3 +264,31 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create: preview never creates the customer it prices for")}`,
+	async () => {
+		const customerId = "inv-create-edge-preview";
+		const { autumnV2_3, pro } = await scenario({
+			customerId,
+			id: "pro-edge-preview",
+		});
+		const unknownCustomerId = `${customerId}-unknown`;
+
+		await expectAutumnError({
+			func: () =>
+				createInvoice({
+					autumnV2_3,
+					params: {
+						customer_id: unknownCustomerId,
+						preview: true,
+						plans: [{ plan_id: pro.id }],
+					},
+				}),
+		});
+
+		await expectAutumnError({
+			func: () => autumnV2_3.customers.get(unknownCustomerId),
+		});
+	},
+);

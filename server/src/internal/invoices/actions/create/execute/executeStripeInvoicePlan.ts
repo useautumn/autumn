@@ -8,8 +8,8 @@ import {
 	createStripeInvoice,
 	finalizeStripeInvoice,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
+import { storeInvoiceLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
-import { workflows } from "@/queue/workflows";
 import { upsertInvoiceFromStripe } from "../../upsertFromStripe";
 import type { InvoiceLine } from "../compute/computeInvoiceLines";
 import type { StripeInvoicePlan } from "../evaluate/evaluateStripeInvoicePlan";
@@ -102,13 +102,17 @@ export const executeStripeInvoicePlan = async ({
 		});
 	}
 
+	// Stored inline: the response reports the invoice's line items.
 	const billingLineItems: LineItem[] = lines.map((line) => line.lineItem);
-	await workflows.triggerStoreInvoiceLineItems({
-		orgId: ctx.org.id,
-		env: ctx.env,
-		stripeInvoiceId: finalized.id,
-		autumnInvoiceId: autumnInvoice.id,
-		billingLineItems,
+	await storeInvoiceLineItems({
+		ctx,
+		payload: {
+			orgId: ctx.org.id,
+			env: ctx.env,
+			stripeInvoiceId: finalized.id,
+			autumnInvoiceId: autumnInvoice.id,
+			billingLineItems,
+		},
 	});
 
 	await deleteCachedFullCustomer({

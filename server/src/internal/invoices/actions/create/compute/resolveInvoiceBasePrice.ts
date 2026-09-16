@@ -28,7 +28,6 @@ export const buildInvoiceFixedPrice = ({
 		amount: params.amount,
 		interval: params.interval,
 		interval_count: params.interval_count,
-		stripe_price_id: params.processors?.stripe?.price_id,
 		stripe_product_id:
 			template?.config.type === PriceType.Fixed
 				? template.config.stripe_product_id

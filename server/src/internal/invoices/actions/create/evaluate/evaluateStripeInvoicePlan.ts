@@ -2,6 +2,7 @@ import {
 	atmnToStripeAmount,
 	type CreateInvoicePreview,
 	type CreateInvoicePreviewLine,
+	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
@@ -21,9 +22,11 @@ export type StripeInvoicePlan = {
 const percentOffTotal = ({
 	amount,
 	coupons,
+	currency,
 }: {
 	amount: number;
 	coupons: Stripe.Coupon[];
+	currency: string;
 }) =>
 	coupons.reduce((remaining, coupon) => {
 		if (coupon.percent_off) {
@@ -31,7 +34,9 @@ const percentOffTotal = ({
 		}
 		if (coupon.amount_off) {
 			return Decimal.max(
-				remaining.minus(new Decimal(coupon.amount_off).div(100)),
+				remaining.minus(
+					stripeToAtmnAmount({ amount: coupon.amount_off, currency }),
+				),
 				0,
 			);
 		}
@@ -84,6 +89,7 @@ export const evaluateStripeInvoicePlan = ({
 		const amountAfterLineDiscounts = percentOffTotal({
 			amount: lineItem.amount,
 			coupons: lineCoupons,
+			currency,
 		});
 
 		const stripeProductId = lineItemToStripeProductId({ lineItem });
@@ -141,10 +147,20 @@ export const evaluateStripeInvoicePlan = ({
 		coupons: assigned.invoiceCouponIds
 			.map((id) => couponsById.get(id))
 			.filter((coupon): coupon is Stripe.Coupon => Boolean(coupon)),
+		currency,
 	});
 
+	// Stripe rounds tax per line, so the preview must tax each line's discounted
+	// share rather than the invoice total.
+	const invoiceDiscountRatio = afterLineDiscounts.isZero()
+		? new Decimal(0)
+		: afterInvoiceDiscounts.div(afterLineDiscounts);
 	const tax = computeInvoiceTaxPreview({
-		taxableAmounts: [afterInvoiceDiscounts.toNumber()],
+		taxableAmounts: previewLines.map((line) =>
+			new Decimal(line.amount_after_discounts)
+				.mul(invoiceDiscountRatio)
+				.toNumber(),
+		),
 		currency,
 		taxRate: invoiceContext.taxRate,
 	});

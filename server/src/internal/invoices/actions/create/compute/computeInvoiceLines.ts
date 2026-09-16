@@ -132,9 +132,6 @@ const customizedFeaturePrice = ({
 						flat_amount: tier.flat_amount,
 					}))
 				: [{ to: "inf" as const, amount: override.amount ?? 0 }],
-			stripe_price_id:
-				override.processors?.stripe?.price_id ??
-				catalogPrice.config.stripe_price_id,
 		} as Price["config"],
 	};
 };

@@ -77,9 +77,12 @@ export const setupCreateInvoiceContext = async ({
 		});
 	}
 
+	// A preview must not write: no customer is created or updated for one.
 	const fullCustomer = await getOrCreateCustomer({
 		ctx,
 		customerId: params.customer_id,
+		skipCreate: preview,
+		skipUpdate: preview,
 	});
 
 	const stripeCustomer = preview

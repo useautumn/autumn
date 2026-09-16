@@ -4,7 +4,6 @@ import { UnixMsTimestampSchema } from "@api/billing/common/unixMsTimestamp.js";
 import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride.js";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice.js";
 import { BillingMethod } from "@api/products/components/billingMethod.js";
-import { ApiPriceProcessorsSchema } from "@api/products/components/processors.js";
 import { PlanItemPriceParamsSchema } from "@api/products/items/crud/createPlanItemParamsV1.js";
 import { z } from "zod/v4";
 import { ApiListInvoiceV1Schema } from "./apiListInvoiceV1.js";
@@ -14,32 +13,17 @@ export const InvoiceBasePriceParamsSchema = BasePriceParamsSchema.pick({
 	amount: true,
 	interval: true,
 	interval_count: true,
-	additional_currencies: true,
-})
-	.extend({
-		processors: ApiPriceProcessorsSchema.optional().meta({
-			description: "Bill this line under an existing Stripe price.",
-		}),
-	})
-	.strict();
+}).strict();
 
 /** Pricing-only subset of a catalog plan item's price. */
 export const InvoiceItemPriceParamsSchema = PlanItemPriceParamsSchema.pick({
 	amount: true,
-	additional_currencies: true,
 	tiers: true,
 	tier_behavior: true,
 	interval: true,
 	interval_count: true,
 	billing_units: true,
-	billing_method: true,
-})
-	.extend({
-		processors: ApiPriceProcessorsSchema.optional().meta({
-			description: "Bill this line under an existing Stripe price.",
-		}),
-	})
-	.strict();
+}).strict();
 
 export const InvoiceCustomizeItemSchema = z
 	.object({
@@ -119,8 +103,7 @@ export const InvoiceFeatureQuantitySchema = z
 	})
 	.strict()
 	.refine(
-		(entry) =>
-			(entry.quantity !== undefined) !== (entry.usage !== undefined),
+		(entry) => (entry.quantity !== undefined) !== (entry.usage !== undefined),
 		{ message: "Provide exactly one of quantity or usage." },
 	);
 
@@ -256,7 +239,9 @@ export const CreateInvoiceResponseSchema = z.object({
 });
 
 export type CreateInvoiceParams = z.infer<typeof CreateInvoiceParamsSchema>;
-export type CreateInvoiceParamsInput = z.input<typeof CreateInvoiceParamsSchema>;
+export type CreateInvoiceParamsInput = z.input<
+	typeof CreateInvoiceParamsSchema
+>;
 export type InvoicePlanParams = z.infer<typeof InvoicePlanParamsSchema>;
 export type InvoiceCustomize = z.infer<typeof InvoiceCustomizeSchema>;
 export type InvoiceCustomizeItem = z.infer<typeof InvoiceCustomizeItemSchema>;
