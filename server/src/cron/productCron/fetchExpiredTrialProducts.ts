@@ -1,6 +1,7 @@
 import {
 	ACTIVE_STATUSES,
 	type AppEnv,
+	customerLicenses,
 	customerPrices,
 	customerProducts,
 	customers,
@@ -16,6 +17,7 @@ import {
 	lt,
 	notExists,
 	or,
+	sql,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -46,6 +48,22 @@ export const fetchExpiredTrialProducts = async ({
 	nowMs?: number;
 	internalCustomerId?: string;
 }) => {
+	const noStripeSubscription = sql`coalesce(array_length(${customerProducts.subscription_ids}, 1), 0) = 0`;
+	const noCustomerPrice = notExists(
+		db
+			.select()
+			.from(customerPrices)
+			.where(eq(customerPrices.customer_product_id, customerProducts.id)),
+	);
+	const noCustomerLicense = notExists(
+		db
+			.select()
+			.from(customerLicenses)
+			.where(
+				eq(customerLicenses.parent_customer_product_id, customerProducts.id),
+			),
+	);
+
 	return db
 		.select({
 			customerProduct: customerProducts,
@@ -59,15 +77,8 @@ export const fetchExpiredTrialProducts = async ({
 		.where(
 			and(
 				or(
-					notExists(
-						db
-							.select()
-							.from(customerPrices)
-							.where(
-								eq(customerPrices.customer_product_id, customerProducts.id),
-							),
-					),
 					eq(customerProducts.on_trial_end, "revert"),
+					and(noStripeSubscription, noCustomerPrice, noCustomerLicense),
 				),
 				inArray(customerProducts.status, ACTIVE_STATUSES),
 				isNotNull(customerProducts.trial_ends_at),
