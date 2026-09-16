@@ -21,6 +21,7 @@ import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { spawn } from "bun";
 import chalk from "chalk";
+import { prepareBalanceSyncQueue } from "./prepareBalanceSyncQueue.js";
 import { SERVER_PORT, TW_ENV } from "../constants.js";
 import {
 	provisionSvixApp,
@@ -96,6 +97,7 @@ const main = async (): Promise<void> => {
 		if (warmupExit !== 0) {
 			throw new Error(`[tw-fsboot] fast-forward warmup.sh exited ${warmupExit}`);
 		}
+		await prepareBalanceSyncQueue();
 		const serverProc = startServer(repoRoot, serverPort);
 		void serverProc.exited.then((code) => {
 			if (code !== 0) {

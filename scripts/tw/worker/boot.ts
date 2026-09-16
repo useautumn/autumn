@@ -40,6 +40,7 @@ import { connect } from "node:net";
 import { join } from "node:path";
 import { type Subprocess, spawn } from "bun";
 import chalk from "chalk";
+import { prepareBalanceSyncQueue } from "./prepareBalanceSyncQueue.js";
 import {
 	DRAGONFLY_PORT,
 	DYNAMODB_PORT,
@@ -313,6 +314,8 @@ const main = async (): Promise<void> => {
 			},
 		),
 	]);
+
+	await prepareBalanceSyncQueue();
 
 	// 2a. Self-heal dependency drift: a stale warm fork can lag the
 	//     fast-forwarded lockfile (missing newly-added packages). Frozen

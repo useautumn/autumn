@@ -35,6 +35,7 @@ import {
 	resolveTestPaths,
 } from "@tests/_groups/index.ts";
 import chalk from "chalk";
+import { BALANCE_SYNC_SQS_QUEUE_URL } from "../worker/prepareBalanceSyncQueue.js";
 import pLimit from "p-limit";
 import { TEST_ORG_CONFIG } from "../../setupTestUtils/createTestOrg.ts";
 import {
@@ -545,6 +546,7 @@ const buildWorkerEnv = ({
 		REDIS_URL,
 		MISC_CACHE_DRAGONFLY_PUBLIC_URL: REDIS_URL,
 		CACHE_V2_DRAGONFLY_URL: REDIS_URL,
+		BALANCE_SYNC_SQS_QUEUE_URL,
 		SQS_QUEUE_URL_V2,
 		STRIPE_WEBHOOK_SQS_QUEUE_URL,
 		TRACK_SQS_QUEUE_URL,
@@ -654,6 +656,7 @@ const buildWarmEnv = (): Record<string, string> => ({
 	REDIS_URL,
 	MISC_CACHE_DRAGONFLY_PUBLIC_URL: REDIS_URL,
 	CACHE_V2_DRAGONFLY_URL: REDIS_URL,
+	BALANCE_SYNC_SQS_QUEUE_URL,
 	SQS_QUEUE_URL_V2,
 	STRIPE_WEBHOOK_SQS_QUEUE_URL,
 	TRACK_SQS_QUEUE_URL,
