@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Worker } from "node:worker_threads";
 import {
 	computeCheck,
 	computeTrack,
@@ -10,15 +11,20 @@ import {
 	parseTrackCommand,
 	stateInitializationFingerprintOf,
 } from "@autumn/balance-engine";
+import { createCheckpointThreadExporter } from "../../src/checkpoint/background/createCheckpointThreadExporter.js";
 import {
 	createPartitionCheckpoint,
 	type PartitionCheckpointReceiptV1,
 	type PartitionCheckpointStateV1,
 } from "../../src/checkpoint/partitionCheckpoint.js";
+import { encodePartitionCheckpoint } from "../../src/checkpoint/partitionCheckpointEncoding.js";
+import { createPartitionCheckpointExporter } from "../../src/checkpoint/partitionCheckpointExporter.js";
 import { openSqliteBalanceStateStore } from "../../src/state/sqliteBalanceStateStore.js";
+import type { CheckpointThreadFixtureConfig } from "../fixtures/checkpoint-thread.js";
 
 const topic = "checkpoint-benchmark";
 const sizes = [100, 1_000, 5_000, 10_000];
+const mode = process.argv.includes("--inline") ? "inline" : "background";
 const limits = {
 	maxSerializedBytes: 16 * 1024 * 1024,
 	maxStates: 10_000,
@@ -48,6 +54,43 @@ for (const customers of sizes) {
 	const store = openSqliteBalanceStateStore({
 		databasePath: join(directory, "balances.sqlite"),
 	});
+	const outputPath = join(directory, "checkpoint.gz");
+	const exporter =
+		mode === "background"
+			? createCheckpointThreadExporter({
+					createWorker: () => {
+						const workerData: CheckpointThreadFixtureConfig = {
+							databasePath: join(directory, "balances.sqlite"),
+							outputPath,
+							limits,
+						};
+						return new Worker(
+							new URL("../fixtures/checkpoint-thread.ts", import.meta.url),
+							{ workerData },
+						);
+					},
+				})
+			: {
+					...createPartitionCheckpointExporter({
+						stateStore: store,
+						clock: { now: Date.now },
+						limits,
+						publisher: {
+							publish: async ({ checkpoint }) => {
+								const { body } = await encodePartitionCheckpoint({
+									checkpoint,
+									limits: {
+										...limits,
+										maxCompressedBytes: limits.maxSerializedBytes,
+									},
+								});
+								await Bun.write(outputPath, body);
+								return { kind: "published", etag: "inline" };
+							},
+						},
+					}),
+					close: async () => {},
+				};
 	try {
 		const now = Date.now();
 		const states: PartitionCheckpointStateV1[] = [];
@@ -202,45 +245,75 @@ for (const customers of sizes) {
 		for (let index = 0; index < 20; index++) baseline.push(measureRequest());
 		const captureMs: number[] = [];
 		const queuedRequestMs: number[] = [];
+		const concurrentRequestMs: number[] = [];
 		let bytes = 0;
+		const coldStartedAt = performance.now();
+		await exporter.export({
+			topic,
+			partition: 0,
+			signal: new AbortController().signal,
+		});
+		const coldExportMs = performance.now() - coldStartedAt;
 		for (let index = 0; index < 5; index++) {
 			await pause();
-			const queuedAt = performance.now();
-			const pendingRequest = new Promise<void>((resolve) =>
-				setTimeout(() => {
-					measureRequest();
+			let exporting = true;
+			const sampleRequests = async (): Promise<void> => {
+				while (exporting) {
+					const queuedAt = performance.now();
+					await pause();
+					concurrentRequestMs.push(measureRequest());
 					queuedRequestMs.push(performance.now() - queuedAt);
-					resolve();
-				}, 0),
-			);
+				}
+			};
+			const pendingRequests = sampleRequests();
 			const startedAt = performance.now();
-			const captured = store.capturePartitionCheckpoint({
-				topic,
-				partition: 0,
-				createdAt: Date.now(),
-				limits,
-			});
-			captureMs.push(performance.now() - startedAt);
-			bytes = captured.serializedBytes;
-			await pendingRequest;
+			try {
+				const result = await exporter.export({
+					topic,
+					partition: 0,
+					signal: new AbortController().signal,
+				});
+				captureMs.push(performance.now() - startedAt);
+				bytes = result.serializedBytes;
+			} finally {
+				exporting = false;
+				await pendingRequests;
+			}
 		}
 		console.log(
 			JSON.stringify({
 				customers,
+				mode,
 				receipts: receipts.length,
 				serializedBytes: bytes,
 				limits,
-				captureP50Ms: quantile({ values: captureMs, fraction: 0.5 }),
-				captureMaxMs: quantile({ values: captureMs, fraction: 1 }),
+				coldExportMs: Math.round(coldExportMs * 100) / 100,
+				exportP50Ms: quantile({ values: captureMs, fraction: 0.5 }),
+				exportMaxMs: quantile({ values: captureMs, fraction: 1 }),
 				localTrackAndCheckP50Ms: quantile({ values: baseline, fraction: 0.5 }),
+				concurrentRequests: concurrentRequestMs.length,
+				concurrentTrackAndCheckP99Ms: quantile({
+					values: concurrentRequestMs,
+					fraction: 0.99,
+				}),
+				queuedTrackAndCheckP99Ms: quantile({
+					values: queuedRequestMs,
+					fraction: 0.99,
+				}),
 				queuedTrackAndCheckMaxMs: quantile({
 					values: queuedRequestMs,
 					fraction: 1,
 				}),
-				note: "Local SQLite and engine only; no Kafka, HTTP, compression, or upload latency",
+				note: "File-backed SQLite, engine, gzip and local file publish; excludes Kafka, HTTP and S3 network latency",
 			}),
 		);
+		if (mode === "background" && Math.max(...queuedRequestMs) > 20) {
+			throw new Error(
+				"Checkpoint capture delayed the serving thread by more than 20ms",
+			);
+		}
 	} finally {
+		await exporter.close();
 		store.close();
 		rmSync(directory, { recursive: true, force: true });
 	}

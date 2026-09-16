@@ -14,7 +14,6 @@ import {
 	S3Client,
 } from "@aws-sdk/client-s3";
 import { Kafka, logLevel } from "kafkajs";
-import { createPartitionCheckpointExporter } from "../../../src/checkpoint/partitionCheckpointExporter.js";
 import { createPartitionCheckpointScheduler } from "../../../src/checkpoint/scheduling/partitionCheckpointScheduler.js";
 import { defaultPartitionCheckpointSchedulerConfig } from "../../../src/checkpoint/scheduling/partitionCheckpointSchedulerConfig.js";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
@@ -24,6 +23,8 @@ import {
 	createWorkerProducerConfig,
 } from "../../../src/init/workerConfig.js";
 import type { PartitionRuntime } from "../../../src/runtime/types/partitionRuntime.js";
+import { createS3CheckpointThreadExporter } from "../../../src/s3/background/createS3CheckpointThreadExporter.js";
+import type { S3CheckpointThreadConfig } from "../../../src/s3/background/s3CheckpointThreadConfig.js";
 import { createS3CheckpointObjectClient } from "../../../src/s3/s3CheckpointObjectClient.js";
 import {
 	createS3PartitionCheckpointStorage,
@@ -68,6 +69,7 @@ const createOwner = ({
 	directory,
 	name,
 	storage,
+	checkpointThread,
 }: {
 	kafka: Kafka;
 	topic: string;
@@ -76,15 +78,14 @@ const createOwner = ({
 	directory: string;
 	name: string;
 	storage: ReturnType<typeof createS3PartitionCheckpointStorage>;
+	checkpointThread: Omit<S3CheckpointThreadConfig, "databasePath">;
 }) => {
 	const store = openSqliteBalanceStateStore({
 		databasePath: join(directory, `${name}.sqlite`),
 	});
-	const exporter = createPartitionCheckpointExporter({
-		stateStore: store,
-		publisher: storage,
-		clock: { now: Date.now },
-		limits: checkpointLimits,
+	const exporter = createS3CheckpointThreadExporter({
+		...checkpointThread,
+		databasePath: join(directory, `${name}.sqlite`),
 	});
 	const scheduler = createPartitionCheckpointScheduler({
 		stateStore: store,
@@ -170,6 +171,7 @@ const createOwner = ({
 		close: async () => {
 			scheduler.stop();
 			await group.stop();
+			await exporter.close();
 			store.close();
 		},
 	};
@@ -193,7 +195,7 @@ describe("automatic checkpoint recovery", () => {
 				retry: { retries: 2 },
 			});
 			const admin = kafka.admin();
-			const s3 = new S3Client({
+			const clientConfig = {
 				endpoint: process.env.S3_ENDPOINT ?? "http://127.0.0.1:19000",
 				region: "us-east-1",
 				forcePathStyle: true,
@@ -202,9 +204,24 @@ describe("automatic checkpoint recovery", () => {
 					secretAccessKey: "autumn-test-secret",
 				},
 				maxAttempts: 1,
-				requestChecksumCalculation: "WHEN_REQUIRED",
-				responseChecksumValidation: "WHEN_REQUIRED",
-			});
+				requestChecksumCalculation: "WHEN_REQUIRED" as const,
+				responseChecksumValidation: "WHEN_REQUIRED" as const,
+			};
+			const s3 = new S3Client(clientConfig);
+			const checkpointThread: Omit<S3CheckpointThreadConfig, "databasePath"> = {
+				client: clientConfig,
+				checkpointLimits,
+				storage: {
+					bucket,
+					keyPrefix: "checkpoints",
+					deploymentEnvironment: runId,
+					limits: {
+						...checkpointLimits,
+						maxCompressedBytes: 1_000_000,
+						maxPublishAttempts: 3,
+					},
+				},
+			};
 			const storage = createS3PartitionCheckpointStorage({
 				client: createS3CheckpointObjectClient({ client: s3 }),
 				bucket,
@@ -288,6 +305,7 @@ describe("automatic checkpoint recovery", () => {
 					directory,
 					name: "first",
 					storage,
+					checkpointThread,
 				});
 				owners.push(first);
 				const firstRuntime = await first.start();
@@ -343,6 +361,7 @@ describe("automatic checkpoint recovery", () => {
 					directory,
 					name: "replacement",
 					storage,
+					checkpointThread,
 				});
 				owners.push(replacement);
 				const replacementRuntime = await replacement.start();
