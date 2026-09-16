@@ -411,12 +411,20 @@ export const reissueInvoice = async ({
 		await voidInvoice({ ctx, invoiceId });
 	} catch (error) {
 		// The original stays payable; retire the replacement instead.
-		await stripeCli.invoices.voidInvoice(finalized.id).catch(() => undefined);
 		await repointDeferredReferences({
 			ctx,
 			fromStripeInvoiceId: finalized.id,
 			toStripeInvoiceId: stripeInvoice.id,
 		}).catch(() => undefined);
+		try {
+			await stripeCli.invoices.voidInvoice(finalized.id);
+		} catch {
+			throw new RecaseError({
+				message: `Invoice ${invoiceId} could not be voided while being reissued; its replacement ${finalized.id} is still open and must be voided manually`,
+				code: ErrCode.InternalError,
+				statusCode: 409,
+			});
+		}
 		throw error;
 	}
 
