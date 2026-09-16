@@ -1,5 +1,9 @@
 import { createCursorPaginatedResponseSchema } from "@api/common/cursorPaginationSchemas.js";
 import { ApiListInvoiceV1Schema } from "@api/others/apiInvoice/apiListInvoiceV1.js";
+import {
+	CreateInvoiceParamsSchema,
+	CreateInvoiceResponseSchema,
+} from "@api/others/apiInvoice/createInvoiceParams.js";
 import { InsertInvoicesParamsSchema } from "@api/others/apiInvoice/insertInvoicesParams.js";
 import { InsertInvoicesResponseSchema } from "@api/others/apiInvoice/insertInvoicesResponse.js";
 import { ListInvoicesParamsSchema } from "@api/others/apiInvoice/listInvoicesParams.js";
@@ -288,6 +292,69 @@ export const listInvoiceTemplatesContract = oc
 					limit: 10,
 					offset: 0,
 					has_more: false,
+				},
+			],
+		}),
+	);
+
+export const createInvoiceContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/invoices.create",
+		operationId: "createInvoice",
+		tags: ["invoices"],
+		description:
+			"Creates a standalone send-invoice Stripe invoice from catalog pricing and custom charges. Quantities are billable units, exclusive of any included usage; Autumn applies billing units and tiers. Nothing about the customer's plans, balances or subscriptions changes. Pass preview: true to get the calculated lines and totals without creating an invoice.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "create",
+		}),
+	})
+	.input(
+		CreateInvoiceParamsSchema.meta({
+			title: "CreateInvoiceParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					net_terms_days: 30,
+					plans: [
+						{
+							plan_id: "pro",
+							feature_quantities: [
+								{
+									feature_id: "seats",
+									billing_behavior: "prepaid",
+									quantity: 5,
+								},
+								{
+									feature_id: "credits",
+									billing_behavior: "usage_based",
+									quantity: 2500,
+								},
+							],
+						},
+					],
+					custom_line_items: [
+						{ description: "Implementation services", amount: 500 },
+					],
+				},
+			],
+		}),
+	)
+	.output(
+		CreateInvoiceResponseSchema.meta({
+			examples: [
+				{
+					invoice: { ...LIST_INVOICE_EXAMPLE, status: "open" },
+					preview: {
+						currency: "usd",
+						lines: [],
+						subtotal: 29.99,
+						discount_total: 0,
+						tax: null,
+						total: 29.99,
+						due_date: 1761839877000,
+					},
 				},
 			],
 		}),

@@ -1,3 +1,4 @@
+import { createInvoice } from "./create/createInvoice";
 import { insertInvoices } from "./insertInvoices";
 import { payInvoiceOutOfBand } from "./payOutOfBand";
 import { reissueInvoice } from "./reissueInvoice";
@@ -7,6 +8,7 @@ import { upsertInvoiceFromStripe } from "./upsertFromStripe";
 import { voidInvoice } from "./voidInvoice";
 
 export const invoiceActions = {
+	create: createInvoice,
 	insert: insertInvoices,
 	payOutOfBand: payInvoiceOutOfBand,
 	reissue: reissueInvoice,

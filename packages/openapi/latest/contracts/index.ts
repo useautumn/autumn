@@ -55,6 +55,7 @@ import {
 	updateFeatureContract,
 } from "./featuresContract.js";
 import {
+	createInvoiceContract,
 	insertInvoicesContract,
 	listInvoicesContract,
 	listInvoiceTemplatesContract,
@@ -165,6 +166,7 @@ export const v2_3ContractRouter = oc.router({
 	eventsAggregate: eventsAggregateContract,
 
 	// Invoices
+	invoicesCreate: createInvoiceContract,
 	invoicesInsert: insertInvoicesContract,
 	invoicesList: listInvoicesContract,
 	invoicesListTemplates: listInvoiceTemplatesContract,
