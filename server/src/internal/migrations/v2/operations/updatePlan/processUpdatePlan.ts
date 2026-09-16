@@ -63,6 +63,7 @@ export const processUpdatePlan = async ({
 	let nextProjectedFullCustomer = projectedFullCustomer;
 	const billingContexts: UpdateSubscriptionBillingContext[] = [];
 	let matchedCustomerProductCount = matchedCustomerProducts.length;
+	let unchangedCustomerProductCount = 0;
 
 	for (const customerProduct of matchedCustomerProducts) {
 		const productContext = await setupUpdatePlanProductContext({
@@ -75,6 +76,7 @@ export const processUpdatePlan = async ({
 		});
 		if (!productContext) {
 			matchedCustomerProductCount -= 1;
+			unchangedCustomerProductCount += 1;
 			continue;
 		}
 
@@ -130,6 +132,7 @@ export const processUpdatePlan = async ({
 		plan: nextPlan,
 		projectedFullCustomer: nextProjectedFullCustomer,
 		matchedCustomerProducts: matchedCustomerProductCount,
+		unchangedCustomerProducts: unchangedCustomerProductCount,
 		billingContexts,
 	};
 };

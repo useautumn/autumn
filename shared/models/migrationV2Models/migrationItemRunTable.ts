@@ -19,6 +19,16 @@ export const MigrationItemRunStatus = {
 export type MigrationItemRunStatus =
 	(typeof MigrationItemRunStatus)[keyof typeof MigrationItemRunStatus];
 
+/** Why a skipped item was skipped: nothing to change, or the operations
+ * could not apply to it (no matching plan, guard, interrupted). */
+export const MigrationItemRunSkipReason = {
+	NoUpdatesNeeded: "no_updates_needed",
+	Ineligible: "ineligible",
+} as const;
+
+export type MigrationItemRunSkipReason =
+	(typeof MigrationItemRunSkipReason)[keyof typeof MigrationItemRunSkipReason];
+
 export const MigrationItemKind = {
 	Customer: "customer",
 	Plan: "plan",
@@ -40,6 +50,7 @@ export const migrationItemRuns = pgTable(
 		item_kind: text().$type<MigrationItemKind>().notNull(),
 		item_id: text().notNull(),
 		status: text().$type<MigrationItemRunStatus>().notNull(),
+		skip_reason: text().$type<MigrationItemRunSkipReason>(),
 		timestamp: timestamp({ withTimezone: true }).notNull().default(sql`now()`),
 		created_at: numeric({ mode: "number" }).notNull(),
 		updated_at: numeric({ mode: "number" }),

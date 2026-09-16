@@ -1,5 +1,9 @@
 import { expect } from "bun:test";
-import type { BillingChangeResponse, CustomerPlanChange } from "@autumn/shared";
+import type {
+	BillingChangeResponse,
+	CustomerPlanChange,
+	MigrationItemRunSkipReason,
+} from "@autumn/shared";
 import type { TinybirdMigrationItemEvent } from "@/external/tinybird/migrations/migrationItemEventsDataSource.js";
 import type { PreviewMigrateCustomer } from "@/internal/migrations/v2/preview/previewMigrateCustomer/types/index.js";
 import { migrationItemEventRepo } from "@/internal/migrations/v2/repos/index.js";
@@ -52,6 +56,7 @@ export const getMigrationItemEvents = async ({
 type EventResponse = {
 	lane?: string;
 	reason?: string;
+	skip_reason?: MigrationItemRunSkipReason | null;
 	preview?: PreviewMigrateCustomer | null;
 };
 
@@ -124,6 +129,7 @@ export const expectMigrationItemEventCorrect = async ({
 	status,
 	lane = "batch",
 	reason,
+	skipReason,
 	planChangeActions,
 	planChangePlanIds,
 	itemChangeCount,
@@ -136,9 +142,12 @@ export const expectMigrationItemEventCorrect = async ({
 	events: MigrationItemEvents;
 	customerId: string;
 	status: "succeeded" | "skipped";
-	lane?: string;
+	/** Defaults to "batch"; pass null for per-customer events, which carry no lane. */
+	lane?: string | null;
 	/** Skip reason, for skipped events. */
 	reason?: string;
+	/** Structured skip reason (no_updates_needed | ineligible). */
+	skipReason?: MigrationItemRunSkipReason;
 	/** Actions on the synthesized plan changes, in order. */
 	planChangeActions?: CustomerPlanChange["action"][];
 	/** subscription/purchase plan_id per plan change, in order. */
@@ -171,10 +180,13 @@ export const expectMigrationItemEventCorrect = async ({
 	expect(event?.item_preview).toMatchObject({ id: customerId });
 
 	const response = event?.response as EventResponse | null;
-	expect(response?.lane).toBe(lane);
+	if (lane !== null) expect(response?.lane).toBe(lane);
 
 	if (typeof reason !== "undefined") {
 		expect(response?.reason).toBe(reason);
+	}
+	if (typeof skipReason !== "undefined") {
+		expect(response?.skip_reason).toBe(skipReason);
 	}
 
 	if (status === "succeeded") {

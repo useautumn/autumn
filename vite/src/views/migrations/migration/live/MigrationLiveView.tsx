@@ -140,6 +140,7 @@ const statusColumn: ColumnDef<CustomerRow, unknown> = {
 					status={status.status}
 					dryRun={status.dryRun}
 					response={status.response}
+					skipReason={status.skipReason}
 				/>
 			);
 
