@@ -30,7 +30,7 @@ const createInvoicePage = async ({
 			await route.fulfill({
 				contentType: "text/html",
 				body: `<button role="button" data-value="card" onclick="document.querySelector('form').hidden=false; this.remove()">Card</button>
-			<form hidden><input name="number"><input name="expiry"><input name="cvc"><input name="postalCode"><input type="checkbox" id="payment-linkOptInInput" name="linkOptIn" checked><label for="payment-linkOptInInput">Save with Link</label><input name="linkMobilePhone" autocomplete="billing tel"></form>
+			<form hidden><input name="number"><input name="expiry"><input name="cvc"><input name="postalCode"><input type="checkbox" id="payment-linkOptInInput" name="linkOptIn" checked><label for="payment-linkOptInInput" style="display:inline-block;width:240px"><a href="https://link.fixture" style="display:block" onclick="event.preventDefault()">Save with Link</a></label><input name="linkMobilePhone" autocomplete="billing tel"></form>
 			<script>
 			document.querySelector('[name=linkOptIn]').onclick = event => { event.preventDefault(); setTimeout(() => { const checkbox = document.querySelector('[name=linkOptIn]'); checkbox.checked = false; checkbox.hidden = true; }, 200); };
 			window.addEventListener('message', () => {

@@ -62,7 +62,7 @@ export const invoiceCheckout = async ({
 	if (await postalCode.count()) await postalCode.fill("10001");
 	const saveWithLink = paymentFrame.locator('input[name="linkOptIn"]');
 	if ((await saveWithLink.isVisible()) && (await saveWithLink.isChecked())) {
-		await paymentFrame.locator('label[for="payment-linkOptInInput"]').click();
+		await saveWithLink.press("Space");
 		await paymentFrame
 			.locator('input[name="linkOptIn"]:checked')
 			.waitFor({ state: "hidden" });
