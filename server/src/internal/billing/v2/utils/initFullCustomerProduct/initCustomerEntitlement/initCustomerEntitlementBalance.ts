@@ -27,32 +27,17 @@ export const initCustomerEntitlementBalance = ({
 		  };
 	entitlement: EntitlementWithFeature;
 }): { balance: number; entities: Record<string, EntityBalance> | null } => {
-	// 1. Boolean and unlimited entitlements carry no balance
+	// 1. If entitlement is boolean or unlimited, return 0
 	const isBoolean = isBooleanEntitlement({ entitlement });
 	const isUnlimited = isUnlimitedEntitlement({ entitlement });
 
-	if (isBoolean) {
+	if (isBoolean || isUnlimited) {
 		return { balance: 0, entities: null };
 	}
 
+	// 2. Get starting balance
 	const { fullCustomer, featureQuantities } = initContext;
 
-	// Unlimited grants carry no balance, but an entity-scoped one still needs
-	// its per-entity map seeded for every existing entity: cusEntMatchesEntity
-	// only admits entities present in a non-empty map, and entity creation
-	// later fills in just the new entity, which would lock the older ones out.
-	if (isUnlimited) {
-		return {
-			balance: 0,
-			entities: initCustomerEntitlementEntities({
-				entitlement,
-				customerEntities: fullCustomer.entities,
-				startingBalance: 0,
-			}),
-		};
-	}
-
-	// 2. Get starting balance
 	const price = entToPrice({
 		ent: entitlement,
 		prices: initContext.fullProduct?.prices ?? [],

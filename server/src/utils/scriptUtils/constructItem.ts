@@ -46,7 +46,6 @@ export const constructFeatureItem = ({
 		return {
 			feature_id: featureId,
 			included_usage: "inf",
-			entity_feature_id: entityFeatureId,
 		} as ProductItem;
 	}
 	const item: LimitedItem = {

@@ -2,7 +2,6 @@ import type { Entity } from "../../models/cusModels/entityModels/entityModels.js
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
-import { AllowanceType } from "../../models/productModels/entModels/entModels.js";
 import { notNullish, nullish } from "../utils.js";
 export const cusEntMatchesEntity = ({
 	cusEnt,
@@ -32,22 +31,10 @@ export const cusEntMatchesEntity = ({
 			cusEnt.entitlement.entity_feature_id === entity.feature_id;
 	}
 
-	// An unlimited entity-scoped grant covers every entity of its entity
-	// feature; its per-entity map is only a usage counter, so a missing entry
-	// (e.g. an entity that predates a map seeded on a later entity creation)
-	// must not exclude the entity.
-	const isUnlimited =
-		cusEnt.unlimited === true ||
-		cusEnt.entitlement.allowance_type === AllowanceType.Unlimited;
-
 	let cusEntEntityMatch = true;
 	if (notNullish(cusEnt.internal_entity_id)) {
 		cusEntEntityMatch = cusEnt.internal_entity_id === entity.internal_id;
-	} else if (
-		!isUnlimited &&
-		cusEnt.entities &&
-		Object.keys(cusEnt.entities).length > 0
-	) {
+	} else if (cusEnt.entities && Object.keys(cusEnt.entities).length > 0) {
 		cusEntEntityMatch = entity.id !== null && entity.id in cusEnt.entities;
 	}
 
