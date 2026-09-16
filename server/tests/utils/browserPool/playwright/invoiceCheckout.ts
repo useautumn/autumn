@@ -10,6 +10,11 @@ export const invoiceCheckout = async ({
 }) => {
 	page.setDefaultTimeout(15_000);
 	await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+	const paid = page
+		.getByText(
+			/^(invoice paid|paid|thanks for your payment|payment (successful|received))[.!]?$/i,
+		)
+		.first();
 	const paymentFrame = page
 		.frameLocator('iframe[title="Secure payment input frame"]')
 		.first();
@@ -21,12 +26,16 @@ export const invoiceCheckout = async ({
 	const cardAccordion = paymentFrame.locator(
 		'[role="button"][data-value="card"]',
 	);
-	await paymentFrame
+	const readyForm = paymentFrame
 		.locator(
 			'input[name="number"]:visible, input[data-elements-stable-field-name="cardNumber"]:visible, [role="button"][data-value="card"]:visible',
 		)
-		.first()
-		.waitFor();
+		.first();
+	const initialState = await Promise.race([
+		paid.waitFor().then(() => "paid"),
+		readyForm.waitFor().then(() => "form"),
+	]);
+	if (initialState === "paid") return;
 	if (!(await cardInput.isVisible())) await cardAccordion.click();
 
 	await cardInput.pressSequentially("4242424242424242");
@@ -59,11 +68,6 @@ export const invoiceCheckout = async ({
 		.first()
 		.click();
 	const deadline = performance.now() + 30_000;
-	const paid = page
-		.getByText(
-			/^(paid|thanks for your payment|payment (successful|received))[.!]?$/i,
-		)
-		.first();
 	while (performance.now() < deadline) {
 		if (await paid.isVisible()) {
 			console.log("[invoiceCheckout] Payment confirmed by hosted page");

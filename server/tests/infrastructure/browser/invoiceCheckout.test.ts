@@ -45,7 +45,7 @@ const createInvoicePage = async ({
 		} else {
 			await route.fulfill({
 				contentType: "text/html",
-				body: `<p>Unpaid</p><p>Previously paid invoices</p>
+				body: `<p>Unpaid</p><p>Previously paid invoices</p><iframe hidden src="https://newassets.hcaptcha.com/challenge"></iframe>
 			<button type="submit" disabled>Pay</button>
 			<script>
 			setTimeout(() => {
@@ -58,7 +58,7 @@ const createInvoicePage = async ({
 			window.addEventListener('message', async ({data}) => {
 				if (data !== 'submitted') return;
 				await fetch('/submitted');
-				${outcome === "challenge" ? "document.body.insertAdjacentHTML('beforeend', '<iframe src=https://newassets.hcaptcha.com/challenge></iframe>');" : "document.body.insertAdjacentHTML('beforeend', '<h1>Paid</h1>');"}
+				${outcome === "challenge" ? "document.body.insertAdjacentHTML('beforeend', '<iframe src=https://newassets.hcaptcha.com/challenge></iframe>');" : "document.body.insertAdjacentHTML('beforeend', '<h1>Invoice paid</h1>');"}
 			});
 			</script>`,
 			});
@@ -76,7 +76,7 @@ test("invoice checkout waits for a delayed frame and collapsed card form, then c
 		});
 		expect(fixture.getSubmissions()).toBe(1);
 		expect(
-			await fixture.page.getByText("Paid", { exact: true }).isVisible(),
+			await fixture.page.getByText("Invoice paid", { exact: true }).isVisible(),
 		).toBe(true);
 	} finally {
 		await fixture.context.close();
@@ -106,3 +106,19 @@ test("payment errors inside the frame fail instead of waiting for a success time
 		await fixture.context.close();
 	}
 }, 10_000);
+
+test("an already paid invoice needs no payment frame or second submission", async () => {
+	const context = await browser.newContext();
+	const page = await context.newPage();
+	await page.route("**/*", (route) =>
+		route.fulfill({ contentType: "text/html", body: "<h1>Invoice paid</h1>" }),
+	);
+	try {
+		await invoiceCheckout({ page, url: "https://invoice.fixture/" });
+		expect(
+			await page.getByText("Invoice paid", { exact: true }).isVisible(),
+		).toBe(true);
+	} finally {
+		await context.close();
+	}
+}, 10000);
