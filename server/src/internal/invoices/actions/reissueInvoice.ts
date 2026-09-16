@@ -196,6 +196,7 @@ const createReplacementDraft = async ({
 	return withLines;
 };
 
+/** Returns a restore function so a failed reissue leaves the address unchanged. */
 const updateStripeCustomerEmail = async ({
 	stripeCli,
 	stripeInvoice,
@@ -204,7 +205,7 @@ const updateStripeCustomerEmail = async ({
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
 	email: string;
-}) => {
+}): Promise<() => Promise<void>> => {
 	const stripeCusId =
 		typeof stripeInvoice.customer === "string"
 			? stripeInvoice.customer
@@ -212,7 +213,89 @@ const updateStripeCustomerEmail = async ({
 	if (!stripeCusId) {
 		throw invalidRequest("Original invoice has no Stripe customer");
 	}
+	const before = await stripeCli.customers.retrieve(stripeCusId);
+	const previousEmail = before.deleted ? undefined : (before.email ?? "");
 	await stripeCli.customers.update(stripeCusId, { email });
+
+	return async () => {
+		if (previousEmail === undefined) return;
+		await stripeCli.customers
+			.update(stripeCusId, { email: previousEmail })
+			.catch(() => undefined);
+	};
+};
+
+/** Creates, finalizes and swaps in the replacement, then voids the original. */
+const issueReplacement = async ({
+	ctx,
+	stripeCli,
+	invoiceId,
+	stripeInvoice,
+	template,
+	dueDate,
+	daysUntilDue,
+}: {
+	ctx: AutumnContext;
+	stripeCli: Stripe;
+	invoiceId: string;
+	stripeInvoice: Stripe.Invoice;
+	template?: InvoiceTemplate;
+	dueDate?: number;
+	daysUntilDue?: number;
+}): Promise<Stripe.Invoice> => {
+	const draft = await createReplacementDraft({
+		stripeCli,
+		stripeInvoice,
+		template,
+		dueDate,
+		daysUntilDue,
+		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
+	});
+
+	if (draft.total !== stripeInvoice.total) {
+		await stripeCli.invoices.del(draft.id).catch(() => undefined);
+		throw new RecaseError({
+			message: `Replacement total (${draft.total}) does not match the original (${stripeInvoice.total}); the invoice was not reissued`,
+			code: ErrCode.InternalError,
+			statusCode: 500,
+		});
+	}
+
+	// Automatic collection is what makes Stripe treat the replacement as the
+	// subscription's receivable (overdue → past_due, paid → active).
+	const finalized = await finalizeStripeInvoice({
+		stripeCli,
+		invoiceId: draft.id,
+		autoAdvance: true,
+	});
+
+	try {
+		await repointDeferredReferences({
+			ctx,
+			fromStripeInvoiceId: stripeInvoice.id,
+			toStripeInvoiceId: finalized.id,
+		});
+		await voidInvoice({ ctx, invoiceId });
+	} catch (error) {
+		// The original stays payable; retire the replacement instead.
+		await repointDeferredReferences({
+			ctx,
+			fromStripeInvoiceId: finalized.id,
+			toStripeInvoiceId: stripeInvoice.id,
+		}).catch(() => undefined);
+		try {
+			await stripeCli.invoices.voidInvoice(finalized.id);
+		} catch {
+			throw new RecaseError({
+				message: `Invoice ${invoiceId} could not be voided while being reissued; its replacement ${finalized.id} is still open and must be voided manually`,
+				code: ErrCode.InternalError,
+				statusCode: 409,
+			});
+		}
+		throw error;
+	}
+
+	return finalized;
 };
 
 /** Moves the deferred plan's pointers so paying the replacement fulfils it. */
@@ -398,65 +481,26 @@ export const reissueInvoice = async ({
 	});
 
 	// Stripe snapshots customer_email at finalization, so this must precede the draft.
-	if (updateCustomerEmail) {
-		await updateStripeCustomerEmail({
-			stripeCli,
-			stripeInvoice,
-			email: updateCustomerEmail,
-		});
-	}
+	const restoreCustomerEmail = updateCustomerEmail
+		? await updateStripeCustomerEmail({
+				stripeCli,
+				stripeInvoice,
+				email: updateCustomerEmail,
+			})
+		: undefined;
 
-	const draft = await createReplacementDraft({
+	const finalized = await issueReplacement({
+		ctx,
 		stripeCli,
+		invoiceId,
 		stripeInvoice,
 		template,
 		dueDate,
 		daysUntilDue,
-		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
-	});
-
-	if (draft.total !== stripeInvoice.total) {
-		await stripeCli.invoices.del(draft.id).catch(() => undefined);
-		throw new RecaseError({
-			message: `Replacement total (${draft.total}) does not match the original (${stripeInvoice.total}); the invoice was not reissued`,
-			code: ErrCode.InternalError,
-			statusCode: 500,
-		});
-	}
-
-	// Automatic collection is what makes Stripe treat the replacement as the
-	// subscription's receivable (overdue → past_due, paid → active).
-	const finalized = await finalizeStripeInvoice({
-		stripeCli,
-		invoiceId: draft.id,
-		autoAdvance: true,
-	});
-
-	try {
-		await repointDeferredReferences({
-			ctx,
-			fromStripeInvoiceId: stripeInvoice.id,
-			toStripeInvoiceId: finalized.id,
-		});
-		await voidInvoice({ ctx, invoiceId });
-	} catch (error) {
-		// The original stays payable; retire the replacement instead.
-		await repointDeferredReferences({
-			ctx,
-			fromStripeInvoiceId: finalized.id,
-			toStripeInvoiceId: stripeInvoice.id,
-		}).catch(() => undefined);
-		try {
-			await stripeCli.invoices.voidInvoice(finalized.id);
-		} catch {
-			throw new RecaseError({
-				message: `Invoice ${invoiceId} could not be voided while being reissued; its replacement ${finalized.id} is still open and must be voided manually`,
-				code: ErrCode.InternalError,
-				statusCode: 409,
-			});
-		}
+	}).catch(async (error) => {
+		await restoreCustomerEmail?.();
 		throw error;
-	}
+	});
 
 	await stripeCli.invoices.update(stripeInvoice.id, {
 		metadata: { autumn_reissued_to: finalized.id },
