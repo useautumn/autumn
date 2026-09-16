@@ -1,5 +1,7 @@
+import { generateKsuid } from "@autumn/ksuid";
 import {
 	cusProductToProduct,
+	type DbInvoiceLineItem,
 	ErrCode,
 	type FullCustomer,
 	type InvoiceTemplate,
@@ -10,6 +12,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -23,13 +26,13 @@ import { CusService } from "@/internal/customers/CusService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/InvoiceTemplateService";
-import { workflows } from "@/queue/workflows";
 import { type InvoiceListRow, InvoiceService } from "../InvoiceService";
+import { invoiceLineItemRepo } from "../lineItems/repos";
 import { updateInvoiceFromStripe } from "./updateFromStripe";
 import { upsertInvoiceFromStripe } from "./upsertFromStripe";
 import { voidInvoice } from "./voidInvoice";
 
-const SECONDS_PER_DAY = 24 * 60 * 60;
+const ADD_LINES_BATCH_SIZE = 100;
 
 type ReissueInvoiceResult = {
 	replacement: InvoiceListRow;
@@ -81,7 +84,7 @@ const loadOpenStripeInvoice = async ({
 };
 
 /** Keeps the original deadline unless it has passed, in which case new terms are required. */
-const resolveDaysUntilDue = ({
+const resolveDueDate = ({
 	stripeInvoice,
 	netTermsDays,
 	nowMs,
@@ -89,22 +92,18 @@ const resolveDaysUntilDue = ({
 	stripeInvoice: Stripe.Invoice;
 	netTermsDays?: number;
 	nowMs: number;
-}): number => {
-	if (netTermsDays) return netTermsDays;
+}): { dueDate?: number; daysUntilDue?: number } => {
+	if (netTermsDays) return { daysUntilDue: netTermsDays };
 
 	const dueDateMs = stripeInvoice.due_date
 		? secondsToMs(stripeInvoice.due_date)
-		: undefined;
-	const remainingDays = dueDateMs
-		? Math.ceil((dueDateMs - nowMs) / (SECONDS_PER_DAY * 1000))
 		: 0;
-
-	if (remainingDays < 1) {
+	if (dueDateMs <= nowMs) {
 		throw invalidRequest(
 			"The original invoice is already past due; pass net_terms_days to give the replacement a new due date",
 		);
 	}
-	return remainingDays;
+	return { dueDate: stripeInvoice.due_date ?? undefined };
 };
 
 const stripeLinesToAddLineParams = ({
@@ -125,6 +124,11 @@ const stripeLinesToAddLineParams = ({
 		period: line.period
 			? { start: line.period.start, end: line.period.end }
 			: undefined,
+		tax_rates: line.taxes?.length
+			? line.taxes.flatMap((tax) =>
+					tax.tax_rate_details?.tax_rate ? [tax.tax_rate_details.tax_rate] : [],
+				)
+			: undefined,
 		metadata: { ...(line.metadata ?? {}), autumn_reissued_from_line: line.id },
 	}));
 
@@ -132,13 +136,15 @@ const createReplacementDraft = async ({
 	stripeCli,
 	stripeInvoice,
 	template,
+	dueDate,
 	daysUntilDue,
 	paymentMethodTypes,
 }: {
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
 	template?: InvoiceTemplate;
-	daysUntilDue: number;
+	dueDate?: number;
+	daysUntilDue?: number;
 	paymentMethodTypes?: string[];
 }) => {
 	const stripeSubId = stripeInvoiceToStripeSubscriptionId(stripeInvoice);
@@ -156,6 +162,7 @@ const createReplacementDraft = async ({
 		stripeSubId,
 		currency: stripeSubId ? undefined : stripeInvoice.currency,
 		collectionMethod: "send_invoice",
+		dueDate,
 		daysUntilDue,
 		footer: template?.footer ?? stripeInvoice.footer ?? undefined,
 		description: template?.memo ?? stripeInvoice.description ?? undefined,
@@ -165,20 +172,28 @@ const createReplacementDraft = async ({
 			autumn_reissued_from: stripeInvoice.id,
 			autumn_source_billing_reason: stripeInvoice.billing_reason ?? "",
 		},
+		automaticTax: stripeInvoice.automatic_tax?.enabled ?? false,
 		defaultTaxRates: stripeInvoice.default_tax_rates?.map((rate) =>
 			typeof rate === "string" ? rate : rate.id,
 		),
 	});
 
-	const lines = await stripeCli.invoices.listLineItems(stripeInvoice.id, {
-		limit: 100,
+	const lines = stripeLinesToAddLineParams({
+		lines: await getStripeInvoiceLineItems({
+			stripeClient: stripeCli,
+			invoiceId: stripeInvoice.id,
+		}),
 	});
 
-	return addStripeInvoiceLines({
-		stripeCli,
-		invoiceId: draft.id,
-		lines: stripeLinesToAddLineParams({ lines: lines.data }),
-	});
+	let withLines = draft;
+	for (let start = 0; start < lines.length; start += ADD_LINES_BATCH_SIZE) {
+		withLines = await addStripeInvoiceLines({
+			stripeCli,
+			invoiceId: draft.id,
+			lines: lines.slice(start, start + ADD_LINES_BATCH_SIZE),
+		});
+	}
+	return withLines;
 };
 
 /** Moves the deferred plan's pointers so paying the replacement fulfils it. */
@@ -225,6 +240,58 @@ const repointDeferredReferences = async ({
 	}
 };
 
+/** Carries the original's Autumn associations (products, entitlements, periods) onto the copied lines. */
+const copyLineItemRows = async ({
+	ctx,
+	original,
+	replacement,
+	autumnInvoiceId,
+}: {
+	ctx: AutumnContext;
+	original: InvoiceListRow;
+	replacement: Stripe.Invoice;
+	autumnInvoiceId: string;
+}) => {
+	const originalRows = await invoiceLineItemRepo.getByInvoiceIds({
+		db: ctx.db,
+		invoiceIds: [original.invoice.id],
+	});
+	if (originalRows.length === 0) return;
+
+	const replacementLines = await getStripeInvoiceLineItems({
+		stripeClient: createStripeCli({ org: ctx.org, env: ctx.env }),
+		invoiceId: replacement.id,
+	});
+	const replacementLineBySource = new Map(
+		replacementLines.map((line) => [
+			line.metadata?.autumn_reissued_from_line,
+			line,
+		]),
+	);
+
+	const copied: DbInvoiceLineItem[] = originalRows.flatMap((row) => {
+		const line = row.stripe_id
+			? replacementLineBySource.get(row.stripe_id)
+			: undefined;
+		if (!line) return [];
+		return [
+			{
+				...row,
+				id: generateKsuid({ prefix: "invoice_li_" }),
+				created_at: Date.now(),
+				invoice_id: autumnInvoiceId,
+				stripe_id: line.id,
+				stripe_invoice_id: replacement.id,
+				stripe_invoice_item_id: null,
+				stripe_subscription_item_id: null,
+				stripe_discountable: false,
+			},
+		];
+	});
+
+	await invoiceLineItemRepo.upsertMany({ db: ctx.db, lineItems: copied });
+};
+
 const storeReplacementInAutumn = async ({
 	ctx,
 	fullCustomer,
@@ -253,17 +320,14 @@ const storeReplacementInAutumn = async ({
 		fullProducts,
 		internalEntityId: original.invoice.internal_entity_id ?? undefined,
 	});
+	if (!autumnInvoice) return undefined;
 
-	if (autumnInvoice) {
-		await workflows.triggerStoreInvoiceLineItems({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			stripeInvoiceId: replacement.id,
-			autumnInvoiceId: autumnInvoice.id,
-			billingLineItems: [],
-		});
-	}
-
+	await copyLineItemRows({
+		ctx,
+		original,
+		replacement,
+		autumnInvoiceId: autumnInvoice.id,
+	});
 	return autumnInvoice;
 };
 
@@ -272,6 +336,9 @@ const storeReplacementInAutumn = async ({
  * template's footer/memo. The replacement stays linked to the same subscription
  * and inherits the original's deferred-plan pointers, so paying it has the same
  * effect the original payment would have had.
+ *
+ * The replacement is finalized before the original is voided, so a failure never
+ * leaves the customer without a payable invoice.
  */
 export const reissueInvoice = async ({
 	ctx,
@@ -303,7 +370,7 @@ export const reissueInvoice = async ({
 		throw invalidRequest(`Invoice template ${invoiceTemplateId} not found`);
 	}
 
-	const daysUntilDue = resolveDaysUntilDue({
+	const { dueDate, daysUntilDue } = resolveDueDate({
 		stripeInvoice,
 		netTermsDays,
 		nowMs: Date.now(),
@@ -313,33 +380,18 @@ export const reissueInvoice = async ({
 		stripeCli,
 		stripeInvoice,
 		template,
+		dueDate,
 		daysUntilDue,
 		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
 	});
 
-	try {
-		await repointDeferredReferences({
-			ctx,
-			fromStripeInvoiceId: stripeInvoice.id,
-			toStripeInvoiceId: draft.id,
-		});
-		await voidInvoice({ ctx, invoiceId });
-	} catch (error) {
+	if (draft.total !== stripeInvoice.total) {
 		await stripeCli.invoices.del(draft.id).catch(() => undefined);
-		await MetadataService.getByStripeInvoiceId({
-			db: ctx.db,
-			stripeInvoiceId: draft.id,
-		}).then((metadata) =>
-			metadata
-				? MetadataService.swapStripeInvoiceId({
-						db: ctx.db,
-						id: metadata.id,
-						fromStripeInvoiceId: draft.id,
-						toStripeInvoiceId: stripeInvoice.id,
-					})
-				: undefined,
-		);
-		throw error;
+		throw new RecaseError({
+			message: `Replacement total (${draft.total}) does not match the original (${stripeInvoice.total}); the invoice was not reissued`,
+			code: ErrCode.InternalError,
+			statusCode: 500,
+		});
 	}
 
 	// Automatic collection is what makes Stripe treat the replacement as the
@@ -349,6 +401,24 @@ export const reissueInvoice = async ({
 		invoiceId: draft.id,
 		autoAdvance: true,
 	});
+
+	try {
+		await repointDeferredReferences({
+			ctx,
+			fromStripeInvoiceId: stripeInvoice.id,
+			toStripeInvoiceId: finalized.id,
+		});
+		await voidInvoice({ ctx, invoiceId });
+	} catch (error) {
+		// The original stays payable; retire the replacement instead.
+		await stripeCli.invoices.voidInvoice(finalized.id).catch(() => undefined);
+		await repointDeferredReferences({
+			ctx,
+			fromStripeInvoiceId: finalized.id,
+			toStripeInvoiceId: stripeInvoice.id,
+		}).catch(() => undefined);
+		throw error;
+	}
 
 	await stripeCli.invoices.update(stripeInvoice.id, {
 		metadata: { autumn_reissued_to: finalized.id },

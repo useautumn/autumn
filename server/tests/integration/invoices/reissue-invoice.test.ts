@@ -21,6 +21,7 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/InvoiceTemplateService";
 import { generateId } from "@/utils/genUtils";
@@ -132,6 +133,23 @@ test.concurrent(
 		expect(replacement.parent?.subscription_details?.subscription).toBe(
 			original.parent?.subscription_details?.subscription,
 		);
+
+		const [originalRows, replacementRows] = await Promise.all([
+			invoiceLineItemRepo.getByInvoiceIds({
+				db: ctx.db,
+				invoiceIds: [originalId],
+			}),
+			invoiceLineItemRepo.getByInvoiceIds({
+				db: ctx.db,
+				invoiceIds: [invoice.id],
+			}),
+		]);
+		expect(replacementRows.length).toBe(originalRows.length);
+		expect(replacementRows.length).toBeGreaterThan(0);
+		for (const row of replacementRows) {
+			expect(row.customer_product_ids.length).toBeGreaterThan(0);
+			expect(row.stripe_invoice_id).toBe(replacement.id);
+		}
 
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
