@@ -2,14 +2,14 @@ import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
 	BillingMethod,
+	type Feature,
 	FeatureType,
 	FeatureUsageType,
+	type FrontendProduct,
 	ProductItemInterval,
 	TierBehavior,
-	UsageModel,
-	type Feature,
-	type FrontendProduct,
 	type UpdatePlanOp,
+	UsageModel,
 } from "@autumn/shared";
 import {
 	buildMigrationDraft,
@@ -177,8 +177,20 @@ describe("buildMigrationDraft", () => {
 	});
 });
 
+const creditsItem = {
+	feature_id: "credits",
+	included_usage: 100,
+	interval: ProductItemInterval.Month,
+	interval_count: 1,
+};
+
+const versionProduct = (
+	version: number,
+	items: FrontendProduct["items"] = [],
+): FrontendProduct => ({ ...baseProduct, version, items });
+
 describe("buildVersionMigrationDraft", () => {
-	test("excludes custom plans by default", () => {
+	test("excludes custom plans by default, one operation per source version", () => {
 		const draft = buildVersionMigrationDraft({
 			productId: "pro",
 			latestVersion: 3,
@@ -191,11 +203,58 @@ describe("buildVersionMigrationDraft", () => {
 			version: { $in: [1, 2] },
 			custom: false,
 		});
-		expect(firstUpdatePlan(draft).plan_filter).toMatchObject({
-			plan_id: "pro",
-			version: { $in: [1, 2] },
-			custom: false,
+		expect(updatePlanFilters(draft)).toEqual([
+			{ plan_id: "pro", version: 1, custom: false },
+			{ plan_id: "pro", version: 2, custom: false },
+		]);
+	});
+
+	test("emits version and the item diff so customized items survive", () => {
+		const draft = buildVersionMigrationDraft({
+			productId: "pro",
+			latestVersion: 3,
+			scope: "all",
+			pastVersions: [1, 2],
+			latestProduct: versionProduct(3, [creditsItem]),
+			versionProducts: new Map([
+				[1, versionProduct(1)],
+				[2, versionProduct(2)],
+			]),
+			features,
 		});
+
+		const ops = (draft.operations.customer ?? []).filter(
+			(op): op is UpdatePlanOp => op.type === "update_plan",
+		);
+		expect(ops).toHaveLength(2);
+		for (const [index, op] of ops.entries()) {
+			expect(op.plan_filter).toEqual({
+				plan_id: "pro",
+				version: index + 1,
+				custom: false,
+			});
+			expect(op.version).toBe(3);
+			expect(op.customize?.add_items?.map((item) => item.feature_id)).toEqual([
+				"credits",
+			]);
+			expect(op.customize?.remove_items).toBeUndefined();
+		}
+	});
+
+	test("a source version with identical items emits version only", () => {
+		const draft = buildVersionMigrationDraft({
+			productId: "pro",
+			latestVersion: 3,
+			scope: 2,
+			pastVersions: [1, 2],
+			latestProduct: versionProduct(3, [creditsItem]),
+			versionProducts: new Map([[2, versionProduct(2, [creditsItem])]]),
+			features,
+		});
+
+		const op = firstUpdatePlan(draft);
+		expect(op.version).toBe(3);
+		expect(op.customize).toBeUndefined();
 	});
 
 	test("targets both regular and custom versions when custom plans are included", () => {
@@ -211,8 +270,6 @@ describe("buildVersionMigrationDraft", () => {
 			plan_id: "pro",
 			version: 2,
 		});
-		expect(updatePlanFilters(draft)).toEqual([
-			{ plan_id: "pro", version: 2 },
-		]);
+		expect(updatePlanFilters(draft)).toEqual([{ plan_id: "pro", version: 2 }]);
 	});
 });

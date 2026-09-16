@@ -153,22 +153,54 @@ export type MigrationScope = "this_version" | "all_customers";
 
 export type VersionMigrateScope = "all" | number;
 
+/** The item diff from one source version to the latest, or undefined when
+ * the versions already agree (or the products aren't loaded yet). */
+function versionCustomize({
+	fromProduct,
+	latestProduct,
+	features,
+}: {
+	fromProduct: FrontendProduct | undefined;
+	latestProduct: FrontendProduct | undefined;
+	features: Feature[];
+}): DiffedCustomizePlanV1 | undefined {
+	if (!fromProduct || !latestProduct) return undefined;
+	const diff = getMigratablePlanDiff(
+		diffPlanV1({
+			from: frontendProductToApiPlanV1(fromProduct, features),
+			to: frontendProductToApiPlanV1(latestProduct, features),
+		}),
+	);
+	return Object.keys(diff).length > 0 ? diff : undefined;
+}
+
+/** Version transitions pair `version` with the from→to item diff so the
+ * customer keeps their existing items and only the changed ones move;
+ * `version` alone would replace every item with the target catalog. */
 export function buildVersionMigrationDraft({
 	productId,
 	latestVersion,
 	scope,
 	pastVersions,
-	hasPricingChange,
+	hasPricingChange = false,
 	includeCustom = false,
+	latestProduct,
+	versionProducts = new Map(),
+	features = [],
 }: {
 	productId: string;
 	latestVersion: number;
 	scope: VersionMigrateScope;
 	pastVersions: number[];
-	hasPricingChange: boolean;
+	hasPricingChange?: boolean;
 	includeCustom?: boolean;
+	latestProduct?: FrontendProduct;
+	versionProducts?: Map<number, FrontendProduct>;
+	features?: Feature[];
 }): MigrationDraft {
-	const versions = scope === "all" ? pastVersions : [scope];
+	const versions = (scope === "all" ? pastVersions : [scope])
+		.slice()
+		.sort((a, b) => a - b);
 	const versionMatcher =
 		versions.length === 1 ? versions[0] : { $in: versions };
 	const basePlanFilter = {
@@ -178,24 +210,30 @@ export function buildVersionMigrationDraft({
 	const planFilter = includeCustom
 		? basePlanFilter
 		: { ...basePlanFilter, custom: false };
-	const versionOp = (custom: boolean): UpdatePlanOp => ({
-		type: "update_plan",
-		plan_filter: { ...basePlanFilter, custom },
-		version: latestVersion,
-	});
-	const versionOpWithoutCustom = (): UpdatePlanOp => ({
-		type: "update_plan",
-		plan_filter: basePlanFilter,
-		version: latestVersion,
+
+	const versionOps: UpdatePlanOp[] = versions.map((version) => {
+		const customize = versionCustomize({
+			fromProduct: versionProducts.get(version),
+			latestProduct,
+			features,
+		});
+		return {
+			type: "update_plan",
+			plan_filter: {
+				plan_id: productId,
+				version,
+				...(includeCustom ? {} : { custom: false }),
+			},
+			version: latestVersion,
+			...(customize ? { customize } : {}),
+		};
 	});
 
 	const filter: MigrationFilter = {
 		customer: { plan: planFilter },
 	};
 
-	const operations: Operations = {
-		customer: includeCustom ? [versionOpWithoutCustom()] : [versionOp(false)],
-	};
+	const operations: Operations = { customer: versionOps };
 
 	const suffix = scope === "all" ? "migrate-all" : `migrate-v${scope}`;
 

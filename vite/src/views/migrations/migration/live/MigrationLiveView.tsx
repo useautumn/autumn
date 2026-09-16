@@ -70,6 +70,7 @@ import { pushPage } from "@/utils/genUtils";
 import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { CustomerListFilterButton } from "@/views/customers2/components/table/customer-list/CustomerListFilterButton";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import {
 	useMigrationRunControls,
@@ -82,6 +83,10 @@ import { CustomerSearchToolbar } from "../shared/CustomerSearchToolbar";
 import { MigrationStatusBadge } from "../shared/MigrationStatusBadge";
 import { isRunDisabled, runButtonLabel } from "../shared/migrationStatus";
 import { OperationsPreview } from "../shared/OperationsPreview";
+import {
+	versionOnlyWarningVersions,
+	versionWarningText,
+} from "../shared/operationUtils";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
 import { ActiveDot } from "./ActiveDot";
 import {
@@ -91,11 +96,13 @@ import {
 	hasActiveExecutionFilters,
 } from "./ExecutionStatusSubMenu";
 import { MigrationRunControls } from "./MigrationRunControls";
+import { MigrationRunProgress } from "./MigrationRunProgress";
 import {
 	type ActiveRunStatus,
 	buildEventsByCustomer,
 	resolveMigrationItemStatus,
 } from "./migrationItemStatus";
+import { runProgressLabel } from "./migrationProgress";
 import {
 	executionStatusOptionsForSource,
 	previewSourceForStatus,
@@ -587,6 +594,11 @@ export function MigrationLiveView({
 							noBillingChanges={noBillingChanges}
 						/>
 						<OperationsPreview operations={operations} />
+						{versionOnlyWarningVersions(operations).map((version) => (
+							<InfoBox key={version} variant="warning">
+								{versionWarningText(version)}
+							</InfoBox>
+						))}
 						<MigrationRunControls
 							value={runControls}
 							onChange={setRunControls}
@@ -812,14 +824,18 @@ export function MigrationLiveView({
 						hideCreatedAt
 					/>
 				}
-				trailing={
-					progressCounts && (
-						<ExecutionProgressBadge
-							completed={progressCounts.completed}
-							running={progressCounts.running}
-						/>
-					)
-				}
+			/>
+
+			<MigrationRunProgress
+				completed={progressCounts?.completed ?? 0}
+				running={progressCounts?.running ?? 0}
+				total={progressCounts?.total ?? 0}
+				expected={runScopeCount}
+				label={runProgressLabel({
+					migrationStatus,
+					activeRun: progressRun,
+				})}
+				active={!!progressRun}
 			/>
 
 			<Table.Provider
@@ -847,23 +863,6 @@ export function MigrationLiveView({
 				</Table.Container>
 			</Table.Provider>
 		</div>
-	);
-}
-
-function ExecutionProgressBadge({
-	completed,
-	running,
-}: {
-	completed: number;
-	running: number;
-}) {
-	if (completed === 0 && running === 0) return null;
-
-	return (
-		<span className="flex items-center h-7 px-2 text-[11px] text-tertiary-foreground">
-			{completed.toLocaleString()} run
-			{running > 0 && `, ${running.toLocaleString()} running`}
-		</span>
 	);
 }
 

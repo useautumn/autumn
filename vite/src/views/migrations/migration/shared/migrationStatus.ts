@@ -1,6 +1,6 @@
 import type { MigrationStatus } from "@autumn/shared";
 
-export type MigrationStatusBadge = {
+export type MigrationStatusBadgeSpec = {
 	label: string;
 	tone: "muted" | "active" | "done";
 	live: boolean;
@@ -20,7 +20,7 @@ export function statusBadge({
 }: {
 	status: MigrationStatus;
 	blockedBy: string | null;
-}): MigrationStatusBadge {
+}): MigrationStatusBadgeSpec {
 	switch (status) {
 		case "waiting":
 			return {
