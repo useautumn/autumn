@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import {
 	customerEntitlementShouldBeBilled,
 	type FullCusEntWithFullCusProduct,
@@ -11,8 +10,8 @@ import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/
 import { getLatestPeriodStart } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers/common";
 import { shouldDisableOverageBilling } from "@/external/stripe/webhookHandlers/common/shouldDisableOverageBilling";
-import { lineItemsToCreateInvoiceItemsParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToCreateInvoiceItemsParams";
-import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
+import { lineItemsToInvoiceAddLinesParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToInvoiceAddLinesParams";
+import { addStripeInvoiceLines } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
@@ -37,6 +36,95 @@ const hasTrialJustEnded = ({
 
 	const periodStart = getLatestPeriodStart({ sub: stripeSubscription });
 	return trialEnd === periodStart;
+};
+
+const getExistingAutumnLineItemIds = async ({
+	ctx,
+	invoiceId,
+}: {
+	ctx: StripeWebhookContext;
+	invoiceId: string;
+}): Promise<Set<string>> => {
+	const stripeLineItems = await getStripeInvoiceLineItems({
+		stripeClient: ctx.stripeCli,
+		invoiceId,
+	});
+	return new Set(
+		stripeLineItems
+			.map((lineItem) => lineItem.metadata?.autumn_line_item_id)
+			.filter((lineItemId): lineItemId is string => Boolean(lineItemId)),
+	);
+};
+
+/**
+ * Adds every line item not already on the invoice in ONE addLines call.
+ *
+ * Stripe webhook retries re-run this task, so line ids are scoped to the
+ * invoice and matched against `metadata.autumn_line_item_id` before sending.
+ * A fresh idempotency key per attempt is deliberate: Stripe caches
+ * resource-specific 429s (lock_timeout) and 400s under a reused key and
+ * replays them for 24h, which is how credit lines went missing in the past.
+ */
+const addPendingLineItemsToInvoice = async ({
+	ctx,
+	eventContext,
+	lineItems,
+}: {
+	ctx: StripeWebhookContext;
+	eventContext: InvoiceCreatedContext;
+	lineItems: LineItem[];
+}) => {
+	const { stripeInvoice } = eventContext;
+	if (lineItems.length === 0) return;
+
+	const existingAutumnLineItemIds = await getExistingAutumnLineItemIds({
+		ctx,
+		invoiceId: stripeInvoice.id,
+	});
+	const pendingLineItems = lineItems.filter(
+		(lineItem) => !existingAutumnLineItemIds.has(lineItem.id),
+	);
+
+	if (pendingLineItems.length === 0) {
+		ctx.logger.info(
+			`[invoice.created] All ${lineItems.length} line items already on ${stripeInvoice.id}, skipping creation`,
+		);
+		return;
+	}
+
+	if (stripeInvoice.status !== "draft") {
+		throw new Error(
+			`[invoice.created] Invoice ${stripeInvoice.id} is no longer a draft (${stripeInvoice.status}) but ${pendingLineItems.length} of ${lineItems.length} Autumn line items are missing; skipping balance resets`,
+		);
+	}
+
+	if (pendingLineItems.length < lineItems.length) {
+		ctx.logger.info(
+			`[invoice.created] Retry detected for ${stripeInvoice.id}: ${lineItems.length - pendingLineItems.length} line items already present, adding ${pendingLineItems.length}`,
+		);
+	}
+
+	const updatedInvoice = await addStripeInvoiceLines({
+		stripeCli: ctx.stripeCli,
+		invoiceId: stripeInvoice.id,
+		lines: lineItemsToInvoiceAddLinesParams({ lineItems: pendingLineItems }),
+	});
+
+	const landedAutumnLineItemIds = updatedInvoice.lines.has_more
+		? await getExistingAutumnLineItemIds({ ctx, invoiceId: stripeInvoice.id })
+		: new Set(
+				updatedInvoice.lines.data
+					.map((lineItem) => lineItem.metadata?.autumn_line_item_id)
+					.filter((lineItemId): lineItemId is string => Boolean(lineItemId)),
+			);
+	const missingLineItemIds = pendingLineItems
+		.map((lineItem) => lineItem.id)
+		.filter((lineItemId) => !landedAutumnLineItemIds.has(lineItemId));
+	if (missingLineItemIds.length > 0) {
+		throw new Error(
+			`[invoice.created] addLines on ${stripeInvoice.id} returned without ${missingLineItemIds.length} requested line items (${missingLineItemIds.join(", ")}); skipping balance resets`,
+		);
+	}
 };
 
 /**
@@ -109,6 +197,7 @@ export const processConsumablePricesForInvoiceCreated = async ({
 		ctx,
 		eventContext,
 		periodEndMs: invoicePeriodEndMs,
+		idempotencyScope: stripeInvoice.id,
 		cusEntFilter: trialJustEnded
 			? () => false
 			: consumableCustomerEntitlementFilter,
@@ -119,51 +208,19 @@ export const processConsumablePricesForInvoiceCreated = async ({
 			includeLineItems: !trialJustEnded,
 		},
 	});
-	const stripeLineItems =
-		invoiceCreditLineItems.length > 0
-			? await getStripeInvoiceLineItems({
-					stripeClient: ctx.stripeCli,
-					invoiceId: stripeInvoice.id,
-				})
-			: [];
-	const existingAutumnLineItemIds = new Set(
-		stripeLineItems
-			.map((lineItem) => lineItem.metadata?.autumn_line_item_id)
-			.filter((lineItemId): lineItemId is string => Boolean(lineItemId)),
-	);
-	const pendingInvoiceCreditLineItems = invoiceCreditLineItems.filter(
-		(lineItem) => !existingAutumnLineItemIds.has(lineItem.id),
-	);
 
 	if (disableOverageBilling && consumableLineItems.length > 0) {
 		addToExtraLogs({ ctx, extras: { overageBillingDisabledByConfig: true } });
 	}
-	if (consumableLineItems.length > 0 && !disableOverageBilling) {
-		await createStripeInvoiceItems({
-			ctx,
-			invoiceItems: lineItemsToCreateInvoiceItemsParams({
-				stripeCustomerId: eventContext.stripeCustomer.id,
-				stripeInvoiceId: stripeInvoice.id,
-				lineItems: consumableLineItems,
-			}),
-		});
-	}
-	if (pendingInvoiceCreditLineItems.length > 0) {
-		await createStripeInvoiceItems({
-			ctx,
-			invoiceItems: lineItemsToCreateInvoiceItemsParams({
-				stripeCustomerId: eventContext.stripeCustomer.id,
-				stripeInvoiceId: stripeInvoice.id,
-				lineItems: pendingInvoiceCreditLineItems,
-			}),
-			idempotencyKeys: pendingInvoiceCreditLineItems.map(
-				(lineItem) =>
-					`autumn:invoice-credit:${createHash("sha256")
-						.update(lineItem.id)
-						.digest("hex")}`,
-			),
-		});
-	}
+
+	await addPendingLineItemsToInvoice({
+		ctx,
+		eventContext,
+		lineItems: [
+			...(disableOverageBilling ? [] : consumableLineItems),
+			...invoiceCreditLineItems,
+		],
+	});
 
 	await CusEntService.batchUpdate({
 		ctx,
