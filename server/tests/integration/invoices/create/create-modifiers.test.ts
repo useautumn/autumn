@@ -669,3 +669,77 @@ test.concurrent(
 		expect(invoice.plan_ids.sort()).toEqual([pro.id, annual.id].sort());
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create: a named Stripe price bills the line through Stripe's own price")}`,
+	async () => {
+		const customerId = "inv-create-stripe-price";
+		const pro = products.pro({
+			id: "pro-create-stripe-price",
+			items: [items.prepaidUsers()],
+		});
+		const { ctx, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		// $7 per pack of 2 users, priced entirely by Stripe.
+		const stripeProduct = await ctx.stripeCli.products.create({
+			name: "Seat pack",
+		});
+		const stripePrice = await ctx.stripeCli.prices.create({
+			product: stripeProduct.id,
+			currency: "usd",
+			unit_amount: 700,
+		});
+
+		const response = await createInvoice({
+			autumnV2_3,
+			params: {
+				customer_id: customerId,
+				plans: [
+					{
+						plan_id: pro.id,
+						customize: {
+							price: null,
+							items: [
+								{
+									feature_id: TestFeature.Users,
+									price: {
+										amount: 7,
+										interval: BillingInterval.Month,
+										billing_method: BillingMethod.Prepaid,
+										billing_units: 2,
+										processors: { stripe: { price_id: stripePrice.id } },
+									},
+								},
+							],
+						},
+						feature_quantities: [
+							{
+								feature_id: TestFeature.Users,
+								billing_behavior: BillingMethod.Prepaid,
+								quantity: 5,
+							},
+						],
+					},
+				],
+			},
+		});
+
+		// 5 users over packs of 2 → 3 packs × $7.
+		const { stripeInvoice } = await expectCreatedInvoiceCorrect({
+			ctx,
+			response,
+			lines: [{ amount: 21, quantity: 5 }],
+			total: 21,
+		});
+		const line = stripeInvoice.lines.data[0];
+		expect(line.pricing?.price_details?.price).toBe(stripePrice.id);
+		expect(line.quantity).toBe(3);
+	},
+);

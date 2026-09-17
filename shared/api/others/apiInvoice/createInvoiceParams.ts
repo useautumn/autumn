@@ -4,6 +4,7 @@ import { UnixMsTimestampSchema } from "@api/billing/common/unixMsTimestamp.js";
 import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride.js";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice.js";
 import { BillingMethod } from "@api/products/components/billingMethod.js";
+import { ApiPriceProcessorsSchema } from "@api/products/components/processors.js";
 import { PlanItemPriceParamsSchema } from "@api/products/items/crud/createPlanItemParamsV1.js";
 import { z } from "zod/v4";
 import { ApiListInvoiceV1Schema } from "./apiListInvoiceV1.js";
@@ -13,7 +14,14 @@ export const InvoiceBasePriceParamsSchema = BasePriceParamsSchema.pick({
 	amount: true,
 	interval: true,
 	interval_count: true,
-}).strict();
+})
+	.extend({
+		processors: ApiPriceProcessorsSchema.optional().meta({
+			description:
+				"Bill this line under an existing Stripe price instead of an inline one.",
+		}),
+	})
+	.strict();
 
 /** Pricing-only subset of a catalog plan item's price. */
 export const InvoiceItemPriceParamsSchema = PlanItemPriceParamsSchema.pick({
@@ -23,7 +31,15 @@ export const InvoiceItemPriceParamsSchema = PlanItemPriceParamsSchema.pick({
 	interval: true,
 	interval_count: true,
 	billing_units: true,
-}).strict();
+	billing_method: true,
+})
+	.extend({
+		processors: ApiPriceProcessorsSchema.optional().meta({
+			description:
+				"Bill this line under an existing Stripe price instead of an inline one.",
+		}),
+	})
+	.strict();
 
 export const InvoiceCustomizeItemSchema = z
 	.object({
@@ -90,7 +106,7 @@ export const InvoiceFeatureQuantitySchema = z
 		}),
 		quantity: z.number().nonnegative().optional().meta({
 			description:
-				"Billable feature units, exclusive of any included usage. For a credit-system feature this is the number of credits.",
+				"Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits.",
 		}),
 		usage: z.array(InvoiceUsageEntrySchema).optional().meta({
 			description:

@@ -43,6 +43,13 @@ const percentOffTotal = ({
 		return remaining;
 	}, new Decimal(amount));
 
+/** Units become packs when the named Stripe price charges per pack. */
+const lineToStripeQuantity = ({ line }: { line: InvoiceLine }): number => {
+	if (line.quantity === null) return 1;
+	const billingUnits = line.lineItem.context.price.config.billing_units ?? 1;
+	return new Decimal(line.quantity).div(billingUnits).ceil().toNumber();
+};
+
 /** Maps computed lines onto Stripe add-lines params and the preview totals. */
 export const evaluateStripeInvoicePlan = ({
 	invoiceContext,
@@ -99,15 +106,22 @@ export const evaluateStripeInvoicePlan = ({
 		});
 		stripeLines.push({
 			description: lineItem.description,
-			...(stripeProductId && minorAmount > 0
+			// A named Stripe price bills through Stripe's own tiers; otherwise the
+			// amount Autumn computed is billed inline.
+			...(line.stripePriceId
 				? {
-						price_data: {
-							unit_amount: minorAmount,
-							currency,
-							product: stripeProductId,
-						},
+						pricing: { price: line.stripePriceId },
+						quantity: lineToStripeQuantity({ line }),
 					}
-				: { amount: minorAmount }),
+				: stripeProductId && minorAmount > 0
+					? {
+							price_data: {
+								unit_amount: minorAmount,
+								currency,
+								product: stripeProductId,
+							},
+						}
+					: { amount: minorAmount }),
 			// Invoice-level coupons only reach discountable lines; the invoice's explicit
 			// discounts array keeps customer-level coupons out.
 			discountable: true,

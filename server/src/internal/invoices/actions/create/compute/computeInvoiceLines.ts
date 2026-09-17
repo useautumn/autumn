@@ -34,6 +34,8 @@ export type InvoiceLine = {
 	planId: string | null;
 	featureId: string | null;
 	quantity: number | null;
+	/** Set only when the request named a Stripe price to bill this line under. */
+	stripePriceId?: string;
 };
 
 const lineContext = ({
@@ -70,6 +72,7 @@ const toLine = ({
 	planKey,
 	planId,
 	featureId,
+	stripePriceId,
 }: {
 	context: LineItemContext;
 	amount: number;
@@ -79,6 +82,7 @@ const toLine = ({
 	planKey: string | null;
 	planId: string | null;
 	featureId: string | null;
+	stripePriceId?: string;
 }): InvoiceLine => {
 	const lineItem = buildLineItem({
 		context,
@@ -99,6 +103,7 @@ const toLine = ({
 		planId,
 		featureId,
 		quantity,
+		stripePriceId,
 	};
 };
 
@@ -132,6 +137,9 @@ const customizedFeaturePrice = ({
 						flat_amount: tier.flat_amount,
 					}))
 				: [{ to: "inf" as const, amount: override.amount ?? 0 }],
+			stripe_price_id:
+				override.processors?.stripe?.price_id ??
+				catalogPrice.config.stripe_price_id,
 		} as Price["config"],
 	};
 };
@@ -251,6 +259,9 @@ const computeFeatureLine = ({
 		planKey: plan.planKey,
 		planId: product.id,
 		featureId: feature.id,
+		stripePriceId: plan.params.customize?.items?.find(
+			(item) => item.feature_id === entry.feature_id,
+		)?.price?.processors?.stripe?.price_id,
 	});
 };
 
@@ -296,6 +307,7 @@ const computePlanLines = ({
 				planKey: plan.planKey,
 				planId: fullProduct.id,
 				featureId: null,
+				stripePriceId: params.customize?.price?.processors?.stripe?.price_id,
 			}),
 		);
 	}
@@ -347,6 +359,7 @@ const computePlanLines = ({
 					planKey: plan.planKey,
 					planId: resolved.licenseProduct.id,
 					featureId: null,
+					stripePriceId: license.customize?.price?.processors?.stripe?.price_id,
 				}),
 			);
 		}

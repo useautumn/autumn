@@ -8,8 +8,8 @@ import {
 	createStripeInvoice,
 	finalizeStripeInvoice,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
-import { storeLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+import { storeLineItems } from "@/internal/invoices/lineItems/actions/storeLineItems";
 import { upsertInvoiceFromStripe } from "../../upsertFromStripe";
 import type { InvoiceLine } from "../compute/computeInvoiceLines";
 import type { StripeInvoicePlan } from "../evaluate/evaluateStripeInvoicePlan";
