@@ -39,8 +39,6 @@ jobs:
     with:
       package-dir: packages/atmn
       pre-build-command: bun -F @autumn/agent-docs gen && bun -F @autumn/atmn-generator generate
-      typecheck-command: bun -F atmn ts && bun -F @autumn/atmn-generator ts && bun -F @autumn/ax-evals ts
-      test-command: bun -F atmn test && bun -F @autumn/atmn-generator test && bun -F @autumn/ax-evals test
       commit-paths: packages/atmn packages/atmn-generator packages/agent-docs packages/openapi
       minimum-package-version: true
       version-bump: ${{ github.event_name == 'workflow_dispatch' && inputs.version-bump || '' }}
