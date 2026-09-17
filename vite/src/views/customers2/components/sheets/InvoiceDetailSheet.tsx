@@ -35,7 +35,6 @@ import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccou
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
 import { RefundInvoiceDialog } from "./RefundInvoiceDialog";
-import { ReissueInvoiceDialog } from "./ReissueInvoiceDialog";
 import { VoidInvoiceDialog } from "./VoidInvoiceDialog";
 
 type LineItemGroup = {
@@ -77,6 +76,7 @@ export function InvoiceDetailSheet({
 	taxedAmount: taxedAmountProp,
 }: InvoiceDetailSheetProps = {}) {
 	const sheetData = useSheetStore((s) => s.data);
+	const setSheet = useSheetStore((s) => s.setSheet);
 	const snapshotInvoice =
 		invoiceProp ?? (sheetData?.invoice as Invoice | undefined);
 	const { customer } = useCusQuery();
@@ -97,7 +97,6 @@ export function InvoiceDetailSheet({
 	const { masterStripeAccount } = useMasterStripeAccount();
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 	const [voidDialogOpen, setVoidDialogOpen] = useState(false);
-	const [reissueDialogOpen, setReissueDialogOpen] = useState(false);
 
 	const productGroups = useMemo(() => {
 		// Bucket line items by product_id, then group within each bucket.
@@ -419,7 +418,9 @@ export function InvoiceDetailSheet({
 					<Button
 						variant="primary"
 						className="flex-1"
-						onClick={() => setReissueDialogOpen(true)}
+						onClick={() =>
+							setSheet({ type: "invoice-reissue", data: { invoice } })
+						}
 					>
 						<PaperPlaneTiltIcon size={16} className="mr-1.5" />
 						Reissue
@@ -440,13 +441,6 @@ export function InvoiceDetailSheet({
 				<RefundInvoiceDialog
 					open={refundDialogOpen}
 					onOpenChange={setRefundDialogOpen}
-					invoice={invoice}
-				/>
-			)}
-			{canReissue && (
-				<ReissueInvoiceDialog
-					open={reissueDialogOpen}
-					onOpenChange={setReissueDialogOpen}
 					invoice={invoice}
 				/>
 			)}
