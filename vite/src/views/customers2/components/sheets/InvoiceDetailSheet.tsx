@@ -12,6 +12,7 @@ import {
 	CalendarBlankIcon,
 	CreditCardIcon,
 	HashIcon,
+	PaperPlaneTiltIcon,
 	ProhibitIcon,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
@@ -34,6 +35,7 @@ import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccou
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
 import { RefundInvoiceDialog } from "./RefundInvoiceDialog";
+import { ReissueInvoiceDialog } from "./ReissueInvoiceDialog";
 import { VoidInvoiceDialog } from "./VoidInvoiceDialog";
 
 type LineItemGroup = {
@@ -95,6 +97,7 @@ export function InvoiceDetailSheet({
 	const { masterStripeAccount } = useMasterStripeAccount();
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 	const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+	const [reissueDialogOpen, setReissueDialogOpen] = useState(false);
 
 	const productGroups = useMemo(() => {
 		// Bucket line items by product_id, then group within each bucket.
@@ -188,6 +191,8 @@ export function InvoiceDetailSheet({
 		invoiceIsStripe &&
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Uncollectible);
+	// Reissue replaces an unpaid invoice, so it offers the same invoices as void.
+	const canReissue = canVoid;
 	const stripeConnectViewAsInvoiceLink =
 		invoiceIsStripe && isAdmin && masterStripeAccount?.id && stripeAccount?.id
 			? getStripeConnectViewAsLink({
@@ -397,7 +402,7 @@ export function InvoiceDetailSheet({
 						onClick={handleViewInvoice}
 					>
 						<ArrowSquareOutIcon size={16} className="mr-1.5" />
-						Open Invoice
+						Open
 					</Button>
 				)}
 				{canRefund && (
@@ -410,6 +415,16 @@ export function InvoiceDetailSheet({
 						Refund Invoice
 					</Button>
 				)}
+				{canReissue && (
+					<Button
+						variant="primary"
+						className="flex-1"
+						onClick={() => setReissueDialogOpen(true)}
+					>
+						<PaperPlaneTiltIcon size={16} className="mr-1.5" />
+						Reissue
+					</Button>
+				)}
 				{canVoid && (
 					<Button
 						variant="destructive"
@@ -417,7 +432,7 @@ export function InvoiceDetailSheet({
 						onClick={() => setVoidDialogOpen(true)}
 					>
 						<ProhibitIcon size={16} className="mr-1.5" />
-						Void Invoice
+						Void
 					</Button>
 				)}
 			</div>
@@ -425,6 +440,13 @@ export function InvoiceDetailSheet({
 				<RefundInvoiceDialog
 					open={refundDialogOpen}
 					onOpenChange={setRefundDialogOpen}
+					invoice={invoice}
+				/>
+			)}
+			{canReissue && (
+				<ReissueInvoiceDialog
+					open={reissueDialogOpen}
+					onOpenChange={setReissueDialogOpen}
 					invoice={invoice}
 				/>
 			)}

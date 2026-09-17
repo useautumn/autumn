@@ -4,6 +4,10 @@ import { InsertInvoicesParamsSchema } from "@api/others/apiInvoice/insertInvoice
 import { InsertInvoicesResponseSchema } from "@api/others/apiInvoice/insertInvoicesResponse.js";
 import { ListInvoicesParamsSchema } from "@api/others/apiInvoice/listInvoicesParams.js";
 import {
+	ListInvoiceTemplatesParamsSchema,
+	ListInvoiceTemplatesResponseSchema,
+} from "@api/others/apiInvoice/listInvoiceTemplatesParams.js";
+import {
 	PayInvoiceParamsSchema,
 	PayInvoiceResponseSchema,
 } from "@api/others/apiInvoice/payInvoiceParams.js";
@@ -242,6 +246,48 @@ export const reissueInvoiceContract = oc
 						status: "open",
 					},
 					voided_invoice_id: "inv_2b3c4d5e6f7g8h",
+				},
+			],
+		}),
+	);
+
+export const listInvoiceTemplatesContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/invoices.listTemplates",
+		operationId: "listInvoiceTemplates",
+		tags: ["invoices"],
+		description:
+			"Lists the organization's invoice templates, newest first, with offset pagination. Use a template's `id` as `invoice_template_id` when creating or reissuing an invoice.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "listTemplates",
+		}),
+	})
+	.input(
+		ListInvoiceTemplatesParamsSchema.meta({
+			title: "ListInvoiceTemplatesParams",
+			examples: [{ limit: 10, offset: 0 }],
+		}),
+	)
+	.output(
+		ListInvoiceTemplatesResponseSchema.meta({
+			examples: [
+				{
+					list: [
+						{
+							id: "inv_tmpl_2b3c4d5e6f7g8h",
+							name: "Bank transfer",
+							footer: "Pay by wire to IBAN GB00 EXAM 0000 0000 0000 00",
+							memo: "Questions? billing@example.com",
+							net_terms_days: 30,
+							created_at: 1759247877000,
+						},
+					],
+					total: 1,
+					limit: 10,
+					offset: 0,
+					has_more: false,
 				},
 			],
 		}),

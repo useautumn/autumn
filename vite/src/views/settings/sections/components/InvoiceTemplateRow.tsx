@@ -1,5 +1,5 @@
 import type { InvoiceTemplate } from "@autumn/shared";
-import { Button } from "@autumn/ui";
+import { Button, MiniCopyButton } from "@autumn/ui";
 import { TrashIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 
@@ -33,6 +33,13 @@ export function InvoiceTemplateRow({
 					{template.footer ?? template.memo}
 				</span>
 			</button>
+			<MiniCopyButton
+				text={template.id}
+				side="left"
+				aria-label="Copy template ID"
+				innerClassName="text-xs font-mono"
+				className="shrink-0 max-w-40"
+			/>
 			<Button
 				variant="muted"
 				size="mini"
