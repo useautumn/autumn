@@ -23,17 +23,33 @@ const resolve = ({
 	});
 
 describe("npm release version", () => {
-	test("starts at the manifest minimum, independently of other version lines", async () => {
-		expect(await resolve({ versions: { "1.9.99": {}, "3.0.0": {} } })).toEqual({
+	test("starts at the manifest minimum when it exceeds published versions", async () => {
+		expect(await resolve({ versions: { "1.9.99": {} } })).toEqual({
 			version: "2.0.0",
 			published: false,
 		});
 	});
 
-	test("selects the first unpublished patch, including holes", async () => {
+	test("advances beyond published patches rather than filling holes", async () => {
 		expect(
 			await resolve({ versions: { "2.0.0": {}, "2.0.1": {}, "2.0.3": {} } }),
-		).toEqual({ version: "2.0.2", published: false });
+		).toEqual({ version: "2.0.4", published: false });
+	});
+
+	test("advances beyond a higher minor or major regardless of registry order", async () => {
+		for (const versions of [
+			{ "1.3.2": {}, "1.2.56": {} },
+			{ "1.2.56": {}, "1.3.2": {} },
+		]) {
+			expect(await resolve({ minimumVersion: "1.2.17", versions })).toEqual({
+				version: "1.3.3",
+				published: false,
+			});
+		}
+		expect(await resolve({ versions: { "3.0.0": {} } })).toEqual({
+			version: "3.0.1",
+			published: false,
+		});
 	});
 
 	test("honors explicit minor and major manifest changes", async () => {

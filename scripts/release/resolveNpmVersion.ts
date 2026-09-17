@@ -18,7 +18,7 @@ export const resolveNpmVersion = async ({
 	if (!stableVersion.test(minimumVersion)) {
 		throw new Error(`Manifest version must be stable: ${minimumVersion}`);
 	}
-	const [major, minor, initialPatch] = minimumVersion.split(".").map(BigInt);
+	let nextVersion = minimumVersion;
 	const response = await ctx.fetch(
 		`https://registry.npmjs.org/${encodeURIComponent(packageName)}`,
 		{ signal: AbortSignal.timeout(30_000) },
@@ -44,8 +44,13 @@ export const resolveNpmVersion = async ({
 		if (!dryRun && stableVersion.test(version) && alreadyPublished) {
 			return { version, published: true };
 		}
+		if (
+			stableVersion.test(version) &&
+			Bun.semver.order(version, nextVersion) >= 0
+		) {
+			const [major, minor, patch] = version.split(".").map(BigInt);
+			nextVersion = `${major}.${minor}.${patch + 1n}`;
+		}
 	}
-	let patch = initialPatch;
-	while (Object.hasOwn(versions, `${major}.${minor}.${patch}`)) patch += 1n;
-	return { version: `${major}.${minor}.${patch}`, published: false };
+	return { version: nextVersion, published: false };
 };

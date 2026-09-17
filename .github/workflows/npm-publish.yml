@@ -59,6 +59,7 @@ jobs:
 
     concurrency:
       group: npm-publish-${{ inputs.publish-name-override || inputs.package-dir }}
+      queue: max
       cancel-in-progress: false
 
     permissions:
