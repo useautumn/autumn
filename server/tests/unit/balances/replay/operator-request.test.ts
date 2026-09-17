@@ -13,7 +13,7 @@ import {
 	createReadContextSpy,
 	EVENT_NAME_REFUSAL_REASON,
 	REPLAY_BASELINE,
-	unsupportedTrackDecision,
+	unsupportedCommandError,
 } from "./operator-fixture.js";
 import {
 	createNotInitializedError,
@@ -248,8 +248,8 @@ describe("executeReplayRequest", () => {
 	it("sends the planned command and refuses engine-unsupported decisions", async () => {
 		const { coordinator, trackCommands } = createFakeCoordinator({
 			onTrack: () =>
-				Promise.resolve(
-					unsupportedTrackDecision({ reason: "feature_not_found" }),
+				Promise.reject(
+					unsupportedCommandError({ reason: "feature_not_found" }),
 				),
 		});
 		const { readContext } = createReadContextSpy({ ctx: fixture.ctx });

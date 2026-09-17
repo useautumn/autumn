@@ -99,13 +99,13 @@ test.concurrent(
 			expect(await execute()).toBe(response);
 			expect(await delivered.promise).toMatchObject({
 				event: "completed",
-				shadow: { kind: "new", remaining: 67 },
+				shadow: { revision: 2, remaining: 67 },
 			});
 			delivered = Promise.withResolvers();
 			expect(await execute()).toBe(response);
 			expect(await delivered.promise).toMatchObject({
 				event: "completed",
-				shadow: { kind: "duplicate", remaining: 67 },
+				shadow: { revision: 2, remaining: 67 },
 			});
 			expect(
 				await runBalanceWorkerCheck({

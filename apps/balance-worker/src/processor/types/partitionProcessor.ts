@@ -1,11 +1,13 @@
 import type {
 	CheckCommand,
-	CheckDecision,
-	InitializationDecision,
-	InitializeCommand,
+	InitializeRequest,
 	TrackCommand,
-	TrackDecision,
 } from "@autumn/balance-engine";
+import type {
+	CheckReply,
+	InitializeReply,
+	TrackReply,
+} from "@autumn/balance-worker-client/protocol";
 import type { CatalogCache } from "../../catalog/types/catalogCache.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 import type { SubjectHydrator } from "../subject/types/subjectHydrator.js";
@@ -19,11 +21,9 @@ import type { ReceiptPolicy } from "./receiptPolicy.js";
 
 /** Processes one partition's accepted commands: track writes, check reads. */
 export type PartitionProcessor = {
-	track(params: { command: TrackCommand }): Promise<TrackDecision>;
-	check(params: { command: CheckCommand }): Promise<CheckDecision>;
-	initialize(params: {
-		command: InitializeCommand;
-	}): Promise<InitializationDecision>;
+	track(params: { command: TrackCommand }): Promise<TrackReply>;
+	check(params: { command: CheckCommand }): Promise<CheckReply>;
+	initialize(params: { request: InitializeRequest }): Promise<InitializeReply>;
 	/** Settles every accepted command; the runtime awaits this before disposal. */
 	drain(): Promise<void>;
 };

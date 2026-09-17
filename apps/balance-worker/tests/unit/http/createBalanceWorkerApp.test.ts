@@ -1,5 +1,6 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import {
+	applyMutation,
 	computeCheck,
 	computeTrack,
 	createSubjectState,
@@ -61,11 +62,15 @@ const state = createSubjectState({
 		}),
 	],
 });
-const decision = computeTrack({
+const mutation = computeTrack({
 	fullSubject: createSubjectFor({ state }),
 	command,
-	deduplicationExpiresAt: 1000,
 });
+if (mutation.result.type !== "track") throw new Error("Expected a track");
+const trackReply = {
+	result: mutation.result,
+	state: applyMutation({ state, mutation }),
+};
 const route = { partition: 2, routeEpoch: "9007199254740993" };
 const request = { route, command };
 const fixture = ({
@@ -90,10 +95,15 @@ const fixture = ({
 		track: async (params) => {
 			submitted.push(params);
 			if (cause) throw cause;
-			return decision;
+			return trackReply;
 		},
-		check: async ({ command }) =>
-			computeCheck({ fullSubject: createSubjectFor({ state }), command }),
+		check: async ({ command }) => ({
+			result: computeCheck({
+				fullSubject: createSubjectFor({ state }),
+				command,
+			}),
+			state,
+		}),
 		drain: async () => undefined,
 	};
 	const process: BalanceWorkerRequestContext["runtime"]["process"] = (run) =>
@@ -156,9 +166,8 @@ async function logsCompletedRequest(): Promise<void> {
 			featureId: "messages",
 			value: 2,
 			route,
-			decision: "new",
+			revision: 1,
 			status: "applied",
-			balanceAfter: 8,
 		},
 	});
 	expect(JSON.stringify(logs)).not.toContain("never-log-this");
@@ -237,7 +246,7 @@ async function preservesResponseOnLoggingFailure(): Promise<void> {
 	try {
 		const response = await post();
 		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({ decision });
+		expect(await response.json()).toEqual(trackReply);
 		expect(fallback).toHaveBeenCalledTimes(1);
 	} finally {
 		fallback.mockRestore();
@@ -245,11 +254,11 @@ async function preservesResponseOnLoggingFailure(): Promise<void> {
 }
 
 describe("Balance worker HTTP", () => {
-	test("returns the full committed decision without coercing the route epoch", async () => {
+	test("returns the committed response without coercing the route epoch", async () => {
 		const { post, submitted, lookups } = fixture();
 		const response = await post();
 		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({ decision });
+		expect(await response.json()).toEqual(trackReply);
 		expect(submitted).toEqual([{ command }]);
 		expect(lookups).toEqual([route]);
 	});
@@ -370,10 +379,10 @@ describe("Balance worker HTTP", () => {
 				const command = parseCheckCommand({
 					input: context.get("request").command,
 				});
-				const decision = await context
+				const checked = await context
 					.get("ctx")
 					.runtime.process((processor) => processor.check({ command }));
-				return context.json({ decision });
+				return context.json(checked);
 			},
 		);
 		const response = await app.request("/check", {
@@ -383,10 +392,11 @@ describe("Balance worker HTTP", () => {
 		});
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({
-			decision: computeCheck({
+			result: computeCheck({
 				fullSubject: createSubjectFor({ state }),
 				command: checkCommand,
 			}),
+			state,
 		});
 		expect(lookups).toEqual([route]);
 		expect(submitted).toEqual([]);

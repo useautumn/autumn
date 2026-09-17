@@ -6,16 +6,18 @@ import {
 	applyMutation,
 	computeTrack,
 	createSubjectState,
-	type InitializationDecision,
-	type InitializeCommand,
+	type InitializeRequest,
 	type MeteringIdentity,
 	meteringIdentityToPartitionKey,
 	parseTrackCommand,
 	type SubjectState,
 	type TrackCommand,
-	type TrackDecision,
-	trackCommandToFingerprint,
+	UnsupportedCommandError,
 } from "@autumn/balance-engine";
+import type {
+	InitializeReply,
+	TrackReply,
+} from "@autumn/balance-worker-client/protocol";
 import type { MeteringRecord } from "@autumn/kafka";
 import { initialize } from "../../../../src/processor/commands/initialize.js";
 import { track } from "../../../../src/processor/commands/track.js";
@@ -51,7 +53,7 @@ import {
 import {
 	applyDurableMutation,
 	createCustomerEntitlement,
-	createInitializeCommand,
+	createInitializeRequest,
 	createSubjectFor,
 	restoreSubjectStates,
 } from "../../../fixtures/mutations.js";
@@ -135,8 +137,8 @@ const createInitialization = ({
 	identity: MeteringIdentity;
 	commandId?: string;
 	balance?: number;
-}): InitializeCommand =>
-	createInitializeCommand({
+}): InitializeRequest =>
+	createInitializeRequest({
 		state: createState({ identity, balance }),
 		commandId,
 		requestId: commandId,
@@ -242,10 +244,10 @@ const defaultReceiptPolicy = {
 };
 
 type TestWriter = {
-	submitTrack(params: { command: TrackCommand }): Promise<TrackDecision>;
+	submitTrack(params: { command: TrackCommand }): Promise<TrackReply>;
 	submitInitialization(params: {
-		initialization: InitializeCommand;
-	}): Promise<InitializationDecision>;
+		initialization: InitializeRequest;
+	}): Promise<InitializeReply>;
 };
 
 const createPartitionTrackWriter = ({
@@ -264,7 +266,7 @@ const createPartitionTrackWriter = ({
 	receiptPolicy?: ReceiptPolicy;
 }): TestWriter => {
 	const writer = createPartitionWriterCore({
-		ctx: { stateStore, appender },
+		ctx: { stateStore, appender, receiptPolicy },
 		config: { topic, partition, limits },
 	});
 	const db = createSyntheticWorkerDb();
@@ -293,23 +295,19 @@ const createPartitionTrackWriter = ({
 	return {
 		submitTrack: ({ command }) => track({ scope, command }),
 		submitInitialization: ({ initialization }) =>
-			initialize({ scope, command: initialization }),
+			initialize({ scope, request: initialization }),
 	};
 };
 
 function decideForTest({
 	state,
 	command,
-}: MutateParams & { command: TrackCommand }): MutationResult<TrackDecision> {
+}: MutateParams & { command: TrackCommand }): MutationResult<never> {
 	if (!state) throw new Error("Expected projected state");
-	const decision = computeTrack({
+	const mutation = computeTrack({
 		fullSubject: createSubjectFor({ state }),
 		command,
-		deduplicationExpiresAt: 1_700_086_400_000,
 	});
-	if (decision.kind !== "new") return { kind: "reply", reply: decision };
-
-	const { mutation } = decision;
 	return {
 		kind: "write",
 		mutation,
@@ -335,10 +333,7 @@ describe("partition writer", () => {
 				command: createCommand({ commandId: "cmd_1" }),
 			});
 
-			expect(decision).toMatchObject({
-				kind: "new",
-				mutation: { receipt: { expiresAt: 1_700_086_400_000 } },
-			});
+			expect(decision).toMatchObject({ state: { revision: 1 } });
 			expect(appender.batches[0]?.[0]).toMatchObject({
 				receipt: { expiresAt: 1_700_086_400_000 },
 			});
@@ -365,14 +360,11 @@ describe("partition writer", () => {
 				writer.submitTrack({ command: createCommand({ commandId: "cmd_3" }) }),
 			]);
 
-			expect(decisions.map(({ kind }) => kind)).toEqual(["new", "new", "new"]);
-			expect(
-				decisions.map((decision) =>
-					decision.kind === "new" && decision.mutation.result.type === "track"
-						? decision.mutation.result.status
-						: null,
-				),
-			).toEqual(["applied", "applied", "rejected"]);
+			expect(decisions.map((decision) => decision.result.status)).toEqual([
+				"applied",
+				"applied",
+				"rejected",
+			]);
 			expect(appender.batches).toHaveLength(1);
 			expect(batchKeys(appender.batches[0])).toEqual([
 				"cmd_1",
@@ -514,9 +506,9 @@ describe("partition writer", () => {
 			).toMatchObject({ kind: "applied", nextOffset: 1n });
 
 			appender.resolve();
-			await expect(decisionPromise).resolves.toEqual({
-				kind: "new",
-				mutation,
+			await expect(decisionPromise).resolves.toMatchObject({
+				result: { type: "track" },
+				state: { revision: mutation.revision.after },
 			});
 			expect(
 				readBalance({ store: fixture.store, identity: firstIdentity }),
@@ -556,18 +548,15 @@ describe("partition writer", () => {
 			expect(appender.batches).toHaveLength(2);
 			expect(appender.batches[1]?.[0]).toMatchObject({
 				id: "cmd_2",
-				result: { status: "rejected", balanceBefore: 4 },
+				result: { status: "rejected" },
 			});
 			appender.resolve({ baseOffset: 1n });
 
 			const decisions = await Promise.all([firstPromise, secondPromise]);
-			expect(
-				decisions.map((decision) =>
-					decision.kind === "new" && decision.mutation.result.type === "track"
-						? decision.mutation.result.status
-						: null,
-				),
-			).toEqual(["applied", "rejected"]);
+			expect(decisions.map((decision) => decision.result.status)).toEqual([
+				"applied",
+				"rejected",
+			]);
 			expect(
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
@@ -604,14 +593,7 @@ describe("partition writer", () => {
 
 			if (firstDecision.status !== "fulfilled") throw firstDecision.reason;
 			if (retryDecision.status !== "fulfilled") throw retryDecision.reason;
-			expect(firstDecision.value.kind).toBe("new");
-			expect(retryDecision.value).toMatchObject({
-				kind: "duplicate",
-				mutation:
-					firstDecision.value.kind === "new"
-						? firstDecision.value.mutation
-						: undefined,
-			});
+			expect(retryDecision.value).toEqual(firstDecision.value);
 			expect(conflict.status).toBe("rejected");
 			if (conflict.status === "rejected") {
 				expect(conflict.reason).toBeInstanceOf(
@@ -812,8 +794,7 @@ describe("partition writer", () => {
 				firstPromise,
 				duplicatePromise,
 			]);
-			expect(firstDecision.kind).toBe("new");
-			expect(duplicateDecision.kind).toBe("duplicate");
+			expect(duplicateDecision).toEqual(firstDecision);
 			expect(appender.batches[0]).toHaveLength(1);
 		} finally {
 			closeFixture(fixture);
@@ -911,17 +892,16 @@ describe("partition writer", () => {
 				limits: defaultLimits,
 			});
 
-			const decision = await writer.submitTrack({
-				command: createCommand({
-					commandId: "cmd_1",
-					properties: { region: "eu" },
+			await expect(
+				writer.submitTrack({
+					command: createCommand({
+						commandId: "cmd_1",
+						properties: { region: "eu" },
+					}),
 				}),
-			});
-
-			expect(decision).toEqual({
-				kind: "unsupported",
-				reason: "properties_not_supported",
-			});
+			).rejects.toEqual(
+				new UnsupportedCommandError({ reason: "properties_not_supported" }),
+			);
 			expect(appender.batches).toHaveLength(0);
 		} finally {
 			closeFixture(fixture);
@@ -968,14 +948,12 @@ describe("partition writer", () => {
 				writer.submitTrack({ command: createCommand({ commandId: "cmd_1" }) }),
 			]);
 
-			expect(initialized).toMatchObject({ kind: "initialized" });
-			expect(tracked.kind).toBe("new");
-			expect(
-				tracked.kind === "new" ? tracked.mutation.result : null,
-			).toMatchObject({
+			expect(initialized).toMatchObject({
+				result: { status: "initialized", duplicate: false },
+			});
+			expect(tracked.result).toMatchObject({
 				status: "applied",
-				balanceBefore: 10,
-				balanceAfter: 5,
+				deltas: [{ id: "messages_monthly", valueDelta: -5 }],
 			});
 			expect(
 				appender.batches.flatMap((batch) => batchKeys(batch) ?? []),
@@ -1017,13 +995,16 @@ describe("partition writer", () => {
 				const decision = await replacementWriter.submitInitialization({
 					initialization: {
 						...initialization,
-						occurredAt: initialization.occurredAt + 1_000,
+						command: {
+							...initialization.command,
+							occurredAt: initialization.command.occurredAt + 1_000,
+						},
 					},
 				});
 
-				expect(decision).toEqual({
-					kind: "duplicate",
-					state: { ...initialization.state, revision: 1 },
+				expect(decision).toMatchObject({
+					result: { status: "initialized", duplicate: true },
+					state: { revision: 2 },
 				});
 				expect(appender.batches).toHaveLength(2);
 				expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
@@ -1075,11 +1056,8 @@ describe("partition writer", () => {
 						command: createCommand({ commandId: "after_conflict", value: 1 }),
 					}),
 				).resolves.toMatchObject({
-					kind: "new",
-					mutation: {
-						revision: { after: 3 },
-						result: { balanceAfter: 4 },
-					},
+					result: { status: "applied" },
+					state: { revision: 3, customerEntitlements: [{ balance: 4 }] },
 				});
 			} finally {
 				closeFixture(fixture);
@@ -1107,7 +1085,10 @@ describe("partition writer", () => {
 				}),
 			});
 
-			expect(decision).toEqual({ kind: "already_initialized" });
+			expect(decision).toMatchObject({
+				result: { status: "already_initialized", duplicate: false },
+				state: { revision: 0 },
+			});
 			expect(appender.batches).toHaveLength(0);
 			expect(
 				readBalance({ store: fixture.store, identity: firstIdentity }),
@@ -1150,16 +1131,16 @@ describe("partition writer", () => {
 
 			expect(first).toMatchObject({
 				status: "fulfilled",
-				value: { kind: "initialized" },
+				value: { result: { status: "initialized", duplicate: false } },
 			});
 			expect(duplicate).toMatchObject({
 				status: "fulfilled",
-				value: { kind: "duplicate" },
+				value: { result: { status: "initialized", duplicate: true } },
 			});
 			// The pending projection already exists, so a competing baseline never appends.
 			expect(competing).toMatchObject({
 				status: "fulfilled",
-				value: { kind: "already_initialized" },
+				value: { result: { status: "already_initialized" } },
 			});
 			// Same commandId with a different baseline is a caller bug.
 			expect(conflict).toMatchObject({
@@ -1206,7 +1187,7 @@ describe("partition writer", () => {
 			appender.resolve();
 			// The submitter wrote it; who applied the position first does not change that.
 			await expect(decisionPromise).resolves.toMatchObject({
-				kind: "initialized",
+				result: { status: "initialized" },
 				state: { revision: 1 },
 			});
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
@@ -1219,20 +1200,20 @@ describe("partition writer", () => {
 		try {
 			const appender = new ControlledCommittedAppender();
 			const writer = createPartitionWriterCore({
-				ctx: { stateStore: fixture.store, appender },
+				ctx: {
+					stateStore: fixture.store,
+					appender,
+					receiptPolicy: defaultReceiptPolicy,
+				},
 				config: { topic, partition, limits: defaultLimits },
 			});
 			const customerKey = meteringIdentityToPartitionKey({
 				identity: firstIdentity,
 			});
-			const submission = (
-				commandId: string,
-			): MutationSubmission<TrackDecision> => {
+			const submission = (commandId: string): MutationSubmission<never> => {
 				const command = createCommand({ commandId });
 				return {
-					identity: command.identity,
-					commandId,
-					fingerprint: trackCommandToFingerprint({ command }),
+					command,
 					mutate: ({ state }) => decideForTest({ state, command }),
 				};
 			};

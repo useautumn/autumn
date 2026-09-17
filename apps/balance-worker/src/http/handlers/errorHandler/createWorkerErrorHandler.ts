@@ -1,3 +1,4 @@
+import { UnsupportedCommandError } from "@autumn/balance-engine";
 import {
 	type WorkerErrorResponse,
 	WorkerProtocolError,
@@ -42,6 +43,13 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 		) {
 			status = 400;
 			error = { code: "INVALID_REQUEST", message: "Invalid worker request" };
+		} else if (cause instanceof UnsupportedCommandError) {
+			status = 400;
+			error = {
+				code: "UNSUPPORTED_COMMAND",
+				message: `The worker cannot decide this command: ${cause.reason}`,
+				reason: cause.reason,
+			};
 		} else if (
 			cause instanceof ConflictingMutationReceiptError ||
 			cause instanceof PartitionWriterCommandConflictError

@@ -1,7 +1,7 @@
 import {
 	type MeteringIdentity,
+	type MutationRecord,
 	meteringIdentityToPartitionKey,
-	type SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type { KafkaRecordPosition } from "../../types/kafkaRecordPosition.js";
 import type { StateStoreContext } from "../../types/stateStoreContext.js";
@@ -40,7 +40,7 @@ const receiptWriteParamsOf = ({
 }: {
 	partitionKey: string;
 	position: KafkaRecordPosition;
-	mutation: SubjectStateMutation;
+	mutation: MutationRecord;
 }): ReceiptWriteParams => ({
 	partitionKey,
 	mutationId: mutation.id,
@@ -111,7 +111,7 @@ export const insertReceipt = ({
 	ctx: StateStoreContext;
 	partitionKey: string;
 	position: KafkaRecordPosition;
-	mutation: SubjectStateMutation;
+	mutation: MutationRecord;
 }) => {
 	ctx.sqliteDb
 		.query<never, ReceiptWriteParams>(`
@@ -149,7 +149,7 @@ export const updateReceipt = ({
 	ctx: StateStoreContext;
 	partitionKey: string;
 	position: KafkaRecordPosition;
-	mutation: SubjectStateMutation;
+	mutation: MutationRecord;
 }) =>
 	ctx.sqliteDb
 		.query<never, ReceiptWriteParams>(`

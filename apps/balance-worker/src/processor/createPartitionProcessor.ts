@@ -1,6 +1,6 @@
 import type {
 	CheckCommand,
-	InitializeCommand,
+	InitializeRequest,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import { check as checkPartition } from "./commands/check.js";
@@ -31,6 +31,7 @@ export function createPartitionProcessor({
 		ctx: {
 			stateStore: dependencies.stateStore,
 			appender: dependencies.appender,
+			receiptPolicy: dependencies.receiptPolicy,
 		},
 		config: {
 			topic: config.topic,
@@ -69,10 +70,10 @@ export function createPartitionProcessor({
 		return settleAcceptedCommands({ accepted: scope.accepted });
 	}
 
-	function initialize({ command }: { command: InitializeCommand }) {
+	function initialize({ request }: { request: InitializeRequest }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: initializePartition({ scope, command }),
+			operation: initializePartition({ scope, request }),
 		});
 	}
 

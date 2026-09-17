@@ -1,5 +1,5 @@
 import { parseTrackCommand } from "@autumn/balance-engine";
-import type { BalanceWorkerTrackResponse } from "@autumn/balance-worker-client/protocol";
+import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import type { Context } from "hono";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
@@ -15,7 +15,7 @@ export async function receiveTrack(context: Context<BalanceWorkerHttpEnv>) {
 		return processor.track({ command: parsedCommand });
 	}
 
-	const decision = await ctx.runtime.process(runTrack);
-	requestLog.decision = decision;
-	return context.json({ decision } satisfies BalanceWorkerTrackResponse);
+	const response = await ctx.runtime.process(runTrack);
+	requestLog.response = response;
+	return context.json(response satisfies TrackReply);
 }

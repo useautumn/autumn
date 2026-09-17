@@ -1,14 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import {
 	createSubjectState,
+	type MutationRecord,
 	type SubjectState,
-	type SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
 import { ensureSubjectState } from "../../../../src/processor/subject/actions/ensureSubject/ensureSubjectState.js";
 import { SubjectNotFoundError } from "../../../../src/processor/subject/subjectErrors.js";
 import type { SubjectScope } from "../../../../src/processor/subject/types/subject.js";
+import { commandToFingerprint } from "../../../../src/processor/writer/receipt/commandToFingerprint.js";
+import { mutationToRecord } from "../../../../src/processor/writer/receipt/mutationToRecord.js";
 import type { MutationSubmission } from "../../../../src/processor/writer/types/mutation.js";
 import { createTestCatalogCache } from "../../../fixtures/catalog.js";
 
@@ -36,18 +38,25 @@ const emptyEnvelope: SubjectRowsEnvelope = {
 /** Applies `mutate` against the held state and commits synchronously, the way the real writer does minus Kafka. */
 const createFakeWriter = ({ initial }: { initial: SubjectState | null }) => {
 	let state = initial;
-	const committed: SubjectStateMutation[] = [];
+	const committed: MutationRecord[] = [];
 	const decide = <Reply>(submission: MutationSubmission<Reply>) => {
 		const result = submission.mutate({ state });
 		if (result.kind === "reply") {
 			return { waitForCommit: async () => result.reply };
 		}
-		state = result.nextState;
-		committed.push(result.mutation);
+		const { nextState } = result;
+		state = nextState;
+		const record = mutationToRecord({
+			mutation: result.mutation,
+			fingerprint: commandToFingerprint({ command: submission.command }),
+			receiptPolicy: { retentionMs: 60_000, now: () => 1_700_000_000_000 },
+		});
+		committed.push(record);
 		return {
 			waitForCommit: async () => ({
 				kind: "new" as const,
-				mutation: result.mutation,
+				mutation: record,
+				state: nextState,
 			}),
 		};
 	};

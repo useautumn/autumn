@@ -3,11 +3,12 @@ import type { TrackCommand } from "@autumn/balance-engine";
 import {
 	createSubjectState,
 	parseCheckCommand,
-	parseInitializeCommand,
+	parseInitializeRequest,
 } from "@autumn/balance-engine";
 import {
 	createBalanceWorkerClient,
 	type PartitionOwner,
+	type TrackReply,
 } from "../src/balanceWorkerClient.js";
 import type {
 	HttpRequest,
@@ -31,8 +32,39 @@ const command: TrackCommand = {
 	properties: null,
 	occurredAt: 0,
 };
-const decision = { kind: "unsupported", reason: "feature_not_found" } as const;
-const success = { status: 200, body: { decision } };
+const initialState = createSubjectState({
+	identity: command.identity,
+	customerEntitlements: [
+		{
+			id: "grant",
+			customer_product_id: null,
+			entitlement_id: "ent_grant",
+			internal_customer_id: "cus_internal",
+			internal_entity_id: null,
+			internal_feature_id: "feat_feature",
+			balance: 10,
+			adjustment: 0,
+			additional_balance: 0,
+			unlimited: false,
+			usage_allowed: false,
+			next_reset_at: null,
+			reset_cycle_anchor: null,
+			expires_at: null,
+			external_id: null,
+			created_at: 0,
+		},
+	],
+});
+const trackReply: TrackReply = {
+	state: initialState,
+	result: {
+		type: "track",
+		status: "applied",
+		reason: null,
+		deltas: [],
+	},
+};
+const success = { status: 200, body: trackReply };
 const stale = {
 	status: 409,
 	body: { error: { code: "NOT_OWNER", message: "Stale route" } },
@@ -96,7 +128,7 @@ function createFixture({
 
 async function usesCachedOwner(): Promise<void> {
 	const fixture = createFixture();
-	expect(await fixture.client.track({ command })).toBe(decision);
+	expect(await fixture.client.track({ command })).toBe(trackReply);
 	expect(fixture.stats()).toEqual({
 		refreshes: 0,
 		requests: [
@@ -110,7 +142,7 @@ async function usesCachedOwner(): Promise<void> {
 
 async function reroutesOnce(): Promise<void> {
 	const fixture = createFixture({ responses: [stale, success] });
-	expect(await fixture.client.track({ command })).toEqual(decision);
+	expect(await fixture.client.track({ command })).toEqual(trackReply);
 	expect(fixture.stats().refreshes).toBe(1);
 	expect(fixture.stats().requests[1]).toEqual({
 		url: "http://worker-b:8080/v1/track",
@@ -284,47 +316,30 @@ test(
 );
 test("a canceled request never sends", respectsCallerCancellation);
 
-const initialState = createSubjectState({
-	identity: command.identity,
-	customerEntitlements: [
-		{
-			id: "grant",
-			customer_product_id: null,
-			entitlement_id: "ent_grant",
-			internal_customer_id: "cus_internal",
-			internal_entity_id: null,
-			internal_feature_id: "feat_feature",
-			balance: 10,
-			adjustment: 0,
-			additional_balance: 0,
-			unlimited: false,
-			usage_allowed: false,
-			next_reset_at: null,
-			reset_cycle_anchor: null,
-			expires_at: null,
-			external_id: null,
-			created_at: 0,
-		},
-	],
-});
 const grantOf = (state: typeof initialState) => {
 	const grant = state.customerEntitlements.find((row) => row.id === "grant");
 	if (!grant) throw new Error("Fixture state must hold the grant");
 	return grant;
 };
 
-const initializeCommand = parseInitializeCommand({
+const initializeRequest = parseInitializeRequest({
 	input: {
-		schemaVersion: 1,
-		type: "initialize",
-		requestId: "initialize",
-		commandId: "baseline",
-		identity: command.identity,
+		command: {
+			schemaVersion: 1,
+			type: "initialize",
+			requestId: "initialize",
+			commandId: "baseline",
+			identity: command.identity,
+			occurredAt: 0,
+		},
 		state: initialState,
 		catalogRows: [],
-		occurredAt: 0,
 	},
 });
+const initializeEnvelope = {
+	command: initializeRequest.command,
+	payload: { state: initialState, catalogRows: [] },
+};
 const checkCommand = parseCheckCommand({
 	input: {
 		schemaVersion: 1,
@@ -341,24 +356,22 @@ const checkCommand = parseCheckCommand({
 test.concurrent(
 	"initialize and check use the existing owner routing envelope",
 	async () => {
-		const initialized = { kind: "initialized" as const, state: initialState };
+		const initialized = {
+			result: { status: "initialized" as const, duplicate: false },
+			state: initialState,
+		};
 		const checked = {
-			kind: "decided" as const,
-			allowed: true,
-			reason: null,
-			balance: 10,
-			requiredBalance: 1,
-			revision: 0,
-			customerEntitlement: grantOf(initialState),
+			result: { allowed: true, reason: null, requiredBalance: 1 },
+			state: initialState,
 		};
 		const fixture = createFixture({
 			responses: [
-				{ status: 200, body: { decision: initialized } },
-				{ status: 200, body: { decision: checked } },
+				{ status: 200, body: initialized },
+				{ status: 200, body: checked },
 			],
 		});
 		expect(
-			await fixture.client.initialize({ command: initializeCommand }),
+			await fixture.client.initialize({ request: initializeRequest }),
 		).toEqual(initialized);
 		expect(await fixture.client.check({ command: checkCommand })).toEqual(
 			checked,
@@ -370,7 +383,7 @@ test.concurrent(
 					url: "http://worker-a:8080/v1/initialize",
 					body: {
 						route: { partition: 0, routeEpoch: "1" },
-						command: initializeCommand,
+						...initializeEnvelope,
 					},
 				},
 				{
@@ -394,23 +407,25 @@ test.concurrent(
 				stale,
 				{
 					status: 200,
-					body: { decision: { kind: "duplicate", state: initialState } },
+					body: {
+						result: { status: "initialized", duplicate: true },
+						state: initialState,
+					},
 				},
 			],
 			refreshGate: gate.promise,
 		});
-		const input = structuredClone(initializeCommand);
-		const pending = fixture.client.initialize({ command: input });
+		const input = structuredClone(initializeRequest);
+		const pending = fixture.client.initialize({ request: input });
 		await fixture.refreshed;
 		const grant = grantOf(input.state);
 		if (grant) grant.balance = 999;
 		gate.resolve();
 		expect(await pending).toMatchObject({
-			kind: "duplicate",
-			state: initialState,
+			result: { status: "initialized", duplicate: true },
 		});
 		for (const request of fixture.stats().requests)
-			expect(request.body).toMatchObject({ command: initializeCommand });
+			expect(request.body).toMatchObject(initializeEnvelope);
 		expect(fixture.stats().requests[1].url).toBe(
 			"http://worker-b:8080/v1/initialize",
 		);
@@ -434,7 +449,7 @@ test.concurrent(
 			const request =
 				workerCode === "NOT_INITIALIZED"
 					? fixture.client.check({ command: checkCommand })
-					: fixture.client.initialize({ command: initializeCommand });
+					: fixture.client.initialize({ request: initializeRequest });
 			await expect(request).rejects.toMatchObject({
 				code: "WORKER_ERROR",
 				workerCode,
@@ -451,7 +466,7 @@ async function preservesBodyTimeoutAmbiguity(): Promise<void> {
 	function start(
 		controller: ReadableStreamDefaultController<Uint8Array>,
 	): void {
-		controller.enqueue(new TextEncoder().encode('{"decision":'));
+		controller.enqueue(new TextEncoder().encode('{"result":'));
 	}
 	function receive(): Response {
 		requests++;

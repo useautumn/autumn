@@ -1,10 +1,11 @@
 import type {
 	MeteringIdentity,
+	MutationRecord,
 	SubjectState,
-	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import type { StateStore } from "../../../state/types/stateStore.js";
+import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 import type {
 	CommittedMutation,
 	DecidedMutation,
@@ -40,6 +41,8 @@ export type PartitionWriterContext = {
 		"readState" | "readOwnState" | "readReceipt" | "applyDurableMutations"
 	>;
 	appender: CommittedOutcomeAppender;
+	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */
+	receiptPolicy: ReceiptPolicy;
 };
 
 export type PartitionWriterLimits = {
@@ -57,7 +60,7 @@ export type PartitionWriterConfig = {
 /** Callers waiting on one queued mutation; the writer is "new", joiners are "duplicate". */
 export type PendingSettlement = {
 	join(params: { kind: CommittedMutation["kind"] }): Promise<CommittedMutation>;
-	settle(params: { mutation: SubjectStateMutation }): void;
+	settle(params: { mutation: MutationRecord; state: SubjectState }): void;
 	reject(params: { error: unknown }): void;
 };
 
@@ -66,7 +69,9 @@ export type PendingMutation = {
 	customerKey: string;
 	/** The states this mutation's projection wrote, released with the customer's last pending mutation. */
 	projectedSubjectKeys: string[];
-	mutation: SubjectStateMutation;
+	mutation: MutationRecord;
+	/** The subject's rows once this mutation is applied. */
+	nextState: SubjectState;
 	settlement: PendingSettlement;
 	/** What `waitForPendingCommits()` snapshots for this customer. */
 	committed: Promise<CommittedMutation>;

@@ -265,7 +265,7 @@ describe("owned partition checkpoints", () => {
 					}),
 				}),
 			);
-			expect(decision.kind).toBe("new");
+			expect(decision.result.type).toBe("track");
 			const check = await runtime.process((processor) =>
 				processor.check({
 					command: parseCheckCommand({
@@ -282,7 +282,10 @@ describe("owned partition checkpoints", () => {
 					}),
 				}),
 			);
-			expect(check).toMatchObject({ allowed: true, balance: 5 });
+			expect(check).toMatchObject({
+				result: { allowed: true },
+				state: { customerEntitlements: [{ balance: 5 }] },
+			});
 		} finally {
 			await runtime.stop();
 			await fixture.close();

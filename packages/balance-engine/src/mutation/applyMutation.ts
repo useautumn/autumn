@@ -3,25 +3,28 @@ import {
 	OutOfOrderMutationError,
 	SubjectStateMissingError,
 } from "../errors.js";
-import type { SubjectState } from "../models/subjectState.js";
-import type { SubjectStateMutation } from "../models/subjectStateMutation.js";
+import type { SubjectStateMutation } from "../models/mutation/subjectStateMutation.js";
+import type { SubjectState } from "../models/subject/subjectState.js";
 import { isSameCustomerIdentity } from "../utils/identityUtils/classifyIdentityUtils.js";
 import { applyChanges } from "./applyChanges.js";
 
-/** Only an initialize can start a state: it is the mutation that names the subject. */
+/** Only an initialize can start a state: it is the mutation that inserts the customer row. */
 const emptyStateFor = ({
 	mutation,
 }: {
 	mutation: SubjectStateMutation;
 }): SubjectState => {
-	if (mutation.command.type !== "initialize") {
+	const customerInsert = mutation.changes.find(
+		(change) => change.table === "customer",
+	);
+	if (mutation.command.type !== "initialize" || !customerInsert) {
 		throw new SubjectStateMissingError();
 	}
 	return {
 		schemaVersion: 1,
 		identity: mutation.identity,
 		revision: 0,
-		customer: mutation.command.customer,
+		customer: customerInsert.row,
 		customerProducts: [],
 		customerEntitlements: [],
 		rollovers: [],
@@ -62,11 +65,6 @@ export const applyMutation = ({
 		state: currentState,
 		changes: mutation.changes,
 	});
-	// The entity is not a table row: the initialize that admits it names it once.
-	const entity =
-		mutation.command.type === "initialize"
-			? mutation.command.entity
-			: currentState.entity;
 
-	return { ...changedState, entity, revision: mutation.revision.after };
+	return { ...changedState, revision: mutation.revision.after };
 };

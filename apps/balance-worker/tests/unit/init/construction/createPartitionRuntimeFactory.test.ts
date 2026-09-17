@@ -138,8 +138,7 @@ describe("Kafka owned partition runtime factory", () => {
 				expect(fixture.store.readState({ identity })?.revision).toBe(0);
 				releaseCommit.resolve();
 				await expect(pending).resolves.toMatchObject({
-					kind: "new",
-					mutation: { result: { status: "applied" } },
+					result: { status: "applied" },
 				});
 				expect(logs).toHaveLength(2);
 				for (const [index, phase, result] of [
@@ -162,7 +161,7 @@ describe("Kafka owned partition runtime factory", () => {
 				expect(fixture.store.readState({ identity })?.revision).toBe(1);
 				await expect(
 					runtime.process((processor) => processor.track({ command })),
-				).resolves.toMatchObject({ kind: "duplicate" });
+				).resolves.toMatchObject({ result: { status: "applied" } });
 				expect(logs).toHaveLength(2);
 				expect(JSON.stringify(logs)).not.toContain("private_command");
 				expect(JSON.stringify(logs)).not.toContain(identity.customerId);

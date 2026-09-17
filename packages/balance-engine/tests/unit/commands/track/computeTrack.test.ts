@@ -1,39 +1,31 @@
 import { describe, expect, test } from "bun:test";
 import {
-	computeTrack as computeTrackDecision,
+	computeTrack as computeTrackMutation,
 	type SubjectState,
 	type SubjectStateMutation,
-	trackCommandToFingerprint,
-	validateTrackMutation,
+	UnsupportedCommandError,
 } from "../../../../src/balanceEngine.js";
 import {
-	createCustomerEntitlement,
 	createState,
 	createSubjectFor,
 	createTrackCommand,
-	deduplicationExpiresAt,
 	identity,
-	requireNewMutation,
 	trackResultOf,
 } from "../../engineFixtures.js";
 
 type TrackInput = {
 	state: SubjectState;
-	command: Parameters<typeof computeTrackDecision>[0]["command"];
+	command: Parameters<typeof computeTrackMutation>[0]["command"];
 };
 
-const computeTrack = ({ state, command }: TrackInput) =>
-	computeTrackDecision({
+const trackMutation = ({ state, command }: TrackInput) =>
+	computeTrackMutation({
 		fullSubject: createSubjectFor({
 			state,
 			entityId: command.identity.entityId,
 		}),
 		command,
-		deduplicationExpiresAt,
 	});
-
-const trackMutation = (input: TrackInput) =>
-	requireNewMutation(computeTrack(input));
 
 const updateChangesOf = ({ mutation }: { mutation: SubjectStateMutation }) =>
 	mutation.changes.map((change) =>
@@ -57,14 +49,20 @@ describe("track computation", () => {
 				after: { balance: 95 },
 			},
 		]);
-		expect(trackResultOf({ mutation })).toMatchObject({
+		expect(trackResultOf({ mutation })).toEqual({
+			type: "track",
 			status: "applied",
 			reason: null,
-			requestedValue: 5,
-			appliedValue: 5,
-			balanceBefore: 100,
-			balanceAfter: 95,
-			customerEntitlement: { id: "messages_monthly", balance: 95 },
+			deltas: [
+				{
+					table: "customerEntitlements",
+					id: "messages_monthly",
+					balanceDelta: -5,
+					usageDelta: 0,
+					valueDelta: -5,
+					creditCost: 1,
+				},
+			],
 		});
 	});
 
@@ -83,8 +81,7 @@ describe("track computation", () => {
 		]);
 		expect(trackResultOf({ mutation })).toMatchObject({
 			status: "applied",
-			appliedValue: 3,
-			balanceAfter: 0,
+			deltas: [{ id: "messages_monthly", valueDelta: -3 }],
 		});
 	});
 
@@ -95,13 +92,11 @@ describe("track computation", () => {
 		});
 
 		expect(mutation.changes).toEqual([]);
-		expect(trackResultOf({ mutation })).toMatchObject({
+		expect(trackResultOf({ mutation })).toEqual({
+			type: "track",
 			status: "rejected",
 			reason: "insufficient_balance",
-			appliedValue: 0,
-			balanceBefore: 3,
-			balanceAfter: 3,
-			customerEntitlement: { balance: 3 },
+			deltas: [],
 		});
 	});
 
@@ -118,145 +113,54 @@ describe("track computation", () => {
 				after: { balance: -2 },
 			},
 		]);
+		// The included bucket gives what it has, then the overage bucket takes the row negative.
 		expect(trackResultOf({ mutation })).toMatchObject({
 			status: "applied",
-			appliedValue: 5,
-			balanceAfter: -2,
+			deltas: [
+				{ id: "messages_monthly", balanceDelta: -3, valueDelta: -3 },
+				{ id: "messages_monthly", balanceDelta: -2, valueDelta: -2 },
+			],
 		});
 	});
 
-	test.concurrent("names every input outside the supported path", () => {
+	test.concurrent("refuses every input outside the supported path", () => {
 		const otherSubjectState = createState();
 		const commandForOtherCustomer = {
 			...createTrackCommand(),
 			identity: { ...identity, customerId: "cus_2" },
 		};
 
-		expect(
-			computeTrack({
+		expect(() =>
+			trackMutation({
 				state: otherSubjectState,
 				command: commandForOtherCustomer,
 			}),
-		).toEqual({ kind: "unsupported", reason: "subject_mismatch" });
-		expect(
-			computeTrack({
+		).toThrow(new UnsupportedCommandError({ reason: "subject_mismatch" }));
+		expect(() =>
+			trackMutation({
 				state: createState(),
 				command: createTrackCommand({ entityId: "entity_1" }),
 			}),
-		).toEqual({ kind: "unsupported", reason: "entity_not_found" });
-		expect(
-			computeTrack({
+		).toThrow(new UnsupportedCommandError({ reason: "entity_not_found" }));
+		expect(() =>
+			trackMutation({
 				state: createState(),
 				command: createTrackCommand({ properties: { region: "eu" } }),
 			}),
-		).toEqual({ kind: "unsupported", reason: "properties_not_supported" });
-		expect(
-			computeTrack({
-				state: createState(),
-				command: createTrackCommand({ value: -1 }),
-			}),
-		).toEqual({ kind: "unsupported", reason: "refund_not_supported" });
-		expect(
-			computeTrack({
+		).toThrow(
+			new UnsupportedCommandError({ reason: "properties_not_supported" }),
+		);
+		expect(() =>
+			trackMutation({
 				state: createState({ customerEntitlements: [] }),
 				command: createTrackCommand(),
 			}),
-		).toEqual({ kind: "unsupported", reason: "feature_not_found" });
-		expect(
-			computeTrack({
+		).toThrow(new UnsupportedCommandError({ reason: "feature_not_found" }));
+		expect(() =>
+			trackMutation({
 				state: createState(),
 				command: createTrackCommand({ featureId: "constructor" }),
 			}),
-		).toEqual({ kind: "unsupported", reason: "feature_not_found" });
-		expect(
-			computeTrack({
-				state: createState({
-					customerEntitlements: [
-						createCustomerEntitlement({ id: "messages_monthly", balance: 5 }),
-						createCustomerEntitlement({ id: "messages_rollover", balance: 5 }),
-					],
-				}),
-				command: createTrackCommand(),
-			}),
-		).toEqual({
-			kind: "unsupported",
-			reason: "multiple_customer_entitlements_not_supported",
-		});
+		).toThrow(new UnsupportedCommandError({ reason: "feature_not_found" }));
 	});
-
-	test.concurrent("fingerprints the command a writer can dedup on", () => {
-		const command = createTrackCommand();
-		const mutation = trackMutation({ state: createState(), command });
-		const retriedCommand = createTrackCommand({
-			commandId: command.commandId,
-			requestId: "req_retry",
-		});
-
-		expect(mutation.receipt).toEqual({
-			fingerprint: trackCommandToFingerprint({ command }),
-			expiresAt: deduplicationExpiresAt,
-		});
-		expect(
-			trackMutation({ state: createState(), command: retriedCommand }).receipt
-				.fingerprint,
-		).toBe(mutation.receipt.fingerprint);
-		expect(
-			trackCommandToFingerprint({
-				command: createTrackCommand({ value: 6 }),
-			}),
-		).not.toBe(mutation.receipt.fingerprint);
-	});
-
-	test.concurrent(
-		"refuses a mutation whose result contradicts its changes",
-		() => {
-			const mutation = trackMutation({
-				state: createState(),
-				command: createTrackCommand(),
-			});
-			const result = trackResultOf({ mutation });
-
-			expect(() => validateTrackMutation({ mutation })).not.toThrow();
-			expect(() =>
-				validateTrackMutation({
-					mutation: { ...mutation, result: { ...result, appliedValue: 4 } },
-				}),
-			).toThrow("Invalid track mutation");
-			expect(() =>
-				validateTrackMutation({
-					mutation: { ...mutation, result: { ...result, balanceAfter: 6 } },
-				}),
-			).toThrow("Invalid track mutation");
-			expect(() =>
-				validateTrackMutation({
-					mutation: {
-						...mutation,
-						changes: [
-							{
-								table: "customerEntitlements",
-								op: "update",
-								id: "messages_monthly",
-								before: { balance: 10 },
-								after: { balance: 6 },
-							},
-						],
-					},
-				}),
-			).toThrow("Invalid track mutation");
-			expect(() =>
-				validateTrackMutation({
-					mutation: {
-						...mutation,
-						changes: [
-							{
-								table: "customerEntitlements",
-								op: "insert",
-								row: createCustomerEntitlement(),
-							},
-						],
-					},
-				}),
-			).toThrow("Invalid track mutation");
-		},
-	);
 });

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { rowChangeSchema } from "../../../src/models/rowChange.js";
+import { rowChangeSchema } from "../../../src/models/mutation/rowChange.js";
 
 describe("row change", () => {
 	test("an update names only the columns it touches; defaults never fill the rest", () => {

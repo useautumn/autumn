@@ -15,6 +15,8 @@ export class BalanceWorkerClientError extends Error {
 	readonly code: BalanceWorkerClientErrorCode;
 	readonly outcome: WorkerRequestOutcome;
 	readonly workerCode?: WorkerErrorCode;
+	/** The worker's own word for an UNSUPPORTED_COMMAND, e.g. "feature_not_found". */
+	readonly workerReason?: string;
 
 	constructor({
 		code,
@@ -22,17 +24,20 @@ export class BalanceWorkerClientError extends Error {
 		message,
 		cause,
 		workerCode,
+		workerReason,
 	}: {
 		code: BalanceWorkerClientErrorCode;
 		outcome: WorkerRequestOutcome;
 		message: string;
 		cause?: unknown;
 		workerCode?: WorkerErrorCode;
+		workerReason?: string;
 	}) {
 		super(message, { cause });
 		this.name = "BalanceWorkerClientError";
 		this.code = code;
 		this.outcome = outcome;
 		this.workerCode = workerCode;
+		this.workerReason = workerReason;
 	}
 }

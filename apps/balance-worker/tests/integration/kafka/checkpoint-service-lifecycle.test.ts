@@ -15,8 +15,8 @@ test.concurrent(
 				command: fixture.command({ commandId: "checkpointed", value: 5 }),
 			});
 			expect(firstTrack).toMatchObject({
-				kind: "new",
-				mutation: { result: { balanceAfter: 5 } },
+				result: { status: "applied" },
+				state: { customerEntitlements: [{ balance: 5 }] },
 			});
 			await waitForCheckpointService({
 				ready: async () => {
@@ -34,7 +34,9 @@ test.concurrent(
 			const tailOwner = await fixture.start({ mode: "restore_only" });
 			const command = fixture.command({ commandId: "replayed-tail", value: 3 });
 			const tail = await fixture.client.track({ command });
-			expect(tail).toMatchObject({ kind: "new", outcome: { balanceAfter: 2 } });
+			expect(tail).toMatchObject({
+				state: { customerEntitlements: [{ balance: 2 }] },
+			});
 			await tailOwner.service.stop();
 			expect((await fixture.latest())?.contentHash).toBe(
 				checkpoint.contentHash,
@@ -61,12 +63,9 @@ test.concurrent(
 			});
 			const retry = await fixture.client.track({ command });
 			expect(retry).toMatchObject({
-				kind: "duplicate",
-				mutation: { result: { balanceAfter: 2 } },
+				state: { customerEntitlements: [{ balance: 2 }] },
 			});
-			if (tail.kind !== "new" || retry.kind !== "duplicate")
-				throw new Error("Expected original and replayed mutations");
-			expect(retry.mutation).toEqual(tail.mutation);
+			expect(retry).toEqual(tail);
 			const database = new Database(replacement.databasePath, {
 				readonly: true,
 			});
@@ -110,8 +109,7 @@ test.concurrent.each(["restore_only", "enabled"] as const)(
 				value: 5,
 			});
 			expect(await fixture.client.track({ command })).toMatchObject({
-				kind: "new",
-				outcome: { balanceAfter: 5 },
+				state: { customerEntitlements: [{ balance: 5 }] },
 			});
 			await first.service.stop();
 			await fixture.start({
@@ -120,14 +118,13 @@ test.concurrent.each(["restore_only", "enabled"] as const)(
 			});
 			expect(requests).toBe(0);
 			expect(await fixture.client.track({ command })).toMatchObject({
-				kind: "duplicate",
-				outcome: { balanceAfter: 5 },
+				state: { customerEntitlements: [{ balance: 5 }] },
 			});
 			expect(
 				await fixture.client.track({
 					command: fixture.command({ commandId: "during-outage", value: 3 }),
 				}),
-			).toMatchObject({ kind: "new", outcome: { balanceAfter: 2 } });
+			).toMatchObject({ state: { customerEntitlements: [{ balance: 2 }] } });
 			expect(fixture.errors).toEqual([]);
 		} finally {
 			await fixture.close();

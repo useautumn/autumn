@@ -14,28 +14,20 @@ import {
 	createCustomerEntitlement,
 	createCustomerProduct,
 	createEntityState,
-	createInitializeCommand,
+	createInitializeRequest,
 	createState,
 	createSubjectFor,
 	createTrackCommand,
-	deduplicationExpiresAt,
 	identity,
-	requireNewMutation,
 } from "../engineFixtures.js";
 
-const initializeMutation = computeInitialize({
-	command: createInitializeCommand(),
-	deduplicationExpiresAt,
-});
+const initializeMutation = computeInitialize(createInitializeRequest());
 
 const trackMutationOn = ({ state }: { state: SubjectState }) =>
-	requireNewMutation(
-		computeTrack({
-			fullSubject: createSubjectFor({ state }),
-			command: createTrackCommand(),
-			deduplicationExpiresAt,
-		}),
-	);
+	computeTrack({
+		fullSubject: createSubjectFor({ state }),
+		command: createTrackCommand(),
+	});
 
 const withChanges = ({
 	mutation,
@@ -101,13 +93,10 @@ describe("mutation application", () => {
 			customerProducts: [createCustomerProduct()],
 			customerEntitlements: [createCustomerEntitlement()],
 		});
-		const otherMutation = requireNewMutation(
-			computeTrack({
-				fullSubject: createSubjectFor({ state: otherState }),
-				command: { ...createTrackCommand(), identity: otherIdentity },
-				deduplicationExpiresAt,
-			}),
-		);
+		const otherMutation = computeTrack({
+			fullSubject: createSubjectFor({ state: otherState }),
+			command: { ...createTrackCommand(), identity: otherIdentity },
+		});
 
 		expect(() =>
 			applyMutation({ state: createState(), mutation: otherMutation }),
@@ -128,9 +117,8 @@ describe("mutation application", () => {
 		() => {
 			const state = { ...createState(), revision: 4 };
 			const mutation = computeInitialize({
-				command: createInitializeCommand({ state: createEntityState() }),
+				...createInitializeRequest({ state: createEntityState() }),
 				revisionBefore: 4,
-				deduplicationExpiresAt,
 			});
 
 			const next = applyMutation({ state, mutation });

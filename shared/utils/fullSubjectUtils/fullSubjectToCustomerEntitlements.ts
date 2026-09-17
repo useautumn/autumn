@@ -1,9 +1,9 @@
 import { isEntityCusEnt } from "../../index.js";
 import type { CustomerEntitlementFilters } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type {
-	FullCustomerEntitlementView,
-	FullCusProductView,
 	FullCusEntWithFullCusProductView,
+	FullCusProductView,
+	FullCustomerEntitlementView,
 	FullSubjectView,
 } from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
@@ -25,6 +25,7 @@ export const fullSubjectToCustomerEntitlements = <
 	featureIds,
 	fundsFeatureId,
 	customerEntitlementFilters,
+	now = Date.now(),
 }: {
 	fullSubject: FullSubjectView<CE, CP>;
 	inStatuses?: CusProductStatus[];
@@ -34,6 +35,8 @@ export const fullSubjectToCustomerEntitlements = <
 	 * else catalog) — per cusEnt, unlike the per-feature featureIds filter. */
 	fundsFeatureId?: string;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
+	/** Expiry is judged against this instant; a replayed command passes its own. */
+	now?: number;
 }) => {
 	type Selected = FullCusEntWithFullCusProductView<
 		CE,
@@ -96,7 +99,6 @@ export const fullSubjectToCustomerEntitlements = <
 		}),
 	);
 
-	const now = Date.now();
 	customerEntitlements = customerEntitlements.filter(
 		(customerEntitlement) =>
 			!isCusEntExpired({ cusEnt: customerEntitlement, now }),

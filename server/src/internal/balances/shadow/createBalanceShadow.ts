@@ -1,23 +1,26 @@
-import {
-	isUnsupportedDecision,
-	meteringIdentityToPartitionKey,
-	type TrackDecision,
-} from "@autumn/balance-engine";
+import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
+import type { TrackReply } from "@autumn/balance-worker-client";
 import type {
 	BalanceShadow,
 	BalanceShadowDependencies,
 	BalanceShadowTrack,
 } from "./balanceShadowTypes.js";
 
-function summarizeDecision({ decision }: { decision: TrackDecision }) {
-	if (isUnsupportedDecision(decision)) return decision;
-	const { result } = decision.mutation;
-	if (result.type !== "track") return { kind: decision.kind };
+/** What the shadow reports per track: the verdict, and the rows it drew from as they stand after it. */
+function summarizeReply({ reply }: { reply: TrackReply }) {
+	const { result, state } = reply;
+	const drawnRowIds = new Set(result.deltas.map((delta) => delta.id));
+	const remaining = [...state.customerEntitlements, ...state.rollovers]
+		.filter((row) => drawnRowIds.has(row.id))
+		.reduce((total, row) => total + row.balance, 0);
 	return {
-		kind: decision.kind,
+		revision: state.revision,
 		status: result.status,
-		remaining: result.balanceAfter,
-		appliedValue: result.appliedValue,
+		remaining: drawnRowIds.size > 0 ? remaining : undefined,
+		appliedValue: -result.deltas.reduce(
+			(total, delta) => total + delta.valueDelta,
+			0,
+		),
 	};
 }
 
@@ -96,11 +99,11 @@ export function createBalanceShadow({
 		);
 		try {
 			controller.signal.throwIfAborted();
-			const decision = await dependencies.client.track({
+			const reply = await dependencies.client.track({
 				command: track.command,
 				signal: controller.signal,
 			});
-			const shadow = summarizeDecision({ decision });
+			const shadow = summarizeReply({ reply });
 			counts.completed++;
 			record({
 				...context,

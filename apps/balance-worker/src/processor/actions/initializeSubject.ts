@@ -1,36 +1,30 @@
 import {
 	applyMutation,
 	computeInitialize,
-	type InitializationDecision,
-	type InitializeCommand,
-	initializeCommandToFingerprint,
+	type InitializeRequest,
 	meteringIdentityToPartitionKey,
 	type SubjectState,
 } from "@autumn/balance-engine";
+import type { InitializeReply } from "@autumn/balance-worker-client/protocol";
 import type { CatalogCache } from "../../catalog/types/catalogCache.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
-import type { ReceiptPolicy } from "../types/receiptPolicy.js";
-import type {
-	CommittedMutation,
-	MutationResult,
-} from "../writer/types/mutation.js";
+import type { MutationResult } from "../writer/types/mutation.js";
 import type { PartitionWriter } from "../writer/types/partitionWriter.js";
 
 export type InitializeSubjectContext = {
-	writer: Pick<PartitionWriter, "decide" | "readFreshestState">;
+	writer: Pick<PartitionWriter, "decide">;
 	catalogCache: CatalogCache;
-	receiptPolicy: ReceiptPolicy;
 };
 
 const alreadyInitialized = ({
 	state,
-	command,
+	request,
 }: {
 	state: SubjectState | null;
-	command: InitializeCommand;
+	request: InitializeRequest;
 }): boolean => {
 	if (!state) return false;
-	const { entityId } = command.identity;
+	const { entityId } = request.command.identity;
 	if (!entityId) return true;
 	return state.entity?.id === entityId;
 };
@@ -38,16 +32,21 @@ const alreadyInitialized = ({
 /** Runs inside the writer's critical section: no await, no I/O. */
 const decideInitialize = ({
 	state,
-	command,
-	deduplicationExpiresAt,
+	request,
 }: {
 	state: SubjectState | null;
-	command: InitializeCommand;
-	deduplicationExpiresAt: number;
-}): MutationResult<InitializationDecision> => {
-	if (alreadyInitialized({ state, command })) {
-		return { kind: "reply", reply: { kind: "already_initialized" } };
+	request: InitializeRequest;
+}): MutationResult<InitializeReply> => {
+	if (state && alreadyInitialized({ state, request })) {
+		return {
+			kind: "reply",
+			reply: {
+				result: { status: "already_initialized", duplicate: false },
+				state,
+			},
+		};
 	}
+	const { command } = request;
 	// An entity joins its customer's log, so the customer must already be there.
 	if (command.identity.entityId && !state) {
 		throw new PartitionProcessorStateNotFoundError({
@@ -58,8 +57,8 @@ const decideInitialize = ({
 	}
 	const mutation = computeInitialize({
 		command,
+		state: request.state,
 		revisionBefore: state?.revision ?? 0,
-		deduplicationExpiresAt,
 	});
 	return {
 		kind: "write",
@@ -68,61 +67,31 @@ const decideInitialize = ({
 	};
 };
 
-/** The baseline for a subject, whoever supplied the rows: the server's initialize command or the worker's own hydration. */
+/** The baseline for a subject, whoever supplied the rows: the server's initialize request or the worker's own hydration. */
 export const initializeSubject = async ({
 	ctx,
-	command,
+	request,
 }: {
 	ctx: InitializeSubjectContext;
-	command: InitializeCommand;
-}): Promise<InitializationDecision> => {
-	ctx.catalogCache.put({ rows: command.catalogRows });
-	const deduplicationExpiresAt =
-		ctx.receiptPolicy.now() + ctx.receiptPolicy.retentionMs;
+	request: InitializeRequest;
+}): Promise<InitializeReply> => {
+	ctx.catalogCache.put({ rows: request.catalogRows });
 
-	let initializedState: SubjectState | null = null;
-	const decided = ctx.writer.decide<InitializationDecision>({
-		identity: command.identity,
-		commandId: command.commandId,
-		fingerprint: initializeCommandToFingerprint({ command }),
-		mutate: ({ state }) => {
-			const result = decideInitialize({
-				state,
-				command,
-				deduplicationExpiresAt,
-			});
-			if (result.kind === "write") initializedState = result.nextState;
-			return result;
-		},
+	const decided = ctx.writer.decide<InitializeReply>({
+		command: request.command,
+		baseline: request.state,
+		mutate: ({ state }) => decideInitialize({ state, request }),
 	});
 
 	const committed = await decided.waitForCommit();
-	if (!("mutation" in committed)) return committed;
-	if (committed.kind === "new" && initializedState) {
-		return { kind: "initialized", state: initializedState };
+	if ("mutation" in committed) {
+		return {
+			result: {
+				status: "initialized",
+				duplicate: committed.kind === "duplicate",
+			},
+			state: committed.state,
+		};
 	}
-	return { kind: "duplicate", state: stateAfter({ ctx, committed }) };
-};
-
-/** The baseline a retry sees: a customer initialize rebuilds from its inserts, an entity one reads the view it joined. */
-const stateAfter = ({
-	ctx,
-	committed,
-}: {
-	ctx: InitializeSubjectContext;
-	committed: CommittedMutation;
-}): SubjectState => {
-	const { mutation } = committed;
-	if (mutation.identity.entityId === null) {
-		return applyMutation({ state: null, mutation });
-	}
-	const state = ctx.writer.readFreshestState({ identity: mutation.identity });
-	if (!state) {
-		throw new PartitionProcessorStateNotFoundError({
-			customerKey: meteringIdentityToPartitionKey({
-				identity: mutation.identity,
-			}),
-		});
-	}
-	return state;
+	return committed;
 };

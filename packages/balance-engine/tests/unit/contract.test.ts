@@ -4,47 +4,28 @@ import {
 	computeInitialize,
 	computeTrack,
 	meteringIdentityToPartitionKey,
-	mutationToFingerprint,
+	parseMutationRecord,
 	parseSubjectState,
 	parseSubjectStateMutation,
 	parseTrackCommand,
 	type SubjectStateMutation,
-	trackCommandToShadowComparisonKey,
 } from "../../src/balanceEngine.js";
 import {
 	createCustomerEntitlement,
-	createInitializeCommand,
+	createInitializeRequest,
 	createState,
 	createSubjectFor,
 	createTrackCommand,
-	deduplicationExpiresAt,
 	identity,
-	requireNewMutation,
 } from "./engineFixtures.js";
 
-const trackMutation = requireNewMutation(
-	computeTrack({
-		fullSubject: createSubjectFor({ state: createState() }),
-		command: createTrackCommand(),
-		deduplicationExpiresAt,
-	}),
-);
-const initializeMutation = computeInitialize({
-	command: createInitializeCommand(),
-	deduplicationExpiresAt,
+const trackMutation = computeTrack({
+	fullSubject: createSubjectFor({ state: createState() }),
+	command: createTrackCommand(),
 });
+const initializeMutation = computeInitialize(createInitializeRequest());
 
-const refingerprinted = ({
-	mutation,
-}: {
-	mutation: SubjectStateMutation;
-}): SubjectStateMutation => ({
-	...mutation,
-	receipt: {
-		...mutation.receipt,
-		fingerprint: mutationToFingerprint({ mutation }),
-	},
-});
+const receipt = { fingerprint: "fp_1", expiresAt: 1_700_086_400_000 };
 
 describe("balance engine contract boundaries", () => {
 	test("round-trips every record through JSON", () => {
@@ -54,6 +35,11 @@ describe("balance engine contract boundaries", () => {
 					input: JSON.parse(JSON.stringify(mutation)),
 				}),
 			).toEqual(mutation);
+			const record = { ...mutation, receipt };
+			expect(
+				parseMutationRecord({ input: JSON.parse(JSON.stringify(record)) }),
+			).toEqual(record);
+			expect(() => parseSubjectStateMutation({ input: record })).toThrow();
 		}
 		expect(
 			parseSubjectState({ input: JSON.parse(JSON.stringify(createState())) }),
@@ -69,27 +55,21 @@ describe("balance engine contract boundaries", () => {
 			...initializeMutation,
 			result: trackMutation.result,
 		};
-		const initializeWithUpdate = refingerprinted({
-			mutation: {
-				...initializeMutation,
-				changes: [
-					{
-						table: "customerEntitlements",
-						op: "update",
-						id: "messages_monthly",
-						before: { balance: 10 },
-						after: { balance: 5 },
-					},
-				],
-			},
-		});
+		const initializeWithUpdate: SubjectStateMutation = {
+			...initializeMutation,
+			changes: [
+				{
+					table: "customerEntitlements",
+					op: "update",
+					id: "messages_monthly",
+					before: { balance: 10 },
+					after: { balance: 5 },
+				},
+			],
+		};
 		const initializeAfterRevisionZero = {
 			...initializeMutation,
 			revision: { before: 1, after: 2 },
-		};
-		const wrongFingerprint = {
-			...trackMutation,
-			receipt: { ...trackMutation.receipt, fingerprint: "not_the_command" },
 		};
 
 		for (const input of [
@@ -97,9 +77,11 @@ describe("balance engine contract boundaries", () => {
 			kindMismatch,
 			initializeWithUpdate,
 			initializeAfterRevisionZero,
-			wrongFingerprint,
 		]) {
 			expect(() => parseSubjectStateMutation({ input })).toThrow();
+			expect(() =>
+				parseMutationRecord({ input: { ...input, receipt } }),
+			).toThrow();
 		}
 	});
 
@@ -116,14 +98,12 @@ describe("balance engine contract boundaries", () => {
 		).toThrow();
 	});
 
-	test("keeps receipt-retention policy out of caller track commands", () => {
+	test("keeps the writer's receipt out of commands", () => {
 		expect(() =>
 			parseTrackCommand({ input: { ...createTrackCommand() } }),
 		).not.toThrow();
 		expect(() =>
-			parseTrackCommand({
-				input: { ...createTrackCommand(), deduplicationExpiresAt },
-			}),
+			parseTrackCommand({ input: { ...createTrackCommand(), receipt } }),
 		).toThrow();
 		expect(() =>
 			parseTrackCommand({
@@ -142,13 +122,10 @@ describe("balance engine contract boundaries", () => {
 		).toThrow();
 	});
 
-	test("builds customer ordering and exact shadow comparison keys", () => {
+	test("builds the customer ordering key", () => {
 		expect(meteringIdentityToPartitionKey({ identity })).toBe(
 			'["org_1","sandbox","cus_1"]',
 		);
-		expect(
-			trackCommandToShadowComparisonKey({ command: createTrackCommand() }),
-		).toBe('["org_1","sandbox","cus_1","messages","cmd_1"]');
 	});
 
 	test("keeps validation libraries behind parser functions", () => {

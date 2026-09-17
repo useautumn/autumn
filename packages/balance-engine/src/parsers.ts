@@ -7,6 +7,10 @@ import {
 	initializeCommandSchema,
 } from "./commands/initialize/types/initializeCommand.js";
 import {
+	type InitializeRequest,
+	initializeRequestSchema,
+} from "./commands/initialize/types/initializeRequest.js";
+import {
 	type TrackCommand,
 	trackCommandSchema,
 } from "./commands/track/types/trackCommand.js";
@@ -18,19 +22,23 @@ import {
 import {
 	type MeteringIdentity,
 	meteringIdentitySchema,
-} from "./models/meteringIdentity.js";
+} from "./models/identity/meteringIdentity.js";
 import {
-	type WorkerCustomerEntitlement,
-	workerCustomerEntitlementSchema,
-} from "./models/rows/workerCustomerEntitlement.js";
-import {
-	type SubjectState,
-	subjectStateSchema,
-} from "./models/subjectState.js";
+	type MutationRecord,
+	mutationRecordSchema,
+} from "./models/mutation/mutationRecord.js";
 import {
 	type SubjectStateMutation,
 	subjectStateMutationSchema,
-} from "./models/subjectStateMutation.js";
+} from "./models/mutation/subjectStateMutation.js";
+import {
+	type WorkerCustomerEntitlement,
+	workerCustomerEntitlementSchema,
+} from "./models/subject/rows/workerCustomerEntitlement.js";
+import {
+	type SubjectState,
+	subjectStateSchema,
+} from "./models/subject/subjectState.js";
 
 export const parseTrackCommand = ({
 	input,
@@ -50,6 +58,12 @@ export const parseInitializeCommand = ({
 	input: unknown;
 }): InitializeCommand => initializeCommandSchema.parse(input);
 
+export const parseInitializeRequest = ({
+	input,
+}: {
+	input: unknown;
+}): InitializeRequest => initializeRequestSchema.parse(input);
+
 export const parseSubjectState = ({
 	input,
 }: {
@@ -61,6 +75,12 @@ export const parseSubjectStateMutation = ({
 }: {
 	input: unknown;
 }): SubjectStateMutation => subjectStateMutationSchema.parse(input);
+
+export const parseMutationRecord = ({
+	input,
+}: {
+	input: unknown;
+}): MutationRecord => mutationRecordSchema.parse(input);
 
 export const parseMeteringIdentity = ({
 	input,

@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
-import { meteringIdentitySchema } from "../meteringIdentity.js";
-import { nonEmptyStringSchema, timestampSchema } from "./primitives.js";
+import { nonEmptyStringSchema, timestampSchema } from "../common/primitives.js";
+import { meteringIdentitySchema } from "../identity/meteringIdentity.js";
 
 /** What every command carries; each command adds its `type` and params. */
 export const baseCommandSchema = z.object({

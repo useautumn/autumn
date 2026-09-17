@@ -156,18 +156,10 @@ describe("Real balance worker HTTP service", () => {
 				ctx: { owners: routing },
 				config: { partitionCount: 1, timeoutMs: 5000 },
 			});
-			const first = { decision: await client.track({ command }) };
-			expect(first.decision.kind).toBe("new");
-			if (first.decision.kind !== "new")
-				throw new Error("Expected a new decision");
-			expect(first.decision.mutation.result).toMatchObject({
-				balanceAfter: 7,
-			});
-			const duplicate = { decision: await client.track({ command }) };
-			expect(duplicate.decision.kind).toBe("duplicate");
-			if (duplicate.decision.kind !== "duplicate")
-				throw new Error("Expected a duplicate decision");
-			expect(duplicate.decision.mutation).toEqual(first.decision.mutation);
+			const first = await client.track({ command });
+			expect(first.state.customerEntitlements).toMatchObject([{ balance: 7 }]);
+			const duplicate = await client.track({ command });
+			expect(duplicate).toEqual(first);
 			const stale = await post((BigInt(owner.routeEpoch) + 1n).toString());
 			expect(stale.status).toBe(409);
 			expect((await stale.json()).error.code).toBe("NOT_OWNER");
@@ -188,7 +180,9 @@ describe("Real balance worker HTTP service", () => {
 				},
 				config: { partitionCount: 1, timeoutMs: 5000 },
 			});
-			expect((await staleClient.track({ command })).kind).toBe("duplicate");
+			expect(
+				(await staleClient.track({ command })).state.customerEntitlements,
+			).toMatchObject([{ balance: 7 }]);
 			const database = new Database(databasePath, { readonly: true });
 			try {
 				expect(

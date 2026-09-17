@@ -6,6 +6,7 @@
  * reply carries the code but no balance.
  */
 import { expect, test } from "bun:test";
+import type { SubjectState } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import { createReplayHydrationCoordinator } from "@/internal/balances/replay/createReplayHydrationCoordinator.js";
 import type {
@@ -38,17 +39,15 @@ function expectCompletedReply({ result }: { result: ReplayExecutionResult }) {
 	return result.reply;
 }
 
-/** The archive keeps the worker decision; remaining is the row balance after a track or the balance a check saw. */
+/** The archive keeps the worker decision; remaining is what its rows hold, after a track or as a check read them. */
 function remainingOf({ result }: { result: ReplayExecutionResult }) {
 	if (result.kind !== "completed")
 		throw new Error(`expected completion, received ${JSON.stringify(result)}`);
-	const { decision } = result;
-	if ("mutation" in decision && decision.mutation.result.type === "track")
-		return decision.mutation.result.customerEntitlement.balance;
-	if ("customerEntitlement" in decision)
-		return decision.customerEntitlement.balance;
-	throw new Error("decision carries no row");
+	return balanceOf({ state: result.decision.state });
 }
+
+const balanceOf = ({ state }: { state: SubjectState }) =>
+	state.customerEntitlements.reduce((total, row) => total + row.balance, 0);
 
 function replyTextOf({ result }: { result: ReplayExecutionResult }) {
 	return JSON.stringify(expectCompletedReply({ result }));
@@ -58,9 +57,8 @@ function balanceAfterOf({ result }: { result: ReplayExecutionResult }) {
 	if (result.kind !== "completed")
 		throw new Error(`expected completion, received ${JSON.stringify(result)}`);
 	const { decision } = result;
-	if (!("mutation" in decision) || decision.mutation.result.type !== "track")
-		throw new Error("expected a track decision carrying a track mutation");
-	return decision.mutation.result.balanceAfter;
+	if (!("type" in decision.result)) throw new Error("expected a track reply");
+	return balanceOf({ state: decision.state });
 }
 
 function trackMutationsOf({ records }: { records: MeteringRecord[] }) {

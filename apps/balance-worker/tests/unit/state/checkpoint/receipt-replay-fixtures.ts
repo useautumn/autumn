@@ -1,10 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type {
-	SubjectStateMutation,
-	TrackDecision,
-} from "@autumn/balance-engine";
+import type { MeteringIdentity, MutationRecord } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import { parsePartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { createPartitionProcessor } from "../../../../src/processor/createPartitionProcessor.js";
@@ -44,13 +41,19 @@ export const createCommand = ({
 	value?: number;
 } = {}) => createTrackCommand({ identity, commandId, value });
 
-const requireNewMutation = ({
-	decision,
+/** The reply carries the result only; the record it came from is in the store. */
+const recordOf = ({
+	store,
+	identity,
+	commandId,
 }: {
-	decision: TrackDecision;
-}): SubjectStateMutation => {
-	if (decision.kind !== "new") throw new Error("Expected a new track mutation");
-	return decision.mutation;
+	store: StateStore;
+	identity: MeteringIdentity;
+	commandId: string;
+}): MutationRecord => {
+	const record = store.readReceipt({ identity, mutationId: commandId });
+	if (!record) throw new Error(`No receipt for ${commandId}`);
+	return record;
 };
 
 export const createReceiptReplayFixture = async ({
@@ -140,8 +143,12 @@ export const createReceiptReplayFixture = async ({
 			mutation: initialization,
 		});
 		let checkpoint = checkpointCut === "before_first_track" ? capture() : null;
-		const firstMutation = requireNewMutation({
-			decision: await liveProcessor.track({ command: createCommand() }),
+		const firstCommand = createCommand();
+		await liveProcessor.track({ command: firstCommand });
+		const firstMutation = recordOf({
+			store: liveStore,
+			identity,
+			commandId: firstCommand.commandId,
 		});
 		if (checkpointCut === "before_expiry") checkpoint = capture();
 		now = firstMutation.receipt.expiresAt;
@@ -155,8 +162,11 @@ export const createReceiptReplayFixture = async ({
 		});
 		// Same request, recomputed after the owner pruned its receipt.
 		const reusedCommand = createCommand();
-		const reusedMutation = requireNewMutation({
-			decision: await liveProcessor.track({ command: reusedCommand }),
+		await liveProcessor.track({ command: reusedCommand });
+		const reusedMutation = recordOf({
+			store: liveStore,
+			identity,
+			commandId: reusedCommand.commandId,
 		});
 		restoredStore.restorePartitionCheckpoint({
 			checkpoint,

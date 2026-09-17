@@ -6,13 +6,13 @@ import type {
 	Rollover,
 } from "@autumn/shared";
 import type { z } from "zod/v4";
-import type { MeteringIdentity } from "../../models/meteringIdentity.js";
-import { workerCustomerSchema } from "../../models/rows/workerCustomer.js";
-import { workerCustomerEntitlementSchema } from "../../models/rows/workerCustomerEntitlement.js";
-import { workerCustomerProductSchema } from "../../models/rows/workerCustomerProduct.js";
-import { workerEntitySchema } from "../../models/rows/workerEntity.js";
-import { workerRolloverSchema } from "../../models/rows/workerRollover.js";
-import type { SubjectState } from "../../models/subjectState.js";
+import type { MeteringIdentity } from "../../models/identity/meteringIdentity.js";
+import { workerCustomerSchema } from "../../models/subject/rows/workerCustomer.js";
+import { workerCustomerEntitlementSchema } from "../../models/subject/rows/workerCustomerEntitlement.js";
+import { workerCustomerProductSchema } from "../../models/subject/rows/workerCustomerProduct.js";
+import { workerEntitySchema } from "../../models/subject/rows/workerEntity.js";
+import { workerRolloverSchema } from "../../models/subject/rows/workerRollover.js";
+import type { SubjectState } from "../../models/subject/subjectState.js";
 import { createSubjectState } from "./createSubjectState.js";
 
 /** Keeps only the schema's columns, so a full Postgres row parses against a strict pick. */

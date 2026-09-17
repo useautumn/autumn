@@ -1,10 +1,10 @@
 import {
 	type CheckCommand,
-	type CheckDecision,
 	computeCheck,
 	meteringIdentityToPartitionKey,
 	parseCheckCommand,
 } from "@autumn/balance-engine";
+import type { CheckReply } from "@autumn/balance-worker-client/protocol";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
@@ -15,7 +15,7 @@ export async function check({
 }: {
 	scope: PartitionProcessorScope;
 	command: CheckCommand;
-}): Promise<CheckDecision> {
+}): Promise<CheckReply> {
 	const { ctx } = scope;
 	const parsed = parseCheckCommand({ input: command });
 	const customerKey = meteringIdentityToPartitionKey({
@@ -33,5 +33,5 @@ export async function check({
 		state,
 		identity: parsed.identity,
 	});
-	return computeCheck({ fullSubject, command: parsed });
+	return { result: computeCheck({ fullSubject, command: parsed }), state };
 }

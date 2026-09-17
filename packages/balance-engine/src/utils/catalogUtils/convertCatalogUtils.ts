@@ -1,7 +1,7 @@
 import type { Catalog } from "../../models/catalog/catalog.js";
 import type { CatalogKey } from "../../models/catalog/catalogKey.js";
 import type { CatalogRow } from "../../models/catalog/catalogRow.js";
-import type { SubjectState } from "../../models/subjectState.js";
+import type { SubjectState } from "../../models/subject/subjectState.js";
 import { parseCatalog } from "../../parsers.js";
 
 export const catalogKeyToString = ({ key }: { key: CatalogKey }): string =>

@@ -5,9 +5,8 @@ import {
 	parseTrackCommand,
 	type SubjectState,
 	type TrackCommand,
-	type TrackDecision,
-	trackCommandToFingerprint,
 } from "@autumn/balance-engine";
+import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type { MutationResult } from "../writer/types/mutation.js";
@@ -19,33 +18,27 @@ export async function track({
 }: {
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
-}): Promise<TrackDecision> {
+}): Promise<TrackReply> {
 	const { ctx } = scope;
 	const parsed = parseTrackCommand({ input: command });
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: parsed.identity,
 	});
-	const deduplicationExpiresAt =
-		ctx.receiptPolicy.now() + ctx.receiptPolicy.retentionMs;
 	await ctx.subjectHydrator.ensure({ identity: parsed.identity });
 
 	// Synchronous: `mutate` runs against the freshest state and the mutation is enqueued before this returns.
-	const decided = ctx.writer.decide<TrackDecision>({
-		identity: parsed.identity,
-		commandId: parsed.commandId,
-		fingerprint: trackCommandToFingerprint({ command: parsed }),
+	const decided = ctx.writer.decide<never>({
+		command: parsed,
 		mutate: ({ state }) =>
-			decideTrack({
-				scope,
-				state,
-				customerKey,
-				command: parsed,
-				deduplicationExpiresAt,
-			}),
+			decideTrack({ scope, state, customerKey, command: parsed }),
 	});
 
 	// Asynchronous: Kafka commit, then SQLite apply.
-	return await decided.waitForCommit();
+	const { mutation, state } = await decided.waitForCommit();
+	if (mutation.result.type !== "track") {
+		throw new Error(`Track ${mutation.id} committed a non-track record`);
+	}
+	return { result: mutation.result, state };
 }
 
 /** Runs inside the writer's critical section: no await, no I/O. */
@@ -54,28 +47,19 @@ function decideTrack({
 	state,
 	customerKey,
 	command,
-	deduplicationExpiresAt,
 }: {
 	scope: PartitionProcessorScope;
 	state: SubjectState | null;
 	customerKey: string;
 	command: TrackCommand;
-	deduplicationExpiresAt: number;
-}): MutationResult<TrackDecision> {
+}): MutationResult<never> {
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
 
 	const fullSubject = scope.ctx.subjectHydrator.readSubject({
 		state,
 		identity: command.identity,
 	});
-	const decision = computeTrack({
-		fullSubject,
-		command,
-		deduplicationExpiresAt,
-	});
-	if (decision.kind !== "new") return { kind: "reply", reply: decision };
-
-	const { mutation } = decision;
+	const mutation = computeTrack({ fullSubject, command });
 	return {
 		kind: "write",
 		mutation,

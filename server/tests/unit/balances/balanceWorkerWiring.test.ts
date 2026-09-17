@@ -178,14 +178,11 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 		return undefined;
 	}
 	async function refresh(): Promise<void> {}
-	async function track() {
-		return { kind: "unsupported", reason: "feature_not_found" } as const;
-	}
-	async function initialize() {
-		return { kind: "already_initialized" } as const;
+	async function track(): Promise<never> {
+		throw new Error("The wiring test never sends a command");
 	}
 	const consumer = { start, stop, findOwner, refresh };
-	const client = { track, check: track, initialize };
+	const client = { track, check: track, initialize: track };
 	const createKafka = spyOn(kafka, "createKafkaClient");
 	const createConsumer = spyOn(
 		kafka,

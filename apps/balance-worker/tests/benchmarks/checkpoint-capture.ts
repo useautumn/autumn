@@ -25,6 +25,7 @@ import {
 	createState,
 	createSubjectFor,
 	restoreSubjectStates,
+	stampReceipt,
 } from "../fixtures/mutations.js";
 
 const topic = "checkpoint-benchmark";
@@ -130,22 +131,24 @@ for (const customers of sizes) {
 					occurredAt: now,
 				},
 			});
-			const decision = computeTrack({
+			const mutation = computeTrack({
 				fullSubject: createSubjectFor({ state }),
+				command,
+			});
+			const record = stampReceipt({
+				mutation,
 				command,
 				deduplicationExpiresAt: now + 3_600_000,
 			});
-			if (decision.kind !== "new")
-				throw new Error("Expected benchmark deduction");
 			const partitionKey = meteringIdentityToPartitionKey({ identity });
 			states.push({
 				subjectKey: partitionKey,
-				state: applyMutation({ state, mutation: decision.mutation }),
+				state: applyMutation({ state, mutation: record }),
 			});
 			receipts.push({
 				partitionKey,
 				recordOffset: BigInt(index),
-				mutation: decision.mutation,
+				mutation: record,
 			});
 		}
 		const checkpoint = createPartitionCheckpoint({
@@ -205,19 +208,20 @@ for (const customers of sizes) {
 					occurredAt: Date.now(),
 				},
 			});
-			const decision = computeTrack({
+			const mutation = computeTrack({
 				fullSubject: createSubjectFor({ state }),
 				command,
-				deduplicationExpiresAt: now + 3_600_000,
 			});
-			if (decision.kind !== "new")
-				throw new Error("Expected new hot deduction");
 			applyDurableMutation({
 				store,
 				topic,
 				partition: 1,
 				offset: offset++,
-				mutation: decision.mutation,
+				mutation: stampReceipt({
+					mutation,
+					command,
+					deduplicationExpiresAt: now + 3_600_000,
+				}),
 			});
 			const after = store.readState({ identity });
 			if (!after) throw new Error("Missing hot customer after track");

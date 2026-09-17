@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { SubjectStateMutation } from "@autumn/balance-engine";
+import type { MutationRecord } from "@autumn/balance-engine";
 import { Kafka, logLevel, type Producer } from "kafkajs";
 import {
 	createMeteringConsumer,
@@ -34,11 +34,7 @@ function createTestKafka(): Kafka {
 	});
 }
 
-function createOutcome({
-	commandId,
-}: {
-	commandId: string;
-}): SubjectStateMutation {
+function createOutcome({ commandId }: { commandId: string }): MutationRecord {
 	return createTrackMutation({
 		state: createState({
 			identity: {
@@ -60,7 +56,7 @@ async function appendAbortedOutcome({
 }: {
 	producer: Producer;
 	topic: string;
-	record: SubjectStateMutation;
+	record: MutationRecord;
 }): Promise<bigint> {
 	const transaction = await producer.transaction();
 	try {
@@ -84,7 +80,7 @@ async function appendCommittedOutcome({
 }: {
 	producer: Producer;
 	topic: string;
-	record: SubjectStateMutation;
+	record: MutationRecord;
 }): Promise<{ baseOffset: bigint }> {
 	const publisher = createMeteringPublisher({ ctx: { producer } });
 	return publisher.append({ topic, partition, records: [record] });

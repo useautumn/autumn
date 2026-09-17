@@ -51,15 +51,18 @@ test.concurrent(
 					command: fixture.trackCommand,
 				}),
 			).toMatchObject({
-				kind: "new",
-				mutation: { result: { status: "applied", balanceAfter: 67 } },
+				result: { status: "applied" },
+				state: { customerEntitlements: [{ balance: 67 }] },
 			});
 			expect(
 				await coordinator.check({
 					selection: fixture.selection,
 					command: fixture.checkCommand,
 				}),
-			).toMatchObject({ kind: "decided", balance: 67 });
+			).toMatchObject({
+				result: { allowed: true },
+				state: { customerEntitlements: [{ balance: 67 }] },
+			});
 			expect(sourceCalls).toBe(1);
 			expect(records.map((record) => record.command.type)).toEqual([
 				"initialize",
@@ -108,15 +111,10 @@ test.concurrent(
 					command: fixture.trackCommand,
 				}),
 			]);
-			expect(results.map((result) => result.kind).sort()).toEqual([
-				"duplicate",
-				"new",
-			]);
-			if (!("mutation" in results[0]) || !("mutation" in results[1]))
-				throw new Error("Expected both track commands to reach the worker");
-			expect(results[0].mutation).toEqual(results[1].mutation);
+			expect(results[0]).toEqual(results[1]);
 			expect(results[0]).toMatchObject({
-				mutation: { result: { status: "applied", balanceAfter: 67 } },
+				result: { status: "applied" },
+				state: { customerEntitlements: [{ balance: 67 }] },
 			});
 			expect(
 				records.filter((record) => record.command.type === "initialize"),

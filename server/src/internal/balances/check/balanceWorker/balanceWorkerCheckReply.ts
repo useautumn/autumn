@@ -1,7 +1,5 @@
-import type {
-	CheckCommand,
-	SupportedCheckDecision,
-} from "@autumn/balance-engine";
+import type { CheckCommand } from "@autumn/balance-engine";
+import type { CheckReply } from "@autumn/balance-worker-client";
 import {
 	AffectedResource,
 	applyResponseVersionChanges,
@@ -10,17 +8,18 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { BalanceWorkerUnsupportedError } from "../../balanceWorker/balanceWorkerErrors.js";
-import { workerCustomerEntitlementToApiBalance } from "../../balanceWorker/workerCustomerEntitlementToApiBalance.js";
+import { workerStateToApiBalance } from "../../balanceWorker/workerStateToApiBalance.js";
 
-export function checkDecisionToCheckResponse({
+/** The one place a worker check reply becomes the API's check response. */
+export function checkReplyToApiResponse({
 	ctx,
 	command,
-	decision,
+	reply,
 	fullSubject,
 }: {
 	ctx: AutumnContext;
 	command: CheckCommand;
-	decision: SupportedCheckDecision;
+	reply: CheckReply;
 	fullSubject: FullSubject;
 }): CheckResponseV3 {
 	const feature = ctx.features.find(
@@ -28,20 +27,22 @@ export function checkDecisionToCheckResponse({
 	);
 	if (!feature)
 		throw new BalanceWorkerUnsupportedError({ reason: "feature_not_found" });
+	const { result, state } = reply;
 	return applyResponseVersionChanges<CheckResponseV3>({
 		ctx,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Check,
 		input: {
-			allowed: decision.allowed,
+			allowed: result.allowed,
 			customer_id: command.identity.customerId,
 			entity_id: command.identity.entityId ?? undefined,
-			required_balance: decision.requiredBalance,
+			required_balance: result.requiredBalance,
 			flag: null,
-			balance: workerCustomerEntitlementToApiBalance({
+			balance: workerStateToApiBalance({
 				ctx,
 				fullSubject,
-				customerEntitlement: decision.customerEntitlement,
+				state,
+				featureId: command.featureId,
 			}),
 		},
 		legacyData: { noCusEnts: false, featureToUse: feature },

@@ -10,10 +10,10 @@ import {
 	parseCheckCommand,
 	parseTrackCommand,
 	type SubjectState,
-	type SubjectStateMutation,
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
+import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import {
 	createOwnershipConsumer,
@@ -117,7 +117,7 @@ type ReplayScope = {
 	workers: WorkerFixture[];
 	coordinators: ReplayHydrationCoordinator[];
 	baselineSource: RecordingReplaySource;
-	firstMutation?: SubjectStateMutation;
+	firstResponse?: TrackReply;
 };
 
 type PersistedReplayRows = { state: unknown; receipts: unknown };
@@ -440,12 +440,11 @@ async function expectCheckedBalance({
 		selection: REPLAY_SELECTION,
 		command: createReplayCheckCommand({ requestId }),
 	});
-	expect(decision.kind).toBe("decided");
-	if (decision.kind !== "decided") throw new Error("Expected a decided check");
-	expect(decision.allowed).toBe(true);
-	expect(decision.balance).toBe(BALANCE_AFTER_TRACK);
-	expect(decision.revision).toBe(REVISION_AFTER_TRACK);
-	expect(decision.customerEntitlement.balance).toBe(BALANCE_AFTER_TRACK);
+	expect(decision.result.allowed).toBe(true);
+	expect(decision.state.customerEntitlements).toMatchObject([
+		{ balance: BALANCE_AFTER_TRACK },
+	]);
+	expect(decision.state.revision).toBe(REVISION_AFTER_TRACK);
 }
 
 async function retireReplayRuntime({
@@ -489,15 +488,12 @@ async function hydrateColdCustomerFromSource({
 		selection: REPLAY_SELECTION,
 		command,
 	});
-	expect(tracked.kind).toBe("new");
-	if (tracked.kind !== "new") throw new Error("Expected a new track decision");
-	expect(tracked.mutation.result).toMatchObject({
-		status: "applied",
-		balanceBefore: BASELINE_BALANCE,
-		balanceAfter: BALANCE_AFTER_TRACK,
-	});
-	expect(tracked.mutation.revision.after).toBe(REVISION_AFTER_TRACK);
-	scope.firstMutation = tracked.mutation;
+	expect(tracked.result).toMatchObject({ status: "applied" });
+	expect(tracked.state.customerEntitlements).toMatchObject([
+		{ balance: BALANCE_AFTER_TRACK },
+	]);
+	expect(tracked.state.revision).toBe(REVISION_AFTER_TRACK);
+	scope.firstResponse = tracked;
 	await expectCheckedBalance({
 		coordinator,
 		requestId: "replay-hydration-check-hydrated",
@@ -506,10 +502,7 @@ async function hydrateColdCustomerFromSource({
 		selection: REPLAY_SELECTION,
 		command,
 	});
-	expect(duplicate.kind).toBe("duplicate");
-	if (duplicate.kind !== "duplicate")
-		throw new Error("Expected a duplicate track decision");
-	expect(duplicate.mutation).toEqual(tracked.mutation);
+	expect(duplicate).toEqual(tracked);
 	expect(scope.baselineSource.readLoadCount()).toBe(1);
 	expect(readReplayRows({ databasePath: worker.databasePath })).toEqual({
 		state: { revision: REVISION_AFTER_TRACK },
@@ -524,7 +517,7 @@ async function serveReplayFromKafkaLogAfterRestart({
 }: {
 	scope: ReplayScope;
 }): Promise<void> {
-	const recorded = scope.firstMutation;
+	const recorded = scope.firstResponse;
 	if (!recorded)
 		throw new Error("Cold hydration must record the first outcome");
 	await retireReplayRuntime({ scope });
@@ -541,10 +534,7 @@ async function serveReplayFromKafkaLogAfterRestart({
 		selection: REPLAY_SELECTION,
 		command: createReplayTrackCommand(),
 	});
-	expect(duplicate.kind).toBe("duplicate");
-	if (duplicate.kind !== "duplicate")
-		throw new Error("Expected a duplicate track decision");
-	expect(duplicate.mutation).toEqual(recorded);
+	expect(duplicate).toEqual(recorded);
 	expect(readReplayRows({ databasePath: worker.databasePath })).toEqual({
 		state: { revision: REVISION_AFTER_TRACK },
 		receipts: { count: 2 },

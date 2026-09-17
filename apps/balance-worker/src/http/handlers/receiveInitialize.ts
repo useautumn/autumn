@@ -1,26 +1,32 @@
-import { parseInitializeCommand } from "@autumn/balance-engine";
-import type { BalanceWorkerInitializeResponse } from "@autumn/balance-worker-client/protocol";
+import { parseInitializeRequest } from "@autumn/balance-engine";
+import type { InitializeReply } from "@autumn/balance-worker-client/protocol";
 import type { Context } from "hono";
+import { z } from "zod/v4";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
+
+const initializePayloadSchema = z
+	.object({ state: z.unknown(), catalogRows: z.unknown() })
+	.strict();
 
 export async function receiveInitialize(
 	context: Context<BalanceWorkerHttpEnv>,
 ) {
 	const { runtime } = context.get("ctx");
-	const command = parseInitializeCommand({
-		input: context.get("request").command,
+	const { command, payload } = context.get("request");
+	const request = parseInitializeRequest({
+		input: { command, ...initializePayloadSchema.parse(payload) },
 	});
 	const requestLog = context.get("requestLog");
 	requestLog.command = {
-		requestId: command.requestId,
-		identity: command.identity,
-		commandId: command.commandId,
+		requestId: request.command.requestId,
+		identity: request.command.identity,
+		commandId: request.command.commandId,
 	};
 	function runInitialize(processor: PartitionProcessor) {
-		return processor.initialize({ command });
+		return processor.initialize({ request });
 	}
-	const decision = await runtime.process(runInitialize);
-	requestLog.decision = decision;
-	return context.json({ decision } satisfies BalanceWorkerInitializeResponse);
+	const response = await runtime.process(runInitialize);
+	requestLog.response = response;
+	return context.json(response satisfies InitializeReply);
 }

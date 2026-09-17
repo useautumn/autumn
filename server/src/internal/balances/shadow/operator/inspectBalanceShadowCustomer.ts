@@ -2,11 +2,13 @@ import { isDeepStrictEqual } from "node:util";
 import {
 	catalogRowsToCatalog,
 	fullCustomerEntitlementToRow,
-	type InitializationDecision,
 	subjectStateToFullSubject,
 	type WorkerCustomerEntitlement,
 } from "@autumn/balance-engine";
-import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
+import type {
+	BalanceWorkerClient,
+	InitializeReply,
+} from "@autumn/balance-worker-client";
 import {
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
@@ -21,7 +23,7 @@ import { checkParamsToCheckCommand } from "../../check/balanceWorker/balanceWork
 
 export type BalanceShadowInspection = {
 	status: "preview" | "equal_at_read" | "different_at_read" | "inconclusive";
-	initialization?: InitializationDecision["kind"];
+	initialization?: InitializeReply["result"]["status"];
 	redis?: Record<string, WorkerCustomerEntitlement>;
 	worker?: Record<string, WorkerCustomerEntitlement & { revision: number }>;
 	reason?: string;
@@ -89,8 +91,8 @@ export async function inspectBalanceShadowCustomer({
 				client,
 				commandId: JSON.stringify(["shadow", runId, state.identity]),
 			});
-			result.initialization = initialization.kind;
-			if (initialization.kind === "already_initialized")
+			result.initialization = initialization.result.status;
+			if (initialization.result.status === "already_initialized")
 				throw new Error(
 					"Worker state already exists; use compare or a fresh isolated namespace, not a new baseline",
 				);
@@ -107,20 +109,20 @@ export async function inspectBalanceShadowCustomer({
 					required_balance: 1,
 				},
 			});
-			const decision = await client.check({ command });
-			if (decision.kind !== "decided")
-				throw new Error(`Worker check unsupported: ${decision.reason}`);
-			result.worker[featureId] = {
-				...decision.customerEntitlement,
-				revision: decision.revision,
-			};
-			if (revision !== undefined && revision !== decision.revision)
-				throw new Error("Worker changed during the operation");
-			revision = decision.revision;
-			equal &&= isDeepStrictEqual(
-				redis[featureId],
-				decision.customerEntitlement,
+			const { state: workerState } = await client.check({ command });
+			const redisRow = redis[featureId];
+			const workerRow = workerState.customerEntitlements.find(
+				(row) => row.id === redisRow?.id,
 			);
+			if (!workerRow) throw new Error(`Worker holds no row for ${featureId}`);
+			result.worker[featureId] = {
+				...workerRow,
+				revision: workerState.revision,
+			};
+			if (revision !== undefined && revision !== workerState.revision)
+				throw new Error("Worker changed during the operation");
+			revision = workerState.revision;
+			equal &&= isDeepStrictEqual(redisRow, workerRow);
 		}
 		const after = await loadSubject();
 		if (

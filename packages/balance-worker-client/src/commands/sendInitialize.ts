@@ -1,21 +1,20 @@
-import type { InitializationDecision } from "@autumn/balance-engine";
-import type { BalanceWorkerInitializeResponse } from "../contracts/initialize.js";
+import type { InitializeReply } from "../contracts/initialize.js";
 import { sendToOwner } from "../routing/sendToOwner.js";
 import type { RoutingContext } from "../routing/types/routing.js";
 import type { InitializeParams } from "../types/balanceWorkerClient.js";
 
 export async function sendInitialize({
 	ctx,
-	command,
+	request,
 	signal,
 }: InitializeParams & {
 	ctx: RoutingContext;
-}): Promise<InitializationDecision> {
-	const { decision } = await sendToOwner<BalanceWorkerInitializeResponse>({
+}): Promise<InitializeReply> {
+	return sendToOwner<InitializeReply>({
 		ctx,
 		path: "/v1/initialize",
-		command,
+		command: request.command,
+		payload: { state: request.state, catalogRows: request.catalogRows },
 		signal,
 	});
-	return decision;
 }

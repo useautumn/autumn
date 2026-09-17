@@ -13,14 +13,15 @@
 import { describe, expect, test } from "bun:test";
 import {
 	type CatalogRow,
-	type CheckDecision,
 	catalogRowsToCatalog,
-	fullCustomerEntitlementToRow,
-	type InitializationDecision,
-	type InitializeCommand,
+	type InitializeRequest,
 	type SubjectState,
 	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
+import type {
+	CheckReply,
+	InitializeReply,
+} from "@autumn/balance-worker-client";
 import { fullSubjectToCustomerEntitlements } from "@autumn/shared";
 import { createReplayHydrationCoordinator } from "@/internal/balances/replay/createReplayHydrationCoordinator.js";
 import type {
@@ -172,7 +173,7 @@ function checkDecisionOf({
 }: {
 	state: SubjectState;
 	catalogRows: CatalogRow[];
-}): CheckDecision {
+}): CheckReply {
 	const [selected] = fullSubjectToCustomerEntitlements({
 		fullSubject: subjectStateToFullSubject({
 			state,
@@ -180,19 +181,11 @@ function checkDecisionOf({
 		}),
 		featureIds: ["messages"],
 	});
-	const customerEntitlement = selected
-		? fullCustomerEntitlementToRow({ customerEntitlement: selected })
-		: undefined;
-	if (!customerEntitlement)
+	if (!selected)
 		throw new Error("Fixture state must expose a messages entitlement");
 	return {
-		kind: "decided",
-		allowed: true,
-		reason: null,
-		balance: customerEntitlement.balance,
-		customerEntitlement,
-		requiredBalance: 0,
-		revision: state.revision,
+		result: { allowed: true, reason: null, requiredBalance: 0 },
+		state,
 	};
 }
 
@@ -201,7 +194,10 @@ describe("Replay hydration parity evidence", () => {
 		const fixture = createReplayHydrationFixture();
 		const worker = createWorkerClientStub({
 			check: rejectNotInitialized,
-			initialize: async () => ({ kind: "duplicate", state: fixture.state }),
+			initialize: async () => ({
+				result: { status: "initialized", duplicate: true },
+				state: fixture.state,
+			}),
 		});
 		const coordinator = createReplayHydrationCoordinator({
 			source: createLoadedSource({
@@ -220,16 +216,22 @@ describe("Replay hydration parity evidence", () => {
 
 	test("grants fresh parity only to a newly initialized customer", async () => {
 		const fixture = createReplayHydrationFixture();
-		const decisions: readonly InitializationDecision[] = [
-			{ kind: "initialized", state: fixture.state },
-			{ kind: "duplicate", state: fixture.state },
-			{ kind: "already_initialized" },
+		const outcomes: readonly (InitializeReply["result"] & {
+			expected: "initialized" | "duplicate" | "already_initialized";
+		})[] = [
+			{ status: "initialized", duplicate: false, expected: "initialized" },
+			{ status: "initialized", duplicate: true, expected: "duplicate" },
+			{
+				status: "already_initialized",
+				duplicate: false,
+				expected: "already_initialized",
+			},
 		];
 
-		for (const decision of decisions) {
+		for (const { expected, ...result } of outcomes) {
 			const worker = createWorkerClientStub({
 				check: rejectNotInitialized,
-				initialize: async () => decision,
+				initialize: async () => ({ result, state: fixture.state }),
 			});
 			const coordinator = createReplayHydrationCoordinator({
 				source: createLoadedSource({
@@ -242,8 +244,8 @@ describe("Replay hydration parity evidence", () => {
 			await expect(
 				coordinator.prewarm({ selection: fixture.selection }),
 			).resolves.toEqual({
-				kind: decision.kind,
-				freshParity: decision.kind === "initialized",
+				kind: expected,
+				freshParity: expected === "initialized",
 			});
 			await coordinator.close();
 		}
@@ -257,7 +259,10 @@ describe("Replay hydration parity evidence", () => {
 					state: fixture.state,
 					catalogRows: fixture.catalogRows,
 				}),
-			initialize: async () => ({ kind: "initialized", state: fixture.state }),
+			initialize: async () => ({
+				result: { status: "initialized", duplicate: false },
+				state: fixture.state,
+			}),
 		});
 		const coordinator = createReplayHydrationCoordinator({
 			source: createLoadedSource({
@@ -289,7 +294,10 @@ describe("Replay hydration lifetime guards", () => {
 		}
 		const worker = createWorkerClientStub({
 			check: rejectNotInitialized,
-			initialize: async () => ({ kind: "initialized", state: fixture.state }),
+			initialize: async () => ({
+				result: { status: "initialized", duplicate: false },
+				state: fixture.state,
+			}),
 		});
 		const coordinator = createReplayHydrationCoordinator({
 			source: createLoadedSource({
@@ -324,7 +332,7 @@ describe("Replay hydration lifetime guards", () => {
 	test("refuses success when initialize returns after the deadline", async () => {
 		const fixture = createReplayHydrationFixture();
 		const clock = createControlledClock();
-		const gate = createDeferred<InitializationDecision>();
+		const gate = createDeferred<InitializeReply>();
 		const worker = createWorkerClientStub({
 			check: rejectNotInitialized,
 			initialize: () => gate.promise,
@@ -345,7 +353,10 @@ describe("Replay hydration lifetime guards", () => {
 		expect(worker.calls.initialize).toBe(1);
 
 		clock.advance(DEADLINE_MS + 1);
-		gate.resolve({ kind: "initialized", state: fixture.state });
+		gate.resolve({
+			result: { status: "initialized", duplicate: false },
+			state: fixture.state,
+		});
 
 		expect(rejectionCauseOf({ state: await prewarmed })).toBeInstanceOf(
 			ReplayHydrationDeadlineError,
@@ -358,7 +369,7 @@ describe("Replay hydration lifetime guards", () => {
 	test("rejects a late initialize reply once the coordinator closes", async () => {
 		const fixture = createReplayHydrationFixture();
 		const clock = createControlledClock();
-		const gate = createDeferred<InitializationDecision>();
+		const gate = createDeferred<InitializeReply>();
 		const worker = createWorkerClientStub({
 			check: rejectNotInitialized,
 			initialize: () => gate.promise,
@@ -379,7 +390,10 @@ describe("Replay hydration lifetime guards", () => {
 		expect(worker.calls.initialize).toBe(1);
 
 		const closed = coordinator.close();
-		gate.resolve({ kind: "initialized", state: fixture.state });
+		gate.resolve({
+			result: { status: "initialized", duplicate: false },
+			state: fixture.state,
+		});
 		await closed;
 
 		expect(rejectionCauseOf({ state: await prewarmed })).toBeInstanceOf(
@@ -419,12 +433,15 @@ describe("Replay hydration abort settlement", () => {
 		}
 
 		async function recordInitialize({
-			command,
+			request,
 		}: {
-			command: InitializeCommand;
-		}): Promise<InitializationDecision> {
-			initializedCustomerIds.push(command.identity.customerId);
-			return { kind: "initialized", state: command.state };
+			request: InitializeRequest;
+		}): Promise<InitializeReply> {
+			initializedCustomerIds.push(request.command.identity.customerId);
+			return {
+				result: { status: "initialized", duplicate: false },
+				state: request.state,
+			};
 		}
 
 		const source: ReplayHydrationSource = { load };

@@ -7,10 +7,9 @@ import {
 	rethrowBalanceWorkerError,
 } from "../../balanceWorker/balanceWorkerErrors.js";
 import { loadBalanceWorkerSubject } from "../../balanceWorker/loadBalanceWorkerSubject.js";
-import { requireSupportedDecision } from "../../balanceWorker/requireSupportedDecision.js";
 import { validateBalanceWorkerRequest } from "../../balanceWorker/validateBalanceWorkerRequest.js";
+import { trackReplyToApiResponse } from "./balanceWorkerTrackReply.js";
 import { trackParamsToTrackCommand } from "./balanceWorkerTrackRequest.js";
-import { trackDecisionToTrackResponse } from "./balanceWorkerTrackResponse.js";
 
 export async function runBalanceWorkerTrack({
 	ctx,
@@ -30,15 +29,15 @@ export async function runBalanceWorkerTrack({
 		});
 	const command = trackParamsToTrackCommand({ ctx, body });
 	try {
-		const decision = requireSupportedDecision({
-			decision: await (client ?? getBalanceWorkerClient()).track({ command }),
+		const reply = await (client ?? getBalanceWorkerClient()).track({
+			command,
 		});
 		const fullSubject = await loadSubject({
 			ctx,
 			customerId: body.customer_id,
 			entityId: body.entity_id,
 		});
-		return trackDecisionToTrackResponse({ ctx, decision, fullSubject });
+		return trackReplyToApiResponse({ ctx, command, reply, fullSubject });
 	} catch (cause) {
 		rethrowBalanceWorkerError({ cause });
 	}

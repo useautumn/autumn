@@ -1,9 +1,9 @@
 import {
 	type CatalogRow,
 	type CheckCommand,
-	type InitializeCommand,
+	type InitializeRequest,
 	parseCheckCommand,
-	parseInitializeCommand,
+	parseInitializeRequest,
 	parseTrackCommand,
 	type SubjectState,
 	type TrackCommand,
@@ -80,7 +80,7 @@ export function buildProbeCommand({
 	});
 }
 
-export function buildInitializeCommand({
+export function buildInitializeRequest({
 	selection,
 	state,
 	catalogRows,
@@ -88,20 +88,22 @@ export function buildInitializeCommand({
 	selection: NormalizedSelection;
 	state: SubjectState;
 	catalogRows: CatalogRow[];
-}): InitializeCommand {
+}): InitializeRequest {
 	const commandId = commandIdOf({ selection });
 	return deepFreeze(
-		parseInitializeCommand({
+		parseInitializeRequest({
 			input: {
-				schemaVersion: 1,
-				type: "initialize",
-				commandId,
-				requestId: `${commandId}:initialize`,
-				identity: selection.identity,
+				command: {
+					schemaVersion: 1,
+					type: "initialize",
+					commandId,
+					requestId: `${commandId}:initialize`,
+					identity: selection.identity,
+					occurredAt: selection.baseline.capturedAtMs,
+				},
 				state,
 				catalogRows,
-				occurredAt: selection.baseline.capturedAtMs,
 			},
 		}),
-	) as InitializeCommand;
+	) as InitializeRequest;
 }

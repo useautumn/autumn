@@ -1,19 +1,16 @@
-import type {
-	SubjectState,
-	SubjectStateMutation,
-} from "@autumn/balance-engine";
+import type { MutationRecord, SubjectState } from "@autumn/balance-engine";
 import type { KafkaRecordPosition } from "./kafkaRecordPosition.js";
 
 export type DurableMutationRecord = {
 	position: KafkaRecordPosition;
-	mutation: SubjectStateMutation;
+	mutation: MutationRecord;
 };
 
 export type DurableMutationApplyResult =
 	| {
 			kind: "applied" | "duplicate";
 			state: SubjectState;
-			mutation: SubjectStateMutation;
+			mutation: MutationRecord;
 			nextOffset: bigint;
 	  }
 	| { kind: "position_already_applied"; nextOffset: bigint };

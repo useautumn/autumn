@@ -12,15 +12,18 @@ import {
 	refreshCommandRoute,
 } from "./workerRequestPolicy.js";
 
+/** The command picks the owner; `payload` rides beside it in the envelope. */
 export async function sendToOwner<Response>({
 	ctx,
 	path,
 	command,
+	payload,
 	signal,
 }: {
 	ctx: RoutingContext;
 	path: string;
 	command: RoutedCommand;
+	payload?: unknown;
 	signal?: AbortSignal;
 }): Promise<Response> {
 	const deadline = {
@@ -31,6 +34,8 @@ export async function sendToOwner<Response>({
 	assertRequestDeadline({ deadline, outcome: "not_submitted" });
 	// Retries must not observe caller mutations after the first send.
 	const snapshot = structuredClone(command);
+	const payloadSnapshot =
+		payload === undefined ? undefined : structuredClone(payload);
 	let outcome: WorkerRequestOutcome = "not_submitted";
 	let failureCode: BalanceWorkerClientErrorCode = "OWNERSHIP_UNAVAILABLE";
 	try {
@@ -53,7 +58,13 @@ export async function sendToOwner<Response>({
 			failureCode = "TRANSPORT";
 			const response = await ctx.http.postJson({
 				url: `${resolved.endpoint}${path}`,
-				body: { route: resolved.route, command: snapshot },
+				body: {
+					route: resolved.route,
+					command: snapshot,
+					...(payloadSnapshot === undefined
+						? {}
+						: { payload: payloadSnapshot }),
+				},
 				signal: deadline.signal,
 			});
 			assertRequestDeadline({ deadline, outcome });

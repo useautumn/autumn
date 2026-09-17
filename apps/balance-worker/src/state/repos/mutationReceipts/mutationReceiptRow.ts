@@ -1,6 +1,6 @@
 import {
 	meteringIdentityToPartitionKey,
-	parseSubjectStateMutation,
+	parseMutationRecord,
 } from "@autumn/balance-engine";
 import { CorruptBalanceStateError } from "../../stateStoreErrors.js";
 import type { StoredMutationReceipt } from "../../types/storedMutationReceipt.js";
@@ -21,7 +21,7 @@ export const storedMutationReceiptFromRow = ({
 }: {
 	row: MutationReceiptRow;
 }): StoredMutationReceipt => {
-	const mutation = parseSubjectStateMutation({
+	const mutation = parseMutationRecord({
 		input: JSON.parse(row.mutationJson),
 	});
 	if (

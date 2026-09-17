@@ -1,5 +1,10 @@
 export type PartitionRoute = { partition: number; routeEpoch: string };
-export type WorkerRequest = { route: PartitionRoute; command: unknown };
+/** `command` always carries the identity the route is checked against; `payload` is what rides beside it (initialize's rows). */
+export type WorkerRequest = {
+	route: PartitionRoute;
+	command: unknown;
+	payload?: unknown;
+};
 export type WorkerErrorCode =
 	| "INVALID_REQUEST"
 	| "NOT_OWNER"
@@ -9,9 +14,10 @@ export type WorkerErrorCode =
 	| "ENTITY_NOT_FOUND"
 	| "CATALOG_NOT_FOUND"
 	| "COMMAND_CONFLICT"
+	| "UNSUPPORTED_COMMAND"
 	| "INTERNAL";
 export type WorkerErrorResponse = {
-	error: { code: WorkerErrorCode; message: string };
+	error: { code: WorkerErrorCode; message: string; reason?: string };
 };
 
 export class WorkerProtocolError extends Error {
@@ -66,16 +72,25 @@ export function parseWorkerRequest({
 }: {
 	input: unknown;
 }): WorkerRequest {
-	const request = readWorkerEnvelope({ input, keys: ["route", "command"] });
+	const hasPayload =
+		typeof input === "object" &&
+		input !== null &&
+		Object.hasOwn(input, "payload");
+	const request = readWorkerEnvelope({
+		input,
+		keys: hasPayload ? ["route", "command", "payload"] : ["route", "command"],
+	});
 	return {
 		route: parsePartitionRoute({ input: request.route }),
 		command: request.command,
+		...(hasPayload ? { payload: request.payload } : {}),
 	};
 }
 
 export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
 	switch (code) {
 		case "INVALID_REQUEST":
+		case "UNSUPPORTED_COMMAND":
 			return 400;
 		case "NOT_OWNER":
 		case "NOT_INITIALIZED":

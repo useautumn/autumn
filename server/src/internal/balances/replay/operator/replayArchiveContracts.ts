@@ -1,8 +1,5 @@
-import type {
-	CheckDecision,
-	MeteringIdentity,
-	TrackDecision,
-} from "@autumn/balance-engine";
+import type { MeteringIdentity } from "@autumn/balance-engine";
+import type { CheckReply, TrackReply } from "@autumn/balance-worker-client";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type {
 	ReplayEnvironment,
@@ -45,7 +42,7 @@ export type ReplayRequestOutcome =
 			kind: "completed";
 			statusCode: number;
 			durationMs: number;
-			decision: CheckDecision | TrackDecision;
+			decision: CheckReply | TrackReply;
 	  }>
 	| Readonly<{ kind: "refused"; reason: string; category?: string }>
 	| Readonly<{

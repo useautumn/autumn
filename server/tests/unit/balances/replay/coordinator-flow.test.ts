@@ -3,12 +3,7 @@
  * request, and shares one exact seed per full customer identity and selection.
  */
 import { expect, test } from "bun:test";
-import type {
-	CheckDecision,
-	InitializeCommand,
-	TrackCommand,
-	TrackDecision,
-} from "@autumn/balance-engine";
+import type { InitializeRequest, TrackCommand } from "@autumn/balance-engine";
 import {
 	type BalanceWorkerClient,
 	BalanceWorkerClientError,
@@ -21,14 +16,15 @@ import {
 	tick,
 } from "./replay-hydration-fixture.js";
 
-const unsupportedTrack: TrackDecision = {
-	kind: "unsupported",
-	reason: "feature_not_found",
-};
-const unsupportedCheck: CheckDecision = {
-	kind: "unsupported",
-	reason: "feature_not_found",
-};
+/** The worker refuses the command outright; the coordinator must not treat it as a miss. */
+const unsupported = () =>
+	new BalanceWorkerClientError({
+		code: "WORKER_ERROR",
+		outcome: "not_submitted",
+		message: "unsupported",
+		workerCode: "UNSUPPORTED_COMMAND",
+		workerReason: "feature_not_found",
+	});
 
 test.concurrent(
 	"hot check and prewarm never read the source or initialize",
@@ -50,21 +46,28 @@ test.concurrent(
 				},
 			}),
 			client: {
-				check: async () => unsupportedCheck,
-				track: async () => unsupportedTrack,
-				initialize: async ({ command }) => {
+				check: async () => {
+					throw unsupported();
+				},
+				track: async () => {
+					throw unsupported();
+				},
+				initialize: async () => {
 					initializeCalls++;
-					return { kind: "initialized", state: command.state };
+					return {
+						result: { status: "initialized", duplicate: false },
+						state: fixture.state,
+					};
 				},
 			},
 		});
 		try {
-			expect(
-				await coordinator.check({
+			await expect(
+				coordinator.check({
 					selection: fixture.selection,
 					command: fixture.checkCommand,
 				}),
-			).toBe(unsupportedCheck);
+			).rejects.toMatchObject({ workerCode: "UNSUPPORTED_COMMAND" });
 			expect(
 				await coordinator.prewarm({ selection: fixture.selection }),
 			).toEqual({ kind: "already_ready", freshParity: false });
@@ -121,9 +124,9 @@ test.concurrent(
 					track: async () => {
 						throw failure;
 					},
-					initialize: async ({ command }) => ({
-						kind: "initialized",
-						state: command.state,
+					initialize: async () => ({
+						result: { status: "initialized", duplicate: false },
+						state: fixture.state,
 					}),
 				},
 			});
@@ -148,17 +151,22 @@ test.concurrent(
 		const fixture = createReplayHydrationFixture();
 		const sourceGate = Promise.withResolvers<void>();
 		const trackCommands: TrackCommand[] = [];
-		const initializeCommands: InitializeCommand[] = [];
+		const initializeCommands: InitializeRequest[] = [];
 		const client: BalanceWorkerClient = {
 			track: async ({ command }) => {
 				trackCommands.push(structuredClone(command));
 				if (trackCommands.length === 1) throw createNotInitializedError();
-				return unsupportedTrack;
+				throw unsupported();
 			},
-			check: async () => unsupportedCheck,
-			initialize: async ({ command }) => {
-				initializeCommands.push(command);
-				return { kind: "initialized", state: command.state };
+			check: async () => {
+				throw unsupported();
+			},
+			initialize: async ({ request }) => {
+				initializeCommands.push(request);
+				return {
+					result: { status: "initialized", duplicate: false },
+					state: request.state,
+				};
 			},
 		};
 		const coordinator = createReplayHydrationCoordinator({
@@ -187,7 +195,9 @@ test.concurrent(
 			fixture.trackCommand.commandId = "mutated";
 			fixture.trackCommand.occurredAt = 0;
 			sourceGate.resolve();
-			expect(await result).toBe(unsupportedTrack);
+			await expect(result).rejects.toMatchObject({
+				workerCode: "UNSUPPORTED_COMMAND",
+			});
 			expect(trackCommands).toEqual([original, original]);
 			expect(initializeCommands).toHaveLength(1);
 			expect(initializeCommands[0]).toMatchObject({
@@ -228,9 +238,9 @@ test.concurrent(
 				track: async () => {
 					throw createNotInitializedError();
 				},
-				initialize: async ({ command }) => ({
-					kind: "initialized",
-					state: command.state,
+				initialize: async () => ({
+					result: { status: "initialized", duplicate: false },
+					state: fixture.state,
 				}),
 			},
 		});

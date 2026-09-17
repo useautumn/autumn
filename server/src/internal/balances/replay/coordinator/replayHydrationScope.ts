@@ -1,4 +1,4 @@
-import type { InitializationDecision } from "@autumn/balance-engine";
+import type { InitializeReply } from "@autumn/balance-worker-client";
 import type {
 	ReplayHydrationClock,
 	ReplayHydrationConfig,
@@ -16,8 +16,8 @@ const DEFAULT_MAX_QUEUED = 64;
 const DEFAULT_DEADLINE_MS = 5_000;
 
 export type JobSettlement = {
-	promise: Promise<InitializationDecision>;
-	resolve: (decision: InitializationDecision) => void;
+	promise: Promise<InitializeReply>;
+	resolve: (decision: InitializeReply) => void;
 	reject: (cause?: unknown) => void;
 };
 

@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	applyMutation,
+	type MutationRecord,
 	type SubjectState,
-	type SubjectStateMutation,
 } from "@autumn/balance-engine";
 import { parsePartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { planPartitionBootstrap } from "../../../../src/runtime/bootstrap/plan/planPartitionBootstrap.js";
@@ -65,7 +65,7 @@ const mutationFor = ({
 	state: SubjectState;
 	commandId: string;
 	deduplicationExpiresAt: number;
-}): SubjectStateMutation =>
+}): MutationRecord =>
 	createTrackMutation({
 		state,
 		commandId,

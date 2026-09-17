@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { SubjectStateMutation } from "@autumn/balance-engine";
+import type { MutationRecord } from "@autumn/balance-engine";
 import {
 	CompressionTypes,
 	type ProducerRecord,
@@ -264,11 +264,7 @@ function meteringPublisherTests(): void {
 	const partition = 4;
 	const baseOffset = "9007199254740993";
 
-	function createOutcome({
-		commandId,
-	}: {
-		commandId: string;
-	}): SubjectStateMutation {
+	function createOutcome({ commandId }: { commandId: string }): MutationRecord {
 		return createTrackMutation({ state: createState({ identity }), commandId });
 	}
 

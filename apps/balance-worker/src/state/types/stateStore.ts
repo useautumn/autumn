@@ -1,7 +1,7 @@
 import type {
 	MeteringIdentity,
+	MutationRecord,
 	SubjectState,
-	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type {
 	PartitionCheckpointPartitionResolver,
@@ -51,7 +51,7 @@ export type StateStore = {
 	readReceipt(params: {
 		identity: MeteringIdentity;
 		mutationId: string;
-	}): SubjectStateMutation | null;
+	}): MutationRecord | null;
 	readNextOffset(params: { topic: string; partition: number }): bigint | null;
 	applyDurableMutations(params: {
 		records: readonly DurableMutationRecord[];

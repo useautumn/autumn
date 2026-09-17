@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import {
 	catalogRowsToCatalog,
 	computeCheck,
-	type InitializeCommand,
+	type InitializeRequest,
 	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
 import type { BalanceShadowConfig } from "@/internal/balances/shadow/balanceShadowTypes.js";
@@ -65,7 +65,7 @@ test.concurrent(
 			})),
 		};
 		const calls: string[] = [];
-		let initialization: InitializeCommand | undefined;
+		let initialization: InitializeRequest | undefined;
 		const results = await runBalanceShadowCohort({
 			config,
 			mode: "initialize",
@@ -85,13 +85,16 @@ test.concurrent(
 				},
 				loadSubject: async () => structuredClone(fullSubject),
 				client: {
-					initialize: async ({ command }) => {
+					initialize: async ({ request }) => {
 						calls.push("initialize");
-						initialization = command;
-						return { kind: "initialized", state: command.state };
+						initialization = request;
+						return {
+							result: { status: "initialized", duplicate: false },
+							state: request.state,
+						};
 					},
-					check: async ({ command }) =>
-						computeCheck({
+					check: async ({ command }) => ({
+						result: computeCheck({
 							fullSubject: subjectStateToFullSubject({
 								state: initialization!.state,
 								catalog: catalogRowsToCatalog({
@@ -101,6 +104,8 @@ test.concurrent(
 							}),
 							command,
 						}),
+						state: initialization!.state,
+					}),
 				},
 				report: () => {
 					calls.push("report");
@@ -116,7 +121,7 @@ test.concurrent(
 				({ internal_feature_id }) => features[internal_feature_id]?.id,
 			),
 		).toEqual(["messages", "tokens"]);
-		expect(initialization!.identity).toEqual(identity);
+		expect(initialization!.command.identity).toEqual(identity);
 		expect(results).toMatchObject([
 			{ status: "equal_at_read", featureIds: ["messages", "tokens"] },
 		]);

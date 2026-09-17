@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { z } from "zod/v4";
-import { workerCustomerEntitlementSchema } from "../../../../src/models/rows/workerCustomerEntitlement.js";
-import { workerCustomerProductSchema } from "../../../../src/models/rows/workerCustomerProduct.js";
-import { workerEntitySchema } from "../../../../src/models/rows/workerEntity.js";
-import { workerRolloverSchema } from "../../../../src/models/rows/workerRollover.js";
+import { workerCustomerEntitlementSchema } from "../../../../src/models/subject/rows/workerCustomerEntitlement.js";
+import { workerCustomerProductSchema } from "../../../../src/models/subject/rows/workerCustomerProduct.js";
+import { workerEntitySchema } from "../../../../src/models/subject/rows/workerEntity.js";
+import { workerRolloverSchema } from "../../../../src/models/subject/rows/workerRollover.js";
 
 const customerEntitlement = {
 	id: "ce_1",

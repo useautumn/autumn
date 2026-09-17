@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import {
+	type MutationRecord,
 	meteringIdentityToPartitionKey,
 	meteringIdentityToSubjectKey,
+	parseMutationRecord,
 	parseSubjectState,
-	parseSubjectStateMutation,
 	type SubjectState,
-	type SubjectStateMutation,
 } from "@autumn/balance-engine";
 
 const CHECKPOINT_SCHEMA_VERSION = 1 as const;
@@ -22,7 +22,7 @@ export type PartitionCheckpointStateV1 = {
 export type PartitionCheckpointReceiptV1 = {
 	partitionKey: string;
 	recordOffset: bigint;
-	mutation: SubjectStateMutation;
+	mutation: MutationRecord;
 };
 
 export type PartitionCheckpointContentsV1 = {
@@ -185,9 +185,9 @@ const parseReceiptMutation = ({
 	input,
 }: {
 	input: unknown;
-}): SubjectStateMutation => {
+}): MutationRecord => {
 	try {
-		return parseSubjectStateMutation({ input });
+		return parseMutationRecord({ input });
 	} catch (cause) {
 		throw new InvalidPartitionCheckpointError({
 			message: "Partition checkpoint contains an invalid mutation receipt",
@@ -543,7 +543,7 @@ export const parsePartitionCheckpoint = ({
 				name: `Checkpoint receipt ${index} recordOffset`,
 				value: receiptEntry.recordOffset,
 			}),
-			mutation: receiptEntry.mutation as SubjectStateMutation,
+			mutation: receiptEntry.mutation as MutationRecord,
 		};
 	});
 	const checkpoint = createPartitionCheckpoint({

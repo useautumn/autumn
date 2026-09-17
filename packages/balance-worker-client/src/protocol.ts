@@ -1,14 +1,14 @@
 export type {
 	BalanceWorkerCheckRequest,
-	BalanceWorkerCheckResponse,
+	CheckReply,
 } from "./contracts/check.js";
 export type {
 	BalanceWorkerInitializeRequest,
-	BalanceWorkerInitializeResponse,
+	InitializeReply,
 } from "./contracts/initialize.js";
 export type {
 	BalanceWorkerTrackRequest,
-	BalanceWorkerTrackResponse,
+	TrackReply,
 } from "./contracts/track.js";
 export type {
 	PartitionRoute,

@@ -1,7 +1,7 @@
 import {
 	customerRowsToSubjectState,
 	type MeteringIdentity,
-	parseInitializeCommand,
+	parseInitializeRequest,
 	type SubjectState,
 } from "@autumn/balance-engine";
 import { initializeSubject } from "../../../actions/initializeSubject.js";
@@ -24,13 +24,16 @@ export const hydrateSubjectState = async ({
 	});
 	if (!envelope) throw new SubjectNotFoundError({ identity });
 
-	const command = parseInitializeCommand({
+	const request = parseInitializeRequest({
 		input: {
-			schemaVersion: 1,
-			type: "initialize",
-			commandId: `hydrate_${crypto.randomUUID()}`,
-			requestId: `hydrate_${identity.customerId}`,
-			identity,
+			command: {
+				schemaVersion: 1,
+				type: "initialize",
+				commandId: `hydrate_${crypto.randomUUID()}`,
+				requestId: `hydrate_${identity.customerId}`,
+				identity,
+				occurredAt,
+			},
 			state: customerRowsToSubjectState({
 				identity,
 				customer: envelope.customer,
@@ -41,15 +44,9 @@ export const hydrateSubjectState = async ({
 			}),
 			// Catalog rows are not part of hydration; ensureSubjectCatalog loads whatever the state references.
 			catalogRows: [],
-			occurredAt,
 		},
 	});
-	const decision = await initializeSubject({ ctx, command });
-	// A server initialize may have landed first; either way the committed state is what the command runs on.
-	if (decision.kind === "already_initialized") {
-		const state = ctx.writer.readFreshestState({ identity });
-		if (state) return state;
-		throw new SubjectNotFoundError({ identity });
-	}
-	return decision.state;
+	// A server initialize may have landed first; either way the state the worker holds is what the command runs on.
+	const { state } = await initializeSubject({ ctx, request });
+	return state;
 };

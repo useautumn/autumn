@@ -1,9 +1,5 @@
-import type {
-	CheckCommand,
-	CheckDecision,
-	TrackCommand,
-	TrackDecision,
-} from "@autumn/balance-engine";
+import type { CheckCommand, TrackCommand } from "@autumn/balance-engine";
+import type { CheckReply, TrackReply } from "@autumn/balance-worker-client";
 import type {
 	ReplayHydrationResult,
 	ReplayHydrationSelection,
@@ -20,6 +16,7 @@ import {
 } from "./replayCommands.js";
 import { abortAllJobs, hydrateSelection } from "./replayHydrationJobs.js";
 import {
+	initializeResponseToOutcome,
 	isExactInitializationMiss,
 	prewarmResultOf,
 } from "./replayHydrationOutcomes.js";
@@ -39,7 +36,7 @@ export async function runCheck({
 	selection: ReplayHydrationSelection;
 	command: CheckCommand;
 	signal?: AbortSignal;
-}): Promise<CheckDecision> {
+}): Promise<CheckReply> {
 	assertScopeOpen({ scope });
 	const normalized = normalizeSelection({ selection });
 	const snapshot = freezeCheckCommand({ command });
@@ -64,7 +61,7 @@ export async function runTrack({
 	selection: ReplayHydrationSelection;
 	command: TrackCommand;
 	signal?: AbortSignal;
-}): Promise<TrackDecision> {
+}): Promise<TrackReply> {
 	assertScopeOpen({ scope });
 	const normalized = normalizeSelection({ selection });
 	const snapshot = freezeTrackCommand({ command });
@@ -97,12 +94,12 @@ export async function runPrewarm({
 	} catch (cause) {
 		if (!isExactInitializationMiss(cause)) throw cause;
 	}
-	const decision = await hydrateSelection({
+	const response = await hydrateSelection({
 		scope,
 		selection: normalized,
 		signal,
 	});
-	return prewarmResultOf({ kind: decision.kind });
+	return prewarmResultOf({ kind: initializeResponseToOutcome({ response }) });
 }
 
 export function closeScope({

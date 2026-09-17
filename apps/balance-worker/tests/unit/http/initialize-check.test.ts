@@ -1,10 +1,7 @@
 import { expect, test } from "bun:test";
 import {
-	applyMutation,
-	computeInitialize,
 	createSubjectState,
 	parseCheckCommand,
-	parseInitializeCommand,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
@@ -39,23 +36,17 @@ const state = createSubjectState({
 	],
 });
 const initialization = {
-	schemaVersion: 1,
-	type: "initialize",
-	requestId: "initialize",
-	commandId: "baseline",
-	identity,
+	command: {
+		schemaVersion: 1,
+		type: "initialize",
+		requestId: "initialize",
+		commandId: "baseline",
+		identity,
+		occurredAt: 1_700_000_000_000,
+	},
 	state,
 	catalogRows: createCatalogRowsFor({ state }),
-	occurredAt: 1_700_000_000_000,
 };
-/** What the store holds once the baseline mutation is applied. */
-const initializedState = applyMutation({
-	state: null,
-	mutation: computeInitialize({
-		command: parseInitializeCommand({ input: initialization }),
-		deduplicationExpiresAt: 1_700_000_000_000 + 86_400_000,
-	}),
-});
 const checkCommand = parseCheckCommand({
 	input: {
 		schemaVersion: 1,
@@ -146,6 +137,7 @@ function createFixture({
 			},
 		},
 	});
+	/** An initialize request is posted as its command plus a payload, the way the client does. */
 	const post = async ({
 		path,
 		command,
@@ -154,12 +146,26 @@ function createFixture({
 		path: string;
 		command: unknown;
 		routeEpoch?: string;
-	}) =>
-		app.request(`/v1/${path}`, {
+	}) => {
+		const envelope =
+			typeof command === "object" && command !== null && "state" in command
+				? {
+						command: Reflect.get(command, "command"),
+						payload: {
+							state: Reflect.get(command, "state"),
+							catalogRows: Reflect.get(command, "catalogRows"),
+						},
+					}
+				: { command };
+		return app.request(`/v1/${path}`, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ route: { partition: 0, routeEpoch }, command }),
+			body: JSON.stringify({
+				route: { partition: 0, routeEpoch },
+				...envelope,
+			}),
 		});
+	};
 	const close = async () => {
 		await processor.drain();
 		store.close();
@@ -185,7 +191,8 @@ test.concurrent(
 			});
 			expect(initialized.status).toBe(200);
 			expect(await initialized.json()).toMatchObject({
-				decision: { kind: "initialized", state: initializedState },
+				result: { status: "initialized", duplicate: false },
+				state: { revision: 1 },
 			});
 			const tracked = await fixture.post({
 				path: "track",
@@ -193,7 +200,8 @@ test.concurrent(
 			});
 			expect(tracked.status).toBe(200);
 			expect(await tracked.json()).toMatchObject({
-				decision: { kind: "new", mutation: { result: { balanceAfter: 5 } } },
+				result: { status: "applied" },
+				state: { revision: 2, customerEntitlements: [{ balance: 5 }] },
 			});
 			const checked = await fixture.post({
 				path: "check",
@@ -201,19 +209,19 @@ test.concurrent(
 			});
 			expect(checked.status).toBe(200);
 			expect(await checked.json()).toMatchObject({
-				decision: {
-					allowed: true,
-					revision: 2,
-					customerEntitlement: { balance: 5 },
-				},
+				result: { allowed: true },
+				state: { revision: 2, customerEntitlements: [{ balance: 5 }] },
 			});
 
 			const duplicate = await fixture.post({
 				path: "initialize",
-				command: { ...initialization, requestId: "retry" },
+				command: {
+					...initialization,
+					command: { ...initialization.command, requestId: "retry" },
+				},
 			});
 			expect(await duplicate.json()).toMatchObject({
-				decision: { kind: "duplicate", state: initializedState },
+				result: { status: "initialized", duplicate: true },
 			});
 			const conflict = await fixture.post({
 				path: "initialize",
@@ -228,20 +236,22 @@ test.concurrent(
 			});
 			const differentBaseline = await fixture.post({
 				path: "initialize",
-				command: { ...initialization, commandId: "other_baseline" },
+				command: {
+					...initialization,
+					command: { ...initialization.command, commandId: "other_baseline" },
+				},
 			});
-			expect(await differentBaseline.json()).toEqual({
-				decision: { kind: "already_initialized" },
+			expect(await differentBaseline.json()).toMatchObject({
+				result: { status: "already_initialized", duplicate: false },
+				state: { revision: 2 },
 			});
 			const trackedAgain = await fixture.post({
 				path: "track",
 				command: trackCommand,
 			});
 			expect(await trackedAgain.json()).toMatchObject({
-				decision: {
-					kind: "duplicate",
-					mutation: { result: { balanceAfter: 5 } },
-				},
+				result: { status: "applied" },
+				state: { customerEntitlements: [{ balance: 5 }] },
 			});
 			expect(
 				fixture.batches.flat().map((record) => record.command.type),
@@ -272,7 +282,10 @@ test.concurrent(
 				path: "initialize",
 				command: {
 					...initialization,
-					identity: { ...identity, customerId: "other" },
+					command: {
+						...initialization.command,
+						identity: { ...identity, customerId: "other" },
+					},
 				},
 			});
 			expect(mismatch.status).toBe(400);
@@ -334,7 +347,8 @@ test.concurrent(
 			gate.resolve();
 			expect((await initializePromise).status).toBe(200);
 			expect(await (await checkPromise).json()).toMatchObject({
-				decision: { balance: 10, revision: 1 },
+				result: { allowed: true },
+				state: { revision: 1, customerEntitlements: [{ balance: 10 }] },
 			});
 			await draining;
 		} finally {

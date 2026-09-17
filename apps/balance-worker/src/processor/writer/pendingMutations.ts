@@ -1,7 +1,7 @@
 import {
+	type MutationRecord,
 	meteringIdentityToSubjectKey,
 	type SubjectState,
-	type SubjectStateMutation,
 	splitSubjectState,
 } from "@autumn/balance-engine";
 import type { CommittedMutation } from "./types/mutation.js";
@@ -51,9 +51,15 @@ export function createPendingSettlement(): PendingSettlement {
 		return resolvers.promise;
 	}
 
-	function settle({ mutation }: { mutation: SubjectStateMutation }): void {
+	function settle({
+		mutation,
+		state,
+	}: {
+		mutation: MutationRecord;
+		state: SubjectState;
+	}): void {
 		for (const { kind, resolvers } of waiters) {
-			resolvers.resolve({ kind, mutation });
+			resolvers.resolve({ kind, mutation, state });
 		}
 	}
 
@@ -64,7 +70,7 @@ export function createPendingSettlement(): PendingSettlement {
 	return { join, settle, reject };
 }
 
-/** Records the mutation and projects its result per subject, then returns the writer's own settlement promise. */
+/** Queues the record and projects its result per subject, then returns the writer's own settlement promise. */
 export function enqueueMutation({
 	scope,
 	pendingKey,
@@ -75,7 +81,7 @@ export function enqueueMutation({
 	scope: PartitionWriterScope;
 	pendingKey: string;
 	customerKey: string;
-	mutation: SubjectStateMutation;
+	mutation: MutationRecord;
 	nextState: SubjectState;
 }): Promise<CommittedMutation> {
 	const { state, config } = scope;
@@ -100,6 +106,7 @@ export function enqueueMutation({
 			meteringIdentityToSubjectKey({ identity: projected.identity }),
 		),
 		mutation,
+		nextState,
 		settlement,
 		committed,
 	};

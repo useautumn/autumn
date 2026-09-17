@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { InitializeCommand } from "@autumn/balance-engine";
+import type { InitializeRequest } from "@autumn/balance-engine";
 import {
 	type BalanceWorkerClient,
 	BalanceWorkerClientError,
@@ -20,18 +20,20 @@ test.concurrent(
 	"initialization sends the exact mapped baseline through the owner client and preserves each decision",
 	async () => {
 		const fixture = createCustomerFixture();
-		const commands: InitializeCommand[] = [];
+		const commands: InitializeRequest[] = [];
 		for (const kind of [
 			"initialized",
 			"duplicate",
 			"already_initialized",
 		] as const) {
+			const result =
+				kind === "already_initialized"
+					? { status: "already_initialized" as const, duplicate: false }
+					: { status: "initialized" as const, duplicate: kind === "duplicate" };
 			const client: Pick<BalanceWorkerClient, "initialize"> = {
-				initialize: async ({ command }) => {
-					commands.push(command);
-					return kind === "already_initialized"
-						? { kind }
-						: { kind, state: command.state };
+				initialize: async ({ request }) => {
+					commands.push(request);
+					return { result, state: request.state };
 				},
 			};
 			expect(
@@ -41,13 +43,15 @@ test.concurrent(
 					commandId: "baseline",
 					client,
 				}),
-			).toMatchObject({ kind });
+			).toMatchObject({ result });
 		}
 		expect(commands[0]).toMatchObject({
-			type: "initialize",
-			requestId: fixture.ctx.id,
-			commandId: "baseline",
-			identity: { customerId: "cus_test" },
+			command: {
+				type: "initialize",
+				requestId: fixture.ctx.id,
+				commandId: "baseline",
+				identity: { customerId: "cus_test" },
+			},
 			state: {
 				revision: 0,
 				customerEntitlements: [
@@ -64,11 +68,14 @@ test.concurrent(
 	"initialization rejects negative raw balances before submission but accepts zero",
 	async () => {
 		const fixture = createCustomerFixture();
-		const commands: InitializeCommand[] = [];
+		const commands: InitializeRequest[] = [];
 		const client: Pick<BalanceWorkerClient, "initialize"> = {
-			initialize: async ({ command }) => {
-				commands.push(command);
-				return { kind: "initialized", state: command.state };
+			initialize: async ({ request }) => {
+				commands.push(request);
+				return {
+					result: { status: "initialized", duplicate: false },
+					state: request.state,
+				};
 			},
 		};
 		const initialization = {
@@ -92,16 +99,14 @@ test.concurrent(
 
 		fixture.customerEntitlement.balance = 0;
 		expect(await initializeBalanceWorkerCustomer(initialization)).toMatchObject(
-			{
-				kind: "initialized",
-				state: {
-					customerEntitlements: expect.arrayContaining([
-						expect.objectContaining({ id: "messages_grant", balance: 0 }),
-					]),
-				},
-			},
+			{ result: { status: "initialized" } },
 		);
 		expect(commands).toHaveLength(1);
+		expect(commands[0]?.state.customerEntitlements).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ id: "messages_grant", balance: 0 }),
+			]),
+		);
 	},
 );
 
@@ -110,24 +115,28 @@ test.concurrent(
 	async () => {
 		const { ctx, fullSubject } = createCustomerFixture();
 		const loadSubject = async () => fullSubject;
-		const [row] = fullSubjectToSubjectState({
+		const state = fullSubjectToSubjectState({
 			ctx,
 			fullSubject,
 			featureIds: ["messages"],
-		}).customerEntitlements;
+		});
+		const [row] = state.customerEntitlements;
 		if (!row) throw new Error("Expected the messages row");
 		const commands: unknown[] = [];
 		const client: Pick<BalanceWorkerClient, "check"> = {
 			check: async ({ command }) => {
 				commands.push(command);
 				return {
-					kind: "decided",
-					allowed: false,
-					reason: "insufficient_balance",
-					balance: 0,
-					requiredBalance: command.requiredBalance,
-					revision: 9,
-					customerEntitlement: { ...row, balance: -2 },
+					result: {
+						allowed: false,
+						reason: "insufficient_balance",
+						requiredBalance: command.requiredBalance,
+					},
+					state: {
+						...state,
+						revision: 9,
+						customerEntitlements: [{ ...row, balance: -2 }],
+					},
 				};
 			},
 		};

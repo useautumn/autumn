@@ -1,19 +1,19 @@
 import {
-	type InitializationDecision,
-	type InitializeCommand,
-	parseInitializeCommand,
+	type InitializeRequest,
+	parseInitializeRequest,
 } from "@autumn/balance-engine";
+import type { InitializeReply } from "@autumn/balance-worker-client/protocol";
 import { initializeSubject } from "../actions/initializeSubject.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
 /** The server hands over a customer's rows; the worker makes them the baseline unless it already has one. */
 export async function initialize({
 	scope,
-	command,
+	request,
 }: {
 	scope: PartitionProcessorScope;
-	command: InitializeCommand;
-}): Promise<InitializationDecision> {
-	const parsed = parseInitializeCommand({ input: command });
-	return await initializeSubject({ ctx: scope.ctx, command: parsed });
+	request: InitializeRequest;
+}): Promise<InitializeReply> {
+	const parsed = parseInitializeRequest({ input: request });
+	return await initializeSubject({ ctx: scope.ctx, request: parsed });
 }

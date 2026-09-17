@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { baseCommandSchema } from "../../../models/common/baseCommand.js";
+import { baseCommandSchema } from "../../../models/command/baseCommand.js";
 import { propertiesSchema } from "../../../models/common/json.js";
 import {
 	finiteNumberSchema,

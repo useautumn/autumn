@@ -1,3 +1,6 @@
+export type { CheckReply } from "./contracts/check.js";
+export type { InitializeReply } from "./contracts/initialize.js";
+export type { TrackReply } from "./contracts/track.js";
 export { createBalanceWorkerClient } from "./createBalanceWorkerClient.js";
 export type {
 	PartitionOwner,

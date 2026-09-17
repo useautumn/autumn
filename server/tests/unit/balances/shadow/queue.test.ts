@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
-import type { TrackCommand, TrackDecision } from "@autumn/balance-engine";
+import type { TrackCommand } from "@autumn/balance-engine";
+import type { TrackReply } from "@autumn/balance-worker-client";
+import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import { createBalanceShadow } from "@/internal/balances/shadow/createBalanceShadow.js";
 
 const command: TrackCommand = {
@@ -27,7 +29,7 @@ test.concurrent(
 	async () => {
 		const calls: TrackCommand[] = [];
 		const events: Record<string, unknown>[] = [];
-		const gate = Promise.withResolvers<TrackDecision>();
+		const gate = Promise.withResolvers<TrackReply>();
 		const shadow = createBalanceShadow({
 			dependencies: {
 				client: {
@@ -44,13 +46,21 @@ test.concurrent(
 		await tick();
 		expect(calls).toEqual([command]);
 		expect(shadow.status()).toMatchObject({ submitted: 1, inFlight: 1 });
-		gate.resolve({ kind: "unsupported", reason: "feature_not_found" });
+		gate.reject(
+			new BalanceWorkerClientError({
+				code: "WORKER_ERROR",
+				outcome: "not_submitted",
+				message: "unsupported: feature_not_found",
+				workerCode: "UNSUPPORTED_COMMAND",
+				workerReason: "feature_not_found",
+			}),
+		);
 		await tick();
 		expect(events).toContainEqual(
 			expect.objectContaining({
-				event: "completed",
+				event: "failed",
 				source,
-				shadow: { kind: "unsupported", reason: "feature_not_found" },
+				reason: "unsupported: feature_not_found",
 			}),
 		);
 		await shadow.stop();

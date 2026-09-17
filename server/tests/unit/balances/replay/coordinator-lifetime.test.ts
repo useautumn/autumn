@@ -21,9 +21,9 @@ function missingClient() {
 		track: async () => {
 			throw createNotInitializedError();
 		},
-		initialize: async ({ command }: { command: { state: SubjectState } }) => ({
-			kind: "initialized" as const,
-			state: command.state,
+		initialize: async ({ request }: { request: { state: SubjectState } }) => ({
+			result: { status: "initialized" as const, duplicate: false },
+			state: request.state,
 		}),
 	};
 }
@@ -141,9 +141,12 @@ test.concurrent(
 			},
 			client: {
 				...missingClient(),
-				initialize: async ({ command }) => {
-					initialized.push(command.identity.customerId);
-					return { kind: "initialized", state: command.state };
+				initialize: async ({ request }) => {
+					initialized.push(request.command.identity.customerId);
+					return {
+						result: { status: "initialized", duplicate: false },
+						state: request.state,
+					};
 				},
 			},
 			config: { maxActive: 1, maxQueued: 1, deadlineMs: 30 },
@@ -186,9 +189,12 @@ test.concurrent(
 			},
 			client: {
 				...missingClient(),
-				initialize: async ({ command }) => {
+				initialize: async () => {
 					initializeCalls++;
-					return { kind: "initialized", state: command.state };
+					return {
+						result: { status: "initialized", duplicate: false },
+						state: fixture.state,
+					};
 				},
 			},
 			config: { deadlineMs: 10_000 },

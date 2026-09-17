@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
+import type { Redis } from "ioredis";
 import CLAIM_SCRIPT from "@/_luaScriptsV2/syncDirty/claimSyncDirty.lua";
 import CLEAR_CLAIM_SCRIPT from "@/_luaScriptsV2/syncDirty/clearSyncClaim.lua";
-import type { Redis } from "ioredis";
 import type { UsageWindowUpdate } from "../../types/usageWindowUpdate.js";
 import { DIRTY_FIELD_PREFIXES } from "./markSyncDirty.js";
 import { buildSyncDirtyKeys, type SyncDirtyScope } from "./syncDirtyKeys.js";
@@ -102,7 +102,6 @@ export const claimSyncDirty = async ({
 	if (!result || result.length === 0) return null;
 	return decodeClaimFields(result);
 };
-
 
 /** Deletes the owned claim after a successful Postgres flush. */
 export const clearSyncClaim = async ({

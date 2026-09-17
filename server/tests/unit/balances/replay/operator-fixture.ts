@@ -1,11 +1,14 @@
 import type {
 	CheckCommand,
-	CheckDecision,
 	MeteringIdentity,
 	TrackCommand,
-	TrackDecision,
-	UnsupportedDecisionReason,
+	UnsupportedCommandReason,
 } from "@autumn/balance-engine";
+import {
+	BalanceWorkerClientError,
+	type CheckReply,
+	type TrackReply,
+} from "@autumn/balance-worker-client";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { parseReplayManifest } from "@/internal/balances/replay/manifest/parseReplayManifest.js";
 import type {
@@ -118,25 +121,19 @@ export function replayEnvOf({
 	return identity.env === "live" ? "live" : "sandbox";
 }
 
-type CheckUnsupportedReason = Extract<
-	CheckDecision,
-	{ kind: "unsupported" }
->["reason"];
-
-export function unsupportedCheckDecision({
+/** What the client raises when the worker refuses a command the engine cannot decide. */
+export function unsupportedCommandError({
 	reason,
 }: {
-	reason: CheckUnsupportedReason;
-}): CheckDecision {
-	return { kind: "unsupported", reason };
-}
-
-export function unsupportedTrackDecision({
-	reason,
-}: {
-	reason: UnsupportedDecisionReason;
-}): TrackDecision {
-	return { kind: "unsupported", reason };
+	reason: UnsupportedCommandReason;
+}): BalanceWorkerClientError {
+	return new BalanceWorkerClientError({
+		code: "WORKER_ERROR",
+		outcome: "not_submitted",
+		message: `The worker cannot decide this command: ${reason}`,
+		workerCode: "UNSUPPORTED_COMMAND",
+		workerReason: reason,
+	});
 }
 
 /** The public converters own the reply shape; replay pins the values it reports. */
@@ -223,11 +220,11 @@ export function createFakeCoordinator({
 	onCheck?: (params: {
 		selection: ReplayHydrationSelection;
 		command: CheckCommand;
-	}) => Promise<CheckDecision>;
+	}) => Promise<CheckReply>;
 	onTrack?: (params: {
 		selection: ReplayHydrationSelection;
 		command: TrackCommand;
-	}) => Promise<TrackDecision>;
+	}) => Promise<TrackReply>;
 } = {}) {
 	const calls: FakeCoordinatorCall[] = [];
 	const checkCommands: CheckCommand[] = [];

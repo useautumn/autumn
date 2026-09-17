@@ -1,14 +1,15 @@
 import type {
 	CatalogRow,
 	CheckCommand,
-	CheckDecision,
-	InitializationDecision,
 	MeteringIdentity,
 	SubjectState,
 	TrackCommand,
-	TrackDecision,
 } from "@autumn/balance-engine";
-import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
+import type {
+	BalanceWorkerClient,
+	CheckReply,
+	TrackReply,
+} from "@autumn/balance-worker-client";
 
 export type ReplayHydrationBaseline = Readonly<{
 	id: string;
@@ -59,8 +60,15 @@ export type ReplayHydrationClock = Readonly<{
 	clearTimeout: (timer: unknown) => void;
 }>;
 
+/** `initialized` is a fresh write; `duplicate` a retry of one; `already_initialized` found state; `already_ready` never needed to initialize. */
+export type ReplayHydrationOutcome =
+	| "initialized"
+	| "duplicate"
+	| "already_initialized"
+	| "already_ready";
+
 export type ReplayHydrationResult = Readonly<{
-	kind: InitializationDecision["kind"] | "already_ready";
+	kind: ReplayHydrationOutcome;
 	freshParity: boolean;
 }>;
 
@@ -69,12 +77,12 @@ export type ReplayHydrationCoordinator = {
 		selection: ReplayHydrationSelection;
 		command: CheckCommand;
 		signal?: AbortSignal;
-	}): Promise<CheckDecision>;
+	}): Promise<CheckReply>;
 	track(params: {
 		selection: ReplayHydrationSelection;
 		command: TrackCommand;
 		signal?: AbortSignal;
-	}): Promise<TrackDecision>;
+	}): Promise<TrackReply>;
 	prewarm(params: {
 		selection: ReplayHydrationSelection;
 		signal?: AbortSignal;

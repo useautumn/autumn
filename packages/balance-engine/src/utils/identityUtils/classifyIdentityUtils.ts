@@ -1,4 +1,4 @@
-import type { MeteringIdentity } from "../../models/meteringIdentity.js";
+import type { MeteringIdentity } from "../../models/identity/meteringIdentity.js";
 
 /** Same customer log, whichever subject of it each identity names. */
 export const isSameCustomerIdentity = ({

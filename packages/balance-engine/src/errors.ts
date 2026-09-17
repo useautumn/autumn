@@ -42,3 +42,20 @@ export class CatalogRowMissingError extends Error {
 		this.name = "CatalogRowMissingError";
 	}
 }
+
+export type UnsupportedCommandReason =
+	| "entity_not_found"
+	| "feature_not_found"
+	| "properties_not_supported"
+	| "subject_mismatch";
+
+/** The engine cannot decide this command for this subject; the caller maps the reason to a status. */
+export class UnsupportedCommandError extends Error {
+	readonly reason: UnsupportedCommandReason;
+
+	constructor({ reason }: { reason: UnsupportedCommandReason }) {
+		super(`Unsupported command: ${reason}`);
+		this.name = "UnsupportedCommandError";
+		this.reason = reason;
+	}
+}

@@ -160,7 +160,7 @@ test.concurrent(
 			);
 			expect(JSON.stringify(logs)).not.toContain("private_baseline");
 			expect(JSON.stringify(logs)).not.toContain(identity.customerId);
-			expect(JSON.stringify(logs)).not.toContain("balanceAfter");
+			expect(JSON.stringify(logs)).not.toContain("deltas");
 		} finally {
 			apply.mockRestore();
 			closeStoreFixture(fixture);

@@ -3,7 +3,7 @@
  * may resend that command once, while refusals and drift never partially seed.
  */
 import { expect, test } from "bun:test";
-import type { InitializeCommand } from "@autumn/balance-engine";
+import type { InitializeRequest } from "@autumn/balance-engine";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import { createReplayHydrationCoordinator } from "@/internal/balances/replay/createReplayHydrationCoordinator.js";
 import type { ReplayHydrationWorkerClient } from "@/internal/balances/replay/replayHydrationContracts.js";
@@ -33,22 +33,25 @@ test.concurrent(
 	"an ambiguous initialize response retries once with the exact frozen seed",
 	async () => {
 		const fixture = createReplayHydrationFixture();
-		const commands: InitializeCommand[] = [];
+		const commands: InitializeRequest[] = [];
 		const coordinator = createReplayHydrationCoordinator({
 			source: createLoadedSource({
 				state: fixture.state,
 				catalogRows: fixture.catalogRows,
 			}),
 			client: prewarmMissingClient({
-				initialize: async ({ command }) => {
-					commands.push(command);
+				initialize: async ({ request }) => {
+					commands.push(request);
 					if (commands.length === 1)
 						throw new BalanceWorkerClientError({
 							code: "TRANSPORT",
 							outcome: "unknown",
 							message: "Reply was lost",
 						});
-					return { kind: "duplicate", state: command.state };
+					return {
+						result: { status: "initialized", duplicate: true },
+						state: request.state,
+					};
 				},
 			}),
 		});
@@ -75,7 +78,7 @@ test.concurrent(
 		);
 		if (!changedRow) throw new Error("Expected the messages grant");
 		changedRow.balance = 71;
-		const commands: InitializeCommand[] = [];
+		const commands: InitializeRequest[] = [];
 		for (const { selection, state } of [
 			{ selection: first.selection, state: first.state },
 			{ selection: first.selection, state: changedState },
@@ -93,18 +96,23 @@ test.concurrent(
 			const coordinator = createReplayHydrationCoordinator({
 				source: createLoadedSource({ state, catalogRows: first.catalogRows }),
 				client: prewarmMissingClient({
-					initialize: async ({ command }) => {
-						commands.push(command);
-						return { kind: "initialized", state: command.state };
+					initialize: async ({ request }) => {
+						commands.push(request);
+						return {
+							result: { status: "initialized", duplicate: false },
+							state: request.state,
+						};
 					},
 				}),
 			});
 			await coordinator.prewarm({ selection });
 			await coordinator.close();
 		}
-		expect(commands[0].commandId).toBe(commands[1].commandId);
-		expect(commands[0].commandId).not.toBe(commands[2].commandId);
-		expect(commands[0].requestId).toBe(commands[1].requestId);
+		expect(commands[0].command.commandId).toBe(commands[1].command.commandId);
+		expect(commands[0].command.commandId).not.toBe(
+			commands[2].command.commandId,
+		);
+		expect(commands[0].command.requestId).toBe(commands[1].command.requestId);
 		expect(commands[0].state).not.toEqual(commands[1].state);
 	},
 );
@@ -146,9 +154,12 @@ test.concurrent(
 			const coordinator = createReplayHydrationCoordinator({
 				source,
 				client: prewarmMissingClient({
-					initialize: async ({ command }) => {
+					initialize: async () => {
 						initializeCalls++;
-						return { kind: "initialized", state: command.state };
+						return {
+							result: { status: "initialized", duplicate: false },
+							state: fixture.state,
+						};
 					},
 				}),
 			});
@@ -176,10 +187,13 @@ test.concurrent(
 					catalogRows: fixture.catalogRows,
 				}),
 				client: prewarmMissingClient({
-					initialize: async ({ command }) =>
-						kind === "already_initialized"
-							? { kind }
-							: { kind, state: command.state },
+					initialize: async () => ({
+						result:
+							kind === "already_initialized"
+								? { status: "already_initialized", duplicate: false }
+								: { status: "initialized", duplicate: kind === "duplicate" },
+						state: fixture.state,
+					}),
 				}),
 			});
 			expect(

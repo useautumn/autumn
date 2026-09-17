@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import type { TrackCommand, TrackDecision } from "@autumn/balance-engine";
+import { createSubjectState, type TrackCommand } from "@autumn/balance-engine";
+import type { TrackReply } from "@autumn/balance-worker-client";
 import { createBalanceShadow } from "@/internal/balances/shadow/createBalanceShadow.js";
 
 const command: TrackCommand = {
@@ -20,9 +21,9 @@ const command: TrackCommand = {
 	occurredAt: 1_800_000_000_000,
 };
 const source = { kind: "returned" } as const;
-const decision: TrackDecision = {
-	kind: "unsupported",
-	reason: "feature_not_found",
+const decision: TrackReply = {
+	state: createSubjectState({ identity: command.identity }),
+	result: { type: "track", status: "applied", reason: null, deltas: [] },
 };
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
 
@@ -30,8 +31,8 @@ test.concurrent(
 	"one customer's features share a FIFO lane without blocking other customers",
 	async () => {
 		const calls: string[] = [];
-		const first = Promise.withResolvers<TrackDecision>();
-		const second = Promise.withResolvers<TrackDecision>();
+		const first = Promise.withResolvers<TrackReply>();
+		const second = Promise.withResolvers<TrackReply>();
 		const startedSecond = Promise.withResolvers<void>();
 		const shadow = createBalanceShadow({
 			dependencies: {
@@ -91,7 +92,7 @@ test.concurrent(
 	"equal customer IDs in different organizations and environments have independent lanes",
 	async () => {
 		const identities: TrackCommand["identity"][] = [];
-		const gate = Promise.withResolvers<TrackDecision>();
+		const gate = Promise.withResolvers<TrackReply>();
 		const shadow = createBalanceShadow({
 			dependencies: {
 				client: {

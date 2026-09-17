@@ -1,5 +1,6 @@
 import type {
-	MeteringIdentity,
+	MutatingCommand,
+	MutationRecord,
 	SubjectState,
 	SubjectStateMutation,
 } from "@autumn/balance-engine";
@@ -9,12 +10,11 @@ export type MutateParams = {
 	state: SubjectState | null;
 };
 
-/** What a command hands the writer: who, which request, and how to decide it. */
+/** What a command hands the writer: the command, and how to decide it. Dedup is derived from the command here. */
 export type MutationSubmission<Reply> = {
-	identity: MeteringIdentity;
-	commandId: string;
-	/** Same commandId + same fingerprint is a retry; a different fingerprint is a conflict. */
-	fingerprint: string;
+	command: MutatingCommand;
+	/** The rows an initialize brings; a retry must bring the same ones. */
+	baseline?: SubjectState;
 	/** Runs inside the writer's synchronous critical section; must not await. */
 	mutate: (params: MutateParams) => MutationResult<Reply>;
 };
@@ -29,11 +29,13 @@ export type MutationResult<Reply> =
 	/** Nothing to write: reply immediately. */
 	| { kind: "reply"; reply: Reply };
 
-/** Resolved once the mutation is committed to Kafka and applied to SQLite. */
+/** Resolved once the record is committed to Kafka and applied to SQLite. */
 export type CommittedMutation = {
 	/** "new" for the submission that wrote it, "duplicate" for retries of it. */
 	kind: "new" | "duplicate";
-	mutation: SubjectStateMutation;
+	mutation: MutationRecord;
+	/** The subject's rows with this mutation applied; a retry after later mutations sees the rows as they stand now. */
+	state: SubjectState;
 };
 
 /** Returned synchronously by `decide`: the decision is made, durability is not. */

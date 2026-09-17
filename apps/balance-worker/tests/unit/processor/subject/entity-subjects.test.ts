@@ -8,6 +8,7 @@ import {
 	type SubjectState,
 	type WorkerEntity,
 } from "@autumn/balance-engine";
+import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import type { MeteringRecord } from "@autumn/kafka";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
@@ -147,7 +148,7 @@ const createFixture = () => {
 		now: () => 1_700_000_000_000,
 	};
 	const writer = createPartitionWriter({
-		ctx: { stateStore: store, appender },
+		ctx: { stateStore: store, appender, receiptPolicy },
 		config: { topic, partition, limits },
 	});
 	const catalogCache = createTestCatalogCache({ db });
@@ -191,10 +192,7 @@ describe("entity subjects", () => {
 			});
 
 			expect(fixture.subjectRowsCalls).toEqual([entityIdentity]);
-			expect(decision).toMatchObject({
-				kind: "new",
-				mutation: { revision: { before: 1, after: 2 } },
-			});
+			expect(decision).toMatchObject({ state: { revision: 2 } });
 			expect(
 				fixture.appender.batches
 					.flat()
@@ -225,6 +223,14 @@ describe("entity subjects", () => {
 			fixture.close();
 		}
 	});
+
+	/** The balance left on the rows this track drew from. */
+	const drawnBalanceOf = ({ result, state }: TrackReply): number => {
+		const drawn = new Set(result.deltas.map((delta) => delta.id));
+		return state.customerEntitlements
+			.filter((row) => drawn.has(row.id))
+			.reduce((total, row) => total + row.balance, 0);
+	};
 
 	test("pending customer and entity mutations project per subject, so each sees the other's revision", async () => {
 		const fixture = createFixture();
@@ -261,20 +267,14 @@ describe("entity subjects", () => {
 			]);
 
 			expect(
-				decisions.map((decision) =>
-					decision.kind === "new"
-						? [
-								decision.mutation.revision.before,
-								decision.mutation.result.type === "track"
-									? decision.mutation.result.balanceAfter
-									: null,
-							]
-						: decision.kind,
-				),
+				decisions.map((decision) => [
+					decision.state.revision,
+					drawnBalanceOf(decision),
+				]),
 			).toEqual([
-				[2, 8],
-				[3, 6],
-				[4, 7],
+				[3, 8],
+				[4, 6],
+				[5, 7],
 			]);
 			expect(fixture.store.readOwnState({ identity })?.revision).toBe(5);
 			expect(

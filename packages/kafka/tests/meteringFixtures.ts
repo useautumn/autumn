@@ -6,10 +6,10 @@ import {
 	computeTrack,
 	createSubjectState,
 	type MeteringIdentity,
-	parseInitializeCommand,
+	type MutationRecord,
+	parseInitializeRequest,
 	parseTrackCommand,
 	type SubjectState,
-	type SubjectStateMutation,
 	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
 import {
@@ -28,7 +28,7 @@ export const testIdentity: MeteringIdentity = {
 };
 
 const occurredAt = 1_700_000_000_000;
-const deduplicationExpiresAt = 1_700_086_400_000;
+const receipt = { fingerprint: "fp_test", expiresAt: 1_700_086_400_000 };
 const internalFeatureId = "feat_messages";
 const entitlementId = "ent_messages_monthly";
 const internalProductId = "prod_internal_pro";
@@ -147,14 +147,13 @@ export const createTrackMutation = ({
 	state?: SubjectState;
 	commandId?: string;
 	value?: number;
-} = {}): SubjectStateMutation => {
-	const decision = computeTrack({
+} = {}): MutationRecord => {
+	const mutation = computeTrack({
 		fullSubject: subjectStateToFullSubject({
 			state,
 			catalog: testCatalog,
 			entityId: state.identity.entityId,
 		}),
-		deduplicationExpiresAt,
 		command: parseTrackCommand({
 			input: {
 				schemaVersion: 1,
@@ -170,10 +169,7 @@ export const createTrackMutation = ({
 			},
 		}),
 	});
-	if (decision.kind !== "new") {
-		throw new Error(`Expected a new mutation, received ${decision.kind}`);
-	}
-	return decision.mutation;
+	return { ...mutation, receipt };
 };
 
 export const createInitializeMutation = ({
@@ -182,19 +178,22 @@ export const createInitializeMutation = ({
 }: {
 	state?: SubjectState;
 	commandId?: string;
-} = {}): SubjectStateMutation =>
-	computeInitialize({
-		command: parseInitializeCommand({
+} = {}): MutationRecord => ({
+	...computeInitialize(
+		parseInitializeRequest({
 			input: {
-				schemaVersion: 1,
-				type: "initialize",
-				requestId: `req_${commandId}`,
-				commandId,
-				identity: state.identity,
+				command: {
+					schemaVersion: 1,
+					type: "initialize",
+					requestId: `req_${commandId}`,
+					commandId,
+					identity: state.identity,
+					occurredAt,
+				},
 				state,
 				catalogRows: testCatalogRows,
-				occurredAt,
 			},
 		}),
-		deduplicationExpiresAt,
-	});
+	),
+	receipt,
+});

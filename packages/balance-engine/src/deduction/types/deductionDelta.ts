@@ -1,0 +1,22 @@
+import { z } from "zod/v4";
+import {
+	finiteNumberSchema,
+	nonEmptyStringSchema,
+} from "../../models/common/primitives.js";
+
+/** One balance moved once. Negative balanceDelta is a deduction, positive a refund. On the log as part of a track's result. */
+export const deductionDeltaSchema = z
+	.object({
+		table: z.enum(["customerEntitlements", "rollovers"]),
+		id: nonEmptyStringSchema,
+		/** In the row's own units: what its balance column moved. */
+		balanceDelta: finiteNumberSchema,
+		/** Rollovers count usage as they drain; rows derive usage from balance. */
+		usageDelta: finiteNumberSchema,
+		/** In the tracked feature's units: what of the caller's value this delta covered. */
+		valueDelta: finiteNumberSchema,
+		creditCost: finiteNumberSchema,
+	})
+	.strict();
+
+export type DeductionDelta = z.infer<typeof deductionDeltaSchema>;

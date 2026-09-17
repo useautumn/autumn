@@ -1,10 +1,10 @@
 import {
 	cusEntToCusPrice,
+	type Feature,
+	type FullCusEntWithFullCusProduct,
+	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
 	isPayPerUsePrice,
-	type Feature,
-	type FullCustomer,
-	type FullCusEntWithFullCusProduct,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 

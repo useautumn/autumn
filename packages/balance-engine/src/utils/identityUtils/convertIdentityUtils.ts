@@ -1,4 +1,4 @@
-import type { MeteringIdentity } from "../../models/meteringIdentity.js";
+import type { MeteringIdentity } from "../../models/identity/meteringIdentity.js";
 
 /** The customer's log key: every subject of a customer shares it, so their mutations stay ordered. */
 export const meteringIdentityToPartitionKey = ({

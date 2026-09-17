@@ -1,65 +1,35 @@
-import {
-	cusEntToBalance,
-	fullSubjectToCustomerEntitlements,
-} from "@autumn/shared";
-import { Decimal } from "decimal.js";
+import { deduct } from "../../deduction/deduct.js";
+import { UnsupportedCommandError } from "../../errors.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
-import { isSameCustomerIdentity } from "../../utils/identityUtils/classifyIdentityUtils.js";
-import { fullCustomerEntitlementToRow } from "../../utils/subjectUtils/convertSubjectUtils.js";
+import { assertCommandSupported } from "../common/assertCommandSupported.js";
 import type { CheckCommand } from "./types/checkCommand.js";
-import type { CheckDecision } from "./types/checkDecision.js";
+import type { CheckResult } from "./types/checkResult.js";
 
+/** A check is a reject-mode deduction that is never written: allowed iff the deduction would not be refused. */
 export const computeCheck = ({
 	fullSubject,
 	command,
 }: {
 	fullSubject: WorkerFullSubject;
 	command: CheckCommand;
-}): CheckDecision => {
-	if (
-		!isSameCustomerIdentity({
-			left: fullSubject.identity,
-			right: command.identity,
-		})
-	) {
-		return { kind: "unsupported", reason: "subject_mismatch" };
-	}
-	if (command.identity.entityId && !fullSubject.entity) {
-		return { kind: "unsupported", reason: "entity_not_found" };
-	}
-	if (command.properties && Object.keys(command.properties).length > 0) {
-		return { kind: "unsupported", reason: "properties_not_supported" };
-	}
+}): CheckResult => {
+	assertCommandSupported({ fullSubject, command });
 
-	const customerEntitlements = fullSubjectToCustomerEntitlements({
+	const outcome = deduct({
 		fullSubject,
-		featureIds: [command.featureId],
+		featureId: command.featureId,
+		overageBehavior: "reject",
+		now: command.occurredAt,
+		value: command.requiredBalance,
 	});
-	const [fundingRow] = customerEntitlements;
-	if (!fundingRow) {
-		return { kind: "unsupported", reason: "feature_not_found" };
-	}
-	if (customerEntitlements.length > 1) {
-		return {
-			kind: "unsupported",
-			reason: "multiple_customer_entitlements_not_supported",
-		};
+	if (outcome.context.customerEntitlements.length === 0) {
+		throw new UnsupportedCommandError({ reason: "feature_not_found" });
 	}
 
-	// An overdrawn row reads as zero remaining, the same floor a reject-mode track applies.
-	const balance = Decimal.max(cusEntToBalance({ cusEnt: fundingRow }), 0);
-	const allowed =
-		command.requiredBalance <= 0 || balance.gte(command.requiredBalance);
-
+	const allowed = !outcome.rejected;
 	return {
-		kind: "decided",
 		allowed,
 		reason: allowed ? null : "insufficient_balance",
-		balance: balance.toNumber(),
-		customerEntitlement: fullCustomerEntitlementToRow({
-			customerEntitlement: fundingRow,
-		}),
 		requiredBalance: command.requiredBalance,
-		revision: fullSubject.revision,
 	};
 };

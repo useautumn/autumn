@@ -3,12 +3,12 @@ import type { Catalog } from "../../models/catalog/catalog.js";
 import {
 	type WorkerCustomerEntitlement,
 	workerCustomerEntitlementSchema,
-} from "../../models/rows/workerCustomerEntitlement.js";
+} from "../../models/subject/rows/workerCustomerEntitlement.js";
+import type { SubjectState } from "../../models/subject/subjectState.js";
 import type {
 	WorkerFullCustomerEntitlement,
 	WorkerFullSubject,
 } from "../../models/subject/workerFullSubject.js";
-import type { SubjectState } from "../../models/subjectState.js";
 import { parseWorkerCustomerEntitlement } from "../../parsers.js";
 
 const joinCustomerEntitlement = ({

@@ -1,25 +1,23 @@
 import { describe, expect, test } from "bun:test";
 import {
 	computeInitialize,
-	initializeCommandToFingerprint,
-	parseInitializeCommand,
+	parseInitializeRequest,
 } from "../../../../src/balanceEngine.js";
 import {
 	createCustomerEntitlement,
 	createCustomerProduct,
 	createEntityState,
-	createInitializeCommand,
+	createInitializeRequest,
 	createState,
-	deduplicationExpiresAt,
 	entity,
 	identity,
 } from "../../engineFixtures.js";
 
 const initializeMutation = ({
-	command = createInitializeCommand(),
+	request = createInitializeRequest(),
 }: {
-	command?: ReturnType<typeof createInitializeCommand>;
-} = {}) => computeInitialize({ command, deduplicationExpiresAt });
+	request?: ReturnType<typeof createInitializeRequest>;
+} = {}) => computeInitialize(request);
 
 describe("initialization computation", () => {
 	test.concurrent("inserts every row as the first revision", () => {
@@ -31,7 +29,7 @@ describe("initialization computation", () => {
 			}),
 		];
 		const mutation = initializeMutation({
-			command: createInitializeCommand({
+			request: createInitializeRequest({
 				state: createState({ customerEntitlements }),
 			}),
 		});
@@ -42,9 +40,9 @@ describe("initialization computation", () => {
 			revision: { before: 0, after: 1 },
 			command: { type: "initialize" },
 			result: { type: "initialize" },
-			receipt: { expiresAt: deduplicationExpiresAt },
 		});
 		expect(mutation.changes).toEqual([
+			{ table: "customer", op: "insert", row: createState().customer },
 			{ table: "customerProducts", op: "insert", row: createCustomerProduct() },
 			{
 				table: "customerEntitlements",
@@ -71,12 +69,12 @@ describe("initialization computation", () => {
 			}),
 		];
 		const mutation = initializeMutation({
-			command: createInitializeCommand({
+			request: createInitializeRequest({
 				state: createState({ customerEntitlements }),
 			}),
 		});
 		const reorderedMutation = initializeMutation({
-			command: createInitializeCommand({
+			request: createInitializeRequest({
 				requestId: "req_init_retry",
 				state: createState({
 					customerEntitlements: [...customerEntitlements].reverse(),
@@ -84,40 +82,31 @@ describe("initialization computation", () => {
 			}),
 		});
 		const changedMutation = initializeMutation({
-			command: createInitializeCommand({
+			request: createInitializeRequest({
 				state: createState({ balance: 11 }),
 			}),
 		});
 
-		expect(reorderedMutation.receipt.fingerprint).toBe(
-			mutation.receipt.fingerprint,
-		);
-		expect(changedMutation.receipt.fingerprint).not.toBe(
-			mutation.receipt.fingerprint,
-		);
+		expect(reorderedMutation.changes).toEqual(mutation.changes);
+		expect(changedMutation.changes).not.toEqual(mutation.changes);
 	});
 
 	test.concurrent(
 		"an entity initialize joins the customer's log at its current revision",
 		() => {
-			const command = createInitializeCommand({ state: createEntityState() });
-			const mutation = computeInitialize({
-				command,
-				revisionBefore: 7,
-				deduplicationExpiresAt,
-			});
+			const request = createInitializeRequest({ state: createEntityState() });
+			const mutation = computeInitialize({ ...request, revisionBefore: 7 });
 
 			expect(mutation).toMatchObject({
 				identity: { ...identity, entityId: entity.id },
 				revision: { before: 7, after: 8 },
 			});
-			expect(mutation.command).toMatchObject({ type: "initialize", entity });
+			expect(mutation.command).toMatchObject({ type: "initialize" });
 			expect(mutation.changes.map((change) => change.table)).toEqual([
+				"customer",
+				"entity",
 				"customerEntitlements",
 			]);
-			expect(initializeCommandToFingerprint({ command })).toBe(
-				mutation.receipt.fingerprint,
-			);
 		},
 	);
 
@@ -131,29 +120,32 @@ describe("initialization computation", () => {
 				}),
 				internal_entity_id: entity.internal_id,
 			};
-			const asInput = (state: ReturnType<typeof createState>) => ({
-				...createInitializeCommand(),
-				identity: state.identity,
-				state,
-			});
+			const asInput = (state: ReturnType<typeof createState>) => {
+				const request = createInitializeRequest();
+				return {
+					...request,
+					command: { ...request.command, identity: state.identity },
+					state,
+				};
+			};
 
 			expect(() =>
-				parseInitializeCommand({
+				parseInitializeRequest({
 					input: asInput(createState({ customerEntitlements: [entityRow] })),
 				}),
 			).toThrow();
 			expect(() =>
-				parseInitializeCommand({
+				parseInitializeRequest({
 					input: asInput({ ...createState(), entity }),
 				}),
 			).toThrow();
 			expect(() =>
-				parseInitializeCommand({
+				parseInitializeRequest({
 					input: asInput({ ...createEntityState(), entity: null }),
 				}),
 			).toThrow();
 			expect(() =>
-				parseInitializeCommand({
+				parseInitializeRequest({
 					input: asInput(
 						createEntityState({
 							customerEntitlements: [createCustomerEntitlement()],
@@ -162,11 +154,7 @@ describe("initialization computation", () => {
 				}),
 			).toThrow();
 			expect(() =>
-				computeInitialize({
-					command: createInitializeCommand(),
-					revisionBefore: 3,
-					deduplicationExpiresAt,
-				}),
+				computeInitialize({ ...createInitializeRequest(), revisionBefore: 3 }),
 			).toThrow();
 		},
 	);

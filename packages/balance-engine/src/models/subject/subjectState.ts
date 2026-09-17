@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { meteringIdentitySchema } from "./meteringIdentity.js";
+import { meteringIdentitySchema } from "../identity/meteringIdentity.js";
 import { workerCustomerSchema } from "./rows/workerCustomer.js";
 import { workerCustomerEntitlementSchema } from "./rows/workerCustomerEntitlement.js";
 import { workerCustomerProductSchema } from "./rows/workerCustomerProduct.js";

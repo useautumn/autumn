@@ -1,6 +1,5 @@
-import type { MeteringIdentity } from "../../models/meteringIdentity.js";
-import type { WorkerCustomer } from "../../models/rows/workerCustomer.js";
-import type { SubjectState } from "../../models/subjectState.js";
+import type { MeteringIdentity } from "../../models/identity/meteringIdentity.js";
+import type { SubjectState } from "../../models/subject/subjectState.js";
 import { parseSubjectState } from "../../parsers.js";
 
 type SubjectStateRows = Partial<

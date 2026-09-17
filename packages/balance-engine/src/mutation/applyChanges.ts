@@ -1,9 +1,15 @@
 import { isDeepStrictEqual } from "node:util";
 import { StaleMutationError } from "../errors.js";
-import type { RowChange, TableRowChange } from "../models/rowChange.js";
-import type { SubjectState } from "../models/subjectState.js";
+import type {
+	RowChange,
+	TableRowChange,
+} from "../models/mutation/rowChange.js";
+import type { SubjectState } from "../models/subject/subjectState.js";
 
-type StateRow = SubjectState[RowChange["table"]][number];
+type StateRow = SubjectState[
+	| "customerProducts"
+	| "customerEntitlements"
+	| "rollovers"][number];
 
 const rowIdOf = ({ row }: { row: StateRow }): string => row.id;
 
@@ -64,6 +70,12 @@ export const applyChanges = ({
 	let nextState = state;
 	for (const change of changes) {
 		switch (change.table) {
+			case "customer":
+				nextState = { ...nextState, customer: change.row };
+				break;
+			case "entity":
+				nextState = { ...nextState, entity: change.row };
+				break;
 			case "customerProducts":
 				nextState = {
 					...nextState,

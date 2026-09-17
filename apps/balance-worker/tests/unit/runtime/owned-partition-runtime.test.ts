@@ -8,8 +8,8 @@ import {
 	parseCheckCommand,
 	parseTrackCommand,
 	type TrackCommand,
-	type TrackDecision,
 } from "@autumn/balance-engine";
+import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import {
 	createProducerSession,
 	type KafkaTransaction as KafkaMutationTransactionPort,
@@ -433,7 +433,10 @@ describe("owned partition runtime", () => {
 						command: createCheckCommand({ requestId: "req_2" }),
 					}),
 				),
-			).resolves.toMatchObject({ kind: "decided", balance: 10, revision: 0 });
+			).resolves.toMatchObject({
+				result: { allowed: true },
+				state: { revision: 0, customerEntitlements: [{ balance: 10 }] },
+			});
 		} finally {
 			await runtime.stop();
 			closeStoreFixture(fixture);
@@ -595,13 +598,12 @@ describe("owned partition runtime", () => {
 
 			commit.resolve(undefined);
 			await expect(trackPromise).resolves.toMatchObject({
-				kind: "new",
-				mutation: { result: { status: "applied", balanceAfter: 5 } },
+				result: { status: "applied" },
+				state: { customerEntitlements: [{ balance: 5 }] },
 			});
 			await expect(checkPromise).resolves.toMatchObject({
-				kind: "decided",
-				balance: 5,
-				revision: 1,
+				result: { allowed: true },
+				state: { revision: 1, customerEntitlements: [{ balance: 5 }] },
 			});
 		} finally {
 			await runtime.stop();
@@ -697,8 +699,8 @@ describe("owned partition runtime", () => {
 				commit.resolve(undefined);
 
 				expect(await track).toMatchObject({
-					kind: "new",
-					mutation: { result: { status: "applied", balanceAfter: 5 } },
+					result: { status: "applied" },
+					state: { customerEntitlements: [{ balance: 5 }] },
 				});
 				expect(await check).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
 				expect(runtime.getStatus()).toBe("recovery_required");
@@ -764,7 +766,7 @@ describe("owned partition runtime", () => {
 			producer: fakeProducer.producer,
 			follower: fakeFollower.follower,
 		});
-		let trackPromise: Promise<TrackDecision> | null = null;
+		let trackPromise: Promise<TrackReply> | null = null;
 
 		try {
 			await runtime.start();
@@ -786,8 +788,8 @@ describe("owned partition runtime", () => {
 
 			commit.resolve(undefined);
 			await expect(trackPromise).resolves.toMatchObject({
-				kind: "new",
-				mutation: { result: { status: "applied", balanceAfter: 5 } },
+				result: { status: "applied" },
+				state: { customerEntitlements: [{ balance: 5 }] },
 			});
 			await runtime.stop();
 
@@ -814,7 +816,7 @@ describe("owned partition runtime", () => {
 			producer: fakeProducer.producer,
 			follower: fakeFollower.follower,
 		});
-		let trackPromise: Promise<TrackDecision> | null = null;
+		let trackPromise: Promise<TrackReply> | null = null;
 
 		try {
 			await runtime.start();
@@ -857,7 +859,7 @@ describe("owned partition runtime", () => {
 			follower: fakeFollower.follower,
 			recoveryDrainTimeoutMs: 1,
 		});
-		let trackPromise: Promise<TrackDecision> | null = null;
+		let trackPromise: Promise<TrackReply> | null = null;
 
 		try {
 			await runtime.start();
@@ -1004,9 +1006,8 @@ describe("owned partition runtime", () => {
 
 			expect(runtime.getStatus()).toBe("ready");
 			await expect(check).resolves.toMatchObject({
-				kind: "decided",
-				balance: 10,
-				revision: 0,
+				result: { allowed: true },
+				state: { revision: 0, customerEntitlements: [{ balance: 10 }] },
 			});
 			await expect(
 				runtime.process((processor) =>
@@ -1014,7 +1015,10 @@ describe("owned partition runtime", () => {
 						command: createCheckCommand({ requestId: "req_after_abort" }),
 					}),
 				),
-			).resolves.toMatchObject({ kind: "decided", balance: 10, revision: 0 });
+			).resolves.toMatchObject({
+				result: { allowed: true },
+				state: { revision: 0, customerEntitlements: [{ balance: 10 }] },
+			});
 		} finally {
 			await runtime.stop();
 			closeStoreFixture(fixture);

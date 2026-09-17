@@ -1,27 +1,32 @@
 import {
 	type MeteringIdentity,
+	type MutationRecord,
 	mergeSubjectStates,
 	meteringIdentityToPartitionKey,
 	meteringIdentityToSubjectKey,
 	type SubjectState,
-	type SubjectStateMutation,
 } from "@autumn/balance-engine";
 import {
 	enqueueMutation,
 	pendingCommitsFor,
 	pendingKeyOf,
 } from "../pendingMutations.js";
+import { commandToFingerprint } from "../receipt/commandToFingerprint.js";
+import { mutationToRecord } from "../receipt/mutationToRecord.js";
 import type {
 	CommittedMutation,
 	DecidedMutation,
 	MutationSubmission,
 } from "../types/mutation.js";
 import type { PartitionWriterScope } from "../types/partitionWriter.js";
-import { PartitionWriterCommandConflictError } from "../writerErrors.js";
+import {
+	PartitionWriterCommandConflictError,
+	PartitionWriterStateNotFoundError,
+} from "../writerErrors.js";
 import { scheduleCommit } from "./commit.js";
 
 /**
- * Synchronous until the mutation is enqueued: no await may separate reading the
+ * Synchronous until the record is enqueued: no await may separate reading the
  * projection from recording the next one, or concurrent commands would interleave.
  */
 export function decide<Reply>({
@@ -33,13 +38,15 @@ export function decide<Reply>({
 }): DecidedMutation<Reply> {
 	const { ctx, state } = scope;
 	if (state.recoveryError) throw state.recoveryError;
-	const { identity, commandId, fingerprint } = submission;
+	const { command, baseline } = submission;
+	const { identity, commandId } = command;
+	const fingerprint = commandToFingerprint({ command, baseline });
 	const customerKey = meteringIdentityToPartitionKey({ identity });
 	const pendingKey = pendingKeyOf({ customerKey, commandId });
 
 	const inFlight = state.pendingByKey.get(pendingKey);
 	if (inFlight) {
-		assertSameRequest({ commandId, fingerprint, mutation: inFlight.mutation });
+		assertSameRequest({ commandId, fingerprint, record: inFlight.mutation });
 		return decidedWith<Reply>(inFlight.settlement.join({ kind: "duplicate" }));
 	}
 
@@ -47,15 +54,21 @@ export function decide<Reply>({
 		identity,
 		mutationId: commandId,
 	});
+	// A null state is legal here: initialize is the command that creates one.
+	const currentState = readFreshestState({ scope, identity });
 	if (receipt) {
-		assertSameRequest({ commandId, fingerprint, mutation: receipt });
+		assertSameRequest({ commandId, fingerprint, record: receipt });
+		if (!currentState)
+			throw new PartitionWriterStateNotFoundError({ customerKey });
 		return decidedWith<Reply>(
-			Promise.resolve({ kind: "duplicate", mutation: receipt }),
+			Promise.resolve({
+				kind: "duplicate",
+				mutation: receipt,
+				state: currentState,
+			}),
 		);
 	}
 
-	// A null state is legal here: initialize is the command that creates one.
-	const currentState = readFreshestState({ scope, identity });
 	const result = submission.mutate({ state: currentState });
 	if (result.kind === "reply")
 		return decidedWith<Reply>(Promise.resolve(result.reply));
@@ -64,7 +77,12 @@ export function decide<Reply>({
 		scope,
 		pendingKey,
 		customerKey,
-		...result,
+		mutation: mutationToRecord({
+			mutation: result.mutation,
+			fingerprint,
+			receiptPolicy: ctx.receiptPolicy,
+		}),
+		nextState: result.nextState,
 	});
 	scheduleCommit({ scope });
 	return decidedWith<Reply>(committed);
@@ -115,16 +133,16 @@ export function readFreshestState({
 	return mergeSubjectStates({ customer, entity });
 }
 
-/** A known mutation for this commandId must have been produced by the same request. */
+/** A known record for this commandId must have been produced by the same request. */
 function assertSameRequest({
 	commandId,
 	fingerprint,
-	mutation,
+	record,
 }: {
 	commandId: string;
 	fingerprint: string;
-	mutation: SubjectStateMutation;
+	record: MutationRecord;
 }): void {
-	if (mutation.receipt.fingerprint === fingerprint) return;
+	if (record.receipt.fingerprint === fingerprint) return;
 	throw new PartitionWriterCommandConflictError({ commandId });
 }

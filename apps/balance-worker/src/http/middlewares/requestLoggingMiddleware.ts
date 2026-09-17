@@ -1,3 +1,4 @@
+import { UnsupportedCommandError } from "@autumn/balance-engine";
 import type { Context, MiddlewareHandler, Next } from "hono";
 import type {
 	BalanceWorkerHttpContext,
@@ -35,13 +36,11 @@ function logRequestResult({
 	context: Context<BalanceWorkerHttpEnv>;
 	startedAt: number;
 }): void {
-	const { id, command, decision, error, errorCode } = context.get("requestLog");
+	const { id, command, response, error, errorCode } = context.get("requestLog");
+	const result = response?.result;
 	const trackResult =
-		decision &&
-		"mutation" in decision &&
-		decision.mutation.result.type === "track"
-			? decision.mutation.result
-			: undefined;
+		result && "type" in result && result.type === "track" ? result : undefined;
+	const initializeResult = result && "duplicate" in result ? result : undefined;
 	const statusCode = context.res.status;
 	const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
 	const event = {
@@ -64,14 +63,13 @@ function logRequestResult({
 			featureId: command?.featureId,
 			value: command?.value,
 			route: context.get("request")?.route,
-			decision: decision?.kind,
-			status: trackResult?.status,
+			revision: response?.state.revision,
+			duplicate: initializeResult?.duplicate,
+			status: trackResult?.status ?? initializeResult?.status,
 			reason:
-				decision?.kind === "unsupported"
-					? decision.reason
+				error instanceof UnsupportedCommandError
+					? error.reason
 					: trackResult?.reason,
-			appliedValue: trackResult?.appliedValue,
-			balanceAfter: trackResult?.balanceAfter,
 			errorCode,
 			error,
 		},

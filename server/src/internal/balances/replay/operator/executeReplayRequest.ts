@@ -1,11 +1,13 @@
-import {
-	type CheckCommand,
-	type CheckDecision,
-	isUnsupportedDecision,
-	type MeteringIdentity,
-	type TrackCommand,
-	type TrackDecision,
+import type {
+	CheckCommand,
+	MeteringIdentity,
+	TrackCommand,
 } from "@autumn/balance-engine";
+import {
+	BalanceWorkerClientError,
+	type CheckReply,
+	type TrackReply,
+} from "@autumn/balance-worker-client";
 import { InsufficientBalanceError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { ReplayManifestRequest } from "../manifest/replayManifestContracts.js";
@@ -30,7 +32,7 @@ export type ReplayExecutionClock = Readonly<{ now: () => number }>;
 export type ReplayExecutionResult =
 	| Readonly<{
 			kind: "completed";
-			decision: CheckDecision | TrackDecision;
+			decision: CheckReply | TrackReply;
 			reply: unknown;
 			statusCode: number;
 			durationMs: number;
@@ -39,8 +41,16 @@ export type ReplayExecutionResult =
 	| Readonly<{ kind: "failed"; reason: string }>;
 
 type ReplayDispatch =
-	| Readonly<{ kind: "check"; command: CheckCommand; decision: CheckDecision }>
-	| Readonly<{ kind: "track"; command: TrackCommand; decision: TrackDecision }>;
+	| Readonly<{
+			kind: "check";
+			command: CheckCommand;
+			decision: CheckReply;
+	  }>
+	| Readonly<{
+			kind: "track";
+			command: TrackCommand;
+			decision: TrackReply;
+	  }>;
 
 const DEFAULT_CLOCK: ReplayExecutionClock = { now: () => performance.now() };
 
@@ -76,22 +86,6 @@ async function dispatchReplayPlan({
 	};
 }
 
-function replayResponseContext({
-	request,
-	identity,
-	readContext,
-}: {
-	request: ReplayManifestRequest;
-	identity: MeteringIdentity;
-	readContext: ReplayReadContext;
-}): AutumnContext {
-	return {
-		...readContext({ identity }),
-		id: request.id,
-		timestamp: request.logicalTimestampMs,
-	};
-}
-
 /** The archive keeps the worker's decision itself; projecting an API balance would need a FullSubject the replay does not load. */
 function replayDecisionReply({
 	dispatch,
@@ -102,14 +96,10 @@ function replayDecisionReply({
 }
 
 function completeReplayDispatch({
-	request,
 	dispatch,
-	readContext,
 	durationMs,
 }: {
-	request: ReplayManifestRequest;
 	dispatch: ReplayDispatch;
-	readContext: ReplayReadContext;
 	durationMs: number;
 }): ReplayExecutionResult {
 	try {
@@ -146,6 +136,15 @@ function replayExecutionErrorOf({
 }): ReplayExecutionResult {
 	if (cause instanceof ReplayHydrationSourceRefusedError)
 		return { kind: "refused", reason: cause.reason };
+	// The engine could not decide the command: a verdict for the archive, not a failure.
+	if (
+		cause instanceof BalanceWorkerClientError &&
+		cause.workerCode === "UNSUPPORTED_COMMAND"
+	)
+		return {
+			kind: "refused",
+			reason: cause.workerReason ?? "unsupported_command",
+		};
 	const refusal = replayRefusalReasonOf({ cause });
 	if (refusal !== undefined) return { kind: "refused", reason: refusal };
 	return { kind: "failed", reason: safeErrorReasonOf({ cause }) };
@@ -176,12 +175,8 @@ export async function executeReplayRequest({
 			coordinator,
 			signal,
 		});
-		if (isUnsupportedDecision(dispatch.decision))
-			return { kind: "refused", reason: dispatch.decision.reason };
 		return completeReplayDispatch({
-			request,
 			dispatch,
-			readContext,
 			durationMs: clock.now() - startedAt,
 		});
 	} catch (cause) {

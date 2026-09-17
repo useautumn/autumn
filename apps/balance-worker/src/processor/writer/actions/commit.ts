@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import type { SubjectStateMutation } from "@autumn/balance-engine";
+import type { MutationRecord } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import type {
 	DurableMutationApplyResult,
@@ -108,7 +108,10 @@ function applyBatch({
 			if (!result) throw new Error("Expected durable apply result");
 			const mutation = persistedMutationOf({ scope, result, pending });
 			removePendingMutation({ state: scope.state, pending });
-			pending.settlement.settle({ mutation });
+			pending.settlement.settle({
+				mutation,
+				state: pending.nextState,
+			});
 		}
 		return true;
 	} catch (cause) {
@@ -162,7 +165,7 @@ function persistedMutationOf({
 	scope: PartitionWriterScope;
 	result: DurableMutationApplyResult;
 	pending: PendingMutation;
-}): SubjectStateMutation {
+}): MutationRecord {
 	if (result.kind !== "position_already_applied") return result.mutation;
 
 	const { mutation } = pending;

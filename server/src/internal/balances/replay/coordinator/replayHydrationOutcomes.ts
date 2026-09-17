@@ -1,6 +1,11 @@
-import type { InitializationDecision } from "@autumn/balance-engine";
-import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
-import type { ReplayHydrationResult } from "../replayHydrationContracts.js";
+import {
+	BalanceWorkerClientError,
+	type InitializeReply,
+} from "@autumn/balance-worker-client";
+import type {
+	ReplayHydrationOutcome,
+	ReplayHydrationResult,
+} from "../replayHydrationContracts.js";
 
 /** The worker had no state and could not hydrate it itself; the coordinator seeds the baseline instead. */
 export function isExactInitializationMiss(cause: unknown): boolean {
@@ -22,7 +27,18 @@ export function isExactInitializationMiss(cause: unknown): boolean {
 export function prewarmResultOf({
 	kind,
 }: {
-	kind: InitializationDecision["kind"] | "already_ready";
+	kind: ReplayHydrationOutcome;
 }): ReplayHydrationResult {
 	return { kind, freshParity: kind === "initialized" };
+}
+
+/** A retry of the write is a duplicate; only the write itself proves the baseline. */
+export function initializeResponseToOutcome({
+	response,
+}: {
+	response: InitializeReply;
+}): ReplayHydrationOutcome {
+	const { status, duplicate } = response.result;
+	if (status === "already_initialized") return "already_initialized";
+	return duplicate ? "duplicate" : "initialized";
 }

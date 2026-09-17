@@ -44,6 +44,14 @@ export function rethrowBalanceWorkerError({
 	}
 	if (
 		cause instanceof BalanceWorkerClientError &&
+		cause.workerCode === "UNSUPPORTED_COMMAND"
+	) {
+		throw new BalanceWorkerUnsupportedError({
+			reason: cause.workerReason ?? "unsupported_command",
+		});
+	}
+	if (
+		cause instanceof BalanceWorkerClientError &&
 		cause.workerCode === "COMMAND_CONFLICT"
 	) {
 		throw new RecaseError({

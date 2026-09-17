@@ -7,9 +7,11 @@ import {
 	computeTrack,
 	createSubjectState,
 	type MeteringIdentity,
+	type MutatingCommand,
+	type MutationRecord,
 	meteringIdentityToSubjectKey,
 	type OverageBehavior,
-	parseInitializeCommand,
+	parseInitializeRequest,
 	parseTrackCommand,
 	type SubjectState,
 	type SubjectStateMutation,
@@ -27,6 +29,8 @@ import {
 	FeatureType,
 } from "@autumn/shared";
 import { createPartitionCheckpoint } from "../../src/checkpoint/partitionCheckpoint.js";
+import { commandToFingerprint } from "../../src/processor/writer/receipt/commandToFingerprint.js";
+import { mutationToRecord } from "../../src/processor/writer/receipt/mutationToRecord.js";
 import type { DurableMutationApplyResult } from "../../src/state/types/durableMutation.js";
 import type { StateStore } from "../../src/state/types/stateStore.js";
 
@@ -250,7 +254,7 @@ export const createTrackCommand = ({
 		},
 	});
 
-export const createInitializeCommand = ({
+export const createInitializeRequest = ({
 	state = createState(),
 	commandId = "init_1",
 	requestId = "req_init_1",
@@ -261,17 +265,37 @@ export const createInitializeCommand = ({
 	requestId?: string;
 	occurredAt?: number;
 } = {}) =>
-	parseInitializeCommand({
+	parseInitializeRequest({
 		input: {
-			schemaVersion: 1,
-			type: "initialize",
-			requestId,
-			commandId,
-			identity: state.identity,
+			command: {
+				schemaVersion: 1,
+				type: "initialize",
+				requestId,
+				commandId,
+				identity: state.identity,
+				occurredAt,
+			},
 			state,
 			catalogRows: createCatalogRowsFor({ state }),
-			occurredAt,
 		},
+	});
+
+/** Stamps a receipt the way the writer does, so fixtures produce what the log and store hold. */
+export const stampReceipt = ({
+	mutation,
+	command,
+	baseline,
+	deduplicationExpiresAt,
+}: {
+	mutation: SubjectStateMutation;
+	command: MutatingCommand;
+	baseline?: SubjectState;
+	deduplicationExpiresAt: number;
+}): MutationRecord =>
+	mutationToRecord({
+		mutation,
+		fingerprint: commandToFingerprint({ command, baseline }),
+		receiptPolicy: { now: () => deduplicationExpiresAt, retentionMs: 0 },
 	});
 
 export const createInitializeMutation = ({
@@ -288,17 +312,20 @@ export const createInitializeMutation = ({
 	requestId?: string;
 	occurredAt?: number;
 	deduplicationExpiresAt?: number;
-} = {}): SubjectStateMutation =>
-	computeInitialize({
-		command: createInitializeCommand({
-			state,
-			commandId,
-			requestId,
-			occurredAt,
-		}),
-		revisionBefore,
+} = {}): MutationRecord => {
+	const request = createInitializeRequest({
+		state,
+		commandId,
+		requestId,
+		occurredAt,
+	});
+	return stampReceipt({
+		mutation: computeInitialize({ ...request, revisionBefore }),
+		command: request.command,
+		baseline: request.state,
 		deduplicationExpiresAt,
 	});
+};
 
 export const createTrackMutation = ({
 	state = createState(),
@@ -315,33 +342,22 @@ export const createTrackMutation = ({
 	value?: number;
 	overageBehavior?: OverageBehavior;
 	occurredAt?: number;
-} = {}): SubjectStateMutation => {
+} = {}): MutationRecord => {
 	const trackCommand =
 		command ??
 		createTrackCommand({ identity: state.identity, ...commandOverrides });
-	const decision = computeTrack({
+	const mutation = computeTrack({
 		fullSubject: createSubjectFor({
 			state,
 			entityId: trackCommand.identity.entityId,
 		}),
 		command: trackCommand,
+	});
+	return stampReceipt({
+		mutation,
+		command: trackCommand,
 		deduplicationExpiresAt,
 	});
-	if (decision.kind !== "new") {
-		throw new Error(`Expected a new mutation, received ${decision.kind}`);
-	}
-	return decision.mutation;
-};
-
-export const requireNewMutation = ({
-	decision,
-}: {
-	decision: { kind: string; mutation?: SubjectStateMutation };
-}): SubjectStateMutation => {
-	if (decision.kind !== "new" || !decision.mutation) {
-		throw new Error(`Expected a new mutation, received ${decision.kind}`);
-	}
-	return decision.mutation;
 };
 
 export const applyDurableMutation = ({
@@ -355,7 +371,7 @@ export const applyDurableMutation = ({
 	topic: string;
 	partition: number;
 	offset: bigint;
-	mutation: SubjectStateMutation;
+	mutation: MutationRecord;
 }): DurableMutationApplyResult => {
 	const [result] = store.applyDurableMutations({
 		records: [{ position: { topic, partition, offset }, mutation }],

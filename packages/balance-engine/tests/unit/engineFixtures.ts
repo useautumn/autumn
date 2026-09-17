@@ -11,12 +11,11 @@ import {
 	catalogRowsToCatalog,
 	createSubjectState,
 	parseCheckCommand,
-	parseInitializeCommand,
+	parseInitializeRequest,
 	parseTrackCommand,
 	type SubjectState,
 	type SubjectStateMutation,
 	subjectStateToFullSubject,
-	type TrackDecision,
 	type TrackResult,
 	type WorkerCustomerEntitlement,
 	type WorkerCustomerProduct,
@@ -31,7 +30,6 @@ export const identity = {
 } as const;
 
 export const occurredAt = 1_700_000_000_000;
-export const deduplicationExpiresAt = 1_700_086_400_000;
 
 const internalFeatureIdOf = (featureId: string) => `feat_${featureId}`;
 const entitlementIdOf = (customerEntitlementId: string) =>
@@ -263,7 +261,7 @@ export const createCheckCommand = ({
 		},
 	});
 
-export const createInitializeCommand = ({
+export const createInitializeRequest = ({
 	commandId = "init_1",
 	requestId = "req_init_1",
 	state = createState(),
@@ -272,27 +270,20 @@ export const createInitializeCommand = ({
 	requestId?: string;
 	state?: ReturnType<typeof createState>;
 } = {}) =>
-	parseInitializeCommand({
+	parseInitializeRequest({
 		input: {
-			schemaVersion: 1,
-			type: "initialize",
-			requestId,
-			commandId,
-			identity: state.identity,
+			command: {
+				schemaVersion: 1,
+				type: "initialize",
+				requestId,
+				commandId,
+				identity: state.identity,
+				occurredAt,
+			},
 			state,
 			catalogRows: createCatalogRowsFor({ state }),
-			occurredAt,
 		},
 	});
-
-export const requireNewMutation = (
-	decision: TrackDecision,
-): SubjectStateMutation => {
-	if (decision.kind !== "new") {
-		throw new Error(`Expected a new mutation, received ${decision.kind}`);
-	}
-	return decision.mutation;
-};
 
 export const trackResultOf = ({
 	mutation,

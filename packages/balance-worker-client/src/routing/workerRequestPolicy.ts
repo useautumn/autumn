@@ -68,5 +68,6 @@ export function isNotOwnerResponse({
 		outcome: error.code === "INTERNAL" ? "unknown" : "not_submitted",
 		message: error.message,
 		workerCode: error.code,
+		workerReason: error.reason,
 	});
 }

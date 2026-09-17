@@ -15,7 +15,7 @@ import {
 	fullSubjectToCatalogRows,
 	fullSubjectToSubjectState,
 } from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
-import { workerCustomerEntitlementToApiBalance } from "@/internal/balances/balanceWorker/workerCustomerEntitlementToApiBalance.js";
+import { workerStateToApiBalance } from "@/internal/balances/balanceWorker/workerStateToApiBalance.js";
 import { prices } from "../../../utils/fixtures/db/prices.js";
 import { createCustomerFixture } from "./customer-fixture.js";
 
@@ -89,17 +89,22 @@ test.concurrent(
 		}).data;
 
 		expect(
-			workerCustomerEntitlementToApiBalance({
+			workerStateToApiBalance({
 				ctx: fixture.ctx,
 				fullSubject: fixture.fullSubject,
-				customerEntitlement,
+				state,
+				featureId: "messages",
 			}),
 		).toEqual(existing);
 		expect(
-			workerCustomerEntitlementToApiBalance({
+			workerStateToApiBalance({
 				ctx: fixture.ctx,
 				fullSubject: fixture.fullSubject,
-				customerEntitlement: { ...customerEntitlement, balance: 67 },
+				state: {
+					...state,
+					customerEntitlements: [{ ...customerEntitlement, balance: 67 }],
+				},
+				featureId: "messages",
 			}),
 		).toMatchObject({ remaining: 67, usage: existing.usage + 5 });
 	},

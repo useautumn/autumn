@@ -13,8 +13,7 @@ import {
 	createManualClock,
 	createReadContextSpy,
 	EVENT_NAME_REFUSAL_REASON,
-	unsupportedCheckDecision,
-	unsupportedTrackDecision,
+	unsupportedCommandError,
 } from "./operator-fixture.js";
 import {
 	createNotInitializedError,
@@ -28,17 +27,17 @@ const fixture = createReplayHydrationFixture();
 const { readContext } = createReadContextSpy({ ctx: fixture.ctx });
 
 const featureNotFoundCheck = () =>
-	Promise.resolve(unsupportedCheckDecision({ reason: "feature_not_found" }));
+	Promise.reject(unsupportedCommandError({ reason: "feature_not_found" }));
 const featureNotFoundTrack = () =>
-	Promise.resolve(unsupportedTrackDecision({ reason: "feature_not_found" }));
+	Promise.reject(unsupportedCommandError({ reason: "feature_not_found" }));
 
 const yieldingCheck = async () => {
 	await tick();
-	return unsupportedCheckDecision({ reason: "feature_not_found" });
+	throw unsupportedCommandError({ reason: "feature_not_found" });
 };
 const yieldingTrack = async () => {
 	await tick();
-	return unsupportedTrackDecision({ reason: "feature_not_found" });
+	throw unsupportedCommandError({ reason: "feature_not_found" });
 };
 
 function findRequestResult({

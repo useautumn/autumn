@@ -1,8 +1,8 @@
-import {
-	type InitializationDecision,
-	parseInitializeCommand,
-} from "@autumn/balance-engine";
-import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
+import { parseInitializeRequest } from "@autumn/balance-engine";
+import type {
+	BalanceWorkerClient,
+	InitializeReply,
+} from "@autumn/balance-worker-client";
 import type { FullSubject } from "@autumn/shared";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -24,22 +24,24 @@ export async function initializeBalanceWorkerCustomer({
 	featureIds: readonly string[];
 	commandId: string;
 	client?: Pick<BalanceWorkerClient, "initialize">;
-}): Promise<InitializationDecision> {
+}): Promise<InitializeReply> {
 	const state = fullSubjectToSubjectState({ ctx, fullSubject, featureIds });
-	const command = parseInitializeCommand({
+	const request = parseInitializeRequest({
 		input: {
-			schemaVersion: 1,
-			type: "initialize",
-			commandId,
-			requestId: ctx.id,
-			identity: state.identity,
+			command: {
+				schemaVersion: 1,
+				type: "initialize",
+				commandId,
+				requestId: ctx.id,
+				identity: state.identity,
+				occurredAt: ctx.timestamp,
+			},
 			state,
 			catalogRows: fullSubjectToCatalogRows({ ctx, fullSubject, featureIds }),
-			occurredAt: ctx.timestamp,
 		},
 	});
 	try {
-		return await (client ?? getBalanceWorkerClient()).initialize({ command });
+		return await (client ?? getBalanceWorkerClient()).initialize({ request });
 	} catch (cause) {
 		rethrowBalanceWorkerError({ cause });
 	}

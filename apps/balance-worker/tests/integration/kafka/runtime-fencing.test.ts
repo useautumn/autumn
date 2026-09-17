@@ -165,8 +165,8 @@ async function replacementFencesPreviousRuntime(): Promise<void> {
 		await expect(
 			replacement.process((processor) => processor.track({ command })),
 		).resolves.toMatchObject({
-			kind: "new",
-			mutation: { result: { status: "applied", balanceAfter: 5 } },
+			result: { status: "applied" },
+			state: { customerEntitlements: [{ balance: 5 }] },
 		});
 		expect(replacement.getStatus()).toBe("ready");
 		expect(stores[1].readState({ identity })?.revision).toBe(1);

@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
 	MeteringIdentity,
+	MutationRecord,
 	SubjectState,
-	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import {
 	type OwnedPartitionHealth,
@@ -40,8 +40,7 @@ export const createMutation = ({
 	state: SubjectState;
 	commandId?: string;
 	requestId?: string;
-}): SubjectStateMutation =>
-	createTrackMutation({ state, commandId, requestId });
+}): MutationRecord => createTrackMutation({ state, commandId, requestId });
 
 export const createStoreFixture = ({
 	nextOffset = 0n,
@@ -308,7 +307,7 @@ export function createKafkaCommittedMutationAppender({
 export function serializeKafkaMutationRecord({
 	mutation,
 }: {
-	mutation: SubjectStateMutation;
+	mutation: MutationRecord;
 }) {
 	return serializeMeteringRecord({ record: mutation });
 }

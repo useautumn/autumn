@@ -79,8 +79,8 @@ test.concurrent(
 					client: live.client,
 				}),
 			).toMatchObject({
-				kind: "initialized",
-				state: { identity, revision: 1 },
+				result: { status: "initialized", duplicate: false },
+				state: { revision: 1 },
 			});
 			expect(
 				await runBalanceWorkerCheck({
@@ -154,14 +154,14 @@ test.concurrent(
 					...initialization,
 					client: live.client,
 				}),
-			).toMatchObject({ kind: "duplicate" });
+			).toMatchObject({ result: { status: "initialized", duplicate: true } });
 			expect(
 				await initializeBalanceWorkerCustomer({
 					...initialization,
 					commandId: "different_baseline",
 					client: live.client,
 				}),
-			).toEqual({ kind: "already_initialized" });
+			).toMatchObject({ result: { status: "already_initialized" } });
 			const changedSubject = structuredClone(fullSubject);
 			changedSubject.customer_products[0].customer_entitlements[0].balance = 99;
 			await expect(
@@ -225,7 +225,7 @@ test.concurrent(
 					...initialization,
 					client: restored.client,
 				}),
-			).toMatchObject({ kind: "duplicate" });
+			).toMatchObject({ result: { status: "initialized", duplicate: true } });
 			expect(records).toHaveLength(4);
 		} finally {
 			await Promise.all([live.close(), restored.close()]);

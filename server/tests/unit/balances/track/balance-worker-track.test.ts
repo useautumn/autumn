@@ -1,13 +1,14 @@
 import { beforeEach, expect, test } from "bun:test";
 import {
+	applyMutation,
 	catalogRowsToCatalog,
 	computeTrack,
 	type OverageBehavior,
-	type SubjectStateMutation,
 	subjectStateToFullSubject,
 	type TrackCommand,
-	type TrackDecision,
 } from "@autumn/balance-engine";
+import type { TrackReply } from "@autumn/balance-worker-client";
+import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import {
 	ApiVersion,
 	ApiVersionClass,
@@ -26,7 +27,7 @@ import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 import { createCustomerFixture } from "../balanceWorker/customer-fixture.js";
 
 const execution = {
-	decision: undefined as TrackDecision | undefined,
+	reply: undefined as TrackReply | undefined,
 	commands: [] as TrackCommand[],
 	failure: undefined as Error | undefined,
 };
@@ -48,14 +49,14 @@ test(
 	commandContract,
 );
 beforeEach(resetExecution);
-test("new and duplicate decisions return the API track shape", successContract);
+test("new and duplicate replies return the API track shape", successContract);
 test("responses read the committed row, not the request", outcomeContract);
-test("worker decisions become existing API errors", errorContract);
+test("worker refusals become existing API errors", errorContract);
 test("track responses respect the requested API version", versionContract);
 test("transport failures propagate without retry", failureContract);
 
 function resetExecution(): void {
-	execution.decision = undefined;
+	execution.reply = undefined;
 	execution.commands.length = 0;
 	execution.failure = undefined;
 }
@@ -72,11 +73,11 @@ async function track({
 	command,
 }: {
 	command: TrackCommand;
-}): Promise<TrackDecision> {
+}): Promise<TrackReply> {
 	execution.commands.push(command);
 	if (execution.failure) throw execution.failure;
-	if (!execution.decision) throw new Error("No decision staged");
-	return execution.decision;
+	if (!execution.reply) throw new Error("No reply staged");
+	return execution.reply;
 }
 
 function eventsModule() {
@@ -155,9 +156,8 @@ function commandContract() {
 async function successContract() {
 	const customer = fixture();
 	const { ctx, body, loadSubject } = customer;
-	const mutation = trackMutation({ customer });
-	for (const kind of ["new", "duplicate"] as const) {
-		execution.decision = { kind, mutation };
+	for (const duplicate of [false, true]) {
+		execution.reply = trackReplyOf({ customer, duplicate });
 		expect(await runBalanceWorkerTrack({ ctx, body, loadSubject })).toEqual({
 			customer_id: "cus_test",
 			entity_id: undefined,
@@ -178,10 +178,7 @@ async function outcomeContract() {
 		[2, 0],
 	] as const) {
 		const customer = fixture({ balance });
-		execution.decision = {
-			kind: "new",
-			mutation: trackMutation({ customer }),
-		};
+		execution.reply = trackReplyOf({ customer });
 		expect(
 			await runBalanceWorkerTrack({
 				ctx: customer.ctx,
@@ -195,30 +192,17 @@ async function outcomeContract() {
 			balance: expectedBalance({ customer, balance: remaining }),
 		});
 	}
-	const customer = fixture();
-	execution.decision = {
-		kind: "new",
-		mutation: echoedElsewhere({ mutation: trackMutation({ customer }) }),
-	};
-	expect(
-		await runBalanceWorkerTrack({
-			ctx: customer.ctx,
-			body: customer.body,
-			loadSubject: customer.loadSubject,
-		}),
-	).toMatchObject({
-		customer_id: "receipt-customer",
-		entity_id: "entity",
-		value: 3,
-	});
 }
 
 async function errorContract() {
 	const customer = fixture({ balance: 2 });
 	const { ctx, body, loadSubject } = customer;
-	const rejected = trackMutation({ customer, overageBehavior: "reject" });
-	for (const kind of ["new", "duplicate"] as const) {
-		execution.decision = { kind, mutation: rejected };
+	for (const duplicate of [false, true]) {
+		execution.reply = trackReplyOf({
+			customer,
+			overageBehavior: "reject",
+			duplicate,
+		});
 		await expect(
 			runBalanceWorkerTrack({ ctx, body, loadSubject }),
 		).rejects.toBeInstanceOf(InsufficientBalanceError);
@@ -226,21 +210,28 @@ async function errorContract() {
 			runBalanceWorkerTrack({ ctx, body, loadSubject }),
 		).rejects.toMatchObject({ code: "insufficient_balance", statusCode: 400 });
 	}
-	for (const [reason, code, statusCode] of [
-		["feature_not_found", ErrCode.InvalidRequest, 400],
-		["command_conflict", ErrCode.DuplicateIdempotencyKey, 409],
+	for (const [workerCode, workerReason, code, statusCode] of [
+		["UNSUPPORTED_COMMAND", "feature_not_found", ErrCode.InvalidRequest, 400],
+		["COMMAND_CONFLICT", undefined, ErrCode.DuplicateIdempotencyKey, 409],
 	] as const) {
-		execution.decision = { kind: "unsupported", reason };
+		execution.failure = new BalanceWorkerClientError({
+			code: "WORKER_ERROR",
+			outcome: "not_submitted",
+			message: "refused",
+			workerCode,
+			workerReason,
+		});
 		await expect(
 			runBalanceWorkerTrack({ ctx, body, loadSubject }),
 		).rejects.toMatchObject({ code, statusCode });
+		execution.failure = undefined;
 	}
 }
 
 async function versionContract() {
 	const customer = fixture();
 	const { ctx, body, loadSubject } = customer;
-	execution.decision = { kind: "new", mutation: trackMutation({ customer }) };
+	execution.reply = trackReplyOf({ customer });
 	ctx.apiVersion = new ApiVersionClass(ApiVersion.V2_0);
 	expect(await runBalanceWorkerTrack({ ctx, body, loadSubject })).toMatchObject(
 		{
@@ -281,13 +272,15 @@ async function failureContract() {
 	expect(execution.commands).toHaveLength(1);
 }
 
-function trackMutation({
+/** What the worker replies for this customer's track: the logged result and the rows after it. A retry replies the same. */
+function trackReplyOf({
 	customer,
 	overageBehavior = "cap",
 }: {
 	customer: ReturnType<typeof fixture>;
 	overageBehavior?: OverageBehavior;
-}): SubjectStateMutation {
+	duplicate?: boolean;
+}): TrackReply {
 	const { ctx, fullSubject } = customer;
 	const featureIds = ["messages"];
 	const state = fullSubjectToSubjectState({ ctx, fullSubject, featureIds });
@@ -298,29 +291,14 @@ function trackMutation({
 		ctx,
 		body: { ...customer.body, overage_behavior: overageBehavior },
 	});
-	const decision = computeTrack({
+	const mutation = computeTrack({
 		fullSubject: subjectStateToFullSubject({ state, catalog }),
 		command,
-		deduplicationExpiresAt: ctx.timestamp + 10_000,
 	});
-	if (decision.kind !== "new")
-		throw new Error(`Expected a new track mutation, got ${decision.kind}`);
-	return decision.mutation;
-}
-
-/** The engine refuses entity tracks today, so the echo is patched onto a computed mutation. */
-function echoedElsewhere({
-	mutation,
-}: {
-	mutation: SubjectStateMutation;
-}): SubjectStateMutation {
+	if (mutation.result.type !== "track") throw new Error("Expected a track");
 	return {
-		...mutation,
-		identity: {
-			...mutation.identity,
-			customerId: "receipt-customer",
-			entityId: "entity",
-		},
+		result: mutation.result,
+		state: applyMutation({ state, mutation }),
 	};
 }
 

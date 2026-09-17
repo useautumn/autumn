@@ -1,17 +1,25 @@
 import { z } from "zod/v4";
-import { nonEmptyStringSchema } from "./common/primitives.js";
+import { nonEmptyStringSchema } from "../common/primitives.js";
+import {
+	type WorkerCustomer,
+	workerCustomerSchema,
+} from "../subject/rows/workerCustomer.js";
 import {
 	type WorkerCustomerEntitlement,
 	workerCustomerEntitlementSchema,
-} from "./rows/workerCustomerEntitlement.js";
+} from "../subject/rows/workerCustomerEntitlement.js";
 import {
 	type WorkerCustomerProduct,
 	workerCustomerProductSchema,
-} from "./rows/workerCustomerProduct.js";
+} from "../subject/rows/workerCustomerProduct.js";
+import {
+	type WorkerEntity,
+	workerEntitySchema,
+} from "../subject/rows/workerEntity.js";
 import {
 	type WorkerRollover,
 	workerRolloverSchema,
-} from "./rows/workerRollover.js";
+} from "../subject/rows/workerRollover.js";
 
 export type TableRowChange<Table extends string, Row> =
 	| { table: Table; op: "insert"; row: Row }
@@ -60,13 +68,45 @@ const tableRowChangeSchema = <
 	]);
 };
 
-/** One change to one row of the customer's state; a mutation applies a list of these in order. */
+/** The subject's own row: inserted once by the initialize that names it, never updated by a mutation. */
+export type SubjectRowChange<Table extends string, Row> = {
+	table: Table;
+	op: "insert";
+	row: Row;
+};
+
+const subjectRowChangeSchema = <
+	Table extends string,
+	RowSchema extends z.ZodObject,
+>({
+	table,
+	rowSchema,
+}: {
+	table: Table;
+	rowSchema: RowSchema;
+}) =>
+	z
+		.object({
+			table: z.literal(table),
+			op: z.literal("insert"),
+			row: rowSchema,
+		})
+		.strict();
+
+/** One change to one row of the subject's state; a mutation applies a list of these in order. */
 export type RowChange =
+	| SubjectRowChange<"customer", WorkerCustomer>
+	| SubjectRowChange<"entity", WorkerEntity>
 	| TableRowChange<"customerProducts", WorkerCustomerProduct>
 	| TableRowChange<"customerEntitlements", WorkerCustomerEntitlement>
 	| TableRowChange<"rollovers", WorkerRollover>;
 
 export const rowChangeSchema = z.discriminatedUnion("table", [
+	subjectRowChangeSchema({
+		table: "customer",
+		rowSchema: workerCustomerSchema,
+	}),
+	subjectRowChangeSchema({ table: "entity", rowSchema: workerEntitySchema }),
 	tableRowChangeSchema({
 		table: "customerProducts",
 		rowSchema: workerCustomerProductSchema,
