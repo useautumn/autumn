@@ -20,6 +20,7 @@ export const runBatchMigrationChunkTask = task({
 	machine: "medium-1x",
 	maxDuration: MIGRATION_CHUNK_MAX_DURATION_SECONDS,
 	run: async (rawPayload: unknown, { ctx: triggerCtx }) => {
+		const deadlineAt = Date.now() + MIGRATION_CHUNK_MAX_DURATION_SECONDS * 1000;
 		const payload = RunBatchMigrationChunkPayloadSchema.parse(rawPayload);
 		const { ctx, logger } = await createTriggerContext({
 			orgId: payload.orgId,
@@ -47,6 +48,7 @@ export const runBatchMigrationChunkTask = task({
 			maxPages: BATCH_MIGRATION_PAGES_PER_CHUNK,
 			webhooks: payload.webhooks,
 			controls: payload.controls,
+			deadlineAt,
 		});
 	},
 });
