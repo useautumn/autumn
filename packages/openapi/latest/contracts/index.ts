@@ -10,6 +10,7 @@ import {
 	balancesUpdateContract,
 } from "./balancesContract.js";
 import {
+	billingAdvanceTestClockContract,
 	billingAttachContract,
 	billingCreateScheduleContract,
 	billingMultiAttachContract,
@@ -132,6 +133,7 @@ export const v2_3ContractRouter = oc.router({
 
 	// Billing
 	billingAttach: billingAttachContract,
+	billingAdvanceTestClock: billingAdvanceTestClockContract,
 	billingCreateSchedule: billingCreateScheduleContract,
 	billingMultiAttach: billingMultiAttachContract,
 	billingPreviewAttach: billingPreviewAttachContract,
