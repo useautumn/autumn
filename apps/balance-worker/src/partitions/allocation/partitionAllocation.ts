@@ -1,3 +1,4 @@
+import { clearPartitionRetries } from "../lifecycle/retryPartition.js";
 import { startPartitions } from "../lifecycle/startPartitions.js";
 import {
 	detachPartitions,
@@ -9,6 +10,7 @@ import type {
 	AllocationScope,
 	PartitionEntry,
 	PartitionsScope,
+	PartitionsState,
 } from "../types/partitionState.js";
 import type {
 	PartitionAllocation,
@@ -55,6 +57,11 @@ function applyAllocation({
 			reportPartitionError({ ctx, cause });
 		}
 	}
+	for (const partition of state.terminalHealthByPartition.keys()) {
+		if (!change.partitions.includes(partition))
+			state.terminalHealthByPartition.delete(partition);
+	}
+	clearPartitionRetries({ state });
 	const allocationGeneration = ++state.generation;
 	const entriesToStop = detachPartitions({ state, revocation: change });
 	const retirement = retireAllocation({ ctx, state, entriesToStop });
@@ -72,6 +79,7 @@ function revokeAllocation({
 	revocation,
 }: PartitionsScope & { revocation: PartitionRevocation }): void {
 	if (state.status !== "running") return;
+	clearPartitionRetries({ state });
 	state.generation += 1;
 	const entriesToStop = detachPartitions({ state, revocation });
 	state.lifecycle = retireAllocation({ ctx, state, entriesToStop });
@@ -82,6 +90,7 @@ function crashAllocation({
 	failure,
 }: PartitionsScope & { failure: PartitionFailure }): void {
 	if (state.status !== "running") return;
+	clearPartitionRetries({ state });
 	state.generation += 1;
 	const entriesToStop = detachPartitions({ state, failure });
 	reportPartitionError({ ctx, cause: failure.cause });
@@ -99,6 +108,8 @@ async function startAfterRetirement({
 }): Promise<void> {
 	try {
 		await retirement;
+		if (isCurrentAllocation({ state, allocationGeneration }))
+			state.retiringEntries.clear();
 		await startPartitions({ ctx, state, allocationGeneration, partitions });
 	} catch (cause) {
 		reportPartitionError({ ctx, cause });
@@ -131,4 +142,18 @@ async function retireAllocation({
 		}
 		queueMicrotask(stopAfterFailure);
 	}
+}
+
+export function isCurrentAllocation({
+	state,
+	allocationGeneration,
+}: {
+	state: PartitionsState;
+	allocationGeneration: number;
+}): boolean {
+	return (
+		state.status === "running" &&
+		!state.retirementFailed &&
+		state.generation === allocationGeneration
+	);
 }

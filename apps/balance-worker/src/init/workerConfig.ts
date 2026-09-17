@@ -12,6 +12,13 @@ export function assertKafkaBalanceWorkerTimings({
 }): void {
 	assertConsumerGroupTimings({ timings });
 	if (
+		!Number.isSafeInteger(timings.healthRefreshIntervalMs) ||
+		timings.healthRefreshIntervalMs <= 0
+	)
+		throw new RangeError(
+			"healthRefreshIntervalMs must be a positive safe integer",
+		);
+	if (
 		!Number.isSafeInteger(timings.recoveryDrainTimeoutMs) ||
 		timings.recoveryDrainTimeoutMs <= 0
 	) {
