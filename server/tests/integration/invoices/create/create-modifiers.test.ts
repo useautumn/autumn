@@ -687,14 +687,14 @@ test.concurrent(
 			actions: [],
 		});
 
-		// $7 per pack of 2 users, priced entirely by Stripe.
+		// $9 per pack of 2 users in Stripe; the request's inline $7 is ignored.
 		const stripeProduct = await ctx.stripeCli.products.create({
 			name: "Seat pack",
 		});
 		const stripePrice = await ctx.stripeCli.prices.create({
 			product: stripeProduct.id,
 			currency: "usd",
-			unit_amount: 700,
+			unit_amount: 900,
 		});
 
 		const response = await createInvoice({
@@ -731,12 +731,12 @@ test.concurrent(
 			},
 		});
 
-		// 5 users over packs of 2 → 3 packs × $7.
+		// 5 users over packs of 2 → 3 packs × $9, the Stripe price's amount.
 		const { stripeInvoice } = await expectCreatedInvoiceCorrect({
 			ctx,
 			response,
-			lines: [{ amount: 21, quantity: 5 }],
-			total: 21,
+			lines: [{ amount: 27, quantity: 5 }],
+			total: 27,
 		});
 		const line = stripeInvoice.lines.data[0];
 		expect(line.pricing?.price_details?.price).toBe(stripePrice.id);

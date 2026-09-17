@@ -3,7 +3,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { BillingMethod } from "@autumn/shared";
+import { BillingInterval, BillingMethod } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
@@ -289,6 +289,72 @@ test.concurrent(
 
 		await expectAutumnError({
 			func: () => autumnV2_3.customers.get(unknownCustomerId),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create: an unknown or foreign-currency Stripe price is rejected")}`,
+	async () => {
+		const customerId = "inv-create-edge-named-price";
+		const { ctx, autumnV2_3, pro } = await scenario({
+			customerId,
+			id: "pro-edge-named-price",
+		});
+
+		await expectAutumnError({
+			errMessage: "price_nonexistent",
+			func: () =>
+				createInvoice({
+					autumnV2_3,
+					params: {
+						customer_id: customerId,
+						plans: [
+							{
+								plan_id: pro.id,
+								customize: {
+									price: {
+										amount: 10,
+										interval: BillingInterval.Month,
+										processors: { stripe: { price_id: "price_nonexistent" } },
+									},
+								},
+							},
+						],
+					},
+				}),
+		});
+
+		const stripeProduct = await ctx.stripeCli.products.create({
+			name: "Euro plan",
+		});
+		const eurPrice = await ctx.stripeCli.prices.create({
+			product: stripeProduct.id,
+			currency: "eur",
+			unit_amount: 1000,
+		});
+
+		await expectAutumnError({
+			errMessage: "is in eur",
+			func: () =>
+				createInvoice({
+					autumnV2_3,
+					params: {
+						customer_id: customerId,
+						plans: [
+							{
+								plan_id: pro.id,
+								customize: {
+									price: {
+										amount: 10,
+										interval: BillingInterval.Month,
+										processors: { stripe: { price_id: eurPrice.id } },
+									},
+								},
+							},
+						],
+					},
+				}),
 		});
 	},
 );

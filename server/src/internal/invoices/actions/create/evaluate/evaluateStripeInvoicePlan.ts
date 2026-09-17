@@ -43,13 +43,6 @@ const percentOffTotal = ({
 		return remaining;
 	}, new Decimal(amount));
 
-/** Units become packs when the named Stripe price charges per pack. */
-const lineToStripeQuantity = ({ line }: { line: InvoiceLine }): number => {
-	if (line.quantity === null) return 1;
-	const billingUnits = line.lineItem.context.price.config.billing_units ?? 1;
-	return new Decimal(line.quantity).div(billingUnits).ceil().toNumber();
-};
-
 /** Maps computed lines onto Stripe add-lines params and the preview totals. */
 export const evaluateStripeInvoicePlan = ({
 	invoiceContext,
@@ -111,7 +104,7 @@ export const evaluateStripeInvoicePlan = ({
 			...(line.stripePriceId
 				? {
 						pricing: { price: line.stripePriceId },
-						quantity: lineToStripeQuantity({ line }),
+						quantity: line.stripeQuantity ?? 1,
 					}
 				: stripeProductId && minorAmount > 0
 					? {

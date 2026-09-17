@@ -23,6 +23,7 @@ import type {
 import { featureQuantityToAmount } from "./featureQuantityToAmount";
 import { findInvoiceFeaturePrice } from "./findInvoiceFeaturePrice";
 import { licenseQuantityToAmount } from "./licenseQuantityToAmount";
+import { namedStripePriceLineAmount } from "./namedStripePriceLineAmount";
 import { prorateInvoiceLineAmount } from "./prorateInvoiceLineAmount";
 import { resolveInvoiceBasePrice } from "./resolveInvoiceBasePrice";
 import { usageEntriesToCredits } from "./usageEntriesToCredits";
@@ -36,6 +37,7 @@ export type InvoiceLine = {
 	quantity: number | null;
 	/** Set only when the request named a Stripe price to bill this line under. */
 	stripePriceId?: string;
+	stripeQuantity?: number;
 };
 
 const lineContext = ({
@@ -73,6 +75,7 @@ const toLine = ({
 	planId,
 	featureId,
 	stripePriceId,
+	stripeQuantity,
 }: {
 	context: LineItemContext;
 	amount: number;
@@ -83,6 +86,7 @@ const toLine = ({
 	planId: string | null;
 	featureId: string | null;
 	stripePriceId?: string;
+	stripeQuantity?: number;
 }): InvoiceLine => {
 	const lineItem = buildLineItem({
 		context,
@@ -104,6 +108,7 @@ const toLine = ({
 		featureId,
 		quantity,
 		stripePriceId,
+		stripeQuantity,
 	};
 };
 
@@ -221,6 +226,20 @@ const computeFeatureLine = ({
 	const { units, alreadyMoney } = billableUnitsFor({ plan, entry, feature });
 	if (units <= 0) return undefined;
 
+	const namedPriceId = plan.params.customize?.items?.find(
+		(item) => item.feature_id === entry.feature_id,
+	)?.price?.processors?.stripe?.price_id;
+	const named = namedPriceId
+		? namedStripePriceLineAmount({
+				namedStripePrices: invoiceContext.namedStripePrices,
+				stripePriceId: namedPriceId,
+				quantity: units,
+				billingUnits: price.config.billing_units,
+				currency: invoiceContext.currency,
+				prorateRequested: entry.prorate,
+			})
+		: undefined;
+
 	const baseAmount = alreadyMoney
 		? units
 		: featureQuantityToAmount({
@@ -230,14 +249,17 @@ const computeFeatureLine = ({
 			});
 
 	const prorate =
-		entry.prorate ?? entry.billing_behavior === BillingMethod.Prepaid;
-	const amount = prorate
-		? prorateInvoiceLineAmount({
-				price,
-				amount: baseAmount,
-				period: invoiceContext.period,
-			})
-		: baseAmount;
+		!named &&
+		(entry.prorate ?? entry.billing_behavior === BillingMethod.Prepaid);
+	const amount =
+		named?.amount ??
+		(prorate
+			? prorateInvoiceLineAmount({
+					price,
+					amount: baseAmount,
+					period: invoiceContext.period,
+				})
+			: baseAmount);
 
 	const context = lineContext({
 		invoiceContext,
@@ -259,9 +281,8 @@ const computeFeatureLine = ({
 		planKey: plan.planKey,
 		planId: product.id,
 		featureId: feature.id,
-		stripePriceId: plan.params.customize?.items?.find(
-			(item) => item.feature_id === entry.feature_id,
-		)?.price?.processors?.stripe?.price_id,
+		stripePriceId: namedPriceId,
+		stripeQuantity: named?.stripeQuantity,
 	});
 };
 
@@ -284,7 +305,17 @@ const computePlanLines = ({
 		customize: params.customize,
 	});
 	if (base) {
-		const prorate = params.prorate ?? true;
+		const namedPriceId = params.customize?.price?.processors?.stripe?.price_id;
+		const named = namedPriceId
+			? namedStripePriceLineAmount({
+					namedStripePrices: invoiceContext.namedStripePrices,
+					stripePriceId: namedPriceId,
+					quantity: null,
+					currency: invoiceContext.currency,
+					prorateRequested: params.prorate,
+				})
+			: undefined;
+		const prorate = !named && (params.prorate ?? true);
 		const context = lineContext({
 			invoiceContext,
 			price: base.price,
@@ -294,20 +325,23 @@ const computePlanLines = ({
 		lines.push(
 			toLine({
 				context,
-				amount: prorate
-					? prorateInvoiceLineAmount({
-							price: base.price,
-							amount: base.amount,
-							period: invoiceContext.period,
-						})
-					: base.amount,
+				amount:
+					named?.amount ??
+					(prorate
+						? prorateInvoiceLineAmount({
+								price: base.price,
+								amount: base.amount,
+								period: invoiceContext.period,
+							})
+						: base.amount),
 				description: fixedPriceToDescription({ price: base.price, context }),
 				quantity: null,
 				prorated: prorate && Boolean(invoiceContext.period),
 				planKey: plan.planKey,
 				planId: fullProduct.id,
 				featureId: null,
-				stripePriceId: params.customize?.price?.processors?.stripe?.price_id,
+				stripePriceId: namedPriceId,
+				stripeQuantity: named?.stripeQuantity,
 			}),
 		);
 	}
@@ -331,8 +365,20 @@ const computePlanLines = ({
 			quantity: license.quantity,
 			customize: license.customize,
 		});
-		if (resolved.amount > 0) {
-			const prorate = license.prorate ?? true;
+		const namedLicensePriceId =
+			license.customize?.price?.processors?.stripe?.price_id;
+		const namedLicense = namedLicensePriceId
+			? namedStripePriceLineAmount({
+					namedStripePrices: invoiceContext.namedStripePrices,
+					stripePriceId: namedLicensePriceId,
+					quantity: license.quantity,
+					billingUnits: resolved.price.config.billing_units,
+					currency: invoiceContext.currency,
+					prorateRequested: license.prorate,
+				})
+			: undefined;
+		if (resolved.amount > 0 || namedLicense) {
+			const prorate = !namedLicense && (license.prorate ?? true);
 			const context = lineContext({
 				invoiceContext,
 				price: resolved.price,
@@ -342,13 +388,15 @@ const computePlanLines = ({
 			lines.push(
 				toLine({
 					context,
-					amount: prorate
-						? prorateInvoiceLineAmount({
-								price: resolved.price,
-								amount: resolved.amount,
-								period: invoiceContext.period,
-							})
-						: resolved.amount,
+					amount:
+						namedLicense?.amount ??
+						(prorate
+							? prorateInvoiceLineAmount({
+									price: resolved.price,
+									amount: resolved.amount,
+									period: invoiceContext.period,
+								})
+							: resolved.amount),
 					description: fixedPriceToDescription({
 						price: resolved.price,
 						context,

@@ -16,6 +16,10 @@ import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCu
 import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/InvoiceTemplateService";
 import { ProductService } from "@/internal/products/ProductService";
 import type { InvoicePeriod } from "../compute/prorateInvoiceLineAmount";
+import {
+	fetchNamedStripePrices,
+	type NamedStripePrices,
+} from "./fetchNamedStripePrices";
 
 export type InvoicePlanContext = {
 	/** Distinguishes two entries for the same plan id. */
@@ -36,9 +40,11 @@ export type CreateInvoiceContext = {
 	period?: InvoicePeriod;
 	taxRate?: Stripe.TaxRate;
 	invoiceDiscounts: StripeDiscountWithCoupon[];
+	namedStripePrices: NamedStripePrices;
 };
 
 const DEFAULT_NET_TERMS_DAYS = 30;
+const DEFAULT_CURRENCY = "usd";
 
 // Stripe cannot apply a `repeating` coupon to a one-off invoice.
 const rejectRepeatingCoupons = ({
@@ -135,9 +141,13 @@ export const setupCreateInvoiceContext = async ({
 		}),
 	);
 
-	const [invoiceDiscounts, taxRate] = await Promise.all([
+	const currency =
+		fullCustomer.currency ?? ctx.org.default_currency ?? DEFAULT_CURRENCY;
+
+	const [invoiceDiscounts, taxRate, namedStripePrices] = await Promise.all([
 		resolveParamDiscounts({ stripeCli, discounts: params.discounts ?? [] }),
 		fetchStripeTaxRateForBilling({ ctx, taxRateId: params.tax_rate_id }),
+		fetchNamedStripePrices({ stripeCli, params, currency }),
 	]);
 	rejectRepeatingCoupons({
 		discounts: [
@@ -150,7 +160,7 @@ export const setupCreateInvoiceContext = async ({
 		params,
 		fullCustomer,
 		stripeCustomer,
-		currency: fullCustomer.currency ?? ctx.org.default_currency ?? "usd",
+		currency,
 		plans,
 		template,
 		daysUntilDue:
@@ -164,5 +174,6 @@ export const setupCreateInvoiceContext = async ({
 				: undefined,
 		taxRate,
 		invoiceDiscounts,
+		namedStripePrices,
 	};
 };
