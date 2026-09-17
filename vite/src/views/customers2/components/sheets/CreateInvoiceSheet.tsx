@@ -1,6 +1,7 @@
 import { CreateInvoiceAdvancedSection } from "@/components/forms/create-invoice-v2/components/CreateInvoiceAdvancedSection";
 import { CreateInvoiceFooter } from "@/components/forms/create-invoice-v2/components/CreateInvoiceFooter";
 import { CreateInvoicePlansSection } from "@/components/forms/create-invoice-v2/components/CreateInvoicePlansSection";
+import { CreateInvoicePreviewColumn } from "@/components/forms/create-invoice-v2/components/CreateInvoicePreviewColumn";
 import { CreateInvoicePreviewSection } from "@/components/forms/create-invoice-v2/components/CreateInvoicePreviewSection";
 import {
 	CreateInvoiceFormProvider,
@@ -17,17 +18,21 @@ function CreateInvoiceSheetContent() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full flex-col overflow-y-auto">
-				<SheetHeader
-					description="Bill catalog pricing and one-off charges without changing plans, balances or subscriptions."
-					title="Create Invoice"
-				/>
+			<div className="flex h-full min-h-0">
+				<CreateInvoicePreviewColumn />
 
-				<CreateInvoicePlansSection />
-				<CreateInvoiceAdvancedSection />
-				<CreateInvoicePreviewSection />
+				<div className="flex h-full w-full shrink-0 flex-col overflow-y-auto md:w-[30rem]">
+					<SheetHeader
+						description="Bill catalog pricing and one-off charges without changing plans, balances or subscriptions."
+						title="Create Invoice"
+					/>
 
-				<CreateInvoiceFooter />
+					<CreateInvoicePlansSection />
+					<CreateInvoiceAdvancedSection />
+					<CreateInvoicePreviewSection />
+
+					<CreateInvoiceFooter />
+				</div>
 			</div>
 
 			{planEditor.planEditorProduct && (

@@ -15,8 +15,7 @@ import type {
 	FormInvoiceLicense,
 	FormInvoicePlan,
 } from "../createInvoiceFormSchema";
-
-const isBasePriceItem = (item: ProductItem) => !item.feature_id;
+import { productItemsToInvoiceCustomize } from "../utils/productItemsToInvoiceCustomize";
 
 const toDiscounts = ({ discounts }: { discounts: FormDiscount[] }) => {
 	const valid = filterValidDiscounts(discounts);
@@ -60,23 +59,14 @@ const toPlanParams = ({
 		.map((license) => toLicenseQuantity({ license, items: pricedItems }))
 		.filter((license): license is InvoiceLicenseQuantity => license !== null);
 
-	// Removing the base-price item in the editor is how a caller drops that line.
-	const customizeItems = plan.isCustom ? plan.items : null;
-	const dropsBasePrice =
-		customizeItems !== null && !customizeItems.some(isBasePriceItem);
-	const customize = customizeItems
-		? {
-				...(dropsBasePrice ? { price: null } : {}),
-				items: customizeItems,
-			}
+	const customize = plan.isCustom
+		? productItemsToInvoiceCustomize({ items: plan.items })
 		: undefined;
 
 	return {
 		plan_id: plan.planId,
 		...(plan.version === undefined ? {} : { version: plan.version }),
-		...(customize
-			? { customize: customize as InvoicePlanParams["customize"] }
-			: {}),
+		...(customize ? { customize } : {}),
 		feature_quantities: convertToInvoiceFeatureQuantities({
 			quantities: plan.featureQuantities,
 			usageEntries: plan.featureUsage,

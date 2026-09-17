@@ -168,10 +168,10 @@ describe("buildCreateInvoiceRequestBody", () => {
 			},
 		});
 
-		expect(body?.plans?.[0].customize).toMatchObject({ price: null });
+		expect(body?.plans?.[0].customize?.price).toBeNull();
 	});
 
-	test("keeps the base price when the edited items still carry one", () => {
+	test("sends the edited base price when the items still carry one", () => {
 		const withBasePrice = [
 			{ feature_id: null, price: 20 },
 			{ feature_id: "credits", usage_model: UsageModel.PayPerUse },
@@ -185,7 +185,7 @@ describe("buildCreateInvoiceRequestBody", () => {
 			},
 		});
 
-		expect(body?.plans?.[0].customize).not.toHaveProperty("price");
+		expect(body?.plans?.[0].customize?.price).toMatchObject({ amount: 20 });
 	});
 
 	test("omits customize entirely when catalog priced", () => {

@@ -20,7 +20,22 @@ export function CreateInvoicePreviewSection() {
 			hidden={requestBody === null}
 			includeNextCycle={false}
 			previewQuery={{
-				data: previewQuery.data,
+				data: previewQuery.data
+					? {
+							currency: previewQuery.data.currency,
+							subtotal: previewQuery.data.subtotal,
+							total: previewQuery.data.total,
+							line_items: [],
+							...(previewQuery.data.tax
+								? {
+										tax: {
+											total: previewQuery.data.tax.total,
+											status: previewQuery.data.tax.status,
+										},
+									}
+								: {}),
+						}
+					: null,
 				error: previewQuery.error,
 				isLoading: previewQuery.isLoading,
 			}}

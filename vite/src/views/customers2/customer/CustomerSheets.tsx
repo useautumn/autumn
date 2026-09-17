@@ -39,6 +39,7 @@ import { VerifyStripeSheet } from "../components/verify-stripe/VerifyStripeSheet
 
 export function CustomerSheets() {
 	const sheetType = useSheetStore((s) => s.type);
+	const hasSidePreview = sheetType === "create-invoice";
 	const sheetData = useSheetStore((s) => s.data);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const closeBalanceSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
@@ -152,7 +153,9 @@ export function CustomerSheets() {
 			    The list must keep `translate` — that's what drives the slide. */}
 			<SheetContent
 				className={cn(
-					"md:max-w-[32rem]",
+					hasSidePreview
+						? "md:w-[76rem] md:max-w-[calc(100vw-5rem)]"
+						: "md:max-w-[32rem]",
 					isInlineEditorOpen &&
 						"transition-[opacity,transform,translate,scale,rotate] opacity-0 pointer-events-none",
 				)}
