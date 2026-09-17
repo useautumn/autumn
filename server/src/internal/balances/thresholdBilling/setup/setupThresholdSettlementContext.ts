@@ -7,7 +7,13 @@ import type { ThresholdSettlementContext } from "../thresholdSettlementContext.j
 
 export type SetupThresholdSettlementResult =
 	| { ok: true; settlementContext: ThresholdSettlementContext }
-	| { ok: false; reason: "not_threshold_billed" | "nothing_to_settle" };
+	| {
+			ok: false;
+			reason:
+				| "customer_unavailable"
+				| "not_threshold_billed"
+				| "nothing_to_settle";
+	  };
 
 export const setupThresholdSettlementContext = async ({
 	ctx,
@@ -25,7 +31,7 @@ export const setupThresholdSettlementContext = async ({
 	});
 
 	if (!fullCustomer?.processor?.id) {
-		return { ok: false, reason: "not_threshold_billed" };
+		return { ok: false, reason: "customer_unavailable" };
 	}
 
 	const settlement = resolveThresholdSettlement({ fullCustomer, featureId });
