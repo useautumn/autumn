@@ -20,10 +20,17 @@
  *  - a non-draft invoice with missing lines throws BEFORE any balance mutation
  *  - a non-draft invoice with every line present continues with balance resets
  *  - if Stripe's addLines response lacks a requested line, throw before resets
+ *  - the addLines request key is derived from the observed invoice state, so
+ *    overlapping deliveries during a Redis outage share a key even when they
+ *    computed different pending sets, and Stripe dedupes instead of
+ *    double-adding; a replayed cached failure retries once under a key salted
+ *    with Stripe's original request id, which every observer derives alike
+ *  - more than 100 pending lines are sent in batches
  */
 
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
+import { buildInvoiceAddLinesIdempotencyKey } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/utils/buildInvoiceAddLinesIdempotencyKey";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 type MockLineItem = {
@@ -38,7 +45,9 @@ type MockLineItem = {
 const addLinesCalls: Array<{
 	invoiceId: string;
 	lines: Array<{ metadata?: { autumn_line_item_id?: string } }>;
+	idempotencyKey?: string;
 }> = [];
+const landedLineItemIds: string[] = [];
 const createInvoiceItemCalls: unknown[] = [];
 const batchUpdateCalls: unknown[] = [];
 const arrearLineItemArgs: Array<Record<string, unknown>> = [];
@@ -64,6 +73,7 @@ let consumableLineItems: MockLineItem[] = usageLineItems;
 let invoiceCreditLineItems: MockLineItem[] = creditLineItems;
 let liveStripeLineItemIds: string[] = [];
 let addLinesShouldDropLastLine = false;
+let addLinesFailures: unknown[] = [];
 
 await mockModuleWithRestore("@/external/stripe/webhookHandlers/common", () => ({
 	eventContextToArrearLineItems: async (args: Record<string, unknown>) => {
@@ -80,7 +90,7 @@ await mockModuleWithRestore(
 	"@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems.js",
 	() => ({
 		getStripeInvoiceLineItems: async () =>
-			liveStripeLineItemIds.map((lineItemId) => ({
+			[...liveStripeLineItemIds, ...landedLineItemIds].map((lineItemId) => ({
 				metadata: { autumn_line_item_id: lineItemId },
 			})),
 	}),
@@ -107,11 +117,18 @@ await mockModuleWithRestore(
 		addStripeInvoiceLines: async (args: {
 			invoiceId: string;
 			lines: Array<{ metadata?: { autumn_line_item_id?: string } }>;
+			idempotencyKey?: string;
 		}) => {
 			addLinesCalls.push(args);
+			const failure = addLinesFailures.shift();
+			if (failure) throw failure;
 			const landedLines = addLinesShouldDropLastLine
 				? args.lines.slice(0, -1)
 				: args.lines;
+			for (const line of landedLines) {
+				const lineItemId = line.metadata?.autumn_line_item_id;
+				if (lineItemId) landedLineItemIds.push(lineItemId);
+			}
 			return {
 				id: args.invoiceId,
 				lines: {
@@ -202,7 +219,159 @@ describe("invoice.created consumable idempotency", () => {
 		consumableLineItems = usageLineItems;
 		invoiceCreditLineItems = creditLineItems;
 		liveStripeLineItemIds = [];
+		landedLineItemIds.length = 0;
 		addLinesShouldDropLastLine = false;
+		addLinesFailures = [];
+	});
+
+	test("retries once under a key salted with the replayed request id when Stripe replays a cached failure", async () => {
+		addLinesFailures = [
+			Object.assign(new Error("lock_timeout"), {
+				headers: {
+					"idempotent-replayed": "true",
+					"original-request": "req_orig",
+				},
+			}),
+		];
+
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext(),
+		});
+
+		expect(addLinesCalls).toHaveLength(2);
+		expect(addLinesCalls[1]?.idempotencyKey).toBe(
+			`${addLinesCalls[0]?.idempotencyKey}:req_orig`,
+		);
+		expect(addLinesCalls[1]?.lines).toHaveLength(3);
+		expect(batchUpdateCalls).toHaveLength(1);
+	});
+
+	test("does not retry a replayed failure that carries no original request id", async () => {
+		addLinesFailures = [
+			Object.assign(new Error("lock_timeout"), {
+				headers: { "idempotent-replayed": "true", "request-id": "req_replay" },
+			}),
+		];
+
+		await expect(
+			processConsumablePricesForInvoiceCreated({
+				ctx,
+				eventContext: makeEventContext(),
+			}),
+		).rejects.toThrow("lock_timeout");
+
+		expect(addLinesCalls).toHaveLength(1);
+		expect(batchUpdateCalls).toEqual([]);
+	});
+
+	test("gives up after one salted retry if the failure is replayed again", async () => {
+		const replayed = () =>
+			Object.assign(new Error("lock_timeout"), {
+				headers: {
+					"idempotent-replayed": "true",
+					"original-request": "req_orig",
+				},
+			});
+		addLinesFailures = [replayed(), replayed()];
+
+		await expect(
+			processConsumablePricesForInvoiceCreated({
+				ctx,
+				eventContext: makeEventContext(),
+			}),
+		).rejects.toThrow("lock_timeout");
+
+		expect(addLinesCalls).toHaveLength(2);
+		expect(batchUpdateCalls).toEqual([]);
+	});
+
+	test("propagates a fresh (non-replayed) Stripe error without retrying", async () => {
+		addLinesFailures = [
+			Object.assign(new Error("rate limit"), {
+				headers: { "request-id": "req_fresh" },
+			}),
+		];
+
+		await expect(
+			processConsumablePricesForInvoiceCreated({
+				ctx,
+				eventContext: makeEventContext(),
+			}),
+		).rejects.toThrow("rate limit");
+
+		expect(addLinesCalls).toHaveLength(1);
+		expect(batchUpdateCalls).toEqual([]);
+	});
+
+	test("keys the request on the observed invoice state so overlapping deliveries with different pending sets still share a key", async () => {
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext(),
+		});
+		const firstKey = addLinesCalls[0]?.idempotencyKey;
+
+		// Second delivery read the same (empty) invoice but computed fewer lines.
+		landedLineItemIds.length = 0;
+		consumableLineItems = [usageLineItems[0]!];
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext(),
+		});
+		const secondKey = addLinesCalls[1]?.idempotencyKey;
+
+		expect(firstKey?.startsWith("autumn:invoice.addLines:invoice_retry:")).toBe(
+			true,
+		);
+		expect(secondKey).toBe(firstKey);
+	});
+
+	test("changes the request key once the invoice state it observed has changed", async () => {
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext(),
+		});
+		const firstKey = addLinesCalls[0]?.idempotencyKey;
+
+		// A later delivery sees the first usage line already on the invoice.
+		landedLineItemIds.length = 0;
+		liveStripeLineItemIds = [usageLineItems[0]!.id];
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext(),
+		});
+
+		expect(addLinesCalls[1]?.idempotencyKey).not.toBe(firstKey);
+	});
+
+	test("splits more than 100 pending lines into batches and verifies all of them landed", async () => {
+		consumableLineItems = Array.from({ length: 230 }, (_, index) =>
+			makeLineItem(`invoice_li_usage_invoice_retry_${index}`),
+		);
+		invoiceCreditLineItems = [];
+
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext(),
+		});
+
+		expect(addLinesCalls.map((call) => call.lines.length)).toEqual([
+			100, 100, 30,
+		]);
+		expect(new Set(addLinesCalls.map((call) => call.idempotencyKey)).size).toBe(
+			3,
+		);
+		// Each later batch is keyed on the invoice as it was after the previous
+		// batch landed, so a second delivery that read that state shares the key.
+		expect(addLinesCalls[1]?.idempotencyKey).toBe(
+			buildInvoiceAddLinesIdempotencyKey({
+				invoiceId: "invoice_retry",
+				existingLineItemIds: consumableLineItems
+					.slice(0, 100)
+					.map((lineItem) => lineItem.id),
+			}),
+		);
+		expect(batchUpdateCalls).toHaveLength(1);
 	});
 
 	test("throws before resetting balances when Stripe returns without a requested line", async () => {

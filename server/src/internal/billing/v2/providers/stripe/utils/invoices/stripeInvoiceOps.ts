@@ -76,19 +76,23 @@ type AddInvoiceLinesParams = {
 	stripeCli: Stripe;
 	invoiceId: string;
 	lines: Stripe.InvoiceAddLinesParams.Line[];
+	idempotencyKey?: string;
 };
 
 export const addStripeInvoiceLines = async ({
 	stripeCli,
 	invoiceId,
 	lines,
+	idempotencyKey,
 }: AddInvoiceLinesParams): Promise<Stripe.Invoice> => {
 	const invoice = await stripeCli.invoices.addLines(
 		invoiceId,
 		{
 			lines,
 		},
-		autumnStripeRequestOptions({ source: "invoice.addLines" }),
+		idempotencyKey
+			? { idempotencyKey }
+			: autumnStripeRequestOptions({ source: "invoice.addLines" }),
 	);
 
 	return invoice;

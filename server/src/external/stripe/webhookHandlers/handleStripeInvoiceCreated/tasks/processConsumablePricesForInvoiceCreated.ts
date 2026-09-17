@@ -19,6 +19,13 @@ import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCust
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
+import {
+	buildInvoiceAddLinesIdempotencyKey,
+	getReplayedStripeRequestId,
+} from "../utils/buildInvoiceAddLinesIdempotencyKey";
+
+const STRIPE_ADD_LINES_MAX_PER_REQUEST = 100;
+const MAX_REPLAYED_FAILURE_RETRIES = 1;
 
 /**
  * Checks if the subscription's trial just ended.
@@ -56,15 +63,90 @@ const getExistingAutumnLineItemIds = async ({
 	);
 };
 
+const observeInvoiceLineItems = async ({
+	ctx,
+	invoiceId,
+	lineItems,
+}: {
+	ctx: StripeWebhookContext;
+	invoiceId: string;
+	lineItems: LineItem[];
+}) => {
+	const existingLineItemIds = await getExistingAutumnLineItemIds({
+		ctx,
+		invoiceId,
+	});
+	return {
+		existingLineItemIds,
+		pendingLineItems: lineItems.filter(
+			(lineItem) => !existingLineItemIds.has(lineItem.id),
+		),
+	};
+};
+
 /**
- * Adds every line item not already on the invoice in ONE addLines call.
- *
- * Stripe webhook retries re-run this task, so line ids are scoped to the
- * invoice and matched against `metadata.autumn_line_item_id` before sending.
- * A fresh idempotency key per attempt is deliberate: Stripe caches
- * resource-specific 429s (lock_timeout) and 400s under a reused key and
- * replays them for 24h, which is how credit lines went missing in the past.
+ * One bulk addLines per batch under a key derived from the observed invoice
+ * state, so overlapping deliveries dedupe at Stripe even if the Redis event
+ * lock failed open. Stripe also caches resource-specific 429s (lock_timeout)
+ * and 4xx under a key for 24h (how credit lines went missing before), so a
+ * replayed failure re-reads the invoice and retries once under a key salted
+ * with the replayed request id, which every observer of that failure derives
+ * alike. A key reused with different params fails fresh and Stripe redelivers.
  */
+const addLineItemBatch = async ({
+	ctx,
+	invoiceId,
+	batch,
+	existingLineItemIds,
+	salt,
+	attempt = 0,
+}: {
+	ctx: StripeWebhookContext;
+	invoiceId: string;
+	batch: LineItem[];
+	existingLineItemIds: Set<string>;
+	salt?: string;
+	attempt?: number;
+}): Promise<Awaited<ReturnType<typeof addStripeInvoiceLines>> | null> => {
+	if (batch.length === 0) return null;
+	try {
+		return await addStripeInvoiceLines({
+			stripeCli: ctx.stripeCli,
+			invoiceId,
+			lines: lineItemsToInvoiceAddLinesParams({ lineItems: batch }),
+			idempotencyKey: buildInvoiceAddLinesIdempotencyKey({
+				invoiceId,
+				existingLineItemIds,
+				salt,
+			}),
+		});
+	} catch (error) {
+		const replayedRequestId = getReplayedStripeRequestId(error);
+		if (!replayedRequestId || attempt >= MAX_REPLAYED_FAILURE_RETRIES) {
+			throw error;
+		}
+		ctx.logger.warn(
+			`[invoice.created] addLines on ${invoiceId} replayed cached failure from ${replayedRequestId}; retrying with a salted key`,
+		);
+		const observed = await observeInvoiceLineItems({
+			ctx,
+			invoiceId,
+			lineItems: batch,
+		});
+		return addLineItemBatch({
+			ctx,
+			invoiceId,
+			batch: observed.pendingLineItems.slice(
+				0,
+				STRIPE_ADD_LINES_MAX_PER_REQUEST,
+			),
+			existingLineItemIds: observed.existingLineItemIds,
+			salt: replayedRequestId,
+			attempt: attempt + 1,
+		});
+	}
+};
+
 const addPendingLineItemsToInvoice = async ({
 	ctx,
 	eventContext,
@@ -77,13 +159,12 @@ const addPendingLineItemsToInvoice = async ({
 	const { stripeInvoice } = eventContext;
 	if (lineItems.length === 0) return;
 
-	const existingAutumnLineItemIds = await getExistingAutumnLineItemIds({
-		ctx,
-		invoiceId: stripeInvoice.id,
-	});
-	const pendingLineItems = lineItems.filter(
-		(lineItem) => !existingAutumnLineItemIds.has(lineItem.id),
-	);
+	const { existingLineItemIds, pendingLineItems } =
+		await observeInvoiceLineItems({
+			ctx,
+			invoiceId: stripeInvoice.id,
+			lineItems,
+		});
 
 	if (pendingLineItems.length === 0) {
 		ctx.logger.info(
@@ -104,19 +185,45 @@ const addPendingLineItemsToInvoice = async ({
 		);
 	}
 
-	const updatedInvoice = await addStripeInvoiceLines({
-		stripeCli: ctx.stripeCli,
-		invoiceId: stripeInvoice.id,
-		lines: lineItemsToInvoiceAddLinesParams({ lineItems: pendingLineItems }),
-	});
+	// Re-observe before every batch so each key reflects the invoice as it is,
+	// and an overlapping delivery that saw the earlier batch shares the key.
+	const maxBatches =
+		Math.ceil(pendingLineItems.length / STRIPE_ADD_LINES_MAX_PER_REQUEST) + 1;
+	let observed = { existingLineItemIds, pendingLineItems };
+	let updatedInvoice: Awaited<ReturnType<typeof addStripeInvoiceLines>> | null =
+		null;
+	let batchesSent = 0;
+	while (observed.pendingLineItems.length > 0 && batchesSent < maxBatches) {
+		const batch = observed.pendingLineItems.slice(
+			0,
+			STRIPE_ADD_LINES_MAX_PER_REQUEST,
+		);
+		updatedInvoice = await addLineItemBatch({
+			ctx,
+			invoiceId: stripeInvoice.id,
+			batch,
+			existingLineItemIds: observed.existingLineItemIds,
+		});
+		batchesSent += 1;
+		if (batch.length === observed.pendingLineItems.length) break;
+		observed = await observeInvoiceLineItems({
+			ctx,
+			invoiceId: stripeInvoice.id,
+			lineItems: pendingLineItems,
+		});
+	}
 
-	const landedAutumnLineItemIds = updatedInvoice.lines.has_more
-		? await getExistingAutumnLineItemIds({ ctx, invoiceId: stripeInvoice.id })
-		: new Set(
-				updatedInvoice.lines.data
+	const returnedLines =
+		batchesSent === 1 && updatedInvoice && !updatedInvoice.lines.has_more
+			? updatedInvoice.lines.data
+			: null;
+	const landedAutumnLineItemIds = returnedLines
+		? new Set(
+				returnedLines
 					.map((lineItem) => lineItem.metadata?.autumn_line_item_id)
 					.filter((lineItemId): lineItemId is string => Boolean(lineItemId)),
-			);
+			)
+		: await getExistingAutumnLineItemIds({ ctx, invoiceId: stripeInvoice.id });
 	const missingLineItemIds = pendingLineItems
 		.map((lineItem) => lineItem.id)
 		.filter((lineItemId) => !landedAutumnLineItemIds.has(lineItemId));
