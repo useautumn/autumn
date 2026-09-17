@@ -44,7 +44,6 @@ export function TestClockDialog({
 			await advanceClock.mutateAsync(value.frozenTime).catch(() => undefined);
 		},
 	});
-	const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 	return (
 		<Dialog
@@ -89,9 +88,6 @@ export function TestClockDialog({
 									disablePastDates
 									withTime
 								/>
-								<p className="text-xs text-muted-foreground">
-									Timezone: {timezone}
-								</p>
 								{field.state.meta.errors.length > 0 && (
 									<p role="alert" className="text-sm text-destructive">
 										{field.state.meta.errors.join(" ")}
