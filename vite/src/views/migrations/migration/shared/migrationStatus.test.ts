@@ -30,6 +30,17 @@ test("status label names the blocking migration while waiting", () => {
 	expect(statusLabel({ status: "run", blockedBy: null })).toBe("Run");
 });
 
+test("a migration whose last run changed nothing says so", () => {
+	expect(statusLabel({ status: "no_changes", blockedBy: null })).toBe(
+		"No changes",
+	);
+});
+
+test("a no-op run can be run again and does not disable the button", () => {
+	expect(runButtonLabel("no_changes")).toBe("Run again");
+	expect(isRunDisabled("no_changes")).toBe(false);
+});
+
 test("waiting explanation names the one-per-org limit and the blocker", () => {
 	expect(waitingExplanation("pro-v3")).toBe(
 		'Only one migration runs at a time per organization. This one starts once "pro-v3" finishes.',

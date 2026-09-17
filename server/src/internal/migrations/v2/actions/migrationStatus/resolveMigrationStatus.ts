@@ -50,8 +50,24 @@ export const resolveMigrationStatus = ({
 
 	const started =
 		hasStartedRunAll || runAllRuns.some((run) => run.started_at !== null);
+	if (!started)
+		return {
+			status: MigrationStatus.Draft,
+			blockedByMigrationInternalId: null,
+		};
+
+	const latestFinished = runAllRuns
+		.filter((run) => run.started_at !== null)
+		.reduce<MigrationRun | null>(
+			(latest, run) =>
+				latest === null || run.created_at > latest.created_at ? run : latest,
+			null,
+		);
 	return {
-		status: started ? MigrationStatus.Run : MigrationStatus.Draft,
+		status:
+			latestFinished?.status === MigrationRunStatus.NoChanges
+				? MigrationStatus.NoChanges
+				: MigrationStatus.Run,
 		blockedByMigrationInternalId: null,
 	};
 };

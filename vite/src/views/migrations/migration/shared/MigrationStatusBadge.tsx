@@ -4,6 +4,7 @@ import {
 	CheckCircleIcon,
 	ClockIcon,
 	type Icon,
+	MinusCircleIcon,
 	PencilSimpleIcon,
 	PlayCircleIcon,
 } from "@phosphor-icons/react";
@@ -15,6 +16,7 @@ const STATUS_STYLES: Record<MigrationStatus, string> = {
 	waiting: "bg-yellow-500/10 text-yellow-500 border-transparent",
 	running: "bg-green-500/10 text-green-500 border-transparent",
 	run: "bg-blue-500/10 text-blue-500 border-transparent",
+	no_changes: "bg-muted text-tertiary-foreground border-transparent",
 };
 
 const STATUS_ICONS: Record<MigrationStatus, Icon> = {
@@ -22,6 +24,7 @@ const STATUS_ICONS: Record<MigrationStatus, Icon> = {
 	waiting: ClockIcon,
 	running: PlayCircleIcon,
 	run: CheckCircleIcon,
+	no_changes: MinusCircleIcon,
 };
 
 export function MigrationStatusBadge({

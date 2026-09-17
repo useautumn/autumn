@@ -18,6 +18,10 @@ test("once a Run All has completed the list freezes to item runs", () => {
 	expect(previewSourceForStatus("run")).toBe("item_runs");
 });
 
+test("a run that changed nothing still froze its customer list", () => {
+	expect(previewSourceForStatus("no_changes")).toBe("item_runs");
+});
+
 test("item_runs source drops the filter-only statuses from options and selections", () => {
 	expect(
 		executionStatusesForSource("item_runs", EXECUTION_STATUS_VALUES),

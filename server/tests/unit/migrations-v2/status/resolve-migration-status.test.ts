@@ -227,3 +227,68 @@ describe("resolveMigrationStatus: run", () => {
 		).toBe("run");
 	});
 });
+
+describe("resolveMigrationStatus: no_changes", () => {
+	test("the latest Run All changed nothing", () => {
+		expect(resolve({ runs: [run({ status: "no_changes" })] })).toEqual({
+			status: "no_changes",
+			blockedByMigrationInternalId: null,
+		});
+	});
+
+	test("a later Run All that did change something wins", () => {
+		expect(
+			resolve({
+				runs: [
+					run({ status: "no_changes", created_at: 1 }),
+					run({ status: "succeeded", created_at: 2 }),
+				],
+			}).status,
+		).toBe("run");
+	});
+
+	test("a later no-op Run All supersedes an earlier real one", () => {
+		expect(
+			resolve({
+				runs: [
+					run({ status: "succeeded", created_at: 1 }),
+					run({ status: "no_changes", created_at: 2 }),
+				],
+			}).status,
+		).toBe("no_changes");
+	});
+
+	test("scoped and dry runs never decide it", () => {
+		expect(
+			resolve({
+				runs: [
+					run({ status: "no_changes", created_at: 1 }),
+					run({ only_ids: ["cus_1"], status: "succeeded", created_at: 2 }),
+					run({ dry_run: true, status: "succeeded", created_at: 3 }),
+				],
+			}).status,
+		).toBe("no_changes");
+	});
+
+	test("an active Run All outranks the last outcome", () => {
+		expect(
+			resolve({
+				runs: [
+					run({ status: "no_changes", created_at: 1 }),
+					run({ status: "running", created_at: 2, finished_at: null }),
+				],
+			}).status,
+		).toBe("running");
+	});
+
+	test("pre-aggregated history without run rows stays run", () => {
+		expect(
+			resolveMigrationStatus({
+				migrationInternalId: MIGRATION_ID,
+				runs: [],
+				orgActiveRuns: [],
+				hasStartedRunAll: true,
+			}).status,
+		).toBe("run");
+	});
+});
