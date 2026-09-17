@@ -1,5 +1,4 @@
 import {
-	ACTIVE_STATUSES,
 	type AutoTopup,
 	type BillingAutoTopupFailureReason,
 	BillingVersion,
@@ -7,19 +6,15 @@ import {
 	cusProductToProduct,
 	customerPriceToBillingUnits,
 	type FullCustomer,
-	fullSubjectToFullCustomer,
 	roundUsageToNearestBillingUnit,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getBillableFullCustomer } from "@/internal/balances/getBillableFullCustomer.js";
 import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeCustomerForBilling.js";
 import {
 	hasRoomForExpiringGrant,
 	isExpiringPurchase,
 } from "@/internal/billing/v2/utils/expiringGrants/hasRoomForExpiringGrant.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject.js";
-import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import type { AutoTopupContext } from "../autoTopupContext.js";
 import { fullCustomerToAutoTopupObjects } from "../helpers/fullCustomerToAutoTopupObjects.js";
@@ -38,52 +33,6 @@ export type SetupAutoTopupContextResult =
 	| { ok: true; autoTopupContext: AutoTopupContext }
 	| { ok: false; failure?: AutoTopupSetupFailure };
 
-const getAutoTopupFullCustomer = async ({
-	ctx,
-	customerId,
-}: {
-	ctx: AutumnContext;
-	customerId: string;
-}): Promise<FullCustomer | undefined> => {
-	if (isFullSubjectRolloutEnabled({ ctx })) {
-	}
-
-	// A Redis failure is just a cache miss here — the DB path below covers it.
-	const cachedFullSubject = await getCachedFullSubject({
-		ctx,
-		customerId,
-		source: "setupAutoTopupContext",
-	})
-		.then((result) => result.fullSubject)
-		.catch(() => null);
-
-	if (cachedFullSubject) {
-		return fullSubjectToFullCustomer({
-			fullSubject: cachedFullSubject,
-		});
-	}
-
-	const normalizedFullSubject = await getFullSubjectNormalized({
-		ctx,
-		customerId,
-		inStatuses: ACTIVE_STATUSES,
-	});
-
-	if (normalizedFullSubject) {
-		return fullSubjectToFullCustomer({
-			fullSubject: normalizedFullSubject.fullSubject,
-		});
-	}
-
-	// Safety fallback to preserve previous behavior if subject query returns no row.
-	return CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-		inStatuses: ACTIVE_STATUSES,
-		withSubs: true,
-	});
-};
-
 /** Fetch full customer, auto-topup config, cusEnt, and Stripe context. */
 export const setupAutoTopupContext = async ({
 	ctx,
@@ -98,9 +47,10 @@ export const setupAutoTopupContext = async ({
 	// 1. Fetch FullCustomer with rollout-aware cache source:
 	//    - FullSubject cache when rollout is enabled for this customer bucket.
 	//    - Legacy FullCustomer cache otherwise.
-	const fullCustomer = await getAutoTopupFullCustomer({
+	const fullCustomer = await getBillableFullCustomer({
 		ctx,
 		customerId,
+		source: "setupAutoTopupContext",
 	});
 
 	if (!fullCustomer?.processor?.id) {

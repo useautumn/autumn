@@ -1,60 +1,13 @@
-import {
-	ACTIVE_STATUSES,
-	BillingVersion,
-	cusProductToProduct,
-	type FullCustomer,
-	fullSubjectToFullCustomer,
-} from "@autumn/shared";
+import { BillingVersion, cusProductToProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getBillableFullCustomer } from "@/internal/balances/getBillableFullCustomer.js";
 import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeCustomerForBilling.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject.js";
-import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { resolveThresholdSettlement } from "../resolve/resolveThresholdSettlement.js";
 import type { ThresholdSettlementContext } from "../thresholdSettlementContext.js";
 
 export type SetupThresholdSettlementResult =
 	| { ok: true; settlementContext: ThresholdSettlementContext }
 	| { ok: false; reason: "not_threshold_billed" | "nothing_to_settle" };
-
-const getSettlementFullCustomer = async ({
-	ctx,
-	customerId,
-}: {
-	ctx: AutumnContext;
-	customerId: string;
-}): Promise<FullCustomer | undefined> => {
-	const cachedFullSubject = await getCachedFullSubject({
-		ctx,
-		customerId,
-		source: "setupThresholdSettlementContext",
-	})
-		.then((result) => result.fullSubject)
-		.catch(() => null);
-
-	if (cachedFullSubject) {
-		return fullSubjectToFullCustomer({ fullSubject: cachedFullSubject });
-	}
-
-	const normalizedFullSubject = await getFullSubjectNormalized({
-		ctx,
-		customerId,
-		inStatuses: ACTIVE_STATUSES,
-	});
-
-	if (normalizedFullSubject) {
-		return fullSubjectToFullCustomer({
-			fullSubject: normalizedFullSubject.fullSubject,
-		});
-	}
-
-	return CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-		inStatuses: ACTIVE_STATUSES,
-		withSubs: true,
-	});
-};
 
 export const setupThresholdSettlementContext = async ({
 	ctx,
@@ -65,7 +18,11 @@ export const setupThresholdSettlementContext = async ({
 	customerId: string;
 	featureId: string;
 }): Promise<SetupThresholdSettlementResult> => {
-	const fullCustomer = await getSettlementFullCustomer({ ctx, customerId });
+	const fullCustomer = await getBillableFullCustomer({
+		ctx,
+		customerId,
+		source: "setupThresholdSettlementContext",
+	});
 
 	if (!fullCustomer?.processor?.id) {
 		return { ok: false, reason: "not_threshold_billed" };

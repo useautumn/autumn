@@ -1,14 +1,8 @@
 import { CusProductStatus, type FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct.js";
-import { customerProductActions } from "@/internal/customers/cusProducts/actions/index.js";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
+import { applyThresholdBlock } from "./applyThresholdBlock.js";
 import { isThresholdBillingPrice } from "./isThresholdBillingPrice.js";
 
-/**
- * Settling a threshold invoice lifts the usage block it caused. The cached
- * subject is what check reads, so a Postgres-only update leaves it blocked.
- */
 export const clearThresholdPastDue = async ({
 	ctx,
 	fullCustomer,
@@ -27,25 +21,12 @@ export const clearThresholdPastDue = async ({
 			),
 	);
 
-	if (blockedProducts.length === 0) return;
-
-	for (const customerProduct of blockedProducts) {
-		await customerProductActions.markActive({
-			ctx,
-			customerProduct,
-			fullCustomer,
-		});
-		await updateCachedCustomerProductV2({
-			ctx,
-			customerId,
-			customerProductId: customerProduct.id,
-			updates: { status: CusProductStatus.Active },
-		});
-	}
-
-	await deleteCachedFullCustomer({
+	await applyThresholdBlock({
 		ctx,
 		customerId,
+		customerProducts: blockedProducts,
+		fullCustomer,
+		status: CusProductStatus.Active,
 		source: "threshold-billing-recovered",
 	});
 };
