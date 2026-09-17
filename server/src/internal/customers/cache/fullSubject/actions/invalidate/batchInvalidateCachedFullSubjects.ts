@@ -79,13 +79,24 @@ const resolveSubjectInvalidations = ({
 		};
 	});
 
+/** Any per-command error tuple means a key was not busted. */
+const throwOnAnyPipelineError = <T extends [Error | null, unknown][] | null>(
+	results: T,
+): T => {
+	const failed = results?.find((entry) => entry[0]);
+	if (failed?.[0]) throw failed[0];
+	return results;
+};
+
 // A pipeline is single-use, so each attempt builds its own.
 const execInvalidationPipeline = ({
 	redisV2,
 	invalidations,
+	strict,
 }: {
 	redisV2: Redis;
 	invalidations: SubjectInvalidation[];
+	strict: boolean;
 }) => {
 	const pipeline = redisV2.pipeline();
 
@@ -96,9 +107,11 @@ const execInvalidationPipeline = ({
 		pipeline.expire(epochKey, FULL_SUBJECT_EPOCH_TTL_SECONDS);
 	}
 
-	// A dead socket resolves exec() with per-command error tuples; surface it so
-	// the retry loop runs instead of counting the pipeline as delivered.
-	return pipeline.exec().then(throwOnPipelineConnectionError);
+	// exec() resolves even when commands failed; surface that so the retry loop
+	// runs instead of counting the pipeline as delivered.
+	return pipeline
+		.exec()
+		.then(strict ? throwOnAnyPipelineError : throwOnPipelineConnectionError);
 };
 
 /**
@@ -112,14 +125,17 @@ const writeInvalidations = async ({
 	redisV2,
 	invalidations,
 	maxAttempts,
+	strict,
 }: {
 	redisV2: Redis;
 	invalidations: SubjectInvalidation[];
 	maxAttempts: number;
+	strict: boolean;
 }): Promise<boolean> => {
 	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 		const result = await tryRedisOp({
-			operation: () => execInvalidationPipeline({ redisV2, invalidations }),
+			operation: () =>
+				execInvalidationPipeline({ redisV2, invalidations, strict }),
 			source: "batchInvalidateCachedFullSubjects:invalidate",
 			redisInstance: redisV2,
 			queueIfNotReady: true,
@@ -141,11 +157,13 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 	featuresByOrgEnv,
 	redisV2,
 	maxAttempts,
+	strict,
 }: {
 	customers: BatchInvalidateCustomer[];
 	featuresByOrgEnv: FeaturesByOrgEnv;
 	redisV2: Redis;
 	maxAttempts: number;
+	strict: boolean;
 }): Promise<BatchInvalidateCustomer[]> => {
 	const dropped: BatchInvalidateCustomer[] = [];
 	// No not-ready guard: a dedicated org Redis is created lazily, so its very
@@ -182,6 +200,7 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 				featuresByOrgEnv,
 			}),
 			maxAttempts,
+			strict,
 		});
 
 		if (!invalidated) {
@@ -229,8 +248,8 @@ export const batchInvalidateCachedFullSubjects = async ({
 	/** Accumulates `invalidate_marks_db` / `invalidate_redis` ms for callers
 	 *  that need to tell a Postgres stall from a Redis one. */
 	phases?: Record<string, number>;
-	/** Reject instead of fail-open when any batch spends every attempt, for
-	 *  callers that can revoke a checkpoint rather than leave caches stale. */
+	/** Strict mode for callers that can revoke a checkpoint: any failed command
+	 *  counts as a failed attempt, and spending every attempt rejects. */
 	throwWhenExhausted?: boolean;
 }): Promise<number> => {
 	if (customers.length === 0) return 0;
@@ -271,6 +290,7 @@ export const batchInvalidateCachedFullSubjects = async ({
 					featuresByOrgEnv,
 					redisV2: targetRedis,
 					maxAttempts,
+					strict: throwWhenExhausted,
 				}),
 			),
 		)

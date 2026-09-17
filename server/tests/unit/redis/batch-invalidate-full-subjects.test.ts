@@ -31,6 +31,7 @@ const createFakeRedis = ({
 	readFails = false,
 	failWrites = 0,
 	errorTupleWrites = 0,
+	commandErrorWrites = 0,
 }: {
 	status?: string;
 	readFails?: boolean;
@@ -38,6 +39,8 @@ const createFakeRedis = ({
 	failWrites?: number;
 	/** Number of write execs after that which resolve with a dead-socket tuple. */
 	errorTupleWrites?: number;
+	/** Number of write execs after that which resolve with a command error tuple. */
+	commandErrorWrites?: number;
 } = {}): { redis: Redis; calls: RedisCalls & { writeAttempts: number } } => {
 	const calls = {
 		readKeys: [] as string[],
@@ -84,6 +87,20 @@ const createFakeRedis = ({
 					}
 					if (calls.writeAttempts <= failWrites + errorTupleWrites) {
 						return [[new Error("Command timed out"), null]];
+					}
+					if (
+						calls.writeAttempts <=
+						failWrites + errorTupleWrites + commandErrorWrites
+					) {
+						return [
+							[null, 1],
+							[
+								new Error(
+									"OOM command not allowed when used memory > 'maxmemory'",
+								),
+								null,
+							],
+						];
 					}
 
 					calls.writeOps.push(...writeOps);
@@ -298,6 +315,51 @@ describe("batchInvalidateCachedFullSubjects", () => {
 		expect(invalidated).toBe(1);
 		expect(down.calls.writeAttempts).toBe(3);
 		expect(down.calls.writeOps).toHaveLength(0);
+	});
+
+	test("in strict mode a failed command is a failed attempt; best-effort callers keep the tuple", async () => {
+		const strictRedis = createFakeRedis({ commandErrorWrites: 1 });
+		const invalidated = await batchInvalidateCachedFullSubjects({
+			customers: [
+				{ orgId: "org_test", env: "sandbox" as AppEnv, customerId: "cus_oom" },
+			],
+			featuresByOrgEnv: {},
+			getRedisTargetsForCustomer: () => [strictRedis.redis],
+			maxAttempts: 3,
+			throwWhenExhausted: true,
+		});
+		expect(invalidated).toBe(1);
+		expect(strictRedis.calls.writeAttempts).toBe(2);
+
+		const alwaysOom = createFakeRedis({
+			commandErrorWrites: Number.POSITIVE_INFINITY,
+		});
+		await expect(
+			batchInvalidateCachedFullSubjects({
+				customers: [
+					{
+						orgId: "org_test",
+						env: "sandbox" as AppEnv,
+						customerId: "cus_oom",
+					},
+				],
+				featuresByOrgEnv: {},
+				getRedisTargetsForCustomer: () => [alwaysOom.redis],
+				maxAttempts: 2,
+				throwWhenExhausted: true,
+			}),
+		).rejects.toThrow("dropped 1 of 1 subjects after 2 attempts");
+
+		const bestEffort = createFakeRedis({ commandErrorWrites: 1 });
+		await batchInvalidateCachedFullSubjects({
+			customers: [
+				{ orgId: "org_test", env: "sandbox" as AppEnv, customerId: "cus_oom" },
+			],
+			featuresByOrgEnv: {},
+			getRedisTargetsForCustomer: () => [bestEffort.redis],
+			maxAttempts: 3,
+		});
+		expect(bestEffort.calls.writeAttempts).toBe(1);
 	});
 
 	test("rejects instead of failing open when asked to and every attempt is spent", async () => {
