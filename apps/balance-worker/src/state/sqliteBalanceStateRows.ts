@@ -415,6 +415,48 @@ export const insertTrackReceipt = ({
 		});
 };
 
+export const updateTrackReceipt = ({
+	database,
+	partitionKey,
+	position,
+	receipt,
+}: {
+	database: Database;
+	partitionKey: string;
+	position: { topic: string; partition: number; offset: bigint };
+	receipt: TrackOutcome;
+}) =>
+	database
+		.query<
+			never,
+			{
+				partitionKey: string;
+				commandId: string;
+				topic: string;
+				partition: number;
+				offset: bigint;
+				deduplicationExpiresAt: bigint;
+				outcomeJson: string;
+			}
+		>(`
+			UPDATE track_receipts
+			SET record_offset = $offset,
+				deduplication_expires_at = $deduplicationExpiresAt,
+				outcome_json = $outcomeJson
+			WHERE partition_key = $partitionKey AND command_id = $commandId
+				AND topic = $topic AND partition_id = $partition
+				AND record_offset < $offset
+		`)
+		.run({
+			partitionKey,
+			commandId: receipt.commandId,
+			topic: position.topic,
+			partition: position.partition,
+			offset: position.offset,
+			deduplicationExpiresAt: BigInt(receipt.deduplicationExpiresAt),
+			outcomeJson: JSON.stringify(receipt),
+		});
+
 export const advancePartitionProgress = ({
 	database,
 	topic,
