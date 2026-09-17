@@ -1,6 +1,7 @@
 import {
 	type AutumnBillingPlan,
 	type CreateScheduleBillingContext,
+	type FullCusProduct,
 	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -18,9 +19,17 @@ export type SchedulePhasePlan = {
 	customerProductIds: string[];
 };
 
+/** The immediate phase's plan change, which the guards validate with attach's
+ * immediate-timing rules. Future phases are validated at activation. */
+export type ImmediatePhaseTransition = {
+	outgoingCustomerProducts: FullCusProduct[];
+	incomingCustomerProducts: FullCusProduct[];
+};
+
 export type CreateSchedulePlanResult = {
 	autumnBillingPlan: AutumnBillingPlan;
 	phases: SchedulePhasePlan[];
+	immediatePhaseTransition: ImmediatePhaseTransition;
 };
 
 /** Compute the full create_schedule billing plan (immediate + scheduled phases). */
@@ -153,5 +162,9 @@ export const computeCreateSchedulePlan = ({
 	return {
 		autumnBillingPlan,
 		phases: [immediatePhase, ...scheduled.scheduledPhases],
+		immediatePhaseTransition: {
+			outgoingCustomerProducts,
+			incomingCustomerProducts: immediateCustomerProducts,
+		},
 	};
 };

@@ -7,8 +7,12 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { assertNoAmbiguousDroppedLicenses } from "@/internal/billing/v2/common/errors/assertNoAmbiguousDroppedLicenses";
 import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/errors/handleLicenseTransitionErrors";
+import { matchCustomerLicenseSuccessors } from "@/internal/billing/v2/compute/customerLicenseTransitions/matchCustomerLicenseSuccessors";
+import { pairCustomerProducts } from "@/internal/billing/v2/compute/pairCustomerProducts";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
+import type { ImmediatePhaseTransition } from "../compute/computeCreateSchedulePlan";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 
 export const handleCreateScheduleErrors = async ({
@@ -44,11 +48,25 @@ export const handleCreateScheduleErrors = async ({
 
 export const handleCreateScheduleComputeErrors = ({
 	autumnBillingPlan,
+	immediatePhaseTransition,
 }: {
 	billingContext: CreateScheduleBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
+	immediatePhaseTransition: ImmediatePhaseTransition;
 }) => {
 	handleLicenseTransitionErrors({ autumnBillingPlan });
+
+	const customerProductPairs = pairCustomerProducts(immediatePhaseTransition);
+	for (const {
+		outgoingCustomerProduct,
+		incomingCustomerProduct,
+	} of customerProductPairs) {
+		const { unmatched } = matchCustomerLicenseSuccessors({
+			outgoingCustomerLicenses: outgoingCustomerProduct.customer_licenses ?? [],
+			incomingCustomerLicenses: incomingCustomerProduct.customer_licenses ?? [],
+		});
+		assertNoAmbiguousDroppedLicenses({ unmatched });
+	}
 };
 
 export const handleCreateScheduleBillingPlanErrors = ({

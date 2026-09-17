@@ -217,6 +217,10 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 					currentEpochMs: Date.now(),
 				}),
 				autumnBillingPlan,
+				immediatePhaseTransition: {
+					outgoingCustomerProducts: [],
+					incomingCustomerProducts: [],
+				},
 			}),
 		).not.toThrow();
 	});
@@ -234,6 +238,10 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 					currentEpochMs: Date.now(),
 				}),
 				autumnBillingPlan,
+				immediatePhaseTransition: {
+					outgoingCustomerProducts: [],
+					incomingCustomerProducts: [],
+				},
 			}),
 		).toThrow("2 assigned, but the incoming plan grants 1");
 	});
