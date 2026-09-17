@@ -10,9 +10,14 @@ import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK, resources } from "@opentelemetry/sdk-node";
-import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import {
+	AlwaysOnSampler,
+	BatchSpanProcessor,
+} from "@opentelemetry/sdk-trace-base";
 import { resolveAwsTaskIdentity } from "./external/aws/ecs/awsTaskIdentity.js";
 import { FilteringSpanProcessor } from "./utils/otel/FilteringSpanProcessor.js";
+import { LocalSpanExporter } from "./utils/otel/localSpanCapture/localSpanExporter.js";
+import { resolveTraceMode } from "./utils/otel/localSpanCapture/resolveTraceMode.js";
 import {
 	buildCompactOtelResourceAttributes,
 	buildOtelResourceDefinitionAttributes,
@@ -25,8 +30,36 @@ import { TenantAttrSpanProcessor } from "./utils/otel/TenantAttrSpanProcessor.js
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.WARN);
 
 let sdk: NodeSDK | null = null;
+const traceMode = resolveTraceMode({ env: process.env });
 
-if (process.env.AXIOM_TOKEN) {
+if (traceMode === "local") {
+	const exporter = new LocalSpanExporter({
+		directory: process.env.AUTUMN_OTEL_LOCAL_DIR!,
+	});
+	sdk = new NodeSDK({
+		autoDetectResources: false,
+		resource: resources.resourceFromAttributes({
+			"service.name": "autumn-local",
+		}),
+		sampler: new AlwaysOnSampler(),
+		spanProcessors: [
+			new BatchSpanProcessor(exporter, {
+				maxQueueSize: 8192,
+				maxExportBatchSize: 256,
+				scheduledDelayMillis: 1000,
+			}),
+		],
+		metricReaders: [],
+		logRecordProcessors: [],
+	});
+	sdk.start();
+	const shutdownSdk = sdk.shutdown.bind(sdk);
+	let shutdownPromise: Promise<void> | undefined;
+	sdk.shutdown = () => {
+		shutdownPromise ??= shutdownSdk();
+		return shutdownPromise;
+	};
+} else if (traceMode === "axiom") {
 	const serviceInstanceId = createOtelServiceInstanceId();
 	const resource = resources.resourceFromAttributes(
 		buildCompactOtelResourceAttributes({ serviceInstanceId }),
@@ -94,7 +127,9 @@ if (process.env.AXIOM_TOKEN) {
 		resourceDefinitionSpan.setStatus({ code: SpanStatusCode.OK });
 		resourceDefinitionSpan.end();
 	});
+}
 
+if (sdk) {
 	// Flush spans on SIGTERM/SIGINT so dev restarts (nodemon) and prod rollouts
 	// don't swallow in-flight batches.
 	const shutdown = async () => {
@@ -106,6 +141,7 @@ if (process.env.AXIOM_TOKEN) {
 	};
 	process.once("SIGTERM", shutdown);
 	process.once("SIGINT", shutdown);
+	if (traceMode === "local") process.once("beforeExit", shutdown);
 }
 
 export { sdk as otelSdk };
