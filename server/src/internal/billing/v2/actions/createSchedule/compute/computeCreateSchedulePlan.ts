@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
@@ -71,6 +72,15 @@ export const computeCreateSchedulePlan = ({
 		),
 	].flatMap((productContext) => productContext.insertPlanLicenses ?? []);
 
+	// The immediate phase expires the outgoing rows and inserts fresh ones, so
+	// pools must re-parent now; future phases carry theirs at activation.
+	const customerLicenseTransitions = computeCustomerLicenseTransitions({
+		outgoingCustomerProducts,
+		incomingCustomerProducts: immediateCustomerProducts,
+		customerLicenseBillingContext: billingContext.customerLicenseBillingContext,
+		carryCustomerLicenseState: true,
+	});
+
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: immediateCustomerProducts,
@@ -120,6 +130,7 @@ export const computeCreateSchedulePlan = ({
 		insertPlanLicenses: insertPlanLicenses.length
 			? insertPlanLicenses
 			: undefined,
+		customerLicenseTransitions,
 		lineItems: allLineItems,
 		updateCustomerEntitlements,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
