@@ -19,11 +19,14 @@ export function useBillingPreview<
 	queryKeyPrefix,
 	requestBody,
 	enabled,
+	expand = BILLING_PREVIEW_EXPAND,
 }: {
 	path: string;
 	queryKeyPrefix: string;
 	requestBody: TRequestBody | null;
 	enabled?: boolean;
+	/** Endpoints with a strict schema reject unknown keys; pass [] to omit it. */
+	expand?: readonly string[];
 }) {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
@@ -52,10 +55,9 @@ export function useBillingPreview<
 
 			const response = await axiosInstance.post<TResponse>(
 				debouncedRequest.path,
-				{
-					...debouncedRequest.body,
-					expand: BILLING_PREVIEW_EXPAND,
-				},
+				expand.length > 0
+					? { ...debouncedRequest.body, expand }
+					: debouncedRequest.body,
 			);
 			return response.data;
 		},

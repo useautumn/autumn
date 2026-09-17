@@ -9,6 +9,7 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCusInvoicePreviewsQuery } from "@/views/customers2/customer/hooks/useCusInvoicePreviewsQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { useInvoiceLineItemsQuery } from "@/views/customers2/hooks/useInvoiceLineItemsQuery";
+import { CreateInvoiceTrigger } from "./CreateInvoiceTrigger";
 import {
 	getCustomerInvoicesColumns,
 	hasNonStripeInvoice,
@@ -109,9 +110,9 @@ export function CustomerInvoicesTable() {
 						<Receipt size={16} weight="fill" className="text-subtle" />
 						Invoices
 					</Table.Heading>
-					{/* <Table.Actions>
-						<CustomerInvoicesShowAllButton />
-					</Table.Actions> */}
+					<Table.Actions>
+						<CreateInvoiceTrigger />
+					</Table.Actions>
 				</Table.Toolbar>
 
 				{hasUpcoming && (

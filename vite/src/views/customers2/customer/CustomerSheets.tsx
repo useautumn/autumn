@@ -23,6 +23,7 @@ import { BillingSpendLimitSheet } from "../components/sheets/BillingSpendLimitSh
 import { BillingUsageAlertSheet } from "../components/sheets/BillingUsageAlertSheet";
 import { BillingUsageLimitSheet } from "../components/sheets/BillingUsageLimitSheet";
 import { CheckBalanceSheet } from "../components/sheets/CheckBalanceSheet";
+import { CreateInvoiceSheet } from "../components/sheets/CreateInvoiceSheet";
 import { CreateScheduleSheet } from "../components/sheets/CreateScheduleSheet";
 import { CustomerConfigSheet } from "../components/sheets/CustomerConfigSheet";
 import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
@@ -85,6 +86,8 @@ export function CustomerSheets() {
 			}
 			case "invoice-reissue":
 				return <ReissueInvoiceSheet />;
+			case "create-invoice":
+				return <CreateInvoiceSheet />;
 			case "upcoming-invoice-detail": {
 				const preview = sheetData?.preview as ApiInvoicePreviewV0 | undefined;
 				if (!preview) return null;

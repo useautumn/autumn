@@ -6,6 +6,7 @@ import { runAllocatedBillingSeed } from "./allocated-billing.js";
 import { runEmailMiniSeed } from "./email-mini.js";
 import { runEmailPlatformSeed } from "./email-platform.js";
 import { runEmailPlatformSeed as runEmailPlatformV2Seed } from "./email-platform-v2.js";
+import { runInvoiceCreateSeed } from "./invoice-create.js";
 import { runKnowledgePlatformSeed } from "./knowledge-platform.js";
 
 const scenarios = {
@@ -15,6 +16,7 @@ const scenarios = {
 	"email-v2": runEmailPlatformV2Seed,
 	ep: runEmailPlatformSeed,
 	epv2: runEmailPlatformV2Seed,
+	invoice: runInvoiceCreateSeed,
 	knowledge: runKnowledgePlatformSeed,
 	kp: runKnowledgePlatformSeed,
 	mini: runEmailMiniSeed,
@@ -28,7 +30,7 @@ const run = async () => {
 	const key = process.argv.slice(2).find(isScenarioKey);
 	if (!key) {
 		console.error(
-			"Usage: bun scenario <alloc | ep | epv2 | mini | kp | email | email-v2 | email-mini | knowledge> [--count N] [--concurrency N] [--attach-plan trial|enterprise] [--skip-clear] [--keep-existing] [--skip-stripe-reset]",
+			"Usage: bun scenario <alloc | ep | epv2 | mini | kp | invoice | email | email-v2 | email-mini | knowledge> [--count N] [--concurrency N] [--attach-plan trial|enterprise] [--skip-clear] [--keep-existing] [--skip-stripe-reset]",
 		);
 		process.exit(1);
 	}
