@@ -8,32 +8,74 @@
  *   at least one item succeeded         → run.status "succeeded"
  *   a run that claimed no items at all  → run.status "succeeded"
  *
+ * Runs go through /migrations.run so the run row is claimed and tracked the
+ * way production does it; the direct in-process runner never inserts one.
+ *
  * Red (current):  every case settles `succeeded`.
  * Green (after):  the all-skipped run settles `no_changes`.
  */
 
 import { expect, test } from "bun:test";
-import { MigrationRunStatus } from "@autumn/shared";
+import {
+	isTerminalMigrationRunStatus,
+	MigrationRunStatus,
+} from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { migrationRunRepo } from "@/internal/migrations/v2/repos/index.js";
-import { runChunkedMigration } from "../utils/runChunkedMigration.js";
+import { clearMigrationRunHistory } from "../utils/runChunkedMigration.js";
+import { waitForMigrationResult } from "../utils/runUpdatePlanMigration.js";
 
-const runStatus = async ({
+type ScenarioCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
+
+/** Runs the migration through the API and returns the settled run status. */
+const runAndSettle = async ({
 	ctx,
-	migrationRunId,
+	migrationClient,
+	migrationId,
+	planId,
 }: {
-	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
-	migrationRunId: string;
+	ctx: ScenarioCtx;
+	migrationClient: Awaited<ReturnType<typeof initScenario>>["autumnV2_2"];
+	migrationId: string;
+	planId: string;
 }) => {
-	const [run] = await migrationRunRepo.list({
-		ctx,
-		internalId: migrationRunId,
+	await clearMigrationRunHistory({ ctx, migrationId });
+	const migration = await migrationClient.migrationsV2.deleteAndCreate({
+		id: migrationId,
+		filter: { customer: { plan: { plan_id: planId } } },
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: planId },
+					customize: { add_items: [itemsV2.dashboard()] },
+				},
+			],
+		},
+		no_billing_changes: true,
 	});
-	if (!run) throw new Error(`Run ${migrationRunId} not found`);
+
+	const { run_id } = await migrationClient.migrationsV2.run({
+		id: migration.id,
+		dry_run: false,
+	});
+
+	await waitForMigrationResult({
+		timeoutMs: 90_000,
+		pollIntervalMs: 1_000,
+		waitFor: async () => {
+			const [run] = await migrationRunRepo.list({ ctx, internalId: run_id });
+			if (!run) throw new Error(`Run ${run_id} not found`);
+			if (!isTerminalMigrationRunStatus(run.status))
+				throw new Error(`Run still ${run.status}`);
+		},
+	});
+
+	const [run] = await migrationRunRepo.list({ ctx, internalId: run_id });
 	return run.status;
 };
 
@@ -58,27 +100,14 @@ test.concurrent(
 			],
 		});
 
-		const { migrationRunId } = await runChunkedMigration({
-			ctx,
-			migrationClient: autumnV2_2,
-			migrationId: "mig-no-changes",
-			filter: { customer: { plan: { plan_id: targetPlan.id } } },
-			operations: {
-				customer: [
-					{
-						type: "update_plan",
-						plan_filter: { plan_id: targetPlan.id },
-						customize: { add_items: [itemsV2.dashboard()] },
-					},
-				],
-			},
-			noBillingChanges: true,
-			controls: { limit: 10 },
-		});
-
-		expect(await runStatus({ ctx, migrationRunId })).toBe(
-			MigrationRunStatus.NoChanges,
-		);
+		expect(
+			await runAndSettle({
+				ctx,
+				migrationClient: autumnV2_2,
+				migrationId: `${customerId}-mig`,
+				planId: targetPlan.id,
+			}),
+		).toBe(MigrationRunStatus.NoChanges);
 	},
 );
 
@@ -111,27 +140,14 @@ test.concurrent(
 			],
 		});
 
-		const { migrationRunId } = await runChunkedMigration({
-			ctx,
-			migrationClient: autumnV2_2,
-			migrationId: "mig-some-changes",
-			filter: { customer: { plan: { plan_id: targetPlan.id } } },
-			operations: {
-				customer: [
-					{
-						type: "update_plan",
-						plan_filter: { plan_id: targetPlan.id },
-						customize: { add_items: [itemsV2.dashboard()] },
-					},
-				],
-			},
-			noBillingChanges: true,
-			controls: { limit: 10 },
-		});
-
-		expect(await runStatus({ ctx, migrationRunId })).toBe(
-			MigrationRunStatus.Succeeded,
-		);
+		expect(
+			await runAndSettle({
+				ctx,
+				migrationClient: autumnV2_2,
+				migrationId: `${changedId}-mig`,
+				planId: targetPlan.id,
+			}),
+		).toBe(MigrationRunStatus.Succeeded);
 	},
 );
 
@@ -143,7 +159,6 @@ test.concurrent(
 			id: "mig-no-matches-target",
 			items: [],
 		});
-		const unmatchedPlanId = `${targetPlan.id}-absent`;
 
 		const { autumnV2_2, ctx } = await initScenario({
 			customerId,
@@ -151,26 +166,13 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: targetPlan.id })],
 		});
 
-		const { migrationRunId } = await runChunkedMigration({
-			ctx,
-			migrationClient: autumnV2_2,
-			migrationId: "mig-no-matches",
-			filter: { customer: { plan: { plan_id: unmatchedPlanId } } },
-			operations: {
-				customer: [
-					{
-						type: "update_plan",
-						plan_filter: { plan_id: unmatchedPlanId },
-						customize: { add_items: [itemsV2.dashboard()] },
-					},
-				],
-			},
-			noBillingChanges: true,
-			controls: { limit: 10 },
-		});
-
-		expect(await runStatus({ ctx, migrationRunId })).toBe(
-			MigrationRunStatus.Succeeded,
-		);
+		expect(
+			await runAndSettle({
+				ctx,
+				migrationClient: autumnV2_2,
+				migrationId: `${customerId}-mig`,
+				planId: `${targetPlan.id}-absent`,
+			}),
+		).toBe(MigrationRunStatus.Succeeded);
 	},
 );
