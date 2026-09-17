@@ -6,7 +6,7 @@ import { renamedPaths } from "../src/emit/freeFormPaths";
 import { OVERLAY } from "../src/overlay/overlay";
 import { loadSpec, requestBodySchema } from "../src/spec/loadSpec";
 
-const generated = join(import.meta.dir, "../../atmn-nightly/src/generated");
+const generated = join(import.meta.dir, "../../atmn/src/generated");
 
 test("every singleton has a generated type, no builder", () => {
 	for (const [name, meta] of Object.entries(SINGLETONS)) {

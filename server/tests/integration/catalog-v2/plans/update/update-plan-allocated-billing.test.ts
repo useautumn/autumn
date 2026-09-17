@@ -102,7 +102,7 @@ test.concurrent(
 );
 
 // C2 rides the atmn emitter, which only carries fields in its generated spec.
-// Green once `openapi-internal.yml` and packages/atmn-nightly are regenerated
+// Green once `openapi-internal.yml` and packages/atmn are regenerated
 // with `price.allocated_billing`; until then the emitter drops the flag and
 // the push reads as a migration.
 test.todo(

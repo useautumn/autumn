@@ -1,4 +1,4 @@
-import type { ApiPlanParams } from "../../../../atmn/src/lib/transforms/sdkToApi/plan.ts";
+import type { ApiPlanParams } from "../../../../atmn-old/src/lib/transforms/sdkToApi/plan.ts";
 
 /**
  * Everything scorers need, extracted from the workspace BEFORE it is deleted.

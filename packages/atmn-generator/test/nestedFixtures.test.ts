@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { NESTED_FIXTURES } from "../src/collections";
 
-const generated = join(import.meta.dir, "../../atmn-nightly/src/generated");
+const generated = join(import.meta.dir, "../../atmn/src/generated");
 
 test("every nested fixture has a generated module with its builder and type", () => {
 	for (const [name, meta] of Object.entries(NESTED_FIXTURES)) {

@@ -15,8 +15,8 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
-import { runPush } from "../../../../../../packages/atmn-nightly/src/actions/push";
-import { createClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { runPush } from "../../../../../../packages/atmn/src/actions/push";
+import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
 /** A plan with two items over two metered features; `dropSecondItem` removes
  * the second one in place, keeping the plan's own row. */

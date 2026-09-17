@@ -22,11 +22,11 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { sandboxKeyName } from "../../../../../packages/atmn-nightly/src/env/sandboxKeyName";
+import { sandboxKeyName } from "../../../../../packages/atmn/src/env/sandboxKeyName";
 import {
 	type AutumnClient,
 	createClient,
-} from "../../../../../packages/atmn-nightly/src/generated/client";
+} from "../../../../../packages/atmn/src/generated/client";
 import { uniqueTestId } from "../../catalog-v2/utils/uniqueTestId.js";
 
 const CREATED_LINE = /^Created sandbox .+ \((?<id>[^)]+)\)\.$/m;

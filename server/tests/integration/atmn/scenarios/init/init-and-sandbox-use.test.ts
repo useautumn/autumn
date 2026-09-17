@@ -33,8 +33,8 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { sandboxKeyName } from "../../../../../../packages/atmn-nightly/src/env/sandboxKeyName";
-import { createClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { sandboxKeyName } from "../../../../../../packages/atmn/src/env/sandboxKeyName";
+import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
 
 const CLI_ENTRY = join(CLI_PACKAGE_DIR, "src/cli.ts");
@@ -164,7 +164,7 @@ test(`${chalk.yellowBright("atmn init: single repo pulls the catalog, writes ski
 		expect(output).toContain(
 			"✓ Wrote autumn.config.ts, features.ts, plans.ts, rewards.ts",
 		);
-		expect(output).toContain("✓ Added atmn-nightly to package.json");
+		expect(output).toContain("✓ Added atmn to package.json");
 		expect(output).toContain("✓ Installed with bun");
 		expect(output).toContain(
 			'✓ Wrote "atmn" script and marker to package.json',
@@ -247,7 +247,7 @@ test(`${chalk.yellowBright("atmn init: a monorepo is hint-driven headless, and t
 			config: "packages/autumn/autumn.config.ts",
 		});
 		expect(manifest.scripts.atmn).toBe(
-			'atmn-nightly -c "packages/autumn/autumn.config.ts"',
+			'atmn -c "packages/autumn/autumn.config.ts"',
 		);
 
 		// From the root, with no -c, the marker resolves the package's config.

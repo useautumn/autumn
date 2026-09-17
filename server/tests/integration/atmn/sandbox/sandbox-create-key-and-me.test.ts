@@ -29,7 +29,7 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { hashApiKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
-import { createClient } from "../../../../../packages/atmn-nightly/src/generated/client";
+import { createClient } from "../../../../../packages/atmn/src/generated/client";
 import { uniqueTestId } from "../../catalog-v2/utils/uniqueTestId.js";
 
 type OrgMe = {

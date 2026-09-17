@@ -12,7 +12,7 @@ import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.j
 
 const CLI_PACKAGE_DIR = join(
 	import.meta.dir,
-	"../../../../../../packages/atmn-nightly",
+	"../../../../../../packages/atmn",
 );
 
 /**
