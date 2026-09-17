@@ -1,4 +1,14 @@
-import type { ProducerConfig, Transaction } from "kafkajs";
+import type { KafkaConfig, ProducerConfig, Transaction } from "kafkajs";
+
+export type KafkaTransportConfig = Omit<
+	KafkaConfig,
+	| "brokers"
+	| "clientId"
+	| "connectionTimeout"
+	| "requestTimeout"
+	| "enforceRequestTimeout"
+	| "retry"
+>;
 
 export type KafkaTransaction = Pick<Transaction, "send" | "commit" | "abort">;
 
