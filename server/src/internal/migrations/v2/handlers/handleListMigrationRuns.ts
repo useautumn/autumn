@@ -27,17 +27,25 @@ export const handleListMigrationRuns = createRoute({
 			listMigrationStatuses({ ctx, migrations: [migration] }),
 		]);
 		const statusInfo = statuses.get(migration.internal_id);
-		const dryRunIds = runs
-			.filter((run) => run.dry_run)
+		// A scoped run (single customer / sample) is counted on its own rows, so
+		// its progress reads out of what it is actually running. An unscoped Run
+		// All keeps the migration-wide count: re-runs reuse item rows and move
+		// `migration_run_id`, so per-run counting would undercount a resumed run.
+		const isScoped = (run: (typeof runs)[number]) =>
+			run.only_ids !== null || run.target_limit !== null;
+		const perRunIds = runs
+			.filter((run) => run.dry_run || isScoped(run))
 			.map((run) => run.internal_id);
-		const hasLiveRuns = runs.some((run) => !run.dry_run);
+		const hasUnscopedLiveRun = runs.some(
+			(run) => !run.dry_run && !isScoped(run),
+		);
 
 		const countRows = await migrationItemRunRepo.listCountsByRun({
 			ctx,
 			migrationInternalId: migration.internal_id,
-			migrationRunIds: dryRunIds,
+			migrationRunIds: perRunIds,
 		});
-		const liveCounts = hasLiveRuns
+		const liveCounts = hasUnscopedLiveRun
 			? await migrationItemRunRepo.getCounts({
 					ctx,
 					migrationInternalId: migration.internal_id,
@@ -48,9 +56,10 @@ export const handleListMigrationRuns = createRoute({
 			countRows.map((row) => [row.migration_run_id, row]),
 		);
 		const runsWithCounts = runs.map((run) => {
-			const counts = run.dry_run
-				? countsByRunId.get(run.internal_id)
-				: liveCounts;
+			const counts =
+				run.dry_run || isScoped(run)
+					? countsByRunId.get(run.internal_id)
+					: liveCounts;
 			const succeeded = counts?.succeeded ?? 0;
 			const skipped = counts?.skipped ?? 0;
 			const failed = counts?.failed ?? 0;
