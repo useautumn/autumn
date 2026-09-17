@@ -15,17 +15,22 @@ import {
 	PaperPlaneTiltIcon,
 	ProhibitIcon,
 } from "@phosphor-icons/react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
+import { getBackendErr } from "@/utils/genUtils";
 import {
 	getStripeConnectViewAsLink,
 	getStripeInvoiceLink,
@@ -35,7 +40,6 @@ import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccou
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
 import { RefundInvoiceDialog } from "./RefundInvoiceDialog";
-import { VoidInvoiceDialog } from "./VoidInvoiceDialog";
 
 type LineItemGroup = {
 	groupKey: string;
@@ -96,7 +100,30 @@ export function InvoiceDetailSheet({
 	const { isAdmin } = useAdmin();
 	const { masterStripeAccount } = useMasterStripeAccount();
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
-	const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+	const axiosInstance = useAxiosInstance();
+	const queryClient = useQueryClient();
+	const buildQueryKey = useQueryKeyFactory();
+	const { refetch } = useCusQuery();
+
+	const voidInvoice = useMutation({
+		mutationFn: () =>
+			axiosInstance.post("/v1/invoices.void", { invoice_id: invoice?.id }),
+		onSuccess: async () => {
+			toast.success("Invoice voided");
+			await Promise.all([
+				refetch(),
+				queryClient.invalidateQueries({
+					queryKey: buildQueryKey([
+						"customer",
+						customer?.id || customer?.internal_id,
+					]),
+				}),
+			]);
+		},
+		onError: (error) => {
+			toast.error(getBackendErr(error, "Failed to void invoice"));
+		},
+	});
 
 	const productGroups = useMemo(() => {
 		// Bucket line items by product_id, then group within each bucket.
@@ -433,7 +460,8 @@ export function InvoiceDetailSheet({
 					<Button
 						variant="destructive"
 						className="flex-1"
-						onClick={() => setVoidDialogOpen(true)}
+						onClick={() => voidInvoice.mutate()}
+						isLoading={voidInvoice.isPending}
 					>
 						<ProhibitIcon size={16} className="mr-1.5" />
 						Void
@@ -444,13 +472,6 @@ export function InvoiceDetailSheet({
 				<RefundInvoiceDialog
 					open={refundDialogOpen}
 					onOpenChange={setRefundDialogOpen}
-					invoice={invoice}
-				/>
-			)}
-			{canVoid && (
-				<VoidInvoiceDialog
-					open={voidDialogOpen}
-					onOpenChange={setVoidDialogOpen}
 					invoice={invoice}
 				/>
 			)}
