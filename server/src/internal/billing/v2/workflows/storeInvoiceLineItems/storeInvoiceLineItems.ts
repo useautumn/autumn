@@ -63,7 +63,8 @@ export const storeInvoiceLineItems = async ({
 	}
 };
 
-const storeLineItems = async ({
+/** Shared by the queue workflow and by callers that must have the lines stored before responding. */
+export const storeLineItems = async ({
 	ctx,
 	stripeInvoiceId,
 	autumnInvoiceId,

@@ -1,4 +1,4 @@
-import type { FullProduct, Invoice, LineItem } from "@autumn/shared";
+import type { FullProduct, Invoice } from "@autumn/shared";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -8,7 +8,7 @@ import {
 	createStripeInvoice,
 	finalizeStripeInvoice,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
-import { storeInvoiceLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems";
+import { storeLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { upsertInvoiceFromStripe } from "../../upsertFromStripe";
 import type { InvoiceLine } from "../compute/computeInvoiceLines";
@@ -103,17 +103,12 @@ export const executeStripeInvoicePlan = async ({
 		});
 	}
 
-	// Stored inline: the response reports the invoice's line items.
-	const billingLineItems: LineItem[] = lines.map((line) => line.lineItem);
-	await storeInvoiceLineItems({
+	// Stored inline, not queued: the response reports the invoice's line items.
+	await storeLineItems({
 		ctx,
-		payload: {
-			orgId: ctx.org.id,
-			env: ctx.env,
-			stripeInvoiceId: finalized.id,
-			autumnInvoiceId: autumnInvoice.id,
-			billingLineItems,
-		},
+		stripeInvoiceId: finalized.id,
+		autumnInvoiceId: autumnInvoice.id,
+		billingLineItems: lines.map((line) => line.lineItem),
 	});
 
 	await deleteCachedFullCustomer({
