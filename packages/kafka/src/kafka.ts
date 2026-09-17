@@ -9,8 +9,11 @@ export {
 } from "./client/kafkaOffsetUtils.js";
 export type {
 	KafkaProducer,
+	KafkaProducerClient,
+	KafkaProducerFactory,
 	KafkaTransaction,
 } from "./client/types/kafkaClient.js";
+export type { KafkaProducerLimits } from "./client/types/kafkaLimits.js";
 export { KafkaPartitionOffsetsNotFoundError } from "./consumer/consumerErrors.js";
 export { createProgressTracker } from "./consumer/createProgressTracker.js";
 export { createTopicConsumer } from "./consumer/createTopicConsumer.js";
@@ -50,7 +53,17 @@ export {
 	UnsupportedRecordVersionError,
 } from "./lib/recordErrors.js";
 export type { TopicSchema } from "./lib/types/topicSchema.js";
+export { createProducerSession } from "./producer/createProducerSession.js";
+export {
+	createProducerConfig,
+	partitionProducerTransactionalIdOf,
+} from "./producer/producerConfig.js";
+export { isKafkaProducerFencingCause } from "./producer/producerErrors.js";
 export { sendTransactionalBatch } from "./producer/sendTransactionalBatch.js";
+export type {
+	KafkaProducerSession,
+	KafkaProducerSessionConfig,
+} from "./producer/types/producer.js";
 export { createMeteringConsumer } from "./topics/metering/consumer/createMeteringConsumer.js";
 export { createMeteringReader } from "./topics/metering/consumer/createMeteringReader.js";
 export type {
