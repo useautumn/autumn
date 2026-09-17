@@ -38,7 +38,7 @@ jobs:
       contents: write
     with:
       package-dir: packages/atmn
-      pre-build-command: bun -F @autumn/agent-docs gen && bun -F @autumn/atmn-generator generate
+      pre-build-command: bun api --spec-only && bun -F @autumn/agent-docs gen && bun -F @autumn/atmn-generator generate
       commit-paths: packages/atmn packages/atmn-generator packages/agent-docs packages/openapi
       minimum-package-version: true
       version-bump: ${{ github.event_name == 'workflow_dispatch' && inputs.version-bump || '' }}

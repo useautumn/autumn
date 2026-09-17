@@ -36,6 +36,8 @@ async function main() {
 		`OpenAPI documents exported to ${paths.openApiOutput} and ${paths.openApiStrippedOutput}`,
 	);
 
+	if (process.argv.includes("--spec-only")) return;
+
 	// Generate TypeScript and Python SDKs in parallel
 	await generateSdksInParallel({
 		speakeasySdkDir: paths.tsSdkDir,
