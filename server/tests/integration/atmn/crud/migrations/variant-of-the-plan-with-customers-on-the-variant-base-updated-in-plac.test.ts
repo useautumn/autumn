@@ -16,8 +16,8 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { runPush } from "../../../../../../packages/atmn-nightly/src/actions/push";
-import { createClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { runPush } from "../../../../../../packages/atmn/src/actions/push";
+import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
 /** `pro` v1 with a nested variant `pro_plus` that has no divergence of its
  * own, so it fully inherits price and items from the base. */

@@ -3,6 +3,6 @@
 	"private": true,
 	"type": "module",
 	"dependencies": {
-		"atmn": "workspace:*"
+		"@autumn/atmn-old": "workspace:*"
 	}
 }

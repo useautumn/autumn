@@ -192,7 +192,7 @@ test("a newer install is never downgraded, and the stale hint stays quiet for it
 		path,
 		first.markdown.replace(
 			`version: ${SKILLS_VERSION}`,
-			"version: 3.0.0-nightly.1",
+			"version: 2.0.0-nightly.1",
 		),
 	);
 	expect(updateSkills({ dir, write: () => {} }).updated).toEqual([first.name]);

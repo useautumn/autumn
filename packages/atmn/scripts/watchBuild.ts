@@ -15,8 +15,8 @@ const build = async (): Promise<void> => {
 	const took = Date.now() - started;
 	console.log(
 		code === 0
-			? `[atmn-nightly] built in ${took}ms`
-			: `[atmn-nightly] build failed (${code})`,
+			? `[atmn] built in ${took}ms`
+			: `[atmn] build failed (${code})`,
 	);
 };
 
@@ -30,4 +30,4 @@ const scheduleBuild = (): void => {
 await build();
 watch(join(PACKAGE_DIR, "src"), { recursive: true }, scheduleBuild);
 watch(join(PACKAGE_DIR, "package.json"), scheduleBuild);
-console.log("[atmn-nightly] watching src/ — dist rebuilds on change");
+console.log("[atmn] watching src/ — dist rebuilds on change");

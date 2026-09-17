@@ -16,8 +16,8 @@ import {
 	TMP_ROOT,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { runPull } from "../../../../../../packages/atmn-nightly/src/actions/pull";
-import type { AutumnClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { runPull } from "../../../../../../packages/atmn/src/actions/pull";
+import type { AutumnClient } from "../../../../../../packages/atmn/src/generated/client";
 
 // One plan carrying processors at every depth the CLI can emit them: plan-level
 // (stripe product), base-price-level (stripe price), item-price-level (stripe

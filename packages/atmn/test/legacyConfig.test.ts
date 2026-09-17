@@ -49,10 +49,14 @@ test("loadConfig refuses a 1.x config with the migration steps", async () => {
 		writeFileSync(join(dir, "autumn.config.ts"), ONE_X_CONFIG);
 		const error = await loadConfig({ dirs: [dir] }).catch((e: unknown) => e);
 		expect(error).toBeInstanceOf(LegacyConfigError);
-		expect((error as Error).message).toContain("written for atmn 1.x");
-		expect((error as Error).message).toContain("bunx atmn@1 push");
-		expect((error as Error).message).toContain(
-			"bunx atmn pull --overwrite --yes",
+		expect((error as Error).message).toBe(
+			[
+				"autumn.config.ts was written for atmn 1.x. atmn 2 uses a new config format.",
+				"",
+				"  1. Take note of any pending changes you have made to your config",
+				"  2. Rebuild the existing config from your org:  atmn pull --overwrite --yes",
+				"  3. Re-apply any changes you made before upgrading to v2 in the new format and push when ready",
+			].join("\n"),
 		);
 	} finally {
 		rmSync(dir, { recursive: true, force: true });

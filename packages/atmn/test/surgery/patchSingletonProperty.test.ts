@@ -13,7 +13,7 @@ import {
 } from "../../src/surgery/patchSingletonProperty";
 
 const config = ({ body }: { body: string }): string =>
-	`import { atmn } from "atmn-nightly";
+	`import { atmn } from "atmn";
 
 export default atmn({
 ${body}
@@ -124,7 +124,7 @@ test("a value back at its default removes the pair, on its own line or inline", 
 });
 
 test("a const the key names is edited through its binding", () => {
-	const source = `import { atmn } from "atmn-nightly";
+	const source = `import { atmn } from "atmn";
 
 const settings = {
 	cancelOnPastDue: true,
@@ -141,7 +141,7 @@ export default atmn({
 			block: { kind: "binding", name: "settings" },
 			edit: { key: "multiCurrency", text: "true" },
 		}),
-	).toBe(`import { atmn } from "atmn-nightly";
+	).toBe(`import { atmn } from "atmn";
 
 const settings = {
 	cancelOnPastDue: true,

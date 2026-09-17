@@ -15,9 +15,9 @@ export class LegacyConfigError extends Error {
 			[
 				`${basename(path)} was written for atmn 1.x. atmn 2 uses a new config format.`,
 				"",
-				"  1. Push any pending changes first:   bunx atmn@1 push",
-				"  2. Rebuild the config from your org:  bunx atmn pull --overwrite --yes",
-				"     (this rewrites autumn.config.ts, features.ts, plans.ts and rewards.ts, so commit them first)",
+				"  1. Take note of any pending changes you have made to your config",
+				"  2. Rebuild the existing config from your org:  atmn pull --overwrite --yes",
+				"  3. Re-apply any changes you made before upgrading to v2 in the new format and push when ready",
 			].join("\n"),
 		);
 		this.name = "LegacyConfigError";

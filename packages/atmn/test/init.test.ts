@@ -12,7 +12,7 @@
  *   path
  *     - monorepo                            → --path and --name are asked (hinted headless)
  *     - single repo                         → config in autumn/, no questions
- *     - monorepo writes package.json (dep on atmn-nightly), config + collection files,
+ *     - monorepo writes package.json (dep on atmn), config + collection files,
  *       the root marker `"atmn": { "config" }` and an `"atmn"` root script
  *   pull
  *     - the pull runs against the config dir; its line count is reported
@@ -215,8 +215,8 @@ test("single repo, valid key: no questions, config in autumn/, skills beside it"
 	// A single-package repo still gets the marker so `-c` stays optional.
 	const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 	expect(manifest.atmn).toEqual({ config: "autumn/autumn.config.ts" });
-	expect(manifest.dependencies["atmn-nightly"]).toBeDefined();
-	expect(text).toContain("✓ Added atmn-nightly to package.json");
+	expect(manifest.dependencies.atmn).toBeDefined();
+	expect(text).toContain("✓ Added atmn to package.json");
 	expect(text).toContain("npm run atmn push");
 });
 
@@ -235,7 +235,7 @@ test("a repo with no package.json gets one, so the config's import resolves", as
 	});
 
 	const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-	expect(manifest.dependencies["atmn-nightly"]).toBeDefined();
+	expect(manifest.dependencies.atmn).toBeDefined();
 	expect(manifest.atmn).toEqual({ config: "autumn/autumn.config.ts" });
 	expect(calls.install).toEqual(["npm"]);
 });
@@ -299,7 +299,7 @@ test("an existing workspace package gains the dependency instead of a new manife
 	);
 	expect(pkg.name).toBe("@acme/billing");
 	expect(pkg.dependencies.left).toBe("1.0.0");
-	expect(pkg.dependencies["atmn-nightly"]).toBeDefined();
+	expect(pkg.dependencies.atmn).toBeDefined();
 	expect(calls.install).toEqual(["npm"]);
 });
 
@@ -473,7 +473,7 @@ test("monorepo, headless: hints --path, then --name, then does everything", asyn
 	const pkg = JSON.parse(readFileSync(join(pkgDir, "package.json"), "utf8"));
 	expect(pkg.name).toBe("@acme/autumn");
 	expect(pkg.private).toBe(true);
-	expect(pkg.dependencies["atmn-nightly"]).toBeDefined();
+	expect(pkg.dependencies.atmn).toBeDefined();
 	expect(existsSync(join(pkgDir, "autumn.config.ts"))).toBe(true);
 	expect(existsSync(join(pkgDir, "plans.ts"))).toBe(true);
 	expect(existsSync(join(pkgDir, "skills"))).toBe(true);
@@ -481,7 +481,7 @@ test("monorepo, headless: hints --path, then --name, then does everything", asyn
 	const rootPkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 	expect(rootPkg.atmn).toEqual({ config: "packages/autumn/autumn.config.ts" });
 	expect(rootPkg.scripts.atmn).toBe(
-		'atmn-nightly -c "packages/autumn/autumn.config.ts"',
+		'atmn -c "packages/autumn/autumn.config.ts"',
 	);
 	// The user's other fields survive.
 	expect(rootPkg.workspaces).toEqual(["packages/*"]);
@@ -565,9 +565,9 @@ test("monorepo, --path .: the config lives at the root, in the root package", as
 	const rootPkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 	// The existing root manifest is reused: the name it already has, plus the dependency.
 	expect(rootPkg.name).toBe("app");
-	expect(rootPkg.dependencies["atmn-nightly"]).toBeDefined();
+	expect(rootPkg.dependencies.atmn).toBeDefined();
 	expect(rootPkg.atmn).toEqual({ config: "autumn.config.ts" });
-	expect(rootPkg.scripts.atmn).toBe('atmn-nightly -c "autumn.config.ts"');
+	expect(rootPkg.scripts.atmn).toBe('atmn -c "autumn.config.ts"');
 	expect(calls.pull).toEqual([root]);
 	const text = lines.join("");
 	expect(text).toContain("✓ Path .");

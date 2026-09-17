@@ -18,7 +18,7 @@ import {
 	scenarioDir,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { runPull } from "../../../../../../packages/atmn-nightly/src/actions/pull";
+import { runPull } from "../../../../../../packages/atmn/src/actions/pull";
 
 test.concurrent(
 	"empty dir → scaffold root + collection files; second pull is a no-op",

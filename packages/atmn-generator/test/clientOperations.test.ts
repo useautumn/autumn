@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 
 const clientSource = (): string =>
 	readFileSync(
-		`${import.meta.dir}/../../atmn-nightly/src/generated/client.ts`,
+		`${import.meta.dir}/../../atmn/src/generated/client.ts`,
 		"utf8",
 	);
 

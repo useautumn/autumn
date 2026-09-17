@@ -46,6 +46,11 @@ on:
         required: false
         default: ""
         type: string
+      minimum-package-version:
+        description: "Do not release below the stable version declared in package.json"
+        required: false
+        default: false
+        type: boolean
       commit-paths:
         description: "Space-separated paths whose commits are scanned for bump prefixes; defaults to package-dir"
         required: false
@@ -169,6 +174,7 @@ jobs:
           if [ -z "$LATEST_TAG" ]; then
             # First release: publish the package.json version as-is, no bump applied.
             VERSION=$(jq -r '.version' ${{ inputs.package-dir }}/package.json)
+            if [ "${{ inputs.minimum-package-version }}" = "true" ]; then VERSION=${VERSION%%-*}; fi
             echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "No existing ${{ steps.pkg.outputs.tag_prefix }}-v* tags, starting at $VERSION"
             exit 0
@@ -187,8 +193,14 @@ jobs:
               PATCH=$((PATCH + 1)) ;;
           esac
 
-          echo "version=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
-          echo "Next version: ${MAJOR}.${MINOR}.${PATCH}"
+          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          if [ "${{ inputs.minimum-package-version }}" = "true" ]; then
+            PACKAGE_VERSION=$(jq -r '.version' ${{ inputs.package-dir }}/package.json)
+            PACKAGE_VERSION=${PACKAGE_VERSION%%-*}
+            VERSION=$(printf '%s\n' "$VERSION" "$PACKAGE_VERSION" | sort -V | tail -n 1)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Next version: $VERSION"
 
       - name: Update package.json version
         if: steps.version-type.outputs.bump != 'skip'

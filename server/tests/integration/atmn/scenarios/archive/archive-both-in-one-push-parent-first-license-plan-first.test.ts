@@ -19,7 +19,7 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import type { AutumnClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import type { AutumnClient } from "../../../../../../packages/atmn/src/generated/client";
 
 type CatalogPlanRow = { id: string; archived: boolean };
 

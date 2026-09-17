@@ -13,7 +13,7 @@
 	],
 	"ignoreWorkspaces": [
 		"packages/atmn",
-		"packages/atmn-nightly",
+		"packages/atmn-old",
 		"packages/atmn-generator",
 		"packages/autumn-js",
 		"packages/mcp",

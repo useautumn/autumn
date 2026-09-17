@@ -1,4 +1,4 @@
-import { feature, item, plan } from "atmn";
+import { feature, item, plan } from "@autumn/atmn-old";
 
 // Features
 export const messages = feature({

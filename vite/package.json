@@ -44,7 +44,7 @@
 		"@tanstack/react-virtual": "^3.13.18",
 		"@trigger.dev/react-hooks": "4.4.5",
 		"ai": "^6.0.5",
-		"atmn": "workspace:*",
+		"@autumn/atmn-old": "workspace:*",
 		"autumn-js": "workspace:*",
 		"axios": "^1.8.3",
 		"better-auth": "catalog:",

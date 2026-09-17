@@ -1,4 +1,4 @@
-import type { ApiPlanParams } from "../../../../atmn/src/lib/transforms/sdkToApi/plan.ts";
+import type { ApiPlanParams } from "../../../../atmn-old/src/lib/transforms/sdkToApi/plan.ts";
 
 type DeepPartial<T> = {
 	[K in keyof T]?: NonNullable<T[K]> extends (infer Element)[]

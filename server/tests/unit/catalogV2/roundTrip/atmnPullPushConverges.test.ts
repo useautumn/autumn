@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { Feature, FullProduct } from "@autumn/shared";
-import { runPull } from "../../../../../packages/atmn-nightly/src/actions/pull";
-import { runPush } from "../../../../../packages/atmn-nightly/src/actions/push";
-import { previewIsEmpty } from "../../../../../packages/atmn-nightly/src/render/renderPreview";
+import { runPull } from "../../../../../packages/atmn/src/actions/pull";
+import { runPush } from "../../../../../packages/atmn/src/actions/push";
+import { previewIsEmpty } from "../../../../../packages/atmn/src/render/renderPreview";
 import { featureCases, planCaseGroups } from "./catalogRoundTripCases";
 import { inMemoryCatalogClient } from "./inMemoryCatalogClient";
 
@@ -19,7 +19,7 @@ import { inMemoryCatalogClient } from "./inMemoryCatalogClient";
 // it regardless of how deep the workspace sits.
 const ATMN = join(
 	import.meta.dir,
-	"../../../../../packages/atmn-nightly/src/index",
+	"../../../../../packages/atmn/src/index",
 );
 const imports = { atmn: ATMN, builders: ATMN };
 

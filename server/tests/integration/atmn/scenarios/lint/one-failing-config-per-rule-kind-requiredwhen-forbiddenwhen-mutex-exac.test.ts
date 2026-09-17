@@ -19,7 +19,7 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
 const CLI_PACKAGE_DIR = join(
 	import.meta.dir,
-	"../../../../../../packages/atmn-nightly",
+	"../../../../../../packages/atmn",
 );
 
 const configSource = ({ body }: { body: string }): string =>

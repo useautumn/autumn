@@ -30,7 +30,7 @@ import {
 } from "./spec/loadSpec";
 import { resolveRef } from "./spec/resolveRef";
 
-const OUTPUT_DIR = join(import.meta.dir, "../../atmn-nightly/src/generated");
+const OUTPUT_DIR = join(import.meta.dir, "../../atmn/src/generated");
 const REPO_ROOT = join(import.meta.dir, "../../..");
 
 const LINT_RUNTIME_SOURCE = join(

@@ -25,7 +25,7 @@ test("a v2 default export is named as a v2 config, with the way out", async () =
 `,
 	});
 	await expect(loadConfig({ dirs: [dir] })).rejects.toThrow(
-		/written for atmn 1\.x.*bunx atmn pull --overwrite --yes/s,
+		/written for atmn 1\.x.*atmn pull --overwrite --yes/s,
 	);
 });
 

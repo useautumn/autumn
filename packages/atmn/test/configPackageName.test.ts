@@ -7,15 +7,15 @@ afterEach(() => {
 
 test("defaults to the published package name", () => {
 	delete process.env.ATMN_CONFIG_PACKAGE;
-	expect(configPackageName()).toBe("atmn-nightly");
+	expect(configPackageName()).toBe("atmn");
 });
 
-test("ATMN_CONFIG_PACKAGE=atmn is the local / eval specifier", () => {
-	process.env.ATMN_CONFIG_PACKAGE = "atmn";
-	expect(configPackageName()).toBe("atmn");
+test("ATMN_CONFIG_PACKAGE overrides the published specifier", () => {
+	process.env.ATMN_CONFIG_PACKAGE = "custom-atmn";
+	expect(configPackageName()).toBe("custom-atmn");
 });
 
 test("blank override falls back to the published name", () => {
 	process.env.ATMN_CONFIG_PACKAGE = "  ";
-	expect(configPackageName()).toBe("atmn-nightly");
+	expect(configPackageName()).toBe("atmn");
 });
