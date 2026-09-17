@@ -9,12 +9,13 @@ import type {
 	OwnedPartitionFollowerProgress,
 	OwnedPartitionHealth,
 } from "../../health/ownedPartitionHealth.js";
-import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
-import type { CommittedTrackOutcomeAppender } from "../../writer/committedTrackOutcomeAppender.js";
+import type { TrackReceiptPolicy } from "../../processor/commands/track.js";
 import type {
-	PartitionTrackWriterLimits,
-	PartitionTrackWriterReceiptPolicy,
-} from "../../writer/partitionTrackWriter.js";
+	CommittedOutcomeAppender,
+	PartitionWriter,
+	PartitionWriterLimits,
+} from "../../processor/writer/types/partitionWriter.js";
+import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
 import type {
 	PartitionBootstrapper,
 	PartitionLogRange,
@@ -53,25 +54,23 @@ export type MeteringPartitionResolver = {
 export type PartitionRuntimeDependencies = {
 	stateStore: SqliteBalanceStateStore;
 	producer: OwnedPartitionProducer;
-	appender: CommittedTrackOutcomeAppender;
+	appender: CommittedOutcomeAppender;
 	follower: PartitionOutcomeFollowerPort;
 	bootstrapper: PartitionBootstrapper;
 	partitionResolver: MeteringPartitionResolver;
-	trackReceiptPolicy: PartitionTrackWriterReceiptPolicy;
+	trackReceiptPolicy: TrackReceiptPolicy;
 };
 
 export type PartitionRuntimeConfig = {
 	topic: string;
 	partition: number;
-	writerLimits: PartitionTrackWriterLimits;
+	writerLimits: PartitionWriterLimits;
 	recoveryDrainTimeoutMs: number;
 };
 
 export interface PartitionRuntimeContext extends PartitionRuntimeDependencies {
 	config: PartitionRuntimeConfig;
-	writer: {
-		submitTrack(params: { command: TrackCommand }): Promise<TrackDecision>;
-	};
+	writer: PartitionWriter;
 	requestTracker: RuntimeRequestTracker;
 }
 

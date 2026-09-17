@@ -92,6 +92,28 @@ export type DurableStateInitializationApplyResult =
 			nextOffset: bigint;
 	  };
 
+export type DurableMutationRecord = {
+	position: KafkaRecordPosition;
+	mutation: TrackOutcome | StateInitializedEvent;
+};
+
+export type AppliedDurableMutation =
+	| {
+			type: "track_outcome";
+			kind: "applied" | "duplicate";
+			state: CustomerMeteringState;
+			receipt: TrackOutcome;
+	  }
+	| {
+			type: "state_initialized";
+			kind: "initialized" | "duplicate";
+			state: CustomerMeteringState;
+	  };
+
+export type DurableMutationApplyResult =
+	| (AppliedDurableMutation & { nextOffset: bigint })
+	| { kind: "position_already_applied"; nextOffset: bigint };
+
 const assertTopic = ({ topic }: { topic: string }) => {
 	if (topic.trim().length === 0) throw new Error("Kafka topic cannot be empty");
 };
@@ -261,24 +283,12 @@ export class SqliteBalanceStateStore {
 		});
 
 		return this.database
-			.transaction(() => {
-				const expectedOffset = this.requireNextOffset({ position });
-				if (position.offset < expectedOffset) {
-					return {
-						kind: "position_already_applied" as const,
-						nextOffset: expectedOffset,
-					};
-				}
-
-				const initialized = this.initializeParsedState({
-					topic: position.topic,
-					partition: position.partition,
+			.transaction(() =>
+				this.applyParsedDurableStateInitialization({
+					position,
 					initialization: persistedInitialization,
-				});
-				const nextOffset = position.offset + 1n;
-				this.advanceProgress({ position, expectedOffset, nextOffset });
-				return { ...initialized, nextOffset };
-			})
+				}),
+			)
 			.immediate();
 	}
 
@@ -344,6 +354,76 @@ export class SqliteBalanceStateStore {
 				),
 			)
 			.immediate();
+	}
+
+	/** Applies a committed batch of mixed records in one transaction, in log order. */
+	applyDurableMutations({
+		records,
+	}: {
+		records: readonly DurableMutationRecord[];
+	}): DurableMutationApplyResult[] {
+		const parsedRecords: DurableMutationRecord[] = [];
+		for (const { position, mutation } of records) {
+			assertTopic({ topic: position.topic });
+			assertPartition({ partition: position.partition });
+			assertOffset({ offset: position.offset });
+			parsedRecords.push({
+				position,
+				mutation:
+					mutation.type === "state_initialized"
+						? this.parsePersistedInitialization({ initialization: mutation })
+						: parseTrackOutcome({ input: mutation }),
+			});
+		}
+		if (parsedRecords.length === 0) return [];
+
+		return this.database
+			.transaction(() => {
+				const results: DurableMutationApplyResult[] = [];
+				for (const record of parsedRecords) {
+					results.push(this.applyParsedDurableMutation(record));
+				}
+				return results;
+			})
+			.immediate();
+	}
+
+	private applyParsedDurableMutation({
+		position,
+		mutation,
+	}: DurableMutationRecord): DurableMutationApplyResult {
+		if (mutation.type === "state_initialized") {
+			const result = this.applyParsedDurableStateInitialization({
+				position,
+				initialization: mutation,
+			});
+			if (result.kind === "position_already_applied") return result;
+			return { type: "state_initialized", ...result };
+		}
+		const result = this.applyParsedDurableTrackOutcome({
+			position,
+			outcome: mutation,
+		});
+		if (result.kind === "position_already_applied") return result;
+		return { type: "track_outcome", ...result };
+	}
+
+	private applyParsedDurableStateInitialization({
+		position,
+		initialization,
+	}: DurableStateInitializationRecord): DurableStateInitializationApplyResult {
+		const expectedOffset = this.requireNextOffset({ position });
+		if (position.offset < expectedOffset) {
+			return { kind: "position_already_applied", nextOffset: expectedOffset };
+		}
+		const initialized = this.initializeParsedState({
+			topic: position.topic,
+			partition: position.partition,
+			initialization,
+		});
+		const nextOffset = position.offset + 1n;
+		this.advanceProgress({ position, expectedOffset, nextOffset });
+		return { ...initialized, nextOffset };
 	}
 
 	private applyParsedDurableTrackOutcome({

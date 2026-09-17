@@ -14,7 +14,7 @@ export async function appendMeteringRecords({
 	ctx: MeteringPublisherContext;
 }): Promise<{ baseOffset: bigint }> {
 	if (records.length === 0) {
-		throw new RangeError("Track outcome batch cannot be empty");
+		throw new RangeError("Metering record batch cannot be empty");
 	}
 	const messages: { key: Buffer; value: Buffer }[] = [];
 	for (const record of records) {

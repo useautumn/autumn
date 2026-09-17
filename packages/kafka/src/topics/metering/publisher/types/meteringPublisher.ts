@@ -1,5 +1,5 @@
-import type { TrackOutcome } from "@autumn/balance-engine";
 import type { KafkaProducer } from "../../../../client/types/kafkaClient.js";
+import type { MeteringRecord } from "../../types/meteringRecord.js";
 
 export type MeteringPublisherContext = {
 	producer: KafkaProducer;
@@ -8,7 +8,7 @@ export type MeteringPublisherContext = {
 export type MeteringAppend = {
 	topic: string;
 	partition: number;
-	records: readonly TrackOutcome[];
+	records: readonly MeteringRecord[];
 };
 
 export type MeteringPublisher = {

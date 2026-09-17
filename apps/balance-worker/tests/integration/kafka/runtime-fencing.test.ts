@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { parseTrackCommand } from "@autumn/balance-engine";
 import { createProducerSession } from "@autumn/kafka";
 import { Kafka, logLevel } from "kafkajs";
-import { createTrackOutcomePublisher } from "../../../src/kafka/createTrackOutcomePublisher.js";
+import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
 import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
@@ -86,7 +86,7 @@ function createTestRuntime({
 			stateStore,
 			trackReceiptPolicy: { retentionMs: 86_400_000, now: Date.now },
 			producer,
-			appender: createTrackOutcomePublisher({ ctx: { producer } }),
+			appender: createMutationPublisher({ ctx: { producer } }),
 			follower: { readLogRange, readProgress, startAndCatchUp, stop },
 			bootstrapper: { bootstrap },
 			partitionResolver: { partitionForIdentity },

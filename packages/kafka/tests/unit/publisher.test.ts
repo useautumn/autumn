@@ -390,7 +390,7 @@ function meteringPublisherTests(): void {
 
 		await expect(
 			publisher.append({ topic, partition, records: [] }),
-		).rejects.toThrow("Track outcome batch cannot be empty");
+		).rejects.toThrow("Metering record batch cannot be empty");
 		expect(fake.calls).toEqual([]);
 	}
 

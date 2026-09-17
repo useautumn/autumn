@@ -10,8 +10,8 @@ import {
 	type KafkaProducerClient as OwnedPartitionProducerPort,
 } from "@autumn/kafka";
 import type { ProducerConfig } from "kafkajs";
+import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
 import { createOwnershipPublisher } from "../../../src/kafka/createOwnershipPublisher.js";
-import { createTrackOutcomePublisher } from "../../../src/kafka/createTrackOutcomePublisher.js";
 import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
@@ -205,7 +205,7 @@ describe("Runtime producer error adapter", function runtimeProducerTests() {
 	test("track fencing takes priority over known-abort classification", async function trackAcquisitionFailure() {
 		const cause = createFencingError();
 		const producer = createFailingSession({ cause });
-		const appender = createTrackOutcomePublisher({ ctx: { producer } });
+		const appender = createMutationPublisher({ ctx: { producer } });
 		await expect(
 			appender.appendCommitted({
 				topic,
