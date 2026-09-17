@@ -1,4 +1,5 @@
 import type { FullSubject } from "@autumn/shared";
+import { isThresholdBillingPrice } from "./isThresholdBillingPrice.js";
 
 export const isThresholdBillingProduct = ({
 	customerProduct,
@@ -6,8 +7,5 @@ export const isThresholdBillingProduct = ({
 	customerProduct: FullSubject["customer_products"][number];
 }): boolean =>
 	customerProduct.customer_prices.some((customerPrice) =>
-		Boolean(
-			(customerPrice.price.config as { threshold_billing?: unknown })
-				.threshold_billing,
-		),
+		isThresholdBillingPrice({ price: customerPrice.price }),
 	);

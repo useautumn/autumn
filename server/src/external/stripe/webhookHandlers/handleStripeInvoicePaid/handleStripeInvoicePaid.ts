@@ -4,7 +4,7 @@ import { convertToChargeAutomatically } from "@/external/stripe/webhookHandlers/
 import { queueCheckoutRewardTasks } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/queueCheckoutRewardTasks.js";
 import { sendEmailReceipt } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/sendEmailReceipt.js";
 import { autoTopupLimitRepo } from "@/internal/balances/autoTopUp/repos";
-import { customerProductActions } from "@/internal/customers/cusProducts/actions/index.js";
+import { clearThresholdPastDue } from "@/internal/balances/thresholdBilling/clearThresholdPastDue.js";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 import { setupStripeInvoicePaidContext } from "./setupStripeInvoicePaidContext.js";
 import { handleStripeInvoiceDiscounts } from "./tasks/handleStripeInvoiceDiscounts.js";
@@ -30,22 +30,9 @@ export const handleStripeInvoicePaid = async ({
 	const isThresholdBillingInvoice =
 		invoicePaidContext.stripeInvoice.metadata?.autumn_action_source ===
 		"threshold_billing";
-	const fullCustomer = ctx.fullCustomer;
-	if (isThresholdBillingInvoice && fullCustomer) {
-		for (const customerProduct of fullCustomer.customer_products) {
-			const thresholdProduct = customerProduct.customer_prices.some(
-				(customerPrice) =>
-					"threshold_billing" in customerPrice.price.config &&
-					customerProduct.status === "past_due",
-			);
-			if (thresholdProduct) {
-				await customerProductActions.markActive({
-					ctx,
-					customerProduct,
-					fullCustomer,
-				});
-			}
-		}
+
+	if (isThresholdBillingInvoice && ctx.fullCustomer) {
+		await clearThresholdPastDue({ ctx, fullCustomer: ctx.fullCustomer });
 	}
 
 	ctx.logger.debug(

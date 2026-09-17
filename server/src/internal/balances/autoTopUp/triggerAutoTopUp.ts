@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { resolveThresholdSettlement } from "../thresholdBilling/resolve/resolveThresholdSettlement.js";
 import { enqueueAutoTopupWithBurstSuppression } from "./helpers/enqueueAutoTopupWithBurstSuppression.js";
 import { fullCustomerToAutoTopupObjects } from "./helpers/fullCustomerToAutoTopupObjects.js";
 import { sendAutoTopupFailedWebhook } from "./webhooks/sendAutoTopupFailedWebhook.js";
@@ -34,7 +35,14 @@ export const triggerAutoTopUp = async ({
 			featureId: relevantFeatureId,
 		});
 
-		if (!resolved?.balanceBelowThreshold) continue;
+		const settlement = resolveThresholdSettlement({
+			fullCustomer: newFullCus,
+			featureId: relevantFeatureId,
+		});
+
+		if (!resolved?.balanceBelowThreshold && settlement.kind !== "settle") {
+			continue;
+		}
 
 		// Enqueue the auto top-up job
 		const customerId = newFullCus.id || newFullCus.internal_id;
@@ -56,7 +64,7 @@ export const triggerAutoTopUp = async ({
 			};
 		}
 
-		if (enqueueResult?.reason === "redis_unavailable") {
+		if (enqueueResult?.reason === "redis_unavailable" && resolved) {
 			await sendAutoTopupFailedWebhook({
 				ctx,
 				customerId,

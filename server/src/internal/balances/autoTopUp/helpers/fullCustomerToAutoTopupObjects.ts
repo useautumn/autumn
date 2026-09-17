@@ -1,8 +1,6 @@
 import {
 	type AutoTopup,
 	cusEntsToBalance,
-	cusEntToCusPrice,
-	cusEntToInvoiceOverage,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
@@ -11,16 +9,6 @@ import {
 	isPrepaidCustomerEntitlement,
 	resolveBillingControlWithProduct,
 } from "@autumn/shared";
-
-const getThreshold = (cusEnt: FullCusEntWithFullCusProduct) =>
-	(
-		cusEntToCusPrice({ cusEnt })?.price.config as
-			| { threshold_billing?: { threshold?: number } }
-			| undefined
-	)?.threshold_billing?.threshold;
-
-const isThresholdEntitlement = (cusEnt: FullCusEntWithFullCusProduct) =>
-	getThreshold(cusEnt) !== undefined;
 
 /** Expiring grants are loose and carry no price, so they never match — but
  * the pin makes the intent explicit: the charge source is the plan's own row. */
@@ -51,8 +39,8 @@ export const fullCustomerToAutoTopupObjects = ({
 		matches: (config) => config.feature_id === featureId,
 	});
 
-	const configuredAutoTopup = resolved?.control;
-	if (configuredAutoTopup && !configuredAutoTopup.enabled) return null;
+	const autoTopupConfig = resolved?.control;
+	if (!autoTopupConfig?.enabled) return null;
 
 	// 2. Find cusEnts for this feature
 	const cusEnts = fullCustomerToCustomerEntitlements({
@@ -61,23 +49,6 @@ export const fullCustomerToAutoTopupObjects = ({
 	});
 
 	if (cusEnts.length === 0) return null;
-	const thresholdEntitlement = configuredAutoTopup
-		? undefined
-		: cusEnts.find(isThresholdEntitlement);
-	const threshold = thresholdEntitlement
-		? getThreshold(thresholdEntitlement)
-		: undefined;
-	if (
-		!configuredAutoTopup &&
-		(!thresholdEntitlement || !threshold || threshold <= 0)
-	)
-		return null;
-	const autoTopupConfig = configuredAutoTopup ?? {
-		feature_id: featureId,
-		enabled: true,
-		threshold: -threshold!,
-		quantity: threshold!,
-	};
 
 	// 3. Find the one-off prepaid cusEnt whose price the top-up charges.
 	const sourceProductInternalId =
@@ -104,19 +75,11 @@ export const fullCustomerToAutoTopupObjects = ({
 			)[0];
 	}
 
-	if (!customerEntitlement || !customerEntitlement.customer_product) {
-		if (thresholdEntitlement?.customer_product)
-			customerEntitlement = thresholdEntitlement;
-		else return null;
-	}
+	if (!customerEntitlement?.customer_product) return null;
 
 	// 4. Check balance against threshold
-	const thresholdBilling = thresholdEntitlement ? threshold : undefined;
 	const remainingBalance = cusEntsToBalance({ cusEnts, withRollovers: true });
-	const balanceBelowThreshold = thresholdBilling
-		? cusEntToInvoiceOverage({ cusEnt: customerEntitlement }) >=
-			thresholdBilling
-		: remainingBalance <= autoTopupConfig.threshold;
+	const balanceBelowThreshold = remainingBalance <= autoTopupConfig.threshold;
 
 	return { autoTopupConfig, customerEntitlement, balanceBelowThreshold };
 };
