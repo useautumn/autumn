@@ -121,11 +121,12 @@ export const createEdgeConfigRegistry = ({
 		backstopTimer = null;
 	};
 
-	return { register, start, stop, checkForChanges };
+	return { register, start, stop, checkForChanges, refreshAll };
 };
 
 const registry = createEdgeConfigRegistry();
 
 export const registerEdgeConfig = registry.register;
+export const refreshAllEdgeConfigs = registry.refreshAll;
 export const startAllEdgeConfigPolling = registry.start;
 export const stopAllEdgeConfigPolling = registry.stop;
