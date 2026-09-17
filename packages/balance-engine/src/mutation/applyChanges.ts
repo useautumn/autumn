@@ -8,8 +8,10 @@ import type { SubjectState } from "../models/subject/subjectState.js";
 
 type StateRow = SubjectState[
 	| "customerProducts"
+	| "customerPrices"
 	| "customerEntitlements"
-	| "rollovers"][number];
+	| "rollovers"
+	| "usageWindows"][number];
 
 const rowIdOf = ({ row }: { row: StateRow }): string => row.id;
 
@@ -85,6 +87,15 @@ export const applyChanges = ({
 					}),
 				};
 				break;
+			case "customerPrices":
+				nextState = {
+					...nextState,
+					customerPrices: applyToTable({
+						rows: nextState.customerPrices,
+						change,
+					}),
+				};
+				break;
 			case "customerEntitlements":
 				nextState = {
 					...nextState,
@@ -98,6 +109,12 @@ export const applyChanges = ({
 				nextState = {
 					...nextState,
 					rollovers: applyToTable({ rows: nextState.rollovers, change }),
+				};
+				break;
+			case "usageWindows":
+				nextState = {
+					...nextState,
+					usageWindows: applyToTable({ rows: nextState.usageWindows, change }),
 				};
 				break;
 		}

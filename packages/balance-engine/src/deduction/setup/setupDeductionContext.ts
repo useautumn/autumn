@@ -1,122 +1,68 @@
-import {
-	fullSubjectToCustomerEntitlements,
-	isUnlimitedEntitlement,
-} from "@autumn/shared";
-import type { OverageBehavior } from "../../commands/track/types/trackCommand.js";
-import type { WorkerRollover } from "../../models/subject/rows/workerRollover.js";
-import type {
-	WorkerFullCustomerEntitlement,
-	WorkerFullSubject,
-} from "../../models/subject/workerFullSubject.js";
+import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import type { DeductionContext } from "../types/deductionContext.js";
-import type { DeductionRow } from "../types/deductionRow.js";
+import type { DeductionRequest } from "../types/deductionRequest.js";
+import { resolveBillingControls } from "./resolveBillingControls.js";
+import { resolveCreditCost } from "./resolveCreditCosts.js";
+import {
+	customerEntitlementToDeductionRow,
+	rolloverToDeductionRow,
+} from "./resolveRowBounds.js";
+import { resolveUsageWindowLimits } from "./resolveUsageWindowLimits.js";
+import { selectDeductionRows } from "./selectDeductionRows.js";
 
-/** Unpriced rows only for now: the grant is the allowance, the overage floor is usage_limit above it. */
-const customerEntitlementToDeductionRow = ({
-	customerEntitlement,
-}: {
-	customerEntitlement: WorkerFullCustomerEntitlement;
-}): DeductionRow => {
-	const { entitlement } = customerEntitlement;
-	const usageAllowed = customerEntitlement.usage_allowed ?? false;
-	const unlimited =
-		Boolean(customerEntitlement.unlimited) ||
-		isUnlimitedEntitlement({ entitlement });
-	const allowance = entitlement.allowance ?? 0;
-	const maxOverage =
-		usageAllowed && entitlement.usage_limit != null
-			? entitlement.usage_limit - allowance
-			: null;
-
-	return {
-		table: "customerEntitlements",
-		id: customerEntitlement.id,
-		balance: customerEntitlement.balance,
-		creditCost: 1,
-		usageAllowed: unlimited || usageAllowed,
-		minBalance: unlimited || maxOverage === null ? null : -maxOverage,
-		maxBalance: unlimited ? null : allowance,
-		unlimited,
-	};
-};
-
-/** A rollover only ever drains to zero and is never refunded into. */
-const rolloverToDeductionRow = ({
-	rollover,
-}: {
-	rollover: WorkerRollover;
-}): DeductionRow => ({
-	table: "rollovers",
-	id: rollover.id,
-	balance: rollover.balance,
-	creditCost: 1,
-	usageAllowed: false,
-	minBalance: 0,
-	maxBalance: 0,
-	unlimited: false,
-});
-
-/** The sort prefers unlimited only within a tier; the sink contract needs it first outright. */
-const hoistUnlimited = ({
-	customerEntitlements,
-}: {
-	customerEntitlements: WorkerFullCustomerEntitlement[];
-}): WorkerFullCustomerEntitlement[] => {
-	const unlimitedCustomerEntitlement = customerEntitlements.find(
-		(customerEntitlement) =>
-			Boolean(customerEntitlement.unlimited) ||
-			isUnlimitedEntitlement({ entitlement: customerEntitlement.entitlement }),
-	);
-	if (!unlimitedCustomerEntitlement) return customerEntitlements;
-	return [
-		unlimitedCustomerEntitlement,
-		...customerEntitlements.filter(
-			(customerEntitlement) =>
-				customerEntitlement !== unlimitedCustomerEntitlement,
-		),
-	];
-};
-
-/** Soonest-expiring first; rollovers without an expiry drain last. */
-const byExpiresAt = (left: WorkerRollover, right: WorkerRollover): number =>
-	(left.expires_at ?? Number.POSITIVE_INFINITY) -
-	(right.expires_at ?? Number.POSITIVE_INFINITY);
-
-/** Everything a deduction of `featureId` needs, decided once; the buckets never read the subject. */
+/** Everything a deduction needs, decided once; the buckets never read the subject. */
 export const setupDeductionContext = ({
 	fullSubject,
-	featureId,
-	overageBehavior,
-	now,
+	request,
 }: {
 	fullSubject: WorkerFullSubject;
-	featureId: string;
-	overageBehavior: OverageBehavior;
-	now: number;
+	request: DeductionRequest;
 }): DeductionContext => {
-	const customerEntitlements = hoistUnlimited({
-		customerEntitlements: fullSubjectToCustomerEntitlements({
+	const { customerEntitlements, rollovers, overdueBlocked } =
+		selectDeductionRows({ fullSubject, request });
+	const { spendLimitByFeatureId, overageAllowedByFeatureId } =
+		resolveBillingControls({
 			fullSubject,
-			featureIds: [featureId],
-			now,
-		}),
+			featureId: request.featureId,
+			customerEntitlements,
+		});
+	const usageWindowLimits = resolveUsageWindowLimits({
+		fullSubject,
+		request,
+		customerEntitlements,
 	});
-	const rollovers = customerEntitlements
-		.flatMap((customerEntitlement) => customerEntitlement.rollovers)
-		.sort(byExpiresAt);
+	// A control that enables overage only lifts features with no natively overage-allowed row.
+	const nativeOverageFeatureIds = new Set(
+		customerEntitlements
+			.filter((customerEntitlement) => customerEntitlement.usage_allowed)
+			.map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
+	);
+	const rows = customerEntitlements.map((customerEntitlement) =>
+		customerEntitlementToDeductionRow({
+			customerEntitlement,
+			creditCost: resolveCreditCost({ customerEntitlement, request }),
+			overageAllowedByFeatureId,
+			nativeOverageFeatureIds,
+			overageBehavior: request.overageBehavior,
+		}),
+	);
+	const rowById = new Map(rows.map((row) => [row.id, row]));
 
 	return {
-		featureId,
+		featureId: request.featureId,
 		entityId: fullSubject.entity?.id ?? null,
-		now,
-		overageBehavior,
+		now: request.now,
+		overageBehavior: request.overageBehavior,
 		customerEntitlements,
 		rollovers,
-		rows: customerEntitlements.map((customerEntitlement) =>
-			customerEntitlementToDeductionRow({ customerEntitlement }),
-		),
-		rolloverRows: rollovers.map((rollover) =>
-			rolloverToDeductionRow({ rollover }),
-		),
+		rows,
+		rolloverRows: rollovers.flatMap((rollover) => {
+			const owner = rowById.get(rollover.cus_ent_id);
+			return owner ? [rolloverToDeductionRow({ rollover, owner })] : [];
+		}),
+		spendLimitByFeatureId,
+		usageWindowLimits,
+		usageWindows: fullSubject.usage_windows,
+		overdueBlocked,
 	};
 };

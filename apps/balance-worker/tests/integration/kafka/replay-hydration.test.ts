@@ -178,10 +178,18 @@ function createReplayTrackCommand(): TrackCommand {
 		input: {
 			schemaVersion: 1,
 			type: "track",
+			org: {
+				config: {
+					reverse_deduction_order: false,
+					block_overdue_entitlements: false,
+					include_past_due: true,
+				},
+			},
 			commandId: TRACK_COMMAND_ID,
 			requestId: TRACK_REQUEST_ID,
 			identity: REPLAY_IDENTITY,
 			featureId: FEATURE_ID,
+			internalFeatureId: `feat_${FEATURE_ID}`,
 			value: TRACKED_VALUE,
 			overageBehavior: "reject",
 			properties: null,
@@ -199,9 +207,17 @@ function createReplayCheckCommand({
 		input: {
 			schemaVersion: 1,
 			type: "check",
+			org: {
+				config: {
+					reverse_deduction_order: false,
+					block_overdue_entitlements: false,
+					include_past_due: true,
+				},
+			},
 			requestId,
 			identity: REPLAY_IDENTITY,
 			featureId: FEATURE_ID,
+			internalFeatureId: `feat_${FEATURE_ID}`,
 			requiredBalance: 1,
 			properties: null,
 			occurredAt: BASELINE_CAPTURED_AT_MS,

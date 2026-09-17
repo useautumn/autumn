@@ -1,8 +1,6 @@
-import {
-	type CreditDimension,
-	type EventProperties,
-	usageLimitFilterMatchesProperties,
-} from "@autumn/shared";
+import type { EventProperties } from "../../../models/cusModels/billingControls/usageLimit.js";
+import { usageLimitFilterMatchesProperties } from "../../../models/cusModels/billingControls/usageLimit.js";
+import type { CreditDimension } from "../../../models/featureModels/featureConfig/creditConfig.js";
 
 export type { EventProperties };
 

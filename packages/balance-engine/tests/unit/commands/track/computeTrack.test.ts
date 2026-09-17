@@ -144,14 +144,6 @@ describe("track computation", () => {
 		).toThrow(new UnsupportedCommandError({ reason: "entity_not_found" }));
 		expect(() =>
 			trackMutation({
-				state: createState(),
-				command: createTrackCommand({ properties: { region: "eu" } }),
-			}),
-		).toThrow(
-			new UnsupportedCommandError({ reason: "properties_not_supported" }),
-		);
-		expect(() =>
-			trackMutation({
 				state: createState({ customerEntitlements: [] }),
 				command: createTrackCommand(),
 			}),

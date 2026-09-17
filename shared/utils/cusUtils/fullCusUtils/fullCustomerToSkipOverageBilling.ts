@@ -1,4 +1,3 @@
-import type { DbSpendLimit } from "@models/cusModels/billingControls/spendLimit.js";
 import type { FullCustomer } from "@models/cusModels/fullCusModel.js";
 import {
 	fullCustomerToPlanProducts,
@@ -25,7 +24,7 @@ export const fullCustomerToSkipOverageBilling = ({
 			)
 		: fullCustomer.entity;
 
-	const spendLimit = resolveBillingControl<DbSpendLimit, "spend_limits">({
+	const spendLimit = resolveBillingControl({
 		controlLists: [entity?.spend_limits ?? [], fullCustomer.spend_limits ?? []],
 		customerProducts: fullCustomerToPlanProducts({ fullCustomer }),
 		controlKey: "spend_limits",

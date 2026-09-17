@@ -89,11 +89,13 @@ const createState = ({
 const createCommand = ({
 	commandId,
 	identity = firstIdentity,
+	featureId = "messages",
 	value = 5,
 	properties = null,
 }: {
 	commandId: string;
 	identity?: MeteringIdentity;
+	featureId?: string;
 	value?: number;
 	properties?: Record<string, string> | null;
 }): TrackCommand =>
@@ -101,10 +103,18 @@ const createCommand = ({
 		input: {
 			schemaVersion: 1,
 			type: "track",
+			org: {
+				config: {
+					reverse_deduction_order: false,
+					block_overdue_entitlements: false,
+					include_past_due: true,
+				},
+			},
 			commandId,
 			requestId: `req_${commandId}`,
 			identity,
-			featureId: "messages",
+			featureId,
+			internalFeatureId: `feat_${featureId}`,
 			value,
 			overageBehavior: "reject",
 			properties,
@@ -894,13 +904,10 @@ describe("partition writer", () => {
 
 			await expect(
 				writer.submitTrack({
-					command: createCommand({
-						commandId: "cmd_1",
-						properties: { region: "eu" },
-					}),
+					command: createCommand({ commandId: "cmd_1", featureId: "unknown" }),
 				}),
 			).rejects.toEqual(
-				new UnsupportedCommandError({ reason: "properties_not_supported" }),
+				new UnsupportedCommandError({ reason: "feature_not_found" }),
 			);
 			expect(appender.batches).toHaveLength(0);
 		} finally {

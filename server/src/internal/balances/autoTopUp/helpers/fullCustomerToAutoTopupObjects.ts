@@ -51,7 +51,7 @@ export const fullCustomerToAutoTopupObjects = ({
 	balanceBelowThreshold: boolean;
 } | null => {
 	// 1. Find enabled auto_topup config (and the plan it resolved from, if any)
-	const resolved = resolveBillingControlWithProduct<AutoTopup, "auto_topups">({
+	const resolved = resolveBillingControlWithProduct({
 		controlLists: [fullCustomer.auto_topups],
 		customerProducts: fullCustomerToPlanProducts({ fullCustomer }),
 		controlKey: "auto_topups",

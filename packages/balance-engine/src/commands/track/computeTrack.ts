@@ -3,6 +3,7 @@ import { UnsupportedCommandError } from "../../errors.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
+import { trackCommandToDeductionRequest } from "./trackCommandToDeductionRequest.js";
 import { trackOutcomeToMutation } from "./trackOutcomeToMutation.js";
 import type { TrackCommand } from "./types/trackCommand.js";
 
@@ -18,12 +19,12 @@ export const computeTrack = ({
 
 	const outcome = deduct({
 		fullSubject,
-		featureId: command.featureId,
-		overageBehavior: command.overageBehavior,
-		now: command.occurredAt,
-		value: command.value,
+		request: trackCommandToDeductionRequest({ command }),
 	});
-	if (outcome.context.customerEntitlements.length === 0) {
+	if (
+		outcome.context.customerEntitlements.length === 0 &&
+		!outcome.context.overdueBlocked
+	) {
 		throw new UnsupportedCommandError({ reason: "feature_not_found" });
 	}
 

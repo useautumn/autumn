@@ -38,7 +38,7 @@ export async function track({
 	if (mutation.result.type !== "track") {
 		throw new Error(`Track ${mutation.id} committed a non-track record`);
 	}
-	return { result: mutation.result, state };
+	return { result: mutation.result, changes: mutation.changes, state };
 }
 
 /** Runs inside the writer's critical section: no await, no I/O. */

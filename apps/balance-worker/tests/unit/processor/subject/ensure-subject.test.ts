@@ -39,6 +39,10 @@ const state: SubjectState = createSubjectState({
 			options: [],
 			quantity: 1,
 			created_at: 1_700_000_000_000,
+			starts_at: 1_700_000_000_000,
+			access_starts_at: null,
+			ended_at: null,
+			customer_license_link_id: null,
 		},
 	],
 	customerEntitlements: [
@@ -143,6 +147,9 @@ const createScope = ({
 				features: sourceRows.flatMap((row) =>
 					row.table === "features" ? [row.row] : [],
 				),
+				prices: sourceRows.flatMap((row) =>
+					row.table === "prices" ? [row.row] : [],
+				),
 			};
 		},
 	};
@@ -181,6 +188,7 @@ describe("ensure subject", () => {
 				entitlementIds: ["ent_1"],
 				productInternalIds: ["prod_internal_1"],
 				featureInternalIds: [],
+				priceIds: [],
 			},
 		]);
 		expect(Object.keys(subject.catalog.entitlements)).toEqual(["ent_1"]);

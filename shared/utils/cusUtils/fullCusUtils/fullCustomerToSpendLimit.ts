@@ -58,7 +58,7 @@ export const fullCustomerToSpendLimitByFeatureId = ({
 			};
 		};
 
-		const spendLimit = resolveBillingControl<DbSpendLimit, "spend_limits">({
+		const spendLimit = resolveBillingControl({
 			controlLists: [entitySpendLimits, customerSpendLimits],
 			customerProducts: fullCustomerToPlanProducts({ fullCustomer }),
 			controlKey: "spend_limits",

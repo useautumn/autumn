@@ -2,6 +2,8 @@ import { type CheckCommand, parseCheckCommand } from "@autumn/balance-engine";
 import type { CheckParams } from "@autumn/shared";
 import { BalanceWorkerUnsupportedError } from "../../balanceWorker/balanceWorkerErrors.js";
 import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
+import { featureToInternalFeatureId } from "../../balanceWorker/featureToInternalFeatureId.js";
+import { orgToCommandOrg } from "../../balanceWorker/orgToCommandOrg.js";
 import { validateBalanceWorkerRequest } from "../../balanceWorker/validateBalanceWorkerRequest.js";
 
 export function checkParamsToCheckCommand({
@@ -35,7 +37,12 @@ export function checkParamsToCheckCommand({
 				customerId: body.customer_id,
 				entityId: null,
 			},
+			org: orgToCommandOrg({ org: ctx.org }),
 			featureId: body.feature_id,
+			internalFeatureId: featureToInternalFeatureId({
+				ctx,
+				featureId: body.feature_id,
+			}),
 			requiredBalance: body.required_balance ?? body.required_quantity ?? 1,
 			properties: body.properties ?? null,
 			occurredAt: ctx.timestamp,

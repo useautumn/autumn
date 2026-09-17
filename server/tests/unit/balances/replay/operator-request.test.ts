@@ -55,16 +55,6 @@ const unsupportedShapeCases = [
 		reason: "entity_not_supported",
 	},
 	{
-		name: "properties",
-		operation: "track",
-		body: {
-			feature_id: "messages",
-			value: 1,
-			properties: { source: "archive" },
-		},
-		reason: "properties_not_supported",
-	},
-	{
 		name: "lock",
 		operation: "check",
 		body: {
@@ -105,6 +95,12 @@ const unsupportedShapeCases = [
 	},
 ] as const;
 
+const orgConfig = {
+	reverse_deduction_order: false,
+	block_overdue_entitlements: false,
+	include_past_due: true,
+};
+
 describe("planReplayRequest", () => {
 	it("plans a check command on the rebased logical clock", () => {
 		const request = buildReplayRequest({
@@ -114,7 +110,9 @@ describe("planReplayRequest", () => {
 				body: { feature_id: "messages", required_balance: 3 },
 			}),
 		});
-		const command = expectCheckPlan({ plan: planReplayRequest({ request }) });
+		const command = expectCheckPlan({
+			plan: planReplayRequest({ request, orgConfig }),
+		});
 		expect(command.requestId).toBe(request.id);
 		expect(command.occurredAt).toBe(request.logicalTimestampMs);
 		expect(command.requiredBalance).toBe(3);
@@ -144,7 +142,9 @@ describe("planReplayRequest", () => {
 			REPLAY_BASELINE.capturedAtMs + 5_000,
 		);
 		expect(request.body.timestamp).toBe(request.logicalTimestampMs);
-		const command = expectTrackPlan({ plan: planReplayRequest({ request }) });
+		const command = expectTrackPlan({
+			plan: planReplayRequest({ request, orgConfig }),
+		});
 		expect(command.occurredAt).toBe(request.logicalTimestampMs);
 		expect(command.occurredAt).not.toBe(archivedTimestampMs);
 	});
@@ -162,10 +162,10 @@ describe("planReplayRequest", () => {
 			record: createArchiveRecord({ operation: "track", body }),
 		});
 		const firstCommand = expectTrackPlan({
-			plan: planReplayRequest({ request: first }),
+			plan: planReplayRequest({ request: first, orgConfig }),
 		});
 		const retryCommand = expectTrackPlan({
-			plan: planReplayRequest({ request: retry }),
+			plan: planReplayRequest({ request: retry, orgConfig }),
 		});
 		expect(firstCommand.commandId).toBe(retryCommand.commandId);
 		expect(firstCommand.requestId).toBe(first.id);
@@ -181,7 +181,9 @@ describe("planReplayRequest", () => {
 				body: { feature_id: "messages" },
 			}),
 		});
-		const command = expectCheckPlan({ plan: planReplayRequest({ request }) });
+		const command = expectCheckPlan({
+			plan: planReplayRequest({ request, orgConfig }),
+		});
 		expect(command.identity.env).toBe("live");
 	});
 
@@ -193,9 +195,9 @@ describe("planReplayRequest", () => {
 					body: testCase.body,
 				}),
 			});
-			expect(expectPlanRefusal({ plan: planReplayRequest({ request }) })).toBe(
-				testCase.reason,
-			);
+			expect(
+				expectPlanRefusal({ plan: planReplayRequest({ request, orgConfig }) }),
+			).toBe(testCase.reason);
 		});
 	}
 
@@ -213,10 +215,14 @@ describe("planReplayRequest", () => {
 			}),
 		});
 		expect(
-			expectPlanRefusal({ plan: planReplayRequest({ request: badValue }) }),
+			expectPlanRefusal({
+				plan: planReplayRequest({ request: badValue, orgConfig }),
+			}),
 		).toBe("request_invalid");
 		expect(
-			expectPlanRefusal({ plan: planReplayRequest({ request: badLock }) }),
+			expectPlanRefusal({
+				plan: planReplayRequest({ request: badLock, orgConfig }),
+			}),
 		).toBe("request_invalid");
 	});
 });

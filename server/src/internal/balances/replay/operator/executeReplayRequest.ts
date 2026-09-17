@@ -165,7 +165,8 @@ export async function executeReplayRequest({
 	signal?: AbortSignal;
 	clock?: ReplayExecutionClock;
 }): Promise<ReplayExecutionResult> {
-	const plan = planReplayRequest({ request });
+	const { org, features } = readContext({ identity: selection.identity });
+	const plan = planReplayRequest({ request, orgConfig: org.config, features });
 	if (plan.kind === "refused") return plan;
 	const startedAt = clock.now();
 	try {

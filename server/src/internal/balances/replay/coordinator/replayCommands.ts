@@ -1,6 +1,7 @@
 import {
 	type CatalogRow,
 	type CheckCommand,
+	type CommandOrg,
 	type InitializeRequest,
 	parseCheckCommand,
 	parseInitializeRequest,
@@ -61,6 +62,15 @@ export function freezeTrackCommand({
 	) as TrackCommand;
 }
 
+/** A probe reads zero units, so no org setting can change its answer; the defaults keep it deterministic. */
+const PROBE_ORG: CommandOrg = {
+	config: {
+		reverse_deduction_order: false,
+		block_overdue_entitlements: false,
+		include_past_due: true,
+	},
+};
+
 export function buildProbeCommand({
 	selection,
 }: {
@@ -72,6 +82,7 @@ export function buildProbeCommand({
 			type: "check",
 			requestId: `${commandIdOf({ selection })}:probe`,
 			identity: selection.identity,
+			org: PROBE_ORG,
 			featureId: selection.featureIds[0],
 			requiredBalance: 0,
 			properties: null,

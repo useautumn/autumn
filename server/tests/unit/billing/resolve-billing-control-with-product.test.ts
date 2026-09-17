@@ -55,7 +55,7 @@ const planProduct = ({
 	}) as unknown as FullCusProduct;
 
 const resolve = (customerProducts: FullCusProduct[]) =>
-	resolveBillingControlWithProduct<AutoTopupLike, "auto_topups">({
+	resolveBillingControlWithProduct<"auto_topups", AutoTopupLike>({
 		controlLists: [null],
 		customerProducts,
 		controlKey: "auto_topups",
@@ -114,8 +114,8 @@ describe("resolveBillingControlWithProduct — auto_topups recency + source plan
 		});
 
 		const resolved = resolveBillingControlWithProduct<
-			AutoTopupLike,
-			"auto_topups"
+			"auto_topups",
+			AutoTopupLike
 		>({
 			controlLists: [[{ feature_id: FEATURE, enabled: true, quantity: 999 }]],
 			customerProducts: [base],

@@ -40,6 +40,9 @@ export function createWorkerFixture({
 			features: catalogRows.flatMap((row) =>
 				row.table === "features" ? [row.row] : [],
 			),
+			prices: catalogRows.flatMap((row) =>
+				row.table === "prices" ? [row.row] : [],
+			),
 		}),
 	};
 	const processor = createPartitionProcessor({

@@ -1,7 +1,7 @@
 import type { DeductionContext } from "../../types/deductionContext.js";
 import type { DeductionRow } from "../../types/deductionRow.js";
 import type { DeductionState } from "../../types/deductionState.js";
-import { allowsNegative, isRefund } from "../deductionUtils.js";
+import { allowsNegative, isRefund } from "../classifyDeductionUtils.js";
 import { type DeductionBucket, deductFromRows } from "./deductFromRows.js";
 
 /** Which rows a bucket visits; deductFromRows knows how far the bucket lets them move. */

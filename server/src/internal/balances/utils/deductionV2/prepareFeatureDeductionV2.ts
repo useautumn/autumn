@@ -12,13 +12,13 @@ import {
 	InsufficientBalanceError,
 	isAllocatedCustomerEntitlement,
 	isFreeCustomerEntitlement,
+	isThresholdBillingCustomerProduct,
 	notNullish,
 	orgToInStatuses,
 	usageLimitFilterMatchesProperties,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCheckSubject } from "@/internal/balances/check/getCheckSubject.js";
-import { isThresholdBillingProduct } from "@/internal/balances/thresholdBilling/isThresholdBillingProduct.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { resolveUsageWindowLimits } from "@/internal/balances/utils/usageWindows/resolveUsageWindowLimits.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -52,7 +52,7 @@ export const prepareFeatureDeductionV2 = ({
 		(customerProduct) =>
 			customerProduct.status === "past_due" &&
 			!customerProduct.product.config?.ignore_past_due &&
-			isThresholdBillingProduct({ customerProduct }) &&
+			isThresholdBillingCustomerProduct({ customerProduct }) &&
 			customerProduct.customer_entitlements.some(
 				(customerEntitlement) =>
 					customerEntitlement.entitlement.feature.id === feature.id,

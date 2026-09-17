@@ -1,9 +1,11 @@
 import {
 	CusProductSchema,
 	CustomerEntitlementSchema,
+	CustomerPriceSchema,
 	CustomerSchema,
 	EntitySchema,
 	RolloverSchema,
+	UsageWindowSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 
@@ -15,10 +17,15 @@ export const subjectRowsEnvelopeSchema = z.object({
 		org_id: true,
 		env: true,
 		config: true,
+		spend_limits: true,
+		overage_allowed: true,
+		usage_limits: true,
 	}),
 	customer_products: z.array(CusProductSchema),
+	customer_prices: z.array(CustomerPriceSchema),
 	customer_entitlements: z.array(CustomerEntitlementSchema),
 	rollovers: z.array(RolloverSchema),
+	usage_windows: z.array(UsageWindowSchema),
 	entity: EntitySchema.nullable(),
 });
 

@@ -1,11 +1,9 @@
-import type { CreditSchemaItem } from "@autumn/shared";
-import { invalidCreditRateCard } from "../creditSystemUtils.js";
+import type { CreditSchemaItem } from "../../../models/featureModels/featureConfig/creditConfig.js";
+import { invalidCreditRateCard } from "../creditRates/invalidCreditRateCard.js";
 import { combineCreditMultipliers } from "./combineCreditMultipliers.js";
 import type { EventProperties } from "./matchesEventProperties.js";
 import { pickWinningDimension } from "./pickWinningDimension.js";
 import { scaleCreditAmount } from "./scaleCreditAmount.js";
-
-export type { EventProperties } from "./matchesEventProperties.js";
 
 /**
  * A rate-card row with its dimension rules applied: the rules are spent, so the

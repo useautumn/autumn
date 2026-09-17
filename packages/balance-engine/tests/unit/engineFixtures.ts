@@ -45,6 +45,10 @@ export const createCustomerProduct = (): WorkerCustomerProduct => ({
 	options: [],
 	quantity: 1,
 	created_at: occurredAt,
+	starts_at: occurredAt,
+	access_starts_at: null,
+	ended_at: null,
+	customer_license_link_id: null,
 });
 
 export const createCustomerEntitlement = ({
@@ -226,10 +230,18 @@ export const createTrackCommand = ({
 		input: {
 			schemaVersion: 1,
 			type: "track",
+			org: {
+				config: {
+					reverse_deduction_order: false,
+					block_overdue_entitlements: false,
+					include_past_due: true,
+				},
+			},
 			commandId,
 			requestId,
 			identity: { ...identity, entityId },
 			featureId,
+			internalFeatureId: internalFeatureIdOf(featureId),
 			value,
 			overageBehavior,
 			properties,
@@ -252,9 +264,17 @@ export const createCheckCommand = ({
 		input: {
 			schemaVersion: 1,
 			type: "check",
+			org: {
+				config: {
+					reverse_deduction_order: false,
+					block_overdue_entitlements: false,
+					include_past_due: true,
+				},
+			},
 			requestId: "req_check_1",
 			identity: { ...identity, entityId },
 			featureId,
+			internalFeatureId: internalFeatureIdOf(featureId),
 			requiredBalance,
 			properties,
 			occurredAt,

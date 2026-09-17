@@ -1,3 +1,4 @@
+import type { CommandOrg } from "@autumn/balance-engine";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 /**
@@ -8,4 +9,7 @@ export type BalanceWorkerRequestContext = Pick<
 	AutumnContext,
 	"id" | "env" | "timestamp" | "expand"
 > &
-	Readonly<{ org: Pick<AutumnContext["org"], "id"> }>;
+	Readonly<{
+		org: Pick<AutumnContext["org"], "id"> & { config: CommandOrg["config"] };
+		features: Pick<AutumnContext["features"][number], "id" | "internal_id">[];
+	}>;

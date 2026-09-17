@@ -8,6 +8,13 @@ import { parseWorkerRequest, WorkerProtocolError } from "../src/protocol.js";
 export const command: TrackCommand = {
 	schemaVersion: 1,
 	type: "track",
+	org: {
+		config: {
+			reverse_deduction_order: false,
+			block_overdue_entitlements: false,
+			include_past_due: true,
+		},
+	},
 	commandId: "command",
 	requestId: "request",
 	identity: {
@@ -17,6 +24,7 @@ export const command: TrackCommand = {
 		entityId: null,
 	},
 	featureId: "feature",
+	internalFeatureId: "feat_feature",
 	value: 1,
 	overageBehavior: "reject",
 	properties: null,

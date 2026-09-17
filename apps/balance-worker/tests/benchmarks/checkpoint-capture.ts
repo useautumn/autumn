@@ -121,10 +121,18 @@ for (const customers of sizes) {
 				input: {
 					schemaVersion: 1,
 					type: "track",
+					org: {
+						config: {
+							reverse_deduction_order: false,
+							block_overdue_entitlements: false,
+							include_past_due: true,
+						},
+					},
 					commandId: `command_${index}`,
 					requestId: `request_${index}`,
 					identity,
 					featureId: "messages",
+					internalFeatureId: "feat_messages",
 					value: 5,
 					overageBehavior: "reject",
 					properties: null,
@@ -198,10 +206,18 @@ for (const customers of sizes) {
 				input: {
 					schemaVersion: 1,
 					type: "track",
+					org: {
+						config: {
+							reverse_deduction_order: false,
+							block_overdue_entitlements: false,
+							include_past_due: true,
+						},
+					},
 					commandId: `hot_${offset}`,
 					requestId: `hot_${offset}`,
 					identity,
 					featureId: "messages",
+					internalFeatureId: "feat_messages",
 					value: 1,
 					overageBehavior: "reject",
 					properties: null,
@@ -230,9 +246,17 @@ for (const customers of sizes) {
 				command: {
 					schemaVersion: 1,
 					type: "check",
+					org: {
+						config: {
+							reverse_deduction_order: false,
+							block_overdue_entitlements: false,
+							include_past_due: true,
+						},
+					},
 					requestId: "check",
 					identity,
 					featureId: "messages",
+					internalFeatureId: "feat_messages",
 					requiredBalance: 1,
 					properties: null,
 					occurredAt: Date.now(),

@@ -89,10 +89,18 @@ export function createTrackCommand({
 	return {
 		schemaVersion: 1,
 		type: "track",
+		org: {
+			config: {
+				reverse_deduction_order: false,
+				block_overdue_entitlements: false,
+				include_past_due: true,
+			},
+		},
 		commandId,
 		requestId,
 		identity,
 		featureId: "messages",
+		internalFeatureId: "feat_messages",
 		value,
 		overageBehavior: "reject",
 		properties: null,
@@ -112,9 +120,17 @@ export function createCheckCommand({
 	return {
 		schemaVersion: 1,
 		type: "check",
+		org: {
+			config: {
+				reverse_deduction_order: false,
+				block_overdue_entitlements: false,
+				include_past_due: true,
+			},
+		},
 		requestId,
 		identity,
 		featureId: "messages",
+		internalFeatureId: "feat_messages",
 		requiredBalance: 1,
 		properties: null,
 		occurredAt,

@@ -6,6 +6,13 @@ import { createBalanceShadow } from "@/internal/balances/shadow/createBalanceSha
 const command: TrackCommand = {
 	schemaVersion: 1,
 	type: "track",
+	org: {
+		config: {
+			reverse_deduction_order: false,
+			block_overdue_entitlements: false,
+			include_past_due: true,
+		},
+	},
 	commandId: "first",
 	requestId: "request",
 	identity: {
@@ -15,6 +22,7 @@ const command: TrackCommand = {
 		entityId: null,
 	},
 	featureId: "messages",
+	internalFeatureId: "feat_messages",
 	value: 5,
 	overageBehavior: "cap",
 	properties: null,
@@ -23,6 +31,7 @@ const command: TrackCommand = {
 const source = { kind: "returned" } as const;
 const decision: TrackReply = {
 	state: createSubjectState({ identity: command.identity }),
+	changes: [],
 	result: { type: "track", status: "applied", reason: null, deltas: [] },
 };
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
@@ -53,7 +62,12 @@ test.concurrent(
 		try {
 			shadow.submit({ command, source });
 			shadow.submit({
-				command: { ...command, commandId: "second", featureId: "tokens" },
+				command: {
+					...command,
+					commandId: "second",
+					featureId: "tokens",
+					internalFeatureId: "feat_tokens",
+				},
 				source,
 			});
 			shadow.submit({ command: { ...command, commandId: "third" }, source });

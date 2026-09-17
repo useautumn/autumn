@@ -1,6 +1,7 @@
 import {
 	EntitlementSchema,
 	FeatureSchema,
+	PriceSchema,
 	ProductSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
@@ -10,6 +11,7 @@ export const catalogRowSchema = z.discriminatedUnion("table", [
 	z.object({ table: z.literal("entitlements"), row: EntitlementSchema }),
 	z.object({ table: z.literal("products"), row: ProductSchema }),
 	z.object({ table: z.literal("features"), row: FeatureSchema }),
+	z.object({ table: z.literal("prices"), row: PriceSchema }),
 ]);
 
 export type CatalogRow = z.infer<typeof catalogRowSchema>;

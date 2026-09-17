@@ -31,6 +31,7 @@ export * from "./classifyCusEnt/customerEntitlementFundsFeature";
 export * from "./classifyCusEnt/isCusEntDisplayExpired";
 export * from "./classifyCusEnt/isCusEntExpired";
 export * from "./classifyCusEnt/isPooledBalanceCustomerEntitlement";
+export * from "./classifyCusEnt/isUnlimitedCustomerEntitlement";
 // Classify utils
 export * from "./classifyCusEntUtils";
 // Convert utils barrel

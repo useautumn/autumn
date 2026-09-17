@@ -253,10 +253,18 @@ describe("owned partition checkpoints", () => {
 						input: {
 							schemaVersion: 1,
 							type: "track",
+							org: {
+								config: {
+									reverse_deduction_order: false,
+									block_overdue_entitlements: false,
+									include_past_due: true,
+								},
+							},
 							commandId: "track_during_s3_failure",
 							requestId: "request",
 							identity,
 							featureId: "messages",
+							internalFeatureId: "feat_messages",
 							value: 5,
 							overageBehavior: "reject",
 							properties: null,
@@ -272,9 +280,17 @@ describe("owned partition checkpoints", () => {
 						input: {
 							schemaVersion: 1,
 							type: "check",
+							org: {
+								config: {
+									reverse_deduction_order: false,
+									block_overdue_entitlements: false,
+									include_past_due: true,
+								},
+							},
 							requestId: "check",
 							identity,
 							featureId: "messages",
+							internalFeatureId: "feat_messages",
 							requiredBalance: 5,
 							properties: null,
 							occurredAt: fixture.clock.now(),

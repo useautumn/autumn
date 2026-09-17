@@ -32,6 +32,10 @@ const customerProduct = {
 	options: [],
 	quantity: 1,
 	created_at: 1_700_000_000_000,
+	starts_at: 1_700_000_000_000,
+	access_starts_at: null,
+	ended_at: null,
+	customer_license_link_id: null,
 };
 
 const customerEntitlement = ({

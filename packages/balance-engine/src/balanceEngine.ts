@@ -22,6 +22,7 @@ export type { UnsupportedCommandReason } from "./errors.js";
 // boundary
 export {
 	CatalogRowMissingError,
+	IrreversibleChangeError,
 	MutationSubjectMismatchError,
 	OutOfOrderMutationError,
 	StaleMutationError,
@@ -34,6 +35,7 @@ export type {
 	CatalogTable,
 } from "./models/catalog/catalogKey.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
+export type { CommandOrg } from "./models/command/commandOrg.js";
 export type { MutatingCommand } from "./models/command/mutatingCommand.js";
 // models
 export type { JsonValue } from "./models/common/json.js";
@@ -51,18 +53,23 @@ export type {
 } from "./models/mutation/subjectStateMutation.js";
 export type { WorkerCustomer } from "./models/subject/rows/workerCustomer.js";
 export type { WorkerCustomerEntitlement } from "./models/subject/rows/workerCustomerEntitlement.js";
+export type { WorkerCustomerPrice } from "./models/subject/rows/workerCustomerPrice.js";
 export type { WorkerCustomerProduct } from "./models/subject/rows/workerCustomerProduct.js";
 export type { WorkerEntity } from "./models/subject/rows/workerEntity.js";
 export type { WorkerRollover } from "./models/subject/rows/workerRollover.js";
+export type { WorkerUsageWindow } from "./models/subject/rows/workerUsageWindow.js";
 export type { SubjectState } from "./models/subject/subjectState.js";
 export type {
 	WorkerFullCustomerEntitlement,
+	WorkerFullCustomerEntitlementWithProduct,
+	WorkerFullCustomerPrice,
 	WorkerFullCustomerProduct,
 	WorkerFullSubject,
 } from "./models/subject/workerFullSubject.js";
 // mutation
 export { applyChanges } from "./mutation/applyChanges.js";
 export { applyMutation } from "./mutation/applyMutation.js";
+export { revertChanges } from "./mutation/revertChanges.js";
 export {
 	parseCatalog,
 	parseCatalogRow,

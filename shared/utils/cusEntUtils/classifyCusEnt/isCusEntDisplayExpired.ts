@@ -9,7 +9,11 @@ export const isCusEntDisplayExpired = ({
 }: {
 	cusEnt: Pick<
 		FullCusEntWithFullCusProduct,
-		"expires_at" | "customer_product" | "balance" | "unlimited" | "next_reset_at"
+		| "expires_at"
+		| "customer_product"
+		| "balance"
+		| "unlimited"
+		| "next_reset_at"
 	>;
 	now?: number;
 }): boolean =>

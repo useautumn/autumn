@@ -90,9 +90,17 @@ describe("receipt reuse during checkpoint replay", () => {
 						input: {
 							schemaVersion: 1,
 							type: "check",
+							org: {
+								config: {
+									reverse_deduction_order: false,
+									block_overdue_entitlements: false,
+									include_past_due: true,
+								},
+							},
 							requestId: "restored-check",
 							identity,
 							featureId: "messages",
+							internalFeatureId: "feat_messages",
 							requiredBalance: 1,
 							properties: null,
 							occurredAt: fixture.now,

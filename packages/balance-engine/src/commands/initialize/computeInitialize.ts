@@ -16,11 +16,17 @@ const insertChangesOf = ({ state }: { state: SubjectState }): RowChange[] => [
 	...byId(state.customerProducts).map(
 		(row): RowChange => ({ table: "customerProducts", op: "insert", row }),
 	),
+	...byId(state.customerPrices).map(
+		(row): RowChange => ({ table: "customerPrices", op: "insert", row }),
+	),
 	...byId(state.customerEntitlements).map(
 		(row): RowChange => ({ table: "customerEntitlements", op: "insert", row }),
 	),
 	...byId(state.rollovers).map(
 		(row): RowChange => ({ table: "rollovers", op: "insert", row }),
+	),
+	...byId(state.usageWindows).map(
+		(row): RowChange => ({ table: "usageWindows", op: "insert", row }),
 	),
 ];
 

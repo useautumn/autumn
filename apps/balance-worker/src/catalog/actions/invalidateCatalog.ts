@@ -1,7 +1,7 @@
 import type { CatalogRow } from "@autumn/balance-engine";
 import type { CatalogCacheScope } from "../types/catalogCacheContext.js";
 
-/** Entitlements carry no env, so they match on org alone; custom ones belong to one customer and never change. */
+/** Entitlements and prices carry no env, so they match on org alone; custom entitlements belong to one customer and never change. */
 const isInvalidatedBy = ({
 	row,
 	orgId,
@@ -13,6 +13,7 @@ const isInvalidatedBy = ({
 }): boolean => {
 	if (row.row.org_id !== orgId) return false;
 	if (row.table === "entitlements") return !row.row.is_custom;
+	if (row.table === "prices") return true;
 	return row.row.env === env;
 };
 

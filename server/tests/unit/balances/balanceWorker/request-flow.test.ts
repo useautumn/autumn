@@ -178,6 +178,13 @@ test.concurrent(
 		});
 		expect(commands[0]).toMatchObject({
 			type: "check",
+			org: {
+				config: {
+					reverse_deduction_order: false,
+					block_overdue_entitlements: false,
+					include_past_due: true,
+				},
+			},
 			requestId: ctx.id,
 			identity: {
 				orgId: ctx.org.id,

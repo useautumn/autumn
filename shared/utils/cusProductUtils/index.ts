@@ -37,3 +37,4 @@ export const customerProductUtils = {
 		toFeaturesToCarryUsagesFor: customerProductToFeaturesToCarryUsagesFor,
 	},
 };
+export * from "./classifyCustomerProduct/isThresholdBillingCustomerProduct";

@@ -8,7 +8,6 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { SQL } from "drizzle-orm";
 import {
 	AllowanceType,
 	EntInterval,
@@ -17,6 +16,7 @@ import {
 	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
+import type { SQL } from "drizzle-orm";
 import { buildDeleteCustomerEntitlementsBatchQuery } from "@/internal/billing/v2/actions/batchTransition/execute/sql/deleteCustomerEntitlementsBatch";
 import { buildReplaceCustomerEntitlementsBatchQuery } from "@/internal/billing/v2/actions/batchTransition/execute/sql/replaceCustomerEntitlementsBatch";
 import type {

@@ -1,8 +1,12 @@
-import type { FullSubject } from "../../../models/cusModels/fullSubject/fullSubjectModel.js";
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type {
+	BillingControlSubjectView,
+	CustomerEntitlementRowView,
+	CustomerProductWithPricesView,
+} from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import type { UsageWindowScope } from "../../../models/cusProductModels/cusEntModels/usageWindowModels.js";
 import { CusProductStatus } from "../../../models/cusProductModels/cusProductEnums.js";
 import { fullSubjectToCustomerEntitlements } from "../../fullSubjectUtils/fullSubjectToCustomerEntitlements.js";
+import type { PlanControlCustomerProduct } from "../../fullSubjectUtils/planBillingControlUtils.js";
 import {
 	type AnchorCandidate,
 	pickAnchorCustomerEntitlementId,
@@ -28,8 +32,14 @@ const customerProductStatusToAnchorRank = (
 	}
 };
 
+type AnchorCustomerEntitlement = CustomerEntitlementRowView & {
+	customer_product:
+		| (PlanControlCustomerProduct & CustomerProductWithPricesView)
+		| null;
+};
+
 const toAnchorCandidate = (
-	customerEntitlement: FullCusEntWithFullCusProduct,
+	customerEntitlement: AnchorCustomerEntitlement,
 ): AnchorCandidate => ({
 	id: customerEntitlement.id,
 	is_entity_scoped:
@@ -56,21 +66,24 @@ const toAnchorCandidate = (
  * when no eligible entitlement exists -- the cap stays enforceable with
  * calendar-aligned bounds.
  */
-export const findUsageWindowAnchor = ({
+export const findUsageWindowAnchor = <
+	CE extends CustomerEntitlementRowView,
+	CP extends PlanControlCustomerProduct & CustomerProductWithPricesView,
+>({
 	fullSubject,
 	featureId,
 	isCreditSystem,
 	inStatuses,
 	scopeType = "customer",
 }: {
-	fullSubject: FullSubject;
+	fullSubject: BillingControlSubjectView<CE, CP>;
 	featureId: string;
 	isCreditSystem: boolean;
 	inStatuses?: CusProductStatus[];
 	scopeType?: UsageWindowScope;
 }): {
 	anchorCustomerEntitlementId: string | null;
-	anchorCustomerEntitlement?: FullCusEntWithFullCusProduct;
+	anchorCustomerEntitlement?: AnchorCustomerEntitlement;
 } => {
 	const ownEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,

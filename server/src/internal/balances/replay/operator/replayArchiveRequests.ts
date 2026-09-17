@@ -1,3 +1,4 @@
+import type { CommandOrg } from "@autumn/balance-engine";
 import type { ReplayManifestRequest } from "../manifest/replayManifestContracts.js";
 import type { ReplayHydrationCoordinator } from "../replayHydrationContracts.js";
 import { executeReplayRequest } from "./executeReplayRequest.js";
@@ -29,6 +30,13 @@ const CANCELLED_OUTCOME: ReplayRequestOutcome = Object.freeze({
 	stage: "setup",
 });
 
+/** A blocked request is classified by shape alone, so any org settings do. */
+const REVIEW_ORG_CONFIG: CommandOrg["config"] = {
+	reverse_deduction_order: false,
+	block_overdue_entitlements: false,
+	include_past_due: true,
+};
+
 /** Shape is classified before the setup verdict, so an unsupported request
  *  stays visible even when its customer never hydrated. */
 const classifyBlockedRequest = ({
@@ -38,7 +46,7 @@ const classifyBlockedRequest = ({
 	request: ReplayManifestRequest;
 	admission: ReplayBlockedAdmission;
 }): ReplayRequestOutcome => {
-	const planned = planReplayRequest({ request });
+	const planned = planReplayRequest({ request, orgConfig: REVIEW_ORG_CONFIG });
 	if (planned.kind === "refused")
 		return { kind: "refused", reason: planned.reason };
 	if (admission.kind === "failed")

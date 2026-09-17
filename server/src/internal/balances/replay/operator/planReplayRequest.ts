@@ -1,4 +1,8 @@
-import type { CheckCommand, TrackCommand } from "@autumn/balance-engine";
+import type {
+	CheckCommand,
+	CommandOrg,
+	TrackCommand,
+} from "@autumn/balance-engine";
 import { AppEnv, CheckParamsSchema, TrackParamsSchema } from "@autumn/shared";
 import { BalanceWorkerUnsupportedError } from "../../balanceWorker/balanceWorkerErrors.js";
 import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
@@ -70,13 +74,18 @@ function replayContextExpand({
 function replayRequestContext({
 	request,
 	expand,
+	orgConfig,
+	features,
 }: {
 	request: ReplayManifestRequest;
 	expand: BalanceWorkerRequestContext["expand"];
+	orgConfig: CommandOrg["config"];
+	features: BalanceWorkerRequestContext["features"];
 }): BalanceWorkerRequestContext {
 	return {
 		id: request.id,
-		org: { id: request.orgId },
+		org: { id: request.orgId, config: orgConfig },
+		features,
 		env: CONTEXT_ENV[request.env],
 		timestamp: request.logicalTimestampMs,
 		expand,
@@ -142,15 +151,21 @@ function planTrackCommand({
 	};
 }
 
+/** `orgConfig` is what the org runs under now; the replayed command records it like a live one would. */
 export function planReplayRequest({
 	request,
+	orgConfig,
+	features = [],
 }: {
 	request: ReplayManifestRequest;
+	orgConfig: CommandOrg["config"];
+	/** The org's catalog features; without them a replayed command carries no internal feature id. */
+	features?: BalanceWorkerRequestContext["features"];
 }): ReplayRequestPlan {
 	const expand = replayContextExpand({ body: request.body });
 	if (expand === undefined)
 		return { kind: "refused", reason: REQUEST_INVALID_REASON };
-	const ctx = replayRequestContext({ request, expand });
+	const ctx = replayRequestContext({ request, expand, orgConfig, features });
 	const body = normalizedReplayBody({ request });
 	try {
 		return request.operation === "check"

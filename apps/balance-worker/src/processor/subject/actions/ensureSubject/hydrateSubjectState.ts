@@ -38,8 +38,10 @@ export const hydrateSubjectState = async ({
 				identity,
 				customer: envelope.customer,
 				customerProducts: envelope.customer_products,
+				customerPrices: envelope.customer_prices,
 				customerEntitlements: envelope.customer_entitlements,
 				rollovers: envelope.rollovers,
+				usageWindows: envelope.usage_windows,
 				entity: envelope.entity,
 			}),
 			// Catalog rows are not part of hydration; ensureSubjectCatalog loads whatever the state references.

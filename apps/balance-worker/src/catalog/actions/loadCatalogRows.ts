@@ -26,6 +26,7 @@ const envelopeToCatalogRows = ({
 	),
 	...envelope.products.map((row): CatalogRow => ({ table: "products", row })),
 	...envelope.features.map((row): CatalogRow => ({ table: "features", row })),
+	...envelope.prices.map((row): CatalogRow => ({ table: "prices", row })),
 ];
 
 const fetchAndPut = async ({
@@ -43,6 +44,7 @@ const fetchAndPut = async ({
 			entitlementIds: idsOf({ keys, table: "entitlements" }),
 			productInternalIds: idsOf({ keys, table: "products" }),
 			featureInternalIds: idsOf({ keys, table: "features" }),
+			priceIds: idsOf({ keys, table: "prices" }),
 		},
 	});
 	putCatalogRows({ scope, rows: envelopeToCatalogRows({ envelope }) });

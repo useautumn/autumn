@@ -76,10 +76,7 @@ export const isPrepaidCusEnt = ({
 	return true;
 };
 
-export const addCusProductToCusEnt = <
-	TCusEnt extends object,
-	TCusProduct,
->({
+export const addCusProductToCusEnt = <TCusEnt extends object, TCusProduct>({
 	cusEnt,
 	cusProduct,
 }: {

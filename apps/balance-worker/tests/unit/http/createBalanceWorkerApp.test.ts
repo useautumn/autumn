@@ -37,6 +37,13 @@ const command = parseTrackCommand({
 	input: {
 		schemaVersion: 1,
 		type: "track",
+		org: {
+			config: {
+				reverse_deduction_order: false,
+				block_overdue_entitlements: false,
+				include_past_due: true,
+			},
+		},
 		commandId: "cmd",
 		requestId: "req",
 		identity: {
@@ -46,6 +53,7 @@ const command = parseTrackCommand({
 			entityId: null,
 		},
 		featureId: "messages",
+		internalFeatureId: "feat_messages",
 		value: 2,
 		overageBehavior: "reject",
 		properties: null,
@@ -69,6 +77,7 @@ const mutation = computeTrack({
 if (mutation.result.type !== "track") throw new Error("Expected a track");
 const trackReply = {
 	result: mutation.result,
+	changes: mutation.changes,
 	state: applyMutation({ state, mutation }),
 };
 const route = { partition: 2, routeEpoch: "9007199254740993" };
@@ -362,9 +371,17 @@ describe("Balance worker HTTP", () => {
 			input: {
 				schemaVersion: 1,
 				type: "check",
+				org: {
+					config: {
+						reverse_deduction_order: false,
+						block_overdue_entitlements: false,
+						include_past_due: true,
+					},
+				},
 				requestId: "check-request",
 				identity: command.identity,
 				featureId: "messages",
+				internalFeatureId: "feat_messages",
 				requiredBalance: 2,
 				properties: null,
 				occurredAt: 1,

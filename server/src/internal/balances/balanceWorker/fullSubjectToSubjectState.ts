@@ -5,18 +5,14 @@ import {
 } from "@autumn/balance-engine";
 import {
 	CusProductStatus,
+	customerEntitlementFundsFeature,
 	type FullCusEntWithFullCusProduct,
 	type FullCusProduct,
 	type FullSubject,
-	fullSubjectToFullCustomer,
-	getApiBalance,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { BalanceWorkerUnsupportedError } from "./balanceWorkerErrors.js";
-import {
-	hasMeteringBillingControls,
-	validateMeteringEntitlement,
-} from "./validateMeteringEntitlement.js";
+import { validateMeteringEntitlement } from "./validateMeteringEntitlement.js";
 
 type MeteringRows = {
 	customerProducts: FullCusProduct[];
@@ -58,42 +54,6 @@ const assertSupportedSubject = ({
 			reason: "invalid_feature_selection",
 		});
 	}
-	if (
-		hasMeteringBillingControls({ controls: customer }) ||
-		fullSubject.usage_windows?.length
-	) {
-		throw new BalanceWorkerUnsupportedError({
-			reason: "billing_controls_not_supported",
-		});
-	}
-};
-
-/** The worker only meters plain included grants today; a breakdown that says otherwise is refused. */
-const assertSupportedBalanceShape = ({
-	ctx,
-	fullSubject,
-	customerEntitlement,
-}: {
-	ctx: AutumnContext;
-	fullSubject: FullSubject;
-	customerEntitlement: FullCusEntWithFullCusProduct;
-}): void => {
-	const { data: balance } = getApiBalance({
-		ctx: { ...ctx, expand: [] },
-		fullCus: fullSubjectToFullCustomer({ fullSubject }),
-		cusEnts: [customerEntitlement],
-		feature: customerEntitlement.entitlement.feature,
-	});
-	const breakdown = balance.breakdown?.[0];
-	if (
-		!breakdown ||
-		breakdown.prepaid_grant !== 0 ||
-		breakdown.reset?.interval === "multiple"
-	) {
-		throw new BalanceWorkerUnsupportedError({
-			reason: "balance_shape_not_supported",
-		});
-	}
 };
 
 /** The rows the worker will own for these features, after every shape gate. */
@@ -127,8 +87,11 @@ export function selectMeteringRows({
 
 	const customerEntitlements: FullCusEntWithFullCusProduct[] = [];
 	for (const featureId of featureIds) {
-		const selected = candidates.filter(
-			(entitlement) => entitlement.entitlement.feature.id === featureId,
+		const selected = candidates.filter((entitlement) =>
+			customerEntitlementFundsFeature({
+				customerEntitlement: entitlement,
+				featureId,
+			}),
 		);
 		if (selected.length === 0)
 			throw new BalanceWorkerUnsupportedError({ reason: "feature_not_found" });
@@ -138,13 +101,7 @@ export function selectMeteringRows({
 				fullSubject,
 				customerEntitlement: entitlement,
 			});
-		if (selected.length !== 1)
-			throw new BalanceWorkerUnsupportedError({
-				reason: "multiple_customer_entitlements_not_supported",
-			});
-		const [customerEntitlement] = selected;
-		assertSupportedBalanceShape({ ctx, fullSubject, customerEntitlement });
-		customerEntitlements.push(customerEntitlement);
+		customerEntitlements.push(...selected);
 	}
 	return { customerProducts, customerEntitlements };
 }
@@ -168,9 +125,15 @@ export function fullSubjectToSubjectState({
 		},
 		customer: fullSubject.customer,
 		customerProducts: rows.customerProducts,
+		customerPrices: rows.customerProducts.flatMap(
+			(customerProduct) => customerProduct.customer_prices,
+		),
 		customerEntitlements: rows.customerEntitlements,
 		rollovers: rows.customerEntitlements.flatMap(
 			(customerEntitlement) => customerEntitlement.rollovers,
+		),
+		usageWindows: (fullSubject.usage_windows ?? []).filter(
+			(usageWindow) => usageWindow.internal_entity_id == null,
 		),
 		entity: null,
 	});
@@ -206,5 +169,13 @@ export function fullSubjectToCatalogRows({
 			row: customerProduct.product,
 		}),
 	);
-	return [...entitlementRows, ...featureRows, ...productRows];
+	const priceRows = rows.customerProducts.flatMap((customerProduct) =>
+		customerProduct.customer_prices.map(
+			(customerPrice): CatalogRow => ({
+				table: "prices",
+				row: customerPrice.price,
+			}),
+		),
+	);
+	return [...entitlementRows, ...featureRows, ...productRows, ...priceRows];
 }

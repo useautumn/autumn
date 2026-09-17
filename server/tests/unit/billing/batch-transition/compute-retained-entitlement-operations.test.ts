@@ -83,9 +83,9 @@ const workflows = feature({
 });
 const admin = feature({ id: "admin", type: FeatureType.Boolean });
 
-const entitlementPrice = (
-	ent: EntitlementWithFeature,
-): EntitlementPrice => ({ entitlement: ent });
+const entitlementPrice = (ent: EntitlementWithFeature): EntitlementPrice => ({
+	entitlement: ent,
+});
 
 const initContext = {
 	fullCustomer: { id: "cus", internal_id: "cus_internal", entities: [] },

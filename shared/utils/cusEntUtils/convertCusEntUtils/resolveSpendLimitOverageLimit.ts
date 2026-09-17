@@ -1,6 +1,6 @@
 import { Decimal } from "decimal.js";
 import type { DbSpendLimit } from "../../../models/cusModels/billingControls/spendLimit.js";
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { CustomerEntitlementWithPricesView } from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { cusEntsToMainPlanAllowance } from "./cusEntsToMainPlanAllowance.js";
 
 export const resolveSpendLimitOverageLimit = ({
@@ -10,7 +10,7 @@ export const resolveSpendLimitOverageLimit = ({
 	additionalAllowance = 0,
 }: {
 	spendLimit: DbSpendLimit;
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	entityId?: string;
 	additionalAllowance?: number;
 }): number | undefined => {
@@ -21,8 +21,7 @@ export const resolveSpendLimitOverageLimit = ({
 	}
 
 	const denominator =
-		cusEntsToMainPlanAllowance({ cusEnts, entityId }) +
-		additionalAllowance;
+		cusEntsToMainPlanAllowance({ cusEnts, entityId }) + additionalAllowance;
 	if (denominator === 0) return undefined;
 
 	return new Decimal(spendLimit.overage_limit)

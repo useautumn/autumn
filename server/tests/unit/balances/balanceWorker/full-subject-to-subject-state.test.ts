@@ -5,7 +5,6 @@ import {
 	subjectStateToCatalogKeys,
 } from "@autumn/balance-engine";
 import {
-	AllowanceType,
 	FeatureType,
 	FeatureUsageType,
 	fullSubjectToFullCustomer,
@@ -16,7 +15,6 @@ import {
 	fullSubjectToSubjectState,
 } from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
 import { workerStateToApiBalance } from "@/internal/balances/balanceWorker/workerStateToApiBalance.js";
-import { prices } from "../../../utils/fixtures/db/prices.js";
 import { createCustomerFixture } from "./customer-fixture.js";
 
 test.concurrent(
@@ -169,52 +167,9 @@ const unsupported: { reason: string; mutate: (fixture: Fixture) => void }[] = [
 		},
 	},
 	{
-		reason: "credit_system_not_supported",
-		mutate: ({ feature }) => {
-			feature.type = FeatureType.CreditSystem;
-		},
-	},
-	{
-		reason: "credit_system_not_supported",
-		mutate: ({ ctx, feature }) => {
-			ctx.features.push({
-				...feature,
-				id: "credits",
-				type: FeatureType.CreditSystem,
-				config: {
-					schema: [{ metered_feature_id: "messages", credit_amount: 2 }],
-				},
-			});
-		},
-	},
-	{
 		reason: "continuous_usage_not_supported",
 		mutate: ({ feature }) => {
 			feature.config = { usage_type: FeatureUsageType.Continuous };
-		},
-	},
-	{
-		reason: "unlimited_not_supported",
-		mutate: ({ customerEntitlement }) => {
-			customerEntitlement.unlimited = true;
-		},
-	},
-	{
-		reason: "unlimited_not_supported",
-		mutate: ({ customerEntitlement }) => {
-			customerEntitlement.entitlement.allowance_type = AllowanceType.Unlimited;
-		},
-	},
-	{
-		reason: "overage_not_supported",
-		mutate: ({ customerEntitlement }) => {
-			customerEntitlement.usage_allowed = true;
-		},
-	},
-	{
-		reason: "usage_limit_not_supported",
-		mutate: ({ customerEntitlement }) => {
-			customerEntitlement.entitlement.usage_limit = 100;
 		},
 	},
 	{
@@ -238,12 +193,6 @@ const unsupported: { reason: string; mutate: (fixture: Fixture) => void }[] = [
 		},
 	},
 	{
-		reason: "additional_balance_not_supported",
-		mutate: ({ customerEntitlement }) => {
-			customerEntitlement.additional_balance = 5;
-		},
-	},
-	{
 		reason: "reset_due",
 		mutate: ({ customerEntitlement, ctx }) => {
 			customerEntitlement.next_reset_at = ctx.timestamp;
@@ -253,42 +202,6 @@ const unsupported: { reason: string; mutate: (fixture: Fixture) => void }[] = [
 		reason: "expired_entitlement",
 		mutate: ({ customerEntitlement, ctx }) => {
 			customerEntitlement.expires_at = ctx.timestamp;
-		},
-	},
-	{
-		reason: "multiple_customer_entitlements_not_supported",
-		mutate: ({ customerProduct, customerEntitlement }) => {
-			customerProduct.customer_entitlements.push({
-				...customerEntitlement,
-				id: "extra",
-			});
-		},
-	},
-	{
-		reason: "priced_entitlement_not_supported",
-		mutate: ({ customerProduct }) => {
-			customerProduct.customer_prices.push(
-				prices.createCustomer({
-					price: prices.createConsumable({
-						id: "usage_price",
-						featureId: "messages",
-					}),
-				}),
-			);
-		},
-	},
-	{
-		reason: "billing_controls_not_supported",
-		mutate: ({ customer }) => {
-			customer.overage_allowed = [{ feature_id: "messages", enabled: true }];
-		},
-	},
-	{
-		reason: "billing_controls_not_supported",
-		mutate: ({ customerProduct }) => {
-			customerProduct.product.overage_allowed = [
-				{ feature_id: "messages", enabled: true },
-			];
 		},
 	},
 ];

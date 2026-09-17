@@ -1,4 +1,4 @@
-import type { CreditDimension } from "@autumn/shared";
+import type { CreditDimension } from "../../../models/featureModels/featureConfig/creditConfig.js";
 import {
 	type EventProperties,
 	matchesEventProperties,

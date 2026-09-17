@@ -26,8 +26,10 @@ const emptyStateFor = ({
 		revision: 0,
 		customer: customerInsert.row,
 		customerProducts: [],
+		customerPrices: [],
 		customerEntitlements: [],
 		rollovers: [],
+		usageWindows: [],
 		entity: null,
 	};
 };

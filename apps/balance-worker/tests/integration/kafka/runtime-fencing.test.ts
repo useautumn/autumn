@@ -146,10 +146,18 @@ async function replacementFencesPreviousRuntime(): Promise<void> {
 			input: {
 				schemaVersion: 1,
 				type: "track",
+				org: {
+					config: {
+						reverse_deduction_order: false,
+						block_overdue_entitlements: false,
+						include_past_due: true,
+					},
+				},
 				commandId: "fenced-owner",
 				requestId: "fenced-owner",
 				identity,
 				featureId: "messages",
+				internalFeatureId: "feat_messages",
 				value: 5,
 				overageBehavior: "reject",
 				properties: null,

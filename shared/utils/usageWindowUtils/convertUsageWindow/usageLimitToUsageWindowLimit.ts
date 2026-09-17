@@ -1,9 +1,14 @@
 import type { DbUsageLimit } from "../../../models/cusModels/billingControls/usageLimit.js";
 import { usageLimitFilterKey } from "../../../models/cusModels/billingControls/usageLimit.js";
-import type { FullSubject } from "../../../models/cusModels/fullSubject/fullSubjectModel.js";
+import type {
+	BillingControlSubjectView,
+	CustomerEntitlementRowView,
+	CustomerProductWithPricesView,
+} from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import type { UsageWindowLimit } from "../../../models/cusProductModels/cusEntModels/usageWindowModels.js";
 import type { CusProductStatus } from "../../../models/cusProductModels/cusProductEnums.js";
 import type { Feature } from "../../../models/featureModels/featureModels.js";
+import type { PlanControlCustomerProduct } from "../../fullSubjectUtils/planBillingControlUtils.js";
 import { resetIntvToEntIntv } from "../../productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
 import { buildUsageWindowKey } from "../buildUsageWindowKey.js";
 import { findUsageWindowAnchor } from "../findUsageWindowAnchor/findUsageWindowAnchor.js";
@@ -25,7 +30,10 @@ export type UsageWindowEntityScope = {
  * align to the anchor entitlement's cycle when one exists, else UTC calendar;
  * `anchor: 'utc'` skips the lookup and always uses the UTC calendar.
  */
-export const usageLimitToUsageWindowLimit = ({
+export const usageLimitToUsageWindowLimit = <
+	CE extends CustomerEntitlementRowView,
+	CP extends PlanControlCustomerProduct & CustomerProductWithPricesView,
+>({
 	fullSubject,
 	usageLimit,
 	feature,
@@ -33,7 +41,7 @@ export const usageLimitToUsageWindowLimit = ({
 	inStatuses,
 	entityScope = null,
 }: {
-	fullSubject: FullSubject;
+	fullSubject: BillingControlSubjectView<CE, CP>;
 	usageLimit: DbUsageLimit;
 	feature: Feature;
 	now: number;
@@ -78,7 +86,7 @@ export const usageLimitToUsageWindowLimit = ({
 	return {
 		feature_id: feature.id,
 		internal_feature_id: feature.internal_id,
-		internal_customer_id: fullSubject.internalCustomerId,
+		internal_customer_id: fullSubject.customer.internal_id,
 		key: buildUsageWindowKey({
 			scopeType,
 			internalEntityId: entityScope?.internalEntityId ?? null,

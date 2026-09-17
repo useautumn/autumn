@@ -3,13 +3,13 @@ import {
 	isCustomerProductMain,
 	isCustomerProductRecurring,
 } from "../../../index.js";
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { CustomerEntitlementWithPricesView } from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 
 export const cusEntsToMainPlanAllowance = ({
 	cusEnts,
 	entityId,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	entityId?: string;
 }): number =>
 	cusEntsToAllowance({

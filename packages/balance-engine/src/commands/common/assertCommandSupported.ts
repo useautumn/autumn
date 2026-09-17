@@ -23,7 +23,4 @@ export const assertCommandSupported = ({
 	if (command.identity.entityId && !fullSubject.entity) {
 		throw new UnsupportedCommandError({ reason: "entity_not_found" });
 	}
-	if (command.properties && Object.keys(command.properties).length > 0) {
-		throw new UnsupportedCommandError({ reason: "properties_not_supported" });
-	}
 };

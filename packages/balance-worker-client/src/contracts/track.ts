@@ -1,4 +1,5 @@
 import type {
+	RowChange,
 	SubjectState,
 	TrackCommand,
 	TrackResult,
@@ -10,8 +11,9 @@ export type BalanceWorkerTrackRequest = {
 	command: TrackCommand;
 };
 
-/** The logged result, and the subject's rows once it is committed. */
+/** The committed mutation's two halves, verbatim, and the subject's rows once it is committed. */
 export type TrackReply = {
 	result: TrackResult;
+	changes: RowChange[];
 	state: SubjectState;
 };

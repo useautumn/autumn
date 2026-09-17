@@ -9,6 +9,10 @@ import {
 	workerCustomerEntitlementSchema,
 } from "../subject/rows/workerCustomerEntitlement.js";
 import {
+	type WorkerCustomerPrice,
+	workerCustomerPriceSchema,
+} from "../subject/rows/workerCustomerPrice.js";
+import {
 	type WorkerCustomerProduct,
 	workerCustomerProductSchema,
 } from "../subject/rows/workerCustomerProduct.js";
@@ -20,6 +24,10 @@ import {
 	type WorkerRollover,
 	workerRolloverSchema,
 } from "../subject/rows/workerRollover.js";
+import {
+	type WorkerUsageWindow,
+	workerUsageWindowSchema,
+} from "../subject/rows/workerUsageWindow.js";
 
 export type TableRowChange<Table extends string, Row> =
 	| { table: Table; op: "insert"; row: Row }
@@ -98,8 +106,10 @@ export type RowChange =
 	| SubjectRowChange<"customer", WorkerCustomer>
 	| SubjectRowChange<"entity", WorkerEntity>
 	| TableRowChange<"customerProducts", WorkerCustomerProduct>
+	| TableRowChange<"customerPrices", WorkerCustomerPrice>
 	| TableRowChange<"customerEntitlements", WorkerCustomerEntitlement>
-	| TableRowChange<"rollovers", WorkerRollover>;
+	| TableRowChange<"rollovers", WorkerRollover>
+	| TableRowChange<"usageWindows", WorkerUsageWindow>;
 
 export const rowChangeSchema = z.discriminatedUnion("table", [
 	subjectRowChangeSchema({
@@ -112,8 +122,16 @@ export const rowChangeSchema = z.discriminatedUnion("table", [
 		rowSchema: workerCustomerProductSchema,
 	}),
 	tableRowChangeSchema({
+		table: "customerPrices",
+		rowSchema: workerCustomerPriceSchema,
+	}),
+	tableRowChangeSchema({
 		table: "customerEntitlements",
 		rowSchema: workerCustomerEntitlementSchema,
 	}),
 	tableRowChangeSchema({ table: "rollovers", rowSchema: workerRolloverSchema }),
+	tableRowChangeSchema({
+		table: "usageWindows",
+		rowSchema: workerUsageWindowSchema,
+	}),
 ]);

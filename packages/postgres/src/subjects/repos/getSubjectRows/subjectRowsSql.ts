@@ -3,8 +3,8 @@ import type { PostgresContext } from "../../../types/postgresClient.js";
 
 /**
  * Single-subject port of getFullSubjectRowsQuery, keeping only what the balance worker
- * holds for one subject: its products in the given statuses, their entitlements, live loose
- * entitlements, and unexpired rollovers. Customer-level rows when no entity is named, else
+ * holds for one subject: its products in the given statuses, their prices and entitlements,
+ * live loose entitlements, unexpired rollovers, and its usage-window counters. Customer-level rows when no entity is named, else
  * the entity's own rows. Catalog rows come from getCatalogRows.
  * Expiry is evaluated at `asOfTimestampMs` so a replay sees the same rows as the original.
  */
@@ -56,6 +56,12 @@ export const subjectRowsSql = ({
 			AND cp.status = ANY(string_to_array(${statuses.join(",")}, ','))
 	),
 
+	cus_prices AS (
+		SELECT cpr.*
+		FROM customer_prices cpr
+		WHERE cpr.customer_product_id IN (SELECT id FROM cus_products)
+	),
+
 	product_entitlements AS (
 		SELECT ce.*
 		FROM customer_entitlements ce
@@ -99,6 +105,13 @@ export const subjectRowsSql = ({
 		FROM rollovers ro
 		WHERE ro.cus_ent_id IN (SELECT id FROM all_entitlements)
 			AND (ro.expires_at IS NULL OR ro.expires_at > ${asOfTimestampMs})
+	),
+
+	cus_usage_windows AS (
+		SELECT uw.*
+		FROM usage_windows uw
+		WHERE uw.internal_customer_id IN (SELECT internal_id FROM customer_record)
+			AND ${ownedBySubject({ alias: sql`uw` })}
 	)
 
 	SELECT json_build_object(
@@ -107,12 +120,20 @@ export const subjectRowsSql = ({
 			(SELECT json_agg(row_to_json(cp) ORDER BY cp.created_at DESC, cp.id) FROM cus_products cp),
 			'[]'::json
 		),
+		'customer_prices', COALESCE(
+			(SELECT json_agg(row_to_json(cpr) ORDER BY cpr.id) FROM cus_prices cpr),
+			'[]'::json
+		),
 		'customer_entitlements', COALESCE(
 			(SELECT json_agg(row_to_json(ce) ORDER BY ce.id) FROM all_entitlements ce),
 			'[]'::json
 		),
 		'rollovers', COALESCE(
 			(SELECT json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST, ro.id) FROM cus_rollovers ro),
+			'[]'::json
+		),
+		'usage_windows', COALESCE(
+			(SELECT json_agg(row_to_json(uw) ORDER BY uw.id) FROM cus_usage_windows uw),
 			'[]'::json
 		),
 		'entity', (SELECT row_to_json(e) FROM entity_record e)

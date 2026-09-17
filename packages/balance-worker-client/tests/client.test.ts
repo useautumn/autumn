@@ -18,6 +18,13 @@ import type {
 const command: TrackCommand = {
 	schemaVersion: 1,
 	type: "track",
+	org: {
+		config: {
+			reverse_deduction_order: false,
+			block_overdue_entitlements: false,
+			include_past_due: true,
+		},
+	},
 	commandId: "command",
 	requestId: "request",
 	identity: {
@@ -27,6 +34,7 @@ const command: TrackCommand = {
 		entityId: null,
 	},
 	featureId: "feature",
+	internalFeatureId: "feat_feature",
 	value: 1,
 	overageBehavior: "reject",
 	properties: null,
@@ -57,6 +65,7 @@ const initialState = createSubjectState({
 });
 const trackReply: TrackReply = {
 	state: initialState,
+	changes: [],
 	result: {
 		type: "track",
 		status: "applied",
@@ -344,9 +353,17 @@ const checkCommand = parseCheckCommand({
 	input: {
 		schemaVersion: 1,
 		type: "check",
+		org: {
+			config: {
+				reverse_deduction_order: false,
+				block_overdue_entitlements: false,
+				include_past_due: true,
+			},
+		},
 		requestId: "check",
 		identity: command.identity,
 		featureId: "feature",
+		internalFeatureId: "feat_feature",
 		requiredBalance: 1,
 		properties: null,
 		occurredAt: 0,

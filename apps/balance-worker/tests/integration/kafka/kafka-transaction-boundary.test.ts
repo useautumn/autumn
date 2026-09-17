@@ -452,10 +452,18 @@ describe("Kafka transaction boundary", () => {
 				input: {
 					schemaVersion: 1,
 					type: "track",
+					org: {
+						config: {
+							reverse_deduction_order: false,
+							block_overdue_entitlements: false,
+							include_past_due: true,
+						},
+					},
 					commandId: "cmd_tail",
 					requestId: "req_tail",
 					identity: initialState.identity,
 					featureId: "messages",
+					internalFeatureId: "feat_messages",
 					value: 5,
 					overageBehavior: "reject",
 					properties: null,
@@ -812,10 +820,18 @@ describe("Kafka transaction boundary", () => {
 				input: {
 					schemaVersion: 1,
 					type: "track",
+					org: {
+						config: {
+							reverse_deduction_order: false,
+							block_overdue_entitlements: false,
+							include_past_due: true,
+						},
+					},
 					commandId: "cmd_fenced_owner",
 					requestId: "req_fenced_owner",
 					identity: firstStore.state.identity,
 					featureId: "messages",
+					internalFeatureId: "feat_messages",
 					value: 5,
 					overageBehavior: "reject",
 					properties: null,
@@ -1044,10 +1060,18 @@ test("prepares without fencing and activates from the committed tail", async fun
 			input: {
 				schemaVersion: 1,
 				type: "track",
+				org: {
+					config: {
+						reverse_deduction_order: false,
+						block_overdue_entitlements: false,
+						include_past_due: true,
+					},
+				},
 				commandId: "cmd_handoff",
 				requestId: "req_handoff",
 				identity: local.state.identity,
 				featureId: "messages",
+				internalFeatureId: "feat_messages",
 				value: 5,
 				overageBehavior: "reject",
 				properties: null,

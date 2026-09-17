@@ -52,6 +52,10 @@ export const createState = ({
 				options: [],
 				quantity: 1,
 				created_at: occurredAt,
+				starts_at: occurredAt,
+				access_starts_at: null,
+				ended_at: null,
+				customer_license_link_id: null,
 			},
 		],
 		customerEntitlements: [
@@ -158,10 +162,18 @@ export const createTrackMutation = ({
 			input: {
 				schemaVersion: 1,
 				type: "track",
+				org: {
+					config: {
+						reverse_deduction_order: false,
+						block_overdue_entitlements: false,
+						include_past_due: true,
+					},
+				},
 				commandId,
 				requestId: `req_${commandId}`,
 				identity: state.identity,
 				featureId: "messages",
+				internalFeatureId: "feat_messages",
 				value,
 				overageBehavior: "reject",
 				properties: null,

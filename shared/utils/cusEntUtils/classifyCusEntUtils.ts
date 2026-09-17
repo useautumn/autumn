@@ -20,6 +20,7 @@ import {
 	FeatureType,
 	FeatureUsageType,
 } from "../../models/featureModels/featureEnums";
+import type { Feature } from "../../models/featureModels/featureModels";
 import {
 	AllowanceType,
 	type Entitlement,
@@ -28,8 +29,8 @@ import type { Price } from "../../models/productModels/priceModels/priceModels";
 import { billingAndEntIntervalsDifferent } from "../intervalUtils";
 import { notNullish, nullish } from "../utils";
 import {
-	cusEntToCusPrice,
 	type CustomerEntitlementWithCustomerPrices,
+	cusEntToCusPrice,
 } from "./convertCusEntUtils/cusEntToCusPrice";
 
 export const isBooleanCusEnt = ({
@@ -66,22 +67,22 @@ export const cusEntsHavePrice = ({
 };
 
 export const isFreeCustomerEntitlement = (
-	customerEntitlement: FullCusEntWithFullCusProduct,
+	customerEntitlement: CustomerEntitlementWithCustomerPrices,
 ) => {
 	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
 	return nullish(cusPrice);
 };
 
 export const isPaidCustomerEntitlement = (
-	customerEntitlement: FullCusEntWithFullCusProduct,
+	customerEntitlement: CustomerEntitlementWithCustomerPrices,
 ) => {
 	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
 	return notNullish(cusPrice);
 };
 
-export const isAllocatedCustomerEntitlement = (
-	customerEntitlement: FullCusEntWithFullCusProduct,
-) => {
+export const isAllocatedCustomerEntitlement = (customerEntitlement: {
+	entitlement: { feature: Pick<Feature, "config"> };
+}) => {
 	const feature = customerEntitlement.entitlement.feature;
 	const isContinuous =
 		feature.config?.usage_type === FeatureUsageType.Continuous;
@@ -152,8 +153,7 @@ export const customerEntitlementShouldBeBilled = ({
 		});
 
 		return (
-			Math.abs(cycleEnd - invoicePeriodEndMs) <=
-			INVOICE_PERIOD_END_TOLERANCE_MS
+			Math.abs(cycleEnd - invoicePeriodEndMs) <= INVOICE_PERIOD_END_TOLERANCE_MS
 		);
 	}
 

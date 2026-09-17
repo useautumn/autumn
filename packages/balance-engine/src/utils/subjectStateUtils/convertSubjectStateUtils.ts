@@ -2,16 +2,20 @@ import type {
 	CusProduct,
 	Customer,
 	CustomerEntitlement,
+	CustomerPrice,
 	Entity,
 	Rollover,
+	UsageWindow,
 } from "@autumn/shared";
 import type { z } from "zod/v4";
 import type { MeteringIdentity } from "../../models/identity/meteringIdentity.js";
 import { workerCustomerSchema } from "../../models/subject/rows/workerCustomer.js";
 import { workerCustomerEntitlementSchema } from "../../models/subject/rows/workerCustomerEntitlement.js";
+import { workerCustomerPriceSchema } from "../../models/subject/rows/workerCustomerPrice.js";
 import { workerCustomerProductSchema } from "../../models/subject/rows/workerCustomerProduct.js";
 import { workerEntitySchema } from "../../models/subject/rows/workerEntity.js";
 import { workerRolloverSchema } from "../../models/subject/rows/workerRollover.js";
+import { workerUsageWindowSchema } from "../../models/subject/rows/workerUsageWindow.js";
 import type { SubjectState } from "../../models/subject/subjectState.js";
 import { createSubjectState } from "./createSubjectState.js";
 
@@ -36,15 +40,27 @@ export const customerRowsToSubjectState = ({
 	identity,
 	customer,
 	customerProducts,
+	customerPrices,
 	customerEntitlements,
 	rollovers,
+	usageWindows,
 	entity,
 }: {
 	identity: MeteringIdentity;
-	customer: Pick<Customer, "internal_id" | "id" | "config">;
+	customer: Pick<
+		Customer,
+		| "internal_id"
+		| "id"
+		| "config"
+		| "spend_limits"
+		| "overage_allowed"
+		| "usage_limits"
+	>;
 	customerProducts: CusProduct[];
+	customerPrices: CustomerPrice[];
 	customerEntitlements: CustomerEntitlement[];
 	rollovers: Rollover[];
+	usageWindows: UsageWindow[];
 	entity: Entity | null;
 }): SubjectState =>
 	createSubjectState({
@@ -53,11 +69,17 @@ export const customerRowsToSubjectState = ({
 		customerProducts: customerProducts.map((row) =>
 			pickColumns({ schema: workerCustomerProductSchema, row }),
 		),
+		customerPrices: customerPrices.map((row) =>
+			pickColumns({ schema: workerCustomerPriceSchema, row }),
+		),
 		customerEntitlements: customerEntitlements.map((row) =>
 			pickColumns({ schema: workerCustomerEntitlementSchema, row }),
 		),
 		rollovers: rollovers.map((row) =>
 			pickColumns({ schema: workerRolloverSchema, row }),
+		),
+		usageWindows: usageWindows.map((row) =>
+			pickColumns({ schema: workerUsageWindowSchema, row }),
 		),
 		entity: entity
 			? pickColumns({ schema: workerEntitySchema, row: entity })
@@ -81,6 +103,10 @@ export const splitSubjectState = ({
 		const customerProducts = state.customerProducts.filter(
 			(row) => row.internal_entity_id === internalEntityId,
 		);
+		const productIds = new Set(customerProducts.map((row) => row.id));
+		const customerPrices = state.customerPrices.filter((row) =>
+			productIds.has(row.customer_product_id),
+		);
 		const customerEntitlements = state.customerEntitlements.filter(
 			(row) => row.internal_entity_id === internalEntityId,
 		);
@@ -88,7 +114,12 @@ export const splitSubjectState = ({
 		const rollovers = state.rollovers.filter((rollover) =>
 			entitlementIds.has(rollover.cus_ent_id),
 		);
-		return { customerProducts, customerEntitlements, rollovers };
+		return {
+			customerProducts,
+			customerPrices,
+			customerEntitlements,
+			rollovers,
+		};
 	};
 
 	return {
@@ -125,10 +156,12 @@ export const mergeSubjectStates = ({
 					...customer.customerProducts,
 					...entity.customerProducts,
 				],
+				customerPrices: [...customer.customerPrices, ...entity.customerPrices],
 				customerEntitlements: [
 					...customer.customerEntitlements,
 					...entity.customerEntitlements,
 				],
 				rollovers: [...customer.rollovers, ...entity.rollovers],
+				usageWindows: [...customer.usageWindows, ...entity.usageWindows],
 			}
 		: customer;

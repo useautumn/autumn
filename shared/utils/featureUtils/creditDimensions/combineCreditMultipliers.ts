@@ -1,5 +1,5 @@
-import type { CreditMultiplier } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import type { CreditMultiplier } from "../../../models/featureModels/featureConfig/creditConfig.js";
 import {
 	type EventProperties,
 	matchesEventProperties,

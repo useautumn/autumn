@@ -1,6 +1,8 @@
 import type { TrackCommand } from "@autumn/balance-engine";
 import type { TrackParams } from "@autumn/shared";
 import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
+import { featureToInternalFeatureId } from "../../balanceWorker/featureToInternalFeatureId.js";
+import { orgToCommandOrg } from "../../balanceWorker/orgToCommandOrg.js";
 
 export function trackParamsToTrackCommand({
 	ctx,
@@ -22,7 +24,12 @@ export function trackParamsToTrackCommand({
 			customerId: body.customer_id,
 			entityId: body.entity_id ?? null,
 		},
+		org: orgToCommandOrg({ org: ctx.org }),
 		featureId: body.feature_id!,
+		internalFeatureId: featureToInternalFeatureId({
+			ctx,
+			featureId: body.feature_id!,
+		}),
 		value: body.value ?? 1,
 		overageBehavior: body.overage_behavior ?? "cap",
 		properties: body.properties ?? null,

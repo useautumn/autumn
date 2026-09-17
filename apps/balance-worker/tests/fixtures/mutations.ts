@@ -66,6 +66,10 @@ export const createCustomerProduct = ({
 	options: [],
 	quantity: 1,
 	created_at: testOccurredAt,
+	starts_at: testOccurredAt,
+	access_starts_at: null,
+	ended_at: null,
+	customer_license_link_id: null,
 });
 
 export const createCustomerEntitlement = ({
@@ -243,10 +247,18 @@ export const createTrackCommand = ({
 		input: {
 			schemaVersion: 1,
 			type: "track",
+			org: {
+				config: {
+					reverse_deduction_order: false,
+					block_overdue_entitlements: false,
+					include_past_due: true,
+				},
+			},
 			commandId,
 			requestId: requestId ?? `req_${commandId}`,
 			identity,
 			featureId,
+			internalFeatureId: internalFeatureIdOf(featureId),
 			value,
 			overageBehavior,
 			properties: null,

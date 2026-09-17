@@ -16,12 +16,14 @@ import {
 	fullSubjectToFullCustomer,
 	getApiBalance,
 	InsufficientBalanceError,
+	ResetInterval,
 	type TrackParams,
 } from "@autumn/shared";
 import {
 	fullSubjectToCatalogRows,
 	fullSubjectToSubjectState,
 } from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
+import { orgToCommandOrg } from "@/internal/balances/balanceWorker/orgToCommandOrg.js";
 import { trackParamsToTrackCommand } from "@/internal/balances/track/balanceWorker/balanceWorkerTrackRequest.js";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 import { createCustomerFixture } from "../balanceWorker/customer-fixture.js";
@@ -115,7 +117,9 @@ function commandContract() {
 			customerId: "cus_test",
 			entityId: null,
 		},
+		org: orgToCommandOrg({ org: ctx.org }),
 		featureId: "messages",
+		internalFeatureId: fixture().feature.internal_id,
 		value: 3,
 		overageBehavior: "cap",
 		properties: null,
@@ -163,6 +167,18 @@ async function successContract() {
 			entity_id: undefined,
 			value: 3,
 			balance: expectedBalance({ customer, balance: 69 }),
+			deductions: [
+				{
+					balance_id: "messages_grant",
+					feature_id: "messages",
+					plan_id: "pro",
+					reset: {
+						interval: ResetInterval.Month,
+						resets_at: 1_800_000_000_000,
+					},
+					value: 3,
+				},
+			],
 		});
 		expect(execution.commands.at(-1)).toEqual(
 			trackParamsToTrackCommand({ ctx, body }),
@@ -190,6 +206,21 @@ async function outcomeContract() {
 			entity_id: undefined,
 			value: 3,
 			balance: expectedBalance({ customer, balance: remaining }),
+			deductions:
+				balance === 0
+					? []
+					: [
+							{
+								balance_id: "messages_grant",
+								feature_id: "messages",
+								plan_id: "pro",
+								reset: {
+									interval: ResetInterval.Month,
+									resets_at: 1_800_000_000_000,
+								},
+								value: balance,
+							},
+						],
 		});
 	}
 }
@@ -298,6 +329,7 @@ function trackReplyOf({
 	if (mutation.result.type !== "track") throw new Error("Expected a track");
 	return {
 		result: mutation.result,
+		changes: mutation.changes,
 		state: applyMutation({ state, mutation }),
 	};
 }

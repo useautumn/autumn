@@ -96,14 +96,6 @@ describe("check computation", () => {
 		).toThrow(new UnsupportedCommandError({ reason: "entity_not_found" }));
 		expect(() =>
 			computeCheck({
-				state: createState(),
-				command: createCheckCommand({ properties: { region: "eu" } }),
-			}),
-		).toThrow(
-			new UnsupportedCommandError({ reason: "properties_not_supported" }),
-		);
-		expect(() =>
-			computeCheck({
 				state: createState({ customerEntitlements: [] }),
 				command: createCheckCommand(),
 			}),

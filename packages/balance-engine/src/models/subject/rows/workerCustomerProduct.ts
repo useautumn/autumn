@@ -11,9 +11,14 @@ export const workerCustomerProductSchema = CusProductSchema.pick({
 	options: true,
 	quantity: true,
 	created_at: true,
+	starts_at: true,
+	access_starts_at: true,
+	ended_at: true,
+	customer_license_link_id: true,
+	billing_cycle_anchor_resets_at: true,
 })
 	// No defaults on stored columns: a default would leak into a change's `before`.
-	.extend({ quantity: z.number() })
+	.extend({ quantity: z.number(), starts_at: z.number() })
 	.strict();
 
 export type WorkerCustomerProduct = z.infer<typeof workerCustomerProductSchema>;

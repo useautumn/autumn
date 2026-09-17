@@ -1,7 +1,12 @@
 import type { DbOverageAllowed } from "../../models/cusModels/billingControls/customerBillingControls.js";
-import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
+import type {
+	BillingControlSubjectView,
+	CustomerEntitlementRowView,
+	CustomerProductWithPricesView,
+} from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import {
 	fullSubjectToPlanProducts,
+	type PlanControlCustomerProduct,
 	resolveBillingControl,
 } from "./planBillingControlUtils.js";
 
@@ -11,11 +16,14 @@ import {
  * Entity inherits from the customer per feature_id: entity's entry wins when
  * present, customer's entry fills any gaps.
  */
-export const fullSubjectToOverageAllowedByFeatureId = ({
+export const fullSubjectToOverageAllowedByFeatureId = <
+	CE extends CustomerEntitlementRowView,
+	CP extends PlanControlCustomerProduct & CustomerProductWithPricesView,
+>({
 	fullSubject,
 	featureIds,
 }: {
-	fullSubject: FullSubject;
+	fullSubject: BillingControlSubjectView<CE, CP>;
 	featureIds: string[];
 }): Record<string, DbOverageAllowed> => {
 	const entityOverageAllowed = fullSubject.entity?.overage_allowed ?? [];
@@ -24,10 +32,7 @@ export const fullSubjectToOverageAllowedByFeatureId = ({
 	const uniqueFeatureIds = [...new Set(featureIds)];
 
 	for (const featureId of uniqueFeatureIds) {
-		const overageAllowed = resolveBillingControl<
-			DbOverageAllowed,
-			"overage_allowed"
-		>({
+		const overageAllowed = resolveBillingControl({
 			controlLists: [entityOverageAllowed, customerOverageAllowed],
 			customerProducts: fullSubjectToPlanProducts({ fullSubject }),
 			controlKey: "overage_allowed",

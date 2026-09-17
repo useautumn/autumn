@@ -42,6 +42,7 @@ const syntheticCatalogRows = ({
 		archived: false,
 		event_names: [],
 	})),
+	prices: [],
 	products: ids.productInternalIds.map((internalId) => ({
 		id: "pro",
 		name: "Pro",
@@ -82,6 +83,7 @@ export const createEmptyWorkerDb = (): WorkerDb => ({
 		entitlements: [],
 		products: [],
 		features: [],
+		prices: [],
 	}),
 });
 

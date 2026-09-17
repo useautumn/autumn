@@ -19,6 +19,7 @@ export const workerCustomerEntitlementSchema = CustomerEntitlementSchema.pick({
 	expires_at: true,
 	external_id: true,
 	created_at: true,
+	usage_attribution: true,
 })
 	// The table stores these NOT NULL; the shared schema allows null or fills defaults, and a default would leak into a change's `before`.
 	.extend({

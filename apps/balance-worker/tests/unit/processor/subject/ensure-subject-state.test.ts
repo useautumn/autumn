@@ -28,10 +28,15 @@ const emptyEnvelope: SubjectRowsEnvelope = {
 		org_id: "org_1",
 		env: AppEnv.Sandbox,
 		config: null,
+		spend_limits: null,
+		overage_allowed: null,
+		usage_limits: null,
 	},
 	customer_products: [],
+	customer_prices: [],
 	customer_entitlements: [],
 	rollovers: [],
+	usage_windows: [],
 	entity: null,
 };
 

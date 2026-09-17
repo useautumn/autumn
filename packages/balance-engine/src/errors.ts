@@ -5,6 +5,14 @@ export class StaleMutationError extends Error {
 	}
 }
 
+/** A delete carries only an id, so the row it removed cannot be restored from the change alone. */
+export class IrreversibleChangeError extends Error {
+	constructor({ subject }: { subject: string }) {
+		super(`Change cannot be reverted for ${subject}`);
+		this.name = "IrreversibleChangeError";
+	}
+}
+
 export class OutOfOrderMutationError extends Error {
 	constructor({
 		stateRevision,
@@ -44,9 +52,11 @@ export class CatalogRowMissingError extends Error {
 }
 
 export type UnsupportedCommandReason =
+	| "credit_rate_invalid"
 	| "entity_not_found"
 	| "feature_not_found"
-	| "properties_not_supported"
+	| "rate_card_on_unlimited_row"
+	| "rate_card_with_additional_balance"
 	| "subject_mismatch";
 
 /** The engine cannot decide this command for this subject; the caller maps the reason to a status. */

@@ -4,9 +4,11 @@ import {
 	type WorkerCustomerEntitlement,
 	workerCustomerEntitlementSchema,
 } from "../../models/subject/rows/workerCustomerEntitlement.js";
+import type { WorkerCustomerPrice } from "../../models/subject/rows/workerCustomerPrice.js";
 import type { SubjectState } from "../../models/subject/subjectState.js";
 import type {
 	WorkerFullCustomerEntitlement,
+	WorkerFullCustomerPrice,
 	WorkerFullSubject,
 } from "../../models/subject/workerFullSubject.js";
 import { parseWorkerCustomerEntitlement } from "../../parsers.js";
@@ -41,6 +43,23 @@ const joinCustomerEntitlement = ({
 	};
 };
 
+/** A customer price without a price row is a placeholder the deduction never reads; it joins as no price. */
+const joinCustomerPrice = ({
+	row,
+	catalog,
+}: {
+	row: WorkerCustomerPrice;
+	catalog: Catalog;
+}): WorkerFullCustomerPrice => {
+	const price = row.price_id ? catalog.prices[row.price_id] : undefined;
+	if (!price)
+		throw new CatalogRowMissingError({
+			table: "prices",
+			id: row.price_id ?? row.id,
+		});
+	return { ...row, price };
+};
+
 /** The one place rows meet catalog. Everything downstream speaks the FullSubject shape. */
 export const subjectStateToFullSubject = ({
 	state,
@@ -63,6 +82,9 @@ export const subjectStateToFullSubject = ({
 		return {
 			...customerProduct,
 			product,
+			customer_prices: state.customerPrices
+				.filter((row) => row.customer_product_id === customerProduct.id)
+				.map((row) => joinCustomerPrice({ row, catalog })),
 			customer_entitlements: state.customerEntitlements
 				.filter((row) => row.customer_product_id === customerProduct.id)
 				.map(join),
@@ -84,6 +106,7 @@ export const subjectStateToFullSubject = ({
 		entity: entityId && state.entity?.id === entityId ? state.entity : null,
 		customer_products,
 		extra_customer_entitlements,
+		usage_windows: state.usageWindows,
 	};
 };
 

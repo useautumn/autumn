@@ -16,6 +16,16 @@ export const deductionDeltaSchema = z
 		/** In the tracked feature's units: what of the caller's value this delta covered. */
 		valueDelta: finiteNumberSchema,
 		creditCost: finiteNumberSchema,
+		/** Units and credits this delta charged to the owning row's rate card, when it has one. */
+		usageAttributionDelta: z
+			.object({
+				customerEntitlementId: nonEmptyStringSchema,
+				key: nonEmptyStringSchema,
+				units: finiteNumberSchema,
+				credits: finiteNumberSchema,
+			})
+			.strict()
+			.optional(),
 	})
 	.strict();
 

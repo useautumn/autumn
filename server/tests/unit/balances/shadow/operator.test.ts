@@ -87,6 +87,13 @@ test.concurrent(
 				command: {
 					schemaVersion: 1,
 					type: "track",
+					org: {
+						config: {
+							reverse_deduction_order: false,
+							block_overdue_entitlements: false,
+							include_past_due: true,
+						},
+					},
 					commandId: "track",
 					requestId: "track",
 					identity: {
@@ -96,6 +103,7 @@ test.concurrent(
 						entityId: null,
 					},
 					featureId: "messages",
+					internalFeatureId: "feat_messages",
 					value: 5,
 					overageBehavior: "cap",
 					properties: null,

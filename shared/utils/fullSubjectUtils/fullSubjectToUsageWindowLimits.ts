@@ -1,12 +1,17 @@
-import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
+import type { DbUsageLimit } from "../../models/cusModels/billingControls/customerBillingControls.js";
+import { usageLimitFilterKey } from "../../models/cusModels/billingControls/usageLimit.js";
+import type {
+	BillingControlSubjectView,
+	CustomerEntitlementRowView,
+	CustomerProductWithPricesView,
+} from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import type { UsageWindowLimit } from "../../models/cusProductModels/cusEntModels/usageWindowModels.js";
 import type { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
 import { usageLimitToUsageWindowLimit } from "../usageWindowUtils/convertUsageWindow/usageLimitToUsageWindowLimit.js";
-import type { DbUsageLimit } from "../../models/cusModels/billingControls/customerBillingControls.js";
-import { usageLimitFilterKey } from "../../models/cusModels/billingControls/usageLimit.js";
 import {
 	fullSubjectToPlanProducts,
+	type PlanControlCustomerProduct,
 	resolveBillingControl,
 } from "./planBillingControlUtils.js";
 
@@ -18,14 +23,17 @@ import {
  * the customer's, else the plan's. Filtered and unfiltered caps on the same
  * feature are independent counters, not sub-budgets of each other.
  */
-export const fullSubjectToUsageWindowLimits = ({
+export const fullSubjectToUsageWindowLimits = <
+	CE extends CustomerEntitlementRowView,
+	CP extends PlanControlCustomerProduct & CustomerProductWithPricesView,
+>({
 	fullSubject,
 	featureIds,
 	features,
 	now,
 	inStatuses,
 }: {
-	fullSubject: FullSubject;
+	fullSubject: BillingControlSubjectView<CE, CP>;
 	featureIds: string[];
 	features: Feature[];
 	now: number;
@@ -57,7 +65,7 @@ export const fullSubjectToUsageWindowLimits = ({
 				usageLimitFilterKey(candidate.filter) === filterKey;
 
 			const entityUsageLimit = entityUsageLimits.find(matchesGroup);
-			const usageLimit = resolveBillingControl<DbUsageLimit, "usage_limits">({
+			const usageLimit = resolveBillingControl({
 				controlLists: [entityUsageLimits, customerUsageLimits],
 				customerProducts: planProducts,
 				controlKey: "usage_limits",

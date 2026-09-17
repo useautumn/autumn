@@ -1,5 +1,5 @@
-import { BillingInterval } from "../../../models/productModels/intervals/billingInterval";
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import { BillingInterval } from "../../../models/productModels/intervals/billingInterval";
 import { getCycleEnd } from "../../billingUtils/cycleUtils/getCycleEnd";
 import { customerEntitlementHasDifferentResetAndPriceInterval } from "../classifyCusEntUtils";
 import { cusEntToCusPrice } from "./cusEntToCusPrice";

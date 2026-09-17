@@ -63,8 +63,8 @@ const featureRow = ({
 });
 
 const keyOf = (row: CatalogRow): CatalogKey =>
-	row.table === "entitlements"
-		? { table: "entitlements", id: row.row.id }
+	row.table === "entitlements" || row.table === "prices"
+		? { table: row.table, id: row.row.id }
 		: { table: row.table, id: row.row.internal_id };
 
 type FakeDb = Pick<WorkerDb, "getCatalogRows"> & {
@@ -96,6 +96,7 @@ const createFakeDb = ({ rows }: { rows: CatalogRow[] }): FakeDb => {
 				entitlements: rowsOf("entitlements", ids.entitlementIds),
 				products: rowsOf("products", ids.productInternalIds),
 				features: rowsOf("features", ids.featureInternalIds),
+				prices: rowsOf("prices", ids.priceIds),
 			} as Awaited<ReturnType<WorkerDb["getCatalogRows"]>>;
 		},
 	};
@@ -126,6 +127,7 @@ describe("catalog cache", () => {
 			entitlements: {},
 			products: {},
 			features: {},
+			prices: {},
 		});
 		await cache.load({ identity, keys });
 
@@ -136,6 +138,7 @@ describe("catalog cache", () => {
 				entitlementIds: ["ent_1"],
 				productInternalIds: ["prod_x"],
 				featureInternalIds: [],
+				priceIds: [],
 			},
 		]);
 	});

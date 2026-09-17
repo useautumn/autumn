@@ -1,10 +1,12 @@
 import { AllowanceType } from "@models/productModels/entModels/entModels.js";
 import { Decimal } from "decimal.js";
-import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
-import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { FullCustomerEntitlementView } from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
+import type { Entitlement } from "../../models/productModels/entModels/entModels.js";
 import { notNullish, nullish } from "../utils.js";
-import { cusEntToStartingBalance } from "./balanceUtils/cusEntToStartingBalance.js";
+import {
+	cusEntToStartingBalance,
+	type StartingBalanceCustomerEntitlement,
+} from "./balanceUtils/cusEntToStartingBalance.js";
 
 export const getSummedEntityBalances = ({
 	cusEnt,
@@ -123,7 +125,10 @@ export const getCusEntBalance = ({
 export const getMaxOverage = ({
 	cusEnt,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: StartingBalanceCustomerEntitlement &
+		Pick<FullCustomerEntitlementView, "usage_allowed"> & {
+			entitlement: Pick<Entitlement, "usage_limit" | "allowance">;
+		};
 }) => {
 	const usageLimit = cusEnt.entitlement.usage_limit;
 	if (nullish(usageLimit)) return undefined;

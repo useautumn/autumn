@@ -7,13 +7,13 @@ import { parseCatalog } from "../../parsers.js";
 export const catalogKeyToString = ({ key }: { key: CatalogKey }): string =>
 	`${key.table}:${key.id}`;
 
-/** Entitlements are addressed by id, products and features by internal_id. */
+/** Entitlements and prices are addressed by id, products and features by internal_id. */
 export const catalogRowToCatalogKey = ({
 	row,
 }: {
 	row: CatalogRow;
 }): CatalogKey =>
-	row.table === "entitlements"
+	row.table === "entitlements" || row.table === "prices"
 		? { table: row.table, id: row.row.id }
 		: { table: row.table, id: row.row.internal_id };
 
@@ -33,6 +33,10 @@ export const subjectStateToCatalogKeys = ({
 	for (const customerProduct of state.customerProducts) {
 		add({ table: "products", id: customerProduct.internal_product_id });
 	}
+	for (const customerPrice of state.customerPrices) {
+		if (customerPrice.price_id)
+			add({ table: "prices", id: customerPrice.price_id });
+	}
 	for (const customerEntitlement of state.customerEntitlements) {
 		add({ table: "entitlements", id: customerEntitlement.entitlement_id });
 		add({ table: "features", id: customerEntitlement.internal_feature_id });
@@ -46,7 +50,12 @@ export const catalogRowsToCatalog = ({
 }: {
 	rows: CatalogRow[];
 }): Catalog => {
-	const catalog: Catalog = { entitlements: {}, products: {}, features: {} };
+	const catalog: Catalog = {
+		entitlements: {},
+		products: {},
+		features: {},
+		prices: {},
+	};
 	for (const tagged of rows) {
 		const { id } = catalogRowToCatalogKey({ row: tagged });
 		switch (tagged.table) {
@@ -58,6 +67,9 @@ export const catalogRowsToCatalog = ({
 				break;
 			case "features":
 				catalog.features[id] = tagged.row;
+				break;
+			case "prices":
+				catalog.prices[id] = tagged.row;
 				break;
 		}
 	}

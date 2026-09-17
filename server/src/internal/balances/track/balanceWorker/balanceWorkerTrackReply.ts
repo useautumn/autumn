@@ -9,6 +9,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { workerStateToApiBalance } from "../../balanceWorker/workerStateToApiBalance.js";
+import { trackReplyToDeductions } from "./trackReplyToDeductions.js";
 
 /** The one place a worker track reply becomes the API's track response. */
 export function trackReplyToApiResponse({
@@ -43,6 +44,7 @@ export function trackReplyToApiResponse({
 			entity_id: command.identity.entityId ?? undefined,
 			value: command.value,
 			balance,
+			deductions: trackReplyToDeductions({ reply, fullSubject }),
 		},
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Track,
