@@ -1,7 +1,23 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, mock, test } from "bun:test";
 import type { AppEnv, Feature } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
+
+// The freshness mark is a real Postgres write; keep this suite hermetic.
+const marksModulePath =
+	"@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
+const realMarks = { ...(await import(marksModulePath)) };
+mock.module(marksModulePath, () => ({
+	...realMarks,
+	markCustomersUpdatedAt: async () => {},
+}));
+afterAll(() => {
+	mock.module(marksModulePath, () => realMarks);
+});
+
+const { batchInvalidateCachedFullSubjects } = await import(
+	"@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js"
+);
+
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
 import { buildFullSubjectOrgEnvKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectOrgEnvKey.js";
 
@@ -14,11 +30,17 @@ const createFakeRedis = ({
 	status = "ready",
 	readFails = false,
 	failWrites = 0,
+	errorTupleWrites = 0,
+	commandErrorWrites = 0,
 }: {
 	status?: string;
 	readFails?: boolean;
 	/** Number of leading write-pipeline execs that reject before one succeeds. */
 	failWrites?: number;
+	/** Number of write execs after that which resolve with a dead-socket tuple. */
+	errorTupleWrites?: number;
+	/** Number of write execs after that which resolve with a command error tuple. */
+	commandErrorWrites?: number;
 } = {}): { redis: Redis; calls: RedisCalls & { writeAttempts: number } } => {
 	const calls = {
 		readKeys: [] as string[],
@@ -62,6 +84,23 @@ const createFakeRedis = ({
 					calls.writeAttempts++;
 					if (calls.writeAttempts <= failWrites) {
 						throw new Error("Command timed out");
+					}
+					if (calls.writeAttempts <= failWrites + errorTupleWrites) {
+						return [[new Error("Command timed out"), null]];
+					}
+					if (
+						calls.writeAttempts <=
+						failWrites + errorTupleWrites + commandErrorWrites
+					) {
+						return [
+							[null, 1],
+							[
+								new Error(
+									"OOM command not allowed when used memory > 'maxmemory'",
+								),
+								null,
+							],
+						];
 					}
 
 					calls.writeOps.push(...writeOps);
@@ -231,6 +270,33 @@ describe("batchInvalidateCachedFullSubjects", () => {
 		);
 	});
 
+	test("treats a pipeline that resolves with dead-socket tuples as a failed attempt", async () => {
+		const flaky = createFakeRedis({ errorTupleWrites: 1 });
+		const phases: Record<string, number> = {};
+
+		const invalidated = await batchInvalidateCachedFullSubjects({
+			customers: [
+				{
+					orgId: "org_test",
+					env: "sandbox" as AppEnv,
+					customerId: "cus_tuple",
+				},
+			],
+			featuresByOrgEnv: {},
+			getRedisTargetsForCustomer: () => [flaky.redis],
+			maxAttempts: 3,
+			phases,
+		});
+
+		expect(invalidated).toBe(1);
+		expect(flaky.calls.writeAttempts).toBe(2);
+		expect(flaky.calls.writeOps.some((op) => op.includes("cus_tuple"))).toBe(
+			true,
+		);
+		expect(phases.invalidate_marks_db).toBeGreaterThanOrEqual(0);
+		expect(phases.invalidate_redis).toBeGreaterThanOrEqual(0);
+	});
+
 	test("gives up without throwing once attempts are exhausted", async () => {
 		const down = createFakeRedis({ failWrites: Number.POSITIVE_INFINITY });
 		const customer = {
@@ -249,6 +315,72 @@ describe("batchInvalidateCachedFullSubjects", () => {
 		expect(invalidated).toBe(1);
 		expect(down.calls.writeAttempts).toBe(3);
 		expect(down.calls.writeOps).toHaveLength(0);
+	});
+
+	test("in strict mode a failed command is a failed attempt; best-effort callers keep the tuple", async () => {
+		const strictRedis = createFakeRedis({ commandErrorWrites: 1 });
+		const invalidated = await batchInvalidateCachedFullSubjects({
+			customers: [
+				{ orgId: "org_test", env: "sandbox" as AppEnv, customerId: "cus_oom" },
+			],
+			featuresByOrgEnv: {},
+			getRedisTargetsForCustomer: () => [strictRedis.redis],
+			maxAttempts: 3,
+			throwWhenExhausted: true,
+		});
+		expect(invalidated).toBe(1);
+		expect(strictRedis.calls.writeAttempts).toBe(2);
+
+		const alwaysOom = createFakeRedis({
+			commandErrorWrites: Number.POSITIVE_INFINITY,
+		});
+		await expect(
+			batchInvalidateCachedFullSubjects({
+				customers: [
+					{
+						orgId: "org_test",
+						env: "sandbox" as AppEnv,
+						customerId: "cus_oom",
+					},
+				],
+				featuresByOrgEnv: {},
+				getRedisTargetsForCustomer: () => [alwaysOom.redis],
+				maxAttempts: 2,
+				throwWhenExhausted: true,
+			}),
+		).rejects.toThrow("dropped 1 of 1 subjects after 2 attempts");
+
+		const bestEffort = createFakeRedis({ commandErrorWrites: 1 });
+		await batchInvalidateCachedFullSubjects({
+			customers: [
+				{ orgId: "org_test", env: "sandbox" as AppEnv, customerId: "cus_oom" },
+			],
+			featuresByOrgEnv: {},
+			getRedisTargetsForCustomer: () => [bestEffort.redis],
+			maxAttempts: 3,
+		});
+		expect(bestEffort.calls.writeAttempts).toBe(1);
+	});
+
+	test("rejects instead of failing open when asked to and every attempt is spent", async () => {
+		const down = createFakeRedis({ failWrites: Number.POSITIVE_INFINITY });
+
+		await expect(
+			batchInvalidateCachedFullSubjects({
+				customers: [
+					{
+						orgId: "org_test",
+						env: "sandbox" as AppEnv,
+						customerId: "cus_down",
+					},
+				],
+				featuresByOrgEnv: {},
+				getRedisTargetsForCustomer: () => [down.redis],
+				maxAttempts: 2,
+				throwWhenExhausted: true,
+			}),
+		).rejects.toThrow("dropped 1 of 1 subjects after 2 attempts");
+		expect(down.calls.writeAttempts).toBe(2);
 	});
 
 	test("defaults to a single attempt for best-effort callers", async () => {
