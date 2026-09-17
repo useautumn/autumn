@@ -101,6 +101,68 @@ vercelTestApiRouter.post(
 	},
 );
 
+// GET /v1/installations/:integrationConfigurationId/billing/invoices/:invoiceId
+// Mirrors Vercel's Get Invoice response (see @vercel/sdk getinvoiceop.ts).
+vercelTestApiRouter.get(
+	"/v1/installations/:integrationConfigurationId/billing/invoices/:invoiceId",
+	async (c) => {
+		const installationId = c.req.param("integrationConfigurationId");
+		const invoiceId = c.req.param("invoiceId");
+		await recordCapture({
+			method: "GET",
+			path: `/v1/installations/${installationId}/billing/invoices/${invoiceId}`,
+			installationId,
+			body: null,
+			receivedAt: Date.now(),
+		});
+		const now = new Date().toISOString();
+		return c.json(
+			{
+				test: true,
+				invoiceId,
+				state: "paid",
+				invoiceDate: now,
+				period: { start: now, end: now },
+				items: [],
+				total: "0.00",
+				created: now,
+				updated: now,
+			},
+			200,
+		);
+	},
+);
+
+// POST /v1/installations/:integrationConfigurationId/billing/invoices/:invoiceId/actions
+// Vercel's Invoice Actions (refund) returns 204 with no body.
+vercelTestApiRouter.post(
+	"/v1/installations/:integrationConfigurationId/billing/invoices/:invoiceId/actions",
+	async (c) => {
+		const installationId = c.req.param("integrationConfigurationId");
+		const invoiceId = c.req.param("invoiceId");
+		const body = await parseJsonOrEmpty(c, "updateInvoice");
+		await recordCapture({
+			method: "POST",
+			path: `/v1/installations/${installationId}/billing/invoices/${invoiceId}/actions`,
+			installationId,
+			body,
+			receivedAt: Date.now(),
+		});
+		// Tests encode the desired failure in the invoice id: `vi_reject_*` → 409,
+		// `vi_flaky_*` → 503 (ambiguous, refund may have been accepted).
+		if (invoiceId.startsWith("vi_reject_")) {
+			return c.json(
+				{ error: { code: "bad_request", message: "rejected" } },
+				409,
+			);
+		}
+		if (invoiceId.startsWith("vi_flaky_")) {
+			return c.json({ error: { code: "internal", message: "flaky" } }, 503);
+		}
+		return c.body(null, 204);
+	},
+);
+
 // Inspector endpoints used by tests --------------------------------------
 
 // GET /__captures/:installationId → recorded calls in insertion order
