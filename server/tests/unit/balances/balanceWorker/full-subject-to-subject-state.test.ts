@@ -49,7 +49,7 @@ test.concurrent(
 				},
 			],
 			rollovers: [],
-			entities: [],
+			entity: null,
 		});
 		expect(
 			subjectStateToCatalogKeys({ state }).map((key) =>

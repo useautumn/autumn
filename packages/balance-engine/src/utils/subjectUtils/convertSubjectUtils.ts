@@ -80,10 +80,8 @@ export const subjectStateToFullSubject = ({
 	return {
 		identity: { ...state.identity, entityId },
 		revision: state.revision,
-		entity: entityId
-			? (state.entities.find((entity) => entity.id === entityId) ?? null)
-			: null,
-		entities: state.entities,
+		customer: state.customer,
+		entity: entityId && state.entity?.id === entityId ? state.entity : null,
 		customer_products,
 		extra_customer_entitlements,
 	};

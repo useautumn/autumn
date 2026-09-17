@@ -16,12 +16,16 @@ export class SubjectCatalogEvictedError extends Error {
 	}
 }
 
-/** No local state and the source of truth has no such customer in this org and env. */
+/** No local state and the source of truth has no such customer, or entity of it, in this org and env. */
 export class SubjectNotFoundError extends Error {
+	readonly identity: MeteringIdentity;
+
 	constructor({ identity }: { identity: MeteringIdentity }) {
-		super(
-			`Customer ${identity.customerId} not found in ${identity.orgId}/${identity.env}`,
-		);
+		const subject = identity.entityId
+			? `Entity ${identity.entityId} of customer ${identity.customerId}`
+			: `Customer ${identity.customerId}`;
+		super(`${subject} not found in ${identity.orgId}/${identity.env}`);
 		this.name = "SubjectNotFoundError";
+		this.identity = identity;
 	}
 }

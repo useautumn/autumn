@@ -1,14 +1,10 @@
+import type { Decision } from "../../../models/common/decision.js";
 import type { SubjectStateMutation } from "../../../models/subjectStateMutation.js";
 
-export type UnsupportedDecisionReason =
-	| "command_conflict"
-	| "entity_not_found"
-	| "feature_not_found"
-	| "multiple_customer_entitlements_not_supported"
-	| "properties_not_supported"
-	| "refund_not_supported"
-	| "subject_mismatch";
+/** "new" for the request that wrote the mutation, "duplicate" for a retry of it. */
+export type SupportedTrackDecision = {
+	kind: "new" | "duplicate";
+	mutation: SubjectStateMutation;
+};
 
-export type TrackDecision =
-	| { kind: "new" | "duplicate"; mutation: SubjectStateMutation }
-	| { kind: "unsupported"; reason: UnsupportedDecisionReason };
+export type TrackDecision = Decision<SupportedTrackDecision>;

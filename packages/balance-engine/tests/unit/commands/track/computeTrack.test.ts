@@ -3,7 +3,7 @@ import {
 	computeTrack as computeTrackDecision,
 	type SubjectState,
 	type SubjectStateMutation,
-	trackCommandFingerprintOf,
+	trackCommandToFingerprint,
 	validateTrackMutation,
 } from "../../../../src/balanceEngine.js";
 import {
@@ -193,7 +193,7 @@ describe("track computation", () => {
 		});
 
 		expect(mutation.receipt).toEqual({
-			fingerprint: trackCommandFingerprintOf({ command }),
+			fingerprint: trackCommandToFingerprint({ command }),
 			expiresAt: deduplicationExpiresAt,
 		});
 		expect(
@@ -201,7 +201,7 @@ describe("track computation", () => {
 				.fingerprint,
 		).toBe(mutation.receipt.fingerprint);
 		expect(
-			trackCommandFingerprintOf({
+			trackCommandToFingerprint({
 				command: createTrackCommand({ value: 6 }),
 			}),
 		).not.toBe(mutation.receipt.fingerprint);

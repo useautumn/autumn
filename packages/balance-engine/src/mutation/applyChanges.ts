@@ -5,9 +5,7 @@ import type { SubjectState } from "../models/subjectState.js";
 
 type StateRow = SubjectState[RowChange["table"]][number];
 
-/** Entities are addressed by internal_id, every other table by id. */
-const rowIdOf = ({ row }: { row: StateRow }): string =>
-	"internal_id" in row ? row.internal_id : row.id;
+const rowIdOf = ({ row }: { row: StateRow }): string => row.id;
 
 const rowMatchesBefore = ({
 	row,
@@ -88,12 +86,6 @@ export const applyChanges = ({
 				nextState = {
 					...nextState,
 					rollovers: applyToTable({ rows: nextState.rollovers, change }),
-				};
-				break;
-			case "entities":
-				nextState = {
-					...nextState,
-					entities: applyToTable({ rows: nextState.entities, change }),
 				};
 				break;
 		}

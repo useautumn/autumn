@@ -252,13 +252,13 @@ test.concurrent(
 						},
 					],
 				}),
-			).toThrow("Mutation does not match current state");
+			).toThrow("Only an initialize can create subject state");
 			expect(logs).toHaveLength(1);
 			expect(logs[0]?.[0]).toMatchObject({
 				phase: "sqlite_apply",
 				result: "failed",
 				durationMs: expect.any(Number),
-				errorName: "StaleMutationError",
+				errorName: "SubjectStateMissingError",
 			});
 			expect(stateStore.readNextOffset({ topic, partition })).toBe(0n);
 		} finally {
@@ -326,7 +326,7 @@ test.concurrent(
 						},
 					],
 				}),
-			).toThrow("Mutation does not match current state");
+			).toThrow("Only an initialize can create subject state");
 			expect(stateStore.readNextOffset({ topic, partition })).toBe(2n);
 		} finally {
 			closeStoreFixture(fixture);

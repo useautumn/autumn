@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { fullSubjectToCustomerEntitlements } from "@autumn/shared";
 import {
 	createSubjectState,
-	subjectBlobsToSubjectState,
-	subjectStateToSubjectBlobs,
+	mergeSubjectStates,
+	splitSubjectState,
 } from "../../../../src/balanceEngine.js";
 import {
 	createCustomerEntitlement,
@@ -39,44 +39,43 @@ const customerRollover = {
 };
 
 const view = createSubjectState({
-	identity,
+	identity: { ...identity, entityId: entity.id },
 	customerProducts: [createCustomerProduct()],
 	customerEntitlements: [customerRow, entityRow],
 	rollovers: [customerRollover, entityRollover],
-	entities: [entity],
+	entity,
 });
 
-describe("subject blobs", () => {
-	test("a view splits into the customer's blob and one blob per entity with rows", () => {
-		const blobs = subjectStateToSubjectBlobs({ state: view });
+describe("subject states", () => {
+	test("a merged state splits into the customer's and the entity's, each owning its rows", () => {
+		const states = splitSubjectState({ state: view });
 
-		expect(blobs.customer.identity.entityId).toBeNull();
-		expect(blobs.customer.customerEntitlements.map((row) => row.id)).toEqual([
+		expect(states.customer.identity.entityId).toBeNull();
+		expect(states.customer.customerEntitlements.map((row) => row.id)).toEqual([
 			"messages_customer",
 		]);
-		expect(blobs.customer.rollovers.map((row) => row.id)).toEqual(["ro_cus"]);
-		expect(blobs.customer.entities).toEqual([entity]);
-		expect(blobs.entities).toHaveLength(1);
-		expect(blobs.entities[0]).toMatchObject({
+		expect(states.customer.rollovers.map((row) => row.id)).toEqual(["ro_cus"]);
+		expect(states.customer.entity).toBeNull();
+		expect(states.entity).toMatchObject({
 			identity: { ...identity, entityId: "ent_42" },
 			customerEntitlements: [entityRow],
 			rollovers: [entityRollover],
 			customerProducts: [],
-			entities: [],
+			entity,
 		});
 	});
 
-	test("customer blob plus the entity's blob is the original view", () => {
-		const blobs = subjectStateToSubjectBlobs({ state: view });
+	test("customer state merged with the entity's is the original", () => {
+		const states = splitSubjectState({ state: view });
 
 		expect(
-			subjectBlobsToSubjectState({
-				customer: blobs.customer,
-				entity: blobs.entities[0],
+			mergeSubjectStates({
+				customer: states.customer,
+				entity: states.entity,
 			}),
 		).toEqual(view);
-		expect(subjectBlobsToSubjectState({ customer: blobs.customer })).toEqual(
-			blobs.customer,
+		expect(mergeSubjectStates({ customer: states.customer })).toEqual(
+			states.customer,
 		);
 	});
 

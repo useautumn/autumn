@@ -1,8 +1,14 @@
 // commands
 export { computeCheck } from "./commands/check/computeCheck.js";
 export type { CheckCommand } from "./commands/check/types/checkCommand.js";
-export type { CheckDecision } from "./commands/check/types/checkDecision.js";
-export { computeInitialize } from "./commands/initialize/computeInitialize.js";
+export type {
+	CheckDecision,
+	SupportedCheckDecision,
+} from "./commands/check/types/checkDecision.js";
+export {
+	computeInitialize,
+	initializeCommandToFingerprint,
+} from "./commands/initialize/computeInitialize.js";
 export type {
 	InitializeCommand,
 	InitializeCommandEcho,
@@ -10,16 +16,16 @@ export type {
 export type { InitializationDecision } from "./commands/initialize/types/initializeDecision.js";
 export type { InitializeResult } from "./commands/initialize/types/initializeResult.js";
 export { computeTrack } from "./commands/track/computeTrack.js";
-export { shadowComparisonKeyOf } from "./commands/track/shadowComparisonKeyOf.js";
-export { trackCommandFingerprintOf } from "./commands/track/trackCommandFingerprintOf.js";
+export { trackCommandToFingerprint } from "./commands/track/trackCommandToFingerprint.js";
+export { trackCommandToShadowComparisonKey } from "./commands/track/trackCommandToShadowComparisonKey.js";
 export type {
 	OverageBehavior,
 	TrackCommand,
 	TrackCommandEcho,
 } from "./commands/track/types/trackCommand.js";
 export type {
+	SupportedTrackDecision,
 	TrackDecision,
-	UnsupportedDecisionReason,
 } from "./commands/track/types/trackDecision.js";
 export type { TrackResult } from "./commands/track/types/trackResult.js";
 export { validateTrackMutation } from "./commands/track/validateTrackMutation.js";
@@ -31,6 +37,7 @@ export {
 	MutationSubjectMismatchError,
 	OutOfOrderMutationError,
 	StaleMutationError,
+	SubjectStateMissingError,
 } from "./errors.js";
 export type { Catalog } from "./models/catalog/catalog.js";
 export type {
@@ -39,10 +46,16 @@ export type {
 } from "./models/catalog/catalogKey.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
 // models
+export type {
+	Decision,
+	UnsupportedDecision,
+	UnsupportedDecisionReason,
+} from "./models/common/decision.js";
 export type { JsonValue } from "./models/common/json.js";
 export { canonicalizeJsonValue } from "./models/common/json.js";
 export type { MeteringIdentity } from "./models/meteringIdentity.js";
 export type { RowChange, TableRowChange } from "./models/rowChange.js";
+export type { WorkerCustomer } from "./models/rows/workerCustomer.js";
 export type { WorkerCustomerEntitlement } from "./models/rows/workerCustomerEntitlement.js";
 export type { WorkerCustomerProduct } from "./models/rows/workerCustomerProduct.js";
 export type { WorkerEntity } from "./models/rows/workerEntity.js";
@@ -61,7 +74,7 @@ export type {
 // mutation
 export { applyChanges } from "./mutation/applyChanges.js";
 export { applyMutation } from "./mutation/applyMutation.js";
-export { mutationFingerprintOf } from "./mutation/mutationFingerprintOf.js";
+export { mutationToFingerprint } from "./mutation/mutationToFingerprint.js";
 export {
 	parseCatalog,
 	parseCatalogRow,
@@ -80,14 +93,17 @@ export {
 	subjectStateToCatalogKeys,
 } from "./utils/catalogUtils/convertCatalogUtils.js";
 export { filterCatalogKeysMissingFrom } from "./utils/catalogUtils/filterCatalogUtils.js";
-export { meteringIdentityToSubjectKey } from "./utils/identityUtils/convertIdentityUtils.js";
-export { identitiesMatch } from "./utils/identityUtils/identitiesMatch.js";
-export { meteringPartitionKeyOf } from "./utils/identityUtils/meteringPartitionKeyOf.js";
+export { isUnsupportedDecision } from "./utils/decisionUtils/classifyDecisionUtils.js";
+export { isSameCustomerIdentity } from "./utils/identityUtils/classifyIdentityUtils.js";
+export {
+	meteringIdentityToPartitionKey,
+	meteringIdentityToSubjectKey,
+} from "./utils/identityUtils/convertIdentityUtils.js";
 // utils
 export {
 	customerRowsToSubjectState,
-	subjectBlobsToSubjectState,
-	subjectStateToSubjectBlobs,
+	mergeSubjectStates,
+	splitSubjectState,
 } from "./utils/subjectStateUtils/convertSubjectStateUtils.js";
 export { createSubjectState } from "./utils/subjectStateUtils/createSubjectState.js";
 export {

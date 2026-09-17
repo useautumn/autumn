@@ -4,6 +4,7 @@ import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorke
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
 import { loadBalanceWorkerSubject } from "../../balanceWorker/loadBalanceWorkerSubject.js";
+import { requireSupportedDecision } from "../../balanceWorker/requireSupportedDecision.js";
 import { checkParamsToCheckCommand } from "./balanceWorkerCheckRequest.js";
 import { checkDecisionToCheckResponse } from "./balanceWorkerCheckResponse.js";
 
@@ -20,8 +21,8 @@ export async function runBalanceWorkerCheck({
 }): Promise<CheckResponseV3> {
 	const command = checkParamsToCheckCommand({ ctx, body });
 	try {
-		const decision = await (client ?? getBalanceWorkerClient()).check({
-			command,
+		const decision = requireSupportedDecision({
+			decision: await (client ?? getBalanceWorkerClient()).check({ command }),
 		});
 		const fullSubject = await loadSubject({
 			ctx,

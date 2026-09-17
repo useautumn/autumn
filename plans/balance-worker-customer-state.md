@@ -72,7 +72,7 @@ related: the worker's supported surface stays "one direct metered cusEnt, no ent
 
 Rows are **picks of the shared schemas**: each table's engine schema is `.pick()` of the `@autumn/shared` zod row schema with Postgres column names and only the columns check/track read, `.strict()`. The engine imports `@autumn/shared`; shared helpers are adopted one at a time, each narrowed to a `Pick<…>` of the fields it reads. `NormalizedFullSubject` → `SubjectState` is a pick, not a derivation. Catalog rows are never in state: state references them by id and the worker resolves the ids through the tiers below.
 
-### Entities: one blob per subject, not per customer
+### Entities: one stored state per subject, not per customer
 
 A customer can have 100k entities, so the customer's rows are never one JSON value. SQLite keeps one table, `subject_states`, with one row per **subject**: the customer-level rows under `cus_abc`, each entity's rows under `cus_abc:ent_42`. That is the same customer/entity split the Redis cache makes with its subject keys.
 
@@ -88,10 +88,10 @@ track api_calls 5, cus_abc, entity ent_42
   GET cus_abc:ent_42   → this entity's rows
   view                 = both, filtered to api_calls in memory
   computeTrack         → changes: update { ce_ent42: balance 10 → 5 }
-  apply                → patch the blob that owns ce_ent42; revision 7 → 8 on cus_abc
+  apply                → patch the subject state that owns ce_ent42; revision 7 → 8 on cus_abc
 ```
 
-The engine's compute functions take a `SubjectView`: the customer blob plus the named entity's blob. Apply is generic because `changes` keys are the blob keys (`insertCustomerEntitlements` → `customerEntitlements`, and so on); a row's `internal_entity_id` says which blob owns it. Revision lives on the customer blob so the customer's mutations stay totally ordered. The customer-view aggregate across entities is out of scope until entity tracks are supported; Redis's `_aggregated` is likely deprecated, so the worker should not mirror it. The legacy `entities` jsonb map on one cusEnt stays an opaque field, same as the Redis hash field today.
+The engine computes over a `WorkerFullSubject` built from one `SubjectState`: for an entity command, the customer's stored state merged with the entity's own. Each stored state has `entity` null for the customer and the entity row otherwise; a row's `internal_entity_id` says which subject owns it, and the split/merge helpers move rows accordingly. Revision lives on the customer's state so the customer's mutations stay totally ordered; an entity initialize joins the log at the customer's current revision. The customer-view aggregate across entities is out of scope until entity tracks are supported; Redis's `_aggregated` is likely deprecated, so the worker should not mirror it. The legacy `entities` jsonb map on one cusEnt stays an opaque field, same as the Redis hash field today.
 
 ### Catalog: the rows a customer's state points at, cached in worker memory
 
@@ -252,20 +252,29 @@ apps/balance-worker/src/catalog/
 **steps** — `packages/postgres/src/catalog/repos/{entitlements,products,features}.ts`: `getEntitlementsByIds`, `getProductsByInternalIds`, `getFeaturesByInternalIds`, scoped by org (and env where the table has one), zod at the boundary · worker `external/catalog/{getPostgresClient,createPostgresCatalogRowsSource}.ts` · `BALANCE_WORKER_DATABASE_URL`
 **verify** — package unit tests against local Postgres · worker integration: uninitialized-catalog track → one Postgres read · EXPLAIN on staging
 
-### 6 · [ ] broadcast → server signal reaches every worker
+### 6 · [x] engine + worker → one stored state per subject, entity subjects
+
+**goal** — a subject is a customer or one of its entities; each is its own SQLite row under its subject key, the customer's revision orders them all, and commands compute over the customer's state merged with the named entity's own
+**steps** — `SubjectState` (renamed from CustomerState) carries `customer: WorkerCustomer` (internal_id, id, config) and `entity: WorkerEntity | null` instead of an entities table; the initialize echo carries both so a replay rebuilds the row; `splitSubjectState` / `mergeSubjectStates` split and assemble · `subject_states(subject_key PK, partition_key, …)`; `readStoredState`, `readStoredStates`, `readOwnState` on the store; `applyRecord` writes the customer's state under its revision guard and the entity's own state beside it · writer projects pending state per subject (`projectedStateBySubjectKey`) so interleaved customer and entity mutations see each other's revision · entity initialize: `computeInitialize({ revisionBefore })`, echo carries the entity, `applyMutation` admits an entity initialize onto existing state; `initializeSubject` decides inside the critical section · hydration keyed by subject key: customer first, then the entity if the view lacks it; `getSubjectRows({ entityId })` returns one subject's own rows and its `entity`, no catalog rows · `ENTITY_NOT_FOUND` 404 · server keeps refusing `entity_id` at the request gate until the worker path is exercised end to end
+**verify** — engine 46 · worker `subject-views`, `entity-subjects`, `ensure-subject-state` · postgres SQL param tests · every suite green
+
+### 12 · [ ] broadcast → server signal reaches every worker (last)
 
 **steps** — kafka `OwnershipConsumer.listOwners()` · client `invalidateCatalog({ orgId, env })` via `routing/sendToAllOwners.ts` · server `notifyBalanceWorkersOfCatalogChange` called from `clearOrgCache` and `refreshProductsCacheMiddleware`, fire-and-forget, logged
 **verify** — integration: edit a product, next track on a worker serves the new row
 
-### 7 · [ ] engine → helper rename pass, tests rewritten
+### 7 · [x] engine → helper rename pass
 
-`balanceOf` / `availableBalanceOf` → `customerEntitlementsToBalance` / `customerEntitlementsToAvailableBalance`; `findCustomerEntitlementsForFeature` → `filterCustomerEntitlementsByFeature`; `engineFixtures.ts` on real rows; every command / mutation / contract test green.
+`*Of` helpers take the shared-utils shape: `meteringIdentityToPartitionKey` and `meteringIdentityToSubjectKey` in `identityUtils/convertIdentityUtils.ts`, `isSameCustomerIdentity` in `identityUtils/classifyIdentityUtils.ts`, `mutationToFingerprint`, `trackCommandToFingerprint`, `initializeCommandToFingerprint`, `trackCommandToShadowComparisonKey`. `balanceOf` and `findCustomerEntitlementsForFeature` were already replaced by the shared cusEnt helpers in unit 6. Fixtures are on real rows since unit 4.
 
 ### 8 · [x] worker → hydrate a customer from Postgres when it has no state (pulled forward into unit 4; entity views still unit 6)
 
 As previously planned: `getSubjectRows` → `subjectRowsToSubjectState` → initialize mutation → decide; catalog rows resolve through the cache. Open items unchanged: primary vs replica, Redis lag during shadow.
 
-### 9 · [ ] server → `Decision<Result>`, unsupported as errors
+### 9 · [x] server → `Decision<Supported>`, unsupported as errors
+
+**steps** — engine `models/common/decision.ts`: `UnsupportedDecisionReason`, `UnsupportedDecision`, `Decision<Supported>`; `TrackDecision = Decision<SupportedTrackDecision>`, `CheckDecision = Decision<SupportedCheckDecision>`; `isUnsupportedDecision` in `utils/decisionUtils/classifyDecisionUtils.ts` · server `balanceWorker/requireSupportedDecision.ts` is the one place an unsupported decision becomes `BalanceWorkerUnsupportedError` (`command_conflict` → 409 duplicate idempotency key, else 400); the track and check response builders take the supported type only · shadow and replay keep inspecting unsupported decisions through the predicate, since for them it is a verdict, not an error
+**verify** — server typecheck; `balance-worker-track.test.ts` error contract once the server unit suite runs again
 
 ### 10 · [ ] worker → `infra/`
 
@@ -284,4 +293,4 @@ One stacked branch per unit (`gh stack`, base `og/balance-worker-observability`)
 4. **Invalidation is pushed and org-scoped.** Drops products, features, base entitlements; keeps custom entitlements. Mutable-row ttl is the backstop.
 5. **Response projection.** Server-side via `getApiBalance` over the returned row and the server's FullSubject.
 6. **Revision semantics.** No state ≡ revision 0; initialize is the mutation 0 → 1; a `needsCatalog` reply consumes no revision.
-7. **Entity subject blobs** deferred until entity commands are supported.
+7. **Entity subject states** deferred until entity commands are supported.

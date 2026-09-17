@@ -1,5 +1,6 @@
 import type { Entitlement, Feature, Product } from "@autumn/shared";
 import type { MeteringIdentity } from "../meteringIdentity.js";
+import type { WorkerCustomer } from "../rows/workerCustomer.js";
 import type { WorkerCustomerEntitlement } from "../rows/workerCustomerEntitlement.js";
 import type { WorkerCustomerProduct } from "../rows/workerCustomerProduct.js";
 import type { WorkerEntity } from "../rows/workerEntity.js";
@@ -16,15 +17,12 @@ export type WorkerFullCustomerProduct = WorkerCustomerProduct & {
 	customer_entitlements: WorkerFullCustomerEntitlement[];
 };
 
-/**
- * FullSubject as the worker holds it: the same nesting, only the tables state carries.
- * `entity` is the view the command names; `entities` are all the customer's.
- */
+/** FullSubject as the worker holds it: the same nesting, only the tables state carries; `entity` is the view the command names. */
 export type WorkerFullSubject = {
 	identity: MeteringIdentity;
 	revision: number;
+	customer: WorkerCustomer;
 	entity: WorkerEntity | null;
-	entities: WorkerEntity[];
 	customer_products: WorkerFullCustomerProduct[];
 	extra_customer_entitlements: WorkerFullCustomerEntitlement[];
 };

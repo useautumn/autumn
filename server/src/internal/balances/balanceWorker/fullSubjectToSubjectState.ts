@@ -166,12 +166,13 @@ export function fullSubjectToSubjectState({
 			customerId: fullSubject.customerId,
 			entityId: null,
 		},
+		customer: fullSubject.customer,
 		customerProducts: rows.customerProducts,
 		customerEntitlements: rows.customerEntitlements,
 		rollovers: rows.customerEntitlements.flatMap(
 			(customerEntitlement) => customerEntitlement.rollovers,
 		),
-		entities: [],
+		entity: null,
 	});
 }
 

@@ -1,4 +1,4 @@
-import { meteringPartitionKeyOf } from "@autumn/balance-engine";
+import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import type { FullSubject } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -38,7 +38,7 @@ export async function runBalanceShadowCohort({
 	const customers = new Map<string, BalanceShadowCustomer>();
 	for (const { featureId, ...enrolled } of config.customers) {
 		const identity = { ...enrolled, entityId: null };
-		const key = meteringPartitionKeyOf({ identity });
+		const key = meteringIdentityToPartitionKey({ identity });
 		const customer = customers.get(key) ?? { ...identity, featureIds: [] };
 		customer.featureIds.push(featureId);
 		customers.set(key, customer);

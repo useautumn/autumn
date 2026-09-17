@@ -1,6 +1,8 @@
-import type {
-	SubjectState,
-	SubjectStateMutation,
+import {
+	meteringIdentityToSubjectKey,
+	type SubjectState,
+	type SubjectStateMutation,
+	splitSubjectState,
 } from "@autumn/balance-engine";
 import type { CommittedMutation } from "./types/mutation.js";
 import type {
@@ -13,7 +15,7 @@ import { PartitionWriterCapacityError } from "./writerErrors.js";
 
 export function createPartitionWriterState(): PartitionWriterState {
 	return {
-		projectedStateByCustomerKey: new Map(),
+		projectedStateBySubjectKey: new Map(),
 		pendingByKey: new Map(),
 		pendingByCustomerKey: new Map(),
 		queue: [],
@@ -62,7 +64,7 @@ export function createPendingSettlement(): PendingSettlement {
 	return { join, settle, reject };
 }
 
-/** Records the mutation and its projection, then returns the writer's own settlement promise. */
+/** Records the mutation and projects its result per subject, then returns the writer's own settlement promise. */
 export function enqueueMutation({
 	scope,
 	pendingKey,
@@ -87,14 +89,24 @@ export function enqueueMutation({
 	}
 	const settlement = createPendingSettlement();
 	const committed = settlement.join({ kind: "new" });
+	const states = splitSubjectState({ state: nextState });
+	const projectedStates = states.entity
+		? [states.customer, states.entity]
+		: [states.customer];
 	const pending: PendingMutation = {
 		pendingKey,
 		customerKey,
+		projectedSubjectKeys: projectedStates.map((projected) =>
+			meteringIdentityToSubjectKey({ identity: projected.identity }),
+		),
 		mutation,
 		settlement,
 		committed,
 	};
-	state.projectedStateByCustomerKey.set(customerKey, nextState);
+	for (const [index, projected] of projectedStates.entries()) {
+		const subjectKey = pending.projectedSubjectKeys[index];
+		if (subjectKey) state.projectedStateBySubjectKey.set(subjectKey, projected);
+	}
 	state.pendingByKey.set(pendingKey, pending);
 	customerPending.add(pending);
 	state.pendingByCustomerKey.set(customerKey, customerPending);
@@ -128,9 +140,11 @@ export function removePendingMutation({
 	const customerPending = state.pendingByCustomerKey.get(pending.customerKey);
 	customerPending?.delete(pending);
 	if (customerPending && customerPending.size > 0) return;
-	// The projection only outlives its last pending mutation for that customer.
+	// A subject's projection only outlives the customer's last pending mutation.
 	state.pendingByCustomerKey.delete(pending.customerKey);
-	state.projectedStateByCustomerKey.delete(pending.customerKey);
+	for (const subjectKey of pending.projectedSubjectKeys) {
+		state.projectedStateBySubjectKey.delete(subjectKey);
+	}
 }
 
 export function rejectAllPending({
@@ -146,5 +160,5 @@ export function rejectAllPending({
 	state.queue.length = 0;
 	state.pendingByKey.clear();
 	state.pendingByCustomerKey.clear();
-	state.projectedStateByCustomerKey.clear();
+	state.projectedStateBySubjectKey.clear();
 }

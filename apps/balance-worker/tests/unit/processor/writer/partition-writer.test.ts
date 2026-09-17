@@ -9,12 +9,12 @@ import {
 	type InitializationDecision,
 	type InitializeCommand,
 	type MeteringIdentity,
-	meteringPartitionKeyOf,
+	meteringIdentityToPartitionKey,
 	parseTrackCommand,
 	type SubjectState,
 	type TrackCommand,
 	type TrackDecision,
-	trackCommandFingerprintOf,
+	trackCommandToFingerprint,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import { initialize } from "../../../../src/processor/commands/initialize.js";
@@ -868,6 +868,7 @@ describe("partition writer", () => {
 			const appender = new RecordingCommittedAppender();
 			const stateStore = {
 				readState: fixture.store.readState.bind(fixture.store),
+				readOwnState: fixture.store.readOwnState.bind(fixture.store),
 				readReceipt: fixture.store.readReceipt.bind(fixture.store),
 				applyDurableMutations: (): never => {
 					throw new Error("disk write failed");
@@ -1221,7 +1222,9 @@ describe("partition writer", () => {
 				ctx: { stateStore: fixture.store, appender },
 				config: { topic, partition, limits: defaultLimits },
 			});
-			const customerKey = meteringPartitionKeyOf({ identity: firstIdentity });
+			const customerKey = meteringIdentityToPartitionKey({
+				identity: firstIdentity,
+			});
 			const submission = (
 				commandId: string,
 			): MutationSubmission<TrackDecision> => {
@@ -1229,7 +1232,7 @@ describe("partition writer", () => {
 				return {
 					identity: command.identity,
 					commandId,
-					fingerprint: trackCommandFingerprintOf({ command }),
+					fingerprint: trackCommandToFingerprint({ command }),
 					mutate: ({ state }) => decideForTest({ state, command }),
 				};
 			};

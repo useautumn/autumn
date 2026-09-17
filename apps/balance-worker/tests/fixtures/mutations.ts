@@ -276,12 +276,14 @@ export const createInitializeCommand = ({
 
 export const createInitializeMutation = ({
 	state = createState(),
+	revisionBefore = 0,
 	commandId = "init_1",
 	requestId = "req_init_1",
 	occurredAt = testOccurredAt,
 	deduplicationExpiresAt = testDeduplicationExpiresAt,
 }: {
 	state?: SubjectState;
+	revisionBefore?: number;
 	commandId?: string;
 	requestId?: string;
 	occurredAt?: number;
@@ -294,6 +296,7 @@ export const createInitializeMutation = ({
 			requestId,
 			occurredAt,
 		}),
+		revisionBefore,
 		deduplicationExpiresAt,
 	});
 

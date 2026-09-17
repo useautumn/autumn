@@ -1,5 +1,5 @@
 import {
-	meteringPartitionKeyOf,
+	meteringIdentityToPartitionKey,
 	parseSubjectStateMutation,
 } from "@autumn/balance-engine";
 import { InvalidRecordError } from "../../lib/recordErrors.js";
@@ -15,7 +15,7 @@ import type {
 import type { MeteringRecord } from "./types/meteringRecord.js";
 
 function meteringRecordToKey({ record }: { record: MeteringRecord }): string {
-	return meteringPartitionKeyOf({ identity: record.identity });
+	return meteringIdentityToPartitionKey({ identity: record.identity });
 }
 
 function parseMeteringPayload({

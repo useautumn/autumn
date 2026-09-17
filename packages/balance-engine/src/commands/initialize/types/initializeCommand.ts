@@ -5,6 +5,8 @@ import {
 	nonEmptyStringSchema,
 	timestampSchema,
 } from "../../../models/common/primitives.js";
+import { workerCustomerSchema } from "../../../models/rows/workerCustomer.js";
+import { workerEntitySchema } from "../../../models/rows/workerEntity.js";
 import { subjectStateSchema } from "../../../models/subjectState.js";
 
 export const initializeCommandSchema = mutatingCommandSchema
@@ -26,7 +28,8 @@ export const initializeCommandSchema = mutatingCommandSchema
 		if (
 			identity.orgId !== state.identity.orgId ||
 			identity.env !== state.identity.env ||
-			identity.customerId !== state.identity.customerId
+			identity.customerId !== state.identity.customerId ||
+			identity.entityId !== state.identity.entityId
 		) {
 			context.addIssue({
 				code: "custom",
@@ -34,16 +37,40 @@ export const initializeCommandSchema = mutatingCommandSchema
 				path: ["identity"],
 			});
 		}
+
+		// The split relies on it: a customer initialize carries customer-level rows,
+		// an entity initialize carries its entity and that entity's rows.
+		if ((state.entity?.id ?? null) !== identity.entityId) {
+			context.addIssue({
+				code: "custom",
+				message: "Initialization must carry the entity its identity names",
+				path: ["state", "entity"],
+			});
+		}
+		const ownerInternalId = state.entity?.internal_id ?? null;
+		const ownedRows = [
+			...state.customerProducts,
+			...state.customerEntitlements,
+		];
+		if (ownedRows.some((row) => row.internal_entity_id !== ownerInternalId)) {
+			context.addIssue({
+				code: "custom",
+				message: "Initialization rows must belong to the initialized subject",
+				path: ["state"],
+			});
+		}
 	});
 
 export type InitializeCommand = z.infer<typeof initializeCommandSchema>;
 
-/** The logged echo carries no payload: the rows are the mutation's inserts. */
+/** The logged echo carries the subject it admits; the rows are the mutation's inserts. */
 export const initializeCommandEchoSchema = z
 	.object({
 		type: z.literal("initialize"),
 		requestId: nonEmptyStringSchema,
 		occurredAt: timestampSchema,
+		customer: workerCustomerSchema,
+		entity: workerEntitySchema.nullable(),
 	})
 	.strict();
 

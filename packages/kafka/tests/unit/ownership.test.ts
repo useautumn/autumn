@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createRequire } from "node:module";
-import { meteringPartitionKeyOf } from "@autumn/balance-engine";
+import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import type {
 	ConsumerConfig,
 	ConsumerRunConfig,
@@ -788,7 +788,10 @@ describe("partitionRouting", function partitionRoutingTests() {
 	} as const;
 
 	function matchesKafkaDefaultPartitioner(): void {
-		const key = Buffer.from(meteringPartitionKeyOf({ identity }), "utf8");
+		const key = Buffer.from(
+			meteringIdentityToPartitionKey({ identity }),
+			"utf8",
+		);
 		const kafkaPartition = (murmur2(key) & 0x7fffffff) % 32;
 
 		expect(meteringIdentityToPartition({ identity, partitionCount: 32 })).toBe(

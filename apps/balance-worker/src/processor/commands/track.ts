@@ -1,12 +1,12 @@
 import {
 	applyMutation,
 	computeTrack,
-	meteringPartitionKeyOf,
+	meteringIdentityToPartitionKey,
 	parseTrackCommand,
 	type SubjectState,
 	type TrackCommand,
 	type TrackDecision,
-	trackCommandFingerprintOf,
+	trackCommandToFingerprint,
 } from "@autumn/balance-engine";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
@@ -22,7 +22,9 @@ export async function track({
 }): Promise<TrackDecision> {
 	const { ctx } = scope;
 	const parsed = parseTrackCommand({ input: command });
-	const customerKey = meteringPartitionKeyOf({ identity: parsed.identity });
+	const customerKey = meteringIdentityToPartitionKey({
+		identity: parsed.identity,
+	});
 	const deduplicationExpiresAt =
 		ctx.receiptPolicy.now() + ctx.receiptPolicy.retentionMs;
 	await ctx.subjectHydrator.ensure({ identity: parsed.identity });
@@ -31,7 +33,7 @@ export async function track({
 	const decided = ctx.writer.decide<TrackDecision>({
 		identity: parsed.identity,
 		commandId: parsed.commandId,
-		fingerprint: trackCommandFingerprintOf({ command: parsed }),
+		fingerprint: trackCommandToFingerprint({ command: parsed }),
 		mutate: ({ state }) =>
 			decideTrack({
 				scope,

@@ -3,13 +3,13 @@ import * as balanceEngine from "../../src/balanceEngine.js";
 import {
 	computeInitialize,
 	computeTrack,
-	meteringPartitionKeyOf,
-	mutationFingerprintOf,
+	meteringIdentityToPartitionKey,
+	mutationToFingerprint,
 	parseSubjectState,
 	parseSubjectStateMutation,
 	parseTrackCommand,
 	type SubjectStateMutation,
-	shadowComparisonKeyOf,
+	trackCommandToShadowComparisonKey,
 } from "../../src/balanceEngine.js";
 import {
 	createCustomerEntitlement,
@@ -42,7 +42,7 @@ const refingerprinted = ({
 	...mutation,
 	receipt: {
 		...mutation.receipt,
-		fingerprint: mutationFingerprintOf({ mutation }),
+		fingerprint: mutationToFingerprint({ mutation }),
 	},
 });
 
@@ -143,12 +143,12 @@ describe("balance engine contract boundaries", () => {
 	});
 
 	test("builds customer ordering and exact shadow comparison keys", () => {
-		expect(meteringPartitionKeyOf({ identity })).toBe(
+		expect(meteringIdentityToPartitionKey({ identity })).toBe(
 			'["org_1","sandbox","cus_1"]',
 		);
-		expect(shadowComparisonKeyOf({ command: createTrackCommand() })).toBe(
-			'["org_1","sandbox","cus_1","messages","cmd_1"]',
-		);
+		expect(
+			trackCommandToShadowComparisonKey({ command: createTrackCommand() }),
+		).toBe('["org_1","sandbox","cus_1","messages","cmd_1"]');
 	});
 
 	test("keeps validation libraries behind parser functions", () => {

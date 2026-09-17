@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import {
+	meteringIdentityToPartitionKey,
 	meteringIdentityToSubjectKey,
-	meteringPartitionKeyOf,
 	parseSubjectState,
 	parseSubjectStateMutation,
 	type SubjectState,
@@ -13,7 +13,7 @@ const ENGINE_SCHEMA_VERSION = 1 as const;
 const contentHashPattern = /^[a-f0-9]{64}$/;
 const offsetPattern = /^(0|[1-9][0-9]*)$/;
 
-/** One blob per entry: the customer's own rows, or one entity's, keyed by subject. */
+/** One subject state per entry: the customer's own rows, or one entity's, keyed by subject. */
 export type PartitionCheckpointStateV1 = {
 	subjectKey: string;
 	state: SubjectState;
@@ -265,7 +265,7 @@ const normalizedContentsOf = ({
 		});
 	}
 
-	// Receipts hang off the customer blob, whose subject key is its partition key.
+	// Receipts hang off the customer's state, whose subject key is its partition key.
 	const stateByPartitionKey = new Map<string, SubjectState>();
 	const subjectKeys = new Set<string>();
 	const normalizedStates = states
@@ -324,7 +324,8 @@ const normalizedContentsOf = ({
 			recordOffsets.add(entry.recordOffset);
 			const mutation = parseReceiptMutation({ input: entry.mutation });
 			if (
-				meteringPartitionKeyOf({ identity: mutation.identity }) !== partitionKey
+				meteringIdentityToPartitionKey({ identity: mutation.identity }) !==
+				partitionKey
 			) {
 				throw new InvalidPartitionCheckpointError({
 					message: `Checkpoint receipt identity does not match ${partitionKey}`,

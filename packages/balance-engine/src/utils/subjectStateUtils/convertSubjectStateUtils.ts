@@ -1,11 +1,13 @@
 import type {
 	CusProduct,
+	Customer,
 	CustomerEntitlement,
 	Entity,
 	Rollover,
 } from "@autumn/shared";
 import type { z } from "zod/v4";
 import type { MeteringIdentity } from "../../models/meteringIdentity.js";
+import { workerCustomerSchema } from "../../models/rows/workerCustomer.js";
 import { workerCustomerEntitlementSchema } from "../../models/rows/workerCustomerEntitlement.js";
 import { workerCustomerProductSchema } from "../../models/rows/workerCustomerProduct.js";
 import { workerEntitySchema } from "../../models/rows/workerEntity.js";
@@ -32,19 +34,22 @@ const pickColumns = <Schema extends z.ZodObject>({
 /** The one definition of "a customer's state from its rows"; the server's initialize and the worker's hydration both call it. */
 export const customerRowsToSubjectState = ({
 	identity,
+	customer,
 	customerProducts,
 	customerEntitlements,
 	rollovers,
-	entities,
+	entity,
 }: {
 	identity: MeteringIdentity;
+	customer: Pick<Customer, "internal_id" | "id" | "config">;
 	customerProducts: CusProduct[];
 	customerEntitlements: CustomerEntitlement[];
 	rollovers: Rollover[];
-	entities: Entity[];
+	entity: Entity | null;
 }): SubjectState =>
 	createSubjectState({
 		identity,
+		customer: pickColumns({ schema: workerCustomerSchema, row: customer }),
 		customerProducts: customerProducts.map((row) =>
 			pickColumns({ schema: workerCustomerProductSchema, row }),
 		),
@@ -54,67 +59,57 @@ export const customerRowsToSubjectState = ({
 		rollovers: rollovers.map((row) =>
 			pickColumns({ schema: workerRolloverSchema, row }),
 		),
-		entities: entities.map((row) =>
-			pickColumns({ schema: workerEntitySchema, row }),
-		),
+		entity: entity
+			? pickColumns({ schema: workerEntitySchema, row: entity })
+			: null,
 	});
 
 /**
- * The rows a subject view is stored as: the customer's own rows (internal_entity_id null, plus the
- * entities themselves) under the customer's identity, and each entity's rows under its identity.
- * Rollovers follow the customer entitlement they belong to.
+ * The rows a subject view is stored as: customer-level rows under the customer's identity,
+ * and the entity with its own rows under its identity. Rollovers follow their customer entitlement.
  */
-export const subjectStateToSubjectBlobs = ({
+export const splitSubjectState = ({
 	state,
 }: {
 	state: SubjectState;
-}): { customer: SubjectState; entities: SubjectState[] } => {
-	const customer: SubjectState = {
-		...state,
-		identity: { ...state.identity, entityId: null },
-		customerProducts: state.customerProducts.filter(
-			(row) => row.internal_entity_id === null,
-		),
-		customerEntitlements: state.customerEntitlements.filter(
-			(row) => row.internal_entity_id === null,
-		),
-		rollovers: [],
-	};
-	const customerEntitlementIds = new Set(
-		customer.customerEntitlements.map((row) => row.id),
-	);
-	customer.rollovers = state.rollovers.filter((rollover) =>
-		customerEntitlementIds.has(rollover.cus_ent_id),
-	);
-
-	const entities = state.entities.flatMap((entity): SubjectState[] => {
-		const customerEntitlements = state.customerEntitlements.filter(
-			(row) => row.internal_entity_id === entity.internal_id,
-		);
+}): { customer: SubjectState; entity: SubjectState | null } => {
+	const rowsOwnedBy = ({
+		internalEntityId,
+	}: {
+		internalEntityId: string | null;
+	}) => {
 		const customerProducts = state.customerProducts.filter(
-			(row) => row.internal_entity_id === entity.internal_id,
+			(row) => row.internal_entity_id === internalEntityId,
 		);
-		if (customerEntitlements.length === 0 && customerProducts.length === 0)
-			return [];
+		const customerEntitlements = state.customerEntitlements.filter(
+			(row) => row.internal_entity_id === internalEntityId,
+		);
 		const entitlementIds = new Set(customerEntitlements.map((row) => row.id));
-		return [
-			{
-				...state,
-				identity: { ...state.identity, entityId: entity.id },
-				customerProducts,
-				customerEntitlements,
-				rollovers: state.rollovers.filter((rollover) =>
-					entitlementIds.has(rollover.cus_ent_id),
-				),
-				entities: [],
-			},
-		];
-	});
-	return { customer, entities };
+		const rollovers = state.rollovers.filter((rollover) =>
+			entitlementIds.has(rollover.cus_ent_id),
+		);
+		return { customerProducts, customerEntitlements, rollovers };
+	};
+
+	return {
+		customer: {
+			...state,
+			identity: { ...state.identity, entityId: null },
+			...rowsOwnedBy({ internalEntityId: null }),
+			entity: null,
+		},
+		entity: state.entity
+			? {
+					...state,
+					identity: { ...state.identity, entityId: state.entity.id },
+					...rowsOwnedBy({ internalEntityId: state.entity.internal_id }),
+				}
+			: null,
+	};
 };
 
-/** The view a command computes against: the customer blob, plus one entity's blob when the command names it. */
-export const subjectBlobsToSubjectState = ({
+/** What an entity command computes against: the customer's state plus the entity's own, as one SubjectState. */
+export const mergeSubjectStates = ({
 	customer,
 	entity = null,
 }: {
@@ -124,6 +119,8 @@ export const subjectBlobsToSubjectState = ({
 	entity
 		? {
 				...customer,
+				identity: entity.identity,
+				entity: entity.entity,
 				customerProducts: [
 					...customer.customerProducts,
 					...entity.customerProducts,

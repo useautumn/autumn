@@ -1,4 +1,7 @@
-import type { CheckCommand, CheckDecision } from "@autumn/balance-engine";
+import type {
+	CheckCommand,
+	SupportedCheckDecision,
+} from "@autumn/balance-engine";
 import {
 	AffectedResource,
 	applyResponseVersionChanges,
@@ -17,11 +20,9 @@ export function checkDecisionToCheckResponse({
 }: {
 	ctx: AutumnContext;
 	command: CheckCommand;
-	decision: CheckDecision;
+	decision: SupportedCheckDecision;
 	fullSubject: FullSubject;
 }): CheckResponseV3 {
-	if (decision.kind === "unsupported")
-		throw new BalanceWorkerUnsupportedError({ reason: decision.reason });
 	const feature = ctx.features.find(
 		(feature) => feature.id === command.featureId,
 	);

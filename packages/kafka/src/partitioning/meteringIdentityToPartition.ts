@@ -1,6 +1,6 @@
 import {
 	type MeteringIdentity,
-	meteringPartitionKeyOf,
+	meteringIdentityToPartitionKey,
 } from "@autumn/balance-engine";
 
 // Kafka Java / KafkaJS DefaultPartitioner murmur2, then toPositive % count.
@@ -52,6 +52,6 @@ export function meteringIdentityToPartition({
 		);
 	}
 
-	const key = Buffer.from(meteringPartitionKeyOf({ identity }), "utf8");
+	const key = Buffer.from(meteringIdentityToPartitionKey({ identity }), "utf8");
 	return (murmur2({ data: key }) & 0x7fffffff) % partitionCount;
 }

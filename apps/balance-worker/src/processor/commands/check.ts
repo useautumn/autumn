@@ -2,7 +2,7 @@ import {
 	type CheckCommand,
 	type CheckDecision,
 	computeCheck,
-	meteringPartitionKeyOf,
+	meteringIdentityToPartitionKey,
 	parseCheckCommand,
 } from "@autumn/balance-engine";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
@@ -18,7 +18,9 @@ export async function check({
 }): Promise<CheckDecision> {
 	const { ctx } = scope;
 	const parsed = parseCheckCommand({ input: command });
-	const customerKey = meteringPartitionKeyOf({ identity: parsed.identity });
+	const customerKey = meteringIdentityToPartitionKey({
+		identity: parsed.identity,
+	});
 	await ctx.subjectHydrator.ensure({ identity: parsed.identity });
 
 	// Only outcomes pending at this moment; a track arriving later is not "earlier" for this check.

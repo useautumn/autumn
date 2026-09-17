@@ -20,6 +20,14 @@ export class OutOfOrderMutationError extends Error {
 	}
 }
 
+/** A non-initialize mutation arrived for a subject the worker holds no state for. */
+export class SubjectStateMissingError extends Error {
+	constructor() {
+		super("Only an initialize can create subject state");
+		this.name = "SubjectStateMissingError";
+	}
+}
+
 export class MutationSubjectMismatchError extends Error {
 	constructor() {
 		super("Mutation subject does not match the current state owner");

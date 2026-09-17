@@ -13,6 +13,7 @@ import {
 import {
 	createCustomerEntitlement,
 	createCustomerProduct,
+	createEntityState,
 	createInitializeCommand,
 	createState,
 	createSubjectFor,
@@ -113,11 +114,38 @@ describe("mutation application", () => {
 		).toThrow(MutationSubjectMismatchError);
 	});
 
-	test.concurrent("refuses an initialize onto an existing state", () => {
-		expect(() =>
-			applyMutation({ state: createState(), mutation: initializeMutation }),
-		).toThrow(OutOfOrderMutationError);
-	});
+	test.concurrent(
+		"refuses a customer initialize onto an existing state",
+		() => {
+			expect(() =>
+				applyMutation({ state: createState(), mutation: initializeMutation }),
+			).toThrow(OutOfOrderMutationError);
+		},
+	);
+
+	test.concurrent(
+		"an entity initialize adds the entity and its rows to the view",
+		() => {
+			const state = { ...createState(), revision: 4 };
+			const mutation = computeInitialize({
+				command: createInitializeCommand({ state: createEntityState() }),
+				revisionBefore: 4,
+				deduplicationExpiresAt,
+			});
+
+			const next = applyMutation({ state, mutation });
+
+			expect(next.revision).toBe(5);
+			expect(next.entity?.id).toBe("ent_42");
+			expect(next.customerEntitlements.map((row) => row.id)).toEqual([
+				"messages_monthly",
+				"seats_ent_42",
+			]);
+			expect(() => applyMutation({ state: next, mutation })).toThrow(
+				OutOfOrderMutationError,
+			);
+		},
+	);
 
 	test.concurrent(
 		"refuses changes that address rows the state disagrees on",

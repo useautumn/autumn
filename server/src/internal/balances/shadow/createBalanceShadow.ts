@@ -1,5 +1,6 @@
 import {
-	meteringPartitionKeyOf,
+	isUnsupportedDecision,
+	meteringIdentityToPartitionKey,
 	type TrackDecision,
 } from "@autumn/balance-engine";
 import type {
@@ -9,7 +10,7 @@ import type {
 } from "./balanceShadowTypes.js";
 
 function summarizeDecision({ decision }: { decision: TrackDecision }) {
-	if (decision.kind === "unsupported") return decision;
+	if (isUnsupportedDecision(decision)) return decision;
 	const { result } = decision.mutation;
 	if (result.type !== "track") return { kind: decision.kind };
 	return {
@@ -125,12 +126,12 @@ export function createBalanceShadow({
 			const index = queue.findIndex(
 				({ command }) =>
 					!activeCustomers.has(
-						meteringPartitionKeyOf({ identity: command.identity }),
+						meteringIdentityToPartitionKey({ identity: command.identity }),
 					),
 			);
 			if (index === -1) break;
 			const [track] = queue.splice(index, 1);
-			const customerKey = meteringPartitionKeyOf({
+			const customerKey = meteringIdentityToPartitionKey({
 				identity: track.command.identity,
 			});
 			activeCustomers.add(customerKey);

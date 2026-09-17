@@ -6,6 +6,7 @@ export type WorkerErrorCode =
 	| "NOT_READY"
 	| "NOT_INITIALIZED"
 	| "CUSTOMER_NOT_FOUND"
+	| "ENTITY_NOT_FOUND"
 	| "CATALOG_NOT_FOUND"
 	| "COMMAND_CONFLICT"
 	| "INTERNAL";
@@ -81,6 +82,7 @@ export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
 		case "COMMAND_CONFLICT":
 			return 409;
 		case "CUSTOMER_NOT_FOUND":
+		case "ENTITY_NOT_FOUND":
 			return 404;
 		case "CATALOG_NOT_FOUND":
 			return 422;

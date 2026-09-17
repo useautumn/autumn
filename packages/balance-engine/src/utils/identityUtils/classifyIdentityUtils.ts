@@ -1,6 +1,7 @@
 import type { MeteringIdentity } from "../../models/meteringIdentity.js";
 
-export const identitiesMatch = ({
+/** Same customer log, whichever subject of it each identity names. */
+export const isSameCustomerIdentity = ({
 	left,
 	right,
 }: {

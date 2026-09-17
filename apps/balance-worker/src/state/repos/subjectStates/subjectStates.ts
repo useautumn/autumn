@@ -1,14 +1,14 @@
 import {
 	type MeteringIdentity,
+	meteringIdentityToPartitionKey,
 	meteringIdentityToSubjectKey,
-	meteringPartitionKeyOf,
 	type SubjectState,
 } from "@autumn/balance-engine";
 import { CorruptBalanceStateError } from "../../stateStoreErrors.js";
 import type { StateStoreContext } from "../../types/stateStoreContext.js";
 import type {
 	StoredSubjectState,
-	StoredSubjectView,
+	StoredSubjectStates,
 } from "../../types/storedSubjectState.js";
 import {
 	type SubjectStateRow,
@@ -24,7 +24,7 @@ const selectColumns = `
 	state_json AS stateJson
 `;
 
-export const readStoredBlob = ({
+export const readStoredState = ({
 	ctx,
 	subjectKey,
 }: {
@@ -42,18 +42,18 @@ export const readStoredBlob = ({
 	return storedSubjectStateFromRow({ row });
 };
 
-/** Null until the customer has a blob; an entity blob without its customer is corruption. */
-export const readStoredView = ({
+/** Null until the customer has state; an entity state without its customer is corruption. */
+export const readStoredStates = ({
 	ctx,
 	identity,
 }: {
 	ctx: StateStoreContext;
 	identity: MeteringIdentity;
-}): StoredSubjectView | null => {
-	const customerKey = meteringPartitionKeyOf({ identity });
-	const customer = readStoredBlob({ ctx, subjectKey: customerKey });
+}): StoredSubjectStates | null => {
+	const customerKey = meteringIdentityToPartitionKey({ identity });
+	const customer = readStoredState({ ctx, subjectKey: customerKey });
 	const entity = identity.entityId
-		? readStoredBlob({
+		? readStoredState({
 				ctx,
 				subjectKey: meteringIdentityToSubjectKey({ identity }),
 			})
@@ -105,8 +105,8 @@ export const readPartitionStates = ({
 			...storedSubjectStateFromRow({ row }),
 		}));
 
-/** Keys derive from the blob's identity, so a blob can never be filed under another subject. */
-export const insertBlob = ({
+/** Keys derive from the state's identity, so a state can never be filed under another subject. */
+export const insertState = ({
 	ctx,
 	topic,
 	partition,
@@ -141,7 +141,9 @@ export const insertBlob = ({
 		`)
 		.run({
 			subjectKey: meteringIdentityToSubjectKey({ identity: state.identity }),
-			partitionKey: meteringPartitionKeyOf({ identity: state.identity }),
+			partitionKey: meteringIdentityToPartitionKey({
+				identity: state.identity,
+			}),
 			topic,
 			partition,
 			revision: BigInt(state.revision),
@@ -149,8 +151,8 @@ export const insertBlob = ({
 		});
 };
 
-/** The customer blob carries the revision guard; entity blobs ride along under it, so they update unguarded. */
-export const updateBlob = ({
+/** The customer's state carries the revision guard; entity states ride along under it, so they update unguarded. */
+export const updateState = ({
 	ctx,
 	state,
 	revisionBefore = null,

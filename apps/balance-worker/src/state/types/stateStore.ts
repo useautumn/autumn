@@ -44,8 +44,10 @@ export type StateStore = {
 		expiresAtOrBefore: number;
 		limit: number;
 	}): { deletedCount: number };
-	/** The view the identity reads: the customer blob plus the named entity's blob, merged. */
+	/** What the identity computes against: the customer's state, merged with the named entity's own. */
 	readState(params: { identity: MeteringIdentity }): SubjectState | null;
+	/** Only the identity's own rows: the customer's when it names no entity, otherwise that entity's. */
+	readOwnState(params: { identity: MeteringIdentity }): SubjectState | null;
 	readReceipt(params: {
 		identity: MeteringIdentity;
 		mutationId: string;

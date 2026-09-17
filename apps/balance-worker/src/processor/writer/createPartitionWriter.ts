@@ -1,4 +1,3 @@
-import { meteringPartitionKeyOf } from "@autumn/balance-engine";
 import {
 	decide as decideMutation,
 	readFreshestState as readFreshestSubjectState,
@@ -44,11 +43,7 @@ export function createPartitionWriter({
 	function readFreshestState({
 		identity,
 	}: Parameters<PartitionWriter["readFreshestState"]>[0]) {
-		return readFreshestSubjectState({
-			scope,
-			customerKey: meteringPartitionKeyOf({ identity }),
-			identity,
-		});
+		return readFreshestSubjectState({ scope, identity });
 	}
 
 	return { decide, waitForPendingCommits, readFreshestState };

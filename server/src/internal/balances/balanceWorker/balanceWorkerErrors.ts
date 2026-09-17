@@ -1,12 +1,16 @@
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import { ErrCode, RecaseError } from "@autumn/shared";
 
+/** A command conflict is the caller reusing an idempotency key; everything else is a request the worker path does not serve. */
 export class BalanceWorkerUnsupportedError extends RecaseError {
 	constructor({ reason }: { reason: string }) {
+		const isCommandConflict = reason === "command_conflict";
 		super({
 			message: `Balance worker request is unsupported: ${reason}`,
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
+			code: isCommandConflict
+				? ErrCode.DuplicateIdempotencyKey
+				: ErrCode.InvalidRequest,
+			statusCode: isCommandConflict ? 409 : 400,
 			data: { reason },
 		});
 	}

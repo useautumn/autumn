@@ -62,10 +62,15 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 			};
 		} else if (cause instanceof SubjectNotFoundError) {
 			status = 404;
-			error = {
-				code: "CUSTOMER_NOT_FOUND",
-				message: "Customer does not exist in this org and env",
-			};
+			error = cause.identity.entityId
+				? {
+						code: "ENTITY_NOT_FOUND",
+						message: "Entity does not exist for this customer",
+					}
+				: {
+						code: "CUSTOMER_NOT_FOUND",
+						message: "Customer does not exist in this org and env",
+					};
 		} else if (cause instanceof CatalogRowsNotFoundError) {
 			status = 422;
 			error = {

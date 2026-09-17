@@ -4,7 +4,7 @@ import type { MeteringIdentity } from "../../models/meteringIdentity.js";
 import type { TrackCommand, TrackCommandEcho } from "./types/trackCommand.js";
 
 // Retries repeat the request, not its envelope: requestId and occurredAt stay out.
-export const trackFingerprintOf = ({
+export const trackInputsToFingerprint = ({
 	identity,
 	command,
 }: {
@@ -28,8 +28,8 @@ export const trackFingerprintOf = ({
 	]);
 
 /** Lets a writer fingerprint a command before deciding; equals the mutation's receipt fingerprint. */
-export const trackCommandFingerprintOf = ({
+export const trackCommandToFingerprint = ({
 	command,
 }: {
 	command: TrackCommand;
-}): string => trackFingerprintOf({ identity: command.identity, command });
+}): string => trackInputsToFingerprint({ identity: command.identity, command });

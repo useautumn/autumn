@@ -1,4 +1,4 @@
-import type { TrackDecision } from "@autumn/balance-engine";
+import type { SupportedTrackDecision } from "@autumn/balance-engine";
 import type { FullSubject } from "@autumn/shared";
 import {
 	AffectedResource,
@@ -17,19 +17,9 @@ export function trackDecisionToTrackResponse({
 	fullSubject,
 }: {
 	ctx: AutumnContext;
-	decision: TrackDecision;
+	decision: SupportedTrackDecision;
 	fullSubject: FullSubject;
 }): TrackResponseV3 {
-	if (decision.kind === "unsupported") {
-		const isCommandConflict = decision.reason === "command_conflict";
-		throw new RecaseError({
-			message: `Balance worker track is unsupported: ${decision.reason}`,
-			code: isCommandConflict
-				? ErrCode.DuplicateIdempotencyKey
-				: ErrCode.InvalidRequest,
-			statusCode: isCommandConflict ? 409 : 400,
-		});
-	}
 	const { command, result } = decision.mutation;
 	if (command.type !== "track" || result.type !== "track")
 		throw new RecaseError({

@@ -1,5 +1,5 @@
 import {
-	meteringPartitionKeyOf,
+	meteringIdentityToPartitionKey,
 	parseSubjectStateMutation,
 } from "@autumn/balance-engine";
 import { CorruptBalanceStateError } from "../../stateStoreErrors.js";
@@ -27,7 +27,7 @@ export const storedMutationReceiptFromRow = ({
 	if (
 		mutation.id !== row.mutationId ||
 		mutation.receipt.fingerprint !== row.fingerprint ||
-		meteringPartitionKeyOf({ identity: mutation.identity }) !==
+		meteringIdentityToPartitionKey({ identity: mutation.identity }) !==
 			row.partitionKey ||
 		BigInt(mutation.receipt.expiresAt) !== row.expiresAt ||
 		row.topic.trim().length === 0 ||

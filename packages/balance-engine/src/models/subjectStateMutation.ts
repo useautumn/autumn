@@ -3,7 +3,7 @@ import { initializeCommandEchoSchema } from "../commands/initialize/types/initia
 import { initializeResultSchema } from "../commands/initialize/types/initializeResult.js";
 import { trackCommandEchoSchema } from "../commands/track/types/trackCommand.js";
 import { trackResultSchema } from "../commands/track/types/trackResult.js";
-import { mutationFingerprintOf } from "../mutation/mutationFingerprintOf.js";
+import { mutationToFingerprint } from "../mutation/mutationToFingerprint.js";
 import { nonEmptyStringSchema, timestampSchema } from "./common/primitives.js";
 import { meteringIdentitySchema } from "./meteringIdentity.js";
 import { rowChangeSchema } from "./rowChange.js";
@@ -59,7 +59,11 @@ export const subjectStateMutationSchema = z
 			});
 		}
 		if (mutation.command.type === "initialize") {
-			if (mutation.revision.before !== 0) {
+			// An entity initialize joins the customer's log mid-stream; a customer one starts it.
+			if (
+				mutation.identity.entityId === null &&
+				mutation.revision.before !== 0
+			) {
 				context.addIssue({
 					code: "custom",
 					message: "Initialization must start at revision zero",
@@ -75,7 +79,7 @@ export const subjectStateMutationSchema = z
 				});
 			}
 		}
-		if (mutation.receipt.fingerprint !== mutationFingerprintOf({ mutation })) {
+		if (mutation.receipt.fingerprint !== mutationToFingerprint({ mutation })) {
 			context.addIssue({
 				code: "custom",
 				message: "receipt.fingerprint must match the mutation inputs",

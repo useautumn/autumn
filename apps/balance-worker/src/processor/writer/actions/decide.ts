@@ -1,6 +1,8 @@
 import {
 	type MeteringIdentity,
-	meteringPartitionKeyOf,
+	mergeSubjectStates,
+	meteringIdentityToPartitionKey,
+	meteringIdentityToSubjectKey,
 	type SubjectState,
 	type SubjectStateMutation,
 } from "@autumn/balance-engine";
@@ -32,7 +34,7 @@ export function decide<Reply>({
 	const { ctx, state } = scope;
 	if (state.recoveryError) throw state.recoveryError;
 	const { identity, commandId, fingerprint } = submission;
-	const customerKey = meteringPartitionKeyOf({ identity });
+	const customerKey = meteringIdentityToPartitionKey({ identity });
 	const pendingKey = pendingKeyOf({ customerKey, commandId });
 
 	const inFlight = state.pendingByKey.get(pendingKey);
@@ -53,7 +55,7 @@ export function decide<Reply>({
 	}
 
 	// A null state is legal here: initialize is the command that creates one.
-	const currentState = readFreshestState({ scope, customerKey, identity });
+	const currentState = readFreshestState({ scope, identity });
 	const result = submission.mutate({ state: currentState });
 	if (result.kind === "reply")
 		return decidedWith<Reply>(Promise.resolve(result.reply));
@@ -90,20 +92,27 @@ export async function waitForPendingCommits({
 	if (scope.state.recoveryError) throw scope.state.recoveryError;
 }
 
-/** Pending projection first, so same-customer commands see uncommitted deductions. */
+/** Per subject, pending projection first: same-customer commands see uncommitted deductions, whichever subject made them. */
 export function readFreshestState({
 	scope,
-	customerKey,
 	identity,
 }: {
 	scope: PartitionWriterScope;
-	customerKey: string;
 	identity: MeteringIdentity;
 }): SubjectState | null {
-	return (
-		scope.state.projectedStateByCustomerKey.get(customerKey) ??
-		scope.ctx.stateStore.readState({ identity })
-	);
+	const readOwnState = ({ ownIdentity }: { ownIdentity: MeteringIdentity }) =>
+		scope.state.projectedStateBySubjectKey.get(
+			meteringIdentityToSubjectKey({ identity: ownIdentity }),
+		) ?? scope.ctx.stateStore.readOwnState({ identity: ownIdentity });
+
+	const customer = readOwnState({
+		ownIdentity: { ...identity, entityId: null },
+	});
+	if (!customer) return null;
+	const entity = identity.entityId
+		? readOwnState({ ownIdentity: identity })
+		: null;
+	return mergeSubjectStates({ customer, entity });
 }
 
 /** A known mutation for this commandId must have been produced by the same request. */

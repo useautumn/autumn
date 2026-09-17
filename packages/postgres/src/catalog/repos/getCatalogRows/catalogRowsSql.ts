@@ -3,6 +3,7 @@ import type { PostgresContext } from "../../../types/postgresClient.js";
 import type { CatalogRowIds } from "../../types/catalogRowsEnvelope.js";
 
 /** Three by-key lookups in one statement. Entitlements carry no env column, so the org scope is their safety net. */
+// sql.param keeps each id list one array parameter; a bare array would expand into a row constructor.
 export const catalogRowsSql = ({
 	ctx,
 	ids,
@@ -15,7 +16,7 @@ export const catalogRowsSql = ({
 			(SELECT json_agg(row_to_json(e) ORDER BY e.id)
 				FROM entitlements e
 				WHERE e.org_id = ${ctx.orgId}
-					AND e.id = ANY(${ids.entitlementIds}::text[])),
+					AND e.id = ANY(${sql.param(ids.entitlementIds)}::text[])),
 			'[]'::json
 		),
 		'products', COALESCE(
@@ -23,7 +24,7 @@ export const catalogRowsSql = ({
 				FROM products p
 				WHERE p.org_id = ${ctx.orgId}
 					AND p.env = ${ctx.env}
-					AND p.internal_id = ANY(${ids.productInternalIds}::text[])),
+					AND p.internal_id = ANY(${sql.param(ids.productInternalIds)}::text[])),
 			'[]'::json
 		),
 		'features', COALESCE(
@@ -31,7 +32,7 @@ export const catalogRowsSql = ({
 				FROM features f
 				WHERE f.org_id = ${ctx.orgId}
 					AND f.env = ${ctx.env}
-					AND f.internal_id = ANY(${ids.featureInternalIds}::text[])),
+					AND f.internal_id = ANY(${sql.param(ids.featureInternalIds)}::text[])),
 			'[]'::json
 		)
 	) AS envelope

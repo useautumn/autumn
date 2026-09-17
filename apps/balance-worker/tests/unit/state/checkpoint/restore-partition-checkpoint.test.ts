@@ -5,7 +5,7 @@ import { join } from "node:path";
 import {
 	applyMutation,
 	type MeteringIdentity,
-	meteringPartitionKeyOf,
+	meteringIdentityToPartitionKey,
 	type SubjectState,
 } from "@autumn/balance-engine";
 import { createPartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
@@ -83,7 +83,7 @@ const checkpointWithReceipt = ({
 		deduplicationExpiresAt: checkpointCreatedAt + 86_400_000,
 	});
 	const state = applyMutation({ state: initialState, mutation });
-	const partitionKey = meteringPartitionKeyOf({ identity });
+	const partitionKey = meteringIdentityToPartitionKey({ identity });
 
 	return createPartitionCheckpoint({
 		engineSchemaVersion: 1,
@@ -106,7 +106,7 @@ const checkpointWithoutReceipts = ({
 	nextOffset: bigint;
 }) => {
 	const state = stateOf({ identity });
-	const partitionKey = meteringPartitionKeyOf({ identity });
+	const partitionKey = meteringIdentityToPartitionKey({ identity });
 	return createPartitionCheckpoint({
 		engineSchemaVersion: 1,
 		createdAt: checkpointCreatedAt,

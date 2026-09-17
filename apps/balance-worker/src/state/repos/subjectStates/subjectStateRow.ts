@@ -1,6 +1,6 @@
 import {
+	meteringIdentityToPartitionKey,
 	meteringIdentityToSubjectKey,
-	meteringPartitionKeyOf,
 	parseSubjectState,
 } from "@autumn/balance-engine";
 import { CorruptBalanceStateError } from "../../stateStoreErrors.js";
@@ -25,7 +25,8 @@ export const storedSubjectStateFromRow = ({
 		BigInt(state.revision) !== row.revision ||
 		meteringIdentityToSubjectKey({ identity: state.identity }) !==
 			row.subjectKey ||
-		meteringPartitionKeyOf({ identity: state.identity }) !== row.partitionKey ||
+		meteringIdentityToPartitionKey({ identity: state.identity }) !==
+			row.partitionKey ||
 		row.topic.trim().length === 0 ||
 		row.partition < 0n ||
 		row.partition > BigInt(Number.MAX_SAFE_INTEGER)

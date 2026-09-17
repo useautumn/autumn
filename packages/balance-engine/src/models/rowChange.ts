@@ -8,7 +8,6 @@ import {
 	type WorkerCustomerProduct,
 	workerCustomerProductSchema,
 } from "./rows/workerCustomerProduct.js";
-import { type WorkerEntity, workerEntitySchema } from "./rows/workerEntity.js";
 import {
 	type WorkerRollover,
 	workerRolloverSchema,
@@ -65,8 +64,7 @@ const tableRowChangeSchema = <
 export type RowChange =
 	| TableRowChange<"customerProducts", WorkerCustomerProduct>
 	| TableRowChange<"customerEntitlements", WorkerCustomerEntitlement>
-	| TableRowChange<"rollovers", WorkerRollover>
-	| TableRowChange<"entities", WorkerEntity>;
+	| TableRowChange<"rollovers", WorkerRollover>;
 
 export const rowChangeSchema = z.discriminatedUnion("table", [
 	tableRowChangeSchema({
@@ -78,5 +76,4 @@ export const rowChangeSchema = z.discriminatedUnion("table", [
 		rowSchema: workerCustomerEntitlementSchema,
 	}),
 	tableRowChangeSchema({ table: "rollovers", rowSchema: workerRolloverSchema }),
-	tableRowChangeSchema({ table: "entities", rowSchema: workerEntitySchema }),
 ]);

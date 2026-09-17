@@ -7,6 +7,7 @@ import {
 	createSubjectState,
 	meteringIdentityToSubjectKey,
 	type SubjectState,
+	type WorkerEntity,
 } from "@autumn/balance-engine";
 import { parsePartitionCheckpoint } from "../../../src/checkpoint/partitionCheckpoint.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
@@ -29,35 +30,37 @@ const limits = {
 	maxReceipts: 100,
 };
 
-const entity42 = {
+const entity42: WorkerEntity = {
 	id: "ent_42",
 	internal_id: "ent_internal_42",
 	internal_customer_id: "cus_internal_1",
 	feature_id: "seats",
 };
-const entity43 = { ...entity42, id: "ent_43", internal_id: "ent_internal_43" };
-const entityRow = ({
-	id,
+const entity43: WorkerEntity = {
+	...entity42,
+	id: "ent_43",
+	internal_id: "ent_internal_43",
+};
+
+/** What an entity initialize carries: the entity and the seats row it owns. */
+const createEntityState = ({
 	entity,
 }: {
-	id: string;
-	entity: typeof entity42;
-}) => ({
-	...createCustomerEntitlement({ id, featureId: "seats", balance: 10 }),
-	internal_entity_id: entity.internal_id,
-});
-
-/** A customer with a shared row and one row per entity, as one initialize view. */
-const createViewWithEntities = (): SubjectState =>
+	entity: WorkerEntity;
+}): SubjectState =>
 	createSubjectState({
-		identity,
-		customerProducts: [createCustomerProduct()],
+		identity: { ...identity, entityId: entity.id },
 		customerEntitlements: [
-			createCustomerEntitlement({ id: "messages_monthly", balance: 10 }),
-			entityRow({ id: "seats_ent_42", entity: entity42 }),
-			entityRow({ id: "seats_ent_43", entity: entity43 }),
+			{
+				...createCustomerEntitlement({
+					id: `seats_${entity.id}`,
+					featureId: "seats",
+					balance: 10,
+				}),
+				internal_entity_id: entity.internal_id,
+			},
 		],
-		entities: [entity42, entity43],
+		entity,
 	});
 
 const openFixture = () => {
@@ -73,52 +76,94 @@ const openFixture = () => {
 	};
 };
 
-const seed = ({ store }: { store: StateStore }): SubjectState => {
-	const mutation = createInitializeMutation({
-		state: createViewWithEntities(),
+/** Customer at revision 1, then each entity joins at the next revision. */
+const seed = ({ store }: { store: StateStore }): void => {
+	const customer = createSubjectState({
+		identity,
+		customerProducts: [createCustomerProduct()],
+		customerEntitlements: [
+			createCustomerEntitlement({ id: "messages_monthly", balance: 10 }),
+		],
 	});
-	applyDurableMutation({ store, topic, partition, offset: 0n, mutation });
-	return applyMutation({ state: null, mutation });
+	let view = applyMutation({
+		state: null,
+		mutation: createInitializeMutation({ state: customer }),
+	});
+	applyDurableMutation({
+		store,
+		topic,
+		partition,
+		offset: 0n,
+		mutation: createInitializeMutation({ state: customer }),
+	});
+	for (const [index, entity] of [entity42, entity43].entries()) {
+		const mutation = createInitializeMutation({
+			state: createEntityState({ entity }),
+			revisionBefore: view.revision,
+			commandId: `init_${entity.id}`,
+		});
+		applyDurableMutation({
+			store,
+			topic,
+			partition,
+			offset: BigInt(index + 1),
+			mutation,
+		});
+		view = applyMutation({ state: view, mutation });
+	}
 };
 
+const entitlementIdsOf = ({
+	store,
+	entityId,
+}: {
+	store: StateStore;
+	entityId: string | null;
+}) =>
+	store
+		.readState({ identity: { ...identity, entityId } })
+		?.customerEntitlements.map((row) => row.id);
+
 describe("subject views", () => {
-	test("an initialize splits into one blob per subject and reads back as views", () => {
+	test("entity initializes add states under their own keys; each identity reads its own view", () => {
 		const fixture = openFixture();
 		try {
 			seed({ store: fixture.store });
+			const { store } = fixture;
 
-			const customerView = fixture.store.readState({ identity });
-			const entityView = fixture.store.readState({
-				identity: { ...identity, entityId: "ent_42" },
-			});
-
-			expect(customerView?.customerEntitlements.map((row) => row.id)).toEqual([
+			expect(entitlementIdsOf({ store, entityId: null })).toEqual([
 				"messages_monthly",
 			]);
-			expect(customerView?.entities.map((entity) => entity.id)).toEqual([
-				"ent_42",
-				"ent_43",
-			]);
-			expect(entityView?.customerEntitlements.map((row) => row.id)).toEqual([
+			expect(store.readState({ identity })?.entity).toBeNull();
+			expect(store.readState({ identity })?.revision).toBe(3);
+			expect(entitlementIdsOf({ store, entityId: "ent_42" })).toEqual([
 				"messages_monthly",
 				"seats_ent_42",
 			]);
 			expect(
-				fixture.store
-					.readState({ identity: { ...identity, entityId: "ent_99" } })
+				store.readState({ identity: { ...identity, entityId: "ent_42" } })
+					?.entity,
+			).toEqual(entity42);
+			expect(entitlementIdsOf({ store, entityId: "ent_99" })).toEqual([
+				"messages_monthly",
+			]);
+			expect(
+				store
+					.readOwnState({ identity: { ...identity, entityId: "ent_43" } })
 					?.customerEntitlements.map((row) => row.id),
-			).toEqual(["messages_monthly"]);
+			).toEqual(["seats_ent_43"]);
 		} finally {
 			fixture.close();
 		}
 	});
 
-	test("an entity track writes only its own blob and the customer's revision", () => {
+	test("an entity track writes only its own state and the customer's revision", () => {
 		const fixture = openFixture();
 		try {
-			const initial = seed({ store: fixture.store });
+			seed({ store: fixture.store });
+			const { store } = fixture;
 			const entityIdentity = { ...identity, entityId: "ent_42" };
-			const view = fixture.store.readState({ identity: entityIdentity });
+			const view = store.readState({ identity: entityIdentity });
 			if (!view) throw new Error("Expected the entity view");
 			const mutation = createTrackMutation({
 				state: view,
@@ -128,40 +173,22 @@ describe("subject views", () => {
 					value: 4,
 				}),
 			});
-			applyDurableMutation({
-				store: fixture.store,
-				topic,
-				partition,
-				offset: 1n,
-				mutation,
-			});
+			applyDurableMutation({ store, topic, partition, offset: 3n, mutation });
 
-			const after42 = fixture.store.readState({ identity: entityIdentity });
-			const after43 = fixture.store.readState({
-				identity: { ...identity, entityId: "ent_43" },
-			});
-			const customer = fixture.store.readState({ identity });
-			expect(after42?.revision).toBe(2);
-			expect(
-				after42?.customerEntitlements.find((row) => row.id === "seats_ent_42")
-					?.balance,
-			).toBe(6);
-			expect(
-				after43?.customerEntitlements.find((row) => row.id === "seats_ent_43")
-					?.balance,
-			).toBe(10);
-			expect(customer?.revision).toBe(2);
-			expect(
-				customer?.customerEntitlements.find(
-					(row) => row.id === "messages_monthly",
-				)?.balance,
-			).toBe(initial.customerEntitlements[0]?.balance);
+			const balanceOf = ({ entityId }: { entityId: string | null }) =>
+				store
+					.readOwnState({ identity: { ...identity, entityId } })
+					?.customerEntitlements.map((row) => row.balance);
+			expect(store.readState({ identity })?.revision).toBe(4);
+			expect(balanceOf({ entityId: "ent_42" })).toEqual([6]);
+			expect(balanceOf({ entityId: "ent_43" })).toEqual([10]);
+			expect(balanceOf({ entityId: null })).toEqual([10]);
 		} finally {
 			fixture.close();
 		}
 	});
 
-	test("a checkpoint captures every blob under its subject key", () => {
+	test("a checkpoint captures every subject state under its subject key", () => {
 		const fixture = openFixture();
 		try {
 			seed({ store: fixture.store });

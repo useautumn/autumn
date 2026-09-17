@@ -1,14 +1,13 @@
-import type {
-	CheckCommand,
-	CheckDecision,
-	MeteringIdentity,
-	TrackCommand,
-	TrackDecision,
+import {
+	type CheckCommand,
+	type CheckDecision,
+	isUnsupportedDecision,
+	type MeteringIdentity,
+	type TrackCommand,
+	type TrackDecision,
 } from "@autumn/balance-engine";
 import { InsufficientBalanceError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { checkDecisionToCheckResponse } from "../../check/balanceWorker/balanceWorkerCheckResponse.js";
-import { trackDecisionToTrackResponse } from "../../track/balanceWorker/balanceWorkerTrackResponse.js";
 import type { ReplayManifestRequest } from "../manifest/replayManifestContracts.js";
 import type {
 	ReplayHydrationCoordinator,
@@ -177,7 +176,7 @@ export async function executeReplayRequest({
 			coordinator,
 			signal,
 		});
-		if (dispatch.decision.kind === "unsupported")
+		if (isUnsupportedDecision(dispatch.decision))
 			return { kind: "refused", reason: dispatch.decision.reason };
 		return completeReplayDispatch({
 			request,

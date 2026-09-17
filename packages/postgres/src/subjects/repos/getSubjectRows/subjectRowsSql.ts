@@ -2,22 +2,31 @@ import { type SQL, sql } from "drizzle-orm";
 import type { PostgresContext } from "../../../types/postgresClient.js";
 
 /**
- * Single-customer port of getFullSubjectRowsQuery, keeping only what the balance
- * worker holds: customer-level products in the given statuses, their entitlements,
- * live loose entitlements, and unexpired rollovers. Catalog rows come from getCatalogRows.
+ * Single-subject port of getFullSubjectRowsQuery, keeping only what the balance worker
+ * holds for one subject: its products in the given statuses, their entitlements, live loose
+ * entitlements, and unexpired rollovers. Customer-level rows when no entity is named, else
+ * the entity's own rows. Catalog rows come from getCatalogRows.
  * Expiry is evaluated at `asOfTimestampMs` so a replay sees the same rows as the original.
  */
 export const subjectRowsSql = ({
 	ctx,
 	customerId,
+	entityId,
 	statuses,
 	asOfTimestampMs,
 }: {
 	ctx: Pick<PostgresContext, "orgId" | "env">;
 	customerId: string;
+	entityId: string | null;
 	statuses: string[];
 	asOfTimestampMs: number;
-}): SQL => sql`
+}): SQL => {
+	const ownedBySubject = ({ alias }: { alias: SQL }) =>
+		entityId === null
+			? sql`${alias}.internal_entity_id IS NULL`
+			: sql`${alias}.internal_entity_id IN (SELECT internal_id FROM entity_record)`;
+
+	return sql`
 	WITH customer_record AS (
 		SELECT c.*
 		FROM customers c
@@ -28,11 +37,21 @@ export const subjectRowsSql = ({
 		LIMIT 1
 	),
 
+	entity_record AS (
+		SELECT e.*
+		FROM entities e
+		WHERE e.internal_customer_id IN (SELECT internal_id FROM customer_record)
+			AND e.deleted IS NOT TRUE
+			AND (e.id = ${entityId} OR e.internal_id = ${entityId})
+		ORDER BY (e.id = ${entityId}) DESC
+		LIMIT 1
+	),
+
 	cus_products AS (
 		SELECT cp.*
 		FROM customer_products cp
 		WHERE cp.internal_customer_id IN (SELECT internal_id FROM customer_record)
-			AND cp.internal_entity_id IS NULL
+			AND ${ownedBySubject({ alias: sql`cp` })}
 			AND cp.customer_license_link_id IS NULL
 			AND cp.status = ANY(string_to_array(${statuses.join(",")}, ','))
 	),
@@ -52,7 +71,7 @@ export const subjectRowsSql = ({
 		FROM customer_entitlements ce
 		WHERE ce.internal_customer_id IN (SELECT internal_id FROM customer_record)
 			AND ce.customer_product_id IS NULL
-			AND ce.internal_entity_id IS NULL
+			AND ${ownedBySubject({ alias: sql`ce` })}
 			AND ce.pooled_balance_id IS NULL
 			AND ce.pooled_contribution_id IS NULL
 			AND (ce.expires_at IS NULL OR ce.expires_at > ${asOfTimestampMs})
@@ -96,6 +115,7 @@ export const subjectRowsSql = ({
 			(SELECT json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST, ro.id) FROM cus_rollovers ro),
 			'[]'::json
 		),
-		'entities', '[]'::json
+		'entity', (SELECT row_to_json(e) FROM entity_record e)
 	) AS envelope
 `;
+};

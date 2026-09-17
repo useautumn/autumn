@@ -16,7 +16,7 @@ import {
 	insertPartitionProgress,
 	readNextOffset,
 } from "../../repos/partitionProgress.js";
-import { insertBlob } from "../../repos/subjectStates/subjectStates.js";
+import { insertState } from "../../repos/subjectStates/subjectStates.js";
 import type { StateStoreContext } from "../../types/stateStoreContext.js";
 
 export type PartitionCheckpointRestoreMode = "replace" | "restore";
@@ -127,7 +127,7 @@ export const restorePartitionCheckpoint = ({
 				nextOffset: checkpoint.nextOffset,
 			});
 			for (const checkpointState of checkpoint.states) {
-				insertBlob({
+				insertState({
 					ctx,
 					topic: checkpoint.topic,
 					partition: checkpoint.partition,

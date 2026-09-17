@@ -5,6 +5,7 @@ import {
 	type SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
+import { AppEnv } from "@autumn/shared";
 import { ensureSubjectState } from "../../../../src/processor/subject/actions/ensureSubject/ensureSubjectState.js";
 import { SubjectNotFoundError } from "../../../../src/processor/subject/subjectErrors.js";
 import type { SubjectScope } from "../../../../src/processor/subject/types/subject.js";
@@ -23,12 +24,13 @@ const emptyEnvelope: SubjectRowsEnvelope = {
 		internal_id: "cus_internal_1",
 		id: "cus_1",
 		org_id: "org_1",
-		env: "sandbox",
+		env: AppEnv.Sandbox,
+		config: null,
 	},
 	customer_products: [],
 	customer_entitlements: [],
 	rollovers: [],
-	entities: [],
+	entity: null,
 };
 
 /** Applies `mutate` against the held state and commits synchronously, the way the real writer does minus Kafka. */

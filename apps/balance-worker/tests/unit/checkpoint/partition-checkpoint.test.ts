@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { applyMutation, meteringPartitionKeyOf } from "@autumn/balance-engine";
+import {
+	applyMutation,
+	meteringIdentityToPartitionKey,
+} from "@autumn/balance-engine";
 import {
 	assertPartitionCheckpointOwnership,
 	createPartitionCheckpoint,
@@ -22,7 +25,9 @@ const createCheckpoint = () => {
 	const initialState = createState();
 	const mutation = createMutation({ state: initialState });
 	const state = applyMutation({ state: initialState, mutation });
-	const partitionKey = meteringPartitionKeyOf({ identity: state.identity });
+	const partitionKey = meteringIdentityToPartitionKey({
+		identity: state.identity,
+	});
 
 	return createPartitionCheckpoint({
 		engineSchemaVersion: 1,

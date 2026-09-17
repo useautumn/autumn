@@ -1,4 +1,4 @@
-import { trackFingerprintOf } from "../commands/track/trackCommandFingerprintOf.js";
+import { trackInputsToFingerprint } from "../commands/track/trackCommandToFingerprint.js";
 import {
 	canonicalizeJsonValue,
 	type JsonValue,
@@ -14,14 +14,14 @@ type FingerprintInputs = {
 };
 
 /** What a retry must match: each command decides which of its inputs count. */
-export const mutationFingerprintOf = ({
+export const mutationToFingerprint = ({
 	mutation,
 }: {
 	mutation: FingerprintInputs;
 }): string => {
 	const { identity, command, changes } = mutation;
 	if (command.type === "track")
-		return trackFingerprintOf({ identity, command });
+		return trackInputsToFingerprint({ identity, command });
 
 	const payload: JsonValue = JSON.parse(
 		JSON.stringify([identity, { type: command.type }, changes]),

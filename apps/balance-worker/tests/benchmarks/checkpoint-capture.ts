@@ -6,7 +6,7 @@ import {
 	applyMutation,
 	computeCheck,
 	computeTrack,
-	meteringPartitionKeyOf,
+	meteringIdentityToPartitionKey,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
 import { createCheckpointThreadExporter } from "../../src/checkpoint/background/createCheckpointThreadExporter.js";
@@ -137,7 +137,7 @@ for (const customers of sizes) {
 			});
 			if (decision.kind !== "new")
 				throw new Error("Expected benchmark deduction");
-			const partitionKey = meteringPartitionKeyOf({ identity });
+			const partitionKey = meteringIdentityToPartitionKey({ identity });
 			states.push({
 				subjectKey: partitionKey,
 				state: applyMutation({ state, mutation: decision.mutation }),

@@ -4,7 +4,7 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
-import { identitiesMatch } from "../../utils/identityUtils/identitiesMatch.js";
+import { isSameCustomerIdentity } from "../../utils/identityUtils/classifyIdentityUtils.js";
 import { fullCustomerEntitlementToRow } from "../../utils/subjectUtils/convertSubjectUtils.js";
 import type { CheckCommand } from "./types/checkCommand.js";
 import type { CheckDecision } from "./types/checkDecision.js";
@@ -17,7 +17,10 @@ export const computeCheck = ({
 	command: CheckCommand;
 }): CheckDecision => {
 	if (
-		!identitiesMatch({ left: fullSubject.identity, right: command.identity })
+		!isSameCustomerIdentity({
+			left: fullSubject.identity,
+			right: command.identity,
+		})
 	) {
 		return { kind: "unsupported", reason: "subject_mismatch" };
 	}

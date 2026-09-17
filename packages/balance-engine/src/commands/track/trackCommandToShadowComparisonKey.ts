@@ -1,6 +1,6 @@
 import type { TrackCommand } from "./types/trackCommand.js";
 
-export const shadowComparisonKeyOf = ({
+export const trackCommandToShadowComparisonKey = ({
 	command,
 }: {
 	command: TrackCommand;

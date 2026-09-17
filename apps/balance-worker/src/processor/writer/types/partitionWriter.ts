@@ -37,7 +37,7 @@ export type CommittedOutcomeAppender = {
 export type PartitionWriterContext = {
 	stateStore: Pick<
 		StateStore,
-		"readState" | "readReceipt" | "applyDurableMutations"
+		"readState" | "readOwnState" | "readReceipt" | "applyDurableMutations"
 	>;
 	appender: CommittedOutcomeAppender;
 };
@@ -64,15 +64,17 @@ export type PendingSettlement = {
 export type PendingMutation = {
 	pendingKey: string;
 	customerKey: string;
+	/** The states this mutation's projection wrote, released with the customer's last pending mutation. */
+	projectedSubjectKeys: string[];
 	mutation: SubjectStateMutation;
 	settlement: PendingSettlement;
 	/** What `waitForPendingCommits()` snapshots for this customer. */
 	committed: Promise<CommittedMutation>;
 };
 
-/** Mutable writer state: speculative projections and mutations awaiting commit. */
+/** Mutable writer state: speculative projections per subject and mutations awaiting commit. */
 export type PartitionWriterState = {
-	projectedStateByCustomerKey: Map<string, SubjectState>;
+	projectedStateBySubjectKey: Map<string, SubjectState>;
 	pendingByKey: Map<string, PendingMutation>;
 	pendingByCustomerKey: Map<string, Set<PendingMutation>>;
 	queue: PendingMutation[];

@@ -1,6 +1,6 @@
 import {
 	type MeteringIdentity,
-	meteringPartitionKeyOf,
+	meteringIdentityToPartitionKey,
 	type SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type { KafkaRecordPosition } from "../../types/kafkaRecordPosition.js";
@@ -61,7 +61,7 @@ export const readReceipt = ({
 	identity: MeteringIdentity;
 	mutationId: string;
 }): StoredMutationReceipt | null => {
-	const partitionKey = meteringPartitionKeyOf({ identity });
+	const partitionKey = meteringIdentityToPartitionKey({ identity });
 	const row = ctx.sqliteDb
 		.query<MutationReceiptRow, { partitionKey: string; mutationId: string }>(`
 			SELECT ${selectColumns}

@@ -5,25 +5,24 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { computeDeduction } from "../../common/deduction/computeDeduction.js";
+import type { UnsupportedDecision } from "../../models/common/decision.js";
 import type { RowChange } from "../../models/rowChange.js";
 import type {
 	WorkerFullCustomerEntitlement,
 	WorkerFullSubject,
 } from "../../models/subject/workerFullSubject.js";
 import type { SubjectStateMutation } from "../../models/subjectStateMutation.js";
-import { mutationFingerprintOf } from "../../mutation/mutationFingerprintOf.js";
+import { mutationToFingerprint } from "../../mutation/mutationToFingerprint.js";
 import { parseSubjectStateMutation } from "../../parsers.js";
-import { identitiesMatch } from "../../utils/identityUtils/identitiesMatch.js";
+import { isSameCustomerIdentity } from "../../utils/identityUtils/classifyIdentityUtils.js";
 import { fullCustomerEntitlementToRow } from "../../utils/subjectUtils/convertSubjectUtils.js";
 import type { TrackCommand, TrackCommandEcho } from "./types/trackCommand.js";
 import type { TrackDecision } from "./types/trackDecision.js";
 import { validateTrackMutation } from "./validateTrackMutation.js";
 
-type UnsupportedTrackDecision = Extract<TrackDecision, { kind: "unsupported" }>;
-
 type TrackClassification =
 	| { kind: "supported"; customerEntitlements: WorkerFullCustomerEntitlement[] }
-	| UnsupportedTrackDecision;
+	| UnsupportedDecision;
 
 const classifyTrackCommand = ({
 	fullSubject,
@@ -33,7 +32,10 @@ const classifyTrackCommand = ({
 	command: TrackCommand;
 }): TrackClassification => {
 	if (
-		!identitiesMatch({ left: fullSubject.identity, right: command.identity })
+		!isSameCustomerIdentity({
+			left: fullSubject.identity,
+			right: command.identity,
+		})
 	) {
 		return { kind: "unsupported", reason: "subject_mismatch" };
 	}
@@ -152,7 +154,7 @@ const buildTrackMutation = ({
 				}),
 			},
 			receipt: {
-				fingerprint: mutationFingerprintOf({
+				fingerprint: mutationToFingerprint({
 					mutation: {
 						identity: command.identity,
 						command: mutationCommand,

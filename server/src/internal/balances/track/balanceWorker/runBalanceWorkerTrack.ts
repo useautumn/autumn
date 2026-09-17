@@ -7,6 +7,7 @@ import {
 	rethrowBalanceWorkerError,
 } from "../../balanceWorker/balanceWorkerErrors.js";
 import { loadBalanceWorkerSubject } from "../../balanceWorker/loadBalanceWorkerSubject.js";
+import { requireSupportedDecision } from "../../balanceWorker/requireSupportedDecision.js";
 import { validateBalanceWorkerRequest } from "../../balanceWorker/validateBalanceWorkerRequest.js";
 import { trackParamsToTrackCommand } from "./balanceWorkerTrackRequest.js";
 import { trackDecisionToTrackResponse } from "./balanceWorkerTrackResponse.js";
@@ -29,8 +30,8 @@ export async function runBalanceWorkerTrack({
 		});
 	const command = trackParamsToTrackCommand({ ctx, body });
 	try {
-		const decision = await (client ?? getBalanceWorkerClient()).track({
-			command,
+		const decision = requireSupportedDecision({
+			decision: await (client ?? getBalanceWorkerClient()).track({ command }),
 		});
 		const fullSubject = await loadSubject({
 			ctx,

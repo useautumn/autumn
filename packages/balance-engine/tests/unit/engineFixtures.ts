@@ -76,6 +76,30 @@ export const createCustomerEntitlement = ({
 	created_at: occurredAt,
 });
 
+export const entity = {
+	id: "ent_42",
+	internal_id: "ent_internal_42",
+	internal_customer_id: "cus_internal_1",
+	feature_id: "seats",
+} as const;
+
+/** What an entity initialize carries: the entity and the rows it owns, under the entity's identity. */
+export const createEntityState = ({
+	customerEntitlements = [
+		{
+			...createCustomerEntitlement({ id: "seats_ent_42", featureId: "seats" }),
+			internal_entity_id: entity.internal_id,
+		},
+	],
+}: {
+	customerEntitlements?: WorkerCustomerEntitlement[];
+} = {}): SubjectState =>
+	createSubjectState({
+		identity: { ...identity, entityId: entity.id },
+		customerEntitlements,
+		entity,
+	});
+
 export const createState = ({
 	balance = 10,
 	customerEntitlements,

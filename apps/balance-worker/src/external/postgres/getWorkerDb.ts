@@ -39,6 +39,7 @@ export const createWorkerDb = ({
 		getSubjectRows({
 			ctx: { db: ctx.postgres.db, orgId: identity.orgId, env: identity.env },
 			customerId: identity.customerId,
+			entityId: identity.entityId,
 			asOfTimestampMs,
 		}),
 	getCatalogRows: ({ identity, ids }) =>
