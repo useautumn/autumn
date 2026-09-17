@@ -17,12 +17,14 @@ export const resolveMigrationStatus = ({
 	migrationInternalId,
 	runs,
 	orgActiveRuns,
-	hasStartedRunAll = false,
+	latestRunAllStatus = null,
 }: {
 	migrationInternalId: string;
 	runs: MigrationRun[];
 	orgActiveRuns: MigrationRun[];
-	hasStartedRunAll?: boolean;
+	/** Status of the newest Run All that reached execution, when the caller
+	 * already aggregated it and did not pass the finished rows in `runs`. */
+	latestRunAllStatus?: MigrationRunStatus | null;
 }): {
 	status: MigrationStatus;
 	blockedByMigrationInternalId: string | null;
@@ -48,24 +50,23 @@ export const resolveMigrationStatus = ({
 			: { status: MigrationStatus.Running, blockedByMigrationInternalId: null };
 	}
 
-	const started =
-		hasStartedRunAll || runAllRuns.some((run) => run.started_at !== null);
-	if (!started)
-		return {
-			status: MigrationStatus.Draft,
-			blockedByMigrationInternalId: null,
-		};
-
-	const latestFinished = runAllRuns
+	const latestLocal = runAllRuns
 		.filter((run) => run.started_at !== null)
 		.reduce<MigrationRun | null>(
 			(latest, run) =>
 				latest === null || run.created_at > latest.created_at ? run : latest,
 			null,
 		);
+	const outcome = latestLocal?.status ?? latestRunAllStatus;
+	if (!outcome)
+		return {
+			status: MigrationStatus.Draft,
+			blockedByMigrationInternalId: null,
+		};
+
 	return {
 		status:
-			latestFinished?.status === MigrationRunStatus.NoChanges
+			outcome === MigrationRunStatus.NoChanges
 				? MigrationStatus.NoChanges
 				: MigrationStatus.Run,
 		blockedByMigrationInternalId: null,

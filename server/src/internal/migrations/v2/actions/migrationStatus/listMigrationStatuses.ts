@@ -36,9 +36,9 @@ export const listMigrationStatuses = async ({
 }): Promise<Map<string, MigrationStatusInfo>> => {
 	if (migrations.length === 0) return new Map();
 
-	const [orgActiveRuns, startedRunAllIds] = await Promise.all([
+	const [orgActiveRuns, latestRunAllStatuses] = await Promise.all([
 		migrationRunRepo.list({ ctx, active: true }),
-		migrationRunRepo.listIdsWithRunAllStarted({
+		migrationRunRepo.listLatestRunAllStatuses({
 			ctx,
 			migrationInternalIds: migrations.map((m) => m.internal_id),
 		}),
@@ -52,7 +52,8 @@ export const listMigrationStatuses = async ({
 				(run) => run.migration_internal_id === migration.internal_id,
 			),
 			orgActiveRuns,
-			hasStartedRunAll: startedRunAllIds.has(migration.internal_id),
+			latestRunAllStatus:
+				latestRunAllStatuses.get(migration.internal_id) ?? null,
 		});
 		statuses.set(migration.internal_id, {
 			status,

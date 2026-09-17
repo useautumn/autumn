@@ -210,7 +210,7 @@ describe("resolveMigrationStatus: run", () => {
 				migrationInternalId: MIGRATION_ID,
 				runs: [],
 				orgActiveRuns: [],
-				hasStartedRunAll: true,
+				latestRunAllStatus: "succeeded",
 			}).status,
 		).toBe("run");
 	});
@@ -287,8 +287,21 @@ describe("resolveMigrationStatus: no_changes", () => {
 				migrationInternalId: MIGRATION_ID,
 				runs: [],
 				orgActiveRuns: [],
-				hasStartedRunAll: true,
+				latestRunAllStatus: "succeeded",
 			}).status,
 		).toBe("run");
+	});
+
+	/** The list endpoint passes only active runs, so a finished no-op run
+	 * reaches the resolver through this aggregate rather than in `runs`. */
+	test("pre-aggregated no_changes without run rows reads no_changes", () => {
+		expect(
+			resolveMigrationStatus({
+				migrationInternalId: MIGRATION_ID,
+				runs: [],
+				orgActiveRuns: [],
+				latestRunAllStatus: "no_changes",
+			}).status,
+		).toBe("no_changes");
 	});
 });
