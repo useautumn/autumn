@@ -3,6 +3,7 @@ import type {
 	KafkaProducerFactory,
 	KafkaProducerLimits,
 } from "@autumn/kafka";
+import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
 import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
@@ -38,6 +39,7 @@ export type KafkaOwnedPartitionRuntimeFactory = (
 ) => ConstructedPartitionRuntime;
 
 export type PartitionRuntimeFactoryContext = {
+	logger?: Pick<AutumnLogger, "info" | "warn">;
 	kafka: KafkaProducerFactory;
 	ownershipOffsets: Pick<Admin, "fetchTopicOffsets">;
 	stateStore: SqliteBalanceStateStore;

@@ -25,14 +25,20 @@ import * as featureDeductions from "@/internal/balances/track/utils/getFeatureDe
 import * as asyncTrackConfig from "@/internal/misc/asyncTrack/asyncTrackStore.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
-let balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({});
+const localEnv = { KAFKA_AUTH_MODE: "none" };
+let balanceWorkerEnv =
+	balanceWorkerConfig.createBalanceWorkerClientEnv(localEnv);
 
 function readBalanceWorkerClientEnv() {
 	return balanceWorkerEnv;
 }
 
 function prepareBalanceWorkerConfig(): void {
-	balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({});
+	balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv(localEnv);
+	spyOn(
+		balanceWorkerConfig,
+		"getBalanceWorkerRolloutEnabled",
+	).mockImplementation(() => balanceWorkerEnv.BALANCE_WORKER_ROLLOUT_ENABLED);
 	spyOn(balanceWorkerConfig, "getBalanceWorkerClientEnv").mockImplementation(
 		readBalanceWorkerClientEnv,
 	);
@@ -43,6 +49,18 @@ function restoreMocks(): void {
 }
 
 function ignoreLog(): void {}
+
+function refuseUnconfiguredKafka() {
+	// This used to break disabled startup and legacy routes before reaching Redis.
+	return spyOn(
+		balanceWorkerConfig,
+		"getBalanceWorkerClientEnv",
+	).mockImplementation(() =>
+		balanceWorkerConfig.createBalanceWorkerClientEnv({
+			NODE_ENV: "production",
+		}),
+	);
+}
 
 test.each(["none", "msk_iam"] as const)(
 	"shared shadow and operator ownership reader uses %s without enabling direct routing",
@@ -132,6 +150,7 @@ function gatesBalanceWorkerToEnabledDevelopmentSandbox(): void {
 	] as const) {
 		balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({
 			NODE_ENV: nodeEnv,
+			...localEnv,
 			BALANCE_WORKER_ROLLOUT_ENABLED: enabled,
 		});
 		expect(
@@ -184,8 +203,10 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 		).href
 	);
 
+	const readClientConfig = refuseUnconfiguredKafka();
 	await ownership.startOwnershipConsumer();
 	await ownership.stopOwnershipConsumer();
+	expect(readClientConfig).not.toHaveBeenCalled();
 	expect(createKafka).not.toHaveBeenCalled();
 	expect(createConsumer).not.toHaveBeenCalled();
 	expect(starts).toBe(0);
@@ -193,13 +214,15 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 	expect(info).toHaveBeenCalledWith(
 		"[balance-worker] Ownership consumer skipped: rollout disabled",
 	);
+	readClientConfig.mockImplementation(readBalanceWorkerClientEnv);
 
 	balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({
 		NODE_ENV: "development",
+		...localEnv,
 		BALANCE_WORKER_ROLLOUT_ENABLED: "true",
 		KAFKA_BROKERS: "broker:9092",
 		BALANCE_WORKER_OWNERSHIP_TOPIC: "ownership",
-		BALANCE_WORKER_PARTITION_COUNT: "4",
+		BALANCE_WORKER_PARTITION_COUNT: "512",
 		BALANCE_WORKER_REQUEST_TIMEOUT_MS: "200",
 	});
 	await ownership.startOwnershipConsumer();
@@ -235,7 +258,7 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 	expect(createClient).toHaveBeenCalledTimes(1);
 	expect(createClient).toHaveBeenCalledWith({
 		ctx: { owners: consumer },
-		config: { partitionCount: 4, timeoutMs: 200 },
+		config: { partitionCount: 512, timeoutMs: 200 },
 	});
 	await ownership.stopOwnershipConsumer();
 	expect(stops).toBe(1);
@@ -347,6 +370,7 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 
 	balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({
 		NODE_ENV: "development",
+		...localEnv,
 		BALANCE_WORKER_ROLLOUT_ENABLED: "true",
 	});
 	asyncEnabled = true;
@@ -367,7 +391,8 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 	});
 	expect(receivedFailure).toBe(balanceWorkerFailure);
 
-	balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({});
+	balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv(localEnv);
+	const readClientConfig = refuseUnconfiguredKafka();
 	await expectSelectedPath({
 		response: await postTrack({ async: true }),
 		status: 202,
@@ -392,6 +417,7 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 		status: 202,
 		path: ["feature-deductions", "async-config", "legacy"],
 	});
+	expect(readClientConfig).not.toHaveBeenCalled();
 }
 
 beforeEach(prepareBalanceWorkerConfig);
@@ -446,11 +472,15 @@ test("check selects the worker without falling back or using the blanket fail-op
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify({ customer_id: "customer", feature_id: "messages" }),
 		});
+	const readClientConfig = refuseUnconfiguredKafka();
 	expect((await post()).status).toBe(202);
 	expect(calls).toEqual(["legacy"]);
+	expect(readClientConfig).not.toHaveBeenCalled();
+	readClientConfig.mockImplementation(readBalanceWorkerClientEnv);
 	calls.length = 0;
 	balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({
 		NODE_ENV: "development",
+		...localEnv,
 		BALANCE_WORKER_ROLLOUT_ENABLED: "true",
 	});
 	const checked = await post();

@@ -3,7 +3,9 @@ export function createKafkaAuthEnv({
 }: {
 	runtimeEnv: Record<string, string | undefined>;
 }) {
-	const authMode = runtimeEnv.KAFKA_AUTH_MODE ?? "none";
+	// Staging and production use MSK IAM without an Infisical auth-mode setting.
+	// Local plaintext Kafka and tests must explicitly opt into "none".
+	const authMode = runtimeEnv.KAFKA_AUTH_MODE ?? "msk_iam";
 	if (authMode !== "none" && authMode !== "msk_iam") {
 		throw new Error("KAFKA_AUTH_MODE must be none or msk_iam");
 	}

@@ -29,6 +29,7 @@ export type EdgeConfigCardId =
 	| "feature-flags"
 	| "async-balance-update"
 	| "async-track"
+	| "balance-shadow"
 	| "request-block"
 	| "customer-block"
 	| "org-limits"
@@ -321,6 +322,30 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 								label: `${pluralize({ count, noun: "org" })} enabled`,
 								tone: "active",
 							};
+				},
+			},
+			{
+				id: "balance-shadow",
+				title: "Balance Shadow",
+				description:
+					"Copy selected tracks to the balance worker without changing live routing.",
+				icon: Activity,
+				endpoint: "/admin/balance-shadow-config",
+				deriveStatus: (data) => {
+					const config = asRecord(data);
+					if (config.enabled !== true) return { label: "Off", tone: "neutral" };
+					const run = asRecord(config.run);
+					if (
+						typeof run.expiresAt === "number" &&
+						run.expiresAt <= Date.now()
+					) {
+						return { label: "Expired", tone: "warning" };
+					}
+					const count = Array.isArray(run.customers) ? run.customers.length : 0;
+					return {
+						label: `${count} ${count === 1 ? "entry" : "entries"} configured`,
+						tone: "active",
+					};
 				},
 			},
 			{

@@ -2,6 +2,7 @@ import { createProducerSession } from "@autumn/kafka";
 import { createMutationPublisher } from "../../kafka/createMutationPublisher.js";
 import { createOwnershipPublisher } from "../../kafka/createOwnershipPublisher.js";
 import { createWorkerProducer } from "../../kafka/createWorkerProducer.js";
+import { createPartitionCommitLogging } from "../../logging/createPartitionCommitLogging.js";
 import { createPartitionBootstrapper } from "../../runtime/bootstrap/createPartitionBootstrapper.js";
 import { createPartitionRuntime } from "../../runtime/createPartitionRuntime.js";
 import type {
@@ -65,14 +66,21 @@ export function createPartitionRuntimeFactory({
 			config: { ...config.ownership, partition },
 		});
 		const appender = createMutationPublisher({ ctx: { producer } });
+		const commitLogging = createPartitionCommitLogging({
+			ctx: { appender, stateStore: ctx.stateStore, logger: ctx.logger },
+			config: {
+				deployment: config.deploymentEnvironment,
+				endpoint: config.ownership.endpoint,
+			},
+		});
 		const runtime = createPartitionRuntime({
 			ctx: {
-				stateStore: ctx.stateStore,
+				stateStore: commitLogging.stateStore,
 				checkpointMaintenance: ctx.checkpointMaintenance,
 				bootstrapper,
 				follower,
 				producer,
-				appender,
+				appender: commitLogging.appender,
 				partitionResolver: ctx.partitionResolver,
 				trackReceiptPolicy: {
 					retentionMs: config.trackReceiptRetentionMs,

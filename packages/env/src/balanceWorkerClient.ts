@@ -1,8 +1,11 @@
+import { getBalanceWorkerPartitionCount } from "./balanceWorkerPartitionCount.js";
 import { createKafkaAuthEnv } from "./kafkaAuth.js";
 
-export function createBalanceWorkerClientEnv(
-	runtimeEnv: Record<string, string | undefined>,
-) {
+export function parseBalanceWorkerRolloutEnabled({
+	runtimeEnv,
+}: {
+	runtimeEnv: Record<string, string | undefined>;
+}): boolean {
 	const rollout = runtimeEnv.BALANCE_WORKER_ROLLOUT_ENABLED ?? "false";
 	if (rollout !== "true" && rollout !== "false") {
 		throw new Error("BALANCE_WORKER_ROLLOUT_ENABLED must be true or false");
@@ -12,6 +15,17 @@ export function createBalanceWorkerClientEnv(
 			"Balance worker direct routing requires NODE_ENV=development",
 		);
 	}
+	return rollout === "true";
+}
+
+export function getBalanceWorkerRolloutEnabled(): boolean {
+	return parseBalanceWorkerRolloutEnabled({ runtimeEnv: process.env });
+}
+
+export function createBalanceWorkerClientEnv(
+	runtimeEnv: Record<string, string | undefined>,
+) {
+	const rolloutEnabled = parseBalanceWorkerRolloutEnabled({ runtimeEnv });
 	const brokers: string[] = [];
 	for (const broker of (runtimeEnv.KAFKA_BROKERS ?? "127.0.0.1:19092").split(
 		",",
@@ -20,13 +34,13 @@ export function createBalanceWorkerClientEnv(
 	}
 	return {
 		...createKafkaAuthEnv({ runtimeEnv }),
-		BALANCE_WORKER_ROLLOUT_ENABLED: rollout === "true",
+		BALANCE_WORKER_ROLLOUT_ENABLED: rolloutEnabled,
 		KAFKA_BROKERS: brokers,
 		BALANCE_WORKER_OWNERSHIP_TOPIC:
 			runtimeEnv.BALANCE_WORKER_OWNERSHIP_TOPIC ?? "autumn-metering-ownership",
-		BALANCE_WORKER_PARTITION_COUNT: Number(
-			runtimeEnv.BALANCE_WORKER_PARTITION_COUNT ?? 8,
-		),
+		BALANCE_WORKER_PARTITION_COUNT: getBalanceWorkerPartitionCount({
+			runtimeEnv,
+		}),
 		BALANCE_WORKER_REQUEST_TIMEOUT_MS: Number(
 			runtimeEnv.BALANCE_WORKER_REQUEST_TIMEOUT_MS ?? 1_000,
 		),

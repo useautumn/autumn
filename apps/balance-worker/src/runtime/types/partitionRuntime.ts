@@ -8,6 +8,7 @@ import type { TrackReceiptPolicy } from "../../processor/commands/track.js";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import type {
 	CommittedOutcomeAppender,
+	PartitionWriterContext,
 	PartitionWriterLimits,
 } from "../../processor/writer/types/partitionWriter.js";
 import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
@@ -47,7 +48,8 @@ export type MeteringPartitionResolver = {
 };
 
 export type PartitionRuntimeDependencies = {
-	stateStore: SqliteBalanceStateStore;
+	stateStore: PartitionWriterContext["stateStore"] &
+		Pick<SqliteBalanceStateStore, "readNextOffset">;
 	producer: OwnedPartitionProducer;
 	appender: CommittedOutcomeAppender;
 	follower: PartitionOutcomeFollowerPort;

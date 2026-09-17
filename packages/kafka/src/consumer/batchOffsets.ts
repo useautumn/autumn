@@ -1,6 +1,5 @@
 import type { EachBatchPayload } from "kafkajs";
 import { parseKafkaOffset } from "../client/kafkaOffsetUtils.js";
-import { KafkaPartitionOffsetsNotFoundError } from "./consumerErrors.js";
 import type {
 	TopicBatchParams,
 	TopicConsumerContext,
@@ -60,17 +59,20 @@ export async function commitBatchOffsets({
 	)
 		return;
 	const offset = readPendingOffset(payload);
-	await payload.commitOffsetsIfNecessary({
-		topics: [{ topic, partitions: [{ partition, offset }] }],
-	});
+	if (offset !== null) {
+		await payload.commitOffsetsIfNecessary({
+			topics: [{ topic, partitions: [{ partition, offset }] }],
+		});
+	}
 	if (
 		!payload.isRunning() ||
 		!hasCurrentBatchGeneration({ state, payload, generation })
 	)
 		return;
-	const committedNextOffset = parseKafkaOffset({ offset });
 	const fetchedNextOffset =
 		parseKafkaOffset({ offset: payload.batch.lastOffset() }) + 1n;
+	const committedNextOffset =
+		offset === null ? fetchedNextOffset : parseKafkaOffset({ offset });
 	ctx.progress.advance({
 		topic,
 		partition,
@@ -82,7 +84,7 @@ export async function commitBatchOffsets({
 	state.initializedPartitions.add(JSON.stringify([topic, partition]));
 }
 
-function readPendingOffset(payload: EachBatchPayload): string {
+function readPendingOffset(payload: EachBatchPayload): string | null {
 	const { topic, partition } = payload.batch;
 	for (const pendingTopic of payload.uncommittedOffsets().topics) {
 		if (pendingTopic.topic !== topic) continue;
@@ -91,5 +93,6 @@ function readPendingOffset(payload: EachBatchPayload): string {
 				return pendingPartition.offset;
 		}
 	}
-	throw new KafkaPartitionOffsetsNotFoundError({ topic, partition });
+	// KafkaJS omits resolved offsets that already match the group's committed offset.
+	return null;
 }

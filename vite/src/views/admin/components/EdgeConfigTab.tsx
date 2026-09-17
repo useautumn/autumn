@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { AsyncBalanceUpdateDialog } from "./AsyncBalanceUpdateDialog";
 import { AsyncTrackDialog } from "./AsyncTrackDialog";
+import { BalanceShadowDialog } from "./BalanceShadowDialog";
 import { CacheV2RampDialog } from "./CacheV2RampDialog";
 import { CustomerBlockDialog } from "./CustomerBlockDialog";
 import { EdgeConfigCard } from "./EdgeConfigCard";
@@ -114,6 +115,11 @@ export function EdgeConfigTab() {
 
 			<AsyncTrackDialog
 				open={openConfig === "async-track"}
+				onOpenChange={closeDialog}
+			/>
+
+			<BalanceShadowDialog
+				open={openConfig === "balance-shadow"}
 				onOpenChange={closeDialog}
 			/>
 

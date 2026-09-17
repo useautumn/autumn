@@ -32,6 +32,7 @@ const partition = 2;
 
 type ConsumerFixtureOptions = {
 	commitGate?: Promise<void>;
+	committedNextOffset?: string;
 	startupFailure?: Error;
 	stopFailure?: Error;
 	disconnectFailure?: Error;
@@ -46,6 +47,7 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 	const listeners = new Map<string, unknown>();
 	let runConfig: ConsumerRunConfig | undefined;
 	let commitFailure: Error | undefined;
+	let committedNextOffset = options.committedNextOffset;
 
 	async function connect(): Promise<void> {
 		events.push("connect");
@@ -77,6 +79,10 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 		}
 		await options.commitGate;
 		commits.push(offsets);
+		for (const position of offsets) {
+			if (position.topic === topic && position.partition === partition)
+				committedNextOffset = position.offset;
+		}
 	}
 	function seek(position: {
 		topic: string;
@@ -148,7 +154,8 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 		}
 		function resolveOffset(offset: string): void {
 			events.push(`resolve:${offset}`);
-			resolvedOffset = offset;
+			resolvedOffset =
+				offset === messages.at(-1)?.offset ? lastOffset() : offset;
 		}
 		async function heartbeat(): Promise<void> {
 			events.push("heartbeat");
@@ -159,6 +166,8 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 		}
 		function uncommittedOffsets(): OffsetsByTopicPartition {
 			if (resolvedOffset === undefined) return { topics: [] };
+			const nextOffset = (BigInt(resolvedOffset) + 1n).toString();
+			if (nextOffset === committedNextOffset) return { topics: [] };
 			return {
 				topics: [
 					{
@@ -166,7 +175,7 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 						partitions: [
 							{
 								partition: uncommittedPartition as number,
-								offset: (BigInt(resolvedOffset) + 1n).toString(),
+								offset: nextOffset,
 							},
 						],
 					},
@@ -327,7 +336,7 @@ async function commitsOnlyAfterApplyingWholeBatch(): Promise<void> {
 	expect(progress.read({ topic, partition })).toBeNull();
 	gate.resolve();
 	await delivery;
-	expect(fixture.commits).toEqual([[{ topic, partition, offset: "3" }]]);
+	expect(fixture.commits).toEqual([[{ topic, partition, offset: "5" }]]);
 	expect(progress.read({ topic, partition })).toBe(5n);
 	expect(fixture.readRunConfig()).toMatchObject({
 		autoCommit: false,
@@ -335,6 +344,69 @@ async function commitsOnlyAfterApplyingWholeBatch(): Promise<void> {
 		partitionsConsumedConcurrently: 3,
 	});
 	await consumer.stop();
+}
+
+async function advancesAlreadyCommittedReplay({
+	lastOffset,
+	nextOffset,
+}: {
+	lastOffset: string;
+	nextOffset: string;
+}): Promise<void> {
+	const fixture = createConsumerFixture({ committedNextOffset: nextOffset });
+	const progress = createProgressTracker();
+	const applied: string[] = [];
+	function applyRecord({ message }: TopicRecord): undefined {
+		applied.push(message.offset);
+	}
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress,
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	progress.advance({ topic, partition, nextOffset: 13n });
+	try {
+		await fixture.deliverBatch({ records: [createRecord("13")], lastOffset });
+		expect(applied).toEqual(["13"]);
+		expect(fixture.commits).toEqual([]);
+		expect(progress.read({ topic, partition })).toBe(BigInt(nextOffset));
+	} finally {
+		await consumer.stop();
+	}
+}
+
+async function failedCommitDoesNotAdvanceProgress(): Promise<void> {
+	const fixture = createConsumerFixture();
+	const progress = createProgressTracker();
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress,
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	try {
+		fixture.failNextCommit(new Error("commit failed"));
+		await expect(
+			fixture.deliverBatch({ records: [createRecord("13")], lastOffset: "14" }),
+		).rejects.toThrow("commit failed");
+		expect(progress.read({ topic, partition })).toBeNull();
+		expect(fixture.commits).toEqual([]);
+		await fixture.deliverBatch({
+			records: [createRecord("13")],
+			lastOffset: "14",
+		});
+		expect(progress.read({ topic, partition })).toBe(15n);
+		expect(fixture.commits).toEqual([[{ topic, partition, offset: "15" }]]);
+	} finally {
+		await consumer.stop();
+	}
 }
 
 async function reconcilesInitialOffsetAndRejoins(): Promise<void> {
@@ -542,6 +614,17 @@ async function lifecycleFailuresRemoveListeners(): Promise<void> {
 }
 
 function topicConsumerTests(): void {
+	test.each([
+		{ lastOffset: "13", nextOffset: "14" },
+		{ lastOffset: "14", nextOffset: "15" },
+	])(
+		"replayed records advance through fetched offset $lastOffset when already committed",
+		advancesAlreadyCommittedReplay,
+	);
+	test(
+		"failed commits do not publish catch-up progress and can be retried",
+		failedCommitDoesNotAdvanceProgress,
+	);
 	test(
 		"applies all records before committing offsets and publishing progress",
 		commitsOnlyAfterApplyingWholeBatch,

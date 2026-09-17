@@ -102,6 +102,7 @@ export function provisionedInfraEnv(
 		DYNAMODB_ENDPOINT: `http://localhost:${dynamoDbPortFor(worktreeNum)}`,
 		...(!isCloudAgent() && {
 			KAFKA_BROKERS: `127.0.0.1:${kafkaPortFor(worktreeNum)}`,
+			KAFKA_AUTH_MODE: "none",
 		}),
 		SQS_QUEUE_URL: queueUrl("autumn.fifo"),
 		SQS_QUEUE_URL_V2: queueUrl("autumn.fifo"),

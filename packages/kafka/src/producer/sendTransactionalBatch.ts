@@ -1,3 +1,4 @@
+import { CompressionTypes } from "kafkajs";
 import {
 	KafkaBatchNotCommittedError,
 	KafkaTransactionStateUnknownError,
@@ -64,6 +65,7 @@ export async function sendTransactionalBatch({
 			topic,
 			messages: partitionMessages,
 			acks: -1,
+			compression: CompressionTypes.GZIP,
 		});
 		baseOffset = metadataToBaseOffset({ metadata, topic, partition });
 	} catch (cause) {

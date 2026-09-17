@@ -5,7 +5,7 @@ import {
 	parseTrackCommand,
 	type TrackOutcome,
 } from "@autumn/balance-engine";
-import type { ProducerRecord, RecordMetadata } from "kafkajs";
+import { CompressionTypes, type ProducerRecord, type RecordMetadata } from "kafkajs";
 import {
 	createMeteringPublisher,
 	KafkaBatchNotCommittedError,
@@ -88,6 +88,7 @@ function transactionalBatchTests(): void {
 					{ ...second, partition },
 				],
 				acks: -1,
+				compression: CompressionTypes.GZIP,
 			},
 		]);
 	}
@@ -370,6 +371,7 @@ function meteringPublisherTests(): void {
 		expect(fake.records[0]).toEqual({
 			topic,
 			acks: -1,
+			compression: CompressionTypes.GZIP,
 			messages: expectedMessages,
 		});
 	}

@@ -3,7 +3,10 @@ import { Kafka } from "kafkajs";
 import { validateBalanceWorkerTopics } from "../src/init/workerConfig.js";
 
 async function setup(): Promise<void> {
-	const env = createBalanceWorkerEnv(process.env);
+	const env = createBalanceWorkerEnv({
+		...process.env,
+		KAFKA_AUTH_MODE: "none",
+	});
 	if (
 		env.BALANCE_WORKER_DEPLOYMENT !== "local" ||
 		hasRemoteBroker(env.KAFKA_BROKERS)
