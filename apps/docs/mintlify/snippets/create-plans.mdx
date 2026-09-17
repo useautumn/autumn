@@ -18,7 +18,7 @@ pnpm dlx atmn init
 ```
 </CodeGroup>
 
-This will prompt you to login or create an account, and create an `autumn.config.ts` file. Paste in the code below, or view our [config schema](/cli/config) to build your own.
+This asks how you want to connect (sign in, or create a sandbox with no account), then creates an `autumn/` folder with an `autumn.config.ts` inside. Replace the contents of that file with the code below, or view our [config reference](/cli/config) to build your own.
 
 ```typescript autumn.config.ts [expandable]
 import { atmn, feature, plan } from "atmn";
@@ -99,8 +99,8 @@ pnpm dlx atmn push --yes
 </CodeGroup>
 
 <Tip>
-  If you already have products created in the dashboard, run `atmn pull` to
-  pull them into your local config.
+  If you already have plans created in the dashboard, `atmn init` pulls them
+  into your config for you. Run `atmn pull` at any time to do it again.
 </Tip>
 
 </Tab>
