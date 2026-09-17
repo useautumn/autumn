@@ -1,0 +1,69 @@
+name: Sync Shipped PR CI
+
+# Event listeners and schedules must be installed on the default branch (dev).
+on:
+  workflow_run:
+    workflows:
+      - Knip
+      - Leaf Evals
+      - Leaf Unit Tests
+      - Server Type Check
+      - Server Unit Tests
+      - Vite Build Check
+      - Vite Unit Tests
+      - Validate Production Schema
+    types: [requested, in_progress, completed]
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  pull-requests: read
+
+concurrency:
+  group: shipped-ci-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-ci:
+    name: Sync shipped PR CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Refresh CI reactions on shipped PRs
+        env:
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+          GH_TOKEN: ${{ github.token }}
+          EVENT_SHA: ${{ github.event.workflow_run.head_sha || '' }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DEPLOY_URL" ] || [ -z "$DEPLOY_SECRET" ]; then
+            echo "::error::DEPLOY_URL and DEPLOY_SECRET must be configured"
+            exit 1
+          fi
+
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&base=main&per_page=100" \
+            --jq '.[] | select(.head.repo.full_name == env.GITHUB_REPOSITORY) |
+              select(env.EVENT_SHA == "" or .head.sha == env.EVENT_SHA) | .html_url' \
+            > "$RUNNER_TEMP/shipped-ci-prs.txt"
+
+          failed=0
+          while IFS= read -r pr_url; do
+            [ -n "$pr_url" ] || continue
+            jq -n --arg pullRequestUrl "$pr_url" '{pullRequestUrl: $pullRequestUrl}' \
+              > "$RUNNER_TEMP/shipped-ci-payload.json"
+
+            # Infra checks the current commit and all CI; event success is not trusted.
+            if ! curl --silent --show-error --fail-with-body \
+              --retry 2 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 30 \
+              --request POST \
+              --header "Content-Type: application/json" \
+              --header "x-deploy-secret: $DEPLOY_SECRET" \
+              --data-binary @"$RUNNER_TEMP/shipped-ci-payload.json" \
+              "$DEPLOY_URL/api/shipped/ci"; then
+              failed=1
+            fi
+          done < "$RUNNER_TEMP/shipped-ci-prs.txt"
+          exit "$failed"
