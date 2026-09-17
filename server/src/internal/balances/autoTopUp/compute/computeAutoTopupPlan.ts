@@ -9,7 +9,6 @@ import {
 	type StripeBillingPlan,
 	type StripeInvoiceAction,
 	type UsagePriceConfig,
-	usagePriceToLineItem,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -39,8 +38,6 @@ export const computeAutoTopupPlan = ({
 	const feature = customerEntitlement.entitlement.feature;
 	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement })!;
 	const quantity = autoTopupConfig.quantity;
-	const isThresholdBilling =
-		autoTopupContext.actionSource === "threshold_billing";
 
 	// A. Convert credits to packs (billing units)
 	const priceConfig = cusPrice.price.config as UsagePriceConfig;
@@ -56,7 +53,7 @@ export const computeAutoTopupPlan = ({
 		prices: cusProductToPrices({ cusProduct }),
 	});
 	const updateCustomerProduct =
-		isThresholdBilling || hasExpiry || !ownsFeatureQuantity
+		hasExpiry || !ownsFeatureQuantity
 			? undefined
 			: {
 					customerProduct: cusProduct,
@@ -79,20 +76,11 @@ export const computeAutoTopupPlan = ({
 		billingTiming: "in_advance",
 	} satisfies LineItemContext;
 
-	const lineItem = isThresholdBilling
-		? usagePriceToLineItem({
-				cusEnt: { ...customerEntitlement, balance: -quantity },
-				context: lineItemContext,
-				options: {
-					shouldProrateOverride: false,
-					chargeImmediatelyOverride: true,
-				},
-			})
-		: topUpQuantityToLineItem({
-				cusEnt: customerEntitlement,
-				quantity,
-				context: lineItemContext,
-			});
+	const lineItem = topUpQuantityToLineItem({
+		cusEnt: customerEntitlement,
+		quantity,
+		context: lineItemContext,
+	});
 
 	if (lineItem.amount <= 0) {
 		throw new InternalError({

@@ -12,7 +12,6 @@ import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/l
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
 import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct.js";
-import { customerProductActions } from "@/internal/customers/cusProducts/actions/index.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import type { AutoTopupContext } from "./autoTopupContext.js";
@@ -31,9 +30,6 @@ import { sendAutoTopupSucceededWebhook } from "./webhooks/sendAutoTopupSucceeded
 // else the gate reopens while copies still cycle and track traffic reseeds the storm.
 const AUTO_TOPUP_RETRY_SUPPRESSION_MS = ms.minutes(10);
 
-const isThresholdBilling = (autoTopupContext: AutoTopupContext) =>
-	autoTopupContext.actionSource === "threshold_billing";
-
 /** Workflow handler for auto top-ups. */
 export const autoTopup = async ({
 	ctx,
@@ -47,34 +43,6 @@ export const autoTopup = async ({
 	let failureWebhookSent = false;
 	let lastAutoTopupContext: AutoTopupContext | undefined;
 	let pendingTtlMs: number | undefined;
-
-	const markThresholdProductPastDue = async ({
-		autoTopupContext,
-	}: {
-		autoTopupContext: AutoTopupContext;
-	}) => {
-		const customerProduct =
-			autoTopupContext.customerEntitlement.customer_product;
-		if (!isThresholdBilling(autoTopupContext) || !customerProduct) return;
-		if (customerProduct.product.config?.ignore_past_due) return;
-
-		await customerProductActions.markPastDue({
-			ctx,
-			customerProduct,
-			fullCustomer: autoTopupContext.fullCustomer,
-		});
-		await updateCachedCustomerProductV2({
-			ctx,
-			customerId,
-			customerProductId: customerProduct.id,
-			updates: { status: "past_due" },
-		});
-		await deleteCachedFullCustomer({
-			ctx,
-			customerId,
-			source: "threshold-billing-past-due",
-		});
-	};
 
 	const sendFailureWebhook = async ({
 		autoTopupContext,
@@ -176,21 +144,6 @@ export const autoTopup = async ({
 			autoTopupContext,
 			billingResult,
 		});
-		if (
-			isThresholdBilling(autoTopupContext) &&
-			billingResult.stripe?.requiredAction?.code === "payment_failed" &&
-			autoTopupContext.customerEntitlement.customer_product
-		) {
-			await markThresholdProductPastDue({ autoTopupContext });
-		}
-		if (
-			isThresholdBilling(autoTopupContext) &&
-			billingResult.stripe?.deferred
-		) {
-			pendingTtlMs = AUTO_TOPUP_RETRY_SUPPRESSION_MS;
-			return;
-		}
-
 		const isInvoiceMode = Boolean(autoTopupContext.invoiceMode);
 		const invoiceStatus = billingResult.stripe?.stripeInvoice?.status;
 		const isCustomPm = autoTopupContext.paymentMethod?.type === "custom";

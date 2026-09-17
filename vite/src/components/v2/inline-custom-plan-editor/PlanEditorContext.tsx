@@ -23,6 +23,7 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
+import { reconcileThresholdBilling } from "@/views/products/plan/components/edit-plan-feature/advanced-settings/thresholdBillingItem";
 import { versionSlugRenamed } from "@/views/products/plan/utils/versionSlug";
 
 type SetProduct = (
@@ -177,7 +178,11 @@ export function useSetCurrentItem() {
 	const { itemId, itemDraft, updateItemId } = useSheet();
 
 	return useCallback(
-		(updatedItem: ProductItem) => {
+		(nextItem: ProductItem) => {
+			// An item edited out of threshold eligibility must not keep its
+			// threshold: the API rejects that payload on save.
+			const updatedItem = reconcileThresholdBilling({ item: nextItem });
+
 			if (itemDraft.session && itemDraft.session.itemId === itemId) {
 				itemDraft.updateItem({ item: updatedItem });
 				return;

@@ -23,6 +23,8 @@ import { ProrationConfig } from "./advanced-settings/ProrationConfig";
 import { ResetIntervalConfig } from "./advanced-settings/ResetIntervalConfig";
 import { RolloverConfig } from "./advanced-settings/RolloverConfig";
 import { StripePriceConfig } from "./advanced-settings/StripePriceConfig";
+import { ThresholdBillingConfig } from "./advanced-settings/ThresholdBillingConfig";
+import { showsThresholdBilling } from "./advanced-settings/thresholdBillingItem";
 import { UsageLimit } from "./advanced-settings/UsageLimit";
 
 export function AdvancedSettings() {
@@ -38,6 +40,7 @@ export function AdvancedSettings() {
 	const isOneOff = itemToBillingInterval({ item }) === BillingInterval.OneOff;
 
 	const showUsageLimits = isPriced;
+	const showThresholdBilling = showsThresholdBilling({ item });
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
 	// Purchased credits only: the cadence of a recurring item already bounds it.
 	const showExpiry =
@@ -83,6 +86,9 @@ export function AdvancedSettings() {
 
 					{/* Usage Limits */}
 					{showUsageLimits && <UsageLimit />}
+
+					{/* Bill overage once it reaches a threshold */}
+					{showThresholdBilling && <ThresholdBillingConfig />}
 
 					{/* Rollover */}
 					{showRollover && <RolloverConfig />}

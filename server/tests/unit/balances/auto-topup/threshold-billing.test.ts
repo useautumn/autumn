@@ -1,18 +1,11 @@
 import { expect, test } from "bun:test";
-import {
-	BillingInterval,
-	BillWhen,
-	type AutoTopup,
-	type UsagePriceConfig,
-} from "@autumn/shared";
-import { contexts } from "@tests/utils/fixtures/db/contexts.js";
+import type { AutoTopup, UsagePriceConfig } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements.js";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts.js";
 import { customers } from "@tests/utils/fixtures/db/customers.js";
 import { prices } from "@tests/utils/fixtures/db/prices.js";
-import { computeAutoTopupPlan } from "@/internal/balances/autoTopUp/compute/computeAutoTopupPlan.js";
 import { fullCustomerToAutoTopupObjects } from "@/internal/balances/autoTopUp/helpers/fullCustomerToAutoTopupObjects.js";
-import type { AutoTopupContext } from "@/internal/balances/autoTopUp/autoTopupContext.js";
+import { resolveThresholdSettlement } from "@/internal/balances/thresholdBilling/resolve/resolveThresholdSettlement.js";
 
 const createPlan = ({
 	id = "threshold",
@@ -46,6 +39,7 @@ const createPlan = ({
 		customerPrices: [prices.createCustomer({ price, customerProductId: id })],
 	});
 };
+
 const autoTopup: AutoTopup = {
 	feature_id: "messages",
 	enabled: true,
@@ -54,48 +48,64 @@ const autoTopup: AutoTopup = {
 };
 
 for (const usage of [99, 100, 140, 240]) {
-	test(`threshold selection: ${usage} feature units`, () => {
+	test(`settles one threshold chunk at ${usage} feature units`, () => {
 		const fullCustomer = customers.create({
 			customerProducts: [createPlan({ balance: -usage })],
 		});
-		const result = fullCustomerToAutoTopupObjects({
+		const settlement = resolveThresholdSettlement({
 			fullCustomer,
 			featureId: "messages",
 		});
-		expect(result?.autoTopupConfig).toMatchObject({ quantity: 100 });
-		expect(result?.balanceBelowThreshold).toBe(usage >= 100);
+
+		if (usage < 100) {
+			expect(settlement.kind).toBe("nothing_to_settle");
+			return;
+		}
+
+		expect(settlement).toMatchObject({
+			kind: "settle",
+			charge: { chargeUnits: 100, remainingUnits: usage - 100 },
+		});
 	});
 }
 
-test("threshold selection resolves the threshold item", () => {
+test("settlement resolves the threshold item", () => {
 	const fullCustomer = customers.create({ customerProducts: [createPlan()] });
-	const result = fullCustomerToAutoTopupObjects({
+	const settlement = resolveThresholdSettlement({
 		fullCustomer,
 		featureId: "messages",
 	});
-	expect(result?.customerEntitlement.customer_product_id).toBe("threshold");
-	expect(result?.balanceBelowThreshold).toBe(true);
+	expect(settlement).toMatchObject({
+		kind: "settle",
+		customerEntitlement: { customer_product_id: "threshold" },
+	});
 });
 
-test("disabled auto top-up never falls through to threshold billing", () => {
+test("a plan without a threshold price is not threshold billed", () => {
+	const fullCustomer = customers.create({
+		customerProducts: [
+			createPlan({ config: { threshold_billing: undefined } }),
+		],
+	});
+	expect(
+		resolveThresholdSettlement({ fullCustomer, featureId: "messages" }),
+	).toEqual({ kind: "not_threshold_billed" });
+});
+
+test("a threshold price never synthesizes an auto top-up config", () => {
+	const fullCustomer = customers.create({ customerProducts: [createPlan()] });
+	expect(
+		fullCustomerToAutoTopupObjects({ fullCustomer, featureId: "messages" }),
+	).toBeNull();
+});
+
+test("a disabled auto top-up stays disabled", () => {
 	const fullCustomer = customers.create({
 		customerProducts: [
 			createPlan({ config: { threshold_billing: undefined } }),
 		],
 	});
 	fullCustomer.auto_topups = [{ ...autoTopup, enabled: false }];
-	expect(
-		fullCustomerToAutoTopupObjects({ fullCustomer, featureId: "messages" }),
-	).toBeNull();
-});
-
-test("configured auto top-up cannot fall back to a threshold price", () => {
-	const fullCustomer = customers.create({
-		customerProducts: [
-			createPlan({ config: { threshold_billing: undefined } }),
-		],
-	});
-	fullCustomer.auto_topups = [autoTopup];
 	expect(
 		fullCustomerToAutoTopupObjects({ fullCustomer, featureId: "messages" }),
 	).toBeNull();
