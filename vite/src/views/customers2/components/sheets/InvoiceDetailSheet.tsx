@@ -419,7 +419,10 @@ export function InvoiceDetailSheet({
 						variant="primary"
 						className="flex-1"
 						onClick={() =>
-							setSheet({ type: "invoice-reissue", data: { invoice } })
+							setSheet({
+								type: "invoice-reissue",
+								data: { invoice, lineItems, taxedAmount },
+							})
 						}
 					>
 						<PaperPlaneTiltIcon size={16} className="mr-1.5" />

@@ -38,7 +38,9 @@ export function ReissueInvoiceSheet() {
 	const { customer, refetch } = useCusQuery();
 	const { templates } = useInvoiceTemplatesQuery();
 
+	// The whole invoice-detail payload rides along so Back restores that sheet intact.
 	const invoice = sheetData?.invoice as Invoice | undefined;
+	const invoiceDetailData = sheetData ?? {};
 	const templateOptions = [
 		{ label: "Keep current footer", value: NO_TEMPLATE },
 		...templates.map((template) => ({
@@ -107,8 +109,6 @@ export function ReissueInvoiceSheet() {
 				<SheetHeader
 					title="Reissue Invoice"
 					description={`Send a new ${formattedTotal} invoice and void this one. No money moves.`}
-					breadcrumbs={[{ name: "Invoice", sheet: "invoice-detail" }]}
-					itemId={invoice.id}
 				/>
 
 				<SheetSection withSeparator>
@@ -165,7 +165,7 @@ export function ReissueInvoiceSheet() {
 						variant="secondary"
 						className="w-full"
 						onClick={() =>
-							setSheet({ type: "invoice-detail", data: { invoice } })
+							setSheet({ type: "invoice-detail", data: invoiceDetailData })
 						}
 						disabled={reissue.isPending}
 					>
