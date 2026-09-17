@@ -18,6 +18,8 @@ const { getDefaultChatEnv, selectChatEnv } = await import(
 const { selectChatOrg } = await import(
 	"../../../src/providers/slack/setup/selectChatOrg.js"
 );
+const { chatEnvSelectorInstructions, chatEnvSelectorOutputInstructions } =
+	await import("../../../src/prompts/chatSelectorPrompts.js");
 const {
 	orgIdentifierVariants,
 	shouldUseSlackAdminInstallationForWorkspace,
@@ -87,6 +89,18 @@ describe("chat environment selection", () => {
 	test("defaults to live in production", () => {
 		process.env.NODE_ENV = "production";
 		expect(getDefaultChatEnv()).toBe(AppEnv.Live);
+	});
+
+	test("only picks sandbox when the user explicitly asks for it", () => {
+		for (const prompt of [
+			chatEnvSelectorInstructions(AppEnv.Live),
+			chatEnvSelectorOutputInstructions(AppEnv.Live),
+		]) {
+			expect(prompt).toContain(
+				"Never choose sandbox unless the user explicitly asks",
+			);
+			expect(prompt).toContain("demo environment");
+		}
 	});
 
 	test("uses live from structured model output", async () => {
