@@ -1,3 +1,4 @@
+import type { PartitionCheckpointLease } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type { OwnedPartitionRecoveryRequiredError } from "../runtimeErrors.js";
 
 import type {
@@ -38,5 +39,6 @@ export type PartitionRuntimeState = {
 	disconnectProducerPromise: Promise<void> | null;
 	recoveryPromise: Promise<OwnedPartitionRecoveryRequiredError> | null;
 	startupAbortController: AbortController;
+	checkpointLease: PartitionCheckpointLease | null;
 	unavailableListeners: Set<RuntimeUnavailableListener>;
 };

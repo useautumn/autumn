@@ -13,6 +13,7 @@ import {
 import type {
 	PartitionCheckpointPartitionResolver,
 	PartitionCheckpointV1,
+	PreparedPartitionCheckpoint,
 } from "../checkpoint/partitionCheckpoint.js";
 import {
 	capturePartitionCheckpoint as captureCheckpoint,
@@ -198,12 +199,14 @@ export class SqliteBalanceStateStore {
 		partition,
 		createdAt,
 		limits,
+		consumedNextOffset,
 	}: {
 		topic: string;
 		partition: number;
 		createdAt: number;
 		limits: PartitionCheckpointCaptureLimits;
-	}): PartitionCheckpointV1 {
+		consumedNextOffset?: bigint | null;
+	}): PreparedPartitionCheckpoint {
 		assertTopic({ topic });
 		assertPartition({ partition });
 		return captureCheckpoint({
@@ -212,6 +215,7 @@ export class SqliteBalanceStateStore {
 			partition,
 			createdAt,
 			limits,
+			consumedNextOffset,
 		});
 	}
 

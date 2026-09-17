@@ -40,6 +40,23 @@ export type PartitionCheckpointV1 = PartitionCheckpointContentsV1 & {
 	contentHash: string;
 };
 
+const preparedCheckpoint = Symbol("preparedCheckpoint");
+
+export type PreparedPartitionCheckpoint = Readonly<
+	Omit<PartitionCheckpointV1, "states" | "receipts"> & {
+		[preparedCheckpoint]: true;
+		serialized: string;
+		serializedBytes: number;
+		stateCount: number;
+		receiptCount: number;
+	}
+>;
+
+export const isPreparedPartitionCheckpoint = (
+	checkpoint: PartitionCheckpointV1 | PreparedPartitionCheckpoint,
+): checkpoint is PreparedPartitionCheckpoint =>
+	preparedCheckpoint in checkpoint;
+
 export type PartitionCheckpointPartitionResolver = {
 	partitionForIdentity({
 		identity,
@@ -364,20 +381,43 @@ export const createPartitionCheckpoint = (
 	};
 };
 
+export const preparePartitionCheckpoint = ({
+	checkpoint,
+}: {
+	checkpoint: PartitionCheckpointContentsV1 & { contentHash?: string };
+}): PreparedPartitionCheckpoint => {
+	const normalized = createPartitionCheckpoint(checkpoint);
+	if (
+		checkpoint.contentHash !== undefined &&
+		normalized.contentHash !== checkpoint.contentHash
+	) {
+		throw new PartitionCheckpointContentHashMismatchError();
+	}
+	const serialized = JSON.stringify({
+		...serializedContentsOf({ checkpoint: normalized }),
+		contentHash: normalized.contentHash,
+	});
+	return Object.freeze({
+		[preparedCheckpoint]: true as const,
+		schemaVersion: normalized.schemaVersion,
+		engineSchemaVersion: normalized.engineSchemaVersion,
+		topic: normalized.topic,
+		partition: normalized.partition,
+		nextOffset: normalized.nextOffset,
+		createdAt: normalized.createdAt,
+		contentHash: normalized.contentHash,
+		serialized,
+		serializedBytes: Buffer.byteLength(serialized, "utf8"),
+		stateCount: normalized.states.length,
+		receiptCount: normalized.receipts.length,
+	});
+};
+
 export const serializePartitionCheckpoint = ({
 	checkpoint,
 }: {
 	checkpoint: PartitionCheckpointV1;
-}): string => {
-	const normalized = createPartitionCheckpoint(checkpoint);
-	if (normalized.contentHash !== checkpoint.contentHash) {
-		throw new PartitionCheckpointContentHashMismatchError();
-	}
-	return JSON.stringify({
-		...serializedContentsOf({ checkpoint: normalized }),
-		contentHash: normalized.contentHash,
-	});
-};
+}): string => preparePartitionCheckpoint({ checkpoint }).serialized;
 
 export const assertPartitionCheckpointOwnership = ({
 	checkpoint,
