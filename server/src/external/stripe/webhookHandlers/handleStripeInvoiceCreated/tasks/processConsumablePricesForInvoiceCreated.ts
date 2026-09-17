@@ -25,7 +25,8 @@ import {
 } from "../utils/buildInvoiceAddLinesIdempotencyKey";
 
 const STRIPE_ADD_LINES_MAX_PER_REQUEST = 100;
-const MAX_REPLAYED_FAILURE_RETRIES = 1;
+// Stripe redelivers a failing webhook ~16 times over 3 days; each cached failure adds one link.
+const MAX_REPLAYED_FAILURE_WALK = 16;
 
 /**
  * Checks if the subscription's trial just ended.
@@ -86,12 +87,12 @@ const observeInvoiceLineItems = async ({
 
 /**
  * One bulk addLines per batch under a key derived from the observed invoice
- * state, so overlapping deliveries dedupe at Stripe even if the Redis event
- * lock failed open. Stripe also caches resource-specific 429s (lock_timeout)
+ * state and the exact request, so the same write dedupes at Stripe while any
+ * change gets a fresh key. Stripe caches resource-specific 429s (lock_timeout)
  * and 4xx under a key for 24h (how credit lines went missing before), so a
- * replayed failure re-reads the invoice and retries once under a key salted
- * with the replayed request id, which every observer of that failure derives
- * alike. A key reused with different params fails fresh and Stripe redelivers.
+ * replayed failure re-reads the invoice and retries under the key salted with
+ * the replayed request id. Every delivery walks that chain identically, and a
+ * fresh failure ends the walk so Stripe redelivers.
  */
 const addLineItemBatch = async ({
 	ctx,
@@ -109,20 +110,22 @@ const addLineItemBatch = async ({
 	attempt?: number;
 }): Promise<Awaited<ReturnType<typeof addStripeInvoiceLines>> | null> => {
 	if (batch.length === 0) return null;
+	const lines = lineItemsToInvoiceAddLinesParams({ lineItems: batch });
 	try {
 		return await addStripeInvoiceLines({
 			stripeCli: ctx.stripeCli,
 			invoiceId,
-			lines: lineItemsToInvoiceAddLinesParams({ lineItems: batch }),
+			lines,
 			idempotencyKey: buildInvoiceAddLinesIdempotencyKey({
 				invoiceId,
 				existingLineItemIds,
+				requestParams: lines,
 				salt,
 			}),
 		});
 	} catch (error) {
 		const replayedRequestId = getReplayedStripeRequestId(error);
-		if (!replayedRequestId || attempt >= MAX_REPLAYED_FAILURE_RETRIES) {
+		if (!replayedRequestId || attempt >= MAX_REPLAYED_FAILURE_WALK) {
 			throw error;
 		}
 		ctx.logger.warn(
