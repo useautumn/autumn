@@ -41,6 +41,11 @@ export type KafkaRecordPosition = {
 	offset: bigint;
 };
 
+export type DurableTrackOutcomeRecord = {
+	position: KafkaRecordPosition;
+	outcome: TrackOutcome;
+};
+
 export type DurableTrackOutcomeApplyResult =
 	| {
 			kind: "applied" | "duplicate";
@@ -174,98 +179,121 @@ export class SqliteBalanceStateStore {
 	applyDurableTrackOutcome({
 		position,
 		outcome,
+	}: DurableTrackOutcomeRecord): DurableTrackOutcomeApplyResult {
+		const [result] = this.applyDurableTrackOutcomes({
+			records: [{ position, outcome }],
+		});
+		if (!result) throw new Error("Expected a durable track outcome result");
+		return result;
+	}
+
+	applyDurableTrackOutcomes({
+		records,
 	}: {
-		position: KafkaRecordPosition;
-		outcome: TrackOutcome;
-	}): DurableTrackOutcomeApplyResult {
-		assertTopic({ topic: position.topic });
-		assertPartition({ partition: position.partition });
-		assertOffset({ offset: position.offset });
-		const parsedOutcome = parseTrackOutcome({ input: outcome });
+		records: readonly DurableTrackOutcomeRecord[];
+	}): DurableTrackOutcomeApplyResult[] {
+		const parsedRecords = records.map(({ position, outcome }) => {
+			assertTopic({ topic: position.topic });
+			assertPartition({ partition: position.partition });
+			assertOffset({ offset: position.offset });
+			return {
+				position,
+				outcome: parseTrackOutcome({ input: outcome }),
+			};
+		});
+		if (parsedRecords.length === 0) return [];
 
 		return this.database
-			.transaction(() => {
-				const expectedOffset = readNextOffset({
-					database: this.database,
-					topic: position.topic,
-					partition: position.partition,
-				});
-				if (expectedOffset === null) {
-					throw new PartitionProgressNotFoundError({
-						topic: position.topic,
-						partition: position.partition,
-					});
-				}
-				if (position.offset < expectedOffset) {
-					return {
-						kind: "position_already_applied",
-						nextOffset: expectedOffset,
-					} as const;
-				}
-				const partitionKey = meteringPartitionKeyOf({
-					identity: parsedOutcome.identity,
-				});
-				const state = readState({
-					database: this.database,
-					identity: parsedOutcome.identity,
-				});
-				if (!state) throw new MeteringStateNotFoundError({ partitionKey });
-
-				const existingReceipt = readTrackReceipt({
-					database: this.database,
-					identity: parsedOutcome.identity,
-					commandId: parsedOutcome.commandId,
-				});
-				const executed = executeEngineTrack({
-					state,
-					outcome: parsedOutcome,
-					existingReceipt,
-				});
-				const nextOffset = position.offset + 1n;
-
-				if (executed.kind === "applied") {
-					const stateUpdate = updateState({
-						database: this.database,
-						partitionKey,
-						revisionBefore: parsedOutcome.revisionBefore,
-						state: executed.state,
-					});
-					if (stateUpdate.changes !== 1) {
-						throw new CorruptBalanceStateError({ partitionKey });
-					}
-
-					insertTrackReceipt({
-						database: this.database,
-						partitionKey,
-						position,
-						receipt: executed.receipt,
-					});
-				}
-
-				const progressUpdate = advancePartitionProgress({
-					database: this.database,
-					topic: position.topic,
-					partition: position.partition,
-					expectedOffset,
-					nextOffset,
-				});
-				if (progressUpdate.changes !== 1) {
-					throw new UnexpectedKafkaOffsetError({
-						topic: position.topic,
-						partition: position.partition,
-						expectedOffset,
-						receivedOffset: position.offset,
-					});
-				}
-
-				return {
-					kind: executed.kind,
-					state: executed.state,
-					receipt: executed.receipt,
-					nextOffset,
-				} as const;
-			})
+			.transaction(() =>
+				parsedRecords.map(({ position, outcome }) =>
+					this.applyParsedDurableTrackOutcome({ position, outcome }),
+				),
+			)
 			.immediate();
+	}
+
+	private applyParsedDurableTrackOutcome({
+		position,
+		outcome,
+	}: DurableTrackOutcomeRecord): DurableTrackOutcomeApplyResult {
+		const expectedOffset = readNextOffset({
+			database: this.database,
+			topic: position.topic,
+			partition: position.partition,
+		});
+		if (expectedOffset === null) {
+			throw new PartitionProgressNotFoundError({
+				topic: position.topic,
+				partition: position.partition,
+			});
+		}
+		if (position.offset < expectedOffset) {
+			return {
+				kind: "position_already_applied",
+				nextOffset: expectedOffset,
+			};
+		}
+
+		const partitionKey = meteringPartitionKeyOf({ identity: outcome.identity });
+		const state = readState({
+			database: this.database,
+			identity: outcome.identity,
+		});
+		if (!state) throw new MeteringStateNotFoundError({ partitionKey });
+
+		const existingReceipt = readTrackReceipt({
+			database: this.database,
+			identity: outcome.identity,
+			commandId: outcome.commandId,
+		});
+		const executed = executeEngineTrack({
+			state,
+			outcome,
+			existingReceipt,
+		});
+		const nextOffset = position.offset + 1n;
+
+		if (executed.kind === "applied") {
+			const stateUpdate = updateState({
+				database: this.database,
+				partitionKey,
+				revisionBefore: outcome.revisionBefore,
+				state: executed.state,
+			});
+			if (stateUpdate.changes !== 1) {
+				throw new CorruptBalanceStateError({ partitionKey });
+			}
+
+			insertTrackReceipt({
+				database: this.database,
+				partitionKey,
+				position,
+				receipt: executed.receipt,
+			});
+		}
+
+		const progressUpdate = advancePartitionProgress({
+			database: this.database,
+			topic: position.topic,
+			partition: position.partition,
+			expectedOffset,
+			nextOffset,
+		});
+		if (progressUpdate.changes !== 1) {
+			throw new UnexpectedKafkaOffsetError({
+				topic: position.topic,
+				partition: position.partition,
+				expectedOffset,
+				receivedOffset: position.offset,
+			});
+		}
+
+		return {
+			kind: executed.kind,
+			state: executed.state,
+			receipt: executed.receipt,
+			nextOffset,
+		};
 	}
 
 	close(): void {
