@@ -1,10 +1,12 @@
 import {
 	type AutumnBillingPlan,
 	type CreateScheduleBillingContext,
+	type FullCusProduct,
 	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
@@ -17,9 +19,17 @@ export type SchedulePhasePlan = {
 	customerProductIds: string[];
 };
 
+/** The immediate phase's plan change, which the guards validate with attach's
+ * immediate-timing rules. Future phases are validated at activation. */
+export type ImmediatePhaseTransition = {
+	outgoingCustomerProducts: FullCusProduct[];
+	incomingCustomerProducts: FullCusProduct[];
+};
+
 export type CreateSchedulePlanResult = {
 	autumnBillingPlan: AutumnBillingPlan;
 	phases: SchedulePhasePlan[];
+	immediatePhaseTransition: ImmediatePhaseTransition;
 };
 
 /** Compute the full create_schedule billing plan (immediate + scheduled phases). */
@@ -71,6 +81,15 @@ export const computeCreateSchedulePlan = ({
 		),
 	].flatMap((productContext) => productContext.insertPlanLicenses ?? []);
 
+	// The immediate phase expires the outgoing rows and inserts fresh ones, so
+	// pools must re-parent now; future phases carry theirs at activation.
+	const customerLicenseTransitions = computeCustomerLicenseTransitions({
+		outgoingCustomerProducts,
+		incomingCustomerProducts: immediateCustomerProducts,
+		customerLicenseBillingContext: billingContext.customerLicenseBillingContext,
+		carryCustomerLicenseState: true,
+	});
+
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: immediateCustomerProducts,
@@ -120,6 +139,7 @@ export const computeCreateSchedulePlan = ({
 		insertPlanLicenses: insertPlanLicenses.length
 			? insertPlanLicenses
 			: undefined,
+		customerLicenseTransitions,
 		lineItems: allLineItems,
 		updateCustomerEntitlements,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
@@ -142,5 +162,9 @@ export const computeCreateSchedulePlan = ({
 	return {
 		autumnBillingPlan,
 		phases: [immediatePhase, ...scheduled.scheduledPhases],
+		immediatePhaseTransition: {
+			outgoingCustomerProducts,
+			incomingCustomerProducts: immediateCustomerProducts,
+		},
 	};
 };
