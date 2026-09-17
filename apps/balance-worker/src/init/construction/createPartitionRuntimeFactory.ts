@@ -76,13 +76,15 @@ export function createPartitionRuntimeFactory({
 		const runtime = createPartitionRuntime({
 			ctx: {
 				stateStore: commitLogging.stateStore,
+				db: ctx.db,
+				catalogCache: ctx.catalogCache,
 				checkpointMaintenance: ctx.checkpointMaintenance,
 				bootstrapper,
 				follower,
 				producer,
 				appender: commitLogging.appender,
 				partitionResolver: ctx.partitionResolver,
-				trackReceiptPolicy: {
+				receiptPolicy: {
 					retentionMs: config.trackReceiptRetentionMs,
 					now: Date.now,
 				},

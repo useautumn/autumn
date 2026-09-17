@@ -38,6 +38,10 @@ import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/pa
 import { openStateStore } from "../../../src/state/openStateStore.js";
 import type { StateStore } from "../../../src/state/types/stateStore.js";
 import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
+import {
 	createState as createCustomerState,
 	restoreCustomerStates,
 } from "../../fixtures/mutations.js";
@@ -51,6 +55,7 @@ const identity = {
 	orgId: "org_1",
 	env: "sandbox",
 	customerId: "cus_1",
+	entityId: null,
 } as const;
 
 const createState = ({
@@ -75,7 +80,6 @@ const createTrackCommand = ({
 			commandId,
 			requestId: `req_${commandId}`,
 			identity: commandIdentity,
-			entityId: null,
 			featureId: "messages",
 			value: 5,
 			overageBehavior: "reject",
@@ -97,7 +101,6 @@ const createCheckCommand = ({
 			type: "check",
 			requestId,
 			identity: commandIdentity,
-			entityId: null,
 			featureId: "messages",
 			requiredBalance: 1,
 			properties: null,
@@ -291,7 +294,9 @@ const closeStoreFixture = ({
 	rmSync(directory, { recursive: true, force: true });
 };
 
+/** Two turns: a command resolves its subject before it reaches the writer, and the writer commits on the turn after. */
 const waitForTurn = async (): Promise<void> => {
+	await new Promise<void>((resolve) => setImmediate(resolve));
 	await new Promise<void>((resolve) => setImmediate(resolve));
 };
 
@@ -341,11 +346,10 @@ const createRuntime = ({
 		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
 		ctx: {
 			stateStore: store,
+			db: createSyntheticWorkerDb(),
+			catalogCache: createTestCatalogCache(),
 			bootstrapper: { bootstrap },
-			trackReceiptPolicy: {
-				retentionMs: 86_400_000,
-				now: () => 1_700_000_000_000,
-			},
+			receiptPolicy: { retentionMs: 86_400_000, now: () => 1_700_000_000_000 },
 			producer: workerProducer,
 			follower,
 			appender: createMutationPublisher({
@@ -1252,6 +1256,8 @@ describe("partitionPreparation", function partitionPreparationTests() {
 		const runtime = createPartitionRuntime({
 			ctx: {
 				stateStore: storage.store,
+				db: createSyntheticWorkerDb(),
+				catalogCache: createTestCatalogCache(),
 				producer: {
 					connect: async () => {
 						events.push("connect");
@@ -1272,7 +1278,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 					},
 				},
 				partitionResolver: { partitionForIdentity: () => partition },
-				trackReceiptPolicy: { retentionMs: 1_000, now: () => 0 },
+				receiptPolicy: { retentionMs: 1_000, now: () => 0 },
 			},
 			config: {
 				topic,

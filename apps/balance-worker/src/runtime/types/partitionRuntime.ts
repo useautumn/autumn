@@ -1,17 +1,19 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
+import type { CatalogCache } from "../../catalog/types/catalogCache.js";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type {
 	OwnedPartitionFollowerProgress,
 	OwnedPartitionHealth,
 } from "../../health/ownedPartitionHealth.js";
-import type { TrackReceiptPolicy } from "../../processor/commands/track.js";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
+import type { ReceiptPolicy } from "../../processor/types/receiptPolicy.js";
 import type {
 	CommittedOutcomeAppender,
 	PartitionWriterContext,
 	PartitionWriterLimits,
 } from "../../processor/writer/types/partitionWriter.js";
 import type { StateStore } from "../../state/types/stateStore.js";
+import type { WorkerDb } from "../../types/workerDb.js";
 import type {
 	PartitionBootstrapper,
 	PartitionLogRange,
@@ -55,7 +57,9 @@ export type PartitionRuntimeDependencies = {
 	follower: PartitionOutcomeFollowerPort;
 	bootstrapper: PartitionBootstrapper;
 	partitionResolver: MeteringPartitionResolver;
-	trackReceiptPolicy: TrackReceiptPolicy;
+	db: WorkerDb;
+	catalogCache: CatalogCache;
+	receiptPolicy: ReceiptPolicy;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 };
 

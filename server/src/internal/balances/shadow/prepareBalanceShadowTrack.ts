@@ -1,11 +1,15 @@
 import {
+	catalogRowsToCatalog,
 	findCustomerEntitlementsForFeature,
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import type { FullSubject, TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { BalanceWorkerUnsupportedError } from "../balanceWorker/balanceWorkerErrors.js";
-import { fullSubjectToCustomerState } from "../balanceWorker/fullSubjectToCustomerState.js";
+import {
+	fullSubjectToCatalogRows,
+	fullSubjectToCustomerState,
+} from "../balanceWorker/fullSubjectToCustomerState.js";
 import { validateBalanceWorkerRequest } from "../balanceWorker/validateBalanceWorkerRequest.js";
 import { trackParamsToTrackCommand } from "../track/balanceWorker/balanceWorkerTrackRequest.js";
 import type { BalanceShadowConfig } from "./balanceShadowTypes.js";
@@ -49,15 +53,24 @@ export function prepareBalanceShadowTrack({
 			fullSubject,
 			featureIds: [body.feature_id],
 		});
-		const entitlement = findCustomerEntitlementsForFeature({
+		const catalog = catalogRowsToCatalog({
+			rows: fullSubjectToCatalogRows({
+				ctx,
+				fullSubject,
+				featureIds: [body.feature_id],
+			}),
+		});
+		const [entitlement] = findCustomerEntitlementsForFeature({
 			state,
+			catalog,
 			featureId: body.feature_id,
-		})[0];
+		});
 		if (
-			(entitlement.reset?.nextResetAt != null &&
-				entitlement.reset.nextResetAt <= config.expiresAt) ||
-			(entitlement.expiresAt != null &&
-				entitlement.expiresAt <= config.expiresAt)
+			!entitlement ||
+			(entitlement.next_reset_at != null &&
+				entitlement.next_reset_at <= config.expiresAt) ||
+			(entitlement.expires_at != null &&
+				entitlement.expires_at <= config.expiresAt)
 		)
 			return { kind: "skip", reason: "lifecycle_within_window" };
 		const command = trackParamsToTrackCommand({ ctx, body });

@@ -18,7 +18,14 @@ import {
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
-import { restoreCustomerStates } from "../../fixtures/mutations.js";
+import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
+import {
+	createCustomerEntitlement,
+	restoreCustomerStates,
+} from "../../fixtures/mutations.js";
 
 if (!process.env.KAFKA_BROKERS?.trim())
 	throw new Error("Run test:kafka with an environment broker");
@@ -79,19 +86,18 @@ describe("Real ownership admission", () => {
 		for (const partition of [0, 1, 2])
 			store.initializePartition({ topic, partition, nextOffset: 0n });
 		const state = createCustomerState({
-			identity: { orgId: "org_1", env: "sandbox", customerId: "customer" },
+			identity: {
+				orgId: "org_1",
+				env: "sandbox",
+				customerId: "customer",
+				entityId: null,
+			},
 			customerEntitlements: [
-				{
+				createCustomerEntitlement({
 					id: "balance",
-					externalId: null,
 					featureId: "messages",
 					balance: 10,
-					usage: 0,
-					granted: 10,
-					planId: null,
-					reset: null,
-					expiresAt: null,
-				},
+				}),
 			],
 		});
 		restoreCustomerStates({ store, topic, partition, states: [state] });
@@ -102,6 +108,8 @@ describe("Real ownership admission", () => {
 				kafka,
 				ownershipOffsets: admin,
 				stateStore: store,
+				db: createSyntheticWorkerDb(),
+				catalogCache: createTestCatalogCache(),
 				checkpointSource: { latest: async () => null },
 				partitionResolver: { partitionForIdentity: () => partition },
 			},
@@ -197,7 +205,6 @@ describe("Real ownership admission", () => {
 					commandId: id,
 					requestId: id,
 					identity: state.identity,
-					entityId: null,
 					featureId: "messages",
 					value: 5,
 					overageBehavior: "reject",

@@ -6,13 +6,16 @@ import type {
 	TrackCommand,
 	TrackDecision,
 } from "@autumn/balance-engine";
-import type { TrackReceiptPolicy } from "../commands/track.js";
+import type { CatalogCache } from "../../catalog/types/catalogCache.js";
+import type { WorkerDb } from "../../types/workerDb.js";
+import type { SubjectHydrator } from "../subject/types/subjectHydrator.js";
 import type {
 	CommittedOutcomeAppender,
 	PartitionWriter,
 	PartitionWriterContext,
 	PartitionWriterLimits,
 } from "../writer/types/partitionWriter.js";
+import type { ReceiptPolicy } from "./receiptPolicy.js";
 
 /** Processes one partition's accepted commands: track writes, check reads. */
 export type PartitionProcessor = {
@@ -27,8 +30,10 @@ export type PartitionProcessor = {
 
 export type PartitionProcessorDependencies = {
 	stateStore: PartitionWriterContext["stateStore"];
+	catalogCache: CatalogCache;
+	db: WorkerDb;
 	appender: CommittedOutcomeAppender;
-	trackReceiptPolicy: TrackReceiptPolicy;
+	receiptPolicy: ReceiptPolicy;
 	assertCanRead(): void;
 };
 
@@ -42,6 +47,7 @@ export interface PartitionProcessorContext
 	extends PartitionProcessorDependencies {
 	config: PartitionProcessorConfig;
 	writer: PartitionWriter;
+	subjectHydrator: SubjectHydrator;
 }
 
 /** Commands still in flight, so drain can settle them before the runtime disposes. */

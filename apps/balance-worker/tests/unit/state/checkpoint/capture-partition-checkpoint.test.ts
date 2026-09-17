@@ -26,6 +26,7 @@ const identity = {
 	orgId: "org_1",
 	env: "sandbox",
 	customerId: "cus_1",
+	entityId: null,
 } as const;
 const limits = {
 	maxSerializedBytes: 1_000_000,

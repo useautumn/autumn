@@ -7,7 +7,6 @@ import {
 } from "../../../models/common/primitives.js";
 
 export const checkParamsSchema = z.object({
-	entityId: nonEmptyStringSchema.nullable(),
 	featureId: nonEmptyStringSchema,
 	requiredBalance: finiteNumberSchema,
 	properties: propertiesSchema,

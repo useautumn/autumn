@@ -2,6 +2,10 @@ import { expect, test } from "bun:test";
 import { Kafka } from "kafkajs";
 import { createWorkerResources } from "../../../src/init/workerResources.js";
 import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
+import {
 	closeStoreFixture,
 	createStoreFixture,
 	topic,
@@ -25,6 +29,9 @@ function createResourceFixture() {
 			kafka,
 			admin: { disconnect, fetchTopicOffsets },
 			stateStore: storeFixture.store,
+			postgres: { close: async () => {} },
+			db: createSyntheticWorkerDb(),
+			catalogCache: createTestCatalogCache(),
 			partitionResolver: { partitionForIdentity },
 		},
 	});

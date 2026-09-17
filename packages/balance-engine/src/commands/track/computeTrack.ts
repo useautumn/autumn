@@ -1,9 +1,10 @@
 import { Decimal } from "decimal.js";
 import { computeDeduction } from "../../common/deduction/computeDeduction.js";
+import type { Catalog } from "../../models/catalog/catalog.js";
 import type { CustomerState } from "../../models/customerState.js";
 import type { CustomerStateMutation } from "../../models/customerStateMutation.js";
 import type { RowChange } from "../../models/rowChange.js";
-import type { LeanCustomerEntitlement } from "../../models/rows/leanCustomerEntitlement.js";
+import type { WorkerCustomerEntitlement } from "../../models/rows/workerCustomerEntitlement.js";
 import { mutationFingerprintOf } from "../../mutation/mutationFingerprintOf.js";
 import { parseCustomerStateMutation } from "../../parsers.js";
 import {
@@ -19,20 +20,22 @@ import { validateTrackMutation } from "./validateTrackMutation.js";
 type UnsupportedTrackDecision = Extract<TrackDecision, { kind: "unsupported" }>;
 
 type TrackClassification =
-	| { kind: "supported"; customerEntitlements: LeanCustomerEntitlement[] }
+	| { kind: "supported"; customerEntitlements: WorkerCustomerEntitlement[] }
 	| UnsupportedTrackDecision;
 
 const classifyTrackCommand = ({
 	state,
+	catalog,
 	command,
 }: {
 	state: CustomerState;
+	catalog: Catalog;
 	command: TrackCommand;
 }): TrackClassification => {
 	if (!identitiesMatch({ left: state.identity, right: command.identity })) {
 		return { kind: "unsupported", reason: "subject_mismatch" };
 	}
-	if (command.entityId) {
+	if (command.identity.entityId) {
 		return { kind: "unsupported", reason: "entity_not_supported" };
 	}
 	if (command.properties && Object.keys(command.properties).length > 0) {
@@ -44,6 +47,7 @@ const classifyTrackCommand = ({
 
 	const customerEntitlements = findCustomerEntitlementsForFeature({
 		state,
+		catalog,
 		featureId: command.featureId,
 	});
 	if (customerEntitlements.length === 0) {
@@ -63,16 +67,19 @@ const customerEntitlementAfterChanges = ({
 	customerEntitlement,
 	changes,
 }: {
-	customerEntitlement: LeanCustomerEntitlement;
+	customerEntitlement: WorkerCustomerEntitlement;
 	changes: RowChange[];
-}): LeanCustomerEntitlement => {
-	const change = changes.find(
-		(candidate) =>
-			candidate.op === "update" && candidate.id === customerEntitlement.id,
-	);
-	if (change?.op !== "update") return customerEntitlement;
-
-	return { ...customerEntitlement, ...change.after };
+}): WorkerCustomerEntitlement => {
+	for (const change of changes) {
+		if (
+			change.table === "customerEntitlements" &&
+			change.op === "update" &&
+			change.id === customerEntitlement.id
+		) {
+			return { ...customerEntitlement, ...change.after };
+		}
+	}
+	return customerEntitlement;
 };
 
 const buildTrackMutation = ({
@@ -86,7 +93,7 @@ const buildTrackMutation = ({
 }: {
 	state: CustomerState;
 	command: TrackCommand;
-	customerEntitlements: LeanCustomerEntitlement[];
+	customerEntitlements: WorkerCustomerEntitlement[];
 	rejected: boolean;
 	appliedValue: Decimal;
 	changes: RowChange[];
@@ -100,7 +107,6 @@ const buildTrackMutation = ({
 		type: "track",
 		requestId: command.requestId,
 		occurredAt: command.occurredAt,
-		entityId: command.entityId,
 		featureId: command.featureId,
 		value: command.value,
 		overageBehavior: command.overageBehavior,
@@ -126,7 +132,7 @@ const buildTrackMutation = ({
 				balanceAfter: balanceOf({
 					customerEntitlements: customerEntitlementsAfter,
 				}),
-				balanceSnapshot: customerEntitlementsAfter[0],
+				customerEntitlement: customerEntitlementsAfter[0],
 			},
 			receipt: {
 				fingerprint: mutationFingerprintOf({
@@ -142,17 +148,19 @@ const buildTrackMutation = ({
 	});
 };
 
-/** Pure: same state and command always yield the same decision. Deduplication is the writer's job. */
+/** Pure: same state, catalog and command always yield the same decision. Deduplication is the writer's job. */
 export const computeTrack = ({
 	state,
+	catalog,
 	command,
 	deduplicationExpiresAt,
 }: {
 	state: CustomerState;
+	catalog: Catalog;
 	command: TrackCommand;
 	deduplicationExpiresAt: number;
 }): TrackDecision => {
-	const classification = classifyTrackCommand({ state, command });
+	const classification = classifyTrackCommand({ state, catalog, command });
 	if (classification.kind !== "supported") return classification;
 
 	const { customerEntitlements } = classification;

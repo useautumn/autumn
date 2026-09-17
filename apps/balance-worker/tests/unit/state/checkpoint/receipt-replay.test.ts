@@ -8,7 +8,11 @@ import {
 } from "@autumn/balance-engine";
 import { parsePartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { ConflictingMutationReceiptError } from "../../../../src/state/stateStoreErrors.js";
-import { applyDurableMutation } from "../../../fixtures/mutations.js";
+import {
+	applyDurableMutation,
+	createCatalogFor,
+	createCatalogRowsFor,
+} from "../../../fixtures/mutations.js";
 import {
 	checkpointLimits,
 	createCommand,
@@ -42,9 +46,9 @@ describe("receipt reuse during checkpoint replay", () => {
 				);
 				expect(fixture.restoredStore.readState({ identity })).toMatchObject({
 					revision: 3,
-					customerEntitlements: {
-						messages_monthly: { balance: 0, usage: 10 },
-					},
+					customerEntitlements: expect.arrayContaining([
+						expect.objectContaining({ id: "messages_monthly", balance: 0 }),
+					]),
 				});
 				expect(fixture.restoredStore.readNextOffset({ topic, partition })).toBe(
 					3n,
@@ -66,6 +70,9 @@ describe("receipt reuse during checkpoint replay", () => {
 							identity,
 							commandId: fixture.initialization.id,
 							state: fixture.baselineState,
+							catalogRows: createCatalogRowsFor({
+								state: fixture.baselineState,
+							}),
 							occurredAt: fixture.now,
 						},
 					}),
@@ -89,7 +96,6 @@ describe("receipt reuse during checkpoint replay", () => {
 							type: "check",
 							requestId: "restored-check",
 							identity,
-							entityId: null,
 							featureId: "messages",
 							requiredBalance: 1,
 							properties: null,
@@ -101,20 +107,10 @@ describe("receipt reuse during checkpoint replay", () => {
 					kind: "decided",
 					balance: 0,
 					revision: 3,
-					balanceSnapshot: {
+					customerEntitlement: {
 						id: "messages_monthly",
-						featureId: "messages",
-						externalId: "monthly-grant",
+						external_id: "monthly-grant",
 						balance: 0,
-						usage: 10,
-						granted: 10,
-						planId: "pro",
-						reset: {
-							interval: "month",
-							intervalCount: 1,
-							nextResetAt: 1_800_000_000_000,
-						},
-						expiresAt: null,
 					},
 				});
 				expect(fixture.records).toHaveLength(3);
@@ -156,6 +152,7 @@ describe("receipt reuse during checkpoint replay", () => {
 				if (!stateBefore) throw new Error("Expected restored state");
 				const staleDecision = computeTrack({
 					state: stateBefore,
+					catalog: createCatalogFor({ state: stateBefore }),
 					command: createCommand({ commandId: "cmd_stale", value: 1 }),
 					deduplicationExpiresAt: fixture.reusedMutation.receipt.expiresAt,
 				});
@@ -205,6 +202,7 @@ describe("receipt reuse during checkpoint replay", () => {
 				if (!currentState) throw new Error("Expected restored state");
 				const conflicting = computeTrack({
 					state: currentState,
+					catalog: createCatalogFor({ state: currentState }),
 					command: createCommand({
 						commandId: fixture.reusedCommand.commandId,
 						value: 1,

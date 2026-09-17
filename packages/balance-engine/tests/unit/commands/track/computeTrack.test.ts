@@ -6,6 +6,7 @@ import {
 	validateTrackMutation,
 } from "../../../../src/balanceEngine.js";
 import {
+	createCatalogFor,
 	createCustomerEntitlement,
 	createState,
 	createTrackCommand,
@@ -18,14 +19,19 @@ import {
 const computeTrack = (
 	input: Omit<
 		Parameters<typeof computeTrackDecision>[0],
-		"deduplicationExpiresAt"
+		"deduplicationExpiresAt" | "catalog"
 	>,
-) => computeTrackDecision({ ...input, deduplicationExpiresAt });
+) =>
+	computeTrackDecision({
+		...input,
+		catalog: createCatalogFor({ state: input.state }),
+		deduplicationExpiresAt,
+	});
 
 const trackMutation = (
 	input: Omit<
 		Parameters<typeof computeTrackDecision>[0],
-		"deduplicationExpiresAt"
+		"deduplicationExpiresAt" | "catalog"
 	>,
 ) => requireNewMutation(computeTrack(input));
 
@@ -47,8 +53,8 @@ describe("track computation", () => {
 		expect(updateChangesOf({ mutation })).toEqual([
 			{
 				id: "messages_monthly",
-				before: { balance: 100, usage: 0 },
-				after: { balance: 95, usage: 5 },
+				before: { balance: 100 },
+				after: { balance: 95 },
 			},
 		]);
 		expect(trackResultOf({ mutation })).toMatchObject({
@@ -58,7 +64,7 @@ describe("track computation", () => {
 			appliedValue: 5,
 			balanceBefore: 100,
 			balanceAfter: 95,
-			balanceSnapshot: { id: "messages_monthly", balance: 95, usage: 5 },
+			customerEntitlement: { id: "messages_monthly", balance: 95 },
 		});
 	});
 
@@ -71,8 +77,8 @@ describe("track computation", () => {
 		expect(updateChangesOf({ mutation })).toEqual([
 			{
 				id: "messages_monthly",
-				before: { balance: 3, usage: 0 },
-				after: { balance: 0, usage: 3 },
+				before: { balance: 3 },
+				after: { balance: 0 },
 			},
 		]);
 		expect(trackResultOf({ mutation })).toMatchObject({
@@ -95,7 +101,7 @@ describe("track computation", () => {
 			appliedValue: 0,
 			balanceBefore: 3,
 			balanceAfter: 3,
-			balanceSnapshot: { balance: 3, usage: 0 },
+			customerEntitlement: { balance: 3 },
 		});
 	});
 
@@ -108,8 +114,8 @@ describe("track computation", () => {
 		expect(updateChangesOf({ mutation })).toEqual([
 			{
 				id: "messages_monthly",
-				before: { balance: 3, usage: 0 },
-				after: { balance: -2, usage: 5 },
+				before: { balance: 3 },
+				after: { balance: -2 },
 			},
 		]);
 		expect(trackResultOf({ mutation })).toMatchObject({
@@ -160,6 +166,16 @@ describe("track computation", () => {
 			computeTrack({
 				state: createState(),
 				command: createTrackCommand({ featureId: "constructor" }),
+			}),
+		).toEqual({ kind: "unsupported", reason: "feature_not_found" });
+		expect(
+			computeTrackDecision({
+				state: createState(),
+				catalog: createCatalogFor({
+					state: createState({ customerEntitlements: [] }),
+				}),
+				command: createTrackCommand(),
+				deduplicationExpiresAt,
 			}),
 		).toEqual({ kind: "unsupported", reason: "feature_not_found" });
 		expect(
@@ -230,8 +246,8 @@ describe("track computation", () => {
 								table: "customerEntitlements",
 								op: "update",
 								id: "messages_monthly",
-								before: { balance: 10, usage: 0 },
-								after: { balance: 5, usage: 9 },
+								before: { balance: 10 },
+								after: { balance: 6 },
 							},
 						],
 					},

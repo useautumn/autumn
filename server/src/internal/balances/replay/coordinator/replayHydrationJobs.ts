@@ -279,12 +279,17 @@ async function loadAndInitialize({
 	}
 	const state = validateSourceState({
 		input: sourceResult.state,
+		catalogRows: sourceResult.catalogRows,
 		selection: job.selection,
 	});
 	return submitInitialization({
 		scope,
 		job,
-		command: buildInitializeCommand({ selection: job.selection, state }),
+		command: buildInitializeCommand({
+			selection: job.selection,
+			state,
+			catalogRows: sourceResult.catalogRows,
+		}),
 	});
 }
 

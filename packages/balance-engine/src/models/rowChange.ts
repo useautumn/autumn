@@ -1,9 +1,18 @@
 import { z } from "zod/v4";
 import { nonEmptyStringSchema } from "./common/primitives.js";
 import {
-	type LeanCustomerEntitlement,
-	leanCustomerEntitlementSchema,
-} from "./rows/leanCustomerEntitlement.js";
+	type WorkerCustomerEntitlement,
+	workerCustomerEntitlementSchema,
+} from "./rows/workerCustomerEntitlement.js";
+import {
+	type WorkerCustomerProduct,
+	workerCustomerProductSchema,
+} from "./rows/workerCustomerProduct.js";
+import { type WorkerEntity, workerEntitySchema } from "./rows/workerEntity.js";
+import {
+	type WorkerRollover,
+	workerRolloverSchema,
+} from "./rows/workerRollover.js";
 
 export type TableRowChange<Table extends string, Row> =
 	| { table: Table; op: "insert"; row: Row }
@@ -16,7 +25,8 @@ export type TableRowChange<Table extends string, Row> =
 	  }
 	| { table: Table; op: "delete"; id: string };
 
-export const tableRowChangeSchema = <
+/** Row schemas carry no defaults, so a partial names exactly the columns a change touches. */
+const tableRowChangeSchema = <
 	Table extends string,
 	RowSchema extends z.ZodObject,
 >({
@@ -51,14 +61,22 @@ export const tableRowChangeSchema = <
 	]);
 };
 
-export type RowChange = TableRowChange<
-	"customerEntitlements",
-	LeanCustomerEntitlement
->;
+/** One change to one row of the customer's state; a mutation applies a list of these in order. */
+export type RowChange =
+	| TableRowChange<"customerProducts", WorkerCustomerProduct>
+	| TableRowChange<"customerEntitlements", WorkerCustomerEntitlement>
+	| TableRowChange<"rollovers", WorkerRollover>
+	| TableRowChange<"entities", WorkerEntity>;
 
 export const rowChangeSchema = z.discriminatedUnion("table", [
 	tableRowChangeSchema({
-		table: "customerEntitlements",
-		rowSchema: leanCustomerEntitlementSchema,
+		table: "customerProducts",
+		rowSchema: workerCustomerProductSchema,
 	}),
+	tableRowChangeSchema({
+		table: "customerEntitlements",
+		rowSchema: workerCustomerEntitlementSchema,
+	}),
+	tableRowChangeSchema({ table: "rollovers", rowSchema: workerRolloverSchema }),
+	tableRowChangeSchema({ table: "entities", rowSchema: workerEntitySchema }),
 ]);

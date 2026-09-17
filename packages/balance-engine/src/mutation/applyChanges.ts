@@ -1,21 +1,58 @@
 import { isDeepStrictEqual } from "node:util";
 import { StaleMutationError } from "../errors.js";
 import type { CustomerState } from "../models/customerState.js";
-import type { RowChange } from "../models/rowChange.js";
-import type { LeanCustomerEntitlement } from "../models/rows/leanCustomerEntitlement.js";
+import type { RowChange, TableRowChange } from "../models/rowChange.js";
+
+type StateRow = CustomerState[RowChange["table"]][number];
+
+/** Entities are addressed by internal_id, every other table by id. */
+const rowIdOf = ({ row }: { row: StateRow }): string =>
+	"internal_id" in row ? row.internal_id : row.id;
 
 const rowMatchesBefore = ({
 	row,
 	before,
 }: {
-	row: LeanCustomerEntitlement;
-	before: Partial<LeanCustomerEntitlement>;
+	row: object;
+	before: object;
 }): boolean => {
-	const currentFields: Record<string, unknown> = row;
-
 	return Object.entries(before).every(([field, value]) =>
-		isDeepStrictEqual(currentFields[field], value),
+		isDeepStrictEqual(Reflect.get(row, field), value),
 	);
+};
+
+const applyToTable = <Row extends StateRow>({
+	rows,
+	change,
+}: {
+	rows: Row[];
+	change: TableRowChange<string, Row>;
+}): Row[] => {
+	const indexOfId = (id: string) =>
+		rows.findIndex((row) => rowIdOf({ row }) === id);
+
+	switch (change.op) {
+		case "insert": {
+			const id = rowIdOf({ row: change.row });
+			if (indexOfId(id) !== -1) throw new StaleMutationError({ subject: id });
+			return [...rows, change.row];
+		}
+		case "update": {
+			const index = indexOfId(change.id);
+			const row = rows[index];
+			if (!row || !rowMatchesBefore({ row, before: change.before })) {
+				throw new StaleMutationError({ subject: change.id });
+			}
+			return rows.map((candidate, candidateIndex) =>
+				candidateIndex === index ? { ...row, ...change.after } : candidate,
+			);
+		}
+		case "delete": {
+			const index = indexOfId(change.id);
+			if (index === -1) throw new StaleMutationError({ subject: change.id });
+			return rows.filter((_, candidate) => candidate !== index);
+		}
+	}
 };
 
 /** Generic over the change list: it never knows which command produced the changes. */
@@ -26,44 +63,40 @@ export const applyChanges = ({
 	state: CustomerState;
 	changes: RowChange[];
 }): CustomerState => {
-	if (changes.length === 0) return state;
-
-	const customerEntitlements = { ...state.customerEntitlements };
-	const rowOf = ({
-		id,
-	}: {
-		id: string;
-	}): LeanCustomerEntitlement | undefined =>
-		Object.hasOwn(customerEntitlements, id)
-			? customerEntitlements[id]
-			: undefined;
-
+	let nextState = state;
 	for (const change of changes) {
-		switch (change.op) {
-			case "insert": {
-				if (rowOf({ id: change.row.id })) {
-					throw new StaleMutationError({ subject: change.row.id });
-				}
-				customerEntitlements[change.row.id] = change.row;
+		switch (change.table) {
+			case "customerProducts":
+				nextState = {
+					...nextState,
+					customerProducts: applyToTable({
+						rows: nextState.customerProducts,
+						change,
+					}),
+				};
 				break;
-			}
-			case "update": {
-				const row = rowOf({ id: change.id });
-				if (!row || !rowMatchesBefore({ row, before: change.before })) {
-					throw new StaleMutationError({ subject: change.id });
-				}
-				customerEntitlements[change.id] = { ...row, ...change.after };
+			case "customerEntitlements":
+				nextState = {
+					...nextState,
+					customerEntitlements: applyToTable({
+						rows: nextState.customerEntitlements,
+						change,
+					}),
+				};
 				break;
-			}
-			case "delete": {
-				if (!rowOf({ id: change.id })) {
-					throw new StaleMutationError({ subject: change.id });
-				}
-				delete customerEntitlements[change.id];
+			case "rollovers":
+				nextState = {
+					...nextState,
+					rollovers: applyToTable({ rows: nextState.rollovers, change }),
+				};
 				break;
-			}
+			case "entities":
+				nextState = {
+					...nextState,
+					entities: applyToTable({ rows: nextState.entities, change }),
+				};
+				break;
 		}
 	}
-
-	return { ...state, customerEntitlements };
+	return nextState;
 };

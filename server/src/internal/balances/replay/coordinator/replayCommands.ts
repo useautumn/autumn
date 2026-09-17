@@ -1,4 +1,5 @@
 import {
+	type CatalogRow,
 	type CheckCommand,
 	type CustomerState,
 	type InitializeCommand,
@@ -71,7 +72,6 @@ export function buildProbeCommand({
 			type: "check",
 			requestId: `${commandIdOf({ selection })}:probe`,
 			identity: selection.identity,
-			entityId: null,
 			featureId: selection.featureIds[0],
 			requiredBalance: 0,
 			properties: null,
@@ -83,9 +83,11 @@ export function buildProbeCommand({
 export function buildInitializeCommand({
 	selection,
 	state,
+	catalogRows,
 }: {
 	selection: NormalizedSelection;
 	state: CustomerState;
+	catalogRows: CatalogRow[];
 }): InitializeCommand {
 	const commandId = commandIdOf({ selection });
 	return deepFreeze(
@@ -97,6 +99,7 @@ export function buildInitializeCommand({
 				requestId: `${commandId}:initialize`,
 				identity: selection.identity,
 				state,
+				catalogRows,
 				occurredAt: selection.baseline.capturedAtMs,
 			},
 		}),

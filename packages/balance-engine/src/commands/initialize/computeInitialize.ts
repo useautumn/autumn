@@ -1,3 +1,4 @@
+import type { CustomerState } from "../../models/customerState.js";
 import type { CustomerStateMutation } from "../../models/customerStateMutation.js";
 import type { RowChange } from "../../models/rowChange.js";
 import { mutationFingerprintOf } from "../../mutation/mutationFingerprintOf.js";
@@ -7,21 +8,24 @@ import type {
 	InitializeCommandEcho,
 } from "./types/initializeCommand.js";
 
-/** Row order is the fingerprint, so the same rows always fingerprint the same way. */
-const insertChangesOf = ({
-	command,
-}: {
-	command: InitializeCommand;
-}): RowChange[] =>
-	Object.values(command.state.customerEntitlements)
-		.sort(({ id: left }, { id: right }) =>
-			left < right ? -1 : left > right ? 1 : 0,
-		)
-		.map((customerEntitlement) => ({
-			table: "customerEntitlements",
-			op: "insert",
-			row: customerEntitlement,
-		}));
+const byId = <Row extends { id: string }>(rows: Row[]): Row[] =>
+	[...rows].sort((left, right) => left.id.localeCompare(right.id));
+
+/** Table order is referential (products before their entitlements); row order is the fingerprint. */
+const insertChangesOf = ({ state }: { state: CustomerState }): RowChange[] => [
+	...byId(state.customerProducts).map(
+		(row): RowChange => ({ table: "customerProducts", op: "insert", row }),
+	),
+	...[...state.entities]
+		.sort((left, right) => left.internal_id.localeCompare(right.internal_id))
+		.map((row): RowChange => ({ table: "entities", op: "insert", row })),
+	...byId(state.customerEntitlements).map(
+		(row): RowChange => ({ table: "customerEntitlements", op: "insert", row }),
+	),
+	...byId(state.rollovers).map(
+		(row): RowChange => ({ table: "rollovers", op: "insert", row }),
+	),
+];
 
 export const computeInitialize = ({
 	command,
@@ -30,7 +34,7 @@ export const computeInitialize = ({
 	command: InitializeCommand;
 	deduplicationExpiresAt: number;
 }): CustomerStateMutation => {
-	const changes = insertChangesOf({ command });
+	const changes = insertChangesOf({ state: command.state });
 	const mutationCommand: InitializeCommandEcho = {
 		type: "initialize",
 		requestId: command.requestId,

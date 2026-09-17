@@ -46,6 +46,8 @@ export async function createBalanceWorker({
 				kafka: resources.kafka,
 				ownershipOffsets: resources.admin,
 				stateStore: resources.stateStore,
+				db: resources.db,
+				catalogCache: resources.catalogCache,
 				partitionResolver: resources.partitionResolver,
 				checkpointSource:
 					dependencies.checkpointSource ?? resources.checkpoints.source,
@@ -115,6 +117,7 @@ export async function createBalanceWorker({
 			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
+				enabled: process.env.NODE_ENV === "production",
 				endpoint: address.endpoint,
 			},
 		});

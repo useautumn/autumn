@@ -44,12 +44,15 @@
         "@autumn/env": "workspace:*",
         "@autumn/kafka": "workspace:*",
         "@autumn/logging": "workspace:*",
+        "@autumn/postgres": "workspace:*",
         "@aws-sdk/client-s3": "^3.1017.0",
         "hono": "^4.13.5",
         "kafkajs": "^2.2.4",
+        "lru-cache": "^11.2.7",
         "zod": "^3.25.23",
       },
       "devDependencies": {
+        "@autumn/shared": "workspace:*",
         "@types/bun": "1.3.14",
         "@types/node": "^24.9.1",
         "typescript": "~5.8.3",
@@ -453,6 +456,7 @@
       "name": "@autumn/balance-engine",
       "version": "0.0.1",
       "dependencies": {
+        "@autumn/shared": "workspace:*",
         "decimal.js": "^10.5.0",
         "zod": "^3.25.23",
       },
@@ -535,6 +539,7 @@
         "zod": "^3.25.23",
       },
       "devDependencies": {
+        "@autumn/shared": "workspace:*",
         "@types/bun": "1.3.14",
         "@types/node": "^24.9.1",
         "typescript": "~5.8.3",
@@ -598,6 +603,20 @@
       },
       "peerDependencies": {
         "zod": "^3.25.23",
+      },
+    },
+    "packages/postgres": {
+      "name": "@autumn/postgres",
+      "version": "0.0.1",
+      "dependencies": {
+        "@autumn/shared": "workspace:*",
+        "drizzle-orm": "catalog:",
+        "zod": "^3.25.23",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.14",
+        "@types/node": "^24.9.1",
+        "typescript": "~5.8.3",
       },
     },
     "packages/render": {
@@ -1164,6 +1183,8 @@
     "@autumn/mcp": ["@autumn/mcp@workspace:packages/mcp"],
 
     "@autumn/openapi": ["@autumn/openapi@workspace:packages/openapi"],
+
+    "@autumn/postgres": ["@autumn/postgres@workspace:packages/postgres"],
 
     "@autumn/render": ["@autumn/render@workspace:packages/render"],
 

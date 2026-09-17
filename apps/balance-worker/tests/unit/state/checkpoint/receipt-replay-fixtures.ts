@@ -11,6 +11,10 @@ import { createPartitionProcessor } from "../../../../src/processor/createPartit
 import { openStateStore } from "../../../../src/state/openStateStore.js";
 import type { StateStore } from "../../../../src/state/types/stateStore.js";
 import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../../fixtures/catalog.js";
+import {
 	applyDurableMutation,
 	createCustomerEntitlement,
 	createInitializeMutation,
@@ -24,6 +28,7 @@ export const identity = {
 	orgId: "org_1",
 	env: "sandbox",
 	customerId: "cus_1",
+	entityId: null,
 } as const;
 export const checkpointLimits = {
 	maxSerializedBytes: 1_000_000,
@@ -66,13 +71,7 @@ export const createReceiptReplayFixture = async ({
 		customerEntitlements: [
 			createCustomerEntitlement({
 				externalId: "monthly-grant",
-				planId: "pro",
 				balance: 10,
-				reset: {
-					interval: "month",
-					intervalCount: 1,
-					nextResetAt: 1_800_000_000_000,
-				},
 			}),
 		],
 	});
@@ -98,7 +97,9 @@ export const createReceiptReplayFixture = async ({
 			ctx: {
 				stateStore,
 				appender,
-				trackReceiptPolicy: { retentionMs: 86_400_000, now: () => now },
+				db: createSyntheticWorkerDb(),
+				catalogCache: createTestCatalogCache(),
+				receiptPolicy: { retentionMs: 86_400_000, now: () => now },
 				assertCanRead: () => {},
 			},
 			config: {

@@ -1,0 +1,20 @@
+import { ensureSubject } from "./actions/ensureSubject/ensureSubject.js";
+import { readSubjectCatalog } from "./actions/readSubjectCatalog.js";
+import type { SubjectHydratorContext, SubjectScope } from "./types/subject.js";
+import type { SubjectHydrator } from "./types/subjectHydrator.js";
+
+export const createSubjectHydrator = ({
+	ctx,
+}: {
+	ctx: SubjectHydratorContext;
+}): SubjectHydrator => {
+	const scope: SubjectScope = {
+		ctx,
+		state: { hydrationPromises: new Map() },
+	};
+
+	return {
+		ensure: ({ identity }) => ensureSubject({ scope, identity }),
+		readCatalog: ({ state }) => readSubjectCatalog({ scope, state }),
+	};
+};

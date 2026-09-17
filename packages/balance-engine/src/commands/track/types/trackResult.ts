@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 import { finiteNumberSchema } from "../../../models/common/primitives.js";
-import { leanCustomerEntitlementSchema } from "../../../models/rows/leanCustomerEntitlement.js";
+import { workerCustomerEntitlementSchema } from "../../../models/rows/workerCustomerEntitlement.js";
 
 export const trackResultSchema = z
 	.object({
@@ -11,7 +11,8 @@ export const trackResultSchema = z
 		appliedValue: finiteNumberSchema.nonnegative(),
 		balanceBefore: finiteNumberSchema,
 		balanceAfter: finiteNumberSchema,
-		balanceSnapshot: leanCustomerEntitlementSchema,
+		// The funding row after the track; the caller projects it with its own catalog.
+		customerEntitlement: workerCustomerEntitlementSchema,
 	})
 	.strict();
 

@@ -5,6 +5,8 @@ export type WorkerErrorCode =
 	| "NOT_OWNER"
 	| "NOT_READY"
 	| "NOT_INITIALIZED"
+	| "CUSTOMER_NOT_FOUND"
+	| "CATALOG_NOT_FOUND"
 	| "COMMAND_CONFLICT"
 	| "INTERNAL";
 export type WorkerErrorResponse = {
@@ -78,6 +80,10 @@ export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
 		case "NOT_INITIALIZED":
 		case "COMMAND_CONFLICT":
 			return 409;
+		case "CUSTOMER_NOT_FOUND":
+			return 404;
+		case "CATALOG_NOT_FOUND":
+			return 422;
 		case "NOT_READY":
 			return 503;
 		case "INTERNAL":

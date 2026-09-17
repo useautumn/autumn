@@ -1,6 +1,7 @@
 import type {
 	CustomerState,
 	CustomerStateMutation,
+	MeteringIdentity,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import type { StateStore } from "../../../state/types/stateStore.js";
@@ -18,6 +19,10 @@ export type PartitionWriter = {
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
 	/** Snapshot: waits for the mutations pending for this customer when called, not ones enqueued later. */
 	waitForPendingCommits(params: { customerKey: string }): Promise<void>;
+	/** Pending projection first, then committed state: what the next decision for this customer would see. */
+	readFreshestState(params: {
+		identity: MeteringIdentity;
+	}): CustomerState | null;
 };
 
 export type CommittedOutcomeAppender = {

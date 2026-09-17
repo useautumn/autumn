@@ -12,6 +12,7 @@ import {
 	shadowComparisonKeyOf,
 } from "../../src/balanceEngine.js";
 import {
+	createCatalogFor,
 	createCustomerEntitlement,
 	createInitializeCommand,
 	createState,
@@ -24,6 +25,7 @@ import {
 const trackMutation = requireNewMutation(
 	computeTrack({
 		state: createState(),
+		catalog: createCatalogFor({ state: createState() }),
 		command: createTrackCommand(),
 		deduplicationExpiresAt,
 	}),
@@ -102,14 +104,14 @@ describe("balance engine contract boundaries", () => {
 		}
 	});
 
-	test("keys customer state rows by their own id", () => {
+	test("state rows carry only the columns the engine reads", () => {
 		expect(() =>
 			parseCustomerState({
 				input: {
 					...createState(),
-					customerEntitlements: {
-						messages_rollover: createCustomerEntitlement(),
-					},
+					customerEntitlements: [
+						{ ...createCustomerEntitlement(), cache_version: 3 },
+					],
 				},
 			}),
 		).toThrow();

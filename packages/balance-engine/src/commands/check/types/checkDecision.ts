@@ -1,4 +1,4 @@
-import type { LeanCustomerEntitlement } from "../../../models/rows/leanCustomerEntitlement.js";
+import type { WorkerCustomerEntitlement } from "../../../models/rows/workerCustomerEntitlement.js";
 
 export type CheckDecision =
 	| {
@@ -6,7 +6,7 @@ export type CheckDecision =
 			allowed: boolean;
 			reason: "insufficient_balance" | null;
 			balance: number;
-			balanceSnapshot: LeanCustomerEntitlement;
+			customerEntitlement: WorkerCustomerEntitlement;
 			requiredBalance: number;
 			revision: number;
 	  }

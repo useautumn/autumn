@@ -30,6 +30,16 @@ export function rethrowBalanceWorkerError({
 	}
 	if (
 		cause instanceof BalanceWorkerClientError &&
+		cause.workerCode === "CUSTOMER_NOT_FOUND"
+	) {
+		throw new RecaseError({
+			code: "balance_worker_customer_not_found",
+			statusCode: 404,
+			message: "Customer does not exist in this org and env",
+		});
+	}
+	if (
+		cause instanceof BalanceWorkerClientError &&
 		cause.workerCode === "COMMAND_CONFLICT"
 	) {
 		throw new RecaseError({

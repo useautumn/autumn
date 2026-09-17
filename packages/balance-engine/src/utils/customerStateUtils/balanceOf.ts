@@ -1,10 +1,10 @@
 import { Decimal } from "decimal.js";
-import type { LeanCustomerEntitlement } from "../../models/rows/leanCustomerEntitlement.js";
+import type { WorkerCustomerEntitlement } from "../../models/rows/workerCustomerEntitlement.js";
 
 export const balanceOf = ({
 	customerEntitlements,
 }: {
-	customerEntitlements: LeanCustomerEntitlement[];
+	customerEntitlements: WorkerCustomerEntitlement[];
 }): number =>
 	customerEntitlements
 		.reduce(
@@ -17,7 +17,7 @@ export const balanceOf = ({
 export const availableBalanceOf = ({
 	customerEntitlements,
 }: {
-	customerEntitlements: LeanCustomerEntitlement[];
+	customerEntitlements: WorkerCustomerEntitlement[];
 }): Decimal =>
 	customerEntitlements.reduce(
 		(total, customerEntitlement) =>

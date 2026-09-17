@@ -12,8 +12,10 @@
 
 import { describe, expect, test } from "bun:test";
 import {
+	type CatalogRow,
 	type CheckDecision,
 	type CustomerState,
+	catalogRowsToCatalog,
 	findCustomerEntitlementsForFeature,
 	type InitializationDecision,
 	type InitializeCommand,
@@ -162,19 +164,26 @@ function rejectionCauseOf<Value>({
 	return state.kind === "rejected" ? state.cause : state;
 }
 
-function checkDecisionOf({ state }: { state: CustomerState }): CheckDecision {
-	const [balanceSnapshot] = findCustomerEntitlementsForFeature({
+function checkDecisionOf({
+	state,
+	catalogRows,
+}: {
+	state: CustomerState;
+	catalogRows: CatalogRow[];
+}): CheckDecision {
+	const [customerEntitlement] = findCustomerEntitlementsForFeature({
 		state,
+		catalog: catalogRowsToCatalog({ rows: catalogRows }),
 		featureId: "messages",
 	});
-	if (!balanceSnapshot)
+	if (!customerEntitlement)
 		throw new Error("Fixture state must expose a messages entitlement");
 	return {
 		kind: "decided",
 		allowed: true,
 		reason: null,
-		balance: balanceSnapshot.balance,
-		balanceSnapshot,
+		balance: customerEntitlement.balance,
+		customerEntitlement,
 		requiredBalance: 0,
 		revision: state.revision,
 	};
@@ -188,7 +197,10 @@ describe("Replay hydration parity evidence", () => {
 			initialize: async () => ({ kind: "duplicate", state: fixture.state }),
 		});
 		const coordinator = createReplayHydrationCoordinator({
-			source: createLoadedSource({ state: fixture.state }),
+			source: createLoadedSource({
+				state: fixture.state,
+				catalogRows: fixture.catalogRows,
+			}),
 			client: worker.client,
 		});
 
@@ -213,7 +225,10 @@ describe("Replay hydration parity evidence", () => {
 				initialize: async () => decision,
 			});
 			const coordinator = createReplayHydrationCoordinator({
-				source: createLoadedSource({ state: fixture.state }),
+				source: createLoadedSource({
+					state: fixture.state,
+					catalogRows: fixture.catalogRows,
+				}),
 				client: worker.client,
 			});
 
@@ -230,11 +245,18 @@ describe("Replay hydration parity evidence", () => {
 	test("treats an already ready customer as a parity-free success", async () => {
 		const fixture = createReplayHydrationFixture();
 		const worker = createWorkerClientStub({
-			check: async () => checkDecisionOf({ state: fixture.state }),
+			check: async () =>
+				checkDecisionOf({
+					state: fixture.state,
+					catalogRows: fixture.catalogRows,
+				}),
 			initialize: async () => ({ kind: "initialized", state: fixture.state }),
 		});
 		const coordinator = createReplayHydrationCoordinator({
-			source: createLoadedSource({ state: fixture.state }),
+			source: createLoadedSource({
+				state: fixture.state,
+				catalogRows: fixture.catalogRows,
+			}),
 			client: worker.client,
 		});
 
@@ -252,14 +274,22 @@ describe("Replay hydration lifetime guards", () => {
 		let sourceLoads = 0;
 		async function load(): Promise<ReplayHydrationSourceResult> {
 			sourceLoads++;
-			return { kind: "loaded", state: fixture.state };
+			return {
+				kind: "loaded",
+				state: fixture.state,
+				catalogRows: fixture.catalogRows,
+			};
 		}
 		const worker = createWorkerClientStub({
 			check: rejectNotInitialized,
 			initialize: async () => ({ kind: "initialized", state: fixture.state }),
 		});
 		const coordinator = createReplayHydrationCoordinator({
-			source: createLoadedSource({ state: fixture.state, onLoad: load }),
+			source: createLoadedSource({
+				state: fixture.state,
+				catalogRows: fixture.catalogRows,
+				onLoad: load,
+			}),
 			client: worker.client,
 		});
 
@@ -293,7 +323,10 @@ describe("Replay hydration lifetime guards", () => {
 			initialize: () => gate.promise,
 		});
 		const coordinator = createReplayHydrationCoordinator({
-			source: createLoadedSource({ state: fixture.state }),
+			source: createLoadedSource({
+				state: fixture.state,
+				catalogRows: fixture.catalogRows,
+			}),
 			client: worker.client,
 			config: { deadlineMs: DEADLINE_MS },
 			clock,
@@ -324,7 +357,10 @@ describe("Replay hydration lifetime guards", () => {
 			initialize: () => gate.promise,
 		});
 		const coordinator = createReplayHydrationCoordinator({
-			source: createLoadedSource({ state: fixture.state }),
+			source: createLoadedSource({
+				state: fixture.state,
+				catalogRows: fixture.catalogRows,
+			}),
 			client: worker.client,
 			config: { deadlineMs: DEADLINE_MS },
 			clock,
@@ -368,7 +404,11 @@ describe("Replay hydration abort settlement", () => {
 			loadsByCustomerId.set(loaded, (loadsByCustomerId.get(loaded) ?? 0) + 1);
 			// Deliberately ignores the signal: physical work outlives logical aborts.
 			if (loaded === customerId) return abandonedLoad.promise;
-			return { kind: "loaded", state: otherFixture.state };
+			return {
+				kind: "loaded",
+				state: otherFixture.state,
+				catalogRows: otherFixture.catalogRows,
+			};
 		}
 
 		async function recordInitialize({
@@ -419,7 +459,11 @@ describe("Replay hydration abort settlement", () => {
 		).resolves.toEqual({ kind: "initialized", freshParity: true });
 		expect(loadsByCustomerId.get(otherCustomerId)).toBe(1);
 
-		abandonedLoad.resolve({ kind: "loaded", state: fixture.state });
+		abandonedLoad.resolve({
+			kind: "loaded",
+			state: fixture.state,
+			catalogRows: fixture.catalogRows,
+		});
 		await coordinator.close();
 		expect(initializedCustomerIds).toEqual([otherCustomerId]);
 	});

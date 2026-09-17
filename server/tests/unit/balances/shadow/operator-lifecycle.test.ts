@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { computeCheck, type InitializeCommand } from "@autumn/balance-engine";
+import {
+	catalogRowsToCatalog,
+	computeCheck,
+	type InitializeCommand,
+} from "@autumn/balance-engine";
 import type { BalanceShadowConfig } from "@/internal/balances/shadow/balanceShadowTypes.js";
 import { runBalanceShadowCohort } from "@/internal/balances/shadow/operator/runBalanceShadowCohort.js";
 import { parseShadowOperatorArgs } from "../../../../../scripts/balance-shadow/parseShadowOperatorArgs.js";
@@ -37,12 +41,18 @@ test.concurrent(
 		const { ctx, fullSubject, customerEntitlement } = createCustomerFixture();
 		const tokens = structuredClone(customerEntitlement);
 		tokens.id = "tokens_grant";
+		tokens.entitlement.id = "ent_tokens";
+		tokens.entitlement_id = "ent_tokens";
 		tokens.entitlement.feature.id = "tokens";
+		tokens.entitlement.feature.internal_id = "internal_tokens";
+		tokens.entitlement.internal_feature_id = "internal_tokens";
+		tokens.internal_feature_id = "internal_tokens";
 		fullSubject.customer_products[0].customer_entitlements.push(tokens);
 		const identity = {
 			orgId: ctx.org.id,
 			env: ctx.env,
 			customerId: "cus_test",
+			entityId: null,
 		};
 		const config: BalanceShadowConfig = {
 			runId: "grouped",
@@ -80,7 +90,13 @@ test.concurrent(
 						return { kind: "initialized", state: command.state };
 					},
 					check: async ({ command }) =>
-						computeCheck({ state: initialization!.state, command }),
+						computeCheck({
+							state: initialization!.state,
+							catalog: catalogRowsToCatalog({
+								rows: initialization!.catalogRows,
+							}),
+							command,
+						}),
 				},
 				report: () => {
 					calls.push("report");
@@ -88,9 +104,12 @@ test.concurrent(
 			},
 		});
 		expect(calls).toEqual(["ready", "load", "initialize", "report", "stop"]);
+		const { features } = catalogRowsToCatalog({
+			rows: initialization!.catalogRows,
+		});
 		expect(
-			Object.values(initialization!.state.customerEntitlements).map(
-				({ featureId }) => featureId,
+			initialization!.state.customerEntitlements.map(
+				({ internal_feature_id }) => features[internal_feature_id]?.id,
 			),
 		).toEqual(["messages", "tokens"]);
 		expect(initialization!.identity).toEqual(identity);

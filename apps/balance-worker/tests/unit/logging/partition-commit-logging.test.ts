@@ -3,6 +3,10 @@ import { createPartitionCommitLogging } from "../../../src/logging/createPartiti
 import { MutationBatchNotCommittedError } from "../../../src/processor/writer/writerErrors.js";
 import type { DurableMutationRecord } from "../../../src/state/types/durableMutation.js";
 import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
+import {
 	createInitializeMutation,
 	createTrackMutation,
 	seedCustomerState,

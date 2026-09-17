@@ -57,7 +57,7 @@ function logRequestResult({
 			org_id: command?.identity.orgId,
 			env: command?.identity.env,
 			customer_id: command?.identity.customerId,
-			entity_id: command?.entityId,
+			entity_id: command?.identity.entityId,
 		},
 		extras: {
 			commandId: command?.commandId,

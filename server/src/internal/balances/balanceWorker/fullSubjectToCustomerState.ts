@@ -1,10 +1,12 @@
 import {
+	type CatalogRow,
 	type CustomerState,
-	createCustomerState,
-	type LeanCustomerEntitlement,
+	customerRowsToCustomerState,
 } from "@autumn/balance-engine";
 import {
 	CusProductStatus,
+	type FullCusEntWithFullCusProduct,
+	type FullCusProduct,
 	type FullSubject,
 	fullSubjectToFullCustomer,
 	getApiBalance,
@@ -16,7 +18,12 @@ import {
 	validateMeteringEntitlement,
 } from "./validateMeteringEntitlement.js";
 
-export function fullSubjectToCustomerState({
+type MeteringRows = {
+	customerProducts: FullCusProduct[];
+	customerEntitlements: FullCusEntWithFullCusProduct[];
+};
+
+const assertSupportedSubject = ({
 	ctx,
 	fullSubject,
 	featureIds,
@@ -24,7 +31,7 @@ export function fullSubjectToCustomerState({
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	featureIds: readonly string[];
-}): CustomerState {
+}): void => {
 	const { customer } = fullSubject;
 	if (
 		customer.org_id !== ctx.org.id ||
@@ -59,27 +66,68 @@ export function fullSubjectToCustomerState({
 			reason: "billing_controls_not_supported",
 		});
 	}
-	const customerEntitlements = [
-		...fullSubject.customer_products
-			.filter((product) =>
-				[CusProductStatus.Active, CusProductStatus.PastDue].includes(
-					product.status,
-				),
-			)
-			.flatMap((customerProduct) =>
-				customerProduct.customer_entitlements.map((entitlement) => ({
-					...entitlement,
-					customer_product: customerProduct,
-				})),
-			),
+};
+
+/** The worker only meters plain included grants today; a breakdown that says otherwise is refused. */
+const assertSupportedBalanceShape = ({
+	ctx,
+	fullSubject,
+	customerEntitlement,
+}: {
+	ctx: AutumnContext;
+	fullSubject: FullSubject;
+	customerEntitlement: FullCusEntWithFullCusProduct;
+}): void => {
+	const { data: balance } = getApiBalance({
+		ctx: { ...ctx, expand: [] },
+		fullCus: fullSubjectToFullCustomer({ fullSubject }),
+		cusEnts: [customerEntitlement],
+		feature: customerEntitlement.entitlement.feature,
+	});
+	const breakdown = balance.breakdown?.[0];
+	if (
+		!breakdown ||
+		breakdown.prepaid_grant !== 0 ||
+		breakdown.reset?.interval === "multiple"
+	) {
+		throw new BalanceWorkerUnsupportedError({
+			reason: "balance_shape_not_supported",
+		});
+	}
+};
+
+/** The rows the worker will own for these features, after every shape gate. */
+export function selectMeteringRows({
+	ctx,
+	fullSubject,
+	featureIds,
+}: {
+	ctx: AutumnContext;
+	fullSubject: FullSubject;
+	featureIds: readonly string[];
+}): MeteringRows {
+	assertSupportedSubject({ ctx, fullSubject, featureIds });
+	const customerProducts = fullSubject.customer_products.filter((product) =>
+		[CusProductStatus.Active, CusProductStatus.PastDue].includes(
+			product.status,
+		),
+	);
+	const candidates: FullCusEntWithFullCusProduct[] = [
+		...customerProducts.flatMap((customerProduct) =>
+			customerProduct.customer_entitlements.map((entitlement) => ({
+				...entitlement,
+				customer_product: customerProduct,
+			})),
+		),
 		...[
 			...fullSubject.extra_customer_entitlements,
 			...(fullSubject.pooled_customer_entitlements ?? []),
 		].map((entitlement) => ({ ...entitlement, customer_product: null })),
 	];
-	const rows: LeanCustomerEntitlement[] = [];
+
+	const customerEntitlements: FullCusEntWithFullCusProduct[] = [];
 	for (const featureId of featureIds) {
-		const selected = customerEntitlements.filter(
+		const selected = candidates.filter(
 			(entitlement) => entitlement.entitlement.feature.id === featureId,
 		);
 		if (selected.length === 0)
@@ -94,43 +142,68 @@ export function fullSubjectToCustomerState({
 			throw new BalanceWorkerUnsupportedError({
 				reason: "multiple_customer_entitlements_not_supported",
 			});
-		const customerEntitlement = selected[0];
-		const { data: balance } = getApiBalance({
-			ctx: { ...ctx, expand: [] },
-			fullCus: fullSubjectToFullCustomer({ fullSubject }),
-			cusEnts: selected,
-			feature: customerEntitlement.entitlement.feature,
-		});
-		const breakdown = balance.breakdown?.[0];
-		if (
-			!breakdown ||
-			breakdown.prepaid_grant !== 0 ||
-			breakdown.reset?.interval === "multiple"
-		) {
-			throw new BalanceWorkerUnsupportedError({
-				reason: "balance_shape_not_supported",
-			});
-		}
-		rows.push({
-			id: customerEntitlement.id,
-			externalId: customerEntitlement.external_id,
-			featureId,
-			balance: breakdown.remaining,
-			usage: breakdown.usage,
-			granted: balance.granted,
-			planId: breakdown.plan_id,
-			reset: breakdown.reset
-				? {
-						interval: breakdown.reset.interval,
-						intervalCount: breakdown.reset.interval_count ?? 1,
-						nextResetAt: breakdown.reset.resets_at,
-					}
-				: null,
-			expiresAt: breakdown.expires_at,
-		});
+		const [customerEntitlement] = selected;
+		assertSupportedBalanceShape({ ctx, fullSubject, customerEntitlement });
+		customerEntitlements.push(customerEntitlement);
 	}
-	return createCustomerState({
-		identity: { orgId: ctx.org.id, env: ctx.env, customerId: customer.id },
-		customerEntitlements: rows,
+	return { customerProducts, customerEntitlements };
+}
+
+export function fullSubjectToCustomerState({
+	ctx,
+	fullSubject,
+	featureIds,
+}: {
+	ctx: AutumnContext;
+	fullSubject: FullSubject;
+	featureIds: readonly string[];
+}): CustomerState {
+	const rows = selectMeteringRows({ ctx, fullSubject, featureIds });
+	return customerRowsToCustomerState({
+		identity: {
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId: fullSubject.customerId,
+			entityId: null,
+		},
+		customerProducts: rows.customerProducts,
+		customerEntitlements: rows.customerEntitlements,
+		rollovers: rows.customerEntitlements.flatMap(
+			(customerEntitlement) => customerEntitlement.rollovers,
+		),
+		entities: [],
 	});
+}
+
+/** The catalog rows that state references, taken from the FullSubject the server already holds. */
+export function fullSubjectToCatalogRows({
+	ctx,
+	fullSubject,
+	featureIds,
+}: {
+	ctx: AutumnContext;
+	fullSubject: FullSubject;
+	featureIds: readonly string[];
+}): CatalogRow[] {
+	const rows = selectMeteringRows({ ctx, fullSubject, featureIds });
+	const entitlementRows = rows.customerEntitlements.map(
+		(customerEntitlement): CatalogRow => {
+			const { feature: _feature, ...entitlement } =
+				customerEntitlement.entitlement;
+			return { table: "entitlements", row: entitlement };
+		},
+	);
+	const featureRows = rows.customerEntitlements.map(
+		(customerEntitlement): CatalogRow => ({
+			table: "features",
+			row: customerEntitlement.entitlement.feature,
+		}),
+	);
+	const productRows = rows.customerProducts.map(
+		(customerProduct): CatalogRow => ({
+			table: "products",
+			row: customerProduct.product,
+		}),
+	);
+	return [...entitlementRows, ...featureRows, ...productRows];
 }

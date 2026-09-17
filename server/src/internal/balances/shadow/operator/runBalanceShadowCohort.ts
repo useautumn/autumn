@@ -36,7 +36,8 @@ export async function runBalanceShadowCohort({
 	};
 }): Promise<BalanceShadowCustomerReport[]> {
 	const customers = new Map<string, BalanceShadowCustomer>();
-	for (const { featureId, ...identity } of config.customers) {
+	for (const { featureId, ...enrolled } of config.customers) {
+		const identity = { ...enrolled, entityId: null };
 		const key = meteringPartitionKeyOf({ identity });
 		const customer = customers.get(key) ?? { ...identity, featureIds: [] };
 		customer.featureIds.push(featureId);

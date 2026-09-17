@@ -784,6 +784,7 @@ describe("partitionRouting", function partitionRoutingTests() {
 		orgId: "org_1",
 		env: "sandbox",
 		customerId: "cus_1",
+		entityId: null,
 	} as const;
 
 	function matchesKafkaDefaultPartitioner(): void {

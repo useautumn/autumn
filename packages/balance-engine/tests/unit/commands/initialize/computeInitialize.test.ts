@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { computeInitialize } from "../../../../src/balanceEngine.js";
 import {
 	createCustomerEntitlement,
+	createCustomerProduct,
 	createInitializeCommand,
 	createState,
 	deduplicationExpiresAt,
@@ -38,6 +39,7 @@ describe("initialization computation", () => {
 			receipt: { expiresAt: deduplicationExpiresAt },
 		});
 		expect(mutation.changes).toEqual([
+			{ table: "customerProducts", op: "insert", row: createCustomerProduct() },
 			{
 				table: "customerEntitlements",
 				op: "insert",

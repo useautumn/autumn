@@ -53,7 +53,7 @@ test.concurrent(
 				}),
 			).toMatchObject({
 				status: "preview",
-				redis: { messages: { balance: 72, usage: 38 } },
+				redis: { messages: { id: "messages_grant", balance: 72 } },
 			});
 			expect(fixture.records).toHaveLength(0);
 			expect(
@@ -72,7 +72,9 @@ test.concurrent(
 			).toMatchObject({
 				status: "equal_at_read",
 				initialization: "initialized",
-				worker: { messages: { balance: 72, usage: 38, revision: 1 } },
+				worker: {
+					messages: { id: "messages_grant", balance: 72, revision: 1 },
+				},
 			});
 			expect(
 				await inspectBalanceShadowCustomer({
@@ -91,8 +93,8 @@ test.concurrent(
 						orgId: fixture.ctx.org.id,
 						env: fixture.ctx.env,
 						customerId: "cus_test",
+						entityId: null,
 					},
-					entityId: null,
 					featureId: "messages",
 					value: 5,
 					overageBehavior: "cap",
@@ -108,8 +110,10 @@ test.concurrent(
 				}),
 			).toMatchObject({
 				status: "equal_at_read",
-				redis: { messages: { balance: 67, usage: 43 } },
-				worker: { messages: { balance: 67, usage: 43, revision: 2 } },
+				redis: { messages: { id: "messages_grant", balance: 67 } },
+				worker: {
+					messages: { id: "messages_grant", balance: 67, revision: 2 },
+				},
 			});
 			const count = fixture.records.length;
 			expect(

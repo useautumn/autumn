@@ -11,7 +11,9 @@ import {
 	StaleMutationError,
 } from "../../../src/balanceEngine.js";
 import {
+	createCatalogFor,
 	createCustomerEntitlement,
+	createCustomerProduct,
 	createInitializeCommand,
 	createState,
 	createTrackCommand,
@@ -29,6 +31,7 @@ const trackMutationOn = ({ state }: { state: CustomerState }) =>
 	requireNewMutation(
 		computeTrack({
 			state,
+			catalog: createCatalogFor({ state }),
 			command: createTrackCommand(),
 			deduplicationExpiresAt,
 		}),
@@ -63,10 +66,11 @@ describe("mutation application", () => {
 		});
 
 		expect(nextState.revision).toBe(2);
-		expect(nextState.customerEntitlements.messages_monthly).toMatchObject({
-			balance: 5,
-			usage: 5,
-		});
+		expect(
+			nextState.customerEntitlements.find(
+				(row) => row.id === "messages_monthly",
+			),
+		).toMatchObject({ balance: 5 });
 	});
 
 	test.concurrent("refuses a mutation decided against stale rows", () => {
@@ -94,11 +98,13 @@ describe("mutation application", () => {
 		const otherIdentity = { ...identity, customerId: "cus_2" };
 		const otherState = createCustomerState({
 			identity: otherIdentity,
+			customerProducts: [createCustomerProduct()],
 			customerEntitlements: [createCustomerEntitlement()],
 		});
 		const otherMutation = requireNewMutation(
 			computeTrack({
 				state: otherState,
+				catalog: createCatalogFor({ state: otherState }),
 				command: { ...createTrackCommand(), identity: otherIdentity },
 				deduplicationExpiresAt,
 			}),
@@ -187,7 +193,7 @@ describe("mutation application", () => {
 		expect(nextState).toEqual({
 			...createState(),
 			revision: 1,
-			customerEntitlements: {},
+			customerEntitlements: [],
 		});
 	});
 });

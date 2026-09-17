@@ -26,6 +26,7 @@
 			"packages/env",
 			"packages/logging",
 			"packages/balance-engine",
+			"packages/postgres",
 			"packages/balance-worker-client",
 			"packages/kafka",
 			"packages/mcp",

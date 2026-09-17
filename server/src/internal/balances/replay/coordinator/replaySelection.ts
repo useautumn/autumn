@@ -53,6 +53,7 @@ export function normalizeSelection({
 				name: "identity.customerId",
 				value: selection.identity.customerId,
 			}),
+			entityId: null,
 		}),
 		baseline: Object.freeze({
 			id: requireNonEmptyString({

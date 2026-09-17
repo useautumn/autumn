@@ -39,9 +39,14 @@ test.concurrent(
 		const coordinator = createReplayHydrationCoordinator({
 			source: createLoadedSource({
 				state: fixture.state,
+				catalogRows: fixture.catalogRows,
 				onLoad: async () => {
 					sourceCalls++;
-					return { kind: "loaded", state: fixture.state };
+					return {
+						kind: "loaded",
+						state: fixture.state,
+						catalogRows: fixture.catalogRows,
+					};
 				},
 			}),
 			client: {
@@ -99,9 +104,14 @@ test.concurrent(
 			const coordinator = createReplayHydrationCoordinator({
 				source: createLoadedSource({
 					state: fixture.state,
+					catalogRows: fixture.catalogRows,
 					onLoad: async () => {
 						sourceCalls++;
-						return { kind: "loaded", state: fixture.state };
+						return {
+							kind: "loaded",
+							state: fixture.state,
+							catalogRows: fixture.catalogRows,
+						};
 					},
 				}),
 				client: {
@@ -154,9 +164,14 @@ test.concurrent(
 		const coordinator = createReplayHydrationCoordinator({
 			source: createLoadedSource({
 				state: fixture.state,
+				catalogRows: fixture.catalogRows,
 				onLoad: async () => {
 					await sourceGate.promise;
-					return { kind: "loaded", state: fixture.state };
+					return {
+						kind: "loaded",
+						state: fixture.state,
+						catalogRows: fixture.catalogRows,
+					};
 				},
 			}),
 			client,
@@ -195,10 +210,15 @@ test.concurrent(
 		const coordinator = createReplayHydrationCoordinator({
 			source: createLoadedSource({
 				state: fixture.state,
+				catalogRows: fixture.catalogRows,
 				onLoad: async () => {
 					sourceCalls++;
 					await sourceGate.promise;
-					return { kind: "loaded", state: fixture.state };
+					return {
+						kind: "loaded",
+						state: fixture.state,
+						catalogRows: fixture.catalogRows,
+					};
 				},
 			}),
 			client: {

@@ -91,7 +91,7 @@ export async function waitForPendingCommits({
 }
 
 /** Pending projection first, so same-customer commands see uncommitted deductions. */
-function readFreshestState({
+export function readFreshestState({
 	scope,
 	customerKey,
 	identity,

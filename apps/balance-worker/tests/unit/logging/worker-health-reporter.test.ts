@@ -4,6 +4,18 @@ import {
 	partitionHealth,
 } from "./health-reporter-fixture.js";
 
+test.concurrent("does not schedule health reports outside production", () => {
+	const { reporter, health, logs, timers } = createHealthReporterFixture({
+		enabled: false,
+	});
+	reporter.start();
+	reporter.start();
+	reporter.stop();
+	expect(timers).toHaveLength(0);
+	expect(logs).toHaveLength(0);
+	expect(health.reads).toBe(0);
+});
+
 test.concurrent(
 	"reports startup with no partitions, then current health every ten seconds",
 	() => {

@@ -35,7 +35,10 @@ test.concurrent(
 		const fixture = createReplayHydrationFixture();
 		const commands: InitializeCommand[] = [];
 		const coordinator = createReplayHydrationCoordinator({
-			source: createLoadedSource({ state: fixture.state }),
+			source: createLoadedSource({
+				state: fixture.state,
+				catalogRows: fixture.catalogRows,
+			}),
 			client: prewarmMissingClient({
 				initialize: async ({ command }) => {
 					commands.push(command);
@@ -67,7 +70,11 @@ test.concurrent(
 	async () => {
 		const first = createReplayHydrationFixture();
 		const changedState = structuredClone(first.state);
-		changedState.customerEntitlements.messages_grant.balance = 71;
+		const changedRow = changedState.customerEntitlements.find(
+			(row) => row.id === "messages_grant",
+		);
+		if (!changedRow) throw new Error("Expected the messages grant");
+		changedRow.balance = 71;
 		const commands: InitializeCommand[] = [];
 		for (const { selection, state } of [
 			{ selection: first.selection, state: first.state },
@@ -84,7 +91,7 @@ test.concurrent(
 			},
 		]) {
 			const coordinator = createReplayHydrationCoordinator({
-				source: createLoadedSource({ state }),
+				source: createLoadedSource({ state, catalogRows: first.catalogRows }),
 				client: prewarmMissingClient({
 					initialize: async ({ command }) => {
 						commands.push(command);
@@ -125,7 +132,10 @@ test.concurrent(
 				},
 			},
 			{
-				source: createLoadedSource({ state: mismatched }),
+				source: createLoadedSource({
+					state: mismatched,
+					catalogRows: fixture.catalogRows,
+				}),
 				expected: {
 					name: "ReplayHydrationSourceMismatchError",
 					code: "source_mismatch",
@@ -161,7 +171,10 @@ test.concurrent(
 			"already_initialized",
 		] as const) {
 			const coordinator = createReplayHydrationCoordinator({
-				source: createLoadedSource({ state: fixture.state }),
+				source: createLoadedSource({
+					state: fixture.state,
+					catalogRows: fixture.catalogRows,
+				}),
 				client: prewarmMissingClient({
 					initialize: async ({ command }) =>
 						kind === "already_initialized"

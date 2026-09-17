@@ -6,6 +6,10 @@ import type { WorkerLifecycleContext } from "../../../src/init/types/balanceWork
 import type { BalanceWorkerState } from "../../../src/init/types/balanceWorkerState.js";
 import { createWorkerResources } from "../../../src/init/workerResources.js";
 import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
+import {
 	closeStoreFixture,
 	createStoreFixture,
 	topic,
@@ -27,6 +31,9 @@ test.concurrent(
 					fetchTopicOffsets: async () => [],
 				},
 				stateStore: fixture.store,
+				postgres: { close: async () => {} },
+				db: createSyntheticWorkerDb(),
+				catalogCache: createTestCatalogCache(),
 				partitionResolver: { partitionForIdentity: () => 0 },
 				checkpoints: {
 					source: { latest: async () => null },
@@ -78,6 +85,9 @@ test.concurrent.each([false, true])(
 					fetchTopicOffsets: async () => [],
 				},
 				stateStore: fixture.store,
+				postgres: { close: async () => {} },
+				db: createSyntheticWorkerDb(),
+				catalogCache: createTestCatalogCache(),
 				partitionResolver: { partitionForIdentity: () => 0 },
 				checkpoints: {
 					source: { latest: async () => null },

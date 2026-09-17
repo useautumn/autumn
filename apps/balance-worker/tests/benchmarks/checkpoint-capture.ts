@@ -21,6 +21,7 @@ import { openStateStore } from "../../src/state/openStateStore.js";
 import type { CheckpointThreadFixtureConfig } from "../fixtures/checkpoint-thread.js";
 import {
 	applyDurableMutation,
+	createCatalogFor,
 	createCustomerEntitlement,
 	createState,
 	restoreCustomerStates,
@@ -104,6 +105,7 @@ for (const customers of sizes) {
 				orgId: "benchmark",
 				env: "sandbox",
 				customerId: `customer_${index}`,
+				entityId: null,
 			} as const;
 			const state = createState({
 				identity,
@@ -121,7 +123,6 @@ for (const customers of sizes) {
 					commandId: `command_${index}`,
 					requestId: `request_${index}`,
 					identity,
-					entityId: null,
 					featureId: "messages",
 					value: 5,
 					overageBehavior: "reject",
@@ -131,6 +132,7 @@ for (const customers of sizes) {
 			});
 			const decision = computeTrack({
 				state,
+				catalog: createCatalogFor({ state }),
 				command,
 				deduplicationExpiresAt: now + 3_600_000,
 			});
@@ -166,6 +168,7 @@ for (const customers of sizes) {
 			orgId: "benchmark",
 			env: "sandbox",
 			customerId: "hot_customer",
+			entityId: null,
 		} as const;
 		store.initializePartition({ topic, partition: 1, nextOffset: 0n });
 		restoreCustomerStates({
@@ -196,7 +199,6 @@ for (const customers of sizes) {
 					commandId: `hot_${offset}`,
 					requestId: `hot_${offset}`,
 					identity,
-					entityId: null,
 					featureId: "messages",
 					value: 1,
 					overageBehavior: "reject",
@@ -206,6 +208,7 @@ for (const customers of sizes) {
 			});
 			const decision = computeTrack({
 				state,
+				catalog: createCatalogFor({ state }),
 				command,
 				deduplicationExpiresAt: now + 3_600_000,
 			});
@@ -222,12 +225,12 @@ for (const customers of sizes) {
 			if (!after) throw new Error("Missing hot customer after track");
 			computeCheck({
 				state: after,
+				catalog: createCatalogFor({ state: after }),
 				command: {
 					schemaVersion: 1,
 					type: "check",
 					requestId: "check",
 					identity,
-					entityId: null,
 					featureId: "messages",
 					requiredBalance: 1,
 					properties: null,

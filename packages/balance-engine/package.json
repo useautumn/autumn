@@ -17,6 +17,7 @@
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@autumn/shared": "workspace:*",
 		"decimal.js": "^10.5.0",
 		"zod": "^3.25.23"
 	},

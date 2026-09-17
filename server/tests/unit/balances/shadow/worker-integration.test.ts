@@ -88,22 +88,32 @@ test.concurrent(
 				client: worker.client,
 			});
 			expect(
-				await runBalanceWorkerCheck({ ctx, body, client: worker.client }),
+				await runBalanceWorkerCheck({
+					ctx,
+					body,
+					client: worker.client,
+					loadSubject: async () => fullSubject,
+				}),
 			).toMatchObject({ balance: { remaining: 72, usage: 38 } });
 			delivered = Promise.withResolvers();
 			expect(await execute()).toBe(response);
 			expect(await delivered.promise).toMatchObject({
 				event: "completed",
-				shadow: { kind: "new", remaining: 67, usage: 43 },
+				shadow: { kind: "new", remaining: 67 },
 			});
 			delivered = Promise.withResolvers();
 			expect(await execute()).toBe(response);
 			expect(await delivered.promise).toMatchObject({
 				event: "completed",
-				shadow: { kind: "duplicate", remaining: 67, usage: 43 },
+				shadow: { kind: "duplicate", remaining: 67 },
 			});
 			expect(
-				await runBalanceWorkerCheck({ ctx, body, client: worker.client }),
+				await runBalanceWorkerCheck({
+					ctx,
+					body,
+					client: worker.client,
+					loadSubject: async () => fullSubject,
+				}),
 			).toMatchObject({ balance: { remaining: 67, usage: 43 } });
 			expect(records.map((record) => record.command.type)).toEqual([
 				"initialize",

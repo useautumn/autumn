@@ -452,7 +452,12 @@ function partitionReaderTests(): void {
 function createOutcome() {
 	return createTrackMutation({
 		state: createState({
-			identity: { orgId: "org_1", env: "sandbox", customerId: "customer_1" },
+			identity: {
+				orgId: "org_1",
+				env: "sandbox",
+				customerId: "customer_1",
+				entityId: null,
+			},
 		}),
 		commandId: "command",
 		value: 1,

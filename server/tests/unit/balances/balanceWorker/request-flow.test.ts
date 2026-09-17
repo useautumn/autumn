@@ -10,6 +10,7 @@ import {
 	type CheckParams,
 	type TrackParams,
 } from "@autumn/shared";
+import { fullSubjectToCustomerState } from "@/internal/balances/balanceWorker/fullSubjectToCustomerState.js";
 import { initializeBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/initializeBalanceWorkerCustomer.js";
 import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
 import { runBalanceWorkerTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js";
@@ -49,14 +50,9 @@ test.concurrent(
 			identity: { customerId: "cus_test" },
 			state: {
 				revision: 0,
-				customerEntitlements: {
-					messages_grant: {
-						featureId: "messages",
-						granted: 110,
-						balance: 72,
-						usage: 38,
-					},
-				},
+				customerEntitlements: [
+					{ id: "messages_grant", external_id: "public_grant", balance: 72 },
+				],
 			},
 		});
 		expect(commands[1]).toEqual(commands[0]);
@@ -99,9 +95,9 @@ test.concurrent(
 			{
 				kind: "initialized",
 				state: {
-					customerEntitlements: {
-						messages_grant: { balance: 0, granted: 110, usage: 110 },
-					},
+					customerEntitlements: expect.arrayContaining([
+						expect.objectContaining({ id: "messages_grant", balance: 0 }),
+					]),
 				},
 			},
 		);
@@ -112,7 +108,14 @@ test.concurrent(
 test.concurrent(
 	"check maps the committed snapshot, request defaults and legacy API responses without reading the customer",
 	async () => {
-		const { ctx } = createCustomerFixture();
+		const { ctx, fullSubject } = createCustomerFixture();
+		const loadSubject = async () => fullSubject;
+		const [row] = fullSubjectToCustomerState({
+			ctx,
+			fullSubject,
+			featureIds: ["messages"],
+		}).customerEntitlements;
+		if (!row) throw new Error("Expected the messages row");
 		const commands: unknown[] = [];
 		const client: Pick<BalanceWorkerClient, "check"> = {
 			check: async ({ command }) => {
@@ -124,21 +127,7 @@ test.concurrent(
 					balance: 0,
 					requiredBalance: command.requiredBalance,
 					revision: 9,
-					balanceSnapshot: {
-						id: "internal_grant",
-						externalId: "public_grant",
-						featureId: "messages",
-						balance: -2,
-						usage: 112,
-						granted: 110,
-						planId: "pro",
-						reset: {
-							interval: "month",
-							intervalCount: 2,
-							nextResetAt: 1_800_000_000_000,
-						},
-						expiresAt: null,
-					},
+					customerEntitlement: { ...row, balance: -2 },
 				};
 			},
 		};
@@ -146,7 +135,12 @@ test.concurrent(
 			customer_id: "cus_test",
 			feature_id: "messages",
 		};
-		const checked = await runBalanceWorkerCheck({ ctx, body, client });
+		const checked = await runBalanceWorkerCheck({
+			ctx,
+			body,
+			client,
+			loadSubject,
+		});
 		expect(checked).toMatchObject({
 			customer_id: "cus_test",
 			allowed: false,
@@ -163,10 +157,10 @@ test.concurrent(
 				breakdown: [
 					{
 						id: "public_grant",
-						remaining: -2,
+						remaining: 0,
+						overage: 2,
 						reset: {
 							interval: "month",
-							interval_count: 2,
 							resets_at: 1_800_000_000_000,
 						},
 					},
@@ -176,7 +170,12 @@ test.concurrent(
 		expect(commands[0]).toMatchObject({
 			type: "check",
 			requestId: ctx.id,
-			identity: { orgId: ctx.org.id, env: "sandbox", customerId: "cus_test" },
+			identity: {
+				orgId: ctx.org.id,
+				env: "sandbox",
+				customerId: "cus_test",
+				entityId: null,
+			},
 			requiredBalance: 1,
 		});
 		ctx.apiVersion = new ApiVersionClass(ApiVersion.V2_0);
@@ -185,6 +184,7 @@ test.concurrent(
 				ctx,
 				body: { ...body, required_quantity: 3 },
 				client,
+				loadSubject,
 			}),
 		).toMatchObject({
 			required_balance: 3,
@@ -196,7 +196,9 @@ test.concurrent(
 			},
 		});
 		ctx.apiVersion = new ApiVersionClass(ApiVersion.V1_Beta);
-		expect(await runBalanceWorkerCheck({ ctx, body, client })).toMatchObject({
+		expect(
+			await runBalanceWorkerCheck({ ctx, body, client, loadSubject }),
+		).toMatchObject({
 			allowed: false,
 			feature_id: "messages",
 			balance: -2,
@@ -250,6 +252,7 @@ test.concurrent(
 	"missing initialization is explicit and transport ambiguity never falls back",
 	async () => {
 		const fixture = createCustomerFixture();
+		const loadSubject = async () => fixture.fullSubject;
 		const missing = new BalanceWorkerClientError({
 			code: "WORKER_ERROR",
 			workerCode: "NOT_INITIALIZED",
@@ -275,8 +278,20 @@ test.concurrent(
 				value: 5,
 			};
 			const operations = [
-				() => runBalanceWorkerCheck({ ctx: fixture.ctx, body, client }),
-				() => runBalanceWorkerTrack({ ctx: fixture.ctx, body, client }),
+				() =>
+					runBalanceWorkerCheck({
+						ctx: fixture.ctx,
+						body,
+						client,
+						loadSubject,
+					}),
+				() =>
+					runBalanceWorkerTrack({
+						ctx: fixture.ctx,
+						body,
+						client,
+						loadSubject,
+					}),
 				() =>
 					initializeBalanceWorkerCustomer({
 						...fixture,

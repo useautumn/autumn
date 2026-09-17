@@ -296,6 +296,10 @@ describe("partition bootstrap", () => {
 import type { PartitionCheckpointV1 } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { PartitionBootstrapRefusedError } from "../../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
 import type { PartitionBootstrapOptions } from "../../../../src/runtime/bootstrap/types/partitionBootstrap.js";
+import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../../fixtures/catalog.js";
 
 function createBootstrapFixture({
 	localNextOffset,

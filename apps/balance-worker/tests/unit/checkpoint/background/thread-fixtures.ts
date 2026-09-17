@@ -24,6 +24,7 @@ export const identity = {
 	orgId: "org_1",
 	env: "sandbox",
 	customerId: "customer_1",
+	entityId: null,
 } as const;
 
 const seedState = createState({

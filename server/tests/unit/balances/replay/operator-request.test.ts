@@ -122,6 +122,7 @@ describe("planReplayRequest", () => {
 			orgId: request.orgId,
 			env: "sandbox",
 			customerId: "cus_plan",
+			entityId: null,
 		});
 	});
 

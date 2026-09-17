@@ -1,8 +1,11 @@
+import type { CatalogRow } from "@autumn/balance-engine";
 import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
 import type { MeteringRecord } from "@autumn/kafka";
+import { createCatalogCache } from "../../../../../apps/balance-worker/src/catalog/createCatalogCache.js";
 import { createBalanceWorkerApp } from "../../../../../apps/balance-worker/src/http/createBalanceWorkerApp.js";
 import { createPartitionProcessor } from "../../../../../apps/balance-worker/src/processor/createPartitionProcessor.js";
 import type { StateStore } from "../../../../../apps/balance-worker/src/state/types/stateStore.js";
+import type { WorkerDb } from "../../../../../apps/balance-worker/src/types/workerDb.js";
 
 export const topic = "request-integration";
 export const partition = 0;
@@ -12,15 +15,33 @@ export const checkpointLimits = {
 	maxReceipts: 100,
 };
 
+/** `catalogRows` stands in for Postgres: a worker restored from a checkpoint holds no catalog and must fetch it. */
 export function createWorkerFixture({
 	stateStore,
 	records,
 	now,
+	catalogRows = [],
 }: {
 	stateStore: StateStore;
 	records: MeteringRecord[];
 	now: number;
+	catalogRows?: CatalogRow[];
 }) {
+	/** Postgres stand-in: no customers, and only the catalog rows the test hands over. */
+	const db: WorkerDb = {
+		getSubjectRows: async () => null,
+		getCatalogRows: async () => ({
+			entitlements: catalogRows.flatMap((row) =>
+				row.table === "entitlements" ? [row.row] : [],
+			),
+			products: catalogRows.flatMap((row) =>
+				row.table === "products" ? [row.row] : [],
+			),
+			features: catalogRows.flatMap((row) =>
+				row.table === "features" ? [row.row] : [],
+			),
+		}),
+	};
 	const processor = createPartitionProcessor({
 		ctx: {
 			stateStore,
@@ -31,7 +52,14 @@ export function createWorkerFixture({
 					return { baseOffset };
 				},
 			},
-			trackReceiptPolicy: { retentionMs: 86_400_000, now: () => now },
+			db,
+			catalogCache: createCatalogCache({
+				ctx: {
+					db,
+					config: { mutableRowTtlMs: 60_000, maxSizeBytes: 1_000_000 },
+				},
+			}),
+			receiptPolicy: { retentionMs: 86_400_000, now: () => now },
 			assertCanRead: () => undefined,
 		},
 		config: {

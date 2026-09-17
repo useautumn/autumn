@@ -5,6 +5,7 @@ import {
 	InsufficientBalanceError,
 	type TrackParams,
 } from "@autumn/shared";
+import { fullSubjectToCatalogRows } from "@/internal/balances/balanceWorker/fullSubjectToCustomerState.js";
 import { initializeBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/initializeBalanceWorkerCustomer.js";
 import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
 import { runBalanceWorkerTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js";
@@ -24,10 +25,12 @@ test.concurrent(
 		const fixture = createCustomerFixture();
 		fixture.customerEntitlement.balance = 10;
 		const { ctx, fullSubject } = fixture;
+		const loadSubject = async () => fullSubject;
 		const identity = {
 			orgId: ctx.org.id,
 			env: ctx.env,
 			customerId: fullSubject.customerId,
+			entityId: null,
 		};
 		const records: MeteringRecord[] = [];
 		const liveStore = openStateStore({ databasePath: ":memory:" });
@@ -44,6 +47,11 @@ test.concurrent(
 			stateStore: restoredStore,
 			records,
 			now: ctx.timestamp,
+			catalogRows: fullSubjectToCatalogRows({
+				ctx,
+				fullSubject,
+				featureIds: ["messages"],
+			}),
 		});
 		const initialization = {
 			ctx,
@@ -60,10 +68,10 @@ test.concurrent(
 		};
 		try {
 			await expect(
-				runBalanceWorkerCheck({ ctx, body, client: live.client }),
+				runBalanceWorkerCheck({ ctx, body, client: live.client, loadSubject }),
 			).rejects.toMatchObject({
-				code: "balance_worker_not_initialized",
-				statusCode: 409,
+				code: "balance_worker_customer_not_found",
+				statusCode: 404,
 			});
 			expect(
 				await initializeBalanceWorkerCustomer({
@@ -75,7 +83,12 @@ test.concurrent(
 				state: { identity, revision: 1 },
 			});
 			expect(
-				await runBalanceWorkerCheck({ ctx, body, client: live.client }),
+				await runBalanceWorkerCheck({
+					ctx,
+					body,
+					client: live.client,
+					loadSubject,
+				}),
 			).toMatchObject({
 				allowed: true,
 				balance: { remaining: 10, granted: 110, usage: 100 },
@@ -94,6 +107,7 @@ test.concurrent(
 						ctx,
 						body: { ...body, idempotency_key: idempotencyKey },
 						client: live.client,
+						loadSubject,
 					}),
 				),
 			);
@@ -128,7 +142,12 @@ test.concurrent(
 			if (firstResult.status !== "fulfilled")
 				throw new Error("Expected the first track to apply");
 			expect(
-				await runBalanceWorkerTrack({ ctx, body, client: live.client }),
+				await runBalanceWorkerTrack({
+					ctx,
+					body,
+					client: live.client,
+					loadSubject,
+				}),
 			).toEqual(firstResult.value);
 			expect(
 				await initializeBalanceWorkerCustomer({
@@ -159,6 +178,7 @@ test.concurrent(
 				ctx,
 				body,
 				client: live.client,
+				loadSubject,
 			});
 			expect(checked).toMatchObject({
 				allowed: false,
@@ -185,10 +205,20 @@ test.concurrent(
 				liveStore.readState({ identity }),
 			);
 			expect(
-				await runBalanceWorkerCheck({ ctx, body, client: restored.client }),
+				await runBalanceWorkerCheck({
+					ctx,
+					body,
+					client: restored.client,
+					loadSubject,
+				}),
 			).toEqual(checked);
 			expect(
-				await runBalanceWorkerTrack({ ctx, body, client: restored.client }),
+				await runBalanceWorkerTrack({
+					ctx,
+					body,
+					client: restored.client,
+					loadSubject,
+				}),
 			).toEqual(firstResult.value);
 			expect(
 				await initializeBalanceWorkerCustomer({

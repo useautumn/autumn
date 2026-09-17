@@ -5,6 +5,7 @@ import type {
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
+import type { CatalogCache } from "../../catalog/types/catalogCache.js";
 import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
@@ -17,6 +18,7 @@ import type {
 } from "../../runtime/types/partitionRuntime.js";
 import type { PartitionCheckpointRestoreLimits } from "../../state/actions/checkpoint/restorePartitionCheckpoint.js";
 import type { StateStore } from "../../state/types/stateStore.js";
+import type { WorkerDb } from "../../types/workerDb.js";
 
 export type KafkaBalanceWorkerTimings = KafkaConsumerGroupTimings & {
 	healthRefreshIntervalMs: number;
@@ -43,6 +45,8 @@ export type PartitionRuntimeFactoryContext = {
 	kafka: KafkaProducerFactory;
 	ownershipOffsets: Pick<Admin, "fetchTopicOffsets">;
 	stateStore: StateStore;
+	db: WorkerDb;
+	catalogCache: CatalogCache;
 	checkpointSource: PartitionCheckpointSource;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 	partitionResolver: MeteringPartitionResolver;

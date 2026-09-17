@@ -14,32 +14,20 @@ const deductedValuesByCustomerEntitlementId = ({
 	const deductedValues = new Map<string, Decimal>();
 
 	for (const change of changes) {
-		if (change.op !== "update") {
+		if (change.table !== "customerEntitlements" || change.op !== "update") {
 			fail("a track can only update customer entitlements");
 		}
-		const { balance: balanceBefore, usage: usageBefore } = change.before;
-		const { balance: balanceAfter, usage: usageAfter } = change.after;
-		if (
-			balanceBefore === undefined ||
-			usageBefore === undefined ||
-			balanceAfter === undefined ||
-			usageAfter === undefined
-		) {
-			fail("each change must carry balance and usage before and after");
+		const { balance: balanceBefore } = change.before;
+		const { balance: balanceAfter } = change.after;
+		if (balanceBefore === undefined || balanceAfter === undefined) {
+			fail("each change must carry balance before and after");
 		}
 		if (deductedValues.has(change.id)) {
 			fail(`duplicate change for customer entitlement ${change.id}`);
 		}
 
 		const balanceDelta = new Decimal(balanceBefore).minus(balanceAfter);
-		const usageDelta = new Decimal(usageAfter).minus(usageBefore);
-		if (
-			balanceDelta.lt(0) ||
-			usageDelta.lt(0) ||
-			!balanceDelta.eq(usageDelta)
-		) {
-			fail(`balance and usage deltas disagree for ${change.id}`);
-		}
+		if (balanceDelta.lt(0)) fail(`a track cannot add balance to ${change.id}`);
 		deductedValues.set(change.id, balanceDelta);
 	}
 
@@ -109,22 +97,15 @@ export const validateTrackMutation = ({
 		}
 	}
 
-	const { balanceSnapshot } = result;
-	if (!new Decimal(balanceSnapshot.balance).eq(result.balanceAfter)) {
-		fail("balanceSnapshot must hold the balance after the track");
+	const { customerEntitlement } = result;
+	if (!new Decimal(customerEntitlement.balance).eq(result.balanceAfter)) {
+		fail("result.customerEntitlement must hold the balance after the track");
 	}
 	for (const [customerEntitlementId] of deductedValues) {
-		if (customerEntitlementId !== balanceSnapshot.id) {
-			fail(`change ${customerEntitlementId} is missing from balanceSnapshot`);
+		if (customerEntitlementId !== customerEntitlement.id) {
+			fail(
+				`change ${customerEntitlementId} is not the result's customer entitlement`,
+			);
 		}
-	}
-	const snapshotChange = mutation.changes.at(0);
-	if (
-		snapshotChange?.op === "update" &&
-		!new Decimal(snapshotChange.after.usage ?? balanceSnapshot.usage).eq(
-			balanceSnapshot.usage,
-		)
-	) {
-		fail("balanceSnapshot usage must match the committed change");
 	}
 };

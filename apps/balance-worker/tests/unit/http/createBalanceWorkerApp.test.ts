@@ -26,6 +26,10 @@ import {
 	OwnedPartitionNotReadyError,
 	OwnedPartitionRecoveryRequiredError,
 } from "../../../src/runtime/runtimeErrors.js";
+import {
+	createCatalogFor,
+	createCustomerEntitlement,
+} from "../../fixtures/mutations.js";
 import { createTestRuntimeResources } from "../kafka/kafka-test-fixtures.js";
 
 const command = parseTrackCommand({
@@ -34,8 +38,12 @@ const command = parseTrackCommand({
 		type: "track",
 		commandId: "cmd",
 		requestId: "req",
-		identity: { orgId: "org", env: "sandbox", customerId: "customer" },
-		entityId: null,
+		identity: {
+			orgId: "org",
+			env: "sandbox",
+			customerId: "customer",
+			entityId: null,
+		},
 		featureId: "messages",
 		value: 2,
 		overageBehavior: "reject",
@@ -46,20 +54,19 @@ const command = parseTrackCommand({
 const state = createCustomerState({
 	identity: command.identity,
 	customerEntitlements: [
-		{
+		createCustomerEntitlement({
 			id: "balance",
-			externalId: null,
 			featureId: "messages",
 			balance: 10,
-			usage: 0,
-			granted: 10,
-			planId: null,
-			reset: null,
-			expiresAt: null,
-		},
+		}),
 	],
 });
-const decision = computeTrack({ state, command, deduplicationExpiresAt: 1000 });
+const decision = computeTrack({
+	state,
+	catalog: createCatalogFor({ state }),
+	command,
+	deduplicationExpiresAt: 1000,
+});
 const route = { partition: 2, routeEpoch: "9007199254740993" };
 const request = { route, command };
 const fixture = ({
@@ -86,7 +93,8 @@ const fixture = ({
 			if (cause) throw cause;
 			return decision;
 		},
-		check: async ({ command }) => computeCheck({ state, command }),
+		check: async ({ command }) =>
+			computeCheck({ state, catalog: createCatalogFor({ state }), command }),
 		drain: async () => undefined,
 	};
 	const process: BalanceWorkerRequestContext["runtime"]["process"] = (run) =>
@@ -348,7 +356,6 @@ describe("Balance worker HTTP", () => {
 				type: "check",
 				requestId: "check-request",
 				identity: command.identity,
-				entityId: null,
 				featureId: "messages",
 				requiredBalance: 2,
 				properties: null,
@@ -377,7 +384,11 @@ describe("Balance worker HTTP", () => {
 		});
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({
-			decision: computeCheck({ state, command: checkCommand }),
+			decision: computeCheck({
+				state,
+				catalog: createCatalogFor({ state }),
+				command: checkCommand,
+			}),
 		});
 		expect(lookups).toEqual([route]);
 		expect(submitted).toEqual([]);

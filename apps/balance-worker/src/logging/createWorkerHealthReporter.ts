@@ -17,7 +17,7 @@ export function createWorkerHealthReporter({
 	config,
 }: {
 	ctx: WorkerHealthReporterContext;
-	config: { deployment: string; endpoint: string };
+	config: { deployment: string; enabled: boolean; endpoint: string };
 }): { start(): void; stop(): void } {
 	const identity = {
 		workerDeployment: config.deployment,
@@ -78,6 +78,10 @@ export function createWorkerHealthReporter({
 
 	function start(): void {
 		if (status !== "created") return;
+		if (!config.enabled) {
+			status = "stopped";
+			return;
+		}
 		status = "active";
 		cancel = (ctx.schedule ?? scheduleReports)({
 			intervalMs: HEALTH_REPORT_INTERVAL_MS,

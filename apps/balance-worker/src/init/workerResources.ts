@@ -7,6 +7,11 @@ import {
 	meteringIdentityToPartition,
 } from "@autumn/kafka";
 import { Kafka } from "kafkajs";
+import { createCatalogCache } from "../catalog/createCatalogCache.js";
+import {
+	createWorkerDb,
+	getPostgresClient,
+} from "../external/postgres/getWorkerDb.js";
 import { openStateStore } from "../state/openStateStore.js";
 import type { StateStore } from "../state/types/stateStore.js";
 import { createWorkerCheckpointResources } from "./construction/createWorkerCheckpointResources.js";
@@ -66,12 +71,32 @@ export async function openWorkerResources({
 		stateStore = openStateStore({
 			databasePath: env.BALANCE_WORKER_SQLITE_PATH,
 		});
+		const postgres = getPostgresClient({ env });
+		const db = createWorkerDb({ ctx: { postgres } });
+		const catalogCache = createCatalogCache({
+			ctx: {
+				db,
+				config: {
+					mutableRowTtlMs: env.BALANCE_WORKER_CATALOG_TTL_MS,
+					maxSizeBytes: env.BALANCE_WORKER_CATALOG_MAX_BYTES,
+				},
+			},
+		});
 		checkpoints = await createWorkerCheckpointResources({
 			ctx: { stateStore },
 			config: checkpointConfig,
 		});
 		const resources = createWorkerResources({
-			ctx: { kafka, admin, stateStore, partitionResolver, checkpoints },
+			ctx: {
+				kafka,
+				admin,
+				stateStore,
+				postgres,
+				db,
+				catalogCache,
+				partitionResolver,
+				checkpoints,
+			},
 		});
 		return { ...resources, checkpoints };
 	} catch (cause) {
@@ -146,6 +171,7 @@ export function createWorkerResources({
 		if (ctx.checkpoints) pending.push(ctx.checkpoints.stop());
 		const results = await Promise.allSettled(pending);
 		await ctx.admin.disconnect();
+		await ctx.postgres.close();
 		const errors: unknown[] = [];
 		for (const result of results) {
 			if (result.status === "rejected") errors.push(result.reason);

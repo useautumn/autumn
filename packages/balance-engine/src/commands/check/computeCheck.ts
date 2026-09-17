@@ -1,3 +1,4 @@
+import type { Catalog } from "../../models/catalog/catalog.js";
 import type { CustomerState } from "../../models/customerState.js";
 import { availableBalanceOf } from "../../utils/customerStateUtils/balanceOf.js";
 import { findCustomerEntitlementsForFeature } from "../../utils/customerStateUtils/findCustomerEntitlementsForFeature.js";
@@ -7,15 +8,17 @@ import type { CheckDecision } from "./types/checkDecision.js";
 
 export const computeCheck = ({
 	state,
+	catalog,
 	command,
 }: {
 	state: CustomerState;
+	catalog: Catalog;
 	command: CheckCommand;
 }): CheckDecision => {
 	if (!identitiesMatch({ left: state.identity, right: command.identity })) {
 		return { kind: "unsupported", reason: "subject_mismatch" };
 	}
-	if (command.entityId) {
+	if (command.identity.entityId) {
 		return { kind: "unsupported", reason: "entity_not_supported" };
 	}
 	if (command.properties && Object.keys(command.properties).length > 0) {
@@ -24,6 +27,7 @@ export const computeCheck = ({
 
 	const customerEntitlements = findCustomerEntitlementsForFeature({
 		state,
+		catalog,
 		featureId: command.featureId,
 	});
 	if (customerEntitlements.length === 0) {
@@ -45,7 +49,7 @@ export const computeCheck = ({
 		allowed,
 		reason: allowed ? null : "insufficient_balance",
 		balance: balance.toNumber(),
-		balanceSnapshot: structuredClone(customerEntitlements[0]),
+		customerEntitlement: structuredClone(customerEntitlements[0]),
 		requiredBalance: command.requiredBalance,
 		revision: state.revision,
 	};

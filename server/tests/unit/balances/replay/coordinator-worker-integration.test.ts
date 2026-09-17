@@ -32,9 +32,14 @@ test.concurrent(
 		const coordinator = createReplayHydrationCoordinator({
 			source: createLoadedSource({
 				state: fixture.state,
+				catalogRows: fixture.catalogRows,
 				onLoad: async () => {
 					sourceCalls++;
-					return { kind: "loaded", state: fixture.state };
+					return {
+						kind: "loaded",
+						state: fixture.state,
+						catalogRows: fixture.catalogRows,
+					};
 				},
 			}),
 			client: worker.client,
@@ -80,7 +85,10 @@ test.concurrent(
 			records,
 			now: fixture.selection.baseline.capturedAtMs,
 		});
-		const source = createLoadedSource({ state: fixture.state });
+		const source = createLoadedSource({
+			state: fixture.state,
+			catalogRows: fixture.catalogRows,
+		});
 		const first = createReplayHydrationCoordinator({
 			source,
 			client: worker.client,
@@ -120,9 +128,9 @@ test.concurrent(
 				store.readState({ identity: fixture.selection.identity }),
 			).toMatchObject({
 				revision: 2,
-				customerEntitlements: {
-					messages_grant: { balance: 67, usage: 43 },
-				},
+				customerEntitlements: expect.arrayContaining([
+					expect.objectContaining({ id: "messages_grant", balance: 67 }),
+				]),
 			});
 		} finally {
 			await Promise.all([first.close(), second.close()]);

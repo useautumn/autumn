@@ -11,14 +11,14 @@ export const trackFingerprintOf = ({
 	identity: MeteringIdentity;
 	command: Pick<
 		TrackCommandEcho,
-		"entityId" | "featureId" | "value" | "overageBehavior" | "properties"
+		"featureId" | "value" | "overageBehavior" | "properties"
 	>;
 }): string =>
 	JSON.stringify([
 		identity.orgId,
 		identity.env,
 		identity.customerId,
-		command.entityId,
+		identity.entityId,
 		command.featureId,
 		new Decimal(command.value).toString(),
 		command.overageBehavior,

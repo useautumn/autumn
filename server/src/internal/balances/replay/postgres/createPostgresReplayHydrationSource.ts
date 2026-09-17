@@ -1,10 +1,17 @@
-import type { CustomerState, MeteringIdentity } from "@autumn/balance-engine";
+import type {
+	CatalogRow,
+	CustomerState,
+	MeteringIdentity,
+} from "@autumn/balance-engine";
 import type { AppEnv, FullSubject } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { fullSubjectToCustomerState } from "../../balanceWorker/fullSubjectToCustomerState.js";
+import {
+	fullSubjectToCatalogRows,
+	fullSubjectToCustomerState,
+} from "../../balanceWorker/fullSubjectToCustomerState.js";
 import type {
 	ReplayHydrationBaseline,
 	ReplayHydrationSelection,
@@ -58,6 +65,7 @@ type SnapshotOutcome =
 	| Readonly<{
 			kind: "loaded";
 			state: CustomerState;
+			catalogRows: CatalogRow[];
 			metadata: ReplayContextMetadata;
 	  }>;
 
@@ -126,8 +134,10 @@ function convertSnapshot({
 	if (!subjectMatchesIdentity({ fullSubject, identity }))
 		return refuseUnsupported({ reason: "subject_mismatch" });
 	let state: CustomerState;
+	let catalogRows: CatalogRow[];
 	try {
 		state = fullSubjectToCustomerState({ ctx, fullSubject, featureIds });
+		catalogRows = fullSubjectToCatalogRows({ ctx, fullSubject, featureIds });
 	} catch (cause) {
 		const refusal = refusalFromConverterError({ cause });
 		if (!refusal) throw cause;
@@ -143,7 +153,7 @@ function convertSnapshot({
 		})
 	)
 		return refuseUnsupported({ reason: "lifecycle_window" });
-	return { kind: "loaded", state, metadata };
+	return { kind: "loaded", state, catalogRows, metadata };
 }
 
 async function readFrozenSnapshot({
@@ -224,7 +234,11 @@ function publishSnapshot({
 		};
 	}
 	state.metadataByIdentity.set(identityKey, outcome.metadata);
-	return { kind: "loaded", state: outcome.state };
+	return {
+		kind: "loaded",
+		state: outcome.state,
+		catalogRows: outcome.catalogRows,
+	};
 }
 
 async function loadSnapshot({

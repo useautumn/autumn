@@ -1,11 +1,15 @@
 import type {
+	CatalogRow,
 	CheckCommand,
 	CustomerState,
 	MeteringIdentity,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
-import { fullSubjectToCustomerState } from "@/internal/balances/balanceWorker/fullSubjectToCustomerState.js";
+import {
+	fullSubjectToCatalogRows,
+	fullSubjectToCustomerState,
+} from "@/internal/balances/balanceWorker/fullSubjectToCustomerState.js";
 import type {
 	ReplayHydrationSelection,
 	ReplayHydrationSource,
@@ -28,6 +32,7 @@ export function createReplayHydrationFixture({
 		orgId: fixture.ctx.org.id,
 		env: fixture.ctx.env,
 		customerId: fixture.fullSubject.customerId,
+		entityId: null,
 	};
 	fixture.ctx.org.id = selectedIdentity.orgId;
 	fixture.ctx.env = selectedIdentity.env as typeof fixture.ctx.env;
@@ -42,6 +47,11 @@ export function createReplayHydrationFixture({
 		fullSubject: fixture.fullSubject,
 		featureIds,
 	});
+	const catalogRows = fullSubjectToCatalogRows({
+		ctx: fixture.ctx,
+		fullSubject: fixture.fullSubject,
+		featureIds,
+	});
 	const selection: ReplayHydrationSelection = {
 		identity: selectedIdentity,
 		baseline,
@@ -51,6 +61,7 @@ export function createReplayHydrationFixture({
 		...fixture,
 		selection,
 		state,
+		catalogRows,
 		trackCommand: createTrackCommand({
 			identity: selectedIdentity,
 			occurredAt: baseline.capturedAtMs + 1_000,
@@ -81,7 +92,6 @@ export function createTrackCommand({
 		commandId,
 		requestId,
 		identity,
-		entityId: null,
 		featureId: "messages",
 		value,
 		overageBehavior: "reject",
@@ -104,7 +114,6 @@ export function createCheckCommand({
 		type: "check",
 		requestId,
 		identity,
-		entityId: null,
 		featureId: "messages",
 		requiredBalance: 1,
 		properties: null,
@@ -123,12 +132,14 @@ export function createNotInitializedError(): BalanceWorkerClientError {
 
 export function createLoadedSource({
 	state,
+	catalogRows = [],
 	onLoad,
 }: {
 	state: CustomerState;
+	catalogRows?: CatalogRow[];
 	onLoad?: ReplayHydrationSource["load"];
 }): ReplayHydrationSource {
 	return {
-		load: onLoad ?? (async () => ({ kind: "loaded", state })),
+		load: onLoad ?? (async () => ({ kind: "loaded", state, catalogRows })),
 	};
 }

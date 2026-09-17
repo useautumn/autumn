@@ -16,7 +16,6 @@ function summarizeDecision({ decision }: { decision: TrackDecision }) {
 		kind: decision.kind,
 		status: result.status,
 		remaining: result.balanceAfter,
-		usage: result.balanceSnapshot.usage,
 		appliedValue: result.appliedValue,
 	};
 }

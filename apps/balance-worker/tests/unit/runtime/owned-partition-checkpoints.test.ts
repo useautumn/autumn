@@ -3,6 +3,10 @@ import { parseCheckCommand, parseTrackCommand } from "@autumn/balance-engine";
 import { PartitionCheckpointPublisherError } from "../../../src/checkpoint/partitionCheckpointPublisher.js";
 import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
 import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
+import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
 import { createSchedulerFixture } from "../checkpoint/scheduling/scheduler-fixtures.js";
 
 const createRuntime = ({
@@ -30,6 +34,8 @@ const createRuntime = ({
 	const runtime = createPartitionRuntime({
 		ctx: {
 			stateStore: fixture.store,
+			db: createSyntheticWorkerDb(),
+			catalogCache: createTestCatalogCache(),
 			producer: {
 				connect: async () => {},
 				fence: async () => {},
@@ -41,7 +47,7 @@ const createRuntime = ({
 				bootstrap: async () => ({ kind: "continued", nextOffset: 1n }),
 			},
 			partitionResolver: { partitionForIdentity: () => 0 },
-			trackReceiptPolicy: { now: fixture.clock.now, retentionMs: 60_000 },
+			receiptPolicy: { retentionMs: 60_000, now: fixture.clock.now },
 			checkpointMaintenance: fixture.scheduler,
 		},
 		config: {
@@ -250,7 +256,6 @@ describe("owned partition checkpoints", () => {
 							commandId: "track_during_s3_failure",
 							requestId: "request",
 							identity,
-							entityId: null,
 							featureId: "messages",
 							value: 5,
 							overageBehavior: "reject",
@@ -269,7 +274,6 @@ describe("owned partition checkpoints", () => {
 							type: "check",
 							requestId: "check",
 							identity,
-							entityId: null,
 							featureId: "messages",
 							requiredBalance: 5,
 							properties: null,

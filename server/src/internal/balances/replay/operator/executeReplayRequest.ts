@@ -93,20 +93,13 @@ function replayResponseContext({
 	};
 }
 
+/** The archive keeps the worker's decision itself; projecting an API balance would need a FullSubject the replay does not load. */
 function replayDecisionReply({
-	ctx,
 	dispatch,
 }: {
-	ctx: AutumnContext;
 	dispatch: ReplayDispatch;
 }): unknown {
-	return dispatch.kind === "check"
-		? checkDecisionToCheckResponse({
-				ctx,
-				command: dispatch.command,
-				decision: dispatch.decision,
-			})
-		: trackDecisionToTrackResponse({ ctx, decision: dispatch.decision });
+	return dispatch.decision;
 }
 
 function completeReplayDispatch({
@@ -124,14 +117,7 @@ function completeReplayDispatch({
 		return {
 			kind: "completed",
 			decision: dispatch.decision,
-			reply: replayDecisionReply({
-				ctx: replayResponseContext({
-					request,
-					identity: dispatch.command.identity,
-					readContext,
-				}),
-				dispatch,
-			}),
+			reply: replayDecisionReply({ dispatch }),
 			statusCode: 200,
 			durationMs,
 		};

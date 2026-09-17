@@ -38,7 +38,10 @@ test.concurrent("config requires positive bounded safe integers", async () => {
 	]) {
 		expect(() =>
 			createReplayHydrationCoordinator({
-				source: createLoadedSource({ state: fixture.state }),
+				source: createLoadedSource({
+					state: fixture.state,
+					catalogRows: fixture.catalogRows,
+				}),
 				client: missingClient(),
 				config,
 			}),
@@ -70,6 +73,7 @@ test.concurrent(
 						...base.state,
 						identity: selection.identity,
 					},
+					catalogRows: base.catalogRows,
 				};
 			},
 		};
@@ -131,6 +135,7 @@ test.concurrent(
 							...first.state,
 							identity: selection.identity,
 						},
+						catalogRows: first.catalogRows,
 					};
 				},
 			},
@@ -172,7 +177,11 @@ test.concurrent(
 				load: async ({ signal }) => {
 					sourceStarted.resolve(signal);
 					await physicalGate.promise;
-					return { kind: "loaded", state: fixture.state };
+					return {
+						kind: "loaded",
+						state: fixture.state,
+						catalogRows: fixture.catalogRows,
+					};
 				},
 			},
 			client: {

@@ -77,7 +77,7 @@ const seedCustomer = ({
 };
 
 const balanceOf = ({ state }: { state: CustomerState | null }) =>
-	state?.customerEntitlements.messages_monthly;
+	state?.customerEntitlements.find((row) => row.id === "messages_monthly");
 
 describe("state store", () => {
 	test.concurrent(
@@ -144,7 +144,7 @@ describe("state store", () => {
 				});
 				expect(
 					balanceOf({ state: fixture.store.readState({ identity }) }),
-				).toMatchObject({ balance: 5, usage: 5 });
+				).toMatchObject({ balance: 5 });
 			} finally {
 				closeStoreFixture(fixture);
 			}
@@ -202,7 +202,7 @@ describe("state store", () => {
 			expect(result).toMatchObject({ kind: "applied", nextOffset: 2n });
 			expect(
 				balanceOf({ state: fixture.store.readState({ identity }) }),
-			).toMatchObject({ balance: 5, usage: 5 });
+			).toMatchObject({ balance: 5 });
 			expect(
 				fixture.store.readReceipt({ identity, mutationId: mutation.id }),
 			).toEqual(mutation);
@@ -296,7 +296,7 @@ describe("state store", () => {
 			expect(results.map(({ kind }) => kind)).toEqual(["applied", "applied"]);
 			expect(
 				balanceOf({ state: fixture.store.readState({ identity }) }),
-			).toMatchObject({ balance: 0, usage: 10 });
+			).toMatchObject({ balance: 0 });
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(3n);
 		} finally {
 			closeStoreFixture(fixture);
@@ -369,7 +369,7 @@ describe("state store", () => {
 				expect(duplicate).toMatchObject({ kind: "duplicate", nextOffset: 3n });
 				expect(
 					balanceOf({ state: fixture.store.readState({ identity }) }),
-				).toMatchObject({ balance: 5, usage: 5 });
+				).toMatchObject({ balance: 5 });
 				expect(fixture.store.readNextOffset({ topic, partition })).toBe(3n);
 				expect(
 					applyDurableMutation({
@@ -518,7 +518,7 @@ describe("state store", () => {
 				).toThrow(OutOfOrderMutationError);
 				expect(
 					balanceOf({ state: fixture.store.readState({ identity }) }),
-				).toMatchObject({ balance: 5, usage: 5 });
+				).toMatchObject({ balance: 5 });
 				expect(
 					fixture.store.readReceipt({
 						identity,
@@ -561,7 +561,7 @@ describe("state store", () => {
 			expect(result).toMatchObject({ kind: "applied", nextOffset: 5n });
 			expect(
 				balanceOf({ state: fixture.store.readState({ identity }) }),
-			).toMatchObject({ balance: 0, usage: 10 });
+			).toMatchObject({ balance: 0 });
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(5n);
 			expect(
 				applyDurableMutation({
@@ -605,7 +605,7 @@ describe("state store", () => {
 				).toThrow(ConflictingMutationReceiptError);
 				expect(
 					balanceOf({ state: fixture.store.readState({ identity }) }),
-				).toMatchObject({ balance: 5, usage: 5 });
+				).toMatchObject({ balance: 5 });
 				expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
 			} finally {
 				closeStoreFixture(fixture);
@@ -645,12 +645,12 @@ describe("state store", () => {
 
 			expect(
 				balanceOf({ state: fixture.store.readState({ identity }) }),
-			).toMatchObject({ balance: 5, usage: 5 });
+			).toMatchObject({ balance: 5 });
 			expect(
 				balanceOf({
 					state: fixture.store.readState({ identity: secondIdentity }),
 				}),
-			).toMatchObject({ balance: 5, usage: 5 });
+			).toMatchObject({ balance: 5 });
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(4n);
 		} finally {
 			closeStoreFixture(fixture);
@@ -717,7 +717,7 @@ describe("state store", () => {
 
 				expect(
 					balanceOf({ state: reopenedStore.readState({ identity }) }),
-				).toMatchObject({ balance: 5, usage: 5 });
+				).toMatchObject({ balance: 5 });
 				expect(
 					reopenedStore.readReceipt({ identity, mutationId: mutation.id }),
 				).toEqual(mutation);

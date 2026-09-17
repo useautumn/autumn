@@ -114,6 +114,7 @@ export const createSchedulerFixture = ({
 					orgId: "org_1",
 					env: "sandbox",
 					customerId: `cus_${partition}`,
+					entityId: null,
 				},
 				customerEntitlements: [createCustomerEntitlement()],
 			}),

@@ -29,6 +29,10 @@ import type {
 	ReplayHydrationSourceResult,
 } from "../../../../../server/src/internal/balances/replay/replayHydrationContracts.js";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
+import {
+	createCatalogRowsFor,
+	createCustomerEntitlement,
+} from "../../fixtures/mutations.js";
 
 const LOOPBACK_BROKER_PATTERN = /^(?:127\.0\.0\.1|localhost):(\d{1,5})$/;
 
@@ -67,12 +71,9 @@ const BASELINE_ID = "replay-baseline-2024-03-01";
 const BASELINE_CAPTURED_AT_MS = 1_709_251_200_000;
 const FEATURE_ID = "messages";
 const CUSTOMER_ENTITLEMENT_ID = "cus_ent_replay_messages";
-const BASELINE_GRANTED = 100;
 const BASELINE_BALANCE = 72;
-const BASELINE_USAGE = 28;
 const TRACKED_VALUE = 5;
 const BALANCE_AFTER_TRACK = 67;
-const USAGE_AFTER_TRACK = 33;
 const REVISION_AFTER_TRACK = 2;
 const TRACK_COMMAND_ID = "replay-hydration-track-command";
 const TRACK_REQUEST_ID = "replay-hydration-track-request";
@@ -81,6 +82,7 @@ const REPLAY_IDENTITY: MeteringIdentity = {
 	orgId: "org_replay_hydration",
 	env: "live",
 	customerId: "cus_replay_hydration_external",
+	entityId: null,
 };
 
 const REPLAY_SELECTION: ReplayHydrationSelection = {
@@ -136,17 +138,11 @@ function createBaselineState(): CustomerState {
 	return createCustomerState({
 		identity: REPLAY_IDENTITY,
 		customerEntitlements: [
-			{
+			createCustomerEntitlement({
 				id: CUSTOMER_ENTITLEMENT_ID,
-				externalId: null,
 				featureId: FEATURE_ID,
 				balance: BASELINE_BALANCE,
-				usage: BASELINE_USAGE,
-				granted: BASELINE_GRANTED,
-				planId: null,
-				reset: null,
-				expiresAt: null,
-			},
+			}),
 		],
 	});
 }
@@ -156,7 +152,12 @@ function createRecordingReplaySource(): RecordingReplaySource {
 	let loadCount = 0;
 	function load(): Promise<ReplayHydrationSourceResult> {
 		loadCount += 1;
-		return Promise.resolve({ kind: "loaded", state: createBaselineState() });
+		const state = createBaselineState();
+		return Promise.resolve({
+			kind: "loaded",
+			state,
+			catalogRows: createCatalogRowsFor({ state }),
+		});
 	}
 	function readLoadCount(): number {
 		return loadCount;
@@ -180,7 +181,6 @@ function createReplayTrackCommand(): TrackCommand {
 			commandId: TRACK_COMMAND_ID,
 			requestId: TRACK_REQUEST_ID,
 			identity: REPLAY_IDENTITY,
-			entityId: null,
 			featureId: FEATURE_ID,
 			value: TRACKED_VALUE,
 			overageBehavior: "reject",
@@ -201,7 +201,6 @@ function createReplayCheckCommand({
 			type: "check",
 			requestId,
 			identity: REPLAY_IDENTITY,
-			entityId: null,
 			featureId: FEATURE_ID,
 			requiredBalance: 1,
 			properties: null,
@@ -309,6 +308,7 @@ async function startBalanceWorkerFixture({
 	const databasePath = join(directory, "state.sqlite");
 	const env = {
 		...createBalanceWorkerEnv({
+			BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
 			KAFKA_BROKERS: brokerList,
 			KAFKA_AUTH_MODE: "none",
 			BALANCE_WORKER_HOST: LOOPBACK_HOST,
@@ -445,7 +445,7 @@ async function expectCheckedBalance({
 	expect(decision.allowed).toBe(true);
 	expect(decision.balance).toBe(BALANCE_AFTER_TRACK);
 	expect(decision.revision).toBe(REVISION_AFTER_TRACK);
-	expect(decision.balanceSnapshot.usage).toBe(USAGE_AFTER_TRACK);
+	expect(decision.customerEntitlement.balance).toBe(BALANCE_AFTER_TRACK);
 }
 
 async function retireReplayRuntime({

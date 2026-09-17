@@ -13,26 +13,29 @@ import type { BalanceWorkerRequestContext } from "../../../src/http/types/balanc
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
 import { OwnedPartitionNotReadyError } from "../../../src/runtime/runtimeErrors.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
+import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
+import {
+	createCatalogRowsFor,
+	createCustomerEntitlement,
+} from "../../fixtures/mutations.js";
 
 const identity = {
 	orgId: "org",
 	env: "sandbox",
 	customerId: "external_customer",
+	entityId: null,
 };
 const state = createCustomerState({
 	identity,
 	customerEntitlements: [
-		{
+		createCustomerEntitlement({
 			id: "grant",
-			externalId: null,
 			featureId: "messages",
 			balance: 10,
-			usage: 0,
-			granted: 10,
-			planId: "pro",
-			reset: null,
-			expiresAt: null,
-		},
+		}),
 	],
 });
 const initialization = {
@@ -42,6 +45,7 @@ const initialization = {
 	commandId: "baseline",
 	identity,
 	state,
+	catalogRows: createCatalogRowsFor({ state }),
 	occurredAt: 1_700_000_000_000,
 };
 /** What the store holds once the baseline mutation is applied. */
@@ -58,7 +62,6 @@ const checkCommand = parseCheckCommand({
 		type: "check",
 		requestId: "check",
 		identity,
-		entityId: null,
 		featureId: "messages",
 		requiredBalance: 5,
 		properties: null,
@@ -72,7 +75,6 @@ const trackCommand = parseTrackCommand({
 		requestId: "track",
 		commandId: "track",
 		identity,
-		entityId: null,
 		featureId: "messages",
 		value: 5,
 		overageBehavior: "reject",
@@ -100,6 +102,8 @@ function createFixture({
 	const processor = createPartitionProcessor({
 		ctx: {
 			stateStore: store,
+			db: createSyntheticWorkerDb(),
+			catalogCache: createTestCatalogCache(),
 			appender: {
 				appendCommitted: async ({ outcomes }) => {
 					batches.push([...outcomes]);
@@ -110,10 +114,7 @@ function createFixture({
 					return { baseOffset };
 				},
 			},
-			trackReceiptPolicy: {
-				retentionMs: 86_400_000,
-				now: () => 1_700_000_000_000,
-			},
+			receiptPolicy: { retentionMs: 86_400_000, now: () => 1_700_000_000_000 },
 			assertCanRead: () => undefined,
 		},
 		config: {
@@ -203,7 +204,7 @@ test.concurrent(
 				decision: {
 					allowed: true,
 					revision: 2,
-					balanceSnapshot: { granted: 10, balance: 5, usage: 5 },
+					customerEntitlement: { balance: 5 },
 				},
 			});
 
@@ -218,7 +219,7 @@ test.concurrent(
 				path: "initialize",
 				command: {
 					...initialization,
-					state: { ...state, customerEntitlements: {} },
+					state: { ...state, customerEntitlements: [] },
 				},
 			});
 			expect(conflict.status).toBe(409);
@@ -262,9 +263,9 @@ test.concurrent(
 				["track", trackCommand],
 			] as const) {
 				const response = await fixture.post({ path, command });
-				expect(response.status).toBe(409);
+				expect(response.status).toBe(404);
 				expect(await response.json()).toMatchObject({
-					error: { code: "NOT_INITIALIZED" },
+					error: { code: "CUSTOMER_NOT_FOUND" },
 				});
 			}
 			const mismatch = await fixture.post({

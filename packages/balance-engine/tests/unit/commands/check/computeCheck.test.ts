@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
 	applyMutation,
-	computeCheck,
+	computeCheck as computeCheckDecision,
 	computeTrack,
 } from "../../../../src/balanceEngine.js";
 import {
+	createCatalogFor,
 	createCheckCommand,
 	createCustomerEntitlement,
 	createState,
@@ -13,6 +14,14 @@ import {
 	identity,
 	requireNewMutation,
 } from "../../engineFixtures.js";
+
+const computeCheck = (
+	input: Omit<Parameters<typeof computeCheckDecision>[0], "catalog">,
+) =>
+	computeCheckDecision({
+		...input,
+		catalog: createCatalogFor({ state: input.state }),
+	});
 
 describe("check computation", () => {
 	test.concurrent("reads a balance without changing state", () => {
@@ -24,7 +33,7 @@ describe("check computation", () => {
 			allowed: true,
 			reason: null,
 			balance: 10,
-			balanceSnapshot: createCustomerEntitlement(),
+			customerEntitlement: createCustomerEntitlement(),
 			requiredBalance: 5,
 			revision: 0,
 		});
@@ -59,6 +68,7 @@ describe("check computation", () => {
 		const mutation = requireNewMutation(
 			computeTrack({
 				state,
+				catalog: createCatalogFor({ state }),
 				command: createTrackCommand(),
 				deduplicationExpiresAt,
 			}),

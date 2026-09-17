@@ -1,17 +1,28 @@
+import type { Catalog } from "../../models/catalog/catalog.js";
 import type { CustomerState } from "../../models/customerState.js";
-import type { LeanCustomerEntitlement } from "../../models/rows/leanCustomerEntitlement.js";
+import type { WorkerCustomerEntitlement } from "../../models/rows/workerCustomerEntitlement.js";
+import { findFeatureById } from "../catalogUtils/findCatalogUtils.js";
 
+/** Rows funding a feature, oldest first. */
 export const findCustomerEntitlementsForFeature = ({
 	state,
+	catalog,
 	featureId,
 }: {
 	state: CustomerState;
+	catalog: Catalog;
 	featureId: string;
-}): LeanCustomerEntitlement[] =>
-	Object.values(state.customerEntitlements)
+}): WorkerCustomerEntitlement[] => {
+	const feature = findFeatureById({ catalog, featureId });
+	if (!feature) return [];
+
+	return state.customerEntitlements
 		.filter(
-			(customerEntitlement) => customerEntitlement.featureId === featureId,
+			(customerEntitlement) =>
+				customerEntitlement.internal_feature_id === feature.internal_id,
 		)
-		.sort(({ id: left }, { id: right }) =>
-			left < right ? -1 : left > right ? 1 : 0,
+		.sort(
+			(left, right) =>
+				left.created_at - right.created_at || left.id.localeCompare(right.id),
 		);
+};

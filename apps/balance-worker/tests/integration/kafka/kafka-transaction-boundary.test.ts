@@ -38,6 +38,10 @@ import {
 import { openStateStore } from "../../../src/state/openStateStore.js";
 import type { StateStore } from "../../../src/state/types/stateStore.js";
 import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
+import {
 	applyDurableMutation,
 	createInitializeMutation,
 	restoreCustomerStates,
@@ -451,7 +455,6 @@ describe("Kafka transaction boundary", () => {
 					commandId: "cmd_tail",
 					requestId: "req_tail",
 					identity: initialState.identity,
-					entityId: null,
 					featureId: "messages",
 					value: 5,
 					overageBehavior: "reject",
@@ -585,7 +588,7 @@ describe("Kafka transaction boundary", () => {
 				revision: 1,
 				featureStatesById: {
 					messages: {
-						customerEntitlements: [{ balance: 5, usage: 5 }],
+						customerEntitlements: [{ balance: 5 }],
 					},
 				},
 			});
@@ -773,6 +776,8 @@ describe("Kafka transaction boundary", () => {
 				topic: topicFixture.topic,
 				partition,
 				stateStore: store,
+				db: createSyntheticWorkerDb(),
+				catalogCache: createTestCatalogCache(),
 				producer: createKafkaOwnedPartitionProducer({
 					kafka,
 					deploymentEnvironment,
@@ -795,10 +800,7 @@ describe("Kafka transaction boundary", () => {
 					maxPendingCommands: 1_000,
 					maxPendingCommandsPerCustomer: 100,
 				},
-				trackReceiptPolicy: {
-					retentionMs: 86_400_000,
-					now: Date.now,
-				},
+				receiptPolicy: { retentionMs: 86_400_000, now: Date.now },
 				recoveryDrainTimeoutMs: timings.recoveryDrainTimeoutMs,
 			});
 		const firstRuntime = runtimeOf({ store: firstStore.store });
@@ -813,7 +815,6 @@ describe("Kafka transaction boundary", () => {
 					commandId: "cmd_fenced_owner",
 					requestId: "req_fenced_owner",
 					identity: firstStore.state.identity,
-					entityId: null,
 					featureId: "messages",
 					value: 5,
 					overageBehavior: "reject",
@@ -960,6 +961,8 @@ test("prepares without fencing and activates from the committed tail", async fun
 	const runtime = createPartitionRuntime({
 		ctx: {
 			stateStore: local.store,
+			db: createSyntheticWorkerDb(),
+			catalogCache: createTestCatalogCache(),
 			producer: createWorkerProducer({
 				ctx: { session: replacement },
 				config: { topic: fixture.topic, partition },
@@ -970,10 +973,7 @@ test("prepares without fencing and activates from the committed tail", async fun
 			follower: replay,
 			bootstrapper,
 			partitionResolver: { partitionForIdentity: () => partition },
-			trackReceiptPolicy: {
-				retentionMs: 86_400_000,
-				now: () => 1_700_000_000_000,
-			},
+			receiptPolicy: { retentionMs: 86_400_000, now: () => 1_700_000_000_000 },
 		},
 		config: {
 			topic: fixture.topic,
@@ -1047,7 +1047,6 @@ test("prepares without fencing and activates from the committed tail", async fun
 				commandId: "cmd_handoff",
 				requestId: "req_handoff",
 				identity: local.state.identity,
-				entityId: null,
 				featureId: "messages",
 				value: 5,
 				overageBehavior: "reject",

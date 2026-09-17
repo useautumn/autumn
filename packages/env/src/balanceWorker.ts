@@ -46,6 +46,10 @@ const workerEnvironmentBaseSchema = z.object({
 		.default(".data/balance-worker.sqlite"),
 	BALANCE_WORKER_MAX_REQUEST_BYTES: positiveInteger.default(1048576),
 	BALANCE_WORKER_RECEIPT_RETENTION_MS: positiveInteger.default(86400000),
+	BALANCE_WORKER_DATABASE_URL: z.string().url(),
+	BALANCE_WORKER_DATABASE_POOL_SIZE: positiveInteger.default(4),
+	BALANCE_WORKER_CATALOG_TTL_MS: positiveInteger.default(300000),
+	BALANCE_WORKER_CATALOG_MAX_BYTES: positiveInteger.default(268435456),
 	BALANCE_WORKER_CHECKPOINT_MODE: z
 		.enum(["off", "restore_only", "enabled"])
 		.default("off"),

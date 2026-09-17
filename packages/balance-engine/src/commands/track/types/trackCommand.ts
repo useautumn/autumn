@@ -12,7 +12,6 @@ export const overageBehaviorSchema = z.enum(["cap", "reject", "overflow"]);
 export type OverageBehavior = z.infer<typeof overageBehaviorSchema>;
 
 export const trackParamsSchema = z.object({
-	entityId: nonEmptyStringSchema.nullable(),
 	featureId: nonEmptyStringSchema,
 	value: finiteNumberSchema.refine((value) => value !== 0),
 	overageBehavior: overageBehaviorSchema,

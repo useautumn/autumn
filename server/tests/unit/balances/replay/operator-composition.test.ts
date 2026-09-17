@@ -22,7 +22,6 @@ import {
 import {
 	buildReplayRequest,
 	createArchiveRecord,
-	findReplyValue,
 	type ReplayArchiveRecord,
 	replayEnvOf,
 } from "./operator-fixture.js";
@@ -39,11 +38,16 @@ function expectCompletedReply({ result }: { result: ReplayExecutionResult }) {
 	return result.reply;
 }
 
+/** The archive keeps the worker decision; remaining is the row balance after a track or the balance a check saw. */
 function remainingOf({ result }: { result: ReplayExecutionResult }) {
-	return findReplyValue({
-		reply: expectCompletedReply({ result }),
-		key: "remaining",
-	});
+	if (result.kind !== "completed")
+		throw new Error(`expected completion, received ${JSON.stringify(result)}`);
+	const { decision } = result;
+	if ("mutation" in decision && decision.mutation.result.type === "track")
+		return decision.mutation.result.customerEntitlement.balance;
+	if ("customerEntitlement" in decision)
+		return decision.customerEntitlement.balance;
+	throw new Error("decision carries no row");
 }
 
 function replyTextOf({ result }: { result: ReplayExecutionResult }) {
@@ -77,9 +81,14 @@ function createCompositionHarness() {
 	const coordinator = createReplayHydrationCoordinator({
 		source: createLoadedSource({
 			state: fixture.state,
+			catalogRows: fixture.catalogRows,
 			onLoad: async () => {
 				loads.count += 1;
-				return { kind: "loaded", state: fixture.state };
+				return {
+					kind: "loaded",
+					state: fixture.state,
+					catalogRows: fixture.catalogRows,
+				};
 			},
 		}),
 		client: worker.client,

@@ -1,4 +1,5 @@
 import type { TrackDecision } from "@autumn/balance-engine";
+import type { FullSubject } from "@autumn/shared";
 import {
 	AffectedResource,
 	applyResponseVersionChanges,
@@ -8,14 +9,16 @@ import {
 	type TrackResponseV3,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { meteringBalanceToApiBalance } from "../../balanceWorker/meteringBalanceToApiBalance.js";
+import { workerCustomerEntitlementToApiBalance } from "../../balanceWorker/workerCustomerEntitlementToApiBalance.js";
 
 export function trackDecisionToTrackResponse({
 	ctx,
 	decision,
+	fullSubject,
 }: {
 	ctx: AutumnContext;
 	decision: TrackDecision;
+	fullSubject: FullSubject;
 }): TrackResponseV3 {
 	if (decision.kind === "unsupported") {
 		const isCommandConflict = decision.reason === "command_conflict";
@@ -45,11 +48,12 @@ export function trackDecisionToTrackResponse({
 		ctx,
 		input: {
 			customer_id: decision.mutation.identity.customerId,
-			entity_id: command.entityId ?? undefined,
+			entity_id: decision.mutation.identity.entityId ?? undefined,
 			value: result.requestedValue,
-			balance: meteringBalanceToApiBalance({
-				featureId: command.featureId,
-				snapshot: result.balanceSnapshot,
+			balance: workerCustomerEntitlementToApiBalance({
+				ctx,
+				fullSubject,
+				customerEntitlement: result.customerEntitlement,
 			}),
 		},
 		targetVersion: ctx.apiVersion,

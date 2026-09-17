@@ -19,6 +19,7 @@ export async function check({
 	const { ctx } = scope;
 	const parsed = parseCheckCommand({ input: command });
 	const customerKey = meteringPartitionKeyOf({ identity: parsed.identity });
+	await ctx.subjectHydrator.ensure({ identity: parsed.identity });
 
 	// Only outcomes pending at this moment; a track arriving later is not "earlier" for this check.
 	await ctx.writer.waitForPendingCommits({ customerKey });
@@ -26,5 +27,6 @@ export async function check({
 
 	const state = ctx.stateStore.readState({ identity: parsed.identity });
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
-	return computeCheck({ state, command: parsed });
+	const catalog = ctx.subjectHydrator.readCatalog({ state });
+	return computeCheck({ state, catalog, command: parsed });
 }

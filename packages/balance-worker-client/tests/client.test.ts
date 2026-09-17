@@ -19,8 +19,12 @@ const command: TrackCommand = {
 	type: "track",
 	commandId: "command",
 	requestId: "request",
-	identity: { orgId: "org", env: "sandbox", customerId: "customer" },
-	entityId: null,
+	identity: {
+		orgId: "org",
+		env: "sandbox",
+		customerId: "customer",
+		entityId: null,
+	},
 	featureId: "feature",
 	value: 1,
 	overageBehavior: "reject",
@@ -285,17 +289,30 @@ const initialState = createCustomerState({
 	customerEntitlements: [
 		{
 			id: "grant",
-			externalId: null,
-			featureId: "feature",
+			customer_product_id: null,
+			entitlement_id: "ent_grant",
+			internal_customer_id: "cus_internal",
+			internal_entity_id: null,
+			internal_feature_id: "feat_feature",
 			balance: 10,
-			usage: 0,
-			granted: 10,
-			planId: null,
-			reset: null,
-			expiresAt: null,
+			adjustment: 0,
+			additional_balance: 0,
+			unlimited: false,
+			usage_allowed: false,
+			next_reset_at: null,
+			reset_cycle_anchor: null,
+			expires_at: null,
+			external_id: null,
+			created_at: 0,
 		},
 	],
 });
+const grantOf = (state: typeof initialState) => {
+	const grant = state.customerEntitlements.find((row) => row.id === "grant");
+	if (!grant) throw new Error("Fixture state must hold the grant");
+	return grant;
+};
+
 const initializeCommand = parseInitializeCommand({
 	input: {
 		schemaVersion: 1,
@@ -304,6 +321,7 @@ const initializeCommand = parseInitializeCommand({
 		commandId: "baseline",
 		identity: command.identity,
 		state: initialState,
+		catalogRows: [],
 		occurredAt: 0,
 	},
 });
@@ -313,7 +331,6 @@ const checkCommand = parseCheckCommand({
 		type: "check",
 		requestId: "check",
 		identity: command.identity,
-		entityId: null,
 		featureId: "feature",
 		requiredBalance: 1,
 		properties: null,
@@ -332,7 +349,7 @@ test.concurrent(
 			balance: 10,
 			requiredBalance: 1,
 			revision: 0,
-			balanceSnapshot: initialState.customerEntitlements.grant,
+			customerEntitlement: grantOf(initialState),
 		};
 		const fixture = createFixture({
 			responses: [
@@ -385,7 +402,7 @@ test.concurrent(
 		const input = structuredClone(initializeCommand);
 		const pending = fixture.client.initialize({ command: input });
 		await fixture.refreshed;
-		const grant = input.state.customerEntitlements.grant;
+		const grant = grantOf(input.state);
 		if (grant) grant.balance = 999;
 		gate.resolve();
 		expect(await pending).toMatchObject({

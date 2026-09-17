@@ -197,11 +197,22 @@ export type KafkaPartitionControlPort = Pick<
 >;
 
 export function createKafkaOwnedPartitionRuntimeFactory(
-	params: Omit<PartitionRuntimeFactoryContext, "ownershipOffsets"> &
+	params: Omit<
+		PartitionRuntimeFactoryContext,
+		"ownershipOffsets" | "db" | "catalogCache"
+	> &
+		Partial<Pick<PartitionRuntimeFactoryContext, "db" | "catalogCache">> &
 		Omit<PartitionRuntimeFactoryConfig, "ownership">,
 ) {
-	const { kafka, stateStore, partitionResolver, checkpointSource, ...config } =
-		params;
+	const {
+		kafka,
+		stateStore,
+		partitionResolver,
+		checkpointSource,
+		db = createSyntheticWorkerDb(),
+		catalogCache = createTestCatalogCache(),
+		...config
+	} = params;
 	async function fetchTopicOffsets() {
 		return [{ partition: 0, offset: "0", low: "0", high: "0" }];
 	}
@@ -209,6 +220,8 @@ export function createKafkaOwnedPartitionRuntimeFactory(
 		ctx: {
 			kafka,
 			stateStore,
+			db,
+			catalogCache,
 			partitionResolver,
 			checkpointSource,
 			ownershipOffsets: { fetchTopicOffsets },
@@ -324,6 +337,10 @@ import type {
 	PartitionRuntimePort,
 	PartitionRuntimeResources,
 } from "../../../src/partitions/types/partitions.js";
+import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
 
 export type LifecycleTestRuntime = Pick<
 	PartitionRuntimePort,

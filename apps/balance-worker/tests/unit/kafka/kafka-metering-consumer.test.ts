@@ -336,7 +336,9 @@ describe("Kafka metering consumer", () => {
 
 			expect(fixture.store.readState({ identity })).toMatchObject({
 				revision: 2,
-				customerEntitlements: { messages_monthly: { balance: 5, usage: 5 } },
+				customerEntitlements: expect.arrayContaining([
+					expect.objectContaining({ id: "messages_monthly", balance: 5 }),
+				]),
 			});
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
 		} finally {
@@ -536,7 +538,9 @@ describe("Kafka metering consumer", () => {
 			]);
 			expect(fixture.store.readState({ identity })).toMatchObject({
 				revision: 1,
-				customerEntitlements: { messages_monthly: { balance: 5, usage: 5 } },
+				customerEntitlements: expect.arrayContaining([
+					expect.objectContaining({ id: "messages_monthly", balance: 5 }),
+				]),
 			});
 		} finally {
 			closeStoreFixture(fixture);
@@ -593,7 +597,9 @@ describe("Kafka metering consumer", () => {
 			]);
 			expect(fixture.store.readState({ identity })).toMatchObject({
 				revision: 2,
-				customerEntitlements: { messages_monthly: { balance: 0, usage: 10 } },
+				customerEntitlements: expect.arrayContaining([
+					expect.objectContaining({ id: "messages_monthly", balance: 0 }),
+				]),
 			});
 		} finally {
 			closeStoreFixture(fixture);

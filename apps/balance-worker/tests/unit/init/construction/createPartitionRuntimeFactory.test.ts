@@ -8,6 +8,10 @@ import type {
 	PartitionOutcomeFollowerPort,
 	PartitionRuntime,
 } from "../../../../src/runtime/types/partitionRuntime.js";
+import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../../fixtures/catalog.js";
 import { restoreCustomerStates } from "../../../fixtures/mutations.js";
 import {
 	closeStoreFixture,
@@ -89,6 +93,8 @@ describe("Kafka owned partition runtime factory", () => {
 					ctx: {
 						kafka: { producer: () => producer },
 						stateStore: fixture.store,
+						db: createSyntheticWorkerDb(),
+						catalogCache: createTestCatalogCache(),
 						ownershipOffsets: { fetchTopicOffsets: async () => [] },
 						checkpointSource: { latest: async () => null },
 						partitionResolver: { partitionForIdentity: () => 0 },
@@ -117,7 +123,6 @@ describe("Kafka owned partition runtime factory", () => {
 						commandId: "private_command",
 						requestId: "private_request",
 						identity,
-						entityId: null,
 						featureId: "messages",
 						value: 5,
 						overageBehavior: "reject",
@@ -177,6 +182,8 @@ describe("Kafka owned partition runtime factory", () => {
 					ctx: {
 						kafka: { producer: () => ({}) as KafkaProducerClient },
 						stateStore: fixture.store,
+						db: createSyntheticWorkerDb(),
+						catalogCache: createTestCatalogCache(),
 						ownershipOffsets: { fetchTopicOffsets: async () => [] },
 						checkpointSource: { latest: async () => null },
 						partitionResolver: { partitionForIdentity: () => 0 },
@@ -203,6 +210,8 @@ describe("Kafka owned partition runtime factory", () => {
 						},
 					},
 					stateStore: fixture.store,
+					db: createSyntheticWorkerDb(),
+					catalogCache: createTestCatalogCache(),
 					ownershipOffsets: { fetchTopicOffsets: async () => [] },
 					checkpointSource: { latest: async () => null },
 					partitionResolver: { partitionForIdentity: () => 0 },

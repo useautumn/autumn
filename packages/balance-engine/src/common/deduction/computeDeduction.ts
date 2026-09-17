@@ -1,39 +1,34 @@
 import { Decimal } from "decimal.js";
 import type { OverageBehavior } from "../../commands/track/types/trackCommand.js";
 import type { RowChange } from "../../models/rowChange.js";
-import type { LeanCustomerEntitlement } from "../../models/rows/leanCustomerEntitlement.js";
+import type { WorkerCustomerEntitlement } from "../../models/rows/workerCustomerEntitlement.js";
 import { availableBalanceOf } from "../../utils/customerStateUtils/balanceOf.js";
 
 const deductionChangeOf = ({
 	customerEntitlement,
 	deductedValue,
 }: {
-	customerEntitlement: LeanCustomerEntitlement;
+	customerEntitlement: WorkerCustomerEntitlement;
 	deductedValue: Decimal;
 }): RowChange => ({
 	table: "customerEntitlements",
 	op: "update",
 	id: customerEntitlement.id,
-	before: {
-		balance: customerEntitlement.balance,
-		usage: customerEntitlement.usage,
-	},
+	before: { balance: customerEntitlement.balance },
 	after: {
 		balance: new Decimal(customerEntitlement.balance)
 			.minus(deductedValue)
 			.toNumber(),
-		usage: new Decimal(customerEntitlement.usage)
-			.plus(deductedValue)
-			.toNumber(),
 	},
 });
 
+/** Drains rows in the order given; overflow drives the last row negative instead of refusing the remainder. */
 export const computeDeduction = ({
 	customerEntitlements,
 	value,
 	overageBehavior,
 }: {
-	customerEntitlements: LeanCustomerEntitlement[];
+	customerEntitlements: WorkerCustomerEntitlement[];
 	value: Decimal;
 	overageBehavior: OverageBehavior;
 }): { appliedValue: Decimal; changes: RowChange[] } => {
@@ -57,7 +52,6 @@ export const computeDeduction = ({
 		remainingValue = remainingValue.minus(deductedValue);
 	}
 
-	// Overflow drives the last row negative rather than refusing the remainder.
 	const overflowCustomerEntitlement = customerEntitlements.at(-1);
 	if (
 		overageBehavior === "overflow" &&

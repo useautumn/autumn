@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import {
+	type AutoTopup,
 	BillingInterval,
 	BillWhen,
-	type AutoTopup,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts.js";
@@ -10,9 +10,9 @@ import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitleme
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts.js";
 import { customers } from "@tests/utils/fixtures/db/customers.js";
 import { prices } from "@tests/utils/fixtures/db/prices.js";
+import type { AutoTopupContext } from "@/internal/balances/autoTopUp/autoTopupContext.js";
 import { computeAutoTopupPlan } from "@/internal/balances/autoTopUp/compute/computeAutoTopupPlan.js";
 import { fullCustomerToAutoTopupObjects } from "@/internal/balances/autoTopUp/helpers/fullCustomerToAutoTopupObjects.js";
-import type { AutoTopupContext } from "@/internal/balances/autoTopUp/autoTopupContext.js";
 
 const createPlan = ({
 	id = "threshold",

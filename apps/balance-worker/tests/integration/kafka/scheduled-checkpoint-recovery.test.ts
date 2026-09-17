@@ -28,7 +28,14 @@ import {
 	partitionCheckpointObjectKeyOf,
 } from "../../../src/s3/s3PartitionCheckpointStorage.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
-import { createInitializeMutation } from "../../fixtures/mutations.js";
+import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
+import {
+	createCustomerEntitlement,
+	createInitializeMutation,
+} from "../../fixtures/mutations.js";
 
 const timings = {
 	fetchMaxWaitTimeMs: 100,
@@ -101,6 +108,8 @@ const createOwner = ({
 			kafka,
 			ownershipOffsets: partitionOffsets,
 			stateStore: store,
+			db: createSyntheticWorkerDb(),
+			catalogCache: createTestCatalogCache(),
 			checkpointSource: storage,
 			partitionResolver: { partitionForIdentity: () => 0 },
 			checkpointMaintenance: scheduler,
@@ -261,21 +270,16 @@ describe("automatic checkpoint recovery", () => {
 					orgId: "org_1",
 					env: "sandbox",
 					customerId: "customer_1",
+					entityId: null,
 				} as const;
 				const state = createCustomerState({
 					identity,
 					customerEntitlements: [
-						{
+						createCustomerEntitlement({
 							id: "messages",
-							externalId: null,
 							featureId: "messages",
 							balance: 10,
-							usage: 0,
-							granted: 10,
-							planId: null,
-							reset: null,
-							expiresAt: null,
-						},
+						}),
 					],
 				});
 				const transaction = await seedProducer.transaction();
@@ -334,7 +338,6 @@ describe("automatic checkpoint recovery", () => {
 						commandId: "tail",
 						requestId: "tail_request",
 						identity,
-						entityId: null,
 						featureId: "messages",
 						value: 5,
 						overageBehavior: "reject",

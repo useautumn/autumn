@@ -12,11 +12,6 @@ import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type { MutationResult } from "../writer/types/mutation.js";
 
-export type TrackReceiptPolicy = {
-	retentionMs: number;
-	now: () => number;
-};
-
 /** Decide now, reply once committed. */
 export async function track({
 	scope,
@@ -29,7 +24,8 @@ export async function track({
 	const parsed = parseTrackCommand({ input: command });
 	const customerKey = meteringPartitionKeyOf({ identity: parsed.identity });
 	const deduplicationExpiresAt =
-		ctx.trackReceiptPolicy.now() + ctx.trackReceiptPolicy.retentionMs;
+		ctx.receiptPolicy.now() + ctx.receiptPolicy.retentionMs;
+	await ctx.subjectHydrator.ensure({ identity: parsed.identity });
 
 	// Synchronous: `mutate` runs against the freshest state and the mutation is enqueued before this returns.
 	const decided = ctx.writer.decide<TrackDecision>({
@@ -38,6 +34,7 @@ export async function track({
 		fingerprint: trackCommandFingerprintOf({ command: parsed }),
 		mutate: ({ state }) =>
 			decideTrack({
+				scope,
 				state,
 				customerKey,
 				command: parsed,
@@ -51,11 +48,13 @@ export async function track({
 
 /** Runs inside the writer's critical section: no await, no I/O. */
 function decideTrack({
+	scope,
 	state,
 	customerKey,
 	command,
 	deduplicationExpiresAt,
 }: {
+	scope: PartitionProcessorScope;
 	state: CustomerState | null;
 	customerKey: string;
 	command: TrackCommand;
@@ -63,7 +62,13 @@ function decideTrack({
 }): MutationResult<TrackDecision> {
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
 
-	const decision = computeTrack({ state, command, deduplicationExpiresAt });
+	const catalog = scope.ctx.subjectHydrator.readCatalog({ state });
+	const decision = computeTrack({
+		state,
+		catalog,
+		command,
+		deduplicationExpiresAt,
+	});
 	if (decision.kind !== "new") return { kind: "reply", reply: decision };
 
 	const { mutation } = decision;

@@ -45,6 +45,7 @@ export function buildReplaySelection({
 			orgId: cohort.identity.orgId,
 			env: cohort.identity.env,
 			customerId: cohort.identity.customerId,
+			entityId: null,
 		},
 		baseline: { id: baseline.id, capturedAtMs: baseline.capturedAtMs },
 		featureIds: cohort.featureIds,

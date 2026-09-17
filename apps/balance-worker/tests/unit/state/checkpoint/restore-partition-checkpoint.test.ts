@@ -30,6 +30,7 @@ const identityOf = (customerId: string): MeteringIdentity => ({
 	orgId: "org_1",
 	env: "sandbox",
 	customerId,
+	entityId: null,
 });
 
 const stateOf = ({
@@ -168,9 +169,9 @@ describe("restore partition checkpoint", () => {
 			expect(fixture.store.readNextOffset({ topic, partition: 0 })).toBe(2n);
 			expect(fixture.store.readState({ identity })).toMatchObject({
 				revision: 1,
-				customerEntitlements: {
-					messages_monthly: { balance: 5, usage: 5 },
-				},
+				customerEntitlements: expect.arrayContaining([
+					expect.objectContaining({ id: "messages_monthly", balance: 5 }),
+				]),
 			});
 			expect(
 				fixture.store.readReceipt({
@@ -222,13 +223,17 @@ describe("restore partition checkpoint", () => {
 				fixture.store.readState({ identity: replacedIdentity }),
 			).toMatchObject({
 				revision: 1,
-				customerEntitlements: { messages_monthly: { balance: 5 } },
+				customerEntitlements: expect.arrayContaining([
+					expect.objectContaining({ id: "messages_monthly", balance: 5 }),
+				]),
 			});
 			expect(fixture.store.readNextOffset({ topic, partition: 1 })).toBe(7n);
 			expect(
 				fixture.store.readState({ identity: retainedIdentity }),
 			).toMatchObject({
-				customerEntitlements: { messages_monthly: { balance: 9 } },
+				customerEntitlements: expect.arrayContaining([
+					expect.objectContaining({ id: "messages_monthly", balance: 9 }),
+				]),
 			});
 		} finally {
 			closeStore(fixture);
@@ -269,7 +274,9 @@ describe("restore partition checkpoint", () => {
 			).toThrow();
 			expect(fixture.store.readNextOffset({ topic, partition: 0 })).toBe(42n);
 			expect(fixture.store.readState({ identity: oldIdentity })).toMatchObject({
-				customerEntitlements: { messages_monthly: { balance: 3 } },
+				customerEntitlements: expect.arrayContaining([
+					expect.objectContaining({ id: "messages_monthly", balance: 3 }),
+				]),
 			});
 			expect(fixture.store.readNextOffset({ topic, partition: 1 })).toBe(7n);
 		} finally {

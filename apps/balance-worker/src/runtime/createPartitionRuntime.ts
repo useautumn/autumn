@@ -41,7 +41,9 @@ export function createPartitionRuntime({
 			ctx: {
 				stateStore: dependencies.stateStore,
 				appender: dependencies.appender,
-				trackReceiptPolicy: dependencies.trackReceiptPolicy,
+				db: dependencies.db,
+				catalogCache: dependencies.catalogCache,
+				receiptPolicy: dependencies.receiptPolicy,
 				assertCanRead,
 			},
 			config: {

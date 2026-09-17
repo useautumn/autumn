@@ -84,7 +84,12 @@ export const createCheckpointServiceFixture = async () => {
 	});
 	const errors: unknown[] = [];
 	const state = createState({
-		identity: { orgId: "org", env: "sandbox", customerId: "customer" },
+		identity: {
+			orgId: "org",
+			env: "sandbox",
+			customerId: "customer",
+			entityId: null,
+		},
 		customerEntitlements: [createCustomerEntitlement({ id: "messages" })],
 	});
 	const producer = kafka.producer();
@@ -186,6 +191,8 @@ export const createCheckpointServiceFixture = async () => {
 		const databasePath = join(directory, file);
 		const env = {
 			...createBalanceWorkerEnv({
+				BALANCE_WORKER_DATABASE_URL:
+					"postgres://worker:secret@127.0.0.1:1/never",
 				KAFKA_BROKERS: brokers,
 				KAFKA_AUTH_MODE: "none",
 				BALANCE_WORKER_PORT: String(port),

@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { catalogRowSchema } from "../../../models/catalog/catalogRow.js";
 import { mutatingCommandSchema } from "../../../models/common/baseCommand.js";
 import {
 	nonEmptyStringSchema,
@@ -7,7 +8,12 @@ import {
 import { customerStateSchema } from "../../../models/customerState.js";
 
 export const initializeCommandSchema = mutatingCommandSchema
-	.extend({ type: z.literal("initialize"), state: customerStateSchema })
+	.extend({
+		type: z.literal("initialize"),
+		state: customerStateSchema,
+		// The catalog rows the state references; the worker caches them, the log never carries them.
+		catalogRows: z.array(catalogRowSchema),
+	})
 	.strict()
 	.superRefine(({ identity, state }, context) => {
 		if (state.revision !== 0) {

@@ -1,19 +1,26 @@
 import { expect, test } from "bun:test";
 import {
+	catalogKeyToString,
+	catalogRowToCatalogKey,
+	customerStateToCatalogKeys,
+} from "@autumn/balance-engine";
+import {
 	AllowanceType,
 	FeatureType,
 	FeatureUsageType,
 	fullSubjectToFullCustomer,
 	getApiBalance,
-	ResetInterval,
 } from "@autumn/shared";
-import { fullSubjectToCustomerState } from "@/internal/balances/balanceWorker/fullSubjectToCustomerState.js";
-import { meteringBalanceToApiBalance } from "@/internal/balances/balanceWorker/meteringBalanceToApiBalance.js";
+import {
+	fullSubjectToCatalogRows,
+	fullSubjectToCustomerState,
+} from "@/internal/balances/balanceWorker/fullSubjectToCustomerState.js";
+import { workerCustomerEntitlementToApiBalance } from "@/internal/balances/balanceWorker/workerCustomerEntitlementToApiBalance.js";
 import { prices } from "../../../utils/fixtures/db/prices.js";
 import { createCustomerFixture } from "./customer-fixture.js";
 
 test.concurrent(
-	"maps a real customer shape with its external identity, grant and reset metadata",
+	"picks the customer's rows and the catalog rows they reference without deriving anything",
 	() => {
 		const fixture = createCustomerFixture();
 		const before = structuredClone(fixture.fullSubject);
@@ -21,32 +28,54 @@ test.concurrent(
 			...fixture,
 			featureIds: ["messages"],
 		});
-		expect(state).toEqual({
+		expect(state).toMatchObject({
 			schemaVersion: 1,
-			identity: { orgId: "org_test", env: "sandbox", customerId: "cus_test" },
-			revision: 0,
-			customerEntitlements: {
-				messages_grant: {
-					id: "messages_grant",
-					externalId: "public_grant",
-					featureId: "messages",
-					balance: 72,
-					usage: 38,
-					granted: 110,
-					planId: "pro",
-					reset: {
-						interval: "month",
-						intervalCount: 1,
-						nextResetAt: 1_800_000_000_000,
-					},
-					expiresAt: null,
-				},
+			identity: {
+				orgId: "org_test",
+				env: "sandbox",
+				customerId: "cus_test",
+				entityId: null,
 			},
+			revision: 0,
+			customerProducts: [{ id: fixture.customerProduct.id }],
+			customerEntitlements: [
+				{
+					id: "messages_grant",
+					external_id: "public_grant",
+					entitlement_id: fixture.customerEntitlement.entitlement_id,
+					internal_feature_id: fixture.feature.internal_id,
+					balance: 72,
+					adjustment: 10,
+				},
+			],
+			rollovers: [],
+			entities: [],
 		});
-		const apiBalance = meteringBalanceToApiBalance({
-			featureId: "messages",
-			snapshot: state.customerEntitlements.messages_grant,
+		expect(
+			customerStateToCatalogKeys({ state }).map((key) =>
+				catalogKeyToString({ key }),
+			),
+		).toEqual(
+			fullSubjectToCatalogRows({ ...fixture, featureIds: ["messages"] })
+				.map((row) =>
+					catalogKeyToString({ key: catalogRowToCatalogKey({ row }) }),
+				)
+				.sort(),
+		);
+		expect(fixture.fullSubject).toEqual(before);
+	},
+);
+
+test.concurrent(
+	"the worker's row projects to the same API balance the Redis path returns",
+	() => {
+		const fixture = createCustomerFixture();
+		const state = fullSubjectToCustomerState({
+			...fixture,
+			featureIds: ["messages"],
 		});
+		const [customerEntitlement] = state.customerEntitlements;
+		if (!customerEntitlement) throw new Error("Expected one row");
 		const existing = getApiBalance({
 			ctx: fixture.ctx,
 			fullCus: fullSubjectToFullCustomer({ fullSubject: fixture.fullSubject }),
@@ -58,22 +87,26 @@ test.concurrent(
 			],
 			feature: fixture.feature,
 		}).data;
-		expect(apiBalance).toMatchObject({
-			granted: existing.granted,
-			remaining: existing.remaining,
-			usage: existing.usage,
-			unlimited: existing.unlimited,
-			overage_allowed: existing.overage_allowed,
-			max_purchase: existing.max_purchase,
-			next_reset_at: existing.next_reset_at,
-			breakdown: existing.breakdown,
-		});
-		expect(fixture.fullSubject).toEqual(before);
+
+		expect(
+			workerCustomerEntitlementToApiBalance({
+				ctx: fixture.ctx,
+				fullSubject: fixture.fullSubject,
+				customerEntitlement,
+			}),
+		).toEqual(existing);
+		expect(
+			workerCustomerEntitlementToApiBalance({
+				ctx: fixture.ctx,
+				fullSubject: fixture.fullSubject,
+				customerEntitlement: { ...customerEntitlement, balance: 67 },
+			}),
+		).toMatchObject({ remaining: 67, usage: existing.usage + 5 });
 	},
 );
 
 test.concurrent(
-	"loose lifetime balances preserve quantity, expiry and public IDs without a plan",
+	"loose lifetime balances are picked without a product and keep their expiry",
 	() => {
 		const fixture = createCustomerFixture();
 		fixture.fullSubject.customer_products = [];
@@ -88,25 +121,19 @@ test.concurrent(
 			...fixture,
 			featureIds: ["messages"],
 		});
+		expect(state.customerProducts).toEqual([]);
+		expect(state.customerEntitlements).toMatchObject([
+			{
+				id: "messages_grant",
+				expires_at: 1_850_000_000_000,
+				next_reset_at: null,
+			},
+		]);
 		expect(
-			meteringBalanceToApiBalance({
-				featureId: "messages",
-				snapshot: state.customerEntitlements.messages_grant,
-			}),
-		).toMatchObject({
-			granted: 110,
-			remaining: 72,
-			usage: 38,
-			next_reset_at: null,
-			breakdown: [
-				{
-					id: "public_grant",
-					plan_id: null,
-					reset: { interval: ResetInterval.OneOff, resets_at: null },
-					expires_at: 1_850_000_000_000,
-				},
-			],
-		});
+			fullSubjectToCatalogRows({ ...fixture, featureIds: ["messages"] }).map(
+				(row) => row.table,
+			),
+		).toEqual(["entitlements", "features"]);
 	},
 );
 

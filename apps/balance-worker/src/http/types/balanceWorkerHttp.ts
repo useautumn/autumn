@@ -30,9 +30,7 @@ export type BalanceWorkerHttpEnv = {
 export type BalanceWorkerRequestLog = {
 	id: string;
 	command?: Pick<TrackCommand, "requestId" | "identity"> &
-		Partial<
-			Pick<TrackCommand, "commandId" | "entityId" | "featureId" | "value">
-		>;
+		Partial<Pick<TrackCommand, "commandId" | "featureId" | "value">>;
 	decision?: TrackDecision | CheckDecision | InitializationDecision;
 	error?: Error;
 	errorCode?: WorkerErrorCode;

@@ -11,6 +11,7 @@ import {
 	createAcceptedCommands,
 	settleAcceptedCommands,
 } from "./common/acceptedCommands.js";
+import { createSubjectHydrator } from "./subject/createSubjectHydrator.js";
 import type {
 	PartitionProcessor,
 	PartitionProcessorConfig,
@@ -26,22 +27,27 @@ export function createPartitionProcessor({
 	ctx: PartitionProcessorDependencies;
 	config: PartitionProcessorConfig;
 }): PartitionProcessor {
-	const scope: PartitionProcessorScope = {
+	const writer = createPartitionWriter({
 		ctx: {
-			...dependencies,
-			config,
-			writer: createPartitionWriter({
-				ctx: {
-					stateStore: dependencies.stateStore,
-					appender: dependencies.appender,
-				},
-				config: {
-					topic: config.topic,
-					partition: config.partition,
-					limits: config.writerLimits,
-				},
-			}),
+			stateStore: dependencies.stateStore,
+			appender: dependencies.appender,
 		},
+		config: {
+			topic: config.topic,
+			partition: config.partition,
+			limits: config.writerLimits,
+		},
+	});
+	const subjectHydrator = createSubjectHydrator({
+		ctx: {
+			catalogCache: dependencies.catalogCache,
+			db: dependencies.db,
+			writer,
+			receiptPolicy: dependencies.receiptPolicy,
+		},
+	});
+	const scope: PartitionProcessorScope = {
+		ctx: { ...dependencies, config, writer, subjectHydrator },
 		accepted: createAcceptedCommands(),
 	};
 

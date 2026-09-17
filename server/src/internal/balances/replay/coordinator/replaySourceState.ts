@@ -1,24 +1,41 @@
-import { type CustomerState, parseCustomerState } from "@autumn/balance-engine";
+import {
+	type CatalogRow,
+	type CustomerState,
+	catalogRowsToCatalog,
+	parseCustomerState,
+} from "@autumn/balance-engine";
 import { ReplayHydrationSourceMismatchError } from "../replayHydrationErrors.js";
 import {
 	identitiesEqual,
 	type NormalizedSelection,
 } from "./replaySelection.js";
 
-const featureIdsOf = ({ state }: { state: CustomerState }): string[] =>
-	[
+/** Rows name features by internal id; the catalog rows that came with them map back to public ids. */
+const featureIdsOf = ({
+	state,
+	catalogRows,
+}: {
+	state: CustomerState;
+	catalogRows: CatalogRow[];
+}): string[] => {
+	const { features } = catalogRowsToCatalog({ rows: catalogRows });
+	return [
 		...new Set(
-			Object.values(state.customerEntitlements).map(
-				({ featureId }) => featureId,
+			state.customerEntitlements.map(
+				({ internal_feature_id }) =>
+					features[internal_feature_id]?.id ?? internal_feature_id,
 			),
 		),
 	].sort();
+};
 
 export function validateSourceState({
 	input,
+	catalogRows,
 	selection,
 }: {
 	input: CustomerState;
+	catalogRows: CatalogRow[];
 	selection: NormalizedSelection;
 }): CustomerState {
 	let state: CustomerState;
@@ -32,7 +49,7 @@ export function validateSourceState({
 	if (!identitiesEqual({ left: state.identity, right: selection.identity })) {
 		throw new ReplayHydrationSourceMismatchError({ reason: "identity" });
 	}
-	const actualFeatureIds = featureIdsOf({ state });
+	const actualFeatureIds = featureIdsOf({ state, catalogRows });
 	if (
 		actualFeatureIds.length !== selection.featureIds.length ||
 		actualFeatureIds.some(

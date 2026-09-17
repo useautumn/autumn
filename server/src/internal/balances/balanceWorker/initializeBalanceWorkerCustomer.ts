@@ -7,7 +7,10 @@ import type { FullSubject } from "@autumn/shared";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { rethrowBalanceWorkerError } from "./balanceWorkerErrors.js";
-import { fullSubjectToCustomerState } from "./fullSubjectToCustomerState.js";
+import {
+	fullSubjectToCatalogRows,
+	fullSubjectToCustomerState,
+} from "./fullSubjectToCustomerState.js";
 
 export async function initializeBalanceWorkerCustomer({
 	ctx,
@@ -31,6 +34,7 @@ export async function initializeBalanceWorkerCustomer({
 			requestId: ctx.id,
 			identity: state.identity,
 			state,
+			catalogRows: fullSubjectToCatalogRows({ ctx, fullSubject, featureIds }),
 			occurredAt: ctx.timestamp,
 		},
 	});

@@ -5,7 +5,12 @@ import {
 import type { Context, ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod/v4";
+import { CatalogRowsNotFoundError } from "../../../catalog/catalogErrors.js";
 import { PartitionProcessorStateNotFoundError } from "../../../processor/common/processorErrors.js";
+import {
+	SubjectCatalogEvictedError,
+	SubjectNotFoundError,
+} from "../../../processor/subject/subjectErrors.js";
 import {
 	PartitionWriterCapacityError,
 	PartitionWriterCommandConflictError,
@@ -24,7 +29,7 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 		cause: Error,
 		context: Context<BalanceWorkerHttpEnv>,
 	) {
-		let status: 400 | 409 | 503 | 500 = 500;
+		let status: 400 | 404 | 409 | 422 | 503 | 500 = 500;
 		let error: WorkerErrorResponse["error"] = {
 			code: "INTERNAL",
 			message: "Worker request failed",
@@ -54,6 +59,24 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 			error = {
 				code: "NOT_INITIALIZED",
 				message: "Customer must be initialized before check or track",
+			};
+		} else if (cause instanceof SubjectNotFoundError) {
+			status = 404;
+			error = {
+				code: "CUSTOMER_NOT_FOUND",
+				message: "Customer does not exist in this org and env",
+			};
+		} else if (cause instanceof CatalogRowsNotFoundError) {
+			status = 422;
+			error = {
+				code: "CATALOG_NOT_FOUND",
+				message: "Customer state references catalog rows that do not exist",
+			};
+		} else if (cause instanceof SubjectCatalogEvictedError) {
+			status = 503;
+			error = {
+				code: "NOT_READY",
+				message: "Catalog rows were evicted before the decision; retry",
 			};
 		} else if (cause instanceof PartitionRouteNotOwnedError) {
 			status = 409;

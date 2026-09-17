@@ -18,13 +18,12 @@ import {
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import { initialize } from "../../../../src/processor/commands/initialize.js";
-import {
-	type TrackReceiptPolicy,
-	track,
-} from "../../../../src/processor/commands/track.js";
+import { track } from "../../../../src/processor/commands/track.js";
 import { createAcceptedCommands } from "../../../../src/processor/common/acceptedCommands.js";
-import { PartitionProcessorStateNotFoundError } from "../../../../src/processor/common/processorErrors.js";
+import { createSubjectHydrator } from "../../../../src/processor/subject/createSubjectHydrator.js";
+import { SubjectNotFoundError } from "../../../../src/processor/subject/subjectErrors.js";
 import type { PartitionProcessorScope } from "../../../../src/processor/types/partitionProcessor.js";
+import type { ReceiptPolicy } from "../../../../src/processor/types/receiptPolicy.js";
 import { createPartitionWriter as createPartitionWriterCore } from "../../../../src/processor/writer/createPartitionWriter.js";
 import type {
 	MutateParams,
@@ -46,7 +45,13 @@ import {
 import { openStateStore } from "../../../../src/state/openStateStore.js";
 import type { StateStore } from "../../../../src/state/types/stateStore.js";
 import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../../fixtures/catalog.js";
+import {
 	applyDurableMutation,
+	createCatalogFor,
+	createCustomerEntitlement,
 	createInitializeCommand,
 	restoreCustomerStates,
 } from "../../../fixtures/mutations.js";
@@ -57,6 +62,7 @@ const firstIdentity = {
 	orgId: "org_1",
 	env: "sandbox",
 	customerId: "cus_1",
+	entityId: null,
 } as const;
 const secondIdentity = { ...firstIdentity, customerId: "cus_2" } as const;
 
@@ -70,17 +76,11 @@ const createState = ({
 	createCustomerState({
 		identity,
 		customerEntitlements: [
-			{
+			createCustomerEntitlement({
 				id: "messages_monthly",
-				externalId: null,
 				featureId: "messages",
 				balance,
-				usage: 0,
-				granted: balance,
-				planId: null,
-				reset: null,
-				expiresAt: null,
-			},
+			}),
 		],
 	});
 
@@ -102,7 +102,6 @@ const createCommand = ({
 			commandId,
 			requestId: `req_${commandId}`,
 			identity,
-			entityId: null,
 			featureId: "messages",
 			value,
 			overageBehavior: "reject",
@@ -121,8 +120,9 @@ const readBalance = ({
 	const state = store.readState({ identity });
 	if (!state) throw new Error("Expected persisted metering state");
 	return {
-		balance: state.customerEntitlements.messages_monthly?.balance,
-		usage: state.customerEntitlements.messages_monthly?.usage,
+		balance: state.customerEntitlements.find(
+			(row) => row.id === "messages_monthly",
+		)?.balance,
 		revision: state.revision,
 	};
 };
@@ -224,7 +224,9 @@ const closeFixture = ({
 const batchKeys = (batch: MeteringRecord[] | undefined) =>
 	batch?.map((mutation) => mutation.id);
 
+/** Two turns: a command resolves its subject before it reaches the writer, and the writer commits on the turn after. */
 const waitForBatch = async (): Promise<void> => {
+	await new Promise<void>((resolve) => setImmediate(resolve));
 	await new Promise<void>((resolve) => setImmediate(resolve));
 };
 
@@ -259,20 +261,32 @@ const createPartitionTrackWriter = ({
 	stateStore: PartitionWriterContext["stateStore"];
 	appender: CommittedOutcomeAppender;
 	limits: PartitionWriterLimits;
-	receiptPolicy?: TrackReceiptPolicy;
+	receiptPolicy?: ReceiptPolicy;
 }): TestWriter => {
 	const writer = createPartitionWriterCore({
 		ctx: { stateStore, appender },
 		config: { topic, partition, limits },
 	});
+	const db = createSyntheticWorkerDb();
+	const catalogCache = createTestCatalogCache();
 	const scope: PartitionProcessorScope = {
 		ctx: {
 			stateStore,
 			appender,
-			trackReceiptPolicy: receiptPolicy,
+			db,
+			catalogCache,
+			receiptPolicy: receiptPolicy,
 			assertCanRead: () => undefined,
 			config: { topic, partition, writerLimits: limits },
 			writer,
+			subjectHydrator: createSubjectHydrator({
+				ctx: {
+					catalogCache,
+					db,
+					writer,
+					receiptPolicy,
+				},
+			}),
 		},
 		accepted: createAcceptedCommands(),
 	};
@@ -290,6 +304,7 @@ function decideForTest({
 	if (!state) throw new Error("Expected projected state");
 	const decision = computeTrack({
 		state,
+		catalog: createCatalogFor({ state }),
 		command,
 		deduplicationExpiresAt: 1_700_086_400_000,
 	});
@@ -369,7 +384,6 @@ describe("partition writer", () => {
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
 				balance: 0,
-				usage: 10,
 				revision: 3,
 			});
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(3n);
@@ -416,14 +430,12 @@ describe("partition writer", () => {
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
 				balance: 0,
-				usage: 10,
 				revision: 2,
 			});
 			expect(
 				readBalance({ store: fixture.store, identity: secondIdentity }),
 			).toEqual({
 				balance: 5,
-				usage: 5,
 				revision: 1,
 			});
 		} finally {
@@ -456,7 +468,6 @@ describe("partition writer", () => {
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
 				balance: 10,
-				usage: 0,
 				revision: 0,
 			});
 
@@ -468,7 +479,6 @@ describe("partition writer", () => {
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
 				balance: 5,
-				usage: 5,
 				revision: 1,
 			});
 		} finally {
@@ -513,7 +523,6 @@ describe("partition writer", () => {
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
 				balance: 5,
-				usage: 5,
 				revision: 1,
 			});
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
@@ -564,7 +573,6 @@ describe("partition writer", () => {
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
 				balance: 4,
-				usage: 6,
 				revision: 2,
 			});
 		} finally {
@@ -617,7 +625,6 @@ describe("partition writer", () => {
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
 				balance: 5,
-				usage: 5,
 				revision: 1,
 			});
 		} finally {
@@ -668,7 +675,6 @@ describe("partition writer", () => {
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
 				balance: 10,
-				usage: 0,
 				revision: 0,
 			});
 
@@ -682,7 +688,6 @@ describe("partition writer", () => {
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
 				balance: 0,
-				usage: 10,
 				revision: 2,
 			});
 		} finally {
@@ -716,7 +721,6 @@ describe("partition writer", () => {
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
 				balance: 10,
-				usage: 0,
 				revision: 0,
 			});
 		} finally {
@@ -888,7 +892,6 @@ describe("partition writer", () => {
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
 				balance: 10,
-				usage: 0,
 				revision: 0,
 			});
 		} finally {
@@ -939,7 +942,7 @@ describe("partition writer", () => {
 
 			await expect(
 				writer.submitTrack({ command: createCommand({ commandId: "cmd_1" }) }),
-			).rejects.toBeInstanceOf(PartitionProcessorStateNotFoundError);
+			).rejects.toBeInstanceOf(SubjectNotFoundError);
 			expect(appender.batches).toHaveLength(0);
 		} finally {
 			closeFixture(fixture);
@@ -979,7 +982,7 @@ describe("partition writer", () => {
 			).toEqual(["init_cus_1", "cmd_1"]);
 			expect(
 				readBalance({ store: fixture.store, identity: firstIdentity }),
-			).toEqual({ balance: 5, usage: 5, revision: 2 });
+			).toEqual({ balance: 5, revision: 2 });
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
 		} finally {
 			closeFixture(fixture);
@@ -996,6 +999,8 @@ describe("partition writer", () => {
 					topic,
 					partition,
 					stateStore: fixture.store,
+					db: createSyntheticWorkerDb(),
+					catalogCache: createTestCatalogCache(),
 					appender,
 					limits: defaultLimits,
 				};
@@ -1024,7 +1029,7 @@ describe("partition writer", () => {
 				expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
 				expect(
 					readBalance({ store: fixture.store, identity: firstIdentity }),
-				).toEqual({ balance: 5, usage: 5, revision: 2 });
+				).toEqual({ balance: 5, revision: 2 });
 			} finally {
 				closeFixture(fixture);
 			}
@@ -1064,7 +1069,7 @@ describe("partition writer", () => {
 				expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
 				expect(
 					readBalance({ store: fixture.store, identity: firstIdentity }),
-				).toEqual({ balance: 5, usage: 5, revision: 2 });
+				).toEqual({ balance: 5, revision: 2 });
 				await expect(
 					writer.submitTrack({
 						command: createCommand({ commandId: "after_conflict", value: 1 }),
@@ -1106,7 +1111,7 @@ describe("partition writer", () => {
 			expect(appender.batches).toHaveLength(0);
 			expect(
 				readBalance({ store: fixture.store, identity: firstIdentity }),
-			).toEqual({ balance: 10, usage: 0, revision: 0 });
+			).toEqual({ balance: 10, revision: 0 });
 		} finally {
 			closeFixture(fixture);
 		}
@@ -1165,7 +1170,7 @@ describe("partition writer", () => {
 			expect(appender.batches[0]).toHaveLength(1);
 			expect(
 				readBalance({ store: fixture.store, identity: firstIdentity }),
-			).toEqual({ balance: 10, usage: 0, revision: 1 });
+			).toEqual({ balance: 10, revision: 1 });
 		} finally {
 			closeFixture(fixture);
 		}

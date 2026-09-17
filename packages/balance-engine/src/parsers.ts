@@ -10,6 +10,11 @@ import {
 	type TrackCommand,
 	trackCommandSchema,
 } from "./commands/track/types/trackCommand.js";
+import { type Catalog, catalogSchema } from "./models/catalog/catalog.js";
+import {
+	type CatalogRow,
+	catalogRowSchema,
+} from "./models/catalog/catalogRow.js";
 import {
 	type CustomerState,
 	customerStateSchema,
@@ -58,3 +63,9 @@ export const parseMeteringIdentity = ({
 }: {
 	input: unknown;
 }): MeteringIdentity => meteringIdentitySchema.parse(input);
+
+export const parseCatalog = ({ input }: { input: unknown }): Catalog =>
+	catalogSchema.parse(input);
+
+export const parseCatalogRow = ({ input }: { input: unknown }): CatalogRow =>
+	catalogRowSchema.parse(input);

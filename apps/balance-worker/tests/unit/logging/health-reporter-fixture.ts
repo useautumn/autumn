@@ -2,7 +2,11 @@ import type { OwnedPartitionHealth } from "../../../src/health/ownedPartitionHea
 import type { BalanceWorkerState } from "../../../src/init/types/balanceWorkerState.js";
 import { createWorkerHealthReporter } from "../../../src/logging/createWorkerHealthReporter.js";
 
-export function createHealthReporterFixture() {
+export function createHealthReporterFixture({
+	enabled = true,
+}: {
+	enabled?: boolean;
+} = {}) {
 	const logs: unknown[][] = [];
 	const warnings: unknown[][] = [];
 	const timers: { intervalMs: number; run(): void; cancelled: boolean }[] = [];
@@ -41,6 +45,7 @@ export function createHealthReporterFixture() {
 		},
 		config: {
 			deployment: "tf-balance-staging-v1",
+			enabled,
 			endpoint: "http://10.0.0.1:8082",
 		},
 	});

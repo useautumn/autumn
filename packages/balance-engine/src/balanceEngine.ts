@@ -31,6 +31,12 @@ export {
 	OutOfOrderMutationError,
 	StaleMutationError,
 } from "./errors.js";
+export type { Catalog } from "./models/catalog/catalog.js";
+export type {
+	CatalogKey,
+	CatalogTable,
+} from "./models/catalog/catalogKey.js";
+export type { CatalogRow } from "./models/catalog/catalogRow.js";
 // models
 export type { JsonValue } from "./models/common/json.js";
 export { canonicalizeJsonValue } from "./models/common/json.js";
@@ -42,12 +48,17 @@ export type {
 } from "./models/customerStateMutation.js";
 export type { MeteringIdentity } from "./models/meteringIdentity.js";
 export type { RowChange, TableRowChange } from "./models/rowChange.js";
-export type { LeanCustomerEntitlement } from "./models/rows/leanCustomerEntitlement.js";
+export type { WorkerCustomerEntitlement } from "./models/rows/workerCustomerEntitlement.js";
+export type { WorkerCustomerProduct } from "./models/rows/workerCustomerProduct.js";
+export type { WorkerEntity } from "./models/rows/workerEntity.js";
+export type { WorkerRollover } from "./models/rows/workerRollover.js";
 // mutation
 export { applyChanges } from "./mutation/applyChanges.js";
 export { applyMutation } from "./mutation/applyMutation.js";
 export { mutationFingerprintOf } from "./mutation/mutationFingerprintOf.js";
 export {
+	parseCatalog,
+	parseCatalogRow,
 	parseCheckCommand,
 	parseCustomerState,
 	parseCustomerStateMutation,
@@ -55,12 +66,22 @@ export {
 	parseMeteringIdentity,
 	parseTrackCommand,
 } from "./parsers.js";
+export {
+	catalogKeyToString,
+	catalogRowsToCatalog,
+	catalogRowToCatalogKey,
+	customerStateToCatalogKeys,
+} from "./utils/catalogUtils/convertCatalogUtils.js";
+export { filterCatalogKeysMissingFrom } from "./utils/catalogUtils/filterCatalogUtils.js";
+export { findFeatureById } from "./utils/catalogUtils/findCatalogUtils.js";
 // utils
 export {
 	availableBalanceOf,
 	balanceOf,
 } from "./utils/customerStateUtils/balanceOf.js";
+export { customerRowsToCustomerState } from "./utils/customerStateUtils/convertCustomerStateUtils.js";
 export { createCustomerState } from "./utils/customerStateUtils/createCustomerState.js";
 export { findCustomerEntitlementsForFeature } from "./utils/customerStateUtils/findCustomerEntitlementsForFeature.js";
+export { meteringIdentityToSubjectKey } from "./utils/identityUtils/convertIdentityUtils.js";
 export { identitiesMatch } from "./utils/identityUtils/identitiesMatch.js";
 export { meteringPartitionKeyOf } from "./utils/identityUtils/meteringPartitionKeyOf.js";

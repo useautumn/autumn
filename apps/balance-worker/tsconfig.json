@@ -1,5 +1,10 @@
 {
 	"compilerOptions": {
+		"paths": {
+			"@api/*": ["../../shared/api/*"],
+			"@models/*": ["../../shared/models/*"],
+			"@utils/*": ["../../shared/utils/*"]
+		},
 		"esModuleInterop": true,
 		"isolatedModules": true,
 		"module": "Preserve",

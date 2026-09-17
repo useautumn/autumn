@@ -119,9 +119,7 @@ describe("Postgres replay hydration source", () => {
 				kind: "loaded",
 				state: {
 					identity: harness.selection.identity,
-					customerEntitlements: {
-						messages_grant: { featureId: "messages", balance: 72 },
-					},
+					customerEntitlements: [{ id: "messages_grant", balance: 72 }],
 				},
 			});
 			expect(harness.transactionConfigs).toEqual([

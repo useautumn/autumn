@@ -258,6 +258,7 @@ function meteringPublisherTests(): void {
 		orgId: "org_1",
 		env: "sandbox",
 		customerId: "cus_1",
+		entityId: null,
 	} as const;
 	const topic = "metering";
 	const partition = 4;

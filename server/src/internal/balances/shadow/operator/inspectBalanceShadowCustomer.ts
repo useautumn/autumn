@@ -1,21 +1,25 @@
 import { isDeepStrictEqual } from "node:util";
 import {
+	catalogRowsToCatalog,
 	findCustomerEntitlementsForFeature,
 	type InitializationDecision,
-	type LeanCustomerEntitlement,
+	type WorkerCustomerEntitlement,
 } from "@autumn/balance-engine";
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import type { FullSubject } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { fullSubjectToCustomerState } from "../../balanceWorker/fullSubjectToCustomerState.js";
+import {
+	fullSubjectToCatalogRows,
+	fullSubjectToCustomerState,
+} from "../../balanceWorker/fullSubjectToCustomerState.js";
 import { initializeBalanceWorkerCustomer } from "../../balanceWorker/initializeBalanceWorkerCustomer.js";
 import { checkParamsToCheckCommand } from "../../check/balanceWorker/balanceWorkerCheckRequest.js";
 
 export type BalanceShadowInspection = {
 	status: "preview" | "equal_at_read" | "different_at_read" | "inconclusive";
 	initialization?: InitializationDecision["kind"];
-	redis?: Record<string, LeanCustomerEntitlement>;
-	worker?: Record<string, LeanCustomerEntitlement & { revision: number }>;
+	redis?: Record<string, WorkerCustomerEntitlement>;
+	worker?: Record<string, WorkerCustomerEntitlement & { revision: number }>;
 	reason?: string;
 };
 
@@ -46,17 +50,25 @@ export async function inspectBalanceShadowCustomer({
 		if (fullSubject.customerId !== customerId)
 			throw new Error("Redis customer identity does not match the cohort");
 		const state = fullSubjectToCustomerState({ ctx, fullSubject, featureIds });
-		result.redis = Object.fromEntries(
-			featureIds.map((featureId) => [
+		const catalog = catalogRowsToCatalog({
+			rows: fullSubjectToCatalogRows({ ctx, fullSubject, featureIds }),
+		});
+		const redis: Record<string, WorkerCustomerEntitlement> = {};
+		for (const featureId of featureIds) {
+			const [entitlement] = findCustomerEntitlementsForFeature({
+				state,
+				catalog,
 				featureId,
-				findCustomerEntitlementsForFeature({ state, featureId })[0],
-			]),
-		);
-		for (const entitlement of Object.values(result.redis)) {
+			});
+			if (!entitlement) throw new Error(`No row funds ${featureId}`);
+			redis[featureId] = entitlement;
+		}
+		result.redis = redis;
+		for (const entitlement of Object.values(redis)) {
 			if (
-				(entitlement.reset?.nextResetAt != null &&
-					entitlement.reset.nextResetAt <= expiresAt) ||
-				(entitlement.expiresAt != null && entitlement.expiresAt <= expiresAt)
+				(entitlement.next_reset_at != null &&
+					entitlement.next_reset_at <= expiresAt) ||
+				(entitlement.expires_at != null && entitlement.expires_at <= expiresAt)
 			)
 				throw new Error("Reset or expiry falls inside the shadow window");
 		}
@@ -93,15 +105,15 @@ export async function inspectBalanceShadowCustomer({
 			if (decision.kind !== "decided")
 				throw new Error(`Worker check unsupported: ${decision.reason}`);
 			result.worker[featureId] = {
-				...decision.balanceSnapshot,
+				...decision.customerEntitlement,
 				revision: decision.revision,
 			};
 			if (revision !== undefined && revision !== decision.revision)
 				throw new Error("Worker changed during the operation");
 			revision = decision.revision;
 			equal &&= isDeepStrictEqual(
-				result.redis[featureId],
-				decision.balanceSnapshot,
+				redis[featureId],
+				decision.customerEntitlement,
 			);
 		}
 		const after = await loadSubject();

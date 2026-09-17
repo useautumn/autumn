@@ -21,6 +21,7 @@ test("ECS metadata failures never fall back to localhost", metadataFailures);
 async function localAddresses(): Promise<void> {
 	for (const host of ["127.0.0.1", "localhost", "::1"]) {
 		const env = createBalanceWorkerEnv({
+			BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
 			...localEnvironment,
 			BALANCE_WORKER_HOST: host,
 			BALANCE_WORKER_PORT: "12982",
@@ -43,6 +44,8 @@ async function ecsAddresses(): Promise<void> {
 	try {
 		for (const address of ["10.0.1.10", "10.0.2.20"]) {
 			const env = createBalanceWorkerEnv({
+				BALANCE_WORKER_DATABASE_URL:
+					"postgres://worker:secret@127.0.0.1:1/never",
 				...localEnvironment,
 				ECS_CONTAINER_METADATA_URI_V4: `${metadata.url}${address}`,
 				BALANCE_WORKER_PORT: "12982",
@@ -84,6 +87,8 @@ async function metadataFailures(): Promise<void> {
 			"malformed",
 		]) {
 			const env = createBalanceWorkerEnv({
+				BALANCE_WORKER_DATABASE_URL:
+					"postgres://worker:secret@127.0.0.1:1/never",
 				...localEnvironment,
 				ECS_CONTAINER_METADATA_URI_V4: `${metadata.url}${path}`,
 			});

@@ -45,6 +45,7 @@ function createOutcome({
 				orgId: "org_consumer_test",
 				env: "sandbox",
 				customerId: "customer_consumer_test",
+				entityId: null,
 			},
 		}),
 		commandId,

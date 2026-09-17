@@ -3,19 +3,22 @@ import {
 	AffectedResource,
 	applyResponseVersionChanges,
 	type CheckResponseV3,
+	type FullSubject,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { BalanceWorkerUnsupportedError } from "../../balanceWorker/balanceWorkerErrors.js";
-import { meteringBalanceToApiBalance } from "../../balanceWorker/meteringBalanceToApiBalance.js";
+import { workerCustomerEntitlementToApiBalance } from "../../balanceWorker/workerCustomerEntitlementToApiBalance.js";
 
 export function checkDecisionToCheckResponse({
 	ctx,
 	command,
 	decision,
+	fullSubject,
 }: {
 	ctx: AutumnContext;
 	command: CheckCommand;
 	decision: CheckDecision;
+	fullSubject: FullSubject;
 }): CheckResponseV3 {
 	if (decision.kind === "unsupported")
 		throw new BalanceWorkerUnsupportedError({ reason: decision.reason });
@@ -31,12 +34,13 @@ export function checkDecisionToCheckResponse({
 		input: {
 			allowed: decision.allowed,
 			customer_id: command.identity.customerId,
-			entity_id: command.entityId ?? undefined,
+			entity_id: command.identity.entityId ?? undefined,
 			required_balance: decision.requiredBalance,
 			flag: null,
-			balance: meteringBalanceToApiBalance({
-				featureId: command.featureId,
-				snapshot: decision.balanceSnapshot,
+			balance: workerCustomerEntitlementToApiBalance({
+				ctx,
+				fullSubject,
+				customerEntitlement: decision.customerEntitlement,
 			}),
 		},
 		legacyData: { noCusEnts: false, featureToUse: feature },

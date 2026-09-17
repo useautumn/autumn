@@ -45,6 +45,8 @@ test.concurrent.each(["off", "restore_only", "enabled"])(
 		};
 		const config = createWorkerCheckpointConfig({
 			env: createBalanceWorkerEnv({
+				BALANCE_WORKER_DATABASE_URL:
+					"postgres://worker:secret@127.0.0.1:1/never",
 				KAFKA_AUTH_MODE: "none",
 				KAFKA_BROKERS: "localhost:19092",
 				BALANCE_WORKER_CHECKPOINT_MODE: mode,

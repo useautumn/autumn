@@ -41,6 +41,8 @@ describe("Real balance worker HTTP service", () => {
 		await reservation.stop();
 		const env = {
 			...createBalanceWorkerEnv({
+				BALANCE_WORKER_DATABASE_URL:
+					"postgres://worker:secret@127.0.0.1:1/never",
 				KAFKA_BROKERS: brokers,
 				KAFKA_AUTH_MODE: "none",
 				BALANCE_WORKER_PORT: String(port),
@@ -72,7 +74,12 @@ describe("Real balance worker HTTP service", () => {
 			],
 		});
 		const state = createState({
-			identity: { orgId: "org", env: "sandbox", customerId: "customer" },
+			identity: {
+				orgId: "org",
+				env: "sandbox",
+				customerId: "customer",
+				entityId: null,
+			},
 			customerEntitlements: [
 				createCustomerEntitlement({ id: "balance", balance: 10 }),
 			],
@@ -128,7 +135,6 @@ describe("Real balance worker HTTP service", () => {
 					commandId: id,
 					requestId: id,
 					identity: state.identity,
-					entityId: null,
 					featureId: "messages",
 					value: 3,
 					overageBehavior: "reject",

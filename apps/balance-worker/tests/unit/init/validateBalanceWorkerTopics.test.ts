@@ -3,6 +3,7 @@ import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { validateBalanceWorkerTopics } from "../../../src/init/workerConfig.js";
 
 const env = createBalanceWorkerEnv({
+	BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
 	KAFKA_BROKERS: "127.0.0.1:19092",
 	KAFKA_AUTH_MODE: "none",
 });

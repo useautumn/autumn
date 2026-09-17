@@ -15,6 +15,10 @@ import { OwnedPartitionProducerFencedError } from "../../../src/runtime/runtimeE
 import type { PartitionRuntime } from "../../../src/runtime/types/partitionRuntime.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
 import type { StateStore } from "../../../src/state/types/stateStore.js";
+import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
 import { restoreCustomerStates } from "../../fixtures/mutations.js";
 import {
 	createState,
@@ -83,7 +87,9 @@ function createTestRuntime({
 	return createPartitionRuntime({
 		ctx: {
 			stateStore,
-			trackReceiptPolicy: { retentionMs: 86_400_000, now: Date.now },
+			db: createSyntheticWorkerDb(),
+			catalogCache: createTestCatalogCache(),
+			receiptPolicy: { retentionMs: 86_400_000, now: Date.now },
 			producer,
 			appender: createMutationPublisher({ ctx: { producer } }),
 			follower: { readLogRange, readProgress, startAndCatchUp, stop },
@@ -143,7 +149,6 @@ async function replacementFencesPreviousRuntime(): Promise<void> {
 				commandId: "fenced-owner",
 				requestId: "fenced-owner",
 				identity,
-				entityId: null,
 				featureId: "messages",
 				value: 5,
 				overageBehavior: "reject",

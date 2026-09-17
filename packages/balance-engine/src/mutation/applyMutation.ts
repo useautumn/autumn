@@ -36,7 +36,10 @@ export const applyMutation = ({
 		schemaVersion: 1,
 		identity: mutation.identity,
 		revision: 0,
-		customerEntitlements: {},
+		customerProducts: [],
+		customerEntitlements: [],
+		rollovers: [],
+		entities: [],
 	};
 	const changedState = applyChanges({
 		state: currentState,

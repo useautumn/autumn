@@ -1,10 +1,13 @@
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import type { AutumnLogger } from "@autumn/logging";
+import type { PostgresClient } from "@autumn/postgres";
 import type { Admin, Kafka } from "kafkajs";
+import type { CatalogCache } from "../../catalog/types/catalogCache.js";
 import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
 import type { Partitions } from "../../partitions/types/partitions.js";
 import type { MeteringPartitionResolver } from "../../runtime/types/partitionRuntime.js";
 import type { StateStore } from "../../state/types/stateStore.js";
+import type { WorkerDb } from "../../types/workerDb.js";
 import type { WorkerCheckpointResources } from "./workerCheckpointResources.js";
 
 export type BalanceWorker = {
@@ -40,6 +43,9 @@ export type WorkerResourcesContext = {
 	kafka: Pick<Kafka, "producer" | "consumer" | "admin">;
 	admin: Pick<Admin, "disconnect" | "fetchTopicOffsets">;
 	stateStore: StateStore;
+	postgres: Pick<PostgresClient, "close">;
+	db: WorkerDb;
+	catalogCache: CatalogCache;
 	partitionResolver: MeteringPartitionResolver;
 	checkpoints?: WorkerCheckpointResources;
 };

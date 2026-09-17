@@ -1,4 +1,5 @@
 import type {
+	CatalogRow,
 	CheckCommand,
 	CheckDecision,
 	CustomerState,
@@ -23,7 +24,11 @@ export type ReplayHydrationSelection = Readonly<{
 export type ReplayHydrationSourceRefusalCategory = "missing" | "unsupported";
 
 export type ReplayHydrationSourceResult =
-	| Readonly<{ kind: "loaded"; state: CustomerState }>
+	| Readonly<{
+			kind: "loaded";
+			state: CustomerState;
+			catalogRows: CatalogRow[];
+	  }>
 	| Readonly<{
 			kind: "refused";
 			category: ReplayHydrationSourceRefusalCategory;
