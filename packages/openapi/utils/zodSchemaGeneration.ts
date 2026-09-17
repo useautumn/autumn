@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -100,6 +100,10 @@ export async function generateZodSchemas({
 		(source) => !existsSync(path.join(sdkModelsDir, source.sdkFile)),
 	);
 	if (missing.length > 0) {
+		console.error(
+			"DEBUG all sdkModelsDir files:",
+			readdirSync(sdkModelsDir).join(", "),
+		);
 		throw new Error(
 			`SDK model files missing for Zod generation:\n${missing
 				.map((source) => `  ${source.sdkFile} -> ${source.outputFile}`)
