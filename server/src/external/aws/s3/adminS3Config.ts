@@ -8,6 +8,8 @@ export const ADMIN_RATE_LIMIT_OVERRIDES_CONFIG_KEY =
 	"admin/rate-limit-overrides-config.json";
 export const ADMIN_RATE_LIMIT_REDIS_ALLOWLIST_CONFIG_KEY =
 	"admin/rate-limit-redis-allowlist-config.json";
+export const ADMIN_AGENT_PROVISION_RATE_LIMIT_CONFIG_KEY =
+	"admin/agent-provision-rate-limit-config.json";
 export const ADMIN_REDIS_V2_CACHE_CONFIG_KEY =
 	"admin/redis-v2-cache-config.json";
 export const ADMIN_MAIN_REDIS_CACHE_CONFIG_KEY =
@@ -70,6 +72,11 @@ export const getAdminEdgeConfigSources = () => ({
 			id: "rate-limit-redis-allowlist",
 			label: "Rate Limit Redis Allowlist",
 			key: ADMIN_RATE_LIMIT_REDIS_ALLOWLIST_CONFIG_KEY,
+		},
+		{
+			id: "agent-provision-rate-limit",
+			label: "Agent Provision Rate Limit",
+			key: ADMIN_AGENT_PROVISION_RATE_LIMIT_CONFIG_KEY,
 		},
 		{
 			id: "redis-v2-cache",
