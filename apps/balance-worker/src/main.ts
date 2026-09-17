@@ -1,22 +1,21 @@
 import { getBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { createBalanceWorker } from "./init/createBalanceWorker.js";
 import type { BalanceWorker } from "./init/types/balanceWorker.js";
+import { getBalanceWorkerLogger } from "./logging/getBalanceWorkerLogger.js";
 
 async function main(): Promise<void> {
 	try {
 		const env = getBalanceWorkerEnv();
 		const worker = await createBalanceWorker({
-			ctx: { onError: reportError },
+			ctx: { onError: reportError, logger: getBalanceWorkerLogger() },
 			config: { env },
 		});
 		registerShutdownSignals({ worker });
 		await worker.start();
-		console.info(
-			`Balance worker listening at ${env.BALANCE_WORKER_ENDPOINT}; partition admission follows recovery`,
-		);
 	} catch (cause) {
 		reportError({ cause });
 		process.exitCode = 1;
+		await getBalanceWorkerLogger().flush?.();
 	}
 }
 
@@ -28,6 +27,8 @@ function registerShutdownSignals({ worker }: { worker: BalanceWorker }): void {
 		} catch (cause) {
 			reportError({ cause });
 			process.exitCode = 1;
+		} finally {
+			await getBalanceWorkerLogger().flush?.();
 		}
 	}
 
@@ -36,7 +37,7 @@ function registerShutdownSignals({ worker }: { worker: BalanceWorker }): void {
 }
 
 function reportError({ cause }: { cause: unknown }): void {
-	console.error("Balance worker error", cause);
+	getBalanceWorkerLogger().error({ error: cause }, "Balance worker error");
 }
 
 void main();

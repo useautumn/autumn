@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import {
 	computeCheck,
 	computeTrack,
@@ -63,6 +63,10 @@ const fixture = ({
 	owned?: boolean;
 	actualPartition?: number;
 } = {}) => {
+	const logs: unknown[][] = [];
+	function recordLog(...args: unknown[]): void {
+		logs.push(args);
+	}
 	const submitted: unknown[] = [];
 	const lookups: PartitionRoute[] = [];
 	const submitTrack: BalanceWorkerRequestContext["runtime"]["submitTrack"] =
@@ -86,7 +90,7 @@ const fixture = ({
 	const ctx: BalanceWorkerHttpContext = {
 		ownership: { findRuntime },
 		partitionResolver: { partitionForIdentity: () => actualPartition },
-		onError: () => undefined,
+		logger: { info: recordLog, warn: recordLog, error: recordLog },
 	};
 	const app = createBalanceWorkerApp({ ctx });
 	const post = (body: unknown = request) =>
@@ -95,8 +99,130 @@ const fixture = ({
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify(body),
 		});
-	return { app, ctx, post, submitted, lookups };
+	return { app, ctx, post, submitted, lookups, logs };
 };
+
+test(
+	"logs one completed request with correlation and outcome, without properties",
+	logsCompletedRequest,
+);
+test(
+	"logs expected and unexpected failures once with their original cause",
+	logsFailedRequest,
+);
+test("logs early rejections and unmatched paths once", logsEarlyRequest);
+test("keeps concurrent request logs separate", isolatesRequestLogs);
+test(
+	"logging failures cannot change the response",
+	preservesResponseOnLoggingFailure,
+);
+
+async function logsCompletedRequest(): Promise<void> {
+	const { post, logs } = fixture();
+	const response = await post({
+		...request,
+		command: { ...command, properties: { private: "never-log-this" } },
+	});
+	expect(response.status).toBe(200);
+	expect(logs).toHaveLength(1);
+	expect(logs[0][0]).toMatchObject({
+		event: "balance_worker.request",
+		req: { id: "req", method: "POST", path: "/v1/track" },
+		statusCode: 200,
+		durationMs: expect.any(Number),
+		context: { org_id: "org", customer_id: "customer", env: "sandbox" },
+		extras: {
+			commandId: "cmd",
+			featureId: "messages",
+			value: 2,
+			route,
+			decision: "new",
+			status: "applied",
+			balanceAfter: 8,
+		},
+	});
+	expect(JSON.stringify(logs)).not.toContain("never-log-this");
+}
+
+async function logsFailedRequest(): Promise<void> {
+	for (const [cause, statusCode, errorCode] of [
+		[
+			new PartitionTrackStateNotFoundError({ customerKey: "missing" }),
+			503,
+			"NOT_READY",
+		],
+		[new Error("failed write"), 500, "INTERNAL"],
+	] as const) {
+		const { post, logs } = fixture({ cause });
+		const response = await post();
+		expect(response.status).toBe(statusCode);
+		expect(logs).toHaveLength(1);
+		expect(logs[0][0]).toMatchObject({
+			statusCode,
+			req: { id: "req" },
+			extras: { route, errorCode, error: cause },
+		});
+		expect(logs[0][1]).toContain(cause.name);
+	}
+}
+
+async function logsEarlyRequest(): Promise<void> {
+	const { app, post, logs } = fixture({ owned: false });
+	expect((await post()).status).toBe(409);
+	expect((await post(null)).status).toBe(400);
+	expect((await app.request("/missing")).status).toBe(404);
+	expect(logs).toHaveLength(3);
+	for (const [index, statusCode] of [409, 400, 404].entries()) {
+		expect(logs[index][0]).toMatchObject({
+			statusCode,
+			req: { id: expect.any(String) },
+		});
+	}
+}
+
+async function isolatesRequestLogs(): Promise<void> {
+	const { post, logs } = fixture();
+	await Promise.all([
+		post({
+			...request,
+			command: { ...command, requestId: "first", commandId: "first" },
+		}),
+		post({
+			...request,
+			command: { ...command, requestId: "second", commandId: "second" },
+		}),
+	]);
+	expect(logs).toHaveLength(2);
+	for (const id of ["first", "second"]) {
+		expect(logs).toContainEqual([
+			expect.objectContaining({
+				req: expect.objectContaining({ id }),
+				extras: expect.objectContaining({ commandId: id }),
+			}),
+			expect.any(String),
+		]);
+	}
+}
+
+function failLog(): never {
+	throw new Error("logging unavailable");
+}
+
+function ignoreLog(): void {}
+
+async function preservesResponseOnLoggingFailure(): Promise<void> {
+	const { ctx, post } = fixture();
+	ctx.logger.info = failLog;
+	const fallback = spyOn(console, "error").mockImplementation(ignoreLog);
+	try {
+		const response = await post();
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ decision });
+		expect(fallback).toHaveBeenCalledTimes(1);
+	} finally {
+		fallback.mockRestore();
+	}
+}
 
 describe("Balance worker HTTP", () => {
 	test("returns the full committed decision without coercing the route epoch", async () => {
@@ -321,7 +447,7 @@ describe("Balance worker HTTP", () => {
 			ctx: {
 				ownership: directory,
 				partitionResolver: { partitionForIdentity: () => 2 },
-				onError: () => undefined,
+				logger: fixture().ctx.logger,
 			},
 		});
 		const response = await app.request("/v1/track", {
