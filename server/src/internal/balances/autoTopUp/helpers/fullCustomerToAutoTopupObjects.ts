@@ -7,6 +7,8 @@ import {
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
 	fullCustomerToPlanProducts,
+	isCustomerProductAddOn,
+	isCustomerProductRecurring,
 	isOneOffCustomerEntitlement,
 	isPrepaidCustomerEntitlement,
 	resolveBillingControlWithProduct,
@@ -30,6 +32,19 @@ const isChargeSource = (cusEnt: FullCusEntWithFullCusProduct) =>
 /** Flat or tiered — the top-up quantity is priced through the item's tiers. */
 const isOneOffPrepaid = (cusEnt: FullCusEntWithFullCusProduct) =>
 	isOneOffCustomerEntitlement(cusEnt) && isPrepaidCustomerEntitlement(cusEnt);
+
+/**
+ * The plan a customer subscribes to states their refill rate; a top-up product
+ * bought alongside it does not. Lower rank wins. `is_add_on` alone is too weak
+ * a signal — a standalone top-up is commonly not flagged as one — so a
+ * recurring price is the primary key and the add-on flag breaks the rest.
+ */
+const chargeSourceRank = (cusEnt: FullCusEntWithFullCusProduct) => {
+	const customerProduct = cusEnt.customer_product ?? undefined;
+	const recurring = isCustomerProductRecurring(customerProduct) ? 0 : 2;
+	const addOn = isCustomerProductAddOn(customerProduct) ? 1 : 0;
+	return recurring + addOn;
+};
 
 /** Pure extraction of auto-topup-relevant objects from a FullCustomer. Returns null if any prerequisite is missing. */
 export const fullCustomerToAutoTopupObjects = ({
@@ -93,14 +108,16 @@ export const fullCustomerToAutoTopupObjects = ({
 				isChargeSource(ce),
 		);
 	} else {
-		// Customer-level config has no source plan, so charge the MOST RECENTLY
-		// attached plan's one-off price.
+		// Customer-level config has no source plan, so rank the candidates: the
+		// subscription plan's own price first, a standalone top-up only as a
+		// fallback, and recency decides within a rank.
 		customerEntitlement = cusEnts
 			.filter((ce) => isOneOffPrepaid(ce) && isChargeSource(ce))
 			.sort(
 				(left, right) =>
+					chargeSourceRank(left) - chargeSourceRank(right) ||
 					(right.customer_product?.created_at ?? 0) -
-					(left.customer_product?.created_at ?? 0),
+						(left.customer_product?.created_at ?? 0),
 			)[0];
 	}
 
