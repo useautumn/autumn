@@ -9,17 +9,15 @@ export function mergeCodeSamples({
 	speakeasySdkDir,
 	pythonSdkDir,
 	outputPath,
+	baseOpenApiPath = path.join(speakeasySdkDir, ".speakeasy/out.openapi.yaml"),
 }: {
 	speakeasySdkDir: string;
 	pythonSdkDir: string;
 	outputPath: string;
+	baseOpenApiPath?: string;
 }): void {
 	console.log("Merging code samples from TypeScript and Python SDKs...");
 
-	const baseOpenApiPath = path.join(
-		speakeasySdkDir,
-		".speakeasy/out.openapi.yaml",
-	);
 	const tsOverlayPath = path.join(
 		speakeasySdkDir,
 		".speakeasy/code-samples.overlay.yaml",
