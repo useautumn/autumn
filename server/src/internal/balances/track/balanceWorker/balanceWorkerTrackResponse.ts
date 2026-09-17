@@ -8,6 +8,7 @@ import {
 	type TrackResponseV3,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { meteringBalanceToApiBalance } from "../../balanceWorker/meteringBalanceToApiBalance.js";
 
 export function trackDecisionToTrackResponse({
 	ctx,
@@ -40,8 +41,10 @@ export function trackDecisionToTrackResponse({
 			customer_id: outcome.identity.customerId,
 			entity_id: outcome.entityId ?? undefined,
 			value: outcome.requestedValue,
-			// Receipts lack the grant/reset metadata needed for an API balance.
-			balance: null,
+			balance: meteringBalanceToApiBalance({
+				featureId: outcome.featureId,
+				snapshot: outcome.balanceSnapshot,
+			}),
 		},
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Track,

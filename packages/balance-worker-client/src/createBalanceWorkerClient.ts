@@ -1,9 +1,13 @@
+import { sendCheck } from "./commands/sendCheck.js";
+import { sendInitialize } from "./commands/sendInitialize.js";
 import { sendTrack } from "./commands/sendTrack.js";
 import { createHttpClient } from "./http/createHttpClient.js";
 import type {
 	BalanceWorkerClient,
 	BalanceWorkerClientConfig,
 	BalanceWorkerClientDependencies,
+	CheckParams,
+	InitializeParams,
 	TrackParams,
 } from "./types/balanceWorkerClient.js";
 
@@ -31,5 +35,13 @@ export function createBalanceWorkerClient({
 		return sendTrack({ ctx, ...params });
 	}
 
-	return { track };
+	function check(params: CheckParams) {
+		return sendCheck({ ctx, ...params });
+	}
+
+	function initialize(params: InitializeParams) {
+		return sendInitialize({ ctx, ...params });
+	}
+
+	return { track, check, initialize };
 }

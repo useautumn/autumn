@@ -10,6 +10,7 @@ export { executeTrack } from "./actions/track/executeTrack.js";
 export {
 	parseCheckCommand,
 	parseCustomerMeteringState,
+	parseInitializeCommand,
 	parseStateInitializedEvent,
 	parseTrackCommand,
 	parseTrackOutcome,
@@ -25,6 +26,8 @@ export type {
 	CheckDecision,
 	CustomerMeteringState,
 	DirectMeteredV1FeatureState,
+	InitializationDecision,
+	InitializeCommand,
 	JsonValue,
 	LeanCustomerEntitlement,
 	MeteringIdentity,

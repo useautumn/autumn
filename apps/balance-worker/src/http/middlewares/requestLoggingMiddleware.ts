@@ -37,7 +37,7 @@ function logRequestResult({
 }): void {
 	const { id, command, decision, error, errorCode } = context.get("requestLog");
 	const outcome =
-		decision && decision.kind !== "unsupported" ? decision.outcome : undefined;
+		decision && "outcome" in decision ? decision.outcome : undefined;
 	const statusCode = context.res.status;
 	const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
 	const event = {

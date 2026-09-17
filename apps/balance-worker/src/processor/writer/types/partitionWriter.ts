@@ -18,7 +18,7 @@ export type PartitionWriter = {
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
 	/** Snapshot: waits for the outcomes pending for this customer when called, not ones enqueued later. */
 	waitForPendingCommits(params: { customerKey: string }): Promise<void>;
-	/** Writes a customer's first state; resolves "already_initialized" if one exists. */
+	/** Writes a first baseline or acknowledges the original initialization identity. */
 	submitInitialization(params: {
 		initialization: StateInitializedEvent;
 	}): Promise<CommittedMutation | { kind: "already_initialized" }>;
@@ -36,7 +36,10 @@ export type CommittedOutcomeAppender = {
 export type PartitionWriterContext = {
 	stateStore: Pick<
 		SqliteBalanceStateStore,
-		"readState" | "readTrackReceipt" | "applyDurableMutations"
+		| "readState"
+		| "readInitializationReceipt"
+		| "readTrackReceipt"
+		| "applyDurableMutations"
 	>;
 	appender: CommittedOutcomeAppender;
 };
