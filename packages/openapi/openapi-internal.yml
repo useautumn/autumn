@@ -36474,6 +36474,65 @@ paths:
       x-speakeasy-name-override: delete
       parameters:
         - *a1
+  /v1/billing.advance_test_clock:
+    post:
+      operationId: advanceTestClock
+      description: Advance a customer's Stripe test clock to a future time in
+        milliseconds. Only Stripe test-mode customers with a test clock are
+        supported. Advancement is asynchronous; Stripe enforces clock status and
+        advancement limits.
+      tags:
+        - billing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  minLength: 1
+                  description: The ID of the customer whose Stripe test clock to advance.
+                frozen_time:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Target time as a Unix timestamp in milliseconds. Rounded down to
+                    whole seconds; must be later than the current clock time.
+              required:
+                - customer_id
+                - frozen_time
+              title: AdvanceTestClockParams
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                  frozen_time:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                    description: The Stripe test clock's frozen time in milliseconds.
+                  status:
+                    enum:
+                      - advancing
+                      - internal_failure
+                      - ready
+                    type: string
+                required:
+                  - customer_id
+                  - frozen_time
+                  - status
+                title: AdvanceTestClockResponse
+      x-speakeasy-name-override: advanceTestClock
+      parameters:
+        - *a1
   /v1/billing.attach:
     post:
       operationId: attach

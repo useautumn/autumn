@@ -854,6 +854,30 @@ export const API_ROUTES: readonly ApiRoute[] = [
 	},
 	{
 		group: "billing",
+		method: "advance_test_clock",
+		path: "/v1/billing.advance_test_clock",
+		description:
+			"Advance a customer's Stripe test clock to a future time in milliseconds. Only Stripe test-mode customers with a test clock are supported. Advancement is asynchronous; Stripe enforces clock status and advancement limits.",
+		body: "object",
+		fields: [
+			{
+				name: "customer_id",
+				type: "string",
+				required: true,
+				description:
+					"The ID of the customer whose Stripe test clock to advance.",
+			},
+			{
+				name: "frozen_time",
+				type: "number",
+				required: true,
+				description:
+					"Target time as a Unix timestamp in milliseconds. Rounded down to whole seconds; must be later than the current clock time.",
+			},
+		],
+	},
+	{
+		group: "billing",
 		method: "attach",
 		path: "/v1/billing.attach",
 		description:
