@@ -41,7 +41,7 @@ export const emitLintRulesModule = ({
 
 	return [
 		GENERATED_HEADER,
-		`import type { LintRules } from "./lintRuntime";`,
+		`import type { LintRules } from "./lintRuntime.js";`,
 		`export const LINT_RULES: LintRules = ${JSON.stringify(merged, null, "\t")};\n`,
 	].join("\n");
 };

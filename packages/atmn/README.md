@@ -19,13 +19,14 @@ npx atmn <command>
 ```bash
 atmn login          # Authenticate with Autumn
 atmn init           # Set up your project
-atmn push           # Preview and deploy your config to Autumn
+atmn push           # Preview your config changes
+atmn push --yes     # Apply the changes to Autumn
 atmn pull           # Pull remote changes into your config
 ```
 
 ## What It Does
 
-You define features and plans in an `autumn.config.ts` file. The CLI syncs that config with your Autumn account — push to deploy, pull to fetch updates.
+You define features and plans in an `autumn.config.ts` file. Use `atmn push` to preview changes, `atmn push --yes` to apply them, and `atmn pull` to fetch updates from your Autumn account.
 
 ```ts
 import { atmn, feature, plan } from "atmn";
@@ -67,7 +68,7 @@ Run `atmn --help` or `atmn <command> --help` for the current options.
 | `atmn login` | Authenticate with Autumn |
 | `atmn env` | Show the current organization and environment |
 | `atmn init` | Set up a project |
-| `atmn push` | Preview and push local configuration to Autumn |
+| `atmn push` | Preview local configuration changes; add `--yes` to apply them |
 | `atmn pull` | Pull remote configuration into local files |
 | `atmn sandbox` | Manage sandboxes |
 | `atmn reset` | Reset sandbox data |
@@ -85,12 +86,13 @@ Run `atmn --help` or `atmn <command> --help` for the current options.
 
 ## Push & Pull
 
-Push previews changes before applying them:
+Push only previews changes unless you pass `--yes`, including in an interactive terminal:
 
 ```bash
-atmn push
-atmn push --prod
-atmn push --yes     # Auto-confirm for CI/CD
+atmn push                # Preview sandbox changes
+atmn push --prod         # Preview production changes
+atmn push --yes          # Apply sandbox changes
+atmn push --prod --yes   # Apply production changes
 ```
 
 Pull updates configuration in place:

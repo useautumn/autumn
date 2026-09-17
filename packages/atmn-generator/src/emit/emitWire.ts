@@ -203,7 +203,9 @@ export const emitWireModule = ({
 	const entries = Object.entries(collections);
 	const singletonEntries = Object.entries(singletons);
 	const imports = [...entries, ...singletonEntries]
-		.map(([name, meta]) => `import type { ${meta.typeName} } from "./${name}";`)
+		.map(
+			([name, meta]) => `import type { ${meta.typeName} } from "./${name}.js";`,
+		)
 		.join("\n");
 	const singletonMembers = singletonEntries
 		.flatMap(([name, meta]) => [
@@ -254,8 +256,8 @@ export const emitWireModule = ({
 	return [
 		GENERATED_HEADER,
 		`${imports}
-import { LINT_RULES } from "./lintRules";
-import { ConfigError, lintDocument } from "./lintRuntime";`,
+import { LINT_RULES } from "./lintRules.js";
+import { ConfigError, lintDocument } from "./lintRuntime.js";`,
 		RUNTIME,
 		hintsLiteral({ name: "CATALOG_HINTS", hints: catalogHints }),
 		`
