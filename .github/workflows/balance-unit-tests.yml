@@ -5,6 +5,7 @@ on:
     paths:
       - "apps/balance-worker/**"
       - "packages/balance-engine/**"
+      - "packages/kafka/**"
       - "package.json"
       - "bun.lock"
       - ".github/workflows/balance-unit-tests.yml"
@@ -13,6 +14,7 @@ on:
     paths:
       - "apps/balance-worker/**"
       - "packages/balance-engine/**"
+      - "packages/kafka/**"
       - "package.json"
       - "bun.lock"
       - ".github/workflows/balance-unit-tests.yml"
@@ -45,11 +47,17 @@ jobs:
       - name: Run balance engine unit tests
         run: bun -F @autumn/balance-engine test:unit
 
+      - name: Run Kafka unit tests
+        run: bun -F @autumn/kafka test:unit
+
       - name: Run balance worker unit tests
         run: bun -F @autumn/balance-worker test:unit
 
       - name: Run balance engine type check
         run: bun -F @autumn/balance-engine ts
+
+      - name: Run Kafka type check
+        run: bun -F @autumn/kafka ts
 
       - name: Run balance worker type check
         run: bun -F @autumn/balance-worker ts
