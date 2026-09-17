@@ -1,3 +1,5 @@
+import { getRuntimeAgentProvisionRateLimit } from "./agentProvisionRateLimit/agentProvisionRateLimitStore.js";
+
 export enum PublicRateLimitType {
 	AgentProvisionGlobal = "agent_provision_global",
 	AgentProvisionClient = "agent_provision_client",
@@ -56,4 +58,28 @@ export const PUBLIC_RATE_LIMIT_CONFIGS: Record<
 		windowMs: 15 * MINUTE_MS,
 		scope: PublicRateLimitScope.Client,
 	},
+};
+
+export const resolvePublicRateLimit = ({
+	type,
+}: {
+	type: PublicRateLimitType;
+}): PublicRateLimitConfig => {
+	const config = PUBLIC_RATE_LIMIT_CONFIGS[type];
+	const agentProvisionRateLimit = getRuntimeAgentProvisionRateLimit();
+
+	switch (type) {
+		case PublicRateLimitType.AgentProvisionGlobal:
+			return {
+				...config,
+				limit: agentProvisionRateLimit.globalRequestsPerHour ?? config.limit,
+			};
+		case PublicRateLimitType.AgentProvisionClient:
+			return {
+				...config,
+				limit: agentProvisionRateLimit.requestsPerIpPerHour ?? config.limit,
+			};
+		default:
+			return config;
+	}
 };
