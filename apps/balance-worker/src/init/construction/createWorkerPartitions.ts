@@ -9,7 +9,7 @@ import { createPartitions } from "../../partitions/createPartitions.js";
 import type {
 	PartitionChangeListeners,
 	PartitionProgress,
-	PartitionResources,
+	PartitionRuntimeResources,
 	Partitions,
 } from "../../partitions/types/partitions.js";
 import type {
@@ -55,10 +55,10 @@ export function createWorkerPartitions({
 	}: {
 		topic: string;
 		partition: number;
-	}): PartitionResources {
-		const follower = meteringConsumer.createReplay();
-		const runtime = ctx.createRuntime({ topic, partition, follower });
-		return { runtime, markUnavailable: follower.markUnavailable };
+	}): PartitionRuntimeResources {
+		const follower = meteringConsumer.createReplay({ partition });
+		const resources = ctx.createRuntime({ topic, partition, follower });
+		return { ...resources, markUnavailable: follower.markUnavailable };
 	}
 
 	function subscribeChanges(listeners: PartitionChangeListeners): () => void {

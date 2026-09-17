@@ -1,21 +1,33 @@
 import type { KafkaConsumerClient } from "@autumn/kafka";
 import type { Admin } from "kafkajs";
-import type { PartitionRuntime } from "../../partitions/types/partitions.js";
+import type { PartitionReplay } from "../../kafka/meteringConsumer/types/partitionReplay.js";
+import type {
+	PartitionRuntimeResources,
+	PartitionsDependencies,
+} from "../../partitions/types/partitions.js";
 import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
-import type { PartitionRuntimeFactoryInput } from "./partitionRuntimeFactory.js";
+
+export type KafkaOwnedPartitionGroupConsumerPort = KafkaConsumerClient;
+export type KafkaOwnedPartitionGroupAdminPort = Pick<
+	Admin,
+	"fetchTopicOffsets" | "connect" | "disconnect"
+>;
+
+export type KafkaPartitionRuntimeFactory = (position: {
+	topic: string;
+	partition: number;
+	follower: PartitionReplay;
+}) => Omit<PartitionRuntimeResources, "markUnavailable">;
 
 export type WorkerPartitionsContext = {
-	onUnhealthyPartition(failure: {
-		topic: string;
-		partition: number;
-		cause: unknown;
-	}): void;
-	consumer: KafkaConsumerClient;
-	partitionOffsets: Pick<Admin, "connect" | "disconnect" | "fetchTopicOffsets">;
+	consumer: KafkaOwnedPartitionGroupConsumerPort;
+	partitionOffsets: KafkaOwnedPartitionGroupAdminPort;
 	stateStore: SqliteBalanceStateStore;
-	createRuntime(input: PartitionRuntimeFactoryInput): PartitionRuntime;
-	onError(failure: { cause: unknown }): void;
+	createRuntime: KafkaPartitionRuntimeFactory;
+	onError: PartitionsDependencies["onError"];
+	onUnhealthyPartition: PartitionsDependencies["onUnhealthyPartition"];
 };
+
 export type WorkerPartitionsConfig = {
 	topic: string;
 	partitionsConsumedConcurrently: number;

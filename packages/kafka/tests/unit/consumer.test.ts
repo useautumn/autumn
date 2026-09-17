@@ -608,7 +608,14 @@ function createMeteringRecords() {
 		command,
 	});
 	if (decision.kind !== "new") throw new Error("Expected a new outcome");
-	return { outcome: decision.outcome };
+	const initialization = {
+		schemaVersion: 1,
+		type: "state_initialized",
+		initializationId: "initial",
+		initializedAt: 1_700_000_000_000,
+		state,
+	} as const;
+	return { initialization, outcome: decision.outcome };
 }
 
 async function deliversTypedRecordsWithoutChangingOffsets(): Promise<void> {
@@ -631,7 +638,7 @@ async function deliversTypedRecordsWithoutChangingOffsets(): Promise<void> {
 		records: [
 			{
 				offset: "0",
-				...serializeMeteringRecord({ record: records.outcome }),
+				...serializeMeteringRecord({ record: records.initialization }),
 			},
 			{ offset: "1", ...serializeMeteringRecord({ record: records.outcome }) },
 		],
@@ -639,7 +646,7 @@ async function deliversTypedRecordsWithoutChangingOffsets(): Promise<void> {
 	expect(applications).toEqual([
 		{
 			position: { topic, partition, offset: 0n },
-			record: records.outcome,
+			record: records.initialization,
 		},
 		{ position: { topic, partition, offset: 1n }, record: records.outcome },
 	]);
@@ -738,7 +745,7 @@ async function preservesUnmappedAndAsynchronousFailures(): Promise<void> {
 
 function meteringConsumerTests(): void {
 	test(
-		"metering consumer applies engine-parsed outcomes in order",
+		"metering consumer applies engine-parsed initializations and outcomes in order",
 		deliversTypedRecordsWithoutChangingOffsets,
 	);
 	test(

@@ -7,7 +7,12 @@ import {
 	executeTrack,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
-import { createKafkaClient as balanceWorkerKafkaConfigOf } from "@autumn/kafka";
+import {
+	createKafkaClient as balanceWorkerKafkaConfigOf,
+	createProducerSession,
+	createProgressTracker,
+	serializeMeteringRecord,
+} from "@autumn/kafka";
 import {
 	CreateBucketCommand,
 	DeleteBucketCommand,
@@ -19,6 +24,14 @@ import { createPartitionCheckpointExporter } from "../../../src/checkpoint/parti
 import type { PartitionCheckpointSource } from "../../../src/checkpoint/partitionCheckpointSource.js";
 import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
 import { createWorkerConsumerConfig as balanceWorkerConsumerConfigOf } from "../../../src/init/workerConfig.js";
+import { createTrackOutcomePublisher } from "../../../src/kafka/createTrackOutcomePublisher.js";
+import {
+	createWorkerProducer,
+	createWorkerProducerConfig,
+} from "../../../src/kafka/createWorkerProducer.js";
+import { createMeteringConsumer } from "../../../src/kafka/meteringConsumer/createMeteringConsumer.js";
+import { createPartitionBootstrapper } from "../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
+import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
 import { OwnedPartitionProducerFencedError } from "../../../src/runtime/runtimeErrors.js";
 import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
 import { createS3CheckpointObjectClient } from "../../../src/s3/s3CheckpointObjectClient.js";
@@ -845,4 +858,229 @@ describe("Kafka transaction boundary", () => {
 			await topicFixture.cleanup();
 		}
 	});
+});
+
+function createReplaySession({
+	kafka,
+	topic,
+	store,
+}: {
+	kafka: Kafka;
+	topic: string;
+	store: SqliteBalanceStateStore;
+}): PartitionOutcomeFollowerPort {
+	const consumer = kafka.consumer(
+		balanceWorkerConsumerConfigOf({
+			groupId: uniqueName({ prefix: "isolated-replay" }),
+			timings,
+		}),
+	);
+	const admin = kafka.admin();
+	const reader = createMeteringConsumer({
+		ctx: {
+			consumer,
+			partitionOffsets: admin,
+			stateStore: store,
+			positionTracker: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	const follower = reader.createReplay({ partition });
+	let connected = false;
+	let readerStarted = false;
+	let joined = false;
+	let stopPromise: Promise<void> | undefined;
+	function onJoin(): void {
+		consumer.pause([{ topic, partitions: [partition] }]);
+		joined = true;
+	}
+	const removeJoin = consumer.on(consumer.events.GROUP_JOIN, onJoin);
+	async function readLogRange(
+		params: Parameters<PartitionOutcomeFollowerPort["readLogRange"]>[0],
+	) {
+		await admin.connect();
+		connected = true;
+		return follower.readLogRange(params);
+	}
+	function isJoined(): boolean {
+		return joined;
+	}
+	async function startAndCatchUp(
+		params: Parameters<PartitionOutcomeFollowerPort["startAndCatchUp"]>[0],
+	) {
+		readerStarted = true;
+		await reader.start();
+		await waitUntil({ condition: isJoined, timeoutMs: 10000 });
+		await follower.startAndCatchUp(params);
+	}
+	async function stopReader(): Promise<void> {
+		await follower.stop();
+		if (readerStarted) await reader.stop();
+		removeJoin();
+		if (connected) await admin.disconnect();
+	}
+	function stop(): Promise<void> {
+		stopPromise ??= stopReader();
+		return stopPromise;
+	}
+	return {
+		readLogRange,
+		startAndCatchUp,
+		readProgress: follower.readProgress,
+		stop,
+	};
+}
+test("prepares without fencing and activates from the committed tail", async function preparesBeforeFencing() {
+	const kafka = createKafka({
+		clientId: uniqueName({ prefix: "warm-handoff" }),
+	});
+	const fixture = await createTopic({ kafka });
+	const local = createStore({
+		topic: fixture.topic,
+		initializeCustomer: false,
+		initializePartition: false,
+	});
+	const environment = uniqueName({ prefix: "same-owner" });
+	function makeProducer() {
+		return createProducerSession({
+			ctx: { kafka },
+			config: createWorkerProducerConfig({
+				deploymentEnvironment: environment,
+				topic: fixture.topic,
+				partition,
+				limits: {
+					transactionTimeoutMs: 10_000,
+					retryCount: 2,
+					initialRetryTimeMs: 100,
+					maxRetryTimeMs: 1_000,
+				},
+			}),
+		});
+	}
+	const active = makeProducer();
+	const replacement = makeProducer();
+	const replay = createReplaySession({
+		kafka,
+		topic: fixture.topic,
+		store: local.store,
+	});
+	const preparation = createReplaySession({
+		kafka,
+		topic: fixture.topic,
+		store: local.store,
+	});
+	const bootstrapper = createPartitionBootstrapper({
+		stateStore: local.store,
+		checkpointSource: checkpointConfiguration.checkpointSource,
+		partitionResolver: { partitionForIdentity: () => partition },
+		restoreLimits: checkpointConfiguration.checkpointRestoreLimits,
+		retryPolicy: checkpointConfiguration.checkpointRetryPolicy,
+	});
+	const runtime = createPartitionRuntime({
+		ctx: {
+			stateStore: local.store,
+			producer: createWorkerProducer({
+				ctx: { session: replacement },
+				config: { topic: fixture.topic, partition },
+			}),
+			appender: createTrackOutcomePublisher({
+				ctx: { producer: replacement },
+			}),
+			follower: replay,
+			bootstrapper,
+			partitionResolver: { partitionForIdentity: () => partition },
+			trackReceiptPolicy: {
+				retentionMs: 86_400_000,
+				now: () => 1_700_000_000_000,
+			},
+		},
+		config: {
+			topic: fixture.topic,
+			partition,
+			writerLimits: {
+				maxBatchSize: 10,
+				maxPendingCommands: 100,
+				maxPendingCommandsPerCustomer: 10,
+			},
+			recoveryDrainTimeoutMs: 1_000,
+		},
+	});
+	try {
+		await active.connect();
+		const seed = await active.transaction();
+		await seed.send({
+			topic: fixture.topic,
+			acks: -1,
+			messages: [
+				{
+					partition,
+					...serializeMeteringRecord({
+						record: {
+							schemaVersion: 1,
+							type: "state_initialized",
+							initializationId: "init_1",
+							initializedAt: 1_700_000_000_000,
+							state: local.state,
+						},
+					}),
+				},
+			],
+		});
+		await seed.commit();
+		await runtime.prepare({ follower: preparation });
+		expect(runtime.getStatus()).toBe("prepared");
+		expect(local.store.readState({ identity: local.state.identity })).toEqual(
+			local.state,
+		);
+		const outcome = createOutcome({
+			state: local.state,
+			commandId: "cmd_handoff",
+			requestId: "req_handoff",
+		});
+		await createTrackOutcomePublisher({
+			ctx: { producer: active },
+		}).appendCommitted({
+			topic: fixture.topic,
+			partition,
+			outcomes: [outcome],
+		});
+		await runtime.activate();
+		expect(local.store.readState({ identity: local.state.identity })).toEqual(
+			executeTrack({ state: local.state, outcome }).state,
+		);
+		expect(runtime.getStatus()).toBe("ready");
+		const command = parseTrackCommand({
+			input: {
+				schemaVersion: 1,
+				type: "track",
+				commandId: "cmd_handoff",
+				requestId: "req_handoff",
+				identity: local.state.identity,
+				entityId: null,
+				featureId: "messages",
+				value: 5,
+				overageBehavior: "reject",
+				properties: null,
+				occurredAt: 1_700_000_000_000,
+			},
+		});
+		await expect(runtime.submitTrack({ command })).resolves.toMatchObject({
+			kind: "duplicate",
+		});
+		await expect(
+			createTrackOutcomePublisher({
+				ctx: { producer: active },
+			}).appendCommitted({
+				topic: fixture.topic,
+				partition,
+				outcomes: [outcome],
+			}),
+		).rejects.toBeInstanceOf(OwnedPartitionProducerFencedError);
+	} finally {
+		await runtime.stop();
+		await preparation.stop();
+		await active.disconnect();
+		local.cleanup();
+		await fixture.cleanup();
+	}
 });

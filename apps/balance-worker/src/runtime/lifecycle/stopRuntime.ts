@@ -1,3 +1,4 @@
+import { OwnedPartitionNotReadyError } from "../runtimeErrors.js";
 import type { PartitionRuntimeScope } from "../types/partitionRuntimeState.js";
 import {
 	cancelRuntimeReaders,
@@ -19,6 +20,9 @@ export function stopRuntime({
 		return Promise.resolve();
 	}
 	state.status = "draining";
+	state.startupAbortController.abort(
+		new OwnedPartitionNotReadyError({ status: "draining" }),
+	);
 	cancelRuntimeReaders({ ctx, state });
 	state.stopPromise = finishRuntimeStop({ ctx, state });
 	return state.stopPromise;
@@ -33,6 +37,9 @@ export function drainRuntime({
 	if (state.status === "stopped") return Promise.resolve();
 	const startupPending = state.status !== "ready";
 	state.status = "draining";
+	state.startupAbortController.abort(
+		new OwnedPartitionNotReadyError({ status: "draining" }),
+	);
 	if (startupPending) cancelRuntimeReaders({ ctx, state });
 	state.drainPromise = finishRuntimeDrain({ ctx, state });
 	return state.drainPromise;
@@ -44,6 +51,7 @@ export async function waitForRuntimeQuiescence({
 }: PartitionRuntimeScope): Promise<void> {
 	await settleRuntimeStartup({ state });
 	await ctx.requestTracker.drain();
+	await state.preparationStopPromise;
 	await state.stopFollowerPromise;
 }
 
