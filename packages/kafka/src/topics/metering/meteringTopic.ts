@@ -1,5 +1,6 @@
 import {
 	meteringPartitionKeyOf,
+	parseStateInitializedEvent,
 	parseTrackOutcome,
 	type TrackOutcome,
 } from "@autumn/balance-engine";
@@ -16,7 +17,11 @@ import type {
 import type { MeteringRecord } from "./types/meteringRecord.js";
 
 function meteringRecordToKey({ record }: { record: MeteringRecord }): string {
-	return meteringPartitionKeyOf({ identity: record.identity });
+	const identity =
+		record.type === "state_initialized"
+			? record.state.identity
+			: record.identity;
+	return meteringPartitionKeyOf({ identity });
 }
 
 function parseMeteringPayload({
@@ -25,6 +30,8 @@ function parseMeteringPayload({
 }: Pick<TopicRecordEnvelope, "type" | "payload">): MeteringRecord {
 	try {
 		switch (type) {
+			case "state_initialized":
+				return parseStateInitializedEvent({ input: payload });
 			case "track_outcome":
 				return parseTrackOutcome({ input: payload });
 			default:

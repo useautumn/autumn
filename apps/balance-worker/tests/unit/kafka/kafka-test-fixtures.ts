@@ -48,6 +48,7 @@ export const createOutcome = ({
 }): TrackOutcome => {
 	const decision = computeTrack({
 		state,
+		deduplicationExpiresAt: 1_700_086_400_000,
 		command: parseTrackCommand({
 			input: {
 				schemaVersion: 1,
@@ -272,4 +273,12 @@ export function createOwnedPartitionRuntime(
 		},
 		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
 	});
+}
+
+export function serializeKafkaStateInitializedRecord({
+	initialization,
+}: {
+	initialization: import("@autumn/balance-engine").StateInitializedEvent;
+}) {
+	return serializeMeteringRecord({ record: initialization });
 }
