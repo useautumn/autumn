@@ -32,6 +32,23 @@ test("progress label follows the run state", () => {
 	).toBe("Run complete");
 });
 
+test("a finished run that changed nothing says so", () => {
+	expect(
+		runProgressLabel({
+			migrationStatus: "run",
+			activeRun: undefined,
+			lastRunStatus: "no_changes",
+		}),
+	).toBe("Run complete, no changes");
+	expect(
+		runProgressLabel({
+			migrationStatus: "run",
+			activeRun: undefined,
+			lastRunStatus: "succeeded",
+		}),
+	).toBe("Run complete");
+});
+
 test("percent is completed over the larger of claimed and expected", () => {
 	expect(
 		migrationProgress({ completed: 50, total: 60, expected: 100 }),

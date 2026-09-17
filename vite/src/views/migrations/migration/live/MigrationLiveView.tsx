@@ -104,6 +104,7 @@ import {
 	previewSourceForStatus,
 } from "./previewSource";
 import { RealtimeRunWatcher } from "./RealtimeRunWatcher";
+import { runExpectedCount } from "./runScope";
 import { useMigrationSheetStore } from "./useMigrationSheetStore";
 
 type CustomerRow = MigrationPreviewCustomer & {
@@ -369,6 +370,10 @@ export function MigrationLiveView({
 		(env === AppEnv.Sandbox ? 260 : 220) + (activeRun ? PROGRESS_FOOTER_PX : 0);
 	const tableContainerHeight = `calc(100vh - ${tableOffsetPx}px)`;
 	const progressCounts = (progressRun ?? latestRun)?.item_run_counts;
+	const progressExpected = runExpectedCount({
+		run: progressRun ?? latestRun,
+		filterCount: runScopeCount,
+	});
 	const canShowPendingStatus =
 		executionStatuses.length === 0 || executionStatuses.includes("queued");
 	const pendingRunStatus: ActiveRunStatus =
@@ -863,8 +868,13 @@ export function MigrationLiveView({
 				completed={progressCounts?.completed ?? 0}
 				running={progressCounts?.running ?? 0}
 				total={progressCounts?.total ?? 0}
-				expected={runScopeCount}
-				label={runProgressLabel({ migrationStatus, activeRun, blockedBy })}
+				expected={progressExpected}
+				label={runProgressLabel({
+					migrationStatus,
+					activeRun,
+					blockedBy,
+					lastRunStatus: latestRun?.status,
+				})}
 				active={!!activeRun}
 				waiting={migrationStatus === "waiting"}
 				runKey={activeRun?.internal_id ?? null}

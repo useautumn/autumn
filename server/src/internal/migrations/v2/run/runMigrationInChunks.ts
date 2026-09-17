@@ -124,6 +124,7 @@ export const runMigrationInChunks = async ({
 		return await withMigrationRunTracking({
 			ctx,
 			migrationRunId: eventMigrationRunId,
+			migrationInternalId: migration.internal_id,
 
 			logData: {
 				migrationId: migration.id,
