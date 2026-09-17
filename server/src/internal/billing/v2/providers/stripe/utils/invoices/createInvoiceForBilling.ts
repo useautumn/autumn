@@ -18,6 +18,10 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
 import { shouldEnableStripeAutomaticTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax";
+import {
+	AUTUMN_ACTION_CUSTOMER_PRODUCT_METADATA_KEY,
+	AUTUMN_ACTION_SOURCE_METADATA_KEY,
+} from "./billingInvoiceMetadataKeys.js";
 
 const stripeDiscountsToInvoiceParams = ({
 	stripeDiscounts,
@@ -73,7 +77,13 @@ export const createInvoiceForBilling = async ({
 			autumn_billing_update: "true",
 			autumn_invoice_mode: billingContext.invoiceMode ? "true" : "false",
 			...(billingContext.actionSource
-				? { autumn_action_source: billingContext.actionSource }
+				? { [AUTUMN_ACTION_SOURCE_METADATA_KEY]: billingContext.actionSource }
+				: {}),
+			...(billingContext.actionCustomerProductId
+				? {
+						[AUTUMN_ACTION_CUSTOMER_PRODUCT_METADATA_KEY]:
+							billingContext.actionCustomerProductId,
+					}
 				: {}),
 			...(vercelInstallationId
 				? {

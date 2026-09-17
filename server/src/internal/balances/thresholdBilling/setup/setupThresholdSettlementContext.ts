@@ -58,6 +58,9 @@ export const setupThresholdSettlementContext = async ({
 			paymentMethod,
 			billingVersion: BillingVersion.V2,
 			actionSource: "threshold_billing",
+			// Names the product this invoice settles, so paying it unblocks only
+			// that product and not every threshold plan the customer holds.
+			actionCustomerProductId: customerProduct.id,
 			customerEntitlement: settlement.customerEntitlement,
 			charge: settlement.charge,
 		},

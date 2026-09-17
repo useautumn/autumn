@@ -1,30 +1,27 @@
 import { CusProductStatus, type FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { applyThresholdBlock } from "./applyThresholdBlock.js";
-import { isThresholdBillingPrice } from "./isThresholdBillingPrice.js";
+import { selectThresholdBlockedProducts } from "./selectThresholdBlockedProducts.js";
 
 export const clearThresholdPastDue = async ({
 	ctx,
 	fullCustomer,
+	customerProductId,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
+	customerProductId?: string;
 }): Promise<void> => {
 	const customerId = fullCustomer.id;
 	if (!customerId) return;
 
-	const blockedProducts = fullCustomer.customer_products.filter(
-		(customerProduct) =>
-			customerProduct.status === CusProductStatus.PastDue &&
-			customerProduct.customer_prices.some((customerPrice) =>
-				isThresholdBillingPrice({ price: customerPrice.price }),
-			),
-	);
-
 	await applyThresholdBlock({
 		ctx,
 		customerId,
-		customerProducts: blockedProducts,
+		customerProducts: selectThresholdBlockedProducts({
+			fullCustomer,
+			customerProductId,
+		}),
 		fullCustomer,
 		status: CusProductStatus.Active,
 		source: "threshold-billing-recovered",

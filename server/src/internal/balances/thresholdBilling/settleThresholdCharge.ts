@@ -22,9 +22,9 @@ export const settleThresholdCharge = async ({
 	ctx: AutumnContext;
 	customerId: string;
 	featureId: string;
-}): Promise<{ handled: boolean }> => {
+}): Promise<{ settled: boolean }> => {
 	const { logger } = ctx;
-	let handled = false;
+	let settled = false;
 
 	const settle = async () => {
 		const setupResult = await setupThresholdSettlementContext({
@@ -34,14 +34,13 @@ export const settleThresholdCharge = async ({
 		});
 
 		if (!setupResult.ok) {
-			handled = setupResult.reason === "nothing_to_settle";
 			logger.info(
 				`[settleThresholdCharge] Skipping ${customerId}/${featureId}: ${setupResult.reason}`,
 			);
 			return;
 		}
 
-		handled = true;
+		settled = true;
 
 		const { settlementContext } = setupResult;
 		const { autumnBillingPlan, stripeBillingPlan } =
@@ -85,5 +84,5 @@ export const settleThresholdCharge = async ({
 		fn: settle,
 	});
 
-	return { handled };
+	return { settled };
 };

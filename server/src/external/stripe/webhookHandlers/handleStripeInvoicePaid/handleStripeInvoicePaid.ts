@@ -5,6 +5,7 @@ import { queueCheckoutRewardTasks } from "@/external/stripe/webhookHandlers/hand
 import { sendEmailReceipt } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/sendEmailReceipt.js";
 import { autoTopupLimitRepo } from "@/internal/balances/autoTopUp/repos";
 import { clearThresholdPastDue } from "@/internal/balances/thresholdBilling/clearThresholdPastDue.js";
+import { AUTUMN_ACTION_CUSTOMER_PRODUCT_METADATA_KEY } from "@/internal/billing/v2/providers/stripe/utils/invoices/billingInvoiceMetadataKeys.js";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 import { setupStripeInvoicePaidContext } from "./setupStripeInvoicePaidContext.js";
 import { handleStripeInvoiceDiscounts } from "./tasks/handleStripeInvoiceDiscounts.js";
@@ -32,7 +33,14 @@ export const handleStripeInvoicePaid = async ({
 		"threshold_billing";
 
 	if (isThresholdBillingInvoice && ctx.fullCustomer) {
-		await clearThresholdPastDue({ ctx, fullCustomer: ctx.fullCustomer });
+		await clearThresholdPastDue({
+			ctx,
+			fullCustomer: ctx.fullCustomer,
+			customerProductId:
+				invoicePaidContext.stripeInvoice.metadata?.[
+					AUTUMN_ACTION_CUSTOMER_PRODUCT_METADATA_KEY
+				] ?? undefined,
+		});
 	}
 
 	ctx.logger.debug(

@@ -337,6 +337,12 @@ test(
 		expect(thresholdInvoice!.status).toBe("open");
 		expect(thresholdInvoice!.total).toBe(10_000);
 
+		// Paying this invoice must unblock only the plan it settles, so it has to
+		// name that plan — a customer can hold several threshold plans at once.
+		expect(
+			thresholdInvoice!.metadata?.autumn_action_customer_product_id,
+		).toBeTruthy();
+
 		await expectCustomerProductCorrect({
 			customerId,
 			autumn: autumnV2_3,
