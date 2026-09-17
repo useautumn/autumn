@@ -19,14 +19,8 @@ import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCust
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
-import {
-	buildInvoiceAddLinesIdempotencyKey,
-	getReplayedStripeRequestId,
-} from "../utils/buildInvoiceAddLinesIdempotencyKey";
 
 const STRIPE_ADD_LINES_MAX_PER_REQUEST = 100;
-// Stripe redelivers a failing webhook ~16 times over 3 days; each cached failure adds one link.
-const MAX_REPLAYED_FAILURE_WALK = 16;
 
 /**
  * Checks if the subscription's trial just ended.
@@ -64,92 +58,16 @@ const getExistingAutumnLineItemIds = async ({
 	);
 };
 
-const observeInvoiceLineItems = async ({
-	ctx,
-	invoiceId,
-	lineItems,
-}: {
-	ctx: StripeWebhookContext;
-	invoiceId: string;
-	lineItems: LineItem[];
-}) => {
-	const existingLineItemIds = await getExistingAutumnLineItemIds({
-		ctx,
-		invoiceId,
-	});
-	return {
-		existingLineItemIds,
-		pendingLineItems: lineItems.filter(
-			(lineItem) => !existingLineItemIds.has(lineItem.id),
-		),
-	};
-};
-
 /**
- * One bulk addLines per batch under a key derived from the observed invoice
- * state and the exact request, so the same write dedupes at Stripe while any
- * change gets a fresh key. Stripe caches resource-specific 429s (lock_timeout)
- * and 4xx under a key for 24h (how credit lines went missing before), so a
- * replayed failure re-reads the invoice and retries under the key salted with
- * the replayed request id. Every delivery walks that chain identically, and a
- * fresh failure ends the walk so Stripe redelivers.
+ * Adds every line item not already on the invoice via bulk addLines.
+ *
+ * Stripe webhook retries re-run this task, so line ids are scoped to the
+ * invoice and matched against `metadata.autumn_line_item_id` before sending.
+ * Each attempt uses a fresh idempotency key on purpose: Stripe caches
+ * resource-specific 429s (lock_timeout) and 4xx under a reused key for 24h,
+ * which is how credit lines went missing before. Concurrent deliveries are
+ * ruled out by the webhook event lock, which this event requires.
  */
-const addLineItemBatch = async ({
-	ctx,
-	invoiceId,
-	batch,
-	existingLineItemIds,
-	salt,
-	attempt = 0,
-}: {
-	ctx: StripeWebhookContext;
-	invoiceId: string;
-	batch: LineItem[];
-	existingLineItemIds: Set<string>;
-	salt?: string;
-	attempt?: number;
-}): Promise<Awaited<ReturnType<typeof addStripeInvoiceLines>> | null> => {
-	if (batch.length === 0) return null;
-	const lines = lineItemsToInvoiceAddLinesParams({ lineItems: batch });
-	try {
-		return await addStripeInvoiceLines({
-			stripeCli: ctx.stripeCli,
-			invoiceId,
-			lines,
-			idempotencyKey: buildInvoiceAddLinesIdempotencyKey({
-				invoiceId,
-				existingLineItemIds,
-				requestParams: lines,
-				salt,
-			}),
-		});
-	} catch (error) {
-		const replayedRequestId = getReplayedStripeRequestId(error);
-		if (!replayedRequestId || attempt >= MAX_REPLAYED_FAILURE_WALK) {
-			throw error;
-		}
-		ctx.logger.warn(
-			`[invoice.created] addLines on ${invoiceId} replayed cached failure from ${replayedRequestId}; retrying with a salted key`,
-		);
-		const observed = await observeInvoiceLineItems({
-			ctx,
-			invoiceId,
-			lineItems: batch,
-		});
-		return addLineItemBatch({
-			ctx,
-			invoiceId,
-			batch: observed.pendingLineItems.slice(
-				0,
-				STRIPE_ADD_LINES_MAX_PER_REQUEST,
-			),
-			existingLineItemIds: observed.existingLineItemIds,
-			salt: replayedRequestId,
-			attempt: attempt + 1,
-		});
-	}
-};
-
 const addPendingLineItemsToInvoice = async ({
 	ctx,
 	eventContext,
@@ -162,12 +80,13 @@ const addPendingLineItemsToInvoice = async ({
 	const { stripeInvoice } = eventContext;
 	if (lineItems.length === 0) return;
 
-	const { existingLineItemIds, pendingLineItems } =
-		await observeInvoiceLineItems({
-			ctx,
-			invoiceId: stripeInvoice.id,
-			lineItems,
-		});
+	const existingAutumnLineItemIds = await getExistingAutumnLineItemIds({
+		ctx,
+		invoiceId: stripeInvoice.id,
+	});
+	const pendingLineItems = lineItems.filter(
+		(lineItem) => !existingAutumnLineItemIds.has(lineItem.id),
+	);
 
 	if (pendingLineItems.length === 0) {
 		ctx.logger.info(
@@ -188,36 +107,29 @@ const addPendingLineItemsToInvoice = async ({
 		);
 	}
 
-	// Re-observe before every batch so each key reflects the invoice as it is,
-	// and an overlapping delivery that saw the earlier batch shares the key.
-	const maxBatches =
-		Math.ceil(pendingLineItems.length / STRIPE_ADD_LINES_MAX_PER_REQUEST) + 1;
-	let observed = { existingLineItemIds, pendingLineItems };
+	const batches: LineItem[][] = [];
+	for (
+		let start = 0;
+		start < pendingLineItems.length;
+		start += STRIPE_ADD_LINES_MAX_PER_REQUEST
+	) {
+		batches.push(
+			pendingLineItems.slice(start, start + STRIPE_ADD_LINES_MAX_PER_REQUEST),
+		);
+	}
+
 	let updatedInvoice: Awaited<ReturnType<typeof addStripeInvoiceLines>> | null =
 		null;
-	let batchesSent = 0;
-	while (observed.pendingLineItems.length > 0 && batchesSent < maxBatches) {
-		const batch = observed.pendingLineItems.slice(
-			0,
-			STRIPE_ADD_LINES_MAX_PER_REQUEST,
-		);
-		updatedInvoice = await addLineItemBatch({
-			ctx,
+	for (const batch of batches) {
+		updatedInvoice = await addStripeInvoiceLines({
+			stripeCli: ctx.stripeCli,
 			invoiceId: stripeInvoice.id,
-			batch,
-			existingLineItemIds: observed.existingLineItemIds,
-		});
-		batchesSent += 1;
-		if (batch.length === observed.pendingLineItems.length) break;
-		observed = await observeInvoiceLineItems({
-			ctx,
-			invoiceId: stripeInvoice.id,
-			lineItems: pendingLineItems,
+			lines: lineItemsToInvoiceAddLinesParams({ lineItems: batch }),
 		});
 	}
 
 	const returnedLines =
-		batchesSent === 1 && updatedInvoice && !updatedInvoice.lines.has_more
+		batches.length === 1 && updatedInvoice && !updatedInvoice.lines.has_more
 			? updatedInvoice.lines.data
 			: null;
 	const landedAutumnLineItemIds = returnedLines
