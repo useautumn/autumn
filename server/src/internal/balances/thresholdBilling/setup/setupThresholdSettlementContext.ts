@@ -39,7 +39,7 @@ export const setupThresholdSettlementContext = async ({
 		return { ok: false, reason: settlement.kind };
 	}
 
-	const customerProduct = settlement.customerEntitlement.customer_product!;
+	const { customerProduct, customerPrice } = settlement;
 
 	const { stripeCus, paymentMethod, testClockFrozenTime } =
 		await fetchStripeCustomerForBilling({ ctx, fullCus: fullCustomer });
@@ -68,7 +68,9 @@ export const setupThresholdSettlementContext = async ({
 			// that product and not every threshold plan the customer holds.
 			actionCustomerProductId: customerProduct.id,
 			customerEntitlement: settlement.customerEntitlement,
-			charge: settlement.charge,
+			customerProduct,
+			customerPrice,
+			chargeUnits: settlement.charge.chargeUnits,
 		},
 	};
 };

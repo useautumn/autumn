@@ -1,7 +1,6 @@
 import {
 	type AutumnBillingPlan,
 	billingContextToCurrency,
-	cusEntToCusPrice,
 	InternalError,
 	type LineItemContext,
 	type StripeBillingPlan,
@@ -22,10 +21,9 @@ export const computeThresholdSettlementPlan = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	stripeBillingPlan: StripeBillingPlan;
 } => {
-	const { customerEntitlement, charge } = settlementContext;
-	const customerProduct = customerEntitlement.customer_product!;
+	const { customerEntitlement, customerProduct, customerPrice, chargeUnits } =
+		settlementContext;
 	const feature = customerEntitlement.entitlement.feature;
-	const customerPrice = cusEntToCusPrice({ cusEnt: customerEntitlement })!;
 
 	const lineItemContext = {
 		price: customerPrice.price,
@@ -41,7 +39,7 @@ export const computeThresholdSettlementPlan = ({
 	} satisfies LineItemContext;
 
 	const lineItem = usagePriceToLineItem({
-		cusEnt: { ...customerEntitlement, balance: -charge.chargeUnits },
+		cusEnt: { ...customerEntitlement, balance: -chargeUnits },
 		context: lineItemContext,
 		options: { shouldProrateOverride: false, chargeImmediatelyOverride: true },
 	});
@@ -55,7 +53,7 @@ export const computeThresholdSettlementPlan = ({
 	const { deltas } = computeRebalancedAutoTopUp({
 		fullCustomer: settlementContext.fullCustomer,
 		featureId: feature.id,
-		quantity: charge.chargeUnits,
+		quantity: chargeUnits,
 		prepaidCustomerEntitlementId: customerEntitlement.id,
 	});
 

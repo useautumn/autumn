@@ -2,15 +2,17 @@ import {
 	cusEntToCusPrice,
 	cusEntToInvoiceOverage,
 	type FullCusEntWithFullCusProduct,
+	type FullCusProduct,
 	type FullCustomer,
+	type FullCustomerPrice,
 	fullCustomerToCustomerEntitlements,
 	isPayPerUsePrice,
-	type UsagePriceConfig,
 } from "@autumn/shared";
 import {
 	computeThresholdCharge,
 	type ThresholdCharge,
 } from "../compute/computeThresholdCharge.js";
+import { priceThresholdBilling } from "../priceThresholdBilling.js";
 
 export type ThresholdSettlement =
 	| { kind: "not_threshold_billed" }
@@ -18,20 +20,27 @@ export type ThresholdSettlement =
 	| {
 			kind: "settle";
 			customerEntitlement: FullCusEntWithFullCusProduct;
+			customerProduct: FullCusProduct;
+			customerPrice: FullCustomerPrice;
 			threshold: number;
 			charge: ThresholdCharge;
 	  };
 
-const entitlementThreshold = (
+/** The pay-per-use price carrying a threshold, with the threshold it declares. */
+const thresholdPrice = (
 	customerEntitlement: FullCusEntWithFullCusProduct,
-): number | undefined => {
+): { customerPrice: FullCustomerPrice; threshold: number } | undefined => {
 	const customerPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
 	if (!customerPrice || !isPayPerUsePrice({ price: customerPrice.price })) {
 		return undefined;
 	}
 
-	return (customerPrice.price.config as UsagePriceConfig).threshold_billing
-		?.threshold;
+	const threshold = priceThresholdBilling({
+		price: customerPrice.price,
+	})?.threshold;
+	if (threshold === undefined || threshold <= 0) return undefined;
+
+	return { customerPrice, threshold };
 };
 
 export const resolveThresholdSettlement = ({
@@ -49,11 +58,13 @@ export const resolveThresholdSettlement = ({
 	let thresholdBilled = false;
 
 	for (const customerEntitlement of customerEntitlements) {
-		if (!customerEntitlement.customer_product) continue;
+		const customerProduct = customerEntitlement.customer_product;
+		if (!customerProduct) continue;
 
-		const threshold = entitlementThreshold(customerEntitlement);
-		if (threshold === undefined || threshold <= 0) continue;
+		const resolved = thresholdPrice(customerEntitlement);
+		if (!resolved) continue;
 
+		const { customerPrice, threshold } = resolved;
 		thresholdBilled = true;
 
 		const charge = computeThresholdCharge({
@@ -62,7 +73,14 @@ export const resolveThresholdSettlement = ({
 		});
 		if (!charge) continue;
 
-		return { kind: "settle", customerEntitlement, threshold, charge };
+		return {
+			kind: "settle",
+			customerEntitlement,
+			customerProduct,
+			customerPrice,
+			threshold,
+			charge,
+		};
 	}
 
 	return {

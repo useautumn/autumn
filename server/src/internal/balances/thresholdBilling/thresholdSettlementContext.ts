@@ -1,10 +1,13 @@
 import type {
 	BillingContext,
 	FullCusEntWithFullCusProduct,
+	FullCusProduct,
+	FullCustomerPrice,
 } from "@autumn/shared";
-import type { ThresholdCharge } from "./compute/computeThresholdCharge.js";
 
 export interface ThresholdSettlementContext extends BillingContext {
 	customerEntitlement: FullCusEntWithFullCusProduct;
-	charge: ThresholdCharge;
+	customerProduct: FullCusProduct;
+	customerPrice: FullCustomerPrice;
+	chargeUnits: number;
 }

@@ -68,7 +68,7 @@ export const settleThresholdCharge = async ({
 		await markThresholdPastDue({
 			ctx,
 			customerId,
-			customerProduct: settlementContext.customerEntitlement.customer_product!,
+			customerProduct: settlementContext.customerProduct,
 			fullCustomer: settlementContext.fullCustomer,
 		});
 	};

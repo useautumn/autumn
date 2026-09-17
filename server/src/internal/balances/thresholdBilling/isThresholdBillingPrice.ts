@@ -1,4 +1,5 @@
-import type { Price, UsagePriceConfig } from "@autumn/shared";
+import type { Price } from "@autumn/shared";
+import { priceThresholdBilling } from "./priceThresholdBilling.js";
 
 export const isThresholdBillingPrice = ({ price }: { price: Price }): boolean =>
-	Boolean((price.config as UsagePriceConfig).threshold_billing);
+	priceThresholdBilling({ price }) !== undefined;
