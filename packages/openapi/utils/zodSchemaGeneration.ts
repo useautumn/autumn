@@ -100,10 +100,12 @@ export async function generateZodSchemas({
 		(source) => !existsSync(path.join(sdkModelsDir, source.sdkFile)),
 	);
 	if (missing.length > 0) {
-		console.error(
-			"DEBUG all sdkModelsDir files:",
-			readdirSync(sdkModelsDir).join(", "),
-		);
+		for (const needle of ["SetupPaymentResponse", "ListPlansParams"]) {
+			const matches = readdirSync(sdkModelsDir).filter((f) =>
+				readFileSync(path.join(sdkModelsDir, f), "utf-8").includes(needle),
+			);
+			console.error(`DEBUG files containing "${needle}":`, matches.join(", "));
+		}
 		throw new Error(
 			`SDK model files missing for Zod generation:\n${missing
 				.map((source) => `  ${source.sdkFile} -> ${source.outputFile}`)
