@@ -1,7 +1,7 @@
 import type {
 	PartitionRoute,
 	WorkerRequest,
-} from "@autumn/balance-worker-protocol";
+} from "@autumn/balance-worker-client/protocol";
 import type {
 	MeteringPartitionResolver,
 	PartitionRuntime,

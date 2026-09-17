@@ -1,5 +1,5 @@
 import { parseMeteringIdentity } from "@autumn/balance-engine";
-import type { PartitionRoute } from "@autumn/balance-worker-protocol";
+import type { PartitionRoute } from "@autumn/balance-worker-client/protocol";
 import { z } from "zod/v4";
 import type {
 	BalanceWorkerHttpContext,
