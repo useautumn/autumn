@@ -23,7 +23,9 @@
  *  - more than 100 pending lines are sent in batches
  *  - a line already on a draft invoice whose amount is stale (usage grew
  *    between attempts) is updated so the reset stays correct; on a finalized
- *    invoice the delta is logged for remediation
+ *    invoice the delta is carried to the next invoice as a pending item
+ *  - usage lines written before ids were invoice-scoped are recognised by
+ *    their customer price, so a retry across the deploy does not re-add them
  */
 
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
@@ -76,6 +78,8 @@ let consumableLineItems: MockLineItem[] = usageLineItems;
 let invoiceCreditLineItems: MockLineItem[] = creditLineItems;
 let liveStripeLineItemIds: string[] = [];
 let liveStripeLineAmounts: Record<string, string> = {};
+let liveStripeLineCustomerPriceIds: Record<string, string> = {};
+let pendingCarryItemIds: string[] = [];
 let addLinesShouldDropLastLine = false;
 
 const liveLineFor = (lineItemId: string) => ({
@@ -84,6 +88,9 @@ const liveLineFor = (lineItemId: string) => ({
 		autumn_line_item_id: lineItemId,
 		...(liveStripeLineAmounts[lineItemId]
 			? { autumn_line_amount: liveStripeLineAmounts[lineItemId] }
+			: {}),
+		...(liveStripeLineCustomerPriceIds[lineItemId]
+			? { autumn_customer_price_id: liveStripeLineCustomerPriceIds[lineItemId] }
 			: {}),
 	},
 });
@@ -163,8 +170,8 @@ await mockModuleWithRestore(
 				},
 			};
 		},
-		createStripeInvoiceItems: async (args: unknown) => {
-			createInvoiceItemCalls.push(args);
+		createStripeInvoiceItems: async (args: { invoiceItems: unknown[] }) => {
+			createInvoiceItemCalls.push(...args.invoiceItems);
 			return [];
 		},
 		updateStripeInvoiceLine: async (args: {
@@ -219,6 +226,7 @@ const makeEventContext = ({
 			items: { data: [] },
 		},
 		stripeCustomer: { id: "stripe_customer" },
+		stripeSubscriptionId: "sub_test",
 		fullCustomer: {
 			id: "customer_test",
 			internal_id: "customer_internal_test",
@@ -228,7 +236,16 @@ const makeEventContext = ({
 const ctx = {
 	org: { id: "org_test", config: { disable_overage_billing: false } },
 	env: AppEnv.Sandbox,
-	stripeCli: { id: "stripe_client_test" },
+	stripeCli: {
+		id: "stripe_client_test",
+		invoiceItems: {
+			list: async function* () {
+				for (const carryId of pendingCarryItemIds) {
+					yield { metadata: { autumn_line_item_id: carryId } };
+				}
+			},
+		},
+	},
 	logger: {
 		info: () => undefined,
 		warn: () => undefined,
@@ -254,6 +271,8 @@ describe("invoice.created consumable idempotency", () => {
 		invoiceCreditLineItems = creditLineItems;
 		liveStripeLineItemIds = [];
 		liveStripeLineAmounts = {};
+		liveStripeLineCustomerPriceIds = {};
+		pendingCarryItemIds = [];
 		updateLineCalls.length = 0;
 		errorLogs.length = 0;
 		addLinesShouldDropLastLine = false;
@@ -301,7 +320,7 @@ describe("invoice.created consumable idempotency", () => {
 		expect(updateLineCalls).toEqual([]);
 	});
 
-	test("logs a stale line on a finalized invoice for remediation and still resets balances", async () => {
+	test("carries the unbilled delta of a stale line on a finalized invoice to the next invoice and still resets balances", async () => {
 		const grown = makeLineItem(usageLineItems[0]!.id, 150);
 		consumableLineItems = [grown, usageLineItems[1]!];
 		liveStripeLineItemIds = [
@@ -318,10 +337,55 @@ describe("invoice.created consumable idempotency", () => {
 
 		expect(updateLineCalls).toEqual([]);
 		expect(addLinesCalls).toEqual([]);
-		expect(errorLogs.some((message) => message.includes(grown.id))).toBe(true);
+		expect(createInvoiceItemCalls).toEqual([
+			expect.objectContaining({
+				customer: "stripe_customer",
+				subscription: "sub_test",
+				amount: 5000,
+				metadata: expect.objectContaining({
+					autumn_line_item_id: `${grown.id}_carry`,
+					autumn_line_amount: "50",
+				}),
+			}),
+		]);
 		expect(batchUpdateCalls).toHaveLength(1);
 	});
 
+	test("does not carry the same delta twice when the pending item already exists", async () => {
+		const grown = makeLineItem(usageLineItems[0]!.id, 150);
+		consumableLineItems = [grown];
+		invoiceCreditLineItems = [];
+		liveStripeLineItemIds = [grown.id];
+		liveStripeLineAmounts = { [grown.id]: "100" };
+		pendingCarryItemIds = [`${grown.id}_carry`];
+
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext({ invoiceStatus: "paid" }),
+		});
+
+		expect(createInvoiceItemCalls).toEqual([]);
+		expect(batchUpdateCalls).toHaveLength(1);
+	});
+
+	test("recognises a usage line written before ids were invoice-scoped by its customer price", async () => {
+		const legacyLineId = "invoice_li_2abc_random";
+		liveStripeLineItemIds = [legacyLineId];
+		liveStripeLineCustomerPriceIds = {
+			[legacyLineId]: usageLineItems[0]!.context.customerPrice.id,
+		};
+
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext(),
+		});
+
+		expect(sentLineItemIds()).toEqual([
+			usageLineItems[1]!.id,
+			...creditLineItems.map((lineItem) => lineItem.id),
+		]);
+		expect(batchUpdateCalls).toHaveLength(1);
+	});
 	test("sends usage and credit lines in a single bulk addLines call", async () => {
 		await processConsumablePricesForInvoiceCreated({
 			ctx,

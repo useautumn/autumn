@@ -1,4 +1,5 @@
 import {
+	atmnToStripeAmount,
 	customerEntitlementShouldBeBilled,
 	type FullCusEntWithFullCusProduct,
 	type FullCusEntWithProduct,
@@ -14,6 +15,7 @@ import { lineItemsToInvoiceAddLinesParams } from "@/internal/billing/v2/provider
 import { lineItemToMetadata } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemToMetadata";
 import {
 	addStripeInvoiceLines,
+	createStripeInvoiceItems,
 	updateStripeInvoiceLine,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
@@ -46,27 +48,62 @@ const hasTrialJustEnded = ({
 
 type ExistingAutumnLine = { stripeLineItemId: string; billedAmount?: string };
 
+type ExistingAutumnLines = {
+	byLineItemId: Map<string, ExistingAutumnLine>;
+	/** Usage lines written before ids were invoice-scoped, keyed by customer price. */
+	legacyByCustomerPriceId: Map<string, ExistingAutumnLine>;
+};
+
+const USAGE_LINE_ID_PREFIX = "invoice_li_usage_";
+const CREDIT_LINE_ID_PREFIX = "invoice_li_credit_";
+
 const getExistingAutumnLines = async ({
 	ctx,
 	invoiceId,
 }: {
 	ctx: StripeWebhookContext;
 	invoiceId: string;
-}): Promise<Map<string, ExistingAutumnLine>> => {
+}): Promise<ExistingAutumnLines> => {
 	const stripeLineItems = await getStripeInvoiceLineItems({
 		stripeClient: ctx.stripeCli,
 		invoiceId,
 	});
-	const existing = new Map<string, ExistingAutumnLine>();
+	const byLineItemId = new Map<string, ExistingAutumnLine>();
+	const legacyByCustomerPriceId = new Map<string, ExistingAutumnLine>();
 	for (const stripeLineItem of stripeLineItems) {
 		const autumnLineItemId = stripeLineItem.metadata?.autumn_line_item_id;
 		if (!autumnLineItemId) continue;
-		existing.set(autumnLineItemId, {
+		const existing: ExistingAutumnLine = {
 			stripeLineItemId: stripeLineItem.id,
 			billedAmount: stripeLineItem.metadata?.autumn_line_amount,
-		});
+		};
+		byLineItemId.set(autumnLineItemId, existing);
+
+		const customerPriceId = stripeLineItem.metadata?.autumn_customer_price_id;
+		const isScoped =
+			autumnLineItemId.startsWith(USAGE_LINE_ID_PREFIX) ||
+			autumnLineItemId.startsWith(CREDIT_LINE_ID_PREFIX);
+		if (customerPriceId && !isScoped) {
+			legacyByCustomerPriceId.set(customerPriceId, existing);
+		}
 	}
-	return existing;
+	return { byLineItemId, legacyByCustomerPriceId };
+};
+
+const findExistingLine = ({
+	lineItem,
+	existingLines,
+}: {
+	lineItem: LineItem;
+	existingLines: ExistingAutumnLines;
+}): ExistingAutumnLine | undefined => {
+	const byId = existingLines.byLineItemId.get(lineItem.id);
+	if (byId) return byId;
+	if (!lineItem.id.startsWith(USAGE_LINE_ID_PREFIX)) return undefined;
+	const customerPriceId = lineItem.context.customerPrice?.id;
+	return customerPriceId
+		? existingLines.legacyByCustomerPriceId.get(customerPriceId)
+		: undefined;
 };
 
 const isExistingLineStale = ({
@@ -81,11 +118,97 @@ const isExistingLineStale = ({
 	return String(currentAmount) !== existing.billedAmount;
 };
 
+const carryLineItemId = (lineItem: LineItem) => `${lineItem.id}_carry`;
+
+const hasPendingCarryItem = async ({
+	ctx,
+	stripeCustomerId,
+	carryId,
+}: {
+	ctx: StripeWebhookContext;
+	stripeCustomerId: string;
+	carryId: string;
+}): Promise<boolean> => {
+	for await (const invoiceItem of ctx.stripeCli.invoiceItems.list({
+		customer: stripeCustomerId,
+		pending: true,
+		limit: 100,
+	})) {
+		if (invoiceItem.metadata?.autumn_line_item_id === carryId) return true;
+	}
+	return false;
+};
+
+/**
+ * The invoice is finalized, so the unbilled delta is added as a pending
+ * invoice item that Stripe picks up on the customer's next invoice.
+ */
+const carryUnbilledDeltaForward = async ({
+	ctx,
+	eventContext,
+	lineItem,
+	existing,
+}: {
+	ctx: StripeWebhookContext;
+	eventContext: InvoiceCreatedContext;
+	lineItem: LineItem;
+	existing: ExistingAutumnLine;
+}) => {
+	const { stripeInvoice, stripeCustomer, stripeSubscriptionId } = eventContext;
+	const currentAmount = Number(
+		lineItemToMetadata({ lineItem }).autumn_line_amount,
+	);
+	const delta = currentAmount - Number(existing.billedAmount);
+	if (!(delta > 0)) {
+		ctx.logger.error(
+			`[invoice.created] Line ${lineItem.id} on finalized invoice ${stripeInvoice.id} was billed at ${existing.billedAmount} but is now ${currentAmount}; nothing to carry forward, needs manual review`,
+		);
+		return;
+	}
+
+	const carryId = carryLineItemId(lineItem);
+	if (
+		await hasPendingCarryItem({
+			ctx,
+			stripeCustomerId: stripeCustomer.id,
+			carryId,
+		})
+	) {
+		ctx.logger.info(
+			`[invoice.created] Unbilled delta for ${lineItem.id} already pending as ${carryId}`,
+		);
+		return;
+	}
+
+	const { currency, discountable } = lineItem.context;
+	ctx.logger.warn(
+		`[invoice.created] Invoice ${stripeInvoice.id} is finalized; carrying ${delta} ${currency} of unbilled usage for ${lineItem.id} to the next invoice as ${carryId}`,
+	);
+	await createStripeInvoiceItems({
+		ctx,
+		invoiceItems: [
+			{
+				customer: stripeCustomer.id,
+				subscription: stripeSubscriptionId,
+				amount: atmnToStripeAmount({ amount: delta, currency }),
+				currency,
+				description: `${lineItem.description} (usage billed after the invoice was finalized)`,
+				discountable: discountable ?? false,
+				metadata: {
+					...lineItemToMetadata({ lineItem }),
+					autumn_line_item_id: carryId,
+					autumn_line_amount: String(delta),
+				},
+			},
+		],
+	});
+};
+
 /**
  * A retry can find a line that was written by an earlier attempt whose reset
  * never ran; usage tracked since then changed the amount. On a draft the line
  * is updated so the reset stays correct; on a finalized invoice the delta is
- * unbillable, so it is logged for manual remediation and the reset proceeds.
+ * carried to the next invoice as a pending item before the reset proceeds.
  */
 const reconcileStaleExistingLines = async ({
 	ctx,
@@ -96,25 +219,27 @@ const reconcileStaleExistingLines = async ({
 	ctx: StripeWebhookContext;
 	eventContext: InvoiceCreatedContext;
 	lineItems: LineItem[];
-	existingLines: Map<string, ExistingAutumnLine>;
+	existingLines: ExistingAutumnLines;
 }) => {
 	const { stripeInvoice } = eventContext;
 	for (const lineItem of lineItems) {
-		const existing = existingLines.get(lineItem.id);
+		const existing = findExistingLine({ lineItem, existingLines });
 		if (!existing || !isExistingLineStale({ lineItem, existing })) continue;
+
+		if (stripeInvoice.status !== "draft") {
+			await carryUnbilledDeltaForward({
+				ctx,
+				eventContext,
+				lineItem,
+				existing,
+			});
+			continue;
+		}
 
 		const [params] = lineItemsToInvoiceAddLinesParams({
 			lineItems: [lineItem],
 		});
 		if (!params) continue;
-
-		if (stripeInvoice.status !== "draft") {
-			ctx.logger.error(
-				`[invoice.created] Line ${lineItem.id} on finalized invoice ${stripeInvoice.id} was billed at ${existing.billedAmount} but is now ${lineItem.amount}; the difference needs manual remediation`,
-			);
-			continue;
-		}
-
 		ctx.logger.info(
 			`[invoice.created] Updating stale line ${lineItem.id} on ${stripeInvoice.id} from ${existing.billedAmount} to ${lineItem.amount}`,
 		);
@@ -127,16 +252,6 @@ const reconcileStaleExistingLines = async ({
 	}
 };
 
-/**
- * Adds every line item not already on the invoice via bulk addLines.
- *
- * Stripe webhook retries re-run this task, so line ids are scoped to the
- * invoice and matched against `metadata.autumn_line_item_id` before sending.
- * Each attempt uses a fresh idempotency key on purpose: Stripe caches
- * resource-specific 429s (lock_timeout) and 4xx under a reused key for 24h,
- * which is how credit lines went missing before. Concurrent deliveries are
- * ruled out by the webhook event lock, which this event requires.
- */
 const addPendingLineItemsToInvoice = async ({
 	ctx,
 	eventContext,
@@ -160,7 +275,7 @@ const addPendingLineItemsToInvoice = async ({
 		existingLines,
 	});
 	const pendingLineItems = lineItems.filter(
-		(lineItem) => !existingLines.has(lineItem.id),
+		(lineItem) => !findExistingLine({ lineItem, existingLines }),
 	);
 
 	if (pendingLineItems.length === 0) {
@@ -216,7 +331,7 @@ const addPendingLineItemsToInvoice = async ({
 		: new Set(
 				(
 					await getExistingAutumnLines({ ctx, invoiceId: stripeInvoice.id })
-				).keys(),
+				).byLineItemId.keys(),
 			);
 	const missingLineItemIds = pendingLineItems
 		.map((lineItem) => lineItem.id)
