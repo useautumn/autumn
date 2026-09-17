@@ -1,9 +1,9 @@
 import { ms } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { buildAutoTopUpLockKey } from "@/internal/balances/autoTopUp/helpers/autoTopUpUtils.js";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan.js";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult.js";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
 import { clearThresholdPastDue } from "./clearThresholdPastDue.js";
 import { computeThresholdSettlementPlan } from "./compute/computeThresholdSettlementPlan.js";
 import { markThresholdPastDue } from "./markThresholdPastDue.js";
@@ -75,7 +75,7 @@ export const settleThresholdCharge = async ({
 	};
 
 	await withLock({
-		lockKey: buildAutoTopUpLockKey({
+		lockKey: buildBillingLockKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
 			customerId,
