@@ -31,7 +31,12 @@ import chalk from "chalk";
 import { Hono } from "hono";
 import type Stripe from "stripe";
 import { getMiscRedis } from "@/external/redis/initRedis";
-import { stripeIdempotencyMiddleware } from "@/external/stripe/webhookMiddlewares/stripeIdempotencyMiddleware";
+import {
+	claimStripeWebhookEvent,
+	completeStripeWebhookEvent,
+	releaseStripeWebhookEvent,
+	stripeIdempotencyMiddleware,
+} from "@/external/stripe/webhookMiddlewares/stripeIdempotencyMiddleware";
 import { stripeWebhookAckMiddleware } from "@/external/stripe/webhookMiddlewares/stripeWebhookAckMiddleware";
 
 const REDIS_READY_TIMEOUT_MS = 10_000;
@@ -218,8 +223,9 @@ test.concurrent(
 		// Let the first delivery acquire the lock before the duplicate arrives.
 		await waitForCondition({
 			condition: async () =>
-				(await getMiscRedis().get(redisKeyFor({ orgId, eventId }))) ===
-				"processing",
+				(await getMiscRedis().get(redisKeyFor({ orgId, eventId })))?.startsWith(
+					"processing",
+				) ?? false,
 			description: "first delivery to acquire the processing lock",
 		});
 
@@ -266,5 +272,39 @@ test.concurrent(
 		expect(duplicate.status).toBe(200);
 		expect(await duplicate.json()).toEqual({ received: true, duplicate: true });
 		expect(handlerRuns).toBe(1);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("webhookAck: only the lock owner can release or complete an event")}`,
+	async () => {
+		await waitForRedisReady();
+		const orgId = `org_owner_${randomUUID()}`;
+		const eventId = `evt_${randomUUID()}`;
+		const eventKey = redisKeyFor({ orgId, eventId });
+
+		expect(await claimStripeWebhookEvent({ eventKey, token: "owner" })).toBe(
+			"claimed",
+		);
+		expect(await claimStripeWebhookEvent({ eventKey, token: "intruder" })).toBe(
+			"in_flight",
+		);
+
+		// A stale worker releasing with its old token must not drop the live lock.
+		await releaseStripeWebhookEvent({ eventKey, token: "intruder" });
+		expect(await getMiscRedis().get(eventKey)).toBe("processing:owner");
+
+		await completeStripeWebhookEvent({ eventKey, token: "intruder" });
+		expect(await getMiscRedis().get(eventKey)).toBe("processing:owner");
+
+		await completeStripeWebhookEvent({ eventKey, token: "owner" });
+		expect(await getMiscRedis().get(eventKey)).toBe("completed");
+
+		await getMiscRedis().del(eventKey);
+		expect(await claimStripeWebhookEvent({ eventKey, token: "owner" })).toBe(
+			"claimed",
+		);
+		await releaseStripeWebhookEvent({ eventKey, token: "owner" });
+		expect(await getMiscRedis().get(eventKey)).toBeNull();
 	},
 );

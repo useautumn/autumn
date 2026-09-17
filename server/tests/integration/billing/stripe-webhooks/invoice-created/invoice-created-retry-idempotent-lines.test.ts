@@ -2,25 +2,28 @@
  * TDD test for invoice.created being safe to replay after a mid-handler crash.
  *
  * Incident (Surge sandbox, 2026-09-14): the handler crashed on a Stripe 429
- * after some lines had landed, Stripe retried the event, and the retry added
- * the usage lines a second time (random idempotency keys, no existing-line
- * check). A later retry against the finalized invoice threw
- * invoice_not_editable, so the balance resets never ran either.
+ * after some lines had landed, Stripe retried, and the retry added the usage
+ * lines a second time (random idempotency keys, no existing-line check). A
+ * later retry against the finalized invoice threw invoice_not_editable, so
+ * the balance resets never ran either.
  *
- * The incident state is reproduced by letting the real webhook run (lines
- * added, balances reset), then rolling the customer entitlement back to its
- * pre-reset state, which is exactly what a crash between "lines added" and
- * "balances reset" leaves behind. Replaying the handler from that state must
- * recover: no new Stripe lines, same total, balances reset.
+ * The incident state is reproduced by letting the real webhook run on the
+ * draft cycle invoice (line added, balance reset), then rolling the customer
+ * entitlement back to its pre-reset state and tracking more usage, which is
+ * exactly what a crash between "line added" and "balance reset" followed by
+ * more traffic leaves behind. Replaying the handler from that state must
+ * recover: no new Stripe lines, the existing usage line updated to the grown
+ * amount, balances reset. The invoice is then finalized and must bill the
+ * grown amount exactly once.
  *
  * Red-failure mode (current behavior):
  *  - usage line ids are random per run, so the replay cannot see its own
- *    lines and either duplicates the usage line or throws
- *    "This invoice is no longer editable"
+ *    lines and duplicates the usage line
  *
  * Green-success criteria (after fix):
  *  - the cycle invoice carries one usage line whose Autumn id is scoped to it
- *  - the replay adds nothing to Stripe and completes the balance reset
+ *  - the replay adds nothing, updates the stale line, and completes the reset
+ *  - the finalized invoice total is base + the grown overage, billed once
  */
 
 import { expect, test } from "bun:test";
@@ -28,9 +31,10 @@ import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { hoursToFinalizeInvoice } from "@tests/utils/constants";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type Stripe from "stripe";
@@ -43,22 +47,25 @@ import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCust
 const INCLUDED_MESSAGES = 100;
 const TRACKED_MESSAGES = 250;
 const OVERAGE = TRACKED_MESSAGES - INCLUDED_MESSAGES;
+const EXTRA_MESSAGES_BETWEEN_ATTEMPTS = 30;
 
-const listAutumnLineIds = async ({
+const listAutumnLines = async ({
 	stripeCli,
 	invoiceId,
 }: {
 	stripeCli: Stripe;
 	invoiceId: string;
 }) => {
-	const lineIds: string[] = [];
+	const lines: Array<{ autumnLineItemId: string; amount: number }> = [];
 	for await (const line of stripeCli.invoices.listLineItems(invoiceId, {
 		limit: 100,
 	})) {
 		const autumnLineItemId = line.metadata?.autumn_line_item_id;
-		if (autumnLineItemId) lineIds.push(autumnLineItemId);
+		if (autumnLineItemId) lines.push({ autumnLineItemId, amount: line.amount });
 	}
-	return lineIds.sort();
+	return lines.sort((a, b) =>
+		a.autumnLineItemId.localeCompare(b.autumnLineItemId),
+	);
 };
 
 const getMessagesEntitlement = async ({
@@ -113,12 +120,13 @@ test.concurrent(
 			await getMessagesEntitlement({ ctx, customerId });
 
 		if (!testClockId) throw new Error("Scenario did not create a test clock");
-		// Pause at the cycle boundary so invoice.created runs on a draft, as in
-		// production, then advance again so Stripe finalizes and pays it.
-		await advanceToNextInvoice({
+		// Stop at the cycle boundary so invoice.created runs on a draft, as in
+		// production; the invoice is finalized in a second advance below.
+		const cycleBoundaryMs = await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId,
-			withPause: true,
+			numberOfMonths: 1,
+			waitForSeconds: 60,
 		});
 
 		const { fullCustomer: customerAfterCycle } = await getMessagesEntitlement({
@@ -139,18 +147,21 @@ test.concurrent(
 		);
 		if (!cycleInvoice) throw new Error("No subscription_cycle invoice found");
 
+		expect(cycleInvoice.status).toBe("draft");
+
 		// ── Real run: one usage line, id scoped to this invoice ──
-		const lineIdsAfterFirstRun = await listAutumnLineIds({
+		const linesAfterFirstRun = await listAutumnLines({
 			stripeCli: ctx.stripeCli,
 			invoiceId: cycleInvoice.id,
 		});
-		const usageLineIds = lineIdsAfterFirstRun.filter((lineId) =>
-			lineId.startsWith("invoice_li_usage_"),
+		const usageLines = linesAfterFirstRun.filter((line) =>
+			line.autumnLineItemId.startsWith("invoice_li_usage_"),
 		);
-		expect(usageLineIds).toHaveLength(1);
-		expect(usageLineIds[0]).toContain(cycleInvoice.id);
+		expect(usageLines).toHaveLength(1);
+		expect(usageLines[0]?.autumnLineItemId).toContain(cycleInvoice.id);
+		const usageLineId = usageLines[0]!.autumnLineItemId;
 
-		// ── Recreate the incident: lines landed, but the reset never ran ──
+		// ── Recreate the incident: line landed, reset never ran, more usage came in ──
 		await CusEntService.update({
 			ctx,
 			id: entitlementBeforeCycle.id,
@@ -164,6 +175,18 @@ test.concurrent(
 			ctx,
 			customerId,
 			source: "invoice-created-retry-test-rollback",
+		});
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: EXTRA_MESSAGES_BETWEEN_ATTEMPTS,
+		});
+		// Flush the tracked usage so the replay's line amount reflects it.
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId,
+			source: "invoice-created-retry-test-flush",
+			flushBalances: true,
 		});
 
 		const { fullCustomer: customerBeforeReplay } = await getMessagesEntitlement(
@@ -190,17 +213,38 @@ test.concurrent(
 			event: stripeEvent,
 		});
 
-		// ── Stripe untouched, balances recovered ──
-		const lineIdsAfterReplay = await listAutumnLineIds({
+		// ── No new lines; the usage line grew to cover the extra usage ──
+		const linesAfterReplay = await listAutumnLines({
 			stripeCli: ctx.stripeCli,
 			invoiceId: cycleInvoice.id,
 		});
-		expect(lineIdsAfterReplay).toEqual(lineIdsAfterFirstRun);
+		expect(linesAfterReplay.map((line) => line.autumnLineItemId)).toEqual(
+			linesAfterFirstRun.map((line) => line.autumnLineItemId),
+		);
+		const usageLineAfterReplay = linesAfterReplay.find(
+			(line) => line.autumnLineItemId === usageLineId,
+		);
+		const usageLineBefore = usageLines[0]!;
+		const perUnitMinor = usageLineBefore.amount / OVERAGE;
+		expect(usageLineAfterReplay?.amount).toBe(
+			usageLineBefore.amount + EXTRA_MESSAGES_BETWEEN_ATTEMPTS * perUnitMinor,
+		);
 
-		const invoiceAfterReplay = await ctx.stripeCli.invoices.retrieve(
+		// ── Finalize and pay; the grown amount is billed exactly once ──
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId,
+			startingFrom: new Date(cycleBoundaryMs),
+			numberOfHours: hoursToFinalizeInvoice,
+			waitForSeconds: 30,
+		});
+		const invoiceAfterFinalize = await ctx.stripeCli.invoices.retrieve(
 			cycleInvoice.id,
 		);
-		expect(invoiceAfterReplay.total).toBe(cycleInvoice.total);
+		expect(invoiceAfterFinalize.status).toBe("paid");
+		expect(invoiceAfterFinalize.total).toBe(
+			cycleInvoice.total + EXTRA_MESSAGES_BETWEEN_ATTEMPTS * perUnitMinor,
+		);
 
 		const { customerEntitlement: entitlementAfterReplay } =
 			await getMessagesEntitlement({ ctx, customerId });
@@ -217,7 +261,7 @@ test.concurrent(
 		expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,
-			latestTotal: cycleInvoice.total / 100,
+			latestTotal: invoiceAfterFinalize.total / 100,
 			latestInvoiceProductId: pro.id,
 		});
 	},

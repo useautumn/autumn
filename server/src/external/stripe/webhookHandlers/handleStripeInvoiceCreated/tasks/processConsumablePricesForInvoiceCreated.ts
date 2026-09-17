@@ -11,7 +11,11 @@ import { getLatestPeriodStart } from "@/external/stripe/stripeSubUtils/convertSu
 import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers/common";
 import { shouldDisableOverageBilling } from "@/external/stripe/webhookHandlers/common/shouldDisableOverageBilling";
 import { lineItemsToInvoiceAddLinesParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToInvoiceAddLinesParams";
-import { addStripeInvoiceLines } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
+import { lineItemToMetadata } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemToMetadata";
+import {
+	addStripeInvoiceLines,
+	updateStripeInvoiceLine,
+} from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
@@ -40,22 +44,87 @@ const hasTrialJustEnded = ({
 	return trialEnd === periodStart;
 };
 
-const getExistingAutumnLineItemIds = async ({
+type ExistingAutumnLine = { stripeLineItemId: string; billedAmount?: string };
+
+const getExistingAutumnLines = async ({
 	ctx,
 	invoiceId,
 }: {
 	ctx: StripeWebhookContext;
 	invoiceId: string;
-}): Promise<Set<string>> => {
+}): Promise<Map<string, ExistingAutumnLine>> => {
 	const stripeLineItems = await getStripeInvoiceLineItems({
 		stripeClient: ctx.stripeCli,
 		invoiceId,
 	});
-	return new Set(
-		stripeLineItems
-			.map((lineItem) => lineItem.metadata?.autumn_line_item_id)
-			.filter((lineItemId): lineItemId is string => Boolean(lineItemId)),
-	);
+	const existing = new Map<string, ExistingAutumnLine>();
+	for (const stripeLineItem of stripeLineItems) {
+		const autumnLineItemId = stripeLineItem.metadata?.autumn_line_item_id;
+		if (!autumnLineItemId) continue;
+		existing.set(autumnLineItemId, {
+			stripeLineItemId: stripeLineItem.id,
+			billedAmount: stripeLineItem.metadata?.autumn_line_amount,
+		});
+	}
+	return existing;
+};
+
+const isExistingLineStale = ({
+	lineItem,
+	existing,
+}: {
+	lineItem: LineItem;
+	existing: ExistingAutumnLine;
+}): boolean => {
+	if (existing.billedAmount === undefined) return false;
+	const currentAmount = lineItemToMetadata({ lineItem }).autumn_line_amount;
+	return String(currentAmount) !== existing.billedAmount;
+};
+
+/**
+ * A retry can find a line that was written by an earlier attempt whose reset
+ * never ran; usage tracked since then changed the amount. On a draft the line
+ * is updated so the reset stays correct; on a finalized invoice the delta is
+ * unbillable, so it is logged for manual remediation and the reset proceeds.
+ */
+const reconcileStaleExistingLines = async ({
+	ctx,
+	eventContext,
+	lineItems,
+	existingLines,
+}: {
+	ctx: StripeWebhookContext;
+	eventContext: InvoiceCreatedContext;
+	lineItems: LineItem[];
+	existingLines: Map<string, ExistingAutumnLine>;
+}) => {
+	const { stripeInvoice } = eventContext;
+	for (const lineItem of lineItems) {
+		const existing = existingLines.get(lineItem.id);
+		if (!existing || !isExistingLineStale({ lineItem, existing })) continue;
+
+		const [params] = lineItemsToInvoiceAddLinesParams({
+			lineItems: [lineItem],
+		});
+		if (!params) continue;
+
+		if (stripeInvoice.status !== "draft") {
+			ctx.logger.error(
+				`[invoice.created] Line ${lineItem.id} on finalized invoice ${stripeInvoice.id} was billed at ${existing.billedAmount} but is now ${lineItem.amount}; the difference needs manual remediation`,
+			);
+			continue;
+		}
+
+		ctx.logger.info(
+			`[invoice.created] Updating stale line ${lineItem.id} on ${stripeInvoice.id} from ${existing.billedAmount} to ${lineItem.amount}`,
+		);
+		await updateStripeInvoiceLine({
+			stripeCli: ctx.stripeCli,
+			invoiceId: stripeInvoice.id,
+			lineItemId: existing.stripeLineItemId,
+			params,
+		});
+	}
 };
 
 /**
@@ -80,12 +149,18 @@ const addPendingLineItemsToInvoice = async ({
 	const { stripeInvoice } = eventContext;
 	if (lineItems.length === 0) return;
 
-	const existingAutumnLineItemIds = await getExistingAutumnLineItemIds({
+	const existingLines = await getExistingAutumnLines({
 		ctx,
 		invoiceId: stripeInvoice.id,
 	});
+	await reconcileStaleExistingLines({
+		ctx,
+		eventContext,
+		lineItems,
+		existingLines,
+	});
 	const pendingLineItems = lineItems.filter(
-		(lineItem) => !existingAutumnLineItemIds.has(lineItem.id),
+		(lineItem) => !existingLines.has(lineItem.id),
 	);
 
 	if (pendingLineItems.length === 0) {
@@ -138,7 +213,11 @@ const addPendingLineItemsToInvoice = async ({
 					.map((lineItem) => lineItem.metadata?.autumn_line_item_id)
 					.filter((lineItemId): lineItemId is string => Boolean(lineItemId)),
 			)
-		: await getExistingAutumnLineItemIds({ ctx, invoiceId: stripeInvoice.id });
+		: new Set(
+				(
+					await getExistingAutumnLines({ ctx, invoiceId: stripeInvoice.id })
+				).keys(),
+			);
 	const missingLineItemIds = pendingLineItems
 		.map((lineItem) => lineItem.id)
 		.filter((lineItemId) => !landedAutumnLineItemIds.has(lineItemId));

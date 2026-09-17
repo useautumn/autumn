@@ -21,6 +21,9 @@
  *  - a non-draft invoice with every line present continues with balance resets
  *  - if Stripe's addLines response lacks a requested line, throw before resets
  *  - more than 100 pending lines are sent in batches
+ *  - a line already on a draft invoice whose amount is stale (usage grew
+ *    between attempts) is updated so the reset stays correct; on a finalized
+ *    invoice the delta is logged for remediation
  */
 
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
@@ -29,6 +32,7 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 type MockLineItem = {
 	id: string;
+	amount: number;
 	context: {
 		customerProduct: { id: string };
 		customerPrice: { id: string };
@@ -41,12 +45,18 @@ const addLinesCalls: Array<{
 	lines: Array<{ metadata?: { autumn_line_item_id?: string } }>;
 }> = [];
 const landedLineItemIds: string[] = [];
+const updateLineCalls: Array<{
+	lineItemId: string;
+	params: { amount?: number; metadata?: Record<string, string> };
+}> = [];
+const errorLogs: string[] = [];
 const createInvoiceItemCalls: unknown[] = [];
 const batchUpdateCalls: unknown[] = [];
 const arrearLineItemArgs: Array<Record<string, unknown>> = [];
 
-const makeLineItem = (id: string): MockLineItem => ({
+const makeLineItem = (id: string, amount = 100): MockLineItem => ({
 	id,
+	amount,
 	context: {
 		customerProduct: { id: "customer_product_test" },
 		customerPrice: { id: `customer_price_${id}` },
@@ -65,7 +75,18 @@ const creditLineItems = [
 let consumableLineItems: MockLineItem[] = usageLineItems;
 let invoiceCreditLineItems: MockLineItem[] = creditLineItems;
 let liveStripeLineItemIds: string[] = [];
+let liveStripeLineAmounts: Record<string, string> = {};
 let addLinesShouldDropLastLine = false;
+
+const liveLineFor = (lineItemId: string) => ({
+	id: `il_${lineItemId}`,
+	metadata: {
+		autumn_line_item_id: lineItemId,
+		...(liveStripeLineAmounts[lineItemId]
+			? { autumn_line_amount: liveStripeLineAmounts[lineItemId] }
+			: {}),
+	},
+});
 
 await mockModuleWithRestore("@/external/stripe/webhookHandlers/common", () => ({
 	eventContextToArrearLineItems: async (args: Record<string, unknown>) => {
@@ -82,9 +103,7 @@ await mockModuleWithRestore(
 	"@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems.js",
 	() => ({
 		getStripeInvoiceLineItems: async () =>
-			[...liveStripeLineItemIds, ...landedLineItemIds].map((lineItemId) => ({
-				metadata: { autumn_line_item_id: lineItemId },
-			})),
+			[...liveStripeLineItemIds, ...landedLineItemIds].map(liveLineFor),
 	}),
 );
 
@@ -94,12 +113,25 @@ await mockModuleWithRestore(
 		lineItemsToInvoiceAddLinesParams: ({
 			lineItems,
 		}: {
-			lineItems: Array<{ id: string }>;
+			lineItems: MockLineItem[];
 		}) =>
-			lineItems.map((lineItem, index) => ({
-				amount: (index + 1) * 100,
-				metadata: { autumn_line_item_id: lineItem.id },
+			lineItems.map((lineItem) => ({
+				amount: lineItem.amount,
+				metadata: {
+					autumn_line_item_id: lineItem.id,
+					autumn_line_amount: String(lineItem.amount),
+				},
 			})),
+	}),
+);
+
+await mockModuleWithRestore(
+	"@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemToMetadata",
+	() => ({
+		lineItemToMetadata: ({ lineItem }: { lineItem: MockLineItem }) => ({
+			autumn_line_item_id: lineItem.id,
+			autumn_line_amount: String(lineItem.amount),
+		}),
 	}),
 );
 
@@ -134,6 +166,16 @@ await mockModuleWithRestore(
 		createStripeInvoiceItems: async (args: unknown) => {
 			createInvoiceItemCalls.push(args);
 			return [];
+		},
+		updateStripeInvoiceLine: async (args: {
+			lineItemId: string;
+			params: { amount?: number; metadata?: Record<string, string> };
+		}) => {
+			updateLineCalls.push({
+				lineItemId: args.lineItemId,
+				params: args.params,
+			});
+			return { id: args.lineItemId };
 		},
 	}),
 );
@@ -190,7 +232,9 @@ const ctx = {
 	logger: {
 		info: () => undefined,
 		warn: () => undefined,
-		error: () => undefined,
+		error: (message: string) => {
+			errorLogs.push(message);
+		},
 	},
 } as never;
 
@@ -209,7 +253,73 @@ describe("invoice.created consumable idempotency", () => {
 		consumableLineItems = usageLineItems;
 		invoiceCreditLineItems = creditLineItems;
 		liveStripeLineItemIds = [];
+		liveStripeLineAmounts = {};
+		updateLineCalls.length = 0;
+		errorLogs.length = 0;
 		addLinesShouldDropLastLine = false;
+	});
+
+	test("updates an existing draft line whose billed amount is stale after usage grew between attempts", async () => {
+		const grown = makeLineItem(usageLineItems[0]!.id, 150);
+		consumableLineItems = [grown, usageLineItems[1]!];
+		liveStripeLineItemIds = [grown.id];
+		liveStripeLineAmounts = { [grown.id]: "100" };
+
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext(),
+		});
+
+		expect(updateLineCalls).toEqual([
+			{
+				lineItemId: `il_${grown.id}`,
+				params: {
+					amount: 150,
+					metadata: {
+						autumn_line_item_id: grown.id,
+						autumn_line_amount: "150",
+					},
+				},
+			},
+		]);
+		expect(sentLineItemIds()).toEqual([
+			usageLineItems[1]!.id,
+			...creditLineItems.map((lineItem) => lineItem.id),
+		]);
+		expect(batchUpdateCalls).toHaveLength(1);
+	});
+
+	test("leaves an existing line alone when its billed amount still matches", async () => {
+		liveStripeLineItemIds = [usageLineItems[0]!.id];
+		liveStripeLineAmounts = { [usageLineItems[0]!.id]: "100" };
+
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext(),
+		});
+
+		expect(updateLineCalls).toEqual([]);
+	});
+
+	test("logs a stale line on a finalized invoice for remediation and still resets balances", async () => {
+		const grown = makeLineItem(usageLineItems[0]!.id, 150);
+		consumableLineItems = [grown, usageLineItems[1]!];
+		liveStripeLineItemIds = [
+			grown.id,
+			usageLineItems[1]!.id,
+			...creditLineItems.map((lineItem) => lineItem.id),
+		];
+		liveStripeLineAmounts = { [grown.id]: "100" };
+
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext({ invoiceStatus: "paid" }),
+		});
+
+		expect(updateLineCalls).toEqual([]);
+		expect(addLinesCalls).toEqual([]);
+		expect(errorLogs.some((message) => message.includes(grown.id))).toBe(true);
+		expect(batchUpdateCalls).toHaveLength(1);
 	});
 
 	test("sends usage and credit lines in a single bulk addLines call", async () => {

@@ -4,11 +4,14 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { runStripeWebhookHandlers } from "../runStripeWebhookHandlers.js";
+import { isStripeWebhookLockRequired } from "../webhookMiddlewares/classifyStripeWebhookAckMode.js";
 import {
 	buildStripeWebhookEventKey,
 	claimStripeWebhookEvent,
 	completeStripeWebhookEvent,
+	newStripeWebhookLockToken,
 	releaseStripeWebhookEvent,
+	startStripeWebhookLockRenewal,
 } from "../webhookMiddlewares/stripeIdempotencyMiddleware.js";
 import { syncStripeEventToSyncDb } from "../webhookMiddlewares/stripeSyncMiddleware.js";
 import { attachStripeEventCustomer } from "../webhookMiddlewares/stripeToAutumnCustomerMiddleware.js";
@@ -23,7 +26,7 @@ export type StripeWebhookReplayPayload = {
 	failureReason: string;
 };
 
-/** Thrown when another instance holds the event lock; retryable via SQS. */
+/** Thrown when the event lock is held elsewhere or unavailable but required; retryable via SQS. */
 export class StripeWebhookReplayInFlightError extends Error {
 	constructor(eventId: string) {
 		super(`Stripe webhook replay in flight for event ${eventId}`);
@@ -62,7 +65,9 @@ export const runStripeWebhookReplay = async ({
 		env: ctx.env,
 		eventId: stripeEvent.id,
 	});
-	const claim = await claimStripeWebhookEvent({ eventKey });
+	const token = newStripeWebhookLockToken();
+	const lockRequired = isStripeWebhookLockRequired({ event: stripeEvent });
+	const claim = await claimStripeWebhookEvent({ eventKey, token });
 
 	if (claim === "duplicate_completed") {
 		logger.info(
@@ -71,7 +76,7 @@ export const runStripeWebhookReplay = async ({
 		return;
 	}
 
-	if (claim === "in_flight") {
+	if (claim === "in_flight" || (claim === "unavailable" && lockRequired)) {
 		if (receiveCount >= STRIPE_WEBHOOK_REPLAY_MAX_ATTEMPTS) return;
 		throw new StripeWebhookReplayInFlightError(stripeEvent.id);
 	}
@@ -80,15 +85,25 @@ export const runStripeWebhookReplay = async ({
 		`[stripeWebhookReplay] Replaying ${stripeEvent.type} (${stripeEvent.id}), originally failed at ${new Date(payload.failedAt).toISOString()}: ${payload.failureReason}`,
 	);
 
+	const stopRenewal =
+		claim === "claimed" && lockRequired
+			? startStripeWebhookLockRenewal({ eventKey, token })
+			: undefined;
 	try {
 		await runStripeWebhookHandlers({ ctx: routedCtx });
 	} catch (error) {
-		if (claim === "claimed") await releaseStripeWebhookEvent({ eventKey });
+		if (claim === "claimed") {
+			await releaseStripeWebhookEvent({ eventKey, token });
+		}
 		if (receiveCount >= STRIPE_WEBHOOK_REPLAY_MAX_ATTEMPTS) return;
 		throw error;
+	} finally {
+		stopRenewal?.();
 	}
 
-	if (claim === "claimed") await completeStripeWebhookEvent({ eventKey });
+	if (claim === "claimed") {
+		await completeStripeWebhookEvent({ eventKey, token });
+	}
 
 	// Post-processing mirrors the route's refresh + sync middlewares (best-effort).
 	if (routedCtx.fullCustomer?.id && !routedCtx.skipSubjectCacheDeletion) {
