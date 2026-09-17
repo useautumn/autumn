@@ -191,8 +191,8 @@ export function InvoiceDetailSheet({
 		invoiceIsStripe &&
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Uncollectible);
-	// Reissue replaces an unpaid invoice, so it offers the same invoices as void.
-	const canReissue = canVoid;
+	// Reissue only replaces an open invoice; an uncollectible one is rejected.
+	const canReissue = invoiceIsStripe && invoice.status === InvoiceStatus.Open;
 	const stripeConnectViewAsInvoiceLink =
 		invoiceIsStripe && isAdmin && masterStripeAccount?.id && stripeAccount?.id
 			? getStripeConnectViewAsLink({
