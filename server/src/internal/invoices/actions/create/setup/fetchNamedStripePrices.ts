@@ -1,5 +1,6 @@
 import { type CreateInvoiceParams, ErrCode, RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
+import { getStripePrice } from "@/external/stripe/prices/operations/getStripePrice";
 
 /** Every Stripe price the request named, keyed by id. */
 export type NamedStripePrices = Map<string, Stripe.Price>;
@@ -38,17 +39,23 @@ export const fetchNamedStripePrices = async ({
 	const ids = namedPriceIds({ params });
 	if (ids.length === 0) return new Map();
 
+	// getStripePrice returns undefined only for a missing price; a Stripe
+	// outage propagates instead of being reported as an invalid request.
 	const prices = await Promise.all(
 		ids.map(async (id) => {
-			try {
-				return await stripeCli.prices.retrieve(id, { expand: ["tiers"] });
-			} catch {
+			const price = await getStripePrice({
+				stripeClient: stripeCli,
+				stripePriceId: id,
+				expand: ["tiers"],
+			});
+			if (!price) {
 				throw new RecaseError({
 					message: `Stripe price ${id} not found`,
 					code: ErrCode.InvalidRequest,
 					statusCode: 400,
 				});
 			}
+			return price;
 		}),
 	);
 
