@@ -75,7 +75,8 @@ export const createSchedule = async ({
 			ctx,
 			billingContext,
 		});
-	handleCreateScheduleComputeErrors({
+	await handleCreateScheduleComputeErrors({
+		ctx,
 		billingContext,
 		autumnBillingPlan,
 		immediatePhaseTransition,

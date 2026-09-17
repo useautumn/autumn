@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { validateCustomerEntitlementBatchTransitions } from "@/internal/billing/v2/actions/batchTransition/errors/validateCustomerEntitlementBatchTransitions";
 import { assertNoAmbiguousDroppedLicenses } from "@/internal/billing/v2/common/errors/assertNoAmbiguousDroppedLicenses";
 import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/errors/handleLicenseTransitionErrors";
 import { matchCustomerLicenseSuccessors } from "@/internal/billing/v2/compute/customerLicenseTransitions/matchCustomerLicenseSuccessors";
@@ -46,10 +47,12 @@ export const handleCreateScheduleErrors = async ({
 	}
 };
 
-export const handleCreateScheduleComputeErrors = ({
+export const handleCreateScheduleComputeErrors = async ({
+	ctx,
 	autumnBillingPlan,
 	immediatePhaseTransition,
 }: {
+	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 	immediatePhaseTransition: ImmediatePhaseTransition;
@@ -67,6 +70,13 @@ export const handleCreateScheduleComputeErrors = ({
 		});
 		assertNoAmbiguousDroppedLicenses({ unmatched });
 	}
+
+	// Preflight the batch-transition limit, so an oversized pool fails before
+	// Stripe and customer product writes begin.
+	await validateCustomerEntitlementBatchTransitions({
+		ctx,
+		transitions: autumnBillingPlan.customerLicenseTransitions,
+	});
 };
 
 export const handleCreateScheduleBillingPlanErrors = ({
