@@ -195,7 +195,7 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 		).resolves.toBeUndefined();
 	});
 
-	test("rejects license-backed products expired by the computed plan", () => {
+	test("allows license-backed products expired by the computed plan", () => {
 		const customerProduct = {
 			id: "cus_product",
 			customer_licenses: [{ id: "license" }],
@@ -218,8 +218,23 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 				}),
 				autumnBillingPlan,
 			}),
-		).toThrow(
-			"billing.create_schedule does not support license-backed plans yet",
-		);
+		).not.toThrow();
+	});
+
+	test("rejects a transition whose incoming pool grants fewer seats than assigned", () => {
+		const autumnBillingPlan = {
+			insertCustomerProducts: [],
+			customerLicenseTransitions: [{ updates: { granted: 1, remaining: -1 } }],
+		} as unknown as AutumnBillingPlan;
+
+		expect(() =>
+			handleCreateScheduleComputeErrors({
+				billingContext: buildContext({
+					immediateStartsAt: Date.now(),
+					currentEpochMs: Date.now(),
+				}),
+				autumnBillingPlan,
+			}),
+		).toThrow("2 assigned, but the incoming plan grants 1");
 	});
 });
