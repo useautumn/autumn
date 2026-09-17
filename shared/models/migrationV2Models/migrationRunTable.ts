@@ -15,6 +15,8 @@ export const MigrationRunStatus = {
 	Queued: "queued",
 	Running: "running",
 	Succeeded: "succeeded",
+	/** Completed items, none of which changed anything. */
+	NoChanges: "no_changes",
 	Failed: "failed",
 	Canceled: "canceled",
 } as const;
@@ -26,6 +28,14 @@ export const ACTIVE_MIGRATION_RUN_STATUSES = [
 	MigrationRunStatus.Queued,
 	MigrationRunStatus.Running,
 ] as const;
+
+/** A run that will never change status again. */
+export const isTerminalMigrationRunStatus = (
+	status: MigrationRunStatus,
+): boolean =>
+	!(ACTIVE_MIGRATION_RUN_STATUSES as readonly MigrationRunStatus[]).includes(
+		status,
+	);
 
 export const MigrationStatus = {
 	Draft: "draft",
