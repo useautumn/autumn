@@ -83,7 +83,7 @@ describe("owned partition checkpoints", () => {
 				});
 			} finally {
 				await runtime.stop();
-				fixture.close();
+				await fixture.close();
 			}
 		},
 	);
@@ -120,7 +120,7 @@ describe("owned partition checkpoints", () => {
 			} finally {
 				publication.resolve({ kind: "published", etag: "late" });
 				await runtime.stop();
-				fixture.close();
+				await fixture.close();
 			}
 		},
 	);
@@ -143,7 +143,7 @@ describe("owned partition checkpoints", () => {
 			} finally {
 				gate.resolve();
 				await runtime.stop();
-				fixture.close();
+				await fixture.close();
 			}
 		},
 	);
@@ -178,7 +178,7 @@ describe("owned partition checkpoints", () => {
 		} finally {
 			gate.resolve();
 			await runtime.stop();
-			fixture.close();
+			await fixture.close();
 		}
 	});
 
@@ -193,7 +193,7 @@ describe("owned partition checkpoints", () => {
 			expect(fixture.clock.pendingTimers).toBe(0);
 		} finally {
 			await runtime.stop();
-			fixture.close();
+			await fixture.close();
 		}
 	});
 
@@ -219,7 +219,7 @@ describe("owned partition checkpoints", () => {
 				expect(fixture.clock.pendingTimers).toBe(0);
 			} finally {
 				await runtime.stop();
-				fixture.close();
+				await fixture.close();
 			}
 		},
 	);
@@ -281,7 +281,7 @@ describe("owned partition checkpoints", () => {
 			expect(check).toMatchObject({ allowed: true, balance: 5 });
 		} finally {
 			await runtime.stop();
-			fixture.close();
+			await fixture.close();
 		}
 	});
 });

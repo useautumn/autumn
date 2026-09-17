@@ -7,6 +7,7 @@ import type {
 	PartitionCheckpointSchedulerClock,
 	PartitionCheckpointSchedulerConfig,
 } from "./partitionCheckpointSchedulerConfig.js";
+import { receiptCleanupRequiresRecovery } from "./receiptCleanupFailure.js";
 
 export const prunePartitionCheckpointReceipts = async ({
 	entries,
@@ -47,6 +48,7 @@ export const prunePartitionCheckpointReceipts = async ({
 		const entry = pending.shift();
 		if (!entry || !isCurrent(entry)) continue;
 		const startedAt = clock.monotonicNow();
+		entry.health.cleanup.lastAttemptAt = clock.now();
 		try {
 			const { deletedCount } = stateStore.pruneExpiredTrackReceipts({
 				topic: entry.topic,
@@ -54,11 +56,9 @@ export const prunePartitionCheckpointReceipts = async ({
 				expiresAtOrBefore: cutoff,
 				limit: config.cleanupBatchSize,
 			});
-			const durationMs = Math.max(0, clock.monotonicNow() - startedAt);
-			spentMs += durationMs;
-			chunks += 1;
+			entry.cleanupAttempts = 0;
+			entry.health.cleanup.status = "healthy";
 			entry.health.cleanup.lastPrunedAt = clock.now();
-			entry.health.cleanup.lastDurationMs = durationMs;
 			entry.health.cleanup.deletedReceipts += deletedCount;
 			entry.health.cleanup.failure = null;
 			entry.health.cleanup.backlog =
@@ -66,8 +66,36 @@ export const prunePartitionCheckpointReceipts = async ({
 			entry.nextCleanupAt = clock.now() + config.cleanupIntervalMs;
 			if (deletedCount === config.cleanupBatchSize) pending.push(entry);
 		} catch (cause) {
-			entry.health.cleanup.failure = checkpointFailureOf({ cause });
-			onStateFailure({ entry, cause });
+			const recoveryRequired = receiptCleanupRequiresRecovery({ cause });
+			entry.cleanupAttempts = Math.min(
+				entry.cleanupAttempts + 1,
+				config.maxAttempts,
+			);
+			entry.health.cleanup.status = "degraded";
+			entry.health.cleanup.failure = {
+				...checkpointFailureOf({ cause }),
+				retriable: !recoveryRequired,
+			};
+			if (entry.health.cleanup.backlog === "clear")
+				entry.health.cleanup.backlog = "unknown";
+			entry.nextCleanupAt =
+				clock.now() +
+				Math.max(
+					config.cleanupIntervalMs,
+					Math.min(
+						config.maxBackoffMs,
+						config.initialBackoffMs * 2 ** (entry.cleanupAttempts - 1),
+					),
+				);
+			if (recoveryRequired) onStateFailure({ entry, cause });
+		} finally {
+			const durationMs = Math.max(0, clock.monotonicNow() - startedAt);
+			spentMs += durationMs;
+			chunks += 1;
+			entry.health.cleanup.lastDurationMs = durationMs;
+			entry.health.cleanup.nextAttemptAt = isCurrent(entry)
+				? entry.nextCleanupAt
+				: null;
 		}
 		await clock.yield();
 	}
