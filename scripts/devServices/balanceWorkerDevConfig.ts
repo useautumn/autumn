@@ -9,7 +9,10 @@ export function balanceWorkerDevConfig({
 }): Record<string, string> {
 	const port =
 		runtimeEnv.BALANCE_WORKER_PORT ?? String(balanceWorkerPortFor(worktreeNum));
+	const databaseUrl =
+		runtimeEnv.BALANCE_WORKER_DATABASE_URL ?? runtimeEnv.DATABASE_URL;
 	return {
+		...(databaseUrl && { BALANCE_WORKER_DATABASE_URL: databaseUrl }),
 		KAFKA_BROKERS: runtimeEnv.KAFKA_BROKERS ?? "127.0.0.1:19092",
 		KAFKA_AUTH_MODE: runtimeEnv.KAFKA_AUTH_MODE ?? "none",
 		KAFKAJS_LOG_LEVEL: runtimeEnv.KAFKAJS_LOG_LEVEL ?? "error",

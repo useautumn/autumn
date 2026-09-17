@@ -329,8 +329,8 @@ async function startDev() {
 				colors.push("white");
 				cmds.push(
 					isWindows
-						? `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`
-						: `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`,
+						? `"cd apps/leaf && bun run eve dev --no-ui --port ${EVE_PORT}"`
+						: `"cd apps/leaf && bun run eve dev --no-ui --port ${EVE_PORT}"`,
 				);
 			} else {
 				console.error("CLOUD_AGENT=1 — skipping eve\n");

@@ -56,4 +56,23 @@ describe("local balance worker launch settings", () => {
 		expect(env.KAFKA_BROKERS).toBe("127.0.0.1:23992");
 		expect(env.BALANCE_WORKER_METERING_TOPIC).toBe("custom");
 	});
+	test("uses the resolved worktree database unless explicitly overridden", () => {
+		const databaseUrl = "postgresql://postgres:postgres@localhost:5432/autumn";
+		expect(
+			balanceWorkerDevConfig({
+				worktreeNum: 50,
+				runtimeEnv: { DATABASE_URL: databaseUrl },
+			}).BALANCE_WORKER_DATABASE_URL,
+		).toBe(databaseUrl);
+		expect(
+			balanceWorkerDevConfig({
+				worktreeNum: 50,
+				runtimeEnv: {
+					DATABASE_URL: databaseUrl,
+					BALANCE_WORKER_DATABASE_URL:
+						"postgresql://worker:worker@localhost:5432/worker",
+				},
+			}).BALANCE_WORKER_DATABASE_URL,
+		).toBe("postgresql://worker:worker@localhost:5432/worker");
+	});
 });
