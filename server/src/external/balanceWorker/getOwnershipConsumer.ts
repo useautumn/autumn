@@ -1,6 +1,7 @@
 import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
 import {
 	createKafkaClient,
+	createKafkaTransport,
 	createOwnershipConsumer,
 	type OwnershipConsumer,
 } from "@autumn/kafka";
@@ -31,7 +32,10 @@ export function createServerOwnershipConsumer({
 		createKafkaClient({
 			clientId: groupIdPrefix,
 			brokers: env.KAFKA_BROKERS,
-			transport: {},
+			transport: createKafkaTransport({
+				authMode: env.KAFKA_AUTH_MODE,
+				region: env.AWS_REGION,
+			}),
 			limits: {
 				connectionTimeoutMs: 3_000,
 				requestTimeoutMs: 10_000,
