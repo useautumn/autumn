@@ -9,20 +9,20 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { computeRebalancedAutoTopUp } from "@/internal/balances/autoTopUp/compute/computeRebalancedAutoTopUp.js";
 import { lineItemsToInvoiceAddLinesParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToInvoiceAddLinesParams.js";
-import type { ThresholdSettlementContext } from "../thresholdSettlementContext.js";
+import type { ThresholdBillingContext } from "../thresholdBillingContext.js";
 
-export const computeThresholdSettlementPlan = ({
+export const computeThresholdBillingPlan = ({
 	ctx,
-	settlementContext,
+	billingContext,
 }: {
 	ctx: AutumnContext;
-	settlementContext: ThresholdSettlementContext;
+	billingContext: ThresholdBillingContext;
 }): {
 	autumnBillingPlan: AutumnBillingPlan;
 	stripeBillingPlan: StripeBillingPlan;
 } => {
 	const { customerEntitlement, customerProduct, customerPrice, chargeUnits } =
-		settlementContext;
+		billingContext;
 	const feature = customerEntitlement.entitlement.feature;
 
 	const lineItemContext = {
@@ -31,7 +31,7 @@ export const computeThresholdSettlementPlan = ({
 		feature,
 		currency: billingContextToCurrency({
 			org: ctx.org,
-			billingContext: settlementContext,
+			billingContext: billingContext,
 		}),
 		direction: "charge",
 		now: Date.now(),
@@ -46,12 +46,12 @@ export const computeThresholdSettlementPlan = ({
 
 	if (lineItem.amount <= 0) {
 		throw new InternalError({
-			message: `[computeThresholdSettlementPlan] Settlement amount for feature ${feature.id} was ${lineItem.amount}`,
+			message: `[computeThresholdBillingPlan] Settlement amount for feature ${feature.id} was ${lineItem.amount}`,
 		});
 	}
 
 	const { deltas } = computeRebalancedAutoTopUp({
-		fullCustomer: settlementContext.fullCustomer,
+		fullCustomer: billingContext.fullCustomer,
 		featureId: feature.id,
 		quantity: chargeUnits,
 		prepaidCustomerEntitlementId: customerEntitlement.id,
@@ -59,7 +59,7 @@ export const computeThresholdSettlementPlan = ({
 
 	return {
 		autumnBillingPlan: {
-			customerId: settlementContext.fullCustomer?.id ?? "",
+			customerId: billingContext.fullCustomer?.id ?? "",
 			insertCustomerProducts: [],
 			lineItems: [lineItem],
 			updateCustomerEntitlements: [],

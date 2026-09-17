@@ -3,10 +3,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getBillableFullCustomer } from "@/internal/balances/getBillableFullCustomer.js";
 import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeCustomerForBilling.js";
 import { resolveThresholdSettlement } from "../resolve/resolveThresholdSettlement.js";
-import type { ThresholdSettlementContext } from "../thresholdSettlementContext.js";
+import type { ThresholdBillingContext } from "../thresholdBillingContext.js";
 
-export type SetupThresholdSettlementResult =
-	| { ok: true; settlementContext: ThresholdSettlementContext }
+export type SetupThresholdBillingResult =
+	| { ok: true; billingContext: ThresholdBillingContext }
 	| {
 			ok: false;
 			reason:
@@ -15,7 +15,7 @@ export type SetupThresholdSettlementResult =
 				| "nothing_to_settle";
 	  };
 
-export const setupThresholdSettlementContext = async ({
+export const setupThresholdBillingContext = async ({
 	ctx,
 	customerId,
 	featureId,
@@ -23,11 +23,11 @@ export const setupThresholdSettlementContext = async ({
 	ctx: AutumnContext;
 	customerId: string;
 	featureId: string;
-}): Promise<SetupThresholdSettlementResult> => {
+}): Promise<SetupThresholdBillingResult> => {
 	const fullCustomer = await getBillableFullCustomer({
 		ctx,
 		customerId,
-		source: "setupThresholdSettlementContext",
+		source: "setupThresholdBillingContext",
 	});
 
 	if (!fullCustomer?.processor?.id) {
@@ -52,7 +52,7 @@ export const setupThresholdSettlementContext = async ({
 
 	return {
 		ok: true,
-		settlementContext: {
+		billingContext: {
 			fullCustomer,
 			fullProducts: [cusProductToProduct({ cusProduct: customerProduct })],
 			featureQuantities: [],

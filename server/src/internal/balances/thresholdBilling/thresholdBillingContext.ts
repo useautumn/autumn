@@ -5,7 +5,7 @@ import type {
 	FullCustomerPrice,
 } from "@autumn/shared";
 
-export interface ThresholdSettlementContext extends BillingContext {
+export interface ThresholdBillingContext extends BillingContext {
 	customerEntitlement: FullCusEntWithFullCusProduct;
 	customerProduct: FullCusProduct;
 	customerPrice: FullCustomerPrice;

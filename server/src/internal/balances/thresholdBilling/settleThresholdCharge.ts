@@ -5,9 +5,9 @@ import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBilling
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
 import { clearThresholdPastDue } from "./clearThresholdPastDue.js";
-import { computeThresholdSettlementPlan } from "./compute/computeThresholdSettlementPlan.js";
+import { computeThresholdBillingPlan } from "./compute/computeThresholdBillingPlan.js";
 import { markThresholdPastDue } from "./markThresholdPastDue.js";
-import { setupThresholdSettlementContext } from "./setup/setupThresholdSettlementContext.js";
+import { setupThresholdBillingContext } from "./setup/setupThresholdBillingContext.js";
 
 /**
  * Bills overage the customer has already consumed. Unlike an auto top-up grant
@@ -27,7 +27,7 @@ export const settleThresholdCharge = async ({
 	let settled = false;
 
 	const settle = async () => {
-		const setupResult = await setupThresholdSettlementContext({
+		const setupResult = await setupThresholdBillingContext({
 			ctx,
 			customerId,
 			featureId,
@@ -42,13 +42,13 @@ export const settleThresholdCharge = async ({
 
 		settled = true;
 
-		const { settlementContext } = setupResult;
+		const { billingContext } = setupResult;
 		const { autumnBillingPlan, stripeBillingPlan } =
-			computeThresholdSettlementPlan({ ctx, settlementContext });
+			computeThresholdBillingPlan({ ctx, billingContext });
 
 		const billingResult = await executeBillingPlan({
 			ctx,
-			billingContext: settlementContext,
+			billingContext,
 			billingPlan: { autumn: autumnBillingPlan, stripe: stripeBillingPlan },
 		});
 
@@ -60,7 +60,7 @@ export const settleThresholdCharge = async ({
 		if (collected) {
 			await clearThresholdPastDue({
 				ctx,
-				fullCustomer: settlementContext.fullCustomer,
+				fullCustomer: billingContext.fullCustomer,
 			});
 			return;
 		}
@@ -68,8 +68,8 @@ export const settleThresholdCharge = async ({
 		await markThresholdPastDue({
 			ctx,
 			customerId,
-			customerProduct: settlementContext.customerProduct,
-			fullCustomer: settlementContext.fullCustomer,
+			customerProduct: billingContext.customerProduct,
+			fullCustomer: billingContext.fullCustomer,
 		});
 	};
 
