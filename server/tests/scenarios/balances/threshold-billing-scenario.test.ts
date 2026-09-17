@@ -95,7 +95,7 @@ test(
 
 		await printOutcome({
 			label:
-				"included 0, tracked 25, threshold 20 → expect a $25 mid-cycle invoice",
+				"included 0, tracked 25, threshold 20 → expect a $20 mid-cycle invoice (whole chunks; 5 units stay unbilled)",
 			customerId,
 			autumnV2_3,
 			ctx,

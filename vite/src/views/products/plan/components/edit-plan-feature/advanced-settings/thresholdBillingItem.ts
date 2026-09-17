@@ -14,6 +14,16 @@ export const showsThresholdBilling = ({ item }: { item: ProductItem }) =>
 export const itemThreshold = ({ item }: { item: ProductItem }) =>
 	item.config?.threshold_billing?.threshold ?? null;
 
+/** An ineligible item must not keep a stale threshold: the API rejects it on save. */
+export const reconcileThresholdBilling = ({
+	item,
+}: {
+	item: ProductItem;
+}): ProductItem =>
+	showsThresholdBilling({ item }) || itemThreshold({ item }) === null
+		? item
+		: withThresholdBilling({ item, threshold: null });
+
 export const withThresholdBilling = ({
 	item,
 	threshold,
