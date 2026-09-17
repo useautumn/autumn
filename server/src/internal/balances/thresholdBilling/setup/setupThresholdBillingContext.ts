@@ -64,9 +64,9 @@ export const setupThresholdBillingContext = async ({
 			paymentMethod,
 			billingVersion: BillingVersion.V2,
 			actionSource: "threshold_billing",
-			// Names the product this invoice settles, so paying it unblocks only
-			// that product and not every threshold plan the customer holds.
-			actionCustomerProductId: customerProduct.id,
+			// The invoice's product ids cannot identify this row: add-ons are exempt
+			// from the duplicate-attach check, so one product can back several.
+			settledCustomerProductId: customerProduct.id,
 			customerEntitlement: settlement.customerEntitlement,
 			customerProduct,
 			customerPrice,

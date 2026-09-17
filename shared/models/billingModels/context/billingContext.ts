@@ -128,9 +128,9 @@ export interface BillingContext {
 	 * subscription metadata so downstream webhook handlers can recognise Autumn-driven
 	 * subscription mutations and skip auto-sync. */
 	actionSource?: string;
-	/** Names the customer product an action settles, so a paid invoice resolves
-	 * back to the one product it covers. */
-	actionCustomerProductId?: string;
+	/** The customer product this invoice settles. Stamped onto Stripe invoice
+	 * metadata so paying it resolves back to that one row. */
+	settledCustomerProductId?: string;
 
 	anchorResetRefund?: AnchorResetRefund;
 
