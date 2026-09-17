@@ -5,7 +5,7 @@ import {
 	InsufficientBalanceError,
 	type TrackParams,
 } from "@autumn/shared";
-import { fullSubjectToCatalogRows } from "@/internal/balances/balanceWorker/fullSubjectToCustomerState.js";
+import { fullSubjectToCatalogRows } from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
 import { initializeBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/initializeBalanceWorkerCustomer.js";
 import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
 import { runBalanceWorkerTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js";

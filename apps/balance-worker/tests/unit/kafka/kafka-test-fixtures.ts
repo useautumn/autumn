@@ -2,9 +2,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
-	CustomerState,
-	CustomerStateMutation,
 	MeteringIdentity,
+	SubjectState,
+	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import {
 	type OwnedPartitionHealth,
@@ -13,7 +13,7 @@ import {
 import { openStateStore } from "../../../src/state/openStateStore.js";
 import type { StateStore } from "../../../src/state/types/stateStore.js";
 import {
-	createState as createCustomerStateFixture,
+	createState as createSubjectStateFixture,
 	createTrackMutation,
 	testIdentity,
 } from "../../fixtures/mutations.js";
@@ -29,18 +29,18 @@ export const createState = ({
 }: {
 	balance?: number;
 	identity?: MeteringIdentity;
-} = {}): CustomerState =>
-	createCustomerStateFixture({ balance, identity: stateIdentity });
+} = {}): SubjectState =>
+	createSubjectStateFixture({ balance, identity: stateIdentity });
 
 export const createMutation = ({
 	state,
 	commandId = "cmd_1",
 	requestId = "req_1",
 }: {
-	state: CustomerState;
+	state: SubjectState;
 	commandId?: string;
 	requestId?: string;
-}): CustomerStateMutation =>
+}): SubjectStateMutation =>
 	createTrackMutation({ state, commandId, requestId });
 
 export const createStoreFixture = ({
@@ -308,7 +308,7 @@ export function createKafkaCommittedMutationAppender({
 export function serializeKafkaMutationRecord({
 	mutation,
 }: {
-	mutation: CustomerStateMutation;
+	mutation: SubjectStateMutation;
 }) {
 	return serializeMeteringRecord({ record: mutation });
 }

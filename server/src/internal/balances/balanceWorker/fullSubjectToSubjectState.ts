@@ -1,7 +1,7 @@
 import {
 	type CatalogRow,
-	type CustomerState,
-	customerRowsToCustomerState,
+	customerRowsToSubjectState,
+	type SubjectState,
 } from "@autumn/balance-engine";
 import {
 	CusProductStatus,
@@ -149,7 +149,7 @@ export function selectMeteringRows({
 	return { customerProducts, customerEntitlements };
 }
 
-export function fullSubjectToCustomerState({
+export function fullSubjectToSubjectState({
 	ctx,
 	fullSubject,
 	featureIds,
@@ -157,9 +157,9 @@ export function fullSubjectToCustomerState({
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	featureIds: readonly string[];
-}): CustomerState {
+}): SubjectState {
 	const rows = selectMeteringRows({ ctx, fullSubject, featureIds });
-	return customerRowsToCustomerState({
+	return customerRowsToSubjectState({
 		identity: {
 			orgId: ctx.org.id,
 			env: ctx.env,

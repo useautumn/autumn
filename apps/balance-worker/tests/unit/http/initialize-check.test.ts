@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import {
 	applyMutation,
 	computeInitialize,
-	createCustomerState,
+	createSubjectState,
 	parseCheckCommand,
 	parseInitializeCommand,
 	parseTrackCommand,
@@ -28,7 +28,7 @@ const identity = {
 	customerId: "external_customer",
 	entityId: null,
 };
-const state = createCustomerState({
+const state = createSubjectState({
 	identity,
 	customerEntitlements: [
 		createCustomerEntitlement({

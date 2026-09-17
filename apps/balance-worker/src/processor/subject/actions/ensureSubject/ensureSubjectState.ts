@@ -1,7 +1,7 @@
 import {
-	type CustomerState,
 	type MeteringIdentity,
 	meteringIdentityToSubjectKey,
+	type SubjectState,
 } from "@autumn/balance-engine";
 import type { SubjectScope } from "../../types/subject.js";
 import { hydrateSubjectState } from "./hydrateSubjectState.js";
@@ -13,7 +13,7 @@ export const ensureSubjectState = async ({
 }: {
 	scope: SubjectScope;
 	identity: MeteringIdentity;
-}): Promise<CustomerState> => {
+}): Promise<SubjectState> => {
 	const state = scope.ctx.writer.readFreshestState({ identity });
 	if (state) return state;
 

@@ -34,12 +34,13 @@ const initializeSchema = ({ database }: { database: Database }) => {
 		`);
 		database.run(`
 			CREATE TABLE IF NOT EXISTS subject_states (
-				partition_key TEXT PRIMARY KEY,
+				subject_key TEXT PRIMARY KEY,
+				partition_key TEXT NOT NULL,
 				topic TEXT NOT NULL,
 				partition_id INTEGER NOT NULL CHECK (partition_id >= 0),
 				revision INTEGER NOT NULL CHECK (revision >= 0),
 				state_json TEXT NOT NULL,
-				UNIQUE (partition_key, topic, partition_id),
+				UNIQUE (subject_key, topic, partition_id),
 				FOREIGN KEY (topic, partition_id)
 					REFERENCES partition_progress(topic, partition_id)
 					ON DELETE CASCADE
@@ -57,13 +58,17 @@ const initializeSchema = ({ database }: { database: Database }) => {
 				mutation_json TEXT NOT NULL,
 				PRIMARY KEY (partition_key, mutation_id),
 				FOREIGN KEY (partition_key, topic, partition_id)
-					REFERENCES subject_states(partition_key, topic, partition_id)
+					REFERENCES subject_states(subject_key, topic, partition_id)
 					ON DELETE CASCADE
 			)
 		`);
 		database.run(`
 			CREATE INDEX IF NOT EXISTS subject_states_by_partition
 			ON subject_states (topic, partition_id)
+		`);
+		database.run(`
+			CREATE INDEX IF NOT EXISTS subject_states_by_customer
+			ON subject_states (partition_key)
 		`);
 		database.run(`
 			CREATE INDEX IF NOT EXISTS mutation_receipts_by_partition_expiry

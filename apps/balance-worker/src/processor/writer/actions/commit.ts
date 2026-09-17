@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import type { CustomerStateMutation } from "@autumn/balance-engine";
+import type { SubjectStateMutation } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import type {
 	DurableMutationApplyResult,
@@ -162,7 +162,7 @@ function persistedMutationOf({
 	scope: PartitionWriterScope;
 	result: DurableMutationApplyResult;
 	pending: PendingMutation;
-}): CustomerStateMutation {
+}): SubjectStateMutation {
 	if (result.kind !== "position_already_applied") return result.mutation;
 
 	const { mutation } = pending;

@@ -10,7 +10,7 @@ import { openStateStore } from "../../../../src/state/openStateStore.js";
 import {
 	createCustomerEntitlement,
 	createState,
-	seedCustomerState,
+	seedSubjectState,
 } from "../../../fixtures/mutations.js";
 
 export class SchedulerClock implements PartitionCheckpointSchedulerClock {
@@ -105,7 +105,7 @@ export const createSchedulerFixture = ({
 	const failures: unknown[] = [];
 	const initialize = ({ partition }: { partition: number }) => {
 		store.initializePartition({ topic, partition, nextOffset: 0n });
-		return seedCustomerState({
+		return seedSubjectState({
 			store,
 			topic,
 			partition,

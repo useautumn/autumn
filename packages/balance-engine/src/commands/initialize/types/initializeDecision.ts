@@ -1,5 +1,5 @@
-import type { CustomerState } from "../../../models/customerState.js";
+import type { SubjectState } from "../../../models/subjectState.js";
 
 export type InitializationDecision =
-	| { kind: "initialized" | "duplicate"; state: CustomerState }
+	| { kind: "initialized" | "duplicate"; state: SubjectState }
 	| { kind: "already_initialized" };

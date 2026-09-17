@@ -2,20 +2,22 @@ import {
 	applyMutation,
 	type Catalog,
 	type CatalogRow,
-	type CustomerState,
-	type CustomerStateMutation,
 	catalogRowsToCatalog,
 	computeInitialize,
 	computeTrack,
-	createCustomerState,
+	createSubjectState,
 	type MeteringIdentity,
-	meteringPartitionKeyOf,
+	meteringIdentityToSubjectKey,
 	type OverageBehavior,
 	parseInitializeCommand,
 	parseTrackCommand,
+	type SubjectState,
+	type SubjectStateMutation,
+	subjectStateToFullSubject,
 	type TrackCommand,
 	type WorkerCustomerEntitlement,
 	type WorkerCustomerProduct,
+	type WorkerFullSubject,
 } from "@autumn/balance-engine";
 import {
 	AllowanceType,
@@ -99,8 +101,8 @@ export const createState = ({
 	identity?: MeteringIdentity;
 	balance?: number;
 	customerEntitlements?: WorkerCustomerEntitlement[];
-} = {}): CustomerState =>
-	createCustomerState({
+} = {}): SubjectState =>
+	createSubjectState({
 		identity,
 		customerProducts: [createCustomerProduct()],
 		customerEntitlements: customerEntitlements ?? [
@@ -182,7 +184,7 @@ const productRowOf = ({
 export const createCatalogRowsFor = ({
 	state,
 }: {
-	state: CustomerState;
+	state: SubjectState;
 }): CatalogRow[] => [
 	...state.customerEntitlements.map((customerEntitlement) =>
 		entitlementRowOf({ customerEntitlement }),
@@ -199,11 +201,22 @@ export const createCatalogRowsFor = ({
 	),
 ];
 
-export const createCatalogFor = ({
+export const createCatalogFor = ({ state }: { state: SubjectState }): Catalog =>
+	catalogRowsToCatalog({ rows: createCatalogRowsFor({ state }) });
+
+/** The view a command computes against: state joined with the catalog it references. */
+export const createSubjectFor = ({
 	state,
+	entityId = null,
 }: {
-	state: CustomerState;
-}): Catalog => catalogRowsToCatalog({ rows: createCatalogRowsFor({ state }) });
+	state: SubjectState;
+	entityId?: string | null;
+}): WorkerFullSubject =>
+	subjectStateToFullSubject({
+		state,
+		catalog: createCatalogFor({ state }),
+		entityId,
+	});
 
 export const createTrackCommand = ({
 	identity = testIdentity,
@@ -243,7 +256,7 @@ export const createInitializeCommand = ({
 	requestId = "req_init_1",
 	occurredAt = testOccurredAt,
 }: {
-	state?: CustomerState;
+	state?: SubjectState;
 	commandId?: string;
 	requestId?: string;
 	occurredAt?: number;
@@ -268,12 +281,12 @@ export const createInitializeMutation = ({
 	occurredAt = testOccurredAt,
 	deduplicationExpiresAt = testDeduplicationExpiresAt,
 }: {
-	state?: CustomerState;
+	state?: SubjectState;
 	commandId?: string;
 	requestId?: string;
 	occurredAt?: number;
 	deduplicationExpiresAt?: number;
-} = {}): CustomerStateMutation =>
+} = {}): SubjectStateMutation =>
 	computeInitialize({
 		command: createInitializeCommand({
 			state,
@@ -290,7 +303,7 @@ export const createTrackMutation = ({
 	deduplicationExpiresAt = testDeduplicationExpiresAt,
 	...commandOverrides
 }: {
-	state?: CustomerState;
+	state?: SubjectState;
 	command?: TrackCommand;
 	deduplicationExpiresAt?: number;
 	commandId?: string;
@@ -299,13 +312,16 @@ export const createTrackMutation = ({
 	value?: number;
 	overageBehavior?: OverageBehavior;
 	occurredAt?: number;
-} = {}): CustomerStateMutation => {
+} = {}): SubjectStateMutation => {
+	const trackCommand =
+		command ??
+		createTrackCommand({ identity: state.identity, ...commandOverrides });
 	const decision = computeTrack({
-		state,
-		catalog: createCatalogFor({ state }),
-		command:
-			command ??
-			createTrackCommand({ identity: state.identity, ...commandOverrides }),
+		fullSubject: createSubjectFor({
+			state,
+			entityId: trackCommand.identity.entityId,
+		}),
+		command: trackCommand,
 		deduplicationExpiresAt,
 	});
 	if (decision.kind !== "new") {
@@ -317,8 +333,8 @@ export const createTrackMutation = ({
 export const requireNewMutation = ({
 	decision,
 }: {
-	decision: { kind: string; mutation?: CustomerStateMutation };
-}): CustomerStateMutation => {
+	decision: { kind: string; mutation?: SubjectStateMutation };
+}): SubjectStateMutation => {
 	if (decision.kind !== "new" || !decision.mutation) {
 		throw new Error(`Expected a new mutation, received ${decision.kind}`);
 	}
@@ -336,7 +352,7 @@ export const applyDurableMutation = ({
 	topic: string;
 	partition: number;
 	offset: bigint;
-	mutation: CustomerStateMutation;
+	mutation: SubjectStateMutation;
 }): DurableMutationApplyResult => {
 	const [result] = store.applyDurableMutations({
 		records: [{ position: { topic, partition, offset }, mutation }],
@@ -346,7 +362,7 @@ export const applyDurableMutation = ({
 };
 
 /** Seeds a customer the way the log does: one initialize mutation at `offset`. */
-export const seedCustomerState = ({
+export const seedSubjectState = ({
 	store,
 	topic,
 	partition,
@@ -359,10 +375,10 @@ export const seedCustomerState = ({
 	topic: string;
 	partition: number;
 	offset?: bigint;
-	state?: CustomerState;
+	state?: SubjectState;
 	commandId?: string;
 	deduplicationExpiresAt?: number;
-}): CustomerState => {
+}): SubjectState => {
 	const mutation = createInitializeMutation({
 		state,
 		commandId,
@@ -373,7 +389,7 @@ export const seedCustomerState = ({
 };
 
 /** Seeds state without consuming a log offset, the way a checkpoint restore does. */
-export const restoreCustomerStates = ({
+export const restoreSubjectStates = ({
 	store,
 	topic,
 	partition,
@@ -383,7 +399,7 @@ export const restoreCustomerStates = ({
 	store: Pick<StateStore, "restorePartitionCheckpoint" | "readNextOffset">;
 	topic: string;
 	partition: number;
-	states: CustomerState[];
+	states: SubjectState[];
 	nextOffset?: bigint;
 }): void => {
 	const existingNextOffset = store.readNextOffset({ topic, partition });
@@ -395,7 +411,7 @@ export const restoreCustomerStates = ({
 			partition,
 			nextOffset: nextOffset ?? existingNextOffset ?? 0n,
 			states: states.map((state) => ({
-				partitionKey: meteringPartitionKeyOf({ identity: state.identity }),
+				subjectKey: meteringIdentityToSubjectKey({ identity: state.identity }),
 				state,
 			})),
 			receipts: [],

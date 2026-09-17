@@ -6,7 +6,7 @@ import { workerEntitySchema } from "./rows/workerEntity.js";
 import { workerRolloverSchema } from "./rows/workerRollover.js";
 
 /** The customer's own rows, revisioned by the mutation log. Catalog rows are referenced by id, never embedded. */
-export const customerStateSchema = z
+export const subjectStateSchema = z
 	.object({
 		schemaVersion: z.literal(1),
 		identity: meteringIdentitySchema,
@@ -18,4 +18,4 @@ export const customerStateSchema = z
 	})
 	.strict();
 
-export type CustomerState = z.infer<typeof customerStateSchema>;
+export type SubjectState = z.infer<typeof subjectStateSchema>;

@@ -42,8 +42,8 @@ import {
 	createTestCatalogCache,
 } from "../../fixtures/catalog.js";
 import {
-	createState as createCustomerState,
-	restoreCustomerStates,
+	createState as createSubjectState,
+	restoreSubjectStates,
 } from "../../fixtures/mutations.js";
 import * as preparationFixtures from "../kafka/kafka-test-fixtures.js";
 
@@ -64,7 +64,7 @@ const createState = ({
 }: {
 	stateIdentity?: MeteringIdentity;
 	balance?: number;
-} = {}) => createCustomerState({ identity: stateIdentity, balance });
+} = {}) => createSubjectState({ identity: stateIdentity, balance });
 
 const createTrackCommand = ({
 	commandId,
@@ -274,7 +274,7 @@ const createStoreFixture = (): {
 	const store = openStateStore({
 		databasePath: join(directory, "balance-state.sqlite"),
 	});
-	restoreCustomerStates({
+	restoreSubjectStates({
 		store,
 		topic,
 		partition,

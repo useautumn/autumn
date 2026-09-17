@@ -14,12 +14,14 @@ import { describe, expect, test } from "bun:test";
 import {
 	type CatalogRow,
 	type CheckDecision,
-	type CustomerState,
 	catalogRowsToCatalog,
-	findCustomerEntitlementsForFeature,
+	fullCustomerEntitlementToRow,
 	type InitializationDecision,
 	type InitializeCommand,
+	type SubjectState,
+	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
+import { fullSubjectToCustomerEntitlements } from "@autumn/shared";
 import { createReplayHydrationCoordinator } from "@/internal/balances/replay/createReplayHydrationCoordinator.js";
 import type {
 	ReplayHydrationClock,
@@ -168,14 +170,19 @@ function checkDecisionOf({
 	state,
 	catalogRows,
 }: {
-	state: CustomerState;
+	state: SubjectState;
 	catalogRows: CatalogRow[];
 }): CheckDecision {
-	const [customerEntitlement] = findCustomerEntitlementsForFeature({
-		state,
-		catalog: catalogRowsToCatalog({ rows: catalogRows }),
-		featureId: "messages",
+	const [selected] = fullSubjectToCustomerEntitlements({
+		fullSubject: subjectStateToFullSubject({
+			state,
+			catalog: catalogRowsToCatalog({ rows: catalogRows }),
+		}),
+		featureIds: ["messages"],
 	});
+	const customerEntitlement = selected
+		? fullCustomerEntitlementToRow({ customerEntitlement: selected })
+		: undefined;
 	if (!customerEntitlement)
 		throw new Error("Fixture state must expose a messages entitlement");
 	return {

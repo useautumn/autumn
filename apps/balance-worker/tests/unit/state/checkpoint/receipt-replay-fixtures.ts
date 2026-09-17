@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
-	CustomerStateMutation,
+	SubjectStateMutation,
 	TrackDecision,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
@@ -48,7 +48,7 @@ const requireNewMutation = ({
 	decision,
 }: {
 	decision: TrackDecision;
-}): CustomerStateMutation => {
+}): SubjectStateMutation => {
 	if (decision.kind !== "new") throw new Error("Expected a new track mutation");
 	return decision.mutation;
 };

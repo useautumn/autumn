@@ -4,7 +4,7 @@ import type { PostgresContext } from "../../../types/postgresClient.js";
 /**
  * Single-customer port of getFullSubjectRowsQuery, keeping only what the balance
  * worker holds: customer-level products in the given statuses, their entitlements,
- * live loose entitlements, unexpired rollovers, and the catalog rows they reference.
+ * live loose entitlements, and unexpired rollovers. Catalog rows come from getCatalogRows.
  * Expiry is evaluated at `asOfTimestampMs` so a replay sees the same rows as the original.
  */
 export const subjectRowsSql = ({
@@ -80,24 +80,6 @@ export const subjectRowsSql = ({
 		FROM rollovers ro
 		WHERE ro.cus_ent_id IN (SELECT id FROM all_entitlements)
 			AND (ro.expires_at IS NULL OR ro.expires_at > ${asOfTimestampMs})
-	),
-
-	catalog_products AS (
-		SELECT p.*
-		FROM products p
-		WHERE p.internal_id IN (SELECT internal_product_id FROM cus_products)
-	),
-
-	catalog_entitlements AS (
-		SELECT e.*
-		FROM entitlements e
-		WHERE e.id IN (SELECT entitlement_id FROM all_entitlements)
-	),
-
-	catalog_features AS (
-		SELECT f.*
-		FROM features f
-		WHERE f.internal_id IN (SELECT internal_feature_id FROM catalog_entitlements)
 	)
 
 	SELECT json_build_object(
@@ -114,18 +96,6 @@ export const subjectRowsSql = ({
 			(SELECT json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST, ro.id) FROM cus_rollovers ro),
 			'[]'::json
 		),
-		'entities', '[]'::json,
-		'products', COALESCE(
-			(SELECT json_agg(row_to_json(p) ORDER BY p.internal_id) FROM catalog_products p),
-			'[]'::json
-		),
-		'entitlements', COALESCE(
-			(SELECT json_agg(row_to_json(e) ORDER BY e.id) FROM catalog_entitlements e),
-			'[]'::json
-		),
-		'features', COALESCE(
-			(SELECT json_agg(row_to_json(f) ORDER BY f.internal_id) FROM catalog_features f),
-			'[]'::json
-		)
+		'entities', '[]'::json
 	) AS envelope
 `;

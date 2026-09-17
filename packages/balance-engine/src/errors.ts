@@ -26,3 +26,11 @@ export class MutationSubjectMismatchError extends Error {
 		this.name = "MutationSubjectMismatchError";
 	}
 }
+
+/** State references a catalog row the catalog does not hold; the caller filled the catalog incompletely. */
+export class CatalogRowMissingError extends Error {
+	constructor({ table, id }: { table: string; id: string }) {
+		super(`Catalog row missing: ${table}:${id}`);
+		this.name = "CatalogRowMissingError";
+	}
+}

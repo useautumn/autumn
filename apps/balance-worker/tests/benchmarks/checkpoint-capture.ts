@@ -21,10 +21,10 @@ import { openStateStore } from "../../src/state/openStateStore.js";
 import type { CheckpointThreadFixtureConfig } from "../fixtures/checkpoint-thread.js";
 import {
 	applyDurableMutation,
-	createCatalogFor,
 	createCustomerEntitlement,
 	createState,
-	restoreCustomerStates,
+	createSubjectFor,
+	restoreSubjectStates,
 } from "../fixtures/mutations.js";
 
 const topic = "checkpoint-benchmark";
@@ -131,8 +131,7 @@ for (const customers of sizes) {
 				},
 			});
 			const decision = computeTrack({
-				state,
-				catalog: createCatalogFor({ state }),
+				fullSubject: createSubjectFor({ state }),
 				command,
 				deduplicationExpiresAt: now + 3_600_000,
 			});
@@ -140,7 +139,7 @@ for (const customers of sizes) {
 				throw new Error("Expected benchmark deduction");
 			const partitionKey = meteringPartitionKeyOf({ identity });
 			states.push({
-				partitionKey,
+				subjectKey: partitionKey,
 				state: applyMutation({ state, mutation: decision.mutation }),
 			});
 			receipts.push({
@@ -171,7 +170,7 @@ for (const customers of sizes) {
 			entityId: null,
 		} as const;
 		store.initializePartition({ topic, partition: 1, nextOffset: 0n });
-		restoreCustomerStates({
+		restoreSubjectStates({
 			store,
 			topic,
 			partition: 1,
@@ -207,8 +206,7 @@ for (const customers of sizes) {
 				},
 			});
 			const decision = computeTrack({
-				state,
-				catalog: createCatalogFor({ state }),
+				fullSubject: createSubjectFor({ state }),
 				command,
 				deduplicationExpiresAt: now + 3_600_000,
 			});
@@ -224,8 +222,7 @@ for (const customers of sizes) {
 			const after = store.readState({ identity });
 			if (!after) throw new Error("Missing hot customer after track");
 			computeCheck({
-				state: after,
-				catalog: createCatalogFor({ state: after }),
+				fullSubject: createSubjectFor({ state: after }),
 				command: {
 					schemaVersion: 1,
 					type: "check",

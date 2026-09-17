@@ -3,24 +3,32 @@ import {
 	applyMutation,
 	computeCheck as computeCheckDecision,
 	computeTrack,
+	type SubjectState,
 } from "../../../../src/balanceEngine.js";
 import {
-	createCatalogFor,
 	createCheckCommand,
 	createCustomerEntitlement,
 	createState,
+	createSubjectFor,
 	createTrackCommand,
 	deduplicationExpiresAt,
 	identity,
 	requireNewMutation,
 } from "../../engineFixtures.js";
 
-const computeCheck = (
-	input: Omit<Parameters<typeof computeCheckDecision>[0], "catalog">,
-) =>
+const computeCheck = ({
+	state,
+	command,
+}: {
+	state: SubjectState;
+	command: Parameters<typeof computeCheckDecision>[0]["command"];
+}) =>
 	computeCheckDecision({
-		...input,
-		catalog: createCatalogFor({ state: input.state }),
+		fullSubject: createSubjectFor({
+			state,
+			entityId: command.identity.entityId,
+		}),
+		command,
 	});
 
 describe("check computation", () => {
@@ -67,8 +75,7 @@ describe("check computation", () => {
 		const state = createState();
 		const mutation = requireNewMutation(
 			computeTrack({
-				state,
-				catalog: createCatalogFor({ state }),
+				fullSubject: createSubjectFor({ state }),
 				command: createTrackCommand(),
 				deduplicationExpiresAt,
 			}),
@@ -100,7 +107,7 @@ describe("check computation", () => {
 				state: createState(),
 				command: createCheckCommand({ entityId: "entity_1" }),
 			}),
-		).toEqual({ kind: "unsupported", reason: "entity_not_supported" });
+		).toEqual({ kind: "unsupported", reason: "entity_not_found" });
 		expect(
 			computeCheck({
 				state: createState(),

@@ -1,8 +1,8 @@
 import {
 	type CatalogRow,
-	type CustomerState,
 	catalogRowsToCatalog,
-	parseCustomerState,
+	parseSubjectState,
+	type SubjectState,
 } from "@autumn/balance-engine";
 import { ReplayHydrationSourceMismatchError } from "../replayHydrationErrors.js";
 import {
@@ -15,7 +15,7 @@ const featureIdsOf = ({
 	state,
 	catalogRows,
 }: {
-	state: CustomerState;
+	state: SubjectState;
 	catalogRows: CatalogRow[];
 }): string[] => {
 	const { features } = catalogRowsToCatalog({ rows: catalogRows });
@@ -34,13 +34,13 @@ export function validateSourceState({
 	catalogRows,
 	selection,
 }: {
-	input: CustomerState;
+	input: SubjectState;
 	catalogRows: CatalogRow[];
 	selection: NormalizedSelection;
-}): CustomerState {
-	let state: CustomerState;
+}): SubjectState {
+	let state: SubjectState;
 	try {
-		state = parseCustomerState({ input });
+		state = parseSubjectState({ input });
 	} catch (cause) {
 		throw new ReplayHydrationSourceMismatchError({
 			reason: cause instanceof Error ? cause.message : "invalid_state",

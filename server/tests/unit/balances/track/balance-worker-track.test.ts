@@ -1,9 +1,10 @@
 import { beforeEach, expect, test } from "bun:test";
 import {
-	type CustomerStateMutation,
 	catalogRowsToCatalog,
 	computeTrack,
 	type OverageBehavior,
+	type SubjectStateMutation,
+	subjectStateToFullSubject,
 	type TrackCommand,
 	type TrackDecision,
 } from "@autumn/balance-engine";
@@ -18,8 +19,8 @@ import {
 } from "@autumn/shared";
 import {
 	fullSubjectToCatalogRows,
-	fullSubjectToCustomerState,
-} from "@/internal/balances/balanceWorker/fullSubjectToCustomerState.js";
+	fullSubjectToSubjectState,
+} from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
 import { trackParamsToTrackCommand } from "@/internal/balances/track/balanceWorker/balanceWorkerTrackRequest.js";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 import { createCustomerFixture } from "../balanceWorker/customer-fixture.js";
@@ -286,10 +287,10 @@ function trackMutation({
 }: {
 	customer: ReturnType<typeof fixture>;
 	overageBehavior?: OverageBehavior;
-}): CustomerStateMutation {
+}): SubjectStateMutation {
 	const { ctx, fullSubject } = customer;
 	const featureIds = ["messages"];
-	const state = fullSubjectToCustomerState({ ctx, fullSubject, featureIds });
+	const state = fullSubjectToSubjectState({ ctx, fullSubject, featureIds });
 	const catalog = catalogRowsToCatalog({
 		rows: fullSubjectToCatalogRows({ ctx, fullSubject, featureIds }),
 	});
@@ -298,8 +299,7 @@ function trackMutation({
 		body: { ...customer.body, overage_behavior: overageBehavior },
 	});
 	const decision = computeTrack({
-		state,
-		catalog,
+		fullSubject: subjectStateToFullSubject({ state, catalog }),
 		command,
 		deduplicationExpiresAt: ctx.timestamp + 10_000,
 	});
@@ -312,8 +312,8 @@ function trackMutation({
 function echoedElsewhere({
 	mutation,
 }: {
-	mutation: CustomerStateMutation;
-}): CustomerStateMutation {
+	mutation: SubjectStateMutation;
+}): SubjectStateMutation {
 	return {
 		...mutation,
 		identity: {

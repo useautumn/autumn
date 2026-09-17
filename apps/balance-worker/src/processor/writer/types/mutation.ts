@@ -1,12 +1,12 @@
 import type {
-	CustomerState,
-	CustomerStateMutation,
 	MeteringIdentity,
+	SubjectState,
+	SubjectStateMutation,
 } from "@autumn/balance-engine";
 
 /** What the writer hands `mutate`: the customer's freshest state, null before initialize. */
 export type MutateParams = {
-	state: CustomerState | null;
+	state: SubjectState | null;
 };
 
 /** What a command hands the writer: who, which request, and how to decide it. */
@@ -23,8 +23,8 @@ export type MutationResult<Reply> =
 	/** Append this mutation; the customer's projection becomes nextState now. */
 	| {
 			kind: "write";
-			mutation: CustomerStateMutation;
-			nextState: CustomerState;
+			mutation: SubjectStateMutation;
+			nextState: SubjectState;
 	  }
 	/** Nothing to write: reply immediately. */
 	| { kind: "reply"; reply: Reply };
@@ -33,7 +33,7 @@ export type MutationResult<Reply> =
 export type CommittedMutation = {
 	/** "new" for the submission that wrote it, "duplicate" for retries of it. */
 	kind: "new" | "duplicate";
-	mutation: CustomerStateMutation;
+	mutation: SubjectStateMutation;
 };
 
 /** Returned synchronously by `decide`: the decision is made, durability is not. */

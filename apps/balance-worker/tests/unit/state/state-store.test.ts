@@ -5,9 +5,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	applyMutation,
-	type CustomerState,
 	OutOfOrderMutationError,
 	StaleMutationError,
+	type SubjectState,
 } from "@autumn/balance-engine";
 import { isPartitionInvariantCause } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
@@ -67,16 +67,16 @@ const seedCustomer = ({
 	commandId = "init_1",
 }: {
 	store: StateStore;
-	state?: CustomerState;
+	state?: SubjectState;
 	offset?: bigint;
 	commandId?: string;
-}): CustomerState => {
+}): SubjectState => {
 	const mutation = createInitializeMutation({ state, commandId });
 	applyDurableMutation({ store, topic, partition, offset, mutation });
 	return applyMutation({ state: null, mutation });
 };
 
-const balanceOf = ({ state }: { state: CustomerState | null }) =>
+const balanceOf = ({ state }: { state: SubjectState | null }) =>
 	state?.customerEntitlements.find((row) => row.id === "messages_monthly");
 
 describe("state store", () => {

@@ -1,9 +1,9 @@
 import { isDeepStrictEqual } from "node:util";
 import { StaleMutationError } from "../errors.js";
-import type { CustomerState } from "../models/customerState.js";
 import type { RowChange, TableRowChange } from "../models/rowChange.js";
+import type { SubjectState } from "../models/subjectState.js";
 
-type StateRow = CustomerState[RowChange["table"]][number];
+type StateRow = SubjectState[RowChange["table"]][number];
 
 /** Entities are addressed by internal_id, every other table by id. */
 const rowIdOf = ({ row }: { row: StateRow }): string =>
@@ -60,9 +60,9 @@ export const applyChanges = ({
 	state,
 	changes,
 }: {
-	state: CustomerState;
+	state: SubjectState;
 	changes: RowChange[];
-}): CustomerState => {
+}): SubjectState => {
 	let nextState = state;
 	for (const change of changes) {
 		switch (change.table) {

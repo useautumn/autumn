@@ -1,6 +1,6 @@
 import type {
-	CustomerState,
-	CustomerStateMutation,
+	SubjectState,
+	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type { CommittedMutation } from "./types/mutation.js";
 import type {
@@ -49,7 +49,7 @@ export function createPendingSettlement(): PendingSettlement {
 		return resolvers.promise;
 	}
 
-	function settle({ mutation }: { mutation: CustomerStateMutation }): void {
+	function settle({ mutation }: { mutation: SubjectStateMutation }): void {
 		for (const { kind, resolvers } of waiters) {
 			resolvers.resolve({ kind, mutation });
 		}
@@ -73,8 +73,8 @@ export function enqueueMutation({
 	scope: PartitionWriterScope;
 	pendingKey: string;
 	customerKey: string;
-	mutation: CustomerStateMutation;
-	nextState: CustomerState;
+	mutation: SubjectStateMutation;
+	nextState: SubjectState;
 }): Promise<CommittedMutation> {
 	const { state, config } = scope;
 	const customerPending =

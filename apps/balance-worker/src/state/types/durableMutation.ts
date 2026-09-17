@@ -1,19 +1,19 @@
 import type {
-	CustomerState,
-	CustomerStateMutation,
+	SubjectState,
+	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type { KafkaRecordPosition } from "./kafkaRecordPosition.js";
 
 export type DurableMutationRecord = {
 	position: KafkaRecordPosition;
-	mutation: CustomerStateMutation;
+	mutation: SubjectStateMutation;
 };
 
 export type DurableMutationApplyResult =
 	| {
 			kind: "applied" | "duplicate";
-			state: CustomerState;
-			mutation: CustomerStateMutation;
+			state: SubjectState;
+			mutation: SubjectStateMutation;
 			nextOffset: bigint;
 	  }
 	| { kind: "position_already_applied"; nextOffset: bigint };

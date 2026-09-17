@@ -1,6 +1,6 @@
 import {
 	meteringPartitionKeyOf,
-	parseCustomerStateMutation,
+	parseSubjectStateMutation,
 } from "@autumn/balance-engine";
 import { InvalidRecordError } from "../../lib/recordErrors.js";
 import {
@@ -24,7 +24,7 @@ function parseMeteringPayload({
 }: Pick<TopicRecordEnvelope, "type" | "payload">): MeteringRecord {
 	if (type !== "mutation") throw new InvalidRecordError();
 	try {
-		return parseCustomerStateMutation({ input: payload });
+		return parseSubjectStateMutation({ input: payload });
 	} catch (cause) {
 		throw new InvalidRecordError({ cause });
 	}

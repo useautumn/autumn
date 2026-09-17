@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { CustomerStateMutation } from "@autumn/balance-engine";
+import type { SubjectStateMutation } from "@autumn/balance-engine";
 import { Kafka, logLevel, type Producer } from "kafkajs";
 import {
 	createMeteringConsumer,
@@ -38,7 +38,7 @@ function createOutcome({
 	commandId,
 }: {
 	commandId: string;
-}): CustomerStateMutation {
+}): SubjectStateMutation {
 	return createTrackMutation({
 		state: createState({
 			identity: {
@@ -60,7 +60,7 @@ async function appendAbortedOutcome({
 }: {
 	producer: Producer;
 	topic: string;
-	record: CustomerStateMutation;
+	record: SubjectStateMutation;
 }): Promise<bigint> {
 	const transaction = await producer.transaction();
 	try {
@@ -84,7 +84,7 @@ async function appendCommittedOutcome({
 }: {
 	producer: Producer;
 	topic: string;
-	record: CustomerStateMutation;
+	record: SubjectStateMutation;
 }): Promise<{ baseOffset: bigint }> {
 	const publisher = createMeteringPublisher({ ctx: { producer } });
 	return publisher.append({ topic, partition, records: [record] });

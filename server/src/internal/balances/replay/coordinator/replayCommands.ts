@@ -1,11 +1,11 @@
 import {
 	type CatalogRow,
 	type CheckCommand,
-	type CustomerState,
 	type InitializeCommand,
 	parseCheckCommand,
 	parseInitializeCommand,
 	parseTrackCommand,
+	type SubjectState,
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import { ReplayHydrationInvalidSelectionError } from "../replayHydrationErrors.js";
@@ -86,7 +86,7 @@ export function buildInitializeCommand({
 	catalogRows,
 }: {
 	selection: NormalizedSelection;
-	state: CustomerState;
+	state: SubjectState;
 	catalogRows: CatalogRow[];
 }): InitializeCommand {
 	const commandId = commandIdOf({ selection });

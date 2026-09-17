@@ -5,12 +5,12 @@ import {
 	nonEmptyStringSchema,
 	timestampSchema,
 } from "../../../models/common/primitives.js";
-import { customerStateSchema } from "../../../models/customerState.js";
+import { subjectStateSchema } from "../../../models/subjectState.js";
 
 export const initializeCommandSchema = mutatingCommandSchema
 	.extend({
 		type: z.literal("initialize"),
-		state: customerStateSchema,
+		state: subjectStateSchema,
 		// The catalog rows the state references; the worker caches them, the log never carries them.
 		catalogRows: z.array(catalogRowSchema),
 	})

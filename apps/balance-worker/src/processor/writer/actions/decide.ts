@@ -1,8 +1,8 @@
 import {
-	type CustomerState,
-	type CustomerStateMutation,
 	type MeteringIdentity,
 	meteringPartitionKeyOf,
+	type SubjectState,
+	type SubjectStateMutation,
 } from "@autumn/balance-engine";
 import {
 	enqueueMutation,
@@ -99,7 +99,7 @@ export function readFreshestState({
 	scope: PartitionWriterScope;
 	customerKey: string;
 	identity: MeteringIdentity;
-}): CustomerState | null {
+}): SubjectState | null {
 	return (
 		scope.state.projectedStateByCustomerKey.get(customerKey) ??
 		scope.ctx.stateStore.readState({ identity })
@@ -114,7 +114,7 @@ function assertSameRequest({
 }: {
 	commandId: string;
 	fingerprint: string;
-	mutation: CustomerStateMutation;
+	mutation: SubjectStateMutation;
 }): void {
 	if (mutation.receipt.fingerprint === fingerprint) return;
 	throw new PartitionWriterCommandConflictError({ commandId });

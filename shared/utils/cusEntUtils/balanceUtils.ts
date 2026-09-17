@@ -2,13 +2,14 @@ import { AllowanceType } from "@models/productModels/entModels/entModels.js";
 import { Decimal } from "decimal.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { FullCustomerEntitlementView } from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { notNullish, nullish } from "../utils.js";
 import { cusEntToStartingBalance } from "./balanceUtils/cusEntToStartingBalance.js";
 
 export const getSummedEntityBalances = ({
 	cusEnt,
 }: {
-	cusEnt: FullCustomerEntitlement;
+	cusEnt: Pick<FullCustomerEntitlementView, "entities">;
 }) => {
 	if (nullish(cusEnt.entities)) {
 		return {
@@ -47,7 +48,7 @@ export const getCusEntBalance = ({
 	cusEnt,
 	entityId,
 }: {
-	cusEnt: FullCustomerEntitlement;
+	cusEnt: FullCustomerEntitlementView;
 	entityId?: string | null;
 }): {
 	balance: number;

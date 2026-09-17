@@ -10,8 +10,8 @@ import { parsePartitionCheckpoint } from "../../../../src/checkpoint/partitionCh
 import { ConflictingMutationReceiptError } from "../../../../src/state/stateStoreErrors.js";
 import {
 	applyDurableMutation,
-	createCatalogFor,
 	createCatalogRowsFor,
+	createSubjectFor,
 } from "../../../fixtures/mutations.js";
 import {
 	checkpointLimits,
@@ -151,8 +151,7 @@ describe("receipt reuse during checkpoint replay", () => {
 				const stateBefore = fixture.restoredStore.readState({ identity });
 				if (!stateBefore) throw new Error("Expected restored state");
 				const staleDecision = computeTrack({
-					state: stateBefore,
-					catalog: createCatalogFor({ state: stateBefore }),
+					fullSubject: createSubjectFor({ state: stateBefore }),
 					command: createCommand({ commandId: "cmd_stale", value: 1 }),
 					deduplicationExpiresAt: fixture.reusedMutation.receipt.expiresAt,
 				});
@@ -201,8 +200,7 @@ describe("receipt reuse during checkpoint replay", () => {
 				const currentState = fixture.restoredStore.readState({ identity });
 				if (!currentState) throw new Error("Expected restored state");
 				const conflicting = computeTrack({
-					state: currentState,
-					catalog: createCatalogFor({ state: currentState }),
+					fullSubject: createSubjectFor({ state: currentState }),
 					command: createCommand({
 						commandId: fixture.reusedCommand.commandId,
 						value: 1,

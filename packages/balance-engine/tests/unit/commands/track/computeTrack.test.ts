@@ -1,14 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
-	type CustomerStateMutation,
 	computeTrack as computeTrackDecision,
+	type SubjectState,
+	type SubjectStateMutation,
 	trackCommandFingerprintOf,
 	validateTrackMutation,
 } from "../../../../src/balanceEngine.js";
 import {
-	createCatalogFor,
 	createCustomerEntitlement,
 	createState,
+	createSubjectFor,
 	createTrackCommand,
 	deduplicationExpiresAt,
 	identity,
@@ -16,26 +17,25 @@ import {
 	trackResultOf,
 } from "../../engineFixtures.js";
 
-const computeTrack = (
-	input: Omit<
-		Parameters<typeof computeTrackDecision>[0],
-		"deduplicationExpiresAt" | "catalog"
-	>,
-) =>
+type TrackInput = {
+	state: SubjectState;
+	command: Parameters<typeof computeTrackDecision>[0]["command"];
+};
+
+const computeTrack = ({ state, command }: TrackInput) =>
 	computeTrackDecision({
-		...input,
-		catalog: createCatalogFor({ state: input.state }),
+		fullSubject: createSubjectFor({
+			state,
+			entityId: command.identity.entityId,
+		}),
+		command,
 		deduplicationExpiresAt,
 	});
 
-const trackMutation = (
-	input: Omit<
-		Parameters<typeof computeTrackDecision>[0],
-		"deduplicationExpiresAt" | "catalog"
-	>,
-) => requireNewMutation(computeTrack(input));
+const trackMutation = (input: TrackInput) =>
+	requireNewMutation(computeTrack(input));
 
-const updateChangesOf = ({ mutation }: { mutation: CustomerStateMutation }) =>
+const updateChangesOf = ({ mutation }: { mutation: SubjectStateMutation }) =>
 	mutation.changes.map((change) =>
 		change.op === "update"
 			? { id: change.id, before: change.before, after: change.after }
@@ -126,7 +126,7 @@ describe("track computation", () => {
 	});
 
 	test.concurrent("names every input outside the supported path", () => {
-		const otherCustomerState = createState();
+		const otherSubjectState = createState();
 		const commandForOtherCustomer = {
 			...createTrackCommand(),
 			identity: { ...identity, customerId: "cus_2" },
@@ -134,7 +134,7 @@ describe("track computation", () => {
 
 		expect(
 			computeTrack({
-				state: otherCustomerState,
+				state: otherSubjectState,
 				command: commandForOtherCustomer,
 			}),
 		).toEqual({ kind: "unsupported", reason: "subject_mismatch" });
@@ -143,7 +143,7 @@ describe("track computation", () => {
 				state: createState(),
 				command: createTrackCommand({ entityId: "entity_1" }),
 			}),
-		).toEqual({ kind: "unsupported", reason: "entity_not_supported" });
+		).toEqual({ kind: "unsupported", reason: "entity_not_found" });
 		expect(
 			computeTrack({
 				state: createState(),
@@ -166,16 +166,6 @@ describe("track computation", () => {
 			computeTrack({
 				state: createState(),
 				command: createTrackCommand({ featureId: "constructor" }),
-			}),
-		).toEqual({ kind: "unsupported", reason: "feature_not_found" });
-		expect(
-			computeTrackDecision({
-				state: createState(),
-				catalog: createCatalogFor({
-					state: createState({ customerEntitlements: [] }),
-				}),
-				command: createTrackCommand(),
-				deduplicationExpiresAt,
 			}),
 		).toEqual({ kind: "unsupported", reason: "feature_not_found" });
 		expect(

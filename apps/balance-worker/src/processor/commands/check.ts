@@ -27,6 +27,9 @@ export async function check({
 
 	const state = ctx.stateStore.readState({ identity: parsed.identity });
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
-	const catalog = ctx.subjectHydrator.readCatalog({ state });
-	return computeCheck({ state, catalog, command: parsed });
+	const fullSubject = ctx.subjectHydrator.readSubject({
+		state,
+		identity: parsed.identity,
+	});
+	return computeCheck({ fullSubject, command: parsed });
 }

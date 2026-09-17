@@ -2,7 +2,7 @@ import { describe, expect, spyOn, test } from "bun:test";
 import {
 	computeCheck,
 	computeTrack,
-	createCustomerState,
+	createSubjectState,
 	parseCheckCommand,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
@@ -27,8 +27,8 @@ import {
 	OwnedPartitionRecoveryRequiredError,
 } from "../../../src/runtime/runtimeErrors.js";
 import {
-	createCatalogFor,
 	createCustomerEntitlement,
+	createSubjectFor,
 } from "../../fixtures/mutations.js";
 import { createTestRuntimeResources } from "../kafka/kafka-test-fixtures.js";
 
@@ -51,7 +51,7 @@ const command = parseTrackCommand({
 		occurredAt: 1,
 	},
 });
-const state = createCustomerState({
+const state = createSubjectState({
 	identity: command.identity,
 	customerEntitlements: [
 		createCustomerEntitlement({
@@ -62,8 +62,7 @@ const state = createCustomerState({
 	],
 });
 const decision = computeTrack({
-	state,
-	catalog: createCatalogFor({ state }),
+	fullSubject: createSubjectFor({ state }),
 	command,
 	deduplicationExpiresAt: 1000,
 });
@@ -94,7 +93,7 @@ const fixture = ({
 			return decision;
 		},
 		check: async ({ command }) =>
-			computeCheck({ state, catalog: createCatalogFor({ state }), command }),
+			computeCheck({ fullSubject: createSubjectFor({ state }), command }),
 		drain: async () => undefined,
 	};
 	const process: BalanceWorkerRequestContext["runtime"]["process"] = (run) =>
@@ -385,8 +384,7 @@ describe("Balance worker HTTP", () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({
 			decision: computeCheck({
-				state,
-				catalog: createCatalogFor({ state }),
+				fullSubject: createSubjectFor({ state }),
 				command: checkCommand,
 			}),
 		});

@@ -1,18 +1,12 @@
 import {
 	CusProductSchema,
 	CustomerEntitlementSchema,
-	EntitlementSchema,
 	EntitySchema,
-	FeatureSchema,
-	ProductSchema,
 	RolloverSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 
-/**
- * One customer's rows as Postgres returns them, split the way the balance worker
- * keeps them: customer-owned rows and the catalog rows they reference.
- */
+/** One customer's own rows as Postgres returns them; the catalog rows they reference come from getCatalogRows. */
 export const subjectRowsEnvelopeSchema = z.object({
 	customer: z.object({
 		internal_id: z.string(),
@@ -24,9 +18,6 @@ export const subjectRowsEnvelopeSchema = z.object({
 	customer_entitlements: z.array(CustomerEntitlementSchema),
 	rollovers: z.array(RolloverSchema),
 	entities: z.array(EntitySchema),
-	products: z.array(ProductSchema),
-	entitlements: z.array(EntitlementSchema),
-	features: z.array(FeatureSchema),
 });
 
 export type SubjectRowsEnvelope = z.infer<typeof subjectRowsEnvelopeSchema>;

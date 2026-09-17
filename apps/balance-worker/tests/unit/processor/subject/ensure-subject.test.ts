@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { CatalogRow, CustomerState } from "@autumn/balance-engine";
-import { createCustomerState } from "@autumn/balance-engine";
+import type { CatalogRow, SubjectState } from "@autumn/balance-engine";
+import { createSubjectState } from "@autumn/balance-engine";
 import type { CatalogRowIds } from "@autumn/postgres";
 import {
 	AllowanceType,
@@ -12,7 +12,7 @@ import {
 import { CatalogRowsNotFoundError } from "../../../../src/catalog/catalogErrors.js";
 import { createCatalogCache } from "../../../../src/catalog/createCatalogCache.js";
 import { ensureSubject } from "../../../../src/processor/subject/actions/ensureSubject/ensureSubject.js";
-import { readSubjectCatalog } from "../../../../src/processor/subject/actions/readSubjectCatalog.js";
+import { readSubject } from "../../../../src/processor/subject/actions/readSubject.js";
 import {
 	SubjectCatalogEvictedError,
 	SubjectNotFoundError,
@@ -27,7 +27,7 @@ const identity = {
 	entityId: null,
 };
 
-const state: CustomerState = createCustomerState({
+const state: SubjectState = createSubjectState({
 	identity,
 	customerProducts: [
 		{
@@ -125,7 +125,7 @@ const createScope = ({
 	storedState,
 	sourceRows,
 }: {
-	storedState: CustomerState | null;
+	storedState: SubjectState | null;
 	sourceRows: CatalogRow[];
 }) => {
 	const calls: CatalogRowIds[] = [];
@@ -184,7 +184,9 @@ describe("ensure subject", () => {
 			},
 		]);
 		expect(Object.keys(subject.catalog.entitlements)).toEqual(["ent_1"]);
-		expect(readSubjectCatalog({ scope, state })).toEqual(subject.catalog);
+		expect(
+			readSubject({ scope, state, identity }).customer_products,
+		).toHaveLength(1);
 		await ensureSubject({ scope, identity });
 		expect(calls).toHaveLength(1);
 	});
@@ -211,7 +213,7 @@ describe("ensure subject", () => {
 			sourceRows: rows,
 		});
 
-		expect(() => readSubjectCatalog({ scope, state })).toThrow(
+		expect(() => readSubject({ scope, state, identity })).toThrow(
 			SubjectCatalogEvictedError,
 		);
 		expect(calls).toEqual([]);

@@ -11,11 +11,10 @@ import {
 	catalogKeyToString,
 	catalogRowsToCatalog,
 	catalogRowToCatalogKey,
-	customerStateToCatalogKeys,
+	subjectStateToCatalogKeys,
 } from "../../../../src/utils/catalogUtils/convertCatalogUtils.js";
 import { filterCatalogKeysMissingFrom } from "../../../../src/utils/catalogUtils/filterCatalogUtils.js";
-import { findFeatureById } from "../../../../src/utils/catalogUtils/findCatalogUtils.js";
-import { createCustomerState } from "../../../../src/utils/customerStateUtils/createCustomerState.js";
+import { createSubjectState } from "../../../../src/utils/subjectStateUtils/createSubjectState.js";
 
 const identity = {
 	orgId: "org_1",
@@ -118,7 +117,7 @@ const productRow: CatalogRow = {
 	},
 };
 
-const state = createCustomerState({
+const state = createSubjectState({
 	identity,
 	customerProducts: [customerProduct],
 	customerEntitlements: [
@@ -129,14 +128,14 @@ const state = createCustomerState({
 
 describe("catalog keys", () => {
 	test("a state references every row once, sorted by table then id", () => {
-		expect(customerStateToCatalogKeys({ state })).toEqual([
+		expect(subjectStateToCatalogKeys({ state })).toEqual([
 			{ table: "entitlements", id: "ent_1" },
 			{ table: "entitlements", id: "ent_2" },
 			{ table: "features", id: "feat_internal_1" },
 			{ table: "products", id: "prod_internal_1" },
 		]);
 		expect(
-			customerStateToCatalogKeys({ state: createCustomerState({ identity }) }),
+			subjectStateToCatalogKeys({ state: createSubjectState({ identity }) }),
 		).toEqual([]);
 	});
 
@@ -174,7 +173,7 @@ describe("catalog from rows", () => {
 	test("names only the referenced rows the catalog lacks", () => {
 		expect(
 			filterCatalogKeysMissingFrom({
-				keys: customerStateToCatalogKeys({ state }),
+				keys: subjectStateToCatalogKeys({ state }),
 				catalog,
 			}),
 		).toEqual([
@@ -183,7 +182,7 @@ describe("catalog from rows", () => {
 		]);
 		expect(
 			filterCatalogKeysMissingFrom({
-				keys: customerStateToCatalogKeys({ state }),
+				keys: subjectStateToCatalogKeys({ state }),
 				catalog: catalogRowsToCatalog({
 					rows: [
 						entitlementRow("ent_1"),
@@ -194,14 +193,5 @@ describe("catalog from rows", () => {
 				}),
 			}),
 		).toEqual([]);
-	});
-
-	test("finds a feature by its public id", () => {
-		expect(
-			findFeatureById({ catalog, featureId: "api_calls" })?.internal_id,
-		).toBe("feat_internal_1");
-		expect(
-			findFeatureById({ catalog, featureId: "constructor" }),
-		).toBeUndefined();
 	});
 });

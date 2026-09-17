@@ -1,16 +1,22 @@
 import {
-	type CustomerState,
 	type MeteringIdentity,
+	meteringIdentityToSubjectKey,
 	meteringPartitionKeyOf,
+	type SubjectState,
 } from "@autumn/balance-engine";
+import { CorruptBalanceStateError } from "../../stateStoreErrors.js";
 import type { StateStoreContext } from "../../types/stateStoreContext.js";
-import type { StoredSubjectState } from "../../types/storedSubjectState.js";
+import type {
+	StoredSubjectState,
+	StoredSubjectView,
+} from "../../types/storedSubjectState.js";
 import {
 	type SubjectStateRow,
 	storedSubjectStateFromRow,
 } from "./subjectStateRow.js";
 
 const selectColumns = `
+	subject_key AS subjectKey,
 	partition_key AS partitionKey,
 	topic,
 	partition_id AS partition,
@@ -18,23 +24,57 @@ const selectColumns = `
 	state_json AS stateJson
 `;
 
-export const readStoredState = ({
+export const readStoredBlob = ({
+	ctx,
+	subjectKey,
+}: {
+	ctx: StateStoreContext;
+	subjectKey: string;
+}): StoredSubjectState | null => {
+	const row = ctx.sqliteDb
+		.query<SubjectStateRow, { subjectKey: string }>(`
+			SELECT ${selectColumns}
+			FROM subject_states
+			WHERE subject_key = $subjectKey
+		`)
+		.get({ subjectKey });
+	if (!row) return null;
+	return storedSubjectStateFromRow({ row });
+};
+
+/** Null until the customer has a blob; an entity blob without its customer is corruption. */
+export const readStoredView = ({
 	ctx,
 	identity,
 }: {
 	ctx: StateStoreContext;
 	identity: MeteringIdentity;
-}): StoredSubjectState | null => {
-	const partitionKey = meteringPartitionKeyOf({ identity });
-	const row = ctx.sqliteDb
-		.query<SubjectStateRow, { partitionKey: string }>(`
-			SELECT ${selectColumns}
-			FROM subject_states
-			WHERE partition_key = $partitionKey
-		`)
-		.get({ partitionKey });
-	if (!row) return null;
-	return storedSubjectStateFromRow({ row });
+}): StoredSubjectView | null => {
+	const customerKey = meteringPartitionKeyOf({ identity });
+	const customer = readStoredBlob({ ctx, subjectKey: customerKey });
+	const entity = identity.entityId
+		? readStoredBlob({
+				ctx,
+				subjectKey: meteringIdentityToSubjectKey({ identity }),
+			})
+		: null;
+	if (!customer) {
+		if (entity)
+			throw new CorruptBalanceStateError({ partitionKey: customerKey });
+		return null;
+	}
+	if (
+		entity &&
+		(entity.topic !== customer.topic || entity.partition !== customer.partition)
+	) {
+		throw new CorruptBalanceStateError({ partitionKey: customerKey });
+	}
+	return {
+		topic: customer.topic,
+		partition: customer.partition,
+		customer: customer.state,
+		entity: entity?.state ?? null,
+	};
 };
 
 export const readPartitionStates = ({
@@ -47,7 +87,7 @@ export const readPartitionStates = ({
 	topic: string;
 	partition: number;
 	limit: number;
-}): Array<{ partitionKey: string } & StoredSubjectState> =>
+}): Array<{ subjectKey: string } & StoredSubjectState> =>
 	ctx.sqliteDb
 		.query<
 			SubjectStateRow,
@@ -56,32 +96,32 @@ export const readPartitionStates = ({
 			SELECT ${selectColumns}
 			FROM subject_states
 			WHERE topic = $topic AND partition_id = $partition
-			ORDER BY partition_key
+			ORDER BY subject_key
 			LIMIT $limit
 		`)
 		.all({ topic, partition, limit })
 		.map((row) => ({
-			partitionKey: row.partitionKey,
+			subjectKey: row.subjectKey,
 			...storedSubjectStateFromRow({ row }),
 		}));
 
-export const insertState = ({
+/** Keys derive from the blob's identity, so a blob can never be filed under another subject. */
+export const insertBlob = ({
 	ctx,
-	partitionKey,
 	topic,
 	partition,
 	state,
 }: {
 	ctx: StateStoreContext;
-	partitionKey: string;
 	topic: string;
 	partition: number;
-	state: CustomerState;
+	state: SubjectState;
 }) => {
 	ctx.sqliteDb
 		.query<
 			never,
 			{
+				subjectKey: string;
 				partitionKey: string;
 				topic: string;
 				partition: number;
@@ -90,16 +130,18 @@ export const insertState = ({
 			}
 		>(`
 			INSERT INTO subject_states (
+				subject_key,
 				partition_key,
 				topic,
 				partition_id,
 				revision,
 				state_json
 			)
-			VALUES ($partitionKey, $topic, $partition, $revision, $stateJson)
+			VALUES ($subjectKey, $partitionKey, $topic, $partition, $revision, $stateJson)
 		`)
 		.run({
-			partitionKey,
+			subjectKey: meteringIdentityToSubjectKey({ identity: state.identity }),
+			partitionKey: meteringPartitionKeyOf({ identity: state.identity }),
 			topic,
 			partition,
 			revision: BigInt(state.revision),
@@ -107,22 +149,21 @@ export const insertState = ({
 		});
 };
 
-export const updateState = ({
+/** The customer blob carries the revision guard; entity blobs ride along under it, so they update unguarded. */
+export const updateBlob = ({
 	ctx,
-	partitionKey,
-	revisionBefore,
 	state,
+	revisionBefore = null,
 }: {
 	ctx: StateStoreContext;
-	partitionKey: string;
-	revisionBefore: number;
-	state: CustomerState;
+	state: SubjectState;
+	revisionBefore?: number | null;
 }) =>
 	ctx.sqliteDb
 		.query<
 			never,
 			{
-				partitionKey: string;
+				subjectKey: string;
 				revisionBefore: bigint;
 				revisionAfter: bigint;
 				stateJson: string;
@@ -130,11 +171,12 @@ export const updateState = ({
 		>(`
 			UPDATE subject_states
 			SET revision = $revisionAfter, state_json = $stateJson
-			WHERE partition_key = $partitionKey AND revision = $revisionBefore
+			WHERE subject_key = $subjectKey
+				AND ($revisionBefore < 0 OR revision = $revisionBefore)
 		`)
 		.run({
-			partitionKey,
-			revisionBefore: BigInt(revisionBefore),
+			subjectKey: meteringIdentityToSubjectKey({ identity: state.identity }),
+			revisionBefore: BigInt(revisionBefore ?? -1),
 			revisionAfter: BigInt(state.revision),
 			stateJson: JSON.stringify(state),
 		});

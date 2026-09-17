@@ -16,17 +16,21 @@ import {
 	catalogRowSchema,
 } from "./models/catalog/catalogRow.js";
 import {
-	type CustomerState,
-	customerStateSchema,
-} from "./models/customerState.js";
-import {
-	type CustomerStateMutation,
-	customerStateMutationSchema,
-} from "./models/customerStateMutation.js";
-import {
 	type MeteringIdentity,
 	meteringIdentitySchema,
 } from "./models/meteringIdentity.js";
+import {
+	type WorkerCustomerEntitlement,
+	workerCustomerEntitlementSchema,
+} from "./models/rows/workerCustomerEntitlement.js";
+import {
+	type SubjectState,
+	subjectStateSchema,
+} from "./models/subjectState.js";
+import {
+	type SubjectStateMutation,
+	subjectStateMutationSchema,
+} from "./models/subjectStateMutation.js";
 
 export const parseTrackCommand = ({
 	input,
@@ -46,17 +50,17 @@ export const parseInitializeCommand = ({
 	input: unknown;
 }): InitializeCommand => initializeCommandSchema.parse(input);
 
-export const parseCustomerState = ({
+export const parseSubjectState = ({
 	input,
 }: {
 	input: unknown;
-}): CustomerState => customerStateSchema.parse(input);
+}): SubjectState => subjectStateSchema.parse(input);
 
-export const parseCustomerStateMutation = ({
+export const parseSubjectStateMutation = ({
 	input,
 }: {
 	input: unknown;
-}): CustomerStateMutation => customerStateMutationSchema.parse(input);
+}): SubjectStateMutation => subjectStateMutationSchema.parse(input);
 
 export const parseMeteringIdentity = ({
 	input,
@@ -69,3 +73,9 @@ export const parseCatalog = ({ input }: { input: unknown }): Catalog =>
 
 export const parseCatalogRow = ({ input }: { input: unknown }): CatalogRow =>
 	catalogRowSchema.parse(input);
+
+export const parseWorkerCustomerEntitlement = ({
+	input,
+}: {
+	input: unknown;
+}): WorkerCustomerEntitlement => workerCustomerEntitlementSchema.parse(input);

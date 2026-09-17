@@ -1,4 +1,4 @@
-import type { FullCustomerEntitlement } from "@models/cusProductModels/cusEntModels/cusEntModels.js";
+import type { FullCustomerEntitlementView } from "@models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { notNullish } from "@utils/utils.js";
 
 type CusRolloverInfo = {
@@ -15,7 +15,7 @@ export const getRolloverFields = ({
 	cusEnt,
 	entityId,
 }: {
-	cusEnt: FullCustomerEntitlement;
+	cusEnt: Pick<FullCustomerEntitlementView, "entitlement" | "rollovers">;
 	entityId?: string;
 }): RolloverFields | undefined => {
 	const hasRollover = notNullish(cusEnt.entitlement.rollover);
@@ -27,15 +27,16 @@ export const getRolloverFields = ({
 		if (entityId) {
 			return rollovers.reduce(
 				(acc: RolloverFields, rollover) => {
-					if (rollover.entities[entityId]) {
+					const entityRollover = rollover.entities?.[entityId];
+					if (entityRollover) {
 						return {
-							balance: acc.balance + rollover.entities[entityId].balance,
-							usage: acc.usage + rollover.entities[entityId].usage,
+							balance: acc.balance + entityRollover.balance,
+							usage: acc.usage + entityRollover.usage,
 							rollovers: [
 								...acc.rollovers,
 								{
-									balance: rollover.entities[entityId].balance,
-									usage: rollover.entities[entityId].usage,
+									balance: entityRollover.balance,
+									usage: entityRollover.usage,
 									expires_at: rollover.expires_at,
 								},
 							],
@@ -55,9 +56,9 @@ export const getRolloverFields = ({
 					let newBalance = 0;
 					let newUsage = 0;
 
-					for (const entityId in rollover.entities) {
-						newBalance += rollover.entities[entityId].balance;
-						newUsage += rollover.entities[entityId].usage;
+					for (const entityRollover of Object.values(rollover.entities ?? {})) {
+						newBalance += entityRollover.balance;
+						newUsage += entityRollover.usage;
 					}
 
 					return {

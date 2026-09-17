@@ -1,9 +1,9 @@
 import {
 	applyMutation,
-	type CustomerState,
 	computeTrack,
 	meteringPartitionKeyOf,
 	parseTrackCommand,
+	type SubjectState,
 	type TrackCommand,
 	type TrackDecision,
 	trackCommandFingerprintOf,
@@ -55,17 +55,19 @@ function decideTrack({
 	deduplicationExpiresAt,
 }: {
 	scope: PartitionProcessorScope;
-	state: CustomerState | null;
+	state: SubjectState | null;
 	customerKey: string;
 	command: TrackCommand;
 	deduplicationExpiresAt: number;
 }): MutationResult<TrackDecision> {
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
 
-	const catalog = scope.ctx.subjectHydrator.readCatalog({ state });
-	const decision = computeTrack({
+	const fullSubject = scope.ctx.subjectHydrator.readSubject({
 		state,
-		catalog,
+		identity: command.identity,
+	});
+	const decision = computeTrack({
+		fullSubject,
 		command,
 		deduplicationExpiresAt,
 	});

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createCustomerState, parseTrackCommand } from "@autumn/balance-engine";
+import { createSubjectState, parseTrackCommand } from "@autumn/balance-engine";
 import { createProducerSession, serializeMeteringRecord } from "@autumn/kafka";
 import {
 	CreateBucketCommand,
@@ -272,7 +272,7 @@ describe("automatic checkpoint recovery", () => {
 					customerId: "customer_1",
 					entityId: null,
 				} as const;
-				const state = createCustomerState({
+				const state = createSubjectState({
 					identity,
 					customerEntitlements: [
 						createCustomerEntitlement({

@@ -1,8 +1,8 @@
-import type { CustomerStateMutation } from "../../../models/customerStateMutation.js";
+import type { SubjectStateMutation } from "../../../models/subjectStateMutation.js";
 
 export type UnsupportedDecisionReason =
 	| "command_conflict"
-	| "entity_not_supported"
+	| "entity_not_found"
 	| "feature_not_found"
 	| "multiple_customer_entitlements_not_supported"
 	| "properties_not_supported"
@@ -10,5 +10,5 @@ export type UnsupportedDecisionReason =
 	| "subject_mismatch";
 
 export type TrackDecision =
-	| { kind: "new" | "duplicate"; mutation: CustomerStateMutation }
+	| { kind: "new" | "duplicate"; mutation: SubjectStateMutation }
 	| { kind: "unsupported"; reason: UnsupportedDecisionReason };

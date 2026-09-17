@@ -1,7 +1,11 @@
 import { isEntityCusEnt } from "../../index.js";
-import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
 import type { CustomerEntitlementFilters } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
-import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type {
+	FullCustomerEntitlementView,
+	FullCusProductView,
+	FullCusEntWithFullCusProductView,
+	FullSubjectView,
+} from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import { customerEntitlementFundsFeature } from "../cusEntUtils/classifyCusEnt/customerEntitlementFundsFeature.js";
 import { isCusEntExpired } from "../cusEntUtils/classifyCusEnt/isCusEntExpired.js";
@@ -10,7 +14,11 @@ import { cusEntMatchesEntity } from "../cusEntUtils/filterCusEntUtils.js";
 import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.js";
 import { notNullish } from "../utils.js";
 
-export const fullSubjectToCustomerEntitlements = ({
+/** Generic over the row shape so the same selection serves a FullSubject and the balance worker's leaner view. */
+export const fullSubjectToCustomerEntitlements = <
+	CE extends FullCustomerEntitlementView,
+	CP extends FullCusProductView,
+>({
 	fullSubject,
 	inStatuses = [CusProductStatus.Active, CusProductStatus.PastDue],
 	reverseOrder = false,
@@ -18,7 +26,7 @@ export const fullSubjectToCustomerEntitlements = ({
 	fundsFeatureId,
 	customerEntitlementFilters,
 }: {
-	fullSubject: FullSubject;
+	fullSubject: FullSubjectView<CE, CP>;
 	inStatuses?: CusProductStatus[];
 	reverseOrder?: boolean;
 	featureIds?: string[];
@@ -27,7 +35,11 @@ export const fullSubjectToCustomerEntitlements = ({
 	fundsFeatureId?: string;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 }) => {
-	let customerEntitlements: FullCusEntWithFullCusProduct[] = [];
+	type Selected = FullCusEntWithFullCusProductView<
+		CE,
+		CP & { customer_entitlements: CE[] }
+	>;
+	let customerEntitlements: Selected[] = [];
 
 	for (const customerProduct of fullSubject.customer_products) {
 		if (!inStatuses.includes(customerProduct.status)) continue;
@@ -124,7 +136,7 @@ export const fullSubjectToCustomerEntitlements = ({
 
 	if (
 		fullSubject.entity?.id &&
-		fullSubject.customer.config?.disable_pooled_balance
+		fullSubject.customer?.config?.disable_pooled_balance
 	) {
 		customerEntitlements = customerEntitlements.filter((ce) =>
 			isEntityCusEnt({ cusEnt: ce }),

@@ -1,26 +1,12 @@
 import {
-	type CatalogRow,
-	type CustomerState,
-	customerRowsToCustomerState,
+	customerRowsToSubjectState,
 	type MeteringIdentity,
 	parseInitializeCommand,
+	type SubjectState,
 } from "@autumn/balance-engine";
-import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { initializeSubject } from "../../../actions/initializeSubject.js";
 import { SubjectNotFoundError } from "../../subjectErrors.js";
 import type { SubjectScope } from "../../types/subject.js";
-
-const envelopeToCatalogRows = ({
-	envelope,
-}: {
-	envelope: SubjectRowsEnvelope;
-}): CatalogRow[] => [
-	...envelope.entitlements.map(
-		(row): CatalogRow => ({ table: "entitlements", row }),
-	),
-	...envelope.products.map((row): CatalogRow => ({ table: "products", row })),
-	...envelope.features.map((row): CatalogRow => ({ table: "features", row })),
-];
 
 /** Reads the customer from Postgres and makes its rows the revision-zero baseline. */
 export const hydrateSubjectState = async ({
@@ -29,7 +15,7 @@ export const hydrateSubjectState = async ({
 }: {
 	scope: SubjectScope;
 	identity: MeteringIdentity;
-}): Promise<CustomerState> => {
+}): Promise<SubjectState> => {
 	const { ctx } = scope;
 	const occurredAt = ctx.receiptPolicy.now();
 	const envelope = await ctx.db.getSubjectRows({
@@ -46,14 +32,15 @@ export const hydrateSubjectState = async ({
 			requestId: `hydrate_${identity.customerId}`,
 			identity,
 			// The customer view: its identity names no entity even when the command's does.
-			state: customerRowsToCustomerState({
+			state: customerRowsToSubjectState({
 				identity: { ...identity, entityId: null },
 				customerProducts: envelope.customer_products,
 				customerEntitlements: envelope.customer_entitlements,
 				rollovers: envelope.rollovers,
 				entities: envelope.entities,
 			}),
-			catalogRows: envelopeToCatalogRows({ envelope }),
+			// Catalog rows are not part of hydration; ensureSubjectCatalog loads whatever the state references.
+			catalogRows: [],
 			occurredAt,
 		},
 	});

@@ -8,17 +8,19 @@ import {
 import {
 	type Catalog,
 	type CatalogRow,
-	type CustomerState,
-	type CustomerStateMutation,
 	catalogRowsToCatalog,
-	createCustomerState,
+	createSubjectState,
 	parseCheckCommand,
 	parseInitializeCommand,
 	parseTrackCommand,
+	type SubjectState,
+	type SubjectStateMutation,
+	subjectStateToFullSubject,
 	type TrackDecision,
 	type TrackResult,
 	type WorkerCustomerEntitlement,
 	type WorkerCustomerProduct,
+	type WorkerFullSubject,
 } from "../../src/balanceEngine.js";
 
 export const identity = {
@@ -81,7 +83,7 @@ export const createState = ({
 	balance?: number;
 	customerEntitlements?: WorkerCustomerEntitlement[];
 } = {}) =>
-	createCustomerState({
+	createSubjectState({
 		identity,
 		customerProducts: [createCustomerProduct()],
 		customerEntitlements: customerEntitlements ?? [
@@ -153,7 +155,7 @@ const productRowOf = (internalProductId: string): CatalogRow => ({
 export const createCatalogRowsFor = ({
 	state,
 }: {
-	state: CustomerState;
+	state: SubjectState;
 }): CatalogRow[] => [
 	...state.customerEntitlements.map(entitlementRowOf),
 	...[
@@ -164,11 +166,22 @@ export const createCatalogRowsFor = ({
 	...state.customerProducts.map((row) => productRowOf(row.internal_product_id)),
 ];
 
-export const createCatalogFor = ({
+export const createCatalogFor = ({ state }: { state: SubjectState }): Catalog =>
+	catalogRowsToCatalog({ rows: createCatalogRowsFor({ state }) });
+
+/** The view a command computes against: state joined with the catalog it references. */
+export const createSubjectFor = ({
 	state,
+	entityId = null,
 }: {
-	state: CustomerState;
-}): Catalog => catalogRowsToCatalog({ rows: createCatalogRowsFor({ state }) });
+	state: SubjectState;
+	entityId?: string | null;
+}): WorkerFullSubject =>
+	subjectStateToFullSubject({
+		state,
+		catalog: createCatalogFor({ state }),
+		entityId,
+	});
 
 export const createTrackCommand = ({
 	commandId = "cmd_1",
@@ -250,7 +263,7 @@ export const createInitializeCommand = ({
 
 export const requireNewMutation = (
 	decision: TrackDecision,
-): CustomerStateMutation => {
+): SubjectStateMutation => {
 	if (decision.kind !== "new") {
 		throw new Error(`Expected a new mutation, received ${decision.kind}`);
 	}
@@ -260,7 +273,7 @@ export const requireNewMutation = (
 export const trackResultOf = ({
 	mutation,
 }: {
-	mutation: CustomerStateMutation;
+	mutation: SubjectStateMutation;
 }): TrackResult => {
 	if (mutation.result.type !== "track") {
 		throw new Error(

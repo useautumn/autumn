@@ -2,6 +2,7 @@ import { Decimal } from "decimal.js";
 import type { ApiBalanceBreakdown } from "../../api/customers/cusFeatures/apiBalance.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { FullCustomerEntitlementView } from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { entToOptions } from "../productUtils/convertProductUtils.js";
 import { resetIntvToEntIntv } from "../productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
 import { getCusEntBalance } from "./balanceUtils.js";
@@ -34,7 +35,7 @@ export const cusEntToBalance = ({
 	entityId,
 	withRollovers = false,
 }: {
-	cusEnt: FullCustomerEntitlement;
+	cusEnt: FullCustomerEntitlementView;
 	entityId?: string;
 	withRollovers?: boolean;
 }) => {

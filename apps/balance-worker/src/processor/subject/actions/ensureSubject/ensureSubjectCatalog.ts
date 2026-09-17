@@ -1,9 +1,9 @@
 import {
 	type Catalog,
-	type CustomerState,
-	customerStateToCatalogKeys,
 	filterCatalogKeysMissingFrom,
 	type MeteringIdentity,
+	type SubjectState,
+	subjectStateToCatalogKeys,
 } from "@autumn/balance-engine";
 import { CatalogRowsNotFoundError } from "../../../../catalog/catalogErrors.js";
 import type { SubjectScope } from "../../types/subject.js";
@@ -16,10 +16,10 @@ export const ensureSubjectCatalog = async ({
 }: {
 	scope: SubjectScope;
 	identity: MeteringIdentity;
-	state: CustomerState;
+	state: SubjectState;
 }): Promise<Catalog> => {
 	const { catalogCache } = scope.ctx;
-	const keys = customerStateToCatalogKeys({ state });
+	const keys = subjectStateToCatalogKeys({ state });
 
 	const cached = catalogCache.read({ keys });
 	const missing = filterCatalogKeysMissingFrom({ keys, catalog: cached });

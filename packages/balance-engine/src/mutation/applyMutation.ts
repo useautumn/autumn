@@ -2,8 +2,8 @@ import {
 	MutationSubjectMismatchError,
 	OutOfOrderMutationError,
 } from "../errors.js";
-import type { CustomerState } from "../models/customerState.js";
-import type { CustomerStateMutation } from "../models/customerStateMutation.js";
+import type { SubjectState } from "../models/subjectState.js";
+import type { SubjectStateMutation } from "../models/subjectStateMutation.js";
 import { identitiesMatch } from "../utils/identityUtils/identitiesMatch.js";
 import { applyChanges } from "./applyChanges.js";
 
@@ -11,9 +11,9 @@ export const applyMutation = ({
 	state,
 	mutation,
 }: {
-	state: CustomerState | null;
-	mutation: CustomerStateMutation;
-}): CustomerState => {
+	state: SubjectState | null;
+	mutation: SubjectStateMutation;
+}): SubjectState => {
 	if (
 		state &&
 		!identitiesMatch({ left: state.identity, right: mutation.identity })
@@ -32,7 +32,7 @@ export const applyMutation = ({
 		});
 	}
 
-	const currentState: CustomerState = state ?? {
+	const currentState: SubjectState = state ?? {
 		schemaVersion: 1,
 		identity: mutation.identity,
 		revision: 0,

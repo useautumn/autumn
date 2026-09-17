@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import type { CustomerStateMutation } from "../../models/customerStateMutation.js";
+import type { SubjectStateMutation } from "../../models/subjectStateMutation.js";
 
 // Annotated so TypeScript narrows the guards that call it.
 const fail: (message: string) => never = (message) => {
@@ -9,7 +9,7 @@ const fail: (message: string) => never = (message) => {
 const deductedValuesByCustomerEntitlementId = ({
 	changes,
 }: {
-	changes: CustomerStateMutation["changes"];
+	changes: SubjectStateMutation["changes"];
 }): Map<string, Decimal> => {
 	const deductedValues = new Map<string, Decimal>();
 
@@ -38,7 +38,7 @@ const deductedValuesByCustomerEntitlementId = ({
 export const validateTrackMutation = ({
 	mutation,
 }: {
-	mutation: CustomerStateMutation;
+	mutation: SubjectStateMutation;
 }): void => {
 	const { command, result } = mutation;
 	if (command.type !== "track" || result.type !== "track") {

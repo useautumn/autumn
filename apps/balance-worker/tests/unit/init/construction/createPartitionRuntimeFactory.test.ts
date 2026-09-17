@@ -12,7 +12,7 @@ import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
 } from "../../../fixtures/catalog.js";
-import { restoreCustomerStates } from "../../../fixtures/mutations.js";
+import { restoreSubjectStates } from "../../../fixtures/mutations.js";
 import {
 	closeStoreFixture,
 	createState,
@@ -69,7 +69,7 @@ describe("Kafka owned partition runtime factory", () => {
 				logs.push(args);
 			}
 			try {
-				restoreCustomerStates({
+				restoreSubjectStates({
 					store: fixture.store,
 					topic,
 					partition: 0,

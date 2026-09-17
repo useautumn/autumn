@@ -1,21 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import {
 	applyMutation,
-	type CustomerState,
-	type CustomerStateMutation,
 	computeInitialize,
 	computeTrack,
-	createCustomerState,
+	createSubjectState,
 	MutationSubjectMismatchError,
 	OutOfOrderMutationError,
 	StaleMutationError,
+	type SubjectState,
+	type SubjectStateMutation,
 } from "../../../src/balanceEngine.js";
 import {
-	createCatalogFor,
 	createCustomerEntitlement,
 	createCustomerProduct,
 	createInitializeCommand,
 	createState,
+	createSubjectFor,
 	createTrackCommand,
 	deduplicationExpiresAt,
 	identity,
@@ -27,11 +27,10 @@ const initializeMutation = computeInitialize({
 	deduplicationExpiresAt,
 });
 
-const trackMutationOn = ({ state }: { state: CustomerState }) =>
+const trackMutationOn = ({ state }: { state: SubjectState }) =>
 	requireNewMutation(
 		computeTrack({
-			state,
-			catalog: createCatalogFor({ state }),
+			fullSubject: createSubjectFor({ state }),
 			command: createTrackCommand(),
 			deduplicationExpiresAt,
 		}),
@@ -41,9 +40,9 @@ const withChanges = ({
 	mutation,
 	changes,
 }: {
-	mutation: CustomerStateMutation;
-	changes: CustomerStateMutation["changes"];
-}): CustomerStateMutation => ({ ...mutation, changes });
+	mutation: SubjectStateMutation;
+	changes: SubjectStateMutation["changes"];
+}): SubjectStateMutation => ({ ...mutation, changes });
 
 describe("mutation application", () => {
 	test.concurrent("initializes a customer that has no state yet", () => {
@@ -96,15 +95,14 @@ describe("mutation application", () => {
 
 	test.concurrent("refuses a mutation owned by another customer", () => {
 		const otherIdentity = { ...identity, customerId: "cus_2" };
-		const otherState = createCustomerState({
+		const otherState = createSubjectState({
 			identity: otherIdentity,
 			customerProducts: [createCustomerProduct()],
 			customerEntitlements: [createCustomerEntitlement()],
 		});
 		const otherMutation = requireNewMutation(
 			computeTrack({
-				state: otherState,
-				catalog: createCatalogFor({ state: otherState }),
+				fullSubject: createSubjectFor({ state: otherState }),
 				command: { ...createTrackCommand(), identity: otherIdentity },
 				deduplicationExpiresAt,
 			}),

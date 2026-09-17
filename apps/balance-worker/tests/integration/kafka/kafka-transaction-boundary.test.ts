@@ -44,7 +44,7 @@ import {
 import {
 	applyDurableMutation,
 	createInitializeMutation,
-	restoreCustomerStates,
+	restoreSubjectStates,
 } from "../../fixtures/mutations.js";
 import {
 	createKafkaCommittedMutationAppender,
@@ -224,7 +224,7 @@ const createStore = ({
 		if (!initializePartition) {
 			throw new Error("Cannot initialize a customer without its partition");
 		}
-		restoreCustomerStates({ store, topic, partition, states: [state] });
+		restoreSubjectStates({ store, topic, partition, states: [state] });
 	}
 	return {
 		store,

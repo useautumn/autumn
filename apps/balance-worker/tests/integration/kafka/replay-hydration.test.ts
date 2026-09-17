@@ -5,12 +5,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	type CheckCommand,
-	type CustomerState,
-	type CustomerStateMutation,
-	createCustomerState,
+	createSubjectState,
 	type MeteringIdentity,
 	parseCheckCommand,
 	parseTrackCommand,
+	type SubjectState,
+	type SubjectStateMutation,
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
@@ -117,7 +117,7 @@ type ReplayScope = {
 	workers: WorkerFixture[];
 	coordinators: ReplayHydrationCoordinator[];
 	baselineSource: RecordingReplaySource;
-	firstMutation?: CustomerStateMutation;
+	firstMutation?: SubjectStateMutation;
 };
 
 type PersistedReplayRows = { state: unknown; receipts: unknown };
@@ -134,8 +134,8 @@ function isRejectedResult(
 	return result.status === "rejected";
 }
 
-function createBaselineState(): CustomerState {
-	return createCustomerState({
+function createBaselineState(): SubjectState {
+	return createSubjectState({
 		identity: REPLAY_IDENTITY,
 		customerEntitlements: [
 			createCustomerEntitlement({

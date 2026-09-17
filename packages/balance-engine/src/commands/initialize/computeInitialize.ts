@@ -1,8 +1,8 @@
-import type { CustomerState } from "../../models/customerState.js";
-import type { CustomerStateMutation } from "../../models/customerStateMutation.js";
 import type { RowChange } from "../../models/rowChange.js";
+import type { SubjectState } from "../../models/subjectState.js";
+import type { SubjectStateMutation } from "../../models/subjectStateMutation.js";
 import { mutationFingerprintOf } from "../../mutation/mutationFingerprintOf.js";
-import { parseCustomerStateMutation } from "../../parsers.js";
+import { parseSubjectStateMutation } from "../../parsers.js";
 import type {
 	InitializeCommand,
 	InitializeCommandEcho,
@@ -12,7 +12,7 @@ const byId = <Row extends { id: string }>(rows: Row[]): Row[] =>
 	[...rows].sort((left, right) => left.id.localeCompare(right.id));
 
 /** Table order is referential (products before their entitlements); row order is the fingerprint. */
-const insertChangesOf = ({ state }: { state: CustomerState }): RowChange[] => [
+const insertChangesOf = ({ state }: { state: SubjectState }): RowChange[] => [
 	...byId(state.customerProducts).map(
 		(row): RowChange => ({ table: "customerProducts", op: "insert", row }),
 	),
@@ -33,7 +33,7 @@ export const computeInitialize = ({
 }: {
 	command: InitializeCommand;
 	deduplicationExpiresAt: number;
-}): CustomerStateMutation => {
+}): SubjectStateMutation => {
 	const changes = insertChangesOf({ state: command.state });
 	const mutationCommand: InitializeCommandEcho = {
 		type: "initialize",
@@ -41,7 +41,7 @@ export const computeInitialize = ({
 		occurredAt: command.occurredAt,
 	};
 
-	return parseCustomerStateMutation({
+	return parseSubjectStateMutation({
 		input: {
 			schemaVersion: 1,
 			type: "mutation",

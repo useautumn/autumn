@@ -27,6 +27,7 @@ export { validateTrackMutation } from "./commands/track/validateTrackMutation.js
 export { computeDeduction } from "./common/deduction/computeDeduction.js";
 // boundary
 export {
+	CatalogRowMissingError,
 	MutationSubjectMismatchError,
 	OutOfOrderMutationError,
 	StaleMutationError,
@@ -40,18 +41,23 @@ export type { CatalogRow } from "./models/catalog/catalogRow.js";
 // models
 export type { JsonValue } from "./models/common/json.js";
 export { canonicalizeJsonValue } from "./models/common/json.js";
-export type { CustomerState } from "./models/customerState.js";
-export type {
-	CustomerStateMutation,
-	MutationCommand,
-	MutationResult,
-} from "./models/customerStateMutation.js";
 export type { MeteringIdentity } from "./models/meteringIdentity.js";
 export type { RowChange, TableRowChange } from "./models/rowChange.js";
 export type { WorkerCustomerEntitlement } from "./models/rows/workerCustomerEntitlement.js";
 export type { WorkerCustomerProduct } from "./models/rows/workerCustomerProduct.js";
 export type { WorkerEntity } from "./models/rows/workerEntity.js";
 export type { WorkerRollover } from "./models/rows/workerRollover.js";
+export type {
+	WorkerFullCustomerEntitlement,
+	WorkerFullCustomerProduct,
+	WorkerFullSubject,
+} from "./models/subject/workerFullSubject.js";
+export type { SubjectState } from "./models/subjectState.js";
+export type {
+	MutationCommand,
+	MutationResult,
+	SubjectStateMutation,
+} from "./models/subjectStateMutation.js";
 // mutation
 export { applyChanges } from "./mutation/applyChanges.js";
 export { applyMutation } from "./mutation/applyMutation.js";
@@ -60,28 +66,31 @@ export {
 	parseCatalog,
 	parseCatalogRow,
 	parseCheckCommand,
-	parseCustomerState,
-	parseCustomerStateMutation,
 	parseInitializeCommand,
 	parseMeteringIdentity,
+	parseSubjectState,
+	parseSubjectStateMutation,
 	parseTrackCommand,
+	parseWorkerCustomerEntitlement,
 } from "./parsers.js";
 export {
 	catalogKeyToString,
 	catalogRowsToCatalog,
 	catalogRowToCatalogKey,
-	customerStateToCatalogKeys,
+	subjectStateToCatalogKeys,
 } from "./utils/catalogUtils/convertCatalogUtils.js";
 export { filterCatalogKeysMissingFrom } from "./utils/catalogUtils/filterCatalogUtils.js";
-export { findFeatureById } from "./utils/catalogUtils/findCatalogUtils.js";
-// utils
-export {
-	availableBalanceOf,
-	balanceOf,
-} from "./utils/customerStateUtils/balanceOf.js";
-export { customerRowsToCustomerState } from "./utils/customerStateUtils/convertCustomerStateUtils.js";
-export { createCustomerState } from "./utils/customerStateUtils/createCustomerState.js";
-export { findCustomerEntitlementsForFeature } from "./utils/customerStateUtils/findCustomerEntitlementsForFeature.js";
 export { meteringIdentityToSubjectKey } from "./utils/identityUtils/convertIdentityUtils.js";
 export { identitiesMatch } from "./utils/identityUtils/identitiesMatch.js";
 export { meteringPartitionKeyOf } from "./utils/identityUtils/meteringPartitionKeyOf.js";
+// utils
+export {
+	customerRowsToSubjectState,
+	subjectBlobsToSubjectState,
+	subjectStateToSubjectBlobs,
+} from "./utils/subjectStateUtils/convertSubjectStateUtils.js";
+export { createSubjectState } from "./utils/subjectStateUtils/createSubjectState.js";
+export {
+	fullCustomerEntitlementToRow,
+	subjectStateToFullSubject,
+} from "./utils/subjectUtils/convertSubjectUtils.js";

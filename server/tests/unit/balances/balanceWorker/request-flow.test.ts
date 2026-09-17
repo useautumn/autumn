@@ -10,7 +10,7 @@ import {
 	type CheckParams,
 	type TrackParams,
 } from "@autumn/shared";
-import { fullSubjectToCustomerState } from "@/internal/balances/balanceWorker/fullSubjectToCustomerState.js";
+import { fullSubjectToSubjectState } from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
 import { initializeBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/initializeBalanceWorkerCustomer.js";
 import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
 import { runBalanceWorkerTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js";
@@ -110,7 +110,7 @@ test.concurrent(
 	async () => {
 		const { ctx, fullSubject } = createCustomerFixture();
 		const loadSubject = async () => fullSubject;
-		const [row] = fullSubjectToCustomerState({
+		const [row] = fullSubjectToSubjectState({
 			ctx,
 			fullSubject,
 			featureIds: ["messages"],

@@ -1,4 +1,4 @@
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { FullCustomerEntitlementView } from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { sumValues } from "../../utils";
 import { cusEntToBalance } from "../convertCusEntUtils";
 
@@ -7,7 +7,7 @@ export const cusEntsToBalance = ({
 	entityId,
 	withRollovers = false,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: FullCustomerEntitlementView[];
 	entityId?: string;
 	withRollovers?: boolean;
 }) => {

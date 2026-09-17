@@ -1,18 +1,20 @@
+import {
+	cusEntsToBalance,
+	cusEntToBalance,
+	fullSubjectToCustomerEntitlements,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { computeDeduction } from "../../common/deduction/computeDeduction.js";
-import type { Catalog } from "../../models/catalog/catalog.js";
-import type { CustomerState } from "../../models/customerState.js";
-import type { CustomerStateMutation } from "../../models/customerStateMutation.js";
 import type { RowChange } from "../../models/rowChange.js";
-import type { WorkerCustomerEntitlement } from "../../models/rows/workerCustomerEntitlement.js";
+import type {
+	WorkerFullCustomerEntitlement,
+	WorkerFullSubject,
+} from "../../models/subject/workerFullSubject.js";
+import type { SubjectStateMutation } from "../../models/subjectStateMutation.js";
 import { mutationFingerprintOf } from "../../mutation/mutationFingerprintOf.js";
-import { parseCustomerStateMutation } from "../../parsers.js";
-import {
-	availableBalanceOf,
-	balanceOf,
-} from "../../utils/customerStateUtils/balanceOf.js";
-import { findCustomerEntitlementsForFeature } from "../../utils/customerStateUtils/findCustomerEntitlementsForFeature.js";
+import { parseSubjectStateMutation } from "../../parsers.js";
 import { identitiesMatch } from "../../utils/identityUtils/identitiesMatch.js";
+import { fullCustomerEntitlementToRow } from "../../utils/subjectUtils/convertSubjectUtils.js";
 import type { TrackCommand, TrackCommandEcho } from "./types/trackCommand.js";
 import type { TrackDecision } from "./types/trackDecision.js";
 import { validateTrackMutation } from "./validateTrackMutation.js";
@@ -20,23 +22,23 @@ import { validateTrackMutation } from "./validateTrackMutation.js";
 type UnsupportedTrackDecision = Extract<TrackDecision, { kind: "unsupported" }>;
 
 type TrackClassification =
-	| { kind: "supported"; customerEntitlements: WorkerCustomerEntitlement[] }
+	| { kind: "supported"; customerEntitlements: WorkerFullCustomerEntitlement[] }
 	| UnsupportedTrackDecision;
 
 const classifyTrackCommand = ({
-	state,
-	catalog,
+	fullSubject,
 	command,
 }: {
-	state: CustomerState;
-	catalog: Catalog;
+	fullSubject: WorkerFullSubject;
 	command: TrackCommand;
 }): TrackClassification => {
-	if (!identitiesMatch({ left: state.identity, right: command.identity })) {
+	if (
+		!identitiesMatch({ left: fullSubject.identity, right: command.identity })
+	) {
 		return { kind: "unsupported", reason: "subject_mismatch" };
 	}
-	if (command.identity.entityId) {
-		return { kind: "unsupported", reason: "entity_not_supported" };
+	if (command.identity.entityId && !fullSubject.entity) {
+		return { kind: "unsupported", reason: "entity_not_found" };
 	}
 	if (command.properties && Object.keys(command.properties).length > 0) {
 		return { kind: "unsupported", reason: "properties_not_supported" };
@@ -45,10 +47,9 @@ const classifyTrackCommand = ({
 		return { kind: "unsupported", reason: "refund_not_supported" };
 	}
 
-	const customerEntitlements = findCustomerEntitlementsForFeature({
-		state,
-		catalog,
-		featureId: command.featureId,
+	const customerEntitlements = fullSubjectToCustomerEntitlements({
+		fullSubject,
+		featureIds: [command.featureId],
 	});
 	if (customerEntitlements.length === 0) {
 		return { kind: "unsupported", reason: "feature_not_found" };
@@ -63,13 +64,24 @@ const classifyTrackCommand = ({
 	return { kind: "supported", customerEntitlements };
 };
 
+/** A reject-mode track can only spend what is above zero; an overdrawn row lends nothing. */
+const availableBalanceOf = ({
+	customerEntitlements,
+}: {
+	customerEntitlements: WorkerFullCustomerEntitlement[];
+}): Decimal =>
+	customerEntitlements.reduce(
+		(total, cusEnt) => total.plus(Decimal.max(cusEntToBalance({ cusEnt }), 0)),
+		new Decimal(0),
+	);
+
 const customerEntitlementAfterChanges = ({
 	customerEntitlement,
 	changes,
 }: {
-	customerEntitlement: WorkerCustomerEntitlement;
+	customerEntitlement: WorkerFullCustomerEntitlement;
 	changes: RowChange[];
-}): WorkerCustomerEntitlement => {
+}): WorkerFullCustomerEntitlement => {
 	for (const change of changes) {
 		if (
 			change.table === "customerEntitlements" &&
@@ -83,7 +95,7 @@ const customerEntitlementAfterChanges = ({
 };
 
 const buildTrackMutation = ({
-	state,
+	fullSubject,
 	command,
 	customerEntitlements,
 	rejected,
@@ -91,18 +103,20 @@ const buildTrackMutation = ({
 	changes,
 	deduplicationExpiresAt,
 }: {
-	state: CustomerState;
+	fullSubject: WorkerFullSubject;
 	command: TrackCommand;
-	customerEntitlements: WorkerCustomerEntitlement[];
+	customerEntitlements: WorkerFullCustomerEntitlement[];
 	rejected: boolean;
 	appliedValue: Decimal;
 	changes: RowChange[];
 	deduplicationExpiresAt: number;
-}): CustomerStateMutation => {
+}): SubjectStateMutation => {
 	const customerEntitlementsAfter = customerEntitlements.map(
 		(customerEntitlement) =>
 			customerEntitlementAfterChanges({ customerEntitlement, changes }),
 	);
+	const [fundingRowAfter] = customerEntitlementsAfter;
+	if (!fundingRowAfter) throw new Error("A supported track funds one row");
 	const mutationCommand: TrackCommandEcho = {
 		type: "track",
 		requestId: command.requestId,
@@ -113,13 +127,16 @@ const buildTrackMutation = ({
 		properties: command.properties,
 	};
 
-	return parseCustomerStateMutation({
+	return parseSubjectStateMutation({
 		input: {
 			schemaVersion: 1,
 			type: "mutation",
 			id: command.commandId,
 			identity: command.identity,
-			revision: { before: state.revision, after: state.revision + 1 },
+			revision: {
+				before: fullSubject.revision,
+				after: fullSubject.revision + 1,
+			},
 			command: mutationCommand,
 			changes,
 			result: {
@@ -128,11 +145,11 @@ const buildTrackMutation = ({
 				reason: rejected ? "insufficient_balance" : null,
 				requestedValue: command.value,
 				appliedValue: appliedValue.toNumber(),
-				balanceBefore: balanceOf({ customerEntitlements }),
-				balanceAfter: balanceOf({
-					customerEntitlements: customerEntitlementsAfter,
+				balanceBefore: cusEntsToBalance({ cusEnts: customerEntitlements }),
+				balanceAfter: cusEntsToBalance({ cusEnts: customerEntitlementsAfter }),
+				customerEntitlement: fullCustomerEntitlementToRow({
+					customerEntitlement: fundingRowAfter,
 				}),
-				customerEntitlement: customerEntitlementsAfter[0],
 			},
 			receipt: {
 				fingerprint: mutationFingerprintOf({
@@ -148,19 +165,17 @@ const buildTrackMutation = ({
 	});
 };
 
-/** Pure: same state, catalog and command always yield the same decision. Deduplication is the writer's job. */
+/** Pure: the same subject and command always yield the same decision. Deduplication is the writer's job. */
 export const computeTrack = ({
-	state,
-	catalog,
+	fullSubject,
 	command,
 	deduplicationExpiresAt,
 }: {
-	state: CustomerState;
-	catalog: Catalog;
+	fullSubject: WorkerFullSubject;
 	command: TrackCommand;
 	deduplicationExpiresAt: number;
 }): TrackDecision => {
-	const classification = classifyTrackCommand({ state, catalog, command });
+	const classification = classifyTrackCommand({ fullSubject, command });
 	if (classification.kind !== "supported") return classification;
 
 	const { customerEntitlements } = classification;
@@ -176,7 +191,7 @@ export const computeTrack = ({
 				overageBehavior: command.overageBehavior,
 			});
 	const mutation = buildTrackMutation({
-		state,
+		fullSubject,
 		command,
 		customerEntitlements,
 		rejected,

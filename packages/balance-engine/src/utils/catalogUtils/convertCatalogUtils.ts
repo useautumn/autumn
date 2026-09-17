@@ -1,7 +1,7 @@
 import type { Catalog } from "../../models/catalog/catalog.js";
 import type { CatalogKey } from "../../models/catalog/catalogKey.js";
 import type { CatalogRow } from "../../models/catalog/catalogRow.js";
-import type { CustomerState } from "../../models/customerState.js";
+import type { SubjectState } from "../../models/subjectState.js";
 import { parseCatalog } from "../../parsers.js";
 
 export const catalogKeyToString = ({ key }: { key: CatalogKey }): string =>
@@ -21,10 +21,10 @@ const compareCatalogKeys = (left: CatalogKey, right: CatalogKey): number =>
 	left.table.localeCompare(right.table) || left.id.localeCompare(right.id);
 
 /** Every catalog row the state references, distinct and in a stable order. */
-export const customerStateToCatalogKeys = ({
+export const subjectStateToCatalogKeys = ({
 	state,
 }: {
-	state: CustomerState;
+	state: SubjectState;
 }): CatalogKey[] => {
 	const keysByString = new Map<string, CatalogKey>();
 	const add = (key: CatalogKey) =>

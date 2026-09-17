@@ -1,17 +1,21 @@
 import { isDeepStrictEqual } from "node:util";
 import {
 	catalogRowsToCatalog,
-	findCustomerEntitlementsForFeature,
+	fullCustomerEntitlementToRow,
 	type InitializationDecision,
+	subjectStateToFullSubject,
 	type WorkerCustomerEntitlement,
 } from "@autumn/balance-engine";
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
-import type { FullSubject } from "@autumn/shared";
+import {
+	type FullSubject,
+	fullSubjectToCustomerEntitlements,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	fullSubjectToCatalogRows,
-	fullSubjectToCustomerState,
-} from "../../balanceWorker/fullSubjectToCustomerState.js";
+	fullSubjectToSubjectState,
+} from "../../balanceWorker/fullSubjectToSubjectState.js";
 import { initializeBalanceWorkerCustomer } from "../../balanceWorker/initializeBalanceWorkerCustomer.js";
 import { checkParamsToCheckCommand } from "../../check/balanceWorker/balanceWorkerCheckRequest.js";
 
@@ -49,19 +53,21 @@ export async function inspectBalanceShadowCustomer({
 		const fullSubject = await loadSubject();
 		if (fullSubject.customerId !== customerId)
 			throw new Error("Redis customer identity does not match the cohort");
-		const state = fullSubjectToCustomerState({ ctx, fullSubject, featureIds });
+		const state = fullSubjectToSubjectState({ ctx, fullSubject, featureIds });
 		const catalog = catalogRowsToCatalog({
 			rows: fullSubjectToCatalogRows({ ctx, fullSubject, featureIds }),
 		});
+		const workerSubject = subjectStateToFullSubject({ state, catalog });
 		const redis: Record<string, WorkerCustomerEntitlement> = {};
 		for (const featureId of featureIds) {
-			const [entitlement] = findCustomerEntitlementsForFeature({
-				state,
-				catalog,
-				featureId,
+			const [entitlement] = fullSubjectToCustomerEntitlements({
+				fullSubject: workerSubject,
+				featureIds: [featureId],
 			});
 			if (!entitlement) throw new Error(`No row funds ${featureId}`);
-			redis[featureId] = entitlement;
+			redis[featureId] = fullCustomerEntitlementToRow({
+				customerEntitlement: entitlement,
+			});
 		}
 		result.redis = redis;
 		for (const entitlement of Object.values(redis)) {
@@ -121,7 +127,7 @@ export async function inspectBalanceShadowCustomer({
 			after.subjectViewEpoch !== fullSubject.subjectViewEpoch ||
 			!isDeepStrictEqual(
 				state,
-				fullSubjectToCustomerState({ ctx, fullSubject: after, featureIds }),
+				fullSubjectToSubjectState({ ctx, fullSubject: after, featureIds }),
 			)
 		)
 			throw new Error("Redis baseline changed during the operation");

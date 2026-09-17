@@ -1,3 +1,3 @@
-import type { CustomerStateMutation } from "@autumn/balance-engine";
+import type { SubjectStateMutation } from "@autumn/balance-engine";
 
-export type MeteringRecord = CustomerStateMutation;
+export type MeteringRecord = SubjectStateMutation;

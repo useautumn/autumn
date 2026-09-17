@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
-	type CustomerState,
-	type CustomerStateMutation,
-	createCustomerState,
+	createSubjectState,
+	type SubjectState,
+	type SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { ensureSubjectState } from "../../../../src/processor/subject/actions/ensureSubject/ensureSubjectState.js";
@@ -17,7 +17,7 @@ const identity = {
 	customerId: "cus_1",
 	entityId: null,
 };
-const emptyState = createCustomerState({ identity });
+const emptyState = createSubjectState({ identity });
 const emptyEnvelope: SubjectRowsEnvelope = {
 	customer: {
 		internal_id: "cus_internal_1",
@@ -29,15 +29,12 @@ const emptyEnvelope: SubjectRowsEnvelope = {
 	customer_entitlements: [],
 	rollovers: [],
 	entities: [],
-	products: [],
-	entitlements: [],
-	features: [],
 };
 
 /** Applies `mutate` against the held state and commits synchronously, the way the real writer does minus Kafka. */
-const createFakeWriter = ({ initial }: { initial: CustomerState | null }) => {
+const createFakeWriter = ({ initial }: { initial: SubjectState | null }) => {
 	let state = initial;
-	const committed: CustomerStateMutation[] = [];
+	const committed: SubjectStateMutation[] = [];
 	const decide = <Reply>(submission: MutationSubmission<Reply>) => {
 		const result = submission.mutate({ state });
 		if (result.kind === "reply") {
@@ -64,7 +61,7 @@ const createScope = ({
 	initial,
 	rows,
 }: {
-	initial: CustomerState | null;
+	initial: SubjectState | null;
 	rows: SubjectRowsEnvelope | null;
 }) => {
 	const writer = createFakeWriter({ initial });

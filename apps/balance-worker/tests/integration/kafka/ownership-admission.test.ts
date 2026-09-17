@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createCustomerState, parseTrackCommand } from "@autumn/balance-engine";
+import { createSubjectState, parseTrackCommand } from "@autumn/balance-engine";
 import {
 	createOwnershipConsumer,
 	createProducerSession,
@@ -24,7 +24,7 @@ import {
 } from "../../fixtures/catalog.js";
 import {
 	createCustomerEntitlement,
-	restoreCustomerStates,
+	restoreSubjectStates,
 } from "../../fixtures/mutations.js";
 
 if (!process.env.KAFKA_BROKERS?.trim())
@@ -85,7 +85,7 @@ describe("Real ownership admission", () => {
 		});
 		for (const partition of [0, 1, 2])
 			store.initializePartition({ topic, partition, nextOffset: 0n });
-		const state = createCustomerState({
+		const state = createSubjectState({
 			identity: {
 				orgId: "org_1",
 				env: "sandbox",
@@ -100,7 +100,7 @@ describe("Real ownership admission", () => {
 				}),
 			],
 		});
-		restoreCustomerStates({ store, topic, partition, states: [state] });
+		restoreSubjectStates({ store, topic, partition, states: [state] });
 		const lifecycle: string[] = [];
 		const errors: unknown[] = [];
 		const factory = createPartitionRuntimeFactory({

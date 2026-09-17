@@ -26,7 +26,7 @@ import {
 import {
 	applyDurableMutation,
 	createInitializeMutation,
-	restoreCustomerStates,
+	restoreSubjectStates,
 } from "../../fixtures/mutations.js";
 import {
 	closeStoreFixture,
@@ -350,7 +350,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -435,7 +435,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -503,7 +503,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -551,7 +551,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -610,7 +610,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -667,7 +667,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -720,7 +720,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -762,7 +762,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -815,7 +815,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -857,7 +857,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -911,7 +911,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -957,7 +957,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -995,7 +995,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -1027,7 +1027,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store: fixture.store,
 				topic,
 				partition,
@@ -1166,7 +1166,7 @@ async function replayStopSettlesBatchesBeforeReplacement(): Promise<void> {
 	const replay = consumer.createReplay({ partition });
 	try {
 		const state = createState();
-		restoreCustomerStates({
+		restoreSubjectStates({
 			store: fixture.store,
 			topic,
 			partition,

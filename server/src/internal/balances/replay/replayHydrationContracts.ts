@@ -2,9 +2,9 @@ import type {
 	CatalogRow,
 	CheckCommand,
 	CheckDecision,
-	CustomerState,
 	InitializationDecision,
 	MeteringIdentity,
+	SubjectState,
 	TrackCommand,
 	TrackDecision,
 } from "@autumn/balance-engine";
@@ -26,7 +26,7 @@ export type ReplayHydrationSourceRefusalCategory = "missing" | "unsupported";
 export type ReplayHydrationSourceResult =
 	| Readonly<{
 			kind: "loaded";
-			state: CustomerState;
+			state: SubjectState;
 			catalogRows: CatalogRow[];
 	  }>
 	| Readonly<{

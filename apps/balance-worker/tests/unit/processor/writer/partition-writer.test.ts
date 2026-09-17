@@ -4,14 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	applyMutation,
-	type CustomerState,
 	computeTrack,
-	createCustomerState,
+	createSubjectState,
 	type InitializationDecision,
 	type InitializeCommand,
 	type MeteringIdentity,
 	meteringPartitionKeyOf,
 	parseTrackCommand,
+	type SubjectState,
 	type TrackCommand,
 	type TrackDecision,
 	trackCommandFingerprintOf,
@@ -50,10 +50,10 @@ import {
 } from "../../../fixtures/catalog.js";
 import {
 	applyDurableMutation,
-	createCatalogFor,
 	createCustomerEntitlement,
 	createInitializeCommand,
-	restoreCustomerStates,
+	createSubjectFor,
+	restoreSubjectStates,
 } from "../../../fixtures/mutations.js";
 
 const topic = "metering-events-v1";
@@ -72,8 +72,8 @@ const createState = ({
 }: {
 	identity: MeteringIdentity;
 	balance?: number;
-}): CustomerState =>
-	createCustomerState({
+}): SubjectState =>
+	createSubjectState({
 		identity,
 		customerEntitlements: [
 			createCustomerEntitlement({
@@ -200,7 +200,7 @@ const createFixture = ({
 	});
 	store.initializePartition({ topic, partition, nextOffset: 0n });
 	if (identities.length > 0) {
-		restoreCustomerStates({
+		restoreSubjectStates({
 			store,
 			topic,
 			partition,
@@ -303,8 +303,7 @@ function decideForTest({
 }: MutateParams & { command: TrackCommand }): MutationResult<TrackDecision> {
 	if (!state) throw new Error("Expected projected state");
 	const decision = computeTrack({
-		state,
-		catalog: createCatalogFor({ state }),
+		fullSubject: createSubjectFor({ state }),
 		command,
 		deduplicationExpiresAt: 1_700_086_400_000,
 	});

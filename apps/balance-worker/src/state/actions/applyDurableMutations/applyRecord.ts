@@ -1,13 +1,19 @@
-import { applyMutation, meteringPartitionKeyOf } from "@autumn/balance-engine";
+import {
+	applyMutation,
+	meteringPartitionKeyOf,
+	type SubjectState,
+	subjectBlobsToSubjectState,
+	subjectStateToSubjectBlobs,
+} from "@autumn/balance-engine";
 import {
 	insertReceipt,
 	readReceipt,
 	updateReceipt,
 } from "../../repos/mutationReceipts/mutationReceipts.js";
 import {
-	insertState,
-	readStoredState,
-	updateState,
+	insertBlob,
+	readStoredView,
+	updateBlob,
 } from "../../repos/subjectStates/subjectStates.js";
 import {
 	ConflictingMutationReceiptError,
@@ -19,6 +25,7 @@ import type {
 	DurableMutationRecord,
 } from "../../types/durableMutation.js";
 import type { StateStoreContext } from "../../types/stateStoreContext.js";
+import type { StoredSubjectView } from "../../types/storedSubjectState.js";
 import {
 	advanceProgress,
 	requireNextOffset,
@@ -26,14 +33,14 @@ import {
 
 type ApplyRecordParams = { ctx: StateStoreContext } & DurableMutationRecord;
 
-/** The stored state, proven to belong to the partition this record arrived on. */
-const readOwnedState = ({
+/** The stored view the mutation was decided against, proven to belong to the partition this record arrived on. */
+const readOwnedView = ({
 	ctx,
 	position,
 	mutation,
 	partitionKey,
-}: ApplyRecordParams & { partitionKey: string }) => {
-	const stored = readStoredState({ ctx, identity: mutation.identity });
+}: ApplyRecordParams & { partitionKey: string }): StoredSubjectView | null => {
+	const stored = readStoredView({ ctx, identity: mutation.identity });
 	if (!stored) return null;
 	if (
 		stored.topic !== position.topic ||
@@ -41,7 +48,57 @@ const readOwnedState = ({
 	) {
 		throw new MeteringStatePartitionMismatchError({ partitionKey });
 	}
-	return stored.state;
+	return stored;
+};
+
+/** A fresh customer writes every blob it carries; an existing one writes the customer blob under its revision guard plus the one entity blob the view named. */
+const writeView = ({
+	ctx,
+	position,
+	stored,
+	nextView,
+	revisionBefore,
+	partitionKey,
+}: ApplyRecordParams & {
+	stored: StoredSubjectView | null;
+	nextView: SubjectState;
+	revisionBefore: number;
+	partitionKey: string;
+}): void => {
+	const blobs = subjectStateToSubjectBlobs({ state: nextView });
+	const insert = (state: SubjectState) =>
+		insertBlob({
+			ctx,
+			topic: position.topic,
+			partition: position.partition,
+			state,
+		});
+
+	if (!stored) {
+		insert(blobs.customer);
+		for (const entityBlob of blobs.entities) insert(entityBlob);
+		return;
+	}
+
+	const customerUpdate = updateBlob({
+		ctx,
+		state: blobs.customer,
+		revisionBefore,
+	});
+	if (customerUpdate.changes !== 1) {
+		throw new CorruptBalanceStateError({ partitionKey });
+	}
+
+	const entityId = nextView.identity.entityId;
+	const entityBlob = entityId
+		? blobs.entities.find((blob) => blob.identity.entityId === entityId)
+		: undefined;
+	if (!entityBlob) return;
+	if (stored.entity) {
+		updateBlob({ ctx, state: entityBlob });
+	} else {
+		insert(entityBlob);
+	}
 };
 
 /** One write path: the log orders the mutation, the receipt only answers "have I seen this id". */
@@ -72,14 +129,20 @@ export const applyRecord = ({
 		});
 	}
 
-	const state = readOwnedState({ ctx, position, mutation, partitionKey });
+	const stored = readOwnedView({ ctx, position, mutation, partitionKey });
+	const view = stored
+		? subjectBlobsToSubjectState({
+				customer: stored.customer,
+				entity: stored.entity,
+			})
+		: null;
 	// A receipt past this mutation's base revision is already folded into the state;
 	// an older one is a replay of a receipt the owner pruned, so it gets overwritten.
 	const receiptCoversState =
 		storedReceipt !== null &&
 		storedReceipt.mutation.revision.after > mutation.revision.before;
 	if (storedReceipt && receiptCoversState) {
-		if (!state) throw new CorruptBalanceStateError({ partitionKey });
+		if (!view) throw new CorruptBalanceStateError({ partitionKey });
 		if (position.offset > storedReceipt.recordOffset) {
 			updateReceipt({
 				ctx,
@@ -91,32 +154,26 @@ export const applyRecord = ({
 		advanceProgress({ ctx, position, expectedOffset, nextOffset });
 		return {
 			kind: "duplicate",
-			state,
+			state: view,
 			mutation: storedReceipt.mutation,
 			nextOffset,
 		};
 	}
 
-	const nextState = applyMutation({ state, mutation });
-	if (state) {
-		const stateUpdate = updateState({
-			ctx,
-			partitionKey,
-			revisionBefore: mutation.revision.before,
-			state: nextState,
-		});
-		if (stateUpdate.changes !== 1) {
-			throw new CorruptBalanceStateError({ partitionKey });
-		}
-	} else {
-		insertState({
-			ctx,
-			partitionKey,
-			topic: position.topic,
-			partition: position.partition,
-			state: nextState,
-		});
-	}
+	// The view keeps the command's identity so the entity blob it names is the one written back.
+	const nextView: SubjectState = {
+		...applyMutation({ state: view, mutation }),
+		identity: mutation.identity,
+	};
+	writeView({
+		ctx,
+		position,
+		mutation,
+		stored,
+		nextView,
+		revisionBefore: mutation.revision.before,
+		partitionKey,
+	});
 
 	if (storedReceipt) {
 		const receiptUpdate = updateReceipt({
@@ -133,5 +190,10 @@ export const applyRecord = ({
 	}
 
 	advanceProgress({ ctx, position, expectedOffset, nextOffset });
-	return { kind: "applied", state: nextState, mutation, nextOffset };
+	return {
+		kind: "applied",
+		state: { ...nextView, identity: { ...nextView.identity, entityId: null } },
+		mutation,
+		nextOffset,
+	};
 };

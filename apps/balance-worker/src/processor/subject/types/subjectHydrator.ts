@@ -1,7 +1,7 @@
 import type {
-	Catalog,
-	CustomerState,
 	MeteringIdentity,
+	SubjectState,
+	WorkerFullSubject,
 } from "@autumn/balance-engine";
 import type { Subject } from "./subject.js";
 
@@ -9,6 +9,9 @@ import type { Subject } from "./subject.js";
 export type SubjectHydrator = {
 	/** Async, before the writer: hydrates a missing customer, loads missing catalog rows. */
 	ensure(params: { identity: MeteringIdentity }): Promise<Subject>;
-	/** Sync, inside the critical section on the freshest state; `ensure` already filled the cache. */
-	readCatalog(params: { state: CustomerState }): Catalog;
+	/** Sync, inside the critical section on the freshest state: the FullSubject-shaped view the command computes against. */
+	readSubject(params: {
+		state: SubjectState;
+		identity: MeteringIdentity;
+	}): WorkerFullSubject;
 };

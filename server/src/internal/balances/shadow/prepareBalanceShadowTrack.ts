@@ -1,15 +1,19 @@
 import {
 	catalogRowsToCatalog,
-	findCustomerEntitlementsForFeature,
+	subjectStateToFullSubject,
 	type TrackCommand,
 } from "@autumn/balance-engine";
-import type { FullSubject, TrackParams } from "@autumn/shared";
+import {
+	type FullSubject,
+	fullSubjectToCustomerEntitlements,
+	type TrackParams,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { BalanceWorkerUnsupportedError } from "../balanceWorker/balanceWorkerErrors.js";
 import {
 	fullSubjectToCatalogRows,
-	fullSubjectToCustomerState,
-} from "../balanceWorker/fullSubjectToCustomerState.js";
+	fullSubjectToSubjectState,
+} from "../balanceWorker/fullSubjectToSubjectState.js";
 import { validateBalanceWorkerRequest } from "../balanceWorker/validateBalanceWorkerRequest.js";
 import { trackParamsToTrackCommand } from "../track/balanceWorker/balanceWorkerTrackRequest.js";
 import type { BalanceShadowConfig } from "./balanceShadowTypes.js";
@@ -48,7 +52,7 @@ export function prepareBalanceShadowTrack({
 		return { kind: "skip", reason: "value_not_supported" };
 	try {
 		validateBalanceWorkerRequest({ ctx, body });
-		const state = fullSubjectToCustomerState({
+		const state = fullSubjectToSubjectState({
 			ctx,
 			fullSubject,
 			featureIds: [body.feature_id],
@@ -60,10 +64,9 @@ export function prepareBalanceShadowTrack({
 				featureIds: [body.feature_id],
 			}),
 		});
-		const [entitlement] = findCustomerEntitlementsForFeature({
-			state,
-			catalog,
-			featureId: body.feature_id,
+		const [entitlement] = fullSubjectToCustomerEntitlements({
+			fullSubject: subjectStateToFullSubject({ state, catalog }),
+			featureIds: [body.feature_id],
 		});
 		if (
 			!entitlement ||

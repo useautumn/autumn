@@ -4,9 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	applyMutation,
-	type CustomerState,
 	type MeteringIdentity,
 	meteringPartitionKeyOf,
+	type SubjectState,
 } from "@autumn/balance-engine";
 import { createPartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { PartitionCheckpointLimitExceededError } from "../../../../src/state/actions/checkpoint/restorePartitionCheckpoint.js";
@@ -15,7 +15,7 @@ import type { StateStore } from "../../../../src/state/types/stateStore.js";
 import {
 	createState,
 	createTrackMutation,
-	seedCustomerState,
+	seedSubjectState,
 } from "../../../fixtures/mutations.js";
 
 const topic = "metering-events-v1";
@@ -39,7 +39,7 @@ const stateOf = ({
 }: {
 	identity: MeteringIdentity;
 	balance?: number;
-}): CustomerState => createState({ identity, balance });
+}): SubjectState => createState({ identity, balance });
 
 /** Leaves the partition at `nextOffset` with the customer seeded by its initialize mutation. */
 const seedPartition = ({
@@ -52,11 +52,11 @@ const seedPartition = ({
 	store: StateStore;
 	partition: number;
 	nextOffset: bigint;
-	state: CustomerState;
+	state: SubjectState;
 	commandId: string;
 }): void => {
 	store.initializePartition({ topic, partition, nextOffset: nextOffset - 1n });
-	seedCustomerState({
+	seedSubjectState({
 		store,
 		topic,
 		partition,
@@ -91,7 +91,7 @@ const checkpointWithReceipt = ({
 		topic,
 		partition,
 		nextOffset,
-		states: [{ partitionKey, state }],
+		states: [{ subjectKey: partitionKey, state }],
 		receipts: [{ partitionKey, recordOffset: nextOffset - 1n, mutation }],
 	});
 };
@@ -113,7 +113,7 @@ const checkpointWithoutReceipts = ({
 		topic,
 		partition,
 		nextOffset,
-		states: [{ partitionKey, state }],
+		states: [{ subjectKey: partitionKey, state }],
 		receipts: [],
 	});
 };

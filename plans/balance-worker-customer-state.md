@@ -6,7 +6,7 @@ Cleanup of the business-logic layers before the stack merges for prod shadowing.
 Two changes, one idea: the worker is a **mutation stream over the customer's rows**.
 
 1. `CustomerMeteringState` becomes the customer-owned rows of `NormalizedFullSubject`, catalog kept apart.
-2. `TrackOutcome | StateInitializedEvent` becomes one `CustomerStateMutation` whose `changes` are row-ops, the way `AutumnBillingPlan` is one object every billing action fills in.
+2. `TrackOutcome | StateInitializedEvent` becomes one `SubjectStateMutation` whose `changes` are row-ops, the way `AutumnBillingPlan` is one object every billing action fills in.
 
 Everything downstream (SQLite apply, receipts, checkpoint, follower, shadow) stops branching on record type.
 
@@ -53,7 +53,7 @@ related: the worker's supported surface stays "one direct metered cusEnt, no ent
 ### State: the customer's rows, catalog beside it
 
 ```
-┌─ CustomerState (one per customer, revisioned) ──────────────────┐
+┌─ SubjectState (one per customer, revisioned) ──────────────────┐
 │ identity { orgId, env, customerId }        revision: 7          │
 │                                                                 │
 │ customer            ┌──────────┐   billing controls only        │
@@ -70,7 +70,7 @@ related: the worker's supported surface stays "one direct metered cusEnt, no ent
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-Rows are **picks of the shared schemas**: each table's engine schema is `.pick()` of the `@autumn/shared` zod row schema with Postgres column names and only the columns check/track read, `.strict()`. The engine imports `@autumn/shared`; shared helpers are adopted one at a time, each narrowed to a `Pick<…>` of the fields it reads. `NormalizedFullSubject` → `CustomerState` is a pick, not a derivation. Catalog rows are never in state: state references them by id and the worker resolves the ids through the tiers below.
+Rows are **picks of the shared schemas**: each table's engine schema is `.pick()` of the `@autumn/shared` zod row schema with Postgres column names and only the columns check/track read, `.strict()`. The engine imports `@autumn/shared`; shared helpers are adopted one at a time, each narrowed to a `Pick<…>` of the fields it reads. `NormalizedFullSubject` → `SubjectState` is a pick, not a derivation. Catalog rows are never in state: state references them by id and the worker resolves the ids through the tiers below.
 
 ### Entities: one blob per subject, not per customer
 
@@ -127,7 +127,7 @@ mutation is never raced:
 
 ```
 decideWithCatalog
-  decide ──► mutate: keys = customerStateToCatalogKeys(state); catalog = cache.read(keys)
+  decide ──► mutate: keys = subjectStateToCatalogKeys(state); catalog = cache.read(keys)
              missing = filterCatalogKeysMissingFrom(keys, catalog)
              missing → reply { kind: "needsCatalog", keys }          nothing written, no revision consumed
   await cache.load({ identity, keys })                               coalesced per key → source → put
@@ -156,7 +156,7 @@ the fan-out a per-row cache never pays.
 ### Mutation: one record, an ordered list of row changes
 
 ```
-┌─ CustomerStateMutation (the Kafka record, the receipt) ────────────────┐
+┌─ SubjectStateMutation (the Kafka record, the receipt) ────────────────┐
 │ id · identity                          index keys the store looks up by │
 │ revision: { before: 7, after: 8 }      ordering guard                   │
 │ command: { kind: "track", requestId, occurredAt, featureId, value, … }  │
@@ -219,14 +219,14 @@ worker or server red for the next.
 
 `john/state-structure` 7fecc92414.
 
-### 1 · [x] data model → one `CustomerStateMutation` record, end to end
+### 1 · [x] data model → one `SubjectStateMutation` record, end to end
 
 `john/one-record` 22bea8d23f. Every suite green: engine 29 · kafka 96 · client 22 · worker 435 · server balance suites 209.
 
 ### 2 · [x] engine → catalog vocabulary, utils in the shared-utils shape
 
 **goal** — the engine says what a catalog row is, which rows a state references, and what a catalog lacks; nothing else about caching
-**steps** — `models/catalog/{catalogKey,catalogRow,catalog}.ts` over shared `Entitlement`/`Product`/`Feature`; delete the `worker{Entitlement,Product,Feature}` picks · `utils/catalogUtils/{convertCatalogUtils,filterCatalogUtils,findCatalogUtils}.ts`: `customerStateToCatalogKeys`, `catalogRowToCatalogKey`, `catalogKeyToString`, `catalogRowsToCatalog`, `filterCatalogKeysMissingFrom`, `findFeatureById` · initialize wire carries `catalogRows: CatalogRow[]` · `parseCatalog`, `parseCatalogRow`
+**steps** — `models/catalog/{catalogKey,catalogRow,catalog}.ts` over shared `Entitlement`/`Product`/`Feature`; delete the `worker{Entitlement,Product,Feature}` picks · `utils/catalogUtils/{convertCatalogUtils,filterCatalogUtils,findCatalogUtils}.ts`: `subjectStateToCatalogKeys`, `catalogRowToCatalogKey`, `catalogKeyToString`, `catalogRowsToCatalog`, `filterCatalogKeysMissingFrom`, `findFeatureById` · initialize wire carries `catalogRows: CatalogRow[]` · `parseCatalog`, `parseCatalogRow`
 **verify** — `tests/unit/utils/catalogUtils/catalogUtils.test.ts`; engine `src/` typechecks
 
 ### 3 · [x] worker → `catalog/` cache, fake source
@@ -244,7 +244,7 @@ apps/balance-worker/src/catalog/
 
 ### 4 · [x] worker + server → wired end to end, tree green
 
-**steps** — `processor/common/catalogForState.ts` (`readCatalogForState`, `decideWithCatalog`) · track/check use it; initialize `put`s `command.catalogRows` · `catalogCache` on `PartitionProcessorDependencies`, built in `openWorkerResources`, threaded through the runtime factory · `http/handlers/receiveInvalidateCatalog.ts` · server `fullSubjectToCustomerState` becomes a pick plus `fullSubjectToCatalogRows`; `balanceWorkerTrackResponse` overlays `result.customerEntitlement.balance` onto the server's `FullCustomerEntitlement` and calls `getApiBalance`; delete `meteringBalanceToApiBalance` · fix `tests/fixtures/mutations.ts` and every suite
+**steps** — `processor/common/catalogForState.ts` (`readCatalogForState`, `decideWithCatalog`) · track/check use it; initialize `put`s `command.catalogRows` · `catalogCache` on `PartitionProcessorDependencies`, built in `openWorkerResources`, threaded through the runtime factory · `http/handlers/receiveInvalidateCatalog.ts` · server `fullSubjectToSubjectState` becomes a pick plus `fullSubjectToCatalogRows`; `balanceWorkerTrackResponse` overlays `result.customerEntitlement.balance` onto the server's `FullCustomerEntitlement` and calls `getApiBalance`; delete `meteringBalanceToApiBalance` · fix `tests/fixtures/mutations.ts` and every suite
 **verify** — worker `bun ts` · engine, kafka, client, worker, server balance suites
 
 ### 5 · [x] postgres → per-table repos, worker sources
@@ -263,7 +263,7 @@ apps/balance-worker/src/catalog/
 
 ### 8 · [x] worker → hydrate a customer from Postgres when it has no state (pulled forward into unit 4; entity views still unit 6)
 
-As previously planned: `getSubjectRows` → `subjectRowsToCustomerState` → initialize mutation → decide; catalog rows resolve through the cache. Open items unchanged: primary vs replica, Redis lag during shadow.
+As previously planned: `getSubjectRows` → `subjectRowsToSubjectState` → initialize mutation → decide; catalog rows resolve through the cache. Open items unchanged: primary vs replica, Redis lag during shadow.
 
 ### 9 · [ ] server → `Decision<Result>`, unsupported as errors
 
@@ -278,7 +278,7 @@ One stacked branch per unit (`gh stack`, base `og/balance-worker-observability`)
 
 ## Decisions
 
-1. **Names.** `CustomerState`, `CustomerStateMutation`, `changes: RowChange[]`; `Catalog` for the by-id records compute receives; `CatalogKey` / `CatalogRow`; `catalogCache` for the worker abstraction; `CatalogRowsSource` for what fills it.
+1. **Names.** `SubjectState`, `SubjectStateMutation`, `changes: RowChange[]`; `Catalog` for the by-id records compute receives; `CatalogKey` / `CatalogRow`; `catalogCache` for the worker abstraction; `CatalogRowsSource` for what fills it.
 2. **Catalog is one in-process tier over Postgres.** No SQLite, no Dynamo. Decided 2026-09-16.
 3. **Catalog rows are never state.** State references by id; rows are the shared types, not picks.
 4. **Invalidation is pushed and org-scoped.** Drops products, features, base entitlements; keeps custom entitlements. Mutable-row ttl is the backstop.

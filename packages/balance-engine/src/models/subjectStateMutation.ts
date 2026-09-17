@@ -30,7 +30,7 @@ const mutationReceiptSchema = z
 	.object({ fingerprint: nonEmptyStringSchema, expiresAt: timestampSchema })
 	.strict();
 
-export const customerStateMutationSchema = z
+export const subjectStateMutationSchema = z
 	.object({
 		schemaVersion: z.literal(1),
 		type: z.literal("mutation"),
@@ -86,4 +86,4 @@ export const customerStateMutationSchema = z
 
 export type MutationCommand = z.infer<typeof mutationCommandSchema>;
 export type MutationResult = z.infer<typeof mutationResultSchema>;
-export type CustomerStateMutation = z.infer<typeof customerStateMutationSchema>;
+export type SubjectStateMutation = z.infer<typeof subjectStateMutationSchema>;

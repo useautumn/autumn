@@ -3,6 +3,7 @@ import {
 	catalogRowsToCatalog,
 	computeCheck,
 	type InitializeCommand,
+	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
 import type { BalanceShadowConfig } from "@/internal/balances/shadow/balanceShadowTypes.js";
 import { runBalanceShadowCohort } from "@/internal/balances/shadow/operator/runBalanceShadowCohort.js";
@@ -91,9 +92,12 @@ test.concurrent(
 					},
 					check: async ({ command }) =>
 						computeCheck({
-							state: initialization!.state,
-							catalog: catalogRowsToCatalog({
-								rows: initialization!.catalogRows,
+							fullSubject: subjectStateToFullSubject({
+								state: initialization!.state,
+								catalog: catalogRowsToCatalog({
+									rows: initialization!.catalogRows,
+								}),
+								entityId: command.identity.entityId,
 							}),
 							command,
 						}),

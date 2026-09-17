@@ -1,15 +1,15 @@
 import type {
 	CatalogRow,
 	CheckCommand,
-	CustomerState,
 	MeteringIdentity,
+	SubjectState,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import {
 	fullSubjectToCatalogRows,
-	fullSubjectToCustomerState,
-} from "@/internal/balances/balanceWorker/fullSubjectToCustomerState.js";
+	fullSubjectToSubjectState,
+} from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
 import type {
 	ReplayHydrationSelection,
 	ReplayHydrationSource,
@@ -42,7 +42,7 @@ export function createReplayHydrationFixture({
 	fixture.fullSubject.customer.env =
 		selectedIdentity.env as typeof fixture.fullSubject.customer.env;
 	fixture.fullSubject.customerId = selectedIdentity.customerId;
-	const state = fullSubjectToCustomerState({
+	const state = fullSubjectToSubjectState({
 		ctx: fixture.ctx,
 		fullSubject: fixture.fullSubject,
 		featureIds,
@@ -135,7 +135,7 @@ export function createLoadedSource({
 	catalogRows = [],
 	onLoad,
 }: {
-	state: CustomerState;
+	state: SubjectState;
 	catalogRows?: CatalogRow[];
 	onLoad?: ReplayHydrationSource["load"];
 }): ReplayHydrationSource {

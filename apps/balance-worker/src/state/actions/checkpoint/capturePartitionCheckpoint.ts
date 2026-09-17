@@ -83,8 +83,8 @@ export const capturePartitionCheckpoint = ({
 				consumedNextOffset !== null && consumedNextOffset > cut.nextOffset
 					? consumedNextOffset
 					: cut.nextOffset,
-			states: cut.states.map(({ partitionKey, state }) => ({
-				partitionKey,
+			states: cut.states.map(({ subjectKey, state }) => ({
+				subjectKey,
 				state,
 			})),
 			receipts: cut.receipts,

@@ -1,15 +1,16 @@
 import {
 	type Catalog,
 	type CatalogRow,
-	type CustomerState,
-	type CustomerStateMutation,
 	catalogRowsToCatalog,
 	computeInitialize,
 	computeTrack,
-	createCustomerState,
+	createSubjectState,
 	type MeteringIdentity,
 	parseInitializeCommand,
 	parseTrackCommand,
+	type SubjectState,
+	type SubjectStateMutation,
+	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
 import {
 	AllowanceType,
@@ -38,8 +39,8 @@ export const createState = ({
 }: {
 	identity?: MeteringIdentity;
 	balance?: number;
-} = {}): CustomerState =>
-	createCustomerState({
+} = {}): SubjectState =>
+	createSubjectState({
 		identity,
 		customerProducts: [
 			{
@@ -143,13 +144,16 @@ export const createTrackMutation = ({
 	commandId = "cmd_1",
 	value = 5,
 }: {
-	state?: CustomerState;
+	state?: SubjectState;
 	commandId?: string;
 	value?: number;
-} = {}): CustomerStateMutation => {
+} = {}): SubjectStateMutation => {
 	const decision = computeTrack({
-		state,
-		catalog: testCatalog,
+		fullSubject: subjectStateToFullSubject({
+			state,
+			catalog: testCatalog,
+			entityId: state.identity.entityId,
+		}),
 		deduplicationExpiresAt,
 		command: parseTrackCommand({
 			input: {
@@ -176,9 +180,9 @@ export const createInitializeMutation = ({
 	state = createState(),
 	commandId = "init_1",
 }: {
-	state?: CustomerState;
+	state?: SubjectState;
 	commandId?: string;
-} = {}): CustomerStateMutation =>
+} = {}): SubjectStateMutation =>
 	computeInitialize({
 		command: parseInitializeCommand({
 			input: {

@@ -70,7 +70,7 @@ test.concurrent(
 			highWatermark: null,
 			lag: null,
 		});
-		const withPrivateData = { ...original, customerState: "do-not-log" };
+		const withPrivateData = { ...original, subjectState: "do-not-log" };
 		Object.freeze(withPrivateData);
 		Object.freeze(original);
 		try {

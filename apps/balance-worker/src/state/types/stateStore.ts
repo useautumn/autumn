@@ -1,7 +1,7 @@
 import type {
-	CustomerState,
-	CustomerStateMutation,
 	MeteringIdentity,
+	SubjectState,
+	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type {
 	PartitionCheckpointPartitionResolver,
@@ -44,11 +44,12 @@ export type StateStore = {
 		expiresAtOrBefore: number;
 		limit: number;
 	}): { deletedCount: number };
-	readState(params: { identity: MeteringIdentity }): CustomerState | null;
+	/** The view the identity reads: the customer blob plus the named entity's blob, merged. */
+	readState(params: { identity: MeteringIdentity }): SubjectState | null;
 	readReceipt(params: {
 		identity: MeteringIdentity;
 		mutationId: string;
-	}): CustomerStateMutation | null;
+	}): SubjectStateMutation | null;
 	readNextOffset(params: { topic: string; partition: number }): bigint | null;
 	applyDurableMutations(params: {
 		records: readonly DurableMutationRecord[];

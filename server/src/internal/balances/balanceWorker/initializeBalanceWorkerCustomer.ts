@@ -9,8 +9,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { rethrowBalanceWorkerError } from "./balanceWorkerErrors.js";
 import {
 	fullSubjectToCatalogRows,
-	fullSubjectToCustomerState,
-} from "./fullSubjectToCustomerState.js";
+	fullSubjectToSubjectState,
+} from "./fullSubjectToSubjectState.js";
 
 export async function initializeBalanceWorkerCustomer({
 	ctx,
@@ -25,7 +25,7 @@ export async function initializeBalanceWorkerCustomer({
 	commandId: string;
 	client?: Pick<BalanceWorkerClient, "initialize">;
 }): Promise<InitializationDecision> {
-	const state = fullSubjectToCustomerState({ ctx, fullSubject, featureIds });
+	const state = fullSubjectToSubjectState({ ctx, fullSubject, featureIds });
 	const command = parseInitializeCommand({
 		input: {
 			schemaVersion: 1,

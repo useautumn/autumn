@@ -2,6 +2,7 @@ import type { FullCustomerEntitlement } from "@models/cusProductModels/cusEntMod
 import type { Feature } from "@models/featureModels/featureModels.js";
 import { Decimal } from "decimal.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { FullCusEntWithFullCusProductView } from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { isPrepaidPrice } from "../productUtils/priceUtils/classifyPriceUtils.js";
 import { cusEntToCusPrice } from "./convertCusEntUtils/cusEntToCusPrice.js";
 
@@ -16,7 +17,7 @@ export const formatCusEnt = ({
 export const isEntityCusEnt = ({
 	cusEnt,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: FullCusEntWithFullCusProductView;
 }): boolean => {
 	return !!(
 		cusEnt.entitlement.entity_feature_id ||

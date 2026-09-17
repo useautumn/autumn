@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { CustomerStateMutation } from "@autumn/balance-engine";
+import type { SubjectStateMutation } from "@autumn/balance-engine";
 import {
 	CompressionTypes,
 	type ProducerRecord,
@@ -268,7 +268,7 @@ function meteringPublisherTests(): void {
 		commandId,
 	}: {
 		commandId: string;
-	}): CustomerStateMutation {
+	}): SubjectStateMutation {
 		return createTrackMutation({ state: createState({ identity }), commandId });
 	}
 

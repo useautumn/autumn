@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { TrackCommand } from "@autumn/balance-engine";
 import {
-	createCustomerState,
+	createSubjectState,
 	parseCheckCommand,
 	parseInitializeCommand,
 } from "@autumn/balance-engine";
@@ -284,7 +284,7 @@ test(
 );
 test("a canceled request never sends", respectsCallerCancellation);
 
-const initialState = createCustomerState({
+const initialState = createSubjectState({
 	identity: command.identity,
 	customerEntitlements: [
 		{

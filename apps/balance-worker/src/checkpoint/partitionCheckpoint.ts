@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
 import {
-	type CustomerState,
-	type CustomerStateMutation,
+	meteringIdentityToSubjectKey,
 	meteringPartitionKeyOf,
-	parseCustomerState,
-	parseCustomerStateMutation,
+	parseSubjectState,
+	parseSubjectStateMutation,
+	type SubjectState,
+	type SubjectStateMutation,
 } from "@autumn/balance-engine";
 
 const CHECKPOINT_SCHEMA_VERSION = 1 as const;
@@ -12,15 +13,16 @@ const ENGINE_SCHEMA_VERSION = 1 as const;
 const contentHashPattern = /^[a-f0-9]{64}$/;
 const offsetPattern = /^(0|[1-9][0-9]*)$/;
 
+/** One blob per entry: the customer's own rows, or one entity's, keyed by subject. */
 export type PartitionCheckpointStateV1 = {
-	partitionKey: string;
-	state: CustomerState;
+	subjectKey: string;
+	state: SubjectState;
 };
 
 export type PartitionCheckpointReceiptV1 = {
 	partitionKey: string;
 	recordOffset: bigint;
-	mutation: CustomerStateMutation;
+	mutation: SubjectStateMutation;
 };
 
 export type PartitionCheckpointContentsV1 = {
@@ -59,7 +61,7 @@ export type PartitionCheckpointPartitionResolver = {
 	partitionForIdentity({
 		identity,
 	}: {
-		identity: CustomerState["identity"];
+		identity: SubjectState["identity"];
 	}): number;
 };
 
@@ -168,9 +170,9 @@ const requireOffset = ({
 	return BigInt(value);
 };
 
-const parseState = ({ input }: { input: unknown }): CustomerState => {
+const parseState = ({ input }: { input: unknown }): SubjectState => {
 	try {
-		return parseCustomerState({ input });
+		return parseSubjectState({ input });
 	} catch (cause) {
 		throw new InvalidPartitionCheckpointError({
 			message: "Partition checkpoint contains invalid customer state",
@@ -183,9 +185,9 @@ const parseReceiptMutation = ({
 	input,
 }: {
 	input: unknown;
-}): CustomerStateMutation => {
+}): SubjectStateMutation => {
 	try {
-		return parseCustomerStateMutation({ input });
+		return parseSubjectStateMutation({ input });
 	} catch (cause) {
 		throw new InvalidPartitionCheckpointError({
 			message: "Partition checkpoint contains an invalid mutation receipt",
@@ -263,30 +265,35 @@ const normalizedContentsOf = ({
 		});
 	}
 
-	const stateByPartitionKey = new Map<string, CustomerState>();
+	// Receipts hang off the customer blob, whose subject key is its partition key.
+	const stateByPartitionKey = new Map<string, SubjectState>();
+	const subjectKeys = new Set<string>();
 	const normalizedStates = states
 		.map((entry) => {
-			const partitionKey = requireNonEmptyString({
-				name: "Checkpoint state partitionKey",
-				value: entry.partitionKey,
+			const subjectKey = requireNonEmptyString({
+				name: "Checkpoint state subjectKey",
+				value: entry.subjectKey,
 			});
-			if (stateByPartitionKey.has(partitionKey)) {
+			if (subjectKeys.has(subjectKey)) {
 				throw new InvalidPartitionCheckpointError({
-					message: `Duplicate checkpoint state: ${partitionKey}`,
+					message: `Duplicate checkpoint state: ${subjectKey}`,
 				});
 			}
 			const state = parseState({ input: entry.state });
 			if (
-				meteringPartitionKeyOf({ identity: state.identity }) !== partitionKey
+				meteringIdentityToSubjectKey({ identity: state.identity }) !==
+				subjectKey
 			) {
 				throw new InvalidPartitionCheckpointError({
-					message: `Checkpoint state identity does not match ${partitionKey}`,
+					message: `Checkpoint state identity does not match ${subjectKey}`,
 				});
 			}
-			stateByPartitionKey.set(partitionKey, state);
-			return { partitionKey, state };
+			subjectKeys.add(subjectKey);
+			if (state.identity.entityId === null)
+				stateByPartitionKey.set(subjectKey, state);
+			return { subjectKey, state };
 		})
-		.sort(({ partitionKey: left }, { partitionKey: right }) =>
+		.sort(({ subjectKey: left }, { subjectKey: right }) =>
 			left < right ? -1 : left > right ? 1 : 0,
 		);
 
@@ -434,7 +441,7 @@ export const assertPartitionCheckpointOwnership = ({
 		});
 		if (resolvedPartition !== partition) {
 			throw new InvalidPartitionCheckpointError({
-				message: `Checkpoint state ${state.partitionKey} resolves to partition ${resolvedPartition}`,
+				message: `Checkpoint state ${state.subjectKey} resolves to partition ${resolvedPartition}`,
 			});
 		}
 	}
@@ -512,11 +519,11 @@ export const parsePartitionCheckpoint = ({
 		assertExactKeys({
 			name: `Checkpoint state ${index}`,
 			value: stateEntry,
-			keys: ["partitionKey", "state"],
+			keys: ["subjectKey", "state"],
 		});
 		return {
-			partitionKey: stateEntry.partitionKey as string,
-			state: stateEntry.state as CustomerState,
+			subjectKey: stateEntry.subjectKey as string,
+			state: stateEntry.state as SubjectState,
 		};
 	});
 	const receipts = parsedCheckpoint.receipts.map((entry, index) => {
@@ -535,7 +542,7 @@ export const parsePartitionCheckpoint = ({
 				name: `Checkpoint receipt ${index} recordOffset`,
 				value: receiptEntry.recordOffset,
 			}),
-			mutation: receiptEntry.mutation as CustomerStateMutation,
+			mutation: receiptEntry.mutation as SubjectStateMutation,
 		};
 	});
 	const checkpoint = createPartitionCheckpoint({

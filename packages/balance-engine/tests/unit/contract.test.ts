@@ -1,21 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import * as balanceEngine from "../../src/balanceEngine.js";
 import {
-	type CustomerStateMutation,
 	computeInitialize,
 	computeTrack,
 	meteringPartitionKeyOf,
 	mutationFingerprintOf,
-	parseCustomerState,
-	parseCustomerStateMutation,
+	parseSubjectState,
+	parseSubjectStateMutation,
 	parseTrackCommand,
+	type SubjectStateMutation,
 	shadowComparisonKeyOf,
 } from "../../src/balanceEngine.js";
 import {
-	createCatalogFor,
 	createCustomerEntitlement,
 	createInitializeCommand,
 	createState,
+	createSubjectFor,
 	createTrackCommand,
 	deduplicationExpiresAt,
 	identity,
@@ -24,8 +24,7 @@ import {
 
 const trackMutation = requireNewMutation(
 	computeTrack({
-		state: createState(),
-		catalog: createCatalogFor({ state: createState() }),
+		fullSubject: createSubjectFor({ state: createState() }),
 		command: createTrackCommand(),
 		deduplicationExpiresAt,
 	}),
@@ -38,8 +37,8 @@ const initializeMutation = computeInitialize({
 const refingerprinted = ({
 	mutation,
 }: {
-	mutation: CustomerStateMutation;
-}): CustomerStateMutation => ({
+	mutation: SubjectStateMutation;
+}): SubjectStateMutation => ({
 	...mutation,
 	receipt: {
 		...mutation.receipt,
@@ -51,13 +50,13 @@ describe("balance engine contract boundaries", () => {
 	test("round-trips every record through JSON", () => {
 		for (const mutation of [trackMutation, initializeMutation]) {
 			expect(
-				parseCustomerStateMutation({
+				parseSubjectStateMutation({
 					input: JSON.parse(JSON.stringify(mutation)),
 				}),
 			).toEqual(mutation);
 		}
 		expect(
-			parseCustomerState({ input: JSON.parse(JSON.stringify(createState())) }),
+			parseSubjectState({ input: JSON.parse(JSON.stringify(createState())) }),
 		).toEqual(createState());
 	});
 
@@ -100,13 +99,13 @@ describe("balance engine contract boundaries", () => {
 			initializeAfterRevisionZero,
 			wrongFingerprint,
 		]) {
-			expect(() => parseCustomerStateMutation({ input })).toThrow();
+			expect(() => parseSubjectStateMutation({ input })).toThrow();
 		}
 	});
 
 	test("state rows carry only the columns the engine reads", () => {
 		expect(() =>
-			parseCustomerState({
+			parseSubjectState({
 				input: {
 					...createState(),
 					customerEntitlements: [

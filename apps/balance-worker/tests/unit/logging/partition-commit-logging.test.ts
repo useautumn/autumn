@@ -9,7 +9,7 @@ import {
 import {
 	createInitializeMutation,
 	createTrackMutation,
-	seedCustomerState,
+	seedSubjectState,
 } from "../../fixtures/mutations.js";
 import {
 	closeStoreFixture,
@@ -279,7 +279,7 @@ test.concurrent(
 			throw new Error("logging unavailable");
 		}
 		try {
-			const seededState = seedCustomerState({
+			const seededState = seedSubjectState({
 				store: fixture.store,
 				topic,
 				partition,

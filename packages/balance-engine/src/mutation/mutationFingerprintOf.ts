@@ -3,9 +3,9 @@ import {
 	canonicalizeJsonValue,
 	type JsonValue,
 } from "../models/common/json.js";
-import type { MutationCommand } from "../models/customerStateMutation.js";
 import type { MeteringIdentity } from "../models/meteringIdentity.js";
 import type { RowChange } from "../models/rowChange.js";
+import type { MutationCommand } from "../models/subjectStateMutation.js";
 
 type FingerprintInputs = {
 	identity: MeteringIdentity;

@@ -8,17 +8,17 @@ export const apiCustomerToFeatures = ({
 }): ApiFeatureV1[] => {
 	const balances = Object.values(apiCustomer.balances);
 	const flags = Object.values(apiCustomer.flags);
-	const customerStates = [...balances, ...flags];
-	if (customerStates.length === 0) return [];
+	const subjectStates = [...balances, ...flags];
+	if (subjectStates.length === 0) return [];
 
-	const firstCustomerState = customerStates[0];
-	if (!firstCustomerState.feature) {
+	const firstSubjectState = subjectStates[0];
+	if (!firstSubjectState.feature) {
 		throw new Error(
 			"[apiCustomerToFeatures] please expand `balances.feature` or `flags.feature` to get features for the customer",
 		);
 	}
 
-	return customerStates
-		.map((customerState) => customerState.feature)
+	return subjectStates
+		.map((subjectState) => subjectState.feature)
 		.filter((feature): feature is ApiFeatureV1 => feature !== undefined);
 };

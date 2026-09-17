@@ -1,4 +1,4 @@
-import { parseCustomerStateMutation } from "@autumn/balance-engine";
+import { parseSubjectStateMutation } from "@autumn/balance-engine";
 import {
 	assertOffset,
 	assertPartition,
@@ -18,7 +18,7 @@ const parsePersistedMutation = ({
 	record: DurableMutationRecord;
 }): DurableMutationRecord => ({
 	position: record.position,
-	mutation: parseCustomerStateMutation({
+	mutation: parseSubjectStateMutation({
 		input: JSON.parse(JSON.stringify(record.mutation)),
 	}),
 });

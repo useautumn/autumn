@@ -1,10 +1,10 @@
 import {
 	applyMutation,
-	type CustomerState,
-	type CustomerStateMutation,
 	computeInitialize,
 	type InitializationDecision,
 	type InitializeCommand,
+	type SubjectState,
+	type SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type { CatalogCache } from "../../catalog/types/catalogCache.js";
 import type { ReceiptPolicy } from "../types/receiptPolicy.js";
@@ -22,8 +22,8 @@ const decideInitialize = ({
 	state,
 	mutation,
 }: {
-	state: CustomerState | null;
-	mutation: CustomerStateMutation;
+	state: SubjectState | null;
+	mutation: SubjectStateMutation;
 }): MutationResult<InitializationDecision> => {
 	if (state) return { kind: "reply", reply: { kind: "already_initialized" } };
 	return {

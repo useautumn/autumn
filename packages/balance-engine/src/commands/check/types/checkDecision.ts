@@ -13,7 +13,7 @@ export type CheckDecision =
 	| {
 			kind: "unsupported";
 			reason:
-				| "entity_not_supported"
+				| "entity_not_found"
 				| "feature_not_found"
 				| "multiple_customer_entitlements_not_supported"
 				| "properties_not_supported"

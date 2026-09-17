@@ -1,14 +1,14 @@
+import { cusEntToBalance } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { OverageBehavior } from "../../commands/track/types/trackCommand.js";
 import type { RowChange } from "../../models/rowChange.js";
-import type { WorkerCustomerEntitlement } from "../../models/rows/workerCustomerEntitlement.js";
-import { availableBalanceOf } from "../../utils/customerStateUtils/balanceOf.js";
+import type { WorkerFullCustomerEntitlement } from "../../models/subject/workerFullSubject.js";
 
 const deductionChangeOf = ({
 	customerEntitlement,
 	deductedValue,
 }: {
-	customerEntitlement: WorkerCustomerEntitlement;
+	customerEntitlement: WorkerFullCustomerEntitlement;
 	deductedValue: Decimal;
 }): RowChange => ({
 	table: "customerEntitlements",
@@ -28,14 +28,17 @@ export const computeDeduction = ({
 	value,
 	overageBehavior,
 }: {
-	customerEntitlements: WorkerCustomerEntitlement[];
+	customerEntitlements: WorkerFullCustomerEntitlement[];
 	value: Decimal;
 	overageBehavior: OverageBehavior;
 }): { appliedValue: Decimal; changes: RowChange[] } => {
+	// A cap spends only what is above zero; an overdrawn row lends nothing.
+	const availableBalance = customerEntitlements.reduce(
+		(total, cusEnt) => total.plus(Decimal.max(cusEntToBalance({ cusEnt }), 0)),
+		new Decimal(0),
+	);
 	const appliedValue =
-		overageBehavior === "cap"
-			? Decimal.min(value, availableBalanceOf({ customerEntitlements }))
-			: value;
+		overageBehavior === "cap" ? Decimal.min(value, availableBalance) : value;
 	const deductedById = new Map<string, Decimal>();
 	let remainingValue = appliedValue;
 

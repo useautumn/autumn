@@ -30,7 +30,7 @@ const createCheckpoint = () => {
 		topic,
 		partition,
 		nextOffset: 2n,
-		states: [{ partitionKey, state }],
+		states: [{ subjectKey: partitionKey, state }],
 		receipts: [{ partitionKey, recordOffset: 1n, mutation }],
 	});
 };

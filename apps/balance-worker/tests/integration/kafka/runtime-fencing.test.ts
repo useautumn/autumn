@@ -19,7 +19,7 @@ import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
 } from "../../fixtures/catalog.js";
-import { restoreCustomerStates } from "../../fixtures/mutations.js";
+import { restoreSubjectStates } from "../../fixtures/mutations.js";
 import {
 	createState,
 	identity,
@@ -131,7 +131,7 @@ async function replacementFencesPreviousRuntime(): Promise<void> {
 			});
 			stores.push(store);
 			store.initializePartition({ topic, partition, nextOffset: 0n });
-			restoreCustomerStates({
+			restoreSubjectStates({
 				store,
 				topic,
 				partition,

@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import {
 	catalogKeyToString,
 	catalogRowToCatalogKey,
-	customerStateToCatalogKeys,
+	subjectStateToCatalogKeys,
 } from "@autumn/balance-engine";
 import {
 	AllowanceType,
@@ -13,8 +13,8 @@ import {
 } from "@autumn/shared";
 import {
 	fullSubjectToCatalogRows,
-	fullSubjectToCustomerState,
-} from "@/internal/balances/balanceWorker/fullSubjectToCustomerState.js";
+	fullSubjectToSubjectState,
+} from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
 import { workerCustomerEntitlementToApiBalance } from "@/internal/balances/balanceWorker/workerCustomerEntitlementToApiBalance.js";
 import { prices } from "../../../utils/fixtures/db/prices.js";
 import { createCustomerFixture } from "./customer-fixture.js";
@@ -24,7 +24,7 @@ test.concurrent(
 	() => {
 		const fixture = createCustomerFixture();
 		const before = structuredClone(fixture.fullSubject);
-		const state = fullSubjectToCustomerState({
+		const state = fullSubjectToSubjectState({
 			...fixture,
 			featureIds: ["messages"],
 		});
@@ -52,7 +52,7 @@ test.concurrent(
 			entities: [],
 		});
 		expect(
-			customerStateToCatalogKeys({ state }).map((key) =>
+			subjectStateToCatalogKeys({ state }).map((key) =>
 				catalogKeyToString({ key }),
 			),
 		).toEqual(
@@ -70,7 +70,7 @@ test.concurrent(
 	"the worker's row projects to the same API balance the Redis path returns",
 	() => {
 		const fixture = createCustomerFixture();
-		const state = fullSubjectToCustomerState({
+		const state = fullSubjectToSubjectState({
 			...fixture,
 			featureIds: ["messages"],
 		});
@@ -117,7 +117,7 @@ test.concurrent(
 		fixture.fullSubject.extra_customer_entitlements = [
 			fixture.customerEntitlement,
 		];
-		const state = fullSubjectToCustomerState({
+		const state = fullSubjectToSubjectState({
 			...fixture,
 			featureIds: ["messages"],
 		});
@@ -294,7 +294,7 @@ test.concurrent.each(unsupported)(
 		const fixture = createCustomerFixture();
 		mutate(fixture);
 		expect(() =>
-			fullSubjectToCustomerState({ ...fixture, featureIds: ["messages"] }),
+			fullSubjectToSubjectState({ ...fixture, featureIds: ["messages"] }),
 		).toThrow(expect.objectContaining({ data: { reason }, statusCode: 400 }));
 	},
 );
