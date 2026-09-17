@@ -62,6 +62,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: 3 
 		actions: [
 			// Attach product ONCE to the customer (not per entity)
 			s.attach({ productId: pro.id }),
+			s.warmEntityCaches(),
 			// Track varying usage on each entity (must specify entityIndex for per-entity features)
 			s.track({ featureId: TestFeature.Messages, value: 150, entityIndex: 0 }), // 50 overage
 			s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 1 }), // 150 overage
@@ -188,6 +189,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: bi
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
+			s.warmEntityCaches(),
 			s.track({ featureId: TestFeature.Messages, value: 155, entityIndex: 0 }), // 55 overage
 			s.track({ featureId: TestFeature.Messages, value: 123, entityIndex: 1 }), // 23 overage
 			s.advanceToNextInvoice({ withPause: true }),
@@ -266,6 +268,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: mi
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
+			s.warmEntityCaches(),
 			s.track({ featureId: TestFeature.Messages, value: 50, entityIndex: 0 }), // Within included
 			s.track({ featureId: TestFeature.Messages, value: 100, entityIndex: 1 }), // Exactly at included
 			s.track({ featureId: TestFeature.Messages, value: 200, entityIndex: 2 }), // 100 overage

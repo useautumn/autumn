@@ -109,7 +109,19 @@ export const expectMigrationEventBillingPlanChangesEqual = async ({
 		events,
 		customerId,
 	});
-	expect(billingUpdated?.plan_changes).toEqual(preview.plan_changes);
+	const planChanges = billingUpdated?.plan_changes;
+	expect(planChanges).toHaveLength(preview.plan_changes.length);
+	for (const [index, expectedChange] of preview.plan_changes.entries()) {
+		const actualChange = planChanges![index];
+		// Omitted and null entity IDs both represent customer scope.
+		expect({
+			...actualChange,
+			entity_id: actualChange.entity_id ?? null,
+		}).toEqual({
+			...expectedChange,
+			entity_id: expectedChange.entity_id ?? null,
+		});
+	}
 	return preview;
 };
 
