@@ -12,18 +12,25 @@ import {
 	CalendarBlankIcon,
 	CreditCardIcon,
 	HashIcon,
+	PaperPlaneTiltIcon,
+	ProhibitIcon,
 } from "@phosphor-icons/react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
+import { getBackendErr } from "@/utils/genUtils";
 import {
 	getStripeConnectViewAsLink,
 	getStripeInvoiceLink,
@@ -73,6 +80,7 @@ export function InvoiceDetailSheet({
 	taxedAmount: taxedAmountProp,
 }: InvoiceDetailSheetProps = {}) {
 	const sheetData = useSheetStore((s) => s.data);
+	const setSheet = useSheetStore((s) => s.setSheet);
 	const snapshotInvoice =
 		invoiceProp ?? (sheetData?.invoice as Invoice | undefined);
 	const { customer } = useCusQuery();
@@ -92,6 +100,30 @@ export function InvoiceDetailSheet({
 	const { isAdmin } = useAdmin();
 	const { masterStripeAccount } = useMasterStripeAccount();
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+	const axiosInstance = useAxiosInstance();
+	const queryClient = useQueryClient();
+	const buildQueryKey = useQueryKeyFactory();
+	const { refetch } = useCusQuery();
+
+	const voidInvoice = useMutation({
+		mutationFn: () =>
+			axiosInstance.post("/v1/invoices.void", { invoice_id: invoice?.id }),
+		onSuccess: async () => {
+			toast.success("Invoice voided");
+			await Promise.all([
+				refetch(),
+				queryClient.invalidateQueries({
+					queryKey: buildQueryKey([
+						"customer",
+						customer?.id || customer?.internal_id,
+					]),
+				}),
+			]);
+		},
+		onError: (error) => {
+			toast.error(getBackendErr(error, "Failed to void invoice"));
+		},
+	});
 
 	const productGroups = useMemo(() => {
 		// Bucket line items by product_id, then group within each bucket.
@@ -181,6 +213,12 @@ export function InvoiceDetailSheet({
 		invoiceIsStripe &&
 		invoice.status === InvoiceStatus.Paid &&
 		!isFullyRefunded;
+	const canVoid =
+		invoiceIsStripe &&
+		(invoice.status === InvoiceStatus.Open ||
+			invoice.status === InvoiceStatus.Uncollectible);
+	// Reissue only replaces an open invoice; an uncollectible one is rejected.
+	const canReissue = invoiceIsStripe && invoice.status === InvoiceStatus.Open;
 	const stripeConnectViewAsInvoiceLink =
 		invoiceIsStripe && isAdmin && masterStripeAccount?.id && stripeAccount?.id
 			? getStripeConnectViewAsLink({
@@ -390,7 +428,7 @@ export function InvoiceDetailSheet({
 						onClick={handleViewInvoice}
 					>
 						<ArrowSquareOutIcon size={16} className="mr-1.5" />
-						Open Invoice
+						Open
 					</Button>
 				)}
 				{canRefund && (
@@ -401,6 +439,32 @@ export function InvoiceDetailSheet({
 					>
 						<ArrowCounterClockwiseIcon size={16} className="mr-1.5" />
 						Refund Invoice
+					</Button>
+				)}
+				{canReissue && (
+					<Button
+						variant="primary"
+						className="flex-1"
+						onClick={() =>
+							setSheet({
+								type: "invoice-reissue",
+								data: { invoice, lineItems, taxedAmount },
+							})
+						}
+					>
+						<PaperPlaneTiltIcon size={16} className="mr-1.5" />
+						Reissue
+					</Button>
+				)}
+				{canVoid && (
+					<Button
+						variant="destructive"
+						className="flex-1"
+						onClick={() => voidInvoice.mutate()}
+						isLoading={voidInvoice.isPending}
+					>
+						<ProhibitIcon size={16} className="mr-1.5" />
+						Void
 					</Button>
 				)}
 			</div>

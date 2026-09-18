@@ -1,11 +1,15 @@
 import { Hono } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { handleCreateInvoice } from "./handlers/handleCreateInvoice.js";
 import { handleGetStripeInvoice } from "./handlers/handleGetStripeInvoice.js";
 import { handleInsertInvoices } from "./handlers/handleInsertInvoices.js";
 import { handleListInvoices } from "./handlers/handleListInvoices.js";
+import { handleListInvoiceTemplates } from "./handlers/handleListInvoiceTemplates.js";
 import { handlePayInvoice } from "./handlers/handlePayInvoice.js";
 import { handleRedirectToInvoice } from "./handlers/handleRedirectToInvoice.js";
+import { handleReissueInvoice } from "./handlers/handleReissueInvoice.js";
+import { handleVoidInvoice } from "./handlers/handleVoidInvoice.js";
 
 export const publicInvoiceRouter = new Hono<HonoEnv>();
 
@@ -34,6 +38,10 @@ invoiceRouter.get("/:stripe_invoice_id/stripe", ...handleGetStripeInvoice);
 
 export const invoiceRpcRouter = new Hono<HonoEnv>();
 
+invoiceRpcRouter.post("/invoices.create", ...handleCreateInvoice);
 invoiceRpcRouter.post("/invoices.insert", ...handleInsertInvoices);
 invoiceRpcRouter.post("/invoices.list", ...handleListInvoices);
+invoiceRpcRouter.post("/invoices.listTemplates", ...handleListInvoiceTemplates);
 invoiceRpcRouter.post("/invoices.pay", ...handlePayInvoice);
+invoiceRpcRouter.post("/invoices.void", ...handleVoidInvoice);
+invoiceRpcRouter.post("/invoices.reissue", ...handleReissueInvoice);

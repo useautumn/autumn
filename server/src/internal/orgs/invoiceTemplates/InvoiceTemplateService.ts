@@ -38,6 +38,31 @@ export class InvoiceTemplateService {
 		return rows.map(toApi);
 	}
 
+	/** One page of templates, newest first, plus whether another page exists. */
+	static async listPage({
+		db,
+		orgId,
+		limit,
+		offset,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		limit: number;
+		offset: number;
+	}): Promise<{ templates: InvoiceTemplate[]; hasMore: boolean }> {
+		const rows = await db
+			.select()
+			.from(invoiceTemplates)
+			.where(eq(invoiceTemplates.org_id, orgId))
+			.orderBy(desc(invoiceTemplates.created_at))
+			.limit(limit + 1)
+			.offset(offset);
+		return {
+			templates: rows.slice(0, limit).map(toApi),
+			hasMore: rows.length > limit,
+		};
+	}
+
 	static async getById({
 		db,
 		orgId,

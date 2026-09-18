@@ -1,6 +1,9 @@
 import { formatAmount, formatInterval, isPriceItem } from "@autumn/shared";
 import { useMemo } from "react";
-import { PlanItemsSection } from "@/components/forms/shared";
+import {
+	type LicenseQuantityEditor,
+	PlanItemsSection,
+} from "@/components/forms/shared";
 import { PlanEditButton } from "@/components/forms/shared/plan-items/PlanEditButton";
 import { PlanLicenseItemsSections } from "@/components/forms/shared/plan-items/PlanLicenseItemsSections";
 import { usePlanLicenseRows } from "@/components/forms/shared/plan-items/PlanLicensesSummary";
@@ -42,10 +45,18 @@ export function EditPlanSection() {
 			}),
 		[customerProduct?.customer_licenses],
 	);
-	const licenseQuantityEditor = {
-		form,
+	const licenseQuantityEditor: LicenseQuantityEditor = {
 		quantities: licenseQuantities,
 		existingQuantities: existingLicenseQuantities,
+		onEditStart: ({ licensePlanId, quantity }) =>
+			form.setFieldValue(`licenseQuantities.${licensePlanId}`, quantity),
+		renderField: ({ licensePlanId, min }) => (
+			<form.AppField name={`licenseQuantities.${licensePlanId}`}>
+				{(field) => (
+					<field.QuantityField fullWidth hideFieldInfo label="" min={min} />
+				)}
+			</form.AppField>
+		),
 	};
 
 	const { rows: licenseRows } = usePlanLicenseRows({

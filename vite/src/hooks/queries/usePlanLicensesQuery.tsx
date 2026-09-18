@@ -1,4 +1,4 @@
-import type { ApiPlanV1, PlanLicense } from "@autumn/shared";
+import type { ApiPlanV1, FullPlanLicense, PlanLicense } from "@autumn/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -26,6 +26,35 @@ export const toPlanLicenses = ({
 		created_at: 0,
 		updated_at: 0,
 	}));
+
+/** The same links as they arrive on the products list, where each carries its
+ * hydrated license product rather than a public id. Lets callers that already
+ * hold a product reuse its licenses instead of refetching the parent plan. */
+export const fullPlanLicensesToPlanLicenses = ({
+	parentPlanId,
+	licenses,
+}: {
+	parentPlanId: string;
+	licenses: FullPlanLicense[];
+}): VersionedPlanLicense[] =>
+	licenses.flatMap((link) => {
+		if (!link.product) return [];
+
+		return [
+			{
+				id: `${parentPlanId}:${link.product.id}`,
+				parent_plan_id: parentPlanId,
+				license_plan_id: link.product.id,
+				version: link.product.version,
+				included: link.included,
+				prepaid_only: link.prepaid_only,
+				customize: null,
+				metadata: null,
+				created_at: 0,
+				updated_at: 0,
+			},
+		];
+	});
 
 /**
  * Loads the license offerings configured on a parent plan (the plan's

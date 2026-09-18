@@ -1,12 +1,28 @@
 import { createCursorPaginatedResponseSchema } from "@api/common/cursorPaginationSchemas.js";
 import { ApiListInvoiceV1Schema } from "@api/others/apiInvoice/apiListInvoiceV1.js";
+import {
+	CreateInvoiceParamsSchema,
+	CreateInvoiceResponseSchema,
+} from "@api/others/apiInvoice/createInvoiceParams.js";
 import { InsertInvoicesParamsSchema } from "@api/others/apiInvoice/insertInvoicesParams.js";
 import { InsertInvoicesResponseSchema } from "@api/others/apiInvoice/insertInvoicesResponse.js";
 import { ListInvoicesParamsSchema } from "@api/others/apiInvoice/listInvoicesParams.js";
 import {
+	ListInvoiceTemplatesParamsSchema,
+	ListInvoiceTemplatesResponseSchema,
+} from "@api/others/apiInvoice/listInvoiceTemplatesParams.js";
+import {
 	PayInvoiceParamsSchema,
 	PayInvoiceResponseSchema,
 } from "@api/others/apiInvoice/payInvoiceParams.js";
+import {
+	ReissueInvoiceParamsSchema,
+	ReissueInvoiceResponseSchema,
+} from "@api/others/apiInvoice/reissueInvoiceParams.js";
+import {
+	VoidInvoiceParamsSchema,
+	VoidInvoiceResponseSchema,
+} from "@api/others/apiInvoice/voidInvoiceParams.js";
 import { oc } from "@orpc/contract";
 
 const LIST_INVOICE_EXAMPLE = {
@@ -172,5 +188,174 @@ export const payInvoiceContract = oc
 	.output(
 		PayInvoiceResponseSchema.meta({
 			examples: [{ invoice: { ...LIST_INVOICE_EXAMPLE, status: "paid" } }],
+		}),
+	);
+
+export const voidInvoiceContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/invoices.void",
+		operationId: "voidInvoice",
+		tags: ["invoices"],
+		description:
+			"Voids an open or uncollectible Stripe invoice. Any plan still waiting on the invoice to be paid expires. Voiding an unpaid subscription invoice lets Stripe re-derive the subscription status from its remaining invoices, which can move a past-due subscription back to active. Already-void invoices are returned unchanged.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "void",
+		}),
+	})
+	.input(
+		VoidInvoiceParamsSchema.meta({
+			title: "VoidInvoiceParams",
+			examples: [{ invoice_id: "inv_2b3c4d5e6f7g8h" }],
+		}),
+	)
+	.output(
+		VoidInvoiceResponseSchema.meta({
+			examples: [{ invoice: { ...LIST_INVOICE_EXAMPLE, status: "void" } }],
+		}),
+	);
+
+export const reissueInvoiceContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/invoices.reissue",
+		operationId: "reissueInvoice",
+		tags: ["invoices"],
+		description:
+			"Voids an open send-invoice Stripe invoice and issues a replacement with the same line items. An invoice template can supply the replacement's footer (e.g. bank details) and memo. The replacement keeps the original due date unless net_terms_days is passed, which is required once the original is past due. Pass update_customer_email to change the customer's billing email first so the replacement is sent there. The replacement stays linked to the same subscription and fulfils the same pending plan when paid.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "reissue",
+		}),
+	})
+	.input(
+		ReissueInvoiceParamsSchema.meta({
+			title: "ReissueInvoiceParams",
+			examples: [
+				{
+					invoice_id: "inv_2b3c4d5e6f7g8h",
+					invoice_template_id: "inv_tmpl_bank_transfer",
+				},
+			],
+		}),
+	)
+	.output(
+		ReissueInvoiceResponseSchema.meta({
+			examples: [
+				{
+					invoice: {
+						...LIST_INVOICE_EXAMPLE,
+						id: "inv_3c4d5e6f7g8h9i",
+						status: "open",
+					},
+					voided_invoice_id: "inv_2b3c4d5e6f7g8h",
+				},
+			],
+		}),
+	);
+
+export const listInvoiceTemplatesContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/invoices.listTemplates",
+		operationId: "listInvoiceTemplates",
+		tags: ["invoices"],
+		description:
+			"Lists the organization's invoice templates, newest first, with offset pagination. Use a template's `id` as `invoice_template_id` when creating or reissuing an invoice.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "listTemplates",
+		}),
+	})
+	.input(
+		ListInvoiceTemplatesParamsSchema.meta({
+			title: "ListInvoiceTemplatesParams",
+			examples: [{ limit: 10, offset: 0 }],
+		}),
+	)
+	.output(
+		ListInvoiceTemplatesResponseSchema.meta({
+			examples: [
+				{
+					list: [
+						{
+							id: "inv_tmpl_2b3c4d5e6f7g8h",
+							name: "Bank transfer",
+							footer: "Pay by wire to IBAN GB00 EXAM 0000 0000 0000 00",
+							memo: "Questions? billing@example.com",
+							net_terms_days: 30,
+							created_at: 1759247877000,
+						},
+					],
+					total: 1,
+					limit: 10,
+					offset: 0,
+					has_more: false,
+				},
+			],
+		}),
+	);
+
+export const createInvoiceContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/invoices.create",
+		operationId: "createInvoice",
+		tags: ["invoices"],
+		description:
+			"Creates a standalone send-invoice Stripe invoice from catalog pricing and custom charges. Quantities are billable units, exclusive of any included usage; Autumn applies billing units and tiers. Nothing about the customer's plans, balances or subscriptions changes. Pass preview: true to get the calculated lines and totals without creating an invoice.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "create",
+		}),
+	})
+	.input(
+		CreateInvoiceParamsSchema.meta({
+			title: "CreateInvoiceParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					net_terms_days: 30,
+					plans: [
+						{
+							plan_id: "pro",
+							feature_quantities: [
+								{
+									feature_id: "seats",
+									billing_behavior: "prepaid",
+									quantity: 5,
+								},
+								{
+									feature_id: "credits",
+									billing_behavior: "usage_based",
+									quantity: 2500,
+								},
+							],
+						},
+					],
+					custom_line_items: [
+						{ description: "Implementation services", amount: 500 },
+					],
+				},
+			],
+		}),
+	)
+	.output(
+		CreateInvoiceResponseSchema.meta({
+			examples: [
+				{
+					invoice: { ...LIST_INVOICE_EXAMPLE, status: "open" },
+					preview: {
+						currency: "usd",
+						lines: [],
+						subtotal: 29.99,
+						discount_total: 0,
+						tax: null,
+						total: 29.99,
+						due_date: 1761839877000,
+					},
+				},
+			],
 		}),
 	);
