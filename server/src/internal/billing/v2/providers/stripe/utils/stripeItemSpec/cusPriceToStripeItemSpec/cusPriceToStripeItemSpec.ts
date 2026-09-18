@@ -2,9 +2,11 @@ import {
 	type BillingContext,
 	billingContextToCurrency,
 	cusPriceToCusEntWithCusProduct,
+	ErrCode,
 	type FixedPriceConfig,
 	type FullCusProduct,
 	type FullCustomerPrice,
+	InternalError,
 	isAllocatedPrice,
 	isConsumablePrice,
 	isFixedPrice,
@@ -116,7 +118,11 @@ export const cusPriceToStripeItemSpec = ({
 			(isFixedPrice(price) || isPrepaidPrice(price));
 		if (canRetryInline) {
 			spec = buildSpec("inline");
-		} else if (billingContext?.actionSource === "verify") {
+		} else if (
+			billingContext?.actionSource === "verify" &&
+			error instanceof InternalError &&
+			error.code === ErrCode.StripePriceNotLinked
+		) {
 			// Usage prices have no inline render; their Stripe prices are created
 			// lazily at attach, so an unlinked one is expected state, not drift.
 			return null;
