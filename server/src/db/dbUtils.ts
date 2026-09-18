@@ -51,6 +51,10 @@ const TRANSIENT_DB_ERROR_MESSAGES = new Set([
 	"Connection terminated unexpectedly",
 	"canceling statement due to lock timeout",
 	"canceling statement due to statement timeout",
+	// pg throws this on any query issued after the client's socket already
+	// died. The original drop is transient, but Drizzle's transaction wrapper
+	// masks it: its `rollback` on the dead client throws this instead.
+	"Client has encountered a connection error and is not queryable",
 ]);
 
 /**
@@ -62,6 +66,7 @@ const RETRYABLE_PG_CODE_PREFIXES = ["08", "53"];
 
 /**
  * Specific SQLSTATE and postgres.js driver codes that indicate infrastructure issues.
+ * - 25P03: idle_in_transaction_session_timeout (server terminated the connection)
  * - 57014: query_canceled (statement_timeout killed the query)
  * - 57P01: admin_shutdown (DB shutting down)
  * - 57P02: crash_shutdown
@@ -70,6 +75,7 @@ const RETRYABLE_PG_CODE_PREFIXES = ["08", "53"];
  * - CONNECT_TIMEOUT: postgres.js pool/connect timeout
  */
 const RETRYABLE_PG_CODES = new Set([
+	"25P03", // idle_in_transaction_session_timeout (server killed our txn conn)
 	"57014",
 	"57P01",
 	"57P02",
