@@ -1,4 +1,5 @@
-import { type MigrationRun, MigrationRunStatus } from "@autumn/shared";
+import { type MigrationRun, MigrationRunStatus, ms } from "@autumn/shared";
+import { differenceInMilliseconds } from "date-fns";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { migrationRunRepo } from "../../repos/index.js";
 import { settleLeftoverClaims } from "./settleLeftoverClaims.js";
@@ -7,13 +8,9 @@ import { isTriggerRunTerminal } from "./triggerRunLiveness.js";
 const ABANDONED_MESSAGE =
 	"Run abandoned: the trigger task ended without settling this row";
 
-/** How long a run may look active before its liveness is worth checking. The
- * trigger handle exists from dispatch, so a just-dispatched run is not yet
- * evidence of anything. */
-const ABANDON_GRACE_MS = 10 * 60 * 1000;
-
-const isStale = (run: MigrationRun, now: number): boolean =>
-	now - (run.started_at ?? run.created_at) > ABANDON_GRACE_MS;
+/** The trigger handle exists from dispatch, so a just-dispatched run looking
+ * active is not yet evidence of anything. */
+const ABANDON_GRACE = ms.minutes(10);
 
 /**
  * Settles runs whose trigger task is provably dead.
@@ -45,7 +42,11 @@ export const reconcileAbandonedRuns = async ({
 }): Promise<Set<string>> => {
 	const reconciled = new Set<string>();
 	const candidates = runs.filter(
-		(run) => run.trigger_run_id !== null && !run.lazy_run && isStale(run, now),
+		(run) =>
+			run.trigger_run_id !== null &&
+			!run.lazy_run &&
+			differenceInMilliseconds(now, run.started_at ?? run.created_at) >
+				ABANDON_GRACE,
 	);
 
 	for (const run of candidates) {
