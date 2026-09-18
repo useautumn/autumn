@@ -1,6 +1,4 @@
 import { expect, test } from "bun:test";
-import { ApiCustomerV5Schema } from "../../../shared/api/customers/apiCustomerV5.js";
-import { ApiEntityV2Schema } from "../../../shared/api/entities/apiEntityV2.js";
 import { FailOpenHook } from "../src/hooks/failOpenHook.js";
 import { Autumn } from "../src/sdk/sdk.js";
 
@@ -20,21 +18,6 @@ const operations = [
 				value: 1,
 			}),
 		expected: { value: 0, balance: null },
-	},
-	{
-		name: "getOrCreateCustomer",
-		call: (client: Autumn) =>
-			client.customers.getOrCreate({ customerId: "customer_123" }),
-		expected: { id: null, licenses: [], subscriptions: [], balances: {} },
-	},
-	{
-		name: "getEntity",
-		call: (client: Autumn) =>
-			client.entities.get({
-				customerId: "customer_123",
-				entityId: "entity_123",
-			}),
-		expected: { id: null, subscriptions: [], balances: {} },
 	},
 ];
 
@@ -63,11 +46,16 @@ for (const operation of operations) {
 	});
 }
 
-for (const [operationID, schema] of [
-	["getOrCreateCustomer", ApiCustomerV5Schema],
-	["getEntity", ApiEntityV2Schema],
-] as const) {
-	test(`${operationID} fallback satisfies the current shared response schema`, async () => {
+for (const operationID of [
+	"getOrCreateCustomer",
+	"getCustomer",
+	"getEntity",
+	"getOrCreateEntity",
+	"createEntity",
+]) {
+	test(`${operationID} preserves the original error response`, async () => {
+		const response = new Response(null, { status: 503 });
+		const error = new Error("Synthetic outage");
 		const result = await new FailOpenHook().afterError(
 			{
 				operationID,
@@ -77,11 +65,66 @@ for (const [operationID, schema] of [
 				resolvedSecurity: null,
 				options: {},
 			},
-			new Response(null, { status: 503 }),
-			null,
+			response,
+			error,
 		);
-		expect(result.error).toBeNull();
-		expect(result.response?.status).toBe(200);
-		schema.parse(await result.response?.json());
+		expect(result.error).toBe(error);
+		expect(result.response).toBe(response);
+	});
+}
+
+for (const operation of [
+	{
+		name: "getOrCreateCustomer",
+		call: (client: Autumn) =>
+			client.customers.getOrCreate({ customerId: "customer_123" }),
+	},
+	{
+		name: "getCustomer",
+		call: (client: Autumn) =>
+			client.customers.get({ customerId: "customer_123" }),
+	},
+	{
+		name: "getEntity",
+		call: (client: Autumn) =>
+			client.entities.get({
+				customerId: "customer_123",
+				entityId: "entity_123",
+			}),
+	},
+	{
+		name: "createEntity",
+		call: (client: Autumn) =>
+			client.entities.create({
+				customerId: "customer_123",
+				entityId: "entity_123",
+				featureId: "seats",
+			}),
+	},
+]) {
+	test(`${operation.name} rejects server errors even with fail-open enabled`, async () => {
+		let requests = 0;
+		const server = Bun.serve({
+			port: 0,
+			hostname: "127.0.0.1",
+			fetch() {
+				requests++;
+				return Response.json({ message: "Synthetic outage" }, { status: 503 });
+			},
+		});
+		try {
+			const client = new Autumn({
+				secretKey: "test",
+				serverURL: `http://127.0.0.1:${server.port}`,
+				failOpen: true,
+				retryConfig: { strategy: "none" },
+			});
+			await expect(operation.call(client)).rejects.toMatchObject({
+				statusCode: 503,
+			});
+			expect(requests).toBe(1);
+		} finally {
+			await server.stop(true);
+		}
 	});
 }
