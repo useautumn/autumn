@@ -30,6 +30,7 @@ export const handleReissueInvoice = createRoute({
 			net_terms_days,
 			update_customer_email,
 			preview,
+			credit_original,
 			invoice,
 			customer,
 			lines,
@@ -38,6 +39,7 @@ export const handleReissueInvoice = createRoute({
 		const {
 			replacement,
 			voidedInvoiceId,
+			creditNoteId,
 			preview: previewTotals,
 		} = await invoiceActions.reissue({
 			ctx,
@@ -46,6 +48,7 @@ export const handleReissueInvoice = createRoute({
 			netTermsDays: net_terms_days,
 			updateCustomerEmail: update_customer_email,
 			preview,
+			creditOriginal: credit_original,
 			invoiceOverrides: invoice,
 			customerOverrides: customer,
 			lineEdits: lines,
@@ -55,6 +58,7 @@ export const handleReissueInvoice = createRoute({
 			return c.json<ReissueInvoiceResponse>({
 				invoice: null,
 				voided_invoice_id: null,
+				credit_note_id: null,
 				preview: previewTotals,
 			});
 		}
@@ -67,6 +71,7 @@ export const handleReissueInvoice = createRoute({
 		return c.json<ReissueInvoiceResponse>({
 			invoice: invoiceListRowToApi({ ctx, row: replacement, lineItems }),
 			voided_invoice_id: voidedInvoiceId,
+			credit_note_id: creditNoteId,
 			preview: previewTotals,
 		});
 	},
