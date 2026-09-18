@@ -37,13 +37,13 @@ export const PlanCardHeader = () => {
 	return (
 		<CardHeader>
 			<div className="flex flex-row items-center justify-between w-full">
-				<div className="flex flex-row items-center gap-2">
-					<AdminHover texts={adminHoverText()} side="top">
-						<span className="text-main-sec w-fit whitespace-nowrap">
-							{product.name.length > MAX_PLAN_NAME_LENGTH
-								? `${product.name.slice(0, MAX_PLAN_NAME_LENGTH)}...`
-								: product.name}
-						</span>
+				<div className="flex flex-row items-center gap-2 min-w-0">
+					<AdminHover
+						texts={adminHoverText()}
+						side="top"
+						triggerClassName="min-w-0"
+					>
+						<span className="text-main-sec truncate">{product.name}</span>
 					</AdminHover>
 					<PlanTypeBadges
 						product={product}
