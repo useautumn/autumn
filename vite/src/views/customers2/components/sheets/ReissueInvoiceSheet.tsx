@@ -59,7 +59,6 @@ export function ReissueInvoiceSheet() {
 	const [templateId, setTemplateId] = useState(NO_TEMPLATE);
 	const [email, setEmail] = useState("");
 	const [netTermsDays, setNetTermsDays] = useState("");
-	const [poNumber, setPoNumber] = useState("");
 	const [removeTax, setRemoveTax] = useState(false);
 	// Keyed by line item id; only the ones the user actually touched are sent.
 	const [amounts, setAmounts] = useState<Record<string, string>>({});
@@ -68,14 +67,7 @@ export function ReissueInvoiceSheet() {
 		mutationFn: async () => {
 			if (!invoice) return;
 			const trimmedEmail = email.trim();
-			const invoiceOverrides = {
-				...(poNumber.trim()
-					? {
-							custom_fields: [{ name: "PO number", value: poNumber.trim() }],
-						}
-					: {}),
-				...(removeTax ? { tax_rate_id: null } : {}),
-			};
+			const invoiceOverrides = removeTax ? { tax_rate_id: null } : {};
 			const updatedLines = Object.entries(amounts).flatMap(([id, value]) =>
 				value.trim() === "" ? [] : [{ id, amount: Number(value) }],
 			);
@@ -144,7 +136,7 @@ export function ReissueInvoiceSheet() {
 			<div className="flex h-full flex-col overflow-y-auto">
 				<SheetHeader
 					title="Reissue Invoice"
-					description={`Send a new ${formattedTotal} invoice and void this one. No money moves.`}
+					description={`Send a new ${formattedTotal} invoice and void this one.`}
 				/>
 
 				<SheetSection withSeparator>
@@ -185,7 +177,7 @@ export function ReissueInvoiceSheet() {
 					</span>
 				</SheetSection>
 
-				<SheetSection withSeparator>
+				<SheetSection withSeparator={isTaxed || lineItems.length > 0}>
 					<FormLabel>Payment terms</FormLabel>
 					<Input
 						type="number"
@@ -193,15 +185,6 @@ export function ReissueInvoiceSheet() {
 						placeholder="Days until due — empty keeps the current terms"
 						value={netTermsDays}
 						onChange={(e) => setNetTermsDays(e.target.value)}
-					/>
-				</SheetSection>
-
-				<SheetSection withSeparator={isTaxed || lineItems.length > 0}>
-					<FormLabel>PO number</FormLabel>
-					<Input
-						placeholder="Shown on the reissued invoice only"
-						value={poNumber}
-						onChange={(e) => setPoNumber(e.target.value)}
 					/>
 				</SheetSection>
 
@@ -226,7 +209,10 @@ export function ReissueInvoiceSheet() {
 									key={lineItem.id}
 									className="flex items-center justify-between gap-3"
 								>
-									<span className="truncate text-sm text-secondary-foreground">
+									<span
+										className="truncate text-sm text-secondary-foreground"
+										title={lineItem.description}
+									>
 										{lineItem.description}
 									</span>
 									<Input
