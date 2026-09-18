@@ -173,15 +173,17 @@ export function InvoicePreviewDocument({
 
 						<table
 							className={cn(
-								"w-full table-fixed border-collapse",
+								"w-full table-auto border-collapse",
 								isFirst ? "mt-[1.6em]" : "mt-[2.4em]",
 							)}
 						>
+							{/* Stripe sizes the numeric columns to their content and
+							    right-aligns them; description absorbs the rest. */}
 							<colgroup>
-								<col className="w-[64.7%]" />
-								<col className="w-[8.55%]" />
-								<col className="w-[11.68%]" />
-								<col className="w-[15.07%]" />
+								<col className="w-full" />
+								<col className="w-px" />
+								<col className="w-px" />
+								<col className="w-px" />
 							</colgroup>
 							{isFirst ? (
 								<thead>
@@ -189,13 +191,13 @@ export function InvoicePreviewDocument({
 										<th className="pb-[0.62em] text-left font-normal">
 											Description
 										</th>
-										<th className="pb-[0.62em] pr-[3.8em] text-right font-normal">
+										<th className="whitespace-nowrap pb-[0.62em] pr-[3.8em] text-right font-normal">
 											Qty
 										</th>
-										<th className="pb-[0.62em] text-right font-normal">
+										<th className="whitespace-nowrap pb-[0.62em] text-right font-normal">
 											Unit price
 										</th>
-										<th className="pb-[0.62em] text-right font-normal">
+										<th className="whitespace-nowrap pb-[0.62em] text-right font-normal">
 											Amount
 										</th>
 									</tr>
@@ -212,16 +214,16 @@ export function InvoicePreviewDocument({
 											)}
 											key={`${line.plan_id ?? "custom"}-${line.feature_id ?? "base"}-${rowOffset + index}`}
 										>
-											<td className="pt-[0.62em] pr-4 pb-[1.83em]">
+											<td className="break-all pt-[0.62em] pr-4 pb-[1.83em]">
 												{cleanDescription(line.description)}
 											</td>
-											<td className="pt-[0.62em] pr-[3.8em] pb-[1.83em] text-right tabular-nums">
+											<td className="whitespace-nowrap pt-[0.62em] pr-[3.8em] pb-[1.83em] text-right tabular-nums">
 												1
 											</td>
-											<td className="pt-[0.62em] pb-[1.83em] text-right tabular-nums">
+											<td className="whitespace-nowrap pt-[0.62em] pb-[1.83em] text-right tabular-nums">
 												{money({ amount: line.amount, currency })}
 											</td>
-											<td className="pt-[0.62em] pb-[1.83em] text-right tabular-nums">
+											<td className="whitespace-nowrap pt-[0.62em] pl-[1.2em] pb-[1.83em] text-right tabular-nums">
 												{money({ amount: line.amount, currency })}
 											</td>
 										</tr>
