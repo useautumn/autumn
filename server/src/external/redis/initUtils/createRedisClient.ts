@@ -3,8 +3,15 @@ import {
 	instrumentRedis,
 	type RedisClientType,
 } from "../otel/instrumentRedis.js";
-import { createRedisReadPool } from "./createRedisReadPool.js";
-import { createStandbyRedisRouter } from "./createStandbyRedisRouter.js";
+import { getRedisPoolMonitor } from "../poolMonitor/getRedisPoolMonitor.js";
+import {
+	createRedisReadPool,
+	getRedisReadLaneInFlight,
+} from "./createRedisReadPool.js";
+import {
+	createStandbyRedisRouter,
+	getStandbyRedisRouter,
+} from "./createStandbyRedisRouter.js";
 import { redisDnsLookup } from "./redisDnsLookup.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
@@ -64,6 +71,7 @@ export const createRedisClient = ({
 	// is in place when commands are registered.
 	instrumentRedis({ redis: instance, region, redisType });
 	registerRedisCommands({ redisInstance: instance });
+	getRedisPoolMonitor().register({ redis: instance, name: region, redisType });
 
 	return instance;
 };
@@ -76,8 +84,8 @@ export const createRedisConnection = createRedisClient;
 export const createStandbyRedisConnection = ({
 	region,
 	...options
-}: Parameters<typeof createRedisClient>[0]): Redis =>
-	createStandbyRedisRouter({
+}: Parameters<typeof createRedisClient>[0]): Redis => {
+	const redis = createStandbyRedisRouter({
 		primary: createRedisClient({
 			...options,
 			region: `${region}:primary`,
@@ -91,18 +99,45 @@ export const createStandbyRedisConnection = ({
 			maxRetriesPerRequest: 0,
 		}),
 	});
+	const router = getStandbyRedisRouter(redis)!;
+	for (const connection of router.ordered()) {
+		getRedisPoolMonitor().setStateReader({
+			redis: connection,
+			getState: () => ({
+				preferred: router.ordered()[0] === connection,
+				usable: router.isUsable(connection),
+			}),
+		});
+	}
+	return redis;
+};
 
 /** Two read lanes, each retaining the preferred/standby failover pair. */
 export const createPooledStandbyRedisConnection = ({
 	region,
 	...options
-}: Parameters<typeof createRedisClient>[0]): Redis =>
-	createRedisReadPool({
-		lanes: [
-			createStandbyRedisConnection({ ...options, region }),
-			createStandbyRedisConnection({
-				...options,
-				region: `${region}:lane-1`,
-			}),
-		],
-	});
+}: Parameters<typeof createRedisClient>[0]): Redis => {
+	const lanes = [
+		createStandbyRedisConnection({ ...options, region }),
+		createStandbyRedisConnection({
+			...options,
+			region: `${region}:lane-1`,
+		}),
+	] as const;
+	const redis = createRedisReadPool({ lanes });
+	for (const [readLane, lane] of lanes.entries()) {
+		const router = getStandbyRedisRouter(lane)!;
+		for (const connection of router.ordered()) {
+			getRedisPoolMonitor().setStateReader({
+				redis: connection,
+				getState: () => ({
+					preferred: router.ordered()[0] === connection,
+					usable: router.isUsable(connection),
+					readLane,
+					readLaneInFlight: getRedisReadLaneInFlight({ redis, lane: readLane }),
+				}),
+			});
+		}
+	}
+	return redis;
+};

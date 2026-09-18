@@ -18,6 +18,7 @@ import {
 	type QueueCapacityLease,
 	reserveQueueCapacity,
 } from "@/external/redis/actions/queueCapacityLease/queueCapacityLease.js";
+import { getRedisPoolMonitor } from "@/external/redis/poolMonitor/getRedisPoolMonitor.js";
 import {
 	isJobQueueEnabled,
 	JOB_QUEUE_IDS,
@@ -621,6 +622,7 @@ export const initWorkers = async ({
 }) => {
 	const { db } = initDrizzle({ name: "worker", maxConnections: 40 });
 	startPgPoolMonitor();
+	getRedisPoolMonitor().start();
 
 	await initBlueGreen({ db, logger });
 
@@ -628,6 +630,7 @@ export const initWorkers = async ({
 		console.log(`[SQS Worker ${process.pid}] Shutting down...`);
 		isRunning = false;
 		stopPgPoolMonitor();
+		getRedisPoolMonitor().stop();
 		shutdownBlueGreen();
 		for (const controller of abortControllers) {
 			controller.abort();

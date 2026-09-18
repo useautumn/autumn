@@ -5,6 +5,7 @@ import { startPgPoolMonitor, stopPgPoolMonitor } from "../db/pgPoolMonitor.js";
 import { runDbProbes } from "../db/probes/runDbProbes.js";
 import { logger } from "../external/logtail/logtailUtils.js";
 import { refreshCeBalancesCache } from "../external/motherduck/refreshCeBalancesCache.js";
+import { getRedisPoolMonitor } from "../external/redis/poolMonitor/getRedisPoolMonitor.js";
 import { runResetLoopV2 } from "../internal/balances/batchReset/runResetLoopV2.js";
 import { stopAllEdgeConfigPolling } from "../internal/misc/edgeConfig/edgeConfigRegistry.js";
 import { isMotherduckCacheRefreshDisabled } from "../internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
@@ -34,6 +35,7 @@ const { db: probeDb, client: probeClient } = initDrizzle({
 	connectTimeout: 5,
 });
 startPgPoolMonitor();
+getRedisPoolMonitor().start();
 startBlueGreenHeartbeat({ db, logger, serviceName: "cron" });
 
 const ctx: CronContext = { db, logger };
@@ -176,6 +178,7 @@ const shutdown = async (signal: string) => {
 	console.log(`Received ${signal} signal, closing database connection...`);
 	resetLoopController.abort();
 	stopPgPoolMonitor();
+	getRedisPoolMonitor().stop();
 	stopBlueGreenHeartbeat({ serviceName: "cron" });
 	stopBlueGreenSlotStorePolling({ serviceName: "cron" });
 	stopAllEdgeConfigPolling();
