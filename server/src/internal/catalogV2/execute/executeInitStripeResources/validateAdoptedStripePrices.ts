@@ -18,6 +18,8 @@ const PRICE_MAPPING_SLOTS = [
 	"stripe_prepaid_price_v2_id",
 ] as const;
 
+type PriceMappingSlot = (typeof PRICE_MAPPING_SLOTS)[number];
+
 type PriceConfigIds = Partial<
 	Record<
 		| (typeof PRICE_MAPPING_SLOTS)[number]
@@ -33,7 +35,7 @@ type AdoptedPrice = {
 	price: Price;
 	product: FullProduct;
 	stripePriceId: string;
-	slot: (typeof PRICE_MAPPING_SLOTS)[number];
+	slot: PriceMappingSlot;
 };
 
 const configIds = ({ price }: { price: Price }): PriceConfigIds =>
@@ -58,22 +60,38 @@ const currentSlotIdsByPriceId = ({
 };
 
 /**
+ * A Stripe price is only valid for the slot Autumn minted it into: a metered
+ * usage price in `stripe_price_id` cannot bill a prepaid item from
+ * `stripe_prepaid_price_v2_id`. So exemptions are keyed by slot AND id — the
+ * same id re-stated in the other slot is a new adoption and gets validated.
+ */
+const slotKey = ({
+	slot,
+	stripePriceId,
+}: {
+	slot: PriceMappingSlot;
+	stripePriceId: string;
+}): string => `${slot}:${stripePriceId}`;
+
+/**
  * A mint clones the previous row's prices under fresh price ids, so per-row
  * matching cannot see them. Those ids were real when Autumn wrote them, so the
- * cloned-from row stays a product-wide exemption.
+ * cloned-from row stays a product-wide exemption (per slot, see `slotKey`).
  */
-const mintedStripePriceIds = ({
+const mintedSlotKeys = ({
 	product,
 }: {
 	product: FullProduct | null | undefined;
-}): Set<string> =>
-	new Set(
-		(product?.prices ?? []).flatMap((price) =>
-			PRICE_MAPPING_SLOTS.map((slot) => configIds({ price })[slot]).filter(
-				(id): id is string => Boolean(id),
-			),
-		),
-	);
+}): Set<string> => {
+	const keys = new Set<string>();
+	for (const price of product?.prices ?? []) {
+		for (const slot of PRICE_MAPPING_SLOTS) {
+			const stripePriceId = configIds({ price })[slot];
+			if (stripePriceId) keys.add(slotKey({ slot, stripePriceId }));
+		}
+	}
+	return keys;
+};
 
 /**
  * Stated ids only — an id Autumn minted earlier was real when it was written.
@@ -90,7 +108,7 @@ export const newlyAdoptedPrices = ({
 	const currentByPriceId = currentSlotIdsByPriceId({
 		product: upsert.row.currentFullProduct,
 	});
-	const minted = mintedStripePriceIds({ product: upsert.row.baseFullProduct });
+	const minted = mintedSlotKeys({ product: upsert.row.baseFullProduct });
 
 	return next.prices.flatMap((price) => {
 		const ids = configIds({ price });
@@ -100,7 +118,7 @@ export const newlyAdoptedPrices = ({
 			const stripePriceId = ids[slot];
 			if (!stripePriceId) return [];
 			if (stripePriceId === current[slot]) return [];
-			if (minted.has(stripePriceId)) return [];
+			if (minted.has(slotKey({ slot, stripePriceId }))) return [];
 			return [{ planId: next.id, price, product: next, stripePriceId, slot }];
 		});
 	});
@@ -242,6 +260,24 @@ export const validateAdoptedStripePrices = async ({
 			throw new RecaseError({
 				code: ErrCode.InvalidRequest,
 				message: `Stripe price ${entry.stripePriceId} has no meter, so it cannot bill a usage-based item (plan ${entry.planId})`,
+				statusCode: 400,
+			});
+		}
+
+		// The inverse: prepaid and fixed items bill by quantity, and Stripe
+		// rejects a quantity on a metered price ("You cannot set the quantity
+		// for metered plans"). Catch it here, when the plan is saved, instead
+		// of on every attach afterwards.
+		const stripePriceIsMetered =
+			stripePrice.recurring?.usage_type === "metered";
+		const itemBillsByQuantity = !priceRequiresMeter({
+			price: entry.price,
+			product: entry.product,
+		});
+		if (stripePriceIsMetered && itemBillsByQuantity) {
+			throw new RecaseError({
+				code: ErrCode.InvalidRequest,
+				message: `Stripe price ${entry.stripePriceId} is metered, so it cannot bill a prepaid or fixed item (plan ${entry.planId})`,
 				statusCode: 400,
 			});
 		}

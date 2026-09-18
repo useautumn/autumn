@@ -6,6 +6,7 @@
  *   every newly-stated SLOT is validated, not just the first one found
  *   "carried forward" is per price row + slot, so an id moved between rows is new
  *   a mint's cloned ids stay exempt (Autumn wrote them, they were real)
+ *   ...but only in the slot they were minted into; the same id in the other slot is new
  *   adopting a metered price records the meter; adopting a meterless one CLEARS it
  *   a usage-based price may not adopt a meterless Stripe price at all
  */
@@ -119,6 +120,33 @@ describe("newlyAdoptedPrices", () => {
 		});
 
 		expect(adopted).toEqual([]);
+	});
+
+	test("a minted id re-stated in the OTHER slot counts as newly stated", () => {
+		// usage_based → prepaid flip. The dashboard echoes the metered v1 id back,
+		// the mapper routes it into the prepaid v2 slot of a fresh price row, and
+		// it must be validated there: a metered price cannot bill a prepaid item.
+		const adopted = newlyAdoptedPrices({
+			upsert: upsert({
+				next: product({
+					prices: [
+						price({
+							id: "fresh",
+							config: { stripe_prepaid_price_v2_id: "price_metered" },
+						}),
+					],
+				}),
+				base: product({
+					prices: [
+						price({ id: "old", config: { stripe_price_id: "price_metered" } }),
+					],
+				}),
+			}),
+		});
+
+		expect(adopted.map((entry) => entry.slot)).toEqual([
+			"stripe_prepaid_price_v2_id",
+		]);
 	});
 });
 
