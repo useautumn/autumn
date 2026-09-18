@@ -1,4 +1,5 @@
 import {
+	boolean,
 	foreignKey,
 	jsonb,
 	numeric,
@@ -38,6 +39,9 @@ export const chatInstallations = pgTable(
 		live_api_key: text("live_api_key"),
 		installed_by_user_id: text("installed_by_user_id"),
 		installed_by_provider_user_id: text("installed_by_provider_user_id"),
+		// When true, the bot only answers messages in a subscribed thread that
+		// @-mention it; otherwise every reply in the thread is answered.
+		require_mention: boolean("require_mention").notNull().default(false),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 		updated_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 	},

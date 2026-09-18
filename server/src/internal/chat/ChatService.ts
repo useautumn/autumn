@@ -59,6 +59,7 @@ export class ChatService {
 					) ?? [],
 				missing_scopes: missingScopes,
 				needs_reconnect: missingScopes.length > 0,
+				require_mention: installation.require_mention,
 				created_at: installation.created_at,
 				updated_at: installation.updated_at,
 			};
@@ -95,6 +96,25 @@ export class ChatService {
 		});
 
 		return url;
+	}
+
+	/** Updates org-level chat behaviour; returns false when nothing is installed. */
+	static async updateSettings(
+		ctx: AutumnContext,
+		{ requireMention }: { requireMention: boolean },
+	) {
+		const updated = await ctx.db
+			.update(chatInstallations)
+			.set({ require_mention: requireMention, updated_at: Date.now() })
+			.where(
+				and(
+					eq(chatInstallations.org_id, ctx.org.id),
+					eq(chatInstallations.provider, slackProvider),
+				),
+			)
+			.returning({ id: chatInstallations.id });
+
+		return updated.length > 0;
 	}
 
 	static async disconnect(ctx: AutumnContext) {

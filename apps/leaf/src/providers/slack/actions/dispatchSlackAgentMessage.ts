@@ -27,7 +27,10 @@ import {
 	fetchSlackAttachmentFallback,
 	getSlackFilesFromRaw,
 } from "../files.js";
-import { findSlackInstallationForWorkspace } from "../installations.js";
+import {
+	type ChatInstallationWithOrg,
+	findSlackInstallationForWorkspace,
+} from "../installations.js";
 import { presentSlackAgentTurn } from "../presenters/presentSlackAgentTurn.js";
 import { controlMessageFrom } from "../routing/controlMessage.js";
 import { runSlackAgentTurn } from "./runSlackAgentTurn.js";
@@ -36,6 +39,8 @@ type DispatchSlackAgentMessageInput = {
 	attachments?: ReadonlyArray<Attachment>;
 	clientContext?: Readonly<Record<string, unknown>>;
 	channelId: string;
+	/** Installation already resolved by the caller; skips the lookup here. */
+	installation?: ChatInstallationWithOrg;
 	providerUserId: string;
 	raw: unknown;
 	react?: (input: { action: "add" | "remove"; emoji: string }) => Promise<void>;
@@ -52,6 +57,7 @@ const runAndReply = async ({
 	attachments,
 	channelId,
 	clientContext,
+	installation: resolvedInstallation,
 	providerUserId,
 	raw,
 	react,
@@ -77,7 +83,8 @@ const runAndReply = async ({
 		const workspaceId = getSlackWorkspaceId(raw);
 		const historyStartedAt = Date.now();
 		const [installation, recentMessages] = await Promise.all([
-			findSlackInstallationForWorkspace({ workspaceId }),
+			resolvedInstallation ??
+				findSlackInstallationForWorkspace({ workspaceId }),
 			Promise.resolve(
 				typeof recentMessagesInput === "function"
 					? recentMessagesInput()

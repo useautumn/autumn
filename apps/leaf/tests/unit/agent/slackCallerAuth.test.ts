@@ -23,6 +23,7 @@ const installation = ({ botAccessToken }: { botAccessToken: string }) =>
 		live_api_key: null,
 		installed_by_user_id: "user_installer",
 		installed_by_provider_user_id: "U_INSTALLER",
+		require_mention: false,
 		created_at: 1,
 		updated_at: 1,
 	}) satisfies ChatInstallation;

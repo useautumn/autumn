@@ -1,6 +1,9 @@
 import type { Message, Thread } from "chat";
 import { logger as rootLogger } from "../../../lib/logger.js";
 import { dispatchSlackAgentMessage } from "../actions/dispatchSlackAgentMessage.js";
+import { getSlackWorkspaceId } from "../context.js";
+import { findSlackInstallationForWorkspace } from "../installations.js";
+import { shouldIgnoreUnmentionedReply } from "../routing/replyPolicy.js";
 import { getRecentMessages } from "../threadContext.js";
 
 const logUnsubscribeFailure = (error: unknown) => {
@@ -25,18 +28,21 @@ const unsubscribe = (thread: Thread) =>
 
 type HandlerDependencies = Readonly<{
 	dispatch: typeof dispatchSlackAgentMessage;
+	findInstallation: typeof findSlackInstallationForWorkspace;
 	getRecentMessages: typeof getRecentMessages;
 }>;
 
 const dispatchMessage = async ({
 	message,
 	dispatch,
+	installation,
 	recentMessages,
 	showRunPlan,
 	thread,
 }: {
 	message: Message;
 	dispatch: typeof dispatchSlackAgentMessage;
+	installation?: Awaited<ReturnType<typeof findSlackInstallationForWorkspace>>;
 	recentMessages:
 		| Awaited<ReturnType<typeof getRecentMessages>>
 		| (() => ReturnType<typeof getRecentMessages>);
@@ -47,6 +53,7 @@ const dispatchMessage = async ({
 	const disposition = await dispatch({
 		attachments: message.attachments,
 		channelId: thread.channelId,
+		installation,
 		providerUserId: message.author.userId,
 		raw: message.raw,
 		react: async ({ action, emoji }) => {
@@ -68,6 +75,7 @@ const dispatchMessage = async ({
 
 export const createSlackMessageHandlers = ({
 	dispatch = dispatchSlackAgentMessage,
+	findInstallation = findSlackInstallationForWorkspace,
 	getRecentMessages: getMessages = getRecentMessages,
 }: Partial<HandlerDependencies> = {}) => {
 	const handleSlackMessage = async (thread: Thread, message: Message) => {
@@ -92,15 +100,30 @@ export const createSlackMessageHandlers = ({
 		});
 	};
 
-	// Every reply in a subscribed thread is answered; "stop" and "stop replying"
-	// are the only way out, handled as control commands inside dispatch.
+	// Every reply in a subscribed thread is answered unless the installation
+	// requires an @-mention; "stop" and "stop replying" are the only other way
+	// out, handled as control commands inside dispatch.
 	const handleSubscribedSlackMessage = async (
 		thread: Thread,
 		message: Message,
 	) => {
 		if (shouldSkipMessage(message)) return;
+		const installation = await findInstallation({
+			workspaceId: getSlackWorkspaceId(message.raw),
+		});
+		if (
+			installation &&
+			shouldIgnoreUnmentionedReply({ installation, message })
+		) {
+			rootLogger.info("Skipping unmentioned reply in mention-only thread", {
+				event: "leaf.slack_message_skipped",
+				data: { reason: "mention_required" },
+			});
+			return;
+		}
 		await dispatchMessage({
 			dispatch,
+			installation,
 			message,
 			recentMessages: () => getMessages(thread, message),
 			showRunPlan: false,

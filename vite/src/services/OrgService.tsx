@@ -51,6 +51,14 @@ export class OrgService {
 		return await axiosInstance.post(`/organization/chat/install`, data);
 	}
 
+	static async updateChatSettings(
+		axiosInstance: AxiosInstance,
+		provider: "slack",
+		data: { require_mention: boolean },
+	) {
+		return await axiosInstance.patch(`/organization/chat/${provider}`, data);
+	}
+
 	static async disconnectChat(axiosInstance: AxiosInstance, provider: "slack") {
 		return await axiosInstance.delete(`/organization/chat/${provider}`);
 	}

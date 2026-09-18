@@ -1,0 +1,1 @@
+ALTER TABLE "chat_installations" ADD COLUMN "require_mention" boolean DEFAULT false NOT NULL;

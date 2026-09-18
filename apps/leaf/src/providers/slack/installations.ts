@@ -176,6 +176,12 @@ export const replaceInstallation = async ({
 		const existingInstallations = await tx.query.chatInstallations.findMany({
 			where: or(sameOrg, sameWorkspace),
 		});
+		// A reconnect replaces the row, so org-level chat settings must survive it.
+		const previousOrgInstallation = existingInstallations.find(
+			(installation) =>
+				installation.org_id === state.orgId &&
+				installation.provider === provider,
+		);
 		for (const installation of existingInstallations) {
 			await deleteInstallationArtifacts(tx, installation);
 		}
@@ -196,6 +202,7 @@ export const replaceInstallation = async ({
 				default_env: state.env,
 				installed_by_user_id: state.userId,
 				installed_by_provider_user_id: installedByProviderUserId,
+				require_mention: previousOrgInstallation?.require_mention ?? false,
 				created_at: Date.now(),
 				updated_at: Date.now(),
 			})

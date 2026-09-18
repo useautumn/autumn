@@ -51,6 +51,7 @@ const installation = ({
 		live_api_key: null,
 		installed_by_user_id: "user_1",
 		installed_by_provider_user_id: "U1",
+		require_mention: false,
 		created_at: 1,
 		updated_at: 1,
 	}) satisfies ChatInstallation & { org_slug?: string };

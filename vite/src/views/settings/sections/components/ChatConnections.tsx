@@ -1,5 +1,5 @@
 import { AppEnv, ChatAuthMode, type ScopeString } from "@autumn/shared";
-import { Button } from "@autumn/ui";
+import { Button, Switch } from "@autumn/ui";
 import { faSlack } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +20,7 @@ type SlackInstallation = {
 	auth_mode: ChatAuthMode | null;
 	agent_scopes: ScopeString[];
 	needs_reconnect?: boolean;
+	require_mention: boolean;
 	updated_at: number;
 };
 
@@ -95,6 +96,36 @@ export const ChatConnections = () => {
 		},
 	});
 
+	const updateSettings = useMutation({
+		mutationFn: async (requireMention: boolean) => {
+			await OrgService.updateChatSettings(axiosInstance, "slack", {
+				require_mention: requireMention,
+			});
+			return requireMention;
+		},
+		onSuccess: (requireMention) => {
+			queryClient.setQueryData<ChatStatus>(queryKey, (current) =>
+				current
+					? {
+							installations: current.installations.map((item) =>
+								item.provider === "slack"
+									? { ...item, require_mention: requireMention }
+									: item,
+							),
+						}
+					: current,
+			);
+			toast.success(
+				requireMention
+					? "Autumn will only reply in threads when mentioned"
+					: "Autumn will reply to every message in its threads",
+			);
+		},
+		onError: (error) => {
+			toast.error(getBackendErr(error, "Failed to update chat settings"));
+		},
+	});
+
 	const installation = data?.installations.find(
 		(item) => item.provider === "slack",
 	);
@@ -153,6 +184,26 @@ export const ChatConnections = () => {
 					</div>
 				);
 			})}
+
+			{installation && (
+				<div className="flex items-center justify-between gap-4 rounded-lg border bg-background p-4">
+					<div className="flex flex-col gap-0.5">
+						<span className="text-sm font-medium">
+							Only reply when mentioned
+						</span>
+						<span className="text-xs text-muted-foreground">
+							In threads Autumn is part of, ignore replies that don't @-mention
+							it. Direct messages are always answered.
+						</span>
+					</div>
+					<Switch
+						aria-label="Only reply when mentioned"
+						checked={installation.require_mention}
+						onCheckedChange={(checked) => updateSettings.mutate(checked)}
+						disabled={updateSettings.isPending}
+					/>
+				</div>
+			)}
 
 			<SlackScopesSheet
 				open={sheetOpen}
