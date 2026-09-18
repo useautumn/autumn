@@ -36,6 +36,9 @@ const REQUEST_INVALID_REASON = "request_invalid";
 
 const EVENT_NAME_REASON = "event_name_not_supported";
 
+/** Replay cohorts are customer subjects; an entity request has no baseline to verify against yet. */
+const ENTITY_REASON = "entity_not_supported";
+
 const CONTEXT_ENV: Record<
 	ReplayEnvironment,
 	BalanceWorkerRequestContext["env"]
@@ -167,6 +170,7 @@ export function planReplayRequest({
 		return { kind: "refused", reason: REQUEST_INVALID_REASON };
 	const ctx = replayRequestContext({ request, expand, orgConfig, features });
 	const body = normalizedReplayBody({ request });
+	if (body.entity_id) return { kind: "refused", reason: ENTITY_REASON };
 	try {
 		return request.operation === "check"
 			? planCheckCommand({ ctx, body })

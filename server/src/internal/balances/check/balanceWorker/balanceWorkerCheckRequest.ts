@@ -32,7 +32,11 @@ export function checkParamsToCheckCommand({
 		});
 	return parseCheckCommand({
 		input: {
-			...requestContextToCommandBase({ ctx, customerId: body.customer_id }),
+			...requestContextToCommandBase({
+				ctx,
+				customerId: body.customer_id,
+				entityId: body.entity_id ?? null,
+			}),
 			type: "check",
 			org: orgToCommandOrg({ org: ctx.org }),
 			featureId: body.feature_id,

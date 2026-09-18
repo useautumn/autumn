@@ -187,9 +187,9 @@ const unsupported: { reason: string; mutate: (fixture: Fixture) => void }[] = [
 		},
 	},
 	{
-		reason: "entity_not_supported",
-		mutate: ({ customerEntitlement }) => {
-			customerEntitlement.entitlement.entity_feature_id = "seats";
+		reason: "license_not_supported",
+		mutate: ({ customerProduct }) => {
+			customerProduct.customer_license_link_id = "link_1";
 		},
 	},
 	{

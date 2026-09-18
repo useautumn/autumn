@@ -321,7 +321,7 @@ commands). Everything else in the scripts has a row below.
 | event `properties` (window filters, credit dimension rules) | refused | 7 · 8 |
 | credit systems: `entitlementToCreditSystem` (+ `feature_override`), `getCreditCost`, graduated rate cards, `usage_attribution`, tokens cost | `creditCost: 1` | 8 |
 | credit-system rows sort last; `getCreditRateRequiredBalance` for check | ✗ | 8 |
-| entities: target / all / top-level cases, per-entity adjustment, entity-first sort, per-entity rollovers | ✗ | 9 (model decision 13) |
+| entities: target / all / top-level cases, per-entity adjustment, entity-first sort, per-entity rollovers | ✓ | 9a |
 | pooled balances (`is_pooled_balance` rows) | refused | 9 |
 | boolean and continuous-use features | refused | 9 (boolean → check `flag`) |
 | mutation logs → per-row deltas with value and credit cost | ✓ (`usage_attribution_delta` in 8) | — |
@@ -524,16 +524,39 @@ with attribution across two tracks, check refused by an exhausted pool
 **verify** — engine 75 · worker 456 · client 22 · postgres 6 green; shared, engine, worker, client,
 server typecheck clean.
 
-### 9 · [ ] engine + worker + server → entities, pooled, boolean
+### 9a · [x] engine + server → per-entity balances
 
-- Decision 10 first: per-entity balances as the `entities` map the Lua reads, or as the
-  entity-scoped rows the worker's entity subjects already model.
-- Engine: the three draw cases, per-entity adjustment, entity-first sort, per-entity rollovers,
-  pooled rows; boolean features answer check with `flag`.
-- Server: delete `entity_not_supported`, `pooled_balance_not_supported`, `boolean_not_supported`,
-  `continuous_usage_not_supported`.
-**spec** — `check/per-entity/*`, `check/pooled-balances/*`, `track/pooled-balances/*`,
-`check-credit-dimensions-entities`
+- Decision 13: the `entities` map stays on the row; setup explodes it into one `DeductionRow`
+  per key (`entityKey` on the row and on its deltas). An entity view targets its own key; a
+  customer-level track draws every key in sorted order, the Lua `sorted_keys` loop. The draw,
+  clamps, buckets, spend headroom, usage windows and attribution are untouched.
+- `customerEntitlementToDeductionRows` sizes each key's ceiling as the parent's grant plus the
+  entity's own adjustment; `rolloverToDeductionRow` holds a balance under each key its owner does.
+  `deltasToRowChanges` folds per-entity deltas into `entities` (before → after), leaving `balance`
+  alone; a key first drawn or refunded into is created.
+- Worker rows pick `entities` (customer entitlements, rollovers) and the entity's billing controls.
+- Server: `entity_id` accepted; `validateMeteringEntitlement` keeps only `license_not_supported`;
+  check commands carry the entity identity; `workerStateToApiBalance` overlays `entities`.
+  Replay still refuses entity requests at plan time: cohorts are customer subjects.
+**verify** — engine: target key, key-order aggregate, refund to grant plus entity adjustment,
+per-entity rollover, unlimited per-entity row, entity view mixing a map row and the entity's own row
+**spec (awaits DB)** — `check/per-entity/*`, `check-credit-dimensions-entities`, per-entity spend-limit suites
+
+### 9a′ · [x] engine → parity audit against the Lua branches and the spec suites
+
+Every branch of the Lua deduction and every in-scope integration and server-unit case was
+matrixed against the engine. Fixed on the way: a zero credit rate is charged one to one and
+leaves its rollovers alone (Lua fallback); an expired rollover never funds a draw; `overflow`
+lifts the refund ceiling; a free graduated tier moves units and attribution with no balance
+change; `overflow` skips the window gate but the counters still record the draw. Tests split by
+domain under `tests/unit/deduction/` (core, rollovers, billing controls, usage windows, credits,
+entities) on a shared `deductionFixtures.ts`.
+Intentional divergences from Lua, each safer than the original: rollovers take entity scope from
+their own owner, not the first row; a zero-rate owner skips only its own rollovers, not the
+whole phase; no rounding step, since Decimal arithmetic is exact where Lua rounds to 10 places.
+
+### 9b · [ ] engine + server → pooled balances
+### 9c · [ ] engine + server → boolean features answer check with `flag`
 
 ### 10 · [ ] deferred → locks and finalize, allocated invoices, webhooks, auto top-up, PG sync
 
@@ -578,5 +601,7 @@ the rest are server side effects fed from `changes` + `state` (see the reply tab
    loads a baseline, decides nothing, and carries none, so the worker's own hydration can build one
    without fetching org context. The server converters share `requestContextToCommandBase` for the
    base fields and add `org` with `orgToCommandOrg`; the client stays a transport. 2026-09-18.
-13. **Open — entity balances.** Lua keeps per-entity balances in an `entities` map on the row;
-   the worker already models entity subjects with their own rows. Decide before 9.
+13. **Per-entity balances are rows, not a draw type.** The `entities` map stays on the stored row
+   because `SubjectState` rows mirror Postgres rows and a `RowChange` is one row's before/after.
+   Setup explodes the map into one `DeductionRow` per key, so target, aggregate and top-level are
+   row selection and the draw never learns entities exist. 2026-09-18.

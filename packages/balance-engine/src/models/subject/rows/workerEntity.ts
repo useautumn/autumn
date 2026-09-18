@@ -7,6 +7,9 @@ export const workerEntitySchema = EntitySchema.pick({
 	internal_id: true,
 	internal_customer_id: true,
 	feature_id: true,
+	spend_limits: true,
+	overage_allowed: true,
+	usage_limits: true,
 }).strict();
 
 export type WorkerEntity = z.infer<typeof workerEntitySchema>;

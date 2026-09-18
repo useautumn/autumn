@@ -29,6 +29,7 @@ const entityRollover = {
 	balance: 3,
 	usage: 0,
 	expires_at: null,
+	entities: {},
 };
 const customerRollover = {
 	id: "ro_cus",
@@ -36,6 +37,7 @@ const customerRollover = {
 	balance: 2,
 	usage: 0,
 	expires_at: null,
+	entities: {},
 };
 
 const view = createSubjectState({

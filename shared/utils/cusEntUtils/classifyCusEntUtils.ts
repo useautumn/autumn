@@ -49,7 +49,9 @@ export const isUnlimitedCusEnt = (cusEnt: FullCustomerEntitlement) => {
  * Type guard that narrows cusEnt to have non-null entities.
  * Use directly with cusEnt (not wrapped in object) for type narrowing to work.
  */
-export const isEntityScopedCusEnt = <T extends FullCustomerEntitlement>(
+export const isEntityScopedCusEnt = <
+	T extends { entitlement: Pick<Entitlement, "entity_feature_id"> },
+>(
 	cusEnt: T,
 ): cusEnt is T & { entities: Record<string, EntityBalance> } => {
 	return notNullish(cusEnt.entitlement.entity_feature_id);

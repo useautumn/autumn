@@ -3,6 +3,7 @@ import {
 	type DbOverageAllowed,
 	getMaxOverage,
 	isAllocatedCustomerEntitlement,
+	isEntityScopedCusEnt,
 	isFreeCustomerEntitlement,
 	isUnlimitedCustomerEntitlement,
 } from "@autumn/shared";
@@ -35,8 +36,44 @@ const usageAllowedOf = ({
 	return native;
 };
 
+/** A customer-level row whose balances live in `entities`; a row of the per-entity kind carries `internal_entity_id` and holds its balance like any row. */
+const isPerEntityMapRow = ({
+	customerEntitlement,
+}: {
+	customerEntitlement: WorkerFullCustomerEntitlementWithProduct;
+}): boolean =>
+	isEntityScopedCusEnt(customerEntitlement) &&
+	customerEntitlement.internal_entity_id == null;
+
+/** Which entities a track may draw from on a map row: the one it is for, or every one in key order (the Lua `sorted_keys` draw). */
+const entityKeysToDraw = ({
+	customerEntitlement,
+	entityId,
+}: {
+	customerEntitlement: WorkerFullCustomerEntitlementWithProduct;
+	entityId: string | null;
+}): string[] =>
+	entityId !== null
+		? [entityId]
+		: Object.keys(customerEntitlement.entities ?? {}).sort();
+
+/** What every balance on a row shares: how it prices, and how far it may move. */
+type RowBounds = Pick<
+	DeductionRow,
+	| "id"
+	| "featureId"
+	| "creditCost"
+	| "rateCard"
+	| "rateUnits"
+	| "ownerId"
+	| "usageAllowed"
+	| "minBalance"
+	| "unlimited"
+	| "skipsRollovers"
+> & { grant: number };
+
 /** How far a row may move: down to its overage floor if usage is allowed, and on a refund back up to its grant plus adjustment. */
-export const customerEntitlementToDeductionRow = ({
+const resolveRowBounds = ({
 	customerEntitlement,
 	creditCost,
 	overageAllowedByFeatureId,
@@ -48,11 +85,10 @@ export const customerEntitlementToDeductionRow = ({
 	overageAllowedByFeatureId: Record<string, DbOverageAllowed>;
 	nativeOverageFeatureIds: Set<string>;
 	overageBehavior: OverageBehavior;
-}): DeductionRow => {
+}): RowBounds => {
 	const featureId = customerEntitlement.entitlement.feature.id;
 	const unlimited = isUnlimitedCustomerEntitlement({ customerEntitlement });
 	const maxOverage = getMaxOverage({ cusEnt: customerEntitlement });
-	const grant = cusEntToStartingBalance({ cusEnt: customerEntitlement });
 	const usageAllowed =
 		unlimited ||
 		usageAllowedOf({
@@ -61,12 +97,9 @@ export const customerEntitlementToDeductionRow = ({
 			featureHasNativeOverage: nativeOverageFeatureIds.has(featureId),
 			overageBehavior,
 		});
-
 	return {
-		table: "customerEntitlements",
 		id: customerEntitlement.id,
 		featureId,
-		balance: customerEntitlement.balance,
 		creditCost: creditCost.creditCost,
 		rateCard: creditCost.rateCard,
 		rateUnits: creditCost.rateCard
@@ -77,12 +110,77 @@ export const customerEntitlementToDeductionRow = ({
 		ownerId: customerEntitlement.id,
 		usageAllowed,
 		minBalance: unlimited || maxOverage === undefined ? null : -maxOverage,
-		maxBalance: unlimited ? null : grant + customerEntitlement.adjustment,
 		unlimited,
+		skipsRollovers: creditCost.skipsRollovers,
+		grant: cusEntToStartingBalance({ cusEnt: customerEntitlement }),
 	};
 };
 
-/** A rollover only ever drains to zero and is never refunded into; it charges at its owner's rate. */
+/** One balance on the row as a deduction row: the shared bounds plus where it sits and how far a refund may lift it. */
+const balanceToDeductionRow = ({
+	bounds: { grant, ...bounds },
+	entityKey,
+	balance,
+	adjustment,
+}: {
+	bounds: RowBounds;
+	entityKey: string | null;
+	balance: number;
+	adjustment: number;
+}): DeductionRow => ({
+	table: "customerEntitlements",
+	...bounds,
+	entityKey,
+	balance,
+	maxBalance: bounds.unlimited ? null : grant + adjustment,
+});
+
+/** A plain row is one deduction row from its balance; a per-entity map row is one per entity balance drawn. */
+export const customerEntitlementToDeductionRows = ({
+	customerEntitlement,
+	entityId,
+	creditCost,
+	overageAllowedByFeatureId,
+	nativeOverageFeatureIds,
+	overageBehavior,
+}: {
+	customerEntitlement: WorkerFullCustomerEntitlementWithProduct;
+	entityId: string | null;
+	creditCost: CreditCost;
+	overageAllowedByFeatureId: Record<string, DbOverageAllowed>;
+	nativeOverageFeatureIds: Set<string>;
+	overageBehavior: OverageBehavior;
+}): DeductionRow[] => {
+	const bounds = resolveRowBounds({
+		customerEntitlement,
+		creditCost,
+		overageAllowedByFeatureId,
+		nativeOverageFeatureIds,
+		overageBehavior,
+	});
+
+	if (!isPerEntityMapRow({ customerEntitlement })) {
+		return [
+			balanceToDeductionRow({
+				bounds,
+				entityKey: null,
+				balance: customerEntitlement.balance,
+				adjustment: customerEntitlement.adjustment,
+			}),
+		];
+	}
+
+	return entityKeysToDraw({ customerEntitlement, entityId }).map((entityKey) =>
+		balanceToDeductionRow({
+			bounds,
+			entityKey,
+			balance: customerEntitlement.entities?.[entityKey]?.balance ?? 0,
+			adjustment: customerEntitlement.entities?.[entityKey]?.adjustment ?? 0,
+		}),
+	);
+};
+
+/** A rollover only ever drains to zero and is never refunded into; it charges at its owner's rate and holds a balance under each key its owner does. */
 export const rolloverToDeductionRow = ({
 	rollover,
 	owner,
@@ -92,8 +190,12 @@ export const rolloverToDeductionRow = ({
 }): DeductionRow => ({
 	table: "rollovers",
 	id: rollover.id,
+	entityKey: owner.entityKey,
 	featureId: owner.featureId,
-	balance: rollover.balance,
+	balance:
+		owner.entityKey === null
+			? rollover.balance
+			: (rollover.entities[owner.entityKey]?.balance ?? 0),
 	creditCost: owner.creditCost,
 	rateCard: owner.rateCard,
 	rateUnits: owner.rateUnits,
@@ -102,4 +204,5 @@ export const rolloverToDeductionRow = ({
 	minBalance: 0,
 	maxBalance: 0,
 	unlimited: false,
+	skipsRollovers: false,
 });

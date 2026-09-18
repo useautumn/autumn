@@ -78,8 +78,13 @@ export const selectDeductionRows = ({
 			now: request.now,
 		}),
 	});
+	// State outlives a rollover's expiry; the hydration query drops these, the draw must too.
 	const rollovers = customerEntitlements
 		.flatMap((customerEntitlement) => customerEntitlement.rollovers)
+		.filter(
+			(rollover) =>
+				rollover.expires_at === null || rollover.expires_at > request.now,
+		)
 		.sort(byExpiresAt);
 	const overdueBlocked = blockedProducts.some((customerProduct) =>
 		customerProduct.customer_entitlements.some(

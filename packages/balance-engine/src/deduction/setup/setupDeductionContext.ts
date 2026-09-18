@@ -4,7 +4,7 @@ import type { DeductionRequest } from "../types/deductionRequest.js";
 import { resolveBillingControls } from "./resolveBillingControls.js";
 import { resolveCreditCost } from "./resolveCreditCosts.js";
 import {
-	customerEntitlementToDeductionRow,
+	customerEntitlementToDeductionRows,
 	rolloverToDeductionRow,
 } from "./resolveRowBounds.js";
 import { resolveUsageWindowLimits } from "./resolveUsageWindowLimits.js";
@@ -37,29 +37,35 @@ export const setupDeductionContext = ({
 			.filter((customerEntitlement) => customerEntitlement.usage_allowed)
 			.map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
 	);
-	const rows = customerEntitlements.map((customerEntitlement) =>
-		customerEntitlementToDeductionRow({
+	const entityId = fullSubject.entity?.id ?? null;
+	const rows = customerEntitlements.flatMap((customerEntitlement) =>
+		customerEntitlementToDeductionRows({
 			customerEntitlement,
+			entityId,
 			creditCost: resolveCreditCost({ customerEntitlement, request }),
 			overageAllowedByFeatureId,
 			nativeOverageFeatureIds,
 			overageBehavior: request.overageBehavior,
 		}),
 	);
-	const rowById = new Map(rows.map((row) => [row.id, row]));
+	const ownersOf = (customerEntitlementId: string) =>
+		rows.filter(
+			(row) => row.id === customerEntitlementId && !row.skipsRollovers,
+		);
 
 	return {
 		featureId: request.featureId,
-		entityId: fullSubject.entity?.id ?? null,
+		entityId,
 		now: request.now,
 		overageBehavior: request.overageBehavior,
 		customerEntitlements,
 		rollovers,
 		rows,
-		rolloverRows: rollovers.flatMap((rollover) => {
-			const owner = rowById.get(rollover.cus_ent_id);
-			return owner ? [rolloverToDeductionRow({ rollover, owner })] : [];
-		}),
+		rolloverRows: rollovers.flatMap((rollover) =>
+			ownersOf(rollover.cus_ent_id).map((owner) =>
+				rolloverToDeductionRow({ rollover, owner }),
+			),
+		),
 		spendLimitByFeatureId,
 		usageWindowLimits,
 		usageWindows: fullSubject.usage_windows,

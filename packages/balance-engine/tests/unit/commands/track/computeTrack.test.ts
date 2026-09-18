@@ -57,6 +57,7 @@ describe("track computation", () => {
 				{
 					table: "customerEntitlements",
 					id: "messages_monthly",
+					entityKey: null,
 					balanceDelta: -5,
 					usageDelta: 0,
 					valueDelta: -5,

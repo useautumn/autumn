@@ -45,6 +45,7 @@ const rollover = {
 	balance: 10,
 	usage: 0,
 	expires_at: 1_800_000_000_000,
+	entities: {},
 };
 
 const entity = {

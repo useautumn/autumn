@@ -44,14 +44,8 @@ export function validateMeteringEntitlement({
 		customerEntitlement.pooled_contribution_id
 	)
 		reason = "pooled_balance_not_supported";
-	else if (
-		customerEntitlement.internal_entity_id ||
-		entitlement.entity_feature_id ||
-		Object.keys(customerEntitlement.entities ?? {}).length ||
-		customerProduct?.internal_entity_id ||
-		customerProduct?.customer_license_link_id
-	)
-		reason = "entity_not_supported";
+	else if (customerProduct?.customer_license_link_id)
+		reason = "license_not_supported";
 	else if (customerEntitlement.replaceables.length)
 		reason = "replaceables_not_supported";
 	else if (

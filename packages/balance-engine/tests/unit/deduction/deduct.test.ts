@@ -3,27 +3,17 @@ import {
 	BillingInterval,
 	BillWhen,
 	CusProductStatus,
-	EntInterval,
-	FeatureType,
-	getUsageWindowBounds,
 	PriceType,
-	ResetInterval,
 } from "@autumn/shared";
 import type {
-	Catalog,
 	CommandOrg,
-	SubjectState,
-	WorkerCustomer,
-	WorkerCustomerEntitlement,
 	WorkerCustomerProduct,
-	WorkerUsageWindow,
 } from "../../../src/balanceEngine.js";
 import {
 	createSubjectState,
 	subjectStateToFullSubject,
 } from "../../../src/balanceEngine.js";
 import { deduct } from "../../../src/deduction/deduct.js";
-import type { DeductionRequest } from "../../../src/deduction/types/deductionRequest.js";
 import {
 	createCatalogFor,
 	createCustomerEntitlement,
@@ -31,87 +21,13 @@ import {
 	createSubjectFor,
 	identity,
 	occurredAt,
+	org,
 } from "../engineFixtures.js";
-
-const org: CommandOrg = {
-	config: {
-		reverse_deduction_order: false,
-		block_overdue_entitlements: false,
-		include_past_due: true,
-	},
-};
-
-const deductFrom = ({
-	customer,
-	customerProducts = [createCustomerProduct()],
-	customerEntitlements,
-	rollovers = [],
-	usageWindows = [],
-	value,
-	overageBehavior = "cap",
-	orgConfig = org.config,
-	properties = null,
-}: {
-	customer?: WorkerCustomer;
-	customerProducts?: WorkerCustomerProduct[];
-	customerEntitlements: WorkerCustomerEntitlement[];
-	usageWindows?: WorkerUsageWindow[];
-	properties?: Record<string, string> | null;
-	rollovers?: {
-		id: string;
-		cus_ent_id: string;
-		balance: number;
-		usage: number;
-		expires_at: number | null;
-	}[];
-	value: number;
-	overageBehavior?: "cap" | "reject" | "overflow";
-	orgConfig?: CommandOrg["config"];
-}) =>
-	deduct({
-		fullSubject: createSubjectFor({
-			state: createSubjectState({
-				identity,
-				customer,
-				customerProducts,
-				customerEntitlements,
-				rollovers,
-				usageWindows,
-			}),
-		}),
-		request: createDeductionRequest({
-			org: { config: orgConfig },
-			overageBehavior,
-			properties,
-			value,
-		}),
-	});
-
-const createDeductionRequest = ({
-	featureId = "messages",
-	internalFeatureId = `feat_${featureId}`,
-	value,
-	overageBehavior = "cap",
-	properties = null,
-	enforceOverdueBlock = false,
-	now = occurredAt,
-	org,
-}: Partial<DeductionRequest> &
-	Pick<DeductionRequest, "value" | "org">): DeductionRequest => ({
-	featureId,
-	internalFeatureId,
-	value,
-	overageBehavior,
-	properties,
-	enforceOverdueBlock,
-	now,
-	org,
-});
-
-const balancesAfter = (outcome: ReturnType<typeof deduct>) =>
-	outcome.changes.map((change) =>
-		change.op === "update" ? [change.id, change.after] : change,
-	);
+import {
+	balancesAfter,
+	createDeductionRequest,
+	deductFrom,
+} from "./deductionFixtures.js";
 
 describe("deduct", () => {
 	test.concurrent("takes from one row and stops at zero under cap", () => {
@@ -240,44 +156,6 @@ describe("deduct", () => {
 				["a", 6],
 			]);
 			expect(balancesAfter(outcome)).toEqual([["a", { balance: 6 }]]);
-		},
-	);
-
-	test.concurrent(
-		"rollovers drain first, soonest expiry first, and count usage",
-		() => {
-			const outcome = deductFrom({
-				customerEntitlements: [createCustomerEntitlement({ balance: 100 })],
-				rollovers: [
-					{
-						id: "ro_late",
-						cus_ent_id: "messages_monthly",
-						balance: 20,
-						usage: 0,
-						expires_at: occurredAt + 2000,
-					},
-					{
-						id: "ro_soon",
-						cus_ent_id: "messages_monthly",
-						balance: 5,
-						usage: 0,
-						expires_at: occurredAt + 1000,
-					},
-				],
-				value: 30,
-			});
-
-			expect(outcome).toMatchObject({ appliedValue: 30, remaining: 0 });
-			expect(balancesAfter(outcome)).toEqual([
-				["messages_monthly", { balance: 95 }],
-				["ro_soon", { balance: 0, usage: 5 }],
-				["ro_late", { balance: 0, usage: 20 }],
-			]);
-			expect(outcome.deltas.map((delta) => delta.id)).toEqual([
-				"ro_soon",
-				"ro_late",
-				"messages_monthly",
-			]);
 		},
 	);
 
@@ -449,127 +327,6 @@ describe("deduct", () => {
 		]);
 	});
 
-	const customerWith = (
-		controls: Partial<
-			Pick<WorkerCustomer, "spend_limits" | "overage_allowed" | "usage_limits">
-		>,
-	): WorkerCustomer => ({
-		internal_id: "cus_1",
-		id: "cus_1",
-		config: null,
-		spend_limits: null,
-		overage_allowed: null,
-		...controls,
-	});
-
-	test.concurrent(
-		"a customer overage_allowed control lets a plain grant run over",
-		() => {
-			const outcome = deductFrom({
-				customer: customerWith({
-					overage_allowed: [{ feature_id: "messages", enabled: true }],
-				}),
-				customerEntitlements: [createCustomerEntitlement({ balance: 10 })],
-				value: 15,
-			});
-
-			expect(outcome).toMatchObject({ appliedValue: 15, remaining: 0 });
-			expect(balancesAfter(outcome)).toEqual([
-				["messages_monthly", { balance: -5 }],
-			]);
-		},
-	);
-
-	test.concurrent("a plan overage_allowed:false vetoes native overage", () => {
-		const state = createSubjectState({
-			identity,
-			customerProducts: [createCustomerProduct()],
-			customerEntitlements: [
-				{ ...createCustomerEntitlement({ balance: 10 }), usage_allowed: true },
-			],
-		});
-		const catalog = createCatalogFor({ state });
-		for (const product of Object.values(catalog.products)) {
-			product.overage_allowed = [{ feature_id: "messages", enabled: false }];
-		}
-		const outcome = deduct({
-			fullSubject: subjectStateToFullSubject({ state, catalog }),
-			request: createDeductionRequest({
-				org,
-				overageBehavior: "cap",
-				value: 15,
-			}),
-		});
-
-		expect(outcome).toMatchObject({ appliedValue: 10, remaining: 5 });
-	});
-
-	test.concurrent(
-		"a spend limit caps the feature's total overage across its rows",
-		() => {
-			const customer = customerWith({
-				spend_limits: [
-					{ feature_id: "messages", enabled: true, overage_limit: 5 },
-				],
-			});
-			const rows = [
-				{
-					...createCustomerEntitlement({ id: "a", balance: 10 }),
-					usage_allowed: true,
-				},
-				{
-					...createCustomerEntitlement({ id: "b", balance: -3 }),
-					usage_allowed: true,
-					created_at: occurredAt + 1,
-				},
-			];
-
-			// b already carries 3 of the 5 allowed overage, so only 2 more may go negative.
-			const outcome = deductFrom({
-				customer,
-				customerEntitlements: rows,
-				value: 30,
-			});
-			expect(outcome).toMatchObject({ appliedValue: 12, remaining: 18 });
-			expect(balancesAfter(outcome)).toEqual([["a", { balance: -2 }]]);
-
-			// Under reject the whole value is refused once the cap binds.
-			expect(
-				deductFrom({
-					customer,
-					customerEntitlements: rows,
-					value: 30,
-					overageBehavior: "reject",
-				}),
-			).toMatchObject({ rejected: true, changes: [] });
-		},
-	);
-
-	test.concurrent(
-		"a percentage spend limit resolves against the main plans' grant",
-		() => {
-			const outcome = deductFrom({
-				customer: customerWith({
-					spend_limits: [
-						{
-							feature_id: "messages",
-							enabled: true,
-							limit_type: "usage_percentage",
-							overage_limit: 50,
-						},
-					],
-				}),
-				customerEntitlements: [
-					{ ...createCustomerEntitlement({ balance: 0 }), usage_allowed: true },
-				],
-				value: 800,
-			});
-
-			// grant 1000 × 50% = 500 of overage
-			expect(outcome).toMatchObject({ appliedValue: 500, remaining: 300 });
-		},
-	);
-
 	test.concurrent(
 		"a past-due plan funds a track but not a check when the org blocks overdue usage",
 		() => {
@@ -608,377 +365,156 @@ describe("deduct", () => {
 		},
 	);
 
-	const dailyCap = ({
-		limit,
-		filter,
-	}: {
-		limit: number;
-		filter?: { properties: Record<string, string> };
-	}): WorkerCustomer =>
-		customerWith({
-			usage_limits: [
-				{
-					feature_id: "messages",
-					enabled: true,
-					limit,
-					interval: ResetInterval.Day,
-					...(filter ? { filter } : {}),
-				},
-			],
-		});
-	const today = getUsageWindowBounds({
-		interval: EntInterval.Day,
-		now: occurredAt,
-	});
-	const counterRow = ({
-		usage,
-		windowStartAt = today.windowStartAt,
-		windowEndAt = today.windowEndAt,
-	}: {
-		usage: number;
-		windowStartAt?: number;
-		windowEndAt?: number;
-	}): WorkerUsageWindow => ({
-		id: "uw_existing",
-		internal_customer_id: "cus_1",
-		internal_entity_id: null,
-		feature_id: "messages",
-		internal_feature_id: "feat_messages",
-		filter_key: null,
-		anchor_customer_entitlement_id: null,
-		window_start_at: windowStartAt,
-		window_end_at: windowEndAt,
-		usage,
-		updated_at: occurredAt - 1,
-	});
-	const windowChangesOf = (outcome: ReturnType<typeof deduct>) =>
-		outcome.changes.filter((change) => change.table === "usageWindows");
-
 	test.concurrent(
-		"a daily cap clamps the track across rows onto one new counter",
+		"among equal intervals the soonest-expiring row drains first, whatever was created first",
 		() => {
 			const outcome = deductFrom({
-				customer: dailyCap({ limit: 5 }),
 				customerEntitlements: [
-					createCustomerEntitlement({ id: "a", balance: 3 }),
 					{
-						...createCustomerEntitlement({ id: "b", balance: 10 }),
+						...createCustomerEntitlement({ id: "later", balance: 100 }),
+						expires_at: occurredAt + 365 * 86_400_000,
+						created_at: occurredAt,
+					},
+					{
+						...createCustomerEntitlement({ id: "sooner", balance: 100 }),
+						expires_at: occurredAt + 30 * 86_400_000,
 						created_at: occurredAt + 1,
 					},
 				],
-				value: 10,
+				value: 60,
 			});
 
-			expect(outcome).toMatchObject({ appliedValue: 5, remaining: 5 });
-			expect(windowChangesOf(outcome)).toMatchObject([
-				{
-					op: "insert",
-					row: {
-						feature_id: "messages",
-						usage: 5,
-						window_start_at: today.windowStartAt,
-						window_end_at: today.windowEndAt,
-						updated_at: occurredAt,
+			expect(balancesAfter(outcome)).toEqual([["sooner", { balance: 40 }]]);
+		},
+	);
+
+	test.concurrent(
+		"a prepaid row drains before a pay-per-use row of the same feature",
+		() => {
+			const outcome = deductFrom({
+				customerEntitlements: [
+					{
+						...createCustomerEntitlement({ id: "pay_per_use", balance: 5 }),
+						usage_allowed: true,
+						created_at: occurredAt,
 					},
-				},
-			]);
-		},
-	);
-
-	test.concurrent(
-		"a live counter leaves only its headroom; an expired one reads as zero",
-		() => {
-			const live = deductFrom({
-				customer: dailyCap({ limit: 5 }),
-				customerEntitlements: [createCustomerEntitlement({ balance: 10 })],
-				usageWindows: [counterRow({ usage: 4 })],
-				value: 10,
-			});
-			expect(live).toMatchObject({ appliedValue: 1, remaining: 9 });
-			expect(windowChangesOf(live)).toMatchObject([
-				{
-					op: "update",
-					id: "uw_existing",
-					before: { usage: 4 },
-					after: { usage: 5 },
-				},
-			]);
-
-			const expired = deductFrom({
-				customer: dailyCap({ limit: 5 }),
-				customerEntitlements: [createCustomerEntitlement({ balance: 10 })],
-				usageWindows: [
-					counterRow({
-						usage: 4,
-						windowStartAt: today.windowStartAt - 86_400_000,
-						windowEndAt: today.windowStartAt,
-					}),
+					{
+						...createCustomerEntitlement({ id: "prepaid", balance: 5 }),
+						created_at: occurredAt + 1,
+					},
 				],
-				value: 10,
+				value: 7,
 			});
-			expect(expired).toMatchObject({ appliedValue: 5, remaining: 5 });
-			expect(windowChangesOf(expired)).toMatchObject([
-				{
-					op: "update",
-					id: "uw_existing",
-					after: { usage: 5, window_start_at: today.windowStartAt },
-				},
-			]);
-		},
-	);
-
-	test.concurrent(
-		"a filtered cap binds only events whose properties match",
-		() => {
-			const customer = dailyCap({
-				limit: 5,
-				filter: { properties: { model: "gpt" } },
-			});
-			const rows = [createCustomerEntitlement({ balance: 10 })];
 
 			expect(
-				deductFrom({
-					customer,
-					customerEntitlements: rows,
-					value: 10,
-					properties: { model: "gpt" },
-				}),
-			).toMatchObject({ appliedValue: 5 });
-			expect(
-				deductFrom({
-					customer,
-					customerEntitlements: rows,
-					value: 10,
-					properties: { model: "other" },
-				}),
-			).toMatchObject({ appliedValue: 10 });
-		},
-	);
-
-	test.concurrent(
-		"a window shortfall follows the overage behaviour: reject refuses, overflow bypasses",
-		() => {
-			const customer = dailyCap({ limit: 5 });
-			const rows = [createCustomerEntitlement({ balance: 10 })];
-
-			expect(
-				deductFrom({
-					customer,
-					customerEntitlements: rows,
-					value: 10,
-					overageBehavior: "reject",
-				}),
-			).toMatchObject({ rejected: true, changes: [] });
-			expect(
-				deductFrom({
-					customer,
-					customerEntitlements: rows,
-					value: 10,
-					overageBehavior: "overflow",
-				}),
-			).toMatchObject({
-				appliedValue: 10,
-				changes: [expect.objectContaining({ table: "customerEntitlements" })],
-			});
-		},
-	);
-
-	/** A `credits` pool whose schema prices messages; the catalog's feature row is what makes it a credit system. */
-	const creditsSystem = ({
-		schemaItem,
-	}: {
-		schemaItem: Record<string, unknown>;
-	}) => {
-		const creditRow = (
-			balance: number,
-			extra: Partial<WorkerCustomerEntitlement> = {},
-		) => ({
-			...createCustomerEntitlement({
-				id: "credits_row",
-				featureId: "credits",
-				balance,
-			}),
-			...extra,
-		});
-		const withCatalog = ({ state }: { state: SubjectState }): Catalog => {
-			const catalog = createCatalogFor({ state });
-			const credits = catalog.features.feat_credits;
-			if (!credits) throw new Error("credits feature row missing");
-			credits.type = FeatureType.CreditSystem;
-			credits.config = {
-				schema: [
-					{ metered_feature_id: "messages", feature_amount: 1, ...schemaItem },
-				],
-			};
-			return catalog;
-		};
-		const run = ({
-			state,
-			value,
-			properties = null,
-			overageBehavior = "cap" as const,
-		}: {
-			state: SubjectState;
-			value: number;
-			properties?: Record<string, string> | null;
-			overageBehavior?: "cap" | "reject" | "overflow";
-		}) =>
-			deduct({
-				fullSubject: subjectStateToFullSubject({
-					state,
-					catalog: withCatalog({ state }),
-				}),
-				request: createDeductionRequest({
-					internalFeatureId: "feat_messages",
-					org,
-					overageBehavior,
-					properties,
-					value,
-				}),
-			});
-		return { creditRow, run };
-	};
-
-	test.concurrent(
-		"a credit system funds the tracked feature at its flat rate, after the feature's own rows",
-		() => {
-			const { creditRow, run } = creditsSystem({
-				schemaItem: { credit_amount: 2 },
-			});
-			const outcome = run({
-				state: createSubjectState({
-					identity,
-					customerProducts: [createCustomerProduct()],
-					customerEntitlements: [
-						createCustomerEntitlement({ id: "own", balance: 3 }),
-						creditRow(100),
-					],
-				}),
-				value: 5,
-			});
-
-			expect(outcome).toMatchObject({ appliedValue: 5, remaining: 0 });
-			expect(
-				outcome.deltas.map((delta) => [
-					delta.id,
-					delta.balanceDelta,
-					delta.valueDelta,
-					delta.creditCost,
-				]),
+				outcome.deltas.map((delta) => [delta.id, delta.balanceDelta]),
 			).toEqual([
-				["own", -3, -3, 1],
-				["credits_row", -4, -2, 2],
-			]);
-			expect(balancesAfter(outcome)).toEqual([
-				["own", { balance: 0 }],
-				["credits_row", { balance: 96 }],
+				["prepaid", -5],
+				["pay_per_use", -2],
 			]);
 		},
 	);
 
-	test.concurrent("a dimensioned rate prices by the event's properties", () => {
-		const { creditRow, run } = creditsSystem({
-			schemaItem: {
-				credit_amount: 1,
-				dimensions: { large: { match: { size: "large" }, credit_amount: 4 } },
-			},
-		});
-		const state = createSubjectState({
-			identity,
-			customerProducts: [createCustomerProduct()],
-			customerEntitlements: [creditRow(100)],
+	test.concurrent("a refund on an untouched grant is a no-op", () => {
+		const outcome = deductFrom({
+			customerEntitlements: [createCustomerEntitlement({ balance: 1000 })],
+			value: -10,
 		});
 
-		expect(run({ state, value: 5 })).toMatchObject({
-			deltas: [expect.objectContaining({ balanceDelta: -5 })],
-		});
-		expect(
-			run({ state, value: 5, properties: { size: "large" } }),
-		).toMatchObject({
-			deltas: [expect.objectContaining({ balanceDelta: -20, creditCost: 4 })],
+		expect(outcome).toMatchObject({
+			appliedValue: 0,
+			remaining: -10,
+			changes: [],
 		});
 	});
 
-	test.concurrent(
-		"graduated tiers charge from the units already attributed and record the attribution",
-		() => {
-			const { creditRow, run } = creditsSystem({
-				schemaItem: {
-					tier_behavior: "graduated",
-					tiers: [
-						{ to: 2, credit_amount: 1 },
-						{ to: "inf", credit_amount: 3 },
-					],
-				},
-			});
-			const first = run({
-				state: createSubjectState({
-					identity,
-					customerProducts: [createCustomerProduct()],
-					customerEntitlements: [creditRow(100)],
-				}),
-				value: 3,
-			});
-			// 2 units at 1 credit, then 1 at 3 = 5 credits
-			expect(first.deltas).toMatchObject([
-				{
-					balanceDelta: -5,
-					valueDelta: -3,
-					usageAttributionDelta: {
-						customerEntitlementId: "credits_row",
-						key: "feat_messages",
-						units: 3,
-						credits: 5,
-					},
-				},
-			]);
-			expect(first.changes).toMatchObject([
-				{
-					id: "credits_row",
-					after: {
-						balance: 95,
-						usage_attribution: { feat_messages: { units: 3, credits: 5 } },
-					},
-				},
-			]);
+	test.concurrent("overflow lifts the refund ceiling above the grant", () => {
+		const outcome = deductFrom({
+			customerEntitlements: [createCustomerEntitlement({ balance: 1000 })],
+			value: -50,
+			overageBehavior: "overflow",
+		});
 
-			const second = run({
-				state: createSubjectState({
-					identity,
-					customerProducts: [createCustomerProduct()],
-					customerEntitlements: [
-						creditRow(95, {
-							usage_attribution: { feat_messages: { units: 3, credits: 5 } },
-						}),
-					],
-				}),
-				value: 1,
+		expect(outcome).toMatchObject({ appliedValue: -50, remaining: 0 });
+		expect(balancesAfter(outcome)).toEqual([
+			["messages_monthly", { balance: 1050 }],
+		]);
+	});
+
+	test.concurrent(
+		"a zero grant is a ceiling of its own: a refund stops at the row's adjustment",
+		() => {
+			const state = createSubjectState({
+				identity,
+				customerProducts: [createCustomerProduct()],
+				customerEntitlements: [
+					{ ...createCustomerEntitlement({ balance: -5 }), adjustment: 2 },
+				],
 			});
-			// the fourth unit sits in the 3-credit tier
-			expect(second.deltas).toMatchObject([
-				{ balanceDelta: -3, valueDelta: -1 },
+			const catalog = createCatalogFor({ state });
+			for (const entitlement of Object.values(catalog.entitlements)) {
+				entitlement.allowance = 0;
+			}
+			const outcome = deduct({
+				fullSubject: subjectStateToFullSubject({ state, catalog }),
+				request: createDeductionRequest({ org, value: -20 }),
+			});
+
+			// up to zero first, then to grant 0 + adjustment 2
+			expect(outcome).toMatchObject({ appliedValue: -7, remaining: -13 });
+			expect(balancesAfter(outcome)).toEqual([
+				["messages_monthly", { balance: 2 }],
 			]);
 		},
 	);
 
 	test.concurrent(
-		"a check against credits refuses what the pool cannot fund",
+		"a usage_limit below the grant is a floor above zero: the overage bucket takes nothing",
 		() => {
-			const { creditRow, run } = creditsSystem({
-				schemaItem: { credit_amount: 2 },
-			});
 			const state = createSubjectState({
 				identity,
 				customerProducts: [createCustomerProduct()],
-				customerEntitlements: [creditRow(6)],
+				customerEntitlements: [
+					{
+						...createCustomerEntitlement({ balance: 50 }),
+						usage_allowed: true,
+					},
+				],
+			});
+			const catalog = createCatalogFor({ state });
+			for (const entitlement of Object.values(catalog.entitlements)) {
+				entitlement.usage_limit = 900;
+			}
+			const outcome = deduct({
+				fullSubject: subjectStateToFullSubject({ state, catalog }),
+				request: createDeductionRequest({ org, value: 80 }),
 			});
 
-			expect(run({ state, value: 3, overageBehavior: "reject" })).toMatchObject(
-				{ rejected: false, appliedValue: 3 },
-			);
-			expect(run({ state, value: 4, overageBehavior: "reject" })).toMatchObject(
-				{ rejected: true, remaining: 1 },
-			);
+			expect(outcome).toMatchObject({ appliedValue: 50, remaining: 30 });
+			expect(balancesAfter(outcome)).toEqual([
+				["messages_monthly", { balance: 0 }],
+			]);
+		},
+	);
+
+	test.concurrent(
+		"fractional values land exactly, never on float noise",
+		() => {
+			expect(
+				balancesAfter(
+					deductFrom({
+						customerEntitlements: [createCustomerEntitlement({ balance: 0.3 })],
+						value: 0.1,
+					}),
+				),
+			).toEqual([["messages_monthly", { balance: 0.2 }]]);
+			expect(
+				deductFrom({
+					customerEntitlements: [createCustomerEntitlement({ balance: 0.001 })],
+					value: 0.001,
+					overageBehavior: "reject",
+				}),
+			).toMatchObject({ rejected: false, remaining: 0 });
 		},
 	);
 });

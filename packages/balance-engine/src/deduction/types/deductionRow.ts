@@ -4,6 +4,8 @@ import type { CreditRateCard } from "@autumn/shared";
 export type DeductionRow = {
 	table: "customerEntitlements" | "rollovers";
 	id: string;
+	/** Which balance on the row: the key in its `entities` map, or null for the `balance` column. */
+	entityKey: string | null;
 	/** The feature this row's balance is denominated in; spend limits are keyed by it. */
 	featureId: string;
 	/** The stored balance; buckets project forward from it through the deltas. */
@@ -24,4 +26,6 @@ export type DeductionRow = {
 	maxBalance: number | null;
 	/** An infinite sink: absorbs everything, finite siblings stay untouched. */
 	unlimited: boolean;
+	/** Free usage on this row: its rollovers are never drawn. */
+	skipsRollovers: boolean;
 };

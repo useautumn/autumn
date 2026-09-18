@@ -11,7 +11,7 @@ import type {
 } from "../../models/subject/workerFullSubject.js";
 import type { DeductionRequest } from "../types/deductionRequest.js";
 
-/** The caps this request must respect: none when an unlimited row funds it or the caller overflows; filtered caps only when the event matches. */
+/** The caps this request counts against: none when an unlimited row funds it; filtered caps only when the event matches. Overflow skips the gate in the draw, not the caps. */
 export const resolveUsageWindowLimits = ({
 	fullSubject,
 	request,
@@ -21,7 +21,6 @@ export const resolveUsageWindowLimits = ({
 	request: DeductionRequest;
 	customerEntitlements: WorkerFullCustomerEntitlementWithProduct[];
 }): UsageWindowLimit[] => {
-	if (request.overageBehavior === "overflow") return [];
 	if (
 		customerEntitlements.some((customerEntitlement) =>
 			isUnlimitedCustomerEntitlement({ customerEntitlement }),

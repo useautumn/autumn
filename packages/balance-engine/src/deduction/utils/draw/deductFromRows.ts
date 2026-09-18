@@ -9,7 +9,10 @@ import {
 	deductionRowToCurrentBalance,
 	deductionRowToRateUnits,
 } from "../convertDeductionUtils.js";
-import { creditRateUnitsForCreditChange } from "../credits/creditRateUnitsForCreditChange.js";
+import {
+	CREDIT_RATE_EPSILON,
+	creditRateUnitsForCreditChange,
+} from "../credits/creditRateUnitsForCreditChange.js";
 import { deductionRowToSpendLimitHeadroom } from "../limits/spendLimit.js";
 import {
 	consumeUsageWindows,
@@ -42,10 +45,14 @@ const boundsOf = ({
 		case "overage":
 			return {
 				floor: allowsNegative({ context }) ? null : row.minBalance,
-				ceiling: row.maxBalance,
+				ceiling: allowsNegative({ context }) ? null : row.maxBalance,
 			};
 	}
 };
+
+/** Decimal keeps a signed zero; the log should not. */
+const toNumber = (value: Decimal): number =>
+	value.isZero() ? 0 : value.toNumber();
 
 /** A delta is what was added to the column, so a deduction records the change negated. */
 const changeToDelta = ({
@@ -59,9 +66,10 @@ const changeToDelta = ({
 }): DeductionDelta => ({
 	table: row.table,
 	id: row.id,
-	balanceDelta: change.neg().toNumber(),
-	usageDelta: row.table === "rollovers" ? change.toNumber() : 0,
-	valueDelta: unitsGiven.neg().toNumber(),
+	entityKey: row.entityKey,
+	balanceDelta: toNumber(change.neg()),
+	usageDelta: row.table === "rollovers" ? toNumber(change) : 0,
+	valueDelta: toNumber(unitsGiven.neg()),
 	creditCost: unitsGiven.isZero()
 		? row.creditCost
 		: change.div(unitsGiven).toNumber(),
@@ -146,15 +154,16 @@ export const deductFromRows = ({
 		const bounds = boundsOf({ row, bucket, context });
 		const refund = isRefund({ deductionState });
 
-		// Windowed caps bound how many tracked units this row may give; a refund is never capped.
+		// Windowed caps bound how many tracked units this row may give; a refund is never capped, overflow skips the gate but still counts.
 		const windowRow = bucket === "rollovers" ? null : row;
-		const windowHeadroom = refund
-			? null
-			: deductionRowToUsageWindowHeadroom({
-					context,
-					deductionState,
-					row: windowRow,
-				});
+		const windowHeadroom =
+			refund || context.overageBehavior === "overflow"
+				? null
+				: deductionRowToUsageWindowHeadroom({
+						context,
+						deductionState,
+						row: windowRow,
+					});
 
 		if (windowHeadroom?.isZero()) continue;
 
@@ -168,8 +177,6 @@ export const deductFromRows = ({
 				? deductionRowToSpendLimitHeadroom({ context, deductionState, row })
 				: null;
 		const amount = creditsFor({ context, row, units, deductionState });
-		if (amount.abs().lte(1e-10)) continue;
-
 		const change = clampChange({
 			current: deductionRowToCurrentBalance({
 				row,
@@ -180,9 +187,9 @@ export const deductFromRows = ({
 			ceiling: bounds.ceiling,
 		});
 
-		if (change.isZero()) continue;
-
+		// A rate card may hand out units for no credits (a free tier); only a draw that moved nothing is skipped.
 		const unitsGiven = unitsFor({ row, units, change, deductionState });
+		if (unitsGiven.abs().lte(CREDIT_RATE_EPSILON)) continue;
 		deductionState.deltas.push(changeToDelta({ row, change, unitsGiven }));
 		deductionState.remaining = deductionState.remaining.minus(unitsGiven);
 		consumeUsageWindows({

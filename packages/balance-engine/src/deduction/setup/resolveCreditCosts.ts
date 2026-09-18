@@ -13,6 +13,8 @@ import type { DeductionRequest } from "../types/deductionRequest.js";
 export type CreditCost = {
 	creditCost: number;
 	rateCard: CreditRateCard | null;
+	/** A zero rate is free usage: rollovers are left untouched and the main balance charges one credit per unit, as the Lua fallback does. */
+	skipsRollovers: boolean;
 };
 
 /** `computeCreditCosts` for one row: credits per tracked unit under the row's effective schema, and the rate card if usage is attributed. */
@@ -43,9 +45,15 @@ export const resolveCreditCost = ({
 			throw new UnsupportedCommandError({
 				reason: "rate_card_with_additional_balance",
 			});
+		const creditCost = getCreditCost({
+			featureId,
+			creditSystem,
+			eventProperties,
+		});
 		return {
-			creditCost: getCreditCost({ featureId, creditSystem, eventProperties }),
+			creditCost: creditCost === 0 ? 1 : creditCost,
 			rateCard,
+			skipsRollovers: creditCost === 0 && rateCard === null,
 		};
 	} catch (error) {
 		if (error instanceof RecaseError)

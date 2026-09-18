@@ -11,7 +11,6 @@ export function validateBalanceWorkerRequest({
 }): void {
 	let reason: string | undefined;
 	if (ctx.expand?.length) reason = "expand_not_supported";
-	else if (body.entity_id) reason = "entity_not_supported";
 	else if (body.lock) reason = "lock_not_supported";
 	else if (body.customer_data || body.entity_data)
 		reason = "inline_customer_data_not_supported";

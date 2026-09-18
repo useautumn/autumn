@@ -28,6 +28,7 @@ const overlayWorkerRows = ({
 		...customerEntitlement,
 		balance: row.balance,
 		adjustment: row.adjustment,
+		...(row.entities === undefined ? {} : { entities: row.entities }),
 		rollovers: customerEntitlement.rollovers.map((rollover) => {
 			const workerRollover = rolloversById.get(rollover.id);
 			return workerRollover
@@ -35,6 +36,7 @@ const overlayWorkerRows = ({
 						...rollover,
 						balance: workerRollover.balance,
 						usage: workerRollover.usage,
+						entities: workerRollover.entities,
 					}
 				: rollover;
 		}),

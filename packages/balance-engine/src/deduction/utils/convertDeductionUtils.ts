@@ -8,10 +8,27 @@ const deltasOn = ({
 	row,
 	deltas,
 }: {
-	row: Pick<DeductionRow, "table" | "id">;
+	row: Pick<DeductionRow, "table" | "id" | "entityKey">;
 	deltas: DeductionDelta[];
 }): DeductionDelta[] =>
-	deltas.filter((delta) => delta.table === row.table && delta.id === row.id);
+	deltas.filter(
+		(delta) =>
+			delta.table === row.table &&
+			delta.id === row.id &&
+			delta.entityKey === row.entityKey,
+	);
+
+/** Every delta on the row, whichever balance on it moved. */
+const rowDeltasOn = ({
+	table,
+	id,
+	deltas,
+}: {
+	table: DeductionRow["table"];
+	id: string;
+	deltas: DeductionDelta[];
+}): DeductionDelta[] =>
+	deltas.filter((delta) => delta.table === table && delta.id === id);
 
 const sumOf = (values: number[]): Decimal =>
 	values.reduce((total, value) => total.plus(value), new Decimal(0));
@@ -81,6 +98,29 @@ const attributionAfter = ({
 	return after;
 };
 
+/** The row's `entities` map with every per-entity delta folded in; a key first drawn into or refunded into is created. */
+const entitiesAfter = <Entry extends { id: string; balance: number }>({
+	before,
+	deltas,
+	createEntry,
+	applyDelta,
+}: {
+	before: Record<string, Entry>;
+	deltas: DeductionDelta[];
+	createEntry: (entityKey: string) => Entry;
+	applyDelta: (entry: Entry, delta: DeductionDelta) => Entry;
+}): Record<string, Entry> => {
+	const after = { ...before };
+	for (const delta of deltas) {
+		if (delta.entityKey === null) continue;
+		after[delta.entityKey] = applyDelta(
+			after[delta.entityKey] ?? createEntry(delta.entityKey),
+			delta,
+		);
+	}
+	return after;
+};
+
 /** Deltas are the log; a row change folds every delta on one row into before → after. */
 export const deltasToRowChanges = ({
 	context,
@@ -94,12 +134,16 @@ export const deltasToRowChanges = ({
 	for (const {
 		id,
 		balance,
+		entities,
 		usage_attribution,
 	} of context.customerEntitlements) {
-		const rowDeltas = deltasOn({
-			row: { table: "customerEntitlements", id },
+		const rowDeltas = rowDeltasOn({
+			table: "customerEntitlements",
+			id,
 			deltas,
 		});
+		const ownDeltas = rowDeltas.filter((delta) => delta.entityKey === null);
+		const entityDeltas = rowDeltas.filter((delta) => delta.entityKey !== null);
 		const attributionDeltas = deltas.filter(
 			(delta) => delta.usageAttributionDelta?.customerEntitlementId === id,
 		);
@@ -118,35 +162,93 @@ export const deltasToRowChanges = ({
 			op: "update",
 			id,
 			before: {
-				balance,
+				...(ownDeltas.length === 0 ? {} : { balance }),
+				...(entityDeltas.length === 0 ? {} : { entities }),
 				...(attributionDeltas.length === 0
 					? {}
 					: { usage_attribution: usage_attribution ?? {} }),
 			},
 			after: {
-				balance: sumOf([
-					balance,
-					...rowDeltas.map((d) => d.balanceDelta),
-				]).toNumber(),
+				...(ownDeltas.length === 0
+					? {}
+					: {
+							balance: sumOf([
+								balance,
+								...ownDeltas.map((d) => d.balanceDelta),
+							]).toNumber(),
+						}),
+				...(entityDeltas.length === 0
+					? {}
+					: {
+							entities: entitiesAfter({
+								before: entities ?? {},
+								deltas: entityDeltas,
+								createEntry: (entityKey) => ({
+									id: entityKey,
+									balance: 0,
+									adjustment: 0,
+								}),
+								applyDelta: (entry, delta) => ({
+									...entry,
+									balance: sumOf([
+										entry.balance,
+										delta.balanceDelta,
+									]).toNumber(),
+								}),
+							}),
+						}),
 				...attribution,
 			},
 		});
 	}
 
-	for (const { id, balance, usage } of context.rollovers) {
-		const rowDeltas = deltasOn({ row: { table: "rollovers", id }, deltas });
+	for (const { id, balance, usage, entities } of context.rollovers) {
+		const rowDeltas = rowDeltasOn({ table: "rollovers", id, deltas });
+		const ownDeltas = rowDeltas.filter((delta) => delta.entityKey === null);
+		const entityDeltas = rowDeltas.filter((delta) => delta.entityKey !== null);
 		if (rowDeltas.length === 0) continue;
 		changes.push({
 			table: "rollovers",
 			op: "update",
 			id,
-			before: { balance, usage },
+			before: {
+				...(ownDeltas.length === 0 ? {} : { balance, usage }),
+				...(entityDeltas.length === 0 ? {} : { entities }),
+			},
 			after: {
-				balance: sumOf([
-					balance,
-					...rowDeltas.map((d) => d.balanceDelta),
-				]).toNumber(),
-				usage: sumOf([usage, ...rowDeltas.map((d) => d.usageDelta)]).toNumber(),
+				...(ownDeltas.length === 0
+					? {}
+					: {
+							balance: sumOf([
+								balance,
+								...ownDeltas.map((d) => d.balanceDelta),
+							]).toNumber(),
+							usage: sumOf([
+								usage,
+								...ownDeltas.map((d) => d.usageDelta),
+							]).toNumber(),
+						}),
+				...(entityDeltas.length === 0
+					? {}
+					: {
+							entities: entitiesAfter({
+								before: entities,
+								deltas: entityDeltas,
+								createEntry: (entityKey) => ({
+									id: entityKey,
+									balance: 0,
+									usage: 0,
+								}),
+								applyDelta: (entry, delta) => ({
+									...entry,
+									balance: sumOf([
+										entry.balance,
+										delta.balanceDelta,
+									]).toNumber(),
+									usage: sumOf([entry.usage, delta.usageDelta]).toNumber(),
+								}),
+							}),
+						}),
 			},
 		});
 	}

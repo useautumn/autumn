@@ -8,6 +8,7 @@ export const workerRolloverSchema = RolloverSchema.pick({
 	balance: true,
 	usage: true,
 	expires_at: true,
+	entities: true,
 })
 	.extend({ usage: z.number() })
 	.strict();

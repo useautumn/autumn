@@ -9,6 +9,8 @@ export const deductionDeltaSchema = z
 	.object({
 		table: z.enum(["customerEntitlements", "rollovers"]),
 		id: nonEmptyStringSchema,
+		/** Which balance on the row moved: the key in its `entities` map, or null for the `balance` column. */
+		entityKey: nonEmptyStringSchema.nullable(),
 		/** In the row's own units: what its balance column moved. */
 		balanceDelta: finiteNumberSchema,
 		/** Rollovers count usage as they drain; rows derive usage from balance. */
