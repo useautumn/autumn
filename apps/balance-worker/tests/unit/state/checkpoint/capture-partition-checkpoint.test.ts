@@ -11,7 +11,7 @@ import { parsePartitionCheckpoint } from "../../../../src/checkpoint/partitionCh
 import { planPartitionBootstrap } from "../../../../src/runtime/bootstrap/plan/planPartitionBootstrap.js";
 import { PartitionCheckpointLimitExceededError } from "../../../../src/state/actions/checkpoint/restorePartitionCheckpoint.js";
 import { openStateStore } from "../../../../src/state/openStateStore.js";
-import type { StateStore } from "../../../../src/state/types/stateStore.js";
+import type { SqliteStateStore } from "../../../../src/state/types/stateStore.js";
 import {
 	applyDurableMutation,
 	createInitializeMutation,
@@ -36,7 +36,7 @@ const limits = {
 
 const createStore = (): {
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 } => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-checkpoint-capture-"));
 	const store = openStateStore({
@@ -51,7 +51,7 @@ const closeStore = ({
 	store,
 }: {
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 }): void => {
 	store.close();
 	rmSync(directory, { recursive: true, force: true });

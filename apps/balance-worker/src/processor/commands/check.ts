@@ -27,7 +27,7 @@ export async function check({
 	await ctx.writer.waitForPendingCommits({ customerKey });
 	ctx.assertCanRead();
 
-	const state = ctx.stateStore.readState({ identity: parsed.identity });
+	const state = ctx.writer.readFreshestState({ identity: parsed.identity });
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
 	const fullSubject = ctx.subjectHydrator.readSubject({
 		state,

@@ -25,6 +25,24 @@ export type StateStore = {
 		partition: number;
 		nextOffset: bigint;
 	}): void;
+	/** What the identity computes against: the customer's state, merged with the named entity's own. */
+	readState(params: { identity: MeteringIdentity }): SubjectState | null;
+	/** Only the identity's own rows: the customer's when it names no entity, otherwise that entity's. */
+	readOwnState(params: { identity: MeteringIdentity }): SubjectState | null;
+	readReceipt(params: {
+		identity: MeteringIdentity;
+		mutationId: string;
+	}): MutationRecord | null;
+	readNextOffset(params: { topic: string; partition: number }): bigint | null;
+	/** Sync for a resident store, a Promise for one that commits elsewhere; callers await either. */
+	applyDurableMutations(params: {
+		records: readonly DurableMutationRecord[];
+	}): DurableMutationApplyResult[] | Promise<DurableMutationApplyResult[]>;
+	close(): void;
+};
+
+/** A store whose resident state is private to the process, so it must be checkpointed to survive it. */
+export type CheckpointStateStore = StateStore & {
 	restorePartitionCheckpoint(params: {
 		checkpoint: PartitionCheckpointV1;
 		mode: PartitionCheckpointRestoreMode;
@@ -44,17 +62,14 @@ export type StateStore = {
 		expiresAtOrBefore: number;
 		limit: number;
 	}): { deletedCount: number };
-	/** What the identity computes against: the customer's state, merged with the named entity's own. */
-	readState(params: { identity: MeteringIdentity }): SubjectState | null;
-	/** Only the identity's own rows: the customer's when it names no entity, otherwise that entity's. */
-	readOwnState(params: { identity: MeteringIdentity }): SubjectState | null;
-	readReceipt(params: {
-		identity: MeteringIdentity;
-		mutationId: string;
-	}): MutationRecord | null;
-	readNextOffset(params: { topic: string; partition: number }): bigint | null;
+};
+
+/** The SQLite store applies synchronously; tests and checkpoints rely on that. */
+export type SqliteStateStore = Omit<
+	CheckpointStateStore,
+	"applyDurableMutations"
+> & {
 	applyDurableMutations(params: {
 		records: readonly DurableMutationRecord[];
 	}): DurableMutationApplyResult[];
-	close(): void;
 };

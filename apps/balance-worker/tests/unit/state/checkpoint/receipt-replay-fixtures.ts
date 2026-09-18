@@ -6,7 +6,7 @@ import type { MeteringRecord } from "@autumn/kafka";
 import { parsePartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { createPartitionProcessor } from "../../../../src/processor/createPartitionProcessor.js";
 import { openStateStore } from "../../../../src/state/openStateStore.js";
-import type { StateStore } from "../../../../src/state/types/stateStore.js";
+import type { SqliteStateStore } from "../../../../src/state/types/stateStore.js";
 import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
@@ -47,7 +47,7 @@ const recordOf = ({
 	identity,
 	commandId,
 }: {
-	store: StateStore;
+	store: SqliteStateStore;
 	identity: MeteringIdentity;
 	commandId: string;
 }): MutationRecord => {
@@ -95,7 +95,7 @@ export const createReceiptReplayFixture = async ({
 			return { baseOffset };
 		},
 	};
-	const createProcessor = ({ stateStore }: { stateStore: StateStore }) =>
+	const createProcessor = ({ stateStore }: { stateStore: SqliteStateStore }) =>
 		createPartitionProcessor({
 			ctx: {
 				stateStore,

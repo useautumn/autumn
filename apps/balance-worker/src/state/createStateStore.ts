@@ -15,17 +15,19 @@ import {
 	readStoredState,
 	readStoredStates,
 } from "./repos/subjectStates/subjectStates.js";
-import type { StateStore } from "./types/stateStore.js";
+import type { SqliteStateStore } from "./types/stateStore.js";
 import type { StateStoreContext } from "./types/stateStoreContext.js";
 
-type CaptureParams = Parameters<StateStore["capturePartitionCheckpoint"]>[0];
-type PruneParams = Parameters<StateStore["pruneExpiredReceipts"]>[0];
+type CaptureParams = Parameters<
+	SqliteStateStore["capturePartitionCheckpoint"]
+>[0];
+type PruneParams = Parameters<SqliteStateStore["pruneExpiredReceipts"]>[0];
 
 export const createStateStore = ({
 	sqliteDb,
 }: {
 	sqliteDb: Database;
-}): StateStore => {
+}): SqliteStateStore => {
 	const ctx: StateStoreContext = { sqliteDb };
 
 	const captureCheckpoint = (params: CaptureParams) => {

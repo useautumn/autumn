@@ -6,6 +6,7 @@ import {
 	type TopicResumePosition,
 } from "@autumn/kafka";
 import type { Admin } from "kafkajs";
+import type { DurableMutationApplyResult } from "../../state/types/durableMutation.js";
 import type { StateStore } from "../../state/types/stateStore.js";
 import {
 	isPartitionInvariantCause,
@@ -63,16 +64,19 @@ export function createMeteringRecordHandler({
 		return storedNextOffset;
 	}
 
+	/** Stays synchronous for a resident store: the writer-race offset must be visible before the next record. */
 	function applyRecord({
 		position,
 		record,
-	}: MeteringRecordApplication): { nextOffset: bigint } | undefined {
-		const [result] = ctx.stateStore.applyDurableMutations({
+	}: MeteringRecordApplication):
+		| { nextOffset: bigint }
+		| undefined
+		| Promise<{ nextOffset: bigint } | undefined> {
+		const applied = ctx.stateStore.applyDurableMutations({
 			records: [{ position, mutation: record }],
 		});
-		if (result?.kind === "position_already_applied") {
-			return { nextOffset: result.nextOffset };
-		}
+		if (applied instanceof Promise) return applied.then(replayedOffsetOf);
+		return replayedOffsetOf(applied);
 	}
 
 	function onRecordError({
@@ -86,4 +90,13 @@ export function createMeteringRecordHandler({
 	}
 
 	return { readResumeOffset, applyRecord, onRecordError };
+}
+
+function replayedOffsetOf(
+	results: DurableMutationApplyResult[],
+): { nextOffset: bigint } | undefined {
+	const [result] = results;
+	if (result?.kind === "position_already_applied") {
+		return { nextOffset: result.nextOffset };
+	}
 }

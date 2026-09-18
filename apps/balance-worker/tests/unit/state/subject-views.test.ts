@@ -11,7 +11,7 @@ import {
 } from "@autumn/balance-engine";
 import { parsePartitionCheckpoint } from "../../../src/checkpoint/partitionCheckpoint.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
-import type { StateStore } from "../../../src/state/types/stateStore.js";
+import type { SqliteStateStore } from "../../../src/state/types/stateStore.js";
 import {
 	applyDurableMutation,
 	createCustomerEntitlement,
@@ -77,7 +77,7 @@ const openFixture = () => {
 };
 
 /** Customer at revision 1, then each entity joins at the next revision. */
-const seed = ({ store }: { store: StateStore }): void => {
+const seed = ({ store }: { store: SqliteStateStore }): void => {
 	const customer = createSubjectState({
 		identity,
 		customerProducts: [createCustomerProduct()],
@@ -117,7 +117,7 @@ const entitlementIdsOf = ({
 	store,
 	entityId,
 }: {
-	store: StateStore;
+	store: SqliteStateStore;
 	entityId: string | null;
 }) =>
 	store

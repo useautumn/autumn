@@ -1,4 +1,4 @@
-import type { StateStore } from "../../state/types/stateStore.js";
+import type { CheckpointStateStore } from "../../state/types/stateStore.js";
 import {
 	checkpointFailureOf,
 	type PartitionCheckpointEntry,
@@ -18,7 +18,7 @@ export const prunePartitionCheckpointReceipts = async ({
 	onStateFailure,
 }: {
 	entries: readonly PartitionCheckpointEntry[];
-	stateStore: Pick<StateStore, "pruneExpiredReceipts">;
+	stateStore: Pick<CheckpointStateStore, "pruneExpiredReceipts">;
 	clock: PartitionCheckpointSchedulerClock;
 	config: PartitionCheckpointSchedulerConfig;
 	isCurrent(entry: PartitionCheckpointEntry): boolean;

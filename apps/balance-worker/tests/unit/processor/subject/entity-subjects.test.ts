@@ -20,7 +20,7 @@ import type { PartitionProcessorScope } from "../../../../src/processor/types/pa
 import { createPartitionWriter } from "../../../../src/processor/writer/createPartitionWriter.js";
 import type { CommittedOutcomeAppender } from "../../../../src/processor/writer/types/partitionWriter.js";
 import { openStateStore } from "../../../../src/state/openStateStore.js";
-import type { StateStore } from "../../../../src/state/types/stateStore.js";
+import type { SqliteStateStore } from "../../../../src/state/types/stateStore.js";
 import type { WorkerDb } from "../../../../src/types/workerDb.js";
 import {
 	createSyntheticWorkerDb,
@@ -128,7 +128,7 @@ const waitForTurn = async () => {
 
 const createFixture = () => {
 	const directory = mkdtempSync(join(tmpdir(), "entity-subjects-"));
-	const store: StateStore = openStateStore({
+	const store: SqliteStateStore = openStateStore({
 		databasePath: join(directory, "s.sqlite"),
 	});
 	store.initializePartition({ topic, partition, nextOffset: 0n });

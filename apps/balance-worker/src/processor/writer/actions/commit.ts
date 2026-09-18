@@ -34,7 +34,7 @@ export function scheduleCommit({
 	setImmediate(runScheduledDrain);
 }
 
-/** Kafka commit → SQLite apply → settle waiters, one batch at a time until the queue empties. */
+/** Kafka commit → store apply → settle waiters, one batch at a time until the queue empties. */
 async function commitOutcomes({
 	scope,
 }: {
@@ -48,7 +48,7 @@ async function commitOutcomes({
 			const batch = state.queue.splice(0, config.limits.maxBatchSize);
 			const baseOffset = await appendBatch({ scope, batch });
 			if (baseOffset === null) return;
-			if (!applyBatch({ scope, batch, baseOffset })) return;
+			if (!(await applyBatch({ scope, batch, baseOffset }))) return;
 		}
 	} finally {
 		state.draining = false;
@@ -87,8 +87,8 @@ async function appendBatch({
 	}
 }
 
-/** A committed batch that cannot be applied locally leaves the writer in recovery. */
-function applyBatch({
+/** A committed batch that cannot be applied leaves the writer in recovery. */
+async function applyBatch({
 	scope,
 	batch,
 	baseOffset,
@@ -96,10 +96,12 @@ function applyBatch({
 	scope: PartitionWriterScope;
 	batch: PendingMutation[];
 	baseOffset: bigint;
-}): boolean {
+}): Promise<boolean> {
 	try {
 		const records = durableRecordsOf({ scope, batch, baseOffset });
-		const results = scope.ctx.stateStore.applyDurableMutations({ records });
+		const results = await scope.ctx.stateStore.applyDurableMutations({
+			records,
+		});
 		if (results.length !== batch.length) {
 			throw new Error("Durable apply result count did not match batch");
 		}

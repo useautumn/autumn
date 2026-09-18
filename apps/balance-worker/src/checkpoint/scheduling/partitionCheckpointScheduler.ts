@@ -1,5 +1,5 @@
 import { PartitionProgressNotFoundError } from "../../state/stateStoreErrors.js";
-import type { StateStore } from "../../state/types/stateStore.js";
+import type { CheckpointStateStore } from "../../state/types/stateStore.js";
 import type { PartitionCheckpointExporter } from "../partitionCheckpointExporter.js";
 import { executePartitionCheckpointExport } from "./executePartitionCheckpointExport.js";
 import {
@@ -25,7 +25,10 @@ export const createPartitionCheckpointScheduler = ({
 	clock = partitionCheckpointSchedulerClock,
 	config = defaultPartitionCheckpointSchedulerConfig,
 }: {
-	stateStore: Pick<StateStore, "readNextOffset" | "pruneExpiredReceipts">;
+	stateStore: Pick<
+		CheckpointStateStore,
+		"readNextOffset" | "pruneExpiredReceipts"
+	>;
 	exporter?: PartitionCheckpointExporter;
 	clock?: PartitionCheckpointSchedulerClock;
 	config?: PartitionCheckpointSchedulerConfig;

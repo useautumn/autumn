@@ -36,7 +36,7 @@ import {
 	partitionCheckpointObjectKeyOf,
 } from "../../../src/s3/s3PartitionCheckpointStorage.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
-import type { StateStore } from "../../../src/state/types/stateStore.js";
+import type { SqliteStateStore } from "../../../src/state/types/stateStore.js";
 import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
@@ -251,7 +251,7 @@ const createTestRuntimeFactory = ({
 }: {
 	kafka: Kafka;
 	deploymentPrefix: string;
-	stateStore: StateStore;
+	stateStore: SqliteStateStore;
 	checkpointSource?: PartitionCheckpointSource;
 }) =>
 	createKafkaOwnedPartitionRuntimeFactory({
@@ -865,7 +865,7 @@ function createReplaySession({
 }: {
 	kafka: Kafka;
 	topic: string;
-	store: StateStore;
+	store: SqliteStateStore;
 }): PartitionOutcomeFollowerPort {
 	const consumer = kafka.consumer(
 		balanceWorkerConsumerConfigOf({

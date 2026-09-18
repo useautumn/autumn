@@ -45,7 +45,7 @@ import {
 	PartitionWriterRecoveryRequiredError,
 } from "../../../../src/processor/writer/writerErrors.js";
 import { openStateStore } from "../../../../src/state/openStateStore.js";
-import type { StateStore } from "../../../../src/state/types/stateStore.js";
+import type { SqliteStateStore } from "../../../../src/state/types/stateStore.js";
 import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
@@ -121,7 +121,7 @@ const readBalance = ({
 	store,
 	identity,
 }: {
-	store: StateStore;
+	store: SqliteStateStore;
 	identity: MeteringIdentity;
 }) => {
 	const state = store.readState({ identity });
@@ -199,7 +199,7 @@ const createFixture = ({
 	identities?: MeteringIdentity[];
 } = {}): {
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 } => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-partition-writer-"));
 	const store = openStateStore({
@@ -222,7 +222,7 @@ const closeFixture = ({
 	store,
 }: {
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 }) => {
 	store.close();
 	rmSync(directory, { recursive: true, force: true });

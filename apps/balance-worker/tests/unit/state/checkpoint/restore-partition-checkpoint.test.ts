@@ -11,7 +11,7 @@ import {
 import { createPartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { PartitionCheckpointLimitExceededError } from "../../../../src/state/actions/checkpoint/restorePartitionCheckpoint.js";
 import { openStateStore } from "../../../../src/state/openStateStore.js";
-import type { StateStore } from "../../../../src/state/types/stateStore.js";
+import type { SqliteStateStore } from "../../../../src/state/types/stateStore.js";
 import {
 	createState,
 	createTrackMutation,
@@ -49,7 +49,7 @@ const seedPartition = ({
 	state,
 	commandId,
 }: {
-	store: StateStore;
+	store: SqliteStateStore;
 	partition: number;
 	nextOffset: bigint;
 	state: SubjectState;
@@ -120,7 +120,7 @@ const checkpointWithoutReceipts = ({
 
 const createStore = (): {
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 } => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-checkpoint-restore-"));
 	return {
@@ -136,7 +136,7 @@ const closeStore = ({
 	store,
 }: {
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 }): void => {
 	store.close();
 	rmSync(directory, { recursive: true, force: true });

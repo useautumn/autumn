@@ -11,7 +11,7 @@ import {
 	ownedPartitionHealthOf,
 } from "../../../src/health/ownedPartitionHealth.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
-import type { StateStore } from "../../../src/state/types/stateStore.js";
+import type { SqliteStateStore } from "../../../src/state/types/stateStore.js";
 import {
 	createState as createSubjectStateFixture,
 	createTrackMutation,
@@ -48,7 +48,7 @@ export const createStoreFixture = ({
 	nextOffset?: bigint;
 } = {}): {
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 } => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-kafka-consumer-"));
 	const store = openStateStore({
@@ -70,7 +70,7 @@ export const closeStoreFixture = ({
 	store,
 }: {
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 }): void => {
 	store.close();
 	rmSync(directory, { recursive: true, force: true });
@@ -245,7 +245,7 @@ export function createKafkaPartitionOutcomeFollower({
 	assignedPartition?: number;
 	consumer: KafkaPartitionControlPort;
 	partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
-	stateStore: Pick<StateStore, "readNextOffset">;
+	stateStore: Pick<SqliteStateStore, "readNextOffset">;
 	positionTracker: ProgressTracker;
 }) {
 	async function withdrawPartition(): Promise<void> {}

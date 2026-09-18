@@ -2,6 +2,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { CommittedOutcomeAppender } from "../processor/writer/types/partitionWriter.js";
 import { MutationBatchNotCommittedError } from "../processor/writer/writerErrors.js";
 import type { PartitionRuntimeDependencies } from "../runtime/types/partitionRuntime.js";
+import type { DurableMutationApplyResult } from "../state/types/durableMutation.js";
 import type { StateStore } from "../state/types/stateStore.js";
 
 type CommitLog = {
@@ -86,11 +87,11 @@ export function createPartitionCommitLogging({
 		return result;
 	}
 
-	function applyDurableMutations(
+	async function applyDurableMutations(
 		params: Parameters<StateStore["applyDurableMutations"]>[0],
-	): ReturnType<StateStore["applyDurableMutations"]> {
+	): Promise<DurableMutationApplyResult[]> {
 		const position = params.records[0]?.position;
-		if (!position) return ctx.stateStore.applyDurableMutations(params);
+		if (!position) return await ctx.stateStore.applyDurableMutations(params);
 		const metadata = {
 			topic: position.topic,
 			partition: position.partition,
@@ -99,9 +100,9 @@ export function createPartitionCommitLogging({
 			startedAt: now(),
 			phase: "sqlite_apply" as const,
 		};
-		let result: ReturnType<StateStore["applyDurableMutations"]>;
+		let result: DurableMutationApplyResult[];
 		try {
-			result = ctx.stateStore.applyDurableMutations(params);
+			result = await ctx.stateStore.applyDurableMutations(params);
 		} catch (cause) {
 			report({
 				...metadata,

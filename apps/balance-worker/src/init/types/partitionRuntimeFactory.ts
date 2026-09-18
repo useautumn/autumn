@@ -17,7 +17,7 @@ import type {
 	PartitionRuntime,
 } from "../../runtime/types/partitionRuntime.js";
 import type { PartitionCheckpointRestoreLimits } from "../../state/actions/checkpoint/restorePartitionCheckpoint.js";
-import type { StateStore } from "../../state/types/stateStore.js";
+import type { CheckpointStateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 
 export type KafkaBalanceWorkerTimings = KafkaConsumerGroupTimings & {
@@ -44,7 +44,7 @@ export type PartitionRuntimeFactoryContext = {
 	logger?: Pick<AutumnLogger, "info" | "warn">;
 	kafka: KafkaProducerFactory;
 	ownershipOffsets: Pick<Admin, "fetchTopicOffsets">;
-	stateStore: StateStore;
+	stateStore: CheckpointStateStore;
 	db: WorkerDb;
 	catalogCache: CatalogCache;
 	checkpointSource: PartitionCheckpointSource;

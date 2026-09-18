@@ -36,7 +36,7 @@ import {
 } from "../../../src/runtime/runtimeErrors.js";
 import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
-import type { StateStore } from "../../../src/state/types/stateStore.js";
+import type { SqliteStateStore } from "../../../src/state/types/stateStore.js";
 import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
@@ -284,7 +284,7 @@ const createFollower = ({
 
 const createStoreFixture = (): {
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 } => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-owned-partition-"));
 	const store = openStateStore({
@@ -304,7 +304,7 @@ const closeStoreFixture = ({
 	store,
 }: {
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 }): void => {
 	store.close();
 	rmSync(directory, { recursive: true, force: true });
@@ -330,7 +330,7 @@ const createRuntime = ({
 	partitionForIdentity = () => partition,
 	recoveryDrainTimeoutMs = 1_000,
 }: {
-	store: StateStore;
+	store: SqliteStateStore;
 	producer: OwnedPartitionProducerPort;
 	follower: PartitionOutcomeFollowerPort;
 	bootstrap?: OwnedPartitionBootstrapPort["bootstrap"];

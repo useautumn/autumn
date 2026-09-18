@@ -33,7 +33,7 @@ import { createPartitionCheckpoint } from "../../src/checkpoint/partitionCheckpo
 import { commandToFingerprint } from "../../src/processor/writer/receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../../src/processor/writer/receipt/mutationToRecord.js";
 import type { DurableMutationApplyResult } from "../../src/state/types/durableMutation.js";
-import type { StateStore } from "../../src/state/types/stateStore.js";
+import type { SqliteStateStore } from "../../src/state/types/stateStore.js";
 
 export const testIdentity: MeteringIdentity = {
 	orgId: "org_1",
@@ -382,7 +382,7 @@ export const applyDurableMutation = ({
 	offset,
 	mutation,
 }: {
-	store: Pick<StateStore, "applyDurableMutations">;
+	store: Pick<SqliteStateStore, "applyDurableMutations">;
 	topic: string;
 	partition: number;
 	offset: bigint;
@@ -405,7 +405,7 @@ export const seedSubjectState = ({
 	commandId = "init_1",
 	deduplicationExpiresAt,
 }: {
-	store: Pick<StateStore, "applyDurableMutations">;
+	store: Pick<SqliteStateStore, "applyDurableMutations">;
 	topic: string;
 	partition: number;
 	offset?: bigint;
@@ -430,7 +430,10 @@ export const restoreSubjectStates = ({
 	states,
 	nextOffset,
 }: {
-	store: Pick<StateStore, "restorePartitionCheckpoint" | "readNextOffset">;
+	store: Pick<
+		SqliteStateStore,
+		"restorePartitionCheckpoint" | "readNextOffset"
+	>;
 	topic: string;
 	partition: number;
 	states: SubjectState[];

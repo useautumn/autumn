@@ -100,7 +100,7 @@ test.concurrent(
 
 test.concurrent(
 	"measures one atomic SQLite batch including initialization, without logging payloads",
-	() => {
+	async () => {
 		const fixture = createStoreFixture();
 		const state = createState();
 		const initialization = createInitializeMutation({
@@ -144,7 +144,9 @@ test.concurrent(
 				},
 				config,
 			});
-			expect(stateStore.applyDurableMutations({ records })).toHaveLength(2);
+			expect(await stateStore.applyDurableMutations({ records })).toHaveLength(
+				2,
+			);
 			expect(logs).toHaveLength(1);
 			expect(logs[0]?.[0]).toMatchObject({
 				phase: "sqlite_apply",
@@ -226,7 +228,7 @@ for (const result of ["not_committed", "unknown"] as const) {
 
 test.concurrent(
 	"logs a failed SQLite apply without changing rollback or the error",
-	() => {
+	async () => {
 		const fixture = createStoreFixture();
 		const logs: unknown[][] = [];
 		try {
@@ -243,7 +245,7 @@ test.concurrent(
 				},
 				config,
 			});
-			expect(() =>
+			await expect(
 				stateStore.applyDurableMutations({
 					records: [
 						{
@@ -252,7 +254,7 @@ test.concurrent(
 						},
 					],
 				}),
-			).toThrow("Only an initialize can create subject state");
+			).rejects.toThrow("Only an initialize can create subject state");
 			expect(logs).toHaveLength(1);
 			expect(logs[0]?.[0]).toMatchObject({
 				phase: "sqlite_apply",
@@ -304,7 +306,7 @@ test.concurrent(
 				appender.appendCommitted({ topic, partition, outcomes: [mutation] }),
 			).resolves.toEqual({ baseOffset: 0n });
 			expect(
-				stateStore.applyDurableMutations({
+				await stateStore.applyDurableMutations({
 					records: [{ position: { topic, partition, offset: 1n }, mutation }],
 				}),
 			).toHaveLength(1);
@@ -313,7 +315,7 @@ test.concurrent(
 			await expect(
 				appender.appendCommitted({ topic, partition, outcomes: [mutation] }),
 			).rejects.toBe(cause);
-			expect(() =>
+			await expect(
 				stateStore.applyDurableMutations({
 					records: [
 						{
@@ -326,7 +328,7 @@ test.concurrent(
 						},
 					],
 				}),
-			).toThrow("Only an initialize can create subject state");
+			).rejects.toThrow("Only an initialize can create subject state");
 			expect(stateStore.readNextOffset({ topic, partition })).toBe(2n);
 		} finally {
 			closeStoreFixture(fixture);

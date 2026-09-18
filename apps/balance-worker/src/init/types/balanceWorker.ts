@@ -6,7 +6,7 @@ import type { CatalogCache } from "../../catalog/types/catalogCache.js";
 import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
 import type { Partitions } from "../../partitions/types/partitions.js";
 import type { MeteringPartitionResolver } from "../../runtime/types/partitionRuntime.js";
-import type { StateStore } from "../../state/types/stateStore.js";
+import type { CheckpointStateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 import type { WorkerCheckpointResources } from "./workerCheckpointResources.js";
 
@@ -42,7 +42,7 @@ export type WorkerLifecycleContext = {
 export type WorkerResourcesContext = {
 	kafka: Pick<Kafka, "producer" | "consumer" | "admin">;
 	admin: Pick<Admin, "disconnect" | "fetchTopicOffsets">;
-	stateStore: StateStore;
+	stateStore: CheckpointStateStore;
 	postgres: Pick<PostgresClient, "close">;
 	db: WorkerDb;
 	catalogCache: CatalogCache;

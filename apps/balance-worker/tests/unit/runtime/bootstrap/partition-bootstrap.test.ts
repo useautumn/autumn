@@ -11,7 +11,7 @@ import { PartitionCheckpointSourceError } from "../../../../src/checkpoint/parti
 import { createPartitionBootstrapper } from "../../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
 import type { PartitionBootstrapRetryPolicy } from "../../../../src/runtime/bootstrap/types/partitionBootstrap.js";
 import { openStateStore } from "../../../../src/state/openStateStore.js";
-import type { StateStore } from "../../../../src/state/types/stateStore.js";
+import type { SqliteStateStore } from "../../../../src/state/types/stateStore.js";
 
 const topic = "metering-events-v1";
 const partition = 0;
@@ -39,7 +39,7 @@ const checkpointAt = (nextOffset: bigint) =>
 
 const createStore = (): {
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 } => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-bootstrap-"));
 	return {
@@ -55,7 +55,7 @@ const closeStore = ({
 	store,
 }: {
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 }): void => {
 	store.close();
 	rmSync(directory, { recursive: true, force: true });
@@ -66,7 +66,7 @@ const createBootstrapper = ({
 	latest,
 	sleep = async () => undefined,
 }: {
-	store: StateStore;
+	store: SqliteStateStore;
 	latest: (
 		signal: AbortSignal,
 	) => ReturnType<

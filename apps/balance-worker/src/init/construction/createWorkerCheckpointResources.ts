@@ -4,7 +4,7 @@ import type { PartitionCheckpointSchedulerClock } from "../../checkpoint/schedul
 import { assertPartitionCheckpointSchedulerConfig } from "../../checkpoint/scheduling/partitionCheckpointSchedulerConfig.js";
 import { createS3CheckpointThreadExporter } from "../../s3/background/createS3CheckpointThreadExporter.js";
 import { createS3CheckpointSourceResource } from "../../s3/createS3CheckpointSourceResource.js";
-import type { StateStore } from "../../state/types/stateStore.js";
+import type { CheckpointStateStore } from "../../state/types/stateStore.js";
 import type {
 	WorkerCheckpointFactories,
 	WorkerCheckpointResources,
@@ -16,7 +16,7 @@ export async function createWorkerCheckpointResources({
 	config,
 }: {
 	ctx: {
-		stateStore: StateStore;
+		stateStore: CheckpointStateStore;
 		clock?: PartitionCheckpointSchedulerClock;
 		factories?: WorkerCheckpointFactories;
 	};

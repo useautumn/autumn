@@ -13,7 +13,10 @@ import {
 	getPostgresClient,
 } from "../external/postgres/getWorkerDb.js";
 import { openStateStore } from "../state/openStateStore.js";
-import type { StateStore } from "../state/types/stateStore.js";
+import type {
+	CheckpointStateStore,
+	StateStore,
+} from "../state/types/stateStore.js";
 import { createWorkerCheckpointResources } from "./construction/createWorkerCheckpointResources.js";
 import type {
 	BalanceWorkerConfig,
@@ -62,7 +65,7 @@ export async function openWorkerResources({
 		});
 	}
 	const partitionResolver = { partitionForIdentity };
-	let stateStore: StateStore | undefined;
+	let stateStore: CheckpointStateStore | undefined;
 	let checkpoints: WorkerCheckpointResources | undefined;
 	try {
 		await admin.connect();

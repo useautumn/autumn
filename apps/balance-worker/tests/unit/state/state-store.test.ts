@@ -17,7 +17,7 @@ import {
 	CorruptBalanceStateError,
 	MeteringStatePartitionMismatchError,
 } from "../../../src/state/stateStoreErrors.js";
-import type { StateStore } from "../../../src/state/types/stateStore.js";
+import type { SqliteStateStore } from "../../../src/state/types/stateStore.js";
 import {
 	applyDurableMutation,
 	createInitializeMutation,
@@ -32,7 +32,7 @@ const partition = 0;
 const createStoreFixture = (): {
 	databasePath: string;
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 } => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-balance-worker-"));
 	const databasePath = join(directory, "balance-state.sqlite");
@@ -53,7 +53,7 @@ const closeStoreFixture = ({
 	store,
 }: {
 	directory: string;
-	store: StateStore;
+	store: SqliteStateStore;
 }) => {
 	store.close();
 	rmSync(directory, { recursive: true, force: true });
@@ -66,7 +66,7 @@ const seedCustomer = ({
 	offset = 0n,
 	commandId = "init_1",
 }: {
-	store: StateStore;
+	store: SqliteStateStore;
 	state?: SubjectState;
 	offset?: bigint;
 	commandId?: string;
@@ -698,7 +698,7 @@ describe("state store", () => {
 		"restores exact state, receipt, and progress after reopening",
 		() => {
 			const fixture = createStoreFixture();
-			let reopenedStore: StateStore | null = null;
+			let reopenedStore: SqliteStateStore | null = null;
 			try {
 				const state = seedCustomer({ store: fixture.store });
 				const mutation = createTrackMutation({ state });

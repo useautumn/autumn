@@ -14,7 +14,7 @@ import { createPartitionRuntime } from "../../../src/runtime/createPartitionRunt
 import { OwnedPartitionProducerFencedError } from "../../../src/runtime/runtimeErrors.js";
 import type { PartitionRuntime } from "../../../src/runtime/types/partitionRuntime.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
-import type { StateStore } from "../../../src/state/types/stateStore.js";
+import type { SqliteStateStore } from "../../../src/state/types/stateStore.js";
 import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
@@ -49,7 +49,7 @@ function createTestRuntime({
 }: {
 	kafka: Kafka;
 	topic: string;
-	stateStore: StateStore;
+	stateStore: SqliteStateStore;
 }): PartitionRuntime {
 	const session = createProducerSession({
 		ctx: { kafka },
@@ -114,7 +114,7 @@ async function replacementFencesPreviousRuntime(): Promise<void> {
 	const topic = `runtime-fencing-${crypto.randomUUID()}`;
 	const admin = kafka.admin();
 	const directory = mkdtempSync(join(tmpdir(), "autumn-runtime-fencing-"));
-	const stores: StateStore[] = [];
+	const stores: SqliteStateStore[] = [];
 	const runtimes: PartitionRuntime[] = [];
 	const cleanup: unknown[] = [];
 	let topicCreated = false;
