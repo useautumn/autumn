@@ -92,7 +92,7 @@ describe("groupLabel", () => {
 		expect(groupLabel({ group })).toBe("Pro");
 	});
 
-	test("a shared product collapses to a variant count", () => {
+	test("a shared product collapses to a plan count", () => {
 		const [group] = buildStripeProductGroups({
 			products: [
 				plan({ id: "Pro", stripeId: "prod_pro" }),
@@ -100,17 +100,17 @@ describe("groupLabel", () => {
 				plan({ id: "Pro Quarterly", stripeId: "prod_pro" }),
 			],
 		});
-		expect(groupLabel({ group })).toBe("Pro + 2 variants");
+		expect(groupLabel({ group })).toBe("Pro + 2 plans");
 	});
 
-	test("a single variant is not pluralised", () => {
+	test("a single sibling is not pluralised", () => {
 		const [group] = buildStripeProductGroups({
 			products: [
 				plan({ id: "Pro", stripeId: "prod_pro" }),
 				plan({ id: "Pro Yearly", stripeId: "prod_pro" }),
 			],
 		});
-		expect(groupLabel({ group })).toBe("Pro + 1 variant");
+		expect(groupLabel({ group })).toBe("Pro + 1 plan");
 	});
 });
 
@@ -179,5 +179,77 @@ describe("duplicate product entries", () => {
 		expect(groups).toHaveLength(1);
 		expect(groups[0].priceIds).toEqual(["pro_price"]);
 		expect(groupLabel({ group: groups[0] })).toBe("pro");
+	});
+});
+
+const usagePlan = ({
+	id,
+	stripeId,
+	featureId,
+	priceId = `${id}_usage_price`,
+}: {
+	id: string;
+	stripeId?: string | null;
+	featureId: string;
+	priceId?: string;
+}) =>
+	({
+		id,
+		name: id,
+		stripe_id: stripeId ?? null,
+		base_id: null,
+		items: [{ price_id: priceId, price: 5, feature_id: featureId }],
+	}) as unknown as ProductV2;
+
+describe("usage prices share a feature-level Stripe product", () => {
+	test("unrelated plans charging the same feature form one group", () => {
+		const groups = buildStripeProductGroups({
+			products: [
+				usagePlan({ id: "pro", stripeId: "prod_pro", featureId: "messages" }),
+				usagePlan({ id: "team", stripeId: "prod_team", featureId: "messages" }),
+			],
+		});
+
+		expect(groups).toHaveLength(1);
+		expect(groups[0].priceIds.sort()).toEqual([
+			"pro_usage_price",
+			"team_usage_price",
+		]);
+	});
+
+	test("plans charging different features stay separate", () => {
+		const groups = buildStripeProductGroups({
+			products: [
+				usagePlan({ id: "pro", stripeId: "prod_pro", featureId: "messages" }),
+				usagePlan({ id: "team", stripeId: "prod_team", featureId: "words" }),
+			],
+		});
+
+		expect(groups).toHaveLength(2);
+	});
+
+	test("a fixed price bridges its plan into the feature group", () => {
+		const groups = buildStripeProductGroups({
+			products: [
+				{
+					id: "pro",
+					name: "pro",
+					stripe_id: "prod_pro",
+					base_id: null,
+					items: [
+						{ price_id: "pro_base", price: 20 },
+						{ price_id: "pro_usage", price: 5, feature_id: "messages" },
+					],
+				} as unknown as ProductV2,
+				usagePlan({ id: "team", stripeId: "prod_team", featureId: "messages" }),
+			],
+		});
+
+		expect(groups).toHaveLength(1);
+		expect(groups[0].priceIds.sort()).toEqual([
+			"pro_base",
+			"pro_usage",
+			"team_usage_price",
+		]);
 	});
 });

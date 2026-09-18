@@ -11,32 +11,72 @@ const SHARED_STRIPE_PRICE_KEYS = [
 	"stripe_placeholder_price_id",
 ] as const;
 
+type InheritedStripeIds = {
+	processor: FullProduct["processor"];
+	priceConfigs: Map<string, FullProduct["prices"][number]["config"]>;
+};
+
+const snapshotStripeIds = ({
+	variant,
+}: {
+	variant: FullProduct;
+}): InheritedStripeIds => ({
+	processor: variant.processor,
+	priceConfigs: new Map(
+		variant.prices.map((price) => [price.id!, { ...price.config }]),
+	),
+});
+
+const writeStripeIds = async ({
+	ctx,
+	variant,
+	processor,
+	priceConfigs,
+}: {
+	ctx: AutumnContext;
+	variant: FullProduct;
+	processor: FullProduct["processor"];
+	priceConfigs: Map<string, FullProduct["prices"][number]["config"]>;
+}) => {
+	for (const price of variant.prices) {
+		const config = priceConfigs.get(price.id!);
+		if (!config) continue;
+
+		price.config = config;
+		await PriceService.update({
+			db: ctx.db,
+			id: price.id!,
+			update: { config },
+		});
+	}
+
+	variant.processor = processor;
+	await ProductService.updateByInternalId({
+		db: ctx.db,
+		internalId: variant.internal_id,
+		update: { processor },
+	});
+};
+
 const clearSharedStripeIds = async ({
 	ctx,
 	variant,
 }: {
 	ctx: AutumnContext;
 	variant: FullProduct;
-}) => {
-	for (const price of variant.prices) {
-		const config = { ...price.config } as Record<string, unknown>;
-		for (const key of SHARED_STRIPE_PRICE_KEYS) config[key] = null;
-
-		price.config = config as typeof price.config;
-		await PriceService.update({
-			db: ctx.db,
-			id: price.id!,
-			update: { config: price.config },
-		});
-	}
-
-	variant.processor = null;
-	await ProductService.updateByInternalId({
-		db: ctx.db,
-		internalId: variant.internal_id,
-		update: { processor: null },
+}) =>
+	writeStripeIds({
+		ctx,
+		variant,
+		processor: null,
+		priceConfigs: new Map(
+			variant.prices.map((price) => {
+				const config = { ...price.config } as Record<string, unknown>;
+				for (const key of SHARED_STRIPE_PRICE_KEYS) config[key] = null;
+				return [price.id!, config as FullProduct["prices"][number]["config"]];
+			}),
+		),
 	});
-};
 
 /** Existing subscriptions stay on the prices they were created with. */
 export const splitVariantStripeProduct = async ({
@@ -72,8 +112,16 @@ export const splitVariantStripeProduct = async ({
 		return variant;
 	}
 
+	// Restore the inherited ids if Stripe fails, so a failed split never leaves
+	// the variant with no mapping at all.
+	const inherited = snapshotStripeIds({ variant });
 	await clearSharedStripeIds({ ctx, variant });
-	await initProductInStripe({ ctx, product: variant, includeLive: true });
+	try {
+		await initProductInStripe({ ctx, product: variant, includeLive: true });
+	} catch (error) {
+		await writeStripeIds({ ctx, variant, ...inherited });
+		throw error;
+	}
 
 	return ProductService.getFull({
 		db: ctx.db,
