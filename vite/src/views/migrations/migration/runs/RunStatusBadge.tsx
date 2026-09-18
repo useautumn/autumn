@@ -20,9 +20,9 @@ export function ActiveRunDot({ className }: { className?: string }) {
 }
 
 const LIVE_STYLES: Record<MigrationItemEventStatus, string> = {
-	succeeded: "bg-green-500/10 text-green-500 border-transparent",
-	skipped: "bg-muted text-muted-foreground border-transparent",
-	failed: "bg-red-500/10 text-red-500 border-transparent",
+	succeeded: "bg-green-500/10 text-green-500 border-green-500/20",
+	skipped: "bg-muted text-muted-foreground border-border",
+	failed: "bg-red-500/10 text-red-500 border-red-500/20",
 };
 
 const DRY_STYLES: Record<MigrationItemEventStatus, string> = {
@@ -67,8 +67,8 @@ export function ItemEventStatusBadge({
 					"gap-1",
 					spec.noChanges
 						? cn(
-								"bg-muted text-tertiary-foreground",
-								dryRun ? "border-border border-dashed" : "border-transparent",
+								"bg-muted text-tertiary-foreground border-border",
+								dryRun && "border-dashed",
 							)
 						: styles.skipped,
 				)}

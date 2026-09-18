@@ -9,6 +9,16 @@ import {
 const isRunAll = (run: MigrationRun): boolean =>
 	!run.dry_run && run.only_ids === null && run.target_limit === null;
 
+const outcomeStatus = (status: MigrationRunStatus): MigrationStatus => {
+	if (status === MigrationRunStatus.Succeeded) return MigrationStatus.Run;
+	if (
+		status === MigrationRunStatus.Queued ||
+		status === MigrationRunStatus.Running
+	)
+		return MigrationStatus.Running;
+	return status;
+};
+
 const isActive = (run: MigrationRun): boolean =>
 	run.status === MigrationRunStatus.Queued ||
 	run.status === MigrationRunStatus.Running;
@@ -17,12 +27,12 @@ export const resolveMigrationStatus = ({
 	migrationInternalId,
 	runs,
 	orgActiveRuns,
-	hasStartedRunAll = false,
+	latestRunAllStatus = null,
 }: {
 	migrationInternalId: string;
 	runs: MigrationRun[];
 	orgActiveRuns: MigrationRun[];
-	hasStartedRunAll?: boolean;
+	latestRunAllStatus?: MigrationRunStatus | null;
 }): {
 	status: MigrationStatus;
 	blockedByMigrationInternalId: string | null;
@@ -48,10 +58,22 @@ export const resolveMigrationStatus = ({
 			: { status: MigrationStatus.Running, blockedByMigrationInternalId: null };
 	}
 
-	const started =
-		hasStartedRunAll || runAllRuns.some((run) => run.started_at !== null);
+	const latestLocal = runAllRuns
+		.filter((run) => run.started_at !== null)
+		.reduce<MigrationRun | null>(
+			(latest, run) =>
+				latest === null || run.created_at > latest.created_at ? run : latest,
+			null,
+		);
+	const outcome = latestLocal?.status ?? latestRunAllStatus;
+	if (!outcome)
+		return {
+			status: MigrationStatus.Draft,
+			blockedByMigrationInternalId: null,
+		};
+
 	return {
-		status: started ? MigrationStatus.Run : MigrationStatus.Draft,
+		status: outcomeStatus(outcome),
 		blockedByMigrationInternalId: null,
 	};
 };

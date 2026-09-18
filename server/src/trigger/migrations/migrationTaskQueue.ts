@@ -36,3 +36,9 @@ export const migrationRunConcurrencyKey = ({
 
 export const getMigrationTriggerOptions = ({ isDev }: { isDev: boolean }) =>
 	isDev ? { region: "eu-central-1" as const } : {};
+
+export const migrationRunTag = ({
+	migrationRunId,
+}: {
+	migrationRunId: string;
+}) => `mrun:${migrationRunId}`;
