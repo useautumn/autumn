@@ -37,8 +37,7 @@ export function ProductPriceSelector({
 	const priceIds = config.price_ids ?? [];
 	const applyToAll = config.apply_to_all ?? false;
 
-	// Selected price IDs may belong to historical versions absent from the
-	// latest-versions list; resolve their owning product for chip labels.
+	// Selected prices may belong to historical versions absent from the latest list.
 	const { products: linkedProductVersions } =
 		useProductsByPriceIdsQuery(priceIds);
 

@@ -1,12 +1,4 @@
-/**
- * Coupons on plans that were never pushed to Stripe.
- *
- * Red (current):  createReward throws product_not_in_stripe, because
- *                 initRewardStripePrices guards on stripe_price_id and
- *                 initProductInStripe returns early on AppEnv.Live.
- * Green (after):  the Stripe product is created on the spot and the coupon
- *                 is scoped to it.
- */
+/** Coupons on plans that were never pushed to Stripe create them on the spot. */
 
 import { expect, test } from "bun:test";
 import {

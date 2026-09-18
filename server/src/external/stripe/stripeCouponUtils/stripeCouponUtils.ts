@@ -116,7 +116,7 @@ const couponToStripeValue = ({
 	}
 };
 
-/** Fixed prices resolve to the plan's Stripe product, usage prices to the feature's. */
+/** Usage prices resolve to the feature's Stripe product, not the plan's. */
 export const resolveStripeProductIdForPrice = ({
 	price,
 }: {

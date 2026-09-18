@@ -550,7 +550,6 @@ export const initProductInStripe = async ({
 }: {
 	ctx: AutumnContext;
 	product: FullProduct;
-	/** Live plans are normally created lazily by attach; opt in to create them here. */
 	includeLive?: boolean;
 }): Promise<undefined> => {
 	const { org, env, logger, db } = ctx;

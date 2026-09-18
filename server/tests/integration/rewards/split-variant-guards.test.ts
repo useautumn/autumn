@@ -1,7 +1,4 @@
-/**
- * Guards on the variant split: base plans are refused, and splitting twice
- * is a no-op rather than churning a second Stripe product.
- */
+/** Base plans are refused, and splitting twice is a no-op. */
 
 import { expect, test } from "bun:test";
 import { BillingInterval, ResetInterval } from "@autumn/shared";

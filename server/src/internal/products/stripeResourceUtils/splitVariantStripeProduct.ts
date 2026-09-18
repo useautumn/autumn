@@ -38,11 +38,7 @@ const clearSharedStripeIds = async ({
 	});
 };
 
-/**
- * Variants inherit their base's Stripe product, which makes a coupon on one
- * apply to the whole family. This gives the variant its own Stripe product
- * and prices; existing subscriptions stay on the prices they were created with.
- */
+/** Existing subscriptions stay on the prices they were created with. */
 export const splitVariantStripeProduct = async ({
 	ctx,
 	variantPlanId,

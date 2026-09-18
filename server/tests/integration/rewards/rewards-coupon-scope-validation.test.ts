@@ -1,11 +1,4 @@
-/**
- * Stripe scopes coupons to products, and variants share their base's Stripe
- * product, so a coupon may not cover part of a shared product.
- *
- * Red (current):  a coupon on the base alone is accepted and silently
- *                 discounts every variant in Stripe.
- * Green (after):  400 naming the plans that must be included.
- */
+/** A coupon may not cover part of a shared Stripe product. */
 
 import { expect, test } from "bun:test";
 import {

@@ -1,12 +1,4 @@
-/**
- * End-to-end validation of the coupon-scoping PRD acceptance criteria.
- *
- * 1. a subset of a shared Stripe product is rejected by the API
- * 2. a coupon on a plan absent from Stripe succeeds and creates the product
- * 3. after a split, a coupon on the variant applies only to the variant
- * 4. versioned plans do not falsely trip the group rule
- * 5. unrelated plans are never dragged into a group
- */
+/** End-to-end coupon scoping: split, unrelated plans, and versioned plans. */
 
 import { expect, test } from "bun:test";
 import {

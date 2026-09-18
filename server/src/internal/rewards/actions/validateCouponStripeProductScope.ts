@@ -34,11 +34,7 @@ const planSharesStripeProductId = ({
 		return stripeProductId !== null && stripeProductIds.has(stripeProductId);
 	});
 
-/**
- * Stripe scopes coupons to products, never prices, and variants share their
- * base's Stripe product. A coupon covering part of a shared product would
- * silently discount the rest, so require the whole group.
- */
+/** Stripe scopes coupons to products, so a partial group would silently discount the rest. */
 export const validateCouponStripeProductScope = async ({
 	ctx,
 	prices,
@@ -53,7 +49,7 @@ export const validateCouponStripeProductScope = async ({
 		prices.map((price) => price.internal_product_id).filter(Boolean),
 	);
 
-	// Read past the cache: a plan split moments earlier must not be stale here.
+	// A plan split moments earlier must not read back stale.
 	const plans = await ProductService.listFull({
 		db: ctx.db,
 		orgId: ctx.org.id,

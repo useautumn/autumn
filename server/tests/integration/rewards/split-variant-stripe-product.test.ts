@@ -1,7 +1,4 @@
-/**
- * Splitting a variant onto its own Stripe product so a coupon can target it
- * alone. Existing subscriptions keep the prices they were created with.
- */
+/** Splitting a variant onto its own Stripe product so a coupon can target it alone. */
 
 import { expect, test } from "bun:test";
 import {

@@ -192,8 +192,7 @@ export const initRewardStripePrices = async ({
 		),
 	);
 
-	// initProductInStripe writes the new Stripe ids onto its own rows, so the
-	// caller's prices keep stale configs until they are copied back.
+	// initProductInStripe writes the new ids onto its own rows, not the caller's.
 	for (const price of prices) {
 		const product = products.find(
 			(p) => p.internal_id === price.internal_product_id,

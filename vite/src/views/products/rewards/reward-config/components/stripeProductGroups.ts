@@ -13,10 +13,7 @@ export const priceItemsOf = (product: ProductV2) =>
 			!isFeatureItem(item) && Boolean(item.price_id),
 	);
 
-/**
- * Stripe scopes coupons to products, and variants share their base's Stripe
- * product, so plans sharing one must be selected together.
- */
+/** Plans sharing a Stripe product must be selected together. */
 const groupKeyOf = (product: ProductV2) =>
 	product.stripe_id ?? product.base_id ?? product.id;
 
@@ -29,8 +26,7 @@ export const buildStripeProductGroups = ({
 	const seenProducts = new Set<string>();
 
 	for (const product of products) {
-		// The same plan can arrive from both the latest-versions list and the
-		// by-price-id lookup.
+		// A plan can arrive from both the latest-versions list and the by-price-id lookup.
 		const productKey =
 			product.internal_id ?? `${product.id}:${product.version}`;
 		if (seenProducts.has(productKey)) continue;
