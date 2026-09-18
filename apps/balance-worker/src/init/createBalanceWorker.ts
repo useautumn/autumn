@@ -39,6 +39,7 @@ export async function createBalanceWorker({
 		endpoint: address.endpoint,
 	});
 	const resources = await openWorkerResources({
+		ctx: { logger: dependencies.logger },
 		config,
 		checkpointConfig,
 		bootstrap: {
@@ -130,6 +131,7 @@ export async function createBalanceWorker({
 		});
 		const ctx: WorkerLifecycleContext = {
 			partitions,
+			edgeConfigs: resources.edgeConfigs,
 			healthReporter,
 			listen,
 			settleResources: resources.settleResources,

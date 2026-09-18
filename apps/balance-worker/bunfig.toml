@@ -3,3 +3,5 @@ timeout = 5000
 
 [test.env]
 NODE_ENV = "test"
+# Edge configs serve their defaults from memory in tests; no S3, no credentials.
+AUTUMN_EDGE_CONFIG_OVERRIDE_B64 = "e30="

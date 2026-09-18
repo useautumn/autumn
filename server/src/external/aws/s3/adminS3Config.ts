@@ -1,3 +1,8 @@
+import {
+	DB_CONTROL_CONFIG_KEY,
+	EDGE_CONFIG_TIMESTAMP_KEY,
+} from "@autumn/edge-config";
+
 export const ADMIN_REQUEST_BLOCK_CONFIG_KEY = "admin/request-block-config.json";
 export const ADMIN_ROLLOUT_CONFIG_KEY = "admin/rollout-config.json";
 export const ADMIN_FEATURE_FLAGS_CONFIG_KEY = "admin/feature-flags-config.json";
@@ -26,8 +31,8 @@ export const ADMIN_ASYNC_BALANCE_UPDATE_CONFIG_KEY =
 export const ADMIN_ASYNC_TRACK_CONFIG_KEY = "admin/async-track-config.json";
 export const ADMIN_BALANCE_SHADOW_CONFIG_KEY =
 	"admin/balance-shadow-config.json";
-export const ADMIN_EDGE_CONFIG_TIMESTAMP_KEY =
-	"admin/edge-config-timestamp.json";
+export const ADMIN_EDGE_CONFIG_TIMESTAMP_KEY = EDGE_CONFIG_TIMESTAMP_KEY;
+export const ADMIN_DB_CONTROL_CONFIG_KEY = DB_CONTROL_CONFIG_KEY;
 export const BLUE_GREEN_ACTIVE_SLOT_KEY = "admin/blue-green-active-slot.json";
 export const BLUE_GREEN_CRON_ACTIVE_SLOT_KEY =
 	"admin/blue-green-cron-active-slot.json";
@@ -132,6 +137,11 @@ export const getAdminEdgeConfigSources = () => ({
 			id: "balance-shadow",
 			label: "Balance Shadow",
 			key: ADMIN_BALANCE_SHADOW_CONFIG_KEY,
+		},
+		{
+			id: "db-control",
+			label: "DB Control",
+			key: ADMIN_DB_CONTROL_CONFIG_KEY,
 		},
 		{
 			id: "stripe-sync",

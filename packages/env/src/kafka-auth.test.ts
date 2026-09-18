@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { createBalanceWorkerEnv } from "./balanceWorker.js";
+import { createBalanceWorkerEnv } from "./balanceWorker/balanceWorkerEnv.js";
 import { createBalanceWorkerClientEnv } from "./balanceWorkerClient.js";
 
-const brokers = { KAFKA_BROKERS: "localhost:19092" };
+const brokers = {
+	KAFKA_BROKERS: "localhost:19092",
+	BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
+};
 
 for (const [name, createEnv] of [
 	["worker", createBalanceWorkerEnv],

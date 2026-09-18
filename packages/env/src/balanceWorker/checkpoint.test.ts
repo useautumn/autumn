@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { createBalanceWorkerEnv } from "./balanceWorker.js";
+import { createBalanceWorkerEnv } from "./balanceWorkerEnv.js";
 
-const valid = { KAFKA_BROKERS: "127.0.0.1:19092", KAFKA_AUTH_MODE: "none" };
+const valid = {
+	KAFKA_BROKERS: "127.0.0.1:19092",
+	KAFKA_AUTH_MODE: "none",
+	BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
+};
 const storage = {
 	BALANCE_WORKER_CHECKPOINT_BUCKET: "balance-checkpoints",
 	BALANCE_WORKER_CHECKPOINT_REGION: "us-east-1",

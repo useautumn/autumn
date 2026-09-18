@@ -90,12 +90,19 @@ const rowChangeToSubjectRowChange = ({
 	const balanceChange = change as BalanceRowChange;
 	switch (balanceChange.op) {
 		case "insert":
-			return { op: "insert", table: balanceChange.table, row: balanceChange.row };
+			return {
+				op: "insert",
+				table: balanceChange.table,
+				row: balanceChange.row,
+			};
 		case "delete":
 			return { op: "delete", table: balanceChange.table, id: balanceChange.id };
 		case "update":
 		case "increment":
-			return { op: "update", ...balanceRowChangeToUpdate({ change: balanceChange }) };
+			return {
+				op: "update",
+				...balanceRowChangeToUpdate({ change: balanceChange }),
+			};
 	}
 };
 

@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, jest, test } from "bun:test";
 import type { S3Client } from "@aws-sdk/client-s3";
 import { z } from "zod/v4";
-import { ADMIN_EDGE_CONFIG_TIMESTAMP_KEY } from "@/external/aws/s3/adminS3Config.js";
-import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
+import {
+	createEdgeConfigStore,
+	EDGE_CONFIG_TIMESTAMP_KEY,
+} from "../../src/edgeConfig.js";
+
+const location = () => ({ bucket: "autumn-test-server", region: "us-east-2" });
 
 const TestConfigSchema = z.object({
 	enabled: z.boolean().default(false),
@@ -67,7 +71,7 @@ describe("createEdgeConfigStore", () => {
 				s3Key: "admin/test-config.json",
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.startPolling();
@@ -87,7 +91,7 @@ describe("createEdgeConfigStore", () => {
 				s3Key: "admin/test-config.json",
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			expect(store.get()).toEqual(defaultConfig());
@@ -106,7 +110,7 @@ describe("createEdgeConfigStore", () => {
 				s3Key: "admin/test-config.json",
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.startPolling();
@@ -127,7 +131,7 @@ describe("createEdgeConfigStore", () => {
 				s3Key: "admin/test-config.json",
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.startPolling();
@@ -149,7 +153,7 @@ describe("createEdgeConfigStore", () => {
 				s3Key: "admin/test-config.json",
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.startPolling();
@@ -167,7 +171,7 @@ describe("createEdgeConfigStore", () => {
 				s3Key: "admin/test-config.json",
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.startPolling();
@@ -187,7 +191,7 @@ describe("createEdgeConfigStore", () => {
 				s3Key: "admin/test-config.json",
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.startPolling();
@@ -212,7 +216,7 @@ describe("createEdgeConfigStore", () => {
 				s3Key: "admin/test-config.json",
 				schema: strictSchema as unknown as z.ZodType<TestConfig>,
 				defaultValue: defaultConfig,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.startPolling();
@@ -239,7 +243,7 @@ describe("createEdgeConfigStore", () => {
 				s3Key: "admin/test-config.json",
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.startPolling();
@@ -266,7 +270,7 @@ describe("createEdgeConfigStore", () => {
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
 				retainOnError: true,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.startPolling();
@@ -286,7 +290,7 @@ describe("createEdgeConfigStore", () => {
 					.input;
 				const name = command?.constructor?.name;
 				if (name === "GetObjectCommand") return makeBody(defaultConfig());
-				if (input?.Key === ADMIN_EDGE_CONFIG_TIMESTAMP_KEY) {
+				if (input?.Key === EDGE_CONFIG_TIMESTAMP_KEY) {
 					throw new Error("AccessDenied");
 				}
 				return {};
@@ -296,7 +300,7 @@ describe("createEdgeConfigStore", () => {
 				s3Key: "admin/test-config.json",
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
-				s3Client: { send } as unknown as S3Client,
+				ctx: { location, s3Client: { send } as unknown as S3Client },
 			});
 
 			await store.writeToSource({
@@ -315,7 +319,7 @@ describe("createEdgeConfigStore", () => {
 				s3Key: "admin/test-config.json",
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.startPolling();
@@ -338,7 +342,7 @@ describe("createEdgeConfigStore", () => {
 				s3Key: "admin/test-config.json",
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.writeToSource({
@@ -356,7 +360,7 @@ describe("createEdgeConfigStore", () => {
 
 			expect(putCommands.map(({ input }) => input.Key)).toEqual([
 				"admin/test-config.json",
-				ADMIN_EDGE_CONFIG_TIMESTAMP_KEY,
+				EDGE_CONFIG_TIMESTAMP_KEY,
 			]);
 			expect(JSON.parse(putCommands[0]!.input.Body)).toEqual({
 				enabled: true,
@@ -383,7 +387,7 @@ describe("createEdgeConfigStore", () => {
 				s3Key: "admin/test-config.json",
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.startPolling();
@@ -410,7 +414,7 @@ describe("createEdgeConfigStore", () => {
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
 				pollIntervalMs: 50,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.startPolling();
@@ -441,7 +445,7 @@ describe("createEdgeConfigStore", () => {
 				schema: TestConfigSchema,
 				defaultValue: defaultConfig,
 				pollIntervalMs: 50,
-				s3Client: mockClient,
+				ctx: { location, s3Client: mockClient },
 			});
 
 			await store.startPolling();

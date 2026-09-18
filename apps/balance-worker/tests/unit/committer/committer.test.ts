@@ -247,4 +247,45 @@ describe("committer", () => {
 		).toEqual([[0], [1], [2]]);
 		await committer.drain();
 	});
+
+	test("a live control moves the lanes between flushes, clamped to the pool-sized ceiling", async () => {
+		const fake = createGatedDb();
+		let concurrency: number | null = null;
+		const committer = createCommitter({
+			ctx: { db: fake.db, control: { read: () => ({ concurrency }) } },
+			config: { concurrency: 3, maxRowsPerFlush: 1, retry: noRetry },
+		});
+		const applyAll = () =>
+			[0, 1, 2, 3].map((partition) =>
+				committer.apply({
+					topic,
+					partition,
+					expectedOffset: 0n,
+					records: [
+						record({ partition, offset: 0n, commandId: `c${partition}` }),
+					],
+				}),
+			);
+
+		// null → the boot value: three lanes start at once.
+		let calls = applyAll();
+		expect(fake.transactions).toHaveLength(3);
+		fake.openGate();
+		await Promise.all(calls);
+		await committer.drain();
+
+		// 1 → one lane; 99 → clamped to the ceiling of 3.
+		concurrency = 1;
+		const before = fake.transactions.length;
+		calls = applyAll();
+		expect(fake.transactions.length - before).toBe(1);
+		await Promise.all(calls);
+		await committer.drain();
+		concurrency = 99;
+		const beforeClamp = fake.transactions.length;
+		calls = applyAll();
+		expect(fake.transactions.length - beforeClamp).toBe(3);
+		await Promise.all(calls);
+		await committer.drain();
+	});
 });

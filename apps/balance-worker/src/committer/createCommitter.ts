@@ -64,7 +64,7 @@ async function startFlushes({
 	onIdle: () => void;
 }): Promise<void> {
 	const { state, config } = scope;
-	while (state.queue.length > 0 && state.inFlight < config.concurrency) {
+	while (state.queue.length > 0 && state.inFlight < lanesOf({ scope })) {
 		const flush = takeFlush({ state, maxRows: config.maxRowsPerFlush });
 		if (!flush) break;
 		state.inFlight += 1;
@@ -86,6 +86,13 @@ async function startFlushes({
 		}
 	}
 	if (state.queue.length === 0 && state.inFlight === 0) onIdle();
+}
+
+/** The live control's concurrency, clamped to the pool-sized ceiling; the boot value when unset. */
+function lanesOf({ scope }: { scope: CommitterScope }): number {
+	const ceiling = scope.config.concurrency;
+	const requested = scope.ctx.control?.read().concurrency ?? ceiling;
+	return Math.min(Math.max(1, Math.trunc(requested)), ceiling);
 }
 
 function countRowChanges({

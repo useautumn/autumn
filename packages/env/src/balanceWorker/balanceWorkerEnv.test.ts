@@ -1,12 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import { createBalanceWorkerEnv } from "./balanceWorker.js";
-import { createAutumnEnv } from "./index.js";
+import { createAutumnEnv } from "../index.js";
+import { createBalanceWorkerEnv } from "./balanceWorkerEnv.js";
 
-const valid = { KAFKA_BROKERS: "127.0.0.1:19092", KAFKA_AUTH_MODE: "none" };
+const valid = {
+	BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
+	KAFKA_BROKERS: "127.0.0.1:19092",
+	KAFKA_AUTH_MODE: "none",
+};
 describe("Balance worker environment", () => {
 	test("parses isolated local defaults and broker lists", () => {
 		const env = createBalanceWorkerEnv({
 			...valid,
+			BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
 			KAFKA_BROKERS: "127.0.0.1:19092, localhost:29092",
 		});
 		expect(env.KAFKA_BROKERS).toEqual(["127.0.0.1:19092", "localhost:29092"]);
@@ -42,9 +47,18 @@ describe("Balance worker environment", () => {
 	});
 	test.each<Record<string, string | undefined>>([
 		{},
-		{ KAFKA_BROKERS: "" },
-		{ KAFKA_BROKERS: "a:9092," },
-		{ KAFKA_BROKERS: "https://broker:9092" },
+		{
+			BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
+			KAFKA_BROKERS: "",
+		},
+		{
+			BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
+			KAFKA_BROKERS: "a:9092,",
+		},
+		{
+			BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
+			KAFKA_BROKERS: "https://broker:9092",
+		},
 		{ ...valid, BALANCE_WORKER_PORT: "0" },
 		{ ...valid, BALANCE_WORKER_PORT: "65536" },
 		{ ...valid, BALANCE_WORKER_PORT: "1.5" },

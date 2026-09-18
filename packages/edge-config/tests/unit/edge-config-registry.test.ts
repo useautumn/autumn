@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, jest, test } from "bun:test";
-import { createEdgeConfigRegistry } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
+import { createEdgeConfigRegistry } from "../../src/edgeConfig.js";
+
+const location = () => ({ bucket: "autumn-test-server", region: "us-east-2" });
 
 const registries: ReturnType<typeof createEdgeConfigRegistry>[] = [];
 
@@ -17,6 +19,7 @@ const createRegistry = ({
 		return value ?? null;
 	});
 	const registry = createEdgeConfigRegistry({
+		ctx: { location },
 		readTimestamp,
 		writeTimestamp,
 		pollIntervalMs: 60_000,
@@ -156,6 +159,7 @@ describe("edge config registry", () => {
 	test("refreshes on the backstop interval even when the timestamp is unchanged", async () => {
 		const refresh = jest.fn(async () => {});
 		const registry = createEdgeConfigRegistry({
+			ctx: { location },
 			readTimestamp: async () => "v1",
 			writeTimestamp: async () => "v1",
 			pollIntervalMs: 60_000,

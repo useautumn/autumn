@@ -1,37 +1,27 @@
 import { randomUUID } from "node:crypto";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
-import {
-	ADMIN_EDGE_CONFIG_TIMESTAMP_KEY,
-	getAdminS3Config,
-} from "@/external/aws/s3/adminS3Config.js";
+import { EDGE_CONFIG_TIMESTAMP_KEY } from "../keys.js";
+import type { EdgeConfigContext } from "../types/edgeConfig.js";
 import {
 	createBunS3EdgeConfigClient,
-	type EdgeConfigS3Client,
-} from "@/external/aws/s3/bunS3EdgeConfigClient.js";
-import { getS3BodyAsString } from "@/external/aws/s3/s3Utils.js";
+	getS3BodyAsString,
+} from "./bunS3EdgeConfigClient.js";
 
-const getClient = (s3Client?: EdgeConfigS3Client) => {
-	if (s3Client) return s3Client;
-	const { region } = getAdminS3Config();
-	return createBunS3EdgeConfigClient({ region });
-};
+const clientOf = ({ ctx }: { ctx: EdgeConfigContext }) =>
+	ctx.s3Client ??
+	createBunS3EdgeConfigClient({ region: ctx.location().region });
 
 export const readEdgeConfigTimestamp = async ({
-	s3Client,
+	ctx,
 }: {
-	s3Client?: EdgeConfigS3Client;
-} = {}): Promise<string | null> => {
-	const { bucket } = getAdminS3Config();
-
+	ctx: EdgeConfigContext;
+}): Promise<string | null> => {
+	const { bucket } = ctx.location();
 	try {
-		const response = await getClient(s3Client).send(
-			new GetObjectCommand({
-				Bucket: bucket,
-				Key: ADMIN_EDGE_CONFIG_TIMESTAMP_KEY,
-			}),
+		const response = await clientOf({ ctx }).send(
+			new GetObjectCommand({ Bucket: bucket, Key: EDGE_CONFIG_TIMESTAMP_KEY }),
 		);
 		if (!response.Body) return null;
-
 		const raw = await getS3BodyAsString({ body: response.Body });
 		const { updatedAt, changeId } = JSON.parse(raw) as {
 			updatedAt?: unknown;
@@ -55,13 +45,12 @@ const WRITE_RETRY_DELAY_MS = 50;
 /** Retries because the config object is already written by the time this runs:
  *  a lost timestamp leaves that config in S3 with nothing signalling it. */
 export const writeEdgeConfigTimestamp = async ({
-	s3Client,
+	ctx,
 }: {
-	s3Client?: EdgeConfigS3Client;
-} = {}): Promise<string> => {
-	const { bucket } = getAdminS3Config();
-	const client = getClient(s3Client);
-
+	ctx: EdgeConfigContext;
+}): Promise<string> => {
+	const { bucket } = ctx.location();
+	const client = clientOf({ ctx });
 	let lastError: unknown;
 	for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt++) {
 		// Fresh marker per attempt: a retry reusing the first marker can overwrite a
@@ -72,7 +61,7 @@ export const writeEdgeConfigTimestamp = async ({
 			await client.send(
 				new PutObjectCommand({
 					Bucket: bucket,
-					Key: ADMIN_EDGE_CONFIG_TIMESTAMP_KEY,
+					Key: EDGE_CONFIG_TIMESTAMP_KEY,
 					Body: JSON.stringify({ updatedAt, changeId }),
 					ContentType: "application/json",
 				}),
@@ -87,6 +76,5 @@ export const writeEdgeConfigTimestamp = async ({
 			}
 		}
 	}
-
 	throw lastError;
 };

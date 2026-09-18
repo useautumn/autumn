@@ -25,6 +25,7 @@ import { handleGetAdminAsyncTrackConfig } from "./handleGetAdminAsyncTrackConfig
 import { handleGetAdminBalanceShadowConfig } from "./handleGetAdminBalanceShadowConfig.js";
 import { handleGetAdminBatchResetConfig } from "./handleGetAdminBatchResetConfig";
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
+import { handleGetAdminDbControlConfig } from "./handleGetAdminDbControlConfig.js";
 import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
 import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
 import { handleGetAdminFullSubjectGateConfig } from "./handleGetAdminFullSubjectGateConfig";
@@ -59,6 +60,7 @@ import { handleUpsertAdminAsyncTrackConfig } from "./handleUpsertAdminAsyncTrack
 import { handleUpsertAdminBalanceShadowConfig } from "./handleUpsertAdminBalanceShadowConfig.js";
 import { handleUpsertAdminBatchResetConfig } from "./handleUpsertAdminBatchResetConfig";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
+import { handleUpsertAdminDbControlConfig } from "./handleUpsertAdminDbControlConfig.js";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
 import { handleUpsertAdminFullSubjectGateConfig } from "./handleUpsertAdminFullSubjectGateConfig";
 import { handleUpsertAdminJobQueueConfig } from "./handleUpsertAdminJobQueueConfig";
@@ -156,6 +158,8 @@ honoAdminRouter.put(
 	"/balance-shadow-config",
 	...handleUpsertAdminBalanceShadowConfig,
 );
+honoAdminRouter.get("/db-control-config", ...handleGetAdminDbControlConfig);
+honoAdminRouter.put("/db-control-config", ...handleUpsertAdminDbControlConfig);
 honoAdminRouter.get(
 	"/full-subject-gate-config",
 	...handleGetAdminFullSubjectGateConfig,

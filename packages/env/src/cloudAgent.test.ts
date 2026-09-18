@@ -2,9 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { isCloudAgent } from "./cloudAgent.js";
 
 describe("isCloudAgent", () => {
-	test.each(["1", "true"] as const)("CLOUD_AGENT=%s is a Cloud agent", (value) => {
-		expect(isCloudAgent({ env: { CLOUD_AGENT: value } })).toBe(true);
-	});
+	test.each(["1", "true"] as const)(
+		"CLOUD_AGENT=%s is a Cloud agent",
+		(value) => {
+			expect(isCloudAgent({ env: { CLOUD_AGENT: value } })).toBe(true);
+		},
+	);
 
 	test.each(["1", "true"] as const)(
 		"DW_HEADLESS=%s still counts (legacy name)",

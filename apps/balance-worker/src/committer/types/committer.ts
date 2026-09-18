@@ -2,10 +2,15 @@ import type { DurableMutationRecord } from "../../state/types/durableMutation.js
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { CommitterDb } from "../../types/committerDb.js";
 
+/** Knobs an operator can move while the worker runs; null leaves the boot value in place. */
+export type CommitterControl = { concurrency: number | null };
+
 export type CommitterContext = {
 	db: CommitterDb;
 	/** Backoff between retries; tests stand it in. */
 	sleep?: (params: { delayMs: number }) => Promise<void>;
+	/** Read on every flush start; absent means the boot config is the only source. */
+	control?: { read(): CommitterControl };
 };
 
 export type FlushRetryPolicy = {
@@ -16,7 +21,7 @@ export type FlushRetryPolicy = {
 };
 
 export type CommitterConfig = {
-	/** Flushes in flight at once; one per pool connection is the natural ceiling. */
+	/** Flushes in flight at once, and the ceiling any live control is clamped to: one per pool connection. */
 	concurrency: number;
 	/** Row changes one flush may carry; a hot partition cannot crowd out the others. */
 	maxRowsPerFlush: number;

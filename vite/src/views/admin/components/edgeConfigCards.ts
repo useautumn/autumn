@@ -40,6 +40,7 @@ export type EdgeConfigCardId =
 	| "misc-redis"
 	| "cache-v2-ramp"
 	| "full-subject-gate"
+	| "db-control"
 	| "miscellaneous";
 
 export type QueueCronCardId =
@@ -409,6 +410,27 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 								label: parts.join(" | "),
 								tone: axiomResponseBodyReductionDisabled ? "warning" : "active",
 							};
+				},
+			},
+		],
+	},
+	{
+		id: "postgres",
+		title: "Postgres",
+		description: "Live knobs on how our processes drive the database.",
+		cards: [
+			{
+				id: "db-control",
+				title: "DB Control",
+				description:
+					"Balance committer concurrency per worker; more clients as they move to Postgres.",
+				icon: Database,
+				endpoint: "/admin/db-control-config",
+				deriveStatus: (data) => {
+					const committer = asRecord(asRecord(data).balanceCommitter);
+					return typeof committer.concurrency === "number"
+						? { label: `${committer.concurrency} lanes`, tone: "active" }
+						: { label: "Pool size", tone: "neutral" };
 				},
 			},
 		],

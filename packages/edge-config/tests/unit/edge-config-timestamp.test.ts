@@ -1,10 +1,12 @@
 import { describe, expect, jest, test } from "bun:test";
 import type { S3Client } from "@aws-sdk/client-s3";
-import { ADMIN_EDGE_CONFIG_TIMESTAMP_KEY } from "@/external/aws/s3/adminS3Config.js";
 import {
+	EDGE_CONFIG_TIMESTAMP_KEY,
 	readEdgeConfigTimestamp,
 	writeEdgeConfigTimestamp,
-} from "@/internal/misc/edgeConfig/edgeConfigTimestamp.js";
+} from "../../src/edgeConfig.js";
+
+const location = () => ({ bucket: "autumn-test-server", region: "us-east-2" });
 
 const makeBody = (data: unknown) => ({
 	Body: {
@@ -20,7 +22,7 @@ describe("edge config timestamp", () => {
 			),
 		} as unknown as S3Client;
 
-		expect(await readEdgeConfigTimestamp({ s3Client })).toBe(
+		expect(await readEdgeConfigTimestamp({ ctx: { location, s3Client } })).toBe(
 			"2026-01-01T00:00:00.000Z:abc",
 		);
 	});
@@ -34,20 +36,24 @@ describe("edge config timestamp", () => {
 			}),
 		} as unknown as S3Client;
 
-		expect(await readEdgeConfigTimestamp({ s3Client })).toBeNull();
+		expect(
+			await readEdgeConfigTimestamp({ ctx: { location, s3Client } }),
+		).toBeNull();
 	});
 
 	test("writes the shared timestamp object", async () => {
 		const send = jest.fn(async (_command: unknown) => ({}));
 		const s3Client = { send } as unknown as S3Client;
 
-		const timestamp = await writeEdgeConfigTimestamp({ s3Client });
+		const timestamp = await writeEdgeConfigTimestamp({
+			ctx: { location, s3Client },
+		});
 		const command = send.mock.calls[0]![0] as {
 			input: { Key: string; Body: string };
 		};
 		const body = JSON.parse(command.input.Body);
 
-		expect(command.input.Key).toBe(ADMIN_EDGE_CONFIG_TIMESTAMP_KEY);
+		expect(command.input.Key).toBe(EDGE_CONFIG_TIMESTAMP_KEY);
 		expect(timestamp).toBe(`${body.updatedAt}:${body.changeId}`);
 	});
 
@@ -62,7 +68,9 @@ describe("edge config timestamp", () => {
 		});
 		const s3Client = { send } as unknown as S3Client;
 
-		const timestamp = await writeEdgeConfigTimestamp({ s3Client });
+		const timestamp = await writeEdgeConfigTimestamp({
+			ctx: { location, s3Client },
+		});
 
 		expect(attempts).toBe(3);
 		expect(timestamp).toContain(":");
@@ -82,7 +90,9 @@ describe("edge config timestamp", () => {
 		});
 		const s3Client = { send } as unknown as S3Client;
 
-		const timestamp = await writeEdgeConfigTimestamp({ s3Client });
+		const timestamp = await writeEdgeConfigTimestamp({
+			ctx: { location, s3Client },
+		});
 		const changeIds = bodies.map((b) => JSON.parse(b).changeId);
 
 		expect(new Set(changeIds).size).toBe(2);
@@ -95,8 +105,8 @@ describe("edge config timestamp", () => {
 		});
 		const s3Client = { send } as unknown as S3Client;
 
-		await expect(writeEdgeConfigTimestamp({ s3Client })).rejects.toThrow(
-			"AccessDenied",
-		);
+		await expect(
+			writeEdgeConfigTimestamp({ ctx: { location, s3Client } }),
+		).rejects.toThrow("AccessDenied");
 	});
 });

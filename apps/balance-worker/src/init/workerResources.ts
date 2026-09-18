@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { MeteringIdentity } from "@autumn/balance-engine";
+import type { EdgeConfigLogger } from "@autumn/edge-config";
 import {
 	createKafkaClient,
 	createKafkaTransport,
@@ -14,6 +15,7 @@ import {
 	DEFAULT_COMMITTER_CONFIG,
 } from "../committer/createCommitter.js";
 import { createCommitterStateStore } from "../committer/createCommitterStateStore.js";
+import { createWorkerEdgeConfigs } from "../edgeConfig/createWorkerEdgeConfigs.js";
 import {
 	createCommitterDb,
 	createWorkerDb,
@@ -47,10 +49,12 @@ export type WorkerBootstrapConfig = {
 };
 
 export async function openWorkerResources({
+	ctx: dependencies = {},
 	config,
 	checkpointConfig,
 	bootstrap,
 }: {
+	ctx?: { logger?: EdgeConfigLogger };
 	config: BalanceWorkerConfig;
 	checkpointConfig: WorkerCheckpointConfig;
 	bootstrap: WorkerBootstrapConfig;
@@ -92,6 +96,13 @@ export async function openWorkerResources({
 		await validateBalanceWorkerTopics({ admin, env });
 		const postgres = getPostgresClient({ env });
 		const db = createWorkerDb({ ctx: { postgres } });
+		const edgeConfigs = createWorkerEdgeConfigs({
+			ctx: { logger: dependencies.logger },
+			config: { location: { bucket: env.S3_BUCKET, region: env.S3_REGION } },
+		});
+		function readCommitterControl() {
+			return edgeConfigs.dbControl.get().balanceCommitter;
+		}
 		const catalogCache = createCatalogCache({
 			ctx: {
 				db,
@@ -124,7 +135,10 @@ export async function openWorkerResources({
 			const committerStore = createCommitterStateStore({
 				ctx: {
 					committer: createCommitter({
-						ctx: { db: committerDb },
+						ctx: {
+							db: committerDb,
+							control: { read: readCommitterControl },
+						},
 						config: {
 							...DEFAULT_COMMITTER_CONFIG,
 							concurrency: env.BALANCE_WORKER_DATABASE_POOL_SIZE,
@@ -147,6 +161,7 @@ export async function openWorkerResources({
 				partitionResolver,
 				bootstrapper,
 				checkpoints,
+				edgeConfigs,
 			},
 		});
 	} catch (cause) {
@@ -219,6 +234,7 @@ export function createWorkerResources({
 		const pending: Promise<void>[] = [];
 		for (const runtime of [...runtimes]) pending.push(settleRuntime(runtime));
 		if (ctx.checkpoints) pending.push(ctx.checkpoints.stop());
+		ctx.edgeConfigs?.stop();
 		const results = await Promise.allSettled(pending);
 		await ctx.admin.disconnect();
 		await ctx.postgres.close();

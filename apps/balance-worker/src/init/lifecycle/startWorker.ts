@@ -18,6 +18,7 @@ async function completeWorkerStartup({
 }: WorkerLifecycleScope): Promise<void> {
 	state.status = "starting";
 	try {
+		await ctx.edgeConfigs?.start();
 		state.listener = ctx.listen();
 		ctx.healthReporter?.start();
 		await ctx.partitions.start();
