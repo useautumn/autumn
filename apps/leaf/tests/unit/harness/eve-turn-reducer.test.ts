@@ -17,6 +17,7 @@ const approvalRequest = ({
 	action: { callId: requestId, input, kind: "tool-call", toolName },
 	allowFreeform: false,
 	display: "confirmation",
+	kind: "tool-approval",
 	options: [
 		{ id: "approve", label: "Yes" },
 		{ id: "deny", label: "No" },
