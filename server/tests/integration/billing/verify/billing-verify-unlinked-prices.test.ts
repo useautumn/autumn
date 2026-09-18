@@ -17,6 +17,12 @@
  *       strict -> mismatched.
  *     - Prepaid unlinked with a drifted quantity (total $ differs) -> still
  *       mismatched non-strict (totals comparison, not swallowed).
+ *     - A consumable or allocated price with no stripe_price_id for the
+ *       customer's currency contributes no expected item instead of throwing.
+ *       Non-base-currency prices are materialized in Stripe lazily (at attach /
+ *       migrate, never at catalog init), so an id-less one is normal state for
+ *       an imported customer -> no expected_state_error, and the rest of the
+ *       subscription still gets evaluated instead of being aborted.
  *   Side effects: none — verify stays read-only.
  *
  * Pre-impl red: spec builders throw on missing Stripe ids, so every verify
@@ -428,5 +434,87 @@ test.concurrent(
 					mismatch.type === "prepaid_quantity_mismatch",
 			),
 		).toBe(true);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("billing-verify unlinked-prices 6: consumable without stripe_price_id -> no expected_state_error")}`,
+	async () => {
+		const customerId = "verify-unlinked-consumable";
+
+		const pro = products.pro({
+			id: "pro",
+			items: [items.consumableMessages({ includedUsage: 200, price: 0.1 })],
+		});
+
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		await clearPriceStripeIds({
+			ctx,
+			productId: pro.id,
+			featureId: TestFeature.Messages,
+			slots: ["stripe_price_id", "stripe_empty_price_id"],
+		});
+
+		// ── Contract: the unrenderable usage price no longer aborts the whole
+		// subscription; the base price is still evaluated ──────────────────
+		const result = await verify({ ctx, params: { customer_id: customerId } });
+		expect(
+			result.subscriptions[0].mismatches.filter(
+				(mismatch) => mismatch.type === "expected_state_error",
+			),
+		).toEqual([]);
+		expect(
+			result.subscriptions[0].mismatches.some(
+				(mismatch) => mismatch.type === "base_price_mismatch",
+			),
+		).toBe(false);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("billing-verify unlinked-prices 7: allocated without stripe_price_id -> no expected_state_error")}`,
+	async () => {
+		const customerId = "verify-unlinked-allocated";
+
+		const pro = products.pro({
+			id: "pro",
+			items: [items.allocatedV2Users({ includedUsage: 0, pricePerUnit: 10 })],
+		});
+
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		await clearPriceStripeIds({
+			ctx,
+			productId: pro.id,
+			featureId: TestFeature.Users,
+			slots: ["stripe_price_id", "stripe_empty_price_id"],
+		});
+
+		const result = await verify({ ctx, params: { customer_id: customerId } });
+		expect(
+			result.subscriptions[0].mismatches.filter(
+				(mismatch) => mismatch.type === "expected_state_error",
+			),
+		).toEqual([]);
+		expect(
+			result.subscriptions[0].mismatches.some(
+				(mismatch) => mismatch.type === "base_price_mismatch",
+			),
+		).toBe(false);
 	},
 );
