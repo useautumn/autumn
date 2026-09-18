@@ -123,7 +123,9 @@ const seedTerminalRun = async ({
 	return status;
 };
 
-/** Mirrors the production bug: started, never settled, trigger handle dead. */
+/** Mirrors the production bug: started, never settled. No trigger handle, so
+ * the reconcile skips it rather than retrying a fake id against the platform
+ * on every 2s poll. */
 const seedAbandonedRun = async ({
 	ctx,
 	migrationInternalId,
@@ -142,7 +144,6 @@ const seedAbandonedRun = async ({
 		updates: {
 			status: MigrationRunStatus.Running,
 			started_at: Date.now() - ms.days(1),
-			trigger_run_id: "run_qa_abandoned_never_enqueued",
 		},
 	});
 	return inserted.internal_id;
