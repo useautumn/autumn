@@ -38,6 +38,23 @@ export const slackMentionedUserIds = ({ raw }: { raw: unknown }): string[] => {
 	return [...new Set(ids)];
 };
 
+/** Whom a message addresses, relative to the bot. Without a known bot id a
+ * mention can't be classified, so neither flag is set: delivery stays
+ * conditional, but the message is never described as addressed to others. */
+export const slackSpeakerMentions = ({
+	botUserId,
+	mentionedUserIds,
+}: {
+	botUserId?: string | null;
+	mentionedUserIds: ReadonlyArray<string>;
+}): { mentionsAgent: boolean; mentionsOthers: boolean } => {
+	if (!botUserId) return { mentionsAgent: false, mentionsOthers: false };
+	return {
+		mentionsAgent: mentionedUserIds.includes(botUserId),
+		mentionsOthers: mentionedUserIds.some((id) => id !== botUserId),
+	};
+};
+
 export const slackMessageMentionsUser = ({
 	raw,
 	userId,
