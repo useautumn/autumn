@@ -10,12 +10,13 @@
  *   stripe_price_id per version (versions often share one Stripe price)
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import { BillingInterval, BillingMethod, type FullProduct } from "@autumn/shared";
 import {
 	expectPriceStripeReuseCorrect,
 	expectPriceStripeResourcesPresent,
 	findFeaturePrice,
+	stripeConfigValue,
 } from "@tests/integration/utils/expectStripePriceResources.js";
 import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -201,4 +202,83 @@ test.concurrent(
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
 	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 stripe immutability: usage to prepaid ignores the old metered processor price")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("stripe_usage_prepaid");
+
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "Usage to Prepaid",
+						items: [
+							{
+								feature_id: TestFeature.Messages,
+								included: 0,
+								price: {
+									amount: 0.1,
+									interval: BillingInterval.Month,
+									billing_method: BillingMethod.UsageBased,
+									billing_units: 1,
+								},
+							},
+						],
+					},
+				],
+			});
+
+			const before = await initPlanStripeResources({ ctx, planId });
+			const beforePrice = findFeaturePrice({
+				product: before,
+				featureId: TestFeature.Messages,
+			});
+			const meteredPriceId = stripeConfigValue({
+				price: beforePrice,
+				field: "stripe_price_id",
+			});
+			expect(meteredPriceId).toMatch(/^price_/);
+
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						items: [
+							{
+								feature_id: TestFeature.Messages,
+								included: 100,
+								price: {
+									amount: 10,
+									interval: BillingInterval.Month,
+									billing_method: BillingMethod.Prepaid,
+									billing_units: 100,
+									processors: {
+										stripe: { price_id: meteredPriceId! },
+									},
+								},
+							},
+						],
+					},
+				],
+			});
+
+			const afterPrice = findFeaturePrice({
+				product: await getFull({ ctx, planId }),
+				featureId: TestFeature.Messages,
+			});
+			expect(
+				stripeConfigValue({
+					price: afterPrice,
+					field: "stripe_prepaid_price_v2_id",
+				}),
+			).not.toBe(meteredPriceId);
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+	30_000,
 );

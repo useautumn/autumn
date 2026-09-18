@@ -47,12 +47,12 @@ export const createReward = async ({
 			ctx,
 			priceIds: reward.discount_config?.price_ids ?? [],
 		});
-		await initRewardStripePrices({ ctx, prices });
+		const initializedPrices = await initRewardStripePrices({ ctx, prices });
 		await createStripeCoupon({
 			reward,
 			org,
 			env,
-			prices,
+			prices: initializedPrices,
 			logger,
 			legacyVersion: legacyStripe,
 		});

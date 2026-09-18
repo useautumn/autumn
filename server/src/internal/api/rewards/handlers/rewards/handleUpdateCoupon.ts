@@ -22,7 +22,10 @@ import { getRewardPrices } from "@/internal/rewards/actions/getRewardPrices.js";
 import { validateRewardUniqueness } from "@/internal/rewards/actions/validateRewardUniqueness.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import { rewardMutationLock } from "@/internal/rewards/rewardLock.js";
-import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
+import {
+	getRewardCat,
+	initRewardStripePrices,
+} from "@/internal/rewards/rewardUtils.js";
 
 const UpdateCouponParamsSchema = z.object({
 	internalId: z.string(),
@@ -114,6 +117,7 @@ export const handleUpdateCoupon = createRoute({
 		// Preflight before deleting the old Stripe coupon, so a plan missing
 		// in Stripe fails the update while the existing coupon is still intact.
 		if (willRecreateStripeCoupon) {
+			prices = await initRewardStripePrices({ ctx, prices });
 			resolveCouponStripeProductIds({ reward: updatedReward, prices });
 		}
 
