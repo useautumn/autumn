@@ -123,15 +123,17 @@ const seedTerminalRun = async ({
 	return status;
 };
 
-/** Mirrors the production bug: started, never settled. No trigger handle, so
- * the reconcile skips it rather than retrying a fake id against the platform
- * on every 2s poll. */
+/** Mirrors the production bug: the row says running, the task is long dead.
+ * Reuses a real terminal handle so the reconcile can settle it, as it would in
+ * production. */
 const seedAbandonedRun = async ({
 	ctx,
 	migrationInternalId,
+	triggerRunId,
 }: {
 	ctx: ScenarioCtx;
 	migrationInternalId: string;
+	triggerRunId: string | null;
 }) => {
 	const inserted = await migrationRunRepo.insert({
 		ctx,
@@ -144,6 +146,7 @@ const seedAbandonedRun = async ({
 		updates: {
 			status: MigrationRunStatus.Running,
 			started_at: Date.now() - ms.days(1),
+			...(triggerRunId ? { trigger_run_id: triggerRunId } : {}),
 		},
 	});
 	return inserted.internal_id;
@@ -239,9 +242,16 @@ test(`${chalk.yellowBright("migration-setup: no-op run status + scoped progress 
 		migrationId: "qa-abandoned",
 		planId: convergedPlan.id,
 	});
+	// A finished run's handle: the platform reports it terminal, so the
+	// reconcile settles this row the way it would in production.
+	const [deadRun] = await migrationRunRepo.list({
+		ctx,
+		migrationInternalId: changes.internal_id,
+	});
 	const abandonedRunId = await seedAbandonedRun({
 		ctx,
 		migrationInternalId: abandoned.internal_id,
+		triggerRunId: deadRun?.trigger_run_id ?? null,
 	});
 
 	console.log(
