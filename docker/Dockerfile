@@ -41,6 +41,8 @@ COPY packages/autumn-js/package.json packages/autumn-js/
 COPY packages/balance-engine/package.json packages/balance-engine/
 COPY packages/balance-worker-client/package.json packages/balance-worker-client/
 COPY packages/kafka/package.json packages/kafka/
+COPY packages/edge-config/package.json packages/edge-config/
+COPY packages/postgres/package.json packages/postgres/
 COPY apps/balance-worker/package.json apps/balance-worker/
 COPY packages/env/package.json packages/env/
 COPY packages/gateway/package.json packages/gateway/
