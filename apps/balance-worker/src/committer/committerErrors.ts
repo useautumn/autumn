@@ -13,19 +13,26 @@ export class StaleSubjectRowsError extends Error {
 	}
 }
 
-export class PartitionProgressConflictError extends Error {
+/** Behind a record that would not land: the log has it, Postgres will once recovery clears the way. */
+export class FlushRecordBlockedError extends Error {
 	constructor({
-		topic,
-		partition,
-		expectedOffset,
+		mutationId,
+		blockedBy,
 	}: {
-		topic: string;
-		partition: number;
-		expectedOffset: bigint;
+		mutationId: string;
+		blockedBy: string;
 	}) {
-		super(
-			`Partition progress for ${topic}[${partition}] is not at ${expectedOffset}`,
-		);
-		this.name = "PartitionProgressConflictError";
+		super(`Log record ${mutationId} waits behind ${blockedBy}`);
+		this.name = "FlushRecordBlockedError";
+	}
+}
+
+/** A record that would not land on its own after retries: the log has it, Postgres does not. */
+export class FlushRecordFailedError extends Error {
+	constructor({ mutationId, cause }: { mutationId: string; cause: unknown }) {
+		super(`Log record could not be committed to Postgres: ${mutationId}`, {
+			cause,
+		});
+		this.name = "FlushRecordFailedError";
 	}
 }

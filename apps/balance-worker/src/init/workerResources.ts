@@ -9,7 +9,10 @@ import {
 import { Kafka } from "kafkajs";
 import { createCatalogCache } from "../catalog/createCatalogCache.js";
 import type { PartitionCheckpointSource } from "../checkpoint/partitionCheckpointSource.js";
-import { createCommitter } from "../committer/createCommitter.js";
+import {
+	createCommitter,
+	DEFAULT_COMMITTER_CONFIG,
+} from "../committer/createCommitter.js";
 import { createCommitterStateStore } from "../committer/createCommitterStateStore.js";
 import {
 	createCommitterDb,
@@ -120,7 +123,13 @@ export async function openWorkerResources({
 			const committerDb = createCommitterDb({ ctx: { postgres } });
 			const committerStore = createCommitterStateStore({
 				ctx: {
-					committer: createCommitter({ ctx: { db: committerDb } }),
+					committer: createCommitter({
+						ctx: { db: committerDb },
+						config: {
+							...DEFAULT_COMMITTER_CONFIG,
+							concurrency: env.BALANCE_WORKER_DATABASE_POOL_SIZE,
+						},
+					}),
 					db: committerDb,
 				},
 			});

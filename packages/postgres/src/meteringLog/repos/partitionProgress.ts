@@ -51,26 +51,3 @@ export const insertPartitionProgress = async ({
 		VALUES (${topic}, ${partition}, ${nextOffset})
 	`);
 };
-
-/** Guarded by the expected offset so a stale writer cannot rewind or skip the bookmark. */
-export const advancePartitionProgress = async ({
-	ctx,
-	topic,
-	partition,
-	expectedOffset,
-	nextOffset,
-}: {
-	ctx: ProgressContext;
-	expectedOffset: bigint;
-	nextOffset: bigint;
-} & PartitionPosition): Promise<{ advanced: boolean }> => {
-	const rows = await ctx.db.execute(sql`
-		UPDATE partition_progress
-		SET next_offset = ${nextOffset}
-		WHERE topic = ${topic}
-			AND partition_id = ${partition}
-			AND next_offset = ${expectedOffset}
-		RETURNING topic
-	`);
-	return { advanced: rows.length === 1 };
-};

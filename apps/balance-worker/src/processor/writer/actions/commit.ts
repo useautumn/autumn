@@ -105,9 +105,17 @@ async function applyBatch({
 		if (results.length !== batch.length) {
 			throw new Error("Durable apply result count did not match batch");
 		}
+		// Landed records reply before anything else: their callers must never see a failure that was not theirs.
+		let firstFailure: unknown = null;
 		for (const [index, pending] of batch.entries()) {
 			const result = results[index];
 			if (!result) throw new Error("Expected durable apply result");
+			if (result.kind === "failed") {
+				firstFailure ??= result.cause;
+				removePendingMutation({ state: scope.state, pending });
+				pending.settlement.reject({ error: result.cause });
+				continue;
+			}
 			const mutation = persistedMutationOf({ scope, result, pending });
 			scope.state.subjects.rememberCommand({
 				customerKey: pending.customerKey,
@@ -120,6 +128,10 @@ async function applyBatch({
 				mutation,
 				state: pending.nextState,
 			});
+		}
+		if (firstFailure !== null) {
+			enterRecovery({ scope, cause: firstFailure });
+			return false;
 		}
 		return true;
 	} catch (cause) {

@@ -1,19 +1,14 @@
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import {
-	advancePartitionProgress,
-	applySubjectRowUpdates,
+	commitFlush,
 	createPostgresClient,
 	getCatalogRows,
 	getSubjectRows,
 	insertPartitionProgress,
 	type PostgresClient,
-	type PostgresExecutor,
 	readNextOffset,
 } from "@autumn/postgres";
-import type {
-	CommitterDb,
-	CommitterTransaction,
-} from "../../types/committerDb.js";
+import type { CommitterDb } from "../../types/committerDb.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 
 let postgresClient: PostgresClient | undefined;
@@ -67,16 +62,8 @@ export const createWorkerDb = ({
 		}),
 });
 
-const bindCommitterTransaction = ({
-	db,
-}: {
-	db: PostgresExecutor;
-}): CommitterTransaction => ({
-	applySubjectRowUpdates: ({ updates }) =>
-		applySubjectRowUpdates({ ctx: { db }, updates }),
-	advancePartitionProgress: (params) =>
-		advancePartitionProgress({ ctx: { db }, ...params }),
-});
+/** A flush must be quick or fail: the server cancels it past this, and the committer retries. */
+const FLUSH_STATEMENT_TIMEOUT_MS = 2_000;
 
 export const createCommitterDb = ({
 	ctx,
@@ -87,8 +74,10 @@ export const createCommitterDb = ({
 		readNextOffset({ ctx: { db: ctx.postgres.db }, ...params }),
 	insertPartitionProgress: (params) =>
 		insertPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
-	transaction: (run) =>
-		ctx.postgres.db.transaction((tx) =>
-			run(bindCommitterTransaction({ db: tx })),
-		),
+	flush: (request) =>
+		commitFlush({
+			ctx: { db: ctx.postgres.db },
+			request,
+			statementTimeoutMs: FLUSH_STATEMENT_TIMEOUT_MS,
+		}),
 });

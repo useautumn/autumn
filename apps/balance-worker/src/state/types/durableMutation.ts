@@ -12,7 +12,9 @@ export type DurableMutationApplyResult =
 			mutation: MutationRecord;
 			nextOffset: bigint;
 	  }
-	| { kind: "position_already_applied"; nextOffset: bigint };
+	| { kind: "position_already_applied"; nextOffset: bigint }
+	/** On the log but not in the store: the record itself would not land, or one before it would not. */
+	| { kind: "failed"; mutation: MutationRecord; cause: unknown };
 
 /** The SQLite store also hands back the state it wrote; tests and checkpoints read it. */
 export type SqliteDurableMutationApplyResult =

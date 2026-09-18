@@ -1,16 +1,6 @@
-import type { SubjectRowUpdate } from "@autumn/postgres";
+import type { FlushRequest, FlushResult } from "@autumn/postgres";
 
 type PartitionPosition = { topic: string; partition: number };
-
-/** What one flush may do inside its transaction: move rows, then advance the bookmark. */
-export type CommitterTransaction = {
-	applySubjectRowUpdates(params: {
-		updates: readonly SubjectRowUpdate[];
-	}): Promise<{ applied: boolean[] }>;
-	advancePartitionProgress(
-		params: PartitionPosition & { expectedOffset: bigint; nextOffset: bigint },
-	): Promise<{ advanced: boolean }>;
-};
 
 /** Postgres as the committer writes it. Tests stand this in. */
 export type CommitterDb = {
@@ -18,7 +8,6 @@ export type CommitterDb = {
 	insertPartitionProgress(
 		params: PartitionPosition & { nextOffset: bigint },
 	): Promise<void>;
-	transaction<Result>(
-		run: (tx: CommitterTransaction) => Promise<Result>,
-	): Promise<Result>;
+	/** One transaction: every row update, then every bookmark; rolls back when a bookmark did not move. */
+	flush(request: FlushRequest): Promise<FlushResult>;
 };

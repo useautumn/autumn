@@ -6,6 +6,10 @@ import type {
 	DurableMutationApplyResult,
 	DurableMutationRecord,
 } from "../../state/types/durableMutation.js";
+import {
+	FlushRecordBlockedError,
+	FlushRecordFailedError,
+} from "../committerErrors.js";
 import type { CommitterStateStoreContext } from "../types/committerStateStoreContext.js";
 
 /**
@@ -65,19 +69,39 @@ export const applyDurableMutations = async ({
 	);
 	if (pending.length === 0) return results;
 
-	const { nextOffset } = await ctx.committer.apply({
+	const outcome = await ctx.committer.apply({
 		topic,
 		partition,
 		expectedOffset,
 		records: pending,
 	});
-	ctx.progress.setNextOffset({ topic, partition, nextOffset });
+	ctx.progress.setNextOffset({
+		topic,
+		partition,
+		nextOffset: outcome.nextOffset,
+	});
+	// Everything before the failed record is in Postgres and the bookmark says so; the rest waits for recovery.
+	const failedId = outcome.failure?.record.mutation.id ?? null;
 	for (const record of pending) {
-		results.push({
-			kind: "applied",
-			mutation: record.mutation,
-			nextOffset: record.position.offset + 1n,
-		});
+		if (record.position.offset < outcome.nextOffset) {
+			results.push({
+				kind: "applied",
+				mutation: record.mutation,
+				nextOffset: record.position.offset + 1n,
+			});
+			continue;
+		}
+		const cause =
+			outcome.failure && record.mutation.id === failedId
+				? new FlushRecordFailedError({
+						mutationId: failedId,
+						cause: outcome.failure.cause,
+					})
+				: new FlushRecordBlockedError({
+						mutationId: record.mutation.id,
+						blockedBy: failedId ?? "an earlier record",
+					});
+		results.push({ kind: "failed", mutation: record.mutation, cause });
 	}
 	return results;
 };

@@ -201,4 +201,94 @@ describe("writer over a store with no resident state", () => {
 			balanceOf(writer.readFreshestState({ identity: testIdentity })),
 		).toBe(95);
 	});
+
+	test("a store that lands some records and fails one: landed callers reply, the failed one rejects, the writer recovers", async () => {
+		const poisonId = "cmd_2";
+		const stateStore: PartitionWriterContext["stateStore"] = {
+			readState: () => null,
+			readOwnState: () => null,
+			readReceipt: () => null,
+			// Like the committer store: records at and after the one that would not land are failed.
+			applyDurableMutations: async ({ records }) => {
+				let blocked = false;
+				return records.map((record) => {
+					blocked ||= record.mutation.id === poisonId;
+					return blocked
+						? {
+								kind: "failed" as const,
+								mutation: record.mutation,
+								cause: new Error(
+									record.mutation.id === poisonId ? "row refused" : "blocked",
+								),
+							}
+						: {
+								kind: "applied" as const,
+								mutation: record.mutation,
+								nextOffset: record.position.offset + 1n,
+							};
+				});
+			},
+		};
+		let nextOffset = 0n;
+		const writer = createPartitionWriter({
+			ctx: {
+				stateStore,
+				appender: {
+					appendCommitted: async ({ outcomes }) => {
+						const baseOffset = nextOffset;
+						nextOffset += BigInt(outcomes.length);
+						return { baseOffset };
+					},
+				},
+				receiptPolicy: { retentionMs: 60_000, now: () => 1_700_000_000_000 },
+			},
+			config: {
+				topic,
+				partition,
+				limits: {
+					maxBatchSize: 100,
+					maxPendingCommands: 100,
+					maxPendingCommandsPerCustomer: 10,
+				},
+			},
+		});
+		const initial = createState({ balance: 100 });
+		const decided = ["cmd_1", "cmd_2", "cmd_3"].map((commandId) =>
+			writer.decide(
+				trackSubmission({
+					command: createTrackCommand({
+						identity: testIdentity,
+						commandId,
+						value: 5,
+					}),
+					initial,
+				}),
+			),
+		);
+
+		const settled = await Promise.allSettled(
+			decided.map((d) => d.waitForCommit()),
+		);
+		expect(settled.map((result) => result.status)).toEqual([
+			"fulfilled",
+			"rejected",
+			"rejected",
+		]);
+		expect((settled[1] as PromiseRejectedResult).reason.message).toBe(
+			"row refused",
+		);
+		// cmd_3 landed nowhere: the store never reached it, and recovery rejects what is left.
+		expect(() =>
+			writer.decide(
+				trackSubmission({
+					command: createTrackCommand({
+						identity: testIdentity,
+						commandId: "cmd_4",
+						value: 5,
+					}),
+					initial,
+				}),
+			),
+		).toThrow("Partition writer requires recovery");
+	});
 });

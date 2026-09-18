@@ -14,8 +14,8 @@ function createFakePostgres() {
 			execute: async (query: SQL) => {
 				const { sql, params } = dialect.sqlToQuery(query);
 				statements.push({ via, sql, params });
-				return sql.includes("RETURNING id")
-					? [{ id: String(params[1]) }]
+				return sql.includes("AS bookmarks")
+					? [{ applied: [1], bookmarks: 1 }]
 					: [{ topic: "metering" }];
 			},
 		};
@@ -30,7 +30,7 @@ function createFakePostgres() {
 }
 
 describe("createCommitterDb", () => {
-	test("runs row updates and the progress advance on the transaction, reads on the pool", async () => {
+	test("a flush is one transaction: the statement timeout, one statement, and the counts read back", async () => {
 		const fake = createFakePostgres();
 		const committerDb = createCommitterDb({
 			ctx: { postgres: { db: fake.db as never } },
@@ -41,35 +41,37 @@ describe("createCommitterDb", () => {
 			partition: 7,
 			nextOffset: 43n,
 		});
-		const result = await committerDb.transaction(async (tx) => {
-			const { applied } = await tx.applySubjectRowUpdates({
-				updates: [
-					{
-						kind: "add",
-						table: "customerEntitlements",
-						id: "ce_1",
-						add: { balance: -5 },
-						addEntries: {},
-						guard: {},
-					},
-				],
-			});
-			const { advanced } = await tx.advancePartitionProgress({
-				topic: "metering",
-				partition: 7,
-				expectedOffset: 43n,
-				nextOffset: 44n,
-			});
-			return { applied, advanced };
+		const result = await committerDb.flush({
+			changes: [
+				{
+					op: "update",
+					table: "customerEntitlements",
+					id: "ce_1",
+					set: {},
+					add: { balance: -5 },
+					addEntries: {},
+					guard: {},
+				},
+			],
+			bookmarks: [
+				{
+					topic: "metering",
+					partition: 7,
+					expectedOffset: 43n,
+					nextOffset: 44n,
+				},
+			],
 		});
 
-		expect(result).toEqual({ applied: [true], advanced: true });
+		expect(result).toEqual({ applied: [true] });
 		expect(fake.statements.map((statement) => statement.via)).toEqual([
 			"pool",
 			"tx",
 			"tx",
 		]);
-		expect(fake.statements[1]?.sql).toContain('UPDATE "customer_entitlements"');
+		expect(fake.statements[1]?.sql).toBe("SET LOCAL statement_timeout = 2000");
+		expect(fake.statements[2]?.sql).toContain('WITH "u0" AS (');
+		expect(fake.statements[2]?.sql).toContain('UPDATE "customer_entitlements"');
 		expect(fake.statements[2]?.sql).toContain("UPDATE partition_progress");
 	});
 });

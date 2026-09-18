@@ -2,18 +2,64 @@ import type { DurableMutationRecord } from "../../state/types/durableMutation.js
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { CommitterDb } from "../../types/committerDb.js";
 
-export type CommitterContext = { db: CommitterDb };
+export type CommitterContext = {
+	db: CommitterDb;
+	/** Backoff between retries; tests stand it in. */
+	sleep?: (params: { delayMs: number }) => Promise<void>;
+};
+
+export type FlushRetryPolicy = {
+	/** Attempts per flush before a transient failure is treated as permanent. */
+	maxAttempts: number;
+	initialBackoffMs: number;
+	maxBackoffMs: number;
+};
+
+export type CommitterConfig = {
+	/** Flushes in flight at once; one per pool connection is the natural ceiling. */
+	concurrency: number;
+	/** Row changes one flush may carry; a hot partition cannot crowd out the others. */
+	maxRowsPerFlush: number;
+	retry: FlushRetryPolicy;
+};
 
 export type PartitionPosition = { topic: string; partition: number };
 
-/** Lands committed log records in Postgres: one partition batch, one transaction. */
+/** Where a call's records stopped landing. Without `failure`, every record is in Postgres. */
+export type FlushOutcome = {
+	nextOffset: bigint;
+	failure?: { record: DurableMutationRecord; cause: unknown };
+};
+
+/** One partition writer's batch, waiting for the flush that will carry it. */
+export type FlushCall = PartitionPosition & {
+	expectedOffset: bigint;
+	records: readonly DurableMutationRecord[];
+	rows: number;
+	settle: ReturnType<typeof Promise.withResolvers<FlushOutcome>>;
+};
+
+/** The calls one transaction carries. */
+export type Flush = { calls: FlushCall[] };
+
+export type CommitterState = { queue: FlushCall[]; inFlight: number };
+
+export type CommitterScope = {
+	ctx: CommitterContext;
+	config: CommitterConfig;
+	state: CommitterState;
+};
+
+/** Lands committed log records in Postgres: every partition's ready batch, one transaction per flush. */
 export type Committer = {
 	apply(
 		params: PartitionPosition & {
 			expectedOffset: bigint;
 			records: readonly DurableMutationRecord[];
 		},
-	): Promise<{ nextOffset: bigint }>;
+	): Promise<FlushOutcome>;
+	/** Resolves once nothing is queued or in flight. */
+	drain(): Promise<void>;
 };
 
 /** The postgres backend's StateStore; the writer's map answers reads, this only commits and bookmarks. */

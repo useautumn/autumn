@@ -96,6 +96,7 @@ function replayedOffsetOf(
 	results: DurableMutationApplyResult[],
 ): { nextOffset: bigint } | undefined {
 	const [result] = results;
+	if (result?.kind === "failed") throw result.cause;
 	if (result?.kind === "position_already_applied") {
 		return { nextOffset: result.nextOffset };
 	}

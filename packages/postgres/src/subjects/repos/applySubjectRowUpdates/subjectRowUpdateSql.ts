@@ -1,5 +1,6 @@
 import { customerEntitlements, rollovers, usageWindows } from "@autumn/shared";
 import { getTableColumns, type SQL, sql } from "drizzle-orm";
+import type { SubjectRowChange } from "../../types/subjectRowChange.js";
 import type {
 	SubjectRowTable,
 	SubjectRowUpdate,
@@ -196,25 +197,37 @@ const mapAddSql = ({
 	return sql`${identifier} = ${value}`;
 };
 
+/** A column both set and added to in one flush lands as `col = $set + $delta`; the fold keeps map columns to one of the two. */
 const assignmentsOf = ({ update }: { update: SubjectRowUpdate }): SQL[] => {
 	const { table } = update;
-	if (update.kind === "set") {
-		return Object.entries(update.set).map(([column, value]) => {
-			const info = columnOf({ table, column });
-			return sql`${sql.identifier(info.name)} = ${valueSql({ info, value })}`;
-		});
+	const assignments: SQL[] = [];
+	for (const [column, value] of Object.entries(update.set)) {
+		const info = columnOf({ table, column });
+		const delta = update.add[column];
+		assignments.push(
+			delta === undefined
+				? sql`${sql.identifier(info.name)} = ${valueSql({ info, value })}`
+				: sql`${sql.identifier(info.name)} = ${value} + ${delta}`,
+		);
 	}
-	return [
-		...Object.entries(update.add).map(([column, delta]) =>
-			addSql({ table, column, delta }),
-		),
-		...Object.entries(update.addEntries).map(([column, entries]) =>
-			mapAddSql({ table, column, entries }),
-		),
-	];
+	for (const [column, delta] of Object.entries(update.add)) {
+		if (column in update.set) continue;
+		assignments.push(addSql({ table, column, delta }));
+	}
+	for (const [column, entries] of Object.entries(update.addEntries)) {
+		if (column in update.set) {
+			throw new SubjectRowColumnNotCounterError({
+				table,
+				column,
+				expected: "added to or replaced, not both",
+			});
+		}
+		assignments.push(mapAddSql({ table, column, entries }));
+	}
+	return assignments;
 };
 
-/** UPDATE … SET <replaced columns, or counters added> WHERE id = $id AND <guards> RETURNING id; no row back means the guard failed or the row is gone. */
+/** UPDATE … SET <replaced columns, counters added> WHERE id = $id AND <guards> RETURNING id; no row back means the guard failed or the row is gone. */
 export const subjectRowUpdateSql = ({
 	update,
 }: {
@@ -234,4 +247,56 @@ export const subjectRowUpdateSql = ({
 		WHERE ${where}
 		RETURNING id
 	`;
+};
+
+/** INSERT … RETURNING id; the shared table is the column allowlist, jsonb values travel as text. */
+export const subjectRowInsertSql = ({
+	table,
+	row,
+}: {
+	table: SubjectRowTable;
+	row: Record<string, unknown>;
+}): SQL => {
+	const entries = Object.entries(row);
+	if (entries.length === 0)
+		throw new Error(`Insert into ${table} has no columns`);
+	const columns = entries.map(([column]) =>
+		sql.identifier(columnOf({ table, column }).name),
+	);
+	const values = entries.map(([column, value]) =>
+		valueSql({ info: columnOf({ table, column }), value }),
+	);
+	return sql`
+		INSERT INTO ${sql.identifier(tableNames[table])} (${sql.join(columns, sql`, `)})
+		VALUES (${sql.join(values, sql`, `)})
+		RETURNING id
+	`;
+};
+
+export const subjectRowDeleteSql = ({
+	table,
+	id,
+}: {
+	table: SubjectRowTable;
+	id: string;
+}): SQL => sql`
+	DELETE FROM ${sql.identifier(tableNames[table])}
+	WHERE id = ${id}
+	RETURNING id
+`;
+
+/** The CTE body for one folded change. */
+export const subjectRowChangeSql = ({
+	change,
+}: {
+	change: SubjectRowChange;
+}): SQL => {
+	switch (change.op) {
+		case "insert":
+			return subjectRowInsertSql({ table: change.table, row: change.row });
+		case "delete":
+			return subjectRowDeleteSql({ table: change.table, id: change.id });
+		case "update":
+			return subjectRowUpdateSql({ update: change });
+	}
 };

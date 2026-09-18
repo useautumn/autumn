@@ -1,23 +1,16 @@
-/** One row's move, as the committer hands it over. A set replaces columns and is refused when the guard no longer holds; an add moves counters on whatever the row holds now. Mirrors the engine's update and increment changes. */
-export type SubjectRowUpdate =
-	| {
-			kind: "set";
-			table: SubjectRowTable;
-			id: string;
-			set: Record<string, unknown>;
-			guard: Record<string, unknown>;
-	  }
-	| {
-			kind: "add";
-			table: SubjectRowTable;
-			id: string;
-			/** Top-level counters, added to the stored value. */
-			add: Record<string, number>;
-			/** Counters inside a jsonb map, by entry key then field, added to the stored entry. */
-			addEntries: Record<string, Record<string, Record<string, number>>>;
-			/** Shape columns the row must still hold for the add to mean anything. */
-			guard: Record<string, unknown>;
-	  };
+/**
+ * One row's move, as the committer hands it over. `set` replaces columns, `add` moves counters on
+ * whatever the row holds, `addEntries` moves counters inside a jsonb map, `guard` names columns the row
+ * must still hold. A row appears once per flush: folding merges every change to it into one of these.
+ */
+export type SubjectRowUpdate = {
+	table: SubjectRowTable;
+	id: string;
+	set: Record<string, unknown>;
+	add: Record<string, number>;
+	addEntries: Record<string, Record<string, Record<string, number>>>;
+	guard: Record<string, unknown>;
+};
 
 export type SubjectRowTable =
 	| "customerEntitlements"

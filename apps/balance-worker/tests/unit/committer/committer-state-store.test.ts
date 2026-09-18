@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { SubjectRowUpdate } from "@autumn/postgres";
+import { type SubjectRowChange, subjectRowIdOf } from "@autumn/postgres";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
@@ -25,7 +25,7 @@ function createFakeCommitterDb({
 	const progress = new Map<string, bigint>();
 	if (storedNextOffset !== null)
 		progress.set(`${topic}[${partition}]`, storedNextOffset);
-	const updates: SubjectRowUpdate[] = [];
+	const updates: SubjectRowChange[] = [];
 	const transactions: ("committed" | "rolled_back")[] = [];
 	const db: CommitterDb = {
 		readNextOffset: async (position) =>
@@ -33,37 +33,33 @@ function createFakeCommitterDb({
 		insertPartitionProgress: async ({ topic, partition, nextOffset }) => {
 			progress.set(`${topic}[${partition}]`, nextOffset);
 		},
-		transaction: async (run) => {
-			const snapshot = new Map(progress);
-			const seen = updates.length;
-			try {
-				const result = await run({
-					applySubjectRowUpdates: async ({ updates: batch }) => {
-						updates.push(...batch);
-						return { applied: batch.map((update) => !staleIds.has(update.id)) };
-					},
-					advancePartitionProgress: async ({
-						topic,
-						partition,
-						expectedOffset,
-						nextOffset,
-					}) => {
-						const key = `${topic}[${partition}]`;
-						if (progress.get(key) !== expectedOffset)
-							return { advanced: false };
-						progress.set(key, nextOffset);
-						return { advanced: true };
-					},
-				});
-				transactions.push("committed");
-				return result;
-			} catch (cause) {
-				progress.clear();
-				for (const [key, value] of snapshot) progress.set(key, value);
-				updates.length = seen;
+		// Rolls back like Postgres would: nothing lands unless every bookmark moved.
+		flush: async (request) => {
+			const applied = request.changes.map(
+				(change) => !staleIds.has(subjectRowIdOf(change)),
+			);
+			const moved = request.bookmarks.filter(
+				(bookmark) =>
+					progress.get(`${bookmark.topic}[${bookmark.partition}]`) ===
+					bookmark.expectedOffset,
+			);
+			if (moved.length !== request.bookmarks.length) {
 				transactions.push("rolled_back");
-				throw cause;
+				throw new Error("bookmark conflict");
 			}
+			if (applied.includes(false)) {
+				transactions.push("rolled_back");
+				return { applied };
+			}
+			updates.push(...request.changes);
+			for (const bookmark of moved) {
+				progress.set(
+					`${bookmark.topic}[${bookmark.partition}]`,
+					bookmark.nextOffset,
+				);
+			}
+			transactions.push("committed");
+			return { applied };
 		},
 	};
 	return { db, progress, updates, transactions };
@@ -91,9 +87,10 @@ describe("committer state store", () => {
 		expect(results).toEqual([{ kind: "applied", mutation, nextOffset: 44n }]);
 		expect(fake.updates).toEqual([
 			{
-				kind: "add",
+				op: "update",
 				table: "customerEntitlements",
 				id: "messages_monthly",
+				set: {},
 				add: { balance: -5 },
 				addEntries: {},
 				guard: {},
@@ -136,8 +133,8 @@ describe("committer state store", () => {
 			"applied",
 		]);
 		expect(
-			fake.updates.map((update) =>
-				update.kind === "add" ? update.add : update.set,
+			fake.updates.map((change) =>
+				change.op === "update" ? change.add : null,
 			),
 		).toEqual([{ balance: -5 }, { balance: -5 }]);
 		expect(store.readNextOffset({ topic, partition })).toBe(45n);
@@ -165,12 +162,13 @@ describe("committer state store", () => {
 			value: 5,
 		});
 
-		await expect(
-			store.applyDurableMutations({
-				records: [{ position: { topic, partition, offset: 43n }, mutation }],
-			}),
-		).rejects.toThrow(
-			"Subject rows moved underneath the worker: messages_monthly",
+		const results = await store.applyDurableMutations({
+			records: [{ position: { topic, partition, offset: 43n }, mutation }],
+		});
+		expect(results).toHaveLength(1);
+		const [result] = results;
+		expect(result?.kind === "failed" && (result.cause as Error).message).toBe(
+			"Log record could not be committed to Postgres: cmd_1",
 		);
 		expect(fake.transactions).toEqual(["rolled_back"]);
 		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(43n);
@@ -190,17 +188,57 @@ describe("committer state store", () => {
 			store.initializePartition({ topic, partition, nextOffset: 101n }),
 		).rejects.toThrow("is already initialized");
 
-		await expect(
-			store.applyDurableMutations({
-				records: [
-					{
-						position: { topic, partition, offset: 100n },
-						mutation: createInitializeMutation(),
-					},
-				],
-			}),
-		).rejects.toThrow(
-			"Row change not supported by the postgres backend: insert customer",
+		const [refused] = await store.applyDurableMutations({
+			records: [
+				{
+					position: { topic, partition, offset: 100n },
+					mutation: createInitializeMutation(),
+				},
+			],
+		});
+		expect(refused?.kind === "failed" && (refused.cause as Error).message).toBe(
+			"Log record could not be committed to Postgres: init_1",
 		);
+		expect(store.readNextOffset({ topic, partition })).toBe(100n);
+	});
+
+	test("a record that will not land: earlier ones apply, it fails, later ones are blocked, the bookmark stops at it", async () => {
+		const fake = createFakeCommitterDb({
+			storedNextOffset: 10n,
+			staleIds: new Set(["poison"]),
+		});
+		const store = createStore(fake);
+		await store.loadProgress({ topic, partition });
+		const state = createState({ balance: 100 });
+		const good = createTrackMutation({ state, value: 5, commandId: "cmd_a" });
+		const poison = createTrackMutation({ state, value: 5, commandId: "cmd_b" });
+		poison.changes = poison.changes.map((change) => ({
+			...change,
+			id: "poison",
+		}));
+		const after = createTrackMutation({ state, value: 5, commandId: "cmd_c" });
+
+		const results = await store.applyDurableMutations({
+			records: [
+				{ position: { topic, partition, offset: 10n }, mutation: good },
+				{ position: { topic, partition, offset: 11n }, mutation: poison },
+				{ position: { topic, partition, offset: 12n }, mutation: after },
+			],
+		});
+
+		expect(results.map((result) => result.kind)).toEqual([
+			"applied",
+			"failed",
+			"failed",
+		]);
+		const [, failed, blocked] = results;
+		expect(failed?.kind === "failed" && (failed.cause as Error).name).toBe(
+			"FlushRecordFailedError",
+		);
+		expect(blocked?.kind === "failed" && (blocked.cause as Error).message).toBe(
+			"Log record cmd_c waits behind cmd_b",
+		);
+		expect(store.readNextOffset({ topic, partition })).toBe(11n);
+		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(11n);
 	});
 });

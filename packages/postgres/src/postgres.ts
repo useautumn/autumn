@@ -6,17 +6,28 @@ export type {
 export { parseRows, RowsInvalidError } from "./common/parseRows.js";
 export { createPostgresClient } from "./createPostgresClient.js";
 export {
-	advancePartitionProgress,
+	commitFlush,
+	FlushBookmarkConflictError,
+} from "./flush/repos/commitFlush.js";
+export type {
+	FlushBookmark,
+	FlushRequest,
+	FlushResult,
+} from "./flush/types/flush.js";
+export {
 	insertPartitionProgress,
 	readNextOffset,
 } from "./meteringLog/repos/partitionProgress.js";
-export { applySubjectRowUpdates } from "./subjects/repos/applySubjectRowUpdates/applySubjectRowUpdates.js";
 export {
 	SubjectRowColumnNotCounterError,
 	UnknownSubjectRowColumnError,
 } from "./subjects/repos/applySubjectRowUpdates/subjectRowUpdateSql.js";
 export { getSubjectRows } from "./subjects/repos/getSubjectRows/getSubjectRows.js";
 export { SubjectRowsInvalidError } from "./subjects/subjectErrors.js";
+export {
+	type SubjectRowChange,
+	subjectRowIdOf,
+} from "./subjects/types/subjectRowChange.js";
 export type { SubjectRowsEnvelope } from "./subjects/types/subjectRowsEnvelope.js";
 export type {
 	SubjectRowTable,
