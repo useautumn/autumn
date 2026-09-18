@@ -114,8 +114,15 @@ export const cusPriceToStripeItemSpec = ({
 		const canRetryInline =
 			billingContext?.actionSource === "verify" &&
 			(isFixedPrice(price) || isPrepaidPrice(price));
-		if (!canRetryInline) throw error;
-		spec = buildSpec("inline");
+		if (canRetryInline) {
+			spec = buildSpec("inline");
+		} else if (billingContext?.actionSource === "verify") {
+			// Usage prices have no inline render; their Stripe prices are created
+			// lazily at attach, so an unlinked one is expected state, not drift.
+			return null;
+		} else {
+			throw error;
+		}
 	}
 
 	if (!spec) {
