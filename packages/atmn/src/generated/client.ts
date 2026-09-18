@@ -199,6 +199,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -490,6 +496,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -686,6 +697,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -993,6 +1009,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -1219,6 +1240,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -1391,6 +1417,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -1682,6 +1714,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -1878,6 +1915,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -2184,6 +2226,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -2418,6 +2465,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -2709,6 +2762,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -2905,6 +2963,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -3212,6 +3275,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -3434,6 +3502,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -3606,6 +3679,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -3897,6 +3976,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -4089,6 +4173,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -4391,6 +4480,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -4599,6 +4693,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -4890,6 +4990,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -5086,6 +5191,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -5393,6 +5503,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -5599,6 +5714,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -5761,6 +5881,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -6052,6 +6178,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -6228,6 +6359,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -6508,6 +6644,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -6709,6 +6850,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -7000,6 +7147,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -7186,6 +7338,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -7480,6 +7637,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -7649,6 +7811,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -7775,6 +7942,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -8063,6 +8236,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -8199,6 +8377,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -8432,6 +8615,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -8601,6 +8789,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -8892,6 +9086,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -9088,6 +9287,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -9395,6 +9599,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -9601,6 +9810,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -9763,6 +9977,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -10054,6 +10274,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -10230,6 +10455,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -10509,6 +10739,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -10709,6 +10944,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -11000,6 +11241,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -11186,6 +11432,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -11480,6 +11731,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -11649,6 +11905,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -11775,6 +12036,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -12063,6 +12330,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -12199,6 +12471,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -12432,6 +12709,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -12609,6 +12891,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -12900,6 +13188,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -13096,6 +13389,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -13403,6 +13701,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -13625,6 +13928,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -13797,6 +14105,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -14088,6 +14402,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -14280,6 +14599,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -14583,6 +14907,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -14804,6 +15133,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -15095,6 +15430,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -15291,6 +15631,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -15598,6 +15943,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -15804,6 +16154,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -15966,6 +16321,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -16257,6 +16618,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -16433,6 +16799,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -16712,6 +17083,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -16904,6 +17280,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -17195,6 +17577,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -17391,6 +17778,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -17698,6 +18090,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -17920,6 +18317,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -18092,6 +18494,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -18383,6 +18791,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -18575,6 +18988,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -18878,6 +19296,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -19097,6 +19520,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -19388,6 +19817,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -19584,6 +20018,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -19891,6 +20330,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -20097,6 +20541,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -20259,6 +20708,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -20550,6 +21005,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -20726,6 +21186,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -21005,6 +21470,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -21201,6 +21671,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -23075,6 +23550,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -23305,6 +23785,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -23537,6 +24022,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -23828,6 +24319,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -24024,6 +24520,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -24331,6 +24832,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -24557,6 +25063,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -24729,6 +25240,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -25020,6 +25537,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -25216,6 +25738,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -25522,6 +26049,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -25756,6 +26288,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -26047,6 +26585,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -26243,6 +26786,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -26550,6 +27098,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -26772,6 +27325,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -26944,6 +27502,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -27235,6 +27799,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -27427,6 +27996,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -27729,6 +28303,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -27937,6 +28516,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -28228,6 +28813,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -28424,6 +29014,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -28731,6 +29326,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -28937,6 +29537,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -29099,6 +29704,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -29390,6 +30001,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -29566,6 +30182,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -29846,6 +30467,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -30047,6 +30673,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -30338,6 +30970,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -30524,6 +31161,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -30818,6 +31460,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -30987,6 +31634,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -31113,6 +31765,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -31401,6 +32059,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -31537,6 +32200,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -31770,6 +32438,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -31939,6 +32612,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -32230,6 +32909,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -32426,6 +33110,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -32733,6 +33422,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -32939,6 +33633,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -33101,6 +33800,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -33392,6 +34097,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -33568,6 +34278,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -33847,6 +34562,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -34047,6 +34767,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -34338,6 +35064,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -34524,6 +35255,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -34818,6 +35554,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -34987,6 +35728,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -35113,6 +35859,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -35401,6 +36153,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -35537,6 +36294,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -35770,6 +36532,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -35947,6 +36714,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -36238,6 +37011,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -36434,6 +37212,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -36741,6 +37524,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -36963,6 +37751,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -37135,6 +37928,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -37426,6 +38225,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -37618,6 +38422,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -37921,6 +38730,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -38142,6 +38956,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -38433,6 +39253,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -38629,6 +39454,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -38936,6 +39766,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -39142,6 +39977,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -39304,6 +40144,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -39595,6 +40441,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -39771,6 +40622,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -40050,6 +40906,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -40242,6 +41103,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -40533,6 +41400,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -40729,6 +41601,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -41036,6 +41913,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -41258,6 +42140,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -41430,6 +42317,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -41721,6 +42614,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -41913,6 +42811,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -42216,6 +43119,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -42435,6 +43343,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -42726,6 +43640,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -42922,6 +43841,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -43229,6 +44153,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -43435,6 +44364,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -43597,6 +44531,12 @@ quantity?: number;
 }>;
 } | null;
 } | null;
+/** The base plan this variant pointed at before this update re-anchored it. Null when it was standalone. */
+baseVariantId?: string | null;
+/** The base row version this variant pointed at before this update. Null when it was standalone. */
+baseVersion?: number | null;
+/** The base row version slug this variant pointed at before this update. Null when it was standalone. */
+baseVersionSlug?: string | null;
 /** Previous free trial when it changed. Null when the plan had none. */
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
@@ -43888,6 +44828,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -44064,6 +45009,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -44343,6 +45293,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -44539,6 +45494,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -46413,6 +47373,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -46643,6 +47608,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -48623,6 +49593,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -48853,6 +49828,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -49294,6 +50274,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -49634,6 +50619,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -49939,6 +50929,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -50167,6 +51162,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+};
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -50386,6 +51386,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -50692,6 +51697,11 @@ maxPercentage?: number;
 expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
+};
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
 };
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
@@ -50974,6 +51984,11 @@ expiryDurationType: "month" | "forever";
 /** Number of periods before expiry. */
 expiryDurationLength?: number;
 };
+/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+expiry?: {
+duration: "day" | "week" | "month" | "year";
+length: number;
+} | null;
 /** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 featureOverride?: {
 /** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */

@@ -5,6 +5,7 @@ import {
 	ApiCustomerV5Schema,
 	ApiEventsListV2_3ParamsSchema,
 	ApiPlanV1Schema,
+	ApiPlanVariantV1Schema,
 	AttachParamsV1Schema,
 	AttachPreviewResponseSchema,
 	BaseApiCustomerSchema,
@@ -29,10 +30,11 @@ import {
 	UpdateBalanceParamsV0Schema,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
-
 import { OpenAPIGenerator } from "@orpc/openapi";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import yaml from "yaml";
+import { GetCatalogResponseSchema } from "../../../shared/api/catalogV2/getCatalogResponse.js";
+import { UpdateCatalogParamsSchema } from "../../../shared/api/catalogV2/updateCatalogParams.js";
 import { transformNode } from "../utils/mintlifyTransform/index.js";
 import {
 	applyPaginationExtensions,
@@ -104,12 +106,17 @@ async function generateOpenApiDocument({
 	registerInternalSchemas(ApiCustomerV5Schema);
 	registerInternalSchemas(ApiBalanceV1Schema);
 	registerInternalSchemas(ApiPlanV1Schema);
+	registerInternalSchemas(ApiPlanVariantV1Schema.shape.mapping_identity);
 	registerInternalSchemas(CheckResponseV3Schema);
 	registerInternalSchemas(TrackResponseV3Schema);
 	registerInternalSchemas(CustomerDataSchema);
 	registerInternalSchemas(ApiEventsListV2_3ParamsSchema);
 	registerInternalSchemas(DfuFlashParamsSchema);
 	registerInternalSchemas(InsertInvoicesParamsSchema);
+	if (!stripInternal) {
+		registerInternalSchemas(UpdateCatalogParamsSchema, { mappingOnly: true });
+		registerInternalSchemas(GetCatalogResponseSchema, { mappingOnly: true });
+	}
 
 	const openApiDocument = (await generator.generate(router as never, {
 		info: {

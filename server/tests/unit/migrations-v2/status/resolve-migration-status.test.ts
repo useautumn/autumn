@@ -2,7 +2,9 @@
  * draft   → no Run All (live, unscoped run) has ever started
  * waiting → a Run All is queued behind another migration's running run
  * running → a Run All is queued/running and not blocked
- * run     → a Run All reached execution, even if it later failed or was canceled
+ * run     → the latest Run All succeeded
+ * failed  → the latest Run All failed after starting
+ * canceled→ the latest Run All was canceled after starting
  */
 
 import { describe, expect, test } from "bun:test";
@@ -196,21 +198,13 @@ describe("resolveMigrationStatus: run", () => {
 		});
 	});
 
-	test("failed after it started still counts as run", () => {
-		expect(resolve({ runs: [run({ status: "failed" })] }).status).toBe("run");
-	});
-
-	test("canceled after it started still counts as run", () => {
-		expect(resolve({ runs: [run({ status: "canceled" })] }).status).toBe("run");
-	});
-
 	test("pre-aggregated history counts as run without the finished rows", () => {
 		expect(
 			resolveMigrationStatus({
 				migrationInternalId: MIGRATION_ID,
 				runs: [],
 				orgActiveRuns: [],
-				hasStartedRunAll: true,
+				latestRunAllStatus: "succeeded",
 			}).status,
 		).toBe("run");
 	});
@@ -225,5 +219,131 @@ describe("resolveMigrationStatus: run", () => {
 				],
 			}).status,
 		).toBe("run");
+	});
+});
+
+describe("resolveMigrationStatus: no_changes", () => {
+	test("the latest Run All changed nothing", () => {
+		expect(resolve({ runs: [run({ status: "no_changes" })] })).toEqual({
+			status: "no_changes",
+			blockedByMigrationInternalId: null,
+		});
+	});
+
+	test("a later Run All that did change something wins", () => {
+		expect(
+			resolve({
+				runs: [
+					run({ status: "no_changes", created_at: 1 }),
+					run({ status: "succeeded", created_at: 2 }),
+				],
+			}).status,
+		).toBe("run");
+	});
+
+	test("a later no-op Run All supersedes an earlier real one", () => {
+		expect(
+			resolve({
+				runs: [
+					run({ status: "succeeded", created_at: 1 }),
+					run({ status: "no_changes", created_at: 2 }),
+				],
+			}).status,
+		).toBe("no_changes");
+	});
+
+	test("scoped and dry runs never decide it", () => {
+		expect(
+			resolve({
+				runs: [
+					run({ status: "no_changes", created_at: 1 }),
+					run({ only_ids: ["cus_1"], status: "succeeded", created_at: 2 }),
+					run({ dry_run: true, status: "succeeded", created_at: 3 }),
+				],
+			}).status,
+		).toBe("no_changes");
+	});
+
+	test("an active Run All outranks the last outcome", () => {
+		expect(
+			resolve({
+				runs: [
+					run({ status: "no_changes", created_at: 1 }),
+					run({ status: "running", created_at: 2, finished_at: null }),
+				],
+			}).status,
+		).toBe("running");
+	});
+
+	test("pre-aggregated history without run rows stays run", () => {
+		expect(
+			resolveMigrationStatus({
+				migrationInternalId: MIGRATION_ID,
+				runs: [],
+				orgActiveRuns: [],
+				latestRunAllStatus: "succeeded",
+			}).status,
+		).toBe("run");
+	});
+
+	/** The list endpoint passes only active runs, so a finished no-op run
+	 * reaches the resolver through this aggregate rather than in `runs`. */
+	test("pre-aggregated no_changes without run rows reads no_changes", () => {
+		expect(
+			resolveMigrationStatus({
+				migrationInternalId: MIGRATION_ID,
+				runs: [],
+				orgActiveRuns: [],
+				latestRunAllStatus: "no_changes",
+			}).status,
+		).toBe("no_changes");
+	});
+});
+
+describe("resolveMigrationStatus: failed and canceled", () => {
+	test("a failed Run All reads failed, not run", () => {
+		expect(resolve({ runs: [run({ status: "failed" })] })).toEqual({
+			status: "failed",
+			blockedByMigrationInternalId: null,
+		});
+	});
+
+	test("a canceled Run All reads canceled, not run", () => {
+		expect(resolve({ runs: [run({ status: "canceled" })] }).status).toBe(
+			"canceled",
+		);
+	});
+
+	test("a later successful run supersedes an earlier failure", () => {
+		expect(
+			resolve({
+				runs: [
+					run({ status: "failed", created_at: 1 }),
+					run({ status: "succeeded", created_at: 2 }),
+				],
+			}).status,
+		).toBe("run");
+	});
+
+	test("a later failure supersedes an earlier success", () => {
+		expect(
+			resolve({
+				runs: [
+					run({ status: "succeeded", created_at: 1 }),
+					run({ status: "failed", created_at: 2 }),
+				],
+			}).status,
+		).toBe("failed");
+	});
+
+	test("pre-aggregated failed history reads failed", () => {
+		expect(
+			resolveMigrationStatus({
+				migrationInternalId: MIGRATION_ID,
+				runs: [],
+				orgActiveRuns: [],
+				latestRunAllStatus: "failed",
+			}).status,
+		).toBe("failed");
 	});
 });

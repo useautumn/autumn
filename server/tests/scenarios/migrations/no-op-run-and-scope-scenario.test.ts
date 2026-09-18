@@ -10,13 +10,20 @@
  *   qa-scope      left as a draft with 6 matching customers, so you can Run
  *                 Sample / run a single customer and watch the progress
  *                 denominator follow the run's scope rather than reading 6
+ *   qa-failed     a run that errored partway
+ *   qa-abandoned  a run stranded `running` by a dead trigger task, which the
+ *                 read path reconciles (the production bug)
  *
  * Run with:
  *   bun test --timeout 300000 server/tests/scenarios/migrations/no-op-run-and-scope-scenario.test.ts
  */
 
 import { test } from "bun:test";
-import { isTerminalMigrationRunStatus } from "@autumn/shared";
+import {
+	isTerminalMigrationRunStatus,
+	MigrationRunStatus,
+	ms,
+} from "@autumn/shared";
 import { clearMigrationRunHistory } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { waitForMigrationResult } from "@tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration";
 import { items } from "@tests/utils/fixtures/items";
@@ -85,6 +92,64 @@ const runToCompletion = async ({
 	});
 	const [row] = await migrationRunRepo.list({ ctx, internalId: run_id });
 	return row.status;
+};
+
+const seedTerminalRun = async ({
+	ctx,
+	migrationInternalId,
+	status,
+	errorMessage,
+}: {
+	ctx: ScenarioCtx;
+	migrationInternalId: string;
+	status: MigrationRunStatus;
+	errorMessage?: string;
+}) => {
+	const inserted = await migrationRunRepo.insert({
+		ctx,
+		insert: { migration_internal_id: migrationInternalId, dry_run: false },
+	});
+	if (!inserted) throw new Error("Could not claim a run to seed");
+	await migrationRunRepo.update({
+		ctx,
+		internalId: inserted.internal_id,
+		updates: {
+			status,
+			started_at: Date.now() - ms.hours(1),
+			finished_at: Date.now(),
+			error_message: errorMessage ?? null,
+		},
+	});
+	return status;
+};
+
+/** Mirrors the production bug: the row says running, the task is long dead.
+ * Reuses a real terminal handle so the reconcile can settle it, as it would in
+ * production. */
+const seedAbandonedRun = async ({
+	ctx,
+	migrationInternalId,
+	triggerRunId,
+}: {
+	ctx: ScenarioCtx;
+	migrationInternalId: string;
+	triggerRunId: string | null;
+}) => {
+	const inserted = await migrationRunRepo.insert({
+		ctx,
+		insert: { migration_internal_id: migrationInternalId, dry_run: false },
+	});
+	if (!inserted) throw new Error("Could not claim a run to strand");
+	await migrationRunRepo.update({
+		ctx,
+		internalId: inserted.internal_id,
+		updates: {
+			status: MigrationRunStatus.Running,
+			started_at: Date.now() - ms.days(1),
+			...(triggerRunId ? { trigger_run_id: triggerRunId } : {}),
+		},
+	});
+	return inserted.internal_id;
 };
 
 test(`${chalk.yellowBright("migration-setup: no-op run status + scoped progress QA")}`, async () => {
@@ -156,6 +221,39 @@ test(`${chalk.yellowBright("migration-setup: no-op run status + scoped progress 
 		planId: scopePlan.id,
 	});
 
+	const failed = await createMigration({
+		ctx,
+		autumn: autumnV2_2,
+		migrationId: "qa-failed",
+		planId: convergedPlan.id,
+	});
+	const failedRunStatus = await seedTerminalRun({
+		ctx,
+		migrationInternalId: failed.internal_id,
+		status: MigrationRunStatus.Failed,
+		errorMessage: "Seeded failure: the run errored partway through",
+	});
+
+	// The production bug: a run whose task died without settling its row. It
+	// reads active until something reconciles it against trigger.dev.
+	const abandoned = await createMigration({
+		ctx,
+		autumn: autumnV2_2,
+		migrationId: "qa-abandoned",
+		planId: convergedPlan.id,
+	});
+	// A finished run's handle: the platform reports it terminal, so the
+	// reconcile settles this row the way it would in production.
+	const [deadRun] = await migrationRunRepo.list({
+		ctx,
+		migrationInternalId: changes.internal_id,
+	});
+	const abandonedRunId = await seedAbandonedRun({
+		ctx,
+		migrationInternalId: abandoned.internal_id,
+		triggerRunId: deadRun?.trigger_run_id ?? null,
+	});
+
 	console.log(
 		[
 			"",
@@ -163,9 +261,15 @@ test(`${chalk.yellowBright("migration-setup: no-op run status + scoped progress 
 			`  qa-nochanges  run settled: ${chalk.yellowBright(noChangesStatus)}  (expect no_changes)`,
 			`  qa-changes    run settled: ${chalk.yellowBright(changesStatus)}  (expect succeeded)`,
 			`  qa-scope      draft over ${SCOPE_IDS.length} customers — id ${scope.id}`,
+			`  qa-failed     run settled: ${chalk.yellowBright(failedRunStatus)}`,
+			`  qa-abandoned  run left running, no trigger handle (${abandonedRunId})`,
 			"",
 			"  Scoped-progress check: open qa-scope, Run Sample with limit 2,",
 			"  and confirm the footer reads '… of 2', not '… of 6'.",
+			"",
+			"  Recovery check: qa-abandoned starts stranded. Loading the migrations",
+			"  list reconciles it (trigger run is dead), so it stops blocking and",
+			"  becomes runnable again.",
 			"",
 		].join("\n"),
 	);

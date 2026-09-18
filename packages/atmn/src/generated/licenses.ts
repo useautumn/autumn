@@ -129,6 +129,11 @@ export type License = {
 				/** Number of periods before expiry. */
 				expiryDurationLength?: number;
 			};
+			/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+			expiry?: {
+				duration: "day" | "week" | "month" | "year";
+				length: number;
+			};
 			/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 			featureOverride?: {
 				/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */

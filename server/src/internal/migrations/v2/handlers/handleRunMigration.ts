@@ -17,6 +17,7 @@ import { MAX_MIGRATION_WEBHOOK_CONCURRENCY } from "@/internal/migrations/v2/webh
 import {
 	getMigrationTriggerOptions,
 	migrationRunConcurrencyKey,
+	migrationRunTag,
 } from "@/trigger/migrations/migrationTaskQueue.js";
 import { runMigrationTask } from "@/trigger/migrations/runMigrationTask/runMigrationTask.js";
 
@@ -127,6 +128,7 @@ export const handleRunMigration = createRoute({
 				}
 				const handle = await runMigrationTask.trigger(payload, {
 					...getMigrationTriggerOptions({ isDev }),
+					tags: [migrationRunTag({ migrationRunId })],
 					// One live run per key: a second migration in the same org
 					// queues behind the first instead of racing it.
 					concurrencyKey: migrationRunConcurrencyKey({

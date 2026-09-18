@@ -1,7 +1,7 @@
 import type { MigrationStatus } from "@autumn/shared";
 
 export function runButtonLabel(status: MigrationStatus): string {
-	return status === "run" ? "Run again" : "Run All";
+	return status === "run" || status === "no_changes" ? "Run again" : "Run All";
 }
 
 export function isRunDisabled(status: MigrationStatus): boolean {
@@ -22,5 +22,12 @@ export function statusLabel({
 }): string {
 	if (status === "waiting")
 		return blockedBy ? `Waiting on ${blockedBy}` : "Waiting";
-	return { draft: "Draft", running: "Running", run: "Run" }[status];
+	return {
+		draft: "Draft",
+		running: "Running",
+		run: "Run",
+		no_changes: "No changes",
+		failed: "Failed",
+		canceled: "Canceled",
+	}[status];
 }

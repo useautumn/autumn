@@ -14,6 +14,7 @@ export const VariantCustomizeSchema = refineCustomizePlanV1Schema(
 
 /** A base plan's down-link to a variant derived from it. */
 export const ApiPlanVariantV1Schema = z.object({
+	mapping_identity: z.string().optional().meta({ internal: true }),
 	variant_plan_id: z.string().meta({
 		description: "The plan ID of the variant derived from this base plan.",
 	}),
