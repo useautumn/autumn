@@ -9,6 +9,18 @@ import {
 const isRunAll = (run: MigrationRun): boolean =>
 	!run.dry_run && run.only_ids === null && run.target_limit === null;
 
+/** Run statuses map onto the badge unchanged, except `succeeded`, which reads
+ * as `run`. An aggregate can still surface an active status. */
+const outcomeStatus = (status: MigrationRunStatus): MigrationStatus => {
+	if (status === MigrationRunStatus.Succeeded) return MigrationStatus.Run;
+	if (
+		status === MigrationRunStatus.Queued ||
+		status === MigrationRunStatus.Running
+	)
+		return MigrationStatus.Running;
+	return status;
+};
+
 const isActive = (run: MigrationRun): boolean =>
 	run.status === MigrationRunStatus.Queued ||
 	run.status === MigrationRunStatus.Running;
@@ -63,10 +75,7 @@ export const resolveMigrationStatus = ({
 		};
 
 	return {
-		status:
-			outcome === MigrationRunStatus.NoChanges
-				? MigrationStatus.NoChanges
-				: MigrationStatus.Run,
+		status: outcomeStatus(outcome),
 		blockedByMigrationInternalId: null,
 	};
 };

@@ -36,6 +36,11 @@ test("a migration whose last run changed nothing says so", () => {
 	);
 });
 
+test("a failed or canceled run is named, not shown as a success", () => {
+	expect(statusLabel({ status: "failed", blockedBy: null })).toBe("Failed");
+	expect(statusLabel({ status: "canceled", blockedBy: null })).toBe("Canceled");
+});
+
 test("a no-op run can be run again and does not disable the button", () => {
 	expect(runButtonLabel("no_changes")).toBe("Run again");
 	expect(isRunDisabled("no_changes")).toBe(false);

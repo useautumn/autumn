@@ -2,7 +2,9 @@
  * draft   → no Run All (live, unscoped run) has ever started
  * waiting → a Run All is queued behind another migration's running run
  * running → a Run All is queued/running and not blocked
- * run     → a Run All reached execution, even if it later failed or was canceled
+ * run     → the latest Run All succeeded
+ * failed  → the latest Run All failed after starting
+ * canceled→ the latest Run All was canceled after starting
  */
 
 import { describe, expect, test } from "bun:test";
@@ -196,14 +198,6 @@ describe("resolveMigrationStatus: run", () => {
 		});
 	});
 
-	test("failed after it started still counts as run", () => {
-		expect(resolve({ runs: [run({ status: "failed" })] }).status).toBe("run");
-	});
-
-	test("canceled after it started still counts as run", () => {
-		expect(resolve({ runs: [run({ status: "canceled" })] }).status).toBe("run");
-	});
-
 	test("pre-aggregated history counts as run without the finished rows", () => {
 		expect(
 			resolveMigrationStatus({
@@ -303,5 +297,53 @@ describe("resolveMigrationStatus: no_changes", () => {
 				latestRunAllStatus: "no_changes",
 			}).status,
 		).toBe("no_changes");
+	});
+});
+
+describe("resolveMigrationStatus: failed and canceled", () => {
+	test("a failed Run All reads failed, not run", () => {
+		expect(resolve({ runs: [run({ status: "failed" })] })).toEqual({
+			status: "failed",
+			blockedByMigrationInternalId: null,
+		});
+	});
+
+	test("a canceled Run All reads canceled, not run", () => {
+		expect(resolve({ runs: [run({ status: "canceled" })] }).status).toBe(
+			"canceled",
+		);
+	});
+
+	test("a later successful run supersedes an earlier failure", () => {
+		expect(
+			resolve({
+				runs: [
+					run({ status: "failed", created_at: 1 }),
+					run({ status: "succeeded", created_at: 2 }),
+				],
+			}).status,
+		).toBe("run");
+	});
+
+	test("a later failure supersedes an earlier success", () => {
+		expect(
+			resolve({
+				runs: [
+					run({ status: "succeeded", created_at: 1 }),
+					run({ status: "failed", created_at: 2 }),
+				],
+			}).status,
+		).toBe("failed");
+	});
+
+	test("pre-aggregated failed history reads failed", () => {
+		expect(
+			resolveMigrationStatus({
+				migrationInternalId: MIGRATION_ID,
+				runs: [],
+				orgActiveRuns: [],
+				latestRunAllStatus: "failed",
+			}).status,
+		).toBe("failed");
 	});
 });

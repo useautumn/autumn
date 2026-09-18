@@ -43,6 +43,8 @@ export const MigrationStatus = {
 	Running: "running",
 	Run: "run",
 	NoChanges: "no_changes",
+	Failed: "failed",
+	Canceled: "canceled",
 } as const;
 
 export type MigrationStatus =

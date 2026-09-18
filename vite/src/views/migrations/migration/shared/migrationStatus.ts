@@ -27,5 +27,7 @@ export function statusLabel({
 		running: "Running",
 		run: "Run",
 		no_changes: "No changes",
+		failed: "Failed",
+		canceled: "Canceled",
 	}[status];
 }
