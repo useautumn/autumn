@@ -17,15 +17,22 @@ const MIGRATION_INVALIDATE_MAX_ATTEMPTS = 5;
 export const invalidateBatchMigrationCaches = async ({
 	ctx,
 	pageResult,
+	includeSkipped = false,
 }: {
 	ctx: AutumnContext;
 	pageResult: BatchMigrationPageResult;
+	includeSkipped?: boolean;
 }): Promise<number> => {
 	// Org-scoped, so the per-customer callback below can return a fixed list.
 	const redisTargets = getRedisTargetsForCustomer({ org: ctx.org });
+	const customers = includeSkipped
+		? [...pageResult.succeeded, ...pageResult.skipped]
+		: pageResult.succeeded;
+	const phases: Record<string, number> = {};
+	const startedAt = Date.now();
 
-	return batchInvalidateCachedFullSubjects({
-		customers: pageResult.succeeded.map((customer) => ({
+	const invalidated = await batchInvalidateCachedFullSubjects({
+		customers: customers.map((customer) => ({
 			customerId: customer.id ?? customer.internalId,
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -37,5 +44,19 @@ export const invalidateBatchMigrationCaches = async ({
 		}),
 		getRedisTargetsForCustomer: () => redisTargets,
 		maxAttempts: MIGRATION_INVALIDATE_MAX_ATTEMPTS,
+		phases,
+		throwWhenExhausted: true,
 	});
+
+	// One line per page: the split says whether a future stall sat in the
+	// Postgres freshness marks or in Redis.
+	ctx.logger.info("batch-migration: page caches invalidated", {
+		data: {
+			customers: invalidated,
+			includeSkipped,
+			totalMs: Date.now() - startedAt,
+			...phases,
+		},
+	});
+	return invalidated;
 };

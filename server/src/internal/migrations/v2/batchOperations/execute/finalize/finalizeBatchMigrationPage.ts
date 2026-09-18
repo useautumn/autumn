@@ -26,6 +26,7 @@ export const finalizeBatchMigrationPage = async ({
 	pageResult,
 	webhooks,
 	phases,
+	invalidateSkipped = false,
 	deferEvents,
 	deferCaches,
 }: {
@@ -36,6 +37,9 @@ export const finalizeBatchMigrationPage = async ({
 	pageResult: BatchMigrationPageResult;
 	webhooks?: MigrationWebhookControls;
 	phases?: BatchMigrationPagePhases;
+	/** Also bust skipped customers' caches — needed when a retry re-claims
+	 * customers whose earlier attempt committed writes but never invalidated. */
+	invalidateSkipped?: boolean;
 	deferEvents?: (emit: () => Promise<unknown>) => void;
 	deferCaches?: (invalidate: () => Promise<unknown>) => void;
 }): Promise<void> => {
@@ -49,7 +53,11 @@ export const finalizeBatchMigrationPage = async ({
 		});
 
 	const invalidateCaches = () =>
-		invalidateBatchMigrationCaches({ ctx, pageResult });
+		invalidateBatchMigrationCaches({
+			ctx,
+			pageResult,
+			includeSkipped: invalidateSkipped,
+		});
 
 	const runCaches = async () => {
 		if (!deferCaches)

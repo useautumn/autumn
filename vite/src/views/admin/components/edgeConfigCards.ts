@@ -34,6 +34,7 @@ export type EdgeConfigCardId =
 	| "org-limits"
 	| "rate-limit-overrides"
 	| "rate-limit-redis-allowlist"
+	| "agent-provision-rate-limit"
 	| "stripe-sync"
 	| "redis-v2-cache"
 	| "misc-redis"
@@ -186,6 +187,30 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 								label: pluralize({ count, noun: "customer" }),
 								tone: "active",
 							};
+				},
+			},
+			{
+				id: "agent-provision-rate-limit",
+				title: "Agent Provision Rate Limit",
+				description:
+					"Global and per-IP hourly limits for agent-created organizations.",
+				icon: Gauge,
+				endpoint: "/admin/agent-provision-rate-limit-config",
+				deriveStatus: (data) => {
+					const config = asRecord(data);
+					const globalLimit = config.globalRequestsPerHour;
+					const perIpLimit = config.requestsPerIpPerHour;
+					if (
+						typeof globalLimit !== "number" ||
+						typeof perIpLimit !== "number"
+					) {
+						return IDLE;
+					}
+
+					return {
+						label: `${globalLimit} global · ${perIpLimit} per IP`,
+						tone: "neutral",
+					};
 				},
 			},
 		],

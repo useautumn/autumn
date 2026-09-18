@@ -8,6 +8,7 @@ import {
 	PUBLIC_RATE_LIMIT_CONFIGS,
 	PublicRateLimitScope,
 	type PublicRateLimitType,
+	resolvePublicRateLimit,
 } from "./publicRateLimitConfigs.js";
 
 export const createPublicRedisRateLimiter = ({
@@ -30,7 +31,7 @@ export const createPublicRedisRateLimiter = ({
 	const getLimiter = () => {
 		limiter ??= rateLimiter<HonoEnv>({
 			windowMs: config.windowMs,
-			limit: config.limit,
+			limit: () => resolvePublicRateLimit({ type }).limit,
 			standardHeaders: false,
 			store: createRateLimitRedisStore<HonoEnv>(),
 			keyGenerator: getRateLimitKey,
