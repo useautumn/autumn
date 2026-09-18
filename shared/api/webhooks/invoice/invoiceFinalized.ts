@@ -18,6 +18,7 @@ export const INVOICE_FINALIZED_EXAMPLE = {
 		"https://api.useautumn.com/invoices/hosted_invoice_url/inv_2b3c4d5e6f7g8h",
 	items: [
 		{
+			id: "invoice_li_2b3c4d5e6f7g8h",
 			description: "Enterprise plan",
 			plan_id: "enterprise",
 			feature_id: null,
@@ -29,6 +30,7 @@ export const INVOICE_FINALIZED_EXAMPLE = {
 			entities: [],
 		},
 		{
+			id: "invoice_li_3c4d5e6f7g8h9i",
 			description: "AI credits",
 			plan_id: "enterprise",
 			feature_id: "ai_credits",

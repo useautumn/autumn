@@ -41,6 +41,7 @@ const LIST_INVOICE_EXAMPLE = {
 	hosted_invoice_url: "https://invoice.stripe.com/i/acct_123/test_456",
 	items: [
 		{
+			id: "invoice_li_2b3c4d5e6f7g8h",
 			description: "Pro plan",
 			plan_id: "pro_plan",
 			feature_id: null,
@@ -52,6 +53,7 @@ const LIST_INVOICE_EXAMPLE = {
 			entities: [],
 		},
 		{
+			id: "invoice_li_3c4d5e6f7g8h9i",
 			description: "AI credits",
 			plan_id: "pro_plan",
 			feature_id: "ai_credits",

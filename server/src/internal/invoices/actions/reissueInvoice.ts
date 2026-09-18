@@ -196,7 +196,6 @@ const createReplacementDraft = async ({
 	return withLines;
 };
 
-/** Returns a restore function so a failed reissue leaves the address unchanged. */
 const updateStripeCustomerEmail = async ({
 	stripeCli,
 	stripeInvoice,
@@ -205,7 +204,7 @@ const updateStripeCustomerEmail = async ({
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
 	email: string;
-}): Promise<() => Promise<void>> => {
+}) => {
 	const stripeCusId =
 		typeof stripeInvoice.customer === "string"
 			? stripeInvoice.customer
@@ -213,16 +212,7 @@ const updateStripeCustomerEmail = async ({
 	if (!stripeCusId) {
 		throw invalidRequest("Original invoice has no Stripe customer");
 	}
-	const before = await stripeCli.customers.retrieve(stripeCusId);
-	const previousEmail = before.deleted ? undefined : (before.email ?? "");
 	await stripeCli.customers.update(stripeCusId, { email });
-
-	return async () => {
-		if (previousEmail === undefined) return;
-		await stripeCli.customers
-			.update(stripeCusId, { email: previousEmail })
-			.catch(() => undefined);
-	};
 };
 
 /** Creates, finalizes and swaps in the replacement, then voids the original. */
@@ -481,13 +471,13 @@ export const reissueInvoice = async ({
 	});
 
 	// Stripe snapshots customer_email at finalization, so this must precede the draft.
-	const restoreCustomerEmail = updateCustomerEmail
-		? await updateStripeCustomerEmail({
-				stripeCli,
-				stripeInvoice,
-				email: updateCustomerEmail,
-			})
-		: undefined;
+	if (updateCustomerEmail) {
+		await updateStripeCustomerEmail({
+			stripeCli,
+			stripeInvoice,
+			email: updateCustomerEmail,
+		});
+	}
 
 	const finalized = await issueReplacement({
 		ctx,
@@ -497,9 +487,6 @@ export const reissueInvoice = async ({
 		template,
 		dueDate,
 		daysUntilDue,
-	}).catch(async (error) => {
-		await restoreCustomerEmail?.();
-		throw error;
 	});
 
 	await stripeCli.invoices.update(stripeInvoice.id, {
