@@ -106,24 +106,38 @@ export const runInvoiceCreateSeed = async () => {
 
 	const templates = [
 		{
-			name: "Bank transfer",
-			footer: "Pay by wire to IBAN GB00 EXAM 0000 0000 0000 00",
-			memo: "Questions? billing@example.com",
-			net_terms_days: 30,
+			id: "inv_tmpl_bank_transfer",
+			values: {
+				name: "Bank transfer",
+				footer: "Pay by wire to IBAN GB00 EXAM 0000 0000 0000 00",
+				memo: "Questions? billing@example.com",
+				net_terms_days: 30,
+			},
 		},
 		{
-			name: "Net 14",
-			footer: "Payment due within 14 days.",
-			memo: "Thanks for your business.",
-			net_terms_days: 14,
+			id: "inv_tmpl_net_14",
+			values: {
+				name: "Net 14",
+				footer: "Payment due within 14 days.",
+				memo: "Thanks for your business.",
+				net_terms_days: 14,
+			},
 		},
 	];
-	for (const values of templates) {
+	for (const { id, values } of templates) {
+		const updated = await InvoiceTemplateService.update({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			id,
+			update: values,
+		});
+		if (updated) continue;
+
 		await InvoiceTemplateService.create({
 			db: ctx.db,
 			orgId: ctx.org.id,
 			internalId: generateId("inv_tmpl_int"),
-			id: generateId("inv_tmpl"),
+			id,
 			values,
 		});
 	}
@@ -134,5 +148,5 @@ export const runInvoiceCreateSeed = async () => {
 	console.log(
 		`   discounts: ${percentOff.id} (INV10), ${amountOff.id} (INV25)`,
 	);
-	console.log(`   templates: ${templates.map((t) => t.name).join(", ")}\n`);
+	console.log(`   templates: ${templates.map((t) => t.values.name).join(", ")}\n`);
 };

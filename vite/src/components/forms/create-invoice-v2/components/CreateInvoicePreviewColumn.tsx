@@ -42,7 +42,7 @@ export function CreateInvoicePreviewColumn() {
 			{preview ? (
 				<div
 					className={cn(
-						"min-h-0 flex-1 px-6 pb-6 transition-opacity duration-200",
+						"shrink-0 px-6 pb-6 transition-opacity duration-200",
 						previewQuery.isLoading ? "opacity-55" : "opacity-100",
 					)}
 				>
