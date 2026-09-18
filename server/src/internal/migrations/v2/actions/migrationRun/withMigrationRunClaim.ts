@@ -4,48 +4,17 @@ import {
 	MigrationRunStatus,
 	RecaseError,
 } from "@autumn/shared";
-import { runs } from "@trigger.dev/sdk/v3";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { migrationRunRepo } from "../../repos/index.js";
 import {
+	type PersistTriggerRunId,
+	persistDispatchHandle,
+} from "./persistDispatchHandle.js";
+import {
 	type TriggerRunLookup,
 	verifyTriggerRunExists,
 } from "./verifyTriggerRunExists.js";
-
-const defaultPersistTriggerRunId = async ({
-	ctx,
-	migrationRunId,
-	triggerRunId,
-}: {
-	ctx: AutumnContext;
-	migrationRunId: string;
-	triggerRunId: string;
-}) =>
-	migrationRunRepo.update({
-		ctx,
-		internalId: migrationRunId,
-		updates: { trigger_run_id: triggerRunId },
-	});
-
-const cancelTriggerRun = async ({
-	ctx,
-	triggerRunId,
-}: {
-	ctx: AutumnContext;
-	triggerRunId: string;
-}) => {
-	try {
-		await runs.cancel(triggerRunId);
-	} catch (error) {
-		ctx.logger.warn("run-migration: could not cancel orphaned trigger run", {
-			data: {
-				triggerRunId,
-				error: error instanceof Error ? error.message : String(error),
-			},
-		});
-	}
-};
 
 const failRun = async ({
 	ctx,
@@ -88,7 +57,7 @@ export const withMigrationRunClaim = async ({
 	targetLimit,
 	claimed,
 	verifyDispatch = verifyTriggerRunExists,
-	persistTriggerRunId = defaultPersistTriggerRunId,
+	persistTriggerRunId,
 }: {
 	ctx: AutumnContext;
 	migration: Migration;
@@ -100,11 +69,7 @@ export const withMigrationRunClaim = async ({
 		migrationRunId: string,
 	) => Promise<{ triggerRunId?: string } | undefined>;
 	verifyDispatch?: (triggerRunId: string) => Promise<TriggerRunLookup>;
-	persistTriggerRunId?: (params: {
-		ctx: AutumnContext;
-		migrationRunId: string;
-		triggerRunId: string;
-	}) => Promise<unknown>;
+	persistTriggerRunId?: PersistTriggerRunId;
 }): Promise<{ migrationRunId: string; triggerRunId?: string }> => {
 	const migrationRun = await migrationRunRepo.insert({
 		ctx,
@@ -167,41 +132,12 @@ export const withMigrationRunClaim = async ({
 	}
 
 	if (result?.triggerRunId) {
-		try {
-			await persistTriggerRunId({
-				ctx,
-				migrationRunId: migrationRun.internal_id,
-				triggerRunId: result.triggerRunId,
-			});
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			ctx.logger.error("run-migration: failed to persist trigger run id", {
-				data: {
-					migrationRunId: migrationRun.internal_id,
-					triggerRunId: result.triggerRunId,
-					error: message,
-				},
-			});
-			await cancelTriggerRun({ ctx, triggerRunId: result.triggerRunId });
-			try {
-				await failRun({
-					ctx,
-					migrationRunId: migrationRun.internal_id,
-					message,
-				});
-			} catch (settleError) {
-				ctx.logger.error("run-migration: could not settle the orphaned run", {
-					data: {
-						migrationRunId: migrationRun.internal_id,
-						error:
-							settleError instanceof Error
-								? settleError.message
-								: String(settleError),
-					},
-				});
-			}
-			throw error;
-		}
+		await persistDispatchHandle({
+			ctx,
+			migrationRunId: migrationRun.internal_id,
+			triggerRunId: result.triggerRunId,
+			persist: persistTriggerRunId,
+		});
 	}
 
 	// Publish lazy-mode runs only after claim setup succeeds, so customer
