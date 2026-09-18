@@ -24,6 +24,9 @@
  *  - the cycle invoice carries one usage line whose Autumn id is scoped to it
  *  - the replay adds nothing, updates the stale line, and completes the reset
  *  - the finalized invoice total is base + the grown overage, billed once
+ *  - a replay against the finalized invoice with yet more usage carries only
+ *    the unbilled delta to the next invoice as a pending item, which that
+ *    invoice then bills once
  */
 
 import { expect, test } from "bun:test";
@@ -48,6 +51,7 @@ const INCLUDED_MESSAGES = 100;
 const TRACKED_MESSAGES = 250;
 const OVERAGE = TRACKED_MESSAGES - INCLUDED_MESSAGES;
 const EXTRA_MESSAGES_BETWEEN_ATTEMPTS = 30;
+const EXTRA_MESSAGES_AFTER_FINALIZE = 20;
 
 const listAutumnLines = async ({
 	stripeCli,
@@ -262,6 +266,104 @@ test.concurrent(
 			customer,
 			count: 2,
 			latestTotal: invoiceAfterFinalize.total / 100,
+			latestInvoiceProductId: pro.id,
+		});
+
+		// ── Crash again, this time after finalization: the delta must be carried ──
+		const billedOverage = OVERAGE + EXTRA_MESSAGES_BETWEEN_ATTEMPTS;
+		await CusEntService.update({
+			ctx,
+			id: entitlementBeforeCycle.id,
+			updates: {
+				balance: -billedOverage,
+				next_reset_at: entitlementBeforeCycle.next_reset_at ?? undefined,
+			},
+		});
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId,
+			source: "invoice-created-retry-test-rollback-2",
+		});
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: EXTRA_MESSAGES_AFTER_FINALIZE,
+		});
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId,
+			source: "invoice-created-retry-test-flush-2",
+			flushBalances: true,
+		});
+
+		const { fullCustomer: customerBeforeSecondReplay } =
+			await getMessagesEntitlement({ ctx, customerId });
+		await handleStripeInvoiceCreated({
+			ctx: {
+				...ctx,
+				fullCustomer: customerBeforeSecondReplay,
+				stripeEvent,
+			} satisfies StripeWebhookContext,
+			event: stripeEvent,
+		});
+
+		const carryId = `${usageLineId}_carry`;
+		const carryAmountMinor = EXTRA_MESSAGES_AFTER_FINALIZE * perUnitMinor;
+		const pendingItems = await ctx.stripeCli.invoiceItems.list({
+			customer: stripeCustomerId,
+			pending: true,
+			limit: 100,
+		});
+		const carryItem = pendingItems.data.find(
+			(item) => item.metadata?.autumn_line_item_id === carryId,
+		);
+		expect(carryItem?.amount).toBe(carryAmountMinor);
+		expect(carryItem?.discountable).toBe(false);
+
+		const finalizedAfterSecondReplay = await ctx.stripeCli.invoices.retrieve(
+			cycleInvoice.id,
+		);
+		expect(finalizedAfterSecondReplay.total).toBe(invoiceAfterFinalize.total);
+		expectCustomerFeatureCorrect({
+			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+			featureId: TestFeature.Messages,
+			balance: INCLUDED_MESSAGES,
+		});
+
+		// ── Next cycle bills the carried delta exactly once ──
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId,
+			startingFrom: new Date(cycleBoundaryMs),
+			numberOfMonths: 1,
+			numberOfHours: hoursToFinalizeInvoice,
+			waitForSeconds: 60,
+		});
+		const invoicesAfterNextCycle = await ctx.stripeCli.invoices.list({
+			customer: stripeCustomerId,
+			limit: 10,
+		});
+		const nextCycleInvoice = invoicesAfterNextCycle.data.find(
+			(invoice) =>
+				invoice.billing_reason === "subscription_cycle" &&
+				invoice.id !== cycleInvoice.id,
+		);
+		if (!nextCycleInvoice) throw new Error("No next cycle invoice found");
+		const nextCycleLines = await listAutumnLines({
+			stripeCli: ctx.stripeCli,
+			invoiceId: nextCycleInvoice.id,
+		});
+		expect(
+			nextCycleLines.filter((line) => line.autumnLineItemId === carryId),
+		).toEqual([{ autumnLineItemId: carryId, amount: carryAmountMinor }]);
+		expect(nextCycleInvoice.status).toBe("paid");
+		// Base plan line plus the carry, and nothing else: the reset left no usage.
+		const nonCarryMinor = nextCycleInvoice.total - carryAmountMinor;
+		expect(nonCarryMinor).toBe(cycleInvoice.total - usageLineBefore.amount);
+		expectCustomerInvoiceCorrect({
+			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+			count: 3,
+			latestTotal: nextCycleInvoice.total / 100,
 			latestInvoiceProductId: pro.id,
 		});
 	},
