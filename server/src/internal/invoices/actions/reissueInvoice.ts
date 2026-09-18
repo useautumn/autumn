@@ -1,5 +1,6 @@
 import { generateKsuid } from "@autumn/ksuid";
 import {
+	type CreateInvoicePreview,
 	cusProductToProduct,
 	type DbInvoiceLineItem,
 	ErrCode,
@@ -12,6 +13,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { getExpandedStripeCustomer } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
 import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
@@ -21,6 +23,7 @@ import {
 	createStripeInvoice,
 	finalizeStripeInvoice,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
+import { stripeCustomerToInvoiceCredits } from "@/internal/billing/v2/utils/billingPlan/preview/invoiceCredits/stripeCustomerToInvoiceCredits";
 import { checkoutRepo } from "@/internal/checkouts";
 import { CusService } from "@/internal/customers/CusService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
@@ -28,6 +31,7 @@ import { MetadataService } from "@/internal/metadata/MetadataService";
 import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/InvoiceTemplateService";
 import { type InvoiceListRow, InvoiceService } from "../InvoiceService";
 import { invoiceLineItemRepo } from "../lineItems/repos";
+import { previewReissuedInvoice } from "./reissue/previewReissuedInvoice";
 import { updateInvoiceFromStripe } from "./updateFromStripe";
 import { upsertInvoiceFromStripe } from "./upsertFromStripe";
 import { voidInvoice } from "./voidInvoice";
@@ -35,8 +39,9 @@ import { voidInvoice } from "./voidInvoice";
 const ADD_LINES_BATCH_SIZE = 100;
 
 type ReissueInvoiceResult = {
-	replacement: InvoiceListRow;
-	voidedInvoiceId: string;
+	replacement: InvoiceListRow | null;
+	voidedInvoiceId: string | null;
+	preview: CreateInvoicePreview;
 };
 
 const invalidRequest = (message: string) =>
@@ -438,12 +443,14 @@ export const reissueInvoice = async ({
 	invoiceTemplateId,
 	netTermsDays,
 	updateCustomerEmail,
+	preview,
 }: {
 	ctx: AutumnContext;
 	invoiceId: string;
 	invoiceTemplateId?: string;
 	netTermsDays?: number;
 	updateCustomerEmail?: string;
+	preview?: boolean;
 }): Promise<ReissueInvoiceResult> => {
 	const row = await InvoiceService.getListRowById({ ctx, id: invoiceId });
 	if (!row) throw invalidRequest(`Invoice ${invoiceId} not found`);
@@ -470,6 +477,42 @@ export const reissueInvoice = async ({
 		nowMs: Date.now(),
 	});
 
+	const previewCustomerId = row.customer_id ?? row.invoice.internal_customer_id;
+	const replacementPreview = previewReissuedInvoice({
+		stripeInvoice,
+		lines: await getStripeInvoiceLineItems({
+			stripeClient: stripeCli,
+			invoiceId: stripeInvoice.id,
+		}),
+		storedLines: await invoiceLineItemRepo.getByInvoiceIds({
+			db: ctx.db,
+			invoiceIds: [row.invoice.id],
+		}),
+		credits: stripeCustomerToInvoiceCredits({
+			stripeCustomer: await getExpandedStripeCustomer({
+				ctx,
+				stripeCustomerId:
+					typeof stripeInvoice.customer === "string"
+						? stripeInvoice.customer
+						: stripeInvoice.customer?.id,
+			}),
+			currency: stripeInvoice.currency,
+		}),
+		dueDateMs: dueDate
+			? secondsToMs(dueDate)
+			: daysUntilDue
+				? Date.now() + daysUntilDue * 24 * 60 * 60 * 1000
+				: null,
+	});
+
+	if (preview) {
+		return {
+			replacement: null,
+			voidedInvoiceId: null,
+			preview: replacementPreview,
+		};
+	}
+
 	// Stripe snapshots customer_email at finalization, so this must precede the draft.
 	if (updateCustomerEmail) {
 		await updateStripeCustomerEmail({
@@ -479,7 +522,7 @@ export const reissueInvoice = async ({
 		});
 		// Autumn is the source of truth the next getOrCreateStripeCustomer pushes
 		// to Stripe, so without this the old address comes straight back.
-		const emailCustomerId = row.customer_id ?? row.invoice.internal_customer_id;
+		const emailCustomerId = previewCustomerId;
 		await CusService.update({
 			ctx,
 			idOrInternalId: emailCustomerId,
@@ -536,5 +579,9 @@ export const reissueInvoice = async ({
 
 	await updateInvoiceFromStripe({ ctx, customerId, stripeInvoice: finalized });
 
-	return { replacement, voidedInvoiceId: invoiceId };
+	return {
+		replacement,
+		voidedInvoiceId: invoiceId,
+		preview: replacementPreview,
+	};
 };
