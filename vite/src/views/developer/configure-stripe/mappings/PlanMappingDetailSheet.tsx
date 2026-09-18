@@ -1,5 +1,5 @@
 import type { CatalogGetMappingsResponse, ProductV2 } from "@autumn/shared";
-import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
+import { Button, Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
@@ -9,6 +9,7 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useAppForm } from "@/hooks/form/form";
 import { useCatalogMappings } from "@/hooks/queries/catalog/useCatalogMappings";
+import { useSplitVariantStripeProduct } from "@/hooks/queries/catalog/useSplitVariantStripeProduct";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useStripeProductsResolveQuery } from "@/hooks/queries/useStripeProductsResolveQuery";
 import { CatalogMappingSaveConfirmDialog } from "./CatalogMappingSaveConfirmDialog";
@@ -26,19 +27,62 @@ import { MappingField } from "./MappingField";
 import { PlanMappingDetailSkeleton } from "./PlanMappingDetailSkeleton";
 import { useStripeProductSearch } from "./useStripeProductSearch";
 
-const VariantList = ({ variants }: { variants: ProductV2[] }) => (
-	<div className="flex flex-col gap-1 pt-1 pl-5">
-		{variants.map((variant) => (
-			<div className="flex min-w-0 items-center gap-2 text-xs" key={variant.id}>
-				<span className="text-tertiary-foreground">└</span>
-				<span className="truncate text-foreground">{variant.name}</span>
-				<span className="ml-auto shrink-0 text-tertiary-foreground">
-					Inherits mapping
-				</span>
-			</div>
-		))}
-	</div>
-);
+const VariantList = ({
+	base,
+	variants,
+}: {
+	base: ProductV2;
+	variants: ProductV2[];
+}) => {
+	const splitVariant = useSplitVariantStripeProduct();
+
+	const sharesBaseProduct = (variant: ProductV2) =>
+		!variant.stripe_id || variant.stripe_id === base.stripe_id;
+
+	const sharedVariants = variants.filter(sharesBaseProduct);
+
+	return (
+		<div className="flex flex-col gap-1 pt-1 pl-5">
+			{variants.map((variant) => (
+				<div
+					className="flex min-w-0 items-center gap-2 text-xs"
+					key={variant.id}
+				>
+					<span className="text-tertiary-foreground">└</span>
+					<span className="truncate text-foreground">{variant.name}</span>
+					{sharesBaseProduct(variant) ? (
+						<Button
+							className="ml-auto h-auto shrink-0 px-0 text-xs"
+							disabled={splitVariant.isPending}
+							onClick={() => splitVariant.mutate(variant.id)}
+							variant="muted"
+						>
+							Create separate Stripe product
+						</Button>
+					) : (
+						<span className="ml-auto shrink-0 text-tertiary-foreground">
+							Own Stripe product
+						</span>
+					)}
+				</div>
+			))}
+			{sharedVariants.length > 1 && (
+				<Button
+					className="h-auto self-start px-0 text-xs"
+					disabled={splitVariant.isPending}
+					onClick={() => {
+						for (const variant of sharedVariants) {
+							splitVariant.mutate(variant.id);
+						}
+					}}
+					variant="muted"
+				>
+					Split all variants
+				</Button>
+			)}
+		</div>
+	);
+};
 
 const PlanMappingDetailForm = ({
 	base,
@@ -158,7 +202,7 @@ const PlanMappingDetailForm = ({
 									initial={{ height: 0, opacity: 0 }}
 									transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
 								>
-									<VariantList variants={variants} />
+									<VariantList base={base} variants={variants} />
 								</motion.div>
 							)}
 						</AnimatePresence>
