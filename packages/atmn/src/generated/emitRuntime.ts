@@ -4,6 +4,7 @@
 import type { MappingProjection } from "./mappingAssignments";
 
 export type CollectionSpec = {
+	readonly wireKey?: string;
 	readonly mappings?: MappingProjection;
 	readonly builder: string;
 	readonly idField: string;

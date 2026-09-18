@@ -266,3 +266,43 @@ export default atmn({ features: [feature({ featureId: "seats", name: "Seats", ty
 	await runPull({ client, cwd: dir, write: () => {} });
 	expect(readFileSync(configPath, "utf8")).toBe(mapped);
 });
+
+test("pull does not require fixtures for collections the config does not manage", async () => {
+	const dir = join(import.meta.dir, ".tmp", "pull-unmanaged-mappings");
+	mkdirSync(dir, { recursive: true });
+	const configPath = join(dir, "autumn.config.ts");
+	writeFileSync(
+		configPath,
+		`import { atmn } from "../../../src/generated/wire";
+import { plan } from "../../../src/generated/plans";
+export default atmn({ plans: [plan({ planId: "pro", name: "Pro", active: true, versionSlug: "v1" })] });`,
+	);
+	const client = {
+		diff: async () => ({
+			plans: [{ planId: "pro", action: "none", versionSlug: "v1" }],
+			features: [],
+		}),
+		get: async () => ({
+			plans: [
+				{
+					id: "pro",
+					name: "Pro",
+					versionSlug: "v1",
+					processors: { stripe: { productId: "prod_pro" } },
+				},
+			],
+			features: [
+				{
+					id: "unmanaged",
+					processors: { stripe: { productId: "prod_unmanaged" } },
+				},
+			],
+		}),
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
+	} as unknown as AutumnClient;
+	await runPull({ client, cwd: dir, includeMappings: true, write: () => {} });
+	const output = readFileSync(configPath, "utf8");
+	expect(output).toContain("prod_pro");
+	expect(output).not.toContain("prod_unmanaged");
+	expect(output).not.toContain("feature(");
+});

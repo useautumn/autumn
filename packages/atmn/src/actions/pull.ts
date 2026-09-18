@@ -343,7 +343,19 @@ export const runPull = async ({
 	}
 
 	if (includeMappings) {
-		const mapped = applyMappings({ catalog: catalogRows, configPath, files });
+		const managedCatalog = Object.fromEntries(
+			Object.entries(COLLECTIONS)
+				.filter(
+					([, spec]) =>
+						spec.wireKey !== undefined && wire[spec.wireKey] !== undefined,
+				)
+				.map(([collection]) => [collection, catalogRows[collection]]),
+		);
+		const mapped = applyMappings({
+			catalog: managedCatalog,
+			configPath,
+			files,
+		});
 		unlocated.push(...mapped.unlocated);
 		for (const id of mapped.replaced) {
 			if (!replaced.includes(id) && !appended.includes(id)) replaced.push(id);

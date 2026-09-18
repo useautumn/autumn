@@ -5,6 +5,7 @@ import type { CollectionSpec, SingletonSpec } from "./emitRuntime";
 
 export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 	features: {
+		wireKey: "features",
 		builder: "feature",
 		idField: "featureId",
 		responseIdField: "id",
@@ -86,6 +87,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 		deprecated: [],
 	},
 	plans: {
+		wireKey: "plans",
 		builder: "plan",
 		idField: "planId",
 		responseIdField: "id",
@@ -999,6 +1001,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 		],
 	},
 	rewards: {
+		wireKey: "rewards",
 		builder: "reward",
 		idField: "id",
 		responseIdField: "id",
@@ -1141,6 +1144,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 		],
 	},
 	referralPrograms: {
+		wireKey: "referral_programs",
 		builder: "referralProgram",
 		idField: "id",
 		responseIdField: "id",

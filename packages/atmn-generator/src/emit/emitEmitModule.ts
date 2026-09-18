@@ -112,6 +112,11 @@ export const emitEmitModule = ({
 		"export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {",
 	];
 	for (const [name, meta] of Object.entries(collections)) {
+		const wireKey = Object.keys(
+			catalogUpdateSchema({ spec }).properties ?? {},
+		).find((key) => toCamelCase(key) === name);
+		if (wireKey === undefined)
+			throw new Error(`No catalog wire key for ${name}`);
 		const keys = fixtureKeys({
 			schema: collectionItemSchema({ spec, collection: name }),
 			overlay,
@@ -123,6 +128,7 @@ export const emitEmitModule = ({
 			.map((path) => path.slice(prefix.length))
 			.sort();
 		lines.push(`\t${name}: {`);
+		lines.push(`\t\twireKey: ${JSON.stringify(wireKey)},`);
 		lines.push(`\t\tbuilder: ${JSON.stringify(meta.builder)},`);
 		lines.push(`\t\tidField: ${JSON.stringify(meta.idField)},`);
 		lines.push(`\t\tresponseIdField: ${JSON.stringify(meta.responseIdField)},`);
