@@ -15,8 +15,6 @@ const ABANDONED_MESSAGE =
 
 const ABANDON_GRACE = ms.minutes(10);
 
-const UNVERIFIABLE_GRACE = ms.hours(24);
-
 const LIVENESS_TIMEOUT = ms.seconds(2);
 
 export const reconcileAbandonedRuns = async ({
@@ -38,15 +36,13 @@ export const reconcileAbandonedRuns = async ({
 		differenceInMilliseconds(now, run.started_at ?? run.created_at);
 	const candidates = runs.filter(
 		(run) =>
-			!run.lazy_run &&
-			age(run) >
-				(run.trigger_run_id === null ? UNVERIFIABLE_GRACE : ABANDON_GRACE),
+			run.trigger_run_id !== null && !run.lazy_run && age(run) > ABANDON_GRACE,
 	);
 
 	const liveness = await Promise.all(
 		candidates.map(async (run) => {
 			const triggerRunId = run.trigger_run_id;
-			if (!triggerRunId) return true;
+			if (!triggerRunId) return false;
 			try {
 				return await withTimeout({
 					fn: () => isTerminal({ ctx, triggerRunId }),

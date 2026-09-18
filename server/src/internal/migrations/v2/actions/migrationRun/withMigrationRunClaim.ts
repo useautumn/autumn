@@ -4,6 +4,7 @@ import {
 	MigrationRunStatus,
 	RecaseError,
 } from "@autumn/shared";
+import { runs } from "@trigger.dev/sdk/v3";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { migrationRunRepo } from "../../repos/index.js";
@@ -11,6 +12,41 @@ import {
 	type TriggerRunLookup,
 	verifyTriggerRunExists,
 } from "./verifyTriggerRunExists.js";
+
+const defaultPersistTriggerRunId = async ({
+	ctx,
+	migrationRunId,
+	triggerRunId,
+}: {
+	ctx: AutumnContext;
+	migrationRunId: string;
+	triggerRunId: string;
+}) =>
+	migrationRunRepo.update({
+		ctx,
+		internalId: migrationRunId,
+		updates: { trigger_run_id: triggerRunId },
+	});
+
+/** Best-effort: the claim already failed, so a cancel failure must not mask it. */
+const cancelTriggerRun = async ({
+	ctx,
+	triggerRunId,
+}: {
+	ctx: AutumnContext;
+	triggerRunId: string;
+}) => {
+	try {
+		await runs.cancel(triggerRunId);
+	} catch (error) {
+		ctx.logger.warn("run-migration: could not cancel orphaned trigger run", {
+			data: {
+				triggerRunId,
+				error: error instanceof Error ? error.message : String(error),
+			},
+		});
+	}
+};
 
 const failRun = async ({
 	ctx,
@@ -53,6 +89,7 @@ export const withMigrationRunClaim = async ({
 	targetLimit,
 	claimed,
 	verifyDispatch = verifyTriggerRunExists,
+	persistTriggerRunId = defaultPersistTriggerRunId,
 }: {
 	ctx: AutumnContext;
 	migration: Migration;
@@ -64,6 +101,11 @@ export const withMigrationRunClaim = async ({
 		migrationRunId: string,
 	) => Promise<{ triggerRunId?: string } | undefined>;
 	verifyDispatch?: (triggerRunId: string) => Promise<TriggerRunLookup>;
+	persistTriggerRunId?: (params: {
+		ctx: AutumnContext;
+		migrationRunId: string;
+		triggerRunId: string;
+	}) => Promise<unknown>;
 }): Promise<{ migrationRunId: string; triggerRunId?: string }> => {
 	const migrationRun = await migrationRunRepo.insert({
 		ctx,
@@ -125,21 +167,31 @@ export const withMigrationRunClaim = async ({
 		});
 	}
 
+	// Without the handle the run can never be checked against trigger.dev, so a
+	// lost write must fail the claim rather than leave an unmanageable run.
 	if (result?.triggerRunId) {
 		try {
-			await migrationRunRepo.update({
+			await persistTriggerRunId({
 				ctx,
-				internalId: migrationRun.internal_id,
-				updates: { trigger_run_id: result.triggerRunId },
+				migrationRunId: migrationRun.internal_id,
+				triggerRunId: result.triggerRunId,
 			});
 		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
 			ctx.logger.error("run-migration: failed to persist trigger run id", {
 				data: {
 					migrationRunId: migrationRun.internal_id,
 					triggerRunId: result.triggerRunId,
-					error: error instanceof Error ? error.message : String(error),
+					error: message,
 				},
 			});
+			await cancelTriggerRun({ ctx, triggerRunId: result.triggerRunId });
+			await failRun({
+				ctx,
+				migrationRunId: migrationRun.internal_id,
+				message,
+			});
+			throw error;
 		}
 	}
 

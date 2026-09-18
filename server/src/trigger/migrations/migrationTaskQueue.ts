@@ -36,3 +36,11 @@ export const migrationRunConcurrencyKey = ({
 
 export const getMigrationTriggerOptions = ({ isDev }: { isDev: boolean }) =>
 	isDev ? { region: "eu-central-1" as const } : {};
+
+/** Makes a dispatched run findable without its handle, which is persisted in a
+ * later write that can be lost. */
+export const migrationRunTag = ({
+	migrationRunId,
+}: {
+	migrationRunId: string;
+}) => `mrun:${migrationRunId}`;
