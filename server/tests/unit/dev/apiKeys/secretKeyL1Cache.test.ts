@@ -161,43 +161,6 @@ describe("secret-key L1 cache", () => {
 		await clearSecretKeyCache({ hashedKey });
 	});
 
-	// ── skipL1: reads past a stale local entry to whatever Redis holds ──────
-	test("skipL1 bypasses a stale L1 entry and returns the Redis value", async () => {
-		const hashedKey = uniqueKey("skip-l1");
-
-		// Populate L1 (and Redis) with the old payload, then overwrite Redis only,
-		// as a write on another worker would (its clearSecretKeyCache reaches
-		// Redis on every instance but never this process's L1).
-		await setCachedSecretKeyVerification({
-			hashedKey,
-			data: buildVerificationData("org_stale"),
-		});
-		fakeStore.set(
-			buildSecretKeyCacheKey(hashedKey),
-			JSON.stringify(buildVerificationData("org_fresh")),
-		);
-		redisGet.mockClear();
-
-		const viaL1 = await getCachedSecretKeyVerification({ hashedKey });
-		expect(viaL1?.org.id).toBe("org_stale");
-		expect(redisGet).not.toHaveBeenCalled();
-
-		const fresh = await getCachedSecretKeyVerification({
-			hashedKey,
-			skipL1: true,
-		});
-		expect(fresh?.org.id).toBe("org_fresh");
-		expect(redisGet).toHaveBeenCalledTimes(1);
-
-		// The fresh read refreshes L1 so the next plain get is no longer stale.
-		redisGet.mockClear();
-		const afterRefresh = await getCachedSecretKeyVerification({ hashedKey });
-		expect(afterRefresh?.org.id).toBe("org_fresh");
-		expect(redisGet).not.toHaveBeenCalled();
-
-		await clearSecretKeyCache({ hashedKey });
-	});
-
 	// ── Contract 3: full miss returns null so verifyKey falls to Postgres ───
 	test("L1 miss + Redis miss returns null", async () => {
 		const hashedKey = uniqueKey("full-miss");

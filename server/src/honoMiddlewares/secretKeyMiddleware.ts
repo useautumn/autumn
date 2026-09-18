@@ -18,23 +18,6 @@ const maskApiKey = (apiKey: string) => {
 	return apiKey.slice(0, 15) + apiKey.slice(15).replace(/./g, "*");
 };
 
-const CATALOG_WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-// Prefix match on purpose: covers `/features/:id`, `/plans.create`, `/catalogV2.update`.
-const CATALOG_PATH_REGEX = /^\/(features|products|plans|catalog)/;
-
-/**
- * Catalog writes (features, plans, products) routinely arrive back-to-back
- * from the CLI, and a plan create may reference a feature created milliseconds
- * earlier on a different worker. The feature write clears Redis on every
- * instance but only the writing worker's in-process L1, so these requests read
- * past the L1 to guarantee they see the freshest org + features.
- */
-const isCatalogWriteRequest = (c: Context<HonoEnv>) => {
-	if (!CATALOG_WRITE_METHODS.has(c.req.method)) return false;
-	const pathname = new URL(c.req.url).pathname.replace(/^\/v1/, "");
-	return CATALOG_PATH_REGEX.test(pathname);
-};
-
 /**
  * Middleware to verify secret key and populate auth context
  * Falls back to Better Auth (dashboard session) if request is from dashboard
@@ -94,7 +77,6 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		db: ctx.db,
 		key: bearerToken,
 		requestId: ctx.id,
-		skipL1: isCatalogWriteRequest(c),
 	});
 
 	if (!data) {
