@@ -21,11 +21,9 @@ export const lineItemToMetadata = ({
 	const { id, context, discounts } = lineItem;
 	const { product, price, customerPrice } = context;
 
-	const metadata: Stripe.MetadataParam = {
-		autumn_line_item_id: id,
-		autumn_product_id: product.id,
-		autumn_price_id: price.id,
-	};
+	const metadata: Stripe.MetadataParam = { autumn_line_item_id: id };
+	if (product.id) metadata.autumn_product_id = product.id;
+	if (price.id) metadata.autumn_price_id = price.id;
 
 	if (customerPrice) {
 		metadata.autumn_customer_price_id = customerPrice.id;

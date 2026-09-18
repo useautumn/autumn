@@ -53,7 +53,7 @@ import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { hashApiKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
 import { generateId } from "@/utils/genUtils.js";
-import { createClient } from "../../../../packages/atmn-nightly/src/generated/client";
+import { createClient } from "../../../../packages/atmn/src/generated/client";
 import { uniqueTestId } from "../catalog-v2/utils/uniqueTestId.js";
 
 /** A key carrying exactly the scopes named, so the gate can be observed. */

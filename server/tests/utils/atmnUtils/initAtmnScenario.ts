@@ -9,29 +9,29 @@ import { dirname, join } from "node:path";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import { generateId } from "@/utils/genUtils.js";
-// Relative rather than a package import: atmn-nightly publishes only its bin,
+// Relative rather than a package import: atmn publishes only its bin,
 // and exposing src through `exports` for a test's benefit would leak internals
 // into the published package.
 import {
 	type AutumnClient,
 	createClient,
-} from "../../../../packages/atmn-nightly/src/generated/client";
+} from "../../../../packages/atmn/src/generated/client";
 import { seedVersionableCustomer } from "../../integration/catalog-v2/plans/migrations/utils/seedVersionableCustomer.js";
 
 /**
  * atmn e2e lives here rather than in the CLI package for one reason: this is
  * where a fresh org and a working key are one line. Rebuilding sub-org
- * provisioning inside atmn-nightly to avoid an import would be the tail wagging
+ * provisioning inside atmn to avoid an import would be the tail wagging
  * the dog.
  *
  * Configs are written to real files because that is what the CLI reads, and
  * because pull's whole job is surgery on a file. They live under the workspace
- * so `import from "atmn-nightly"` resolves, and are gitignored.
+ * so `import from "atmn"` resolves, and are gitignored.
  */
 
 export const CLI_PACKAGE_DIR = join(
 	import.meta.dir,
-	"../../../../packages/atmn-nightly",
+	"../../../../packages/atmn",
 );
 export const TMP_ROOT = join(CLI_PACKAGE_DIR, "test/.tmp");
 const CLI_ENTRY = join(CLI_PACKAGE_DIR, "src/cli.ts");

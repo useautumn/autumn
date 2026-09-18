@@ -7,12 +7,13 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { handleUnsupportedOutgoingLicenseErrors } from "@/internal/billing/v2/common/errors/handleUnsupportedLicenseActionErrors";
+import { validateCustomerEntitlementBatchTransitions } from "@/internal/billing/v2/actions/batchTransition/errors/validateCustomerEntitlementBatchTransitions";
+import { assertNoAmbiguousDroppedLicenses } from "@/internal/billing/v2/common/errors/assertNoAmbiguousDroppedLicenses";
+import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/errors/handleLicenseTransitionErrors";
+import { matchCustomerLicenseSuccessors } from "@/internal/billing/v2/compute/customerLicenseTransitions/matchCustomerLicenseSuccessors";
+import { pairCustomerProducts } from "@/internal/billing/v2/compute/pairCustomerProducts";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
-import {
-	getDeleteCustomerProducts,
-	getExpiredUpdatedCustomerProducts,
-} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import type { ImmediatePhaseTransition } from "../compute/computeCreateSchedulePlan";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 
 export const handleCreateScheduleErrors = async ({
@@ -46,19 +47,35 @@ export const handleCreateScheduleErrors = async ({
 	}
 };
 
-export const handleCreateScheduleComputeErrors = ({
+export const handleCreateScheduleComputeErrors = async ({
+	ctx,
 	autumnBillingPlan,
+	immediatePhaseTransition,
 }: {
+	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
+	immediatePhaseTransition: ImmediatePhaseTransition;
 }) => {
-	const outgoingCustomerProducts = [
-		...getExpiredUpdatedCustomerProducts({ autumnBillingPlan }),
-		...getDeleteCustomerProducts({ autumnBillingPlan }),
-	];
-	handleUnsupportedOutgoingLicenseErrors({
-		actionLabel: "billing.create_schedule",
-		customerProducts: outgoingCustomerProducts,
+	handleLicenseTransitionErrors({ autumnBillingPlan });
+
+	const customerProductPairs = pairCustomerProducts(immediatePhaseTransition);
+	for (const {
+		outgoingCustomerProduct,
+		incomingCustomerProduct,
+	} of customerProductPairs) {
+		const { unmatched } = matchCustomerLicenseSuccessors({
+			outgoingCustomerLicenses: outgoingCustomerProduct.customer_licenses ?? [],
+			incomingCustomerLicenses: incomingCustomerProduct.customer_licenses ?? [],
+		});
+		assertNoAmbiguousDroppedLicenses({ unmatched });
+	}
+
+	// Preflight the batch-transition limit, so an oversized pool fails before
+	// Stripe and customer product writes begin.
+	await validateCustomerEntitlementBatchTransitions({
+		ctx,
+		transitions: autumnBillingPlan.customerLicenseTransitions,
 	});
 };
 

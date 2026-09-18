@@ -14,7 +14,7 @@ import { computeProductDetailsPlan } from "@/internal/catalogV2/actions/updateCa
 import {
 	type AutumnClient,
 	createClient,
-} from "../../../../../packages/atmn-nightly/src/generated/client";
+} from "../../../../../packages/atmn/src/generated/client";
 
 /**
  * The real generated client, with `fetch` answered in-process: GET through

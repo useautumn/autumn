@@ -33,17 +33,17 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 // Relative rather than a package import, for the same reason initAtmnScenario
 // imports runPush that way: the package publishes only its bin.
-import { runPull } from "../../../../packages/atmn-nightly/src/actions/pull";
-import { runPush } from "../../../../packages/atmn-nightly/src/actions/push";
+import { runPull } from "../../../../packages/atmn/src/actions/pull";
+import { runPush } from "../../../../packages/atmn/src/actions/push";
 import {
 	type AutumnClient,
 	createClient,
-} from "../../../../packages/atmn-nightly/src/generated/client";
+} from "../../../../packages/atmn/src/generated/client";
 import { uniqueTestId } from "../catalog-v2/utils/uniqueTestId.js";
 
 const CLI_PACKAGE_DIR = join(
 	import.meta.dir,
-	"../../../../packages/atmn-nightly",
+	"../../../../packages/atmn",
 );
 
 /**
@@ -65,7 +65,7 @@ export default atmn(${body});
  */
 const TMP_ROOT = join(
 	import.meta.dir,
-	"../../../../packages/atmn-nightly/test/.tmp",
+	"../../../../packages/atmn/test/.tmp",
 );
 
 const openConfigDir = (): {

@@ -16,7 +16,10 @@
  */
 
 import { expect, test } from "bun:test";
-import { migrationItemRuns } from "@autumn/shared";
+import {
+	isTerminalMigrationRunStatus,
+	migrationItemRuns,
+} from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
@@ -39,7 +42,7 @@ const waitForRunCompleted = async ({
 		waitFor: async () => {
 			const [run] = await migrationRunRepo.list({ ctx, internalId: runId });
 			if (!run) throw new Error("Run not found");
-			if (run.status !== "succeeded" && run.status !== "failed")
+			if (!isTerminalMigrationRunStatus(run.status))
 				throw new Error(`Run still ${run.status}`);
 		},
 	});

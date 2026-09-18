@@ -30,7 +30,7 @@ export const expirePendingCustomerProducts = async ({
 }: {
 	ctx: RepoContext;
 	metadataId: string;
-}) => {
+}): Promise<number> => {
 	const pendingCustomerProducts = await CusProductService.getByMetadataId({
 		db: ctx.db,
 		metadataId,
@@ -45,4 +45,6 @@ export const expirePendingCustomerProducts = async ({
 			cusProductId: customerProduct.id,
 		});
 	}
+
+	return pendingCustomerProducts.length;
 };

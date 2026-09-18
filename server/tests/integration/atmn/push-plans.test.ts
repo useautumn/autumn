@@ -32,12 +32,12 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import {
 	type AutumnClient,
 	createClient,
-} from "../../../../packages/atmn-nightly/src/generated/client";
+} from "../../../../packages/atmn/src/generated/client";
 import { uniqueTestId } from "../catalog-v2/utils/uniqueTestId.js";
 
 const CLI_PACKAGE_DIR = join(
 	import.meta.dir,
-	"../../../../packages/atmn-nightly",
+	"../../../../packages/atmn",
 );
 
 /**

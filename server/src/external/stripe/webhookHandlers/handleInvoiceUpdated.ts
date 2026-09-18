@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
+import { expirePendingForVoidedStripeInvoice } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingForVoidedStripeInvoice";
 import { invoiceActions } from "@/internal/invoices/actions";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext";
@@ -43,6 +44,14 @@ export const handleInvoiceUpdated = async ({
 		if (!totalEquals) {
 			updates.total = newAtmnTotal;
 		}
+	}
+
+	if (invoiceObject.status === "void" && invoiceObject.id) {
+		await expirePendingForVoidedStripeInvoice({
+			ctx,
+			stripeInvoiceId: invoiceObject.id,
+			customerId: ctx.customerId,
+		});
 	}
 
 	if (Object.keys(updates).length > 0 && invoiceObject.id) {

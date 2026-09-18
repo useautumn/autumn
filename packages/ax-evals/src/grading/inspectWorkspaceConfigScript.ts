@@ -1,6 +1,6 @@
-import type { ApiPlanParams } from "../../../atmn/src/lib/transforms/sdkToApi/plan.ts";
-import { configSearchDirs } from "../../../atmn-nightly/src/actions/push.ts";
-import { loadConfig } from "../../../atmn-nightly/src/config/loadConfig.ts";
+import { configSearchDirs } from "../../../atmn/src/actions/push.ts";
+import { loadConfig } from "../../../atmn/src/config/loadConfig.ts";
+import type { ApiPlanParams } from "../../../atmn-old/src/lib/transforms/sdkToApi/plan.ts";
 import type { InspectedConfig } from "./types/inspectedConfig.ts";
 
 type WirePlan = {
@@ -8,7 +8,7 @@ type WirePlan = {
 	name?: string;
 	active?: boolean;
 	variants?: WireVariant[];
-	items?: Record<string, unknown>[];
+	items?: ApiPlanParams["items"];
 	[key: string]: unknown;
 };
 
@@ -17,8 +17,8 @@ type WireVariant = {
 	name?: string;
 	customize?: {
 		price?: unknown;
-		items?: Record<string, unknown>[];
-		add_items?: Record<string, unknown>[];
+		items?: ApiPlanParams["items"];
+		add_items?: ApiPlanParams["items"];
 		remove_items?: { feature_id?: string }[];
 		free_trial?: unknown;
 		[key: string]: unknown;

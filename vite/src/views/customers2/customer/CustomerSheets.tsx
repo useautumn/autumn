@@ -23,12 +23,14 @@ import { BillingSpendLimitSheet } from "../components/sheets/BillingSpendLimitSh
 import { BillingUsageAlertSheet } from "../components/sheets/BillingUsageAlertSheet";
 import { BillingUsageLimitSheet } from "../components/sheets/BillingUsageLimitSheet";
 import { CheckBalanceSheet } from "../components/sheets/CheckBalanceSheet";
+import { CreateInvoiceSheet } from "../components/sheets/CreateInvoiceSheet";
 import { CreateScheduleSheet } from "../components/sheets/CreateScheduleSheet";
 import { CustomerConfigSheet } from "../components/sheets/CustomerConfigSheet";
 import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
 import { LicenseDetailSheet } from "../components/sheets/LicenseDetailSheet";
 import { LicensePoolDetailSheet } from "../components/sheets/LicensePoolDetailSheet";
 import { RecordUsageSheet } from "../components/sheets/RecordUsageSheet";
+import { ReissueInvoiceSheet } from "../components/sheets/ReissueInvoiceSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
 import { UpcomingInvoiceSheet } from "../components/sheets/UpcomingInvoiceSheet";
 import { SyncStripeSheet } from "../components/sync-stripe/SyncStripeSheet";
@@ -37,6 +39,7 @@ import { VerifyStripeSheet } from "../components/verify-stripe/VerifyStripeSheet
 
 export function CustomerSheets() {
 	const sheetType = useSheetStore((s) => s.type);
+	const hasSidePreview = sheetType === "create-invoice";
 	const sheetData = useSheetStore((s) => s.data);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const closeBalanceSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
@@ -82,6 +85,10 @@ export function CustomerSheets() {
 				if (!invoice) return null;
 				return <InvoiceDetailSheet invoice={invoice} lineItems={lineItems} />;
 			}
+			case "invoice-reissue":
+				return <ReissueInvoiceSheet />;
+			case "create-invoice":
+				return <CreateInvoiceSheet />;
 			case "upcoming-invoice-detail": {
 				const preview = sheetData?.preview as ApiInvoicePreviewV0 | undefined;
 				if (!preview) return null;
@@ -146,7 +153,9 @@ export function CustomerSheets() {
 			    The list must keep `translate` — that's what drives the slide. */}
 			<SheetContent
 				className={cn(
-					"md:max-w-[32rem]",
+					hasSidePreview
+						? "md:w-[76rem] md:max-w-[calc(100vw-5rem)]"
+						: "md:max-w-[32rem]",
 					isInlineEditorOpen &&
 						"transition-[opacity,transform,translate,scale,rotate] opacity-0 pointer-events-none",
 				)}

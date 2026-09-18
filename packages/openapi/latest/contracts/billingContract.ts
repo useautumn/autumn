@@ -1,4 +1,6 @@
 import {
+	AdvanceTestClockParamsSchema,
+	AdvanceTestClockResponseSchema,
 	AttachParamsV1Schema,
 	BILLING_PREVIEW_RESPONSE_EXAMPLE,
 	BillingResponseSchema,
@@ -27,6 +29,24 @@ import {
 	billingPreviewUpdateJsDoc,
 	billingUpdateJsDoc,
 } from "../jsDocs/billingJsDocs";
+
+export const billingAdvanceTestClockContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/billing.advance_test_clock",
+		operationId: "advanceTestClock",
+		tags: ["billing"],
+		description:
+			"Advance a customer's Stripe test clock to a future time in milliseconds. Only Stripe test-mode customers with a test clock are supported. Advancement is asynchronous; Stripe enforces clock status and advancement limits.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "advanceTestClock",
+		}),
+	})
+	.input(AdvanceTestClockParamsSchema.meta({ title: "AdvanceTestClockParams" }))
+	.output(
+		AdvanceTestClockResponseSchema.meta({ title: "AdvanceTestClockResponse" }),
+	);
 
 export const billingAttachContract = oc
 	.route({

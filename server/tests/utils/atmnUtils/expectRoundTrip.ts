@@ -1,7 +1,7 @@
 import { expect } from "bun:test";
 import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import type { AutumnClient } from "../../../../packages/atmn-nightly/src/generated/client";
+import type { AutumnClient } from "../../../../packages/atmn/src/generated/client";
 import { uniqueTestId } from "../../integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	type AtmnScenario,

@@ -5,7 +5,7 @@ import { oauthClient } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
-import { buildCliOAuthScopes } from "../../../../packages/atmn/src/commands/auth/oauth.js";
+import { buildCliOAuthScopes } from "../../../../packages/atmn-old/src/commands/auth/oauth.js";
 
 const { db } = initDrizzle();
 const baseUrl =

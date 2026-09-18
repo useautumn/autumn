@@ -10,6 +10,7 @@ import {
 	balancesUpdateContract,
 } from "./balancesContract.js";
 import {
+	billingAdvanceTestClockContract,
 	billingAttachContract,
 	billingCreateScheduleContract,
 	billingMultiAttachContract,
@@ -55,8 +56,13 @@ import {
 	updateFeatureContract,
 } from "./featuresContract.js";
 import {
+	createInvoiceContract,
 	insertInvoicesContract,
 	listInvoicesContract,
+	listInvoiceTemplatesContract,
+	payInvoiceContract,
+	reissueInvoiceContract,
+	voidInvoiceContract,
 } from "./invoicesContract.js";
 import {
 	keysMintContract,
@@ -132,6 +138,7 @@ export const v2_3ContractRouter = oc.router({
 
 	// Billing
 	billingAttach: billingAttachContract,
+	billingAdvanceTestClock: billingAdvanceTestClockContract,
 	billingCreateSchedule: billingCreateScheduleContract,
 	billingMultiAttach: billingMultiAttachContract,
 	billingPreviewAttach: billingPreviewAttachContract,
@@ -161,8 +168,13 @@ export const v2_3ContractRouter = oc.router({
 	eventsAggregate: eventsAggregateContract,
 
 	// Invoices
+	invoicesCreate: createInvoiceContract,
 	invoicesInsert: insertInvoicesContract,
 	invoicesList: listInvoicesContract,
+	invoicesListTemplates: listInvoiceTemplatesContract,
+	invoicesPay: payInvoiceContract,
+	invoicesReissue: reissueInvoiceContract,
+	invoicesVoid: voidInvoiceContract,
 
 	// Licenses
 	licensesAttach: attachLicenseContract,

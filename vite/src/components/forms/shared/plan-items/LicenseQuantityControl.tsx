@@ -1,15 +1,28 @@
+import type { ReactNode } from "react";
 import { useState } from "react";
-import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
-import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
 import { QuantityEditControl } from "./QuantityEditControl";
 
+export type LicenseEditStart = (params: {
+	licensePlanId: string;
+	quantity: number;
+}) => void;
+
+export type LicenseFieldRenderer = (params: {
+	licensePlanId: string;
+	min: number;
+}) => ReactNode;
+
 export interface LicenseQuantityEditor {
-	form: UseAttachForm | UseUpdateSubscriptionForm;
 	quantities: Record<string, number | undefined>;
 	/** Current purchased totals per license (update flow) shown when unstaged. */
 	existingQuantities?: Record<string, number>;
 	/** Display staged totals without allowing edits (review stage). */
 	readOnly?: boolean;
+	/** Stages the total on edit-open, so the field below always renders against
+	 * a value the form already holds. */
+	onEditStart: LicenseEditStart;
+	/** Owned by the caller so each form binds its own typed field path. */
+	renderField: LicenseFieldRenderer;
 }
 
 /** Edits the total seats purchased for a license (sent as license_quantities).
@@ -26,7 +39,13 @@ export function LicenseQuantityControl({
 	licenseName?: string;
 }) {
 	const [isEditing, setIsEditing] = useState(false);
-	const { form, quantities, existingQuantities, readOnly = false } = editor;
+	const {
+		quantities,
+		existingQuantities,
+		readOnly = false,
+		onEditStart,
+		renderField,
+	} = editor;
 	const stagedQuantity = quantities[licensePlanId];
 	const totalQuantity = Math.max(
 		stagedQuantity ?? existingQuantities?.[licensePlanId] ?? includedQuantity,
@@ -34,9 +53,7 @@ export function LicenseQuantityControl({
 	);
 
 	const handleEditingChange = (editing: boolean) => {
-		if (editing && stagedQuantity !== totalQuantity) {
-			form.setFieldValue(`licenseQuantities.${licensePlanId}`, totalQuantity);
-		}
+		if (editing) onEditStart({ licensePlanId, quantity: totalQuantity });
 		setIsEditing(editing);
 	};
 
@@ -49,16 +66,7 @@ export function LicenseQuantityControl({
 			readOnly={readOnly}
 			title={licenseName ?? licensePlanId}
 		>
-			<form.AppField name={`licenseQuantities.${licensePlanId}`}>
-				{(field) => (
-					<field.QuantityField
-						fullWidth
-						hideFieldInfo
-						label=""
-						min={includedQuantity}
-					/>
-				)}
-			</form.AppField>
+			{renderField({ licensePlanId, min: includedQuantity })}
 		</QuantityEditControl>
 	);
 }

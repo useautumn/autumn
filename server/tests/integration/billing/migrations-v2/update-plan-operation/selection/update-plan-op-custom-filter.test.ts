@@ -5,9 +5,10 @@ import {
 	customers,
 	entitlements,
 	features,
+	isTerminalMigrationRunStatus,
 	MigrationItemRunStatus,
 } from "@autumn/shared";
-import { TestFeature, getFeatures } from "@tests/setup/v2Features.js";
+import { getFeatures, TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -85,7 +86,7 @@ const waitForRunCompleted = async ({
 			if (run.status === "failed") {
 				throw new Error(`Run failed: ${run.error_message}`);
 			}
-			if (run.status !== "succeeded") {
+			if (!isTerminalMigrationRunStatus(run.status)) {
 				throw new Error(`Run still ${run.status}`);
 			}
 		},
@@ -115,7 +116,10 @@ const getActiveFeatureIds = async ({
 			entitlements,
 			eq(customerEntitlements.entitlement_id, entitlements.id),
 		)
-		.innerJoin(features, eq(entitlements.internal_feature_id, features.internal_id))
+		.innerJoin(
+			features,
+			eq(entitlements.internal_feature_id, features.internal_id),
+		)
 		.where(
 			and(
 				eq(customers.org_id, ctx.org.id),

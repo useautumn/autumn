@@ -12,7 +12,7 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
 const CLI_PACKAGE_DIR = join(
 	import.meta.dir,
-	"../../../../../../packages/atmn-nightly",
+	"../../../../../../packages/atmn",
 );
 
 test("findings name file:line for fixtures in nested files", async () => {

@@ -19,14 +19,12 @@ export const seedCatalog = async ({
 	secretKey: string;
 }) => {
 	await writeFile(join(workspaceDir, "autumn.config.ts"), config);
-	// PATH already has the nightly wrapper from linkAtmn; --yes applies.
 	await run("atmn", ["push", "--yes"], {
 		cwd: workspaceDir,
 		env: {
 			...process.env,
 			PATH: `${join(workspaceDir, "node_modules/.bin")}:${process.env.PATH ?? ""}`,
 			AUTUMN_BASE_URL: backendUrl,
-			ATMN_CONFIG_PACKAGE: "atmn",
 			AUTUMN_SECRET_KEY: secretKey,
 		},
 	});

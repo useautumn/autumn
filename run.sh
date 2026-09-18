@@ -100,7 +100,7 @@ if [[ "$resolved" == "$repo_root/packages/ax-evals/"* && "$resolved" == *".test.
 	exec bun test "$rel" ${passthrough_args[@]+"${passthrough_args[@]}"}
 fi
 
-if [[ "$resolved" == "$repo_root/packages/atmn/test/integration/"* && "$resolved" == *".test.ts" ]]; then
+if [[ "$resolved" == "$repo_root/packages/atmn-old/test/integration/"* && "$resolved" == *".test.ts" ]]; then
 	cd "$repo_root/server"
 	rel="../${resolved#$repo_root/}"
 	strip_runner_ui_flags "$@"

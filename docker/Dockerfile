@@ -32,7 +32,7 @@ COPY apps/testbench/package.json apps/testbench/
 COPY apps/website/package.json apps/website/
 COPY packages/agent-docs/package.json packages/agent-docs/
 COPY packages/atmn/package.json packages/atmn/
-COPY packages/atmn-nightly/package.json packages/atmn-nightly/
+COPY packages/atmn-old/package.json packages/atmn-old/
 COPY packages/atmn-generator/package.json packages/atmn-generator/
 COPY packages/ax-evals/package.json packages/ax-evals/
 COPY packages/atmn-tests/package.json packages/atmn-tests/

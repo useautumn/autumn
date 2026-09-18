@@ -3,7 +3,7 @@
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
-	"description": "Generates the atmn-nightly CLI from the internal OpenAPI spec.",
+	"description": "Generates the atmn CLI from the internal OpenAPI spec.",
 	"scripts": {
 		"ts": "bunx tsgo --build --noEmit",
 		"test": "bun test --timeout 30000 test",

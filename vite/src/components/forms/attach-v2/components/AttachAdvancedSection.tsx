@@ -11,17 +11,14 @@ import {
 	DropdownMenuContent,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-	IconButton,
 	IconCheckbox,
-	Input,
 	Switch,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@autumn/ui";
-import { CaretDownIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react";
 import { addDays } from "date-fns";
-import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import {
 	AdvancedSection,
@@ -30,10 +27,15 @@ import {
 } from "@/components/forms/shared/advanced-section";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
 import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
+import {
+	addCustomLineItem,
+	CustomLineItemRows,
+	removeCustomLineItem,
+	updateCustomLineItem,
+} from "@/components/forms/shared/CustomLineItemRows";
 import { DiscountsConfigRow } from "@/components/forms/shared/discount-row/DiscountsConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { cn } from "@/lib/utils";
-import type { FormCustomLineItem } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { getAttachScheduledStartDate } from "../utils/buildAttachPreviewTotals";
 import {
@@ -42,16 +44,7 @@ import {
 	updateDiscount,
 } from "../utils/discountUtils";
 
-let customLineItemCounter = 0;
 const BACKDATE_START_YEAR_LOOKBACK = 25;
-
-function createCustomLineItem(): FormCustomLineItem {
-	return {
-		_id: `cli_${Date.now()}_${customLineItemCounter++}`,
-		amount: "",
-		description: "",
-	};
-}
 
 function FeatureSelectDropdown({
 	features,
@@ -215,16 +208,13 @@ export function AttachAdvancedSection() {
 	};
 
 	const handleAddCustomLineItem = () => {
-		form.setFieldValue("customLineItems", [
-			...customLineItems,
-			createCustomLineItem(),
-		]);
+		form.setFieldValue("customLineItems", addCustomLineItem(customLineItems));
 	};
 
 	const handleRemoveCustomLineItem = ({ index }: { index: number }) => {
 		form.setFieldValue(
 			"customLineItems",
-			customLineItems.filter((_, i) => i !== index),
+			removeCustomLineItem(customLineItems, index),
 		);
 	};
 
@@ -237,16 +227,10 @@ export function AttachAdvancedSection() {
 		field: "amount" | "description";
 		value: string;
 	}) => {
-		const updated = [...customLineItems];
-		if (field === "amount") {
-			updated[index] = {
-				...updated[index],
-				amount: value === "" ? "" : Number(value),
-			};
-		} else {
-			updated[index] = { ...updated[index], [field]: value };
-		}
-		form.setFieldValue("customLineItems", updated);
+		form.setFieldValue(
+			"customLineItems",
+			updateCustomLineItem({ lineItems: customLineItems, index, field, value }),
+		);
 	};
 
 	const moreOptions = (
@@ -380,69 +364,12 @@ export function AttachAdvancedSection() {
 					/>
 				}
 			>
-				<div className="flex flex-col gap-2">
-					<div className="flex justify-end">
-						<IconButton
-							variant="muted"
-							size="sm"
-							onClick={handleAddCustomLineItem}
-							icon={<PlusIcon size={12} />}
-							className="text-tertiary-foreground"
-						>
-							Add
-						</IconButton>
-					</div>
-					{customLineItems.length > 0 && (
-						<div className="space-y-2">
-							<AnimatePresence initial={false} mode="popLayout">
-								{customLineItems.map((lineItem, index) => (
-									<motion.div
-										key={lineItem._id}
-										initial={{ opacity: 0, scale: 0.95 }}
-										animate={{ opacity: 1, scale: 1 }}
-										exit={{ opacity: 0, scale: 0.95 }}
-										transition={{ duration: 0.15 }}
-									>
-										<div className="flex items-center gap-2">
-											<Input
-												type="number"
-												placeholder="Amount ($)"
-												value={lineItem.amount}
-												onChange={(e) =>
-													handleUpdateCustomLineItem({
-														index,
-														field: "amount",
-														value: e.target.value,
-													})
-												}
-												className="h-7 text-xs w-24 shrink-0"
-											/>
-											<Input
-												placeholder="Description"
-												value={lineItem.description}
-												onChange={(e) =>
-													handleUpdateCustomLineItem({
-														index,
-														field: "description",
-														value: e.target.value,
-													})
-												}
-												className="h-7 text-xs flex-1"
-											/>
-											<IconButton
-												variant="muted"
-												size="sm"
-												onClick={() => handleRemoveCustomLineItem({ index })}
-												icon={<XIcon size={12} />}
-												className="shrink-0 text-tertiary-foreground hover:text-red-500"
-											/>
-										</div>
-									</motion.div>
-								))}
-							</AnimatePresence>
-						</div>
-					)}
-				</div>
+				<CustomLineItemRows
+					lineItems={customLineItems}
+					onAdd={handleAddCustomLineItem}
+					onUpdate={handleUpdateCustomLineItem}
+					onRemove={handleRemoveCustomLineItem}
+				/>
 			</ConfigRow>
 
 			{rules.newBillingSubscription.visible && (

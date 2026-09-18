@@ -1,6 +1,6 @@
 /**
  * The walker, driven with hand-built rules. It is a real file here, so it is
- * tested directly; the generated copy is exercised from atmn-nightly.
+ * tested directly; the generated copy is exercised from atmn.
  */
 
 import { expect, test } from "bun:test";

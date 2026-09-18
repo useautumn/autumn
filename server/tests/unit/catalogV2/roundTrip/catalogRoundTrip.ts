@@ -16,16 +16,16 @@ import type { EntitlementPricesPlan } from "@/internal/products/actions/computeE
 // The CLI's own emit → parse path, so the test sees exactly what `atmn pull`
 // writes and what `atmn push` sends back. Relative because the package only
 // publishes its bin (same reason the atmn integration tests import this way).
-import { COLLECTIONS } from "../../../../../packages/atmn-nightly/src/generated/emit";
-import { emitFixture } from "../../../../../packages/atmn-nightly/src/generated/emitRuntime";
-import { feature as featureBuilder } from "../../../../../packages/atmn-nightly/src/generated/features";
-import { plan as planBuilder } from "../../../../../packages/atmn-nightly/src/generated/plans";
+import { COLLECTIONS } from "../../../../../packages/atmn/src/generated/emit";
+import { emitFixture } from "../../../../../packages/atmn/src/generated/emitRuntime";
+import { feature as featureBuilder } from "../../../../../packages/atmn/src/generated/features";
+import { plan as planBuilder } from "../../../../../packages/atmn/src/generated/plans";
 import {
 	atmn,
 	hintsOf,
 	splitWire,
 	toFixture,
-} from "../../../../../packages/atmn-nightly/src/generated/wire";
+} from "../../../../../packages/atmn/src/generated/wire";
 import {
 	describeEntitlementDifferences,
 	describePriceDifferences,

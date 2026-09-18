@@ -22,7 +22,7 @@ jobs:
             vite:
               - "vite/**"
               - "shared/**"
-              - "packages/atmn/**"
+              - "packages/atmn-old/**"
               - "packages/autumn-js/**"
               - "package.json"
               - "bun.lock"
