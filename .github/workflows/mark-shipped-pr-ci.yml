@@ -2,6 +2,9 @@ name: Sync Shipped PR CI
 
 # Event listeners and schedules must be installed on the default branch (dev).
 on:
+  check_run:
+    types: [completed]
+  status:
   workflow_run:
     workflows:
       - Knip
@@ -27,6 +30,7 @@ concurrency:
 jobs:
   sync-ci:
     name: Sync shipped PR CI
+    if: ${{ github.event_name != 'check_run' || github.event.check_run.app.slug != 'github-actions' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -36,7 +40,7 @@ jobs:
           DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
           DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
           GH_TOKEN: ${{ github.token }}
-          EVENT_SHA: ${{ github.event.workflow_run.head_sha || '' }}
+          EVENT_SHA: ${{ github.event.workflow_run.head_sha || github.event.check_run.head_sha || github.event.sha || '' }}
         run: |
           set -euo pipefail
           if [ -z "$DEPLOY_URL" ] || [ -z "$DEPLOY_SECRET" ]; then
