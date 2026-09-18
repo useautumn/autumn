@@ -10,11 +10,6 @@ export function parseBalanceWorkerRolloutEnabled({
 	if (rollout !== "true" && rollout !== "false") {
 		throw new Error("BALANCE_WORKER_ROLLOUT_ENABLED must be true or false");
 	}
-	if (rollout === "true" && runtimeEnv.NODE_ENV !== "development") {
-		throw new Error(
-			"Balance worker direct routing requires NODE_ENV=development",
-		);
-	}
 	return rollout === "true";
 }
 

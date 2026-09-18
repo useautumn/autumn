@@ -31,7 +31,7 @@ export const handleCheck = createRoute({
 		skip: (c) => {
 			const body = c.req.valid("json");
 			return Boolean(
-				isBalanceWorkerRolloutEnabled({ ctx: c.get("ctx") }) ||
+				isBalanceWorkerRolloutEnabled() ||
 					body.lock?.enabled ||
 					body.product_id,
 			);
@@ -65,7 +65,7 @@ export const handleCheck = createRoute({
 		const rawBody = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		if (isBalanceWorkerRolloutEnabled({ ctx })) {
+		if (isBalanceWorkerRolloutEnabled()) {
 			return c.json(await runBalanceWorkerCheck({ ctx, body: rawBody }));
 		}
 

@@ -30,25 +30,17 @@ test.concurrent(
 );
 
 test.concurrent(
-	"the isolated flag parser preserves direct routing restrictions",
+	"the isolated flag parser routes on the flag alone",
 	() => {
-		expect(
-			parseBalanceWorkerRolloutEnabled({
-				runtimeEnv: {
-					NODE_ENV: "development",
-					BALANCE_WORKER_ROLLOUT_ENABLED: "true",
-				},
-			}),
-		).toBe(true);
-		for (const nodeEnv of [undefined, "test", "production"]) {
-			expect(() =>
+		for (const nodeEnv of [undefined, "development", "test", "production"]) {
+			expect(
 				parseBalanceWorkerRolloutEnabled({
 					runtimeEnv: {
 						NODE_ENV: nodeEnv,
 						BALANCE_WORKER_ROLLOUT_ENABLED: "true",
 					},
 				}),
-			).toThrow("requires NODE_ENV=development");
+			).toBe(true);
 		}
 		expect(() =>
 			parseBalanceWorkerRolloutEnabled({
@@ -79,8 +71,8 @@ test(
 	usesDevelopmentRollout,
 );
 test(
-	"production cannot opt into the development balance worker route",
-	rejectsProductionRollout,
+	"any environment may opt into the balance worker route",
+	acceptsRolloutInAnyEnvironment,
 );
 test(
 	"development uses the shared worker topic and partition configuration",
@@ -127,16 +119,16 @@ function usesDevelopmentRollout() {
 	).toBe(true);
 }
 
-function rejectsProductionRollout() {
-	expect(() =>
-		createBalanceWorkerClientEnv({
-			NODE_ENV: "production",
-			BALANCE_WORKER_ROLLOUT_ENABLED: "true",
-		}),
-	).toThrow("requires NODE_ENV=development");
-	expect(() =>
-		createBalanceWorkerClientEnv({ BALANCE_WORKER_ROLLOUT_ENABLED: "true" }),
-	).toThrow("requires NODE_ENV=development");
+function acceptsRolloutInAnyEnvironment() {
+	for (const nodeEnv of ["production", undefined]) {
+		expect(
+			createBalanceWorkerClientEnv({
+				...localEnv,
+				NODE_ENV: nodeEnv,
+				BALANCE_WORKER_ROLLOUT_ENABLED: "true",
+			}).BALANCE_WORKER_ROLLOUT_ENABLED,
+		).toBe(true);
+	}
 	expect(() =>
 		createBalanceWorkerClientEnv({
 			NODE_ENV: "development",
