@@ -70,6 +70,7 @@ const createFakeWriter = ({ initial }: { initial: SubjectState | null }) => {
 		committed,
 		readState: () => state,
 		readFreshestState: () => state,
+		adopt: ({ state: adopted }: { state: SubjectState }) => adopted,
 	};
 };
 

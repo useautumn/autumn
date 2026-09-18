@@ -19,6 +19,7 @@ import {
 	createWorkerConsumerConfig,
 	createWorkerProducerConfig,
 } from "../../../src/init/workerConfig.js";
+import { createPartitionBootstrapper } from "../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
 import type { PartitionRuntime } from "../../../src/runtime/types/partitionRuntime.js";
 import { createS3CheckpointThreadExporter } from "../../../src/s3/background/createS3CheckpointThreadExporter.js";
 import type { S3CheckpointThreadConfig } from "../../../src/s3/background/s3CheckpointThreadConfig.js";
@@ -110,7 +111,17 @@ const createOwner = ({
 			stateStore: store,
 			db: createSyntheticWorkerDb(),
 			catalogCache: createTestCatalogCache(),
-			checkpointSource: storage,
+			bootstrapper: createPartitionBootstrapper({
+				stateStore: store,
+				checkpointSource: storage,
+				partitionResolver: { partitionForIdentity: () => 0 },
+				restoreLimits: checkpointLimits,
+				retryPolicy: {
+					maxAttempts: 3,
+					initialBackoffMs: 10,
+					maxBackoffMs: 100,
+				},
+			}),
 			partitionResolver: { partitionForIdentity: () => 0 },
 			checkpointMaintenance: scheduler,
 		},

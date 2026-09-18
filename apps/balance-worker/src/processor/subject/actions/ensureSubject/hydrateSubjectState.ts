@@ -23,6 +23,19 @@ export const hydrateSubjectState = async ({
 		asOfTimestampMs: occurredAt,
 	});
 	if (!envelope) throw new SubjectNotFoundError({ identity });
+	const baseline = customerRowsToSubjectState({
+		identity,
+		customer: envelope.customer,
+		customerProducts: envelope.customer_products,
+		customerPrices: envelope.customer_prices,
+		customerEntitlements: envelope.customer_entitlements,
+		rollovers: envelope.rollovers,
+		usageWindows: envelope.usage_windows,
+		entity: envelope.entity,
+	});
+	// Postgres is the baseline: nothing to log, the rows just become resident.
+	if ((ctx.baseline ?? "log") === "map")
+		return ctx.writer.adopt({ state: baseline });
 
 	const request = parseInitializeRequest({
 		input: {
@@ -34,16 +47,7 @@ export const hydrateSubjectState = async ({
 				identity,
 				occurredAt,
 			},
-			state: customerRowsToSubjectState({
-				identity,
-				customer: envelope.customer,
-				customerProducts: envelope.customer_products,
-				customerPrices: envelope.customer_prices,
-				customerEntitlements: envelope.customer_entitlements,
-				rollovers: envelope.rollovers,
-				usageWindows: envelope.usage_windows,
-				entity: envelope.entity,
-			}),
+			state: baseline,
 			// Catalog rows are not part of hydration; ensureSubjectCatalog loads whatever the state references.
 			catalogRows: [],
 		},

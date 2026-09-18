@@ -35,6 +35,11 @@ test.concurrent(
 				db: createSyntheticWorkerDb(),
 				catalogCache: createTestCatalogCache(),
 				partitionResolver: { partitionForIdentity: () => 0 },
+				bootstrapper: {
+					bootstrap: async () => {
+						throw new Error("not exercised");
+					},
+				},
 				checkpoints: {
 					source: { latest: async () => null },
 					maintenance: {
@@ -89,6 +94,11 @@ test.concurrent.each([false, true])(
 				db: createSyntheticWorkerDb(),
 				catalogCache: createTestCatalogCache(),
 				partitionResolver: { partitionForIdentity: () => 0 },
+				bootstrapper: {
+					bootstrap: async () => {
+						throw new Error("not exercised");
+					},
+				},
 				checkpoints: {
 					source: { latest: async () => null },
 					maintenance: {

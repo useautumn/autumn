@@ -38,7 +38,15 @@ export async function createBalanceWorker({
 		env,
 		endpoint: address.endpoint,
 	});
-	const resources = await openWorkerResources({ config, checkpointConfig });
+	const resources = await openWorkerResources({
+		config,
+		checkpointConfig,
+		bootstrap: {
+			restoreLimits: runtimeConfig.checkpointRestoreLimits,
+			retryPolicy: runtimeConfig.checkpointRetryPolicy,
+			checkpointSource: dependencies.checkpointSource,
+		},
+	});
 	try {
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
@@ -49,9 +57,8 @@ export async function createBalanceWorker({
 				db: resources.db,
 				catalogCache: resources.catalogCache,
 				partitionResolver: resources.partitionResolver,
-				checkpointSource:
-					dependencies.checkpointSource ?? resources.checkpoints.source,
-				checkpointMaintenance: resources.checkpoints.maintenance,
+				bootstrapper: resources.bootstrapper,
+				checkpointMaintenance: resources.checkpoints?.maintenance,
 			},
 			config: runtimeConfig,
 		});

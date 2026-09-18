@@ -21,8 +21,8 @@ import {
 	MeteringStatePartitionMismatchError,
 } from "../../stateStoreErrors.js";
 import type {
-	DurableMutationApplyResult,
 	DurableMutationRecord,
+	SqliteDurableMutationApplyResult,
 } from "../../types/durableMutation.js";
 import type { StateStoreContext } from "../../types/stateStoreContext.js";
 import type { StoredSubjectStates } from "../../types/storedSubjectState.js";
@@ -102,7 +102,7 @@ export const applyRecord = ({
 	ctx,
 	position,
 	mutation,
-}: ApplyRecordParams): DurableMutationApplyResult => {
+}: ApplyRecordParams): SqliteDurableMutationApplyResult => {
 	const expectedOffset = requireNextOffset({ ctx, position });
 	if (position.offset < expectedOffset) {
 		return { kind: "position_already_applied", nextOffset: expectedOffset };

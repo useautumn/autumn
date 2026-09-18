@@ -5,8 +5,10 @@ import type { Admin, Kafka } from "kafkajs";
 import type { CatalogCache } from "../../catalog/types/catalogCache.js";
 import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
 import type { Partitions } from "../../partitions/types/partitions.js";
+import type { PartitionBootstrapper } from "../../runtime/bootstrap/types/partitionBootstrap.js";
 import type { MeteringPartitionResolver } from "../../runtime/types/partitionRuntime.js";
-import type { CheckpointStateStore } from "../../state/types/stateStore.js";
+import type { StateBackend } from "../../state/stateBackend.js";
+import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 import type { WorkerCheckpointResources } from "./workerCheckpointResources.js";
 
@@ -21,7 +23,11 @@ export type BalanceWorkerDependencies = {
 	onError(failure: { cause: unknown }): void;
 };
 
-export type BalanceWorkerConfig = { env: BalanceWorkerEnv };
+export type BalanceWorkerConfig = {
+	env: BalanceWorkerEnv;
+	/** Overrides the STATE_BACKEND constant; tests exercise both backends. */
+	stateBackend?: StateBackend;
+};
 
 export type WorkerAddress = { hostname: string; endpoint: string };
 
@@ -42,11 +48,13 @@ export type WorkerLifecycleContext = {
 export type WorkerResourcesContext = {
 	kafka: Pick<Kafka, "producer" | "consumer" | "admin">;
 	admin: Pick<Admin, "disconnect" | "fetchTopicOffsets">;
-	stateStore: CheckpointStateStore;
+	stateStore: StateStore;
 	postgres: Pick<PostgresClient, "close">;
 	db: WorkerDb;
 	catalogCache: CatalogCache;
 	partitionResolver: MeteringPartitionResolver;
+	bootstrapper: PartitionBootstrapper;
+	/** Only the sqlite backend checkpoints; the postgres backend's bookmark lives in Postgres. */
 	checkpoints?: WorkerCheckpointResources;
 };
 

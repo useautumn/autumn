@@ -17,6 +17,7 @@ import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
+import { createPartitionBootstrapper } from "../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
 import {
 	createSyntheticWorkerDb,
@@ -110,7 +111,17 @@ describe("Real ownership admission", () => {
 				stateStore: store,
 				db: createSyntheticWorkerDb(),
 				catalogCache: createTestCatalogCache(),
-				checkpointSource: { latest: async () => null },
+				bootstrapper: createPartitionBootstrapper({
+					stateStore: store,
+					checkpointSource: { latest: async () => null },
+					partitionResolver: { partitionForIdentity: () => partition },
+					restoreLimits: {
+						maxSerializedBytes: 1_000_000,
+						maxStates: 100,
+						maxReceipts: 100,
+					},
+					retryPolicy: { maxAttempts: 1, initialBackoffMs: 1, maxBackoffMs: 1 },
+				}),
 				partitionResolver: { partitionForIdentity: () => partition },
 			},
 			config: {

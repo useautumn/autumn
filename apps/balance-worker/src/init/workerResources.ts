@@ -8,15 +8,24 @@ import {
 } from "@autumn/kafka";
 import { Kafka } from "kafkajs";
 import { createCatalogCache } from "../catalog/createCatalogCache.js";
+import type { PartitionCheckpointSource } from "../checkpoint/partitionCheckpointSource.js";
+import { createCommitter } from "../committer/createCommitter.js";
+import { createCommitterStateStore } from "../committer/createCommitterStateStore.js";
 import {
+	createCommitterDb,
 	createWorkerDb,
 	getPostgresClient,
 } from "../external/postgres/getWorkerDb.js";
-import { openStateStore } from "../state/openStateStore.js";
+import { createPartitionBootstrapper } from "../runtime/bootstrap/createPartitionBootstrapper.js";
+import { createProgressBootstrapper } from "../runtime/bootstrap/createProgressBootstrapper.js";
 import type {
-	CheckpointStateStore,
-	StateStore,
-} from "../state/types/stateStore.js";
+	PartitionBootstrapper,
+	PartitionBootstrapRetryPolicy,
+} from "../runtime/bootstrap/types/partitionBootstrap.js";
+import type { PartitionCheckpointRestoreLimits } from "../state/actions/checkpoint/restorePartitionCheckpoint.js";
+import { openStateStore } from "../state/openStateStore.js";
+import { STATE_BACKEND } from "../state/stateBackend.js";
+import type { StateStore } from "../state/types/stateStore.js";
 import { createWorkerCheckpointResources } from "./construction/createWorkerCheckpointResources.js";
 import type {
 	BalanceWorkerConfig,
@@ -28,13 +37,21 @@ import type { WorkerCheckpointResources } from "./types/workerCheckpointResource
 import type { WorkerCheckpointConfig } from "./workerCheckpointConfig.js";
 import { validateBalanceWorkerTopics } from "./workerConfig.js";
 
+export type WorkerBootstrapConfig = {
+	restoreLimits: PartitionCheckpointRestoreLimits;
+	retryPolicy: PartitionBootstrapRetryPolicy;
+	checkpointSource?: PartitionCheckpointSource;
+};
+
 export async function openWorkerResources({
 	config,
 	checkpointConfig,
+	bootstrap,
 }: {
 	config: BalanceWorkerConfig;
 	checkpointConfig: WorkerCheckpointConfig;
-}): Promise<WorkerResources & { checkpoints: WorkerCheckpointResources }> {
+	bootstrap: WorkerBootstrapConfig;
+}): Promise<WorkerResources> {
 	const { env } = config;
 	const kafka = new Kafka(
 		createKafkaClient({
@@ -65,15 +82,11 @@ export async function openWorkerResources({
 		});
 	}
 	const partitionResolver = { partitionForIdentity };
-	let stateStore: CheckpointStateStore | undefined;
+	let stateStore: StateStore | undefined;
 	let checkpoints: WorkerCheckpointResources | undefined;
 	try {
 		await admin.connect();
 		await validateBalanceWorkerTopics({ admin, env });
-		mkdirSync(dirname(env.BALANCE_WORKER_SQLITE_PATH), { recursive: true });
-		stateStore = openStateStore({
-			databasePath: env.BALANCE_WORKER_SQLITE_PATH,
-		});
 		const postgres = getPostgresClient({ env });
 		const db = createWorkerDb({ ctx: { postgres } });
 		const catalogCache = createCatalogCache({
@@ -85,11 +98,36 @@ export async function openWorkerResources({
 				},
 			},
 		});
-		checkpoints = await createWorkerCheckpointResources({
-			ctx: { stateStore },
-			config: checkpointConfig,
-		});
-		const resources = createWorkerResources({
+		let bootstrapper: PartitionBootstrapper;
+		if ((config.stateBackend ?? STATE_BACKEND) === "sqlite") {
+			mkdirSync(dirname(env.BALANCE_WORKER_SQLITE_PATH), { recursive: true });
+			const sqliteStore = openStateStore({
+				databasePath: env.BALANCE_WORKER_SQLITE_PATH,
+			});
+			stateStore = sqliteStore;
+			checkpoints = await createWorkerCheckpointResources({
+				ctx: { stateStore: sqliteStore },
+				config: checkpointConfig,
+			});
+			bootstrapper = createPartitionBootstrapper({
+				stateStore: sqliteStore,
+				checkpointSource: bootstrap.checkpointSource ?? checkpoints.source,
+				partitionResolver,
+				restoreLimits: bootstrap.restoreLimits,
+				retryPolicy: bootstrap.retryPolicy,
+			});
+		} else {
+			const committerDb = createCommitterDb({ ctx: { postgres } });
+			const committerStore = createCommitterStateStore({
+				ctx: {
+					committer: createCommitter({ ctx: { db: committerDb } }),
+					db: committerDb,
+				},
+			});
+			stateStore = committerStore;
+			bootstrapper = createProgressBootstrapper({ stateStore: committerStore });
+		}
+		return createWorkerResources({
 			ctx: {
 				kafka,
 				admin,
@@ -98,10 +136,10 @@ export async function openWorkerResources({
 				db,
 				catalogCache,
 				partitionResolver,
+				bootstrapper,
 				checkpoints,
 			},
 		});
-		return { ...resources, checkpoints };
 	} catch (cause) {
 		return await closeFailedWorkerResources({
 			ctx: { stateStore, checkpoints, admin },

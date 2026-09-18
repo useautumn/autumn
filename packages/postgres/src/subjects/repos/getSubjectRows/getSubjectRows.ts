@@ -19,7 +19,7 @@ export const getSubjectRows = async ({
 	entityId?: string | null;
 	asOfTimestampMs: number;
 }): Promise<SubjectRowsEnvelope | null> => {
-	const rows = await ctx.db.execute<{ envelope: unknown }>(
+	const rows = await ctx.db.execute(
 		subjectRowsSql({
 			ctx,
 			customerId,

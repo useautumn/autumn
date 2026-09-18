@@ -72,7 +72,8 @@ export type PartitionBootstrapRefusalReason =
 	| "checkpoint_ahead_of_log_end"
 	| "checkpoint_behind_log_start"
 	| "checkpoint_required_for_retention_gap"
-	| "local_state_ahead_of_log_end";
+	| "local_state_ahead_of_log_end"
+	| "progress_behind_log_start";
 
 export type PartitionBootstrapPlan =
 	| { kind: "continue"; nextOffset: bigint }

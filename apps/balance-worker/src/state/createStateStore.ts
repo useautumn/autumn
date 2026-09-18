@@ -43,6 +43,7 @@ export const createStateStore = ({
 	};
 
 	return {
+		baseline: "log",
 		initializePartition: (params) => initializePartition({ ctx, ...params }),
 		restorePartitionCheckpoint: (params) =>
 			restorePartitionCheckpoint({ ctx, ...params }),

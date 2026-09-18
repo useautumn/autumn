@@ -1,3 +1,4 @@
+import { adopt as adoptState } from "./actions/adopt.js";
 import {
 	decide as decideMutation,
 	readFreshestState as readFreshestSubjectState,
@@ -46,7 +47,11 @@ export function createPartitionWriter({
 		return readFreshestSubjectState({ scope, identity });
 	}
 
-	return { decide, waitForPendingCommits, readFreshestState };
+	function adopt({ state }: Parameters<PartitionWriter["adopt"]>[0]) {
+		return adoptState({ scope, state });
+	}
+
+	return { decide, waitForPendingCommits, readFreshestState, adopt };
 }
 
 function validateWriterConfig(config: PartitionWriterConfig): void {

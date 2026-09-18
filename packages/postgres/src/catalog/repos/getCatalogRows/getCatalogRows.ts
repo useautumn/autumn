@@ -29,9 +29,7 @@ export const getCatalogRows = async ({
 		ids.priceIds.length;
 	if (wanted === 0) return emptyEnvelope;
 
-	const rows = await ctx.db.execute<{ envelope: unknown }>(
-		catalogRowsSql({ ctx, ids }),
-	);
+	const rows = await ctx.db.execute(catalogRowsSql({ ctx, ids }));
 	const parsed = catalogRowsEnvelopeSchema.safeParse(rows[0]?.envelope);
 	if (!parsed.success) {
 		throw new RowsInvalidError({

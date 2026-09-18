@@ -4,6 +4,7 @@ import type { KafkaProducerClient } from "@autumn/kafka";
 import type { ProducerConfig } from "kafkajs";
 import { createPartitionRuntimeFactory } from "../../../../src/init/construction/createPartitionRuntimeFactory.js";
 import type { PartitionRuntimeFactoryConfig } from "../../../../src/init/types/partitionRuntimeFactory.js";
+import { createPartitionBootstrapper } from "../../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
 import type {
 	PartitionOutcomeFollowerPort,
 	PartitionRuntime,
@@ -96,7 +97,13 @@ describe("Kafka owned partition runtime factory", () => {
 						db: createSyntheticWorkerDb(),
 						catalogCache: createTestCatalogCache(),
 						ownershipOffsets: { fetchTopicOffsets: async () => [] },
-						checkpointSource: { latest: async () => null },
+						bootstrapper: createPartitionBootstrapper({
+							stateStore: fixture.store,
+							checkpointSource: { latest: async () => null },
+							partitionResolver: { partitionForIdentity: () => 0 },
+							restoreLimits: config.checkpointRestoreLimits,
+							retryPolicy: config.checkpointRetryPolicy,
+						}),
 						partitionResolver: { partitionForIdentity: () => 0 },
 						logger: { info: record, warn: record },
 					},
@@ -192,7 +199,13 @@ describe("Kafka owned partition runtime factory", () => {
 						db: createSyntheticWorkerDb(),
 						catalogCache: createTestCatalogCache(),
 						ownershipOffsets: { fetchTopicOffsets: async () => [] },
-						checkpointSource: { latest: async () => null },
+						bootstrapper: createPartitionBootstrapper({
+							stateStore: fixture.store,
+							checkpointSource: { latest: async () => null },
+							partitionResolver: { partitionForIdentity: () => 0 },
+							restoreLimits: config.checkpointRestoreLimits,
+							retryPolicy: config.checkpointRetryPolicy,
+						}),
 						partitionResolver: { partitionForIdentity: () => 0 },
 					},
 					config: { ...config, trackReceiptRetentionMs: 0 },
@@ -220,7 +233,13 @@ describe("Kafka owned partition runtime factory", () => {
 					db: createSyntheticWorkerDb(),
 					catalogCache: createTestCatalogCache(),
 					ownershipOffsets: { fetchTopicOffsets: async () => [] },
-					checkpointSource: { latest: async () => null },
+					bootstrapper: createPartitionBootstrapper({
+						stateStore: fixture.store,
+						checkpointSource: { latest: async () => null },
+						partitionResolver: { partitionForIdentity: () => 0 },
+						restoreLimits: config.checkpointRestoreLimits,
+						retryPolicy: config.checkpointRetryPolicy,
+					}),
 					partitionResolver: { partitionForIdentity: () => 0 },
 				},
 				config,

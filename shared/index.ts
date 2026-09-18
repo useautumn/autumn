@@ -28,13 +28,13 @@ export * from "./api/entities/crud/getEntityParams";
 export * from "./api/entities/crud/listEntitiesParamsV2_3";
 // Customer keys (per-customer JWTs)
 export * from "./api/keys/keysModels";
-export * from "./api/orgs/onboardingStatusModels";
 // Migrations v2 (operations + entity schemas)
 export * from "./api/migrations/filters/index";
 export * from "./api/migrations/operations/index";
 export * from "./api/migrations/webhooks/migrationWebhookEvents";
 // API MODELS
 export * from "./api/models";
+export * from "./api/orgs/onboardingStatusModels";
 // Sandboxes (isolated sub-orgs)
 export * from "./api/sandboxes/sandboxesModels";
 // API VERSIONING SYSTEM
@@ -119,14 +119,12 @@ export * from "./models/cusProductModels/cusEntModels/usageWindowTable";
 export * from "./models/cusProductModels/cusPriceModels/cusPriceModels";
 export * from "./models/cusProductModels/cusPriceModels/cusPriceTable";
 export * from "./models/cusProductModels/cusProductEnums";
-
 // 7. Cus Product Models
 export * from "./models/cusProductModels/cusProductModels";
 export * from "./models/cusProductModels/cusProductTable";
 export * from "./models/devModels/apiKeyModels";
 export * from "./models/devModels/apiKeyTable";
 export * from "./models/devModels/customerJwtFamilyTable";
-
 // 5. Others: events, apiKeys
 export * from "./models/eventModels/eventModels";
 export * from "./models/eventModels/eventTable";
@@ -136,6 +134,7 @@ export * from "./models/featureModels/featureConfig/creditConfig";
 export * from "./models/featureModels/featureConfig/meteredConfig";
 export * from "./models/featureModels/featureEnums";
 export * from "./models/featureModels/featureModels";
+export * from "./models/meteringLogModels/partitionProgressTable";
 
 // export * from "./models/featureModels/featureResModels";
 

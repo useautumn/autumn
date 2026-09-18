@@ -6,18 +6,20 @@ import type {
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
 import type { CatalogCache } from "../../catalog/types/catalogCache.js";
-import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
 import type { PartitionWriterLimits } from "../../processor/writer/types/partitionWriter.js";
-import type { PartitionBootstrapRetryPolicy } from "../../runtime/bootstrap/types/partitionBootstrap.js";
+import type {
+	PartitionBootstrapper,
+	PartitionBootstrapRetryPolicy,
+} from "../../runtime/bootstrap/types/partitionBootstrap.js";
 import type {
 	MeteringPartitionResolver,
 	PartitionOutcomeFollowerPort,
 	PartitionRuntime,
 } from "../../runtime/types/partitionRuntime.js";
 import type { PartitionCheckpointRestoreLimits } from "../../state/actions/checkpoint/restorePartitionCheckpoint.js";
-import type { CheckpointStateStore } from "../../state/types/stateStore.js";
+import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 
 export type KafkaBalanceWorkerTimings = KafkaConsumerGroupTimings & {
@@ -44,10 +46,11 @@ export type PartitionRuntimeFactoryContext = {
 	logger?: Pick<AutumnLogger, "info" | "warn">;
 	kafka: KafkaProducerFactory;
 	ownershipOffsets: Pick<Admin, "fetchTopicOffsets">;
-	stateStore: CheckpointStateStore;
+	stateStore: StateStore;
 	db: WorkerDb;
 	catalogCache: CatalogCache;
-	checkpointSource: PartitionCheckpointSource;
+	/** Built beside the store: checkpoint restore for sqlite, the Postgres bookmark for postgres. */
+	bootstrapper: PartitionBootstrapper;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 	partitionResolver: MeteringPartitionResolver;
 };

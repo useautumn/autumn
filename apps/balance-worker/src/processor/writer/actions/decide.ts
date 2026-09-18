@@ -1,6 +1,5 @@
 import {
 	type MeteringIdentity,
-	type MutationRecord,
 	mergeSubjectStates,
 	meteringIdentityToPartitionKey,
 	meteringIdentityToSubjectKey,
@@ -21,6 +20,7 @@ import type {
 import type { PartitionWriterScope } from "../types/partitionWriter.js";
 import {
 	PartitionWriterCommandConflictError,
+	PartitionWriterDuplicateCommandError,
 	PartitionWriterStateNotFoundError,
 } from "../writerErrors.js";
 import { scheduleCommit } from "./commit.js";
@@ -46,18 +46,22 @@ export function decide<Reply>({
 
 	const inFlight = state.pendingByKey.get(pendingKey);
 	if (inFlight) {
-		assertSameRequest({ commandId, fingerprint, record: inFlight.mutation });
+		assertSameRequest({
+			commandId,
+			fingerprint,
+			record: inFlight.mutation.receipt,
+		});
 		return decidedWith<Reply>(inFlight.settlement.join({ kind: "duplicate" }));
 	}
 
+	// A null state is legal here: initialize is the command that creates one.
+	const currentState = readFreshestState({ scope, identity });
 	const receipt = ctx.stateStore.readReceipt({
 		identity,
 		mutationId: commandId,
 	});
-	// A null state is legal here: initialize is the command that creates one.
-	const currentState = readFreshestState({ scope, identity });
 	if (receipt) {
-		assertSameRequest({ commandId, fingerprint, record: receipt });
+		assertSameRequest({ commandId, fingerprint, record: receipt.receipt });
 		if (!currentState)
 			throw new PartitionWriterStateNotFoundError({ customerKey });
 		return decidedWith<Reply>(
@@ -67,6 +71,16 @@ export function decide<Reply>({
 				state: currentState,
 			}),
 		);
+	}
+	// A store without records (postgres) still remembers the id: same request → duplicate, else conflict.
+	const remembered = state.subjects.readCommand({
+		customerKey,
+		commandId,
+		now: ctx.receiptPolicy.now(),
+	});
+	if (remembered) {
+		assertSameRequest({ commandId, fingerprint, record: remembered });
+		throw new PartitionWriterDuplicateCommandError({ commandId });
 	}
 
 	const result = submission.mutate({ state: currentState });
@@ -110,7 +124,7 @@ export async function waitForPendingCommits({
 	if (scope.state.recoveryError) throw scope.state.recoveryError;
 }
 
-/** Per subject, pending projection first: same-customer commands see uncommitted deductions, whichever subject made them. */
+/** Per subject, the map first (projected or committed), then the store: same-customer commands see uncommitted deductions, whichever subject made them. */
 export function readFreshestState({
 	scope,
 	identity,
@@ -118,10 +132,12 @@ export function readFreshestState({
 	scope: PartitionWriterScope;
 	identity: MeteringIdentity;
 }): SubjectState | null {
+	// One subject's own rows: the map first, then the store. Only sqlite answers from the
+	// store (its resident row); the postgres store returns null, so a miss means hydrate.
 	const readOwnState = ({ ownIdentity }: { ownIdentity: MeteringIdentity }) =>
-		scope.state.projectedStateBySubjectKey.get(
-			meteringIdentityToSubjectKey({ identity: ownIdentity }),
-		) ?? scope.ctx.stateStore.readOwnState({ identity: ownIdentity });
+		scope.state.subjects.readState({
+			subjectKey: meteringIdentityToSubjectKey({ identity: ownIdentity }),
+		}) ?? scope.ctx.stateStore.readOwnState({ identity: ownIdentity });
 
 	const customer = readOwnState({
 		ownIdentity: { ...identity, entityId: null },
@@ -141,8 +157,8 @@ function assertSameRequest({
 }: {
 	commandId: string;
 	fingerprint: string;
-	record: MutationRecord;
+	record: { fingerprint: string };
 }): void {
-	if (record.receipt.fingerprint === fingerprint) return;
+	if (record.fingerprint === fingerprint) return;
 	throw new PartitionWriterCommandConflictError({ commandId });
 }

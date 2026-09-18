@@ -27,6 +27,18 @@ test.each(["none", "msk_iam"] as const)(
 				openWorkerResources({
 					config: { env },
 					checkpointConfig: createWorkerCheckpointConfig({ env }),
+					bootstrap: {
+						restoreLimits: {
+							maxSerializedBytes: 1,
+							maxStates: 1,
+							maxReceipts: 1,
+						},
+						retryPolicy: {
+							maxAttempts: 1,
+							initialBackoffMs: 1,
+							maxBackoffMs: 1,
+						},
+					},
 				}),
 			).rejects.toBe(interrupted);
 			expect(createTransport).toHaveBeenCalledWith({

@@ -13,6 +13,14 @@ export class PartitionWriterStateNotFoundError extends Error {
 }
 
 /** The same commandId was reused for a different request. */
+/** The same request again, but the original record is only on the log: nothing to reply with. */
+export class PartitionWriterDuplicateCommandError extends Error {
+	constructor({ commandId }: { commandId: string }) {
+		super(`Command already applied: ${commandId}`);
+		this.name = "PartitionWriterDuplicateCommandError";
+	}
+}
+
 export class PartitionWriterCommandConflictError extends Error {
 	constructor({ commandId }: { commandId: string }) {
 		super(`Command id reused with different input: ${commandId}`);

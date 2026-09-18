@@ -1,5 +1,6 @@
 import type { Catalog, SubjectState } from "@autumn/balance-engine";
 import type { CatalogCache } from "../../../catalog/types/catalogCache.js";
+import type { SubjectBaseline } from "../../../state/types/stateStore.js";
 import type { WorkerDb } from "../../../types/workerDb.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 import type { PartitionWriter } from "../../writer/types/partitionWriter.js";
@@ -13,8 +14,10 @@ export type Subject = {
 export type SubjectHydratorContext = {
 	catalogCache: CatalogCache;
 	db: Pick<WorkerDb, "getSubjectRows">;
-	writer: Pick<PartitionWriter, "decide" | "readFreshestState">;
+	writer: Pick<PartitionWriter, "decide" | "readFreshestState" | "adopt">;
 	receiptPolicy: ReceiptPolicy;
+	/** Defaults to "log", the sqlite store's answer. */
+	baseline?: SubjectBaseline;
 };
 
 /** One hydration in flight per customer; later requests for the same customer join it. */

@@ -4,6 +4,7 @@ import {
 	type SubjectState,
 	splitSubjectState,
 } from "@autumn/balance-engine";
+import { createSubjectMap } from "./subjectMap/createSubjectMap.js";
 import type { CommittedMutation } from "./types/mutation.js";
 import type {
 	PartitionWriterScope,
@@ -15,7 +16,7 @@ import { PartitionWriterCapacityError } from "./writerErrors.js";
 
 export function createPartitionWriterState(): PartitionWriterState {
 	return {
-		projectedStateBySubjectKey: new Map(),
+		subjects: createSubjectMap(),
 		pendingByKey: new Map(),
 		pendingByCustomerKey: new Map(),
 		queue: [],
@@ -70,7 +71,7 @@ export function createPendingSettlement(): PendingSettlement {
 	return { join, settle, reject };
 }
 
-/** Queues the record and projects its result per subject, then returns the writer's own settlement promise. */
+/** Queues the record, projects its result into the map and pins those subjects, then returns the writer's own settlement promise. */
 export function enqueueMutation({
 	scope,
 	pendingKey,
@@ -112,7 +113,9 @@ export function enqueueMutation({
 	};
 	for (const [index, projected] of projectedStates.entries()) {
 		const subjectKey = pending.projectedSubjectKeys[index];
-		if (subjectKey) state.projectedStateBySubjectKey.set(subjectKey, projected);
+		if (!subjectKey) continue;
+		state.subjects.pin({ subjectKey });
+		state.subjects.setState({ subjectKey, state: projected });
 	}
 	state.pendingByKey.set(pendingKey, pending);
 	customerPending.add(pending);
@@ -144,13 +147,14 @@ export function removePendingMutation({
 	pending: PendingMutation;
 }): void {
 	state.pendingByKey.delete(pending.pendingKey);
+	// The committed rows stay resident; only the pin that kept them from eviction is released.
+	for (const subjectKey of pending.projectedSubjectKeys) {
+		state.subjects.unpin({ subjectKey });
+	}
 	const customerPending = state.pendingByCustomerKey.get(pending.customerKey);
 	customerPending?.delete(pending);
-	if (customerPending && customerPending.size > 0) return;
-	// A subject's projection only outlives the customer's last pending mutation.
-	state.pendingByCustomerKey.delete(pending.customerKey);
-	for (const subjectKey of pending.projectedSubjectKeys) {
-		state.projectedStateBySubjectKey.delete(subjectKey);
+	if (customerPending && customerPending.size === 0) {
+		state.pendingByCustomerKey.delete(pending.customerKey);
 	}
 }
 
@@ -167,5 +171,5 @@ export function rejectAllPending({
 	state.queue.length = 0;
 	state.pendingByKey.clear();
 	state.pendingByCustomerKey.clear();
-	state.projectedStateBySubjectKey.clear();
+	state.subjects.clear();
 }

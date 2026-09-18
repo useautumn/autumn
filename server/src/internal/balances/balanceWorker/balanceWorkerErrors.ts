@@ -52,12 +52,16 @@ export function rethrowBalanceWorkerError({
 	}
 	if (
 		cause instanceof BalanceWorkerClientError &&
-		cause.workerCode === "COMMAND_CONFLICT"
+		(cause.workerCode === "COMMAND_CONFLICT" ||
+			cause.workerCode === "DUPLICATE_COMMAND")
 	) {
 		throw new RecaseError({
 			code: ErrCode.DuplicateIdempotencyKey,
 			statusCode: 409,
-			message: "Command id reused with a different request",
+			message:
+				cause.workerCode === "DUPLICATE_COMMAND"
+					? "Another request with this idempotency key has already been applied"
+					: "Command id reused with a different request",
 		});
 	}
 	throw cause;

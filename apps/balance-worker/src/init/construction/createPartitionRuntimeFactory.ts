@@ -3,7 +3,6 @@ import { createMutationPublisher } from "../../kafka/createMutationPublisher.js"
 import { createOwnershipPublisher } from "../../kafka/createOwnershipPublisher.js";
 import { createWorkerProducer } from "../../kafka/createWorkerProducer.js";
 import { createPartitionCommitLogging } from "../../logging/createPartitionCommitLogging.js";
-import { createPartitionBootstrapper } from "../../runtime/bootstrap/createPartitionBootstrapper.js";
 import { createPartitionRuntime } from "../../runtime/createPartitionRuntime.js";
 import type {
 	ConstructedPartitionRuntime,
@@ -36,13 +35,6 @@ export function createPartitionRuntimeFactory({
 			"trackReceiptRetentionMs must be a positive safe integer",
 		);
 	}
-	const bootstrapper = createPartitionBootstrapper({
-		stateStore: ctx.stateStore,
-		checkpointSource: ctx.checkpointSource,
-		partitionResolver: ctx.partitionResolver,
-		restoreLimits: config.checkpointRestoreLimits,
-		retryPolicy: config.checkpointRetryPolicy,
-	});
 	function createRuntime({
 		topic,
 		partition,
@@ -79,7 +71,7 @@ export function createPartitionRuntimeFactory({
 				db: ctx.db,
 				catalogCache: ctx.catalogCache,
 				checkpointMaintenance: ctx.checkpointMaintenance,
-				bootstrapper,
+				bootstrapper: ctx.bootstrapper,
 				follower,
 				producer,
 				appender: commitLogging.appender,

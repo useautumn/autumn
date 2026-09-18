@@ -5,7 +5,7 @@ import type {
 	PartitionRuntimeResources,
 	PartitionsDependencies,
 } from "../../partitions/types/partitions.js";
-import type { CheckpointStateStore } from "../../state/types/stateStore.js";
+import type { StateStore } from "../../state/types/stateStore.js";
 
 export type KafkaOwnedPartitionGroupConsumerPort = KafkaConsumerClient;
 export type KafkaOwnedPartitionGroupAdminPort = Pick<
@@ -22,7 +22,7 @@ export type KafkaPartitionRuntimeFactory = (position: {
 export type WorkerPartitionsContext = {
 	consumer: KafkaOwnedPartitionGroupConsumerPort;
 	partitionOffsets: KafkaOwnedPartitionGroupAdminPort;
-	stateStore: CheckpointStateStore;
+	stateStore: StateStore;
 	createRuntime: KafkaPartitionRuntimeFactory;
 	onError: PartitionsDependencies["onError"];
 	onUnhealthyPartition: PartitionsDependencies["onUnhealthyPartition"];

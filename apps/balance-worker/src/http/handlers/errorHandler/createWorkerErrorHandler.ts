@@ -15,6 +15,7 @@ import {
 import {
 	PartitionWriterCapacityError,
 	PartitionWriterCommandConflictError,
+	PartitionWriterDuplicateCommandError,
 	PartitionWriterStateNotFoundError,
 } from "../../../processor/writer/writerErrors.js";
 import { OwnedPartitionNotReadyError } from "../../../runtime/runtimeErrors.js";
@@ -58,6 +59,12 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 			error = {
 				code: "COMMAND_CONFLICT",
 				message: "Command id reused with a different request",
+			};
+		} else if (cause instanceof PartitionWriterDuplicateCommandError) {
+			status = 409;
+			error = {
+				code: "DUPLICATE_COMMAND",
+				message: "Command id already applied",
 			};
 		} else if (
 			cause instanceof PartitionWriterStateNotFoundError ||

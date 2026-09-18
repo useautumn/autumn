@@ -6,10 +6,12 @@ import type {
 	MutationRecord,
 	SubjectState,
 } from "@autumn/balance-engine";
+import type { PartitionCheckpointSource } from "../../../src/checkpoint/partitionCheckpointSource.js";
 import {
 	type OwnedPartitionHealth,
 	ownedPartitionHealthOf,
 } from "../../../src/health/ownedPartitionHealth.js";
+import { createPartitionBootstrapper } from "../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
 import type { SqliteStateStore } from "../../../src/state/types/stateStore.js";
 import {
@@ -17,7 +19,6 @@ import {
 	createTrackMutation,
 	testIdentity,
 } from "../../fixtures/mutations.js";
-
 export const identity = testIdentity;
 
 export const topic = "metering-events-v1";
@@ -198,9 +199,11 @@ export type KafkaPartitionControlPort = Pick<
 export function createKafkaOwnedPartitionRuntimeFactory(
 	params: Omit<
 		PartitionRuntimeFactoryContext,
-		"ownershipOffsets" | "db" | "catalogCache"
-	> &
-		Partial<Pick<PartitionRuntimeFactoryContext, "db" | "catalogCache">> &
+		"ownershipOffsets" | "db" | "catalogCache" | "bootstrapper"
+	> & {
+		stateStore: SqliteStateStore;
+		checkpointSource: PartitionCheckpointSource;
+	} & Partial<Pick<PartitionRuntimeFactoryContext, "db" | "catalogCache">> &
 		Omit<PartitionRuntimeFactoryConfig, "ownership">,
 ) {
 	const {
@@ -222,7 +225,13 @@ export function createKafkaOwnedPartitionRuntimeFactory(
 			db,
 			catalogCache,
 			partitionResolver,
-			checkpointSource,
+			bootstrapper: createPartitionBootstrapper({
+				stateStore,
+				checkpointSource,
+				partitionResolver,
+				restoreLimits: config.checkpointRestoreLimits,
+				retryPolicy: config.checkpointRetryPolicy,
+			}),
 			ownershipOffsets: { fetchTopicOffsets },
 		},
 		config: {

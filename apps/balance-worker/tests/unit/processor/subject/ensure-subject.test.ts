@@ -161,6 +161,9 @@ const createScope = ({
 			catalogCache,
 			db,
 			writer: {
+				adopt: () => {
+					throw new Error("not exercised");
+				},
 				decide: () => {
 					throw new Error("not exercised");
 				},

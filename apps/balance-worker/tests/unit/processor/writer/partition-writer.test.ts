@@ -265,7 +265,7 @@ const createPartitionTrackWriter = ({
 }: {
 	topic: string;
 	partition: number;
-	stateStore: PartitionWriterContext["stateStore"];
+	stateStore: PartitionProcessorScope["ctx"]["stateStore"];
 	appender: CommittedOutcomeAppender;
 	limits: PartitionWriterLimits;
 	receiptPolicy?: ReceiptPolicy;
@@ -853,6 +853,7 @@ describe("partition writer", () => {
 		try {
 			const appender = new RecordingCommittedAppender();
 			const stateStore = {
+				baseline: "log" as const,
 				readState: fixture.store.readState.bind(fixture.store),
 				readOwnState: fixture.store.readOwnState.bind(fixture.store),
 				readReceipt: fixture.store.readReceipt.bind(fixture.store),

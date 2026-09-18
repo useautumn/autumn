@@ -33,6 +33,11 @@ function createResourceFixture() {
 			db: createSyntheticWorkerDb(),
 			catalogCache: createTestCatalogCache(),
 			partitionResolver: { partitionForIdentity },
+			bootstrapper: {
+				bootstrap: async () => {
+					throw new Error("not exercised");
+				},
+			},
 		},
 	});
 	function close(): void {

@@ -109,6 +109,12 @@ async function applyBatch({
 			const result = results[index];
 			if (!result) throw new Error("Expected durable apply result");
 			const mutation = persistedMutationOf({ scope, result, pending });
+			scope.state.subjects.rememberCommand({
+				customerKey: pending.customerKey,
+				commandId: mutation.id,
+				fingerprint: mutation.receipt.fingerprint,
+				expiresAt: mutation.receipt.expiresAt,
+			});
 			removePendingMutation({ state: scope.state, pending });
 			pending.settlement.settle({
 				mutation,

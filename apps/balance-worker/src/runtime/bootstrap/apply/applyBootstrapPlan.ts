@@ -7,7 +7,7 @@ import type {
 	PartitionBootstrapResult,
 } from "../types/partitionBootstrap.js";
 
-export function applyBootstrapPlan({
+export async function applyBootstrapPlan({
 	ctx,
 	topic,
 	partition,
@@ -19,13 +19,13 @@ export function applyBootstrapPlan({
 	partition: number;
 	plan: PartitionBootstrapPlan;
 	signal: AbortSignal;
-}): PartitionBootstrapResult {
+}): Promise<PartitionBootstrapResult> {
 	signal.throwIfAborted();
 	switch (plan.kind) {
 		case "continue":
 			return { kind: "continued", nextOffset: plan.nextOffset };
 		case "initialize":
-			ctx.stateStore.initializePartition({
+			await ctx.stateStore.initializePartition({
 				topic,
 				partition,
 				nextOffset: plan.nextOffset,

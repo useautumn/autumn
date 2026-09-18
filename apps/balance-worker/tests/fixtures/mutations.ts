@@ -32,7 +32,7 @@ import {
 import { createPartitionCheckpoint } from "../../src/checkpoint/partitionCheckpoint.js";
 import { commandToFingerprint } from "../../src/processor/writer/receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../../src/processor/writer/receipt/mutationToRecord.js";
-import type { DurableMutationApplyResult } from "../../src/state/types/durableMutation.js";
+import type { SqliteDurableMutationApplyResult } from "../../src/state/types/durableMutation.js";
 import type { SqliteStateStore } from "../../src/state/types/stateStore.js";
 
 export const testIdentity: MeteringIdentity = {
@@ -387,7 +387,7 @@ export const applyDurableMutation = ({
 	partition: number;
 	offset: bigint;
 	mutation: MutationRecord;
-}): DurableMutationApplyResult => {
+}): SqliteDurableMutationApplyResult => {
 	const [result] = store.applyDurableMutations({
 		records: [{ position: { topic, partition, offset }, mutation }],
 	});

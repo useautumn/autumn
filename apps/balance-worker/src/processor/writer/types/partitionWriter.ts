@@ -6,6 +6,7 @@ import type {
 import type { MeteringRecord } from "@autumn/kafka";
 import type { StateStore } from "../../../state/types/stateStore.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
+import type { SubjectMap } from "../subjectMap/types/subjectMap.js";
 import type {
 	CommittedMutation,
 	DecidedMutation,
@@ -24,6 +25,8 @@ export type PartitionWriter = {
 	readFreshestState(params: {
 		identity: MeteringIdentity;
 	}): SubjectState | null;
+	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there. */
+	adopt(params: { state: SubjectState }): SubjectState;
 };
 
 export type CommittedOutcomeAppender = {
@@ -67,7 +70,7 @@ export type PendingSettlement = {
 export type PendingMutation = {
 	pendingKey: string;
 	customerKey: string;
-	/** The states this mutation's projection wrote, released with the customer's last pending mutation. */
+	/** The subjects this mutation projected; pinned in the map until it commits. */
 	projectedSubjectKeys: string[];
 	mutation: MutationRecord;
 	/** The subject's rows once this mutation is applied. */
@@ -77,9 +80,9 @@ export type PendingMutation = {
 	committed: Promise<CommittedMutation>;
 };
 
-/** Mutable writer state: speculative projections per subject and mutations awaiting commit. */
+/** Mutable writer state: the subject map (projected and committed rows) and mutations awaiting commit. */
 export type PartitionWriterState = {
-	projectedStateBySubjectKey: Map<string, SubjectState>;
+	subjects: SubjectMap;
 	pendingByKey: Map<string, PendingMutation>;
 	pendingByCustomerKey: Map<string, Set<PendingMutation>>;
 	queue: PendingMutation[];

@@ -2,8 +2,11 @@ import { type SQL, sql } from "drizzle-orm";
 import type { PostgresContext } from "../../../types/postgresClient.js";
 import type { CatalogRowIds } from "../../types/catalogRowsEnvelope.js";
 
+/** Bun's driver flattens a JS array to "a,b" and JSON-encodes a string bound as jsonb, so the list travels as text. */
+const idList = (ids: readonly string[]): SQL =>
+	sql`(SELECT jsonb_array_elements_text(${JSON.stringify(ids)}::text::jsonb))`;
+
 /** Four by-key lookups in one statement. Entitlements carry no env column, so the org scope is their safety net. */
-// sql.param keeps each id list one array parameter; a bare array would expand into a row constructor.
 export const catalogRowsSql = ({
 	ctx,
 	ids,
@@ -16,7 +19,7 @@ export const catalogRowsSql = ({
 			(SELECT json_agg(row_to_json(e) ORDER BY e.id)
 				FROM entitlements e
 				WHERE e.org_id = ${ctx.orgId}
-					AND e.id = ANY(${sql.param(ids.entitlementIds)}::text[])),
+					AND e.id IN ${idList(ids.entitlementIds)}),
 			'[]'::json
 		),
 		'products', COALESCE(
@@ -24,7 +27,7 @@ export const catalogRowsSql = ({
 				FROM products p
 				WHERE p.org_id = ${ctx.orgId}
 					AND p.env = ${ctx.env}
-					AND p.internal_id = ANY(${sql.param(ids.productInternalIds)}::text[])),
+					AND p.internal_id IN ${idList(ids.productInternalIds)}),
 			'[]'::json
 		),
 		'features', COALESCE(
@@ -32,14 +35,14 @@ export const catalogRowsSql = ({
 				FROM features f
 				WHERE f.org_id = ${ctx.orgId}
 					AND f.env = ${ctx.env}
-					AND f.internal_id = ANY(${sql.param(ids.featureInternalIds)}::text[])),
+					AND f.internal_id IN ${idList(ids.featureInternalIds)}),
 			'[]'::json
 		),
 		'prices', COALESCE(
 			(SELECT json_agg(row_to_json(p) ORDER BY p.id)
 				FROM prices p
 				WHERE p.org_id = ${ctx.orgId}
-					AND p.id = ANY(${sql.param(ids.priceIds)}::text[])),
+					AND p.id IN ${idList(ids.priceIds)}),
 			'[]'::json
 		)
 	) AS envelope

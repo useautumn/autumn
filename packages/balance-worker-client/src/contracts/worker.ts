@@ -14,6 +14,7 @@ export type WorkerErrorCode =
 	| "ENTITY_NOT_FOUND"
 	| "CATALOG_NOT_FOUND"
 	| "COMMAND_CONFLICT"
+	| "DUPLICATE_COMMAND"
 	| "UNSUPPORTED_COMMAND"
 	| "INTERNAL";
 export type WorkerErrorResponse = {
@@ -95,6 +96,7 @@ export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
 		case "NOT_OWNER":
 		case "NOT_INITIALIZED":
 		case "COMMAND_CONFLICT":
+		case "DUPLICATE_COMMAND":
 			return 409;
 		case "CUSTOMER_NOT_FOUND":
 		case "ENTITY_NOT_FOUND":

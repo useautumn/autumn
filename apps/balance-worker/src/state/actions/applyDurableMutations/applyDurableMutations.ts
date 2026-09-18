@@ -5,8 +5,8 @@ import {
 	assertTopic,
 } from "../../assertKafkaPosition.js";
 import type {
-	DurableMutationApplyResult,
 	DurableMutationRecord,
+	SqliteDurableMutationApplyResult,
 } from "../../types/durableMutation.js";
 import type { StateStoreContext } from "../../types/stateStoreContext.js";
 import { applyRecord } from "./applyRecord.js";
@@ -30,7 +30,7 @@ export const applyDurableMutations = ({
 }: {
 	ctx: StateStoreContext;
 	records: readonly DurableMutationRecord[];
-}): DurableMutationApplyResult[] => {
+}): SqliteDurableMutationApplyResult[] => {
 	const parsedRecords: DurableMutationRecord[] = [];
 	for (const record of records) {
 		assertTopic({ topic: record.position.topic });
