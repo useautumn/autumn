@@ -30,6 +30,9 @@ export const handleReissueInvoice = createRoute({
 			net_terms_days,
 			update_customer_email,
 			preview,
+			invoice,
+			customer,
+			lines,
 		} = c.req.valid("json");
 
 		const {
@@ -43,6 +46,9 @@ export const handleReissueInvoice = createRoute({
 			netTermsDays: net_terms_days,
 			updateCustomerEmail: update_customer_email,
 			preview,
+			invoiceOverrides: invoice,
+			customerOverrides: customer,
+			lineEdits: lines,
 		});
 
 		if (!replacement) {

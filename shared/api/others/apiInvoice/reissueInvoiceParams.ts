@@ -1,6 +1,123 @@
+import { CustomLineItemSchema } from "@api/billing/common/customLineItem.js";
 import { z } from "zod/v4";
 import { ApiListInvoiceV1Schema } from "./apiListInvoiceV1.js";
-import { CreateInvoicePreviewSchema } from "./createInvoiceParams.js";
+import {
+	CreateInvoicePreviewSchema,
+	InvoicePlanParamsSchema,
+} from "./createInvoiceParams.js";
+
+/** Name/value pairs Stripe renders on the invoice, e.g. a PO number. */
+export const InvoiceCustomFieldSchema = z
+	.object({
+		name: z.string().max(30),
+		value: z.string().max(30),
+	})
+	.strict();
+
+/** Changes scoped to the replacement invoice only. */
+export const ReissueInvoiceOverridesSchema = z
+	.object({
+		custom_fields: z.array(InvoiceCustomFieldSchema).max(4).optional().meta({
+			description:
+				"Fields shown on this invoice only, such as a PO number. Up to four; pass an empty array to clear them.",
+		}),
+		tax_rate_id: z.string().nullable().optional().meta({
+			description:
+				"Stripe tax rate applied to every line. Omit to keep the original's tax, or pass null to issue the replacement with no tax.",
+		}),
+		account_tax_ids: z.array(z.string()).nullable().optional().meta({
+			description:
+				"Your own Stripe tax registrations (atx_...) shown as the seller's tax numbers. Not the customer's.",
+		}),
+		footer: z.string().nullable().optional().meta({
+			description: "Footer text, overriding the original's and any template's.",
+		}),
+		memo: z.string().nullable().optional().meta({
+			description: "Memo shown near the top of the invoice.",
+		}),
+	})
+	.strict();
+
+/** Changes written to the customer, which the replacement then snapshots. */
+export const ReissueCustomerOverridesSchema = z
+	.object({
+		email: z.email().optional().meta({
+			description:
+				"Billing email. Same as update_customer_email; passing both with different values is rejected.",
+		}),
+		name: z.string().optional().meta({
+			description: "Customer name shown on this and every later invoice.",
+		}),
+		address: z
+			.object({
+				line1: z.string().optional(),
+				line2: z.string().optional(),
+				city: z.string().optional(),
+				state: z.string().optional(),
+				postal_code: z.string().optional(),
+				country: z.string().optional(),
+			})
+			.strict()
+			.optional()
+			.meta({
+				description:
+					"Billing address. Drives tax when the org uses Stripe Tax, and is snapshotted onto the replacement.",
+			}),
+		tax_ids: z
+			.array(
+				z
+					.object({
+						type: z.string(),
+						value: z.string(),
+					})
+					.strict(),
+			)
+			.optional()
+			.meta({
+				description:
+					"The customer's own tax registrations, e.g. { type: 'eu_vat', value: 'FR123...' }. Replaces the existing set; pass an empty array to remove them.",
+			}),
+		invoice_settings_custom_fields: z
+			.array(InvoiceCustomFieldSchema)
+			.max(4)
+			.nullable()
+			.optional()
+			.meta({
+				description:
+					"Custom fields shown on this and every future invoice. Use invoice.custom_fields for this invoice alone.",
+			}),
+	})
+	.strict();
+
+/** Line edits against the original's lines. */
+export const ReissueLineEditsSchema = z
+	.object({
+		add: z
+			.array(
+				z.union([CustomLineItemSchema, InvoicePlanParamsSchema]).meta({
+					description:
+						"Either a custom charge (description + amount) or a catalog plan priced like invoices.create.",
+				}),
+			)
+			.optional(),
+		update: z
+			.array(
+				z
+					.object({
+						id: z.string().meta({
+							description: "The invoice line item ID from invoices.list items.",
+						}),
+						amount: z.number().optional(),
+						description: z.string().optional(),
+					})
+					.strict(),
+			)
+			.optional(),
+		remove: z.array(z.string()).optional().meta({
+			description: "Invoice line item IDs to leave off the replacement.",
+		}),
+	})
+	.strict();
 
 export const ReissueInvoiceParamsSchema = z.object({
 	invoice_id: z.string().meta({
@@ -23,6 +140,16 @@ export const ReissueInvoiceParamsSchema = z.object({
 		description:
 			"Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address.",
 	}),
+	invoice: ReissueInvoiceOverridesSchema.optional().meta({
+		description: "Changes that apply to the replacement invoice only.",
+	}),
+	customer: ReissueCustomerOverridesSchema.optional().meta({
+		description:
+			"Changes written to the customer, which the replacement snapshots and later invoices inherit.",
+	}),
+	lines: ReissueLineEditsSchema.optional().meta({
+		description: "Add, change or drop lines relative to the original.",
+	}),
 });
 
 export const ReissueInvoiceResponseSchema = z.object({
@@ -38,6 +165,13 @@ export const ReissueInvoiceResponseSchema = z.object({
 	}),
 });
 
+export type ReissueInvoiceOverrides = z.infer<
+	typeof ReissueInvoiceOverridesSchema
+>;
+export type ReissueCustomerOverrides = z.infer<
+	typeof ReissueCustomerOverridesSchema
+>;
+export type ReissueLineEdits = z.infer<typeof ReissueLineEditsSchema>;
 export type ReissueInvoiceParams = z.infer<typeof ReissueInvoiceParamsSchema>;
 export type ReissueInvoiceResponse = z.infer<
 	typeof ReissueInvoiceResponseSchema
