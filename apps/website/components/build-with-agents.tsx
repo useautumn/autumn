@@ -6,8 +6,8 @@ import type { SvgIconProps } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const SKILL_URL = "useautumn.com/SKILL.md";
-const PROMPT_TEXT = `Add Autumn billing to my app: ${SKILL_URL}`;
-const COPY_TEXT = `Add Autumn billing to my app: https://${SKILL_URL}`;
+const PROMPT_TEXT = `Add Autumn to my app: ${SKILL_URL}`;
+const COPY_TEXT = `Add Autumn to my app: https://${SKILL_URL}`;
 const COPIED_RESET_MS = 1800;
 
 type AgentMarkProps = SvgIconProps & { title: string; d: string };
