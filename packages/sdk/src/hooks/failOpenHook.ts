@@ -42,6 +42,7 @@ const FAIL_OPEN_BODIES: Record<string, object> = {
 		billing_controls: {},
 		subscriptions: [],
 		purchases: [],
+		licenses: [],
 		balances: {},
 		flags: {},
 	},
