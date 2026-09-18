@@ -10,6 +10,10 @@ import type { SettingsPreview } from "../render/renderPreview";
 import { applyPreview, type PreviewEntry } from "./pull/applyPreview";
 import { applySettingsPreview } from "./pull/applySettingsPreview";
 import { listSourceFiles } from "./pull/listSourceFiles";
+import {
+	pruneUnpulledPlanIds,
+	pulledPlanIds,
+} from "./pull/pruneUnpulledPlanIds";
 import { type ConfigImports, scaffoldConfig } from "./pull/scaffoldConfig";
 import { configSearchDirs } from "./push";
 import {
@@ -178,6 +182,25 @@ export const runPull = async ({
 	const previewRows = preview as unknown as Record<string, unknown>;
 	const catalogRows = catalog as unknown as Record<string, unknown>;
 
+	// A reward may name an archived plan; the pull never writes one, and a
+	// config cannot name a plan it does not declare.
+	const pulled = pulledPlanIds({ plans: rowsOf(catalogRows.plans) });
+	const rewards = pruneUnpulledPlanIds({
+		rows: rowsOf(catalogRows.rewards),
+		pulled,
+		kind: "rewards",
+	});
+	const referralPrograms = pruneUnpulledPlanIds({
+		rows: rowsOf(catalogRows.referralPrograms),
+		pulled,
+		kind: "referralPrograms",
+	});
+	const pulledRows: Record<string, unknown> = {
+		...catalogRows,
+		rewards: rewards.rows,
+		referralPrograms: referralPrograms.rows,
+	};
+
 	for (const [collection, spec] of Object.entries(COLLECTIONS)) {
 		// Versions share an id; until internal_id lands, pull cannot address them.
 		if (!spec.pull) continue;
@@ -185,7 +208,7 @@ export const runPull = async ({
 			collection,
 			spec,
 			entries: entriesOf(previewRows[collection]),
-			catalogRows: withVariantIdentity(rowsOf(catalogRows[collection])),
+			catalogRows: withVariantIdentity(rowsOf(pulledRows[collection])),
 			statedRows: rowsOf((wire as Record<string, unknown>)[collection]),
 			configPath,
 			files,
@@ -220,6 +243,8 @@ export const runPull = async ({
 			})),
 		);
 	}
+
+	lines.push(...rewards.lines, ...referralPrograms.lines);
 
 	// A fixture that is not a plain literal cannot be edited in place; saying
 	// so before writing anything beats a half-applied pull.

@@ -122,6 +122,16 @@ export const OVERLAY: Overlay = {
 				reason:
 					"The deprecated twin of auto_enable: both write the same flag, and a config states it once.",
 			},
+			base_variant_id: {
+				hidden: true,
+				reason:
+					"Read side, it is the deprecated interval-variant hint older rows carry (a history row may state a base its later versions never did); write side, it links a plan to a base. Pulled into a config it turns a stale hint into a link request the push refuses. A config links a variant by nesting it under its base's variants[] instead.",
+			},
+			"variants.base_variant_id": {
+				hidden: true,
+				reason:
+					"Nesting under the base is the link, and leaving a nested entry out is the unlink; a pointer beside the nesting can only agree with it or contradict it.",
+			},
 		},
 		features: {
 			display: {

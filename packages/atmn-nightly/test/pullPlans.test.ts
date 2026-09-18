@@ -543,3 +543,66 @@ test("a sibling version demoted under the edited row moves into history", async 
 	expect(historyTextIn(historyDir)).toContain('internalId: "prod_v1"');
 	expect(rootTextIn(historyDir)).not.toContain('internalId: "prod_v1"');
 });
+
+test("a legacy baseVariantId on a history row never reaches the config", async () => {
+	fresh(`${imports}export default atmn({\n\tfeatures: [],\n});\n`);
+	const rows = {
+		features: [],
+		plans: [
+			{
+				id: "starter_yearly",
+				internalId: "prod_sy_v1",
+				name: "Starter (yearly)",
+				version: 1,
+				versionSlug: "v1",
+				active: false,
+				archived: false,
+				items: [],
+				// The deprecated interval-variant hint older rows carry; the
+				// later version never had it, and a push would refuse the mix.
+				baseVariantId: "starter",
+			},
+			{
+				id: "starter_yearly",
+				internalId: "prod_sy_v2",
+				name: "Starter (yearly)",
+				version: 2,
+				versionSlug: "v2",
+				active: true,
+				archived: false,
+				items: [],
+				baseVariantId: null,
+			},
+		],
+	};
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "starter_yearly",
+				version: 2,
+				versionSlug: "v2",
+				active: true,
+				action: "delete",
+				internalId: "prod_sy_v2",
+				state: { hasCustomers: false },
+			},
+		],
+	};
+	const client = {
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
+		previewUpdate: async () => preview,
+		update: async () => ({}),
+		get: async () => rows,
+	};
+	// biome-ignore lint/suspicious/noExplicitAny: a fake client
+	await runPull({ client: client as any, cwd: dir, write: () => {} });
+	const text = configText();
+	expect(text).toContain('versionSlug: "v1"');
+	expect(text).toContain('versionSlug: "v2"');
+	expect(text).not.toContain("baseVariantId");
+	const wire = await executed();
+	expect(
+		wire.plans.map((row: { version_slug: string }) => row.version_slug).sort(),
+	).toEqual(["v1", "v2"]);
+});

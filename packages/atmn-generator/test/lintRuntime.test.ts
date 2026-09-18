@@ -255,6 +255,28 @@ test("exists checks a present collection and skips an absent one", () => {
 	expect(messagesWith({ rules, entry, document: {} })).toEqual([]);
 });
 
+test("exists matches a row nested in the candidate, array indices elided", () => {
+	const rules = [
+		{
+			kind: "exists" as const,
+			field: "planIds",
+			in: "plans",
+			matching: ["planId", "variants.variantPlanId"],
+			because: "E.",
+		},
+	];
+	const entry = { planIds: ["pro", "pro_annual", "gone"] };
+	expect(
+		messagesWith({
+			rules,
+			entry,
+			document: {
+				plans: [{ planId: "pro", variants: [{ variantPlanId: "pro_annual" }] }],
+			},
+		}),
+	).toEqual(['planIds "gone" is not in plans. E.']);
+});
+
 test("valueWhen", () => {
 	const rules = [
 		{

@@ -2018,7 +2018,7 @@ export const LINT_RULES: LintRules = {
 				kind: "exists",
 				field: "planIds",
 				in: "plans",
-				matching: "planId",
+				matching: ["planId", "variants.variantPlanId"],
 				because:
 					"A referral program triggers on checkout of a plan this config does not declare.",
 			},
@@ -2089,7 +2089,7 @@ export const LINT_RULES: LintRules = {
 				kind: "exists",
 				field: "planIds",
 				in: "plans",
-				matching: "planId",
+				matching: ["planId", "variants.variantPlanId"],
 				because: "A coupon discounts a plan this config does not declare.",
 			},
 		],

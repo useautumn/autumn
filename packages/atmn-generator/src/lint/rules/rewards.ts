@@ -3,6 +3,9 @@ import { exists, unique } from "./define";
 
 const REWARD_ID_PATHS = ["coupon.id", "featureGrant.id"] as const;
 
+/** A plan is declared at the top level or nested as a variant under its base. */
+const PLAN_ID_PATHS = ["planId", "variants.variantPlanId"] as const;
+
 export const rewardRules: LintRule[] = [
 	unique({
 		field: REWARD_ID_PATHS,
@@ -19,7 +22,7 @@ export const couponRules: LintRule[] = [
 	exists({
 		field: "planIds",
 		in: "plans",
-		matching: "planId",
+		matching: PLAN_ID_PATHS,
 		because: "A coupon discounts a plan this config does not declare.",
 	}),
 ];
@@ -53,7 +56,7 @@ export const referralProgramRules: LintRule[] = [
 	exists({
 		field: "planIds",
 		in: "plans",
-		matching: "planId",
+		matching: PLAN_ID_PATHS,
 		because:
 			"A referral program triggers on checkout of a plan this config does not declare.",
 	}),

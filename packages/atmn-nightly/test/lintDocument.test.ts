@@ -7,6 +7,9 @@
 import { expect, test } from "bun:test";
 import { feature } from "../src/generated/features";
 import { ConfigError } from "../src/generated/lintRuntime";
+import { plan } from "../src/generated/plans";
+import { referralProgram } from "../src/generated/referralPrograms";
+import { coupon } from "../src/generated/rewards";
 import { atmn } from "../src/generated/wire";
 
 const issuesOf = (run: () => unknown): { path: string; message: string }[] => {
@@ -158,5 +161,49 @@ test("two features claiming one id are refused", () => {
 			message:
 				'featureId "seats" is used more than once. Two features claiming one id race to define the same row.',
 		},
+	]);
+});
+
+test("a coupon or referral program may name a variant nested under its base", () => {
+	const launch = {
+		id: "launch",
+		name: "Launch",
+		duration: { type: "forever" as const, length: null },
+		promoCodes: [{ code: "LAUNCH" }],
+		type: "percentage_discount" as const,
+		value: 10,
+	};
+	expect(() =>
+		atmn({
+			features: [],
+			plans: [
+				plan({
+					planId: "pro",
+					name: "Pro",
+					variants: [{ variantPlanId: "pro_annual", name: "Pro (annual)" }],
+				}),
+			],
+			rewards: [coupon({ ...launch, planIds: ["pro", "pro_annual"] })],
+			referralPrograms: [
+				referralProgram({
+					id: "friends",
+					rewardId: "launch",
+					redeemOn: "checkout",
+					receivedBy: "referrer",
+					planIds: ["pro_annual"],
+				}),
+			],
+		}),
+	).not.toThrow();
+
+	const issues = issuesOf(() =>
+		atmn({
+			features: [],
+			plans: [plan({ planId: "pro", name: "Pro" })],
+			rewards: [coupon({ ...launch, planIds: ["retired"] })],
+		}),
+	);
+	expect(issues.map((issue) => issue.message)).toEqual([
+		expect.stringContaining('planIds "retired" is not in plans'),
 	]);
 });

@@ -115,7 +115,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"createInStripe",
 			"variants",
 			"licenses",
-			"baseVariantId",
 		],
 		required: [
 			"billingControls.autoTopups.featureId",
@@ -309,7 +308,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"addOn",
 			"archived",
 			"autoEnable",
-			"baseVariantId",
 			"billingControls",
 			"billingControls.autoTopups",
 			"billingControls.autoTopups.enabled",
@@ -540,7 +538,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"processors.stripe.productId",
 			"variants",
 			"variants.archived",
-			"variants.baseVariantId",
 			"variants.customize",
 			"variants.customize.addItems",
 			"variants.customize.addItems.entityFeatureId",

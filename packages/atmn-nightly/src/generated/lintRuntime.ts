@@ -111,8 +111,10 @@ export type LintRule =
 	| {
 			/** `field` names an entry of top-level collection `in` by `matching`.
 			 * An array-valued `field` is checked element-wise; a list of `matching`
-			 * paths matches on whichever the candidate states. Skipped when that
-			 * collection is absent: absent means "not mine". */
+			 * paths matches on whichever the candidate states, array indices
+			 * elided, so a row nested in the candidate (a plan's variants) names
+			 * it too. Skipped when that collection is absent: absent means "not
+			 * mine". */
 			readonly kind: "exists";
 			readonly field: string;
 			readonly in: string;
@@ -223,6 +225,24 @@ const valueAtPath = ({
 		current = current[segment];
 	}
 	return current;
+};
+
+/** Every value at a dotted path, array indices elided: an array on the way
+ * fans out over its elements, as the path hints spell nested rows. */
+const valuesAtPath = ({
+	entry,
+	path,
+}: {
+	entry: Entry;
+	path: string;
+}): unknown[] => {
+	let current: unknown[] = [entry];
+	for (const segment of path.split(".")) {
+		current = current
+			.flatMap((value) => (Array.isArray(value) ? value : [value]))
+			.flatMap((value) => (isEntry(value) ? [value[segment]] : []));
+	}
+	return current.filter((value) => value !== undefined);
 };
 
 /** The first of `paths` the entry states — a union item is named by its branch. */
@@ -462,12 +482,15 @@ const entryRuleFailures = ({
 			const target = document[rule.in];
 			if (value === undefined || value === null || !Array.isArray(target))
 				return [];
+			const paths =
+				typeof rule.matching === "string" ? [rule.matching] : rule.matching;
 			const names = (wanted: unknown): boolean =>
 				target.some(
 					(candidate) =>
 						isEntry(candidate) &&
-						firstValueAtPaths({ entry: candidate, paths: rule.matching }) ===
-							wanted,
+						paths.some((path) =>
+							valuesAtPath({ entry: candidate, path }).includes(wanted),
+						),
 				);
 			const missing = (Array.isArray(value) ? value : [value]).filter(
 				(wanted) => !names(wanted),
