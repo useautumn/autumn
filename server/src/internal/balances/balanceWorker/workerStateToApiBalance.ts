@@ -4,10 +4,9 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
-	fullSubjectToFullCustomer,
-	getApiBalance,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getApiBalanceV2 } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiBalance/getApiBalanceV2.js";
 import { BalanceWorkerUnsupportedError } from "./balanceWorkerErrors.js";
 
 /** The server's row with the worker's balances on it: the worker owns balance, the server owns everything derived from catalog. */
@@ -61,10 +60,10 @@ export function workerStateToApiBalance({
 	const [first] = customerEntitlements;
 	if (!first)
 		throw new BalanceWorkerUnsupportedError({ reason: "feature_not_found" });
-	const { data } = getApiBalance({
+	const { data } = getApiBalanceV2({
 		ctx: { ...ctx, expand: [] },
-		fullCus: fullSubjectToFullCustomer({ fullSubject }),
-		cusEnts: customerEntitlements.map((customerEntitlement) =>
+		fullSubject,
+		customerEntitlements: customerEntitlements.map((customerEntitlement) =>
 			overlayWorkerRows({ customerEntitlement, state }),
 		),
 		feature: first.entitlement.feature,

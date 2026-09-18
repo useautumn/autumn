@@ -4,6 +4,7 @@ import {
 	catalogRowsToCatalog,
 	computeTrack,
 	type OverageBehavior,
+	orgToCommandOrg,
 	subjectStateToFullSubject,
 	type TrackCommand,
 } from "@autumn/balance-engine";
@@ -23,7 +24,6 @@ import {
 	fullSubjectToCatalogRows,
 	fullSubjectToSubjectState,
 } from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
-import { orgToCommandOrg } from "@/internal/balances/balanceWorker/orgToCommandOrg.js";
 import { trackParamsToTrackCommand } from "@/internal/balances/track/balanceWorker/balanceWorkerTrackRequest.js";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 import { createCustomerFixture } from "../balanceWorker/customer-fixture.js";

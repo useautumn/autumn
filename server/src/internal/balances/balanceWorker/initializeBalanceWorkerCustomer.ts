@@ -11,6 +11,7 @@ import {
 	fullSubjectToCatalogRows,
 	fullSubjectToSubjectState,
 } from "./fullSubjectToSubjectState.js";
+import { requestContextToCommandBase } from "./requestContextToCommandBase.js";
 
 export async function initializeBalanceWorkerCustomer({
 	ctx,
@@ -29,12 +30,13 @@ export async function initializeBalanceWorkerCustomer({
 	const request = parseInitializeRequest({
 		input: {
 			command: {
-				schemaVersion: 1,
+				...requestContextToCommandBase({
+					ctx,
+					customerId: state.identity.customerId,
+					entityId: state.identity.entityId,
+				}),
 				type: "initialize",
 				commandId,
-				requestId: ctx.id,
-				identity: state.identity,
-				occurredAt: ctx.timestamp,
 			},
 			state,
 			catalogRows: fullSubjectToCatalogRows({ ctx, fullSubject, featureIds }),

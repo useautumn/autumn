@@ -10,6 +10,8 @@ export const baseCommandSchema = z.object({
 	occurredAt: timestampSchema,
 });
 
+export type BaseCommand = z.infer<typeof baseCommandSchema>;
+
 /** A command that appends a mutation also carries the id the log dedups on. */
 export const mutatingCommandSchema = baseCommandSchema.extend({
 	commandId: nonEmptyStringSchema,

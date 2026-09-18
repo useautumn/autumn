@@ -8,6 +8,7 @@ import {
 import {
 	type Catalog,
 	type CatalogRow,
+	type CommandOrg,
 	catalogRowsToCatalog,
 	createSubjectState,
 	parseCheckCommand,
@@ -30,6 +31,14 @@ export const identity = {
 } as const;
 
 export const occurredAt = 1_700_000_000_000;
+
+export const org: CommandOrg = {
+	config: {
+		reverse_deduction_order: false,
+		block_overdue_entitlements: false,
+		include_past_due: true,
+	},
+};
 
 const internalFeatureIdOf = (featureId: string) => `feat_${featureId}`;
 const entitlementIdOf = (customerEntitlementId: string) =>
@@ -230,13 +239,7 @@ export const createTrackCommand = ({
 		input: {
 			schemaVersion: 1,
 			type: "track",
-			org: {
-				config: {
-					reverse_deduction_order: false,
-					block_overdue_entitlements: false,
-					include_past_due: true,
-				},
-			},
+			org,
 			commandId,
 			requestId,
 			identity: { ...identity, entityId },
@@ -264,13 +267,7 @@ export const createCheckCommand = ({
 		input: {
 			schemaVersion: 1,
 			type: "check",
-			org: {
-				config: {
-					reverse_deduction_order: false,
-					block_overdue_entitlements: false,
-					include_past_due: true,
-				},
-			},
+			org,
 			requestId: "req_check_1",
 			identity: { ...identity, entityId },
 			featureId,

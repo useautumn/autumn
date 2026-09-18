@@ -1,6 +1,7 @@
 import {
 	type Catalog,
 	type CatalogRow,
+	type CommandOrg,
 	catalogRowsToCatalog,
 	computeInitialize,
 	computeTrack,
@@ -30,6 +31,14 @@ export const testIdentity: MeteringIdentity = {
 const occurredAt = 1_700_000_000_000;
 const receipt = { fingerprint: "fp_test", expiresAt: 1_700_086_400_000 };
 const internalFeatureId = "feat_messages";
+
+const testOrg: CommandOrg = {
+	config: {
+		reverse_deduction_order: false,
+		block_overdue_entitlements: false,
+		include_past_due: true,
+	},
+};
 const entitlementId = "ent_messages_monthly";
 const internalProductId = "prod_internal_pro";
 
@@ -162,13 +171,7 @@ export const createTrackMutation = ({
 			input: {
 				schemaVersion: 1,
 				type: "track",
-				org: {
-					config: {
-						reverse_deduction_order: false,
-						block_overdue_entitlements: false,
-						include_past_due: true,
-					},
-				},
+				org: testOrg,
 				commandId,
 				requestId: `req_${commandId}`,
 				identity: state.identity,

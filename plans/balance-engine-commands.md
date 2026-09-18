@@ -321,7 +321,7 @@ commands). Everything else in the scripts has a row below.
 | event `properties` (window filters, credit dimension rules) | refused | 7 · 8 |
 | credit systems: `entitlementToCreditSystem` (+ `feature_override`), `getCreditCost`, graduated rate cards, `usage_attribution`, tokens cost | `creditCost: 1` | 8 |
 | credit-system rows sort last; `getCreditRateRequiredBalance` for check | ✗ | 8 |
-| entities: target / all / top-level cases, per-entity adjustment, entity-first sort, per-entity rollovers | ✗ | 9 (model decision 11) |
+| entities: target / all / top-level cases, per-entity adjustment, entity-first sort, per-entity rollovers | ✗ | 9 (model decision 13) |
 | pooled balances (`is_pooled_balance` rows) | refused | 9 |
 | boolean and continuous-use features | refused | 9 (boolean → check `flag`) |
 | mutation logs → per-row deltas with value and credit cost | ✓ (`usage_attribution_delta` in 8) | — |
@@ -560,7 +560,7 @@ the rest are server side effects fed from `changes` + `state` (see the reply tab
    `state` is a field a command returns, not a wrapper every command must fit.
 9. **Org context comes from the server, on the command, and only what is read.** The Lua path
    reads `ctx.org` for `reverse_deduction_order`, `block_overdue_entitlements` and the statuses
-   `orgToInStatuses` derives; those travel as an `org` pick on `TrackCommand` / `CheckCommand`,
+   `orgToInStatuses` derives; those travel as an `org` pick on `TrackCommand` / `CheckCommand` (decision 12),
    nothing more, so the log records the settings a decision was made under and replay stays
    exact. Features are already catalog rows. Keep what crosses to the worker minimal: a field
    is added when a unit reads it, never ahead of time. 2026-09-17.
@@ -568,5 +568,15 @@ the rest are server side effects fed from `changes` + `state` (see the reply tab
    row it needs (`Pick`/view types), never `FullCusProduct`, so the server's full rows and the
    worker's lean rows share one implementation; the engine adds a local rule only when no shared
    one exists, and then asks first. 2026-09-17.
-11. **Open — entity balances.** Lua keeps per-entity balances in an `entities` map on the row;
+11. **Commands carry data, contexts carry handles; the two never merge.** Everything a decision
+   reads (identity, org settings, features, `occurredAt`) is on the command, because a replay must
+   reach the same decision without a live server. Everything that executes (logger, clock, hydrator,
+   writer, database) lives in the process running it: `AutumnContext` on the server,
+   `PartitionProcessorScope.ctx` in the worker, nothing in the engine. No context object crosses
+   the client, and the worker never fetches org context itself. 2026-09-18.
+12. **`org` is a field on the commands that read it.** Track and check declare `org`; initialize
+   loads a baseline, decides nothing, and carries none, so the worker's own hydration can build one
+   without fetching org context. The server converters share `requestContextToCommandBase` for the
+   base fields and add `org` with `orgToCommandOrg`; the client stays a transport. 2026-09-18.
+13. **Open — entity balances.** Lua keeps per-entity balances in an `entities` map on the row;
    the worker already models entity subjects with their own rows. Decide before 9.

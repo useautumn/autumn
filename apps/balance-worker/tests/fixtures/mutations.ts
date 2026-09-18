@@ -2,6 +2,7 @@ import {
 	applyMutation,
 	type Catalog,
 	type CatalogRow,
+	type CommandOrg,
 	catalogRowsToCatalog,
 	computeInitialize,
 	computeTrack,
@@ -46,6 +47,14 @@ export const testDeduplicationExpiresAt = 1_700_086_400_000;
 
 /** Deterministic catalog ids so a state's rows and the catalog rows they reference agree by construction. */
 const internalFeatureIdOf = (featureId: string) => `feat_${featureId}`;
+
+export const testOrg: CommandOrg = {
+	config: {
+		reverse_deduction_order: false,
+		block_overdue_entitlements: false,
+		include_past_due: true,
+	},
+};
 const entitlementIdOf = (customerEntitlementId: string) =>
 	`ent_${customerEntitlementId}`;
 export const testProductInternalId = "prod_internal_pro";
@@ -247,13 +256,7 @@ export const createTrackCommand = ({
 		input: {
 			schemaVersion: 1,
 			type: "track",
-			org: {
-				config: {
-					reverse_deduction_order: false,
-					block_overdue_entitlements: false,
-					include_past_due: true,
-				},
-			},
+			org: testOrg,
 			commandId,
 			requestId: requestId ?? `req_${commandId}`,
 			identity,

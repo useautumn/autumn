@@ -35,8 +35,10 @@ export type {
 	CatalogTable,
 } from "./models/catalog/catalogKey.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
+export type { BaseCommand } from "./models/command/baseCommand.js";
 export type { CommandOrg } from "./models/command/commandOrg.js";
 export type { MutatingCommand } from "./models/command/mutatingCommand.js";
+export { orgToCommandOrg } from "./models/command/orgToCommandOrg.js";
 // models
 export type { JsonValue } from "./models/common/json.js";
 export { canonicalizeJsonValue } from "./models/common/json.js";

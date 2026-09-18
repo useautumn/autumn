@@ -56,6 +56,7 @@ import {
 	createInitializeRequest,
 	createSubjectFor,
 	restoreSubjectStates,
+	testOrg,
 } from "../../../fixtures/mutations.js";
 
 const topic = "metering-events-v1";
@@ -103,13 +104,7 @@ const createCommand = ({
 		input: {
 			schemaVersion: 1,
 			type: "track",
-			org: {
-				config: {
-					reverse_deduction_order: false,
-					block_overdue_entitlements: false,
-					include_past_due: true,
-				},
-			},
+			org: testOrg,
 			commandId,
 			requestId: `req_${commandId}`,
 			identity,

@@ -1,8 +1,8 @@
-import type { TrackCommand } from "@autumn/balance-engine";
+import { orgToCommandOrg, type TrackCommand } from "@autumn/balance-engine";
 import type { TrackParams } from "@autumn/shared";
 import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
 import { featureToInternalFeatureId } from "../../balanceWorker/featureToInternalFeatureId.js";
-import { orgToCommandOrg } from "../../balanceWorker/orgToCommandOrg.js";
+import { requestContextToCommandBase } from "../../balanceWorker/requestContextToCommandBase.js";
 
 export function trackParamsToTrackCommand({
 	ctx,
@@ -12,19 +12,17 @@ export function trackParamsToTrackCommand({
 	body: TrackParams;
 }): TrackCommand {
 	return {
-		schemaVersion: 1,
+		...requestContextToCommandBase({
+			ctx,
+			customerId: body.customer_id,
+			entityId: body.entity_id ?? null,
+			occurredAt: body.timestamp ?? ctx.timestamp,
+		}),
 		type: "track",
+		org: orgToCommandOrg({ org: ctx.org }),
 		commandId: body.idempotency_key
 			? JSON.stringify(["track", body.idempotency_key])
 			: ctx.id,
-		requestId: ctx.id,
-		identity: {
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId: body.customer_id,
-			entityId: body.entity_id ?? null,
-		},
-		org: orgToCommandOrg({ org: ctx.org }),
 		featureId: body.feature_id!,
 		internalFeatureId: featureToInternalFeatureId({
 			ctx,
@@ -33,6 +31,5 @@ export function trackParamsToTrackCommand({
 		value: body.value ?? 1,
 		overageBehavior: body.overage_behavior ?? "cap",
 		properties: body.properties ?? null,
-		occurredAt: body.timestamp ?? ctx.timestamp,
 	};
 }
