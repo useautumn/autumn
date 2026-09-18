@@ -1,5 +1,10 @@
 import type { InvoiceCustomize, ProductItem } from "@autumn/shared";
-import { BillingMethod, UsageModel } from "@autumn/shared";
+import {
+	BillingMethod,
+	itemToBillingInterval,
+	itemToBillingIntervalCount,
+	UsageModel,
+} from "@autumn/shared";
 
 const isBasePriceItem = (item: ProductItem) => !item.feature_id;
 
@@ -32,11 +37,11 @@ export function productItemsToInvoiceCustomize({
 
 	const customize: InvoiceCustomize = {
 		price: baseItem
-			? defined({
+			? {
 					amount: baseItem.price ?? 0,
-					interval: baseItem.interval,
-					interval_count: baseItem.interval_count,
-				})
+					interval: itemToBillingInterval({ item: baseItem }),
+					interval_count: itemToBillingIntervalCount({ item: baseItem }),
+				}
 			: null,
 	};
 
@@ -45,8 +50,8 @@ export function productItemsToInvoiceCustomize({
 			amount: item.price,
 			tiers: item.tiers,
 			tier_behavior: item.tier_behavior,
-			interval: item.interval,
-			interval_count: item.interval_count,
+			interval: itemToBillingInterval({ item }),
+			interval_count: itemToBillingIntervalCount({ item }),
 			billing_units: item.billing_units,
 			billing_method: billingMethodOf(item),
 		});

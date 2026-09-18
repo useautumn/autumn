@@ -30,6 +30,8 @@ describe("productItemsToInvoiceCustomize", () => {
 		expect(result?.items?.[0].price).toEqual({
 			amount: 0.1,
 			billing_units: 1,
+			interval: "one_off",
+			interval_count: 1,
 			billing_method: BillingMethod.UsageBased,
 		});
 	});
@@ -41,7 +43,11 @@ describe("productItemsToInvoiceCustomize", () => {
 			]),
 		});
 
-		expect(result?.price).toEqual({ amount: 23, interval: "quarter" });
+		expect(result?.price).toEqual({
+			amount: 23,
+			interval: "quarter",
+			interval_count: 1,
+		});
 		expect(result?.items).toBeUndefined();
 	});
 
@@ -69,5 +75,18 @@ describe("productItemsToInvoiceCustomize", () => {
 		expect(result?.items?.[0].price?.billing_method).toBe(
 			BillingMethod.Prepaid,
 		);
+	});
+	test("bills a one-off base price as one_off rather than omitting the interval", () => {
+		const result = productItemsToInvoiceCustomize({
+			items: items([
+				{ feature_id: null, price: 40, interval: null, created_at: 1 },
+			]),
+		});
+
+		expect(result?.price).toEqual({
+			amount: 40,
+			interval: "one_off",
+			interval_count: 1,
+		});
 	});
 });

@@ -5,6 +5,15 @@ import type {
 import { toast } from "sonner";
 import { useBillingMutation } from "@/components/forms/shared/hooks/useBillingMutation";
 
+const copyLink = async (url: string) => {
+	try {
+		await navigator.clipboard.writeText(url);
+		return true;
+	} catch {
+		return false;
+	}
+};
+
 export function useCreateInvoiceMutation({
 	customerId,
 	buildRequestBody,
@@ -30,14 +39,12 @@ export function useCreateInvoiceMutation({
 			useInvoice: true,
 			skipDefaultSuccess: true,
 		});
-		const invoice = result.data?.invoice;
+		const url = result.data?.invoice?.hosted_invoice_url;
+		const copied = url ? await copyLink(url) : false;
 
-		if (invoice?.hosted_invoice_url) {
-			await navigator.clipboard.writeText(invoice.hosted_invoice_url);
-			toast.success("Invoice created, link copied to clipboard");
-		} else {
-			toast.success("Invoice created");
-		}
+		toast.success(
+			copied ? "Invoice created, link copied to clipboard" : "Invoice created",
+		);
 
 		onCreated?.();
 	};

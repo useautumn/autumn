@@ -6,7 +6,9 @@ export type InvoiceDiscountRow = { label: string; amount: number };
 
 /**
  * Stripe lists each coupon on its own row and applies them in order, so a
- * percentage coupon discounts what is left after the ones before it.
+ * percentage coupon discounts what is left after the ones before it. Rows are
+ * rounded per line while the server rounds once, so the last row absorbs the
+ * difference and the displayed rows always sum to the invoice's discount.
  */
 export function invoiceDiscountRows({
 	discounts,
@@ -32,7 +34,7 @@ export function invoiceDiscountRows({
 	}
 
 	let remaining = subtotal;
-	return rewards.flatMap((reward) => {
+	const rows = rewards.flatMap((reward) => {
 		const value = reward.discount_config?.discount_value ?? 0;
 		const isFixed = reward.type === RewardType.FixedDiscount;
 		const amount = isFixed
@@ -44,4 +46,11 @@ export function invoiceDiscountRows({
 		const suffix = isFixed ? `$${value.toFixed(2)} off` : `${value}% off`;
 		return [{ label: `${reward.name} (${suffix})`, amount }];
 	});
+
+	const shown = rows.reduce((sum, row) => sum + row.amount, 0);
+	const drift = Math.round((discountTotal - shown) * 100) / 100;
+
+	return rows.map((row, index) =>
+		index === rows.length - 1 ? { ...row, amount: row.amount + drift } : row,
+	);
 }

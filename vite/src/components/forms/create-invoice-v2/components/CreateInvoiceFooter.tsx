@@ -30,7 +30,10 @@ export function CreateInvoiceFooter() {
 
 	const nothingToBill = requestBody === null;
 	const disabled =
-		nothingToBill || blockingReason !== null || previewQuery.isLoading;
+		nothingToBill ||
+		blockingReason !== null ||
+		previewQuery.isLoading ||
+		previewQuery.isError;
 
 	return (
 		<SheetFooter className="grid-cols-1 pt-4">

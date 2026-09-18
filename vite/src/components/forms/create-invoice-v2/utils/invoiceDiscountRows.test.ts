@@ -14,6 +14,14 @@ const rewardsById = new Map([
 		"pct10",
 		reward("pct10", "Inv 10 Percent Off", RewardType.PercentageDiscount, 10),
 	],
+	[
+		"pct33",
+		reward("pct33", "Inv 33 Percent Off", RewardType.PercentageDiscount, 33),
+	],
+	[
+		"pct33b",
+		reward("pct33b", "Another 33 Percent", RewardType.PercentageDiscount, 33),
+	],
 ]);
 
 describe("invoiceDiscountRows", () => {
@@ -54,5 +62,19 @@ describe("invoiceDiscountRows", () => {
 				discountTotal: 0,
 			}),
 		).toEqual([]);
+	});
+	test("rows sum to the invoice discount when per-row rounding drifts", () => {
+		const rows = invoiceDiscountRows({
+			discounts: [
+				{ _id: "d1", reward_id: "pct33" },
+				{ _id: "d2", reward_id: "pct33b" },
+			],
+			rewardsById,
+			subtotal: 99.99,
+			discountTotal: 55.1,
+		});
+
+		const shown = rows.reduce((sum, row) => sum + row.amount, 0);
+		expect(Math.round(shown * 100) / 100).toBe(55.1);
 	});
 });
