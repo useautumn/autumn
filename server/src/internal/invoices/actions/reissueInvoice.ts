@@ -5,6 +5,7 @@ import {
 	type DbInvoiceLineItem,
 	ErrCode,
 	type FullCustomer,
+	type InsertDbInvoiceLineItem,
 	type InvoiceTemplate,
 	MetadataType,
 	ProcessorType,
@@ -13,6 +14,7 @@ import {
 	type ReissueInvoiceOverrides,
 	type ReissueLineEdits,
 	secondsToMs,
+	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
@@ -21,6 +23,7 @@ import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { stripeLineItemsToDbLineItems } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines";
 import {
 	addStripeInvoiceLines,
 	createStripeInvoice,
@@ -496,8 +499,6 @@ const copyLineItemRows = async ({
 		db: ctx.db,
 		invoiceIds: [original.invoice.id],
 	});
-	if (originalRows.length === 0) return;
-
 	const replacementLines = await getStripeInvoiceLineItems({
 		stripeClient: createStripeCli({ org: ctx.org, env: ctx.env }),
 		invoiceId: replacement.id,
@@ -509,16 +510,23 @@ const copyLineItemRows = async ({
 		]),
 	);
 
-	const copied: DbInvoiceLineItem[] = originalRows.flatMap((row) => {
+	const copied: InsertDbInvoiceLineItem[] = originalRows.flatMap((row) => {
 		const line = row.stripe_id
 			? replacementLineBySource.get(row.stripe_id)
 			: undefined;
 		if (!line) return [];
+		// Adjusted lines bill a different amount, so the stored row follows Stripe.
+		const amount = stripeToAtmnAmount({
+			amount: line.amount,
+			currency: replacement.currency,
+		});
 		return [
 			{
 				...row,
 				id: generateKsuid({ prefix: "invoice_li_" }),
 				created_at: Date.now(),
+				amount,
+				amount_after_discounts: amount,
 				invoice_id: autumnInvoiceId,
 				stripe_id: line.id,
 				stripe_invoice_id: replacement.id,
@@ -529,7 +537,21 @@ const copyLineItemRows = async ({
 		];
 	});
 
-	await invoiceLineItemRepo.upsertMany({ db: ctx.db, lineItems: copied });
+	// Lines the reissue added have no original row behind them.
+	const copiedStripeIds = new Set(copied.map((row) => row.stripe_id));
+	const addedLines = replacementLines.filter(
+		(line) => !copiedStripeIds.has(line.id),
+	);
+	const added = stripeLineItemsToDbLineItems({
+		stripeLineItems: addedLines,
+		stripeDiscounts: [],
+		invoiceId: autumnInvoiceId,
+		stripeInvoiceId: replacement.id,
+	});
+
+	const lineItems = [...copied, ...added];
+	if (lineItems.length === 0) return;
+	await invoiceLineItemRepo.upsertMany({ db: ctx.db, lineItems });
 };
 
 const storeReplacementInAutumn = async ({

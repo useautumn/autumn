@@ -23,6 +23,7 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
+import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos";
 
 type Scenario = Awaited<ReturnType<typeof initScenario>>;
 type ReissueResponse = { invoice: ApiListInvoiceV1; voided_invoice_id: string };
@@ -155,6 +156,15 @@ test.concurrent(
 		expect(
 			replacement.lines.data.map((line) => line.amount).sort((a, b) => a - b),
 		).toEqual([1500, 10000]);
+
+		// The stored Autumn row must follow the edit, not the original's $20.
+		const storedRows = await invoiceLineItemRepo.getByInvoiceIds({
+			db: ctx.db,
+			invoiceIds: [invoice.id],
+		});
+		expect(storedRows.map((row) => row.amount).sort((a, b) => a - b)).toEqual([
+			15, 100,
+		]);
 	},
 );
 
