@@ -107,7 +107,7 @@ describe("Real balance worker HTTP service", () => {
 				onError: ({ cause }) => errors.push(cause),
 				logger: { info: ignoreLog, warn: ignoreLog, error: ignoreLog },
 			},
-			config: { env },
+			config: { env, stateBackend: "sqlite" },
 		});
 		const routing = createOwnershipConsumer({
 			ctx: { kafka },

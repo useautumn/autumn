@@ -217,7 +217,7 @@ export const createCheckpointServiceFixture = async () => {
 				},
 				logger: { info: () => {}, warn: () => {}, error: () => {} },
 			},
-			config: { env },
+			config: { env, stateBackend: "sqlite" },
 		});
 		services.push(service);
 		await service.start();

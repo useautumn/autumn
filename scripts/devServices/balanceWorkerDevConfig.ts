@@ -13,6 +13,9 @@ export function balanceWorkerDevConfig({
 		runtimeEnv.BALANCE_WORKER_DATABASE_URL ?? runtimeEnv.DATABASE_URL;
 	return {
 		...(databaseUrl && { BALANCE_WORKER_DATABASE_URL: databaseUrl }),
+		// Edge configs poll the same admin bucket the server does; absent, the worker serves defaults.
+		...(runtimeEnv.S3_BUCKET && { S3_BUCKET: runtimeEnv.S3_BUCKET }),
+		...(runtimeEnv.S3_REGION && { S3_REGION: runtimeEnv.S3_REGION }),
 		KAFKA_BROKERS: runtimeEnv.KAFKA_BROKERS ?? "127.0.0.1:19092",
 		KAFKA_AUTH_MODE: runtimeEnv.KAFKA_AUTH_MODE ?? "none",
 		KAFKAJS_LOG_LEVEL: runtimeEnv.KAFKAJS_LOG_LEVEL ?? "error",

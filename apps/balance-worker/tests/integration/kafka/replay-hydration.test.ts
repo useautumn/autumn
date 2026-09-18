@@ -346,7 +346,7 @@ async function startBalanceWorkerFixture({
 			onError: recordError,
 			logger: { info: ignoreLog, warn: ignoreLog, error: ignoreLog },
 		},
-		config: { env },
+		config: { env, stateBackend: "sqlite" },
 	});
 	let released = false;
 	async function stop(): Promise<void> {

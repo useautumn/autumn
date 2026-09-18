@@ -19,7 +19,7 @@ import { createWorkerEdgeConfigs } from "../edgeConfig/createWorkerEdgeConfigs.j
 import {
 	createCommitterDb,
 	createWorkerDb,
-	getPostgresClient,
+	createWorkerPostgresClient,
 } from "../external/postgres/getWorkerDb.js";
 import { createPartitionBootstrapper } from "../runtime/bootstrap/createPartitionBootstrapper.js";
 import { createProgressBootstrapper } from "../runtime/bootstrap/createProgressBootstrapper.js";
@@ -94,7 +94,7 @@ export async function openWorkerResources({
 	try {
 		await admin.connect();
 		await validateBalanceWorkerTopics({ admin, env });
-		const postgres = getPostgresClient({ env });
+		const postgres = createWorkerPostgresClient({ env });
 		const db = createWorkerDb({ ctx: { postgres } });
 		const edgeConfigs = createWorkerEdgeConfigs({
 			ctx: { logger: dependencies.logger },

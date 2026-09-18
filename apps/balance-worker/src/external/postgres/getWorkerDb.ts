@@ -11,19 +11,16 @@ import {
 import type { CommitterDb } from "../../types/committerDb.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 
-let postgresClient: PostgresClient | undefined;
-
-/** One pool per process; its size counts against the fleet's PgBouncer client budget. */
-export const getPostgresClient = ({
+/** One pool per worker, closed with it; its size counts against the fleet's PgBouncer client budget. */
+export const createWorkerPostgresClient = ({
 	env,
 }: {
 	env: Pick<
 		BalanceWorkerEnv,
 		"BALANCE_WORKER_DATABASE_URL" | "BALANCE_WORKER_DATABASE_POOL_SIZE"
 	>;
-}): PostgresClient => {
-	if (postgresClient) return postgresClient;
-	const client = createPostgresClient({
+}): PostgresClient =>
+	createPostgresClient({
 		config: {
 			databaseUrl: env.BALANCE_WORKER_DATABASE_URL,
 			maxConnections: env.BALANCE_WORKER_DATABASE_POOL_SIZE,
@@ -32,16 +29,6 @@ export const getPostgresClient = ({
 			maxLifetime: 1800,
 		},
 	});
-	// A closed pool must not be handed to the next worker in this process (tests restart workers).
-	postgresClient = {
-		...client,
-		close: async () => {
-			postgresClient = undefined;
-			await client.close();
-		},
-	};
-	return postgresClient;
-};
 
 export const createWorkerDb = ({
 	ctx,

@@ -25,7 +25,7 @@ test.each(["none", "msk_iam"] as const)(
 			});
 			await expect(
 				openWorkerResources({
-					config: { env },
+					config: { env, stateBackend: "sqlite" },
 					checkpointConfig: createWorkerCheckpointConfig({ env }),
 					bootstrap: {
 						restoreLimits: {
