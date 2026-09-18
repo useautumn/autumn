@@ -47,16 +47,20 @@ export const ApiRevenueCatPlanProcessorSchema = z.object({
 	}),
 });
 
-export const ApiPlanProcessorsSchema = z.object({
-	/** Omit to keep the current mapping; null unlinks it. */
-	stripe: ApiStripePlanProcessorSchema.nullish(),
-	revenuecat: ApiRevenueCatPlanProcessorSchema.nullish(),
-});
+export const ApiPlanProcessorsSchema = z
+	.object({
+		/** Omit to keep the current mapping; null unlinks it. */
+		stripe: ApiStripePlanProcessorSchema.nullish(),
+		revenuecat: ApiRevenueCatPlanProcessorSchema.nullish(),
+	})
+	.meta({ "x-atmn-mapping": true });
 
-export const ApiPriceProcessorsSchema = z.object({
-	/** Omit to keep the current mapping; null unlinks it. */
-	stripe: ApiStripePriceProcessorSchema.nullish(),
-});
+export const ApiPriceProcessorsSchema = z
+	.object({
+		/** Omit to keep the current mapping; null unlinks it. */
+		stripe: ApiStripePriceProcessorSchema.nullish(),
+	})
+	.meta({ "x-atmn-mapping": true });
 
 export type ApiStripePlanProcessor = z.infer<
 	typeof ApiStripePlanProcessorSchema

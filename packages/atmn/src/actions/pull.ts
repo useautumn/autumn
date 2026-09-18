@@ -16,6 +16,7 @@ import { resolveProject } from "../project/resolveProject";
 import { writeRootMarker } from "../project/rootMarker";
 import { createPrompter, done, type Prompter } from "../prompt/prompt";
 import type { SettingsPreview } from "../render/renderPreview";
+import { applyMappings } from "./pull/applyMappings";
 import { applyPreview, type PreviewEntry } from "./pull/applyPreview";
 import { applySettingsPreview } from "./pull/applySettingsPreview";
 import { listSourceFiles } from "./pull/listSourceFiles";
@@ -339,6 +340,15 @@ export const runPull = async ({
 				action: `set by hand: \`${singleton}\` is not an object literal`,
 			})),
 		);
+	}
+
+	if (includeMappings) {
+		const mapped = applyMappings({ catalog: catalogRows, configPath, files });
+		unlocated.push(...mapped.unlocated);
+		for (const id of mapped.replaced) {
+			if (!replaced.includes(id) && !appended.includes(id)) replaced.push(id);
+			lines.push(`↳ wrote processor mappings into ${id}`);
+		}
 	}
 
 	// A fixture that is not a plain literal cannot be edited in place; saying

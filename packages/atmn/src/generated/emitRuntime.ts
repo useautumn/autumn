@@ -1,13 +1,10 @@
 // Copied by @autumn/atmn-generator from packages/atmn-generator/src/emit/runtime/emitFixture.ts.
 // Do not edit — change that file and run `bun generate` instead.
 
-/**
- * Copied verbatim into the CLI by the generator, so this file imports nothing:
- * a pulled server row becomes fixture source here, in the exact shape the
- * surgery module splices into the user's config.
- */
+import type { MappingProjection } from "./mappingAssignments";
 
 export type CollectionSpec = {
+	readonly mappings?: MappingProjection;
 	readonly builder: string;
 	readonly idField: string;
 	readonly responseIdField: string;
