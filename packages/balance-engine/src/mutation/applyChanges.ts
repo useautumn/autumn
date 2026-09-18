@@ -4,7 +4,9 @@ import type {
 	RowChange,
 	TableRowChange,
 } from "../models/mutation/rowChange.js";
+import type { AnyRowIncrement } from "../models/mutation/rowIncrement.js";
 import type { SubjectState } from "../models/subject/subjectState.js";
+import { incrementRow } from "./incrementRow.js";
 
 type StateRow = SubjectState[
 	| "customerProducts"
@@ -32,7 +34,7 @@ const applyToTable = <Row extends StateRow>({
 	change,
 }: {
 	rows: Row[];
-	change: TableRowChange<string, Row>;
+	change: TableRowChange<string, Row> | AnyRowIncrement<Row>;
 }): Row[] => {
 	const indexOfId = (id: string) =>
 		rows.findIndex((row) => rowIdOf({ row }) === id);
@@ -57,6 +59,17 @@ const applyToTable = <Row extends StateRow>({
 			const index = indexOfId(change.id);
 			if (index === -1) throw new StaleMutationError({ subject: change.id });
 			return rows.filter((_, candidate) => candidate !== index);
+		}
+		// An add needs the row to exist and to still be the cycle the guard names; its counters may hold anything.
+		case "increment": {
+			const index = indexOfId(change.id);
+			const row = rows[index];
+			if (!row || !rowMatchesBefore({ row, before: change.guard ?? {} })) {
+				throw new StaleMutationError({ subject: change.id });
+			}
+			return rows.map((candidate, candidateIndex) =>
+				candidateIndex === index ? incrementRow({ row, change }) : candidate,
+			);
 		}
 	}
 };

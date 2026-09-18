@@ -11,7 +11,10 @@ export {
 	readNextOffset,
 } from "./meteringLog/repos/partitionProgress.js";
 export { applySubjectRowUpdates } from "./subjects/repos/applySubjectRowUpdates/applySubjectRowUpdates.js";
-export { UnknownSubjectRowColumnError } from "./subjects/repos/applySubjectRowUpdates/subjectRowUpdateSql.js";
+export {
+	SubjectRowColumnNotCounterError,
+	UnknownSubjectRowColumnError,
+} from "./subjects/repos/applySubjectRowUpdates/subjectRowUpdateSql.js";
 export { getSubjectRows } from "./subjects/repos/getSubjectRows/getSubjectRows.js";
 export { SubjectRowsInvalidError } from "./subjects/subjectErrors.js";
 export type { SubjectRowsEnvelope } from "./subjects/types/subjectRowsEnvelope.js";

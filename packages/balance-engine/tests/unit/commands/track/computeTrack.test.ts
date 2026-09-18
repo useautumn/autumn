@@ -27,11 +27,9 @@ const trackMutation = ({ state, command }: TrackInput) =>
 		command,
 	});
 
-const updateChangesOf = ({ mutation }: { mutation: SubjectStateMutation }) =>
+const incrementChangesOf = ({ mutation }: { mutation: SubjectStateMutation }) =>
 	mutation.changes.map((change) =>
-		change.op === "update"
-			? { id: change.id, before: change.before, after: change.after }
-			: change,
+		change.op === "increment" ? { id: change.id, add: change.add } : change,
 	);
 
 describe("track computation", () => {
@@ -42,12 +40,8 @@ describe("track computation", () => {
 		});
 
 		expect(mutation.revision).toEqual({ before: 0, after: 1 });
-		expect(updateChangesOf({ mutation })).toEqual([
-			{
-				id: "messages_monthly",
-				before: { balance: 100 },
-				after: { balance: 95 },
-			},
+		expect(incrementChangesOf({ mutation })).toEqual([
+			{ id: "messages_monthly", add: { balance: -5 } },
 		]);
 		expect(trackResultOf({ mutation })).toEqual({
 			type: "track",
@@ -73,11 +67,10 @@ describe("track computation", () => {
 			command: createTrackCommand({ value: 5, overageBehavior: "cap" }),
 		});
 
-		expect(updateChangesOf({ mutation })).toEqual([
+		expect(incrementChangesOf({ mutation })).toEqual([
 			{
 				id: "messages_monthly",
-				before: { balance: 3 },
-				after: { balance: 0 },
+				add: { balance: -3 },
 			},
 		]);
 		expect(trackResultOf({ mutation })).toMatchObject({
@@ -107,11 +100,10 @@ describe("track computation", () => {
 			command: createTrackCommand({ value: 5, overageBehavior: "overflow" }),
 		});
 
-		expect(updateChangesOf({ mutation })).toEqual([
+		expect(incrementChangesOf({ mutation })).toEqual([
 			{
 				id: "messages_monthly",
-				before: { balance: 3 },
-				after: { balance: -2 },
+				add: { balance: -5 },
 			},
 		]);
 		// The included bucket gives what it has, then the overage bucket takes the row negative.

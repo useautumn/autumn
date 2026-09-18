@@ -8,14 +8,14 @@ import type { DeductionState } from "../../types/deductionState.js";
 import { deductionRowToRateUnits } from "../convertDeductionUtils.js";
 import { creditRateUnitsForCreditChange } from "../credits/creditRateUnitsForCreditChange.js";
 
-/** A counter only counts inside its stamped window; expired or re-derived bounds read as zero. */
-const storedUsageOf = ({
+/** The stored counter row for this cap, if it is still counting inside the cap's current window. */
+const liveWindowOf = ({
 	context,
 	limit,
 }: {
 	context: DeductionContext;
 	limit: UsageWindowLimit;
-}): Decimal => {
+}): WorkerUsageWindow | null => {
 	const existing = findUsageWindowByLimit({
 		usageWindows: context.usageWindows,
 		limit,
@@ -25,9 +25,18 @@ const storedUsageOf = ({
 		existing.window_end_at <= context.now ||
 		existing.window_start_at !== limit.window_start_at
 	)
-		return new Decimal(0);
-	return new Decimal(existing.usage);
+		return null;
+	return existing;
 };
+
+/** A counter only counts inside its stamped window; expired or re-derived bounds read as zero. */
+const storedUsageOf = ({
+	context,
+	limit,
+}: {
+	context: DeductionContext;
+	limit: UsageWindowLimit;
+}): Decimal => new Decimal(liveWindowOf({ context, limit })?.usage ?? 0);
 
 const headroomOf = ({
 	context,
@@ -134,14 +143,29 @@ export const usageWindowsToRowChanges = ({
 			usageWindows: context.usageWindows,
 			limit,
 		});
-		const usage = storedUsageOf({ context, limit }).plus(consumed).toNumber();
 		const stamped = {
 			anchor_customer_entitlement_id: limit.anchor_customer_entitlement_id,
 			window_start_at: limit.window_start_at,
 			window_end_at: limit.window_end_at,
-			usage,
+			usage: consumed.toNumber(),
 			updated_at: context.now,
 		};
+		// A live counter adds, guarded by the window it counts in; a rolled one is re-stamped and restarted.
+		const live = liveWindowOf({ context, limit });
+		if (live) {
+			changes.push({
+				table: "usageWindows",
+				op: "increment",
+				id: live.id,
+				add: { usage: consumed.toNumber() },
+				guard: {
+					anchor_customer_entitlement_id: live.anchor_customer_entitlement_id,
+					window_start_at: live.window_start_at,
+					window_end_at: live.window_end_at,
+				},
+			});
+			continue;
+		}
 		if (existing) {
 			changes.push({
 				table: "usageWindows",

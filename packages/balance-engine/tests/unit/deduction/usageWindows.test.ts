@@ -121,10 +121,10 @@ describe("usage windows", () => {
 			expect(live).toMatchObject({ appliedValue: 1, remaining: 9 });
 			expect(windowChangesOf(live)).toMatchObject([
 				{
-					op: "update",
+					op: "increment",
 					id: "uw_existing",
-					before: { usage: 4 },
-					after: { usage: 5 },
+					add: { usage: 1 },
+					guard: { window_start_at: today.windowStartAt },
 				},
 			]);
 

@@ -4,7 +4,9 @@ import type {
 	RowChange,
 	TableRowChange,
 } from "../models/mutation/rowChange.js";
+import type { AnyRowIncrement } from "../models/mutation/rowIncrement.js";
 import type { SubjectState } from "../models/subject/subjectState.js";
+import { incrementRow } from "./incrementRow.js";
 
 type StateRow = SubjectState[
 	| "customerProducts"
@@ -30,7 +32,7 @@ const revertOnTable = <Row extends StateRow>({
 	change,
 }: {
 	rows: Row[];
-	change: TableRowChange<string, Row>;
+	change: TableRowChange<string, Row> | AnyRowIncrement<Row>;
 }): Row[] => {
 	switch (change.op) {
 		case "insert": {
@@ -51,6 +53,16 @@ const revertOnTable = <Row extends StateRow>({
 		}
 		case "delete":
 			throw new IrreversibleChangeError({ subject: change.id });
+		case "increment": {
+			const index = rows.findIndex((row) => row.id === change.id);
+			const row = rows[index];
+			if (!row) throw new StaleMutationError({ subject: change.id });
+			return rows.map((candidate, candidateIndex) =>
+				candidateIndex === index
+					? incrementRow({ row, change, direction: -1 })
+					: candidate,
+			);
+		}
 	}
 };
 

@@ -22,8 +22,9 @@ function createFakePostgres() {
 	}
 	const db = {
 		...executorFor("pool"),
-		transaction: async <T>(run: (tx: ReturnType<typeof executorFor>) => Promise<T>) =>
-			run(executorFor("tx")),
+		transaction: async <T>(
+			run: (tx: ReturnType<typeof executorFor>) => Promise<T>,
+		) => run(executorFor("tx")),
 	};
 	return { db, statements };
 }
@@ -44,10 +45,12 @@ describe("createCommitterDb", () => {
 			const { applied } = await tx.applySubjectRowUpdates({
 				updates: [
 					{
+						kind: "add",
 						table: "customerEntitlements",
 						id: "ce_1",
-						before: { balance: 100 },
-						after: { balance: 95 },
+						add: { balance: -5 },
+						addEntries: {},
+						guard: {},
 					},
 				],
 			});

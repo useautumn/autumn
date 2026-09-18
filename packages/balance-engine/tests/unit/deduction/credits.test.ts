@@ -176,8 +176,9 @@ describe("credit systems", () => {
 			expect(first.changes).toMatchObject([
 				{
 					id: "credits_row",
-					after: {
-						balance: 95,
+					op: "increment",
+					add: { balance: -5 },
+					addEntries: {
 						usage_attribution: { feat_messages: { units: 3, credits: 5 } },
 					},
 				},
@@ -304,10 +305,7 @@ describe("credit systems", () => {
 			expect(balancesAfter(free)).toEqual([
 				[
 					"credits_row",
-					{
-						balance: 100,
-						usage_attribution: { feat_messages: { units: 3, credits: 0 } },
-					},
+					{ usage_attribution: { feat_messages: { units: 3, credits: 0 } } },
 				],
 			]);
 

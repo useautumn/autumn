@@ -5,7 +5,10 @@ import type {
 	WorkerCustomerProduct,
 	WorkerUsageWindow,
 } from "../../../src/balanceEngine.js";
-import { createSubjectState } from "../../../src/balanceEngine.js";
+import {
+	createSubjectState,
+	incrementRow,
+} from "../../../src/balanceEngine.js";
 import { deduct } from "../../../src/deduction/deduct.js";
 import type { DeductionRequest } from "../../../src/deduction/types/deductionRequest.js";
 import {
@@ -85,11 +88,46 @@ export const createDeductionRequest = ({
 	org,
 });
 
-/** Each updated row as `[id, after]`; inserts and deletes pass through. */
+const rowBeforeOf = ({
+	outcome,
+	table,
+	id,
+}: {
+	outcome: DeductionOutcome;
+	table: "customerEntitlements" | "rollovers" | "usageWindows";
+	id: string;
+}): object => {
+	const rows: { id: string }[] =
+		table === "customerEntitlements"
+			? outcome.context.customerEntitlements
+			: table === "rollovers"
+				? outcome.context.rollovers
+				: outcome.context.usageWindows;
+	const row = rows.find((candidate) => candidate.id === id);
+	if (!row) throw new Error(`No ${table} row ${id} in the deduction context`);
+	return row;
+};
+
+/** Each moved row as `[id, columns as the change leaves them]`: an increment read through the row it moved, an update's `after`; inserts and deletes pass through. */
 export const balancesAfter = (outcome: DeductionOutcome) =>
-	outcome.changes.map((change) =>
-		change.op === "update" ? [change.id, change.after] : change,
-	);
+	outcome.changes.map((change) => {
+		if (change.op === "update") return [change.id, change.after];
+		if (change.op !== "increment") return change;
+		const after = incrementRow({
+			row: rowBeforeOf({ outcome, table: change.table, id: change.id }),
+			change,
+		});
+		const touched = [
+			...Object.keys(change.add),
+			...Object.keys(change.addEntries ?? {}),
+		];
+		return [
+			change.id,
+			Object.fromEntries(
+				touched.map((column) => [column, Reflect.get(after, column)]),
+			),
+		];
+	});
 
 /** The customer row with the given billing controls on it. */
 export const customerWith = (

@@ -23,7 +23,7 @@ import {
 	occurredAt,
 	org,
 } from "../engineFixtures.js";
-import { customerWith } from "./deductionFixtures.js";
+import { balancesAfter, customerWith } from "./deductionFixtures.js";
 
 const ENTITY_FEATURE_ID = "seats";
 const OTHER_ENTITY_ID = "ent_07";
@@ -116,10 +116,7 @@ const deductFrom = ({
 	});
 };
 
-const changesAfter = (outcome: ReturnType<typeof deduct>) =>
-	outcome.changes.map((change) =>
-		change.op === "update" ? [change.id, change.after] : change,
-	);
+const changesAfter = balancesAfter;
 
 describe("per-entity balances", () => {
 	test.concurrent(

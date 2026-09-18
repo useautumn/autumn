@@ -47,7 +47,14 @@ export type {
 	MutationReceipt,
 	MutationRecord,
 } from "./models/mutation/mutationRecord.js";
-export type { RowChange, TableRowChange } from "./models/mutation/rowChange.js";
+export type {
+	CustomerEntitlementIncrement,
+	RolloverIncrement,
+	RowChange,
+	TableRowChange,
+	UsageWindowIncrement,
+} from "./models/mutation/rowChange.js";
+export type { RowIncrement } from "./models/mutation/rowIncrement.js";
 export type {
 	MutationCommand,
 	MutationResult,
@@ -71,6 +78,7 @@ export type {
 // mutation
 export { applyChanges } from "./mutation/applyChanges.js";
 export { applyMutation } from "./mutation/applyMutation.js";
+export { incrementRow } from "./mutation/incrementRow.js";
 export { revertChanges } from "./mutation/revertChanges.js";
 export {
 	parseCatalog,

@@ -58,7 +58,7 @@ describe("reverting changes", () => {
 	);
 
 	test.concurrent(
-		"refuses rows that no longer read as the change left them",
+		"an increment is given back whatever the row holds; an update must still read as it left the row",
 		() => {
 			const state = createState({ balance: 10 });
 			const mutation = computeTrack({
@@ -66,9 +66,24 @@ describe("reverting changes", () => {
 				command: createTrackCommand({ value: 4, overageBehavior: "cap" }),
 			});
 
-			expect(() => revertChanges({ state, changes: mutation.changes })).toThrow(
-				StaleMutationError,
-			);
+			expect(
+				revertChanges({ state, changes: mutation.changes })
+					.customerEntitlements[0]?.balance,
+			).toBe(14);
+			expect(() =>
+				revertChanges({
+					state,
+					changes: [
+						{
+							table: "customerEntitlements",
+							op: "update",
+							id: "messages_monthly",
+							before: { balance: 12 },
+							after: { balance: 6 },
+						},
+					],
+				}),
+			).toThrow(StaleMutationError);
 		},
 	);
 

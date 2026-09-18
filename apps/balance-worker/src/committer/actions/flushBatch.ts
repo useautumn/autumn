@@ -1,3 +1,4 @@
+import type { RowChange } from "@autumn/balance-engine";
 import type { SubjectRowUpdate } from "@autumn/postgres";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
 import {
@@ -10,40 +11,94 @@ import type {
 	PartitionPosition,
 } from "../types/committer.js";
 
-const updatableTables = new Set<SubjectRowUpdate["table"]>([
-	"customerEntitlements",
-	"rollovers",
-	"usageWindows",
-]);
+const definedNumbers = (record: Record<string, number | undefined>) =>
+	Object.fromEntries(
+		Object.entries(record).flatMap(([key, value]) =>
+			value === undefined ? [] : [[key, value]],
+		),
+	);
 
-const isUpdatableTable = (table: string): table is SubjectRowUpdate["table"] =>
-	updatableTables.has(table as SubjectRowUpdate["table"]);
+type BalanceRowChange = Extract<
+	RowChange,
+	{ table: SubjectRowUpdate["table"]; op: "update" | "increment" }
+>;
 
-/** The log's row changes, in log order, as guarded Postgres updates. Only `update` on a balance table lands today. */
+/** An increment adds its counters; an update replaces its columns under the before guard. */
+const balanceRowChangeToUpdate = ({
+	change,
+}: {
+	change: BalanceRowChange;
+}): SubjectRowUpdate => {
+	if (change.op === "update") {
+		return {
+			kind: "set",
+			table: change.table,
+			id: change.id,
+			set: change.after,
+			guard: change.before,
+		};
+	}
+	const entries: Record<
+		string,
+		Record<string, Record<string, number | undefined>> | undefined
+	> = change.addEntries ?? {};
+	return {
+		kind: "add",
+		table: change.table,
+		id: change.id,
+		add: definedNumbers(change.add),
+		addEntries: Object.fromEntries(
+			Object.entries(entries).flatMap(([column, byKey]) =>
+				byKey === undefined
+					? []
+					: [
+							[
+								column,
+								Object.fromEntries(
+									Object.entries(byKey).map(([key, fields]) => [
+										key,
+										definedNumbers(fields),
+									]),
+								),
+							],
+						],
+			),
+		),
+		guard: change.guard ?? {},
+	};
+};
+
+/** The change as Postgres lands it; only moves on a balance table land today. */
+const rowChangeToUpdate = ({
+	change,
+}: {
+	change: RowChange;
+}): SubjectRowUpdate => {
+	switch (change.table) {
+		case "customer":
+		case "entity":
+		case "customerProducts":
+		case "customerPrices":
+			throw new UnsupportedRowChangeError({
+				table: change.table,
+				op: change.op,
+			});
+	}
+	if (change.op === "insert" || change.op === "delete") {
+		throw new UnsupportedRowChangeError({ table: change.table, op: change.op });
+	}
+	return balanceRowChangeToUpdate({ change });
+};
+
+/** The log's row changes, in log order, as Postgres updates. */
 const recordsToRowUpdates = ({
 	records,
 }: {
 	records: readonly DurableMutationRecord[];
-}): SubjectRowUpdate[] => {
-	const updates: SubjectRowUpdate[] = [];
-	for (const { mutation } of records) {
-		for (const change of mutation.changes) {
-			if (change.op !== "update" || !isUpdatableTable(change.table)) {
-				throw new UnsupportedRowChangeError({
-					table: change.table,
-					op: change.op,
-				});
-			}
-			updates.push({
-				table: change.table,
-				id: change.id,
-				before: change.before,
-				after: change.after,
-			});
-		}
-	}
-	return updates;
-};
+}): SubjectRowUpdate[] =>
+	records.flatMap(({ mutation }) =>
+		mutation.changes.map((change) => rowChangeToUpdate({ change })),
+	);
 
 /** One transaction: every row update, then the bookmark. Either all of it lands or none of it does. */
 export const flushBatch = async ({

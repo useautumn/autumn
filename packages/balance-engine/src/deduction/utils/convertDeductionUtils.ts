@@ -18,18 +18,6 @@ const deltasOn = ({
 			delta.entityKey === row.entityKey,
 	);
 
-/** Every delta on the row, whichever balance on it moved. */
-const rowDeltasOn = ({
-	table,
-	id,
-	deltas,
-}: {
-	table: DeductionRow["table"];
-	id: string;
-	deltas: DeductionDelta[];
-}): DeductionDelta[] =>
-	deltas.filter((delta) => delta.table === table && delta.id === id);
-
 const sumOf = (values: number[]): Decimal =>
 	values.reduce((total, value) => total.plus(value), new Decimal(0));
 
@@ -67,61 +55,83 @@ export const deductionRowToRateUnits = ({
 		),
 	);
 
-/** `apply_credit_rate_attribution_change`: the row's attribution with every delta charged to it folded in; an entry that nets to zero is dropped. */
-const attributionAfter = ({
-	before,
+/** Every delta on the row, whichever balance on it moved. */
+const rowDeltasOn = ({
+	table,
+	id,
 	deltas,
 }: {
-	before: Record<string, { units: number; credits: number }>;
+	table: DeductionRow["table"];
+	id: string;
 	deltas: DeductionDelta[];
-}): Record<string, { units: number; credits: number }> => {
-	const after = { ...before };
-	for (const { usageAttributionDelta } of deltas) {
-		if (!usageAttributionDelta) continue;
-		const current = after[usageAttributionDelta.key] ?? {
-			units: 0,
-			credits: 0,
-		};
-		const units = new Decimal(current.units).plus(usageAttributionDelta.units);
-		const credits = new Decimal(current.credits).plus(
-			usageAttributionDelta.credits,
-		);
-		if (units.abs().lte(1e-10) && credits.abs().lte(1e-10)) {
-			delete after[usageAttributionDelta.key];
-			continue;
-		}
-		after[usageAttributionDelta.key] = {
-			units: units.toNumber(),
-			credits: credits.toNumber(),
-		};
-	}
-	return after;
-};
+}): DeductionDelta[] =>
+	deltas.filter((delta) => delta.table === table && delta.id === id);
 
-/** The row's `entities` map with every per-entity delta folded in; a key first drawn into or refunded into is created. */
-const entitiesAfter = <Entry extends { id: string; balance: number }>({
-	before,
+/** Deltas summed by the map key they moved; a key that nets to zero is left out. */
+const sumByEntityKey = ({
 	deltas,
-	createEntry,
-	applyDelta,
+	amountOf,
 }: {
-	before: Record<string, Entry>;
 	deltas: DeductionDelta[];
-	createEntry: (entityKey: string) => Entry;
-	applyDelta: (entry: Entry, delta: DeductionDelta) => Entry;
-}): Record<string, Entry> => {
-	const after = { ...before };
+	amountOf: (delta: DeductionDelta) => number;
+}): Record<string, number> => {
+	const totals: Record<string, Decimal> = {};
 	for (const delta of deltas) {
 		if (delta.entityKey === null) continue;
-		after[delta.entityKey] = applyDelta(
-			after[delta.entityKey] ?? createEntry(delta.entityKey),
-			delta,
+		totals[delta.entityKey] = (totals[delta.entityKey] ?? new Decimal(0)).plus(
+			amountOf(delta),
 		);
 	}
-	return after;
+	return Object.fromEntries(
+		Object.entries(totals)
+			.filter(([, total]) => !total.isZero())
+			.map(([key, total]) => [key, total.toNumber()]),
+	);
 };
 
-/** Deltas are the log; a row change folds every delta on one row into before → after. */
+const nonZero = (value: Decimal): number | undefined =>
+	value.isZero() ? undefined : value.toNumber();
+
+const definedEntries = <Value>(record: Record<string, Value | undefined>) =>
+	Object.fromEntries(
+		Object.entries(record).filter(([, value]) => value !== undefined),
+	);
+
+/** Attribution moved on the owning row, by key: units and credits together. */
+const attributionIncrementsOn = ({
+	id,
+	deltas,
+}: {
+	id: string;
+	deltas: DeductionDelta[];
+}): Record<string, { units?: number; credits?: number }> => {
+	const totals: Record<string, { units: Decimal; credits: Decimal }> = {};
+	for (const { usageAttributionDelta } of deltas) {
+		if (
+			!usageAttributionDelta ||
+			usageAttributionDelta.customerEntitlementId !== id
+		)
+			continue;
+		const current = totals[usageAttributionDelta.key] ?? {
+			units: new Decimal(0),
+			credits: new Decimal(0),
+		};
+		totals[usageAttributionDelta.key] = {
+			units: current.units.plus(usageAttributionDelta.units),
+			credits: current.credits.plus(usageAttributionDelta.credits),
+		};
+	}
+	return Object.fromEntries(
+		Object.entries(totals)
+			.filter(([, total]) => !(total.units.isZero() && total.credits.isZero()))
+			.map(([key, total]) => [
+				key,
+				{ units: total.units.toNumber(), credits: total.credits.toNumber() },
+			]),
+	);
+};
+
+/** Deltas are the log; a row change adds what every delta on one row moved. Nothing is set, so the change composes with any other writer of the row. */
 export const deltasToRowChanges = ({
 	context,
 	deltas,
@@ -131,125 +141,73 @@ export const deltasToRowChanges = ({
 }): RowChange[] => {
 	const changes: RowChange[] = [];
 
-	for (const {
-		id,
-		balance,
-		entities,
-		usage_attribution,
-	} of context.customerEntitlements) {
+	for (const { id } of context.customerEntitlements) {
 		const rowDeltas = rowDeltasOn({
 			table: "customerEntitlements",
 			id,
 			deltas,
 		});
-		const ownDeltas = rowDeltas.filter((delta) => delta.entityKey === null);
-		const entityDeltas = rowDeltas.filter((delta) => delta.entityKey !== null);
-		const attributionDeltas = deltas.filter(
-			(delta) => delta.usageAttributionDelta?.customerEntitlementId === id,
+		const balance = nonZero(
+			sumOf(
+				rowDeltas
+					.filter((delta) => delta.entityKey === null)
+					.map((delta) => delta.balanceDelta),
+			),
 		);
-		if (rowDeltas.length === 0 && attributionDeltas.length === 0) continue;
-		const attribution =
-			attributionDeltas.length === 0
-				? {}
-				: {
-						usage_attribution: attributionAfter({
-							before: usage_attribution ?? {},
-							deltas: attributionDeltas,
-						}),
-					};
+		const entities = Object.fromEntries(
+			Object.entries(
+				sumByEntityKey({ deltas: rowDeltas, amountOf: (d) => d.balanceDelta }),
+			).map(([key, amount]) => [key, { balance: amount }]),
+		);
+		const usage_attribution = attributionIncrementsOn({ id, deltas });
+		const addEntries = definedEntries({
+			entities: Object.keys(entities).length ? entities : undefined,
+			usage_attribution: Object.keys(usage_attribution).length
+				? usage_attribution
+				: undefined,
+		});
+		if (balance === undefined && Object.keys(addEntries).length === 0) continue;
 		changes.push({
 			table: "customerEntitlements",
-			op: "update",
+			op: "increment",
 			id,
-			before: {
-				...(ownDeltas.length === 0 ? {} : { balance }),
-				...(entityDeltas.length === 0 ? {} : { entities }),
-				...(attributionDeltas.length === 0
-					? {}
-					: { usage_attribution: usage_attribution ?? {} }),
-			},
-			after: {
-				...(ownDeltas.length === 0
-					? {}
-					: {
-							balance: sumOf([
-								balance,
-								...ownDeltas.map((d) => d.balanceDelta),
-							]).toNumber(),
-						}),
-				...(entityDeltas.length === 0
-					? {}
-					: {
-							entities: entitiesAfter({
-								before: entities ?? {},
-								deltas: entityDeltas,
-								createEntry: (entityKey) => ({
-									id: entityKey,
-									balance: 0,
-									adjustment: 0,
-								}),
-								applyDelta: (entry, delta) => ({
-									...entry,
-									balance: sumOf([
-										entry.balance,
-										delta.balanceDelta,
-									]).toNumber(),
-								}),
-							}),
-						}),
-				...attribution,
-			},
+			add: definedEntries({ balance }),
+			...(Object.keys(addEntries).length ? { addEntries } : {}),
 		});
 	}
 
-	for (const { id, balance, usage, entities } of context.rollovers) {
+	for (const { id } of context.rollovers) {
 		const rowDeltas = rowDeltasOn({ table: "rollovers", id, deltas });
-		const ownDeltas = rowDeltas.filter((delta) => delta.entityKey === null);
-		const entityDeltas = rowDeltas.filter((delta) => delta.entityKey !== null);
 		if (rowDeltas.length === 0) continue;
+		const own = rowDeltas.filter((delta) => delta.entityKey === null);
+		const add = definedEntries({
+			balance: nonZero(sumOf(own.map((delta) => delta.balanceDelta))),
+			usage: nonZero(sumOf(own.map((delta) => delta.usageDelta))),
+		});
+		const balances = sumByEntityKey({
+			deltas: rowDeltas,
+			amountOf: (d) => d.balanceDelta,
+		});
+		const usages = sumByEntityKey({
+			deltas: rowDeltas,
+			amountOf: (d) => d.usageDelta,
+		});
+		const entities = Object.fromEntries(
+			[...new Set([...Object.keys(balances), ...Object.keys(usages)])].map(
+				(key) => [
+					key,
+					definedEntries({ balance: balances[key], usage: usages[key] }),
+				],
+			),
+		);
+		if (Object.keys(add).length === 0 && Object.keys(entities).length === 0)
+			continue;
 		changes.push({
 			table: "rollovers",
-			op: "update",
+			op: "increment",
 			id,
-			before: {
-				...(ownDeltas.length === 0 ? {} : { balance, usage }),
-				...(entityDeltas.length === 0 ? {} : { entities }),
-			},
-			after: {
-				...(ownDeltas.length === 0
-					? {}
-					: {
-							balance: sumOf([
-								balance,
-								...ownDeltas.map((d) => d.balanceDelta),
-							]).toNumber(),
-							usage: sumOf([
-								usage,
-								...ownDeltas.map((d) => d.usageDelta),
-							]).toNumber(),
-						}),
-				...(entityDeltas.length === 0
-					? {}
-					: {
-							entities: entitiesAfter({
-								before: entities,
-								deltas: entityDeltas,
-								createEntry: (entityKey) => ({
-									id: entityKey,
-									balance: 0,
-									usage: 0,
-								}),
-								applyDelta: (entry, delta) => ({
-									...entry,
-									balance: sumOf([
-										entry.balance,
-										delta.balanceDelta,
-									]).toNumber(),
-									usage: sumOf([entry.usage, delta.usageDelta]).toNumber(),
-								}),
-							}),
-						}),
-			},
+			add,
+			...(Object.keys(entities).length ? { addEntries: { entities } } : {}),
 		});
 	}
 

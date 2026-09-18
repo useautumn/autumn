@@ -6,10 +6,8 @@ import { join } from "node:path";
 import {
 	applyMutation,
 	OutOfOrderMutationError,
-	StaleMutationError,
 	type SubjectState,
 } from "@autumn/balance-engine";
-import { isPartitionInvariantCause } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
 import {
 	ConflictingMutationReceiptError,
@@ -446,7 +444,7 @@ describe("state store", () => {
 	);
 
 	test.concurrent(
-		"refuses a mutation whose before values no longer match the stored rows",
+		"a mutation decided against a stale balance still lands: its adds compose with the stored row",
 		() => {
 			const fixture = createStoreFixture();
 			try {
@@ -458,29 +456,35 @@ describe("state store", () => {
 					offset: 1n,
 					mutation: createTrackMutation({ state }),
 				});
+				const afterFirst = balanceOf({
+					state: fixture.store.readState({ identity }),
+				})?.balance;
+				if (afterFirst === undefined) throw new Error("row missing");
 
 				// Same revision as the store, but built from the pre-deduction balance.
 				const staleMutation = createTrackMutation({
 					state: { ...state, revision: 2 },
 					commandId: "cmd_stale",
 				});
+				const [change] = staleMutation.changes;
+				if (
+					change?.op !== "increment" ||
+					change.table !== "customerEntitlements"
+				)
+					throw new Error("expected a customer entitlement increment");
 
-				let thrown: unknown;
-				try {
-					applyDurableMutation({
-						store: fixture.store,
-						topic,
-						partition,
-						offset: 2n,
-						mutation: staleMutation,
-					});
-				} catch (cause) {
-					thrown = cause;
-				}
+				applyDurableMutation({
+					store: fixture.store,
+					topic,
+					partition,
+					offset: 2n,
+					mutation: staleMutation,
+				});
 
-				expect(thrown).toBeInstanceOf(StaleMutationError);
-				expect(isPartitionInvariantCause(thrown)).toBe(true);
-				expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
+				expect(
+					balanceOf({ state: fixture.store.readState({ identity }) })?.balance,
+				).toBe(afterFirst + (change.add.balance ?? 0));
+				expect(fixture.store.readNextOffset({ topic, partition })).toBe(3n);
 			} finally {
 				closeStoreFixture(fixture);
 			}

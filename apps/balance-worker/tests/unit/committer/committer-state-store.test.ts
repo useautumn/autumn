@@ -91,10 +91,12 @@ describe("committer state store", () => {
 		expect(results).toEqual([{ kind: "applied", mutation, nextOffset: 44n }]);
 		expect(fake.updates).toEqual([
 			{
+				kind: "add",
 				table: "customerEntitlements",
 				id: "messages_monthly",
-				before: { balance: 100 },
-				after: { balance: 95 },
+				add: { balance: -5 },
+				addEntries: {},
+				guard: {},
 			},
 		]);
 		expect(fake.transactions).toEqual(["committed"]);
@@ -133,10 +135,11 @@ describe("committer state store", () => {
 			"applied",
 			"applied",
 		]);
-		expect(fake.updates.map((update) => update.before)).toEqual([
-			{ balance: 100 },
-			{ balance: 95 },
-		]);
+		expect(
+			fake.updates.map((update) =>
+				update.kind === "add" ? update.add : update.set,
+			),
+		).toEqual([{ balance: -5 }, { balance: -5 }]);
 		expect(store.readNextOffset({ topic, partition })).toBe(45n);
 
 		// A gap is a commit marker, not a lost record; going backwards inside a batch is corruption.

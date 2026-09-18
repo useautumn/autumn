@@ -65,16 +65,24 @@ describe("mutation application", () => {
 		).toMatchObject({ balance: 5 });
 	});
 
-	test.concurrent("refuses a mutation decided against stale rows", () => {
-		const state = createState();
+	test.concurrent(
+		"a mutation decided against another balance still lands: its adds compose with it",
+		() => {
+			const state = createState();
+			const mutation = trackMutationOn({ state });
+			const [change] = mutation.changes;
+			if (change?.op !== "increment" || change.table !== "customerEntitlements")
+				throw new Error("expected a customer entitlement increment");
 
-		expect(() =>
-			applyMutation({
+			const landed = applyMutation({
 				state: createState({ balance: 9 }),
-				mutation: trackMutationOn({ state }),
-			}),
-		).toThrow(StaleMutationError);
-	});
+				mutation,
+			});
+			expect(landed.customerEntitlements[0]?.balance).toBe(
+				9 + (change.add.balance ?? 0),
+			);
+		},
+	);
 
 	test.concurrent("refuses a mutation decided against another revision", () => {
 		const state = createState();

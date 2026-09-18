@@ -605,3 +605,13 @@ the rest are server side effects fed from `changes` + `state` (see the reply tab
    because `SubjectState` rows mirror Postgres rows and a `RowChange` is one row's before/after.
    Setup explodes the map into one `DeductionRow` per key, so target, aggregate and top-level are
    row selection and the draw never learns entities exist. 2026-09-18.
+14. **The log declares how a row moves: `increment` or `update`.** A deduction logs
+   `increment` changes, `{ add, addEntries, guard? }`, for balances, adjustments, rollover usage,
+   per-entity balances and attribution counters; the applier adds them to whatever the row holds
+   and the committer renders `col = col + $d`, so a reset or grant that landed between decide and
+   commit is kept and the usage comes off it. A change that re-shapes a row (a window roll, a
+   reset) logs `update` with `before`/`after` and commits as a guarded set. A live window consume
+   is an increment guarded by its bounds, so a concurrent roll refuses it instead of double
+   counting. Nothing is inferred at the commit boundary; the producer says what it meant.
+   Known bound: adds keep Postgres correct, not a stale decision; a clamp near a boundary can
+   under-charge until the worker re-reads. 2026-09-18.
