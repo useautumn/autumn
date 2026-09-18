@@ -3,6 +3,7 @@ import {
 	type Feature,
 	FeatureType,
 	getGlobalMaxRedemption,
+	isAnyCreditSystem,
 } from "@autumn/shared";
 import {
 	Button,
@@ -43,8 +44,8 @@ export function FeatureGrantRewardConfig({
 	const availableGrantTargets = features.filter(
 		(f) =>
 			f.type === FeatureType.Metered ||
-			f.type === FeatureType.CreditSystem ||
-			f.type === FeatureType.Boolean,
+			f.type === FeatureType.Boolean ||
+			isAnyCreditSystem(f.type),
 	);
 
 	const isBooleanFeature = (featureId: string) =>
