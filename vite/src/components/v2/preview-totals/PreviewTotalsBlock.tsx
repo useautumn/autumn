@@ -12,8 +12,9 @@ type PreviewTotalsBlockPreviewData = {
 	};
 	invoice_credits?: {
 		balance: number;
+		applied?: number;
 	};
-	checkout_type?: "stripe_checkout" | "autumn_checkout" | null;
+	amount_due?: number;
 };
 
 const fmt = (amount: number, currency: string) =>
@@ -33,22 +34,12 @@ export function PreviewTotalsBlock({
 		previewData.tax?.status === "complete" && previewData.tax.total > 0;
 	const taxAmount = showTaxRow ? (previewData.tax?.total ?? 0) : 0;
 
+	// The server decides how much credit this invoice consumes and what is left
+	// to pay; this block only renders those numbers.
 	const creditBalance = previewData.invoice_credits?.balance ?? 0;
-	const willRedirectToStripeCheckout =
-		previewData.checkout_type === "stripe_checkout";
-	const subtotalBeforeCredit = Math.max(previewData.subtotal, 0) + taxAmount;
-	// FE-side cap, purely for the row's displayed amount and rollover
-	// tooltip. The authoritative numeric total comes from the server.
-	const creditApplied =
-		!willRedirectToStripeCheckout && creditBalance > 0
-			? Math.min(creditBalance, subtotalBeforeCredit)
-			: 0;
-	// Hide the row entirely when there's no credit on file. We also hide
-	// when redirecting to Stripe Checkout (Stripe applies the balance in
-	// their hosted form — showing it here would diverge) or when nothing
-	// would actually be applied (e.g. $0 plan with credit).
-	const showCreditRow =
-		creditBalance > 0 && !willRedirectToStripeCheckout && creditApplied > 0;
+	const creditApplied = previewData.invoice_credits?.applied ?? 0;
+	const amountDue = previewData.amount_due ?? previewData.total;
+	const showCreditRow = creditApplied > 0;
 	const creditRollover = creditBalance - creditApplied;
 
 	const { currency } = previewData;
@@ -104,7 +95,7 @@ export function PreviewTotalsBlock({
 					Total Due Now
 				</span>
 				<span className="text-sm font-semibold text-foreground tabular-nums">
-					{fmt(previewData.total, currency)}
+					{fmt(amountDue, currency)}
 				</span>
 			</div>
 		</div>

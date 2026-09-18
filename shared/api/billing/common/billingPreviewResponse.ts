@@ -51,6 +51,10 @@ export const PreviewInvoiceCreditsSchema = z.object({
 		description:
 			"Stripe customer credit balance available, expressed as a positive number in major currency units.",
 	}),
+	applied: z.number().optional().meta({
+		description:
+			"How much of that balance this invoice consumes, capped at its total. The rest stays on the customer.",
+	}),
 	currency: z.string().meta({
 		description: "Three-letter currency code.",
 	}),
