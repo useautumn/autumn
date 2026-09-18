@@ -13,12 +13,10 @@
  *   deducts that usage from the new version's entitlement, so the customer
  *   starts the new cycle already in debit.
  *
- * Reproduces Bloom (org MIAFcAsIQmcB4P69DyL18yQJegKM6YpG) customers
- * uQ0d7knGPaovgRmjVNGyW7tg7qtCWNCq and fL5QbnrNsRw2RwFkwjJuu7VFGu4WSfSe:
- * both renewed 31 Aug 2026, next_reset_at sat 24h later on 1 Sep, and the
- * plus-monthly v6 -> v7 migration ran at 1 Sep 10:41 UTC — 8 minutes before
- * the first customer's reset was due. Their 17 and 10 credits of prior-cycle
- * usage were deducted from the new 50-credit buckets.
+ * Reproduces two affected customers: both renewed, next_reset_at sat 24h
+ * later, and the plan migration ran 8 minutes before the first reset was due.
+ * Their 17 and 10 credits of prior-cycle usage were deducted from the new
+ * 50-credit buckets.
  */
 
 import { expect, test } from "bun:test";
