@@ -44,7 +44,10 @@ test.concurrent(
 		const { autumnV2_3, ctx } = await initScenario({
 			customerId: "split-guards",
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "split-guards@autumn.test",
+				}),
 				s.customer({}),
 			],
 			actions: [],

@@ -75,7 +75,10 @@ test.concurrent(
 		const { autumnV2_2, ctx } = await initScenario({
 			customerId: "reward-lazy-create",
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "reward-lazy-create@autumn.test",
+				}),
 				s.customer({}),
 				s.products({ list: [pro], createInStripe: false }),
 			],
@@ -119,7 +122,10 @@ test.concurrent(
 		const { autumnV2_2, ctx } = await initScenario({
 			customerId: "reward-lazy-update",
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "reward-lazy-update@autumn.test",
+				}),
 				s.customer({}),
 				s.products({ list: [pro, unseen], createInStripe: false }),
 			],
@@ -160,7 +166,10 @@ test.concurrent(
 		const { autumnV2_2, ctx } = await initScenario({
 			customerId: "reward-lazy-usage",
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "reward-lazy-usage@autumn.test",
+				}),
 				s.customer({}),
 				s.products({ list: [usagePlan], createInStripe: false }),
 			],

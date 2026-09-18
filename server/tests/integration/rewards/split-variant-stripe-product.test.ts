@@ -64,7 +64,10 @@ test.concurrent(
 		const { autumnV2_3, ctx } = await initScenario({
 			customerId: "split-variant-basic",
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "split-variant-basic@autumn.test",
+				}),
 				s.customer({}),
 			],
 			actions: [],
@@ -95,7 +98,10 @@ test.concurrent(
 		const { autumnV2_2, autumnV2_3, ctx } = await initScenario({
 			customerId: "split-variant-coupon",
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "split-variant-coupon@autumn.test",
+				}),
 				s.customer({}),
 			],
 			actions: [],

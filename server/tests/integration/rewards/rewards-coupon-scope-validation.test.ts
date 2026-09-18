@@ -70,7 +70,10 @@ test.concurrent(
 		const { autumnV2_2, autumnV2_3 } = await initScenario({
 			customerId: "reward-scope-partial",
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "reward-scope-partial@autumn.test",
+				}),
 				s.customer({}),
 			],
 			actions: [],
@@ -99,7 +102,10 @@ test.concurrent(
 		const { autumnV2_2, autumnV2_3 } = await initScenario({
 			customerId: "reward-scope-full",
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "reward-scope-full@autumn.test",
+				}),
 				s.customer({}),
 			],
 			actions: [],
@@ -133,7 +139,10 @@ test.concurrent(
 		const { autumnV2_2, autumnV2_3 } = await initScenario({
 			customerId: "reward-scope-all",
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "reward-scope-all@autumn.test",
+				}),
 				s.customer({}),
 			],
 			actions: [],

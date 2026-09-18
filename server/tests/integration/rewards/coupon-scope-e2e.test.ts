@@ -94,7 +94,10 @@ test.concurrent(
 		const { autumnV2_2, autumnV2_3, ctx } = await initScenario({
 			customerId: "coupon-e2e-split",
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "coupon-e2e-split@autumn.test",
+				}),
 				s.customer({}),
 			],
 			actions: [],
@@ -160,7 +163,10 @@ test.concurrent(
 		const { autumnV2_2, autumnV2_3, ctx } = await initScenario({
 			customerId: "coupon-e2e-unrelated",
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "coupon-e2e-unrelated@autumn.test",
+				}),
 				s.customer({}),
 			],
 			actions: [],
@@ -195,7 +201,10 @@ test.concurrent(
 		const { autumnV2_2, autumnV2_3 } = await initScenario({
 			customerId: "coupon-e2e-version",
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "coupon-e2e-version@autumn.test",
+				}),
 				s.customer({}),
 			],
 			actions: [],
