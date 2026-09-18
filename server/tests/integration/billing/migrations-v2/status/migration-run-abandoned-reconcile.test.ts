@@ -1,23 +1,9 @@
 /**
- * A run whose trigger task dies without settling its row is stranded forever.
- * `withMigrationRunTracking`'s catch records the failure with a DB write, so an
- * error that kills the connection (`no more connections allowed`, `Connection
- * terminated unexpectedly`) also kills the write that would record it. The row
- * stays `running`, and the partial unique index on (migration, active status)
- * then blocks that migration from ever running again.
+ * A lost settle-write strands a run as `running`, and the partial unique index
+ * then blocks that migration forever. Seen in production on six runs.
  *
- * Seen in production: six runs stranded across two orgs, the oldest for two
- * months, four of which had claimed zero items.
- *
- * Contract:
- *   run row active + trigger run terminal  → reconciled to `failed`, claims released
- *   run row active + trigger run alive     → left alone (never settle a live run)
- *   run row active + trigger unreachable   → left alone (conservative)
- *   reconciled run no longer blocks a new run of the same migration
- *
- * Red (current):  the stranded row stays `running` and /migrations.run is
- *                 rejected with MigrationAlreadyInProgress.
- * Green (after):  reading the run settles it, and the migration runs again.
+ * Red:   the stranded row stays `running` and blocks the next run.
+ * Green: a confirmed-dead trigger run settles; a live or unreachable one does not.
  */
 
 import { expect, test } from "bun:test";
@@ -96,7 +82,6 @@ test(`${chalk.yellowBright("abandoned run: a dead trigger run is reconciled, a l
 		no_billing_changes: true,
 	});
 
-	// 1. A dead trigger run is settled.
 	const deadRunId = await strandRun({
 		ctx,
 		migrationInternalId: migration.internal_id,
@@ -112,14 +97,12 @@ test(`${chalk.yellowBright("abandoned run: a dead trigger run is reconciled, a l
 	expect(settled.finished_at).not.toBeNull();
 	expect(settled.error_message).toMatch(/abandon|never settled|trigger/i);
 
-	// 2. The migration is runnable again: the claim is no longer blocked.
 	const liveRunId = await strandRun({
 		ctx,
 		migrationInternalId: migration.internal_id,
 		triggerRunId: "run_still_alive",
 	});
 
-	// 3. A run the platform still reports as alive is never settled.
 	await reconcileAbandonedRuns({
 		ctx,
 		runs: [await statusOf({ ctx, internalId: liveRunId })],
@@ -129,7 +112,6 @@ test(`${chalk.yellowBright("abandoned run: a dead trigger run is reconciled, a l
 		MigrationRunStatus.Running,
 	);
 
-	// 4. An unreachable platform is treated as alive, not dead.
 	await reconcileAbandonedRuns({
 		ctx,
 		runs: [await statusOf({ ctx, internalId: liveRunId })],
@@ -151,8 +133,7 @@ test(`${chalk.yellowBright("abandoned run: a dead trigger run is reconciled, a l
 		},
 	});
 
-	// 5. The real read path reconciles too: listMigrationStatuses is what the
-	//    dashboard calls, and a stranded run must not read as `running` there.
+	// listMigrationStatuses is what the dashboard actually calls.
 	const readPathRunId = await strandRun({
 		ctx,
 		migrationInternalId: migration.internal_id,

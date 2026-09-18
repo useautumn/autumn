@@ -42,7 +42,6 @@ export const MigrationStatus = {
 	Waiting: "waiting",
 	Running: "running",
 	Run: "run",
-	/** The latest Run All completed without changing any customer. */
 	NoChanges: "no_changes",
 } as const;
 

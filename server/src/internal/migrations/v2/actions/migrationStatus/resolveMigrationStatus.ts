@@ -22,8 +22,6 @@ export const resolveMigrationStatus = ({
 	migrationInternalId: string;
 	runs: MigrationRun[];
 	orgActiveRuns: MigrationRun[];
-	/** Status of the newest Run All that reached execution, when the caller
-	 * already aggregated it and did not pass the finished rows in `runs`. */
 	latestRunAllStatus?: MigrationRunStatus | null;
 }): {
 	status: MigrationStatus;

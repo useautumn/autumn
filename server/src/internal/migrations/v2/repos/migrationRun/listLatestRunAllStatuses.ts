@@ -2,9 +2,7 @@ import { type MigrationRunStatus, migrationRuns } from "@autumn/shared";
 import { and, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
-/** The most recent live, unscoped run that reached execution, per migration
- * (`started_at` is only written when execution starts, not at dispatch). Its
- * status decides whether the migration reads `run` or `no_changes`. */
+/** `started_at` is written when execution starts, not at dispatch. */
 export const listLatestRunAllStatuses = async ({
 	ctx,
 	migrationInternalIds,

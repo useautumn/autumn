@@ -1,17 +1,9 @@
 /**
- * The progress bar on a scoped run (single customer or sample) must count only
- * that run's customers. `/migrations.runs.list` returned one migration-wide
- * live count for every non-dry run, so a second single-customer run reported
- * the total of every live run ever: the bar read "2 of 1".
+ * A scoped run must count only its own customers. One migration-wide live count
+ * was handed to every non-dry run, so a second single-customer run read "2 of 1".
  *
- * Contract:
- *   only_ids run      → item_run_counts covers just those ids
- *   target_limit run  → counts cover at most the limit
- *   unscoped Run All  → keeps the migration-wide count, so a resumed run that
- *                       reuses item rows is not undercounted
- *
- * Red (current):  the second scoped run reports total 2.
- * Green (after):  it reports total 1.
+ * Red:   the second scoped run reports total 2.
+ * Green: it reports total 1.
  */
 
 import { expect, test } from "bun:test";

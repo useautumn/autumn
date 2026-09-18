@@ -46,9 +46,7 @@ export const listMigrationStatuses = async ({
 		}),
 	]);
 
-	// A run whose task died without settling its row stays active forever and
-	// blocks the migration, so liveness is reconciled here rather than trusted
-	// to the process that failed.
+	// A lost settle-write leaves a dead run active, blocking the migration.
 	const reconciled = isTriggerConfigured()
 		? await reconcileAbandonedRuns({ ctx, runs: activeRuns })
 		: new Set<string>();
