@@ -1,5 +1,9 @@
 /**
- * Sync-ack failures that would 500 Stripe enqueue the in-house replay job.
+ * Sync-ack failures that would 500 Stripe enqueue the in-house replay job,
+ * except permanent Postgres foreign-key violations (those 500 Stripe only).
+ *
+ * Red (current):  a 23503 still lands on SQS and can DLQ after maxReceiveCount.
+ * Green (after):  23503 returns 500 and does not enqueue.
  */
 
 import { beforeEach, describe, expect, test } from "bun:test";
@@ -95,6 +99,26 @@ describe("sync webhook failure enqueues replay", () => {
 
 		expect(response.status).toBe(500);
 		expect(hookCalls.released).toBe(1);
+		expect(enqueueCalls).toEqual([]);
+	});
+
+	test("500s Stripe but does not enqueue a foreign-key violation", async () => {
+		const { app, hookCalls } = createApp({
+			handler: () => {
+				throw Object.assign(
+					new Error(
+						'insert or update on table "customer_prices" violates foreign key constraint "customer_prices_price_id_fkey"',
+					),
+					{ code: "23503" },
+				);
+			},
+		});
+
+		const response = await app.request("/webhook", { method: "POST" });
+
+		expect(response.status).toBe(500);
+		expect(hookCalls.released).toBe(1);
+		expect(hookCalls.completed).toBe(0);
 		expect(enqueueCalls).toEqual([]);
 	});
 });
