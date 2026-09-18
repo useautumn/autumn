@@ -13,14 +13,12 @@ import { isTriggerRunTerminal } from "./triggerRunLiveness.js";
 const ABANDONED_MESSAGE =
 	"Run abandoned: the trigger task ended without settling this row";
 
-/** A trigger handle exists from dispatch, so a young run is not yet evidence. */
 const ABANDON_GRACE = ms.minutes(10);
 
-/** The dashboard polls this path every 2s, so a slow platform must not stall it. */
+const UNVERIFIABLE_GRACE = ms.hours(24);
+
 const LIVENESS_TIMEOUT = ms.seconds(2);
 
-/** Settles runs whose trigger task is provably dead. Only a confirmed-terminal
- * run settles: releasing a live run's claim would double-process its customers. */
 export const reconcileAbandonedRuns = async ({
 	ctx,
 	runs,
@@ -36,18 +34,19 @@ export const reconcileAbandonedRuns = async ({
 	now?: number;
 }): Promise<Set<string>> => {
 	const reconciled = new Set<string>();
+	const age = (run: MigrationRun) =>
+		differenceInMilliseconds(now, run.started_at ?? run.created_at);
 	const candidates = runs.filter(
 		(run) =>
-			run.trigger_run_id !== null &&
 			!run.lazy_run &&
-			differenceInMilliseconds(now, run.started_at ?? run.created_at) >
-				ABANDON_GRACE,
+			age(run) >
+				(run.trigger_run_id === null ? UNVERIFIABLE_GRACE : ABANDON_GRACE),
 	);
 
 	const liveness = await Promise.all(
 		candidates.map(async (run) => {
 			const triggerRunId = run.trigger_run_id;
-			if (!triggerRunId) return false;
+			if (!triggerRunId) return true;
 			try {
 				return await withTimeout({
 					fn: () => isTerminal({ ctx, triggerRunId }),
