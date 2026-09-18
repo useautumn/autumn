@@ -252,7 +252,7 @@ test(`${chalk.yellowBright("migration-setup: no-op run status + scoped progress 
 			`  qa-changes    run settled: ${chalk.yellowBright(changesStatus)}  (expect succeeded)`,
 			`  qa-scope      draft over ${SCOPE_IDS.length} customers — id ${scope.id}`,
 			`  qa-failed     run settled: ${chalk.yellowBright(failedRunStatus)}`,
-			`  qa-abandoned  run left running with a dead trigger handle (${abandonedRunId})`,
+			`  qa-abandoned  run left running, no trigger handle (${abandonedRunId})`,
 			"",
 			"  Scoped-progress check: open qa-scope, Run Sample with limit 2,",
 			"  and confirm the footer reads '… of 2', not '… of 6'.",
