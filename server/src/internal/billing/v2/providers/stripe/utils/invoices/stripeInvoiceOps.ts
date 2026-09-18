@@ -15,6 +15,7 @@ type CreateInvoiceParams = {
 	currency?: string;
 	discounts?: Stripe.InvoiceCreateParams["discounts"];
 	collectionMethod?: "charge_automatically" | "send_invoice";
+	autoAdvance?: boolean;
 	daysUntilDue?: number;
 	/** Unix seconds; takes precedence over daysUntilDue for send_invoice. */
 	dueDate?: number;
@@ -32,6 +33,7 @@ export const createStripeInvoice = async ({
 	stripeSubId,
 	currency,
 	collectionMethod = "charge_automatically",
+	autoAdvance = false,
 	daysUntilDue,
 	dueDate,
 	paymentMethodTypes,
@@ -47,7 +49,7 @@ export const createStripeInvoice = async ({
 	const invoice = await stripeCli.invoices.create(
 		{
 			customer: stripeCusId,
-			auto_advance: false,
+			auto_advance: autoAdvance,
 			...(stripeSubId ? { subscription: stripeSubId } : {}),
 			...(currency ? { currency } : {}),
 			...(description ? { description } : {}),
