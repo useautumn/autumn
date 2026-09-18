@@ -1,5 +1,6 @@
 import {
 	cusEntToBillingObjects,
+	ErrCode,
 	type FullCusEntWithFullCusProduct,
 	getPriceCurrencyStripeId,
 	InternalError,
@@ -37,6 +38,7 @@ export const allocatedToStripeItemSpec = ({
 	if (!stripePriceId) {
 		throw new InternalError({
 			message: `[allocatedToStripeItemSpec] no stripe_price_id for currency '${currency}' on autumn price: ${price.id}`,
+			code: ErrCode.StripePriceNotLinked,
 		});
 	}
 

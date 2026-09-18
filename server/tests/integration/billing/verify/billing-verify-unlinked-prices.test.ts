@@ -437,8 +437,40 @@ test.concurrent(
 	},
 );
 
+// Qontext's report: a usage price whose Stripe price for the customer's currency
+// is materialized lazily (at attach/migrate, never at catalog init), so an
+// imported customer legitimately has an Autumn price with no Stripe link.
+// `removeItemPriceIds` drops the live item too, which is what that state looks
+// like in Stripe: the meter simply does not exist yet.
+const setupUnlinkedUsagePrice = async ({
+	ctx,
+	customerId,
+	productId,
+	featureId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	productId: string;
+	featureId: string;
+}) => {
+	const clearedIds = await clearPriceStripeIds({
+		ctx,
+		productId,
+		featureId,
+		slots: ["stripe_price_id", "stripe_empty_price_id"],
+	});
+	const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
+	const [sub] = await listActiveStripeSubscriptions({ ctx, stripeCustomerId });
+	await corruptStripeSubscription({
+		ctx,
+		subscriptionId: sub.id,
+		mutations: { removeItemPriceIds: clearedIds },
+	});
+	return sub;
+};
+
 test.concurrent(
-	`${chalk.yellowBright("billing-verify unlinked-prices 6: consumable without stripe_price_id -> no expected_state_error")}`,
+	`${chalk.yellowBright("billing-verify unlinked-prices 6: consumable with no Stripe link -> correct, and later drift still caught")}`,
 	async () => {
 		const customerId = "verify-unlinked-consumable";
 
@@ -456,31 +488,50 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		await clearPriceStripeIds({
+		await setupUnlinkedUsagePrice({
 			ctx,
+			customerId,
 			productId: pro.id,
 			featureId: TestFeature.Messages,
-			slots: ["stripe_price_id", "stripe_empty_price_id"],
 		});
 
-		// ── Contract: the unrenderable usage price no longer aborts the whole
-		// subscription; the base price is still evaluated ──────────────────
-		const result = await verify({ ctx, params: { customer_id: customerId } });
+		// ── Contract: the unlinked usage price is expected state, not drift ──
+		const clean = await verify({ ctx, params: { customer_id: customerId } });
+		expect(clean.subscriptions[0].mismatches).toEqual([]);
+		expect(clean.subscriptions[0].status).toBe("correct");
+
+		// ── Contract: evaluation continues past the skipped item — drift added
+		// afterwards is still reported, not swallowed with it ───────────────
+		const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
+		const [sub] = await listActiveStripeSubscriptions({
+			ctx,
+			stripeCustomerId,
+		});
+		const baseItem = sub.items.data[0];
+		if (!baseItem) throw new Error("Expected a base item on the sub");
+		const foreignPrice = await createUnlinkedClone({ ctx, item: baseItem });
+		await corruptStripeSubscription({
+			ctx,
+			subscriptionId: sub.id,
+			mutations: { addItems: [{ price: foreignPrice.id, quantity: 1 }] },
+		});
+
+		const drifted = await verify({
+			ctx,
+			params: { customer_id: customerId, strict: true },
+		});
+		expect(drifted.subscriptions[0].status).toBe("mismatched");
 		expect(
-			result.subscriptions[0].mismatches.filter(
-				(mismatch) => mismatch.type === "expected_state_error",
+			drifted.subscriptions[0].mismatches.some(
+				(mismatch) =>
+					mismatch.type === "item_mismatch" && mismatch.reason === "unexpected",
 			),
-		).toEqual([]);
-		expect(
-			result.subscriptions[0].mismatches.some(
-				(mismatch) => mismatch.type === "base_price_mismatch",
-			),
-		).toBe(false);
+		).toBe(true);
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("billing-verify unlinked-prices 7: allocated without stripe_price_id -> no expected_state_error")}`,
+	`${chalk.yellowBright("billing-verify unlinked-prices 7: allocated with no Stripe link -> correct, no expected_state_error")}`,
 	async () => {
 		const customerId = "verify-unlinked-allocated";
 
@@ -498,23 +549,15 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		await clearPriceStripeIds({
+		await setupUnlinkedUsagePrice({
 			ctx,
+			customerId,
 			productId: pro.id,
 			featureId: TestFeature.Users,
-			slots: ["stripe_price_id", "stripe_empty_price_id"],
 		});
 
 		const result = await verify({ ctx, params: { customer_id: customerId } });
-		expect(
-			result.subscriptions[0].mismatches.filter(
-				(mismatch) => mismatch.type === "expected_state_error",
-			),
-		).toEqual([]);
-		expect(
-			result.subscriptions[0].mismatches.some(
-				(mismatch) => mismatch.type === "base_price_mismatch",
-			),
-		).toBe(false);
+		expect(result.subscriptions[0].mismatches).toEqual([]);
+		expect(result.subscriptions[0].status).toBe("correct");
 	},
 );
