@@ -67,13 +67,16 @@ const applyPreviewAdjustmentsToTotal = ({
 	subtotal: number;
 	total: number;
 	billingPlan: BillingPlan;
-}): number => {
+}): { total: number; creditApplied: number } => {
 	const taxTotal = billingPlan.preview?.tax?.total ?? 0;
 	const creditBalance = billingPlan.preview?.invoiceCredits?.balance ?? 0;
 
 	const taxed = new Decimal(total).add(taxTotal);
 	const cappedCredit = Decimal.min(creditBalance, Decimal.max(taxed, 0));
-	return taxed.sub(cappedCredit).toDP(2).toNumber();
+	return {
+		total: taxed.sub(cappedCredit).toDP(2).toNumber(),
+		creditApplied: cappedCredit.toDP(2).toNumber(),
+	};
 };
 
 export const billingPlanToPreviewResponse = async ({
@@ -87,7 +90,7 @@ export const billingPlanToPreviewResponse = async ({
 	billingPlan: BillingPlan;
 	/** Scope next_cycle to a subset of products (e.g. one subscription's). */
 	nextCycleCustomerProductFilter?: (customerProduct: FullCusProduct) => boolean;
-}): Promise<BillingPreviewResponse> => {
+}): Promise<BillingPreviewResponse & { credit_applied: number }> => {
 	const { fullCustomer } = billingContext;
 
 	const autumnBillingPlan = billingPlan.autumn;
@@ -105,7 +108,7 @@ export const billingPlanToPreviewResponse = async ({
 		currency,
 	});
 
-	const total = applyPreviewAdjustmentsToTotal({
+	const { total, creditApplied } = applyPreviewAdjustmentsToTotal({
 		subtotal,
 		total: lineItemsTotal,
 		billingPlan,
@@ -149,11 +152,13 @@ export const billingPlanToPreviewResponse = async ({
 		line_items: previewLineItems,
 		subtotal,
 		total,
+		// total is already net of credit here, so amount_due would only repeat it.
+		credit_applied: creditApplied,
 		currency,
 		resets_usage: billingContextResetsUsage(billingContext),
 		next_cycle: nextCycle,
 		incoming,
 		outgoing,
 		refund: autumnBillingPlan.refundPlan,
-	} satisfies BillingPreviewResponse;
+	};
 };
