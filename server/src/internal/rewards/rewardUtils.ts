@@ -6,6 +6,7 @@ import {
 	type Feature,
 	FeatureType,
 	findFeatureByInternalId,
+	hasMissingStripeResourcesForProduct,
 	isFixedPrice,
 	normalizePromoCodes,
 	notNullish,
@@ -170,38 +171,52 @@ export const initRewardStripePrices = async ({
 }: {
 	ctx: AutumnContext;
 	prices: (Price & { product: Product })[];
-}) => {
-	if (prices.every((price) => !nullish(price.config.stripe_price_id))) {
-		return;
-	}
+}): Promise<(Price & { product: Product })[]> => {
+	if (prices.length === 0) return [];
 
 	const internalProductIds = getUnique(
 		prices.map((p: Price) => p.internal_product_id).filter(notNullish),
 	);
-	const products = await ProductService.listByInternalIds({
+	let products = await ProductService.listByInternalIds({
 		db: ctx.db,
 		internalIds: internalProductIds,
 	});
 
-	const batchInit: Promise<void>[] = [];
-	for (const product of products) {
-		batchInit.push(
-			initProductInStripe({
-				ctx,
-				product,
-			}),
+	const productsToInitialize = products.filter((product) =>
+		hasMissingStripeResourcesForProduct({ product }),
+	);
+	if (productsToInitialize.length > 0) {
+		await Promise.all(
+			productsToInitialize.map((product) =>
+				initProductInStripe({
+					ctx,
+					product,
+				}),
+			),
 		);
+		products = await ProductService.listByInternalIds({
+			db: ctx.db,
+			internalIds: internalProductIds,
+		});
 	}
-	await Promise.all(batchInit);
 
-	for (const price of prices) {
+	return prices.map((price) => {
 		const product = products.find(
 			(p) => p.internal_id === price.internal_product_id,
 		);
+		const refreshedPrice = product?.prices.find(
+			(productPrice) => productPrice.id === price.id,
+		);
 
-		price.product = product as Product;
-	}
-	return;
+		if (!product || !refreshedPrice) {
+			throw new RecaseError({
+				message: `Failed to refresh reward price ${price.id}`,
+				code: ErrCode.InternalError,
+			});
+		}
+
+		return { ...refreshedPrice, product };
+	});
 };
 
 const formatReward = ({ reward }: { reward: Reward }) => {
