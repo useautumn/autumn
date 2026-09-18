@@ -12,6 +12,7 @@
 			"apps/docs",
 			"apps/website",
 			"apps/leaf",
+			"apps/leaf-lab",
 			"apps/sdk-test",
 			"apps/sso-test-idp",
 			"apps/testbench",

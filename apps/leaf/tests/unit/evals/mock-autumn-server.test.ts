@@ -184,7 +184,7 @@ describe("eval mock Autumn server", () => {
 		expect(subscription?.plan).toMatchObject({
 			base_variant_id: "pro",
 			id: "pro_custom",
-			price: { amount: 9_900 },
+			price: { amount: 99 },
 		});
 		expect(subscription?.plan?.items.map((item) => item.feature_id)).toEqual([
 			"credits",

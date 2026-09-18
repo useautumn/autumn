@@ -7,6 +7,7 @@ import {
 	mintCachedAutumnToken,
 } from "./autumnAuth.js";
 import { leafMcpBaseUrl, serverToolMetadata } from "./autumnToolMetadata.js";
+import { jevWriteGateEnabled, verifyGatedWrite } from "./jevWriteGate.js";
 import { previewLedger } from "./previewLedger.js";
 import { type LeafAgentConnection, toolAllowlists } from "./toolAllowlists.js";
 import { slimToolSchema } from "./toolSchemaSlim.js";
@@ -44,6 +45,7 @@ export const autumnDirectTools = ({
 	return defineDynamic({
 		events: {
 			"step.started": async (_event, ctx) => {
+				const messages = ctx.messages;
 				const attributes = (ctx.session.auth.current?.attributes ??
 					ctx.session.auth.initiator?.attributes) as
 					| LeafPrincipalAttributes
@@ -76,6 +78,8 @@ export const autumnDirectTools = ({
 									toolName,
 								});
 								if (rejection) throw new Error(rejection);
+								if (jevWriteGateEnabled())
+									await verifyGatedWrite({ args, messages, toolName });
 								return RECORDED_FOR_APPROVAL;
 							}
 							const minted = await mintCachedAutumnToken(

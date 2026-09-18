@@ -1,0 +1,13 @@
+{
+	"extends": "../tsconfig.json",
+	"include": [
+		"agent/**/*.ts",
+		"lib/**/*.ts",
+		"evals/agent/follow-up-carry-over.eval.ts",
+		"launch.ts",
+		"suite.ts",
+		"runtimeCheck.ts",
+		"runtime-fixture/**/*.ts",
+		"../tests/native*.test.ts"
+	]
+}

@@ -19,6 +19,10 @@ import {
 	prepareAgentTurn,
 } from "./setup/prepareAgentTurn.js";
 import { startAgentTurn } from "./setup/startAgentTurn.js";
+import {
+	runStructuredAgentTurn,
+	structuredAgentEnabled,
+} from "./structured/runStructuredAgentTurn.js";
 
 export const runAgentTurn = async ({
 	ctx,
@@ -29,6 +33,7 @@ export const runAgentTurn = async ({
 	params: AgentTurnParams;
 	titleSourceText?: string;
 }) => {
+	if (structuredAgentEnabled()) return runStructuredAgentTurn({ ctx, params });
 	const {
 		env,
 		logger,

@@ -15,7 +15,6 @@ type EvalCustomizePlan = Omit<
 	price?: CustomizePlanV1["price"] | PlanPrice | null;
 };
 
-const dollarsToCents = (amount: number) => amount * 100;
 const displayAmount = (amount: number) => `$${amount}`;
 
 const planNameFromId = (planId: string) =>
@@ -97,10 +96,10 @@ const applyCustomizeItems = ({
 	return nextItems;
 };
 
-/** Base price amounts are in dollars; returned API price.amount is cents. */
+/** Autumn API monetary amounts are in major currency units. */
 export const basePrice = {
 	annual: ({ amount = 200 } = {}): PlanPrice => ({
-		amount: dollarsToCents(amount),
+		amount,
 		display: {
 			primary_text: displayAmount(amount),
 			secondary_text: "per year",
@@ -108,7 +107,7 @@ export const basePrice = {
 		interval: BillingInterval.Year,
 	}),
 	monthly: ({ amount = 20 } = {}): PlanPrice => ({
-		amount: dollarsToCents(amount),
+		amount,
 		display: {
 			primary_text: displayAmount(amount),
 			secondary_text: "per month",

@@ -54,6 +54,15 @@ export const continueAfterApproval = async ({
 		}
 		const output = await runSlackAgentTurn({
 			channelId: approval.channel_id,
+			clientContext: {
+				approvalOutcome: {
+					writes: writes.map((write) => ({
+						result: write.result,
+						status: write.status,
+						toolName: write.tool_name,
+					})),
+				},
+			},
 			installation,
 			providerUserId,
 			text: notice,

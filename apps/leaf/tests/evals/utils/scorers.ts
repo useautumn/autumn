@@ -60,17 +60,44 @@ const namedScorer = ({
 const includesValue = ({
 	actual,
 	expected,
+	path = [],
 }: {
 	actual: unknown;
 	expected: unknown;
+	path?: string[];
 }): boolean => {
 	if (Array.isArray(expected)) {
-		return (
-			Array.isArray(actual) &&
-			expected.length === actual.length &&
-			expected.every((value, index) =>
-				includesValue({ actual: actual[index], expected: value }),
-			)
+		if (!Array.isArray(actual) || expected.length !== actual.length)
+			return false;
+		if (
+			[
+				"customize.remove_items",
+				"phases.plans.customize.remove_items",
+				"unscheduled_plans.customize.remove_items",
+				"customize.add_items",
+				"phases.plans.customize.add_items",
+				"unscheduled_plans.customize.add_items",
+			].includes(path.join("."))
+		) {
+			const matched = new Map<number, number>();
+			const assign = (index: number, visited: Set<number>): boolean =>
+				actual.some((value, candidate) => {
+					if (
+						visited.has(candidate) ||
+						!includesValue({ actual: value, expected: expected[index], path })
+					)
+						return false;
+					visited.add(candidate);
+					const previous = matched.get(candidate);
+					if (previous !== undefined && !assign(previous, visited))
+						return false;
+					matched.set(candidate, index);
+					return true;
+				});
+			return expected.every((_, index) => assign(index, new Set()));
+		}
+		return expected.every((value, index) =>
+			includesValue({ actual: actual[index], expected: value, path }),
 		);
 	}
 	if (expected && typeof expected === "object") {
@@ -81,6 +108,7 @@ const includesValue = ({
 				includesValue({
 					actual: (actual as Record<string, unknown>)[key],
 					expected: value,
+					path: [...path, key],
 				}),
 			)
 		);

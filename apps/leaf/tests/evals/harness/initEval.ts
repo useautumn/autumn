@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { defaultErrorScoreHandler, Eval } from "braintrust";
 import type { AutumnMcpAuth } from "../../../../../packages/mcp/src/server/auth/auth.js";
 import type { EvalSetup } from "../fixtures/types.js";
@@ -29,6 +30,7 @@ type InitEvalCase<Metadata extends EvalCaseMetadata> = {
 
 type InitEvalInput = {
 	conversation: EvalTurn[];
+	caseId: string;
 };
 
 type InitEvalOptions<Metadata extends EvalCaseMetadata> = {
@@ -78,6 +80,16 @@ const runEval: typeof Eval = async (...args) => {
 	try {
 		return await Eval(...args);
 	} catch (error) {
+		if (process.env.LEAF_LAB_SCORES_FILE)
+			await writeFile(
+				process.env.LEAF_LAB_SCORES_FILE,
+				JSON.stringify(
+					{ experimentName: args[1].experimentName, error: String(error) },
+					null,
+					2,
+				),
+				{ mode: 0o600 },
+			);
 		failEvalRun({ error, experimentName: args[1].experimentName });
 		throw error;
 	}
@@ -96,7 +108,16 @@ export const initEval = async <Metadata extends EvalCaseMetadata>({
 	today,
 	trace,
 }: InitEvalOptions<Metadata>) => {
-	const resolvedDriver = driver ?? createLeafAgentDriver();
+	const resolvedDriver =
+		driver ??
+		(process.env.LEAF_EVAL_DRIVER === "eve-lab"
+			? (
+					await import(
+						process.env.LEAF_LAB_DRIVER_MODULE ??
+							"../../../../leaf-lab/lib/evalDriver.js"
+					)
+				).createEveLabDriver()
+			: createLeafAgentDriver());
 	// Default panel: one named scorer per expectation type the cases declare,
 	// so Braintrust only shows columns a case can actually fail.
 	const resolvedScores =
@@ -110,12 +131,13 @@ export const initEval = async <Metadata extends EvalCaseMetadata>({
 		"leaf",
 		{
 			experimentName,
-			data: cases.map((testCase) => ({
+			data: cases.map((testCase, index) => ({
 				expected: testCase.expect ?? {},
-				input: { conversation: testCase.conversation },
+				input: { conversation: testCase.conversation, caseId: `${experimentName}:${index}` },
 				metadata: {
 					...metadata,
 					...testCase.metadata,
+					caseId: `${experimentName}:${index}`,
 					...(testCase.name ? { caseName: testCase.name } : {}),
 					driver: resolvedDriver.name,
 					setup: setup.tag,
@@ -137,7 +159,7 @@ export const initEval = async <Metadata extends EvalCaseMetadata>({
 					auth,
 					autumnApiOverrides,
 					driver: resolvedDriver,
-					name: experimentName,
+					name: input.caseId,
 					setup: structuredClone(setup),
 					today,
 					trace,
@@ -152,6 +174,20 @@ export const initEval = async <Metadata extends EvalCaseMetadata>({
 		},
 		{ noSendLogs: !process.env.BRAINTRUST_API_KEY },
 	);
+	if (process.env.LEAF_LAB_SCORES_FILE)
+		await writeFile(
+			process.env.LEAF_LAB_SCORES_FILE,
+			JSON.stringify(
+				{
+					experimentName,
+					results: evaluation.results,
+					summary: evaluation.summary,
+				},
+				null,
+				2,
+			),
+			{ mode: 0o600 },
+		);
 	assertEvalPassed({ evaluation, experimentName });
 	return evaluation;
 };

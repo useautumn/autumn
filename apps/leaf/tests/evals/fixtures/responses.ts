@@ -1,6 +1,7 @@
 import type { BillingResponse } from "@api/billing/common/billingResponse.js";
 import type { BaseApiCustomerV5 } from "@api/customers/apiCustomerV5.js";
 import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
+import { formatAmount, formatInterval } from "@autumn/shared";
 
 const asRecord = (value: unknown) =>
 	value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -8,17 +9,19 @@ const asArray = (value: unknown) => (Array.isArray(value) ? value : []);
 const planAmount = (plan: ApiPlanV1) => plan.price?.amount ?? 0;
 const amountFromCustomize = (value: unknown) => {
 	const price = asRecord(asRecord(value).price);
-	return typeof price.amount === "number" ? price.amount : 0;
+	return typeof price.amount === "number" ? price.amount : undefined;
 };
 const customLineItemsTotal = (value: unknown) =>
-	asArray(asRecord(value).custom_line_items).reduce(
-		(total, item) =>
-			total +
-			(typeof asRecord(item).amount === "number"
-				? (asRecord(item).amount as number)
-				: 0),
-		0,
-	);
+	Array.isArray(asRecord(value).custom_line_items)
+		? asArray(asRecord(value).custom_line_items).reduce(
+				(total, item) =>
+					total +
+					(typeof asRecord(item).amount === "number"
+						? (asRecord(item).amount as number)
+						: 0),
+				0,
+			)
+		: undefined;
 const attachPreviewTotal = ({
 	plan,
 	request,
@@ -26,12 +29,13 @@ const attachPreviewTotal = ({
 	plan: ApiPlanV1;
 	request?: unknown;
 }) =>
-	customLineItemsTotal(request) ||
-	amountFromCustomize(asRecord(request).customize) ||
-	planAmount(plan);
+	customLineItemsTotal(request) ??
+	amountFromCustomize(asRecord(request).customize) ??
+	(asRecord(asRecord(request).customize).price === null ? 0 : planAmount(plan));
 const phaseTotal = (phase: unknown) =>
 	asArray(asRecord(phase).plans).reduce(
-		(total, plan) => total + amountFromCustomize(asRecord(plan).customize),
+		(total, plan) =>
+			total + (amountFromCustomize(asRecord(plan).customize) ?? 0),
 		0,
 	);
 const schedulePhases = (phases: unknown) =>
@@ -63,7 +67,8 @@ export const responses = {
 		currency: "usd",
 		line_items: [
 			{
-				description: `${plan.name} annual`,
+				description:
+					`${plan.name} — ${formatAmount({ amount: attachPreviewTotal({ plan, request }), currency: "usd" })} ${customLineItemsTotal(request) !== undefined ? "custom line items" : formatInterval({ interval: (asRecord(asRecord(asRecord(request).customize).price).interval ?? plan.price?.interval) as Parameters<typeof formatInterval>[0]["interval"] })}`.trim(),
 				total: attachPreviewTotal({ plan, request }),
 			},
 		],
@@ -153,7 +158,7 @@ export const responses = {
 		request?: unknown;
 	}) => {
 		const addedItems = asArray(asRecord(asRecord(request).customize).add_items);
-		const dueToday = amountFromCustomize(asRecord(request).customize);
+		const dueToday = amountFromCustomize(asRecord(request).customize) ?? 0;
 		return {
 			customer_id: customerId,
 			plan_id: planId,

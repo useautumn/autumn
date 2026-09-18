@@ -1,5 +1,13 @@
+import {
+	type ApiPlanV1,
+	loosePlanItemMatchesFilter,
+	toCreatePlanItemParams,
+} from "@autumn/shared";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
-import { ResetInterval } from "@models/productModels/intervals/resetInterval";
+import {
+	addIncludedToTiers,
+	subtractIncludedFromTiers,
+} from "@utils/productV2Utils/productItemUtils/tierUtils";
 import { withCustomers } from "../../../fixtures/createSetup.js";
 import {
 	api,
@@ -38,6 +46,38 @@ const setup = withCustomers({
 	}),
 });
 
+const creditAllowance = ({
+	plan,
+	included,
+}: {
+	plan: ApiPlanV1;
+	included: number;
+}) => {
+	const source = plan.items.find((item) =>
+		loosePlanItemMatchesFilter({
+			item,
+			filter: { feature_id: "credits", billing_method: "prepaid" },
+		}),
+	);
+	if (!source?.price?.tiers)
+		throw new Error("Prepaid credits fixture is missing");
+	const item = toCreatePlanItemParams(source);
+	return {
+		...item,
+		included,
+		price: {
+			...item.price,
+			tiers: addIncludedToTiers({
+				tiers: subtractIncludedFromTiers({
+					tiers: source.price.tiers,
+					included: source.included,
+				}),
+				included,
+			}),
+		},
+	};
+};
+
 const expectedScheduleRequest = {
 	customer_id: setup.refs.customers.northstar.id,
 	enable_plan_immediately: true,
@@ -45,6 +85,7 @@ const expectedScheduleRequest = {
 	invoice_mode: {
 		enabled: true,
 		finalize: false,
+		net_terms_days: 30,
 	},
 	redirect_mode: "if_required",
 	phases: [
@@ -54,13 +95,15 @@ const expectedScheduleRequest = {
 				{
 					plan_id: setup.refs.plans.launch.id,
 					customize: {
-						items: [
+						remove_items: [
+							{ feature_id: "credits", billing_method: "prepaid" },
+						],
+						add_items: [
 							{ feature_id: "member_slots", included: 25 },
-							{
-								feature_id: "credits",
+							creditAllowance({
+								plan: setup.refs.plans.launch,
 								included: 100_000,
-								reset: { interval: ResetInterval.Month },
-							},
+							}),
 						],
 					},
 				},
@@ -75,13 +118,15 @@ const expectedScheduleRequest = {
 				{
 					plan_id: setup.refs.plans.scale.id,
 					customize: {
-						items: [
+						remove_items: [
+							{ feature_id: "credits", billing_method: "prepaid" },
+						],
+						add_items: [
 							{ feature_id: "member_slots", included: 40 },
-							{
-								feature_id: "credits",
+							creditAllowance({
+								plan: setup.refs.plans.scale,
 								included: 250_000,
-								reset: { interval: ResetInterval.Month },
-							},
+							}),
 						],
 					},
 				},
@@ -96,18 +141,18 @@ const expectedScheduleRequest = {
 					plan_id: setup.refs.plans.enterprise.id,
 					customize: {
 						price: { amount: 2_400, interval: BillingInterval.Month },
-						items: [
+						remove_items: [
+							{ feature_id: "member_slots" },
+							{ feature_id: "project_slots" },
+							{ feature_id: "credits", billing_method: "prepaid" },
+						],
+						add_items: [
 							{ feature_id: "member_slots", included: 75 },
 							{ feature_id: "project_slots", included: 500 },
-							{
-								feature_id: "credits",
+							creditAllowance({
+								plan: setup.refs.plans.enterprise,
 								included: 1_000_000,
-								reset: { interval: ResetInterval.Month },
-							},
-							{ feature_id: "platform_api", unlimited: true },
-							{ feature_id: "approval_chains", unlimited: true },
-							{ feature_id: "compliance_controls", unlimited: true },
-							{ feature_id: "brand_controls", unlimited: true },
+							}),
 						],
 					},
 				},
@@ -129,7 +174,7 @@ const extractedContractText = [
 	"Section 2. Initial ramp. On April 1, 2027, start the Launch plan with 25 member slots and 100,000 credits per month. Add the Automation Pack.",
 	"Section 3. Expansion. On July 1, 2027, move to Scale, increase to 40 member slots and 250,000 credits per month, and keep Automation Pack. Add Security Pack.",
 	"Section 4. Enterprise conversion. On January 1, 2028, move to Enterprise at a custom $2,400/month base rate with 75 member slots, 500 project slots, and 1,000,000 credits per month. Keep Security Pack and add White Label Pack.",
-	"Enterprise conversion also includes contract-specific feature overrides that are not part of the standard Enterprise plan: unlimited API access, unlimited approval flows, unlimited compliance cntrls, and unlimited brand controls.",
+	"Enterprise conversion also includes unlimited API access, unlimited approval flows, unlimited compliance cntrls, and unlimited brand controls. Retain these capabilities from the standard Enterprise plan.",
 	"Section 8. Confidentiality. Neither party may disclose pricing or implementation details except to auditors, investors, or legal advisors under confidentiality obligations.",
 	"Section 11. Service levels. Support response targets are commercially reasonable and do not create service credits unless separately stated in an SLA exhibit.",
 	"Signature block: Northstar Labs Ltd. / Autumn Software Inc.",

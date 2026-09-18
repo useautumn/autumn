@@ -1,0 +1,10 @@
+{
+	"extends": "../leaf/tsconfig.json",
+	"compilerOptions": { "baseUrl": "../leaf" },
+	"include": [
+		"agent/**/*.ts",
+		"lib/**/*.ts",
+		"scripts/**/*.ts",
+		"tests/**/*.ts"
+	]
+}

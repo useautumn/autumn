@@ -1,4 +1,12 @@
+import {
+	loosePlanItemMatchesFilter,
+	toCreatePlanItemParams,
+} from "@autumn/shared";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
+import {
+	addIncludedToTiers,
+	subtractIncludedFromTiers,
+} from "@utils/productV2Utils/productItemUtils/tierUtils";
 import { withCustomers } from "../../../fixtures/createSetup.js";
 import {
 	api,
@@ -16,7 +24,7 @@ type EvalMetadata = {
 };
 
 const experimentName = "multi-year-escalator";
-const now = new Date("2026-06-12T00:00:00.000Z");
+const now = new Date("2026-07-01T00:00:00.000Z");
 const time = (value: string) => new Date(value).getTime();
 
 const setup = withCustomers({
@@ -50,15 +58,33 @@ const setup = withCustomers({
 });
 
 const enterprisePlan = setup.refs.plans.enterprise;
+const prepaidCredits = enterprisePlan.items.find((item) =>
+	loosePlanItemMatchesFilter({
+		item,
+		filter: {
+			feature_id: setup.refs.features.credits.id,
+			billing_method: "prepaid",
+		},
+	}),
+);
+if (!prepaidCredits?.price?.tiers)
+	throw new Error("Enterprise prepaid credits fixture is missing");
+const prepaidCreditItem = toCreatePlanItemParams(prepaidCredits);
+const prepaidCreditTiers = subtractIncludedFromTiers({
+	tiers: prepaidCredits.price.tiers,
+	included: prepaidCredits.included,
+});
 
 // Each phase escalates only the annual price; entitlements (credits, seats)
 // stay constant, so the price bump must land in customize.price — never as a
 // credit grant or a separate subscription.
 const enterprisePhase = ({
 	amount,
+	included,
 	startsAt,
 }: {
 	amount: number;
+	included: number;
 	startsAt: number;
 }) => ({
 	starts_at: startsAt,
@@ -67,6 +93,25 @@ const enterprisePhase = ({
 			plan_id: enterprisePlan.id,
 			customize: {
 				price: { amount, interval: BillingInterval.Year },
+				remove_items: [
+					{
+						feature_id: setup.refs.features.credits.id,
+						billing_method: "prepaid",
+					},
+				],
+				add_items: [
+					{
+						...prepaidCreditItem,
+						included,
+						price: {
+							...prepaidCreditItem.price,
+							tiers: addIncludedToTiers({
+								tiers: prepaidCreditTiers,
+								included,
+							}),
+						},
+					},
+				],
 			},
 		},
 	],
@@ -74,13 +119,16 @@ const enterprisePhase = ({
 
 const twoYearSchedule = {
 	customer_id: setup.refs.customers.twoYear.id,
+	entity_id: setup.refs.entities.redwoodWorkspace.id,
 	phases: [
 		enterprisePhase({
 			amount: 40_000,
+			included: 50_000,
 			startsAt: time("2026-07-01T00:00:00.000Z"),
 		}),
 		enterprisePhase({
 			amount: 50_000,
+			included: 50_000,
 			startsAt: time("2027-07-01T00:00:00.000Z"),
 		}),
 	],
@@ -88,21 +136,26 @@ const twoYearSchedule = {
 
 const fourYearSchedule = {
 	customer_id: setup.refs.customers.fourYear.id,
+	entity_id: setup.refs.entities.harborWorkspace.id,
 	phases: [
 		enterprisePhase({
 			amount: 60_000,
+			included: 100_000,
 			startsAt: time("2026-07-01T00:00:00.000Z"),
 		}),
 		enterprisePhase({
 			amount: 72_000,
+			included: 100_000,
 			startsAt: time("2027-07-01T00:00:00.000Z"),
 		}),
 		enterprisePhase({
 			amount: 86_400,
+			included: 100_000,
 			startsAt: time("2028-07-01T00:00:00.000Z"),
 		}),
 		enterprisePhase({
 			amount: 103_680,
+			included: 100_000,
 			startsAt: time("2029-07-01T00:00:00.000Z"),
 		}),
 	],

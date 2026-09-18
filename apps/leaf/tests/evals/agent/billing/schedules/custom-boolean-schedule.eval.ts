@@ -1,4 +1,9 @@
+import {
+	applyCustomizeToPlan,
+	loosePlanItemMatchesFilter,
+} from "@autumn/shared";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
+import { isSameToolRequest } from "../../../../../src/internal/approvals/utils/toolRequest.js";
 import { withCustomers } from "../../../fixtures/createSetup.js";
 import {
 	api,
@@ -13,7 +18,10 @@ import {
 	initEval,
 	user,
 } from "../../../harness/index.js";
-import { billingScheduleScores } from "../../../utils/scorers.js";
+import {
+	billingScheduleScores,
+	type EvalScoreArgs,
+} from "../../../utils/scorers.js";
 
 type EvalMetadata = {
 	domain: "billing";
@@ -43,9 +51,18 @@ const setup = withCustomers({
 	}),
 });
 
+// Both catalog credit slots are replaced, so each is removed by its billing
+// method; the matcher compares removal filters as an unordered set.
 const enterpriseCustomize = (amount: number) => ({
 	price: { amount, interval: BillingInterval.Year },
-	remove_items: [{ feature_id: setup.refs.features.revision_history.id }],
+	remove_items: [
+		{ feature_id: setup.refs.features.revision_history.id },
+		{ feature_id: setup.refs.features.credits.id, billing_method: "prepaid" },
+		{
+			feature_id: setup.refs.features.credits.id,
+			billing_method: "usage_based",
+		},
+	],
 	add_items: [
 		{
 			feature_id: setup.refs.features.hosted_solution.id,
@@ -54,6 +71,16 @@ const enterpriseCustomize = (amount: number) => ({
 		{
 			feature_id: setup.refs.features.unlimited_seats.id,
 			unlimited: true,
+		},
+		{
+			feature_id: setup.refs.features.credits.id,
+			included: 5_000,
+			reset: { interval: "month" },
+			price: {
+				amount: 0.01,
+				interval: BillingInterval.Month,
+				billing_method: "usage_based",
+			},
 		},
 	],
 });
@@ -93,6 +120,100 @@ const expectedScheduleRequest = {
 	],
 };
 
+// Judges the executed schedule and the preview that vouched for it. A
+// preview the verifier rejected before approval never became a write, so it
+// is not part of the delivered package.
+const contractPackageScore = ({ output }: EvalScoreArgs) => {
+	const writes = output.apiCalls.filter(
+		(call) => call.toolName === "createSchedule",
+	);
+	const withoutExpand = ({
+		expand: _expand,
+		...body
+	}: Record<string, unknown>) => body;
+	const previews = output.apiCalls.filter(
+		(call) =>
+			call.toolName === "previewCreateSchedule" &&
+			writes.some((write) =>
+				isSameToolRequest(withoutExpand(write.body), withoutExpand(call.body)),
+			),
+	);
+	const calls = [...previews, ...writes];
+	const complete =
+		writes.length >= 1 &&
+		previews.length >= 1 &&
+		calls.every((call) => {
+			const phases = call.body.phases as
+				| Array<{
+						plans: Array<{
+							plan_id: string;
+							customize: Parameters<
+								typeof applyCustomizeToPlan
+							>[0]["customize"];
+						}>;
+				  }>
+				| undefined;
+			return (
+				phases?.length === 2 &&
+				phases.every((phase) => {
+					const enterprise = phase.plans.find(
+						(plan) => plan.plan_id === setup.refs.plans.enterprise.id,
+					);
+					if (!enterprise) return false;
+					const effective = applyCustomizeToPlan({
+						plan: setup.refs.plans.enterprise,
+						customize: enterprise.customize,
+					});
+					const hasItem = (filter: Record<string, unknown>) =>
+						effective.items.some((item) =>
+							loosePlanItemMatchesFilter({ item, filter }),
+						);
+					const credits = effective.items.filter(
+						(item) => item.feature_id === setup.refs.features.credits.id,
+					);
+					return (
+						hasItem({
+							feature_id: setup.refs.features.member_slots.id,
+							included: 25,
+						}) &&
+						hasItem({
+							feature_id: setup.refs.features.project_slots.id,
+							included: 100,
+						}) &&
+						credits.length === 1 &&
+						credits[0]?.included === 5000 &&
+						credits[0]?.reset?.interval === "month" &&
+						credits[0]?.price?.amount === 0.01 &&
+						credits[0]?.price?.billing_method === "usage_based" &&
+						credits[0]?.price?.interval === "month" &&
+						[
+							"insight_reports",
+							"automation_rules",
+							"outbound_hooks",
+							"platform_api",
+							"approval_chains",
+							"team_policies",
+							"private_spaces",
+							"export_center",
+							"priority_queue",
+							"brand_controls",
+							"compliance_controls",
+							"hosted_solution",
+							"unlimited_seats",
+						].every((feature_id) =>
+							effective.items.some(
+								(item) =>
+									item.feature_id === feature_id && item.unlimited === true,
+							),
+						) &&
+						!hasItem({ feature_id: setup.refs.features.revision_history.id })
+					);
+				})
+			);
+		});
+	return { name: "contract_package_complete", score: complete ? 1 : 0 };
+};
+
 initEval<EvalMetadata>({
 	experimentName,
 	setup,
@@ -100,7 +221,7 @@ initEval<EvalMetadata>({
 		domain: "billing",
 		flow: "schedule",
 	},
-	scores: billingScheduleScores(),
+	scores: [...billingScheduleScores(), contractPackageScore],
 	today: now,
 	timeout: 150_000,
 	cases: [

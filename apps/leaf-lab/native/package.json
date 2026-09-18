@@ -1,0 +1,9 @@
+{
+	"name": "leaf-lab-native",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "bun launch.ts",
+		"check": "tsc --noEmit -p tsconfig.json"
+	}
+}
