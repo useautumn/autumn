@@ -7,6 +7,8 @@ import {
 	useContext,
 	useMemo,
 } from "react";
+import type { LicenseCatalog } from "@/components/forms/shared";
+import { fullPlanLicensesToPlanLicenses } from "@/hooks/queries/usePlanLicensesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -30,6 +32,7 @@ interface CreateInvoiceFormContextValue {
 	previewQuery: ReturnType<typeof useCreateInvoicePreview>;
 	requestBody: ReturnType<typeof useCreateInvoiceRequestBody>;
 	catalogItemsByPlanId: Map<string, ProductItem[] | undefined>;
+	licenseCatalogByPlanId: Map<string, LicenseCatalog>;
 	blockingReason: string | null;
 	planEditor: ReturnType<typeof useCreateInvoicePlanEditor>;
 }
@@ -64,6 +67,23 @@ export function CreateInvoiceFormProvider({
 			new Map((products ?? []).map((product) => [product.id, product.items])),
 		[products],
 	);
+
+	// The products list already carries each plan's license links and the
+	// license plans themselves, so rows never wait on a per-plan fetch.
+	const licenseCatalogByPlanId = useMemo(() => {
+		const all = products ?? [];
+		return new Map(
+			all.flatMap((product) => {
+				const links = fullPlanLicensesToPlanLicenses({
+					parentPlanId: product.id,
+					licenses: product.licenses ?? [],
+				});
+				return links.length > 0
+					? [[product.id, { links, products: all }] as const]
+					: [];
+			}),
+		);
+	}, [products]);
 
 	const requestBody = useCreateInvoiceRequestBody({
 		customerId,
@@ -106,6 +126,7 @@ export function CreateInvoiceFormProvider({
 			previewQuery,
 			requestBody,
 			catalogItemsByPlanId,
+			licenseCatalogByPlanId,
 			blockingReason,
 			planEditor,
 		}),
@@ -118,6 +139,7 @@ export function CreateInvoiceFormProvider({
 			previewQuery,
 			requestBody,
 			catalogItemsByPlanId,
+			licenseCatalogByPlanId,
 			blockingReason,
 			planEditor,
 		],

@@ -3,7 +3,8 @@
  *
  *   bun scenario invoice [--skip-clear]
  */
-import { RewardType } from "@autumn/shared";
+import { ApiVersion, RewardType } from "@autumn/shared";
+
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { createReward } from "@tests/utils/productUtils";
@@ -11,13 +12,14 @@ import { clearOrg } from "@tests/utils/setup/clearOrg.js";
 import { ensureV2Features } from "@tests/utils/setup/setupOrg.js";
 import { createTestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/InvoiceTemplateService";
 import { generateId } from "@/utils/genUtils";
 import { constructCoupon } from "@/utils/scriptUtils/createTestProducts";
 
 const GROUP = "invoice-create";
-const PRIMARY_CUSTOMER = "inv_test_1";
-const SECOND_CUSTOMER = "inv_test_2";
+const PRIMARY_CUSTOMER = "inv_cus_1";
+const SECOND_CUSTOMER = "inv_cus_2";
 
 export const runInvoiceCreateSeed = async () => {
 	const skipClear = process.argv.includes("--skip-clear");
@@ -46,8 +48,15 @@ export const runInvoiceCreateSeed = async () => {
 		id: "inv_usage",
 		items: [items.consumableMessages({ includedUsage: 0, price: 0.1 })],
 	});
+	// A license plan is a separate product linked to a parent, so seat charges
+	// come through license_quantities rather than feature_quantities.
+	const licensed = products.pro({ id: "inv_licensed", items: [] });
+	const editor = products.base({
+		id: "inv_editor",
+		items: [items.monthlyPrice({ price: 25 })],
+	});
 
-	const list = [basic, seats, tiered, usage].map((plan) => ({
+	const list = [basic, seats, tiered, usage, licensed, editor].map((plan) => ({
 		...plan,
 		group: GROUP,
 	}));
@@ -75,6 +84,13 @@ export const runInvoiceCreateSeed = async () => {
 		],
 		actions: [],
 		ctx,
+	});
+
+	// s.licenses.link() suffixes plan ids with the product prefix, which this
+	// seed does not use, so the catalog link is written directly.
+	await autumnV2_3.post("/plans.update", {
+		plan_id: licensed.id,
+		licenses: [{ license_plan_id: editor.id, included: 0 }],
 	});
 
 	// s.reward() always suffixes ids with the product prefix, which is empty here.

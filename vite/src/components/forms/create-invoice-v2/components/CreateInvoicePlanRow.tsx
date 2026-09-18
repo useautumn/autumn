@@ -3,6 +3,7 @@ import { XIcon } from "@phosphor-icons/react";
 import { SelectedPlanRow } from "@/components/forms/shared";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
 import type { FormInvoicePlan } from "../createInvoiceFormSchema";
+import { CreateInvoiceLicenseRows } from "./CreateInvoiceLicenseRows";
 import { CreateInvoiceQuantityFields } from "./CreateInvoiceQuantityFields";
 
 export function CreateInvoicePlanRow({ plan }: { plan: FormInvoicePlan }) {
@@ -12,8 +13,6 @@ export function CreateInvoicePlanRow({ plan }: { plan: FormInvoicePlan }) {
 		(candidate) => candidate._id === plan._id,
 	);
 	const selectedProduct = productsById.get(plan.planId);
-
-	const canRemove = formValues.plans.length > 1;
 
 	const handleRemove = () => {
 		form.setFieldValue(
@@ -44,15 +43,13 @@ export function CreateInvoicePlanRow({ plan }: { plan: FormInvoicePlan }) {
 						/>
 					)}
 				</form.AppField>
-				{canRemove && (
-					<IconButton
-						className="shrink-0 text-tertiary-foreground hover:text-red-500"
-						icon={<XIcon size={12} />}
-						onClick={handleRemove}
-						size="sm"
-						variant="muted"
-					/>
-				)}
+				<IconButton
+					className="shrink-0 text-tertiary-foreground hover:text-red-500"
+					icon={<XIcon size={12} />}
+					onClick={handleRemove}
+					size="sm"
+					variant="muted"
+				/>
 			</div>
 		);
 	}
@@ -65,13 +62,14 @@ export function CreateInvoicePlanRow({ plan }: { plan: FormInvoicePlan }) {
 				customItems={plan.items}
 				isCustom={plan.isCustom}
 				onEdit={() => planEditor.handleEditPlan({ planId: plan._id })}
-				onRemove={canRemove ? handleRemove : undefined}
+				onRemove={handleRemove}
 			/>
 			<CreateInvoiceQuantityFields
 				items={plan.items ?? selectedProduct?.items}
 				planIndex={planIndex}
 				quantities={plan.featureQuantities}
 			/>
+			<CreateInvoiceLicenseRows plan={plan} planIndex={planIndex} />
 		</div>
 	);
 }

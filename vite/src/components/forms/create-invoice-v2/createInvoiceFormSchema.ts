@@ -49,6 +49,22 @@ export const EMPTY_INVOICE_PLAN: Omit<FormInvoicePlan, "_id"> = {
 	prorate: undefined,
 };
 
+let licenseCounter = 0;
+
+export const newInvoiceLicense = (
+	licensePlanId: string,
+): FormInvoiceLicense => {
+	licenseCounter += 1;
+	return {
+		_id: `license_${Date.now()}_${licenseCounter}`,
+		licensePlanId,
+		quantity: undefined,
+		featureQuantities: {},
+		featureUsage: {},
+		prorate: undefined,
+	};
+};
+
 let planCounter = 0;
 
 export const newInvoicePlan = (): FormInvoicePlan => {

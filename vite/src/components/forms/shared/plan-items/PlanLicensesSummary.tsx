@@ -26,6 +26,13 @@ import {
 
 type LicenseRowStatus = "unchanged" | "added" | "removed" | "changed";
 
+/** Catalog a caller already holds, letting the rows render on first paint
+ * instead of shifting when their own fetches land. */
+export interface LicenseCatalog {
+	links: VersionedLicenseLink[];
+	products: ProductV2[];
+}
+
 type VersionedLicenseLink = PlanLicense & { version?: number };
 
 export interface LicenseSummaryRow {
@@ -165,23 +172,27 @@ export const diffLicensesAgainstOutgoing = ({
 export const usePlanLicenseRows = ({
 	planId,
 	addLicenses,
+	cachedCatalog,
 	outgoingLicenses,
 	features,
 }: {
 	planId: string | undefined;
 	addLicenses: CustomizePlanLicense[] | null | undefined;
+	cachedCatalog?: LicenseCatalog;
 	outgoingLicenses?: VersionedLicenseLink[];
 	features: Feature[];
 }): { rows: PlanLicenseRow[] } => {
 	const { org } = useOrg();
 	const orgDefaultCurrency = org?.default_currency ?? "USD";
-	const { planLicenses } = usePlanLicensesQuery(
-		addLicenses === undefined ? undefined : planId,
+	const { planLicenses: fetchedLicenses } = usePlanLicensesQuery(
+		addLicenses === undefined || cachedCatalog ? undefined : planId,
 	);
-	const { licenseProducts } = useLicenseProductsQuery({
-		enabled: addLicenses !== undefined,
+	const { licenseProducts: fetchedProducts } = useLicenseProductsQuery({
+		enabled: addLicenses !== undefined && !cachedCatalog,
 		allVersions: true,
 	});
+	const planLicenses = cachedCatalog?.links ?? fetchedLicenses;
+	const licenseProducts = cachedCatalog?.products ?? fetchedProducts;
 
 	const baseRows = diffPlanLicenses({ base: planLicenses, addLicenses });
 	const summaryRows = outgoingLicenses
@@ -300,6 +311,7 @@ export const licenseRowHasBillingChanges = (row: PlanLicenseRow): boolean => {
 export function PlanLicensesSummary({
 	planId,
 	addLicenses,
+	cachedCatalog,
 	features,
 	showDiff,
 	changesOnly = false,
@@ -309,6 +321,7 @@ export function PlanLicensesSummary({
 }: {
 	planId: string | undefined;
 	addLicenses: CustomizePlanLicense[] | null | undefined;
+	cachedCatalog?: LicenseCatalog;
 	features: Feature[];
 	showDiff: boolean;
 	changesOnly?: boolean;
@@ -322,6 +335,7 @@ export function PlanLicensesSummary({
 	const { rows: allRows } = usePlanLicenseRows({
 		planId,
 		addLicenses,
+		cachedCatalog,
 		outgoingLicenses: showDiff ? outgoingLicenses : undefined,
 		features,
 	});
