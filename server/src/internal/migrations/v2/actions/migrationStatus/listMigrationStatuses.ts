@@ -2,7 +2,7 @@ import type { Migration, MigrationStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isTriggerConfigured } from "@/trigger/configureTrigger.js";
 import { migrationRepo, migrationRunRepo } from "../../repos/index.js";
-import { reconcileAbandonedRuns } from "../migrationRun/reconcileAbandonedRuns.js";
+import { reconcileAbandonedRunsOnce } from "../migrationRun/reconcileAbandonedRunsOnce.js";
 import { resolveMigrationStatus } from "./resolveMigrationStatus.js";
 
 type MigrationRef = Pick<Migration, "internal_id" | "id">;
@@ -47,12 +47,12 @@ export const listMigrationStatuses = async ({
 	]);
 
 	// A lost settle-write leaves a dead run active, blocking the migration.
-	const reconciled = isTriggerConfigured()
-		? await reconcileAbandonedRuns({ ctx, runs: activeRuns })
-		: new Set<string>();
-	const orgActiveRuns = activeRuns.filter(
-		(run) => !reconciled.has(run.internal_id),
-	);
+	// Reconciling needs a trigger.dev round trip, and this path is polled every
+	// 2s, so it runs detached: the next poll reads the settled row.
+	if (isTriggerConfigured()) {
+		void reconcileAbandonedRunsOnce({ ctx, runs: activeRuns });
+	}
+	const orgActiveRuns = activeRuns;
 
 	const statuses = new Map<string, MigrationStatusInfo>();
 	for (const migration of migrations) {

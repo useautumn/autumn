@@ -1,4 +1,9 @@
-import { type MigrationRun, MigrationRunStatus, ms } from "@autumn/shared";
+import {
+	type MigrationRun,
+	MigrationRunStatus,
+	ms,
+	withTimeout,
+} from "@autumn/shared";
 import { differenceInMilliseconds } from "date-fns";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { migrationRunRepo } from "../../repos/index.js";
@@ -10,6 +15,9 @@ const ABANDONED_MESSAGE =
 
 /** A trigger handle exists from dispatch, so a young run is not yet evidence. */
 const ABANDON_GRACE = ms.minutes(10);
+
+/** The dashboard polls this path every 2s, so a slow platform must not stall it. */
+const LIVENESS_TIMEOUT = ms.seconds(2);
 
 /** Settles runs whose trigger task is provably dead. Only a confirmed-terminal
  * run settles: releasing a live run's claim would double-process its customers. */
@@ -36,24 +44,31 @@ export const reconcileAbandonedRuns = async ({
 				ABANDON_GRACE,
 	);
 
-	for (const run of candidates) {
-		const triggerRunId = run.trigger_run_id;
-		if (!triggerRunId) continue;
+	const liveness = await Promise.all(
+		candidates.map(async (run) => {
+			const triggerRunId = run.trigger_run_id;
+			if (!triggerRunId) return false;
+			try {
+				return await withTimeout({
+					fn: () => isTerminal({ ctx, triggerRunId }),
+					timeoutMs: LIVENESS_TIMEOUT,
+					timeoutMessage: `trigger liveness check timed out for ${triggerRunId}`,
+				});
+			} catch (error) {
+				ctx.logger.warn("migration-run: abandoned check failed", {
+					data: {
+						migrationRunId: run.internal_id,
+						triggerRunId,
+						error: error instanceof Error ? error.message : String(error),
+					},
+				});
+				return false;
+			}
+		}),
+	);
 
-		let terminal = false;
-		try {
-			terminal = await isTerminal({ ctx, triggerRunId });
-		} catch (error) {
-			ctx.logger.warn("migration-run: abandoned check failed", {
-				data: {
-					migrationRunId: run.internal_id,
-					triggerRunId,
-					error: error instanceof Error ? error.message : String(error),
-				},
-			});
-			continue;
-		}
-		if (!terminal) continue;
+	for (const [index, run] of candidates.entries()) {
+		if (!liveness[index]) continue;
 
 		try {
 			await migrationRunRepo.update({
@@ -68,7 +83,10 @@ export const reconcileAbandonedRuns = async ({
 			await settleLeftoverClaims({ ctx, migrationRunId: run.internal_id });
 			reconciled.add(run.internal_id);
 			ctx.logger.warn("migration-run: reconciled abandoned run", {
-				data: { migrationRunId: run.internal_id, triggerRunId },
+				data: {
+					migrationRunId: run.internal_id,
+					triggerRunId: run.trigger_run_id,
+				},
 			});
 		} catch (error) {
 			ctx.logger.error("migration-run: failed to reconcile abandoned run", {
