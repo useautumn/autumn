@@ -140,10 +140,6 @@ export const ReissueInvoiceParamsSchema = z.object({
 		description:
 			"Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address.",
 	}),
-	credit_original: z.boolean().optional().meta({
-		description:
-			"Required to reissue a paid invoice. The original stays paid and a credit note returns its amount to the customer's balance, which then covers the replacement.",
-	}),
 	invoice: ReissueInvoiceOverridesSchema.optional().meta({
 		description: "Changes that apply to the replacement invoice only.",
 	}),
@@ -162,11 +158,11 @@ export const ReissueInvoiceResponseSchema = z.object({
 	}),
 	voided_invoice_id: z.string().nullable().meta({
 		description:
-			"The Autumn ID of the original invoice, now void. Null when previewing or when the original was credited instead of voided.",
+			"The Autumn ID of the original invoice, now void. Null when previewing, and when the original was paid and got a credit note instead.",
 	}),
 	credit_note_id: z.string().nullable().meta({
 		description:
-			"The Stripe credit note issued against a paid original. Null otherwise.",
+			"The Stripe credit note issued against a paid original, whose amount lands on the customer's balance and covers the replacement. Null when the original was open and voided instead.",
 	}),
 	preview: CreateInvoicePreviewSchema.meta({
 		description: "The replacement's lines and totals.",

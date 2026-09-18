@@ -1,19 +1,15 @@
 /**
- * invoices.reissue on a paid invoice: correct it with a credit note instead of a void.
+ * invoices.reissue on a paid invoice: corrected with a credit note instead of a void.
  *
  * Contract:
- *   paid invoice, no credit_original      -> 400 (a paid invoice is never voided by accident)
- *   paid invoice + credit_original: true  -> original stays paid, a credit note refunds it to
- *                                            the customer's balance, and the corrected
- *                                            replacement is issued for the new amount
+ *   paid invoice -> original stays paid, a credit note returns its amount to the
+ *                   customer's balance, and that balance covers the corrected replacement
  *   the replacement never carries the original's deferred-plan pointer, so paying it
  *   cannot promote a plan a second time
  */
 
 import { expect, test } from "bun:test";
 import type { ApiListInvoiceV1, AttachParamsV1Input } from "@autumn/shared";
-import { ErrCode } from "@autumn/shared";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { payOpenInvoice } from "@tests/utils/stripeUtils/payOpenInvoice";
@@ -56,40 +52,7 @@ const paidSendInvoice = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("invoices.reissue: paid invoice without credit_original → 400")}`,
-	async () => {
-		const customerId = "inv-reissue-paid-guard";
-		const pro = products.base({
-			id: "pro-reissue-paid-guard",
-			items: [items.monthlyPrice({ price: 20 })],
-		});
-		const { autumnV2_3, autumnV2_4 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ testClock: false, paymentMethod: "success" }),
-				s.products({ list: [pro] }),
-			],
-			actions: [],
-		});
-
-		const original = await paidSendInvoice({
-			autumnV2_3,
-			autumnV2_4,
-			customerId,
-			planId: pro.id,
-		});
-
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			errMessage: "credit_original",
-			func: () =>
-				autumnV2_3.post("/invoices.reissue", { invoice_id: original.id }),
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("invoices.reissue: paid invoice + credit_original → credit note, original stays paid")}`,
+	`${chalk.yellowBright("invoices.reissue: paid invoice → credit note, original stays paid")}`,
 	async () => {
 		const customerId = "inv-reissue-paid-credit";
 		const pro = products.base({
@@ -125,7 +88,6 @@ test.concurrent(
 		const { invoice, voided_invoice_id, credit_note_id } =
 			(await autumnV2_3.post("/invoices.reissue", {
 				invoice_id: original.id,
-				credit_original: true,
 				invoice: {
 					tax_rate_id: null,
 					custom_fields: [{ name: "PO number", value: "PO-9001" }],

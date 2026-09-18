@@ -2,6 +2,7 @@ import {
 	formatAmount,
 	type Invoice,
 	type InvoiceLineItem,
+	InvoiceStatus,
 } from "@autumn/shared";
 import {
 	Button,
@@ -119,6 +120,7 @@ export function ReissueInvoiceSheet() {
 		minFractionDigits: 2,
 		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 	});
+	const isPaid = invoice.status === InvoiceStatus.Paid;
 	const taxTotal = taxedAmount != null ? taxedAmount - invoice.total : 0;
 	const isTaxed = taxTotal > 0;
 	const formattedTax = formatAmount({
@@ -136,7 +138,11 @@ export function ReissueInvoiceSheet() {
 			<div className="flex h-full flex-col overflow-y-auto">
 				<SheetHeader
 					title="Reissue Invoice"
-					description={`Send a new ${formattedTotal} invoice and void this one.`}
+					description={
+						isPaid
+							? `Credit this ${formattedTotal} invoice to the customer's balance and send a corrected one, which that balance covers.`
+							: `Send a new ${formattedTotal} invoice and void this one.`
+					}
 				/>
 
 				<SheetSection withSeparator>

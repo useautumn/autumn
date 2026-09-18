@@ -74,11 +74,9 @@ const invalidRequest = (message: string) =>
 const loadReissuableStripeInvoice = async ({
 	ctx,
 	row,
-	creditOriginal,
 }: {
 	ctx: AutumnContext;
 	row: InvoiceListRow;
-	creditOriginal: boolean;
 }) => {
 	const processorType = row.invoice.processor_type ?? ProcessorType.Stripe;
 	if (processorType !== ProcessorType.Stripe || !row.invoice.stripe_id) {
@@ -98,11 +96,6 @@ const loadReissuableStripeInvoice = async ({
 			replacementId
 				? `Invoice ${row.invoice.id} was already reissued as Stripe invoice ${replacementId}`
 				: `Invoice ${row.invoice.id} is void and cannot be reissued`,
-		);
-	}
-	if (stripeInvoice.status === "paid" && !creditOriginal) {
-		throw invalidRequest(
-			`Invoice ${row.invoice.id} is already paid; pass credit_original to credit it and issue a corrected replacement`,
 		);
 	}
 	if (stripeInvoice.status !== "open" && stripeInvoice.status !== "paid") {
@@ -350,7 +343,7 @@ const issueReplacement = async ({
 
 	// The total is only guaranteed to match when nothing was adjusted.
 	const adjusted = Boolean(overrides || lineEdits);
-	if (!adjusted && !creditOriginal && draft.total !== stripeInvoice.total) {
+	if (!adjusted && draft.total !== stripeInvoice.total) {
 		await stripeCli.invoices.del(draft.id).catch(() => undefined);
 		throw new RecaseError({
 			message: `Replacement total (${draft.total}) does not match the original (${stripeInvoice.total}); the invoice was not reissued`,
@@ -609,7 +602,6 @@ export const reissueInvoice = async ({
 	netTermsDays,
 	updateCustomerEmail,
 	preview,
-	creditOriginal,
 	invoiceOverrides,
 	customerOverrides,
 	lineEdits,
@@ -620,7 +612,6 @@ export const reissueInvoice = async ({
 	netTermsDays?: number;
 	updateCustomerEmail?: string;
 	preview?: boolean;
-	creditOriginal?: boolean;
 	invoiceOverrides?: ReissueInvoiceOverrides;
 	customerOverrides?: ReissueCustomerOverrides;
 	lineEdits?: ReissueLineEdits;
@@ -641,8 +632,10 @@ export const reissueInvoice = async ({
 	const { stripeCli, stripeInvoice } = await loadReissuableStripeInvoice({
 		ctx,
 		row,
-		creditOriginal: Boolean(creditOriginal),
 	});
+
+	// A paid invoice keeps its money and gets a credit note; an open one is voided.
+	const creditOriginal = stripeInvoice.status === "paid";
 
 	const template = invoiceTemplateId
 		? await InvoiceTemplateService.getById({
@@ -721,7 +714,7 @@ export const reissueInvoice = async ({
 
 	const { finalized, creditNoteId } = await issueReplacement({
 		ctx,
-		creditOriginal: Boolean(creditOriginal),
+		creditOriginal,
 		customerId: previewCustomerId,
 		stripeCli,
 		invoiceId,

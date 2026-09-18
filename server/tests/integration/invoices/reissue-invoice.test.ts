@@ -8,7 +8,7 @@
  *                      linked to the same subscription and inheriting deferred metadata
  *   deferred invoice → paying the replacement promotes the pending plan
  *   void invoice     → 400
- *   paid invoice     → 400
+ *   charge-automatically invoice → 400 (reissue is send-invoice only)
  */
 
 import { expect, test } from "bun:test";
@@ -232,7 +232,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("invoices.reissue: paid invoice → 400")}`,
+	`${chalk.yellowBright("invoices.reissue: charge-automatically invoice → 400")}`,
 	async () => {
 		const customerId = "inv-reissue-paid";
 		const pro = products.pro({
@@ -251,6 +251,7 @@ test.concurrent(
 		const invoiceId = await firstInvoiceId({ autumnV2_3, customerId });
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
+			errMessage: "charged automatically",
 			func: () =>
 				autumnV2_3.post("/invoices.reissue", { invoice_id: invoiceId }),
 		});
