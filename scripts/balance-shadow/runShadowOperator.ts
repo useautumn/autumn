@@ -11,6 +11,17 @@ import { refreshAllEdgeConfigs } from "@server/internal/misc/edgeConfig/edgeConf
 import { getRedisV2CacheStatus } from "@server/internal/misc/redisV2Cache/redisV2CacheStore.js";
 import { loadShadowOperatorContext } from "./loadShadowOperatorContext.js";
 
+/** The row keeps usage per attribution source, so the comparable total is the sum of its units. */
+const attributedUnits = ({
+	usage_attribution,
+}: {
+	usage_attribution?: Record<string, { units: number }>;
+} = {}): number =>
+	Object.values(usage_attribution ?? {}).reduce(
+		(total, entry) => total + entry.units,
+		0,
+	);
+
 export async function runShadowOperator({
 	config,
 	mode,
@@ -69,8 +80,8 @@ export async function runShadowOperator({
 							status: result.status,
 							redisRemaining: result.redis?.[featureId]?.balance,
 							workerRemaining: result.worker?.[featureId]?.balance,
-							redisUsage: result.redis?.[featureId]?.usage,
-							workerUsage: result.worker?.[featureId]?.usage,
+							redisUsage: attributedUnits(result.redis?.[featureId]),
+							workerUsage: attributedUnits(result.worker?.[featureId]),
 							workerRevision: result.worker?.[featureId]?.revision,
 						})),
 					);
