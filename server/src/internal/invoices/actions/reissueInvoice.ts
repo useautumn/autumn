@@ -477,6 +477,19 @@ export const reissueInvoice = async ({
 			stripeInvoice,
 			email: updateCustomerEmail,
 		});
+		// Autumn is the source of truth the next getOrCreateStripeCustomer pushes
+		// to Stripe, so without this the old address comes straight back.
+		const emailCustomerId = row.customer_id ?? row.invoice.internal_customer_id;
+		await CusService.update({
+			ctx,
+			idOrInternalId: emailCustomerId,
+			update: { email: updateCustomerEmail },
+		});
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId: emailCustomerId,
+			source: "reissueInvoice:email",
+		});
 	}
 
 	const finalized = await issueReplacement({

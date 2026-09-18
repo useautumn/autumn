@@ -12,7 +12,11 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiListInvoiceV1, AttachParamsV1Input } from "@autumn/shared";
+import type {
+	ApiCustomerV5,
+	ApiListInvoiceV1,
+	AttachParamsV1Input,
+} from "@autumn/shared";
 import { ALL_STATUSES, CusProductStatus, ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
@@ -136,6 +140,11 @@ test.concurrent(
 		expect(replacement.auto_advance).toBe(true);
 		expect(replacement.due_date).toBe(original.due_date);
 		expect(replacement.customer_email).toBe(NEW_EMAIL);
+
+		// Autumn holds the new address too, or the next Stripe sync would undo it.
+		const updatedCustomer =
+			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		expect(updatedCustomer.email).toBe(NEW_EMAIL);
 		expect(replacement.parent?.subscription_details?.subscription).toBe(
 			original.parent?.subscription_details?.subscription,
 		);
