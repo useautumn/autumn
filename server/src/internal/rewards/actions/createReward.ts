@@ -15,6 +15,7 @@ import {
 	initRewardStripePrices,
 } from "@/internal/rewards/rewardUtils.js";
 import { getRewardPrices } from "./getRewardPrices.js";
+import { validateCouponStripeProductScope } from "./validateCouponStripeProductScope.js";
 import { validateRewardUniqueness } from "./validateRewardUniqueness.js";
 
 type CreateRewardParams = {
@@ -48,6 +49,9 @@ export const createReward = async ({
 			priceIds: reward.discount_config?.price_ids ?? [],
 		});
 		await initRewardStripePrices({ ctx, prices });
+		if (!reward.discount_config?.apply_to_all) {
+			await validateCouponStripeProductScope({ ctx, prices });
+		}
 		await createStripeCoupon({
 			reward,
 			org,
