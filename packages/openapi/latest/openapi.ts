@@ -1,6 +1,10 @@
 import { writeFileSync } from "node:fs";
 import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import {
+	ApiCreditDimensionSchema,
+	ApiCreditTierSchema,
+} from "@api/features/creditRateCard.js";
+import {
 	ApiBalanceV1Schema,
 	ApiCustomerV5Schema,
 	ApiEventsListV2_3ParamsSchema,
@@ -140,6 +144,18 @@ async function generateOpenApiDocument({
 			Balance: {
 				schema: ApiBalanceV1Schema,
 				strategy: "output",
+			},
+			CreditDimension: {
+				schema: ApiCreditDimensionSchema,
+				strategy: "input",
+			},
+			CreditDimensionResponse: {
+				schema: ApiCreditDimensionSchema,
+				strategy: "output",
+			},
+			CreditTier: {
+				schema: ApiCreditTierSchema,
+				strategy: "input",
 			},
 		},
 		servers: [
