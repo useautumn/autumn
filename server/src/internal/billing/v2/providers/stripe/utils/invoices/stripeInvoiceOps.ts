@@ -101,6 +101,47 @@ export const addStripeInvoiceLines = async ({
 };
 
 // ============================================
+// Update Invoice Line
+// ============================================
+
+export const updateStripeInvoiceLine = async ({
+	stripeCli,
+	invoiceId,
+	lineItemId,
+	params,
+}: {
+	stripeCli: Stripe;
+	invoiceId: string;
+	lineItemId: string;
+	params: Stripe.InvoiceUpdateLineItemParams;
+}): Promise<Stripe.InvoiceLineItem> =>
+	stripeCli.invoices.updateLineItem(
+		invoiceId,
+		lineItemId,
+		params,
+		autumnStripeRequestOptions({ source: "invoice.updateLineItem" }),
+	);
+
+// ============================================
+// Update Pending Invoice Item
+// ============================================
+
+export const updateStripeInvoiceItem = async ({
+	stripeCli,
+	invoiceItemId,
+	params,
+}: {
+	stripeCli: Stripe;
+	invoiceItemId: string;
+	params: Stripe.InvoiceItemUpdateParams;
+}): Promise<Stripe.InvoiceItem> =>
+	stripeCli.invoiceItems.update(
+		invoiceItemId,
+		params,
+		autumnStripeRequestOptions({ source: "invoiceItems.update" }),
+	);
+
+// ============================================
 // Update Invoice
 // ============================================
 
