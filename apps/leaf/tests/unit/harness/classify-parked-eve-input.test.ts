@@ -17,6 +17,7 @@ const approvalRequest = ({
 	action: { callId: requestId, input, kind: "tool-call", toolName },
 	allowFreeform: false,
 	display: "confirmation",
+	kind: "tool-approval",
 	options: [
 		{ id: "approve", label: "Yes" },
 		{ id: "deny", label: "No" },
@@ -41,6 +42,7 @@ const questionRequest = ({
 		toolName: "ask_question",
 	},
 	display: options ? "select" : "text",
+	kind: "question",
 	prompt,
 	requestId,
 	...(options ? { options: [...options] } : {}),
@@ -49,7 +51,7 @@ const questionRequest = ({
 // Every park blocks the run until it is answered, so the only wrong answer is
 // `undefined` — each case pins one park shape to the surface that can answer it.
 describe("classifyParkedEveInput", () => {
-	test("an option-less ask_question is text, not a gated write", () => {
+	test("an option-less ask_question is a question, not a gated write", () => {
 		const parked = classifyParkedEveInput({
 			requests: [
 				questionRequest({
@@ -61,8 +63,12 @@ describe("classifyParkedEveInput", () => {
 		});
 
 		expect(parked).toEqual({
-			kind: "waiting",
-			text: "Which plan should I migrate them onto?",
+			kind: "question",
+			question: {
+				options: [],
+				prompt: "Which plan should I migrate them onto?",
+				requestId: "req_2",
+			},
 		});
 	});
 
