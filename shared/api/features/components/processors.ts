@@ -10,9 +10,11 @@ export const ApiStripeFeatureProcessorSchema = z.object({
 	}),
 });
 
-export const ApiFeatureProcessorsSchema = z.object({
-	stripe: ApiStripeFeatureProcessorSchema.optional(),
-});
+export const ApiFeatureProcessorsSchema = z
+	.object({
+		stripe: ApiStripeFeatureProcessorSchema.optional(),
+	})
+	.meta({ "x-atmn-mapping": true });
 
 export type ApiStripeFeatureProcessor = z.infer<
 	typeof ApiStripeFeatureProcessorSchema
