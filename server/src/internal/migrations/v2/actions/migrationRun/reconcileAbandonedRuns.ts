@@ -1,4 +1,5 @@
 import {
+	ACTIVE_MIGRATION_RUN_STATUSES,
 	type MigrationRun,
 	MigrationRunStatus,
 	ms,
@@ -66,7 +67,7 @@ export const reconcileAbandonedRuns = async ({
 		if (!liveness[index]) continue;
 
 		try {
-			await migrationRunRepo.update({
+			const settled = await migrationRunRepo.update({
 				ctx,
 				internalId: run.internal_id,
 				updates: {
@@ -74,7 +75,9 @@ export const reconcileAbandonedRuns = async ({
 					error_message: ABANDONED_MESSAGE,
 					finished_at: now,
 				},
+				onlyIfStatusIn: ACTIVE_MIGRATION_RUN_STATUSES,
 			});
+			if (!settled) continue;
 			await settleLeftoverClaims({ ctx, migrationRunId: run.internal_id });
 			reconciled.add(run.internal_id);
 			ctx.logger.warn("migration-run: reconciled abandoned run", {

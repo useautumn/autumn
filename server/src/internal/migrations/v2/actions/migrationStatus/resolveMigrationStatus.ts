@@ -9,8 +9,6 @@ import {
 const isRunAll = (run: MigrationRun): boolean =>
 	!run.dry_run && run.only_ids === null && run.target_limit === null;
 
-/** Run statuses map onto the badge unchanged, except `succeeded`, which reads
- * as `run`. An aggregate can still surface an active status. */
 const outcomeStatus = (status: MigrationRunStatus): MigrationStatus => {
 	if (status === MigrationRunStatus.Succeeded) return MigrationStatus.Run;
 	if (

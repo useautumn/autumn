@@ -4,8 +4,6 @@ import { reconcileAbandonedRuns } from "./reconcileAbandonedRuns.js";
 
 const inFlight = new Set<string>();
 
-/** Detached reconcile for polled read paths. One pass per org/env at a time, so
- * a 2s poll cannot stack up trigger.dev round trips. */
 export const reconcileAbandonedRunsOnce = async ({
 	ctx,
 	runs,

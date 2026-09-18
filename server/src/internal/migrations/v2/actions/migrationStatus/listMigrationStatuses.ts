@@ -46,9 +46,6 @@ export const listMigrationStatuses = async ({
 		}),
 	]);
 
-	// A lost settle-write leaves a dead run active, blocking the migration.
-	// Reconciling needs a trigger.dev round trip, and this path is polled every
-	// 2s, so it runs detached: the next poll reads the settled row.
 	if (isTriggerConfigured()) {
 		void reconcileAbandonedRunsOnce({ ctx, runs: activeRuns });
 	}

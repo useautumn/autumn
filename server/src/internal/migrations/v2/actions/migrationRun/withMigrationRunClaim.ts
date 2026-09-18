@@ -28,7 +28,6 @@ const defaultPersistTriggerRunId = async ({
 		updates: { trigger_run_id: triggerRunId },
 	});
 
-/** Best-effort: the claim already failed, so a cancel failure must not mask it. */
 const cancelTriggerRun = async ({
 	ctx,
 	triggerRunId,
@@ -167,8 +166,6 @@ export const withMigrationRunClaim = async ({
 		});
 	}
 
-	// Without the handle the run can never be checked against trigger.dev, so a
-	// lost write must fail the claim rather than leave an unmanageable run.
 	if (result?.triggerRunId) {
 		try {
 			await persistTriggerRunId({
@@ -186,11 +183,23 @@ export const withMigrationRunClaim = async ({
 				},
 			});
 			await cancelTriggerRun({ ctx, triggerRunId: result.triggerRunId });
-			await failRun({
-				ctx,
-				migrationRunId: migrationRun.internal_id,
-				message,
-			});
+			try {
+				await failRun({
+					ctx,
+					migrationRunId: migrationRun.internal_id,
+					message,
+				});
+			} catch (settleError) {
+				ctx.logger.error("run-migration: could not settle the orphaned run", {
+					data: {
+						migrationRunId: migrationRun.internal_id,
+						error:
+							settleError instanceof Error
+								? settleError.message
+								: String(settleError),
+					},
+				});
+			}
 			throw error;
 		}
 	}

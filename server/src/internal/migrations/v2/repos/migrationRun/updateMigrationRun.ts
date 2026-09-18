@@ -1,18 +1,21 @@
 import {
 	type MigrationRun,
 	type MigrationRunInsert,
+	type MigrationRunStatus,
 	migrationRuns,
 } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
 export const updateMigrationRun = async ({
 	ctx,
 	internalId,
 	updates,
+	onlyIfStatusIn,
 }: {
 	ctx: RepoContext;
 	internalId: string;
+	onlyIfStatusIn?: readonly MigrationRunStatus[];
 	updates: Partial<
 		Pick<
 			MigrationRunInsert,
@@ -32,6 +35,9 @@ export const updateMigrationRun = async ({
 				eq(migrationRuns.internal_id, internalId),
 				eq(migrationRuns.org_id, ctx.org.id),
 				eq(migrationRuns.env, ctx.env),
+				...(onlyIfStatusIn
+					? [inArray(migrationRuns.status, [...onlyIfStatusIn])]
+					: []),
 			),
 		)
 		.returning();

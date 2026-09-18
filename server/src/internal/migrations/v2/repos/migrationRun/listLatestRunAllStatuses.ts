@@ -2,7 +2,6 @@ import { type MigrationRunStatus, migrationRuns } from "@autumn/shared";
 import { and, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
-/** `started_at` is written when execution starts, not at dispatch. */
 export const listLatestRunAllStatuses = async ({
 	ctx,
 	migrationInternalIds,

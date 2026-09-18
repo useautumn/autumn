@@ -27,8 +27,6 @@ export const handleListMigrationRuns = createRoute({
 			listMigrationStatuses({ ctx, migrations: [migration] }),
 		]);
 		const statusInfo = statuses.get(migration.internal_id);
-		// Unscoped runs keep the migration-wide count: re-runs reuse item rows
-		// and move `migration_run_id`, so per-run counting would undercount them.
 		const isScoped = (run: (typeof runs)[number]) =>
 			run.only_ids !== null || run.target_limit !== null;
 		const perRunIds = runs
