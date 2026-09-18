@@ -33,6 +33,7 @@ export const coreMigrations: TestGroup = {
 		"integration/billing/migrations-v2/status/migration-run-dispatch-verification.test.ts",
 		"integration/billing/migrations-v2/status/migration-run-no-changes-status.test.ts",
 		"integration/billing/migrations-v2/status/migration-run-scoped-counts.test.ts",
+		"integration/billing/migrations-v2/status/migration-run-abandoned-reconcile.test.ts",
 		"integration/billing/migrations-v2/status/migration-status-lifecycle.test.ts",
 		"integration/billing/migrations-v2/status/migration-status-contention.test.ts",
 		// Frozen post-run customer list (filter.preview source=item_runs).

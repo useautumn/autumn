@@ -1,6 +1,8 @@
 import type { Migration, MigrationStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { isTriggerConfigured } from "@/trigger/configureTrigger.js";
 import { migrationRepo, migrationRunRepo } from "../../repos/index.js";
+import { reconcileAbandonedRuns } from "../migrationRun/reconcileAbandonedRuns.js";
 import { resolveMigrationStatus } from "./resolveMigrationStatus.js";
 
 type MigrationRef = Pick<Migration, "internal_id" | "id">;
@@ -36,13 +38,23 @@ export const listMigrationStatuses = async ({
 }): Promise<Map<string, MigrationStatusInfo>> => {
 	if (migrations.length === 0) return new Map();
 
-	const [orgActiveRuns, latestRunAllStatuses] = await Promise.all([
+	const [activeRuns, latestRunAllStatuses] = await Promise.all([
 		migrationRunRepo.list({ ctx, active: true }),
 		migrationRunRepo.listLatestRunAllStatuses({
 			ctx,
 			migrationInternalIds: migrations.map((m) => m.internal_id),
 		}),
 	]);
+
+	// A run whose task died without settling its row stays active forever and
+	// blocks the migration, so liveness is reconciled here rather than trusted
+	// to the process that failed.
+	const reconciled = isTriggerConfigured()
+		? await reconcileAbandonedRuns({ ctx, runs: activeRuns })
+		: new Set<string>();
+	const orgActiveRuns = activeRuns.filter(
+		(run) => !reconciled.has(run.internal_id),
+	);
 
 	const statuses = new Map<string, MigrationStatusInfo>();
 	for (const migration of migrations) {
