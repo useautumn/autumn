@@ -7,7 +7,9 @@ import type { ExecutionStatus } from "./ExecutionStatusSubMenu";
 export function previewSourceForStatus(
 	status: MigrationStatus,
 ): MigrationPreviewSource {
-	return status === "run" || status === "no_changes" ? "item_runs" : "filter";
+	return status === "draft" || status === "waiting" || status === "running"
+		? "filter"
+		: "item_runs";
 }
 
 /** Statuses only the live filter can answer (the frozen list has no unclaimed rows). */

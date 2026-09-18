@@ -18,6 +18,11 @@ test("once a Run All has completed the list freezes to item runs", () => {
 	expect(previewSourceForStatus("run")).toBe("item_runs");
 });
 
+test("a failed or canceled run shows what that run actually did", () => {
+	expect(previewSourceForStatus("failed")).toBe("item_runs");
+	expect(previewSourceForStatus("canceled")).toBe("item_runs");
+});
+
 test("a run that changed nothing still froze its customer list", () => {
 	expect(previewSourceForStatus("no_changes")).toBe("item_runs");
 });
