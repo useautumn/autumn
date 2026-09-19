@@ -10,8 +10,8 @@ export function validateBalanceWorkerRequest({
 	body: CheckParams | TrackParams;
 }): void {
 	let reason: string | undefined;
-	if (ctx.expand?.length) reason = "expand_not_supported";
-	else if (body.lock) reason = "lock_not_supported";
+
+	if (body.lock) reason = "lock_not_supported";
 	else if (body.customer_data || body.entity_data)
 		reason = "inline_customer_data_not_supported";
 	if (reason) throw new BalanceWorkerUnsupportedError({ reason });

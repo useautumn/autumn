@@ -184,7 +184,13 @@ function checkDecisionOf({
 	if (!selected)
 		throw new Error("Fixture state must expose a messages entitlement");
 	return {
-		result: { allowed: true, reason: null, requiredBalance: 0 },
+		result: {
+			allowed: true,
+			reason: null,
+			requiredBalance: 0,
+			fundingFeatureId: "messages",
+			isFlag: false,
+		},
 		state,
 	};
 }

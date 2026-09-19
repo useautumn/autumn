@@ -38,6 +38,8 @@ describe("check computation", () => {
 			allowed: true,
 			reason: null,
 			requiredBalance: 5,
+			fundingFeatureId: createCheckCommand().featureId,
+			isFlag: false,
 		});
 		expect(state).toEqual(createState());
 	});
@@ -52,6 +54,8 @@ describe("check computation", () => {
 			allowed: false,
 			reason: "insufficient_balance",
 			requiredBalance: 11,
+			fundingFeatureId: createCheckCommand().featureId,
+			isFlag: false,
 		});
 	});
 
@@ -94,17 +98,26 @@ describe("check computation", () => {
 				command: createCheckCommand({ entityId: "entity_1" }),
 			}),
 		).toThrow(new UnsupportedCommandError({ reason: "entity_not_found" }));
-		expect(() =>
+	});
+
+	test.concurrent("answers not allowed when nothing funds the feature", () => {
+		const notAttached = {
+			allowed: false,
+			reason: "feature_not_attached",
+			fundingFeatureId: null,
+			isFlag: false,
+		};
+		expect(
 			computeCheck({
 				state: createState({ customerEntitlements: [] }),
 				command: createCheckCommand(),
 			}),
-		).toThrow(new UnsupportedCommandError({ reason: "feature_not_found" }));
-		expect(() =>
+		).toMatchObject(notAttached);
+		expect(
 			computeCheck({
 				state: createState(),
 				command: createCheckCommand({ featureId: "constructor" }),
 			}),
-		).toThrow(new UnsupportedCommandError({ reason: "feature_not_found" }));
+		).toMatchObject(notAttached);
 	});
 });

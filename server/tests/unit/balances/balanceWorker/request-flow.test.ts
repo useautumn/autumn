@@ -131,6 +131,8 @@ test.concurrent(
 						allowed: false,
 						reason: "insufficient_balance",
 						requiredBalance: command.requiredBalance,
+						fundingFeatureId: command.featureId,
+						isFlag: false,
 					},
 					state: {
 						...state,

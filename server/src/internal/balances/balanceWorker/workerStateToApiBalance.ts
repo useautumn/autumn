@@ -63,7 +63,7 @@ export function workerStateToApiBalance({
 	if (!first)
 		throw new BalanceWorkerUnsupportedError({ reason: "feature_not_found" });
 	const { data } = getApiBalanceV2({
-		ctx: { ...ctx, expand: [] },
+		ctx,
 		fullSubject,
 		customerEntitlements: customerEntitlements.map((customerEntitlement) =>
 			overlayWorkerRows({ customerEntitlement, state }),

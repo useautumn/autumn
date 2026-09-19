@@ -5,9 +5,11 @@ import {
 	applyResponseVersionChanges,
 	type CheckResponseV3,
 	type FullSubject,
+	findFeatureById,
+	fullSubjectToCustomerEntitlements,
+	getApiFlag,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { BalanceWorkerUnsupportedError } from "../../balanceWorker/balanceWorkerErrors.js";
 import { workerStateToApiBalance } from "../../balanceWorker/workerStateToApiBalance.js";
 
 /** The one place a worker check reply becomes the API's check response. */
@@ -22,12 +24,34 @@ export function checkReplyToApiResponse({
 	reply: CheckReply;
 	fullSubject: FullSubject;
 }): CheckResponseV3 {
-	const feature = ctx.features.find(
-		(feature) => feature.id === command.featureId,
-	);
-	if (!feature)
-		throw new BalanceWorkerUnsupportedError({ reason: "feature_not_found" });
 	const { result, state } = reply;
+	// The worker names the feature that answers: the checked one, or the credit system funding it.
+	const featureToUse = findFeatureById({
+		features: ctx.features,
+		featureId: result.fundingFeatureId ?? command.featureId,
+		errorOnNotFound: true,
+	});
+	const isAttached = result.fundingFeatureId !== null;
+	const balance =
+		isAttached && !result.isFlag
+			? workerStateToApiBalance({
+					ctx,
+					fullSubject,
+					state,
+					featureId: featureToUse.id,
+				})
+			: null;
+	const flag =
+		isAttached && result.isFlag
+			? getApiFlag({
+					ctx,
+					cusEnts: fullSubjectToCustomerEntitlements({
+						fullSubject,
+						featureIds: [featureToUse.id],
+					}),
+					feature: featureToUse,
+				}).data
+			: null;
 	return applyResponseVersionChanges<CheckResponseV3>({
 		ctx,
 		targetVersion: ctx.apiVersion,
@@ -37,14 +61,9 @@ export function checkReplyToApiResponse({
 			customer_id: command.identity.customerId,
 			entity_id: command.identity.entityId ?? undefined,
 			required_balance: result.requiredBalance,
-			flag: null,
-			balance: workerStateToApiBalance({
-				ctx,
-				fullSubject,
-				state,
-				featureId: command.featureId,
-			}),
+			flag,
+			balance,
 		},
-		legacyData: { noCusEnts: false, featureToUse: feature },
+		legacyData: { noCusEnts: !isAttached, featureToUse },
 	});
 }
