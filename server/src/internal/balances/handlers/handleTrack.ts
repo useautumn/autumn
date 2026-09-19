@@ -36,7 +36,7 @@ async function track(
 	const body = c.req.valid("json");
 	const ctx = c.get("ctx");
 
-	if (isBalanceWorkerRolloutEnabled({ ctx })) {
+	if (isBalanceWorkerRolloutEnabled()) {
 		return c.json(await runBalanceWorkerTrack({ ctx, body }));
 	}
 

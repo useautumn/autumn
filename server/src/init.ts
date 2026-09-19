@@ -133,7 +133,15 @@ const init = async ({
 	prewarmMotherDuckResolver();
 
 	await startAllEdgeConfigPolling({ logger });
-	await startOwnershipConsumer();
+	// Ownership discovery must not gate the HTTP listener: start() waits for the
+	// initial catch-up, and the load balancer kills the task long before a slow or
+	// failing Kafka connect finishes. Routing refreshes on its own afterwards.
+	void startOwnershipConsumer().catch((error) => {
+		logger.error(
+			{ error },
+			"[balance-worker] Ownership consumer startup failed; routing will retry",
+		);
+	});
 	startBalanceShadow();
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
 	startRedisMonitor();

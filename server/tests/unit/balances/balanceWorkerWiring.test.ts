@@ -156,18 +156,10 @@ function createContext({
 	} as never;
 }
 
-function gatesBalanceWorkerToEnabledDevelopmentSandbox(): void {
-	for (const [enabled, requestEnv, expected] of [
-		[true, AppEnv.Sandbox, true],
-		[false, AppEnv.Sandbox, false],
-		[true, AppEnv.Live, false],
-	] as const) {
+function gatesBalanceWorkerOnTheRolloutFlagAlone(): void {
+	for (const enabled of [true, false]) {
 		balanceWorkerEnv = createClientEnv({ rolloutEnabled: enabled });
-		expect(
-			isBalanceWorkerRolloutEnabled({
-				ctx: createContext({ env: requestEnv }),
-			}),
-		).toBe(expected);
+		expect(isBalanceWorkerRolloutEnabled()).toBe(enabled);
 	}
 }
 
@@ -425,8 +417,8 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 beforeEach(prepareBalanceWorkerConfig);
 afterEach(restoreMocks);
 test(
-	"balance worker routing requires an enabled rollout and a sandbox request",
-	gatesBalanceWorkerToEnabledDevelopmentSandbox,
+	"balance worker routing follows the rollout flag alone",
+	gatesBalanceWorkerOnTheRolloutFlagAlone,
 );
 test(
 	"disabled boot avoids Kafka; enabled accessors memoize ownership and client",
