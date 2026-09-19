@@ -378,7 +378,13 @@ test.concurrent(
 			state: initialState,
 		};
 		const checked = {
-			result: { allowed: true, reason: null, requiredBalance: 1 },
+			result: {
+				allowed: true,
+				reason: null,
+				requiredBalance: 1,
+				fundingFeatureId: "messages",
+				isFlag: false,
+			},
 			state: initialState,
 		};
 		const fixture = createFixture({
