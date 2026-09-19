@@ -32,12 +32,38 @@ export function assertRequestDeadline({
 	});
 }
 
+/** Gives an ownership refresh its own expiry so a request can stop waiting on it
+ *  without giving up its remaining budget. Cancelling before the timer fires
+ *  means the rejection never happens, so nothing is left unhandled. */
+function startRefreshExpiry({ timeoutMs }: { timeoutMs: number }): {
+	expired: Promise<never>;
+	cancel(): void;
+} {
+	const expiry = Promise.withResolvers<never>();
+	function expire(): void {
+		expiry.reject(
+			new BalanceWorkerClientError({
+				code: "OWNERSHIP_UNAVAILABLE",
+				outcome: "not_submitted",
+				message: "Ownership did not settle within the route refresh budget",
+			}),
+		);
+	}
+	const timer = setTimeout(expire, timeoutMs);
+	function cancel(): void {
+		clearTimeout(timer);
+	}
+	return { expired: expiry.promise, cancel };
+}
+
 export async function refreshCommandRoute({
 	owners,
 	deadline,
+	timeoutMs,
 }: {
 	owners: PartitionOwners;
 	deadline: RequestDeadline;
+	timeoutMs?: number;
 }): Promise<void> {
 	assertRequestDeadline({ deadline, outcome: "not_submitted" });
 	const interrupted = Promise.withResolvers<never>();
@@ -45,10 +71,18 @@ export async function refreshCommandRoute({
 		interrupted.reject(deadline.signal.reason);
 	}
 	deadline.signal.addEventListener("abort", abort, { once: true });
+	// Deliberately not awaited on its own: the refresh outlives a request that
+	// stops waiting, so whoever routes next finds ownership already settled.
+	const refreshing = owners.refresh();
+	const racing: Promise<unknown>[] = [refreshing, interrupted.promise];
+	const expiry =
+		timeoutMs === undefined ? undefined : startRefreshExpiry({ timeoutMs });
+	if (expiry) racing.push(expiry.expired);
 	try {
-		await Promise.race([owners.refresh(), interrupted.promise]);
+		await Promise.race(racing);
 		assertRequestDeadline({ deadline, outcome: "not_submitted" });
 	} finally {
+		expiry?.cancel();
 		deadline.signal.removeEventListener("abort", abort);
 	}
 }

@@ -16,6 +16,20 @@ export class BalanceWorkerUnsupportedError extends RecaseError {
 	}
 }
 
+/** Failures the client raised on its own, before any worker returned a verdict.
+ *  They say the worker path is momentarily unreachable, not that the request was
+ *  wrong, so they belong in the retryable 5xx family. INVALID_RESPONSE and
+ *  WORKER_ERROR are deliberately absent: those mean a worker answered with
+ *  something we do not understand, which is a defect worth surfacing loudly. */
+const UNAVAILABLE_CLIENT_CODES = new Set([
+	"NO_OWNER",
+	"ROUTE_STILL_STALE",
+	"DEADLINE",
+	"ABORTED",
+	"TRANSPORT",
+	"OWNERSHIP_UNAVAILABLE",
+]);
+
 export function rethrowBalanceWorkerError({
 	cause,
 }: {
@@ -64,6 +78,24 @@ export function rethrowBalanceWorkerError({
 				cause.workerCode === "DUPLICATE_COMMAND"
 					? "Another request with this idempotency key has already been applied"
 					: "Command id reused with a different request",
+		});
+	}
+	if (
+		cause instanceof BalanceWorkerClientError &&
+		UNAVAILABLE_CLIENT_CODES.has(cause.code)
+	) {
+		// "unknown" means the command may already have been applied, so the caller
+		// must reuse its idempotency key rather than retry blind.
+		const mayHaveApplied = cause.outcome === "unknown";
+		throw new RecaseError({
+			code: mayHaveApplied
+				? "balance_worker_result_unknown"
+				: "balance_worker_unavailable",
+			statusCode: 503,
+			message: mayHaveApplied
+				? "Balance worker did not confirm the command; it may already have been applied"
+				: "Balance worker is temporarily unavailable and the command was not submitted",
+			data: { reason: cause.code },
 		});
 	}
 	throw cause;

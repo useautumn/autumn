@@ -12,6 +12,10 @@ export type RoutingContext = {
 	http: HttpClient;
 	partitionCount: number;
 	timeoutMs: number;
+	/** Slice of the request budget an ownership refresh may spend before the
+	 *  request gives up on it. Keeps a rebalance from costing callers the whole
+	 *  deadline. Unset means the refresh may use whatever budget is left. */
+	routeRefreshTimeoutMs?: number;
 };
 export type RoutedCommand = { identity: MeteringIdentity };
 export type ResolvedCommandRoute = { endpoint: string; route: PartitionRoute };

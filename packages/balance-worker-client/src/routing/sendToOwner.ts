@@ -43,7 +43,11 @@ export async function sendToOwner<Response>({
 			failureCode = "OWNERSHIP_UNAVAILABLE";
 			assertRequestDeadline({ deadline, outcome });
 			if (attempt > 0)
-				await refreshCommandRoute({ owners: ctx.owners, deadline });
+				await refreshCommandRoute({
+					owners: ctx.owners,
+					deadline,
+					timeoutMs: ctx.routeRefreshTimeoutMs,
+				});
 			const resolved = resolveCommandRoute({ ctx, command: snapshot });
 			if (!resolved) {
 				if (attempt === 0) continue;

@@ -94,6 +94,7 @@ function createFixture({
 	owner = initialOwner,
 	nextOwner = replacement,
 	timeoutMs = 1000,
+	routeRefreshTimeoutMs,
 	refreshGate,
 	refreshFailure,
 	transportFailure,
@@ -102,6 +103,7 @@ function createFixture({
 	owner?: PartitionOwner | null;
 	nextOwner?: PartitionOwner | null;
 	timeoutMs?: number;
+	routeRefreshTimeoutMs?: number;
 	refreshGate?: Promise<void>;
 	refreshFailure?: Error;
 	transportFailure?: Error;
@@ -130,7 +132,7 @@ function createFixture({
 	}
 	const client = createBalanceWorkerClient({
 		ctx: { owners: { findOwner, refresh }, http: { postJson } },
-		config: { partitionCount: 1, timeoutMs },
+		config: { partitionCount: 1, timeoutMs, routeRefreshTimeoutMs },
 	});
 	return { client, stats, refreshed: refreshed.promise };
 }
@@ -522,4 +524,32 @@ async function preservesBodyTimeoutAmbiguity(): Promise<void> {
 test(
 	"a response body timeout is uncertain and never retried",
 	preservesBodyTimeoutAmbiguity,
+);
+
+async function boundsTheRouteRefreshBelowTheDeadline(): Promise<void> {
+	// A partition mid-move: nothing owns it, and ownership never settles.
+	const stuck = Promise.withResolvers<void>();
+	const fixture = createFixture({
+		owner: null,
+		nextOwner: null,
+		timeoutMs: 2000,
+		routeRefreshTimeoutMs: 50,
+		refreshGate: stuck.promise,
+	});
+	const startedAt = performance.now();
+	await expect(
+		fixture.client.check({ command: checkCommand }),
+	).rejects.toMatchObject({
+		code: "OWNERSHIP_UNAVAILABLE",
+		outcome: "not_submitted",
+	});
+	// The point of the bound: the caller is released in its own slice, not the
+	// whole request budget, so a rebalance cannot hold customer traffic open.
+	expect(performance.now() - startedAt).toBeLessThan(500);
+	stuck.resolve();
+}
+
+test(
+	"a stalled ownership refresh gives up on its own budget, not the request's",
+	boundsTheRouteRefreshBelowTheDeadline,
 );

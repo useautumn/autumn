@@ -27,5 +27,8 @@ export type BalanceWorkerClientDependencies = {
 export type BalanceWorkerClientConfig = {
 	partitionCount: number;
 	timeoutMs: number;
+	/** Caps what an ownership refresh may take out of `timeoutMs`, so a rebalance
+	 *  fails fast instead of spending a caller's whole budget. */
+	routeRefreshTimeoutMs?: number;
 	maxResponseBytes?: number;
 };

@@ -34,4 +34,10 @@ export type PostgresClientConfig = {
 	idleTimeout: number;
 	/** Seconds before a connection is recycled, so a failover never pins a stale socket. */
 	maxLifetime: number;
+	/** Off by default because every deployed connection goes through PgBouncer in
+	 *  transaction pooling mode, where a statement prepared on one backend
+	 *  connection is absent when the next query lands on another. That surfaces as
+	 *  a missing-prepared-statement error naming the bouncer, and it poisons the
+	 *  surrounding transaction. Only turn it on against a direct connection. */
+	usePreparedStatements?: boolean;
 };

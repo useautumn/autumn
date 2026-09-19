@@ -13,6 +13,7 @@ export const createPostgresClient = ({
 }): PostgresClient => {
 	const client = new SQL(config.databaseUrl, {
 		max: config.maxConnections,
+		prepare: config.usePreparedStatements ?? false,
 		connectionTimeout: config.connectTimeout,
 		idleTimeout: config.idleTimeout,
 		maxLifetime: config.maxLifetime,

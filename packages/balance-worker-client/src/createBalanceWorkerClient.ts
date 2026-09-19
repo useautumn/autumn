@@ -29,6 +29,7 @@ export function createBalanceWorkerClient({
 		http,
 		partitionCount: config.partitionCount,
 		timeoutMs: config.timeoutMs,
+		routeRefreshTimeoutMs: config.routeRefreshTimeoutMs,
 	};
 
 	function track(params: TrackParams) {
