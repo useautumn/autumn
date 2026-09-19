@@ -99,7 +99,10 @@ function OnboardingView() {
 					className="w-24 gap-0 [&_[data-slot=progress-indicator]]:transition-none"
 				/>
 			</PageHeader>
-			<div className="w-full divide-y rounded-lg border">
+			{/* overflow-clip, not hidden: the rows' own background is square, so it
+				needs to be trimmed to the rounded border, and `hidden` would make this
+				a scroll container. */}
+			<div className="w-full divide-y overflow-clip rounded-lg border bg-interactive-secondary">
 				{steps.map((step, index) => (
 					<OnboardingStep
 						key={step.id}

@@ -7,12 +7,7 @@ import type {
 	SDKInitHook,
 } from "./types.js";
 
-const FAIL_OPEN_OPERATION_IDS = new Set([
-	"check",
-	"track",
-	"getOrCreateCustomer",
-	"getEntity",
-]);
+const FAIL_OPEN_OPERATION_IDS = new Set(["check", "track"]);
 
 const FAIL_OPEN_LOG_MESSAGE =
 	"[Autumn] Request failed — failing open. Learn more: https://docs.useautumn.com/documentation/fail-open";
@@ -28,34 +23,6 @@ const FAIL_OPEN_BODIES: Record<string, object> = {
 		customer_id: null,
 		value: 0,
 		balance: null,
-	},
-	getOrCreateCustomer: {
-		id: null,
-		name: null,
-		email: null,
-		created_at: 0,
-		fingerprint: null,
-		stripe_id: null,
-		env: "live",
-		metadata: {},
-		send_email_receipts: false,
-		billing_controls: {},
-		subscriptions: [],
-		purchases: [],
-		balances: {},
-		flags: {},
-	},
-	getEntity: {
-		id: null,
-		name: null,
-		customer_id: null,
-		feature_id: null,
-		created_at: 0,
-		env: "live",
-		subscriptions: [],
-		purchases: [],
-		balances: {},
-		flags: {},
 	},
 };
 
