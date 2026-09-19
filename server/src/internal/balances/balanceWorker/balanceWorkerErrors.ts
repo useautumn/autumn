@@ -36,8 +36,10 @@ export function rethrowBalanceWorkerError({
 		cause instanceof BalanceWorkerClientError &&
 		cause.workerCode === "CUSTOMER_NOT_FOUND"
 	) {
+		// Same code as the legacy path: callers branch on it, and which engine
+		// served the request must not change the error they see.
 		throw new RecaseError({
-			code: "balance_worker_customer_not_found",
+			code: ErrCode.CustomerNotFound,
 			statusCode: 404,
 			message: "Customer does not exist in this org and env",
 		});

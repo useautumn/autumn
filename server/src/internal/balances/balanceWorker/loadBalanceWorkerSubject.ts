@@ -1,7 +1,6 @@
-import type { FullSubject } from "@autumn/shared";
+import { CustomerNotFoundError, type FullSubject } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
-import { BalanceWorkerUnsupportedError } from "./balanceWorkerErrors.js";
 
 /** The worker decides on rows; the API balance still derives from the server's own FullSubject. */
 export async function loadBalanceWorkerSubject({
@@ -19,7 +18,8 @@ export async function loadBalanceWorkerSubject({
 		entityId: entityId ?? undefined,
 		routeSource: "balance_worker",
 	});
-	if (!fullSubject)
-		throw new BalanceWorkerUnsupportedError({ reason: "customer_not_found" });
+	// A missing customer is not an unsupported request: the legacy path answers
+	// 404 customer_not_found, and callers branch on that code.
+	if (!fullSubject) throw new CustomerNotFoundError({ customerId });
 	return fullSubject;
 }

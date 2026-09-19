@@ -70,7 +70,7 @@ test.concurrent(
 			await expect(
 				runBalanceWorkerCheck({ ctx, body, client: live.client, loadSubject }),
 			).rejects.toMatchObject({
-				code: "balance_worker_customer_not_found",
+				code: "customer_not_found",
 				statusCode: 404,
 			});
 			expect(
