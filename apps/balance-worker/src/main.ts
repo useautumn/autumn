@@ -1,4 +1,5 @@
 import { getBalanceWorkerEnv } from "@autumn/env/balanceWorker";
+import { initInfisical } from "@autumn/shared/utils/infisical";
 import { createBalanceWorker } from "./init/createBalanceWorker.js";
 import type { BalanceWorker } from "./init/types/balanceWorker.js";
 import { errorCauseChain } from "./logging/errorCauseChain.js";
@@ -6,6 +7,7 @@ import { getBalanceWorkerLogger } from "./logging/getBalanceWorkerLogger.js";
 
 async function main(): Promise<void> {
 	try {
+		await initInfisical();
 		const env = getBalanceWorkerEnv();
 		const worker = await createBalanceWorker({
 			ctx: { onError: reportError, logger: getBalanceWorkerLogger() },
