@@ -1,4 +1,9 @@
-import type { CollectionMethod, InsertCustomerProduct } from "@autumn/shared";
+import {
+	type CollectionMethod,
+	type InsertCustomerProduct,
+	secondsToMs,
+	truncateMsToSecondPrecision,
+} from "@autumn/shared";
 import type { SubscriptionPreviousAttributes } from "../../stripeSubscriptionUpdatedContext";
 
 type StripeOwnedFieldUpdates = Pick<
@@ -15,9 +20,34 @@ type StripeOwnedFieldUpdates = Pick<
  * from the subscription on every event silently erases them. Only mirror those
  * fields when Stripe itself changed them; status is always Stripe's to own.
  *
+ * Even when Stripe did change `trial_end`, a shared subscription can carry
+ * both its own trial and an Autumn-only one, so `trial_ends_at` moves only on
+ * products whose trial was Stripe's — i.e. matched Stripe's previous value.
+ * Autumn keeps ms and Stripe keeps seconds, so the match is at second
+ * precision, as in `normalizeCustomerProductTimestamps`.
+ *
  * Pass `current` to skip no-op writes. Omit it for a blind bulk write, where
  * every field Stripe changed is written.
  */
+const trialWasStripes = ({
+	currentTrialEndsAt,
+	previousStripeTrialEnd,
+}: {
+	currentTrialEndsAt: number | null;
+	previousStripeTrialEnd: number | null | undefined;
+}): boolean => {
+	const previousStripeTrialEndsAt = previousStripeTrialEnd
+		? secondsToMs(previousStripeTrialEnd)
+		: null;
+	if (currentTrialEndsAt === null || previousStripeTrialEndsAt === null) {
+		return currentTrialEndsAt === previousStripeTrialEndsAt;
+	}
+	return (
+		truncateMsToSecondPrecision(currentTrialEndsAt) ===
+		previousStripeTrialEndsAt
+	);
+};
+
 export const getStripeOwnedFieldUpdates = ({
 	previousAttributes,
 	current,
@@ -38,7 +68,14 @@ export const getStripeOwnedFieldUpdates = ({
 	if (trialEndChanged) {
 		const newTrialEndsAt = stripeTrialEndsAt ?? null;
 		const currentTrialEndsAt = current?.trial_ends_at ?? null;
-		if (!current || currentTrialEndsAt !== newTrialEndsAt) {
+		const shouldWriteTrialEndsAt = current
+			? currentTrialEndsAt !== newTrialEndsAt &&
+				trialWasStripes({
+					currentTrialEndsAt,
+					previousStripeTrialEnd: previousAttributes.trial_end,
+				})
+			: true;
+		if (shouldWriteTrialEndsAt) {
 			updates.trial_ends_at = newTrialEndsAt;
 		}
 	}

@@ -62,6 +62,48 @@ describe("getStripeOwnedFieldUpdates", () => {
 		expect(updates).toEqual({});
 	});
 
+	test("shortening a Stripe trial leaves an Autumn-only trial on the same sub alone", () => {
+		const shortenedStripeTrialEndMs = STRIPE_TRIAL_END_MS - 86_400_000;
+
+		const autumnOnlyTrial = getStripeOwnedFieldUpdates({
+			previousAttributes: { trial_end: STRIPE_TRIAL_END_MS / 1000 },
+			current: {
+				trial_ends_at: AUTUMN_ONLY_TRIAL_ENDS_AT,
+				collection_method: CollectionMethod.ChargeAutomatically,
+			},
+			stripeTrialEndsAt: shortenedStripeTrialEndMs,
+			stripeCollectionMethod: CollectionMethod.ChargeAutomatically,
+		});
+		expect(autumnOnlyTrial).toEqual({});
+
+		const stripeTrial = getStripeOwnedFieldUpdates({
+			previousAttributes: { trial_end: STRIPE_TRIAL_END_MS / 1000 },
+			current: {
+				trial_ends_at: STRIPE_TRIAL_END_MS,
+				collection_method: CollectionMethod.ChargeAutomatically,
+			},
+			stripeTrialEndsAt: shortenedStripeTrialEndMs,
+			stripeCollectionMethod: CollectionMethod.ChargeAutomatically,
+		});
+		expect(stripeTrial).toEqual({ trial_ends_at: shortenedStripeTrialEndMs });
+	});
+
+	test("matches Autumn's ms trial_ends_at against Stripe's seconds at second precision", () => {
+		const autumnMsPrecision = STRIPE_TRIAL_END_MS + 691;
+
+		const updates = getStripeOwnedFieldUpdates({
+			previousAttributes: { trial_end: STRIPE_TRIAL_END_MS / 1000 },
+			current: {
+				trial_ends_at: autumnMsPrecision,
+				collection_method: CollectionMethod.ChargeAutomatically,
+			},
+			stripeTrialEndsAt: undefined,
+			stripeCollectionMethod: CollectionMethod.ChargeAutomatically,
+		});
+
+		expect(updates).toEqual({ trial_ends_at: null });
+	});
+
 	test("mirrors collection_method only when Stripe changed it", () => {
 		const changed = getStripeOwnedFieldUpdates({
 			previousAttributes: { collection_method: "charge_automatically" },
