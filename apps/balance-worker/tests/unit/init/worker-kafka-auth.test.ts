@@ -17,8 +17,7 @@ test.each(["none", "msk_iam"] as const)(
 		const createTransport = spyOn(kafka, "createKafkaTransport");
 		try {
 			const env = createBalanceWorkerEnv({
-				BALANCE_WORKER_DATABASE_URL:
-					"postgres://worker:secret@127.0.0.1:1/never",
+				DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
 				KAFKA_BROKERS: "broker:9098",
 				KAFKA_AUTH_MODE: authMode,
 				AWS_REGION: "us-east-1",

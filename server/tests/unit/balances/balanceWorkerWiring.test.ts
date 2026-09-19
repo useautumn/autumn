@@ -11,6 +11,7 @@ import {
 	type TrackResponseV3,
 } from "@autumn/shared";
 import { type Context, Hono, type Next } from "hono";
+import * as rolloutAccess from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
 import * as ownershipAccess from "@/external/balanceWorker/getOwnershipConsumer.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -26,19 +27,32 @@ import * as asyncTrackConfig from "@/internal/misc/asyncTrack/asyncTrackStore.js
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
 const localEnv = { KAFKA_AUTH_MODE: "none" };
-let balanceWorkerEnv =
-	balanceWorkerConfig.createBalanceWorkerClientEnv(localEnv);
+
+// Routing is fixed on in source, so each case states the rollout it exercises.
+let rolloutEnabled = false;
+
+function createClientEnv({
+	runtimeEnv = localEnv,
+	rolloutEnabled: nextRolloutEnabled = false,
+}: {
+	runtimeEnv?: Record<string, string | undefined>;
+	rolloutEnabled?: boolean;
+} = {}) {
+	rolloutEnabled = nextRolloutEnabled;
+	return balanceWorkerConfig.createBalanceWorkerClientEnv(runtimeEnv);
+}
+
+let balanceWorkerEnv = createClientEnv();
 
 function readBalanceWorkerClientEnv() {
 	return balanceWorkerEnv;
 }
 
 function prepareBalanceWorkerConfig(): void {
-	balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv(localEnv);
-	spyOn(
-		balanceWorkerConfig,
-		"getBalanceWorkerRolloutEnabled",
-	).mockImplementation(() => balanceWorkerEnv.BALANCE_WORKER_ROLLOUT_ENABLED);
+	balanceWorkerEnv = createClientEnv();
+	spyOn(rolloutAccess, "getBalanceWorkerRolloutEnabled").mockImplementation(
+		() => rolloutEnabled,
+	);
 	spyOn(balanceWorkerConfig, "getBalanceWorkerClientEnv").mockImplementation(
 		readBalanceWorkerClientEnv,
 	);
@@ -65,11 +79,14 @@ function refuseUnconfiguredKafka() {
 test.each(["none", "msk_iam"] as const)(
 	"shared shadow and operator ownership reader uses %s without enabling direct routing",
 	(authMode) => {
-		balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({
-			NODE_ENV: "production",
-			KAFKA_BROKERS: "broker:9098",
-			KAFKA_AUTH_MODE: authMode,
-			AWS_REGION: "us-east-1",
+		balanceWorkerEnv = createClientEnv({
+			runtimeEnv: {
+				NODE_ENV: "production",
+				KAFKA_BROKERS: "broker:9098",
+				KAFKA_AUTH_MODE: authMode,
+				AWS_REGION: "us-east-1",
+				BALANCE_WORKER_DEPLOYMENT: "serving",
+			},
 		});
 		const interrupted = new Error("stop before opening any connection");
 		function interruptConnection(): never {
@@ -89,7 +106,6 @@ test.each(["none", "msk_iam"] as const)(
 			authMode,
 			region: "us-east-1",
 		});
-		expect(balanceWorkerEnv.BALANCE_WORKER_ROLLOUT_ENABLED).toBe(false);
 		expect(createClient).toHaveBeenCalledTimes(1);
 		expect(createClient.mock.calls[0]?.[0]).toMatchObject({
 			clientId: "shadow-reader",
@@ -141,18 +157,12 @@ function createContext({
 }
 
 function gatesBalanceWorkerToEnabledDevelopmentSandbox(): void {
-	for (const [nodeEnv, enabled, requestEnv, expected] of [
-		["development", "true", AppEnv.Sandbox, true],
-		["development", "false", AppEnv.Sandbox, false],
-		["development", "true", AppEnv.Live, false],
-		["production", "false", AppEnv.Sandbox, false],
-		["test", "false", AppEnv.Sandbox, false],
+	for (const [enabled, requestEnv, expected] of [
+		[true, AppEnv.Sandbox, true],
+		[false, AppEnv.Sandbox, false],
+		[true, AppEnv.Live, false],
 	] as const) {
-		balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({
-			NODE_ENV: nodeEnv,
-			...localEnv,
-			BALANCE_WORKER_ROLLOUT_ENABLED: enabled,
-		});
+		balanceWorkerEnv = createClientEnv({ rolloutEnabled: enabled });
 		expect(
 			isBalanceWorkerRolloutEnabled({
 				ctx: createContext({ env: requestEnv }),
@@ -213,14 +223,13 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 	);
 	readClientConfig.mockImplementation(readBalanceWorkerClientEnv);
 
-	balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({
-		NODE_ENV: "development",
-		...localEnv,
-		BALANCE_WORKER_ROLLOUT_ENABLED: "true",
-		KAFKA_BROKERS: "broker:9092",
-		BALANCE_WORKER_OWNERSHIP_TOPIC: "ownership",
-		BALANCE_WORKER_PARTITION_COUNT: "512",
-		BALANCE_WORKER_REQUEST_TIMEOUT_MS: "200",
+	balanceWorkerEnv = createClientEnv({
+		runtimeEnv: {
+			...localEnv,
+			KAFKA_BROKERS: "broker:9092",
+			BALANCE_WORKER_DEPLOYMENT: "serving",
+		},
+		rolloutEnabled: true,
 	});
 	await ownership.startOwnershipConsumer();
 	expect(ownership.getOwnershipConsumer()).toBe(consumer);
@@ -228,12 +237,12 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 	expect(createKafka).toHaveBeenCalledTimes(1);
 	expect(createConsumer).toHaveBeenCalledTimes(1);
 	expect(createConsumer.mock.calls[0]?.[0].config).toEqual({
-		topic: "ownership",
+		topic: "serving-ownership",
 		groupIdPrefix: "autumn-server-ownership",
 	});
 	expect(starts).toBe(1);
 	expect(info).toHaveBeenCalledWith(
-		{ brokers: ["broker:9092"], topic: "ownership" },
+		{ brokers: ["broker:9092"], topic: "serving-ownership" },
 		"[balance-worker] Starting Kafka ownership consumer; waiting for initial catch-up",
 	);
 	expect(info).toHaveBeenLastCalledWith(
@@ -255,7 +264,7 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 	expect(createClient).toHaveBeenCalledTimes(1);
 	expect(createClient).toHaveBeenCalledWith({
 		ctx: { owners: consumer },
-		config: { partitionCount: 512, timeoutMs: 200 },
+		config: { partitionCount: 512, timeoutMs: 1000 },
 	});
 	await ownership.stopOwnershipConsumer();
 	expect(stops).toBe(1);
@@ -365,11 +374,7 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 		calls.length = 0;
 	}
 
-	balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({
-		NODE_ENV: "development",
-		...localEnv,
-		BALANCE_WORKER_ROLLOUT_ENABLED: "true",
-	});
+	balanceWorkerEnv = createClientEnv({ rolloutEnabled: true });
 	asyncEnabled = true;
 	for (const async of [true, false]) {
 		const response = await postTrack({ async });
@@ -388,7 +393,7 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 	});
 	expect(receivedFailure).toBe(balanceWorkerFailure);
 
-	balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv(localEnv);
+	balanceWorkerEnv = createClientEnv();
 	const readClientConfig = refuseUnconfiguredKafka();
 	await expectSelectedPath({
 		response: await postTrack({ async: true }),
@@ -420,7 +425,7 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 beforeEach(prepareBalanceWorkerConfig);
 afterEach(restoreMocks);
 test(
-	"balance worker routing requires development and a sandbox request",
+	"balance worker routing requires an enabled rollout and a sandbox request",
 	gatesBalanceWorkerToEnabledDevelopmentSandbox,
 );
 test(
@@ -475,11 +480,7 @@ test("check selects the worker without falling back or using the blanket fail-op
 	expect(readClientConfig).not.toHaveBeenCalled();
 	readClientConfig.mockImplementation(readBalanceWorkerClientEnv);
 	calls.length = 0;
-	balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({
-		NODE_ENV: "development",
-		...localEnv,
-		BALANCE_WORKER_ROLLOUT_ENABLED: "true",
-	});
+	balanceWorkerEnv = createClientEnv({ rolloutEnabled: true });
 	const checked = await post();
 	expect(checked.status).toBe(200);
 	expect(await checked.json()).toEqual(response);

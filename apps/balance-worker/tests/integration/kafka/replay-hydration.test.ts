@@ -324,17 +324,17 @@ async function startBalanceWorkerFixture({
 	const databasePath = join(directory, "state.sqlite");
 	const env = {
 		...createBalanceWorkerEnv({
-			BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
+			DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
 			KAFKA_BROKERS: brokerList,
 			KAFKA_AUTH_MODE: "none",
 			BALANCE_WORKER_HOST: LOOPBACK_HOST,
 			BALANCE_WORKER_PORT: String(await reserveLoopbackPort()),
 			BALANCE_WORKER_SQLITE_PATH: databasePath,
-			BALANCE_WORKER_METERING_TOPIC: topics.metering,
-			BALANCE_WORKER_OWNERSHIP_TOPIC: topics.ownership,
-			BALANCE_WORKER_GROUP_ID: deployment,
 			BALANCE_WORKER_DEPLOYMENT: deployment,
 		}),
+		BALANCE_WORKER_METERING_TOPIC: topics.metering,
+		BALANCE_WORKER_OWNERSHIP_TOPIC: topics.ownership,
+		BALANCE_WORKER_GROUP_ID: deployment,
 		BALANCE_WORKER_PARTITION_COUNT: PARTITION_COUNT,
 	};
 	const errors: unknown[] = [];
@@ -344,7 +344,12 @@ async function startBalanceWorkerFixture({
 	const worker = await createBalanceWorker({
 		ctx: {
 			onError: recordError,
-			logger: { info: ignoreLog, warn: ignoreLog, error: ignoreLog },
+			logger: {
+				debug: ignoreLog,
+				info: ignoreLog,
+				warn: ignoreLog,
+				error: ignoreLog,
+			},
 		},
 		config: { env, stateBackend: "sqlite" },
 	});

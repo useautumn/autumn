@@ -1,5 +1,8 @@
 import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
-import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
+import {
+	BALANCE_WORKER_PARTITION_COUNT,
+	BALANCE_WORKER_REQUEST_TIMEOUT_MS,
+} from "@autumn/env/balanceWorkerConstants";
 import { initDrizzle } from "@server/db/initDrizzle.js";
 import { createServerOwnershipConsumer } from "@server/external/balanceWorker/getOwnershipConsumer.js";
 import { logger } from "@server/external/logtail/logtailUtils.js";
@@ -30,7 +33,6 @@ export async function runShadowOperator({
 				"Redis routing config is unavailable; refusing a guessed baseline",
 			);
 	}
-	const env = getBalanceWorkerClientEnv();
 	const owners = createServerOwnershipConsumer({
 		topic: config.ownershipTopic,
 		groupIdPrefix: "autumn-shadow-operator",
@@ -38,8 +40,8 @@ export async function runShadowOperator({
 	const client = createBalanceWorkerClient({
 		ctx: { owners },
 		config: {
-			partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
-			timeoutMs: env.BALANCE_WORKER_REQUEST_TIMEOUT_MS,
+			partitionCount: BALANCE_WORKER_PARTITION_COUNT,
+			timeoutMs: BALANCE_WORKER_REQUEST_TIMEOUT_MS,
 		},
 	});
 	const database = initDrizzle({

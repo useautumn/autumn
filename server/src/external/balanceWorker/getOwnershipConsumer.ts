@@ -1,7 +1,4 @@
-import {
-	getBalanceWorkerClientEnv,
-	getBalanceWorkerRolloutEnabled,
-} from "@autumn/env/balanceWorkerClient";
+import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
 import {
 	createKafkaClient,
 	createKafkaTransport,
@@ -10,6 +7,7 @@ import {
 } from "@autumn/kafka";
 import { Kafka } from "kafkajs";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { getBalanceWorkerRolloutEnabled } from "./getBalanceWorkerRolloutEnabled.js";
 
 let ownershipConsumer: OwnershipConsumer | undefined;
 

@@ -15,6 +15,11 @@
 			"import": "./src/balanceWorker/balanceWorkerEnv.ts",
 			"default": "./src/balanceWorker/balanceWorkerEnv.ts"
 		},
+		"./balanceWorkerConstants": {
+			"types": "./src/balanceWorker/balanceWorkerConstants.ts",
+			"import": "./src/balanceWorker/balanceWorkerConstants.ts",
+			"default": "./src/balanceWorker/balanceWorkerConstants.ts"
+		},
 		"./balanceWorkerClient": {
 			"types": "./src/balanceWorkerClient.ts",
 			"import": "./src/balanceWorkerClient.ts",

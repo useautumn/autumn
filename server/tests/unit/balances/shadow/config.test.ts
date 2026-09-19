@@ -28,7 +28,7 @@ test("edge controls enforce the same bounded cohort and direct-routing isolation
 		},
 		{
 			enabled: true,
-			run: { ...run, ownershipTopic: "autumn-metering-ownership" },
+			run: { ...run, ownershipTopic: "local-ownership" },
 		},
 		{ enabled: true, run: { ...run, expiresAt: Date.now() + 86_400_100 } },
 		{ enabled: false, run },
@@ -36,12 +36,6 @@ test("edge controls enforce the same bounded cohort and direct-routing isolation
 		expect(() =>
 			parseBalanceShadowEdgeConfig({ input, runtimeEnv: {} }),
 		).toThrow();
-	expect(() =>
-		parseBalanceShadowEdgeConfig({
-			input: { enabled: true, run },
-			runtimeEnv: { BALANCE_WORKER_ROLLOUT_ENABLED: "true" },
-		}),
-	).toThrow("direct routing");
 	expect(
 		parseBalanceShadowEdgeConfig({
 			input: { enabled: false },
@@ -60,6 +54,7 @@ test.concurrent(
 			parseBalanceShadowConfig({
 				runtimeEnv: {
 					NODE_ENV: "production",
+					BALANCE_WORKER_DEPLOYMENT: "serving",
 					BALANCE_WORKER_SHADOW: JSON.stringify(config),
 				},
 				now,
@@ -78,7 +73,7 @@ test.concurrent(
 				customers: Array.from({ length: 21 }, () => config.customers[0]),
 			},
 			{ ...config, customers: [config.customers[0], config.customers[0]] },
-			{ ...config, ownershipTopic: "autumn-metering-ownership" },
+			{ ...config, ownershipTopic: "local-ownership" },
 			{ ...config, expiresAt: now },
 			{ ...config, expiresAt: now + 86_400_001 },
 			{ ...config, extra: true },
@@ -101,19 +96,18 @@ test.concurrent(
 test.concurrent(
 	"shadow and direct routing cannot address the same serving system",
 	() => {
-		for (const runtimeEnv of [
-			{ BALANCE_WORKER_ROLLOUT_ENABLED: "true" },
-			{ BALANCE_WORKER_OWNERSHIP_TOPIC: config.ownershipTopic },
-		])
-			expect(() =>
-				parseBalanceShadowConfig({
-					runtimeEnv: {
-						...runtimeEnv,
-						BALANCE_WORKER_SHADOW: JSON.stringify(config),
-					},
-					now,
-				}),
-			).toThrow();
+		expect(() =>
+			parseBalanceShadowConfig({
+				runtimeEnv: {
+					BALANCE_WORKER_DEPLOYMENT: "serving",
+					BALANCE_WORKER_SHADOW: JSON.stringify({
+						...config,
+						ownershipTopic: "serving-ownership",
+					}),
+				},
+				now,
+			}),
+		).toThrow("separate ownership topic");
 	},
 );
 
@@ -127,12 +121,5 @@ test.concurrent(
 		expect(
 			parseBalanceShadowConfig({ runtimeEnv, now, purpose: "inspect" }),
 		).toMatchObject({ expiresAt: now - 1 });
-		expect(() =>
-			parseBalanceShadowConfig({
-				runtimeEnv: { ...runtimeEnv, BALANCE_WORKER_ROLLOUT_ENABLED: "true" },
-				now,
-				purpose: "inspect",
-			}),
-		).toThrow();
 	},
 );

@@ -20,7 +20,6 @@ export function createWorkerHealthReporter({
 	config: { deployment: string; enabled: boolean; endpoint: string };
 }): { start(): void; stop(): void } {
 	const identity = {
-		workerDeployment: config.deployment,
 		workerEndpoint: config.endpoint,
 		workerInstanceId: crypto.randomUUID(),
 	};
@@ -32,10 +31,10 @@ export function createWorkerHealthReporter({
 		try {
 			const health = ctx.readPartitions();
 			const metadata = {
-				...identity,
+				workerDeployment: config.deployment,
 				workerStatus: ctx.readWorkerStatus(),
-				reportedAt: new Date().toISOString(),
 			};
+			const reportedAt = new Date().toISOString();
 			const partitionStatusCounts: Record<string, number> = {};
 			for (const partition of health) {
 				partitionStatusCounts[partition.status] =
@@ -43,19 +42,34 @@ export function createWorkerHealthReporter({
 			}
 			ctx.logger.info(
 				{
-					...metadata,
 					event: "balance_worker.health",
-					reportedPartitions: health.length,
-					partitionStatusCounts,
+					...metadata,
+					data: {
+						...identity,
+						reportedAt,
+						reportedPartitions: health.length,
+						partitionStatusCounts,
+					},
 				},
 				"Balance worker health",
 			);
 			for (const partition of health) {
+				const {
+					topic,
+					partition: number,
+					status,
+					failureReason,
+					...rest
+				} = partitionHealthLogFields({ health: partition });
 				ctx.logger.info(
 					{
-						...metadata,
 						event: "balance_worker.partition_health",
-						...partitionHealthLogFields({ health: partition }),
+						...metadata,
+						topic,
+						partition: number,
+						status,
+						failureReason,
+						data: { ...identity, reportedAt, ...rest },
 					},
 					"Balance worker partition health",
 				);
@@ -64,9 +78,10 @@ export function createWorkerHealthReporter({
 			try {
 				ctx.logger.warn(
 					{
-						...identity,
 						event: "balance_worker.health_error",
-						errorName: cause instanceof Error ? cause.name : "unknown_failure",
+						workerDeployment: config.deployment,
+						error: cause,
+						data: identity,
 					},
 					"Balance worker health report unavailable",
 				);

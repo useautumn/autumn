@@ -16,8 +16,7 @@ async function verifyAdminConfig() {
 	type HonoEnv = import("@/honoUtils/HonoEnv.js").HonoEnv;
 	const write = spyOn(balanceShadowStore, "writeToSource").mockResolvedValue();
 	const read = spyOn(balanceShadowStore, "readFromSource");
-	const originalRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
-	const originalOwnershipTopic = process.env.BALANCE_WORKER_OWNERSHIP_TOPIC;
+	const originalDeployment = process.env.BALANCE_WORKER_DEPLOYMENT;
 	const input = {
 		enabled: true as const,
 		run: {
@@ -72,16 +71,12 @@ async function verifyAdminConfig() {
 			body: JSON.stringify(config),
 		});
 	const restoreEnvironment = () => {
-		if (originalRollout === undefined)
-			delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
-		else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = originalRollout;
-		if (originalOwnershipTopic === undefined)
-			delete process.env.BALANCE_WORKER_OWNERSHIP_TOPIC;
-		else process.env.BALANCE_WORKER_OWNERSHIP_TOPIC = originalOwnershipTopic;
+		if (originalDeployment === undefined)
+			delete process.env.BALANCE_WORKER_DEPLOYMENT;
+		else process.env.BALANCE_WORKER_DEPLOYMENT = originalDeployment;
 	};
 	try {
-		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
-		process.env.BALANCE_WORKER_OWNERSHIP_TOPIC = "direct.ownership";
+		process.env.BALANCE_WORKER_DEPLOYMENT = "direct";
 		const expired = { ...input, run: { ...input.run, expiresAt: 1 } };
 		read.mockResolvedValue(expired);
 		const loaded = await createApp().request("/admin/balance-shadow-config");
@@ -110,7 +105,7 @@ async function verifyAdminConfig() {
 			},
 			{
 				reason: "ownership topic",
-				run: { ...input.run, ownershipTopic: "direct.ownership" },
+				run: { ...input.run, ownershipTopic: "direct-ownership" },
 			},
 			{ reason: "empty cohort", run: { ...input.run, customers: [] } },
 			{
@@ -138,18 +133,11 @@ async function verifyAdminConfig() {
 			expect(response.status, reason).toBe(400);
 			expect(write, reason).not.toHaveBeenCalled();
 		}
-		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
-		expect(
-			(await save({ config: input })).status,
-			"direct routing must be off",
-		).toBe(400);
-		expect(write).not.toHaveBeenCalled();
 		expect(
 			(await save({ config: { enabled: false } })).status,
 			"off must always be saveable",
 		).toBe(200);
 		expect(write).toHaveBeenCalledWith({ config: { enabled: false } });
-		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 		write.mockClear();
 		read.mockClear();
 

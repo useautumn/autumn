@@ -118,17 +118,17 @@ async function startWorker({
 	const directory = mkdtempSync(join(tmpdir(), "pg-commit-"));
 	const env = {
 		...createBalanceWorkerEnv({
-			BALANCE_WORKER_DATABASE_URL: databaseUrl,
+			DATABASE_URL: databaseUrl,
 			KAFKA_BROKERS: brokers.join(","),
 			KAFKA_AUTH_MODE: "none",
 			BALANCE_WORKER_HOST: LOOPBACK_HOST,
 			BALANCE_WORKER_PORT: String(await reserveLoopbackPort()),
 			BALANCE_WORKER_SQLITE_PATH: join(directory, "unused.sqlite"),
-			BALANCE_WORKER_METERING_TOPIC: harness.topics.metering,
-			BALANCE_WORKER_OWNERSHIP_TOPIC: harness.topics.ownership,
-			BALANCE_WORKER_GROUP_ID: harness.deployment,
 			BALANCE_WORKER_DEPLOYMENT: harness.deployment,
 		}),
+		BALANCE_WORKER_METERING_TOPIC: harness.topics.metering,
+		BALANCE_WORKER_OWNERSHIP_TOPIC: harness.topics.ownership,
+		BALANCE_WORKER_GROUP_ID: harness.deployment,
 		BALANCE_WORKER_PARTITION_COUNT: PARTITION_COUNT,
 	};
 	const errors: unknown[] = [];
@@ -139,6 +139,7 @@ async function startWorker({
 				runtimeErrors.push(cause);
 			},
 			logger: {
+				debug: ignoreLog,
 				info: ignoreLog,
 				warn: (...args: unknown[]) => workerLogs.push(["warn", ...args]),
 				error: (...args: unknown[]) => workerLogs.push(["error", ...args]),

@@ -147,6 +147,7 @@ function createFixture({
 			},
 			partitionResolver: { partitionForIdentity: () => 0 },
 			logger: {
+				debug: () => undefined,
 				info: () => undefined,
 				warn: () => undefined,
 				error: () => undefined,

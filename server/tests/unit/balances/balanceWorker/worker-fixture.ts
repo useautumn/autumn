@@ -83,6 +83,7 @@ export function createWorkerFixture({
 			},
 			partitionResolver: { partitionForIdentity: () => partition },
 			logger: {
+				debug: () => undefined,
 				info: () => undefined,
 				warn: () => undefined,
 				error: () => undefined,

@@ -9,10 +9,8 @@ export function balanceWorkerDevConfig({
 }): Record<string, string> {
 	const port =
 		runtimeEnv.BALANCE_WORKER_PORT ?? String(balanceWorkerPortFor(worktreeNum));
-	const databaseUrl =
-		runtimeEnv.BALANCE_WORKER_DATABASE_URL ?? runtimeEnv.DATABASE_URL;
 	return {
-		...(databaseUrl && { BALANCE_WORKER_DATABASE_URL: databaseUrl }),
+		...(runtimeEnv.DATABASE_URL && { DATABASE_URL: runtimeEnv.DATABASE_URL }),
 		// Edge configs poll the same admin bucket the server does; absent, the worker serves defaults.
 		...(runtimeEnv.S3_BUCKET && { S3_BUCKET: runtimeEnv.S3_BUCKET }),
 		...(runtimeEnv.S3_REGION && { S3_REGION: runtimeEnv.S3_REGION }),
@@ -22,9 +20,5 @@ export function balanceWorkerDevConfig({
 		BALANCE_WORKER_PORT: port,
 		BALANCE_WORKER_HOST: "127.0.0.1",
 		BALANCE_WORKER_ENDPOINT: `http://127.0.0.1:${port}`,
-		BALANCE_WORKER_METERING_TOPIC:
-			runtimeEnv.BALANCE_WORKER_METERING_TOPIC ?? "autumn-metering",
-		BALANCE_WORKER_OWNERSHIP_TOPIC:
-			runtimeEnv.BALANCE_WORKER_OWNERSHIP_TOPIC ?? "autumn-metering-ownership",
 	};
 }

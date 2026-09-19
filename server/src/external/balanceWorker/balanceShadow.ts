@@ -1,5 +1,8 @@
 import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
-import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
+import {
+	BALANCE_WORKER_PARTITION_COUNT,
+	BALANCE_WORKER_REQUEST_TIMEOUT_MS,
+} from "@autumn/env/balanceWorkerConstants";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { balanceShadowStore } from "@/internal/balances/shadow/balanceShadowStore.js";
 import { createBalanceShadowController } from "@/internal/balances/shadow/createBalanceShadowController.js";
@@ -11,7 +14,6 @@ const controller = createBalanceShadowController({
 	readConfig: balanceShadowStore.get,
 	runtimeEnv: process.env,
 	startSession: ({ config }) => {
-		const env = getBalanceWorkerClientEnv();
 		const owners = createServerOwnershipConsumer({
 			topic: config.ownershipTopic,
 			groupIdPrefix: "autumn-server-shadow",
@@ -19,8 +21,8 @@ const controller = createBalanceShadowController({
 		const client = createBalanceWorkerClient({
 			ctx: { owners },
 			config: {
-				partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
-				timeoutMs: env.BALANCE_WORKER_REQUEST_TIMEOUT_MS,
+				partitionCount: BALANCE_WORKER_PARTITION_COUNT,
+				timeoutMs: BALANCE_WORKER_REQUEST_TIMEOUT_MS,
 			},
 		});
 		const observerId = crypto.randomUUID();

@@ -31,11 +31,6 @@ export const booleanFlag = z
 	.default("false")
 	.transform((value) => value === "true");
 
-export const s3KeyPrefix = z
-	.string()
-	.trim()
-	.refine((value) => value.replace(/^\/+|\/+$/g, "").trim().length > 0);
-
 function hasValidBrokerPort(broker: string): boolean {
 	const port = Number(broker.slice(broker.lastIndexOf(":") + 1));
 	return port > 0 && port <= 65535;

@@ -17,12 +17,12 @@ export const createWorkerPostgresClient = ({
 }: {
 	env: Pick<
 		BalanceWorkerEnv,
-		"BALANCE_WORKER_DATABASE_URL" | "BALANCE_WORKER_DATABASE_POOL_SIZE"
+		"DATABASE_URL" | "BALANCE_WORKER_DATABASE_POOL_SIZE"
 	>;
 }): PostgresClient =>
 	createPostgresClient({
 		config: {
-			databaseUrl: env.BALANCE_WORKER_DATABASE_URL,
+			databaseUrl: env.DATABASE_URL,
 			maxConnections: env.BALANCE_WORKER_DATABASE_POOL_SIZE,
 			connectTimeout: 10,
 			idleTimeout: 30,

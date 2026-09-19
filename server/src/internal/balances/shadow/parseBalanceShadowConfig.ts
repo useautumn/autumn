@@ -1,3 +1,7 @@
+import {
+	balanceWorkerDeploymentToKafkaNames,
+	getBalanceWorkerDeployment,
+} from "@autumn/env/balanceWorkerClient";
 import { z } from "zod/v4";
 import type { BalanceShadowConfig } from "./balanceShadowTypes.js";
 
@@ -33,12 +37,10 @@ export function parseBalanceShadowConfig({
 	if (Buffer.byteLength(raw) > 16_384)
 		throw new Error("Shadow config exceeds 16 KiB");
 	const config = BalanceShadowConfigSchema.parse(JSON.parse(raw));
-	if (runtimeEnv.BALANCE_WORKER_ROLLOUT_ENABLED === "true")
-		throw new Error("Shadow requires direct routing to remain disabled");
-	if (
-		config.ownershipTopic ===
-		(runtimeEnv.BALANCE_WORKER_OWNERSHIP_TOPIC ?? "autumn-metering-ownership")
-	)
+	const servingOwnershipTopic = balanceWorkerDeploymentToKafkaNames({
+		deployment: getBalanceWorkerDeployment({ runtimeEnv }),
+	}).ownershipTopic;
+	if (config.ownershipTopic === servingOwnershipTopic)
 		throw new Error("Shadow requires a separate ownership topic");
 	if (
 		(purpose === "run" && config.expiresAt <= now) ||

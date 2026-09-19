@@ -14,7 +14,7 @@ type CommitLog = {
 	errorName?: string;
 } & (
 	| { phase: "kafka_commit"; result: "committed" | "not_committed" | "unknown" }
-	| { phase: "sqlite_apply"; result: "applied" | "failed" }
+	| { phase: "store_apply"; result: "applied" | "failed" }
 );
 
 export function createPartitionCommitLogging({
@@ -24,7 +24,7 @@ export function createPartitionCommitLogging({
 	ctx: {
 		appender: CommittedOutcomeAppender;
 		stateStore: PartitionRuntimeDependencies["stateStore"];
-		logger?: Pick<AutumnLogger, "info" | "warn">;
+		logger?: Pick<AutumnLogger, "debug">;
 		monotonicNow?: () => number;
 	};
 	config: { deployment: string; endpoint: string };
@@ -36,19 +36,32 @@ export function createPartitionCommitLogging({
 	if (!logger) return { appender: ctx.appender, stateStore: ctx.stateStore };
 	const now = ctx.monotonicNow ?? (() => performance.now());
 
-	function report({ startedAt, baseOffset, ...fields }: CommitLog): void {
+	function report({
+		startedAt,
+		baseOffset,
+		batchSize,
+		errorName,
+		...fields
+	}: CommitLog): void {
 		try {
 			const event = {
 				event: "balance_worker.commit",
-				workerDeployment: config.deployment,
-				workerEndpoint: config.endpoint,
 				...fields,
-				baseOffset: baseOffset?.toString() ?? null,
 				durationMs: Math.round((now() - startedAt) * 100) / 100,
+				data: {
+					workerEndpoint: config.endpoint,
+					batchSize,
+					baseOffset: baseOffset?.toString() ?? null,
+					errorName,
+				},
 			};
-			if (fields.result === "committed" || fields.result === "applied")
-				logger?.info(event, "Balance worker commit phase completed");
-			else logger?.warn(event, "Balance worker commit phase failed");
+			// Per-batch telemetry stays at debug; a failure surfaces through the request log.
+			logger?.debug(
+				event,
+				fields.result === "committed" || fields.result === "applied"
+					? "Balance worker commit phase completed"
+					: "Balance worker commit phase failed",
+			);
 		} catch {
 			// Telemetry cannot turn a durable commit into a failed request.
 		}
@@ -98,7 +111,7 @@ export function createPartitionCommitLogging({
 			batchSize: params.records.length,
 			baseOffset: position.offset,
 			startedAt: now(),
-			phase: "sqlite_apply" as const,
+			phase: "store_apply" as const,
 		};
 		let result: DurableMutationApplyResult[];
 		try {

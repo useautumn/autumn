@@ -44,7 +44,7 @@
 	"githubPullRequests.queries": [
 		{
 			"label": "This Stack",
-			"query": "repo:${owner}/${repository} is:open (head:john/state-structure) sort:created-desc"
+			"query": "repo:${owner}/${repository} is:open (head:john/one-record) sort:created-desc"
 		}
 	]
 }

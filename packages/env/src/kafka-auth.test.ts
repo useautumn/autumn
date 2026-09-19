@@ -4,7 +4,7 @@ import { createBalanceWorkerClientEnv } from "./balanceWorkerClient.js";
 
 const brokers = {
 	KAFKA_BROKERS: "localhost:19092",
-	BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
+	DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
 };
 
 for (const [name, createEnv] of [
@@ -70,14 +70,3 @@ for (const [name, createEnv] of [
 		);
 	});
 }
-
-test("IAM authentication does not enable direct balance routing", () => {
-	expect(
-		createBalanceWorkerClientEnv({
-			...brokers,
-			NODE_ENV: "production",
-			KAFKA_AUTH_MODE: "msk_iam",
-			AWS_REGION: "us-east-1",
-		}).BALANCE_WORKER_ROLLOUT_ENABLED,
-	).toBe(false);
-});

@@ -29,11 +29,13 @@ test.concurrent(
 			expect(logs[0][0]).toMatchObject({
 				event: "balance_worker.health",
 				workerDeployment: "tf-balance-staging-v1",
-				workerEndpoint: "http://10.0.0.1:8082",
-				workerInstanceId: expect.any(String),
 				workerStatus: "starting",
-				reportedPartitions: 0,
-				partitionStatusCounts: {},
+				data: {
+					workerEndpoint: "http://10.0.0.1:8082",
+					workerInstanceId: expect.any(String),
+					reportedPartitions: 0,
+					partitionStatusCounts: {},
+				},
 			});
 			health.status = "running";
 			health.partitions = [partitionHealth()];
@@ -41,18 +43,19 @@ test.concurrent(
 			expect(logs).toHaveLength(3);
 			expect(logs[1][0]).toMatchObject({
 				workerStatus: "running",
-				reportedPartitions: 1,
-				partitionStatusCounts: { ready: 1 },
+				data: { reportedPartitions: 1, partitionStatusCounts: { ready: 1 } },
 			});
 			expect(logs[2][0]).toMatchObject({
 				event: "balance_worker.partition_health",
 				topic: "tf-balance-staging-v1-events",
 				partition: 0,
 				status: "ready",
-				localNextOffset: "41",
-				consumedNextOffset: "42",
-				highWatermark: "42",
-				lag: "0",
+				data: {
+					localNextOffset: "41",
+					consumedNextOffset: "42",
+					highWatermark: "42",
+					lag: "0",
+				},
 			});
 		} finally {
 			reporter.stop();
@@ -77,10 +80,12 @@ test.concurrent(
 			health.partitions = [withPrivateData];
 			reporter.start();
 			expect(logs[1]?.[0]).toMatchObject({
-				localNextOffset: "9007199254740993",
-				consumedNextOffset: null,
-				highWatermark: null,
-				lag: null,
+				data: {
+					localNextOffset: "9007199254740993",
+					consumedNextOffset: null,
+					highWatermark: null,
+					lag: null,
+				},
 			});
 			expect(JSON.stringify(logs)).not.toContain("do-not-log");
 			health.partitions = [
@@ -141,16 +146,18 @@ test.concurrent(
 			reporter.start();
 			expect(logs[1]?.[0]).toMatchObject({
 				status: "ready",
-				checkpoint: {
-					status: "degraded",
-					lastConfirmedNextOffset: "9007199254740993",
-					lastDurationMs: 123,
-					uncheckpointedAgeMs: 500,
-					failure: { limitName: "maxStates", limit: 10000, observed: 10001 },
-					cleanup: {
+				data: {
+					checkpoint: {
 						status: "degraded",
-						backlog: "possible",
-						deletedReceipts: 12,
+						lastConfirmedNextOffset: "9007199254740993",
+						lastDurationMs: 123,
+						uncheckpointedAgeMs: 500,
+						failure: { limitName: "maxStates", limit: 10000, observed: 10001 },
+						cleanup: {
+							status: "degraded",
+							backlog: "possible",
+							deletedReceipts: 12,
+						},
 					},
 				},
 			});

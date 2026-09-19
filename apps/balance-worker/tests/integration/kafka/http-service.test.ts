@@ -41,17 +41,16 @@ describe("Real balance worker HTTP service", () => {
 		await reservation.stop();
 		const env = {
 			...createBalanceWorkerEnv({
-				BALANCE_WORKER_DATABASE_URL:
-					"postgres://worker:secret@127.0.0.1:1/never",
+				DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
 				KAFKA_BROKERS: brokers,
 				KAFKA_AUTH_MODE: "none",
 				BALANCE_WORKER_PORT: String(port),
 				BALANCE_WORKER_SQLITE_PATH: databasePath,
-				BALANCE_WORKER_METERING_TOPIC: topic,
-				BALANCE_WORKER_OWNERSHIP_TOPIC: owners,
-				BALANCE_WORKER_GROUP_ID: id,
 				BALANCE_WORKER_DEPLOYMENT: id,
 			}),
+			BALANCE_WORKER_METERING_TOPIC: topic,
+			BALANCE_WORKER_OWNERSHIP_TOPIC: owners,
+			BALANCE_WORKER_GROUP_ID: id,
 			BALANCE_WORKER_PARTITION_COUNT: 1,
 		};
 		const kafka = new Kafka({
@@ -105,7 +104,12 @@ describe("Real balance worker HTTP service", () => {
 		const service = await createBalanceWorker({
 			ctx: {
 				onError: ({ cause }) => errors.push(cause),
-				logger: { info: ignoreLog, warn: ignoreLog, error: ignoreLog },
+				logger: {
+					debug: ignoreLog,
+					info: ignoreLog,
+					warn: ignoreLog,
+					error: ignoreLog,
+				},
 			},
 			config: { env, stateBackend: "sqlite" },
 		});

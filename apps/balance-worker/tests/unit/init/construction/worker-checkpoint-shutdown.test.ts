@@ -6,15 +6,17 @@ import { createSchedulerFixture } from "../../checkpoint/scheduling/scheduler-fi
 
 const enabledConfig = () =>
 	createWorkerCheckpointConfig({
-		env: createBalanceWorkerEnv({
-			BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
-			KAFKA_AUTH_MODE: "none",
-			KAFKA_BROKERS: "localhost:19092",
-			BALANCE_WORKER_CHECKPOINT_MODE: "enabled",
-			BALANCE_WORKER_CHECKPOINT_BUCKET: "test-checkpoints",
-			BALANCE_WORKER_CHECKPOINT_REGION: "us-east-1",
-			BALANCE_WORKER_CHECKPOINT_INTERVAL_MS: "100",
-		}),
+		env: {
+			...createBalanceWorkerEnv({
+				DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
+				KAFKA_AUTH_MODE: "none",
+				KAFKA_BROKERS: "localhost:19092",
+				BALANCE_WORKER_CHECKPOINT_MODE: "enabled",
+				BALANCE_WORKER_CHECKPOINT_BUCKET: "test-checkpoints",
+				BALANCE_WORKER_CHECKPOINT_REGION: "us-east-1",
+			}),
+			BALANCE_WORKER_CHECKPOINT_INTERVAL_MS: 100,
+		},
 	});
 
 test.concurrent(

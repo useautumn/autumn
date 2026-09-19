@@ -20,7 +20,7 @@ export type BalanceWorker = {
 
 export type BalanceWorkerDependencies = {
 	checkpointSource?: PartitionCheckpointSource;
-	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
+	logger: Pick<AutumnLogger, "debug" | "info" | "warn" | "error">;
 	onError(failure: { cause: unknown }): void;
 };
 

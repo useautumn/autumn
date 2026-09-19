@@ -129,7 +129,12 @@ const fixture = ({
 	const ctx: BalanceWorkerHttpContext = {
 		ownership: { findRuntime },
 		partitionResolver: { partitionForIdentity: () => actualPartition },
-		logger: { info: recordLog, warn: recordLog, error: recordLog },
+		logger: {
+			debug: recordLog,
+			info: recordLog,
+			warn: recordLog,
+			error: recordLog,
+		},
 	};
 	const app = createBalanceWorkerApp({ ctx });
 	const post = (body: unknown = request) =>
@@ -166,11 +171,19 @@ async function logsCompletedRequest(): Promise<void> {
 	expect(logs).toHaveLength(1);
 	expect(logs[0][0]).toMatchObject({
 		event: "balance_worker.request",
-		req: { id: "req", method: "POST", path: "/v1/track" },
+		req: {
+			id: "req",
+			method: "POST",
+			path: "/v1/track",
+			body: expect.objectContaining({ commandId: "cmd" }),
+		},
+		res: trackReply,
 		statusCode: 200,
 		durationMs: expect.any(Number),
-		context: { org_id: "org", customer_id: "customer", env: "sandbox" },
-		extras: {
+		org_id: "org",
+		customer_id: "customer",
+		env: "sandbox",
+		data: {
 			commandId: "cmd",
 			featureId: "messages",
 			value: 2,
@@ -198,7 +211,9 @@ async function logsFailedRequest(): Promise<void> {
 		expect(logs[0][0]).toMatchObject({
 			statusCode,
 			req: { id: "req" },
-			extras: { route, errorCode, error: cause },
+			errorCode,
+			error: cause,
+			data: { route },
 		});
 		expect(logs[0][1]).toContain(cause.name);
 	}
@@ -235,7 +250,7 @@ async function isolatesRequestLogs(): Promise<void> {
 		expect(logs).toContainEqual([
 			expect.objectContaining({
 				req: expect.objectContaining({ id }),
-				extras: expect.objectContaining({ commandId: id }),
+				data: expect.objectContaining({ commandId: id }),
 			}),
 			expect.any(String),
 		]);

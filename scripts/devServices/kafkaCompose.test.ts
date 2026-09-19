@@ -58,9 +58,6 @@ function provisionsTopicsOnTheEnvironmentBroker(): void {
 	const runtimeEnv = {
 		KAFKA_BROKERS: "remote.example:9092",
 		BALANCE_WORKER_DEPLOYMENT: "production",
-		BALANCE_WORKER_METERING_TOPIC: "custom.metering",
-		BALANCE_WORKER_OWNERSHIP_TOPIC: "custom.ownership",
-		BALANCE_WORKER_PARTITION_COUNT: "512",
 		DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/autumn",
 	};
 	const spawn = spyOn(Bun, "spawnSync").mockReturnValue(successfulProcess);
@@ -77,7 +74,6 @@ function provisionsTopicsOnTheEnvironmentBroker(): void {
 					cwd: resolve(repoRoot, "apps/balance-worker"),
 					env: {
 						...runtimeEnv,
-						BALANCE_WORKER_DATABASE_URL: runtimeEnv.DATABASE_URL,
 						KAFKA_BROKERS: `127.0.0.1:${kafkaPort}`,
 						KAFKA_AUTH_MODE: "none",
 						BALANCE_WORKER_DEPLOYMENT: "local",

@@ -105,7 +105,7 @@ describe("Kafka owned partition runtime factory", () => {
 							retryPolicy: config.checkpointRetryPolicy,
 						}),
 						partitionResolver: { partitionForIdentity: () => 0 },
-						logger: { info: record, warn: record },
+						logger: { debug: record },
 					},
 					config,
 				});
@@ -158,19 +158,20 @@ describe("Kafka owned partition runtime factory", () => {
 				expect(logs).toHaveLength(2);
 				for (const [index, phase, result] of [
 					[0, "kafka_commit", "committed"],
-					[1, "sqlite_apply", "applied"],
+					[1, "store_apply", "applied"],
 				] as const) {
 					expect(logs[index]?.[0]).toMatchObject({
 						event: "balance_worker.commit",
-						workerDeployment: "staging",
-						workerEndpoint: "http://worker.test",
 						topic,
 						partition: 0,
 						phase,
 						result,
-						batchSize: 1,
-						baseOffset: "0",
 						durationMs: expect.any(Number),
+						data: {
+							workerEndpoint: "http://worker.test",
+							batchSize: 1,
+							baseOffset: "0",
+						},
 					});
 				}
 				expect(fixture.store.readState({ identity })?.revision).toBe(1);

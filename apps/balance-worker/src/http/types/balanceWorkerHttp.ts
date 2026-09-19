@@ -28,7 +28,9 @@ export type BalanceWorkerHttpEnv = {
 export type BalanceWorkerRequestLog = {
 	id: string;
 	command?: Pick<TrackCommand, "requestId" | "identity"> &
-		Partial<Pick<TrackCommand, "commandId" | "featureId" | "value">>;
+		Partial<
+			Pick<TrackCommand, "commandId" | "featureId" | "value" | "properties">
+		>;
 	response?: TrackReply | CheckReply | InitializeReply;
 	error?: Error;
 	errorCode?: WorkerErrorCode;
@@ -41,5 +43,5 @@ export type BalanceWorkerHttpContext = {
 		): BalanceWorkerRequestContext["runtime"] | undefined;
 	};
 	partitionResolver: MeteringPartitionResolver;
-	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
+	logger: Pick<AutumnLogger, "debug" | "info" | "warn" | "error">;
 };

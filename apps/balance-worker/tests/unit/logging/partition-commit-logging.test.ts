@@ -62,10 +62,9 @@ test.concurrent(
 						},
 					},
 					logger: {
-						info: (...args) => {
+						debug: (...args) => {
 							logs.push(args);
 						},
-						warn: () => {},
 					},
 					monotonicNow: () => now,
 				},
@@ -81,15 +80,17 @@ test.concurrent(
 			expect(logs).toHaveLength(1);
 			expect(logs[0]?.[0]).toEqual({
 				event: "balance_worker.commit",
-				workerDeployment: config.deployment,
-				workerEndpoint: config.endpoint,
 				topic,
 				partition,
 				phase: "kafka_commit",
 				result: "committed",
-				batchSize: 1,
-				baseOffset: "9007199254740993",
 				durationMs: 17.13,
+				data: {
+					workerEndpoint: config.endpoint,
+					batchSize: 1,
+					baseOffset: "9007199254740993",
+					errorName: undefined,
+				},
 			});
 		} finally {
 			gate.resolve(result);
@@ -135,10 +136,9 @@ test.concurrent(
 					stateStore: fixture.store,
 					appender: { appendCommitted: async () => ({ baseOffset: 0n }) },
 					logger: {
-						info: (...args) => {
+						debug: (...args) => {
 							logs.push(args);
 						},
-						warn: () => {},
 					},
 					monotonicNow: () => now,
 				},
@@ -149,11 +149,10 @@ test.concurrent(
 			);
 			expect(logs).toHaveLength(1);
 			expect(logs[0]?.[0]).toMatchObject({
-				phase: "sqlite_apply",
+				phase: "store_apply",
 				result: "applied",
-				batchSize: 2,
-				baseOffset: "0",
 				durationMs: 0.38,
+				data: { batchSize: 2, baseOffset: "0" },
 			});
 			expect(stateStore.readState({ identity })?.revision).toBe(2);
 			expect(stateStore.readNextOffset({ topic, partition })).toBe(2n);
@@ -194,8 +193,7 @@ for (const result of ["not_committed", "unknown"] as const) {
 							},
 						},
 						logger: {
-							info: () => {},
-							warn: (...args) => {
+							debug: (...args) => {
 								logs.push(args);
 							},
 						},
@@ -215,8 +213,7 @@ for (const result of ["not_committed", "unknown"] as const) {
 					phase: "kafka_commit",
 					result,
 					durationMs: 25,
-					baseOffset: null,
-					errorName: cause.name,
+					data: { baseOffset: null, errorName: cause.name },
 				});
 				expect(JSON.stringify(logs)).not.toContain("private details");
 			} finally {
@@ -237,8 +234,7 @@ test.concurrent(
 					stateStore: fixture.store,
 					appender: { appendCommitted: async () => ({ baseOffset: 0n }) },
 					logger: {
-						info: () => {},
-						warn: (...args) => {
+						debug: (...args) => {
 							logs.push(args);
 						},
 					},
@@ -257,10 +253,10 @@ test.concurrent(
 			).rejects.toThrow("Only an initialize can create subject state");
 			expect(logs).toHaveLength(1);
 			expect(logs[0]?.[0]).toMatchObject({
-				phase: "sqlite_apply",
+				phase: "store_apply",
 				result: "failed",
 				durationMs: expect.any(Number),
-				errorName: "SubjectStateMissingError",
+				data: { errorName: "SubjectStateMissingError" },
 			});
 			expect(stateStore.readNextOffset({ topic, partition })).toBe(0n);
 		} finally {
@@ -298,7 +294,7 @@ test.concurrent(
 							return { baseOffset: 0n };
 						},
 					},
-					logger: { info: failLog, warn: failLog },
+					logger: { debug: failLog },
 				},
 				config,
 			});

@@ -4,7 +4,7 @@ import { createBalanceWorkerEnv } from "./balanceWorkerEnv.js";
 const valid = {
 	KAFKA_BROKERS: "127.0.0.1:19092",
 	KAFKA_AUTH_MODE: "none",
-	BALANCE_WORKER_DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
+	DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
 };
 const storage = {
 	BALANCE_WORKER_CHECKPOINT_BUCKET: "balance-checkpoints",
@@ -52,14 +52,8 @@ describe("balance worker checkpoint settings", () => {
 		{
 			...storage,
 			BALANCE_WORKER_CHECKPOINT_MODE: "enabled",
-			BALANCE_WORKER_CHECKPOINT_PREFIX: "///",
-		},
-		{
-			...storage,
-			BALANCE_WORKER_CHECKPOINT_MODE: "enabled",
 			BALANCE_WORKER_CHECKPOINT_ENDPOINT: "ftp://localhost",
 		},
-		{ BALANCE_WORKER_CHECKPOINT_INTERVAL_MS: "0" },
 		{
 			...storage,
 			BALANCE_WORKER_CHECKPOINT_MODE: "enabled",

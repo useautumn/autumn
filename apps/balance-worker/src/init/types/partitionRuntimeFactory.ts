@@ -43,7 +43,7 @@ export type KafkaOwnedPartitionRuntimeFactory = (
 ) => ConstructedPartitionRuntime;
 
 export type PartitionRuntimeFactoryContext = {
-	logger?: Pick<AutumnLogger, "info" | "warn">;
+	logger?: Pick<AutumnLogger, "debug">;
 	kafka: KafkaProducerFactory;
 	ownershipOffsets: Pick<Admin, "fetchTopicOffsets">;
 	stateStore: StateStore;

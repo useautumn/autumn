@@ -1,6 +1,7 @@
 import { getBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { createBalanceWorker } from "./init/createBalanceWorker.js";
 import type { BalanceWorker } from "./init/types/balanceWorker.js";
+import { errorCauseChain } from "./logging/errorCauseChain.js";
 import { getBalanceWorkerLogger } from "./logging/getBalanceWorkerLogger.js";
 
 async function main(): Promise<void> {
@@ -37,7 +38,10 @@ function registerShutdownSignals({ worker }: { worker: BalanceWorker }): void {
 }
 
 function reportError({ cause }: { cause: unknown }): void {
-	getBalanceWorkerLogger().error({ error: cause }, "Balance worker error");
+	getBalanceWorkerLogger().error(
+		{ error: cause, data: { causes: errorCauseChain({ error: cause }) } },
+		"Balance worker error",
+	);
 }
 
 void main();

@@ -45,34 +45,21 @@ describe("local balance worker launch settings", () => {
 				.BALANCE_WORKER_PORT,
 		).toBe("12982");
 	});
-	test("keeps the configured worktree broker and explicit topic names", () => {
+	test("keeps the configured worktree broker and sets no topic names", () => {
 		const env = balanceWorkerDevConfig({
 			worktreeNum: 50,
-			runtimeEnv: {
-				KAFKA_BROKERS: "127.0.0.1:23992",
-				BALANCE_WORKER_METERING_TOPIC: "custom",
-			},
+			runtimeEnv: { KAFKA_BROKERS: "127.0.0.1:23992" },
 		});
 		expect(env.KAFKA_BROKERS).toBe("127.0.0.1:23992");
-		expect(env.BALANCE_WORKER_METERING_TOPIC).toBe("custom");
+		expect(env.BALANCE_WORKER_METERING_TOPIC).toBeUndefined();
 	});
-	test("uses the resolved worktree database unless explicitly overridden", () => {
+	test("uses the same database as the server", () => {
 		const databaseUrl = "postgresql://postgres:postgres@localhost:5432/autumn";
 		expect(
 			balanceWorkerDevConfig({
 				worktreeNum: 50,
 				runtimeEnv: { DATABASE_URL: databaseUrl },
-			}).BALANCE_WORKER_DATABASE_URL,
+			}).DATABASE_URL,
 		).toBe(databaseUrl);
-		expect(
-			balanceWorkerDevConfig({
-				worktreeNum: 50,
-				runtimeEnv: {
-					DATABASE_URL: databaseUrl,
-					BALANCE_WORKER_DATABASE_URL:
-						"postgresql://worker:worker@localhost:5432/worker",
-				},
-			}).BALANCE_WORKER_DATABASE_URL,
-		).toBe("postgresql://worker:worker@localhost:5432/worker");
 	});
 });

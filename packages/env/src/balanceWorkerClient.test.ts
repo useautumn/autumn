@@ -1,167 +1,56 @@
 import { expect, test } from "bun:test";
-import {
-	createBalanceWorkerClientEnv,
-	parseBalanceWorkerRolloutEnabled,
-} from "./balanceWorkerClient.js";
+import { createBalanceWorkerClientEnv } from "./balanceWorkerClient.js";
 
 const localEnv = { KAFKA_AUTH_MODE: "none" };
 
-test.concurrent(
-	"disabled rollout ignores missing or invalid Kafka settings",
-	() => {
-		for (const kafkaEnv of [
-			{},
-			{ KAFKA_AUTH_MODE: "invalid" },
-			{ AWS_REGION: "us-east-1", BALANCE_WORKER_PARTITION_COUNT: "16" },
-		]) {
-			for (const rollout of [undefined, "false"]) {
-				expect(
-					parseBalanceWorkerRolloutEnabled({
-						runtimeEnv: {
-							NODE_ENV: "production",
-							...kafkaEnv,
-							BALANCE_WORKER_ROLLOUT_ENABLED: rollout,
-						},
-					}),
-				).toBe(false);
-			}
-		}
-	},
-);
-
-test.concurrent(
-	"the isolated flag parser preserves direct routing restrictions",
-	() => {
-		expect(
-			parseBalanceWorkerRolloutEnabled({
-				runtimeEnv: {
-					NODE_ENV: "development",
-					BALANCE_WORKER_ROLLOUT_ENABLED: "true",
-				},
-			}),
-		).toBe(true);
-		for (const nodeEnv of [undefined, "test", "production"]) {
-			expect(() =>
-				parseBalanceWorkerRolloutEnabled({
-					runtimeEnv: {
-						NODE_ENV: nodeEnv,
-						BALANCE_WORKER_ROLLOUT_ENABLED: "true",
-					},
-				}),
-			).toThrow("requires NODE_ENV=development");
-		}
-		expect(() =>
-			parseBalanceWorkerRolloutEnabled({
-				runtimeEnv: { BALANCE_WORKER_ROLLOUT_ENABLED: "yes" },
-			}),
-		).toThrow("must be true or false");
-	},
-);
-
-test.concurrent(
-	"actual client configuration still validates Kafka with direct routing off",
-	() => {
-		expect(() =>
-			createBalanceWorkerClientEnv({ NODE_ENV: "production" }),
-		).toThrow("KAFKA_AUTH_MODE=msk_iam requires AWS_REGION");
-		expect(() =>
-			createBalanceWorkerClientEnv({
-				NODE_ENV: "production",
-				BALANCE_WORKER_ROLLOUT_ENABLED: "false",
-				KAFKA_AUTH_MODE: "invalid",
-			}),
-		).toThrow("KAFKA_AUTH_MODE must be none or msk_iam");
-	},
-);
-
-test(
-	"balance worker routing requires an explicit development opt-in",
-	usesDevelopmentRollout,
-);
-test(
-	"production cannot opt into the development balance worker route",
-	rejectsProductionRollout,
-);
-test(
-	"development uses the shared worker topic and partition configuration",
-	readsBalanceWorkerEnvironment,
-);
-test("client uses 512 partitions without an environment setting", () => {
-	expect(
-		createBalanceWorkerClientEnv(localEnv).BALANCE_WORKER_PARTITION_COUNT,
-	).toBe(512);
-});
-test.each(["4", "8", "16", "0", "not-a-number"])(
-	"client rejects a partition count that differs from the fixed layout: %s",
-	(partitionCount) => {
-		expect(() =>
-			createBalanceWorkerClientEnv({
-				...localEnv,
-				BALANCE_WORKER_PARTITION_COUNT: partitionCount,
-			}),
-		).toThrow("BALANCE_WORKER_PARTITION_COUNT is fixed at 512");
-	},
-);
-
-function usesDevelopmentRollout() {
-	expect(
-		createBalanceWorkerClientEnv(localEnv).BALANCE_WORKER_ROLLOUT_ENABLED,
-	).toBe(false);
-	expect(
-		createBalanceWorkerClientEnv({ ...localEnv, NODE_ENV: "development" })
-			.BALANCE_WORKER_ROLLOUT_ENABLED,
-	).toBe(false);
-	expect(
-		createBalanceWorkerClientEnv({
-			...localEnv,
-			NODE_ENV: "development",
-			BALANCE_WORKER_ROLLOUT_ENABLED: "false",
-		}).BALANCE_WORKER_ROLLOUT_ENABLED,
-	).toBe(false);
-	expect(
-		createBalanceWorkerClientEnv({
-			...localEnv,
-			NODE_ENV: "development",
-			BALANCE_WORKER_ROLLOUT_ENABLED: "true",
-		}).BALANCE_WORKER_ROLLOUT_ENABLED,
-	).toBe(true);
-}
-
-function rejectsProductionRollout() {
+test.concurrent("client configuration validates Kafka auth", () => {
 	expect(() =>
 		createBalanceWorkerClientEnv({
 			NODE_ENV: "production",
-			BALANCE_WORKER_ROLLOUT_ENABLED: "true",
+			KAFKA_BROKERS: "broker:9098",
+			BALANCE_WORKER_DEPLOYMENT: "staging",
 		}),
-	).toThrow("requires NODE_ENV=development");
+	).toThrow("KAFKA_AUTH_MODE=msk_iam requires AWS_REGION");
 	expect(() =>
-		createBalanceWorkerClientEnv({ BALANCE_WORKER_ROLLOUT_ENABLED: "true" }),
-	).toThrow("requires NODE_ENV=development");
+		createBalanceWorkerClientEnv({ KAFKA_AUTH_MODE: "invalid" }),
+	).toThrow("KAFKA_AUTH_MODE must be none or msk_iam");
+});
+
+test.concurrent("production refuses to fall back to local settings", () => {
 	expect(() =>
 		createBalanceWorkerClientEnv({
-			NODE_ENV: "development",
-			BALANCE_WORKER_ROLLOUT_ENABLED: "yes",
+			...localEnv,
+			NODE_ENV: "production",
+			BALANCE_WORKER_DEPLOYMENT: "staging",
 		}),
-	).toThrow("must be true or false");
-}
+	).toThrow("KAFKA_BROKERS is required in production");
+	expect(() =>
+		createBalanceWorkerClientEnv({
+			...localEnv,
+			NODE_ENV: "production",
+			KAFKA_BROKERS: "broker:9098",
+		}),
+	).toThrow("BALANCE_WORKER_DEPLOYMENT is required in production");
+});
 
-function readsBalanceWorkerEnvironment() {
-	const env = createBalanceWorkerClientEnv({
-		...localEnv,
-		NODE_ENV: "development",
-		BALANCE_WORKER_ROLLOUT_ENABLED: "true",
-		KAFKA_BROKERS: "127.0.0.1:19092, localhost:29092",
-		BALANCE_WORKER_OWNERSHIP_TOPIC: "test-ownership",
-		BALANCE_WORKER_PARTITION_COUNT: "512",
-		BALANCE_WORKER_REQUEST_TIMEOUT_MS: "2500",
-	});
-	expect(env).toEqual({
+test.concurrent("local development needs no balance worker settings", () => {
+	expect(createBalanceWorkerClientEnv(localEnv)).toEqual({
 		KAFKA_AUTH_MODE: "none",
 		AWS_REGION: undefined,
-		BALANCE_WORKER_ROLLOUT_ENABLED: true,
-		KAFKA_BROKERS: ["127.0.0.1:19092", "localhost:29092"],
-		BALANCE_WORKER_OWNERSHIP_TOPIC: "test-ownership",
-		BALANCE_WORKER_PARTITION_COUNT: 512,
-		BALANCE_WORKER_REQUEST_TIMEOUT_MS: 2500,
+		KAFKA_BROKERS: ["127.0.0.1:19092"],
+		BALANCE_WORKER_OWNERSHIP_TOPIC: "local-ownership",
 	});
-}
+});
+
+test.concurrent("the ownership topic derives from the deployment", () => {
+	const env = createBalanceWorkerClientEnv({
+		...localEnv,
+		KAFKA_BROKERS: "127.0.0.1:19092, localhost:29092",
+		BALANCE_WORKER_DEPLOYMENT: "tf-balance-staging-v2-512",
+		BALANCE_WORKER_OWNERSHIP_TOPIC: "ignored",
+	});
+	expect(env.KAFKA_BROKERS).toEqual(["127.0.0.1:19092", "localhost:29092"]);
+	expect(env.BALANCE_WORKER_OWNERSHIP_TOPIC).toBe(
+		"tf-balance-staging-v2-512-ownership",
+	);
+});
