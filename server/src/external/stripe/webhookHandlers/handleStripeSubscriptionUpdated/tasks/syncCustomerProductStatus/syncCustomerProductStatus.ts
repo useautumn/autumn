@@ -22,10 +22,11 @@ import type {
 	SubscriptionPreviousAttributes,
 } from "../../stripeSubscriptionUpdatedContext";
 import { fixUnexpectedStatuses } from "./fixUnexpectedStatuses";
+import { getStripeOwnedFieldUpdates } from "./getStripeOwnedFieldUpdates";
 
-const isManualBillingUpdateInvoice = (
-	invoice: { metadata?: Record<string, string> | null },
-) =>
+const isManualBillingUpdateInvoice = (invoice: {
+	metadata?: Record<string, string> | null;
+}) =>
 	invoice.metadata?.autumn_billing_update &&
 	invoice.metadata?.autumn_invoice_mode !== "true";
 
@@ -147,17 +148,19 @@ export const syncCustomerProductStatus = async ({
 			updates.status = autumnStatus;
 		}
 
-		// Sync trial_ends_at (normalize null/undefined comparison)
-		const currentTrialEndsAt = customerProduct.trial_ends_at ?? null;
-		const newTrialEndsAt = trialEndsAt ?? null;
-		if (currentTrialEndsAt !== newTrialEndsAt) {
-			updates.trial_ends_at = newTrialEndsAt;
-		}
-
-		// Sync collection_method
-		if (customerProduct.collection_method !== collectionMethod) {
-			updates.collection_method = collectionMethod;
-		}
+		// Sync trial_ends_at / collection_method only when Stripe changed them
+		Object.assign(
+			updates,
+			getStripeOwnedFieldUpdates({
+				previousAttributes,
+				current: {
+					trial_ends_at: customerProduct.trial_ends_at,
+					collection_method: customerProduct.collection_method,
+				},
+				stripeTrialEndsAt: trialEndsAt,
+				stripeCollectionMethod: collectionMethod,
+			}),
+		);
 
 		// Skip if nothing to update
 		if (Object.keys(updates).length === 0) continue;
@@ -204,5 +207,6 @@ export const syncCustomerProductStatus = async ({
 		autumnStatus,
 		trialEndsAt,
 		collectionMethod,
+		previousAttributes,
 	});
 };
