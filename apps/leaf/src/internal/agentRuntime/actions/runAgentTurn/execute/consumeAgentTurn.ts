@@ -1,5 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { AppEnv } from "@autumn/shared";
+import { type AppEnv, ms } from "@autumn/shared";
 import { AGENT_UNREACHABLE_MESSAGE } from "../../../../../ui/messages.js";
 import type { ActiveRun } from "../../../../runs/runRegistry.js";
 import {
@@ -31,6 +31,35 @@ import { createTurnActivity, type TurnActivity } from "./turnActivity.js";
 import { watchSubagentProgress } from "./watchSubagentProgress.js";
 
 const PERSIST_CURSOR_EVERY_EVENTS = 10;
+
+/** A post that hangs must not pin the reader to the stream. Proceeding after
+ * this is no worse than never having waited. */
+const FOLLOW_UP_POST_SETTLE_MS = ms.seconds(5);
+
+/** Waits out follow-up posts that are still in flight, so the claim that
+ * follows counts what eve accepted rather than what was optimistically
+ * reserved. Without it a post that fails after its reservation leaves this
+ * reader waiting for a turn eve never received, while the coordinator falls
+ * back to a new run — two readers on one session, which is the failure this
+ * whole handoff exists to prevent. */
+const settleFollowUpPosts = async (run?: ActiveRun) => {
+	const deadline = Date.now() + FOLLOW_UP_POST_SETTLE_MS;
+	let inFlight = run?.followUpPostsInFlight();
+	while (inFlight) {
+		const remaining = deadline - Date.now();
+		if (remaining <= 0) return;
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		await Promise.race([
+			inFlight,
+			new Promise<void>((resolve) => {
+				timer = setTimeout(resolve, remaining);
+			}),
+		]);
+		if (timer) clearTimeout(timer);
+		// A post can start while we wait for an earlier one.
+		inFlight = run?.followUpPostsInFlight();
+	}
+};
 
 type EveTurnContext = Omit<EveEventContext, "event"> & { auth: EveAuthContext };
 
@@ -106,6 +135,7 @@ const streamPassEvents = async ({
 				// stream, and this reader is the only one attached to it. Hand
 				// this turn's outcome on now so nothing is lost, then read the
 				// replacement instead of leaving it to run unwatched.
+				await settleFollowUpPosts(run);
 				if (run?.claimFollowUpsOrSettle()) {
 					await emitSettledTurn(result.outcome);
 					progress = createEveTurnProgress();

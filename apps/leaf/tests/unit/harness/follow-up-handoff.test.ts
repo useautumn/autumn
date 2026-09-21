@@ -113,6 +113,24 @@ const replacementTurn = [
 
 let posted: string[] = [];
 
+/** A post that rejects only after the reader has reached its boundary: the
+ * reservation is already counted, but eve never took the message. */
+const failingRun = (key: string) => {
+	const run = registerRun({
+		key,
+		kind: "message",
+		ownerProviderUserId: "U1",
+		sendUserMessage: async () => {
+			await Bun.sleep(5);
+			throw new Error(
+				"Unable to connect. Is the computer able to access the url?",
+			);
+		},
+	});
+	run.resolveSessionId("eve_session_1");
+	return run;
+};
+
 const activeRun = (key: string) => {
 	const run = registerRun({
 		key,
@@ -217,6 +235,36 @@ describe("a follow-up eve already accepted", () => {
 			text: "OK, now acting as resend in live.",
 		});
 		expect(run.settling).toBe(true);
+		closeRun({ key: run.key, run });
+	});
+
+	test("is not claimed when its post never reached eve", async () => {
+		const run = failingRun("handoff-5");
+		// Both turns are on the stream, so a wrong claim is visible: the reader
+		// would read past its own answer and return the second turn instead.
+		streamPasses = [{ events: [...firstTurn, ...replacementTurn] }];
+		const settled: unknown[] = [];
+		beforeEventAt = {
+			index: 2,
+			run: () => {
+				void run.injectFollowUp({ text: "find me 1 customer" }).catch(() => {});
+			},
+		};
+
+		const outcome = await consume({ run, settled });
+
+		// eve never accepted the message, so there is no replacement turn to
+		// wait for. The reader answers what it read and stops.
+		expect(settled).toEqual([]);
+		expect(outcome).toMatchObject({
+			kind: "answered",
+			text: "OK, now acting as resend in live.",
+		});
+		// The coordinator's fallback run is the one that will carry the message;
+		// this reader must be shut so the two cannot both drive the session.
+		expect(run.settling).toBe(true);
+		// A reservation released after a claim must not leave the count negative.
+		expect(run.pendingTurns).toBe(0);
 		closeRun({ key: run.key, run });
 	});
 
