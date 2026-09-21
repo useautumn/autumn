@@ -32,5 +32,15 @@ export const BALANCE_WORKER_CHECKPOINT_INTERVAL_MS = 60_000;
  *  12,000 (see the pool budget guards beside the server's Drizzle setup), so
  *  this stays far inside the fleet allowance. */
 export const BALANCE_WORKER_DATABASE_POOL_SIZE = 32;
+/** How many partitions a worker may bring up at once. Startup connects and fences
+ *  a transactional producer per partition, so an unbounded fan-out means one
+ *  init per owned partition all at the same instant. At 512 that saturates the
+ *  worker's own Kafka client: connections time out, startup outlives the window
+ *  in which the partition stays eligible, and it aborts as "not ready: draining"
+ *  and never restarts. Six workers only survived it by splitting the fan-out
+ *  about 85 ways, so this sits below that and holds however few workers own the
+ *  topic. It costs a slower start, roughly one wave per this many partitions. */
+export const BALANCE_WORKER_PARTITION_STARTUP_CONCURRENCY = 16;
+
 export const BALANCE_WORKER_CATALOG_TTL_MS = 300_000;
 export const BALANCE_WORKER_CATALOG_MAX_BYTES = 268_435_456;
