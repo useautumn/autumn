@@ -34,7 +34,8 @@ export const flushSql = ({
 	const applied =
 		appliedCounts.length === 0
 			? sql`'[]'::json`
-			: sql`json_build_array(${sql.join(appliedCounts, sql`, `)})`;
+			: // An array constructor, not json_build_array: a function call is capped at 100 arguments.
+				sql`to_json(ARRAY[${sql.join(appliedCounts, sql`, `)}])`;
 
 	return sql`
 		WITH ${sql.join([...updateCtes, bookmarkCte], sql`, `)}
