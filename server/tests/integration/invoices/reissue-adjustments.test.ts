@@ -14,6 +14,7 @@ import type {
 	ApiCustomerV5,
 	ApiListInvoiceV1,
 	AttachParamsV1Input,
+	CreateInvoicePreview,
 } from "@autumn/shared";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
@@ -24,9 +25,15 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos";
+import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/InvoiceTemplateService";
+import { generateId } from "@/utils/genUtils";
 
 type Scenario = Awaited<ReturnType<typeof initScenario>>;
-type ReissueResponse = { invoice: ApiListInvoiceV1; voided_invoice_id: string };
+type ReissueResponse = {
+	invoice: ApiListInvoiceV1;
+	voided_invoice_id: string;
+	preview: CreateInvoicePreview;
+};
 
 const attachInvoiceMode = ({
 	autumnV2_4,
@@ -114,6 +121,69 @@ test.concurrent(
 		expect(replacement.custom_fields).toEqual([
 			{ name: "PO number", value: "PO-4417" },
 		]);
+
+		// The original now points at its replacement and cannot be reissued twice.
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "already reissued",
+			func: () =>
+				autumnV2_3.post("/invoices.reissue", { invoice_id: original.id }),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.reissue adjustments: a null footer clears the template's instead of inheriting it")}`,
+	async () => {
+		const customerId = "inv-reissue-adj-footer";
+		const pro = products.base({
+			id: "pro-reissue-adj-footer",
+			items: [items.monthlyPrice({ price: 20 })],
+		});
+		const { autumnV2_3, autumnV2_4 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		const templateId = generateId("inv_tmpl");
+		await InvoiceTemplateService.create({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			internalId: generateId("inv_tmpl_int"),
+			id: templateId,
+			values: {
+				name: "Bank transfer",
+				footer: "IBAN TEST0000",
+				memo: "Pay up",
+			},
+		});
+
+		await attachInvoiceMode({ autumnV2_4, customerId, planId: pro.id });
+		const original = await firstInvoice({ autumnV2_3, customerId });
+
+		const { invoice: withFooter } = (await autumnV2_3.post(
+			"/invoices.reissue",
+			{ invoice_id: original.id, invoice_template_id: templateId },
+		)) as ReissueResponse;
+		expect(
+			(await ctx.stripeCli.invoices.retrieve(withFooter.stripe_id)).footer,
+		).toBe("IBAN TEST0000");
+
+		const { invoice: cleared } = (await autumnV2_3.post("/invoices.reissue", {
+			invoice_id: withFooter.id,
+			invoice_template_id: templateId,
+			invoice: { footer: null, memo: null },
+		})) as ReissueResponse;
+
+		const replacement = await ctx.stripeCli.invoices.retrieve(
+			cleared.stripe_id,
+		);
+		expect(replacement.footer).toBeNull();
+		expect(replacement.description).toBeNull();
 	},
 );
 
@@ -139,7 +209,7 @@ test.concurrent(
 		const baseLine = original.items?.[0];
 		if (!baseLine) throw new Error("original invoice has no line items");
 
-		const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
+		const { invoice, preview } = (await autumnV2_3.post("/invoices.reissue", {
 			invoice_id: original.id,
 			lines: {
 				update: [{ id: baseLine.id, amount: 15 }],
@@ -148,6 +218,11 @@ test.concurrent(
 		})) as ReissueResponse;
 
 		expect(invoice.total).toBe(115);
+		// The returned preview describes what was issued, not the original's $20.
+		expect(preview.total).toBe(115);
+		expect(
+			preview.lines.map((line) => line.amount).sort((a, b) => a - b),
+		).toEqual([15, 100]);
 
 		const replacement = await ctx.stripeCli.invoices.retrieve(
 			invoice.stripe_id,
@@ -238,5 +313,54 @@ test.concurrent(
 		);
 		expect(replacement.customer_address?.country).toBe("FR");
 		expect(replacement.customer_tax_ids?.[0]?.value).toBe("FR12345678901");
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.reissue adjustments: an added catalog plan is priced and attributed like invoices.create")}`,
+	async () => {
+		const customerId = "inv-reissue-adj-catalog";
+		const pro = products.base({
+			id: "pro-reissue-adj-catalog",
+			items: [items.monthlyPrice({ price: 20 })],
+		});
+		const addOn = products.base({
+			id: "addon-reissue-adj-catalog",
+			items: [items.monthlyPrice({ price: 40 })],
+		});
+		const { autumnV2_3, autumnV2_4 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [pro, addOn] }),
+			],
+			actions: [],
+		});
+
+		const coupon = await ctx.stripeCli.coupons.create({
+			percent_off: 50,
+			duration: "once",
+		});
+
+		await attachInvoiceMode({ autumnV2_4, customerId, planId: pro.id });
+		const original = await firstInvoice({ autumnV2_3, customerId });
+
+		const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
+			invoice_id: original.id,
+			lines: {
+				add: [{ plan_id: addOn.id, discounts: [{ reward_id: coupon.id }] }],
+			},
+		})) as ReissueResponse;
+
+		// $20 base plus the add-on at half of $40.
+		expect(invoice.total).toBe(40);
+
+		const storedRows = await invoiceLineItemRepo.getByInvoiceIds({
+			db: ctx.db,
+			invoiceIds: [invoice.id],
+		});
+		const addOnRow = storedRows.find((row) => row.product_id === addOn.id);
+		expect(addOnRow).toBeDefined();
+		expect(addOnRow?.amount).toBe(40);
 	},
 );

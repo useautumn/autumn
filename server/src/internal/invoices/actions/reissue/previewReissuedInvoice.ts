@@ -28,9 +28,9 @@ const lineAmountAfterDiscounts = ({
 	});
 
 /**
- * What the replacement invoice will look like, computed from the original's
- * lines without creating anything. A reissue reproduces the original, so its
- * tax and totals carry over unchanged.
+ * What a reissued invoice looks like, read off a Stripe invoice and its lines.
+ * Called with the original before anything is created, and with the finalized
+ * replacement afterwards so the response describes what was actually issued.
  */
 export const previewReissuedInvoice = ({
 	stripeInvoice,
@@ -38,6 +38,7 @@ export const previewReissuedInvoice = ({
 	storedLines,
 	credits,
 	dueDateMs,
+	settled = false,
 }: {
 	stripeInvoice: Stripe.Invoice;
 	lines: ExpandedStripeInvoiceLineItem[];
@@ -45,6 +46,8 @@ export const previewReissuedInvoice = ({
 	storedLines: DbInvoiceLineItem[];
 	credits?: PreviewInvoiceCredits;
 	dueDateMs: number | null;
+	/** The invoice is finalized, so its own balance figures are the truth. */
+	settled?: boolean;
 }): CreateInvoicePreview => {
 	const currency = stripeInvoice.currency;
 	const storedByStripeId = new Map(
@@ -55,7 +58,11 @@ export const previewReissuedInvoice = ({
 
 	const previewLines: CreateInvoicePreviewLine[] = lines.map((line) => {
 		const amount = lineAmountAfterDiscounts({ line, currency });
-		const stored = storedByStripeId.get(line.id);
+		// A replacement line carries the id of the original line it came from.
+		const sourceLineId =
+			(line.metadata?.autumn_reissued_from_line as string | undefined) ??
+			line.id;
+		const stored = storedByStripeId.get(sourceLineId);
 		return {
 			plan_id: stored?.product_id ?? line.metadata?.autumn_product_id ?? null,
 			feature_id: stored?.feature_id ?? null,
@@ -78,10 +85,24 @@ export const previewReissuedInvoice = ({
 		(sum, tax) => sum + tax.amount,
 		0,
 	);
-	const { credits: appliedCredits, amountDue } = applyInvoiceCredits({
-		total,
-		credits,
-	});
+	// Stripe records the credit it consumed as a negative starting_balance.
+	const { credits: appliedCredits, amountDue } = settled
+		? {
+				credits: credits
+					? {
+							...credits,
+							applied: stripeToAtmnAmount({
+								amount: Math.max(-(stripeInvoice.starting_balance ?? 0), 0),
+								currency,
+							}),
+						}
+					: undefined,
+				amountDue: stripeToAtmnAmount({
+					amount: stripeInvoice.amount_due,
+					currency,
+				}),
+			}
+		: applyInvoiceCredits({ total, credits });
 
 	return {
 		currency,

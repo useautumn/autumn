@@ -121,10 +121,11 @@ export function ReissueInvoiceSheet() {
 		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 	});
 	const isPaid = invoice.status === InvoiceStatus.Paid;
-	const taxTotal = taxedAmount != null ? taxedAmount - invoice.total : 0;
-	const isTaxed = taxTotal > 0;
+	// taxedAmount is the tax itself, and the detail sheet only receives one for
+	// orgs on Stripe automatic tax.
+	const isTaxed = (taxedAmount ?? 0) > 0;
 	const formattedTax = formatAmount({
-		amount: taxTotal,
+		amount: taxedAmount ?? 0,
 		currency: invoice.currency,
 		minFractionDigits: 2,
 		amountFormatOptions: { currencyDisplay: "narrowSymbol" },

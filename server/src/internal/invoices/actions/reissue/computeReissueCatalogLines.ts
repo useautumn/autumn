@@ -1,40 +1,14 @@
-import type {
-	CreateInvoiceParams,
-	InvoicePlanParams,
-	LineItem,
-} from "@autumn/shared";
-import { atmnToStripeAmount } from "@autumn/shared";
+import type { CreateInvoiceParams, InvoicePlanParams } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeInvoiceLines } from "../create/compute/computeInvoiceLines";
+import { evaluateStripeInvoicePlan } from "../create/evaluate/evaluateStripeInvoicePlan";
 import { setupCreateInvoiceContext } from "../create/setup/setupCreateInvoiceContext";
 
-const lineItemToStripeLine = ({
-	lineItem,
-	currency,
-}: {
-	lineItem: LineItem;
-	currency: string;
-}): Stripe.InvoiceAddLinesParams.Line => ({
-	description: lineItem.description,
-	amount: atmnToStripeAmount({
-		amount: lineItem.amountAfterDiscounts ?? lineItem.amount,
-		currency,
-	}),
-	discountable: false,
-	...(lineItem.context.effectivePeriod
-		? {
-				period: {
-					start: Math.floor(lineItem.context.effectivePeriod.start / 1000),
-					end: Math.floor(lineItem.context.effectivePeriod.end / 1000),
-				},
-			}
-		: {}),
-});
-
 /**
- * Prices catalog plans added to a reissue exactly as invoices.create would,
- * so the same plan costs the same whichever endpoint bills it.
+ * Prices catalog plans added to a reissue exactly as invoices.create would, so
+ * the same plan costs the same whichever endpoint bills it and its lines carry
+ * the metadata that ties them back to the Autumn product and price.
  */
 export const computeReissueCatalogLines = async ({
 	ctx,
@@ -60,7 +34,9 @@ export const computeReissueCatalogLines = async ({
 		params,
 		preview: true,
 	});
-	return computeInvoiceLines({ ctx, invoiceContext }).map(({ lineItem }) =>
-		lineItemToStripeLine({ lineItem, currency }),
-	);
+	return evaluateStripeInvoicePlan({
+		invoiceContext,
+		lines: computeInvoiceLines({ ctx, invoiceContext }),
+		dueDateMs: null,
+	}).lines;
 };
