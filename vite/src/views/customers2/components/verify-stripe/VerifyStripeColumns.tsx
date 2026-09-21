@@ -13,6 +13,7 @@ const ISSUE_LABELS: Record<SubscriptionMismatch["type"], string> = {
 	cancel_state_mismatch: "Cancellation",
 	reward_mismatch: "Coupons",
 	stripe_sub_not_in_autumn: "Unlinked",
+	plan_on_ending_subscription: "Plan on ending sub",
 	stale_subscription_link: "Stale link",
 	expected_state_error: "Unknown state",
 	shared_stripe_customer: "Shared customer",
