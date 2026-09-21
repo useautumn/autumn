@@ -83,8 +83,10 @@ export function RefundInvoiceDialog({
 				toast.error("Please enter a valid refund amount");
 				return;
 			}
-			if (parsed > refundableAmount) {
-				toast.error("Refund amount cannot exceed the amount paid");
+			if (parsed > remainingRefundable) {
+				toast.error(
+					"Refund amount cannot exceed the remaining refundable amount",
+				);
 				return;
 			}
 		}
@@ -139,7 +141,7 @@ export function RefundInvoiceDialog({
 								type="number"
 								min="0.01"
 								step="0.01"
-								max={refundableAmount}
+								max={remainingRefundable}
 								placeholder="0.00"
 								value={amount}
 								onChange={(e) => setAmount(e.target.value)}
