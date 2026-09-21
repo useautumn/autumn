@@ -1,6 +1,7 @@
 import {
 	CUSTOMER_EXPORT_FIELD_ORDER,
 	CustomerExportFieldsSchema,
+	CustomerExportKind,
 	type CustomerExportResponse,
 	isCustomerExportActive,
 } from "@autumn/shared";
@@ -32,6 +33,7 @@ const CustomerExportFormSchema = z.object({
 });
 
 export type CustomerExportSheetProps = {
+	kind: CustomerExportKind;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 };
@@ -64,6 +66,7 @@ function getSubmitBlockedReason({
 }
 
 export function useCustomerExportSheet({
+	kind,
 	open,
 	onOpenChange,
 }: CustomerExportSheetProps) {
@@ -88,11 +91,15 @@ export function useCustomerExportSheet({
 			const restrictToFilters = hasFilters && value.restrictToCurrentFilters;
 
 			try {
-				await createExport.mutateAsync({
-					fields: value.fields,
+				const scope = {
 					search: restrictToFilters ? trimmedSearch : "",
 					filters: restrictToFilters ? filters : {},
-				});
+				};
+				await createExport.mutateAsync(
+					kind === CustomerExportKind.Customers
+						? { kind, fields: value.fields, ...scope }
+						: { kind, ...scope },
+				);
 				toast.success("Export started");
 			} catch (error) {
 				invalidateExports();
@@ -110,6 +117,7 @@ export function useCustomerExportSheet({
 	const offset = (page - 1) * CUSTOMER_EXPORTS_PAGE_SIZE;
 
 	const exportsQuery = useCustomerExportsQuery({
+		kind,
 		enabled: open,
 		limit: CUSTOMER_EXPORTS_PAGE_SIZE,
 		offset,
@@ -120,6 +128,7 @@ export function useCustomerExportSheet({
 	// Newest first, so a running export is always on page 1 — keep that page
 	// queried so footer progress survives paging away from it.
 	const firstPageQuery = useCustomerExportsQuery({
+		kind,
 		enabled: open && page > 1,
 		limit: CUSTOMER_EXPORTS_PAGE_SIZE,
 		offset: 0,
