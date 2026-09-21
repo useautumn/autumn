@@ -90,14 +90,17 @@ export const handleMarketplaceInvoiceRefunded = async ({
 			refundTotal = parsed;
 		}
 	} catch (error) {
+		// Rethrow so the router answers non-2xx and Vercel redelivers; acking
+		// here would silently drop the only confirmation that money moved.
 		logCaughtError({
 			logger,
 			message:
-				"[vercel/marketplace.invoice.refunded] failed to fetch invoice from Vercel",
+				"[vercel/marketplace.invoice.refunded] failed to fetch invoice from Vercel; not acking so Vercel retries",
 			error,
 			data: { vercelInvoiceId, externalInvoiceId, installationId },
 			level: "warn",
 		});
+		throw error;
 	}
 
 	if (refundTotal !== undefined) {

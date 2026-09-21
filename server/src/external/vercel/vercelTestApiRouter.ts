@@ -118,6 +118,10 @@ vercelTestApiRouter.get(
 			body: null,
 			receivedAt: Date.now(),
 		});
+		// `vi_flaky_*` simulates a transient Vercel outage on Get Invoice.
+		if (invoiceId.startsWith("vi_flaky_")) {
+			return c.json({ error: { code: "internal", message: "flaky" } }, 503);
+		}
 		const refundTotal = await resolveRedisV2().get(
 			`${VERCEL_TEST_REFUND_TOTAL_PREFIX}${invoiceId}`,
 		);

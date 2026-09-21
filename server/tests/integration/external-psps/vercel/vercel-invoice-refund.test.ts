@@ -512,3 +512,26 @@ test(`${chalk.yellowBright(
 	).rejects.toThrow();
 	expect(await getRefundedAmount(stripeInvoiceId)).toBe(0);
 }, 60000);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEST 4d: transient Vercel failure on Get Invoice is NOT acked, so Vercel retries
+// ─────────────────────────────────────────────────────────────────────────────
+
+test(`${chalk.yellowBright(
+	"vercel-invoice-refund: refunded webhook returns 500 when Vercel Get Invoice fails, leaving refunded_amount untouched",
+)}`, async () => {
+	const { installationId, stripeInvoiceId } = await setupPaidVercelInvoice({
+		suffix: "flaky-hook",
+	});
+
+	const { response } = await webhookClient().invoiceRefunded(
+		refundedPayload({
+			installationId,
+			stripeInvoiceId,
+			vercelInvoiceId: "vi_flaky_1",
+			amount: "20.00",
+		}),
+	);
+	expect(response.status).toBe(500);
+	expect(await getRefundedAmount(stripeInvoiceId)).toBe(0);
+}, 60000);
