@@ -10,22 +10,31 @@ export const useSplitVariantStripeProduct = () => {
 	const buildKey = useQueryKeyFactory();
 
 	return useMutation({
-		mutationFn: async (variantPlanId: string) => {
-			const { data } = await axiosInstance.post(
-				"/v1/plans.split_variant_stripe_product",
-				{ variant_plan_id: variantPlanId },
-			);
-			return data;
+		// The route holds an org-wide lock, so variants must split one at a time.
+		mutationFn: async (variantPlanIds: string[]) => {
+			for (const variantPlanId of variantPlanIds) {
+				await axiosInstance.post("/v1/plans.split_variant_stripe_product", {
+					variant_plan_id: variantPlanId,
+				});
+			}
+			return variantPlanIds.length;
 		},
-		onSuccess: async () => {
+		onSuccess: async (count) => {
 			await Promise.all([
 				queryClient.invalidateQueries({
 					queryKey: buildKey(["catalog-mappings"]),
 				}),
 				queryClient.invalidateQueries({ queryKey: ["products"] }),
 				queryClient.invalidateQueries({ queryKey: ["product"] }),
+				queryClient.invalidateQueries({
+					queryKey: ["stripe-products-resolve"],
+				}),
 			]);
-			toast.success("Created a separate Stripe product");
+			toast.success(
+				count === 1
+					? "Created a separate Stripe product"
+					: `Created ${count} separate Stripe products`,
+			);
 		},
 		onError: (error) => {
 			toast.error(getBackendErr(error, "Failed to create Stripe product"));

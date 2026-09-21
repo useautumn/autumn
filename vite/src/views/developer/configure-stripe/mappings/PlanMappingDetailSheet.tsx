@@ -54,7 +54,7 @@ const VariantList = ({
 						<Button
 							className="ml-auto h-auto shrink-0 px-0 text-xs"
 							disabled={splitVariant.isPending}
-							onClick={() => splitVariant.mutate(variant.id)}
+							onClick={() => splitVariant.mutate([variant.id])}
 							variant="muted"
 						>
 							Create separate Stripe product
@@ -70,11 +70,9 @@ const VariantList = ({
 				<Button
 					className="h-auto self-start px-0 text-xs"
 					disabled={splitVariant.isPending}
-					onClick={() => {
-						for (const variant of sharedVariants) {
-							splitVariant.mutate(variant.id);
-						}
-					}}
+					onClick={() =>
+						splitVariant.mutate(sharedVariants.map((variant) => variant.id))
+					}
 					variant="muted"
 				>
 					Split all variants
