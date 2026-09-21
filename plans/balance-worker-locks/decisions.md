@@ -128,3 +128,59 @@ runLockSweepLoop            while (!signal.aborted): gate -> one batch -> wait
 Index risk to benchmark on staging before shipping: every lock adds an `expires_at` index entry and finalize removes it, so dead entries collect at the old end, where the sweep reads. The grace period and an aggressive autovacuum setting on this small table are the mitigation. EXPLAIN it, do not assume.
 
 Noted, not chosen: the same sweep could replace EventBridge outright. EventBridge is accurate to about a minute and costs a create and a delete call per lock.
+
+## 5. The refund rules to port
+
+**Settled: finalize produces deltas, exactly like a track does. Nothing downstream changes.**
+
+The engine's unit is already `deltas -> row changes` (`deltasToRowChanges`, `packages/balance-engine/src/deduction/utils/convertDeductionUtils.ts:135`). A track gets its deltas from `deduct`. A finalize gets them from two places and concatenates:
+
+```
+finalize(lock, finalValue f)                 L = sum of the lock's value deltas
+
+ 1 split      { unwindValue, additionalValue } = splitFinalize(L, f)
+ 2 unwind     walk the lock's deltas BACKWARDS, emit the inverse of each
+              until unwindValue is used up. A delta whose row is gone is skipped.
+ 3 forward    deduct( additionalValue - lockSign * skipped )
+              run with the unwind deltas already in its state, so it sees
+              post-unwind balances. The LOCK's overage behaviour applies.
+ 4 changes    deltasToRowChanges( unwind deltas + forward deltas )
+              + delete the lock row
+```
+
+Step 1 is an existing pure function to port (`server/src/internal/balances/utils/lock/unwindLockUtils.ts:8`):
+
+| case | unwindValue | additionalValue |
+|---|---|---|
+| `L == 0` | 0 | f |
+| `f == 0`, release or expiry | abs(L) | 0 |
+| signs differ | abs(L) | f |
+| abs(f) >= abs(L) | 0 | f - L |
+| abs(f) < abs(L) | abs(L) - abs(f) | 0 |
+
+`f == L` falls out as 0 and 0: no balance change and no event, only the lock row is deleted.
+
+Why inverse deltas and not a negative `deduct`: refunds through `deduct` skip rollovers and clamp at the included allowance (`deductFromBucket.ts:24`, `resolveRowBounds.ts:135`). The legacy unwind is deliberately unclamped. Increments are an exact inverse.
+
+Each legacy rule, and where it lands:
+
+| rule | how | cost |
+|---|---|---|
+| newest bucket first | iterate the lock's deltas in reverse | free |
+| partial unwind of one bucket | scale that delta by `units / abs(valueDelta)` | small |
+| entity balances | `entityKey` is already on every delta | free |
+| rollovers, with their `usage` | delta `table: rollovers` carries `usageDelta` | free |
+| credit systems, fixed rate | `creditCost` is on every delta | free |
+| bucket vanished after an upgrade | row not in state -> skip, fold into the forward amount | small |
+| confirm above the lock | the existing `deduct`, seeded with the unwind deltas | small |
+| the lock's overage behaviour governs | stored on the lock row, passed to `deduct` | free |
+| negative locks, sign flips | fall out of the split table | free |
+| no clamp at the allowance on refund | increments are unclamped | free |
+| allocated and boolean features rejected | guard in the lock decision | small |
+| usage windows shrink on refund | needs the windows the lock counted in | **later unit** |
+| graduated credits reprice the marginal tail | `unwindLockV2.lua:42`, its own algorithm | **last unit** |
+| overdue block on a confirm above the lock | `enforceOverdueBlock` on the forward deduct | later unit |
+
+Found while reading, bigger than locks: **the worker track path records no usage events.** `runBalanceWorkerTrack` and `handleTrack`'s worker branch never insert one. The lock tests assert events at lock time (value L) and at finalize (value `f - L`, the lock's properties unless overridden, nothing when `f == L`). Events need their own decision before those assertions can pass.
+
+Local testing: `bun dw` runs fakecloud, use it for the EventBridge schedule in the expiry unit.
