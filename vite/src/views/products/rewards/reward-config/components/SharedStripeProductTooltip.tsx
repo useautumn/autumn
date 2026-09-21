@@ -20,7 +20,7 @@ export function SharedStripeProductTooltip() {
 					applies to all of them.
 				</span>
 				<span>
-					To target one plan on its own,{" "}
+					To target a variant on its own,{" "}
 					<Link
 						className="underline"
 						to={getRedirectUrl("/dev?tab=stripe", env)}
@@ -28,7 +28,8 @@ export function SharedStripeProductTooltip() {
 					>
 						give it a separate Stripe product
 					</Link>
-					. It then appears as its own row here.
+					. That separates its fixed prices only — usage prices stay on the
+					feature's product, so plans charging the same feature remain grouped.
 				</span>
 			</TooltipContent>
 		</Tooltip>

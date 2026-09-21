@@ -267,7 +267,7 @@ describe("sharedProductHint", () => {
 		});
 
 		expect(sharedProductHint({ group })).toBe(
-			"Shares one Stripe product with Pro, Pro Yearly, so a coupon applies to all of them.",
+			"Shares Stripe products with Pro, Pro Yearly, so a coupon applies to all of them.",
 		);
 	});
 });
@@ -310,5 +310,35 @@ describe("after a split", () => {
 		expect(groupSuffix({ group: baseGroup })).toBe("+ 1 variant");
 		expect(groupLabel({ group: euGroup })).toBe("eu");
 		expect(groupSuffix({ group: euGroup })).toBeNull();
+	});
+});
+
+describe("groups chained across several Stripe products", () => {
+	test("a plan's fixed price links a variant while its usage price links an unrelated plan", () => {
+		const groups = buildStripeProductGroups({
+			products: [
+				{
+					id: "pro",
+					name: "pro",
+					stripe_id: "prod_pro",
+					base_id: null,
+					items: [
+						{ price_id: "pro_base", price: 20 },
+						{ price_id: "pro_usage", price: 5, feature_id: "messages" },
+					],
+				} as unknown as ProductV2,
+				plan({ id: "pro-yearly", stripeId: "prod_pro", baseId: "pro" }),
+				usagePlan({ id: "team", stripeId: "prod_team", featureId: "messages" }),
+			],
+		});
+
+		expect(groups).toHaveLength(1);
+		expect(groups[0].products.map((p) => p.id).sort()).toEqual([
+			"pro",
+			"pro-yearly",
+			"team",
+		]);
+		// Not a variant family: team is unrelated, so the suffix counts plans.
+		expect(groupSuffix({ group: groups[0] })).toBe("+ 2 plans");
 	});
 });
