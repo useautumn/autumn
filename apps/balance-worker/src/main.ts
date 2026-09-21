@@ -65,10 +65,19 @@ function exitAfterServiceStopped(): void {
 	void endProcess();
 }
 
+function causeToLine({ name, message }: { name: string; message: string }) {
+	return `${name}: ${message}`;
+}
+
 function reportError({ cause }: { cause: unknown }): void {
+	const causes = errorCauseChain({ error: cause });
+	// The chain rides in the message too: `data` is hidden from the local terminal, and the root cause is what matters.
+	const rootCauses = causes.map(causeToLine).join(" <- ");
 	getBalanceWorkerLogger().error(
-		{ error: cause, data: { causes: errorCauseChain({ error: cause }) } },
-		"Balance worker error",
+		{ error: cause, data: { causes } },
+		rootCauses
+			? `Balance worker error <- ${rootCauses}`
+			: "Balance worker error",
 	);
 }
 

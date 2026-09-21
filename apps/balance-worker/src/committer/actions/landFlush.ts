@@ -1,6 +1,7 @@
 import { LockAlreadyExistsError } from "@autumn/balance-engine";
 import { SubjectNotFoundError } from "../../processor/subject/subjectErrors.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
+import { FlushRecordRefusedError } from "../committerErrors.js";
 import type {
 	CommitterContext,
 	Flush,
@@ -30,26 +31,34 @@ const isTransientFailure = (cause: unknown): boolean => {
 const UNIQUE_VIOLATION = "23505";
 const FOREIGN_KEY_VIOLATION = "23503";
 
+/** SQLSTATE classes that retrying can never fix: a broken constraint (23) or a value Postgres cannot store (22). */
+const PERMANENT_SQLSTATE = /^(22|23)/;
+
 /**
- * Postgres refusing a lock row is the request's problem, not a broken record. The lock id is unique across the
- * org but a writer only knows its own customers' locks, and a customer can be deleted between the decision and the write.
+ * Why Postgres will never take this record, or null when the failure is not the record's own. A refused record is
+ * skipped and only its caller fails: replaying it would fail the same way forever and hold its whole partition.
  */
-const lockRefusalOf = ({
+const refusalOf = ({
 	record,
 	cause,
 }: {
 	record: DurableMutationRecord;
 	cause: unknown;
 }): Error | null => {
+	if (!(cause instanceof Error)) return null;
+	const { errno } = cause as Error & { errno?: unknown };
+	if (typeof errno !== "string" || !PERMANENT_SQLSTATE.test(errno)) return null;
+
+	// A lock id is unique across the org but a writer knows only its own customers' locks, and a customer can be
+	// deleted between the decision and the write: both are the request's problem, with an answer of their own.
 	const { command, identity } = record.mutation;
 	const lockId = command.type === "track" ? command.lock?.lockId : undefined;
-	if (!lockId || !(cause instanceof Error)) return null;
-	if (!cause.message.includes("balance_locks")) return null;
-	const { errno } = cause as Error & { errno?: unknown };
-	if (errno === UNIQUE_VIOLATION) return new LockAlreadyExistsError({ lockId });
-	if (errno === FOREIGN_KEY_VIOLATION)
+	const isLockRow = lockId && cause.message.includes("balance_locks");
+	if (isLockRow && errno === UNIQUE_VIOLATION)
+		return new LockAlreadyExistsError({ lockId });
+	if (isLockRow && errno === FOREIGN_KEY_VIOLATION)
 		return new SubjectNotFoundError({ identity });
-	return null;
+	return new FlushRecordRefusedError({ mutationId: record.mutation.id, cause });
 };
 
 /** The same record with nothing to write: lands only its bookmark, so the records behind it are not held up. */
@@ -110,7 +119,7 @@ type RefusedRecord =
 			failure: { record: DurableMutationRecord; cause: unknown };
 	  };
 
-/** A record that would not land alone: a lock conflict is skipped past with only its bookmark, anything else stops the call here. */
+/** A record that would not land alone: one Postgres will never take is skipped past with only its bookmark, anything else stops the call here. */
 const settleRefusedRecord = async ({
 	ctx,
 	call,
@@ -126,8 +135,11 @@ const settleRefusedRecord = async ({
 	retry: FlushRetryPolicy;
 	nextOffset: bigint;
 }): Promise<RefusedRecord> => {
-	const refusal = lockRefusalOf({ record, cause });
+	const refusal = refusalOf({ record, cause });
 	if (!refusal) return { nextOffset, failure: { record, cause } };
+	// A lock conflict is routine; anything else skipped is a bug upstream that lost a write, so it is loud.
+	if (refusal instanceof FlushRecordRefusedError)
+		ctx.logger?.warn(`[committer] ${refusal.message}`);
 	const skip = recordCall({
 		call,
 		record: withoutChanges({ record }),

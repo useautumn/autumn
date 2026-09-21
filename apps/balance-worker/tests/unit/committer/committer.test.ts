@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { LockAlreadyExistsError } from "@autumn/balance-engine";
 import type { SubjectRowChange } from "@autumn/postgres";
+import { FlushRecordRefusedError } from "../../../src/committer/committerErrors.js";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
 import {
@@ -172,6 +173,59 @@ describe("committer", () => {
 		expect(
 			fake.transactions.map((transaction) => transaction.partitions),
 		).toEqual([[0], [0], [0], [1]]);
+		await committer.drain();
+	});
+
+	test("a record Postgres will never take is skipped: it never holds its partition, and only its caller fails", async () => {
+		const isPoison = (updates: readonly SubjectRowChange[]) =>
+			updates.some(
+				(change) => change.op === "update" && change.id === "poison",
+			);
+		const fake = createGatedDb();
+		fake.openGate();
+		const landFlush = fake.db.flush;
+		fake.db.flush = async (request) => {
+			if (!isPoison(request.changes)) return landFlush(request);
+			throw Object.assign(
+				new Error(
+					'duplicate key value violates unique constraint "usage_windows_pkey"',
+				),
+				{ errno: "23505" },
+			);
+		};
+		const warnings: string[] = [];
+		const committer = createCommitter({
+			ctx: {
+				db: fake.db,
+				logger: { warn: (message) => warnings.push(message) },
+			},
+			config: { concurrency: 1, maxRowsPerFlush: 500, retry: noRetry },
+		});
+		const poison = record({ partition: 0, offset: 1n, commandId: "b" });
+		poison.mutation.changes = poison.mutation.changes.map((change) => ({
+			...change,
+			id: "poison",
+		}));
+
+		const outcome = await committer.apply({
+			topic,
+			partition: 0,
+			expectedOffset: 0n,
+			records: [
+				record({ partition: 0, offset: 0n, commandId: "a" }),
+				poison,
+				record({ partition: 0, offset: 2n, commandId: "c" }),
+			],
+		});
+
+		// The bookmark moves past the poison record, so a replay after a restart never meets it again.
+		expect(outcome.nextOffset).toBe(3n);
+		expect(outcome.failure).toBeUndefined();
+		expect(outcome.rejections?.map(({ record }) => record)).toEqual([poison]);
+		expect(outcome.rejections?.[0]?.cause).toBeInstanceOf(
+			FlushRecordRefusedError,
+		);
+		expect(warnings.some((message) => message.includes("skipped"))).toBe(true);
 		await committer.drain();
 	});
 

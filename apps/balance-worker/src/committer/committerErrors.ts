@@ -38,3 +38,17 @@ export class FlushRecordFailedError extends Error {
 		this.name = "FlushRecordFailedError";
 	}
 }
+
+/** Postgres will never take this record (a constraint or a value it cannot store): it is skipped, and only its caller fails. */
+export class FlushRecordRefusedError extends Error {
+	constructor({ mutationId, cause }: { mutationId: string; cause: unknown }) {
+		const reason = cause instanceof Error ? cause.message : String(cause);
+		super(
+			`Log record refused by Postgres and skipped: ${mutationId} (${reason})`,
+			{
+				cause,
+			},
+		);
+		this.name = "FlushRecordRefusedError";
+	}
+}
