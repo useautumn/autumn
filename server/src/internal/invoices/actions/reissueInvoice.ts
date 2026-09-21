@@ -777,7 +777,10 @@ export const reissueInvoice = async ({
 	const { finalized, creditNoteId } = await issueReplacement({
 		ctx,
 		creditOriginal,
-		customerAdjusted: Boolean(customerOverrides),
+		// Only a location or tax registration can move what Stripe charges.
+		customerAdjusted: Boolean(
+			customerOverrides?.address || customerOverrides?.tax_ids,
+		),
 		customerId: previewCustomerId,
 		stripeCli,
 		invoiceId,
