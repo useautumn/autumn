@@ -66,6 +66,10 @@ jobs:
       id-token: write
       contents: write
 
+    env:
+      # tsup's dts worker hits Node's default heap cap; runner has 16 GB
+      NODE_OPTIONS: --max-old-space-size=8192
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
