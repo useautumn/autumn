@@ -1,0 +1,224 @@
+.diagram {
+	container-type: inline-size;
+	width: 100%;
+	margin: 36px 0;
+	font-family: var(--font-geist-sans), sans-serif;
+	font-weight: 400;
+}
+
+.editor {
+	--unit: calc(100cqw / 688);
+	overflow: hidden;
+	border: 1px solid #292929;
+	border-radius: calc(6 * var(--unit));
+	background: #151515;
+	color: #d4d4d4;
+	font-size: calc(12 * var(--unit));
+	line-height: 1.6;
+}
+
+.fileHeader {
+	display: flex;
+	align-items: center;
+	gap: calc(8 * var(--unit));
+	padding: calc(12 * var(--unit)) calc(20 * var(--unit));
+	border-bottom: 1px solid #292929;
+	background: #191919;
+	color: #eeeeee;
+	font-weight: 500;
+}
+
+.fileHeader svg {
+	width: calc(14 * var(--unit));
+	height: calc(14 * var(--unit));
+	stroke: #888888;
+	stroke-width: 1.5;
+}
+
+.fileLabel {
+	margin-left: auto;
+	color: #888888;
+	font-size: calc(10 * var(--unit));
+	font-weight: 400;
+}
+
+.document {
+	padding: calc(23 * var(--unit)) calc(26 * var(--unit)) calc(26 * var(--unit));
+}
+
+.documentTitle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: calc(8 * var(--unit));
+	margin: 0 0 calc(23 * var(--unit)) calc(37 * var(--unit));
+	color: #eeeeee;
+	font-family: var(--font-geist-mono), monospace;
+	font-size: calc(19 * var(--unit));
+	font-weight: 550;
+}
+
+.markdown {
+	color: #7b688f;
+	font-weight: 450;
+}
+
+.environment {
+	color: #888888;
+	font-family: var(--font-geist-sans), sans-serif;
+	font-size: calc(10 * var(--unit));
+	font-weight: 400;
+}
+
+.diagram .steps {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.diagram .step {
+	position: relative;
+	display: grid;
+	grid-template-columns: calc(21 * var(--unit)) minmax(0, 1fr);
+	gap: calc(16 * var(--unit));
+	margin: 0;
+	padding: 0 0 calc(22 * var(--unit));
+	font-size: inherit;
+	line-height: inherit;
+}
+
+.step::before {
+	position: absolute;
+	top: calc(28 * var(--unit));
+	bottom: calc(7 * var(--unit));
+	left: calc(10 * var(--unit));
+	border-left: 1px solid #333333;
+	content: "";
+}
+
+.diagram .step:last-child {
+	padding-bottom: 0;
+}
+
+.step:last-child::before {
+	display: none;
+}
+
+.stepNumber {
+	display: grid;
+	place-items: center;
+	width: calc(21 * var(--unit));
+	height: calc(21 * var(--unit));
+	border: 1px solid #48404f;
+	border-radius: 50%;
+	color: #c4a5fa;
+	font-family: var(--font-geist-mono), monospace;
+	font-size: calc(10 * var(--unit));
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+}
+
+.stepContent {
+	min-width: 0;
+}
+
+.stepHeading {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: calc(4 * var(--unit)) calc(12 * var(--unit));
+	margin-bottom: calc(5 * var(--unit));
+}
+
+.stepTitle {
+	color: #e2e2e2;
+	font-family: var(--font-geist-mono), monospace;
+	font-size: calc(14 * var(--unit));
+	font-weight: 550;
+	text-wrap: balance;
+}
+
+.condition {
+	color: #888888;
+	font-size: calc(10 * var(--unit));
+}
+
+.detail {
+	color: #aaaaaa;
+	font-family: var(--font-geist-mono), monospace;
+	font-size: calc(12 * var(--unit));
+	font-weight: 450;
+	text-wrap: pretty;
+}
+
+.skillCall {
+	width: fit-content;
+	margin: calc(6 * var(--unit)) 0;
+	padding: calc(3 * var(--unit)) calc(8 * var(--unit));
+	border: 1px solid #9564ff24;
+	border-radius: calc(3 * var(--unit));
+	background: #9564ff0c;
+	color: #aaa2b5;
+	font-family: var(--font-geist-mono), monospace;
+	font-size: calc(11.5 * var(--unit));
+	font-weight: 450;
+}
+
+.syntax {
+	color: #c4a5fa;
+}
+
+.skillName {
+	color: #d9d0e6;
+}
+
+.reference {
+	display: flex;
+	gap: calc(6 * var(--unit));
+	margin-top: calc(5 * var(--unit));
+	color: #a797bc;
+	font-family: var(--font-geist-mono), monospace;
+	font-size: calc(10.5 * var(--unit));
+	font-weight: 450;
+}
+
+@container (max-width: 520px) {
+	.editor {
+		--unit: 1px;
+	}
+
+	.fileHeader {
+		padding: 12px 16px;
+	}
+
+	.document {
+		padding: 20px 16px 22px;
+	}
+
+	.documentTitle {
+		margin-left: 31px;
+		font-size: 18px;
+	}
+
+	.diagram .step {
+		gap: 10px;
+		padding-bottom: 22px;
+	}
+
+	.stepHeading {
+		gap: 2px 10px;
+	}
+
+	.stepTitle {
+		font-size: 12px;
+	}
+
+	.detail {
+		font-size: 12px;
+	}
+
+	.skillCall {
+		font-size: 11px;
+	}
+}

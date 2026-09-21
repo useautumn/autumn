@@ -11,6 +11,7 @@ export type BlogPostSummary = {
 	date: string | null;
 	author: string;
 	image: string | null;
+	imageScale: number;
 };
 
 export type BlogPost = BlogPostSummary & {
@@ -37,6 +38,7 @@ export function getAllPosts(): BlogPostSummary[] {
 			date: data.date || null,
 			author: data.author || "Autumn Team",
 			image: data.image || null,
+			imageScale: data.imageScale ?? 1,
 		};
 	});
 
@@ -67,6 +69,7 @@ export function getPostBySlug({ slug }: { slug: string }): BlogPost | null {
 				date: data.date || null,
 				author: data.author || "Autumn Team",
 				image: data.image || null,
+				imageScale: data.imageScale ?? 1,
 				heroComponent: data.heroComponent || null,
 				source: content,
 			};

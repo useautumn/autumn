@@ -1,0 +1,173 @@
+.terminal {
+	container-type: inline-size;
+	margin: 32px 0;
+	overflow: hidden;
+	border: 1px solid #292929;
+	border-radius: 8px;
+	background: #151515;
+	color: #e7e3ed;
+	font-family: var(--font-geist-mono), monospace;
+	font-weight: 400;
+}
+
+.titlebar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 11px 16px;
+	border-bottom: 1px solid #292929;
+	background: #191919;
+	font-size: 11px;
+	line-height: 20px;
+}
+
+.title {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	color: #d9d1e2;
+}
+
+.prompt {
+	color: #c4aff0;
+}
+
+.filename {
+	color: #938b9d;
+}
+
+.viewport {
+	min-width: 0;
+}
+
+.terminal .output {
+	width: 100%;
+	margin: 0;
+	padding: 18px 16px 20px;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	color: inherit;
+	font-family: inherit;
+	font-size: 11px;
+	font-weight: 400;
+	line-height: 1.64;
+	letter-spacing: -0.02em;
+	font-variant-ligatures: none;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.block {
+	display: block;
+}
+
+.line {
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	min-height: 1.64em;
+}
+
+.gutter {
+	position: relative;
+	white-space: pre;
+}
+
+.line:not([data-kind="header"]) > .gutter {
+	color: transparent;
+}
+
+.line:not([data-kind="header"]) > .gutter::before,
+.line[data-kind="speech"] > .gutter::after {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0.4ch;
+	border-left: 1px solid #938d9c;
+	content: "";
+}
+
+.line[data-kind="speech"] > .gutter::after {
+	left: 3.4ch;
+	border-color: #56525c;
+}
+
+.content {
+	min-width: 0;
+}
+
+.checklist {
+	display: grid;
+	grid-template-columns: 5ch minmax(0, 1fr);
+	gap: 1ch;
+	padding-left: 4ch;
+}
+
+.plain {
+	color: inherit;
+}
+
+.cyan {
+	color: #a6c7cc;
+}
+
+.green {
+	color: #b0d7b6;
+}
+
+.dim {
+	color: #938d9c;
+}
+
+.blue {
+	color: #c4aff0;
+}
+
+.white {
+	color: #eeeaf1;
+}
+
+.bold {
+	font-weight: 600;
+}
+
+@media (max-width: 480px) {
+	.terminal .output {
+		padding: 16px 12px 18px;
+		font-size: 11px;
+		line-height: 1.6;
+	}
+
+	.titlebar {
+		gap: 12px;
+		padding: 10px 12px;
+		font-size: 11px;
+	}
+
+	.title {
+		gap: 6px;
+		flex-shrink: 0;
+	}
+
+	.filename {
+		min-width: 0;
+		overflow-wrap: anywhere;
+		text-align: right;
+	}
+
+	.line {
+		min-height: 1.6em;
+	}
+
+	.checklist {
+		padding-left: 0;
+	}
+}
+
+@media print {
+	.terminal [data-turn-at] {
+		/* biome-ignore lint/complexity/noImportantStyles: Print must override the Web Animations cascade. */
+		opacity: 1 !important;
+	}
+}

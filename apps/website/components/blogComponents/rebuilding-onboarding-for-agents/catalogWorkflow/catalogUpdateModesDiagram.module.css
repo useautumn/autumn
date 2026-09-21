@@ -1,0 +1,194 @@
+.modesLayout {
+	--workflow-unit: min(1px, calc(100cqw / 686));
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	overflow: hidden;
+	border: 1px solid var(--workflow-border);
+	border-radius: calc(4 * var(--workflow-unit));
+	font-size: calc(11 * var(--workflow-unit));
+	line-height: calc(18 * var(--workflow-unit));
+	font-variant-numeric: tabular-nums;
+}
+
+.patchPanel,
+.putPanel {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.putPanel {
+	border-left: 1px solid var(--workflow-border);
+}
+
+.modesDiagram .modeHeading {
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+	height: calc(44 * var(--workflow-unit));
+	margin: 0;
+	padding: 0 calc(14 * var(--workflow-unit));
+	border-bottom: 1px solid var(--workflow-border);
+	background: var(--workflow-surface);
+	font-size: calc(11 * var(--workflow-unit));
+	font-weight: 500;
+	line-height: 1;
+	text-wrap: balance;
+}
+
+.methodLabel {
+	padding: calc(4 * var(--workflow-unit)) calc(6 * var(--workflow-unit));
+	border: 1px solid #9564ff33;
+	border-radius: calc(3 * var(--workflow-unit));
+	background: #9564ff14;
+	color: var(--workflow-accent);
+	font-family: var(--font-geist-mono), monospace;
+}
+
+.patchFlow {
+	position: relative;
+	display: grid;
+	flex: 1;
+	grid-template-columns: 143fr 28fr 143fr;
+	grid-template-rows: calc(116 * var(--workflow-unit)) 1fr calc(
+			116 *
+			var(--workflow-unit)
+		);
+	min-height: calc(298 * var(--workflow-unit));
+	margin: calc(14 * var(--workflow-unit));
+}
+
+.flowCard {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	padding: calc(10 * var(--workflow-unit));
+	border: 1px solid var(--workflow-border);
+	border-radius: calc(4 * var(--workflow-unit));
+	background: var(--workflow-surface);
+	font-size: calc(12 * var(--workflow-unit));
+	white-space: nowrap;
+}
+
+.modesDiagram .flowCard h5 {
+	margin: 0 0 calc(12 * var(--workflow-unit));
+	padding: 0;
+	color: #eeeeee;
+	font-size: calc(13 * var(--workflow-unit));
+	font-weight: 500;
+	line-height: calc(18 * var(--workflow-unit));
+	text-wrap: balance;
+}
+
+.editCard {
+	grid-column: 1;
+	grid-row: 1;
+}
+
+.decideCard {
+	grid-column: 3;
+	grid-row: 1;
+}
+
+.applyCard {
+	grid-column: 3;
+	grid-row: 3;
+}
+
+.pullCard {
+	grid-column: 1;
+	grid-row: 3;
+}
+
+.flowDetail {
+	margin-top: calc(6 * var(--workflow-unit));
+	color: #888888;
+	font-size: calc(11 * var(--workflow-unit));
+}
+
+.versionTags {
+	display: flex;
+	gap: calc(5 * var(--workflow-unit));
+	color: var(--workflow-accent);
+	font-family: var(--font-geist-mono), monospace;
+}
+
+.versionTags > span {
+	padding: 0 calc(5 * var(--workflow-unit));
+	border: 1px solid #9564ff33;
+	border-radius: calc(3 * var(--workflow-unit));
+	background: #9564ff14;
+}
+
+.loopArrows {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	stroke: #777777;
+	stroke-width: 1;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.returnArrow {
+	stroke-dasharray: 3 4;
+}
+
+.configPane {
+	flex: 1;
+	min-width: 0;
+	background: #0f0f0f;
+}
+
+.versionDiffs {
+	display: grid;
+	gap: calc(8 * var(--workflow-unit));
+	padding-block: calc(12 * var(--workflow-unit));
+}
+
+.modesDiagram .versionDiff {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	color: #cccccc;
+	font-size: calc(12 * var(--workflow-unit));
+	line-height: calc(17 * var(--workflow-unit));
+	white-space: pre;
+}
+
+.versionDiff code {
+	display: block;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	font: inherit;
+	font-family: var(--font-geist-mono), monospace;
+}
+
+.diffComment,
+.diffLine,
+.addedLine {
+	display: block;
+	padding-inline: calc(14 * var(--workflow-unit));
+}
+
+.diffComment {
+	color: #888888;
+}
+
+.addedLine {
+	position: relative;
+	background: #2f814d24;
+	color: #a7d6b6;
+}
+
+.addedLine > span {
+	position: absolute;
+	left: calc(5 * var(--workflow-unit));
+	color: #75ba8e;
+}

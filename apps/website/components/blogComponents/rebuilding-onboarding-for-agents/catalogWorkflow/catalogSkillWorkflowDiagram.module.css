@@ -1,0 +1,156 @@
+.skillLayout {
+	--skill-unit: calc(100cqw / 1000);
+	position: relative;
+	display: grid;
+	grid-template-columns: 592fr 368fr;
+	align-items: start;
+	gap: calc(40 * var(--skill-unit));
+	color: #c5c5c5;
+	font-family: var(--font-geist-mono), monospace;
+	font-size: calc(16 * var(--skill-unit));
+	font-weight: 400;
+	line-height: calc(28 * var(--skill-unit));
+	white-space: nowrap;
+}
+
+.file {
+	min-width: 0;
+	overflow: hidden;
+	border: 1px solid var(--workflow-border);
+	border-radius: calc(5 * var(--skill-unit));
+	background: var(--workflow-surface);
+}
+
+.skillDiagram .fileHeader {
+	display: flex;
+	align-items: center;
+	height: calc(42 * var(--skill-unit));
+	padding-inline: calc(22 * var(--skill-unit));
+	border-bottom: 1px solid var(--workflow-border);
+	color: #999999;
+	font-size: calc(13 * var(--skill-unit));
+	line-height: 1;
+}
+
+.program {
+	padding: calc(10 * var(--skill-unit)) calc(22 * var(--skill-unit))
+		calc(20 * var(--skill-unit));
+}
+
+.reference .program {
+	padding-block: calc(12 * var(--skill-unit));
+}
+
+.reference {
+	margin-top: calc(188 * var(--skill-unit));
+}
+
+.skillDiagram .stages {
+	display: grid;
+	gap: calc(18 * var(--skill-unit));
+	margin: 0;
+	padding: calc(14 * var(--skill-unit)) calc(22 * var(--skill-unit))
+		calc(20 * var(--skill-unit));
+	list-style: none;
+}
+
+.skillDiagram .stages .stage {
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	font: inherit;
+	letter-spacing: normal;
+}
+
+.skillDiagram .stageHeading {
+	display: grid;
+	grid-template-columns: calc(32 * var(--skill-unit)) 1fr;
+	align-items: baseline;
+	margin: 0 0 calc(6 * var(--skill-unit));
+	padding: 0;
+	color: #eeeeee;
+	font: inherit;
+	font-weight: 500;
+	text-wrap: balance;
+}
+
+.stageNumber {
+	color: var(--workflow-accent);
+	font-variant-numeric: tabular-nums;
+}
+
+.stageContent {
+	padding-left: calc(32 * var(--skill-unit));
+}
+
+.referenceCall {
+	display: grid;
+	grid-template-columns: calc(184 * var(--skill-unit)) calc(
+			28 *
+			var(--skill-unit)
+		) 1fr;
+}
+
+.callArrow {
+	color: #777777;
+}
+
+.optionExamples {
+	color: #888888;
+}
+
+.scope {
+	position: relative;
+	padding-left: calc(22 * var(--skill-unit));
+}
+
+.scope::before {
+	position: absolute;
+	top: calc(7 * var(--skill-unit));
+	bottom: calc(3 * var(--skill-unit));
+	left: calc(7 * var(--skill-unit));
+	border-left: 1px solid #303030;
+	content: "";
+}
+
+.block {
+	margin-top: calc(14 * var(--skill-unit));
+}
+
+.skillDiagram .keyword {
+	color: var(--workflow-accent);
+}
+
+.callLine {
+	position: relative;
+}
+
+.callLine::before {
+	position: absolute;
+	inset-block: 0;
+	left: calc(-76 * var(--skill-unit));
+	right: calc(-22 * var(--skill-unit));
+	background: #9564ff0e;
+	content: "";
+}
+
+.callLine > span {
+	position: relative;
+}
+
+.connectors {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	fill: none;
+	stroke: #777777;
+	stroke-width: 1;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	pointer-events: none;
+}
+
+.returnArrow {
+	stroke-dasharray: 4 5;
+}
