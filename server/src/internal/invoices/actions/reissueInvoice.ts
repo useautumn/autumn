@@ -330,6 +330,7 @@ const issueReplacement = async ({
 	lineEdits,
 	storedLines,
 	creditOriginal,
+	customerAdjusted,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -343,6 +344,8 @@ const issueReplacement = async ({
 	lineEdits?: ReissueLineEdits;
 	storedLines: DbInvoiceLineItem[];
 	creditOriginal: boolean;
+	/** A corrected address or tax id legitimately moves the tax. */
+	customerAdjusted: boolean;
 }): Promise<{ finalized: Stripe.Invoice; creditNoteId: string | null }> => {
 	const draft = await createReplacementDraft({
 		ctx,
@@ -360,7 +363,7 @@ const issueReplacement = async ({
 	});
 
 	// The total is only guaranteed to match when nothing was adjusted.
-	const adjusted = Boolean(overrides || lineEdits);
+	const adjusted = Boolean(overrides || lineEdits || customerAdjusted);
 	if (!adjusted && draft.total !== stripeInvoice.total) {
 		await stripeCli.invoices.del(draft.id).catch(() => undefined);
 		throw new RecaseError({
@@ -774,6 +777,7 @@ export const reissueInvoice = async ({
 	const { finalized, creditNoteId } = await issueReplacement({
 		ctx,
 		creditOriginal,
+		customerAdjusted: Boolean(customerOverrides),
 		customerId: previewCustomerId,
 		stripeCli,
 		invoiceId,
