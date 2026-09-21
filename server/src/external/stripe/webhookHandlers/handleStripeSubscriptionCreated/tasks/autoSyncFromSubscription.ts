@@ -5,6 +5,7 @@ import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/sub
 import { isAutumnCheckoutSubscription } from "@/internal/billing/v2/actions/sync/utils/isAutumnCheckoutSubscription.js";
 import { withStripeSyncCustomerLock } from "@/internal/billing/v2/actions/sync/utils/withStripeSyncCustomerLock.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { findPlanLinkedToAnotherSubscription } from "../../common/subscriptionSync/findPlanLinkedToAnotherSubscription.js";
 import { shouldSkipSubscriptionSync } from "../../common/subscriptionSync/shouldSkipSubscriptionSync.js";
 import type { StripeSubscriptionCreatedContext } from "../setupStripeSubscriptionCreatedContext.js";
 
@@ -59,6 +60,18 @@ const autoSyncFromSubscription = async ({
 	if (!eligibility.eligible) {
 		logger.info(
 			`sub.created auto-sync skipping ${subscription.id}: ${eligibility.reason} — ${eligibility.details}`,
+		);
+		return;
+	}
+
+	const planOnAnotherSubscription = findPlanLinkedToAnotherSubscription({
+		match,
+		fullCustomer: currentCustomer,
+		stripeSubscriptionId: subscription.id,
+	});
+	if (planOnAnotherSubscription) {
+		logger.warn(
+			`sub.created auto-sync skipping ${subscription.id}: plan ${planOnAnotherSubscription.product_id} belongs to subscription ${planOnAnotherSubscription.subscription_ids?.join(", ")}`,
 		);
 		return;
 	}
