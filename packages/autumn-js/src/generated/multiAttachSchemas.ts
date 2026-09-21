@@ -264,6 +264,11 @@ export const multiAttachRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const multiAttachExpiryOutboundSchema = z.object({
+	duration: z.string(),
+	length: z.number(),
+});
+
 export const multiAttachDimensionsMatch4OutboundSchema = z.union([
 	z.string(),
 	z.number(),
@@ -494,6 +499,7 @@ export const multiAttachPlanItemOutboundSchema = z.object({
 	rollover: z
 		.union([multiAttachRolloverOutboundSchema, z.undefined()])
 		.optional(),
+	expiry: z.union([multiAttachExpiryOutboundSchema, z.undefined()]).optional(),
 	feature_override: z
 		.union([multiAttachFeatureOverrideOutboundSchema, z.undefined()])
 		.optional(),
@@ -701,6 +707,13 @@ export const multiAttachRolloverSchema = z.object({
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const multiAttachDurationSchema = closedEnumSchema;
+
+export const multiAttachExpirySchema = z.object({
+	duration: multiAttachDurationSchema,
+	length: z.number(),
+});
+
 export const multiAttachDimensionsToEnum2Schema = closedEnumSchema;
 
 export const multiAttachDimensionsToUnion2Schema = z.union([
@@ -831,6 +844,7 @@ export const multiAttachPlanItemSchema = z.object({
 	price: z.union([multiAttachPriceSchema, z.undefined()]).optional(),
 	proration: z.union([multiAttachProrationSchema, z.undefined()]).optional(),
 	rollover: z.union([multiAttachRolloverSchema, z.undefined()]).optional(),
+	expiry: z.union([multiAttachExpirySchema, z.undefined()]).optional(),
 	featureOverride: z
 		.union([multiAttachFeatureOverrideSchema, z.undefined()])
 		.optional(),

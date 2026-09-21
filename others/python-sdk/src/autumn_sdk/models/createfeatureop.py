@@ -593,13 +593,13 @@ CreateFeatureCreditSchemaRequestBodyUnion = TypeAliasType(
 )
 
 
-class CreateFeatureModelMarkupsRequestTypedDict(TypedDict):
+class CreateFeatureModelMarkupsRequestBodyTypedDict(TypedDict):
     markup: NotRequired[float]
     input_cost: NotRequired[float]
     output_cost: NotRequired[float]
 
 
-class CreateFeatureModelMarkupsRequest(BaseModel):
+class CreateFeatureModelMarkupsRequestBody(BaseModel):
     markup: Optional[float] = None
 
     input_cost: Optional[float] = None
@@ -623,11 +623,11 @@ class CreateFeatureModelMarkupsRequest(BaseModel):
         return m
 
 
-class CreateFeatureProviderMarkupsRequestTypedDict(TypedDict):
+class CreateFeatureProviderMarkupsRequestBodyTypedDict(TypedDict):
     markup: float
 
 
-class CreateFeatureProviderMarkupsRequest(BaseModel):
+class CreateFeatureProviderMarkupsRequestBody(BaseModel):
     markup: float
 
 
@@ -644,16 +644,14 @@ class CreateFeatureParamsTypedDict(TypedDict):
     r"""Singular and plural display names for the feature in your user interface."""
     credit_schema: NotRequired[List[CreateFeatureCreditSchemaRequestBodyUnionTypedDict]]
     r"""A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead."""
-    invoice_credit: NotRequired[bool]
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
     model_markups: NotRequired[
-        Nullable[Dict[str, CreateFeatureModelMarkupsRequestTypedDict]]
+        Nullable[Dict[str, CreateFeatureModelMarkupsRequestBodyTypedDict]]
     ]
     r"""Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration."""
     default_markup: NotRequired[float]
     r"""Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free."""
     provider_markups: NotRequired[
-        Nullable[Dict[str, CreateFeatureProviderMarkupsRequestTypedDict]]
+        Nullable[Dict[str, CreateFeatureProviderMarkupsRequestBodyTypedDict]]
     ]
     r"""Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id."""
     event_names: NotRequired[List[str]]
@@ -678,17 +676,16 @@ class CreateFeatureParams(BaseModel):
     credit_schema: Optional[List[CreateFeatureCreditSchemaRequestBodyUnion]] = None
     r"""A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead."""
 
-    invoice_credit: Optional[bool] = None
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
-
-    model_markups: OptionalNullable[Dict[str, CreateFeatureModelMarkupsRequest]] = UNSET
+    model_markups: OptionalNullable[Dict[str, CreateFeatureModelMarkupsRequestBody]] = (
+        UNSET
+    )
     r"""Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration."""
 
     default_markup: Optional[float] = None
     r"""Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free."""
 
     provider_markups: OptionalNullable[
-        Dict[str, CreateFeatureProviderMarkupsRequest]
+        Dict[str, CreateFeatureProviderMarkupsRequestBody]
     ] = UNSET
     r"""Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id."""
 
@@ -701,7 +698,6 @@ class CreateFeatureParams(BaseModel):
                 "consumable",
                 "display",
                 "credit_schema",
-                "invoice_credit",
                 "model_markups",
                 "default_markup",
                 "provider_markups",
@@ -1571,8 +1567,6 @@ class CreateFeatureResponseTypedDict(TypedDict):
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[CreateFeatureCreditSchemaResponseUnionTypedDict]]
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
-    invoice_credit: NotRequired[bool]
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
     model_markups: NotRequired[
         Nullable[Dict[str, CreateFeatureModelMarkupsResponseTypedDict]]
     ]
@@ -1613,9 +1607,6 @@ class CreateFeatureResponse(BaseModel):
     credit_schema: Optional[List[CreateFeatureCreditSchemaResponseUnion]] = None
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
 
-    invoice_credit: Optional[bool] = None
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
-
     model_markups: OptionalNullable[Dict[str, CreateFeatureModelMarkupsResponse]] = (
         UNSET
     )
@@ -1641,7 +1632,6 @@ class CreateFeatureResponse(BaseModel):
             [
                 "event_names",
                 "credit_schema",
-                "invoice_credit",
                 "model_markups",
                 "default_markup",
                 "provider_markups",

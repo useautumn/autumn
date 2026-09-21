@@ -358,6 +358,11 @@ export const previewMultiAttachRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewMultiAttachExpiryOutboundSchema = z.object({
+	duration: z.string(),
+	length: z.number(),
+});
+
 export const previewMultiAttachDimensionsMatch4OutboundSchema = z.union([
 	z.string(),
 	z.number(),
@@ -592,6 +597,9 @@ export const previewMultiAttachPlanItemOutboundSchema = z.object({
 	rollover: z
 		.union([previewMultiAttachRolloverOutboundSchema, z.undefined()])
 		.optional(),
+	expiry: z
+		.union([previewMultiAttachExpiryOutboundSchema, z.undefined()])
+		.optional(),
 	feature_override: z
 		.union([previewMultiAttachFeatureOverrideOutboundSchema, z.undefined()])
 		.optional(),
@@ -810,6 +818,13 @@ export const previewMultiAttachRolloverSchema = z.object({
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewMultiAttachDurationSchema = closedEnumSchema;
+
+export const previewMultiAttachExpirySchema = z.object({
+	duration: previewMultiAttachDurationSchema,
+	length: z.number(),
+});
+
 export const previewMultiAttachDimensionsToEnum2Schema = closedEnumSchema;
 
 export const previewMultiAttachDimensionsToUnion2Schema = z.union([
@@ -956,6 +971,7 @@ export const previewMultiAttachPlanItemSchema = z.object({
 	rollover: z
 		.union([previewMultiAttachRolloverSchema, z.undefined()])
 		.optional(),
+	expiry: z.union([previewMultiAttachExpirySchema, z.undefined()]).optional(),
 	featureOverride: z
 		.union([previewMultiAttachFeatureOverrideSchema, z.undefined()])
 		.optional(),

@@ -11,6 +11,32 @@ import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
 import {
+  PhaseStartAddItemPlanItem,
+  PhaseStartAddItemPlanItem$Outbound,
+  PhaseStartAddItemPlanItem$outboundSchema,
+  PhaseStartBasePrice,
+  PhaseStartBasePrice$Outbound,
+  PhaseStartBasePrice$outboundSchema,
+  PhaseStartFeatureQuantity,
+  PhaseStartFeatureQuantity$Outbound,
+  PhaseStartFeatureQuantity$outboundSchema,
+  PhaseStartItemPlanItem,
+  PhaseStartItemPlanItem$Outbound,
+  PhaseStartItemPlanItem$outboundSchema,
+  PhaseStartRemoveItemBillingMethod,
+  PhaseStartRemoveItemBillingMethod$outboundSchema,
+  StartingAfter2,
+  StartingAfter2$Outbound,
+  StartingAfter2$outboundSchema,
+  StartsAt2,
+  StartsAt2$Outbound,
+  StartsAt2$outboundSchema,
+  UnscheduledPlan,
+  UnscheduledPlan$Outbound,
+  UnscheduledPlan$outboundSchema,
+} from "./phase-start-remove-item-billing-method.js";
+import { SDKValidationError } from "./sdk-validation-error.js";
+import {
   CreateScheduleAttachDiscount,
   CreateScheduleAttachDiscount$Outbound,
   CreateScheduleAttachDiscount$outboundSchema,
@@ -24,42 +50,186 @@ import {
   CreateScheduleInvoiceMode$outboundSchema,
   CreateScheduleRedirectMode,
   CreateScheduleRedirectMode$outboundSchema,
-} from "./dimensions-unscheduled-plan-upsert-license-match-3.js";
-import {
-  PhaseStartAddItemPlanItem,
-  PhaseStartAddItemPlanItem$Outbound,
-  PhaseStartAddItemPlanItem$outboundSchema,
-  PhaseStartAutoTopup,
-  PhaseStartAutoTopup$Outbound,
-  PhaseStartAutoTopup$outboundSchema,
-  PhaseStartBasePrice,
-  PhaseStartBasePrice$Outbound,
-  PhaseStartBasePrice$outboundSchema,
-  PhaseStartFeatureQuantity,
-  PhaseStartFeatureQuantity$Outbound,
-  PhaseStartFeatureQuantity$outboundSchema,
-  PhaseStartItemPlanItem,
-  PhaseStartItemPlanItem$Outbound,
-  PhaseStartItemPlanItem$outboundSchema,
-  PhaseStartPlanItemFilter,
-  PhaseStartPlanItemFilter$Outbound,
-  PhaseStartPlanItemFilter$outboundSchema,
-  PhaseStartSpendLimit,
-  PhaseStartSpendLimit$Outbound,
-  PhaseStartSpendLimit$outboundSchema,
-  PhaseStartUsageLimitInterval,
-  PhaseStartUsageLimitInterval$outboundSchema,
-  StartingAfter2,
-  StartingAfter2$Outbound,
-  StartingAfter2$outboundSchema,
-  StartsAt2,
-  StartsAt2$Outbound,
-  StartsAt2$outboundSchema,
-  UnscheduledPlan,
-  UnscheduledPlan$Outbound,
-  UnscheduledPlan$outboundSchema,
-} from "./phase-start-usage-limit-interval.js";
-import { SDKValidationError } from "./sdk-validation-error.js";
+} from "./unscheduled-plan-upsert-license-expiry-duration-type.js";
+
+export const PhaseStartIntervalRemoveItemEnum2 = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+export type PhaseStartIntervalRemoveItemEnum2 = ClosedEnum<
+  typeof PhaseStartIntervalRemoveItemEnum2
+>;
+
+export const PhaseStartIntervalRemoveItemEnum1 = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+export type PhaseStartIntervalRemoveItemEnum1 = ClosedEnum<
+  typeof PhaseStartIntervalRemoveItemEnum1
+>;
+
+/**
+ * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+ */
+export type PhaseStartIntervalUnion =
+  | PhaseStartIntervalRemoveItemEnum1
+  | PhaseStartIntervalRemoveItemEnum2;
+
+/**
+ * Filter for matching plan items. All provided fields must match (AND).
+ */
+export type PhaseStartPlanItemFilter = {
+  /**
+   * Match items linked to this feature.
+   */
+  featureId?: string | undefined;
+  /**
+   * Match items with this billing method (prepaid or usage_based).
+   */
+  billingMethod?: PhaseStartRemoveItemBillingMethod | undefined;
+  /**
+   * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+   */
+  interval?:
+    | PhaseStartIntervalRemoveItemEnum1
+    | PhaseStartIntervalRemoveItemEnum2
+    | undefined;
+  /**
+   * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Match items whose grant equals this included usage. Omitted is a wildcard.
+   */
+  included?: number | undefined;
+};
+
+/**
+ * The time interval for the purchase limit window.
+ */
+export const PhaseStartAutoTopupInterval = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type PhaseStartAutoTopupInterval = ClosedEnum<
+  typeof PhaseStartAutoTopupInterval
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
+ */
+export type PhaseStartPurchaseLimit = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: PhaseStartAutoTopupInterval;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
+};
+
+export type PhaseStartAutoTopup = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
+   */
+  purchaseLimit?: PhaseStartPurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
+};
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const PhaseStartLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type PhaseStartLimitType = ClosedEnum<typeof PhaseStartLimitType>;
+
+export type PhaseStartSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether the overage spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: PhaseStartLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   */
+  overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const PhaseStartUsageLimitInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type PhaseStartUsageLimitInterval = ClosedEnum<
+  typeof PhaseStartUsageLimitInterval
+>;
 
 /**
  * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
@@ -512,6 +682,24 @@ export type PhaseStartUpsertLicenseRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export const PhaseStartUpsertLicenseDuration = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+export type PhaseStartUpsertLicenseDuration = ClosedEnum<
+  typeof PhaseStartUpsertLicenseDuration
+>;
+
+/**
+ * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+ */
+export type PhaseStartUpsertLicenseExpiry = {
+  duration: PhaseStartUpsertLicenseDuration;
+  length: number;
+};
+
 export type PhaseStartDimensionsUpsertLicenseMatch4 = string | number | boolean;
 
 export type PhaseStartDimensionsUpsertLicense4 = {
@@ -824,6 +1012,10 @@ export type PhaseStartUpsertLicensePlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: PhaseStartUpsertLicenseRollover | undefined;
+  /**
+   * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+   */
+  expiry?: PhaseStartUpsertLicenseExpiry | undefined;
   /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
@@ -1202,6 +1394,209 @@ export type CreateScheduleResponse = {
 };
 
 /** @internal */
+export const PhaseStartIntervalRemoveItemEnum2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseStartIntervalRemoveItemEnum2
+> = z.enum(PhaseStartIntervalRemoveItemEnum2);
+
+/** @internal */
+export const PhaseStartIntervalRemoveItemEnum1$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseStartIntervalRemoveItemEnum1
+> = z.enum(PhaseStartIntervalRemoveItemEnum1);
+
+/** @internal */
+export type PhaseStartIntervalUnion$Outbound = string | string;
+
+/** @internal */
+export const PhaseStartIntervalUnion$outboundSchema: z.ZodMiniType<
+  PhaseStartIntervalUnion$Outbound,
+  PhaseStartIntervalUnion
+> = smartUnion([
+  PhaseStartIntervalRemoveItemEnum1$outboundSchema,
+  PhaseStartIntervalRemoveItemEnum2$outboundSchema,
+]);
+
+export function phaseStartIntervalUnionToJSON(
+  phaseStartIntervalUnion: PhaseStartIntervalUnion,
+): string {
+  return JSON.stringify(
+    PhaseStartIntervalUnion$outboundSchema.parse(phaseStartIntervalUnion),
+  );
+}
+
+/** @internal */
+export type PhaseStartPlanItemFilter$Outbound = {
+  feature_id?: string | undefined;
+  billing_method?: string | undefined;
+  interval?: string | string | undefined;
+  interval_count?: number | undefined;
+  included?: number | undefined;
+};
+
+/** @internal */
+export const PhaseStartPlanItemFilter$outboundSchema: z.ZodMiniType<
+  PhaseStartPlanItemFilter$Outbound,
+  PhaseStartPlanItemFilter
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    billingMethod: z.optional(PhaseStartRemoveItemBillingMethod$outboundSchema),
+    interval: z.optional(
+      smartUnion([
+        PhaseStartIntervalRemoveItemEnum1$outboundSchema,
+        PhaseStartIntervalRemoveItemEnum2$outboundSchema,
+      ]),
+    ),
+    intervalCount: z.optional(z.int()),
+    included: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      billingMethod: "billing_method",
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function phaseStartPlanItemFilterToJSON(
+  phaseStartPlanItemFilter: PhaseStartPlanItemFilter,
+): string {
+  return JSON.stringify(
+    PhaseStartPlanItemFilter$outboundSchema.parse(phaseStartPlanItemFilter),
+  );
+}
+
+/** @internal */
+export const PhaseStartAutoTopupInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseStartAutoTopupInterval
+> = z.enum(PhaseStartAutoTopupInterval);
+
+/** @internal */
+export type PhaseStartPurchaseLimit$Outbound = {
+  interval: string;
+  interval_count: number;
+  limit: number;
+  count?: number | undefined;
+};
+
+/** @internal */
+export const PhaseStartPurchaseLimit$outboundSchema: z.ZodMiniType<
+  PhaseStartPurchaseLimit$Outbound,
+  PhaseStartPurchaseLimit
+> = z.pipe(
+  z.object({
+    interval: PhaseStartAutoTopupInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    limit: z.number(),
+    count: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function phaseStartPurchaseLimitToJSON(
+  phaseStartPurchaseLimit: PhaseStartPurchaseLimit,
+): string {
+  return JSON.stringify(
+    PhaseStartPurchaseLimit$outboundSchema.parse(phaseStartPurchaseLimit),
+  );
+}
+
+/** @internal */
+export type PhaseStartAutoTopup$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  threshold: number;
+  quantity: number;
+  purchase_limit?: PhaseStartPurchaseLimit$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
+};
+
+/** @internal */
+export const PhaseStartAutoTopup$outboundSchema: z.ZodMiniType<
+  PhaseStartAutoTopup$Outbound,
+  PhaseStartAutoTopup
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+    threshold: z.number(),
+    quantity: z.number(),
+    purchaseLimit: z.optional(
+      z.lazy(() => PhaseStartPurchaseLimit$outboundSchema),
+    ),
+    invoiceMode: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
+    });
+  }),
+);
+
+export function phaseStartAutoTopupToJSON(
+  phaseStartAutoTopup: PhaseStartAutoTopup,
+): string {
+  return JSON.stringify(
+    PhaseStartAutoTopup$outboundSchema.parse(phaseStartAutoTopup),
+  );
+}
+
+/** @internal */
+export const PhaseStartLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseStartLimitType
+> = z.enum(PhaseStartLimitType);
+
+/** @internal */
+export type PhaseStartSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  limit_type?: string | undefined;
+  overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
+};
+
+/** @internal */
+export const PhaseStartSpendLimit$outboundSchema: z.ZodMiniType<
+  PhaseStartSpendLimit$Outbound,
+  PhaseStartSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    limitType: z.optional(PhaseStartLimitType$outboundSchema),
+    overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      limitType: "limit_type",
+      overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
+    });
+  }),
+);
+
+export function phaseStartSpendLimitToJSON(
+  phaseStartSpendLimit: PhaseStartSpendLimit,
+): string {
+  return JSON.stringify(
+    PhaseStartSpendLimit$outboundSchema.parse(phaseStartSpendLimit),
+  );
+}
+
+/** @internal */
+export const PhaseStartUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseStartUsageLimitInterval
+> = z.enum(PhaseStartUsageLimitInterval);
+
+/** @internal */
 export const PhaseStartAnchor$outboundSchema: z.ZodMiniEnum<
   typeof PhaseStartAnchor
 > = z.enum(PhaseStartAnchor);
@@ -1426,8 +1821,12 @@ export const PhaseStartBillingControls$outboundSchema: z.ZodMiniType<
   PhaseStartBillingControls
 > = z.pipe(
   z.object({
-    autoTopups: z.optional(z.array(PhaseStartAutoTopup$outboundSchema)),
-    spendLimits: z.optional(z.array(PhaseStartSpendLimit$outboundSchema)),
+    autoTopups: z.optional(
+      z.array(z.lazy(() => PhaseStartAutoTopup$outboundSchema)),
+    ),
+    spendLimits: z.optional(
+      z.array(z.lazy(() => PhaseStartSpendLimit$outboundSchema)),
+    ),
     usageLimits: z.optional(
       z.array(z.lazy(() => PhaseStartUsageLimit$outboundSchema)),
     ),
@@ -1875,6 +2274,36 @@ export function phaseStartUpsertLicenseRolloverToJSON(
   return JSON.stringify(
     PhaseStartUpsertLicenseRollover$outboundSchema.parse(
       phaseStartUpsertLicenseRollover,
+    ),
+  );
+}
+
+/** @internal */
+export const PhaseStartUpsertLicenseDuration$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseStartUpsertLicenseDuration
+> = z.enum(PhaseStartUpsertLicenseDuration);
+
+/** @internal */
+export type PhaseStartUpsertLicenseExpiry$Outbound = {
+  duration: string;
+  length: number;
+};
+
+/** @internal */
+export const PhaseStartUpsertLicenseExpiry$outboundSchema: z.ZodMiniType<
+  PhaseStartUpsertLicenseExpiry$Outbound,
+  PhaseStartUpsertLicenseExpiry
+> = z.object({
+  duration: PhaseStartUpsertLicenseDuration$outboundSchema,
+  length: z.number(),
+});
+
+export function phaseStartUpsertLicenseExpiryToJSON(
+  phaseStartUpsertLicenseExpiry: PhaseStartUpsertLicenseExpiry,
+): string {
+  return JSON.stringify(
+    PhaseStartUpsertLicenseExpiry$outboundSchema.parse(
+      phaseStartUpsertLicenseExpiry,
     ),
   );
 }
@@ -2732,6 +3161,7 @@ export type PhaseStartUpsertLicensePlanItem$Outbound = {
   price?: PhaseStartUpsertLicensePrice$Outbound | undefined;
   proration?: PhaseStartUpsertLicenseProration$Outbound | undefined;
   rollover?: PhaseStartUpsertLicenseRollover$Outbound | undefined;
+  expiry?: PhaseStartUpsertLicenseExpiry$Outbound | undefined;
   feature_override?:
     | PhaseStartUpsertLicenseFeatureOverride$Outbound
     | undefined;
@@ -2761,6 +3191,9 @@ export const PhaseStartUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     ),
     rollover: z.optional(
       z.lazy(() => PhaseStartUpsertLicenseRollover$outboundSchema),
+    ),
+    expiry: z.optional(
+      z.lazy(() => PhaseStartUpsertLicenseExpiry$outboundSchema),
     ),
     featureOverride: z.optional(
       z.lazy(() => PhaseStartUpsertLicenseFeatureOverride$outboundSchema),
@@ -3008,7 +3441,9 @@ export const PhaseStartCustomize$outboundSchema: z.ZodMiniType<
     price: z.optional(z.nullable(PhaseStartBasePrice$outboundSchema)),
     items: z.optional(z.array(PhaseStartItemPlanItem$outboundSchema)),
     addItems: z.optional(z.array(PhaseStartAddItemPlanItem$outboundSchema)),
-    removeItems: z.optional(z.array(PhaseStartPlanItemFilter$outboundSchema)),
+    removeItems: z.optional(
+      z.array(z.lazy(() => PhaseStartPlanItemFilter$outboundSchema)),
+    ),
     billingControls: z.optional(
       z.lazy(() => PhaseStartBillingControls$outboundSchema),
     ),

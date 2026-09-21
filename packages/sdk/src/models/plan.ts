@@ -10,7 +10,6 @@ import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
-import { SDKValidationError } from "./sdk-validation-error.js";
 import {
   BasePrice,
   BasePrice$inboundSchema,
@@ -38,11 +37,63 @@ import {
   PlanProcessors$inboundSchema,
   PlanVariantDetailsBillingControls1,
   PlanVariantDetailsBillingControls1$inboundSchema,
-  UpsertLicenseBasePrice,
-  UpsertLicenseBasePrice$inboundSchema,
-  UpsertLicenseThresholdBilling,
-  UpsertLicenseThresholdBilling$inboundSchema,
-} from "./upsert-license-threshold-billing.js";
+} from "./plan-variant-details-billing-controls-1.js";
+import { SDKValidationError } from "./sdk-validation-error.js";
+
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export const PlanPriceUpsertLicenseInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export type PlanPriceUpsertLicenseInterval = OpenEnum<
+  typeof PlanPriceUpsertLicenseInterval
+>;
+
+export type UpsertLicenseAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
+/**
+ * Base price configuration for a plan.
+ */
+export type UpsertLicenseBasePrice = {
+  /**
+   * Base price amount for the plan, in major currency units (e.g. dollars).
+   */
+  amount: number;
+  /**
+   * Billing interval (e.g. 'month', 'year').
+   */
+  interval: PlanPriceUpsertLicenseInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount: number;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?: Array<UpsertLicenseAdditionalCurrency> | undefined;
+};
+
+export type UpsertLicenseThresholdBilling = {
+  threshold: number;
+};
 
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
@@ -272,6 +323,22 @@ export type PlanUpsertLicenseRollover = {
    * Number of periods before expiry.
    */
   expiryDurationLength?: number | undefined;
+};
+
+export const UpsertLicenseDuration = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+export type UpsertLicenseDuration = OpenEnum<typeof UpsertLicenseDuration>;
+
+/**
+ * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+ */
+export type UpsertLicenseExpiry = {
+  duration: UpsertLicenseDuration;
+  length: number;
 };
 
 export type PlanDimensionsUpsertLicense4 = {
@@ -586,6 +653,10 @@ export type UpsertLicensePlanItem = {
    */
   rollover?: PlanUpsertLicenseRollover | undefined;
   /**
+   * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+   */
+  expiry?: UpsertLicenseExpiry | undefined;
+  /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
   featureOverride?: UpsertLicenseFeatureOverride | undefined;
@@ -822,6 +893,80 @@ export type Plan = {
    */
   variantDetails?: VariantDetails | undefined;
 };
+
+/** @internal */
+export const PlanPriceUpsertLicenseInterval$inboundSchema: z.ZodMiniType<
+  PlanPriceUpsertLicenseInterval,
+  unknown
+> = openEnums.inboundSchema(PlanPriceUpsertLicenseInterval);
+
+/** @internal */
+export const UpsertLicenseAdditionalCurrency$inboundSchema: z.ZodMiniType<
+  UpsertLicenseAdditionalCurrency,
+  unknown
+> = z.object({
+  currency: types.string(),
+  amount: types.number(),
+});
+
+export function upsertLicenseAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<UpsertLicenseAdditionalCurrency, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpsertLicenseAdditionalCurrency$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpsertLicenseAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpsertLicenseBasePrice$inboundSchema: z.ZodMiniType<
+  UpsertLicenseBasePrice,
+  unknown
+> = z.pipe(
+  z.object({
+    amount: types.number(),
+    interval: PlanPriceUpsertLicenseInterval$inboundSchema,
+    interval_count: z._default(types.number(), 1),
+    additional_currencies: types.optional(
+      z.array(z.lazy(() => UpsertLicenseAdditionalCurrency$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+      "additional_currencies": "additionalCurrencies",
+    });
+  }),
+);
+
+export function upsertLicenseBasePriceFromJSON(
+  jsonString: string,
+): SafeParseResult<UpsertLicenseBasePrice, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpsertLicenseBasePrice$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpsertLicenseBasePrice' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpsertLicenseThresholdBilling$inboundSchema: z.ZodMiniType<
+  UpsertLicenseThresholdBilling,
+  unknown
+> = z.object({
+  threshold: types.number(),
+});
+
+export function upsertLicenseThresholdBillingFromJSON(
+  jsonString: string,
+): SafeParseResult<UpsertLicenseThresholdBilling, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpsertLicenseThresholdBilling$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpsertLicenseThresholdBilling' from JSON`,
+  );
+}
 
 /** @internal */
 export const PlanUpsertLicenseResetInterval$inboundSchema: z.ZodMiniType<
@@ -1082,6 +1227,31 @@ export function planUpsertLicenseRolloverFromJSON(
     jsonString,
     (x) => PlanUpsertLicenseRollover$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'PlanUpsertLicenseRollover' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpsertLicenseDuration$inboundSchema: z.ZodMiniType<
+  UpsertLicenseDuration,
+  unknown
+> = openEnums.inboundSchema(UpsertLicenseDuration);
+
+/** @internal */
+export const UpsertLicenseExpiry$inboundSchema: z.ZodMiniType<
+  UpsertLicenseExpiry,
+  unknown
+> = z.object({
+  duration: UpsertLicenseDuration$inboundSchema,
+  length: types.number(),
+});
+
+export function upsertLicenseExpiryFromJSON(
+  jsonString: string,
+): SafeParseResult<UpsertLicenseExpiry, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpsertLicenseExpiry$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpsertLicenseExpiry' from JSON`,
   );
 }
 
@@ -1664,7 +1834,7 @@ export const UpsertLicensePlanItem$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     threshold_billing: z.optional(
-      z.nullable(UpsertLicenseThresholdBilling$inboundSchema),
+      z.nullable(z.lazy(() => UpsertLicenseThresholdBilling$inboundSchema)),
     ),
     feature_id: types.string(),
     included: types.optional(types.number()),
@@ -1678,6 +1848,7 @@ export const UpsertLicensePlanItem$inboundSchema: z.ZodMiniType<
     rollover: types.optional(
       z.lazy(() => PlanUpsertLicenseRollover$inboundSchema),
     ),
+    expiry: types.optional(z.lazy(() => UpsertLicenseExpiry$inboundSchema)),
     feature_override: types.optional(
       z.lazy(() => UpsertLicenseFeatureOverride$inboundSchema),
     ),
@@ -1779,7 +1950,9 @@ export const UpsertLicenseCustomize$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    price: z.optional(z.nullable(UpsertLicenseBasePrice$inboundSchema)),
+    price: z.optional(
+      z.nullable(z.lazy(() => UpsertLicenseBasePrice$inboundSchema)),
+    ),
     add_items: types.optional(
       z.array(z.lazy(() => UpsertLicensePlanItem$inboundSchema)),
     ),

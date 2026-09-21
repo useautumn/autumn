@@ -1,0 +1,85 @@
+---
+title: "List Invoice Templates"
+openapi: "openapi POST /v1/invoices.listTemplates"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="offset" type="integer">
+  Number of items to skip
+</DynamicParamField>
+
+<DynamicParamField body="limit" type="integer">
+  Number of items to return. Default 10, max 1000.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  Invoice templates, newest first.
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      Unique identifier for the invoice template.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="name" type="string">
+      User-defined name to distinguish this template when sending an invoice.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="footer" type="string">
+      Footer text rendered on the invoice, typically bank details so customers can pay directly.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="memo" type="string">
+      Memo shown near the top of the invoice (Stripe invoice description), e.g. a contact line for payment questions.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="net_terms_days" type="integer">
+      Default number of days the customer has to pay before the invoice is due. Overridable when sending.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      Timestamp (ms) when the template was created.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="total" type="number">
+  Number of templates returned in this page.
+</DynamicResponseField>
+
+<DynamicResponseField name="limit" type="number" />
+
+<DynamicResponseField name="offset" type="number" />
+
+<DynamicResponseField name="has_more" type="boolean">
+  Whether more templates exist after this page.
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "list": [
+    {
+      "id": "inv_tmpl_2b3c4d5e6f7g8h",
+      "name": "Bank transfer",
+      "footer": "Pay by wire to IBAN GB00 EXAM 0000 0000 0000 00",
+      "memo": "Questions? billing@example.com",
+      "net_terms_days": 30,
+      "created_at": 1759247877000
+    }
+  ],
+  "total": 1,
+  "limit": 10,
+  "offset": 0,
+  "has_more": false
+}
+```
+</ResponseExample>
