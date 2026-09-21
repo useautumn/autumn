@@ -13,7 +13,7 @@ export const sendMigrationWebhooksTask = task({
 	id: "send-migration-webhooks",
 	queue: migrationWebhookDeliveryQueue,
 	retry: MIGRATION_WEBHOOK_DELIVERY_RETRY,
-	machine: "small-1x",
+	machine: "medium-1x",
 	maxDuration: MIGRATION_WEBHOOK_DELIVERY_MAX_DURATION_SECONDS,
 	run: async (rawPayload: unknown, { ctx: triggerCtx }) => {
 		const payload = SendMigrationWebhooksPayloadSchema.parse(rawPayload);
