@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "packages/atmn/**"
+      - "packages/atmn-generator/**"
+      - "packages/agent-docs/**"
+      - "packages/openapi/openapi*.yml"
 
   workflow_dispatch:
     inputs:

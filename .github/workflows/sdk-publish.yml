@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "packages/autumn-js/**"
+      - "packages/openapi/**"
+      - "packages/sdk/**"
 
   workflow_dispatch:
     inputs:
