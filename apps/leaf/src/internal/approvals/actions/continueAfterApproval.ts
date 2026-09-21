@@ -2,12 +2,74 @@ import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
 import { runSlackAgentTurn } from "../../../providers/slack/actions/runSlackAgentTurn.js";
+import type { SlackChatInstallation } from "../../../providers/slack/domain/slackAgentTurn.js";
 import { findInstallation } from "../../../providers/slack/installations.js";
 import { presentSlackAgentTurn } from "../../../providers/slack/presenters/presentSlackAgentTurn.js";
 import type { ReplyTarget } from "../../../ui/progress.js";
+import { dispatchThreadMessage } from "../../runs/runCoordinator.js";
+import {
+	closeRun,
+	registerRun,
+	runKeyForThread,
+} from "../../runs/runRegistry.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 import type { ApprovalRunResult } from "../types.js";
 import { approvalOutcomeNotice } from "../utils/approvalOutcomeNotice.js";
+
+const runFollowUpTurn = async ({
+	approval,
+	installation,
+	notice,
+	providerUserId,
+	runKey,
+	target,
+	threadId,
+}: {
+	approval: ChatApproval;
+	installation: SlackChatInstallation;
+	notice: string;
+	providerUserId: string;
+	runKey: string;
+	target: ReplyTarget;
+	threadId: string;
+}) => {
+	const run = registerRun({
+		key: runKey,
+		kind: "approval",
+		ownerProviderUserId: providerUserId,
+	});
+	try {
+		const output = await runSlackAgentTurn({
+			channelId: approval.channel_id,
+			installation,
+			providerUserId,
+			run,
+			text: notice,
+			threadId,
+		});
+		// Neither is presentable, and neither can happen on a turn nobody drives.
+		if (output.kind === "blocked" || output.kind === "stopped") {
+			rootLogger.info("Approval follow-up turn did not run", {
+				event: "leaf.approval_continue_skipped",
+				approval_id: approval.id,
+				data: { kind: output.kind },
+			});
+			return;
+		}
+		await presentSlackAgentTurn({
+			channelId: approval.channel_id,
+			logAction: () => undefined,
+			logger: rootLogger,
+			providerUserId,
+			stopStatus: () => undefined,
+			target,
+			threadId,
+			turn: output,
+		});
+	} finally {
+		closeRun({ key: runKey, run });
+	}
+};
 
 /** A fresh turn confirms the applied change and finishes any remaining steps
  * of a multi-step request. */
@@ -52,31 +114,31 @@ export const continueAfterApproval = async ({
 			});
 			return;
 		}
-		const output = await runSlackAgentTurn({
+		// The same per-thread door every Slack message goes through: a live run
+		// absorbs the notice into its turn, otherwise the follow-up waits its
+		// turn and registers itself so messages arriving during it queue too.
+		const runKey = runKeyForThread({
 			channelId: approval.channel_id,
-			installation,
-			providerUserId,
-			text: notice,
+			provider: "slack",
 			threadId,
+			workspaceId: approval.workspace_id,
 		});
-		// Neither is presentable, and neither can happen on a turn nobody drives.
-		if (output.kind === "blocked" || output.kind === "stopped") {
-			rootLogger.info("Approval follow-up turn did not run", {
-				event: "leaf.approval_continue_skipped",
-				approval_id: approval.id,
-				data: { kind: output.kind },
-			});
-			return;
-		}
-		await presentSlackAgentTurn({
-			channelId: approval.channel_id,
-			logAction: () => undefined,
-			logger: rootLogger,
+		await dispatchThreadMessage({
+			hasAttachments: false,
+			origin: "system",
 			providerUserId,
-			stopStatus: () => undefined,
-			target,
-			threadId,
-			turn: output,
+			runKey,
+			runNewMessage: () =>
+				runFollowUpTurn({
+					approval,
+					installation,
+					notice,
+					providerUserId,
+					runKey,
+					target,
+					threadId,
+				}),
+			text: notice,
 		});
 	} catch (error) {
 		rootLogger.warn("Could not continue after approval", {

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	createEveTurnProgress,
 	reduceEveTurnEvent,
+	STEERED_TURN_STATUS,
 } from "../../../src/internal/agentRuntime/actions/runAgentTurn/execute/eveTurnReducer.js";
 import type { EveInputRequest } from "../../../src/internal/agentRuntime/eve/eveEventSchemas.js";
 
@@ -82,6 +83,82 @@ describe("Eve turn reducer", () => {
 		});
 		expect(terminal.effects).toEqual([{ kind: "save_session" }]);
 		expect(terminal.outcome).toMatchObject({ kind: "answered", text: "Hello" });
+	});
+
+	test("a steered turn is a boundary to read past, not a reply", () => {
+		// Tony's second message steered the turn mid-sentence: eve cancels it,
+		// parks, then restarts with both messages in context. The "Appl" the
+		// cancelled turn streamed was posted as the reply in the 2026-09-16
+		// incident; the reader must drop it and wait for the replacement.
+		const started = reduceEveTurnEvent({
+			event: { turnId: "turn_1", type: "turn.started" },
+			progress: {
+				...createEveTurnProgress(),
+				recordedWrites: [
+					{ callId: "call_1", input: { plan_id: "pro" }, toolName: "attach" },
+				],
+			},
+		});
+		const appended = reduceEveTurnEvent({
+			createReasoningId: () => "reasoning_1",
+			event: { messageDelta: "Appl", type: "message.appended" },
+			progress: started.progress,
+		});
+
+		const cancelled = reduceEveTurnEvent({
+			event: { turnId: "turn_1", type: "turn.cancelled" },
+			progress: appended.progress,
+		});
+		expect(cancelled.outcome).toBeUndefined();
+		expect(cancelled.effects).toEqual([
+			{ id: "reasoning_1", kind: "reasoning", text: "" },
+			{ kind: "status", text: STEERED_TURN_STATUS },
+		]);
+		expect(cancelled.progress).toMatchObject({
+			finalText: "",
+			pendingText: "",
+			turnStarted: false,
+		});
+		// A write the cancelled turn completed is not rolled back by eve, so its
+		// approval still has to be assembled when the replacement turn ends.
+		expect(cancelled.progress.recordedWrites).toHaveLength(1);
+
+		const waiting = reduceEveTurnEvent({
+			event: { type: "session.waiting" },
+			progress: cancelled.progress,
+		});
+		expect(waiting.outcome).toBeUndefined();
+		expect(waiting.effects).toEqual([]);
+
+		const restarted = reduceEveTurnEvent({
+			event: { turnId: "turn_2", type: "turn.started" },
+			progress: waiting.progress,
+		});
+		const completed = reduceEveTurnEvent({
+			event: {
+				finishReason: "stop",
+				message: "Applied — the trial now ends 2026-09-23.",
+				type: "message.completed",
+			},
+			progress: restarted.progress,
+		});
+		const terminal = reduceEveTurnEvent({
+			event: { type: "session.waiting" },
+			progress: completed.progress,
+		});
+		expect(terminal.outcome).toMatchObject({
+			kind: "suspended",
+			text: "Applied — the trial now ends 2026-09-23.",
+		});
+	});
+
+	test("a cancel before the current turn started is replay noise", () => {
+		const transition = reduceEveTurnEvent({
+			event: { turnId: "turn_0", type: "turn.cancelled" },
+			progress: createEveTurnProgress(),
+		});
+		expect(transition.effects).toEqual([]);
+		expect(transition.outcome).toBeUndefined();
 	});
 
 	test("treats an empty-delivery completion as a declined reply", () => {
