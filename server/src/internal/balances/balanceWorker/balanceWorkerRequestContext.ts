@@ -10,6 +10,9 @@ export type BalanceWorkerRequestContext = Pick<
 	"id" | "env" | "timestamp" | "expand"
 > &
 	Readonly<{
-		org: Pick<AutumnContext["org"], "id"> & { config: CommandOrg["config"] };
+		org: Pick<AutumnContext["org"], "id"> &
+			Partial<Pick<AutumnContext["org"], "slug">> & {
+				config: CommandOrg["config"];
+			};
 		features: Pick<AutumnContext["features"][number], "id" | "internal_id">[];
 	}>;

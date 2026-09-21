@@ -1,4 +1,5 @@
 import { sendCheck } from "./commands/sendCheck.js";
+import { sendEvict } from "./commands/sendEvict.js";
 import { sendInitialize } from "./commands/sendInitialize.js";
 import { sendTrack } from "./commands/sendTrack.js";
 import { createHttpClient } from "./http/createHttpClient.js";
@@ -7,6 +8,7 @@ import type {
 	BalanceWorkerClientConfig,
 	BalanceWorkerClientDependencies,
 	CheckParams,
+	EvictParams,
 	InitializeParams,
 	TrackParams,
 } from "./types/balanceWorkerClient.js";
@@ -44,5 +46,9 @@ export function createBalanceWorkerClient({
 		return sendInitialize({ ctx, ...params });
 	}
 
-	return { track, check, initialize };
+	function evict(params: EvictParams) {
+		return sendEvict({ ctx, ...params });
+	}
+
+	return { track, check, initialize, evict };
 }

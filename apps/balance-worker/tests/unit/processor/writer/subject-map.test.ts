@@ -22,6 +22,44 @@ const partition = 0;
 const customerKey = meteringIdentityToPartitionKey({ identity: testIdentity });
 
 describe("createSubjectMap", () => {
+	test("evicts one customer's subjects, entities included, and keeps its command ids", () => {
+		const map = createSubjectMap();
+		const state = createState();
+		const entityKey = `${customerKey}:entity_1`;
+		map.setState({ subjectKey: customerKey, state });
+		map.setState({ subjectKey: entityKey, state });
+		map.setState({ subjectKey: "other", state });
+		map.rememberCommand({
+			customerKey,
+			commandId: "cmd",
+			fingerprint: "fp",
+			expiresAt: 10,
+		});
+
+		map.evictCustomer({ customerKey });
+		expect(map.readState({ subjectKey: customerKey })).toBeNull();
+		expect(map.readState({ subjectKey: entityKey })).toBeNull();
+		expect(map.readState({ subjectKey: "other" })).toEqual(state);
+		expect(
+			map.readCommand({ customerKey, commandId: "cmd", now: 0 }),
+		).not.toBeNull();
+	});
+
+	test("a pinned subject stays until its last pin is released, then goes", () => {
+		const map = createSubjectMap();
+		const state = createState();
+		map.setState({ subjectKey: customerKey, state });
+		map.pin({ subjectKey: customerKey });
+		map.pin({ subjectKey: customerKey });
+		map.evictCustomer({ customerKey });
+		expect(map.readState({ subjectKey: customerKey })).toEqual(state);
+		map.unpin({ subjectKey: customerKey });
+		expect(map.readState({ subjectKey: customerKey })).toEqual(state);
+		map.unpin({ subjectKey: customerKey });
+		expect(map.readState({ subjectKey: customerKey })).toBeNull();
+		expect(map.sizeBytes()).toBe(0);
+	});
+
 	test("evicts the least recently read subject first and never a pinned one", () => {
 		const map = createSubjectMap({ maxBytes: 1 });
 		const a = createState({ identity: { ...testIdentity, customerId: "a" } });

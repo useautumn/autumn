@@ -21,6 +21,8 @@ export type SubjectMap = {
 		commandId: string;
 		now: number;
 	}): RememberedCommand | null;
+	/** Drops the customer's resident rows, entities included, keeping recent command ids so retries still dedupe. A pinned subject goes when its last pin is released. */
+	evictCustomer(params: { customerKey: string }): void;
 	clear(): void;
 	/** Bytes held by resident states, for tests and health. */
 	sizeBytes(): number;

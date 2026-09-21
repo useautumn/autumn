@@ -2,6 +2,7 @@ import type { Redis } from "ioredis";
 import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { evictBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/evictBalanceWorkerCustomer.js";
 import { markCustomerUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
@@ -97,6 +98,7 @@ export const invalidateCachedFullSubject = async ({
 	// Freshness mark lives in the chokepoint so no invalidating writer can
 	// forget it; a pure DB write, deliberately not gated on any Redis state.
 	await Promise.all([
+		evictBalanceWorkerCustomer({ ctx, customerId }),
 		markCustomerUpdatedAt({
 			db: ctx.db,
 			orgId: ctx.org.id,

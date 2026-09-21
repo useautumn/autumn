@@ -4,6 +4,7 @@ import {
 	readFreshestState as readFreshestSubjectState,
 	waitForPendingCommits as waitForCustomerCommits,
 } from "./actions/decide.js";
+import { evict as evictCustomer } from "./actions/evict.js";
 import { createPartitionWriterState } from "./pendingMutations.js";
 import type { DecidedMutation, MutationSubmission } from "./types/mutation.js";
 import type {
@@ -47,11 +48,15 @@ export function createPartitionWriter({
 		return readFreshestSubjectState({ scope, identity });
 	}
 
+	function evict({ customerKey }: Parameters<PartitionWriter["evict"]>[0]) {
+		return evictCustomer({ scope, customerKey });
+	}
+
 	function adopt({ state }: Parameters<PartitionWriter["adopt"]>[0]) {
 		return adoptState({ scope, state });
 	}
 
-	return { decide, waitForPendingCommits, readFreshestState, adopt };
+	return { decide, waitForPendingCommits, readFreshestState, evict, adopt };
 }
 
 function validateWriterConfig(config: PartitionWriterConfig): void {

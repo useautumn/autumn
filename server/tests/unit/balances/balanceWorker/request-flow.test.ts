@@ -123,7 +123,10 @@ test.concurrent(
 		const [row] = state.customerEntitlements;
 		if (!row) throw new Error("Expected the messages row");
 		const commands: unknown[] = [];
-		const client: Pick<BalanceWorkerClient, "check"> = {
+		const client: Pick<BalanceWorkerClient, "check" | "track"> = {
+			track: async () => {
+				throw new Error("This fixture never tracks");
+			},
 			check: async ({ command }) => {
 				commands.push(command);
 				return {
@@ -230,7 +233,10 @@ test.concurrent(
 	async () => {
 		const { ctx } = createCustomerFixture();
 		let calls = 0;
-		const client: Pick<BalanceWorkerClient, "check"> = {
+		const client: Pick<BalanceWorkerClient, "check" | "track"> = {
+			track: async () => {
+				throw new Error("This fixture never tracks");
+			},
 			check: async () => {
 				calls++;
 				throw new Error("Unexpected check");
@@ -287,6 +293,9 @@ test.concurrent(
 					throw cause;
 				},
 				track: async () => {
+					throw cause;
+				},
+				evict: async () => {
 					throw cause;
 				},
 			};

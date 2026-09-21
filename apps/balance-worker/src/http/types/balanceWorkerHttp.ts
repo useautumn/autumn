@@ -29,7 +29,10 @@ export type BalanceWorkerRequestLog = {
 	id: string;
 	command?: Pick<TrackCommand, "requestId" | "identity"> &
 		Partial<
-			Pick<TrackCommand, "commandId" | "featureId" | "value" | "properties">
+			Pick<
+				TrackCommand,
+				"commandId" | "featureId" | "value" | "properties" | "org"
+			>
 		>;
 	response?: TrackReply | CheckReply | InitializeReply;
 	error?: Error;

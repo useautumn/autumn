@@ -2,6 +2,7 @@
 export { computeCheck } from "./commands/check/computeCheck.js";
 export type { CheckCommand } from "./commands/check/types/checkCommand.js";
 export type { CheckResult } from "./commands/check/types/checkResult.js";
+export type { EvictCommand } from "./commands/evict/types/evictCommand.js";
 export { computeInitialize } from "./commands/initialize/computeInitialize.js";
 export type { InitializeCommand } from "./commands/initialize/types/initializeCommand.js";
 export type { InitializeRequest } from "./commands/initialize/types/initializeRequest.js";
@@ -84,6 +85,7 @@ export {
 	parseCatalog,
 	parseCatalogRow,
 	parseCheckCommand,
+	parseEvictCommand,
 	parseInitializeCommand,
 	parseInitializeRequest,
 	parseMeteringIdentity,

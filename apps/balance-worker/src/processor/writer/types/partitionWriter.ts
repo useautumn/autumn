@@ -25,6 +25,8 @@ export type PartitionWriter = {
 	readFreshestState(params: {
 		identity: MeteringIdentity;
 	}): SubjectState | null;
+	/** Waits for the customer's pending commits, then drops its resident rows so the next command re-reads the database. */
+	evict(params: { customerKey: string }): Promise<void>;
 	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there. */
 	adopt(params: { state: SubjectState }): SubjectState;
 };

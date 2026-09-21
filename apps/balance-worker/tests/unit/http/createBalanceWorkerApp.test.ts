@@ -38,6 +38,7 @@ const command = parseTrackCommand({
 		schemaVersion: 1,
 		type: "track",
 		org: {
+			slug: "acme",
 			config: {
 				reverse_deduction_order: false,
 				block_overdue_entitlements: false,
@@ -113,6 +114,7 @@ const fixture = ({
 			}),
 			state,
 		}),
+		evict: async () => ({ evicted: false }),
 		drain: async () => undefined,
 	};
 	const process: BalanceWorkerRequestContext["runtime"]["process"] = (run) =>
@@ -180,9 +182,12 @@ async function logsCompletedRequest(): Promise<void> {
 		res: trackReply,
 		statusCode: 200,
 		durationMs: expect.any(Number),
-		org_id: "org",
-		customer_id: "customer",
-		env: "sandbox",
+		context: {
+			org_id: "org",
+			org_slug: "acme",
+			customer_id: "customer",
+			env: "sandbox",
+		},
 		data: {
 			commandId: "cmd",
 			featureId: "messages",

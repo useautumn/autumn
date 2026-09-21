@@ -58,6 +58,7 @@ describe("track computation", () => {
 					creditCost: 1,
 				},
 			],
+			fundingFeatureId: "messages",
 		});
 	});
 
@@ -91,6 +92,7 @@ describe("track computation", () => {
 			status: "rejected",
 			reason: "insufficient_balance",
 			deltas: [],
+			fundingFeatureId: "messages",
 		});
 	});
 

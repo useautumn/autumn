@@ -1,9 +1,11 @@
 import type {
 	CheckCommand,
+	EvictCommand,
 	InitializeRequest,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import { check as checkPartition } from "./commands/check.js";
+import { evict as evictPartition } from "./commands/evict.js";
 import { initialize as initializePartition } from "./commands/initialize.js";
 import { track as trackPartition } from "./commands/track.js";
 import {
@@ -67,6 +69,13 @@ export function createPartitionProcessor({
 		});
 	}
 
+	function evict({ command }: { command: EvictCommand }) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: evictPartition({ scope, command }),
+		});
+	}
+
 	function drain() {
 		return settleAcceptedCommands({ accepted: scope.accepted });
 	}
@@ -78,5 +87,5 @@ export function createPartitionProcessor({
 		});
 	}
 
-	return { track, check, initialize, drain };
+	return { track, check, initialize, evict, drain };
 }

@@ -22,10 +22,6 @@ export function checkParamsToCheckCommand({
 		throw new BalanceWorkerUnsupportedError({
 			reason: "product_check_not_supported",
 		});
-	if (body.send_event)
-		throw new BalanceWorkerUnsupportedError({
-			reason: "check_and_track_not_supported",
-		});
 	if (body.with_preview)
 		throw new BalanceWorkerUnsupportedError({
 			reason: "preview_not_supported",

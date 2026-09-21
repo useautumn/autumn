@@ -90,8 +90,9 @@ export function balanceWorkerEnvToRuntimeConfig({
 		},
 		writerLimits: {
 			maxBatchSize: 100,
-			maxPendingCommands: 1000,
-			maxPendingCommandsPerCustomer: 100,
+			// Sized for one customer bursting 500 parallel tracks, the largest the balance suites send.
+			maxPendingCommands: 4000,
+			maxPendingCommandsPerCustomer: 1000,
 		},
 		trackReceiptRetentionMs: env.BALANCE_WORKER_RECEIPT_RETENTION_MS,
 		producerLimits: {

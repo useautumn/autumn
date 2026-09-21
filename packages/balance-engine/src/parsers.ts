@@ -3,6 +3,10 @@ import {
 	checkCommandSchema,
 } from "./commands/check/types/checkCommand.js";
 import {
+	type EvictCommand,
+	evictCommandSchema,
+} from "./commands/evict/types/evictCommand.js";
+import {
 	type InitializeCommand,
 	initializeCommandSchema,
 } from "./commands/initialize/types/initializeCommand.js";
@@ -51,6 +55,12 @@ export const parseCheckCommand = ({
 }: {
 	input: unknown;
 }): CheckCommand => checkCommandSchema.parse(input);
+
+export const parseEvictCommand = ({
+	input,
+}: {
+	input: unknown;
+}): EvictCommand => evictCommandSchema.parse(input);
 
 export const parseInitializeCommand = ({
 	input,

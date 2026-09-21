@@ -48,10 +48,14 @@ function logRequestResult({
 		event: "balance_worker.request",
 		statusCode,
 		durationMs,
-		org_id: command?.identity.orgId,
-		env: command?.identity.env,
-		customer_id: command?.identity.customerId,
-		entity_id: command?.identity.entityId,
+		// Same key and field names the server logs under, so one Axiom filter covers both services.
+		context: {
+			org_id: command?.identity.orgId,
+			org_slug: command?.org?.slug,
+			env: command?.identity.env,
+			customer_id: command?.identity.customerId,
+			entity_id: command?.identity.entityId,
+		},
 		errorCode,
 		error,
 		req: {

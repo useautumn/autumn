@@ -1,4 +1,5 @@
 import type { DeductionOutcome } from "../../deduction/types/deductionOutcome.js";
+import { fundingRowOf } from "../../deduction/utils/fundingRowOf.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import { parseSubjectStateMutation } from "../../parsers.js";
 import type { TrackCommand } from "./types/trackCommand.js";
@@ -28,6 +29,8 @@ export const trackOutcomeToMutation = ({
 				status: rejected ? "rejected" : "applied",
 				reason: rejected ? "insufficient_balance" : null,
 				deltas: rejected ? [] : outcome.deltas,
+				fundingFeatureId:
+					fundingRowOf({ outcome })?.featureId ?? command.featureId,
 			},
 		},
 	});

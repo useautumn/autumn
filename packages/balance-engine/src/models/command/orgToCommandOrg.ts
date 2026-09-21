@@ -4,8 +4,9 @@ import type { CommandOrg } from "./commandOrg.js";
 export const orgToCommandOrg = ({
 	org,
 }: {
-	org: { config: CommandOrg["config"] };
+	org: { slug?: string; config: CommandOrg["config"] };
 }): CommandOrg => ({
+	slug: org.slug,
 	config: {
 		reverse_deduction_order: org.config.reverse_deduction_order,
 		block_overdue_entitlements: org.config.block_overdue_entitlements,

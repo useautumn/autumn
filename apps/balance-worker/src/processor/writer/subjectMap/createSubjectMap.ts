@@ -16,6 +16,8 @@ type Entry = {
 	state: SubjectState;
 	bytes: number;
 	pins: number;
+	/** Evicted while a commit was in flight: the rows go as soon as the last pin is released. */
+	evictOnUnpin: boolean;
 	recentCommands: Map<string, RememberedCommand>;
 };
 
@@ -46,6 +48,7 @@ export const createSubjectMap = ({
 			state: null as unknown as SubjectState,
 			bytes: 0,
 			pins: 0,
+			evictOnUnpin: false,
 			recentCommands: new Map(),
 		};
 		entries.set(subjectKey, created);
@@ -89,9 +92,25 @@ export const createSubjectMap = ({
 		entryOf({ subjectKey }).pins += 1;
 	};
 
+	const dropState = ({
+		subjectKey,
+		entry,
+	}: {
+		subjectKey: string;
+		entry: Entry;
+	}) => {
+		totalBytes -= entry.bytes;
+		entry.bytes = 0;
+		entry.evictOnUnpin = false;
+		if (entry.recentCommands.size === 0) entries.delete(subjectKey);
+	};
+
 	const unpin = ({ subjectKey }: { subjectKey: string }) => {
 		const entry = entries.get(subjectKey);
-		if (entry && entry.pins > 0) entry.pins -= 1;
+		if (!entry || entry.pins === 0) return;
+		entry.pins -= 1;
+		if (entry.pins === 0 && entry.evictOnUnpin)
+			dropState({ subjectKey, entry });
 	};
 
 	const rememberCommand = ({
@@ -127,6 +146,16 @@ export const createSubjectMap = ({
 		return remembered;
 	};
 
+	const evictCustomer = ({ customerKey }: { customerKey: string }) => {
+		for (const [subjectKey, entry] of entries) {
+			const belongsToCustomer =
+				subjectKey === customerKey || subjectKey.startsWith(`${customerKey}:`);
+			if (!belongsToCustomer) continue;
+			if (entry.pins > 0) entry.evictOnUnpin = true;
+			else dropState({ subjectKey, entry });
+		}
+	};
+
 	const clear = () => {
 		entries.clear();
 		totalBytes = 0;
@@ -139,6 +168,7 @@ export const createSubjectMap = ({
 		unpin,
 		rememberCommand,
 		readCommand,
+		evictCustomer,
 		clear,
 		sizeBytes: () => totalBytes,
 	};
