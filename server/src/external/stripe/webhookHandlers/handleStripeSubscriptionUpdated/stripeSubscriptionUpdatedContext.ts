@@ -19,6 +19,7 @@ export interface SubscriptionPreviousAttributes {
 	trial_end?: number | null;
 	collection_method?: Stripe.Subscription.CollectionMethod;
 	items?: Stripe.ApiList<Stripe.SubscriptionItem>;
+	schedule?: string | Stripe.SubscriptionSchedule | null;
 }
 
 export interface StripeSubscriptionUpdatedContext {
