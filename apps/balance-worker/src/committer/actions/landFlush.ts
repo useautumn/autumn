@@ -1,9 +1,11 @@
+import { LockAlreadyExistsError } from "@autumn/balance-engine";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
 import type {
 	CommitterContext,
 	Flush,
 	FlushCall,
 	FlushOutcome,
+	FlushRejection,
 	FlushRetryPolicy,
 } from "../types/committer.js";
 import { runFlush } from "./runFlush.js";
@@ -23,6 +25,38 @@ const isTransientFailure = (cause: unknown): boolean => {
 	if (typeof errno === "string" && TRANSIENT_SQLSTATE.test(errno)) return true;
 	return typeof code === "string" && TRANSIENT_SOCKET_CODES.has(code);
 };
+
+const UNIQUE_VIOLATION = "23505";
+
+/**
+ * The lock id is unique across the org, but only one customer's locks are in a writer's memory: another
+ * customer holding the id is found here. That is the caller's mistake, not a broken record.
+ */
+const lockConflictOf = ({
+	record,
+	cause,
+}: {
+	record: DurableMutationRecord;
+	cause: unknown;
+}): LockAlreadyExistsError | null => {
+	const { command } = record.mutation;
+	const lockId = command.type === "track" ? command.lock?.lockId : undefined;
+	if (!lockId || !(cause instanceof Error)) return null;
+	const { errno } = cause as Error & { errno?: unknown };
+	const isLockIdTaken =
+		errno === UNIQUE_VIOLATION && cause.message.includes("balance_locks");
+	return isLockIdTaken ? new LockAlreadyExistsError({ lockId }) : null;
+};
+
+/** The same record with nothing to write: lands only its bookmark, so the records behind it are not held up. */
+const withoutChanges = ({
+	record,
+}: {
+	record: DurableMutationRecord;
+}): DurableMutationRecord => ({
+	...record,
+	mutation: { ...record.mutation, changes: [] },
+});
 
 const defaultSleep = ({ delayMs }: { delayMs: number }) => Bun.sleep(delayMs);
 
@@ -65,7 +99,52 @@ const recordCall = ({
 	rows: record.mutation.changes.length,
 });
 
-/** One call, one record at a time and in order: the bookmark stops at the first record that will not land. */
+type RefusedRecord =
+	| { nextOffset: bigint; rejection: FlushRejection }
+	| {
+			nextOffset: bigint;
+			failure: { record: DurableMutationRecord; cause: unknown };
+	  };
+
+/** A record that would not land alone: a lock conflict is skipped past with only its bookmark, anything else stops the call here. */
+const settleRefusedRecord = async ({
+	ctx,
+	call,
+	record,
+	cause,
+	retry,
+	nextOffset,
+}: {
+	ctx: CommitterContext;
+	call: FlushCall;
+	record: DurableMutationRecord;
+	cause: unknown;
+	retry: FlushRetryPolicy;
+	nextOffset: bigint;
+}): Promise<RefusedRecord> => {
+	const conflict = lockConflictOf({ record, cause });
+	if (!conflict) return { nextOffset, failure: { record, cause } };
+	const skip = recordCall({
+		call,
+		record: withoutChanges({ record }),
+		expectedOffset: nextOffset,
+	});
+	try {
+		const outcomes = await runWithRetries({
+			ctx,
+			flush: { calls: [skip] },
+			retry,
+		});
+		return {
+			nextOffset: outcomes.get(skip)?.nextOffset ?? nextOffset,
+			rejection: { record, cause: conflict },
+		};
+	} catch (skipCause) {
+		return { nextOffset, failure: { record, cause: skipCause } };
+	}
+};
+
+/** One call, one record at a time and in order: the bookmark stops at the first record that is broken, and moves past one that is merely refused. */
 const landRecordsOneByOne = async ({
 	ctx,
 	call,
@@ -76,6 +155,7 @@ const landRecordsOneByOne = async ({
 	retry: FlushRetryPolicy;
 }): Promise<FlushOutcome> => {
 	let nextOffset = call.expectedOffset;
+	const rejections: FlushRejection[] = [];
 	for (const record of call.records) {
 		const single = recordCall({ call, record, expectedOffset: nextOffset });
 		try {
@@ -86,10 +166,21 @@ const landRecordsOneByOne = async ({
 			});
 			nextOffset = outcomes.get(single)?.nextOffset ?? nextOffset;
 		} catch (cause) {
-			return { nextOffset, failure: { record, cause } };
+			const refused = await settleRefusedRecord({
+				ctx,
+				call,
+				record,
+				cause,
+				retry,
+				nextOffset,
+			});
+			nextOffset = refused.nextOffset;
+			if ("failure" in refused)
+				return { nextOffset, failure: refused.failure, rejections };
+			rejections.push(refused.rejection);
 		}
 	}
-	return { nextOffset };
+	return { nextOffset, rejections };
 };
 
 /**
@@ -122,12 +213,25 @@ export const landFlush = async ({
 			outcomes.set(call, await landRecordsOneByOne({ ctx, call, retry }));
 			return outcomes;
 		}
+		// A lone record already failed alone: it is not re-run, only classified.
 		const record = call.records[0];
+		if (!record) {
+			outcomes.set(call, { nextOffset: call.expectedOffset });
+			return outcomes;
+		}
+		const refused = await settleRefusedRecord({
+			ctx,
+			call,
+			record,
+			cause,
+			retry,
+			nextOffset: call.expectedOffset,
+		});
 		outcomes.set(
 			call,
-			record
-				? { nextOffset: call.expectedOffset, failure: { record, cause } }
-				: { nextOffset: call.expectedOffset },
+			"failure" in refused
+				? { nextOffset: refused.nextOffset, failure: refused.failure }
+				: { nextOffset: refused.nextOffset, rejections: [refused.rejection] },
 		);
 		return outcomes;
 	}

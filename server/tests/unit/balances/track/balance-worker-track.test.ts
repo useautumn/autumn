@@ -331,6 +331,7 @@ function trackReplyOf({
 		result: mutation.result,
 		changes: mutation.changes,
 		state: applyMutation({ state, mutation }),
+		catalog: catalogRowsToCatalog({ rows: [] }),
 	};
 }
 

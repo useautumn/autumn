@@ -1,4 +1,5 @@
 import type {
+	Catalog,
 	FinalizeCommand,
 	FinalizeResult,
 	RowChange,
@@ -15,4 +16,6 @@ export type FinalizeReply = {
 	result: FinalizeResult;
 	changes: RowChange[];
 	state: SubjectState;
+	/** The catalog rows the command was decided against, so the server builds its response without loading them. */
+	catalog: Catalog;
 };

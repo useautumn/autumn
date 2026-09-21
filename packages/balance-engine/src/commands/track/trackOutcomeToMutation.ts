@@ -18,6 +18,7 @@ export const trackOutcomeToMutation = ({
 }): SubjectStateMutation => {
 	const { rejected, changes } = outcome;
 	const revisionBefore = fullSubject.revision;
+	const fundingRow = fundingRowOf({ outcome });
 	// A rejected track deducted nothing, so there is nothing for a lock to hold.
 	const lockChanges =
 		command.lock && !rejected
@@ -44,8 +45,8 @@ export const trackOutcomeToMutation = ({
 				status: rejected ? "rejected" : "applied",
 				reason: rejected ? "insufficient_balance" : null,
 				deltas: rejected ? [] : outcome.deltas,
-				fundingFeatureId:
-					fundingRowOf({ outcome })?.featureId ?? command.featureId,
+				fundingFeatureId: fundingRow?.featureId ?? command.featureId,
+				fundingCreditCost: fundingRow?.creditCost ?? 1,
 			},
 		},
 	});

@@ -105,6 +105,9 @@ test.concurrent(
 							command,
 						}),
 						state: initialization!.state,
+						catalog: catalogRowsToCatalog({
+							rows: initialization!.catalogRows,
+						}),
 					}),
 				},
 				report: () => {

@@ -59,6 +59,7 @@ describe("track computation", () => {
 				},
 			],
 			fundingFeatureId: "messages",
+			fundingCreditCost: 1,
 		});
 	});
 
@@ -93,6 +94,7 @@ describe("track computation", () => {
 			reason: "insufficient_balance",
 			deltas: [],
 			fundingFeatureId: "messages",
+			fundingCreditCost: 1,
 		});
 	});
 

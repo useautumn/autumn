@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { createSubjectState, type TrackCommand } from "@autumn/balance-engine";
+import {
+	catalogRowsToCatalog,
+	createSubjectState,
+	type TrackCommand,
+} from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client";
 import { createBalanceShadow } from "@/internal/balances/shadow/createBalanceShadow.js";
 
@@ -31,8 +35,16 @@ const command: TrackCommand = {
 const source = { kind: "returned" } as const;
 const decision: TrackReply = {
 	state: createSubjectState({ identity: command.identity }),
+	catalog: catalogRowsToCatalog({ rows: [] }),
 	changes: [],
-	result: { type: "track", status: "applied", reason: null, deltas: [] },
+	result: {
+		type: "track",
+		status: "applied",
+		reason: null,
+		deltas: [],
+		fundingFeatureId: "messages",
+		fundingCreditCost: 1,
+	},
 };
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
 

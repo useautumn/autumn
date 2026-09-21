@@ -30,10 +30,14 @@ export type CommitterConfig = {
 
 export type PartitionPosition = { topic: string; partition: number };
 
-/** Where a call's records stopped landing. Without `failure`, every record is in Postgres. */
+/** A record Postgres refused for a business reason: skipped, its changes never applied, the bookmark moved past it. */
+export type FlushRejection = { record: DurableMutationRecord; cause: Error };
+
+/** Where a call's records stopped landing. Without `failure`, every record before `nextOffset` is settled: landed, or rejected. */
 export type FlushOutcome = {
 	nextOffset: bigint;
 	failure?: { record: DurableMutationRecord; cause: unknown };
+	rejections?: FlushRejection[];
 };
 
 /** One partition writer's batch, waiting for the flush that will carry it. */

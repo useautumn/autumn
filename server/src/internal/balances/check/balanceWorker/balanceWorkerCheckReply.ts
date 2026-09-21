@@ -1,5 +1,4 @@
 import type { CheckCommand } from "@autumn/balance-engine";
-import type { CheckReply } from "@autumn/balance-worker-client";
 import {
 	AffectedResource,
 	applyResponseVersionChanges,
@@ -11,20 +10,21 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { workerStateToApiBalance } from "../../balanceWorker/workerStateToApiBalance.js";
+import type { WorkerCheckAnswer } from "./runDeductingCheck.js";
 
-/** The one place a worker check reply becomes the API's check response. */
-export function checkReplyToApiResponse({
+/** The one place a worker's answer becomes the API's check response, whether it came from a check or a track. */
+export function checkAnswerToApiResponse({
 	ctx,
 	command,
-	reply,
+	answer,
 	fullSubject,
 }: {
 	ctx: AutumnContext;
 	command: CheckCommand;
-	reply: CheckReply;
+	answer: WorkerCheckAnswer;
 	fullSubject: FullSubject;
 }): CheckResponseV3 {
-	const { result, state } = reply;
+	const { result, state } = answer;
 	// The worker names the feature that answers: the checked one, or the credit system funding it.
 	const featureToUse = findFeatureById({
 		features: ctx.features,
@@ -33,7 +33,7 @@ export function checkReplyToApiResponse({
 	});
 	const isAttached = result.fundingFeatureId !== null;
 	const balance =
-		isAttached && !result.isFlag
+		state && isAttached && !result.isFlag
 			? workerStateToApiBalance({
 					ctx,
 					fullSubject,

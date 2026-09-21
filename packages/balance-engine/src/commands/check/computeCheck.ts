@@ -24,9 +24,11 @@ export const computeCheck = ({
 	});
 	const [firstEntitlement] = outcome.context.customerEntitlements;
 	if (!firstEntitlement && !outcome.context.overdueBlocked) {
+		// Nothing funds the feature, so only a requirement of nothing can be met.
+		const allowed = command.requiredBalance <= 0;
 		return {
-			allowed: false,
-			reason: "feature_not_attached",
+			allowed,
+			reason: allowed ? null : "feature_not_attached",
 			requiredBalance: command.requiredBalance,
 			fundingFeatureId: null,
 			isFlag: false,

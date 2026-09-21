@@ -1,4 +1,5 @@
 import type {
+	Catalog,
 	RowChange,
 	SubjectState,
 	TrackCommand,
@@ -16,4 +17,6 @@ export type TrackReply = {
 	result: TrackResult;
 	changes: RowChange[];
 	state: SubjectState;
+	/** The catalog rows the command was decided against, so the server builds its response without loading them. */
+	catalog: Catalog;
 };

@@ -33,5 +33,9 @@ export async function check({
 		state,
 		identity: parsed.identity,
 	});
-	return { result: computeCheck({ fullSubject, command: parsed }), state };
+	return {
+		result: computeCheck({ fullSubject, command: parsed }),
+		state,
+		catalog: ctx.subjectHydrator.readCatalog({ state }),
+	};
 }

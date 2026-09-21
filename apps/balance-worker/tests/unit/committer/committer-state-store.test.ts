@@ -168,7 +168,7 @@ describe("committer state store", () => {
 		expect(results).toHaveLength(1);
 		const [result] = results;
 		expect(result?.kind === "failed" && (result.cause as Error).message).toBe(
-			"Log record could not be committed to Postgres: cmd_1",
+			"Log record could not be committed to Postgres: cmd_1 (Subject rows moved underneath the worker: messages_monthly (cmd_1))",
 		);
 		expect(fake.transactions).toEqual(["rolled_back"]);
 		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(43n);
@@ -197,7 +197,7 @@ describe("committer state store", () => {
 			],
 		});
 		expect(refused?.kind === "failed" && (refused.cause as Error).message).toBe(
-			"Log record could not be committed to Postgres: init_1",
+			"Log record could not be committed to Postgres: init_1 (Row change not supported by the postgres backend: insert customer)",
 		);
 		expect(store.readNextOffset({ topic, partition })).toBe(100n);
 	});

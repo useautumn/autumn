@@ -37,6 +37,8 @@ export const trackCommandSchema = mutatingCommandSchema
 		overageBehavior: overageBehaviorSchema,
 		properties: propertiesSchema,
 		lock: trackLockSchema.optional(),
+		/** A check that deducts honours the org's overdue block, as a plain check does; a plain track does not. */
+		enforceOverdueBlock: z.boolean().optional(),
 	})
 	.strict();
 

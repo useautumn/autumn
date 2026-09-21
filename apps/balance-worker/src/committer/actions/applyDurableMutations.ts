@@ -82,7 +82,22 @@ export const applyDurableMutations = async ({
 	});
 	// Everything before the failed record is in Postgres and the bookmark says so; the rest waits for recovery.
 	const failedId = outcome.failure?.record.mutation.id ?? null;
+	const rejectionById = new Map(
+		(outcome.rejections ?? []).map((rejection) => [
+			rejection.record.mutation.id,
+			rejection.cause,
+		]),
+	);
 	for (const record of pending) {
+		const rejectedFor = rejectionById.get(record.mutation.id);
+		if (rejectedFor) {
+			results.push({
+				kind: "rejected",
+				mutation: record.mutation,
+				cause: rejectedFor,
+			});
+			continue;
+		}
 		if (record.position.offset < outcome.nextOffset) {
 			results.push({
 				kind: "applied",

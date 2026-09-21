@@ -1,4 +1,5 @@
 import {
+	type Catalog,
 	filterCatalogKeysMissingFrom,
 	type MeteringIdentity,
 	type SubjectState,
@@ -9,16 +10,14 @@ import {
 import { SubjectCatalogEvictedError } from "../subjectErrors.js";
 import type { SubjectScope } from "../types/subject.js";
 
-/** Synchronous, on the freshest state inside the critical section; `ensure` already filled the cache. */
-export const readSubject = ({
+/** The catalog rows a state references, straight from the cache; `ensure` already filled it. */
+export const readSubjectCatalog = ({
 	scope,
 	state,
-	identity,
 }: {
 	scope: SubjectScope;
 	state: SubjectState;
-	identity: MeteringIdentity;
-}): WorkerFullSubject => {
+}): Catalog => {
 	const keys = subjectStateToCatalogKeys({ state });
 	// `ensure` refreshed anything due moments ago, so a row that has since passed
 	// its ttl is still the row it just fetched. Failing the request over that
@@ -27,9 +26,21 @@ export const readSubject = ({
 	const missing = filterCatalogKeysMissingFrom({ keys, catalog });
 	if (missing.length > 0)
 		throw new SubjectCatalogEvictedError({ keys: missing });
-	return subjectStateToFullSubject({
+	return catalog;
+};
+
+/** Synchronous, on the freshest state inside the critical section. */
+export const readSubject = ({
+	scope,
+	state,
+	identity,
+}: {
+	scope: SubjectScope;
+	state: SubjectState;
+	identity: MeteringIdentity;
+}): WorkerFullSubject =>
+	subjectStateToFullSubject({
 		state,
-		catalog,
+		catalog: readSubjectCatalog({ scope, state }),
 		entityId: identity.entityId,
 	});
-};

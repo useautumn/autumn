@@ -1,8 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { LockAlreadyExistsError } from "@autumn/balance-engine";
 import type { SubjectRowChange } from "@autumn/postgres";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
-import { createState, createTrackMutation } from "../../fixtures/mutations.js";
+import {
+	createState,
+	createTrackCommand,
+	createTrackMutation,
+} from "../../fixtures/mutations.js";
 
 const topic = "autumn-metering";
 const noRetry = { maxAttempts: 1, initialBackoffMs: 1, maxBackoffMs: 1 };
@@ -167,6 +172,71 @@ describe("committer", () => {
 		expect(
 			fake.transactions.map((transaction) => transaction.partitions),
 		).toEqual([[0], [0], [0], [1]]);
+		await committer.drain();
+	});
+
+	test("a lock id another customer holds is rejected alone: nothing behind it waits, and only its bookmark lands", async () => {
+		const insertsLock = (updates: readonly SubjectRowChange[]) =>
+			updates.some(
+				(change) => change.op === "insert" && change.table === "locks",
+			);
+		const fake = createGatedDb();
+		fake.openGate();
+		const landFlush = fake.db.flush;
+		fake.db.flush = async (request) => {
+			if (!insertsLock(request.changes)) return landFlush(request);
+			await landFlush(request);
+			throw Object.assign(
+				new Error(
+					'duplicate key value violates unique constraint "balance_locks_org_env_lock_id_key"',
+				),
+				{ errno: "23505" },
+			);
+		};
+		const committer = createCommitter({
+			ctx: { db: fake.db },
+			config: { concurrency: 1, maxRowsPerFlush: 500, retry: noRetry },
+		});
+		const locked = record({ partition: 0, offset: 1n, commandId: "b" });
+		locked.mutation = createTrackMutation({
+			state: createState({ balance: 100 }),
+			command: {
+				...createTrackCommand({ value: 5, commandId: "b" }),
+				lock: {
+					id: "lck_1",
+					lockId: "L1",
+					expiresAt: 1_800_000_000_000,
+					expiryAction: "confirm",
+				},
+			},
+		});
+
+		const outcome = await committer.apply({
+			topic,
+			partition: 0,
+			expectedOffset: 0n,
+			records: [
+				record({ partition: 0, offset: 0n, commandId: "a" }),
+				locked,
+				record({ partition: 0, offset: 2n, commandId: "c" }),
+			],
+		});
+
+		// Every record is settled: a and c landed, the locked one was refused and skipped.
+		expect(outcome.nextOffset).toBe(3n);
+		expect(outcome.failure).toBeUndefined();
+		expect(outcome.rejections?.map(({ record }) => record)).toEqual([locked]);
+		expect(outcome.rejections?.[0]?.cause).toBeInstanceOf(
+			LockAlreadyExistsError,
+		);
+		// The skip carried no row changes, so neither the deduction nor the lock row reached Postgres.
+		const lockAttempts = fake.transactions
+			.map((transaction, index) =>
+				insertsLock(transaction.updates) ? index : -1,
+			)
+			.filter((index) => index !== -1);
+		const lastLockAttempt = lockAttempts[lockAttempts.length - 1] ?? -1;
+		expect(fake.transactions[lastLockAttempt + 1]?.updates).toEqual([]);
 		await committer.drain();
 	});
 

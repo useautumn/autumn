@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { TrackCommand } from "@autumn/balance-engine";
 import {
+	catalogRowsToCatalog,
 	createSubjectState,
 	parseCheckCommand,
 	parseInitializeRequest,
@@ -65,12 +66,15 @@ const initialState = createSubjectState({
 });
 const trackReply: TrackReply = {
 	state: initialState,
+	catalog: catalogRowsToCatalog({ rows: [] }),
 	changes: [],
 	result: {
 		type: "track",
 		status: "applied",
 		reason: null,
 		deltas: [],
+		fundingFeatureId: "messages",
+		fundingCreditCost: 1,
 	},
 };
 const success = { status: 200, body: trackReply };
@@ -388,6 +392,7 @@ test.concurrent(
 				isFlag: false,
 			},
 			state: initialState,
+			catalog: catalogRowsToCatalog({ rows: [] }),
 		};
 		const fixture = createFixture({
 			responses: [

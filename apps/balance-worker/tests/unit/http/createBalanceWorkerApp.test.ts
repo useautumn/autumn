@@ -1,6 +1,7 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import {
 	applyMutation,
+	catalogRowsToCatalog,
 	computeCheck,
 	computeTrack,
 	createSubjectState,
@@ -80,6 +81,7 @@ const trackReply = {
 	result: mutation.result,
 	changes: mutation.changes,
 	state: applyMutation({ state, mutation }),
+	catalog: catalogRowsToCatalog({ rows: [] }),
 };
 const route = { partition: 2, routeEpoch: "9007199254740993" };
 const request = { route, command };
@@ -113,6 +115,7 @@ const fixture = ({
 				command,
 			}),
 			state,
+			catalog: catalogRowsToCatalog({ rows: [] }),
 		}),
 		evict: async () => ({ evicted: false }),
 		finalize: async () => {
@@ -436,6 +439,7 @@ describe("Balance worker HTTP", () => {
 				command: checkCommand,
 			}),
 			state,
+			catalog: catalogRowsToCatalog({ rows: [] }),
 		});
 		expect(lookups).toEqual([route]);
 		expect(submitted).toEqual([]);

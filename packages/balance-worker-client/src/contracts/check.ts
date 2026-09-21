@@ -1,4 +1,5 @@
 import type {
+	Catalog,
 	CheckCommand,
 	CheckResult,
 	SubjectState,
@@ -13,4 +14,6 @@ export type BalanceWorkerCheckRequest = {
 export type CheckReply = {
 	result: CheckResult;
 	state: SubjectState;
+	/** The catalog rows the command was decided against, so the server builds its response without loading them. */
+	catalog: Catalog;
 };

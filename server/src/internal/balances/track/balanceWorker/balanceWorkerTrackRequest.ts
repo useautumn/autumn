@@ -25,11 +25,14 @@ export function trackParamsToTrackCommand({
 	ctx,
 	body,
 	isFanOut = false,
+	enforceOverdueBlock = false,
 }: {
 	ctx: BalanceWorkerRequestContext;
 	body: TrackParams;
 	/** The request named an event, and this command is one of the features it maps to. */
 	isFanOut?: boolean;
+	/** A check that deducts honours the org's overdue block, as a plain check does. */
+	enforceOverdueBlock?: boolean;
 }): TrackCommand {
 	const occurredAt = body.timestamp ?? ctx.timestamp;
 	return {
@@ -50,6 +53,7 @@ export function trackParamsToTrackCommand({
 		value: body.value ?? 1,
 		overageBehavior: body.overage_behavior ?? "cap",
 		properties: body.properties ?? null,
+		...(enforceOverdueBlock && { enforceOverdueBlock }),
 		...(body.lock?.enabled && {
 			lock: lockParamsToTrackLock({ lock: body.lock, occurredAt }),
 		}),

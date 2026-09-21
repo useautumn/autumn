@@ -1,4 +1,5 @@
 import type {
+	Catalog,
 	MeteringIdentity,
 	SubjectState,
 	WorkerFullSubject,
@@ -14,4 +15,6 @@ export type SubjectHydrator = {
 		state: SubjectState;
 		identity: MeteringIdentity;
 	}): WorkerFullSubject;
+	/** Sync: the catalog rows that view was joined from, which a reply hands to the server so it need not load them. */
+	readCatalog(params: { state: SubjectState }): Catalog;
 };

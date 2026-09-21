@@ -73,9 +73,7 @@ export function trackRepliesToApiResponse({
 	// The worker names the feature each balance is reported in: the tracked one, or the credit system funding it.
 	const fundingFeatureIds = [
 		...new Set(
-			replies.map(
-				({ featureId, reply }) => reply.result.fundingFeatureId ?? featureId,
-			),
+			replies.map(({ featureId, reply }) => reply.result.fundingFeatureId),
 		),
 	];
 	const fundingBalances = fundingFeatureIds.map((featureId) =>
@@ -87,8 +85,7 @@ export function trackRepliesToApiResponse({
 	);
 	if (rejectedIndex !== -1) {
 		const rejected = replies[rejectedIndex];
-		const fundingFeatureId =
-			rejected.reply.result.fundingFeatureId ?? rejected.featureId;
+		const fundingFeatureId = rejected.reply.result.fundingFeatureId;
 		throw new InsufficientBalanceError({
 			featureId: rejected.featureId,
 			value,

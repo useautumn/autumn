@@ -116,6 +116,16 @@ async function applyBatch({
 				pending.settlement.reject({ error: result.cause });
 				continue;
 			}
+			// Refused by Postgres, not broken: only this caller hears of it, and the customer's rows are
+			// dropped because memory had already applied a deduction that never landed.
+			if (result.kind === "rejected") {
+				removePendingMutation({ state: scope.state, pending });
+				scope.state.subjects.evictCustomer({
+					customerKey: pending.customerKey,
+				});
+				pending.settlement.reject({ error: result.cause });
+				continue;
+			}
 			const mutation = persistedMutationOf({ scope, result, pending });
 			scope.state.subjects.rememberCommand({
 				customerKey: pending.customerKey,

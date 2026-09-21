@@ -30,9 +30,11 @@ export class FlushRecordBlockedError extends Error {
 /** A record that would not land on its own after retries: the log has it, Postgres does not. */
 export class FlushRecordFailedError extends Error {
 	constructor({ mutationId, cause }: { mutationId: string; cause: unknown }) {
-		super(`Log record could not be committed to Postgres: ${mutationId}`, {
-			cause,
-		});
+		const reason = cause instanceof Error ? cause.message : String(cause);
+		super(
+			`Log record could not be committed to Postgres: ${mutationId} (${reason})`,
+			{ cause },
+		);
 		this.name = "FlushRecordFailedError";
 	}
 }

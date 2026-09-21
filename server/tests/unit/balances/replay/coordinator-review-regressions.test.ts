@@ -192,6 +192,7 @@ function checkDecisionOf({
 			isFlag: false,
 		},
 		state,
+		catalog: catalogRowsToCatalog({ rows: [] }),
 	};
 }
 

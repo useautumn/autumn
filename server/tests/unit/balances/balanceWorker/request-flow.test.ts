@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { InitializeRequest } from "@autumn/balance-engine";
+import { catalogRowsToCatalog } from "@autumn/balance-engine";
 import {
 	type BalanceWorkerClient,
 	BalanceWorkerClientError,
@@ -142,6 +143,7 @@ test.concurrent(
 						revision: 9,
 						customerEntitlements: [{ ...row, balance: -2 }],
 					},
+					catalog: catalogRowsToCatalog({ rows: [] }),
 				};
 			},
 		};

@@ -120,4 +120,16 @@ describe("check computation", () => {
 			}),
 		).toMatchObject(notAttached);
 	});
+
+	test.concurrent(
+		"a requirement of nothing is met even with nothing attached",
+		() => {
+			expect(
+				computeCheck({
+					state: createState({ customerEntitlements: [] }),
+					command: createCheckCommand({ requiredBalance: 0 }),
+				}),
+			).toMatchObject({ allowed: true, reason: null, fundingFeatureId: null });
+		},
+	);
 });

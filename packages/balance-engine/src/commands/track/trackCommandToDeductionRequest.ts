@@ -11,7 +11,7 @@ export const trackCommandToDeductionRequest = ({
 	value: command.value,
 	overageBehavior: command.overageBehavior,
 	properties: command.properties,
-	enforceOverdueBlock: false,
+	enforceOverdueBlock: command.enforceOverdueBlock ?? false,
 	now: command.occurredAt,
 	org: command.org,
 });

@@ -97,6 +97,7 @@ function replayedOffsetOf(
 ): { nextOffset: bigint } | undefined {
 	const [result] = results;
 	if (result?.kind === "failed") throw result.cause;
+	// A rejected record is settled: nothing of it landed and the bookmark is already past it.
 	if (result?.kind === "position_already_applied") {
 		return { nextOffset: result.nextOffset };
 	}
