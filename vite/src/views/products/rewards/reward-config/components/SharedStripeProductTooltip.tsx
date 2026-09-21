@@ -12,18 +12,24 @@ export function SharedStripeProductTooltip() {
 			<TooltipTrigger asChild>
 				<InfoIcon className="size-3.5 cursor-help text-tertiary-foreground" />
 			</TooltipTrigger>
-			<TooltipContent className="max-w-xs">
-				Linked plans share the same Stripe product. Stripe only allows coupons
-				to be scoped to a product, so a discount on one applies to all of them.
-				To target just one plan,{" "}
-				<Link
-					className="underline"
-					to={getRedirectUrl("/dev?tab=stripe", env)}
-					onClick={(e) => e.stopPropagation()}
-				>
-					create a separate Stripe product for it in Stripe settings
-				</Link>
-				.
+			<TooltipContent className="flex max-w-xs flex-col gap-2">
+				<span>
+					Stripe scopes a coupon to a product, never a single price. Variants
+					share their base plan's Stripe product, and usage prices share the
+					feature's, so those plans are selected together and a discount on one
+					applies to all of them.
+				</span>
+				<span>
+					To target one plan on its own,{" "}
+					<Link
+						className="underline"
+						to={getRedirectUrl("/dev?tab=stripe", env)}
+						onClick={(e) => e.stopPropagation()}
+					>
+						give it a separate Stripe product
+					</Link>
+					. It then appears as its own row here.
+				</span>
 			</TooltipContent>
 		</Tooltip>
 	);

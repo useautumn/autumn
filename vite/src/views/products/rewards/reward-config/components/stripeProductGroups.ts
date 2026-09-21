@@ -96,11 +96,30 @@ export const findGroupForPriceId = ({
 	priceId: string;
 }) => groups.find((group) => group.priceIds.includes(priceId)) ?? null;
 
-export const groupLabel = ({ group }: { group: StripeProductGroup }) => {
+/** Every sibling is a variant of the first plan, rather than an unrelated plan sharing a feature. */
+const isVariantFamily = ({ group }: { group: StripeProductGroup }) => {
 	const [first, ...rest] = group.products;
-	if (rest.length === 0) return first.name;
-	return `${first.name} + ${rest.length} plan${rest.length > 1 ? "s" : ""}`;
+	const familyId = first.base_id ?? first.id;
+	return rest.every((product) => product.base_id === familyId);
 };
+
+export const groupLabel = ({ group }: { group: StripeProductGroup }) =>
+	group.products[0].name;
+
+/** The muted "+ N variants" suffix, or null when a group is a single plan. */
+export const groupSuffix = ({ group }: { group: StripeProductGroup }) => {
+	const extra = group.products.length - 1;
+	if (extra < 1) return null;
+
+	const noun = isVariantFamily({ group }) ? "variant" : "plan";
+	return `+ ${extra} ${noun}${extra > 1 ? "s" : ""}`;
+};
+
+/** Named plans, so the hint says which ones move together. */
+export const sharedProductHint = ({ group }: { group: StripeProductGroup }) =>
+	`Shares one Stripe product with ${group.products
+		.map((product) => product.name)
+		.join(", ")}, so a coupon applies to all of them.`;
 
 export const isGroupSelected = ({
 	group,

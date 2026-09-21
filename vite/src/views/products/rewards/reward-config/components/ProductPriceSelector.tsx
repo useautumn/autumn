@@ -5,7 +5,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 } from "@autumn/ui";
-import { LinkIcon } from "@phosphor-icons/react";
 import { useEffect } from "react";
 import { useProductsByPriceIdsQuery } from "@/hooks/queries/useProductsByPriceIdsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -19,7 +18,9 @@ import {
 	expandToFullGroups,
 	findGroupForPriceId,
 	groupLabel,
+	groupSuffix,
 	isGroupSelected,
+	sharedProductHint,
 } from "./stripeProductGroups";
 
 interface ProductPriceSelectorProps {
@@ -104,7 +105,9 @@ export function ProductPriceSelector({
 			seen.add(group.key);
 			chips.push({
 				key: group.key,
-				label: groupLabel({ group }),
+				label: [groupLabel({ group }), groupSuffix({ group })]
+					.filter(Boolean)
+					.join(" "),
 				onRemove: () =>
 					setPriceIds(priceIds.filter((id) => !group.priceIds.includes(id))),
 			});
@@ -154,8 +157,13 @@ export function ProductPriceSelector({
 									className="border-border"
 								/>
 								<span className="truncate">{groupLabel({ group })}</span>
-								{group.products.length > 1 && (
-									<LinkIcon className="ml-auto size-3.5 shrink-0 text-tertiary-foreground" />
+								{groupSuffix({ group }) && (
+									<span
+										className="shrink-0 text-tertiary-foreground"
+										title={sharedProductHint({ group })}
+									>
+										{groupSuffix({ group })}
+									</span>
 								)}
 							</DropdownMenuItem>
 						))}

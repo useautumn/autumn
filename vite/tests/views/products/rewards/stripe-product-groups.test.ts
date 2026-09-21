@@ -4,7 +4,9 @@ import {
 	buildStripeProductGroups,
 	expandToFullGroups,
 	groupLabel,
+	groupSuffix,
 	isGroupSelected,
+	sharedProductHint,
 } from "@/views/products/rewards/reward-config/components/stripeProductGroups";
 
 const plan = ({
@@ -90,27 +92,28 @@ describe("groupLabel", () => {
 			products: [plan({ id: "Pro", stripeId: "prod_pro" })],
 		});
 		expect(groupLabel({ group })).toBe("Pro");
+		expect(groupSuffix({ group })).toBeNull();
 	});
 
 	test("a shared product collapses to a plan count", () => {
 		const [group] = buildStripeProductGroups({
 			products: [
 				plan({ id: "Pro", stripeId: "prod_pro" }),
-				plan({ id: "Pro Yearly", stripeId: "prod_pro" }),
-				plan({ id: "Pro Quarterly", stripeId: "prod_pro" }),
+				plan({ id: "Pro Yearly", stripeId: "prod_pro", baseId: "Pro" }),
+				plan({ id: "Pro Quarterly", stripeId: "prod_pro", baseId: "Pro" }),
 			],
 		});
-		expect(groupLabel({ group })).toBe("Pro + 2 plans");
+		expect(groupSuffix({ group })).toBe("+ 2 variants");
 	});
 
 	test("a single sibling is not pluralised", () => {
 		const [group] = buildStripeProductGroups({
 			products: [
 				plan({ id: "Pro", stripeId: "prod_pro" }),
-				plan({ id: "Pro Yearly", stripeId: "prod_pro" }),
+				plan({ id: "Pro Yearly", stripeId: "prod_pro", baseId: "Pro" }),
 			],
 		});
-		expect(groupLabel({ group })).toBe("Pro + 1 plan");
+		expect(groupSuffix({ group })).toBe("+ 1 variant");
 	});
 });
 
@@ -178,7 +181,7 @@ describe("duplicate product entries", () => {
 
 		expect(groups).toHaveLength(1);
 		expect(groups[0].priceIds).toEqual(["pro_price"]);
-		expect(groupLabel({ group: groups[0] })).toBe("pro");
+		expect(groupSuffix({ group: groups[0] })).toBeNull();
 	});
 });
 
@@ -251,5 +254,61 @@ describe("usage prices share a feature-level Stripe product", () => {
 			"pro_usage",
 			"team_usage_price",
 		]);
+	});
+});
+
+describe("sharedProductHint", () => {
+	test("names the plans that move together", () => {
+		const [group] = buildStripeProductGroups({
+			products: [
+				plan({ id: "Pro", stripeId: "prod_pro" }),
+				plan({ id: "Pro Yearly", stripeId: "prod_pro" }),
+			],
+		});
+
+		expect(sharedProductHint({ group })).toBe(
+			"Shares one Stripe product with Pro, Pro Yearly, so a coupon applies to all of them.",
+		);
+	});
+});
+
+describe("groupSuffix wording", () => {
+	test("a variant family counts variants", () => {
+		const [group] = buildStripeProductGroups({
+			products: [
+				plan({ id: "pro", stripeId: "prod_pro" }),
+				plan({ id: "pro-yearly", stripeId: "prod_pro", baseId: "pro" }),
+			],
+		});
+		expect(groupSuffix({ group })).toBe("+ 1 variant");
+	});
+
+	test("unrelated plans sharing a feature count plans", () => {
+		const [group] = buildStripeProductGroups({
+			products: [
+				usagePlan({ id: "pro", stripeId: "prod_pro", featureId: "messages" }),
+				usagePlan({ id: "team", stripeId: "prod_team", featureId: "messages" }),
+			],
+		});
+		expect(groupSuffix({ group })).toBe("+ 1 plan");
+	});
+});
+
+describe("after a split", () => {
+	test("the split variant becomes its own row and the base keeps the rest", () => {
+		const groups = buildStripeProductGroups({
+			products: [
+				plan({ id: "base", stripeId: "prod_base" }),
+				plan({ id: "eu", stripeId: "prod_eu", baseId: "base" }),
+				plan({ id: "apac", stripeId: "prod_base", baseId: "base" }),
+			],
+		});
+
+		expect(groups).toHaveLength(2);
+		const [baseGroup, euGroup] = groups;
+		expect(groupLabel({ group: baseGroup })).toBe("base");
+		expect(groupSuffix({ group: baseGroup })).toBe("+ 1 variant");
+		expect(groupLabel({ group: euGroup })).toBe("eu");
+		expect(groupSuffix({ group: euGroup })).toBeNull();
 	});
 });
