@@ -156,8 +156,13 @@ export const resolveCouponStripeProductIds = ({
 		reward.type !== RewardType.FreeProduct &&
 		!reward.discount_config!.apply_to_all;
 
+	// Prices of one plan share a product, so dedupe before Stripe sees them.
 	return appliesToSpecificProducts
-		? prices.map((price) => getStripeProductIdForCoupon({ price }))
+		? [
+				...new Set(
+					prices.map((price) => getStripeProductIdForCoupon({ price })),
+				),
+			]
 		: [];
 };
 
