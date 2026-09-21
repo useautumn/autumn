@@ -1,6 +1,6 @@
 import { hostname } from "node:os";
 import { Writable } from "node:stream";
-import { resolveDeployment } from "@autumn/logging";
+import { normalizeErrorValues, resolveDeployment } from "@autumn/logging";
 import pino from "pino";
 import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
 
@@ -277,6 +277,17 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 						level: label.toUpperCase(),
 					};
 				},
+				/** An Error keeps `message`, `stack` and `cause` on non-enumerable
+				 *  properties, so `JSON.stringify` renders one as `{}`. Pino only
+				 *  rescues the `err` key, and most call sites here log under
+				 *  `error` or bury the error inside a payload, so those lines
+				 *  reached Axiom carrying a name and nothing else. That is how an
+				 *  ownership catch-up failed 113 times while every error field in
+				 *  the log was null, and the cause had to be inferred from the gap
+				 *  between retries. The worker's logger already normalises this
+				 *  way; this brings the server in line. */
+				log: (object: Record<string, unknown>) =>
+					normalizeErrorValues(object) as Record<string, unknown>,
 			},
 		},
 		pino.multistream(streams),
