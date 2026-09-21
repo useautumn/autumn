@@ -15,6 +15,9 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 
 export const VERCEL_TEST_CAPTURE_PREFIX = "__test:vercel:captures:";
+// Per-invoice refund total (dollars), accumulated by the refund action mock and
+// returned by the Get Invoice mock as `refundTotal`.
+export const VERCEL_TEST_REFUND_TOTAL_PREFIX = "__test:vercel:refundTotal:";
 const CAPTURE_TTL_SECONDS = 600; // 10 min
 
 type CapturedCall = {
@@ -115,18 +118,22 @@ vercelTestApiRouter.get(
 			body: null,
 			receivedAt: Date.now(),
 		});
+		const refundTotal = await resolveRedisV2().get(
+			`${VERCEL_TEST_REFUND_TOTAL_PREFIX}${invoiceId}`,
+		);
 		const now = new Date().toISOString();
 		return c.json(
 			{
 				test: true,
 				invoiceId,
-				state: "paid",
+				state: refundTotal ? "refunded" : "paid",
 				invoiceDate: now,
 				period: { start: now, end: now },
 				items: [],
 				total: "0.00",
 				created: now,
 				updated: now,
+				...(refundTotal ? { refundTotal: Number(refundTotal).toFixed(2) } : {}),
 			},
 			200,
 		);
@@ -155,6 +162,13 @@ vercelTestApiRouter.post(
 				{ error: { code: "bad_request", message: "rejected" } },
 				409,
 			);
+		}
+		const total = Number((body as { total?: string })?.total);
+		if (Number.isFinite(total) && total > 0) {
+			const redis = resolveRedisV2();
+			const key = `${VERCEL_TEST_REFUND_TOTAL_PREFIX}${invoiceId}`;
+			await redis.incrbyfloat(key, total);
+			await redis.expire(key, CAPTURE_TTL_SECONDS);
 		}
 		return c.body(null, 204);
 	},
@@ -193,6 +207,13 @@ vercelTestApiRouter.delete("/__captures/:installationId", async (c) => {
 	const installationId = c.req.param("installationId");
 	const redis = resolveRedisV2();
 	await redis.del(`${VERCEL_TEST_CAPTURE_PREFIX}${installationId}`);
+	return c.json({ cleared: true }, 200);
+});
+
+// DELETE /__refund-total/:invoiceId → clear the mocked refund total
+vercelTestApiRouter.delete("/__refund-total/:invoiceId", async (c) => {
+	const invoiceId = c.req.param("invoiceId");
+	await resolveRedisV2().del(`${VERCEL_TEST_REFUND_TOTAL_PREFIX}${invoiceId}`);
 	return c.json({ cleared: true }, 200);
 });
 

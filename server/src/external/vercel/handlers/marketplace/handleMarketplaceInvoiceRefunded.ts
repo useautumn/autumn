@@ -1,16 +1,25 @@
 import { invoices } from "@autumn/shared";
-import { eq, sql } from "drizzle-orm";
+import { Marketplace } from "@vercel/sdk/sdk/marketplace.js";
+import { eq } from "drizzle-orm";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { storeVercelInvoiceId } from "@/external/vercel/misc/vercelInvoiceUtils.js";
+import { getVercelSdkServerURL } from "@/external/vercel/misc/vercelSdkOptions.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { CusService } from "@/internal/customers/CusService.js";
 import { upsertInvoiceInCache } from "@/internal/invoices/actions/cache/upsertInvoiceInCache.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 
 /**
  * Handles Vercel's `marketplace.invoice.refunded` webhook — the only
- * confirmation that money actually moved back. Increments `refunded_amount`
- * on the Autumn invoice keyed by `externalInvoiceId` (our Stripe invoice id).
+ * confirmation that money actually moved back.
+ *
+ * Vercel retries webhook deliveries, so the payload's `amount` can't be
+ * accumulated (a retried $20 refund would record $40). Instead we fetch the
+ * invoice from Vercel and set `refunded_amount` to its `refundTotal`, which
+ * is idempotent across retries while still counting multiple partial refunds.
+ * If Vercel can't be reached or returns no total, `refunded_amount` is left
+ * untouched rather than guessed.
  */
 export const handleMarketplaceInvoiceRefunded = async ({
 	ctx,
@@ -32,35 +41,88 @@ export const handleMarketplaceInvoiceRefunded = async ({
 		externalInvoiceId,
 	} = payload;
 
-	const amount = Number(payload.amount);
-	if (!externalInvoiceId || !Number.isFinite(amount) || amount <= 0) {
+	if (!externalInvoiceId || !vercelInvoiceId) {
 		logger.warn("[vercel/marketplace.invoice.refunded] unusable payload", {
-			data: { externalInvoiceId, amount: payload.amount },
+			data: { externalInvoiceId, vercelInvoiceId, amount: payload.amount },
 		});
 		return;
 	}
 
-	const [updated] = await db
-		.update(invoices)
-		.set({ refunded_amount: sql`${invoices.refunded_amount} + ${amount}` })
-		.where(eq(invoices.stripe_id, externalInvoiceId))
-		.returning({ id: invoices.id });
-
-	if (!updated) {
-		logger.warn("[vercel/marketplace.invoice.refunded] no Autumn invoice", {
-			data: { externalInvoiceId },
-		});
+	const customer =
+		ctx.fullCustomer ??
+		(await CusService.getByVercelId({
+			ctx,
+			vercelInstallationId: installationId,
+		}));
+	const accessToken = customer?.processors?.vercel?.access_token;
+	if (!accessToken) {
+		logger.warn(
+			"[vercel/marketplace.invoice.refunded] no Vercel access token for installation",
+			{ data: { installationId, externalInvoiceId } },
+		);
 		return;
+	}
+
+	let refundTotal: number | undefined;
+	try {
+		const marketplace = new Marketplace({
+			bearerToken: accessToken,
+			serverURL: getVercelSdkServerURL(ctx.testOptions),
+		});
+		const vercelInvoice = await marketplace.getInvoice({
+			integrationConfigurationId: installationId,
+			invoiceId: vercelInvoiceId,
+		});
+		const parsed = Number(vercelInvoice.refundTotal);
+		if (vercelInvoice.refundTotal === undefined || !Number.isFinite(parsed)) {
+			logger.warn(
+				"[vercel/marketplace.invoice.refunded] Vercel invoice has no usable refundTotal",
+				{
+					data: {
+						vercelInvoiceId,
+						externalInvoiceId,
+						state: vercelInvoice.state,
+						refundTotal: vercelInvoice.refundTotal,
+					},
+				},
+			);
+		} else {
+			refundTotal = parsed;
+		}
+	} catch (error) {
+		logCaughtError({
+			logger,
+			message:
+				"[vercel/marketplace.invoice.refunded] failed to fetch invoice from Vercel",
+			error,
+			data: { vercelInvoiceId, externalInvoiceId, installationId },
+			level: "warn",
+		});
+	}
+
+	if (refundTotal !== undefined) {
+		const [updated] = await db
+			.update(invoices)
+			.set({ refunded_amount: refundTotal })
+			.where(eq(invoices.stripe_id, externalInvoiceId))
+			.returning({ id: invoices.id });
+
+		if (!updated) {
+			logger.warn("[vercel/marketplace.invoice.refunded] no Autumn invoice", {
+				data: { externalInvoiceId },
+			});
+			return;
+		}
 	}
 
 	const invoice = await InvoiceService.getByStripeId({
 		db,
 		stripeId: externalInvoiceId,
 	});
-	if (invoice && ctx.fullCustomer?.id) {
+	if (invoice && customer?.id) {
 		await upsertInvoiceInCache({
 			ctx,
-			customerId: ctx.fullCustomer.id,
+			customerId: customer.id,
 			invoice,
 		});
 	}

@@ -40,6 +40,8 @@ interface VercelWebhookClientConfig {
 	 */
 	clientSecret: string;
 	baseUrl?: string;
+	/** Extra request headers, e.g. `x-mock-vercel-api` to route SDK calls to the mock. */
+	headers?: Record<string, string>;
 }
 
 /**
@@ -55,17 +57,20 @@ export class VercelWebhookClient {
 	private env: AppEnv;
 	private clientSecret: string;
 	private baseUrl: string;
+	private headers: Record<string, string>;
 
 	constructor({
 		orgId,
 		env,
 		clientSecret,
 		baseUrl = process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080",
+		headers = {},
 	}: VercelWebhookClientConfig) {
 		this.orgId = orgId;
 		this.env = env;
 		this.clientSecret = clientSecret;
 		this.baseUrl = baseUrl;
+		this.headers = headers;
 	}
 
 	private get webhookUrl(): string {
@@ -93,6 +98,7 @@ export class VercelWebhookClient {
 			headers: {
 				"Content-Type": "application/json",
 				"x-vercel-signature": signature,
+				...this.headers,
 			},
 		});
 

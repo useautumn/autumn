@@ -14,7 +14,8 @@
  * 3. `POST /customers/:id/invoices/:stripe_id/refund` calls Vercel's
  *    `updateInvoice` with `{ action: "refund", reason, total }`. Nothing is
  *    written to Autumn yet — Vercel settles asynchronously.
- * 4. `marketplace.invoice.refunded` webhook increments `refunded_amount`.
+ * 4. `marketplace.invoice.refunded` webhook fetches the invoice from Vercel and
+ *    sets `refunded_amount` to its `refundTotal` (idempotent across retries).
  *
  * The Vercel SDK is pointed at the dev server's `/__test/vercel/api` mock via
  * `x-mock-vercel-api` / `ctx.testOptions.mockVercelApi`.
@@ -63,19 +64,22 @@ const webhookClient = () =>
 		orgId: ctx.org.id,
 		env: ctx.env,
 		clientSecret: HMAC_SECRET,
+		headers: MOCK_HEADERS,
 	});
 
 const refundedPayload = ({
 	installationId,
 	stripeInvoiceId,
+	vercelInvoiceId,
 	amount,
 }: {
 	installationId: string;
 	stripeInvoiceId: string;
+	vercelInvoiceId: string;
 	amount: string;
 }) => ({
 	installationId,
-	invoiceId: `vi_test_${stripeInvoiceId}`,
+	invoiceId: vercelInvoiceId,
 	externalInvoiceId: stripeInvoiceId,
 	amount,
 	reason: "Refund issued from Autumn",
@@ -84,6 +88,14 @@ const refundedPayload = ({
 		end: new Date().toISOString(),
 	},
 });
+
+/** The Vercel invoice id `processVercelInvoice` stamped on the Stripe invoice. */
+const getVercelInvoiceId = async (stripeInvoiceId: string) => {
+	const stripeInvoice = await ctx.stripeCli.invoices.retrieve(stripeInvoiceId);
+	const vercelInvoiceId = stripeInvoice.metadata?.vercel_invoice_id;
+	if (!vercelInvoiceId) throw new Error("Expected vercel_invoice_id metadata");
+	return vercelInvoiceId;
+};
 
 const getRefundedAmount = async (stripeInvoiceId: string) =>
 	(
@@ -268,12 +280,28 @@ test(`${chalk.yellowBright(
 	// Nothing recorded until Vercel confirms.
 	expect(await getRefundedAmount(stripeInvoiceId)).toBe(0);
 
+	const vercelInvoiceId = await getVercelInvoiceId(stripeInvoiceId);
 	expectVercelWebhookSuccess(
 		await webhookClient().invoiceRefunded(
-			refundedPayload({ installationId, stripeInvoiceId, amount: "20.00" }),
+			refundedPayload({
+				installationId,
+				stripeInvoiceId,
+				vercelInvoiceId,
+				amount: "20.00",
+			}),
 		),
 	);
 	expect(await getRefundedAmount(stripeInvoiceId)).toBe(20);
+
+	// The handler reconciles against Vercel's Get Invoice rather than the payload.
+	const getCall = await waitForVercelCapture({
+		installationId,
+		predicate: (call) =>
+			call.method === "GET" &&
+			call.path ===
+				`/v1/installations/${installationId}/billing/invoices/${vercelInvoiceId}`,
+	});
+	expect(getCall).not.toBeNull();
 }, 60000);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -302,7 +330,12 @@ test(`${chalk.yellowBright(
 
 	expectVercelWebhookSuccess(
 		await webhookClient().invoiceRefunded(
-			refundedPayload({ installationId, stripeInvoiceId, amount: "7.50" }),
+			refundedPayload({
+				installationId,
+				stripeInvoiceId,
+				vercelInvoiceId: await getVercelInvoiceId(stripeInvoiceId),
+				amount: "7.50",
+			}),
 		),
 	);
 	expect(await getRefundedAmount(stripeInvoiceId)).toBe(7.5);
@@ -315,6 +348,94 @@ test(`${chalk.yellowBright(
 			MOCK_HEADERS,
 		),
 	).rejects.toThrow();
+}, 60000);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEST 4b: a retried refunded webhook must not double-count
+// ─────────────────────────────────────────────────────────────────────────────
+
+test(`${chalk.yellowBright(
+	"vercel-invoice-refund: redelivered refunded webhook leaves refunded_amount unchanged",
+)}`, async () => {
+	const { customerId, installationId, stripeInvoiceId } =
+		await setupPaidVercelInvoice({ suffix: "retry" });
+
+	await autumn.post(
+		`/customers/${customerId}/invoices/${stripeInvoiceId}/refund`,
+		{ mode: "full" },
+		MOCK_HEADERS,
+	);
+	await waitForVercelCapture({
+		installationId,
+		predicate: (call) =>
+			call.method === "POST" && call.path.endsWith("/actions"),
+	});
+
+	const payload = refundedPayload({
+		installationId,
+		stripeInvoiceId,
+		vercelInvoiceId: await getVercelInvoiceId(stripeInvoiceId),
+		amount: "20.00",
+	});
+
+	expectVercelWebhookSuccess(await webhookClient().invoiceRefunded(payload));
+	expect(await getRefundedAmount(stripeInvoiceId)).toBe(20);
+
+	// Vercel retries deliveries; the same event again must be a no-op.
+	expectVercelWebhookSuccess(await webhookClient().invoiceRefunded(payload));
+	expect(await getRefundedAmount(stripeInvoiceId)).toBe(20);
+}, 60000);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEST 4c: two legitimate partial refunds of the same amount both count
+// ─────────────────────────────────────────────────────────────────────────────
+
+test(`${chalk.yellowBright(
+	"vercel-invoice-refund: two equal partial refunds accumulate to their sum",
+)}`, async () => {
+	const { customerId, installationId, stripeInvoiceId } =
+		await setupPaidVercelInvoice({ suffix: "twopartial" });
+	const vercelInvoiceId = await getVercelInvoiceId(stripeInvoiceId);
+
+	const requestPartial = async () => {
+		await autumn.post(
+			`/customers/${customerId}/invoices/${stripeInvoiceId}/refund`,
+			{ mode: "partial", amount: 7.5 },
+			MOCK_HEADERS,
+		);
+	};
+	const actionCalls = async () =>
+		(await readVercelCaptures(installationId)).filter(
+			(call) => call.method === "POST" && call.path.endsWith("/actions"),
+		);
+
+	await requestPartial();
+	expect(await actionCalls()).toHaveLength(1);
+	expectVercelWebhookSuccess(
+		await webhookClient().invoiceRefunded(
+			refundedPayload({
+				installationId,
+				stripeInvoiceId,
+				vercelInvoiceId,
+				amount: "7.50",
+			}),
+		),
+	);
+	expect(await getRefundedAmount(stripeInvoiceId)).toBe(7.5);
+
+	await requestPartial();
+	expect(await actionCalls()).toHaveLength(2);
+	expectVercelWebhookSuccess(
+		await webhookClient().invoiceRefunded(
+			refundedPayload({
+				installationId,
+				stripeInvoiceId,
+				vercelInvoiceId,
+				amount: "7.50",
+			}),
+		),
+	);
+	expect(await getRefundedAmount(stripeInvoiceId)).toBe(15);
 }, 60000);
 
 // ─────────────────────────────────────────────────────────────────────────────
