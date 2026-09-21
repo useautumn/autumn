@@ -1,0 +1,149 @@
+.pricingComparison {
+	--workflow-unit: min(1px, calc(100cqw / 686));
+	position: relative;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: calc(32 * var(--workflow-unit));
+	font-size: calc(12 * var(--workflow-unit));
+	line-height: calc(18 * var(--workflow-unit));
+	font-variant-numeric: tabular-nums;
+}
+
+.pricingComparison::after {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 50%;
+	border-left: 1px solid var(--workflow-border);
+	content: "";
+}
+
+.pricingComparison > section {
+	min-width: 0;
+}
+
+.topupDiagram .comparisonHeading {
+	margin: 0 0 calc(16 * var(--workflow-unit));
+	padding: 0;
+	color: #eeeeee;
+	font-size: calc(13 * var(--workflow-unit));
+	font-weight: 500;
+	line-height: calc(20 * var(--workflow-unit));
+	text-wrap: balance;
+}
+
+.pricingPair {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: calc(10 * var(--workflow-unit));
+}
+
+.pricingCard {
+	min-width: 0;
+	overflow: hidden;
+	border: 1px solid var(--workflow-border);
+	border-radius: calc(4 * var(--workflow-unit));
+	background: var(--workflow-surface);
+}
+
+.planAllowance {
+	display: flex;
+	flex-direction: column;
+	height: calc(90 * var(--workflow-unit));
+	padding: calc(14 * var(--workflow-unit));
+}
+
+.topupDiagram h5 {
+	margin: 0;
+	padding: 0;
+	color: #eeeeee;
+	font-size: calc(13 * var(--workflow-unit));
+	font-weight: 500;
+	line-height: calc(20 * var(--workflow-unit));
+	text-wrap: balance;
+}
+
+.topupDiagram .planAllowance h5 {
+	font-size: calc(14 * var(--workflow-unit));
+}
+
+.creditAllowance {
+	display: flex;
+	align-items: baseline;
+	gap: calc(5 * var(--workflow-unit));
+	margin-top: calc(14 * var(--workflow-unit));
+	white-space: nowrap;
+}
+
+.topupDiagram .includedCredits {
+	color: #d4d4d4;
+	font-size: calc(18 * var(--workflow-unit));
+	font-weight: 500;
+	line-height: calc(24 * var(--workflow-unit));
+}
+
+.creditCaption {
+	color: #888888;
+	font-size: calc(11 * var(--workflow-unit));
+	line-height: calc(16 * var(--workflow-unit));
+	white-space: nowrap;
+}
+
+.planTopup {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: calc(4 * var(--workflow-unit));
+	height: calc(74 * var(--workflow-unit));
+	padding: calc(14 * var(--workflow-unit));
+	border-top: 1px solid var(--workflow-border);
+	background: #0f0f0f;
+}
+
+.topupLabel {
+	color: #888888;
+	font-size: calc(11 * var(--workflow-unit));
+	line-height: calc(16 * var(--workflow-unit));
+}
+
+.topupRate {
+	display: flex;
+	align-items: baseline;
+	gap: calc(6 * var(--workflow-unit));
+	white-space: nowrap;
+}
+
+.topupDiagram .topupRate strong {
+	color: var(--workflow-accent);
+	font-size: calc(18 * var(--workflow-unit));
+	font-weight: 500;
+	line-height: calc(24 * var(--workflow-unit));
+}
+
+.topupRate > span {
+	color: #888888;
+	font-size: calc(11 * var(--workflow-unit));
+	line-height: calc(16 * var(--workflow-unit));
+}
+
+.topupConnector {
+	display: block;
+	width: 100%;
+	height: calc(22 * var(--workflow-unit));
+	stroke: #777777;
+	stroke-width: 1;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.sharedTopup {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: calc(12 * var(--workflow-unit));
+	height: calc(52 * var(--workflow-unit));
+	padding: 0 calc(14 * var(--workflow-unit));
+	border: 1px solid #9564ff33;
+	border-radius: calc(4 * var(--workflow-unit));
+	background: var(--workflow-surface);
+}

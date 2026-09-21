@@ -261,6 +261,44 @@ body {
 	font-weight: 300;
 }
 
+.prose [data-rehype-pretty-code-title] {
+	margin: 0;
+	padding: 10px 16px;
+	border: 1px solid #292929;
+	border-radius: 8px 8px 0 0;
+	background: #151515;
+	color: #888;
+	font-family: var(--font-geist-mono), monospace;
+	font-size: 12px;
+	line-height: 20px;
+}
+
+.prose [data-rehype-pretty-code-title] + pre {
+	margin-top: 0;
+	border-top: 0;
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+}
+
+@media (max-width: 480px) {
+	.prose .eval-code-example [data-rehype-pretty-code-title] {
+		padding: 10px 12px;
+		font-size: 11px;
+	}
+
+	.prose .eval-code-example pre {
+		padding: 14px 12px;
+		font-size: 11px;
+		line-height: 1.7;
+	}
+
+	.prose .eval-code-example [data-line] {
+		min-width: 0;
+		padding-left: var(--code-indent, 2ch);
+		text-indent: calc(-1 * var(--code-indent, 2ch));
+	}
+}
+
 .prose.prose-invert p {
 	font-size: 14px;
 	line-height: 1.7;

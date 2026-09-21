@@ -13,6 +13,19 @@ import { BillingPathsAnimation } from "./blogComponents/inching-towards-a-softwa
 import { CloudAgentSession } from "./blogComponents/inching-towards-a-software-factory/CloudAgentSession";
 import { ParallelTestPool } from "./blogComponents/inching-towards-a-software-factory/ParallelTestPool";
 import { SetupActionVerifyTest } from "./blogComponents/inching-towards-a-software-factory/SetupActionVerifyTest";
+import { AuthMdDiagram } from "./blogComponents/rebuilding-onboarding-for-agents/agentAuth/authMdDiagram";
+import { AutumnKeylessDiagram } from "./blogComponents/rebuilding-onboarding-for-agents/agentAuth/autumnKeylessDiagram";
+import { AgentDocsDiagram } from "./blogComponents/rebuilding-onboarding-for-agents/agentDocs/agentDocsDiagram";
+import { AgentCatalogDiagram } from "./blogComponents/rebuilding-onboarding-for-agents/catalogWorkflow/agentCatalogDiagram";
+import { CatalogSkillWorkflowDiagram } from "./blogComponents/rebuilding-onboarding-for-agents/catalogWorkflow/catalogSkillWorkflowDiagram";
+import { CatalogTopupDiagram } from "./blogComponents/rebuilding-onboarding-for-agents/catalogWorkflow/catalogTopupDiagram";
+import { CatalogUpdateModesDiagram } from "./blogComponents/rebuilding-onboarding-for-agents/catalogWorkflow/catalogUpdateModesDiagram";
+import { DashboardCatalogDiagram } from "./blogComponents/rebuilding-onboarding-for-agents/catalogWorkflow/dashboardCatalogDiagram";
+import { SharedCatalogApiDiagram } from "./blogComponents/rebuilding-onboarding-for-agents/catalogWorkflow/sharedCatalogApiDiagram";
+import { EvalCodeExample } from "./blogComponents/rebuilding-onboarding-for-agents/evalConversation/evalCodeExample";
+import { EvalConversation } from "./blogComponents/rebuilding-onboarding-for-agents/evalConversation/evalConversation";
+import { OnboardingDiagram } from "./blogComponents/rebuilding-onboarding-for-agents/onboardingDiagram";
+import { SetupWorkflowDiagram } from "./blogComponents/rebuilding-onboarding-for-agents/setupWorkflow/setupWorkflowDiagram";
 import { ConfigAsCodeSimulator } from "./blogComponents/stop-rebuilding-your-billing-system/ConfigAsCodeSimulator";
 import {
 	ConfigSim,
@@ -81,7 +94,7 @@ export const mdxComponents = {
 	},
 	pre: ({ children, ...props }: ComponentPropsWithoutRef<"pre">) => (
 		<pre
-			className="rounded-lg border border-[#292929] bg-[#141414] p-4 whitespace-pre-wrap break-words text-sm leading-relaxed"
+			className="rounded-lg border border-[#292929] bg-[#141414] p-4 whitespace-pre-wrap break-words text-sm leading-relaxed [&>code]:rounded-none [&>code]:border-0 [&>code]:bg-transparent [&>code]:p-0"
 			{...props}
 		>
 			{children}
@@ -148,6 +161,19 @@ export const mdxComponents = {
 	PlanRecordDiagram,
 	CloudAgentSession,
 	ParallelTestPool,
+	OnboardingDiagram,
+	DashboardCatalogDiagram,
+	AgentCatalogDiagram,
+	AgentDocsDiagram,
+	AuthMdDiagram,
+	AutumnKeylessDiagram,
+	SetupWorkflowDiagram,
+	SharedCatalogApiDiagram,
+	CatalogUpdateModesDiagram,
+	CatalogTopupDiagram,
+	CatalogSkillWorkflowDiagram,
+	EvalConversation,
+	EvalCodeExample,
 	SetupActionVerifyTest,
 	TestimonialQuote,
 	PostgresTablesHero,

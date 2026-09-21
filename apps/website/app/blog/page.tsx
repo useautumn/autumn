@@ -61,6 +61,7 @@ export default function BlogListingPage() {
 										alt={post.title}
 										fill
 										className="object-cover"
+										style={{ transform: `scale(${post.imageScale})` }}
 										sizes="(max-width: 768px) 100vw, 540px"
 									/>
 								</div>
