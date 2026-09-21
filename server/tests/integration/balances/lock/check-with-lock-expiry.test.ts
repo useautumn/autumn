@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
+import { expectLockExpiryCorrect } from "@tests/integration/balances/utils/lockUtils/expectLockExpiryCorrect.js";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
@@ -12,7 +13,6 @@ import chalk from "chalk";
 import { addSeconds } from "date-fns";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey";
-import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt";
 import { timeout } from "@/utils/genUtils";
 import { getCustomerEvents } from "../utils/events/getCustomerEvents";
 
@@ -45,209 +45,224 @@ const makeFreeProd = () => {
 	});
 };
 
-test.concurrent(`${chalk.yellowBright("check-with-lock-expiry 1: /check with lock, expires at works (SQS)")}`, async () => {
-	const hourlyMessages = items.hourlyMessages({ includedUsage: 5 });
-	const monthlyMessages = items.monthlyMessages({ includedUsage: 10 });
-	const freeProd = products.base({
-		id: "free",
-		items: [hourlyMessages, monthlyMessages],
-	});
+test.concurrent(
+	`${chalk.yellowBright("check-with-lock-expiry 1: /check with lock, expires at works (SQS)")}`,
+	async () => {
+		const hourlyMessages = items.hourlyMessages({ includedUsage: 5 });
+		const monthlyMessages = items.monthlyMessages({ includedUsage: 10 });
+		const freeProd = products.base({
+			id: "free",
+			items: [hourlyMessages, monthlyMessages],
+		});
 
-	const customerId = `check-lock-expiry-1`;
-	const { autumnV2_1, ctx } = await initScenario({
-		customerId: customerId,
-		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
-		actions: [s.attach({ productId: freeProd.id })],
-	});
+		const customerId = `check-lock-expiry-1`;
+		const { autumnV2_1, ctx } = await initScenario({
+			customerId: customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [freeProd] }),
+			],
+			actions: [s.attach({ productId: freeProd.id })],
+		});
 
-	await deleteLock({
-		ctx,
-		lockId: customerId,
-	});
+		await deleteLock({
+			ctx,
+			lockId: customerId,
+		});
 
-	await autumnV2_1.check({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		required_balance: 8,
-		lock: {
-			enabled: true,
-			lock_id: customerId,
-			expires_at: addSeconds(new Date(), 5).getTime(),
-		},
-	});
+		await autumnV2_1.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: 8,
+			lock: {
+				enabled: true,
+				lock_id: customerId,
+				expires_at: addSeconds(new Date(), 5).getTime(),
+			},
+		});
 
-	await timeout(60000);
+		await timeout(60000);
 
-	const customerAfter =
-		await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	expectBalanceCorrect({
-		customer: customerAfter,
-		featureId: TestFeature.Messages,
-		remaining: 15,
-	});
-});
+		const customerAfter =
+			await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		expectBalanceCorrect({
+			customer: customerAfter,
+			featureId: TestFeature.Messages,
+			remaining: 15,
+		});
+	},
+);
 
-test.concurrent(`${chalk.yellowBright("check-with-lock-expiry 2: expires at undoes usage")}`, async () => {
-	const hourlyMessages = items.hourlyMessages({ includedUsage: 5 });
-	const monthlyMessages = items.monthlyMessages({ includedUsage: 10 });
-	const freeProd = products.base({
-		id: "free",
-		items: [hourlyMessages, monthlyMessages],
-	});
+test.concurrent(
+	`${chalk.yellowBright("check-with-lock-expiry 2: expires at undoes usage")}`,
+	async () => {
+		const hourlyMessages = items.hourlyMessages({ includedUsage: 5 });
+		const monthlyMessages = items.monthlyMessages({ includedUsage: 10 });
+		const freeProd = products.base({
+			id: "free",
+			items: [hourlyMessages, monthlyMessages],
+		});
 
-	const customerId = `check-lock-expiry-2`;
-	const { autumnV2_1, ctx } = await initScenario({
-		customerId: customerId,
-		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
-		actions: [s.attach({ productId: freeProd.id })],
-	});
+		const customerId = `check-lock-expiry-2`;
+		const { autumnV2_1, ctx } = await initScenario({
+			customerId: customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [freeProd] }),
+			],
+			actions: [s.attach({ productId: freeProd.id })],
+		});
 
-	await deleteLock({
-		ctx,
-		lockId: customerId,
-	});
+		await deleteLock({
+			ctx,
+			lockId: customerId,
+		});
 
-	await autumnV2_1.check({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		required_balance: 8,
-		lock: {
-			enabled: true,
-			lock_id: customerId,
-		},
-	});
+		await autumnV2_1.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: 8,
+			lock: {
+				enabled: true,
+				lock_id: customerId,
+			},
+		});
 
-	// Run expire lock function
-	await expireLock({
-		ctx,
-		payload: buildExpireLockPayload({ ctx, customerId }),
-	});
+		// Run expire lock function
+		await expireLock({
+			ctx,
+			payload: buildExpireLockPayload({ ctx, customerId }),
+		});
 
-	const customerAfter =
-		await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	expectBalanceCorrect({
-		customer: customerAfter,
-		featureId: TestFeature.Messages,
-		remaining: 15,
-	});
+		const customerAfter =
+			await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		expectBalanceCorrect({
+			customer: customerAfter,
+			featureId: TestFeature.Messages,
+			remaining: 15,
+		});
 
-	await timeout(3000);
+		await timeout(3000);
 
-	// Grab events
-	const events = await getCustomerEvents({
-		customerId,
-	});
+		// Grab events
+		const events = await getCustomerEvents({
+			customerId,
+		});
 
-	expect(events).toHaveLength(2);
-	expect(events[0].value).toBe(-8);
-	expect(events[1].value).toBe(8);
-});
+		expect(events).toHaveLength(2);
+		expect(events[0].value).toBe(-8);
+		expect(events[1].value).toBe(8);
+	},
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // check-lock-expiry-3: expires_at > 1 day from now → HTTP 400
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.concurrent(`${chalk.yellowBright("check-lock-expiry-3: expires_at > 1 day from now is rejected")}`, async () => {
-	const freeProd = makeFreeProd();
-	const customerId = "check-lock-expiry-3";
+test.concurrent(
+	`${chalk.yellowBright("check-lock-expiry-3: expires_at > 1 day from now is rejected")}`,
+	async () => {
+		const freeProd = makeFreeProd();
+		const customerId = "check-lock-expiry-3";
 
-	const { autumnV2_1 } = await initScenario({
-		customerId,
-		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
-		actions: [s.attach({ productId: freeProd.id })],
-	});
+		const { autumnV2_1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [freeProd] }),
+			],
+			actions: [s.attach({ productId: freeProd.id })],
+		});
 
-	const twoDaysFromNow = Date.now() + 2 * 24 * 60 * 60 * 1000;
+		const twoDaysFromNow = Date.now() + 2 * 24 * 60 * 60 * 1000;
 
-	await expectAutumnError({
-		func: async () => {
-			await autumnV2_1.check({
-				customer_id: customerId,
-				feature_id: TestFeature.Messages,
-				required_balance: 5,
-				lock: {
-					enabled: true,
-					lock_id: customerId,
-					expires_at: twoDaysFromNow,
-				},
-			});
-		},
-	});
-});
+		await expectAutumnError({
+			func: async () => {
+				await autumnV2_1.check({
+					customer_id: customerId,
+					feature_id: TestFeature.Messages,
+					required_balance: 5,
+					lock: {
+						enabled: true,
+						lock_id: customerId,
+						expires_at: twoDaysFromNow,
+					},
+				});
+			},
+		});
+	},
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // check-lock-expiry-4: no expires_at → TTL is ~1 day from now
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.concurrent(`${chalk.yellowBright("check-lock-expiry-4: no expires_at sets TTL ~1 day from now")}`, async () => {
-	const freeProd = makeFreeProd();
-	const customerId = "check-lock-expiry-4";
+test.concurrent(
+	`${chalk.yellowBright("check-lock-expiry-4: no expires_at expires ~1 day from now")}`,
+	async () => {
+		const freeProd = makeFreeProd();
+		const customerId = "check-lock-expiry-4";
 
-	const { autumnV2_1, ctx } = await initScenario({
-		customerId,
-		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
-		actions: [s.attach({ productId: freeProd.id })],
-	});
+		const { autumnV2_1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [freeProd] }),
+			],
+			actions: [s.attach({ productId: freeProd.id })],
+		});
 
-	await deleteLock({ ctx, lockId: customerId });
+		await deleteLock({ ctx, lockId: customerId });
 
-	const beforeCheck = Math.floor(Date.now() / 1000);
+		const checkedAt = Date.now();
 
-	await autumnV2_1.check({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		required_balance: 5,
-		lock: { enabled: true, lock_id: customerId },
-	});
+		await autumnV2_1.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: 5,
+			lock: { enabled: true, lock_id: customerId },
+		});
 
-	const fetchedReceipt = await fetchLockReceipt({ ctx, lockId: customerId });
-	const redisInstance = fetchedReceipt.redisInstance;
-
-	const expireAt = await redisInstance.expiretime(
-		fetchedReceipt.lockReceiptKey,
-	);
-	const expectedTtl = beforeCheck + 24 * 60 * 60;
-
-	// TTL should be within 5s of now + 1 day
-	expect(expireAt).toBeGreaterThanOrEqual(expectedTtl - 5);
-	expect(expireAt).toBeLessThanOrEqual(expectedTtl + 5);
-});
+		await expectLockExpiryCorrect({ ctx, lockId: customerId, checkedAt });
+	},
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // check-lock-expiry-5: expires_at set → TTL is expires_at + 1 hour
 // Uses a unique ID per run to avoid duplicate EventBridge schedule errors
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.concurrent(`${chalk.yellowBright("check-lock-expiry-5: expires_at set, TTL is expires_at + 1 hour")}`, async () => {
-	const freeProd = makeFreeProd();
-	const customerId = `check-lock-expiry-5-${Date.now()}`;
+test.concurrent(
+	`${chalk.yellowBright("check-lock-expiry-5: expires_at set, the lock expires then")}`,
+	async () => {
+		const freeProd = makeFreeProd();
+		const customerId = `check-lock-expiry-5-${Date.now()}`;
 
-	const { autumnV2_1, ctx } = await initScenario({
-		customerId,
-		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
-		actions: [s.attach({ productId: freeProd.id })],
-	});
+		const { autumnV2_1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [freeProd] }),
+			],
+			actions: [s.attach({ productId: freeProd.id })],
+		});
 
-	await deleteLock({ ctx, lockId: customerId });
+		await deleteLock({ ctx, lockId: customerId });
 
-	const expiresAt = Date.now() + 2 * 60 * 60 * 1000;
+		const expiresAt = Date.now() + 2 * 60 * 60 * 1000;
 
-	await autumnV2_1.check({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		required_balance: 5,
-		lock: { enabled: true, lock_id: customerId, expires_at: expiresAt },
-	});
+		await autumnV2_1.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: 5,
+			lock: { enabled: true, lock_id: customerId, expires_at: expiresAt },
+		});
 
-	const fetchedReceipt = await fetchLockReceipt({ ctx, lockId: customerId });
-	const redisInstance = fetchedReceipt.redisInstance;
-
-	const expireAt = await redisInstance.expiretime(
-		fetchedReceipt.lockReceiptKey,
-	);
-	const expectedTtl = Math.ceil(expiresAt / 1000) + 60 * 60;
-
-	// TTL should be within 5s of expires_at + 1 hour
-	expect(expireAt).toBeGreaterThanOrEqual(expectedTtl - 5);
-	expect(expireAt).toBeLessThanOrEqual(expectedTtl + 5);
-});
+		await expectLockExpiryCorrect({
+			ctx,
+			lockId: customerId,
+			checkedAt: Date.now(),
+			expiresAt,
+		});
+	},
+);

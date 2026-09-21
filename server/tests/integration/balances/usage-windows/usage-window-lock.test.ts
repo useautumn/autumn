@@ -5,14 +5,15 @@
  *   - a lock is gated by window headroom and counts at lock time
  *   - finalize at the lock value does not double count
  *   - finalize below the lock decrements the counter (freed headroom reusable)
- *   - finalize ABOVE the lock is capped at the window limit: only the
- *     remaining headroom of the extra delta applies, and it is counted
+ *   - finalize ABOVE the lock is held to the window's headroom: past it a
+ *     reject lock (the default) refuses the finalize and stays open
  */
 
 import { expect, test } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
+import { ApiVersion, ErrCode } from "@autumn/shared";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -239,9 +240,9 @@ test.concurrent(
 	},
 );
 
-// ── Contract: finalize above the lock is capped at the window limit ──
+// ── Contract: finalize above the lock is held to the window limit ──
 test.concurrent(
-	`${chalk.yellowBright("usage-window-lock4: finalize above the lock value is capped at the window limit")}`,
+	`${chalk.yellowBright("usage-window-lock4: finalize above the lock value is refused past the window limit")}`,
 	async () => {
 		const freePlan = products.base({
 			id: "uw-lock-overfinal",
@@ -275,14 +276,31 @@ test.concurrent(
 		});
 		expect(granted.allowed).toBe(true);
 
-		// ...then finalize at 6: the extra 3 must clamp to the remaining headroom
-		// of 2, landing the final usage exactly at the cap.
+		// ...then finalize at 6: the extra 3 exceeds the headroom of 2. A lock rejects by
+		// default, so the finalize is refused whole: nothing moves and the lock stays open.
+		await expectAutumnError({
+			errCode: ErrCode.InsufficientBalance,
+			func: () =>
+				autumnV2_3.balances.finalize({
+					lock_id: customerId,
+					action: "confirm",
+					override_value: 6,
+				}),
+		});
+		await expectCustomerBalance({
+			autumn: autumnV2_3,
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 97,
+			usage: 3,
+		});
+
+		// A finalize that fits the headroom lands exactly at the cap.
 		await autumnV2_3.balances.finalize({
 			lock_id: customerId,
 			action: "confirm",
-			override_value: 6,
+			override_value: 5,
 		});
-
 		await expectCustomerBalance({
 			autumn: autumnV2_3,
 			customerId,
@@ -296,20 +314,6 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			usage: 5,
 			limit: 5,
-		});
-
-		// The cap is exhausted: a further track fully clamps.
-		await autumnV2_3.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: 1,
-		});
-		await expectCustomerBalance({
-			autumn: autumnV2_3,
-			customerId,
-			featureId: TestFeature.Messages,
-			remaining: 95,
-			usage: 5,
 		});
 	},
 );
