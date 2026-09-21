@@ -125,7 +125,11 @@ const eveEventSchema = eveEventEnvelopeSchema.transform((envelope) => {
 		case "session.failed":
 			return event({ schema: failureSchema, type: envelope.type });
 		case "turn.started":
-			return event({ schema: emptyEventSchema, type: envelope.type });
+			return event({ schema: turnDataSchema, type: envelope.type });
+		// A steer cancels the active turn: eve then emits `session.waiting` and
+		// starts the replacement under a new turn id.
+		case "turn.cancelled":
+			return event({ schema: turnDataSchema, type: envelope.type });
 		case "turn.completed":
 			return event({ schema: emptyEventSchema, type: envelope.type });
 		case "step.started":

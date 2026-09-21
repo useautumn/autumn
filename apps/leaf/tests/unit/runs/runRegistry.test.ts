@@ -45,6 +45,45 @@ describe("runRegistry", () => {
 		);
 	});
 
+	test("a transport bound with the session id carries follow-ups", async () => {
+		const sent: string[] = [];
+		const run = registerRun({
+			key: "k1c",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
+		// The Slack path registers before it knows the session; the turn binds
+		// the transport once eve has answered.
+		run.resolveSessionId("sesn_1", {
+			sendUserMessage: async ({ sessionId, text }) => {
+				sent.push(`${sessionId}:${text}`);
+			},
+		});
+
+		await run.injectFollowUp({ text: "late enough" });
+
+		expect(sent).toEqual(["sesn_1:late enough"]);
+		expect(run.pendingTurns).toBe(1);
+		closeRun({ key: "k1c", run });
+	});
+
+	test("injection is rejected once the run settles", async () => {
+		const run = registerRun({
+			key: "k1d",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendUserMessage: async () => undefined,
+		});
+		run.resolveSessionId("sesn_1");
+		run.settle();
+
+		expect(run.injectFollowUp({ text: "unread" })).rejects.toThrow(
+			"Run is settling",
+		);
+		expect(run.pendingTurns).toBe(0);
+		closeRun({ key: "k1d", run });
+	});
+
 	test("close ignores entries replaced by a newer run", () => {
 		const first = registerRun({
 			key: "k2",

@@ -61,16 +61,20 @@ await mockLeafModule({
 });
 
 const turns: Array<{ installation: unknown; text: string }> = [];
+type RunSlackAgentTurnInput = {
+	installation: unknown;
+	run?: unknown;
+	text: string;
+};
+let runSlackAgentTurnImpl = async (input: RunSlackAgentTurnInput) => {
+	turns.push({ installation: input.installation, text: input.text });
+	return { kind: "reply", sessionId: "s1", text: "Both updated." };
+};
 await mockLeafModule({
 	specifier: "../../../src/providers/slack/actions/runSlackAgentTurn.js",
 	factory: () => ({
-		runSlackAgentTurn: async (input: {
-			installation: unknown;
-			text: string;
-		}) => {
-			turns.push({ installation: input.installation, text: input.text });
-			return { kind: "reply", sessionId: "s1", text: "Both updated." };
-		},
+		runSlackAgentTurn: (input: RunSlackAgentTurnInput) =>
+			runSlackAgentTurnImpl(input),
 	}),
 });
 
@@ -86,6 +90,9 @@ await mockLeafModule({
 
 const { continueAfterApproval } = await import(
 	"../../../src/internal/approvals/actions/continueAfterApproval.js"
+);
+const { closeRun, registerRun, runKeyForThread } = await import(
+	"../../../src/internal/runs/runRegistry.js"
 );
 
 // The org acted on (resend) is not the installation's org (autumn).
@@ -106,6 +113,10 @@ describe("continueAfterApproval", () => {
 		turns.length = 0;
 		presented.length = 0;
 		installationRow = adminInstallation;
+		runSlackAgentTurnImpl = async (input) => {
+			turns.push({ installation: input.installation, text: input.text });
+			return { kind: "reply", sessionId: "s1", text: "Both updated." };
+		};
 	});
 
 	test("resumes the agent on the admin install acting as another org", async () => {
@@ -130,6 +141,63 @@ describe("continueAfterApproval", () => {
 			'2. updateSubscription {"customer_id":"b6"',
 		);
 		expect(presented).toHaveLength(1);
+	});
+
+	test("merges the notice into a run already live on the thread", async () => {
+		// Tony's "it's good!" was mid-turn when Marco clicked Approve (prod
+		// 2026-09-16): a second reader on the same session left both turns
+		// empty. The notice now rides the live run, and nothing else opens.
+		const posted: string[] = [];
+		const run = registerRun({
+			key: runKeyForThread({
+				channelId: "slack:C1",
+				provider: "slack",
+				threadId: "thread_1",
+				workspaceId: "T07",
+			}),
+			kind: "message",
+			ownerProviderUserId: "U_tony",
+			sendUserMessage: async ({ text }) => {
+				posted.push(text);
+			},
+		});
+		run.resolveSessionId("wrun_live");
+
+		await continueAfterApproval({
+			approval,
+			outcome,
+			providerUserId: "U_marco",
+			target,
+			threadId: "thread_1",
+		});
+		closeRun({ key: run.key, run });
+
+		expect(posted).toHaveLength(1);
+		expect(posted[0]).toContain("<approval_applied>");
+		expect(turns).toHaveLength(0);
+		expect(presented).toHaveLength(0);
+	});
+
+	test("registers its own run so a message during it waits", async () => {
+		let activeDuringTurn: unknown;
+		runSlackAgentTurnImpl = async (input) => {
+			activeDuringTurn = input.run;
+			return { kind: "reply", sessionId: "s1", text: "Both updated." };
+		};
+
+		await continueAfterApproval({
+			approval,
+			outcome,
+			providerUserId: "U1",
+			target,
+			threadId: "thread_1",
+		});
+
+		expect(activeDuringTurn).toMatchObject({
+			closed: true,
+			kind: "approval",
+			ownerProviderUserId: "U1",
+		});
 	});
 
 	test("does nothing when the workspace has no installation", async () => {

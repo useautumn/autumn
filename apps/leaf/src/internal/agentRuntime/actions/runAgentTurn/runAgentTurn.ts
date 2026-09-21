@@ -1,9 +1,14 @@
 import { db } from "../../../../lib/db.js";
+import type {
+	FollowUpMessage,
+	RunTransport,
+} from "../../../runs/runRegistry.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import type {
 	AgentTurnContext,
 	AgentTurnParams,
 } from "../../domain/agentTurnContext.js";
+import { postEveMessage } from "../../eve/client.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import {
 	generateThreadTitle,
@@ -11,6 +16,7 @@ import {
 } from "../../sessions/agentThreadTitle.js";
 import { recoverLostSession } from "./errors/recoverLostSession.js";
 import { consumeAgentTurn } from "./execute/consumeAgentTurn.js";
+import type { EveTurnOutcome } from "./execute/eveTurnReducer.js";
 import { resolveAgentTurnOutcome } from "./finalize/resolveAgentTurnOutcome.js";
 import { buildAgentTurnMessage } from "./setup/buildAgentTurnMessage.js";
 import {
@@ -87,8 +93,39 @@ export const runAgentTurn = async ({
 			orgContext: await loadAgentOrgContext(ctx),
 		});
 	};
-	const consume = (session: EveSessionRef) => {
-		run?.resolveSessionId(session.sessionId);
+	// A follow-up that lands mid-turn is posted straight into the session: eve
+	// steers, and the one reader below sees the replacement turn. It carries
+	// the same preamble a fresh turn would, minus attachments (never injected).
+	const followUpTransport = ({
+		prepared,
+		session,
+	}: {
+		prepared: Partial<PreparedAgentTurn>;
+		session: EveSessionRef;
+	}): RunTransport => ({
+		sendUserMessage: async ({ speaker, text }: FollowUpMessage) => {
+			await postEveMessage({
+				auth,
+				clientContext: params.clientContext,
+				message: buildAgentTurnMessage({
+					env,
+					newSession: false,
+					orgSlug: org.slug,
+					params: { clientContext: params.clientContext, speaker, text },
+					pendingApprovals: prepared.pendingApprovals,
+				}),
+				session,
+			});
+		},
+	});
+	const consume = (
+		session: EveSessionRef,
+		prepared: Partial<PreparedAgentTurn>,
+	) => {
+		run?.resolveSessionId(
+			session.sessionId,
+			followUpTransport({ prepared, session }),
+		);
 		return consumeAgentTurn({
 			auth,
 			deadlineAt: ctx.deadlineAt,
@@ -121,11 +158,18 @@ export const runAgentTurn = async ({
 			});
 			return startFresh();
 		});
-		const outcome = await consume(session).catch(async (error) => {
-			await recoverLostSession({ ctx, error, existingSession, session });
-			session = await startFresh();
-			return consume(session);
-		});
+		let outcome: EveTurnOutcome;
+		try {
+			outcome = await consume(session, prepared).catch(async (error) => {
+				await recoverLostSession({ ctx, error, existingSession, session });
+				session = await startFresh();
+				return consume(session, {});
+			});
+		} finally {
+			// Nobody reads the stream past this point: a follow-up posted now
+			// would run unread, so the coordinator queues it as a new run.
+			run?.settle();
+		}
 		const result = await resolveAgentTurnOutcome({
 			env,
 			logger,
