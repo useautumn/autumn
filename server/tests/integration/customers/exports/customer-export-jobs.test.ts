@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
+	AppEnv,
 	CusProductStatus,
 	CustomerExportField,
 	CustomerExportKind,
@@ -39,7 +40,7 @@ describeDb("customer export jobs", () => {
 	const seededExportIds: string[] = [];
 	const seededCustomerProductIds: string[] = [];
 	const seededProductInternalIds: string[] = [];
-	const otherEnv = ctx.env === "sandbox" ? "live" : "sandbox";
+	const otherEnv = ctx.env === AppEnv.Sandbox ? AppEnv.Live : AppEnv.Sandbox;
 
 	const insertExport = async ({
 		status,
@@ -159,7 +160,8 @@ describeDb("customer export jobs", () => {
 	});
 
 	test("each export kind has its own active slot and its own list", async () => {
-		const scope = { db: ctx.db, orgId: ctx.org.id, env: ctx.env };
+		// The other env keeps these active rows clear of suites that run real exports.
+		const scope = { db: ctx.db, orgId: ctx.org.id, env: otherEnv };
 		const customersExport = await CustomerExportService.createIfNoneActive({
 			...scope,
 			fields: ALL_FIELDS,

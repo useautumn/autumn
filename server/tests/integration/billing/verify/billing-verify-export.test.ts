@@ -9,17 +9,22 @@
  *   - The producer walks the filtered population and emits a CSV holding
  *     only the drifted customer.
  *   - A real org-wide sweep screens customers to the same rows as live reads.
+ *   - A billing_verify job runs to completion: published to S3, downloadable
+ *     under its own file name, holding only the drifted customer.
  */
 
 import { expect, test } from "bun:test";
-import { CustomerExportKind } from "@autumn/shared";
+import { CustomerExportKind, CustomerExportStatus } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { isCustomerExportsS3Configured } from "@/external/aws/s3/customerExportsS3Config";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { CusService } from "@/internal/customers/CusService";
+import { downloadCustomerExport } from "@/internal/customers/exports/actions/downloadCustomerExport";
+import { CustomerExportService } from "@/internal/customers/exports/CustomerExportService";
 import { resolveCustomerExportPopulation } from "@/internal/customers/exports/queries/getCustomerExportScalars";
 import { createBillingVerifyStripeReader } from "@/internal/customers/exports/verify/createBillingVerifyStripeReader";
 import {
@@ -27,6 +32,7 @@ import {
 	setupBillingVerifySweep,
 } from "@/internal/customers/exports/verify/setupBillingVerifySweep";
 import { verifyCustomerToExportRows } from "@/internal/customers/exports/verify/verifyCustomerToExportRows";
+import { executeCustomerExport } from "@/internal/customers/exports/workflows/executeCustomerExport";
 import { CUSTOMER_EXPORT_PRODUCERS } from "@/internal/customers/exports/workflows/upload/customerExportProducers";
 import { ProductService } from "@/internal/products/ProductService";
 import {
@@ -299,5 +305,72 @@ test.concurrent(
 				type: "base_price_mismatch",
 			},
 		]);
+	},
+);
+
+const testWithS3 = isCustomerExportsS3Configured() ? test : test.skip;
+
+testWithS3(
+	`${chalk.yellowBright("billing-verify export 6: job runs end to end -> downloadable CSV of the drifted customer")}`,
+	async () => {
+		const searchTerm = "verify-export-job";
+		await setupSubscribedCustomer({ customerId: `${searchTerm}-healthy` });
+		const drifted = await setupSubscribedCustomer({
+			customerId: `${searchTerm}-drifted`,
+		});
+		const { ctx } = drifted;
+
+		await corruptStripeSubscription({
+			ctx,
+			subscriptionId: drifted.subscriptions[0].id,
+			mutations: {
+				removeItemPriceIds: [
+					await basePriceIdFor({ ctx, productId: drifted.pro.id }),
+				],
+			},
+		});
+
+		const created = await CustomerExportService.createIfNoneActive({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			kind: CustomerExportKind.BillingVerify,
+			fields: [],
+			snapshot: { search: searchTerm, filters: {} },
+		});
+		if (!created.created) throw new Error("A verify export is already active");
+		const exportId = created.customerExport.id;
+
+		try {
+			await executeCustomerExport({
+				ctx,
+				logger: ctx.logger,
+				payload: { exportId, orgId: ctx.org.id, env: ctx.env },
+			});
+
+			const completed = await CustomerExportService.get({
+				db: ctx.db,
+				id: exportId,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			});
+			expect(completed?.status).toBe(CustomerExportStatus.Completed);
+			expect(completed?.row_count).toBe(1);
+
+			const download = await downloadCustomerExport({ ctx, exportId });
+			expect(download.file_name).toBe("billing-issues.csv");
+
+			const csv = await (await fetch(download.url)).text();
+			expect(csv).toContain(`${searchTerm}-drifted`);
+			expect(csv).toContain("base_price_mismatch");
+			expect(csv).not.toContain(`${searchTerm}-healthy`);
+		} finally {
+			await CustomerExportService.failIfStillActive({
+				db: ctx.db,
+				id: exportId,
+				errorMessage: "test cleanup",
+				observed: { status: CustomerExportStatus.Queued, startedAt: null },
+			});
+		}
 	},
 );
