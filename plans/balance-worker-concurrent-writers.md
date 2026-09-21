@@ -49,3 +49,23 @@ missed signal               CAS fails → 409 stale_subject, evict, progress adv
 - Which server sites are the complete set? Start from the `deleteCachedFullCustomer` callers.
 - Does a reset that lands mid-cycle need the worker to re-decide or only to re-read?
 - Entity create/delete changes `ce.entities` on a customer-level row the worker may hold.
+
+## Todos
+
+### A customer load in flight can undo an evict (2026-09-21)
+
+Evict shipped on 2026-09-19 (`/v1/evict`, called from `invalidateCachedFullSubject`). It has one hole.
+
+```
+worker   starts loading A ············ finishes, stores A
+         reads: plan = Free                      ^ stores "Free"
+server          upgrades A to Pro                |
+                evict A                          |
+worker          evicts A: nothing there yet -----+
+```
+
+The load began before the write, the evict found nothing to drop, and the stale rows landed afterwards. Memory stays wrong until the next evict for A.
+
+Fix: when an evict arrives for a customer whose load is in flight (`scope.state.hydrationPromises`), mark that load stale so its result is discarded and the customer is read again.
+
+Affects balances today. Open lock ids (`plans/balance-worker-locks/`) will inherit it, so fix before locks ship.
