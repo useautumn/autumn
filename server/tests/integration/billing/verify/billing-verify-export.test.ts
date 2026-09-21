@@ -14,12 +14,17 @@
  */
 
 import { expect, test } from "bun:test";
-import { CustomerExportKind, CustomerExportStatus } from "@autumn/shared";
+import {
+	CustomerExportKind,
+	CustomerExportStatus,
+	customerExports,
+} from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { eq } from "drizzle-orm";
 import { isCustomerExportsS3Configured } from "@/external/aws/s3/customerExportsS3Config";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { CusService } from "@/internal/customers/CusService";
@@ -365,12 +370,9 @@ testWithS3(
 			expect(csv).toContain("base_price_mismatch");
 			expect(csv).not.toContain(`${searchTerm}-healthy`);
 		} finally {
-			await CustomerExportService.failIfStillActive({
-				db: ctx.db,
-				id: exportId,
-				errorMessage: "test cleanup",
-				observed: { status: CustomerExportStatus.Queued, startedAt: null },
-			});
+			await ctx.db
+				.delete(customerExports)
+				.where(eq(customerExports.id, exportId));
 		}
 	},
 );
