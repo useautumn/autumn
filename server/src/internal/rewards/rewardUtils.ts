@@ -180,10 +180,8 @@ export const initRewardStripePrices = async ({
 		internalIds: internalProductIds,
 	});
 
-	const uninitialised = products.filter(
-		(product) =>
-			hasMissingStripeResourcesForProduct({ product }) ||
-			nullish(product.processor?.id),
+	const uninitialised = products.filter((product) =>
+		hasMissingStripeResourcesForProduct({ product }),
 	);
 
 	await Promise.all(
