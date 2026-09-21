@@ -1,4 +1,9 @@
-import { customerEntitlements, rollovers, usageWindows } from "@autumn/shared";
+import {
+	balanceLocks,
+	customerEntitlements,
+	rollovers,
+	usageWindows,
+} from "@autumn/shared";
 import { getTableColumns, type SQL, sql } from "drizzle-orm";
 import type { SubjectRowChange } from "../../types/subjectRowChange.js";
 import type {
@@ -11,12 +16,18 @@ const NUMERIC_TOLERANCE = 1e-9;
 
 type ColumnInfo = { name: string; columnType: string };
 
-const tables = { customerEntitlements, rollovers, usageWindows } as const;
+const tables = {
+	customerEntitlements,
+	rollovers,
+	usageWindows,
+	locks: balanceLocks,
+} as const;
 
 const tableNames: Record<SubjectRowTable, string> = {
 	customerEntitlements: "customer_entitlements",
 	rollovers: "rollovers",
 	usageWindows: "usage_windows",
+	locks: "balance_locks",
 };
 
 export class UnknownSubjectRowColumnError extends Error {
@@ -131,6 +142,7 @@ const MAP_ENTRIES: Record<
 		},
 	},
 	usageWindows: {},
+	locks: {},
 };
 
 /** The stored entry with its counters added; a field the entry lacks counts from zero. */

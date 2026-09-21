@@ -30,6 +30,7 @@ const emptyStateFor = ({
 		customerEntitlements: [],
 		rollovers: [],
 		usageWindows: [],
+		openLocks: [],
 		entity: null,
 	};
 };

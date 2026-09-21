@@ -2,6 +2,7 @@ import { orgToCommandOrg, type TrackCommand } from "@autumn/balance-engine";
 import type { TrackParams } from "@autumn/shared";
 import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
 import { featureToInternalFeatureId } from "../../balanceWorker/featureToInternalFeatureId.js";
+import { lockParamsToTrackLock } from "../../balanceWorker/lockParamsToTrackLock.js";
 import { requestContextToCommandBase } from "../../balanceWorker/requestContextToCommandBase.js";
 
 /** One per feature on an event-name track, so each feature dedupes on its own and a retry can finish the rest. */
@@ -30,12 +31,13 @@ export function trackParamsToTrackCommand({
 	/** The request named an event, and this command is one of the features it maps to. */
 	isFanOut?: boolean;
 }): TrackCommand {
+	const occurredAt = body.timestamp ?? ctx.timestamp;
 	return {
 		...requestContextToCommandBase({
 			ctx,
 			customerId: body.customer_id,
 			entityId: body.entity_id ?? null,
-			occurredAt: body.timestamp ?? ctx.timestamp,
+			occurredAt,
 		}),
 		type: "track",
 		org: orgToCommandOrg({ org: ctx.org }),
@@ -48,5 +50,8 @@ export function trackParamsToTrackCommand({
 		value: body.value ?? 1,
 		overageBehavior: body.overage_behavior ?? "cap",
 		properties: body.properties ?? null,
+		...(body.lock?.enabled && {
+			lock: lockParamsToTrackLock({ lock: body.lock, occurredAt }),
+		}),
 	};
 }

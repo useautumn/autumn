@@ -1,20 +1,35 @@
 import type { DeductionOutcome } from "../../deduction/types/deductionOutcome.js";
 import { fundingRowOf } from "../../deduction/utils/fundingRowOf.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
+import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { parseSubjectStateMutation } from "../../parsers.js";
+import { trackLockToRowChange } from "./trackLockToRowChange.js";
 import type { TrackCommand } from "./types/trackCommand.js";
 
 /** Wraps what the deduction decided into the one mutation: command, changes, result. */
 export const trackOutcomeToMutation = ({
 	command,
 	outcome,
-	revisionBefore,
+	fullSubject,
 }: {
 	command: TrackCommand;
 	outcome: DeductionOutcome;
-	revisionBefore: number;
+	fullSubject: WorkerFullSubject;
 }): SubjectStateMutation => {
 	const { rejected, changes } = outcome;
+	const revisionBefore = fullSubject.revision;
+	// A rejected track deducted nothing, so there is nothing for a lock to hold.
+	const lockChanges =
+		command.lock && !rejected
+			? [
+					trackLockToRowChange({
+						lock: command.lock,
+						command,
+						fullSubject,
+						outcome,
+					}),
+				]
+			: [];
 	return parseSubjectStateMutation({
 		input: {
 			schemaVersion: 1,
@@ -23,7 +38,7 @@ export const trackOutcomeToMutation = ({
 			identity: command.identity,
 			revision: { before: revisionBefore, after: revisionBefore + 1 },
 			command,
-			changes,
+			changes: [...changes, ...lockChanges],
 			result: {
 				type: "track",
 				status: rejected ? "rejected" : "applied",

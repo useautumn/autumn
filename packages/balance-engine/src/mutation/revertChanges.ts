@@ -125,6 +125,17 @@ export const revertChanges = ({
 					}),
 				};
 				break;
+			case "locks":
+				// A deleted lock's id is gone from memory, so only the insert can be walked back.
+				if (change.op === "delete")
+					throw new IrreversibleChangeError({ subject: change.id });
+				previousState = {
+					...previousState,
+					openLocks: previousState.openLocks.filter(
+						(openLock) => openLock.id !== change.row.id,
+					),
+				};
+				break;
 		}
 	}
 	return previousState;

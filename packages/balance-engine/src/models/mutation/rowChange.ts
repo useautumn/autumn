@@ -21,6 +21,10 @@ import {
 	workerEntitySchema,
 } from "../subject/rows/workerEntity.js";
 import {
+	type WorkerLock,
+	workerLockSchema,
+} from "../subject/rows/workerLock.js";
+import {
 	type WorkerRollover,
 	workerRolloverSchema,
 } from "../subject/rows/workerRollover.js";
@@ -151,6 +155,26 @@ const subjectRowChangeSchema = <
 		})
 		.strict();
 
+/** A table whose rows are written once and removed once, never edited: the general row change without its update. */
+export type WriteOnceRowChange<Table extends string, Row> = Exclude<
+	TableRowChange<Table, Row>,
+	{ op: "update" }
+>;
+
+const writeOnceRowChangeSchema = <
+	Table extends string,
+	RowSchema extends z.ZodObject,
+>(params: {
+	table: Table;
+	rowSchema: RowSchema;
+}) => {
+	const [insert, , remove] = tableRowChangeOptions(params);
+	return z.discriminatedUnion("op", [insert, remove]);
+};
+
+/** Nothing edits a lock row, which is what lets finalize trust the copy it is handed. */
+export type LockRowChange = WriteOnceRowChange<"locks", WorkerLock>;
+
 /** One change to one row of the subject's state; a mutation applies a list of these in order. */
 export type RowChange =
 	| SubjectRowChange<"customer", WorkerCustomer>
@@ -162,7 +186,8 @@ export type RowChange =
 	| TableRowChange<"rollovers", WorkerRollover>
 	| RolloverIncrement
 	| TableRowChange<"usageWindows", WorkerUsageWindow>
-	| UsageWindowIncrement;
+	| UsageWindowIncrement
+	| LockRowChange;
 
 export const rowChangeSchema = z.discriminatedUnion("table", [
 	subjectRowChangeSchema({
@@ -193,4 +218,5 @@ export const rowChangeSchema = z.discriminatedUnion("table", [
 		rowSchema: workerUsageWindowSchema,
 		parts: usageWindowIncrementParts,
 	}),
+	writeOnceRowChangeSchema({ table: "locks", rowSchema: workerLockSchema }),
 ]);

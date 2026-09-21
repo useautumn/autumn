@@ -29,6 +29,8 @@ export const commandToFingerprint = ({
 				command.properties && Object.keys(command.properties).length > 0
 					? canonicalizeJsonValue(command.properties)
 					: null,
+				// Appended only when present, so tracks without a lock keep the fingerprint they always had.
+				...(command.lock ? [command.lock.lockId] : []),
 			]);
 		// The baseline rows are the request; a retry with different rows is a conflict.
 		case "initialize":

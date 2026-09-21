@@ -68,6 +68,17 @@ export function rethrowBalanceWorkerError({
 	}
 	if (
 		cause instanceof BalanceWorkerClientError &&
+		cause.workerCode === "LOCK_ALREADY_EXISTS"
+	) {
+		// Same code and status as the legacy path, which callers branch on.
+		throw new RecaseError({
+			code: ErrCode.LockAlreadyExists,
+			statusCode: 409,
+			message: "A lock with this ID already exists",
+		});
+	}
+	if (
+		cause instanceof BalanceWorkerClientError &&
 		(cause.workerCode === "COMMAND_CONFLICT" ||
 			cause.workerCode === "DUPLICATE_COMMAND")
 	) {

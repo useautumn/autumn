@@ -15,4 +15,5 @@ export type SubjectRowUpdate = {
 export type SubjectRowTable =
 	| "customerEntitlements"
 	| "rollovers"
-	| "usageWindows";
+	| "usageWindows"
+	| "locks";

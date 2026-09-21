@@ -1,4 +1,7 @@
-import { UnsupportedCommandError } from "@autumn/balance-engine";
+import {
+	LockAlreadyExistsError,
+	UnsupportedCommandError,
+} from "@autumn/balance-engine";
 import {
 	type WorkerErrorResponse,
 	WorkerProtocolError,
@@ -59,6 +62,12 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 			error = {
 				code: "COMMAND_CONFLICT",
 				message: "Command id reused with a different request",
+			};
+		} else if (cause instanceof LockAlreadyExistsError) {
+			status = 409;
+			error = {
+				code: "LOCK_ALREADY_EXISTS",
+				message: "The customer already holds an open lock under this id",
 			};
 		} else if (cause instanceof PartitionWriterDuplicateCommandError) {
 			status = 409;

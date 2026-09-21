@@ -95,6 +95,7 @@ export { schemas };
 
 // Cus response
 
+export * from "./models/balanceLockModels/balanceLockTable";
 export * from "./models/cusModels/cusTable";
 export * from "./models/cusModels/customerLsnsTable";
 export * from "./models/cusModels/entityModels/entityExpand";

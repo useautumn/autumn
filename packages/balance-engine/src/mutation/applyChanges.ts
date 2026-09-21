@@ -1,10 +1,12 @@
 import { isDeepStrictEqual } from "node:util";
 import { StaleMutationError } from "../errors.js";
 import type {
+	LockRowChange,
 	RowChange,
 	TableRowChange,
 } from "../models/mutation/rowChange.js";
 import type { AnyRowIncrement } from "../models/mutation/rowIncrement.js";
+import type { OpenLock } from "../models/subject/rows/workerLock.js";
 import type { SubjectState } from "../models/subject/subjectState.js";
 import { incrementRow } from "./incrementRow.js";
 
@@ -74,6 +76,28 @@ const applyToTable = <Row extends StateRow>({
 	}
 };
 
+/** Memory keeps only the ids of an open lock; the row the change carries is for Postgres. */
+const applyToOpenLocks = ({
+	openLocks,
+	change,
+}: {
+	openLocks: OpenLock[];
+	change: LockRowChange;
+}): OpenLock[] => {
+	if (change.op === "insert") {
+		const { id, lock_id } = change.row;
+		const isAlreadyOpen = openLocks.some(
+			(openLock) => openLock.id === id || openLock.lock_id === lock_id,
+		);
+		if (isAlreadyOpen) throw new StaleMutationError({ subject: id });
+		return [...openLocks, { id, lock_id }];
+	}
+	const remaining = openLocks.filter((openLock) => openLock.id !== change.id);
+	if (remaining.length === openLocks.length)
+		throw new StaleMutationError({ subject: change.id });
+	return remaining;
+};
+
 /** Generic over the change list: it never knows which command produced the changes. */
 export const applyChanges = ({
 	state,
@@ -128,6 +152,15 @@ export const applyChanges = ({
 				nextState = {
 					...nextState,
 					usageWindows: applyToTable({ rows: nextState.usageWindows, change }),
+				};
+				break;
+			case "locks":
+				nextState = {
+					...nextState,
+					openLocks: applyToOpenLocks({
+						openLocks: nextState.openLocks,
+						change,
+					}),
 				};
 				break;
 		}

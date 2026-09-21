@@ -1,5 +1,8 @@
 import { deduct } from "../../deduction/deduct.js";
-import { UnsupportedCommandError } from "../../errors.js";
+import {
+	LockAlreadyExistsError,
+	UnsupportedCommandError,
+} from "../../errors.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
@@ -17,6 +20,13 @@ export const computeTrack = ({
 }): SubjectStateMutation => {
 	assertCommandSupported({ fullSubject, command });
 
+	// Checked before the deduction: a duplicate lock deducts nothing and writes nothing.
+	const lockId = command.lock?.lockId;
+	const holdsLock = fullSubject.open_locks.some(
+		(openLock) => openLock.lock_id === lockId,
+	);
+	if (lockId && holdsLock) throw new LockAlreadyExistsError({ lockId });
+
 	const outcome = deduct({
 		fullSubject,
 		request: trackCommandToDeductionRequest({ command }),
@@ -31,6 +41,6 @@ export const computeTrack = ({
 	return trackOutcomeToMutation({
 		command,
 		outcome,
-		revisionBefore: fullSubject.revision,
+		fullSubject,
 	});
 };

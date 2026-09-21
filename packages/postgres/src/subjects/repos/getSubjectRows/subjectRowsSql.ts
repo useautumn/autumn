@@ -4,8 +4,8 @@ import type { PostgresContext } from "../../../types/postgresClient.js";
 /**
  * Single-subject port of getFullSubjectRowsQuery, keeping only what the balance worker
  * holds for one subject: its products in the given statuses, their prices and entitlements,
- * live loose entitlements, unexpired rollovers, and its usage-window counters. Customer-level rows when no entity is named, else
- * the entity's own rows. Catalog rows come from getCatalogRows.
+ * live loose entitlements, unexpired rollovers, its usage-window counters, and the ids of its open locks. Customer-level rows
+ * when no entity is named, else the entity's own rows. Catalog rows come from getCatalogRows.
  * Expiry is evaluated at `asOfTimestampMs` so a replay sees the same rows as the original.
  */
 export const subjectRowsSql = ({
@@ -25,6 +25,9 @@ export const subjectRowsSql = ({
 		entityId === null
 			? sql`${alias}.internal_entity_id IS NULL`
 			: sql`${alias}.internal_entity_id IN (SELECT internal_id FROM entity_record)`;
+
+	// A lock id is unique across the customer, so only the customer's own load carries open locks.
+	const openLocksOwnedBySubject = entityId === null ? sql`TRUE` : sql`FALSE`;
 
 	return sql`
 	WITH customer_record AS (
@@ -112,6 +115,13 @@ export const subjectRowsSql = ({
 		FROM usage_windows uw
 		WHERE uw.internal_customer_id IN (SELECT internal_id FROM customer_record)
 			AND ${ownedBySubject({ alias: sql`uw` })}
+	),
+
+	cus_open_locks AS (
+		SELECT bl.id, bl.lock_id
+		FROM balance_locks bl
+		WHERE bl.internal_customer_id IN (SELECT internal_id FROM customer_record)
+			AND ${openLocksOwnedBySubject}
 	)
 
 	SELECT json_build_object(
@@ -134,6 +144,10 @@ export const subjectRowsSql = ({
 		),
 		'usage_windows', COALESCE(
 			(SELECT json_agg(row_to_json(uw) ORDER BY uw.id) FROM cus_usage_windows uw),
+			'[]'::json
+		),
+		'open_locks', COALESCE(
+			(SELECT json_agg(row_to_json(bl) ORDER BY bl.id) FROM cus_open_locks bl),
 			'[]'::json
 		),
 		'entity', (SELECT row_to_json(e) FROM entity_record e)

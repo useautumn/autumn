@@ -11,6 +11,7 @@ export { computeTrack } from "./commands/track/computeTrack.js";
 export type {
 	OverageBehavior,
 	TrackCommand,
+	TrackLock,
 } from "./commands/track/types/trackCommand.js";
 export type { TrackResult } from "./commands/track/types/trackResult.js";
 // deduction
@@ -24,6 +25,7 @@ export type { UnsupportedCommandReason } from "./errors.js";
 export {
 	CatalogRowMissingError,
 	IrreversibleChangeError,
+	LockAlreadyExistsError,
 	MutationSubjectMismatchError,
 	OutOfOrderMutationError,
 	StaleMutationError,
@@ -66,6 +68,10 @@ export type { WorkerCustomerEntitlement } from "./models/subject/rows/workerCust
 export type { WorkerCustomerPrice } from "./models/subject/rows/workerCustomerPrice.js";
 export type { WorkerCustomerProduct } from "./models/subject/rows/workerCustomerProduct.js";
 export type { WorkerEntity } from "./models/subject/rows/workerEntity.js";
+export type {
+	OpenLock,
+	WorkerLock,
+} from "./models/subject/rows/workerLock.js";
 export type { WorkerRollover } from "./models/subject/rows/workerRollover.js";
 export type { WorkerUsageWindow } from "./models/subject/rows/workerUsageWindow.js";
 export type { SubjectState } from "./models/subject/subjectState.js";

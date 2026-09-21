@@ -69,3 +69,14 @@ export class UnsupportedCommandError extends Error {
 		this.reason = reason;
 	}
 }
+
+/** The customer already holds an open lock under this id; nothing was deducted. */
+export class LockAlreadyExistsError extends Error {
+	readonly lockId: string;
+
+	constructor({ lockId }: { lockId: string }) {
+		super(`Lock already exists: ${lockId}`);
+		this.name = "LockAlreadyExistsError";
+		this.lockId = lockId;
+	}
+}

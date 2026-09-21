@@ -26,6 +26,8 @@ export const subjectRowsEnvelopeSchema = z.object({
 	customer_entitlements: z.array(CustomerEntitlementSchema),
 	rollovers: z.array(RolloverSchema),
 	usage_windows: z.array(UsageWindowSchema),
+	/** Ids only: the rest of a lock row is read at finalize, never held in memory. */
+	open_locks: z.array(z.object({ id: z.string(), lock_id: z.string() })),
 	entity: EntitySchema.nullable(),
 });
 

@@ -107,6 +107,7 @@ export const subjectStateToFullSubject = ({
 		customer_products,
 		extra_customer_entitlements,
 		usage_windows: state.usageWindows,
+		open_locks: state.openLocks,
 	};
 };
 

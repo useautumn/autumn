@@ -5,6 +5,7 @@ import type { WorkerCustomerEntitlement } from "./rows/workerCustomerEntitlement
 import type { WorkerCustomerPrice } from "./rows/workerCustomerPrice.js";
 import type { WorkerCustomerProduct } from "./rows/workerCustomerProduct.js";
 import type { WorkerEntity } from "./rows/workerEntity.js";
+import type { OpenLock } from "./rows/workerLock.js";
 import type { WorkerRollover } from "./rows/workerRollover.js";
 import type { WorkerUsageWindow } from "./rows/workerUsageWindow.js";
 
@@ -38,4 +39,6 @@ export type WorkerFullSubject = {
 	extra_customer_entitlements: WorkerFullCustomerEntitlement[];
 	/** Windowed-cap counters, customer-scoped or the entity's own. */
 	usage_windows: WorkerUsageWindow[];
+	/** The customer's open locks, ids only: what a lock decision refuses a duplicate against. */
+	open_locks: OpenLock[];
 };

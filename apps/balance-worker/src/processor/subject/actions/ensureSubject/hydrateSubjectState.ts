@@ -31,6 +31,7 @@ export const hydrateSubjectState = async ({
 		customerEntitlements: envelope.customer_entitlements,
 		rollovers: envelope.rollovers,
 		usageWindows: envelope.usage_windows,
+		openLocks: envelope.open_locks,
 		entity: envelope.entity,
 	});
 	// Postgres is the baseline: nothing to log, the rows just become resident.

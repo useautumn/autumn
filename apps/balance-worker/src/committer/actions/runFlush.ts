@@ -30,7 +30,8 @@ type BalanceRowChange = Extract<RowChange, { table: BalanceTable }>;
 const isBalanceTable = (table: RowChange["table"]): table is BalanceTable =>
 	table === "customerEntitlements" ||
 	table === "rollovers" ||
-	table === "usageWindows";
+	table === "usageWindows" ||
+	table === "locks";
 
 /** An increment adds its counters; an update replaces its columns under the before guard. */
 const balanceRowChangeToUpdate = ({
@@ -78,7 +79,7 @@ const balanceRowChangeToUpdate = ({
 	};
 };
 
-/** The change as Postgres lands it; only the balance tables land today, the subject and plan rows wait for attach. */
+/** The change as Postgres lands it; only the balance tables and their locks land today, the subject and plan rows wait for attach. */
 const rowChangeToSubjectRowChange = ({
 	change,
 }: {

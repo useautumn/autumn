@@ -2,6 +2,8 @@
 
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
+// Balance worker: open locks
+import { balanceLocks } from "../models/balanceLockModels/balanceLockTable.js";
 import {
 	chatApprovals,
 	chatApprovalWrites,
@@ -246,6 +248,7 @@ export {
 	subscriptions,
 	usageWindows,
 	partitionProgress,
+	balanceLocks,
 	// Auth
 	user,
 	// Auth Relations

@@ -14,6 +14,7 @@ import { workerCustomerEntitlementSchema } from "../../models/subject/rows/worke
 import { workerCustomerPriceSchema } from "../../models/subject/rows/workerCustomerPrice.js";
 import { workerCustomerProductSchema } from "../../models/subject/rows/workerCustomerProduct.js";
 import { workerEntitySchema } from "../../models/subject/rows/workerEntity.js";
+import type { OpenLock } from "../../models/subject/rows/workerLock.js";
 import { workerRolloverSchema } from "../../models/subject/rows/workerRollover.js";
 import { workerUsageWindowSchema } from "../../models/subject/rows/workerUsageWindow.js";
 import type { SubjectState } from "../../models/subject/subjectState.js";
@@ -44,6 +45,7 @@ export const customerRowsToSubjectState = ({
 	customerEntitlements,
 	rollovers,
 	usageWindows,
+	openLocks = [],
 	entity,
 }: {
 	identity: MeteringIdentity;
@@ -61,6 +63,8 @@ export const customerRowsToSubjectState = ({
 	customerEntitlements: CustomerEntitlement[];
 	rollovers: Rollover[];
 	usageWindows: UsageWindow[];
+	/** Absent when the rows come from the server's FullSubject, which does not carry locks. */
+	openLocks?: OpenLock[];
 	entity: Entity | null;
 }): SubjectState =>
 	createSubjectState({
@@ -81,6 +85,7 @@ export const customerRowsToSubjectState = ({
 		usageWindows: usageWindows.map((row) =>
 			pickColumns({ schema: workerUsageWindowSchema, row }),
 		),
+		openLocks,
 		entity: entity
 			? pickColumns({ schema: workerEntitySchema, row: entity })
 			: null,
@@ -134,6 +139,8 @@ export const splitSubjectState = ({
 					...state,
 					identity: { ...state.identity, entityId: state.entity.id },
 					...rowsOwnedBy({ internalEntityId: state.entity.internal_id }),
+					// A lock id is unique across the customer, so the customer's state owns every open lock.
+					openLocks: [],
 				}
 			: null,
 	};

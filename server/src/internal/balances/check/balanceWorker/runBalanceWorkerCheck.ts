@@ -7,6 +7,9 @@ import {
 	type CheckParams,
 	type CheckResponseV3,
 	ErrCode,
+	featureUtils,
+	findFeatureById,
+	type ParsedCheckParams,
 	RecaseError,
 } from "@autumn/shared";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
@@ -14,12 +17,13 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
 import { loadBalanceWorkerSubject } from "../../balanceWorker/loadBalanceWorkerSubject.js";
 import { trackParamsToTrackCommand } from "../../track/balanceWorker/balanceWorkerTrackRequest.js";
+import { parseCheckParamsForLock } from "../../utils/lock/parseCheckParamsForLock.js";
 import { checkReplyToApiResponse } from "./balanceWorkerCheckReply.js";
 import { checkParamsToCheckCommand } from "./balanceWorkerCheckRequest.js";
 
 type CheckClient = Pick<BalanceWorkerClient, "check" | "track">;
 
-/** `send_event`: an allowed check is followed by a reject-mode track of the same amount; a lost race answers not allowed. */
+/** `send_event` or a lock: an allowed check is followed by a track of the same amount; a lost race answers not allowed. */
 const trackAllowedCheck = async ({
 	ctx,
 	body,
@@ -27,10 +31,20 @@ const trackAllowedCheck = async ({
 	checkReply,
 }: {
 	ctx: AutumnContext;
-	body: CheckParams;
+	body: ParsedCheckParams;
 	client: CheckClient;
 	checkReply: CheckReply;
 }): Promise<CheckReply> => {
+	const feature = findFeatureById({
+		features: ctx.features,
+		featureId: body.feature_id ?? "",
+	});
+	if (body.lock && feature && featureUtils.isAllocated(feature))
+		throw new RecaseError({
+			message: "Lock is not supported for allocated features",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
 	if (checkReply.result.isFlag)
 		throw new RecaseError({
 			message:
@@ -47,7 +61,9 @@ const trackAllowedCheck = async ({
 				feature_id: body.feature_id,
 				value: body.required_balance ?? body.required_quantity ?? 1,
 				properties: body.properties,
-				overage_behavior: "reject",
+				// A lock carries its own overage behaviour, and keeps it for a later confirm above the lock.
+				overage_behavior: body.lock?.overage_behavior ?? "reject",
+				lock: body.lock,
 			},
 		}),
 	});
@@ -64,7 +80,7 @@ const trackAllowedCheck = async ({
 
 export async function runBalanceWorkerCheck({
 	ctx,
-	body,
+	body: rawBody,
 	client = getBalanceWorkerClient(),
 	loadSubject = loadBalanceWorkerSubject,
 }: {
@@ -73,11 +89,14 @@ export async function runBalanceWorkerCheck({
 	client?: CheckClient;
 	loadSubject?: typeof loadBalanceWorkerSubject;
 }): Promise<CheckResponseV3> {
+	// Validates the lock, gives it an id when the caller sent none, and drops a disabled one.
+	const body = parseCheckParamsForLock({ params: rawBody });
 	const command: CheckCommand = checkParamsToCheckCommand({ ctx, body });
 	try {
 		const checkReply = await client.check({ command });
+		const tracksOnAllow = body.send_event || body.lock !== undefined;
 		const reply =
-			body.send_event && checkReply.result.allowed
+			tracksOnAllow && checkReply.result.allowed
 				? await trackAllowedCheck({ ctx, body, client, checkReply })
 				: checkReply;
 		const fullSubject = await loadSubject({

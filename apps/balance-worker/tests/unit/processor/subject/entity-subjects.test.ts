@@ -81,6 +81,7 @@ const entityEnvelope: SubjectRowsEnvelope = {
 	],
 	rollovers: [],
 	usage_windows: [],
+	open_locks: [],
 	entity: {
 		...entity,
 		org_id: identity.orgId,
