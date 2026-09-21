@@ -5,6 +5,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 } from "@autumn/ui";
+import { LinkIcon } from "@phosphor-icons/react";
 import { useEffect } from "react";
 import { useProductsByPriceIdsQuery } from "@/hooks/queries/useProductsByPriceIdsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -13,7 +14,6 @@ import {
 	type SelectorChip,
 } from "../../components/ChipSelectTrigger";
 import type { FrontendReward } from "../../types/frontendReward";
-import { SharedStripeProductTooltip } from "./SharedStripeProductTooltip";
 import {
 	buildStripeProductGroups,
 	expandToFullGroups,
@@ -154,7 +154,9 @@ export function ProductPriceSelector({
 									className="border-border"
 								/>
 								<span className="truncate">{groupLabel({ group })}</span>
-								{group.products.length > 1 && <SharedStripeProductTooltip />}
+								{group.products.length > 1 && (
+									<LinkIcon className="ml-auto size-3.5 shrink-0 text-tertiary-foreground" />
+								)}
 							</DropdownMenuItem>
 						))}
 					</div>
