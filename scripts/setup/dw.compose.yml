@@ -19,14 +19,28 @@ services:
       memlock: -1
     restart: unless-stopped
 
-  elasticmq:
-    image: softwaremill/elasticmq-native:latest
-    container_name: ${COMPOSE_PROJECT_NAME}-elasticmq
+  # Local SQS and EventBridge Scheduler, pinned to a release and its digest. Why it replaced ElasticMQ, how it
+  # is locked down and how to upgrade it: scripts/dw/README.md. Never mount the Docker socket into it.
+  fakecloud:
+    image: ghcr.io/faiscadev/fakecloud:0.45.0@sha256:78844f091be86081d3d11b056e3d56e6ea0ace4ce607e55fa4255fc759d39279
+    container_name: ${COMPOSE_PROJECT_NAME}-fakecloud
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     ports:
-      - "${ELASTICMQ_PORT}:9324"
-    volumes:
-      - ./elasticmq.conf:/opt/elasticmq.conf:ro
-    command: ["-Dconfig.file=/opt/elasticmq.conf"]
+      - "127.0.0.1:${FAKECLOUD_PORT}:4566"
+    environment:
+      FAKECLOUD_REGION: us-east-2
+      FAKECLOUD_ACCOUNT_ID: "123456789012"
+    healthcheck:
+      test: ["CMD", "fakecloud", "healthcheck"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
     restart: unless-stopped
 
   dynamodb:

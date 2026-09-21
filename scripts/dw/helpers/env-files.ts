@@ -16,12 +16,12 @@ import {
 import type { RegistryEntry } from "../types.ts";
 import { emulateGoogleUrl } from "./emulate.ts";
 import { isProvisioned } from "./entry.ts";
+import { FAKECLOUD_SCHEDULER_ROLE_ARN, localQueueUrl } from "./fakecloud.ts";
 import {
 	aliasesFor,
 	checkoutPortFor,
 	dragonflyPortFor,
 	dynamoDbPortFor,
-	elasticMqPortFor,
 	kafkaPortFor,
 	serverPortFor,
 } from "./ports.ts";
@@ -90,10 +90,9 @@ export function mergeEnvFile(
 export function provisionedInfraEnv(
 	worktreeNum: number,
 ): Record<string, string> {
-	const elasticMqPort = elasticMqPortFor(worktreeNum);
 	const redisUrl = `redis://localhost:${dragonflyPortFor(worktreeNum)}`;
 	const queueUrl = (queueName: string) =>
-		`http://localhost:${elasticMqPort}/000000000000/${queueName}`;
+		localQueueUrl({ worktreeNum, queueName });
 	return {
 		REDIS_URL: redisUrl,
 		MISC_CACHE_DRAGONFLY_PUBLIC_URL: redisUrl,
@@ -110,6 +109,7 @@ export function provisionedInfraEnv(
 		TRACK_ASYNC_SQS_QUEUE_URL: queueUrl("autumn-track.fifo"),
 		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL: queueUrl("autumn-track-async"),
 		STRIPE_WEBHOOK_SQS_QUEUE_URL: queueUrl("autumn-stripe-webhook.fifo"),
+		AWS_EVENTBRIDGE_SCHEDULER_ROLE_ARN: FAKECLOUD_SCHEDULER_ROLE_ARN,
 	};
 }
 

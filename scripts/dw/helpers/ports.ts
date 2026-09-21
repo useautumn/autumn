@@ -18,8 +18,10 @@ export function dragonflyPortFor(worktreeNum: number): number {
 	return 6379 + (composeSlot(worktreeNum) - 1) * 100;
 }
 
-export function elasticMqPortFor(worktreeNum: number): number {
-	return 9324 + (composeSlot(worktreeNum) - 1) * 100;
+// fakecloud's default port. Base 4566 shares no residue mod 100 with any other
+// compose or app base, so it never collides (ngrok's 4040 is the nearest).
+export function fakecloudPortFor(worktreeNum: number): number {
+	return 4566 + (composeSlot(worktreeNum) - 1) * 100;
 }
 
 // DynamoDB Local's default port. Base 8000 never collides with the server's

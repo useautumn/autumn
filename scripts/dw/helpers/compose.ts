@@ -1,11 +1,12 @@
 import { join } from "node:path";
 import { ensureBalanceWorkerTopics } from "../../devServices/ensureBalanceWorkerTopics.ts";
 import { PROJECT_ROOT } from "../constants.ts";
+import { ensureFakecloudQueues } from "./fakecloud.ts";
 import {
 	composeProjectName,
 	dragonflyPortFor,
 	dynamoDbPortFor,
-	elasticMqPortFor,
+	fakecloudPortFor,
 	kafkaPortFor,
 } from "./ports.ts";
 import { log, sh } from "./shell.ts";
@@ -22,16 +23,16 @@ function composeEnv(worktreeNum: number): Record<string, string> {
 		...(process.env as Record<string, string>),
 		COMPOSE_PROJECT_NAME: composeProjectName(worktreeNum),
 		DRAGONFLY_PORT: String(dragonflyPortFor(worktreeNum)),
-		ELASTICMQ_PORT: String(elasticMqPortFor(worktreeNum)),
+		FAKECLOUD_PORT: String(fakecloudPortFor(worktreeNum)),
 		DYNAMODB_PORT: String(dynamoDbPortFor(worktreeNum)),
 		KAFKA_PORT: String(kafkaPortFor(worktreeNum)),
 	};
 }
 
-export function ensureComposeStack(
+export async function ensureComposeStack(
 	worktreeNum: number,
 	_branchName: string | undefined,
-): void {
+): Promise<void> {
 	if (!dockerComposeAvailable()) {
 		log("docker compose not available; skipping infra stack");
 		return;
@@ -60,8 +61,9 @@ export function ensureComposeStack(
 			kafkaPort: kafkaPortFor(worktreeNum),
 			runtimeEnv: process.env,
 		});
+		await ensureFakecloudQueues({ port: fakecloudPortFor(worktreeNum) });
 		log(
-			`compose stack ${project} up (dragonfly :${env.DRAGONFLY_PORT}, elasticmq :${env.ELASTICMQ_PORT}, dynamodb :${env.DYNAMODB_PORT}, kafka :${env.KAFKA_PORT})`,
+			`compose stack ${project} up (dragonfly :${env.DRAGONFLY_PORT}, fakecloud :${env.FAKECLOUD_PORT}, dynamodb :${env.DYNAMODB_PORT}, kafka :${env.KAFKA_PORT})`,
 		);
 	} else {
 		throw new Error(`Failed to start compose stack ${project}: ${up.stderr}`);

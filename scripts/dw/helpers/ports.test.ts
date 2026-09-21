@@ -5,7 +5,7 @@ import {
 	dragonflyPortFor,
 	dynamoDbPortFor,
 	EMULATE_PORT,
-	elasticMqPortFor,
+	fakecloudPortFor,
 	kafkaPortFor,
 	leafPortFor,
 	ngrokApiPortFor,
@@ -32,8 +32,29 @@ describe("compose ports", () => {
 		expect(dragonflyPortFor(1)).not.toBe(6380);
 		expect(dynamoDbPortFor(1)).not.toBe(8000);
 		expect(dragonflyPortFor(2)).toBe(6479);
-		expect(elasticMqPortFor(2)).toBe(9424);
+		expect(fakecloudPortFor(2)).toBe(4666);
 		expect(dynamoDbPortFor(2)).toBe(8100);
+	});
+
+	test("fakecloud never lands on another service's port", () => {
+		const others = [
+			dragonflyPortFor,
+			dynamoDbPortFor,
+			kafkaPortFor,
+			ngrokApiPortFor,
+			serverPortFor,
+			vitePortFor,
+			checkoutPortFor,
+			leafPortFor,
+		];
+		const taken = new Set<number>();
+		for (let worktree = 1; worktree <= 50; worktree++) {
+			for (const portFor of others) taken.add(portFor(worktree));
+		}
+		for (let worktree = 1; worktree <= 50; worktree++) {
+			expect(taken.has(fakecloudPortFor(worktree))).toBe(false);
+		}
+		expect(fakecloudPortFor(1)).toBe(9566);
 	});
 });
 

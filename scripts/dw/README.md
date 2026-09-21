@@ -1,6 +1,6 @@
 # `bun dw` — Dev Worktrees
 
-Run isolated, parallel Autumn dev stacks per git worktree. Each agent gets its own Neon DB branch, Redis (Dragonfly), SQS (ElasticMQ), portless HTTPS aliases, and tmux-wrapped dev server — no port collisions, no cross-contamination.
+Run isolated, parallel Autumn dev stacks per git worktree. Each agent gets its own Neon DB branch, Redis (Dragonfly), AWS emulator (fakecloud: SQS + EventBridge Scheduler), portless HTTPS aliases, and tmux-wrapped dev server — no port collisions, no cross-contamination.
 
 ## When to use it
 
@@ -16,7 +16,7 @@ Most auto-install on first run:
 
 - **Neon CLI** — `neonctl` (logs in via OAuth on first use)
 - **psql** — for DDL against new branches
-- **Docker + Compose** — spins Dragonfly + ElasticMQ per worktree
+- **Docker + Compose** — spins Dragonfly + fakecloud per worktree
 - **Stripe CLI** — used by the dev server for webhooks
 - **tmux** — headless dev wrapping for agent worktrees
 - **portless** — `npm install -g @portless/cli` for HTTPS aliases
@@ -222,6 +222,8 @@ bun dw teardown
 - **Registry lives at** `~/.autumn-worktrees.json`. It tracks worktree numbers, branch names, and last-used timestamps. Deleting it orphans Neon branches and Docker containers.
 - **Portless HTTPS** requires the `portless` daemon. If aliases aren't resolving, check `portless proxy status`.
 - **Emulate** (Google OAuth) is shared across all worktrees and starts automatically when needed.
+- **fakecloud** replaces ElasticMQ as the local SQS. It also serves EventBridge Scheduler, and a schedule can only deliver to fakecloud's own SQS — that is why it replaces ElasticMQ instead of sitting beside it. Queues (`autumn.fifo`, `autumn-track.fifo`, `autumn-stripe-webhook.fifo`, `autumn-track-async`) are created by `bun dw setup` after the container is healthy; fakecloud has no startup config for seeding them. Queue URLs look like `http://localhost:<fakecloudPort>/123456789012/autumn.fifo`, and the server points its Scheduler client at the same endpoint whenever the queue URL is local.
+- **fakecloud is pinned and locked down.** It is a young third-party image, so `dw.compose.yml` pins a release *and* its digest (the `latest` tag is an unreleased build of `main`, and a tag alone can be moved), and runs it read-only, with every Linux capability dropped, `no-new-privileges`, and published on `127.0.0.1` only. Never mount the Docker socket into it: fakecloud starts real containers for Lambda, RDS and similar when it finds one. To upgrade, pick a release, run `docker buildx imagetools inspect ghcr.io/faiscadev/fakecloud:<version>`, and paste both the version and the digest into the compose file.
 - **Cloudflare Tunnel** is the public front door. One named tunnel, one hostname per service (`autumn-wtN-<hash>.autumnworktree.com`, `-api`, `-checkout`, `-leaf`, `-emulate`). The hash is machine id + path so Cloud worktree #1 and two laptops on the same number do not collide. Laptop browsers stay on `https://wtN.localhost`.
 
 ## How Conductor / Superset use this

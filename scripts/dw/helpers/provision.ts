@@ -1,10 +1,10 @@
 import { promoteAllUsersToAdmin } from "../commands/admin.ts";
 import type { Registry, RegistryEntry } from "../types.ts";
+import { ensurePublicAccess } from "./cloudflare.ts";
 import { ensureComposeStack } from "./compose.ts";
 import { ensureEmulateRunning } from "./emulate.ts";
 import { writeEnvLocalFiles } from "./env-files.ts";
 import { ensureChatDatabase } from "./neon.ts";
-import { ensurePublicAccess } from "./cloudflare.ts";
 import { entryPublicOrigin } from "./publicUrls.ts";
 import { saveRegistry } from "./registry.ts";
 import {
@@ -28,7 +28,7 @@ export async function provisionWorktree({
 
 	if (current.branchName) ensureChatDatabase(current.branchName);
 
-	ensureComposeStack(current.worktreeNum, current.branchName);
+	await ensureComposeStack(current.worktreeNum, current.branchName);
 	current = await ensurePublicAccess(current);
 	registry[cwd] = current;
 	saveRegistry(registry);
