@@ -97,6 +97,7 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			entity_id: entityId,
 			user_id: ctx.userId || undefined,
 			user_email: ctx.user?.email || undefined,
+			impersonated_by: ctx.impersonatedBy,
 			api_version: ctx.apiVersion?.semver,
 			scopes: ctx.scopes,
 			full_subject_bucket: fullSubjectBucket ?? undefined,

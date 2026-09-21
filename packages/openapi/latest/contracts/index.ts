@@ -75,6 +75,7 @@ import {
 	listLicensesContract,
 	releaseLicenseContract,
 } from "./licensesContract.js";
+import { logsSearchContract } from "./logsContract.js";
 import {
 	organizationPreviewUpdateContract,
 	organizationUpdateContract,
@@ -166,6 +167,9 @@ export const v2_3ContractRouter = oc.router({
 	// Events
 	eventsList: eventsListContract,
 	eventsAggregate: eventsAggregateContract,
+
+	// Logs
+	logsSearch: logsSearchContract,
 
 	// Invoices
 	invoicesCreate: createInvoiceContract,

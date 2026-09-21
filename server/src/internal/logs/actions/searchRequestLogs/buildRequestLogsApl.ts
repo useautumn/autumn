@@ -37,6 +37,9 @@ const REQUEST_LOG_PROJECTION: ProjectionField[] = [
 	{ alias: "org_id", expression: "['context.org_id']" },
 	{ alias: "customer_id", expression: "['context.customer_id']" },
 	{ alias: "entity_id", expression: "['context.entity_id']" },
+	{ alias: "auth_type", expression: "['context.auth_type']" },
+	{ alias: "user_id", expression: "['context.user_id']" },
+	{ alias: "user_email", expression: "['context.user_email']" },
 	{ alias: "stripe_event_id", expression: "['stripe_event.id']" },
 	{ alias: "stripe_event_type", expression: "['stripe_event.type']" },
 	{ alias: "stripe_object_id", expression: "['stripe_event.object_id']" },
@@ -66,6 +69,7 @@ export const buildRequestLogsApl = (input: RequestLogsAplInput): string => {
 	return [
 		"['express']",
 		...tenantClauses(input),
+		"| where isempty(column_ifexists('context.impersonated_by', ''))",
 		"| where isnotnull(statusCode)",
 		"| where isnotnull(['req.url'])",
 		"| extend request_path = tostring(parse_url(['req.url']).path)",
