@@ -1,6 +1,7 @@
 import {
 	type BalanceWorkerClient,
 	createBalanceWorkerClient,
+	type PartitionOwner,
 } from "@autumn/balance-worker-client";
 import {
 	BALANCE_WORKER_PARTITION_COUNT,
@@ -11,10 +12,21 @@ import { getOwnershipConsumer } from "./getOwnershipConsumer.js";
 
 let balanceWorkerClient: BalanceWorkerClient | undefined;
 
+/** Looks the consumer up on every call instead of capturing it. A consumer that
+ *  fails its startup cannot be restarted, so it gets replaced rather than
+ *  revived, and this client has to follow the replacement. */
+function findOwner(params: { partition: number }): PartitionOwner | undefined {
+	return getOwnershipConsumer().findOwner(params);
+}
+
+function refresh(): Promise<void> {
+	return getOwnershipConsumer().refresh();
+}
+
 export function getBalanceWorkerClient(): BalanceWorkerClient {
 	if (balanceWorkerClient) return balanceWorkerClient;
 	balanceWorkerClient = createBalanceWorkerClient({
-		ctx: { owners: getOwnershipConsumer() },
+		ctx: { owners: { findOwner, refresh } },
 		config: {
 			partitionCount: BALANCE_WORKER_PARTITION_COUNT,
 			timeoutMs: BALANCE_WORKER_REQUEST_TIMEOUT_MS,

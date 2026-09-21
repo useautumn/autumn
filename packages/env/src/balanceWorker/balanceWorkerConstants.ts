@@ -42,5 +42,14 @@ export const BALANCE_WORKER_DATABASE_POOL_SIZE = 32;
  *  topic. It costs a slower start, roughly one wave per this many partitions. */
 export const BALANCE_WORKER_PARTITION_STARTUP_CONCURRENCY = 16;
 
+/** How long routing may spend reading the ownership log before it gives up and
+ *  starts over. The default of ten seconds was written when that log was short.
+ *  It accumulates a record per claim and per release, so it grows with every
+ *  deploy, and a staging read of it took roughly twenty seconds with four of
+ *  those spent joining the group before the first record arrived. Overrunning
+ *  leaves the server with no owners at all, so this is deliberately generous:
+ *  a slow start costs nothing, and the listener does not wait for it. */
+export const BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS = 60_000;
+
 export const BALANCE_WORKER_CATALOG_TTL_MS = 300_000;
 export const BALANCE_WORKER_CATALOG_MAX_BYTES = 268_435_456;
