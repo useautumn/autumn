@@ -79,6 +79,30 @@ const windowChangesOf = (outcome: DeductionOutcome) =>
 
 describe("usage windows", () => {
 	test.concurrent(
+		"two customers with the same cap on the same day get counters of their own",
+		() => {
+			const counterIdFor = ({ internalId }: { internalId: string }) => {
+				const outcome = deductFrom({
+					customer: { ...dailyCap({ limit: 5 }), internal_id: internalId },
+					customerEntitlements: [
+						createCustomerEntitlement({ id: "a", balance: 10 }),
+					],
+					value: 1,
+				});
+				const [change] = windowChangesOf(outcome);
+				return change?.op === "insert" ? change.row.id : undefined;
+			};
+
+			const first = counterIdFor({ internalId: "cus_1" });
+			const second = counterIdFor({ internalId: "cus_2" });
+			expect(first).toBeDefined();
+			expect(second).toBeDefined();
+			// A calendar-aligned window starts at the same instant for everyone, so the customer must be in the id.
+			expect(first).not.toBe(second);
+		},
+	);
+
+	test.concurrent(
 		"a daily cap clamps the track across rows onto one new counter",
 		() => {
 			const outcome = deductFrom({

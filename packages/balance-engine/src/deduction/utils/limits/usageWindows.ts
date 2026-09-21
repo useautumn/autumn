@@ -217,8 +217,9 @@ export const usageWindowsToRowChanges = ({
 			continue;
 		}
 		const row: WorkerUsageWindow = {
-			// Deterministic from the counter's identity, so a replay creates the same row.
-			id: `uw_${limit.key}`,
+			// Deterministic, so a replay creates the same row. The key alone names a counter only within one
+			// customer: a calendar-aligned window starts at the same instant for everyone.
+			id: `uw_${limit.internal_customer_id}:${limit.key}`,
 			internal_customer_id: limit.internal_customer_id,
 			internal_entity_id: limit.internal_entity_id,
 			feature_id: limit.feature_id,
