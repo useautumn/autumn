@@ -277,7 +277,8 @@ async function startDev() {
 			if (launchBalanceWorker) {
 				names.push("balance-worker");
 				colors.push("blueBright");
-				cmds.push('"cd apps/balance-worker && bun dev"');
+				// Restarted when it exits: the worker ends its own process to be replaced, and only production has a replacer.
+				cmds.push('"cd apps/balance-worker && bun dev:restart"');
 				console.log(
 					`  balance-worker: ${balanceWorkerEnv.BALANCE_WORKER_ENDPOINT}/health (liveness only)`,
 				);
