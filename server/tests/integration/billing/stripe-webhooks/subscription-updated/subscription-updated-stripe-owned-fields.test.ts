@@ -26,14 +26,16 @@ import { getSubscriptionId } from "@tests/integration/billing/utils/stripe/getSu
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntilAsserted, timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
-import { timeout } from "@/utils/genUtils";
 
-const WEBHOOK_WAIT_MS = 8000;
+// Webhooks queue behind concurrent tests on one worker, so a no-op assertion
+// needs a generous settle before it proves anything.
+const WEBHOOK_SETTLE_MS = 20_000;
 
 const getEntityCustomerProduct = async ({
 	ctx,
@@ -75,22 +77,39 @@ const seedAutumnOnlyTrial = async ({
 	});
 };
 
+/** Polls an entity's product until the webhook's expected write lands. */
+const waitForEntityCustomerProduct = ({
+	ctx,
+	customerId,
+	entityId,
+	assert,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	entityId: string;
+	assert: (customerProduct: FullCusProduct) => void;
+}) =>
+	pollUntilAsserted({
+		fetch: () => getEntityCustomerProduct({ ctx, customerId, entityId }),
+		assert,
+	});
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Unrelated Stripe event leaves an Autumn-only trial alone
+// TEST 1: A non-trial Stripe change leaves an Autumn-only trial alone
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Scenario:
  * - Entity-1 and entity-2 share one paid pro subscription (no Stripe trial)
  * - Entity-2 carries an Autumn-only trial (trial_ends_at set, Stripe trial_end null)
- * - An unrelated change hits the subscription (metadata only)
+ * - Stripe flips the subscription to send_invoice (trial_end unchanged)
  *
  * Expected Result:
+ * - collection_method is mirrored onto both entities (proves the event was processed)
  * - Entity-2's trial_ends_at is untouched
- * - collection_method is untouched on both entities
  */
 test.concurrent(
-	`${chalk.yellowBright("sub.updated: unrelated Stripe change leaves an Autumn-only trial alone")}`,
+	`${chalk.yellowBright("sub.updated: non-trial Stripe change leaves an Autumn-only trial alone")}`,
 	async () => {
 		const customerId = "sub-updated-keeps-autumn-trial";
 
@@ -130,11 +149,18 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Unrelated change: Stripe fires sub.updated with previous_attributes.metadata only
 		await ctx.stripeCli.subscriptions.update(subscriptionId, {
-			metadata: { unrelated_change: "1" },
+			collection_method: "send_invoice",
+			days_until_due: 30,
 		});
-		await timeout(WEBHOOK_WAIT_MS);
+
+		await waitForEntityCustomerProduct({
+			ctx,
+			customerId,
+			entityId: entities[0].id,
+			assert: (entity1) =>
+				expect(entity1.collection_method).toBe(CollectionMethod.SendInvoice),
+		});
 
 		const entity1 = await getEntityCustomerProduct({
 			ctx,
@@ -147,14 +173,9 @@ test.concurrent(
 			entityId: entities[1].id,
 		});
 
-		expect(entity2.trial_ends_at).toBe(autumnOnlyTrialEndsAt);
 		expect(entity1.trial_ends_at).toBeNull();
-		expect(entity1.collection_method).toBe(
-			CollectionMethod.ChargeAutomatically,
-		);
-		expect(entity2.collection_method).toBe(
-			CollectionMethod.ChargeAutomatically,
-		);
+		expect(entity2.trial_ends_at).toBe(autumnOnlyTrialEndsAt);
+		expect(entity2.collection_method).toBe(CollectionMethod.SendInvoice);
 	},
 );
 
@@ -220,20 +241,20 @@ test.concurrent(
 			trial_end: shortenedTrialEndSec,
 			proration_behavior: "none",
 		});
-		await timeout(WEBHOOK_WAIT_MS);
 
-		const entity1 = await getEntityCustomerProduct({
+		await waitForEntityCustomerProduct({
 			ctx,
 			customerId,
 			entityId: entities[0].id,
+			assert: (entity1) =>
+				expect(entity1.trial_ends_at).toBe(shortenedTrialEndSec * 1000),
 		});
+
 		const entity2 = await getEntityCustomerProduct({
 			ctx,
 			customerId,
 			entityId: entities[1].id,
 		});
-
-		expect(entity1.trial_ends_at).toBe(shortenedTrialEndSec * 1000);
 		expect(entity2.trial_ends_at).toBe(autumnOnlyTrialEndsAt);
 	},
 );
@@ -298,20 +319,19 @@ test.concurrent(
 			trial_end: "now",
 			proration_behavior: "none",
 		});
-		await timeout(WEBHOOK_WAIT_MS);
 
-		const entity1 = await getEntityCustomerProduct({
+		await waitForEntityCustomerProduct({
 			ctx,
 			customerId,
 			entityId: entities[0].id,
+			assert: (entity1) => expect(entity1.trial_ends_at).toBeNull(),
 		});
+
 		const entity2 = await getEntityCustomerProduct({
 			ctx,
 			customerId,
 			entityId: entities[1].id,
 		});
-
-		expect(entity1.trial_ends_at).toBeNull();
 		expect(entity2.trial_ends_at).toBe(autumnOnlyTrialEndsAt);
 	},
 );
@@ -370,7 +390,7 @@ test.concurrent(
 			plan_id: premium.id,
 			redirect_mode: "if_required",
 		});
-		await timeout(WEBHOOK_WAIT_MS);
+		await timeout(WEBHOOK_SETTLE_MS);
 
 		const entity1 = await autumnV2_2.entities.get<ApiEntityV2>(
 			customerId,
