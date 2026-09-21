@@ -40,11 +40,12 @@ export const syncStripeEventToSyncDb = ({
 			orgId: org.id,
 			env: ctx.env,
 		}).catch((error) => {
-			logger.error(`Stripe sync failed for event ${stripeEvent.id}: ${error}`, {
+			logger.warn(`Stripe sync failed for event ${stripeEvent.id}: ${error}`, {
 				error: {
 					message: error instanceof Error ? error.message : String(error),
 				},
 				data: {
+					type: "stripe_sync_write_failed",
 					eventId: stripeEvent.id,
 					eventType: stripeEvent.type,
 					orgId: org.id,

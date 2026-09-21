@@ -47,7 +47,8 @@ export const getStripeSyncEngine = (): StripeSync | null => {
 /**
  * Upserts the Stripe event into the sync DB, then stamps the row
  * with the originating Stripe account ID and org ID for multi-tenancy.
- * Fully fail-open: any error is swallowed and returns silently.
+ * Errors reject so the caller can log them; callers must not await this on
+ * the webhook path, which keeps it fail-open.
  */
 export const processStripeSyncEvent = async ({
 	event,
@@ -63,11 +64,7 @@ export const processStripeSyncEvent = async ({
 	const engine = getStripeSyncEngine();
 	if (!engine) return;
 
-	try {
-		await engine.processEvent(event);
-	} catch {
-		return;
-	}
+	await engine.processEvent(event);
 
 	const table = eventTypeToTable({ eventType: event.type });
 	if (!table) return;
@@ -79,14 +76,10 @@ export const processStripeSyncEvent = async ({
 
 	if (!accountId && !orgId && !env) return;
 
-	try {
-		await engine.postgresClient.pool.query(
-			`UPDATE "${SCHEMA}"."${table}" SET stripe_account_id = COALESCE($1, stripe_account_id), org_id = COALESCE($2, org_id), env = COALESCE($3, env) WHERE id = $4`,
-			[accountId, orgId, env, objectId],
-		);
-	} catch {
-		// Fail-open: metadata stamp is best-effort
-	}
+	await engine.postgresClient.pool.query(
+		`UPDATE "${SCHEMA}"."${table}" SET stripe_account_id = COALESCE($1, stripe_account_id), org_id = COALESCE($2, org_id), env = COALESCE($3, env) WHERE id = $4`,
+		[accountId, orgId, env, objectId],
+	);
 };
 
 /** Gracefully close the sync engine's PG pool (call on server shutdown). */
