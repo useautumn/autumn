@@ -7,6 +7,7 @@ import {
 	gte,
 	ilike,
 	inArray,
+	isNotNull,
 	isNull,
 	lt,
 	or,
@@ -20,7 +21,12 @@ export const handleListAdminOrgs = createRoute({
 		const ctx = c.get("ctx");
 		const { db } = ctx;
 
-		const { search, after: afterQuery, before: beforeQuery } = c.req.query();
+		const {
+			search,
+			platform,
+			after: afterQuery,
+			before: beforeQuery,
+		} = c.req.query();
 		const trimmedSearch = search?.trim();
 		const searchTerm = trimmedSearch ? trimmedSearch : undefined;
 
@@ -54,7 +60,9 @@ export const handleListAdminOrgs = createRoute({
 			.from(organizations)
 			.where(
 				and(
-					isNull(organizations.created_by),
+					platform === "true"
+						? isNotNull(organizations.created_by)
+						: isNull(organizations.created_by),
 					searchTerm
 						? or(
 								eq(organizations.id, searchTerm),

@@ -203,13 +203,37 @@ const CommandBar = () => {
 		currentPage === "impersonate" &&
 		isAdmin;
 
-	const [orgsQuery, usersQuery] = useQueries({
+	const [orgsQuery, platformOrgsQuery, usersQuery] = useQueries({
 		queries: [
 			{
-				queryKey: buildKey(["command-palette-orgs-search", debouncedSearch]),
+				queryKey: buildKey([
+					"command-palette-orgs-search",
+					debouncedSearch,
+					{ platform: false },
+				]),
 				queryFn: async () => {
-					const params = new URLSearchParams();
-					if (debouncedSearch) params.append("search", debouncedSearch);
+					const params = new URLSearchParams({
+						search: debouncedSearch,
+						platform: "false",
+					});
+					const { data } = await axiosInstance.get<{ rows: Org[] }>(
+						`/admin/orgs?${params.toString()}`,
+					);
+					return data;
+				},
+				enabled: impersonateEnabled,
+			},
+			{
+				queryKey: buildKey([
+					"command-palette-orgs-search",
+					debouncedSearch,
+					{ platform: true },
+				]),
+				queryFn: async () => {
+					const params = new URLSearchParams({
+						search: debouncedSearch,
+						platform: "true",
+					});
 					const { data } = await axiosInstance.get<{ rows: Org[] }>(
 						`/admin/orgs?${params.toString()}`,
 					);
@@ -233,12 +257,14 @@ const CommandBar = () => {
 	});
 
 	const searchedOrgsData = orgsQuery.data;
-	const searchOrgsLoading = orgsQuery.isLoading;
+	const searchOrgsLoading = orgsQuery.isLoading || platformOrgsQuery.isLoading;
 	const searchedUsersData = usersQuery.data;
 	const searchUsersLoading = usersQuery.isLoading;
 
 	const rawUsers = searchedUsersData?.rows || [];
-	const rawOrgs = searchedOrgsData?.rows || [];
+	const rawRegularOrgs = searchedOrgsData?.rows || [];
+	const rawPlatformOrgs = platformOrgsQuery.data?.rows || [];
+	const rawOrgs = [...rawRegularOrgs, ...rawPlatformOrgs];
 
 	const FAVOURITES_PAGE_SIZE = 10;
 	const totalFavouritesPages = Math.max(
@@ -425,20 +451,42 @@ const CommandBar = () => {
 				return { type: "user" as const, data: user, score };
 			});
 
-			const orgResults = rawOrgs.map((org) => {
+			const orgResults = [
+				...rawRegularOrgs.map((org) => ({ org, type: "org" as const })),
+				...rawPlatformOrgs.map((org) => ({
+					org,
+					type: "platform-org" as const,
+				})),
+			].map(({ org, type }) => {
 				const nameScore = calculateRelevanceScore(search, org.name || "");
 				const slugScore = calculateRelevanceScore(search, org.slug || "");
 				const idScore = calculateRelevanceScore(search, org.id || "");
 				const score = Math.min(nameScore, slugScore, idScore);
-				return { type: "org" as const, data: org, score };
+				return { type, data: org, score };
 			});
-			return [...orgResults, ...userResults]
-				.sort((a, b) => a.score - b.score)
-				.slice(0, 15);
+			const rankedResults = [...orgResults, ...userResults].sort(
+				(a, b) => a.score - b.score,
+			);
+			return [
+				...rankedResults
+					.filter((result) => result.type !== "platform-org")
+					.slice(0, 15),
+				...rankedResults
+					.filter((result) => result.type === "platform-org")
+					.slice(0, 15),
+			];
 		}
 
 		return [];
-	}, [rawCustomers, products, rawUsers, rawOrgs, search, currentPage]);
+	}, [
+		rawCustomers,
+		products,
+		rawUsers,
+		rawRegularOrgs,
+		rawPlatformOrgs,
+		search,
+		currentPage,
+	]);
 
 	// Show loading if:
 	// 1. Products are loading, OR
@@ -720,7 +768,16 @@ const CommandBar = () => {
 		}
 
 		const userResults = sortedResults.filter((r) => r.type === "user");
-		const orgResults = sortedResults.filter((r) => r.type === "org");
+		const orgGroups = [
+			{
+				heading: "Organizations",
+				results: sortedResults.filter((r) => r.type === "org"),
+			},
+			{
+				heading: "Platform organizations",
+				results: sortedResults.filter((r) => r.type === "platform-org"),
+			},
+		];
 
 		// Wait for orgs to load before showing anything so first org gets auto-selected
 		const waitingForOrgs = showResults && searchOrgsLoading;
@@ -729,44 +786,57 @@ const CommandBar = () => {
 			<>
 				{showResults && !waitingForOrgs && (
 					<>
-						{orgResults.length > 0 && (
-							<CommandGroup heading="Organizations" className="p-1.5">
-								{orgResults.map((result) => {
-									const org = result.data as Org;
-									const firstNonAdminUser = org.users?.find(
-										(user) => user.role !== "admin",
-									);
-									if (!firstNonAdminUser) return null;
+						{orgGroups.map(
+							({ heading, results }) =>
+								results.length > 0 && (
+									<CommandGroup
+										key={heading}
+										heading={heading}
+										className="p-1.5"
+									>
+										{results.map((result) => {
+											const org = result.data as Org;
+											const firstNonAdminUser = org.users?.find(
+												(user) => user.role !== "admin",
+											);
+											if (!firstNonAdminUser) return null;
 
-									return (
-										<CommandRow
-											key={`org-${org.id}`}
-											value={`org:${org.id}`}
-											icon={
-												isOrgFav(org.id) ? (
-													<StarIcon weight="fill" className="text-yellow-500" />
-												) : (
-													<AtIcon />
-												)
-											}
-											title={org.name}
-											subtext={org.slug}
-											onSelect={async () => {
-												try {
-													await impersonateUser({
-														userId: firstNonAdminUser.id,
-														organizationId: org.id,
-														isCurrentlyImpersonating,
-													});
-													closeDialog();
-												} catch (error) {
-													console.error("Failed to impersonate user:", error);
-												}
-											}}
-										/>
-									);
-								})}
-							</CommandGroup>
+											return (
+												<CommandRow
+													key={`org-${org.id}`}
+													value={`org:${org.id}`}
+													icon={
+														isOrgFav(org.id) ? (
+															<StarIcon
+																weight="fill"
+																className="text-yellow-500"
+															/>
+														) : (
+															<AtIcon />
+														)
+													}
+													title={org.name}
+													subtext={org.slug}
+													onSelect={async () => {
+														try {
+															await impersonateUser({
+																userId: firstNonAdminUser.id,
+																organizationId: org.id,
+																isCurrentlyImpersonating,
+															});
+															closeDialog();
+														} catch (error) {
+															console.error(
+																"Failed to impersonate user:",
+																error,
+															);
+														}
+													}}
+												/>
+											);
+										})}
+									</CommandGroup>
+								),
 						)}
 
 						{userResults.length > 0 && (
