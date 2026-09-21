@@ -1,7 +1,6 @@
 import {
 	FeatureType as APIFeatureType,
 	type CreateFeature,
-	FeatureUsageType,
 	isAnyCreditSystem,
 } from "@autumn/shared";
 import { PanelButton } from "@autumn/ui";
@@ -9,7 +8,7 @@ import { BarcodeIcon, CoinsIcon } from "@phosphor-icons/react";
 import { BooleanIcon } from "@/components/v2/icons/AutumnIcons";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
-import { createSchemaItem } from "@/views/products/features/credit-systems/utils/creditSchemaUtils";
+import { applyFeatureType } from "@/views/products/features/utils/applyFeatureType";
 
 export function NewFeatureType({
 	feature,
@@ -36,14 +35,12 @@ export function NewFeatureType({
 						<PanelButton
 							isSelected={feature.type === APIFeatureType.Metered}
 							onClick={() => {
-								setFeature({
-									...feature,
-									type: APIFeatureType.Metered,
-									config: {
-										...feature.config,
-										usage_type: FeatureUsageType.Single,
-									},
-								});
+								setFeature(
+									applyFeatureType({
+										feature,
+										type: APIFeatureType.Metered,
+									}),
+								);
 							}}
 							icon={<BarcodeIcon size={16} color="currentColor" />}
 						/>
@@ -61,14 +58,12 @@ export function NewFeatureType({
 						<PanelButton
 							isSelected={isAnyCreditSystem(feature.type)}
 							onClick={() => {
-								setFeature({
-									...feature,
-									type: APIFeatureType.CreditSystem,
-									config: {
-										schema: [createSchemaItem()],
-										usage_type: FeatureUsageType.Single,
-									},
-								});
+								setFeature(
+									applyFeatureType({
+										feature,
+										type: APIFeatureType.CreditSystem,
+									}),
+								);
 							}}
 							icon={<CoinsIcon size={16} color="currentColor" />}
 						/>
@@ -86,7 +81,12 @@ export function NewFeatureType({
 						<PanelButton
 							isSelected={feature.type === APIFeatureType.Boolean}
 							onClick={() => {
-								setFeature({ ...feature, type: APIFeatureType.Boolean });
+								setFeature(
+									applyFeatureType({
+										feature,
+										type: APIFeatureType.Boolean,
+									}),
+								);
 							}}
 							icon={<BooleanIcon className="hover:text-primary" />}
 						/>

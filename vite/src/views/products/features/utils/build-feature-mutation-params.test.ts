@@ -105,3 +105,43 @@ test("never sends processors: feature Stripe products are managed outside the sh
 
 	expect(result.processors).toBeUndefined();
 });
+
+test("a rate card left over from a credit system never ships with a metered feature", () => {
+	const result = featureToCatalogFeatureParams({
+		feature: {
+			id: "messages",
+			name: "Messages",
+			type: FeatureType.Metered,
+			// Switching type in the sheet used to leave the credit system's schema
+			// behind, and the empty metered_feature_id failed API validation.
+			config: {
+				usage_type: FeatureUsageType.Single,
+				schema: [
+					{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 },
+				],
+			},
+			event_names: [],
+		},
+	});
+
+	expect(result.credit_schema).toBeUndefined();
+	expect(result.consumable).toBe(true);
+});
+
+test("boolean features never ship a rate card", () => {
+	const result = featureToCatalogFeatureParams({
+		feature: {
+			id: "sso",
+			name: "SSO",
+			type: FeatureType.Boolean,
+			config: {
+				schema: [
+					{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 },
+				],
+			},
+			event_names: [],
+		},
+	});
+
+	expect(result.credit_schema).toBeUndefined();
+});
