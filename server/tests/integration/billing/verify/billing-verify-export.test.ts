@@ -48,7 +48,6 @@ import {
 	listActiveStripeSubscriptions,
 } from "../restore/utils/corruptStripeSubscription";
 
-/** An org-wide Stripe list omits test-clock customers, so sweep cases opt out. */
 const setupSubscribedCustomer = async ({
 	customerId,
 	testClock = true,
@@ -266,7 +265,6 @@ test.concurrent(
 	async () => {
 		const healthy = await setupSubscribedCustomer({
 			customerId: "verify-export-sweep-healthy",
-			testClock: false,
 		});
 		const drifted = await setupSubscribedCustomer({
 			customerId: "verify-export-sweep-drifted",

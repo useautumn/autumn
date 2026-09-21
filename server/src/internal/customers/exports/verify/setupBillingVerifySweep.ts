@@ -1,3 +1,4 @@
+import { AppEnv } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -32,7 +33,10 @@ export const setupBillingVerifySweep = async ({
 	}
 
 	const [sweptSubscriptions, schedulesById] = await Promise.all([
-		sweepStripeSubscriptions({ stripeCli }),
+		sweepStripeSubscriptions({
+			stripeCli,
+			includeTestClocks: ctx.env === AppEnv.Sandbox,
+		}),
 		sweepStripeSchedules({ stripeCli }),
 	]);
 

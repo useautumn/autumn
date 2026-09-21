@@ -106,37 +106,66 @@ describe("verifyResponseToExportRows", () => {
 	});
 });
 
+const asyncList = <Item>(items: Item[]) => ({
+	async *[Symbol.asyncIterator]() {
+		yield* items;
+	},
+});
+
 describe("sweepStripeSubscriptions", () => {
-	it("groups the org's subscriptions by Stripe customer", async () => {
-		const listed = [
-			{ id: "sub_1", customer: "cus_a" },
-			{ id: "sub_2", customer: { id: "cus_b" } },
-			{ id: "sub_3", customer: "cus_a" },
-		] as Stripe.Subscription[];
+	const buildStripeCli = () => {
+		const listedClockIds: (string | undefined)[] = [];
 		const stripeCli = {
 			subscriptions: {
-				list: () => ({
-					async *[Symbol.asyncIterator]() {
-						yield* listed;
-					},
-				}),
+				list: ({ test_clock }: { test_clock?: string }) => {
+					listedClockIds.push(test_clock);
+					return asyncList(
+						test_clock
+							? [{ id: `sub_${test_clock}`, customer: "cus_clock" }]
+							: [
+									{ id: "sub_1", customer: "cus_a" },
+									{ id: "sub_2", customer: { id: "cus_b" } },
+									{ id: "sub_3", customer: "cus_a" },
+								],
+					);
+				},
+			},
+			testHelpers: {
+				testClocks: { list: () => asyncList([{ id: "clock_1" }]) },
 			},
 		} as unknown as Stripe;
+		return { listedClockIds, stripeCli };
+	};
 
-		const swept = await sweepStripeSubscriptions({ stripeCli });
+	it("groups the org's subscriptions by Stripe customer", async () => {
+		const { listedClockIds, stripeCli } = buildStripeCli();
+
+		const swept = await sweepStripeSubscriptions({
+			stripeCli,
+			includeTestClocks: false,
+		});
 
 		expect(swept.get("cus_a")?.map((sub) => sub.id)).toEqual([
 			"sub_1",
 			"sub_3",
 		]);
 		expect(swept.get("cus_b")?.map((sub) => sub.id)).toEqual(["sub_2"]);
+		expect(listedClockIds).toEqual([undefined]);
 	});
-});
 
-const asyncList = <Item>(items: Item[]) => ({
-	async *[Symbol.asyncIterator]() {
-		yield* items;
-	},
+	it("also sweeps each test clock, which the org-wide listing omits", async () => {
+		const { stripeCli } = buildStripeCli();
+
+		const swept = await sweepStripeSubscriptions({
+			stripeCli,
+			includeTestClocks: true,
+		});
+
+		expect(swept.get("cus_clock")?.map((sub) => sub.id)).toEqual([
+			"sub_clock_1",
+		]);
+		expect(swept.get("cus_a")?.length).toBe(2);
+	});
 });
 
 describe("sweepStripeSchedules", () => {
