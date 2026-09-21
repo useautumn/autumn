@@ -1,4 +1,5 @@
 import {
+	type Catalog,
 	type MutationRecord,
 	meteringIdentityToSubjectKey,
 	type SubjectState,
@@ -82,6 +83,7 @@ export function enqueueMutation({
 	mutation,
 	nextState,
 	durability,
+	catalog,
 }: {
 	scope: PartitionWriterScope;
 	pendingKey: string;
@@ -89,6 +91,7 @@ export function enqueueMutation({
 	mutation: MutationRecord;
 	nextState: SubjectState;
 	durability: MutationDurability;
+	catalog?: Catalog;
 }): Promise<CommittedMutation> {
 	const { state, config } = scope;
 	const customerPending =
@@ -114,6 +117,7 @@ export function enqueueMutation({
 		mutation,
 		nextState,
 		durability,
+		catalog,
 		settlement,
 		committed,
 	};

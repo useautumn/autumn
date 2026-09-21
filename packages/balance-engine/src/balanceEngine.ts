@@ -54,6 +54,7 @@ export type { JsonValue } from "./models/common/json.js";
 export { canonicalizeJsonValue } from "./models/common/json.js";
 export type { MeteringIdentity } from "./models/identity/meteringIdentity.js";
 export type {
+	MutationAfter,
 	MutationReceipt,
 	MutationRecord,
 } from "./models/mutation/mutationRecord.js";

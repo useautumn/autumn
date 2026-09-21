@@ -1,4 +1,5 @@
 import type {
+	Catalog,
 	MeteringIdentity,
 	MutationRecord,
 	SubjectState,
@@ -84,6 +85,8 @@ export type PendingMutation = {
 	nextState: SubjectState;
 	/** Whether the caller is answered at the append or after the store applies. */
 	durability: MutationDurability;
+	/** Travels to the log beside nextState, never into the store. */
+	catalog?: Catalog;
 	settlement: PendingSettlement;
 	/** What `waitForPendingCommits()` snapshots for this customer. */
 	committed: Promise<CommittedMutation>;

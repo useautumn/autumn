@@ -11,17 +11,23 @@ import type {
 import type { StateStoreContext } from "../../types/stateStoreContext.js";
 import { applyRecord } from "./applyRecord.js";
 
-/** Re-parsed through JSON so an in-memory mutation and a replayed one persist identically. */
+/**
+ * Re-parsed through JSON so an in-memory mutation and a replayed one persist identically.
+ * `after` is for the log's other readers: the store, its receipts and checkpoints hold the record without it.
+ */
 const parsePersistedMutation = ({
 	record,
 }: {
 	record: DurableMutationRecord;
-}): DurableMutationRecord => ({
-	position: record.position,
-	mutation: parseMutationRecord({
-		input: JSON.parse(JSON.stringify(record.mutation)),
-	}),
-});
+}): DurableMutationRecord => {
+	const { after: _after, ...mutation } = record.mutation;
+	return {
+		position: record.position,
+		mutation: parseMutationRecord({
+			input: JSON.parse(JSON.stringify(mutation)),
+		}),
+	};
+};
 
 /** Applies a committed batch in one transaction, in log order. */
 export const applyDurableMutations = ({

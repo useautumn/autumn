@@ -203,8 +203,13 @@ function enterRecovery({
 	rejectAllPending({ state: scope.state, error });
 }
 
+// Only the log's copy carries `after`; the record the store and the dedup memory keep stays lean.
 function mutationOf(pending: PendingMutation): MeteringRecord {
-	return pending.mutation;
+	if (!pending.catalog) return pending.mutation;
+	return {
+		...pending.mutation,
+		after: { state: pending.nextState, catalog: pending.catalog },
+	};
 }
 
 function durableRecordsOf({

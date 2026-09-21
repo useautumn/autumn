@@ -98,6 +98,7 @@ export function decide<Reply>({
 		}),
 		nextState: result.nextState,
 		durability: submission.durability ?? "log",
+		catalog: result.catalog,
 	});
 	scheduleCommit({ scope });
 	return decidedWith<Reply>(committed);

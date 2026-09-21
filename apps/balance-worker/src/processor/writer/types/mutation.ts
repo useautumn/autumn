@@ -1,4 +1,5 @@
 import type {
+	Catalog,
 	MutatingCommand,
 	MutationRecord,
 	SubjectState,
@@ -41,6 +42,8 @@ export type MutationResult<Reply> =
 			kind: "write";
 			mutation: SubjectStateMutation;
 			nextState: SubjectState;
+			/** The catalog the decision read; with it the log's readers can rebuild the subject. Absent when nothing downstream reads balances. */
+			catalog?: Catalog;
 	  }
 	/** Nothing to write: reply immediately. */
 	| { kind: "reply"; reply: Reply };
