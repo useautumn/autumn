@@ -52,4 +52,7 @@ export const BALANCE_WORKER_PARTITION_STARTUP_CONCURRENCY = 16;
 export const BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS = 60_000;
 
 export const BALANCE_WORKER_CATALOG_TTL_MS = 300_000;
-export const BALANCE_WORKER_CATALOG_MAX_BYTES = 268_435_456;
+/** Shared per worker rather than per partition. Staging evicted rows out from
+ *  under in-flight decisions at 256 MiB, which surfaces as NOT_READY responses
+ *  the caller cannot do anything useful with. */
+export const BALANCE_WORKER_CATALOG_MAX_BYTES = 536_870_912;

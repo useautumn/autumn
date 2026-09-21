@@ -2,7 +2,13 @@ import type { SubjectState } from "@autumn/balance-engine";
 import type { RememberedCommand, SubjectMap } from "./types/subjectMap.js";
 
 /** Per partition writer; a worker holds many partitions, so the fleet total is this × partitions. */
-export const SUBJECT_MAP_MAX_BYTES = 2 * 1024 * 1024;
+/** How much resident customer state a partition keeps. This is the cache that
+ *  decides whether a check costs a millisecond or a Postgres subject load, and
+ *  it is replacing a dedicated Redis instance holding gigabytes, so sizing it in
+ *  single-digit megabytes left almost every customer cold between visits. At 512
+ *  partitions this is 16 GiB across the fleet, under 3 GiB on a worker holding
+ *  its ~85 partitions, against the 8 GiB a worker is given. */
+export const SUBJECT_MAP_MAX_BYTES = 32 * 1024 * 1024;
 /** A retry lands within seconds; a customer's last few commands cover it. */
 export const RECENT_COMMANDS_PER_CUSTOMER = 32;
 
