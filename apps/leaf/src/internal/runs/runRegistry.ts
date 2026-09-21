@@ -41,6 +41,13 @@ export type ActiveRun = {
 	}) => Promise<void>;
 	resolveSessionId: (sessionId: string, transport?: RunTransport) => void;
 	sessionId: Promise<string>;
+	/** One synchronous step, so no injection can be accepted in between:
+	 * claims the follow-ups eve has already taken for this run and returns
+	 * true, or closes the run to further injections and returns false. The
+	 * reader calls it at every turn boundary — a claim means a replacement
+	 * turn is coming and it must keep reading, because the message is already
+	 * posted and its reply would otherwise run with nobody attached. */
+	claimFollowUpsOrSettle: () => boolean;
 	/** The turn settled locally and nobody reads the stream any more: a message
 	 * posted now would run unread. Set the instant the reader returns, before
 	 * the reply or approval card is presented, so late arrivals queue instead. */
@@ -154,6 +161,21 @@ export const registerRun = ({
 					error,
 				});
 			}
+		},
+		claimFollowUpsOrSettle: () => {
+			// Synchronous on purpose. injectFollowUp increments pendingTurns in
+			// the same synchronous block as its last settling check, so between
+			// that block and this one there is no point where a message can be
+			// posted to eve while this reader is on its way out.
+			if (run.pendingTurns > 0) {
+				// eve may fold several buffered messages into one replacement
+				// turn, so claim them all; anything injected after this claim is
+				// caught by the next boundary.
+				run.pendingTurns = 0;
+				return true;
+			}
+			run.settling = true;
+			return false;
 		},
 		settle: () => {
 			run.settling = true;

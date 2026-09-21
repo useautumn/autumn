@@ -57,6 +57,7 @@ const closeReasoningOutput = ({
 const streamPassEvents = async ({
 	abandonForStop,
 	activity,
+	emitSettledTurn,
 	onFirstStreamEvent,
 	run,
 	signal,
@@ -67,6 +68,7 @@ const streamPassEvents = async ({
 		progress: EveTurnProgress;
 		stop: NonNullable<ActiveRun["stop"]>;
 	}) => Promise<EveTurnOutcome>;
+	emitSettledTurn: (outcome: EveTurnOutcome) => Promise<void>;
 	onFirstStreamEvent?: () => void;
 	run?: ActiveRun;
 	signal: AbortSignal;
@@ -100,6 +102,15 @@ const streamPassEvents = async ({
 				// The next post resumes from here, so a cursor left behind by the
 				// checkpoint interval would replay this turn as the next one's reply.
 				await saveEveSessionState({ orgId, session });
+				// A follow-up eve already accepted has a reply coming on this
+				// stream, and this reader is the only one attached to it. Hand
+				// this turn's outcome on now so nothing is lost, then read the
+				// replacement instead of leaving it to run unwatched.
+				if (run?.claimFollowUpsOrSettle()) {
+					await emitSettledTurn(result.outcome);
+					progress = createEveTurnProgress();
+					continue;
+				}
 				return { outcome: result.outcome, progress, sawEvent };
 			}
 
@@ -152,10 +163,13 @@ const persistCursorAfterIdleStream = async ({
 
 const settleExhaustedTurn = ({
 	activity,
+	emittedSettledTurn,
 	logger,
 	turn,
 }: {
 	activity: TurnActivity;
+	/** A turn already reached the thread on this stream. */
+	emittedSettledTurn: boolean;
 	logger: AutumnLogger;
 	turn: EveTurnContext;
 }): EveTurnOutcome => {
@@ -164,6 +178,7 @@ const settleExhaustedTurn = ({
 	logger.error("Eve never resumed the turn", {
 		event: "leaf.eve_turn_abandoned",
 		data: {
+			awaited_follow_up: emittedSettledTurn,
 			has_partial_text: Boolean(partialText),
 			quiet_ms: activity.msSinceActivity(),
 			session_id: session.sessionId,
@@ -171,6 +186,11 @@ const settleExhaustedTurn = ({
 			turn_ms: activity.msSinceStart(),
 		},
 	});
+	// The claimed follow-up never produced a turn. Its reply is already posted,
+	// so the thread is not waiting on us — an "eve stopped responding" notice
+	// here would contradict the answer the user just got.
+	if (emittedSettledTurn && !partialText)
+		return { declined: true, kind: "silent" };
 	if (!partialText) throw new Error(AGENT_UNREACHABLE_MESSAGE);
 	closeReasoningOutput({ onReasoning, progress });
 	return { kind: "answered", text: partialText };
@@ -201,6 +221,7 @@ export const consumeAgentTurn = async ({
 	onAction,
 	onFirstStreamEvent,
 	onReasoning,
+	onSettledTurn,
 	onThinking,
 	orgId,
 	run,
@@ -214,6 +235,10 @@ export const consumeAgentTurn = async ({
 	onAction?: EveEventContext["onAction"];
 	onFirstStreamEvent?: () => void;
 	onReasoning?: EveEventContext["onReasoning"];
+	/** A turn settled while this reader still owes a claimed follow-up: its
+	 * outcome is delivered here, and the reader stays on the stream for the
+	 * replacement. Only the last turn of a read comes back as the return. */
+	onSettledTurn?: (outcome: EveTurnOutcome) => Promise<void> | void;
 	onThinking?: EveEventContext["onThinking"];
 	orgId: string;
 	run?: ActiveRun;
@@ -221,6 +246,19 @@ export const consumeAgentTurn = async ({
 	token: string;
 }): Promise<EveTurnOutcome> => {
 	const abortController = new AbortController();
+	let emittedSettledTurn = false;
+	const emitSettledTurn = async (outcome: EveTurnOutcome) => {
+		emittedSettledTurn = true;
+		logger.info("Turn settled with a follow-up still to read", {
+			event: "leaf.eve_follow_up_turn_awaited",
+			data: {
+				outcome_kind: outcome.kind,
+				session_id: session.sessionId,
+				stream_index: session.state.streamIndex,
+			},
+		});
+		await onSettledTurn?.(outcome);
+	};
 	let turn: EveTurnContext = {
 		auth,
 		env,
@@ -276,12 +314,18 @@ export const consumeAgentTurn = async ({
 				activity.msSinceStart() >= MAX_TURN_DURATION_MS ||
 				(!childIsWorking && (quietTooLong || deadlineReached))
 			) {
-				return settleExhaustedTurn({ activity, logger, turn });
+				return settleExhaustedTurn({
+					activity,
+					emittedSettledTurn,
+					logger,
+					turn,
+				});
 			}
 
 			const pass = await streamPassEvents({
 				abandonForStop,
 				activity,
+				emitSettledTurn,
 				onFirstStreamEvent: streamedAnyEvent ? undefined : onFirstStreamEvent,
 				run,
 				signal: abortController.signal,
@@ -304,7 +348,12 @@ export const consumeAgentTurn = async ({
 				const turnIsWorking = activity.activeChildren() > 0;
 				idleRetries = pass.sawEvent || turnIsWorking ? 0 : idleRetries + 1;
 				if (idleRetries >= MAX_IDLE_RESYNCS) {
-					return settleExhaustedTurn({ activity, logger, turn });
+					return settleExhaustedTurn({
+						activity,
+						emittedSettledTurn,
+						logger,
+						turn,
+					});
 				}
 				await persistCursorAfterIdleStream({
 					attempt: idleRetries,

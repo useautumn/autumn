@@ -25,6 +25,9 @@ export type SlackAgentTurnParams = Readonly<{
 	logger?: AutumnLogger;
 	onAction?: (progress: AgentActionProgress | string) => Promise<void> | void;
 	onReasoning?: (input: { id: string; text: string }) => void;
+	/** Receives a turn that settled while a follow-up was still to be read, so
+	 * its reply is posted before the reader moves on to the replacement. */
+	onSettledTurn?: (turn: SlackAgentTurnResult) => Promise<void> | void;
 	onThinking?: () => void;
 	providerUserId: string;
 	recentMessages?: ReadonlyArray<AgentContextMessage>;

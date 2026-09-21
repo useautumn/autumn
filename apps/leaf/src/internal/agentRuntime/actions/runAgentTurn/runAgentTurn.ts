@@ -118,6 +118,22 @@ export const runAgentTurn = async ({
 			});
 		},
 	});
+	// A turn that settles while a claimed follow-up is still coming is a real
+	// reply the thread needs now; only the last turn of the read is returned.
+	const emitSettledTurn = async (
+		outcome: EveTurnOutcome,
+		session: EveSessionRef,
+	) => {
+		if (!ctx.onTurnResult) return;
+		const result = await resolveAgentTurnOutcome({
+			env,
+			logger,
+			orgId: org.id,
+			outcome,
+			session,
+		});
+		await ctx.onTurnResult(result);
+	};
 	const consume = (
 		session: EveSessionRef,
 		prepared: Partial<PreparedAgentTurn>,
@@ -127,6 +143,7 @@ export const runAgentTurn = async ({
 			followUpTransport({ prepared, session }),
 		);
 		return consumeAgentTurn({
+			onSettledTurn: (outcome) => emitSettledTurn(outcome, session),
 			auth,
 			deadlineAt: ctx.deadlineAt,
 			env,

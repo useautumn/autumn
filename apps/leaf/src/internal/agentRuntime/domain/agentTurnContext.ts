@@ -2,6 +2,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv, ChatProvider } from "@autumn/shared";
 import type { ActiveRun } from "../../runs/runRegistry.js";
 import type { EveSessionRef } from "../eve/types.js";
+import type { AgentTurnResult } from "./agentTurn.js";
 
 export type AgentContextMessage = Readonly<{
 	author: string;
@@ -39,6 +40,10 @@ export type AgentTurnContext = Readonly<{
 	onAction?: (progress: AgentActionProgress | string) => Promise<void> | void;
 	onThinking?: () => void;
 	onReasoning?: (input: { id: string; text: string }) => void;
+	/** Delivers a turn that settled while a follow-up was still to be read, so
+	 * its reply reaches the thread before the reader moves on. The turn's final
+	 * result is returned as usual and never repeated here. */
+	onTurnResult?: (result: AgentTurnResult) => Promise<void> | void;
 	org: { id: string; slug?: string };
 	autumnUserId?: string;
 	providerUserId: string;
