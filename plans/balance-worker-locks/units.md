@@ -16,6 +16,7 @@ Thin vertical slices, each ending in a runnable integration test.
 | unit | state |
 |---|---|
 | 1 | done, committed. `check-with-lock-errors` passes. |
+| 3 | done. With the events assertion stubbed locally (not committed), all of these pass: `entities/check-lock-per-entity`, `entities/check-lock-entity-product`, `-rollovers`, `-credit-system` (12 tests), `-edge-cases`, `-overage-behavior`, `-properties`, `-unlimited`, `-no-entitlement`. Two fixes came out of it, both in when a locked check tracks: a `cap` or `overflow` lock tracks even when the reject-mode pre-check says no, and a requirement of 0 is met with nothing attached. |
 | 2 | done. 32 of 32 finalizes answer 200 and no lock is left open. Its four target files stop only at `expectCustomerEventsCorrect`; every balance assertion before it passes. |
 
 **Usage events come after all of lock and finalize is done** (decided 2026-09-21). Until then, judge a lock test by its balance assertions: a failure at `expectCustomerEventsCorrect` is expected, a failure anywhere else is real.
