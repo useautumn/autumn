@@ -22,6 +22,7 @@ export type LogAppContext = {
 	entity_id?: string;
 	user_id?: string;
 	user_email?: string;
+	impersonated_by?: string;
 	api_version?: string;
 	scopes?: string[];
 	full_subject_bucket?: number;
