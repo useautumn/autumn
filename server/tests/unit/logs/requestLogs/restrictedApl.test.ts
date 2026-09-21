@@ -366,6 +366,9 @@ describe("restricted request-log APL", () => {
 		expect(apl).not.toContain("context.orgId");
 		expect(apl).not.toContain("context.orgSlug");
 		expect(apl).toContain(
+			"| where isempty(column_ifexists('context.impersonated_by', ''))",
+		);
+		expect(apl).toContain(
 			"request_path = tostring(parse_url(['req.url']).path)",
 		);
 		expect(apl).toContain(
@@ -379,6 +382,14 @@ describe("restricted request-log APL", () => {
 			"| project timestamp = _time, source = source, status_code = statusCode",
 		);
 		expect(apl).toContain("request_body = ['req.body']");
+		expect(apl).toContain("auth_type = ['context.auth_type']");
+		expect(apl).toContain("user_id = ['context.user_id']");
+		expect(apl).toContain("user_email = ['context.user_email']");
+		expect(
+			apl.indexOf(
+				"| where isempty(column_ifexists('context.impersonated_by', ''))",
+			),
+		).toBeLessThan(apl.indexOf("| limit 25"));
 		expect(apl).toContain("stripe_event_id = ['stripe_event.id']");
 		expect(apl).toContain(
 			"| where dynamic_to_json(response_body) contains 'checkout'",

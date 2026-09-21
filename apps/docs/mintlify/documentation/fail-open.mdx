@@ -19,7 +19,8 @@ Fail-open is **enabled by default**. When Autumn is unreachable (network errors,
 |--------|-----------------|--------|
 | `check()` | `{ allowed: true }` | Users retain access to features |
 | `track()` | `{ value: 0, balance: null }` | Usage event is silently dropped |
-| `customers.getOrCreate()` | Sentinel customer with `id: null` | Returns a valid but empty customer object |
+
+Customer and entity operations, including `customers.getOrCreate()`, `customers.get()`, `entities.get()`, and `entities.create()`, propagate errors even when fail-open is enabled. Only `check()` and `track()` return fail-open defaults.
 
 <Warning>
 When fail-open triggers, the SDK logs a prominent error to your console so you're immediately aware of the issue.
@@ -68,18 +69,6 @@ const result = await autumn.check({
 
 // Normal response: allowed is based on actual balance
 // Fail-open response: allowed is always true, customerId is ""
-```
-
-When `customers.getOrCreate()` fails open, the returned customer will have `id: null`:
-
-```typescript
-const customer = await autumn.customers.getOrCreate({
-  customerId: "cus_123",
-});
-
-if (customer.id === null) {
-  // Autumn was unreachable, handle gracefully
-}
 ```
 
 ## Console output

@@ -75,6 +75,13 @@ export const generate = async (): Promise<string[]> => {
 	mkdirSync(OUTPUT_DIR, { recursive: true });
 
 	const written: string[] = [];
+	copyRuntime({
+		from: join(import.meta.dir, "emit/runtime/mappingAssignments.ts"),
+		to: join(OUTPUT_DIR, "mappingAssignments.ts"),
+		sourceLabel:
+			"packages/atmn-generator/src/emit/runtime/mappingAssignments.ts",
+	});
+	written.push(join(OUTPUT_DIR, "mappingAssignments.ts"));
 	const write = ({ name, source }: { name: string; source: string }) => {
 		const path = join(OUTPUT_DIR, name);
 		writeFileSync(path, source, "utf8");

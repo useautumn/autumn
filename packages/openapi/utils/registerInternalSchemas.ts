@@ -14,24 +14,50 @@ import { globalRegistry } from "zod/v4/core";
  * Both registries are needed because ORPC uses the input registry for
  * request body schemas and the output registry for response schemas.
  */
-export function registerInternalSchemas(schema: z.ZodType): void {
+export function registerInternalSchemas(
+	schema: z.ZodType,
+	{ mappingOnly = false }: { mappingOnly?: boolean } = {},
+): void {
 	const visited = new WeakSet<z.ZodType>();
-	walkSchema(schema, visited);
+	walkSchema(schema, visited, mappingOnly);
 }
 
-function walkSchema(schema: z.ZodType, visited: WeakSet<z.ZodType>): void {
+function walkSchema(
+	schema: z.ZodType,
+	visited: WeakSet<z.ZodType>,
+	mappingOnly: boolean,
+): void {
 	if (visited.has(schema)) return;
 	visited.add(schema);
 
 	// Check if this schema has internal: true in its metadata
 	const meta = globalRegistry.get(schema);
-	if (meta?.internal === true) {
-		// Register with x-internal in BOTH registries so removeInternalFields() can find it
-		// Input registry is used for request bodies, output registry for responses
-		// biome-ignore lint/suspicious/noExplicitAny: TypeScript types are restrictive but runtime accepts arbitrary props
-		JSON_SCHEMA_INPUT_REGISTRY.add(schema, { "x-internal": true } as any);
-		// biome-ignore lint/suspicious/noExplicitAny: TypeScript types are restrictive but runtime accepts arbitrary props
-		JSON_SCHEMA_OUTPUT_REGISTRY.add(schema, { "x-internal": true } as any);
+	const extensions = Object.fromEntries(
+		Object.entries(meta ?? {}).filter(([key]) => key.startsWith("x-atmn-")),
+	);
+	if (!mappingOnly && meta?.internal === true) extensions["x-internal"] = true;
+	if (Object.keys(extensions).length > 0) {
+		const standardMetadata = Object.keys(extensions).some((key) =>
+			key.startsWith("x-atmn-"),
+		)
+			? {
+					...(meta?.title !== undefined ? { title: meta.title } : {}),
+					...(meta?.description !== undefined
+						? { description: meta.description }
+						: {}),
+					...(Array.isArray(meta?.examples) ? { examples: meta.examples } : {}),
+				}
+			: {};
+		JSON_SCHEMA_INPUT_REGISTRY.add(schema, {
+			...standardMetadata,
+			...JSON_SCHEMA_INPUT_REGISTRY.get(schema),
+			...extensions,
+		});
+		JSON_SCHEMA_OUTPUT_REGISTRY.add(schema, {
+			...standardMetadata,
+			...JSON_SCHEMA_OUTPUT_REGISTRY.get(schema),
+			...extensions,
+		});
 	}
 
 	// Get the internal Zod definition to traverse nested schemas
@@ -47,7 +73,7 @@ function walkSchema(schema: z.ZodType, visited: WeakSet<z.ZodType>): void {
 			if (shape && typeof shape === "object") {
 				for (const fieldSchema of Object.values(shape)) {
 					if (isZodType(fieldSchema)) {
-						walkSchema(fieldSchema, visited);
+						walkSchema(fieldSchema, visited, mappingOnly);
 					}
 				}
 			}
@@ -58,7 +84,7 @@ function walkSchema(schema: z.ZodType, visited: WeakSet<z.ZodType>): void {
 		case "ZodArray": {
 			const element = def.element ?? def.type;
 			if (isZodType(element)) {
-				walkSchema(element, visited);
+				walkSchema(element, visited, mappingOnly);
 			}
 			break;
 		}
@@ -71,7 +97,7 @@ function walkSchema(schema: z.ZodType, visited: WeakSet<z.ZodType>): void {
 		case "ZodReadonly": {
 			const innerType = def.innerType ?? def.unwrapped;
 			if (isZodType(innerType)) {
-				walkSchema(innerType, visited);
+				walkSchema(innerType, visited, mappingOnly);
 			}
 			break;
 		}
@@ -84,7 +110,7 @@ function walkSchema(schema: z.ZodType, visited: WeakSet<z.ZodType>): void {
 			if (Array.isArray(options)) {
 				for (const option of options) {
 					if (isZodType(option)) {
-						walkSchema(option, visited);
+						walkSchema(option, visited, mappingOnly);
 					}
 				}
 			}
@@ -93,8 +119,8 @@ function walkSchema(schema: z.ZodType, visited: WeakSet<z.ZodType>): void {
 
 		case "intersection":
 		case "ZodIntersection": {
-			if (isZodType(def.left)) walkSchema(def.left, visited);
-			if (isZodType(def.right)) walkSchema(def.right, visited);
+			if (isZodType(def.left)) walkSchema(def.left, visited, mappingOnly);
+			if (isZodType(def.right)) walkSchema(def.right, visited, mappingOnly);
 			break;
 		}
 
@@ -104,33 +130,36 @@ function walkSchema(schema: z.ZodType, visited: WeakSet<z.ZodType>): void {
 			if (Array.isArray(items)) {
 				for (const item of items) {
 					if (isZodType(item)) {
-						walkSchema(item, visited);
+						walkSchema(item, visited, mappingOnly);
 					}
 				}
 			}
 			if (isZodType(def.rest)) {
-				walkSchema(def.rest, visited);
+				walkSchema(def.rest, visited, mappingOnly);
 			}
 			break;
 		}
 
 		case "record":
 		case "ZodRecord": {
-			if (isZodType(def.keyType)) walkSchema(def.keyType, visited);
-			if (isZodType(def.valueType)) walkSchema(def.valueType, visited);
+			if (isZodType(def.keyType)) walkSchema(def.keyType, visited, mappingOnly);
+			if (isZodType(def.valueType))
+				walkSchema(def.valueType, visited, mappingOnly);
 			break;
 		}
 
 		case "map":
 		case "ZodMap": {
-			if (isZodType(def.keyType)) walkSchema(def.keyType, visited);
-			if (isZodType(def.valueType)) walkSchema(def.valueType, visited);
+			if (isZodType(def.keyType)) walkSchema(def.keyType, visited, mappingOnly);
+			if (isZodType(def.valueType))
+				walkSchema(def.valueType, visited, mappingOnly);
 			break;
 		}
 
 		case "set":
 		case "ZodSet": {
-			if (isZodType(def.valueType)) walkSchema(def.valueType, visited);
+			if (isZodType(def.valueType))
+				walkSchema(def.valueType, visited, mappingOnly);
 			break;
 		}
 
@@ -142,7 +171,7 @@ function walkSchema(schema: z.ZodType, visited: WeakSet<z.ZodType>): void {
 				try {
 					const lazySchema = getter();
 					if (isZodType(lazySchema)) {
-						walkSchema(lazySchema, visited);
+						walkSchema(lazySchema, visited, mappingOnly);
 					}
 				} catch {
 					// Ignore errors from lazy evaluation
@@ -156,7 +185,7 @@ function walkSchema(schema: z.ZodType, visited: WeakSet<z.ZodType>): void {
 		case "ZodPipeline": {
 			const innerSchema = def.schema ?? def.in;
 			if (isZodType(innerSchema)) {
-				walkSchema(innerSchema, visited);
+				walkSchema(innerSchema, visited, mappingOnly);
 			}
 			break;
 		}
@@ -167,7 +196,7 @@ function walkSchema(schema: z.ZodType, visited: WeakSet<z.ZodType>): void {
 		case "ZodCatch": {
 			const innerType = def.innerType;
 			if (isZodType(innerType)) {
-				walkSchema(innerType, visited);
+				walkSchema(innerType, visited, mappingOnly);
 			}
 			break;
 		}
@@ -176,7 +205,7 @@ function walkSchema(schema: z.ZodType, visited: WeakSet<z.ZodType>): void {
 		case "ZodBranded": {
 			const brandedType = def.type;
 			if (isZodType(brandedType)) {
-				walkSchema(brandedType, visited);
+				walkSchema(brandedType, visited, mappingOnly);
 			}
 			break;
 		}
@@ -185,7 +214,7 @@ function walkSchema(schema: z.ZodType, visited: WeakSet<z.ZodType>): void {
 		case "ZodPromise": {
 			const promiseType = def.type;
 			if (isZodType(promiseType)) {
-				walkSchema(promiseType, visited);
+				walkSchema(promiseType, visited, mappingOnly);
 			}
 			break;
 		}

@@ -1,5 +1,6 @@
 import {
 	cusEntToBillingObjects,
+	ErrCode,
 	type FullCusEntWithFullCusProduct,
 	getPriceCurrencyStripeId,
 	InternalError,
@@ -50,6 +51,7 @@ export const consumableToStripeItemSpec = ({
 	if (!priceId) {
 		throw new InternalError({
 			message: `[consumableToStripeItemSpec] no stripe_price_id for currency '${currency}' on autumn price: ${price.id}`,
+			code: ErrCode.StripePriceNotLinked,
 		});
 	}
 

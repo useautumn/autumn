@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
-CustomerDataPurchaseLimitInterval = Literal[
+CustomerDataAutoTopupInterval = Literal[
     "hour",
     "day",
     "week",
@@ -26,7 +26,7 @@ r"""The time interval for the purchase limit window."""
 class CustomerDataPurchaseLimitTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
-    interval: CustomerDataPurchaseLimitInterval
+    interval: CustomerDataAutoTopupInterval
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -39,7 +39,7 @@ class CustomerDataPurchaseLimitTypedDict(TypedDict):
 class CustomerDataPurchaseLimit(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
-    interval: CustomerDataPurchaseLimitInterval
+    interval: CustomerDataAutoTopupInterval
     r"""The time interval for the purchase limit window."""
 
     limit: float

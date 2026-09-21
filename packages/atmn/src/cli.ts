@@ -21,6 +21,7 @@ import { runSandboxDelete } from "./actions/sandbox/deleteSandbox";
 import { runSandboxList } from "./actions/sandbox/listSandboxes";
 import { runSandboxUse } from "./actions/sandbox/useSandbox";
 import { withSandboxScopeHint } from "./actions/sandbox/withSandboxScopeHint";
+import { ignoreBundledSkills } from "./actions/skills/ignoreBundledSkills";
 import {
 	installSkills,
 	linkSkills,
@@ -431,6 +432,8 @@ Linking a keyless org to an account:
 			async (options: { dir?: string; link?: boolean }, command: Command) => {
 				const dir = skillsDirOf({ command, dir: options.dir });
 				installSkills({ dir, write: (text) => process.stdout.write(text) });
+				if (options.dir === undefined)
+					ignoreBundledSkills(projectOf({ command }));
 				if (options.link === true)
 					await linkSkills({
 						dir,
@@ -449,6 +452,8 @@ Linking a keyless org to an account:
 		.action((options: { dir?: string }, command: Command) => {
 			const dir = skillsDirOf({ command, dir: options.dir });
 			updateSkills({ dir, write: (text) => process.stdout.write(text) });
+			if (options.dir === undefined)
+				ignoreBundledSkills(projectOf({ command }));
 		});
 
 	program

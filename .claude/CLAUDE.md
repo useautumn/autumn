@@ -1,3 +1,7 @@
+# Git Rules
+
+- **NEVER push to `main`.** Not directly, not via a PR you merge yourself. All work goes on a feature branch with a PR against `dev`.
+
 # Code Standards (Biome)
 
 This project uses the repo-pinned **Biome** for formatting and linting.

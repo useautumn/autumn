@@ -10,7 +10,8 @@ if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === undefined) {
 type VercelMarketplaceEventType =
 	| "marketplace.invoice.created"
 	| "marketplace.invoice.paid"
-	| "marketplace.invoice.notpaid";
+	| "marketplace.invoice.notpaid"
+	| "marketplace.invoice.refunded";
 
 export interface VercelMarketplaceInvoicePayload {
 	installationId: string;
@@ -19,6 +20,15 @@ export interface VercelMarketplaceInvoicePayload {
 	invoiceTotal: string;
 	period: { start: string; end: string };
 	invoiceDate: string;
+}
+
+export interface VercelMarketplaceInvoiceRefundedPayload {
+	installationId: string;
+	invoiceId: string;
+	externalInvoiceId: string;
+	amount: string;
+	reason: string;
+	period: { start: string; end: string };
 }
 
 interface VercelWebhookClientConfig {
@@ -30,6 +40,8 @@ interface VercelWebhookClientConfig {
 	 */
 	clientSecret: string;
 	baseUrl?: string;
+	/** Extra request headers, e.g. `x-mock-vercel-api` to route SDK calls to the mock. */
+	headers?: Record<string, string>;
 }
 
 /**
@@ -45,17 +57,20 @@ export class VercelWebhookClient {
 	private env: AppEnv;
 	private clientSecret: string;
 	private baseUrl: string;
+	private headers: Record<string, string>;
 
 	constructor({
 		orgId,
 		env,
 		clientSecret,
 		baseUrl = process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080",
+		headers = {},
 	}: VercelWebhookClientConfig) {
 		this.orgId = orgId;
 		this.env = env;
 		this.clientSecret = clientSecret;
 		this.baseUrl = baseUrl;
+		this.headers = headers;
 	}
 
 	private get webhookUrl(): string {
@@ -67,7 +82,9 @@ export class VercelWebhookClient {
 		payload,
 	}: {
 		type: VercelMarketplaceEventType;
-		payload: VercelMarketplaceInvoicePayload;
+		payload:
+			| VercelMarketplaceInvoicePayload
+			| VercelMarketplaceInvoiceRefundedPayload;
 	}): Promise<{ response: Response; data: unknown }> {
 		const body = JSON.stringify({ type, payload });
 		const signature = crypto
@@ -81,6 +98,7 @@ export class VercelWebhookClient {
 			headers: {
 				"Content-Type": "application/json",
 				"x-vercel-signature": signature,
+				...this.headers,
 			},
 		});
 
@@ -103,6 +121,10 @@ export class VercelWebhookClient {
 
 	async invoiceNotPaid(payload: VercelMarketplaceInvoicePayload) {
 		return this.sendEvent({ type: "marketplace.invoice.notpaid", payload });
+	}
+
+	async invoiceRefunded(payload: VercelMarketplaceInvoiceRefundedPayload) {
+		return this.sendEvent({ type: "marketplace.invoice.refunded", payload });
 	}
 }
 

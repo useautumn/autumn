@@ -15,6 +15,7 @@ import { handleUpsertInstallation } from "./handlers/installations/handleUpsertI
 import { handleMarketplaceInvoiceCreated } from "./handlers/marketplace/handleMarketplaceInvoiceCreated.js";
 import { handleMarketplaceInvoiceNotPaid } from "./handlers/marketplace/handleMarketplaceInvoiceNotPaid.js";
 import { handleMarketplaceInvoicePaid } from "./handlers/marketplace/handleMarketplaceInvoicePaid.js";
+import { handleMarketplaceInvoiceRefunded } from "./handlers/marketplace/handleMarketplaceInvoiceRefunded.js";
 import { handleCreateResource } from "./handlers/resources/handleCreateResource.js";
 import { handleDeleteResource } from "./handlers/resources/handleDeleteResource.js";
 import { handleGetResource } from "./handlers/resources/handleGetResource.js";
@@ -155,6 +156,13 @@ vercelWebhookRouter.post(
 
 				case "marketplace.invoice.notpaid":
 					await handleMarketplaceInvoiceNotPaid({
+						ctx,
+						payload: body.payload,
+					});
+					return c.json({ received: true }, 200);
+
+				case "marketplace.invoice.refunded":
+					await handleMarketplaceInvoiceRefunded({
 						ctx,
 						payload: body.payload,
 					});

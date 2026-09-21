@@ -1104,7 +1104,7 @@ export type CheckProduct2 = {
 /**
  * Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false.
  */
-export type Preview2 = {
+export type CheckPreview2 = {
   /**
    * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
    */
@@ -1166,7 +1166,7 @@ export type CheckResponseBody2 = {
   /**
    * Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false.
    */
-  preview?: Preview2 | undefined;
+  preview?: CheckPreview2 | undefined;
 };
 
 /**
@@ -2183,7 +2183,7 @@ export type CheckProduct1 = {
 /**
  * Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false.
  */
-export type Preview1 = {
+export type CheckPreview1 = {
   /**
    * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
    */
@@ -2245,7 +2245,7 @@ export type CheckResponseBody1 = {
   /**
    * Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false.
    */
-  preview?: Preview1 | undefined;
+  preview?: CheckPreview1 | undefined;
 };
 
 export type CheckResponse = CheckResponseBody1 | CheckResponseBody2;
@@ -3755,7 +3755,10 @@ export function checkProduct2FromJSON(
 }
 
 /** @internal */
-export const Preview2$inboundSchema: z.ZodMiniType<Preview2, unknown> = z.pipe(
+export const CheckPreview2$inboundSchema: z.ZodMiniType<
+  CheckPreview2,
+  unknown
+> = z.pipe(
   z.object({
     scenario: Scenario2$inboundSchema,
     title: types.string(),
@@ -3772,13 +3775,13 @@ export const Preview2$inboundSchema: z.ZodMiniType<Preview2, unknown> = z.pipe(
   }),
 );
 
-export function preview2FromJSON(
+export function checkPreview2FromJSON(
   jsonString: string,
-): SafeParseResult<Preview2, SDKValidationError> {
+): SafeParseResult<CheckPreview2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Preview2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Preview2' from JSON`,
+    (x) => CheckPreview2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckPreview2' from JSON`,
   );
 }
 
@@ -3797,7 +3800,7 @@ export const CheckResponseBody2$inboundSchema: z.ZodMiniType<
       z.record(z.string(), types.nullable(Balance$inboundSchema)),
     ),
     flag: types.nullable(z.lazy(() => Flag2$inboundSchema)),
-    preview: types.optional(z.lazy(() => Preview2$inboundSchema)),
+    preview: types.optional(z.lazy(() => CheckPreview2$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5243,7 +5246,10 @@ export function checkProduct1FromJSON(
 }
 
 /** @internal */
-export const Preview1$inboundSchema: z.ZodMiniType<Preview1, unknown> = z.pipe(
+export const CheckPreview1$inboundSchema: z.ZodMiniType<
+  CheckPreview1,
+  unknown
+> = z.pipe(
   z.object({
     scenario: Scenario1$inboundSchema,
     title: types.string(),
@@ -5260,13 +5266,13 @@ export const Preview1$inboundSchema: z.ZodMiniType<Preview1, unknown> = z.pipe(
   }),
 );
 
-export function preview1FromJSON(
+export function checkPreview1FromJSON(
   jsonString: string,
-): SafeParseResult<Preview1, SDKValidationError> {
+): SafeParseResult<CheckPreview1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Preview1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Preview1' from JSON`,
+    (x) => CheckPreview1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckPreview1' from JSON`,
   );
 }
 
@@ -5285,7 +5291,7 @@ export const CheckResponseBody1$inboundSchema: z.ZodMiniType<
       z.record(z.string(), types.nullable(Balance$inboundSchema)),
     ),
     flag: types.nullable(z.lazy(() => Flag1$inboundSchema)),
-    preview: types.optional(z.lazy(() => Preview1$inboundSchema)),
+    preview: types.optional(z.lazy(() => CheckPreview1$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

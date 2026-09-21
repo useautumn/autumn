@@ -49,7 +49,7 @@ export type UpdateRewardTypeRequestBody = ClosedEnum<
   typeof UpdateRewardTypeRequestBody
 >;
 
-export type UpdateRewardExpiryRequest = {
+export type UpdateRewardExpiryRequestBody = {
   /**
    * The unit of time the grant lasts.
    */
@@ -66,7 +66,7 @@ export type UpdateRewardGrantRequest = {
   /**
    * How long the granted amount lasts before expiring, or null for a permanent grant.
    */
-  expiry: UpdateRewardExpiryRequest | null;
+  expiry: UpdateRewardExpiryRequestBody | null;
 };
 
 export type UpdateRewardFeatureGrantPromoCodeRequest = {
@@ -338,25 +338,27 @@ export const UpdateRewardTypeRequestBody$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UpdateRewardTypeRequestBody);
 
 /** @internal */
-export type UpdateRewardExpiryRequest$Outbound = {
+export type UpdateRewardExpiryRequestBody$Outbound = {
   type: string;
   length: number;
 };
 
 /** @internal */
-export const UpdateRewardExpiryRequest$outboundSchema: z.ZodMiniType<
-  UpdateRewardExpiryRequest$Outbound,
-  UpdateRewardExpiryRequest
+export const UpdateRewardExpiryRequestBody$outboundSchema: z.ZodMiniType<
+  UpdateRewardExpiryRequestBody$Outbound,
+  UpdateRewardExpiryRequestBody
 > = z.object({
   type: UpdateRewardTypeRequestBody$outboundSchema,
   length: z.int(),
 });
 
-export function updateRewardExpiryRequestToJSON(
-  updateRewardExpiryRequest: UpdateRewardExpiryRequest,
+export function updateRewardExpiryRequestBodyToJSON(
+  updateRewardExpiryRequestBody: UpdateRewardExpiryRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateRewardExpiryRequest$outboundSchema.parse(updateRewardExpiryRequest),
+    UpdateRewardExpiryRequestBody$outboundSchema.parse(
+      updateRewardExpiryRequestBody,
+    ),
   );
 }
 
@@ -364,7 +366,7 @@ export function updateRewardExpiryRequestToJSON(
 export type UpdateRewardGrantRequest$Outbound = {
   feature_id: string;
   included: number | null;
-  expiry: UpdateRewardExpiryRequest$Outbound | null;
+  expiry: UpdateRewardExpiryRequestBody$Outbound | null;
 };
 
 /** @internal */
@@ -375,7 +377,9 @@ export const UpdateRewardGrantRequest$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.string(),
     included: z.nullable(z.number()),
-    expiry: z.nullable(z.lazy(() => UpdateRewardExpiryRequest$outboundSchema)),
+    expiry: z.nullable(
+      z.lazy(() => UpdateRewardExpiryRequestBody$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {

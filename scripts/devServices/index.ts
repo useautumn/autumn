@@ -21,12 +21,14 @@ const localConfig = {
 	miscCachePort: 6379,
 	dragonflyPort: 6380,
 	dynamoDbPort: 8000,
+	elasticmqPort: 9324,
 	apiServerPort: 8080,
 	databaseUrl: "postgresql://postgres:postgres@localhost:5432/autumn",
 	chatStateDatabaseUrl: "postgresql://postgres:postgres@localhost:5432/chat",
 	miscCacheUrl: "redis://localhost:6379",
 	dragonflyUrl: "redis://localhost:6380",
 	dynamoDbEndpoint: "http://localhost:8000",
+	elasticmqEndpoint: "http://localhost:9324",
 };
 
 const command = process.argv[2] ?? "help";
@@ -85,15 +87,33 @@ const getDomainFromUrl = ({ url }: { url: string }) => {
 	return new URL(normalizedUrl).host;
 };
 
+const isLoopbackHost = (host: string) =>
+	/^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$/.test(host);
+
+/** NGROK_DOMAIN is the reserved tunnel domain. Falling back to the API URL only
+ * works when that URL is public: a loopback host is never a valid domain. */
 const configureNgrokUrl = () => {
+	const explicitDomain = composeEnv.NGROK_DOMAIN?.trim();
+	if (explicitDomain) {
+		composeEnv.NGROK_DOMAIN = getDomainFromUrl({ url: explicitDomain });
+		return;
+	}
+
 	const ngrokUrl = composeEnv.AUTUMN_PUBLIC_API_URL;
 	if (!ngrokUrl) {
 		throw new Error(
-			"AUTUMN_PUBLIC_API_URL is required for dev services. It should be injected from Infisical dev secrets.",
+			"Set NGROK_DOMAIN to your reserved ngrok domain (e.g. you.autumn.ngrok.app), or provide AUTUMN_PUBLIC_API_URL from Infisical dev secrets.",
 		);
 	}
 
-	composeEnv.NGROK_DOMAIN = getDomainFromUrl({ url: ngrokUrl });
+	const host = getDomainFromUrl({ url: ngrokUrl });
+	if (isLoopbackHost(host)) {
+		throw new Error(
+			`AUTUMN_PUBLIC_API_URL is "${ngrokUrl}", which cannot be an ngrok domain. Set NGROK_DOMAIN to your reserved domain (e.g. you.autumn.ngrok.app) in server/.env.`,
+		);
+	}
+
+	composeEnv.NGROK_DOMAIN = host;
 };
 
 const configureNgrokTarget = () => {
@@ -285,6 +305,11 @@ const doctor = async () => {
 			fn: () =>
 				waitForTcp({ port: localConfig.dynamoDbPort, label: "DynamoDB" }),
 		}),
+		check({
+			label: "ElasticMQ :9324",
+			fn: () =>
+				waitForTcp({ port: localConfig.elasticmqPort, label: "ElasticMQ" }),
+		}),
 	]);
 
 	if (results.some((result) => !result)) process.exit(1);
@@ -385,6 +410,7 @@ const up = async () => {
 		}),
 		waitForTcp({ port: localConfig.dragonflyPort, label: "Dragonfly" }),
 		waitForTcp({ port: localConfig.dynamoDbPort, label: "DynamoDB" }),
+		waitForTcp({ port: localConfig.elasticmqPort, label: "ElasticMQ" }),
 		waitForTcp({ port: localConfig.ngrokApiPort, label: "ngrok" }),
 	]);
 

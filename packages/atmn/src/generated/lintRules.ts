@@ -399,6 +399,14 @@ export const LINT_RULES: LintRules = {
 			},
 		],
 	},
+	"plans.items.expiry": {
+		required: ["duration", "length"],
+		fields: {
+			duration: {
+				enum: ["day", "week", "month", "year"],
+			},
+		},
+	},
 	"plans.items.featureOverride.creditSchema": {
 		variants: {
 			on: "tierBehavior",
@@ -658,6 +666,14 @@ export const LINT_RULES: LintRules = {
 		fields: {
 			included: {
 				maximum: 10000000000000,
+			},
+		},
+	},
+	"plans.licenses.customize.addItems.expiry": {
+		required: ["duration", "length"],
+		fields: {
+			duration: {
+				enum: ["day", "week", "month", "year"],
 			},
 		},
 	},
@@ -1052,6 +1068,14 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.variants.customize.addItems.expiry": {
+		required: ["duration", "length"],
+		fields: {
+			duration: {
+				enum: ["day", "week", "month", "year"],
+			},
+		},
+	},
 	"plans.variants.customize.addItems.featureOverride.creditSchema": {
 		variants: {
 			on: "tierBehavior",
@@ -1394,6 +1418,14 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.variants.customize.items.expiry": {
+		required: ["duration", "length"],
+		fields: {
+			duration: {
+				enum: ["day", "week", "month", "year"],
+			},
+		},
+	},
 	"plans.variants.customize.items.featureOverride.creditSchema": {
 		variants: {
 			on: "tierBehavior",
@@ -1680,6 +1712,14 @@ export const LINT_RULES: LintRules = {
 		fields: {
 			included: {
 				maximum: 10000000000000,
+			},
+		},
+	},
+	"plans.variants.customize.upsertLicenses.customize.addItems.expiry": {
+		required: ["duration", "length"],
+		fields: {
+			duration: {
+				enum: ["day", "week", "month", "year"],
 			},
 		},
 	},

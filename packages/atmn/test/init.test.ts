@@ -178,6 +178,26 @@ const deps = ({
 	return { deps: fake, calls };
 };
 
+test.each(["autumn", "packages/custom", "."])(
+	"init ignores only bundled skills at the chosen config path %s",
+	async (path) => {
+		const root = repo({
+			monorepo: false,
+			env: "AUTUMN_SECRET_KEY=am_sk_test_main\n",
+		});
+		const { deps: d } = deps({ keyAnswers: { am_sk_test_main: org } });
+		await runInit({
+			cwd: root,
+			path,
+			deps: d,
+			prompter: createPrompter({ interactive: false, write: () => {} }),
+		});
+		expect(readFileSync(join(root, ".gitignore"), "utf8")).toBe(
+			`/${path === "." ? "" : `${path}/`}skills/\n`,
+		);
+	},
+);
+
 test("single repo, valid key: no questions, config in autumn/, skills beside it", async () => {
 	const root = repo({
 		monorepo: false,

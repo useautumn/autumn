@@ -1189,8 +1189,6 @@ class ListEntitiesFeatureTypedDict(TypedDict):
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[ListEntitiesCreditSchemaUnionTypedDict]]
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
-    invoice_credit: NotRequired[bool]
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
     model_markups: NotRequired[Nullable[Dict[str, ListEntitiesModelMarkupsTypedDict]]]
     r"""Per-model markup overrides for AI credit systems."""
     default_markup: NotRequired[float]
@@ -1229,9 +1227,6 @@ class ListEntitiesFeature(BaseModel):
     credit_schema: Optional[List[ListEntitiesCreditSchemaUnion]] = None
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
 
-    invoice_credit: Optional[bool] = None
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
-
     model_markups: OptionalNullable[Dict[str, ListEntitiesModelMarkups]] = UNSET
     r"""Per-model markup overrides for AI credit systems."""
 
@@ -1253,7 +1248,6 @@ class ListEntitiesFeature(BaseModel):
             [
                 "event_names",
                 "credit_schema",
-                "invoice_credit",
                 "model_markups",
                 "default_markup",
                 "provider_markups",
@@ -1477,7 +1471,7 @@ class ListEntitiesUsageLimitTypedDict(TypedDict):
     filter_: NotRequired[ListEntitiesUsageLimitFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
-    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
     source: NotRequired[ListEntitiesUsageLimitSource]
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
@@ -1504,7 +1498,7 @@ class ListEntitiesUsageLimit(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     usage: Optional[float] = None
-    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
 
     source: Optional[ListEntitiesUsageLimitSource] = None
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""

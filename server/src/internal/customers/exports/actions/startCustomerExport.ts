@@ -1,5 +1,6 @@
 import {
 	type CreateCustomerExportParams,
+	CustomerExportKind,
 	type CustomerExportResponse,
 	type DbCustomerExport,
 	ErrCode,
@@ -137,7 +138,7 @@ export const startCustomerExport = async ({
 	ctx: AutumnContext;
 	params: CreateCustomerExportParams;
 }): Promise<{ export: CustomerExportResponse }> => {
-	const { fields, search, filters } = params;
+	const { kind, search, filters } = params;
 	// Fail before creating a row a worker without S3 config could never publish.
 	getCustomerExportsS3Config();
 
@@ -146,7 +147,8 @@ export const startCustomerExport = async ({
 		logger: ctx.logger,
 		orgId: ctx.org.id,
 		env: ctx.env,
-		fields,
+		kind,
+		fields: params.kind === CustomerExportKind.Customers ? params.fields : [],
 		// The dashboard trims client-side; trimming here keeps direct API callers consistent.
 		snapshot: { search: search.trim(), filters },
 		requestedByUserId: ctx.userId ?? ctx.user?.id,
@@ -155,7 +157,7 @@ export const startCustomerExport = async ({
 	if (!result.created) {
 		throw new RecaseError({
 			message:
-				"A customer export is already running. Wait for it to finish before starting another.",
+				"An export of this type is already running. Wait for it to finish before starting another.",
 			code: ErrCode.CustomerExportInProgress,
 			statusCode: 409,
 		});

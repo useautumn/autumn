@@ -108,6 +108,79 @@ class UpdateEntitySpendLimitRequestBody(BaseModel):
         return m
 
 
+UpdateEntityUsageLimitProperties2TypedDict = TypeAliasType(
+    "UpdateEntityUsageLimitProperties2TypedDict", Union[str, float, bool]
+)
+
+
+UpdateEntityUsageLimitProperties2 = TypeAliasType(
+    "UpdateEntityUsageLimitProperties2", Union[str, float, bool]
+)
+
+
+class UpdateEntityUsageLimitFilterRequestBody2TypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, UpdateEntityUsageLimitProperties2TypedDict]
+
+
+class UpdateEntityUsageLimitFilterRequestBody2(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, UpdateEntityUsageLimitProperties2]
+
+
+UpdateEntitySourceRequest2 = Literal[
+    "customer",
+    "plan",
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
+class UpdateEntityUsageLimitRequestBody2TypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    usage: float
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
+    filter_: NotRequired[UpdateEntityUsageLimitFilterRequestBody2TypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+    source: NotRequired[UpdateEntitySourceRequest2]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
+class UpdateEntityUsageLimitRequestBody2(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    usage: float
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
+
+    filter_: Annotated[
+        Optional[UpdateEntityUsageLimitFilterRequestBody2],
+        pydantic.Field(alias="filter"),
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    source: Optional[UpdateEntitySourceRequest2] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["filter", "source"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 UpdateEntityIntervalRequestBody = Literal[
     "day",
     "week",
@@ -124,29 +197,36 @@ UpdateEntityAnchorRequestBody = Literal[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-UpdateEntityUsageLimitPropertiesTypedDict = TypeAliasType(
-    "UpdateEntityUsageLimitPropertiesTypedDict", Union[str, float, bool]
+UpdateEntityUsageLimitProperties1TypedDict = TypeAliasType(
+    "UpdateEntityUsageLimitProperties1TypedDict", Union[str, float, bool]
 )
 
 
-UpdateEntityUsageLimitProperties = TypeAliasType(
-    "UpdateEntityUsageLimitProperties", Union[str, float, bool]
+UpdateEntityUsageLimitProperties1 = TypeAliasType(
+    "UpdateEntityUsageLimitProperties1", Union[str, float, bool]
 )
 
 
-class UpdateEntityUsageLimitFilterRequestBodyTypedDict(TypedDict):
+class UpdateEntityUsageLimitFilterRequestBody1TypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, UpdateEntityUsageLimitPropertiesTypedDict]
+    properties: Dict[str, UpdateEntityUsageLimitProperties1TypedDict]
 
 
-class UpdateEntityUsageLimitFilterRequestBody(BaseModel):
+class UpdateEntityUsageLimitFilterRequestBody1(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, UpdateEntityUsageLimitProperties]
+    properties: Dict[str, UpdateEntityUsageLimitProperties1]
 
 
-class UpdateEntityUsageLimitRequestBodyTypedDict(TypedDict):
+UpdateEntitySourceRequest1 = Literal[
+    "customer",
+    "plan",
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
+class UpdateEntityUsageLimitRequestBody1TypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
     limit: float
@@ -157,11 +237,15 @@ class UpdateEntityUsageLimitRequestBodyTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[UpdateEntityAnchorRequestBody]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[UpdateEntityUsageLimitFilterRequestBodyTypedDict]
+    filter_: NotRequired[UpdateEntityUsageLimitFilterRequestBody1TypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+    usage: NotRequired[float]
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
+    source: NotRequired[UpdateEntitySourceRequest1]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
-class UpdateEntityUsageLimitRequestBody(BaseModel):
+class UpdateEntityUsageLimitRequestBody1(BaseModel):
     feature_id: str
     r"""The feature this usage limit applies to."""
 
@@ -178,14 +262,20 @@ class UpdateEntityUsageLimitRequestBody(BaseModel):
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
     filter_: Annotated[
-        Optional[UpdateEntityUsageLimitFilterRequestBody],
+        Optional[UpdateEntityUsageLimitFilterRequestBody1],
         pydantic.Field(alias="filter"),
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
+    usage: Optional[float] = None
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
+
+    source: Optional[UpdateEntitySourceRequest1] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "anchor", "filter"])
+        optional_fields = set(["enabled", "anchor", "filter", "usage", "source"])
         serialized = handler(self)
         m = {}
 
@@ -198,6 +288,21 @@ class UpdateEntityUsageLimitRequestBody(BaseModel):
                     m[k] = val
 
         return m
+
+
+UpdateEntityUsageLimitUnionTypedDict = TypeAliasType(
+    "UpdateEntityUsageLimitUnionTypedDict",
+    Union[
+        UpdateEntityUsageLimitRequestBody2TypedDict,
+        UpdateEntityUsageLimitRequestBody1TypedDict,
+    ],
+)
+
+
+UpdateEntityUsageLimitUnion = TypeAliasType(
+    "UpdateEntityUsageLimitUnion",
+    Union[UpdateEntityUsageLimitRequestBody2, UpdateEntityUsageLimitRequestBody1],
+)
 
 
 UpdateEntityThresholdTypeRequestBody = Literal[
@@ -335,8 +440,8 @@ class UpdateEntityBillingControlsRequestBodyTypedDict(TypedDict):
 
     spend_limits: NotRequired[List[UpdateEntitySpendLimitRequestBodyTypedDict]]
     r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
-    usage_limits: NotRequired[List[UpdateEntityUsageLimitRequestBodyTypedDict]]
-    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
+    usage_limits: NotRequired[List[UpdateEntityUsageLimitUnionTypedDict]]
+    r"""List of hard usage caps per feature. An entry with only feature_id and usage sets the current counter without changing configuration."""
     usage_alerts: NotRequired[List[UpdateEntityUsageAlertRequestBodyTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[UpdateEntityOverageAllowedRequestBodyTypedDict]]
@@ -349,8 +454,8 @@ class UpdateEntityBillingControlsRequestBody(BaseModel):
     spend_limits: Optional[List[UpdateEntitySpendLimitRequestBody]] = None
     r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
 
-    usage_limits: Optional[List[UpdateEntityUsageLimitRequestBody]] = None
-    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
+    usage_limits: Optional[List[UpdateEntityUsageLimitUnion]] = None
+    r"""List of hard usage caps per feature. An entry with only feature_id and usage sets the current counter without changing configuration."""
 
     usage_alerts: Optional[List[UpdateEntityUsageAlertRequestBody]] = None
     r"""List of usage alert configurations per feature."""
@@ -1448,8 +1553,6 @@ class UpdateEntityFeatureTypedDict(TypedDict):
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[UpdateEntityCreditSchemaUnionTypedDict]]
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
-    invoice_credit: NotRequired[bool]
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
     model_markups: NotRequired[Nullable[Dict[str, UpdateEntityModelMarkupsTypedDict]]]
     r"""Per-model markup overrides for AI credit systems."""
     default_markup: NotRequired[float]
@@ -1488,9 +1591,6 @@ class UpdateEntityFeature(BaseModel):
     credit_schema: Optional[List[UpdateEntityCreditSchemaUnion]] = None
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
 
-    invoice_credit: Optional[bool] = None
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
-
     model_markups: OptionalNullable[Dict[str, UpdateEntityModelMarkups]] = UNSET
     r"""Per-model markup overrides for AI credit systems."""
 
@@ -1512,7 +1612,6 @@ class UpdateEntityFeature(BaseModel):
             [
                 "event_names",
                 "credit_schema",
-                "invoice_credit",
                 "model_markups",
                 "default_markup",
                 "provider_markups",
@@ -1712,7 +1811,7 @@ class UpdateEntityUsageLimitFilterResponse(BaseModel):
     properties: Dict[str, str]
 
 
-UpdateEntityUsageLimitSource = Union[
+UpdateEntityUsageLimitSourceResponse = Union[
     Literal[
         "customer",
         "plan",
@@ -1736,8 +1835,8 @@ class UpdateEntityUsageLimitResponseTypedDict(TypedDict):
     filter_: NotRequired[UpdateEntityUsageLimitFilterResponseTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
-    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
-    source: NotRequired[UpdateEntityUsageLimitSource]
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
+    source: NotRequired[UpdateEntityUsageLimitSourceResponse]
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
@@ -1763,9 +1862,9 @@ class UpdateEntityUsageLimitResponse(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     usage: Optional[float] = None
-    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
 
-    source: Optional[UpdateEntityUsageLimitSource] = None
+    source: Optional[UpdateEntityUsageLimitSourceResponse] = None
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
     @model_serializer(mode="wrap")
@@ -2158,7 +2257,11 @@ class UpdateEntityResponse(BaseModel):
 
 
 try:
-    UpdateEntityUsageLimitRequestBody.model_rebuild()
+    UpdateEntityUsageLimitRequestBody2.model_rebuild()
+except NameError:
+    pass
+try:
+    UpdateEntityUsageLimitRequestBody1.model_rebuild()
 except NameError:
     pass
 try:

@@ -53,7 +53,7 @@ ListInvoicesStatus = Literal[
 ]
 
 
-ListInvoicesProcessorTypeRequest = Literal[
+ListInvoicesProcessorTypeRequestBody = Literal[
     "stripe",
     "revenuecat",
 ]
@@ -70,7 +70,7 @@ class ListInvoicesParamsTypedDict(TypedDict):
     r"""Filter invoices to a single entity by ID. Must be provided together with customer_id, since entity IDs are only unique per customer."""
     status: NotRequired[List[ListInvoicesStatus]]
     r"""Filter by invoice status (draft, open, paid, void, uncollectible)."""
-    processor_types: NotRequired[List[ListInvoicesProcessorTypeRequest]]
+    processor_types: NotRequired[List[ListInvoicesProcessorTypeRequestBody]]
     r"""Filter by billing processor (stripe, revenuecat). Invoices recorded before processor tracking count as stripe."""
 
 
@@ -90,7 +90,7 @@ class ListInvoicesParams(BaseModel):
     status: Optional[List[ListInvoicesStatus]] = None
     r"""Filter by invoice status (draft, open, paid, void, uncollectible)."""
 
-    processor_types: Optional[List[ListInvoicesProcessorTypeRequest]] = None
+    processor_types: Optional[List[ListInvoicesProcessorTypeRequestBody]] = None
     r"""Filter by billing processor (stripe, revenuecat). Invoices recorded before processor tracking count as stripe."""
 
     @model_serializer(mode="wrap")
@@ -129,6 +129,104 @@ ListInvoicesListProcessorType = Union[
 r"""The billing processor that owns this invoice."""
 
 
+class ListInvoicesEntityTypedDict(TypedDict):
+    entity_id: str
+    r"""The entity this share of the line item is attributed to"""
+    quantity: Nullable[float]
+    r"""Quantity charged to this entity. Null on fixed-price lines."""
+    amount: float
+    r"""Amount attributed to this entity, pre-discount and pre-tax"""
+
+
+class ListInvoicesEntity(BaseModel):
+    entity_id: str
+    r"""The entity this share of the line item is attributed to"""
+
+    quantity: Nullable[float]
+    r"""Quantity charged to this entity. Null on fixed-price lines."""
+
+    amount: float
+    r"""Amount attributed to this entity, pre-discount and pre-tax"""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                m[k] = val
+
+        return m
+
+
+class ListInvoicesItemTypedDict(TypedDict):
+    description: str
+    r"""Description of the invoice line item"""
+    period_start: Nullable[float]
+    r"""Timestamp when the billing period starts"""
+    period_end: Nullable[float]
+    r"""Timestamp when the billing period ends"""
+    plan_id: Nullable[str]
+    r"""The plan this line item came from. Null for lines with no Autumn plan behind them."""
+    feature_id: Nullable[str]
+    r"""The ID of the feature associated with this line item"""
+    feature_name: Nullable[str]
+    r"""The name of the feature associated with this line item"""
+    quantity: Nullable[float]
+    r"""Quantity actually charged on this line. Null on fixed-price lines."""
+    amount: float
+    r"""Amount charged on this line, pre-discount and pre-tax. Negative for credits."""
+    entities: List[ListInvoicesEntityTypedDict]
+    r"""How this line splits by entity. Empty for customer-level lines. Only populated for invoices finalized after entity attribution shipped."""
+
+
+class ListInvoicesItem(BaseModel):
+    description: str
+    r"""Description of the invoice line item"""
+
+    period_start: Nullable[float]
+    r"""Timestamp when the billing period starts"""
+
+    period_end: Nullable[float]
+    r"""Timestamp when the billing period ends"""
+
+    plan_id: Nullable[str]
+    r"""The plan this line item came from. Null for lines with no Autumn plan behind them."""
+
+    feature_id: Nullable[str]
+    r"""The ID of the feature associated with this line item"""
+
+    feature_name: Nullable[str]
+    r"""The name of the feature associated with this line item"""
+
+    quantity: Nullable[float]
+    r"""Quantity actually charged on this line. Null on fixed-price lines."""
+
+    amount: float
+    r"""Amount charged on this line, pre-discount and pre-tax. Negative for credits."""
+
+    entities: List[ListInvoicesEntity]
+    r"""How this line splits by entity. Empty for customer-level lines. Only populated for invoices finalized after entity attribution shipped."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                m[k] = val
+
+        return m
+
+
 class ListInvoicesListTypedDict(TypedDict):
     plan_ids: List[str]
     r"""Array of plan IDs included in this invoice"""
@@ -156,6 +254,8 @@ class ListInvoicesListTypedDict(TypedDict):
     r"""The billing processor that owns this invoice."""
     hosted_invoice_url: NotRequired[Nullable[str]]
     r"""URL to the Stripe-hosted invoice page"""
+    items: NotRequired[List[ListInvoicesItemTypedDict]]
+    r"""Line items on the invoice, one per line as shown in Stripe. Capped at 100. Empty for invoices recorded before line item storage."""
 
 
 class ListInvoicesList(BaseModel):
@@ -198,9 +298,12 @@ class ListInvoicesList(BaseModel):
     hosted_invoice_url: OptionalNullable[str] = UNSET
     r"""URL to the Stripe-hosted invoice page"""
 
+    items: Optional[List[ListInvoicesItem]] = None
+    r"""Line items on the invoice, one per line as shown in Stripe. Capped at 100. Empty for invoices recorded before line item storage."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["processor_type", "hosted_invoice_url"])
+        optional_fields = set(["processor_type", "hosted_invoice_url", "items"])
         nullable_fields = set(
             ["hosted_invoice_url", "customer_id", "entity_id", "amount_paid"]
         )

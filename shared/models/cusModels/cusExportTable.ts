@@ -11,6 +11,7 @@ import {
 import { organizations } from "../orgModels/orgTable.js";
 import type {
 	CustomerExportField,
+	CustomerExportKind,
 	CustomerExportSnapshot,
 	CustomerExportStatus,
 } from "./cusExportModels.js";
@@ -21,6 +22,7 @@ export const customerExports = pgTable(
 		id: text().primaryKey().notNull(),
 		org_id: text("org_id").notNull(),
 		env: text().notNull(),
+		kind: text().$type<CustomerExportKind>().notNull().default("customers"),
 		status: text().$type<CustomerExportStatus>().notNull(),
 		fields: jsonb().$type<CustomerExportField[]>().notNull(),
 		snapshot: jsonb().$type<CustomerExportSnapshot>().notNull(),
@@ -43,10 +45,10 @@ export const customerExports = pgTable(
 		index("idx_customer_exports_org_env_created_at")
 			.on(table.org_id, table.env, sql`${table.created_at} DESC`)
 			.concurrently(),
-		// One queued/running export per org+env; the create endpoint maps the
-		// violation to a 409 carrying the active export id.
-		uniqueIndex("customer_exports_active_per_org_env_unique")
-			.on(table.org_id, table.env)
+		// One queued/running export per org+env+kind; the create endpoint maps
+		// the violation to a 409 carrying the active export id.
+		uniqueIndex("customer_exports_active_per_org_env_kind_unique")
+			.on(table.org_id, table.env, table.kind)
 			.where(sql`${table.status} IN ('queued', 'running')`)
 			.concurrently(),
 	],

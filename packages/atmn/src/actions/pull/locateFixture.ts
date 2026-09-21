@@ -2,7 +2,7 @@ import type { SgNode } from "@ast-grep/napi";
 import {
 	type FixtureConstraint,
 	type FixtureShape,
-	findFixture,
+	findFixtures,
 } from "../../surgery/findFixture";
 
 /** The file, its source, the node, and the lookup that found it — reuse the
@@ -35,6 +35,7 @@ export const locateFixture = ({
 	internalId,
 	where,
 	allowDynamic = false,
+	requireUnique = false,
 }: {
 	configPath: string;
 	files: Map<string, string>;
@@ -44,6 +45,7 @@ export const locateFixture = ({
 	internalId?: string | null;
 	where?: FixtureConstraint[];
 	allowDynamic?: boolean;
+	requireUnique?: boolean;
 }): LocatedFixture | null => {
 	const others = [...files.keys()].filter((file) => file !== configPath);
 	const ordered = [configPath, ...others];
@@ -59,20 +61,33 @@ export const locateFixture = ({
 	];
 	const shapes = Array.isArray(builder) ? builder : [builder];
 	for (const attempt of attempts) {
+		const matches = new Map<string, LocatedFixture>();
 		for (const file of ordered) {
 			const source = files.get(file);
 			if (source === undefined) continue;
 			for (const shape of shapes) {
-				const node = findFixture({
+				const nodes = findFixtures({
 					source,
 					builder: shape,
 					allowDynamic,
 					...attempt,
 				});
-				if (node !== null)
-					return { file, source, node, builder: shape, ...attempt };
+				for (const node of nodes) {
+					const located = { file, source, node, builder: shape, ...attempt };
+					if (!requireUnique) return located;
+					const range = node.range();
+					const key = JSON.stringify([
+						file,
+						range.start.index,
+						range.end.index,
+					]);
+					matches.set(key, located);
+					if (matches.size > 1) return null;
+				}
 			}
 		}
+		const match = matches.values().next().value;
+		if (match !== undefined) return match;
 	}
 	return null;
 };

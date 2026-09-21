@@ -137,3 +137,38 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("migration run claim: a run whose handle cannot be persisted fails instead of orphaning")}`,
+	async () => {
+		const customerId = `mig-handle-write-${Date.now()}`;
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer()],
+			actions: [],
+		});
+		const migration = await autumnV2_2.migrationsV2.deleteAndCreate({
+			id: `${customerId}-mig`,
+		});
+
+		await expect(
+			withMigrationRunClaim({
+				ctx,
+				migration,
+				dryRun: false,
+				claimed: async () => ({ triggerRunId: "run_handle_write_fails" }),
+				verifyDispatch: async () => "found" as const,
+				persistTriggerRunId: async () => {
+					throw new Error("connection terminated unexpectedly");
+				},
+			}),
+		).rejects.toThrow(/connection terminated/i);
+
+		const [run] = await migrationRunRepo.list({
+			ctx,
+			migrationInternalId: migration.internal_id,
+		});
+		expect(run).toMatchObject({ status: MigrationRunStatus.Failed });
+		expect(run.finished_at).not.toBeNull();
+	},
+);

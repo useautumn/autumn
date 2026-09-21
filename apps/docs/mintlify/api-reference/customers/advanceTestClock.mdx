@@ -1,0 +1,29 @@
+---
+title: "Advance Test Clock"
+openapi: "openapi POST /v1/customers.advance_test_clock"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The ID of the customer whose Stripe test clock to advance.
+</DynamicParamField>
+
+<DynamicParamField body="frozen_time" type="integer" required>
+  Target time as a Unix timestamp in milliseconds. Rounded down to whole seconds; must be later than the current clock time.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="customer_id" type="string" />
+
+<DynamicResponseField name="frozen_time" type="integer">
+  The Stripe test clock's frozen time in milliseconds.
+</DynamicResponseField>
+
+<DynamicResponseField name="status" type="'advancing' | 'internal_failure' | 'ready'" />

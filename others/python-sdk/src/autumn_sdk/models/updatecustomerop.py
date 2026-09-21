@@ -47,7 +47,7 @@ class UpdateCustomerGlobals(BaseModel):
         return m
 
 
-UpdateCustomerPurchaseLimitIntervalRequestBody = Literal[
+UpdateCustomerAutoTopupIntervalRequestBody = Literal[
     "hour",
     "day",
     "week",
@@ -59,7 +59,7 @@ r"""The time interval for the purchase limit window."""
 class UpdateCustomerPurchaseLimitRequestBodyTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
-    interval: UpdateCustomerPurchaseLimitIntervalRequestBody
+    interval: UpdateCustomerAutoTopupIntervalRequestBody
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -72,7 +72,7 @@ class UpdateCustomerPurchaseLimitRequestBodyTypedDict(TypedDict):
 class UpdateCustomerPurchaseLimitRequestBody(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
-    interval: UpdateCustomerPurchaseLimitIntervalRequestBody
+    interval: UpdateCustomerAutoTopupIntervalRequestBody
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -213,6 +213,79 @@ class UpdateCustomerSpendLimitRequestBody(BaseModel):
         return m
 
 
+UpdateCustomerUsageLimitProperties2TypedDict = TypeAliasType(
+    "UpdateCustomerUsageLimitProperties2TypedDict", Union[str, float, bool]
+)
+
+
+UpdateCustomerUsageLimitProperties2 = TypeAliasType(
+    "UpdateCustomerUsageLimitProperties2", Union[str, float, bool]
+)
+
+
+class UpdateCustomerUsageLimitFilterRequestBody2TypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, UpdateCustomerUsageLimitProperties2TypedDict]
+
+
+class UpdateCustomerUsageLimitFilterRequestBody2(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, UpdateCustomerUsageLimitProperties2]
+
+
+UpdateCustomerSourceRequest2 = Literal[
+    "customer",
+    "plan",
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
+class UpdateCustomerUsageLimitRequestBody2TypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    usage: float
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
+    filter_: NotRequired[UpdateCustomerUsageLimitFilterRequestBody2TypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+    source: NotRequired[UpdateCustomerSourceRequest2]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
+class UpdateCustomerUsageLimitRequestBody2(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    usage: float
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
+
+    filter_: Annotated[
+        Optional[UpdateCustomerUsageLimitFilterRequestBody2],
+        pydantic.Field(alias="filter"),
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    source: Optional[UpdateCustomerSourceRequest2] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["filter", "source"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 UpdateCustomerUsageLimitIntervalRequestBody = Literal[
     "day",
     "week",
@@ -229,29 +302,36 @@ UpdateCustomerAnchorRequestBody = Literal[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-UpdateCustomerUsageLimitPropertiesTypedDict = TypeAliasType(
-    "UpdateCustomerUsageLimitPropertiesTypedDict", Union[str, float, bool]
+UpdateCustomerUsageLimitProperties1TypedDict = TypeAliasType(
+    "UpdateCustomerUsageLimitProperties1TypedDict", Union[str, float, bool]
 )
 
 
-UpdateCustomerUsageLimitProperties = TypeAliasType(
-    "UpdateCustomerUsageLimitProperties", Union[str, float, bool]
+UpdateCustomerUsageLimitProperties1 = TypeAliasType(
+    "UpdateCustomerUsageLimitProperties1", Union[str, float, bool]
 )
 
 
-class UpdateCustomerUsageLimitFilterRequestBodyTypedDict(TypedDict):
+class UpdateCustomerUsageLimitFilterRequestBody1TypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, UpdateCustomerUsageLimitPropertiesTypedDict]
+    properties: Dict[str, UpdateCustomerUsageLimitProperties1TypedDict]
 
 
-class UpdateCustomerUsageLimitFilterRequestBody(BaseModel):
+class UpdateCustomerUsageLimitFilterRequestBody1(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, UpdateCustomerUsageLimitProperties]
+    properties: Dict[str, UpdateCustomerUsageLimitProperties1]
 
 
-class UpdateCustomerUsageLimitRequestBodyTypedDict(TypedDict):
+UpdateCustomerSourceRequest1 = Literal[
+    "customer",
+    "plan",
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
+class UpdateCustomerUsageLimitRequestBody1TypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
     limit: float
@@ -262,11 +342,15 @@ class UpdateCustomerUsageLimitRequestBodyTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[UpdateCustomerAnchorRequestBody]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[UpdateCustomerUsageLimitFilterRequestBodyTypedDict]
+    filter_: NotRequired[UpdateCustomerUsageLimitFilterRequestBody1TypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+    usage: NotRequired[float]
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
+    source: NotRequired[UpdateCustomerSourceRequest1]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
-class UpdateCustomerUsageLimitRequestBody(BaseModel):
+class UpdateCustomerUsageLimitRequestBody1(BaseModel):
     feature_id: str
     r"""The feature this usage limit applies to."""
 
@@ -283,14 +367,20 @@ class UpdateCustomerUsageLimitRequestBody(BaseModel):
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
     filter_: Annotated[
-        Optional[UpdateCustomerUsageLimitFilterRequestBody],
+        Optional[UpdateCustomerUsageLimitFilterRequestBody1],
         pydantic.Field(alias="filter"),
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
+    usage: Optional[float] = None
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
+
+    source: Optional[UpdateCustomerSourceRequest1] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "anchor", "filter"])
+        optional_fields = set(["enabled", "anchor", "filter", "usage", "source"])
         serialized = handler(self)
         m = {}
 
@@ -303,6 +393,21 @@ class UpdateCustomerUsageLimitRequestBody(BaseModel):
                     m[k] = val
 
         return m
+
+
+UpdateCustomerUsageLimitUnionTypedDict = TypeAliasType(
+    "UpdateCustomerUsageLimitUnionTypedDict",
+    Union[
+        UpdateCustomerUsageLimitRequestBody2TypedDict,
+        UpdateCustomerUsageLimitRequestBody1TypedDict,
+    ],
+)
+
+
+UpdateCustomerUsageLimitUnion = TypeAliasType(
+    "UpdateCustomerUsageLimitUnion",
+    Union[UpdateCustomerUsageLimitRequestBody2, UpdateCustomerUsageLimitRequestBody1],
+)
 
 
 UpdateCustomerThresholdTypeRequestBody = Literal[
@@ -436,14 +541,12 @@ class UpdateCustomerOverageAllowedRequestBody(BaseModel):
 
 
 class UpdateCustomerBillingControlsRequestBodyTypedDict(TypedDict):
-    r"""Billing controls for the customer (auto top-ups, etc.)"""
-
     auto_topups: NotRequired[List[UpdateCustomerAutoTopupRequestBodyTypedDict]]
     r"""List of auto top-up configurations per feature."""
     spend_limits: NotRequired[List[UpdateCustomerSpendLimitRequestBodyTypedDict]]
     r"""List of overage spend limits per feature (caps overage spend)."""
-    usage_limits: NotRequired[List[UpdateCustomerUsageLimitRequestBodyTypedDict]]
-    r"""List of hard usage caps per feature (max units per interval)."""
+    usage_limits: NotRequired[List[UpdateCustomerUsageLimitUnionTypedDict]]
+    r"""List of hard usage caps per feature. An entry with only feature_id and usage sets the current counter without changing configuration."""
     usage_alerts: NotRequired[List[UpdateCustomerUsageAlertRequestBodyTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[UpdateCustomerOverageAllowedRequestBodyTypedDict]]
@@ -451,16 +554,14 @@ class UpdateCustomerBillingControlsRequestBodyTypedDict(TypedDict):
 
 
 class UpdateCustomerBillingControlsRequestBody(BaseModel):
-    r"""Billing controls for the customer (auto top-ups, etc.)"""
-
     auto_topups: Optional[List[UpdateCustomerAutoTopupRequestBody]] = None
     r"""List of auto top-up configurations per feature."""
 
     spend_limits: Optional[List[UpdateCustomerSpendLimitRequestBody]] = None
     r"""List of overage spend limits per feature (caps overage spend)."""
 
-    usage_limits: Optional[List[UpdateCustomerUsageLimitRequestBody]] = None
-    r"""List of hard usage caps per feature (max units per interval)."""
+    usage_limits: Optional[List[UpdateCustomerUsageLimitUnion]] = None
+    r"""List of hard usage caps per feature. An entry with only feature_id and usage sets the current counter without changing configuration."""
 
     usage_alerts: Optional[List[UpdateCustomerUsageAlertRequestBody]] = None
     r"""List of usage alert configurations per feature."""
@@ -546,7 +647,6 @@ class UpdateCustomerParamsTypedDict(TypedDict):
     currency: NotRequired[Nullable[str]]
     r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
     billing_controls: NotRequired[UpdateCustomerBillingControlsRequestBodyTypedDict]
-    r"""Billing controls for the customer (auto top-ups, etc.)"""
     config: NotRequired[UpdateCustomerConfigRequestBodyTypedDict]
     r"""Miscellaneous configurations for the customer."""
     new_customer_id: NotRequired[str]
@@ -579,7 +679,6 @@ class UpdateCustomerParams(BaseModel):
     r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
 
     billing_controls: Optional[UpdateCustomerBillingControlsRequestBody] = None
-    r"""Billing controls for the customer (auto top-ups, etc.)"""
 
     config: Optional[UpdateCustomerConfigRequestBody] = None
     r"""Miscellaneous configurations for the customer."""
@@ -638,7 +737,7 @@ UpdateCustomerEnv = Union[
 r"""The environment this customer was created in."""
 
 
-UpdateCustomerPurchaseLimitIntervalResponse2 = Union[
+UpdateCustomerAutoTopupIntervalResponse2 = Union[
     Literal[
         "hour",
         "day",
@@ -651,7 +750,7 @@ r"""The time interval for the purchase limit window."""
 
 
 class UpdateCustomerPurchaseLimitResponse2TypedDict(TypedDict):
-    interval: UpdateCustomerPurchaseLimitIntervalResponse2
+    interval: UpdateCustomerAutoTopupIntervalResponse2
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -660,7 +759,7 @@ class UpdateCustomerPurchaseLimitResponse2TypedDict(TypedDict):
 
 
 class UpdateCustomerPurchaseLimitResponse2(BaseModel):
-    interval: UpdateCustomerPurchaseLimitIntervalResponse2
+    interval: UpdateCustomerAutoTopupIntervalResponse2
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -686,7 +785,7 @@ class UpdateCustomerPurchaseLimitResponse2(BaseModel):
         return m
 
 
-UpdateCustomerPurchaseLimitIntervalResponse1 = Union[
+UpdateCustomerAutoTopupIntervalResponse1 = Union[
     Literal[
         "hour",
         "day",
@@ -698,7 +797,7 @@ UpdateCustomerPurchaseLimitIntervalResponse1 = Union[
 
 
 class UpdateCustomerPurchaseLimitResponse1TypedDict(TypedDict):
-    interval: Nullable[UpdateCustomerPurchaseLimitIntervalResponse1]
+    interval: Nullable[UpdateCustomerAutoTopupIntervalResponse1]
     r"""The time interval for the purchase limit window. Null when no purchase limit is configured."""
     interval_count: Nullable[float]
     r"""Number of intervals in the purchase limit window. Null when no purchase limit is configured."""
@@ -711,7 +810,7 @@ class UpdateCustomerPurchaseLimitResponse1TypedDict(TypedDict):
 
 
 class UpdateCustomerPurchaseLimitResponse1(BaseModel):
-    interval: Nullable[UpdateCustomerPurchaseLimitIntervalResponse1]
+    interval: Nullable[UpdateCustomerAutoTopupIntervalResponse1]
     r"""The time interval for the purchase limit window. Null when no purchase limit is configured."""
 
     interval_count: Nullable[float]
@@ -938,7 +1037,7 @@ class UpdateCustomerUsageLimitFilterResponse(BaseModel):
     properties: Dict[str, str]
 
 
-UpdateCustomerUsageLimitSource = Union[
+UpdateCustomerUsageLimitSourceResponse = Union[
     Literal[
         "customer",
         "plan",
@@ -962,8 +1061,8 @@ class UpdateCustomerUsageLimitResponseTypedDict(TypedDict):
     filter_: NotRequired[UpdateCustomerUsageLimitFilterResponseTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
-    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
-    source: NotRequired[UpdateCustomerUsageLimitSource]
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
+    source: NotRequired[UpdateCustomerUsageLimitSourceResponse]
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
@@ -989,9 +1088,9 @@ class UpdateCustomerUsageLimitResponse(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     usage: Optional[float] = None
-    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
 
-    source: Optional[UpdateCustomerUsageLimitSource] = None
+    source: Optional[UpdateCustomerUsageLimitSourceResponse] = None
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
     @model_serializer(mode="wrap")
@@ -2293,8 +2392,6 @@ class UpdateCustomerFeatureTypedDict(TypedDict):
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[UpdateCustomerCreditSchemaUnionTypedDict]]
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
-    invoice_credit: NotRequired[bool]
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
     model_markups: NotRequired[Nullable[Dict[str, UpdateCustomerModelMarkupsTypedDict]]]
     r"""Per-model markup overrides for AI credit systems."""
     default_markup: NotRequired[float]
@@ -2333,9 +2430,6 @@ class UpdateCustomerFeature(BaseModel):
     credit_schema: Optional[List[UpdateCustomerCreditSchemaUnion]] = None
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
 
-    invoice_credit: Optional[bool] = None
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
-
     model_markups: OptionalNullable[Dict[str, UpdateCustomerModelMarkups]] = UNSET
     r"""Per-model markup overrides for AI credit systems."""
 
@@ -2357,7 +2451,6 @@ class UpdateCustomerFeature(BaseModel):
             [
                 "event_names",
                 "credit_schema",
-                "invoice_credit",
                 "model_markups",
                 "default_markup",
                 "provider_markups",
@@ -2699,7 +2792,11 @@ class UpdateCustomerResponse(BaseModel):
 
 
 try:
-    UpdateCustomerUsageLimitRequestBody.model_rebuild()
+    UpdateCustomerUsageLimitRequestBody2.model_rebuild()
+except NameError:
+    pass
+try:
+    UpdateCustomerUsageLimitRequestBody1.model_rebuild()
 except NameError:
     pass
 try:

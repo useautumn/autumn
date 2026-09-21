@@ -318,6 +318,24 @@ export type PreviewMultiAttachRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export const PreviewMultiAttachDuration = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+export type PreviewMultiAttachDuration = ClosedEnum<
+  typeof PreviewMultiAttachDuration
+>;
+
+/**
+ * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+ */
+export type PreviewMultiAttachExpiry = {
+  duration: PreviewMultiAttachDuration;
+  length: number;
+};
+
 export type PreviewMultiAttachDimensionsMatch4 = string | number | boolean;
 
 export type PreviewMultiAttachDimensions4 = {
@@ -641,6 +659,10 @@ export type PreviewMultiAttachPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: PreviewMultiAttachRollover | undefined;
+  /**
+   * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+   */
+  expiry?: PreviewMultiAttachExpiry | undefined;
   /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
@@ -1894,6 +1916,34 @@ export function previewMultiAttachRolloverToJSON(
 }
 
 /** @internal */
+export const PreviewMultiAttachDuration$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiAttachDuration
+> = z.enum(PreviewMultiAttachDuration);
+
+/** @internal */
+export type PreviewMultiAttachExpiry$Outbound = {
+  duration: string;
+  length: number;
+};
+
+/** @internal */
+export const PreviewMultiAttachExpiry$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachExpiry$Outbound,
+  PreviewMultiAttachExpiry
+> = z.object({
+  duration: PreviewMultiAttachDuration$outboundSchema,
+  length: z.number(),
+});
+
+export function previewMultiAttachExpiryToJSON(
+  previewMultiAttachExpiry: PreviewMultiAttachExpiry,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachExpiry$outboundSchema.parse(previewMultiAttachExpiry),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachDimensionsMatch4$Outbound =
   | string
   | number
@@ -2772,6 +2822,7 @@ export type PreviewMultiAttachPlanItem$Outbound = {
   price?: PreviewMultiAttachPrice$Outbound | undefined;
   proration?: PreviewMultiAttachProration$Outbound | undefined;
   rollover?: PreviewMultiAttachRollover$Outbound | undefined;
+  expiry?: PreviewMultiAttachExpiry$Outbound | undefined;
   feature_override?: PreviewMultiAttachFeatureOverride$Outbound | undefined;
 };
 
@@ -2798,6 +2849,7 @@ export const PreviewMultiAttachPlanItem$outboundSchema: z.ZodMiniType<
     rollover: z.optional(
       z.lazy(() => PreviewMultiAttachRollover$outboundSchema),
     ),
+    expiry: z.optional(z.lazy(() => PreviewMultiAttachExpiry$outboundSchema)),
     featureOverride: z.optional(
       z.lazy(() => PreviewMultiAttachFeatureOverride$outboundSchema),
     ),

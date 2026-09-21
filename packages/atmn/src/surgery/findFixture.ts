@@ -83,7 +83,7 @@ const candidateFixtures = ({
 	);
 };
 
-export const findFixture = ({
+export const findFixtures = ({
 	source,
 	builder,
 	idField,
@@ -98,8 +98,9 @@ export const findFixture = ({
 	where?: FixtureConstraint[];
 	/** Match a literal built from spreads or calls too: to name it, not to edit it. */
 	allowDynamic?: boolean;
-}): SgNode | null => {
+}): SgNode[] => {
 	const root = parse(Lang.TypeScript, source).root();
+	const matches: SgNode[] = [];
 	// A rule walk rather than a pattern: a pattern misses an object whose id
 	// pair follows a spread, and the fixture must be found to be refused.
 	for (const { node, object } of candidateFixtures({ root, builder })) {
@@ -108,10 +109,14 @@ export const findFixture = ({
 		if (!allowDynamic && containsDynamicValue(object)) continue;
 		if (where !== undefined && !satisfiesFixtureConstraints({ object, where }))
 			continue;
-		return node;
+		matches.push(node);
 	}
-	return null;
+	return matches;
 };
+
+export const findFixture = (
+	params: Parameters<typeof findFixtures>[0],
+): SgNode | null => findFixtures(params)[0] ?? null;
 
 const SIMPLE_ESCAPES: Record<string, string> = {
 	n: "\n",
@@ -161,7 +166,7 @@ const decodeStringBody = (body: string): string => {
  * The text a string node stands for, so `'pro'` and `"pro"` name one fixture.
  * Null for anything else — a template literal is a computed value, not an id.
  */
-const stringLiteralValue = (node: SgNode): string | null => {
+export const stringLiteralValue = (node: SgNode): string | null => {
 	if (node.kind() !== "string") return null;
 	const text = node.text();
 	const quote = text[0];
@@ -181,7 +186,12 @@ const topLevelPairValue = ({
 	for (const member of object.children()) {
 		if (member.kind() !== "pair") continue;
 		const [name, value] = member.namedChildren();
-		if (name?.text() === key && value !== undefined) return value;
+		if (
+			name !== undefined &&
+			(name.text() === key || stringLiteralValue(name) === key) &&
+			value !== undefined
+		)
+			return value;
 	}
 	return null;
 };
@@ -225,13 +235,15 @@ const satisfiesConstraint = ({
 	object: SgNode;
 	constraint: FixtureConstraint;
 }): boolean => {
-	const pair = object
-		.children()
-		.find(
-			(child) =>
-				child.kind() === "pair" &&
-				child.namedChildren()[0]?.text() === constraint.field,
+	const pair = object.children().find((child) => {
+		const key = child.field("key");
+		return (
+			child.kind() === "pair" &&
+			key !== null &&
+			(key.text() === constraint.field ||
+				stringLiteralValue(key) === constraint.field)
 		);
+	});
 	if (pair === undefined) return constraint.absentMeans === constraint.equals;
 	const value = pair.namedChildren()[1];
 	return value !== undefined && stringLiteralValue(value) === constraint.equals;

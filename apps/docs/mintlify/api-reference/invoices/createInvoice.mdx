@@ -1,0 +1,671 @@
+---
+title: "Create Invoice"
+openapi: "openapi POST /v1/invoices.create"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The customer to invoice.
+</DynamicParamField>
+
+<DynamicParamField body="plans" type="object[]">
+  <Expandable title="properties">
+    <DynamicParamField body="plan_id" type="string" required>
+      The catalog plan (or variant) whose pricing to use.
+    </DynamicParamField>
+
+    <DynamicParamField body="version" type="number">
+      Plan version. Defaults to the active version.
+    </DynamicParamField>
+
+    <DynamicParamField body="customize" type="object">
+      Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed.
+      <Expandable title="properties">
+        <DynamicParamField body="price" type="object | null">
+          Override the plan's base price for this invoice. Pass null or an amount of 0 to omit the base price line.
+          <Expandable title="properties">
+            <DynamicParamField body="amount" type="number" required>
+              Base price amount for the plan, in major currency units (e.g. dollars).
+            </DynamicParamField>
+
+            <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+              Billing interval (e.g. 'month', 'year').
+            </DynamicParamField>
+
+            <DynamicParamField body="interval_count" type="number">
+              Number of intervals per billing cycle. Defaults to 1.
+            </DynamicParamField>
+
+            <DynamicParamField body="processors" type="object">
+              Bill this line under an existing Stripe price instead of an inline one.
+              <Expandable title="properties">
+                <DynamicParamField body="stripe" type="object | null">
+                  <Expandable title="properties">
+                    <DynamicParamField body="price_id" type="string" required>
+                      Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="items" type="object[]">
+          Override feature pricing for this invoice. Only pricing fields are accepted; grants, resets and rollovers are not part of an invoice.
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string" required>
+              The feature whose pricing is overridden on this invoice.
+            </DynamicParamField>
+
+            <DynamicParamField body="price" type="object">
+              Pricing to use for this feature on this invoice.
+              <Expandable title="properties">
+                <DynamicParamField body="amount" type="number">
+                  Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                </DynamicParamField>
+
+                <DynamicParamField body="tiers" type="object[]">
+                  Tiered pricing. Either 'amount' or 'tiers' is required.
+                  <Expandable title="properties">
+                    <DynamicParamField body="to" type="number" required />
+
+                    <DynamicParamField body="amount" type="number" />
+
+                    <DynamicParamField body="flat_amount" type="number" />
+
+                    <DynamicParamField body="additional_currencies" type="object[]">
+                      Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+                      <Expandable title="properties">
+                        <DynamicParamField body="currency" type="string" required>
+                          Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                        </DynamicParamField>
+
+                        <DynamicParamField body="amount" type="number">
+                          Per-unit amount for this tier in this currency.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="flat_amount" type="number">
+                          Flat amount for this tier in this currency, if the tier uses one.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+
+                <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                  Billing interval. For consumable features, should match reset.interval.
+                </DynamicParamField>
+
+                <DynamicParamField body="interval_count" type="number">
+                  Number of intervals per billing cycle. Defaults to 1.
+                </DynamicParamField>
+
+                <DynamicParamField body="billing_units" type="number">
+                  Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                </DynamicParamField>
+
+                <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'" required>
+                  'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+                </DynamicParamField>
+
+                <DynamicParamField body="processors" type="object">
+                  Bill this line under an existing Stripe price instead of an inline one.
+                  <Expandable title="properties">
+                    <DynamicParamField body="stripe" type="object | null">
+                      <Expandable title="properties">
+                        <DynamicParamField body="price_id" type="string" required>
+                          Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="feature_override" type="object">
+              For credit-system features: a credit rate card to use when converting `usage` on this invoice.
+              <Expandable title="properties">
+                <DynamicParamField body="credit_schema" type="object | object[]">
+                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                  <Expandable title="properties">
+                    <DynamicParamField body="metered_feature_id" type="string">
+                      ID of the metered feature that draws from this credit system.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="billing_units" type="number">
+                      Number of metered-feature units priced together. Defaults to one when omitted.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="dimensions.{key}" type="object">
+                      Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                      <Expandable title="properties">
+                        <DynamicParamField body="match.{key}" type="string" required>
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="priority" type="integer">
+                          Breaks ties between dimensions that match the same number of keys. Higher wins.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="tier_behavior" type="any" required />
+
+                        <DynamicParamField body="tiers" type="object[]" required>
+                          <Expandable title="properties">
+                            <DynamicParamField body="to" type="number" required>
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="credit_cost" type="number" required>
+                              Credits consumed per billing-unit group within this tier.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="multipliers.{key}" type="object">
+                      Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                      <Expandable title="properties">
+                        <DynamicParamField body="match.{key}" type="string" required>
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="factor" type="number">
+                          Multiplies the matched rate. All matching multipliers stack.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="add" type="number">
+                          Added to the rate after every factor is applied, in credits per billing-unit group.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="tier_behavior" type="any" />
+
+                    <DynamicParamField body="tiers" type="object[]">
+                      <Expandable title="properties">
+                        <DynamicParamField body="to" type="number" required>
+                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="credit_cost" type="number" required>
+                          Credits consumed per billing-unit group within this tier.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="credit_cost" type="number">
+                      Credits consumed per billing-unit group.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="feature_quantities" type="object[]">
+      <Expandable title="properties">
+        <DynamicParamField body="feature_id" type="string" required>
+          The feature to bill.
+        </DynamicParamField>
+
+        <DynamicParamField body="billing_behavior" type="'prepaid' | 'usage_based'" required>
+          Which of the feature's prices to use: 'prepaid' or 'usage_based'.
+        </DynamicParamField>
+
+        <DynamicParamField body="quantity" type="number">
+          Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits.
+        </DynamicParamField>
+
+        <DynamicParamField body="usage" type="object[]">
+          For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity.
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string" required>
+              The metered feature whose units are being converted.
+            </DynamicParamField>
+
+            <DynamicParamField body="quantity" type="number" required>
+              Billable units of the metered feature. Converted to the credit-system feature through its rate card.
+            </DynamicParamField>
+
+            <DynamicParamField body="properties" type="object">
+              Event properties used to pick the rate card dimension and multipliers.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="prorate" type="boolean">
+          Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="license_quantities" type="object[]">
+      <Expandable title="properties">
+        <DynamicParamField body="license_plan_id" type="string" required>
+          The license plan linked to the parent plan.
+        </DynamicParamField>
+
+        <DynamicParamField body="quantity" type="integer" required>
+          Billable seats, exclusive of any included seats.
+        </DynamicParamField>
+
+        <DynamicParamField body="customize" type="object">
+          Override the license's per-seat price on this invoice.
+          <Expandable title="properties">
+            <DynamicParamField body="price" type="object | null">
+              <Expandable title="properties">
+                <DynamicParamField body="amount" type="number" required>
+                  Base price amount for the plan, in major currency units (e.g. dollars).
+                </DynamicParamField>
+
+                <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                  Billing interval (e.g. 'month', 'year').
+                </DynamicParamField>
+
+                <DynamicParamField body="interval_count" type="number">
+                  Number of intervals per billing cycle. Defaults to 1.
+                </DynamicParamField>
+
+                <DynamicParamField body="processors" type="object">
+                  Bill this line under an existing Stripe price instead of an inline one.
+                  <Expandable title="properties">
+                    <DynamicParamField body="stripe" type="object | null">
+                      <Expandable title="properties">
+                        <DynamicParamField body="price_id" type="string" required>
+                          Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="feature_quantities" type="object[]">
+          Feature charges priced through the license plan.
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string" required>
+              The feature to bill.
+            </DynamicParamField>
+
+            <DynamicParamField body="billing_behavior" type="'prepaid' | 'usage_based'" required>
+              Which of the feature's prices to use: 'prepaid' or 'usage_based'.
+            </DynamicParamField>
+
+            <DynamicParamField body="quantity" type="number">
+              Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits.
+            </DynamicParamField>
+
+            <DynamicParamField body="usage" type="object[]">
+              For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity.
+              <Expandable title="properties">
+                <DynamicParamField body="feature_id" type="string" required>
+                  The metered feature whose units are being converted.
+                </DynamicParamField>
+
+                <DynamicParamField body="quantity" type="number" required>
+                  Billable units of the metered feature. Converted to the credit-system feature through its rate card.
+                </DynamicParamField>
+
+                <DynamicParamField body="properties" type="object">
+                  Event properties used to pick the rate card dimension and multipliers.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="prorate" type="boolean">
+              Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="prorate" type="boolean">
+          Whether to prorate seat charges against period_start / period_end. Defaults to true.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="discounts" type="object[]">
+      Discounts applied only to this plan's lines.
+      <Expandable title="properties">
+        <DynamicParamField body="reward_id" type="string">
+          The ID of the reward to apply as a discount.
+        </DynamicParamField>
+
+        <DynamicParamField body="promotion_code" type="string">
+          The promotion code to apply as a discount.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="prorate" type="boolean">
+      Whether to prorate the base price against period_start / period_end. Defaults to true.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="custom_line_items" type="object[]">
+  Charges that are not tied to any plan or feature.
+  <Expandable title="properties">
+    <DynamicParamField body="amount" type="number" required>
+      Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+    </DynamicParamField>
+
+    <DynamicParamField body="description" type="string" required>
+      Description for the line item.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="discounts" type="object[]">
+  Discounts applied to the whole invoice.
+  <Expandable title="properties">
+    <DynamicParamField body="reward_id" type="string">
+      The ID of the reward to apply as a discount.
+    </DynamicParamField>
+
+    <DynamicParamField body="promotion_code" type="string">
+      The promotion code to apply as a discount.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="invoice_template_id" type="string">
+  ID of an invoice template whose footer, memo and default payment terms are applied.
+</DynamicParamField>
+
+<DynamicParamField body="net_terms_days" type="integer">
+  Days until the invoice is due. Defaults to the template's terms, then the org default.
+</DynamicParamField>
+
+<DynamicParamField body="tax_rate_id" type="string">
+  Stripe tax rate ID (txr_...) applied to every line.
+</DynamicParamField>
+
+<DynamicParamField body="period_start" type="integer">
+  Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start.
+</DynamicParamField>
+
+<DynamicParamField body="period_end" type="integer">
+  End of the period being invoiced, in milliseconds.
+</DynamicParamField>
+
+<DynamicParamField body="preview" type="boolean">
+  If true, returns the calculated lines and totals without creating an invoice.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="invoice" type="object | null">
+  The created invoice. Null when preview is true.
+  <Expandable title="properties">
+    <DynamicResponseField name="plan_ids" type="string[]">
+      Array of plan IDs included in this invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="stripe_id" type="string">
+      The Stripe invoice ID
+    </DynamicResponseField>
+
+    <DynamicResponseField name="processor_type" type="'stripe' | 'revenuecat'">
+      The billing processor that owns this invoice.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="status" type="string">
+      The status of the invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="total" type="number">
+      The total amount of the invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="currency" type="string">
+      The currency code for the invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      Timestamp when the invoice was created
+    </DynamicResponseField>
+
+    <DynamicResponseField name="hosted_invoice_url" type="string | null">
+      URL to the Stripe-hosted invoice page
+    </DynamicResponseField>
+
+    <DynamicResponseField name="id" type="string">
+      The Autumn invoice ID
+    </DynamicResponseField>
+
+    <DynamicResponseField name="customer_id" type="string | null">
+      The ID of the customer this invoice belongs to. Null for customers created without an ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="entity_id" type="string | null">
+      The ID of the entity this invoice belongs to, if entity-scoped
+    </DynamicResponseField>
+
+    <DynamicResponseField name="amount_paid" type="number | null">
+      The amount paid on the invoice. Null on invoices recorded before amounts paid were tracked.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="refunded_amount" type="number">
+      The total amount refunded on the invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="items" type="object[]">
+      Line items on the invoice, one per line as shown in Stripe. Capped at 100. Empty for invoices recorded before line item storage.
+      <Expandable title="properties">
+        <DynamicResponseField name="description" type="string">
+          Description of the invoice line item
+        </DynamicResponseField>
+
+        <DynamicResponseField name="period_start" type="number | null">
+          Timestamp when the billing period starts
+        </DynamicResponseField>
+
+        <DynamicResponseField name="period_end" type="number | null">
+          Timestamp when the billing period ends
+        </DynamicResponseField>
+
+        <DynamicResponseField name="plan_id" type="string | null">
+          The plan this line item came from. Null for lines with no Autumn plan behind them.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="feature_id" type="string | null">
+          The ID of the feature associated with this line item
+        </DynamicResponseField>
+
+        <DynamicResponseField name="feature_name" type="string | null">
+          The name of the feature associated with this line item
+        </DynamicResponseField>
+
+        <DynamicResponseField name="quantity" type="number | null">
+          Quantity actually charged on this line. Null on fixed-price lines.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="amount" type="number">
+          Amount charged on this line, pre-discount and pre-tax. Negative for credits.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="entities" type="object[]">
+          How this line splits by entity. Empty for customer-level lines. Only populated for invoices finalized after entity attribution shipped.
+          <Expandable title="properties">
+            <DynamicResponseField name="entity_id" type="string">
+              The entity this share of the line item is attributed to
+            </DynamicResponseField>
+
+            <DynamicResponseField name="quantity" type="number | null">
+              Quantity charged to this entity. Null on fixed-price lines.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="amount" type="number">
+              Amount attributed to this entity, pre-discount and pre-tax
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="preview" type="object">
+  <Expandable title="properties">
+    <DynamicResponseField name="currency" type="string" />
+
+    <DynamicResponseField name="lines" type="object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="plan_id" type="string | null" />
+
+        <DynamicResponseField name="feature_id" type="string | null" />
+
+        <DynamicResponseField name="description" type="string" />
+
+        <DynamicResponseField name="amount" type="number" />
+
+        <DynamicResponseField name="amount_after_discounts" type="number" />
+
+        <DynamicResponseField name="quantity" type="number | null" />
+
+        <DynamicResponseField name="prorated" type="boolean" />
+
+        <DynamicResponseField name="period_start" type="number | null" />
+
+        <DynamicResponseField name="period_end" type="number | null" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="subtotal" type="number" />
+
+    <DynamicResponseField name="discount_total" type="number" />
+
+    <DynamicResponseField name="tax" type="object | null">
+      <Expandable title="properties">
+        <DynamicResponseField name="total" type="number" />
+
+        <DynamicResponseField name="amount_inclusive" type="number" />
+
+        <DynamicResponseField name="amount_exclusive" type="number" />
+
+        <DynamicResponseField name="status" type="'complete' | 'incomplete'" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="total" type="number" />
+
+    <DynamicResponseField name="due_date" type="number | null" />
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "invoice": {
+    "id": "inv_2b3c4d5e6f7g8h",
+    "customer_id": "cus_123",
+    "entity_id": null,
+    "plan_ids": [
+      "pro_plan"
+    ],
+    "stripe_id": "in_1A2B3C4D5E6F7G8H",
+    "processor_type": "stripe",
+    "status": "open",
+    "total": 29.99,
+    "amount_paid": 29.99,
+    "refunded_amount": 0,
+    "currency": "usd",
+    "created_at": 1759247877000,
+    "hosted_invoice_url": "https://invoice.stripe.com/i/acct_123/test_456",
+    "items": [
+      {
+        "description": "Pro plan",
+        "plan_id": "pro_plan",
+        "feature_id": null,
+        "feature_name": null,
+        "quantity": null,
+        "amount": 20,
+        "period_start": 1759247877000,
+        "period_end": 1761839877000,
+        "entities": []
+      },
+      {
+        "description": "AI credits",
+        "plan_id": "pro_plan",
+        "feature_id": "ai_credits",
+        "feature_name": "AI Credits",
+        "quantity": 4995,
+        "amount": 9.99,
+        "period_start": 1759247877000,
+        "period_end": 1761839877000,
+        "entities": [
+          {
+            "entity_id": "acme-docs-prod",
+            "quantity": 4995,
+            "amount": 9.99
+          }
+        ]
+      }
+    ]
+  },
+  "preview": {
+    "currency": "usd",
+    "lines": [],
+    "subtotal": 29.99,
+    "discount_total": 0,
+    "tax": null,
+    "total": 29.99,
+    "due_date": 1761839877000
+  }
+}
+```
+</ResponseExample>

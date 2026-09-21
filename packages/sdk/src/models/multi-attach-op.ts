@@ -307,6 +307,22 @@ export type MultiAttachRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export const MultiAttachDuration = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+export type MultiAttachDuration = ClosedEnum<typeof MultiAttachDuration>;
+
+/**
+ * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+ */
+export type MultiAttachExpiry = {
+  duration: MultiAttachDuration;
+  length: number;
+};
+
 export type MultiAttachDimensionsMatch4 = string | number | boolean;
 
 export type MultiAttachDimensions4 = {
@@ -623,6 +639,10 @@ export type MultiAttachPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: MultiAttachRollover | undefined;
+  /**
+   * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+   */
+  expiry?: MultiAttachExpiry | undefined;
   /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
@@ -1566,6 +1586,34 @@ export function multiAttachRolloverToJSON(
 }
 
 /** @internal */
+export const MultiAttachDuration$outboundSchema: z.ZodMiniEnum<
+  typeof MultiAttachDuration
+> = z.enum(MultiAttachDuration);
+
+/** @internal */
+export type MultiAttachExpiry$Outbound = {
+  duration: string;
+  length: number;
+};
+
+/** @internal */
+export const MultiAttachExpiry$outboundSchema: z.ZodMiniType<
+  MultiAttachExpiry$Outbound,
+  MultiAttachExpiry
+> = z.object({
+  duration: MultiAttachDuration$outboundSchema,
+  length: z.number(),
+});
+
+export function multiAttachExpiryToJSON(
+  multiAttachExpiry: MultiAttachExpiry,
+): string {
+  return JSON.stringify(
+    MultiAttachExpiry$outboundSchema.parse(multiAttachExpiry),
+  );
+}
+
+/** @internal */
 export type MultiAttachDimensionsMatch4$Outbound = string | number | boolean;
 
 /** @internal */
@@ -2371,6 +2419,7 @@ export type MultiAttachPlanItem$Outbound = {
   price?: MultiAttachPrice$Outbound | undefined;
   proration?: MultiAttachProration$Outbound | undefined;
   rollover?: MultiAttachRollover$Outbound | undefined;
+  expiry?: MultiAttachExpiry$Outbound | undefined;
   feature_override?: MultiAttachFeatureOverride$Outbound | undefined;
 };
 
@@ -2391,6 +2440,7 @@ export const MultiAttachPlanItem$outboundSchema: z.ZodMiniType<
     price: z.optional(z.lazy(() => MultiAttachPrice$outboundSchema)),
     proration: z.optional(z.lazy(() => MultiAttachProration$outboundSchema)),
     rollover: z.optional(z.lazy(() => MultiAttachRollover$outboundSchema)),
+    expiry: z.optional(z.lazy(() => MultiAttachExpiry$outboundSchema)),
     featureOverride: z.optional(
       z.lazy(() => MultiAttachFeatureOverride$outboundSchema),
     ),
