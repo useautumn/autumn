@@ -1,5 +1,6 @@
 import {
 	LockAlreadyExistsError,
+	LockNotFoundError,
 	UnsupportedCommandError,
 } from "@autumn/balance-engine";
 import {
@@ -68,6 +69,13 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 			error = {
 				code: "LOCK_ALREADY_EXISTS",
 				message: "The customer already holds an open lock under this id",
+			};
+		} else if (cause instanceof LockNotFoundError) {
+			status = 404;
+			error = {
+				code: "LOCK_NOT_FOUND",
+				message:
+					"No open lock under this id: never taken, already settled, or expired",
 			};
 		} else if (cause instanceof PartitionWriterDuplicateCommandError) {
 			status = 409;

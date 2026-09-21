@@ -1,6 +1,7 @@
 import { Decimal } from "decimal.js";
 import type { WorkerFullSubject } from "../models/subject/workerFullSubject.js";
 import { setupDeductionContext } from "./setup/setupDeductionContext.js";
+import type { DeductionDelta } from "./types/deductionDelta.js";
 import type { DeductionOutcome } from "./types/deductionOutcome.js";
 import type { DeductionRequest } from "./types/deductionRequest.js";
 import type { DeductionState } from "./types/deductionState.js";
@@ -8,19 +9,24 @@ import { deltasToRowChanges } from "./utils/convertDeductionUtils.js";
 import { deductFromBucket } from "./utils/draw/deductFromBucket.js";
 import { usageWindowsToRowChanges } from "./utils/limits/usageWindows.js";
 
-/** Take the requested units from the subject; negative values refund. Pure: same inputs, same outcome. */
+/**
+ * Take the requested units from the subject; negative values refund. Pure: same inputs, same outcome.
+ * `priorDeltas` are movements already decided (a finalize's unwind): the draw sees balances after them, and they come back in the outcome.
+ */
 export const deduct = ({
 	fullSubject,
 	request,
+	priorDeltas = [],
 }: {
 	fullSubject: WorkerFullSubject;
 	request: DeductionRequest;
+	priorDeltas?: DeductionDelta[];
 }): DeductionOutcome => {
 	const context = setupDeductionContext({ fullSubject, request });
 
 	const deductionState: DeductionState = {
 		remaining: new Decimal(request.value),
-		deltas: [],
+		deltas: [...priorDeltas],
 		usageWindowConsumed: new Map(),
 	};
 	deductFromBucket({ context, deductionState, bucket: "unlimited" });

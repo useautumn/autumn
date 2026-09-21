@@ -1,12 +1,14 @@
 import type {
 	CheckCommand,
 	EvictCommand,
+	FinalizeCommand,
 	InitializeRequest,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import type {
 	CheckReply,
 	EvictReply,
+	FinalizeReply,
 	InitializeReply,
 	TrackReply,
 } from "@autumn/balance-worker-client/protocol";
@@ -28,6 +30,7 @@ export type PartitionProcessor = {
 	check(params: { command: CheckCommand }): Promise<CheckReply>;
 	initialize(params: { request: InitializeRequest }): Promise<InitializeReply>;
 	evict(params: { command: EvictCommand }): Promise<EvictReply>;
+	finalize(params: { command: FinalizeCommand }): Promise<FinalizeReply>;
 	/** Settles every accepted command; the runtime awaits this before disposal. */
 	drain(): Promise<void>;
 };

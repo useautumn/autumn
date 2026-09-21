@@ -1,4 +1,6 @@
 import { z } from "zod/v4";
+import { finalizeCommandSchema } from "../../commands/finalize/types/finalizeCommand.js";
+import { finalizeResultSchema } from "../../commands/finalize/types/finalizeResult.js";
 import { initializeCommandSchema } from "../../commands/initialize/types/initializeCommand.js";
 import { initializeResultSchema } from "../../commands/initialize/types/initializeResult.js";
 import { trackCommandSchema } from "../../commands/track/types/trackCommand.js";
@@ -11,11 +13,13 @@ import { rowChangeSchema } from "./rowChange.js";
 export const mutationCommandSchema = z.discriminatedUnion("type", [
 	trackCommandSchema.loose(),
 	initializeCommandSchema.loose(),
+	finalizeCommandSchema.loose(),
 ]);
 
 export const mutationResultSchema = z.discriminatedUnion("type", [
 	trackResultSchema,
 	initializeResultSchema,
+	finalizeResultSchema,
 ]);
 
 const mutationRevisionSchema = z

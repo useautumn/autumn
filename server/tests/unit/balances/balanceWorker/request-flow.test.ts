@@ -298,6 +298,9 @@ test.concurrent(
 				evict: async () => {
 					throw cause;
 				},
+				finalize: async () => {
+					throw cause;
+				},
 			};
 			const body: TrackParams = {
 				customer_id: "cus_test",

@@ -97,8 +97,13 @@ function loggedCommandOf({
 function outcomeOf({ requestLog }: { requestLog: BalanceWorkerRequestLog }) {
 	const { response, error } = requestLog;
 	const result = response?.result;
+	// A track and a finalize both report a status and a reason.
 	const trackResult =
-		result && "type" in result && result.type === "track" ? result : undefined;
+		result &&
+		"type" in result &&
+		(result.type === "track" || result.type === "finalize")
+			? result
+			: undefined;
 	const initializeResult = result && "duplicate" in result ? result : undefined;
 	return {
 		revision: response?.state.revision,

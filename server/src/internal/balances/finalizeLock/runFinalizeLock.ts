@@ -3,6 +3,8 @@ import { withRedisFailOpen } from "@/external/redis/utils/withRedisFailOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
 import { releaseLockClaimMarker } from "@/internal/balances/utils/lockV2/releaseLockClaimMarker.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import { runBalanceWorkerFinalize } from "./balanceWorker/runBalanceWorkerFinalize.js";
 import { queueFinalizeLock } from "./queueFinalizeLock.js";
 import { runFinalizeLockV2 } from "./runFinalizeLockV2.js";
 
@@ -12,6 +14,9 @@ type RunFinalizeLockArgs = {
 };
 
 export const runFinalizeLock = async (args: RunFinalizeLockArgs) => {
+	// The API, the expiry job and the queued replay all enter here, so all of them reach the worker.
+	if (isBalanceWorkerRolloutEnabled()) return runBalanceWorkerFinalize(args);
+
 	return withRedisFailOpen({
 		source: "runFinalizeLock",
 		run: () => runFinalizeLockInner(args),

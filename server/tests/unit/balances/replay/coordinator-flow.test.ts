@@ -169,6 +169,9 @@ test.concurrent(
 				};
 			},
 			evict: async () => ({ evicted: false }),
+			finalize: async () => {
+				throw unsupported();
+			},
 		};
 		const coordinator = createReplayHydrationCoordinator({
 			source: createLoadedSource({

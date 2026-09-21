@@ -3,6 +3,9 @@ export { computeCheck } from "./commands/check/computeCheck.js";
 export type { CheckCommand } from "./commands/check/types/checkCommand.js";
 export type { CheckResult } from "./commands/check/types/checkResult.js";
 export type { EvictCommand } from "./commands/evict/types/evictCommand.js";
+export { computeFinalize } from "./commands/finalize/computeFinalize.js";
+export type { FinalizeCommand } from "./commands/finalize/types/finalizeCommand.js";
+export type { FinalizeResult } from "./commands/finalize/types/finalizeResult.js";
 export { computeInitialize } from "./commands/initialize/computeInitialize.js";
 export type { InitializeCommand } from "./commands/initialize/types/initializeCommand.js";
 export type { InitializeRequest } from "./commands/initialize/types/initializeRequest.js";
@@ -26,6 +29,7 @@ export {
 	CatalogRowMissingError,
 	IrreversibleChangeError,
 	LockAlreadyExistsError,
+	LockNotFoundError,
 	MutationSubjectMismatchError,
 	OutOfOrderMutationError,
 	StaleMutationError,
@@ -92,6 +96,7 @@ export {
 	parseCatalogRow,
 	parseCheckCommand,
 	parseEvictCommand,
+	parseFinalizeCommand,
 	parseInitializeCommand,
 	parseInitializeRequest,
 	parseMeteringIdentity,
@@ -100,6 +105,7 @@ export {
 	parseSubjectStateMutation,
 	parseTrackCommand,
 	parseWorkerCustomerEntitlement,
+	parseWorkerLock,
 } from "./parsers.js";
 export {
 	catalogKeyToString,

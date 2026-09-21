@@ -115,6 +115,9 @@ const fixture = ({
 			state,
 		}),
 		evict: async () => ({ evicted: false }),
+		finalize: async () => {
+			throw new Error("Finalize is not configured in this fixture");
+		},
 		drain: async () => undefined,
 	};
 	const process: BalanceWorkerRequestContext["runtime"]["process"] = (run) =>
@@ -318,7 +321,6 @@ describe("Balance worker HTTP", () => {
 	});
 	test.each([
 		{ ...command, schemaVersion: 2 },
-		{ ...command, value: 0 },
 		{ ...command, type: "check" },
 	])(
 		"track handler rejects invalid commands after routing",

@@ -7,6 +7,10 @@ export type {
 	EvictReply,
 } from "./contracts/evict.js";
 export type {
+	BalanceWorkerFinalizeRequest,
+	FinalizeReply,
+} from "./contracts/finalize.js";
+export type {
 	BalanceWorkerInitializeRequest,
 	InitializeReply,
 } from "./contracts/initialize.js";

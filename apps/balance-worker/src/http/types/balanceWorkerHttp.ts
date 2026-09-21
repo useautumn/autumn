@@ -2,6 +2,7 @@ import type { TrackCommand } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client";
 import type {
 	CheckReply,
+	FinalizeReply,
 	InitializeReply,
 	PartitionRoute,
 	WorkerErrorCode,
@@ -34,7 +35,7 @@ export type BalanceWorkerRequestLog = {
 				"commandId" | "featureId" | "value" | "properties" | "org"
 			>
 		>;
-	response?: TrackReply | CheckReply | InitializeReply;
+	response?: TrackReply | CheckReply | InitializeReply | FinalizeReply;
 	error?: Error;
 	errorCode?: WorkerErrorCode;
 };

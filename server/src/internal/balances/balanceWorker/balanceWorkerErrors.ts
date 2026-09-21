@@ -68,6 +68,16 @@ export function rethrowBalanceWorkerError({
 	}
 	if (
 		cause instanceof BalanceWorkerClientError &&
+		cause.workerCode === "LOCK_NOT_FOUND"
+	) {
+		// Settled or expired between the server's read and the worker's decision; same message as the legacy path.
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message: "Lock not found for ID: already finalized or expired",
+		});
+	}
+	if (
+		cause instanceof BalanceWorkerClientError &&
 		cause.workerCode === "LOCK_ALREADY_EXISTS"
 	) {
 		// Same code and status as the legacy path, which callers branch on.

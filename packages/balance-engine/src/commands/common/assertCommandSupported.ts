@@ -1,6 +1,5 @@
-import type { CheckCommand } from "../../commands/check/types/checkCommand.js";
-import type { TrackCommand } from "../../commands/track/types/trackCommand.js";
 import { UnsupportedCommandError } from "../../errors.js";
+import type { BaseCommand } from "../../models/command/baseCommand.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { isSameCustomerIdentity } from "../../utils/identityUtils/classifyIdentityUtils.js";
 
@@ -10,7 +9,8 @@ export const assertCommandSupported = ({
 	command,
 }: {
 	fullSubject: WorkerFullSubject;
-	command: TrackCommand | CheckCommand;
+	/** Only the identity is read, so any command qualifies. */
+	command: Pick<BaseCommand, "identity">;
 }): void => {
 	if (
 		!isSameCustomerIdentity({

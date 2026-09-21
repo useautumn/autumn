@@ -184,7 +184,13 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 		throw new Error("The wiring test never sends a command");
 	}
 	const consumer = { start, stop, findOwner, refresh };
-	const client = { track, check: track, initialize: track, evict: track };
+	const client = {
+		track,
+		check: track,
+		initialize: track,
+		evict: track,
+		finalize: track,
+	};
 	const createKafka = spyOn(kafka, "createKafkaClient");
 	const createConsumer = spyOn(
 		kafka,

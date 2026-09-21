@@ -80,3 +80,14 @@ export class LockAlreadyExistsError extends Error {
 		this.lockId = lockId;
 	}
 }
+
+/** No open lock under this id for the customer: never taken, already settled, or expired. */
+export class LockNotFoundError extends Error {
+	readonly lockId: string;
+
+	constructor({ lockId }: { lockId: string }) {
+		super(`Lock not found: ${lockId}`);
+		this.name = "LockNotFoundError";
+		this.lockId = lockId;
+	}
+}

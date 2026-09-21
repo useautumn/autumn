@@ -16,6 +16,7 @@ export type WorkerErrorCode =
 	| "COMMAND_CONFLICT"
 	| "DUPLICATE_COMMAND"
 	| "LOCK_ALREADY_EXISTS"
+	| "LOCK_NOT_FOUND"
 	| "UNSUPPORTED_COMMAND"
 	| "INTERNAL";
 export type WorkerErrorResponse = {
@@ -102,6 +103,7 @@ export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
 			return 409;
 		case "CUSTOMER_NOT_FOUND":
 		case "ENTITY_NOT_FOUND":
+		case "LOCK_NOT_FOUND":
 			return 404;
 		case "CATALOG_NOT_FOUND":
 			return 422;

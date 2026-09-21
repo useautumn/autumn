@@ -7,6 +7,10 @@ import {
 	evictCommandSchema,
 } from "./commands/evict/types/evictCommand.js";
 import {
+	type FinalizeCommand,
+	finalizeCommandSchema,
+} from "./commands/finalize/types/finalizeCommand.js";
+import {
 	type InitializeCommand,
 	initializeCommandSchema,
 } from "./commands/initialize/types/initializeCommand.js";
@@ -40,6 +44,10 @@ import {
 	workerCustomerEntitlementSchema,
 } from "./models/subject/rows/workerCustomerEntitlement.js";
 import {
+	type WorkerLock,
+	workerLockSchema,
+} from "./models/subject/rows/workerLock.js";
+import {
 	type SubjectState,
 	subjectStateSchema,
 } from "./models/subject/subjectState.js";
@@ -62,6 +70,12 @@ export const parseEvictCommand = ({
 	input: unknown;
 }): EvictCommand => evictCommandSchema.parse(input);
 
+export const parseFinalizeCommand = ({
+	input,
+}: {
+	input: unknown;
+}): FinalizeCommand => finalizeCommandSchema.parse(input);
+
 export const parseInitializeCommand = ({
 	input,
 }: {
@@ -73,6 +87,10 @@ export const parseInitializeRequest = ({
 }: {
 	input: unknown;
 }): InitializeRequest => initializeRequestSchema.parse(input);
+
+/** A lock row read back from Postgres, before it rides on a finalize command. */
+export const parseWorkerLock = ({ input }: { input: unknown }): WorkerLock =>
+	workerLockSchema.parse(input);
 
 export const parseSubjectState = ({
 	input,
