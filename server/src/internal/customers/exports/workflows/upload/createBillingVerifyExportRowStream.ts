@@ -12,10 +12,10 @@ import type { CustomerExportRowStreamFactory } from "./customerExportProducers.j
 import { walkCustomerExportPages } from "./walkCustomerExportPages.js";
 
 export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory =
-	({ ctx, snapshot, population, totalCount, onPageProcessed }) => {
+	({ ctx, snapshot, population, onPageProcessed }) => {
 		const exportRows =
 			async function* (): AsyncGenerator<BillingVerifyExportRow> {
-				const sweep = await setupBillingVerifySweep({ ctx, totalCount });
+				const sweep = await setupBillingVerifySweep({ ctx });
 
 				const pages = walkCustomerExportPages({
 					ctx,

@@ -9,7 +9,7 @@
  *   - The producer walks the filtered population and emits a CSV holding
  *     only the drifted customer.
  *   - A real org-wide sweep screens customers to the same rows as live reads.
- *   - With the org swept, a customer with nothing on Stripe is never loaded;
+ *   - A customer with nothing on Stripe is never loaded;
  *     one with a Stripe-linked plan always is.
  *   - A customer with a scheduled plan change verifies clean through the
  *     memoized reader, which serves both of verify's schedule reads.
@@ -243,7 +243,6 @@ test.concurrent(
 			ctx,
 			snapshot,
 			population,
-			totalCount,
 			onPageProcessed: (page) => {
 				pages.push(page);
 			},
@@ -284,14 +283,11 @@ test.concurrent(
 			},
 		});
 
-		const sweep = await setupBillingVerifySweep({
-			ctx,
-			totalCount: Number.MAX_SAFE_INTEGER,
-		});
+		const sweep = await setupBillingVerifySweep({ ctx });
 
 		expect(
 			sweep.sweptSubscriptions
-				?.get(healthy.stripeCustomerId)
+				.get(healthy.stripeCustomerId)
 				?.map((subscription) => subscription.id),
 		).toEqual([healthy.subscriptions[0].id]);
 		expect(
@@ -347,13 +343,6 @@ test.concurrent(
 			sweep: sweepOf({ ctx, subscriptionsByStripeCustomerId: new Map() }),
 		});
 		expect(swept.map((scalar) => scalar.id)).toEqual([subscribed.scalar.id]);
-
-		const unswept = await filterBillingVerifyCandidates({
-			ctx,
-			scalars,
-			sweep: sweepOf({ ctx, subscriptionsByStripeCustomerId: null }),
-		});
-		expect(unswept.length).toBe(2);
 	},
 );
 

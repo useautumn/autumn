@@ -1,7 +1,3 @@
-/** Below this many customers, reading each one live costs fewer Stripe calls
- * than listing the whole org. */
-export const SWEEP_MIN_CUSTOMER_COUNT = 500;
-
 // A page of live Stripe reads is slow, so small pages keep progress moving.
 export const BILLING_VERIFY_EXPORT_PAGE_SIZE = 40;
 

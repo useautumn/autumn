@@ -40,16 +40,6 @@ export const verifyCustomerToExportRows = async ({
 
 		const { stripeReader, sweptSubscriptions } = sweep;
 
-		if (!sweptSubscriptions) {
-			const response = await billingActions.verify({
-				ctx,
-				params,
-				prefetched: { fullCustomer },
-				stripeCli: stripeReader,
-			});
-			return verifyResponseToExportRows({ customer, response });
-		}
-
 		const screened = await billingActions.verify({
 			ctx,
 			params,

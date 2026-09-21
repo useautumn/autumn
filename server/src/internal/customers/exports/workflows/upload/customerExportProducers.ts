@@ -15,7 +15,6 @@ export type CustomerExportRowStreamFactory = (args: {
 	ctx: AutumnContext;
 	snapshot: CustomerExportSnapshot;
 	population: CustomerExportPopulation;
-	totalCount: number;
 	onPageProcessed: (page: {
 		customerCount: number;
 		rowCount: number;

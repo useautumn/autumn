@@ -8,7 +8,7 @@ import {
 import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalars.js";
 import type { BillingVerifySweep } from "./setupBillingVerifySweep.js";
 
-/** With the org swept, a customer with no Stripe subscription, no Stripe-linked
+/** A customer with no Stripe subscription, no Stripe-linked
  * plan and no shared Stripe id has nothing to verify, so it is never loaded. */
 export const filterBillingVerifyCandidates = async ({
 	ctx,
@@ -21,7 +21,6 @@ export const filterBillingVerifyCandidates = async ({
 }): Promise<CustomerExportScalarRow[]> => {
 	const onStripe = scalars.filter((scalar) => scalar.processor?.id);
 	const { sweptSubscriptions } = sweep;
-	if (!sweptSubscriptions) return onStripe;
 
 	const db = dbReplica ?? ctx.db;
 	const [linkedCustomerIds, sharedStripeCustomerIds] = await Promise.all([
