@@ -12,7 +12,7 @@ import { advanceStripeTestClock } from "@/external/stripe/testClocks/advanceStri
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
 
-const createAdvanceTestClockRoute = ({
+export const createAdvanceTestClockRoute = ({
 	scopes,
 }: {
 	scopes: RouteScopeRequirement;
@@ -53,9 +53,4 @@ const createAdvanceTestClockRoute = ({
 
 export const handleAdvanceTestClock = createAdvanceTestClockRoute({
 	scopes: [Scopes.Customers.Write],
-});
-
-/** `billing.advance_test_clock` predates the move; keys minted for it only hold billing:write. */
-export const handleLegacyBillingAdvanceTestClock = createAdvanceTestClockRoute({
-	scopes: { ANY: [Scopes.Customers.Write, Scopes.Billing.Write] },
 });

@@ -166,7 +166,7 @@ export const deleteCustomerContract = oc
 	)
 	.output(DeleteCustomerResponseSchema);
 
-const advanceTestClockDescription =
+export const advanceTestClockDescription =
 	"Advance a customer's Stripe test clock to a future time in milliseconds. Only Stripe test-mode customers with a test clock are supported. Advancement is asynchronous; Stripe enforces clock status and advancement limits.";
 
 export const advanceTestClockContract = oc
@@ -184,33 +184,4 @@ export const advanceTestClockContract = oc
 	.input(AdvanceTestClockParamsSchema.meta({ title: "AdvanceTestClockParams" }))
 	.output(
 		AdvanceTestClockResponseSchema.meta({ title: "AdvanceTestClockResponse" }),
-	);
-
-/**
- * Superseded by `customers.advance_test_clock`; still served for keys minted
- * against it, but hidden from the public spec, SDKs, docs and the CLI.
- */
-export const legacyBillingAdvanceTestClockContract = oc
-	.route({
-		method: "POST",
-		path: "/v1/billing.advance_test_clock",
-		operationId: "billingAdvanceTestClock",
-		tags: ["billing"],
-		description: advanceTestClockDescription,
-		deprecated: true,
-		spec: (spec) => ({
-			...spec,
-			"x-internal": true,
-			"x-speakeasy-ignore": true,
-		}),
-	})
-	.input(
-		AdvanceTestClockParamsSchema.meta({
-			title: "LegacyBillingAdvanceTestClockParams",
-		}),
-	)
-	.output(
-		AdvanceTestClockResponseSchema.meta({
-			title: "LegacyBillingAdvanceTestClockResponse",
-		}),
 	);

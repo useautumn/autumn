@@ -21,6 +21,7 @@ import {
 	billingPreviewUpdateContract,
 	billingSetupPaymentContract,
 	billingUpdateContract,
+	legacyBillingAdvanceTestClockContract,
 } from "./billingContract.js";
 import {
 	catalogV2DiffContract,
@@ -33,7 +34,6 @@ import {
 	deleteCustomerContract,
 	getCustomerContract,
 	getOrCreateCustomerContract,
-	legacyBillingAdvanceTestClockContract,
 	listCustomersContract,
 	updateCustomerContract,
 } from "./customersContract.js";
@@ -123,7 +123,6 @@ export const v2_3ContractRouter = oc.router({
 	updateCustomer: updateCustomerContract,
 	deleteCustomer: deleteCustomerContract,
 	advanceTestClock: advanceTestClockContract,
-	billingAdvanceTestClock: legacyBillingAdvanceTestClockContract,
 
 	// Plans
 	plansCreate: createPlanContract,
@@ -141,6 +140,7 @@ export const v2_3ContractRouter = oc.router({
 
 	// Billing
 	billingAttach: billingAttachContract,
+	billingAdvanceTestClock: legacyBillingAdvanceTestClockContract,
 	billingCreateSchedule: billingCreateScheduleContract,
 	billingMultiAttach: billingMultiAttachContract,
 	billingPreviewAttach: billingPreviewAttachContract,

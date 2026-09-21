@@ -1,4 +1,6 @@
 import {
+	AdvanceTestClockParamsSchema,
+	AdvanceTestClockResponseSchema,
 	AttachParamsV1Schema,
 	BILLING_PREVIEW_RESPONSE_EXAMPLE,
 	BillingResponseSchema,
@@ -27,6 +29,36 @@ import {
 	billingPreviewUpdateJsDoc,
 	billingUpdateJsDoc,
 } from "../jsDocs/billingJsDocs";
+import { advanceTestClockDescription } from "./customersContract";
+
+/**
+ * Superseded by `customers.advance_test_clock`; still served for keys minted
+ * against it, but hidden from the public spec, SDKs, docs and the CLI.
+ */
+export const legacyBillingAdvanceTestClockContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/billing.advance_test_clock",
+		operationId: "billingAdvanceTestClock",
+		tags: ["billing"],
+		description: advanceTestClockDescription,
+		deprecated: true,
+		spec: (spec) => ({
+			...spec,
+			"x-internal": true,
+			"x-speakeasy-ignore": true,
+		}),
+	})
+	.input(
+		AdvanceTestClockParamsSchema.meta({
+			title: "LegacyBillingAdvanceTestClockParams",
+		}),
+	)
+	.output(
+		AdvanceTestClockResponseSchema.meta({
+			title: "LegacyBillingAdvanceTestClockResponse",
+		}),
+	);
 
 export const billingAttachContract = oc
 	.route({
