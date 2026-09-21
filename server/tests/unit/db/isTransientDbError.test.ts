@@ -26,9 +26,27 @@ describe("isTransientDbError", () => {
 		).toBe(true);
 	});
 
-	test("does not match an application error", () => {
+	test("matches pg's dead-client error left behind by a masked drop", () => {
 		expect(
-			isTransientDbError({ error: new Error("unique constraint") }),
-		).toBe(false);
+			isTransientDbError({
+				error: new Error(
+					"Client has encountered a connection error and is not queryable",
+				),
+			}),
+		).toBe(true);
+	});
+
+	test("matches an idle-in-transaction session timeout by SQLSTATE", () => {
+		const error = Object.assign(
+			new Error("terminating connection due to idle-in-transaction timeout"),
+			{ code: "25P03" },
+		);
+		expect(isTransientDbError({ error })).toBe(true);
+	});
+
+	test("does not match an application error", () => {
+		expect(isTransientDbError({ error: new Error("unique constraint") })).toBe(
+			false,
+		);
 	});
 });
