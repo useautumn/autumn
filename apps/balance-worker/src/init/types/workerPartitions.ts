@@ -26,6 +26,7 @@ export type WorkerPartitionsContext = {
 	createRuntime: KafkaPartitionRuntimeFactory;
 	onError: PartitionsDependencies["onError"];
 	onUnhealthyPartition: PartitionsDependencies["onUnhealthyPartition"];
+	onServiceStopped?: PartitionsDependencies["onServiceStopped"];
 };
 
 export type WorkerPartitionsConfig = {

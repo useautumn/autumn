@@ -85,11 +85,19 @@ export function requestPartitionServiceStop({
 	state,
 	allocationGeneration,
 }: AllocationScope): void {
-	function stopCurrentAllocation(): void {
+	async function stopCurrentAllocation(): Promise<void> {
 		if (!isCurrentAllocation({ state, allocationGeneration })) return;
-		void stopPartitionServiceSafely({ ctx, state });
+		await stopPartitionServiceSafely({ ctx, state });
+		try {
+			ctx.onServiceStopped?.();
+		} catch (cause) {
+			reportPartitionError({ ctx, cause });
+		}
 	}
-	queueMicrotask(stopCurrentAllocation);
+	function scheduleStop(): void {
+		void stopCurrentAllocation();
+	}
+	queueMicrotask(scheduleStop);
 }
 
 export async function stopPartitionServiceSafely({

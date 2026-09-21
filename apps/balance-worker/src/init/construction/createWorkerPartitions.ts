@@ -131,6 +131,7 @@ export function createWorkerPartitions({
 			createRuntime,
 			onError: ctx.onError,
 			onUnhealthyPartition: ctx.onUnhealthyPartition,
+			onServiceStopped: ctx.onServiceStopped,
 		},
 		config,
 	});

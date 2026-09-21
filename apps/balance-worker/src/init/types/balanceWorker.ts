@@ -22,6 +22,10 @@ export type BalanceWorkerDependencies = {
 	checkpointSource?: PartitionCheckpointSource;
 	logger: Pick<AutumnLogger, "debug" | "info" | "warn" | "error">;
 	onError(failure: { cause: unknown }): void;
+	/** Raised when the partition service shuts itself down and will not resume.
+	 *  The entrypoint uses it to end the process so the scheduler replaces the
+	 *  task; leaving it unset keeps the old behaviour of staying up and idle. */
+	onServiceStopped?(): void;
 };
 
 export type BalanceWorkerConfig = {

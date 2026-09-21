@@ -98,6 +98,12 @@ export type PartitionsDependencies = {
 		partition: number;
 		cause: unknown;
 	}): void;
+	/** The service shut itself down after a partition failed terminally, so this
+	 *  worker owns nothing and will not pick anything up again. Nothing restarts a
+	 *  stopped consumer, so without someone acting on this the task stays alive
+	 *  and idle and the scheduler never learns to replace it. Left optional so a
+	 *  test can observe the stop without taking the runner down with it. */
+	onServiceStopped?(): void;
 };
 
 export type PartitionsConfig = {

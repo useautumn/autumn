@@ -145,6 +145,9 @@ const fixture = ({
 	const ownership = createPartitions({
 		config: { topic: "metering", healthRefreshIntervalMs: 60_000 },
 		ctx: {
+			onServiceStopped: () => {
+				events.push("service-stopped");
+			},
 			createRuntime,
 			consumer: {
 				start: async () => undefined,
@@ -799,4 +802,17 @@ describe("partitionLifecycle", function partitionLifecycleTests() {
 			expect(fixture.errors).toContain(cleanupFailure);
 		});
 	});
+});
+
+test("a terminal partition failure tells the entrypoint the worker is finished", async () => {
+	// Nothing restarts a stopped consumer, so the process has to end for the
+	// scheduler to replace the task. Staging sat at zero ready partitions for
+	// hours because this signal did not exist.
+	const f = fixture({ claimError: new Error("claim rejected") });
+	await f.ownership.start();
+	f.assign();
+	await waitFor(() => f.events.includes("consumer-stop"));
+	await waitFor(() => f.events.includes("service-stopped"));
+	expect(f.events).toContain("service-stopped");
+	await f.ownership.stop();
 });

@@ -84,6 +84,7 @@ export async function createBalanceWorker({
 				createRuntime,
 				onError: dependencies.onError,
 				onUnhealthyPartition: dependencies.onError,
+				onServiceStopped: dependencies.onServiceStopped,
 			},
 			config: {
 				topic: env.BALANCE_WORKER_METERING_TOPIC,
