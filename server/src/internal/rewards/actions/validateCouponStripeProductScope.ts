@@ -73,7 +73,7 @@ export const validateCouponStripeProductScope = async ({
 	if (missingPlanIds.length === 0) return;
 
 	throw new RecaseError({
-		message: `These plans share a Stripe product with the selected plans, and Stripe applies a coupon to the whole product. Include them as well: ${missingPlanIds.join(", ")}`,
+		message: `Stripe applies a coupon to a whole product, so also include: ${missingPlanIds.join(", ")}`,
 		code: ErrCode.InvalidRequest,
 		statusCode: 400,
 	});
