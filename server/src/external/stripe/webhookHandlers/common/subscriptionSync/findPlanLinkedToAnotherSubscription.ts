@@ -16,9 +16,10 @@ export const findPlanLinkedToAnotherSubscription = ({
 	fullCustomer: FullCustomer;
 	stripeSubscriptionId: string;
 }): FullCusProduct | undefined => {
-	const currentPhase = match.phaseMatches.find((phase) => phase.is_current);
+	// Future-phase plans expire the current plan at sync time too.
+	const matchedPlans = match.phaseMatches.flatMap((phase) => phase.plans);
 
-	for (const { product } of currentPhase?.plans ?? []) {
+	for (const { product } of matchedPlans) {
 		if (product.is_add_on) continue;
 
 		const currentCustomerProduct = findMainActiveCustomerProductByGroup({
