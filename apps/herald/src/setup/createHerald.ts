@@ -2,6 +2,7 @@ import type { HeraldEnv } from "@autumn/env/herald";
 import { createKafkaClient, createKafkaTransport } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { EventsDb } from "@autumn/postgres";
+import type { EventsTinybird } from "@autumn/tinybird";
 import { Kafka } from "kafkajs";
 import { createHeraldConsumers } from "../consumers/heraldConsumers.js";
 import { createStreamConsumer } from "../stream/createStreamConsumer.js";
@@ -13,7 +14,11 @@ export function createHerald({
 	ctx,
 	config,
 }: {
-	ctx: { logger: AutumnLogger; eventsDb: EventsDb };
+	ctx: {
+		logger: AutumnLogger;
+		eventsDb: EventsDb;
+		eventsTinybird: EventsTinybird | null;
+	};
 	config: { env: HeraldEnv };
 }): Herald {
 	const { env } = config;

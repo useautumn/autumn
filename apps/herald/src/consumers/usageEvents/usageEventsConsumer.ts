@@ -1,17 +1,22 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { EventsDb } from "@autumn/postgres";
 import type { EventInsert } from "@autumn/shared";
+import type { EventsTinybird } from "@autumn/tinybird";
 import type {
 	StreamConsumer,
 	StreamRecord,
 } from "../../stream/types/streamConsumer.js";
 import { recordToUsageEvent } from "./actions/recordToUsageEvent.js";
 
-/** A batch of records in, one insert out. A replayed record makes the same event id, which the insert skips. */
+/** One event built once feeds both stores. A replayed record makes the same event id, which the insert skips. */
 export function createUsageEventsConsumer({
 	ctx,
 }: {
-	ctx: { eventsDb: Pick<EventsDb, "insertUsageEvents">; logger: AutumnLogger };
+	ctx: {
+		eventsDb: Pick<EventsDb, "insertUsageEvents">;
+		eventsTinybird: EventsTinybird | null;
+		logger: Pick<AutumnLogger, "error">;
+	};
 }): StreamConsumer {
 	async function handle({
 		records,
@@ -23,6 +28,8 @@ export function createUsageEventsConsumer({
 			const event = recordToUsageEvent(record);
 			if (event) events.push(event);
 		}
+		// Tinybird first: it cannot skip a repeat, so a crash after it may repeat one batch, never lose one.
+		await ctx.eventsTinybird?.sendUsageEvents({ events });
 		const { refused } = await ctx.eventsDb.insertUsageEvents({ events });
 		// Set aside so the rest of the batch lands; loud, because a refused event is usage nobody will see.
 		for (const { event, cause } of refused) {

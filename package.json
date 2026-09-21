@@ -29,6 +29,7 @@
 			"packages/balance-engine",
 			"packages/edge-config",
 			"packages/postgres",
+			"packages/tinybird",
 			"packages/balance-worker-client",
 			"packages/kafka",
 			"packages/mcp",

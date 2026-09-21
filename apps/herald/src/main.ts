@@ -1,12 +1,17 @@
 import { getHeraldEnv } from "@autumn/env/herald";
 import { createHerald, type Herald } from "./setup/createHerald.js";
 import { getEventsDb } from "./setup/getEventsDb.js";
+import { getEventsTinybird } from "./setup/getEventsTinybird.js";
 import { getHeraldLogger } from "./setup/getHeraldLogger.js";
 
 async function main(): Promise<void> {
 	const logger = getHeraldLogger();
 	const herald = createHerald({
-		ctx: { logger, eventsDb: getEventsDb() },
+		ctx: {
+			logger,
+			eventsDb: getEventsDb(),
+			eventsTinybird: getEventsTinybird(),
+		},
 		config: { env: getHeraldEnv() },
 	});
 	registerShutdownSignals({ herald });

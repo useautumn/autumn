@@ -128,9 +128,9 @@ test.concurrent(
 			},
 		});
 
-		// Run expire lock function
+		// A real job's ctx is stamped when the job starts; the shared test ctx predates the lock.
 		await expireLock({
-			ctx,
+			ctx: { ...ctx, timestamp: Date.now() },
 			payload: buildExpireLockPayload({ ctx, customerId }),
 		});
 

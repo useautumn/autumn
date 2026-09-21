@@ -1,5 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { EventsDb } from "@autumn/postgres";
+import type { EventsTinybird } from "@autumn/tinybird";
 import type { StreamConsumer } from "../stream/types/streamConsumer.js";
 import { createUsageEventsConsumer } from "./usageEvents/usageEventsConsumer.js";
 
@@ -7,7 +8,11 @@ import { createUsageEventsConsumer } from "./usageEvents/usageEventsConsumer.js"
 export function createHeraldConsumers({
 	ctx,
 }: {
-	ctx: { eventsDb: EventsDb; logger: AutumnLogger };
+	ctx: {
+		eventsDb: EventsDb;
+		eventsTinybird: EventsTinybird | null;
+		logger: AutumnLogger;
+	};
 }): StreamConsumer[] {
 	return [createUsageEventsConsumer({ ctx })];
 }

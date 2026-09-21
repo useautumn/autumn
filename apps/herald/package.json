@@ -17,6 +17,8 @@
 		"@autumn/logging": "workspace:*",
 		"@autumn/postgres": "workspace:*",
 		"@autumn/shared": "workspace:*",
+		"@autumn/tinybird": "workspace:*",
+		"decimal.js": "^10.5.0",
 		"kafkajs": "^2.2.4",
 		"zod": "^3.25.23"
 	},
