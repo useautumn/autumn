@@ -31,13 +31,23 @@ export const createCatalogCache = ({
 				sizeCalculation: (row) => JSON.stringify(row).length,
 				// Default ttl; a per-entry ttl of 0 on set opts a row out of expiry.
 				ttl: ctx.config.mutableRowTtlMs,
+				// An expired row is kept and stays retrievable by an explicit stale
+				// read. Refreshing still happens on the strict read that `ensure`
+				// does, so rows do not go stale indefinitely; this only stops a row
+				// ageing out between `ensure` filling the cache and the decision
+				// reading it, which failed the request outright.
+				allowStale: true,
+				// Without this the first stale read drops the row, so the next
+				// decision on the same key fails exactly the way this is meant to
+				// prevent. The row survives until `ensure` replaces it.
+				noDeleteOnStaleGet: true,
 			}),
 			inFlight: new Map(),
 		},
 	};
 
 	return {
-		read: ({ keys }) => readCatalog({ scope, keys }),
+		read: ({ keys, allowStale }) => readCatalog({ scope, keys, allowStale }),
 		load: ({ identity, keys }) => loadCatalogRows({ scope, identity, keys }),
 		put: ({ rows }) => putCatalogRows({ scope, rows }),
 		invalidate: ({ orgId, env }) => invalidateCatalog({ scope, orgId, env }),

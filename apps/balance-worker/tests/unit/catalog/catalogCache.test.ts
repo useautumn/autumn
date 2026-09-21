@@ -231,3 +231,30 @@ describe("catalog cache", () => {
 		).toThrow(RangeError);
 	});
 });
+
+test("an expired row is hidden from a strict read and still available to a stale one", async () => {
+	// Entitlements are set with no expiry, so this only concerns the row types
+	// that do age out. The decision runs after `ensure` has refreshed whatever
+	// was due, so a row crossing its ttl in that gap is still the row just
+	// fetched, and failing the request over that timing was costing traffic.
+	// A strict read must still miss it, or `ensure` would never refresh it.
+	const feature = featureRow({ internalId: "feat_stale" });
+	const db = createFakeDb({ rows: [feature] });
+	db.release();
+	const cache = createCache({ db, mutableRowTtlMs: 20 });
+	const keys = [keyOf(feature)];
+
+	await cache.load({ identity, keys });
+	expect(Object.keys(cache.read({ keys }).features)).toEqual(["feat_stale"]);
+
+	await new Promise((resolve) => setTimeout(resolve, 40));
+
+	expect(cache.read({ keys }).features).toEqual({});
+	// Readable more than once: the first stale read must not drop the row.
+	expect(Object.keys(cache.read({ keys, allowStale: true }).features)).toEqual([
+		"feat_stale",
+	]);
+	expect(Object.keys(cache.read({ keys, allowStale: true }).features)).toEqual([
+		"feat_stale",
+	]);
+});

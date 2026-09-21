@@ -7,8 +7,9 @@ import type {
 
 /** The worker's in-memory copy of the catalog rows its states reference. */
 export type CatalogCache = {
-	/** Synchronous: the cached rows among `keys`; anything absent or expired is simply not in the result. */
-	read(params: { keys: CatalogKey[] }): Catalog;
+	/** Synchronous: the cached rows among `keys`; anything absent is simply not in
+	 *  the result. Expired rows are excluded unless `allowStale` asks for them. */
+	read(params: { keys: CatalogKey[]; allowStale?: boolean }): Catalog;
 	/** Resolves `keys` through the source and caches what it finds; concurrent calls share one fetch per key. */
 	load(params: {
 		identity: MeteringIdentity;
