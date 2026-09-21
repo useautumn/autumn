@@ -1,8 +1,10 @@
 import { CustomerExportKind } from "@autumn/shared";
+import { type Icon, UsersIcon, WarningCircleIcon } from "@phosphor-icons/react";
 
 export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 	CustomerExportKind,
 	{
+		menuIcon: Icon;
 		menuLabel: string;
 		title: string;
 		description: string;
@@ -11,6 +13,7 @@ export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 	}
 > = {
 	[CustomerExportKind.Customers]: {
+		menuIcon: UsersIcon,
 		menuLabel: "Export customers",
 		title: "Export customers",
 		description: "Download your customer list as a CSV file.",
@@ -18,6 +21,7 @@ export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 		submitLabel: "Start export",
 	},
 	[CustomerExportKind.BillingVerify]: {
+		menuIcon: WarningCircleIcon,
 		menuLabel: "Export billing issues",
 		title: "Export billing issues",
 		description:

@@ -5,12 +5,9 @@ import {
 	emptyPlanColumns,
 	getCustomerExportPlanColumns,
 } from "../../queries/getCustomerExportPlanColumns.js";
-import {
-	CUSTOMER_EXPORT_PAGE_SIZE,
-	getCustomerExportScalars,
-} from "../../queries/getCustomerExportScalars.js";
 import { createOneOffProductLookup } from "../../queries/getOneOffProductLookup.js";
 import type { CustomerExportRowStreamFactory } from "./customerExportProducers.js";
+import { walkCustomerExportPages } from "./walkCustomerExportPages.js";
 
 export const createCustomerExportRowStream: CustomerExportRowStreamFactory = ({
 	ctx,
@@ -22,22 +19,11 @@ export const createCustomerExportRowStream: CustomerExportRowStreamFactory = ({
 	const oneOffProductLookup = createOneOffProductLookup({ db: readDb });
 
 	const exportRows = async function* (): AsyncGenerator<CustomerExportRow> {
-		let afterInternalId: string | null = null;
-		let hasMorePages = true;
-
-		while (hasMorePages) {
-			const scalars = await getCustomerExportScalars({
-				db: readDb,
-				orgId: ctx.org.id,
-				env: ctx.env,
-				snapshot,
-				upperBoundInternalId: population.upperBoundInternalId,
-				createdAtCutoff: population.createdAtCutoff,
-				afterInternalId,
-			});
-			const lastScalar = scalars[scalars.length - 1];
-			if (!lastScalar) break;
-
+		for await (const scalars of walkCustomerExportPages({
+			ctx,
+			snapshot,
+			population,
+		})) {
 			const planColumnsByCustomer = await getCustomerExportPlanColumns({
 				db: readDb,
 				internalCustomerIds: scalars.map((scalar) => scalar.internal_id),
@@ -61,9 +47,6 @@ export const createCustomerExportRowStream: CustomerExportRowStreamFactory = ({
 				customerCount: scalars.length,
 				rowCount: scalars.length,
 			});
-
-			afterInternalId = lastScalar.internal_id;
-			hasMorePages = scalars.length === CUSTOMER_EXPORT_PAGE_SIZE;
 		}
 	};
 

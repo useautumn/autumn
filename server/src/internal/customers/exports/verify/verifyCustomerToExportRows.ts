@@ -1,6 +1,6 @@
 import type { BillingVerifyExportRow } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { verify } from "@/internal/billing/v2/actions/verify/verify.js";
+import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { CusService } from "../../CusService.js";
 import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalars.js";
 import type { BillingVerifySweep } from "./setupBillingVerifySweep.js";
@@ -41,7 +41,7 @@ export const verifyCustomerToExportRows = async ({
 		const { stripeReader, sweptSubscriptions } = sweep;
 
 		if (!sweptSubscriptions) {
-			const response = await verify({
+			const response = await billingActions.verify({
 				ctx,
 				params,
 				prefetched: { fullCustomer },
@@ -50,7 +50,7 @@ export const verifyCustomerToExportRows = async ({
 			return verifyResponseToExportRows({ customer, response });
 		}
 
-		const screened = await verify({
+		const screened = await billingActions.verify({
 			ctx,
 			params,
 			prefetched: {
@@ -61,7 +61,7 @@ export const verifyCustomerToExportRows = async ({
 		});
 		if (isVerifyResponseClean({ response: screened })) return [];
 
-		const confirmed = await verify({
+		const confirmed = await billingActions.verify({
 			ctx,
 			params,
 			prefetched: { fullCustomer },

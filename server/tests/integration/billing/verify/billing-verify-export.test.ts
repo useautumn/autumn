@@ -9,6 +9,8 @@
  *   - The producer walks the filtered population and emits a CSV holding
  *     only the drifted customer.
  *   - A real org-wide sweep screens customers to the same rows as live reads.
+ *   - With the org swept, a customer with nothing on Stripe is never loaded;
+ *     one with a Stripe-linked plan always is.
  *   - A billing_verify job runs to completion: published to S3, downloadable
  *     under its own file name, holding only the drifted customer.
  */
@@ -32,6 +34,7 @@ import { downloadCustomerExport } from "@/internal/customers/exports/actions/dow
 import { CustomerExportService } from "@/internal/customers/exports/CustomerExportService";
 import { resolveCustomerExportPopulation } from "@/internal/customers/exports/queries/getCustomerExportScalars";
 import { createBillingVerifyStripeReader } from "@/internal/customers/exports/verify/createBillingVerifyStripeReader";
+import { filterBillingVerifyCandidates } from "@/internal/customers/exports/verify/filterBillingVerifyCandidates";
 import {
 	type BillingVerifySweep,
 	setupBillingVerifySweep,
@@ -310,6 +313,47 @@ test.concurrent(
 				type: "base_price_mismatch",
 			},
 		]);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("billing-verify export 7: swept run loads only customers with something to verify")}`,
+	async () => {
+		const subscribed = await setupSubscribedCustomer({
+			customerId: "verify-export-candidate-subscribed",
+		});
+		const { ctx: idleCtx } = await initScenario({
+			customerId: "verify-export-candidate-idle",
+			setup: [s.customer({ paymentMethod: "success" })],
+			actions: [],
+		});
+		const idleCustomer = await CusService.getFull({
+			ctx: idleCtx,
+			idOrInternalId: "verify-export-candidate-idle",
+		});
+		const idleScalar = {
+			internal_id: idleCustomer.internal_id,
+			id: idleCustomer.id ?? null,
+			name: idleCustomer.name ?? null,
+			email: idleCustomer.email ?? null,
+			processor: idleCustomer.processor ?? null,
+		};
+		const scalars = [subscribed.scalar, idleScalar];
+		const { ctx } = subscribed;
+
+		const swept = await filterBillingVerifyCandidates({
+			ctx,
+			scalars,
+			sweep: sweepOf({ ctx, subscriptionsByStripeCustomerId: new Map() }),
+		});
+		expect(swept.map((scalar) => scalar.id)).toEqual([subscribed.scalar.id]);
+
+		const unswept = await filterBillingVerifyCandidates({
+			ctx,
+			scalars,
+			sweep: sweepOf({ ctx, subscriptionsByStripeCustomerId: null }),
+		});
+		expect(unswept.length).toBe(2);
 	},
 );
 

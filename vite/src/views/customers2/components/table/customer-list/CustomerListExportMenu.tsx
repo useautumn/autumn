@@ -35,14 +35,20 @@ export function CustomerListExportMenu() {
 					/>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
-					{EXPORT_KINDS.map((kind) => (
-						<DropdownMenuItem
-							key={kind}
-							onClick={() => setSheet({ kind, open: true })}
-						>
-							{CUSTOMER_EXPORT_SHEET_COPY[kind].menuLabel}
-						</DropdownMenuItem>
-					))}
+					{EXPORT_KINDS.map((kind) => {
+						const { menuIcon: MenuIcon, menuLabel } =
+							CUSTOMER_EXPORT_SHEET_COPY[kind];
+						return (
+							<DropdownMenuItem
+								key={kind}
+								className="flex gap-2"
+								onClick={() => setSheet({ kind, open: true })}
+							>
+								<MenuIcon />
+								{menuLabel}
+							</DropdownMenuItem>
+						);
+					})}
 				</DropdownMenuContent>
 			</DropdownMenu>
 
