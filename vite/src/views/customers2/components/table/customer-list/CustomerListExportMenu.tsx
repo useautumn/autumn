@@ -1,3 +1,4 @@
+import { CustomerExportKind } from "@autumn/shared";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -8,9 +9,16 @@ import {
 import { EllipsisVertical } from "lucide-react";
 import { useState } from "react";
 import { CustomerExportSheet } from "../../export/CustomerExportSheet";
+import { CUSTOMER_EXPORT_SHEET_COPY } from "../../export/customerExportSheetCopy";
+
+const EXPORT_KINDS = Object.values(CustomerExportKind);
 
 export function CustomerListExportMenu() {
-	const [isSheetOpen, setIsSheetOpen] = useState(false);
+	// The kind outlives `open` so the sheet keeps its copy while animating out.
+	const [sheet, setSheet] = useState<{
+		kind: CustomerExportKind;
+		open: boolean;
+	}>({ kind: CustomerExportKind.Customers, open: false });
 
 	return (
 		<>
@@ -27,13 +35,22 @@ export function CustomerListExportMenu() {
 					/>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
-					<DropdownMenuItem onClick={() => setIsSheetOpen(true)}>
-						Export customers
-					</DropdownMenuItem>
+					{EXPORT_KINDS.map((kind) => (
+						<DropdownMenuItem
+							key={kind}
+							onClick={() => setSheet({ kind, open: true })}
+						>
+							{CUSTOMER_EXPORT_SHEET_COPY[kind].menuLabel}
+						</DropdownMenuItem>
+					))}
 				</DropdownMenuContent>
 			</DropdownMenu>
 
-			<CustomerExportSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} />
+			<CustomerExportSheet
+				kind={sheet.kind}
+				open={sheet.open}
+				onOpenChange={(open) => setSheet((current) => ({ ...current, open }))}
+			/>
 		</>
 	);
 }

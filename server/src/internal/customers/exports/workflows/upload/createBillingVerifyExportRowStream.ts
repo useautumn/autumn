@@ -1,10 +1,9 @@
 import { Readable } from "node:stream";
 import type { BillingVerifyExportRow } from "@autumn/shared";
 import { dbReplica } from "@/db/initDrizzle.js";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { mapWithConcurrency } from "@/internal/migrations/v2/batchOperations/execute/utils/mapWithConcurrency.js";
 import { getCustomerExportScalars } from "../../queries/getCustomerExportScalars.js";
-import { sweepStripeSubscriptions } from "../../verify/sweepStripeSubscriptions.js";
+import { setupBillingVerifySweep } from "../../verify/setupBillingVerifySweep.js";
 import { verifyCustomerToExportRows } from "../../verify/verifyCustomerToExportRows.js";
 import type { CustomerExportRowStreamFactory } from "./customerExportProducers.js";
 
@@ -13,14 +12,12 @@ const BILLING_VERIFY_EXPORT_PAGE_SIZE = 200;
 const BILLING_VERIFY_CONCURRENCY = 8;
 
 export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory =
-	({ ctx, snapshot, population, onPageProcessed }) => {
+	({ ctx, snapshot, population, totalCount, onPageProcessed }) => {
 		const readDb = dbReplica ?? ctx.db;
 
 		const exportRows =
 			async function* (): AsyncGenerator<BillingVerifyExportRow> {
-				const sweptSubscriptions = await sweepStripeSubscriptions({
-					stripeCli: createStripeCli({ org: ctx.org, env: ctx.env }),
-				});
+				const sweep = await setupBillingVerifySweep({ ctx, totalCount });
 
 				let afterInternalId: string | null = null;
 				let hasMorePages = true;
@@ -44,7 +41,7 @@ export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory 
 							items: scalars,
 							concurrency: BILLING_VERIFY_CONCURRENCY,
 							run: (scalar) =>
-								verifyCustomerToExportRows({ ctx, scalar, sweptSubscriptions }),
+								verifyCustomerToExportRows({ ctx, scalar, sweep }),
 						})
 					).flat();
 					yield* rows;

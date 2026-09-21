@@ -2,6 +2,8 @@ import { describe, expect, it } from "bun:test";
 import type { VerifyResponse } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createBillingVerifyExportStringifier } from "@/internal/customers/exports/csv/createBillingVerifyExportStringifier.js";
+import { createBillingVerifyStripeReader } from "@/internal/customers/exports/verify/createBillingVerifyStripeReader.js";
+import { sweepStripeSchedules } from "@/internal/customers/exports/verify/sweepStripeSchedules.js";
 import { sweepStripeSubscriptions } from "@/internal/customers/exports/verify/sweepStripeSubscriptions.js";
 import {
 	isVerifyResponseClean,
@@ -128,5 +130,116 @@ describe("sweepStripeSubscriptions", () => {
 			"sub_3",
 		]);
 		expect(swept.get("cus_b")?.map((sub) => sub.id)).toEqual(["sub_2"]);
+	});
+});
+
+const asyncList = <Item>(items: Item[]) => ({
+	async *[Symbol.asyncIterator]() {
+		yield* items;
+	},
+});
+
+describe("sweepStripeSchedules", () => {
+	it("keeps only live schedules", async () => {
+		const stripeCli = {
+			subscriptionSchedules: {
+				list: () =>
+					asyncList([
+						{ id: "sched_active", status: "active" },
+						{ id: "sched_pending", status: "not_started" },
+						{ id: "sched_released", status: "released" },
+						{ id: "sched_canceled", status: "canceled" },
+					]),
+			},
+		} as unknown as Stripe;
+
+		const swept = await sweepStripeSchedules({ stripeCli });
+
+		expect([...swept.keys()]).toEqual(["sched_active", "sched_pending"]);
+	});
+});
+
+describe("createBillingVerifyStripeReader", () => {
+	const buildStripeCli = () => {
+		const calls = { prices: 0, schedules: 0, subscriptions: 0 };
+		const stripeCli = {
+			prices: {
+				retrieve: async (id: string) => {
+					calls.prices++;
+					return { id };
+				},
+			},
+			subscriptionSchedules: {
+				retrieve: async (id: string) => {
+					calls.schedules++;
+					return { id, source: "live" };
+				},
+			},
+			subscriptions: {
+				retrieve: async (id: string) => {
+					calls.subscriptions++;
+					return { id };
+				},
+			},
+		} as unknown as Stripe;
+		return { calls, stripeCli };
+	};
+
+	it("reads each price once for the whole run", async () => {
+		const { calls, stripeCli } = buildStripeCli();
+		const reader = createBillingVerifyStripeReader({ stripeCli });
+
+		await Promise.all([
+			reader.prices.retrieve("price_1", { expand: ["tiers"] }),
+			reader.prices.retrieve("price_1", { expand: ["tiers"] }),
+		]);
+		await reader.prices.retrieve("price_1", { expand: ["tiers"] });
+
+		expect(calls.prices).toBe(1);
+	});
+
+	it("serves swept schedules from memory and falls back live", async () => {
+		const { calls, stripeCli } = buildStripeCli();
+		const swept = { id: "sched_1" } as Stripe.SubscriptionSchedule;
+		const reader = createBillingVerifyStripeReader({
+			stripeCli,
+			schedulesById: new Map([["sched_1", swept]]),
+		});
+
+		expect(await reader.subscriptionSchedules.retrieve("sched_1")).toBe(
+			swept as Stripe.Response<Stripe.SubscriptionSchedule>,
+		);
+		await reader.subscriptionSchedules.retrieve("sched_2");
+		await reader.subscriptionSchedules.retrieve("sched_2");
+
+		expect(calls.schedules).toBe(1);
+	});
+
+	it("leaves every other resource live", async () => {
+		const { calls, stripeCli } = buildStripeCli();
+		const reader = createBillingVerifyStripeReader({ stripeCli });
+
+		await reader.subscriptions.retrieve("sub_1");
+		await reader.subscriptions.retrieve("sub_1");
+
+		expect(calls.subscriptions).toBe(2);
+	});
+
+	it("does not cache a failed read", async () => {
+		let attempts = 0;
+		const stripeCli = {
+			prices: {
+				retrieve: async (id: string) => {
+					attempts++;
+					if (attempts === 1) throw new Error("rate limited");
+					return { id };
+				},
+			},
+			subscriptionSchedules: {},
+		} as unknown as Stripe;
+		const reader = createBillingVerifyStripeReader({ stripeCli });
+
+		await expect(reader.prices.retrieve("price_1")).rejects.toThrow();
+		expect((await reader.prices.retrieve("price_1")).id).toBe("price_1");
 	});
 });

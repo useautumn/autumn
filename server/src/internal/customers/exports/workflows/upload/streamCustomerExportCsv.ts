@@ -9,12 +9,14 @@ export const streamCustomerExportCsv = async ({
 	ctx,
 	customerExport,
 	population,
+	totalCount,
 	destination,
 	onCustomersProcessed,
 }: {
 	ctx: AutumnContext;
 	customerExport: DbCustomerExport;
 	population: CustomerExportPopulation;
+	totalCount: number;
 	destination: CustomerExportDestination;
 	onCustomersProcessed?: (customerCount: number) => Promise<void> | void;
 }): Promise<{ rowCount: number; byteCount: number }> => {
@@ -27,6 +29,7 @@ export const streamCustomerExportCsv = async ({
 		ctx,
 		snapshot,
 		population,
+		totalCount,
 		onPageProcessed: async (page) => {
 			rowCount += page.rowCount;
 			await onCustomersProcessed?.(page.customerCount);

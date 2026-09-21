@@ -59,6 +59,7 @@ export const uploadCustomerExportCsv = async ({
 		ctx,
 		customerExport,
 		population,
+		totalCount,
 		destination: { bucket, region, key },
 		onCustomersProcessed: (customerCount) =>
 			progress?.incrementProcessedRows(customerCount),

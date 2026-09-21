@@ -1,5 +1,6 @@
 import {
-	type CreateCustomerExportParams,
+	type CreateCustomerExportParamsSchema,
+	type CustomerExportKind,
 	type CustomerExportResponse,
 	type DownloadCustomerExportResponse,
 	isCustomerExportActive,
@@ -15,6 +16,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { toast } from "sonner";
+import type { z } from "zod/v4";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
@@ -27,10 +29,12 @@ export const CUSTOMER_EXPORTS_QUERY_KEY = "customer-exports";
 const ACTIVE_EXPORT_POLL_INTERVAL_MS = ms.seconds(2);
 
 export const useCustomerExportsQuery = ({
+	kind,
 	enabled,
 	limit = MAX_CUSTOMER_EXPORTS_PAGE_SIZE,
 	offset = 0,
 }: {
+	kind: CustomerExportKind;
 	enabled: boolean;
 	limit?: number;
 	offset?: number;
@@ -39,13 +43,13 @@ export const useCustomerExportsQuery = ({
 	const buildKey = useQueryKeyFactory();
 
 	return useQuery({
-		queryKey: [...buildKey([CUSTOMER_EXPORTS_QUERY_KEY]), limit, offset],
+		queryKey: [...buildKey([CUSTOMER_EXPORTS_QUERY_KEY]), kind, limit, offset],
 		enabled,
 		placeholderData: keepPreviousData,
 		queryFn: async () => {
 			const { data } = await axiosInstance.get<ListCustomerExportsResponse>(
 				"/customers/exports",
-				{ params: { limit, offset } },
+				{ params: { kind, limit, offset } },
 			);
 			return data;
 		},
@@ -72,7 +76,9 @@ export const useCreateCustomerExport = () => {
 	const invalidateExports = useInvalidateCustomerExports();
 
 	return useMutation({
-		mutationFn: async (params: CreateCustomerExportParams) => {
+		mutationFn: async (
+			params: z.input<typeof CreateCustomerExportParamsSchema>,
+		) => {
 			const { data } = await axiosInstance.post<{
 				export: CustomerExportResponse;
 			}>("/customers/exports", params);

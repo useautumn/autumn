@@ -1,9 +1,9 @@
 import type { BillingVerifyExportRow } from "@autumn/shared";
-import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { verify } from "@/internal/billing/v2/actions/verify/verify.js";
 import { CusService } from "../../CusService.js";
 import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalars.js";
+import type { BillingVerifySweep } from "./setupBillingVerifySweep.js";
 import {
 	isVerifyResponseClean,
 	verifyResponseToExportRows,
@@ -14,11 +14,11 @@ import {
 export const verifyCustomerToExportRows = async ({
 	ctx,
 	scalar,
-	sweptSubscriptions,
+	sweep,
 }: {
 	ctx: AutumnContext;
 	scalar: CustomerExportScalarRow;
-	sweptSubscriptions: Map<string, Stripe.Subscription[]>;
+	sweep: BillingVerifySweep;
 }): Promise<BillingVerifyExportRow[]> => {
 	const stripeCustomerId = scalar.processor?.id;
 	if (!stripeCustomerId) return [];
@@ -38,6 +38,18 @@ export const verifyCustomerToExportRows = async ({
 		});
 		const params = { customer_id: scalar.id ?? scalar.internal_id };
 
+		const { stripeReader, sweptSubscriptions } = sweep;
+
+		if (!sweptSubscriptions) {
+			const response = await verify({
+				ctx,
+				params,
+				prefetched: { fullCustomer },
+				stripeCli: stripeReader,
+			});
+			return verifyResponseToExportRows({ customer, response });
+		}
+
 		const screened = await verify({
 			ctx,
 			params,
@@ -45,6 +57,7 @@ export const verifyCustomerToExportRows = async ({
 				fullCustomer,
 				subscriptions: sweptSubscriptions.get(stripeCustomerId) ?? [],
 			},
+			stripeCli: stripeReader,
 		});
 		if (isVerifyResponseClean({ response: screened })) return [];
 
