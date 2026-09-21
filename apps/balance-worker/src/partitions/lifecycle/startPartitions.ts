@@ -14,6 +14,13 @@ import {
  *  already holds always resolves or rejects exactly once. */
 type StartOneEntry = (params: { entry: PartitionEntry }) => Promise<void>;
 
+/** Named indirectly because this package's TypeScript configuration does not expose
+ *  PromiseWithResolvers as a global type, even though the call itself resolves. */
+function createStartupSettlement() {
+	return Promise.withResolvers<void>();
+}
+type StartupSettlement = ReturnType<typeof createStartupSettlement>;
+
 /** Works through the queue a few entries at a time. Several of these run side by
  *  side and share the cursor, so the number in flight never exceeds the number
  *  of runners regardless of how many partitions were assigned. */
@@ -24,7 +31,7 @@ async function drainStartupQueue({
 	start,
 }: {
 	entries: PartitionEntry[];
-	settlements: PromiseWithResolvers<void>[];
+	settlements: StartupSettlement[];
 	cursor: { next: number };
 	start: StartOneEntry;
 }): Promise<void> {
@@ -57,10 +64,10 @@ export async function runBoundedStartups({
 	// Every entry gets its promise before any of them begins. Retirement awaits
 	// entry.startup, so a partition retired while still queued must already have
 	// something to wait on rather than a null it would skip straight past.
-	const settlements: PromiseWithResolvers<void>[] = [];
+	const settlements: StartupSettlement[] = [];
 	const startups: Promise<void>[] = [];
 	for (const entry of entries) {
-		const settlement = Promise.withResolvers<void>();
+		const settlement = createStartupSettlement();
 		entry.startup = settlement.promise;
 		settlements.push(settlement);
 		startups.push(settlement.promise);

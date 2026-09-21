@@ -198,7 +198,11 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 		});
 
 		await expect(
-			producer.release({ partition, releasedAt: 1_700_000_000_100 }),
+			producer.release({
+				partition,
+				releasedAt: 1_700_000_000_100,
+				endpoint: "http://10.0.0.4:8080",
+			}),
 		).resolves.toEqual({ routeEpoch: "12" });
 		expect(
 			ownershipTopic.parse({
@@ -504,7 +508,11 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 				claim.routeEpoch,
 			);
 			fixture.rejoin();
-			await publisher.release({ partition, releasedAt: 2 });
+			await publisher.release({
+				partition,
+				releasedAt: 2,
+				endpoint: "http://worker:8080",
+			});
 			expect(consumer.findOwner({ partition })).toBeUndefined();
 			expect(fixture.readStats().offsetReads).toBe(reads);
 			expect(fixture.readStats().groupConfig).toMatchObject({
@@ -666,7 +674,11 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 				BigInt(first.routeEpoch),
 			);
 
-			await ownershipPublisher.release({ partition, releasedAt: 3 });
+			await ownershipPublisher.release({
+				partition,
+				releasedAt: 3,
+				endpoint: "http://10.0.0.8:8080",
+			});
 			await consumer.refresh();
 			expect(consumer.findOwner({ partition })).toBeUndefined();
 			await consumer.stop();

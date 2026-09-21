@@ -112,6 +112,7 @@ describe("ownership topic", () => {
 			await ownershipPublisher.release({
 				partition,
 				releasedAt: Date.now(),
+				endpoint: "http://10.0.0.4:8080",
 			});
 			await consumer.refresh();
 			expect(consumer.findOwner({ partition })).toBeUndefined();
