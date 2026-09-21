@@ -50,10 +50,14 @@ export const BALANCE_WORKER_PARTITION_STARTUP_CONCURRENCY = 16;
  *  starts over. The default of ten seconds was written when that log was short.
  *  It accumulates a record per claim and per release, so it grows with every
  *  deploy, and a staging read of it took roughly twenty seconds with four of
- *  those spent joining the group before the first record arrived. Overrunning
- *  leaves the server with no owners at all, so this is deliberately generous:
- *  a slow start costs nothing, and the listener does not wait for it. */
-export const BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS = 60_000;
+ *  those spent joining the group before the first record arrived. Every server
+ *  reads the whole log independently, so a large fleet multiplies that
+ *  contention: at thirty servers almost none finished inside sixty seconds and
+ *  the fleet served "no owner" for everything. Overrunning leaves a server with
+ *  no owner table at all, so this is deliberately generous: a slow start costs
+ *  nothing, and the listener does not wait for it. The real remedy is letting
+ *  the topic compact, which collapses it to about one record per partition. */
+export const BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS = 180_000;
 
 export const BALANCE_WORKER_CATALOG_TTL_MS = 300_000;
 /** Shared per worker rather than per partition. Staging evicted rows out from

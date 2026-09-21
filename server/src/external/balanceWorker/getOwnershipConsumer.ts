@@ -97,8 +97,20 @@ export async function startOwnershipConsumer(): Promise<void> {
 			return;
 		} catch (error) {
 			// The failed consumer cannot be restarted, so the next attempt builds a
-			// fresh one. Whatever routing was already using stays in place.
+			// fresh one. Whatever routing was already using stays in place. Stop the
+			// failed one first: abandoning it leaves its group membership alive, and
+			// across a fleet of retrying servers those pile up — staging reached 99
+			// live consumer groups across 29 hosts.
+			const abandoned = startingConsumer;
 			startingConsumer = undefined;
+			try {
+				await abandoned?.stop();
+			} catch (stopError) {
+				logger.warn(
+					{ error: stopError },
+					"[balance-worker] Could not stop a failed ownership consumer",
+				);
+			}
 			const waitMs = ownershipRetryDelayMs({ attempt });
 			logger.error(
 				{
