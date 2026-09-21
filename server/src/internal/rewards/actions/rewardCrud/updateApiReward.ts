@@ -218,9 +218,7 @@ const recreateStripeCoupon = async ({
 
 	// Preflight before deleting, so a plan missing in Stripe fails the update
 	// while the existing coupon is still intact.
-	if (!updated.discount_config?.apply_to_all) {
-		await validateCouponStripeProductScope({ ctx, prices });
-	}
+	await validateCouponStripeProductScope({ ctx, prices });
 	resolveCouponStripeProductIds({ reward: updated, prices });
 
 	const stripeCli = createStripeCli({ org, env });
