@@ -8,6 +8,7 @@ test("drops x-internal operations and their now-empty path items", () => {
 				post: { operationId: "advanceTestClock" },
 			},
 			"/v1/billing.advance_test_clock": {
+				parameters: [{ name: "x-api-version", in: "header" }],
 				post: { operationId: "billingAdvanceTestClock", "x-internal": true },
 			},
 		},

@@ -21,6 +21,17 @@ function stripInternalMarkers(value: Record<string, unknown>): void {
 	delete value["x-internal"];
 }
 
+const HTTP_METHODS = new Set([
+	"get",
+	"put",
+	"post",
+	"delete",
+	"options",
+	"head",
+	"patch",
+	"trace",
+]);
+
 /** Deletes every entry whose value is an internal node; returns the deleted keys. */
 function deleteInternalEntries(record: Record<string, unknown>): Set<string> {
 	const removed = new Set<string>();
@@ -58,12 +69,14 @@ function sanitizeNode(node: unknown): void {
 		}
 	}
 
-	// Handle paths - remove internal operations, then empty path items
+	// Handle paths - remove internal operations, then path items with none left
 	if (isRecord(node.paths)) {
 		for (const [path, pathItem] of Object.entries(node.paths)) {
 			if (!isRecord(pathItem)) continue;
 			deleteInternalEntries(pathItem);
-			if (Object.keys(pathItem).length === 0) delete node.paths[path];
+			if (!Object.keys(pathItem).some((key) => HTTP_METHODS.has(key))) {
+				delete node.paths[path];
+			}
 		}
 	}
 
