@@ -80,12 +80,12 @@ test.concurrent(
 			expect(logs).toHaveLength(1);
 			expect(logs[0]?.[0]).toEqual({
 				event: "balance_worker.commit",
-				topic,
-				partition,
-				phase: "kafka_commit",
-				result: "committed",
 				durationMs: 17.13,
 				data: {
+					topic,
+					partition,
+					phase: "kafka_commit",
+					result: "committed",
 					workerEndpoint: config.endpoint,
 					batchSize: 1,
 					baseOffset: "9007199254740993",
@@ -149,10 +149,13 @@ test.concurrent(
 			);
 			expect(logs).toHaveLength(1);
 			expect(logs[0]?.[0]).toMatchObject({
-				phase: "store_apply",
-				result: "applied",
 				durationMs: 0.38,
-				data: { batchSize: 2, baseOffset: "0" },
+				data: {
+					phase: "store_apply",
+					result: "applied",
+					batchSize: 2,
+					baseOffset: "0",
+				},
 			});
 			expect(stateStore.readState({ identity })?.revision).toBe(2);
 			expect(stateStore.readNextOffset({ topic, partition })).toBe(2n);
@@ -210,10 +213,13 @@ for (const result of ["not_committed", "unknown"] as const) {
 				).rejects.toBe(cause);
 				expect(logs).toHaveLength(1);
 				expect(logs[0]?.[0]).toMatchObject({
-					phase: "kafka_commit",
-					result,
 					durationMs: 25,
-					data: { baseOffset: null, errorName: cause.name },
+					data: {
+						phase: "kafka_commit",
+						result,
+						baseOffset: null,
+						errorName: cause.name,
+					},
 				});
 				expect(JSON.stringify(logs)).not.toContain("private details");
 			} finally {
@@ -253,10 +259,12 @@ test.concurrent(
 			).rejects.toThrow("Only an initialize can create subject state");
 			expect(logs).toHaveLength(1);
 			expect(logs[0]?.[0]).toMatchObject({
-				phase: "store_apply",
-				result: "failed",
 				durationMs: expect.any(Number),
-				data: { errorName: "SubjectStateMissingError" },
+				data: {
+					phase: "store_apply",
+					result: "failed",
+					errorName: "SubjectStateMissingError",
+				},
 			});
 			expect(stateStore.readNextOffset({ topic, partition })).toBe(0n);
 		} finally {

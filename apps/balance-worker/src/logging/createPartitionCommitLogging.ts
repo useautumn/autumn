@@ -46,9 +46,9 @@ export function createPartitionCommitLogging({
 		try {
 			const event = {
 				event: "balance_worker.commit",
-				...fields,
 				durationMs: Math.round((now() - startedAt) * 100) / 100,
 				data: {
+					...fields,
 					workerEndpoint: config.endpoint,
 					batchSize,
 					baseOffset: baseOffset?.toString() ?? null,

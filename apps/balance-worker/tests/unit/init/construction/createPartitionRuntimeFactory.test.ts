@@ -162,12 +162,12 @@ describe("Kafka owned partition runtime factory", () => {
 				] as const) {
 					expect(logs[index]?.[0]).toMatchObject({
 						event: "balance_worker.commit",
-						topic,
-						partition: 0,
-						phase,
-						result,
 						durationMs: expect.any(Number),
 						data: {
+							topic,
+							partition: 0,
+							phase,
+							result,
 							workerEndpoint: "http://worker.test",
 							batchSize: 1,
 							baseOffset: "0",
