@@ -11,6 +11,15 @@ Thin vertical slices, each ending in a runnable integration test.
 | 5 | **Windows and overdue.** Usage windows shrink on refund, overdue block on confirm. | `usage-window-lock`, `check-overdue-entitlements` lock cases |
 | 6 | **Graduated credits.** Marginal-tail repricing. | `track-graduated-credit-system` lock cases |
 
+## Status
+
+| unit | state |
+|---|---|
+| 1 | done, committed. `check-with-lock-errors` passes. |
+| 2 | done. 32 of 32 finalizes answer 200 and no lock is left open. Its four target files stop only at `expectCustomerEventsCorrect`; every balance assertion before it passes. |
+
+**Usage events come after all of lock and finalize is done** (decided 2026-09-21). Until then, judge a lock test by its balance assertions: a failure at `expectCustomerEventsCorrect` is expected, a failure anywhere else is real.
+
 Before any of it ships: the evict todo in `plans/balance-worker-concurrent-writers.md`, and a decision on usage events for the worker path.
 
 ## Unit 1, slices
