@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	catalogKeyToString,
+	catalogRowsToCatalog,
 	catalogRowToCatalogKey,
 	subjectStateToCatalogKeys,
 } from "@autumn/balance-engine";
@@ -14,7 +15,10 @@ import {
 	fullSubjectToCatalogRows,
 	fullSubjectToSubjectState,
 } from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
-import { workerStateToApiBalance } from "@/internal/balances/balanceWorker/workerStateToApiBalance.js";
+import {
+	workerReplyToFullSubject,
+	workerStateToApiBalance,
+} from "@/internal/balances/balanceWorker/workerStateToApiBalance.js";
 import { createCustomerFixture } from "./customer-fixture.js";
 
 test.concurrent(
@@ -74,6 +78,10 @@ test.concurrent(
 		});
 		const [customerEntitlement] = state.customerEntitlements;
 		if (!customerEntitlement) throw new Error("Expected one row");
+		// The catalog a worker reply carries, so the balance is built from the reply alone.
+		const catalog = catalogRowsToCatalog({
+			rows: fullSubjectToCatalogRows({ ...fixture, featureIds: ["messages"] }),
+		});
 		const existing = getApiBalance({
 			ctx: fixture.ctx,
 			fullCus: fullSubjectToFullCustomer({ fullSubject: fixture.fullSubject }),
@@ -89,19 +97,20 @@ test.concurrent(
 		expect(
 			workerStateToApiBalance({
 				ctx: fixture.ctx,
-				fullSubject: fixture.fullSubject,
-				state,
+				fullSubject: workerReplyToFullSubject({ state, catalog }),
 				featureId: "messages",
 			}),
 		).toEqual(existing);
 		expect(
 			workerStateToApiBalance({
 				ctx: fixture.ctx,
-				fullSubject: fixture.fullSubject,
-				state: {
-					...state,
-					customerEntitlements: [{ ...customerEntitlement, balance: 67 }],
-				},
+				fullSubject: workerReplyToFullSubject({
+					catalog,
+					state: {
+						...state,
+						customerEntitlements: [{ ...customerEntitlement, balance: 67 }],
+					},
+				}),
 				featureId: "messages",
 			}),
 		).toMatchObject({ remaining: 67, usage: existing.usage + 5 });

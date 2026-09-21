@@ -25,8 +25,8 @@ import {
 	expandIncludes,
 	type Feature,
 	type FullAggregatedFeatureBalance,
-	type FullCusEntWithFullCusProduct,
-	type FullSubject,
+	type CustomerEntitlementWithPricesView,
+	type FullSubjectView,
 	getCusEntBalance,
 	isUnlimitedCusEnt,
 	nullish,
@@ -44,8 +44,8 @@ const getApiBalanceBreakdownItemV2 = ({
 	fullSubject,
 	customerEntitlement,
 }: {
-	fullSubject: FullSubject;
-	customerEntitlement: FullCusEntWithFullCusProduct;
+	fullSubject: Pick<FullSubjectView, "entity">;
+	customerEntitlement: CustomerEntitlementWithPricesView;
 }): ApiBalanceBreakdownV1 => {
 	const entityId = fullSubject.entity?.id ?? fullSubject.entity?.internal_id;
 	const planId = cusEntsToPlanId({
@@ -113,8 +113,8 @@ export const getApiBalanceV2 = ({
 	aggregatedFeatureBalance,
 }: {
 	ctx: SharedContext;
-	fullSubject: FullSubject;
-	customerEntitlements: FullCusEntWithFullCusProduct[];
+	fullSubject: Pick<FullSubjectView, "entity">;
+	customerEntitlements: CustomerEntitlementWithPricesView[];
 	feature: Feature;
 	aggregatedFeatureBalance?: FullAggregatedFeatureBalance;
 }): { data: ApiBalanceV1 } => {

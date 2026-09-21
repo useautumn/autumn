@@ -3,13 +3,15 @@ import {
 	AffectedResource,
 	applyResponseVersionChanges,
 	type CheckResponseV3,
-	type FullSubject,
 	findFeatureById,
 	fullSubjectToCustomerEntitlements,
 	getApiFlag,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { workerStateToApiBalance } from "../../balanceWorker/workerStateToApiBalance.js";
+import {
+	workerReplyToFullSubject,
+	workerStateToApiBalance,
+} from "../../balanceWorker/workerStateToApiBalance.js";
 import type { WorkerCheckAnswer } from "./runDeductingCheck.js";
 
 /** The one place a worker's answer becomes the API's check response, whether it came from a check or a track. */
@@ -17,14 +19,12 @@ export function checkAnswerToApiResponse({
 	ctx,
 	command,
 	answer,
-	fullSubject,
 }: {
 	ctx: AutumnContext;
 	command: CheckCommand;
 	answer: WorkerCheckAnswer;
-	fullSubject: FullSubject;
 }): CheckResponseV3 {
-	const { result, state } = answer;
+	const { result, state, catalog } = answer;
 	// The worker names the feature that answers: the checked one, or the credit system funding it.
 	const featureToUse = findFeatureById({
 		features: ctx.features,
@@ -32,17 +32,25 @@ export function checkAnswerToApiResponse({
 		errorOnNotFound: true,
 	});
 	const isAttached = result.fundingFeatureId !== null;
+	// The worker's reply is the customer: its rows and the catalog they were decided against.
+	const fullSubject =
+		state && catalog && isAttached
+			? workerReplyToFullSubject({
+					state,
+					catalog,
+					entityId: command.identity.entityId,
+				})
+			: null;
 	const balance =
-		state && isAttached && !result.isFlag
+		fullSubject && !result.isFlag
 			? workerStateToApiBalance({
 					ctx,
 					fullSubject,
-					state,
 					featureId: featureToUse.id,
 				})
 			: null;
 	const flag =
-		isAttached && result.isFlag
+		fullSubject && result.isFlag
 			? getApiFlag({
 					ctx,
 					cusEnts: fullSubjectToCustomerEntitlements({

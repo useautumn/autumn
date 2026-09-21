@@ -15,7 +15,10 @@ import type { Rollover } from "./rolloverModels/rolloverTable.js";
  * The columns balance selection and deduction read. FullCustomerEntitlement satisfies it,
  * and so does a leaner row joined with its catalog rows, so one helper serves both.
  */
-export type RolloverView = Pick<Rollover, "balance" | "usage" | "expires_at"> &
+export type RolloverView = Pick<
+	Rollover,
+	"id" | "balance" | "usage" | "expires_at"
+> &
 	Partial<Pick<Rollover, "entities">>;
 
 export type FullCusProductView = Pick<

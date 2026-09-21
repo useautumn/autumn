@@ -1,58 +1,37 @@
-import type { SubjectState } from "@autumn/balance-engine";
+import {
+	type Catalog,
+	type SubjectState,
+	subjectStateToFullSubject,
+	type WorkerFullSubject,
+} from "@autumn/balance-engine";
 import {
 	type ApiBalanceV1,
-	type FullCusEntWithFullCusProduct,
-	type FullSubject,
 	fullSubjectToCustomerEntitlements,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getApiBalanceV2 } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiBalance/getApiBalanceV2.js";
 import { BalanceWorkerUnsupportedError } from "./balanceWorkerErrors.js";
 
-/** The server's row with the worker's balances on it: the worker owns balance, the server owns everything derived from catalog. */
-const overlayWorkerRows = ({
-	customerEntitlement,
+/** The customer as the worker decided on it: its rows joined with the catalog rows the reply carried. */
+export const workerReplyToFullSubject = ({
 	state,
+	catalog,
+	entityId,
 }: {
-	customerEntitlement: FullCusEntWithFullCusProduct;
 	state: SubjectState;
-}): FullCusEntWithFullCusProduct => {
-	const row = state.customerEntitlements.find(
-		(candidate) => candidate.id === customerEntitlement.id,
-	);
-	if (!row) return customerEntitlement;
-	const rolloversById = new Map(
-		state.rollovers.map((rollover) => [rollover.id, rollover]),
-	);
-	return {
-		...customerEntitlement,
-		balance: row.balance,
-		adjustment: row.adjustment,
-		...(row.entities === undefined ? {} : { entities: row.entities }),
-		rollovers: customerEntitlement.rollovers.map((rollover) => {
-			const workerRollover = rolloversById.get(rollover.id);
-			return workerRollover
-				? {
-						...rollover,
-						balance: workerRollover.balance,
-						usage: workerRollover.usage,
-						entities: workerRollover.entities,
-					}
-				: rollover;
-		}),
-	};
-};
+	catalog: Catalog;
+	entityId?: string | null;
+}): WorkerFullSubject =>
+	subjectStateToFullSubject({ state, catalog, entityId: entityId ?? null });
 
-/** The API balance for one feature, with the worker's state overlaid on the server's own FullSubject. */
+/** The API balance for one feature, read off the worker's own rows: nothing is loaded from Postgres. */
 export function workerStateToApiBalance({
 	ctx,
 	fullSubject,
-	state,
 	featureId,
 }: {
 	ctx: AutumnContext;
-	fullSubject: FullSubject;
-	state: SubjectState;
+	fullSubject: WorkerFullSubject;
 	featureId: string;
 }): ApiBalanceV1 {
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
@@ -65,9 +44,7 @@ export function workerStateToApiBalance({
 	const { data } = getApiBalanceV2({
 		ctx,
 		fullSubject,
-		customerEntitlements: customerEntitlements.map((customerEntitlement) =>
-			overlayWorkerRows({ customerEntitlement, state }),
-		),
+		customerEntitlements,
 		feature: first.entitlement.feature,
 	});
 	return data;

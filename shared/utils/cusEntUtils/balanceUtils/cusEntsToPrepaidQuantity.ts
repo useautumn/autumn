@@ -2,7 +2,7 @@ import { cusEntToCusPrice } from "@utils/cusEntUtils/convertCusEntUtils/cusEntTo
 import { isLosingPrepaidQuantityPrice } from "@utils/productUtils/priceUtils/findPrice/findPrepaidQuantityTargetPrice";
 import { Decimal } from "decimal.js";
 import {
-	type FullCusEntWithFullCusProduct,
+	type CustomerEntitlementWithPricesView,
 	isEntityScopedCusEnt,
 	isPrepaidPrice,
 	sumValues,
@@ -14,7 +14,7 @@ export const cusEntToPrepaidQuantity = ({
 	sumAcrossEntities = false,
 	useUpcomingQuantity = false,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: CustomerEntitlementWithPricesView;
 	sumAcrossEntities?: boolean;
 	useUpcomingQuantity?: boolean;
 }) => {
@@ -68,7 +68,7 @@ export const cusEntsToPrepaidQuantity = ({
 	sumAcrossEntities = false,
 	useUpcomingQuantity = false,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	sumAcrossEntities?: boolean;
 	useUpcomingQuantity?: boolean;
 }) => {

@@ -1,8 +1,8 @@
 import { Decimal } from "decimal.js";
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { CustomerEntitlementWithPricesView } from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView";
 import { AllowanceType } from "../../../models/productModels/entModels/entModels.js";
 
-const isUnlimitedUsageCusEnt = (cusEnt: FullCusEntWithFullCusProduct) =>
+const isUnlimitedUsageCusEnt = (cusEnt: CustomerEntitlementWithPricesView) =>
 	cusEnt.entitlement.allowance_type === AllowanceType.Unlimited ||
 	Boolean(cusEnt.unlimited);
 
@@ -10,7 +10,7 @@ export const cusEntsToUnlimitedUsage = ({
 	cusEnts,
 	entityId,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	entityId?: string;
 }): number => {
 	let totalBalance = new Decimal(0);

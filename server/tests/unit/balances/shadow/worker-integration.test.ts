@@ -92,7 +92,6 @@ test.concurrent(
 					ctx,
 					body,
 					client: worker.client,
-					loadSubject: async () => fullSubject,
 				}),
 			).toMatchObject({ balance: { remaining: 72, usage: 38 } });
 			delivered = Promise.withResolvers();
@@ -112,7 +111,6 @@ test.concurrent(
 					ctx,
 					body,
 					client: worker.client,
-					loadSubject: async () => fullSubject,
 				}),
 			).toMatchObject({ balance: { remaining: 67, usage: 43 } });
 			expect(records.map((record) => record.command.type)).toEqual([

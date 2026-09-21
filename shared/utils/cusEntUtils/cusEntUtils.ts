@@ -2,7 +2,10 @@ import type { FullCustomerEntitlement } from "@models/cusProductModels/cusEntMod
 import type { Feature } from "@models/featureModels/featureModels.js";
 import { Decimal } from "decimal.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
-import type { FullCusEntWithFullCusProductView } from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
+import type {
+	CustomerEntitlementWithPricesView,
+	FullCusEntWithFullCusProductView,
+} from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { isPrepaidPrice } from "../productUtils/priceUtils/classifyPriceUtils.js";
 import { cusEntToCusPrice } from "./convertCusEntUtils/cusEntToCusPrice.js";
 
@@ -58,7 +61,7 @@ export const isEntityCusEnt = ({
 export const isPrepaidCusEnt = ({
 	cusEnt,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: CustomerEntitlementWithPricesView;
 }) => {
 	const cusPrice = cusEntToCusPrice({ cusEnt });
 	if (!cusPrice || !isPrepaidPrice(cusPrice.price)) return false;

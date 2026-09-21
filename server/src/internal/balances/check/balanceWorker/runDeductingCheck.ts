@@ -1,4 +1,8 @@
-import type { CheckResult, SubjectState } from "@autumn/balance-engine";
+import type {
+	Catalog,
+	CheckResult,
+	SubjectState,
+} from "@autumn/balance-engine";
 import {
 	type BalanceWorkerClient,
 	BalanceWorkerClientError,
@@ -18,9 +22,11 @@ import { scheduleLockExpiry } from "../../balanceWorker/lockExpirySchedule.js";
 import { trackParamsToTrackCommand } from "../../track/balanceWorker/balanceWorkerTrackRequest.js";
 
 /** What a check learned from the worker; `state` is null when nothing is attached, since there was nothing to read. */
+/** What a check answers from: the decision, and the rows and catalog it was decided against (absent when nothing is attached). */
 export type WorkerCheckAnswer = {
 	result: CheckResult;
 	state: SubjectState | null;
+	catalog: Catalog | null;
 };
 
 const requiredBalanceOf = ({ body }: { body: ParsedCheckParams }): number =>
@@ -74,6 +80,7 @@ const trackReplyToCheckAnswer = ({
 			isFlag: false,
 		},
 		state: reply.state,
+		catalog: reply.catalog,
 	};
 };
 
@@ -94,6 +101,7 @@ const nothingAttachedAnswer = ({
 			isFlag: false,
 		},
 		state: null,
+		catalog: null,
 	};
 };
 

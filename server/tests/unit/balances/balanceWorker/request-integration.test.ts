@@ -25,7 +25,6 @@ test.concurrent(
 		const fixture = createCustomerFixture();
 		fixture.customerEntitlement.balance = 10;
 		const { ctx, fullSubject } = fixture;
-		const loadSubject = async () => fullSubject;
 		const identity = {
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -68,7 +67,7 @@ test.concurrent(
 		};
 		try {
 			await expect(
-				runBalanceWorkerCheck({ ctx, body, client: live.client, loadSubject }),
+				runBalanceWorkerCheck({ ctx, body, client: live.client }),
 			).rejects.toMatchObject({
 				code: "customer_not_found",
 				statusCode: 404,
@@ -87,7 +86,6 @@ test.concurrent(
 					ctx,
 					body,
 					client: live.client,
-					loadSubject,
 				}),
 			).toMatchObject({
 				allowed: true,
@@ -107,7 +105,6 @@ test.concurrent(
 						ctx,
 						body: { ...body, idempotency_key: idempotencyKey },
 						client: live.client,
-						loadSubject,
 					}),
 				),
 			);
@@ -146,7 +143,6 @@ test.concurrent(
 					ctx,
 					body,
 					client: live.client,
-					loadSubject,
 				}),
 			).toEqual(firstResult.value);
 			expect(
@@ -178,7 +174,6 @@ test.concurrent(
 				ctx,
 				body,
 				client: live.client,
-				loadSubject,
 			});
 			expect(checked).toMatchObject({
 				allowed: false,
@@ -209,7 +204,6 @@ test.concurrent(
 					ctx,
 					body,
 					client: restored.client,
-					loadSubject,
 				}),
 			).toEqual(checked);
 			expect(
@@ -217,7 +211,6 @@ test.concurrent(
 					ctx,
 					body,
 					client: restored.client,
-					loadSubject,
 				}),
 			).toEqual(firstResult.value);
 			expect(

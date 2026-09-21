@@ -1,4 +1,4 @@
-import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
+import type { FullSubjectView } from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
 import { fullSubjectToCreditSystems } from "./fullSubjectToCreditSystems.js";
 
@@ -12,7 +12,7 @@ export const fullSubjectToRelevantFeatures = ({
 	featureId,
 	features,
 }: {
-	fullSubject: FullSubject;
+	fullSubject: FullSubjectView;
 	featureId: string;
 	features: Feature[];
 }): Feature[] => {

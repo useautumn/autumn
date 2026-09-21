@@ -111,6 +111,7 @@ export * from "./models/cusProductModels/cusEntModels/aggregatedCusEnt";
 export * from "./models/cusProductModels/cusEntModels/cusEntModels";
 export * from "./models/cusProductModels/cusEntModels/cusEntTable";
 export * from "./models/cusProductModels/cusEntModels/cusEntWithProduct";
+export * from "./models/cusProductModels/cusEntModels/fullCustomerEntitlementView";
 export * from "./models/cusProductModels/cusEntModels/replaceableSchema";
 export * from "./models/cusProductModels/cusEntModels/replaceableTable";
 export * from "./models/cusProductModels/cusEntModels/resetCusEnt";

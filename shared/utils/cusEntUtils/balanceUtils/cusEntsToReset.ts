@@ -1,5 +1,5 @@
 import type { ApiBalanceReset } from "../../../api/customers/cusFeatures/apiBalance";
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { FullCusEntWithFullCusProductView } from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView";
 import { isContUseFeature } from "../../featureUtils/convertFeatureUtils";
 import {
 	entIntvToResetIntv,
@@ -9,7 +9,7 @@ import {
 export const cusEntsToNextResetAt = ({
 	cusEnts,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: FullCusEntWithFullCusProductView[];
 }) => {
 	const result = cusEnts.reduce((acc, curr) => {
 		if (curr.next_reset_at && curr.next_reset_at < acc) {
@@ -26,7 +26,7 @@ export const cusEntsToNextResetAt = ({
 export const cusEntsToReset = ({
 	cusEnts,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: FullCusEntWithFullCusProductView[];
 }): ApiBalanceReset | null => {
 	if (cusEnts.length === 0) return null;
 

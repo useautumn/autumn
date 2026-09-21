@@ -3,7 +3,6 @@ import type { CheckParams, CheckResponseV3 } from "@autumn/shared";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
-import { loadBalanceWorkerSubject } from "../../balanceWorker/loadBalanceWorkerSubject.js";
 import { parseCheckParamsForLock } from "../../utils/lock/parseCheckParamsForLock.js";
 import { checkAnswerToApiResponse } from "./balanceWorkerCheckReply.js";
 import { checkParamsToCheckCommand } from "./balanceWorkerCheckRequest.js";
@@ -14,12 +13,10 @@ export async function runBalanceWorkerCheck({
 	ctx,
 	body: rawBody,
 	client = getBalanceWorkerClient(),
-	loadSubject = loadBalanceWorkerSubject,
 }: {
 	ctx: AutumnContext;
 	body: CheckParams;
 	client?: Pick<BalanceWorkerClient, "check" | "track">;
-	loadSubject?: typeof loadBalanceWorkerSubject;
 }): Promise<CheckResponseV3> {
 	// Validates the lock, gives it an id when the caller sent none, and drops a disabled one.
 	const body = parseCheckParamsForLock({ params: rawBody });
@@ -29,12 +26,7 @@ export async function runBalanceWorkerCheck({
 		const answer = deducts
 			? await runDeductingCheck({ ctx, body, client })
 			: await client.check({ command });
-		const fullSubject = await loadSubject({
-			ctx,
-			customerId: body.customer_id,
-			entityId: body.entity_id,
-		});
-		return checkAnswerToApiResponse({ ctx, command, answer, fullSubject });
+		return checkAnswerToApiResponse({ ctx, command, answer });
 	} catch (cause) {
 		rethrowBalanceWorkerError({ cause });
 	}

@@ -11,7 +11,10 @@ import {
 	type CheckParams,
 	type TrackParams,
 } from "@autumn/shared";
-import { fullSubjectToSubjectState } from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
+import {
+	fullSubjectToCatalogRows,
+	fullSubjectToSubjectState,
+} from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
 import { initializeBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/initializeBalanceWorkerCustomer.js";
 import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
 import { runBalanceWorkerTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js";
@@ -115,7 +118,6 @@ test.concurrent(
 	"check maps the committed snapshot, request defaults and legacy API responses without reading the customer",
 	async () => {
 		const { ctx, fullSubject } = createCustomerFixture();
-		const loadSubject = async () => fullSubject;
 		const state = fullSubjectToSubjectState({
 			ctx,
 			fullSubject,
@@ -143,7 +145,13 @@ test.concurrent(
 						revision: 9,
 						customerEntitlements: [{ ...row, balance: -2 }],
 					},
-					catalog: catalogRowsToCatalog({ rows: [] }),
+					catalog: catalogRowsToCatalog({
+						rows: fullSubjectToCatalogRows({
+							ctx,
+							fullSubject,
+							featureIds: ["messages"],
+						}),
+					}),
 				};
 			},
 		};
@@ -155,7 +163,6 @@ test.concurrent(
 			ctx,
 			body,
 			client,
-			loadSubject,
 		});
 		expect(checked).toMatchObject({
 			customer_id: "cus_test",
@@ -207,7 +214,6 @@ test.concurrent(
 				ctx,
 				body: { ...body, required_quantity: 3 },
 				client,
-				loadSubject,
 			}),
 		).toMatchObject({
 			required_balance: 3,
@@ -219,9 +225,7 @@ test.concurrent(
 			},
 		});
 		ctx.apiVersion = new ApiVersionClass(ApiVersion.V1_Beta);
-		expect(
-			await runBalanceWorkerCheck({ ctx, body, client, loadSubject }),
-		).toMatchObject({
+		expect(await runBalanceWorkerCheck({ ctx, body, client })).toMatchObject({
 			allowed: false,
 			feature_id: "messages",
 			balance: -2,
@@ -278,7 +282,6 @@ test.concurrent(
 	"missing initialization is explicit and transport ambiguity never falls back",
 	async () => {
 		const fixture = createCustomerFixture();
-		const loadSubject = async () => fixture.fullSubject;
 		const missing = new BalanceWorkerClientError({
 			code: "WORKER_ERROR",
 			workerCode: "NOT_INITIALIZED",
@@ -318,14 +321,12 @@ test.concurrent(
 						ctx: fixture.ctx,
 						body,
 						client,
-						loadSubject,
 					}),
 				() =>
 					runBalanceWorkerTrack({
 						ctx: fixture.ctx,
 						body,
 						client,
-						loadSubject,
 					}),
 				() =>
 					initializeBalanceWorkerCustomer({

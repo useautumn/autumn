@@ -3,7 +3,7 @@ import {
 	dbToApiFeatureV1,
 	expandPathIncludes,
 	type Feature,
-	type FullCusEntWithFullCusProduct,
+	type FullCusEntWithFullCusProductView,
 	type SharedContext,
 	scopeExpandForCtx,
 } from "@autumn/shared";
@@ -15,7 +15,7 @@ export const getApiFlag = ({
 	feature,
 }: {
 	ctx: SharedContext;
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: FullCusEntWithFullCusProductView[];
 	feature: Feature;
 }): { data: ApiFlagV0 } => {
 	const featureCtx = scopeExpandForCtx({

@@ -100,8 +100,7 @@ function fixture({ balance = 72 }: { balance?: number } = {}) {
 		feature_id: "messages",
 		value: 3,
 	};
-	const loadSubject = async () => fullSubject;
-	return { ...customer, ctx, body, loadSubject };
+	return { ...customer, ctx, body };
 }
 
 function commandContract() {
@@ -159,10 +158,10 @@ function commandContract() {
 
 async function successContract() {
 	const customer = fixture();
-	const { ctx, body, loadSubject } = customer;
+	const { ctx, body } = customer;
 	for (const duplicate of [false, true]) {
 		execution.reply = trackReplyOf({ customer, duplicate });
-		expect(await runBalanceWorkerTrack({ ctx, body, loadSubject })).toEqual({
+		expect(await runBalanceWorkerTrack({ ctx, body })).toEqual({
 			customer_id: "cus_test",
 			entity_id: undefined,
 			value: 3,
@@ -199,7 +198,6 @@ async function outcomeContract() {
 			await runBalanceWorkerTrack({
 				ctx: customer.ctx,
 				body: customer.body,
-				loadSubject: customer.loadSubject,
 			}),
 		).toEqual({
 			customer_id: "cus_test",
@@ -227,19 +225,20 @@ async function outcomeContract() {
 
 async function errorContract() {
 	const customer = fixture({ balance: 2 });
-	const { ctx, body, loadSubject } = customer;
+	const { ctx, body } = customer;
 	for (const duplicate of [false, true]) {
 		execution.reply = trackReplyOf({
 			customer,
 			overageBehavior: "reject",
 			duplicate,
 		});
-		await expect(
-			runBalanceWorkerTrack({ ctx, body, loadSubject }),
-		).rejects.toBeInstanceOf(InsufficientBalanceError);
-		await expect(
-			runBalanceWorkerTrack({ ctx, body, loadSubject }),
-		).rejects.toMatchObject({ code: "insufficient_balance", statusCode: 400 });
+		await expect(runBalanceWorkerTrack({ ctx, body })).rejects.toBeInstanceOf(
+			InsufficientBalanceError,
+		);
+		await expect(runBalanceWorkerTrack({ ctx, body })).rejects.toMatchObject({
+			code: "insufficient_balance",
+			statusCode: 400,
+		});
 	}
 	for (const [workerCode, workerReason, code, statusCode] of [
 		["UNSUPPORTED_COMMAND", "feature_not_found", ErrCode.InvalidRequest, 400],
@@ -252,39 +251,36 @@ async function errorContract() {
 			workerCode,
 			workerReason,
 		});
-		await expect(
-			runBalanceWorkerTrack({ ctx, body, loadSubject }),
-		).rejects.toMatchObject({ code, statusCode });
+		await expect(runBalanceWorkerTrack({ ctx, body })).rejects.toMatchObject({
+			code,
+			statusCode,
+		});
 		execution.failure = undefined;
 	}
 }
 
 async function versionContract() {
 	const customer = fixture();
-	const { ctx, body, loadSubject } = customer;
+	const { ctx, body } = customer;
 	execution.reply = trackReplyOf({ customer });
 	ctx.apiVersion = new ApiVersionClass(ApiVersion.V2_0);
-	expect(await runBalanceWorkerTrack({ ctx, body, loadSubject })).toMatchObject(
-		{
-			customer_id: "cus_test",
-			entity_id: undefined,
-			event_name: undefined,
-			value: 3,
-			balance: {
-				feature_id: "messages",
-				granted_balance: 110,
-				current_balance: 69,
-				usage: 41,
-				plan_id: "pro",
-				reset: { interval: "month", resets_at: 1_800_000_000_000 },
-			},
-			balances: undefined,
+	expect(await runBalanceWorkerTrack({ ctx, body })).toMatchObject({
+		customer_id: "cus_test",
+		entity_id: undefined,
+		event_name: undefined,
+		value: 3,
+		balance: {
+			feature_id: "messages",
+			granted_balance: 110,
+			current_balance: 69,
+			usage: 41,
+			plan_id: "pro",
+			reset: { interval: "month", resets_at: 1_800_000_000_000 },
 		},
-	);
+		balances: undefined,
+	});
 	ctx.apiVersion = new ApiVersionClass(ApiVersion.V1_Beta);
-	expect<unknown>(
-		await runBalanceWorkerTrack({ ctx, body, loadSubject }),
-	).toEqual({
+	expect<unknown>(await runBalanceWorkerTrack({ ctx, body })).toEqual({
 		id: "placeholder",
 		code: "event_received",
 		customer_id: "cus_test",
@@ -295,9 +291,9 @@ async function versionContract() {
 }
 
 async function failureContract() {
-	const { ctx, body, loadSubject } = fixture();
+	const { ctx, body } = fixture();
 	execution.failure = new Error("unknown committed result");
-	await expect(runBalanceWorkerTrack({ ctx, body, loadSubject })).rejects.toBe(
+	await expect(runBalanceWorkerTrack({ ctx, body })).rejects.toBe(
 		execution.failure,
 	);
 	expect(execution.commands).toHaveLength(1);
@@ -331,7 +327,8 @@ function trackReplyOf({
 		result: mutation.result,
 		changes: mutation.changes,
 		state: applyMutation({ state, mutation }),
-		catalog: catalogRowsToCatalog({ rows: [] }),
+		// The catalog the track was decided against, as the worker returns it.
+		catalog,
 	};
 }
 

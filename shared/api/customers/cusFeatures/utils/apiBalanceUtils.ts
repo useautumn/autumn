@@ -1,5 +1,5 @@
 import type { ApiFeatureV1 } from "@api/features/apiFeatureV1";
-import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { CustomerEntitlementWithPricesView } from "@models/cusProductModels/cusEntModels/fullCustomerEntitlementView";
 import {
 	cusEntsToPlanId,
 	cusEntsToRollovers,
@@ -11,7 +11,7 @@ export const getBooleanApiBalance = ({
 	cusEnts,
 	apiFeature,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	apiFeature?: ApiFeatureV1;
 }): ApiBalanceV1 => {
 	const feature = cusEnts[0].entitlement.feature;
@@ -60,7 +60,7 @@ export const getUnlimitedApiBalance = ({
 	entityId,
 }: {
 	apiFeature?: ApiFeatureV1;
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	entityId?: string;
 }): ApiBalanceV1 => {
 	const feature = cusEnts[0].entitlement.feature;

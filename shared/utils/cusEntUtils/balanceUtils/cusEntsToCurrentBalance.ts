@@ -1,6 +1,8 @@
 import { Decimal } from "decimal.js";
-import type { FullCustomerEntitlement } from "../../../models/cusProductModels/cusEntModels/cusEntModels";
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type {
+	CustomerEntitlementWithPricesView,
+	FullCustomerEntitlementView,
+} from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView";
 import { AllowanceType } from "../../../models/productModels/entModels/entModels";
 import { nullish, sumValues } from "../../utils";
 import { isEntityScopedCusEnt } from "../classifyCusEntUtils";
@@ -11,7 +13,7 @@ export const cusEntToCurrentBalance = ({
 	entityId,
 	withRollovers = false,
 }: {
-	cusEnt: FullCustomerEntitlement;
+	cusEnt: FullCustomerEntitlementView;
 	entityId?: string;
 	withRollovers?: boolean;
 }): number => {
@@ -52,7 +54,7 @@ export const cusEntsToCurrentBalance = ({
 	entityId,
 	withRollovers = false,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	entityId?: string;
 	withRollovers?: boolean;
 }) => {

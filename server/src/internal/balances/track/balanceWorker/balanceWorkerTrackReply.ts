@@ -1,9 +1,9 @@
+import type { WorkerFullSubject } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client";
 import {
 	AffectedResource,
 	type ApiBalanceV1,
 	applyResponseVersionChanges,
-	type FullSubject,
 	fullSubjectToCustomerEntitlements,
 	fullSubjectToRelevantFeatures,
 	InsufficientBalanceError,
@@ -11,7 +11,10 @@ import {
 	type TrackResponseV3,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { workerStateToApiBalance } from "../../balanceWorker/workerStateToApiBalance.js";
+import {
+	workerReplyToFullSubject,
+	workerStateToApiBalance,
+} from "../../balanceWorker/workerStateToApiBalance.js";
 import { trackReplyToDeductions } from "./trackReplyToDeductions.js";
 
 /** One worker track and the feature it was sent for; an event name yields one per feature it maps to. */
@@ -21,12 +24,10 @@ export type FeatureTrackReply = { featureId: string; reply: TrackReply };
 const balancesOf = ({
 	ctx,
 	fullSubject,
-	state,
 	featureIds,
 }: {
 	ctx: AutumnContext;
-	fullSubject: FullSubject;
-	state: TrackReply["state"];
+	fullSubject: WorkerFullSubject;
 	featureIds: string[];
 }): Record<string, ApiBalanceV1 | null> | undefined => {
 	const balances: Record<string, ApiBalanceV1 | null> = {};
@@ -43,12 +44,7 @@ const balancesOf = ({
 					featureIds: [feature.id],
 				}).length > 0;
 			balances[feature.id] = isHeld
-				? workerStateToApiBalance({
-						ctx,
-						fullSubject,
-						state,
-						featureId: feature.id,
-					})
+				? workerStateToApiBalance({ ctx, fullSubject, featureId: feature.id })
 				: null;
 		}
 	}
@@ -60,16 +56,19 @@ export function trackRepliesToApiResponse({
 	ctx,
 	body,
 	replies,
-	fullSubject,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	replies: FeatureTrackReply[];
-	fullSubject: FullSubject;
 }): TrackResponseV3 {
 	const value = body.value ?? 1;
-	// Every reply carries the whole customer's rows, so the last one is the freshest view of all features.
-	const { state } = replies[replies.length - 1].reply;
+	// Every reply carries the whole customer's rows and their catalog, so the last one is the freshest view of all features.
+	const { state, catalog } = replies[replies.length - 1].reply;
+	const fullSubject = workerReplyToFullSubject({
+		state,
+		catalog,
+		entityId: body.entity_id,
+	});
 	// The worker names the feature each balance is reported in: the tracked one, or the credit system funding it.
 	const fundingFeatureIds = [
 		...new Set(
@@ -77,7 +76,7 @@ export function trackRepliesToApiResponse({
 		),
 	];
 	const fundingBalances = fundingFeatureIds.map((featureId) =>
-		workerStateToApiBalance({ ctx, fullSubject, state, featureId }),
+		workerStateToApiBalance({ ctx, fullSubject, featureId }),
 	);
 
 	const rejectedIndex = replies.findIndex(
@@ -104,7 +103,6 @@ export function trackRepliesToApiResponse({
 			balances: balancesOf({
 				ctx,
 				fullSubject,
-				state,
 				featureIds: replies.map(({ featureId }) => featureId),
 			}),
 			deductions: replies.flatMap(({ reply }) =>

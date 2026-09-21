@@ -41,7 +41,9 @@ export const isBooleanCusEnt = ({
 	return cusEnt.entitlement.feature.type === FeatureType.Boolean;
 };
 
-export const isUnlimitedCusEnt = (cusEnt: FullCustomerEntitlement) => {
+export const isUnlimitedCusEnt = (cusEnt: {
+	entitlement: Pick<Entitlement, "allowance_type">;
+}) => {
 	return cusEnt.entitlement.allowance_type === AllowanceType.Unlimited;
 };
 

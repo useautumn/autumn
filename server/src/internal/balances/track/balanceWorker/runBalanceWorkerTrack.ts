@@ -10,7 +10,6 @@ import {
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
-import { loadBalanceWorkerSubject } from "../../balanceWorker/loadBalanceWorkerSubject.js";
 import { validateBalanceWorkerRequest } from "../../balanceWorker/validateBalanceWorkerRequest.js";
 import {
 	type FeatureTrackReply,
@@ -94,23 +93,16 @@ export async function runBalanceWorkerTrack({
 	ctx,
 	body,
 	client = getBalanceWorkerClient(),
-	loadSubject = loadBalanceWorkerSubject,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	client?: TrackClient;
-	loadSubject?: typeof loadBalanceWorkerSubject;
 }): Promise<TrackResponseV3> {
 	validateBalanceWorkerRequest({ ctx, body });
 	const featureIds = trackedFeatureIdsOf({ ctx, body });
 	try {
 		const replies = await trackEachFeature({ ctx, body, client, featureIds });
-		const fullSubject = await loadSubject({
-			ctx,
-			customerId: body.customer_id,
-			entityId: body.entity_id,
-		});
-		return trackRepliesToApiResponse({ ctx, body, replies, fullSubject });
+		return trackRepliesToApiResponse({ ctx, body, replies });
 	} catch (cause) {
 		rethrowBalanceWorkerError({ cause });
 	}

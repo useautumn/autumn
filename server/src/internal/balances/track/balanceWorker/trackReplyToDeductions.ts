@@ -2,8 +2,8 @@ import type { TrackReply } from "@autumn/balance-worker-client";
 import {
 	cusEntsToPlanId,
 	cusEntsToReset,
-	type FullCusEntWithFullCusProduct,
-	type FullSubject,
+	type FullCusEntWithFullCusProductView,
+	type FullSubjectView,
 	fullSubjectToCustomerEntitlements,
 	type TrackDeduction,
 } from "@autumn/shared";
@@ -15,8 +15,8 @@ const customerEntitlementOf = ({
 	customerEntitlements,
 }: {
 	delta: TrackReply["result"]["deltas"][number];
-	customerEntitlements: FullCusEntWithFullCusProduct[];
-}): FullCusEntWithFullCusProduct | undefined =>
+	customerEntitlements: FullCusEntWithFullCusProductView[];
+}): FullCusEntWithFullCusProductView | undefined =>
 	delta.table === "customerEntitlements"
 		? customerEntitlements.find((candidate) => candidate.id === delta.id)
 		: customerEntitlements.find((candidate) =>
@@ -29,7 +29,7 @@ export function trackReplyToDeductions({
 	fullSubject,
 }: {
 	reply: TrackReply;
-	fullSubject: FullSubject;
+	fullSubject: FullSubjectView;
 }): TrackDeduction[] {
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
