@@ -1,8 +1,16 @@
 import type { CatalogGetMappingsResponse, ProductV2 } from "@autumn/shared";
-import { Button, Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
+import {
+	Button,
+	CopyButton,
+	IconTooltipButton,
+	Sheet,
+	SheetContent,
+	ShortcutButton,
+} from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
+import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import {
 	SheetFooter,
 	SheetHeader,
@@ -25,6 +33,7 @@ import {
 } from "./catalogMappingsForm";
 import { MappingField } from "./MappingField";
 import { PlanMappingDetailSkeleton } from "./PlanMappingDetailSkeleton";
+import { useStripeProductLink } from "./useStripeProductLink";
 import { useStripeProductSearch } from "./useStripeProductSearch";
 
 const VariantList = ({
@@ -35,6 +44,7 @@ const VariantList = ({
 	variants: ProductV2[];
 }) => {
 	const splitVariant = useSplitVariantStripeProduct();
+	const getStripeProductHref = useStripeProductLink();
 
 	const sharesBaseProduct = (variant: ProductV2) =>
 		!variant.stripe_id || variant.stripe_id === base.stripe_id;
@@ -60,8 +70,24 @@ const VariantList = ({
 							Create separate Stripe product
 						</Button>
 					) : (
-						<span className="ml-auto shrink-0 text-tertiary-foreground">
-							Own Stripe product
+						<span className="ml-auto flex shrink-0 items-center gap-1">
+							<CopyButton
+								className="text-tertiary-foreground"
+								innerClassName="max-w-40 text-tiny-id truncate"
+								size="mini"
+								text={variant.stripe_id as string}
+							/>
+							<IconTooltipButton
+								icon={<StripeIcon size={12} />}
+								onClick={() =>
+									window.open(
+										getStripeProductHref(variant.stripe_id as string),
+										"_blank",
+										"noopener,noreferrer",
+									)
+								}
+								tooltip="Open in Stripe"
+							/>
 						</span>
 					)}
 				</div>
