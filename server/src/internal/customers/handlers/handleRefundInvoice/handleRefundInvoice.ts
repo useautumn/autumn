@@ -1,18 +1,31 @@
-import { ErrCode, RecaseError, stripeToAtmnAmount, Scopes } from "@autumn/shared";
+import {
+	ErrCode,
+	RecaseError,
+	Scopes,
+	stripeToAtmnAmount,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { resolveVercelInstallationId } from "@/external/vercel/misc/vercelInvoiceUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import {
 	calculateRefundAmountInCents,
 	createRefundAndUpdateInvoice,
 	resolveChargeFromInvoice,
 	validateChargeRefundable,
 } from "./invoiceRefundUtils.js";
+import {
+	calculateVercelRefundAmount,
+	requestVercelRefund,
+} from "./refundVercelInvoice.js";
 
 const RefundInvoiceBodySchema = z.object({
 	mode: z.enum(["full", "partial"]),
 	amount: z.number().positive().optional(),
+	reason: z.string().optional(),
 });
 
 export const handleRefundInvoice = createRoute({
@@ -24,8 +37,8 @@ export const handleRefundInvoice = createRoute({
 	body: RefundInvoiceBodySchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { stripe_invoice_id } = c.req.param();
-		const { mode, amount } = c.req.valid("json");
+		const { customer_id, stripe_invoice_id } = c.req.param();
+		const { mode, amount, reason } = c.req.valid("json");
 
 		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
@@ -43,7 +56,64 @@ export const handleRefundInvoice = createRoute({
 			});
 		}
 
-		// 2. Resolve the charge from the invoice's payments
+		// 2. Vercel invoices have no Stripe charge — refund through Vercel instead
+		const vercelInstallationId = await resolveVercelInstallationId({
+			stripeCli,
+			invoice: stripeInvoice,
+		});
+		if (vercelInstallationId) {
+			const customer = await CusService.get({
+				db: ctx.db,
+				idOrInternalId: customer_id,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			});
+			const autumnInvoice = await InvoiceService.getByStripeId({
+				db: ctx.db,
+				stripeId: stripe_invoice_id,
+			});
+			if (
+				!customer ||
+				!autumnInvoice ||
+				autumnInvoice.internal_customer_id !== customer.internal_id
+			) {
+				throw new RecaseError({
+					message: "Invoice not found for this customer",
+					code: ErrCode.InvalidRequest,
+					statusCode: 404,
+				});
+			}
+
+			const paidAmount = stripeToAtmnAmount({
+				amount: stripeInvoice.amount_paid,
+				currency: stripeInvoice.currency,
+			});
+			const refundAmount = calculateVercelRefundAmount({
+				mode,
+				amount,
+				refundableAmount: paidAmount - autumnInvoice.refunded_amount,
+				currency: stripeInvoice.currency,
+			});
+
+			const { vercelInvoiceId } = await requestVercelRefund({
+				customer,
+				stripeInvoice,
+				installationId: vercelInstallationId,
+				amount: refundAmount,
+				reason,
+				testOptions: ctx.testOptions,
+			});
+
+			return c.json({
+				processor: "vercel",
+				vercel_invoice_id: vercelInvoiceId,
+				amount: refundAmount,
+				currency: stripeInvoice.currency,
+				status: "requested",
+			});
+		}
+
+		// 3. Resolve the charge from the invoice's payments
 		const charge = await resolveChargeFromInvoice({
 			stripeCli,
 			stripeInvoice,
@@ -57,7 +127,7 @@ export const handleRefundInvoice = createRoute({
 			});
 		}
 
-		// 3. Validate and calculate
+		// 4. Validate and calculate
 		const refundableAmountInCents = validateChargeRefundable({ charge });
 		const refundAmountInCents = calculateRefundAmountInCents({
 			mode,
@@ -66,7 +136,7 @@ export const handleRefundInvoice = createRoute({
 			currency: charge.currency,
 		});
 
-		// 4. Issue the refund and update the DB
+		// 5. Issue the refund and update the DB
 		const stripeRefund = await createRefundAndUpdateInvoice({
 			stripeCli,
 			db: ctx.db,
@@ -76,6 +146,7 @@ export const handleRefundInvoice = createRoute({
 		});
 
 		return c.json({
+			processor: "stripe",
 			refund_id: stripeRefund.id,
 			charge_id: charge.id,
 			amount: stripeToAtmnAmount({
