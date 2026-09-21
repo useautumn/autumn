@@ -4,6 +4,10 @@ import { handleGetCustomerV3 } from "@/internal/customers/handlers/handleGetCust
 import { handleGetOrCreateCustomerV2 } from "@/internal/customers/handlers/handleGetOrCreateCustomer/handleGetOrCreateCustomerV2.js";
 import { handleUpdateCustomerV2 } from "@/internal/customers/handlers/handleUpdateCustomer/handleUpdateCustomerV2.js";
 import { handleAddCouponToCusV2 } from "./handlers/handleAddCouponToCusV2.js";
+import {
+	handleAdvanceTestClock,
+	handleLegacyBillingAdvanceTestClock,
+} from "./handlers/handleAdvanceTestClock.js";
 import { handleCreateBillingPortal } from "./handlers/handleBillingPortal/handleCreateBillingPortal.js";
 import { handleGetBillingPortal } from "./handlers/handleBillingPortal/handleGetBillingPortal.js";
 import { handleClearCustomerCache } from "./handlers/handleClearCustomerCache.js";
@@ -62,3 +66,12 @@ customerRpcRouter.post("/customers.get", ...handleGetCustomerV3);
 customerRpcRouter.post("/customers.update", ...handleUpdateCustomerV2);
 customerRpcRouter.post("/customers.list", ...handleListCustomersV2);
 customerRpcRouter.post("/customers.delete", ...handleDeleteCustomerV2);
+customerRpcRouter.post(
+	"/customers.advance_test_clock",
+	...handleAdvanceTestClock,
+);
+
+customerRpcRouter.post(
+	"/billing.advance_test_clock",
+	...handleLegacyBillingAdvanceTestClock,
+);

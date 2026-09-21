@@ -108,11 +108,41 @@ function stripMarkersEverywhere(node: unknown): void {
 	for (const value of Object.values(node)) stripMarkersEverywhere(value);
 }
 
+const HTTP_METHODS = new Set([
+	"get",
+	"put",
+	"post",
+	"delete",
+	"options",
+	"head",
+	"patch",
+	"trace",
+]);
+
+/** Drops operations marked internal, and any path item left with no operations. */
+function removeInternalOperations(openApiDocument: Record<string, unknown>) {
+	if (!isRecord(openApiDocument.paths)) return;
+	const paths = openApiDocument.paths;
+	for (const [path, pathItem] of Object.entries(paths)) {
+		if (!isRecord(pathItem)) continue;
+		for (const [method, operation] of Object.entries(pathItem)) {
+			if (HTTP_METHODS.has(method) && isInternalNode(operation)) {
+				delete pathItem[method];
+			}
+		}
+		const hasOperation = Object.keys(pathItem).some((key) =>
+			HTTP_METHODS.has(key),
+		);
+		if (!hasOperation) delete paths[path];
+	}
+}
+
 export function removeInternalFields({
 	openApiDocument,
 }: {
 	openApiDocument: Record<string, unknown>;
 }): void {
+	removeInternalOperations(openApiDocument);
 	// Two passes on purpose. zod-openapi emits shared schema objects (the spec is
 	// full of YAML anchors), so stripping a marker while deleting would leave a
 	// second parent holding the same object with nothing left to match on.
