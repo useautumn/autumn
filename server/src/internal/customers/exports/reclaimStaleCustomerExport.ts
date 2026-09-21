@@ -1,6 +1,7 @@
 import {
 	type AppEnv,
 	type CustomerExportField,
+	type CustomerExportKind,
 	type CustomerExportSnapshot,
 	type DbCustomerExport,
 	ms,
@@ -129,6 +130,7 @@ export const createExportReclaimingStale = async ({
 	logger,
 	orgId,
 	env,
+	kind,
 	fields,
 	snapshot,
 	requestedByUserId,
@@ -137,11 +139,20 @@ export const createExportReclaimingStale = async ({
 	logger: Logger;
 	orgId: string;
 	env: AppEnv;
+	kind: CustomerExportKind;
 	fields: CustomerExportField[];
 	snapshot: CustomerExportSnapshot;
 	requestedByUserId?: string;
 }): Promise<CreateCustomerExportResult> => {
-	const createParams = { db, orgId, env, fields, snapshot, requestedByUserId };
+	const createParams = {
+		db,
+		orgId,
+		env,
+		kind,
+		fields,
+		snapshot,
+		requestedByUserId,
+	};
 
 	const first = await CustomerExportService.createIfNoneActive(createParams);
 	if (first.created || !first.activeExport) return first;

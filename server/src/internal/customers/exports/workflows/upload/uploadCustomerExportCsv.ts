@@ -60,7 +60,7 @@ export const uploadCustomerExportCsv = async ({
 		customerExport,
 		population,
 		destination: { bucket, region, key },
-		onRowsProcessed: (processedRows) =>
-			progress?.incrementProcessedRows(processedRows),
+		onCustomersProcessed: (customerCount) =>
+			progress?.incrementProcessedRows(customerCount),
 	});
 };

@@ -1,6 +1,9 @@
 import { z } from "zod/v4";
 import {
+	CustomerExportFieldSchema,
 	CustomerExportFieldsSchema,
+	CustomerExportKind,
+	CustomerExportKindSchema,
 	CustomerExportSnapshotSchema,
 	CustomerExportStatusSchema,
 } from "../../../models/cusModels/cusExportModels.js";
@@ -10,8 +13,7 @@ export const MAX_CUSTOMER_EXPORTS_PAGE_SIZE = 20;
 
 export const MAX_CUSTOMER_EXPORT_SEARCH_LENGTH = 500;
 
-export const CreateCustomerExportParamsSchema = z.object({
-	fields: CustomerExportFieldsSchema,
+const ExportScopeParamsSchema = z.object({
 	search: z
 		.string()
 		.max(MAX_CUSTOMER_EXPORT_SEARCH_LENGTH)
@@ -19,6 +21,19 @@ export const CreateCustomerExportParamsSchema = z.object({
 		.default(""),
 	filters: CustomerListFiltersSchema.optional().default({}),
 });
+
+export const CreateCustomerExportParamsSchema = z.discriminatedUnion("kind", [
+	ExportScopeParamsSchema.extend({
+		kind: z
+			.literal(CustomerExportKind.Customers)
+			.optional()
+			.default(CustomerExportKind.Customers),
+		fields: CustomerExportFieldsSchema,
+	}),
+	ExportScopeParamsSchema.extend({
+		kind: z.literal(CustomerExportKind.BillingVerify),
+	}),
+]);
 
 export type CreateCustomerExportParams = z.infer<
 	typeof CreateCustomerExportParamsSchema
@@ -33,6 +48,9 @@ export const ListCustomerExportsQuerySchema = z.object({
 		.optional()
 		.default(MAX_CUSTOMER_EXPORTS_PAGE_SIZE),
 	offset: z.coerce.number().int().min(0).optional().default(0),
+	kind: CustomerExportKindSchema.optional().default(
+		CustomerExportKind.Customers,
+	),
 });
 
 export type ListCustomerExportsQuery = z.infer<
@@ -78,22 +96,30 @@ export const runMetadataToCustomerExportProgress = ({
 	};
 };
 
-export const CustomerExportResponseSchema = z.object({
-	id: z.string(),
-	status: CustomerExportStatusSchema,
-	fields: CustomerExportFieldsSchema,
-	snapshot: CustomerExportSnapshotSchema,
-	requested_by_user_id: z.string().nullable(),
-	row_count: z.number().nullable(),
-	byte_count: z.number().nullable(),
-	error_message: z.string().nullable(),
-	created_at: z.number(),
-	started_at: z.number().nullable(),
-	completed_at: z.number().nullable(),
-	progress: CustomerExportProgressSchema.nullable(),
-	trigger_run_id: z.string().nullable(),
-	public_access_token: z.string().nullable(),
-});
+export const CustomerExportResponseSchema = z
+	.object({
+		id: z.string(),
+		kind: CustomerExportKindSchema,
+		status: CustomerExportStatusSchema,
+		fields: z.array(CustomerExportFieldSchema),
+		snapshot: CustomerExportSnapshotSchema,
+		requested_by_user_id: z.string().nullable(),
+		row_count: z.number().nullable(),
+		byte_count: z.number().nullable(),
+		error_message: z.string().nullable(),
+		created_at: z.number(),
+		started_at: z.number().nullable(),
+		completed_at: z.number().nullable(),
+		progress: CustomerExportProgressSchema.nullable(),
+		trigger_run_id: z.string().nullable(),
+		public_access_token: z.string().nullable(),
+	})
+	.refine(
+		({ kind, fields }) =>
+			kind !== CustomerExportKind.Customers ||
+			CustomerExportFieldsSchema.safeParse(fields).success,
+		{ message: "A customers export needs at least one unique field" },
+	);
 
 export type CustomerExportResponse = z.infer<
 	typeof CustomerExportResponseSchema

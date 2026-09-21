@@ -5,7 +5,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import {
-	CUSTOMER_EXPORT_FILE_NAME,
+	CUSTOMER_EXPORT_DOWNLOAD_FILE_NAMES,
 	getCustomerExportsS3Config,
 } from "@/external/aws/s3/customerExportsS3Config.js";
 import { getS3PresignedGetUrl } from "@/external/aws/s3/s3PresignUtils.js";
@@ -48,17 +48,18 @@ export const downloadCustomerExport = async ({
 	}
 
 	const { bucket, region } = getCustomerExportsS3Config();
+	const fileName = CUSTOMER_EXPORT_DOWNLOAD_FILE_NAMES[customerExport.kind];
 	const url = await getS3PresignedGetUrl({
 		bucket,
 		region,
 		key: customerExport.s3_key,
 		expiresIn: DOWNLOAD_URL_EXPIRES_IN_SECONDS,
-		downloadFileName: CUSTOMER_EXPORT_FILE_NAME,
+		downloadFileName: fileName,
 	});
 
 	return {
 		url,
 		expires_in: DOWNLOAD_URL_EXPIRES_IN_SECONDS,
-		file_name: CUSTOMER_EXPORT_FILE_NAME,
+		file_name: fileName,
 	};
 };

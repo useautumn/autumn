@@ -1,3 +1,4 @@
+import { CustomerExportKind } from "@autumn/shared";
 import { queue } from "@trigger.dev/sdk/v3";
 
 export const CUSTOMER_EXPORT_PARENT_QUEUE_NAME = "customer-export-parent";
@@ -14,8 +15,16 @@ export const customerExportParentQueue = queue({
 	concurrencyLimit: CUSTOMER_EXPORT_PARENT_CONCURRENCY,
 });
 
+/** The verify export holds the org's swept Stripe subscriptions in memory. */
 export const getCustomerExportTriggerOptions = ({
 	isDev,
+	kind,
 }: {
 	isDev: boolean;
-}) => (isDev && process.env.S3_REGION ? { region: process.env.S3_REGION } : {});
+	kind: CustomerExportKind;
+}) => ({
+	...(isDev && process.env.S3_REGION ? { region: process.env.S3_REGION } : {}),
+	...(kind === CustomerExportKind.BillingVerify
+		? { machine: "large-1x" as const }
+		: {}),
+});

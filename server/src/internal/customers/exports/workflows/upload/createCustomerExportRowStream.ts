@@ -1,7 +1,5 @@
 import { Readable } from "node:stream";
-import type { CustomerExportSnapshot } from "@autumn/shared";
 import { dbReplica } from "@/db/initDrizzle.js";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CustomerExportRow } from "../../csv/createCustomerExportStringifier.js";
 import {
 	emptyPlanColumns,
@@ -9,22 +7,17 @@ import {
 } from "../../queries/getCustomerExportPlanColumns.js";
 import {
 	CUSTOMER_EXPORT_PAGE_SIZE,
-	type CustomerExportPopulation,
 	getCustomerExportScalars,
 } from "../../queries/getCustomerExportScalars.js";
 import { createOneOffProductLookup } from "../../queries/getOneOffProductLookup.js";
+import type { CustomerExportRowStreamFactory } from "./customerExportProducers.js";
 
-export const createCustomerExportRowStream = ({
+export const createCustomerExportRowStream: CustomerExportRowStreamFactory = ({
 	ctx,
 	snapshot,
 	population,
 	onPageProcessed,
-}: {
-	ctx: AutumnContext;
-	snapshot: CustomerExportSnapshot;
-	population: CustomerExportPopulation;
-	onPageProcessed: (rowCount: number) => Promise<void> | void;
-}): Readable => {
+}) => {
 	const readDb = dbReplica ?? ctx.db;
 	const oneOffProductLookup = createOneOffProductLookup({ db: readDb });
 
@@ -64,7 +57,10 @@ export const createCustomerExportRowStream = ({
 				};
 			}
 
-			await onPageProcessed(scalars.length);
+			await onPageProcessed({
+				customerCount: scalars.length,
+				rowCount: scalars.length,
+			});
 
 			afterInternalId = lastScalar.internal_id;
 			hasMorePages = scalars.length === CUSTOMER_EXPORT_PAGE_SIZE;

@@ -1,8 +1,16 @@
-import { InternalError } from "@autumn/shared";
+import { CustomerExportKind, InternalError } from "@autumn/shared";
 
 export const CUSTOMER_EXPORTS_PREFIX = "customer-exports";
 
 export const CUSTOMER_EXPORT_FILE_NAME = "customers.csv";
+
+export const CUSTOMER_EXPORT_DOWNLOAD_FILE_NAMES: Record<
+	CustomerExportKind,
+	string
+> = {
+	[CustomerExportKind.Customers]: CUSTOMER_EXPORT_FILE_NAME,
+	[CustomerExportKind.BillingVerify]: "billing-issues.csv",
+};
 
 export type CustomerExportDestination = {
 	bucket: string;
