@@ -3,6 +3,7 @@ import { billingActions } from "@/internal/billing/v2/actions";
 import { canAutoSync } from "@/internal/billing/v2/actions/sync/canAutoSync/index.js";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams.js";
 import { isAutumnCheckoutSubscription } from "@/internal/billing/v2/actions/sync/utils/isAutumnCheckoutSubscription.js";
+import { logAutoSyncSkip } from "@/internal/billing/v2/actions/sync/utils/logAutoSyncSkip.js";
 import { withStripeSyncCustomerLock } from "@/internal/billing/v2/actions/sync/utils/withStripeSyncCustomerLock.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { findPlanLinkedToAnotherSubscription } from "../../common/subscriptionSync/findPlanLinkedToAnotherSubscription.js";
@@ -58,9 +59,13 @@ const autoSyncFromSubscription = async ({
 
 	const eligibility = canAutoSync({ match });
 	if (!eligibility.eligible) {
-		logger.info(
-			`sub.created auto-sync skipping ${subscription.id}: ${eligibility.reason} — ${eligibility.details}`,
-		);
+		logAutoSyncSkip({
+			logger,
+			source: "sub.created",
+			stripeSubscriptionId: subscription.id,
+			reason: eligibility.reason,
+			details: eligibility.details,
+		});
 		return;
 	}
 
