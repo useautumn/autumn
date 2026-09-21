@@ -20,21 +20,24 @@ export const logAutoSyncSkip = ({
 	logger,
 	source,
 	stripeSubscriptionId,
+	stripeScheduleId,
 	reason,
 	details,
 }: {
 	logger: SkipLogger;
 	source: "sub.created" | "sub.updated" | "customer.create";
-	stripeSubscriptionId: string;
+	stripeSubscriptionId: string | null;
+	stripeScheduleId?: string | null;
 	reason: AutoSyncSkipReason;
 	details?: string;
 }) => {
-	const message = `${source} auto-sync skipping ${stripeSubscriptionId}: ${reason}${details ? ` - ${details}` : ""}`;
+	const message = `${source} auto-sync skipping ${stripeSubscriptionId ?? stripeScheduleId}: ${reason}${details ? ` - ${details}` : ""}`;
 	const fields = {
 		data: {
 			type: "stripe_auto_sync_skip",
 			source,
 			stripe_subscription_id: stripeSubscriptionId,
+			...(stripeScheduleId ? { stripe_schedule_id: stripeScheduleId } : {}),
 			skip_reason: reason,
 		},
 	};

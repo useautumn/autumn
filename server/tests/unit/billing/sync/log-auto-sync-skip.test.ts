@@ -57,4 +57,28 @@ describe("logAutoSyncSkip", () => {
 			);
 		}
 	});
+
+	test("a schedule-only skip is recorded under stripe_schedule_id", () => {
+		const logger = fakeLogger();
+		logAutoSyncSkip({
+			logger,
+			source: "customer.create",
+			stripeSubscriptionId: null,
+			stripeScheduleId: "sub_sched_123",
+			reason: "multiple_main_plans",
+		});
+
+		expect(logger.warn).toHaveBeenCalledWith(
+			"customer.create auto-sync skipping sub_sched_123: multiple_main_plans",
+			{
+				data: {
+					type: "stripe_auto_sync_skip",
+					source: "customer.create",
+					stripe_subscription_id: null,
+					stripe_schedule_id: "sub_sched_123",
+					skip_reason: "multiple_main_plans",
+				},
+			},
+		);
+	});
 });

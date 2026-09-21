@@ -27,8 +27,8 @@ const autoSyncStripeCustomer = async ({
 			logAutoSyncSkip({
 				logger: ctx.logger,
 				source: "customer.create",
-				stripeSubscriptionId:
-					match.stripe_subscription_id ?? match.stripe_schedule_id ?? "",
+				stripeSubscriptionId: match.stripe_subscription_id,
+				stripeScheduleId: match.stripe_schedule_id,
 				reason: eligibility.reason,
 				details: eligibility.details,
 			});
