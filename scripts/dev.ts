@@ -284,6 +284,13 @@ async function startDev() {
 				);
 			}
 
+			// Herald follows the balance worker's log, so it only runs where the worker does.
+			if (launchBalanceWorker) {
+				names.push("herald");
+				colors.push("magentaBright");
+				cmds.push('"cd apps/herald && bun dev"');
+			}
+
 			if (!skipWorkers) {
 				names.push("workers");
 				colors.push("yellow");

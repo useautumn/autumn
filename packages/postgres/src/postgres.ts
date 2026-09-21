@@ -5,6 +5,15 @@ export type {
 } from "./catalog/types/catalogRowsEnvelope.js";
 export { parseRows, RowsInvalidError } from "./common/parseRows.js";
 export { createPostgresClient } from "./createPostgresClient.js";
+export { createEventsDb } from "./eventsDb/createEventsDb.js";
+export type {
+	RefusedUsageEvent,
+	UsageEventsInsertResult,
+} from "./eventsDb/repos/usageEvents.js";
+export type {
+	EventsDb,
+	EventsDbConfig,
+} from "./eventsDb/types/eventsDb.js";
 export {
 	commitFlush,
 	FlushBookmarkConflictError,

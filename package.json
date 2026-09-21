@@ -9,6 +9,7 @@
 			"vite",
 			"scripts",
 			"apps/balance-worker",
+			"apps/herald",
 			"apps/checkout",
 			"apps/docs",
 			"apps/website",

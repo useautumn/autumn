@@ -29,6 +29,11 @@
 			"types": "./src/viteDev.ts",
 			"import": "./src/viteDev.ts",
 			"default": "./src/viteDev.ts"
+		},
+		"./herald": {
+			"types": "./src/herald.ts",
+			"import": "./src/herald.ts",
+			"default": "./src/herald.ts"
 		}
 	},
 	"scripts": {
