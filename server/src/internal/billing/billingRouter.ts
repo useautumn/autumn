@@ -10,9 +10,9 @@ import type { HonoEnv } from "../../honoUtils/HonoEnv.js";
 import { handleAttach } from "./attach/handleAttach.js";
 import { handleLegacyApiCheckout } from "./checkout/handleLegacyApiCheckout.js";
 import { handleSetupPayment } from "./handlers/handleSetupPayment.js";
-import { handleAdvanceTestClock } from "./v2/handlers/handleAdvanceTestClock.js";
 import { handleAttachV2 } from "./v2/handlers/handleAttachV2.js";
 import { handleCreateSchedule } from "./v2/handlers/handleCreateSchedule.js";
+import { handleLegacyAdvanceTestClock } from "./v2/handlers/handleLegacyAdvanceTestClock.js";
 import { handleMultiAttach } from "./v2/handlers/handleMultiAttach.js";
 import { handleMultiUpdate } from "./v2/handlers/handleMultiUpdate.js";
 import { handlePreviewCreateSchedule } from "./v2/handlers/handlePreviewCreateSchedule.js";
@@ -39,7 +39,11 @@ billingRouter.post("/checkout", ...handleLegacyApiCheckout);
 billingRouter.post("/attach", ...handleAttach);
 
 export const billingRpcRouter = new Hono<HonoEnv>();
-billingRpcRouter.post("/billing.advance_test_clock", ...handleAdvanceTestClock);
+// Deprecated: superseded by customers.advance_test_clock.
+billingRpcRouter.post(
+	"/billing.advance_test_clock",
+	...handleLegacyAdvanceTestClock,
+);
 billingRpcRouter.post("/billing.update", ...handleUpdateSubscription);
 billingRpcRouter.post(
 	"/billing.preview_update",
