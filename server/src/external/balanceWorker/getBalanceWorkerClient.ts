@@ -15,12 +15,15 @@ let balanceWorkerClient: BalanceWorkerClient | undefined;
 /** Looks the consumer up on every call instead of capturing it. A consumer that
  *  fails its startup cannot be restarted, so it gets replaced rather than
  *  revived, and this client has to follow the replacement. */
+/** Undefined until ownership has been read through at least once. Routing then
+ *  resolves no owner and the caller gets a retryable answer, which is the truth:
+ *  the server does not yet know who owns anything. */
 function findOwner(params: { partition: number }): PartitionOwner | undefined {
-	return getOwnershipConsumer().findOwner(params);
+	return getOwnershipConsumer()?.findOwner(params);
 }
 
-function refresh(): Promise<void> {
-	return getOwnershipConsumer().refresh();
+async function refresh(): Promise<void> {
+	await getOwnershipConsumer()?.refresh();
 }
 
 export function getBalanceWorkerClient(): BalanceWorkerClient {

@@ -10,24 +10,29 @@ import { Kafka } from "kafkajs";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { getBalanceWorkerRolloutEnabled } from "./getBalanceWorkerRolloutEnabled.js";
 
-let ownershipConsumer: OwnershipConsumer | undefined;
+/** The consumer routing reads from. Only ever a consumer that finished its
+ *  catch-up, so routing cannot end up reading an empty owner table. */
+let readyConsumer: OwnershipConsumer | undefined;
+/** The consumer the current startup attempt is working on. A failed consumer
+ *  aborts its own lifetime and cannot be started again, so each attempt builds
+ *  its own and only promotes it once it is caught up. */
+let startingConsumer: OwnershipConsumer | undefined;
 
-/** A failed consumer aborts its own lifetime, so it cannot be started again.
- *  Dropping it lets the next attempt build a fresh one. Callers reach the
- *  consumer through this function every time rather than holding a reference,
- *  so a replacement is picked up without rewiring anything. */
-function discardOwnershipConsumer(): void {
-	ownershipConsumer = undefined;
-}
-
-export function getOwnershipConsumer(): OwnershipConsumer {
-	if (ownershipConsumer) return ownershipConsumer;
+function buildOwnershipConsumer(): OwnershipConsumer {
 	const env = getBalanceWorkerClientEnv();
-	ownershipConsumer = createServerOwnershipConsumer({
+	return createServerOwnershipConsumer({
 		topic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
 		groupIdPrefix: "autumn-server-ownership",
 	});
-	return ownershipConsumer;
+}
+
+/** Never constructs. Routing asks for owners constantly, and building a consumer
+ *  on that path once meant a request that arrived between a failed attempt and
+ *  the next one got a brand new consumer whose owner table was empty, so it
+ *  resolved no owner for every partition and answered 503 while a perfectly good
+ *  ownership log said otherwise. */
+export function getOwnershipConsumer(): OwnershipConsumer | undefined {
+	return readyConsumer;
 }
 
 export function createServerOwnershipConsumer({
@@ -83,13 +88,17 @@ export async function startOwnershipConsumer(): Promise<void> {
 	// "no owner" until somebody redeploys it.
 	for (let attempt = 1; ; attempt++) {
 		try {
-			await getOwnershipConsumer().start();
+			startingConsumer ??= buildOwnershipConsumer();
+			await startingConsumer.start();
+			readyConsumer = startingConsumer;
 			logger.info(
 				`[balance-worker] Kafka ownership consumer ready; initial catch-up complete (${Math.round(performance.now() - startedAt)}ms, attempt ${attempt})`,
 			);
 			return;
 		} catch (error) {
-			discardOwnershipConsumer();
+			// The failed consumer cannot be restarted, so the next attempt builds a
+			// fresh one. Whatever routing was already using stays in place.
+			startingConsumer = undefined;
 			const waitMs = ownershipRetryDelayMs({ attempt });
 			logger.error(
 				{
@@ -112,5 +121,8 @@ function ownershipRetryDelayMs({ attempt }: { attempt: number }): number {
 }
 
 export async function stopOwnershipConsumer(): Promise<void> {
-	await ownershipConsumer?.stop();
+	const running = readyConsumer ?? startingConsumer;
+	readyConsumer = undefined;
+	startingConsumer = undefined;
+	await running?.stop();
 }
