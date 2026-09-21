@@ -260,7 +260,7 @@ test.concurrent(
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Ending the Stripe trial early clears only the Stripe-owned trial
+// TEST 3: Ending the Stripe trial early ends only the Stripe-owned trial
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -269,11 +269,11 @@ test.concurrent(
  * - The Stripe trial is ended now from the dashboard (trial_end: "now")
  *
  * Expected Result:
- * - Entity-1's trial_ends_at is cleared
+ * - Entity-1's trial_ends_at moves to Stripe's new trial_end (now, so no longer trialing)
  * - Entity-2 keeps its Autumn-only trial
  */
 test.concurrent(
-	`${chalk.yellowBright("sub.updated: ending the Stripe trial early clears only the Stripe-owned trial")}`,
+	`${chalk.yellowBright("sub.updated: ending the Stripe trial early ends only the Stripe-owned trial")}`,
 	async () => {
 		const customerId = "sub-updated-end-stripe-trial";
 
@@ -315,16 +315,19 @@ test.concurrent(
 			productId: proTrial.id,
 		});
 
-		await ctx.stripeCli.subscriptions.update(subscriptionId, {
-			trial_end: "now",
-			proration_behavior: "none",
-		});
+		// Stripe keeps trial_end set to the moment the trial ended, not null
+		const endedSubscription = await ctx.stripeCli.subscriptions.update(
+			subscriptionId,
+			{ trial_end: "now", proration_behavior: "none" },
+		);
+		const endedTrialEndsAt = endedSubscription.trial_end! * 1000;
+		expect(endedTrialEndsAt).toBeLessThan(autumnOnlyTrialEndsAt);
 
 		await waitForEntityCustomerProduct({
 			ctx,
 			customerId,
 			entityId: entities[0].id,
-			assert: (entity1) => expect(entity1.trial_ends_at).toBeNull(),
+			assert: (entity1) => expect(entity1.trial_ends_at).toBe(endedTrialEndsAt),
 		});
 
 		const entity2 = await getEntityCustomerProduct({
