@@ -19,7 +19,7 @@ import {
 } from "./invoiceRefundUtils.js";
 import {
 	calculateVercelRefundAmount,
-	refundVercelInvoice,
+	requestVercelRefund,
 } from "./refundVercelInvoice.js";
 
 const RefundInvoiceBodySchema = z.object({
@@ -95,13 +95,11 @@ export const handleRefundInvoice = createRoute({
 				currency: stripeInvoice.currency,
 			});
 
-			const { vercelInvoiceId } = await refundVercelInvoice({
-				db: ctx.db,
+			const { vercelInvoiceId } = await requestVercelRefund({
 				customer,
 				stripeInvoice,
 				installationId: vercelInstallationId,
 				amount: refundAmount,
-				refundableAmount: paidAmount,
 				reason,
 				testOptions: ctx.testOptions,
 			});

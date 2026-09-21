@@ -13,11 +13,15 @@ import type { Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
 import { getInvoiceHoverTexts } from "@/views/admin/adminUtils";
+import type { InvoiceProcessorVariant } from "@/views/customers2/hooks/useInvoiceMetadataQuery";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
 import { CustomerInvoiceStatus } from "./CustomerInvoiceStatus";
 import { InvoiceTotalCell } from "./invoiceAmountUtils";
 
-type CustomerInvoice = Invoice & { productNames: string };
+type CustomerInvoice = Invoice & {
+	productNames: string;
+	processor: InvoiceProcessorVariant;
+};
 
 const getTotalDiscountAmount = (invoice: Invoice) => {
 	return invoice.discounts.reduce((acc: number, discount: InvoiceDiscount) => {
@@ -25,17 +29,18 @@ const getTotalDiscountAmount = (invoice: Invoice) => {
 	}, 0);
 };
 
-const PROCESSOR_LABELS: Record<ProcessorType, string> = {
+const PROCESSOR_LABELS: Record<InvoiceProcessorVariant, string> = {
 	[ProcessorType.Stripe]: "Stripe",
 	[ProcessorType.RevenueCat]: "RevenueCat",
+	vercel: "Vercel",
 };
 
 const processorColumn = {
 	header: "Processor",
-	accessorKey: "processor_type",
+	accessorKey: "processor",
 	size: 140,
 	cell: ({ row }: { row: Row<CustomerInvoice> }) => {
-		const processor = row.original.processor_type ?? ProcessorType.Stripe;
+		const processor = row.original.processor;
 		return (
 			<TooltipProvider>
 				<Tooltip delayDuration={0}>
@@ -58,10 +63,7 @@ const processorColumn = {
 };
 
 export const hasNonStripeInvoice = (invoices: CustomerInvoice[]) =>
-	invoices.some(
-		(inv) =>
-			inv.processor_type != null && inv.processor_type !== ProcessorType.Stripe,
-	);
+	invoices.some((inv) => inv.processor !== ProcessorType.Stripe);
 
 export const getCustomerInvoicesColumns = ({
 	showProcessor,

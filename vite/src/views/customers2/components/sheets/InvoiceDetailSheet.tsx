@@ -46,7 +46,10 @@ import {
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useInvoiceMetadataQuery } from "@/views/customers2/hooks/useInvoiceMetadataQuery";
+import {
+	resolveInvoiceProcessor,
+	useInvoiceMetadataQuery,
+} from "@/views/customers2/hooks/useInvoiceMetadataQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
 import { RefundInvoiceDialog } from "./RefundInvoiceDialog";
 
@@ -222,17 +225,25 @@ export function InvoiceDetailSheet({
 
 	if (!invoice) return null;
 
-	const invoiceProcessor = invoice.processor_type ?? ProcessorType.Stripe;
+	const invoiceProcessor = resolveInvoiceProcessor({
+		processorType: invoice.processor_type,
+		metadata: invoiceMetadata,
+	});
 	const processorLabel =
-		invoiceProcessor === ProcessorType.RevenueCat ? "RevenueCat" : "Stripe";
-	const idLabel = `${processorLabel} ID`;
+		invoiceProcessor === ProcessorType.RevenueCat
+			? "RevenueCat"
+			: invoiceProcessor === "vercel"
+				? "Vercel"
+				: "Stripe";
+	// Vercel invoices are still Stripe-ledgered, so the id stays a Stripe id.
+	const idLabel =
+		invoiceProcessor === "vercel" ? "Stripe ID" : `${processorLabel} ID`;
 	const refundableAmount = Math.abs(invoice.amount_paid ?? invoice.total);
 	const isFullyRefunded =
 		invoice.refunded_amount > 0 && invoice.refunded_amount >= refundableAmount;
-	const isVercelInvoice = Boolean(invoiceMetadata.vercel_installation_id);
 	// Vercel invoices before the mapping existed can't be refunded from Autumn.
 	const vercelRefundBlocked =
-		isVercelInvoice && !invoiceMetadata.vercel_invoice_id;
+		invoiceProcessor === "vercel" && !invoiceMetadata.vercel_invoice_id;
 	const canRefund =
 		invoiceIsStripe &&
 		invoice.status === InvoiceStatus.Paid &&

@@ -12,8 +12,9 @@
  * 2. Internal `GET /customers/:id/invoices/:stripe_id/metadata` (dashboard
  *    session auth) exposes it so the invoice sheet can gate the refund button.
  * 3. `POST /customers/:id/invoices/:stripe_id/refund` calls Vercel's
- *    `updateInvoice` with `{ action: "refund", reason, total }` and increments
- *    `refunded_amount` on the Autumn invoice.
+ *    `updateInvoice` with `{ action: "refund", reason, total }`. Nothing is
+ *    written to Autumn yet — Vercel settles asynchronously.
+ * 4. `marketplace.invoice.refunded` webhook increments `refunded_amount`.
  *
  * The Vercel SDK is pointed at the dev server's `/__test/vercel/api` mock via
  * `x-mock-vercel-api` / `ctx.testOptions.mockVercelApi`.
@@ -46,11 +47,51 @@ import {
 	setupVercelOrg,
 	waitForVercelCapture,
 } from "./utils/vercel-test-helpers";
+import {
+	expectVercelWebhookSuccess,
+	VercelWebhookClient,
+} from "./utils/vercel-webhook-client";
 
 const TEST_CASE = "vrefund";
 const MOCK_HEADERS = { "x-mock-vercel-api": "true" };
 
 const autumn = new AutumnInt();
+const HMAC_SECRET = "test_vercel_client_secret_refund";
+
+const webhookClient = () =>
+	new VercelWebhookClient({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		clientSecret: HMAC_SECRET,
+	});
+
+const refundedPayload = ({
+	installationId,
+	stripeInvoiceId,
+	amount,
+}: {
+	installationId: string;
+	stripeInvoiceId: string;
+	amount: string;
+}) => ({
+	installationId,
+	invoiceId: `vi_test_${stripeInvoiceId}`,
+	externalInvoiceId: stripeInvoiceId,
+	amount,
+	reason: "Refund issued from Autumn",
+	period: {
+		start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+		end: new Date().toISOString(),
+	},
+});
+
+const getRefundedAmount = async (stripeInvoiceId: string) =>
+	(
+		await InvoiceService.getByStripeId({
+			db: ctx.db,
+			stripeId: stripeInvoiceId,
+		})
+	)?.refunded_amount;
 
 /**
  * Provision a Vercel customer + paid plan, run the finalize task against the
@@ -67,7 +108,7 @@ const setupPaidVercelInvoice = async ({ suffix }: { suffix: string }) => {
 		items: [items.monthlyMessages({ includedUsage: 1000 })],
 	});
 
-	await setupVercelOrg(ctx);
+	await setupVercelOrg(ctx, { clientSecret: HMAC_SECRET });
 	await initProductsV0({
 		ctx,
 		products: [proRaw],
@@ -190,11 +231,11 @@ test(`${chalk.yellowBright(
 }, 60000);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TEST 3: full refund goes through Vercel Invoice Actions, not Stripe charges
+// TEST 3: full refund → Vercel Invoice Actions; refunded webhook → DB
 // ─────────────────────────────────────────────────────────────────────────────
 
 test(`${chalk.yellowBright(
-	"vercel-invoice-refund: full refund calls Vercel updateInvoice and increments refunded_amount",
+	"vercel-invoice-refund: full refund requests via Vercel, refunded webhook records it",
 )}`, async () => {
 	const { customerId, installationId, stripeInvoiceId } =
 		await setupPaidVercelInvoice({ suffix: "full" });
@@ -205,6 +246,7 @@ test(`${chalk.yellowBright(
 		MOCK_HEADERS,
 	);
 	expect(res.processor).toBe("vercel");
+	expect(res.status).toBe("requested");
 	expect(res.amount).toBe(20);
 
 	const refundCall = await waitForVercelCapture({
@@ -212,7 +254,6 @@ test(`${chalk.yellowBright(
 		predicate: (call) =>
 			call.method === "POST" && call.path.endsWith("/actions"),
 	});
-	expect(refundCall).not.toBeNull();
 	expect(refundCall!.path).toMatch(
 		new RegExp(
 			`^/v1/installations/${installationId}/billing/invoices/vi_test_\\d+/actions$`,
@@ -224,11 +265,15 @@ test(`${chalk.yellowBright(
 		total: "20.00",
 	});
 
-	const autumnInvoice = await InvoiceService.getByStripeId({
-		db: ctx.db,
-		stripeId: stripeInvoiceId,
-	});
-	expect(autumnInvoice?.refunded_amount).toBe(20);
+	// Nothing recorded until Vercel confirms.
+	expect(await getRefundedAmount(stripeInvoiceId)).toBe(0);
+
+	expectVercelWebhookSuccess(
+		await webhookClient().invoiceRefunded(
+			refundedPayload({ installationId, stripeInvoiceId, amount: "20.00" }),
+		),
+	);
+	expect(await getRefundedAmount(stripeInvoiceId)).toBe(20);
 }, 60000);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -241,6 +286,7 @@ test(`${chalk.yellowBright(
 	const { customerId, installationId, stripeInvoiceId } =
 		await setupPaidVercelInvoice({ suffix: "partial" });
 
+	// Sub-cent input is normalized so Vercel and the DB agree on the amount.
 	await autumn.post(
 		`/customers/${customerId}/invoices/${stripeInvoiceId}/refund`,
 		{ mode: "partial", amount: 7.499 },
@@ -254,11 +300,12 @@ test(`${chalk.yellowBright(
 	});
 	expect(refundCall!.body.total).toBe("7.50");
 
-	const autumnInvoice = await InvoiceService.getByStripeId({
-		db: ctx.db,
-		stripeId: stripeInvoiceId,
-	});
-	expect(autumnInvoice?.refunded_amount).toBe(7.5);
+	expectVercelWebhookSuccess(
+		await webhookClient().invoiceRefunded(
+			refundedPayload({ installationId, stripeInvoiceId, amount: "7.50" }),
+		),
+	);
+	expect(await getRefundedAmount(stripeInvoiceId)).toBe(7.5);
 
 	// Remaining refundable is 12.50 — asking for more must 400.
 	await expect(
@@ -302,7 +349,7 @@ test(`${chalk.yellowBright(
 test(`${chalk.yellowBright(
 	"vercel-invoice-refund: refund via another customer's URL is rejected",
 )}`, async () => {
-	const [{ stripeInvoiceId }, other] = await Promise.all([
+	const [{ stripeInvoiceId, installationId }, other] = await Promise.all([
 		setupPaidVercelInvoice({ suffix: "owner-a" }),
 		setupPaidVercelInvoice({ suffix: "owner-b" }),
 	]);
@@ -315,94 +362,32 @@ test(`${chalk.yellowBright(
 		),
 	).rejects.toThrow(/not found/i);
 
-	const autumnInvoice = await InvoiceService.getByStripeId({
-		db: ctx.db,
-		stripeId: stripeInvoiceId,
-	});
-	expect(autumnInvoice?.refunded_amount).toBe(0);
-}, 90000);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 7: concurrent full refunds can't double-refund
-// ─────────────────────────────────────────────────────────────────────────────
-
-test(`${chalk.yellowBright(
-	"vercel-invoice-refund: concurrent full refunds reserve atomically",
-)}`, async () => {
-	const { customerId, installationId, stripeInvoiceId } =
-		await setupPaidVercelInvoice({ suffix: "race" });
-
-	const results = await Promise.allSettled([
-		autumn.post(
-			`/customers/${customerId}/invoices/${stripeInvoiceId}/refund`,
-			{ mode: "full" },
-			MOCK_HEADERS,
-		),
-		autumn.post(
-			`/customers/${customerId}/invoices/${stripeInvoiceId}/refund`,
-			{ mode: "full" },
-			MOCK_HEADERS,
-		),
-	]);
-	expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
-
-	const autumnInvoice = await InvoiceService.getByStripeId({
-		db: ctx.db,
-		stripeId: stripeInvoiceId,
-	});
-	expect(autumnInvoice?.refunded_amount).toBe(20);
-
-	await waitForVercelCapture({
-		installationId,
-		predicate: (call) => call.path.endsWith("/actions"),
-	});
 	const refundCalls = (await readVercelCaptures(installationId)).filter(
 		(call) => call.path.endsWith("/actions"),
 	);
-	expect(refundCalls).toHaveLength(1);
-}, 60000);
+	expect(refundCalls).toHaveLength(0);
+}, 90000);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TEST 8: definitive 4xx from Vercel releases the reservation; 5xx keeps it
+// TEST 7: a Vercel rejection surfaces and records nothing
 // ─────────────────────────────────────────────────────────────────────────────
 
 test(`${chalk.yellowBright(
-	"vercel-invoice-refund: 4xx releases the reserved amount, ambiguous 5xx keeps it",
+	"vercel-invoice-refund: Vercel 409 (already refund_requested) surfaces as an error",
 )}`, async () => {
-	const [rejected, flaky] = await Promise.all([
-		setupPaidVercelInvoice({ suffix: "reject" }),
-		setupPaidVercelInvoice({ suffix: "flaky" }),
-	]);
+	const { customerId, stripeInvoiceId } = await setupPaidVercelInvoice({
+		suffix: "reject",
+	});
 
-	await ctx.stripeCli.invoices.update(rejected.stripeInvoiceId, {
+	await ctx.stripeCli.invoices.update(stripeInvoiceId, {
 		metadata: { vercel_invoice_id: "vi_reject_1" },
 	});
 	await expect(
 		autumn.post(
-			`/customers/${rejected.customerId}/invoices/${rejected.stripeInvoiceId}/refund`,
+			`/customers/${customerId}/invoices/${stripeInvoiceId}/refund`,
 			{ mode: "full" },
 			MOCK_HEADERS,
 		),
 	).rejects.toThrow();
-	const rejectedInvoice = await InvoiceService.getByStripeId({
-		db: ctx.db,
-		stripeId: rejected.stripeInvoiceId,
-	});
-	expect(rejectedInvoice?.refunded_amount).toBe(0);
-
-	await ctx.stripeCli.invoices.update(flaky.stripeInvoiceId, {
-		metadata: { vercel_invoice_id: "vi_flaky_1" },
-	});
-	await expect(
-		autumn.post(
-			`/customers/${flaky.customerId}/invoices/${flaky.stripeInvoiceId}/refund`,
-			{ mode: "full" },
-			MOCK_HEADERS,
-		),
-	).rejects.toThrow(/did not confirm/i);
-	const flakyInvoice = await InvoiceService.getByStripeId({
-		db: ctx.db,
-		stripeId: flaky.stripeInvoiceId,
-	});
-	expect(flakyInvoice?.refunded_amount).toBe(20);
-}, 90000);
+	expect(await getRefundedAmount(stripeInvoiceId)).toBe(0);
+}, 60000);

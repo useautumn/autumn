@@ -10,7 +10,8 @@ if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === undefined) {
 type VercelMarketplaceEventType =
 	| "marketplace.invoice.created"
 	| "marketplace.invoice.paid"
-	| "marketplace.invoice.notpaid";
+	| "marketplace.invoice.notpaid"
+	| "marketplace.invoice.refunded";
 
 export interface VercelMarketplaceInvoicePayload {
 	installationId: string;
@@ -19,6 +20,15 @@ export interface VercelMarketplaceInvoicePayload {
 	invoiceTotal: string;
 	period: { start: string; end: string };
 	invoiceDate: string;
+}
+
+export interface VercelMarketplaceInvoiceRefundedPayload {
+	installationId: string;
+	invoiceId: string;
+	externalInvoiceId: string;
+	amount: string;
+	reason: string;
+	period: { start: string; end: string };
 }
 
 interface VercelWebhookClientConfig {
@@ -67,7 +77,9 @@ export class VercelWebhookClient {
 		payload,
 	}: {
 		type: VercelMarketplaceEventType;
-		payload: VercelMarketplaceInvoicePayload;
+		payload:
+			| VercelMarketplaceInvoicePayload
+			| VercelMarketplaceInvoiceRefundedPayload;
 	}): Promise<{ response: Response; data: unknown }> {
 		const body = JSON.stringify({ type, payload });
 		const signature = crypto
@@ -103,6 +115,10 @@ export class VercelWebhookClient {
 
 	async invoiceNotPaid(payload: VercelMarketplaceInvoicePayload) {
 		return this.sendEvent({ type: "marketplace.invoice.notpaid", payload });
+	}
+
+	async invoiceRefunded(payload: VercelMarketplaceInvoiceRefundedPayload) {
+		return this.sendEvent({ type: "marketplace.invoice.refunded", payload });
 	}
 }
 
