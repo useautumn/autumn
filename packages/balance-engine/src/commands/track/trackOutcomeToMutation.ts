@@ -1,3 +1,5 @@
+import { deltasToUsageEventFields } from "../../common/usageEvent/deltasToUsageEventFields.js";
+import { fullSubjectToMutationSubject } from "../../common/usageEvent/fullSubjectToMutationSubject.js";
 import type { DeductionOutcome } from "../../deduction/types/deductionOutcome.js";
 import { fundingRowOf } from "../../deduction/utils/fundingRowOf.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
@@ -37,6 +39,7 @@ export const trackOutcomeToMutation = ({
 			type: "mutation",
 			id: command.commandId,
 			identity: command.identity,
+			subject: fullSubjectToMutationSubject({ fullSubject }),
 			revision: { before: revisionBefore, after: revisionBefore + 1 },
 			command,
 			changes: [...changes, ...lockChanges],
@@ -45,6 +48,10 @@ export const trackOutcomeToMutation = ({
 				status: rejected ? "rejected" : "applied",
 				reason: rejected ? "insufficient_balance" : null,
 				deltas: rejected ? [] : outcome.deltas,
+				...deltasToUsageEventFields({
+					fullSubject,
+					deltas: rejected ? [] : outcome.deltas,
+				}),
 				fundingFeatureId: fundingRow?.featureId ?? command.featureId,
 				fundingCreditCost: fundingRow?.creditCost ?? 1,
 			},

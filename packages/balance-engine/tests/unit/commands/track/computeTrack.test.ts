@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { ResetInterval } from "@autumn/shared";
 import {
 	computeTrack as computeTrackMutation,
 	type SubjectState,
@@ -58,8 +59,26 @@ describe("track computation", () => {
 					creditCost: 1,
 				},
 			],
+			// What a usage event reports, read off the rows while the decision still has them.
+			deductions: [
+				{
+					balance_id: "messages_monthly",
+					feature_id: "messages",
+					plan_id: "pro",
+					reset: {
+						interval: ResetInterval.Month,
+						resets_at: null,
+					},
+					value: 5,
+				},
+			],
+			internalProductId: "prod_internal_pro",
 			fundingFeatureId: "messages",
 			fundingCreditCost: 1,
+		});
+		expect(mutation.subject).toEqual({
+			internalCustomerId: "cus_1",
+			internalEntityId: null,
 		});
 	});
 
@@ -93,6 +112,8 @@ describe("track computation", () => {
 			status: "rejected",
 			reason: "insufficient_balance",
 			deltas: [],
+			deductions: [],
+			internalProductId: null,
 			fundingFeatureId: "messages",
 			fundingCreditCost: 1,
 		});

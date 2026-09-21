@@ -42,6 +42,8 @@ const decision: TrackReply = {
 		status: "applied",
 		reason: null,
 		deltas: [],
+		deductions: [],
+		internalProductId: null,
 		fundingFeatureId: "messages",
 		fundingCreditCost: 1,
 	},

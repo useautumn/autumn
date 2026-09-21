@@ -1,4 +1,6 @@
 import { Decimal } from "decimal.js";
+import { deltasToUsageEventFields } from "../../common/usageEvent/deltasToUsageEventFields.js";
+import { fullSubjectToMutationSubject } from "../../common/usageEvent/fullSubjectToMutationSubject.js";
 import {
 	deductFromBuckets,
 	deductionStateToOutcome,
@@ -86,6 +88,7 @@ export const computeFinalize = ({
 			type: "mutation",
 			id: command.commandId,
 			identity: command.identity,
+			subject: fullSubjectToMutationSubject({ fullSubject }),
 			revision: {
 				before: fullSubject.revision,
 				after: fullSubject.revision + 1,
@@ -102,6 +105,10 @@ export const computeFinalize = ({
 				lockValue,
 				finalValue,
 				deltas: rejected ? [] : outcome.deltas,
+				...deltasToUsageEventFields({
+					fullSubject,
+					deltas: rejected ? [] : outcome.deltas,
+				}),
 			},
 		},
 	});

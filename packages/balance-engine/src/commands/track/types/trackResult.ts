@@ -1,3 +1,4 @@
+import { TrackDeductionSchema } from "@autumn/shared";
 import { z } from "zod/v4";
 import { deductionDeltaSchema } from "../../../deduction/types/deductionDelta.js";
 import {
@@ -13,6 +14,9 @@ export const trackResultSchema = z
 		reason: z.literal("insufficient_balance").nullable(),
 		/** How much each balance gave, in draw order; empty when rejected. */
 		deltas: z.array(deductionDeltaSchema),
+		/** The same movement as a usage event reports it; defaulted so records written before it existed still parse. */
+		deductions: z.array(TrackDeductionSchema).default([]),
+		internalProductId: nonEmptyStringSchema.nullable().default(null),
 		/** The feature whose balance paid: the tracked one, or the credit system behind it. */
 		fundingFeatureId: nonEmptyStringSchema,
 		/** Units of the funding feature charged per tracked unit: 1 unless a credit system pays. */

@@ -1,3 +1,4 @@
+import { fullSubjectToMutationSubject } from "../../common/usageEvent/fullSubjectToMutationSubject.js";
 import { LockNotFoundError } from "../../errors.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
@@ -28,6 +29,7 @@ export const computeConfirmExpiredLock = ({
 			type: "mutation",
 			id: command.commandId,
 			identity: command.identity,
+			subject: fullSubjectToMutationSubject({ fullSubject }),
 			revision: {
 				before: fullSubject.revision,
 				after: fullSubject.revision + 1,

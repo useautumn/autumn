@@ -122,6 +122,11 @@ describe("computeFinalize", () => {
 		expect(balanceOf({ state: locked.state })).toBe(2);
 		const { state, mutation } = finalize({ ...locked, finalValue: 5 });
 		expect(balanceOf({ state })).toBe(5);
+		// The usage event a finalize produces is the difference, signed the way it moved.
+		expect(mutation.result).toMatchObject({
+			deductions: [{ balance_id: "messages_monthly", value: -3 }],
+			internalProductId: "prod_internal_pro",
+		});
 		expect(state.openLocks).toEqual([]);
 		expect(mutation.result).toMatchObject({
 			status: "applied",

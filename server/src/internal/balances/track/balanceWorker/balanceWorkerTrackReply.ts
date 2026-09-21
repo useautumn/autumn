@@ -15,7 +15,6 @@ import {
 	workerReplyToFullSubject,
 	workerStateToApiBalance,
 } from "../../balanceWorker/workerStateToApiBalance.js";
-import { trackReplyToDeductions } from "./trackReplyToDeductions.js";
 
 /** One worker track and the feature it was sent for; an event name yields one per feature it maps to. */
 export type FeatureTrackReply = { featureId: string; reply: TrackReply };
@@ -105,9 +104,8 @@ export function trackRepliesToApiResponse({
 				fullSubject,
 				featureIds: replies.map(({ featureId }) => featureId),
 			}),
-			deductions: replies.flatMap(({ reply }) =>
-				trackReplyToDeductions({ reply, fullSubject }),
-			),
+			// The worker reports the per-balance breakdown with its decision, the same one its usage event carries.
+			deductions: replies.flatMap(({ reply }) => reply.result.deductions),
 		},
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Track,

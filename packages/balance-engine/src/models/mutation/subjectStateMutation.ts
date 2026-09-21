@@ -26,6 +26,15 @@ export const mutationResultSchema = z.discriminatedUnion("type", [
 	confirmExpiredLockResultSchema,
 ]);
 
+export const mutationSubjectSchema = z
+	.object({
+		internalCustomerId: nonEmptyStringSchema,
+		internalEntityId: nonEmptyStringSchema.nullable(),
+	})
+	.strict();
+
+export type MutationSubject = z.infer<typeof mutationSubjectSchema>;
+
 const mutationRevisionSchema = z
 	.object({
 		before: z.number().int().nonnegative(),
@@ -39,6 +48,8 @@ export const subjectStateMutationShape = {
 	type: z.literal("mutation"),
 	id: nonEmptyStringSchema,
 	identity: meteringIdentitySchema,
+	/** The subject's internal ids, for readers of the log that have no rows to look them up in. Absent on records written before it existed. */
+	subject: mutationSubjectSchema.optional(),
 	revision: mutationRevisionSchema,
 	/** Why: the request, for humans and downstream consumers. Never replayed. */
 	command: mutationCommandSchema,
