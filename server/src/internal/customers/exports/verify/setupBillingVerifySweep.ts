@@ -2,13 +2,9 @@ import { AppEnv } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { SWEEP_MIN_CUSTOMER_COUNT } from "./billingVerifyExportConfig.js";
 import { createBillingVerifyStripeReader } from "./createBillingVerifyStripeReader.js";
-import { sweepStripeSchedules } from "./sweepStripeSchedules.js";
 import { sweepStripeSubscriptions } from "./sweepStripeSubscriptions.js";
-
-// Below this many customers, reading each one live costs fewer Stripe calls
-// than listing the whole org.
-const SWEEP_MIN_CUSTOMER_COUNT = 500;
 
 export type BillingVerifySweep = {
 	stripeReader: Stripe;
@@ -24,24 +20,17 @@ export const setupBillingVerifySweep = async ({
 	totalCount: number;
 }): Promise<BillingVerifySweep> => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const stripeReader = createBillingVerifyStripeReader({ stripeCli });
 
 	if (totalCount < SWEEP_MIN_CUSTOMER_COUNT) {
-		return {
-			stripeReader: createBillingVerifyStripeReader({ stripeCli }),
-			sweptSubscriptions: null,
-		};
+		return { stripeReader, sweptSubscriptions: null };
 	}
 
-	const [sweptSubscriptions, schedulesById] = await Promise.all([
-		sweepStripeSubscriptions({
+	return {
+		stripeReader,
+		sweptSubscriptions: await sweepStripeSubscriptions({
 			stripeCli,
 			includeTestClocks: ctx.env === AppEnv.Sandbox,
 		}),
-		sweepStripeSchedules({ stripeCli }),
-	]);
-
-	return {
-		stripeReader: createBillingVerifyStripeReader({ stripeCli, schedulesById }),
-		sweptSubscriptions,
 	};
 };

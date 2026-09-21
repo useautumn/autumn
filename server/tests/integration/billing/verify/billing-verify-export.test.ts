@@ -11,6 +11,8 @@
  *   - A real org-wide sweep screens customers to the same rows as live reads.
  *   - With the org swept, a customer with nothing on Stripe is never loaded;
  *     one with a Stripe-linked plan always is.
+ *   - A customer with a scheduled plan change verifies clean through the
+ *     memoized reader, which serves both of verify's schedule reads.
  *   - A billing_verify job runs to completion: published to S3, downloadable
  *     under its own file name, holding only the drifted customer.
  */
@@ -352,6 +354,62 @@ test.concurrent(
 			sweep: sweepOf({ ctx, subscriptionsByStripeCustomerId: null }),
 		});
 		expect(unswept.length).toBe(2);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("billing-verify export 8: scheduled downgrade -> clean through the memoized reader")}`,
+	async () => {
+		const customerId = "verify-export-scheduled";
+		const premium = products.premium({
+			id: "premium",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 200 })],
+		});
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [premium, pro] }),
+			],
+			actions: [
+				s.billing.attach({ productId: premium.id }),
+				s.billing.attach({ productId: pro.id }),
+			],
+		});
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const stripeCustomerId = fullCustomer.processor?.id ?? "";
+		const subscriptions = await listActiveStripeSubscriptions({
+			ctx,
+			stripeCustomerId,
+		});
+		expect(subscriptions[0].schedule).toBeTruthy();
+
+		const rows = await verifyCustomerToExportRows({
+			ctx,
+			scalar: {
+				internal_id: fullCustomer.internal_id,
+				id: fullCustomer.id ?? null,
+				name: fullCustomer.name ?? null,
+				email: fullCustomer.email ?? null,
+				processor: fullCustomer.processor ?? null,
+			},
+			sweep: sweepOf({
+				ctx,
+				subscriptionsByStripeCustomerId: new Map([
+					[stripeCustomerId, subscriptions],
+				]),
+			}),
+		});
+
+		expect(rows).toEqual([]);
 	},
 );
 

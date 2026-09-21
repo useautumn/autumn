@@ -24,10 +24,7 @@ const ExportScopeParamsSchema = z.object({
 
 export const CreateCustomerExportParamsSchema = z.discriminatedUnion("kind", [
 	ExportScopeParamsSchema.extend({
-		kind: z
-			.literal(CustomerExportKind.Customers)
-			.optional()
-			.default(CustomerExportKind.Customers),
+		kind: z.literal(CustomerExportKind.Customers),
 		fields: CustomerExportFieldsSchema,
 	}),
 	ExportScopeParamsSchema.extend({

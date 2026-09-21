@@ -28,12 +28,10 @@ const TRIGGER_ENQUEUE_RETRY_DELAY_MS = ms.seconds(1);
 const triggerCustomerExportWithRetry = async ({
 	logger,
 	exportId,
-	kind,
 	payload,
 }: {
 	logger: Logger;
 	exportId: string;
-	kind: CustomerExportKind;
 	payload: RunCustomerExportPayload;
 }) =>
 	retryAsync({
@@ -53,7 +51,6 @@ const triggerCustomerExportWithRetry = async ({
 				idempotencyKeyTTL: "7d",
 				...getCustomerExportTriggerOptions({
 					isDev: process.env.NODE_ENV === "development",
-					kind,
 				}),
 			}),
 	});
@@ -99,7 +96,6 @@ const enqueueExportRun = async ({
 		handle = await triggerCustomerExportWithRetry({
 			logger: ctx.logger,
 			exportId: customerExport.id,
-			kind: customerExport.kind,
 			payload,
 		});
 	} catch (error) {

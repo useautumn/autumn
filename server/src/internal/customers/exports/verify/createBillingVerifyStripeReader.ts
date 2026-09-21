@@ -1,51 +1,41 @@
 import type Stripe from "stripe";
+import { MAX_MEMOIZED_STRIPE_READS } from "./billingVerifyExportConfig.js";
 
-const memoizeRetrieve = <Resource>({
-	retrieve,
-	preloaded,
-}: {
-	retrieve: (id: string, params?: object) => Promise<Resource>;
-	preloaded?: Map<string, Resource>;
-}) => {
-	const inFlight = new Map<string, Promise<Resource>>();
+const memoizeById = <Resource>(retrieve: (id: string) => Promise<Resource>) => {
+	const reads = new Map<string, Promise<Resource>>();
 
-	return (id: string, params?: object): Promise<Resource> => {
-		const swept = preloaded?.get(id);
-		if (swept) return Promise.resolve(swept);
-
-		const key = `${id}:${JSON.stringify(params ?? {})}`;
-		const cached = inFlight.get(key);
+	return (id: string): Promise<Resource> => {
+		const cached = reads.get(id);
 		if (cached) return cached;
 
-		const request = retrieve(id, params);
-		inFlight.set(key, request);
-		request.catch(() => inFlight.delete(key));
-		return request;
+		if (reads.size >= MAX_MEMOIZED_STRIPE_READS) reads.clear();
+		const read = retrieve(id);
+		reads.set(id, read);
+		read.catch(() => reads.delete(id));
+		return read;
 	};
 };
 
-/** A bulk run re-reads the same few prices for every customer; serving those
- * and the swept schedules from memory keeps it off the org's rate limit. */
+/** A bulk run re-reads the same few prices for every customer, and verify reads
+ * each schedule twice; one expanded read per id keeps it off the rate limit. */
 export const createBillingVerifyStripeReader = ({
 	stripeCli,
-	schedulesById,
 }: {
 	stripeCli: Stripe;
-	schedulesById?: Map<string, Stripe.SubscriptionSchedule>;
 }): Stripe => {
 	const prices = Object.assign(Object.create(stripeCli.prices), {
-		retrieve: memoizeRetrieve({
-			retrieve: (id, params) => stripeCli.prices.retrieve(id, params),
-		}),
+		retrieve: memoizeById((id) =>
+			stripeCli.prices.retrieve(id, { expand: ["tiers"] }),
+		),
 	});
 	const subscriptionSchedules = Object.assign(
 		Object.create(stripeCli.subscriptionSchedules),
 		{
-			retrieve: memoizeRetrieve({
-				retrieve: (id, params) =>
-					stripeCli.subscriptionSchedules.retrieve(id, params),
-				preloaded: schedulesById,
-			}),
+			retrieve: memoizeById((id) =>
+				stripeCli.subscriptionSchedules.retrieve(id, {
+					expand: ["phases.items.price"],
+				}),
+			),
 		},
 	);
 

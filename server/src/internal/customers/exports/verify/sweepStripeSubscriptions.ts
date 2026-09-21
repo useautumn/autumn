@@ -1,8 +1,9 @@
 import type Stripe from "stripe";
 import { mapWithConcurrency } from "@/internal/migrations/v2/batchOperations/execute/utils/mapWithConcurrency.js";
-
-const STRIPE_LIST_PAGE_SIZE = 100;
-const TEST_CLOCK_SWEEP_CONCURRENCY = 4;
+import {
+	STRIPE_LIST_PAGE_SIZE,
+	TEST_CLOCK_SWEEP_CONCURRENCY,
+} from "./billingVerifyExportConfig.js";
 
 const listTestClockIds = async ({ stripeCli }: { stripeCli: Stripe }) => {
 	const testClockIds: string[] = [];

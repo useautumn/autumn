@@ -3,7 +3,6 @@ import type { VerifyResponse } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createBillingVerifyExportStringifier } from "@/internal/customers/exports/csv/createBillingVerifyExportStringifier.js";
 import { createBillingVerifyStripeReader } from "@/internal/customers/exports/verify/createBillingVerifyStripeReader.js";
-import { sweepStripeSchedules } from "@/internal/customers/exports/verify/sweepStripeSchedules.js";
 import { sweepStripeSubscriptions } from "@/internal/customers/exports/verify/sweepStripeSubscriptions.js";
 import {
 	isVerifyResponseClean,
@@ -168,26 +167,6 @@ describe("sweepStripeSubscriptions", () => {
 	});
 });
 
-describe("sweepStripeSchedules", () => {
-	it("keeps only live schedules", async () => {
-		const stripeCli = {
-			subscriptionSchedules: {
-				list: () =>
-					asyncList([
-						{ id: "sched_active", status: "active" },
-						{ id: "sched_pending", status: "not_started" },
-						{ id: "sched_released", status: "released" },
-						{ id: "sched_canceled", status: "canceled" },
-					]),
-			},
-		} as unknown as Stripe;
-
-		const swept = await sweepStripeSchedules({ stripeCli });
-
-		expect([...swept.keys()]).toEqual(["sched_active", "sched_pending"]);
-	});
-});
-
 describe("createBillingVerifyStripeReader", () => {
 	const buildStripeCli = () => {
 		const calls = { prices: 0, schedules: 0, subscriptions: 0 };
@@ -227,19 +206,14 @@ describe("createBillingVerifyStripeReader", () => {
 		expect(calls.prices).toBe(1);
 	});
 
-	it("serves swept schedules from memory and falls back live", async () => {
+	it("reads each schedule once, expanded, however verify asks for it", async () => {
 		const { calls, stripeCli } = buildStripeCli();
-		const swept = { id: "sched_1" } as Stripe.SubscriptionSchedule;
-		const reader = createBillingVerifyStripeReader({
-			stripeCli,
-			schedulesById: new Map([["sched_1", swept]]),
-		});
+		const reader = createBillingVerifyStripeReader({ stripeCli });
 
-		expect(await reader.subscriptionSchedules.retrieve("sched_1")).toBe(
-			swept as Stripe.Response<Stripe.SubscriptionSchedule>,
-		);
-		await reader.subscriptionSchedules.retrieve("sched_2");
-		await reader.subscriptionSchedules.retrieve("sched_2");
+		await reader.subscriptionSchedules.retrieve("sched_1");
+		await reader.subscriptionSchedules.retrieve("sched_1", {
+			expand: ["phases.items.price"],
+		});
 
 		expect(calls.schedules).toBe(1);
 	});
