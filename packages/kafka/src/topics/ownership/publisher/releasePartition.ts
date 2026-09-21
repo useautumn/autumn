@@ -11,6 +11,7 @@ export async function releasePartition({
 	topic,
 	partition,
 	releasedAt,
+	endpoint,
 }: OwnershipRelease & {
 	ctx: OwnershipPublisherContext;
 	topic: string;
@@ -26,6 +27,7 @@ export async function releasePartition({
 					type: "unowned",
 					partition,
 					releasedAt,
+					endpoint,
 				},
 			}),
 		],

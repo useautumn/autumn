@@ -13,6 +13,9 @@ export type OwnershipClaim = {
 export type OwnershipRelease = {
 	partition: number;
 	releasedAt: number;
+	/** The releasing worker, so a consumer can refuse a release from a worker that
+	 *  no longer holds the partition. */
+	endpoint: string;
 };
 
 export type OwnershipPublication = {

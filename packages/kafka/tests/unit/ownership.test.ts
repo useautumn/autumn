@@ -701,6 +701,50 @@ describe("ownershipReplay", function ownershipReplayTests() {
 	};
 
 	describe("applyOwnershipRecord", () => {
+		test("ignores a release from a worker that no longer holds the partition", () => {
+			// The case that stranded claims in staging: one worker claims, loses the
+			// partition to another on rebalance, then withdraws. Its withdrawal must
+			// not evict the worker that legitimately took over.
+			const original = applyOwnershipRecord({
+				owners: new Map(),
+				record: claimed,
+				offset: 3n,
+			});
+			const takenOver = applyOwnershipRecord({
+				owners: original,
+				record: { ...claimed, endpoint: "http://10.0.0.9:8080" },
+				offset: 9n,
+			});
+
+			const afterStaleRelease = applyOwnershipRecord({
+				owners: takenOver,
+				record: { ...unowned, endpoint: "http://10.0.0.4:8080" },
+				offset: 11n,
+			});
+
+			expect(afterStaleRelease.get(7)).toEqual({
+				partition: 7,
+				endpoint: "http://10.0.0.9:8080",
+				routeEpoch: "9",
+			});
+		});
+
+		test("honours a release from the worker that does hold the partition", () => {
+			const owned = applyOwnershipRecord({
+				owners: new Map(),
+				record: claimed,
+				offset: 3n,
+			});
+
+			expect(
+				applyOwnershipRecord({
+					owners: owned,
+					record: { ...unowned, endpoint: "http://10.0.0.4:8080" },
+					offset: 4n,
+				}).get(7),
+			).toBeUndefined();
+		});
+
 		test("records a claim", () => {
 			const owners = applyOwnershipRecord({
 				owners: new Map(),

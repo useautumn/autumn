@@ -335,7 +335,7 @@ describe("Ownership publication and admission", () => {
 		await f.ownership.stop();
 	});
 	for (const message of ["claim rejected", "claim outcome unknown"]) {
-		test(`${message} is terminal and never admits or releases`, async () => {
+		test(`${message} is terminal, never admits, and still withdraws`, async () => {
 			const f = fixture({ claimError: new Error(message) });
 			await f.ownership.start();
 			f.assign();
@@ -343,7 +343,12 @@ describe("Ownership publication and admission", () => {
 			expect(
 				f.ownership.findRuntime({ partition: 2, routeEpoch: "100" }),
 			).toBeUndefined();
-			expect(f.events).not.toContain("release:2");
+			// A failed publish does not prove the record never reached the broker, so
+			// the worker withdraws anyway. It used to stay silent, which is how a
+			// claim nobody could see locally went on directing traffic here forever.
+			// The withdrawal names this worker and is ignored unless it still holds
+			// the partition, so withdrawing a claim that never landed costs nothing.
+			await waitFor(() => f.events.includes("release:2"));
 			expect(f.events.filter((event) => event === "claim:2")).toHaveLength(1);
 			await f.ownership.stop();
 		});

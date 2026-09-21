@@ -46,6 +46,11 @@ export type PartitionEntry = PartitionRuntimeResources & {
 	partition: number;
 	startupSettled: boolean;
 	startup: Promise<void> | null;
+	/** Set before the claim is published, not after it is acknowledged. The record
+	 *  is durable at the broker before the publish resolves, so a worker torn down
+	 *  mid-claim would otherwise hold a claim it has no record of making and never
+	 *  withdraw it. */
+	claimAttempted: boolean;
 	claimed: boolean;
 	publicationFailed: boolean;
 	unsubscribeUnavailable: Unsubscribe | null;

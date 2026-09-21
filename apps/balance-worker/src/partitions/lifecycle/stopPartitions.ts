@@ -119,8 +119,15 @@ async function completePartitionRetirement({
 	}
 	const drained = await entry.drain;
 	try {
-		if (drained?.ok && entry.claimed && !entry.publicationFailed)
-			await entry.publication.release();
+		// Release on having attempted a claim rather than on having seen one
+		// acknowledged: the record is durable before the publish resolves, so a
+		// worker torn down mid-claim was previously leaving a claim behind that it
+		// never withdrew. A release that does not name the current holder is now
+		// ignored, so letting go cannot evict whoever took the partition over.
+		// The drain still gates it. A partition that could not be drained may have
+		// work in flight, and advertising it as free would invite a second worker
+		// in before this one has finished.
+		if (drained?.ok && entry.claimAttempted) await entry.publication.release();
 	} catch (cause) {
 		entry.publicationFailed = true;
 		reportPartitionError({ ctx, cause });

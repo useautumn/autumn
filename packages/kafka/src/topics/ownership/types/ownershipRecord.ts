@@ -19,6 +19,12 @@ export const unownedOwnershipRecordSchema = z
 		type: z.literal("unowned"),
 		partition: partitionSchema,
 		releasedAt: z.number().int().nonnegative(),
+		/** Who is giving the partition up. A release is only honoured when it names
+		 *  the worker that currently holds the partition, so a worker letting go of
+		 *  a claim it has already lost cannot evict whoever took it over. Optional
+		 *  because releases written before this field existed carry no claimant and
+		 *  are still applied unconditionally, the way they always were. */
+		endpoint: nonEmptyStringSchema.optional(),
 	})
 	.strict();
 

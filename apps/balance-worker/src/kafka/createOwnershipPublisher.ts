@@ -51,6 +51,7 @@ export function createOwnershipPublisher({
 		await publisher.release({
 			partition: config.partition,
 			releasedAt: Date.now(),
+			endpoint: config.endpoint,
 		});
 	}
 

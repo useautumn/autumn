@@ -37,6 +37,7 @@ export function createPartitionEntries({
 				...resources,
 				startupSettled: false,
 				startup: null,
+				claimAttempted: false,
 				claimed: false,
 				publicationFailed: false,
 				unsubscribeUnavailable: null,
@@ -100,6 +101,7 @@ export async function startPartition({
 
 		let routeEpoch: string;
 		try {
+			entry.claimAttempted = true;
 			({ routeEpoch } = await entry.publication.claim());
 			entry.claimed = true;
 		} catch (cause) {

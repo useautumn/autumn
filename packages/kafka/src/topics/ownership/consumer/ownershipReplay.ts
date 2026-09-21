@@ -7,6 +7,24 @@ import type {
 	OwnershipLogEntry,
 } from "./types/ownershipConsumer.js";
 
+/** A release only takes effect when it names the worker that currently holds the
+ *  partition. Without that check a worker letting go of a claim it had already
+ *  lost would evict whoever took it over, which is why releasing used to be
+ *  guarded so tightly that stale claims were never withdrawn at all. Releases
+ *  written before the claimant was recorded carry no endpoint and keep their
+ *  original unconditional behaviour. */
+function releaseApplies({
+	record,
+	current,
+}: {
+	record: OwnershipRecord;
+	current: PartitionOwner | undefined;
+}): boolean {
+	if (record.type !== "unowned") return false;
+	if (record.endpoint === undefined) return true;
+	return current?.endpoint === record.endpoint;
+}
+
 export function applyOwnershipMessage({
 	state,
 	message,
@@ -29,9 +47,11 @@ export function applyOwnershipMessage({
 			endpoint: record.endpoint,
 			routeEpoch: offset.toString(),
 		});
-	} else {
+	} else if (releaseApplies({ record, current: state.owners.get(partition) })) {
 		state.owners.delete(partition);
 	}
+	// The offset advances even for a release that was ignored, so replay does not
+	// keep reconsidering a record whose outcome is already settled.
 	state.lastAppliedOffsets.set(partition, offset);
 }
 
@@ -95,7 +115,7 @@ export function applyOwnershipRecord({
 			endpoint: record.endpoint,
 			routeEpoch: offset.toString(),
 		});
-	} else {
+	} else if (releaseApplies({ record, current })) {
 		next.delete(record.partition);
 	}
 	return next;
