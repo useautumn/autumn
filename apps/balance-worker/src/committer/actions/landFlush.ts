@@ -1,4 +1,5 @@
 import { LockAlreadyExistsError } from "@autumn/balance-engine";
+import { SubjectNotFoundError } from "../../processor/subject/subjectErrors.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
 import type {
 	CommitterContext,
@@ -27,25 +28,28 @@ const isTransientFailure = (cause: unknown): boolean => {
 };
 
 const UNIQUE_VIOLATION = "23505";
+const FOREIGN_KEY_VIOLATION = "23503";
 
 /**
- * The lock id is unique across the org, but only one customer's locks are in a writer's memory: another
- * customer holding the id is found here. That is the caller's mistake, not a broken record.
+ * Postgres refusing a lock row is the request's problem, not a broken record. The lock id is unique across the
+ * org but a writer only knows its own customers' locks, and a customer can be deleted between the decision and the write.
  */
-const lockConflictOf = ({
+const lockRefusalOf = ({
 	record,
 	cause,
 }: {
 	record: DurableMutationRecord;
 	cause: unknown;
-}): LockAlreadyExistsError | null => {
-	const { command } = record.mutation;
+}): Error | null => {
+	const { command, identity } = record.mutation;
 	const lockId = command.type === "track" ? command.lock?.lockId : undefined;
 	if (!lockId || !(cause instanceof Error)) return null;
+	if (!cause.message.includes("balance_locks")) return null;
 	const { errno } = cause as Error & { errno?: unknown };
-	const isLockIdTaken =
-		errno === UNIQUE_VIOLATION && cause.message.includes("balance_locks");
-	return isLockIdTaken ? new LockAlreadyExistsError({ lockId }) : null;
+	if (errno === UNIQUE_VIOLATION) return new LockAlreadyExistsError({ lockId });
+	if (errno === FOREIGN_KEY_VIOLATION)
+		return new SubjectNotFoundError({ identity });
+	return null;
 };
 
 /** The same record with nothing to write: lands only its bookmark, so the records behind it are not held up. */
@@ -122,8 +126,8 @@ const settleRefusedRecord = async ({
 	retry: FlushRetryPolicy;
 	nextOffset: bigint;
 }): Promise<RefusedRecord> => {
-	const conflict = lockConflictOf({ record, cause });
-	if (!conflict) return { nextOffset, failure: { record, cause } };
+	const refusal = lockRefusalOf({ record, cause });
+	if (!refusal) return { nextOffset, failure: { record, cause } };
 	const skip = recordCall({
 		call,
 		record: withoutChanges({ record }),
@@ -137,7 +141,7 @@ const settleRefusedRecord = async ({
 		});
 		return {
 			nextOffset: outcomes.get(skip)?.nextOffset ?? nextOffset,
-			rejection: { record, cause: conflict },
+			rejection: { record, cause: refusal },
 		};
 	} catch (skipCause) {
 		return { nextOffset, failure: { record, cause: skipCause } };
@@ -200,6 +204,15 @@ export const landFlush = async ({
 		return await runWithRetries({ ctx, flush, retry });
 	} catch (cause) {
 		const outcomes = new Map<FlushCall, FlushOutcome>();
+		const recordCount = flush.calls.reduce(
+			(total, call) => total + call.records.length,
+			0,
+		);
+		// Landing piece by piece costs a transaction per record, so it must never happen quietly.
+		if (recordCount > 1)
+			ctx.logger?.warn(
+				`[committer] flush of ${recordCount} records failed and is landing piece by piece: ${cause instanceof Error ? cause.message : String(cause)}`,
+			);
 		if (flush.calls.length > 1) {
 			for (const call of flush.calls) {
 				const alone = await landFlush({ ctx, flush: { calls: [call] }, retry });

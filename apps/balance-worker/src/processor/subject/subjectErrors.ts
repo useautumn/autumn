@@ -29,3 +29,16 @@ export class SubjectNotFoundError extends Error {
 		this.identity = identity;
 	}
 }
+
+/** Every read of the subject was overtaken by an evict, so nothing was kept; the caller retries. */
+export class SubjectLoadOvertakenError extends Error {
+	readonly identity: MeteringIdentity;
+
+	constructor({ identity }: { identity: MeteringIdentity }) {
+		super(
+			`Customer ${identity.customerId} kept changing while it was loaded in ${identity.orgId}/${identity.env}`,
+		);
+		this.name = "SubjectLoadOvertakenError";
+		this.identity = identity;
+	}
+}

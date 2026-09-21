@@ -303,6 +303,9 @@ test.concurrent(
 				finalize: async () => {
 					throw cause;
 				},
+				confirmExpiredLock: async () => {
+					throw cause;
+				},
 			};
 			const body: TrackParams = {
 				customer_id: "cus_test",

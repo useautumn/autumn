@@ -3,6 +3,10 @@ import {
 	checkCommandSchema,
 } from "./commands/check/types/checkCommand.js";
 import {
+	type ConfirmExpiredLockCommand,
+	confirmExpiredLockCommandSchema,
+} from "./commands/confirmExpiredLock/types/confirmExpiredLockCommand.js";
+import {
 	type EvictCommand,
 	evictCommandSchema,
 } from "./commands/evict/types/evictCommand.js";
@@ -69,6 +73,12 @@ export const parseEvictCommand = ({
 }: {
 	input: unknown;
 }): EvictCommand => evictCommandSchema.parse(input);
+
+export const parseConfirmExpiredLockCommand = ({
+	input,
+}: {
+	input: unknown;
+}): ConfirmExpiredLockCommand => confirmExpiredLockCommandSchema.parse(input);
 
 export const parseFinalizeCommand = ({
 	input,

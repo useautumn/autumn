@@ -3,6 +3,7 @@ import { Decimal } from "decimal.js";
 import type { RowChange } from "../../../models/mutation/rowChange.js";
 import type { WorkerUsageWindow } from "../../../models/subject/rows/workerUsageWindow.js";
 import type { DeductionContext } from "../../types/deductionContext.js";
+import type { DeductionDelta } from "../../types/deductionDelta.js";
 import type { DeductionRow } from "../../types/deductionRow.js";
 import type { DeductionState } from "../../types/deductionState.js";
 import { deductionRowToRateUnits } from "../convertDeductionUtils.js";
@@ -127,6 +128,37 @@ export const consumeUsageWindows = ({
 	}
 };
 
+/**
+ * `decrement_usage_windows_for_unwind`: what a give-back frees on each cap, as negative consumption a draw
+ * can start from. Never below an empty counter, so a window that rolled since the lock forfeits its count.
+ */
+export const deltasToFreedUsageWindows = ({
+	context,
+	deltas,
+}: {
+	context: DeductionContext;
+	deltas: DeductionDelta[];
+}): Map<string, Decimal> => {
+	const rows = [...context.rows, ...context.rolloverRows];
+	const freedByLimitKey = new Map<string, Decimal>();
+	for (const limit of context.usageWindowLimits) {
+		let givenBack = new Decimal(0);
+		for (const delta of deltas) {
+			const row = rows.find((candidate) => candidate.id === delta.id) ?? null;
+			if (delta.valueDelta <= 0 || !appliesTo({ limit, row })) continue;
+			const units = new Decimal(delta.valueDelta);
+			givenBack = givenBack.plus(
+				limit.dimension_type === "balance"
+					? units.times(delta.creditCost)
+					: units,
+			);
+		}
+		const freed = Decimal.min(givenBack, storedUsageOf({ context, limit }));
+		if (freed.gt(0)) freedByLimitKey.set(limit.key, freed.neg());
+	}
+	return freedByLimitKey;
+};
+
 /** `update_in_memory_usage_window`: one row per cap, created on first use, zeroed when its window rolled, re-stamped with today's bounds. */
 export const usageWindowsToRowChanges = ({
 	context,
@@ -138,7 +170,7 @@ export const usageWindowsToRowChanges = ({
 	const changes: RowChange[] = [];
 	for (const limit of context.usageWindowLimits) {
 		const consumed = deductionState.usageWindowConsumed.get(limit.key);
-		if (!consumed || consumed.lte(0)) continue;
+		if (!consumed || consumed.isZero()) continue;
 		const existing = findUsageWindowByLimit({
 			usageWindows: context.usageWindows,
 			limit,
@@ -166,6 +198,7 @@ export const usageWindowsToRowChanges = ({
 			});
 			continue;
 		}
+		if (consumed.lt(0)) continue;
 		if (existing) {
 			changes.push({
 				table: "usageWindows",

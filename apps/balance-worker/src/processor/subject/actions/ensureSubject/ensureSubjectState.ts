@@ -1,10 +1,11 @@
 import {
 	type MeteringIdentity,
+	meteringIdentityToPartitionKey,
 	meteringIdentityToSubjectKey,
 	type SubjectState,
 } from "@autumn/balance-engine";
 import type { SubjectScope } from "../../types/subject.js";
-import { hydrateSubjectState } from "./hydrateSubjectState.js";
+import { loadSubjectState } from "./loadSubjectState.js";
 
 const viewHasEntity = ({
 	state,
@@ -15,24 +16,19 @@ const viewHasEntity = ({
 }): boolean =>
 	identity.entityId === null || state.entity?.id === identity.entityId;
 
-/** One hydration per subject; concurrent commands for the same subject join it. */
+/** One load per subject; concurrent commands for the same subject join it. */
 const hydrateOnce = ({
 	scope,
 	identity,
 }: {
 	scope: SubjectScope;
 	identity: MeteringIdentity;
-}): Promise<SubjectState> => {
-	const subjectKey = meteringIdentityToSubjectKey({ identity });
-	const inFlight = scope.state.hydrationPromises.get(subjectKey);
-	if (inFlight) return inFlight;
-
-	const hydration = hydrateSubjectState({ scope, identity }).finally(() => {
-		scope.state.hydrationPromises.delete(subjectKey);
+}): Promise<SubjectState> =>
+	scope.state.inFlightLoads.join({
+		subjectKey: meteringIdentityToSubjectKey({ identity }),
+		customerKey: meteringIdentityToPartitionKey({ identity }),
+		start: ({ load }) => loadSubjectState({ scope, identity, load }),
 	});
-	scope.state.hydrationPromises.set(subjectKey, hydration);
-	return hydration;
-};
 
 /** The freshest view for the identity, pending baseline included; a missing customer hydrates first, then a missing entity. */
 export const ensureSubjectState = async ({

@@ -18,8 +18,9 @@ export async function evict({
 	const customerIdentity = { ...identity, entityId: null };
 	const wasResident =
 		scope.ctx.writer.readFreshestState({ identity: customerIdentity }) !== null;
-	await scope.ctx.writer.evict({
-		customerKey: meteringIdentityToPartitionKey({ identity }),
-	});
+	const customerKey = meteringIdentityToPartitionKey({ identity });
+	// A load still in flight started before this evict, so it must not put its rows back afterwards.
+	scope.ctx.subjectHydrator.overtakeInFlightLoads({ customerKey });
+	await scope.ctx.writer.evict({ customerKey });
 	return { evicted: wasResident };
 }

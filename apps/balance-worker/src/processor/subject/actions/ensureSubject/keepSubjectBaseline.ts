@@ -1,39 +1,24 @@
 import {
-	customerRowsToSubjectState,
 	type MeteringIdentity,
 	parseInitializeRequest,
 	type SubjectState,
 } from "@autumn/balance-engine";
 import { initializeSubject } from "../../../actions/initializeSubject.js";
-import { SubjectNotFoundError } from "../../subjectErrors.js";
 import type { SubjectScope } from "../../types/subject.js";
 
-/** Reads the subject's own rows from Postgres and makes them its baseline: the customer's at revision zero, an entity's at the customer's current revision. */
-export const hydrateSubjectState = async ({
+/** Makes the rows resident: the customer's at revision zero, an entity's at the customer's current revision. */
+export const keepSubjectBaseline = async ({
 	scope,
 	identity,
+	baseline,
+	occurredAt,
 }: {
 	scope: SubjectScope;
 	identity: MeteringIdentity;
+	baseline: SubjectState;
+	occurredAt: number;
 }): Promise<SubjectState> => {
 	const { ctx } = scope;
-	const occurredAt = ctx.receiptPolicy.now();
-	const envelope = await ctx.db.getSubjectRows({
-		identity,
-		asOfTimestampMs: occurredAt,
-	});
-	if (!envelope) throw new SubjectNotFoundError({ identity });
-	const baseline = customerRowsToSubjectState({
-		identity,
-		customer: envelope.customer,
-		customerProducts: envelope.customer_products,
-		customerPrices: envelope.customer_prices,
-		customerEntitlements: envelope.customer_entitlements,
-		rollovers: envelope.rollovers,
-		usageWindows: envelope.usage_windows,
-		openLocks: envelope.open_locks,
-		entity: envelope.entity,
-	});
 	// Postgres is the baseline: nothing to log, the rows just become resident.
 	if ((ctx.baseline ?? "log") === "map")
 		return ctx.writer.adopt({ state: baseline });

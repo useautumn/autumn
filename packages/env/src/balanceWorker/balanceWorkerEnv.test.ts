@@ -18,7 +18,7 @@ describe("Balance worker environment", () => {
 		expect(env.BALANCE_WORKER_HOST).toBe("127.0.0.1");
 		expect(env.BALANCE_WORKER_PORT).toBe(8082);
 		expect(env.BALANCE_WORKER_ENDPOINT).toBe("http://127.0.0.1:8082");
-		expect(env.BALANCE_WORKER_PARTITION_COUNT).toBe(512);
+		expect(env.BALANCE_WORKER_PARTITION_COUNT).toBe(4);
 	});
 	test("derives every Kafka name from the deployment", () => {
 		const env = createBalanceWorkerEnv({

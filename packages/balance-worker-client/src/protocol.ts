@@ -3,6 +3,10 @@ export type {
 	CheckReply,
 } from "./contracts/check.js";
 export type {
+	BalanceWorkerConfirmExpiredLockRequest,
+	ConfirmExpiredLockReply,
+} from "./contracts/confirmExpiredLock.js";
+export type {
 	BalanceWorkerEvictRequest,
 	EvictReply,
 } from "./contracts/evict.js";

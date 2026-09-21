@@ -131,6 +131,25 @@ const attributionIncrementsOn = ({
 	);
 };
 
+/**
+ * The rows to emit changes for: the selection in draw order, then any other row a delta names. A finalize's unwind
+ * can land on a row the current selection leaves out (a past-due product, an expired rollover); it must not be dropped.
+ */
+const rowIdsToChange = ({
+	table,
+	selectedIds,
+	deltas,
+}: {
+	table: DeductionDelta["table"];
+	selectedIds: string[];
+	deltas: DeductionDelta[];
+}): string[] => [
+	...new Set([
+		...selectedIds,
+		...deltas.filter((delta) => delta.table === table).map((delta) => delta.id),
+	]),
+];
+
 /** Deltas are the log; a row change adds what every delta on one row moved. Nothing is set, so the change composes with any other writer of the row. */
 export const deltasToRowChanges = ({
 	context,
@@ -141,7 +160,12 @@ export const deltasToRowChanges = ({
 }): RowChange[] => {
 	const changes: RowChange[] = [];
 
-	for (const { id } of context.customerEntitlements) {
+	const customerEntitlementIds = rowIdsToChange({
+		table: "customerEntitlements",
+		selectedIds: context.customerEntitlements.map((row) => row.id),
+		deltas,
+	});
+	for (const id of customerEntitlementIds) {
 		const rowDeltas = rowDeltasOn({
 			table: "customerEntitlements",
 			id,
@@ -176,7 +200,12 @@ export const deltasToRowChanges = ({
 		});
 	}
 
-	for (const { id } of context.rollovers) {
+	const rolloverIds = rowIdsToChange({
+		table: "rollovers",
+		selectedIds: context.rollovers.map((row) => row.id),
+		deltas,
+	});
+	for (const id of rolloverIds) {
 		const rowDeltas = rowDeltasOn({ table: "rollovers", id, deltas });
 		if (rowDeltas.length === 0) continue;
 		const own = rowDeltas.filter((delta) => delta.entityKey === null);

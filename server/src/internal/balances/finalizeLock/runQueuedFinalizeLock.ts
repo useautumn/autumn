@@ -1,5 +1,7 @@
 import { type FinalizeLockParamsV0, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import { runBalanceWorkerFinalize } from "./balanceWorker/runBalanceWorkerFinalize.js";
 import { runFinalizeLockInner } from "./runFinalizeLock.js";
 
 /** Queued finalize replay. Never re-queues — the same dedup id would drop
@@ -11,8 +13,12 @@ export const runQueuedFinalizeLock = async ({
 	ctx: AutumnContext;
 	params: FinalizeLockParamsV0;
 }) => {
+	// A lock lives where it was taken, so the replay looks there: the worker's row, or the legacy Redis receipt.
+	const finalize = isBalanceWorkerRolloutEnabled()
+		? runBalanceWorkerFinalize
+		: runFinalizeLockInner;
 	try {
-		return await runFinalizeLockInner({ ctx, params });
+		return await finalize({ ctx, params });
 	} catch (error) {
 		if (
 			error instanceof RecaseError &&

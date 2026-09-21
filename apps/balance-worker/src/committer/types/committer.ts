@@ -7,6 +7,7 @@ export type CommitterControl = { concurrency: number | null };
 
 export type CommitterContext = {
 	db: CommitterDb;
+	logger?: { warn(message: string): void };
 	/** Backoff between retries; tests stand it in. */
 	sleep?: (params: { delayMs: number }) => Promise<void>;
 	/** Read on every flush start; absent means the boot config is the only source. */

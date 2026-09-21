@@ -1,13 +1,18 @@
 import { Decimal } from "decimal.js";
-import { deduct } from "../../deduction/deduct.js";
+import {
+	deductFromBuckets,
+	deductionStateToOutcome,
+} from "../../deduction/deduct.js";
+import { setupDeductionContext } from "../../deduction/setup/setupDeductionContext.js";
+import type { DeductionRequest } from "../../deduction/types/deductionRequest.js";
 import { LockNotFoundError } from "../../errors.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { parseSubjectStateMutation } from "../../parsers.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
-import { splitFinalize } from "./splitFinalize.js";
+import { splitFinalize, unwoundLockToForwardValue } from "./splitFinalize.js";
 import type { FinalizeCommand } from "./types/finalizeCommand.js";
-import { unwindLockDeltas } from "./unwindLockDeltas.js";
+import { unwindLock } from "./unwindLock/unwindLock.js";
 
 /**
  * Settles a lock: give back what the final value does not need, newest bucket first, then take whatever it
@@ -27,41 +32,52 @@ export const computeFinalize = ({
 	const isOpen = fullSubject.open_locks.some(
 		(openLock) => openLock.id === lock.id,
 	);
+
 	if (!isOpen) throw new LockNotFoundError({ lockId: lock.lock_id });
 
 	const lockValue = lock.deltas
 		.reduce((total, delta) => total.minus(delta.valueDelta), new Decimal(0))
 		.toNumber();
 	const finalValue = command.finalValue ?? lockValue;
+
 	const { unwindValue, additionalValue } = splitFinalize({
 		lockValue,
 		finalValue,
 	});
-	const unwind = unwindLockDeltas({
+
+	// The lock's terms govern, whatever the finalize call would prefer.
+	const lockRequest: DeductionRequest = {
+		value: additionalValue,
+		featureId: lock.feature_id,
+		internalFeatureId: command.internalFeatureId,
+		overageBehavior: lock.overage_behavior,
+		properties: command.properties ?? lock.properties,
+		// A release gives back regardless; only taking more is subject to the overdue block.
+		enforceOverdueBlock: true,
+		now: command.occurredAt,
+		org: command.org,
+	};
+	const context = setupDeductionContext({ fullSubject, request: lockRequest });
+
+	const unwound = unwindLock({
 		fullSubject,
+		context,
 		lockDeltas: lock.deltas,
 		unwindValue,
 	});
-	// What the unwind could not return to a vanished row is settled against the rows the customer holds now.
-	const forwardValue = new Decimal(additionalValue)
-		.minus(new Decimal(unwind.skippedValue).mul(Math.sign(lockValue)))
-		.toNumber();
 
-	const outcome = deduct({
-		fullSubject,
-		priorDeltas: unwind.deltas,
-		request: {
-			featureId: lock.feature_id,
-			internalFeatureId: command.internalFeatureId,
-			value: forwardValue,
-			// The lock's behaviour governs, whatever the finalize call would prefer.
-			overageBehavior: lock.overage_behavior,
-			properties: command.properties ?? lock.properties,
-			enforceOverdueBlock: false,
-			now: command.occurredAt,
-			org: command.org,
-		},
-	});
+	const request = {
+		...lockRequest,
+		value: unwoundLockToForwardValue({ unwound, additionalValue, lockValue }),
+	};
+	// The forward draw starts from what the unwind moved, so it sees the balances and headroom just given back.
+	const deductionState = {
+		remaining: new Decimal(request.value),
+		deltas: unwound.deltas,
+		usageWindowConsumed: unwound.usageWindowConsumed,
+	};
+	deductFromBuckets({ context, deductionState });
+	const outcome = deductionStateToOutcome({ context, deductionState, request });
 
 	const { rejected } = outcome;
 	return parseSubjectStateMutation({

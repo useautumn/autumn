@@ -106,7 +106,9 @@ function outcomeOf({ requestLog }: { requestLog: BalanceWorkerRequestLog }) {
 			: undefined;
 	const initializeResult = result && "duplicate" in result ? result : undefined;
 	return {
-		revision: response?.state.revision,
+		// An expired lock replies with its result alone.
+		revision:
+			response && "state" in response ? response.state.revision : undefined,
 		duplicate: initializeResult?.duplicate,
 		status: trackResult?.status ?? initializeResult?.status,
 		reason:

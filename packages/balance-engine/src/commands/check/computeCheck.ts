@@ -1,4 +1,4 @@
-import { FeatureType } from "@autumn/shared";
+import { FeatureType, fullSubjectToCustomerEntitlements } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { deduct } from "../../deduction/deduct.js";
 import { fundingRowOf } from "../../deduction/utils/fundingRowOf.js";
@@ -35,11 +35,19 @@ export const computeCheck = ({
 		};
 	}
 
-	const feature = firstEntitlement?.entitlement.feature;
+	// An overdue block empties the selection, so the feature is read from everything the subject holds.
+	const feature =
+		firstEntitlement?.entitlement.feature ??
+		fullSubjectToCustomerEntitlements({
+			fullSubject,
+			featureIds: [command.featureId],
+			now: command.occurredAt,
+		})[0]?.entitlement.feature;
 	if (feature?.type === FeatureType.Boolean) {
+		const holdsFlag = firstEntitlement !== undefined;
 		return {
-			allowed: true,
-			reason: null,
+			allowed: holdsFlag,
+			reason: holdsFlag ? null : "insufficient_balance",
 			requiredBalance: command.requiredBalance,
 			fundingFeatureId: feature.id,
 			isFlag: true,

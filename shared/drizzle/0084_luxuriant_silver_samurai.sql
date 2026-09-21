@@ -1,0 +1,3 @@
+-- Rows whose customer is already gone would fail the constraint; they hold nothing but a dead lock id.
+DELETE FROM "balance_locks" bl WHERE NOT EXISTS (SELECT 1 FROM "customers" c WHERE c."internal_id" = bl."internal_customer_id");--> statement-breakpoint
+ALTER TABLE "balance_locks" ADD CONSTRAINT "balance_locks_internal_customer_id_fkey" FOREIGN KEY ("internal_customer_id") REFERENCES "public"."customers"("internal_id") ON DELETE cascade ON UPDATE no action;

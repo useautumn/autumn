@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { CusProductStatus, ResetInterval } from "@autumn/shared";
 import {
 	applyMutation,
 	computeFinalize,
@@ -9,6 +10,7 @@ import {
 	type WorkerLock,
 } from "../../../../src/balanceEngine.js";
 import { splitFinalize } from "../../../../src/commands/finalize/splitFinalize.js";
+import { customerWith } from "../../deduction/deductionFixtures.js";
 import {
 	createCustomerEntitlement,
 	createState,
@@ -60,9 +62,11 @@ const takeLock = ({
 const finalizeCommand = ({
 	lock,
 	finalValue,
+	blocksOverdue = false,
 }: {
 	lock: WorkerLock;
 	finalValue: number;
+	blocksOverdue?: boolean;
 }): FinalizeCommand => ({
 	schemaVersion: 1,
 	type: "finalize",
@@ -70,7 +74,9 @@ const finalizeCommand = ({
 	requestId: "req_finalize",
 	identity,
 	occurredAt,
-	org,
+	org: {
+		config: { ...org.config, block_overdue_entitlements: blocksOverdue },
+	},
 	lock,
 	internalFeatureId: "feat_messages",
 	finalValue,
@@ -81,14 +87,16 @@ const finalize = ({
 	state,
 	lock,
 	finalValue,
+	blocksOverdue,
 }: {
 	state: SubjectState;
 	lock: WorkerLock;
 	finalValue: number;
+	blocksOverdue?: boolean;
 }) => {
 	const mutation = computeFinalize({
 		fullSubject: createSubjectFor({ state }),
-		command: finalizeCommand({ lock, finalValue }),
+		command: finalizeCommand({ lock, finalValue, blocksOverdue }),
 	});
 	return { mutation, state: applyMutation({ state, mutation }) };
 };
@@ -204,6 +212,92 @@ describe("computeFinalize", () => {
 			balanceOf({ state: locked.state, id: first.id }),
 		);
 	});
+
+	/** The plan went past due after the lock was taken, and the org blocks overdue usage. */
+	const pastDue = ({ state }: { state: SubjectState }): SubjectState => ({
+		...state,
+		customerProducts: state.customerProducts.map((customerProduct) => ({
+			...customerProduct,
+			status: CusProductStatus.PastDue,
+		})),
+	});
+
+	test.concurrent(
+		"a release still lands on a row the overdue block leaves out of the selection",
+		() => {
+			const locked = takeLock({ state: createState(), value: 8 });
+			const { state, mutation } = finalize({
+				state: pastDue({ state: locked.state }),
+				lock: locked.lock,
+				finalValue: 0,
+				blocksOverdue: true,
+			});
+			expect(mutation.result).toMatchObject({ status: "applied" });
+			expect(balanceOf({ state })).toBe(10);
+			expect(state.openLocks).toEqual([]);
+		},
+	);
+
+	test.concurrent(
+		"a confirm above the lock is refused while the plan is overdue, and the lock stays open",
+		() => {
+			const locked = takeLock({ state: createState(), value: 8 });
+			const { state, mutation } = finalize({
+				state: pastDue({ state: locked.state }),
+				lock: locked.lock,
+				finalValue: 9,
+				blocksOverdue: true,
+			});
+			expect(mutation.result).toMatchObject({ status: "rejected" });
+			expect(balanceOf({ state })).toBe(2);
+			expect(state.openLocks).toHaveLength(1);
+		},
+	);
+
+	/** A customer capped at `limit` tracked units a day. */
+	const cappedState = ({ limit }: { limit: number }): SubjectState => {
+		const state = createState({ balance: 100 });
+		return {
+			...state,
+			customer: customerWith({
+				usage_limits: [
+					{
+						feature_id: "messages",
+						enabled: true,
+						limit,
+						interval: ResetInterval.Day,
+					},
+				],
+			}),
+		};
+	};
+	const windowUsageOf = ({ state }: { state: SubjectState }) =>
+		state.usageWindows[0]?.usage;
+
+	test.concurrent(
+		"a confirm below the lock frees the usage window it counted",
+		() => {
+			const locked = takeLock({ state: cappedState({ limit: 5 }), value: 4 });
+			expect(windowUsageOf({ state: locked.state })).toBe(4);
+			const { state } = finalize({ ...locked, finalValue: 1 });
+			expect(windowUsageOf({ state })).toBe(1);
+			expect(balanceOf({ state })).toBe(99);
+		},
+	);
+
+	test.concurrent(
+		"a confirm above the lock is held to the window's headroom",
+		() => {
+			const locked = takeLock({ state: cappedState({ limit: 5 }), value: 3 });
+			const refused = finalize({ ...locked, finalValue: 6 });
+			expect(refused.mutation.result).toMatchObject({ status: "rejected" });
+			expect(windowUsageOf({ state: refused.state })).toBe(3);
+
+			const { state } = finalize({ ...locked, finalValue: 5 });
+			expect(windowUsageOf({ state })).toBe(5);
+			expect(balanceOf({ state })).toBe(95);
+		},
+	);
 
 	test.concurrent(
 		"what sat on a vanished row is returned to the rows held now",

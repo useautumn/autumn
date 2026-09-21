@@ -17,4 +17,6 @@ export type SubjectHydrator = {
 	}): WorkerFullSubject;
 	/** Sync: the catalog rows that view was joined from, which a reply hands to the server so it need not load them. */
 	readCatalog(params: { state: SubjectState }): Catalog;
+	/** An evict arrived: any load of this customer still in flight started before it, so its rows cannot be trusted. */
+	overtakeInFlightLoads(params: { customerKey: string }): void;
 };

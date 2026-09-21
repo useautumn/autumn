@@ -1,7 +1,7 @@
 import { Decimal } from "decimal.js";
 import type { WorkerFullSubject } from "../models/subject/workerFullSubject.js";
 import { setupDeductionContext } from "./setup/setupDeductionContext.js";
-import type { DeductionDelta } from "./types/deductionDelta.js";
+import type { DeductionContext } from "./types/deductionContext.js";
 import type { DeductionOutcome } from "./types/deductionOutcome.js";
 import type { DeductionRequest } from "./types/deductionRequest.js";
 import type { DeductionState } from "./types/deductionState.js";
@@ -9,31 +9,30 @@ import { deltasToRowChanges } from "./utils/convertDeductionUtils.js";
 import { deductFromBucket } from "./utils/draw/deductFromBucket.js";
 import { usageWindowsToRowChanges } from "./utils/limits/usageWindows.js";
 
-/**
- * Take the requested units from the subject; negative values refund. Pure: same inputs, same outcome.
- * `priorDeltas` are movements already decided (a finalize's unwind): the draw sees balances after them, and they come back in the outcome.
- */
-export const deduct = ({
-	fullSubject,
-	request,
-	priorDeltas = [],
+/** The forward draw: takes `deductionState.remaining` from the buckets in order, on top of whatever has already moved. */
+export const deductFromBuckets = ({
+	context,
+	deductionState,
 }: {
-	fullSubject: WorkerFullSubject;
-	request: DeductionRequest;
-	priorDeltas?: DeductionDelta[];
-}): DeductionOutcome => {
-	const context = setupDeductionContext({ fullSubject, request });
-
-	const deductionState: DeductionState = {
-		remaining: new Decimal(request.value),
-		deltas: [...priorDeltas],
-		usageWindowConsumed: new Map(),
-	};
+	context: DeductionContext;
+	deductionState: DeductionState;
+}): void => {
 	deductFromBucket({ context, deductionState, bucket: "unlimited" });
 	deductFromBucket({ context, deductionState, bucket: "rollovers" });
 	deductFromBucket({ context, deductionState, bucket: "included" });
 	deductFromBucket({ context, deductionState, bucket: "overage" });
+};
 
+/** Everything that moved becomes row changes once, unless what is left over refuses the whole value. */
+export const deductionStateToOutcome = ({
+	context,
+	deductionState,
+	request,
+}: {
+	context: DeductionContext;
+	deductionState: DeductionState;
+	request: DeductionRequest;
+}): DeductionOutcome => {
 	const { remaining, deltas } = deductionState;
 	// Overdue-blocked with nothing left to draw from refuses the value whatever the behaviour.
 	const refusedAsOverdue =
@@ -55,4 +54,22 @@ export const deduct = ({
 					...usageWindowsToRowChanges({ context, deductionState }),
 				],
 	};
+};
+
+/** Take the requested units from the subject; negative values refund. Pure: same inputs, same outcome. */
+export const deduct = ({
+	fullSubject,
+	request,
+}: {
+	fullSubject: WorkerFullSubject;
+	request: DeductionRequest;
+}): DeductionOutcome => {
+	const context = setupDeductionContext({ fullSubject, request });
+	const deductionState: DeductionState = {
+		remaining: new Decimal(request.value),
+		deltas: [],
+		usageWindowConsumed: new Map(),
+	};
+	deductFromBuckets({ context, deductionState });
+	return deductionStateToOutcome({ context, deductionState, request });
 };

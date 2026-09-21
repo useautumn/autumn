@@ -1,5 +1,6 @@
 import type {
 	CheckCommand,
+	ConfirmExpiredLockCommand,
 	EvictCommand,
 	FinalizeCommand,
 	InitializeRequest,
@@ -7,6 +8,7 @@ import type {
 } from "@autumn/balance-engine";
 import type {
 	CheckReply,
+	ConfirmExpiredLockReply,
 	EvictReply,
 	FinalizeReply,
 	InitializeReply,
@@ -31,6 +33,9 @@ export type PartitionProcessor = {
 	initialize(params: { request: InitializeRequest }): Promise<InitializeReply>;
 	evict(params: { command: EvictCommand }): Promise<EvictReply>;
 	finalize(params: { command: FinalizeCommand }): Promise<FinalizeReply>;
+	confirmExpiredLock(params: {
+		command: ConfirmExpiredLockCommand;
+	}): Promise<ConfirmExpiredLockReply>;
 	/** Settles every accepted command; the runtime awaits this before disposal. */
 	drain(): Promise<void>;
 };

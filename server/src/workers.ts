@@ -2,6 +2,7 @@ import "dotenv/config";
 import cluster from "node:cluster";
 import { getAutumnEnv } from "@autumn/env";
 import { startBalanceShadow } from "./external/balanceWorker/balanceShadow.js";
+import { startOwnershipConsumer } from "./external/balanceWorker/getOwnershipConsumer.js";
 
 import { initInfisical } from "./external/infisical/initInfisical.js";
 import { logger } from "./external/logtail/logtailUtils.js";
@@ -112,6 +113,13 @@ if (cluster.isPrimary) {
 	startMemoryMonitor("worker", 60_000);
 	await startAllEdgeConfigPolling({ logger });
 	startBalanceShadow();
+	// Queue jobs reach the balance worker too (lock expiry, evicts after billing), so they need its routing table.
+	void startOwnershipConsumer().catch((error) => {
+		logger.error(
+			{ error },
+			"[balance-worker] Ownership consumer startup failed; routing will retry",
+		);
+	});
 
 	const { db } = await import("./db/initDrizzle.js");
 	const { primeRedisMonitor } = await import(

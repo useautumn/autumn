@@ -14,6 +14,7 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { scheduleLockExpiry } from "../../balanceWorker/lockExpirySchedule.js";
 import { trackParamsToTrackCommand } from "../../track/balanceWorker/balanceWorkerTrackRequest.js";
 
 /** What a check learned from the worker; `state` is null when nothing is attached, since there was nothing to read. */
@@ -118,6 +119,7 @@ export async function runDeductingCheck({
 	const command = trackParamsToTrackCommand({
 		ctx,
 		enforceOverdueBlock: true,
+		lock: body.lock,
 		body: {
 			customer_id: body.customer_id,
 			entity_id: body.entity_id,
@@ -126,11 +128,17 @@ export async function runDeductingCheck({
 			properties: body.properties,
 			// A lock keeps its overage behaviour for a later confirm above the lock.
 			overage_behavior: body.lock?.overage_behavior ?? "reject",
-			lock: body.lock,
 		},
 	});
 	try {
 		const reply = await client.track({ command });
+		// A rejected track took nothing, so there is no lock to expire.
+		if (body.lock && reply.result.status === "applied")
+			await scheduleLockExpiry({
+				ctx,
+				customerId: body.customer_id,
+				lock: body.lock,
+			});
 		return trackReplyToCheckAnswer({ reply, body });
 	} catch (cause) {
 		if (isNothingAttached({ cause })) return nothingAttachedAnswer({ body });

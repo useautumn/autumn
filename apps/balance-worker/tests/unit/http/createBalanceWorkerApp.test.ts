@@ -121,6 +121,9 @@ const fixture = ({
 		finalize: async () => {
 			throw new Error("Finalize is not configured in this fixture");
 		},
+		confirmExpiredLock: async () => {
+			throw new Error("Expire lock is not configured in this fixture");
+		},
 		drain: async () => undefined,
 	};
 	const process: BalanceWorkerRequestContext["runtime"]["process"] = (run) =>

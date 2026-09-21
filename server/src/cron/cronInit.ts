@@ -6,6 +6,7 @@ import { runDbProbes } from "../db/probes/runDbProbes.js";
 import { logger } from "../external/logtail/logtailUtils.js";
 import { refreshCeBalancesCache } from "../external/motherduck/refreshCeBalancesCache.js";
 import { runResetLoopV2 } from "../internal/balances/batchReset/runResetLoopV2.js";
+import { runLockSweepLoop } from "../internal/balances/lockSweep/runLockSweepLoop.js";
 import { stopAllEdgeConfigPolling } from "../internal/misc/edgeConfig/edgeConfigRegistry.js";
 import { isMotherduckCacheRefreshDisabled } from "../internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import {
@@ -169,6 +170,10 @@ const resetLoopV2Promise = runResetLoopV2({
 	ctx,
 	signal: resetLoopController.signal,
 });
+const lockSweepLoopPromise = runLockSweepLoop({
+	ctx,
+	signal: resetLoopController.signal,
+});
 
 const shutdown = async (signal: string) => {
 	if (shuttingDown) return;
@@ -179,7 +184,11 @@ const shutdown = async (signal: string) => {
 	stopBlueGreenHeartbeat({ serviceName: "cron" });
 	stopBlueGreenSlotStorePolling({ serviceName: "cron" });
 	stopAllEdgeConfigPolling();
-	await Promise.all([resetLoopPromise, resetLoopV2Promise]);
+	await Promise.all([
+		resetLoopPromise,
+		resetLoopV2Promise,
+		lockSweepLoopPromise,
+	]);
 	await shutdownSqsSendBatchers();
 	await client.end();
 	await probeClient.end();

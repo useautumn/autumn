@@ -1,4 +1,5 @@
 import { sendCheck } from "./commands/sendCheck.js";
+import { sendConfirmExpiredLock } from "./commands/sendConfirmExpiredLock.js";
 import { sendEvict } from "./commands/sendEvict.js";
 import { sendFinalize } from "./commands/sendFinalize.js";
 import { sendInitialize } from "./commands/sendInitialize.js";
@@ -9,6 +10,7 @@ import type {
 	BalanceWorkerClientConfig,
 	BalanceWorkerClientDependencies,
 	CheckParams,
+	ConfirmExpiredLockParams,
 	EvictParams,
 	FinalizeParams,
 	InitializeParams,
@@ -56,5 +58,9 @@ export function createBalanceWorkerClient({
 		return sendFinalize({ ctx, ...params });
 	}
 
-	return { track, check, initialize, evict, finalize };
+	function confirmExpiredLock(params: ConfirmExpiredLockParams) {
+		return sendConfirmExpiredLock({ ctx, ...params });
+	}
+
+	return { track, check, initialize, evict, finalize, confirmExpiredLock };
 }

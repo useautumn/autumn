@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { createWorkerErrorHandler } from "./handlers/errorHandler/createWorkerErrorHandler.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
+import { receiveConfirmExpiredLock } from "./handlers/receiveConfirmExpiredLock.js";
 import { receiveEvict } from "./handlers/receiveEvict.js";
 import { receiveFinalize } from "./handlers/receiveFinalize.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
@@ -31,6 +32,7 @@ export function createBalanceWorkerApp({
 	commands.post("/track", receiveTrack);
 	commands.post("/evict", receiveEvict);
 	commands.post("/finalize", receiveFinalize);
+	commands.post("/confirm-expired-lock", receiveConfirmExpiredLock);
 	app.route("/v1", commands);
 	return app;
 }

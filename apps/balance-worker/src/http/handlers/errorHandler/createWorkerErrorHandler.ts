@@ -14,6 +14,7 @@ import { CatalogRowsNotFoundError } from "../../../catalog/catalogErrors.js";
 import { PartitionProcessorStateNotFoundError } from "../../../processor/common/processorErrors.js";
 import {
 	SubjectCatalogEvictedError,
+	SubjectLoadOvertakenError,
 	SubjectNotFoundError,
 } from "../../../processor/subject/subjectErrors.js";
 import {
@@ -114,6 +115,12 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 			error = {
 				code: "NOT_READY",
 				message: "Catalog rows were evicted before the decision; retry",
+			};
+		} else if (cause instanceof SubjectLoadOvertakenError) {
+			status = 503;
+			error = {
+				code: "NOT_READY",
+				message: "Customer kept changing while it was loaded; retry",
 			};
 		} else if (cause instanceof PartitionRouteNotOwnedError) {
 			status = 409;

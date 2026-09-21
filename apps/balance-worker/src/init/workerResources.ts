@@ -137,6 +137,7 @@ export async function openWorkerResources({
 					committer: createCommitter({
 						ctx: {
 							db: committerDb,
+							logger: dependencies.logger,
 							control: { read: readCommitterControl },
 						},
 						config: {

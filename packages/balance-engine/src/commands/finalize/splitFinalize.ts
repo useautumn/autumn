@@ -1,4 +1,5 @@
 import { Decimal } from "decimal.js";
+import type { UnwoundLock } from "./unwindLock/types/unwoundLock.js";
 
 /** How a lock at `lockValue` reaches `finalValue`: how much of it to give back, and how much more to take. */
 export const splitFinalize = ({
@@ -28,3 +29,17 @@ export const splitFinalize = ({
 		additionalValue: 0,
 	};
 };
+
+/** What the forward draw takes: the value beyond the lock, plus whatever the unwind could not return to a vanished row. */
+export const unwoundLockToForwardValue = ({
+	unwound,
+	additionalValue,
+	lockValue,
+}: {
+	unwound: UnwoundLock;
+	additionalValue: number;
+	lockValue: number;
+}): number =>
+	new Decimal(additionalValue)
+		.minus(new Decimal(unwound.skippedValue).mul(Math.sign(lockValue)))
+		.toNumber();

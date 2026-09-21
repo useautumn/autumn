@@ -1,4 +1,6 @@
 import { z } from "zod/v4";
+import { confirmExpiredLockCommandSchema } from "../../commands/confirmExpiredLock/types/confirmExpiredLockCommand.js";
+import { confirmExpiredLockResultSchema } from "../../commands/confirmExpiredLock/types/confirmExpiredLockResult.js";
 import { finalizeCommandSchema } from "../../commands/finalize/types/finalizeCommand.js";
 import { finalizeResultSchema } from "../../commands/finalize/types/finalizeResult.js";
 import { initializeCommandSchema } from "../../commands/initialize/types/initializeCommand.js";
@@ -14,12 +16,14 @@ export const mutationCommandSchema = z.discriminatedUnion("type", [
 	trackCommandSchema.loose(),
 	initializeCommandSchema.loose(),
 	finalizeCommandSchema.loose(),
+	confirmExpiredLockCommandSchema.loose(),
 ]);
 
 export const mutationResultSchema = z.discriminatedUnion("type", [
 	trackResultSchema,
 	initializeResultSchema,
 	finalizeResultSchema,
+	confirmExpiredLockResultSchema,
 ]);
 
 const mutationRevisionSchema = z

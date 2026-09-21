@@ -10,6 +10,7 @@ import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorke
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
 import { featureToInternalFeatureId } from "../../balanceWorker/featureToInternalFeatureId.js";
+import { cancelLockExpirySchedule } from "../../balanceWorker/lockExpirySchedule.js";
 import { requestContextToCommandBase } from "../../balanceWorker/requestContextToCommandBase.js";
 import { getBalanceLock } from "./getBalanceLock.js";
 
@@ -67,6 +68,9 @@ export async function runBalanceWorkerFinalize({
 				featureId: lock.feature_id,
 				value: result.finalValue,
 			});
+		// Only a caller-supplied expiry had a timer; the 24 hour default is the sweep's.
+		if (lock.expiry_action === "release")
+			await cancelLockExpirySchedule({ ctx, lockId: lock.lock_id });
 		return { success: true };
 	} catch (cause) {
 		rethrowBalanceWorkerError({ cause });

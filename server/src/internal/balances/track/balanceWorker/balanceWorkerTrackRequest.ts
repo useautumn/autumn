@@ -1,5 +1,5 @@
 import { orgToCommandOrg, type TrackCommand } from "@autumn/balance-engine";
-import type { TrackParams } from "@autumn/shared";
+import type { LockParams, TrackParams } from "@autumn/shared";
 import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
 import { featureToInternalFeatureId } from "../../balanceWorker/featureToInternalFeatureId.js";
 import { lockParamsToTrackLock } from "../../balanceWorker/lockParamsToTrackLock.js";
@@ -26,6 +26,7 @@ export function trackParamsToTrackCommand({
 	body,
 	isFanOut = false,
 	enforceOverdueBlock = false,
+	lock,
 }: {
 	ctx: BalanceWorkerRequestContext;
 	body: TrackParams;
@@ -33,6 +34,8 @@ export function trackParamsToTrackCommand({
 	isFanOut?: boolean;
 	/** A check that deducts honours the org's overdue block, as a plain check does. */
 	enforceOverdueBlock?: boolean;
+	/** Only a check takes a lock; a plain track never does. */
+	lock?: LockParams;
 }): TrackCommand {
 	const occurredAt = body.timestamp ?? ctx.timestamp;
 	return {
@@ -54,8 +57,8 @@ export function trackParamsToTrackCommand({
 		overageBehavior: body.overage_behavior ?? "cap",
 		properties: body.properties ?? null,
 		...(enforceOverdueBlock && { enforceOverdueBlock }),
-		...(body.lock?.enabled && {
-			lock: lockParamsToTrackLock({ lock: body.lock, occurredAt }),
+		...(lock?.enabled && {
+			lock: lockParamsToTrackLock({ lock, occurredAt }),
 		}),
 	};
 }

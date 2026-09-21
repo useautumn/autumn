@@ -13,6 +13,7 @@ import { CatalogRowsNotFoundError } from "../../../../src/catalog/catalogErrors.
 import { createCatalogCache } from "../../../../src/catalog/createCatalogCache.js";
 import { ensureSubject } from "../../../../src/processor/subject/actions/ensureSubject/ensureSubject.js";
 import { readSubject } from "../../../../src/processor/subject/actions/readSubject.js";
+import { createInFlightLoads } from "../../../../src/processor/subject/inFlightLoads/createInFlightLoads.js";
 import {
 	SubjectCatalogEvictedError,
 	SubjectNotFoundError,
@@ -171,7 +172,7 @@ const createScope = ({
 			},
 			receiptPolicy: { retentionMs: 1, now: () => 0 },
 		},
-		state: { hydrationPromises: new Map() },
+		state: { inFlightLoads: createInFlightLoads() },
 	};
 	return { scope, calls, catalogCache };
 };

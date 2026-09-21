@@ -42,6 +42,8 @@ export const commandToFingerprint = ({
 					? canonicalizeJsonValue(command.properties)
 					: null,
 			]);
+		case "confirmExpiredLock":
+			return JSON.stringify([...identityKey, command.lock.id]);
 		// The baseline rows are the request; a retry with different rows is a conflict.
 		case "initialize":
 			return JSON.stringify(

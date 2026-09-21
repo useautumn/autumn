@@ -33,4 +33,15 @@ const { startBlueGreenSlotStorePolling } = await import(
 );
 await startBlueGreenSlotStorePolling({ serviceName: "cron", logger });
 
+// The lock sweep evicts customers from the balance worker, so it needs to know who owns each partition.
+const { startOwnershipConsumer } = await import(
+	"./external/balanceWorker/getOwnershipConsumer.js"
+);
+void startOwnershipConsumer().catch((error) => {
+	logger.error(
+		{ error },
+		"[balance-worker] Ownership consumer startup failed; routing will retry",
+	);
+});
+
 await import("./cron/cronInit.js");

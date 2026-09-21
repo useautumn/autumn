@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, mock, spyOn, test } from "bun:test";
 import * as workerClient from "@autumn/balance-worker-client";
 import * as balanceWorkerConfig from "@autumn/env/balanceWorkerClient";
+import { BALANCE_WORKER_PARTITION_COUNT } from "@autumn/env/balanceWorkerConstants";
 import * as kafka from "@autumn/kafka";
 import {
 	ApiVersionClass,
@@ -190,6 +191,7 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 		initialize: track,
 		evict: track,
 		finalize: track,
+		confirmExpiredLock: track,
 	};
 	const createKafka = spyOn(kafka, "createKafkaClient");
 	const createConsumer = spyOn(
@@ -262,7 +264,10 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 	expect(createClient).toHaveBeenCalledTimes(1);
 	expect(createClient).toHaveBeenCalledWith({
 		ctx: { owners: consumer },
-		config: { partitionCount: 512, timeoutMs: 1000 },
+		config: {
+			partitionCount: BALANCE_WORKER_PARTITION_COUNT,
+			timeoutMs: 1000,
+		},
 	});
 	await ownership.stopOwnershipConsumer();
 	expect(stops).toBe(1);

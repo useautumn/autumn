@@ -2,6 +2,9 @@
 export { computeCheck } from "./commands/check/computeCheck.js";
 export type { CheckCommand } from "./commands/check/types/checkCommand.js";
 export type { CheckResult } from "./commands/check/types/checkResult.js";
+export { computeConfirmExpiredLock } from "./commands/confirmExpiredLock/computeConfirmExpiredLock.js";
+export type { ConfirmExpiredLockCommand } from "./commands/confirmExpiredLock/types/confirmExpiredLockCommand.js";
+export type { ConfirmExpiredLockResult } from "./commands/confirmExpiredLock/types/confirmExpiredLockResult.js";
 export type { EvictCommand } from "./commands/evict/types/evictCommand.js";
 export { computeFinalize } from "./commands/finalize/computeFinalize.js";
 export type { FinalizeCommand } from "./commands/finalize/types/finalizeCommand.js";
@@ -95,6 +98,7 @@ export {
 	parseCatalog,
 	parseCatalogRow,
 	parseCheckCommand,
+	parseConfirmExpiredLockCommand,
 	parseEvictCommand,
 	parseFinalizeCommand,
 	parseInitializeCommand,

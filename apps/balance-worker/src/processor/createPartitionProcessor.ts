@@ -1,11 +1,13 @@
 import type {
 	CheckCommand,
+	ConfirmExpiredLockCommand,
 	EvictCommand,
 	FinalizeCommand,
 	InitializeRequest,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import { check as checkPartition } from "./commands/check.js";
+import { confirmExpiredLock as confirmExpiredLockPartition } from "./commands/confirmExpiredLock.js";
 import { evict as evictPartition } from "./commands/evict.js";
 import { finalize as finalizePartition } from "./commands/finalize.js";
 import { initialize as initializePartition } from "./commands/initialize.js";
@@ -85,6 +87,17 @@ export function createPartitionProcessor({
 		});
 	}
 
+	function confirmExpiredLock({
+		command,
+	}: {
+		command: ConfirmExpiredLockCommand;
+	}) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: confirmExpiredLockPartition({ scope, command }),
+		});
+	}
+
 	function drain() {
 		return settleAcceptedCommands({ accepted: scope.accepted });
 	}
@@ -96,5 +109,13 @@ export function createPartitionProcessor({
 		});
 	}
 
-	return { track, check, initialize, evict, finalize, drain };
+	return {
+		track,
+		check,
+		initialize,
+		evict,
+		finalize,
+		confirmExpiredLock,
+		drain,
+	};
 }

@@ -14,7 +14,7 @@ type RunFinalizeLockArgs = {
 };
 
 export const runFinalizeLock = async (args: RunFinalizeLockArgs) => {
-	// The API, the expiry job and the queued replay all enter here, so all of them reach the worker.
+	// The API and the expiry job enter here; the queued replay makes the same choice in runQueuedFinalizeLock.
 	if (isBalanceWorkerRolloutEnabled()) return runBalanceWorkerFinalize(args);
 
 	return withRedisFailOpen({

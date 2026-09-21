@@ -2,8 +2,12 @@
 // Part of customer placement: changing it needs fresh topics, SQLite and checkpoint namespaces.
 // Local dev keeps just enough partitions to exercise routing without 512 Kafka producers.
 const LOCAL_PARTITION_COUNT = 4;
-export const BALANCE_WORKER_PARTITION_COUNT =
-	process.env.NODE_ENV === "development" ? LOCAL_PARTITION_COUNT : 512;
+// A test process talks to the local stack, so it must route over the same partitions.
+const isLocalStack =
+	process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
+export const BALANCE_WORKER_PARTITION_COUNT = isLocalStack
+	? LOCAL_PARTITION_COUNT
+	: 512;
 
 export const BALANCE_WORKER_MAX_REQUEST_BYTES = 1_048_576;
 /** Whole-operation budget for a routed command, not a per-call HTTP timeout: it

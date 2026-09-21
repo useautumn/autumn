@@ -1,4 +1,5 @@
 import {
+	foreignKey,
 	index,
 	jsonb,
 	numeric,
@@ -6,6 +7,8 @@ import {
 	text,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { customers } from "../cusModels/cusTable.js";
+import type { AppEnv } from "../genModels/genEnums.js";
 
 /**
  * An open lock: a deduction already taken, and the per-row deltas needed to undo it.
@@ -16,7 +19,7 @@ export const balanceLocks = pgTable(
 	{
 		id: text("id").primaryKey().notNull(),
 		org_id: text("org_id").notNull(),
-		env: text("env").notNull(),
+		env: text("env").$type<AppEnv>().notNull(),
 		/** The caller's id, unique per org and env. */
 		lock_id: text("lock_id").notNull(),
 		internal_customer_id: text("internal_customer_id").notNull(),
@@ -35,6 +38,12 @@ export const balanceLocks = pgTable(
 		created_at: numeric({ mode: "number" }).notNull(),
 	},
 	(table) => [
+		// A lock cannot outlive its customer: an orphaned row would hold its lock id forever.
+		foreignKey({
+			columns: [table.internal_customer_id],
+			foreignColumns: [customers.internal_id],
+			name: "balance_locks_internal_customer_id_fkey",
+		}).onDelete("cascade"),
 		uniqueIndex("balance_locks_org_env_lock_id_key")
 			.on(table.org_id, table.env, table.lock_id)
 			.concurrently(),

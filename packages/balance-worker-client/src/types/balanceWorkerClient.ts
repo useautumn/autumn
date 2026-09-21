@@ -1,11 +1,13 @@
 import type {
 	CheckCommand,
+	ConfirmExpiredLockCommand,
 	EvictCommand,
 	FinalizeCommand,
 	InitializeRequest,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import type { CheckReply } from "../contracts/check.js";
+import type { ConfirmExpiredLockReply } from "../contracts/confirmExpiredLock.js";
 import type { EvictReply } from "../contracts/evict.js";
 import type { FinalizeReply } from "../contracts/finalize.js";
 import type { InitializeReply } from "../contracts/initialize.js";
@@ -16,6 +18,10 @@ import type { PartitionOwners } from "../routing/types/routing.js";
 export type TrackParams = { command: TrackCommand; signal?: AbortSignal };
 export type CheckParams = { command: CheckCommand; signal?: AbortSignal };
 export type EvictParams = { command: EvictCommand; signal?: AbortSignal };
+export type ConfirmExpiredLockParams = {
+	command: ConfirmExpiredLockCommand;
+	signal?: AbortSignal;
+};
 export type FinalizeParams = { command: FinalizeCommand; signal?: AbortSignal };
 export type InitializeParams = {
 	request: InitializeRequest;
@@ -27,6 +33,9 @@ export type BalanceWorkerClient = {
 	initialize(params: InitializeParams): Promise<InitializeReply>;
 	evict(params: EvictParams): Promise<EvictReply>;
 	finalize(params: FinalizeParams): Promise<FinalizeReply>;
+	confirmExpiredLock(
+		params: ConfirmExpiredLockParams,
+	): Promise<ConfirmExpiredLockReply>;
 };
 export type BalanceWorkerClientDependencies = {
 	owners: PartitionOwners;

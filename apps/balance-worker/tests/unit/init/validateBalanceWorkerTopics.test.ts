@@ -8,7 +8,7 @@ const env = createBalanceWorkerEnv({
 	KAFKA_AUTH_MODE: "none",
 });
 const admin = ({
-	count = 512,
+	count = env.BALANCE_WORKER_PARTITION_COUNT,
 	policy = "compact",
 }: {
 	count?: number;
