@@ -1,6 +1,7 @@
 import { MigrationItemRunSkipReason } from "@autumn/shared";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { withMigrationBatchResult } from "../../repos/migrationBatchResult/withMigrationBatchResult.js";
 import { addCustomerEntitlementsForPage } from "../actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
 import { listScopedInternalCustomerIds } from "../actions/listScopedInternalCustomerIds/listScopedInternalCustomerIds.js";
 import { removeCustomerEntitlementsForPage } from "../actions/removeCustomerEntitlementsForPage/removeCustomerEntitlementsForPage.js";
@@ -9,6 +10,11 @@ import { repointCustomerProductsForPage } from "../actions/repointCustomerProduc
 import { runLicenseEntitlementOp } from "../actions/runLicenseEntitlementOp.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import { markPageItemRuns } from "./claim/index.js";
+import { assertMigrationPageRecovery } from "./recovery/assertMigrationPageRecovery.js";
+import { compactToRepointBatchResult } from "./recovery/compactResults/compactToRepointBatchResult.js";
+import { repointBatchResultToCompact } from "./recovery/compactResults/repointBatchResultToCompact.js";
+import { getMigrationOperationId } from "./recovery/getMigrationOperationId.js";
+import type { MigrationPageRecovery } from "./recovery/types/migrationPageRecovery.js";
 import type {
 	BatchMigrationInsertedItem,
 	BatchMigrationPageCustomer,
@@ -26,18 +32,8 @@ import {
 	timePhase,
 } from "./utils/pagePhaseTimings.js";
 
-/**
- * Executes one claimed page: every patch's ops (scoped by the patch's
- * OperationScope), then the set-based status marks. Succeeded = customers a
- * patch actually changed (≥1 inserted row); everyone else — out-of-scope OR
- * already converged — is skipped.
- *
- * The unit of atomicity is one candidate BATCH, not the page: ops commit
- * per bounded batch (see runCandidateBatches) and the marks commit in their
- * own transaction. Safe because mutations are dedup-idempotent and the
- * page's claims stay `running` until the marks land — a mid-page failure
- * keeps committed batches and a replay converges the rest.
- */
+// SQL batches commit independently; recovery preserves their original results.
+// Retries must supply the original plan, customers, page identity and timestamp.
 export const executeBatchMigrationPage = async ({
 	ctx,
 	migrationInternalId,
@@ -45,6 +41,7 @@ export const executeBatchMigrationPage = async ({
 	plan,
 	customers,
 	phases,
+	recovery,
 }: {
 	ctx: AutumnContext;
 	migrationInternalId: string;
@@ -52,7 +49,10 @@ export const executeBatchMigrationPage = async ({
 	plan: BatchMigrationExecutionPlan;
 	customers: BatchMigrationPageCustomer[];
 	phases?: BatchMigrationPagePhases;
+	recovery?: MigrationPageRecovery;
 }): Promise<BatchMigrationPageResult> => {
+	assertMigrationPageRecovery({ plan, recovery });
+
 	if (customers.length === 0)
 		return {
 			succeeded: [],
@@ -64,7 +64,7 @@ export const executeBatchMigrationPage = async ({
 		};
 
 	const pageInternalIds = customers.map((customer) => customer.internalId);
-	const now = Date.now();
+	const now = recovery?.effectiveAt ?? Date.now();
 	const insertedItems: BatchMigrationInsertedItem[] = [];
 	const removedItems: BatchMigrationRemovedItem[] = [];
 	const repointedProducts: BatchMigrationRepointedProduct[] = [];
@@ -73,7 +73,7 @@ export const executeBatchMigrationPage = async ({
 	const excludedIds = new Set<string>();
 	const repointedIds = new Set<string>();
 
-	for (const patch of plan.patches) {
+	for (const [patchIndex, patch] of plan.patches.entries()) {
 		// Op types stay ordered (removes, then replaces, then adds) but ops
 		// WITHIN a type run concurrently: each op owns one feature, and
 		// different features touch disjoint customer_entitlements rows.
@@ -146,9 +146,9 @@ export const executeBatchMigrationPage = async ({
 		}
 
 		const addResults = await mapWithConcurrency({
-			items: patch.addEntitlementOps,
+			items: Array.from(patch.addEntitlementOps.entries()),
 			concurrency: BATCH_MIGRATION_FEATURE_OP_CONCURRENCY,
-			run: (add) =>
+			run: ([addIndex, add]) =>
 				addCustomerEntitlementsForPage({
 					db: ctx.db,
 					scope: patch.scope,
@@ -157,6 +157,12 @@ export const executeBatchMigrationPage = async ({
 					add,
 					now,
 					phases,
+					operationId: getMigrationOperationId({
+						migrationRunId,
+						pageId: recovery?.pageId,
+						patchIndex,
+						operation: { type: "add", index: addIndex },
+					}),
 				}),
 		});
 		for (const [index, add] of patch.addEntitlementOps.entries()) {
@@ -210,13 +216,40 @@ export const executeBatchMigrationPage = async ({
 		}
 
 		if (patch.repointCustomerProduct) {
-			const rows = await repointCustomerProductsForPage({
-				db: ctx.db,
+			const input = {
 				scope: patch.scope,
 				internalCustomerIds: pageInternalIds.filter(
 					(id) => !excludedIds.has(id),
 				),
 				toInternalProductId: patch.repointCustomerProduct.toInternalProductId,
+			};
+			const operationId = getMigrationOperationId({
+				migrationRunId,
+				pageId: recovery?.pageId,
+				patchIndex,
+				operation: { type: "repoint" },
+			});
+			const { rows } = await withMigrationBatchResult({
+				ctx,
+				recovery:
+					operationId === undefined
+						? undefined
+						: {
+								orgId: ctx.org.id,
+								env: ctx.env,
+								batchId: JSON.stringify([
+									"repoint-customer-products",
+									operationId,
+								]),
+								input,
+								resultStorage: {
+									toStored: repointBatchResultToCompact,
+									fromStored: compactToRepointBatchResult,
+								},
+							},
+				execute: async ({ ctx }) => ({
+					rows: await repointCustomerProductsForPage({ db: ctx.db, ...input }),
+				}),
 			});
 			for (const row of rows) {
 				repointedIds.add(row.internalCustomerId);

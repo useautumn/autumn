@@ -67,6 +67,7 @@ import { migrationErrorRelations } from "../models/migrationModels/migrationErro
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
 // Migration Tables
 import { migrationJobs } from "../models/migrationModels/migrationJobTable.js";
+import { migrationBatchResults } from "../models/migrationV2Models/migrationBatchResultTable.js";
 // Migrations V2
 import { migrationItemRuns } from "../models/migrationV2Models/migrationItemRunTable.js";
 import { migrationRunsRelations } from "../models/migrationV2Models/migrationRunRelations.js";
@@ -194,6 +195,7 @@ export {
 	migrationErrorRelations,
 	migrationErrors,
 	migrationItemRuns,
+	migrationBatchResults,
 	migrationJobs,
 	migrationRuns,
 	migrationRunsRelations,

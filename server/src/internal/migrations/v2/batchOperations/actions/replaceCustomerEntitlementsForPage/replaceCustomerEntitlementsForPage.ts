@@ -127,7 +127,7 @@ export const replaceCustomerEntitlementsForPage = async ({
 						limit,
 					}),
 			});
-			if (candidates.length === 0) return candidates;
+			if (candidates.length === 0) return { candidates };
 			assertWithinCeiling(candidates.length);
 
 			const { rows, excludedInternalCustomerIds } = resetting
@@ -194,7 +194,7 @@ export const replaceCustomerEntitlementsForPage = async ({
 					}),
 				);
 			}
-			return candidates;
+			return { candidates };
 		},
 	});
 

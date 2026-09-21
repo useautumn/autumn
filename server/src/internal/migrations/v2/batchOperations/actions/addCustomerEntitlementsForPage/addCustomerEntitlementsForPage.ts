@@ -4,6 +4,8 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { iterateCustomerProductPages } from "@/internal/migrations/v2/batchOperations/execute/customerProductPagination/index.js";
+import { addBatchResultToCompact } from "@/internal/migrations/v2/batchOperations/execute/recovery/compactResults/addBatchResultToCompact.js";
+import { compactToAddBatchResult } from "@/internal/migrations/v2/batchOperations/execute/recovery/compactResults/compactToAddBatchResult.js";
 import type { BatchMigrationInsertedItem } from "@/internal/migrations/v2/batchOperations/execute/types/batchMigrationExecutionTypes.js";
 import { BATCH_MIGRATION_CANDIDATE_ROW_BATCH } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
 import {
@@ -50,6 +52,7 @@ export const addCustomerEntitlementsForPage = async ({
 	add,
 	now,
 	phases,
+	operationId,
 	candidateRowBatchSize = BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
 }: {
 	db: DrizzleCli;
@@ -61,6 +64,8 @@ export const addCustomerEntitlementsForPage = async ({
 	add: BatchMigrationExecutionAdd;
 	now: number;
 	phases?: BatchMigrationPagePhases;
+	/** Stable identity for this add operation on the original customer page, across retries. */
+	operationId?: string;
 	candidateRowBatchSize?: number;
 }): Promise<AddCustomerEntitlementsForPageResult> => {
 	const resetting = isResettingEntitlement({ entitlement: add.entitlement });
@@ -71,6 +76,17 @@ export const addCustomerEntitlementsForPage = async ({
 	const { rowCount } = await iterateCustomerProductPages({
 		db,
 		pageSize: candidateRowBatchSize,
+		recovery: {
+			operationId,
+			operationType: "add-customer-entitlements",
+			orgId: fromProduct.org_id,
+			env: fromProduct.env,
+			input: { scope, internalCustomerIds, fromProduct, add, now },
+			resultStorage: {
+				toStored: addBatchResultToCompact,
+				fromStored: compactToAddBatchResult,
+			},
+		},
 		executePage: async ({
 			transaction,
 			afterCustomerProductId,
@@ -91,7 +107,12 @@ export const addCustomerEntitlementsForPage = async ({
 						limit,
 					}),
 			});
-			if (candidates.length === 0) return candidates;
+			if (candidates.length === 0)
+				return {
+					candidates: [],
+					excludedInternalCustomerIds: [],
+					insertedItems: [],
+				};
 			assertWithinCeiling(candidates.length);
 
 			const inserted = await enrichAndInsertCandidates({
@@ -104,10 +125,17 @@ export const addCustomerEntitlementsForPage = async ({
 				resetting,
 				candidates,
 			});
-			for (const id of inserted.excludedInternalCustomerIds)
-				excludedIds.add(id);
-			insertedItems.push(...inserted.insertedItems);
-			return candidates;
+			return {
+				candidates: candidates.map(({ customerProductId }) => ({
+					customerProductId,
+				})),
+				...inserted,
+			};
+		},
+		onPage: (batchResult) => {
+			for (const internalCustomerId of batchResult.excludedInternalCustomerIds)
+				excludedIds.add(internalCustomerId);
+			insertedItems.push(...batchResult.insertedItems);
 		},
 	});
 

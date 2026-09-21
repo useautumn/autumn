@@ -204,7 +204,7 @@ export const replaceLicenseEntitlementsForPage = async ({
 						fromEntitlementIds,
 					}),
 			});
-			if (candidates.length === 0) return candidates;
+			if (candidates.length === 0) return { candidates };
 			assertWithinCeiling(candidates.length);
 
 			const { rows, excludedInternalCustomerIds } = resetting
@@ -245,7 +245,7 @@ export const replaceLicenseEntitlementsForPage = async ({
 					toInsertedItem({ row, operation, customerEntitlementPatch }),
 				);
 			}
-			return candidates;
+			return { candidates };
 		},
 	});
 

@@ -575,6 +575,13 @@
       "when": 1789506861254,
       "tag": "0081_sudden_layla_miller",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1789993999966,
+      "tag": "0082_even_raider",
+      "breakpoints": true
     }
   ]
 }

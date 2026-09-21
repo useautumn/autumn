@@ -1,41 +1,55 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { withStatementTimeout } from "@/db/withStatementTimeout.js";
-import {
-	BATCH_MIGRATION_MAX_CANDIDATE_ROWS_PER_PAGE,
-	BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
-} from "../utils/batchMigrationExecutionConstants.js";
+import { withMigrationBatchResult } from "../../../repos/migrationBatchResult/withMigrationBatchResult.js";
+import type { MigrationBatchResultStorage } from "../recovery/types/migrationBatchResultStorage.js";
+import { BATCH_MIGRATION_MAX_CANDIDATE_ROWS_PER_PAGE } from "../utils/batchMigrationExecutionConstants.js";
 
-/**
- * Iterates an operation over a customer page's scope-matched customer
- * products in cp.id-keyset pages: one bounded transaction per `executePage`
- * call. The rows a call returns drive the cursor; a short page ends the
- * iteration.
- *
- * Partial iterations are safe by design: every mutation is dedup-idempotent
- * and the customer page's claims stay `running` until the marks land, so a
- * failure keeps committed pages, aborts only the current one, and a replay
- * converges.
- */
+// Each batch commits independently; saved results reconstruct both changes and pagination.
 export const iterateCustomerProductPages = async <
-	Row extends { customerProductId: string },
+	Result extends { candidates: { customerProductId: string }[] },
+	Stored extends Record<string, unknown> = Result,
 >({
 	db,
 	pageSize,
 	executePage,
+	onPage,
+	recovery,
 }: {
 	db: DrizzleCli;
 	pageSize: number;
-	/** Select + mutate one page inside `transaction`; returns the rows it
-	 * visited (selected, whether or not they were mutated). Must call
-	 * `assertWithinCeiling` after selecting and before mutating, so the runaway
-	 * ceiling trips without committing a partial page. */
+	/** Return every change needed on replay; call assertWithinCeiling before mutating. */
 	executePage: (args: {
 		transaction: DrizzleCli;
 		afterCustomerProductId: string | undefined;
 		limit: number;
 		assertWithinCeiling: (selectedCount: number) => void;
-	}) => Promise<Row[]>;
+	}) => Promise<Result>;
+	/** Collects either a fresh or saved result after its transaction completes. */
+	onPage?: (result: Result) => void;
+	recovery?: {
+		operationId?: string;
+		operationType: string;
+		orgId: string;
+		env: string;
+		input: Record<string, unknown>;
+		resultStorage?: MigrationBatchResultStorage<Result, Stored>;
+	};
 }): Promise<{ rowCount: number }> => {
+	if (recovery?.operationId === "")
+		throw new Error("Migration operation identity must not be empty");
+	const batchRecovery =
+		recovery?.operationId === undefined
+			? undefined
+			: {
+					...recovery,
+					operationId: recovery.operationId,
+					input: JSON.parse(
+						JSON.stringify({
+							...recovery.input,
+							operationId: recovery.operationId,
+							candidateRowBatchSize: pageSize,
+						}),
+					),
+				};
 	let afterCustomerProductId: string | undefined;
 	let rowCount = 0;
 	const assertWithinCeiling = (selectedCount: number) => {
@@ -47,18 +61,37 @@ export const iterateCustomerProductPages = async <
 	};
 
 	while (true) {
-		const rows = await withStatementTimeout(
-			db,
-			(transaction) =>
+		const result = await withMigrationBatchResult({
+			ctx: { db },
+			recovery:
+				batchRecovery === undefined
+					? undefined
+					: {
+							orgId: batchRecovery.orgId,
+							env: batchRecovery.env,
+							batchId: JSON.stringify([
+								batchRecovery.operationType,
+								batchRecovery.operationId,
+								afterCustomerProductId ?? null,
+							]),
+							input: {
+								...batchRecovery.input,
+								afterCustomerProductId: afterCustomerProductId ?? null,
+							},
+							resultStorage: batchRecovery.resultStorage,
+						},
+			forceCustomPlan: true,
+			execute: ({ ctx }) =>
 				executePage({
-					transaction,
+					transaction: ctx.db,
 					afterCustomerProductId,
 					limit: pageSize,
 					assertWithinCeiling,
 				}),
-			BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
-			{ forceCustomPlan: true },
-		);
+		});
+		const rows = result.candidates;
+		assertWithinCeiling(rows.length);
+		onPage?.(result);
 		if (rows.length === 0) break;
 		rowCount += rows.length;
 		afterCustomerProductId = rows[rows.length - 1].customerProductId;

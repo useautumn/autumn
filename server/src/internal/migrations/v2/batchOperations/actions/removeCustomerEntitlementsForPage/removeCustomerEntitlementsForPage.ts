@@ -1,7 +1,4 @@
-import type {
-	Feature,
-	FullProductWithoutLicenses,
-} from "@autumn/shared";
+import type { Feature, FullProductWithoutLicenses } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { iterateCustomerProductPages } from "@/internal/migrations/v2/batchOperations/execute/customerProductPagination/index.js";
 import type { BatchMigrationRemovedItem } from "@/internal/migrations/v2/batchOperations/execute/types/batchMigrationExecutionTypes.js";
@@ -68,7 +65,7 @@ export const removeCustomerEntitlementsForPage = async ({
 						limit,
 					}),
 			});
-			if (candidates.length === 0) return candidates;
+			if (candidates.length === 0) return { candidates };
 			assertWithinCeiling(candidates.length);
 
 			const deletedIds = await timePhase({
@@ -97,7 +94,7 @@ export const removeCustomerEntitlementsForPage = async ({
 					}),
 				);
 			}
-			return candidates;
+			return { candidates };
 		},
 	});
 

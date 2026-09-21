@@ -170,6 +170,7 @@ export * from "./models/invoiceTemplateModels/invoiceTemplateTable";
 export * from "./models/migrationModels/migrationErrorTable";
 export * from "./models/migrationModels/migrationJobTable";
 export * from "./models/migrationModels/migrationModels";
+export * from "./models/migrationV2Models/migrationBatchResultTable";
 export * from "./models/migrationV2Models/migrationItemRunSchema";
 export * from "./models/migrationV2Models/migrationItemRunTable";
 export * from "./models/migrationV2Models/migrationRunTable";

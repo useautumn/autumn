@@ -64,7 +64,7 @@ export const addLicenseEntitlementsForPage = async ({
 						match: "add",
 					}),
 			});
-			if (candidates.length === 0) return candidates;
+			if (candidates.length === 0) return { candidates };
 			assertWithinCeiling(candidates.length);
 
 			const { insertedItems: pageItems, excludedInternalCustomerIds } =
@@ -80,7 +80,7 @@ export const addLicenseEntitlementsForPage = async ({
 			for (const id of excludedInternalCustomerIds) excludedIds.add(id);
 			insertedItems.push(...pageItems);
 
-			return candidates;
+			return { candidates };
 		},
 	});
 
