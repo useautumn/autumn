@@ -9,7 +9,11 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiListInvoiceV1, AttachParamsV1Input } from "@autumn/shared";
+import type {
+	ApiListInvoiceV1,
+	AttachParamsV1Input,
+	CreateInvoicePreview,
+} from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { payOpenInvoice } from "@tests/utils/stripeUtils/payOpenInvoice";
@@ -22,6 +26,7 @@ type ReissueResponse = {
 	invoice: ApiListInvoiceV1;
 	voided_invoice_id: string | null;
 	credit_note_id: string | null;
+	preview: CreateInvoicePreview;
 };
 
 const paidSendInvoice = async ({
@@ -85,7 +90,7 @@ test.concurrent(
 			(await ctx.stripeCli.invoices.retrieve(original.stripe_id)).status,
 		).toBe("paid");
 
-		const { invoice, voided_invoice_id, credit_note_id } =
+		const { invoice, voided_invoice_id, credit_note_id, preview } =
 			(await autumnV2_3.post("/invoices.reissue", {
 				invoice_id: original.id,
 				invoice: {
@@ -108,6 +113,13 @@ test.concurrent(
 		);
 		expect(creditNote.invoice).toBe(original.stripe_id);
 		expect(creditNote.total).toBe(2200);
+
+		// The $22 credit covers the corrected $20; the preview reports what the
+		// replacement consumed, not the whole balance it was offered.
+		expect(preview.total).toBe(20);
+		expect(preview.invoice_credits?.balance).toBe(22);
+		expect(preview.invoice_credits?.applied).toBe(20);
+		expect(preview.amount_due).toBe(0);
 
 		// The customer holds the $22 back as balance, so the corrected $20 is covered.
 		const replacement = await ctx.stripeCli.invoices.retrieve(

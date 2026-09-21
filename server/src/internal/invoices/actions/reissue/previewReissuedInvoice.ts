@@ -28,6 +28,34 @@ const lineAmountAfterDiscounts = ({
 	});
 
 /**
+ * Stripe holds credit as a negative balance and records what an invoice
+ * consumed as the gap between its starting and ending balance.
+ */
+const settledCredits = ({
+	stripeInvoice,
+	credits,
+	currency,
+}: {
+	stripeInvoice: Stripe.Invoice;
+	credits?: PreviewInvoiceCredits;
+	currency: string;
+}): PreviewInvoiceCredits | undefined => {
+	const startingBalance = stripeInvoice.starting_balance ?? 0;
+	if (startingBalance >= 0)
+		return credits ? { ...credits, applied: 0 } : undefined;
+
+	const endingBalance = stripeInvoice.ending_balance ?? startingBalance;
+	return {
+		currency,
+		balance: stripeToAtmnAmount({ amount: -startingBalance, currency }),
+		applied: stripeToAtmnAmount({
+			amount: Math.max(endingBalance - startingBalance, 0),
+			currency,
+		}),
+	};
+};
+
+/**
  * What a reissued invoice looks like, read off a Stripe invoice and its lines.
  * Called with the original before anything is created, and with the finalized
  * replacement afterwards so the response describes what was actually issued.
@@ -85,18 +113,9 @@ export const previewReissuedInvoice = ({
 		(sum, tax) => sum + tax.amount,
 		0,
 	);
-	// Stripe records the credit it consumed as a negative starting_balance.
 	const { credits: appliedCredits, amountDue } = settled
 		? {
-				credits: credits
-					? {
-							...credits,
-							applied: stripeToAtmnAmount({
-								amount: Math.max(-(stripeInvoice.starting_balance ?? 0), 0),
-								currency,
-							}),
-						}
-					: undefined,
+				credits: settledCredits({ stripeInvoice, credits, currency }),
 				amountDue: stripeToAtmnAmount({
 					amount: stripeInvoice.amount_due,
 					currency,
