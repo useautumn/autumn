@@ -8,6 +8,7 @@ on:
       - "packages/autumn-js/**"
       - "packages/openapi/**"
       - "packages/sdk/**"
+      - "shared/**"
 
   workflow_dispatch:
     inputs:

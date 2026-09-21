@@ -8,7 +8,9 @@ on:
       - "packages/atmn/**"
       - "packages/atmn-generator/**"
       - "packages/agent-docs/**"
-      - "packages/openapi/openapi*.yml"
+      - "packages/openapi/**"
+      - "shared/**"
+      - "apps/docs/mintlify/**"
 
   workflow_dispatch:
     inputs:
