@@ -1,4 +1,3 @@
-import { getApiFlag } from "@api/customers/flags/utils/getApiFlag.js";
 import type { ApiFlagV0 } from "@autumn/shared";
 import {
 	type AggregatedSubjectFlag,
@@ -9,6 +8,7 @@ import {
 	type SharedContext,
 	scopeExpandForCtx,
 } from "@autumn/shared";
+import { getApiFlag } from "./getApiFlag.js";
 
 export const getApiFlagV2 = ({
 	ctx,

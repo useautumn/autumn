@@ -4,20 +4,20 @@ import {
 	type EntityLegacyData,
 	type FullSubject,
 	fullSubjectToApiUsageLimits,
+	getApiBalancesV2,
+	getApiSubscriptionsV2,
 	InternalError,
 	orgToInStatuses,
+	type SharedContext,
 	scopeExpandForCtx,
 } from "@autumn/shared";
-import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiBalancesV2 } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiBalance/getApiBalancesV2.js";
-import { getApiSubscriptionsV2 } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubscription/getApiSubscriptionsV2.js";
 
 export const getApiEntityBaseV2 = async ({
 	ctx,
 	fullSubject,
 	withAutumnId = false,
 }: {
-	ctx: RequestContext;
+	ctx: SharedContext;
 	fullSubject: FullSubject;
 	withAutumnId?: boolean;
 }): Promise<{ apiEntity: ApiEntityV2; legacyData: EntityLegacyData }> => {

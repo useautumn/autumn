@@ -1,20 +1,19 @@
 import {
 	type ApiCustomerV5,
 	ApiCustomerV5Schema,
-	CustomerExpand,
+	type ApiInvoiceV1,
 	type CustomerLegacyData,
 	type FullSubject,
 	fullSubjectToApiUsageLimits,
+	getApiBalancesV2,
+	getApiCustomerLicenses,
+	getApiSubscriptionsV2,
 	orgToInStatuses,
+	type SharedContext,
 	scopeExpandForCtx,
 } from "@autumn/shared";
 import { z } from "zod/v4";
-import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { invoicesToResponse } from "../../../invoices/invoiceUtils.js";
-import { getCusProcessors } from "../cusResponseUtils/getCusProcessors.js";
-import { getApiBalancesV2 } from "./getApiBalance/getApiBalancesV2.js";
-import { getApiCustomerLicenses } from "./getApiCustomerLicense/getApiCustomerLicenses.js";
-import { getApiSubscriptionsV2 } from "./getApiSubscription/getApiSubscriptionsV2.js";
+import { getCusProcessors } from "../cusProcessors/utils/getCusProcessors.js";
 
 /**
  * Get base ApiCustomer without expand fields from FullSubject.
@@ -24,10 +23,13 @@ export const getApiCustomerBaseV2 = async ({
 	ctx,
 	fullSubject,
 	withAutumnId = true,
+	invoices,
 }: {
-	ctx: RequestContext;
+	ctx: SharedContext;
 	fullSubject: FullSubject;
 	withAutumnId?: boolean;
+	/** Already in API form: an invoice's hosted URL is built from the server's own address, which this has no way to know. */
+	invoices?: ApiInvoiceV1[];
 }): Promise<{ apiCustomer: ApiCustomerV5; legacyData: CustomerLegacyData }> => {
 	const { balances: apiBalances, flags: apiFlags } = getApiBalancesV2({
 		ctx,
@@ -49,7 +51,6 @@ export const getApiCustomerBaseV2 = async ({
 	});
 
 	const apiLicenses = getApiCustomerLicenses({
-		ctx,
 		customerProducts: fullSubject.customer_products,
 	});
 
@@ -88,20 +89,14 @@ export const getApiCustomerBaseV2 = async ({
 		config: customer.config
 			? {
 					disable_pooled_balance: customer.config.disable_pooled_balance,
-					disable_overage_billing:
-						customer.config.disable_overage_billing,
+					disable_overage_billing: customer.config.disable_overage_billing,
 				}
 			: undefined,
 		processors: getCusProcessors({
 			customer,
 			customer_products: fullSubject.customer_products,
 		}),
-		invoices:
-			fullSubject.invoices && ctx.expand.includes(CustomerExpand.Invoices)
-				? invoicesToResponse({
-						invoices: fullSubject.invoices,
-					})
-				: undefined,
+		invoices,
 	} satisfies ApiCustomerV5);
 
 	return {

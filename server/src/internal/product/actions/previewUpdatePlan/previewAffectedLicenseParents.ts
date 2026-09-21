@@ -4,6 +4,7 @@ import {
 	applyLicenseCustomizeToBasePlan,
 	diffLicensePlanCustomize,
 	type FullProduct,
+	fullPlanLicenseToApiPlanLicense,
 	type PlanUpdatePreviewLicenseChange,
 	PlanUpdatePreviewLicenseChangeSchema,
 	type PlanUpdatePreviewLicenseParent,
@@ -20,7 +21,6 @@ import {
 	licenseParentTargetKey,
 	resolveLicenseParentTargets,
 } from "@/internal/licenses/actions/propagation/resolveLicenseParentTargets.js";
-import { buildApiPlanLicense } from "@/internal/products/productUtils/productResponseUtils/buildApiPlanLicense.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import { getApiPlanDiff } from "../common/planTransformUtils.js";
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
@@ -105,10 +105,9 @@ export const previewAffectedLicenseParents = async ({
 						product: currentLink.product,
 						features: ctx.features,
 					}),
-					buildApiPlanLicense({
-						ctx,
+					fullPlanLicenseToApiPlanLicense({
+						ctx: { ...ctx, expand: [] },
 						license: currentLink,
-						features: ctx.features,
 					}),
 				]);
 			const { targetEffectivePlan, targetCustomize } =

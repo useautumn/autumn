@@ -6,19 +6,17 @@ import {
 	type CustomerLegacyData,
 	type FullCustomer,
 	fullCustomerToFullSubject,
+	fullCustomerWithoutEntityData,
 	fullSubjectToApiUsageLimits,
+	getApiCustomerLicenses,
+	getCusProcessors,
 	orgToInStatuses,
 	scopeExpandForCtx,
+	shouldAggregateEntityData,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { invoicesToResponse } from "../../../invoices/invoiceUtils.js";
-import { getCusProcessors } from "../cusResponseUtils/getCusProcessors.js";
-import {
-	fullCustomerWithoutEntityData,
-	shouldAggregateEntityData,
-} from "../customerEntityData.js";
-import { getApiCustomerLicenses } from "../getApiCustomerV2/getApiCustomerLicense/getApiCustomerLicenses.js";
 import { getApiSubscriptions } from "./getApiSubscription/getApiSubscriptions.js";
 
 /**
@@ -83,7 +81,6 @@ export const getApiCustomerBase = async ({
 		subscriptions: apiSubscriptions,
 		purchases: apiPurchases,
 		licenses: getApiCustomerLicenses({
-			ctx,
 			customerProducts: fullCustomer.customer_products,
 		}),
 		balances: apiBalances,

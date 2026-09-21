@@ -5,15 +5,15 @@ import {
 	type FullSubject,
 	fullSubjectToApiCustomerProducts,
 	isCustomerProductOneOff,
+	type SharedContext,
 } from "@autumn/shared";
-import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiSubscriptionV2 } from "./getApiSubscriptionV2.js";
 
-export const getApiSubscriptionsV2 = async ({
+export const getApiSubscriptionsV2 = ({
 	ctx,
 	fullSubject,
 }: {
-	ctx: RequestContext;
+	ctx: SharedContext;
 	fullSubject: FullSubject;
 }) => {
 	const apiSubscriptions: ApiSubscriptionV1[] = [];
@@ -23,7 +23,7 @@ export const getApiSubscriptionsV2 = async ({
 
 	for (const customerProduct of customerProducts) {
 		const { data, legacyData: customerProductLegacyData } =
-			await getApiSubscriptionV2({
+			getApiSubscriptionV2({
 				ctx,
 				fullSubject,
 				customerProduct,

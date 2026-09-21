@@ -1,10 +1,10 @@
+import { billingControlsFromColumns } from "../../models/cusModels/billingControls/customerBillingControls.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
 import type { EntitlementWithFeature } from "../../models/productModels/entModels/entModels.js";
 import type { Price } from "../../models/productModels/priceModels/priceModels.js";
 import type { FullProduct } from "../../models/productModels/productModels.js";
 import type { ProductItem } from "../../models/productV2Models/productItemModels/productItemModels.js";
 import type { ProductV2 } from "../../models/productV2Models/productV2Models.js";
-import { billingControlsFromColumns } from "../../models/cusModels/billingControls/customerBillingControls.js";
 import { entToPrice, priceToEnt } from "../productUtils/convertProductUtils.js";
 import { toProductItem } from "./productItemUtils/mapToItem.js";
 import { getItemFeatureType } from "./productItemUtils/productItemUtils.js";
@@ -98,6 +98,7 @@ export const mapToProductV2 = ({
 
 		items: items,
 		stripe_id: product.processor?.id || null,
+		stripe_additional_ids: product.processor?.additional_ids ?? null,
 		archived: product.archived || false,
 		config: product.config ?? undefined,
 		billing_controls: billingControlsFromColumns(product),

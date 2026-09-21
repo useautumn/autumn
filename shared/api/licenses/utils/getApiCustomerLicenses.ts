@@ -5,17 +5,14 @@ import {
 	customerLicenseToUsage,
 	type FullCusProduct,
 } from "@autumn/shared";
-import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 
 /**
  * Serializes the customer's license pools from their (already hydrated)
  * customer products — live parents only, broken links skipped.
  */
 export const getApiCustomerLicenses = ({
-	ctx,
 	customerProducts,
 }: {
-	ctx: RequestContext;
 	customerProducts: FullCusProduct[];
 }): ApiCustomerLicenseV0[] => {
 	return customerProducts

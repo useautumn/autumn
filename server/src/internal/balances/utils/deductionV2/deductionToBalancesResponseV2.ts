@@ -2,9 +2,9 @@ import {
 	type ApiBalanceV1,
 	type FullSubject,
 	fullSubjectToRelevantFeatures,
+	getApiSubject,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubject.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 
 /**

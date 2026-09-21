@@ -10,11 +10,11 @@ import {
 	findFeatureByInternalId,
 	fullSubjectToCustomerEntitlements,
 	orgToInStatuses,
+	type SharedContext,
 	scopeExpandForCtx,
 } from "@autumn/shared";
-import type { RequestContext } from "@/honoUtils/HonoEnv.js";
+import { getApiFlagV2 } from "../../flags/utils/getApiFlagV2.js";
 import { getApiBalanceV2 } from "./getApiBalanceV2.js";
-import { getApiFlagV2 } from "./getApiFlag.js";
 
 type FeatureInput = {
 	featureId: string;
@@ -110,7 +110,7 @@ export const getApiBalancesV2 = ({
 	ctx,
 	fullSubject,
 }: {
-	ctx: RequestContext;
+	ctx: SharedContext;
 	fullSubject: FullSubject;
 }): {
 	balances: Record<string, ApiBalanceV1>;

@@ -1,7 +1,11 @@
-import type { ApiCustomerV5, ApiEntityV2, FullSubject } from "@autumn/shared";
-import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiEntityBaseV2 } from "@/internal/entities/entityUtils/getApiEntityV2/getApiEntityBaseV2.js";
-import { subjectWithoutEntityData } from "../customerEntityData.js";
+import type {
+	ApiCustomerV5,
+	ApiEntityV2,
+	FullSubject,
+	SharedContext,
+} from "@autumn/shared";
+import { getApiEntityBaseV2 } from "../../entities/utils/getApiEntityBaseV2.js";
+import { subjectWithoutEntityData } from "./customerEntityData.js";
 import { getApiCustomerBaseV2 } from "./getApiCustomerBaseV2.js";
 
 export const getApiSubject = async ({
@@ -9,7 +13,7 @@ export const getApiSubject = async ({
 	fullSubject,
 	includeAggregations,
 }: {
-	ctx: RequestContext;
+	ctx: SharedContext;
 	fullSubject: FullSubject;
 	includeAggregations: boolean;
 }): Promise<ApiCustomerV5 | ApiEntityV2> => {

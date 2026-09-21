@@ -2,9 +2,15 @@ import type { ApiPlanLicenseV1 } from "@api/products/apiPlanLicenseV1.js";
 import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 import { ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
 import type { Feature } from "@models/featureModels/featureModels.js";
+import { ProcessorType } from "@models/genModels/genEnums.js";
 import type { ProductV2 } from "@models/productV2Models/productV2Models.js";
 import { sortProductItems } from "@utils/productDisplayUtils/sortProductItems.js";
 import { getProductItemDisplay } from "@utils/productDisplayUtils.js";
+import {
+	productToPlanProcessors,
+	type RevenueCatPlanMapping,
+} from "@utils/productUtils/convertProduct/productToPlanProcessors.js";
+import { priceConfigToPriceProcessors } from "@utils/productUtils/priceUtils/convertPrice/priceConfigToPriceProcessors.js";
 import { productItemsToPlanItemsV1 } from "@utils/productV2Utils/productItemUtils/convertProductItem/productItemToPlanItemV1.js";
 import {
 	itemToBillingInterval,
@@ -26,24 +32,49 @@ export const productV2ToApiPlanV1 = ({
 	product,
 	features,
 	currency,
+	expand,
 	customerEligibility,
 	licenses,
 	includeProration = false,
+	includeProcessors = false,
+	revenuecatMapping,
 }: {
 	product: ProductV2;
 	features: Feature[];
 	currency?: string;
+	expand?: string[];
 	customerEligibility?: ApiPlanV1["customer_eligibility"];
 	licenses?: ApiPlanLicenseV1[];
 	/** Proration is internal and stripped from plan responses; diff and patch
 	 * bases need it kept or every rebuilt item silently loses the config. */
 	includeProration?: boolean;
+	/** Stripe and RevenueCat ids, on the plan and its base price. Off for plans that get rebuilt into items, which would adopt those ids. */
+	includeProcessors?: boolean;
+	/** RevenueCat mappings live in their own table, so the row is read in. */
+	revenuecatMapping?: RevenueCatPlanMapping | null;
 }): ApiPlanV1 & { licenses?: ApiPlanLicenseV1[] } => {
 	const sortedItems = sortProductItems(product.items, features);
 
 	const basePriceItem = productV2ToBasePrice({
 		product: { ...product, items: sortedItems },
 	});
+	const basePriceProcessors = includeProcessors
+		? priceConfigToPriceProcessors({ config: basePriceItem?.price_config })
+		: undefined;
+	const planProcessors = includeProcessors
+		? productToPlanProcessors({
+				product: {
+					processor: product.stripe_id
+						? {
+								type: ProcessorType.Stripe,
+								id: product.stripe_id,
+								additional_ids: product.stripe_additional_ids ?? undefined,
+							}
+						: null,
+				},
+				revenuecatMapping,
+			})
+		: undefined;
 	const basePrice: ApiPlanV1["price"] = basePriceItem
 		? {
 				amount: basePriceItem.price,
@@ -68,6 +99,7 @@ export const productV2ToApiPlanV1 = ({
 							}),
 						}
 					: {}),
+				...(basePriceProcessors ? { processors: basePriceProcessors } : {}),
 			}
 		: null;
 
@@ -79,6 +111,7 @@ export const productV2ToApiPlanV1 = ({
 	const planItems = productItemsToPlanItemsV1({
 		items: featureItems,
 		features,
+		expand,
 		currency,
 	}).map((item) =>
 		includeProration ? item : { ...item, proration: undefined },
@@ -120,6 +153,7 @@ export const productV2ToApiPlanV1 = ({
 		billing_controls: product.billing_controls,
 		metadata: product.metadata ?? {},
 		customer_eligibility: customerEligibility,
+		...(planProcessors ? { processors: planProcessors } : {}),
 	} satisfies ApiPlanV1);
 
 	if (!licenses?.length) return plan;

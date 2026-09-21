@@ -1,40 +1,30 @@
-import type {
-	ApiPlanVariantV1,
-	DiffablePlanV1,
-	Feature,
-	FullProduct,
-	RevenueCatPlanMapping,
-} from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getPlanResponse } from "./getPlanResponse.js";
+import type { ApiPlanVariantV1 } from "@api/products/apiPlanVariantV1";
+import type { FullProduct } from "@models/productModels/productModels";
+import type { DiffablePlanV1 } from "@utils/planV1Utils/diff/diffPlanV1";
+import type { RevenueCatPlanMapping } from "@utils/productUtils/convertProduct/productToPlanProcessors";
+import { fullProductToApiPlan } from "../fullProductToApiPlan";
+import type { ApiPlanContext } from "../types/apiPlanContext";
 
 /** A base plan's down-link to a variant: id + name + customize + resolved plan. */
-export const buildApiPlanVariant = async ({
+export const fullProductToApiPlanVariant = ({
 	ctx,
 	basePlan,
 	variant,
-	features,
-	expand,
 	currency,
 	revenuecatMappings,
 }: {
-	ctx?: AutumnContext;
+	ctx: ApiPlanContext;
 	basePlan: DiffablePlanV1;
 	variant: FullProduct;
-	features: Feature[];
-	expand?: string[];
 	currency?: string;
-	/** Keyed by plan id — the variant owns its own `revenuecat_mappings` row. */
+	/** Keyed by plan id: the variant owns its own `revenuecat_mappings` row. */
 	revenuecatMappings?: ReadonlyMap<string, RevenueCatPlanMapping>;
-}): Promise<ApiPlanVariantV1> => {
-	const variantPlan = await getPlanResponse({
+}): ApiPlanVariantV1 => {
+	const variantPlan = fullProductToApiPlan({
 		ctx,
 		product: variant,
-		features,
-		expand,
 		currency,
 		basePlan,
-		resolveBaseFullProduct: false,
 		revenuecatMappings,
 	});
 

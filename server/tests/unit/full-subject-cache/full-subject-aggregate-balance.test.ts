@@ -3,8 +3,8 @@ import {
 	AppEnv,
 	FeatureType,
 	type FullAggregatedFeatureBalance,
+	mergeAggregatedBalanceIntoApiBalanceV2,
 } from "@autumn/shared";
-import { mergeAggregatedBalanceIntoApiBalanceV2 } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiBalance/apiBalanceV2Utils.js";
 
 describe("fullSubject aggregate balance", () => {
 	test("uses allowance_total when merging aggregated granted balance", () => {

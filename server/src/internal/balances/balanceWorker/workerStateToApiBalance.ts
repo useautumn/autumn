@@ -7,9 +7,9 @@ import {
 import {
 	type ApiBalanceV1,
 	fullSubjectToCustomerEntitlements,
+	getApiBalanceV2,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getApiBalanceV2 } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiBalance/getApiBalanceV2.js";
 import { BalanceWorkerUnsupportedError } from "./balanceWorkerErrors.js";
 
 /** The customer as the worker decided on it: its rows joined with the catalog rows the reply carried. */

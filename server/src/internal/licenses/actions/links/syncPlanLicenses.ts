@@ -4,6 +4,8 @@ import {
 	ErrCode,
 	type FullProduct,
 	findDuplicate,
+	fullPlanLicensesToApiPlanLicenses,
+	fullProductsToLicenseCustomize,
 	type PlanLicenseParams,
 	type Price,
 	RecaseError,
@@ -15,11 +17,7 @@ import {
 	computeLicenseCustomize,
 	derivePlanLicenseItemRefs,
 } from "@/internal/licenses/actions/customize/computeLicenseCustomize.js";
-import { licensePlanCustomize } from "../../licenseLinkCustomize.js";
-import {
-	getFullLicenseProduct,
-	toApiPlanLicenses,
-} from "../../licenseUtils.js";
+import { getFullLicenseProduct } from "../../licenseUtils.js";
 import { customerLicenseRepo } from "../../repos/customerLicenseRepo.js";
 import { licenseAssignmentRepo } from "../../repos/licenseAssignmentRepo.js";
 import { licenseItemRepo } from "../../repos/licenseItemRepo.js";
@@ -80,11 +78,13 @@ export const validatePlanLicenseUpdate = ({
 export const previewPlanLicenseSync = async (
 	args: Parameters<typeof preparePlanLicenseSync>[0],
 ) => {
-	const previous = toApiPlanLicenses(args.parentProduct.licenses ?? []);
+	const previous = fullPlanLicensesToApiPlanLicenses({
+		licenses: args.parentProduct.licenses ?? [],
+	});
 	const prepared = await preparePlanLicenseSync(args);
 	const current = prepared
 		? prepared.resolved.map((license) => {
-				const customize = licensePlanCustomize({
+				const customize = fullProductsToLicenseCustomize({
 					product: license.effectiveProduct,
 					baseProduct: license.licenseProduct,
 				});

@@ -10,13 +10,13 @@ import {
 	expandPathIncludes,
 	type FullCusProduct,
 	type FullSubject,
+	fullProductToApiPlan,
 	isCustomerProductOneOff,
 	isCustomerProductTrialing,
+	type SharedContext,
 	type Subscription,
 	scopeExpandForCtx,
 } from "@autumn/shared";
-import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 
 type ApiSubscriptionResult = {
 	data: ApiSubscriptionV1;
@@ -27,7 +27,7 @@ const handlePlanExpand = ({
 	ctx,
 	customerProduct,
 }: {
-	ctx: AutumnContext;
+	ctx: SharedContext;
 	customerProduct: FullCusProduct;
 }) => {
 	const planCtx = scopeExpandForCtx({
@@ -56,15 +56,15 @@ const handlePlanExpand = ({
 	};
 };
 
-export const getApiSubscriptionV2 = async ({
+export const getApiSubscriptionV2 = ({
 	ctx,
 	fullSubject,
 	customerProduct,
 }: {
-	ctx: RequestContext;
+	ctx: SharedContext;
 	fullSubject: FullSubject;
 	customerProduct: FullCusProduct;
-}): Promise<ApiSubscriptionResult> => {
+}): ApiSubscriptionResult => {
 	const fullProduct = cusProductToProduct({
 		cusProduct: customerProduct,
 	});
@@ -104,10 +104,12 @@ export const getApiSubscriptionV2 = async ({
 	});
 
 	const apiPlan = shouldExpandPlan
-		? await getPlanResponse({
+		? fullProductToApiPlan({
+				ctx: {
+					...planCtx,
+					expand: planCtx.expand.filter((entry) => entry.length > 0),
+				},
 				product: fullProduct,
-				features: ctx.features,
-				expand: planCtx.expand.filter((entry) => entry.length > 0),
 			})
 		: undefined;
 

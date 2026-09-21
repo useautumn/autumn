@@ -7,6 +7,7 @@ import {
 	type CusProductStatus,
 	type EntityLegacyData,
 	ErrCode,
+	getApiEntityBaseV2,
 	type ListEntitiesParams,
 	ListEntitiesParamsSchema,
 	ListEntitiesV2_3ParamsSchema,
@@ -29,7 +30,6 @@ import {
 import { resultToFullSubject } from "@/internal/customers/repos/getFullSubject/index.js";
 import { unpackSubjectEnvelope } from "@/internal/customers/repos/getFullSubject/unpackSubjectEnvelope.js";
 import { getOrgPaginationMaxLimit } from "../../misc/edgeConfig/orgLimitsStore.js";
-import { getApiEntityBaseV2 } from "../entityUtils/getApiEntityV2/getApiEntityBaseV2.js";
 import { getCursorPaginatedEntitySubjectsQuery } from "../repos/cursorListEntitiesQuery.js";
 import { hydrateEntityRowsWithCustomerData } from "../repos/hydrateEntityRowsWithCustomerData.js";
 import {

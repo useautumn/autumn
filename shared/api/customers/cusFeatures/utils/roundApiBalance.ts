@@ -1,5 +1,4 @@
-import type { ApiBalanceV1 } from "@autumn/shared";
-import { roundCacheBalance } from "@/internal/customers/cache/fullSubject/roundCacheBalance.js";
+import { type ApiBalanceV1, roundCacheBalance } from "@autumn/shared";
 
 /**
  * Round all numeric balance fields on an ApiBalanceV1 to eliminate

@@ -18,8 +18,8 @@ const baseProduct = {
 	version: 1,
 	version_slug: "v1",
 	active: true,
-deleted_at: null,
-previous_version_slug: null,
+	deleted_at: null,
+	previous_version_slug: null,
 	env: AppEnv.Sandbox,
 	internal_id: "prod_internal",
 	org_id: "org_123",
@@ -103,5 +103,37 @@ describe("getPlanResponse", () => {
 		});
 
 		expect(response.free_trial?.card_required).toBe(true);
+	});
+
+	test("names every Stripe product the plan bills through", async () => {
+		const response = await getPlanResponse({
+			product: {
+				...baseProduct,
+				is_add_on: false,
+				is_default: false,
+				processor: {
+					type: "stripe",
+					id: "prod_main",
+					additional_ids: ["prod_older"],
+				},
+			},
+			features: [],
+		});
+
+		expect(response.processors).toEqual({
+			stripe: {
+				product_id: "prod_main",
+				additional_product_ids: ["prod_older"],
+			},
+		});
+	});
+
+	test("names no processors for a plan that has never reached Stripe", async () => {
+		const response = await getPlanResponse({
+			product: { ...baseProduct, is_add_on: false, is_default: false },
+			features: [],
+		});
+
+		expect(response.processors).toBeUndefined();
 	});
 });
