@@ -1,10 +1,10 @@
 /**
- * A failed write to the Stripe mirror must reach the caller, whose `.catch`
- * logs it. The webhook stays fail-open because the caller never awaits it.
+ * A failed write to the Stripe mirror must never reject (the webhook path is
+ * fail-open), but it must be reported so it can be logged.
  *
- * Red (before): processStripeSyncEvent swallowed every error, so the mirror
- *               could lose rows with no log line at all.
- * Green (after): the error rejects out of processStripeSyncEvent.
+ * Red (before): processStripeSyncEvent swallowed every error with no report,
+ *               so the mirror could lose rows with no log line at all.
+ * Green (after): it still resolves, and hands the error to `onError`.
  */
 import { beforeAll, expect, mock, test } from "bun:test";
 import type Stripe from "stripe";
@@ -33,8 +33,9 @@ beforeAll(() => {
 	process.env.STRIPE_SANDBOX_SECRET_KEY = "sk_test_unit";
 });
 
-test("processStripeSyncEvent rejects when the mirror write fails", async () => {
+test("processStripeSyncEvent resolves on a failed mirror write and reports it", async () => {
 	const { processStripeSyncEvent } = await import("@autumn/stripe-sync");
+	const onError = mock();
 
 	await expect(
 		processStripeSyncEvent({
@@ -46,7 +47,12 @@ test("processStripeSyncEvent rejects when the mirror write fails", async () => {
 			stripeAccountId: "acct_unit",
 			orgId: "org_unit",
 			env: "sandbox",
+			onError,
 		}),
-	).rejects.toThrow("mirror write failed");
-	expect(processEvent).toHaveBeenCalledTimes(1);
+	).resolves.toBeUndefined();
+
+	expect(onError).toHaveBeenCalledTimes(1);
+	expect(onError.mock.calls[0]?.[0]).toMatchObject({
+		message: "mirror write failed",
+	});
 });
