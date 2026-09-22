@@ -1,12 +1,13 @@
-import type {
-	CustomerLicenseQuantity,
-	FullCusProduct,
-	FullProduct,
-	LicenseQuantityParams,
+import {
+	type CustomerLicenseQuantity,
+	customerLicenseToUsage,
+	type FullCusProduct,
+	type FullProduct,
+	type LicenseQuantityParams,
 } from "@autumn/shared";
 import { matchCustomerLicensesToPlanLicenses } from "../compute/customerLicenseTransitions/matchCustomerLicenseSuccessors.js";
 
-/** Explicit quantities win; omitted 1:1 successors retain paid seats. */
+/** Explicit quantities win; omitted successors cover their live assignments. */
 export const setupCustomerLicenseQuantityContext = ({
 	params,
 	fullProduct,
@@ -33,13 +34,23 @@ export const setupCustomerLicenseQuantityContext = ({
 		({ outgoingCustomerLicense, incomingPlanLicense }) => {
 			const licensePlanId = incomingPlanLicense.product.id;
 			if (explicitLicensePlanIds.has(licensePlanId)) return [];
+			const includedChanged =
+				outgoingCustomerLicense.planLicense?.included !== undefined &&
+				outgoingCustomerLicense.planLicense.included !==
+					incomingPlanLicense.included;
+			const paidQuantity = includedChanged
+				? Math.max(
+						0,
+						customerLicenseToUsage({
+							customerLicense: outgoingCustomerLicense,
+						}) - incomingPlanLicense.included,
+					)
+				: outgoingCustomerLicense.paid_quantity;
 
 			return [
 				{
 					licensePlanId,
-					totalQuantity:
-						incomingPlanLicense.included +
-						outgoingCustomerLicense.paid_quantity,
+					totalQuantity: incomingPlanLicense.included + paidQuantity,
 				},
 			];
 		},
