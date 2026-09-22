@@ -209,7 +209,7 @@ describe("getNextCycleEvent", () => {
 		}
 	});
 
-	test("phase change at the renewal boundary is classified as renewal", () => {
+	test("phase change at the renewal boundary is a scheduled change", () => {
 		const pro = cusProduct({ id: "pro", endedAt: renewalBoundaryMs });
 		const premium = cusProduct({
 			id: "premium",
@@ -219,10 +219,11 @@ describe("getNextCycleEvent", () => {
 
 		const event = resolve({ customerProducts: [pro, premium] });
 
-		expect(event.kind).toBe("renewal");
-		if (event.kind === "renewal") {
+		expect(event.kind).toBe("scheduled_change");
+		if (event.kind === "scheduled_change") {
 			expect(event.startsAtMs).toBe(renewalBoundaryMs);
-			expect(productIds(event.customerProducts)).toEqual([premium.id]);
+			expect(productIds(event.incomingCustomerProducts)).toEqual([premium.id]);
+			expect(productIds(event.outgoingCustomerProducts)).toEqual([pro.id]);
 		}
 	});
 
