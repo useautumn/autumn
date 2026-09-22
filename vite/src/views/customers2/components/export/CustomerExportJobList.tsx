@@ -1,26 +1,10 @@
-import type { CustomerExportResponse, Membership } from "@autumn/shared";
+import type { CustomerExportResponse } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { CursorPagination, Table } from "@/components/general/table";
-import { useMemberships } from "@/views/main-sidebar/org-dropdown/hooks/useMemberships";
 import { useDownloadCustomerExport } from "../../hooks/useCustomerExports";
 import { createCustomerExportColumns } from "./CustomerExportColumns";
-
-const buildRequesterLabels = ({
-	memberships,
-}: {
-	memberships: Membership[];
-}) => {
-	const labels = new Map<string, string>();
-	for (const { user } of memberships) {
-		if (!user?.id) continue;
-		labels.set(user.id, user.email ?? user.name ?? user.id);
-	}
-	return labels;
-};
-
-const NO_REQUESTER_LABEL = "—";
 
 export function CustomerExportJobList({
 	customerExports,
@@ -44,26 +28,18 @@ export function CustomerExportJobList({
 	onPageChange: (page: number) => void;
 }) {
 	const download = useDownloadCustomerExport();
-	const memberships: Membership[] = useMemberships().memberships;
 	const downloadingExportId = download.isPending
 		? download.variables?.exportId
 		: undefined;
 	const downloadMutate = download.mutate;
 
-	const requesterLabels = useMemo(
-		() => buildRequesterLabels({ memberships }),
-		[memberships],
-	);
-
 	const columns = useMemo(
 		() =>
 			createCustomerExportColumns({
-				requesterLabels,
-				noRequesterLabel: NO_REQUESTER_LABEL,
 				downloadingExportId,
 				onDownload: (exportId) => downloadMutate({ exportId }),
 			}),
-		[requesterLabels, downloadingExportId, downloadMutate],
+		[downloadingExportId, downloadMutate],
 	);
 
 	const table = useReactTable({
