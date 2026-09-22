@@ -4,7 +4,7 @@ import {
 	CustomerExportPhase,
 } from "@autumn/shared";
 import { mapWithConcurrency } from "@/internal/migrations/v2/batchOperations/execute/utils/mapWithConcurrency.js";
-import { BILLING_VERIFY_CONCURRENCY } from "../../verify/billingVerifyExportConfig.js";
+import { billingVerifyExportConfig } from "../../verify/billingVerifyExportConfig.js";
 import { filterBillingVerifyCandidates } from "../../verify/filterBillingVerifyCandidates.js";
 import { setupBillingVerifySweep } from "../../verify/setupBillingVerifySweep.js";
 import { verifyCustomerToExportRows } from "../../verify/verifyCustomerToExportRows.js";
@@ -37,7 +37,7 @@ export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory 
 					const rows = (
 						await mapWithConcurrency({
 							items: candidates,
-							concurrency: BILLING_VERIFY_CONCURRENCY,
+							concurrency: billingVerifyExportConfig.customer.concurrency,
 							run: (scalar) =>
 								verifyCustomerToExportRows({ ctx, scalar, sweep }),
 						})

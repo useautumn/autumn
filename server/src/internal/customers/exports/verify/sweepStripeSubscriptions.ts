@@ -1,15 +1,16 @@
 import type Stripe from "stripe";
 import { mapWithConcurrency } from "@/internal/migrations/v2/batchOperations/execute/utils/mapWithConcurrency.js";
 import {
-	STRIPE_LIST_PAGE_SIZE,
-	STRIPE_SWEEP_CONCURRENCY,
+	billingVerifyExportConfig,
+	type SweepLimits,
 } from "./billingVerifyExportConfig.js";
+import { listStripeSubscriptionPage } from "./listStripeSubscriptionPage.js";
 import { stripeCreatedWindows } from "./stripeCreatedWindows.js";
 
 const listTestClockIds = async ({ stripeCli }: { stripeCli: Stripe }) => {
 	const testClockIds: string[] = [];
 	const testClocks = stripeCli.testHelpers.testClocks.list({
-		limit: STRIPE_LIST_PAGE_SIZE,
+		limit: billingVerifyExportConfig.sweep.pageSize,
 	});
 	for await (const testClock of testClocks) testClockIds.push(testClock.id);
 	return testClockIds;
@@ -23,14 +24,22 @@ export const sweepStripeSubscriptions = async ({
 	includeTestClocks,
 	sinceMs,
 	untilMs,
+	limits,
 	onPage,
+	onRetry,
 }: {
 	stripeCli: Stripe;
 	includeTestClocks: boolean;
 	sinceMs: number;
 	untilMs: number;
+	limits?: SweepLimits;
 	onPage?: (subscriptionCount: number) => Promise<void> | void;
+	onRetry?: ({ attempt, error }: { attempt: number; error: unknown }) => void;
 }): Promise<Map<string, Stripe.Subscription[]>> => {
+	const { concurrency, windowMonths } = {
+		...billingVerifyExportConfig.sweep,
+		...limits,
+	};
 	const subscriptionsByStripeCustomerId = new Map<
 		string,
 		Stripe.Subscription[]
@@ -41,10 +50,12 @@ export const sweepStripeSubscriptions = async ({
 	) => {
 		let startingAfter: string | undefined;
 		while (true) {
-			const page = await stripeCli.subscriptions.list({
-				...params,
-				limit: STRIPE_LIST_PAGE_SIZE,
-				starting_after: startingAfter,
+			const page = await listStripeSubscriptionPage({
+				stripeCli,
+				params,
+				startingAfter,
+				limits,
+				onRetry,
 			});
 			for (const subscription of page.data) {
 				const stripeCustomerId =
@@ -63,14 +74,14 @@ export const sweepStripeSubscriptions = async ({
 	};
 
 	await mapWithConcurrency({
-		items: stripeCreatedWindows({ sinceMs, untilMs }),
-		concurrency: STRIPE_SWEEP_CONCURRENCY,
+		items: stripeCreatedWindows({ sinceMs, untilMs, windowMonths }),
+		concurrency,
 		run: (created) => collect({ created }),
 	});
 	if (includeTestClocks) {
 		await mapWithConcurrency({
 			items: await listTestClockIds({ stripeCli }),
-			concurrency: STRIPE_SWEEP_CONCURRENCY,
+			concurrency,
 			run: (testClockId) => collect({ test_clock: testClockId }),
 		});
 	}

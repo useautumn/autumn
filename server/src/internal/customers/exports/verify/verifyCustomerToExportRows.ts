@@ -5,9 +5,8 @@ import { retryAsync } from "@/utils/retryAsync.js";
 import { CusService } from "../../CusService.js";
 import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalars.js";
 import {
-	BILLING_VERIFY_CUSTOMER_ATTEMPTS,
-	BILLING_VERIFY_CUSTOMER_TIMEOUT_MS,
-	BILLING_VERIFY_RETRY_DELAY_MS,
+	billingVerifyExportConfig,
+	type CustomerLimits,
 } from "./billingVerifyExportConfig.js";
 import type { BillingVerifySweep } from "./setupBillingVerifySweep.js";
 import {
@@ -22,15 +21,17 @@ export const verifyCustomerToExportRows = async ({
 	ctx,
 	scalar,
 	sweep,
-	timeoutMs = BILLING_VERIFY_CUSTOMER_TIMEOUT_MS,
-	retryDelayMs = BILLING_VERIFY_RETRY_DELAY_MS,
+	limits,
 }: {
 	ctx: AutumnContext;
 	scalar: CustomerExportScalarRow;
 	sweep: BillingVerifySweep;
-	timeoutMs?: number;
-	retryDelayMs?: number;
+	limits?: CustomerLimits;
 }): Promise<BillingVerifyExportRow[]> => {
+	const { timeoutMs, attempts, retryDelayMs } = {
+		...billingVerifyExportConfig.customer,
+		...limits,
+	};
 	const stripeCustomerId = scalar.processor?.id;
 	if (!stripeCustomerId) return [];
 
@@ -81,7 +82,7 @@ export const verifyCustomerToExportRows = async ({
 
 	try {
 		return await retryAsync({
-			attempts: BILLING_VERIFY_CUSTOMER_ATTEMPTS,
+			attempts,
 			delayMs: retryDelayMs,
 			run: verifyOnce,
 			onRetry: ({ attempt, error }) =>

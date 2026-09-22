@@ -36,6 +36,13 @@ export const setupBillingVerifySweep = async ({
 			sinceMs,
 			untilMs,
 			onPage: onSubscriptionsScanned,
+			onRetry: ({ attempt, error }) =>
+				ctx.logger.warn("billing-verify-export: retrying stripe sweep page", {
+					data: {
+						attempt,
+						error: error instanceof Error ? error.message : String(error),
+					},
+				}),
 		}),
 	};
 };

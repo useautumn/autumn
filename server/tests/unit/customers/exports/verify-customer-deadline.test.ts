@@ -47,8 +47,7 @@ describe("verifyCustomerToExportRows deadline", () => {
 			ctx,
 			scalar,
 			sweep,
-			timeoutMs: 50,
-			retryDelayMs: 0,
+			limits: { timeoutMs: 50, retryDelayMs: 0 },
 		});
 
 		expect(getFull).toHaveBeenCalledTimes(2);
@@ -67,8 +66,7 @@ describe("verifyCustomerToExportRows deadline", () => {
 			ctx,
 			scalar,
 			sweep,
-			timeoutMs: 50,
-			retryDelayMs: 0,
+			limits: { timeoutMs: 50, retryDelayMs: 0 },
 		});
 
 		expect(rows[0].details).toBe("boom");

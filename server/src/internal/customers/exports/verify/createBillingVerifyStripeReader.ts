@@ -1,5 +1,5 @@
 import type Stripe from "stripe";
-import { MAX_MEMOIZED_STRIPE_READS } from "./billingVerifyExportConfig.js";
+import { billingVerifyExportConfig } from "./billingVerifyExportConfig.js";
 
 const memoizeById = <Resource>(retrieve: (id: string) => Promise<Resource>) => {
 	const reads = new Map<string, Promise<Resource>>();
@@ -8,7 +8,8 @@ const memoizeById = <Resource>(retrieve: (id: string) => Promise<Resource>) => {
 		const cached = reads.get(id);
 		if (cached) return cached;
 
-		if (reads.size >= MAX_MEMOIZED_STRIPE_READS) reads.clear();
+		if (reads.size >= billingVerifyExportConfig.stripeReader.maxMemoizedReads)
+			reads.clear();
 		const read = retrieve(id);
 		reads.set(id, read);
 		read.catch(() => reads.delete(id));
