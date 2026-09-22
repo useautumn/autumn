@@ -41,6 +41,19 @@ export type ActiveRun = {
 	}) => Promise<void>;
 	resolveSessionId: (sessionId: string, transport?: RunTransport) => void;
 	sessionId: Promise<string>;
+	/** Resolves once every follow-up post that is mid-flight has been accepted
+	 * or has failed; undefined when none is. A reservation is taken before the
+	 * post, so the count alone says a message was attempted, not that eve took
+	 * it — the reader waits on this so its claim reflects what eve actually
+	 * accepted. */
+	followUpPostsInFlight: () => Promise<void> | undefined;
+	/** One synchronous step, so no injection can be accepted in between:
+	 * claims the follow-ups eve has already taken for this run and returns
+	 * true, or closes the run to further injections and returns false. The
+	 * reader calls it at every turn boundary — a claim means a replacement
+	 * turn is coming and it must keep reading, because the message is already
+	 * posted and its reply would otherwise run with nobody attached. */
+	claimFollowUpsOrSettle: () => boolean;
 	/** The turn settled locally and nobody reads the stream any more: a message
 	 * posted now would run unread. Set the instant the reader returns, before
 	 * the reply or approval card is presented, so late arrivals queue instead. */
@@ -105,6 +118,10 @@ export const registerRun = ({
 			),
 		]));
 
+	// Reservations are taken before the post lands, so a reader that is about
+	// to stop needs to know an answer is still outstanding.
+	const inFlightPosts = new Set<Promise<unknown>>();
+
 	const assertAcceptingFollowUps = () => {
 		if (run.closed || run.stop) throw new Error("Run is closing");
 		if (run.settling) throw new Error("Run is settling");
@@ -126,13 +143,19 @@ export const registerRun = ({
 			const send = transport.sendUserMessage;
 			if (!send) throw new Error("Run has no follow-up transport");
 			run.pendingTurns += 1;
+			// No separate interrupt: the post itself steers, so the cancel and
+			// the replacement message travel as one durable command.
+			const post = send({ ...input, sessionId: resolved });
+			inFlightPosts.add(post);
 			try {
-				// No separate interrupt: the post itself steers, so the cancel and
-				// the replacement message travel as one durable command.
-				await send({ ...input, sessionId: resolved });
+				await post;
 			} catch (error) {
-				run.pendingTurns -= 1;
+				// The reader may have claimed this reservation while the post was
+				// in flight, which would already have zeroed the count.
+				run.pendingTurns = Math.max(0, run.pendingTurns - 1);
 				throw error;
+			} finally {
+				inFlightPosts.delete(post);
 			}
 		},
 		requestStop: async ({ byUserId, reason }) => {
@@ -154,6 +177,27 @@ export const registerRun = ({
 					error,
 				});
 			}
+		},
+		followUpPostsInFlight: () =>
+			inFlightPosts.size === 0
+				? undefined
+				: // allSettled: a failed post is an answer too, and its own caller
+					// owns the rejection.
+					Promise.allSettled([...inFlightPosts]).then(() => undefined),
+		claimFollowUpsOrSettle: () => {
+			// Synchronous on purpose. injectFollowUp increments pendingTurns in
+			// the same synchronous block as its last settling check, so between
+			// that block and this one there is no point where a message can be
+			// posted to eve while this reader is on its way out.
+			if (run.pendingTurns > 0) {
+				// eve may fold several buffered messages into one replacement
+				// turn, so claim them all; anything injected after this claim is
+				// caught by the next boundary.
+				run.pendingTurns = 0;
+				return true;
+			}
+			run.settling = true;
+			return false;
 		},
 		settle: () => {
 			run.settling = true;
