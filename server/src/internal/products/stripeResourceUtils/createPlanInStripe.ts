@@ -1,4 +1,8 @@
-import { ErrCode, RecaseError } from "@autumn/shared";
+import {
+	ErrCode,
+	hasMissingStripeResourcesForProduct,
+	RecaseError,
+} from "@autumn/shared";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -19,7 +23,12 @@ export const createPlanInStripe = async ({
 		env: ctx.env,
 	});
 
-	if (plan.processor?.id) {
+	// The product is persisted before its prices, so a failure part way through
+	// leaves the plan mapped but incomplete. Only refuse a plan that is done.
+	if (
+		plan.processor?.id &&
+		!hasMissingStripeResourcesForProduct({ product: plan })
+	) {
 		throw new RecaseError({
 			message: `Plan ${planId} already has a Stripe product.`,
 			code: ErrCode.InvalidRequest,
@@ -39,6 +48,15 @@ export const createPlanInStripe = async ({
 	if (!created.processor?.id) {
 		throw new RecaseError({
 			message: `Could not create a Stripe product for ${planId}. Check that Stripe is connected and writes are enabled.`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
+	if (hasMissingStripeResourcesForProduct({ product: created })) {
+		await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
+		throw new RecaseError({
+			message: `Created the Stripe product for ${planId}, but some prices are still missing. Run this again to finish.`,
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
