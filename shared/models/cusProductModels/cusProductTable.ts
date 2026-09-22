@@ -136,6 +136,13 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_on_internal_product_id").on(
 			table.internal_product_id,
 		),
+		// GIN indexes match elements, not length, so they can't serve cardinality().
+		index("idx_customer_products_stripe_linked_customer")
+			.on(table.internal_customer_id)
+			.where(
+				sql`cardinality(${table.subscription_ids}) > 0 OR cardinality(${table.scheduled_ids}) > 0`,
+			)
+			.concurrently(),
 		index("idx_customer_products_subscription_ids").using(
 			"gin",
 			table.subscription_ids,
