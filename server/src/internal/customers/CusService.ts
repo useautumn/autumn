@@ -31,6 +31,7 @@ import {
 	ilike,
 	inArray,
 	isNull,
+	ne,
 	or,
 	sql,
 	type Table,
@@ -862,8 +863,8 @@ export class CusService {
 		}
 	}
 
-	// Sets currency only when still null, so concurrent first-paid attaches can't
-	// clobber each other (a locked-to-different currency is already blocked upstream).
+	// First paid attach only sends this when unset. Stripe sync also sends it
+	// to relock leftover currency after the previous paid product expired.
 	static async lockCurrencyIfUnset({
 		ctx,
 		internalCustomerId,
@@ -882,7 +883,7 @@ export class CusService {
 					eq(customers.internal_id, internalCustomerId),
 					eq(customers.org_id, org.id),
 					eq(customers.env, env),
-					isNull(customers.currency),
+					or(isNull(customers.currency), ne(customers.currency, currency)),
 				),
 			);
 	}

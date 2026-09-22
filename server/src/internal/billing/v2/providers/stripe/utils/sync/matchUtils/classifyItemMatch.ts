@@ -51,19 +51,28 @@ const matchesMappedStripeProduct = (match: AutumnPriceMatch): boolean =>
 	"stripe_product_id" in match.matched_on &&
 	match.product.processor?.id === match.matched_on.stripe_product_id;
 
-/** Shape matches under the plan's mapped Stripe product select its catalog base. */
+const matchesCatalogCurrency = (match: AutumnPriceMatch): boolean => {
+	if (match.matched_on.type !== "stripe_base_price_shape") return true;
+	const itemCurrency = match.matched_on.currency?.toLowerCase();
+	const catalogCurrency = match.price.config.base_currency?.toLowerCase();
+	if (!itemCurrency || !catalogCurrency) return true;
+	return itemCurrency === catalogCurrency;
+};
+
+/** Exact Stripe price id, or a same-currency shape hit on the mapped Stripe product. */
 export const isBasePriceMatch = (match: ItemMatch): match is AutumnPriceMatch =>
 	isAutumnPriceMatch(match) &&
 	matchesOnBasePrice(match) &&
-	(!matchesOnBasePriceShape(match) || matchesMappedStripeProduct(match));
+	(!matchesOnBasePriceShape(match) ||
+		(matchesMappedStripeProduct(match) && matchesCatalogCurrency(match)));
 
-/** Shape matches from another source preserve that Stripe price as custom. */
+/** Shape matches keep the Stripe price as custom when currency differs, or the source isn't the mapped product. */
 export const isCustomBaseMatch = (match: ItemMatch): boolean =>
 	isAutumnProductMatch(match) ||
 	(isAutumnPriceMatch(match) &&
 		matchesOnBasePrice(match) &&
 		matchesOnBasePriceShape(match) &&
-		!matchesMappedStripeProduct(match));
+		!(matchesMappedStripeProduct(match) && matchesCatalogCurrency(match)));
 
 /** Hit on one of the plan's feature prices — any price that isn't its base. */
 export const isFeaturePriceMatch = (

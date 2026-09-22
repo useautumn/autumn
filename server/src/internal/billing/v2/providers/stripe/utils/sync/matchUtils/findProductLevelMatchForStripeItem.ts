@@ -162,6 +162,7 @@ const resolvePriceMatch = ({
 	const shapeMatchedOn = {
 		stripe_product_id: candidate.matched_on.stripe_product_id,
 		stripe_price_id: item.stripe_price_id,
+		currency: item.currency,
 	};
 
 	const basePrice = findMatchingBasePrice({ item, candidate });
