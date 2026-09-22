@@ -18,6 +18,7 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useAppForm } from "@/hooks/form/form";
 import { useCatalogMappings } from "@/hooks/queries/catalog/useCatalogMappings";
+import { useCreatePlanInStripe } from "@/hooks/queries/catalog/useCreatePlanInStripe";
 import { useSplitVariantStripeProduct } from "@/hooks/queries/catalog/useSplitVariantStripeProduct";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useStripeProductsResolveQuery } from "@/hooks/queries/useStripeProductsResolveQuery";
@@ -126,6 +127,7 @@ const PlanMappingDetailForm = ({
 	onClose: () => void;
 }) => {
 	const { updateMappings, isSaving } = useCatalogMappings();
+	const createInStripe = useCreatePlanInStripe();
 	const [variantsExpanded, setVariantsExpanded] = useState(false);
 	const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
 	const {
@@ -234,6 +236,24 @@ const PlanMappingDetailForm = ({
 						</AnimatePresence>
 					)}
 				</div>
+
+				{resolved.status === "unmapped" && (
+					<div className="flex flex-col gap-2">
+						<p className="text-tertiary-foreground text-xs">
+							This plan has no Stripe product yet. Create one to map it, or pick
+							an existing product above.
+						</p>
+						<Button
+							className="w-full justify-start gap-2 text-xs"
+							disabled={createInStripe.isPending}
+							onClick={() => createInStripe.mutate(base.id)}
+							variant="muted"
+						>
+							<StripeIcon size={13} />
+							Create in Stripe
+						</Button>
+					</div>
+				)}
 
 				<p className="text-tertiary-foreground text-xs">
 					Individual prices are mapped on the plan itself, where each version

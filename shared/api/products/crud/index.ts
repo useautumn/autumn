@@ -1,4 +1,5 @@
 export * from "../previewUpdatePlan/index.js";
+export * from "./createPlanInStripeParams.js";
 export * from "./createPlanParamsV1.js";
 export * from "./createVariantParamsV2.js";
 export * from "./deletePlanParamsV2.js";

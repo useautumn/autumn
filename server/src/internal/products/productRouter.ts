@@ -4,6 +4,7 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handlePlanHasCustomersV2 } from "@/internal/products/handlers/handlePlanHasCustomersV2.js";
 import { handleGetLicenseProducts } from "@/internal/products/internalHandlers/handleGetProducts.js";
 import { handleCopyProductV2 } from "./handlers/handleCopyProduct/handleCopyProductV2.js";
+import { handleCreatePlanInStripe } from "./handlers/handleCreatePlanInStripe.js";
 import { handleCreatePlan } from "./handlers/handleCreateProduct/handleCreatePlan.js";
 import { handleCreatePlanV2 } from "./handlers/handleCreateProduct/handleCreatePlanV2.js";
 import { handleCreateVariantV2 } from "./handlers/handleCreateVariant/handleCreateVariantV2.js";
@@ -65,4 +66,5 @@ plansRpcRouter.post(
 	"/plans.split_variant_stripe_product",
 	...handleSplitVariantStripeProduct,
 );
+plansRpcRouter.post("/plans.create_in_stripe", ...handleCreatePlanInStripe);
 plansRpcRouter.post("/plans.preview_update", ...handlePreviewUpdatePlanV2);
