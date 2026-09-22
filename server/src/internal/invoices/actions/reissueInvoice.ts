@@ -199,6 +199,7 @@ const createReplacementDraft = async ({
 	lineEdits,
 	storedLines,
 	dropDeferredPointer,
+	linkSubscription,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -212,8 +213,12 @@ const createReplacementDraft = async ({
 	lineEdits?: ReissueLineEdits;
 	storedLines: DbInvoiceLineItem[];
 	dropDeferredPointer: boolean;
+	/** A linked draft fires invoice.created against the subscription's products. */
+	linkSubscription: boolean;
 }) => {
-	const stripeSubId = stripeInvoiceToStripeSubscriptionId(stripeInvoice);
+	const stripeSubId = linkSubscription
+		? stripeInvoiceToStripeSubscriptionId(stripeInvoice)
+		: undefined;
 	const stripeCusId =
 		typeof stripeInvoice.customer === "string"
 			? stripeInvoice.customer
@@ -315,8 +320,9 @@ const createReplacementDraft = async ({
 
 /**
  * Stripe is the only source of truth for tax, so a preview builds the real
- * draft, reads its totals and deletes it. Customer corrections are not applied
- * here (a preview must not write), so tax driven by address is best-effort.
+ * draft, reads its totals and deletes it. The draft is never linked to the
+ * subscription so its invoice.created webhook is a no-op, and customer
+ * corrections are not applied (a preview must not write).
  */
 const previewReplacementDraft = async ({
 	ctx,
@@ -360,9 +366,10 @@ const previewReplacementDraft = async ({
 		lineEdits,
 		storedLines,
 		dropDeferredPointer,
+		linkSubscription: false,
 	});
 	try {
-		return previewReissuedInvoice({
+		return await previewReissuedInvoice({
 			stripeInvoice: draft,
 			lines: await getStripeInvoiceLineItems({
 				stripeClient: stripeCli,
@@ -373,7 +380,11 @@ const previewReplacementDraft = async ({
 			dueDateMs,
 		});
 	} finally {
-		await stripeCli.invoices.del(draft.id).catch(() => undefined);
+		await stripeCli.invoices.del(draft.id).catch((error) => {
+			ctx.logger.error(
+				`[reissueInvoice] failed to delete preview draft ${draft.id}: ${error}`,
+			);
+		});
 	}
 };
 
@@ -425,6 +436,7 @@ const issueReplacement = async ({
 		lineEdits,
 		storedLines,
 		dropDeferredPointer: creditOriginal,
+		linkSubscription: true,
 	});
 
 	// The total is only guaranteed to match when nothing was adjusted.

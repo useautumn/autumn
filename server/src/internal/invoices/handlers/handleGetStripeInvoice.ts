@@ -1,5 +1,5 @@
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { Scopes } from "@autumn/shared";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
 /**
@@ -17,7 +17,11 @@ export const handleGetStripeInvoice = createRoute({
 			env,
 		});
 
-		const stripeInvoice = await stripeCli.invoices.retrieve(stripe_invoice_id);
+		// The customer is expanded so callers can edit the live record, not the
+		// snapshot the invoice took at finalization.
+		const stripeInvoice = await stripeCli.invoices.retrieve(stripe_invoice_id, {
+			expand: ["customer.tax_ids"],
+		});
 
 		return c.json(stripeInvoice);
 	},

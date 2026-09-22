@@ -115,27 +115,35 @@ export const buildReissuePayload = ({
 	const taxIdChanged =
 		form.taxIdOptionId !== (prefill.taxIdOptionId ?? null) ||
 		trimmed(form.taxIdValue) !== trimmed(prefill.taxIdValue ?? "");
+	const hasTaxId = Boolean(form.taxIdOptionId && trimmed(form.taxIdValue));
+	const hadTaxId = Boolean(prefill.taxIdOptionId && prefill.taxIdValue);
 	const customer = {
 		...(nameChanged && trimmed(form.customerName)
 			? { name: trimmed(form.customerName) }
 			: {}),
+		// Blank fields are sent as "" so Stripe clears them instead of keeping the old value.
 		...(addressChanged
 			? {
 					address: Object.fromEntries(
-						Object.entries(form.address).filter(([, value]) => trimmed(value)),
+						Object.entries(form.address).map(([key, value]) => [
+							key,
+							trimmed(value),
+						]),
 					),
 				}
 			: {}),
-		...(taxIdChanged && form.taxIdOptionId && trimmed(form.taxIdValue)
+		...(taxIdChanged && hasTaxId
 			? {
 					tax_ids: [
 						{
-							type: form.taxIdOptionId.split(":")[1],
+							type: form.taxIdOptionId?.split(":")[1],
 							value: trimmed(form.taxIdValue),
 						},
 					],
 				}
-			: {}),
+			: taxIdChanged && hadTaxId
+				? { tax_ids: [] }
+				: {}),
 	};
 
 	return {

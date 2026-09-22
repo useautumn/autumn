@@ -7,21 +7,26 @@
  *   preview lines mirror the original's lines and total
  *   the original stays open and no replacement is created
  *   a customer's Stripe credit balance shows as applied against the total
+ *   the preview draft never reaches the subscription's invoice.created handlers
  */
 
 import { expect, test } from "bun:test";
-import type {
-	ApiListInvoiceV1,
-	AttachParamsV1Input,
-	CreateInvoicePreview,
-	ReissueInvoiceResponse,
+import {
+	type ApiListInvoiceV1,
+	type AttachParamsV1Input,
+	type CreateInvoicePreview,
+	customerProducts,
+	type ReissueInvoiceResponse,
 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { timeout } from "@tests/utils/genUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { eq } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 const PRO_BASE = 20;
 
@@ -193,5 +198,70 @@ test.concurrent(
 		})) as { list: ApiListInvoiceV1[] };
 		expect(after.map((row) => row.id)).toEqual([original.id]);
 		expect(after[0].status).toBe("open");
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.reissue preview: does not consume a pending billing cycle anchor reset")}`,
+	async () => {
+		const customerId = "inv-reissue-preview-anchor";
+		const pro = products.base({
+			id: "pro-reissue-preview-anchor",
+			items: [items.monthlyPrice({ price: 20 })],
+		});
+		const { autumnV2_3, autumnV2_4 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		await autumnV2_4.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			invoice_mode: {
+				enabled: true,
+				finalize: true,
+				enable_plan_immediately: true,
+			},
+		});
+		const original = await firstInvoice({ autumnV2_3, customerId });
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const customerProduct = fullCustomer.customer_products.find(
+			(cp) => cp.product_id === pro.id,
+		);
+		const stripeSubId = customerProduct?.subscription_ids?.[0];
+		if (!customerProduct || !stripeSubId) {
+			throw new Error("customer product is not on a Stripe subscription");
+		}
+
+		// A reset pending for the subscription's current anchor is exactly what
+		// invoice.created consumes when a linked invoice appears.
+		const stripeSubscription =
+			await ctx.stripeCli.subscriptions.retrieve(stripeSubId);
+		const resetsAt = stripeSubscription.billing_cycle_anchor * 1000;
+		await CusProductService.update({
+			ctx,
+			cusProductId: customerProduct.id,
+			updates: { billing_cycle_anchor_resets_at: resetsAt },
+		});
+
+		await autumnV2_3.post("/invoices.reissue", {
+			invoice_id: original.id,
+			preview: true,
+		});
+		await timeout(5000);
+
+		const [after] = await ctx.db
+			.select()
+			.from(customerProducts)
+			.where(eq(customerProducts.id, customerProduct.id));
+		expect(after?.billing_cycle_anchor_resets_at).toBe(resetsAt);
 	},
 );

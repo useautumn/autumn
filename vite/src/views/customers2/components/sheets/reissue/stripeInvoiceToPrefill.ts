@@ -1,29 +1,50 @@
 import { findStripeTaxIdOption } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { ReissuePrefill } from "./useReissueForm";
+import type { ReissueAddress, ReissuePrefill } from "./useReissueForm";
 
-/** The customer's current Stripe details, so the form edits rather than retypes. */
+const liveCustomer = (
+	stripeInvoice: Stripe.Invoice,
+): Stripe.Customer | undefined =>
+	typeof stripeInvoice.customer === "object" &&
+	stripeInvoice.customer &&
+	!("deleted" in stripeInvoice.customer)
+		? stripeInvoice.customer
+		: undefined;
+
+const addressToForm = (
+	address: Stripe.Address | null | undefined,
+): ReissueAddress => ({
+	line1: address?.line1 ?? "",
+	line2: address?.line2 ?? "",
+	city: address?.city ?? "",
+	state: address?.state ?? "",
+	postal_code: address?.postal_code ?? "",
+	country: address?.country ?? "",
+});
+
+/**
+ * Prefills from the live Stripe customer when the invoice carries it expanded,
+ * so an edit corrects the current record instead of pushing the invoice-time
+ * snapshot back over it. The snapshot is the fallback.
+ */
 export const stripeInvoiceToPrefill = (
 	stripeInvoice: Stripe.Invoice | undefined,
 ): ReissuePrefill => {
 	if (!stripeInvoice) return {};
-	const taxId = stripeInvoice.customer_tax_ids?.[0];
+	const customer = liveCustomer(stripeInvoice);
+	const address = customer ? customer.address : stripeInvoice.customer_address;
+	const taxId = customer
+		? customer.tax_ids?.data[0]
+		: stripeInvoice.customer_tax_ids?.[0];
 	const option = taxId
 		? findStripeTaxIdOption({
 				type: taxId.type,
-				countryCode: stripeInvoice.customer_address?.country,
+				countryCode: address?.country,
 			})
 		: undefined;
 	return {
-		customerName: stripeInvoice.customer_name,
-		address: {
-			line1: stripeInvoice.customer_address?.line1 ?? "",
-			line2: stripeInvoice.customer_address?.line2 ?? "",
-			city: stripeInvoice.customer_address?.city ?? "",
-			state: stripeInvoice.customer_address?.state ?? "",
-			postal_code: stripeInvoice.customer_address?.postal_code ?? "",
-			country: stripeInvoice.customer_address?.country ?? "",
-		},
+		customerName: customer ? customer.name : stripeInvoice.customer_name,
+		address: addressToForm(address),
 		taxIdOptionId: option?.id ?? null,
 		taxIdValue: taxId?.value ?? "",
 	};

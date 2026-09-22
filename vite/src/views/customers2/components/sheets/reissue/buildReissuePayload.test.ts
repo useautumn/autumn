@@ -105,11 +105,60 @@ describe("buildReissuePayload", () => {
 		).toEqual({
 			address: {
 				line1: "12 Rue de Rivoli",
+				line2: "",
 				city: "Berlin",
+				state: "",
 				postal_code: "75004",
 				country: "DE",
 			},
 			tax_ids: [{ type: "eu_vat", value: "DE123456789" }],
 		});
+	});
+
+	it("sends blanks for cleared address fields and an empty tax_ids for a removed registration", () => {
+		const prefillWithLine2 = {
+			...prefill,
+			address: { ...prefill.address, line2: "Bâtiment B" },
+		};
+		const form = {
+			...untouched(),
+			address: { ...untouched().address, line2: "" },
+			taxIdOptionId: null,
+			taxIdValue: "",
+		};
+		expect(
+			buildReissuePayload({
+				invoiceId: "inv_1",
+				form,
+				prefill: prefillWithLine2,
+				lineItems,
+			}).customer,
+		).toEqual({
+			address: {
+				line1: "12 Rue de Rivoli",
+				line2: "",
+				city: "Paris",
+				state: "",
+				postal_code: "75004",
+				country: "FR",
+			},
+			tax_ids: [],
+		});
+	});
+
+	it("does not send tax_ids when there was none and none was entered", () => {
+		const form = {
+			...untouched(),
+			taxIdOptionId: "DE:eu_vat",
+			taxIdValue: "",
+		};
+		expect(
+			buildReissuePayload({
+				invoiceId: "inv_1",
+				form,
+				prefill: { ...prefill, taxIdOptionId: null, taxIdValue: null },
+				lineItems,
+			}).customer,
+		).toBeUndefined();
 	});
 });

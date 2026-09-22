@@ -153,7 +153,11 @@ function ReissueInvoiceForm({
 		value: JSON.stringify({ ...payload, customer: undefined, preview: true }),
 		delayMs: 500,
 	});
-	const { data: preview, isFetching: previewing } = useQuery({
+	const {
+		data: preview,
+		isFetching: previewing,
+		error: previewError,
+	} = useQuery({
 		queryKey: ["reissue-preview", previewPayload],
 		queryFn: async () => {
 			const { data } = await axiosInstance.post<{
@@ -440,7 +444,10 @@ function ReissueInvoiceForm({
 									onChange={(e) => patch({ customerName: e.target.value })}
 								/>
 							</Field>
-							<Field label="Address">
+							<Field
+								label="Address"
+								hint="Saved to the customer. The preview total uses the current address, so tax can shift once it changes."
+							>
 								<div className="space-y-2">
 									<Input
 										placeholder="Line 1"
@@ -520,12 +527,17 @@ function ReissueInvoiceForm({
 						className="w-full"
 						onClick={() => reissue.mutate()}
 						isLoading={reissue.isPending}
-						disabled={invalidNetTerms || previewing}
+						disabled={invalidNetTerms || previewing || Boolean(previewError)}
 					>
 						<PaperPlaneTiltIcon size={16} />
 						Reissue {total}
 					</Button>
 				</SheetFooter>
+				{previewError && (
+					<p className="px-4 pb-4 text-xs text-destructive">
+						{getBackendErr(previewError, "Preview failed")}
+					</p>
+				)}
 			</div>
 		</LayoutGroup>
 	);
