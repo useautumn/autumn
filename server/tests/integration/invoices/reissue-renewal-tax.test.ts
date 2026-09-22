@@ -127,8 +127,17 @@ test(`${chalk.yellowBright("invoices.reissue: automatically taxed renewal → ta
 	})) as { preview: { total: number } };
 	expect(preview.total).toBe(22);
 
-	const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
+	const { invoice: taxed } = (await autumnV2_3.post("/invoices.reissue", {
 		invoice_id: renewal.id,
+	})) as { invoice: ApiListInvoiceV1 };
+	const taxedStripe = await ctx.stripeCli.invoices.retrieve(taxed.stripe_id);
+	expect(taxedStripe.status).toBe("open");
+	expect(taxedStripe.automatic_tax.enabled).toBe(true);
+	expect(taxedStripe.total).toBe(2200);
+
+	// The taxed replacement is now the open invoice; reissue it without tax.
+	const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
+		invoice_id: taxed.id,
 		invoice: { tax_rate_id: null },
 	})) as { invoice: ApiListInvoiceV1 };
 
