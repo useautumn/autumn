@@ -7,6 +7,7 @@
 import { expect, test } from "bun:test";
 import type { JsonSchema } from "../src/casing/schemaKeyCasing";
 import { nodeRulesFromSpec } from "../src/lint/specRules/nodeRulesFromSpec";
+import { OVERLAY } from "../src/overlay/overlay";
 import { catalogUpdateSchema, loadSpec } from "../src/spec/loadSpec";
 
 const spec = loadSpec();
@@ -142,4 +143,19 @@ test("$ref is followed", () => {
 		} as JsonSchema,
 	});
 	expect(out.things?.required).toEqual(["id"]);
+});
+
+test("overlay-hidden fields are listed on their node and drop their constraints", () => {
+	const withOverlay = nodeRulesFromSpec({
+		schema: catalogUpdateSchema({ spec }),
+		root,
+		overlay: OVERLAY,
+	});
+	expect(withOverlay.plans?.hidden).toContain("baseVariantId");
+	expect(withOverlay.plans?.hidden).toContain("versioning");
+	expect(withOverlay.plans?.fields?.baseVariantId).toBeUndefined();
+	expect(withOverlay["plans.variants"]?.hidden).toEqual([
+		"baseVariantId",
+		"newPlanId",
+	]);
 });

@@ -320,6 +320,10 @@ Use this to permanently remove a feature. Note: features that are used in produc
 * [attach](docs/sdks/licenses/README.md#attach) - Assigns licenses to one or more entities.
 * [release](docs/sdks/licenses/README.md#release) - Releases licenses assigned to one or more entities.
 
+### [Logs](docs/sdks/logs/README.md)
+
+* [search](docs/sdks/logs/README.md#search) - Search API requests and incoming Stripe webhooks for your organization and environment.
+
 ### [Plans](docs/sdks/plans/README.md)
 
 * [create](docs/sdks/plans/README.md#create) - Create a plan

@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 05940b80-1ef8-40f4-9878-822fb2792070
 management:
-  docChecksum: b23094709ea3b258120dcfc51ffbdfc9
+  docChecksum: acf5de3a92c57f72c14793672c01fa86
   docVersion: 2.4.0
   speakeasyVersion: 1.762.0
   generationVersion: 2.882.0
   releaseVersion: 1.1.0
   configChecksum: 16593a23b9d6e917b198473dd835d916
 persistentEdits:
-  generation_id: 9a7a7d02-fa51-4c3f-b349-82e9e31d4d4d
-  pristine_commit_hash: 356427dea5982f2d42c4e3107ed217f36d84f441
-  pristine_tree_hash: ef8d463741df41ec4cc2dbc1923a2c097a103e78
+  generation_id: bf0e4d2f-9534-46b6-a9c6-2f906b5de46f
+  pristine_commit_hash: ffe5661429e1023d5ed440247bcc42ced8a44293
+  pristine_tree_hash: 712e77e8554d4925db145b80ba182ae761c39b7a
 features:
   python:
     additionalDependencies: 1.0.0
@@ -2550,6 +2550,10 @@ trackedFiles:
     id: 2a5fc83f865e
     last_write_checksum: sha1:09f3857cc198665dfb68e2fb8be6f0ba0450f607
     pristine_git_object: 7386884b68f5b856543f1568433532aa1b26541d
+  docs/models/context.md:
+    id: e8f2f9e54b8e
+    last_write_checksum: sha1:44bcba472f41e84e0f1e36eebb41add5466dd064
+    pristine_git_object: b28939ad4933b653ae7a8e7c16f55a2ee39ff00e
   docs/models/coupontyperequestbody.md:
     id: a530906b9539
     last_write_checksum: sha1:fdde28adb940a01077e81ae8ff3c44fa72c4af75
@@ -14458,6 +14462,10 @@ trackedFiles:
     id: 1ab7104f86c8
     last_write_checksum: sha1:543ea6d804388d8069f421e9c86650e05a15df5a
     pristine_git_object: 2f08801106dc2cb3293990b3f83a8f2c15c8fbce
+  docs/models/request.md:
+    id: 75a113c35040
+    last_write_checksum: sha1:a4324cf048d56c5bc035c774141c59a935c68219
+    pristine_git_object: 10fc6c1edcd2a852b11c5598e482e6af949249ec
   docs/models/requestbody.md:
     id: a15f5440d48c
     last_write_checksum: sha1:8a9310d99d2768fdab768ee19876ed0f9b5e57fc
@@ -14514,6 +14522,34 @@ trackedFiles:
     id: c2fda7f528b7
     last_write_checksum: sha1:3db048ac30765f87c795aa59011ee93c2fbd2497
     pristine_git_object: e0b4637eb68430769deed470af4e6e509c338df1
+  docs/models/searchlogsrange.md:
+    id: d06043f494c4
+    last_write_checksum: sha1:abecc85ae1382e8e65c1978d153336f3ef4d4315
+    pristine_git_object: e1e2a6814be859f9b8738e2f6b33cdb65c39d6c7
+  docs/models/searchrequestlogsglobals.md:
+    id: c1fa9e58ae93
+    last_write_checksum: sha1:55695d39efd789e01d66a1f0c45940bddf86ff07
+    pristine_git_object: 71659be009ca6a9a4ad565744df977562ef3de68
+  docs/models/searchrequestlogslist.md:
+    id: 707ba28b7409
+    last_write_checksum: sha1:64a49135491e07dc2b3375807b4711274cd1ee51
+    pristine_git_object: f4fbf967d45ef793385dbf80128bd64efe8e610d
+  docs/models/searchrequestlogsparams.md:
+    id: eaee6b7b3f2d
+    last_write_checksum: sha1:50aab44618610f7eb0894f0488e6c2c4838693d5
+    pristine_git_object: 121a86e5bcd5381b001542e192e61d68d2911e9e
+  docs/models/searchrequestlogsresponse.md:
+    id: 2c77d4ce50c6
+    last_write_checksum: sha1:5374fdc0f6bac5a32a06d280920d2bd2fba0dd62
+    pristine_git_object: 55a1e06e53f19b9eb71c90f6623daac35a9f33ed
+  docs/models/searchrequestlogssource.md:
+    id: 37323d7842e6
+    last_write_checksum: sha1:193db1ce9d48cb22792cccda1038c20d5bb9127f
+    pristine_git_object: c8e796c67884830ed92c17f91cf2cd0bf4806be0
+  docs/models/searchrequestlogsstripe.md:
+    id: 04a815825cfb
+    last_write_checksum: sha1:5559c39fd386eb78cde149bc92f2684420ba0b73
+    pristine_git_object: 3fb4af7d362dadd8661d9d475febf8bf2939b9e2
   docs/models/security.md:
     id: 452e4d4eb67a
     last_write_checksum: sha1:64787360e0bddbe1d2d2ede91992fa1a27c15a0e
@@ -19498,6 +19534,10 @@ trackedFiles:
     id: 28ca188b6148
     last_write_checksum: sha1:f4b9584ffeca0bacba0f8e38ae417d9420a591ab
     pristine_git_object: 7af2f1f86aff6cb35ce1431f33a4a3bb98e3f5f4
+  docs/sdks/logs/README.md:
+    id: 5adacd63da21
+    last_write_checksum: sha1:93fecb083f7d8391913e3d14f8efbaeb507ca089
+    pristine_git_object: 71aa8f5e04eaa2deb1b4d114ca6f1b7cd514e5ee
   docs/sdks/plans/README.md:
     id: 2d8c741fff57
     last_write_checksum: sha1:275e4a6f1fef4d42798a08704cf054db4e26dd21
@@ -19618,10 +19658,14 @@ trackedFiles:
     id: ec73648a9c73
     last_write_checksum: sha1:9f2c316f8ce8a8443de2ff1ef8537a1b54aa2c4e
     pristine_git_object: ab7599187acf4fbd6a77ff0288d4ed12ea3d55ba
+  src/autumn_sdk/logs.py:
+    id: 894ac021b751
+    last_write_checksum: sha1:0f33f584fe71a011a2049c8ebeca40d7a250d365
+    pristine_git_object: 5a6a41797e7c59da14e7852eafdc2462fca177db
   src/autumn_sdk/models/__init__.py:
     id: bcf3802243ff
-    last_write_checksum: sha1:d44b4676264573bde5a9e4ffc620c5941178bc64
-    pristine_git_object: ab1d95b2d826bfaf19d3dda6e6a2c0d5363a8c06
+    last_write_checksum: sha1:06bf32d04211af19bb9f89accb0ffe0f77850aa4
+    pristine_git_object: c6e87e584d74641db9ae9e3125976b767143578f
   src/autumn_sdk/models/advancetestclockop.py:
     id: 05ed97a4d4fe
     last_write_checksum: sha1:440c7dd1450b892802c467baf8871ecc70151761
@@ -19946,6 +19990,10 @@ trackedFiles:
     id: f53ba1aad883
     last_write_checksum: sha1:95eed585af42c53cc20e5b1d750c5e109bfff58d
     pristine_git_object: 587e4c066fc1de7df74c10690c5a30d615eb045a
+  src/autumn_sdk/models/searchrequestlogsop.py:
+    id: f9229e96a8e4
+    last_write_checksum: sha1:17d10203008a0fb82aa066bfa937a69f542c0437
+    pristine_git_object: 064d7001cf60b2ae5cbe50ce99ed40f97b70ee9c
   src/autumn_sdk/models/security.py:
     id: 27d01b755fbe
     last_write_checksum: sha1:e5ac2e52ed9c2db46d4989c4744c230dd12bdf01
@@ -20048,8 +20096,8 @@ trackedFiles:
     pristine_git_object: 158c9c90433e427ba1cb4f2d3a8ffb4dc8067ab5
   src/autumn_sdk/sdk.py:
     id: 9e733b372628
-    last_write_checksum: sha1:a410a8749a13fb7efcf183cb5f1fff556fc0383e
-    pristine_git_object: 4af1dae9c4ae318c353a97d0a19f0e4812527a7a
+    last_write_checksum: sha1:23e2548f7f5f8578eba0ac5934db58ce612a02a4
+    pristine_git_object: 6bb8c4da9949d9145b31f44396267b840bb1ab8b
   src/autumn_sdk/sdkconfiguration.py:
     id: e65df2e44fc0
     last_write_checksum: sha1:233b710dff940202f00e389e0c8fa6a33f6ae7b4
@@ -21099,4 +21147,14 @@ examples:
       responses:
         "200":
           application/json: {"success": true}
+  searchRequestLogs:
+    speakeasy-default-search-request-logs:
+      parameters:
+        header:
+          x-api-version: "2.4.0"
+      requestBody:
+        application/json: {"query": "where status_code >= 400 | order by timestamp desc", "limit": 50}
+      responses:
+        "200":
+          application/json: {"list": [{"timestamp": "2026-09-21T12:00:00Z", "source": "api_request", "status_code": 200, "request": {"method": "POST", "url": "https://api.useautumn.com/v1/balances.check", "path": "/v1/balances.check"}, "context": {"org_id": "org_123", "customer_id": "cus_123", "entity_id": null, "auth_type": "secret_key", "user_id": "user_123", "user_email": "user@example.com"}, "stripe": {"event_id": null, "event_type": null, "object_id": null}, "request_body": {"customer_id": "cus_123"}, "response_body": {"allowed": true}}]}
 examplesVersion: 1.0.2

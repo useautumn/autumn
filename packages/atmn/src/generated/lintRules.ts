@@ -7,6 +7,7 @@ export const LINT_RULES: LintRules = {
 		label: "feature",
 		idField: "featureId",
 		required: ["featureId", "name", "type"],
+		hidden: ["display", "newFeatureId"],
 		fields: {
 			type: {
 				enum: ["boolean", "metered", "credit_system", "ai_credit_system"],
@@ -154,9 +155,6 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
-	"features.display": {
-		required: ["plural", "singular"],
-	},
 	"features.modelMarkups": {
 		keys: {
 			pattern: ".+\\/.+",
@@ -187,12 +185,18 @@ export const LINT_RULES: LintRules = {
 		label: "plan",
 		idField: "planId",
 		required: ["planId", "versionSlug"],
+		hidden: [
+			"baseVariantId",
+			"isDefault",
+			"migration",
+			"newPlanId",
+			"newVersionSlug",
+			"propagate",
+			"version",
+			"versioning",
+		],
 		fields: {
 			planId: {
-				minLength: 1,
-				pattern: "^[a-zA-Z0-9_-]+$",
-			},
-			newPlanId: {
 				minLength: 1,
 				pattern: "^[a-zA-Z0-9_-]+$",
 			},
@@ -202,22 +206,7 @@ export const LINT_RULES: LintRules = {
 			name: {
 				minLength: 1,
 			},
-			version: {
-				minimum: 1,
-				maximum: 9007199254740991,
-			},
 			versionSlug: {
-				minLength: 1,
-				pattern: "^[a-zA-Z0-9_-]+$",
-			},
-			newVersionSlug: {
-				minLength: 1,
-				pattern: "^[a-zA-Z0-9_-]+$",
-			},
-			versioning: {
-				enum: ["existing", "new_version", "all_versions"],
-			},
-			baseVariantId: {
 				minLength: 1,
 				pattern: "^[a-zA-Z0-9_-]+$",
 			},
@@ -981,52 +970,11 @@ export const LINT_RULES: LintRules = {
 	"plans.processors.stripe": {
 		required: ["productId"],
 	},
-	"plans.propagate.licenseParents": {
-		required: ["planId"],
-		fields: {
-			planId: {
-				minLength: 1,
-				pattern: "^[a-zA-Z0-9_-]+$",
-			},
-			version: {
-				minimum: 1,
-				maximum: 9007199254740991,
-			},
-			versionSlug: {
-				minLength: 1,
-				pattern: "^[a-zA-Z0-9_-]+$",
-			},
-			newVersionSlug: {
-				minLength: 1,
-				pattern: "^[a-zA-Z0-9_-]+$",
-			},
-		},
-	},
-	"plans.propagate.variants": {
-		required: ["planId"],
-		fields: {
-			planId: {
-				minLength: 1,
-				pattern: "^[a-zA-Z0-9_-]+$",
-			},
-			version: {
-				minimum: 1,
-				maximum: 9007199254740991,
-			},
-			versionSlug: {
-				minLength: 1,
-				pattern: "^[a-zA-Z0-9_-]+$",
-			},
-			newVersionSlug: {
-				minLength: 1,
-				pattern: "^[a-zA-Z0-9_-]+$",
-			},
-		},
-	},
 	"plans.variants": {
 		label: "variant",
 		idField: "variantPlanId",
 		required: ["variantPlanId", "versionSlug"],
+		hidden: ["baseVariantId", "newPlanId"],
 		fields: {
 			variantPlanId: {
 				minLength: 1,
@@ -1046,15 +994,7 @@ export const LINT_RULES: LintRules = {
 			name: {
 				minLength: 1,
 			},
-			newPlanId: {
-				minLength: 1,
-				pattern: "^[a-zA-Z0-9_-]+$",
-			},
 			newVersionSlug: {
-				minLength: 1,
-				pattern: "^[a-zA-Z0-9_-]+$",
-			},
-			baseVariantId: {
 				minLength: 1,
 				pattern: "^[a-zA-Z0-9_-]+$",
 			},

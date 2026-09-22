@@ -30,6 +30,7 @@ export const emitLintRulesModule = ({
 					label: entry?.label,
 					idField: entry?.idField,
 					required: required.length > 0 ? required : undefined,
+					hidden: spec?.hidden,
 					fields: spec?.fields,
 					keys: spec?.keys,
 					variants: spec?.variants,

@@ -93,12 +93,13 @@ export const BILLING_VERIFY_EXPORT_COLUMNS = [
 	{ key: "name", header: "Name" },
 	{ key: "email", header: "Email" },
 	{ key: "stripe_customer_id", header: "Stripe Customer ID" },
-	{ key: "stripe_subscription_id", header: "Stripe Subscription ID" },
+	{ key: "stripe_subscription_ids", header: "Stripe Subscription IDs" },
 	{ key: "severity", header: "Severity" },
-	{ key: "type", header: "Issue" },
-	{ key: "message", header: "Details" },
+	{ key: "issues", header: "Issues" },
+	{ key: "details", header: "Details" },
 ] as const;
 
+/** One row per customer; list columns hold every mismatch, comma-separated. */
 export type BillingVerifyExportRow = Record<
 	(typeof BILLING_VERIFY_EXPORT_COLUMNS)[number]["key"],
 	string | null

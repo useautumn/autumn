@@ -16,11 +16,13 @@ export const billingPlanToUpdateSubscriptionPreview = async ({
 	billingContext: UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
 }): Promise<PreviewUpdateSubscriptionResponse> => {
-	const basePreview = await billingPlanToPreviewResponse({
+	const { credit_applied, ...basePreview } = await billingPlanToPreviewResponse({
 		ctx,
 		billingContext,
 		billingPlan,
 	});
+
+	const invoiceCredits = billingPlan.preview?.invoiceCredits;
 
 	return {
 		...basePreview,
@@ -29,6 +31,8 @@ export const billingPlanToUpdateSubscriptionPreview = async ({
 			billingContext,
 		}),
 		tax: billingPlan.preview?.tax,
-		invoice_credits: billingPlan.preview?.invoiceCredits,
+		invoice_credits: invoiceCredits
+			? { ...invoiceCredits, applied: credit_applied }
+			: undefined,
 	} satisfies PreviewUpdateSubscriptionResponse;
 };

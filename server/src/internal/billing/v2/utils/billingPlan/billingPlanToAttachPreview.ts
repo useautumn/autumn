@@ -20,7 +20,7 @@ export const billingPlanToAttachPreview = async ({
 		| UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
 }): Promise<AttachPreviewResponse> => {
-	const basePreview = await billingPlanToPreviewResponse({
+	const { credit_applied, ...basePreview } = await billingPlanToPreviewResponse({
 		ctx,
 		billingContext,
 		billingPlan,
@@ -37,12 +37,17 @@ export const billingPlanToAttachPreview = async ({
 				? "autumn_checkout"
 				: null;
 
+	const invoiceCredits = billingPlan.preview?.invoiceCredits;
+
 	return {
 		...basePreview,
 		object: "attach_preview" as const,
 		redirect_to_checkout: willRedirectToCheckout,
 		checkout_type: checkoutType,
 		tax: billingPlan.preview?.tax,
-		invoice_credits: billingPlan.preview?.invoiceCredits,
+		// total already nets the credit off, so applied just explains the gap.
+		invoice_credits: invoiceCredits
+			? { ...invoiceCredits, applied: credit_applied }
+			: undefined,
 	} satisfies AttachPreviewResponse;
 };

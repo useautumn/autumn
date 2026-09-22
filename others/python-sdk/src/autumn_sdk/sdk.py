@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from autumn_sdk.invoices import Invoices
     from autumn_sdk.keys import Keys
     from autumn_sdk.licenses import Licenses
+    from autumn_sdk.logs import Logs
     from autumn_sdk.plans import Plans
     from autumn_sdk.platform import Platform
     from autumn_sdk.referrals import Referrals
@@ -50,6 +51,7 @@ class Autumn(BaseSDK):
     billing: "Billing"
     balances: "Balances"
     events: "Events"
+    logs: "Logs"
     invoices: "Invoices"
     licenses: "Licenses"
     entities: "Entities"
@@ -65,6 +67,7 @@ class Autumn(BaseSDK):
         "billing": ("autumn_sdk.billing", "Billing"),
         "balances": ("autumn_sdk.balances", "Balances"),
         "events": ("autumn_sdk.events", "Events"),
+        "logs": ("autumn_sdk.logs", "Logs"),
         "invoices": ("autumn_sdk.invoices", "Invoices"),
         "licenses": ("autumn_sdk.licenses", "Licenses"),
         "entities": ("autumn_sdk.entities", "Entities"),
