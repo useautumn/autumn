@@ -21,24 +21,24 @@ export const walkCustomerExportPages = async function* ({
 	population: CustomerExportPopulation;
 	pageSize?: number;
 }): AsyncGenerator<CustomerExportScalarRow[]> {
+	const readScalars = retryExportDbRead({
+		logger: ctx.logger,
+		operation: "getCustomerExportScalars",
+		query: getCustomerExportScalars,
+	});
 	let afterInternalId: string | null = null;
 	let hasMorePages = true;
 
 	while (hasMorePages) {
-		const scalars = await retryExportDbRead({
-			logger: ctx.logger,
-			operation: "getCustomerExportScalars",
-			run: () =>
-				getCustomerExportScalars({
-					db: dbReplica ?? ctx.db,
-					orgId: ctx.org.id,
-					env: ctx.env,
-					snapshot,
-					upperBoundInternalId: population.upperBoundInternalId,
-					createdAtCutoff: population.createdAtCutoff,
-					afterInternalId,
-					limit: pageSize,
-				}),
+		const scalars = await readScalars({
+			db: dbReplica ?? ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			snapshot,
+			upperBoundInternalId: population.upperBoundInternalId,
+			createdAtCutoff: population.createdAtCutoff,
+			afterInternalId,
+			limit: pageSize,
 		});
 		const lastScalar = scalars[scalars.length - 1];
 		if (!lastScalar) return;

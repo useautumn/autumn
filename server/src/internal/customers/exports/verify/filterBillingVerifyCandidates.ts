@@ -27,28 +27,30 @@ export const filterBillingVerifyCandidates = async ({
 	const { sweptSubscriptions } = sweep;
 
 	const db = dbReplica ?? ctx.db;
+	const { logger } = ctx;
+	const readLinkedCustomerIds = retryExportDbRead({
+		logger,
+		operation: "getStripeLinkedCustomerIds",
+		query: getStripeLinkedCustomerIds,
+	});
+	const readSharedStripeCustomerIds = retryExportDbRead({
+		logger,
+		operation: "getSharedStripeCustomerIds",
+		query: getSharedStripeCustomerIds,
+	});
+
 	const [linkedCustomerIds, sharedStripeCustomerIds] = await Promise.all([
-		retryExportDbRead({
-			logger: ctx.logger,
-			operation: "getStripeLinkedCustomerIds",
-			run: () =>
-				getStripeLinkedCustomerIds({
-					db,
-					internalCustomerIds: onStripe.map((scalar) => scalar.internal_id),
-				}),
+		readLinkedCustomerIds({
+			db,
+			internalCustomerIds: onStripe.map((scalar) => scalar.internal_id),
 		}),
-		retryExportDbRead({
-			logger: ctx.logger,
-			operation: "getSharedStripeCustomerIds",
-			run: () =>
-				getSharedStripeCustomerIds({
-					db,
-					orgId: ctx.org.id,
-					env: ctx.env,
-					stripeCustomerIds: onStripe
-						.map((scalar) => scalar.processor?.id)
-						.filter(notNullish),
-				}),
+		readSharedStripeCustomerIds({
+			db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			stripeCustomerIds: onStripe
+				.map((scalar) => scalar.processor?.id)
+				.filter(notNullish),
 		}),
 	]);
 
