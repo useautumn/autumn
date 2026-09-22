@@ -54,11 +54,16 @@ async function applyBatch({
 	const firstMessage = messages[0];
 	if (!firstMessage) return;
 
-	if (!state.initializedPartitions.has(JSON.stringify([topic, partition]))) {
+	// An offset that will not parse is the handler's to judge, so the resume read waits for a readable one.
+	const firstOffset = readOffsetOrNull({ offset: firstMessage.offset });
+	if (
+		firstOffset !== null &&
+		!state.initializedPartitions.has(JSON.stringify([topic, partition]))
+	) {
 		const resume = ctx.handler.readResumeOffset({
 			topic,
 			partition,
-			firstOffset: parseKafkaOffset({ offset: firstMessage.offset }),
+			firstOffset,
 		});
 		const resumeOffset = resume instanceof Promise ? await resume : resume;
 		if (resumeOffset !== null) {
@@ -79,16 +84,16 @@ async function applyBatch({
 			!hasCurrentBatchGeneration({ state, payload, generation })
 		)
 			return;
-		const recordOffset = parseKafkaOffset({ offset: message.offset });
 		const application = ctx.handler.applyRecord({ topic, partition, message });
 		const result =
 			application instanceof Promise ? await application : application;
+		// A handler may withdraw the partition while applying; nothing of that record is resolved then.
 		if (
-			application instanceof Promise &&
-			(!payload.isRunning() ||
-				!hasCurrentBatchGeneration({ state, payload, generation }))
+			!payload.isRunning() ||
+			!hasCurrentBatchGeneration({ state, payload, generation })
 		)
 			return;
+		const recordOffset = parseKafkaOffset({ offset: message.offset });
 		if (result && result.nextOffset > recordOffset + 1n) {
 			await reconcilePartitionOffset({
 				ctx,
@@ -104,4 +109,12 @@ async function applyBatch({
 	}
 
 	await commitBatchOffsets({ ctx, state, payload, generation });
+}
+
+function readOffsetOrNull({ offset }: { offset: string }): bigint | null {
+	try {
+		return parseKafkaOffset({ offset });
+	} catch {
+		return null;
+	}
 }

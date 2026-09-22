@@ -31,6 +31,9 @@ export type SeededCustomer = {
 		topic: string;
 		partition: number;
 	}): Promise<bigint | null>;
+	/** Removes the grant row as a legacy writer would; `restoreGrant` puts it back with the given balance. */
+	deleteGrant(): Promise<void>;
+	restoreGrant(params: { balance: number }): Promise<void>;
 	cleanup(): Promise<void>;
 };
 
@@ -109,18 +112,31 @@ export async function seedCustomer({
 		options: [],
 		billing_version: "v2",
 	});
-	await db.insert(schemas.customerEntitlements).values({
-		id: customerEntitlementId,
-		internal_customer_id: internalCustomerId,
-		customer_id: customerId,
-		customer_product_id: customerProductId,
-		entitlement_id: entitlementId,
-		internal_feature_id: internalFeatureId,
-		feature_id: featureId,
-		created_at: now,
-		balance,
-		adjustment: 0,
-	});
+	async function restoreGrant({
+		balance: restoredBalance,
+	}: {
+		balance: number;
+	}): Promise<void> {
+		await db.insert(schemas.customerEntitlements).values({
+			id: customerEntitlementId,
+			internal_customer_id: internalCustomerId,
+			customer_id: customerId,
+			customer_product_id: customerProductId,
+			entitlement_id: entitlementId,
+			internal_feature_id: internalFeatureId,
+			feature_id: featureId,
+			created_at: now,
+			balance: restoredBalance,
+			adjustment: 0,
+		});
+	}
+	await restoreGrant({ balance });
+
+	async function deleteGrant(): Promise<void> {
+		await db.execute(
+			sql`DELETE FROM customer_entitlements WHERE id = ${customerEntitlementId}`,
+		);
+	}
 
 	async function readBalance(): Promise<number> {
 		const rows = await db.execute(
@@ -171,6 +187,8 @@ export async function seedCustomer({
 		balance,
 		readBalance,
 		readNextOffset,
+		deleteGrant,
+		restoreGrant,
 		cleanup,
 	};
 }

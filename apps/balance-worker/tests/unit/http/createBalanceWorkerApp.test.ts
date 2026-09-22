@@ -10,6 +10,7 @@ import {
 } from "@autumn/balance-engine";
 import type { PartitionRoute } from "@autumn/balance-worker-client/protocol";
 import { Hono } from "hono";
+import { FlushRecordRefusedError } from "../../../src/committer/committerErrors.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { requestValidationMiddleware } from "../../../src/http/middlewares/requestValidationMiddleware.js";
 import { runtimeRoutingMiddleware } from "../../../src/http/middlewares/runtimeRouting/runtimeRoutingMiddleware.js";
@@ -19,6 +20,7 @@ import type {
 	BalanceWorkerRequestContext,
 } from "../../../src/http/types/balanceWorkerHttp.js";
 import { createRuntimeDirectory } from "../../../src/partitions/directory/createRuntimeDirectory.js";
+import { SubjectStaleError } from "../../../src/processor/subject/subjectErrors.js";
 import type { PartitionProcessor } from "../../../src/processor/types/partitionProcessor.js";
 import {
 	PartitionWriterCapacityError,
@@ -501,6 +503,22 @@ describe("Balance worker HTTP", () => {
 			cause: new PartitionWriterCapacityError(),
 			status: 503,
 			code: "NOT_READY",
+		},
+		{
+			cause: new SubjectStaleError({
+				identity: command.identity,
+				cause: new Error("rows moved"),
+			}),
+			status: 409,
+			code: "STALE_SUBJECT",
+		},
+		{
+			cause: new FlushRecordRefusedError({
+				mutationId: "cmd",
+				cause: new Error("value out of range"),
+			}),
+			status: 500,
+			code: "RECORD_REFUSED",
 		},
 	])(
 		"reports unavailable state or capacity without inventing balances",

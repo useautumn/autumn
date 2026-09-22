@@ -1,5 +1,6 @@
 import { landFlush } from "./actions/landFlush.js";
 import { takeFlush } from "./actions/takeFlush.js";
+import { CommitterStoppedError } from "./committerErrors.js";
 import type {
 	Committer,
 	CommitterConfig,
@@ -12,7 +13,7 @@ import type {
 export const DEFAULT_COMMITTER_CONFIG: CommitterConfig = {
 	concurrency: 10,
 	maxRowsPerFlush: 500,
-	retry: { maxAttempts: 3, initialBackoffMs: 50, maxBackoffMs: 800 },
+	retry: { degradedAfterAttempts: 5, initialBackoffMs: 50, maxBackoffMs: 800 },
 };
 
 export const createCommitter = ({
@@ -25,11 +26,21 @@ export const createCommitter = ({
 	const scope: CommitterScope = {
 		ctx,
 		config,
-		state: { queue: [], inFlight: 0 },
+		state: {
+			queue: [],
+			inFlight: 0,
+			degraded: false,
+			stop: new AbortController(),
+		},
 	};
 	const idle = new Set<() => void>();
 
 	function apply(params: Parameters<Committer["apply"]>[0]) {
+		const { signal } = scope.state.stop;
+		if (signal.aborted)
+			return Promise.reject(
+				new CommitterStoppedError({ cause: signal.reason }),
+			);
 		const call: FlushCall = {
 			...params,
 			rows: countRowChanges({ records: params.records }),
@@ -38,6 +49,17 @@ export const createCommitter = ({
 		scope.state.queue.push(call);
 		void startFlushes({ scope, onIdle: notifyIdle });
 		return call.settle.promise;
+	}
+
+	function stop(): void {
+		const { state } = scope;
+		if (state.stop.signal.aborted) return;
+		state.stop.abort(new Error("Committer stopped"));
+		const stopped = new CommitterStoppedError({
+			cause: state.stop.signal.reason,
+		});
+		for (const call of state.queue.splice(0)) call.settle.reject(stopped);
+		if (state.inFlight === 0) notifyIdle();
 	}
 
 	function drain(): Promise<void> {
@@ -52,7 +74,7 @@ export const createCommitter = ({
 		idle.clear();
 	}
 
-	return { apply, drain };
+	return { apply, drain, stop };
 };
 
 /** Starts a flush per free lane; each lane loops until the queue is empty. landFlush never throws for a bad record, only for a bug. */
@@ -69,11 +91,7 @@ async function startFlushes({
 		if (!flush) break;
 		state.inFlight += 1;
 		try {
-			const outcomes = await landFlush({
-				ctx: scope.ctx,
-				flush,
-				retry: config.retry,
-			});
+			const outcomes = await landFlush({ scope, flush });
 			for (const call of flush.calls) {
 				const outcome = outcomes.get(call);
 				if (outcome) call.settle.resolve(outcome);

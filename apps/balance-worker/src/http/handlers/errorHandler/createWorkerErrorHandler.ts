@@ -11,11 +11,13 @@ import type { Context, ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod/v4";
 import { CatalogRowsNotFoundError } from "../../../catalog/catalogErrors.js";
+import { FlushRecordRefusedError } from "../../../committer/committerErrors.js";
 import { PartitionProcessorStateNotFoundError } from "../../../processor/common/processorErrors.js";
 import {
 	SubjectCatalogEvictedError,
 	SubjectLoadOvertakenError,
 	SubjectNotFoundError,
+	SubjectStaleError,
 } from "../../../processor/subject/subjectErrors.js";
 import {
 	PartitionWriterCapacityError,
@@ -104,6 +106,21 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 						code: "CUSTOMER_NOT_FOUND",
 						message: "Customer does not exist in this org and env",
 					};
+		} else if (cause instanceof FlushRecordRefusedError) {
+			// Skipped for good, so nothing landed; unlike INTERNAL the caller knows a retry will fail the same way.
+			status = 500;
+			error = {
+				code: "RECORD_REFUSED",
+				message:
+					"Postgres refused this command's rows; nothing was applied and a retry would be refused the same way",
+			};
+		} else if (cause instanceof SubjectStaleError) {
+			status = 409;
+			error = {
+				code: "STALE_SUBJECT",
+				message:
+					"Customer changed while the command was decided; nothing was applied, retry",
+			};
 		} else if (cause instanceof CatalogRowsNotFoundError) {
 			status = 422;
 			error = {

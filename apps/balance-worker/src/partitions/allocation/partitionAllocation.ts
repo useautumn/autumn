@@ -4,7 +4,10 @@ import {
 	detachPartitions,
 	withdrawPartitions,
 } from "../lifecycle/stopPartitions.js";
-import { stopPartitionServiceSafely } from "../partitionService.js";
+import {
+	requestPartitionServiceStop,
+	stopServiceThenNotify,
+} from "../partitionService.js";
 import { reportPartitionError } from "../reportPartitionError.js";
 import type {
 	AllocationScope,
@@ -15,6 +18,7 @@ import type {
 } from "../types/partitionState.js";
 import type {
 	PartitionAssignment,
+	PartitionConsumerCrash,
 	PartitionFailure,
 	PartitionRevocation,
 } from "../types/partitions.js";
@@ -31,8 +35,8 @@ export function subscribePartitionAllocations({
 		revokePartitionAllocation({ ctx, state, revocation });
 	}
 
-	function onCrashed(failure: PartitionFailure): void {
-		crashPartitionAllocation({ ctx, state, failure });
+	function onCrashed(crash: PartitionConsumerCrash): void {
+		crashPartitionAllocation({ ctx, state, crash });
 	}
 
 	function onError(failure: PartitionFailure): void {
@@ -82,17 +86,20 @@ function revokePartitionAllocation({
 	state.lifecycle = retireAllocation({ ctx, state, entriesToStop });
 }
 
+/** A crash kafkajs will restart from rejoins and is reassigned; one it will not leaves nothing to wait for. */
 function crashPartitionAllocation({
 	ctx,
 	state,
-	failure,
-}: PartitionsScope & { failure: PartitionFailure }): void {
+	crash,
+}: PartitionsScope & { crash: PartitionConsumerCrash }): void {
 	if (state.status !== "running") return;
 	clearPartitionRetries({ state });
-	state.generation += 1;
-	const entriesToStop = detachPartitions({ state, failure });
-	reportPartitionError({ ctx, cause: failure.cause });
+	const allocationGeneration = ++state.generation;
+	const entriesToStop = detachPartitions({ state, failure: crash });
+	reportPartitionError({ ctx, cause: crash.cause });
 	state.lifecycle = retireAllocation({ ctx, state, entriesToStop });
+	if (!crash.restart)
+		requestPartitionServiceStop({ ctx, state, allocationGeneration });
 }
 
 export function isCurrentAllocation({
@@ -123,10 +130,11 @@ async function retireAllocation({
 			entriesToStop,
 		});
 	} catch (cause) {
+		// No later assignment may reuse a half-retired runtime, so this worker is finished.
 		state.retirementFailed = true;
 		reportPartitionError({ ctx, cause });
 		function stopAfterRetirementFailure(): void {
-			void stopPartitionServiceSafely({ ctx, state });
+			void stopServiceThenNotify({ ctx, state });
 		}
 		queueMicrotask(stopAfterRetirementFailure);
 	}

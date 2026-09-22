@@ -10,6 +10,7 @@ import {
 import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { createOwnershipConsumer, type OwnershipConsumer } from "@autumn/kafka";
 import type { PostgresClient } from "@autumn/postgres";
+import { sql } from "drizzle-orm";
 import { Kafka, logLevel } from "kafkajs";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
 import {
@@ -297,5 +298,70 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			).rejects.toMatchObject({ workerCode: "DUPLICATE_COMMAND" });
 			expect(await customer.readBalance()).toBe(90);
 		}, 60_000);
+
+		test("a row deleted underneath a decision refuses that track alone: 409, bookmark past it, the next track re-hydrates, a restart replays it as settled", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const moved = await seedCustomer({ postgres, balance: 100 });
+			try {
+				const first = await trackOrExplain(
+					harness,
+					trackCommand({ customer: moved, commandId: "moved_1", value: 5 }),
+				);
+				expect(balanceOf(first, moved.customerEntitlementId)).toBe(95);
+				const bookmarkBefore = await moved.readNextOffset({
+					topic: harness.topics.metering,
+					partition: PARTITION,
+				});
+
+				// The legacy path removes the row without telling the worker, as a customer delete does.
+				await moved.deleteGrant();
+
+				await expect(
+					harness.client.track({
+						command: trackCommand({
+							customer: moved,
+							commandId: "moved_2",
+							value: 5,
+						}),
+					}),
+				).rejects.toMatchObject({
+					workerCode: "STALE_SUBJECT",
+					outcome: "not_submitted",
+				});
+				// The refused record still moved the bookmark: a replay never meets it again.
+				const bookmarkAfter = await moved.readNextOffset({
+					topic: harness.topics.metering,
+					partition: PARTITION,
+				});
+				expect(bookmarkAfter).not.toBeNull();
+				expect(bookmarkAfter as bigint).toBeGreaterThan(
+					bookmarkBefore as bigint,
+				);
+
+				// The worker still owns the partition and decides the next track on fresh rows.
+				await moved.restoreGrant({ balance: 50 });
+				const third = await trackOrExplain(
+					harness,
+					trackCommand({ customer: moved, commandId: "moved_3", value: 5 }),
+				);
+				expect(balanceOf(third, moved.customerEntitlementId)).toBe(45);
+				expect(await moved.readBalance()).toBe(45);
+
+				// A restart replays the log from below the bookmark without tripping on the refused record.
+				await worker.stop();
+				workers.splice(workers.indexOf(worker), 1);
+				const replacement = await startWorker({ harness });
+				workers.push(replacement);
+				const fourth = await trackOrExplain(
+					harness,
+					trackCommand({ customer: moved, commandId: "moved_4", value: 5 }),
+				);
+				expect(balanceOf(fourth, moved.customerEntitlementId)).toBe(40);
+				expect(await moved.readBalance()).toBe(40);
+			} finally {
+				await moved.cleanup();
+			}
+		}, 90_000);
 	},
 );

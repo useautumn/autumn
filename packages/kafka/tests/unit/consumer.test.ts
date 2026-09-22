@@ -538,6 +538,63 @@ async function withdrawalInvalidatesPendingApplication(): Promise<void> {
 	await consumer.stop();
 }
 
+async function withdrawalDuringSynchronousApplication(): Promise<void> {
+	const fixture = createConsumerFixture();
+	const progress = createProgressTracker();
+	let consumer: ReturnType<typeof createTopicConsumer> | undefined;
+	// A handler that withdraws the partition while applying: neither record is resolved, nothing commits.
+	function applyRecord(): undefined {
+		void consumer?.withdrawPartition({ partition });
+		return undefined;
+	}
+	consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress,
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	await fixture.deliverBatch({
+		records: [createRecord("0"), createRecord("1")],
+	});
+	expect(fixture.events).not.toContain("resolve:0");
+	expect(fixture.events).not.toContain("resolve:1");
+	expect(fixture.commits).toEqual([]);
+	expect(progress.read({ topic, partition })).toBeNull();
+	await consumer.stop();
+}
+
+async function unparseableOffsetReachesTheHandler(): Promise<void> {
+	const fixture = createConsumerFixture();
+	const progress = createProgressTracker();
+	const seen: string[] = [];
+	function applyRecord({
+		message,
+	}: {
+		message: { offset: string };
+	}): undefined {
+		seen.push(message.offset);
+		throw new Error(`refused ${message.offset}`);
+	}
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress,
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	await expect(
+		fixture.deliverBatch({ records: [createRecord("-1")] }),
+	).rejects.toThrow("refused -1");
+	expect(seen).toEqual(["-1"]);
+	expect(fixture.commits).toEqual([]);
+	await consumer.stop();
+}
+
 async function markerProgressAndFetchingControls(): Promise<void> {
 	const fixture = createConsumerFixture();
 	const progress = createProgressTracker();
@@ -644,6 +701,14 @@ function topicConsumerTests(): void {
 	test(
 		"withdrawal invalidates asynchronous application completion",
 		withdrawalInvalidatesPendingApplication,
+	);
+	test(
+		"withdrawal during a synchronous application resolves nothing",
+		withdrawalDuringSynchronousApplication,
+	);
+	test(
+		"an offset that will not parse reaches the handler instead of failing the batch first",
+		unparseableOffsetReachesTheHandler,
 	);
 	test(
 		"marker-only batches advance progress and partition controls target one topic",

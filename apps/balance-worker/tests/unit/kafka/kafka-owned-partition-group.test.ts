@@ -46,6 +46,7 @@ test("failed retirement stops the group without starting a replacement", async (
 	const consumer = createFakeGroupConsumer();
 	const errors: unknown[] = [];
 	const started: number[] = [];
+	const events: string[] = [];
 	const failure = new Error("replay did not settle");
 	const group = createKafkaOwnedPartitionGroup({
 		consumer,
@@ -63,6 +64,9 @@ test("failed retirement stops the group without starting a replacement", async (
 			},
 		}),
 		onError: ({ cause }) => errors.push(cause),
+		onServiceStopped: () => {
+			events.push("service-stopped");
+		},
 	});
 	try {
 		await group.start();
@@ -73,6 +77,9 @@ test("failed retirement stops the group without starting a replacement", async (
 		expect(started).toEqual([0]);
 		expect(errors).toHaveLength(1);
 		expect((errors[0] as AggregateError).errors).toEqual([failure]);
+		// A worker that can never take an assignment again tells the entrypoint, so it is replaced instead of idling.
+		await waitFor(() => events.includes("service-stopped"));
+		expect(events).toEqual(["service-stopped"]);
 	} finally {
 		await group.stop();
 		closeStoreFixture(fixture);
@@ -92,6 +99,7 @@ import {
 	ownedPartitionHealthOf,
 } from "../../../src/health/ownedPartitionHealth.js";
 
+import { KafkaPartitionInvariantError } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
 import { OwnedPartitionRecoveryRequiredError } from "../../../src/runtime/runtimeErrors.js";
 import type { PartitionRuntimeStatus as OwnedPartitionRuntimeStatus } from "../../../src/runtime/types/partitionRuntimeState.js";
@@ -132,7 +140,7 @@ type FakeGroupConsumer = KafkaOwnedPartitionGroupConsumerPort & {
 	runConfig: ConsumerRunConfig | null;
 	emitGroupJoin(partitions: number[]): void;
 	emitRebalancing(): void;
-	emitCrash(error: Error): void;
+	emitCrash(error: Error, options?: { restart: boolean }): void;
 	failNextPause(error: Error): void;
 };
 
@@ -221,13 +229,13 @@ const createFakeGroupConsumer = (): FakeGroupConsumer => {
 				}),
 			);
 		},
-		emitCrash: (error) => {
+		emitCrash: (error, { restart } = { restart: true }) => {
 			emit(
 				"consumer.crash",
 				event<ConsumerCrashEvent["payload"]>("consumer.crash", {
 					error,
 					groupId: "balance-workers",
-					restart: true,
+					restart,
 				}),
 			);
 		},
@@ -584,6 +592,52 @@ describe("Kafka owned partition group", () => {
 
 			expect(unavailable).toEqual([crash]);
 			expect(errors).toEqual([crash]);
+			// kafkajs restarts this consumer: the rejoin brings the partitions back, so the worker stays up.
+			await Bun.sleep(20);
+			expect(consumer.lifecycle).not.toContain("consumer-stop");
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => started.length === 2);
+			await group.stop();
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("a crash kafkajs will not restart from ends the worker: nothing would ever rejoin", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const started: number[] = [];
+			const stopped: number[] = [];
+			const events: string[] = [];
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: createPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5_000,
+				createRuntime: createRuntimeFactory({
+					started,
+					stopped,
+					unavailable: [],
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: () => undefined,
+				onServiceStopped: () => {
+					events.push("service-stopped");
+				},
+			});
+			await group.start();
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => started.length === 1);
+
+			consumer.emitCrash(new Error("non-retriable"), { restart: false });
+			await waitFor(() => events.includes("service-stopped"));
+
+			expect(stopped).toEqual([0]);
+			expect(consumer.lifecycle).toContain("consumer-stop");
+			expect(events).toEqual(["service-stopped"]);
 			await group.stop();
 		} finally {
 			closeStoreFixture(fixture);
@@ -760,6 +814,176 @@ describe("Kafka owned partition group", () => {
 				expect.objectContaining({ partition: 0, status: "ready" }),
 				expect.objectContaining({ partition: 1, status: "ready" }),
 			]);
+			await group.stop();
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("parks a partition whose log cannot be read and keeps the others serving", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const unreadableLog = new KafkaPartitionInvariantError({
+				topic,
+				partition: 1,
+				offset: "2584",
+				cause: new Error("not-json"),
+			});
+			const startupFailure = new OwnedPartitionRecoveryRequiredError({
+				topic,
+				partition: 1,
+				cause: unreadableLog,
+			});
+			const startAttempts = new Map<number, number>();
+			const unhealthy: Array<{
+				topic: string;
+				partition: number;
+				cause: unknown;
+			}> = [];
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: createPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5,
+				partitionBootstrapRetryIntervalMs: 5,
+				createRuntime: ({ partition }) => ({
+					start: async () => {
+						const attempt = (startAttempts.get(partition) ?? 0) + 1;
+						startAttempts.set(partition, attempt);
+						if (partition === 1 && attempt === 1) throw startupFailure;
+					},
+					stop: async () => {},
+					getHealth: () =>
+						startAttempts.get(partition) === 1 && partition === 1
+							? terminalHealth({ partition, reason: "kafka_log_unreadable" })
+							: ownedPartitionHealthOf({
+									topic,
+									partition,
+									status: "ready",
+									localNextOffset: 0n,
+									consumedNextOffset: 0n,
+									highWatermark: 0n,
+									failureReason: null,
+								}),
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: (failure) => unhealthy.push(failure),
+			});
+
+			await group.start();
+			consumer.emitGroupJoin([0, 1]);
+			await waitFor(() => unhealthy.length === 1);
+			await waitFor(() => startAttempts.get(1) === 2);
+
+			// The bad partition is retried alone; the group never stops and partition 0 never restarts.
+			expect(unhealthy).toEqual([
+				{ topic, partition: 1, cause: startupFailure },
+			]);
+			expect(consumer.lifecycle).not.toContain("consumer-stop");
+			expect(startAttempts.get(0)).toBe(1);
+			expect(group.partitions()).toEqual([
+				expect.objectContaining({ partition: 0, status: "ready" }),
+				expect.objectContaining({ partition: 1, status: "ready" }),
+			]);
+			await group.stop();
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("parks a claimed partition whose log turns unreadable: releases its claim, retries it alone, the others keep serving", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const startAttempts = new Map<number, number>();
+			const released: number[] = [];
+			const events: string[] = [];
+			const unavailableListeners = new Map<
+				number,
+				(failure: { cause: unknown }) => void
+			>();
+			const failedAttempt = new Map<number, number>();
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: createPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5,
+				partitionBootstrapRetryIntervalMs: 5,
+				createRuntime: ({ partition }) => ({
+					start: async () => {
+						startAttempts.set(
+							partition,
+							(startAttempts.get(partition) ?? 0) + 1,
+						);
+					},
+					stop: async () => {},
+					subscribeUnavailable: (listener) => {
+						unavailableListeners.set(partition, listener);
+						return () => unavailableListeners.delete(partition);
+					},
+					getHealth: () =>
+						failedAttempt.get(partition) === startAttempts.get(partition)
+							? terminalHealth({ partition, reason: "kafka_log_unreadable" })
+							: ownedPartitionHealthOf({
+									topic,
+									partition,
+									status: "ready",
+									localNextOffset: 0n,
+									consumedNextOffset: 0n,
+									highWatermark: 0n,
+									failureReason: null,
+								}),
+					publication: {
+						claim: async () => ({ routeEpoch: "0" }),
+						release: async () => {
+							released.push(partition);
+						},
+					},
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: () => undefined,
+				onServiceStopped: () => {
+					events.push("service-stopped");
+				},
+			});
+
+			await group.start();
+			consumer.emitGroupJoin([0, 1]);
+			await waitFor(
+				() =>
+					group.findRuntime({ partition: 1, routeEpoch: "0" }) !== undefined,
+			);
+
+			// The live owner's follower hits a record it cannot read.
+			failedAttempt.set(1, startAttempts.get(1) ?? 0);
+			unavailableListeners.get(1)?.({
+				cause: new OwnedPartitionRecoveryRequiredError({
+					topic,
+					partition: 1,
+					cause: new KafkaPartitionInvariantError({
+						topic,
+						partition: 1,
+						offset: "2584",
+						cause: new Error("not-json"),
+					}),
+				}),
+			});
+			await waitFor(() => released.includes(1));
+			await waitFor(() => startAttempts.get(1) === 2);
+
+			expect(released).toEqual([1]);
+			expect(startAttempts.get(0)).toBe(1);
+			expect(consumer.lifecycle).not.toContain("consumer-stop");
+			expect(events).toEqual([]);
+			await waitFor(
+				() =>
+					group.findRuntime({ partition: 1, routeEpoch: "0" }) !== undefined,
+			);
 			await group.stop();
 		} finally {
 			closeStoreFixture(fixture);

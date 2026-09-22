@@ -171,7 +171,7 @@ export function createKafkaOwnedPartitionGroup(
 				waitForQuiescence,
 				getHealth,
 			},
-			publication: { claim, release },
+			publication: runtime.publication ?? { claim, release },
 		};
 	}
 	return createWorkerPartitions({
@@ -192,6 +192,10 @@ export type KafkaPartitionRuntimeFactory = (
 	stop(): Promise<void>;
 	waitForQuiescence?(): Promise<void>;
 	getHealth?(): OwnedPartitionHealth;
+	subscribeUnavailable?(
+		listener: (failure: { cause: unknown }) => void,
+	): () => void;
+	publication?: PartitionOwnershipPublication;
 };
 export type KafkaPartitionControlPort = Pick<
 	Consumer,
@@ -350,6 +354,7 @@ export function createOwnedPartitionRuntime(
 function ignoreUnhealthy(): void {}
 
 import type {
+	PartitionOwnershipPublication,
 	PartitionRuntimePort,
 	PartitionRuntimeResources,
 } from "../../../src/partitions/types/partitions.js";

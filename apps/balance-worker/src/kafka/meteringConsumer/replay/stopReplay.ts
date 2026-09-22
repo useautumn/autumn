@@ -52,10 +52,13 @@ async function settleReplay({
 		throw new AggregateError(failures, "Partition replay did not stop safely");
 }
 
+/** Consumption halts at once: the batch in flight finds its generation gone before it resolves another record. */
 export function markReplayUnavailable({
+	ctx,
 	state,
 	cause,
 }: {
+	ctx: PartitionReplayContext;
 	state: PartitionReplayState;
 	cause: unknown;
 }): void {
@@ -66,6 +69,16 @@ export function markReplayUnavailable({
 	)
 		return;
 	state.status = "unavailable";
+	const { partition } = state.position;
+	void ctx.consumption.withdrawPartition({ partition });
+	try {
+		ctx.consumption.pausePartition({ partition });
+	} catch (pauseCause) {
+		ctx.logger?.warn("Unavailable partition could not be paused", {
+			partition,
+			error: pauseCause,
+		});
+	}
 	state.abortController?.abort(cause);
 	state.onUnavailable?.({ cause });
 }

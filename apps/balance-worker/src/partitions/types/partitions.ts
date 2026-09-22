@@ -17,6 +17,9 @@ export type Unsubscribe = () => void;
 
 export type PartitionFailure = { cause: unknown };
 
+/** A consumer crash; without `restart` the consumer never rejoins, so the worker would own nothing forever. */
+export type PartitionConsumerCrash = PartitionFailure & { restart: boolean };
+
 export type PartitionUnavailableListener = (failure: PartitionFailure) => void;
 
 export type PartitionOwnershipPublication = {
@@ -46,7 +49,7 @@ export interface PartitionAssignment extends PartitionRevocation {
 export type PartitionChangeListeners = {
 	onAssigned(change: PartitionAssignment): void;
 	onRevoked(change: PartitionRevocation): void;
-	onCrashed(failure: PartitionFailure): void;
+	onCrashed(crash: PartitionConsumerCrash): void;
 	onError(failure: PartitionFailure): void;
 };
 

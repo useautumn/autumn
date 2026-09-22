@@ -1,12 +1,12 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { MeteringIdentity } from "@autumn/balance-engine";
-import type { EdgeConfigLogger } from "@autumn/edge-config";
 import {
 	createKafkaClient,
 	createKafkaTransport,
 	meteringIdentityToPartition,
 } from "@autumn/kafka";
+import type { AutumnLogger } from "@autumn/logging";
 import { Kafka } from "kafkajs";
 import { createCatalogCache } from "../catalog/createCatalogCache.js";
 import type { PartitionCheckpointSource } from "../checkpoint/partitionCheckpointSource.js";
@@ -54,7 +54,7 @@ export async function openWorkerResources({
 	checkpointConfig,
 	bootstrap,
 }: {
-	ctx?: { logger?: EdgeConfigLogger };
+	ctx?: { logger?: Pick<AutumnLogger, "info" | "warn" | "error"> };
 	config: BalanceWorkerConfig;
 	checkpointConfig: WorkerCheckpointConfig;
 	bootstrap: WorkerBootstrapConfig;

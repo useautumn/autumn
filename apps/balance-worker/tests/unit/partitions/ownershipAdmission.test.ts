@@ -573,8 +573,8 @@ describe("partitionLifecycle", function partitionLifecycleTests() {
 		const revoke = (): void => {
 			listeners?.onRevoked({ causeForPartition });
 		};
-		const crash = (cause: unknown): void => {
-			listeners?.onCrashed({ cause });
+		const crash = (cause: unknown, restart = true): void => {
+			listeners?.onCrashed({ cause, restart });
 		};
 		return {
 			ownership,
@@ -758,7 +758,8 @@ describe("partitionLifecycle", function partitionLifecycleTests() {
 			cleanupGate.resolve();
 			await fixture.ownership.stop();
 			expect(constructions).toBe(1);
-			expect(cleanupCalls).toBe(2);
+			// Parking retires the entry once; the group stop reuses that retirement instead of stopping the runtime again.
+			expect(cleanupCalls).toBe(1);
 		});
 
 		test("stops the group instead of retrying when parked runtime cleanup fails", async () => {

@@ -7,16 +7,21 @@ export type CommitterControl = { concurrency: number | null };
 
 export type CommitterContext = {
 	db: CommitterDb;
-	logger?: { warn(message: string): void };
-	/** Backoff between retries; tests stand it in. */
-	sleep?: (params: { delayMs: number }) => Promise<void>;
+	logger?: {
+		info(message: string): void;
+		warn(message: string): void;
+		error(message: string): void;
+	};
+	/** Backoff between retries, cut short by `signal` when the committer stops; tests stand it in. */
+	sleep?: (params: { delayMs: number; signal: AbortSignal }) => Promise<void>;
 	/** Read on every flush start; absent means the boot config is the only source. */
 	control?: { read(): CommitterControl };
 };
 
+/** A transient failure is retried until the store answers or the committer stops; the record is never given up on. */
 export type FlushRetryPolicy = {
-	/** Attempts per flush before a transient failure is treated as permanent. */
-	maxAttempts: number;
+	/** Consecutive transient failures before the committer reports itself degraded, and again every so many after. */
+	degradedAfterAttempts: number;
 	initialBackoffMs: number;
 	maxBackoffMs: number;
 };
@@ -52,7 +57,13 @@ export type FlushCall = PartitionPosition & {
 /** The calls one transaction carries. */
 export type Flush = { calls: FlushCall[] };
 
-export type CommitterState = { queue: FlushCall[]; inFlight: number };
+export type CommitterState = {
+	queue: FlushCall[];
+	inFlight: number;
+	/** Set while a flush has been waiting on the store past the degraded threshold. */
+	degraded: boolean;
+	stop: AbortController;
+};
 
 export type CommitterScope = {
 	ctx: CommitterContext;
@@ -70,6 +81,8 @@ export type Committer = {
 	): Promise<FlushOutcome>;
 	/** Resolves once nothing is queued or in flight. */
 	drain(): Promise<void>;
+	/** Ends every wait on the store: in-flight retries and queued calls reject; nothing is skipped. */
+	stop(): void;
 };
 
 /** The postgres backend's StateStore; the writer's map answers reads, this only commits and bookmarks. */

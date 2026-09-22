@@ -6,9 +6,11 @@ import type {
 	PartitionCleanupResult,
 	PartitionEntry,
 	PartitionRetry,
+	PartitionsContext,
 	PartitionsState,
 } from "../types/partitionState.js";
 import { startPartitions } from "./startPartitions.js";
+import { retirePartition } from "./stopPartitions.js";
 
 export function retryPartition({
 	ctx,
@@ -21,7 +23,7 @@ export function retryPartition({
 	entry?: PartitionEntry;
 }): void {
 	if (state.partitionRetryTimers.has(partition)) return;
-	const cleanup = cleanUpPartitionForRetry({ entry });
+	const cleanup = cleanUpPartitionForRetry({ ctx, entry });
 	const timer = setTimeout(
 		retryPartitionWhenDue,
 		ctx.config.partitionBootstrapRetryIntervalMs,
@@ -53,16 +55,16 @@ export function clearPartitionRetries({
 	state.partitionRetryTimers.clear();
 }
 
+// A full retirement: the claim is released, so the route is not advertised while the partition waits.
 async function cleanUpPartitionForRetry({
+	ctx,
 	entry,
 }: {
+	ctx: PartitionsContext;
 	entry?: PartitionEntry;
 }): Promise<PartitionCleanupResult> {
 	try {
-		if (entry) {
-			await entry.runtime.stop();
-			await entry.runtime.waitForQuiescence();
-		}
+		if (entry) await retirePartition({ ctx, entry });
 		return { ok: true };
 	} catch (cause) {
 		return { ok: false, cause };

@@ -51,7 +51,7 @@ export function createPartitionReplay({
 	}
 
 	function markUnavailable({ cause }: { cause: unknown }): void {
-		markReplayUnavailable({ state, cause });
+		markReplayUnavailable({ ctx, state, cause });
 	}
 
 	return { readLogRange, startAndCatchUp, readProgress, stop, markUnavailable };

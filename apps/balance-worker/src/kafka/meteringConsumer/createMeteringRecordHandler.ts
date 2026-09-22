@@ -16,6 +16,7 @@ import {
 	KafkaPartitionInvariantError,
 	StateBehindKafkaLogStartError,
 } from "./meteringErrors.js";
+import type { PartitionReplay } from "./types/partitionReplay.js";
 
 export function createMeteringRecordHandler({
 	ctx,
@@ -25,14 +26,39 @@ export function createMeteringRecordHandler({
 		partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
 		recentCommandsByPartition: ReadonlyMap<number, RecentCommands>;
 		replayFloorByPartition: ReadonlyMap<number, bigint>;
+		/** The replay reading each partition; a log it cannot read parks that partition through it. */
+		replayByPartition: ReadonlyMap<
+			number,
+			Pick<PartitionReplay, "markUnavailable">
+		>;
 		logger?: Pick<AutumnLogger, "warn">;
 	};
 }): MeteringRecordHandler {
+	/** Parks the partition behind the unreadable record; without a replay to park, the failure is thrown as before. */
+	function parkPartition({
+		topic,
+		partition,
+		cause,
+	}: {
+		topic: string;
+		partition: number;
+		cause: Error;
+	}): void {
+		const replay = ctx.replayByPartition.get(partition);
+		if (!replay) throw cause;
+		ctx.logger?.warn("Partition log cannot be read; parking the partition", {
+			topic,
+			partition,
+			error: cause,
+		});
+		replay.markUnavailable({ cause });
+	}
+
 	function readResumeOffset({
 		topic,
 		partition,
 		firstOffset,
-	}: TopicResumePosition): bigint | null | Promise<bigint> {
+	}: TopicResumePosition): bigint | null | Promise<bigint | null> {
 		const storedNextOffset = ctx.stateStore.readNextOffset({
 			topic,
 			partition,
@@ -48,6 +74,7 @@ export function createMeteringRecordHandler({
 		return firstOffset < floor ? floor : null;
 	}
 
+	/** Null here means no seek: the parked partition's batch then finds its generation gone and applies nothing. */
 	async function readRetainedResumeOffset({
 		topic,
 		partition,
@@ -56,19 +83,24 @@ export function createMeteringRecordHandler({
 		topic: string;
 		partition: number;
 		storedNextOffset: bigint;
-	}): Promise<bigint> {
+	}): Promise<bigint | null> {
 		const { logStartOffset } = await readPartitionLogRange({
 			ctx: { partitionOffsets: ctx.partitionOffsets },
 			topic,
 			partition,
 		});
 		if (storedNextOffset < logStartOffset) {
-			throw new StateBehindKafkaLogStartError({
+			parkPartition({
 				topic,
 				partition,
-				storedNextOffset,
-				logStartOffset,
+				cause: new StateBehindKafkaLogStartError({
+					topic,
+					partition,
+					storedNextOffset,
+					logStartOffset,
+				}),
 			});
+			return null;
 		}
 		return storedNextOffset;
 	}
@@ -114,8 +146,9 @@ export function createMeteringRecordHandler({
 		offset,
 		cause,
 	}: MeteringRecordFailure): undefined {
-		const position = { topic, partition, offset: parseKafkaOffset({ offset }) };
-		if (isInsideReplayWindow({ position })) {
+		// An offset that will not parse is itself the failure; it is outside any window.
+		const position = readPosition({ topic, partition, offset });
+		if (position && isInsideReplayWindow({ position })) {
 			ctx.logger?.warn("Replay window record skipped", {
 				topic,
 				partition,
@@ -125,10 +158,36 @@ export function createMeteringRecordHandler({
 			return undefined;
 		}
 		if (!isPartitionInvariantCause(cause)) throw cause;
-		throw new KafkaPartitionInvariantError({ topic, partition, offset, cause });
+		parkPartition({
+			topic,
+			partition,
+			cause: new KafkaPartitionInvariantError({
+				topic,
+				partition,
+				offset,
+				cause,
+			}),
+		});
+		return undefined;
 	}
 
 	return { readResumeOffset, applyRecord, onRecordError };
+}
+
+function readPosition({
+	topic,
+	partition,
+	offset,
+}: {
+	topic: string;
+	partition: number;
+	offset: string;
+}): { topic: string; partition: number; offset: bigint } | null {
+	try {
+		return { topic, partition, offset: parseKafkaOffset({ offset }) };
+	} catch {
+		return null;
+	}
 }
 
 /** Applied now or already in the store: either way the log record is the receipt for its command id. */

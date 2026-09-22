@@ -289,8 +289,20 @@ test.concurrent(
 			outcome: "not_submitted",
 			message: "Customer must be initialized",
 		});
+		const stale = new BalanceWorkerClientError({
+			code: "WORKER_ERROR",
+			workerCode: "STALE_SUBJECT",
+			outcome: "not_submitted",
+			message: "Customer changed while the command was decided",
+		});
+		const refused = new BalanceWorkerClientError({
+			code: "WORKER_ERROR",
+			workerCode: "RECORD_REFUSED",
+			outcome: "not_submitted",
+			message: "Postgres refused this command's rows",
+		});
 		const failure = new Error("Unknown committed result");
-		for (const cause of [missing, failure]) {
+		for (const cause of [missing, stale, refused, failure]) {
 			const client: BalanceWorkerClient = {
 				initialize: async () => {
 					throw cause;
@@ -342,6 +354,16 @@ test.concurrent(
 					await expect(operation()).rejects.toMatchObject({
 						code: "balance_worker_not_initialized",
 						statusCode: 409,
+					});
+				else if (cause === stale)
+					await expect(operation()).rejects.toMatchObject({
+						code: "balance_worker_stale_subject",
+						statusCode: 409,
+					});
+				else if (cause === refused)
+					await expect(operation()).rejects.toMatchObject({
+						code: "balance_worker_record_refused",
+						statusCode: 500,
 					});
 				else await expect(operation()).rejects.toBe(cause);
 			}

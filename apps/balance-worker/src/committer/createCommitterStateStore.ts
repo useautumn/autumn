@@ -46,6 +46,6 @@ export const createCommitterStateStore = ({
 		readOwnState: () => null,
 		readReceipt: () => null,
 		applyDurableMutations: applyInLane,
-		close: () => {},
+		close: () => ctx.committer.stop(),
 	};
 };

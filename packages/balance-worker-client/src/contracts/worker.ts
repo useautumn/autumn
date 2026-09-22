@@ -10,6 +10,7 @@ export type WorkerErrorCode =
 	| "NOT_OWNER"
 	| "NOT_READY"
 	| "NOT_INITIALIZED"
+	| "STALE_SUBJECT"
 	| "CUSTOMER_NOT_FOUND"
 	| "ENTITY_NOT_FOUND"
 	| "CATALOG_NOT_FOUND"
@@ -18,6 +19,7 @@ export type WorkerErrorCode =
 	| "LOCK_ALREADY_EXISTS"
 	| "LOCK_NOT_FOUND"
 	| "UNSUPPORTED_COMMAND"
+	| "RECORD_REFUSED"
 	| "INTERNAL";
 export type WorkerErrorResponse = {
 	error: { code: WorkerErrorCode; message: string; reason?: string };
@@ -97,6 +99,7 @@ export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
 			return 400;
 		case "NOT_OWNER":
 		case "NOT_INITIALIZED":
+		case "STALE_SUBJECT":
 		case "COMMAND_CONFLICT":
 		case "DUPLICATE_COMMAND":
 		case "LOCK_ALREADY_EXISTS":
@@ -109,6 +112,7 @@ export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
 			return 422;
 		case "NOT_READY":
 			return 503;
+		case "RECORD_REFUSED":
 		case "INTERNAL":
 			return 500;
 	}

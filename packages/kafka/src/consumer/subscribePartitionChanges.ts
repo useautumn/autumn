@@ -66,7 +66,10 @@ export function subscribePartitionChanges({
 		listeners.onRevoked({ causeForPartition });
 	}
 	function notifyConsumerCrashed(event: ConsumerCrashEvent): void {
-		listeners.onCrashed({ cause: event.payload.error });
+		listeners.onCrashed({
+			cause: event.payload.error,
+			restart: event.payload.restart,
+		});
 	}
 	const removeListeners = [
 		consumer.on(consumer.events.GROUP_JOIN, notifyPartitionsAssigned),

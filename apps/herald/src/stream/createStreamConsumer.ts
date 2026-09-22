@@ -5,6 +5,7 @@ import {
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { EachBatchPayload, Kafka } from "kafkajs";
+import { landRecords } from "./landRecords/landRecords.js";
 import type { StreamConsumer, StreamRecord } from "./types/streamConsumer.js";
 
 // Small on purpose: herald is a follower, and one slow partition must not hold the others.
@@ -35,6 +36,7 @@ export function createStreamConsumer({
 	const consumer = ctx.kafka.consumer(
 		createConsumerGroupConfig({ groupId, timings: CONSUMER_TIMINGS }),
 	);
+	const stopping = new AbortController();
 
 	/** A record that cannot be read is skipped, loudly: one bad record must never hold its partition. */
 	function parseBatch({
@@ -73,13 +75,17 @@ export function createStreamConsumer({
 		return records;
 	}
 
-	// Offsets resolve and commit only after this returns, so a throw replays the whole batch.
+	// Offsets resolve and commit only after this returns; landRecords never throws, so a bad record cannot crash the consumer.
 	async function handleBatch({
 		batch,
 		heartbeat,
 	}: EachBatchPayload): Promise<void> {
 		const records = parseBatch({ batch });
-		if (records.length > 0) await streamConsumer.handle({ records });
+		await landRecords({
+			ctx: { logger: ctx.logger, signal: stopping.signal },
+			job: streamConsumer,
+			records,
+		});
 		await heartbeat();
 	}
 
@@ -95,6 +101,7 @@ export function createStreamConsumer({
 	}
 
 	async function stop(): Promise<void> {
+		stopping.abort(new Error("Herald stopping"));
 		await consumer.disconnect();
 	}
 

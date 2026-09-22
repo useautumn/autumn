@@ -48,6 +48,30 @@ export function rethrowBalanceWorkerError({
 	}
 	if (
 		cause instanceof BalanceWorkerClientError &&
+		cause.workerCode === "STALE_SUBJECT"
+	) {
+		// The worker rolled the decision back and dropped its copy of the customer; a retry decides on fresh rows.
+		throw new RecaseError({
+			code: "balance_worker_stale_subject",
+			statusCode: 409,
+			message:
+				"Customer changed while the command was decided; nothing was applied, retry",
+		});
+	}
+	if (
+		cause instanceof BalanceWorkerClientError &&
+		cause.workerCode === "RECORD_REFUSED"
+	) {
+		// The worker skipped the command for good: a defect to surface, not an outage to retry through.
+		throw new RecaseError({
+			code: "balance_worker_record_refused",
+			statusCode: 500,
+			message:
+				"Balance worker could not store this command; nothing was applied",
+		});
+	}
+	if (
+		cause instanceof BalanceWorkerClientError &&
 		cause.workerCode === "CUSTOMER_NOT_FOUND"
 	) {
 		// Same code as the legacy path: callers branch on it, and which engine

@@ -91,7 +91,7 @@ async function drainPartition({
 	}
 }
 
-function retirePartition({
+export function retirePartition({
 	ctx,
 	entry,
 }: {

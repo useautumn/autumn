@@ -6,6 +6,7 @@ import {
 	type KafkaConsumerClient,
 	type ProgressTracker,
 	serializeMeteringRecord,
+	type TopicRecordResult,
 } from "@autumn/kafka";
 import type {
 	Admin,
@@ -23,6 +24,7 @@ import {
 	KafkaPartitionInvariantError,
 	StateBehindKafkaLogStartError,
 } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
+import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import {
 	applyDurableMutation,
 	createInitializeMutation,
@@ -103,9 +105,34 @@ function createKafkaMeteringConsumer(params: {
 		ctx: {
 			...ctx,
 			positionTracker: ctx.positionTracker ?? createProgressTracker(),
+			replayWindow: { windowMs: 600_000, lookupTimeoutMs: 50, now: () => 0 },
 		},
 		config: { topic, partitionsConsumedConcurrently },
 	});
+}
+
+/** A replay following the partition from its bookmark, as the runtime holds it during catch-up. */
+async function followPartition({
+	consumer,
+	targetNextOffset,
+}: {
+	consumer: ReturnType<typeof createKafkaMeteringConsumer>;
+	targetNextOffset: bigint;
+}) {
+	const unavailable: unknown[] = [];
+	const replay = consumer.createReplay({
+		partition,
+		recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
+	});
+	await replay.startAndCatchUp({
+		topic,
+		partition,
+		targetNextOffset,
+		onUnavailable: ({ cause }) => {
+			unavailable.push(cause);
+		},
+	});
+	return { replay, unavailable };
 }
 
 const createFakeKafkaConsumer = ({
@@ -186,7 +213,9 @@ const createFakeKafkaConsumer = ({
 			eachMessage = config.eachMessage ?? null;
 		},
 		commitOffsets,
-		pause: () => undefined,
+		pause: () => {
+			lifecycle.push("pause");
+		},
 		resume: () => undefined,
 		seek: (position) => {
 			lifecycle.push("seek");
@@ -716,6 +745,66 @@ describe("Kafka metering consumer", () => {
 		}
 	});
 
+	test("a replayed record lands in the partition's recent commands, applied or already applied", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const initialState = createState();
+			restoreSubjectStates({
+				store: fixture.store,
+				topic,
+				partition,
+				states: [initialState],
+			});
+			const consumerPort = createFakeKafkaConsumer();
+			const consumer = createKafkaMeteringConsumer({
+				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+			});
+			await consumer.start();
+			const recentCommands = createRecentCommands({
+				windowMs: 600_000,
+				now: () => 0,
+			});
+			consumer.createReplay({ partition, recentCommands });
+
+			const first = createMutation({ state: initialState });
+			await consumerPort.deliver({
+				offset: "0",
+				...serializeMeteringRecord({ record: first }),
+			});
+
+			const currentState = fixture.store.readState({ identity });
+			if (!currentState) throw new Error("Expected current state");
+			const second = createMutation({
+				state: currentState,
+				commandId: "cmd_2",
+				requestId: "req_2",
+			});
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 1n,
+				mutation: second,
+			});
+			await consumerPort.deliver({
+				offset: "1",
+				...serializeMeteringRecord({ record: second }),
+			});
+
+			expect(recentCommands.read({ identity, commandId: "cmd_1" })).toEqual({
+				fingerprint: first.receipt.fingerprint,
+			});
+			expect(recentCommands.read({ identity, commandId: "cmd_2" })).toEqual({
+				fingerprint: second.receipt.fingerprint,
+			});
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
 	test("commits across valid gaps in delivered Kafka offsets", async () => {
 		const fixture = createStoreFixture();
 		try {
@@ -758,7 +847,7 @@ describe("Kafka metering consumer", () => {
 		}
 	});
 
-	test("refuses to fold when SQLite progress is behind the Kafka log start", async () => {
+	test("parks the partition when SQLite progress is behind the Kafka log start", async () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
@@ -796,14 +885,19 @@ describe("Kafka metering consumer", () => {
 			});
 
 			await consumer.start();
-			const delivery = consumerPort.deliver({ offset: "5000", ...serialized });
-			await expect(delivery).rejects.toBeInstanceOf(
-				StateBehindKafkaLogStartError,
-			);
-			await expect(delivery).rejects.toMatchObject({ retriable: false });
+			const { unavailable } = await followPartition({
+				consumer,
+				targetNextOffset: 1n,
+			});
+			await consumerPort.deliver({ offset: "5000", ...serialized });
 
+			// The batch settles without a throw: the partition is parked, paused and left where it was.
+			expect(unavailable).toHaveLength(1);
+			expect(unavailable[0]).toBeInstanceOf(StateBehindKafkaLogStartError);
+			expect(unavailable[0]).toMatchObject({ retriable: false });
+			expect(consumerPort.lifecycle).toContain("pause");
 			expect(consumerPort.commits).toEqual([]);
-			expect(consumerPort.seeks).toEqual([]);
+			expect(consumerPort.seeks).toEqual([{ topic, partition, offset: "1" }]);
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
 			expect(fixture.store.readState({ identity })?.revision).toBe(1);
 		} finally {
@@ -953,7 +1047,7 @@ describe("Kafka metering consumer", () => {
 		}
 	});
 
-	test("does not commit or advance a malformed record", async () => {
+	test("a malformed record parks its partition: nothing committed or advanced, no throw", async () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
@@ -972,17 +1066,23 @@ describe("Kafka metering consumer", () => {
 			});
 
 			await consumer.start();
-			await expect(
-				consumerPort.deliver({
-					offset: "0",
-					key: Buffer.from("invalid", "utf8"),
-					value: Buffer.from("not-json", "utf8"),
-				}),
-			).rejects.toMatchObject({
-				name: "KafkaPartitionInvariantError",
-				retriable: false,
+			const { unavailable } = await followPartition({
+				consumer,
+				targetNextOffset: 0n,
+			});
+			await consumerPort.deliver({
+				offset: "0",
+				key: Buffer.from("invalid", "utf8"),
+				value: Buffer.from("not-json", "utf8"),
 			});
 
+			expect(unavailable).toHaveLength(1);
+			expect(unavailable[0]).toMatchObject({
+				name: "KafkaPartitionInvariantError",
+				retriable: false,
+				offset: "0",
+			});
+			expect(consumerPort.lifecycle).toContain("pause");
 			expect(consumerPort.commits).toEqual([]);
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(0n);
 			expect(fixture.store.readState({ identity })?.revision).toBe(0);
@@ -991,7 +1091,7 @@ describe("Kafka metering consumer", () => {
 		}
 	});
 
-	test("marks an invalid record offset as non-retryable", async () => {
+	test("an invalid record offset parks its partition", async () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
@@ -1013,9 +1113,17 @@ describe("Kafka metering consumer", () => {
 			});
 
 			await consumer.start();
-			await expect(
-				consumerPort.deliver({ offset: "-1", ...serialized }),
-			).rejects.toMatchObject({ retriable: false });
+			const { unavailable } = await followPartition({
+				consumer,
+				targetNextOffset: 0n,
+			});
+			await consumerPort.deliver({ offset: "-1", ...serialized });
+
+			expect(unavailable).toHaveLength(1);
+			expect(unavailable[0]).toMatchObject({
+				name: "KafkaPartitionInvariantError",
+				retriable: false,
+			});
 			expect(consumerPort.commits).toEqual([]);
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(0n);
 		} finally {
@@ -1023,7 +1131,7 @@ describe("Kafka metering consumer", () => {
 		}
 	});
 
-	test("marks an out-of-order outcome as a non-retryable invariant failure", async () => {
+	test("an out-of-order outcome parks its partition as an invariant failure", async () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
@@ -1055,12 +1163,17 @@ describe("Kafka metering consumer", () => {
 			});
 
 			await consumer.start();
-			await expect(
-				consumerPort.deliver({
-					offset: "1",
-					...serializeMeteringRecord({ record: staleOutcome }),
-				}),
-			).rejects.toMatchObject({
+			const { unavailable } = await followPartition({
+				consumer,
+				targetNextOffset: 1n,
+			});
+			await consumerPort.deliver({
+				offset: "1",
+				...serializeMeteringRecord({ record: staleOutcome }),
+			});
+
+			expect(unavailable).toHaveLength(1);
+			expect(unavailable[0]).toMatchObject({
 				name: "KafkaPartitionInvariantError",
 				retriable: false,
 			});
@@ -1163,7 +1276,10 @@ async function replayStopSettlesBatchesBeforeReplacement(): Promise<void> {
 		positionTracker: tracker,
 		topic,
 	});
-	const replay = consumer.createReplay({ partition });
+	const replay = consumer.createReplay({
+		partition,
+		recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
+	});
 	try {
 		const state = createState();
 		restoreSubjectStates({
@@ -1195,7 +1311,10 @@ async function replayStopSettlesBatchesBeforeReplacement(): Promise<void> {
 		expect(tracker.read({ topic, partition })).toBe(0n);
 		expect(fixture.store.readState({ identity })?.revision).toBe(0);
 
-		const replacement = consumer.createReplay({ partition });
+		const replacement = consumer.createReplay({
+			partition,
+			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
+		});
 		await replacement.startAndCatchUp({
 			topic,
 			partition,
@@ -1219,6 +1338,161 @@ test(
 	replayStopSettlesBatchesBeforeReplacement,
 );
 
+describe("replay window", () => {
+	function createWindowedHandler({
+		floor,
+		withReplay = true,
+	}: {
+		floor: bigint | null;
+		withReplay?: boolean;
+	}) {
+		const fixture = createStoreFixture({ nextOffset: 3n });
+		const recentCommands = createRecentCommands({
+			windowMs: 600_000,
+			now: () => 0,
+		});
+		const warnings: unknown[] = [];
+		const parked: unknown[] = [];
+		const replay = {
+			markUnavailable: ({ cause }: { cause: unknown }) => parked.push(cause),
+		};
+		const handler = createMeteringRecordHandler({
+			ctx: {
+				stateStore: fixture.store,
+				partitionOffsets: {
+					fetchTopicOffsets: async () => {
+						throw new Error("No broker read expected");
+					},
+				},
+				recentCommandsByPartition: new Map([[partition, recentCommands]]),
+				replayFloorByPartition: new Map(
+					floor === null ? [] : [[partition, floor]],
+				),
+				replayByPartition: new Map(withReplay ? [[partition, replay]] : []),
+				logger: { warn: (...args: unknown[]) => warnings.push(args) },
+			},
+		});
+		return { fixture, recentCommands, handler, warnings, parked };
+	}
+
+	test("inside the window a below-bookmark record is read, remembered and not skipped past", async () => {
+		const { fixture, recentCommands, handler } = createWindowedHandler({
+			floor: 1n,
+		});
+		try {
+			expect(
+				handler.readResumeOffset({ topic, partition, firstOffset: 2n }),
+			).toBeNull();
+			expect(
+				handler.readResumeOffset({ topic, partition, firstOffset: 0n }),
+			).toBe(1n);
+
+			const state = createState();
+			restoreSubjectStates({
+				store: fixture.store,
+				topic,
+				partition,
+				states: [state],
+			});
+			const record = createMutation({ state });
+			const result = await handler.applyRecord({
+				position: { topic, partition, offset: 2n },
+				record,
+			});
+			expect(result).toBeUndefined();
+			expect(recentCommands.read({ identity, commandId: record.id })).toEqual({
+				fingerprint: record.receipt.fingerprint,
+			});
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("without a window a below-bookmark record still skips to the bookmark, as before", async () => {
+		const { fixture, handler } = createWindowedHandler({ floor: null });
+		try {
+			expect(
+				handler.readResumeOffset({ topic, partition, firstOffset: 2n }),
+			).toBe(3n);
+			const state = createState();
+			restoreSubjectStates({
+				store: fixture.store,
+				topic,
+				partition,
+				states: [state],
+			});
+			const result = await handler.applyRecord({
+				position: { topic, partition, offset: 2n },
+				record: createMutation({ state }),
+			});
+			expect(result).toEqual({ nextOffset: 3n });
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("a record it cannot read inside the window is skipped with a warning; outside it the partition is parked", () => {
+		const { fixture, handler, warnings, parked } = createWindowedHandler({
+			floor: 1n,
+		});
+		try {
+			if (!handler.onRecordError) throw new Error("Expected an error boundary");
+			expect(
+				handler.onRecordError({
+					topic,
+					partition,
+					offset: "2",
+					cause: new InvalidRecordError(),
+				}),
+			).toBeUndefined();
+			expect(warnings).toHaveLength(1);
+			expect(parked).toEqual([]);
+
+			expect(
+				handler.onRecordError({
+					topic,
+					partition,
+					offset: "5",
+					cause: new InvalidRecordError(),
+				}),
+			).toBeUndefined();
+			expect(parked).toHaveLength(1);
+			expect(parked[0]).toBeInstanceOf(KafkaPartitionInvariantError);
+			expect((parked[0] as KafkaPartitionInvariantError).offset).toBe("5");
+			expect(warnings).toHaveLength(2);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("with no replay to park, an unreadable record still fails the batch", () => {
+		const { fixture, handler } = createWindowedHandler({
+			floor: null,
+			withReplay: false,
+		});
+		try {
+			expect(() =>
+				handler.onRecordError?.({
+					topic,
+					partition,
+					offset: "5",
+					cause: new InvalidRecordError(),
+				}),
+			).toThrow(KafkaPartitionInvariantError);
+			expect(() =>
+				handler.onRecordError?.({
+					topic,
+					partition,
+					offset: "5",
+					cause: new Error("not an invariant"),
+				}),
+			).toThrow("not an invariant");
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+});
+
 describe("recordApplication", function recordApplicationTests() {
 	function preservesSynchronousReadsAndApplications(): void {
 		const fixture = createStoreFixture({ nextOffset: 3n });
@@ -1229,6 +1503,9 @@ describe("recordApplication", function recordApplicationTests() {
 			ctx: {
 				stateStore: fixture.store,
 				partitionOffsets: { fetchTopicOffsets },
+				recentCommandsByPartition: new Map(),
+				replayFloorByPartition: new Map(),
+				replayByPartition: new Map(),
 			},
 		});
 		try {
@@ -1289,6 +1566,9 @@ describe("recordApplication", function recordApplicationTests() {
 			ctx: {
 				stateStore: fixture.store,
 				partitionOffsets: { fetchTopicOffsets },
+				recentCommandsByPartition: new Map(),
+				replayFloorByPartition: new Map(),
+				replayByPartition: new Map(),
 			},
 		});
 		try {
@@ -1332,11 +1612,14 @@ describe("recordApplication", function recordApplicationTests() {
 			ctx: {
 				stateStore: fixture.store,
 				partitionOffsets: { fetchTopicOffsets },
+				recentCommandsByPartition: new Map(),
+				replayFloorByPartition: new Map(),
+				replayByPartition: new Map(),
 			},
 		});
 		const invariant = new InvalidRecordError();
 		const ordinary = new Error("store disconnected");
-		function throwInvariant(): never {
+		function throwInvariant(): TopicRecordResult {
 			if (!handler.onRecordError) throw new Error("Expected an error boundary");
 			return handler.onRecordError({
 				topic,
@@ -1464,6 +1747,7 @@ describe("consumerLifecycle", function consumerLifecycleTests() {
 				partitionOffsets: { fetchTopicOffsets },
 				stateStore: fixture.store,
 				positionTracker: createProgressTracker(),
+				replayWindow: { windowMs: 600_000, lookupTimeoutMs: 50, now: () => 0 },
 			},
 			config: { topic },
 		});

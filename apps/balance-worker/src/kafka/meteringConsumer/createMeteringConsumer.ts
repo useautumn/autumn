@@ -20,11 +20,13 @@ export function createMeteringConsumer({
 }): MeteringConsumer {
 	const recentCommandsByPartition = new Map<number, RecentCommands>();
 	const replayFloorByPartition = new Map<number, bigint>();
+	const replayByPartition = new Map<number, PartitionReplay>();
 	const handler = createMeteringRecordHandler({
 		ctx: {
 			...ctx,
 			recentCommandsByPartition,
 			replayFloorByPartition,
+			replayByPartition,
 		},
 	});
 	const consumer = createKafkaMeteringConsumer({
@@ -38,7 +40,7 @@ export function createMeteringConsumer({
 		recentCommands,
 	}: Parameters<MeteringConsumer["createReplay"]>[0]): PartitionReplay {
 		recentCommandsByPartition.set(partition, recentCommands);
-		return createPartitionReplay({
+		const replay = createPartitionReplay({
 			ctx: {
 				stateStore: ctx.stateStore,
 				partitionOffsets: ctx.partitionOffsets,
@@ -50,6 +52,8 @@ export function createMeteringConsumer({
 			},
 			position: { topic: config.topic, partition },
 		});
+		replayByPartition.set(partition, replay);
+		return replay;
 	}
 
 	return { start, stop, createReplay, withdrawPartition, resumePartition };

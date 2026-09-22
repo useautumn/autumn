@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { type SubjectRowChange, subjectRowIdOf } from "@autumn/postgres";
+import {
+	FlushBookmarkConflictError,
+	type SubjectRowChange,
+	subjectRowIdOf,
+} from "@autumn/postgres";
+import { FlushRecordRefusedError } from "../../../src/committer/committerErrors.js";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
+import { SubjectStaleError } from "../../../src/processor/subject/subjectErrors.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
 import {
 	createCustomerEntitlement,
@@ -14,13 +20,16 @@ import {
 const topic = "autumn-metering";
 const partition = 7;
 
-/** A Postgres stand-in that remembers its bookmark and every update, and can refuse a guard. */
+/** A Postgres stand-in that remembers its bookmark and every update, and can refuse a guard or a bookmark. */
 function createFakeCommitterDb({
 	storedNextOffset = null,
 	staleIds = new Set<string>(),
+	conflictIds = new Set<string>(),
 }: {
 	storedNextOffset?: bigint | null;
 	staleIds?: Set<string>;
+	/** Rows whose flush finds the bookmark moved by another worker. */
+	conflictIds?: Set<string>;
 } = {}) {
 	const progress = new Map<string, bigint>();
 	if (storedNextOffset !== null)
@@ -43,9 +52,15 @@ function createFakeCommitterDb({
 					progress.get(`${bookmark.topic}[${bookmark.partition}]`) ===
 					bookmark.expectedOffset,
 			);
-			if (moved.length !== request.bookmarks.length) {
+			const conflicted = request.changes.some((change) =>
+				conflictIds.has(subjectRowIdOf(change)),
+			);
+			if (conflicted || moved.length !== request.bookmarks.length) {
 				transactions.push("rolled_back");
-				throw new Error("bookmark conflict");
+				throw new FlushBookmarkConflictError({
+					expected: request.bookmarks.length,
+					advanced: conflicted ? 0 : moved.length,
+				});
 			}
 			if (applied.includes(false)) {
 				transactions.push("rolled_back");
@@ -150,7 +165,7 @@ describe("committer state store", () => {
 		).rejects.toThrow("offset 48, received 46");
 	});
 
-	test("a stale row rolls the whole batch back and leaves the bookmark where it was", async () => {
+	test("a stale row rolls its batch back, then is skipped: the bookmark moves past it and its caller is told", async () => {
 		const fake = createFakeCommitterDb({
 			storedNextOffset: 43n,
 			staleIds: new Set(["messages_monthly"]),
@@ -167,15 +182,21 @@ describe("committer state store", () => {
 		});
 		expect(results).toHaveLength(1);
 		const [result] = results;
-		expect(result?.kind === "failed" && (result.cause as Error).message).toBe(
-			"Log record could not be committed to Postgres: cmd_1 (Subject rows moved underneath the worker: messages_monthly (cmd_1))",
+		expect(result?.kind).toBe("rejected");
+		expect(result?.kind === "rejected" && result.cause).toBeInstanceOf(
+			SubjectStaleError,
 		);
-		expect(fake.transactions).toEqual(["rolled_back"]);
-		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(43n);
-		expect(store.readNextOffset({ topic, partition })).toBe(43n);
+		expect(result?.kind === "rejected" && result.cause.message).toBe(
+			"Customer cus_1 changed underneath the decision in org_1/sandbox",
+		);
+		// The decision rolls back; the skip lands only the bookmark, so a replay never meets this record again.
+		expect(fake.transactions).toEqual(["rolled_back", "committed"]);
+		expect(fake.updates).toEqual([]);
+		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(44n);
+		expect(store.readNextOffset({ topic, partition })).toBe(44n);
 	});
 
-	test("initialize creates the bookmark once; a baseline record is refused until it is a map fill", async () => {
+	test("initialize creates the bookmark once; a baseline record is refused and skipped until it is a map fill", async () => {
 		const fake = createFakeCommitterDb();
 		const store = createStore(fake);
 		await store.loadProgress({ topic, partition });
@@ -196,16 +217,20 @@ describe("committer state store", () => {
 				},
 			],
 		});
-		expect(refused?.kind === "failed" && (refused.cause as Error).message).toBe(
-			"Log record could not be committed to Postgres: init_1 (Row change not supported by the postgres backend: insert customer)",
+		expect(refused?.kind).toBe("rejected");
+		expect(refused?.kind === "rejected" && refused.cause).toBeInstanceOf(
+			FlushRecordRefusedError,
 		);
-		expect(store.readNextOffset({ topic, partition })).toBe(100n);
+		expect(refused?.kind === "rejected" && refused.cause.message).toBe(
+			"Log record refused by Postgres and skipped: init_1 (Row change not supported by the postgres backend: insert customer)",
+		);
+		expect(store.readNextOffset({ topic, partition })).toBe(101n);
 	});
 
-	test("a record that will not land: earlier ones apply, it fails, later ones are blocked, the bookmark stops at it", async () => {
+	test("a record whose bookmark was moved by another worker: earlier ones apply, it fails, later ones are blocked, the bookmark stops at it", async () => {
 		const fake = createFakeCommitterDb({
 			storedNextOffset: 10n,
-			staleIds: new Set(["poison"]),
+			conflictIds: new Set(["poison"]),
 		});
 		const store = createStore(fake);
 		await store.loadProgress({ topic, partition });

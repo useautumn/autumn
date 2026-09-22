@@ -1,4 +1,5 @@
 import type { OwnedPartitionHealth } from "../../health/ownedPartitionHealth.js";
+import { isPartitionLogUnreadableCause } from "../../kafka/meteringConsumer/meteringErrors.js";
 import { isPartitionBootstrapBlockedCause } from "../../runtime/bootstrap/partitionBootstrapErrors.js";
 import { isCurrentAllocation } from "../allocation/partitionAllocation.js";
 import { retryPartition } from "../lifecycle/retryPartition.js";
@@ -83,11 +84,11 @@ export function respondToPartitionFailure({
 	} catch (callbackCause) {
 		reportPartitionError({ ctx, cause: callbackCause });
 	}
-	if (
-		isPartitionBootstrapBlockedCause({ cause }) &&
-		!entry?.claimed &&
-		!entry?.publicationFailed
-	) {
+	// A partition that cannot be brought up, or whose log cannot be read, waits alone: retired, claim released, retried.
+	const canBeParked =
+		isPartitionBootstrapBlockedCause({ cause }) ||
+		isPartitionLogUnreadableCause({ cause });
+	if (canBeParked && !entry?.publicationFailed) {
 		retryPartition({ ctx, state, partition, entry, allocationGeneration });
 		return "partition_parked";
 	}

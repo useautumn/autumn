@@ -94,6 +94,31 @@ export function isPartitionInvariantCause(cause: unknown): cause is Error {
 	);
 }
 
+/** The partition's log cannot be read past this point: the partition parks, the rest of the group carries on. */
+export function isPartitionLogUnreadableCause({
+	cause,
+}: {
+	cause: unknown;
+}): boolean {
+	const seen = new Set<unknown>();
+	let current = cause;
+	while (
+		typeof current === "object" &&
+		current !== null &&
+		!seen.has(current)
+	) {
+		if (
+			current instanceof KafkaPartitionInvariantError ||
+			current instanceof StateBehindKafkaLogStartError
+		)
+			return true;
+		seen.add(current);
+		if (!("cause" in current)) return false;
+		current = current.cause;
+	}
+	return false;
+}
+
 export class StateBehindKafkaLogStartError extends Error {
 	readonly retriable = false;
 	readonly storedNextOffset: bigint;

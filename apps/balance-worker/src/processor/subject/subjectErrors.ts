@@ -30,6 +30,26 @@ export class SubjectNotFoundError extends Error {
 	}
 }
 
+/** Postgres no longer holds the rows the decision was made on; the subject is evicted and the caller retries. */
+export class SubjectStaleError extends Error {
+	readonly identity: MeteringIdentity;
+
+	constructor({
+		identity,
+		cause,
+	}: {
+		identity: MeteringIdentity;
+		cause: unknown;
+	}) {
+		super(
+			`Customer ${identity.customerId} changed underneath the decision in ${identity.orgId}/${identity.env}`,
+			{ cause },
+		);
+		this.name = "SubjectStaleError";
+		this.identity = identity;
+	}
+}
+
 /** Every read of the subject was overtaken by an evict, so nothing was kept; the caller retries. */
 export class SubjectLoadOvertakenError extends Error {
 	readonly identity: MeteringIdentity;

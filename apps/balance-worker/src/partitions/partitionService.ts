@@ -85,19 +85,24 @@ export function requestPartitionServiceStop({
 	state,
 	allocationGeneration,
 }: AllocationScope): void {
-	async function stopCurrentAllocation(): Promise<void> {
+	function stopCurrentAllocation(): void {
 		if (!isCurrentAllocation({ state, allocationGeneration })) return;
-		await stopPartitionServiceSafely({ ctx, state });
-		try {
-			ctx.onServiceStopped?.();
-		} catch (cause) {
-			reportPartitionError({ ctx, cause });
-		}
+		void stopServiceThenNotify({ ctx, state });
 	}
-	function scheduleStop(): void {
-		void stopCurrentAllocation();
+	queueMicrotask(stopCurrentAllocation);
+}
+
+/** The worker owns nothing after this and never will again: the entrypoint is told so the process can end. */
+export async function stopServiceThenNotify({
+	ctx,
+	state,
+}: PartitionsScope): Promise<void> {
+	await stopPartitionServiceSafely({ ctx, state });
+	try {
+		ctx.onServiceStopped?.();
+	} catch (cause) {
+		reportPartitionError({ ctx, cause });
 	}
-	queueMicrotask(scheduleStop);
 }
 
 export async function stopPartitionServiceSafely({

@@ -13,6 +13,14 @@ export class StaleSubjectRowsError extends Error {
 	}
 }
 
+/** The committer stopped while this flush waited on the store: the log has the records, the next worker lands them. */
+export class CommitterStoppedError extends Error {
+	constructor({ cause }: { cause: unknown }) {
+		super("Committer stopped while a flush was waiting on Postgres", { cause });
+		this.name = "CommitterStoppedError";
+	}
+}
+
 /** Behind a record that would not land: the log has it, Postgres will once recovery clears the way. */
 export class FlushRecordBlockedError extends Error {
 	constructor({
@@ -39,7 +47,7 @@ export class FlushRecordFailedError extends Error {
 	}
 }
 
-/** Postgres will never take this record (a constraint or a value it cannot store): it is skipped, and only its caller fails. */
+/** Postgres refused this record for a reason no replay would change: it is skipped, and only its caller fails. */
 export class FlushRecordRefusedError extends Error {
 	constructor({ mutationId, cause }: { mutationId: string; cause: unknown }) {
 		const reason = cause instanceof Error ? cause.message : String(cause);
