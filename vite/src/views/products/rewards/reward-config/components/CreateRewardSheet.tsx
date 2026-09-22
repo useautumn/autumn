@@ -1,4 +1,4 @@
-import { FeatureType } from "@autumn/shared";
+import { CouponDurationType, FeatureType } from "@autumn/shared";
 import {
 	Button,
 	Sheet,
@@ -19,6 +19,7 @@ import { useRewardStore } from "@/hooks/stores/useRewardStore";
 import { RewardService } from "@/services/products/RewardService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { missingDiscountField } from "../../utils/missingDiscountField";
 import { mapFrontendToApiReward } from "../../utils/rewardMappers";
 import { DiscountRewardConfig } from "./DiscountRewardConfig";
 import { FeatureGrantRewardConfig } from "./FeatureGrantRewardConfig";
@@ -64,6 +65,13 @@ export function CreateRewardSheet({
 		if (reward.rewardCategory === "discount") {
 			if (!reward.discountType) return false;
 			const config = reward.discount_config;
+			if (!config?.discount_value) return false;
+			if (
+				config.duration_type === CouponDurationType.Months &&
+				!config.duration_value
+			) {
+				return false;
+			}
 			if (
 				!config?.apply_to_all &&
 				(!config?.price_ids || config.price_ids.length === 0)
@@ -106,6 +114,11 @@ export function CreateRewardSheet({
 	};
 
 	const handleCreate = async () => {
+		const missing = missingDiscountField({ reward });
+		if (missing) {
+			toast.error(missing);
+			return;
+		}
 		if (!isFormValid()) return;
 
 		setLoading(true);

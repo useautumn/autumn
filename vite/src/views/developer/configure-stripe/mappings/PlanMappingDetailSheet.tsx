@@ -7,6 +7,7 @@ import {
 	SheetContent,
 	ShortcutButton,
 } from "@autumn/ui";
+import { GitBranchIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
@@ -94,13 +95,14 @@ const VariantList = ({
 			))}
 			{sharedVariants.length > 1 && (
 				<Button
-					className="h-auto self-start px-0 text-xs"
+					className="mt-1 w-full justify-start gap-2 text-xs"
 					disabled={splitVariant.isPending}
 					onClick={() =>
 						splitVariant.mutate(sharedVariants.map((variant) => variant.id))
 					}
 					variant="muted"
 				>
+					<GitBranchIcon size={13} />
 					Split all variants
 				</Button>
 			)}

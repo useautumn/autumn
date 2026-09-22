@@ -9,14 +9,14 @@ export const useSplitVariantStripeProduct = () => {
 	const queryClient = useQueryClient();
 	const buildKey = useQueryKeyFactory();
 
+	// refetchQueries rather than invalidateQueries: the sheet reads the split
+	// variant's new product id, so the rows must not paint before it lands.
 	const refreshMappings = () =>
 		Promise.all([
-			queryClient.invalidateQueries({
-				queryKey: buildKey(["catalog-mappings"]),
-			}),
-			queryClient.invalidateQueries({ queryKey: ["products"] }),
-			queryClient.invalidateQueries({ queryKey: ["product"] }),
-			queryClient.invalidateQueries({ queryKey: ["stripe-products-resolve"] }),
+			queryClient.refetchQueries({ queryKey: buildKey(["catalog-mappings"]) }),
+			queryClient.refetchQueries({ queryKey: ["products"] }),
+			queryClient.refetchQueries({ queryKey: ["product"] }),
+			queryClient.refetchQueries({ queryKey: ["stripe-products-resolve"] }),
 		]);
 
 	return useMutation({
