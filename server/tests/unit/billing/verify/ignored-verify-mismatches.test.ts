@@ -19,19 +19,48 @@ import {
 
 const CONFIGURED_ORG_ID = "J5DBNq2fVFPh3Od7QhKltZuRwihXHOCy";
 
+const phase = ({
+	start,
+	prices,
+	quantity = 1,
+	extra = {},
+}: {
+	start: number;
+	prices: string[];
+	quantity?: number;
+	extra?: Record<string, unknown>;
+}) => ({
+	start_date: start,
+	items: prices.map((price) => ({ price, quantity })),
+	...extra,
+});
+
 const scheduleWith = ({
 	currentPrices,
 	futurePrices,
+	futureQuantity = 1,
+	futureExtra = {},
+	currentExtra = {},
 }: {
 	currentPrices: string[];
 	futurePrices?: string[];
+	futureQuantity?: number;
+	futureExtra?: Record<string, unknown>;
+	currentExtra?: Record<string, unknown>;
 }) =>
 	({
 		current_phase: { start_date: 100 },
 		phases: [
-			{ start_date: 100, items: currentPrices.map((price) => ({ price })) },
+			phase({ start: 100, prices: currentPrices, extra: currentExtra }),
 			...(futurePrices
-				? [{ start_date: 200, items: futurePrices.map((price) => ({ price })) }]
+				? [
+						phase({
+							start: 200,
+							prices: futurePrices,
+							quantity: futureQuantity,
+							extra: futureExtra,
+						}),
+					]
 				: []),
 		],
 	}) as unknown as Stripe.SubscriptionSchedule;
@@ -76,6 +105,55 @@ describe("isQuantityOnlySchedule", () => {
 				schedule: scheduleWith({
 					currentPrices: ["price_a", "price_b"],
 					futurePrices: ["price_a"],
+				}),
+			}),
+		).toBe(false);
+	});
+
+	it("is quantity-only when only the item quantity changes", () => {
+		expect(
+			isQuantityOnlySchedule({
+				schedule: scheduleWith({
+					currentPrices: ["price_a"],
+					futurePrices: ["price_a"],
+					futureQuantity: 40,
+				}),
+			}),
+		).toBe(true);
+	});
+
+	it("is not quantity-only when a future phase adds a discount", () => {
+		expect(
+			isQuantityOnlySchedule({
+				schedule: scheduleWith({
+					currentPrices: ["price_a"],
+					futurePrices: ["price_a"],
+					futureExtra: { discounts: [{ coupon: "SAVE20" }] },
+				}),
+			}),
+		).toBe(false);
+	});
+
+	it("is not quantity-only when a future phase changes tax settings", () => {
+		expect(
+			isQuantityOnlySchedule({
+				schedule: scheduleWith({
+					currentPrices: ["price_a"],
+					futurePrices: ["price_a"],
+					currentExtra: { automatic_tax: { enabled: false } },
+					futureExtra: { automatic_tax: { enabled: true } },
+				}),
+			}),
+		).toBe(false);
+	});
+
+	it("is not quantity-only when a future phase adds invoice items", () => {
+		expect(
+			isQuantityOnlySchedule({
+				schedule: scheduleWith({
+					currentPrices: ["price_a"],
+					futurePrices: ["price_a"],
+					futureExtra: { add_invoice_items: [{ price: "price_setup" }] },
 				}),
 			}),
 		).toBe(false);

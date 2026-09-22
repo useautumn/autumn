@@ -1,37 +1,28 @@
 import type Stripe from "stripe";
 
-const priceIdOf = (
-	item: Stripe.SubscriptionSchedule.Phase.Item,
-): string | undefined => {
-	if (typeof item.price === "string") return item.price;
-	return item.price?.id;
+/** Everything a phase can carry except the quantity a phase step changes.
+ * Comparing the whole shape means a field Stripe adds later reads as a
+ * difference until it is deliberately allowed, rather than being ignored. */
+const billingShapeOf = (phase: Stripe.SubscriptionSchedule.Phase) => {
+	const { start_date, end_date, items, ...rest } = phase;
+
+	return JSON.stringify({
+		...rest,
+		items: items
+			.map((item) => {
+				const { quantity, price, ...itemRest } = item;
+				const priceId = typeof price === "string" ? price : price?.id;
+				return { ...itemRest, priceId };
+			})
+			.sort((left, right) =>
+				String(left.priceId).localeCompare(String(right.priceId)),
+			),
+	});
 };
 
-/** Stripe's own quantity is what a phase changes; anything else is a real edit. */
-const priceIdsOf = (phase: Stripe.SubscriptionSchedule.Phase) =>
-	phase.items
-		.map(priceIdOf)
-		.filter((priceId): priceId is string => Boolean(priceId))
-		.sort();
-
-const samePrices = ({
-	phase,
-	against,
-}: {
-	phase: Stripe.SubscriptionSchedule.Phase;
-	against: Stripe.SubscriptionSchedule.Phase;
-}) => {
-	const left = priceIdsOf(phase);
-	const right = priceIdsOf(against);
-	return (
-		left.length === right.length &&
-		left.every((priceId, index) => priceId === right[index])
-	);
-};
-
-/** A schedule whose future phases carry the same prices as the one running now
- * only steps a quantity, which the subscription webhook applies — so Autumn
- * holds no phase for it and verify has nothing to compare against. */
+/** A schedule whose future phases differ from the one running now only by
+ * quantity is a step the subscription webhook applies, so Autumn holds no
+ * phase for it and verify has nothing to compare against. */
 export const isQuantityOnlySchedule = ({
 	schedule,
 }: {
@@ -50,7 +41,6 @@ export const isQuantityOnlySchedule = ({
 	);
 	if (futurePhases.length === 0) return false;
 
-	return futurePhases.every((phase) =>
-		samePrices({ phase, against: currentPhase }),
-	);
+	const currentShape = billingShapeOf(currentPhase);
+	return futurePhases.every((phase) => billingShapeOf(phase) === currentShape);
 };
