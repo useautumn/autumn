@@ -1,16 +1,24 @@
 import {
 	type BasePriceAndEntitlementPrices,
 	type EntitlementPrice,
-	normalizedEntitlementInterval,
-	normalizedEntitlementIntervalCount,
+	entitlementPricesAreSame,
 } from "@autumn/shared";
 
-const sameSlot = (a: EntitlementPrice, b: EntitlementPrice): boolean =>
-	a.entitlement.internal_feature_id === b.entitlement.internal_feature_id &&
-	normalizedEntitlementInterval(a.entitlement) ===
-		normalizedEntitlementInterval(b.entitlement) &&
-	normalizedEntitlementIntervalCount(a.entitlement) ===
-		normalizedEntitlementIntervalCount(b.entitlement);
+/** The definition match the claim uses, with carry_from_previous held equal. */
+const sameDefinitionIgnoringCarry = (
+	a: EntitlementPrice,
+	b: EntitlementPrice,
+): boolean =>
+	entitlementPricesAreSame({
+		entitlementPrice1: a,
+		entitlementPrice2: {
+			...b,
+			entitlement: {
+				...b.entitlement,
+				carry_from_previous: a.entitlement.carry_from_previous,
+			},
+		},
+	});
 
 /**
  * No API field states `carry_from_previous`; the mint derives it from the
@@ -30,7 +38,7 @@ export const withCarryFromPreviousOfCurrent = ({
 			const match = current.entitlementPrices.find(
 				(candidate) =>
 					!taken.has(candidate.entitlement.id) &&
-					sameSlot(candidate, entitlementPrice),
+					sameDefinitionIgnoringCarry(candidate, entitlementPrice),
 			);
 			if (!match) return entitlementPrice;
 			taken.add(match.entitlement.id);
