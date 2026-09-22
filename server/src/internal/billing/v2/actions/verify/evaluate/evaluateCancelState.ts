@@ -2,6 +2,11 @@ import type { SubscriptionMismatch } from "@autumn/shared";
 import type Stripe from "stripe";
 import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { PhaseScenario } from "../compute/classifyPhaseScenario";
+import {
+	IGNORED_VERIFY_RULES,
+	orgIgnoresVerifyRule,
+} from "../ignoredVerifyMismatches";
+import { isQuantityOnlySchedule } from "./isQuantityOnlySchedule";
 
 /**
  * Checks whether the subscription has an active schedule with future phase
@@ -20,6 +25,7 @@ const getActiveScheduleState = async ({
 	upcomingPhaseStarts: number[];
 	endBehavior?: Stripe.SubscriptionSchedule.EndBehavior;
 	endsAtSeconds?: number;
+	quantityOnly?: boolean;
 }> => {
 	const inactive = { scheduleActive: false, upcomingPhaseStarts: [] };
 	if (!sub.schedule) return inactive;
@@ -52,6 +58,7 @@ const getActiveScheduleState = async ({
 			.filter((startDate) => startDate > nowSeconds),
 		endBehavior: schedule.end_behavior,
 		endsAtSeconds: schedule.phases[schedule.phases.length - 1]?.end_date,
+		quantityOnly: isQuantityOnlySchedule({ schedule }),
 	};
 };
 
@@ -61,23 +68,29 @@ export const evaluateCancelState = async ({
 	sub,
 	scenario,
 	cancelAtSeconds,
+	orgId,
 }: {
 	stripeCli: Stripe;
 	sub: Stripe.Subscription;
 	scenario: PhaseScenario;
 	cancelAtSeconds?: number;
+	orgId: string;
 }): Promise<SubscriptionMismatch | undefined> => {
 	const actualCanceling = isStripeSubscriptionCanceling(sub);
+	const ignoresQuantityOnly = orgIgnoresVerifyRule({
+		orgId,
+		rule: IGNORED_VERIFY_RULES.quantityOnlySchedule,
+	});
 
 	switch (scenario) {
 		case "no_phases":
 			return undefined;
 
 		case "single_indefinite": {
-			const { scheduleActive, upcomingPhaseStarts } =
+			const { scheduleActive, upcomingPhaseStarts, quantityOnly } =
 				await getActiveScheduleState({ stripeCli, sub });
 			// An active schedule here is a phase problem, not a cancel problem.
-			if (scheduleActive) {
+			if (scheduleActive && !(quantityOnly && ignoresQuantityOnly)) {
 				return {
 					type: "schedule_mismatch",
 					reason: "unexpected_schedule",
@@ -108,7 +121,10 @@ export const evaluateCancelState = async ({
 			if (scheduleImplementsCancel) return undefined;
 
 			if (scheduleState.scheduleActive) {
-				if (scheduleState.upcomingPhaseStarts.length > 0) {
+				if (
+					scheduleState.upcomingPhaseStarts.length > 0 &&
+					!(scheduleState.quantityOnly && ignoresQuantityOnly)
+				) {
 					return {
 						type: "schedule_mismatch",
 						reason: "unexpected_schedule",
