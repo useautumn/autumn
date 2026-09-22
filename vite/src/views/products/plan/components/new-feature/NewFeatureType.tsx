@@ -1,6 +1,7 @@
 import {
 	FeatureType as APIFeatureType,
 	type CreateFeature,
+	FeatureUsageType,
 	isAnyCreditSystem,
 } from "@autumn/shared";
 import { PanelButton } from "@autumn/ui";
@@ -8,7 +9,7 @@ import { BarcodeIcon, CoinsIcon } from "@phosphor-icons/react";
 import { BooleanIcon } from "@/components/v2/icons/AutumnIcons";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
-import { applyFeatureType } from "@/views/products/features/utils/applyFeatureType";
+import { createSchemaItem } from "@/views/products/features/credit-systems/utils/creditSchemaUtils";
 
 export function NewFeatureType({
 	feature,
@@ -35,12 +36,17 @@ export function NewFeatureType({
 						<PanelButton
 							isSelected={feature.type === APIFeatureType.Metered}
 							onClick={() => {
-								setFeature(
-									applyFeatureType({
-										feature,
-										type: APIFeatureType.Metered,
-									}),
-								);
+								setFeature({
+									...feature,
+									type: APIFeatureType.Metered,
+									// Fresh config: a credit system's rate card must not survive
+									// the switch, or the create request ships a credit_schema
+									// the API rejects.
+									config: {
+										usage_type:
+											feature.config?.usage_type ?? FeatureUsageType.Single,
+									},
+								});
 							}}
 							icon={<BarcodeIcon size={16} color="currentColor" />}
 						/>
@@ -58,12 +64,14 @@ export function NewFeatureType({
 						<PanelButton
 							isSelected={isAnyCreditSystem(feature.type)}
 							onClick={() => {
-								setFeature(
-									applyFeatureType({
-										feature,
-										type: APIFeatureType.CreditSystem,
-									}),
-								);
+								setFeature({
+									...feature,
+									type: APIFeatureType.CreditSystem,
+									config: {
+										schema: [createSchemaItem()],
+										usage_type: FeatureUsageType.Single,
+									},
+								});
 							}}
 							icon={<CoinsIcon size={16} color="currentColor" />}
 						/>
@@ -81,12 +89,11 @@ export function NewFeatureType({
 						<PanelButton
 							isSelected={feature.type === APIFeatureType.Boolean}
 							onClick={() => {
-								setFeature(
-									applyFeatureType({
-										feature,
-										type: APIFeatureType.Boolean,
-									}),
-								);
+								setFeature({
+									...feature,
+									type: APIFeatureType.Boolean,
+									config: {},
+								});
 							}}
 							icon={<BooleanIcon className="hover:text-primary" />}
 						/>
