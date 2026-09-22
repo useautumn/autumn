@@ -951,7 +951,9 @@ describe("approval status card", () => {
 			statusLine: "Creating invoice… · 24s",
 		});
 
-		expect(JSON.stringify(card)).toContain("▸ Creating invoice… · 24s");
+		const json = JSON.stringify(card);
+		expect(json).toContain("▸ Creating invoice… · 24s");
+		expect(json).toContain("Approved by <@U1>");
 	});
 
 	test("renders the outcome as the headline with invoice facts and links", () => {
@@ -989,7 +991,7 @@ describe("approval status card", () => {
 		expect(json).toContain("Open checkout");
 		expect(json).toContain("https://pay.example");
 		expect(json).not.toContain("View customer");
-		expect(json).not.toContain("approved by");
+		expect(json).toContain("Approved by <@U1>");
 	});
 
 	test("keeps the pending card footprint after approval", () => {
