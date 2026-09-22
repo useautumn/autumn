@@ -79,6 +79,7 @@ export const verifyCustomerToExportRows = async ({
 			timeoutMs,
 			timeoutMessage: `Verification timed out after ${timeoutMs}ms`,
 			run: verifyOnce,
+			shouldRetry: () => true,
 			onRetry: ({ attempt, error }) =>
 				ctx.logger.warn("billing-verify-export: retrying customer", {
 					data: {

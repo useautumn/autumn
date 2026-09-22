@@ -29,12 +29,14 @@ const emptyPage = () => ({ data: [], has_more: false });
 
 const stripeCliWith = ({
 	list,
+	listTestClocks = () => Promise.resolve(emptyPage()),
 }: {
 	list: (params: Stripe.SubscriptionListParams) => Promise<unknown>;
+	listTestClocks?: () => Promise<unknown>;
 }) =>
 	({
 		subscriptions: { list },
-		testHelpers: { testClocks: { list: () => [] } },
+		testHelpers: { testClocks: { list: listTestClocks } },
 	}) as unknown as Stripe;
 
 describe("sweepStripeSubscriptions deadline", () => {
@@ -57,6 +59,23 @@ describe("sweepStripeSubscriptions deadline", () => {
 
 		await expect(sweep).rejects.toThrow(/timed out/);
 		expect(calls).toBeGreaterThan(1);
+	});
+
+	it("bounds the sandbox test-clock listing too", async () => {
+		const stripeCli = stripeCliWith({
+			list: () => Promise.resolve(emptyPage()),
+			listTestClocks: neverSettles,
+		});
+
+		const sweep = sweepStripeSubscriptions({
+			stripeCli,
+			includeTestClocks: true,
+			sinceMs: JANUARY_2026,
+			untilMs: FEBRUARY_2026,
+			limits: { pageTimeoutMs: 50, retryDelayMs: 0 },
+		});
+
+		await expect(sweep).rejects.toThrow(/test clock page timed out/);
 	});
 
 	it("surfaces a Stripe error without retrying it, the SDK having already tried", async () => {

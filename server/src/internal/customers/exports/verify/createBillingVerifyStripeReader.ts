@@ -20,7 +20,7 @@ const memoizeById = <Resource>(retrieve: (id: string) => Promise<Resource>) => {
 
 /** A memoized read caches the pending promise, so an unbounded one that stalls
  * would be handed to every later customer; the deadline lets it reject and
- * evict itself. */
+ * evict itself in time for the customer's own retry to start a fresh read. */
 const boundedRead = <T>({
 	resource,
 	id,
@@ -30,13 +30,12 @@ const boundedRead = <T>({
 	id: string;
 	run: () => Promise<T>;
 }) => {
-	const { pageTimeoutMs, pageAttempts, retryDelayMs } =
-		billingVerifyExportConfig.sweep;
+	const { timeoutMs, attempts } = billingVerifyExportConfig.stripeReader;
 	return retryBoundedAsync({
-		attempts: pageAttempts,
-		delayMs: retryDelayMs,
-		timeoutMs: pageTimeoutMs,
-		timeoutMessage: `Stripe ${resource} ${id} timed out after ${pageTimeoutMs}ms`,
+		attempts,
+		delayMs: 0,
+		timeoutMs,
+		timeoutMessage: `Stripe ${resource} ${id} timed out after ${timeoutMs}ms`,
 		run,
 	});
 };

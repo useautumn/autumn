@@ -15,6 +15,8 @@ type BillingVerifyExportConfig = {
 	};
 	stripeReader: {
 		maxMemoizedReads: number;
+		timeoutMs: number;
+		attempts: number;
 	};
 };
 
@@ -41,7 +43,11 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 		attempts: 2,
 		retryDelayMs: 5_000,
 	},
+	/** A memoized read is shared, so it must expire well inside the customer
+	 * deadline — otherwise a retry re-attaches to the same stalled promise. */
 	stripeReader: {
 		maxMemoizedReads: 2000,
+		timeoutMs: 30_000,
+		attempts: 1,
 	},
 };
