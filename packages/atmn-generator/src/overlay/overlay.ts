@@ -234,6 +234,11 @@ export const OVERLAY: Overlay = {
 				reason:
 					"A fixture states the whole row (PUT), so a feature always has its name.",
 			},
+			event_names: {
+				hidden: true,
+				reason:
+					"Soft-deprecated: a config neither states nor pulls it, and the server keeps a feature's existing names when a push omits the field.",
+			},
 		},
 		settings: {
 			persist_free_overage: {

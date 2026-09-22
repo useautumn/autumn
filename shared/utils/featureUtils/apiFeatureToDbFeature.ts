@@ -326,7 +326,6 @@ export const featureV1ToDbFeature = ({
 }) => {
 	// Replace body...
 	const featureType = apiFeature.type;
-	const eventNames = apiFeature.event_names;
 
 	// Cloned — mutating the original's config in place would make the produced
 	// row and originalFeature indistinguishable to diffing.
@@ -377,7 +376,8 @@ export const featureV1ToDbFeature = ({
 			"archived" in apiFeature
 				? apiFeature.archived
 				: (originalFeature?.archived ?? false),
-		event_names: eventNames ?? [],
+		// Omitted event_names keeps the current ones: the CLI no longer states them.
+		event_names: apiFeature.event_names ?? originalFeature?.event_names ?? [],
 		model_markups: modelMarkups,
 		// Omitted display keeps the current (often LLM-generated) one.
 		display:
