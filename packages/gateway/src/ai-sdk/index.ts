@@ -1,4 +1,4 @@
-import type { LanguageModelV3 } from "@ai-sdk/provider";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { type LanguageModelMiddleware, wrapLanguageModel } from "ai";
 import { type AutumnTrackingOptions, createTracker } from "../shared/track.js";
 import { normalizeUsage, type UsageLike } from "./usage.js";
@@ -9,7 +9,7 @@ export type { UsageLike } from "./usage.js";
 
 export type WithAutumnOptions = AutumnTrackingOptions & {
 	/** The AI SDK language model to wrap. */
-	model: LanguageModelV3;
+	model: LanguageModelV4;
 	/** Override the provider prefix used in the model name (e.g. "openrouter", "custom"). Falls back to `model.provider`. */
 	providerId?: string;
 };
@@ -18,7 +18,7 @@ export const withAutumn = ({
 	model,
 	providerId,
 	...tracking
-}: WithAutumnOptions): LanguageModelV3 => {
+}: WithAutumnOptions): LanguageModelV4 => {
 	const modelName = `${providerId ?? model.provider}/${model.modelId}`;
 	const track = createTracker(tracking);
 
@@ -29,10 +29,10 @@ export const withAutumn = ({
 		}));
 
 	const middleware: LanguageModelMiddleware = {
-		specificationVersion: "v3",
+		specificationVersion: "v4",
 		wrapGenerate: async ({ doGenerate }) => {
 			const result = await doGenerate();
-			await trackUsage(result.usage as UsageLike);
+			await trackUsage(result.usage);
 			return result;
 		},
 		wrapStream: async ({ doStream }) => {
@@ -47,7 +47,7 @@ export const withAutumn = ({
 			const transformStream = new TransformStream<StreamChunk, StreamChunk>({
 				transform(chunk, controller) {
 					if (chunk.type === "finish" && chunk.usage) {
-						trackingPromise = trackUsage(chunk.usage as UsageLike);
+						trackingPromise = trackUsage(chunk.usage);
 					}
 					controller.enqueue(chunk);
 				},
