@@ -226,3 +226,10 @@ test("singletonPropertyText reads the literal a key holds", () => {
 		singletonPropertyText({ source, block: inline, key: "cancelOnPastDue" }),
 	).toBeNull();
 });
+
+test("insertSingleton keeps shorthand collections beside the seeded block", () => {
+	const source = config({ body: "\tfeatures,\n\tplans,\n\trewards," });
+	expect(insertSingleton({ source, singleton: "settings" })).toBe(
+		config({ body: "\tfeatures,\n\tplans,\n\trewards,\n\tsettings: {}," }),
+	);
+});

@@ -27,18 +27,23 @@ export const insertCollection = ({
 	const object = call.getMatch("ARG");
 	if (object === null || object.kind() !== "object") return null;
 
-	const pairs = object.children().filter((child) => child.kind() === "pair");
-	const named = object
+	// A shorthand `plans` is a member as much as `plans: [...]`; counting only
+	// pairs read `atmn({ features, plans })` as empty and replaced it wholesale.
+	const members = object
 		.children()
-		.some((child) =>
-			child.kind() === "pair"
-				? child.namedChildren()[0]?.text() === collection
-				: child.kind() === "shorthand_property_identifier" &&
-					child.text() === collection,
+		.filter(
+			(child) =>
+				child.kind() === "pair" ||
+				child.kind() === "shorthand_property_identifier",
 		);
+	const named = members.some((child) =>
+		child.kind() === "pair"
+			? child.namedChildren()[0]?.text() === collection
+			: child.text() === collection,
+	);
 	if (named) return source;
 
-	if (pairs.length === 0) {
+	if (members.length === 0) {
 		const callLineIndent = leadingIndentOfLine(
 			source,
 			call.range().start.index,
@@ -53,7 +58,7 @@ export const insertCollection = ({
 		]);
 	}
 
-	const last = pairs[pairs.length - 1];
+	const last = members[members.length - 1];
 	const lastEnd = last.range().end.index;
 	const after = source.slice(lastEnd);
 	const commaAfter = after.indexOf(",");
