@@ -1,9 +1,11 @@
 import {
+	CusProductStatus,
 	cp,
 	customerProductsToStripeSubscriptionIds,
 	type FullCusProduct,
 	type FullCustomer,
 	notNullish,
+	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
@@ -37,23 +39,43 @@ export type VerifyContext = {
 
 /** Matches on subscription OR schedule: a scheduled customer product carries no
  * subscription_ids, so the subscription alone loses every future phase. */
+/** A plan parked by a reverting trial stays live on Stripe; the trial that
+ * parked it is Autumn-only, so verify reads the paused plan and not the trial. */
+export const VERIFY_CUSTOMER_PRODUCT_STATUSES = [
+	...RELEVANT_STATUSES,
+	CusProductStatus.Paused,
+];
+
+const isRevertingTrial = ({
+	customerProduct,
+	pausedCustomerProductIds,
+}: {
+	customerProduct: FullCusProduct;
+	pausedCustomerProductIds: Set<string>;
+}) => {
+	const previousId = customerProduct.previous_customer_product_id;
+	return notNullish(previousId) && pausedCustomerProductIds.has(previousId);
+};
+
 const isRelevantForSubscription = ({
 	customerProduct,
+	pausedCustomerProductIds,
 	stripeSubscriptionId,
 	stripeSubscriptionScheduleId,
 }: {
 	customerProduct: FullCusProduct;
+	pausedCustomerProductIds: Set<string>;
 	stripeSubscriptionId: string;
 	stripeSubscriptionScheduleId?: string;
 }) =>
+	VERIFY_CUSTOMER_PRODUCT_STATUSES.includes(customerProduct.status) &&
+	!isRevertingTrial({ customerProduct, pausedCustomerProductIds }) &&
 	cp(customerProduct)
 		.paid()
 		.recurring()
-		.hasRelevantStatus()
 		.onStripeSubscription({ stripeSubscriptionId })
 		.or.paid()
 		.recurring()
-		.hasRelevantStatus()
 		.onStripeSchedule({ stripeSubscriptionScheduleId }).valid;
 
 /** Sub items never include price `tiers` — fetch them once per tiered price
@@ -127,9 +149,17 @@ export const setupVerifyContext = async ({
 			ctx,
 			idOrInternalId: customerId,
 			withEntities: true,
+			inStatuses: VERIFY_CUSTOMER_PRODUCT_STATUSES,
 		}));
 
 	const cusProducts = fullCustomer.customer_products;
+	const pausedCustomerProductIds = new Set(
+		cusProducts
+			.filter(
+				(customerProduct) => customerProduct.status === CusProductStatus.Paused,
+			)
+			.map((customerProduct) => customerProduct.id),
+	);
 	const allowedSubscriptionIds = subscriptionIdsFilter
 		? new Set(subscriptionIdsFilter)
 		: null;
@@ -174,6 +204,7 @@ export const setupVerifyContext = async ({
 		const relatedCusProducts = cusProducts.filter((customerProduct) =>
 			isRelevantForSubscription({
 				customerProduct,
+				pausedCustomerProductIds,
 				stripeSubscriptionId,
 				stripeSubscriptionScheduleId,
 			}),
