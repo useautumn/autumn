@@ -29,15 +29,38 @@ export const handleReissueInvoice = createRoute({
 			invoice_template_id,
 			net_terms_days,
 			update_customer_email,
+			preview,
+			invoice,
+			customer,
+			lines,
 		} = c.req.valid("json");
 
-		const { replacement, voidedInvoiceId } = await invoiceActions.reissue({
+		const {
+			replacement,
+			voidedInvoiceId,
+			creditNoteId,
+			preview: previewTotals,
+		} = await invoiceActions.reissue({
 			ctx,
 			invoiceId: invoice_id,
 			invoiceTemplateId: invoice_template_id,
 			netTermsDays: net_terms_days,
 			updateCustomerEmail: update_customer_email,
+			preview,
+			invoiceOverrides: invoice,
+			customerOverrides: customer,
+			lineEdits: lines,
 		});
+
+		if (!replacement) {
+			return c.json<ReissueInvoiceResponse>({
+				invoice: null,
+				voided_invoice_id: null,
+				credit_note_id: null,
+				preview: previewTotals,
+			});
+		}
+
 		const lineItems = await invoiceLineItemRepo.getByInvoiceIds({
 			db: ctx.db,
 			invoiceIds: [replacement.invoice.id],
@@ -46,6 +69,8 @@ export const handleReissueInvoice = createRoute({
 		return c.json<ReissueInvoiceResponse>({
 			invoice: invoiceListRowToApi({ ctx, row: replacement, lineItems }),
 			voided_invoice_id: voidedInvoiceId,
+			credit_note_id: creditNoteId,
+			preview: previewTotals,
 		});
 	},
 });

@@ -8,11 +8,15 @@
  *                      linked to the same subscription and inheriting deferred metadata
  *   deferred invoice → paying the replacement promotes the pending plan
  *   void invoice     → 400
- *   paid invoice     → 400
+ *   charge-automatically invoice → 400 (reissue is send-invoice only)
  */
 
 import { expect, test } from "bun:test";
-import type { ApiListInvoiceV1, AttachParamsV1Input } from "@autumn/shared";
+import type {
+	ApiCustomerV5,
+	ApiListInvoiceV1,
+	AttachParamsV1Input,
+} from "@autumn/shared";
 import { ALL_STATUSES, CusProductStatus, ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
@@ -136,6 +140,11 @@ test.concurrent(
 		expect(replacement.auto_advance).toBe(true);
 		expect(replacement.due_date).toBe(original.due_date);
 		expect(replacement.customer_email).toBe(NEW_EMAIL);
+
+		// Autumn holds the new address too, or the next Stripe sync would undo it.
+		const updatedCustomer =
+			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		expect(updatedCustomer.email).toBe(NEW_EMAIL);
 		expect(replacement.parent?.subscription_details?.subscription).toBe(
 			original.parent?.subscription_details?.subscription,
 		);
@@ -223,7 +232,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("invoices.reissue: paid invoice → 400")}`,
+	`${chalk.yellowBright("invoices.reissue: charge-automatically invoice → 400")}`,
 	async () => {
 		const customerId = "inv-reissue-paid";
 		const pro = products.pro({
@@ -242,6 +251,7 @@ test.concurrent(
 		const invoiceId = await firstInvoiceId({ autumnV2_3, customerId });
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
+			errMessage: "charged automatically",
 			func: () =>
 				autumnV2_3.post("/invoices.reissue", { invoice_id: invoiceId }),
 		});

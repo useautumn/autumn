@@ -1314,6 +1314,29 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/logs.search"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.logs.search({
+                query: "where status_code >= 400 | order by timestamp desc",
+                limit: 50,
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/plans.create"]["post"]
     update:
       x-codeSamples:

@@ -47,7 +47,8 @@ type PreviewData = {
 		invoice: { current_refunded_amount: number };
 	} | null;
 	tax?: { total: number; status: "complete" | "incomplete" };
-	invoice_credits?: { balance: number };
+	invoice_credits?: { balance: number; applied?: number };
+	amount_due?: number;
 	checkout_type?: "stripe_checkout" | "autumn_checkout" | null;
 };
 

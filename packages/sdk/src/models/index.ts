@@ -86,6 +86,7 @@ export * from "./reset-sandbox-op.js";
 export * from "./response-validation-error.js";
 export * from "./revoke-key-op.js";
 export * from "./sdk-validation-error.js";
+export * from "./search-request-logs-op.js";
 export * from "./security.js";
 export * from "./setup-payment-response.js";
 export * from "./setup-payment-upsert-license-rollover.js";

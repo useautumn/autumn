@@ -252,6 +252,12 @@
 						]
 					},
 					{
+						"group": "Logs",
+						"pages": [
+							"api-reference/logs/searchRequestLogs"
+						]
+					},
+					{
 						"group": "Entities",
 						"pages": [
 							"api-reference/entities/getEntity",

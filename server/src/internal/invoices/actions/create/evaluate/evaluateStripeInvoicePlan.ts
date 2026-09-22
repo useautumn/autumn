@@ -8,6 +8,7 @@ import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import { lineItemToMetadata } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemToMetadata";
 import { lineItemToStripeProductId } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemToStripeProductId";
+import { applyInvoiceCredits } from "@/internal/billing/v2/utils/billingPlan/preview/invoiceCredits/applyInvoiceCredits";
 import type { InvoiceLine } from "../compute/computeInvoiceLines";
 import { computeInvoiceTaxPreview } from "../compute/computeInvoiceTaxPreview";
 import type { CreateInvoiceContext } from "../setup/setupCreateInvoiceContext";
@@ -172,6 +173,15 @@ export const evaluateStripeInvoicePlan = ({
 		taxRate: invoiceContext.taxRate,
 	});
 
+	const total = afterInvoiceDiscounts
+		.plus(tax?.total ?? 0)
+		.toDP(2)
+		.toNumber();
+	const { credits, amountDue } = applyInvoiceCredits({
+		total,
+		credits: invoiceContext.invoiceCredits,
+	});
+
 	return {
 		lines: stripeLines,
 		invoiceCouponIds: assigned.invoiceCouponIds,
@@ -188,10 +198,9 @@ export const evaluateStripeInvoicePlan = ({
 						status: tax.status,
 					}
 				: null,
-			total: afterInvoiceDiscounts
-				.plus(tax?.total ?? 0)
-				.toDP(2)
-				.toNumber(),
+			total,
+			invoice_credits: credits,
+			amount_due: amountDue,
 			due_date: dueDateMs,
 		},
 	};
