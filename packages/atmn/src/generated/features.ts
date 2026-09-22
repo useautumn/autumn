@@ -124,7 +124,6 @@ export type Feature = {
 			markup: number;
 		}
 	> | null;
-	eventNames?: Array<string>;
 	/** The ID of the feature to create. */
 	featureId: string;
 } & {

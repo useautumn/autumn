@@ -74,3 +74,57 @@ test("a boolean row with a stale usage_type does not phantom-diff on consumable"
 
 	expect(diff.previous_attributes).toBeNull();
 });
+
+test("omitted event_names keeps the row's existing names", () => {
+	const current = {
+		id: "actions",
+		internal_id: "fe_2",
+		name: "Actions",
+		type: FeatureType.Metered,
+		config: { usage_type: FeatureUsageType.Single },
+		event_names: ["action.created", "action.retried"],
+		archived: false,
+	} as Feature;
+	const ctx = {} as SharedContext;
+	const next = featureV1ToDbFeature({
+		apiFeature: {
+			id: "actions",
+			name: "Actions",
+			type: FeatureType.Metered,
+			consumable: true,
+		},
+		originalFeature: current,
+	});
+
+	expect(next.event_names).toEqual(["action.created", "action.retried"]);
+	expect(
+		diffFeatureV1({
+			from: dbToApiFeatureV1({ ctx, dbFeature: current }),
+			to: dbToApiFeatureV1({ ctx, dbFeature: next }),
+		}).previous_attributes,
+	).toBeNull();
+});
+
+test("explicit empty event_names still clears them", () => {
+	const current = {
+		id: "actions",
+		internal_id: "fe_2",
+		name: "Actions",
+		type: FeatureType.Metered,
+		config: { usage_type: FeatureUsageType.Single },
+		event_names: ["action.created"],
+		archived: false,
+	} as Feature;
+	const next = featureV1ToDbFeature({
+		apiFeature: {
+			id: "actions",
+			name: "Actions",
+			type: FeatureType.Metered,
+			consumable: true,
+			event_names: [],
+		},
+		originalFeature: current,
+	});
+
+	expect(next.event_names).toEqual([]);
+});

@@ -123,7 +123,6 @@ Load the matching definition when reasoning about that object.
 
 <additional>
 
-- `event_names`: optional aliases so one `track` request can target usage for multiple features.
 - `credit_schema`: classic `credit_system` only (not `ai_credit_system`); maps `metered_feature_id` to `credit_cost`.
 - `archived`: deprecated config; may still exist in grandfathered plans or subscriptions.
 - Legacy pricing-agent wording: `single_use` means metered consumable; `continuous_use` means metered non-consumable.
