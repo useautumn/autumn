@@ -14,7 +14,6 @@ import { evaluateSchedulePhases } from "./evaluate/evaluateSchedulePhases";
 import { evaluateSharedStripeCustomer } from "./evaluate/evaluateSharedStripeCustomer";
 import { evaluateUnlinkedSubscription } from "./evaluate/evaluateUnlinkedSubscription";
 import { verifyMismatchToMessage } from "./format/verifyMismatchToMessage";
-import { isIgnoredVerifyMismatch } from "./ignoredVerifyMismatches";
 import {
 	setupVerifyContext,
 	type VerifyPrefetched,
@@ -27,22 +26,16 @@ const WARNING_MISMATCH_TYPES = new Set<SubscriptionMismatch["type"]>([
 	"shared_stripe_customer",
 ]);
 
-const stampMessages = ({
-	orgId,
-	mismatches,
-}: {
-	orgId: string;
-	mismatches: SubscriptionMismatch[];
-}): SubscriptionMismatch[] =>
-	mismatches
-		.filter((mismatch) => !isIgnoredVerifyMismatch({ orgId, mismatch }))
-		.map((mismatch) => ({
-			...mismatch,
-			message: mismatch.message ?? verifyMismatchToMessage(mismatch),
-			severity:
-				mismatch.severity ??
-				(WARNING_MISMATCH_TYPES.has(mismatch.type) ? "warning" : "error"),
-		}));
+const stampMessages = (
+	mismatches: SubscriptionMismatch[],
+): SubscriptionMismatch[] =>
+	mismatches.map((mismatch) => ({
+		...mismatch,
+		message: mismatch.message ?? verifyMismatchToMessage(mismatch),
+		severity:
+			mismatch.severity ??
+			(WARNING_MISMATCH_TYPES.has(mismatch.type) ? "warning" : "error"),
+	}));
 
 /**
  * Verifies that a customer's Stripe subscription(s) match the state Autumn expects from
@@ -89,11 +82,9 @@ export const verify = async ({
 	const stripeCli =
 		stripeCliOverride ?? createStripeCli({ org: ctx.org, env: ctx.env });
 
-	const orgId = ctx.org.id;
-	const customerMismatches = stampMessages({
-		orgId,
-		mismatches: await evaluateSharedStripeCustomer({ ctx, fullCustomer }),
-	});
+	const customerMismatches = stampMessages(
+		await evaluateSharedStripeCustomer({ ctx, fullCustomer }),
+	);
 
 	const subscriptions: VerifyResponse["subscriptions"] = [];
 
@@ -101,10 +92,9 @@ export const verify = async ({
 		subscriptions.push({
 			stripe_subscription_id: unlinkedSubscription.id,
 			status: "mismatched",
-			mismatches: stampMessages({
-				orgId,
-				mismatches: [evaluateUnlinkedSubscription({ fullCustomer, targets })],
-			}),
+			mismatches: stampMessages([
+				evaluateUnlinkedSubscription({ fullCustomer, targets }),
+			]),
 		});
 	}
 
@@ -155,6 +145,7 @@ export const verify = async ({
 				sub: stripeSubscription,
 				scenario,
 				cancelAtSeconds,
+				orgId: ctx.org.id,
 			});
 			if (cancelMismatch) mismatches.push(cancelMismatch);
 
@@ -178,11 +169,10 @@ export const verify = async ({
 			});
 		}
 
-		const reported = stampMessages({ orgId, mismatches });
 		subscriptions.push({
 			stripe_subscription_id: stripeSubscriptionId,
-			status: reported.length === 0 ? "correct" : "mismatched",
-			mismatches: reported,
+			status: mismatches.length === 0 ? "correct" : "mismatched",
+			mismatches: stampMessages(mismatches),
 		});
 	}
 
