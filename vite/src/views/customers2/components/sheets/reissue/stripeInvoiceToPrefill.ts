@@ -50,5 +50,6 @@ export const stripeInvoiceToPrefill = (
 		otherTaxIds: otherTaxIds.flatMap(({ type, value }) =>
 			value ? [{ type, value }] : [],
 		),
+		taxIdsIncomplete: customer?.tax_ids?.has_more ?? false,
 	};
 };

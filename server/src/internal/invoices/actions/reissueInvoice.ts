@@ -551,8 +551,11 @@ const creditAndFinalize = async ({
 		});
 		return { finalized, creditNoteId: creditNote.id };
 	} catch (error) {
-		await reverseCredit({ stripeCli, stripeInvoice, creditNote, amount });
-		await deleteDraft({ ctx, stripeCli, draftId: draft.id });
+		try {
+			await reverseCredit({ stripeCli, stripeInvoice, creditNote, amount });
+		} finally {
+			await deleteDraft({ ctx, stripeCli, draftId: draft.id });
+		}
 		throw error;
 	}
 };

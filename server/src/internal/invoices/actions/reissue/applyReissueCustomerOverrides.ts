@@ -31,13 +31,15 @@ const replaceCustomerTaxIds = async ({
 	const created: Stripe.TaxId[] = [];
 	try {
 		for (const taxId of taxIds) {
-			if (kept.has(taxIdKey(taxId))) continue;
+			const key = taxIdKey(taxId);
+			if (kept.has(key)) continue;
 			created.push(
 				await stripeCli.customers.createTaxId(stripeCustomerId, {
 					type: taxId.type as Stripe.CustomerCreateTaxIdParams.Type,
 					value: taxId.value,
 				}),
 			);
+			kept.add(key);
 		}
 	} catch (error) {
 		await Promise.all(

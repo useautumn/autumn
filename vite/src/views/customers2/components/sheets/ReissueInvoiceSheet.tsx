@@ -491,33 +491,46 @@ function ReissueInvoiceForm({
 									/>
 								</div>
 							</Field>
-							<Field
-								label="Tax ID"
-								hint={
-									prefill.otherTaxIds?.length
-										? `Pick the registration and paste the number as it appears on their paperwork. ${prefill.otherTaxIds.length} other registration${prefill.otherTaxIds.length === 1 ? "" : "s"} on this customer stay as they are.`
-										: "Pick the registration and paste the number as it appears on their paperwork."
-								}
-							>
-								<div className="flex items-center gap-2">
-									<TaxIdTypeSelect
-										value={form.taxIdOptionId}
-										onValueChange={(id) => {
-											const country = id.split(":")[0];
-											patch({ taxIdOptionId: id });
-											if (!form.address.country && country !== "EU") {
-												setAddress({ country });
-											}
-										}}
-									/>
+							{prefill.taxIdsIncomplete ? (
+								<Field
+									label="Tax ID"
+									hint="This customer has more registrations than Stripe returned here. Edit them in Stripe so none are dropped."
+								>
 									<Input
-										className="flex-1"
-										placeholder="Number"
+										disabled
 										value={form.taxIdValue}
-										onChange={(e) => patch({ taxIdValue: e.target.value })}
+										placeholder="Number"
 									/>
-								</div>
-							</Field>
+								</Field>
+							) : (
+								<Field
+									label="Tax ID"
+									hint={
+										prefill.otherTaxIds?.length
+											? `Pick the registration and paste the number as it appears on their paperwork. ${prefill.otherTaxIds.length} other registration${prefill.otherTaxIds.length === 1 ? "" : "s"} on this customer stay as they are.`
+											: "Pick the registration and paste the number as it appears on their paperwork."
+									}
+								>
+									<div className="flex items-center gap-2">
+										<TaxIdTypeSelect
+											value={form.taxIdOptionId}
+											onValueChange={(id) => {
+												const country = id.split(":")[0];
+												patch({ taxIdOptionId: id });
+												if (!form.address.country && country !== "EU") {
+													setAddress({ country });
+												}
+											}}
+										/>
+										<Input
+											className="flex-1"
+											placeholder="Number"
+											value={form.taxIdValue}
+											onChange={(e) => patch({ taxIdValue: e.target.value })}
+										/>
+									</div>
+								</Field>
+							)}
 						</div>
 					</SheetAccordionItem>
 				</SheetAccordion>

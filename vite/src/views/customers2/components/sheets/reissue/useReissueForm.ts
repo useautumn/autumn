@@ -43,6 +43,8 @@ export type ReissuePrefill = {
 	taxIdValue?: string | null;
 	/** Registrations beyond the one the form edits; sent back untouched. */
 	otherTaxIds?: ReissueTaxId[];
+	/** Stripe returned one page of registrations, so a replacement would drop the rest. */
+	taxIdsIncomplete?: boolean;
 };
 
 const EMPTY_ADDRESS: ReissueAddress = {
