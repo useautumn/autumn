@@ -1,5 +1,6 @@
-/** Full jitter: a retried failure that hit several callers at once must not
- * bring them all back in step. */
+/** Equal jitter: half the ceiling is always waited, so a caller riding out a
+ * dead connection keeps a guaranteed floor, and the other half is spread so
+ * several callers that failed together don't return in step. */
 export const backoffDelayMs = ({
 	attempt,
 	baseDelayMs,
@@ -12,5 +13,5 @@ export const backoffDelayMs = ({
 	jitter?: boolean;
 }) => {
 	const ceiling = Math.min(baseDelayMs * 2 ** (attempt - 1), maxDelayMs);
-	return jitter ? Math.random() * ceiling : ceiling;
+	return jitter ? ceiling / 2 + (Math.random() * ceiling) / 2 : ceiling;
 };

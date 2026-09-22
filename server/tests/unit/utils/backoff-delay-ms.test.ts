@@ -16,13 +16,13 @@ describe("backoffDelayMs", () => {
 		]);
 	});
 
-	it("keeps jittered delays inside the attempt's ceiling", () => {
+	it("always waits at least half the ceiling, spreading the rest", () => {
 		const delays = Array.from({ length: 50 }, () =>
 			backoffDelayMs({ attempt: 3, baseDelayMs: 1_000, maxDelayMs: 30_000 }),
 		);
 
 		expect(Math.max(...delays)).toBeLessThanOrEqual(4_000);
-		expect(Math.min(...delays)).toBeGreaterThanOrEqual(0);
+		expect(Math.min(...delays)).toBeGreaterThanOrEqual(2_000);
 		expect(new Set(delays).size).toBeGreaterThan(1);
 	});
 });

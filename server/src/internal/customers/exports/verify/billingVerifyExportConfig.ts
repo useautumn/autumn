@@ -41,12 +41,12 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 		maxRetryDelayMs: 20_000,
 	},
 	/** A dead pooled connection fails the retry too if it comes back before the
-	 * pool reaps it, and one customer's exhausted attempts restart the whole
-	 * export — so back off far enough to outlast that. */
+	 * pool reaps it, and exhausted attempts restart the whole export — so these
+	 * wait a guaranteed 30s across five backoffs, up to 60s. */
 	customer: {
 		concurrency: 8,
 		timeoutMs: 120_000,
-		attempts: 4,
+		attempts: 6,
 		retryDelayMs: 2_000,
 		maxRetryDelayMs: 30_000,
 	},

@@ -85,7 +85,7 @@ describe("verifyCustomerToExportRows deadline", () => {
 			limits: { timeoutMs: 50, retryDelayMs: 0, maxRetryDelayMs: 0 },
 		});
 
-		expect(getFull).toHaveBeenCalledTimes(4);
+		expect(getFull).toHaveBeenCalledTimes(6);
 		expect(rows[0].details).toBe("Connection terminated unexpectedly");
 	});
 

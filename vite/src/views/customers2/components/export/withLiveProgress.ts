@@ -4,7 +4,11 @@ import type {
 } from "@autumn/shared";
 
 /** A stale realtime frame keeps its last value forever, so the poll wins once
- * it moves past it — otherwise a dropped subscription freezes the bar. */
+ * it moves past it — otherwise a dropped subscription freezes the bar.
+ *
+ * On a phase disagreement the poll wins too: realtime reaching exporting early
+ * and a retry rewinding to scanning look identical from the phase alone, and
+ * showing a stale frame is worse than a delay bounded by the 2s poll. */
 export const liveProgressOf = ({
 	polled,
 	live,
