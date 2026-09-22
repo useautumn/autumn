@@ -23,6 +23,8 @@ import { getExpandedStripeCustomer } from "@/external/stripe/customers/operation
 import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
+import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils";
+import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeLineItemsToDbLineItems } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines";
 import {
@@ -572,13 +574,13 @@ const creditAndFinalize = async ({
 		memo: "Reissued as a corrected invoice",
 	});
 
+	let finalized: Stripe.Invoice;
 	try {
-		const finalized = await finalizeStripeInvoice({
+		finalized = await finalizeStripeInvoice({
 			stripeCli,
 			invoiceId: draft.id,
 			autoAdvance: true,
 		});
-		return { finalized, creditNoteId: creditNote.id };
 	} catch (error) {
 		try {
 			await reverseCredit({ stripeCli, stripeInvoice, creditNote, amount });
@@ -587,6 +589,45 @@ const creditAndFinalize = async ({
 		}
 		throw error;
 	}
+
+	return {
+		finalized: await collectRemainderNow({ ctx, stripeCli, finalized }),
+		creditNoteId: creditNote.id,
+	};
+};
+
+/**
+ * A card invoice's original was charged on the spot, so a replacement that
+ * costs more is charged now too rather than waiting for auto-advance. A
+ * declined card leaves it open for Stripe's retries, like any other invoice.
+ */
+const collectRemainderNow = async ({
+	ctx,
+	stripeCli,
+	finalized,
+}: {
+	ctx: AutumnContext;
+	stripeCli: Stripe;
+	finalized: Stripe.Invoice;
+}): Promise<Stripe.Invoice> => {
+	if (
+		finalized.collection_method !== "charge_automatically" ||
+		finalized.status !== "open"
+	) {
+		return finalized;
+	}
+	const paymentMethod = await getCusPaymentMethod({
+		stripeCli,
+		stripeId: stripeInvoiceToStripeCustomerId({ stripeInvoice: finalized }),
+	});
+	const { paid, invoice } = await payForInvoice({
+		stripeCli,
+		invoiceId: finalized.id,
+		paymentMethod,
+		logger: ctx.logger,
+		errorOnFail: false,
+	});
+	return paid && invoice ? invoice : finalized;
 };
 
 const reverseCredit = async ({

@@ -316,3 +316,48 @@ test.concurrent(
 		).toBe("paid");
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.reissue: paid charge-automatically invoice with a larger total → card is charged for the difference")}`,
+	async () => {
+		const customerId = "inv-reissue-card-upsize";
+		const pro = products.pro({
+			id: "pro-reissue-card-upsize",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const invoiceId = await firstInvoiceId({ autumnV2_3, customerId });
+		const { list } = (await autumnV2_3.post("/invoices.list", {
+			customer_id: customerId,
+		})) as { list: ApiListInvoiceV1[] };
+		const original = list.find((row) => row.id === invoiceId);
+		if (!original) throw new Error("original invoice not found");
+		const originalStripe = await ctx.stripeCli.invoices.retrieve(
+			original.stripe_id,
+		);
+
+		const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
+			invoice_id: invoiceId,
+			lines: { add: [{ description: "Setup", amount: 10 }] },
+		})) as { invoice: ApiListInvoiceV1 };
+
+		// The credit covers the original amount; the extra $10 is charged now.
+		const replacement = await ctx.stripeCli.invoices.retrieve(
+			invoice.stripe_id,
+		);
+		expect(replacement.collection_method).toBe("charge_automatically");
+		expect(replacement.total).toBe(originalStripe.total + 1000);
+		expect(replacement.starting_balance).toBe(-originalStripe.total);
+		expect(replacement.status).toBe("paid");
+		expect(replacement.amount_paid).toBe(1000);
+		expect(replacement.amount_remaining).toBe(0);
+	},
+);
