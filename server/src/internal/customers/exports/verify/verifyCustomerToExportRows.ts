@@ -6,7 +6,7 @@ import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalar
 import type { BillingVerifySweep } from "./setupBillingVerifySweep.js";
 import {
 	isVerifyResponseClean,
-	verifyResponseToExportRows,
+	verifyResponseToExportRow,
 } from "./verifyResponseToExportRows.js";
 
 /** The swept subscriptions only screen; a flagged customer is re-verified live
@@ -56,15 +56,16 @@ export const verifyCustomerToExportRows = async ({
 			params,
 			prefetched: { fullCustomer },
 		});
-		return verifyResponseToExportRows({ customer, response: confirmed });
+		const row = verifyResponseToExportRow({ customer, response: confirmed });
+		return row ? [row] : [];
 	} catch (error) {
 		return [
 			{
 				...customer,
-				stripe_subscription_id: null,
+				stripe_subscription_ids: null,
 				severity: "error",
-				type: "verify_failed",
-				message: error instanceof Error ? error.message : String(error),
+				issues: "verify_failed",
+				details: error instanceof Error ? error.message : String(error),
 			},
 		];
 	}

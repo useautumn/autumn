@@ -9,6 +9,8 @@ export type BillingVerifyExportCustomer = Pick<
 	"customer_id" | "name" | "email" | "stripe_customer_id"
 >;
 
+const LIST_SEPARATOR = ", ";
+
 export const isVerifyResponseClean = ({
 	response,
 }: {
@@ -19,39 +21,42 @@ export const isVerifyResponseClean = ({
 		(subscription) => subscription.mismatches.length === 0,
 	);
 
-/** One row per mismatch; a verified customer yields none. */
-export const verifyResponseToExportRows = ({
+const uniqueList = (values: (string | null | undefined)[]) =>
+	[...new Set(values.filter((value): value is string => Boolean(value)))].join(
+		LIST_SEPARATOR,
+	) || null;
+
+/** One row holding every mismatch; a verified customer yields none. */
+export const verifyResponseToExportRow = ({
 	customer,
 	response,
 }: {
 	customer: BillingVerifyExportCustomer;
 	response: VerifyResponse;
-}): BillingVerifyExportRow[] => {
-	const toRow = ({
-		mismatch,
-		stripeSubscriptionId,
-	}: {
-		mismatch: SubscriptionMismatch;
-		stripeSubscriptionId: string | null;
-	}): BillingVerifyExportRow => ({
-		...customer,
-		stripe_subscription_id: stripeSubscriptionId,
-		severity: mismatch.severity ?? "error",
-		type: mismatch.type,
-		message: mismatch.message ?? null,
-	});
+}): BillingVerifyExportRow | null => {
+	if (isVerifyResponseClean({ response })) return null;
 
-	return [
-		...response.customer_mismatches.map((mismatch) =>
-			toRow({ mismatch, stripeSubscriptionId: null }),
+	const mismatched = response.subscriptions.filter(
+		(subscription) => subscription.mismatches.length > 0,
+	);
+	const mismatches: SubscriptionMismatch[] = [
+		...response.customer_mismatches,
+		...mismatched.flatMap((subscription) => subscription.mismatches),
+	];
+
+	return {
+		...customer,
+		stripe_subscription_ids: uniqueList(
+			mismatched.map((subscription) => subscription.stripe_subscription_id),
 		),
-		...response.subscriptions.flatMap((subscription) =>
-			subscription.mismatches.map((mismatch) =>
-				toRow({
-					mismatch,
-					stripeSubscriptionId: subscription.stripe_subscription_id,
-				}),
+		severity: mismatches.some((mismatch) => mismatch.severity !== "warning")
+			? "error"
+			: "warning",
+		issues: uniqueList(mismatches.map((mismatch) => mismatch.type)),
+		details: uniqueList(
+			mismatches.map((mismatch) =>
+				mismatch.message ? `${mismatch.type}: ${mismatch.message}` : null,
 			),
 		),
-	];
+	};
 };
