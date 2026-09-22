@@ -41,6 +41,7 @@ export function pendingBillingCycleAnchorFormDefaults({
 	};
 }
 
+// The API cannot cancel a scheduled reset, so toggling off leaves it in place.
 export function billingCycleAnchorChanged({
 	formValues,
 	pendingResetsAt,
@@ -48,9 +49,9 @@ export function billingCycleAnchorChanged({
 	formValues: BillingCycleAnchorFormValues;
 	pendingResetsAt: number | null;
 }): boolean {
-	if (pendingResetsAt === null) return formValues.resetBillingCycle;
+	if (!formValues.resetBillingCycle) return false;
+	if (pendingResetsAt === null) return true;
 	return (
-		!formValues.resetBillingCycle ||
 		formValues.billingCycleAnchorMode !== "custom" ||
 		formValues.billingCycleAnchorDate !== pendingResetsAt
 	);

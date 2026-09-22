@@ -78,7 +78,7 @@ export function useHasSubscriptionChanges({
 		)
 			return true;
 		if (formValues.noBillingChanges) return true;
-		if (formValues.addLicenses !== null) return true;
+		if (formValues.addLicenses?.length) return true;
 
 		if (
 			hasStagedLicenseQuantityChanges({

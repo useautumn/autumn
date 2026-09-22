@@ -85,7 +85,7 @@ test("an untouched prefilled anchor is not a change", () => {
 	).toBe(false);
 });
 
-test("moving the date, switching to now, or turning it off is a change", () => {
+test("moving the date or switching to now is a change", () => {
 	expect(
 		billingCycleAnchorChanged({
 			formValues: {
@@ -106,6 +106,9 @@ test("moving the date, switching to now, or turning it off is a change", () => {
 			pendingResetsAt: futureMs,
 		}),
 	).toBe(true);
+});
+
+test("turning the toggle off keeps the scheduled reset and is not a change", () => {
 	expect(
 		billingCycleAnchorChanged({
 			formValues: {
@@ -115,7 +118,7 @@ test("moving the date, switching to now, or turning it off is a change", () => {
 			},
 			pendingResetsAt: futureMs,
 		}),
-	).toBe(true);
+	).toBe(false);
 });
 
 test("without a scheduled anchor, enabling the toggle is the change", () => {
