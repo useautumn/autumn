@@ -33,6 +33,7 @@ export const setupBillingVerifySweep = async ({
 		sweptSubscriptions: await sweepStripeSubscriptions({
 			stripeCli,
 			includeTestClocks: ctx.env === AppEnv.Sandbox,
+			isSandbox: ctx.env === AppEnv.Sandbox,
 			sinceMs,
 			untilMs,
 			onPage: onSubscriptionsScanned,

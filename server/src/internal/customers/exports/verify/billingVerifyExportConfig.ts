@@ -2,10 +2,12 @@ type BillingVerifyExportConfig = {
 	sweep: {
 		pageSize: number;
 		concurrency: number;
-		windowMonths: number;
+		windowDays: number;
 		pageTimeoutMs: number;
 		pageAttempts: number;
 		retryDelayMs: number;
+		requestsPerSecond: number;
+		sandboxRequestsPerSecond: number;
 	};
 	customer: {
 		concurrency: number;
@@ -32,10 +34,12 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 	sweep: {
 		pageSize: 100,
 		concurrency: 8,
-		windowMonths: 1,
+		windowDays: 7,
 		pageTimeoutMs: 60_000,
 		pageAttempts: 3,
 		retryDelayMs: 2_000,
+		requestsPerSecond: 40,
+		sandboxRequestsPerSecond: 10,
 	},
 	customer: {
 		concurrency: 8,
