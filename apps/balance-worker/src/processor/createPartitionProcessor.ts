@@ -5,6 +5,7 @@ import type {
 	FinalizeCommand,
 	InitializeRequest,
 	MutationSource,
+	ResetCommand,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import { check as checkPartition } from "./commands/check.js";
@@ -12,6 +13,7 @@ import { confirmExpiredLock as confirmExpiredLockPartition } from "./commands/co
 import { evict as evictPartition } from "./commands/evict.js";
 import { finalize as finalizePartition } from "./commands/finalize.js";
 import { initialize as initializePartition } from "./commands/initialize.js";
+import { reset as resetPartition } from "./commands/reset.js";
 import { track as trackPartition } from "./commands/track.js";
 import {
 	acceptCommand,
@@ -109,6 +111,13 @@ function createProcessor({
 		});
 	}
 
+	function reset({ command }: { command: ResetCommand }) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: resetPartition({ scope, command }),
+		});
+	}
+
 	function drain() {
 		return settleAcceptedCommands({ accepted: scope.accepted });
 	}
@@ -146,6 +155,7 @@ function createProcessor({
 		evict,
 		finalize,
 		confirmExpiredLock,
+		reset,
 		drain,
 	};
 }

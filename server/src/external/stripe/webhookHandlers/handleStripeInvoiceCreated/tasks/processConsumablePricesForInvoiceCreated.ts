@@ -3,6 +3,7 @@ import {
 	customerEntitlementShouldBeBilled,
 	type FullCusEntWithFullCusProduct,
 	type FullCusEntWithProduct,
+	getRolloverUpdates,
 	isCustomerEntitlementDueAtInvoice,
 	type LineItem,
 	secondsToMs,
@@ -15,7 +16,6 @@ import { lineItemsToCreateInvoiceItemsParams } from "@/internal/billing/v2/provi
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
-import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";

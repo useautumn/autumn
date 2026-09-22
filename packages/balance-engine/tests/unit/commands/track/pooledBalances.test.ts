@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { PooledBalanceResetMode } from "@autumn/shared";
 import {
 	catalogRowsToCatalog,
 	computeCheck,
@@ -54,6 +55,7 @@ const pooledState = ({
 				customer_entitlement_id: POOL_ROW_ID,
 				granted,
 				unlimited: false,
+				reset_mode: PooledBalanceResetMode.Subscription,
 			},
 		],
 		entity: withEntity ? entity : null,

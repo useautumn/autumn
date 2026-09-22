@@ -4,6 +4,7 @@ import type {
 	EvictCommand,
 	FinalizeCommand,
 	InitializeRequest,
+	ResetCommand,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import type { CheckReply } from "../contracts/check.js";
@@ -11,6 +12,7 @@ import type { ConfirmExpiredLockReply } from "../contracts/confirmExpiredLock.js
 import type { EvictReply } from "../contracts/evict.js";
 import type { FinalizeReply } from "../contracts/finalize.js";
 import type { InitializeReply } from "../contracts/initialize.js";
+import type { ResetReply } from "../contracts/reset.js";
 import type { TrackReply } from "../contracts/track.js";
 import type { HttpClient } from "../http/types/httpClient.js";
 import type {
@@ -28,6 +30,7 @@ export type ConfirmExpiredLockParams = {
 	signal?: AbortSignal;
 };
 export type FinalizeParams = { command: FinalizeCommand; signal?: AbortSignal };
+export type ResetParams = { command: ResetCommand; signal?: AbortSignal };
 export type InitializeParams = {
 	request: InitializeRequest;
 	signal?: AbortSignal;
@@ -41,6 +44,8 @@ export type BalanceWorkerClient = {
 	confirmExpiredLock(
 		params: ConfirmExpiredLockParams,
 	): Promise<ConfirmExpiredLockReply>;
+	/** Brings the subject's cycles up to the command's clock; the cron's way to refill an idle customer. */
+	reset(params: ResetParams): Promise<ResetReply>;
 	/** The async half: `queue.track` is to `track` what Kafka is to HTTP. */
 	queue: CommandQueue;
 	/** A mixed batch of commands; the typed doors on `queue` are the usual way in. */

@@ -18,6 +18,7 @@ import {
 	customerEntitlements,
 	customerProducts,
 	EntInterval,
+	getNextResetAt,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -28,7 +29,6 @@ import chalk from "chalk";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { getNextResetAt } from "@/utils/timeUtils.js";
 
 const INCLUDED_MESSAGES = 100;
 
@@ -187,9 +187,10 @@ test.concurrent(
 			.from(customerEntitlements)
 			.where(eq(customerEntitlements.id, seatCusEnt.id));
 		const expectedNextResetAt = getNextResetAt({
-			curReset: new UTCDate(planted),
+			curReset: planted,
 			interval: EntInterval.Month,
 			intervalCount: 1,
+			now: Date.now(),
 		});
 		expect(seatCusEntAfter.next_reset_at).toBe(expectedNextResetAt);
 		expect(seatCusEntAfter.next_reset_at ?? 0).toBeGreaterThan(Date.now());

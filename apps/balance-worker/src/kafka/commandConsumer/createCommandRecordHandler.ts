@@ -6,7 +6,9 @@ import {
 	type TopicRecordResult,
 	type TopicResumePosition,
 } from "@autumn/kafka";
+import { consumeReset } from "../../consume/consumeReset.js";
 import { consumeTrack } from "../../consume/consumeTrack.js";
+import { settleQueuedFailure } from "../../consume/settleQueuedFailure.js";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import { CommandPartitionUnavailableError } from "./commandConsumerErrors.js";
 import type { CommandConsumerContext } from "./types/commandConsumer.js";
@@ -56,26 +58,35 @@ export function createCommandRecordHandler({
 				});
 				return;
 			}
-			switch (command.type) {
-				case "track": {
-					await consumeTrack({
-						ctx: {
-							processor,
-							idempotencyKeys: ctx.idempotencyKeys,
-							logger: ctx.logger,
-						},
-						command,
-					});
-					break;
+			try {
+				switch (command.type) {
+					case "track":
+						await consumeTrack({
+							ctx: {
+								processor,
+								idempotencyKeys: ctx.idempotencyKeys,
+								logger: ctx.logger,
+							},
+							command,
+						});
+						break;
+					case "reset":
+						await consumeReset({
+							ctx: { processor, logger: ctx.logger },
+							command,
+						});
+						break;
+					default:
+						ctx.logger?.warn("Queued command skipped: not consumable yet", {
+							topic,
+							partition,
+							offset: offset.toString(),
+							commandType: command.type,
+							commandId: command.commandId,
+						});
 				}
-				default:
-					ctx.logger?.warn("Queued command skipped: not consumable yet", {
-						topic,
-						partition,
-						offset: offset.toString(),
-						commandType: command.type,
-						commandId: command.commandId,
-					});
+			} catch (cause) {
+				settleQueuedFailure({ ctx: { logger: ctx.logger }, command, cause });
 			}
 		}
 		return runtime.process((processor) => processor.execute({ source, run }));

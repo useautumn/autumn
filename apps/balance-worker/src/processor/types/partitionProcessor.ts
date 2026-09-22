@@ -5,6 +5,7 @@ import type {
 	FinalizeCommand,
 	InitializeRequest,
 	MutationSource,
+	ResetCommand,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import type {
@@ -13,6 +14,7 @@ import type {
 	EvictReply,
 	FinalizeReply,
 	InitializeReply,
+	ResetReply,
 	TrackReply,
 } from "@autumn/balance-worker-client/protocol";
 import type { CatalogCache } from "../../catalog/types/catalogCache.js";
@@ -42,6 +44,7 @@ export type PartitionProcessor = {
 	confirmExpiredLock(params: {
 		command: ConfirmExpiredLockCommand;
 	}): Promise<ConfirmExpiredLockReply>;
+	reset(params: { command: ResetCommand }): Promise<ResetReply>;
 	/** Settles every accepted command; the runtime awaits this before disposal. */
 	drain(): Promise<void>;
 };

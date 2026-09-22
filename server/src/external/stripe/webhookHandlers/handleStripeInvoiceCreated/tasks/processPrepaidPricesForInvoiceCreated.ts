@@ -1,11 +1,14 @@
 import {
 	addCusProductToCusEnt,
 	BillingType,
+	clampNextResetAtToPendingBillingCycleAnchor,
 	customerEntitlementToOptions,
 	customerPriceToCustomerEntitlement,
 	EntInterval,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomerPrice,
+	getResetBalancesUpdate,
+	getRolloverUpdates,
 	isCustomerEntitlementPrepaidWithSeparateResetInterval,
 	notNullish,
 } from "@autumn/shared";
@@ -14,12 +17,9 @@ import { isStripeSubscriptionVercel } from "@/external/stripe/subscriptions/util
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
 import { getCustomerPricesWithCustomerProducts } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/utils/getCustomerPricesWithCustomerProducts";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { clampNextResetAtToPendingBillingCycleAnchor } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
-import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
-import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
 import { logPrepaidPriceProcessed } from "../logs/logInvoiceCreatedPriceProcessing";
 
 /**

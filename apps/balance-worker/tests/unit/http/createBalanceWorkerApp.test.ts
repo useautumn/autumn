@@ -127,6 +127,9 @@ const fixture = ({
 		confirmExpiredLock: async () => {
 			throw new Error("Expire lock is not configured in this fixture");
 		},
+		reset: async () => {
+			throw new Error("Reset is not configured in this fixture");
+		},
 		drain: async () => undefined,
 	};
 	const process: BalanceWorkerRequestContext["runtime"]["process"] = (run) =>

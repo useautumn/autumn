@@ -2,10 +2,12 @@ import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import {
 	commitFlush,
 	createPostgresClient,
+	getBillingCycleAnchors,
 	getCatalogRows,
 	getSubjectRows,
 	insertPartitionProgress,
 	type PostgresClient,
+	promoteDuePooledContributions,
 	readPartitionProgress,
 } from "@autumn/postgres";
 import type { CommitterDb } from "../../types/committerDb.js";
@@ -46,6 +48,17 @@ export const createWorkerDb = ({
 		getCatalogRows({
 			ctx: { db: ctx.postgres.db, orgId: identity.orgId, env: identity.env },
 			ids,
+		}),
+	getBillingCycleAnchors: ({ identity, customerProductIds }) =>
+		getBillingCycleAnchors({
+			ctx: { db: ctx.postgres.db, orgId: identity.orgId, env: identity.env },
+			customerProductIds,
+		}),
+	promoteDuePooledContributions: ({ pooledBalanceId, now }) =>
+		promoteDuePooledContributions({
+			ctx: { db: ctx.postgres.db },
+			pooledBalanceId,
+			now,
 		}),
 });
 

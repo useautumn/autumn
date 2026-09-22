@@ -6,6 +6,7 @@ import { receiveEvict } from "./handlers/receiveEvict.js";
 import { receiveFinalize } from "./handlers/receiveFinalize.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveInitialize } from "./handlers/receiveInitialize.js";
+import { receiveReset } from "./handlers/receiveReset.js";
 import { receiveTrack } from "./handlers/receiveTrack.js";
 import { requestLoggingMiddleware } from "./middlewares/requestLoggingMiddleware.js";
 import { requestValidationMiddleware } from "./middlewares/requestValidationMiddleware.js";
@@ -33,6 +34,7 @@ export function createBalanceWorkerApp({
 	commands.post("/evict", receiveEvict);
 	commands.post("/finalize", receiveFinalize);
 	commands.post("/confirm-expired-lock", receiveConfirmExpiredLock);
+	commands.post("/reset", receiveReset);
 	app.route("/v1", commands);
 	return app;
 }

@@ -6,11 +6,11 @@ import {
 	FeatureType,
 	type FreeTrial,
 	getCycleEnd,
+	getNextEntitlementReset,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { getNextEntitlementReset } from "@/utils/timeUtils.js";
 
 export const initNextResetAt = ({
 	entitlement,

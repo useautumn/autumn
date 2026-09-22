@@ -9,6 +9,7 @@ import type { WorkerPooledBalance } from "../../models/subject/rows/workerPooled
 import type { SubjectState } from "../../models/subject/subjectState.js";
 import type {
 	WorkerFullCustomerEntitlement,
+	WorkerFullCustomerEntitlementWithProduct,
 	WorkerFullCustomerPrice,
 	WorkerFullSubject,
 } from "../../models/subject/workerFullSubject.js";
@@ -133,6 +134,27 @@ export const subjectStateToFullSubject = ({
 		open_locks: state.openLocks,
 	};
 };
+
+/** Every balance row the subject holds with the plan that granted it, selected or not: a finalize or a reset can land on a row a track would skip. */
+export const fullSubjectToHeldRows = ({
+	fullSubject,
+}: {
+	fullSubject: WorkerFullSubject;
+}): WorkerFullCustomerEntitlementWithProduct[] => [
+	...fullSubject.customer_products.flatMap((customerProduct) =>
+		customerProduct.customer_entitlements.map((customerEntitlement) => ({
+			...customerEntitlement,
+			customer_product: customerProduct,
+		})),
+	),
+	...[
+		...fullSubject.extra_customer_entitlements,
+		...fullSubject.pooled_customer_entitlements,
+	].map((customerEntitlement) => ({
+		...customerEntitlement,
+		customer_product: null,
+	})),
+];
 
 /** Back to the stored row: joined catalog rows and the product the selection attached never travel in a mutation. */
 export const fullCustomerEntitlementToRow = ({

@@ -3,6 +3,7 @@ import {
 	parseConfirmExpiredLockCommand,
 	parseFinalizeCommand,
 	parseInitializeCommand,
+	parseResetCommand,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
 import { InvalidRecordError } from "../../lib/recordErrors.js";
@@ -36,6 +37,8 @@ function parseCommandPayload({
 				return parseFinalizeCommand({ input: payload });
 			case "confirmExpiredLock":
 				return parseConfirmExpiredLockCommand({ input: payload });
+			case "reset":
+				return parseResetCommand({ input: payload });
 			default:
 				throw new InvalidRecordError();
 		}

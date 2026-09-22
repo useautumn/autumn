@@ -5,6 +5,7 @@ export type {
 } from "./catalog/types/catalogRowsEnvelope.js";
 export { parseRows, RowsInvalidError } from "./common/parseRows.js";
 export { createPostgresClient } from "./createPostgresClient.js";
+export { getBillingCycleAnchors } from "./customerProducts/repos/getBillingCycleAnchors.js";
 export { createEventsDb } from "./eventsDb/createEventsDb.js";
 export type {
 	RefusedUsageEvent,
@@ -29,6 +30,7 @@ export {
 	readNextOffset,
 	readPartitionProgress,
 } from "./meteringLog/repos/partitionProgress.js";
+export { promoteDuePooledContributions } from "./pooledBalances/repos/promoteDuePooledContributions.js";
 export {
 	SubjectRowColumnNotCounterError,
 	UnknownSubjectRowColumnError,

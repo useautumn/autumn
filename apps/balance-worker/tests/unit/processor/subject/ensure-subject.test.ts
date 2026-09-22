@@ -136,6 +136,8 @@ const createScope = ({
 	const calls: CatalogRowIds[] = [];
 	const db: WorkerDb = {
 		getSubjectRows: async () => null,
+		getBillingCycleAnchors: async () => ({}),
+		promoteDuePooledContributions: async () => null,
 		getCatalogRows: async ({ ids }) => {
 			calls.push(ids);
 			return {

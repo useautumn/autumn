@@ -54,3 +54,10 @@ Postgres never gets that write. Accepted. `STALE_SUBJECT` / `RECORD_REFUSED` rea
 `"store"` callers. The lever if this ever matters: every writer of `customer_entitlements`,
 `usage_windows`, `rollovers` or `balance_locks` must evict the worker, so a stale guard stays
 the rare case it is meant to be.
+
+## 2026-09-22 follow-up
+
+- `track-commits.test.ts` "row deleted underneath a decision" still asserted a 409 to an HTTP track. Since
+  the log-durability merge a `"log"` caller is answered at Kafka append and the store's refusal is an
+  accepted loss, so the case now asserts that: reply from memory, bookmark past the skipped record,
+  re-hydration on the next track. Its Postgres reads poll for the flush like the file's other cases.

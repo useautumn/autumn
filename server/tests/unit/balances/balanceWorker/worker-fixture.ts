@@ -31,6 +31,8 @@ export function createWorkerFixture({
 	/** Postgres stand-in: no customers, and only the catalog rows the test hands over. */
 	const db: WorkerDb = {
 		getSubjectRows: async () => null,
+		getBillingCycleAnchors: async () => ({}),
+		promoteDuePooledContributions: async () => null,
 		getCatalogRows: async () => ({
 			entitlements: catalogRows.flatMap((row) =>
 				row.table === "entitlements" ? [row.row] : [],

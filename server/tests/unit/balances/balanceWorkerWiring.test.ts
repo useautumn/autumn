@@ -122,8 +122,9 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 		evict: track,
 		finalize: track,
 		confirmExpiredLock: track,
+		reset: track,
 		enqueue: queueNothing,
-		queue: { track: queueNothing },
+		queue: { track: queueNothing, reset: queueNothing },
 		start: async () => {
 			starts++;
 		},

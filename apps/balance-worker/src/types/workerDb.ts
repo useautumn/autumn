@@ -5,7 +5,7 @@ import type {
 	SubjectRowsEnvelope,
 } from "@autumn/postgres";
 
-/** Postgres as the worker reads it: the two repos it needs, bound to the pool and scoped per call. Tests stand these in. */
+/** Postgres as the worker reads it: the repos it needs, bound to the pool and scoped per call. Tests stand these in. */
 export type WorkerDb = {
 	getSubjectRows(params: {
 		identity: MeteringIdentity;
@@ -15,4 +15,14 @@ export type WorkerDb = {
 		identity: MeteringIdentity;
 		ids: CatalogRowIds;
 	}): Promise<CatalogRowsEnvelope>;
+	/** Subscription billing anchors by customer product id, for the plans whose reset the anchor can move. */
+	getBillingCycleAnchors(params: {
+		identity: MeteringIdentity;
+		customerProductIds: string[];
+	}): Promise<Record<string, number>>;
+	/** Promotes a pool's due contributions and returns its grant now; null when the pool has no contributions. */
+	promoteDuePooledContributions(params: {
+		pooledBalanceId: string;
+		now: number;
+	}): Promise<number | null>;
 };

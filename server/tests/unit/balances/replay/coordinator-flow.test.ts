@@ -175,11 +175,17 @@ test.concurrent(
 			confirmExpiredLock: async () => {
 				throw unsupported();
 			},
+			reset: async () => {
+				throw unsupported();
+			},
 			enqueue: async () => {
 				throw unsupported();
 			},
 			queue: {
 				track: async () => {
+					throw unsupported();
+				},
+				reset: async () => {
 					throw unsupported();
 				},
 			},

@@ -15,7 +15,8 @@ type StateRow = SubjectState[
 	| "customerPrices"
 	| "customerEntitlements"
 	| "rollovers"
-	| "usageWindows"][number];
+	| "usageWindows"
+	| "pooledBalances"][number];
 
 const rowIdOf = ({ row }: { row: StateRow }): string => row.id;
 
@@ -152,6 +153,15 @@ export const applyChanges = ({
 				nextState = {
 					...nextState,
 					usageWindows: applyToTable({ rows: nextState.usageWindows, change }),
+				};
+				break;
+			case "pooledBalances":
+				nextState = {
+					...nextState,
+					pooledBalances: applyToTable({
+						rows: nextState.pooledBalances,
+						change,
+					}),
 				};
 				break;
 			case "locks":

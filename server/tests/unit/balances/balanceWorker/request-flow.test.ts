@@ -322,11 +322,17 @@ test.concurrent(
 				confirmExpiredLock: async () => {
 					throw cause;
 				},
+				reset: async () => {
+					throw cause;
+				},
 				enqueue: async () => {
 					throw cause;
 				},
 				queue: {
 					track: async () => {
+						throw cause;
+					},
+					reset: async () => {
 						throw cause;
 					},
 				},

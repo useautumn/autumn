@@ -64,6 +64,16 @@ export * from "./getStartingBalance";
 export * from "./overageUtils/cusEntToInvoiceOverage";
 export * from "./overageUtils/cusEntToInvoiceUsage";
 export * from "./overageUtils/cusEntToOptions";
+// Reset utils
+export * from "./resetUtils/clampNextResetAtToPendingBillingCycleAnchor";
+export * from "./resetUtils/customerEntitlementToNextResetAt";
+export * from "./resetUtils/getNextResetAt";
+export * from "./resetUtils/getResetBalancesUpdate";
+// Rollover utils
+export * from "./rolloverUtils/clearRolloversOverMax";
+export * from "./rolloverUtils/cusEntToEffectiveRolloverMax";
+export * from "./rolloverUtils/getRolloverUpdates";
+export * from "./rolloverUtils/performMaximumClearing";
 export * from "./sortCusEntsForDeduction";
 export * from "./usageAttribution/buildUsageAttributionKey";
 export * from "./usageAttribution/parseUsageAttributionKey";

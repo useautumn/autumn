@@ -5,6 +5,7 @@ import {
 	parseCheckCommand,
 } from "@autumn/balance-engine";
 import type { CheckReply } from "@autumn/balance-worker-client/protocol";
+import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
@@ -21,9 +22,9 @@ export async function check({
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: parsed.identity,
 	});
-	await ctx.subjectHydrator.ensure({ identity: parsed.identity });
+	await ensureSubjectCurrent({ scope, command: parsed });
 
-	// Only outcomes pending at this moment; a track arriving later is not "earlier" for this check.
+	// Only outcomes pending at this moment, any reset just decided included; a track arriving later is not "earlier" for this check.
 	await ctx.writer.waitForPendingCommits({ customerKey });
 	ctx.assertCanRead();
 

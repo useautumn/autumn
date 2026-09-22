@@ -20,6 +20,7 @@ export const orgToCommandOrg = ({ org }: { org: OrgLike }): CommandOrg => ({
 		include_past_due: org.config.include_past_due,
 		usage_alerts: org.config.usage_alerts,
 		sandbox_usage_alerts: org.config.sandbox_usage_alerts,
+		persist_free_overage: org.config.persist_free_overage,
 	},
 	svix: {
 		sandbox_app_id: org.svix_config?.sandbox_app_id || null,

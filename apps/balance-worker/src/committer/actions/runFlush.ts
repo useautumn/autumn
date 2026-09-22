@@ -31,6 +31,7 @@ const isBalanceTable = (table: RowChange["table"]): table is BalanceTable =>
 	table === "customerEntitlements" ||
 	table === "rollovers" ||
 	table === "usageWindows" ||
+	table === "pooledBalances" ||
 	table === "locks";
 
 /** An increment adds its counters; an update replaces its columns under the before guard. */

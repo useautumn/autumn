@@ -1,11 +1,13 @@
 import type { EntInterval, FullEntitlement, ResetCusEnt } from "@autumn/shared";
+import {
+	getNextResetAt,
+	getResetBalancesUpdate,
+	getRolloverUpdates,
+} from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { Decimal } from "decimal.js";
 import type { RepoContext } from "@/db/repoContext";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
-import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
-import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
-import { getNextResetAt } from "@/utils/timeUtils.js";
 
 export const resetShortDurationCustomerEntitlement = async ({
 	ctx,
@@ -23,9 +25,10 @@ export const resetShortDurationCustomerEntitlement = async ({
 	const resetCusEnt = {
 		...cusEnt,
 		next_reset_at: getNextResetAt({
-			curReset: new UTCDate(cusEnt.next_reset_at),
+			curReset: cusEnt.next_reset_at,
 			interval: ent.interval as EntInterval,
 			intervalCount: ent.interval_count,
+			now: Date.now(),
 		}),
 		adjustment: 0,
 		...getResetBalancesUpdate({

@@ -8,6 +8,7 @@ import {
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
+import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type { MutationResult } from "../writer/types/mutation.js";
@@ -25,7 +26,7 @@ export async function track({
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: parsed.identity,
 	});
-	await ctx.subjectHydrator.ensure({ identity: parsed.identity });
+	await ensureSubjectCurrent({ scope, command: parsed });
 
 	// Synchronous: `mutate` runs against the freshest state and the mutation is enqueued before this returns.
 	// Filled by the decision, which is the only place that knows which rows it was made against.

@@ -44,6 +44,9 @@ export const commandToFingerprint = ({
 			]);
 		case "confirmExpiredLock":
 			return JSON.stringify([...identityKey, command.lock.id]);
+		// The clock is the request, and it rides in the id; a retry carries the same id.
+		case "reset":
+			return JSON.stringify([...identityKey, command.type]);
 		// The baseline rows are the request; a retry with different rows is a conflict.
 		case "initialize":
 			return JSON.stringify(

@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
+	parseResetCommand,
 	parseTrackCommand,
+	type ResetCommand,
 	type TrackCommand,
 	UnsupportedCommandError,
 } from "@autumn/balance-engine";
@@ -10,7 +12,11 @@ import { createCommandRecordHandler } from "../../../src/kafka/commandConsumer/c
 import type { PartitionRuntimePort } from "../../../src/partitions/types/partitions.js";
 import { PartitionWriterDuplicateCommandError } from "../../../src/processor/writer/writerErrors.js";
 import { createFakeIdempotencyKeys } from "../../fixtures/idempotencyKeys.js";
-import { createTrackCommand, testIdentity } from "../../fixtures/mutations.js";
+import {
+	createTrackCommand,
+	testIdentity,
+	testOrg,
+} from "../../fixtures/mutations.js";
 
 const topic = "local-commands";
 const partition = 0;
@@ -49,6 +55,10 @@ function createFixture({
 					if (outcome instanceof Error) throw outcome;
 					return { result: { status: outcome ?? "applied", reason: null } };
 				},
+				reset: async () => {
+					if (outcome instanceof Error) throw outcome;
+					return { result: null };
+				},
 			};
 			return run(processor as never);
 		},
@@ -75,7 +85,23 @@ const command = parseTrackCommand({
 	}),
 });
 
-function recordOf({ command: record }: { command: TrackCommand }) {
+const resetCommand = parseResetCommand({
+	input: {
+		schemaVersion: 1,
+		type: "reset",
+		commandId: "reset_cus_1_1",
+		requestId: "reset_cus_1_1",
+		identity: testIdentity,
+		occurredAt: 1_700_000_000_000,
+		org: testOrg,
+	},
+});
+
+function recordOf({
+	command: record,
+}: {
+	command: TrackCommand | ResetCommand;
+}) {
 	return {
 		topic,
 		partition,
@@ -141,6 +167,21 @@ describe("command record handler", () => {
 		expect(rejected.logs).toEqual([
 			"warn:Queued track rejected by the balance",
 		]);
+	});
+
+	test("a redelivered reset whose id was already applied is consumed, never thrown: the poison that crash-looped a partition", async () => {
+		const duplicate = createFixture({
+			outcome: new PartitionWriterDuplicateCommandError({
+				commandId: "reset_cus_1_1",
+			}),
+		});
+		await duplicate.handler.applyRecord(recordOf({ command: resetCommand }));
+		expect(duplicate.completed).toEqual([{ commandOffset: "7" }]);
+		expect(duplicate.logs).toEqual(["info:Queued reset already applied"]);
+
+		const idle = createFixture();
+		await idle.handler.applyRecord(recordOf({ command: resetCommand }));
+		expect(idle.logs).toEqual(["info:Queued reset found nothing due"]);
 	});
 
 	test("anything else is thrown so Kafka redelivers, and an unowned partition never consumes", async () => {

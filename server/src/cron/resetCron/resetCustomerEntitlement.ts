@@ -3,6 +3,9 @@ import {
 	addCusProductToCusEnt,
 	cusEntToStartingBalance,
 	EntInterval,
+	getNextResetAt,
+	getResetBalancesUpdate,
+	getRolloverUpdates,
 	isCustomerEntitlementPrepaidWithSeparateResetInterval,
 	PooledBalanceResetMode,
 	type ResetCusEnt,
@@ -18,10 +21,7 @@ import { invalidateCustomerEntitlementBalance } from "@/internal/customers/cache
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
-import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
-import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
-import { getNextResetAt } from "@/utils/timeUtils.js";
 import type { CronContext } from "../utils/CronContext";
 import { getStripeSubscriptionAnchor } from "./getStripeSubscriptionAnchor";
 import { resetShortDurationCustomerEntitlement } from "./resetShortDurationCustomerEntitlement";
@@ -162,9 +162,10 @@ const resetCustomerEntitlementInDb = async ({
 
 		// 1. Check if should reset
 		let nextResetAt = getNextResetAt({
-			curReset: new UTCDate(cusEnt.next_reset_at),
+			curReset: cusEnt.next_reset_at,
 			interval: resetInterval,
 			intervalCount: cusEnt.entitlement.interval_count,
+			now: Date.now(),
 		});
 
 		const rolloverUpdate = getRolloverUpdates({

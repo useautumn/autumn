@@ -3,6 +3,8 @@ import {
 	type EntityBalance,
 	type FullCusEntWithFullCusProduct,
 	type FullCusEntWithProduct,
+	getResetBalancesUpdate,
+	getRolloverUpdates,
 	isLifetimeEntitlement,
 	isUnlimitedEntitlement,
 	orgPersistFreeOverage,
@@ -12,8 +14,6 @@ import {
 import { logger } from "better-auth";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { promoteDuePooledContributions } from "@/internal/billing/v2/pooledBalances/execute/promoteDuePooledContributions.js";
-import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
-import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 import { getResetAtUpdate } from "./getResetAtUpdate.js";
 
 export type ResetUpdates = {

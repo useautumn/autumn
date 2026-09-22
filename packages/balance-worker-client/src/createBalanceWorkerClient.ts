@@ -3,6 +3,7 @@ import { sendConfirmExpiredLock } from "./commands/sendConfirmExpiredLock.js";
 import { sendEvict } from "./commands/sendEvict.js";
 import { sendFinalize } from "./commands/sendFinalize.js";
 import { sendInitialize } from "./commands/sendInitialize.js";
+import { sendReset } from "./commands/sendReset.js";
 import { sendTrack } from "./commands/sendTrack.js";
 import { createHttpClient } from "./http/createHttpClient.js";
 import { createCommandQueue } from "./queue/createCommandQueue.js";
@@ -17,6 +18,7 @@ import type {
 	EvictParams,
 	FinalizeParams,
 	InitializeParams,
+	ResetParams,
 	TrackParams,
 } from "./types/balanceWorkerClient.js";
 
@@ -69,6 +71,10 @@ export function createBalanceWorkerClient({
 		return sendConfirmExpiredLock({ ctx, ...params });
 	}
 
+	function reset(params: ResetParams) {
+		return sendReset({ ctx, ...params });
+	}
+
 	function enqueue(params: EnqueueParams) {
 		return enqueueCommands({ ctx: queue, ...params });
 	}
@@ -88,6 +94,7 @@ export function createBalanceWorkerClient({
 		evict,
 		finalize,
 		confirmExpiredLock,
+		reset,
 		queue: createCommandQueue({ ctx: queue }),
 		enqueue,
 		start,

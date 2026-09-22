@@ -1,15 +1,24 @@
-import type {
-	EntityBalance,
-	FullCustomerEntitlement,
-	UsageAttribution,
-} from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { notNullish } from "@/utils/genUtils.js";
+import type {
+	CustomerEntitlement,
+	EntityBalance,
+	UsageAttribution,
+} from "../../../models/cusProductModels/cusEntModels/cusEntModels.js";
+import type { Entitlement } from "../../../models/productModels/entModels/entModels.js";
+import { notNullish } from "../../utils.js";
 
 export type ResetBalancesUpdate = (
 	| { entities: Record<string, EntityBalance> }
 	| { balance: number; additional_balance: number; adjustment: number }
 ) & { usage_attribution: UsageAttribution };
+
+/** What a refill reads: the balances being replaced and the grant that sizes them. */
+export type ResetBalancesCustomerEntitlement = Pick<
+	CustomerEntitlement,
+	"balance" | "entities"
+> & {
+	entitlement: Pick<Entitlement, "allowance" | "entity_feature_id">;
+};
 
 /** Returns the overage amount to deduct: max(0, -balance). */
 const computeOverageDeduction = ({ balance }: { balance: number }): Decimal => {
@@ -21,7 +30,7 @@ export const getResetBalancesUpdate = ({
 	allowance,
 	persistFreeOverage = false,
 }: {
-	cusEnt: FullCustomerEntitlement;
+	cusEnt: ResetBalancesCustomerEntitlement;
 	allowance?: number;
 	persistFreeOverage?: boolean;
 }): ResetBalancesUpdate => {
@@ -32,9 +41,8 @@ export const getResetBalancesUpdate = ({
 	const entitlement = cusEnt.entitlement;
 
 	if (notNullish(entitlement.entity_feature_id)) {
-		const newEntities = { ...cusEnt.entities };
-		for (const entityId in newEntities) {
-			const entity = newEntities[entityId];
+		const newEntities: Record<string, EntityBalance> = {};
+		for (const [entityId, entity] of Object.entries(cusEnt.entities ?? {})) {
 			let entityResetBalance = newBalance;
 
 			if (persistFreeOverage) {
@@ -44,8 +52,11 @@ export const getResetBalancesUpdate = ({
 				entityResetBalance = new Decimal(newBalance).sub(overage).toNumber();
 			}
 
-			newEntities[entityId].balance = entityResetBalance;
-			newEntities[entityId].adjustment = 0;
+			newEntities[entityId] = {
+				...entity,
+				balance: entityResetBalance,
+				adjustment: 0,
+			};
 		}
 		return { entities: newEntities, usage_attribution: {} };
 	}

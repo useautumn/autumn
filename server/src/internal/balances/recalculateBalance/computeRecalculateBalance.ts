@@ -6,6 +6,7 @@ import {
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
 	getRecalculableScopeKeys,
+	getResetBalancesUpdate,
 	type RecalculateBalanceParamsV0,
 	RecaseError,
 } from "@autumn/shared";
@@ -13,7 +14,6 @@ import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deductFromCusEntsTypescript } from "@/internal/balances/track/deductUtils/deductFromCusEntsTypescript";
 import { CusService } from "@/internal/customers/CusService";
-import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
 import { buildCustomerEntitlementFilters } from "../utils/buildCustomerEntitlementFilters";
 import { validateInvoiceCreditBalanceMutation } from "../utils/validateInvoiceCreditBalanceMutation.js";
 

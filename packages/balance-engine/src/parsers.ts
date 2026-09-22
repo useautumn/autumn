@@ -23,6 +23,10 @@ import {
 	initializeRequestSchema,
 } from "./commands/initialize/types/initializeRequest.js";
 import {
+	type ResetCommand,
+	resetCommandSchema,
+} from "./commands/reset/types/resetCommand.js";
+import {
 	type TrackCommand,
 	trackCommandSchema,
 } from "./commands/track/types/trackCommand.js";
@@ -79,6 +83,12 @@ export const parseConfirmExpiredLockCommand = ({
 }: {
 	input: unknown;
 }): ConfirmExpiredLockCommand => confirmExpiredLockCommandSchema.parse(input);
+
+export const parseResetCommand = ({
+	input,
+}: {
+	input: unknown;
+}): ResetCommand => resetCommandSchema.parse(input);
 
 export const parseFinalizeCommand = ({
 	input,

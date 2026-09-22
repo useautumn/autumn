@@ -4,7 +4,7 @@ import {
 	type IdempotencyClaim,
 	withIdempotencyKey,
 } from "@autumn/dynamodb";
-import { settleTrackFailure } from "./trackSettlement.js";
+import { classifyQueuedFailure } from "./settleQueuedFailure.js";
 import type { ConsumeContext } from "./types/consume.js";
 
 /** The item owns its claim: its fan-out commands and redeliveries resume it, any other item is a duplicate. */
@@ -27,9 +27,9 @@ const claimOf = ({
 };
 
 const isRefusal = (cause: unknown): boolean =>
-	settleTrackFailure({ cause }) === "refused";
+	classifyQueuedFailure({ cause }) === "refused";
 
-/** A queued track: nobody waits for its reply, so every outcome is logged and only a transient failure comes back. */
+/** A queued track: claim the item's key, run it, describe the verdict. Failures go to the stream's boundary. */
 export async function consumeTrack({
 	ctx,
 	command,
@@ -43,29 +43,21 @@ export async function consumeTrack({
 		customerId: command.identity.customerId,
 		featureId: command.featureId,
 	};
-	try {
-		const reply = await withIdempotencyKey({
-			store: ctx.idempotencyKeys,
-			claim: claimOf({ command }),
-			run: () => ctx.processor.track({ command }),
-			onDuplicate: () => null,
-			releaseOnError: isRefusal,
+	const reply = await withIdempotencyKey({
+		store: ctx.idempotencyKeys,
+		claim: claimOf({ command }),
+		run: () => ctx.processor.track({ command }),
+		onDuplicate: () => null,
+		releaseOnError: isRefusal,
+	});
+	if (reply === null)
+		ctx.logger?.info(
+			"Queued track skipped: idempotency key already used",
+			fields,
+		);
+	else if (reply.result.status !== "applied")
+		ctx.logger?.warn("Queued track rejected by the balance", {
+			...fields,
+			reason: reply.result.reason,
 		});
-		if (reply === null)
-			ctx.logger?.info(
-				"Queued track skipped: idempotency key already used",
-				fields,
-			);
-		else if (reply.result.status !== "applied")
-			ctx.logger?.warn("Queued track rejected by the balance", {
-				...fields,
-				reason: reply.result.reason,
-			});
-	} catch (cause) {
-		const settlement = settleTrackFailure({ cause });
-		if (settlement === "transient") throw cause;
-		if (settlement === "applied")
-			ctx.logger?.info("Queued track already applied", fields);
-		else ctx.logger?.warn("Queued track refused", { ...fields, error: cause });
-	}
 }

@@ -6,6 +6,7 @@ import type {
 	FinalizeReply,
 	InitializeReply,
 	PartitionRoute,
+	ResetReply,
 	WorkerErrorCode,
 	WorkerRequest,
 } from "@autumn/balance-worker-client/protocol";
@@ -41,7 +42,8 @@ export type BalanceWorkerRequestLog = {
 		| CheckReply
 		| InitializeReply
 		| FinalizeReply
-		| ConfirmExpiredLockReply;
+		| ConfirmExpiredLockReply
+		| ResetReply;
 	error?: Error;
 	errorCode?: WorkerErrorCode;
 };

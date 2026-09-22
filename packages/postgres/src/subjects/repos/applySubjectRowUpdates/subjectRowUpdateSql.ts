@@ -1,6 +1,7 @@
 import {
 	balanceLocks,
 	customerEntitlements,
+	pooledBalances,
 	rollovers,
 	usageWindows,
 } from "@autumn/shared";
@@ -20,6 +21,7 @@ const tables = {
 	customerEntitlements,
 	rollovers,
 	usageWindows,
+	pooledBalances,
 	locks: balanceLocks,
 } as const;
 
@@ -27,6 +29,7 @@ const tableNames: Record<SubjectRowTable, string> = {
 	customerEntitlements: "customer_entitlements",
 	rollovers: "rollovers",
 	usageWindows: "usage_windows",
+	pooledBalances: "pooled_balances",
 	locks: "balance_locks",
 };
 
@@ -142,6 +145,7 @@ const MAP_ENTRIES: Record<
 		},
 	},
 	usageWindows: {},
+	pooledBalances: {},
 	locks: {},
 };
 

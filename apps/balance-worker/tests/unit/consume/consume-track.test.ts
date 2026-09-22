@@ -107,28 +107,30 @@ describe("consumeTrack", () => {
 		expect(tracked).toEqual(["c1", "c2", "c1"]);
 	});
 
-	test("a refused track releases the claim so the caller can retry", async () => {
-		const { ctx, logs, keys } = createFixture({
+	test("a refused track releases the claim and lets the stream's boundary settle it", async () => {
+		const { ctx, keys } = createFixture({
 			outcome: new UnsupportedCommandError({ reason: "feature_not_found" }),
 		});
-		await consumeTrack({
-			ctx,
-			command: commandOf({ commandId: "c1", requestId: "r1" }),
-		});
+		await expect(
+			consumeTrack({
+				ctx,
+				command: commandOf({ commandId: "c1", requestId: "r1" }),
+			}),
+		).rejects.toBeInstanceOf(UnsupportedCommandError);
 		expect(keys.released).toEqual([storageKey]);
-		expect(logs).toEqual(["warn:Queued track refused"]);
 	});
 
-	test("an already applied track keeps the claim and is consumed", async () => {
-		const { ctx, logs, keys } = createFixture({
+	test("an already applied track keeps the claim and lets the stream's boundary settle it", async () => {
+		const { ctx, keys } = createFixture({
 			outcome: new PartitionWriterDuplicateCommandError({ commandId: "c1" }),
 		});
-		await consumeTrack({
-			ctx,
-			command: commandOf({ commandId: "c1", requestId: "r1" }),
-		});
+		await expect(
+			consumeTrack({
+				ctx,
+				command: commandOf({ commandId: "c1", requestId: "r1" }),
+			}),
+		).rejects.toBeInstanceOf(PartitionWriterDuplicateCommandError);
 		expect(keys.released).toEqual([]);
-		expect(logs).toEqual(["info:Queued track already applied"]);
 	});
 
 	test("a transient failure keeps the claim and comes back for redelivery", async () => {

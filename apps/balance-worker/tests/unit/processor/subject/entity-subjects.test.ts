@@ -144,6 +144,8 @@ const createFixture = () => {
 			return requested.entityId === entity.id ? entityEnvelope : null;
 		},
 		getCatalogRows: createSyntheticWorkerDb().getCatalogRows,
+		getBillingCycleAnchors: async () => ({}),
+		promoteDuePooledContributions: async () => null,
 	};
 	const appender = new ControlledAppender();
 	const limits = {

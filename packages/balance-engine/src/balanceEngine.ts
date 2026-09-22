@@ -13,6 +13,15 @@ export { computeInitialize } from "./commands/initialize/computeInitialize.js";
 export type { InitializeCommand } from "./commands/initialize/types/initializeCommand.js";
 export type { InitializeRequest } from "./commands/initialize/types/initializeRequest.js";
 export type { InitializeResult } from "./commands/initialize/types/initializeResult.js";
+export { computeReset } from "./commands/reset/computeReset.js";
+export type {
+	ResetCommand,
+	ResetDurability,
+} from "./commands/reset/types/resetCommand.js";
+export type {
+	ResetResult,
+	ResetRow,
+} from "./commands/reset/types/resetResult.js";
 export { computeTrack } from "./commands/track/computeTrack.js";
 export type {
 	OverageBehavior,
@@ -108,6 +117,7 @@ export {
 	parseInitializeRequest,
 	parseMeteringIdentity,
 	parseMutationRecord,
+	parseResetCommand,
 	parseSubjectState,
 	parseSubjectStateMutation,
 	parseTrackCommand,
@@ -137,3 +147,8 @@ export {
 	fullCustomerEntitlementToRow,
 	subjectStateToFullSubject,
 } from "./utils/subjectUtils/convertSubjectUtils.js";
+export {
+	fullSubjectToDueRows,
+	fullSubjectToPlansNeedingBillingCycleAnchor,
+	fullSubjectToPoolsNeedingPromotion,
+} from "./utils/subjectUtils/fullSubjectToDueRows.js";

@@ -19,6 +19,10 @@ export type {
 	InitializeReply,
 } from "./contracts/initialize.js";
 export type {
+	BalanceWorkerResetRequest,
+	ResetReply,
+} from "./contracts/reset.js";
+export type {
 	BalanceWorkerTrackRequest,
 	TrackReply,
 } from "./contracts/track.js";

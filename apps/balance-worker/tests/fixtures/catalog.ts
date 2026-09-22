@@ -74,11 +74,15 @@ export const createSyntheticWorkerDb = ({
 } = {}): WorkerDb => ({
 	getSubjectRows: async () => subjectRows,
 	getCatalogRows: async (params) => syntheticCatalogRows(params),
+	getBillingCycleAnchors: async () => ({}),
+	promoteDuePooledContributions: async () => null,
 });
 
 /** A Postgres stand-in that knows nothing: every miss stays a miss. */
 export const createEmptyWorkerDb = (): WorkerDb => ({
 	getSubjectRows: async () => null,
+	getBillingCycleAnchors: async () => ({}),
+	promoteDuePooledContributions: async () => null,
 	getCatalogRows: async () => ({
 		entitlements: [],
 		products: [],

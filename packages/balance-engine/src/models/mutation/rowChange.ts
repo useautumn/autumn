@@ -25,6 +25,10 @@ import {
 	workerLockSchema,
 } from "../subject/rows/workerLock.js";
 import {
+	type WorkerPooledBalance,
+	workerPooledBalanceSchema,
+} from "../subject/rows/workerPooledBalance.js";
+import {
 	type WorkerRollover,
 	workerRolloverSchema,
 } from "../subject/rows/workerRollover.js";
@@ -187,6 +191,7 @@ export type RowChange =
 	| RolloverIncrement
 	| TableRowChange<"usageWindows", WorkerUsageWindow>
 	| UsageWindowIncrement
+	| TableRowChange<"pooledBalances", WorkerPooledBalance>
 	| LockRowChange;
 
 export const rowChangeSchema = z.discriminatedUnion("table", [
@@ -217,6 +222,10 @@ export const rowChangeSchema = z.discriminatedUnion("table", [
 		table: "usageWindows",
 		rowSchema: workerUsageWindowSchema,
 		parts: usageWindowIncrementParts,
+	}),
+	tableRowChangeSchema({
+		table: "pooledBalances",
+		rowSchema: workerPooledBalanceSchema,
 	}),
 	writeOnceRowChangeSchema({ table: "locks", rowSchema: workerLockSchema }),
 ]);

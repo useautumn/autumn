@@ -13,7 +13,8 @@ type StateRow = SubjectState[
 	| "customerPrices"
 	| "customerEntitlements"
 	| "rollovers"
-	| "usageWindows"][number];
+	| "usageWindows"
+	| "pooledBalances"][number];
 
 const rowMatchesAfter = ({
 	row,
@@ -121,6 +122,15 @@ export const revertChanges = ({
 					...previousState,
 					usageWindows: revertOnTable({
 						rows: previousState.usageWindows,
+						change,
+					}),
+				};
+				break;
+			case "pooledBalances":
+				previousState = {
+					...previousState,
+					pooledBalances: revertOnTable({
+						rows: previousState.pooledBalances,
 						change,
 					}),
 				};

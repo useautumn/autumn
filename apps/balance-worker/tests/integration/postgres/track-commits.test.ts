@@ -3,7 +3,14 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseTrackCommand, type TrackCommand } from "@autumn/balance-engine";
+import {
+	type CheckCommand,
+	parseCheckCommand,
+	parseResetCommand,
+	parseTrackCommand,
+	type ResetCommand,
+	type TrackCommand,
+} from "@autumn/balance-engine";
 import {
 	type BalanceWorkerClient,
 	createBalanceWorkerClient,
@@ -24,6 +31,7 @@ import {
 	readWorktreeDatabaseUrl,
 	type SeededCustomer,
 	seedCustomer,
+	seedPool,
 } from "./postgresCustomerFixture.js";
 
 const brokers = (process.env.KAFKA_BROKERS ?? "").split(",").filter(Boolean);
@@ -235,10 +243,12 @@ function trackCommand({
 	customer,
 	commandId,
 	value,
+	occurredAt = Date.now(),
 }: {
 	customer: SeededCustomer;
 	commandId: string;
 	value: number;
+	occurredAt?: number;
 }): TrackCommand {
 	return parseTrackCommand({
 		input: {
@@ -259,7 +269,66 @@ function trackCommand({
 			value,
 			overageBehavior: "reject",
 			properties: null,
+			occurredAt,
+		},
+	});
+}
+
+function checkCommand({
+	customer,
+	requestId,
+	requiredBalance,
+}: {
+	customer: SeededCustomer;
+	requestId: string;
+	requiredBalance: number;
+}): CheckCommand {
+	return parseCheckCommand({
+		input: {
+			schemaVersion: 1,
+			type: "check",
+			org: {
+				config: {
+					reverse_deduction_order: false,
+					block_overdue_entitlements: false,
+					include_past_due: true,
+				},
+			},
+			requestId,
+			identity: customer.identity,
+			featureId: customer.featureId,
+			internalFeatureId: customer.internalFeatureId,
+			requiredBalance,
+			properties: null,
 			occurredAt: Date.now(),
+		},
+	});
+}
+
+function resetCommand({
+	customer,
+	commandId,
+	occurredAt = Date.now(),
+}: {
+	customer: SeededCustomer;
+	commandId: string;
+	occurredAt?: number;
+}): ResetCommand {
+	return parseResetCommand({
+		input: {
+			schemaVersion: 1,
+			type: "reset",
+			org: {
+				config: {
+					reverse_deduction_order: false,
+					block_overdue_entitlements: false,
+					include_past_due: true,
+				},
+			},
+			commandId,
+			requestId: `req_${commandId}`,
+			identity: customer.identity,
+			occurredAt,
 		},
 	});
 }
@@ -336,6 +405,29 @@ async function waitForCommandBookmark({
 		await Bun.sleep(50);
 	}
 	expect(current).toBe(nextOffset);
+}
+
+async function waitForBookmarkPast({
+	customer,
+	harness,
+	bookmark,
+}: {
+	customer: SeededCustomer;
+	harness: Harness;
+	bookmark: bigint | null;
+}): Promise<bigint> {
+	let current: bigint | null = null;
+	for (let attempt = 0; attempt < 200; attempt++) {
+		current = await customer.readNextOffset({
+			topic: harness.topics.metering,
+			partition: PARTITION,
+		});
+		if (current !== null && (bookmark === null || current > bookmark)) {
+			return current;
+		}
+		await Bun.sleep(50);
+	}
+	throw new Error(`Bookmark never moved past ${bookmark}`);
 }
 
 const balanceOf = (
@@ -534,7 +626,312 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			}
 		}, 90_000);
 
-		test("a row deleted underneath a decision refuses that track alone: 409, bookmark past it, the next track re-hydrates, a restart replays it as settled", async () => {
+		test("a command past the row's cycle end refills it first: the track draws from the new cycle and Postgres shows it; a check does the same", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const DAY_MS = 24 * 60 * 60 * 1000;
+			const cycleEndedAt = Date.now() - DAY_MS;
+			const tracked = await seedCustomer({
+				postgres,
+				balance: 60,
+				allowance: 100,
+				nextResetAt: cycleEndedAt,
+			});
+			const checked = await seedCustomer({
+				postgres,
+				balance: 60,
+				allowance: 100,
+				nextResetAt: cycleEndedAt,
+			});
+			try {
+				const reply = await trackOrExplain(
+					harness,
+					trackCommand({
+						customer: tracked,
+						commandId: "reset_track",
+						value: 5,
+					}),
+				);
+				expect(reply.result.status).toBe("applied");
+				expect(balanceOf(reply, tracked.customerEntitlementId)).toBe(95);
+				expect(await waitForBalance({ customer: tracked, balance: 95 })).toBe(
+					95,
+				);
+				const trackedNextResetAt = await tracked.readNextResetAt();
+				expect(trackedNextResetAt).toBeGreaterThan(Date.now());
+				expect(trackedNextResetAt).toBeLessThanOrEqual(
+					cycleEndedAt + 32 * DAY_MS,
+				);
+
+				// A retry of the track is a duplicate; the reset it triggered is not refilled twice.
+				await expect(
+					harness.client.track({
+						command: trackCommand({
+							customer: tracked,
+							commandId: "reset_track",
+							value: 5,
+						}),
+					}),
+				).rejects.toMatchObject({ workerCode: "DUPLICATE_COMMAND" });
+				expect(await tracked.readBalance()).toBe(95);
+
+				// 60 on the old cycle would refuse 70; the check refills first and allows it.
+				const check = await harness.client.check({
+					command: checkCommand({
+						customer: checked,
+						requestId: "reset_check",
+						requiredBalance: 70,
+					}),
+				});
+				expect(check.result.allowed).toBe(true);
+				expect(balanceOf(check, checked.customerEntitlementId)).toBe(100);
+				expect(await waitForBalance({ customer: checked, balance: 100 })).toBe(
+					100,
+				);
+				expect(await checked.readNextResetAt()).toBeGreaterThan(Date.now());
+			} finally {
+				await tracked.cleanup();
+				await checked.cleanup();
+			}
+		}, 60_000);
+
+		test("a reset on an edge date reads the subscription's anchor from Postgres and lands on the anchor's cycle end", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const utc = (year: number, month: number, day: number) =>
+				Date.UTC(year, month - 1, day);
+			// A month-end subscription drifted to the 30th: stepping alone would give 30 May; the anchor bills 31 May.
+			const anchored = await seedCustomer({
+				postgres,
+				balance: 60,
+				allowance: 100,
+				nextResetAt: utc(2027, 4, 30),
+				billingCycleAnchor: utc(2027, 1, 31),
+			});
+			try {
+				const reply = await trackOrExplain(
+					harness,
+					trackCommand({
+						customer: anchored,
+						commandId: "anchored_track",
+						value: 5,
+						occurredAt: utc(2027, 5, 1),
+					}),
+				);
+				expect(balanceOf(reply, anchored.customerEntitlementId)).toBe(95);
+				expect(await waitForBalance({ customer: anchored, balance: 95 })).toBe(
+					95,
+				);
+				expect(await anchored.readNextResetAt()).toBe(utc(2027, 5, 31));
+			} finally {
+				await anchored.cleanup();
+			}
+		}, 60_000);
+
+		test("an explicit reset refills a due row and lands it; nothing due writes nothing; a queued reset is consumed the same way", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const DAY_MS = 24 * 60 * 60 * 1000;
+			const sent = await seedCustomer({
+				postgres,
+				balance: 60,
+				allowance: 100,
+				nextResetAt: Date.now() - DAY_MS,
+			});
+			const queued = await seedCustomer({
+				postgres,
+				balance: 60,
+				allowance: 100,
+				nextResetAt: Date.now() - DAY_MS,
+			});
+			try {
+				const refilled = await harness.client.reset({
+					command: resetCommand({ customer: sent, commandId: "reset_1" }),
+				});
+				expect(
+					refilled.result?.rows.map((row) => row.customerEntitlementId),
+				).toEqual([sent.customerEntitlementId]);
+				expect(await waitForBalance({ customer: sent, balance: 100 })).toBe(
+					100,
+				);
+				expect(await sent.readNextResetAt()).toBeGreaterThan(Date.now());
+				const bookmark = await sent.readNextOffset({
+					topic: harness.topics.metering,
+					partition: PARTITION,
+				});
+
+				// Already on the new cycle: a later reset finds nothing due and appends no record.
+				const idle = await harness.client.reset({
+					command: resetCommand({ customer: sent, commandId: "reset_2" }),
+				});
+				expect(idle.result).toBeNull();
+				expect(
+					await sent.readNextOffset({
+						topic: harness.topics.metering,
+						partition: PARTITION,
+					}),
+				).toBe(bookmark);
+
+				// The cron's path: queued on the command topic, consumed by the owner, landed the same way.
+				await harness.client.queue.reset({
+					commands: [
+						resetCommand({ customer: queued, commandId: "reset_queued" }),
+					],
+				});
+				expect(await waitForBalance({ customer: queued, balance: 100 })).toBe(
+					100,
+				);
+				expect(await queued.readNextResetAt()).toBeGreaterThan(Date.now());
+			} finally {
+				await sent.cleanup();
+				await queued.cleanup();
+			}
+		}, 60_000);
+
+		test("a reset carries the unused balance over as a rollover row and the next track draws it down", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const DAY_MS = 24 * 60 * 60 * 1000;
+			const carried = await seedCustomer({
+				postgres,
+				balance: 60,
+				allowance: 100,
+				nextResetAt: Date.now() - DAY_MS,
+				rolloverMax: 50,
+			});
+			try {
+				const refilled = await harness.client.reset({
+					command: resetCommand({
+						customer: carried,
+						commandId: "carry_reset",
+					}),
+				});
+				expect(refilled.result?.rows).toHaveLength(1);
+				expect(await waitForBalance({ customer: carried, balance: 100 })).toBe(
+					100,
+				);
+				// 60 unused, capped at 50, expiring a month after the cycle that ended.
+				expect(await carried.readRollovers()).toEqual([
+					{ balance: 50, expires_at: expect.any(Number) },
+				]);
+
+				const reply = await trackOrExplain(
+					harness,
+					trackCommand({
+						customer: carried,
+						commandId: "carry_track",
+						value: 5,
+					}),
+				);
+				expect(reply.result.status).toBe("applied");
+				// One of the two paid the 5; which one is the deduction order's call, not this test's.
+				let held = 0;
+				for (let attempt = 0; attempt < 200 && held !== 145; attempt++) {
+					const [rollover] = await carried.readRollovers();
+					held = (rollover?.balance ?? 0) + (await carried.readBalance());
+					if (held !== 145) await Bun.sleep(50);
+				}
+				expect(held).toBe(145);
+			} finally {
+				await carried.cleanup();
+			}
+		}, 60_000);
+
+		test("a due pool promotes its contributions in Postgres, refills from the promoted grant, and lands the pool row with it", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const DAY_MS = 24 * 60 * 60 * 1000;
+			const cycleEndedAt = Date.now() - DAY_MS;
+			const owner = await seedCustomer({ postgres, balance: 100 });
+			// A: unchanged. B: a downgrade due at the cycle end. C: added mid-cycle, contributing from the next one.
+			const pool = await seedPool({
+				postgres,
+				customer: owner,
+				granted: 150,
+				balance: 20,
+				nextResetAt: cycleEndedAt,
+				contributions: [
+					{ current: 100, next: 100, effectiveAt: null },
+					{ current: 50, next: 40, effectiveAt: cycleEndedAt },
+					{ current: 0, next: 30, effectiveAt: cycleEndedAt },
+				],
+			});
+			try {
+				const reply = await trackOrExplain(
+					harness,
+					trackCommand({ customer: owner, commandId: "pool_track", value: 5 }),
+				);
+				expect(reply.result.status).toBe("applied");
+				// The pool paid: 100 + 40 + 30 = 170, less the 5.
+				expect(balanceOf(reply, pool.poolCustomerEntitlementId)).toBe(165);
+
+				let landed = false;
+				for (let attempt = 0; attempt < 200 && !landed; attempt++) {
+					landed = (await pool.readBalance()) === 165;
+					if (!landed) await Bun.sleep(50);
+				}
+				expect(await pool.readBalance()).toBe(165);
+				expect(await pool.readGranted()).toBe(170);
+				expect(await pool.readNextResetAt()).toBeGreaterThan(Date.now());
+				expect(
+					(await pool.readContributions()).map(({ current, effective_at }) => [
+						current,
+						effective_at,
+					]),
+				).toEqual([
+					[100, null],
+					[40, null],
+					[30, null],
+				]);
+			} finally {
+				await pool.cleanup();
+				await owner.cleanup();
+			}
+		}, 60_000);
+
+		test("two tracks and a check arriving together at the cycle end refill the row exactly once", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const DAY_MS = 24 * 60 * 60 * 1000;
+			const crowded = await seedCustomer({
+				postgres,
+				balance: 60,
+				allowance: 100,
+				nextResetAt: Date.now() - DAY_MS,
+			});
+			try {
+				const [first, second, check] = await Promise.all([
+					trackOrExplain(
+						harness,
+						trackCommand({ customer: crowded, commandId: "crowd_1", value: 5 }),
+					),
+					trackOrExplain(
+						harness,
+						trackCommand({ customer: crowded, commandId: "crowd_2", value: 5 }),
+					),
+					harness.client.check({
+						command: checkCommand({
+							customer: crowded,
+							requestId: "crowd_check",
+							requiredBalance: 70,
+						}),
+					}),
+				]);
+				expect(first.result.status).toBe("applied");
+				expect(second.result.status).toBe("applied");
+				// 60 on the old cycle would have refused 70: every arrival saw the refilled cycle.
+				expect(check.result.allowed).toBe(true);
+				// One refill to 100, then 5 and 5: a second refill would leave 95 or 100.
+				expect(await waitForBalance({ customer: crowded, balance: 90 })).toBe(
+					90,
+				);
+				expect(await crowded.readNextResetAt()).toBeGreaterThan(Date.now());
+			} finally {
+				await crowded.cleanup();
+			}
+		}, 60_000);
+
+		test("a row deleted underneath a decision is refused by the store alone: the log-durable caller is answered, the bookmark moves past it, the next track re-hydrates, a restart replays it as settled", async () => {
 			const worker = workers.at(-1) ?? (await startWorker({ harness }));
 			if (!workers.includes(worker)) workers.push(worker);
 			const moved = await seedCustomer({ postgres, balance: 100 });
@@ -544,6 +941,8 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					trackCommand({ customer: moved, commandId: "moved_1", value: 5 }),
 				);
 				expect(balanceOf(first, moved.customerEntitlementId)).toBe(95);
+				// Landed, so the bookmark read next is the one moved_2's skip has to pass.
+				expect(await waitForBalance({ customer: moved, balance: 95 })).toBe(95);
 				const bookmarkBefore = await moved.readNextOffset({
 					topic: harness.topics.metering,
 					partition: PARTITION,
@@ -552,27 +951,19 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				// The legacy path removes the row without telling the worker, as a customer delete does.
 				await moved.deleteGrant();
 
-				await expect(
-					harness.client.track({
-						command: trackCommand({
-							customer: moved,
-							commandId: "moved_2",
-							value: 5,
-						}),
-					}),
-				).rejects.toMatchObject({
-					workerCode: "STALE_SUBJECT",
-					outcome: "not_submitted",
-				});
-				// The refused record still moved the bookmark: a replay never meets it again.
-				const bookmarkAfter = await moved.readNextOffset({
-					topic: harness.topics.metering,
-					partition: PARTITION,
-				});
-				expect(bookmarkAfter).not.toBeNull();
-				expect(bookmarkAfter as bigint).toBeGreaterThan(
-					bookmarkBefore as bigint,
+				// A log-durable caller is answered from memory once Kafka has the record; the store's refusal is an accepted loss.
+				const refused = await trackOrExplain(
+					harness,
+					trackCommand({ customer: moved, commandId: "moved_2", value: 5 }),
 				);
+				expect(balanceOf(refused, moved.customerEntitlementId)).toBe(90);
+				// The refused record still moved the bookmark: a replay never meets it again.
+				const bookmarkAfter = await waitForBookmarkPast({
+					customer: moved,
+					harness,
+					bookmark: bookmarkBefore,
+				});
+				expect(bookmarkAfter).toBeGreaterThan(bookmarkBefore as bigint);
 
 				// The worker still owns the partition and decides the next track on fresh rows.
 				await moved.restoreGrant({ balance: 50 });
@@ -581,7 +972,7 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					trackCommand({ customer: moved, commandId: "moved_3", value: 5 }),
 				);
 				expect(balanceOf(third, moved.customerEntitlementId)).toBe(45);
-				expect(await moved.readBalance()).toBe(45);
+				expect(await waitForBalance({ customer: moved, balance: 45 })).toBe(45);
 
 				// A restart replays the log from below the bookmark without tripping on the refused record.
 				await worker.stop();
@@ -593,7 +984,7 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					trackCommand({ customer: moved, commandId: "moved_4", value: 5 }),
 				);
 				expect(balanceOf(fourth, moved.customerEntitlementId)).toBe(40);
-				expect(await moved.readBalance()).toBe(40);
+				expect(await waitForBalance({ customer: moved, balance: 40 })).toBe(40);
 			} finally {
 				await moved.cleanup();
 			}

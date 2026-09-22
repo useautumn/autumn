@@ -9,27 +9,7 @@ import type {
 	WorkerFullCustomerEntitlementWithProduct,
 	WorkerFullSubject,
 } from "../../models/subject/workerFullSubject.js";
-
-/** Every balance row the subject holds with the plan that granted it, selected or not: a finalize can land on a row a track would skip. */
-const heldRowsOf = ({
-	fullSubject,
-}: {
-	fullSubject: WorkerFullSubject;
-}): WorkerFullCustomerEntitlementWithProduct[] => [
-	...fullSubject.customer_products.flatMap((customerProduct) =>
-		customerProduct.customer_entitlements.map((customerEntitlement) => ({
-			...customerEntitlement,
-			customer_product: customerProduct,
-		})),
-	),
-	...[
-		...fullSubject.extra_customer_entitlements,
-		...fullSubject.pooled_customer_entitlements,
-	].map((customerEntitlement) => ({
-		...customerEntitlement,
-		customer_product: null,
-	})),
-];
+import { fullSubjectToHeldRows } from "../../utils/subjectUtils/convertSubjectUtils.js";
 
 /** The row a delta moved: a customer entitlement directly, or the one that owns the rollover. */
 const rowOf = ({
@@ -74,7 +54,7 @@ export const deltasToUsageEventFields = ({
 	fullSubject: WorkerFullSubject;
 	deltas: DeductionDelta[];
 }): UsageEventFields => {
-	const rows = heldRowsOf({ fullSubject });
+	const rows = fullSubjectToHeldRows({ fullSubject });
 	const deductions = new Map<string, TrackDeduction>();
 	const movedByProduct = new Map<string, Decimal>();
 

@@ -5,6 +5,8 @@ import { finalizeCommandSchema } from "../../commands/finalize/types/finalizeCom
 import { finalizeResultSchema } from "../../commands/finalize/types/finalizeResult.js";
 import { initializeCommandSchema } from "../../commands/initialize/types/initializeCommand.js";
 import { initializeResultSchema } from "../../commands/initialize/types/initializeResult.js";
+import { resetCommandSchema } from "../../commands/reset/types/resetCommand.js";
+import { resetResultSchema } from "../../commands/reset/types/resetResult.js";
 import { trackCommandSchema } from "../../commands/track/types/trackCommand.js";
 import { trackResultSchema } from "../../commands/track/types/trackResult.js";
 import { nonEmptyStringSchema } from "../common/primitives.js";
@@ -17,6 +19,7 @@ export const mutationCommandSchema = z.discriminatedUnion("type", [
 	initializeCommandSchema.loose(),
 	finalizeCommandSchema.loose(),
 	confirmExpiredLockCommandSchema.loose(),
+	resetCommandSchema.loose(),
 ]);
 
 export const mutationResultSchema = z.discriminatedUnion("type", [
@@ -24,6 +27,7 @@ export const mutationResultSchema = z.discriminatedUnion("type", [
 	initializeResultSchema,
 	finalizeResultSchema,
 	confirmExpiredLockResultSchema,
+	resetResultSchema,
 ]);
 
 export const mutationSubjectSchema = z

@@ -17,8 +17,13 @@ export const commandOrgSchema = z
 			include_past_due: true,
 			usage_alerts: true,
 			sandbox_usage_alerts: true,
+			persist_free_overage: true,
 		})
-			.partial({ usage_alerts: true, sandbox_usage_alerts: true })
+			.partial({
+				usage_alerts: true,
+				sandbox_usage_alerts: true,
+				persist_free_overage: true,
+			})
 			.strict(),
 		/** The Svix apps the org's webhooks deliver through, one per env; absent where none is set up. */
 		svix: z

@@ -11,6 +11,10 @@ export type ResetScanCursor = {
 export type ResetEligibleCustomerEntitlementRow = {
 	id: string;
 	nextResetAt: number;
+	internalCustomerId: string;
+	/** Set on a loose entity row; an entity plan's rows carry the entity on the plan instead. */
+	internalEntityId: string | null;
+	customerProductId: string | null;
 };
 
 /** The partial index covers every leg except expiry, which remains a heap filter. */
@@ -38,6 +42,9 @@ export const buildResetEligiblePageQuery = ({
 		.select({
 			id: customerEntitlements.id,
 			next_reset_at: customerEntitlements.next_reset_at,
+			internal_customer_id: customerEntitlements.internal_customer_id,
+			internal_entity_id: customerEntitlements.internal_entity_id,
+			customer_product_id: customerEntitlements.customer_product_id,
 		})
 		.from(customerEntitlements)
 		.where(
@@ -82,10 +89,16 @@ export const getResetEligibleCustomerEntitlementsPage = async ({
 	const rows = await db.execute<{
 		id: string;
 		next_reset_at: number;
+		internal_customer_id: string;
+		internal_entity_id: string | null;
+		customer_product_id: string | null;
 	}>(buildResetEligiblePageQuery({ db, dueBefore, cursor, limit }));
 
 	return rows.map((row) => ({
 		id: row.id,
 		nextResetAt: Number(row.next_reset_at),
+		internalCustomerId: row.internal_customer_id,
+		internalEntityId: row.internal_entity_id,
+		customerProductId: row.customer_product_id,
 	}));
 };
