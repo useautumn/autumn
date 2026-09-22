@@ -69,7 +69,7 @@ export const getPooledSourceCustomerProduct = ({
 }: {
 	state: PooledBalanceDbState;
 	productId: string;
-	entityId: string;
+	entityId: string | null;
 }) => {
 	const customerProduct = state.sourceCustomerProducts.find(
 		(candidate) =>
