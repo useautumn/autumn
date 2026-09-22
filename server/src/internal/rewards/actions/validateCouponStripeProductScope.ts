@@ -48,6 +48,11 @@ export const validateCouponStripeProductScope = async ({
 	const selectedInternalIds = new Set(
 		prices.map((price) => price.internal_product_id).filter(Boolean),
 	);
+	// Versions of one plan share a Stripe product, so a coupon on any version
+	// already covers the others.
+	const selectedPlanIds = new Set(
+		prices.map((price) => price.product?.id).filter(Boolean),
+	);
 
 	// A plan split moments earlier must not read back stale.
 	const plans = await ProductService.listFull({
@@ -63,6 +68,7 @@ export const validateCouponStripeProductScope = async ({
 				.filter(
 					(plan) =>
 						!selectedInternalIds.has(plan.internal_id) &&
+						!selectedPlanIds.has(plan.id) &&
 						!plan.archived &&
 						planSharesStripeProductId({ plan, stripeProductIds }),
 				)

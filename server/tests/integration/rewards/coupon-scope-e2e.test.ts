@@ -227,3 +227,61 @@ test.concurrent(
 		expect(created).toBeTruthy();
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("coupon e2e: a coupon on an older plan version is not asked to include its siblings")}`,
+	async () => {
+		const { autumnV2_2, autumnV2_3, ctx } = await initScenario({
+			customerId: "coupon-e2e-old-version",
+			setup: [
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "coupon-e2e-old-version@autumn.test",
+				}),
+				s.customer({}),
+			],
+			actions: [],
+		});
+
+		const stamp = Date.now();
+		const planId = `e2e_oldver_${stamp}`;
+		await seedPlan({ autumn: autumnV2_3, planId });
+		await autumnV2_3.catalogV2.update({
+			plans: [
+				{
+					plan_id: planId,
+					name: `Plan ${planId} v2`,
+					versioning: "new_version",
+					active: true,
+					price: { amount: 35, interval: BillingInterval.Month },
+					items: [messagesItem],
+				},
+			],
+		});
+
+		// Scope the coupon to v1's prices while v2 is the live version; both
+		// versions share one Stripe product, so neither should be reported missing.
+		const v1 = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: planId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			version: 1,
+		});
+
+		const created = await autumnV2_2.post("/rewards.create", {
+			coupon: {
+				id: `e2e_oldver_cpn_${stamp}`,
+				name: "Old Version",
+				type: RewardType.PercentageDiscount,
+				value: 10,
+				duration: { type: CouponDurationType.Months, length: 1 },
+				plan_ids: [planId],
+				promo_codes: [],
+			},
+		});
+
+		expect(created).toBeTruthy();
+		expect(v1.prices.length).toBeGreaterThan(0);
+	},
+);
