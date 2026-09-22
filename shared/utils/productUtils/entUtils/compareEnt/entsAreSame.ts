@@ -144,7 +144,7 @@ const isBooleanRow = (entitlement: Entitlement) =>
 
 /** Nothing to carry on a boolean row, so a stored value is inert. */
 const carryFromPreviousDiffers = (ent1: Entitlement, ent2: Entitlement) =>
-	!isBooleanRow(ent1) &&
+	!(isBooleanRow(ent1) && isBooleanRow(ent2)) &&
 	(ent1.carry_from_previous ?? false) !== (ent2.carry_from_previous ?? false);
 
 const expiriesAreSame = (ent1: Entitlement, ent2: Entitlement) =>

@@ -259,12 +259,22 @@ describe("entsAreSame", () => {
 			);
 		});
 
-		test("ignored on a boolean row: nothing to carry", () => {
+		test("ignored when both rows are boolean: nothing to carry", () => {
 			const booleanRow = { allowance_type: null, interval: null };
 			expectSame(
 				{ ...booleanRow, carry_from_previous: true },
 				{ ...booleanRow, carry_from_previous: false },
 				true,
+			);
+			// Only one side boolean-shaped: still compared, and symmetric.
+			expectSame(
+				{ ...booleanRow, carry_from_previous: true },
+				{
+					allowance_type: AllowanceType.Fixed,
+					interval: EntInterval.Lifetime,
+					carry_from_previous: false,
+				},
+				false,
 			);
 		});
 

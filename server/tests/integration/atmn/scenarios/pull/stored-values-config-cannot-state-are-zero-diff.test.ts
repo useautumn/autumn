@@ -32,12 +32,14 @@ const config = ({
 	freeTrialPlanId,
 	booleanPlanId,
 	capPlanId,
+	zeroCapPlanId,
 }: {
 	creditsId: string;
 	analyticsId: string;
 	freeTrialPlanId: string;
 	booleanPlanId: string;
 	capPlanId: string;
+	zeroCapPlanId: string;
 }) =>
 	`${atmnImports()}
 export default atmn({
@@ -102,6 +104,26 @@ export default atmn({
 				},
 			],
 		}),
+		plan({
+			active: true,
+			planId: "${zeroCapPlanId}",
+			name: "Zero capped",
+			versionSlug: "v1",
+			price: { amount: 5, interval: "month" },
+			items: [
+				{
+					featureId: "${creditsId}",
+					included: 0,
+					reset: { interval: "month" },
+					price: {
+						amount: 0.1,
+						interval: "month",
+						billingMethod: "usage_based",
+						maxPurchase: 0,
+					},
+				},
+			],
+		}),
 	],
 });
 `;
@@ -114,6 +136,7 @@ test.concurrent(
 		const freeTrialPlanId = uniqueTestId("atmn_free_trial");
 		const booleanPlanId = uniqueTestId("atmn_bool");
 		const capPlanId = uniqueTestId("atmn_cap");
+		const zeroCapPlanId = uniqueTestId("atmn_zerocap");
 		const scenario = await initAtmnScenario({
 			setup: [
 				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
@@ -125,6 +148,7 @@ test.concurrent(
 					freeTrialPlanId,
 					booleanPlanId,
 					capPlanId,
+					zeroCapPlanId,
 				}),
 			},
 		});
@@ -153,7 +177,70 @@ test.concurrent(
 			const { freshFiles } = await expectRoundTrip({ scenario });
 			const plansFile = freshFiles.get("plans.ts") ?? "";
 			expect(plansFile).not.toContain("cardRequired");
-			expect(plansFile).toContain("maxPurchase: 0");
+			expect(plansFile.match(/maxPurchase: 0/g)).toHaveLength(2);
+		} finally {
+			scenario.cleanup();
+		}
+	},
+);
+
+test.concurrent(
+	"a free plan's trial card_required is not masked once the same push makes it paid",
+	async () => {
+		const creditsId = uniqueTestId("atmn_credits");
+		const planId = uniqueTestId("atmn_free_to_paid");
+		const withPrice = ({ price }: { price: boolean }) =>
+			`${atmnImports()}
+export default atmn({
+	features: [
+		feature({
+			featureId: "${creditsId}",
+			name: "Credits",
+			type: "metered",
+			consumable: true,
+		}),
+	],
+	plans: [
+		plan({
+			active: true,
+			planId: "${planId}",
+			name: "Starter",
+			versionSlug: "v1",
+			${price ? 'price: { amount: 20, interval: "month" },' : ""}
+			items: [
+				{
+					featureId: "${creditsId}",
+					included: 50,
+					reset: { interval: "month" },
+				},
+			],
+			freeTrial: {
+				durationLength: 30,
+				durationType: "day",
+				${price ? "" : "cardRequired: true,"}
+			},
+		}),
+	],
+});
+`;
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
+			config: { raw: withPrice({ price: false }) },
+		});
+
+		try {
+			await scenario.push();
+			// Free with a stored true. Adding a price and omitting cardRequired
+			// (false) is a real change on the now-paid plan: the trial must update.
+			scenario.writeConfig(withPrice({ price: true }));
+			await scenario.push();
+			const catalog = (await scenario.client.get({})) as {
+				plans: { id: string; freeTrial: { cardRequired: boolean } | null }[];
+			};
+			const plan = catalog.plans.find((row) => row.id === planId);
+			expect(plan?.freeTrial?.cardRequired).toBe(false);
 		} finally {
 			scenario.cleanup();
 		}

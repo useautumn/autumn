@@ -114,17 +114,6 @@ export const intentToUpsertProductPlan = ({
 			: {}),
 	});
 
-	const freeTrialPlan = computeFreeTrialPlan({
-		freeTrialParams: planParams.free_trial,
-		currentFreeTrial: baseFullProduct?.free_trial ?? null,
-		internalProductId: details.product.internal_id,
-		mode:
-			versioning === "new_version" ? { type: "version" } : { type: "update" },
-		// Same rule as resolveTrialCardRequired on the read side.
-		cardRequiredInert:
-			baseFullProduct !== null && isFreeProduct({ product: baseFullProduct }),
-	});
-
 	const entitlementPricesPlan = computeCatalogEntitlementPricesPlan({
 		ctx,
 		product: details.product,
@@ -140,6 +129,24 @@ export const intentToUpsertProductPlan = ({
 					},
 				}
 			: {}),
+	});
+
+	// The plan as this update leaves it: a free plan has no card gate, so the
+	// trial's card_required is inert there (resolveTrialCardRequired's rule).
+	const resultingPrices = entitlementPricesPlan
+		? [
+				...entitlementPricesPlan.prices.same,
+				...entitlementPricesPlan.prices.updated,
+				...entitlementPricesPlan.prices.new,
+			]
+		: (baseFullProduct?.prices ?? []);
+	const freeTrialPlan = computeFreeTrialPlan({
+		freeTrialParams: planParams.free_trial,
+		currentFreeTrial: baseFullProduct?.free_trial ?? null,
+		internalProductId: details.product.internal_id,
+		mode:
+			versioning === "new_version" ? { type: "version" } : { type: "update" },
+		cardRequiredInert: isFreeProduct({ prices: resultingPrices }),
 	});
 
 	const nextFullProduct = assembleNextFullProduct({
