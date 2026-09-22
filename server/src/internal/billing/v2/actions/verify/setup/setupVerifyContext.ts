@@ -3,7 +3,9 @@ import {
 	customerProductsToStripeSubscriptionIds,
 	type FullCusProduct,
 	type FullCustomer,
+	isCustomerProductRevertingTrial,
 	notNullish,
+	STRIPE_LINKED_STATUSES,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
@@ -46,14 +48,14 @@ const isRelevantForSubscription = ({
 	stripeSubscriptionId: string;
 	stripeSubscriptionScheduleId?: string;
 }) =>
+	STRIPE_LINKED_STATUSES.includes(customerProduct.status) &&
+	!isCustomerProductRevertingTrial(customerProduct) &&
 	cp(customerProduct)
 		.paid()
 		.recurring()
-		.hasRelevantStatus()
 		.onStripeSubscription({ stripeSubscriptionId })
 		.or.paid()
 		.recurring()
-		.hasRelevantStatus()
 		.onStripeSchedule({ stripeSubscriptionScheduleId }).valid;
 
 /** Sub items never include price `tiers` — fetch them once per tiered price
@@ -127,6 +129,7 @@ export const setupVerifyContext = async ({
 			ctx,
 			idOrInternalId: customerId,
 			withEntities: true,
+			inStatuses: STRIPE_LINKED_STATUSES,
 		}));
 
 	const cusProducts = fullCustomer.customer_products;

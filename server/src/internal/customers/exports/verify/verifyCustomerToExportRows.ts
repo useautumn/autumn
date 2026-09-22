@@ -1,4 +1,7 @@
-import type { BillingVerifyExportRow } from "@autumn/shared";
+import {
+	type BillingVerifyExportRow,
+	STRIPE_LINKED_STATUSES,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { retryBoundedAsync } from "@/utils/retryBoundedAsync.js";
@@ -47,6 +50,7 @@ export const verifyCustomerToExportRows = async ({
 			ctx,
 			idOrInternalId: scalar.internal_id,
 			withEntities: true,
+			inStatuses: STRIPE_LINKED_STATUSES,
 		});
 		const params = { customer_id: scalar.id ?? scalar.internal_id };
 

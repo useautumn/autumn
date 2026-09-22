@@ -4,10 +4,7 @@ import type {
 	FullCusProduct,
 } from "@models/cusProductModels/cusProductModels.js";
 import type { Product } from "@models/productModels/productModels";
-import {
-	isPrepaidPrice,
-	orgDefaultAppliesToEntities,
-} from "../../..";
+import { isPrepaidPrice, orgDefaultAppliesToEntities } from "../../..";
 import type { SharedContext } from "../../../types/sharedContext";
 import { ms } from "../../common";
 import {
@@ -136,6 +133,11 @@ export const isCustomerProductTrialing = (
 	const nowMs = params?.nowMs ?? Date.now();
 	return customerProduct.trial_ends_at && customerProduct.trial_ends_at > nowMs;
 };
+
+/** Attach writes nothing to Stripe for a trial that reverts on end. */
+export const isCustomerProductRevertingTrial = (
+	customerProduct?: FullCusProduct,
+) => customerProduct?.free_trial?.on_end === "revert";
 
 export const customerProductHasRelevantStatus = (cp?: FullCusProduct) => {
 	if (!cp) return false;
