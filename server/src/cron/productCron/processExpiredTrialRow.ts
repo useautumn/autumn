@@ -9,6 +9,7 @@ import { customerProductToDefaultProduct } from "@utils/cusProductUtils/convertC
 import type { InferSelectModel } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { CusService } from "@/internal/customers/CusService";
@@ -99,6 +100,17 @@ export const processExpiredTrialRow = async ({
 			],
 		},
 	});
+
+	// Default activation already executes the outgoing and incoming transition together.
+	if (!activatedDefault) {
+		await applyPooledBalanceCustomerProductTransitions({
+			ctx,
+			fullCustomer: originalFullCustomer,
+			outgoingCustomerProducts: [trialFullCusProduct],
+			incomingCustomerProducts: [],
+			now: Date.now(),
+		});
+	}
 
 	await deleteCachedFullCustomer({
 		ctx,
