@@ -26,8 +26,8 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
-import { FeatureService } from "../features/FeatureService.js";
 import { toPlanAliasMap } from "../catalogV2/productAliases/toPlanAliasMap.js";
+import { FeatureService } from "../features/FeatureService.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 
 export class OrgService {
@@ -346,19 +346,36 @@ export class OrgService {
 	static async getByAccountId({
 		db,
 		accountId,
+		deauthorizedEnv,
 	}: {
 		db: DrizzleCli;
 		accountId: string;
+		deauthorizedEnv?: AppEnv;
 	}) {
+		const connectColumn =
+			deauthorizedEnv === AppEnv.Live
+				? organizations.live_stripe_connect
+				: organizations.test_stripe_connect;
 		const result = await db.query.organizations.findFirst({
-			where: or(
-				eq(
-					sql`${organizations.test_stripe_connect}->>'default_account_id'`,
-					accountId,
-				),
-				eq(sql`${organizations.test_stripe_connect}->>'account_id'`, accountId),
-				eq(sql`${organizations.live_stripe_connect}->>'account_id'`, accountId),
-			),
+			where: deauthorizedEnv
+				? or(
+						eq(sql`${connectColumn}->>'account_id'`, accountId),
+						eq(sql`${connectColumn}->>'revoked_account_id'`, accountId),
+					)
+				: or(
+						eq(
+							sql`${organizations.test_stripe_connect}->>'default_account_id'`,
+							accountId,
+						),
+						eq(
+							sql`${organizations.test_stripe_connect}->>'account_id'`,
+							accountId,
+						),
+						eq(
+							sql`${organizations.live_stripe_connect}->>'account_id'`,
+							accountId,
+						),
+					),
 			with: {
 				master: true,
 			},
@@ -376,9 +393,10 @@ export class OrgService {
 		const testAccountId = result?.test_stripe_connect?.account_id;
 
 		const env =
-			defaultAccountId === accountId || testAccountId === accountId
+			deauthorizedEnv ??
+			(defaultAccountId === accountId || testAccountId === accountId
 				? AppEnv.Sandbox
-				: AppEnv.Live;
+				: AppEnv.Live);
 
 		const features = await FeatureService.list({
 			db,
@@ -451,23 +469,27 @@ export class OrgService {
 
 		if (env === AppEnv.Sandbox) {
 			const currentConnect = org.test_stripe_connect || {};
+			delete currentConnect.revoked_account_id;
 			await db
 				.update(organizations)
 				.set({
 					test_stripe_connect: {
 						...currentConnect,
 						account_id: accountId,
+						connected_at: Date.now(),
 					},
 				})
 				.where(eq(organizations.id, orgId));
 		} else {
 			const currentConnect = org.live_stripe_connect || {};
+			delete currentConnect.revoked_account_id;
 			await db
 				.update(organizations)
 				.set({
 					live_stripe_connect: {
 						...currentConnect,
 						account_id: accountId,
+						connected_at: Date.now(),
 					},
 				})
 				.where(eq(organizations.id, orgId));

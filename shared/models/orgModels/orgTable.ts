@@ -42,6 +42,8 @@ export type StripeConnectConfig = {
 	default_account_id?: string;
 	account_id?: string;
 	master_org_id?: string;
+	connected_at?: number;
+	revoked_account_id?: string;
 };
 
 export type OrgRedisConfig = {
