@@ -235,19 +235,18 @@ const PlanMappingDetailForm = ({
 							)}
 						</AnimatePresence>
 					)}
+					{resolved.status === "unmapped" && (
+						<Button
+							className="w-full justify-start gap-2 text-xs"
+							disabled={createInStripe.isPending}
+							onClick={() => createInStripe.mutate(base.id)}
+							variant="muted"
+						>
+							<StripeIcon size={13} />
+							Create in Stripe
+						</Button>
+					)}
 				</div>
-
-				{resolved.status === "unmapped" && (
-					<Button
-						className="w-full justify-start gap-2 text-xs"
-						disabled={createInStripe.isPending}
-						onClick={() => createInStripe.mutate(base.id)}
-						variant="muted"
-					>
-						<StripeIcon size={13} />
-						Create in Stripe
-					</Button>
-				)}
 
 				<p className="text-tertiary-foreground text-xs">
 					Individual prices are mapped on the plan itself, where each version
