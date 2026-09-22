@@ -243,8 +243,7 @@ describe("Kafka partition outcome follower", () => {
 			await new Promise<void>(setImmediate);
 			expect(consumer.seeks).toEqual([{ topic, partition, offset: "3" }]);
 			expect(replayFloorByPartition.get(partition)).toBe(3n);
-			// Readiness is still measured from the bookmark, not the floor.
-			expect(positionTracker.read({ topic, partition })).toBe(8n);
+			expect(positionTracker.read({ topic, partition })).toBe(3n);
 
 			positionTracker.advance({ topic, partition, nextOffset: 10n });
 			await catchUp;
@@ -309,6 +308,7 @@ describe("Kafka partition outcome follower", () => {
 		const fixture = createStoreFixture({ nextOffset: 8n });
 		try {
 			const consumer = createPartitionControl();
+			const positionTracker = createProgressTracker();
 			const follower = createKafkaPartitionOutcomeFollower({
 				consumer,
 				partitionOffsets: {
@@ -318,16 +318,20 @@ describe("Kafka partition outcome follower", () => {
 					],
 				},
 				stateStore: fixture.store,
-				positionTracker: createProgressTracker(),
+				positionTracker,
 			});
 			await follower.readLogRange({ topic, partition, signal: activeSignal() });
-			await follower.startAndCatchUp({
+			const catchUp = follower.startAndCatchUp({
 				topic,
 				partition,
 				targetNextOffset: 8n,
 				onUnavailable: () => undefined,
 			});
+			await new Promise<void>(setImmediate);
 			expect(consumer.seeks).toEqual([{ topic, partition, offset: "5" }]);
+			expect(positionTracker.read({ topic, partition })).toBe(5n);
+			positionTracker.advance({ topic, partition, nextOffset: 8n });
+			await catchUp;
 		} finally {
 			closeStoreFixture(fixture);
 		}

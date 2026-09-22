@@ -23,7 +23,6 @@ import { initialize } from "../../../../src/processor/commands/initialize.js";
 import { track } from "../../../../src/processor/commands/track.js";
 import { createAcceptedCommands } from "../../../../src/processor/common/acceptedCommands.js";
 import { createPartitionProcessor } from "../../../../src/processor/createPartitionProcessor.js";
-import { completeCommand } from "../../../../src/processor/execution/completeCommand.js";
 import { executeCommand } from "../../../../src/processor/execution/executeCommand.js";
 import { createSubjectHydrator } from "../../../../src/processor/subject/createSubjectHydrator.js";
 import { SubjectNotFoundError } from "../../../../src/processor/subject/subjectErrors.js";
@@ -38,7 +37,6 @@ import type {
 } from "../../../../src/processor/writer/types/mutation.js";
 import type {
 	CommittedOutcomeAppender,
-	PartitionWriterContext,
 	PartitionWriterLimits,
 } from "../../../../src/processor/writer/types/partitionWriter.js";
 import {
@@ -311,7 +309,8 @@ const createPartitionTrackWriter = ({
 		accepted: createAcceptedCommands(),
 	};
 	return {
-		completeCommand: ({ source }) => completeCommand({ scope, source }),
+		completeCommand: ({ source }) =>
+			executeCommand({ scope, source, run: async () => undefined }),
 		submitTrack: ({ command, source }) =>
 			source
 				? executeCommand({
@@ -445,6 +444,226 @@ describe("partition writer", () => {
 			expect(events).toEqual(["applied", "fenced", "bookmark:42"]);
 		} finally {
 			gate.resolve();
+			closeFixture(fixture);
+		}
+	});
+
+	test.each(["before Kafka commits", "while the store applies"])(
+		"command completion ignores later batches queued %s",
+		async (arrival) => {
+			const fixture = createFixture({
+				identities: [firstIdentity, secondIdentity],
+			});
+			const gate = Promise.withResolvers<void>();
+			const appender = new ControlledCommittedAppender();
+			const events: string[] = [];
+			try {
+				const writer = createPartitionTrackWriter({
+					topic,
+					partition,
+					limits: { ...defaultLimits, maxBatchSize: 1 },
+					appender: {
+						appendCommitted: (params) => appender.appendCommitted(params),
+						commitCommandOffset: async () => {
+							events.push("fenced");
+						},
+					},
+					stateStore: {
+						...fixture.store,
+						applyDurableMutations: async (params) => {
+							await gate.promise;
+							const result = fixture.store.applyDurableMutations(params);
+							events.push("applied");
+							return result;
+						},
+						advanceCommandNextOffset: ({ commandNextOffset }) => {
+							events.push(`bookmark:${commandNextOffset}`);
+						},
+					},
+				});
+				const command = createCommand({ commandId: "original" });
+				const original = writer.submitTrack({ command });
+				const completion = writer.submitTrack({
+					command,
+					source: { commandOffset: "41" },
+				});
+				await waitForBatch();
+				if (arrival === "while the store applies") {
+					appender.resolve();
+					await original;
+					await waitForBatch();
+				}
+				const later = writer.submitTrack({
+					command: createCommand({
+						commandId: "later",
+						identity: secondIdentity,
+					}),
+				});
+				await waitForBatch();
+				if (arrival === "before Kafka commits") {
+					appender.resolve();
+					await original;
+					await waitForBatch();
+				}
+				expect(events).toEqual([]);
+				gate.resolve();
+				await waitForBatch();
+				const beforeLaterCommit = [...events];
+				expect(appender.batches.map(batchKeys)).toEqual([
+					["original"],
+					["later"],
+				]);
+				appender.resolve({ baseOffset: 1n });
+				await Promise.all([completion, later]);
+				await waitForBatch();
+				expect(beforeLaterCommit).toEqual(["applied", "fenced", "bookmark:42"]);
+			} finally {
+				gate.resolve();
+				await waitForBatch();
+				closeFixture(fixture);
+			}
+		},
+	);
+
+	test.each(["append", "store"])(
+		"command completion rejects when the required %s fails",
+		async (failure) => {
+			const fixture = createFixture();
+			const gate = Promise.withResolvers<void>();
+			const events: string[] = [];
+			try {
+				const appender = new RecordingCommittedAppender();
+				const writer = createPartitionTrackWriter({
+					topic,
+					partition,
+					limits: defaultLimits,
+					appender: {
+						appendCommitted: async (params) => {
+							if (failure === "append") {
+								await gate.promise;
+								throw new MutationBatchNotCommittedError({
+									cause: new Error("append failed"),
+								});
+							}
+							return appender.appendCommitted(params);
+						},
+						commitCommandOffset: async () => {
+							events.push("fenced");
+						},
+					},
+					stateStore: {
+						...fixture.store,
+						applyDurableMutations: async () => {
+							await gate.promise;
+							throw new Error("store failed");
+						},
+						advanceCommandNextOffset: () => {
+							events.push("bookmark");
+						},
+					},
+				});
+				const sent = writer.submitTrack({
+					command: createCommand({ commandId: "pending" }),
+				});
+				await waitForBatch();
+				const completion = writer.completeCommand({
+					source: { commandOffset: "41" },
+				});
+				const settled = Promise.allSettled([sent, completion]);
+				gate.resolve();
+				const [, result] = await settled;
+				expect(result).toMatchObject({
+					status: "rejected",
+					reason: expect.any(
+						failure === "append"
+							? MutationBatchAppendError
+							: PartitionWriterRecoveryRequiredError,
+					),
+				});
+				expect(events).toEqual([]);
+				if (failure === "append") {
+					await writer.completeCommand({ source: { commandOffset: "41" } });
+					expect(events).toEqual(["fenced", "bookmark"]);
+				}
+			} finally {
+				gate.resolve();
+				await waitForBatch();
+				closeFixture(fixture);
+			}
+		},
+	);
+
+	test("waitForStore waits through its queued target across multiple batches", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new ControlledCommittedAppender();
+			const writer = createPartitionWriterCore({
+				ctx: {
+					stateStore: fixture.store,
+					appender,
+					receiptPolicy: defaultReceiptPolicy,
+					recentCommands: createRecentCommands({
+						windowMs: 600_000,
+						now: () => 0,
+					}),
+				},
+				config: {
+					topic,
+					partition,
+					limits: { ...defaultLimits, maxBatchSize: 1 },
+				},
+			});
+			function submit(commandId: string) {
+				const command = createCommand({ commandId, value: 1 });
+				return writer.decide({
+					command,
+					mutate: ({ state }) => decideForTest({ state, command }),
+				});
+			}
+			const first = submit("first");
+			const target = submit("target");
+			const duplicate = submit("first");
+			let duplicateStored = false;
+			void duplicate.waitForStore().then(() => {
+				duplicateStored = true;
+			});
+			const skipped = writer.decide({
+				command: createCommand({ commandId: "skipped" }),
+				mutate: () => ({ kind: "reply", reply: undefined }),
+			});
+			let stored = false;
+			const completion = writer.waitForStore().then(() => {
+				stored = true;
+			});
+			const later = submit("later");
+			let decisionStored = false;
+			const decisionCompletion = Promise.all([
+				target.waitForStore(),
+				duplicate.waitForStore(),
+				skipped.waitForStore(),
+			]).then(() => {
+				decisionStored = true;
+			});
+			await waitForBatch();
+			appender.resolve();
+			await first.waitForCommit();
+			await waitForBatch();
+			expect(stored).toBe(false);
+			expect(decisionStored).toBe(false);
+			expect(duplicateStored).toBe(true);
+			appender.resolve({ baseOffset: 1n });
+			await target.waitForCommit();
+			await waitForBatch();
+			const storedBeforeLaterCommit = stored;
+			const decisionStoredBeforeLaterCommit = decisionStored;
+			appender.resolve({ baseOffset: 2n });
+			await later.waitForCommit();
+			await Promise.all([completion, decisionCompletion]);
+			expect(decisionStoredBeforeLaterCommit).toBe(true);
+			expect(storedBeforeLaterCommit).toBe(true);
+			await expect(writer.waitForStore()).resolves.toBeUndefined();
+		} finally {
+			await waitForBatch();
 			closeFixture(fixture);
 		}
 	});

@@ -13,16 +13,13 @@ export async function executeCommand<Decision>({
 	run: (scope: PartitionProcessorScope) => Promise<Decision>;
 }): Promise<Decision> {
 	let wroteMutation = false;
+	let precedingWrites = scope.ctx.writer.waitForStore();
 	function decide<Reply>(submission: MutationSubmission<Reply>) {
-		return scope.ctx.writer.decide({
-			...submission,
-			source,
-			mutate: (params) => {
-				const result = submission.mutate(params);
-				if (result.kind === "write") wroteMutation = true;
-				return result;
-			},
-		});
+		// Refusals can throw before returning a decision, but still depend on preceding writes.
+		precedingWrites = scope.ctx.writer.waitForStore();
+		const decided = scope.ctx.writer.decide({ ...submission, source });
+		wroteMutation ||= decided.kind === "write";
+		return decided;
 	}
 
 	const result = await run({
@@ -33,6 +30,9 @@ export async function executeCommand<Decision>({
 		},
 	});
 	// Joined and skipped commands have no new mutation to carry their offset.
-	if (!wroteMutation) await completeCommand({ scope, source });
+	if (!wroteMutation) {
+		await precedingWrites;
+		await completeCommand({ scope, source });
+	}
 	return result;
 }

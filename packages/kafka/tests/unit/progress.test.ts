@@ -39,6 +39,35 @@ function neverMovesConsumedPositionBackwards(): void {
 	expect(tracker.read({ topic, partition })).toBe(8n);
 }
 
+async function resetsConsumedPositionForReplay(): Promise<void> {
+	const tracker = createProgressTracker();
+	tracker.advance({ topic, partition, nextOffset: 8n });
+	tracker.advance({ topic, partition: partition + 1, nextOffset: 9n });
+	tracker.observeHighWatermark({ topic, partition, highWatermark: 12n });
+
+	tracker.reset({ topic, partition, nextOffset: 3n });
+	expect(tracker.readProgress({ topic, partition })).toEqual({
+		consumedNextOffset: 3n,
+		highWatermark: 12n,
+	});
+	expect(tracker.read({ topic, partition: partition + 1 })).toBe(9n);
+
+	let caughtUp = false;
+	const catchUp = tracker
+		.waitUntil({ topic, partition, nextOffset: 8n })
+		.then(() => {
+			caughtUp = true;
+		});
+	await Promise.resolve();
+	expect(caughtUp).toBe(false);
+	tracker.advance({ topic, partition, nextOffset: 7n });
+	await Promise.resolve();
+	expect(caughtUp).toBe(false);
+	tracker.advance({ topic, partition, nextOffset: 8n });
+	await catchUp;
+	expect(caughtUp).toBe(true);
+}
+
 function tracksPositionAndHighWatermark(): void {
 	const tracker = createProgressTracker();
 
@@ -78,6 +107,10 @@ async function cancelsPendingWait(): Promise<void> {
 }
 
 function progressTrackerTests(): void {
+	test(
+		"resets consumed progress for replay without clearing other progress",
+		resetsConsumedPositionForReplay,
+	);
 	test(
 		"resolves catch-up only after the consumed position reaches the target",
 		waitsForTargetPosition,

@@ -26,7 +26,9 @@ export async function processCommand<Decision>({
 			cause instanceof PartitionWriterRecoveryRequiredError ||
 			cause instanceof OwnedPartitionProducerFencedError
 		) {
-			throw await enterRuntimeRecovery({ ctx, state, cause });
+			// Recovery withdraws this consumer batch, so the command must reject before cleanup finishes.
+			void enterRuntimeRecovery({ ctx, state, cause });
+			throw state.terminalError;
 		}
 		throw cause;
 	}

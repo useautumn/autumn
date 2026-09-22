@@ -51,7 +51,7 @@ export type MutationResult<Reply> =
 	/** Nothing to write: reply immediately. */
 	| { kind: "reply"; reply: Reply };
 
-/** Resolved once the record is committed to Kafka and applied to SQLite. */
+/** The mutation and projected result returned at the requested durability milestone. */
 export type CommittedMutation = {
 	/** "new" for the submission that wrote it, "duplicate" for retries of it. */
 	kind: "new" | "duplicate";
@@ -62,6 +62,9 @@ export type CommittedMutation = {
 
 /** Returned synchronously by `decide`: the decision is made, durability is not. */
 export type DecidedMutation<Reply> = {
-	/** Resolves after Kafka commit and SQLite apply. */
+	kind: "write" | "duplicate" | "reply";
+	/** Resolves at the submission's durability milestone (Kafka by default). */
 	waitForCommit(): Promise<Reply | CommittedMutation>;
+	/** Resolves once this write's batch is stored (or durably refused); replies wait for preceding writes. */
+	waitForStore(): Promise<void>;
 };

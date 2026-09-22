@@ -17,11 +17,9 @@ import type {
 } from "./mutation.js";
 
 export type PartitionWriter = {
+	/** Snapshot: waits for the current writes to reach the store, not writes enqueued later. */
 	waitForStore(): Promise<void>;
-	/**
-	 * Synchronous: decides against the customer's freshest state and enqueues the
-	 * mutation before returning. `.committed` resolves after Kafka commit + SQLite apply.
-	 */
+	/** Decides and enqueues synchronously; the returned handle tracks durability. */
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
 	/** Snapshot: waits for the mutations pending for this customer when called, not ones enqueued later. */
 	waitForPendingCommits(params: { customerKey: string }): Promise<void>;
@@ -81,6 +79,9 @@ export type PartitionWriterConfig = {
 export type PendingSettlement = {
 	join(params: { kind: CommittedMutation["kind"] }): Promise<CommittedMutation>;
 	settle(params: { mutation: MutationRecord; state: SubjectState }): void;
+	waitForStore(): Promise<void>;
+	settleStore(): void;
+	rejectCommit(params: { error: unknown }): void;
 	reject(params: { error: unknown }): void;
 };
 
@@ -108,7 +109,7 @@ export type PartitionWriterState = {
 	pendingByCustomerKey: Map<string, Set<PendingMutation>>;
 	queue: PendingMutation[];
 	draining: boolean;
-	storeWaiters: Set<() => void>;
+	storeCompletion: Promise<void>;
 	drainScheduled: boolean;
 	recoveryError: Error | null;
 };

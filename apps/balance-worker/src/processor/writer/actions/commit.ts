@@ -52,8 +52,6 @@ async function commitOutcomes({
 		}
 	} finally {
 		state.draining = false;
-		for (const resolve of state.storeWaiters) resolve();
-		state.storeWaiters.clear();
 	}
 }
 
@@ -80,10 +78,12 @@ async function appendBatch({
 		if (cause instanceof MutationBatchNotCommittedError) {
 			rejectAllPending({
 				state,
+				batch,
 				error: new MutationBatchAppendError({ cause }),
 			});
+			state.storeCompletion = Promise.resolve();
 		} else {
-			enterRecovery({ scope, cause });
+			enterRecovery({ scope, batch, cause });
 		}
 		return null;
 	}
@@ -154,10 +154,8 @@ async function applyBatch({
 			const waiting = pending.durability === "store";
 			if (result.kind === "failed") {
 				firstFailure ??= result.cause;
-				if (waiting) {
-					removePendingMutation({ state: scope.state, pending });
-					pending.settlement.reject({ error: result.cause });
-				}
+				if (waiting) removePendingMutation({ state: scope.state, pending });
+				pending.settlement.rejectCommit({ error: result.cause });
 				continue;
 			}
 			// Refused by the store, not broken: the customer's rows are dropped because
@@ -168,7 +166,7 @@ async function applyBatch({
 				});
 				if (waiting) {
 					removePendingMutation({ state: scope.state, pending });
-					pending.settlement.reject({ error: result.cause });
+					pending.settlement.rejectCommit({ error: result.cause });
 				}
 				continue;
 			}
@@ -178,26 +176,29 @@ async function applyBatch({
 			}
 		}
 		if (firstFailure !== null) {
-			enterRecovery({ scope, cause: firstFailure });
+			enterRecovery({ scope, batch, cause: firstFailure });
 			return false;
 		}
+		for (const pending of batch) pending.settlement.settleStore();
 		return true;
 	} catch (cause) {
-		enterRecovery({ scope, cause });
+		enterRecovery({ scope, batch, cause });
 		return false;
 	}
 }
 
 function enterRecovery({
 	scope,
+	batch,
 	cause,
 }: {
 	scope: PartitionWriterScope;
+	batch: PendingMutation[];
 	cause: unknown;
 }): void {
 	const error = new PartitionWriterRecoveryRequiredError({ cause });
 	scope.state.recoveryError = error;
-	rejectAllPending({ state: scope.state, error });
+	rejectAllPending({ state: scope.state, batch, error });
 }
 
 // Only the log's copy carries `after`; the record the store and the dedup memory keep stays lean.
@@ -262,16 +263,4 @@ function assertPersistedMutation({
 	if (!receipt || !isDeepStrictEqual(receipt, mutation)) {
 		throw new Error(`Applied position has no matching receipt: ${mutation.id}`);
 	}
-}
-
-/** Log replies can precede store apply; command completion must not advance past that work. */
-export async function waitForStore({
-	scope,
-}: {
-	scope: PartitionWriterScope;
-}): Promise<void> {
-	const { state } = scope;
-	if (state.draining || state.queue.length > 0)
-		await new Promise<void>((resolve) => state.storeWaiters.add(resolve));
-	if (state.recoveryError) throw state.recoveryError;
 }

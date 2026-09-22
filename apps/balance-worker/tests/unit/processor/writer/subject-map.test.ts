@@ -12,6 +12,7 @@ import { mutationToRecord } from "../../../../src/processor/writer/receipt/mutat
 import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { createSubjectMap } from "../../../../src/processor/writer/subjectMap/createSubjectMap.js";
 import type { PartitionWriterContext } from "../../../../src/processor/writer/types/partitionWriter.js";
+import { PartitionWriterRecoveryRequiredError } from "../../../../src/processor/writer/writerErrors.js";
 import type { DurableMutationRecord } from "../../../../src/state/types/durableMutation.js";
 import {
 	createState,
@@ -382,6 +383,15 @@ describe("writer over a store with no resident state", () => {
 			"fulfilled",
 			"fulfilled",
 		]);
+		const stored = await Promise.allSettled(
+			decided.map((decision) => decision.waitForStore()),
+		);
+		expect(stored).toEqual(
+			decided.map(() => ({
+				status: "rejected",
+				reason: expect.any(PartitionWriterRecoveryRequiredError),
+			})),
+		);
 		// cmd_3 landed nowhere: the store never reached it, and recovery rejects what is left.
 		expect(() =>
 			writer.decide(
@@ -479,5 +489,6 @@ describe("writer over a store with no resident state", () => {
 		await waited;
 		expect(applied.length).toBe(1);
 		await expect(decided.waitForCommit()).rejects.toThrow("row refused");
+		await expect(decided.waitForStore()).resolves.toBeUndefined();
 	});
 });

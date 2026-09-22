@@ -950,6 +950,76 @@ describe("owned partition runtime", () => {
 		}
 	});
 
+	test("rejects a failed command before recovery waits for its batch", async () => {
+		const fixture = createStoreFixture();
+		const batchFinished = createDeferred<void>();
+		const stopStarted = createDeferred<void>();
+		const cleanup = createDeferred<void>();
+		const fakeProducer = createFakeProducer({
+			appendSendError: Object.assign(new Error("producer fenced"), {
+				type: "INVALID_PRODUCER_EPOCH",
+				code: 47,
+			}),
+		});
+		const fakeFollower = createFollower();
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: {
+				...fakeFollower.follower,
+				stop: async () => {
+					stopStarted.resolve(undefined);
+					// Consumer withdrawal waits for the batch executing this command.
+					await batchFinished.promise;
+					await cleanup.promise;
+				},
+			},
+		});
+		const unavailable: unknown[] = [];
+		runtime.subscribeUnavailable(({ cause }) => unavailable.push(cause));
+		let batchSettled = false;
+		try {
+			await runtime.start();
+			const batch = runtime
+				.process((processor) =>
+					processor.track({
+						command: createTrackCommand({ commandId: "queued_failure" }),
+					}),
+				)
+				.catch((cause: unknown) => cause)
+				.finally(() => {
+					batchSettled = true;
+					batchFinished.resolve(undefined);
+				});
+			await stopStarted.promise;
+			await waitForTurn();
+			expect(batchSettled).toBe(true);
+			expect(await batch).toBeInstanceOf(OwnedPartitionProducerFencedError);
+			expect(unavailable).toHaveLength(1);
+			expect(runtime.getStatus()).toBe("recovery_required");
+			await expect(
+				runtime.process(async () => "late command"),
+			).rejects.toBeInstanceOf(OwnedPartitionProducerFencedError);
+
+			let stopped = false;
+			const stopping = runtime.stop().then(() => {
+				stopped = true;
+			});
+			await waitForTurn();
+			expect(stopped).toBe(false);
+			expect(fakeProducer.lifecycle).not.toContain("producer:disconnect");
+			cleanup.resolve(undefined);
+			await stopping;
+			await runtime.waitForQuiescence();
+			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+		} finally {
+			batchFinished.resolve(undefined);
+			cleanup.resolve(undefined);
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
 	test("parks and discards a producer fenced during append", async () => {
 		const fixture = createStoreFixture();
 		const fencedError = Object.assign(new Error("producer fenced"), {
@@ -979,6 +1049,7 @@ describe("owned partition runtime", () => {
 			).rejects.toBeInstanceOf(OwnedPartitionProducerFencedError);
 
 			expect(runtime.getStatus()).toBe("recovery_required");
+			await runtime.stop();
 			expect(fakeFollower.lifecycle.at(-1)).toBe("follower:stop");
 			expect(
 				fakeProducer.lifecycle.filter(
@@ -1069,6 +1140,7 @@ describe("owned partition runtime", () => {
 			expect(error).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
 			expect(error).not.toBeInstanceOf(OwnedPartitionProducerFencedError);
 			expect(runtime.getStatus()).toBe("recovery_required");
+			await runtime.stop();
 			expect(fakeFollower.lifecycle.at(-1)).toBe("follower:stop");
 			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
 		} finally {

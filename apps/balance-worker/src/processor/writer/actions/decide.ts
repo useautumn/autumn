@@ -51,7 +51,11 @@ export function decide<Reply>({
 			fingerprint,
 			record: inFlight.mutation.receipt,
 		});
-		return decidedWith<Reply>(inFlight.settlement.join({ kind: "duplicate" }));
+		return decidedWith<Reply>({
+			kind: "duplicate",
+			committed: inFlight.settlement.join({ kind: "duplicate" }),
+			stored: inFlight.settlement.waitForStore(),
+		});
 	}
 
 	// A null state is legal here: initialize is the command that creates one.
@@ -64,13 +68,15 @@ export function decide<Reply>({
 		assertSameRequest({ commandId, fingerprint, record: receipt.receipt });
 		if (!currentState)
 			throw new PartitionWriterStateNotFoundError({ customerKey });
-		return decidedWith<Reply>(
-			Promise.resolve({
+		return decidedWith<Reply>({
+			kind: "duplicate",
+			stored: Promise.resolve(),
+			committed: Promise.resolve({
 				kind: "duplicate",
 				mutation: receipt,
 				state: currentState,
 			}),
-		);
+		});
 	}
 	// A store without records (postgres) still remembers the id: same request → duplicate, else conflict.
 	const remembered = ctx.recentCommands.read({ identity, commandId });
@@ -81,9 +87,13 @@ export function decide<Reply>({
 
 	const result = submission.mutate({ state: currentState });
 	if (result.kind === "reply")
-		return decidedWith<Reply>(Promise.resolve(result.reply));
+		return decidedWith<Reply>({
+			kind: "reply",
+			committed: Promise.resolve(result.reply),
+			stored: state.storeCompletion,
+		});
 
-	const committed = enqueueMutation({
+	const pending = enqueueMutation({
 		scope,
 		pendingKey,
 		customerKey,
@@ -98,16 +108,29 @@ export function decide<Reply>({
 		catalog: result.catalog,
 	});
 	scheduleCommit({ scope });
-	return decidedWith<Reply>(committed);
+	return decidedWith<Reply>({
+		kind: "write",
+		committed: pending.committed,
+		stored: pending.settlement.waitForStore(),
+	});
 }
 
-function decidedWith<Reply>(
-	committed: Promise<Reply | CommittedMutation>,
-): DecidedMutation<Reply> {
+function decidedWith<Reply>({
+	kind,
+	committed,
+	stored,
+}: {
+	kind: DecidedMutation<Reply>["kind"];
+	committed: Promise<Reply | CommittedMutation>;
+	stored: Promise<void>;
+}): DecidedMutation<Reply> {
 	function waitForCommit(): Promise<Reply | CommittedMutation> {
 		return committed;
 	}
-	return { waitForCommit };
+	function waitForStore(): Promise<void> {
+		return stored;
+	}
+	return { kind, waitForCommit, waitForStore };
 }
 
 /** Snapshot at call time: mutations enqueued after this returns do not extend the wait. */

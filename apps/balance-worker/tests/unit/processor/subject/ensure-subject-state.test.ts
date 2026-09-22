@@ -55,7 +55,11 @@ const createFakeWriter = ({ initial }: { initial: SubjectState | null }) => {
 	const decide = <Reply>(submission: MutationSubmission<Reply>) => {
 		const result = submission.mutate({ state });
 		if (result.kind === "reply") {
-			return { waitForCommit: async () => result.reply };
+			return {
+				kind: "reply" as const,
+				waitForCommit: async () => result.reply,
+				waitForStore: async () => undefined,
+			};
 		}
 		const { nextState } = result;
 		state = nextState;
@@ -66,6 +70,8 @@ const createFakeWriter = ({ initial }: { initial: SubjectState | null }) => {
 		});
 		committed.push(record);
 		return {
+			kind: "write" as const,
+			waitForStore: async () => undefined,
 			waitForCommit: async () => ({
 				kind: "new" as const,
 				mutation: record,

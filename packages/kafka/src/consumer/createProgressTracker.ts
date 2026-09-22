@@ -13,6 +13,12 @@ export function createProgressTracker(): ProgressTracker {
 	const highWatermarks = new Map<string, bigint>();
 	const waiters = new Map<string, Set<PositionWaiter>>();
 
+	function reset(position: ProgressPosition): void {
+		validatePosition(position);
+		nextOffsets.delete(positionKeyOf(position));
+		advance(position);
+	}
+
 	function advance({ topic, partition, nextOffset }: ProgressPosition): void {
 		validatePosition({ topic, partition, nextOffset });
 		const key = positionKeyOf({ topic, partition });
@@ -86,7 +92,14 @@ export function createProgressTracker(): ProgressTracker {
 		return promise;
 	}
 
-	return { advance, read, observeHighWatermark, readProgress, waitUntil };
+	return {
+		reset,
+		advance,
+		read,
+		observeHighWatermark,
+		readProgress,
+		waitUntil,
+	};
 }
 
 function positionKeyOf({ topic, partition }: PartitionPosition): string {

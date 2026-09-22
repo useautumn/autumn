@@ -25,7 +25,7 @@ export function createPartitionWriterState(): PartitionWriterState {
 		pendingByCustomerKey: new Map(),
 		queue: [],
 		draining: false,
-		storeWaiters: new Set(),
+		storeCompletion: Promise.resolve(),
 		drainScheduled: false,
 		recoveryError: null,
 	};
@@ -42,6 +42,9 @@ export function pendingKeyOf({
 }
 
 export function createPendingSettlement(): PendingSettlement {
+	const stored = Promise.withResolvers<void>();
+	// Log-only callers may never wait for the store; failure still reaches store waiters.
+	void stored.promise.catch(() => undefined);
 	const waiters: {
 		kind: CommittedMutation["kind"];
 		resolvers: ReturnType<typeof Promise.withResolvers<CommittedMutation>>;
@@ -69,14 +72,27 @@ export function createPendingSettlement(): PendingSettlement {
 		}
 	}
 
-	function reject({ error }: { error: unknown }): void {
+	function waitForStore(): Promise<void> {
+		return stored.promise;
+	}
+
+	function settleStore(): void {
+		stored.resolve();
+	}
+
+	function rejectCommit({ error }: { error: unknown }): void {
 		for (const { resolvers } of waiters) resolvers.reject(error);
 	}
 
-	return { join, settle, reject };
+	function reject({ error }: { error: unknown }): void {
+		rejectCommit({ error });
+		stored.reject(error);
+	}
+
+	return { join, settle, waitForStore, settleStore, rejectCommit, reject };
 }
 
-/** Queues the record, projects its result into the map and pins those subjects, then returns the writer's own settlement promise. */
+/** A queued mutation owns both durability milestones, even after its log reply releases its pins. */
 export function enqueueMutation({
 	scope,
 	pendingKey,
@@ -93,7 +109,7 @@ export function enqueueMutation({
 	nextState: SubjectState;
 	durability: MutationDurability;
 	catalog?: Catalog;
-}): Promise<CommittedMutation> {
+}): PendingMutation {
 	const { state, config } = scope;
 	const customerPending =
 		state.pendingByCustomerKey.get(customerKey) ?? new Set<PendingMutation>();
@@ -132,7 +148,8 @@ export function enqueueMutation({
 	customerPending.add(pending);
 	state.pendingByCustomerKey.set(customerKey, customerPending);
 	state.queue.push(pending);
-	return committed;
+	state.storeCompletion = settlement.waitForStore();
+	return pending;
 }
 
 /** Snapshot at call time: mutations enqueued later must not extend the wait. */
@@ -171,14 +188,18 @@ export function removePendingMutation({
 
 export function rejectAllPending({
 	state,
+	batch,
 	error,
 }: {
 	state: PartitionWriterState;
+	batch: readonly PendingMutation[];
 	error: Error;
 }): void {
 	for (const pending of state.pendingByKey.values()) {
 		pending.settlement.reject({ error });
 	}
+	// Log-acknowledged writes have left pendingByKey but still own an unfinished store milestone.
+	for (const pending of batch) pending.settlement.reject({ error });
 	state.queue.length = 0;
 	state.pendingByKey.clear();
 	state.pendingByCustomerKey.clear();

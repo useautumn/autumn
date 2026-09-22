@@ -105,18 +105,14 @@ async function catchUpPartition({
 			logEndOffset: targetNextOffset,
 		});
 	}
-	// Readiness still means the bookmark reached log end; the records below it only refill recent commands.
-	ctx.positionTracker.advance({
-		topic,
-		partition,
-		nextOffset: storedNextOffset,
-	});
 	const floor = await readReplayFloor({
 		ctx,
 		state,
 		bookmark: storedNextOffset,
 	});
 	if (signal.aborted) throw signal.reason;
+	// A new replay must rebuild recent commands even if an earlier runtime reached the target.
+	ctx.positionTracker.reset({ topic, partition, nextOffset: floor });
 	if (floor < storedNextOffset)
 		ctx.replayFloorByPartition.set(partition, floor);
 	try {

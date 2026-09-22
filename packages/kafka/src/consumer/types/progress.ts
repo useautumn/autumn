@@ -9,6 +9,7 @@ export type HighWatermarkPosition = PartitionPosition & {
 };
 export type ProgressWait = ProgressPosition & { signal?: AbortSignal };
 export type ProgressTracker = {
+	reset(position: ProgressPosition): void;
 	advance(position: ProgressPosition): void;
 	observeHighWatermark(position: HighWatermarkPosition): void;
 	read(position: PartitionPosition): bigint | null;

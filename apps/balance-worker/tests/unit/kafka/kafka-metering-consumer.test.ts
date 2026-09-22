@@ -94,7 +94,8 @@ const createFakeKafkaPartitionOffsets = ({
 
 function createKafkaMeteringConsumer(params: {
 	consumer: KafkaConsumerClient;
-	partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
+	partitionOffsets: Pick<Admin, "fetchTopicOffsets"> &
+		Partial<Pick<Admin, "fetchTopicOffsetsByTimestamp">>;
 	stateStore: import("../../../src/state/types/stateStore.js").StateStore;
 	topic: string;
 	positionTracker?: ProgressTracker;
@@ -1339,6 +1340,108 @@ test(
 );
 
 describe("replay window", () => {
+	test.each([
+		{
+			scenario: "the store is already caught up",
+			previousNextOffset: null,
+			targetNextOffset: 3n,
+		},
+		{
+			scenario: "a previous runtime reached the target",
+			previousNextOffset: 4n,
+			targetNextOffset: 4n,
+		},
+	])(
+		"rebuilds dedup memory before readiness when $scenario",
+		async ({ previousNextOffset, targetNextOffset }) => {
+			const fixture = createStoreFixture({ nextOffset: 3n });
+			const port = createFakeKafkaConsumer();
+			const tracker = createProgressTracker();
+			if (previousNextOffset !== null)
+				tracker.advance({ topic, partition, nextOffset: previousNextOffset });
+			const consumer = createKafkaMeteringConsumer({
+				consumer: port,
+				partitionOffsets: {
+					...createFakeKafkaPartitionOffsets({
+						high: targetNextOffset.toString(),
+					}),
+					fetchTopicOffsetsByTimestamp: async () => [
+						{ partition, offset: "1" },
+					],
+				},
+				stateStore: fixture.store,
+				positionTracker: tracker,
+				topic,
+			});
+			const recentCommands = createRecentCommands({
+				windowMs: 600_000,
+				now: () => 0,
+			});
+			const replay = consumer.createReplay({ partition, recentCommands });
+			try {
+				const state = createState();
+				restoreSubjectStates({
+					store: fixture.store,
+					topic,
+					partition,
+					states: [state],
+				});
+				await consumer.start();
+				await replay.readLogRange({
+					topic,
+					partition,
+					signal: new AbortController().signal,
+				});
+				let ready = false;
+				const catchUp = replay
+					.startAndCatchUp({
+						topic,
+						partition,
+						targetNextOffset,
+						onUnavailable: () => undefined,
+					})
+					.then(() => {
+						ready = true;
+					});
+				void catchUp.catch(() => undefined);
+				await new Promise<void>(setImmediate);
+				expect(ready).toBe(false);
+				expect(port.seeks).toEqual([{ topic, partition, offset: "1" }]);
+
+				const first = createMutation({ state, commandId: "cmd_first" });
+				await port.deliver({
+					offset: "1",
+					...serializeMeteringRecord({ record: first }),
+				});
+				expect(recentCommands.read({ identity, commandId: first.id })).toEqual({
+					fingerprint: first.receipt.fingerprint,
+				});
+				expect(ready).toBe(false);
+
+				const last = createMutation({ state, commandId: "cmd_last" });
+				await port.deliver({
+					offset: "2",
+					...serializeMeteringRecord({ record: last }),
+				});
+				if (targetNextOffset > 3n) {
+					await new Promise<void>(setImmediate);
+					expect(ready).toBe(false);
+					port.emitEndBatchProcess({ batchSize: 0, lastOffset: "3" });
+				}
+				await catchUp;
+				expect(ready).toBe(true);
+				expect(recentCommands.read({ identity, commandId: last.id })).toEqual({
+					fingerprint: last.receipt.fingerprint,
+				});
+				expect(fixture.store.readState({ identity })).toEqual(state);
+				expect(fixture.store.readNextOffset({ topic, partition })).toBe(3n);
+			} finally {
+				await replay.stop();
+				await consumer.stop();
+				closeStoreFixture(fixture);
+			}
+		},
+	);
 	function createWindowedHandler({
 		floor,
 		withReplay = true,
