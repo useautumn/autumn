@@ -298,7 +298,12 @@ const createReplacementDraft = async ({
 			override: overrides?.memo,
 			inherited: template?.memo ?? stripeInvoice.description,
 		}),
-		paymentMethodTypes: paymentMethodTypes as never,
+		// The org's invoice methods (e.g. customer_balance) are for send-invoice
+		// only; a card replacement uses the customer's payment method as before.
+		paymentMethodTypes:
+			collectionMethod === "send_invoice"
+				? (paymentMethodTypes as never)
+				: undefined,
 		metadata: {
 			...inheritedMetadata({ stripeInvoice, dropDeferredPointer }),
 			autumn_reissued_from: stripeInvoice.id,
