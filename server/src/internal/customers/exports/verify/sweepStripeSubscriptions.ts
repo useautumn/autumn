@@ -18,7 +18,13 @@ const listTestClockIds = async ({
 	limits?: SweepLimits;
 	pacer: RatePacer;
 }) => {
-	const { pageSize, pageTimeoutMs, pageAttempts, retryDelayMs } = {
+	const {
+		pageSize,
+		pageTimeoutMs,
+		pageAttempts,
+		retryDelayMs,
+		maxRetryDelayMs,
+	} = {
 		...billingVerifyExportConfig.sweep,
 		...limits,
 	};
@@ -29,6 +35,7 @@ const listTestClockIds = async ({
 		const page = await retryBoundedAsync({
 			attempts: pageAttempts,
 			delayMs: retryDelayMs,
+			maxDelayMs: maxRetryDelayMs,
 			timeoutMs: pageTimeoutMs,
 			timeoutMessage: `Stripe test clock page timed out after ${pageTimeoutMs}ms`,
 			beforeAttempt: () => pacer.takeSlot(),
