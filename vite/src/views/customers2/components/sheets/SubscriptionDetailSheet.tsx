@@ -5,7 +5,7 @@ import {
 	type Entity,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
-import { Badge, Button, CopyButton, IconButton, InfoRow } from "@autumn/ui";
+import { Badge, Button, CopyButton, InfoRow } from "@autumn/ui";
 import {
 	CalendarBlankIcon,
 	CreditCardIcon,
@@ -14,7 +14,6 @@ import {
 	HashIcon,
 	HeartbeatIcon,
 	Info,
-	PencilSimpleIcon,
 	SubtractIcon,
 	TagIcon,
 	TicketIcon,
@@ -27,6 +26,7 @@ import {
 	BillingControlsList,
 	hasBillingControls,
 } from "@/components/billing-controls/BillingControlsDisplay";
+import { getPendingBillingCycleAnchor } from "@/components/forms/update-subscription-v2/utils/pendingBillingCycleAnchor";
 import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
@@ -35,7 +35,6 @@ import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
-
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -46,56 +45,10 @@ import {
 	SubscriptionDetailLicenses,
 } from "./SubscriptionDetailLicenses";
 import { SubscriptionLicenseRow } from "./SubscriptionLicenseRow";
-import {
-	billingCycleAnchorFormOverrides,
-	formatDiscountLabel,
-	getPendingBillingCycleAnchor,
-} from "./subscriptionDetailUtils";
+import { formatDiscountLabel } from "./subscriptionDetailUtils";
 import { usePendingPaymentLink } from "./usePendingPaymentLink";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
-
-function PendingBillingCycleAnchorSection({
-	resetsAt,
-	itemId,
-}: {
-	resetsAt: number;
-	itemId: string | null;
-}) {
-	const setSheet = useSheetStore((s) => s.setSheet);
-	return (
-		<SheetSection>
-			<div className="mb-2 text-form-label">Upcoming billing change</div>
-			<InfoRow
-				icon={<CalendarBlankIcon size={16} weight="duotone" />}
-				label="Cycle restarts"
-				value={
-					<div className="flex items-center gap-2">
-						<span>{format(new Date(resetsAt), "MMM d, yyyy, HH:mm")}</span>
-						<IconButton
-							aria-label="Edit billing cycle anchor"
-							icon={<PencilSimpleIcon size={14} />}
-							iconOrientation="center"
-							size="sm"
-							variant="secondary"
-							onClick={() =>
-								setSheet({
-									type: "subscription-update",
-									itemId,
-									data: {
-										formOverrides: billingCycleAnchorFormOverrides({
-											resetsAt,
-										}),
-									},
-								})
-							}
-						/>
-					</div>
-				}
-			/>
-		</SheetSection>
-	);
-}
 
 export function SubscriptionDetailSheet() {
 	const { customer, features = [], testClockFrozenTimeMs } = useCusQuery();
@@ -417,11 +370,15 @@ export function SubscriptionDetailSheet() {
 				</div>
 			</SheetSection>
 
-			{pendingAnchorResetsAt !== null && canUpdate && (
-				<PendingBillingCycleAnchorSection
-					resetsAt={pendingAnchorResetsAt}
-					itemId={itemId}
-				/>
+			{pendingAnchorResetsAt !== null && (
+				<SheetSection>
+					<div className="mb-2 text-form-label">Upcoming billing change</div>
+					<InfoRow
+						icon={<CalendarBlankIcon size={16} weight="duotone" />}
+						label="Cycle restarts"
+						value={formatDate(pendingAnchorResetsAt)}
+					/>
+				</SheetSection>
 			)}
 
 			{hasBillingControls(planBillingControls) && (

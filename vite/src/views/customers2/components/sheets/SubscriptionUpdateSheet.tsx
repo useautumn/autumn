@@ -211,13 +211,9 @@ export function SubscriptionUpdateSheet() {
 			...(approvalSeed?.defaultOverrides as
 				| Partial<UpdateSubscriptionForm>
 				| undefined),
-			...(sheetData?.formOverrides as
-				| Partial<UpdateSubscriptionForm>
-				| undefined),
 		};
 	}, [
 		approvalSeed?.defaultOverrides,
-		sheetData?.formOverrides,
 		customizedProduct,
 		cusProduct?.customer_licenses,
 		features,
