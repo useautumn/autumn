@@ -269,9 +269,13 @@ const createReplacementDraft = async ({
 				stripeClient: stripeCli,
 				invoiceId: stripeInvoice.id,
 			}),
+			// Stripe Tax's own rates cannot be reapplied by hand; it recomputes
+			// them on the replacement since automatic tax carries over.
 			lineTaxRates:
 				overrides?.tax_rate_id === undefined
-					? "keep"
+					? stripeInvoice.automatic_tax?.enabled
+						? "inherit"
+						: "keep"
 					: overrides.tax_rate_id === null
 						? "none"
 						: "inherit",
@@ -297,7 +301,12 @@ const createReplacementDraft = async ({
 			override: overrides?.memo,
 			inherited: template?.memo ?? stripeInvoice.description,
 		}),
-		paymentMethodTypes: paymentMethodTypes as never,
+		// The org's invoice methods (e.g. customer_balance) are for send-invoice
+		// only; a card replacement uses the customer's payment method as before.
+		paymentMethodTypes:
+			collectionMethod === "send_invoice"
+				? (paymentMethodTypes as never)
+				: undefined,
 		metadata: {
 			...inheritedMetadata({ stripeInvoice, dropDeferredPointer }),
 			autumn_reissued_from: stripeInvoice.id,
