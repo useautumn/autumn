@@ -258,7 +258,7 @@ describe("usage prices share a feature-level Stripe product", () => {
 });
 
 describe("sharedProductHint", () => {
-	test("names the plans that move together", () => {
+	test("lists the plans a coupon reaches, one per line", () => {
 		const [group] = buildStripeProductGroups({
 			products: [
 				plan({ id: "Pro", stripeId: "prod_pro" }),
@@ -267,7 +267,7 @@ describe("sharedProductHint", () => {
 		});
 
 		expect(sharedProductHint({ group })).toBe(
-			"Shares Stripe products with Pro, Pro Yearly, so a coupon applies to all of them.",
+			"A coupon here applies to:\n  • Pro\n  • Pro Yearly",
 		);
 	});
 });
@@ -371,5 +371,20 @@ describe("the base plan leads its group", () => {
 
 		expect(groupLabel({ group: groups[0] })).toBe("Pro");
 		expect(groupSuffix({ group: groups[0] })).toBe("+ 2 variants");
+	});
+});
+
+describe("sharedProductHint ordering", () => {
+	test("the base is listed first even when a variant comes first", () => {
+		const [group] = buildStripeProductGroups({
+			products: [
+				plan({ id: "Pro Yearly", stripeId: "prod_pro", baseId: "Pro" }),
+				plan({ id: "Pro", stripeId: "prod_pro" }),
+			],
+		});
+
+		expect(sharedProductHint({ group })).toBe(
+			"A coupon here applies to:\n  • Pro\n  • Pro Yearly",
+		);
 	});
 });

@@ -121,11 +121,21 @@ export const groupSuffix = ({ group }: { group: StripeProductGroup }) => {
 	return `+ ${extra} ${noun}${extra > 1 ? "s" : ""}`;
 };
 
-/** Named plans, so the hint says which ones move together. A group can chain across several products. */
-export const sharedProductHint = ({ group }: { group: StripeProductGroup }) =>
-	`Shares Stripe products with ${group.products
-		.map((product) => product.name)
-		.join(", ")}, so a coupon applies to all of them.`;
+/** Lists the plans a coupon would reach, base first, one per line. */
+export const sharedProductHint = ({ group }: { group: StripeProductGroup }) => {
+	const lead = leadProduct({ group });
+	const names = [
+		lead.name,
+		...group.products
+			.filter((product) => product !== lead)
+			.map((product) => product.name),
+	];
+
+	return [
+		"A coupon here applies to:",
+		...names.map((name) => `  • ${name}`),
+	].join("\n");
+};
 
 export const isGroupSelected = ({
 	group,
