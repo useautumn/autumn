@@ -1,3 +1,4 @@
+import type { SgNode } from "@ast-grep/napi";
 import { NESTED_FIXTURES } from "../../generated/emit";
 import {
 	branchSpecs,
@@ -342,10 +343,25 @@ export const applyPreview = ({
 				context: { featureTypes, nestedBuilders },
 			});
 		const targetSource = files.get(resolved.file) ?? "";
+		// Versions of one plan sit together: a new one lands after its siblings.
+		const after = versioned
+			? (element: SgNode) =>
+					element.kind() === "call_expression" &&
+					element.field("function")?.text() === rowSpec.builder &&
+					fixturePropertyString({
+						call: element,
+						property: rowSpec.idField,
+					}) === id
+			: undefined;
 		const updated =
 			resolved.kind === "inline"
-				? appendToCollection({ source: targetSource, collection, text })
-				: appendToBinding({ source: targetSource, name: resolved.name, text });
+				? appendToCollection({ source: targetSource, collection, text, after })
+				: appendToBinding({
+						source: targetSource,
+						name: resolved.name,
+						text,
+						after,
+					});
 		if (updated === null) {
 			result.unlocated.push({
 				id: key,

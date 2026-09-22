@@ -753,3 +753,53 @@ test("a sibling version demoted under the edited row flips active where it sits"
 	// The config-only v2 was a create on the server: it is dropped, not kept.
 	expect(text).not.toContain('internalId: "prod_v2"');
 });
+
+test("a version pulled for the first time lands beside its plan's other versions", async () => {
+	const caseDir = freshWithBinding({
+		name: "beside",
+		plans: [
+			'\tplan({ internalId: "prod_v1", active: true, planId: "pro", versionSlug: "v1", name: "Pro" }),',
+			'\tplan({ internalId: "prod_free", active: true, planId: "free", versionSlug: "v1", name: "Free" }),',
+		].join("\n"),
+	});
+	const rows = {
+		features: [],
+		plans: [
+			...numberedLaterRows.plans,
+			{
+				id: "free",
+				internalId: "prod_free",
+				name: "Free",
+				version: 1,
+				versionSlug: "v1",
+				active: true,
+				archived: false,
+				price: null,
+				items: [],
+			},
+		],
+	};
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				version: 1,
+				versionSlug: "v2",
+				active: true,
+				action: "delete",
+				internalId: "prod_v2",
+				state: { hasCustomers: false },
+			},
+		],
+	};
+	const result = await runPull({
+		client: clientFor({ preview, rows }),
+		cwd: caseDir,
+		write: () => {},
+	});
+	expect(result.appended).toEqual(["pro@v2"]);
+	const text = plansTextIn(caseDir);
+	const order = [...text.matchAll(/internalId: "(\w+)"/g)].map((m) => m[1]);
+	expect(order).toEqual(["prod_v1", "prod_v2", "prod_free"]);
+});
