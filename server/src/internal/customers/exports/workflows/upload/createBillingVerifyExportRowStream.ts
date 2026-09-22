@@ -1,10 +1,10 @@
 import { Readable } from "node:stream";
-import type { BillingVerifyExportRow } from "@autumn/shared";
-import { mapWithConcurrency } from "@/internal/migrations/v2/batchOperations/execute/utils/mapWithConcurrency.js";
 import {
-	BILLING_VERIFY_CONCURRENCY,
-	BILLING_VERIFY_EXPORT_PAGE_SIZE,
-} from "../../verify/billingVerifyExportConfig.js";
+	type BillingVerifyExportRow,
+	CustomerExportPhase,
+} from "@autumn/shared";
+import { mapWithConcurrency } from "@/internal/migrations/v2/batchOperations/execute/utils/mapWithConcurrency.js";
+import { BILLING_VERIFY_CONCURRENCY } from "../../verify/billingVerifyExportConfig.js";
 import { filterBillingVerifyCandidates } from "../../verify/filterBillingVerifyCandidates.js";
 import { setupBillingVerifySweep } from "../../verify/setupBillingVerifySweep.js";
 import { verifyCustomerToExportRows } from "../../verify/verifyCustomerToExportRows.js";
@@ -12,16 +12,21 @@ import type { CustomerExportRowStreamFactory } from "./customerExportProducers.j
 import { walkCustomerExportPages } from "./walkCustomerExportPages.js";
 
 export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory =
-	({ ctx, snapshot, population, onPageProcessed }) => {
+	({ ctx, snapshot, population, progress, onPageProcessed }) => {
 		const exportRows =
 			async function* (): AsyncGenerator<BillingVerifyExportRow> {
-				const sweep = await setupBillingVerifySweep({ ctx });
+				await progress?.setPhase(CustomerExportPhase.Scanning);
+				const sweep = await setupBillingVerifySweep({
+					ctx,
+					onSubscriptionsScanned: (count) =>
+						progress?.incrementProcessedRows(count),
+				});
+				await progress?.setPhase(CustomerExportPhase.Exporting);
 
 				const pages = walkCustomerExportPages({
 					ctx,
 					snapshot,
 					population,
-					pageSize: BILLING_VERIFY_EXPORT_PAGE_SIZE,
 				});
 				for await (const scalars of pages) {
 					const candidates = await filterBillingVerifyCandidates({

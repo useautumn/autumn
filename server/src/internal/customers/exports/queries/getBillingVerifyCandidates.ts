@@ -1,6 +1,24 @@
 import { type AppEnv, customerProducts, customers } from "@autumn/shared";
-import { and, eq, gt, inArray, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, min, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+
+/** The oldest customer bounds how far back the Stripe sweep must reach. */
+export const getEarliestCustomerCreatedAt = async ({
+	db,
+	orgId,
+	env,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+}): Promise<number | null> => {
+	const rows = await db
+		.select({ createdAt: min(customers.created_at) })
+		.from(customers)
+		.where(and(eq(customers.org_id, orgId), eq(customers.env, env)));
+
+	return rows[0]?.createdAt ?? null;
+};
 
 /** Customers holding a plan tied to a Stripe subscription or schedule. */
 export const getStripeLinkedCustomerIds = async ({

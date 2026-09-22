@@ -8,6 +8,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createBillingVerifyExportStringifier } from "../../csv/createBillingVerifyExportStringifier.js";
 import { createCustomerExportStringifier } from "../../csv/createCustomerExportStringifier.js";
 import type { CustomerExportPopulation } from "../../queries/getCustomerExportScalars.js";
+import type { CustomerExportProgressReporter } from "../customerExportProgressReporter.js";
 import { createBillingVerifyExportRowStream } from "./createBillingVerifyExportRowStream.js";
 import { createCustomerExportRowStream } from "./createCustomerExportRowStream.js";
 
@@ -15,6 +16,7 @@ export type CustomerExportRowStreamFactory = (args: {
 	ctx: AutumnContext;
 	snapshot: CustomerExportSnapshot;
 	population: CustomerExportPopulation;
+	progress?: CustomerExportProgressReporter;
 	onPageProcessed: (page: {
 		customerCount: number;
 		rowCount: number;
