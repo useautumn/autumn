@@ -840,7 +840,7 @@ const response = await client.features.delete({ featureId: "old-feature" });
 
 ### [Logs](docs/sdks/logs/README.md)
 
-* [search](docs/sdks/logs/README.md#search) - Search tenant-scoped Autumn API request logs. Supports restricted APL filters, ordering, and limits over projected request-log fields.
+* [search](docs/sdks/logs/README.md#search) - Search API requests and incoming Stripe webhooks for your organization and environment.
 
 ### [Plans](docs/sdks/plans/README.md)
 
@@ -1500,7 +1500,7 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 - [`keysRevoke`](docs/sdks/keys/README.md#revoke) - Revokes every outstanding token (access and refresh) for a customer. Authenticated with your secret key. New tokens can be issued afterwards with `keys.mint`.
 - [`licensesAttach`](docs/sdks/licenses/README.md#attach) - Assigns licenses to one or more entities.
 - [`licensesRelease`](docs/sdks/licenses/README.md#release) - Releases licenses assigned to one or more entities.
-- [`logsSearch`](docs/sdks/logs/README.md#search) - Search tenant-scoped Autumn API request logs. Supports restricted APL filters, ordering, and limits over projected request-log fields.
+- [`logsSearch`](docs/sdks/logs/README.md#search) - Search API requests and incoming Stripe webhooks for your organization and environment.
 - [`plansCreate`](docs/sdks/plans/README.md#create) - Create a plan
 - [`plansDelete`](docs/sdks/plans/README.md#delete) - Delete a plan
 - [`plansGet`](docs/sdks/plans/README.md#get) - Get a plan

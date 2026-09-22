@@ -322,7 +322,7 @@ Use this to permanently remove a feature. Note: features that are used in produc
 
 ### [Logs](docs/sdks/logs/README.md)
 
-* [search](docs/sdks/logs/README.md#search) - Search tenant-scoped Autumn API request logs. Supports restricted APL filters, ordering, and limits over projected request-log fields.
+* [search](docs/sdks/logs/README.md#search) - Search API requests and incoming Stripe webhooks for your organization and environment.
 
 ### [Plans](docs/sdks/plans/README.md)
 

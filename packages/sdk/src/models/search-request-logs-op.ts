@@ -15,52 +15,145 @@ export type SearchRequestLogsGlobals = {
   xApiVersion?: string | undefined;
 };
 
+/**
+ * Time window to search. Defaults to the last 30 minutes. Maximum 7 days.
+ */
 export type SearchLogsRange = {
+  /**
+   * Start of the time window in ISO 8601 format. Defaults to 30 minutes before end_date.
+   */
   startDate?: string | undefined;
+  /**
+   * End of the time window in ISO 8601 format. Defaults to now.
+   */
   endDate?: string | undefined;
 };
 
 export type SearchRequestLogsParams = {
+  /**
+   * Filter and sort logs using where, order by, and limit, joined with |. Omit to return recent logs.
+   */
   query?: string | undefined;
+  /**
+   * Time window to search. Defaults to the last 30 minutes. Maximum 7 days.
+   */
   range?: SearchLogsRange | undefined;
+  /**
+   * Maximum number of logs to return, from 1 to 200. Defaults to 100.
+   */
   limit?: number | undefined;
 };
 
+/**
+ * Whether this was an API request or an incoming Stripe webhook.
+ */
 export const SearchRequestLogsSource = {
   ApiRequest: "api_request",
   StripeWebhook: "stripe_webhook",
 } as const;
+/**
+ * Whether this was an API request or an incoming Stripe webhook.
+ */
 export type SearchRequestLogsSource = OpenEnum<typeof SearchRequestLogsSource>;
 
+/**
+ * HTTP request details.
+ */
 export type RequestT = {
+  /**
+   * HTTP method, such as GET or POST.
+   */
   method: string | null;
+  /**
+   * Full request URL.
+   */
   url: string | null;
+  /**
+   * Request path without the host or query string.
+   */
   path: string | null;
 };
 
+/**
+ * Organization, customer, and user associated with the request.
+ */
 export type Context = {
+  /**
+   * Autumn organization that made the request.
+   */
   orgId: string | null;
+  /**
+   * Customer ID associated with the request, if available.
+   */
   customerId: string | null;
+  /**
+   * Entity ID associated with the request, if available.
+   */
   entityId: string | null;
+  /**
+   * How the request was authenticated, such as secret_key or dashboard.
+   */
   authType: string | null;
+  /**
+   * Authenticated user's ID, if available.
+   */
   userId: string | null;
+  /**
+   * Authenticated user's email, if available.
+   */
   userEmail: string | null;
 };
 
+/**
+ * Stripe webhook details. Fields are null for API requests.
+ */
 export type SearchRequestLogsStripe = {
+  /**
+   * Stripe event ID, if this was a Stripe webhook.
+   */
   eventId: string | null;
+  /**
+   * Stripe event type, such as customer.subscription.updated.
+   */
   eventType: string | null;
+  /**
+   * ID of the Stripe object the event refers to.
+   */
   objectId: string | null;
 };
 
 export type SearchRequestLogsList = {
+  /**
+   * When the log was recorded, in ISO 8601 format.
+   */
   timestamp: string;
+  /**
+   * Whether this was an API request or an incoming Stripe webhook.
+   */
   source: SearchRequestLogsSource;
+  /**
+   * HTTP response status code.
+   */
   statusCode: number;
+  /**
+   * HTTP request details.
+   */
   request: RequestT;
+  /**
+   * Organization, customer, and user associated with the request.
+   */
   context: Context;
+  /**
+   * Stripe webhook details. Fields are null for API requests.
+   */
   stripe: SearchRequestLogsStripe;
+  /**
+   * Recorded request body, or null if unavailable.
+   */
   requestBody?: any | null | undefined;
+  /**
+   * Recorded response body, or null if unavailable.
+   */
   responseBody?: any | null | undefined;
 };
 
@@ -68,8 +161,10 @@ export type SearchRequestLogsList = {
  * OK
  */
 export type SearchRequestLogsResponse = {
+  /**
+   * Matching logs, newest first unless you specify an order.
+   */
   list: Array<SearchRequestLogsList>;
-  unconfigured?: boolean | undefined;
 };
 
 /** @internal */
@@ -251,7 +346,6 @@ export const SearchRequestLogsResponse$inboundSchema: z.ZodMiniType<
   unknown
 > = z.object({
   list: z.array(z.lazy(() => SearchRequestLogsList$inboundSchema)),
-  unconfigured: types.optional(types.boolean()),
 });
 
 export function searchRequestLogsResponseFromJSON(

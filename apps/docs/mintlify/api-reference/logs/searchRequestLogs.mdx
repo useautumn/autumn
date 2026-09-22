@@ -7,79 +7,165 @@ import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
 import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
 import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
+Search API requests and incoming Stripe webhooks for your organization and environment.
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Customer errors
+const logs = await autumn.logs.search({
+    query: "where customer_id == 'cus_123' and status_code >= 400",
+    limit: 50,
+});
+```
+
+```typescript Feature requests
+const logs = await autumn.logs.search({
+    query: "where request_body.feature_id == 'credits' | order by timestamp desc",
+    range: {
+        startDate: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    },
+});
+```
+
+```typescript Stripe webhooks
+const logs = await autumn.logs.search({
+    query: "where source == 'stripe_webhook' and stripe_event_type == 'customer.subscription.updated'",
+    limit: 25,
+});
+```
+
+</CodeGroup>
+
+### Writing a query
+
+Use `where` to filter, `order by` to sort, and `limit` to cap results. Join these steps with `|`. Without a query, you get the most recent logs.
+
+Filter on fields like `customer_id`, `status_code`, `request_path`, and `stripe_event_type`. Use dot paths for body fields, such as `request_body.feature_id`, or `contains` to find text: `where response_body contains 'error'`.
+
+Field names inside the query stay in snake_case, including when you use the TypeScript SDK.
+
+By default, the search covers the last 30 minutes. Set `range` to search another window of up to 7 days.
+
 ### Body Parameters
 
-<DynamicParamField body="query" type="string" />
+<DynamicParamField body="query" type="string">
+  Filter and sort logs using where, order by, and limit, joined with |. Omit to return recent logs.
+</DynamicParamField>
 
 <DynamicParamField body="range" type="object">
+  Time window to search. Defaults to the last 30 minutes. Maximum 7 days.
   <Expandable title="properties">
-    <DynamicParamField body="start_date" type="string" />
+    <DynamicParamField body="start_date" type="string">
+      Start of the time window in ISO 8601 format. Defaults to 30 minutes before end_date.
+    </DynamicParamField>
 
-    <DynamicParamField body="end_date" type="string" />
+    <DynamicParamField body="end_date" type="string">
+      End of the time window in ISO 8601 format. Defaults to now.
+    </DynamicParamField>
 
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="limit" type="integer" />
+<DynamicParamField body="limit" type="integer">
+  Maximum number of logs to return, from 1 to 200. Defaults to 100.
+</DynamicParamField>
 
 
 ### Response
 
 <DynamicResponseField name="list" type="object[]">
+  Matching logs, newest first unless you specify an order.
   <Expandable title="properties">
-    <DynamicResponseField name="timestamp" type="string" />
+    <DynamicResponseField name="timestamp" type="string">
+      When the log was recorded, in ISO 8601 format.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="source" type="'api_request' | 'stripe_webhook'" />
+    <DynamicResponseField name="source" type="'api_request' | 'stripe_webhook'">
+      Whether this was an API request or an incoming Stripe webhook.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="status_code" type="number" />
+    <DynamicResponseField name="status_code" type="number">
+      HTTP response status code.
+    </DynamicResponseField>
 
     <DynamicResponseField name="request" type="object">
+      HTTP request details.
       <Expandable title="properties">
-        <DynamicResponseField name="method" type="string | null" />
+        <DynamicResponseField name="method" type="string | null">
+          HTTP method, such as GET or POST.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="url" type="string | null" />
+        <DynamicResponseField name="url" type="string | null">
+          Full request URL.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="path" type="string | null" />
+        <DynamicResponseField name="path" type="string | null">
+          Request path without the host or query string.
+        </DynamicResponseField>
 
       </Expandable>
     </DynamicResponseField>
 
     <DynamicResponseField name="context" type="object">
+      Organization, customer, and user associated with the request.
       <Expandable title="properties">
-        <DynamicResponseField name="org_id" type="string | null" />
+        <DynamicResponseField name="org_id" type="string | null">
+          Autumn organization that made the request.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="customer_id" type="string | null" />
+        <DynamicResponseField name="customer_id" type="string | null">
+          Customer ID associated with the request, if available.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="entity_id" type="string | null" />
+        <DynamicResponseField name="entity_id" type="string | null">
+          Entity ID associated with the request, if available.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="auth_type" type="string | null" />
+        <DynamicResponseField name="auth_type" type="string | null">
+          How the request was authenticated, such as secret_key or dashboard.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="user_id" type="string | null" />
+        <DynamicResponseField name="user_id" type="string | null">
+          Authenticated user's ID, if available.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="user_email" type="string | null" />
+        <DynamicResponseField name="user_email" type="string | null">
+          Authenticated user's email, if available.
+        </DynamicResponseField>
 
       </Expandable>
     </DynamicResponseField>
 
     <DynamicResponseField name="stripe" type="object">
+      Stripe webhook details. Fields are null for API requests.
       <Expandable title="properties">
-        <DynamicResponseField name="event_id" type="string | null" />
+        <DynamicResponseField name="event_id" type="string | null">
+          Stripe event ID, if this was a Stripe webhook.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="event_type" type="string | null" />
+        <DynamicResponseField name="event_type" type="string | null">
+          Stripe event type, such as customer.subscription.updated.
+        </DynamicResponseField>
 
-        <DynamicResponseField name="object_id" type="string | null" />
+        <DynamicResponseField name="object_id" type="string | null">
+          ID of the Stripe object the event refers to.
+        </DynamicResponseField>
 
       </Expandable>
     </DynamicResponseField>
 
-    <DynamicResponseField name="request_body" type="any | null" />
+    <DynamicResponseField name="request_body" type="any | null">
+      Recorded request body, or null if unavailable.
+    </DynamicResponseField>
 
-    <DynamicResponseField name="response_body" type="any | null" />
+    <DynamicResponseField name="response_body" type="any | null">
+      Recorded response body, or null if unavailable.
+    </DynamicResponseField>
 
   </Expandable>
 </DynamicResponseField>
-
-<DynamicResponseField name="unconfigured" type="boolean" />
 
 
 <ResponseExample>

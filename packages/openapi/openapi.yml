@@ -65552,8 +65552,8 @@ paths:
   /v1/logs.search:
     post:
       operationId: searchRequestLogs
-      description: Search tenant-scoped Autumn API request logs. Supports restricted
-        APL filters, ordering, and limits over projected request-log fields.
+      description: Search API requests and incoming Stripe webhooks for your
+        organization and environment.
       tags:
         - logs
       requestBody:
@@ -65566,19 +65566,27 @@ paths:
                 query:
                   type: string
                   maxLength: 4000
+                  description: Filter and sort logs using where, order by, and limit, joined with
+                    |. Omit to return recent logs.
                 range:
                   type: object
                   properties:
                     start_date:
                       type: string
+                      description: Start of the time window in ISO 8601 format. Defaults to 30 minutes
+                        before end_date.
                     end_date:
                       type: string
+                      description: End of the time window in ISO 8601 format. Defaults to now.
                   additionalProperties: false
                   title: SearchLogsRange
+                  description: Time window to search. Defaults to the last 30 minutes. Maximum 7
+                    days.
                 limit:
                   type: integer
                   minimum: 1
                   maximum: 200
+                  description: Maximum number of logs to return, from 1 to 200. Defaults to 100.
               additionalProperties: false
               title: SearchRequestLogsParams
               examples:
@@ -65599,13 +65607,16 @@ paths:
                       properties:
                         timestamp:
                           type: string
+                          description: When the log was recorded, in ISO 8601 format.
                         source:
                           enum:
                             - api_request
                             - stripe_webhook
                           type: string
+                          description: Whether this was an API request or an incoming Stripe webhook.
                         status_code:
                           type: number
+                          description: HTTP response status code.
                         request:
                           type: object
                           properties:
@@ -65613,18 +65624,22 @@ paths:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                              description: HTTP method, such as GET or POST.
                             url:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                              description: Full request URL.
                             path:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                              description: Request path without the host or query string.
                           required:
                             - method
                             - url
                             - path
+                          description: HTTP request details.
                         context:
                           type: object
                           properties:
@@ -65632,26 +65647,32 @@ paths:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                              description: Autumn organization that made the request.
                             customer_id:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                              description: Customer ID associated with the request, if available.
                             entity_id:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                              description: Entity ID associated with the request, if available.
                             auth_type:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                              description: How the request was authenticated, such as secret_key or dashboard.
                             user_id:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                              description: Authenticated user's ID, if available.
                             user_email:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                              description: Authenticated user's email, if available.
                           required:
                             - org_id
                             - customer_id
@@ -65659,6 +65680,7 @@ paths:
                             - auth_type
                             - user_id
                             - user_email
+                          description: Organization, customer, and user associated with the request.
                         stripe:
                           type: object
                           properties:
@@ -65666,26 +65688,32 @@ paths:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                              description: Stripe event ID, if this was a Stripe webhook.
                             event_type:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                              description: Stripe event type, such as customer.subscription.updated.
                             object_id:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                              description: ID of the Stripe object the event refers to.
                           required:
                             - event_id
                             - event_type
                             - object_id
+                          description: Stripe webhook details. Fields are null for API requests.
                         request_body:
                           anyOf:
                             - {}
                             - type: "null"
+                          description: Recorded request body, or null if unavailable.
                         response_body:
                           anyOf:
                             - {}
                             - type: "null"
+                          description: Recorded response body, or null if unavailable.
                       required:
                         - timestamp
                         - source
@@ -65693,8 +65721,7 @@ paths:
                         - request
                         - context
                         - stripe
-                  unconfigured:
-                    type: boolean
+                    description: Matching logs, newest first unless you specify an order.
                 required:
                   - list
                 examples:

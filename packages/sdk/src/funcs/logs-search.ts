@@ -27,7 +27,7 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Search tenant-scoped Autumn API request logs. Supports restricted APL filters, ordering, and limits over projected request-log fields.
+ * Search API requests and incoming Stripe webhooks for your organization and environment.
  */
 export function logsSearch(
   client: AutumnCore,

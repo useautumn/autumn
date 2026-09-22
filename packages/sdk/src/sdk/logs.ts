@@ -9,7 +9,7 @@ import { unwrapAsync } from "../types/fp.js";
 
 export class Logs extends ClientSDK {
   /**
-   * Search tenant-scoped Autumn API request logs. Supports restricted APL filters, ordering, and limits over projected request-log fields.
+   * Search API requests and incoming Stripe webhooks for your organization and environment.
    */
   async search(
     request: models.SearchRequestLogsParams,

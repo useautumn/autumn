@@ -45,14 +45,22 @@ class SearchRequestLogsGlobals(BaseModel):
 
 
 class SearchLogsRangeTypedDict(TypedDict):
+    r"""Time window to search. Defaults to the last 30 minutes. Maximum 7 days."""
+
     start_date: NotRequired[str]
+    r"""Start of the time window in ISO 8601 format. Defaults to 30 minutes before end_date."""
     end_date: NotRequired[str]
+    r"""End of the time window in ISO 8601 format. Defaults to now."""
 
 
 class SearchLogsRange(BaseModel):
+    r"""Time window to search. Defaults to the last 30 minutes. Maximum 7 days."""
+
     start_date: Optional[str] = None
+    r"""Start of the time window in ISO 8601 format. Defaults to 30 minutes before end_date."""
 
     end_date: Optional[str] = None
+    r"""End of the time window in ISO 8601 format. Defaults to now."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -73,16 +81,22 @@ class SearchLogsRange(BaseModel):
 
 class SearchRequestLogsParamsTypedDict(TypedDict):
     query: NotRequired[str]
+    r"""Filter and sort logs using where, order by, and limit, joined with |. Omit to return recent logs."""
     range: NotRequired[SearchLogsRangeTypedDict]
+    r"""Time window to search. Defaults to the last 30 minutes. Maximum 7 days."""
     limit: NotRequired[int]
+    r"""Maximum number of logs to return, from 1 to 200. Defaults to 100."""
 
 
 class SearchRequestLogsParams(BaseModel):
     query: Optional[str] = None
+    r"""Filter and sort logs using where, order by, and limit, joined with |. Omit to return recent logs."""
 
     range: Optional[SearchLogsRange] = None
+    r"""Time window to search. Defaults to the last 30 minutes. Maximum 7 days."""
 
     limit: Optional[int] = None
+    r"""Maximum number of logs to return, from 1 to 200. Defaults to 100."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -108,20 +122,31 @@ SearchRequestLogsSource = Union[
     ],
     UnrecognizedStr,
 ]
+r"""Whether this was an API request or an incoming Stripe webhook."""
 
 
 class RequestTypedDict(TypedDict):
+    r"""HTTP request details."""
+
     method: Nullable[str]
+    r"""HTTP method, such as GET or POST."""
     url: Nullable[str]
+    r"""Full request URL."""
     path: Nullable[str]
+    r"""Request path without the host or query string."""
 
 
 class Request(BaseModel):
+    r"""HTTP request details."""
+
     method: Nullable[str]
+    r"""HTTP method, such as GET or POST."""
 
     url: Nullable[str]
+    r"""Full request URL."""
 
     path: Nullable[str]
+    r"""Request path without the host or query string."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -139,26 +164,42 @@ class Request(BaseModel):
 
 
 class ContextTypedDict(TypedDict):
+    r"""Organization, customer, and user associated with the request."""
+
     org_id: Nullable[str]
+    r"""Autumn organization that made the request."""
     customer_id: Nullable[str]
+    r"""Customer ID associated with the request, if available."""
     entity_id: Nullable[str]
+    r"""Entity ID associated with the request, if available."""
     auth_type: Nullable[str]
+    r"""How the request was authenticated, such as secret_key or dashboard."""
     user_id: Nullable[str]
+    r"""Authenticated user's ID, if available."""
     user_email: Nullable[str]
+    r"""Authenticated user's email, if available."""
 
 
 class Context(BaseModel):
+    r"""Organization, customer, and user associated with the request."""
+
     org_id: Nullable[str]
+    r"""Autumn organization that made the request."""
 
     customer_id: Nullable[str]
+    r"""Customer ID associated with the request, if available."""
 
     entity_id: Nullable[str]
+    r"""Entity ID associated with the request, if available."""
 
     auth_type: Nullable[str]
+    r"""How the request was authenticated, such as secret_key or dashboard."""
 
     user_id: Nullable[str]
+    r"""Authenticated user's ID, if available."""
 
     user_email: Nullable[str]
+    r"""Authenticated user's email, if available."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -176,17 +217,27 @@ class Context(BaseModel):
 
 
 class SearchRequestLogsStripeTypedDict(TypedDict):
+    r"""Stripe webhook details. Fields are null for API requests."""
+
     event_id: Nullable[str]
+    r"""Stripe event ID, if this was a Stripe webhook."""
     event_type: Nullable[str]
+    r"""Stripe event type, such as customer.subscription.updated."""
     object_id: Nullable[str]
+    r"""ID of the Stripe object the event refers to."""
 
 
 class SearchRequestLogsStripe(BaseModel):
+    r"""Stripe webhook details. Fields are null for API requests."""
+
     event_id: Nullable[str]
+    r"""Stripe event ID, if this was a Stripe webhook."""
 
     event_type: Nullable[str]
+    r"""Stripe event type, such as customer.subscription.updated."""
 
     object_id: Nullable[str]
+    r"""ID of the Stripe object the event refers to."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -205,31 +256,47 @@ class SearchRequestLogsStripe(BaseModel):
 
 class SearchRequestLogsListTypedDict(TypedDict):
     timestamp: str
+    r"""When the log was recorded, in ISO 8601 format."""
     source: SearchRequestLogsSource
+    r"""Whether this was an API request or an incoming Stripe webhook."""
     status_code: float
+    r"""HTTP response status code."""
     request: RequestTypedDict
+    r"""HTTP request details."""
     context: ContextTypedDict
+    r"""Organization, customer, and user associated with the request."""
     stripe: SearchRequestLogsStripeTypedDict
+    r"""Stripe webhook details. Fields are null for API requests."""
     request_body: NotRequired[Nullable[Any]]
+    r"""Recorded request body, or null if unavailable."""
     response_body: NotRequired[Nullable[Any]]
+    r"""Recorded response body, or null if unavailable."""
 
 
 class SearchRequestLogsList(BaseModel):
     timestamp: str
+    r"""When the log was recorded, in ISO 8601 format."""
 
     source: SearchRequestLogsSource
+    r"""Whether this was an API request or an incoming Stripe webhook."""
 
     status_code: float
+    r"""HTTP response status code."""
 
     request: Request
+    r"""HTTP request details."""
 
     context: Context
+    r"""Organization, customer, and user associated with the request."""
 
     stripe: SearchRequestLogsStripe
+    r"""Stripe webhook details. Fields are null for API requests."""
 
     request_body: OptionalNullable[Any] = UNSET
+    r"""Recorded request body, or null if unavailable."""
 
     response_body: OptionalNullable[Any] = UNSET
+    r"""Recorded response body, or null if unavailable."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -261,28 +328,11 @@ class SearchRequestLogsResponseTypedDict(TypedDict):
     r"""OK"""
 
     list: List[SearchRequestLogsListTypedDict]
-    unconfigured: NotRequired[bool]
+    r"""Matching logs, newest first unless you specify an order."""
 
 
 class SearchRequestLogsResponse(BaseModel):
     r"""OK"""
 
     list: List[SearchRequestLogsList]
-
-    unconfigured: Optional[bool] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["unconfigured"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
+    r"""Matching logs, newest first unless you specify an order."""

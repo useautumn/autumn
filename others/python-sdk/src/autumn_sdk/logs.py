@@ -22,11 +22,11 @@ class Logs(BaseSDK):
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.SearchRequestLogsResponse:
-        r"""Search tenant-scoped Autumn API request logs. Supports restricted APL filters, ordering, and limits over projected request-log fields.
+        r"""Search API requests and incoming Stripe webhooks for your organization and environment.
 
-        :param query:
-        :param range:
-        :param limit:
+        :param query: Filter and sort logs using where, order by, and limit, joined with |. Omit to return recent logs.
+        :param range: Time window to search. Defaults to the last 30 minutes. Maximum 7 days.
+        :param limit: Maximum number of logs to return, from 1 to 200. Defaults to 100.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -120,11 +120,11 @@ class Logs(BaseSDK):
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.SearchRequestLogsResponse:
-        r"""Search tenant-scoped Autumn API request logs. Supports restricted APL filters, ordering, and limits over projected request-log fields.
+        r"""Search API requests and incoming Stripe webhooks for your organization and environment.
 
-        :param query:
-        :param range:
-        :param limit:
+        :param query: Filter and sort logs using where, order by, and limit, joined with |. Omit to return recent logs.
+        :param range: Time window to search. Defaults to the last 30 minutes. Maximum 7 days.
+        :param limit: Maximum number of logs to return, from 1 to 200. Defaults to 100.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
