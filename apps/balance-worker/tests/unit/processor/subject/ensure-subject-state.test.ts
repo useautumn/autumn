@@ -43,6 +43,7 @@ const emptyEnvelope: SubjectRowsEnvelope = {
 	customer_entitlements: [],
 	rollovers: [],
 	usage_windows: [],
+	pooled_balances: [],
 	open_locks: [],
 	entity: null,
 };

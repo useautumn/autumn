@@ -1,14 +1,12 @@
 import type { Customer } from "../../cusModels/cusModels.js";
 import type { Entity } from "../../cusModels/entityModels/entityModels.js";
 import type { FullSubject } from "../../cusModels/fullSubject/fullSubjectModel.js";
+import type { DbPooledBalance } from "../../pooledBalanceModels/pooledBalanceTable.js";
 import type { EntitlementWithFeature } from "../../productModels/entModels/entModels.js";
 import type { Product } from "../../productModels/productModels.js";
 import type { FullCustomerPrice } from "../cusPriceModels/cusPriceModels.js";
 import type { CusProduct, FullCusProduct } from "../cusProductModels.js";
-import type {
-	CustomerEntitlement,
-	FullCustomerEntitlement,
-} from "./cusEntModels.js";
+import type { CustomerEntitlement } from "./cusEntModels.js";
 import type { Rollover } from "./rolloverModels/rolloverTable.js";
 
 /**
@@ -79,11 +77,17 @@ export type CustomerProductWithPricesView = FullCusProductView &
 		customer_licenses?: FullCusProduct["customer_licenses"];
 	};
 
+/** What a balance reads off the pool behind a pooled row: its grant. */
+export type PooledBalanceGrantView = Pick<
+	DbPooledBalance,
+	"granted" | "unlimited"
+>;
+
 /** A stored row before selection attaches its product. */
-export type CustomerEntitlementRowView = FullCustomerEntitlementView &
-	Partial<Pick<FullCustomerEntitlement, "pooled_balance">> & {
-		customer_product_id: string | null;
-	};
+export type CustomerEntitlementRowView = FullCustomerEntitlementView & {
+	pooled_balance?: PooledBalanceGrantView | null;
+	customer_product_id: string | null;
+};
 
 /** A row with the product that prices it: what starting balances, overage floors and plan allowances read. */
 export type CustomerEntitlementWithPricesView = CustomerEntitlementRowView & {

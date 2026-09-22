@@ -12,6 +12,7 @@ type SubjectStateRows = Partial<
 		| "rollovers"
 		| "usageWindows"
 		| "openLocks"
+		| "pooledBalances"
 		| "entity"
 	>
 >;
@@ -33,6 +34,7 @@ export const createSubjectState = ({
 	rollovers = [],
 	usageWindows = [],
 	openLocks = [],
+	pooledBalances = [],
 	entity = null,
 }: { identity: MeteringIdentity } & SubjectStateRows): SubjectState =>
 	parseSubjectState({
@@ -47,6 +49,7 @@ export const createSubjectState = ({
 			rollovers,
 			usageWindows,
 			openLocks,
+			pooledBalances,
 			entity,
 		},
 	});

@@ -6,6 +6,7 @@ import type { WorkerCustomerPrice } from "./rows/workerCustomerPrice.js";
 import type { WorkerCustomerProduct } from "./rows/workerCustomerProduct.js";
 import type { WorkerEntity } from "./rows/workerEntity.js";
 import type { OpenLock } from "./rows/workerLock.js";
+import type { WorkerPooledBalance } from "./rows/workerPooledBalance.js";
 import type { WorkerRollover } from "./rows/workerRollover.js";
 import type { WorkerUsageWindow } from "./rows/workerUsageWindow.js";
 
@@ -13,6 +14,8 @@ import type { WorkerUsageWindow } from "./rows/workerUsageWindow.js";
 export type WorkerFullCustomerEntitlement = WorkerCustomerEntitlement & {
 	entitlement: Entitlement & { feature: Feature };
 	rollovers: WorkerRollover[];
+	/** The pool a pooled row draws from, joined by `pooled_balance_id`; null on every other row. */
+	pooled_balance?: WorkerPooledBalance;
 };
 
 export type WorkerFullCustomerPrice = WorkerCustomerPrice & { price: Price };
@@ -37,6 +40,8 @@ export type WorkerFullSubject = {
 	entity: WorkerEntity | null;
 	customer_products: WorkerFullCustomerProduct[];
 	extra_customer_entitlements: WorkerFullCustomerEntitlement[];
+	/** The customer's pools: customer-level rows every entity draws from, kept apart the way the server's FullSubject keeps them. */
+	pooled_customer_entitlements: WorkerFullCustomerEntitlement[];
 	/** Windowed-cap counters, customer-scoped or the entity's own. */
 	usage_windows: WorkerUsageWindow[];
 	/** The customer's open locks, ids only: what a lock decision refuses a duplicate against. */

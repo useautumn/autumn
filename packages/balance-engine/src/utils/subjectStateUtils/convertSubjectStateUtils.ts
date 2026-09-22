@@ -4,6 +4,7 @@ import type {
 	CustomerEntitlement,
 	CustomerPrice,
 	Entity,
+	PooledBalance,
 	Rollover,
 	UsageWindow,
 } from "@autumn/shared";
@@ -15,6 +16,7 @@ import { workerCustomerPriceSchema } from "../../models/subject/rows/workerCusto
 import { workerCustomerProductSchema } from "../../models/subject/rows/workerCustomerProduct.js";
 import { workerEntitySchema } from "../../models/subject/rows/workerEntity.js";
 import type { OpenLock } from "../../models/subject/rows/workerLock.js";
+import { workerPooledBalanceSchema } from "../../models/subject/rows/workerPooledBalance.js";
 import { workerRolloverSchema } from "../../models/subject/rows/workerRollover.js";
 import { workerUsageWindowSchema } from "../../models/subject/rows/workerUsageWindow.js";
 import type { SubjectState } from "../../models/subject/subjectState.js";
@@ -46,6 +48,7 @@ export const customerRowsToSubjectState = ({
 	rollovers,
 	usageWindows,
 	openLocks = [],
+	pooledBalances = [],
 	entity,
 }: {
 	identity: MeteringIdentity;
@@ -65,6 +68,8 @@ export const customerRowsToSubjectState = ({
 	usageWindows: UsageWindow[];
 	/** Absent when the rows come from the server's FullSubject, which does not carry locks. */
 	openLocks?: OpenLock[];
+	/** The pools behind the customer's pooled rows, as Postgres returns them. */
+	pooledBalances?: PooledBalance[];
 	entity: Entity | null;
 }): SubjectState =>
 	createSubjectState({
@@ -86,6 +91,9 @@ export const customerRowsToSubjectState = ({
 			pickColumns({ schema: workerUsageWindowSchema, row }),
 		),
 		openLocks,
+		pooledBalances: pooledBalances.map((row) =>
+			pickColumns({ schema: workerPooledBalanceSchema, row }),
+		),
 		entity: entity
 			? pickColumns({ schema: workerEntitySchema, row: entity })
 			: null,
@@ -139,8 +147,9 @@ export const splitSubjectState = ({
 					...state,
 					identity: { ...state.identity, entityId: state.entity.id },
 					...rowsOwnedBy({ internalEntityId: state.entity.internal_id }),
-					// A lock id is unique across the customer, so the customer's state owns every open lock.
+					// A lock id is unique across the customer, so the customer's state owns every open lock; so does a pool.
 					openLocks: [],
+					pooledBalances: [],
 				}
 			: null,
 	};
@@ -170,5 +179,6 @@ export const mergeSubjectStates = ({
 				],
 				rollovers: [...customer.rollovers, ...entity.rollovers],
 				usageWindows: [...customer.usageWindows, ...entity.usageWindows],
+				pooledBalances: [...customer.pooledBalances, ...entity.pooledBalances],
 			}
 		: customer;

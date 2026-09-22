@@ -26,8 +26,9 @@ export const subjectRowsSql = ({
 			? sql`${alias}.internal_entity_id IS NULL`
 			: sql`${alias}.internal_entity_id IN (SELECT internal_id FROM entity_record)`;
 
-	// A lock id is unique across the customer, so only the customer's own load carries open locks.
-	const openLocksOwnedBySubject = entityId === null ? sql`TRUE` : sql`FALSE`;
+	// A lock id is unique across the customer, so only the customer's own load carries open locks;
+	// a pool is customer-level too, and an entity command reads it off the customer's state.
+	const customerOwnedOnly = entityId === null ? sql`TRUE` : sql`FALSE`;
 
 	return sql`
 	WITH customer_record AS (
@@ -97,10 +98,34 @@ export const subjectRowsSql = ({
 			)
 	),
 
+	-- The pool behind pooled plan items: one customer-level row every entity draws from. Its sources
+	-- (pooled_contribution_id set) hold no balance and stay out. License pools are not served here.
+	pooled_entitlements AS (
+		SELECT ce.*
+		FROM customer_entitlements ce
+		JOIN pooled_balances pb ON pb.id = ce.pooled_balance_id
+		WHERE ${customerOwnedOnly}
+			AND ce.internal_customer_id IN (SELECT internal_id FROM customer_record)
+			AND ce.customer_product_id IS NULL
+			AND ce.internal_entity_id IS NULL
+			AND ce.pooled_balance_id IS NOT NULL
+			AND ce.pooled_contribution_id IS NULL
+			AND pb.customer_license_link_id IS NULL
+			AND (ce.expires_at IS NULL OR ce.expires_at > ${asOfTimestampMs})
+	),
+
+	cus_pooled_balances AS (
+		SELECT pb.*
+		FROM pooled_balances pb
+		WHERE pb.id IN (SELECT pooled_balance_id FROM pooled_entitlements)
+	),
+
 	all_entitlements AS (
 		SELECT * FROM product_entitlements
 		UNION ALL
 		SELECT * FROM loose_entitlements
+		UNION ALL
+		SELECT * FROM pooled_entitlements
 	),
 
 	cus_rollovers AS (
@@ -121,7 +146,7 @@ export const subjectRowsSql = ({
 		SELECT bl.id, bl.lock_id
 		FROM balance_locks bl
 		WHERE bl.internal_customer_id IN (SELECT internal_id FROM customer_record)
-			AND ${openLocksOwnedBySubject}
+			AND ${customerOwnedOnly}
 	)
 
 	SELECT json_build_object(
@@ -144,6 +169,10 @@ export const subjectRowsSql = ({
 		),
 		'usage_windows', COALESCE(
 			(SELECT json_agg(row_to_json(uw) ORDER BY uw.id) FROM cus_usage_windows uw),
+			'[]'::json
+		),
+		'pooled_balances', COALESCE(
+			(SELECT json_agg(row_to_json(pb) ORDER BY pb.id) FROM cus_pooled_balances pb),
 			'[]'::json
 		),
 		'open_locks', COALESCE(

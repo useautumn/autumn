@@ -5,6 +5,7 @@ import {
 	workerCustomerEntitlementSchema,
 } from "../../models/subject/rows/workerCustomerEntitlement.js";
 import type { WorkerCustomerPrice } from "../../models/subject/rows/workerCustomerPrice.js";
+import type { WorkerPooledBalance } from "../../models/subject/rows/workerPooledBalance.js";
 import type { SubjectState } from "../../models/subject/subjectState.js";
 import type {
 	WorkerFullCustomerEntitlement,
@@ -12,6 +13,20 @@ import type {
 	WorkerFullSubject,
 } from "../../models/subject/workerFullSubject.js";
 import { parseWorkerCustomerEntitlement } from "../../parsers.js";
+
+/** The pool a pooled row draws from, present only when the row names one the state holds. */
+const poolOf = ({
+	row,
+	state,
+}: {
+	row: WorkerCustomerEntitlement;
+	state: SubjectState;
+}): { pooled_balance?: WorkerPooledBalance } => {
+	const pool = state.pooledBalances.find(
+		(candidate) => candidate.id === row.pooled_balance_id,
+	);
+	return pool ? { pooled_balance: pool } : {};
+};
 
 const joinCustomerEntitlement = ({
 	row,
@@ -40,6 +55,7 @@ const joinCustomerEntitlement = ({
 		rollovers: state.rollovers.filter(
 			(rollover) => rollover.cus_ent_id === row.id,
 		),
+		...poolOf({ row, state }),
 	};
 };
 
@@ -91,12 +107,18 @@ export const subjectStateToFullSubject = ({
 		};
 	});
 	const productIds = new Set(state.customerProducts.map((row) => row.id));
+	const isPool = (row: WorkerCustomerEntitlement) =>
+		row.is_pooled_balance === true;
 	const extra_customer_entitlements = state.customerEntitlements
 		.filter(
 			(row) =>
-				row.customer_product_id === null ||
-				!productIds.has(row.customer_product_id),
+				!isPool(row) &&
+				(row.customer_product_id === null ||
+					!productIds.has(row.customer_product_id)),
 		)
+		.map(join);
+	const pooled_customer_entitlements = state.customerEntitlements
+		.filter(isPool)
 		.map(join);
 
 	return {
@@ -106,6 +128,7 @@ export const subjectStateToFullSubject = ({
 		entity: entityId && state.entity?.id === entityId ? state.entity : null,
 		customer_products,
 		extra_customer_entitlements,
+		pooled_customer_entitlements,
 		usage_windows: state.usageWindows,
 		open_locks: state.openLocks,
 	};

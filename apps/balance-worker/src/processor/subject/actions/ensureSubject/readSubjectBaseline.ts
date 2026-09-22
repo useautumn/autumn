@@ -30,6 +30,7 @@ export const readSubjectBaseline = async ({
 		rollovers: envelope.rollovers,
 		usageWindows: envelope.usage_windows,
 		openLocks: envelope.open_locks,
+		pooledBalances: envelope.pooled_balances,
 		entity: envelope.entity,
 	});
 };

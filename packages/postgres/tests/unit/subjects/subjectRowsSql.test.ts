@@ -37,6 +37,7 @@ describe("subjectRowsSql", () => {
 			"active,past_due",
 			1_700_000_000_000,
 			1_700_000_000_000,
+			1_700_000_000_000,
 		]);
 		expect(first.sql).toBe(second.sql);
 		expect(first.sql).not.toContain("org_1");
@@ -71,5 +72,44 @@ describe("subjectRowsSql", () => {
 			"ce.internal_entity_id IN (SELECT internal_id FROM entity_record)",
 		);
 		expect(entityQuery.params).toContain("ent_42");
+	});
+});
+
+describe("subjectRowsSql: pooled balances", () => {
+	test("the pool behind pooled plan items is loaded with its pooled_balances row; its sources are not", () => {
+		const { sql } = dialect.sqlToQuery(
+			subjectRowsSql({
+				ctx: { orgId: "org_1", env: "sandbox" },
+				customerId: "cus_1",
+				entityId: "ent_42",
+				statuses: ["active"],
+				asOfTimestampMs: 1_700_000_000_000,
+			}),
+		);
+
+		// The pool is a customer-level row: only the customer's own load carries it, an entity command reads the customer's copy.
+		expect(sql).toContain("pooled_entitlements AS (");
+		expect(sql).toContain("WHERE FALSE\n\t\t\tAND ce.internal_customer_id");
+		expect(
+			dialect.sqlToQuery(
+				subjectRowsSql({
+					ctx: { orgId: "org_1", env: "sandbox" },
+					customerId: "cus_1",
+					entityId: null,
+					statuses: ["active"],
+					asOfTimestampMs: 1_700_000_000_000,
+				}),
+			).sql,
+		).toContain("WHERE TRUE\n\t\t\tAND ce.internal_customer_id");
+		expect(sql).toContain(
+			"JOIN pooled_balances pb ON pb.id = ce.pooled_balance_id",
+		);
+		expect(sql).toContain("AND ce.pooled_balance_id IS NOT NULL");
+		expect(sql).toContain("AND ce.pooled_contribution_id IS NULL");
+		expect(sql).toContain("AND pb.customer_license_link_id IS NULL");
+		expect(sql).toContain("SELECT * FROM pooled_entitlements");
+		expect(sql).toContain("'pooled_balances', COALESCE(");
+		// Product and loose rows still leave every pooled row out.
+		expect(sql.match(/ce\.pooled_balance_id IS NULL/g)).toHaveLength(2);
 	});
 });

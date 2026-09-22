@@ -14,6 +14,7 @@ const heldRowIdsOf = ({
 			(customerProduct) => customerProduct.customer_entitlements,
 		),
 		...fullSubject.extra_customer_entitlements,
+		...fullSubject.pooled_customer_entitlements,
 	];
 	return new Set(
 		customerEntitlements.flatMap((customerEntitlement) => [

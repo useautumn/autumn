@@ -82,6 +82,7 @@ const entityEnvelope: SubjectRowsEnvelope = {
 	],
 	rollovers: [],
 	usage_windows: [],
+	pooled_balances: [],
 	open_locks: [],
 	entity: {
 		...entity,

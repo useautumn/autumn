@@ -87,6 +87,7 @@ export * from "./models/licenseModels/fullPlanLicenseModel";
 export * from "./models/licenseModels/licenseModels";
 export * from "./models/licenseModels/licenseTable";
 export * from "./models/pooledBalanceModels/pooledBalanceIdentity";
+export * from "./models/pooledBalanceModels/pooledBalanceModels";
 export * from "./models/pooledBalanceModels/pooledBalanceTable";
 // Processor Models
 export * from "./models/processorModels/processorModels";

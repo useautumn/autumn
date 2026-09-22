@@ -101,16 +101,17 @@ had a loop deleting that key every 250 ms; that is a local fixture problem, not 
 | usage-alert-free-tier-daily-cap | ✓ | ✓ ¹ |
 | usage-alerts-credit-system | ✓ | ✓ |
 | usage-alerts-race-condition | ✓ | ✓ |
-| pooled-balance-usage-alert | ✓ | ✗ ² |
+| pooled-balance-usage-alert | ✓ | ✓ ² |
 
-Legacy run: 16/16, 739 s wall. Worker run: 15/16.
+Legacy run: 16/16, 739 s wall. Worker run: 16/16 once the worker loads pools.
 
 ¹ Passed once `expireUsageWindowForReset` also evicts the worker: it backdates `usage_windows` in
 Postgres and Redis directly, and the worker's resident copy answered 409 `balance_worker_stale_subject`
 until it was told. Same rule as prod code: a direct row write must evict.
 
-² Worker path answers `UNSUPPORTED_COMMAND feature_not_found` for an entity track on a pooled
-feature: the worker has no pooled balances yet. Not a herald difference.
+² Failed until the worker hydrated pools (`plans/balance-worker-pooled-balances`, unit 1): the
+worker answered `UNSUPPORTED_COMMAND feature_not_found` for any track on a pooled feature. With the
+pool loaded, herald fires the alert with no change to the package.
 
 Two things the worker run needed before any alert fired at all: `subjectRowsEnvelope` had to pick
 `usage_alerts` (it dropped the column on hydration), and `commitFlush` had to roll back on a stale

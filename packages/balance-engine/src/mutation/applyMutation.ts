@@ -31,6 +31,7 @@ const emptyStateFor = ({
 		rollovers: [],
 		usageWindows: [],
 		openLocks: [],
+		pooledBalances: [],
 		entity: null,
 	};
 };

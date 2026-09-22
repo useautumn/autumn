@@ -1,5 +1,5 @@
 import { cusEntToCusPrice } from "@utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
-import type { FullCustomerEntitlement } from "../../../models/cusProductModels/cusEntModels/cusEntModels";
+import type { PooledBalanceGrantView } from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView";
 import type { FullCustomerPrice } from "../../../models/cusProductModels/cusPriceModels/cusPriceModels";
 import type { CusProduct } from "../../../models/cusProductModels/cusProductModels";
 import type { Entitlement } from "../../../models/productModels/entModels/entModels";
@@ -7,9 +7,8 @@ import { entToOptions } from "../../productUtils/convertProductUtils";
 import { getStartingBalance } from "../getStartingBalance";
 
 /** What the starting balance reads: the grant, the product's options and quantity, and the prices that size a prepaid grant. */
-export type StartingBalanceCustomerEntitlement = Partial<
-	Pick<FullCustomerEntitlement, "pooled_balance">
-> & {
+export type StartingBalanceCustomerEntitlement = {
+	pooled_balance?: PooledBalanceGrantView | null;
 	id: string;
 	customer_product_id: string | null;
 	entitlement: Entitlement;

@@ -21,6 +21,8 @@ export const workerCustomerEntitlementSchema = CustomerEntitlementSchema.pick({
 	created_at: true,
 	usage_attribution: true,
 	entities: true,
+	is_pooled_balance: true,
+	pooled_balance_id: true,
 })
 	// The table stores these NOT NULL; the shared schema allows null or fills defaults, and a default would leak into a change's `before`.
 	.extend({

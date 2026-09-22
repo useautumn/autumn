@@ -4,6 +4,7 @@ import {
 	CustomerPriceSchema,
 	CustomerSchema,
 	EntitySchema,
+	PooledBalanceSchema,
 	RolloverSchema,
 	UsageWindowSchema,
 } from "@autumn/shared";
@@ -27,6 +28,8 @@ export const subjectRowsEnvelopeSchema = z.object({
 	customer_entitlements: z.array(CustomerEntitlementSchema),
 	rollovers: z.array(RolloverSchema),
 	usage_windows: z.array(UsageWindowSchema),
+	/** The pools behind the pooled rows above; the worker keeps only the grant off each. */
+	pooled_balances: z.array(PooledBalanceSchema),
 	/** Ids only: the rest of a lock row is read at finalize, never held in memory. */
 	open_locks: z.array(z.object({ id: z.string(), lock_id: z.string() })),
 	entity: EntitySchema.nullable(),

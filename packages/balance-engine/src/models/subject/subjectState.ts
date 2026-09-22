@@ -6,6 +6,7 @@ import { workerCustomerPriceSchema } from "./rows/workerCustomerPrice.js";
 import { workerCustomerProductSchema } from "./rows/workerCustomerProduct.js";
 import { workerEntitySchema } from "./rows/workerEntity.js";
 import { openLockSchema } from "./rows/workerLock.js";
+import { workerPooledBalanceSchema } from "./rows/workerPooledBalance.js";
 import { workerRolloverSchema } from "./rows/workerRollover.js";
 import { workerUsageWindowSchema } from "./rows/workerUsageWindow.js";
 
@@ -23,6 +24,8 @@ export const subjectStateSchema = z
 		usageWindows: z.array(workerUsageWindowSchema),
 		/** The customer's open locks, ids only; states stored before locks existed have none. */
 		openLocks: z.array(openLockSchema).default([]),
+		/** The pools behind the customer's pooled rows; states stored before pools existed have none. */
+		pooledBalances: z.array(workerPooledBalanceSchema).default([]),
 		entity: workerEntitySchema.nullable(),
 	})
 	.strict();

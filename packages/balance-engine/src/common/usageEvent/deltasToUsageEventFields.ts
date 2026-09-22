@@ -22,7 +22,10 @@ const heldRowsOf = ({
 			customer_product: customerProduct,
 		})),
 	),
-	...fullSubject.extra_customer_entitlements.map((customerEntitlement) => ({
+	...[
+		...fullSubject.extra_customer_entitlements,
+		...fullSubject.pooled_customer_entitlements,
+	].map((customerEntitlement) => ({
 		...customerEntitlement,
 		customer_product: null,
 	})),
