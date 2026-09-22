@@ -1,6 +1,5 @@
-import { withTimeout } from "@autumn/shared";
 import type Stripe from "stripe";
-import { retryAsync } from "@/utils/retryAsync.js";
+import { retryBoundedAsync } from "@/utils/retryBoundedAsync.js";
 import {
 	billingVerifyExportConfig,
 	type SweepLimits,
@@ -27,20 +26,17 @@ export const listStripeSubscriptionPage = async ({
 		...limits,
 	};
 
-	return retryAsync({
+	return retryBoundedAsync({
 		attempts: pageAttempts,
 		delayMs: retryDelayMs,
+		timeoutMs: pageTimeoutMs,
+		timeoutMessage: `Stripe subscription page timed out after ${pageTimeoutMs}ms`,
 		onRetry,
 		run: () =>
-			withTimeout({
-				timeoutMs: pageTimeoutMs,
-				timeoutMessage: `Stripe subscription page timed out after ${pageTimeoutMs}ms`,
-				fn: () =>
-					stripeCli.subscriptions.list({
-						...params,
-						limit: pageSize,
-						starting_after: startingAfter,
-					}),
+			stripeCli.subscriptions.list({
+				...params,
+				limit: pageSize,
+				starting_after: startingAfter,
 			}),
 	});
 };

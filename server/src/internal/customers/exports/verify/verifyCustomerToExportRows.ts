@@ -1,7 +1,7 @@
-import { type BillingVerifyExportRow, withTimeout } from "@autumn/shared";
+import type { BillingVerifyExportRow } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { billingActions } from "@/internal/billing/v2/actions/index.js";
-import { retryAsync } from "@/utils/retryAsync.js";
+import { retryBoundedAsync } from "@/utils/retryBoundedAsync.js";
 import { CusService } from "../../CusService.js";
 import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalars.js";
 import {
@@ -42,48 +42,42 @@ export const verifyCustomerToExportRows = async ({
 		stripe_customer_id: stripeCustomerId,
 	};
 
-	const verifyOnce = () =>
-		withTimeout({
-			timeoutMs,
-			timeoutMessage: `Verification timed out after ${timeoutMs}ms`,
-			fn: async () => {
-				const fullCustomer = await CusService.getFull({
-					ctx,
-					idOrInternalId: scalar.internal_id,
-					withEntities: true,
-				});
-				const params = { customer_id: scalar.id ?? scalar.internal_id };
-
-				const { stripeReader, sweptSubscriptions } = sweep;
-
-				const screened = await billingActions.verify({
-					ctx,
-					params,
-					prefetched: {
-						fullCustomer,
-						subscriptions: sweptSubscriptions.get(stripeCustomerId) ?? [],
-					},
-					stripeCli: stripeReader,
-				});
-				if (isVerifyResponseClean({ response: screened })) return [];
-
-				const confirmed = await billingActions.verify({
-					ctx,
-					params,
-					prefetched: { fullCustomer },
-				});
-				const row = verifyResponseToExportRow({
-					customer,
-					response: confirmed,
-				});
-				return row ? [row] : [];
-			},
+	const verifyOnce = async () => {
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: scalar.internal_id,
+			withEntities: true,
 		});
+		const params = { customer_id: scalar.id ?? scalar.internal_id };
+
+		const { stripeReader, sweptSubscriptions } = sweep;
+
+		const screened = await billingActions.verify({
+			ctx,
+			params,
+			prefetched: {
+				fullCustomer,
+				subscriptions: sweptSubscriptions.get(stripeCustomerId) ?? [],
+			},
+			stripeCli: stripeReader,
+		});
+		if (isVerifyResponseClean({ response: screened })) return [];
+
+		const confirmed = await billingActions.verify({
+			ctx,
+			params,
+			prefetched: { fullCustomer },
+		});
+		const row = verifyResponseToExportRow({ customer, response: confirmed });
+		return row ? [row] : [];
+	};
 
 	try {
-		return await retryAsync({
+		return await retryBoundedAsync({
 			attempts,
 			delayMs: retryDelayMs,
+			timeoutMs,
+			timeoutMessage: `Verification timed out after ${timeoutMs}ms`,
 			run: verifyOnce,
 			onRetry: ({ attempt, error }) =>
 				ctx.logger.warn("billing-verify-export: retrying customer", {
