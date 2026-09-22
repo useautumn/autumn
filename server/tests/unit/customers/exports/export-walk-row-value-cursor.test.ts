@@ -13,33 +13,38 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { AppEnv } from "@autumn/shared";
+import { drizzle } from "drizzle-orm/node-postgres";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { buildCustomerExportScalarsQuery } from "@/internal/customers/exports/queries/getCustomerExportScalars.js";
 
-const source = readFileSync(
-	join(
-		import.meta.dir,
-		"../../../../src/internal/customers/exports/queries/getCustomerExportScalars.ts",
-	),
-	"utf8",
-);
+const sqlFor = ({ afterInternalId }: { afterInternalId: string | null }) =>
+	buildCustomerExportScalarsQuery({
+		db: drizzle.mock() as unknown as DrizzleCli,
+		orgId: "org_1",
+		env: AppEnv.Live,
+		snapshot: { search: null, filters: [] } as never,
+		upperBoundInternalId: "cus_zzz",
+		createdAtCutoff: 1_790_000_000_000,
+		afterInternalId,
+		limit: 2000,
+	}).toSQL().sql;
+
+const ROW_VALUE_CURSOR =
+	'("customers"."org_id", "customers"."env", "customers"."internal_id") <';
 
 describe("customer export page walk", () => {
-	it("compares the cursor as a row value over the org index's columns", () => {
-		expect(source).toContain(
-			"(${customers.org_id}, ${customers.env}, ${customers.internal_id}) < (${orgId}, ${env}, ${afterInternalId})",
+	it("orders by the org index's columns so the planner can use it", () => {
+		expect(sqlFor({ afterInternalId: null })).toContain(
+			'order by "customers"."org_id" desc, "customers"."env" desc, "customers"."internal_id" desc',
 		);
 	});
 
-	it("orders by the org index's columns so the planner can use it", () => {
-		const orderBy = source.slice(source.indexOf(".orderBy("));
-
-		for (const column of ["org_id", "env", "internal_id"]) {
-			expect(orderBy).toContain(`desc(customers.${column})`);
-		}
+	it("compares the cursor as a row value, not internal_id alone", () => {
+		expect(sqlFor({ afterInternalId: "cus_mid" })).toContain(ROW_VALUE_CURSOR);
 	});
 
-	it("no longer compares internal_id alone for the cursor", () => {
-		expect(source).not.toContain("lt(customers.internal_id, afterInternalId)");
+	it("omits the cursor comparison on the first page", () => {
+		expect(sqlFor({ afterInternalId: null })).not.toContain(ROW_VALUE_CURSOR);
 	});
 });

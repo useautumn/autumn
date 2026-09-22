@@ -134,8 +134,7 @@ export const resolveCustomerExportPopulation = async ({
 	return { population: { upperBoundInternalId, createdAtCutoff }, totalCount };
 };
 
-/** Both snapshot bounds must remain unchanged for the entire keyset walk. */
-export const getCustomerExportScalars = async ({
+export const buildCustomerExportScalarsQuery = ({
 	db,
 	orgId,
 	env,
@@ -149,14 +148,12 @@ export const getCustomerExportScalars = async ({
 	orgId: string;
 	env: AppEnv;
 	snapshot: CustomerExportSnapshot;
-	upperBoundInternalId: string | null;
+	upperBoundInternalId: string;
 	createdAtCutoff: number;
 	afterInternalId: string | null;
 	limit?: number;
-}): Promise<CustomerExportScalarRow[]> => {
-	if (upperBoundInternalId === null) return [];
-
-	const matched = db
+}) =>
+	db
 		.select({
 			internal_id: customers.internal_id,
 			id: customers.id,
@@ -188,6 +185,25 @@ export const getCustomerExportScalars = async ({
 			desc(customers.internal_id),
 		)
 		.limit(limit);
+
+/** Both snapshot bounds must remain unchanged for the entire keyset walk. */
+export const getCustomerExportScalars = async (params: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	snapshot: CustomerExportSnapshot;
+	upperBoundInternalId: string | null;
+	createdAtCutoff: number;
+	afterInternalId: string | null;
+	limit?: number;
+}): Promise<CustomerExportScalarRow[]> => {
+	const { db, upperBoundInternalId } = params;
+	if (upperBoundInternalId === null) return [];
+
+	const matched = buildCustomerExportScalarsQuery({
+		...params,
+		upperBoundInternalId,
+	});
 
 	return await db.execute<CustomerExportScalarRow>(
 		sql`${matched} ${planetScaleTag({ query: "getCustomerExportScalars" })}`,
