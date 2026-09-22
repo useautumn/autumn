@@ -7,13 +7,6 @@ Revoke Autumn's Stripe OAuth access for a tenant and clear its connection in the
 
 Authenticate with your **master organization's secret key**, with `platform:write` scope. Pass the tenant's public `organization_slug` and an explicit `env`: `test` or `live`. You can only disconnect organizations created by your master organization.
 
-```bash
-curl https://api.useautumn.com/v1/platform.disconnect_stripe \
-  -H "Authorization: Bearer $AUTUMN_SECRET_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"organization_slug":"my-app","env":"test"}'
-```
-
 ## What disconnecting changes
 
 On success, the endpoint returns `{"success":true}`. The tenant's OAuth connection is cleared before the response, so [Get Stripe Connection](/api-reference/platform/getStripeConnection) reports it as disconnected without waiting for webhook delivery. Calling the endpoint when the tenant is already disconnected also succeeds.

@@ -7,13 +7,6 @@ Read a tenant's Stripe OAuth connection before showing a **Connect Stripe** or *
 
 Authenticate with your **master organization's secret key**, with `platform:read` scope. Pass the tenant's public `organization_slug` and an explicit `env`: `test` or `live`. You can only inspect organizations created by your master organization.
 
-```bash
-curl https://api.useautumn.com/v1/platform.get_stripe_connection \
-  -H "Authorization: Bearer $AUTUMN_SECRET_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"organization_slug":"my-app","env":"test"}'
-```
-
 ## Interpreting the response
 
 - `connected: true` means the tenant has a stored Stripe OAuth account connection in this environment. `account_id` identifies that Stripe account.

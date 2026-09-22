@@ -76,4 +76,5 @@ test.each([
 	expect(page).toContain(scenario.guideText);
 	expect(page).toContain("organization_slug");
 	expect(page).toContain("DynamicResponseField");
+	expect(page).not.toContain("```bash");
 });
