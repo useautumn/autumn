@@ -22,6 +22,7 @@ export const retryBoundedAsync = async <T>({
 	timeoutMs,
 	timeoutMessage,
 	run,
+	beforeAttempt,
 	shouldRetry = isDeadlineExceededError,
 	onRetry,
 }: {
@@ -31,6 +32,7 @@ export const retryBoundedAsync = async <T>({
 	timeoutMs: number;
 	timeoutMessage: string;
 	run: () => Promise<T>;
+	beforeAttempt?: () => Promise<void> | void;
 	shouldRetry?: (error: unknown) => boolean;
 	onRetry?: ({ attempt, error }: { attempt: number; error: unknown }) => void;
 }): Promise<T> =>
@@ -40,11 +42,13 @@ export const retryBoundedAsync = async <T>({
 		maxDelayMs,
 		onRetry,
 		shouldRetry,
-		run: () =>
-			withTimeout({
+		run: async () => {
+			await beforeAttempt?.();
+			return withTimeout({
 				timeoutMs,
 				timeoutMessage,
 				timeoutError: (message) => new DeadlineExceededError(message),
 				fn: run,
-			}),
+			});
+		},
 	});

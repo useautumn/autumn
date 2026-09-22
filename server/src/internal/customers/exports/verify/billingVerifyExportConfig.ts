@@ -2,11 +2,13 @@ type BillingVerifyExportConfig = {
 	sweep: {
 		pageSize: number;
 		concurrency: number;
-		windowMonths: number;
+		windowDays: number;
 		pageTimeoutMs: number;
 		pageAttempts: number;
 		retryDelayMs: number;
 		maxRetryDelayMs: number;
+		requestsPerSecond: number;
+		sandboxRequestsPerSecond: number;
 	};
 	customer: {
 		concurrency: number;
@@ -34,11 +36,13 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 	sweep: {
 		pageSize: 100,
 		concurrency: 8,
-		windowMonths: 1,
+		windowDays: 7,
 		pageTimeoutMs: 60_000,
 		pageAttempts: 3,
 		retryDelayMs: 2_000,
 		maxRetryDelayMs: 20_000,
+		requestsPerSecond: 40,
+		sandboxRequestsPerSecond: 10,
 	},
 	/** A dead pooled connection fails the retry too if it comes back before the
 	 * pool reaps it, and exhausted attempts restart the whole export — so these

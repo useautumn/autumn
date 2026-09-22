@@ -154,6 +154,7 @@ describe("sweepStripeSubscriptions", () => {
 			includeTestClocks: false,
 			sinceMs: now - 10 * DAY_MS,
 			untilMs: now,
+			limits: { windowDays: 30 },
 			onPage: (count) => {
 				pageCounts.push(count);
 			},
@@ -186,11 +187,12 @@ describe("sweepStripeSubscriptions", () => {
 });
 
 describe("stripeCreatedWindows", () => {
-	it("covers all time with disjoint windows that meet at month boundaries", () => {
+	it("covers all time with disjoint windows that meet at their boundaries", () => {
 		const sinceMs = Date.UTC(2026, 0, 15);
 		const windows = stripeCreatedWindows({
 			sinceMs,
 			untilMs: Date.UTC(2026, 2, 1),
+			windowDays: 7,
 		});
 
 		expect(windows[0]).toEqual({ lt: Math.floor(sinceMs / 1000) });
@@ -200,7 +202,20 @@ describe("stripeCreatedWindows", () => {
 		for (let i = 1; i < windows.length; i++) {
 			expect(windows[i].gte).toBe(windows[i - 1].lt);
 		}
-		expect(windows.length).toBe(3);
+		expect(windows.length).toBe(8);
+	});
+
+	it("slices a heavy recent range finer than a monthly window would", () => {
+		const range = {
+			sinceMs: Date.UTC(2026, 0, 1),
+			untilMs: Date.UTC(2026, 2, 1),
+		};
+
+		expect(
+			stripeCreatedWindows({ ...range, windowDays: 7 }).length,
+		).toBeGreaterThan(
+			stripeCreatedWindows({ ...range, windowDays: 30 }).length,
+		);
 	});
 
 	it("degrades to one unbounded window when there is no history", () => {

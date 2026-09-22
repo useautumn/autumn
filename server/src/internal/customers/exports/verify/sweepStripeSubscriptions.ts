@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
 import { mapWithConcurrency } from "@/internal/migrations/v2/batchOperations/execute/utils/mapWithConcurrency.js";
+import { createRatePacer, type RatePacer } from "@/utils/createRatePacer.js";
 import { retryBoundedAsync } from "@/utils/retryBoundedAsync.js";
 import {
 	billingVerifyExportConfig,
@@ -11,9 +12,11 @@ import { stripeCreatedWindows } from "./stripeCreatedWindows.js";
 const listTestClockIds = async ({
 	stripeCli,
 	limits,
+	pacer,
 }: {
 	stripeCli: Stripe;
 	limits?: SweepLimits;
+	pacer: RatePacer;
 }) => {
 	const {
 		pageSize,
@@ -35,6 +38,7 @@ const listTestClockIds = async ({
 			maxDelayMs: maxRetryDelayMs,
 			timeoutMs: pageTimeoutMs,
 			timeoutMessage: `Stripe test clock page timed out after ${pageTimeoutMs}ms`,
+			beforeAttempt: () => pacer.takeSlot(),
 			run: () =>
 				stripeCli.testHelpers.testClocks.list({
 					limit: pageSize,
@@ -53,6 +57,7 @@ const listTestClockIds = async ({
 export const sweepStripeSubscriptions = async ({
 	stripeCli,
 	includeTestClocks,
+	isSandbox = includeTestClocks,
 	sinceMs,
 	untilMs,
 	limits,
@@ -61,16 +66,22 @@ export const sweepStripeSubscriptions = async ({
 }: {
 	stripeCli: Stripe;
 	includeTestClocks: boolean;
+	isSandbox?: boolean;
 	sinceMs: number;
 	untilMs: number;
 	limits?: SweepLimits;
 	onPage?: (subscriptionCount: number) => Promise<void> | void;
 	onRetry?: ({ attempt, error }: { attempt: number; error: unknown }) => void;
 }): Promise<Map<string, Stripe.Subscription[]>> => {
-	const { concurrency, windowMonths } = {
-		...billingVerifyExportConfig.sweep,
-		...limits,
-	};
+	const {
+		concurrency,
+		windowDays,
+		requestsPerSecond,
+		sandboxRequestsPerSecond,
+	} = { ...billingVerifyExportConfig.sweep, ...limits };
+	const pacer = createRatePacer({
+		requestsPerSecond: isSandbox ? sandboxRequestsPerSecond : requestsPerSecond,
+	});
 	const subscriptionsByStripeCustomerId = new Map<
 		string,
 		Stripe.Subscription[]
@@ -86,6 +97,7 @@ export const sweepStripeSubscriptions = async ({
 				params,
 				startingAfter,
 				limits,
+				pacer,
 				onRetry,
 			});
 			for (const subscription of page.data) {
@@ -105,13 +117,13 @@ export const sweepStripeSubscriptions = async ({
 	};
 
 	await mapWithConcurrency({
-		items: stripeCreatedWindows({ sinceMs, untilMs, windowMonths }),
+		items: stripeCreatedWindows({ sinceMs, untilMs, windowDays }),
 		concurrency,
 		run: (created) => collect({ created }),
 	});
 	if (includeTestClocks) {
 		await mapWithConcurrency({
-			items: await listTestClockIds({ stripeCli, limits }),
+			items: await listTestClockIds({ stripeCli, limits, pacer }),
 			concurrency,
 			run: (testClockId) => collect({ test_clock: testClockId }),
 		});
