@@ -19,12 +19,14 @@ const runIncludedSeatTransition = async ({
 	toIncluded,
 	assignedSeats,
 	expectedPaidSeats,
+	explicitTotalQuantity,
 }: {
 	idPrefix: string;
 	fromIncluded: number;
 	toIncluded: number;
 	assignedSeats: number;
 	expectedPaidSeats: number;
+	explicitTotalQuantity?: number;
 }) => {
 	const customerId = `${idPrefix}-customer`;
 	const fromParentPrice = 20;
@@ -80,6 +82,15 @@ const runIncludedSeatTransition = async ({
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
 		plan_id: toParent.id,
+		license_quantities:
+			explicitTotalQuantity === undefined
+				? undefined
+				: [
+						{
+							license_plan_id: seat.id,
+							quantity: explicitTotalQuantity,
+						},
+					],
 		redirect_mode: "if_required",
 	};
 	const preview =
@@ -141,6 +152,20 @@ test.concurrent(
 			toIncluded: 3,
 			assignedSeats: 5,
 			expectedPaidSeats: 2,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license transitions: explicit quantity preserves paid capacity on upgrade")}`,
+	async () => {
+		await runIncludedSeatTransition({
+			idPrefix: "included-explicit",
+			fromIncluded: 1,
+			toIncluded: 10,
+			assignedSeats: 2,
+			expectedPaidSeats: 2,
+			explicitTotalQuantity: 12,
 		});
 	},
 );

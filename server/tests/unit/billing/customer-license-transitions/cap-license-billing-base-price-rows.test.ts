@@ -10,9 +10,11 @@ import { capLicenseBillingBasePriceRows } from "@/internal/billing/v2/compute/cu
 const fixedPrice = ({
 	id,
 	entitlementId = null,
+	amount = 10,
 }: {
 	id: string;
 	entitlementId?: string | null;
+	amount?: number;
 }): Price => ({
 	id,
 	internal_product_id: "seat_product",
@@ -20,7 +22,7 @@ const fixedPrice = ({
 	proration_config: null,
 	config: {
 		type: PriceType.Fixed,
-		amount: 10,
+		amount,
 		interval: BillingInterval.Month,
 		feature_id: null,
 		internal_feature_id: null,
@@ -84,5 +86,30 @@ describe("capLicenseBillingBasePriceRows", () => {
 		expect(rows.map(({ price, quantity }) => [price.id, quantity])).toEqual([
 			[entitlementPrice.id, 2],
 		]);
+	});
+
+	test("caps mixed price cohorts independently of query order", () => {
+		const basePriceA = fixedPrice({ id: "base_a", amount: 5 });
+		const basePriceB = fixedPrice({ id: "base_b", amount: 10 });
+		const rows = [
+			billingRow({ price: basePriceA, quantity: 2 }),
+			billingRow({ price: basePriceB, quantity: 2 }),
+		];
+
+		const forward = capLicenseBillingBasePriceRows({
+			licenseBillingPriceRows: rows,
+			targetQuantity: 2,
+		});
+		const reversed = capLicenseBillingBasePriceRows({
+			licenseBillingPriceRows: [...rows].reverse(),
+			targetQuantity: 2,
+		});
+
+		expect(forward.map(({ price, quantity }) => [price.id, quantity])).toEqual([
+			[basePriceA.id, 2],
+		]);
+		expect(reversed.map(({ price, quantity }) => [price.id, quantity])).toEqual(
+			[[basePriceA.id, 2]],
+		);
 	});
 });
