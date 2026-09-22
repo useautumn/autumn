@@ -33,6 +33,7 @@ import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
 } from "../../fixtures/catalog.js";
+import { createFakeIdempotencyKeys } from "../../fixtures/idempotencyKeys.js";
 import {
 	createCustomerEntitlement,
 	createInitializeMutation,
@@ -156,6 +157,7 @@ const createOwner = ({
 			),
 			partitionOffsets,
 			stateStore: store,
+			idempotencyKeys: createFakeIdempotencyKeys().keys,
 			createRuntime: (assignment) => {
 				const resources = factory(assignment);
 				runtimes.set(assignment.partition, resources.runtime);

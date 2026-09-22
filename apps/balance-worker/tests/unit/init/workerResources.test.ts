@@ -5,6 +5,7 @@ import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
 } from "../../fixtures/catalog.js";
+import { createFakeIdempotencyKeys } from "../../fixtures/idempotencyKeys.js";
 import {
 	closeStoreFixture,
 	createStoreFixture,
@@ -29,6 +30,8 @@ function createResourceFixture() {
 			kafka,
 			admin: { disconnect, fetchTopicOffsets },
 			stateStore: storeFixture.store,
+			dynamo: { close: () => {} },
+			idempotencyKeys: createFakeIdempotencyKeys().keys,
 			postgres: { close: async () => {} },
 			db: createSyntheticWorkerDb(),
 			catalogCache: createTestCatalogCache(),

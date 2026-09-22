@@ -28,6 +28,7 @@ const UNAVAILABLE_CLIENT_CODES = new Set([
 	"ABORTED",
 	"TRANSPORT",
 	"OWNERSHIP_UNAVAILABLE",
+	"COMMAND_LOG_UNAVAILABLE",
 ]);
 
 export function rethrowBalanceWorkerError({

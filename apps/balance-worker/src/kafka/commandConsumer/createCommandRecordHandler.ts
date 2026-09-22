@@ -59,7 +59,11 @@ export function createCommandRecordHandler({
 			switch (command.type) {
 				case "track": {
 					await consumeTrack({
-						ctx: { processor, logger: ctx.logger },
+						ctx: {
+							processor,
+							idempotencyKeys: ctx.idempotencyKeys,
+							logger: ctx.logger,
+						},
 						command,
 					});
 					break;

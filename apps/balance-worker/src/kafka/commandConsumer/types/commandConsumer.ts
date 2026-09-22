@@ -1,3 +1,4 @@
+import type { IdempotencyKeyStore } from "@autumn/dynamodb";
 import type { AutumnLogger } from "@autumn/logging";
 import type { PartitionRuntimePort } from "../../../partitions/types/partitions.js";
 
@@ -8,5 +9,6 @@ export type CommandConsumerContext = {
 	}): PartitionRuntimePort | undefined;
 	/** How far the partition's commands are decided, from Postgres; null before the bookmark exists. */
 	readCommandNextOffset(position: { partition: number }): bigint | null;
+	idempotencyKeys: IdempotencyKeyStore;
 	logger?: Pick<AutumnLogger, "info" | "warn">;
 };

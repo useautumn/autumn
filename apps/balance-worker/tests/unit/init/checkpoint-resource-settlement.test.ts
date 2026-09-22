@@ -9,6 +9,7 @@ import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
 } from "../../fixtures/catalog.js";
+import { createFakeIdempotencyKeys } from "../../fixtures/idempotencyKeys.js";
 import {
 	closeStoreFixture,
 	createStoreFixture,
@@ -31,6 +32,8 @@ test.concurrent(
 					fetchTopicOffsets: async () => [],
 				},
 				stateStore: fixture.store,
+				dynamo: { close: () => {} },
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				postgres: { close: async () => {} },
 				db: createSyntheticWorkerDb(),
 				catalogCache: createTestCatalogCache(),
@@ -90,6 +93,8 @@ test.concurrent.each([false, true])(
 					fetchTopicOffsets: async () => [],
 				},
 				stateStore: fixture.store,
+				dynamo: { close: () => {} },
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				postgres: { close: async () => {} },
 				db: createSyntheticWorkerDb(),
 				catalogCache: createTestCatalogCache(),

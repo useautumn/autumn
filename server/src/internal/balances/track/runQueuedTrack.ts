@@ -20,8 +20,8 @@ export const runQueuedTrack = async ({
 	ctx: AutumnContext;
 	body: TrackParams;
 	apiVersion?: ApiVersion;
-	/** Sync-originated replays already claimed the body key at accept time
-	 *  (queueTrack marks them false); async/batch messages have no accept-time
+	/** Sync and async replays already claimed the body key at accept time
+	 *  (queueTrack marks them false); batch messages have no accept-time
 	 *  claim, so the worker's claim is their only body-key dedup. */
 	validateTrackBodyIdempotencyKey?: boolean;
 }) => {

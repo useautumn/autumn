@@ -55,7 +55,12 @@ export function createWorkerPartitions({
 		});
 	}
 	const commandHandler = createCommandRecordHandler({
-		ctx: { findOwnedRuntime, readCommandNextOffset, logger: ctx.logger },
+		ctx: {
+			findOwnedRuntime,
+			readCommandNextOffset,
+			idempotencyKeys: ctx.idempotencyKeys,
+			logger: ctx.logger,
+		},
 	});
 	const meteringConsumer = createMeteringConsumer({
 		ctx: {

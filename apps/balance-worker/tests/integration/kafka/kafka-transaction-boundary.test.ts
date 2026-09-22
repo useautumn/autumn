@@ -42,6 +42,7 @@ import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
 } from "../../fixtures/catalog.js";
+import { createFakeIdempotencyKeys } from "../../fixtures/idempotencyKeys.js";
 import {
 	applyDurableMutation,
 	createInitializeMutation,
@@ -416,6 +417,7 @@ describe("Kafka transaction boundary", () => {
 				partitionOffsets,
 				topic: topicFixture.topic,
 				stateStore: storeFixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 1,
 				healthRefreshIntervalMs: timings.healthRefreshIntervalMs,
 				createRuntime: (params) => {
@@ -546,6 +548,7 @@ describe("Kafka transaction boundary", () => {
 			partitionOffsets,
 			topic: topicFixture.topic,
 			stateStore: storeFixture.store,
+			idempotencyKeys: createFakeIdempotencyKeys().keys,
 			partitionsConsumedConcurrently: 1,
 			healthRefreshIntervalMs: timings.healthRefreshIntervalMs,
 			createRuntime: (params) => {
@@ -729,6 +732,7 @@ describe("Kafka transaction boundary", () => {
 			partitionOffsets,
 			topic: topicFixture.topic,
 			stateStore: storeFixture.store,
+			idempotencyKeys: createFakeIdempotencyKeys().keys,
 			partitionsConsumedConcurrently: 2,
 			healthRefreshIntervalMs: timings.healthRefreshIntervalMs,
 			createRuntime: (params) => {

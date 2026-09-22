@@ -1,3 +1,4 @@
+import type { DynamoClient, IdempotencyKeyStore } from "@autumn/dynamodb";
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import type { AutumnLogger } from "@autumn/logging";
 import type { PostgresClient } from "@autumn/postgres";
@@ -58,6 +59,8 @@ export type WorkerResourcesContext = {
 	stateStore: StateStore;
 	postgres: Pick<PostgresClient, "close">;
 	db: WorkerDb;
+	dynamo: Pick<DynamoClient, "close">;
+	idempotencyKeys: IdempotencyKeyStore;
 	catalogCache: CatalogCache;
 	partitionResolver: MeteringPartitionResolver;
 	bootstrapper: PartitionBootstrapper;

@@ -1,3 +1,4 @@
+import type { IdempotencyKeyStore } from "@autumn/dynamodb";
 import type { KafkaConsumerClient } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
@@ -23,6 +24,7 @@ export type KafkaPartitionRuntimeFactory = (position: {
 }) => Omit<PartitionRuntimeResources, "markUnavailable">;
 
 export type WorkerPartitionsContext = {
+	idempotencyKeys: IdempotencyKeyStore;
 	consumer: KafkaOwnedPartitionGroupConsumerPort;
 	partitionOffsets: KafkaOwnedPartitionGroupAdminPort &
 		Partial<Pick<Admin, "fetchTopicOffsetsByTimestamp">>;

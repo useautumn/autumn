@@ -26,6 +26,17 @@ export const trackLockSchema = z
 
 export type TrackLock = z.infer<typeof trackLockSchema>;
 
+/** A body key the consumer claims, not the API: a queued batch item. Absent when the API already claimed it. */
+export const trackIdempotencySchema = z
+	.object({
+		/** Already namespaced (`track:<key>`), so it hashes to the same storage key the API would use. */
+		key: nonEmptyStringSchema,
+		ttlMs: z.number().int().positive(),
+	})
+	.strict();
+
+export type TrackIdempotency = z.infer<typeof trackIdempotencySchema>;
+
 export const trackCommandSchema = mutatingCommandSchema
 	.extend({
 		type: z.literal("track"),
@@ -39,6 +50,7 @@ export const trackCommandSchema = mutatingCommandSchema
 		lock: trackLockSchema.optional(),
 		/** A check that deducts honours the org's overdue block, as a plain check does; a plain track does not. */
 		enforceOverdueBlock: z.boolean().optional(),
+		idempotency: trackIdempotencySchema.optional(),
 	})
 	.strict();
 

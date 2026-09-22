@@ -1,51 +1,28 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { createDynamoClient, type DynamoClient } from "@autumn/dynamodb";
+import type { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { DEFAULT_AWS_REGION } from "@/external/aws/awsRegionUtils.js";
 
-/** Endpoint override when pointed at a local emulator (dynamodb-local /
- *  dynoxide). Unset in prod, where the SDK resolves the real AWS endpoint. */
-export const getDynamoEndpoint = (): string | undefined =>
-	process.env.DYNAMODB_ENDPOINT || undefined;
+const getDynamoClientConfig = () => ({
+	region: process.env.AWS_REGION || DEFAULT_AWS_REGION,
+	// Set when pointed at a local emulator; unset in prod, where the SDK resolves the real endpoint.
+	endpoint: process.env.DYNAMODB_ENDPOINT || undefined,
+	credentials: {
+		accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+		secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+	},
+});
 
-/** True when DYNAMODB_ENDPOINT points at a non-AWS host (local emulator). */
-export const isLocalDynamoEndpoint = (): boolean => {
-	const endpoint = getDynamoEndpoint();
-	if (!endpoint) return false;
-	try {
-		return !new URL(endpoint).hostname.endsWith("amazonaws.com");
-	} catch {
-		return false;
-	}
-};
+const clientsByCacheKey = new Map<string, DynamoClient>();
 
-const getDynamoClientConfig = () => {
-	const endpoint = getDynamoEndpoint();
-	return {
-		region: process.env.AWS_REGION || DEFAULT_AWS_REGION,
-		...(endpoint ? { endpoint } : {}),
-		credentials: {
-			accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-			secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-		},
-	};
-};
-
-const getDynamoCacheKey = () => {
+export const getDynamoClient = (): DynamoClient => {
 	const config = getDynamoClientConfig();
-	return `${config.region}:${config.endpoint ?? "aws"}`;
+	const cacheKey = `${config.region}:${config.endpoint ?? "aws"}`;
+	const existing = clientsByCacheKey.get(cacheKey);
+	if (existing) return existing;
+	const client = createDynamoClient({ config });
+	clientsByCacheKey.set(cacheKey, client);
+	return client;
 };
 
-const documentClientsByCacheKey = new Map<string, DynamoDBDocumentClient>();
-
-export const getDynamoDocumentClient = (): DynamoDBDocumentClient => {
-	const cacheKey = getDynamoCacheKey();
-	const existingClient = documentClientsByCacheKey.get(cacheKey);
-	if (existingClient) return existingClient;
-
-	const documentClient = DynamoDBDocumentClient.from(
-		new DynamoDBClient(getDynamoClientConfig()),
-		{ marshallOptions: { removeUndefinedValues: true } },
-	);
-	documentClientsByCacheKey.set(cacheKey, documentClient);
-	return documentClient;
-};
+export const getDynamoDocumentClient = (): DynamoDBDocumentClient =>
+	getDynamoClient().client as DynamoDBDocumentClient;

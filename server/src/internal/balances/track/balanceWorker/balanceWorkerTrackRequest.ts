@@ -1,5 +1,5 @@
 import { orgToCommandOrg, type TrackCommand } from "@autumn/balance-engine";
-import type { LockParams, TrackParams } from "@autumn/shared";
+import { type LockParams, RecaseError, type TrackParams } from "@autumn/shared";
 import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
 import { featureToInternalFeatureId } from "../../balanceWorker/featureToInternalFeatureId.js";
 import { lockParamsToTrackLock } from "../../balanceWorker/lockParamsToTrackLock.js";
@@ -62,3 +62,41 @@ export function trackParamsToTrackCommand({
 		}),
 	};
 }
+
+/** A feature id tracks itself; an event name tracks every feature that lists it. */
+export const trackedFeatureIdsOf = ({
+	ctx,
+	body,
+}: {
+	ctx: Pick<BalanceWorkerRequestContext, "features">;
+	body: TrackParams;
+}): string[] => {
+	if (body.feature_id) return [body.feature_id];
+	const featureIds = ctx.features
+		.filter((feature) => feature.event_names?.includes(body.event_name ?? ""))
+		.map((feature) => feature.id);
+	if (featureIds.length === 0)
+		throw new RecaseError({
+			message: `No features found for event name: ${body.event_name}`,
+			statusCode: 404,
+		});
+	return featureIds;
+};
+
+/** One command per feature the item tracks; an event name fans out, a feature id is one command. */
+export const trackParamsToTrackCommands = ({
+	ctx,
+	body,
+}: {
+	ctx: BalanceWorkerRequestContext;
+	body: TrackParams;
+}): TrackCommand[] => {
+	const isFanOut = !body.feature_id;
+	return trackedFeatureIdsOf({ ctx, body }).map((featureId) =>
+		trackParamsToTrackCommand({
+			ctx,
+			body: { ...body, feature_id: featureId },
+			isFanOut,
+		}),
+	);
+};

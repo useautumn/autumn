@@ -14,5 +14,8 @@ export type BalanceWorkerRequestContext = Pick<
 			Partial<Pick<AutumnContext["org"], "slug" | "svix_config">> & {
 				config: CommandOrg["config"];
 			};
-		features: Pick<AutumnContext["features"][number], "id" | "internal_id">[];
+		features: Pick<
+			AutumnContext["features"][number],
+			"id" | "internal_id" | "event_names"
+		>[];
 	}>;

@@ -125,7 +125,7 @@ command at two offsets (41 and 57) is Part A's job.
 | 8 | Fence for the command consumer (B) | `transaction.sendOffsets` inside the mutation's transaction. Postgres `command_next_offset` is the truth, Kafka's offset is a hint. |
 | 9 | A command that changes nothing (B) | A bookmark-only flush, the way `landFlush` already skips a refused record (`withoutChanges`). |
 | 10 | An async track that is refused (B) | **settled** — logged at warn with the command id and reason, then dropped, in `consume/consumeTrack.ts`. Same accepted loss as a refused row after a log-durable reply. |
-| 11 | The 24h key claim for async and batch tracks (B) | **settled in principle** — it stays in DynamoDB. The worker has no DynamoDB, so the server claims before it appends: once per request for async, once per item for batch (today the SQS consumer claims batch items). A failed append releases the claim. |
+| 11 | The 24h key claim for async and batch tracks (B) | **settled** — it stays in DynamoDB, now reachable from both processes through `@autumn/dynamodb`. Async: the server claims before it appends; a failed append releases. Batch: the consumer claims each item (as the SQS consumer does today), the key travelling on the command as `idempotency`. The claim is owned by the item's request id: the item's fan-out commands and its redeliveries resume it, a different item with the same key is a duplicate, a refusal releases it, a transient failure keeps it, an unreachable store fails open. |
 
 ## Before Part B ships
 

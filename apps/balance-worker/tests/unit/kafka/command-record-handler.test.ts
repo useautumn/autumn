@@ -9,6 +9,7 @@ import { CommandPartitionUnavailableError } from "../../../src/kafka/commandCons
 import { createCommandRecordHandler } from "../../../src/kafka/commandConsumer/createCommandRecordHandler.js";
 import type { PartitionRuntimePort } from "../../../src/partitions/types/partitions.js";
 import { PartitionWriterDuplicateCommandError } from "../../../src/processor/writer/writerErrors.js";
+import { createFakeIdempotencyKeys } from "../../fixtures/idempotencyKeys.js";
 import { createTrackCommand, testIdentity } from "../../fixtures/mutations.js";
 
 const topic = "local-commands";
@@ -56,6 +57,7 @@ function createFixture({
 		ctx: {
 			findOwnedRuntime: () => (owned ? runtime : undefined),
 			readCommandNextOffset: () => commandNextOffset,
+			idempotencyKeys: createFakeIdempotencyKeys().keys,
 			logger: {
 				info: (message: string) => logs.push(`info:${message}`),
 				warn: (message: string) => logs.push(`warn:${message}`),

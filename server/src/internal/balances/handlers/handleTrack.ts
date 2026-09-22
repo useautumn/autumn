@@ -10,6 +10,7 @@ import {
 import type { Context } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { runBalanceWorkerAsyncTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerAsyncTrack.js";
 import { runBalanceWorkerTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js";
 import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
@@ -36,16 +37,21 @@ async function track(
 	const body = c.req.valid("json");
 	const ctx = c.get("ctx");
 
+	const isAsync =
+		body.async === true ||
+		isAsyncTrackEnabled({ orgId: ctx.org.id, orgSlug: ctx.org.slug });
+
 	if (isBalanceWorkerRolloutEnabled()) {
+		if (isAsync) {
+			await runBalanceWorkerAsyncTrack({ ctx, body });
+			return c.json(getQueuedTrackResponse({ ctx, body }), 202);
+		}
 		return c.json(await runBalanceWorkerTrack({ ctx, body }));
 	}
 
 	const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
 
-	if (
-		body.async === true ||
-		isAsyncTrackEnabled({ orgId: ctx.org.id, orgSlug: ctx.org.slug })
-	) {
+	if (isAsync) {
 		await runAsyncTrack({ ctx, body });
 		return c.json(getQueuedTrackResponse({ ctx, body }), 202);
 	}

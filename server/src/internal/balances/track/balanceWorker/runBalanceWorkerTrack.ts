@@ -18,29 +18,12 @@ import {
 	type FeatureTrackReply,
 	trackRepliesToApiResponse,
 } from "./balanceWorkerTrackReply.js";
-import { trackParamsToTrackCommand } from "./balanceWorkerTrackRequest.js";
+import {
+	trackedFeatureIdsOf,
+	trackParamsToTrackCommand,
+} from "./balanceWorkerTrackRequest.js";
 
 type TrackClient = Pick<BalanceWorkerClient, "track">;
-
-/** A feature id tracks itself; an event name tracks every feature that lists it. */
-const trackedFeatureIdsOf = ({
-	ctx,
-	body,
-}: {
-	ctx: AutumnContext;
-	body: TrackParams;
-}): string[] => {
-	if (body.feature_id) return [body.feature_id];
-	const featureIds = ctx.features
-		.filter((feature) => feature.event_names?.includes(body.event_name ?? ""))
-		.map((feature) => feature.id);
-	if (featureIds.length === 0)
-		throw new RecaseError({
-			message: `No features found for event name: ${body.event_name}`,
-			statusCode: 404,
-		});
-	return featureIds;
-};
 
 const isDuplicateCommand = ({ cause }: { cause: unknown }): boolean =>
 	cause instanceof BalanceWorkerClientError &&

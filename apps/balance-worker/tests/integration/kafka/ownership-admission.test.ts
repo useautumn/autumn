@@ -23,6 +23,7 @@ import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
 } from "../../fixtures/catalog.js";
+import { createFakeIdempotencyKeys } from "../../fixtures/idempotencyKeys.js";
 import {
 	createCustomerEntitlement,
 	restoreSubjectStates,
@@ -154,6 +155,7 @@ describe("Real ownership admission", () => {
 				),
 				partitionOffsets: kafka.admin(),
 				stateStore: store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				createRuntime: (params) => {
 					const resources = factory(params);
 					return {

@@ -18,6 +18,7 @@
 	"dependencies": {
 		"@autumn/balance-engine": "workspace:*",
 		"@autumn/balance-worker-client": "workspace:*",
+		"@autumn/dynamodb": "workspace:*",
 		"@autumn/edge-config": "workspace:*",
 		"@autumn/env": "workspace:*",
 		"@autumn/kafka": "workspace:*",

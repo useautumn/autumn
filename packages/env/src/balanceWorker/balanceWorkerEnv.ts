@@ -58,6 +58,18 @@ const postgres = z.object({
 	DATABASE_URL: z.string().url(),
 });
 
+/** The idempotency keys queued batch items claim; the same table and defaults the server uses. */
+const dynamo = z.object({
+	DYNAMODB_ENDPOINT: z.string().url().optional(),
+	DYNAMODB_IDEMPOTENCY_TABLE: z
+		.string()
+		.trim()
+		.min(1)
+		.default("autumn-idempotency-keys"),
+	AWS_ACCESS_KEY_ID: z.string().optional(),
+	AWS_SECRET_ACCESS_KEY: z.string().optional(),
+});
+
 /** The admin bucket edge configs are polled from; the same names and defaults the server uses. */
 const adminS3 = z.object({
 	S3_BUCKET: z.string().trim().min(1).default("autumn-prod-server"),
@@ -69,6 +81,7 @@ const balanceWorkerEnvSchema = kafka
 	.merge(state)
 	.merge(postgres)
 	.merge(adminS3)
+	.merge(dynamo)
 	.superRefine(validateBalanceWorkerEnv);
 
 export function createBalanceWorkerEnv(

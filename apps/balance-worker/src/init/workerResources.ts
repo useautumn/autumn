@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { MeteringIdentity } from "@autumn/balance-engine";
+import { createIdempotencyKeyStore } from "@autumn/dynamodb";
 import {
 	createKafkaClient,
 	createKafkaTransport,
@@ -16,6 +17,7 @@ import {
 } from "../committer/createCommitter.js";
 import { createCommitterStateStore } from "../committer/createCommitterStateStore.js";
 import { createWorkerEdgeConfigs } from "../edgeConfig/createWorkerEdgeConfigs.js";
+import { createWorkerDynamoClient } from "../external/dynamodb/createWorkerDynamoClient.js";
 import {
 	createCommitterDb,
 	createWorkerDb,
@@ -96,6 +98,14 @@ export async function openWorkerResources({
 		await validateBalanceWorkerTopics({ admin, env });
 		const postgres = createWorkerPostgresClient({ env });
 		const db = createWorkerDb({ ctx: { postgres } });
+		const dynamo = createWorkerDynamoClient({ env });
+		const idempotencyKeys = createIdempotencyKeyStore({
+			ctx: {
+				dynamo,
+				tableName: env.DYNAMODB_IDEMPOTENCY_TABLE,
+				logger: dependencies.logger,
+			},
+		});
 		const edgeConfigs = createWorkerEdgeConfigs({
 			ctx: { logger: dependencies.logger },
 			config: { location: { bucket: env.S3_BUCKET, region: env.S3_REGION } },
@@ -158,6 +168,8 @@ export async function openWorkerResources({
 				stateStore,
 				postgres,
 				db,
+				dynamo,
+				idempotencyKeys,
 				catalogCache,
 				partitionResolver,
 				bootstrapper,
@@ -236,6 +248,7 @@ export function createWorkerResources({
 		for (const runtime of [...runtimes]) pending.push(settleRuntime(runtime));
 		if (ctx.checkpoints) pending.push(ctx.checkpoints.stop());
 		ctx.edgeConfigs?.stop();
+		ctx.dynamo.close();
 		const results = await Promise.allSettled(pending);
 		await ctx.admin.disconnect();
 		await ctx.postgres.close();

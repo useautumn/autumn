@@ -1,12 +1,23 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 
 const mockState = {
 	batchTrackBodies: [] as unknown[],
+	workerBatchTrackBodies: [] as unknown[],
 	batchTrackTokenBodies: [] as unknown[],
+	rolloutEnabled: false,
 };
+
+await mockModuleWithRestore(
+	"@/internal/balances/track/balanceWorker/runBalanceWorkerBatchTrack.js",
+	() => ({
+		runBalanceWorkerBatchTrack: async ({ body }: { body: unknown }) => {
+			mockState.workerBatchTrackBodies.push(body);
+		},
+	}),
+);
 
 await mockModuleWithRestore(
 	"@/internal/balances/track/runBatchTrack.js",
@@ -26,6 +37,7 @@ await mockModuleWithRestore(
 	}),
 );
 
+import * as rolloutAccess from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
 import { handleBatchTrack } from "@/internal/balances/handlers/handleBatchTrack.js";
 import { handleBatchTrackTokens } from "@/internal/balances/handlers/handleBatchTrackTokens.js";
 
@@ -64,7 +76,12 @@ const createApp = ({ ctx }: { ctx: AutumnContext }) => {
 describe("batch track handlers", () => {
 	beforeEach(() => {
 		mockState.batchTrackBodies = [];
+		mockState.workerBatchTrackBodies = [];
 		mockState.batchTrackTokenBodies = [];
+		mockState.rolloutEnabled = false;
+		spyOn(rolloutAccess, "getBalanceWorkerRolloutEnabled").mockImplementation(
+			() => mockState.rolloutEnabled,
+		);
 	});
 
 	test("returns 200 success after enqueueing batch track", async () => {
@@ -81,6 +98,24 @@ describe("batch track handlers", () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ success: true });
 		expect(mockState.batchTrackBodies).toEqual([body]);
+	});
+
+	test("under the worker rollout the batch is queued and still answers 200 success", async () => {
+		mockState.rolloutEnabled = true;
+		const body = [{ customer_id: "cus_123", feature_id: "messages" }];
+		const response = await createApp({ ctx: createCtx() }).request(
+			"/balances.batch_track",
+			{
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(body),
+			},
+		);
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ success: true });
+		expect(mockState.workerBatchTrackBodies).toEqual([body]);
+		expect(mockState.batchTrackBodies).toEqual([]);
 	});
 
 	test("returns 200 success after enqueueing batch track tokens", async () => {

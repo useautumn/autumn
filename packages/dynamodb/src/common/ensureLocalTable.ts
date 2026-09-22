@@ -3,24 +3,23 @@ import {
 	ResourceInUseException,
 	UpdateTimeToLiveCommand,
 } from "@aws-sdk/client-dynamodb";
-import {
-	getDynamoDocumentClient,
-	isLocalDynamoEndpoint,
-} from "./initDynamoDb.js";
+import type { DynamoClient } from "../types/dynamoClient.js";
+
+const ensuredTables = new Map<string, Promise<void>>();
 
 const createTable = async ({
+	ctx,
 	tableName,
 	partitionKey,
 	ttlAttribute,
 }: {
+	ctx: { dynamo: DynamoClient };
 	tableName: string;
 	partitionKey: string;
 	ttlAttribute?: string;
 }): Promise<void> => {
-	const documentClient = getDynamoDocumentClient();
-
 	try {
-		await documentClient.send(
+		await ctx.dynamo.client.send(
 			new CreateTableCommand({
 				TableName: tableName,
 				AttributeDefinitions: [
@@ -33,44 +32,36 @@ const createTable = async ({
 	} catch (error) {
 		if (!(error instanceof ResourceInUseException)) throw error;
 	}
-
 	if (!ttlAttribute) return;
 	try {
-		await documentClient.send(
+		await ctx.dynamo.client.send(
 			new UpdateTimeToLiveCommand({
 				TableName: tableName,
-				TimeToLiveSpecification: {
-					AttributeName: ttlAttribute,
-					Enabled: true,
-				},
+				TimeToLiveSpecification: { AttributeName: ttlAttribute, Enabled: true },
 			}),
 		);
 	} catch {
-		// Already enabled (ValidationException) — emulators accept but never
-		// sweep TTL anyway, so callers must enforce expiry in their conditions.
+		// Already enabled. Emulators accept but never sweep TTL, so conditions enforce expiry themselves.
 	}
 };
 
-const ensuredTables = new Map<string, Promise<void>>();
-
-/** Local emulators start empty, so tables are auto-created on first use (once
- *  per process per table). Never runs against real AWS, where tables are
- *  one-time infra (no DYNAMODB_ENDPOINT override → no-op). */
-export const ensureLocalDynamoTable = ({
+/** Emulators start empty, so a table is created on first use, once per process. On AWS tables are infra: a no-op. */
+export const ensureLocalTable = ({
+	ctx,
 	tableName,
 	partitionKey,
 	ttlAttribute,
 }: {
+	ctx: { dynamo: DynamoClient };
 	tableName: string;
 	partitionKey: string;
 	ttlAttribute?: string;
 }): Promise<void> => {
-	if (!isLocalDynamoEndpoint()) return Promise.resolve();
-
+	if (!ctx.dynamo.isLocalEndpoint) return Promise.resolve();
 	const existing = ensuredTables.get(tableName);
 	if (existing) return existing;
-
-	const ensurePromise = createTable({
+	const ensuring = createTable({
+		ctx,
 		tableName,
 		partitionKey,
 		ttlAttribute,
@@ -78,6 +69,6 @@ export const ensureLocalDynamoTable = ({
 		ensuredTables.delete(tableName);
 		throw error;
 	});
-	ensuredTables.set(tableName, ensurePromise);
-	return ensurePromise;
+	ensuredTables.set(tableName, ensuring);
+	return ensuring;
 };

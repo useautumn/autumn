@@ -49,6 +49,11 @@ are enqueued with `validateTrackBodyIdempotencyKey: false` and the worker
 (`runQueuedTrack`) skips the body-key claim. The worker only claims for
 messages with no accept-time claim (batch — not yet migrated).
 
+On the worker lane the same split holds over Kafka: an async single track is
+claimed at accept (`runBalanceWorkerAsyncTrack`), a batch item carries its key
+on its commands (`TrackCommand.idempotency`) and the balance worker claims it
+in `consumeTrack`, owned by the item's request id so redeliveries resume it.
+
 ## Files
 
 - `trackBodyIdempotencyKey.ts` — builds the `track:`-prefixed body key

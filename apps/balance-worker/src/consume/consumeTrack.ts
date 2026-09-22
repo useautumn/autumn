@@ -1,37 +1,35 @@
+import type { TrackCommand } from "@autumn/balance-engine";
 import {
-	LockAlreadyExistsError,
-	LockNotFoundError,
-	type TrackCommand,
-	UnsupportedCommandError,
-} from "@autumn/balance-engine";
-import { FlushRecordRefusedError } from "../committer/committerErrors.js";
-import { PartitionProcessorStateNotFoundError } from "../processor/common/processorErrors.js";
-import { SubjectNotFoundError } from "../processor/subject/subjectErrors.js";
-import {
-	PartitionWriterCommandConflictError,
-	PartitionWriterDuplicateCommandError,
-	PartitionWriterStateNotFoundError,
-} from "../processor/writer/writerErrors.js";
-import { ConflictingMutationReceiptError } from "../state/stateStoreErrors.js";
+	buildIdempotencyStorageKey,
+	type IdempotencyClaim,
+	withIdempotencyKey,
+} from "@autumn/dynamodb";
+import { settleTrackFailure } from "./trackSettlement.js";
 import type { ConsumeContext } from "./types/consume.js";
 
-/** The command already landed, under this id or a conflicting one; consuming it again changes nothing. */
-const isAlreadyApplied = (cause: unknown): boolean =>
-	cause instanceof PartitionWriterDuplicateCommandError ||
-	cause instanceof PartitionWriterCommandConflictError ||
-	cause instanceof ConflictingMutationReceiptError;
+/** The item owns its claim: its fan-out commands and redeliveries resume it, any other item is a duplicate. */
+const claimOf = ({
+	command,
+}: {
+	command: TrackCommand;
+}): IdempotencyClaim | undefined => {
+	if (!command.idempotency) return undefined;
+	const { storageKey } = buildIdempotencyStorageKey({
+		orgId: command.identity.orgId,
+		env: command.identity.env,
+		idempotencyKey: command.idempotency.key,
+	});
+	return {
+		storageKey,
+		ttlMs: command.idempotency.ttlMs,
+		owner: command.requestId,
+	};
+};
 
-/** Refused for good: nothing landed, and a redelivery would be refused the same way. */
-const isRefused = (cause: unknown): boolean =>
-	cause instanceof UnsupportedCommandError ||
-	cause instanceof SubjectNotFoundError ||
-	cause instanceof LockAlreadyExistsError ||
-	cause instanceof LockNotFoundError ||
-	cause instanceof FlushRecordRefusedError ||
-	cause instanceof PartitionWriterStateNotFoundError ||
-	cause instanceof PartitionProcessorStateNotFoundError;
+const isRefusal = (cause: unknown): boolean =>
+	settleTrackFailure({ cause }) === "refused";
 
-/** Refusals complete without a mutation; transient failures throw so Kafka redelivers. */
+/** A queued track: nobody waits for its reply, so every outcome is logged and only a transient failure comes back. */
 export async function consumeTrack({
 	ctx,
 	command,
@@ -46,21 +44,28 @@ export async function consumeTrack({
 		featureId: command.featureId,
 	};
 	try {
-		const reply = await ctx.processor.track({ command });
-		if (reply.result.status !== "applied")
+		const reply = await withIdempotencyKey({
+			store: ctx.idempotencyKeys,
+			claim: claimOf({ command }),
+			run: () => ctx.processor.track({ command }),
+			onDuplicate: () => null,
+			releaseOnError: isRefusal,
+		});
+		if (reply === null)
+			ctx.logger?.info(
+				"Queued track skipped: idempotency key already used",
+				fields,
+			);
+		else if (reply.result.status !== "applied")
 			ctx.logger?.warn("Queued track rejected by the balance", {
 				...fields,
 				reason: reply.result.reason,
 			});
 	} catch (cause) {
-		if (isAlreadyApplied(cause)) {
+		const settlement = settleTrackFailure({ cause });
+		if (settlement === "transient") throw cause;
+		if (settlement === "applied")
 			ctx.logger?.info("Queued track already applied", fields);
-			return;
-		}
-		if (isRefused(cause)) {
-			ctx.logger?.warn("Queued track refused", { ...fields, error: cause });
-			return;
-		}
-		throw cause;
+		else ctx.logger?.warn("Queued track refused", { ...fields, error: cause });
 	}
 }

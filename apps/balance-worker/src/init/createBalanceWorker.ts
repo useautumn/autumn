@@ -81,6 +81,7 @@ export async function createBalanceWorker({
 				),
 				partitionOffsets: resources.kafka.admin(),
 				stateStore: resources.stateStore,
+				idempotencyKeys: resources.idempotencyKeys,
 				logger: dependencies.logger,
 				createRuntime,
 				onError: dependencies.onError,

@@ -17,6 +17,7 @@ export { computeTrack } from "./commands/track/computeTrack.js";
 export type {
 	OverageBehavior,
 	TrackCommand,
+	TrackIdempotency,
 	TrackLock,
 } from "./commands/track/types/trackCommand.js";
 export type { TrackResult } from "./commands/track/types/trackResult.js";

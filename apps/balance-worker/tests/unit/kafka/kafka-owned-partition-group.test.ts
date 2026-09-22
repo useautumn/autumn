@@ -9,6 +9,7 @@ test("waits for runtime quiescence before starting a replacement", async () => {
 		partitionOffsets: createPartitionOffsets(),
 		topic,
 		stateStore: fixture.store,
+		idempotencyKeys: createFakeIdempotencyKeys().keys,
 		partitionsConsumedConcurrently: 1,
 		createRuntime: () => {
 			const id = ++sequence;
@@ -53,6 +54,7 @@ test("failed retirement stops the group without starting a replacement", async (
 		partitionOffsets: createPartitionOffsets(),
 		topic,
 		stateStore: fixture.store,
+		idempotencyKeys: createFakeIdempotencyKeys().keys,
 		partitionsConsumedConcurrently: 1,
 		createRuntime: () => ({
 			start: async () => {
@@ -361,6 +363,7 @@ describe("Kafka owned partition group", () => {
 					partitionOffsets: createPartitionOffsets(),
 					topic,
 					stateStore: fixture.store,
+					idempotencyKeys: createFakeIdempotencyKeys().keys,
 					partitionsConsumedConcurrently: 1,
 					healthRefreshIntervalMs: 5_000,
 					createRuntime: createRuntimeFactory({
@@ -390,6 +393,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets,
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 2,
 				healthRefreshIntervalMs: 5_000,
 				createRuntime: createRuntimeFactory({
@@ -444,6 +448,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets: createPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 2,
 				healthRefreshIntervalMs: 5_000,
 				createRuntime: createRuntimeFactory({
@@ -485,6 +490,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets: createPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 2,
 				healthRefreshIntervalMs: 5_000,
 				createRuntime: createRuntimeFactory({
@@ -537,6 +543,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets: createPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 2,
 				healthRefreshIntervalMs: 5_000,
 				createRuntime,
@@ -574,6 +581,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets: createPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 2,
 				healthRefreshIntervalMs: 5_000,
 				createRuntime: createRuntimeFactory({
@@ -617,6 +625,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets: createPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 2,
 				healthRefreshIntervalMs: 5_000,
 				createRuntime: createRuntimeFactory({
@@ -657,6 +666,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets: createPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 2,
 				healthRefreshIntervalMs: 5_000,
 				createRuntime: () => ({
@@ -702,6 +712,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets: createPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 1,
 				healthRefreshIntervalMs: 5_000,
 				createRuntime: ({ partition }) => ({
@@ -770,6 +781,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets: createPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 2,
 				healthRefreshIntervalMs: 5,
 				partitionBootstrapRetryIntervalMs: 5,
@@ -848,6 +860,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets: createPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 2,
 				healthRefreshIntervalMs: 5,
 				partitionBootstrapRetryIntervalMs: 5,
@@ -913,6 +926,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets: createPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 2,
 				healthRefreshIntervalMs: 5,
 				partitionBootstrapRetryIntervalMs: 5,
@@ -1022,6 +1036,7 @@ describe("Kafka owned partition group", () => {
 				},
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 1,
 				healthRefreshIntervalMs: 1,
 				createRuntime: ({ partition }) => ({
@@ -1076,6 +1091,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets: createPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 1,
 				healthRefreshIntervalMs: 5_000,
 				createRuntime: () => {
@@ -1114,6 +1130,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets,
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 1,
 				healthRefreshIntervalMs: 5,
 				createRuntime: createRuntimeFactory({
@@ -1149,6 +1166,7 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets: createPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
 				partitionsConsumedConcurrently: 1,
 				healthRefreshIntervalMs: 5,
 				createRuntime: ({ partition }) => ({
@@ -1191,6 +1209,7 @@ describe("Kafka owned partition group", () => {
 import { readFileSync } from "node:fs";
 import { Glob } from "bun";
 import ts from "typescript";
+import { createFakeIdempotencyKeys } from "../../fixtures/idempotencyKeys.js";
 
 function ownershipUsesNamedFunctions(): void {
 	const directory = new URL("../../../src/", import.meta.url).pathname;
@@ -1264,6 +1283,7 @@ test("admission seeks the command bookmark before resuming, even when no batch a
 				],
 			},
 			stateStore: { ...fixture.store, readCommandNextOffset: () => 7n },
+			idempotencyKeys: createFakeIdempotencyKeys().keys,
 			createRuntime: () =>
 				createTestRuntimeResources({
 					runtime: {
