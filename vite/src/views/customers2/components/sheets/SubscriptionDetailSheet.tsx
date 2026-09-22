@@ -5,7 +5,7 @@ import {
 	type Entity,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
-import { Badge, Button, CopyButton, InfoRow } from "@autumn/ui";
+import { Badge, Button, CopyButton, DateInputUnix, InfoRow } from "@autumn/ui";
 import {
 	CalendarBlankIcon,
 	CreditCardIcon,
@@ -21,7 +21,7 @@ import {
 	XCircle,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
 	BillingControlsList,
 	hasBillingControls,
@@ -49,6 +49,49 @@ import { formatDiscountLabel } from "./subscriptionDetailUtils";
 import { usePendingPaymentLink } from "./usePendingPaymentLink";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
+
+function BillingAnchorMockup() {
+	const scheduledAt = new Date("2026-10-15T09:00:00Z").getTime();
+	const [editing, setEditing] = useState(false);
+	const [anchor, setAnchor] = useState<number | null>(scheduledAt);
+	return (
+		<SheetSection>
+			<div className="flex flex-col gap-3">
+				<div className="flex items-center justify-between">
+					<span className="text-form-label">Upcoming billing change</span>
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={() => setEditing(!editing)}
+					>
+						{editing ? "Cancel" : "Edit"}
+					</Button>
+				</div>
+				<InfoRow
+					icon={<CalendarBlankIcon size={16} weight="duotone" />}
+					label="Restart date"
+					value={format(scheduledAt, "MMM d, yyyy, HH:mm")}
+				/>
+				{editing && (
+					<div className="flex flex-col gap-3">
+						<DateInputUnix
+							unixDate={anchor}
+							setUnixDate={setAnchor}
+							withTime
+							disablePastDates
+						/>
+						<p className="text-xs text-tertiary-foreground">
+							The new date replaces the scheduled billing cycle restart.
+						</p>
+						<Button variant="primary" disabled>
+							Save changes (preview only)
+						</Button>
+					</div>
+				)}
+			</div>
+		</SheetSection>
+	);
+}
 
 export function SubscriptionDetailSheet() {
 	const { customer, features = [], testClockFrozenTimeMs } = useCusQuery();
@@ -365,6 +408,11 @@ export function SubscriptionDetailSheet() {
 					)}
 				</div>
 			</SheetSection>
+
+			{import.meta.env.DEV &&
+				new URLSearchParams(window.location.search).has("anchor_mockup") && (
+					<BillingAnchorMockup />
+				)}
 
 			{hasBillingControls(planBillingControls) && (
 				<SheetSection>
