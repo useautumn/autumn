@@ -48,6 +48,7 @@ const withInvoicePaymentMethods = async <T>({
 			.set({ config: org.config })
 			.where(eq(organizations.id, org.id));
 		await clearOrgCache({ db, orgId: org.id });
+		await timeout(SECRET_KEY_L1_TTL_MS + 500);
 	}
 };
 
