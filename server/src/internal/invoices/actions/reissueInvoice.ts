@@ -117,17 +117,26 @@ const loadReissuableStripeInvoice = async ({
 			`Invoice ${row.invoice.id} is ${stripeInvoice.status}; only open and paid invoices can be reissued`,
 		);
 	}
-	if (stripeInvoice.collection_method !== "send_invoice") {
+	// An open card invoice has no due date to carry over and would charge the
+	// card again on finalize; a paid one is settled by its credit note instead.
+	if (
+		stripeInvoice.collection_method !== "send_invoice" &&
+		stripeInvoice.status !== "paid"
+	) {
 		throw invalidRequest(
-			`Invoice ${row.invoice.id} is charged automatically; only send-invoice invoices can be reissued`,
+			`Invoice ${row.invoice.id} is charged automatically and still open; only paid card invoices and send-invoice invoices can be reissued`,
 		);
 	}
 
 	return { stripeCli, stripeInvoice };
 };
 
-/** Keeps the original deadline unless it has passed, in which case new terms are required. */
-const resolveDueDate = ({
+/**
+ * Keeps the original deadline unless it has passed, in which case new terms are
+ * required. A card invoice has no deadline unless terms are given, which turns
+ * the replacement into a send-invoice one.
+ */
+const resolveCollection = ({
 	stripeInvoice,
 	netTermsDays,
 	nowMs,
@@ -135,8 +144,17 @@ const resolveDueDate = ({
 	stripeInvoice: Stripe.Invoice;
 	netTermsDays?: number;
 	nowMs: number;
-}): { dueDate?: number; daysUntilDue?: number } => {
-	if (netTermsDays) return { daysUntilDue: netTermsDays };
+}): {
+	collectionMethod: "send_invoice" | "charge_automatically";
+	dueDate?: number;
+	daysUntilDue?: number;
+} => {
+	if (netTermsDays) {
+		return { collectionMethod: "send_invoice", daysUntilDue: netTermsDays };
+	}
+	if (stripeInvoice.collection_method === "charge_automatically") {
+		return { collectionMethod: "charge_automatically" };
+	}
 
 	const dueDateMs = stripeInvoice.due_date
 		? secondsToMs(stripeInvoice.due_date)
@@ -146,7 +164,10 @@ const resolveDueDate = ({
 			"The original invoice is already past due; pass net_terms_days to give the replacement a new due date",
 		);
 	}
-	return { dueDate: stripeInvoice.due_date ?? undefined };
+	return {
+		collectionMethod: "send_invoice",
+		dueDate: stripeInvoice.due_date ?? undefined,
+	};
 };
 
 const stripeLinesToAddLineParams = ({
@@ -212,6 +233,7 @@ const createReplacementDraft = async ({
 	stripeCli,
 	stripeInvoice,
 	template,
+	collectionMethod,
 	dueDate,
 	daysUntilDue,
 	paymentMethodTypes,
@@ -226,6 +248,7 @@ const createReplacementDraft = async ({
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
 	template?: InvoiceTemplate;
+	collectionMethod: "send_invoice" | "charge_automatically";
 	dueDate?: number;
 	daysUntilDue?: number;
 	paymentMethodTypes?: string[];
@@ -273,7 +296,7 @@ const createReplacementDraft = async ({
 		stripeCusId,
 		stripeSubId,
 		currency: stripeSubId ? undefined : stripeInvoice.currency,
-		collectionMethod: "send_invoice",
+		collectionMethod,
 		dueDate,
 		daysUntilDue,
 		footer: overrideOrInherit({
@@ -357,6 +380,7 @@ const previewReplacementDraft = async ({
 	stripeCli,
 	stripeInvoice,
 	template,
+	collectionMethod,
 	dueDate,
 	daysUntilDue,
 	overrides,
@@ -371,6 +395,7 @@ const previewReplacementDraft = async ({
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
 	template?: InvoiceTemplate;
+	collectionMethod: "send_invoice" | "charge_automatically";
 	dueDate?: number;
 	daysUntilDue?: number;
 	overrides?: ReissueInvoiceOverrides;
@@ -386,6 +411,7 @@ const previewReplacementDraft = async ({
 		stripeCli,
 		stripeInvoice,
 		template,
+		collectionMethod,
 		dueDate,
 		daysUntilDue,
 		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
@@ -423,6 +449,7 @@ const issueReplacement = async ({
 	invoiceId,
 	stripeInvoice,
 	template,
+	collectionMethod,
 	dueDate,
 	daysUntilDue,
 	overrides,
@@ -437,6 +464,7 @@ const issueReplacement = async ({
 	invoiceId: string;
 	stripeInvoice: Stripe.Invoice;
 	template?: InvoiceTemplate;
+	collectionMethod: "send_invoice" | "charge_automatically";
 	dueDate?: number;
 	daysUntilDue?: number;
 	overrides?: ReissueInvoiceOverrides;
@@ -452,6 +480,7 @@ const issueReplacement = async ({
 		stripeCli,
 		stripeInvoice,
 		template,
+		collectionMethod,
 		dueDate,
 		daysUntilDue,
 		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
@@ -817,7 +846,7 @@ export const reissueInvoice = async ({
 		throw invalidRequest(`Invoice template ${invoiceTemplateId} not found`);
 	}
 
-	const { dueDate, daysUntilDue } = resolveDueDate({
+	const { collectionMethod, dueDate, daysUntilDue } = resolveCollection({
 		stripeInvoice,
 		netTermsDays,
 		nowMs: Date.now(),
@@ -853,6 +882,7 @@ export const reissueInvoice = async ({
 				stripeCli,
 				stripeInvoice,
 				template,
+				collectionMethod,
 				dueDate,
 				daysUntilDue,
 				overrides: invoiceOverrides,
@@ -890,6 +920,7 @@ export const reissueInvoice = async ({
 		invoiceId,
 		stripeInvoice,
 		template,
+		collectionMethod,
 		dueDate,
 		daysUntilDue,
 		overrides: invoiceOverrides,
