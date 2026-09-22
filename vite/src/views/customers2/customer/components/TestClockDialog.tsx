@@ -27,7 +27,7 @@ export function TestClockDialog({
 	const axios = useAxiosInstance();
 	const advanceClock = useMutation({
 		mutationFn: (target: number) =>
-			axios.post("/v1/billing.advance_test_clock", {
+			axios.post("/v1/customers.advance_test_clock", {
 				customer_id: customer.id || customer.internal_id,
 				frozen_time: target,
 			}),

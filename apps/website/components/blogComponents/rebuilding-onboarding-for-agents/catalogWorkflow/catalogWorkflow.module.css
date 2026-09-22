@@ -1,0 +1,197 @@
+.diagram {
+	container-type: inline-size;
+	--workflow-border: #292929;
+	--workflow-surface: #151515;
+	--workflow-accent: #b08aff;
+	width: 100%;
+	margin: 36px 0;
+	color: #d4d4d4;
+	font-family: var(--font-geist-sans), Arial, sans-serif;
+}
+
+.steps {
+	--workflow-unit: min(1px, calc(100cqw / 686));
+	--workflow-gap: calc(18 * var(--workflow-unit));
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: var(--workflow-gap);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* Article typography also targets descendants inside not-prose figures. */
+.diagram .steps .step {
+	position: relative;
+	min-width: 0;
+	margin: 0;
+	padding: calc(12 * var(--workflow-unit));
+	border: 1px solid var(--workflow-border);
+	border-radius: calc(4 * var(--workflow-unit));
+	background: var(--workflow-surface);
+	font-size: calc(12 * var(--workflow-unit));
+	font-weight: 400;
+	line-height: 1.5;
+}
+
+.step:not(:last-child)::after {
+	position: absolute;
+	top: 50%;
+	right: calc((var(--workflow-gap) + 14 * var(--workflow-unit)) / -2);
+	display: grid;
+	place-items: center;
+	width: calc(14 * var(--workflow-unit));
+	height: calc(20 * var(--workflow-unit));
+	transform: translateY(-50%);
+	color: #777777;
+	content: "→";
+	font-size: calc(13 * var(--workflow-unit));
+	line-height: 1;
+}
+
+.diagram .heading {
+	display: flex;
+	align-items: center;
+	gap: calc(7 * var(--workflow-unit));
+	margin: 0 0 calc(16 * var(--workflow-unit));
+	padding: 0;
+	color: #eeeeee;
+	font-size: calc(13 * var(--workflow-unit));
+	font-weight: 500;
+	line-height: calc(20 * var(--workflow-unit));
+	white-space: nowrap;
+}
+
+.stepNumber {
+	display: grid;
+	place-items: center;
+	width: calc(16 * var(--workflow-unit));
+	height: calc(16 * var(--workflow-unit));
+	flex-shrink: 0;
+	border: 1px solid #9564ff33;
+	border-radius: calc(3 * var(--workflow-unit));
+	background: #9564ff14;
+	color: var(--workflow-accent);
+	font-size: calc(10 * var(--workflow-unit));
+	font-weight: 400;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+}
+
+.content {
+	display: flex;
+	min-height: calc(64 * var(--workflow-unit));
+	align-items: center;
+}
+
+.content > * {
+	width: 100%;
+}
+.accent {
+	color: var(--workflow-accent);
+}
+
+.textRows {
+	display: grid;
+	gap: calc(12 * var(--workflow-unit));
+	font-size: calc(13 * var(--workflow-unit));
+	line-height: 1.5;
+}
+
+.agentSteps {
+	grid-template-columns: 1.05fr 1.12fr 0.85fr;
+}
+.agentSteps .heading {
+	font-size: calc(13 * var(--workflow-unit));
+}
+.agentSteps .content {
+	min-height: calc(148 * var(--workflow-unit));
+}
+.conversation {
+	display: grid;
+	gap: calc(10 * var(--workflow-unit));
+}
+.message {
+	max-width: 93%;
+	padding: calc(8 * var(--workflow-unit));
+	border: 1px solid var(--workflow-border);
+	border-radius: calc(5 * var(--workflow-unit));
+	background: #0f0f0f;
+}
+.diagram .steps .message p {
+	margin: 0;
+	font-size: calc(12 * var(--workflow-unit));
+	line-height: 1.5;
+}
+.userMessage {
+	justify-self: end;
+	border-color: #9564ff33;
+}
+.config {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	color: #cccccc;
+	font-size: calc(12 * var(--workflow-unit));
+	line-height: calc(21 * var(--workflow-unit));
+	white-space: pre;
+}
+.config code {
+	padding: 0;
+	background: none;
+	border: 0;
+	font: inherit;
+	font-family: var(--font-geist-mono), monospace;
+}
+.comment {
+	display: block;
+	margin-bottom: calc(12 * var(--workflow-unit));
+	padding-bottom: calc(10 * var(--workflow-unit));
+	border-bottom: 1px solid #292929;
+	color: #888888;
+	font-size: calc(11 * var(--workflow-unit));
+}
+.command {
+	color: #ededed;
+	font-family: var(--font-geist-mono), monospace;
+	font-size: calc(12 * var(--workflow-unit));
+}
+.command > span {
+	color: #777777;
+}
+.syncedPlans {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: calc(8 * var(--workflow-unit));
+	margin-top: calc(15 * var(--workflow-unit));
+}
+.syncedPlan {
+	padding: calc(9 * var(--workflow-unit));
+	border: 1px solid var(--workflow-border);
+	border-radius: calc(4 * var(--workflow-unit));
+	background: #0f0f0f;
+	font-size: calc(11 * var(--workflow-unit));
+}
+.planLines {
+	display: grid;
+	gap: calc(5 * var(--workflow-unit));
+	margin-top: calc(10 * var(--workflow-unit));
+}
+.planLines::before,
+.planLines::after {
+	content: "";
+	height: calc(2 * var(--workflow-unit));
+	width: 90%;
+	background: #4b4454;
+}
+.planLines::after {
+	width: 60%;
+}
+.synced {
+	margin-top: calc(12 * var(--workflow-unit));
+	color: var(--workflow-accent);
+	font-size: calc(11 * var(--workflow-unit));
+	white-space: nowrap;
+}

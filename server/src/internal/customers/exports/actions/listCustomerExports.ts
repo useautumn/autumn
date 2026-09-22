@@ -46,7 +46,12 @@ export const listCustomerExports = async ({
 	ctx: AutumnContext;
 	query: ListCustomerExportsQuery;
 }): Promise<ListCustomerExportsResponse> => {
-	const scope = { db: ctx.db, orgId: ctx.org.id, env: ctx.env };
+	const scope = {
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		kind: query.kind,
+	};
 
 	const [customerExports, total] = await Promise.all([
 		CustomerExportService.list({

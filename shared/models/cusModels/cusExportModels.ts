@@ -23,6 +23,16 @@ export const isCustomerExportActive = (customerExport: {
 		(status) => status === customerExport.status,
 	);
 
+export const CustomerExportKind = {
+	Customers: "customers",
+	BillingVerify: "billing_verify",
+} as const;
+
+export type CustomerExportKind =
+	(typeof CustomerExportKind)[keyof typeof CustomerExportKind];
+
+export const CustomerExportKindSchema = z.enum(CustomerExportKind);
+
 export const CustomerExportField = {
 	Name: "name",
 	Email: "email",
@@ -76,4 +86,20 @@ export const CustomerExportSnapshotSchema = z.object({
 
 export type CustomerExportSnapshot = z.infer<
 	typeof CustomerExportSnapshotSchema
+>;
+
+export const BILLING_VERIFY_EXPORT_COLUMNS = [
+	{ key: "customer_id", header: "Customer ID" },
+	{ key: "name", header: "Name" },
+	{ key: "email", header: "Email" },
+	{ key: "stripe_customer_id", header: "Stripe Customer ID" },
+	{ key: "stripe_subscription_id", header: "Stripe Subscription ID" },
+	{ key: "severity", header: "Severity" },
+	{ key: "type", header: "Issue" },
+	{ key: "message", header: "Details" },
+] as const;
+
+export type BillingVerifyExportRow = Record<
+	(typeof BILLING_VERIFY_EXPORT_COLUMNS)[number]["key"],
+	string | null
 >;

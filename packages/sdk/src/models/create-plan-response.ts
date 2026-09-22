@@ -11,6 +11,10 @@ import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
 import {
+  CreatePlanPriceResponse,
+  CreatePlanPriceResponse$inboundSchema,
+} from "./create-plan-item-tier-additional-currency-response.js";
+import {
   CreatePlanBasePriceResponse,
   CreatePlanBasePriceResponse$inboundSchema,
   CreatePlanBillingControlsResponse,
@@ -19,10 +23,6 @@ import {
   CreatePlanConfigResponse$inboundSchema,
   CreatePlanCustomerEligibility,
   CreatePlanCustomerEligibility$inboundSchema,
-  CreatePlanDimensionsUpsertLicense3,
-  CreatePlanDimensionsUpsertLicense3$inboundSchema,
-  CreatePlanDimensionsUpsertLicense4,
-  CreatePlanDimensionsUpsertLicense4$inboundSchema,
   CreatePlanEnv,
   CreatePlanEnv$inboundSchema,
   CreatePlanFreeTrialParams,
@@ -39,24 +39,141 @@ import {
   CreatePlanProcessors$inboundSchema,
   CreatePlanUpsertLicenseBasePrice,
   CreatePlanUpsertLicenseBasePrice$inboundSchema,
+  CreatePlanUpsertLicenseOnDecrease,
+  CreatePlanUpsertLicenseOnDecrease$inboundSchema,
+  CreatePlanUpsertLicenseOnIncrease,
+  CreatePlanUpsertLicenseOnIncrease$inboundSchema,
   CreatePlanUpsertLicensePrice,
   CreatePlanUpsertLicensePrice$inboundSchema,
-  CreatePlanUpsertLicenseProration,
-  CreatePlanUpsertLicenseProration$inboundSchema,
   CreatePlanUpsertLicenseReset,
   CreatePlanUpsertLicenseReset$inboundSchema,
-  CreatePlanUpsertLicenseRollover,
-  CreatePlanUpsertLicenseRollover$inboundSchema,
   CreatePlanUpsertLicenseThresholdBilling,
   CreatePlanUpsertLicenseThresholdBilling$inboundSchema,
   CreatePlanVariantDetailsBillingControls,
   CreatePlanVariantDetailsBillingControls$inboundSchema,
-} from "./create-plan-dimensions-upsert-license-3.js";
-import {
-  CreatePlanPriceResponse,
-  CreatePlanPriceResponse$inboundSchema,
-} from "./create-plan-item-billing-method-response.js";
+} from "./create-plan-upsert-license-on-decrease.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+/**
+ * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+ */
+export type CreatePlanUpsertLicenseProration = {
+  /**
+   * Billing behavior when quantity increases mid-cycle.
+   */
+  onIncrease: CreatePlanUpsertLicenseOnIncrease;
+  /**
+   * Credit behavior when quantity decreases mid-cycle.
+   */
+  onDecrease: CreatePlanUpsertLicenseOnDecrease;
+};
+
+/**
+ * When rolled over units expire.
+ */
+export const CreatePlanUpsertLicenseExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type CreatePlanUpsertLicenseExpiryDurationType = OpenEnum<
+  typeof CreatePlanUpsertLicenseExpiryDurationType
+>;
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type CreatePlanUpsertLicenseRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
+  max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: CreatePlanUpsertLicenseExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
+
+export const CreatePlanUpsertLicenseDuration = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+export type CreatePlanUpsertLicenseDuration = OpenEnum<
+  typeof CreatePlanUpsertLicenseDuration
+>;
+
+/**
+ * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+ */
+export type CreatePlanUpsertLicenseExpiry = {
+  duration: CreatePlanUpsertLicenseDuration;
+  length: number;
+};
+
+export type CreatePlanDimensionsUpsertLicense4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CreatePlanDimensionsToUpsertLicenseEnum2 = {
+  Inf: "inf",
+} as const;
+export type CreatePlanDimensionsToUpsertLicenseEnum2 = ClosedEnum<
+  typeof CreatePlanDimensionsToUpsertLicenseEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CreatePlanDimensionsUpsertLicenseToUnion2 =
+  | number
+  | CreatePlanDimensionsToUpsertLicenseEnum2;
+
+export type CreatePlanDimensionsUpsertLicenseTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CreatePlanDimensionsToUpsertLicenseEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CreatePlanDimensionsUpsertLicense3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CreatePlanDimensionsUpsertLicenseTier2>;
+};
 
 export type CreatePlanUpsertLicenseDimensionsUnion2 =
   | CreatePlanDimensionsUpsertLicense3
@@ -328,6 +445,10 @@ export type CreatePlanUpsertLicensePlanItem = {
    */
   rollover?: CreatePlanUpsertLicenseRollover | undefined;
   /**
+   * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+   */
+  expiry?: CreatePlanUpsertLicenseExpiry | undefined;
+  /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
   featureOverride?: CreatePlanUpsertLicenseFeatureOverride | undefined;
@@ -569,10 +690,215 @@ export type CreatePlanResponse = {
 };
 
 /** @internal */
+export const CreatePlanUpsertLicenseProration$inboundSchema: z.ZodMiniType<
+  CreatePlanUpsertLicenseProration,
+  unknown
+> = z.pipe(
+  z.object({
+    on_increase: CreatePlanUpsertLicenseOnIncrease$inboundSchema,
+    on_decrease: CreatePlanUpsertLicenseOnDecrease$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "on_increase": "onIncrease",
+      "on_decrease": "onDecrease",
+    });
+  }),
+);
+
+export function createPlanUpsertLicenseProrationFromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanUpsertLicenseProration, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreatePlanUpsertLicenseProration$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanUpsertLicenseProration' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreatePlanUpsertLicenseExpiryDurationType$inboundSchema:
+  z.ZodMiniType<CreatePlanUpsertLicenseExpiryDurationType, unknown> = openEnums
+    .inboundSchema(CreatePlanUpsertLicenseExpiryDurationType);
+
+/** @internal */
+export const CreatePlanUpsertLicenseRollover$inboundSchema: z.ZodMiniType<
+  CreatePlanUpsertLicenseRollover,
+  unknown
+> = z.pipe(
+  z.object({
+    max: types.optional(types.number()),
+    max_percentage: types.optional(types.number()),
+    expiry_duration_type:
+      CreatePlanUpsertLicenseExpiryDurationType$inboundSchema,
+    expiry_duration_length: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "max_percentage": "maxPercentage",
+      "expiry_duration_type": "expiryDurationType",
+      "expiry_duration_length": "expiryDurationLength",
+    });
+  }),
+);
+
+export function createPlanUpsertLicenseRolloverFromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanUpsertLicenseRollover, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreatePlanUpsertLicenseRollover$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanUpsertLicenseRollover' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreatePlanUpsertLicenseDuration$inboundSchema: z.ZodMiniType<
+  CreatePlanUpsertLicenseDuration,
+  unknown
+> = openEnums.inboundSchema(CreatePlanUpsertLicenseDuration);
+
+/** @internal */
+export const CreatePlanUpsertLicenseExpiry$inboundSchema: z.ZodMiniType<
+  CreatePlanUpsertLicenseExpiry,
+  unknown
+> = z.object({
+  duration: CreatePlanUpsertLicenseDuration$inboundSchema,
+  length: types.number(),
+});
+
+export function createPlanUpsertLicenseExpiryFromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanUpsertLicenseExpiry, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreatePlanUpsertLicenseExpiry$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanUpsertLicenseExpiry' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreatePlanDimensionsUpsertLicense4$inboundSchema: z.ZodMiniType<
+  CreatePlanDimensionsUpsertLicense4,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createPlanDimensionsUpsertLicense4FromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanDimensionsUpsertLicense4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanDimensionsUpsertLicense4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanDimensionsUpsertLicense4' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreatePlanDimensionsToUpsertLicenseEnum2$inboundSchema:
+  z.ZodMiniEnum<typeof CreatePlanDimensionsToUpsertLicenseEnum2> = z.enum(
+    CreatePlanDimensionsToUpsertLicenseEnum2,
+  );
+
+/** @internal */
+export const CreatePlanDimensionsUpsertLicenseToUnion2$inboundSchema:
+  z.ZodMiniType<CreatePlanDimensionsUpsertLicenseToUnion2, unknown> =
+    smartUnion([
+      types.number(),
+      CreatePlanDimensionsToUpsertLicenseEnum2$inboundSchema,
+    ]);
+
+export function createPlanDimensionsUpsertLicenseToUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<
+  CreatePlanDimensionsUpsertLicenseToUnion2,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanDimensionsUpsertLicenseToUnion2$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'CreatePlanDimensionsUpsertLicenseToUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreatePlanDimensionsUpsertLicenseTier2$inboundSchema:
+  z.ZodMiniType<CreatePlanDimensionsUpsertLicenseTier2, unknown> = z.pipe(
+    z.object({
+      to: smartUnion([
+        types.number(),
+        CreatePlanDimensionsToUpsertLicenseEnum2$inboundSchema,
+      ]),
+      credit_cost: types.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "credit_cost": "creditCost",
+      });
+    }),
+  );
+
+export function createPlanDimensionsUpsertLicenseTier2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanDimensionsUpsertLicenseTier2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanDimensionsUpsertLicenseTier2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanDimensionsUpsertLicenseTier2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreatePlanDimensionsUpsertLicense3$inboundSchema: z.ZodMiniType<
+  CreatePlanDimensionsUpsertLicense3,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => CreatePlanDimensionsUpsertLicenseTier2$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function createPlanDimensionsUpsertLicense3FromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanDimensionsUpsertLicense3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanDimensionsUpsertLicense3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanDimensionsUpsertLicense3' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreatePlanUpsertLicenseDimensionsUnion2$inboundSchema:
   z.ZodMiniType<CreatePlanUpsertLicenseDimensionsUnion2, unknown> = smartUnion([
-    CreatePlanDimensionsUpsertLicense3$inboundSchema,
-    CreatePlanDimensionsUpsertLicense4$inboundSchema,
+    z.lazy(() => CreatePlanDimensionsUpsertLicense3$inboundSchema),
+    z.lazy(() => CreatePlanDimensionsUpsertLicense4$inboundSchema),
   ]);
 
 export function createPlanUpsertLicenseDimensionsUnion2FromJSON(
@@ -620,15 +946,13 @@ export const CreatePlanCreditSchemaUpsertLicense2$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
-    dimensions: types.optional(
-      z.record(
-        z.string(),
-        smartUnion([
-          CreatePlanDimensionsUpsertLicense3$inboundSchema,
-          CreatePlanDimensionsUpsertLicense4$inboundSchema,
-        ]),
-      ),
-    ),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => CreatePlanDimensionsUpsertLicense3$inboundSchema),
+        z.lazy(() => CreatePlanDimensionsUpsertLicense4$inboundSchema),
+      ]),
+    )),
     multipliers: types.optional(z.record(
       z.string(),
       z.lazy(() => CreatePlanUpsertLicenseMultipliers2$inboundSchema),
@@ -1072,8 +1396,15 @@ export const CreatePlanUpsertLicensePlanItem$inboundSchema: z.ZodMiniType<
     pooled: z._default(types.boolean(), false),
     reset: types.optional(CreatePlanUpsertLicenseReset$inboundSchema),
     price: types.optional(CreatePlanUpsertLicensePrice$inboundSchema),
-    proration: types.optional(CreatePlanUpsertLicenseProration$inboundSchema),
-    rollover: types.optional(CreatePlanUpsertLicenseRollover$inboundSchema),
+    proration: types.optional(
+      z.lazy(() => CreatePlanUpsertLicenseProration$inboundSchema),
+    ),
+    rollover: types.optional(
+      z.lazy(() => CreatePlanUpsertLicenseRollover$inboundSchema),
+    ),
+    expiry: types.optional(
+      z.lazy(() => CreatePlanUpsertLicenseExpiry$inboundSchema),
+    ),
     feature_override: types.optional(
       z.lazy(() => CreatePlanUpsertLicenseFeatureOverride$inboundSchema),
     ),

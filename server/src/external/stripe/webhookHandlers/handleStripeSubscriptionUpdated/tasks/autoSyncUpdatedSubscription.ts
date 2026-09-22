@@ -8,6 +8,7 @@ import { billingActions } from "@/internal/billing/v2/actions";
 import { canAutoSync } from "@/internal/billing/v2/actions/sync/canAutoSync/index.js";
 import { buildIncrementalSyncParams } from "@/internal/billing/v2/actions/sync/scope/buildIncrementalSyncParams.js";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams";
+import { logAutoSyncSkip } from "@/internal/billing/v2/actions/sync/utils/logAutoSyncSkip";
 import { isAutumnManagedSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
@@ -137,9 +138,13 @@ export const autoSyncUpdatedSubscription = async ({
 
 	const eligibility = canAutoSync({ match });
 	if (!eligibility.eligible) {
-		logger.info(
-			`sub.updated auto-sync skipping ${stripeSubscription.id}: ${eligibility.reason} - ${eligibility.details}`,
-		);
+		logAutoSyncSkip({
+			logger,
+			source: "sub.updated",
+			stripeSubscriptionId: stripeSubscription.id,
+			reason: eligibility.reason,
+			details: eligibility.details,
+		});
 		return;
 	}
 
@@ -149,9 +154,12 @@ export const autoSyncUpdatedSubscription = async ({
 		linkedCustomerProducts,
 	});
 	if (!incremental.shouldSync) {
-		logger.info(
-			`sub.updated auto-sync skipping ${stripeSubscription.id}: ${incremental.reason}`,
-		);
+		logAutoSyncSkip({
+			logger,
+			source: "sub.updated",
+			stripeSubscriptionId: stripeSubscription.id,
+			reason: incremental.reason,
+		});
 		return;
 	}
 

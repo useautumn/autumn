@@ -139,6 +139,8 @@ class CreateRewardCouponRequestTypedDict(TypedDict):
     type: CouponTypeRequestBody
     value: float
     r"""Percentage discounts must be at most 100; fixed discounts must be positive."""
+    internal_id: NotRequired[str]
+    r"""Address an existing reward by its stable id. Omit when creating — the server generates one."""
 
 
 class CreateRewardCouponRequest(BaseModel):
@@ -162,17 +164,31 @@ class CreateRewardCouponRequest(BaseModel):
     value: float
     r"""Percentage discounts must be at most 100; fixed discounts must be positive."""
 
+    internal_id: Optional[str] = None
+    r"""Address an existing reward by its stable id. Omit when creating — the server generates one."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
+        optional_fields = set(["internal_id"])
+        nullable_fields = set(["plan_ids"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                m[k] = val
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
 
         return m
 
@@ -186,14 +202,14 @@ CreateRewardExpiryTypeRequestBody = Literal[
 r"""The unit of time the grant lasts."""
 
 
-class CreateRewardExpiryRequestTypedDict(TypedDict):
+class CreateRewardExpiryRequestBodyTypedDict(TypedDict):
     type: CreateRewardExpiryTypeRequestBody
     r"""The unit of time the grant lasts."""
     length: int
     r"""The positive integer count of periods before the grant expires."""
 
 
-class CreateRewardExpiryRequest(BaseModel):
+class CreateRewardExpiryRequestBody(BaseModel):
     type: CreateRewardExpiryTypeRequestBody
     r"""The unit of time the grant lasts."""
 
@@ -205,7 +221,7 @@ class CreateRewardGrantTypedDict(TypedDict):
     feature_id: str
     included: Nullable[float]
     r"""A non-negative amount to grant, or null for boolean features."""
-    expiry: Nullable[CreateRewardExpiryRequestTypedDict]
+    expiry: Nullable[CreateRewardExpiryRequestBodyTypedDict]
 
 
 class CreateRewardGrant(BaseModel):
@@ -214,7 +230,7 @@ class CreateRewardGrant(BaseModel):
     included: Nullable[float]
     r"""A non-negative amount to grant, or null for boolean features."""
 
-    expiry: Nullable[CreateRewardExpiryRequest]
+    expiry: Nullable[CreateRewardExpiryRequestBody]
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -267,6 +283,8 @@ class CreateRewardFeatureGrantRequestTypedDict(TypedDict):
     r"""Feature IDs must be unique."""
     promo_codes: List[CreateRewardFeatureGrantPromoCodeTypedDict]
     r"""Promo code values must be unique."""
+    internal_id: NotRequired[str]
+    r"""Address an existing reward by its stable id. Omit when creating — the server generates one."""
 
 
 class CreateRewardFeatureGrantRequest(BaseModel):
@@ -281,6 +299,25 @@ class CreateRewardFeatureGrantRequest(BaseModel):
 
     promo_codes: List[CreateRewardFeatureGrantPromoCode]
     r"""Promo code values must be unique."""
+
+    internal_id: Optional[str] = None
+    r"""Address an existing reward by its stable id. Omit when creating — the server generates one."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["internal_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 class CreateRewardParamsTypedDict(TypedDict):

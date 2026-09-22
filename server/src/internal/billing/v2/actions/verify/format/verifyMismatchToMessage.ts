@@ -112,6 +112,8 @@ const describe = (mismatch: SubscriptionMismatch): string => {
 	switch (mismatch.type) {
 		case "stripe_sub_not_in_autumn":
 			return "Active Stripe subscription has no linked Autumn products";
+		case "plan_on_ending_subscription":
+			return `Active Stripe subscription is unlinked while the customer's plan is linked to ${mismatch.ending_subscription_id}, which is ending — the customer loses the plan when it ends`;
 		case "stale_subscription_link":
 			return "Autumn products link to a Stripe subscription that is not in the customer's active set";
 		case "expected_state_error":

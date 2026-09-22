@@ -26,15 +26,17 @@ const toPercent = ({
 
 export function CustomerExportActiveProgress({
 	activeExport,
+	runningLabel,
 }: {
 	activeExport: CustomerExportResponse | undefined;
+	runningLabel: string;
 }) {
 	const shouldReduceMotion = useReducedMotion();
 
 	const progress = activeExport?.progress;
 	const percent = progress ? toPercent(progress) : 0;
 	const label =
-		activeExport?.status === "queued" ? "Export queued" : "Exporting customers";
+		activeExport?.status === "queued" ? "Export queued" : runningLabel;
 
 	return (
 		<AnimatePresence initial={false}>

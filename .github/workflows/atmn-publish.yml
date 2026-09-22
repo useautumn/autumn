@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "packages/atmn/**"
+      - "packages/atmn-generator/**"
+      - "packages/agent-docs/**"
+      - "packages/openapi/**"
+      - "shared/**"
+      - "apps/docs/mintlify/**"
 
   workflow_dispatch:
     inputs:

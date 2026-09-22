@@ -89,7 +89,7 @@ GetCustomerEnv = Union[
 r"""The environment this customer was created in."""
 
 
-GetCustomerPurchaseLimitInterval2 = Union[
+GetCustomerAutoTopupInterval2 = Union[
     Literal[
         "hour",
         "day",
@@ -102,7 +102,7 @@ r"""The time interval for the purchase limit window."""
 
 
 class GetCustomerPurchaseLimit2TypedDict(TypedDict):
-    interval: GetCustomerPurchaseLimitInterval2
+    interval: GetCustomerAutoTopupInterval2
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -111,7 +111,7 @@ class GetCustomerPurchaseLimit2TypedDict(TypedDict):
 
 
 class GetCustomerPurchaseLimit2(BaseModel):
-    interval: GetCustomerPurchaseLimitInterval2
+    interval: GetCustomerAutoTopupInterval2
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -137,7 +137,7 @@ class GetCustomerPurchaseLimit2(BaseModel):
         return m
 
 
-GetCustomerPurchaseLimitInterval1 = Union[
+GetCustomerAutoTopupInterval1 = Union[
     Literal[
         "hour",
         "day",
@@ -149,7 +149,7 @@ GetCustomerPurchaseLimitInterval1 = Union[
 
 
 class GetCustomerPurchaseLimit1TypedDict(TypedDict):
-    interval: Nullable[GetCustomerPurchaseLimitInterval1]
+    interval: Nullable[GetCustomerAutoTopupInterval1]
     r"""The time interval for the purchase limit window. Null when no purchase limit is configured."""
     interval_count: Nullable[float]
     r"""Number of intervals in the purchase limit window. Null when no purchase limit is configured."""
@@ -162,7 +162,7 @@ class GetCustomerPurchaseLimit1TypedDict(TypedDict):
 
 
 class GetCustomerPurchaseLimit1(BaseModel):
-    interval: Nullable[GetCustomerPurchaseLimitInterval1]
+    interval: Nullable[GetCustomerAutoTopupInterval1]
     r"""The time interval for the purchase limit window. Null when no purchase limit is configured."""
 
     interval_count: Nullable[float]
@@ -410,7 +410,7 @@ class GetCustomerUsageLimitTypedDict(TypedDict):
     filter_: NotRequired[GetCustomerUsageLimitFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
-    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
     source: NotRequired[GetCustomerUsageLimitSource]
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
@@ -437,7 +437,7 @@ class GetCustomerUsageLimit(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     usage: Optional[float] = None
-    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+    r"""Usage consumed in the active interval, stored in the usage-window counter."""
 
     source: Optional[GetCustomerUsageLimitSource] = None
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
@@ -1731,8 +1731,6 @@ class GetCustomerFeatureTypedDict(TypedDict):
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[GetCustomerCreditSchemaUnionTypedDict]]
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
-    invoice_credit: NotRequired[bool]
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
     model_markups: NotRequired[Nullable[Dict[str, GetCustomerModelMarkupsTypedDict]]]
     r"""Per-model markup overrides for AI credit systems."""
     default_markup: NotRequired[float]
@@ -1771,9 +1769,6 @@ class GetCustomerFeature(BaseModel):
     credit_schema: Optional[List[GetCustomerCreditSchemaUnion]] = None
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
 
-    invoice_credit: Optional[bool] = None
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
-
     model_markups: OptionalNullable[Dict[str, GetCustomerModelMarkups]] = UNSET
     r"""Per-model markup overrides for AI credit systems."""
 
@@ -1795,7 +1790,6 @@ class GetCustomerFeature(BaseModel):
             [
                 "event_names",
                 "credit_schema",
-                "invoice_credit",
                 "model_markups",
                 "default_markup",
                 "provider_markups",

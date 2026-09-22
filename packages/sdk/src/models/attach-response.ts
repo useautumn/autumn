@@ -23,14 +23,6 @@ import {
   AttachCustomizeFreeTrialParams,
   AttachCustomizeFreeTrialParams$Outbound,
   AttachCustomizeFreeTrialParams$outboundSchema,
-  AttachDimensionsToUpsertLicenseEnum2,
-  AttachDimensionsToUpsertLicenseEnum2$outboundSchema,
-  AttachDimensionsUpsertLicense4,
-  AttachDimensionsUpsertLicense4$Outbound,
-  AttachDimensionsUpsertLicense4$outboundSchema,
-  AttachDimensionsUpsertLicenseMatch3,
-  AttachDimensionsUpsertLicenseMatch3$Outbound,
-  AttachDimensionsUpsertLicenseMatch3$outboundSchema,
   AttachFeatureQuantity,
   AttachFeatureQuantity$Outbound,
   AttachFeatureQuantity$outboundSchema,
@@ -61,8 +53,52 @@ import {
   AttachUpsertLicenseThresholdBilling,
   AttachUpsertLicenseThresholdBilling$Outbound,
   AttachUpsertLicenseThresholdBilling$outboundSchema,
-} from "./attach-dimensions-to-upsert-license-enum-2.js";
+} from "./attach-upsert-license-rollover.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+export const AttachUpsertLicenseDuration = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+export type AttachUpsertLicenseDuration = ClosedEnum<
+  typeof AttachUpsertLicenseDuration
+>;
+
+/**
+ * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+ */
+export type AttachUpsertLicenseExpiry = {
+  duration: AttachUpsertLicenseDuration;
+  length: number;
+};
+
+export type AttachDimensionsUpsertLicenseMatch4 = string | number | boolean;
+
+export type AttachDimensionsUpsertLicense4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type AttachDimensionsUpsertLicenseMatch3 = string | number | boolean;
+
+export const AttachDimensionsToUpsertLicenseEnum2 = {
+  Inf: "inf",
+} as const;
+export type AttachDimensionsToUpsertLicenseEnum2 = ClosedEnum<
+  typeof AttachDimensionsToUpsertLicenseEnum2
+>;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
@@ -86,7 +122,7 @@ export type AttachDimensionsUpsertLicense3 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
-  match: { [k: string]: AttachDimensionsUpsertLicenseMatch3 };
+  match: { [k: string]: string | number | boolean };
   /**
    * Breaks ties between dimensions that match the same number of keys. Higher wins.
    */
@@ -365,6 +401,10 @@ export type AttachUpsertLicensePlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: AttachUpsertLicenseRollover | undefined;
+  /**
+   * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+   */
+  expiry?: AttachUpsertLicenseExpiry | undefined;
   /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
@@ -847,6 +887,120 @@ export type AttachResponse = {
 };
 
 /** @internal */
+export const AttachUpsertLicenseDuration$outboundSchema: z.ZodMiniEnum<
+  typeof AttachUpsertLicenseDuration
+> = z.enum(AttachUpsertLicenseDuration);
+
+/** @internal */
+export type AttachUpsertLicenseExpiry$Outbound = {
+  duration: string;
+  length: number;
+};
+
+/** @internal */
+export const AttachUpsertLicenseExpiry$outboundSchema: z.ZodMiniType<
+  AttachUpsertLicenseExpiry$Outbound,
+  AttachUpsertLicenseExpiry
+> = z.object({
+  duration: AttachUpsertLicenseDuration$outboundSchema,
+  length: z.number(),
+});
+
+export function attachUpsertLicenseExpiryToJSON(
+  attachUpsertLicenseExpiry: AttachUpsertLicenseExpiry,
+): string {
+  return JSON.stringify(
+    AttachUpsertLicenseExpiry$outboundSchema.parse(attachUpsertLicenseExpiry),
+  );
+}
+
+/** @internal */
+export type AttachDimensionsUpsertLicenseMatch4$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const AttachDimensionsUpsertLicenseMatch4$outboundSchema: z.ZodMiniType<
+  AttachDimensionsUpsertLicenseMatch4$Outbound,
+  AttachDimensionsUpsertLicenseMatch4
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function attachDimensionsUpsertLicenseMatch4ToJSON(
+  attachDimensionsUpsertLicenseMatch4: AttachDimensionsUpsertLicenseMatch4,
+): string {
+  return JSON.stringify(
+    AttachDimensionsUpsertLicenseMatch4$outboundSchema.parse(
+      attachDimensionsUpsertLicenseMatch4,
+    ),
+  );
+}
+
+/** @internal */
+export type AttachDimensionsUpsertLicense4$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const AttachDimensionsUpsertLicense4$outboundSchema: z.ZodMiniType<
+  AttachDimensionsUpsertLicense4$Outbound,
+  AttachDimensionsUpsertLicense4
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function attachDimensionsUpsertLicense4ToJSON(
+  attachDimensionsUpsertLicense4: AttachDimensionsUpsertLicense4,
+): string {
+  return JSON.stringify(
+    AttachDimensionsUpsertLicense4$outboundSchema.parse(
+      attachDimensionsUpsertLicense4,
+    ),
+  );
+}
+
+/** @internal */
+export type AttachDimensionsUpsertLicenseMatch3$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const AttachDimensionsUpsertLicenseMatch3$outboundSchema: z.ZodMiniType<
+  AttachDimensionsUpsertLicenseMatch3$Outbound,
+  AttachDimensionsUpsertLicenseMatch3
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function attachDimensionsUpsertLicenseMatch3ToJSON(
+  attachDimensionsUpsertLicenseMatch3: AttachDimensionsUpsertLicenseMatch3,
+): string {
+  return JSON.stringify(
+    AttachDimensionsUpsertLicenseMatch3$outboundSchema.parse(
+      attachDimensionsUpsertLicenseMatch3,
+    ),
+  );
+}
+
+/** @internal */
+export const AttachDimensionsToUpsertLicenseEnum2$outboundSchema: z.ZodMiniEnum<
+  typeof AttachDimensionsToUpsertLicenseEnum2
+> = z.enum(AttachDimensionsToUpsertLicenseEnum2);
+
+/** @internal */
 export type AttachDimensionsUpsertLicenseToUnion2$Outbound = number | string;
 
 /** @internal */
@@ -906,7 +1060,7 @@ export function attachDimensionsUpsertLicenseTier2ToJSON(
 
 /** @internal */
 export type AttachDimensionsUpsertLicense3$Outbound = {
-  match: { [k: string]: AttachDimensionsUpsertLicenseMatch3$Outbound };
+  match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   tier_behavior: "graduated";
   tiers: Array<AttachDimensionsUpsertLicenseTier2$Outbound>;
@@ -920,7 +1074,7 @@ export const AttachDimensionsUpsertLicense3$outboundSchema: z.ZodMiniType<
   z.object({
     match: z.record(
       z.string(),
-      AttachDimensionsUpsertLicenseMatch3$outboundSchema,
+      smartUnion([z.string(), z.number(), z.boolean()]),
     ),
     priority: z.optional(z.int()),
     tierBehavior: z.literal("graduated"),
@@ -956,7 +1110,7 @@ export const AttachUpsertLicenseDimensionsUnion2$outboundSchema: z.ZodMiniType<
   AttachUpsertLicenseDimensionsUnion2
 > = smartUnion([
   z.lazy(() => AttachDimensionsUpsertLicense3$outboundSchema),
-  AttachDimensionsUpsertLicense4$outboundSchema,
+  z.lazy(() => AttachDimensionsUpsertLicense4$outboundSchema),
 ]);
 
 export function attachUpsertLicenseDimensionsUnion2ToJSON(
@@ -1048,7 +1202,7 @@ export const AttachCreditSchemaUpsertLicense2$outboundSchema: z.ZodMiniType<
       z.string(),
       smartUnion([
         z.lazy(() => AttachDimensionsUpsertLicense3$outboundSchema),
-        AttachDimensionsUpsertLicense4$outboundSchema,
+        z.lazy(() => AttachDimensionsUpsertLicense4$outboundSchema),
       ]),
     )),
     multipliers: z.optional(z.record(
@@ -1644,6 +1798,7 @@ export type AttachUpsertLicensePlanItem$Outbound = {
   price?: AttachUpsertLicensePrice$Outbound | undefined;
   proration?: AttachUpsertLicenseProration$Outbound | undefined;
   rollover?: AttachUpsertLicenseRollover$Outbound | undefined;
+  expiry?: AttachUpsertLicenseExpiry$Outbound | undefined;
   feature_override?: AttachUpsertLicenseFeatureOverride$Outbound | undefined;
 };
 
@@ -1664,6 +1819,7 @@ export const AttachUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     price: z.optional(AttachUpsertLicensePrice$outboundSchema),
     proration: z.optional(AttachUpsertLicenseProration$outboundSchema),
     rollover: z.optional(AttachUpsertLicenseRollover$outboundSchema),
+    expiry: z.optional(z.lazy(() => AttachUpsertLicenseExpiry$outboundSchema)),
     featureOverride: z.optional(
       z.lazy(() => AttachUpsertLicenseFeatureOverride$outboundSchema),
     ),

@@ -29,6 +29,7 @@ export type RequestContext = {
 	features: Feature[];
 	user?: User;
 	userId?: string;
+	impersonatedBy?: string;
 	customerId?: string;
 	entityId?: string;
 	requestBody?: unknown;

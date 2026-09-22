@@ -78,6 +78,7 @@ export const ErrCode = {
 	InvalidPriceOptions: "invalid_price_options",
 	InvalidPriceConfig: "invalid_price_config",
 	CusPriceNotFound: "cus_price_not_found",
+	StripePriceNotLinked: "stripe_price_not_linked",
 
 	// Customer
 	InvalidCustomer: "invalid_customer",

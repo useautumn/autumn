@@ -1,0 +1,278 @@
+.diagram {
+	container-type: inline-size;
+	--diagram-accent: #b08aff;
+	--diagram-muted: #888888;
+	--diagram-border: #292929;
+	--diagram-surface: #151515;
+	--diagram-inset: #0f0f0f;
+	--diagram-accent-border: #9564ff33;
+	width: 100%;
+	margin: 28px 0;
+	overflow: hidden;
+	border: 1px solid var(--diagram-border);
+	border-radius: 10px;
+	background: var(--diagram-surface);
+	color: #d4d4d4;
+	font-family: var(--font-geist-sans), Arial, sans-serif;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.row {
+	/* Keep every detail proportional to the desktop drawing area. */
+	--diagram-unit: min(1px, calc(100cqw / 686));
+	font-size: calc(12 * var(--diagram-unit));
+}
+.row + .row {
+	border-top: 1px solid var(--diagram-border);
+}
+.rowContent {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	border-top: 1px solid var(--diagram-border);
+}
+.rowHeading {
+	padding: calc(14 * var(--diagram-unit)) calc(16 * var(--diagram-unit));
+}
+.partLabel {
+	display: inline-flex;
+	align-items: center;
+	flex-shrink: 0;
+	padding: calc(2 * var(--diagram-unit)) calc(6 * var(--diagram-unit));
+	border: 1px solid var(--diagram-accent-border);
+	border-radius: calc(4 * var(--diagram-unit));
+	background: #9564ff14;
+	color: var(--diagram-accent);
+	font-size: calc(11 * var(--diagram-unit));
+	font-weight: 500;
+	line-height: calc(16 * var(--diagram-unit));
+	white-space: nowrap;
+}
+.diagram .rowHeading h4 {
+	display: flex;
+	align-items: center;
+	gap: calc(10 * var(--diagram-unit));
+	margin: 0;
+	color: #eeeeee;
+	font-size: calc(14 * var(--diagram-unit));
+	font-weight: 500;
+	line-height: calc(20 * var(--diagram-unit));
+}
+.editor {
+	background: var(--diagram-inset);
+	min-width: 0;
+	border-right: 1px solid var(--diagram-border);
+}
+.comment {
+	color: var(--diagram-muted);
+}
+.diagram .code {
+	min-height: calc(134 * var(--diagram-unit));
+	margin: 0;
+	padding: calc(14 * var(--diagram-unit)) calc(15 * var(--diagram-unit))
+		calc(15 * var(--diagram-unit));
+	overflow-x: auto;
+	background: none;
+	font-family: var(--font-geist-mono), monospace;
+	font-size: calc(11 * var(--diagram-unit));
+	line-height: calc(18 * var(--diagram-unit));
+	tab-size: 2;
+}
+.code code {
+	display: block;
+	width: max-content;
+	min-width: 100%;
+	padding: 0;
+	font: inherit;
+	color: #cccccc;
+}
+.string {
+	color: var(--diagram-accent);
+}
+.number {
+	color: var(--diagram-accent);
+}
+.keyword {
+	color: var(--diagram-accent);
+}
+
+.catalogPreview,
+.integrationPreview {
+	min-height: calc(194 * var(--diagram-unit));
+	min-width: 0;
+	margin: 0;
+	padding: calc(14 * var(--diagram-unit)) calc(15 * var(--diagram-unit));
+}
+.planHeader {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	margin-bottom: calc(10 * var(--diagram-unit));
+}
+.diagram .planHeader strong {
+	color: #eeeeee;
+	font-size: calc(16 * var(--diagram-unit));
+	font-weight: 500;
+}
+.planHeader > span {
+	color: var(--diagram-muted);
+	font-size: calc(10 * var(--diagram-unit));
+}
+.planHeader b {
+	color: #eeeeee;
+	font-size: calc(13 * var(--diagram-unit));
+	font-weight: 500;
+}
+.memberGrid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: calc(6 * var(--diagram-unit));
+}
+.memberCard {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: calc(7 * var(--diagram-unit)) calc(3 * var(--diagram-unit));
+	border: 1px solid var(--diagram-border);
+	border-radius: calc(5 * var(--diagram-unit));
+	background: var(--diagram-inset);
+}
+.memberName {
+	color: var(--diagram-muted);
+	font-size: calc(10 * var(--diagram-unit));
+}
+.diagram .memberCard strong {
+	color: var(--diagram-accent);
+	font-size: calc(18 * var(--diagram-unit));
+	font-weight: 500;
+	line-height: calc(25 * var(--diagram-unit));
+	font-variant-numeric: tabular-nums;
+}
+.memberUnit {
+	color: var(--diagram-muted);
+	font-size: calc(9 * var(--diagram-unit));
+}
+.poolConnector {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	height: calc(17 * var(--diagram-unit));
+	padding-inline: 16%;
+}
+.poolConnector > span {
+	height: calc(9 * var(--diagram-unit));
+	border-bottom: 1px solid #777777;
+}
+.poolConnector > span:first-child {
+	border-left: 1px solid #777777;
+}
+.poolConnector > span:last-child {
+	border-right: 1px solid #777777;
+}
+.poolConnector > span:nth-child(2)::after {
+	display: block;
+	width: 50%;
+	height: calc(17 * var(--diagram-unit));
+	content: "";
+	border-right: 1px solid #777777;
+}
+.sharedPool {
+	display: flex;
+	align-items: center;
+	gap: calc(7 * var(--diagram-unit));
+	height: calc(32 * var(--diagram-unit));
+	padding: 0 calc(9 * var(--diagram-unit));
+	border: 1px solid var(--diagram-accent-border);
+	border-radius: calc(5 * var(--diagram-unit));
+	background: var(--diagram-inset);
+	color: #d4d4d4;
+	font-size: calc(10 * var(--diagram-unit));
+}
+.poolIcon {
+	color: var(--diagram-accent);
+	font-size: calc(16 * var(--diagram-unit));
+}
+.diagram .sharedPool strong {
+	margin-left: auto;
+	color: var(--diagram-accent);
+	font-family: var(--font-geist-mono), monospace;
+	font-size: calc(11 * var(--diagram-unit));
+	font-weight: 400;
+}
+
+.appHeader {
+	display: flex;
+	align-items: center;
+	gap: calc(7 * var(--diagram-unit));
+	padding-bottom: calc(9 * var(--diagram-unit));
+	border-bottom: 1px solid var(--diagram-border);
+}
+.orgIcon {
+	display: grid;
+	place-items: center;
+	width: calc(21 * var(--diagram-unit));
+	height: calc(21 * var(--diagram-unit));
+	border: 1px solid var(--diagram-border);
+	border-radius: calc(5 * var(--diagram-unit));
+	background: var(--diagram-inset);
+	color: var(--diagram-accent);
+	font-size: calc(11 * var(--diagram-unit));
+}
+.diagram .appHeader strong {
+	color: #eeeeee;
+	font-size: calc(11 * var(--diagram-unit));
+	font-weight: 500;
+}
+.proBadge {
+	margin-left: auto;
+	padding: 1px calc(6 * var(--diagram-unit));
+	border: 1px solid var(--diagram-accent-border);
+	border-radius: calc(4 * var(--diagram-unit));
+	background: #9564ff14;
+	color: var(--diagram-accent);
+	font-size: calc(9 * var(--diagram-unit));
+}
+.appBody {
+	padding-top: calc(10 * var(--diagram-unit));
+}
+.balanceRow {
+	display: flex;
+	align-items: center;
+	gap: calc(4 * var(--diagram-unit));
+	color: var(--diagram-muted);
+	font-size: calc(10 * var(--diagram-unit));
+}
+.balanceRow > span:first-child {
+	margin-right: auto;
+	color: #d4d4d4;
+}
+.creditBalance {
+	color: var(--diagram-accent);
+	font-family: var(--font-geist-mono), monospace;
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+}
+.message {
+	width: fit-content;
+	margin-top: calc(14 * var(--diagram-unit));
+	margin-left: auto;
+	padding: calc(7 * var(--diagram-unit)) calc(9 * var(--diagram-unit));
+	border-radius: calc(6 * var(--diagram-unit)) calc(6 * var(--diagram-unit))
+		calc(2 * var(--diagram-unit)) calc(6 * var(--diagram-unit));
+	background: var(--diagram-inset);
+	box-shadow: inset 0 0 0 1px var(--diagram-accent-border);
+	color: #d4d4d4;
+	font-size: calc(10 * var(--diagram-unit));
+}
+.reply {
+	display: flex;
+	align-items: center;
+	gap: calc(7 * var(--diagram-unit));
+	margin-top: calc(13 * var(--diagram-unit));
+	color: #d4d4d4;
+	font-size: calc(10 * var(--diagram-unit));
+}
+.reply > span {
+	color: var(--diagram-accent);
+	font-size: calc(17 * var(--diagram-unit));
+	line-height: 1;
+}

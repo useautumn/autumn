@@ -23,14 +23,6 @@ import {
   BillingUpdateCustomizeFreeTrialParams,
   BillingUpdateCustomizeFreeTrialParams$Outbound,
   BillingUpdateCustomizeFreeTrialParams$outboundSchema,
-  BillingUpdateDimensionsToUpsertLicenseEnum2,
-  BillingUpdateDimensionsToUpsertLicenseEnum2$outboundSchema,
-  BillingUpdateDimensionsUpsertLicense4,
-  BillingUpdateDimensionsUpsertLicense4$Outbound,
-  BillingUpdateDimensionsUpsertLicense4$outboundSchema,
-  BillingUpdateDimensionsUpsertLicenseMatch3,
-  BillingUpdateDimensionsUpsertLicenseMatch3$Outbound,
-  BillingUpdateDimensionsUpsertLicenseMatch3$outboundSchema,
   BillingUpdateFeatureQuantity,
   BillingUpdateFeatureQuantity$Outbound,
   BillingUpdateFeatureQuantity$outboundSchema,
@@ -61,8 +53,58 @@ import {
   BillingUpdateUpsertLicenseThresholdBilling,
   BillingUpdateUpsertLicenseThresholdBilling$Outbound,
   BillingUpdateUpsertLicenseThresholdBilling$outboundSchema,
-} from "./billing-update-dimensions-to-upsert-license-enum-2.js";
+} from "./billing-update-upsert-license-rollover.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+export const BillingUpdateUpsertLicenseDuration = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+export type BillingUpdateUpsertLicenseDuration = ClosedEnum<
+  typeof BillingUpdateUpsertLicenseDuration
+>;
+
+/**
+ * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+ */
+export type BillingUpdateUpsertLicenseExpiry = {
+  duration: BillingUpdateUpsertLicenseDuration;
+  length: number;
+};
+
+export type BillingUpdateDimensionsUpsertLicenseMatch4 =
+  | string
+  | number
+  | boolean;
+
+export type BillingUpdateDimensionsUpsertLicense4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type BillingUpdateDimensionsUpsertLicenseMatch3 =
+  | string
+  | number
+  | boolean;
+
+export const BillingUpdateDimensionsToUpsertLicenseEnum2 = {
+  Inf: "inf",
+} as const;
+export type BillingUpdateDimensionsToUpsertLicenseEnum2 = ClosedEnum<
+  typeof BillingUpdateDimensionsToUpsertLicenseEnum2
+>;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
@@ -86,7 +128,7 @@ export type BillingUpdateDimensionsUpsertLicense3 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
-  match: { [k: string]: BillingUpdateDimensionsUpsertLicenseMatch3 };
+  match: { [k: string]: string | number | boolean };
   /**
    * Breaks ties between dimensions that match the same number of keys. Higher wins.
    */
@@ -388,6 +430,10 @@ export type BillingUpdateUpsertLicensePlanItem = {
    */
   rollover?: BillingUpdateUpsertLicenseRollover | undefined;
   /**
+   * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+   */
+  expiry?: BillingUpdateUpsertLicenseExpiry | undefined;
+  /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
   featureOverride?: BillingUpdateUpsertLicenseFeatureOverride | undefined;
@@ -596,6 +642,17 @@ export type BillingUpdateAttachDiscount = {
   promotionCode?: string | undefined;
 };
 
+export type BillingUpdateCustomLineItem = {
+  /**
+   * Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+   */
+  amount: number;
+  /**
+   * Description for the line item.
+   */
+  description: string;
+};
+
 /**
  * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
  */
@@ -715,6 +772,10 @@ export type UpdateSubscriptionParams = {
    */
   discounts?: Array<BillingUpdateAttachDiscount> | undefined;
   /**
+   * Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
+   */
+  customLineItems?: Array<BillingUpdateCustomLineItem> | undefined;
+  /**
    * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
    */
   cancelAction?: BillingUpdateCancelAction | undefined;
@@ -829,6 +890,128 @@ export type BillingUpdateResponse = {
 };
 
 /** @internal */
+export const BillingUpdateUpsertLicenseDuration$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateUpsertLicenseDuration
+> = z.enum(BillingUpdateUpsertLicenseDuration);
+
+/** @internal */
+export type BillingUpdateUpsertLicenseExpiry$Outbound = {
+  duration: string;
+  length: number;
+};
+
+/** @internal */
+export const BillingUpdateUpsertLicenseExpiry$outboundSchema: z.ZodMiniType<
+  BillingUpdateUpsertLicenseExpiry$Outbound,
+  BillingUpdateUpsertLicenseExpiry
+> = z.object({
+  duration: BillingUpdateUpsertLicenseDuration$outboundSchema,
+  length: z.number(),
+});
+
+export function billingUpdateUpsertLicenseExpiryToJSON(
+  billingUpdateUpsertLicenseExpiry: BillingUpdateUpsertLicenseExpiry,
+): string {
+  return JSON.stringify(
+    BillingUpdateUpsertLicenseExpiry$outboundSchema.parse(
+      billingUpdateUpsertLicenseExpiry,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateDimensionsUpsertLicenseMatch4$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const BillingUpdateDimensionsUpsertLicenseMatch4$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateDimensionsUpsertLicenseMatch4$Outbound,
+    BillingUpdateDimensionsUpsertLicenseMatch4
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function billingUpdateDimensionsUpsertLicenseMatch4ToJSON(
+  billingUpdateDimensionsUpsertLicenseMatch4:
+    BillingUpdateDimensionsUpsertLicenseMatch4,
+): string {
+  return JSON.stringify(
+    BillingUpdateDimensionsUpsertLicenseMatch4$outboundSchema.parse(
+      billingUpdateDimensionsUpsertLicenseMatch4,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateDimensionsUpsertLicense4$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const BillingUpdateDimensionsUpsertLicense4$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateDimensionsUpsertLicense4$Outbound,
+    BillingUpdateDimensionsUpsertLicense4
+  > = z.pipe(
+    z.object({
+      match: z.record(
+        z.string(),
+        smartUnion([z.string(), z.number(), z.boolean()]),
+      ),
+      priority: z.optional(z.int()),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function billingUpdateDimensionsUpsertLicense4ToJSON(
+  billingUpdateDimensionsUpsertLicense4: BillingUpdateDimensionsUpsertLicense4,
+): string {
+  return JSON.stringify(
+    BillingUpdateDimensionsUpsertLicense4$outboundSchema.parse(
+      billingUpdateDimensionsUpsertLicense4,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateDimensionsUpsertLicenseMatch3$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const BillingUpdateDimensionsUpsertLicenseMatch3$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateDimensionsUpsertLicenseMatch3$Outbound,
+    BillingUpdateDimensionsUpsertLicenseMatch3
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function billingUpdateDimensionsUpsertLicenseMatch3ToJSON(
+  billingUpdateDimensionsUpsertLicenseMatch3:
+    BillingUpdateDimensionsUpsertLicenseMatch3,
+): string {
+  return JSON.stringify(
+    BillingUpdateDimensionsUpsertLicenseMatch3$outboundSchema.parse(
+      billingUpdateDimensionsUpsertLicenseMatch3,
+    ),
+  );
+}
+
+/** @internal */
+export const BillingUpdateDimensionsToUpsertLicenseEnum2$outboundSchema:
+  z.ZodMiniEnum<typeof BillingUpdateDimensionsToUpsertLicenseEnum2> = z.enum(
+    BillingUpdateDimensionsToUpsertLicenseEnum2,
+  );
+
+/** @internal */
 export type BillingUpdateDimensionsUpsertLicenseToUnion2$Outbound =
   | number
   | string;
@@ -893,7 +1076,7 @@ export function billingUpdateDimensionsUpsertLicenseTier2ToJSON(
 
 /** @internal */
 export type BillingUpdateDimensionsUpsertLicense3$Outbound = {
-  match: { [k: string]: BillingUpdateDimensionsUpsertLicenseMatch3$Outbound };
+  match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   tier_behavior: "graduated";
   tiers: Array<BillingUpdateDimensionsUpsertLicenseTier2$Outbound>;
@@ -908,7 +1091,7 @@ export const BillingUpdateDimensionsUpsertLicense3$outboundSchema:
     z.object({
       match: z.record(
         z.string(),
-        BillingUpdateDimensionsUpsertLicenseMatch3$outboundSchema,
+        smartUnion([z.string(), z.number(), z.boolean()]),
       ),
       priority: z.optional(z.int()),
       tierBehavior: z.literal("graduated"),
@@ -945,7 +1128,7 @@ export const BillingUpdateUpsertLicenseDimensionsUnion2$outboundSchema:
     BillingUpdateUpsertLicenseDimensionsUnion2
   > = smartUnion([
     z.lazy(() => BillingUpdateDimensionsUpsertLicense3$outboundSchema),
-    BillingUpdateDimensionsUpsertLicense4$outboundSchema,
+    z.lazy(() => BillingUpdateDimensionsUpsertLicense4$outboundSchema),
   ]);
 
 export function billingUpdateUpsertLicenseDimensionsUnion2ToJSON(
@@ -1043,7 +1226,7 @@ export const BillingUpdateCreditSchemaUpsertLicense2$outboundSchema:
         z.string(),
         smartUnion([
           z.lazy(() => BillingUpdateDimensionsUpsertLicense3$outboundSchema),
-          BillingUpdateDimensionsUpsertLicense4$outboundSchema,
+          z.lazy(() => BillingUpdateDimensionsUpsertLicense4$outboundSchema),
         ]),
       )),
       multipliers: z.optional(z.record(
@@ -1673,6 +1856,7 @@ export type BillingUpdateUpsertLicensePlanItem$Outbound = {
   price?: BillingUpdateUpsertLicensePrice$Outbound | undefined;
   proration?: BillingUpdateUpsertLicenseProration$Outbound | undefined;
   rollover?: BillingUpdateUpsertLicenseRollover$Outbound | undefined;
+  expiry?: BillingUpdateUpsertLicenseExpiry$Outbound | undefined;
   feature_override?:
     | BillingUpdateUpsertLicenseFeatureOverride$Outbound
     | undefined;
@@ -1695,6 +1879,9 @@ export const BillingUpdateUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     price: z.optional(BillingUpdateUpsertLicensePrice$outboundSchema),
     proration: z.optional(BillingUpdateUpsertLicenseProration$outboundSchema),
     rollover: z.optional(BillingUpdateUpsertLicenseRollover$outboundSchema),
+    expiry: z.optional(
+      z.lazy(() => BillingUpdateUpsertLicenseExpiry$outboundSchema),
+    ),
     featureOverride: z.optional(
       z.lazy(() => BillingUpdateUpsertLicenseFeatureOverride$outboundSchema),
     ),
@@ -2059,6 +2246,31 @@ export function billingUpdateAttachDiscountToJSON(
 }
 
 /** @internal */
+export type BillingUpdateCustomLineItem$Outbound = {
+  amount: number;
+  description: string;
+};
+
+/** @internal */
+export const BillingUpdateCustomLineItem$outboundSchema: z.ZodMiniType<
+  BillingUpdateCustomLineItem$Outbound,
+  BillingUpdateCustomLineItem
+> = z.object({
+  amount: z.number(),
+  description: z.string(),
+});
+
+export function billingUpdateCustomLineItemToJSON(
+  billingUpdateCustomLineItem: BillingUpdateCustomLineItem,
+): string {
+  return JSON.stringify(
+    BillingUpdateCustomLineItem$outboundSchema.parse(
+      billingUpdateCustomLineItem,
+    ),
+  );
+}
+
+/** @internal */
 export const BillingUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
   typeof BillingUpdateCancelAction
 > = z.enum(BillingUpdateCancelAction);
@@ -2188,6 +2400,7 @@ export type UpdateSubscriptionParams$Outbound = {
   redirect_mode: string;
   subscription_id?: string | undefined;
   discounts?: Array<BillingUpdateAttachDiscount$Outbound> | undefined;
+  custom_line_items?: Array<BillingUpdateCustomLineItem$Outbound> | undefined;
   cancel_action?: string | undefined;
   billing_cycle_anchor?: string | number | undefined;
   no_billing_changes?: boolean | undefined;
@@ -2229,6 +2442,9 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
     discounts: z.optional(
       z.array(z.lazy(() => BillingUpdateAttachDiscount$outboundSchema)),
     ),
+    customLineItems: z.optional(
+      z.array(z.lazy(() => BillingUpdateCustomLineItem$outboundSchema)),
+    ),
     cancelAction: z.optional(BillingUpdateCancelAction$outboundSchema),
     billingCycleAnchor: z.optional(smartUnion([z.string(), z.int()])),
     noBillingChanges: z.optional(z.boolean()),
@@ -2257,6 +2473,7 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       prorationBehavior: "proration_behavior",
       redirectMode: "redirect_mode",
       subscriptionId: "subscription_id",
+      customLineItems: "custom_line_items",
       cancelAction: "cancel_action",
       billingCycleAnchor: "billing_cycle_anchor",
       noBillingChanges: "no_billing_changes",

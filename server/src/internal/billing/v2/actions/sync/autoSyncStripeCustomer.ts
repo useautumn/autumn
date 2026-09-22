@@ -2,6 +2,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { canAutoSync } from "./canAutoSync";
 import { prepareAutoSyncStripeCustomer } from "./setup/prepareAutoSyncStripeCustomer";
 import { syncV2 } from "./syncV2";
+import { logAutoSyncSkip } from "./utils/logAutoSyncSkip";
 import { withStripeSyncCustomerLock } from "./utils/withStripeSyncCustomerLock";
 
 const autoSyncStripeCustomer = async ({
@@ -21,7 +22,18 @@ const autoSyncStripeCustomer = async ({
 	for (const syncCandidate of syncCandidates) {
 		if (!syncCandidate) continue;
 		const { match, params } = syncCandidate;
-		if (!canAutoSync({ match }).eligible) continue;
+		const eligibility = canAutoSync({ match });
+		if (!eligibility.eligible) {
+			logAutoSyncSkip({
+				logger: ctx.logger,
+				source: "customer.create",
+				stripeSubscriptionId: match.stripe_subscription_id,
+				stripeScheduleId: match.stripe_schedule_id,
+				reason: eligibility.reason,
+				details: eligibility.details,
+			});
+			continue;
+		}
 		await syncV2({
 			ctx,
 			params,

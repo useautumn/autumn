@@ -2,19 +2,15 @@
 
 from __future__ import annotations
 from .plan import Plan, PlanTypedDict
-from .previewupdate_dimensions_upsert_license_2 import (
+from .previewupdate_upsert_license_rollover import (
     PreviewUpdateAddItemPlanItem,
     PreviewUpdateAddItemPlanItemTypedDict,
     PreviewUpdateBasePrice,
     PreviewUpdateBasePriceTypedDict,
     PreviewUpdateBillingControls,
     PreviewUpdateBillingControlsTypedDict,
-    PreviewUpdateCreditSchemaUpsertLicense2,
-    PreviewUpdateCreditSchemaUpsertLicense2TypedDict,
     PreviewUpdateCustomizeFreeTrialParams,
     PreviewUpdateCustomizeFreeTrialParamsTypedDict,
-    PreviewUpdateDimensionsUpsertLicense2,
-    PreviewUpdateDimensionsUpsertLicense2TypedDict,
     PreviewUpdateFeatureQuantityRequestBody,
     PreviewUpdateFeatureQuantityRequestBodyTypedDict,
     PreviewUpdateFreeTrialParams,
@@ -33,6 +29,8 @@ from .previewupdate_dimensions_upsert_license_2 import (
     PreviewUpdateUpsertLicenseResetTypedDict,
     PreviewUpdateUpsertLicenseRollover,
     PreviewUpdateUpsertLicenseRolloverTypedDict,
+    PreviewUpdateUpsertLicenseThresholdBilling,
+    PreviewUpdateUpsertLicenseThresholdBillingTypedDict,
 )
 from autumn_sdk.types import (
     BaseModel,
@@ -48,6 +46,312 @@ from pydantic import model_serializer
 from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
+
+
+PreviewUpdateUpsertLicenseDuration = Literal[
+    "day",
+    "week",
+    "month",
+    "year",
+]
+
+
+class PreviewUpdateUpsertLicenseExpiryTypedDict(TypedDict):
+    r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
+
+    duration: PreviewUpdateUpsertLicenseDuration
+    length: float
+
+
+class PreviewUpdateUpsertLicenseExpiry(BaseModel):
+    r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
+
+    duration: PreviewUpdateUpsertLicenseDuration
+
+    length: float
+
+
+PreviewUpdateDimensionsUpsertLicenseMatch4TypedDict = TypeAliasType(
+    "PreviewUpdateDimensionsUpsertLicenseMatch4TypedDict", Union[str, float, bool]
+)
+
+
+PreviewUpdateDimensionsUpsertLicenseMatch4 = TypeAliasType(
+    "PreviewUpdateDimensionsUpsertLicenseMatch4", Union[str, float, bool]
+)
+
+
+class PreviewUpdateDimensionsUpsertLicense4TypedDict(TypedDict):
+    match: Dict[str, PreviewUpdateDimensionsUpsertLicenseMatch4TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class PreviewUpdateDimensionsUpsertLicense4(BaseModel):
+    match: Dict[str, PreviewUpdateDimensionsUpsertLicenseMatch4]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewUpdateDimensionsUpsertLicenseMatch3TypedDict = TypeAliasType(
+    "PreviewUpdateDimensionsUpsertLicenseMatch3TypedDict", Union[str, float, bool]
+)
+
+
+PreviewUpdateDimensionsUpsertLicenseMatch3 = TypeAliasType(
+    "PreviewUpdateDimensionsUpsertLicenseMatch3", Union[str, float, bool]
+)
+
+
+PreviewUpdateDimensionsToUpsertLicenseEnum2 = Literal["inf",]
+
+
+PreviewUpdateDimensionsUpsertLicenseToUnion2TypedDict = TypeAliasType(
+    "PreviewUpdateDimensionsUpsertLicenseToUnion2TypedDict",
+    Union[float, PreviewUpdateDimensionsToUpsertLicenseEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+PreviewUpdateDimensionsUpsertLicenseToUnion2 = TypeAliasType(
+    "PreviewUpdateDimensionsUpsertLicenseToUnion2",
+    Union[float, PreviewUpdateDimensionsToUpsertLicenseEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class PreviewUpdateDimensionsUpsertLicenseTier2TypedDict(TypedDict):
+    to: PreviewUpdateDimensionsUpsertLicenseToUnion2TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class PreviewUpdateDimensionsUpsertLicenseTier2(BaseModel):
+    to: PreviewUpdateDimensionsUpsertLicenseToUnion2
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class PreviewUpdateDimensionsUpsertLicense3TypedDict(TypedDict):
+    match: Dict[str, PreviewUpdateDimensionsUpsertLicenseMatch3TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[PreviewUpdateDimensionsUpsertLicenseTier2TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class PreviewUpdateDimensionsUpsertLicense3(BaseModel):
+    match: Dict[str, PreviewUpdateDimensionsUpsertLicenseMatch3]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[PreviewUpdateDimensionsUpsertLicenseTier2]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewUpdateUpsertLicenseDimensionsUnion2TypedDict = TypeAliasType(
+    "PreviewUpdateUpsertLicenseDimensionsUnion2TypedDict",
+    Union[
+        PreviewUpdateDimensionsUpsertLicense4TypedDict,
+        PreviewUpdateDimensionsUpsertLicense3TypedDict,
+    ],
+)
+
+
+PreviewUpdateUpsertLicenseDimensionsUnion2 = TypeAliasType(
+    "PreviewUpdateUpsertLicenseDimensionsUnion2",
+    Union[PreviewUpdateDimensionsUpsertLicense4, PreviewUpdateDimensionsUpsertLicense3],
+)
+
+
+PreviewUpdateUpsertLicenseMultipliersMatch2TypedDict = TypeAliasType(
+    "PreviewUpdateUpsertLicenseMultipliersMatch2TypedDict", Union[str, float, bool]
+)
+
+
+PreviewUpdateUpsertLicenseMultipliersMatch2 = TypeAliasType(
+    "PreviewUpdateUpsertLicenseMultipliersMatch2", Union[str, float, bool]
+)
+
+
+class PreviewUpdateUpsertLicenseMultipliers2TypedDict(TypedDict):
+    match: Dict[str, PreviewUpdateUpsertLicenseMultipliersMatch2TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class PreviewUpdateUpsertLicenseMultipliers2(BaseModel):
+    match: Dict[str, PreviewUpdateUpsertLicenseMultipliersMatch2]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewUpdateCreditSchemaUpsertLicense2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[
+        Dict[str, PreviewUpdateUpsertLicenseDimensionsUnion2TypedDict]
+    ]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, PreviewUpdateUpsertLicenseMultipliers2TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+
+class PreviewUpdateCreditSchemaUpsertLicense2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, PreviewUpdateUpsertLicenseDimensionsUnion2]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, PreviewUpdateUpsertLicenseMultipliers2]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewUpdateDimensionsUpsertLicenseMatch2TypedDict = TypeAliasType(
+    "PreviewUpdateDimensionsUpsertLicenseMatch2TypedDict", Union[str, float, bool]
+)
+
+
+PreviewUpdateDimensionsUpsertLicenseMatch2 = TypeAliasType(
+    "PreviewUpdateDimensionsUpsertLicenseMatch2", Union[str, float, bool]
+)
+
+
+class PreviewUpdateDimensionsUpsertLicense2TypedDict(TypedDict):
+    match: Dict[str, PreviewUpdateDimensionsUpsertLicenseMatch2TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class PreviewUpdateDimensionsUpsertLicense2(BaseModel):
+    match: Dict[str, PreviewUpdateDimensionsUpsertLicenseMatch2]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 PreviewUpdateDimensionsUpsertLicenseMatch1TypedDict = TypeAliasType(
@@ -294,6 +598,101 @@ PreviewUpdateUpsertLicenseCreditSchemaUnion = TypeAliasType(
 )
 
 
+class PreviewUpdateUpsertLicenseProviderMarkupsTypedDict(TypedDict):
+    markup: float
+
+
+class PreviewUpdateUpsertLicenseProviderMarkups(BaseModel):
+    markup: float
+
+
+class PreviewUpdateUpsertLicenseModelMarkupsTypedDict(TypedDict):
+    markup: NotRequired[float]
+    input_cost: NotRequired[float]
+    output_cost: NotRequired[float]
+
+
+class PreviewUpdateUpsertLicenseModelMarkups(BaseModel):
+    markup: Optional[float] = None
+
+    input_cost: Optional[float] = None
+
+    output_cost: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["markup", "input_cost", "output_cost"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewUpdateUpsertLicenseMarkupsTypedDict(TypedDict):
+    r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
+
+    default_markup: NotRequired[float]
+    r"""Default percentage markup for customers on this plan. Use -100 to make usage free."""
+    provider_markups: NotRequired[
+        Nullable[Dict[str, PreviewUpdateUpsertLicenseProviderMarkupsTypedDict]]
+    ]
+    r"""Per-provider markup percentages for customers on this plan."""
+    model_markups: NotRequired[
+        Nullable[Dict[str, PreviewUpdateUpsertLicenseModelMarkupsTypedDict]]
+    ]
+    r"""Per-model markup overrides for customers on this plan."""
+
+
+class PreviewUpdateUpsertLicenseMarkups(BaseModel):
+    r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
+
+    default_markup: Optional[float] = None
+    r"""Default percentage markup for customers on this plan. Use -100 to make usage free."""
+
+    provider_markups: OptionalNullable[
+        Dict[str, PreviewUpdateUpsertLicenseProviderMarkups]
+    ] = UNSET
+    r"""Per-provider markup percentages for customers on this plan."""
+
+    model_markups: OptionalNullable[
+        Dict[str, PreviewUpdateUpsertLicenseModelMarkups]
+    ] = UNSET
+    r"""Per-model markup overrides for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["default_markup", "provider_markups", "model_markups"])
+        nullable_fields = set(["provider_markups", "model_markups"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 class PreviewUpdateUpsertLicenseFeatureOverrideTypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
@@ -301,6 +700,8 @@ class PreviewUpdateUpsertLicenseFeatureOverrideTypedDict(TypedDict):
         List[PreviewUpdateUpsertLicenseCreditSchemaUnionTypedDict]
     ]
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    markups: NotRequired[PreviewUpdateUpsertLicenseMarkupsTypedDict]
+    r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
 
 class PreviewUpdateUpsertLicenseFeatureOverride(BaseModel):
@@ -309,9 +710,12 @@ class PreviewUpdateUpsertLicenseFeatureOverride(BaseModel):
     credit_schema: Optional[List[PreviewUpdateUpsertLicenseCreditSchemaUnion]] = None
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
 
+    markups: Optional[PreviewUpdateUpsertLicenseMarkups] = None
+    r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["credit_schema"])
+        optional_fields = set(["credit_schema", "markups"])
         serialized = handler(self)
         m = {}
 
@@ -331,6 +735,10 @@ class PreviewUpdateUpsertLicensePlanItemTypedDict(TypedDict):
 
     feature_id: str
     r"""The ID of the feature to configure."""
+    threshold_billing: NotRequired[
+        Nullable[PreviewUpdateUpsertLicenseThresholdBillingTypedDict]
+    ]
+    r"""Bills this many feature units when outstanding overage reaches it."""
     included: NotRequired[float]
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
@@ -345,6 +753,8 @@ class PreviewUpdateUpsertLicensePlanItemTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[PreviewUpdateUpsertLicenseRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
+    expiry: NotRequired[PreviewUpdateUpsertLicenseExpiryTypedDict]
+    r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
     feature_override: NotRequired[PreviewUpdateUpsertLicenseFeatureOverrideTypedDict]
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
@@ -354,6 +764,11 @@ class PreviewUpdateUpsertLicensePlanItem(BaseModel):
 
     feature_id: str
     r"""The ID of the feature to configure."""
+
+    threshold_billing: OptionalNullable[PreviewUpdateUpsertLicenseThresholdBilling] = (
+        UNSET
+    )
+    r"""Bills this many feature units when outstanding overage reaches it."""
 
     included: Optional[float] = None
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
@@ -376,6 +791,9 @@ class PreviewUpdateUpsertLicensePlanItem(BaseModel):
     rollover: Optional[PreviewUpdateUpsertLicenseRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
+    expiry: Optional[PreviewUpdateUpsertLicenseExpiry] = None
+    r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
+
     feature_override: Optional[PreviewUpdateUpsertLicenseFeatureOverride] = None
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
@@ -383,6 +801,7 @@ class PreviewUpdateUpsertLicensePlanItem(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "threshold_billing",
                 "included",
                 "unlimited",
                 "pooled",
@@ -390,18 +809,28 @@ class PreviewUpdateUpsertLicensePlanItem(BaseModel):
                 "price",
                 "proration",
                 "rollover",
+                "expiry",
                 "feature_override",
             ]
         )
+        nullable_fields = set(["threshold_billing"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -798,6 +1227,21 @@ class PreviewUpdateAttachDiscount(BaseModel):
         return m
 
 
+class PreviewUpdateCustomLineItemTypedDict(TypedDict):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+    description: str
+    r"""Description for the line item."""
+
+
+class PreviewUpdateCustomLineItem(BaseModel):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+
+    description: str
+    r"""Description for the line item."""
+
+
 PreviewUpdateCancelAction = Literal[
     "cancel_immediately",
     "cancel_end_of_cycle",
@@ -889,21 +1333,6 @@ class PreviewUpdateLicenseQuantity(BaseModel):
     r"""Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid."""
 
 
-class PreviewUpdateCustomLineItemTypedDict(TypedDict):
-    amount: float
-    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
-    description: str
-    r"""Description for the line item."""
-
-
-class PreviewUpdateCustomLineItem(BaseModel):
-    amount: float
-    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
-
-    description: str
-    r"""Description for the line item."""
-
-
 class PreviewUpdateParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
@@ -931,6 +1360,8 @@ class PreviewUpdateParamsTypedDict(TypedDict):
     r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
     discounts: NotRequired[List[PreviewUpdateAttachDiscountTypedDict]]
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
+    custom_line_items: NotRequired[List[PreviewUpdateCustomLineItemTypedDict]]
+    r"""Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription."""
     cancel_action: NotRequired[PreviewUpdateCancelAction]
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
     billing_cycle_anchor: NotRequired[PreviewUpdateBillingCycleAnchorTypedDict]
@@ -947,8 +1378,6 @@ class PreviewUpdateParamsTypedDict(TypedDict):
     r"""Whether to carry over usages from the previous plan."""
     license_quantities: NotRequired[List[PreviewUpdateLicenseQuantityTypedDict]]
     r"""Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity."""
-    custom_line_items: NotRequired[List[PreviewUpdateCustomLineItemTypedDict]]
-    r"""Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription."""
 
 
 class PreviewUpdateParams(BaseModel):
@@ -988,6 +1417,9 @@ class PreviewUpdateParams(BaseModel):
     discounts: Optional[List[PreviewUpdateAttachDiscount]] = None
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
 
+    custom_line_items: Optional[List[PreviewUpdateCustomLineItem]] = None
+    r"""Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription."""
+
     cancel_action: Optional[PreviewUpdateCancelAction] = None
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
@@ -1012,9 +1444,6 @@ class PreviewUpdateParams(BaseModel):
     license_quantities: Optional[List[PreviewUpdateLicenseQuantity]] = None
     r"""Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity."""
 
-    custom_line_items: Optional[List[PreviewUpdateCustomLineItem]] = None
-    r"""Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -1030,6 +1459,7 @@ class PreviewUpdateParams(BaseModel):
                 "redirect_mode",
                 "subscription_id",
                 "discounts",
+                "custom_line_items",
                 "cancel_action",
                 "billing_cycle_anchor",
                 "no_billing_changes",
@@ -1038,7 +1468,6 @@ class PreviewUpdateParams(BaseModel):
                 "recalculate_balances",
                 "carry_over_usages",
                 "license_quantities",
-                "custom_line_items",
             ]
         )
         nullable_fields = set(["free_trial"])
@@ -1733,6 +2162,10 @@ class PreviewUpdateResponse(BaseModel):
         return m
 
 
+try:
+    PreviewUpdateDimensionsUpsertLicense3.model_rebuild()
+except NameError:
+    pass
 try:
     PreviewUpdateDimensionsUpsertLicense1.model_rebuild()
 except NameError:

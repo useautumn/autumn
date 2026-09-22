@@ -46,6 +46,13 @@ class CheckGlobals(BaseModel):
         return m
 
 
+CheckOverageBehavior = Literal[
+    "cap",
+    "overflow",
+]
+r"""How to handle a lock that exceeds the available balance. \"reject\" (default) returns allowed: false and reserves nothing. \"cap\" reserves only what fits and returns allowed: true. \"overflow\" reserves the full value: the balance can go negative, though spend limits still apply. balances.finalize reuses the behavior chosen here."""
+
+
 class CheckLockTypedDict(TypedDict):
     r"""Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold."""
 
@@ -55,6 +62,8 @@ class CheckLockTypedDict(TypedDict):
     r"""Must be true to enable locking."""
     expires_at: NotRequired[float]
     r"""Unix timestamp (ms) when the lock automatically expires and releases the held balance."""
+    overage_behavior: NotRequired[CheckOverageBehavior]
+    r"""How to handle a lock that exceeds the available balance. \"reject\" (default) returns allowed: false and reserves nothing. \"cap\" reserves only what fits and returns allowed: true. \"overflow\" reserves the full value: the balance can go negative, though spend limits still apply. balances.finalize reuses the behavior chosen here."""
 
 
 class CheckLock(BaseModel):
@@ -72,9 +81,12 @@ class CheckLock(BaseModel):
     expires_at: Optional[float] = None
     r"""Unix timestamp (ms) when the lock automatically expires and releases the held balance."""
 
+    overage_behavior: Optional[CheckOverageBehavior] = None
+    r"""How to handle a lock that exceeds the available balance. \"reject\" (default) returns allowed: false and reserves nothing. \"cap\" reserves only what fits and returns allowed: true. \"overflow\" reserves the full value: the balance can go negative, though spend limits still apply. balances.finalize reuses the behavior chosen here."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["expires_at"])
+        optional_fields = set(["expires_at", "overage_behavior"])
         serialized = handler(self)
         m = {}
 
@@ -477,53 +489,6 @@ class CheckDimensions9(BaseModel):
         return m
 
 
-CheckDimensionsUnion5TypedDict = TypeAliasType(
-    "CheckDimensionsUnion5TypedDict",
-    Union[CheckDimensions10TypedDict, CheckDimensions9TypedDict],
-)
-
-
-CheckDimensionsUnion5 = TypeAliasType(
-    "CheckDimensionsUnion5", Union[CheckDimensions10, CheckDimensions9]
-)
-
-
-class CheckMultipliers5TypedDict(TypedDict):
-    match: Dict[str, str]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    factor: NotRequired[float]
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-    add: NotRequired[float]
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-
-class CheckMultipliers5(BaseModel):
-    match: Dict[str, str]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-
-    factor: Optional[float] = None
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-
-    add: Optional[float] = None
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["factor", "add"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
 class CheckCreditSchema5TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
@@ -592,6 +557,53 @@ class CheckDimensions8(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CheckDimensionsUnion5TypedDict = TypeAliasType(
+    "CheckDimensionsUnion5TypedDict",
+    Union[CheckDimensions10TypedDict, CheckDimensions9TypedDict],
+)
+
+
+CheckDimensionsUnion5 = TypeAliasType(
+    "CheckDimensionsUnion5", Union[CheckDimensions10, CheckDimensions9]
+)
+
+
+class CheckMultipliers5TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class CheckMultipliers5(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
         serialized = handler(self)
         m = {}
 
@@ -975,8 +987,6 @@ class CheckFeature2TypedDict(TypedDict):
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[CheckCreditSchemaUnion2TypedDict]]
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
-    invoice_credit: NotRequired[bool]
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
     model_markups: NotRequired[Nullable[Dict[str, CheckModelMarkups2TypedDict]]]
     r"""Per-model markup overrides for AI credit systems."""
     default_markup: NotRequired[float]
@@ -1013,9 +1023,6 @@ class CheckFeature2(BaseModel):
     credit_schema: Optional[List[CheckCreditSchemaUnion2]] = None
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
 
-    invoice_credit: Optional[bool] = None
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
-
     model_markups: OptionalNullable[Dict[str, CheckModelMarkups2]] = UNSET
     r"""Per-model markup overrides for AI credit systems."""
 
@@ -1037,7 +1044,6 @@ class CheckFeature2(BaseModel):
             [
                 "event_names",
                 "credit_schema",
-                "invoice_credit",
                 "model_markups",
                 "default_markup",
                 "provider_markups",
@@ -1591,7 +1597,7 @@ class CheckFreeTrial2(BaseModel):
         return m
 
 
-CheckPurchaseLimitInterval2 = Union[
+CheckAutoTopupInterval2 = Union[
     Literal[
         "hour",
         "day",
@@ -1606,7 +1612,7 @@ r"""The time interval for the purchase limit window."""
 class CheckPurchaseLimit2TypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
-    interval: CheckPurchaseLimitInterval2
+    interval: CheckAutoTopupInterval2
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -1617,7 +1623,7 @@ class CheckPurchaseLimit2TypedDict(TypedDict):
 class CheckPurchaseLimit2(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
-    interval: CheckPurchaseLimitInterval2
+    interval: CheckAutoTopupInterval2
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -2204,7 +2210,7 @@ class CheckProduct2(BaseModel):
         return m
 
 
-class Preview2TypedDict(TypedDict):
+class CheckPreview2TypedDict(TypedDict):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
     scenario: Scenario2
@@ -2221,7 +2227,7 @@ class Preview2TypedDict(TypedDict):
     r"""Products that would grant access to this feature. Use to display upgrade options."""
 
 
-class Preview2(BaseModel):
+class CheckPreview2(BaseModel):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
     scenario: Scenario2
@@ -2260,7 +2266,7 @@ class CheckResponseBody2TypedDict(TypedDict):
     r"""The required balance that was checked against."""
     balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
     r"""Map of feature_id to balance for the checked feature and any related features (e.g. linked credit systems)."""
-    preview: NotRequired[Preview2TypedDict]
+    preview: NotRequired[CheckPreview2TypedDict]
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
 
@@ -2288,7 +2294,7 @@ class CheckResponseBody2(BaseModel):
     balances: Optional[Dict[str, Nullable[Balance]]] = None
     r"""Map of feature_id to balance for the checked feature and any related features (e.g. linked credit systems)."""
 
-    preview: Optional[Preview2] = None
+    preview: Optional[CheckPreview2] = None
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
     @model_serializer(mode="wrap")
@@ -3133,8 +3139,6 @@ class CheckFeature1TypedDict(TypedDict):
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[CheckCreditSchemaUnion1TypedDict]]
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
-    invoice_credit: NotRequired[bool]
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
     model_markups: NotRequired[Nullable[Dict[str, CheckModelMarkups1TypedDict]]]
     r"""Per-model markup overrides for AI credit systems."""
     default_markup: NotRequired[float]
@@ -3171,9 +3175,6 @@ class CheckFeature1(BaseModel):
     credit_schema: Optional[List[CheckCreditSchemaUnion1]] = None
     r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
 
-    invoice_credit: Optional[bool] = None
-    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
-
     model_markups: OptionalNullable[Dict[str, CheckModelMarkups1]] = UNSET
     r"""Per-model markup overrides for AI credit systems."""
 
@@ -3195,7 +3196,6 @@ class CheckFeature1(BaseModel):
             [
                 "event_names",
                 "credit_schema",
-                "invoice_credit",
                 "model_markups",
                 "default_markup",
                 "provider_markups",
@@ -3749,7 +3749,7 @@ class CheckFreeTrial1(BaseModel):
         return m
 
 
-CheckPurchaseLimitInterval1 = Union[
+CheckAutoTopupInterval1 = Union[
     Literal[
         "hour",
         "day",
@@ -3764,7 +3764,7 @@ r"""The time interval for the purchase limit window."""
 class CheckPurchaseLimit1TypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
-    interval: CheckPurchaseLimitInterval1
+    interval: CheckAutoTopupInterval1
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -3775,7 +3775,7 @@ class CheckPurchaseLimit1TypedDict(TypedDict):
 class CheckPurchaseLimit1(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
-    interval: CheckPurchaseLimitInterval1
+    interval: CheckAutoTopupInterval1
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -4362,7 +4362,7 @@ class CheckProduct1(BaseModel):
         return m
 
 
-class Preview1TypedDict(TypedDict):
+class CheckPreview1TypedDict(TypedDict):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
     scenario: Scenario1
@@ -4379,7 +4379,7 @@ class Preview1TypedDict(TypedDict):
     r"""Products that would grant access to this feature. Use to display upgrade options."""
 
 
-class Preview1(BaseModel):
+class CheckPreview1(BaseModel):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
     scenario: Scenario1
@@ -4418,7 +4418,7 @@ class CheckResponseBody1TypedDict(TypedDict):
     r"""The required balance that was checked against."""
     balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
     r"""Map of feature_id to balance for the checked feature and any related features (e.g. linked credit systems)."""
-    preview: NotRequired[Preview1TypedDict]
+    preview: NotRequired[CheckPreview1TypedDict]
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
 
@@ -4446,7 +4446,7 @@ class CheckResponseBody1(BaseModel):
     balances: Optional[Dict[str, Nullable[Balance]]] = None
     r"""Map of feature_id to balance for the checked feature and any related features (e.g. linked credit systems)."""
 
-    preview: Optional[Preview1] = None
+    preview: Optional[CheckPreview1] = None
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
     @model_serializer(mode="wrap")
