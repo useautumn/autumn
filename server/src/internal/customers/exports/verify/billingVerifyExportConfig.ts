@@ -1,19 +1,53 @@
-export const BILLING_VERIFY_CONCURRENCY = 8;
+type BillingVerifyExportConfig = {
+	sweep: {
+		pageSize: number;
+		concurrency: number;
+		windowMonths: number;
+		pageTimeoutMs: number;
+		pageAttempts: number;
+		retryDelayMs: number;
+	};
+	customer: {
+		concurrency: number;
+		timeoutMs: number;
+		attempts: number;
+		retryDelayMs: number;
+	};
+	stripeReader: {
+		maxMemoizedReads: number;
+		timeoutMs: number;
+		attempts: number;
+	};
+};
 
-export const STRIPE_LIST_PAGE_SIZE = 100;
+/** Callers override only what a test needs to vary. */
+export type SweepLimits = Partial<BillingVerifyExportConfig["sweep"]>;
 
-/** Concurrent created-range windows. At ~2s per 100-subscription page this is
- * ~4 req/s against Stripe's 100 req/s live (25 req/s test) read limit. */
-export const STRIPE_SWEEP_CONCURRENCY = 8;
+export type CustomerLimits = Partial<BillingVerifyExportConfig["customer"]>;
 
-export const STRIPE_SWEEP_WINDOW_MONTHS = 1;
-
-export const MAX_MEMOIZED_STRIPE_READS = 2000;
-
-/** A read that never settles is retried once on a fresh connection, then the
- * customer is written as a failed row. */
-export const BILLING_VERIFY_CUSTOMER_TIMEOUT_MS = 120_000;
-
-export const BILLING_VERIFY_CUSTOMER_ATTEMPTS = 2;
-
-export const BILLING_VERIFY_RETRY_DELAY_MS = 5_000;
+/** A read that never settles is retried before the work it belongs to fails:
+ * the Stripe SDK leaves an interrupted response body pending forever, so every
+ * bounded read here needs its own deadline. */
+export const billingVerifyExportConfig: BillingVerifyExportConfig = {
+	sweep: {
+		pageSize: 100,
+		concurrency: 8,
+		windowMonths: 1,
+		pageTimeoutMs: 60_000,
+		pageAttempts: 3,
+		retryDelayMs: 2_000,
+	},
+	customer: {
+		concurrency: 8,
+		timeoutMs: 120_000,
+		attempts: 2,
+		retryDelayMs: 5_000,
+	},
+	/** A memoized read is shared, so it must expire well inside the customer
+	 * deadline — otherwise a retry re-attaches to the same stalled promise. */
+	stripeReader: {
+		maxMemoizedReads: 2000,
+		timeoutMs: 30_000,
+		attempts: 1,
+	},
+};

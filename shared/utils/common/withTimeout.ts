@@ -1,11 +1,15 @@
+/** `timeoutError` lets a caller distinguish a stall from the wrapped
+ * function's own failures. */
 export const withTimeout = async <T>({
 	fn,
 	onTimeout,
+	timeoutError,
 	timeoutMessage,
 	timeoutMs,
 }: {
 	fn: () => Promise<T>;
 	onTimeout?: () => Promise<void> | void;
+	timeoutError?: (message: string) => Error;
 	timeoutMessage?: string;
 	timeoutMs: number;
 }): Promise<T> => {
@@ -16,7 +20,8 @@ export const withTimeout = async <T>({
 			new Promise<never>((_, reject) => {
 				timeoutId = setTimeout(() => {
 					void Promise.resolve(onTimeout?.());
-					reject(new Error(timeoutMessage || `timed out after ${timeoutMs}ms`));
+					const message = timeoutMessage || `timed out after ${timeoutMs}ms`;
+					reject(timeoutError ? timeoutError(message) : new Error(message));
 				}, timeoutMs);
 				timeoutId.unref?.();
 			}),
