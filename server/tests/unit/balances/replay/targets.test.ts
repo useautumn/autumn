@@ -13,9 +13,9 @@ const STAGING_BROKERS = [
 	"b-3.tfmeteringstaging.jfuutw.c3.kafka.us-east-1.amazonaws.com:9098",
 	"b-4.tfmeteringstaging.jfuutw.c3.kafka.us-east-1.amazonaws.com:9098",
 ];
-const STAGING_DEPLOYMENT = "tf-balance-staging-v2-512";
-const STAGING_TOPIC = "tf-balance-staging-v2-512-ownership";
-const STAGING_PARTITION_COUNT = 512;
+const STAGING_DEPLOYMENT = "tf-balance-staging-v2-64";
+const STAGING_TOPIC = "tf-balance-staging-v2-64-ownership";
+const STAGING_PARTITION_COUNT = 64;
 const STAGING_REGION = "us-east-1";
 const POLICY_HOSTNAME = "tf-balance-staging-db.internal";
 const POLICY_PORT = 5432;
@@ -134,9 +134,9 @@ describe("Replay staging target guard", () => {
 		"refuses deployments, topics, partition counts and regions that are not pinned",
 		() => {
 			const invalidTargets: Record<string, unknown>[] = [
-				{ deployment: "tf-balance-prod-v2-512" },
+				{ deployment: "tf-balance-prod-v2-64" },
 				{ deployment: "tf-balance-staging-v2-256" },
-				{ topic: "tf-balance-prod-v2-512-ownership" },
+				{ topic: "tf-balance-prod-v2-64-ownership" },
 				{ topic: STAGING_DEPLOYMENT },
 				{ partitionCount: 256 },
 				{ region: "us-west-2" },
@@ -158,8 +158,8 @@ describe("Replay staging target guard", () => {
 				validateReplayStagingTarget({
 					target: buildTarget({
 						databaseUrl: `postgresql://${DATABASE_USER}:${DATABASE_SECRET}@${productionHostname}:5432/${productionDatabase}`,
-						deployment: "tf-balance-prod-v2-512",
-						topic: "tf-balance-prod-v2-512-ownership",
+						deployment: "tf-balance-prod-v2-64",
+						topic: "tf-balance-prod-v2-64-ownership",
 					}),
 					policy: {
 						database: {

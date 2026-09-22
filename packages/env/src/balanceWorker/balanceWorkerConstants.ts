@@ -7,7 +7,7 @@ const isLocalStack =
 	process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
 export const BALANCE_WORKER_PARTITION_COUNT = isLocalStack
 	? LOCAL_PARTITION_COUNT
-	: 512;
+	: 64;
 
 export const BALANCE_WORKER_MAX_REQUEST_BYTES = 1_048_576;
 /** Whole-operation budget for a routed command, not a per-call HTTP timeout: it

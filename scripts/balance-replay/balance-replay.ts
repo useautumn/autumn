@@ -66,7 +66,7 @@ Target policy file shape (JSON):
 Limitations:
   - Dry run by default: counts, limits and the pinned target only. It opens no
     database, Kafka or Redis client and loads no runtime module.
-  - The Kafka target is pinned to tf-balance-staging-v2-512 (512 partitions,
+  - The Kafka target is pinned to tf-balance-staging-v2-64 (64 partitions,
     us-east-1, four known brokers) and cannot be redirected from the CLI.
   - The database guard only proves the supplied URL matches the trusted policy
     file. Verify that policy against the staging inventory before executing.

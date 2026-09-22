@@ -23,17 +23,17 @@ describe("Balance worker environment", () => {
 	test("derives every Kafka name from the deployment", () => {
 		const env = createBalanceWorkerEnv({
 			...valid,
-			BALANCE_WORKER_DEPLOYMENT: "tf-balance-staging-v2-512",
+			BALANCE_WORKER_DEPLOYMENT: "tf-balance-staging-v2-64",
 			BALANCE_WORKER_METERING_TOPIC: "ignored",
 		});
 		expect(env.BALANCE_WORKER_METERING_TOPIC).toBe(
-			"tf-balance-staging-v2-512-events",
+			"tf-balance-staging-v2-64-events",
 		);
 		expect(env.BALANCE_WORKER_OWNERSHIP_TOPIC).toBe(
-			"tf-balance-staging-v2-512-ownership",
+			"tf-balance-staging-v2-64-ownership",
 		);
 		expect(env.BALANCE_WORKER_GROUP_ID).toBe(
-			"tf-balance-staging-v2-512-workers",
+			"tf-balance-staging-v2-64-workers",
 		);
 	});
 	test("production requires a deployment", () => {

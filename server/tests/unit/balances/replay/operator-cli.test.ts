@@ -19,9 +19,9 @@ const STAGING_BROKERS = [
 	"b-3.tfmeteringstaging.jfuutw.c3.kafka.us-east-1.amazonaws.com:9098",
 	"b-4.tfmeteringstaging.jfuutw.c3.kafka.us-east-1.amazonaws.com:9098",
 ];
-const STAGING_DEPLOYMENT = "tf-balance-staging-v2-512";
-const STAGING_TOPIC = "tf-balance-staging-v2-512-ownership";
-const STAGING_PARTITION_COUNT = 512;
+const STAGING_DEPLOYMENT = "tf-balance-staging-v2-64";
+const STAGING_TOPIC = "tf-balance-staging-v2-64-ownership";
+const STAGING_PARTITION_COUNT = 64;
 const STAGING_REGION = "us-east-1";
 const POLICY_HOSTNAME = "tf-balance-staging-db.internal";
 const POLICY_PORT = 5432;
@@ -451,8 +451,8 @@ const UNSUPPORTED_TARGET_SCENARIOS: {
 		name: "production deployment with a matching policy",
 		targetInput: buildTargetInput({
 			databaseUrl: PRODUCTION_DATABASE_URL,
-			deployment: "tf-balance-prod-v2-512",
-			topic: "tf-balance-prod-v2-512-ownership",
+			deployment: "tf-balance-prod-v2-64",
+			topic: "tf-balance-prod-v2-64-ownership",
 		}),
 		policyInput: {
 			database: {
@@ -484,7 +484,7 @@ const UNSUPPORTED_TARGET_SCENARIOS: {
 		name: "environment hint field",
 		targetInput: buildTargetInput({ env: "live" }),
 	},
-	{ name: "malformed target", targetInput: "tf-balance-staging-v2-512" },
+	{ name: "malformed target", targetInput: "tf-balance-staging-v2-64" },
 ];
 
 const MALFORMED_MANIFESTS: { name: string; manifestInput: unknown }[] = [
