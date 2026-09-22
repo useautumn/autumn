@@ -119,17 +119,6 @@ const loadReissuableStripeInvoice = async ({
 			`Invoice ${row.invoice.id} is ${stripeInvoice.status}; only open and paid invoices can be reissued`,
 		);
 	}
-	// An open card invoice has no due date to carry over and would charge the
-	// card again on finalize; a paid one is settled by its credit note instead.
-	if (
-		stripeInvoice.collection_method !== "send_invoice" &&
-		stripeInvoice.status !== "paid"
-	) {
-		throw invalidRequest(
-			`Invoice ${row.invoice.id} is charged automatically and still open; only paid card invoices and send-invoice invoices can be reissued`,
-		);
-	}
-
 	return { stripeCli, stripeInvoice };
 };
 
@@ -539,10 +528,35 @@ const issueReplacement = async ({
 				statusCode: 409,
 			});
 		}
+		// Stripe may have collected the original between our read and the void.
+		if (await isNowPaid({ stripeCli, stripeInvoiceId: stripeInvoice.id })) {
+			throw new RecaseError({
+				message: `Invoice ${invoiceId} was paid while being reissued; nothing was changed`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 409,
+			});
+		}
 		throw error;
 	}
 
-	return { finalized, creditNoteId: null };
+	// The original is retired, so a card replacement can be charged now.
+	return {
+		finalized: await collectRemainderNow({ ctx, stripeCli, finalized }),
+		creditNoteId: null,
+	};
+};
+
+const isNowPaid = async ({
+	stripeCli,
+	stripeInvoiceId,
+}: {
+	stripeCli: Stripe;
+	stripeInvoiceId: string;
+}) => {
+	const invoice = await stripeCli.invoices
+		.retrieve(stripeInvoiceId)
+		.catch(() => null);
+	return invoice?.status === "paid";
 };
 
 /**
@@ -597,9 +611,9 @@ const creditAndFinalize = async ({
 };
 
 /**
- * A card invoice's original was charged on the spot, so a replacement that
- * costs more is charged now too rather than waiting for auto-advance. A
- * declined card leaves it open for Stripe's retries, like any other invoice.
+ * Stripe waits about an hour before first attempting a card invoice created
+ * through the API, so a card replacement is charged now instead. A declined
+ * card leaves it open for Stripe's retries, like any other invoice.
  */
 const collectRemainderNow = async ({
 	ctx,
@@ -616,18 +630,27 @@ const collectRemainderNow = async ({
 	) {
 		return finalized;
 	}
-	const paymentMethod = await getCusPaymentMethod({
-		stripeCli,
-		stripeId: stripeInvoiceToStripeCustomerId({ stripeInvoice: finalized }),
-	});
-	const { paid, invoice } = await payForInvoice({
-		stripeCli,
-		invoiceId: finalized.id,
-		paymentMethod,
-		logger: ctx.logger,
-		errorOnFail: false,
-	});
-	return paid && invoice ? invoice : finalized;
+	// The reissue is already complete here, so a collection hiccup must not
+	// report it as failed; the replacement simply stays open.
+	try {
+		const paymentMethod = await getCusPaymentMethod({
+			stripeCli,
+			stripeId: stripeInvoiceToStripeCustomerId({ stripeInvoice: finalized }),
+		});
+		const { paid, invoice } = await payForInvoice({
+			stripeCli,
+			invoiceId: finalized.id,
+			paymentMethod,
+			logger: ctx.logger,
+			errorOnFail: false,
+		});
+		return paid && invoice ? invoice : finalized;
+	} catch (error) {
+		ctx.logger.warn(
+			`[reissueInvoice] replacement ${finalized.id} left open; collection failed: ${error}`,
+		);
+		return finalized;
+	}
 };
 
 const reverseCredit = async ({

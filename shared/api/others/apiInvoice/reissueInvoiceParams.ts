@@ -130,7 +130,7 @@ export const ReissueInvoiceParamsSchema = z.object({
 	}),
 	net_terms_days: z.number().int().positive().optional().meta({
 		description:
-			"Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed. Setting it on a card-charged invoice makes the replacement a send-invoice one.",
+			"Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed. A card-charged invoice has no due date and its replacement is charged immediately; setting this makes the replacement a send-invoice one instead.",
 	}),
 	preview: z.boolean().optional().meta({
 		description:
