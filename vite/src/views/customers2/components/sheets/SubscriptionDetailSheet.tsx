@@ -5,7 +5,7 @@ import {
 	type Entity,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
-import { Badge, Button, CopyButton, DateInputUnix, InfoRow } from "@autumn/ui";
+import { Badge, Button, CopyButton, IconButton, InfoRow } from "@autumn/ui";
 import {
 	CalendarBlankIcon,
 	CreditCardIcon,
@@ -14,6 +14,7 @@ import {
 	HashIcon,
 	HeartbeatIcon,
 	Info,
+	PencilSimpleIcon,
 	SubtractIcon,
 	TagIcon,
 	TicketIcon,
@@ -21,7 +22,7 @@ import {
 	XCircle,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
 	BillingControlsList,
 	hasBillingControls,
@@ -50,45 +51,41 @@ import { usePendingPaymentLink } from "./usePendingPaymentLink";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
 
-function BillingAnchorMockup() {
+function BillingAnchorMockup({ itemId }: { itemId: string | null }) {
+	const setSheet = useSheetStore((s) => s.setSheet);
 	const scheduledAt = new Date("2026-10-15T09:00:00Z").getTime();
-	const [editing, setEditing] = useState(false);
-	const [anchor, setAnchor] = useState<number | null>(scheduledAt);
 	return (
 		<SheetSection>
-			<div className="flex flex-col gap-3">
-				<div className="flex items-center justify-between">
-					<span className="text-form-label">Upcoming billing change</span>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={() => setEditing(!editing)}
-					>
-						{editing ? "Cancel" : "Edit"}
-					</Button>
-				</div>
-				<InfoRow
-					icon={<CalendarBlankIcon size={16} weight="duotone" />}
-					label="Restart date"
-					value={format(scheduledAt, "MMM d, yyyy, HH:mm")}
-				/>
-				{editing && (
-					<div className="flex flex-col gap-3">
-						<DateInputUnix
-							unixDate={anchor}
-							setUnixDate={setAnchor}
-							withTime
-							disablePastDates
+			<div className="mb-2 text-form-label">Upcoming billing change</div>
+			<InfoRow
+				icon={<CalendarBlankIcon size={16} weight="duotone" />}
+				label="Cycle restarts"
+				value={
+					<div className="flex items-center gap-2">
+						<span>{format(scheduledAt, "MMM d, yyyy, HH:mm")}</span>
+						<IconButton
+							aria-label="Edit billing cycle anchor"
+							icon={<PencilSimpleIcon size={14} />}
+							iconOrientation="center"
+							size="sm"
+							variant="secondary"
+							onClick={() =>
+								setSheet({
+									type: "subscription-update",
+									itemId,
+									data: {
+										anchorMockupOverrides: {
+											resetBillingCycle: true,
+											billingCycleAnchorMode: "custom",
+											billingCycleAnchorDate: scheduledAt,
+										},
+									},
+								})
+							}
 						/>
-						<p className="text-xs text-tertiary-foreground">
-							The new date replaces the scheduled billing cycle restart.
-						</p>
-						<Button variant="primary" disabled>
-							Save changes (preview only)
-						</Button>
 					</div>
-				)}
-			</div>
+				}
+			/>
 		</SheetSection>
 	);
 }
@@ -411,7 +408,7 @@ export function SubscriptionDetailSheet() {
 
 			{import.meta.env.DEV &&
 				new URLSearchParams(window.location.search).has("anchor_mockup") && (
-					<BillingAnchorMockup />
+					<BillingAnchorMockup itemId={itemId} />
 				)}
 
 			{hasBillingControls(planBillingControls) && (

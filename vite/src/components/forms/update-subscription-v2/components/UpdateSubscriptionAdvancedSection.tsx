@@ -12,6 +12,7 @@ import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCy
 import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
 import { DiscountsConfigRow } from "@/components/forms/shared/discount-row/DiscountsConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
 export function UpdateSubscriptionAdvancedSection() {
@@ -26,12 +27,14 @@ export function UpdateSubscriptionAdvancedSection() {
 		discounts,
 	} = formValues;
 	const { customerProduct, product } = formContext;
+	const anchorMockup = useSheetStore((s) => s.data?.anchorMockupOverrides);
 
 	const rules = getBillingOptionRules({
 		flow: "update",
 		state: {
 			hasActiveSubscription:
-				(customerProduct.subscription_ids?.length ?? 0) > 0,
+				(customerProduct.subscription_ids?.length ?? 0) > 0 ||
+				Boolean(anchorMockup),
 		},
 	});
 	const isProrate = billingBehavior !== "none";
