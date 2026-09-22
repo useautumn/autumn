@@ -2,7 +2,6 @@ import {
 	member,
 	type Organization,
 	type OrgConfig,
-	type OrgProvisioningSource,
 	organizations,
 	type SandboxColor,
 	type SandboxIcon,
@@ -35,7 +34,6 @@ export const provisionSubOrg = async ({
 	sandboxColor,
 	sandboxIcon,
 	config,
-	provisioningSource,
 }: {
 	db: DrizzleCli;
 	masterOrg: Organization;
@@ -47,7 +45,6 @@ export const provisionSubOrg = async ({
 	sandboxColor?: SandboxColor;
 	sandboxIcon?: SandboxIcon;
 	config?: OrgConfig;
-	provisioningSource?: OrgProvisioningSource;
 }): Promise<Organization & { master?: Organization | null }> => {
 	const orgId = generateId();
 	const [insertedOrg] = await db
@@ -64,7 +61,6 @@ export const provisionSubOrg = async ({
 			sandbox_color: sandboxColor ?? null,
 			sandbox_icon: sandboxIcon ?? null,
 			config,
-			provisioning_source: provisioningSource,
 		})
 		.returning();
 

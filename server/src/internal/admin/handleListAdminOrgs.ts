@@ -1,10 +1,4 @@
-import {
-	member,
-	OrgProvisioningSource,
-	organizations,
-	Scopes,
-	user,
-} from "@autumn/shared";
+import { member, organizations, Scopes, user } from "@autumn/shared";
 import {
 	and,
 	desc,
@@ -20,15 +14,6 @@ import {
 } from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 import { getRequestBlockConfigFromSource } from "../misc/requestBlocks/requestBlockStore.js";
-
-export const getAdminOrgTypeFilter = ({ platform }: { platform?: string }) =>
-	platform === "true"
-		? and(
-				isNotNull(organizations.created_by),
-				eq(organizations.is_sandbox, false),
-				eq(organizations.provisioning_source, OrgProvisioningSource.Platform),
-			)
-		: isNull(organizations.created_by);
 
 export const handleListAdminOrgs = createRoute({
 	scopes: [Scopes.Superuser],
@@ -75,7 +60,9 @@ export const handleListAdminOrgs = createRoute({
 			.from(organizations)
 			.where(
 				and(
-					getAdminOrgTypeFilter({ platform }),
+					platform === "true"
+						? isNotNull(organizations.created_by)
+						: isNull(organizations.created_by),
 					searchTerm
 						? or(
 								eq(organizations.id, searchTerm),

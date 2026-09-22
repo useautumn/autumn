@@ -3,7 +3,6 @@ import {
 	ErrCode,
 	member,
 	type Organization,
-	OrgProvisioningSource,
 	organizations,
 	RecaseError,
 	Scopes,
@@ -113,7 +112,6 @@ export const handleLegacyPlatformExchange = createRoute({
 					createdAt: new Date(),
 					metadata: "",
 					created_by: requestingOrg.id,
-					provisioning_source: OrgProvisioningSource.Platform,
 				})
 				.returning()) as [Organization];
 

@@ -72,7 +72,6 @@ export type OrgClaimState = (typeof OrgClaimState)[keyof typeof OrgClaimState];
 
 export const OrgProvisioningSource = {
 	Agent: "agent",
-	Platform: "platform",
 } as const;
 
 export type OrgProvisioningSource =
