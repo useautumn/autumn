@@ -6,11 +6,6 @@ import { sendMigrationWebhooks } from "../sendMigrationWebhooks.js";
 import type { MigrationWebhookRecord } from "../types/migrationWebhookRecord.js";
 import { MIGRATION_WEBHOOK_RECORDS_PER_MESSAGE } from "./migrationWebhookDeliveryQueue.js";
 
-/**
- * The single entry point both migration lanes use to deliver webhooks.
- * Batches leave the run's lifetime: the task drains them on its own queue,
- * keyed by run so one migration never starves another.
- */
 /** Splits a page's records into queue-message-sized batches. */
 export const chunkWebhookRecords = ({
 	records,
@@ -41,26 +36,29 @@ export const queueMigrationWebhooks = async ({
 
 	const batches = chunkWebhookRecords({ records });
 
-	for (const [index, batch] of batches.entries()) {
-		const payload = {
+	const submissions = batches.map((batch, index) => ({
+		payload: {
 			orgId: ctx.org.id,
 			env: ctx.env,
 			migrationRunId,
 			concurrency: controls.webhookConcurrency,
 			eventTypes: controls.eventTypes,
 			records: batch,
-		};
-
-		if (!isTriggerConfigured()) {
-			await sendMigrationWebhooks({ ctx, payload });
-			continue;
-		}
-
-		await sendMigrationWebhooksTask.trigger(payload, {
+		},
+		options: {
 			concurrencyKey: migrationRunId,
 			idempotencyKey: `migration-webhooks:${migrationRunId}:${records[0]?.customerId}:${index}`,
 			idempotencyKeyTTL: "7d",
-		});
+		},
+	}));
+
+	if (isTriggerConfigured()) {
+		// Submit the page together so queue latency isn't paid once per delivery task.
+		await sendMigrationWebhooksTask.batchTrigger(submissions);
+	} else {
+		for (const { payload } of submissions) {
+			await sendMigrationWebhooks({ ctx, payload });
+		}
 	}
 
 	return batches.length;

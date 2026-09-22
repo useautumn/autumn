@@ -17,7 +17,7 @@ export const MIGRATION_WEBHOOK_DELIVERY_MAX_DURATION_SECONDS = 15 * 60;
 export const MIGRATION_WEBHOOK_DELIVERY_RETRY = { maxAttempts: 2 } as const;
 
 /** Records per queue message — keeps payloads small while still batching. */
-export const MIGRATION_WEBHOOK_RECORDS_PER_MESSAGE = 500;
+export const MIGRATION_WEBHOOK_RECORDS_PER_MESSAGE = 50;
 
 export const migrationWebhookDeliveryQueue = queue({
 	name: MIGRATION_WEBHOOK_DELIVERY_QUEUE_NAME,

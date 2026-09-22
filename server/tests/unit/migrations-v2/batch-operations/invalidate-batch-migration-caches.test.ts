@@ -9,17 +9,21 @@ const realBatchInvalidate = { ...(await import(batchInvalidateModulePath)) };
 const realRouting = { ...(await import(routingModulePath)) };
 
 let receivedCustomerIds: string[] = [];
+let receivedCommandTimeoutMs: number | undefined;
 
 mock.module(batchInvalidateModulePath, () => ({
 	...realBatchInvalidate,
 	batchInvalidateCachedFullSubjects: async ({
 		customers,
 		phases,
+		commandTimeoutMs,
 	}: {
 		customers: { customerId: string }[];
 		phases?: Record<string, number>;
+		commandTimeoutMs?: number;
 	}) => {
 		receivedCustomerIds = customers.map((customer) => customer.customerId);
+		receivedCommandTimeoutMs = commandTimeoutMs;
 		if (phases) {
 			phases.invalidate_marks_db = 7;
 			phases.invalidate_redis = 11;
@@ -84,6 +88,7 @@ describe("invalidateBatchMigrationCaches", () => {
 		});
 		expect(invalidated).toBe(2);
 		expect(receivedCustomerIds).toEqual(["cus_a", "cus_b"]);
+		expect(receivedCommandTimeoutMs).toBe(10_000);
 	});
 
 	test("also busts skipped customers when a retry re-claims them", async () => {
