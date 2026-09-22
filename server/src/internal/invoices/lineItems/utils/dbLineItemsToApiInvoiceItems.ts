@@ -19,6 +19,7 @@ export const dbLineItemsToApiInvoiceItems = ({
 		);
 
 		return {
+			id: lineItem.id,
 			description: lineItem.description,
 			period_start: lineItem.effective_period_start,
 			period_end: lineItem.effective_period_end,

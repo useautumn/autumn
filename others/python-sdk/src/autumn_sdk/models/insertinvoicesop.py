@@ -44,7 +44,7 @@ class InsertInvoicesGlobals(BaseModel):
         return m
 
 
-InsertInvoicesProcessorTypeRequest = Literal[
+InsertInvoicesProcessorTypeRequestBody = Literal[
     "stripe",
     "revenuecat",
 ]
@@ -74,7 +74,7 @@ class InvoiceRequestBodyTypedDict(TypedDict):
     r"""The invoice creation timestamp in milliseconds."""
     plan_ids: NotRequired[List[str]]
     r"""Plan IDs represented by this invoice."""
-    processor_type: NotRequired[InsertInvoicesProcessorTypeRequest]
+    processor_type: NotRequired[InsertInvoicesProcessorTypeRequestBody]
     r"""The billing processor that owns this invoice."""
     amount_paid: NotRequired[Nullable[float]]
     r"""The amount paid in major currency units."""
@@ -105,7 +105,7 @@ class InvoiceRequestBody(BaseModel):
     plan_ids: Optional[List[str]] = None
     r"""Plan IDs represented by this invoice."""
 
-    processor_type: Optional[InsertInvoicesProcessorTypeRequest] = "stripe"
+    processor_type: Optional[InsertInvoicesProcessorTypeRequestBody] = "stripe"
     r"""The billing processor that owns this invoice."""
 
     amount_paid: OptionalNullable[float] = UNSET

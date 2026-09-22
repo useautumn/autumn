@@ -216,7 +216,6 @@
 						"pages": [
 							"api-reference/core/check",
 							"api-reference/core/track",
-							"api-reference/balances/trackTokens",
 							"api-reference/core/batchTrack",
 							"api-reference/balances/createBalance",
 							"api-reference/balances/updateBalance",
@@ -250,6 +249,12 @@
 						"pages": [
 							"api-reference/events/listEvents",
 							"api-reference/events/aggregateEvents"
+						]
+					},
+					{
+						"group": "Logs",
+						"pages": [
+							"api-reference/logs/searchRequestLogs"
 						]
 					},
 					{

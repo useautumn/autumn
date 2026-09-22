@@ -432,6 +432,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                   </Expandable>
                 </ParamField>
 
+                <ParamField body="expiry" type="object | null">
+                  Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                  <Expandable title="properties">
+                    <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                    <ParamField body="length" type="number" required />
+
+                  </Expandable>
+                </ParamField>
+
                 <ParamField body="feature_override" type="object">
                   Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                   <Expandable title="properties">
@@ -1024,6 +1034,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                           </Expandable>
                         </ParamField>
 
+                        <ParamField body="expiry" type="object">
+                          Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                          <Expandable title="properties">
+                            <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                            <ParamField body="length" type="number" required />
+
+                          </Expandable>
+                        </ParamField>
+
                         <ParamField body="feature_override" type="object">
                           Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                           <Expandable title="properties">
@@ -1542,6 +1562,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   </Expandable>
                                 </ParamField>
 
+                                <ParamField body="expiry" type="object">
+                                  Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                                  <Expandable title="properties">
+                                    <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                                    <ParamField body="length" type="number" required />
+
+                                  </Expandable>
+                                </ParamField>
+
                                 <ParamField body="feature_override" type="object">
                                   Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                                   <Expandable title="properties">
@@ -1802,6 +1832,18 @@ openapi: "api/openapi.yml webhook billing.updated"
                 </ParamField>
 
               </Expandable>
+            </ParamField>
+
+            <ParamField body="base_variant_id" type="string | null">
+              The base plan this variant pointed at before this update re-anchored it. Null when it was standalone.
+            </ParamField>
+
+            <ParamField body="base_version" type="integer | null">
+              The base row version this variant pointed at before this update. Null when it was standalone.
+            </ParamField>
+
+            <ParamField body="base_version_slug" type="string | null">
+              The base row version slug this variant pointed at before this update. Null when it was standalone.
             </ParamField>
 
             <ParamField body="free_trial" type="object | null">
@@ -2397,6 +2439,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                   </Expandable>
                 </ParamField>
 
+                <ParamField body="expiry" type="object | null">
+                  Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                  <Expandable title="properties">
+                    <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                    <ParamField body="length" type="number" required />
+
+                  </Expandable>
+                </ParamField>
+
                 <ParamField body="feature_override" type="object">
                   Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                   <Expandable title="properties">
@@ -2698,6 +2750,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                     <ParamField body="expiry_duration_length" type="number">
                       Number of periods before expiry.
                     </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
+                <ParamField body="expiry" type="object">
+                  Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                  <Expandable title="properties">
+                    <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                    <ParamField body="length" type="number" required />
 
                   </Expandable>
                 </ParamField>
@@ -3220,6 +3282,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                           </Expandable>
                         </ParamField>
 
+                        <ParamField body="expiry" type="object">
+                          Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                          <Expandable title="properties">
+                            <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                            <ParamField body="length" type="number" required />
+
+                          </Expandable>
+                        </ParamField>
+
                         <ParamField body="feature_override" type="object">
                           Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                           <Expandable title="properties">
@@ -3719,6 +3791,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                         <ParamField body="expiry_duration_length" type="number">
                           Number of periods before expiry.
                         </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                    <ParamField body="expiry" type="object | null">
+                      Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                      <Expandable title="properties">
+                        <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                        <ParamField body="length" type="number" required />
 
                       </Expandable>
                     </ParamField>
@@ -4315,6 +4397,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                               </Expandable>
                             </ParamField>
 
+                            <ParamField body="expiry" type="object">
+                              Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                              <Expandable title="properties">
+                                <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                                <ParamField body="length" type="number" required />
+
+                              </Expandable>
+                            </ParamField>
+
                             <ParamField body="feature_override" type="object">
                               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                               <Expandable title="properties">
@@ -4833,6 +4925,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                                       </Expandable>
                                     </ParamField>
 
+                                    <ParamField body="expiry" type="object">
+                                      Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                                      <Expandable title="properties">
+                                        <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                                        <ParamField body="length" type="number" required />
+
+                                      </Expandable>
+                                    </ParamField>
+
                                     <ParamField body="feature_override" type="object">
                                       Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                                       <Expandable title="properties">
@@ -5340,6 +5442,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                             <ParamField body="expiry_duration_length" type="number">
                               Number of periods before expiry.
                             </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="expiry" type="object | null">
+                          Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                          <Expandable title="properties">
+                            <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                            <ParamField body="length" type="number" required />
 
                           </Expandable>
                         </ParamField>
@@ -5936,6 +6048,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   </Expandable>
                                 </ParamField>
 
+                                <ParamField body="expiry" type="object">
+                                  Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                                  <Expandable title="properties">
+                                    <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                                    <ParamField body="length" type="number" required />
+
+                                  </Expandable>
+                                </ParamField>
+
                                 <ParamField body="feature_override" type="object">
                                   Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                                   <Expandable title="properties">
@@ -6454,6 +6576,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                                           </Expandable>
                                         </ParamField>
 
+                                        <ParamField body="expiry" type="object">
+                                          Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                                          <Expandable title="properties">
+                                            <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                                            <ParamField body="length" type="number" required />
+
+                                          </Expandable>
+                                        </ParamField>
+
                                         <ParamField body="feature_override" type="object">
                                           Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                                           <Expandable title="properties">
@@ -6714,6 +6846,18 @@ openapi: "api/openapi.yml webhook billing.updated"
                         </ParamField>
 
                       </Expandable>
+                    </ParamField>
+
+                    <ParamField body="base_variant_id" type="string | null">
+                      The base plan this variant pointed at before this update re-anchored it. Null when it was standalone.
+                    </ParamField>
+
+                    <ParamField body="base_version" type="integer | null">
+                      The base row version this variant pointed at before this update. Null when it was standalone.
+                    </ParamField>
+
+                    <ParamField body="base_version_slug" type="string | null">
+                      The base row version slug this variant pointed at before this update. Null when it was standalone.
                     </ParamField>
 
                     <ParamField body="free_trial" type="object | null">
@@ -7309,6 +7453,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                           </Expandable>
                         </ParamField>
 
+                        <ParamField body="expiry" type="object | null">
+                          Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                          <Expandable title="properties">
+                            <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                            <ParamField body="length" type="number" required />
+
+                          </Expandable>
+                        </ParamField>
+
                         <ParamField body="feature_override" type="object">
                           Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                           <Expandable title="properties">
@@ -7610,6 +7764,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                             <ParamField body="expiry_duration_length" type="number">
                               Number of periods before expiry.
                             </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="expiry" type="object">
+                          Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                          <Expandable title="properties">
+                            <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                            <ParamField body="length" type="number" required />
 
                           </Expandable>
                         </ParamField>
@@ -8132,6 +8296,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   </Expandable>
                                 </ParamField>
 
+                                <ParamField body="expiry" type="object">
+                                  Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                                  <Expandable title="properties">
+                                    <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                                    <ParamField body="length" type="number" required />
+
+                                  </Expandable>
+                                </ParamField>
+
                                 <ParamField body="feature_override" type="object">
                                   Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                                   <Expandable title="properties">
@@ -8528,6 +8702,16 @@ openapi: "api/openapi.yml webhook billing.updated"
                 <ParamField body="expiry_duration_length" type="number">
                   Number of periods before expiry.
                 </ParamField>
+
+              </Expandable>
+            </ParamField>
+
+            <ParamField body="expiry" type="object | null">
+              Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+              <Expandable title="properties">
+                <ParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                <ParamField body="length" type="number" required />
 
               </Expandable>
             </ParamField>

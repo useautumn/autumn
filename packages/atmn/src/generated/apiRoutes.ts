@@ -300,6 +300,30 @@ export const API_ROUTES: readonly ApiRoute[] = [
 		],
 	},
 	{
+		group: "customers",
+		method: "advance_test_clock",
+		path: "/v1/customers.advance_test_clock",
+		description:
+			"Advance a customer's Stripe test clock to a future time in milliseconds. Only Stripe test-mode customers with a test clock are supported. Advancement is asynchronous; Stripe enforces clock status and advancement limits.",
+		body: "object",
+		fields: [
+			{
+				name: "customer_id",
+				type: "string",
+				required: true,
+				description:
+					"The ID of the customer whose Stripe test clock to advance.",
+			},
+			{
+				name: "frozen_time",
+				type: "number",
+				required: true,
+				description:
+					"Target time as a Unix timestamp in milliseconds. Rounded down to whole seconds; must be later than the current clock time.",
+			},
+		],
+	},
+	{
 		group: "plans",
 		method: "create",
 		path: "/v1/plans.create",
@@ -849,30 +873,6 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: true,
 				description: "The ID of the feature to delete.",
-			},
-		],
-	},
-	{
-		group: "billing",
-		method: "advance_test_clock",
-		path: "/v1/billing.advance_test_clock",
-		description:
-			"Advance a customer's Stripe test clock to a future time in milliseconds. Only Stripe test-mode customers with a test clock are supported. Advancement is asynchronous; Stripe enforces clock status and advancement limits.",
-		body: "object",
-		fields: [
-			{
-				name: "customer_id",
-				type: "string",
-				required: true,
-				description:
-					"The ID of the customer whose Stripe test clock to advance.",
-			},
-			{
-				name: "frozen_time",
-				type: "number",
-				required: true,
-				description:
-					"Target time as a Unix timestamp in milliseconds. Rounded down to whole seconds; must be later than the current clock time.",
 			},
 		],
 	},
@@ -1765,6 +1765,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
 			},
 			{
+				name: "custom_line_items",
+				type: "json",
+				required: false,
+				description:
+					"Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.",
+			},
+			{
 				name: "cancel_action",
 				type: "string",
 				required: false,
@@ -1818,13 +1825,6 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.",
-			},
-			{
-				name: "custom_line_items",
-				type: "json",
-				required: false,
-				description:
-					"Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.",
 			},
 		],
 	},
@@ -1918,6 +1918,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
 			},
 			{
+				name: "custom_line_items",
+				type: "json",
+				required: false,
+				description:
+					"Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.",
+			},
+			{
 				name: "cancel_action",
 				type: "string",
 				required: false,
@@ -1971,13 +1978,6 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.",
-			},
-			{
-				name: "custom_line_items",
-				type: "json",
-				required: false,
-				description:
-					"Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.",
 			},
 		],
 	},
@@ -2957,6 +2957,79 @@ export const API_ROUTES: readonly ApiRoute[] = [
 	},
 	{
 		group: "invoices",
+		method: "create",
+		path: "/v1/invoices.create",
+		description:
+			"Creates a standalone send-invoice Stripe invoice from catalog pricing and custom charges. Quantities are billable units, exclusive of any included usage; Autumn applies billing units and tiers. Nothing about the customer's plans, balances or subscriptions changes. Pass preview: true to get the calculated lines and totals without creating an invoice.",
+		body: "object",
+		fields: [
+			{
+				name: "customer_id",
+				type: "string",
+				required: true,
+				description: "The customer to invoice.",
+			},
+			{
+				name: "plans",
+				type: "json",
+				required: false,
+			},
+			{
+				name: "custom_line_items",
+				type: "json",
+				required: false,
+				description: "Charges that are not tied to any plan or feature.",
+			},
+			{
+				name: "discounts",
+				type: "json",
+				required: false,
+				description: "Discounts applied to the whole invoice.",
+			},
+			{
+				name: "invoice_template_id",
+				type: "string",
+				required: false,
+				description:
+					"ID of an invoice template whose footer, memo and default payment terms are applied.",
+			},
+			{
+				name: "net_terms_days",
+				type: "number",
+				required: false,
+				description:
+					"Days until the invoice is due. Defaults to the template's terms, then the org default.",
+			},
+			{
+				name: "tax_rate_id",
+				type: "string",
+				required: false,
+				description: "Stripe tax rate ID (txr_...) applied to every line.",
+			},
+			{
+				name: "period_start",
+				type: "number",
+				required: false,
+				description:
+					"Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start.",
+			},
+			{
+				name: "period_end",
+				type: "number",
+				required: false,
+				description: "End of the period being invoiced, in milliseconds.",
+			},
+			{
+				name: "preview",
+				type: "boolean",
+				required: false,
+				description:
+					"If true, returns the calculated lines and totals without creating an invoice.",
+			},
+		],
+	},
+	{
+		group: "invoices",
 		method: "insert",
 		path: "/v1/invoices.insert",
 		description:
@@ -3035,6 +3108,59 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: true,
 				description: "The Autumn invoice ID to mark as paid.",
+			},
+		],
+	},
+	{
+		group: "invoices",
+		method: "reissue",
+		path: "/v1/invoices.reissue",
+		description:
+			"Voids an open send-invoice Stripe invoice and issues a replacement with the same line items. An invoice template can supply the replacement's footer (e.g. bank details) and memo. The replacement keeps the original due date unless net_terms_days is passed, which is required once the original is past due. Pass update_customer_email to change the customer's billing email first so the replacement is sent there. The replacement stays linked to the same subscription and fulfils the same pending plan when paid.",
+		body: "object",
+		fields: [
+			{
+				name: "invoice_id",
+				type: "string",
+				required: true,
+				description: "The Autumn invoice ID to void and replace.",
+			},
+			{
+				name: "invoice_template_id",
+				type: "string",
+				required: false,
+				description:
+					"ID of an invoice template (configured in billing settings) whose footer and memo are applied to the replacement invoice.",
+			},
+			{
+				name: "net_terms_days",
+				type: "number",
+				required: false,
+				description:
+					"Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed.",
+			},
+			{
+				name: "update_customer_email",
+				type: "string",
+				required: false,
+				description:
+					"Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address.",
+			},
+		],
+	},
+	{
+		group: "invoices",
+		method: "void",
+		path: "/v1/invoices.void",
+		description:
+			"Voids an open or uncollectible Stripe invoice. Any plan still waiting on the invoice to be paid expires. Voiding an unpaid subscription invoice lets Stripe re-derive the subscription status from its remaining invoices, which can move a past-due subscription back to active. Already-void invoices are returned unchanged.",
+		body: "object",
+		fields: [
+			{
+				name: "invoice_id",
+				type: "string",
+				required: true,
+				description: "The Autumn invoice ID to void.",
 			},
 		],
 	},

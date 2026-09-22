@@ -282,17 +282,6 @@ export const listPlansVariantDetailsUsageAlertFilterSchema = z.object({
 	properties: z.record(z.string(), z.string()),
 });
 
-export const listPlansVariantDetailsOverageAllowedSchema = z.object({
-	featureId: z.string(),
-	enabled: z.boolean(),
-});
-
-export const listPlansVariantDetailsUpsertLicenseAdditionalCurrencySchema =
-	z.object({
-		currency: z.string(),
-		amount: z.number(),
-	});
-
 export const listPlansParamsOutboundSchema = z.object({
 	customer_id: z.union([z.string(), z.undefined()]).optional(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
@@ -377,6 +366,13 @@ export const listPlansItemRolloverSchema = z.object({
 	maxPercentage: z.union([z.number(), z.undefined()]).optional().nullable(),
 	expiryDurationType: listPlansItemExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const listPlansItemDurationSchema = openEnumSchema;
+
+export const listPlansItemExpirySchema = z.object({
+	duration: listPlansItemDurationSchema,
+	length: z.number(),
 });
 
 export const listPlansDimensionsToItemEnum2Schema = closedEnumSchema;
@@ -522,6 +518,10 @@ export const listPlansItemSchema = z.object({
 	price: listPlansItemPriceSchema.nullable(),
 	display: z.union([listPlansItemDisplaySchema, z.undefined()]).optional(),
 	rollover: z.union([listPlansItemRolloverSchema, z.undefined()]).optional(),
+	expiry: z
+		.union([listPlansItemExpirySchema, z.undefined()])
+		.optional()
+		.nullable(),
 	featureOverride: z
 		.union([listPlansItemFeatureOverrideSchema, z.undefined()])
 		.optional(),
@@ -692,6 +692,13 @@ export const listPlansVariantDetailsRolloverSchema = z.object({
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const listPlansVariantDetailsDurationSchema = openEnumSchema;
+
+export const listPlansVariantDetailsExpirySchema = z.object({
+	duration: listPlansVariantDetailsDurationSchema,
+	length: z.number(),
+});
+
 export const listPlansDimensionsToVariantDetailsEnum2Schema = closedEnumSchema;
 
 export const listPlansDimensionsVariantDetailsToUnion2Schema = z.union([
@@ -844,6 +851,9 @@ export const listPlansVariantDetailsPlanItemSchema = z.object({
 	rollover: z
 		.union([listPlansVariantDetailsRolloverSchema, z.undefined()])
 		.optional(),
+	expiry: z
+		.union([listPlansVariantDetailsExpirySchema, z.undefined()])
+		.optional(),
 	featureOverride: z
 		.union([listPlansVariantDetailsFeatureOverrideSchema, z.undefined()])
 		.optional(),
@@ -957,27 +967,3 @@ export const listPlansVariantDetailsUsageAlertSchema = z.object({
 		.optional(),
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
-
-export const listPlansVariantDetailsBillingControlsSchema = z.object({
-	autoTopups: z
-		.union([z.array(listPlansVariantDetailsAutoTopupSchema), z.undefined()])
-		.optional(),
-	spendLimits: z
-		.union([z.array(listPlansVariantDetailsSpendLimitSchema), z.undefined()])
-		.optional(),
-	usageLimits: z
-		.union([z.array(listPlansVariantDetailsUsageLimitSchema), z.undefined()])
-		.optional(),
-	usageAlerts: z
-		.union([z.array(listPlansVariantDetailsUsageAlertSchema), z.undefined()])
-		.optional(),
-	overageAllowed: z
-		.union([
-			z.array(listPlansVariantDetailsOverageAllowedSchema),
-			z.undefined(),
-		])
-		.optional(),
-});
-
-export const listPlansPriceVariantDetailsUpsertLicenseIntervalSchema =
-	openEnumSchema;

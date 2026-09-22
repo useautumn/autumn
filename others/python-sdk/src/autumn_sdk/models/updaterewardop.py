@@ -135,14 +135,14 @@ UpdateRewardTypeRequestBody = Literal[
 r"""The unit of time the grant lasts."""
 
 
-class UpdateRewardExpiryRequestTypedDict(TypedDict):
+class UpdateRewardExpiryRequestBodyTypedDict(TypedDict):
     type: UpdateRewardTypeRequestBody
     r"""The unit of time the grant lasts."""
     length: int
     r"""The positive integer count of periods before the grant expires."""
 
 
-class UpdateRewardExpiryRequest(BaseModel):
+class UpdateRewardExpiryRequestBody(BaseModel):
     type: UpdateRewardTypeRequestBody
     r"""The unit of time the grant lasts."""
 
@@ -153,7 +153,7 @@ class UpdateRewardExpiryRequest(BaseModel):
 class UpdateRewardGrantRequestTypedDict(TypedDict):
     feature_id: str
     included: Nullable[float]
-    expiry: Nullable[UpdateRewardExpiryRequestTypedDict]
+    expiry: Nullable[UpdateRewardExpiryRequestBodyTypedDict]
     r"""How long the granted amount lasts before expiring, or null for a permanent grant."""
 
 
@@ -162,7 +162,7 @@ class UpdateRewardGrantRequest(BaseModel):
 
     included: Nullable[float]
 
-    expiry: Nullable[UpdateRewardExpiryRequest]
+    expiry: Nullable[UpdateRewardExpiryRequestBody]
     r"""How long the granted amount lasts before expiring, or null for a permanent grant."""
 
     @model_serializer(mode="wrap")

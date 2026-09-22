@@ -205,6 +205,7 @@ export const ApiPlanItemV1Schema = z
 		entity_feature_id: z.string().optional().meta({
 			internal: true,
 		}),
+		mapping_identity: z.string().optional().meta({ internal: true }),
 		entitlement_id: z.string().optional().meta({
 			internal: true,
 		}),

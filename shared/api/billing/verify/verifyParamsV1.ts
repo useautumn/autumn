@@ -152,6 +152,18 @@ export type StripeSubNotInAutumnMismatch = z.infer<
 	typeof StripeSubNotInAutumnMismatchSchema
 >;
 
+/** This active Stripe subscription is unlinked while the customer's main plan
+ * is linked to a different subscription that is ending. */
+export const PlanOnEndingSubscriptionMismatchSchema = z.object({
+	type: z.literal("plan_on_ending_subscription"),
+	message,
+	severity,
+	ending_subscription_id: z.string(),
+});
+export type PlanOnEndingSubscriptionMismatch = z.infer<
+	typeof PlanOnEndingSubscriptionMismatchSchema
+>;
+
 /** Autumn products link to a Stripe subscription outside the customer's active set. */
 export const StaleSubscriptionLinkMismatchSchema = z.object({
 	type: z.literal("stale_subscription_link"),
@@ -205,6 +217,7 @@ export const SubscriptionMismatchSchema = z.discriminatedUnion("type", [
 	CancelStateMismatchSchema,
 	RewardMismatchSchema,
 	StripeSubNotInAutumnMismatchSchema,
+	PlanOnEndingSubscriptionMismatchSchema,
 	StaleSubscriptionLinkMismatchSchema,
 	ExpectedStateErrorMismatchSchema,
 	SharedStripeCustomerMismatchSchema,

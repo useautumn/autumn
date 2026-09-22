@@ -2,7 +2,9 @@ import type { Edit, SgNode } from "@ast-grep/napi";
 import { leadingIndentOfLine, lineStartOf } from "./fixtureEdit";
 
 const isMember = (child: SgNode): boolean =>
-	child.kind() === "pair" || child.kind() === "spread_element";
+	child.kind() === "pair" ||
+	child.kind() === "spread_element" ||
+	child.kind() === "shorthand_property_identifier";
 
 /**
  * Append a pair after the literal's last member, spreads counted. A spread

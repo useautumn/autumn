@@ -44,7 +44,7 @@ class GetOrCreateCustomerGlobals(BaseModel):
         return m
 
 
-GetOrCreateCustomerPurchaseLimitInterval = Literal[
+GetOrCreateCustomerAutoTopupInterval = Literal[
     "hour",
     "day",
     "week",
@@ -56,7 +56,7 @@ r"""The time interval for the purchase limit window."""
 class GetOrCreateCustomerPurchaseLimitTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
-    interval: GetOrCreateCustomerPurchaseLimitInterval
+    interval: GetOrCreateCustomerAutoTopupInterval
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -69,7 +69,7 @@ class GetOrCreateCustomerPurchaseLimitTypedDict(TypedDict):
 class GetOrCreateCustomerPurchaseLimit(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
-    interval: GetOrCreateCustomerPurchaseLimitInterval
+    interval: GetOrCreateCustomerAutoTopupInterval
     r"""The time interval for the purchase limit window."""
 
     limit: float

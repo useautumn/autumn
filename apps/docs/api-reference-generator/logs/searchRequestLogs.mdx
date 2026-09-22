@@ -1,0 +1,45 @@
+---
+title: "Search Request Logs"
+openapi: "openapi POST /v1/logs.search"
+---
+
+Search API requests and incoming Stripe webhooks for your organization and environment.
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Customer errors
+const logs = await autumn.logs.search({
+    query: "where customer_id == 'cus_123' and status_code >= 400",
+    limit: 50,
+});
+```
+
+```typescript Feature requests
+const logs = await autumn.logs.search({
+    query: "where request_body.feature_id == 'credits' | order by timestamp desc",
+    range: {
+        startDate: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    },
+});
+```
+
+```typescript Stripe webhooks
+const logs = await autumn.logs.search({
+    query: "where source == 'stripe_webhook' and stripe_event_type == 'customer.subscription.updated'",
+    limit: 25,
+});
+```
+
+</CodeGroup>
+
+### Writing a query
+
+Use `where` to filter, `order by` to sort, and `limit` to cap results. Join these steps with `|`. Without a query, you get the most recent logs.
+
+Filter on fields like `customer_id`, `status_code`, `request_path`, and `stripe_event_type`. Use dot paths for body fields, such as `request_body.feature_id`, or `contains` to find text: `where response_body contains 'error'`.
+
+Field names inside the query stay in snake_case, including when you use the TypeScript SDK.
+
+By default, the search covers the last 30 minutes. Set `range` to search another window of up to 7 days.

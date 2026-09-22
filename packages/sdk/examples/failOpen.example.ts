@@ -40,21 +40,21 @@ async function testFailOpenTrack() {
 	console.log();
 }
 
-async function testFailOpenGetCustomer() {
+async function testCustomerErrorPropagation() {
 	console.log(
-		"--- Test: customers.getOrCreate() fail-open (enabled by default) ---",
+		"--- Test: customers.getOrCreate() propagates errors with fail-open enabled ---",
 	);
 	const autumn = new Autumn({
 		secretKey: "sk_fake",
 		serverURL: FAKE_URL,
 	});
 
-	const result = await autumn.customers.getOrCreate({
-		customerId: "cus_123",
-	});
-
-	console.log("Result:", JSON.stringify(result, null, 2));
-	console.log("id === null:", result.id === null);
+	try {
+		await autumn.customers.getOrCreate({ customerId: "cus_123" });
+		console.log("ERROR: Should have thrown but did not!");
+	} catch (err) {
+		console.log("Correctly threw error:", (err as Error).message);
+	}
 	console.log();
 }
 
@@ -81,7 +81,7 @@ async function testFailOpenDisabled() {
 async function main() {
 	await testFailOpenCheck();
 	await testFailOpenTrack();
-	await testFailOpenGetCustomer();
+	await testCustomerErrorPropagation();
 	await testFailOpenDisabled();
 	console.log("All tests complete.");
 }

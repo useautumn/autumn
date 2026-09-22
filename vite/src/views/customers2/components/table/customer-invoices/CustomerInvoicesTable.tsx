@@ -1,4 +1,4 @@
-import type { Invoice } from "@autumn/shared";
+import { type Invoice, ProcessorType } from "@autumn/shared";
 import { SectionTag } from "@autumn/ui";
 import { Receipt } from "@phosphor-icons/react";
 import { getPaginationRowModel } from "@tanstack/react-table";
@@ -9,6 +9,10 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCusInvoicePreviewsQuery } from "@/views/customers2/customer/hooks/useCusInvoicePreviewsQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { useInvoiceLineItemsQuery } from "@/views/customers2/hooks/useInvoiceLineItemsQuery";
+import {
+	resolveInvoiceProcessor,
+	useInvoicesMetadataQuery,
+} from "@/views/customers2/hooks/useInvoiceMetadataQuery";
 import { CreateInvoiceTrigger } from "./CreateInvoiceTrigger";
 import {
 	getCustomerInvoicesColumns,
@@ -39,6 +43,22 @@ export function CustomerInvoicesTable() {
 		enabled: invoiceIds.length > 0,
 	});
 
+	const stripeInvoiceIds = useMemo(
+		() =>
+			customer?.invoices
+				?.filter(
+					(inv: Invoice) =>
+						(inv.processor_type ?? ProcessorType.Stripe) ===
+						ProcessorType.Stripe,
+				)
+				.map((inv: Invoice) => inv.stripe_id) ?? [],
+		[customer?.invoices],
+	);
+	const { metadataByStripeId } = useInvoicesMetadataQuery({
+		customerId: customer?.id || customer?.internal_id,
+		stripeInvoiceIds,
+	});
+
 	const invoices = useMemo(
 		() =>
 			customer?.invoices.map((invoice: Invoice) => ({
@@ -49,8 +69,18 @@ export function CustomerInvoicesTable() {
 					products,
 					features,
 				}),
+				processor: resolveInvoiceProcessor({
+					processorType: invoice.processor_type,
+					metadata: metadataByStripeId[invoice.stripe_id],
+				}),
 			})) ?? [],
-		[customer?.invoices, products, features, lineItemsByInvoiceId],
+		[
+			customer?.invoices,
+			products,
+			features,
+			lineItemsByInvoiceId,
+			metadataByStripeId,
+		],
 	);
 
 	const handleRowClick = (invoice: Invoice) => {

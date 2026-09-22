@@ -17,6 +17,7 @@ export const customerExportToResponse = ({
 	publicAccessToken?: string | null;
 }): CustomerExportResponse => ({
 	id: customerExport.id,
+	kind: customerExport.kind,
 	status: customerExport.status,
 	fields: customerExport.fields,
 	snapshot: {

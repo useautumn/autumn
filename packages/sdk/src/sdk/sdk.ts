@@ -18,6 +18,7 @@ import { Features } from "./features.js";
 import { Invoices } from "./invoices.js";
 import { Keys } from "./keys.js";
 import { Licenses } from "./licenses.js";
+import { Logs } from "./logs.js";
 import { Plans } from "./plans.js";
 import { Platform } from "./platform.js";
 import { Referrals } from "./referrals.js";
@@ -53,6 +54,11 @@ export class Autumn extends ClientSDK {
   private _events?: Events;
   get events(): Events {
     return (this._events ??= new Events(this._options));
+  }
+
+  private _logs?: Logs;
+  get logs(): Logs {
+    return (this._logs ??= new Logs(this._options));
   }
 
   private _invoices?: Invoices;

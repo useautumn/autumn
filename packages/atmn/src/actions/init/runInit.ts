@@ -29,6 +29,7 @@ import {
 	runKeylessLogin,
 } from "../login/keyless";
 import { scaffoldConfig } from "../pull/scaffoldConfig";
+import { ignoreBundledSkills } from "../skills/ignoreBundledSkills";
 import { installSkills, SKILLS_DIR_NAME } from "../skills/skills";
 
 /** The network, behind functions so a test can hand over fakes. */
@@ -385,6 +386,7 @@ export const runInit = async ({
 
 	const skillsDir = join(configDir, SKILLS_DIR_NAME);
 	const { written } = installSkills({ dir: skillsDir, write: () => {} });
+	ignoreBundledSkills({ repoRoot, configDir });
 	prompter.write(
 		`${done(`Skills: ${relative(repoRoot, skillsDir)}/${written.join(", ")}`)}\n`,
 	);

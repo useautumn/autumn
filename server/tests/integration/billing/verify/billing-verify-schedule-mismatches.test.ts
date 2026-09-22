@@ -11,12 +11,18 @@
  */
 
 import { expect, spyOn, test as testSequentially } from "bun:test";
-import { type CreateScheduleParamsV0Input, ms } from "@autumn/shared";
+import {
+	type CreateScheduleParamsV0Input,
+	CusProductStatus,
+	customerProducts,
+	ms,
+} from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { eq } from "drizzle-orm";
 import { verify } from "@/internal/billing/v2/actions/verify/verify";
 import { CusService } from "@/internal/customers/CusService";
 import {
@@ -291,5 +297,161 @@ testSequentially(
 				(mismatch) => mismatch.type === "cancel_state_mismatch",
 			),
 		).toBe(false);
+	},
+);
+
+// Phase matching tolerates a day of drift, so an extra Stripe phase landing
+// within that window could be claimed by an expected phase that already
+// matched, hiding it. Each expected phase may claim only one actual phase.
+testSequentially(
+	`${chalk.yellowBright("billing-verify schedule-mismatches 4: an extra phase inside the day tolerance is still reported")}`,
+	async () => {
+		const customerId = "verify-schedule-extra-phase";
+
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const addon = products.recurringAddOn({
+			id: "addon",
+			items: [items.monthlyWords({ includedUsage: 25 })],
+		});
+
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, addon] }),
+			],
+			actions: [],
+		});
+
+		const response = await autumnV1.billing.createSchedule(
+			buildTwoPhaseSchedule({ customerId, proId: pro.id, addonId: addon.id }),
+		);
+		expect(response.status).toBe("created");
+
+		const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
+		const [sub] = await listActiveStripeSubscriptions({
+			ctx,
+			stripeCustomerId,
+		});
+		const scheduleId =
+			typeof sub.schedule === "string" ? sub.schedule : sub.schedule?.id;
+		if (!scheduleId) throw new Error("Expected schedule id on sub");
+
+		const schedule = await ctx.stripeCli.subscriptionSchedules.retrieve(
+			scheduleId,
+			{ expand: ["phases.items.price"] },
+		);
+		const [firstPhase, secondPhase] = schedule.phases;
+
+		// Split the final phase in two: the second half starts 12h later, well
+		// inside similarUnix's day tolerance.
+		const splitAt = secondPhase.start_date + 12 * 3600;
+		const phaseItems = (phase: (typeof schedule.phases)[number]) =>
+			phase.items.map((item) => ({
+				price: typeof item.price === "string" ? item.price : item.price.id,
+				quantity: item.quantity ?? undefined,
+			}));
+
+		await ctx.stripeCli.subscriptionSchedules.update(scheduleId, {
+			phases: [
+				{
+					start_date: firstPhase.start_date,
+					end_date: firstPhase.end_date,
+					proration_behavior: "none",
+					items: phaseItems(firstPhase),
+				},
+				{
+					start_date: secondPhase.start_date,
+					end_date: splitAt,
+					proration_behavior: "none",
+					items: phaseItems(secondPhase),
+				},
+				{
+					start_date: splitAt,
+					end_date: secondPhase.end_date,
+					proration_behavior: "none",
+					items: phaseItems(secondPhase),
+				},
+			],
+		});
+
+		// ── Contract: the extra phase is reported, not absorbed by the
+		// tolerance window of the phase Autumn does expect ─────────────────
+		const result = await verify({ ctx, params: { customer_id: customerId } });
+		expect(result.subscriptions[0].status).toBe("mismatched");
+		expect(
+			result.subscriptions[0].mismatches.some(
+				(mismatch) =>
+					mismatch.type === "schedule_mismatch" &&
+					mismatch.reason === "phase_count_mismatch",
+			),
+		).toBe(true);
+	},
+);
+
+// Mintlify's report: a scheduled cusProduct carries no subscription_ids and is
+// reachable only through the schedule. Selecting related products by
+// subscription alone drops it, so Autumn's expected phases collapse to one and
+// the real Stripe schedule reads as unexpected.
+testSequentially(
+	`${chalk.yellowBright("billing-verify schedule-mismatches 5: schedule-only-linked cusProduct is not reported as unexpected")}`,
+	async () => {
+		const customerId = "verify-schedule-link-only";
+
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const addon = products.recurringAddOn({
+			id: "addon",
+			items: [items.monthlyWords({ includedUsage: 25 })],
+		});
+
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, addon] }),
+			],
+			actions: [],
+		});
+
+		const response = await autumnV1.billing.createSchedule(
+			buildTwoPhaseSchedule({ customerId, proId: pro.id, addonId: addon.id }),
+		);
+		expect(response.status).toBe("created");
+
+		// Reproduce the prod shape: the scheduled rows keep only scheduled_ids.
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const scheduledProducts = fullCustomer.customer_products.filter(
+			(customerProduct) =>
+				customerProduct.status === CusProductStatus.Scheduled,
+		);
+		expect(scheduledProducts.length).toBeGreaterThan(0);
+		for (const scheduled of scheduledProducts) {
+			expect(scheduled.scheduled_ids?.length).toBeGreaterThan(0);
+			await ctx.db
+				.update(customerProducts)
+				.set({ subscription_ids: null })
+				.where(eq(customerProducts.id, scheduled.id));
+		}
+
+		// ── Contract: the future phase is still part of the expected state, so
+		// the schedule Autumn created is not reported as unexpected ─────────
+		const result = await verify({ ctx, params: { customer_id: customerId } });
+		expect(
+			result.subscriptions[0].mismatches.filter(
+				(mismatch) =>
+					mismatch.type === "schedule_mismatch" &&
+					mismatch.reason === "unexpected_schedule",
+			),
+		).toEqual([]);
+		expect(result.subscriptions[0].status).toBe("correct");
 	},
 );

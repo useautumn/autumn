@@ -4,7 +4,11 @@ import {
 	isStripeInvoiceForNewPeriod,
 } from "@/external/stripe/invoices/utils/classifyStripeInvoice.js";
 import { sendUsageAndReset } from "@/external/stripe/webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
-import { getInvoiceSubscriptionId } from "@/external/vercel/misc/vercelInvoiceUtils.js";
+import {
+	getInvoiceSubscriptionId,
+	getVercelInvoiceId,
+	storeVercelInvoiceId,
+} from "@/external/vercel/misc/vercelInvoiceUtils.js";
 import { provisionVercelCusProduct } from "@/external/vercel/misc/vercelProvisioning.js";
 import {
 	ensureVercelInvoiceModeCustomer,
@@ -32,13 +36,26 @@ export const handleMarketplaceInvoicePaid = async ({
 	};
 }) => {
 	const { db, org, env, logger } = ctx;
-	const { installationId, externalInvoiceId } = payload;
+	const {
+		installationId,
+		externalInvoiceId,
+		invoiceId: vercelInvoiceId,
+	} = payload;
 
 	const stripeCli = createStripeCli({ org, env });
 
 	const invoice = await stripeCli.invoices.retrieve(externalInvoiceId, {
 		expand: ["subscription"],
 	});
+
+	if (!getVercelInvoiceId(invoice)) {
+		await storeVercelInvoiceId({
+			stripeCli,
+			stripeInvoiceId: invoice.id,
+			vercelInvoiceId,
+			installationId,
+		});
+	}
 
 	if (invoice.status === "paid") {
 		logger.info("Invoice already marked as paid, skipping");

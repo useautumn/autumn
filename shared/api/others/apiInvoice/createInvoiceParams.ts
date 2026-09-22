@@ -1,4 +1,5 @@
 import { AttachDiscountSchema } from "@api/billing/attachV2/attachDiscount.js";
+import { PreviewInvoiceCreditsSchema } from "@api/billing/common/billingPreviewResponse.js";
 import { CustomLineItemSchema } from "@api/billing/common/customLineItem.js";
 import { UnixMsTimestampSchema } from "@api/billing/common/unixMsTimestamp.js";
 import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride.js";
@@ -244,6 +245,13 @@ export const CreateInvoicePreviewSchema = z.object({
 		})
 		.nullable(),
 	total: z.number(),
+	invoice_credits: PreviewInvoiceCreditsSchema.optional().meta({
+		description:
+			"The customer's Stripe credit balance and how much of it this invoice consumes.",
+	}),
+	amount_due: z.number().meta({
+		description: "What the customer pays: the total less any credit applied.",
+	}),
 	due_date: z.number().nullable(),
 });
 

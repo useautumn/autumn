@@ -106,6 +106,7 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	ctx.org = resolved.org;
 	ctx.features = resolved.features;
 	ctx.userId = userId;
+	ctx.impersonatedBy = session.session.impersonatedBy ?? undefined;
 	ctx.authType = AuthType.Dashboard;
 	ctx.user = user;
 	ctx.scopes = sessionScopes;

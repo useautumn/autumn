@@ -4,17 +4,23 @@ import {
 	CheckCircleIcon,
 	ClockIcon,
 	type Icon,
+	MinusCircleIcon,
 	PencilSimpleIcon,
 	PlayCircleIcon,
+	ProhibitIcon,
+	XCircleIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { statusLabel, waitingExplanation } from "./migrationStatus";
 
 const STATUS_STYLES: Record<MigrationStatus, string> = {
-	draft: "bg-muted text-tertiary-foreground border-transparent",
-	waiting: "bg-yellow-500/10 text-yellow-500 border-transparent",
-	running: "bg-green-500/10 text-green-500 border-transparent",
-	run: "bg-blue-500/10 text-blue-500 border-transparent",
+	draft: "bg-muted text-tertiary-foreground border-border",
+	waiting: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+	running: "bg-green-500/10 text-green-500 border-green-500/20",
+	run: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+	no_changes: "bg-muted text-tertiary-foreground border-border",
+	failed: "bg-red-500/10 text-red-500 border-red-500/20",
+	canceled: "bg-muted text-tertiary-foreground border-border",
 };
 
 const STATUS_ICONS: Record<MigrationStatus, Icon> = {
@@ -22,6 +28,9 @@ const STATUS_ICONS: Record<MigrationStatus, Icon> = {
 	waiting: ClockIcon,
 	running: PlayCircleIcon,
 	run: CheckCircleIcon,
+	no_changes: MinusCircleIcon,
+	failed: XCircleIcon,
+	canceled: ProhibitIcon,
 };
 
 export function MigrationStatusBadge({

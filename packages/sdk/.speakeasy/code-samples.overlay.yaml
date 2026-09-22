@@ -575,6 +575,29 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/customers.advance_test_clock"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.customers.advanceTestClock({
+                customerId: "<id>",
+                frozenTime: 202884,
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/customers.delete"]["post"]
     update:
       x-codeSamples:
@@ -976,6 +999,52 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/invoices.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.invoices.create({
+                customerId: "cus_123",
+                plans: [
+                  {
+                    planId: "pro",
+                    featureQuantities: [
+                      {
+                        featureId: "seats",
+                        billingBehavior: "prepaid",
+                        quantity: 5,
+                      },
+                      {
+                        featureId: "credits",
+                        billingBehavior: "usage_based",
+                        quantity: 2500,
+                      },
+                    ],
+                  },
+                ],
+                customLineItems: [
+                  {
+                    amount: 500,
+                    description: "Implementation services",
+                  },
+                ],
+                netTermsDays: 30,
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/invoices.insert"]["post"]
     update:
       x-codeSamples:
@@ -1039,6 +1108,26 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/invoices.listTemplates"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.invoices.listTemplates({});
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/invoices.pay"]["post"]
     update:
       x-codeSamples:
@@ -1054,6 +1143,51 @@ actions:
 
             async function run() {
               const result = await autumn.invoices.pay({
+                invoiceId: "inv_2b3c4d5e6f7g8h",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/invoices.reissue"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.invoices.reissue({
+                invoiceId: "inv_2b3c4d5e6f7g8h",
+                invoiceTemplateId: "inv_tmpl_bank_transfer",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/invoices.void"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.invoices.void({
                 invoiceId: "inv_2b3c4d5e6f7g8h",
               });
 
@@ -1174,6 +1308,29 @@ actions:
                 entityIds: [
                   "user_123",
                 ],
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/logs.search"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.logs.search({
+                query: "where status_code >= 400 | order by timestamp desc",
+                limit: 50,
               });
 
               console.log(result);

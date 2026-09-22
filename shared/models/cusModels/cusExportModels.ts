@@ -23,6 +23,16 @@ export const isCustomerExportActive = (customerExport: {
 		(status) => status === customerExport.status,
 	);
 
+export const CustomerExportKind = {
+	Customers: "customers",
+	BillingVerify: "billing_verify",
+} as const;
+
+export type CustomerExportKind =
+	(typeof CustomerExportKind)[keyof typeof CustomerExportKind];
+
+export const CustomerExportKindSchema = z.enum(CustomerExportKind);
+
 export const CustomerExportField = {
 	Name: "name",
 	Email: "email",
@@ -76,4 +86,21 @@ export const CustomerExportSnapshotSchema = z.object({
 
 export type CustomerExportSnapshot = z.infer<
 	typeof CustomerExportSnapshotSchema
+>;
+
+export const BILLING_VERIFY_EXPORT_COLUMNS = [
+	{ key: "customer_id", header: "Customer ID" },
+	{ key: "name", header: "Name" },
+	{ key: "email", header: "Email" },
+	{ key: "stripe_customer_id", header: "Stripe Customer ID" },
+	{ key: "stripe_subscription_ids", header: "Stripe Subscription IDs" },
+	{ key: "severity", header: "Severity" },
+	{ key: "issues", header: "Issues" },
+	{ key: "details", header: "Details" },
+] as const;
+
+/** One row per customer; list columns hold every mismatch, comma-separated. */
+export type BillingVerifyExportRow = Record<
+	(typeof BILLING_VERIFY_EXPORT_COLUMNS)[number]["key"],
+	string | null
 >;

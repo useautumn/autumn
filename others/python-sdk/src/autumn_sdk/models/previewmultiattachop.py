@@ -97,7 +97,7 @@ class PreviewMultiAttachBasePrice(BaseModel):
     interval: PreviewMultiAttachPriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
 
-    interval_count: Optional[float] = None
+    interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
     additional_currencies: Optional[List[PreviewMultiAttachAdditionalCurrency]] = None
@@ -118,6 +118,14 @@ class PreviewMultiAttachBasePrice(BaseModel):
                     m[k] = val
 
         return m
+
+
+class PreviewMultiAttachThresholdBillingTypedDict(TypedDict):
+    threshold: float
+
+
+class PreviewMultiAttachThresholdBilling(BaseModel):
+    threshold: float
 
 
 PreviewMultiAttachResetInterval = Literal[
@@ -149,7 +157,7 @@ class PreviewMultiAttachReset(BaseModel):
     interval: PreviewMultiAttachResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
-    interval_count: Optional[float] = None
+    interval_count: Optional[float] = 1
     r"""Number of intervals between resets. Defaults to 1."""
 
     @model_serializer(mode="wrap")
@@ -472,6 +480,29 @@ class PreviewMultiAttachRollover(BaseModel):
                     m[k] = val
 
         return m
+
+
+PreviewMultiAttachDuration = Literal[
+    "day",
+    "week",
+    "month",
+    "year",
+]
+
+
+class PreviewMultiAttachExpiryTypedDict(TypedDict):
+    r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
+
+    duration: PreviewMultiAttachDuration
+    length: float
+
+
+class PreviewMultiAttachExpiry(BaseModel):
+    r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
+
+    duration: PreviewMultiAttachDuration
+
+    length: float
 
 
 PreviewMultiAttachDimensionsMatch4TypedDict = TypeAliasType(
@@ -992,11 +1023,106 @@ PreviewMultiAttachCreditSchemaUnion = TypeAliasType(
 )
 
 
+class PreviewMultiAttachProviderMarkupsTypedDict(TypedDict):
+    markup: float
+
+
+class PreviewMultiAttachProviderMarkups(BaseModel):
+    markup: float
+
+
+class PreviewMultiAttachModelMarkupsTypedDict(TypedDict):
+    markup: NotRequired[float]
+    input_cost: NotRequired[float]
+    output_cost: NotRequired[float]
+
+
+class PreviewMultiAttachModelMarkups(BaseModel):
+    markup: Optional[float] = None
+
+    input_cost: Optional[float] = None
+
+    output_cost: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["markup", "input_cost", "output_cost"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewMultiAttachMarkupsTypedDict(TypedDict):
+    r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
+
+    default_markup: NotRequired[float]
+    r"""Default percentage markup for customers on this plan. Use -100 to make usage free."""
+    provider_markups: NotRequired[
+        Nullable[Dict[str, PreviewMultiAttachProviderMarkupsTypedDict]]
+    ]
+    r"""Per-provider markup percentages for customers on this plan."""
+    model_markups: NotRequired[
+        Nullable[Dict[str, PreviewMultiAttachModelMarkupsTypedDict]]
+    ]
+    r"""Per-model markup overrides for customers on this plan."""
+
+
+class PreviewMultiAttachMarkups(BaseModel):
+    r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
+
+    default_markup: Optional[float] = None
+    r"""Default percentage markup for customers on this plan. Use -100 to make usage free."""
+
+    provider_markups: OptionalNullable[Dict[str, PreviewMultiAttachProviderMarkups]] = (
+        UNSET
+    )
+    r"""Per-provider markup percentages for customers on this plan."""
+
+    model_markups: OptionalNullable[Dict[str, PreviewMultiAttachModelMarkups]] = UNSET
+    r"""Per-model markup overrides for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["default_markup", "provider_markups", "model_markups"])
+        nullable_fields = set(["provider_markups", "model_markups"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 class PreviewMultiAttachFeatureOverrideTypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     credit_schema: NotRequired[List[PreviewMultiAttachCreditSchemaUnionTypedDict]]
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    markups: NotRequired[PreviewMultiAttachMarkupsTypedDict]
+    r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
 
 class PreviewMultiAttachFeatureOverride(BaseModel):
@@ -1005,9 +1131,12 @@ class PreviewMultiAttachFeatureOverride(BaseModel):
     credit_schema: Optional[List[PreviewMultiAttachCreditSchemaUnion]] = None
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
 
+    markups: Optional[PreviewMultiAttachMarkups] = None
+    r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["credit_schema"])
+        optional_fields = set(["credit_schema", "markups"])
         serialized = handler(self)
         m = {}
 
@@ -1027,6 +1156,10 @@ class PreviewMultiAttachPlanItemTypedDict(TypedDict):
 
     feature_id: str
     r"""The ID of the feature to configure."""
+    threshold_billing: NotRequired[
+        Nullable[PreviewMultiAttachThresholdBillingTypedDict]
+    ]
+    r"""Bills this many feature units when outstanding overage reaches it."""
     included: NotRequired[float]
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
@@ -1041,6 +1174,8 @@ class PreviewMultiAttachPlanItemTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[PreviewMultiAttachRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
+    expiry: NotRequired[PreviewMultiAttachExpiryTypedDict]
+    r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
     feature_override: NotRequired[PreviewMultiAttachFeatureOverrideTypedDict]
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
@@ -1050,6 +1185,9 @@ class PreviewMultiAttachPlanItem(BaseModel):
 
     feature_id: str
     r"""The ID of the feature to configure."""
+
+    threshold_billing: OptionalNullable[PreviewMultiAttachThresholdBilling] = UNSET
+    r"""Bills this many feature units when outstanding overage reaches it."""
 
     included: Optional[float] = None
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
@@ -1072,6 +1210,9 @@ class PreviewMultiAttachPlanItem(BaseModel):
     rollover: Optional[PreviewMultiAttachRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
+    expiry: Optional[PreviewMultiAttachExpiry] = None
+    r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
+
     feature_override: Optional[PreviewMultiAttachFeatureOverride] = None
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
@@ -1079,6 +1220,7 @@ class PreviewMultiAttachPlanItem(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "threshold_billing",
                 "included",
                 "unlimited",
                 "pooled",
@@ -1086,18 +1228,28 @@ class PreviewMultiAttachPlanItem(BaseModel):
                 "price",
                 "proration",
                 "rollover",
+                "expiry",
                 "feature_override",
             ]
         )
+        nullable_fields = set(["threshold_billing"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -1297,7 +1449,7 @@ class PreviewMultiAttachFreeTrialParams(BaseModel):
     card_required: Optional[bool] = False
     r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
 
-    on_end: Optional[PreviewMultiAttachOnEnd] = None
+    on_end: Optional[PreviewMultiAttachOnEnd] = "bill"
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
     @model_serializer(mode="wrap")

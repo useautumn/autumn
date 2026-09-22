@@ -71,6 +71,8 @@ class CreateReferralProgramParamsTypedDict(TypedDict):
     r"""Required when redeem_on is checkout. Plan IDs must be unique."""
     exclude_trial: NotRequired[Nullable[bool]]
     r"""Whether checkouts that start a trial should skip granting the reward."""
+    internal_id: NotRequired[str]
+    r"""Address an existing referral program by its stable id. Omit when creating — the server generates one."""
 
 
 class CreateReferralProgramParams(BaseModel):
@@ -93,9 +95,14 @@ class CreateReferralProgramParams(BaseModel):
     exclude_trial: OptionalNullable[bool] = UNSET
     r"""Whether checkouts that start a trial should skip granting the reward."""
 
+    internal_id: Optional[str] = None
+    r"""Address an existing referral program by its stable id. Omit when creating — the server generates one."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["max_redemptions", "plan_ids", "exclude_trial"])
+        optional_fields = set(
+            ["max_redemptions", "plan_ids", "exclude_trial", "internal_id"]
+        )
         nullable_fields = set(["max_redemptions", "plan_ids", "exclude_trial"])
         serialized = handler(self)
         m = {}

@@ -2012,6 +2012,12 @@ class Billing(BaseSDK):
                 List[models.BillingUpdateAttachDiscountTypedDict],
             ]
         ] = None,
+        custom_line_items: Optional[
+            Union[
+                List[models.BillingUpdateCustomLineItem],
+                List[models.BillingUpdateCustomLineItemTypedDict],
+            ]
+        ] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         billing_cycle_anchor: Optional[
             Union[
@@ -2040,12 +2046,6 @@ class Billing(BaseSDK):
                 List[models.BillingUpdateLicenseQuantityTypedDict],
             ]
         ] = None,
-        custom_line_items: Optional[
-            Union[
-                List[models.BillingUpdateCustomLineItem],
-                List[models.BillingUpdateCustomLineItemTypedDict],
-            ]
-        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2067,6 +2067,7 @@ class Billing(BaseSDK):
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
@@ -2075,7 +2076,6 @@ class Billing(BaseSDK):
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param license_quantities: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
-        :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2114,6 +2114,9 @@ class Billing(BaseSDK):
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.BillingUpdateAttachDiscount]]
             ),
+            custom_line_items=utils.get_pydantic_model(
+                custom_line_items, Optional[List[models.BillingUpdateCustomLineItem]]
+            ),
             cancel_action=cancel_action,
             billing_cycle_anchor=billing_cycle_anchor,
             no_billing_changes=no_billing_changes,
@@ -2127,9 +2130,6 @@ class Billing(BaseSDK):
             ),
             license_quantities=utils.get_pydantic_model(
                 license_quantities, Optional[List[models.BillingUpdateLicenseQuantity]]
-            ),
-            custom_line_items=utils.get_pydantic_model(
-                custom_line_items, Optional[List[models.BillingUpdateCustomLineItem]]
             ),
         )
 
@@ -2229,6 +2229,12 @@ class Billing(BaseSDK):
                 List[models.BillingUpdateAttachDiscountTypedDict],
             ]
         ] = None,
+        custom_line_items: Optional[
+            Union[
+                List[models.BillingUpdateCustomLineItem],
+                List[models.BillingUpdateCustomLineItemTypedDict],
+            ]
+        ] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         billing_cycle_anchor: Optional[
             Union[
@@ -2257,12 +2263,6 @@ class Billing(BaseSDK):
                 List[models.BillingUpdateLicenseQuantityTypedDict],
             ]
         ] = None,
-        custom_line_items: Optional[
-            Union[
-                List[models.BillingUpdateCustomLineItem],
-                List[models.BillingUpdateCustomLineItemTypedDict],
-            ]
-        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2284,6 +2284,7 @@ class Billing(BaseSDK):
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
@@ -2292,7 +2293,6 @@ class Billing(BaseSDK):
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param license_quantities: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
-        :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2331,6 +2331,9 @@ class Billing(BaseSDK):
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.BillingUpdateAttachDiscount]]
             ),
+            custom_line_items=utils.get_pydantic_model(
+                custom_line_items, Optional[List[models.BillingUpdateCustomLineItem]]
+            ),
             cancel_action=cancel_action,
             billing_cycle_anchor=billing_cycle_anchor,
             no_billing_changes=no_billing_changes,
@@ -2344,9 +2347,6 @@ class Billing(BaseSDK):
             ),
             license_quantities=utils.get_pydantic_model(
                 license_quantities, Optional[List[models.BillingUpdateLicenseQuantity]]
-            ),
-            custom_line_items=utils.get_pydantic_model(
-                custom_line_items, Optional[List[models.BillingUpdateCustomLineItem]]
             ),
         )
 
@@ -2446,6 +2446,12 @@ class Billing(BaseSDK):
                 List[models.PreviewUpdateAttachDiscountTypedDict],
             ]
         ] = None,
+        custom_line_items: Optional[
+            Union[
+                List[models.PreviewUpdateCustomLineItem],
+                List[models.PreviewUpdateCustomLineItemTypedDict],
+            ]
+        ] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         billing_cycle_anchor: Optional[
             Union[
@@ -2474,12 +2480,6 @@ class Billing(BaseSDK):
                 List[models.PreviewUpdateLicenseQuantityTypedDict],
             ]
         ] = None,
-        custom_line_items: Optional[
-            Union[
-                List[models.PreviewUpdateCustomLineItem],
-                List[models.PreviewUpdateCustomLineItemTypedDict],
-            ]
-        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2501,6 +2501,7 @@ class Billing(BaseSDK):
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
@@ -2509,7 +2510,6 @@ class Billing(BaseSDK):
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param license_quantities: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
-        :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2549,6 +2549,9 @@ class Billing(BaseSDK):
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.PreviewUpdateAttachDiscount]]
             ),
+            custom_line_items=utils.get_pydantic_model(
+                custom_line_items, Optional[List[models.PreviewUpdateCustomLineItem]]
+            ),
             cancel_action=cancel_action,
             billing_cycle_anchor=billing_cycle_anchor,
             no_billing_changes=no_billing_changes,
@@ -2562,9 +2565,6 @@ class Billing(BaseSDK):
             ),
             license_quantities=utils.get_pydantic_model(
                 license_quantities, Optional[List[models.PreviewUpdateLicenseQuantity]]
-            ),
-            custom_line_items=utils.get_pydantic_model(
-                custom_line_items, Optional[List[models.PreviewUpdateCustomLineItem]]
             ),
         )
 
@@ -2664,6 +2664,12 @@ class Billing(BaseSDK):
                 List[models.PreviewUpdateAttachDiscountTypedDict],
             ]
         ] = None,
+        custom_line_items: Optional[
+            Union[
+                List[models.PreviewUpdateCustomLineItem],
+                List[models.PreviewUpdateCustomLineItemTypedDict],
+            ]
+        ] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         billing_cycle_anchor: Optional[
             Union[
@@ -2692,12 +2698,6 @@ class Billing(BaseSDK):
                 List[models.PreviewUpdateLicenseQuantityTypedDict],
             ]
         ] = None,
-        custom_line_items: Optional[
-            Union[
-                List[models.PreviewUpdateCustomLineItem],
-                List[models.PreviewUpdateCustomLineItemTypedDict],
-            ]
-        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2719,6 +2719,7 @@ class Billing(BaseSDK):
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
@@ -2727,7 +2728,6 @@ class Billing(BaseSDK):
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param license_quantities: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
-        :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2767,6 +2767,9 @@ class Billing(BaseSDK):
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.PreviewUpdateAttachDiscount]]
             ),
+            custom_line_items=utils.get_pydantic_model(
+                custom_line_items, Optional[List[models.PreviewUpdateCustomLineItem]]
+            ),
             cancel_action=cancel_action,
             billing_cycle_anchor=billing_cycle_anchor,
             no_billing_changes=no_billing_changes,
@@ -2780,9 +2783,6 @@ class Billing(BaseSDK):
             ),
             license_quantities=utils.get_pydantic_model(
                 license_quantities, Optional[List[models.PreviewUpdateLicenseQuantity]]
-            ),
-            custom_line_items=utils.get_pydantic_model(
-                custom_line_items, Optional[List[models.PreviewUpdateCustomLineItem]]
             ),
         )
 

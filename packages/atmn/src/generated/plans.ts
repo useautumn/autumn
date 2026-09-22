@@ -16,7 +16,7 @@ export type Plan = {
 	addOn?: boolean;
 	/** Whether the plan is automatically enabled for new customers. Defaults to false. */
 	autoEnable?: boolean;
-	/** Archive or unarchive the plan. */
+	/** Archive this plan. Omitted or false means the stated plan is live. */
 	archived?: boolean;
 	/** Take the active pointer. On `new_version`, omit to mint a draft; `true` promotes the minted row immediately. */
 	active: boolean;
@@ -173,6 +173,11 @@ export type Plan = {
 			expiryDurationType: "month" | "forever";
 			/** Number of periods before expiry. */
 			expiryDurationLength?: number;
+		};
+		/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+		expiry?: {
+			duration: "day" | "week" | "month" | "year";
+			length: number;
 		};
 		/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 		featureOverride?: {
@@ -420,7 +425,7 @@ export type Plan = {
 		versionSlug?: string;
 		/** Display name when creating the variant if it does not exist. */
 		name: string;
-		/** Archive or unarchive this variant. Omit to leave archived state unchanged. */
+		/** Archive this variant. Omitted or false means the stated variant is live. */
 		archived?: boolean;
 		/** Slug for the row this variant mints. Omit to inherit the base's `new_version_slug`, then `v{n}`. Ignored when this entry resolves to an existing row. */
 		newVersionSlug?: string;
@@ -572,6 +577,11 @@ export type Plan = {
 					expiryDurationType: "month" | "forever";
 					/** Number of periods before expiry. */
 					expiryDurationLength?: number;
+				};
+				/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+				expiry?: {
+					duration: "day" | "week" | "month" | "year";
+					length: number;
 				};
 				/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 				featureOverride?: {
@@ -798,6 +808,11 @@ export type Plan = {
 					expiryDurationType: "month" | "forever";
 					/** Number of periods before expiry. */
 					expiryDurationLength?: number;
+				};
+				/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+				expiry?: {
+					duration: "day" | "week" | "month" | "year";
+					length: number;
 				};
 				/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 				featureOverride?: {
@@ -1178,6 +1193,11 @@ export type Plan = {
 							/** Number of periods before expiry. */
 							expiryDurationLength?: number;
 						};
+						/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+						expiry?: {
+							duration: "day" | "week" | "month" | "year";
+							length: number;
+						};
 						/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 						featureOverride?: {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -1466,6 +1486,11 @@ export type Plan = {
 					expiryDurationType: "month" | "forever";
 					/** Number of periods before expiry. */
 					expiryDurationLength?: number;
+				};
+				/** Purchased units expire this long after each purchase. One-off prepaid consumable items only. */
+				expiry?: {
+					duration: "day" | "week" | "month" | "year";
+					length: number;
 				};
 				/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 				featureOverride?: {

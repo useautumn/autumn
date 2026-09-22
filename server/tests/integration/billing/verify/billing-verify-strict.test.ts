@@ -138,9 +138,15 @@ test.concurrent(
 	async () => {
 		const customerId = "verify-strict-unexpected-metered";
 		const pro = products.pro({ id: "pro", items: [] });
+		// $0 tiers — non-strict only tolerates meters that bill nothing; a
+		// priced meter Autumn doesn't model is real drift.
 		const meteredSource = products.pro({
 			id: "metered-source",
-			items: [items.consumableMessages()],
+			items: [
+				items.tieredConsumableMessages({
+					tiers: [{ to: "inf", amount: 0 }],
+				}),
+			],
 		});
 
 		const { ctx } = await initScenario({

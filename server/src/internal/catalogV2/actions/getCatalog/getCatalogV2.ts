@@ -1,11 +1,14 @@
 import {
+	type ApiPlanV1,
 	ApiVersionClass,
 	dbToApiFeatureV1,
+	evaluateCatalogItemIdentity,
 	type FullProduct,
 	type GetCatalogParams,
 	type GetCatalogResponse,
 	LATEST_VERSION,
 } from "@autumn/shared";
+import { catalogVariantIdentity } from "@autumn/shared/api/catalogV2/planUpdate/params/catalogVariantParams.js";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
@@ -16,6 +19,18 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 
 const FEATURE_TARGET_VERSION = new ApiVersionClass(LATEST_VERSION);
+
+const withItemMappingIdentities = <T extends Pick<ApiPlanV1, "items">>({
+	plan,
+}: {
+	plan: T;
+}) => ({
+	...plan,
+	items: plan.items.map((item) => ({
+		...item,
+		mapping_identity: JSON.stringify(evaluateCatalogItemIdentity({ item })),
+	})),
+});
 
 /** Read the entire catalog — features plus latest top-level plans with variant/license edges. */
 export const getCatalogV2 = async ({
@@ -93,7 +108,27 @@ export const getCatalogV2 = async ({
 
 	return {
 		features,
-		plans,
+		plans: plans.map((plan) => ({
+			...withItemMappingIdentities({ plan }),
+			licenses: plan.licenses?.map((license) => ({
+				...license,
+				plan: license.plan
+					? withItemMappingIdentities({ plan: license.plan })
+					: undefined,
+			})),
+			variants: plan.variants?.map((variant) => ({
+				...variant,
+				mapping_identity: JSON.stringify(
+					evaluateCatalogItemIdentity({
+						item: variant,
+						recipe: catalogVariantIdentity,
+					}),
+				),
+				plan: variant.plan
+					? withItemMappingIdentities({ plan: variant.plan })
+					: undefined,
+			})),
+		})),
 		rewards: loadedRewards.rewards.map((reward) =>
 			reward.kind === "coupon"
 				? { coupon: { ...reward.coupon, internal_id: reward.internalId } }

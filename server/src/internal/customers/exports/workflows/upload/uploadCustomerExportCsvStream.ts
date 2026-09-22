@@ -1,21 +1,19 @@
 import type { Readable } from "node:stream";
 import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import type { CustomerExportField } from "@autumn/shared";
 import { Upload } from "@aws-sdk/lib-storage";
 import type { CustomerExportDestination } from "@/external/aws/s3/customerExportsS3Config.js";
 import { getS3Client } from "@/external/aws/s3/initS3.js";
-import { createCustomerExportStringifier } from "../../csv/createCustomerExportStringifier.js";
 
 const CSV_UPLOAD_PART_SIZE_BYTES = 8 * 1024 * 1024;
 
 export const uploadCustomerExportCsvStream = async ({
 	rows,
-	fields,
+	stringifier,
 	destination,
 }: {
 	rows: Readable;
-	fields: CustomerExportField[];
+	stringifier: Transform;
 	destination: CustomerExportDestination;
 }): Promise<{ byteCount: number }> => {
 	const { bucket, region, key } = destination;
@@ -30,11 +28,7 @@ export const uploadCustomerExportCsvStream = async ({
 		},
 	});
 
-	const csvPipeline = pipeline(
-		rows,
-		createCustomerExportStringifier({ fields }),
-		countedCsvBytes,
-	);
+	const csvPipeline = pipeline(rows, stringifier, countedCsvBytes);
 
 	const upload = new Upload({
 		client: getS3Client({ region }),

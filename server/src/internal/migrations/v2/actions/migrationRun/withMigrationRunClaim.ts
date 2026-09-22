@@ -8,6 +8,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { migrationRunRepo } from "../../repos/index.js";
 import {
+	type PersistTriggerRunId,
+	persistDispatchHandle,
+} from "./persistDispatchHandle.js";
+import {
 	type TriggerRunLookup,
 	verifyTriggerRunExists,
 } from "./verifyTriggerRunExists.js";
@@ -53,6 +57,7 @@ export const withMigrationRunClaim = async ({
 	targetLimit,
 	claimed,
 	verifyDispatch = verifyTriggerRunExists,
+	persistTriggerRunId,
 }: {
 	ctx: AutumnContext;
 	migration: Migration;
@@ -64,6 +69,7 @@ export const withMigrationRunClaim = async ({
 		migrationRunId: string,
 	) => Promise<{ triggerRunId?: string } | undefined>;
 	verifyDispatch?: (triggerRunId: string) => Promise<TriggerRunLookup>;
+	persistTriggerRunId?: PersistTriggerRunId;
 }): Promise<{ migrationRunId: string; triggerRunId?: string }> => {
 	const migrationRun = await migrationRunRepo.insert({
 		ctx,
@@ -126,21 +132,12 @@ export const withMigrationRunClaim = async ({
 	}
 
 	if (result?.triggerRunId) {
-		try {
-			await migrationRunRepo.update({
-				ctx,
-				internalId: migrationRun.internal_id,
-				updates: { trigger_run_id: result.triggerRunId },
-			});
-		} catch (error) {
-			ctx.logger.error("run-migration: failed to persist trigger run id", {
-				data: {
-					migrationRunId: migrationRun.internal_id,
-					triggerRunId: result.triggerRunId,
-					error: error instanceof Error ? error.message : String(error),
-				},
-			});
-		}
+		await persistDispatchHandle({
+			ctx,
+			migrationRunId: migrationRun.internal_id,
+			triggerRunId: result.triggerRunId,
+			persist: persistTriggerRunId,
+		});
 	}
 
 	// Publish lazy-mode runs only after claim setup succeeds, so customer

@@ -715,6 +715,16 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               </Expandable>
             </DynamicResponseField>
 
+            <DynamicResponseField name="expiry" type="object | null">
+              Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+              <Expandable title="properties">
+                <DynamicResponseField name="duration" type="'day' | 'week' | 'month' | 'year'" />
+
+                <DynamicResponseField name="length" type="number" />
+
+              </Expandable>
+            </DynamicResponseField>
+
             <DynamicResponseField name="feature_override" type="object">
               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
               <Expandable title="properties">
@@ -1311,6 +1321,16 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       </Expandable>
                     </DynamicResponseField>
 
+                    <DynamicResponseField name="expiry" type="object">
+                      Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="duration" type="'day' | 'week' | 'month' | 'year'" />
+
+                        <DynamicResponseField name="length" type="number" />
+
+                      </Expandable>
+                    </DynamicResponseField>
+
                     <DynamicResponseField name="feature_override" type="object">
                       Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                       <Expandable title="properties">
@@ -1836,6 +1856,16 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                                 <DynamicResponseField name="expiry_duration_length" type="number">
                                   Number of periods before expiry.
                                 </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="expiry" type="object">
+                              Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="duration" type="'day' | 'week' | 'month' | 'year'" />
+
+                                <DynamicResponseField name="length" type="number" />
 
                               </Expandable>
                             </DynamicResponseField>
@@ -2383,6 +2413,16 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               </Expandable>
             </DynamicResponseField>
 
+            <DynamicResponseField name="expiry" type="object | null">
+              Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+              <Expandable title="properties">
+                <DynamicResponseField name="duration" type="'day' | 'week' | 'month' | 'year'" />
+
+                <DynamicResponseField name="length" type="number" />
+
+              </Expandable>
+            </DynamicResponseField>
+
             <DynamicResponseField name="feature_override" type="object">
               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
               <Expandable title="properties">
@@ -2979,6 +3019,16 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       </Expandable>
                     </DynamicResponseField>
 
+                    <DynamicResponseField name="expiry" type="object">
+                      Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="duration" type="'day' | 'week' | 'month' | 'year'" />
+
+                        <DynamicResponseField name="length" type="number" />
+
+                      </Expandable>
+                    </DynamicResponseField>
+
                     <DynamicResponseField name="feature_override" type="object">
                       Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                       <Expandable title="properties">
@@ -3508,6 +3558,16 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                               </Expandable>
                             </DynamicResponseField>
 
+                            <DynamicResponseField name="expiry" type="object">
+                              Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="duration" type="'day' | 'week' | 'month' | 'year'" />
+
+                                <DynamicResponseField name="length" type="number" />
+
+                              </Expandable>
+                            </DynamicResponseField>
+
                             <DynamicResponseField name="feature_override" type="object">
                               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                               <Expandable title="properties">
@@ -3807,10 +3867,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
             </DynamicResponseField>
 
           </Expandable>
-        </DynamicResponseField>
-
-        <DynamicResponseField name="invoice_credit" type="boolean">
-          Whether usage of this classic credit system should be itemized as invoice credits.
         </DynamicResponseField>
 
         <DynamicResponseField name="model_markups.{key}" type="object | null">
@@ -4139,10 +4195,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
             </DynamicResponseField>
 
           </Expandable>
-        </DynamicResponseField>
-
-        <DynamicResponseField name="invoice_credit" type="boolean">
-          Whether usage of this classic credit system should be itemized as invoice credits.
         </DynamicResponseField>
 
         <DynamicResponseField name="model_markups.{key}" type="object | null">

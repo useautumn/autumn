@@ -58,18 +58,26 @@ export const evaluateSchedulePhases = async ({
 
 	const currentPhaseStart =
 		schedule.current_phase?.start_date ?? schedule.phases[0]?.start_date;
+	// One expected phase claims one actual phase, so a genuine extra phase can't
+	// hide behind a sibling that already matched within the day tolerance.
+	const claimedPhases = new Set<number>();
 	for (let i = 0; i < scheduledPhases.length; i++) {
 		const expectedPhase = scheduledPhases[i];
 		const expectedStartSeconds = expectedPhase.start_date as number;
 
-		const actualPhase = schedule.phases.find((phase) =>
-			i === 0 && currentPhaseStart
-				? phase.start_date === currentPhaseStart
-				: similarUnix({
-						unix1: expectedStartSeconds * 1000,
-						unix2: phase.start_date * 1000,
-					}),
+		const actualPhaseIndex = schedule.phases.findIndex(
+			(phase, phaseIndex) =>
+				!claimedPhases.has(phaseIndex) &&
+				(i === 0 && currentPhaseStart
+					? phase.start_date === currentPhaseStart
+					: similarUnix({
+							unix1: expectedStartSeconds * 1000,
+							unix2: phase.start_date * 1000,
+						})),
 		);
+		const actualPhase =
+			actualPhaseIndex === -1 ? undefined : schedule.phases[actualPhaseIndex];
+		if (actualPhaseIndex !== -1) claimedPhases.add(actualPhaseIndex);
 		const phaseStartsAt =
 			i === 0
 				? (currentPhaseStart ?? expectedStartSeconds)

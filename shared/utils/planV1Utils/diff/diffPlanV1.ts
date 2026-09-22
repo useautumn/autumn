@@ -5,6 +5,7 @@ import {
 	CustomizePlanV1BaseSchema,
 	refineCustomizePlanV1Schema,
 } from "@api/billing/common/customizePlan/customizePlanV1.js";
+import { evaluateCatalogItemIdentity } from "@api/catalogV2/planUpdate/params/catalogPlanItemIdentity.js";
 import type { ApiPlanLicenseV1 } from "@api/products/apiPlanLicenseV1.js";
 import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 import type { BasePriceParams } from "@api/products/components/basePrice/basePrice.js";
@@ -166,20 +167,11 @@ export const buildPlanItemKey = ({
 	item: MatchKeyItem;
 	matchPrecision?: PlanItemMatchPrecision;
 }): string => {
-	const billingMethod = item.price?.billing_method ?? "";
-	const interval = item.price?.interval ?? item.reset?.interval ?? "";
-	const intervalCount = normalizeIntervalCount({
-		interval,
-		intervalCount: item.price?.interval_count ?? item.reset?.interval_count,
-	});
-	return [
-		item.feature_id,
-		...(matchPrecision === PlanItemMatchPrecision.FeatureBillingMethodCadence
-			? [billingMethod]
-			: []),
-		interval,
-		intervalCount,
-	].join("|");
+	const components = evaluateCatalogItemIdentity({ item });
+	if (matchPrecision === PlanItemMatchPrecision.FeatureCadence) {
+		components.splice(1, 1);
+	}
+	return components.join("|");
 };
 
 /** The identity used across plan diffs: feature, billing method, and cadence. */

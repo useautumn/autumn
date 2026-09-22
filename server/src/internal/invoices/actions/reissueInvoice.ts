@@ -1,26 +1,35 @@
 import { generateKsuid } from "@autumn/ksuid";
 import {
+	type CreateInvoicePreview,
 	cusProductToProduct,
 	type DbInvoiceLineItem,
 	ErrCode,
 	type FullCustomer,
+	type InsertDbInvoiceLineItem,
 	type InvoiceTemplate,
 	MetadataType,
 	ProcessorType,
 	RecaseError,
+	type ReissueCustomerOverrides,
+	type ReissueInvoiceOverrides,
+	type ReissueLineEdits,
 	secondsToMs,
+	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { getExpandedStripeCustomer } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
 import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { stripeLineItemsToDbLineItems } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines";
 import {
 	addStripeInvoiceLines,
 	createStripeInvoice,
 	finalizeStripeInvoice,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
+import { stripeCustomerToInvoiceCredits } from "@/internal/billing/v2/utils/billingPlan/preview/invoiceCredits/stripeCustomerToInvoiceCredits";
 import { checkoutRepo } from "@/internal/checkouts";
 import { CusService } from "@/internal/customers/CusService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
@@ -28,6 +37,9 @@ import { MetadataService } from "@/internal/metadata/MetadataService";
 import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/InvoiceTemplateService";
 import { type InvoiceListRow, InvoiceService } from "../InvoiceService";
 import { invoiceLineItemRepo } from "../lineItems/repos";
+import { applyReissueCustomerOverrides } from "./reissue/applyReissueCustomerOverrides";
+import { applyReissueLineEdits } from "./reissue/applyReissueLineEdits";
+import { previewReissuedInvoice } from "./reissue/previewReissuedInvoice";
 import { updateInvoiceFromStripe } from "./updateFromStripe";
 import { upsertInvoiceFromStripe } from "./upsertFromStripe";
 import { voidInvoice } from "./voidInvoice";
@@ -35,14 +47,41 @@ import { voidInvoice } from "./voidInvoice";
 const ADD_LINES_BATCH_SIZE = 100;
 
 type ReissueInvoiceResult = {
-	replacement: InvoiceListRow;
-	voidedInvoiceId: string;
+	replacement: InvoiceListRow | null;
+	voidedInvoiceId: string | null;
+	creditNoteId: string | null;
+	preview: CreateInvoicePreview;
+};
+
+/** An explicit null clears the field rather than falling back to the original. */
+const overrideOrInherit = ({
+	override,
+	inherited,
+}: {
+	override?: string | null;
+	inherited?: string | null;
+}) =>
+	override === undefined ? (inherited ?? undefined) : (override ?? undefined);
+
+const stripeInvoiceToStripeCustomerId = ({
+	stripeInvoice,
+}: {
+	stripeInvoice: Stripe.Invoice;
+}) => {
+	const stripeCusId =
+		typeof stripeInvoice.customer === "string"
+			? stripeInvoice.customer
+			: stripeInvoice.customer?.id;
+	if (!stripeCusId) {
+		throw invalidRequest("Original invoice has no Stripe customer");
+	}
+	return stripeCusId;
 };
 
 const invalidRequest = (message: string) =>
 	new RecaseError({ message, code: ErrCode.InvalidRequest, statusCode: 400 });
 
-const loadOpenStripeInvoice = async ({
+const loadReissuableStripeInvoice = async ({
 	ctx,
 	row,
 }: {
@@ -61,17 +100,20 @@ const loadOpenStripeInvoice = async ({
 		expand: [],
 	});
 
-	if (stripeInvoice.status === "void") {
-		const replacementId = stripeInvoice.metadata?.autumn_reissued_to;
+	const replacementId = stripeInvoice.metadata?.autumn_reissued_to;
+	if (replacementId) {
 		throw invalidRequest(
-			replacementId
-				? `Invoice ${row.invoice.id} was already reissued as Stripe invoice ${replacementId}`
-				: `Invoice ${row.invoice.id} is void and cannot be reissued`,
+			`Invoice ${row.invoice.id} was already reissued as Stripe invoice ${replacementId}`,
 		);
 	}
-	if (stripeInvoice.status !== "open") {
+	if (stripeInvoice.status === "void") {
 		throw invalidRequest(
-			`Invoice ${row.invoice.id} is ${stripeInvoice.status}; only open invoices can be reissued`,
+			`Invoice ${row.invoice.id} is void and cannot be reissued`,
+		);
+	}
+	if (stripeInvoice.status !== "open" && stripeInvoice.status !== "paid") {
+		throw invalidRequest(
+			`Invoice ${row.invoice.id} is ${stripeInvoice.status}; only open and paid invoices can be reissued`,
 		);
 	}
 	if (stripeInvoice.collection_method !== "send_invoice") {
@@ -108,8 +150,14 @@ const resolveDueDate = ({
 
 const stripeLinesToAddLineParams = ({
 	lines,
+	lineTaxRates = "keep",
 }: {
 	lines: Stripe.InvoiceLineItem[];
+	/**
+	 * `keep` copies the original's per-line rates, `inherit` lets the invoice's
+	 * default rate apply, and `none` taxes the line at nothing regardless of it.
+	 */
+	lineTaxRates?: "keep" | "inherit" | "none";
 }): Stripe.InvoiceAddLinesParams.Line[] =>
 	lines.map((line) => ({
 		description: line.description ?? undefined,
@@ -124,28 +172,45 @@ const stripeLinesToAddLineParams = ({
 		period: line.period
 			? { start: line.period.start, end: line.period.end }
 			: undefined,
-		tax_rates: line.taxes?.length
-			? line.taxes.flatMap((tax) =>
-					tax.tax_rate_details?.tax_rate ? [tax.tax_rate_details.tax_rate] : [],
-				)
-			: undefined,
+		tax_rates:
+			lineTaxRates === "none"
+				? ""
+				: lineTaxRates === "keep" && line.taxes?.length
+					? line.taxes.flatMap((tax) =>
+							tax.tax_rate_details?.tax_rate
+								? [tax.tax_rate_details.tax_rate]
+								: [],
+						)
+					: undefined,
 		metadata: { ...(line.metadata ?? {}), autumn_reissued_from_line: line.id },
 	}));
 
 const createReplacementDraft = async ({
+	ctx,
+	customerId,
 	stripeCli,
 	stripeInvoice,
 	template,
 	dueDate,
 	daysUntilDue,
 	paymentMethodTypes,
+	overrides,
+	lineEdits,
+	storedLines,
+	dropDeferredPointer,
 }: {
+	ctx: AutumnContext;
+	customerId: string;
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
 	template?: InvoiceTemplate;
 	dueDate?: number;
 	daysUntilDue?: number;
 	paymentMethodTypes?: string[];
+	overrides?: ReissueInvoiceOverrides;
+	lineEdits?: ReissueLineEdits;
+	storedLines: DbInvoiceLineItem[];
+	dropDeferredPointer: boolean;
 }) => {
 	const stripeSubId = stripeInvoiceToStripeSubscriptionId(stripeInvoice);
 	const stripeCusId =
@@ -164,25 +229,76 @@ const createReplacementDraft = async ({
 		collectionMethod: "send_invoice",
 		dueDate,
 		daysUntilDue,
-		footer: template?.footer ?? stripeInvoice.footer ?? undefined,
-		description: template?.memo ?? stripeInvoice.description ?? undefined,
+		footer: overrideOrInherit({
+			override: overrides?.footer,
+			inherited: template?.footer ?? stripeInvoice.footer,
+		}),
+		description: overrideOrInherit({
+			override: overrides?.memo,
+			inherited: template?.memo ?? stripeInvoice.description,
+		}),
 		paymentMethodTypes: paymentMethodTypes as never,
 		metadata: {
-			...(stripeInvoice.metadata ?? {}),
+			...inheritedMetadata({ stripeInvoice, dropDeferredPointer }),
 			autumn_reissued_from: stripeInvoice.id,
 			autumn_source_billing_reason: stripeInvoice.billing_reason ?? "",
 		},
-		automaticTax: stripeInvoice.automatic_tax?.enabled ?? false,
-		defaultTaxRates: stripeInvoice.default_tax_rates?.map((rate) =>
-			typeof rate === "string" ? rate : rate.id,
-		),
+		// Stripe would recompute automatic tax over the cleared rates.
+		automaticTax:
+			overrides?.tax_rate_id === null
+				? false
+				: (stripeInvoice.automatic_tax?.enabled ?? false),
+		// Omitted keeps the original's rate; null clears it; a value replaces it.
+		defaultTaxRates:
+			overrides?.tax_rate_id === undefined
+				? stripeInvoice.default_tax_rates?.map((rate) =>
+						typeof rate === "string" ? rate : rate.id,
+					)
+				: overrides.tax_rate_id
+					? [overrides.tax_rate_id]
+					: [],
 	});
 
-	const lines = stripeLinesToAddLineParams({
-		lines: await getStripeInvoiceLineItems({
-			stripeClient: stripeCli,
-			invoiceId: stripeInvoice.id,
+	const invoiceFields: Stripe.InvoiceUpdateParams = {
+		// A subscription's tax rate is inherited at creation; Stripe clears it
+		// only on update, and only for the empty string. Automatic tax is
+		// inherited the same way and would recompute the tax that was dropped.
+		...(overrides?.tax_rate_id === null
+			? { default_tax_rates: "", automatic_tax: { enabled: false } }
+			: {}),
+		...(overrides?.custom_fields !== undefined
+			? {
+					custom_fields: overrides.custom_fields.length
+						? overrides.custom_fields
+						: null,
+				}
+			: {}),
+		...(overrides?.account_tax_ids !== undefined
+			? { account_tax_ids: overrides.account_tax_ids }
+			: {}),
+	};
+	if (Object.keys(invoiceFields).length > 0) {
+		await stripeCli.invoices.update(draft.id, invoiceFields);
+	}
+
+	const lines = await applyReissueLineEdits({
+		ctx,
+		customerId,
+		lines: stripeLinesToAddLineParams({
+			lines: await getStripeInvoiceLineItems({
+				stripeClient: stripeCli,
+				invoiceId: stripeInvoice.id,
+			}),
+			lineTaxRates:
+				overrides?.tax_rate_id === undefined
+					? "keep"
+					: overrides.tax_rate_id === null
+						? "none"
+						: "inherit",
 		}),
+		storedLines,
+		edits: lineEdits,
+		currency: stripeInvoice.currency,
 	});
 
 	let withLines = draft;
@@ -196,69 +312,69 @@ const createReplacementDraft = async ({
 	return withLines;
 };
 
-/** Returns a restore function so a failed reissue leaves the address unchanged. */
-const updateStripeCustomerEmail = async ({
-	stripeCli,
-	stripeInvoice,
-	email,
-}: {
-	stripeCli: Stripe;
-	stripeInvoice: Stripe.Invoice;
-	email: string;
-}): Promise<() => Promise<void>> => {
-	const stripeCusId =
-		typeof stripeInvoice.customer === "string"
-			? stripeInvoice.customer
-			: stripeInvoice.customer?.id;
-	if (!stripeCusId) {
-		throw invalidRequest("Original invoice has no Stripe customer");
-	}
-	const before = await stripeCli.customers.retrieve(stripeCusId);
-	const previousEmail = before.deleted ? undefined : (before.email ?? "");
-	await stripeCli.customers.update(stripeCusId, { email });
-
-	return async () => {
-		if (previousEmail === undefined) return;
-		await stripeCli.customers
-			.update(stripeCusId, { email: previousEmail })
-			.catch(() => undefined);
-	};
-};
-
-/** Creates, finalizes and swaps in the replacement, then voids the original. */
+/**
+ * Creates and finalizes the replacement, then retires the original: an open
+ * invoice is voided and its deferred pointers move across, while a paid one
+ * keeps its money and gets a credit note instead.
+ */
 const issueReplacement = async ({
 	ctx,
+	customerId,
 	stripeCli,
 	invoiceId,
 	stripeInvoice,
 	template,
 	dueDate,
 	daysUntilDue,
+	overrides,
+	lineEdits,
+	storedLines,
+	creditOriginal,
+	customerAdjusted,
 }: {
 	ctx: AutumnContext;
+	customerId: string;
 	stripeCli: Stripe;
 	invoiceId: string;
 	stripeInvoice: Stripe.Invoice;
 	template?: InvoiceTemplate;
 	dueDate?: number;
 	daysUntilDue?: number;
-}): Promise<Stripe.Invoice> => {
+	overrides?: ReissueInvoiceOverrides;
+	lineEdits?: ReissueLineEdits;
+	storedLines: DbInvoiceLineItem[];
+	creditOriginal: boolean;
+	/** A corrected address or tax id legitimately moves the tax. */
+	customerAdjusted: boolean;
+}): Promise<{ finalized: Stripe.Invoice; creditNoteId: string | null }> => {
 	const draft = await createReplacementDraft({
+		ctx,
+		customerId,
 		stripeCli,
 		stripeInvoice,
 		template,
 		dueDate,
 		daysUntilDue,
 		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
+		overrides,
+		lineEdits,
+		storedLines,
+		dropDeferredPointer: creditOriginal,
 	});
 
-	if (draft.total !== stripeInvoice.total) {
+	// The total is only guaranteed to match when nothing was adjusted.
+	const adjusted = Boolean(overrides || lineEdits || customerAdjusted);
+	if (!adjusted && draft.total !== stripeInvoice.total) {
 		await stripeCli.invoices.del(draft.id).catch(() => undefined);
 		throw new RecaseError({
 			message: `Replacement total (${draft.total}) does not match the original (${stripeInvoice.total}); the invoice was not reissued`,
 			code: ErrCode.InternalError,
 			statusCode: 500,
 		});
+	}
+
+	if (creditOriginal) {
+		return creditAndFinalize({ stripeCli, stripeInvoice, draft });
 	}
 
 	// Automatic collection is what makes Stripe treat the replacement as the
@@ -277,7 +393,7 @@ const issueReplacement = async ({
 		});
 		await voidInvoice({ ctx, invoiceId });
 	} catch (error) {
-		// The original stays payable; retire the replacement instead.
+		// The original keeps standing; retire the replacement instead.
 		await repointDeferredReferences({
 			ctx,
 			fromStripeInvoiceId: finalized.id,
@@ -287,7 +403,7 @@ const issueReplacement = async ({
 			await stripeCli.invoices.voidInvoice(finalized.id);
 		} catch {
 			throw new RecaseError({
-				message: `Invoice ${invoiceId} could not be voided while being reissued; its replacement ${finalized.id} is still open and must be voided manually`,
+				message: `Invoice ${invoiceId} could not be retired while being reissued; its replacement ${finalized.id} is still open and must be voided manually`,
 				code: ErrCode.InternalError,
 				statusCode: 409,
 			});
@@ -295,7 +411,89 @@ const issueReplacement = async ({
 		throw error;
 	}
 
-	return finalized;
+	return { finalized, creditNoteId: null };
+};
+
+/**
+ * Returns a paid invoice's money to the customer's Stripe balance and finalizes
+ * the replacement, which that balance then settles. No refund is issued: the
+ * cash never moves.
+ *
+ * The credit must exist before finalization or Stripe bills the replacement in
+ * full, so a finalization failure has to hand the credit back — a credit note
+ * on a paid invoice cannot be voided, which leaves a reversing balance entry.
+ */
+const creditAndFinalize = async ({
+	stripeCli,
+	stripeInvoice,
+	draft,
+}: {
+	stripeCli: Stripe;
+	stripeInvoice: Stripe.Invoice;
+	draft: Stripe.Invoice;
+}): Promise<{ finalized: Stripe.Invoice; creditNoteId: string | null }> => {
+	const amount = stripeInvoice.amount_paid;
+	const creditNote = await stripeCli.creditNotes.create({
+		invoice: stripeInvoice.id,
+		amount,
+		credit_amount: amount,
+		reason: "order_change",
+		memo: "Reissued as a corrected invoice",
+	});
+
+	try {
+		const finalized = await finalizeStripeInvoice({
+			stripeCli,
+			invoiceId: draft.id,
+			autoAdvance: true,
+		});
+		return { finalized, creditNoteId: creditNote.id };
+	} catch (error) {
+		await reverseCredit({ stripeCli, stripeInvoice, creditNote, amount });
+		await stripeCli.invoices.del(draft.id).catch(() => undefined);
+		throw error;
+	}
+};
+
+const reverseCredit = async ({
+	stripeCli,
+	stripeInvoice,
+	creditNote,
+	amount,
+}: {
+	stripeCli: Stripe;
+	stripeInvoice: Stripe.Invoice;
+	creditNote: Stripe.CreditNote;
+	amount: number;
+}) => {
+	const stripeCusId = stripeInvoiceToStripeCustomerId({ stripeInvoice });
+	try {
+		await stripeCli.customers.createBalanceTransaction(stripeCusId, {
+			amount,
+			currency: stripeInvoice.currency,
+			description: `Reversing credit note ${creditNote.number ?? creditNote.id}: the reissue of ${stripeInvoice.id} failed`,
+			metadata: { autumn_reversed_credit_note: creditNote.id },
+		});
+	} catch {
+		throw new RecaseError({
+			message: `The reissue of ${stripeInvoice.id} failed after credit note ${creditNote.id} was issued, and the credit could not be returned; the customer holds it until it is reversed manually`,
+			code: ErrCode.InternalError,
+			statusCode: 409,
+		});
+	}
+};
+
+/** A paid original keeps its own deferred pointer, so the replacement must not carry one. */
+const inheritedMetadata = ({
+	stripeInvoice,
+	dropDeferredPointer,
+}: {
+	stripeInvoice: Stripe.Invoice;
+	dropDeferredPointer: boolean;
+}) => {
+	const metadata = { ...(stripeInvoice.metadata ?? {}) };
+	if (dropDeferredPointer) delete metadata.autumn_metadata_id;
+	return metadata;
 };
 
 /** Moves the deferred plan's pointers so paying the replacement fulfils it. */
@@ -358,8 +556,6 @@ const copyLineItemRows = async ({
 		db: ctx.db,
 		invoiceIds: [original.invoice.id],
 	});
-	if (originalRows.length === 0) return;
-
 	const replacementLines = await getStripeInvoiceLineItems({
 		stripeClient: createStripeCli({ org: ctx.org, env: ctx.env }),
 		invoiceId: replacement.id,
@@ -371,16 +567,23 @@ const copyLineItemRows = async ({
 		]),
 	);
 
-	const copied: DbInvoiceLineItem[] = originalRows.flatMap((row) => {
+	const copied: InsertDbInvoiceLineItem[] = originalRows.flatMap((row) => {
 		const line = row.stripe_id
 			? replacementLineBySource.get(row.stripe_id)
 			: undefined;
 		if (!line) return [];
+		// Adjusted lines bill a different amount, so the stored row follows Stripe.
+		const amount = stripeToAtmnAmount({
+			amount: line.amount,
+			currency: replacement.currency,
+		});
 		return [
 			{
 				...row,
 				id: generateKsuid({ prefix: "invoice_li_" }),
 				created_at: Date.now(),
+				amount,
+				amount_after_discounts: amount,
 				invoice_id: autumnInvoiceId,
 				stripe_id: line.id,
 				stripe_invoice_id: replacement.id,
@@ -391,7 +594,21 @@ const copyLineItemRows = async ({
 		];
 	});
 
-	await invoiceLineItemRepo.upsertMany({ db: ctx.db, lineItems: copied });
+	// Lines the reissue added have no original row behind them.
+	const copiedStripeIds = new Set(copied.map((row) => row.stripe_id));
+	const addedLines = replacementLines.filter(
+		(line) => !copiedStripeIds.has(line.id),
+	);
+	const added = stripeLineItemsToDbLineItems({
+		stripeLineItems: addedLines,
+		stripeDiscounts: [],
+		invoiceId: autumnInvoiceId,
+		stripeInvoiceId: replacement.id,
+	});
+
+	const lineItems = [...copied, ...added];
+	if (lineItems.length === 0) return;
+	await invoiceLineItemRepo.upsertMany({ db: ctx.db, lineItems });
 };
 
 const storeReplacementInAutumn = async ({
@@ -448,20 +665,41 @@ export const reissueInvoice = async ({
 	invoiceTemplateId,
 	netTermsDays,
 	updateCustomerEmail,
+	preview,
+	invoiceOverrides,
+	customerOverrides,
+	lineEdits,
 }: {
 	ctx: AutumnContext;
 	invoiceId: string;
 	invoiceTemplateId?: string;
 	netTermsDays?: number;
 	updateCustomerEmail?: string;
+	preview?: boolean;
+	invoiceOverrides?: ReissueInvoiceOverrides;
+	customerOverrides?: ReissueCustomerOverrides;
+	lineEdits?: ReissueLineEdits;
 }): Promise<ReissueInvoiceResult> => {
+	if (
+		updateCustomerEmail &&
+		customerOverrides?.email &&
+		updateCustomerEmail !== customerOverrides.email
+	) {
+		throw invalidRequest(
+			"update_customer_email and customer.email disagree; pass only one",
+		);
+	}
+
 	const row = await InvoiceService.getListRowById({ ctx, id: invoiceId });
 	if (!row) throw invalidRequest(`Invoice ${invoiceId} not found`);
 
-	const { stripeCli, stripeInvoice } = await loadOpenStripeInvoice({
+	const { stripeCli, stripeInvoice } = await loadReissuableStripeInvoice({
 		ctx,
 		row,
 	});
+
+	// A paid invoice keeps its money and gets a credit note; an open one is voided.
+	const creditOriginal = stripeInvoice.status === "paid";
 
 	const template = invoiceTemplateId
 		? await InvoiceTemplateService.getById({
@@ -480,26 +718,79 @@ export const reissueInvoice = async ({
 		nowMs: Date.now(),
 	});
 
-	// Stripe snapshots customer_email at finalization, so this must precede the draft.
-	const restoreCustomerEmail = updateCustomerEmail
-		? await updateStripeCustomerEmail({
-				stripeCli,
-				stripeInvoice,
-				email: updateCustomerEmail,
-			})
-		: undefined;
+	const previewCustomerId = row.customer_id ?? row.invoice.internal_customer_id;
+	const storedLines = await invoiceLineItemRepo.getByInvoiceIds({
+		db: ctx.db,
+		invoiceIds: [row.invoice.id],
+	});
 
-	const finalized = await issueReplacement({
+	if (preview && (invoiceOverrides || customerOverrides || lineEdits)) {
+		throw invalidRequest(
+			"Preview does not yet account for adjustments; omit invoice, customer and lines to preview a plain reissue",
+		);
+	}
+
+	const dueDateMs = dueDate
+		? secondsToMs(dueDate)
+		: daysUntilDue
+			? Date.now() + daysUntilDue * 24 * 60 * 60 * 1000
+			: null;
+	const credits = stripeCustomerToInvoiceCredits({
+		stripeCustomer: await getExpandedStripeCustomer({
+			ctx,
+			stripeCustomerId: stripeInvoiceToStripeCustomerId({ stripeInvoice }),
+		}),
+		currency: stripeInvoice.currency,
+	});
+
+	if (preview) {
+		return {
+			replacement: null,
+			voidedInvoiceId: null,
+			creditNoteId: null,
+			preview: previewReissuedInvoice({
+				stripeInvoice,
+				lines: await getStripeInvoiceLineItems({
+					stripeClient: stripeCli,
+					invoiceId: stripeInvoice.id,
+				}),
+				storedLines,
+				credits,
+				dueDateMs,
+			}),
+		};
+	}
+
+	// Stripe snapshots the customer's email, name, address and tax ids at
+	// finalization, so these must precede the draft.
+	if (updateCustomerEmail || customerOverrides) {
+		await applyReissueCustomerOverrides({
+			ctx,
+			stripeCli,
+			stripeCustomerId: stripeInvoiceToStripeCustomerId({ stripeInvoice }),
+			customerId: previewCustomerId,
+			overrides: customerOverrides,
+			email: updateCustomerEmail,
+		});
+	}
+
+	const { finalized, creditNoteId } = await issueReplacement({
 		ctx,
+		creditOriginal,
+		// Only a location or tax registration can move what Stripe charges.
+		customerAdjusted: Boolean(
+			customerOverrides?.address || customerOverrides?.tax_ids,
+		),
+		customerId: previewCustomerId,
 		stripeCli,
 		invoiceId,
 		stripeInvoice,
 		template,
 		dueDate,
 		daysUntilDue,
-	}).catch(async (error) => {
-		await restoreCustomerEmail?.();
-		throw error;
+		overrides: invoiceOverrides,
+		lineEdits,
+		storedLines,
 	});
 
 	await stripeCli.invoices.update(stripeInvoice.id, {
@@ -523,6 +814,19 @@ export const reissueInvoice = async ({
 		source: "reissueInvoice",
 	});
 
+	// The response describes what was issued, adjustments included.
+	const issuedPreview = previewReissuedInvoice({
+		stripeInvoice: finalized,
+		lines: await getStripeInvoiceLineItems({
+			stripeClient: stripeCli,
+			invoiceId: finalized.id,
+		}),
+		storedLines,
+		credits,
+		dueDateMs,
+		settled: true,
+	});
+
 	const replacement = autumnInvoice
 		? await InvoiceService.getListRowById({ ctx, id: autumnInvoice.id })
 		: null;
@@ -536,5 +840,10 @@ export const reissueInvoice = async ({
 
 	await updateInvoiceFromStripe({ ctx, customerId, stripeInvoice: finalized });
 
-	return { replacement, voidedInvoiceId: invoiceId };
+	return {
+		replacement,
+		voidedInvoiceId: creditOriginal ? null : invoiceId,
+		creditNoteId,
+		preview: issuedPreview,
+	};
 };
