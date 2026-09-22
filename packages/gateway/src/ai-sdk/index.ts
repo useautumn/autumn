@@ -10,7 +10,7 @@ export type { UsageLike } from "./usage.js";
 export type WithAutumnOptions = AutumnTrackingOptions & {
 	/** The AI SDK language model to wrap. */
 	model: LanguageModelV4;
-	/** Override the provider prefix used in the model name (e.g. "openrouter", "custom"). Falls back to `model.provider`. */
+	/** Explicit pricing provider, used verbatim instead of the normalized model provider. */
 	providerId?: string;
 };
 
@@ -19,7 +19,12 @@ export const withAutumn = ({
 	providerId,
 	...tracking
 }: WithAutumnOptions): LanguageModelV4 => {
-	const modelName = `${providerId ?? model.provider}/${model.modelId}`;
+	const providerRoot =
+		model.provider.match(/^(openai|anthropic|google|gateway)(?:\.|$)/)?.[1] ??
+		model.provider;
+	const pricingProvider =
+		providerId ?? (providerRoot === "gateway" ? "vercel" : providerRoot);
+	const modelName = `${pricingProvider}/${model.modelId}`;
 	const track = createTracker(tracking);
 
 	const trackUsage = (usage: UsageLike) =>

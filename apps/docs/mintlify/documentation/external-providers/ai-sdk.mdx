@@ -86,7 +86,9 @@ For example:
 - `@ai-sdk/openai` → `openai/gpt-4o`
 - `@ai-sdk/google` → `google/gemini-2.5-pro`
 
-If the AI SDK provider name doesn't match the Models.dev provider key, use the `providerId` option to override it:
+OpenAI, Anthropic, and Google provider names are normalized automatically, including dotted SDK namespaces such as `openai.responses`, `anthropic.messages`, and `google.generative-ai`. Vercel's `gateway` namespace maps to `vercel`. Dots and slashes in the model ID are preserved. Other provider names pass through unchanged.
+
+For a custom mapping, use `providerId`. Explicit overrides are used verbatim:
 
 ```typescript
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
@@ -109,7 +111,7 @@ const model = withAutumn({
 | `autumn` | `Autumn` | Yes | Your Autumn SDK client instance |
 | `model` | `LanguageModelV4` | Yes | The AI SDK 7 language model to wrap |
 | `customerId` | `string` | Yes | The Autumn customer ID to attribute usage to |
-| `providerId` | `string` | No | Override the provider prefix in the model name sent to Autumn. Falls back to the model's `provider` field |
+| `providerId` | `string` | No | Explicit pricing provider, used verbatim instead of the normalized model provider |
 | `featureId` | `string` | No | Target a specific AI credit system feature. Auto-detected if you only have one |
 | `entityId` | `string` | No | Entity ID for entity-scoped balance tracking |
 | `properties` | `Record<string, unknown>` | No | Additional properties to attach to each usage event |

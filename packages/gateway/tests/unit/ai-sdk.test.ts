@@ -81,6 +81,78 @@ const createModel = (): LanguageModelV4 => ({
 
 describe("withAutumn", () => {
 	for (const streaming of [false, true]) {
+		for (const [provider, modelId, providerId, expected] of [
+			["openai", "gpt-4.1", undefined, "openai/gpt-4.1"],
+			["openai.chat", "gpt-4.1", undefined, "openai/gpt-4.1"],
+			["openai.messages", "gpt-4.1", undefined, "openai/gpt-4.1"],
+			["openai.responses", "gpt-4.1", undefined, "openai/gpt-4.1"],
+			["openai.future.api", "gpt-4.1", undefined, "openai/gpt-4.1"],
+			[
+				"anthropic.messages",
+				"claude-sonnet-4.6",
+				undefined,
+				"anthropic/claude-sonnet-4.6",
+			],
+			[
+				"google.generative-ai",
+				"gemini-2.5-pro",
+				undefined,
+				"google/gemini-2.5-pro",
+			],
+			[
+				"gateway",
+				"anthropic/claude-sonnet-4.6",
+				undefined,
+				"vercel/anthropic/claude-sonnet-4.6",
+			],
+			[
+				"gateway.responses",
+				"openai/gpt-4.1",
+				undefined,
+				"vercel/openai/gpt-4.1",
+			],
+			["vercel", "openai/gpt-4.1", undefined, "vercel/openai/gpt-4.1"],
+			["openrouter", "openai/gpt-4.1", undefined, "openrouter/openai/gpt-4.1"],
+			[
+				"my.custom.provider",
+				"nested/model.v1",
+				undefined,
+				"my.custom.provider/nested/model.v1",
+			],
+			[
+				"openai-compatible.chat",
+				"model.v1",
+				undefined,
+				"openai-compatible.chat/model.v1",
+			],
+			["openai.responses", "model.v1", "custom", "custom/model.v1"],
+			[
+				"openai.chat",
+				"model.v1",
+				"my.custom.provider",
+				"my.custom.provider/model.v1",
+			],
+		] as const) {
+			test(`resolves ${provider} with override ${providerId ?? "none"} (${streaming ? "streamText" : "generateText"})`, async () => {
+				const { autumn, calls } = createAutumn();
+				const model = withAutumn({
+					autumn,
+					customerId: "cus_provider",
+					model: { ...createModel(), provider, modelId },
+					providerId,
+				});
+				if (streaming) {
+					await streamText({ model, prompt: "Hello" }).consumeStream();
+				} else {
+					await generateText({ model, prompt: "Hello" });
+				}
+				expect(calls).toHaveLength(1);
+				expect(calls[0].modelId).toBe(expected);
+				expect(model.provider).toBe(provider);
+				expect(model.modelId).toBe(modelId);
+			});
+		}
+
 		test(`tracks each tool-loop step exactly once (${streaming ? "streamText" : "generateText"})`, async () => {
 			const { autumn, calls } = createAutumn();
 			const base = createModel();
