@@ -108,9 +108,12 @@ describe("sweepStripeSubscriptions deadline", () => {
 					hangsLeft--;
 					return neverSettles();
 				}
-				const isFirstWindow =
-					typeof created === "object" && created !== null && "lt" in created;
-				if (!isFirstWindow) return Promise.resolve(emptyPage());
+				const isOpenFirstWindow =
+					typeof created === "object" &&
+					created !== null &&
+					"lt" in created &&
+					!("gte" in created);
+				if (!isOpenFirstWindow) return Promise.resolve(emptyPage());
 				return Promise.resolve(
 					subscriptionPage({ customerId: "cus_stripe_1" }),
 				);

@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import type { RatePacer } from "@/utils/createRatePacer.js";
 import { retryBoundedAsync } from "@/utils/retryBoundedAsync.js";
 import {
 	billingVerifyExportConfig,
@@ -13,12 +14,14 @@ export const listStripeSubscriptionPage = async ({
 	params,
 	startingAfter,
 	limits,
+	pacer,
 	onRetry,
 }: {
 	stripeCli: Stripe;
 	params: Pick<Stripe.SubscriptionListParams, "created" | "test_clock">;
 	startingAfter?: string;
 	limits?: SweepLimits;
+	pacer?: RatePacer;
 	onRetry?: ({ attempt, error }: { attempt: number; error: unknown }) => void;
 }): Promise<Stripe.ApiList<Stripe.Subscription>> => {
 	const {
@@ -39,6 +42,7 @@ export const listStripeSubscriptionPage = async ({
 		timeoutMs: pageTimeoutMs,
 		timeoutMessage: `Stripe subscription page timed out after ${pageTimeoutMs}ms`,
 		onRetry,
+		beforeAttempt: () => pacer?.takeSlot(),
 		run: () =>
 			stripeCli.subscriptions.list({
 				...params,
