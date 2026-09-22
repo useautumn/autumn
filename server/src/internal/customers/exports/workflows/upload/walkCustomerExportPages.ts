@@ -7,6 +7,7 @@ import {
 	type CustomerExportScalarRow,
 	getCustomerExportScalars,
 } from "../../queries/getCustomerExportScalars.js";
+import { retryExportDbRead } from "../../verify/retryExportDbRead.js";
 
 /** Keyset walk over the export's frozen population, one page of customers at a time. */
 export const walkCustomerExportPages = async function* ({
@@ -24,15 +25,20 @@ export const walkCustomerExportPages = async function* ({
 	let hasMorePages = true;
 
 	while (hasMorePages) {
-		const scalars = await getCustomerExportScalars({
-			db: dbReplica ?? ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			snapshot,
-			upperBoundInternalId: population.upperBoundInternalId,
-			createdAtCutoff: population.createdAtCutoff,
-			afterInternalId,
-			limit: pageSize,
+		const scalars = await retryExportDbRead({
+			logger: ctx.logger,
+			operation: "getCustomerExportScalars",
+			run: () =>
+				getCustomerExportScalars({
+					db: dbReplica ?? ctx.db,
+					orgId: ctx.org.id,
+					env: ctx.env,
+					snapshot,
+					upperBoundInternalId: population.upperBoundInternalId,
+					createdAtCutoff: population.createdAtCutoff,
+					afterInternalId,
+					limit: pageSize,
+				}),
 		});
 		const lastScalar = scalars[scalars.length - 1];
 		if (!lastScalar) return;

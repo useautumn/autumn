@@ -23,7 +23,7 @@ import {
 	useCustomerExportsQuery,
 	useInvalidateCustomerExports,
 } from "../../hooks/useCustomerExports";
-import { withLiveProgress } from "./withLiveProgress";
+import { liveProgressOf, withLiveProgress } from "./withLiveProgress";
 
 export const CUSTOMER_EXPORTS_PAGE_SIZE = 5;
 
@@ -151,7 +151,10 @@ export function useCustomerExportSheet({
 	const activeExport = polledActiveExport
 		? {
 				...polledActiveExport,
-				progress: progress ?? polledActiveExport.progress,
+				progress: liveProgressOf({
+					polled: polledActiveExport.progress,
+					live: progress,
+				}),
 			}
 		: undefined;
 
