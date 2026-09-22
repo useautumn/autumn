@@ -29,6 +29,19 @@ const resolveDesiredFreeTrial = ({
 		: desired;
 };
 
+/**
+ * Free plans have no card gate, and the read API reports `card_required`
+ * false for them; a stored true is inert and must not read as a change.
+ */
+const comparableFreeTrial = ({
+	freeTrial,
+	cardRequiredInert,
+}: {
+	freeTrial: FreeTrial;
+	cardRequiredInert: boolean;
+}): FreeTrial =>
+	cardRequiredInert ? { ...freeTrial, card_required: false } : freeTrial;
+
 /** Pair desired vs current by mode — version never claims/retires the base row. */
 const claimFreeTrial = ({
 	mode,
@@ -36,12 +49,14 @@ const claimFreeTrial = ({
 	desired,
 	currentFreeTrial,
 	internalProductId,
+	cardRequiredInert,
 }: {
 	mode: FreeTrialPlanMode;
 	freeTrialParams: FreeTrialParamsV1 | null | undefined;
 	desired: FreeTrial | null;
 	currentFreeTrial: FreeTrial | null;
 	internalProductId: string;
+	cardRequiredInert: boolean;
 }): {
 	new?: FreeTrial | null;
 	same?: FreeTrial | null;
@@ -67,7 +82,13 @@ const claimFreeTrial = ({
 
 	if (
 		currentFreeTrial &&
-		freeTrialsAreSame({ ft1: currentFreeTrial, ft2: desired })
+		freeTrialsAreSame({
+			ft1: comparableFreeTrial({
+				freeTrial: currentFreeTrial,
+				cardRequiredInert,
+			}),
+			ft2: comparableFreeTrial({ freeTrial: desired, cardRequiredInert }),
+		})
 	) {
 		return { same: currentFreeTrial };
 	}
@@ -81,11 +102,14 @@ export const computeFreeTrialPlan = ({
 	currentFreeTrial,
 	internalProductId,
 	mode = { type: "update" },
+	cardRequiredInert = false,
 }: {
 	freeTrialParams: FreeTrialParamsV1 | null | undefined;
 	currentFreeTrial: FreeTrial | null;
 	internalProductId: string;
 	mode?: FreeTrialPlanMode;
+	/** The plan is free: `card_required` has no effect, so it never differs. */
+	cardRequiredInert?: boolean;
 }): FreeTrialPlan => {
 	const desired = resolveDesiredFreeTrial({
 		freeTrialParams,
@@ -99,6 +123,7 @@ export const computeFreeTrialPlan = ({
 		desired,
 		currentFreeTrial,
 		internalProductId,
+		cardRequiredInert,
 	});
 
 	return buildFreeTrialPlan({ claim });

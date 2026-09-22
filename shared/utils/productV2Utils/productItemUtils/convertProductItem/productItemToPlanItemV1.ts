@@ -66,9 +66,8 @@ const itemToPlanFeaturePrice = ({
 
 	const includedUsage =
 		item.included_usage === Infinite ? 0 : (item.included_usage ?? 0);
-	const maxPurchase = item.usage_limit
-		? item.usage_limit - includedUsage
-		: null;
+	const maxPurchase =
+		item.usage_limit != null ? item.usage_limit - includedUsage : null;
 
 	const price =
 		item.tiers && item.tiers.length === 1 ? item.tiers[0].amount : item.price;

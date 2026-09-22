@@ -138,6 +138,15 @@ export const normalizedEntitlementIntervalCount = (entitlement: Entitlement) =>
 const hasUnlimitedAllowanceType = (entitlement: Entitlement) =>
 	entitlement.allowance_type === AllowanceType.Unlimited;
 
+/** A boolean feature's row: no allowance type and no interval (itemToPriceAndEnt). */
+const isBooleanRow = (entitlement: Entitlement) =>
+	entitlement.allowance_type == null && entitlement.interval == null;
+
+/** Nothing to carry on a boolean row, so a stored value is inert. */
+const carryFromPreviousDiffers = (ent1: Entitlement, ent2: Entitlement) =>
+	!(isBooleanRow(ent1) && isBooleanRow(ent2)) &&
+	(ent1.carry_from_previous ?? false) !== (ent2.carry_from_previous ?? false);
+
 const expiriesAreSame = (ent1: Entitlement, ent2: Entitlement) =>
 	(ent1.expiry_duration ?? null) === (ent2.expiry_duration ?? null) &&
 	(ent1.expiry_length ?? null) == (ent2.expiry_length ?? null);
@@ -160,9 +169,7 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 			normalizedEntitlementIntervalCount(ent1) !==
 			normalizedEntitlementIntervalCount(ent2),
 		allowance: !bothUnlimited && ent1.allowance != ent2.allowance,
-		carryFromPrevious:
-			(ent1.carry_from_previous ?? false) !==
-			(ent2.carry_from_previous ?? false),
+		carryFromPrevious: carryFromPreviousDiffers(ent1, ent2),
 		entityFeatureId:
 			normalizeOptionalId(ent1.entity_feature_id) !==
 			normalizeOptionalId(ent2.entity_feature_id),

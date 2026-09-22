@@ -208,9 +208,11 @@ export const planItemV0ToProductItem = ({
 
 		usage_model: planItem.price?.usage_model,
 		billing_units: planItem.price?.billing_units,
-		usage_limit: planItem.price?.max_purchase
-			? planItem.price.max_purchase + (planItem.granted_balance ?? 0)
-			: undefined,
+		// 0 is a stated cap (no purchase beyond included), not an absent one.
+		usage_limit:
+			planItem.price?.max_purchase != null
+				? planItem.price.max_purchase + (planItem.granted_balance ?? 0)
+				: undefined,
 
 		reset_usage_when_enabled:
 			planItem.reset?.reset_when_enabled ?? resetUsageWhenEnabled,
