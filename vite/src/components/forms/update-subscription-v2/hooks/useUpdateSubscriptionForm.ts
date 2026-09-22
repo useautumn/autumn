@@ -6,11 +6,13 @@ import {
 import { useMemo } from "react";
 import { useAppForm } from "@/hooks/form/form";
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import {
 	type UpdateSubscriptionForm,
 	UpdateSubscriptionFormSchema,
 } from "../updateSubscriptionFormSchema";
+import { pendingBillingCycleAnchorFormDefaults } from "../utils/pendingBillingCycleAnchor";
 
 export function useUpdateSubscriptionForm({
 	updateSubscriptionFormContext,
@@ -30,6 +32,12 @@ export function useUpdateSubscriptionForm({
 			}),
 		[customerProduct.options, prepaidItems],
 	);
+
+	const { testClockFrozenTimeMs } = useCusQuery();
+	const anchorDefaults = pendingBillingCycleAnchorFormDefaults({
+		cusProduct: customerProduct,
+		nowMs: testClockFrozenTimeMs ?? Date.now(),
+	});
 
 	const isTrialing = isCustomerProductTrialing(customerProduct);
 	const remainingTrialDays = isTrialing
@@ -54,9 +62,7 @@ export function useUpdateSubscriptionForm({
 			addLicenses: null,
 			cancelAction: null,
 			billingBehavior: null,
-			resetBillingCycle: false,
-			billingCycleAnchorMode: "now",
-			billingCycleAnchorDate: null,
+			...anchorDefaults,
 			resetUsage: false,
 			refundBehavior: null,
 			refundAmount: null,

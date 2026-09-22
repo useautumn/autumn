@@ -33,6 +33,7 @@ import {
 	customerLicenseTotals,
 	hasStagedLicenseQuantityChanges,
 } from "@/utils/billing/licenseQuantityUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useHasSubscriptionChanges } from "../hooks/useHasSubscriptionChanges";
 import {
 	type UseTrialStateReturn,
@@ -50,6 +51,10 @@ import {
 } from "../hooks/useUpdateSubscriptionPreview";
 import { useUpdateSubscriptionRequestBody } from "../hooks/useUpdateSubscriptionRequestBody";
 import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
+import {
+	billingCycleAnchorChanged,
+	getPendingBillingCycleAnchor,
+} from "../utils/pendingBillingCycleAnchor";
 import {
 	getProductWithSupportedFormValues,
 	getSupportedFormPatchFromDraftProduct,
@@ -250,11 +255,22 @@ export function UpdateSubscriptionFormProvider({
 		[customerProduct.customer_licenses],
 	);
 
+	const { testClockFrozenTimeMs } = useCusQuery();
+	const pendingBillingCycleAnchor = getPendingBillingCycleAnchor({
+		cusProduct: customerProduct,
+		nowMs: testClockFrozenTimeMs ?? Date.now(),
+	});
+	const anchorChanged = billingCycleAnchorChanged({
+		formValues: normalizedFormValues,
+		pendingResetsAt: pendingBillingCycleAnchor,
+	});
+
 	const hasChanges = useHasSubscriptionChanges({
 		formValues: normalizedFormValues,
 		initialPrepaidOptions,
 		initialLicenseQuantities,
 		initialBillingBehavior,
+		pendingBillingCycleAnchor,
 		prepaidItems,
 		customerProduct,
 		currentVersion,
@@ -330,12 +346,13 @@ export function UpdateSubscriptionFormProvider({
 			!hasLicenseBillingChanges &&
 			!hasPrepaidQuantityChanges &&
 			!isVersionLoading &&
-			!normalizedFormValues.resetBillingCycle);
+			!anchorChanged);
 
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({
 		updateSubscriptionFormContext: formContext,
 		form,
 		currentPrepaidItems,
+		pendingBillingCycleAnchor,
 	});
 
 	// Build the preview body reactively — formValues triggers recomputation,
