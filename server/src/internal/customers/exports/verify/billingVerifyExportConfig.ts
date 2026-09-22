@@ -6,12 +6,14 @@ type BillingVerifyExportConfig = {
 		pageTimeoutMs: number;
 		pageAttempts: number;
 		retryDelayMs: number;
+		maxRetryDelayMs: number;
 	};
 	customer: {
 		concurrency: number;
 		timeoutMs: number;
 		attempts: number;
 		retryDelayMs: number;
+		maxRetryDelayMs: number;
 	};
 	stripeReader: {
 		maxMemoizedReads: number;
@@ -36,12 +38,17 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 		pageTimeoutMs: 60_000,
 		pageAttempts: 3,
 		retryDelayMs: 2_000,
+		maxRetryDelayMs: 20_000,
 	},
+	/** A dead pooled connection fails the retry too if it comes back before the
+	 * pool reaps it, and exhausted attempts restart the whole export — so these
+	 * wait a guaranteed 30s across five backoffs, up to 60s. */
 	customer: {
 		concurrency: 8,
 		timeoutMs: 120_000,
-		attempts: 2,
-		retryDelayMs: 5_000,
+		attempts: 6,
+		retryDelayMs: 2_000,
+		maxRetryDelayMs: 30_000,
 	},
 	/** A memoized read is shared, so it must expire well inside the customer
 	 * deadline — otherwise a retry re-attaches to the same stalled promise. */

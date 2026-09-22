@@ -21,7 +21,13 @@ export const listStripeSubscriptionPage = async ({
 	limits?: SweepLimits;
 	onRetry?: ({ attempt, error }: { attempt: number; error: unknown }) => void;
 }): Promise<Stripe.ApiList<Stripe.Subscription>> => {
-	const { pageSize, pageTimeoutMs, pageAttempts, retryDelayMs } = {
+	const {
+		pageSize,
+		pageTimeoutMs,
+		pageAttempts,
+		retryDelayMs,
+		maxRetryDelayMs,
+	} = {
 		...billingVerifyExportConfig.sweep,
 		...limits,
 	};
@@ -29,6 +35,7 @@ export const listStripeSubscriptionPage = async ({
 	return retryBoundedAsync({
 		attempts: pageAttempts,
 		delayMs: retryDelayMs,
+		maxDelayMs: maxRetryDelayMs,
 		timeoutMs: pageTimeoutMs,
 		timeoutMessage: `Stripe subscription page timed out after ${pageTimeoutMs}ms`,
 		onRetry,

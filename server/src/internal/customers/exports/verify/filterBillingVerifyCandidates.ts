@@ -6,6 +6,7 @@ import {
 	getStripeLinkedCustomerIds,
 } from "../queries/getBillingVerifyCandidates.js";
 import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalars.js";
+import { retryExportDbRead } from "./retryExportDbRead.js";
 import type { BillingVerifySweep } from "./setupBillingVerifySweep.js";
 
 /** A customer with no Stripe subscription, no Stripe-linked
@@ -26,12 +27,24 @@ export const filterBillingVerifyCandidates = async ({
 	const { sweptSubscriptions } = sweep;
 
 	const db = dbReplica ?? ctx.db;
+	const { logger } = ctx;
+	const readLinkedCustomerIds = retryExportDbRead({
+		logger,
+		operation: "getStripeLinkedCustomerIds",
+		query: getStripeLinkedCustomerIds,
+	});
+	const readSharedStripeCustomerIds = retryExportDbRead({
+		logger,
+		operation: "getSharedStripeCustomerIds",
+		query: getSharedStripeCustomerIds,
+	});
+
 	const [linkedCustomerIds, sharedStripeCustomerIds] = await Promise.all([
-		getStripeLinkedCustomerIds({
+		readLinkedCustomerIds({
 			db,
 			internalCustomerIds: onStripe.map((scalar) => scalar.internal_id),
 		}),
-		getSharedStripeCustomerIds({
+		readSharedStripeCustomerIds({
 			db,
 			orgId: ctx.org.id,
 			env: ctx.env,

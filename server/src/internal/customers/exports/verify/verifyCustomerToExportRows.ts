@@ -31,7 +31,7 @@ export const verifyCustomerToExportRows = async ({
 	sweep: BillingVerifySweep;
 	limits?: CustomerLimits;
 }): Promise<BillingVerifyExportRow[]> => {
-	const { timeoutMs, attempts, retryDelayMs } = {
+	const { timeoutMs, attempts, retryDelayMs, maxRetryDelayMs } = {
 		...billingVerifyExportConfig.customer,
 		...limits,
 	};
@@ -80,6 +80,7 @@ export const verifyCustomerToExportRows = async ({
 		return await retryBoundedAsync({
 			attempts,
 			delayMs: retryDelayMs,
+			maxDelayMs: maxRetryDelayMs,
 			timeoutMs,
 			timeoutMessage: `Verification timed out after ${timeoutMs}ms`,
 			run: verifyOnce,

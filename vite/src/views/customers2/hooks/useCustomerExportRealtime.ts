@@ -25,9 +25,10 @@ export function useCustomerExportRealtime({
 	});
 
 	// Polling still reports status, so a dead subscription only costs smoothness.
-	if (error) return { progress: null };
+	// Its last frame must not be merged over the poll, or the bar sticks there.
+	if (error || !run) return { progress: null };
 
 	return {
-		progress: runMetadataToCustomerExportProgress({ metadata: run?.metadata }),
+		progress: runMetadataToCustomerExportProgress({ metadata: run.metadata }),
 	};
 }
