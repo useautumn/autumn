@@ -7,7 +7,7 @@ export const LINT_RULES: LintRules = {
 		label: "feature",
 		idField: "featureId",
 		required: ["featureId", "name", "type"],
-		hidden: ["display", "newFeatureId"],
+		hidden: ["display", "eventNames", "newFeatureId"],
 		fields: {
 			type: {
 				enum: ["boolean", "metered", "credit_system", "ai_credit_system"],
