@@ -1,4 +1,5 @@
 import {
+	type CreateInvoicePreview,
 	formatAmount,
 	type Invoice,
 	type InvoiceLineItem,
@@ -7,18 +8,21 @@ import {
 import {
 	Button,
 	FormLabel,
+	IconButton,
 	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	SheetAccordion,
+	SheetAccordionItem,
 	Switch,
 } from "@autumn/ui";
-import { PaperPlaneTiltIcon } from "@phosphor-icons/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { PaperPlaneTiltIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type Stripe from "stripe";
 import {
 	LayoutGroup,
 	SheetFooter,
@@ -28,14 +32,96 @@ import {
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useInvoiceTemplatesQuery } from "@/hooks/queries/useInvoiceTemplatesQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { CountrySelect } from "./reissue/CountrySelect";
+import { stripeInvoiceToPrefill } from "./reissue/stripeInvoiceToPrefill";
+import { TaxIdTypeSelect } from "./reissue/TaxIdTypeSelect";
+import {
+	buildReissuePayload,
+	type ReissuePrefill,
+	useReissueForm,
+} from "./reissue/useReissueForm";
 
 const NO_TEMPLATE = "none";
 
+const RemoveButton = ({ onClick }: { onClick: () => void }) => (
+	<IconButton
+		variant="muted"
+		size="sm"
+		onClick={onClick}
+		icon={<XIcon size={12} />}
+		className="shrink-0 text-tertiary-foreground hover:text-red-500"
+	/>
+);
+
+const Field = ({
+	label,
+	children,
+	hint,
+}: {
+	label: string;
+	children: React.ReactNode;
+	hint?: string;
+}) => (
+	<div className="flex flex-col gap-1.5">
+		<span className="text-form-label">{label}</span>
+		{children}
+		{hint && <span className="text-xs text-tertiary-foreground">{hint}</span>}
+	</div>
+);
+
 export function ReissueInvoiceSheet() {
 	const sheetData = useSheetStore((s) => s.data);
+	const invoice = sheetData?.invoice as Invoice | undefined;
+	const axiosInstance = useAxiosInstance();
+
+	const { data: stripeInvoice, isLoading } = useQuery({
+		queryKey: ["stripe-invoice", invoice?.stripe_id],
+		enabled: Boolean(invoice?.stripe_id),
+		queryFn: async () => {
+			const { data } = await axiosInstance.get<Stripe.Invoice>(
+				`/v1/invoices/${invoice?.stripe_id}/stripe`,
+			);
+			return data;
+		},
+	});
+
+	if (!invoice || isLoading) {
+		return (
+			<div className="flex h-full flex-col">
+				<SheetHeader title="Reissue Invoice" description="Loading invoice..." />
+				<div className="p-4 text-sm text-tertiary-foreground">Loading...</div>
+			</div>
+		);
+	}
+
+	return (
+		<ReissueInvoiceForm
+			invoice={invoice}
+			lineItems={(sheetData?.lineItems as InvoiceLineItem[] | undefined) ?? []}
+			taxedAmount={sheetData?.taxedAmount as number | undefined}
+			prefill={stripeInvoiceToPrefill(stripeInvoice)}
+			invoiceDetailData={sheetData ?? {}}
+		/>
+	);
+}
+
+function ReissueInvoiceForm({
+	invoice,
+	lineItems,
+	taxedAmount,
+	prefill,
+	invoiceDetailData,
+}: {
+	invoice: Invoice;
+	lineItems: InvoiceLineItem[];
+	taxedAmount?: number;
+	prefill: ReissuePrefill;
+	invoiceDetailData: Record<string, unknown>;
+}) {
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const axiosInstance = useAxiosInstance();
@@ -43,48 +129,51 @@ export function ReissueInvoiceSheet() {
 	const buildQueryKey = useQueryKeyFactory();
 	const { customer, refetch } = useCusQuery();
 	const { templates } = useInvoiceTemplatesQuery();
+	const {
+		form,
+		patch,
+		setAmount,
+		toggleRemoved,
+		addLine,
+		updateAddedLine,
+		removeAddedLine,
+		addCustomField,
+		updateCustomField,
+		removeCustomField,
+		setAddress,
+	} = useReissueForm({ prefill });
 
-	// The whole invoice-detail payload rides along so Back restores that sheet intact.
-	const invoice = sheetData?.invoice as Invoice | undefined;
-	const lineItems =
-		(sheetData?.lineItems as InvoiceLineItem[] | undefined) ?? [];
-	const taxedAmount = sheetData?.taxedAmount as number | undefined;
-	const invoiceDetailData = sheetData ?? {};
-	const templateOptions = [
-		{ label: "Keep current footer", value: NO_TEMPLATE },
-		...templates.map((template) => ({
-			label: template.name,
-			value: template.id,
-		})),
-	];
-	const [templateId, setTemplateId] = useState(NO_TEMPLATE);
-	const [email, setEmail] = useState("");
-	const [netTermsDays, setNetTermsDays] = useState("");
-	const [removeTax, setRemoveTax] = useState(false);
-	// Keyed by line item id; only the ones the user actually touched are sent.
-	const [amounts, setAmounts] = useState<Record<string, string>>({});
+	const payload = buildReissuePayload({
+		invoiceId: invoice.id,
+		form,
+		prefill,
+		lineItems,
+	});
+	const previewPayload = useDebounce({
+		value: JSON.stringify({ ...payload, customer: undefined, preview: true }),
+		delayMs: 500,
+	});
+	const {
+		data: preview,
+		isFetching: previewing,
+		error: previewError,
+	} = useQuery({
+		queryKey: ["reissue-preview", previewPayload],
+		queryFn: async () => {
+			const { data } = await axiosInstance.post<{
+				preview: CreateInvoicePreview;
+			}>("/v1/invoices.reissue", JSON.parse(previewPayload));
+			return data.preview;
+		},
+		placeholderData: (previous) => previous,
+	});
 
 	const reissue = useMutation({
 		mutationFn: async () => {
-			if (!invoice) return;
-			const trimmedEmail = email.trim();
-			const invoiceOverrides = removeTax ? { tax_rate_id: null } : {};
-			const updatedLines = Object.entries(amounts).flatMap(([id, value]) =>
-				value.trim() === "" ? [] : [{ id, amount: Number(value) }],
+			const { data } = await axiosInstance.post(
+				"/v1/invoices.reissue",
+				payload,
 			);
-
-			const { data } = await axiosInstance.post("/v1/invoices.reissue", {
-				invoice_id: invoice.id,
-				...(templateId !== NO_TEMPLATE
-					? { invoice_template_id: templateId }
-					: {}),
-				...(trimmedEmail ? { update_customer_email: trimmedEmail } : {}),
-				...(netTermsDays ? { net_terms_days: Number(netTermsDays) } : {}),
-				...(Object.keys(invoiceOverrides).length
-					? { invoice: invoiceOverrides }
-					: {}),
-				...(updatedLines.length ? { lines: { update: updatedLines } } : {}),
-			});
 			return data;
 		},
 		onSuccess: async () => {
@@ -105,34 +194,27 @@ export function ReissueInvoiceSheet() {
 		},
 	});
 
-	if (!invoice) {
-		return (
-			<div className="flex h-full flex-col">
-				<SheetHeader title="Reissue Invoice" description="Loading invoice..." />
-				<div className="p-4 text-sm text-tertiary-foreground">Loading...</div>
-			</div>
-		);
-	}
-
-	const formattedTotal = formatAmount({
-		amount: invoice.total,
-		currency: invoice.currency,
-		minFractionDigits: 2,
-		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-	});
+	const money = (amount: number) =>
+		formatAmount({
+			amount,
+			currency: invoice.currency,
+			minFractionDigits: 2,
+			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
+		});
 	const isPaid = invoice.status === InvoiceStatus.Paid;
-	// taxedAmount is the tax itself, and the detail sheet only receives one for
-	// orgs on Stripe automatic tax.
 	const isTaxed = (taxedAmount ?? 0) > 0;
-	const formattedTax = formatAmount({
-		amount: taxedAmount ?? 0,
-		currency: invoice.currency,
-		minFractionDigits: 2,
-		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-	});
+	const total = money(preview?.total ?? invoice.total);
 	const invalidNetTerms =
-		netTermsDays !== "" &&
-		(!Number.isInteger(Number(netTermsDays)) || Number(netTermsDays) < 1);
+		form.netTermsDays !== "" &&
+		(!Number.isInteger(Number(form.netTermsDays)) ||
+			Number(form.netTermsDays) < 1);
+	const templateOptions = [
+		{ label: "Keep current footer", value: NO_TEMPLATE },
+		...templates.map((template) => ({
+			label: template.name,
+			value: template.id,
+		})),
+	];
 
 	return (
 		<LayoutGroup>
@@ -141,22 +223,25 @@ export function ReissueInvoiceSheet() {
 					title="Reissue Invoice"
 					description={
 						isPaid
-							? `Credit this ${formattedTotal} invoice to the customer's balance and send a corrected one, which that balance covers.`
-							: `Send a new ${formattedTotal} invoice and void this one.`
+							? `Credit this ${money(invoice.total)} invoice to the customer's balance and send a corrected ${total} one, which that balance covers.`
+							: `Send a new ${total} invoice and void this one.`
 					}
 				/>
 
 				<SheetSection withSeparator>
 					<FormLabel>Invoice template</FormLabel>
 					<Select
-						value={templateId}
-						onValueChange={setTemplateId}
+						value={form.templateId ?? NO_TEMPLATE}
+						onValueChange={(value) =>
+							patch({ templateId: value === NO_TEMPLATE ? null : value })
+						}
 						items={templateOptions}
 					>
 						<SelectTrigger className="w-full">
 							<SelectValue>
-								{templateOptions.find((option) => option.value === templateId)
-									?.label ?? "Keep current footer"}
+								{templateOptions.find(
+									(option) => option.value === (form.templateId ?? NO_TEMPLATE),
+								)?.label ?? "Keep current footer"}
 							</SelectValue>
 						</SelectTrigger>
 						<SelectContent>
@@ -175,8 +260,8 @@ export function ReissueInvoiceSheet() {
 						placeholder={
 							customer?.email ?? "Leave empty to keep the same email"
 						}
-						value={email}
-						onChange={(e) => setEmail(e.target.value)}
+						value={form.email}
+						onChange={(e) => patch({ email: e.target.value })}
 					/>
 					<span className="text-xs text-tertiary-foreground">
 						Changes the customer's email in Stripe, so later invoices go there
@@ -184,64 +269,247 @@ export function ReissueInvoiceSheet() {
 					</span>
 				</SheetSection>
 
-				<SheetSection withSeparator={isTaxed || lineItems.length > 0}>
+				<SheetSection withSeparator>
 					<FormLabel>Payment terms</FormLabel>
 					<Input
 						type="number"
 						min={1}
 						placeholder="Days until due — empty keeps the current terms"
-						value={netTermsDays}
-						onChange={(e) => setNetTermsDays(e.target.value)}
+						value={form.netTermsDays}
+						onChange={(e) => patch({ netTermsDays: e.target.value })}
 					/>
 				</SheetSection>
 
 				{isTaxed && (
-					<SheetSection withSeparator={lineItems.length > 0}>
+					<SheetSection withSeparator>
 						<div className="flex items-center justify-between">
 							<FormLabel className="mb-0">Reissue without tax</FormLabel>
-							<Switch checked={removeTax} onCheckedChange={setRemoveTax} />
+							<Switch
+								checked={form.removeTax}
+								onCheckedChange={(checked) => patch({ removeTax: checked })}
+							/>
 						</div>
 						<span className="text-xs text-tertiary-foreground">
-							Drops the {formattedTax} of tax on this invoice.
+							Drops the {money(taxedAmount ?? 0)} of tax on this invoice.
 						</span>
 					</SheetSection>
 				)}
 
-				{lineItems.length > 0 && (
-					<SheetSection withSeparator={false}>
-						<FormLabel>Line amounts</FormLabel>
-						<div className="flex flex-col gap-2">
-							{lineItems.map((lineItem) => (
+				<SheetSection withSeparator>
+					<div className="flex items-center justify-between">
+						<FormLabel className="mb-0">Lines</FormLabel>
+						<IconButton
+							className="text-tertiary-foreground"
+							icon={<PlusIcon size={12} />}
+							onClick={addLine}
+							size="sm"
+							variant="muted"
+						>
+							Add
+						</IconButton>
+					</div>
+					<div className="flex flex-col gap-2">
+						{lineItems.map((lineItem) => {
+							const removed = form.removedLineIds.includes(lineItem.id);
+							return (
 								<div
 									key={lineItem.id}
-									className="flex items-center justify-between gap-3"
+									className={`flex items-center gap-2 ${removed ? "opacity-40" : ""}`}
 								>
 									<span
-										className="truncate text-sm text-secondary-foreground"
+										className={`flex-1 truncate text-sm text-secondary-foreground ${removed ? "line-through" : ""}`}
 										title={lineItem.description}
 									>
 										{lineItem.description}
 									</span>
 									<Input
 										type="number"
-										className="w-28 shrink-0"
+										className="h-7 w-24 shrink-0 text-right text-xs"
 										placeholder={String(lineItem.amount)}
-										value={amounts[lineItem.id] ?? ""}
-										onChange={(e) =>
-											setAmounts((current) => ({
-												...current,
-												[lineItem.id]: e.target.value,
-											}))
-										}
+										value={form.amounts[lineItem.id] ?? ""}
+										disabled={removed}
+										onChange={(e) => setAmount(lineItem.id, e.target.value)}
+									/>
+									<RemoveButton onClick={() => toggleRemoved(lineItem.id)} />
+								</div>
+							);
+						})}
+						{form.addedLines.map((line) => (
+							<div key={line._id} className="flex items-center gap-2">
+								<Input
+									autoFocus={line.description === "" && line.amount === ""}
+									className="h-7 flex-1 text-xs"
+									placeholder="Description"
+									value={line.description}
+									onChange={(e) =>
+										updateAddedLine(line._id, { description: e.target.value })
+									}
+								/>
+								<Input
+									type="number"
+									className="h-7 w-24 shrink-0 text-right text-xs"
+									placeholder="Amount"
+									value={line.amount}
+									onChange={(e) =>
+										updateAddedLine(line._id, { amount: e.target.value })
+									}
+								/>
+								<RemoveButton onClick={() => removeAddedLine(line._id)} />
+							</div>
+						))}
+					</div>
+					<span className="text-xs text-tertiary-foreground">
+						Edit an amount to bill it differently, remove a line to leave it
+						off, or add a custom charge.
+					</span>
+				</SheetSection>
+
+				<SheetAccordion type="multiple">
+					<SheetAccordionItem
+						value="invoice"
+						title="This invoice"
+						description="Shown on the replacement only"
+					>
+						<div className="space-y-4">
+							<Field label="Custom fields" hint="Up to four, e.g. a PO number.">
+								<div className="flex flex-col gap-2">
+									{form.customFields.map((field) => (
+										<div key={field._id} className="flex items-center gap-2">
+											<Input
+												className="h-7 w-32 shrink-0 text-xs"
+												placeholder="Name"
+												maxLength={30}
+												value={field.name}
+												onChange={(e) =>
+													updateCustomField(field._id, { name: e.target.value })
+												}
+											/>
+											<Input
+												className="h-7 flex-1 text-xs"
+												placeholder="Value"
+												maxLength={30}
+												value={field.value}
+												onChange={(e) =>
+													updateCustomField(field._id, {
+														value: e.target.value,
+													})
+												}
+											/>
+											<RemoveButton
+												onClick={() => removeCustomField(field._id)}
+											/>
+										</div>
+									))}
+									{form.customFields.length < 4 && (
+										<div className="flex justify-end">
+											<IconButton
+												className="text-tertiary-foreground"
+												icon={<PlusIcon size={12} />}
+												onClick={addCustomField}
+												size="sm"
+												variant="muted"
+											>
+												Add
+											</IconButton>
+										</div>
+									)}
+								</div>
+							</Field>
+							<Field label="Memo">
+								<Input
+									placeholder="Keep the current memo"
+									value={form.memo}
+									onChange={(e) => patch({ memo: e.target.value })}
+								/>
+							</Field>
+							<Field label="Footer">
+								<Input
+									placeholder="Keep the current footer"
+									value={form.footer}
+									onChange={(e) => patch({ footer: e.target.value })}
+								/>
+							</Field>
+						</div>
+					</SheetAccordionItem>
+
+					<SheetAccordionItem
+						value="customer"
+						title="Customer details"
+						description="Saved to the customer and used on every later invoice"
+					>
+						<div className="space-y-4">
+							<Field label="Name">
+								<Input
+									value={form.customerName}
+									onChange={(e) => patch({ customerName: e.target.value })}
+								/>
+							</Field>
+							<Field
+								label="Address"
+								hint="Saved to the customer. The preview total uses the current address, so tax can shift once it changes."
+							>
+								<div className="space-y-2">
+									<Input
+										placeholder="Line 1"
+										value={form.address.line1}
+										onChange={(e) => setAddress({ line1: e.target.value })}
+									/>
+									<Input
+										placeholder="Line 2"
+										value={form.address.line2}
+										onChange={(e) => setAddress({ line2: e.target.value })}
+									/>
+									<div className="grid grid-cols-3 gap-2">
+										<Input
+											placeholder="City"
+											value={form.address.city}
+											onChange={(e) => setAddress({ city: e.target.value })}
+										/>
+										<Input
+											placeholder="State"
+											value={form.address.state}
+											onChange={(e) => setAddress({ state: e.target.value })}
+										/>
+										<Input
+											placeholder="Postal code"
+											value={form.address.postal_code}
+											onChange={(e) =>
+												setAddress({ postal_code: e.target.value })
+											}
+										/>
+									</div>
+									<CountrySelect
+										value={form.address.country}
+										onValueChange={(country) => setAddress({ country })}
 									/>
 								</div>
-							))}
+							</Field>
+							<Field
+								label="Tax ID"
+								hint="Pick the registration and paste the number as it appears on their paperwork."
+							>
+								<div className="flex items-center gap-2">
+									<TaxIdTypeSelect
+										value={form.taxIdOptionId}
+										onValueChange={(id) => {
+											const country = id.split(":")[0];
+											patch({ taxIdOptionId: id });
+											if (!form.address.country && country !== "EU") {
+												setAddress({ country });
+											}
+										}}
+									/>
+									<Input
+										className="flex-1"
+										placeholder="Number"
+										value={form.taxIdValue}
+										onChange={(e) => patch({ taxIdValue: e.target.value })}
+									/>
+								</div>
+							</Field>
 						</div>
-						<span className="text-xs text-tertiary-foreground">
-							Leave a line empty to bill it unchanged.
-						</span>
-					</SheetSection>
-				)}
+					</SheetAccordionItem>
+				</SheetAccordion>
 
 				<SheetFooter className="pt-4">
 					<Button
@@ -259,12 +527,17 @@ export function ReissueInvoiceSheet() {
 						className="w-full"
 						onClick={() => reissue.mutate()}
 						isLoading={reissue.isPending}
-						disabled={invalidNetTerms}
+						disabled={invalidNetTerms || previewing || Boolean(previewError)}
 					>
 						<PaperPlaneTiltIcon size={16} />
-						Reissue
+						Reissue {total}
 					</Button>
 				</SheetFooter>
+				{previewError && (
+					<p className="px-4 pb-4 text-xs text-destructive">
+						{getBackendErr(previewError, "Preview failed")}
+					</p>
+				)}
 			</div>
 		</LayoutGroup>
 	);
