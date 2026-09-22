@@ -1,3 +1,4 @@
+import type { SgNode } from "@ast-grep/napi";
 import { Lang, parse } from "@ast-grep/napi";
 import { type AppendText, appendElementToArray } from "./appendToArray";
 import { findArrayBinding } from "./arrayBinding";
@@ -7,13 +8,15 @@ export const appendToBinding = ({
 	source,
 	name,
 	text,
+	after,
 }: {
 	source: string;
 	name: string;
 	text: AppendText;
+	after?: (element: SgNode) => boolean;
 }): string | null => {
 	const root = parse(Lang.TypeScript, source).root();
 	const array = findArrayBinding({ root, name });
 	if (array === null) return null;
-	return appendElementToArray({ source, root, array, text });
+	return appendElementToArray({ source, root, array, text, after });
 };

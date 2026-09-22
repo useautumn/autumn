@@ -152,7 +152,7 @@ const collectionValue = ({
 };
 
 /** The import binding `name`, with the name it had in the module it came from. */
-const importedFrom = ({
+export const importedFrom = ({
 	root,
 	name,
 }: {
@@ -176,7 +176,7 @@ const importedFrom = ({
 };
 
 /** A relative specifier against the walked files: bare, `.ts`, or a folder index. */
-const moduleFileOf = ({
+export const moduleFileOf = ({
 	from,
 	specifier,
 	files,
