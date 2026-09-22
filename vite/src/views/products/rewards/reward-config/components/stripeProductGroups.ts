@@ -96,15 +96,21 @@ export const findGroupForPriceId = ({
 	priceId: string;
 }) => groups.find((group) => group.priceIds.includes(priceId)) ?? null;
 
-/** Every sibling is a variant of the first plan, rather than an unrelated plan sharing a feature. */
+/** The base plan leads the group, so a family reads "Base + N variants". */
+const leadProduct = ({ group }: { group: StripeProductGroup }) =>
+	group.products.find((product) => !product.base_id) ?? group.products[0];
+
+/** Every sibling is a variant of the lead plan, rather than an unrelated plan sharing a feature. */
 const isVariantFamily = ({ group }: { group: StripeProductGroup }) => {
-	const [first, ...rest] = group.products;
-	const familyId = first.base_id ?? first.id;
-	return rest.every((product) => product.base_id === familyId);
+	const lead = leadProduct({ group });
+	const familyId = lead.base_id ?? lead.id;
+	return group.products
+		.filter((product) => product !== lead)
+		.every((product) => product.base_id === familyId);
 };
 
 export const groupLabel = ({ group }: { group: StripeProductGroup }) =>
-	group.products[0].name;
+	leadProduct({ group }).name;
 
 /** The muted "+ N variants" suffix, or null when a group is a single plan. */
 export const groupSuffix = ({ group }: { group: StripeProductGroup }) => {

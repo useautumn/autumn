@@ -342,3 +342,34 @@ describe("groups chained across several Stripe products", () => {
 		expect(groupSuffix({ group: groups[0] })).toBe("+ 2 plans");
 	});
 });
+
+describe("the base plan leads its group", () => {
+	test("a variant listed before its base still reads Base + N variants", () => {
+		const groups = buildStripeProductGroups({
+			products: [
+				plan({
+					id: "Legacy Variant",
+					stripeId: "prod_leg",
+					baseId: "Legacy Base",
+				}),
+				plan({ id: "Legacy Base", stripeId: "prod_leg" }),
+			],
+		});
+
+		expect(groupLabel({ group: groups[0] })).toBe("Legacy Base");
+		expect(groupSuffix({ group: groups[0] })).toBe("+ 1 variant");
+	});
+
+	test("two variants listed before the base count variants", () => {
+		const groups = buildStripeProductGroups({
+			products: [
+				plan({ id: "Pro Yearly", stripeId: "prod_pro", baseId: "Pro" }),
+				plan({ id: "Pro Quarterly", stripeId: "prod_pro", baseId: "Pro" }),
+				plan({ id: "Pro", stripeId: "prod_pro" }),
+			],
+		});
+
+		expect(groupLabel({ group: groups[0] })).toBe("Pro");
+		expect(groupSuffix({ group: groups[0] })).toBe("+ 2 variants");
+	});
+});
