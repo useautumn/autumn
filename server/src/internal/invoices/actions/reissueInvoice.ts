@@ -23,6 +23,8 @@ import { getExpandedStripeCustomer } from "@/external/stripe/customers/operation
 import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
+import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils";
+import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeLineItemsToDbLineItems } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines";
 import {
@@ -117,17 +119,15 @@ const loadReissuableStripeInvoice = async ({
 			`Invoice ${row.invoice.id} is ${stripeInvoice.status}; only open and paid invoices can be reissued`,
 		);
 	}
-	if (stripeInvoice.collection_method !== "send_invoice") {
-		throw invalidRequest(
-			`Invoice ${row.invoice.id} is charged automatically; only send-invoice invoices can be reissued`,
-		);
-	}
-
 	return { stripeCli, stripeInvoice };
 };
 
-/** Keeps the original deadline unless it has passed, in which case new terms are required. */
-const resolveDueDate = ({
+/**
+ * Keeps the original deadline unless it has passed, in which case new terms are
+ * required. A card invoice has no deadline unless terms are given, which turns
+ * the replacement into a send-invoice one.
+ */
+const resolveCollection = ({
 	stripeInvoice,
 	netTermsDays,
 	nowMs,
@@ -135,8 +135,17 @@ const resolveDueDate = ({
 	stripeInvoice: Stripe.Invoice;
 	netTermsDays?: number;
 	nowMs: number;
-}): { dueDate?: number; daysUntilDue?: number } => {
-	if (netTermsDays) return { daysUntilDue: netTermsDays };
+}): {
+	collectionMethod: "send_invoice" | "charge_automatically";
+	dueDate?: number;
+	daysUntilDue?: number;
+} => {
+	if (netTermsDays) {
+		return { collectionMethod: "send_invoice", daysUntilDue: netTermsDays };
+	}
+	if (stripeInvoice.collection_method === "charge_automatically") {
+		return { collectionMethod: "charge_automatically" };
+	}
 
 	const dueDateMs = stripeInvoice.due_date
 		? secondsToMs(stripeInvoice.due_date)
@@ -146,7 +155,10 @@ const resolveDueDate = ({
 			"The original invoice is already past due; pass net_terms_days to give the replacement a new due date",
 		);
 	}
-	return { dueDate: stripeInvoice.due_date ?? undefined };
+	return {
+		collectionMethod: "send_invoice",
+		dueDate: stripeInvoice.due_date ?? undefined,
+	};
 };
 
 const stripeLinesToAddLineParams = ({
@@ -212,6 +224,7 @@ const createReplacementDraft = async ({
 	stripeCli,
 	stripeInvoice,
 	template,
+	collectionMethod,
 	dueDate,
 	daysUntilDue,
 	paymentMethodTypes,
@@ -226,6 +239,7 @@ const createReplacementDraft = async ({
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
 	template?: InvoiceTemplate;
+	collectionMethod: "send_invoice" | "charge_automatically";
 	dueDate?: number;
 	daysUntilDue?: number;
 	paymentMethodTypes?: string[];
@@ -273,7 +287,7 @@ const createReplacementDraft = async ({
 		stripeCusId,
 		stripeSubId,
 		currency: stripeSubId ? undefined : stripeInvoice.currency,
-		collectionMethod: "send_invoice",
+		collectionMethod,
 		dueDate,
 		daysUntilDue,
 		footer: overrideOrInherit({
@@ -357,6 +371,7 @@ const previewReplacementDraft = async ({
 	stripeCli,
 	stripeInvoice,
 	template,
+	collectionMethod,
 	dueDate,
 	daysUntilDue,
 	overrides,
@@ -371,6 +386,7 @@ const previewReplacementDraft = async ({
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
 	template?: InvoiceTemplate;
+	collectionMethod: "send_invoice" | "charge_automatically";
 	dueDate?: number;
 	daysUntilDue?: number;
 	overrides?: ReissueInvoiceOverrides;
@@ -386,6 +402,7 @@ const previewReplacementDraft = async ({
 		stripeCli,
 		stripeInvoice,
 		template,
+		collectionMethod,
 		dueDate,
 		daysUntilDue,
 		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
@@ -423,6 +440,7 @@ const issueReplacement = async ({
 	invoiceId,
 	stripeInvoice,
 	template,
+	collectionMethod,
 	dueDate,
 	daysUntilDue,
 	overrides,
@@ -437,6 +455,7 @@ const issueReplacement = async ({
 	invoiceId: string;
 	stripeInvoice: Stripe.Invoice;
 	template?: InvoiceTemplate;
+	collectionMethod: "send_invoice" | "charge_automatically";
 	dueDate?: number;
 	daysUntilDue?: number;
 	overrides?: ReissueInvoiceOverrides;
@@ -452,6 +471,7 @@ const issueReplacement = async ({
 		stripeCli,
 		stripeInvoice,
 		template,
+		collectionMethod,
 		dueDate,
 		daysUntilDue,
 		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
@@ -508,10 +528,35 @@ const issueReplacement = async ({
 				statusCode: 409,
 			});
 		}
+		// Stripe may have collected the original between our read and the void.
+		if (await isNowPaid({ stripeCli, stripeInvoiceId: stripeInvoice.id })) {
+			throw new RecaseError({
+				message: `Invoice ${invoiceId} was paid while being reissued; nothing was changed`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 409,
+			});
+		}
 		throw error;
 	}
 
-	return { finalized, creditNoteId: null };
+	// The original is retired, so a card replacement can be charged now.
+	return {
+		finalized: await collectRemainderNow({ ctx, stripeCli, finalized }),
+		creditNoteId: null,
+	};
+};
+
+const isNowPaid = async ({
+	stripeCli,
+	stripeInvoiceId,
+}: {
+	stripeCli: Stripe;
+	stripeInvoiceId: string;
+}) => {
+	const invoice = await stripeCli.invoices
+		.retrieve(stripeInvoiceId)
+		.catch(() => null);
+	return invoice?.status === "paid";
 };
 
 /**
@@ -543,13 +588,13 @@ const creditAndFinalize = async ({
 		memo: "Reissued as a corrected invoice",
 	});
 
+	let finalized: Stripe.Invoice;
 	try {
-		const finalized = await finalizeStripeInvoice({
+		finalized = await finalizeStripeInvoice({
 			stripeCli,
 			invoiceId: draft.id,
 			autoAdvance: true,
 		});
-		return { finalized, creditNoteId: creditNote.id };
 	} catch (error) {
 		try {
 			await reverseCredit({ stripeCli, stripeInvoice, creditNote, amount });
@@ -557,6 +602,54 @@ const creditAndFinalize = async ({
 			await deleteDraft({ ctx, stripeCli, draftId: draft.id });
 		}
 		throw error;
+	}
+
+	return {
+		finalized: await collectRemainderNow({ ctx, stripeCli, finalized }),
+		creditNoteId: creditNote.id,
+	};
+};
+
+/**
+ * Stripe waits about an hour before first attempting a card invoice created
+ * through the API, so a card replacement is charged now instead. A declined
+ * card leaves it open for Stripe's retries, like any other invoice.
+ */
+const collectRemainderNow = async ({
+	ctx,
+	stripeCli,
+	finalized,
+}: {
+	ctx: AutumnContext;
+	stripeCli: Stripe;
+	finalized: Stripe.Invoice;
+}): Promise<Stripe.Invoice> => {
+	if (
+		finalized.collection_method !== "charge_automatically" ||
+		finalized.status !== "open"
+	) {
+		return finalized;
+	}
+	// The reissue is already complete here, so a collection hiccup must not
+	// report it as failed; the replacement simply stays open.
+	try {
+		const paymentMethod = await getCusPaymentMethod({
+			stripeCli,
+			stripeId: stripeInvoiceToStripeCustomerId({ stripeInvoice: finalized }),
+		});
+		const { paid, invoice } = await payForInvoice({
+			stripeCli,
+			invoiceId: finalized.id,
+			paymentMethod,
+			logger: ctx.logger,
+			errorOnFail: false,
+		});
+		return paid && invoice ? invoice : finalized;
+	} catch (error) {
+		ctx.logger.warn(
+			`[reissueInvoice] replacement ${finalized.id} left open; collection failed: ${error}`,
+		);
+		return finalized;
 	}
 };
 
@@ -817,7 +910,7 @@ export const reissueInvoice = async ({
 		throw invalidRequest(`Invoice template ${invoiceTemplateId} not found`);
 	}
 
-	const { dueDate, daysUntilDue } = resolveDueDate({
+	const { collectionMethod, dueDate, daysUntilDue } = resolveCollection({
 		stripeInvoice,
 		netTermsDays,
 		nowMs: Date.now(),
@@ -853,6 +946,7 @@ export const reissueInvoice = async ({
 				stripeCli,
 				stripeInvoice,
 				template,
+				collectionMethod,
 				dueDate,
 				daysUntilDue,
 				overrides: invoiceOverrides,
@@ -890,6 +984,7 @@ export const reissueInvoice = async ({
 		invoiceId,
 		stripeInvoice,
 		template,
+		collectionMethod,
 		dueDate,
 		daysUntilDue,
 		overrides: invoiceOverrides,
