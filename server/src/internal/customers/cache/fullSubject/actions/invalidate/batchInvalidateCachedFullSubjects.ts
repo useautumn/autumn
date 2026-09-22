@@ -1,6 +1,7 @@
 import type { AppEnv, Feature } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { createRedisPipeline } from "@/external/redis/utils/createRedisPipeline.js";
 import { throwOnPipelineConnectionError } from "@/external/redis/utils/pipelineErrors.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import { markCustomersUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
@@ -12,7 +13,7 @@ import { buildSharedFullSubjectBalanceKey } from "../../builders/buildSharedFull
 import { FULL_SUBJECT_EPOCH_TTL_SECONDS } from "../../config/fullSubjectCacheConfig.js";
 import type { CachedFullSubject } from "../../fullSubjectCacheModel.js";
 
-const PIPELINE_BATCH_SIZE = 1000;
+const PIPELINE_BATCH_SIZE = 250;
 const RETRY_BASE_DELAY_MS = 250;
 const RETRY_MAX_DELAY_MS = 2000;
 
@@ -93,12 +94,14 @@ const execInvalidationPipeline = ({
 	redisV2,
 	invalidations,
 	strict,
+	commandTimeoutMs,
 }: {
 	redisV2: Redis;
 	invalidations: SubjectInvalidation[];
 	strict: boolean;
+	commandTimeoutMs?: number;
 }) => {
-	const pipeline = redisV2.pipeline();
+	const pipeline = createRedisPipeline({ redis: redisV2, commandTimeoutMs });
 
 	for (const { subjectKey, epochKey, balanceKeys } of invalidations) {
 		for (const balanceKey of balanceKeys) pipeline.unlink(balanceKey);
@@ -126,16 +129,23 @@ const writeInvalidations = async ({
 	invalidations,
 	maxAttempts,
 	strict,
+	commandTimeoutMs,
 }: {
 	redisV2: Redis;
 	invalidations: SubjectInvalidation[];
 	maxAttempts: number;
 	strict: boolean;
+	commandTimeoutMs?: number;
 }): Promise<boolean> => {
 	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 		const result = await tryRedisOp({
 			operation: () =>
-				execInvalidationPipeline({ redisV2, invalidations, strict }),
+				execInvalidationPipeline({
+					redisV2,
+					invalidations,
+					strict,
+					commandTimeoutMs,
+				}),
 			source: "batchInvalidateCachedFullSubjects:invalidate",
 			redisInstance: redisV2,
 			queueIfNotReady: true,
@@ -158,12 +168,14 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 	redisV2,
 	maxAttempts,
 	strict,
+	commandTimeoutMs,
 }: {
 	customers: BatchInvalidateCustomer[];
 	featuresByOrgEnv: FeaturesByOrgEnv;
 	redisV2: Redis;
 	maxAttempts: number;
 	strict: boolean;
+	commandTimeoutMs?: number;
 }): Promise<BatchInvalidateCustomer[]> => {
 	const dropped: BatchInvalidateCustomer[] = [];
 	// No not-ready guard: a dedicated org Redis is created lazily, so its very
@@ -178,7 +190,10 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 		offset += PIPELINE_BATCH_SIZE
 	) {
 		const batch = invalidatable.slice(offset, offset + PIPELINE_BATCH_SIZE);
-		const readPipeline = redisV2.pipeline();
+		const readPipeline = createRedisPipeline({
+			redis: redisV2,
+			commandTimeoutMs,
+		});
 
 		for (const { orgId, env, customerId } of batch) {
 			readPipeline.get(buildFullSubjectKey({ orgId, env, customerId }));
@@ -201,6 +216,7 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 			}),
 			maxAttempts,
 			strict,
+			commandTimeoutMs,
 		});
 
 		if (!invalidated) {
@@ -233,6 +249,7 @@ export const batchInvalidateCachedFullSubjects = async ({
 	maxAttempts = 1,
 	phases,
 	throwWhenExhausted = false,
+	commandTimeoutMs,
 }: {
 	customers: BatchInvalidateCustomer[];
 	featuresByOrgEnv: FeaturesByOrgEnv;
@@ -251,6 +268,7 @@ export const batchInvalidateCachedFullSubjects = async ({
 	/** Strict mode for callers that can revoke a checkpoint: any failed command
 	 *  counts as a failed attempt, and spending every attempt rejects. */
 	throwWhenExhausted?: boolean;
+	commandTimeoutMs?: number;
 }): Promise<number> => {
 	if (customers.length === 0) return 0;
 
@@ -291,6 +309,7 @@ export const batchInvalidateCachedFullSubjects = async ({
 					redisV2: targetRedis,
 					maxAttempts,
 					strict: throwWhenExhausted,
+					commandTimeoutMs,
 				}),
 			),
 		)

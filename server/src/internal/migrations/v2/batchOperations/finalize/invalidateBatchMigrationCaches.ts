@@ -7,6 +7,7 @@ import type { BatchMigrationPageResult } from "../execute/types/batchMigrationEx
 /** Migration writes are already committed when this runs, so a dropped
  *  invalidation is unrecoverable staleness rather than a retryable request. */
 const MIGRATION_INVALIDATE_MAX_ATTEMPTS = 5;
+const MIGRATION_REDIS_COMMAND_TIMEOUT_MS = 10_000;
 
 /**
  * Busts caches for the page's mutated customers — skipped customers received
@@ -44,6 +45,7 @@ export const invalidateBatchMigrationCaches = async ({
 		}),
 		getRedisTargetsForCustomer: () => redisTargets,
 		maxAttempts: MIGRATION_INVALIDATE_MAX_ATTEMPTS,
+		commandTimeoutMs: MIGRATION_REDIS_COMMAND_TIMEOUT_MS,
 		phases,
 		throwWhenExhausted: true,
 	});

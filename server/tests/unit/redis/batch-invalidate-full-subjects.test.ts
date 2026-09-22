@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, mock, test } from "bun:test";
-import type { AppEnv, Feature } from "@autumn/shared";
+import { type AppEnv, type Feature, withTimeout } from "@autumn/shared";
 import type { Redis } from "ioredis";
+import { BATCH_MIGRATION_DEFERRED_OPERATION_TIMEOUT_MS } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
 
 // The freshness mark is a real Postgres write; keep this suite hermetic.
 const marksModulePath =
@@ -24,6 +25,8 @@ import { buildFullSubjectOrgEnvKey } from "@/internal/customers/cache/fullSubjec
 type RedisCalls = {
 	readKeys: string[];
 	writeOps: string[];
+	readBatchSizes: number[];
+	writeBatchSizes: number[];
 };
 
 const createFakeRedis = ({
@@ -32,6 +35,7 @@ const createFakeRedis = ({
 	failWrites = 0,
 	errorTupleWrites = 0,
 	commandErrorWrites = 0,
+	pipelineDelayMs = 0,
 }: {
 	status?: string;
 	readFails?: boolean;
@@ -41,10 +45,13 @@ const createFakeRedis = ({
 	errorTupleWrites?: number;
 	/** Number of write execs after that which resolve with a command error tuple. */
 	commandErrorWrites?: number;
+	pipelineDelayMs?: number;
 } = {}): { redis: Redis; calls: RedisCalls & { writeAttempts: number } } => {
 	const calls = {
 		readKeys: [] as string[],
 		writeOps: [] as string[],
+		readBatchSizes: [] as number[],
+		writeBatchSizes: [] as number[],
 		writeAttempts: 0,
 	};
 	const redis = {
@@ -72,7 +79,9 @@ const createFakeRedis = ({
 				// Retries mean writes aren't a fixed nth pipeline — discriminate on
 				// the commands actually queued.
 				exec: async () => {
+					if (pipelineDelayMs) await Bun.sleep(pipelineDelayMs);
 					if (writeOps.length === 0) {
+						calls.readBatchSizes.push(readKeys.length);
 						if (readFails) throw new Error("Command timed out");
 						calls.readKeys.push(...readKeys);
 						return readKeys.map(() => [
@@ -82,6 +91,7 @@ const createFakeRedis = ({
 					}
 
 					calls.writeAttempts++;
+					calls.writeBatchSizes.push(writeOps.length);
 					if (calls.writeAttempts <= failWrites) {
 						throw new Error("Command timed out");
 					}
@@ -116,6 +126,72 @@ const createFakeRedis = ({
 };
 
 describe("batchInvalidateCachedFullSubjects", () => {
+	test.each([1_000, 4_000, 9_000])(
+		"measures the full-page cache deadline at %i ms per pipeline",
+		async (pipelineLatencyMs) => {
+			const timeScale = 100;
+			const primary = createFakeRedis({
+				pipelineDelayMs: pipelineLatencyMs / timeScale,
+			});
+			const customers = Array.from({ length: 5_000 }, (_, index) => ({
+				orgId: "org_test",
+				env: "sandbox" as AppEnv,
+				customerId: `cus_${index}`,
+			}));
+			const invalidation = batchInvalidateCachedFullSubjects({
+				customers,
+				featuresByOrgEnv: {},
+				getRedisTargetsForCustomer: () => [primary.redis],
+				maxAttempts: 5,
+				throwWhenExhausted: true,
+			});
+			const bounded = withTimeout({
+				fn: () => invalidation,
+				timeoutMs: BATCH_MIGRATION_DEFERRED_OPERATION_TIMEOUT_MS / timeScale,
+				timeoutMessage: "cache deadline exceeded",
+			});
+			if (pipelineLatencyMs === 9_000) {
+				await expect(bounded).rejects.toThrow("cache deadline exceeded");
+				expect(primary.calls.readKeys.length).toBeLessThan(5_000);
+			} else {
+				expect(await bounded).toBe(5_000);
+			}
+			// A Promise.race timeout doesn't cancel the remaining Redis batches.
+			expect(await invalidation).toBe(5_000);
+			expect(primary.calls.readBatchSizes).toEqual(Array(20).fill(250));
+			expect(primary.calls.writeBatchSizes).toEqual(Array(20).fill(1_000));
+			expect(new Set(primary.calls.writeOps).size).toBe(20_000);
+		},
+	);
+
+	test("limits migration pipelines to 250 subjects and retries the same batch", async () => {
+		const primary = createFakeRedis({ errorTupleWrites: 1 });
+		const dedicated = createFakeRedis();
+		const customers = Array.from({ length: 501 }, (_, index) => ({
+			orgId: "org_test",
+			env: "sandbox" as AppEnv,
+			customerId: `cus_${index}`,
+		}));
+
+		const invalidated = await batchInvalidateCachedFullSubjects({
+			customers,
+			featuresByOrgEnv: {},
+			getRedisTargetsForCustomer: () => [primary.redis, dedicated.redis],
+			maxAttempts: 2,
+			throwWhenExhausted: true,
+		});
+
+		expect(invalidated).toBe(501);
+		for (const target of [primary, dedicated]) {
+			expect(target.calls.readBatchSizes).toEqual([250, 250, 1]);
+			expect(target.calls.readKeys).toHaveLength(501);
+			expect(target.calls.writeOps).toHaveLength(501 * 4);
+			expect(new Set(target.calls.writeOps).size).toBe(501 * 4);
+		}
+		expect(primary.calls.writeBatchSizes).toEqual([1000, 1000, 1000, 4]);
+		expect(dedicated.calls.writeBatchSizes).toEqual([1000, 1000, 4]);
+	});
+
 	test("fans out invalidation to the Redis instance for each customer", async () => {
 		const primary = createFakeRedis();
 		const dedicated = createFakeRedis();
