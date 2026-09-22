@@ -8,13 +8,9 @@ import { CustomerExportStatusBadge } from "./CustomerExportStatusBadge";
 const FAILED_FALLBACK_MESSAGE = "Export failed — you can start a new one.";
 
 export const createCustomerExportColumns = ({
-	requesterLabels,
-	noRequesterLabel,
 	downloadingExportId,
 	onDownload,
 }: {
-	requesterLabels: Map<string, string>;
-	noRequesterLabel: string;
 	downloadingExportId: string | undefined;
 	onDownload: (exportId: string) => void;
 }): ColumnDef<CustomerExportResponse, unknown>[] => [
@@ -50,27 +46,6 @@ export const createCustomerExportColumns = ({
 				{formatUnixToDateTimeString(row.original.created_at)}
 			</span>
 		),
-	},
-	{
-		header: "Requested by",
-		id: "requested_by",
-		cell: ({ row }: { row: Row<CustomerExportResponse> }) => {
-			const requestedByUserId = row.original.requested_by_user_id;
-			const label = requestedByUserId
-				? (requesterLabels.get(requestedByUserId) ?? requestedByUserId)
-				: noRequesterLabel;
-
-			return (
-				<ConditionalTooltip
-					enabled={Boolean(requestedByUserId)}
-					content={label}
-				>
-					<span className="block cursor-default truncate text-tertiary-foreground">
-						{label}
-					</span>
-				</ConditionalTooltip>
-			);
-		},
 	},
 	{
 		header: "Rows",
