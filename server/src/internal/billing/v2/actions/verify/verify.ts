@@ -145,6 +145,7 @@ export const verify = async ({
 				sub: stripeSubscription,
 				scenario,
 				cancelAtSeconds,
+				orgId: ctx.org.id,
 			});
 			if (cancelMismatch) mismatches.push(cancelMismatch);
 
