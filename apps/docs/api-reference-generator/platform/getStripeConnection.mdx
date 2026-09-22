@@ -1,0 +1,29 @@
+---
+title: "Get Stripe Connection"
+openapi: "openapi POST /v1/platform.get_stripe_connection"
+---
+
+Read a tenant's Stripe OAuth connection before showing a **Connect Stripe** or **Disconnect Stripe** action in your application.
+
+Authenticate with your **master organization's secret key**, with `platform:read` scope. Pass the tenant's public `organization_slug` and an explicit `env`: `test` or `live`. You can only inspect organizations created by your master organization.
+
+```bash
+curl https://api.useautumn.com/v1/platform.get_stripe_connection \
+  -H "Authorization: Bearer $AUTUMN_SECRET_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"organization_slug":"my-app","env":"test"}'
+```
+
+## Interpreting the response
+
+- `connected: true` means the tenant has a stored Stripe OAuth account connection in this environment. `account_id` identifies that Stripe account.
+- `connected_at` is the authorization time as a Unix timestamp in **milliseconds**. It can be `null` for historical connections; `null` does not mean disconnected.
+- An unconnected tenant returns `{"connected":false,"account_id":null,"connected_at":null}`.
+
+<Note>
+  A default sandbox account, a separately configured Stripe secret key, or a direct account-ID connection through your own Stripe platform does not count as an Autumn OAuth connection. This endpoint is not a general check of whether the tenant can process payments.
+</Note>
+
+After the tenant returns from the [Stripe OAuth flow](/api-reference/platform/oauth-url), fetch this status to update your UI. Revocations made in Stripe are reflected after Autumn processes Stripe's deauthorization webhook.
+
+To remove the OAuth connection, call [Disconnect Stripe](/api-reference/platform/disconnectStripe). Test and live connections are managed separately.

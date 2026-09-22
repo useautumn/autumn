@@ -26,8 +26,43 @@ const state = {
 const realInitDrizzle = await import("@/db/initDrizzle.js");
 await mockModuleWithRestore("@/db/initDrizzle.js", () => ({
 	...realInitDrizzle,
-	initDrizzle: () => ({ db: {} }),
+	initDrizzle: () => ({
+		db: {
+			transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
+				fn({
+					execute: async () => [],
+					select: () => ({
+						from: () => ({
+							where: () => ({
+								for: async () => [
+									{
+										id: "org_test",
+										slug: "test-org",
+										stripe_config: { test_api_key: "enc_key" },
+										test_stripe_connect: {},
+										live_stripe_connect: {},
+									},
+								],
+								limit: async () => [],
+							}),
+						}),
+					}),
+					update: () => ({
+						set: () => ({
+							where: async () => {
+								state.updateStripeConnectCalls++;
+							},
+						}),
+					}),
+				}),
+		},
+	}),
 }));
+
+await mockModuleWithRestore(
+	"@/internal/orgs/orgUtils/clearOrgCache.js",
+	() => ({ clearOrgCache: async () => {} }),
+);
 
 await mockModuleWithRestore(
 	"@/internal/platform/platformBeta/utils/oauthStateUtils.js",
@@ -43,6 +78,7 @@ await mockModuleWithRestore(
 
 await mockModuleWithRestore("@/external/connect/initStripeCli.js", () => ({
 	initMasterStripe: () => ({
+		balance: { retrieve: async () => ({}) },
 		oauth: {
 			token: async () => ({ stripe_user_id: state.oauthAccountId }),
 		},

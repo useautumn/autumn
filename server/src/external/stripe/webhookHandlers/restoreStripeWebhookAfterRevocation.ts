@@ -70,8 +70,14 @@ export const restoreStripeWebhookAfterRevocation = async ({
 			)
 			.returning({ id: organizations.id });
 		persisted = updated.length > 0;
-		if (!persisted)
-			throw new Error("Stripe connection changed during webhook restoration");
+		if (!persisted) {
+			const current = await OrgService.get({ db, orgId: org.id });
+			if (
+				current[connectField]?.revoked_account_id === accountId &&
+				!current[connectField]?.account_id
+			)
+				throw new Error("Stripe connection changed during webhook restoration");
+		}
 	} catch (error) {
 		throw new Error(
 			"Failed to restore direct Stripe webhook after OAuth revocation",

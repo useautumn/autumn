@@ -26,6 +26,7 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
+import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 import { toPlanAliasMap } from "../catalogV2/productAliases/toPlanAliasMap.js";
 import { FeatureService } from "../features/FeatureService.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
@@ -453,47 +454,27 @@ export class OrgService {
 		accountId: string;
 		env: AppEnv;
 	}): Promise<void> {
-		const [org] = await db
-			.select()
-			.from(organizations)
-			.where(eq(organizations.id, orgId))
-			.limit(1);
-
-		if (!org) {
-			throw new RecaseError({
-				message: "Organization not found",
-				code: ErrCode.OrgNotFound,
-				statusCode: 404,
-			});
-		}
-
-		if (env === AppEnv.Sandbox) {
-			const currentConnect = org.test_stripe_connect || {};
-			delete currentConnect.revoked_account_id;
-			await db
+		const field =
+			env === AppEnv.Live ? "live_stripe_connect" : "test_stripe_connect";
+		await db.transaction(async (tx) => {
+			await tx.execute(
+				sql`SELECT pg_advisory_xact_lock(hashtextextended(${`stripe-oauth:${env}:${accountId}`}, 0))`,
+			);
+			await initMasterStripe({ env }).accounts.retrieve(accountId);
+			const updated = await tx
 				.update(organizations)
 				.set({
-					test_stripe_connect: {
-						...currentConnect,
-						account_id: accountId,
-						connected_at: Date.now(),
-					},
+					[field]: sql`(coalesce(${organizations[field]}, '{}'::jsonb) - 'revoked_account_id' - 'master_org_id') || ${JSON.stringify({ account_id: accountId, connected_at: Date.now() })}::jsonb`,
 				})
-				.where(eq(organizations.id, orgId));
-		} else {
-			const currentConnect = org.live_stripe_connect || {};
-			delete currentConnect.revoked_account_id;
-			await db
-				.update(organizations)
-				.set({
-					live_stripe_connect: {
-						...currentConnect,
-						account_id: accountId,
-						connected_at: Date.now(),
-					},
-				})
-				.where(eq(organizations.id, orgId));
-		}
+				.where(eq(organizations.id, orgId))
+				.returning({ id: organizations.id });
+			if (!updated.length)
+				throw new RecaseError({
+					message: "Organization not found",
+					code: ErrCode.OrgNotFound,
+					statusCode: 404,
+				});
+		});
 
 		await clearOrgCache({ db, orgId });
 	}

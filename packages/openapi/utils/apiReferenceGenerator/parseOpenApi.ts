@@ -734,6 +734,8 @@ function resolveType(
 	schema: Record<string, unknown>,
 	schemas: Record<string, unknown>,
 ): string {
+	if (typeof schema.const === "boolean") return String(schema.const);
+
 	if (schema.$ref) {
 		const refPath = schema.$ref as string;
 		const refName = refPath.replace("#/components/schemas/", "");

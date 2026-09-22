@@ -89,7 +89,9 @@ import {
 	updatePlanContract,
 } from "./plansContract.js";
 import {
+	platformDisconnectStripeContract,
 	platformGetRevenueCatKeysContract,
+	platformGetStripeConnectionContract,
 	platformLinkRevenueCatContract,
 	platformSyncRevenueCatContract,
 } from "./platformContract.js";
@@ -211,6 +213,8 @@ export const v2_3ContractRouter = oc.router({
 	rewardsRedeemCode: rewardsRedeemCodeContract,
 
 	// Platform
+	platformGetStripeConnection: platformGetStripeConnectionContract,
+	platformDisconnectStripe: platformDisconnectStripeContract,
 	platformLinkRevenueCat: platformLinkRevenueCatContract,
 	platformSyncRevenueCat: platformSyncRevenueCatContract,
 	platformGetRevenueCatKeys: platformGetRevenueCatKeysContract,

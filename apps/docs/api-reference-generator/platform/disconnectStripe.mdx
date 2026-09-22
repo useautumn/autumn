@@ -1,0 +1,33 @@
+---
+title: "Disconnect Stripe"
+openapi: "openapi POST /v1/platform.disconnect_stripe"
+---
+
+Revoke Autumn's Stripe OAuth access for a tenant and clear its connection in the selected environment.
+
+Authenticate with your **master organization's secret key**, with `platform:write` scope. Pass the tenant's public `organization_slug` and an explicit `env`: `test` or `live`. You can only disconnect organizations created by your master organization.
+
+```bash
+curl https://api.useautumn.com/v1/platform.disconnect_stripe \
+  -H "Authorization: Bearer $AUTUMN_SECRET_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"organization_slug":"my-app","env":"test"}'
+```
+
+## What disconnecting changes
+
+On success, the endpoint returns `{"success":true}`. The tenant's OAuth connection is cleared before the response, so [Get Stripe Connection](/api-reference/platform/getStripeConnection) reports it as disconnected without waiting for webhook delivery. Calling the endpoint when the tenant is already disconnected also succeeds.
+
+The other environment's connection, the default sandbox account, and any separately configured Stripe secret key are preserved. Stripe catalog mappings are cleared when no separate secret-key connection remains in the selected environment.
+
+<Warning>
+  Disconnecting revokes OAuth access; it does not delete the Stripe account, cancel subscriptions, or delete customers. Operations that require the revoked connection will no longer work. Ask the tenant to confirm before disconnecting.
+</Warning>
+
+If the request fails, do not assume the connection is still active: Stripe revocation may already have completed. Retry the request and refresh the status. To reconnect, generate a new [Stripe OAuth URL](/api-reference/platform/oauth-url) and have the tenant authorize again.
+
+## Safety checks
+
+- **Direct account-ID connections:** connections made through [Update Connected Stripe Account](/api-reference/platform/update-stripe) belong to your own Stripe platform, not Autumn's OAuth application. This endpoint rejects them with `400` rather than revoking the wrong authorization.
+- **Shared OAuth authorization:** if the same Stripe OAuth account is linked to another Autumn organization in this environment, the endpoint returns `409` without revoking access. Disconnecting that shared authorization could disrupt the other organization. Resolve the shared linkage before retrying.
+- **Permissions:** a missing API key returns `401`; a key without `platform:write` returns `403`. Neither changes the connection.

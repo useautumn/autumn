@@ -14,8 +14,49 @@ const realInitDrizzle = await import("@/db/initDrizzle.js");
 await mockModuleWithRestore("@/db/initDrizzle.js", () => ({
 	...realInitDrizzle,
 	db: {},
-	initDrizzle: () => ({ db: {} }),
+	initDrizzle: () => ({
+		db: {
+			transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
+				fn({
+					execute: async () => [],
+					select: () => ({
+						from: () => ({
+							where: () => ({
+								for: async () => [
+									{
+										id: "org_target",
+										slug: "target-sandbox",
+										name: "Target Sandbox",
+										created_by: "org_master",
+										test_stripe_connect: {},
+										live_stripe_connect: {},
+									},
+								],
+								limit: async () =>
+									state.existingOrg ? [state.existingOrg] : [],
+							}),
+						}),
+					}),
+					update: () => ({
+						set: (updates: {
+							test_stripe_connect: { account_id: string };
+						}) => ({
+							where: async () => {
+								state.updateConnectCalls.push({
+									orgId: "org_target",
+									accountId: updates.test_stripe_connect.account_id,
+								});
+							},
+						}),
+					}),
+				}),
+		},
+	}),
 }));
+await mockModuleWithRestore(
+	"@/internal/orgs/orgUtils/clearOrgCache.js",
+	() => ({ clearOrgCache: async () => {} }),
+);
 await mockModuleWithRestore(
 	"@/internal/platform/platformBeta/utils/oauthStateUtils.js",
 	() => ({
@@ -29,6 +70,7 @@ await mockModuleWithRestore(
 );
 await mockModuleWithRestore("@/external/connect/initStripeCli.js", () => ({
 	initMasterStripe: () => ({
+		balance: { retrieve: async () => ({}) },
 		oauth: { token: async () => ({ stripe_user_id: state.accountId }) },
 	}),
 }));
@@ -36,6 +78,7 @@ await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		getBySlug: async () => ({
 			id: "org_target",
+			created_by: "org_master",
 			slug: "target-sandbox",
 			name: "Target Sandbox",
 		}),
