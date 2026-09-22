@@ -612,6 +612,15 @@ export const evaluateItems = ({
 		}
 
 		if (!actual) {
+			// A prepaid item with nothing purchased bills nothing, so its absence
+			// is not drift.
+			if (
+				catalogEntry &&
+				isPrepaidPrice(catalogEntry.price) &&
+				expected.quantity === 0
+			) {
+				continue;
+			}
 			if (siblingQuantity > 0) {
 				if (siblingQuantity !== expected.quantity) {
 					mismatches.push({

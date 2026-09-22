@@ -31,26 +31,20 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	findPriceByFeatureId,
-	type Price,
-	prices as pricesTable,
-} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { verify } from "@/internal/billing/v2/actions/verify/verify";
 import { CusService } from "@/internal/customers/CusService";
-import { ProductService } from "@/internal/products/ProductService";
 import {
 	corruptStripeSubscription,
 	listActiveStripeSubscriptions,
 } from "../restore/utils/corruptStripeSubscription";
+import { clearPriceStripeIds } from "./utils/clearPriceStripeIds";
 
 const stripeCustomerIdFor = async ({
 	ctx,
@@ -67,43 +61,6 @@ const stripeCustomerIdFor = async ({
 	if (!stripeCustomerId)
 		throw new Error(`Customer ${customerId} has no Stripe customer ID`);
 	return stripeCustomerId;
-};
-
-/** Nulls the given Stripe id slots on a product's price config — simulates a
- * price that was never materialized in Stripe. Returns the old Stripe ids. */
-const clearPriceStripeIds = async ({
-	ctx,
-	productId,
-	featureId,
-	slots,
-}: {
-	ctx: TestContext;
-	productId: string;
-	featureId?: string;
-	slots: string[];
-}): Promise<string[]> => {
-	const fullProduct = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: productId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-	const price = featureId
-		? findPriceByFeatureId({ prices: fullProduct.prices, featureId })
-		: fullProduct.prices.find((candidate) => !candidate.config.feature_id);
-	if (!price) throw new Error(`No matching price on product ${productId}`);
-
-	const config = { ...(price.config as unknown as Record<string, unknown>) };
-	const clearedIds: string[] = [];
-	for (const slot of slots) {
-		if (typeof config[slot] === "string") clearedIds.push(config[slot]);
-		config[slot] = null;
-	}
-	await ctx.db
-		.update(pricesTable)
-		.set({ config: config as Price["config"] })
-		.where(eq(pricesTable.id, price.id));
-	return clearedIds;
 };
 
 /** Clones a live sub item's price into a fresh Stripe price Autumn has never
