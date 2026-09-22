@@ -1,5 +1,5 @@
 import { notNullish } from "@autumn/shared";
-import { dbReplica } from "@/db/initDrizzle.js";
+import { dbReplicaSlow } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	getSharedStripeCustomerIds,
@@ -26,7 +26,7 @@ export const filterBillingVerifyCandidates = async ({
 	const onStripe = scalars.filter((scalar) => scalar.processor?.id);
 	const { sweptSubscriptions } = sweep;
 
-	const db = dbReplica ?? ctx.db;
+	const db = dbReplicaSlow ?? ctx.db;
 	const { logger } = ctx;
 	const readLinkedCustomerIds = retryExportDbRead({
 		logger,

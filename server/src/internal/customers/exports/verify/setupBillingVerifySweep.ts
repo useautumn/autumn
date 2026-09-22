@@ -1,6 +1,6 @@
 import { AppEnv } from "@autumn/shared";
 import type Stripe from "stripe";
-import { dbReplica } from "@/db/initDrizzle.js";
+import { dbReplicaSlow } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getEarliestCustomerCreatedAt } from "../queries/getBillingVerifyCandidates.js";
@@ -23,7 +23,7 @@ export const setupBillingVerifySweep = async ({
 	const untilMs = Date.now();
 	const sinceMs =
 		(await getEarliestCustomerCreatedAt({
-			db: dbReplica ?? ctx.db,
+			db: dbReplicaSlow ?? ctx.db,
 			orgId: ctx.org.id,
 			env: ctx.env,
 		})) ?? untilMs;

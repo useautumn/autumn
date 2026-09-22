@@ -1,5 +1,5 @@
 import type { CustomerExportSnapshot } from "@autumn/shared";
-import { dbReplica } from "@/db/initDrizzle.js";
+import { dbReplicaSlow } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	CUSTOMER_EXPORT_PAGE_SIZE,
@@ -31,7 +31,7 @@ export const walkCustomerExportPages = async function* ({
 
 	while (hasMorePages) {
 		const scalars = await readScalars({
-			db: dbReplica ?? ctx.db,
+			db: dbReplicaSlow ?? ctx.db,
 			orgId: ctx.org.id,
 			env: ctx.env,
 			snapshot,

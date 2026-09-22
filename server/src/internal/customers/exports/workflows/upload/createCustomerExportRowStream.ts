@@ -1,5 +1,5 @@
 import { Readable } from "node:stream";
-import { dbReplica } from "@/db/initDrizzle.js";
+import { dbReplicaSlow } from "@/db/initDrizzle.js";
 import type { CustomerExportRow } from "../../csv/createCustomerExportStringifier.js";
 import {
 	emptyPlanColumns,
@@ -15,7 +15,7 @@ export const createCustomerExportRowStream: CustomerExportRowStreamFactory = ({
 	population,
 	onPageProcessed,
 }) => {
-	const readDb = dbReplica ?? ctx.db;
+	const readDb = dbReplicaSlow ?? ctx.db;
 	const oneOffProductLookup = createOneOffProductLookup({ db: readDb });
 
 	const exportRows = async function* (): AsyncGenerator<CustomerExportRow> {

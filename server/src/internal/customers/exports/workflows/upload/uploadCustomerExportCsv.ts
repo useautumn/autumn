@@ -1,5 +1,5 @@
 import { CustomerExportPhase, type DbCustomerExport } from "@autumn/shared";
-import { dbReplica } from "@/db/initDrizzle.js";
+import { dbReplicaSlow } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
@@ -28,7 +28,7 @@ export const uploadCustomerExportCsv = async ({
 	progress?: CustomerExportProgressReporter;
 }): Promise<{ rowCount: number; byteCount: number }> => {
 	const { exportId, orgId, env } = payload;
-	const readDb = dbReplica ?? ctx.db;
+	const readDb = dbReplicaSlow ?? ctx.db;
 
 	const { population, totalCount } = await resolveCustomerExportPopulation({
 		db: readDb,
