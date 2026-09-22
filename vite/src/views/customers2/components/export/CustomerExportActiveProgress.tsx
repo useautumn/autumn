@@ -53,8 +53,8 @@ const toLabel = ({
 
 export function CustomerExportActiveProgress({
 	activeExport,
-	scanningLabel = runningLabel,
 	runningLabel,
+	scanningLabel = runningLabel,
 }: {
 	activeExport: CustomerExportResponse | undefined;
 	scanningLabel?: string;
