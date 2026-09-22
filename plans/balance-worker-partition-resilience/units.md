@@ -45,3 +45,12 @@ integration case therefore deletes the grant row, the exact shape of the custome
 | 6 | **A refused record has a name.** `FlushRecordRefusedError` → worker `500 RECORD_REFUSED` → client code → server `balance_worker_record_refused`; callers can tell "your command will never land" from "the worker broke". | `createBalanceWorkerApp.test.ts`, `request-flow.test.ts` |
 | 7 | **A live owner can park.** The retry cleanup is a full retirement (`retirePartition`: drain → release the claim → stop → quiesce), so the `!entry.claimed` guard on parking is gone: a claimed partition whose log turns unreadable is released and retried alone instead of stopping the group. | `kafka-owned-partition-group.test.ts` "parks a claimed partition…"; `ownershipAdmission.test.ts` now pins one stop per parked entry |
 | 8 | **Herald lands batches the same way.** `stream/landRecords/`: a store failure (Postgres `errno`, `TinybirdError`, socket codes) waits in place with capped backoff and a `herald_store_waiting` warn every 5 attempts, never thrown to kafkajs; a job-code throw is bisected to the one record, skipped with `herald_record_skipped`, the rest land; `stop()` aborts a wait without skipping. Tinybird already quarantines bad rows and the events insert already isolates refusals, so no store can refuse one record. | `apps/herald/tests/unit/stream/land-records.test.ts` |
+
+## Decided 2026-09-22: refusals and `durability: "log"`
+
+A `"log"` caller (the default since c3b71285b1) is answered once Kafka has the record, so a
+later stale skip cannot reach it: the caller keeps its 200, the skip is logged at error, and
+Postgres never gets that write. Accepted. `STALE_SUBJECT` / `RECORD_REFUSED` reach only
+`"store"` callers. The lever if this ever matters: every writer of `customer_entitlements`,
+`usage_windows`, `rollovers` or `balance_locks` must evict the worker, so a stale guard stays
+the rare case it is meant to be.
