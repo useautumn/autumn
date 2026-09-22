@@ -33,7 +33,43 @@ describe("stripeInvoiceToPrefill", () => {
 			},
 			taxIdOptionId: "FR:eu_vat",
 			taxIdValue: "FR12345678901",
+			otherTaxIds: [],
+			taxIdsIncomplete: false,
 		});
+	});
+
+	it("flags a truncated registration list so the form does not replace it", () => {
+		const prefill = stripeInvoiceToPrefill(
+			invoice({
+				customer: {
+					id: "cus_1",
+					object: "customer",
+					tax_ids: {
+						object: "list",
+						data: [{ type: "eu_vat", value: "FR12345678901" }],
+						has_more: true,
+						url: "",
+					},
+				} as unknown as Stripe.Customer,
+			}),
+		);
+		expect(prefill.taxIdsIncomplete).toBe(true);
+	});
+
+	it("keeps registrations beyond the first so an edit does not drop them", () => {
+		const prefill = stripeInvoiceToPrefill(
+			invoice({
+				customer_address: { country: "FR" } as Stripe.Address,
+				customer_tax_ids: [
+					{ type: "eu_vat", value: "FR12345678901" },
+					{ type: "eu_oss_vat", value: "EU123456789" },
+				],
+			}),
+		);
+		expect(prefill.taxIdValue).toBe("FR12345678901");
+		expect(prefill.otherTaxIds).toEqual([
+			{ type: "eu_oss_vat", value: "EU123456789" },
+		]);
 	});
 
 	it("picks the country-specific row for a shared type like eu_vat", () => {
@@ -96,6 +132,8 @@ describe("stripeInvoiceToPrefill", () => {
 			},
 			taxIdOptionId: "DE:eu_vat",
 			taxIdValue: "DE123456789",
+			otherTaxIds: [],
+			taxIdsIncomplete: false,
 		});
 	});
 
