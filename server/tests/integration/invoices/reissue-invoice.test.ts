@@ -24,6 +24,8 @@ import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import type Stripe from "stripe";
+import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos";
 import { MetadataService } from "@/internal/metadata/MetadataService";
@@ -349,6 +351,106 @@ test.concurrent(
 		expect(
 			(await ctx.stripeCli.invoices.retrieve(original.stripe_id)).status,
 		).toBe("paid");
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.reissue: card invoice with net_terms_days → send-invoice replacement, no charge")}`,
+	async () => {
+		const customerId = "inv-reissue-card-terms";
+		const pro = products.pro({
+			id: "pro-reissue-card-terms",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const invoiceId = await firstInvoiceId({ autumnV2_3, customerId });
+		const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
+			invoice_id: invoiceId,
+			net_terms_days: 7,
+			lines: { add: [{ description: "Setup", amount: 10 }] },
+		})) as ReissueResponse;
+
+		// The credit covers the original; the extra $10 waits for the due date.
+		const replacement = await ctx.stripeCli.invoices.retrieve(
+			invoice.stripe_id,
+		);
+		expect(replacement.collection_method).toBe("send_invoice");
+		expect(replacement.status).toBe("open");
+		expect(replacement.amount_paid).toBe(0);
+		expect(replacement.amount_remaining).toBe(1000);
+		const dueInDays =
+			((replacement.due_date ?? 0) * 1000 - Date.now()) / 86_400_000;
+		expect(dueInDays).toBeGreaterThan(6.9);
+		expect(dueInDays).toBeLessThan(7.1);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.reissue: replacement is charged to the subscription's card, not the customer default")}`,
+	async () => {
+		const customerId = "inv-reissue-card-sub-pm";
+		const pro = products.pro({
+			id: "pro-reissue-card-sub-pm",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { autumnV2_3, customer } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const invoiceId = await firstInvoiceId({ autumnV2_3, customerId });
+		const { list } = (await autumnV2_3.post("/invoices.list", {
+			customer_id: customerId,
+		})) as { list: ApiListInvoiceV1[] };
+		const original = list.find((row) => row.id === invoiceId);
+		if (!original) throw new Error("original invoice not found");
+		const originalStripe = await ctx.stripeCli.invoices.retrieve(
+			original.stripe_id,
+		);
+		const stripeSubId = stripeInvoiceToStripeSubscriptionId(originalStripe);
+		if (!stripeSubId) throw new Error("original invoice has no subscription");
+
+		// The subscription bills card A; the customer's default becomes card B.
+		const stripeCusId = customer.processor?.id ?? "";
+		const cardA = await ctx.stripeCli.paymentMethods.attach("pm_card_visa", {
+			customer: stripeCusId,
+		});
+		const cardB = await ctx.stripeCli.paymentMethods.attach(
+			"pm_card_mastercard",
+			{ customer: stripeCusId },
+		);
+		await ctx.stripeCli.subscriptions.update(stripeSubId, {
+			default_payment_method: cardA.id,
+		});
+		await ctx.stripeCli.customers.update(stripeCusId, {
+			invoice_settings: { default_payment_method: cardB.id },
+		});
+
+		const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
+			invoice_id: invoiceId,
+			lines: { add: [{ description: "Setup", amount: 10 }] },
+		})) as ReissueResponse;
+
+		const replacement = await ctx.stripeCli.invoices.retrieve(
+			invoice.stripe_id,
+			{ expand: ["payments.data.payment.payment_intent"] },
+		);
+		expect(replacement.status).toBe("paid");
+		const paymentIntent = replacement.payments?.data[0]?.payment
+			.payment_intent as Stripe.PaymentIntent | null | undefined;
+		expect(paymentIntent?.payment_method).toBe(cardA.id);
 	},
 );
 
