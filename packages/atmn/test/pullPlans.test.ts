@@ -803,3 +803,78 @@ test("a version pulled for the first time lands beside its plan's other versions
 	const order = [...text.matchAll(/internalId: "(\w+)"/g)].map((m) => m[1]);
 	expect(order).toEqual(["prod_v1", "prod_v2", "prod_free"]);
 });
+
+test("a version pulled into a by-reference layout lands beside the reference to its sibling", async () => {
+	const caseDir = `${import.meta.dir}/.tmp/pull-plans-reference`;
+	rmSync(caseDir, { recursive: true, force: true });
+	mkdirSync(caseDir, { recursive: true });
+	writeFileSync(
+		`${caseDir}/autumn.config.ts`,
+		[
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { free, proV1 } from "./plans";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [],",
+			"\tplans: [proV1, free],",
+			"});",
+			"",
+		].join("\n"),
+		"utf8",
+	);
+	writeFileSync(
+		`${caseDir}/plans.ts`,
+		[
+			'import { plan } from "../../../src/generated/plans";',
+			"",
+			'export const proV1 = plan({ internalId: "prod_v1", active: true, planId: "pro", versionSlug: "v1", name: "Pro" });',
+			'export const free = plan({ internalId: "prod_free", active: true, planId: "free", versionSlug: "v1", name: "Free" });',
+			"",
+		].join("\n"),
+		"utf8",
+	);
+	const rows = {
+		features: [],
+		plans: [
+			...numberedLaterRows.plans,
+			{
+				id: "free",
+				internalId: "prod_free",
+				name: "Free",
+				version: 1,
+				versionSlug: "v1",
+				active: true,
+				archived: false,
+				price: null,
+				items: [],
+			},
+		],
+	};
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				version: 1,
+				versionSlug: "v2",
+				active: true,
+				action: "delete",
+				internalId: "prod_v2",
+				state: { hasCustomers: false },
+			},
+		],
+	};
+	const result = await runPull({
+		client: clientFor({ preview, rows }),
+		cwd: caseDir,
+		write: () => {},
+	});
+	expect(result.appended).toEqual(["pro@v2"]);
+	const root = rootTextIn(caseDir);
+	expect(root.indexOf("proV1")).toBeLessThan(
+		root.indexOf('internalId: "prod_v2"'),
+	);
+	expect(root.indexOf('internalId: "prod_v2"')).toBeLessThan(
+		root.lastIndexOf("free,"),
+	);
+});

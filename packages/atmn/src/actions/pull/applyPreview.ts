@@ -25,6 +25,7 @@ import {
 } from "../../surgery/patchFixtureProperty";
 import { replaceFixture } from "../../surgery/replaceFixture";
 import { changedFixtureKeys } from "./changedFixtureKeys";
+import { elementStatesPlanId } from "./elementStatesPlanId";
 import { type FixtureConstraint, locateFixture } from "./locateFixture";
 import { resolveCollectionTarget } from "./resolveCollectionTarget";
 
@@ -346,12 +347,14 @@ export const applyPreview = ({
 		// Versions of one plan sit together: a new one lands after its siblings.
 		const after = versioned
 			? (element: SgNode) =>
-					element.kind() === "call_expression" &&
-					element.field("function")?.text() === rowSpec.builder &&
-					fixturePropertyString({
-						call: element,
-						property: rowSpec.idField,
-					}) === id
+					elementStatesPlanId({
+						element,
+						file: resolved.file,
+						files,
+						builder: rowSpec.builder,
+						idField: rowSpec.idField,
+						id,
+					})
 			: undefined;
 		const updated =
 			resolved.kind === "inline"

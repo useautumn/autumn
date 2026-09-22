@@ -144,3 +144,53 @@ test("no atmn collection returns null", () => {
 		appendToCollection({ source, collection: "features", text: "seats" }),
 	).toBeNull();
 });
+
+test("an `after` anchor inserts behind the last matching sibling, keeping its comment", () => {
+	const source = `export default atmn({
+	features: [
+		feature({ featureId: "seats" }) /* note */,
+		feature({ featureId: "words" }), // legacy
+		feature({ featureId: "seats" }), // v1
+		other,
+	],
+});
+`;
+	const output = appendToCollection({
+		source,
+		collection: "features",
+		text: 'feature({ featureId: "seats", v: 2 })',
+		after: (element) => element.text().includes('"seats"'),
+	});
+	expect(output).toBe(`export default atmn({
+	features: [
+		feature({ featureId: "seats" }) /* note */,
+		feature({ featureId: "words" }), // legacy
+		feature({ featureId: "seats" }), // v1
+		feature({ featureId: "seats", v: 2 }),
+		other,
+	],
+});
+`);
+});
+
+test("an anchor without a comma gets one before its trailing comment", () => {
+	const source = `export default atmn({
+	features: [
+		feature({ featureId: "seats" }) // only
+	],
+});
+`;
+	const output = appendToCollection({
+		source,
+		collection: "features",
+		text: "next",
+		after: () => true,
+	});
+	expect(output).toBe(`export default atmn({
+	features: [
+		feature({ featureId: "seats" }), // only
+		next,
+	],
+});
+`);
+});

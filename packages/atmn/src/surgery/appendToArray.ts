@@ -20,7 +20,10 @@ export const appendElementToArray = ({
 	text: AppendText;
 	after?: (element: SgNode) => boolean;
 }): string => {
-	const elements = array.namedChildren();
+	// A comment is a named child too, but never an element.
+	const elements = array
+		.namedChildren()
+		.filter((child) => child.kind() !== "comment");
 	if (elements.length === 0) {
 		const indent = leadingIndentOfLine(source, array.range().start.index);
 		// The seeded element's first line lands one tab deeper than the array.
@@ -44,13 +47,21 @@ export const appendElementToArray = ({
 		}
 	}
 	const anchor = anchorIndex === -1 ? last : elements[anchorIndex];
-	const anchorEnd = anchor.range().end.index;
-	const rest = source.slice(anchorEnd);
-	const commaAfter = rest.indexOf(",");
-	const hasTrailingComma =
-		commaAfter !== -1 && rest.slice(0, commaAfter).trim() === "";
-	const insertAt = hasTrailingComma ? anchorEnd + commaAfter + 1 : anchorEnd;
-	const missingComma = hasTrailingComma ? "" : ",";
+	const { insertAt, hasTrailingComma } = insertionAfter({
+		source,
+		array,
+		anchor,
+	});
+	// A missing comma goes straight after the anchor, ahead of any comment.
+	const commaEdits = hasTrailingComma
+		? []
+		: [
+				{
+					startPos: anchor.range().end.index,
+					endPos: anchor.range().end.index,
+					insertedText: ",",
+				},
+			];
 	const spansLines = source
 		.slice(array.range().start.index, last.range().start.index)
 		.includes("\n");
@@ -59,10 +70,11 @@ export const appendElementToArray = ({
 		const indent = leadingIndentOfLine(source, anchor.range().start.index);
 		const resolved = resolveText({ text, elementIndent: indent });
 		return root.commitEdits([
+			...commaEdits,
 			{
 				startPos: insertAt,
 				endPos: insertAt,
-				insertedText: `${missingComma}\n${indent}${resolved},`,
+				insertedText: `\n${indent}${resolved},`,
 			},
 		]);
 	}
@@ -71,10 +83,11 @@ export const appendElementToArray = ({
 	const resolved = resolveText({ text, elementIndent });
 	if (!resolved.includes("\n")) {
 		return root.commitEdits([
+			...commaEdits,
 			{
 				startPos: insertAt,
 				endPos: insertAt,
-				insertedText: `${missingComma} ${resolved},`,
+				insertedText: ` ${resolved},`,
 			},
 		]);
 	}
@@ -90,6 +103,41 @@ export const appendElementToArray = ({
 			insertedText: `[\n${lines.join("\n")}\n${lineIndent}]`,
 		},
 	]);
+};
+
+/** Where the next element goes: past the anchor's comma and any comment that
+ * shares its line, so `plan() /* note *\/,` and `plan(), // legacy` keep their trivia. */
+const insertionAfter = ({
+	source,
+	array,
+	anchor,
+}: {
+	source: string;
+	array: SgNode;
+	anchor: SgNode;
+}): { insertAt: number; hasTrailingComma: boolean } => {
+	const children = array.children();
+	const start = children.findIndex(
+		(child) => child.range().start.index === anchor.range().start.index,
+	);
+	let insertAt = anchor.range().end.index;
+	let hasTrailingComma = false;
+	for (const child of children.slice(start + 1)) {
+		const kind = child.kind();
+		if (kind === ",") {
+			if (hasTrailingComma) break;
+			hasTrailingComma = true;
+			insertAt = child.range().end.index;
+			continue;
+		}
+		if (kind !== "comment") break;
+		const sameLine = !source
+			.slice(insertAt, child.range().start.index)
+			.includes("\n");
+		if (!sameLine) break;
+		insertAt = child.range().end.index;
+	}
+	return { insertAt, hasTrailingComma };
 };
 
 const resolveText = ({
