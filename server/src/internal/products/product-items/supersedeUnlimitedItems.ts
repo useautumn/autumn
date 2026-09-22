@@ -1,8 +1,4 @@
-import {
-	Infinite,
-	isFeatureItem,
-	type ProductItem,
-} from "@autumn/shared";
+import { Infinite, isFeatureItem, type ProductItem } from "@autumn/shared";
 
 const isUnlimitedItem = (item: ProductItem) => item.included_usage === Infinite;
 
@@ -11,6 +7,10 @@ const isUnlimitedItem = (item: ProductItem) => item.included_usage === Infinite;
  * a legitimate shape, and the grant is what keeps that usage unbilled. */
 const grantsFiniteAllowance = (item: ProductItem) =>
 	!isUnlimitedItem(item) && isFeatureItem(item);
+
+/** Global and entity-scoped grants for one feature are independent balances. */
+const itemToGrantScope = (item: ProductItem) =>
+	item.feature_id ? `${item.feature_id}|${item.entity_feature_id ?? ""}` : "";
 
 /**
  * Drops an unlimited item when the same feature also has a finite grant.
@@ -25,21 +25,14 @@ export const supersedeUnlimitedItems = ({
 }: {
 	items: ProductItem[];
 }): ProductItem[] => {
-	const finiteFeatureIds = new Set(
-		items
-			.filter(grantsFiniteAllowance)
-			.map((item) => item.feature_id)
-			.filter((featureId): featureId is string => Boolean(featureId)),
+	const finiteScopes = new Set(
+		items.filter(grantsFiniteAllowance).map(itemToGrantScope).filter(Boolean),
 	);
 
-	if (finiteFeatureIds.size === 0) return items;
+	if (finiteScopes.size === 0) return items;
 
 	return items.filter(
 		(item) =>
-			!(
-				isUnlimitedItem(item) &&
-				item.feature_id &&
-				finiteFeatureIds.has(item.feature_id)
-			),
+			!(isUnlimitedItem(item) && finiteScopes.has(itemToGrantScope(item))),
 	);
 };

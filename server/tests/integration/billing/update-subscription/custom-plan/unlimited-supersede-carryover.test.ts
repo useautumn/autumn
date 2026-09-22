@@ -12,7 +12,8 @@
  * Green (after):  the finite grant wins — granted 50, usage 100, remaining 0.
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
+import type { ApiEntityV2 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -121,5 +122,52 @@ test.concurrent(
 			usage: CREDITS_CONSUMED,
 			remaining: 0,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("supersede: a per-entity unlimited grant survives a global finite grant")}`,
+	async () => {
+		const customerId = "unlim-scope-preserved";
+		const plan = products.pro({
+			id: "unlim-scope-preserved-pro",
+			items: [
+				items.unlimited({
+					featureId: TestFeature.Messages,
+					entityFeatureId: TestFeature.Users,
+				}),
+			],
+		});
+
+		const { autumnV1, autumnV2_3, entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [plan] }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+			],
+			actions: [s.attach({ productId: plan.id })],
+		});
+
+		// A global finite grant must not evict the per-entity unlimited one:
+		// they are independent balances.
+		await autumnV1.subscriptions.update({
+			customer_id: customerId,
+			product_id: plan.id,
+			items: [
+				items.unlimited({
+					featureId: TestFeature.Messages,
+					entityFeatureId: TestFeature.Users,
+				}),
+				items.monthlyMessages({ includedUsage: NEW_ALLOWANCE }),
+			],
+		});
+
+		const entity = await autumnV2_3.entities.get<ApiEntityV2>(
+			customerId,
+			entities[0].id,
+			{ skip_cache: "true" },
+		);
+		expect(entity.balances[TestFeature.Messages]?.unlimited).toBe(true);
 	},
 );
