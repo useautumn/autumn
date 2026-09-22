@@ -124,6 +124,24 @@ const createInvoiceCreditCtx = () => {
 	return ctx;
 };
 
+/** A plain live balance for the feature the routing params name, so the
+ *  routing assertions aren't answered by the "no such balance" guard. */
+const messagesProducts = () => [
+	{
+		status: "active",
+		customer_entitlements: [
+			{
+				id: "ce_messages",
+				invoice_credit: false,
+				pooled_contribution_id: null,
+				is_pooled_balance: false,
+				balance: 100,
+				entitlement: { feature: { id: "messages" } },
+			},
+		],
+	},
+];
+
 /** A subject whose credits balance was stamped as invoice credits at attach. */
 const stampedInvoiceCreditProducts = () => [
 	{
@@ -219,6 +237,7 @@ describe("updateBalanceV2 async routing", () => {
 	});
 
 	test("keeps other org updates synchronous", async () => {
+		state.subjectProducts = messagesProducts();
 		const ctx = createCtx();
 		await updateBalanceV2({
 			ctx,
