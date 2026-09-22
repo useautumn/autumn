@@ -238,21 +238,15 @@ const PlanMappingDetailForm = ({
 				</div>
 
 				{resolved.status === "unmapped" && (
-					<div className="flex flex-col gap-2">
-						<p className="text-tertiary-foreground text-xs">
-							This plan has no Stripe product yet. Create one to map it, or pick
-							an existing product above.
-						</p>
-						<Button
-							className="w-full justify-start gap-2 text-xs"
-							disabled={createInStripe.isPending}
-							onClick={() => createInStripe.mutate(base.id)}
-							variant="muted"
-						>
-							<StripeIcon size={13} />
-							Create in Stripe
-						</Button>
-					</div>
+					<Button
+						className="w-full justify-start gap-2 text-xs"
+						disabled={createInStripe.isPending}
+						onClick={() => createInStripe.mutate(base.id)}
+						variant="muted"
+					>
+						<StripeIcon size={13} />
+						Create in Stripe
+					</Button>
 				)}
 
 				<p className="text-tertiary-foreground text-xs">
