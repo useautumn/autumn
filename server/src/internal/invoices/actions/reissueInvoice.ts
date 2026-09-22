@@ -8,6 +8,7 @@ import {
 	type InsertDbInvoiceLineItem,
 	type InvoiceTemplate,
 	MetadataType,
+	type PreviewInvoiceCredits,
 	ProcessorType,
 	RecaseError,
 	type ReissueCustomerOverrides,
@@ -310,6 +311,70 @@ const createReplacementDraft = async ({
 		});
 	}
 	return withLines;
+};
+
+/**
+ * Stripe is the only source of truth for tax, so a preview builds the real
+ * draft, reads its totals and deletes it. Customer corrections are not applied
+ * here (a preview must not write), so tax driven by address is best-effort.
+ */
+const previewReplacementDraft = async ({
+	ctx,
+	customerId,
+	stripeCli,
+	stripeInvoice,
+	template,
+	dueDate,
+	daysUntilDue,
+	overrides,
+	lineEdits,
+	storedLines,
+	dropDeferredPointer,
+	credits,
+	dueDateMs,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	stripeCli: Stripe;
+	stripeInvoice: Stripe.Invoice;
+	template?: InvoiceTemplate;
+	dueDate?: number;
+	daysUntilDue?: number;
+	overrides?: ReissueInvoiceOverrides;
+	lineEdits?: ReissueLineEdits;
+	storedLines: DbInvoiceLineItem[];
+	dropDeferredPointer: boolean;
+	credits?: PreviewInvoiceCredits;
+	dueDateMs: number | null;
+}): Promise<CreateInvoicePreview> => {
+	const draft = await createReplacementDraft({
+		ctx,
+		customerId,
+		stripeCli,
+		stripeInvoice,
+		template,
+		dueDate,
+		daysUntilDue,
+		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
+		overrides,
+		lineEdits,
+		storedLines,
+		dropDeferredPointer,
+	});
+	try {
+		return previewReissuedInvoice({
+			stripeInvoice: draft,
+			lines: await getStripeInvoiceLineItems({
+				stripeClient: stripeCli,
+				invoiceId: draft.id,
+			}),
+			storedLines,
+			credits,
+			dueDateMs,
+		});
+	} finally {
+		await stripeCli.invoices.del(draft.id).catch(() => undefined);
+	}
 };
 
 /**
@@ -724,12 +789,6 @@ export const reissueInvoice = async ({
 		invoiceIds: [row.invoice.id],
 	});
 
-	if (preview && (invoiceOverrides || customerOverrides || lineEdits)) {
-		throw invalidRequest(
-			"Preview does not yet account for adjustments; omit invoice, customer and lines to preview a plain reissue",
-		);
-	}
-
 	const dueDateMs = dueDate
 		? secondsToMs(dueDate)
 		: daysUntilDue
@@ -748,13 +807,18 @@ export const reissueInvoice = async ({
 			replacement: null,
 			voidedInvoiceId: null,
 			creditNoteId: null,
-			preview: previewReissuedInvoice({
+			preview: await previewReplacementDraft({
+				ctx,
+				customerId: previewCustomerId,
+				stripeCli,
 				stripeInvoice,
-				lines: await getStripeInvoiceLineItems({
-					stripeClient: stripeCli,
-					invoiceId: stripeInvoice.id,
-				}),
+				template,
+				dueDate,
+				daysUntilDue,
+				overrides: invoiceOverrides,
+				lineEdits,
 				storedLines,
+				dropDeferredPointer: creditOriginal,
 				credits,
 				dueDateMs,
 			}),

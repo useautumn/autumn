@@ -13,6 +13,7 @@ import { expect, test } from "bun:test";
 import type {
 	ApiListInvoiceV1,
 	AttachParamsV1Input,
+	CreateInvoicePreview,
 	ReissueInvoiceResponse,
 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
@@ -137,3 +138,60 @@ test(`${chalk.yellowBright("invoices.reissue preview: credit on the customer sho
 	expect(response.preview.total).toEqual(PRO_BASE);
 	expect(response.preview.amount_due).toEqual(12);
 });
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.reissue preview: reflects line edits without issuing anything")}`,
+	async () => {
+		const customerId = "inv-reissue-preview-adjusted";
+		const pro = products.base({
+			id: "pro-reissue-preview-adj",
+			items: [items.monthlyPrice({ price: 20 })],
+		});
+		const { autumnV2_3, autumnV2_4 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		await autumnV2_4.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			invoice_mode: {
+				enabled: true,
+				finalize: true,
+				enable_plan_immediately: true,
+			},
+		});
+		const { list } = (await autumnV2_3.post("/invoices.list", {
+			customer_id: customerId,
+		})) as { list: ApiListInvoiceV1[] };
+		const original = list[0];
+		const baseLine = original.items?.[0];
+		if (!baseLine) throw new Error("original invoice has no line items");
+
+		const { invoice, preview } = (await autumnV2_3.post("/invoices.reissue", {
+			invoice_id: original.id,
+			preview: true,
+			lines: {
+				update: [{ id: baseLine.id, amount: 15 }],
+				add: [{ description: "Onboarding", amount: 100 }],
+			},
+		})) as { invoice: ApiListInvoiceV1 | null; preview: CreateInvoicePreview };
+
+		expect(invoice).toBeNull();
+		expect(preview.total).toBe(115);
+		expect(
+			preview.lines.map((line) => line.amount).sort((a, b) => a - b),
+		).toEqual([15, 100]);
+
+		// Nothing was issued: the original is still the only invoice and still open.
+		const { list: after } = (await autumnV2_3.post("/invoices.list", {
+			customer_id: customerId,
+		})) as { list: ApiListInvoiceV1[] };
+		expect(after.map((row) => row.id)).toEqual([original.id]);
+		expect(after[0].status).toBe("open");
+	},
+);
