@@ -18,6 +18,7 @@ export const isDeadlineExceededError = (error: unknown): boolean =>
 export const retryBoundedAsync = async <T>({
 	attempts,
 	delayMs,
+	maxDelayMs,
 	timeoutMs,
 	timeoutMessage,
 	run,
@@ -26,6 +27,7 @@ export const retryBoundedAsync = async <T>({
 }: {
 	attempts: number;
 	delayMs: number;
+	maxDelayMs?: number;
 	timeoutMs: number;
 	timeoutMessage: string;
 	run: () => Promise<T>;
@@ -35,6 +37,7 @@ export const retryBoundedAsync = async <T>({
 	retryAsync({
 		attempts,
 		delayMs,
+		maxDelayMs,
 		onRetry,
 		shouldRetry,
 		run: () =>
