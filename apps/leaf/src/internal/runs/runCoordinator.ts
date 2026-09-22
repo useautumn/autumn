@@ -1,4 +1,5 @@
 import { logger } from "../../lib/logger.js";
+import type { AgentTurnSpeaker } from "../agentRuntime/domain/agentTurnContext.js";
 import { getRun } from "./runRegistry.js";
 
 const MAX_PENDING_TURNS = 5;
@@ -23,35 +24,43 @@ export const stopActiveThreadRun = async ({
 
 // Replaces the chat SDK queue under `concurrency: "concurrent"`: new runs are
 // serialized per thread, while messages arriving mid-run are routed live —
-// stop keywords interrupt, everything else is injected as the next turn.
+// stop keywords interrupt, everything else is posted into the live session,
+// where eve's steer policy restarts the turn with every message in context.
 const newRunTails = new Map<string, Promise<void>>();
 
 export const dispatchThreadMessage = async <Result>({
 	hasAttachments,
 	onFollowUpInjected,
+	origin = "user",
 	providerUserId,
 	runKey,
 	runNewMessage,
+	speaker,
 	text,
 }: {
 	hasAttachments: boolean;
 	onFollowUpInjected?: () => Promise<void> | void;
+	/** A system notice (an applied approval's outcome) belongs to the thread,
+	 * not to whoever is speaking, so it merges into anyone's active run. */
+	origin?: "system" | "user";
 	providerUserId: string;
 	runKey: string;
 	runNewMessage: () => Promise<Result>;
+	speaker?: AgentTurnSpeaker;
 	text: string;
 }): Promise<Result | undefined> => {
 	const active = getRun(runKey);
-	if (active && !(active.closed || active.stop)) {
+	// A settling run has no reader left on its stream: a message posted into
+	// it would run unread, so it waits for the run to close and starts fresh.
+	if (active && !(active.closed || active.stop || active.settling)) {
 		const injectable =
-			active.kind === "message" &&
-			active.ownerProviderUserId === providerUserId &&
+			(origin === "system" || active.ownerProviderUserId === providerUserId) &&
 			!hasAttachments &&
 			active.pendingTurns < MAX_PENDING_TURNS;
 
 		if (injectable) {
 			try {
-				await active.injectFollowUp({ text });
+				await active.injectFollowUp({ speaker, text });
 				logger.info("Injected follow-up into active run", {
 					event: "leaf.run_follow_up_injected",
 					data: { pending_turns: active.pendingTurns, run_key: runKey },

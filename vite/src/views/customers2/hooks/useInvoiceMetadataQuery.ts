@@ -1,6 +1,11 @@
 import { ProcessorType } from "@autumn/shared";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import {
+	type UseQueryResult,
+	useQueries,
+	useQuery,
+} from "@tanstack/react-query";
 import type { AxiosInstance } from "axios";
+import { useCallback } from "react";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
@@ -85,7 +90,20 @@ export const useInvoicesMetadataQuery = ({
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
-	const results = useQueries({
+	const combineMetadataByStripeId = useCallback(
+		(results: UseQueryResult<InvoiceMetadataResponse>[]) => {
+			const metadataByStripeId: Record<string, InvoiceMetadata> = {};
+			for (const [index, result] of results.entries()) {
+				if (result.data)
+					metadataByStripeId[stripeInvoiceIds[index]] = result.data.metadata;
+			}
+			return metadataByStripeId;
+		},
+		[stripeInvoiceIds],
+	);
+
+	/** combine keeps the map referentially stable; a fresh object per render loops the invoices table. */
+	const metadataByStripeId = useQueries({
 		queries: stripeInvoiceIds.map((stripeInvoiceId) =>
 			invoiceMetadataQueryOptions({
 				axiosInstance,
@@ -94,12 +112,7 @@ export const useInvoicesMetadataQuery = ({
 				stripeInvoiceId,
 			}),
 		),
-	});
-
-	const metadataByStripeId: Record<string, InvoiceMetadata> = {};
-	results.forEach((result, i) => {
-		if (result.data)
-			metadataByStripeId[stripeInvoiceIds[i]] = result.data.metadata;
+		combine: combineMetadataByStripeId,
 	});
 
 	return { metadataByStripeId };

@@ -9,7 +9,7 @@ import {
 } from "../../../src/internal/runs/runRegistry.js";
 
 describe("dispatchThreadMessage", () => {
-	test("injects follow-ups into the active run with an interrupt first", async () => {
+	test("posts follow-ups into the active run; the post itself steers", async () => {
 		const sent: string[] = [];
 		const run = registerRun({
 			key: "co2",
@@ -18,8 +18,8 @@ describe("dispatchThreadMessage", () => {
 			sendInterrupt: async () => {
 				sent.push("interrupt");
 			},
-			sendUserMessage: async ({ text }) => {
-				sent.push(`message:${text}`);
+			sendUserMessage: async ({ speaker, text }) => {
+				sent.push(`message:${text}:${speaker?.name ?? "-"}`);
 			},
 		});
 		run.resolveSessionId("sesn_1");
@@ -36,14 +36,81 @@ describe("dispatchThreadMessage", () => {
 			runNewMessage: async () => {
 				newRuns += 1;
 			},
+			speaker: { mentionsAgent: true, name: "Tony" },
 			text: "also, what's the MRR?",
 		});
 
-		expect(sent).toEqual(["interrupt", "message:also, what's the MRR?"]);
+		// No separate interrupt: eve's steer policy cancels the active turn as
+		// part of the same durable delivery, so the cancel can't outrun the text.
+		expect(sent).toEqual(["message:also, what's the MRR?:Tony"]);
 		expect(run.pendingTurns).toBe(1);
 		expect(acked).toBe(1);
 		expect(newRuns).toBe(0);
 		closeRun({ key: "co2", run });
+	});
+
+	test("a system notice merges into another sender's active run", async () => {
+		const sent: string[] = [];
+		const run = registerRun({
+			key: "co-notice",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendUserMessage: async ({ speaker, text }) => {
+				sent.push(`${text}:${speaker?.name ?? "-"}`);
+			},
+		});
+		run.resolveSessionId("sesn_1");
+		let newRuns = 0;
+
+		// Marco approved the card while Tony's message was still running: the
+		// applied-outcome notice belongs to the thread, so it rides Tony's turn
+		// instead of opening a second reader on the same session.
+		await dispatchThreadMessage({
+			hasAttachments: false,
+			origin: "system",
+			providerUserId: "U2",
+			runKey: "co-notice",
+			runNewMessage: async () => {
+				newRuns += 1;
+			},
+			text: "<approval_applied>…</approval_applied>",
+		});
+
+		expect(sent).toEqual(["<approval_applied>…</approval_applied>:-"]);
+		expect(newRuns).toBe(0);
+		closeRun({ key: "co-notice", run });
+	});
+
+	test("a settling run queues the follow-up instead of posting it unread", async () => {
+		const sent: string[] = [];
+		const run = registerRun({
+			key: "co-settling",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendUserMessage: async ({ text }) => {
+				sent.push(text);
+			},
+		});
+		run.resolveSessionId("sesn_1");
+		// The turn parked for an approval card: the reader returned and the card
+		// is being rendered, but the run stays registered until it is posted.
+		run.settle();
+		let newRuns = 0;
+
+		await dispatchThreadMessage({
+			hasAttachments: false,
+			providerUserId: "U1",
+			runKey: "co-settling",
+			runNewMessage: async () => {
+				newRuns += 1;
+			},
+			text: "also bump the seats to 10",
+		});
+
+		expect(sent).toEqual([]);
+		expect(newRuns).toBe(1);
+		expect(run.pendingTurns).toBe(0);
+		closeRun({ key: "co-settling", run });
 	});
 
 	test("serializes new runs per thread when nothing is active", async () => {
