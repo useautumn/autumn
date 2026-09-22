@@ -1,11 +1,12 @@
-// A page of live Stripe reads is slow, so small pages keep progress moving.
-export const BILLING_VERIFY_EXPORT_PAGE_SIZE = 40;
-
 export const BILLING_VERIFY_CONCURRENCY = 8;
 
 export const STRIPE_LIST_PAGE_SIZE = 100;
 
-export const TEST_CLOCK_SWEEP_CONCURRENCY = 4;
+/** Concurrent created-range windows. At ~2s per 100-subscription page this is
+ * ~4 req/s against Stripe's 100 req/s live (25 req/s test) read limit. */
+export const STRIPE_SWEEP_CONCURRENCY = 8;
+
+export const STRIPE_SWEEP_WINDOW_MONTHS = 1;
 
 export const MAX_MEMOIZED_STRIPE_READS = 2000;
 

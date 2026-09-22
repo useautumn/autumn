@@ -126,6 +126,7 @@ export function CustomerExportSheet({
 						<div className="border-border/40 border-t px-4 pt-3 pb-4">
 							<CustomerExportActiveProgress
 								activeExport={activeExport}
+								scanningLabel={copy.scanningLabel}
 								runningLabel={copy.runningLabel}
 							/>
 

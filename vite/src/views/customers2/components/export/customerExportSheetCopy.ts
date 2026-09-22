@@ -8,6 +8,7 @@ export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 		menuLabel: string;
 		title: string;
 		description: string;
+		scanningLabel?: string;
 		runningLabel: string;
 		submitLabel: string;
 	}
@@ -26,6 +27,7 @@ export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 		title: "Export billing issues",
 		description:
 			"Check each Stripe-linked customer's billing against Autumn and download the mismatches as a CSV file. Customers without a Stripe customer are skipped. Large accounts can take up to an hour.",
+		scanningLabel: "Scanning Stripe subscriptions",
 		runningLabel: "Checking customers",
 		submitLabel: "Start check",
 	},

@@ -3,6 +3,7 @@ import type { VerifyResponse } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createBillingVerifyExportStringifier } from "@/internal/customers/exports/csv/createBillingVerifyExportStringifier.js";
 import { createBillingVerifyStripeReader } from "@/internal/customers/exports/verify/createBillingVerifyStripeReader.js";
+import { stripeCreatedWindows } from "@/internal/customers/exports/verify/stripeCreatedWindows.js";
 import { sweepStripeSubscriptions } from "@/internal/customers/exports/verify/sweepStripeSubscriptions.js";
 import {
 	isVerifyResponseClean,
@@ -109,16 +110,31 @@ const asyncList = <Item>(items: Item[]) => ({
 	},
 });
 
+const page = <Item>(data: Item[]) => Promise.resolve({ data, has_more: false });
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 describe("sweepStripeSubscriptions", () => {
 	const buildStripeCli = () => {
-		const listedClockIds: (string | undefined)[] = [];
+		const listed: { created?: Stripe.RangeQueryParam; test_clock?: string }[] =
+			[];
 		const stripeCli = {
 			subscriptions: {
-				list: ({ test_clock }: { test_clock?: string }) => {
-					listedClockIds.push(test_clock);
-					return asyncList(
-						test_clock
-							? [{ id: `sub_${test_clock}`, customer: "cus_clock" }]
+				list: ({
+					created,
+					test_clock,
+				}: {
+					created?: Stripe.RangeQueryParam;
+					test_clock?: string;
+				}) => {
+					listed.push({ created, test_clock });
+					if (test_clock) {
+						return page([{ id: `sub_${test_clock}`, customer: "cus_clock" }]);
+					}
+					// The open-ended first window holds everything in this fake org.
+					return page(
+						created && "gte" in created
+							? []
 							: [
 									{ id: "sub_1", customer: "cus_a" },
 									{ id: "sub_2", customer: { id: "cus_b" } },
@@ -131,15 +147,22 @@ describe("sweepStripeSubscriptions", () => {
 				testClocks: { list: () => asyncList([{ id: "clock_1" }]) },
 			},
 		} as unknown as Stripe;
-		return { listedClockIds, stripeCli };
+		return { listed, stripeCli };
 	};
+	const now = Date.now();
 
-	it("groups the org's subscriptions by Stripe customer", async () => {
-		const { listedClockIds, stripeCli } = buildStripeCli();
+	it("groups the org's subscriptions by Stripe customer and reports each page", async () => {
+		const { listed, stripeCli } = buildStripeCli();
+		const pageCounts: number[] = [];
 
 		const swept = await sweepStripeSubscriptions({
 			stripeCli,
 			includeTestClocks: false,
+			sinceMs: now - 10 * DAY_MS,
+			untilMs: now,
+			onPage: (count) => {
+				pageCounts.push(count);
+			},
 		});
 
 		expect(swept.get("cus_a")?.map((sub) => sub.id)).toEqual([
@@ -147,7 +170,8 @@ describe("sweepStripeSubscriptions", () => {
 			"sub_3",
 		]);
 		expect(swept.get("cus_b")?.map((sub) => sub.id)).toEqual(["sub_2"]);
-		expect(listedClockIds).toEqual([undefined]);
+		expect(listed.every((call) => call.test_clock === undefined)).toBe(true);
+		expect(pageCounts.sort()).toEqual([0, 3]);
 	});
 
 	it("also sweeps each test clock, which the org-wide listing omits", async () => {
@@ -156,12 +180,38 @@ describe("sweepStripeSubscriptions", () => {
 		const swept = await sweepStripeSubscriptions({
 			stripeCli,
 			includeTestClocks: true,
+			sinceMs: now - 10 * DAY_MS,
+			untilMs: now,
 		});
 
 		expect(swept.get("cus_clock")?.map((sub) => sub.id)).toEqual([
 			"sub_clock_1",
 		]);
 		expect(swept.get("cus_a")?.length).toBe(2);
+	});
+});
+
+describe("stripeCreatedWindows", () => {
+	it("covers all time with disjoint windows that meet at month boundaries", () => {
+		const sinceMs = Date.UTC(2026, 0, 15);
+		const windows = stripeCreatedWindows({
+			sinceMs,
+			untilMs: Date.UTC(2026, 2, 1),
+		});
+
+		expect(windows[0]).toEqual({ lt: Math.floor(sinceMs / 1000) });
+		expect(windows[windows.length - 1]).toEqual({
+			gte: windows[windows.length - 2]?.lt,
+		});
+		for (let i = 1; i < windows.length; i++) {
+			expect(windows[i].gte).toBe(windows[i - 1].lt);
+		}
+		expect(windows.length).toBe(3);
+	});
+
+	it("degrades to one unbounded window when there is no history", () => {
+		const now = Date.now();
+		expect(stripeCreatedWindows({ sinceMs: now, untilMs: now })).toEqual([{}]);
 	});
 });
 
