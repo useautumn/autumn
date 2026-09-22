@@ -971,3 +971,97 @@ test("a diff the server refuses points at --overwrite; other failures do not", a
 		runPull({ client: failing(unauthorized), cwd: dir, write: () => {} }),
 	).rejects.not.toThrow(/--overwrite/);
 });
+
+test("a reward naming an archived plan is pulled without it, and the drop is said", async () => {
+	const dir = tempDir({ name: "archived-plan-refs" });
+	const path = writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [],",
+			"\tplans: [],",
+			"\trewards: [],",
+			"\treferralPrograms: [],",
+			"});",
+			"",
+		].join("\n"),
+	});
+	const proRow = {
+		id: "pro",
+		internalId: "prod_pro",
+		name: "Pro",
+		version: 1,
+		versionSlug: "v1",
+		active: true,
+		archived: false,
+		items: [],
+	};
+	const couponRow = {
+		coupon: {
+			id: "launch",
+			internalId: "rew_launch",
+			name: "Launch",
+			duration: { type: "forever", length: null },
+			// `retired` is archived: the catalog no longer surfaces it.
+			planIds: ["pro", "retired"],
+			promoCodes: [{ code: "LAUNCH" }],
+			type: "percentage_discount",
+			value: 10,
+		},
+	};
+	const programRow = {
+		id: "friends",
+		internalId: "rp_friends",
+		rewardId: "launch",
+		redeemOn: "checkout",
+		receivedBy: "referrer",
+		planIds: ["retired"],
+	};
+	let output = "";
+	const result = await runPull({
+		client: fakeClient({
+			preview: {
+				features: [],
+				plans: [
+					{
+						planId: "pro",
+						version: 1,
+						versionSlug: "v1",
+						active: true,
+						action: "delete",
+						internalId: "prod_pro",
+						state: { hasCustomers: false },
+					},
+				],
+				rewards: [{ id: "launch", action: "delete" }],
+				referralPrograms: [{ id: "friends", action: "delete" }],
+			},
+			catalog: {
+				features: [],
+				plans: [proRow],
+				rewards: [couponRow],
+				referralPrograms: [programRow],
+			},
+		}),
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+	});
+
+	expect(result.appended.sort()).toEqual(["friends", "launch", "pro@v1"]);
+	expect(readFileSync(path, "utf8")).not.toContain('"retired"');
+	expect(output).toContain(
+		'↳ coupon "launch" no longer names plan "retired": not in the catalog (archived), so not in the config',
+	);
+	expect(output).toContain(
+		'↳ referral program "friends" no longer names plan "retired": not in the catalog (archived), so not in the config',
+	);
+	// The pulled config lints clean and pushes what it declares.
+	// biome-ignore lint/suspicious/noExplicitAny: the executed wire
+	const wire = (await import(`${path}?v=${Date.now()}`)).default as any;
+	expect(wire.rewards[0].coupon.plan_ids).toEqual(["pro"]);
+	expect(wire.referral_programs[0].plan_ids).toEqual([]);
+});

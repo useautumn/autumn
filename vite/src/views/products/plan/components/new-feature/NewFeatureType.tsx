@@ -39,9 +39,12 @@ export function NewFeatureType({
 								setFeature({
 									...feature,
 									type: APIFeatureType.Metered,
+									// Fresh config: a credit system's rate card must not survive
+									// the switch, or the create request ships a credit_schema
+									// the API rejects.
 									config: {
-										...feature.config,
-										usage_type: FeatureUsageType.Single,
+										usage_type:
+											feature.config?.usage_type ?? FeatureUsageType.Single,
 									},
 								});
 							}}
@@ -86,7 +89,11 @@ export function NewFeatureType({
 						<PanelButton
 							isSelected={feature.type === APIFeatureType.Boolean}
 							onClick={() => {
-								setFeature({ ...feature, type: APIFeatureType.Boolean });
+								setFeature({
+									...feature,
+									type: APIFeatureType.Boolean,
+									config: {},
+								});
 							}}
 							icon={<BooleanIcon className="hover:text-primary" />}
 						/>

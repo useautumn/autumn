@@ -158,6 +158,8 @@ export type LintRule =
 /** The part of a node's rules that an anyOf/oneOf branch can override. */
 export type ShapeRules = {
 	readonly required?: readonly string[];
+	/** Fields the CLI keeps out of a config; stating one is an error. */
+	readonly hidden?: readonly string[];
 	readonly fields?: Readonly<Record<string, FieldConstraints>>;
 };
 
@@ -318,6 +320,13 @@ const checkShape = ({
 	for (const field of shape.required ?? []) {
 		if (entry[field] === undefined)
 			issues.push({ path: at, message: `${field} is required.` });
+	}
+	for (const field of shape.hidden ?? []) {
+		if (entry[field] !== undefined)
+			issues.push({
+				path: at,
+				message: `${field} is not a config field. Remove it.`,
+			});
 	}
 	for (const [field, constraints] of Object.entries(shape.fields ?? {})) {
 		if (entry[field] === undefined) continue;
@@ -545,8 +554,7 @@ const checkUnique = ({
 		const pair =
 			rule.alongside === undefined ? undefined : entry[rule.alongside];
 		if (rule.alongside !== undefined && typeof pair !== "string") continue;
-		const composite =
-			rule.alongside === undefined ? value : `${value}@${pair}`;
+		const composite = rule.alongside === undefined ? value : `${value}@${pair}`;
 		if (seen.has(composite)) {
 			const label =
 				rule.alongside === undefined

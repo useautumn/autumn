@@ -37,8 +37,6 @@ export type Variant = {
 			}>;
 		} | null;
 	};
-	/** Pointer write for this nested variant. Omit to link it to this base; `null` detaches it. A string must be this plan's id. */
-	baseVariantId?: string | null;
 	/** Declared overlay on this variant. `items` is PUT (replaces the list); `add_items` / `remove_items` are PATCH. Independent of `propagate`. Blocked on an archived variant unless `archived` is false in the same entry. */
 	customize?: {
 		/** Override the base price of the plan. Pass null to remove the base price. */

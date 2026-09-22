@@ -313,6 +313,54 @@ test("a nested variant is pulled nested, pruned to its fixture shape, with its i
 	expect(text).toContain('\t\t\t\t\tversionSlug: "v1",\n\t\t\t\t}),');
 });
 
+test("a standalone plan's legacy baseVariantId grouping value is never pulled", async () => {
+	fresh(`${imports}export default atmn({\n\tfeatures: [],\n});\n`);
+	// The server still returns the old monthly/annual grouping id on every
+	// plan; pushing it back would read as a variant link the plan never had.
+	const rows = {
+		features: [],
+		plans: [
+			{
+				id: "max_annual",
+				internalId: "prod_max_annual_v1",
+				name: "Max (annual)",
+				version: 1,
+				versionSlug: "v1",
+				active: true,
+				archived: false,
+				baseVariantId: "max_monthly",
+				items: [],
+			},
+		],
+	};
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "max_annual",
+				version: 1,
+				versionSlug: "v1",
+				active: true,
+				action: "delete",
+				internalId: "prod_max_annual_v1",
+				state: { hasCustomers: false },
+			},
+		],
+	};
+	const client = {
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
+		diff: async () => preview,
+		update: async () => ({}),
+		get: async () => rows,
+	};
+	// biome-ignore lint/suspicious/noExplicitAny: a fake client
+	await runPull({ client: client as any, cwd: dir, write: () => {} });
+	const text = configText();
+	expect(text).toContain('planId: "max_annual"');
+	expect(text).not.toContain("baseVariantId");
+	expect(text).not.toContain("max_monthly");
+});
+
 test("a missing nested variant version is restored to its parent and the second pull converges", async () => {
 	fresh(`${imports}export default atmn({
 	features: [],

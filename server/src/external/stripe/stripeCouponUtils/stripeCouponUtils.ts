@@ -32,11 +32,6 @@ const couponToStripeDuration = ({
 				duration: "once",
 			};
 		}
-		console.log("--------------------------------");
-		console.log("rewardName", coupon.name);
-		console.log("coupon.free_product_config", coupon.free_product_config);
-		console.log("isOneOffProduct", isOneOffProduct);
-		console.log("--------------------------------");
 		return {
 			duration: "repeating",
 			duration_in_months: coupon.free_product_config?.duration_value,
@@ -94,7 +89,6 @@ const couponToStripeValue = ({
 			) || 0,
 		);
 
-		console.log("amountOff in couponToStripeValue", amountOff);
 		const currency = org.default_currency || "usd";
 		return {
 			amount_off: atmnToStripeAmount({ amount: amountOff, currency }),
@@ -122,15 +116,22 @@ const couponToStripeValue = ({
 	}
 };
 
+/** Usage prices resolve to the feature's Stripe product, not the plan's. */
+export const resolveStripeProductIdForPrice = ({
+	price,
+}: {
+	price: Price & { product?: Product | null };
+}) =>
+	(price.config.type === PriceType.Fixed
+		? price.product?.processor?.id
+		: (price.config as UsagePriceConfig).stripe_product_id) ?? null;
+
 const getStripeProductIdForCoupon = ({
 	price,
 }: {
 	price: Price & { product: Product };
 }) => {
-	const stripeProductId =
-		price.config.type === PriceType.Fixed
-			? price.product.processor?.id
-			: (price.config as UsagePriceConfig).stripe_product_id;
+	const stripeProductId = resolveStripeProductIdForPrice({ price });
 
 	if (!stripeProductId) {
 		throw new RecaseError({
@@ -155,8 +156,13 @@ export const resolveCouponStripeProductIds = ({
 		reward.type !== RewardType.FreeProduct &&
 		!reward.discount_config!.apply_to_all;
 
+	// Prices of one plan share a product, so dedupe before Stripe sees them.
 	return appliesToSpecificProducts
-		? prices.map((price) => getStripeProductIdForCoupon({ price }))
+		? [
+				...new Set(
+					prices.map((price) => getStripeProductIdForCoupon({ price })),
+				),
+			]
 		: [];
 };
 

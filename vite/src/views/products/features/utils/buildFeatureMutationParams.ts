@@ -5,6 +5,7 @@ import {
 	type FeatureType,
 	FeatureUsageType,
 	isAiCreditSystem,
+	isAnyCreditSystem,
 	type ModelMarkups,
 	type ProviderMarkups,
 	type UpdateCatalogFeatureParams,
@@ -39,11 +40,16 @@ export const buildFeatureMarkupParams = ({
 	schema,
 }: BuildFeatureMarkupParamsArgs): FeatureMarkupParams => {
 	const ai = isAiCreditSystem(type);
+	// Only a classic credit system has a rate card. A metered or boolean draft
+	// can still carry a schema left over from a type switch, and sending that
+	// fails API validation on rows the user never filled in.
+	const classicCreditSystem = isAnyCreditSystem(type) && !ai;
 	return {
 		model_markups: ai ? modelMarkups : undefined,
 		default_markup: ai ? defaultMarkup : undefined,
 		provider_markups: ai ? providerMarkups : undefined,
-		credit_schema: ai || !schema ? undefined : creditSchemaToApi(schema),
+		credit_schema:
+			classicCreditSystem && schema ? creditSchemaToApi(schema) : undefined,
 	};
 };
 

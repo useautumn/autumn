@@ -16,6 +16,7 @@ import { FeatureService } from "@server/internal/features/FeatureService.js";
 import { EntitlementService } from "@server/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@server/internal/products/prices/PriceService.js";
 import { itemToPriceAndEnt } from "@server/internal/products/product-items/productItemUtils/itemToPriceAndEnt.js";
+import { supersedeUnlimitedItems } from "@server/internal/products/product-items/supersedeUnlimitedItems.js";
 import { validateProductItems } from "@server/internal/products/product-items/validateProductItems.js";
 
 const updateDbPricesAndEnts = async ({
@@ -153,6 +154,8 @@ export const handleNewProductItems = async ({
 			features,
 		};
 	}
+
+	newItems = supersedeUnlimitedItems({ items: newItems });
 
 	// Validate product items...
 	const { allFeatures, newFeatures } = validateProductItems({
