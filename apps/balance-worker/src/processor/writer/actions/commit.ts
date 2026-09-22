@@ -1,5 +1,4 @@
 import { isDeepStrictEqual } from "node:util";
-import type { MutationRecord } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import type {
 	DurableMutationApplyResult,
@@ -48,6 +47,7 @@ async function commitOutcomes({
 			const batch = state.queue.splice(0, config.limits.maxBatchSize);
 			const baseOffset = await appendBatch({ scope, batch });
 			if (baseOffset === null) return;
+			settleAppended({ scope, batch });
 			if (!(await applyBatch({ scope, batch, baseOffset }))) return;
 		}
 	} finally {
@@ -87,6 +87,36 @@ async function appendBatch({
 	}
 }
 
+/** The log is the record and the store is a projection of it, so once Kafka has
+ *  the batch the outcome is durable and the caller can be answered. Everything the
+ *  reply carries was decided in memory before either durability step: the balance
+ *  is the state computed at decide time, and the store hands back the very mutation
+ *  it was given. Waiting for the store therefore added its whole cost to every
+ *  write without changing a byte of the response.
+ *
+ *  The writer still applies batches in order behind this; only the caller stops
+ *  waiting. What is given up is the ability to tell a caller that the store later
+ *  refused its row, which is why that refusal is logged where it happens. */
+function settleAppended({
+	scope,
+	batch,
+}: {
+	scope: PartitionWriterScope;
+	batch: PendingMutation[];
+}): void {
+	for (const pending of batch) {
+		const { mutation } = pending;
+		scope.state.subjects.rememberCommand({
+			customerKey: pending.customerKey,
+			commandId: mutation.id,
+			fingerprint: mutation.receipt.fingerprint,
+			expiresAt: mutation.receipt.expiresAt,
+		});
+		removePendingMutation({ state: scope.state, pending });
+		pending.settlement.settle({ mutation, state: pending.nextState });
+	}
+}
+
 /** A committed batch that cannot be applied leaves the writer in recovery. */
 async function applyBatch({
 	scope,
@@ -105,39 +135,25 @@ async function applyBatch({
 		if (results.length !== batch.length) {
 			throw new Error("Durable apply result count did not match batch");
 		}
-		// Landed records reply before anything else: their callers must never see a failure that was not theirs.
+		// These callers were answered when Kafka took the batch, so nothing here can
+		// reach them; the store's verdict decides the partition's fate instead.
 		let firstFailure: unknown = null;
 		for (const [index, pending] of batch.entries()) {
 			const result = results[index];
 			if (!result) throw new Error("Expected durable apply result");
 			if (result.kind === "failed") {
 				firstFailure ??= result.cause;
-				removePendingMutation({ state: scope.state, pending });
-				pending.settlement.reject({ error: result.cause });
 				continue;
 			}
-			// Refused by Postgres, not broken: only this caller hears of it, and the customer's rows are
-			// dropped because memory had already applied a deduction that never landed.
+			// Refused by the store, not broken: the customer's rows are dropped because
+			// memory had already applied a deduction that never landed there.
 			if (result.kind === "rejected") {
-				removePendingMutation({ state: scope.state, pending });
 				scope.state.subjects.evictCustomer({
 					customerKey: pending.customerKey,
 				});
-				pending.settlement.reject({ error: result.cause });
 				continue;
 			}
-			const mutation = persistedMutationOf({ scope, result, pending });
-			scope.state.subjects.rememberCommand({
-				customerKey: pending.customerKey,
-				commandId: mutation.id,
-				fingerprint: mutation.receipt.fingerprint,
-				expiresAt: mutation.receipt.expiresAt,
-			});
-			removePendingMutation({ state: scope.state, pending });
-			pending.settlement.settle({
-				mutation,
-				state: pending.nextState,
-			});
+			assertPersistedMutation({ scope, result, pending });
 		}
 		if (firstFailure !== null) {
 			enterRecovery({ scope, cause: firstFailure });
@@ -198,7 +214,7 @@ function durableRecordsOf({
  *  Asking it for a receipt it was never built to store meant the first re-applied
  *  record put the partition into recovery, which stops the whole worker and every
  *  other partition it holds. */
-function persistedMutationOf({
+function assertPersistedMutation({
 	scope,
 	result,
 	pending,
@@ -206,11 +222,11 @@ function persistedMutationOf({
 	scope: PartitionWriterScope;
 	result: DurableMutationApplyResult;
 	pending: PendingMutation;
-}): MutationRecord {
-	if (result.kind !== "position_already_applied") return result.mutation;
+}): void {
+	if (result.kind !== "position_already_applied") return;
 
 	const { mutation } = pending;
-	if (scope.ctx.stateStore.baseline === "map") return mutation;
+	if (scope.ctx.stateStore.baseline === "map") return;
 
 	const receipt = scope.ctx.stateStore.readReceipt({
 		identity: mutation.identity,
@@ -219,5 +235,4 @@ function persistedMutationOf({
 	if (!receipt || !isDeepStrictEqual(receipt, mutation)) {
 		throw new Error(`Applied position has no matching receipt: ${mutation.id}`);
 	}
-	return receipt;
 }

@@ -347,6 +347,50 @@ describe("partition writer", () => {
 		}
 	});
 
+	/** The log is the record; Postgres is a projection of it. Once Kafka has the
+	 *  batch the outcome is durable, so the caller can be answered then instead of
+	 *  waiting out a store apply that adds nothing to the reply. The balance the
+	 *  caller reads was computed at decide time, and the apply echoes back the very
+	 *  mutation it was handed, so nothing in the response comes from the store. */
+	test("settles the caller once Kafka has the batch, without waiting for the store", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new RecordingCommittedAppender();
+			let releaseApply: () => void = () => undefined;
+			const applyGate = new Promise<void>((resolve) => {
+				releaseApply = resolve;
+			});
+			const slowStore: PartitionProcessorScope["ctx"]["stateStore"] = {
+				...fixture.store,
+				applyDurableMutations: async ({ records }) => {
+					await applyGate;
+					return records.map((record) => ({
+						kind: "applied" as const,
+						mutation: record.mutation,
+						nextOffset: record.position.offset + 1n,
+					}));
+				},
+			};
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: slowStore,
+				appender,
+				limits: defaultLimits,
+			});
+
+			const decision = await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_before_apply" }),
+			});
+
+			expect(decision).toMatchObject({ state: { revision: 1 } });
+			expect(appender.batches.length).toBe(1);
+			releaseApply();
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
 	/** The Postgres-backed store answers null to every read on purpose: Postgres
 	 *  holds the baseline, so there is no receipt table to consult. A position
 	 *  the committer has already durably applied must therefore be accepted on
@@ -885,6 +929,9 @@ describe("partition writer", () => {
 		}
 	});
 
+	/** Kafka took the batch, so the first caller already has its answer and keeps
+	 *  it; the store refusing afterwards is the partition's problem, not that
+	 *  caller's. Everything queued behind it still meets recovery. */
 	test("stops after a committed batch cannot be applied locally", async () => {
 		const fixture = createFixture();
 		try {
@@ -906,9 +953,10 @@ describe("partition writer", () => {
 				limits: defaultLimits,
 			});
 
-			await expect(
-				writer.submitTrack({ command: createCommand({ commandId: "cmd_1" }) }),
-			).rejects.toBeInstanceOf(PartitionWriterRecoveryRequiredError);
+			const answered = await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1" }),
+			});
+			expect(answered).toMatchObject({ state: { revision: 1 } });
 			await expect(
 				writer.submitTrack({ command: createCommand({ commandId: "cmd_2" }) }),
 			).rejects.toBeInstanceOf(PartitionWriterRecoveryRequiredError);

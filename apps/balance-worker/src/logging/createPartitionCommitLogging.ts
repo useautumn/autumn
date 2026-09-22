@@ -24,7 +24,7 @@ export function createPartitionCommitLogging({
 	ctx: {
 		appender: CommittedOutcomeAppender;
 		stateStore: PartitionRuntimeDependencies["stateStore"];
-		logger?: Pick<AutumnLogger, "debug">;
+		logger?: Pick<AutumnLogger, "debug"> & Partial<Pick<AutumnLogger, "error">>;
 		monotonicNow?: () => number;
 	};
 	config: { deployment: string; endpoint: string };
@@ -125,7 +125,52 @@ export function createPartitionCommitLogging({
 			throw cause;
 		}
 		report({ ...metadata, result: "applied" });
+		reportUnreachableVerdicts({ metadata, results: result });
 		return result;
+	}
+
+	/** The caller was answered when Kafka took the batch, so a store verdict arriving
+	 *  afterwards has nobody to tell. A refused row used to reach an operator as that
+	 *  caller's failed request; now this is the only place it is visible, so it is
+	 *  logged at error rather than with the per-batch telemetry. */
+	function reportUnreachableVerdicts({
+		metadata,
+		results,
+	}: {
+		metadata: { topic: string; partition: number; baseOffset: bigint };
+		results: DurableMutationApplyResult[];
+	}): void {
+		try {
+			const unreachable = results.filter(function isUnreachable(entry) {
+				return entry.kind === "rejected" || entry.kind === "failed";
+			});
+			if (unreachable.length === 0) return;
+			logger?.error?.(
+				{
+					event: "balance_worker.commit_verdict_unreachable",
+					data: {
+						topic: metadata.topic,
+						partition: metadata.partition,
+						baseOffset: metadata.baseOffset.toString(),
+						workerEndpoint: config.endpoint,
+						count: unreachable.length,
+						verdicts: unreachable.map(function describe(entry) {
+							return {
+								kind: entry.kind,
+								mutationId: "mutation" in entry ? entry.mutation.id : null,
+								reason:
+									"cause" in entry && entry.cause instanceof Error
+										? entry.cause.message
+										: null,
+							};
+						}),
+					},
+				},
+				"Balance worker store refused a record its caller was already told had landed",
+			);
+		} catch {
+			// Telemetry cannot turn a durable commit into a failed request.
+		}
 	}
 
 	return {

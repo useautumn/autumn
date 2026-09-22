@@ -241,7 +241,7 @@ describe("writer over a store with no resident state", () => {
 		).toBe(95);
 	});
 
-	test("a store that lands some records and fails one: landed callers reply, the failed one rejects, the writer recovers", async () => {
+	test("a store that lands some records and fails one: every caller keeps the reply Kafka earned, and the writer recovers", async () => {
 		const poisonId = "cmd_2";
 		const stateStore: PartitionWriterContext["stateStore"] = {
 			baseline: "map",
@@ -309,14 +309,14 @@ describe("writer over a store with no resident state", () => {
 		const settled = await Promise.allSettled(
 			decided.map((d) => d.waitForCommit()),
 		);
+		// All three were answered when Kafka took the batch. The store refusing a row
+		// afterwards cannot reach a caller that already holds its reply, so the refusal
+		// surfaces as the partition entering recovery instead.
 		expect(settled.map((result) => result.status)).toEqual([
 			"fulfilled",
-			"rejected",
-			"rejected",
+			"fulfilled",
+			"fulfilled",
 		]);
-		expect((settled[1] as PromiseRejectedResult).reason.message).toBe(
-			"row refused",
-		);
 		// cmd_3 landed nowhere: the store never reached it, and recovery rejects what is left.
 		expect(() =>
 			writer.decide(
