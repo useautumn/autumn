@@ -3,15 +3,18 @@ import type {
 	FullCustomer,
 	FullProduct,
 	InvoiceTemplate,
+	PreviewInvoiceCredits,
 	StripeDiscountWithCoupon,
 } from "@autumn/shared";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { getExpandedStripeCustomer } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers/operations/getOrCreateStripeCustomer";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeTaxRateForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeTaxRateForBilling";
 import { resolveParamDiscounts } from "@/internal/billing/v2/providers/stripe/utils/discounts/resolveParamDiscounts";
+import { stripeCustomerToInvoiceCredits } from "@/internal/billing/v2/utils/billingPlan/preview/invoiceCredits/stripeCustomerToInvoiceCredits";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer";
 import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/InvoiceTemplateService";
 import { ProductService } from "@/internal/products/ProductService";
@@ -41,6 +44,7 @@ export type CreateInvoiceContext = {
 	taxRate?: Stripe.TaxRate;
 	invoiceDiscounts: StripeDiscountWithCoupon[];
 	namedStripePrices: NamedStripePrices;
+	invoiceCredits?: PreviewInvoiceCredits;
 };
 
 const DEFAULT_NET_TERMS_DAYS = 30;
@@ -91,8 +95,13 @@ export const setupCreateInvoiceContext = async ({
 		skipUpdate: preview,
 	});
 
+	// A preview reads the existing Stripe customer (for its credit balance) but
+	// never creates one.
 	const stripeCustomer = preview
-		? undefined
+		? await getExpandedStripeCustomer({
+				ctx,
+				stripeCustomerId: fullCustomer.processor?.id,
+			})
 		: await getOrCreateStripeCustomer({ ctx, customer: fullCustomer });
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
@@ -175,5 +184,9 @@ export const setupCreateInvoiceContext = async ({
 		taxRate,
 		invoiceDiscounts,
 		namedStripePrices,
+		invoiceCredits: stripeCustomerToInvoiceCredits({
+			stripeCustomer,
+			currency,
+		}),
 	};
 };

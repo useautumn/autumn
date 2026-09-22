@@ -255,8 +255,12 @@ export function InvoiceDetailSheet({
 		invoiceIsStripe &&
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Uncollectible);
-	// Reissue only replaces an open invoice; an uncollectible one is rejected.
-	const canReissue = invoiceIsStripe && invoice.status === InvoiceStatus.Open;
+	// An open invoice is voided and replaced; a paid one is credited and replaced.
+	// An uncollectible one is rejected.
+	const canReissue =
+		invoiceIsStripe &&
+		(invoice.status === InvoiceStatus.Open ||
+			(invoice.status === InvoiceStatus.Paid && !isFullyRefunded));
 	const stripeConnectViewAsInvoiceLink =
 		invoiceIsStripe && isAdmin && masterStripeAccount?.id && stripeAccount?.id
 			? getStripeConnectViewAsLink({

@@ -1,4 +1,9 @@
-import { formatAmount, type Invoice } from "@autumn/shared";
+import {
+	formatAmount,
+	type Invoice,
+	type InvoiceLineItem,
+	InvoiceStatus,
+} from "@autumn/shared";
 import {
 	Button,
 	FormLabel,
@@ -8,6 +13,7 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Switch,
 } from "@autumn/ui";
 import { PaperPlaneTiltIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -40,6 +46,9 @@ export function ReissueInvoiceSheet() {
 
 	// The whole invoice-detail payload rides along so Back restores that sheet intact.
 	const invoice = sheetData?.invoice as Invoice | undefined;
+	const lineItems =
+		(sheetData?.lineItems as InvoiceLineItem[] | undefined) ?? [];
+	const taxedAmount = sheetData?.taxedAmount as number | undefined;
 	const invoiceDetailData = sheetData ?? {};
 	const templateOptions = [
 		{ label: "Keep current footer", value: NO_TEMPLATE },
@@ -51,11 +60,19 @@ export function ReissueInvoiceSheet() {
 	const [templateId, setTemplateId] = useState(NO_TEMPLATE);
 	const [email, setEmail] = useState("");
 	const [netTermsDays, setNetTermsDays] = useState("");
+	const [removeTax, setRemoveTax] = useState(false);
+	// Keyed by line item id; only the ones the user actually touched are sent.
+	const [amounts, setAmounts] = useState<Record<string, string>>({});
 
 	const reissue = useMutation({
 		mutationFn: async () => {
 			if (!invoice) return;
 			const trimmedEmail = email.trim();
+			const invoiceOverrides = removeTax ? { tax_rate_id: null } : {};
+			const updatedLines = Object.entries(amounts).flatMap(([id, value]) =>
+				value.trim() === "" ? [] : [{ id, amount: Number(value) }],
+			);
+
 			const { data } = await axiosInstance.post("/v1/invoices.reissue", {
 				invoice_id: invoice.id,
 				...(templateId !== NO_TEMPLATE
@@ -63,6 +80,10 @@ export function ReissueInvoiceSheet() {
 					: {}),
 				...(trimmedEmail ? { update_customer_email: trimmedEmail } : {}),
 				...(netTermsDays ? { net_terms_days: Number(netTermsDays) } : {}),
+				...(Object.keys(invoiceOverrides).length
+					? { invoice: invoiceOverrides }
+					: {}),
+				...(updatedLines.length ? { lines: { update: updatedLines } } : {}),
 			});
 			return data;
 		},
@@ -99,6 +120,16 @@ export function ReissueInvoiceSheet() {
 		minFractionDigits: 2,
 		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 	});
+	const isPaid = invoice.status === InvoiceStatus.Paid;
+	// taxedAmount is the tax itself, and the detail sheet only receives one for
+	// orgs on Stripe automatic tax.
+	const isTaxed = (taxedAmount ?? 0) > 0;
+	const formattedTax = formatAmount({
+		amount: taxedAmount ?? 0,
+		currency: invoice.currency,
+		minFractionDigits: 2,
+		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
+	});
 	const invalidNetTerms =
 		netTermsDays !== "" &&
 		(!Number.isInteger(Number(netTermsDays)) || Number(netTermsDays) < 1);
@@ -108,7 +139,11 @@ export function ReissueInvoiceSheet() {
 			<div className="flex h-full flex-col overflow-y-auto">
 				<SheetHeader
 					title="Reissue Invoice"
-					description={`Send a new ${formattedTotal} invoice and void this one. No money moves.`}
+					description={
+						isPaid
+							? `Credit this ${formattedTotal} invoice to the customer's balance and send a corrected one, which that balance covers.`
+							: `Send a new ${formattedTotal} invoice and void this one.`
+					}
 				/>
 
 				<SheetSection withSeparator>
@@ -149,7 +184,7 @@ export function ReissueInvoiceSheet() {
 					</span>
 				</SheetSection>
 
-				<SheetSection withSeparator={false}>
+				<SheetSection withSeparator={isTaxed || lineItems.length > 0}>
 					<FormLabel>Payment terms</FormLabel>
 					<Input
 						type="number"
@@ -159,6 +194,54 @@ export function ReissueInvoiceSheet() {
 						onChange={(e) => setNetTermsDays(e.target.value)}
 					/>
 				</SheetSection>
+
+				{isTaxed && (
+					<SheetSection withSeparator={lineItems.length > 0}>
+						<div className="flex items-center justify-between">
+							<FormLabel className="mb-0">Reissue without tax</FormLabel>
+							<Switch checked={removeTax} onCheckedChange={setRemoveTax} />
+						</div>
+						<span className="text-xs text-tertiary-foreground">
+							Drops the {formattedTax} of tax on this invoice.
+						</span>
+					</SheetSection>
+				)}
+
+				{lineItems.length > 0 && (
+					<SheetSection withSeparator={false}>
+						<FormLabel>Line amounts</FormLabel>
+						<div className="flex flex-col gap-2">
+							{lineItems.map((lineItem) => (
+								<div
+									key={lineItem.id}
+									className="flex items-center justify-between gap-3"
+								>
+									<span
+										className="truncate text-sm text-secondary-foreground"
+										title={lineItem.description}
+									>
+										{lineItem.description}
+									</span>
+									<Input
+										type="number"
+										className="w-28 shrink-0"
+										placeholder={String(lineItem.amount)}
+										value={amounts[lineItem.id] ?? ""}
+										onChange={(e) =>
+											setAmounts((current) => ({
+												...current,
+												[lineItem.id]: e.target.value,
+											}))
+										}
+									/>
+								</div>
+							))}
+						</div>
+						<span className="text-xs text-tertiary-foreground">
+							Leave a line empty to bill it unchanged.
+						</span>
+					</SheetSection>
+				)}
 
 				<SheetFooter className="pt-4">
 					<Button
