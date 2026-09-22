@@ -144,3 +144,77 @@ test("no atmn collection returns null", () => {
 		appendToCollection({ source, collection: "features", text: "seats" }),
 	).toBeNull();
 });
+
+test("an `after` anchor inserts behind the last matching sibling, keeping its comment", () => {
+	const source = `export default atmn({
+	features: [
+		feature({ featureId: "seats" }) /* note */,
+		feature({ featureId: "words" }), // legacy
+		feature({ featureId: "seats" }), // v1
+		other,
+	],
+});
+`;
+	const output = appendToCollection({
+		source,
+		collection: "features",
+		text: 'feature({ featureId: "seats", v: 2 })',
+		after: (element) => element.text().includes('"seats"'),
+	});
+	expect(output).toBe(`export default atmn({
+	features: [
+		feature({ featureId: "seats" }) /* note */,
+		feature({ featureId: "words" }), // legacy
+		feature({ featureId: "seats" }), // v1
+		feature({ featureId: "seats", v: 2 }),
+		other,
+	],
+});
+`);
+});
+
+test("an anchor without a comma gets one before its trailing comment", () => {
+	const source = `export default atmn({
+	features: [
+		feature({ featureId: "seats" }) // only
+	],
+});
+`;
+	const output = appendToCollection({
+		source,
+		collection: "features",
+		text: "next",
+		after: () => true,
+	});
+	expect(output).toBe(`export default atmn({
+	features: [
+		feature({ featureId: "seats" }), // only
+		next,
+	],
+});
+`);
+});
+
+test("a comment inside an empty array survives the seeding", () => {
+	const output = appendToCollection({
+		source:
+			"export default atmn({\n\tfeatures: [ /* intentionally empty */ ],\n});\n",
+		collection: "features",
+		text: "next",
+	});
+	expect(output).toBe(
+		"export default atmn({\n\tfeatures: [\n\t\t/* intentionally empty */\n\t\tnext,\n\t],\n});\n",
+	);
+});
+
+test("a comment in a one-line array survives the reflow", () => {
+	const output = appendToCollection({
+		source: "export default atmn({\n\tfeatures: [a, /* keep */ b],\n});\n",
+		collection: "features",
+		text: "x({\n\t\t\ty: 1,\n\t\t})",
+		after: (element) => element.text() === "a",
+	});
+	expect(output).toBe(
+		"export default atmn({\n\tfeatures: [\n\t\ta,\n\t\tx({\n\t\t\ty: 1,\n\t\t}),\n\t\t/* keep */\n\t\tb,\n\t],\n});\n",
+	);
+});

@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY "idx_customer_products_stripe_linked_customer" ON "customer_products" USING btree ("internal_customer_id") WHERE cardinality("customer_products"."subscription_ids") > 0 OR cardinality("customer_products"."scheduled_ids") > 0;

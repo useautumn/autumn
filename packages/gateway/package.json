@@ -1,7 +1,10 @@
 {
 	"name": "@useautumn/gateway",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"type": "module",
+	"engines": {
+		"node": ">=22"
+	},
 	"description": "Autumn usage tracking adapters for AI SDKs and gateways (Vercel AI SDK, OpenRouter)",
 	"repository": "github:useautumn/autumn",
 	"homepage": "https://useautumn.com",
@@ -24,12 +27,10 @@
 	"exports": {
 		"./ai-sdk": {
 			"types": "./dist/ai-sdk/index.d.ts",
-			"require": "./dist/ai-sdk/index.cjs",
 			"import": "./dist/ai-sdk/index.js"
 		},
 		"./openrouter": {
 			"types": "./dist/openrouter/index.d.ts",
-			"require": "./dist/openrouter/index.cjs",
 			"import": "./dist/openrouter/index.js"
 		}
 	},
@@ -40,11 +41,11 @@
 		"prepublishOnly": "bun run build"
 	},
 	"dependencies": {
-		"@ai-sdk/provider": "^3.0.0"
+		"@ai-sdk/provider": "^4.0.7"
 	},
 	"peerDependencies": {
 		"@openrouter/sdk": "*",
-		"ai": "^6.0.116",
+		"ai": "^7.0.58",
 		"autumn-js": "*"
 	},
 	"peerDependenciesMeta": {
@@ -58,7 +59,7 @@
 	"devDependencies": {
 		"@types/node": "^24.9.1",
 		"@typescript/native-preview": "7.0.0-dev.20260220.1",
-		"ai": "^6.0.116",
+		"ai": "^7.0.58",
 		"tsup": "^8.4.0",
 		"typescript": "^5.8.3"
 	}

@@ -6,10 +6,12 @@ export const appendToCollection = ({
 	source,
 	collection,
 	text,
+	after,
 }: {
 	source: string;
 	collection: string;
 	text: AppendText;
+	after?: (element: SgNode) => boolean;
 }): string | null => {
 	const root = parse(Lang.TypeScript, source).root();
 	// A bare `collection: [$$$]` parses as a type annotation, so the anchor must
@@ -20,7 +22,7 @@ export const appendToCollection = ({
 	if (anchor === null) return null;
 	const array = collectionArray({ anchor, collection });
 	if (array === null) return null;
-	return appendElementToArray({ source, root, array, text });
+	return appendElementToArray({ source, root, array, text, after });
 };
 
 const collectionArray = ({

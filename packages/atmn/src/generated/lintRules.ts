@@ -2064,9 +2064,6 @@ export const LINT_RULES: LintRules = {
 			name: {
 				minLength: 1,
 			},
-			planIds: {
-				minItems: 1,
-			},
 			internalId: {
 				minLength: 1,
 			},
@@ -2078,6 +2075,12 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 		rules: [
+			{
+				kind: "nonEmpty",
+				field: "planIds",
+				because:
+					"A coupon must apply to at least one plan: list the plans it discounts, set planIds: null to apply it to every plan, or remove the coupon from your config.",
+			},
 			{
 				kind: "exists",
 				field: "planIds",

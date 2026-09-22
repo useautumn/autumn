@@ -1,28 +1,27 @@
-import { addMonths } from "date-fns";
+import { addDays, getUnixTime, isBefore } from "date-fns";
 import type Stripe from "stripe";
 import { billingVerifyExportConfig } from "./billingVerifyExportConfig.js";
 
-const toSeconds = (ms: number) => Math.floor(ms / 1000);
-
 /** Disjoint, gap-free `created` ranges covering every subscription: one open
- * window before `sinceMs`, monthly windows up to `untilMs`, then one open
- * window after, so no month boundary can drop a subscription. */
+ * window before `sinceMs`, fixed-length windows up to `untilMs`, then one open
+ * window after, so no boundary can drop a subscription. */
 export const stripeCreatedWindows = ({
 	sinceMs,
 	untilMs,
-	windowMonths = billingVerifyExportConfig.sweep.windowMonths,
+	windowDays = billingVerifyExportConfig.sweep.windowDays,
 }: {
 	sinceMs: number;
 	untilMs: number;
-	windowMonths?: number;
+	windowDays?: number;
 }): Stripe.RangeQueryParam[] => {
+	const until = new Date(untilMs);
 	const boundaries: number[] = [];
 	for (
 		let cursor = new Date(sinceMs);
-		cursor.getTime() < untilMs;
-		cursor = addMonths(cursor, windowMonths)
+		isBefore(cursor, until);
+		cursor = addDays(cursor, windowDays)
 	) {
-		boundaries.push(toSeconds(cursor.getTime()));
+		boundaries.push(getUnixTime(cursor));
 	}
 	if (boundaries.length === 0) return [{}];
 

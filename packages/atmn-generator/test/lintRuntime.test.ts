@@ -401,3 +401,33 @@ test("compare", () => {
 		"included must be at most limit — got 50 and 10. C.",
 	]);
 });
+
+test("nonEmpty: an empty list is refused with the rule's own wording; null and omitted pass", () => {
+	const rules = {
+		rewards: {
+			rules: [
+				{
+					kind: "nonEmpty",
+					field: "planIds",
+					because: "Say which plans.",
+				},
+			],
+		},
+	} as const;
+	const hints = {
+		recordPaths: new Set<string>(),
+		frozenPaths: new Set<string>(),
+	};
+	const lint = (planIds: unknown) =>
+		lintDocument({
+			document: { rewards: [planIds === undefined ? {} : { planIds }] },
+			rules: rules as never,
+			hints,
+		});
+	expect(lint([])).toEqual([
+		{ path: "rewards[0]", message: "planIds is empty. Say which plans." },
+	]);
+	expect(lint(null)).toEqual([]);
+	expect(lint(undefined)).toEqual([]);
+	expect(lint(["pro"])).toEqual([]);
+});
