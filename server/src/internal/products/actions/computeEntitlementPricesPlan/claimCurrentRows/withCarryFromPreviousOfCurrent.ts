@@ -1,24 +1,8 @@
 import {
 	type BasePriceAndEntitlementPrices,
 	type EntitlementPrice,
-	entitlementPricesAreSame,
+	findEntitlementPriceSuccessor,
 } from "@autumn/shared";
-
-/** The definition match the claim uses, with carry_from_previous held equal. */
-const sameDefinitionIgnoringCarry = (
-	a: EntitlementPrice,
-	b: EntitlementPrice,
-): boolean =>
-	entitlementPricesAreSame({
-		entitlementPrice1: a,
-		entitlementPrice2: {
-			...b,
-			entitlement: {
-				...b.entitlement,
-				carry_from_previous: a.entitlement.carry_from_previous,
-			},
-		},
-	});
 
 /**
  * No API field states `carry_from_previous`; the mint derives it from the
@@ -32,14 +16,16 @@ export const withCarryFromPreviousOfCurrent = ({
 	desired: BasePriceAndEntitlementPrices;
 	current: BasePriceAndEntitlementPrices;
 }): BasePriceAndEntitlementPrices => {
+	// Strongest match first (exact definition), then price identity, interval,
+	// feature: an edited allowance still finds the row it is editing.
 	const taken = new Set<string>();
 	const entitlementPrices = desired.entitlementPrices.map(
 		(entitlementPrice): EntitlementPrice => {
-			const match = current.entitlementPrices.find(
-				(candidate) =>
-					!taken.has(candidate.entitlement.id) &&
-					sameDefinitionIgnoringCarry(candidate, entitlementPrice),
-			);
+			const match = findEntitlementPriceSuccessor({
+				sourceEntitlementPrice: entitlementPrice,
+				candidateEntitlementPrices: current.entitlementPrices,
+				excludedEntitlementIds: taken,
+			});
 			if (!match) return entitlementPrice;
 			taken.add(match.entitlement.id);
 			return {

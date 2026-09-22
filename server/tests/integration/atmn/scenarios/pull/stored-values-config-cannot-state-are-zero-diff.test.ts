@@ -193,11 +193,12 @@ test.concurrent(
 			expect(plansFile).not.toContain("cardRequired");
 			expect(plansFile.match(/maxPurchase: 0/g)).toHaveLength(2);
 
-			// A push that does touch the plan (rename) must still keep the flag.
+			// A push that edits the item itself (allowance 50 → 75) rewrites the
+			// row, and must still keep the flag it cannot state.
 			scenario.writeConfig(
 				(scenario.files().get("autumn.config.ts") ?? "").replace(
-					'name: "Starter (free)"',
-					'name: "Starter (free) renamed"',
+					"included: 50,",
+					"included: 75,",
 				),
 			);
 			await scenario.push();
