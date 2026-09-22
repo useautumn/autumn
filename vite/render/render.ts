@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -89,7 +89,11 @@ ${comparePath ? `  ...normalize(B, "B:"),` : ""}
 `,
 ].join("\n");
 
-await writeFile(path.join(harnessDir, "subject.gen.tsx"), genLines);
+const genDir = path.join(harnessDir, "gen", String(process.pid));
+await mkdir(genDir, { recursive: true });
+const subjectGen = path.join(genDir, "subject.gen.tsx");
+const stylesGenPath = path.join(genDir, "styles.gen.css");
+await writeFile(subjectGen, genLines);
 
 const sourceDirs = new Set([harnessDir, path.dirname(subjectPath)]);
 if (comparePath) sourceDirs.add(path.dirname(comparePath));
@@ -97,7 +101,7 @@ const stylesGen = [
 	`@import ${JSON.stringify(path.join(uiDir, "src/styles/index.css"))};`,
 	...[...sourceDirs].map((dir) => `@source ${JSON.stringify(dir)};`),
 ].join("\n");
-await writeFile(path.join(harnessDir, "styles.gen.css"), stylesGen);
+await writeFile(stylesGenPath, stylesGen);
 
 const { createServer } = await import("vite");
 const react = (await import("@vitejs/plugin-react")).default;
@@ -106,11 +110,18 @@ const tailwindcss = (await import("@tailwindcss/vite")).default;
 const server = await createServer({
 	configFile: false,
 	root: harnessDir,
+	cacheDir: path.join(
+		viteDir,
+		"node_modules/.vite-render",
+		String(process.pid),
+	),
 	publicDir: path.join(viteDir, "public"),
 	plugins: [react(), tailwindcss()],
 	resolve: {
 		dedupe: ["react", "react-dom", "recharts"],
 		alias: [
+			{ find: /^virtual:subject$/, replacement: subjectGen },
+			{ find: /^virtual:styles$/, replacement: stylesGenPath },
 			{ find: /^@autumn\/ui$/, replacement: path.join(uiDir, "src/index.ts") },
 			{ find: /^@autumn\/ui\//, replacement: `${path.join(uiDir, "src")}/` },
 			{ find: /^@\//, replacement: `${path.join(viteDir, "src")}/` },
@@ -134,7 +145,11 @@ const server = await createServer({
 		__APP_ENV__: JSON.stringify(""),
 		__WORKTREE_NUM__: JSON.stringify("1"),
 	},
-	server: { fs: { allow: [repoRoot] } },
+	server: {
+		fs: { allow: [repoRoot] },
+		port: 20_000 + Math.floor(Math.random() * 20_000),
+		host: "127.0.0.1",
+	},
 	logLevel: "error",
 });
 await server.listen();
@@ -185,13 +200,17 @@ for (const theme of themes) {
 	if (renderError) throw new Error(renderError);
 	const file = path.join(outDir, `${baseName}-${theme}.png`);
 	if (values["full-page"]) {
-		await page.screenshot({ path: file });
+		await page.screenshot({ path: file, animations: "disabled" });
 	} else {
-		await page.locator("#stage").screenshot({ path: file });
+		await page
+			.locator("#stage")
+			.screenshot({ path: file, animations: "disabled" });
 	}
 	written.push(file);
 }
 
 await browser.close();
 await server.close();
+await rm(genDir, { recursive: true, force: true });
+await rm(server.config.cacheDir, { recursive: true, force: true });
 for (const file of written) console.log(file);

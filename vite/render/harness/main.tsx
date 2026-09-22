@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import "scraps-ui/scraps.css";
-import "./styles.gen.css";
-import { subjects } from "./subject.gen";
+import "virtual:styles";
+import { subjects } from "virtual:subject";
 
 type Case = { name: string; node: React.ReactNode };
 
@@ -19,6 +19,18 @@ document.documentElement.classList.add(theme, `preset-${preset}`);
 document.documentElement.style.colorScheme = theme;
 
 const surfaceVar = `var(--${surface}, var(--background))`;
+
+const interReady: Promise<boolean> = Promise.all([
+	document.fonts.ready,
+	document.fonts.load("500 13px Inter"),
+])
+	.then(() =>
+		[...document.fonts].some(
+			(face) =>
+				face.family.replace(/"/g, "") === "Inter" && face.status === "loaded",
+		),
+	)
+	.catch(() => false);
 
 const guideOverlay = guides && (
 	<div
@@ -82,8 +94,13 @@ const boxColors = [
 function InspectOverlay() {
 	const [found, setFound] = React.useState<Box[]>([]);
 	useEffect(() => {
-		const stage = document.getElementById("stage");
-		if (!stage) return;
+		void interReady.then(() => {
+			const stage = document.getElementById("stage");
+			if (!stage) return;
+			measure(stage);
+		});
+	}, []);
+	const measure = (stage: HTMLElement) => {
 		const base = stage.getBoundingClientRect();
 		const results: Box[] = [];
 		const walk = (el: Element, depth: number) => {
@@ -131,7 +148,7 @@ function InspectOverlay() {
 		};
 		walk(stage, 0);
 		setFound(results);
-	}, []);
+	};
 	const dedup = (values: number[]) => {
 		const sorted = [...values].sort((a, b) => a - b);
 		return sorted.filter(
@@ -191,14 +208,7 @@ function InspectOverlay() {
 
 function Stage() {
 	useEffect(() => {
-		void Promise.all([
-			document.fonts.ready,
-			document.fonts.load("500 13px Inter"),
-		]).then(() => {
-			const interLoaded = [...document.fonts].some(
-				(face) =>
-					face.family.replace(/"/g, "") === "Inter" && face.status === "loaded",
-			);
+		void interReady.then((interLoaded) => {
 			if (!interLoaded) {
 				document.body.setAttribute(
 					"data-render-error",
