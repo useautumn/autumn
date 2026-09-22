@@ -150,12 +150,15 @@ function createWriterOverNullStore() {
 function trackSubmission({
 	command,
 	initial,
+	durability,
 }: {
 	command: TrackCommand;
 	initial: SubjectState;
+	durability?: "log" | "store";
 }) {
 	return {
 		command,
+		durability,
 		mutate: ({ state }: { state: SubjectState | null }) => {
 			const current = state ?? initial;
 			const mutation = computeTrack({
@@ -330,5 +333,85 @@ describe("writer over a store with no resident state", () => {
 				}),
 			),
 		).toThrow("Partition writer requires recovery");
+	});
+
+	/** A command that must not be told a thing landed until it has landed
+	 *  everywhere opts in with "store", and then behaves exactly as every write did
+	 *  before: it waits for the apply, and a refusal still reaches it. */
+	test("a store-durable command waits for the apply and still hears a refusal", async () => {
+		let releaseApply: () => void = () => undefined;
+		const applyGate = new Promise<void>((resolve) => {
+			releaseApply = resolve;
+		});
+		const applied: DurableMutationRecord[] = [];
+		const stateStore: PartitionWriterContext["stateStore"] = {
+			baseline: "map",
+			readState: () => null,
+			readOwnState: () => null,
+			readReceipt: () => null,
+			applyDurableMutations: async ({ records }) => {
+				await applyGate;
+				applied.push(...records);
+				return records.map((record) => ({
+					kind: "rejected" as const,
+					mutation: record.mutation,
+					cause: new Error("row refused"),
+				}));
+			},
+		};
+		const writer = createPartitionWriter({
+			ctx: {
+				stateStore,
+				appender: {
+					appendCommitted: async ({ outcomes }) => {
+						const baseOffset = 0n;
+						void outcomes;
+						return { baseOffset };
+					},
+				},
+				receiptPolicy: {
+					retentionMs: 86_400_000,
+					now: () => 1_700_000_000_000,
+				},
+			},
+			config: {
+				topic,
+				partition,
+				limits: {
+					maxBatchSize: 10,
+					maxPendingCommands: 100,
+					maxPendingCommandsPerCustomer: 10,
+				},
+			},
+		});
+		const initial = createState({ balance: 100 });
+		const decided = writer.decide(
+			trackSubmission({
+				command: createTrackCommand({
+					identity: testIdentity,
+					commandId: "cmd_store",
+					value: 5,
+				}),
+				initial,
+				durability: "store",
+			}),
+		);
+
+		let settledEarly = false;
+		const waited = decided.waitForCommit().then(
+			function onSettle() {
+				settledEarly = true;
+			},
+			function onReject() {
+				settledEarly = true;
+			},
+		);
+		await Promise.resolve();
+		expect(settledEarly).toBe(false);
+
+		releaseApply();
+		await waited;
+		expect(applied.length).toBe(1);
+		await expect(decided.waitForCommit()).rejects.toThrow("row refused");
 	});
 });

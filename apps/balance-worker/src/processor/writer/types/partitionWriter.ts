@@ -10,6 +10,7 @@ import type { SubjectMap } from "../subjectMap/types/subjectMap.js";
 import type {
 	CommittedMutation,
 	DecidedMutation,
+	MutationDurability,
 	MutationSubmission,
 } from "./mutation.js";
 
@@ -81,6 +82,8 @@ export type PendingMutation = {
 	mutation: MutationRecord;
 	/** The subject's rows once this mutation is applied. */
 	nextState: SubjectState;
+	/** Whether the caller is answered at the append or after the store applies. */
+	durability: MutationDurability;
 	settlement: PendingSettlement;
 	/** What `waitForPendingCommits()` snapshots for this customer. */
 	committed: Promise<CommittedMutation>;

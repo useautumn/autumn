@@ -5,7 +5,10 @@ import {
 	splitSubjectState,
 } from "@autumn/balance-engine";
 import { createSubjectMap } from "./subjectMap/createSubjectMap.js";
-import type { CommittedMutation } from "./types/mutation.js";
+import type {
+	CommittedMutation,
+	MutationDurability,
+} from "./types/mutation.js";
 import type {
 	PartitionWriterScope,
 	PartitionWriterState,
@@ -78,12 +81,14 @@ export function enqueueMutation({
 	customerKey,
 	mutation,
 	nextState,
+	durability,
 }: {
 	scope: PartitionWriterScope;
 	pendingKey: string;
 	customerKey: string;
 	mutation: MutationRecord;
 	nextState: SubjectState;
+	durability: MutationDurability;
 }): Promise<CommittedMutation> {
 	const { state, config } = scope;
 	const customerPending =
@@ -108,6 +113,7 @@ export function enqueueMutation({
 		),
 		mutation,
 		nextState,
+		durability,
 		settlement,
 		committed,
 	};

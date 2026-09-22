@@ -105,16 +105,28 @@ function settleAppended({
 	batch: PendingMutation[];
 }): void {
 	for (const pending of batch) {
-		const { mutation } = pending;
-		scope.state.subjects.rememberCommand({
-			customerKey: pending.customerKey,
-			commandId: mutation.id,
-			fingerprint: mutation.receipt.fingerprint,
-			expiresAt: mutation.receipt.expiresAt,
-		});
-		removePendingMutation({ state: scope.state, pending });
-		pending.settlement.settle({ mutation, state: pending.nextState });
+		if (pending.durability !== "log") continue;
+		settlePending({ scope, pending });
 	}
+}
+
+/** Remember the command for dedup, unpin the subjects, answer the caller. */
+function settlePending({
+	scope,
+	pending,
+}: {
+	scope: PartitionWriterScope;
+	pending: PendingMutation;
+}): void {
+	const { mutation } = pending;
+	scope.state.subjects.rememberCommand({
+		customerKey: pending.customerKey,
+		commandId: mutation.id,
+		fingerprint: mutation.receipt.fingerprint,
+		expiresAt: mutation.receipt.expiresAt,
+	});
+	removePendingMutation({ state: scope.state, pending });
+	pending.settlement.settle({ mutation, state: pending.nextState });
 }
 
 /** A committed batch that cannot be applied leaves the writer in recovery. */
@@ -135,14 +147,20 @@ async function applyBatch({
 		if (results.length !== batch.length) {
 			throw new Error("Durable apply result count did not match batch");
 		}
-		// These callers were answered when Kafka took the batch, so nothing here can
-		// reach them; the store's verdict decides the partition's fate instead.
+		// A "log" caller was answered when Kafka took the batch, so nothing here can
+		// reach it and the store's verdict only decides the partition's fate. A
+		// "store" caller is still waiting, and hears the verdict as it always did.
 		let firstFailure: unknown = null;
 		for (const [index, pending] of batch.entries()) {
 			const result = results[index];
 			if (!result) throw new Error("Expected durable apply result");
+			const waiting = pending.durability === "store";
 			if (result.kind === "failed") {
 				firstFailure ??= result.cause;
+				if (waiting) {
+					removePendingMutation({ state: scope.state, pending });
+					pending.settlement.reject({ error: result.cause });
+				}
 				continue;
 			}
 			// Refused by the store, not broken: the customer's rows are dropped because
@@ -151,9 +169,16 @@ async function applyBatch({
 				scope.state.subjects.evictCustomer({
 					customerKey: pending.customerKey,
 				});
+				if (waiting) {
+					removePendingMutation({ state: scope.state, pending });
+					pending.settlement.reject({ error: result.cause });
+				}
 				continue;
 			}
 			assertPersistedMutation({ scope, result, pending });
+			if (waiting) {
+				settlePending({ scope, pending });
+			}
 		}
 		if (firstFailure !== null) {
 			enterRecovery({ scope, cause: firstFailure });

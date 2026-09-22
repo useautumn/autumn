@@ -97,6 +97,7 @@ export function decide<Reply>({
 			receiptPolicy: ctx.receiptPolicy,
 		}),
 		nextState: result.nextState,
+		durability: submission.durability ?? "log",
 	});
 	scheduleCommit({ scope });
 	return decidedWith<Reply>(committed);
