@@ -6,6 +6,7 @@ import {
 import { mapWithConcurrency } from "@/internal/migrations/v2/batchOperations/execute/utils/mapWithConcurrency.js";
 import { billingVerifyExportConfig } from "../../verify/billingVerifyExportConfig.js";
 import { filterBillingVerifyCandidates } from "../../verify/filterBillingVerifyCandidates.js";
+import { releaseSweptSubscriptions } from "../../verify/releaseSweptSubscriptions.js";
 import { setupBillingVerifySweep } from "../../verify/setupBillingVerifySweep.js";
 import { verifyCustomerToExportRows } from "../../verify/verifyCustomerToExportRows.js";
 import type { CustomerExportRowStreamFactory } from "./customerExportProducers.js";
@@ -29,11 +30,8 @@ export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory 
 					population,
 				});
 				for await (const scalars of pages) {
-					const candidates = await filterBillingVerifyCandidates({
-						ctx,
-						scalars,
-						sweep,
-					});
+					const { candidates, sharedStripeCustomerIds } =
+						await filterBillingVerifyCandidates({ ctx, scalars, sweep });
 					const rows = (
 						await mapWithConcurrency({
 							items: candidates,
@@ -42,6 +40,11 @@ export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory 
 								verifyCustomerToExportRows({ ctx, scalar, sweep }),
 						})
 					).flat();
+					releaseSweptSubscriptions({
+						sweep,
+						scalars,
+						sharedStripeCustomerIds,
+					});
 					yield* rows;
 
 					await onPageProcessed({

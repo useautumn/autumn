@@ -18,7 +18,10 @@ export const filterBillingVerifyCandidates = async ({
 	ctx: AutumnContext;
 	scalars: CustomerExportScalarRow[];
 	sweep: BillingVerifySweep;
-}): Promise<CustomerExportScalarRow[]> => {
+}): Promise<{
+	candidates: CustomerExportScalarRow[];
+	sharedStripeCustomerIds: Set<string>;
+}> => {
 	const onStripe = scalars.filter((scalar) => scalar.processor?.id);
 	const { sweptSubscriptions } = sweep;
 
@@ -38,7 +41,7 @@ export const filterBillingVerifyCandidates = async ({
 		}),
 	]);
 
-	return onStripe.filter((scalar) => {
+	const candidates = onStripe.filter((scalar) => {
 		const stripeCustomerId = scalar.processor?.id ?? "";
 		return (
 			sweptSubscriptions.has(stripeCustomerId) ||
@@ -46,4 +49,6 @@ export const filterBillingVerifyCandidates = async ({
 			sharedStripeCustomerIds.has(stripeCustomerId)
 		);
 	});
+
+	return { candidates, sharedStripeCustomerIds };
 };
