@@ -86,3 +86,45 @@ test("a one-line atmn object gains the key inline, still valid", () => {
 		"export default atmn({ plans: [keep], planVersions: [], });\n",
 	);
 });
+
+test("shorthand members are members: the key lands after them, nothing is replaced", () => {
+	const source = `import { atmn } from "atmn";
+import { features } from "./features";
+import { plans } from "./plans";
+
+export default atmn({
+	features,
+	plans,
+});
+`;
+	expect(insertCollection({ source, collection: "rewards" })).toBe(
+		`import { atmn } from "atmn";
+import { features } from "./features";
+import { plans } from "./plans";
+
+export default atmn({
+	features,
+	plans,
+	rewards: [],
+});
+`,
+	);
+	expect(insertCollection({ source, collection: "plans" })).toBe(source);
+});
+
+test("a comment between the last member and its comma is left where it is", () => {
+	expect(
+		insertCollection({
+			source: "export default atmn({ plans /* keep */, });\n",
+			collection: "rewards",
+		}),
+	).toBe("export default atmn({ plans /* keep */, rewards: [], });\n");
+	expect(
+		insertCollection({
+			source: "export default atmn({\n\tplans: [] /* keep */,\n});\n",
+			collection: "rewards",
+		}),
+	).toBe(
+		"export default atmn({\n\tplans: [] /* keep */,\n\trewards: [],\n});\n",
+	);
+});
