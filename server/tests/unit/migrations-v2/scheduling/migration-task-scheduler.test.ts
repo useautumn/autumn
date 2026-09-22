@@ -39,7 +39,7 @@ describe("migration task scheduler", () => {
 	});
 
 	test("bounds a stuck chunk and prioritizes request-path customer work", () => {
-		expect(MIGRATION_CHUNK_MAX_DURATION_SECONDS).toBe(15 * 60);
+		expect(MIGRATION_CHUNK_MAX_DURATION_SECONDS).toBe(30 * 60);
 		expect(MIGRATION_LAZY_TASK_PRIORITY_SECONDS).toBeGreaterThan(
 			MIGRATION_SLICE_DURATION_MS / 1000,
 		);

@@ -12,6 +12,7 @@ import { evaluateCancelState } from "./evaluate/evaluateCancelState";
 import { evaluateItems } from "./evaluate/evaluateItems";
 import { evaluateSchedulePhases } from "./evaluate/evaluateSchedulePhases";
 import { evaluateSharedStripeCustomer } from "./evaluate/evaluateSharedStripeCustomer";
+import { evaluateUnlinkedSubscription } from "./evaluate/evaluateUnlinkedSubscription";
 import { verifyMismatchToMessage } from "./format/verifyMismatchToMessage";
 import {
 	setupVerifyContext,
@@ -91,7 +92,9 @@ export const verify = async ({
 		subscriptions.push({
 			stripe_subscription_id: unlinkedSubscription.id,
 			status: "mismatched",
-			mismatches: stampMessages([{ type: "stripe_sub_not_in_autumn" }]),
+			mismatches: stampMessages([
+				evaluateUnlinkedSubscription({ fullCustomer, targets }),
+			]),
 		});
 	}
 

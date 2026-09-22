@@ -47,7 +47,7 @@ export const BATCH_MIGRATION_DEFERRED_INFLIGHT = 3;
 
 /** Ceiling for one page's deferred side effect (cache invalidation or item
  * events); a hung call otherwise parks settle/drain until trigger kills the chunk. */
-export const BATCH_MIGRATION_DEFERRED_OPERATION_TIMEOUT_MS = 2 * 60_000;
+export const BATCH_MIGRATION_DEFERRED_OPERATION_TIMEOUT_MS = 5 * 60_000;
 
 /** Budget for one page across its transient-retry attempts. Pages run in
  * ~15s; anything past this is a stall, not a big page. */
