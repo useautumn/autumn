@@ -1,11 +1,11 @@
 import {
-	CusProductStatus,
 	cp,
 	customerProductsToStripeSubscriptionIds,
 	type FullCusProduct,
 	type FullCustomer,
+	isCustomerProductRevertingTrial,
 	notNullish,
-	RELEVANT_STATUSES,
+	STRIPE_LINKED_STATUSES,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
@@ -37,17 +37,6 @@ export type VerifyContext = {
 	activeSubscriptionIds: Set<string> | null;
 };
 
-/** A trial with on_end "revert" is Autumn-only: attach writes nothing to
- * Stripe and parks the current plan as Paused, so verify reads the paused
- * plan and not the trial. */
-export const VERIFY_CUSTOMER_PRODUCT_STATUSES = [
-	...RELEVANT_STATUSES,
-	CusProductStatus.Paused,
-];
-
-const isRevertingTrial = (customerProduct: FullCusProduct) =>
-	customerProduct.free_trial?.on_end === "revert";
-
 /** Matches on subscription OR schedule: a scheduled customer product carries no
  * subscription_ids, so the subscription alone loses every future phase. */
 const isRelevantForSubscription = ({
@@ -59,8 +48,8 @@ const isRelevantForSubscription = ({
 	stripeSubscriptionId: string;
 	stripeSubscriptionScheduleId?: string;
 }) =>
-	VERIFY_CUSTOMER_PRODUCT_STATUSES.includes(customerProduct.status) &&
-	!isRevertingTrial(customerProduct) &&
+	STRIPE_LINKED_STATUSES.includes(customerProduct.status) &&
+	!isCustomerProductRevertingTrial(customerProduct) &&
 	cp(customerProduct)
 		.paid()
 		.recurring()
@@ -140,7 +129,7 @@ export const setupVerifyContext = async ({
 			ctx,
 			idOrInternalId: customerId,
 			withEntities: true,
-			inStatuses: VERIFY_CUSTOMER_PRODUCT_STATUSES,
+			inStatuses: STRIPE_LINKED_STATUSES,
 		}));
 
 	const cusProducts = fullCustomer.customer_products;

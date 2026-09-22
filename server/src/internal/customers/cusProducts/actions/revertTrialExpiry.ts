@@ -1,10 +1,11 @@
 import {
-	type AutumnBillingPlan,
 	AttachScenario,
+	type AutumnBillingPlan,
 	CusProductStatus,
 	type customerProducts,
 	customerProducts as customerProductsTable,
 	findCustomerProductById,
+	STRIPE_LINKED_STATUSES,
 } from "@autumn/shared";
 import { and, eq, type InferSelectModel } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
@@ -13,7 +14,6 @@ import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { CusService } from "@/internal/customers/CusService";
-import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 
 /**
@@ -46,15 +46,14 @@ export const tryProcessRevertExpiry = async ({
 	}
 
 	// Snapshot fullCustomer BEFORE the transaction so the webhook payload
-	// reflects pre-revert state in `previous_attributes`. RELEVANT_STATUSES
-	// is broadened with Paused so the previous (paused) cusProduct is
-	// visible — keeping the query narrow vs. ALL_STATUSES.
+	// reflects pre-revert state in `previous_attributes`; the previous
+	// (paused) cusProduct must be visible.
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
 		withEntities: true,
 		withSubs: true,
-		inStatuses: [...RELEVANT_STATUSES, CusProductStatus.Paused],
+		inStatuses: STRIPE_LINKED_STATUSES,
 	});
 
 	const trialFullCusProduct = findCustomerProductById({

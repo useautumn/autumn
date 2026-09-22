@@ -16,6 +16,13 @@ export const ATTACH_CONFLICT_STATUSES = [
 	CusProductStatus.Pending,
 ];
 
+/** Products whose Stripe subscription is live — a plan parked by a reverting
+ * trial keeps billing on Stripe. */
+export const STRIPE_LINKED_STATUSES = [
+	...RELEVANT_STATUSES,
+	CusProductStatus.Paused,
+];
+
 export const VERSIONABLE_CUSTOMER_STATUSES = [
 	CusProductStatus.Active,
 	CusProductStatus.PastDue,
