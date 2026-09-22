@@ -3,8 +3,9 @@
  *
  * A subscription migrated to send_invoice (ignore_past_due, Vercel) keeps the
  * automatic tax it was created with, so its renewals are both reissuable and
- * automatically taxed. `tax_rate_id: null` must stop Stripe recomputing the
- * tax it just cleared, for that invoice only.
+ * automatically taxed. A plain reissue lets Stripe Tax recompute the tax
+ * (its auto-created rates cannot be copied by hand); `tax_rate_id: null` must
+ * stop it recomputing the tax it just cleared, for that invoice only.
  */
 
 import { expect, test } from "bun:test";
@@ -117,6 +118,14 @@ test(`${chalk.yellowBright("invoices.reissue: automatically taxed renewal → ta
 	expect(renewalStripe.automatic_tax.enabled).toBe(true);
 	expect(renewalStripe.collection_method).toBe("send_invoice");
 	expect(renewalStripe.total).toBe(2200);
+
+	// A plain reissue keeps the tax: Stripe Tax recomputes it on the replacement
+	// rather than the original's auto-created rate being copied by hand.
+	const { preview } = (await autumnV2_3.post("/invoices.reissue", {
+		invoice_id: renewal.id,
+		preview: true,
+	})) as { preview: { total: number } };
+	expect(preview.total).toBe(22);
 
 	const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
 		invoice_id: renewal.id,

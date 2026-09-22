@@ -270,9 +270,13 @@ const createReplacementDraft = async ({
 				stripeClient: stripeCli,
 				invoiceId: stripeInvoice.id,
 			}),
+			// Stripe Tax's own rates cannot be reapplied by hand; it recomputes
+			// them on the replacement since automatic tax carries over.
 			lineTaxRates:
 				overrides?.tax_rate_id === undefined
-					? "keep"
+					? stripeInvoice.automatic_tax?.enabled
+						? "inherit"
+						: "keep"
 					: overrides.tax_rate_id === null
 						? "none"
 						: "inherit",
