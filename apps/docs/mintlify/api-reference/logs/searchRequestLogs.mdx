@@ -1,0 +1,121 @@
+---
+title: "Search Request Logs"
+openapi: "openapi POST /v1/logs.search"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="query" type="string" />
+
+<DynamicParamField body="range" type="object">
+  <Expandable title="properties">
+    <DynamicParamField body="start_date" type="string" />
+
+    <DynamicParamField body="end_date" type="string" />
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="limit" type="integer" />
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  <Expandable title="properties">
+    <DynamicResponseField name="timestamp" type="string" />
+
+    <DynamicResponseField name="source" type="'api_request' | 'stripe_webhook'" />
+
+    <DynamicResponseField name="status_code" type="number" />
+
+    <DynamicResponseField name="request" type="object">
+      <Expandable title="properties">
+        <DynamicResponseField name="method" type="string | null" />
+
+        <DynamicResponseField name="url" type="string | null" />
+
+        <DynamicResponseField name="path" type="string | null" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="context" type="object">
+      <Expandable title="properties">
+        <DynamicResponseField name="org_id" type="string | null" />
+
+        <DynamicResponseField name="customer_id" type="string | null" />
+
+        <DynamicResponseField name="entity_id" type="string | null" />
+
+        <DynamicResponseField name="auth_type" type="string | null" />
+
+        <DynamicResponseField name="user_id" type="string | null" />
+
+        <DynamicResponseField name="user_email" type="string | null" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="stripe" type="object">
+      <Expandable title="properties">
+        <DynamicResponseField name="event_id" type="string | null" />
+
+        <DynamicResponseField name="event_type" type="string | null" />
+
+        <DynamicResponseField name="object_id" type="string | null" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="request_body" type="any | null" />
+
+    <DynamicResponseField name="response_body" type="any | null" />
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="unconfigured" type="boolean" />
+
+
+<ResponseExample>
+```json 200
+{
+  "list": [
+    {
+      "timestamp": "2026-09-21T12:00:00.000Z",
+      "source": "api_request",
+      "status_code": 200,
+      "request": {
+        "method": "POST",
+        "url": "https://api.useautumn.com/v1/balances.check",
+        "path": "/v1/balances.check"
+      },
+      "context": {
+        "org_id": "org_123",
+        "customer_id": "cus_123",
+        "entity_id": null,
+        "auth_type": "secret_key",
+        "user_id": "user_123",
+        "user_email": "user@example.com"
+      },
+      "stripe": {
+        "event_id": null,
+        "event_type": null,
+        "object_id": null
+      },
+      "request_body": {
+        "customer_id": "cus_123"
+      },
+      "response_body": {
+        "allowed": true
+      }
+    }
+  ]
+}
+```
+</ResponseExample>
