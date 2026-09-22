@@ -61,5 +61,16 @@ export async function beginProducerTransaction({
 		return finish({ action: "abort" });
 	}
 
-	return { send, commit, abort };
+	async function sendOffsets(
+		offsets: Parameters<KafkaTransaction["sendOffsets"]>[0],
+	): Promise<void> {
+		try {
+			await current.sendOffsets(offsets);
+		} catch (cause) {
+			if (isKafkaProducerFencingCause({ cause })) state.terminal = true;
+			throw cause;
+		}
+	}
+
+	return { send, sendOffsets, commit, abort };
 }

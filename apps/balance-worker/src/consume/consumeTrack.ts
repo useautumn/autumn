@@ -7,7 +7,6 @@ import {
 import { FlushRecordRefusedError } from "../committer/committerErrors.js";
 import { PartitionProcessorStateNotFoundError } from "../processor/common/processorErrors.js";
 import { SubjectNotFoundError } from "../processor/subject/subjectErrors.js";
-import type { PartitionProcessor } from "../processor/types/partitionProcessor.js";
 import {
 	PartitionWriterCommandConflictError,
 	PartitionWriterDuplicateCommandError,
@@ -32,10 +31,7 @@ const isRefused = (cause: unknown): boolean =>
 	cause instanceof PartitionWriterStateNotFoundError ||
 	cause instanceof PartitionProcessorStateNotFoundError;
 
-/**
- * A queued track, with nobody waiting for the reply. Anything HTTP would answer 4xx
- * is logged and dropped here; anything it would answer 5xx is thrown so Kafka redelivers.
- */
+/** Refusals complete without a mutation; transient failures throw so Kafka redelivers. */
 export async function consumeTrack({
 	ctx,
 	command,
@@ -43,9 +39,6 @@ export async function consumeTrack({
 	ctx: ConsumeContext;
 	command: TrackCommand;
 }): Promise<void> {
-	function runTrack(processor: PartitionProcessor) {
-		return processor.track({ command });
-	}
 	const fields = {
 		commandId: command.commandId,
 		requestId: command.requestId,
@@ -53,7 +46,7 @@ export async function consumeTrack({
 		featureId: command.featureId,
 	};
 	try {
-		const reply = await ctx.runtime.process(runTrack);
+		const reply = await ctx.processor.track({ command });
 		if (reply.result.status !== "applied")
 			ctx.logger?.warn("Queued track rejected by the balance", {
 				...fields,

@@ -69,4 +69,21 @@ variant, a processor method and a consumer case; the transport does not change.
 | 5 | done, uncommitted. `client.enqueue({ commands })` → one `producer.send` with a partition per message. Boot validation of the command topic waits for unit 6, when the worker first depends on it; `setupLocalTopics` creates it now. The server connects its producer on the first append, never at boot, and disconnects it on shutdown. Green: kafka unit + `command-topic` integration on the real broker, client unit, env unit; server and worker typecheck. |
 | 5b | done, uncommitted. The client grew `queue.track` (a typed door over one `enqueue`; more doors as more commands queue), and a Kafka-backed factory: `createKafkaBalanceWorkerClient({ ctx: { kafka, logger }, config })` → `{ client, start, stop }`, with the ownership reader's start-with-retry and the lazy command producer moved out of the server. The server keeps `getBalanceWorkerClient` / `startBalanceWorkerClient` / `stopBalanceWorkerClient` and an env→connection reader; `getOwnershipConsumer.ts`, `getCommandLog.ts`, `createServerKafka.ts` are gone. Any process (API, SQS workers, cron, the shadow operator) builds the same client. |
 | 6 | done, uncommitted. `packages/kafka`: `coPartitionedAssigner` (partition n of every topic → one member), `secondaryTopics` on the topic consumer, topic routing in the metering consumer. Worker: `kafka/commandConsumer/` is the transport (parse the record, find the partition's admitted runtime, dispatch by `command.type`); `consume/` is the business layer, one file per command (`consumeTrack`: a refused or already-applied track is logged and dropped, anything a caller would get a 5xx for is thrown so Kafka redelivers). Command partitions stay paused from assignment until the runtime is admitted. Boot validates the command topic; a bare partition group in tests opts out. `postgres/track-commits.test.ts`: `queue.track` → the row moves; the same id queued again changes nothing. |
-| 7 to 8 | not started |
+| 7 | implemented. Command offsets travel on mutations through an execution-scoped writer; Postgres stores both bookmarks atomically. Commands without mutations use fenced offset completion after prior store writes settle. Verified: crash between Kafka and Postgres, restart seeking, duplicate completion, concurrent HTTP isolation, offset-send failure, codec and SQL unit tests; worker typecheck. Broader architecture review remains deferred. |
+| 8 | not started |
+
+### Unit 7 verification
+
+| Case | Assertion |
+|---|---|
+| Mutation committed to Kafka, worker lost before Postgres | Replay moves both bookmarks; consumption resumes after the command without dedup memory. |
+| Kafka group offset ahead or behind Postgres | Admission seeks to the durable command bookmark before fetching, including an empty tail. |
+| Duplicate, refusal, unsupported or unreadable command | Fenced offset commit followed by a bookmark-only flush; no balance change. |
+| Earlier mutation still applying | Bookmark-only completion waits for the writer's store work. |
+| Flush falls back to individual records | Both bookmarks reflect only the applied/refused prefix. |
+| Source-less HTTP mutation / old record | Existing parsing and command progress remain unchanged. |
+| Offset send fails or producer is fenced | Transaction aborts; command progress never advances. |
+
+Mutation batches send their command offsets in the fenced producer transaction. For commands
+without a mutation, completion waits for prior store work, commits the offset through the same
+producer session, then flushes only the command bookmark. Postgres remains authoritative.

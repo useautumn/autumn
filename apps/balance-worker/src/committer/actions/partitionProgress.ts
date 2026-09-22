@@ -3,7 +3,10 @@ import {
 	assertPartition,
 	assertTopic,
 } from "../../state/assertKafkaPosition.js";
-import { ConflictingPartitionInitializationError } from "../../state/stateStoreErrors.js";
+import {
+	ConflictingPartitionInitializationError,
+	PartitionProgressNotFoundError,
+} from "../../state/stateStoreErrors.js";
 import type { PartitionPosition } from "../types/committer.js";
 import type { CommitterStateStoreContext } from "../types/committerStateStoreContext.js";
 
@@ -12,9 +15,14 @@ export const loadProgress = async ({
 	ctx,
 	...position
 }: { ctx: CommitterStateStoreContext } & PartitionPosition): Promise<void> => {
-	const stored = await ctx.db.readNextOffset(position);
-	if (stored !== null)
-		ctx.progress.setNextOffset({ ...position, nextOffset: stored });
+	const stored = await ctx.db.readPartitionProgress(position);
+	if (!stored) return;
+	ctx.progress.setNextOffset({ ...position, nextOffset: stored.nextOffset });
+	if (stored.commandNextOffset !== null)
+		ctx.progress.setCommandNextOffset({
+			...position,
+			commandNextOffset: stored.commandNextOffset,
+		});
 };
 
 /** Creates the bookmark once; the same offset again is a no-op, a different one is a conflict. */
@@ -38,3 +46,19 @@ export const initializePartition = async ({
 	await ctx.db.insertPartitionProgress({ topic, partition, nextOffset });
 	ctx.progress.setNextOffset({ topic, partition, nextOffset });
 };
+
+export async function advanceCommandNextOffset({
+	ctx,
+	...position
+}: {
+	ctx: CommitterStateStoreContext;
+} & PartitionPosition & { commandNextOffset: bigint }): Promise<void> {
+	assertOffset({ offset: position.commandNextOffset });
+	const current = ctx.progress.readCommandNextOffset(position);
+	if (current !== null && current >= position.commandNextOffset) return;
+	const expectedOffset = ctx.progress.readNextOffset(position);
+	if (expectedOffset === null)
+		throw new PartitionProgressNotFoundError(position);
+	await ctx.committer.apply({ ...position, expectedOffset, records: [] });
+	ctx.progress.setCommandNextOffset(position);
+}

@@ -7,6 +7,7 @@ import {
 	type TopicResumePosition,
 } from "@autumn/kafka";
 import { consumeTrack } from "../../consume/consumeTrack.js";
+import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import { CommandPartitionUnavailableError } from "./commandConsumerErrors.js";
 import type { CommandConsumerContext } from "./types/commandConsumer.js";
 
@@ -16,9 +17,14 @@ export function createCommandRecordHandler({
 }: {
 	ctx: CommandConsumerContext;
 }): TopicRecordHandler {
-	/** The group's committed offset is the bookmark until the command offset rides on the mutation. */
-	function readResumeOffset(_position: TopicResumePosition): null {
-		return null;
+	/** Postgres says how far the commands are decided; a batch starting below that is skipped forward, never re-decided. */
+	function readResumeOffset({
+		partition,
+		firstOffset,
+	}: TopicResumePosition): bigint | null {
+		const bookmark = ctx.readCommandNextOffset({ partition });
+		if (bookmark === null || firstOffset >= bookmark) return null;
+		return bookmark;
 	}
 
 	async function applyRecord({
@@ -30,35 +36,45 @@ export function createCommandRecordHandler({
 		const runtime = ctx.findOwnedRuntime({ partition });
 		if (!runtime)
 			throw new CommandPartitionUnavailableError({ topic, partition });
-		let command: ReturnType<typeof parseCommandRecord>;
-		try {
-			command = parseCommandRecord({ key: message.key, value: message.value });
-		} catch (cause) {
-			// A record nobody can read must not take the partition down with it.
-			ctx.logger?.warn("Queued command skipped: unreadable", {
-				topic,
-				partition,
-				offset: offset.toString(),
-				error: cause,
-			});
-			return;
-		}
-		switch (command.type) {
-			case "track":
-				await consumeTrack({
-					ctx: { runtime, logger: ctx.logger },
-					command,
+		const bookmark = ctx.readCommandNextOffset({ partition });
+		if (bookmark !== null && offset < bookmark) return { nextOffset: bookmark };
+		const source = { commandOffset: offset.toString() };
+		async function run(processor: PartitionProcessor) {
+			let command: ReturnType<typeof parseCommandRecord>;
+			try {
+				command = parseCommandRecord({
+					key: message.key,
+					value: message.value,
 				});
-				return;
-			default:
-				ctx.logger?.warn("Queued command skipped: not consumable yet", {
+			} catch (cause) {
+				// A record nobody can read must not take the partition down with it.
+				ctx.logger?.warn("Queued command skipped: unreadable", {
 					topic,
 					partition,
 					offset: offset.toString(),
-					commandType: command.type,
-					commandId: command.commandId,
+					error: cause,
 				});
+				return;
+			}
+			switch (command.type) {
+				case "track": {
+					await consumeTrack({
+						ctx: { processor, logger: ctx.logger },
+						command,
+					});
+					break;
+				}
+				default:
+					ctx.logger?.warn("Queued command skipped: not consumable yet", {
+						topic,
+						partition,
+						offset: offset.toString(),
+						commandType: command.type,
+						commandId: command.commandId,
+					});
+			}
 		}
+		return runtime.process((processor) => processor.execute({ source, run }));
 	}
 
 	return { readResumeOffset, applyRecord };

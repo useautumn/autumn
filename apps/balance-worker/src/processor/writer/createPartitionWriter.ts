@@ -1,4 +1,5 @@
 import { adopt as adoptState } from "./actions/adopt.js";
+import { waitForStore as waitForAppliedMutations } from "./actions/commit.js";
 import {
 	decide as decideMutation,
 	readFreshestState as readFreshestSubjectState,
@@ -56,7 +57,18 @@ export function createPartitionWriter({
 		return adoptState({ scope, state });
 	}
 
-	return { decide, waitForPendingCommits, readFreshestState, evict, adopt };
+	function waitForStore() {
+		return waitForAppliedMutations({ scope });
+	}
+
+	return {
+		waitForStore,
+		decide,
+		waitForPendingCommits,
+		readFreshestState,
+		evict,
+		adopt,
+	};
 }
 
 function validateWriterConfig(config: PartitionWriterConfig): void {

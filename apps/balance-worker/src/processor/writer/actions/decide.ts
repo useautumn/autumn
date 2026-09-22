@@ -91,6 +91,7 @@ export function decide<Reply>({
 			mutation: result.mutation,
 			fingerprint,
 			receiptPolicy: ctx.receiptPolicy,
+			source: submission.source,
 		}),
 		nextState: result.nextState,
 		durability: submission.durability ?? "log",

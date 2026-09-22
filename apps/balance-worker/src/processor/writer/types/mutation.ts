@@ -2,6 +2,7 @@ import type {
 	Catalog,
 	MutatingCommand,
 	MutationRecord,
+	MutationSource,
 	SubjectState,
 	SubjectStateMutation,
 } from "@autumn/balance-engine";
@@ -32,6 +33,8 @@ export type MutationSubmission<Reply> = {
 	baseline?: SubjectState;
 	/** Defaults to "log": metered writes do not wait for the projection. */
 	durability?: MutationDurability;
+	/** Set for a command consumed from the command topic; rides on the record so the bookmark moves with the rows. */
+	source?: MutationSource;
 	/** Runs inside the writer's synchronous critical section; must not await. */
 	mutate: (params: MutateParams) => MutationResult<Reply>;
 };

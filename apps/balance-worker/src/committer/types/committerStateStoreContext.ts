@@ -4,6 +4,6 @@ import type { Committer } from "./committer.js";
 
 export type CommitterStateStoreContext = {
 	committer: Committer;
-	db: Pick<CommitterDb, "readNextOffset" | "insertPartitionProgress">;
+	db: Pick<CommitterDb, "readPartitionProgress" | "insertPartitionProgress">;
 	progress: ProgressMirror;
 };

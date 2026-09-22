@@ -6,6 +6,8 @@ export type FlushBookmark = {
 	partition: number;
 	expectedOffset: bigint;
 	nextOffset: bigint;
+	/** Left where it is when absent. */
+	commandNextOffset?: bigint;
 };
 
 /** Everything one transaction lands: row changes (any row may repeat) and the bookmarks they advance. */

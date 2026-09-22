@@ -10,6 +10,7 @@ export async function appendMeteringRecords({
 	topic,
 	partition,
 	records,
+	offsets,
 }: MeteringAppend & {
 	ctx: MeteringPublisherContext;
 }): Promise<{ baseOffset: bigint }> {
@@ -26,5 +27,6 @@ export async function appendMeteringRecords({
 		topic,
 		partition,
 		messages,
+		offsets,
 	});
 }

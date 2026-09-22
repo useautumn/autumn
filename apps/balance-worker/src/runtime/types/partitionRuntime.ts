@@ -52,7 +52,13 @@ export type MeteringPartitionResolver = {
 
 export type PartitionRuntimeDependencies = {
 	stateStore: PartitionWriterContext["stateStore"] &
-		Pick<StateStore, "readNextOffset" | "baseline">;
+		Pick<
+			StateStore,
+			| "readNextOffset"
+			| "baseline"
+			| "readCommandNextOffset"
+			| "advanceCommandNextOffset"
+		>;
 	producer: OwnedPartitionProducer;
 	appender: CommittedOutcomeAppender;
 	follower: PartitionOutcomeFollowerPort;

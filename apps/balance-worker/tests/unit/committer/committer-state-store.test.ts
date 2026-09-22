@@ -32,13 +32,21 @@ function createFakeCommitterDb({
 	conflictIds?: Set<string>;
 } = {}) {
 	const progress = new Map<string, bigint>();
+	const commandProgress = new Map<string, bigint>();
 	if (storedNextOffset !== null)
 		progress.set(`${topic}[${partition}]`, storedNextOffset);
 	const updates: SubjectRowChange[] = [];
 	const transactions: ("committed" | "rolled_back")[] = [];
 	const db: CommitterDb = {
-		readNextOffset: async (position) =>
-			progress.get(`${position.topic}[${position.partition}]`) ?? null,
+		readPartitionProgress: async (position) => {
+			const key = `${position.topic}[${position.partition}]`;
+			const nextOffset = progress.get(key);
+			if (nextOffset === undefined) return null;
+			return {
+				nextOffset,
+				commandNextOffset: commandProgress.get(key) ?? null,
+			};
+		},
 		insertPartitionProgress: async ({ topic, partition, nextOffset }) => {
 			progress.set(`${topic}[${partition}]`, nextOffset);
 		},
@@ -68,16 +76,16 @@ function createFakeCommitterDb({
 			}
 			updates.push(...request.changes);
 			for (const bookmark of moved) {
-				progress.set(
-					`${bookmark.topic}[${bookmark.partition}]`,
-					bookmark.nextOffset,
-				);
+				const key = `${bookmark.topic}[${bookmark.partition}]`;
+				progress.set(key, bookmark.nextOffset);
+				if (bookmark.commandNextOffset !== undefined)
+					commandProgress.set(key, bookmark.commandNextOffset);
 			}
 			transactions.push("committed");
 			return { applied };
 		},
 	};
-	return { db, progress, updates, transactions };
+	return { db, progress, commandProgress, updates, transactions };
 }
 
 function createStore(fake: ReturnType<typeof createFakeCommitterDb>) {
@@ -115,6 +123,65 @@ describe("committer state store", () => {
 		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(44n);
 		expect(store.readNextOffset({ topic, partition })).toBe(44n);
 		expect(store.readState({ identity: testIdentity })).toBeNull();
+	});
+
+	test("a consumed command moves the command bookmark with the rows; one sent over HTTP leaves it alone", async () => {
+		const fake = createFakeCommitterDb({ storedNextOffset: 0n });
+		const store = createStore(fake);
+		await store.loadProgress({ topic, partition });
+		expect(store.readCommandNextOffset({ topic, partition })).toBeNull();
+
+		const state = createState({ balance: 100 });
+		const queued = {
+			...createTrackMutation({ state, value: 5, commandId: "cmd_1" }),
+			source: { commandOffset: "41" },
+		};
+		await store.applyDurableMutations({
+			records: [
+				{ position: { topic, partition, offset: 0n }, mutation: queued },
+			],
+		});
+		expect(fake.commandProgress.get(`${topic}[${partition}]`)).toBe(42n);
+		expect(store.readCommandNextOffset({ topic, partition })).toBe(42n);
+
+		const sent = createTrackMutation({
+			state: {
+				...state,
+				revision: 1,
+				customerEntitlements: [
+					{ ...createCustomerEntitlement({ balance: 95 }) },
+				],
+			},
+			value: 5,
+			commandId: "cmd_2",
+		});
+		await store.applyDurableMutations({
+			records: [{ position: { topic, partition, offset: 1n }, mutation: sent }],
+		});
+		expect(store.readNextOffset({ topic, partition })).toBe(2n);
+		expect(store.readCommandNextOffset({ topic, partition })).toBe(42n);
+	});
+
+	test("a bookmark-only completion preserves rows and survives reloading progress", async () => {
+		const fake = createFakeCommitterDb({ storedNextOffset: 43n });
+		const store = createStore(fake);
+		await store.loadProgress({ topic, partition });
+		await store.advanceCommandNextOffset({
+			topic,
+			partition,
+			commandNextOffset: 42n,
+		});
+		expect(store.readNextOffset({ topic, partition })).toBe(43n);
+		expect(fake.updates).toEqual([]);
+		const restarted = createStore(fake);
+		await restarted.loadProgress({ topic, partition });
+		expect(restarted.readCommandNextOffset({ topic, partition })).toBe(42n);
+		await restarted.advanceCommandNextOffset({
+			topic,
+			partition,
+			commandNextOffset: 40n,
+		});
+		expect(restarted.readCommandNextOffset({ topic, partition })).toBe(42n);
 	});
 
 	test("records below the bookmark are already applied; the rest must be contiguous", async () => {
@@ -177,9 +244,11 @@ describe("committer state store", () => {
 			value: 5,
 		});
 
+		mutation.source = { commandOffset: "41" };
 		const results = await store.applyDurableMutations({
 			records: [{ position: { topic, partition, offset: 43n }, mutation }],
 		});
+		expect(store.readCommandNextOffset({ topic, partition })).toBe(42n);
 		expect(results).toHaveLength(1);
 		const [result] = results;
 		expect(result?.kind).toBe("rejected");
@@ -236,7 +305,9 @@ describe("committer state store", () => {
 		await store.loadProgress({ topic, partition });
 		const state = createState({ balance: 100 });
 		const good = createTrackMutation({ state, value: 5, commandId: "cmd_a" });
+		good.source = { commandOffset: "41" };
 		const poison = createTrackMutation({ state, value: 5, commandId: "cmd_b" });
+		poison.source = { commandOffset: "42" };
 		poison.changes = poison.changes.map((change) => ({
 			...change,
 			id: "poison",
@@ -263,6 +334,7 @@ describe("committer state store", () => {
 		expect(blocked?.kind === "failed" && (blocked.cause as Error).message).toBe(
 			"Log record cmd_c waits behind cmd_b",
 		);
+		expect(store.readCommandNextOffset({ topic, partition })).toBe(42n);
 		expect(store.readNextOffset({ topic, partition })).toBe(11n);
 		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(11n);
 	});

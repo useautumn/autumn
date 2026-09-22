@@ -83,6 +83,10 @@ export function balanceWorkerEnvToRuntimeConfig({
 }): PartitionRuntimeFactoryConfig {
 	return {
 		deploymentEnvironment: env.BALANCE_WORKER_DEPLOYMENT,
+		commands: {
+			commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,
+			groupId: env.BALANCE_WORKER_GROUP_ID,
+		},
 		ownership: {
 			topic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
 			endpoint,

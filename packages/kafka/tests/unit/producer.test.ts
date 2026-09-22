@@ -66,7 +66,7 @@ function createProducerFixture() {
 			events.push(`aborted:${sequence}`);
 		}
 
-		return { send, commit, abort };
+		return { send, commit, abort, sendOffsets: async () => {} };
 	}
 
 	function producer(producerConfig: ProducerConfig): KafkaProducerClient {

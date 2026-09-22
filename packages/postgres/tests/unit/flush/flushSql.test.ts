@@ -51,7 +51,7 @@ describe("flushSql", () => {
 		).toBe(true);
 		expect(sql).toContain('"u1" AS ( UPDATE "rollovers"');
 		expect(sql).toContain(
-			"b AS ( UPDATE partition_progress p SET next_offset = v.next_offset::bigint FROM (VALUES ($5, $6, $7, $8), ($9, $10, $11, $12))",
+			"b AS ( UPDATE partition_progress p SET next_offset = v.next_offset::bigint, command_next_offset = GREATEST(v.command_next_offset::bigint, p.command_next_offset) FROM (VALUES ($5, $6, $7, $8, $9), ($10, $11, $12, $13, $14))",
 		);
 		expect(sql).toContain(
 			"AND p.next_offset = v.expected_offset::bigint RETURNING p.topic )",
@@ -70,10 +70,12 @@ describe("flushSql", () => {
 			3,
 			40n,
 			42n,
+			null,
 			"metering",
 			7,
 			9n,
 			10n,
+			null,
 		]);
 	});
 

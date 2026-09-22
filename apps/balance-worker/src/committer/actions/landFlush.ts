@@ -189,7 +189,11 @@ const recordCall = ({
 });
 
 type RefusedRecord =
-	| { nextOffset: bigint; rejection: FlushRejection }
+	| {
+			nextOffset: bigint;
+			commandNextOffset?: bigint;
+			rejection: FlushRejection;
+	  }
 	| {
 			nextOffset: bigint;
 			failure: { record: DurableMutationRecord; cause: unknown };
@@ -224,6 +228,7 @@ const settleRefusedRecord = async ({
 		});
 		return {
 			nextOffset: outcomes.get(skip)?.nextOffset ?? nextOffset,
+			commandNextOffset: outcomes.get(skip)?.commandNextOffset,
 			rejection: { record, cause: refusal },
 		};
 	} catch (skipCause) {
@@ -240,6 +245,7 @@ const landRecordsOneByOne = async ({
 	call: FlushCall;
 }): Promise<FlushOutcome> => {
 	let nextOffset = call.expectedOffset;
+	let commandNextOffset: bigint | undefined;
 	const rejections: FlushRejection[] = [];
 	for (const record of call.records) {
 		const single = recordCall({ call, record, expectedOffset: nextOffset });
@@ -249,6 +255,8 @@ const landRecordsOneByOne = async ({
 				flush: { calls: [single] },
 			});
 			nextOffset = outcomes.get(single)?.nextOffset ?? nextOffset;
+			commandNextOffset =
+				outcomes.get(single)?.commandNextOffset ?? commandNextOffset;
 		} catch (cause) {
 			const refused = await settleRefusedRecord({
 				scope,
@@ -259,11 +267,17 @@ const landRecordsOneByOne = async ({
 			});
 			nextOffset = refused.nextOffset;
 			if ("failure" in refused)
-				return { nextOffset, failure: refused.failure, rejections };
+				return {
+					nextOffset,
+					commandNextOffset,
+					failure: refused.failure,
+					rejections,
+				};
+			commandNextOffset = refused.commandNextOffset ?? commandNextOffset;
 			rejections.push(refused.rejection);
 		}
 	}
-	return { nextOffset, rejections };
+	return { nextOffset, commandNextOffset, rejections };
 };
 
 /**
@@ -308,8 +322,7 @@ export const landFlush = async ({
 		// A lone record already failed alone: it is not re-run, only classified.
 		const record = call.records[0];
 		if (!record) {
-			outcomes.set(call, { nextOffset: call.expectedOffset });
-			return outcomes;
+			throw cause;
 		}
 		const refused = await settleRefusedRecord({
 			scope,
@@ -322,7 +335,11 @@ export const landFlush = async ({
 			call,
 			"failure" in refused
 				? { nextOffset: refused.nextOffset, failure: refused.failure }
-				: { nextOffset: refused.nextOffset, rejections: [refused.rejection] },
+				: {
+						nextOffset: refused.nextOffset,
+						commandNextOffset: refused.commandNextOffset,
+						rejections: [refused.rejection],
+					},
 		);
 		return outcomes;
 	}

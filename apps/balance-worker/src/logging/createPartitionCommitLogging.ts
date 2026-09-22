@@ -174,9 +174,15 @@ export function createPartitionCommitLogging({
 	}
 
 	return {
-		appender: { appendCommitted },
+		appender: { ...ctx.appender, appendCommitted },
 		stateStore: {
 			baseline: ctx.stateStore.baseline,
+			readCommandNextOffset: ctx.stateStore.readCommandNextOffset.bind(
+				ctx.stateStore,
+			),
+			advanceCommandNextOffset: ctx.stateStore.advanceCommandNextOffset.bind(
+				ctx.stateStore,
+			),
 			readState: ctx.stateStore.readState.bind(ctx.stateStore),
 			readOwnState: ctx.stateStore.readOwnState.bind(ctx.stateStore),
 			readReceipt: ctx.stateStore.readReceipt.bind(ctx.stateStore),

@@ -15,27 +15,47 @@ const nextOffsetSchema = z
 	])
 	.transform((value) => BigInt(value));
 
-export const readNextOffset = async ({
+const progressRowSchema = z.object({
+	next_offset: nextOffsetSchema,
+	command_next_offset: nextOffsetSchema.nullable(),
+});
+
+export type PartitionProgressRow = {
+	nextOffset: bigint;
+	commandNextOffset: bigint | null;
+};
+
+export const readPartitionProgress = async ({
 	ctx,
 	topic,
 	partition,
-}: { ctx: ProgressContext } & PartitionPosition): Promise<bigint | null> => {
+}: {
+	ctx: ProgressContext;
+} & PartitionPosition): Promise<PartitionProgressRow | null> => {
 	const rows = await ctx.db.execute(sql`
-		SELECT next_offset
+		SELECT next_offset, command_next_offset
 		FROM partition_progress
 		WHERE topic = ${topic} AND partition_id = ${partition}
 	`);
 	const row = rows[0];
 	if (!row) return null;
-	const parsed = nextOffsetSchema.safeParse(row.next_offset);
+	const parsed = progressRowSchema.safeParse(row);
 	if (!parsed.success) {
 		throw new RowsInvalidError({
 			table: "partition_progress",
 			issues: parsed.error.issues,
 		});
 	}
-	return parsed.data;
+	return {
+		nextOffset: parsed.data.next_offset,
+		commandNextOffset: parsed.data.command_next_offset,
+	};
 };
+
+export const readNextOffset = async (
+	params: { ctx: ProgressContext } & PartitionPosition,
+): Promise<bigint | null> =>
+	(await readPartitionProgress(params))?.nextOffset ?? null;
 
 export const insertPartitionProgress = async ({
 	ctx,

@@ -62,7 +62,7 @@ function transactionalBatchTests(): void {
 		async function transaction(): Promise<KafkaTransaction> {
 			lifecycle.push("transaction");
 			if (transactionError) throw transactionError;
-			return { send, commit, abort };
+			return { send, commit, abort, sendOffsets: async () => {} };
 		}
 
 		return { lifecycle, records, producer: { transaction } };
@@ -293,7 +293,7 @@ function meteringPublisherTests(): void {
 
 		async function transaction(): Promise<KafkaTransaction> {
 			calls.push("transaction");
-			return { send, commit, abort };
+			return { send, commit, abort, sendOffsets: async () => {} };
 		}
 
 		const producer: KafkaProducer = { transaction };

@@ -25,6 +25,7 @@ export function createPartitionWriterState(): PartitionWriterState {
 		pendingByCustomerKey: new Map(),
 		queue: [],
 		draining: false,
+		storeWaiters: new Set(),
 		drainScheduled: false,
 		recoveryError: null,
 	};

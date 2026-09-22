@@ -22,6 +22,9 @@ import type { MeteringRecord } from "@autumn/kafka";
 import { initialize } from "../../../../src/processor/commands/initialize.js";
 import { track } from "../../../../src/processor/commands/track.js";
 import { createAcceptedCommands } from "../../../../src/processor/common/acceptedCommands.js";
+import { createPartitionProcessor } from "../../../../src/processor/createPartitionProcessor.js";
+import { completeCommand } from "../../../../src/processor/execution/completeCommand.js";
+import { executeCommand } from "../../../../src/processor/execution/executeCommand.js";
 import { createSubjectHydrator } from "../../../../src/processor/subject/createSubjectHydrator.js";
 import { SubjectNotFoundError } from "../../../../src/processor/subject/subjectErrors.js";
 import type { PartitionProcessorScope } from "../../../../src/processor/types/partitionProcessor.js";
@@ -250,7 +253,11 @@ const defaultReceiptPolicy = {
 };
 
 type TestWriter = {
-	submitTrack(params: { command: TrackCommand }): Promise<TrackReply>;
+	completeCommand(params: { source: { commandOffset: string } }): Promise<void>;
+	submitTrack(params: {
+		command: TrackCommand;
+		source?: { commandOffset: string };
+	}): Promise<TrackReply>;
 	submitInitialization(params: {
 		initialization: InitializeRequest;
 	}): Promise<InitializeReply>;
@@ -304,7 +311,15 @@ const createPartitionTrackWriter = ({
 		accepted: createAcceptedCommands(),
 	};
 	return {
-		submitTrack: ({ command }) => track({ scope, command }),
+		completeCommand: ({ source }) => completeCommand({ scope, source }),
+		submitTrack: ({ command, source }) =>
+			source
+				? executeCommand({
+						scope,
+						source,
+						run: (scope) => track({ scope, command }),
+					})
+				: track({ scope, command }),
 		submitInitialization: ({ initialization }) =>
 			initialize({ scope, request: initialization }),
 	};
@@ -327,6 +342,144 @@ function decideForTest({
 }
 
 describe("partition writer", () => {
+	test("queued execution stamps only its own mutation while concurrent HTTP tracks share the writer", async () => {
+		const fixture = createFixture();
+		const gate = Promise.withResolvers<void>();
+		let applied = false;
+		try {
+			const appender = new RecordingCommittedAppender();
+			const processor = createPartitionProcessor({
+				ctx: {
+					stateStore: {
+						...fixture.store,
+						applyDurableMutations: async (params) => {
+							await gate.promise;
+							const result = fixture.store.applyDurableMutations(params);
+							applied = true;
+							return result;
+						},
+					},
+					appender,
+					db: createSyntheticWorkerDb(),
+					catalogCache: createTestCatalogCache(),
+					receiptPolicy: defaultReceiptPolicy,
+					recentCommands: createRecentCommands({
+						windowMs: 600_000,
+						now: () => 0,
+					}),
+					assertCanRead: () => {},
+				},
+				config: { topic, partition, writerLimits: defaultLimits },
+			});
+			const queued = processor.execute({
+				source: { commandOffset: "41" },
+				run: (processor) =>
+					processor.track({ command: createCommand({ commandId: "queued" }) }),
+			});
+			const http = processor.track({
+				command: createCommand({ commandId: "http" }),
+			});
+			const replies = await Promise.all([queued, http]);
+			expect(applied).toBe(false);
+			expect(
+				replies.map((reply) => reply.state.customerEntitlements[0]?.balance),
+			).toEqual([5, 0]);
+			expect(
+				appender.batches
+					.flat()
+					.map((record) => ({ id: record.id, source: record.source })),
+			).toEqual([
+				{ id: "queued", source: { commandOffset: "41" } },
+				{ id: "http", source: undefined },
+			]);
+			gate.resolve();
+			await waitForBatch();
+			expect(applied).toBe(true);
+		} finally {
+			gate.resolve();
+			await waitForBatch();
+			closeFixture(fixture);
+		}
+	});
+
+	test("command completion waits for a log-acknowledged write to reach the store, then fences before bookmarking", async () => {
+		const fixture = createFixture();
+		const gate = Promise.withResolvers<void>();
+		const events: string[] = [];
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				limits: defaultLimits,
+				appender: {
+					appendCommitted: (params) => appender.appendCommitted(params),
+					commitCommandOffset: async () => {
+						events.push("fenced");
+					},
+				},
+				stateStore: {
+					...fixture.store,
+					applyDurableMutations: async (params) => {
+						await gate.promise;
+						const result = fixture.store.applyDurableMutations(params);
+						events.push("applied");
+						return result;
+					},
+					advanceCommandNextOffset: ({ commandNextOffset }) => {
+						events.push(`bookmark:${commandNextOffset}`);
+					},
+				},
+			});
+			const command = createCommand({ commandId: "http_in_flight" });
+			const sent = writer.submitTrack({ command });
+			const completion = writer.submitTrack({
+				command,
+				source: { commandOffset: "41" },
+			});
+			await sent;
+			await waitForBatch();
+			expect(events).toEqual([]);
+			gate.resolve();
+			await completion;
+			expect(events).toEqual(["applied", "fenced", "bookmark:42"]);
+		} finally {
+			gate.resolve();
+			closeFixture(fixture);
+		}
+	});
+
+	test("a failed command offset transaction never advances the Postgres bookmark", async () => {
+		const fixture = createFixture();
+		const bookmarks: bigint[] = [];
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				limits: defaultLimits,
+				appender: {
+					appendCommitted: (params) => appender.appendCommitted(params),
+					commitCommandOffset: async () => {
+						throw new Error("producer fenced");
+					},
+				},
+				stateStore: {
+					...fixture.store,
+					advanceCommandNextOffset: ({ commandNextOffset }) => {
+						bookmarks.push(commandNextOffset);
+					},
+				},
+			});
+			await expect(
+				writer.completeCommand({ source: { commandOffset: "41" } }),
+			).rejects.toThrow("producer fenced");
+			expect(bookmarks).toEqual([]);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
 	test("stamps receipt expiry from worker policy", async () => {
 		const fixture = createFixture();
 		try {
@@ -944,6 +1097,8 @@ describe("partition writer", () => {
 			const appender = new RecordingCommittedAppender();
 			const stateStore = {
 				baseline: "log" as const,
+				readCommandNextOffset: fixture.store.readCommandNextOffset,
+				advanceCommandNextOffset: fixture.store.advanceCommandNextOffset,
 				readState: fixture.store.readState.bind(fixture.store),
 				readOwnState: fixture.store.readOwnState.bind(fixture.store),
 				readReceipt: fixture.store.readReceipt.bind(fixture.store),

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseTrackCommand, type TrackCommand } from "@autumn/balance-engine";
 import {
 	type BalanceWorkerClient,
@@ -34,6 +35,7 @@ const OWNERSHIP_POLL_ATTEMPTS = 200;
 const OWNERSHIP_POLL_INTERVAL_MS = 50;
 
 type Harness = {
+	admin: ReturnType<Kafka["admin"]>;
 	deployment: string;
 	topics: { metering: string; ownership: string; commands: string };
 	routing: OwnershipConsumer;
@@ -134,14 +136,16 @@ async function createHarness(): Promise<Harness> {
 		});
 		await admin.disconnect();
 	}
-	return { deployment, topics, routing, client, stop };
+	return { deployment, topics, routing, client, stop, admin };
 }
 
 /** A whole worker on the postgres backend: Kafka log, Postgres rows and bookmark, no SQLite. */
 async function startWorker({
 	harness,
+	subprocess = false,
 }: {
 	harness: Harness;
+	subprocess?: boolean;
 }): Promise<RunningWorker> {
 	if (!databaseUrl) throw new Error("No worktree DATABASE_URL");
 	const directory = mkdtempSync(join(tmpdir(), "pg-commit-"));
@@ -162,21 +166,43 @@ async function startWorker({
 		BALANCE_WORKER_PARTITION_COUNT: PARTITION_COUNT,
 	};
 	const errors: unknown[] = [];
-	const worker = await createBalanceWorker({
-		ctx: {
-			onError: ({ cause }) => {
-				errors.push(cause);
-				runtimeErrors.push(cause);
-			},
-			logger: {
-				debug: ignoreLog,
-				info: ignoreLog,
-				warn: (...args: unknown[]) => workerLogs.push(["warn", ...args]),
-				error: (...args: unknown[]) => workerLogs.push(["error", ...args]),
-			},
-		},
-		config: { env, stateBackend: "postgres" },
-	});
+	const child = subprocess
+		? Bun.spawn(
+				[
+					"bun",
+					"--config=./bunfig.toml",
+					fileURLToPath(new URL("./commandWorker.ts", import.meta.url)),
+				],
+				{
+					env: { ...process.env, BALANCE_WORKER_TEST_ENV: JSON.stringify(env) },
+					stdout: "inherit",
+					stderr: "inherit",
+				},
+			)
+		: null;
+	const worker = child
+		? {
+				start: async () => {},
+				stop: async () => {
+					child.kill("SIGKILL");
+					await child.exited;
+				},
+			}
+		: await createBalanceWorker({
+				ctx: {
+					onError: ({ cause }) => {
+						errors.push(cause);
+						runtimeErrors.push(cause);
+					},
+					logger: {
+						debug: ignoreLog,
+						info: ignoreLog,
+						warn: (...args: unknown[]) => workerLogs.push(["warn", ...args]),
+						error: (...args: unknown[]) => workerLogs.push(["error", ...args]),
+					},
+				},
+				config: { env, stateBackend: "postgres" },
+			});
 	await worker.start();
 	let owned = false;
 	for (
@@ -272,6 +298,46 @@ async function waitForBalance({
 	return seen;
 }
 
+async function waitForCommandGroupOffset({
+	harness,
+	nextOffset,
+}: {
+	harness: Harness;
+	nextOffset: bigint;
+}): Promise<void> {
+	for (let attempt = 0; attempt < 200; attempt++) {
+		const offsets = await harness.admin.fetchOffsets({
+			groupId: harness.deployment,
+			topics: [harness.topics.commands],
+		});
+		const current = offsets[0]?.partitions[0]?.offset;
+		if (current && BigInt(current) >= nextOffset) return;
+		await Bun.sleep(50);
+	}
+	throw new Error(`Command group did not reach ${nextOffset}`);
+}
+
+async function waitForCommandBookmark({
+	customer,
+	harness,
+	nextOffset,
+}: {
+	customer: SeededCustomer;
+	harness: Harness;
+	nextOffset: bigint;
+}): Promise<void> {
+	let current: bigint | null = null;
+	for (let attempt = 0; attempt < 200; attempt++) {
+		current = await customer.readCommandNextOffset({
+			topic: harness.topics.metering,
+			partition: PARTITION,
+		});
+		if (current === nextOffset) return;
+		await Bun.sleep(50);
+	}
+	expect(current).toBe(nextOffset);
+}
+
 const balanceOf = (
 	reply: { state: { customerEntitlements: { id: string; balance: number }[] } },
 	id: string,
@@ -357,6 +423,116 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			await Bun.sleep(1_000);
 			expect(await customer.readBalance()).toBe(85);
 		}, 60_000);
+
+		test("a crash after the command's Kafka commit replays both bookmarks before commands resume", async () => {
+			const isolated = await createHarness();
+			const crashCustomer = await seedCustomer({ postgres, balance: 100 });
+			let running: RunningWorker | undefined;
+			const locked = Promise.withResolvers<void>();
+			const unlock = Promise.withResolvers<void>();
+			let holding: Promise<unknown> | undefined;
+			try {
+				running = await startWorker({ harness: isolated, subprocess: true });
+				holding = postgres.db.transaction(async (transaction) => {
+					await transaction.execute(
+						sql`SELECT next_offset FROM partition_progress WHERE topic = ${isolated.topics.metering} AND partition_id = ${PARTITION} FOR UPDATE`,
+					);
+					locked.resolve();
+					await unlock.promise;
+				});
+				await Promise.race([locked.promise, holding]);
+				const command = trackCommand({
+					customer: crashCustomer,
+					commandId: "crash_command",
+					value: 5,
+				});
+				await isolated.client.queue.track({ commands: [command] });
+				await waitForCommandGroupOffset({ harness: isolated, nextOffset: 1n });
+				expect(await crashCustomer.readBalance()).toBe(100);
+				expect(
+					await crashCustomer.readCommandNextOffset({
+						topic: isolated.topics.metering,
+						partition: PARTITION,
+					}),
+				).toBeNull();
+				await running.stop();
+				running = undefined;
+				unlock.resolve();
+				await holding;
+
+				running = await startWorker({ harness: isolated });
+				expect(
+					await waitForBalance({ customer: crashCustomer, balance: 95 }),
+				).toBe(95);
+				expect(
+					await crashCustomer.readCommandNextOffset({
+						topic: isolated.topics.metering,
+						partition: PARTITION,
+					}),
+				).toBe(1n);
+
+				// A duplicate at a different offset and an unreadable record both finish without another deduction.
+				await isolated.client.queue.track({ commands: [command] });
+				await waitForCommandBookmark({
+					customer: crashCustomer,
+					harness: isolated,
+					nextOffset: 2n,
+				});
+				const sender = new Kafka({
+					clientId: "command-poison",
+					brokers,
+					logLevel: logLevel.NOTHING,
+				}).producer();
+				await sender.connect();
+				try {
+					await sender.send({
+						topic: isolated.topics.commands,
+						messages: [{ partition: PARTITION, value: "invalid" }],
+					});
+				} finally {
+					await sender.disconnect();
+				}
+				await waitForCommandBookmark({
+					customer: crashCustomer,
+					harness: isolated,
+					nextOffset: 3n,
+				});
+				expect(await crashCustomer.readBalance()).toBe(95);
+				await running.stop();
+				running = undefined;
+
+				// The group is behind Postgres: takeover still seeks past the three completed commands.
+				await isolated.admin.setOffsets({
+					groupId: isolated.deployment,
+					topic: isolated.topics.commands,
+					partitions: [{ partition: PARTITION, offset: "0" }],
+				});
+				running = await startWorker({ harness: isolated });
+				await isolated.client.queue.track({
+					commands: [
+						trackCommand({
+							customer: crashCustomer,
+							commandId: "after_restart",
+							value: 5,
+						}),
+					],
+				});
+				expect(
+					await waitForBalance({ customer: crashCustomer, balance: 90 }),
+				).toBe(90);
+				await waitForCommandBookmark({
+					customer: crashCustomer,
+					harness: isolated,
+					nextOffset: 4n,
+				});
+			} finally {
+				unlock.resolve();
+				await holding;
+				await running?.stop();
+				await isolated.stop();
+				await crashCustomer.cleanup();
+			}
+		}, 90_000);
 
 		test("a row deleted underneath a decision refuses that track alone: 409, bookmark past it, the next track re-hydrates, a restart replays it as settled", async () => {
 			const worker = workers.at(-1) ?? (await startWorker({ harness }));

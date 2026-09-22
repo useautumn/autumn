@@ -57,6 +57,7 @@ export type {
 	MutationAfter,
 	MutationReceipt,
 	MutationRecord,
+	MutationSource,
 } from "./models/mutation/mutationRecord.js";
 export type {
 	CustomerEntitlementIncrement,

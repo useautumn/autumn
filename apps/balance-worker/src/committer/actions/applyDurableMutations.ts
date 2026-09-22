@@ -80,6 +80,12 @@ export const applyDurableMutations = async ({
 		partition,
 		nextOffset: outcome.nextOffset,
 	});
+	if (outcome.commandNextOffset !== undefined)
+		ctx.progress.setCommandNextOffset({
+			topic,
+			partition,
+			commandNextOffset: outcome.commandNextOffset,
+		});
 	// Everything before the failed record is in Postgres and the bookmark says so; the rest waits for recovery.
 	const failedId = outcome.failure?.record.mutation.id ?? null;
 	const rejectionById = new Map(

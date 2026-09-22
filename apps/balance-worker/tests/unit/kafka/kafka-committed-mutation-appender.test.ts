@@ -16,6 +16,7 @@ import {
 } from "./kafka-test-fixtures.js";
 
 type FakeProducerOptions = {
+	offsetError?: Error;
 	metadata?: RecordMetadata[];
 	transactionError?: Error;
 	sendError?: Error;
@@ -34,6 +35,7 @@ const createFakeProducer = ({
 		},
 	],
 	transactionError,
+	offsetError,
 	sendError,
 	commitError,
 	abortError,
@@ -51,6 +53,10 @@ const createFakeProducer = ({
 			records.push(record);
 			if (sendError) throw sendError;
 			return metadata;
+		},
+		sendOffsets: async (offsets) => {
+			lifecycle.push(`offset:${offsets.topics[0]?.partitions[0]?.offset}`);
+			if (offsetError) throw offsetError;
 		},
 		commit: async () => {
 			lifecycle.push("commit");
@@ -78,6 +84,51 @@ const waitForTurn = async (): Promise<void> => {
 };
 
 describe("Kafka committed track outcome appender", () => {
+	test("source offsets commit with the mutation, while offset-only completions use the same transaction fence", async () => {
+		const fake = createFakeProducer();
+		const appender = createMutationPublisher({
+			ctx: { producer: fake.producer },
+			config: { commandTopic: "commands", groupId: "workers" },
+		});
+		const mutation = {
+			...createMutation({ state: createState(), commandId: "queued" }),
+			source: { commandOffset: "41" },
+		};
+		await appender.appendCommitted({ topic, partition, outcomes: [mutation] });
+		expect(fake.lifecycle).toEqual([
+			"transaction",
+			"send",
+			"offset:42",
+			"commit",
+		]);
+		fake.lifecycle.length = 0;
+		await appender.commitCommandOffset({ topic, partition, nextOffset: 43n });
+		expect(fake.lifecycle).toEqual(["transaction", "offset:43", "commit"]);
+	});
+
+	test("an offset send failure aborts the mutation transaction", async () => {
+		const fake = createFakeProducer({
+			offsetError: new Error("offset refused"),
+		});
+		const appender = createMutationPublisher({
+			ctx: { producer: fake.producer },
+			config: { commandTopic: "commands", groupId: "workers" },
+		});
+		const mutation = {
+			...createMutation({ state: createState(), commandId: "queued" }),
+			source: { commandOffset: "41" },
+		};
+		await expect(
+			appender.appendCommitted({ topic, partition, outcomes: [mutation] }),
+		).rejects.toBeInstanceOf(MutationBatchNotCommittedError);
+		expect(fake.lifecycle).toEqual([
+			"transaction",
+			"send",
+			"offset:42",
+			"abort",
+		]);
+	});
+
 	test("commits one ordered partition batch and returns its first offset", async () => {
 		const firstOutcome = createMutation({
 			state: createState(),

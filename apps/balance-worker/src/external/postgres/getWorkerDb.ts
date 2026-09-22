@@ -6,7 +6,7 @@ import {
 	getSubjectRows,
 	insertPartitionProgress,
 	type PostgresClient,
-	readNextOffset,
+	readPartitionProgress,
 } from "@autumn/postgres";
 import type { CommitterDb } from "../../types/committerDb.js";
 import type { WorkerDb } from "../../types/workerDb.js";
@@ -57,8 +57,8 @@ export const createCommitterDb = ({
 }: {
 	ctx: { postgres: Pick<PostgresClient, "db"> };
 }): CommitterDb => ({
-	readNextOffset: (params) =>
-		readNextOffset({ ctx: { db: ctx.postgres.db }, ...params }),
+	readPartitionProgress: (params) =>
+		readPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
 	insertPartitionProgress: (params) =>
 		insertPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
 	flush: (request) =>

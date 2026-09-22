@@ -5,6 +5,7 @@ import {
 } from "../client/kafkaErrors.js";
 import { metadataToBaseOffset } from "../client/kafkaOffsetUtils.js";
 import type {
+	KafkaOffsetCommit,
 	KafkaProducer,
 	KafkaTransaction,
 } from "../client/types/kafkaClient.js";
@@ -34,8 +35,10 @@ export async function sendTransactionalBatch({
 	topic,
 	partition,
 	messages,
+	offsets,
 }: {
 	producer: KafkaProducer;
+	offsets?: KafkaOffsetCommit;
 	topic: string;
 	partition: number;
 	messages: ReadonlyArray<{ key: Buffer; value: Buffer }>;
@@ -48,30 +51,59 @@ export async function sendTransactionalBatch({
 		throw new RangeError("Kafka batch cannot be empty");
 	}
 
-	let transaction: KafkaTransaction;
-	try {
-		transaction = await producer.transaction();
-	} catch (cause) {
-		throw new KafkaBatchNotCommittedError({ cause });
-	}
-
-	let baseOffset: bigint;
-	try {
-		const partitionMessages = [];
-		for (const message of messages) {
-			partitionMessages.push({ ...message, partition });
-		}
+	async function send(
+		transaction: KafkaTransaction,
+	): Promise<{ baseOffset: bigint }> {
+		const partitionMessages = messages.map((message) => ({
+			...message,
+			partition,
+		}));
 		const metadata = await transaction.send({
 			topic,
 			messages: partitionMessages,
 			acks: -1,
 			compression: CompressionTypes.GZIP,
 		});
-		baseOffset = metadataToBaseOffset({ metadata, topic, partition });
+		const baseOffset = metadataToBaseOffset({ metadata, topic, partition });
+		if (offsets) await transaction.sendOffsets(offsets);
+		return { baseOffset };
+	}
+	return runTransaction({ producer, send });
+}
+
+/** An offset-only transaction still uses the partition's fenced producer session. */
+export async function sendTransactionalOffsets({
+	producer,
+	offsets,
+}: {
+	producer: KafkaProducer;
+	offsets: KafkaOffsetCommit;
+}): Promise<void> {
+	return runTransaction({
+		producer,
+		send: (transaction) => transaction.sendOffsets(offsets),
+	});
+}
+
+async function runTransaction<Result>({
+	producer,
+	send,
+}: {
+	producer: KafkaProducer;
+	send(transaction: KafkaTransaction): Promise<Result>;
+}): Promise<Result> {
+	let transaction: KafkaTransaction;
+	try {
+		transaction = await producer.transaction();
+	} catch (cause) {
+		throw new KafkaBatchNotCommittedError({ cause });
+	}
+	let result: Result;
+	try {
+		result = await send(transaction);
 	} catch (cause) {
 		return abortTransaction({ transaction, cause });
 	}
-
 	try {
 		await transaction.commit();
 	} catch (cause) {
@@ -80,6 +112,5 @@ export async function sendTransactionalBatch({
 			cause,
 		});
 	}
-
-	return { baseOffset };
+	return result;
 }

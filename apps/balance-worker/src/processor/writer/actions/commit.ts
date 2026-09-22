@@ -52,6 +52,8 @@ async function commitOutcomes({
 		}
 	} finally {
 		state.draining = false;
+		for (const resolve of state.storeWaiters) resolve();
+		state.storeWaiters.clear();
 	}
 }
 
@@ -260,4 +262,16 @@ function assertPersistedMutation({
 	if (!receipt || !isDeepStrictEqual(receipt, mutation)) {
 		throw new Error(`Applied position has no matching receipt: ${mutation.id}`);
 	}
+}
+
+/** Log replies can precede store apply; command completion must not advance past that work. */
+export async function waitForStore({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): Promise<void> {
+	const { state } = scope;
+	if (state.draining || state.queue.length > 0)
+		await new Promise<void>((resolve) => state.storeWaiters.add(resolve));
+	if (state.recoveryError) throw state.recoveryError;
 }

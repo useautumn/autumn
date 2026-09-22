@@ -4,6 +4,7 @@ import type {
 	EvictCommand,
 	FinalizeCommand,
 	InitializeRequest,
+	MutationSource,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import { check as checkPartition } from "./commands/check.js";
@@ -17,6 +18,7 @@ import {
 	createAcceptedCommands,
 	settleAcceptedCommands,
 } from "./common/acceptedCommands.js";
+import { executeCommand } from "./execution/executeCommand.js";
 import { createSubjectHydrator } from "./subject/createSubjectHydrator.js";
 import type {
 	PartitionProcessor,
@@ -60,6 +62,14 @@ export function createPartitionProcessor({
 		accepted: createAcceptedCommands(),
 	};
 
+	return createProcessor({ scope });
+}
+
+function createProcessor({
+	scope,
+}: {
+	scope: PartitionProcessorScope;
+}): PartitionProcessor {
 	function track({ command }: { command: TrackCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
@@ -110,7 +120,26 @@ export function createPartitionProcessor({
 		});
 	}
 
+	function execute<Decision>({
+		source,
+		run,
+	}: {
+		source: MutationSource;
+		run: (processor: PartitionProcessor) => Promise<Decision>;
+	}) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: executeCommand({
+				scope,
+				source,
+				run: (executionScope) =>
+					run(createProcessor({ scope: executionScope })),
+			}),
+		});
+	}
+
 	return {
+		execute,
 		track,
 		check,
 		initialize,

@@ -31,6 +31,10 @@ export type SeededCustomer = {
 		topic: string;
 		partition: number;
 	}): Promise<bigint | null>;
+	readCommandNextOffset(params: {
+		topic: string;
+		partition: number;
+	}): Promise<bigint | null>;
 	/** Removes the grant row as a legacy writer would; `restoreGrant` puts it back with the given balance. */
 	deleteGrant(): Promise<void>;
 	restoreGrant(params: { balance: number }): Promise<void>;
@@ -145,18 +149,31 @@ export async function seedCustomer({
 		return Number(rows[0]?.balance);
 	}
 
-	async function readNextOffset({
+	async function readProgressColumn({
+		column,
 		topic,
 		partition,
 	}: {
+		column: "next_offset" | "command_next_offset";
 		topic: string;
 		partition: number;
 	}): Promise<bigint | null> {
 		const rows = await db.execute(
-			sql`SELECT next_offset FROM partition_progress WHERE topic = ${topic} AND partition_id = ${partition}`,
+			sql`SELECT ${sql.identifier(column)} AS value FROM partition_progress WHERE topic = ${topic} AND partition_id = ${partition}`,
 		);
-		const value = rows[0]?.next_offset;
+		const value = rows[0]?.value;
 		return value === undefined || value === null ? null : BigInt(String(value));
+	}
+
+	function readNextOffset(position: { topic: string; partition: number }) {
+		return readProgressColumn({ column: "next_offset", ...position });
+	}
+
+	function readCommandNextOffset(position: {
+		topic: string;
+		partition: number;
+	}) {
+		return readProgressColumn({ column: "command_next_offset", ...position });
 	}
 
 	async function cleanup(): Promise<void> {
@@ -187,6 +204,7 @@ export async function seedCustomer({
 		balance,
 		readBalance,
 		readNextOffset,
+		readCommandNextOffset,
 		deleteGrant,
 		restoreGrant,
 		cleanup,

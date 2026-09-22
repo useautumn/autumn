@@ -99,6 +99,7 @@ import {
 	ownedPartitionHealthOf,
 } from "../../../src/health/ownedPartitionHealth.js";
 
+import { createWorkerPartitions } from "../../../src/init/construction/createWorkerPartitions.js";
 import { KafkaPartitionInvariantError } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
 import { OwnedPartitionRecoveryRequiredError } from "../../../src/runtime/runtimeErrors.js";
@@ -107,6 +108,7 @@ import {
 	closeStoreFixture,
 	createKafkaOwnedPartitionGroup,
 	createStoreFixture,
+	createTestRuntimeResources,
 	type KafkaOwnedPartitionGroupConsumerPort,
 	type KafkaPartitionRuntimeFactory,
 	topic,
@@ -1240,3 +1242,64 @@ test(
 	"partition ownership, construction and replay use named functions",
 	ownershipUsesNamedFunctions,
 );
+
+test("admission seeks the command bookmark before resuming, even when no batch arrives at the group offset", async () => {
+	const fixture = createStoreFixture();
+	const consumer = createFakeGroupConsumer();
+	const events: string[] = [];
+	consumer.seek = ({ topic: soughtTopic, offset }) => {
+		events.push(`seek:${soughtTopic}:${offset}`);
+	};
+	consumer.resume = (topics) => {
+		for (const entry of topics) events.push(`resume:${entry.topic}`);
+	};
+	const group = createWorkerPartitions({
+		ctx: {
+			consumer,
+			partitionOffsets: {
+				connect: async () => {},
+				disconnect: async () => {},
+				fetchTopicOffsets: async () => [
+					{ partition: 0, offset: "10", low: "0", high: "10" },
+				],
+			},
+			stateStore: { ...fixture.store, readCommandNextOffset: () => 7n },
+			createRuntime: () =>
+				createTestRuntimeResources({
+					runtime: {
+						start: async () => {},
+						stop: async () => {},
+						getHealth: () =>
+							ownedPartitionHealthOf({
+								topic,
+								partition: 0,
+								status: "ready",
+								localNextOffset: 10n,
+								consumedNextOffset: 10n,
+								highWatermark: 10n,
+								failureReason: null,
+							}),
+					},
+				}),
+			onError: ({ cause }) => {
+				throw cause;
+			},
+			onUnhealthyPartition: () => {},
+		},
+		config: {
+			topic,
+			commandTopic: "commands",
+			partitionsConsumedConcurrently: 1,
+			healthRefreshIntervalMs: 60_000,
+		},
+	});
+	try {
+		await group.start();
+		consumer.emitGroupJoin([0]);
+		await waitFor(() => events.includes("resume:commands"));
+		expect(events).toEqual(["seek:commands:7", "resume:commands"]);
+	} finally {
+		await group.stop();
+		closeStoreFixture(fixture);
+	}
+});

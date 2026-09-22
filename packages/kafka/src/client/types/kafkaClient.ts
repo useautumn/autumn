@@ -15,7 +15,10 @@ export type KafkaTransportConfig = Omit<
 	| "retry"
 >;
 
-export type KafkaTransaction = Pick<Transaction, "send" | "commit" | "abort">;
+export type KafkaTransaction = Pick<
+	Transaction,
+	"send" | "sendOffsets" | "commit" | "abort"
+>;
 
 /** A plain producer: sends outside any transaction. */
 export type KafkaSender = Pick<Producer, "send">;
@@ -32,3 +35,5 @@ export type KafkaProducerClient = KafkaProducer & {
 export type KafkaProducerFactory = {
 	producer(config: ProducerConfig): KafkaProducerClient;
 };
+
+export type KafkaOffsetCommit = Parameters<Transaction["sendOffsets"]>[0];

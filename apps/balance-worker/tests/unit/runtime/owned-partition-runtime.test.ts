@@ -202,6 +202,7 @@ const createFakeProducer = ({
 						},
 					] satisfies RecordMetadata[];
 				},
+				sendOffsets: async () => {},
 				commit: async () => {
 					lifecycle.push("producer:commit");
 					await appendCommitGate;

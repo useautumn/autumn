@@ -323,6 +323,7 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 							},
 						];
 					},
+					sendOffsets: async () => {},
 					commit: async () => {
 						events.push("commit");
 						if (commitFailure) throw commitFailure;

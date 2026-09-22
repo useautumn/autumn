@@ -84,6 +84,7 @@ describe("Kafka owned partition runtime factory", () => {
 						send: async () => [
 							{ topicName: topic, partition: 0, errorCode: 0, baseOffset: "0" },
 						],
+						sendOffsets: async () => {},
 						commit: async () => {
 							commitStarted.resolve();
 							await releaseCommit.promise;

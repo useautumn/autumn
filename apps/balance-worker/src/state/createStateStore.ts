@@ -66,6 +66,10 @@ export const createStateStore = ({
 		readReceipt: ({ identity, mutationId }) =>
 			readReceipt({ ctx, identity, mutationId })?.mutation ?? null,
 		readNextOffset: (params) => readNextOffset({ ctx, ...params }),
+		readCommandNextOffset: () => null,
+		advanceCommandNextOffset: () => {
+			throw new Error("Command bookmarks require the Postgres backend");
+		},
 		applyDurableMutations: ({ records }) =>
 			applyDurableMutations({ ctx, records }),
 		close: () => sqliteDb.close(true),

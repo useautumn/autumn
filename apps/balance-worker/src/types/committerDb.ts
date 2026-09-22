@@ -1,10 +1,16 @@
-import type { FlushRequest, FlushResult } from "@autumn/postgres";
+import type {
+	FlushRequest,
+	FlushResult,
+	PartitionProgressRow,
+} from "@autumn/postgres";
 
 type PartitionPosition = { topic: string; partition: number };
 
 /** Postgres as the committer writes it. Tests stand this in. */
 export type CommitterDb = {
-	readNextOffset(params: PartitionPosition): Promise<bigint | null>;
+	readPartitionProgress(
+		params: PartitionPosition,
+	): Promise<PartitionProgressRow | null>;
 	insertPartitionProgress(
 		params: PartitionPosition & { nextOffset: bigint },
 	): Promise<void>;

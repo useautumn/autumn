@@ -126,14 +126,28 @@ const collectChanges = ({
 	return { changes, recordOf };
 };
 
+/** The command bookmark follows the last consumed command in the call; calls without one leave it where it is. */
+const commandNextOffsetOf = ({
+	call,
+}: {
+	call: FlushCall;
+}): bigint | undefined => {
+	for (let index = call.records.length - 1; index >= 0; index--) {
+		const source = call.records[index]?.mutation.source;
+		if (source) return BigInt(source.commandOffset) + 1n;
+	}
+	return call.commandNextOffset;
+};
+
 const bookmarkOf = ({ call }: { call: FlushCall }): FlushBookmark | null => {
 	const last = call.records.at(-1);
-	if (!last) return null;
+	if (!last && call.commandNextOffset === undefined) return null;
 	return {
 		topic: call.topic,
 		partition: call.partition,
 		expectedOffset: call.expectedOffset,
-		nextOffset: last.position.offset + 1n,
+		nextOffset: last ? last.position.offset + 1n : call.expectedOffset,
+		commandNextOffset: commandNextOffsetOf({ call }),
 	};
 };
 
@@ -151,6 +165,7 @@ export const runFlush = async ({
 		const bookmark = bookmarkOf({ call });
 		outcomes.set(call, {
 			nextOffset: bookmark?.nextOffset ?? call.expectedOffset,
+			commandNextOffset: bookmark?.commandNextOffset,
 		});
 		if (bookmark) bookmarks.push(bookmark);
 	}

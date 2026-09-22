@@ -138,7 +138,7 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 		async function commit(): Promise<void> {}
 		async function abort(): Promise<void> {}
 		async function transaction(): Promise<KafkaTransaction> {
-			return { send, commit, abort };
+			return { send, commit, abort, sendOffsets: async () => {} };
 		}
 
 		return {
@@ -409,7 +409,7 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 		}
 		async function abort(): Promise<void> {}
 		async function transaction(): Promise<KafkaTransaction> {
-			return { send, commit, abort };
+			return { send, commit, abort, sendOffsets: async () => {} };
 		}
 		function readStats() {
 			return { offsetReads, disconnects, groupConfig };

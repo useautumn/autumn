@@ -6,5 +6,7 @@ export type CommandConsumerContext = {
 	findOwnedRuntime(position: {
 		partition: number;
 	}): PartitionRuntimePort | undefined;
+	/** How far the partition's commands are decided, from Postgres; null before the bookmark exists. */
+	readCommandNextOffset(position: { partition: number }): bigint | null;
 	logger?: Pick<AutumnLogger, "info" | "warn">;
 };

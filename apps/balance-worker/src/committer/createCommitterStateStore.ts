@@ -1,11 +1,16 @@
 import type { CommitterDb } from "../types/committerDb.js";
 import { applyDurableMutations } from "./actions/applyDurableMutations.js";
 import {
+	advanceCommandNextOffset as advanceCommandProgress,
 	initializePartition,
 	loadProgress,
 } from "./actions/partitionProgress.js";
 import { createProgressMirror } from "./repos/progressMirror.js";
-import type { Committer, CommitterStateStore } from "./types/committer.js";
+import type {
+	Committer,
+	CommitterStateStore,
+	PartitionPosition,
+} from "./types/committer.js";
 import type { CommitterStateStoreContext } from "./types/committerStateStoreContext.js";
 
 /** Reads answer null: the writer's map holds every subject this backend knows. */
@@ -14,38 +19,80 @@ export const createCommitterStateStore = ({
 }: {
 	ctx: {
 		committer: Committer;
-		db: Pick<CommitterDb, "readNextOffset" | "insertPartitionProgress">;
+		db: Pick<CommitterDb, "readPartitionProgress" | "insertPartitionProgress">;
 	};
 }): CommitterStateStore => {
 	const ctx: CommitterStateStoreContext = {
 		...dependencies,
 		progress: createProgressMirror(),
 	};
-	// The writer and the follower both apply; one lane per partition keeps the bookmark honest.
+	// Replay, writer applies and command-only bookmarks share one lane per partition.
 	const laneByPartition = new Map<string, Promise<unknown>>();
+	function runInLane<Result>({
+		position,
+		run,
+	}: {
+		position: PartitionPosition;
+		run(): Promise<Result>;
+	}): Promise<Result> {
+		const key = `${position.topic}[${position.partition}]`;
+		const previous = laneByPartition.get(key) ?? Promise.resolve();
+		const operation = previous.catch(() => undefined).then(run);
+		laneByPartition.set(key, operation);
+		return operation;
+	}
+
 	const applyInLane: CommitterStateStore["applyDurableMutations"] = ({
 		records,
 	}) => {
 		const first = records[0];
 		if (!first) return Promise.resolve([]);
-		const key = `${first.position.topic}[${first.position.partition}]`;
-		const previous = laneByPartition.get(key) ?? Promise.resolve();
-		const run = previous
-			.catch(() => undefined)
-			.then(() => applyDurableMutations({ ctx, records }));
-		laneByPartition.set(key, run);
-		return run;
+		return runInLane({
+			position: first.position,
+			run: () => applyDurableMutations({ ctx, records }),
+		});
 	};
+
+	function advanceCommandNextOffset(
+		params: Parameters<CommitterStateStore["advanceCommandNextOffset"]>[0],
+	): Promise<void> {
+		return runInLane({
+			position: params,
+			run: () => advanceCommandProgress({ ctx, ...params }),
+		});
+	}
+	function loadPartitionProgress(params: PartitionPosition) {
+		return loadProgress({ ctx, ...params });
+	}
+	function initialize(
+		params: Parameters<CommitterStateStore["initializePartition"]>[0],
+	) {
+		return initializePartition({ ctx, ...params });
+	}
+	function readNextOffset(params: PartitionPosition) {
+		return ctx.progress.readNextOffset(params);
+	}
+	function readCommandNextOffset(params: PartitionPosition) {
+		return ctx.progress.readCommandNextOffset(params);
+	}
+	function readAbsent(): null {
+		return null;
+	}
+	function close() {
+		ctx.committer.stop();
+	}
 
 	return {
 		baseline: "map",
-		loadProgress: (params) => loadProgress({ ctx, ...params }),
-		initializePartition: (params) => initializePartition({ ctx, ...params }),
-		readNextOffset: (params) => ctx.progress.readNextOffset(params),
-		readState: () => null,
-		readOwnState: () => null,
-		readReceipt: () => null,
+		advanceCommandNextOffset,
+		loadProgress: loadPartitionProgress,
+		initializePartition: initialize,
+		readNextOffset,
+		readCommandNextOffset,
+		readState: readAbsent,
+		readOwnState: readAbsent,
+		readReceipt: readAbsent,
 		applyDurableMutations: applyInLane,
-		close: () => ctx.committer.stop(),
+		close,
 	};
 };

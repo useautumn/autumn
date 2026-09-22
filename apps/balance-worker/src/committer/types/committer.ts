@@ -42,6 +42,8 @@ export type FlushRejection = { record: DurableMutationRecord; cause: Error };
 /** Where a call's records stopped landing. Without `failure`, every record before `nextOffset` is settled: landed, or rejected. */
 export type FlushOutcome = {
 	nextOffset: bigint;
+	/** Moved only when a record in the call came from the command topic. */
+	commandNextOffset?: bigint;
 	failure?: { record: DurableMutationRecord; cause: unknown };
 	rejections?: FlushRejection[];
 };
@@ -49,6 +51,7 @@ export type FlushOutcome = {
 /** One partition writer's batch, waiting for the flush that will carry it. */
 export type FlushCall = PartitionPosition & {
 	expectedOffset: bigint;
+	commandNextOffset?: bigint;
 	records: readonly DurableMutationRecord[];
 	rows: number;
 	settle: ReturnType<typeof Promise.withResolvers<FlushOutcome>>;
@@ -76,6 +79,7 @@ export type Committer = {
 	apply(
 		params: PartitionPosition & {
 			expectedOffset: bigint;
+			commandNextOffset?: bigint;
 			records: readonly DurableMutationRecord[];
 		},
 	): Promise<FlushOutcome>;

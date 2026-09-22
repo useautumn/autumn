@@ -42,7 +42,7 @@ function createGatedDb({
 	let gate = Promise.withResolvers<void>();
 	let open = false;
 	const db: CommitterDb = {
-		readNextOffset: async () => null,
+		readPartitionProgress: async () => null,
 		insertPartitionProgress: async () => {},
 		flush: async (request) => {
 			transactions.push({

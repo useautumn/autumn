@@ -61,7 +61,10 @@ export type PartitionConsumer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
 	pause(position: { topic: string; partitions: number[] }): void;
-	resume(position: { topic: string; partitions: number[] }): void;
+	resume(position: {
+		topic: string;
+		partitions: number[];
+	}): void | Promise<void>;
 };
 
 export type PartitionOffsets = {

@@ -59,6 +59,7 @@ export type PartitionRuntimeFactoryContext = {
 
 export type PartitionRuntimeFactoryConfig = {
 	deploymentEnvironment: string;
+	commands?: { commandTopic: string; groupId: string };
 	ownership: { topic: string; endpoint: string };
 	checkpointRestoreLimits: PartitionCheckpointRestoreLimits;
 	checkpointRetryPolicy: PartitionBootstrapRetryPolicy;

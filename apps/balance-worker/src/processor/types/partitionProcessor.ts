@@ -4,6 +4,7 @@ import type {
 	EvictCommand,
 	FinalizeCommand,
 	InitializeRequest,
+	MutationSource,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import type {
@@ -29,6 +30,10 @@ import type { ReceiptPolicy } from "./receiptPolicy.js";
 
 /** Processes one partition's accepted commands: track writes, check reads. */
 export type PartitionProcessor = {
+	execute<Decision>(params: {
+		source: MutationSource;
+		run: (processor: PartitionProcessor) => Promise<Decision>;
+	}): Promise<Decision>;
 	track(params: { command: TrackCommand }): Promise<TrackReply>;
 	check(params: { command: CheckCommand }): Promise<CheckReply>;
 	initialize(params: { request: InitializeRequest }): Promise<InitializeReply>;
@@ -43,7 +48,10 @@ export type PartitionProcessor = {
 
 export type PartitionProcessorDependencies = {
 	stateStore: PartitionWriterContext["stateStore"] &
-		Pick<StateStore, "baseline">;
+		Pick<
+			StateStore,
+			"baseline" | "readCommandNextOffset" | "advanceCommandNextOffset"
+		>;
 	catalogCache: CatalogCache;
 	db: WorkerDb;
 	appender: CommittedOutcomeAppender;

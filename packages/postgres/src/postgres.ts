@@ -25,7 +25,9 @@ export type {
 } from "./flush/types/flush.js";
 export {
 	insertPartitionProgress,
+	type PartitionProgressRow,
 	readNextOffset,
+	readPartitionProgress,
 } from "./meteringLog/repos/partitionProgress.js";
 export {
 	SubjectRowColumnNotCounterError,

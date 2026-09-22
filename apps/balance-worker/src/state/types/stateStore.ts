@@ -41,6 +41,17 @@ export type StateStore = {
 		mutationId: string;
 	}): MutationRecord | null;
 	readNextOffset(params: { topic: string; partition: number }): bigint | null;
+	/** How far the partition's queued commands are decided; null for a store that keeps no such bookmark. */
+	readCommandNextOffset(params: {
+		topic: string;
+		partition: number;
+	}): bigint | null;
+	/** Completes a consumed command without changing any balance rows. */
+	advanceCommandNextOffset(params: {
+		topic: string;
+		partition: number;
+		commandNextOffset: bigint;
+	}): void | Promise<void>;
 	/** Sync for a resident store, a Promise for one that commits elsewhere; callers await either. */
 	applyDurableMutations(params: {
 		records: readonly DurableMutationRecord[];

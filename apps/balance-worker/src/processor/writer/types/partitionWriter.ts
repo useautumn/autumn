@@ -17,6 +17,7 @@ import type {
 } from "./mutation.js";
 
 export type PartitionWriter = {
+	waitForStore(): Promise<void>;
 	/**
 	 * Synchronous: decides against the customer's freshest state and enqueues the
 	 * mutation before returning. `.committed` resolves after Kafka commit + SQLite apply.
@@ -35,6 +36,11 @@ export type PartitionWriter = {
 };
 
 export type CommittedOutcomeAppender = {
+	commitCommandOffset?(params: {
+		topic: string;
+		partition: number;
+		nextOffset: bigint;
+	}): Promise<void>;
 	/** Atomically commits all mutations contiguously and returns the first record's offset. */
 	appendCommitted(params: {
 		topic: string;
@@ -102,6 +108,7 @@ export type PartitionWriterState = {
 	pendingByCustomerKey: Map<string, Set<PendingMutation>>;
 	queue: PendingMutation[];
 	draining: boolean;
+	storeWaiters: Set<() => void>;
 	drainScheduled: boolean;
 	recoveryError: Error | null;
 };

@@ -144,6 +144,23 @@ describe("meteringTopic", () => {
 		).toEqual(mutation);
 	});
 
+	test("round-trips optional command sources and refuses invalid offsets", () => {
+		const mutation = {
+			...createMutation(),
+			source: { commandOffset: "9007199254740993" },
+		};
+		expect(
+			parseMeteringRecord(serializeMeteringRecord({ record: mutation })),
+		).toEqual(mutation);
+		for (const commandOffset of ["-1", "1.5", "not_an_offset"]) {
+			expect(() =>
+				serializeMeteringRecord({
+					record: { ...mutation, source: { commandOffset } },
+				}),
+			).toThrow(InvalidRecordError);
+		}
+	});
+
 	test("rejects an unsupported envelope version", () => {
 		const serialized = serializeMeteringRecord({ record: createMutation() });
 		const envelope = JSON.parse(serialized.value.toString("utf8"));

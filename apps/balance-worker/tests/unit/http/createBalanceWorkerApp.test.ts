@@ -103,6 +103,7 @@ const fixture = ({
 	const submitted: unknown[] = [];
 	const lookups: PartitionRoute[] = [];
 	const processor: PartitionProcessor = {
+		execute: ({ run }) => run(processor),
 		initialize: async () => {
 			throw new Error("Initialization is not configured in this fixture");
 		},

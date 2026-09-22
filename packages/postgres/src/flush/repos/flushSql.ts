@@ -20,12 +20,13 @@ export const flushSql = ({
 	);
 	const bookmarkRows = bookmarks.map(
 		(bookmark) =>
-			sql`(${bookmark.topic}, ${bookmark.partition}, ${bookmark.expectedOffset}, ${bookmark.nextOffset})`,
+			sql`(${bookmark.topic}, ${bookmark.partition}, ${bookmark.expectedOffset}, ${bookmark.nextOffset}, ${bookmark.commandNextOffset ?? null})`,
 	);
 	const bookmarkCte = sql`b AS (
 		UPDATE partition_progress p
-		SET next_offset = v.next_offset::bigint
-		FROM (VALUES ${sql.join(bookmarkRows, sql`, `)}) AS v(topic, partition_id, expected_offset, next_offset)
+		SET next_offset = v.next_offset::bigint,
+			command_next_offset = GREATEST(v.command_next_offset::bigint, p.command_next_offset)
+		FROM (VALUES ${sql.join(bookmarkRows, sql`, `)}) AS v(topic, partition_id, expected_offset, next_offset, command_next_offset)
 		WHERE p.topic = v.topic::text
 			AND p.partition_id = v.partition_id::integer
 			AND p.next_offset = v.expected_offset::bigint

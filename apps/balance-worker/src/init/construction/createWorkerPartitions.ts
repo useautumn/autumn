@@ -5,6 +5,7 @@ import {
 import {
 	createProgressTracker,
 	KafkaPartitionOffsetsNotFoundError,
+	readPartitionLogRange,
 	readTopicHighWatermarks,
 	subscribePartitionChanges,
 } from "@autumn/kafka";
@@ -46,8 +47,15 @@ export function createWorkerPartitions({
 	function findOwnedRuntime({ partition }: { partition: number }) {
 		return partitions.findOwnedRuntime({ partition });
 	}
+	// Both bookmarks sit on the metering topic's progress row.
+	function readCommandNextOffset({ partition }: { partition: number }) {
+		return ctx.stateStore.readCommandNextOffset({
+			topic: config.topic,
+			partition,
+		});
+	}
 	const commandHandler = createCommandRecordHandler({
-		ctx: { findOwnedRuntime, logger: ctx.logger },
+		ctx: { findOwnedRuntime, readCommandNextOffset, logger: ctx.logger },
 	});
 	const meteringConsumer = createMeteringConsumer({
 		ctx: {
@@ -103,6 +111,7 @@ export function createWorkerPartitions({
 		});
 	}
 
+	const commandResumeGeneration = new Map<number, number>();
 	function pause({
 		topic,
 		partitions,
@@ -110,16 +119,42 @@ export function createWorkerPartitions({
 		topic: string;
 		partitions: number[];
 	}): void {
+		if (topic === config.commandTopic) {
+			for (const partition of partitions)
+				commandResumeGeneration.set(
+					partition,
+					(commandResumeGeneration.get(partition) ?? 0) + 1,
+				);
+		}
 		ctx.consumer.pause([{ topic, partitions }]);
 	}
 
-	function resume({
+	async function resume({
 		topic,
 		partitions,
 	}: {
 		topic: string;
 		partitions: number[];
-	}): void {
+	}): Promise<void> {
+		if (topic === config.commandTopic) {
+			for (const partition of partitions) {
+				const generation = commandResumeGeneration.get(partition);
+				const range = await readPartitionLogRange({ ctx, topic, partition });
+				if (generation !== commandResumeGeneration.get(partition)) continue;
+				const nextOffset =
+					readCommandNextOffset({ partition }) ?? range.logStartOffset;
+				if (
+					nextOffset < range.logStartOffset ||
+					nextOffset > range.logEndOffset
+				)
+					throw new Error(
+						`Command bookmark outside retained log: ${topic}[${partition}] at ${nextOffset}`,
+					);
+				ctx.consumer.seek({ topic, partition, offset: nextOffset.toString() });
+				ctx.consumer.resume([{ topic, partitions: [partition] }]);
+			}
+			return;
+		}
 		ctx.consumer.resume([{ topic, partitions }]);
 	}
 
