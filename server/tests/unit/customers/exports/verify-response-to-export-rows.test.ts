@@ -6,7 +6,7 @@ import { createBillingVerifyStripeReader } from "@/internal/customers/exports/ve
 import { sweepStripeSubscriptions } from "@/internal/customers/exports/verify/sweepStripeSubscriptions.js";
 import {
 	isVerifyResponseClean,
-	verifyResponseToExportRows,
+	verifyResponseToExportRow,
 } from "@/internal/customers/exports/verify/verifyResponseToExportRows.js";
 
 const customer = {
@@ -52,55 +52,53 @@ const mismatchedResponse: VerifyResponse = {
 	],
 };
 
-describe("verifyResponseToExportRows", () => {
-	it("yields no rows for a verified customer", () => {
+const expectedRow = {
+	...customer,
+	stripe_subscription_ids: "sub_2",
+	severity: "error",
+	issues: "shared_stripe_customer, stale_subscription_link",
+	details:
+		"shared_stripe_customer: Shared Stripe customer, stale_subscription_link: Stale link",
+};
+
+describe("verifyResponseToExportRow", () => {
+	it("yields no row for a verified customer", () => {
 		expect(isVerifyResponseClean({ response: cleanResponse })).toBe(true);
 		expect(
-			verifyResponseToExportRows({ customer, response: cleanResponse }),
-		).toEqual([]);
+			verifyResponseToExportRow({ customer, response: cleanResponse }),
+		).toBeNull();
 	});
 
-	it("yields one row per mismatch, customer-level rows without a subscription", () => {
+	it("folds every mismatch into one row, listing only mismatched subscriptions", () => {
 		expect(isVerifyResponseClean({ response: mismatchedResponse })).toBe(false);
 		expect(
-			verifyResponseToExportRows({ customer, response: mismatchedResponse }),
-		).toEqual([
-			{
-				...customer,
-				stripe_subscription_id: null,
-				severity: "warning",
-				type: "shared_stripe_customer",
-				message: "Shared Stripe customer",
-			},
-			{
-				...customer,
-				stripe_subscription_id: "sub_2",
-				severity: "error",
-				type: "stale_subscription_link",
-				message: "Stale link",
-			},
-		]);
+			verifyResponseToExportRow({ customer, response: mismatchedResponse }),
+		).toEqual(expectedRow);
 	});
 
-	it("serializes rows under the fixed headers", async () => {
-		const stringifier = createBillingVerifyExportStringifier();
-		for (const row of verifyResponseToExportRows({
+	it("is a warning only when every mismatch is one", () => {
+		const row = verifyResponseToExportRow({
 			customer,
-			response: mismatchedResponse,
-		})) {
-			stringifier.write(row);
-		}
+			response: { ...mismatchedResponse, subscriptions: [] },
+		});
+		expect(row?.severity).toBe("warning");
+		expect(row?.stripe_subscription_ids).toBeNull();
+	});
+
+	it("serializes the row under the fixed headers", async () => {
+		const stringifier = createBillingVerifyExportStringifier();
+		stringifier.write(expectedRow);
 		stringifier.end();
 
 		let csv = "";
 		for await (const chunk of stringifier) csv += chunk;
-		const lines = csv.replace("﻿", "").trim().split("\r\n");
+		const lines = csv.replace("\uFEFF", "").trim().split("\r\n");
 
 		expect(lines[0]).toBe(
-			"Customer ID,Name,Email,Stripe Customer ID,Stripe Subscription ID,Severity,Issue,Details",
+			"Customer ID,Name,Email,Stripe Customer ID,Stripe Subscription IDs,Severity,Issues,Details",
 		);
-		expect(lines[2]).toBe(
-			"cus_1,Jane,jane@example.com,cus_stripe_1,sub_2,error,stale_subscription_link,Stale link",
+		expect(lines[1]).toBe(
+			'cus_1,Jane,jane@example.com,cus_stripe_1,sub_2,error,"shared_stripe_customer, stale_subscription_link","shared_stripe_customer: Shared Stripe customer, stale_subscription_link: Stale link"',
 		);
 	});
 });

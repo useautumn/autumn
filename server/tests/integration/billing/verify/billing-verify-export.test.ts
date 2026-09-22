@@ -3,7 +3,9 @@
  *
  * Contract under test (verifyCustomerToExportRows, billing_verify producer):
  *   - A verified customer yields no rows.
- *   - A drifted customer yields one row per mismatch.
+ *   - A drifted customer yields one row listing every mismatch.
+ *   - Two distinct mismatches on one subscription land in that one row,
+ *     comma-separated.
  *   - A sweep gone stale never reaches the file: flagged customers are
  *     re-verified live before any row is written.
  *   - The producer walks the filtered population and emits a CSV holding
@@ -148,7 +150,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("billing-verify export 2: drifted customer -> one row per mismatch")}`,
+	`${chalk.yellowBright("billing-verify export 2: drifted customer -> one row listing every mismatch")}`,
 	async () => {
 		const customerId = "verify-export-drifted";
 		const { ctx, pro, scalar, stripeCustomerId, subscriptions } =
@@ -178,12 +180,12 @@ test.concurrent(
 			{
 				customer_id: customerId,
 				stripe_customer_id: stripeCustomerId,
-				stripe_subscription_id: subscriptions[0].id,
+				stripe_subscription_ids: subscriptions[0].id,
 				severity: "error",
-				type: "base_price_mismatch",
+				issues: "base_price_mismatch",
 			},
 		]);
-		expect(rows[0].message).toBeTruthy();
+		expect(rows[0].details).toStartWith("base_price_mismatch: ");
 	},
 );
 
@@ -305,8 +307,8 @@ test.concurrent(
 			}),
 		).toMatchObject([
 			{
-				stripe_subscription_id: drifted.subscriptions[0].id,
-				type: "base_price_mismatch",
+				stripe_subscription_ids: drifted.subscriptions[0].id,
+				issues: "base_price_mismatch",
 			},
 		]);
 	},
@@ -399,6 +401,49 @@ test.concurrent(
 		});
 
 		expect(rows).toEqual([]);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("billing-verify export 9: two mismatches -> one row, issues comma-separated")}`,
+	async () => {
+		const customerId = "verify-export-two-issues";
+		const { ctx, pro, scalar, stripeCustomerId, subscriptions } =
+			await setupSubscribedCustomer({ customerId });
+
+		await corruptStripeSubscription({
+			ctx,
+			subscriptionId: subscriptions[0].id,
+			mutations: {
+				removeItemPriceIds: [await basePriceIdFor({ ctx, productId: pro.id })],
+			},
+		});
+		await ctx.stripeCli.subscriptions.update(subscriptions[0].id, {
+			cancel_at_period_end: true,
+		});
+
+		const rows = await verifyCustomerToExportRows({
+			ctx,
+			scalar,
+			sweep: sweepOf({
+				ctx,
+				subscriptionsByStripeCustomerId: new Map([
+					[
+						stripeCustomerId,
+						await listActiveStripeSubscriptions({ ctx, stripeCustomerId }),
+					],
+				]),
+			}),
+		});
+
+		expect(rows.length).toBe(1);
+		expect(rows[0].stripe_subscription_ids).toBe(subscriptions[0].id);
+		expect(rows[0].issues?.split(", ").sort()).toEqual([
+			"base_price_mismatch",
+			"cancel_state_mismatch",
+		]);
+		expect(rows[0].details).toContain("base_price_mismatch: ");
+		expect(rows[0].details).toContain("cancel_state_mismatch: ");
 	},
 );
 
