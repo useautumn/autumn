@@ -347,6 +347,43 @@ describe("partition writer", () => {
 		}
 	});
 
+	/** The Postgres-backed store answers null to every read on purpose: Postgres
+	 *  holds the baseline, so there is no receipt table to consult. A position
+	 *  the committer has already durably applied must therefore be accepted on
+	 *  the pending mutation alone, or the first re-applied record takes the
+	 *  partition terminal and, through the partition service, the whole worker. */
+	test("accepts an already-applied position on a store that keeps no receipts", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new RecordingCommittedAppender();
+			const mapBackedStore: PartitionProcessorScope["ctx"]["stateStore"] = {
+				...fixture.store,
+				baseline: "map",
+				readReceipt: () => null,
+				applyDurableMutations: ({ records }) =>
+					records.map(() => ({
+						kind: "position_already_applied" as const,
+						nextOffset: 0n,
+					})),
+			};
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: mapBackedStore,
+				appender,
+				limits: defaultLimits,
+			});
+
+			const decision = await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_replayed" }),
+			});
+
+			expect(decision).toMatchObject({ state: { revision: 1 } });
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
 	test("orders simultaneous tracks against projected customer state", async () => {
 		const fixture = createFixture();
 		try {

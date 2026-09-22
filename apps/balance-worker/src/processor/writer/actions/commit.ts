@@ -186,7 +186,18 @@ function durableRecordsOf({
 	return records;
 }
 
-/** The follower may apply a position first; then SQLite must hold exactly what we appended. */
+/** The follower may apply a position first; then the store has to say what we appended.
+ *  A private SQLite store keeps a receipt per applied position, so it can prove the
+ *  record coming back is the one already durable, and a mismatch is a real conflict
+ *  worth stopping for.
+ *
+ *  The Postgres-backed store keeps no receipts at all. Its reads answer null on
+ *  purpose, because Postgres holds the baseline rather than a file this worker owns,
+ *  and its progress bookmark is the only evidence it has. That bookmark is what
+ *  reported the position applied in the first place, so the pending mutation stands.
+ *  Asking it for a receipt it was never built to store meant the first re-applied
+ *  record put the partition into recovery, which stops the whole worker and every
+ *  other partition it holds. */
 function persistedMutationOf({
 	scope,
 	result,
@@ -199,6 +210,8 @@ function persistedMutationOf({
 	if (result.kind !== "position_already_applied") return result.mutation;
 
 	const { mutation } = pending;
+	if (scope.ctx.stateStore.baseline === "map") return mutation;
+
 	const receipt = scope.ctx.stateStore.readReceipt({
 		identity: mutation.identity,
 		mutationId: mutation.id,

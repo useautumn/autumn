@@ -43,7 +43,11 @@ export type CommittedOutcomeAppender = {
 export type PartitionWriterContext = {
 	stateStore: Pick<
 		StateStore,
-		"readState" | "readOwnState" | "readReceipt" | "applyDurableMutations"
+		| "baseline"
+		| "readState"
+		| "readOwnState"
+		| "readReceipt"
+		| "applyDurableMutations"
 	>;
 	appender: CommittedOutcomeAppender;
 	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */

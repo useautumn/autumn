@@ -103,6 +103,7 @@ describe("createSubjectMap", () => {
 function createNullStore() {
 	const applied: DurableMutationRecord[] = [];
 	const stateStore: PartitionWriterContext["stateStore"] = {
+		baseline: "map",
 		readState: () => null,
 		readOwnState: () => null,
 		readReceipt: () => null,
@@ -243,6 +244,7 @@ describe("writer over a store with no resident state", () => {
 	test("a store that lands some records and fails one: landed callers reply, the failed one rejects, the writer recovers", async () => {
 		const poisonId = "cmd_2";
 		const stateStore: PartitionWriterContext["stateStore"] = {
+			baseline: "map",
 			readState: () => null,
 			readOwnState: () => null,
 			readReceipt: () => null,
