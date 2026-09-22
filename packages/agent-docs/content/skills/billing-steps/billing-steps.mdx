@@ -21,9 +21,14 @@ This covers the majority of cases. Load skills upfront when needed:
   - Moving the customer onto a different plan ID? → `attach` or `multiAttach`
   - Moving them onto a plan(s) in several phases (ramps, staged pricing) → `createSchedule`
 
-Then decide how it is paid. Follow the user's instructions or the org rules. If neither says:
+Then decide how it is paid. Follow the user's instructions or the org rules. If neither says, first check if there is a payment method (from the `getCustomer` call), and follow these defaults:
 
-<part file="../billing/references/billing-behavior.md" inline="true" />
+- If payment method exists, just attach directly (without invoice mode) to charge it.
+- Otherwise, use Invoice mode: `invoice_mode.enabled: true`, `invoice_mode.finalize: true`,
+- Use`enable_plan_immediately: true`
+- Timing: always set `plan_schedule: "immediate"`. DO NOT omit this, as Autumn will default to schedule a lower priced plan.
+- Proration: `proration_behavior: "none"` — but omit it entirely if the customer has no existing subscription.
+- Checkout URL instead: omit `invoice_mode`, set `redirect_mode: "always"`, with long_lived_checkout: true
 
 ## 2. Build the request body
 

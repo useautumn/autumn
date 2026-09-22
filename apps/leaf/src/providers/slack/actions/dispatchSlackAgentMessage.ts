@@ -219,6 +219,24 @@ const runAndReply = async ({
 			logger,
 			onAction: logAction,
 			onReasoning: evePresenter.onReasoning,
+			// A turn that settled while a follow-up was still to be read: post it
+			// now and leave the ticker running, because the reader is still on
+			// the stream waiting for the replacement turn.
+			onSettledTurn: async (settled) => {
+				if (settled.kind === "blocked" || settled.kind === "stopped") return;
+				await presentSlackAgentTurn({
+					channelId,
+					clientContext,
+					logAction,
+					logger,
+					providerUserId,
+					stopStatus: () => undefined,
+					target,
+					threadId,
+					turn: settled,
+				});
+				progress.thinking();
+			},
 			onThinking: progress.thinking,
 			providerUserId,
 			recentMessages,
