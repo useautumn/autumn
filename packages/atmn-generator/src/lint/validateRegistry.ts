@@ -32,6 +32,8 @@ const fieldsNamedBy = (rule: LintRule): string[] => {
 			return [rule.groupBy, rule.field];
 		case "exists":
 			return listOf(rule.field);
+		case "nonEmpty":
+			return [rule.field];
 		case "compare":
 			return [rule.field, rule.than];
 		case "valueWhen":

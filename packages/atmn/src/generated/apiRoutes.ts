@@ -2956,6 +2956,37 @@ export const API_ROUTES: readonly ApiRoute[] = [
 		],
 	},
 	{
+		group: "logs",
+		method: "search",
+		path: "/v1/logs.search",
+		description:
+			"Search API requests and incoming Stripe webhooks for your organization and environment.",
+		body: "object",
+		fields: [
+			{
+				name: "query",
+				type: "string",
+				required: false,
+				description:
+					"Filter and sort logs using where, order by, and limit, joined with |. Omit to return recent logs.",
+			},
+			{
+				name: "range",
+				type: "json",
+				required: false,
+				description:
+					"Time window to search. Defaults to the last 30 minutes. Maximum 7 days.",
+			},
+			{
+				name: "limit",
+				type: "number",
+				required: false,
+				description:
+					"Maximum number of logs to return, from 1 to 200. Defaults to 100.",
+			},
+		],
+	},
+	{
 		group: "invoices",
 		method: "create",
 		path: "/v1/invoices.create",
