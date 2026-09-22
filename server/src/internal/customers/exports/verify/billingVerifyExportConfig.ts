@@ -38,8 +38,8 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 		pageTimeoutMs: 60_000,
 		pageAttempts: 3,
 		retryDelayMs: 2_000,
-		requestsPerSecond: 40,
-		sandboxRequestsPerSecond: 10,
+		requestsPerSecond: 25,
+		sandboxRequestsPerSecond: 5,
 	},
 	customer: {
 		concurrency: 8,
