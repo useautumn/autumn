@@ -45,7 +45,7 @@ export function createMeteringConsumer({
 				? settleRecordApplication({ ctx, input, application })
 				: application;
 		} catch (cause) {
-			return throwRecordError({ ctx, input, cause });
+			return settleRecordError({ ctx, input, cause });
 		}
 	}
 
@@ -71,11 +71,11 @@ async function settleRecordApplication({
 	try {
 		return await application;
 	} catch (cause) {
-		return throwRecordError({ ctx, input, cause });
+		return settleRecordError({ ctx, input, cause });
 	}
 }
 
-function throwRecordError({
+function settleRecordError({
 	ctx,
 	input,
 	cause,
@@ -83,7 +83,7 @@ function throwRecordError({
 	ctx: { handler: MeteringRecordHandler };
 	input: TopicRecord;
 	cause: unknown;
-}): never {
+}): TopicRecordResult {
 	if (ctx.handler.onRecordError) {
 		return ctx.handler.onRecordError({
 			topic: input.topic,

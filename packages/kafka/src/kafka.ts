@@ -30,6 +30,7 @@ export { createProgressTracker } from "./consumer/createProgressTracker.js";
 export { createTopicConsumer } from "./consumer/createTopicConsumer.js";
 export {
 	readPartitionLogRange,
+	readPartitionOffsetAtTimestamp,
 	readTopicHighWatermarks,
 } from "./consumer/partitionOffsets.js";
 export { createPartitionReader } from "./consumer/reader/createPartitionReader.js";

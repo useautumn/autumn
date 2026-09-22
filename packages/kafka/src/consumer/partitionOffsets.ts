@@ -40,3 +40,27 @@ export async function readPartitionLogRange({
 	}
 	throw new KafkaPartitionOffsetsNotFoundError({ topic, partition });
 }
+
+/** Null when nothing on the partition is at or after `timestamp`: the broker answers "-1". */
+export async function readPartitionOffsetAtTimestamp({
+	ctx,
+	topic,
+	partition,
+	timestamp,
+}: {
+	ctx: { partitionOffsets: Pick<Admin, "fetchTopicOffsetsByTimestamp"> };
+	topic: string;
+	partition: number;
+	timestamp: number;
+}): Promise<bigint | null> {
+	const offsets = await ctx.partitionOffsets.fetchTopicOffsetsByTimestamp(
+		topic,
+		timestamp,
+	);
+	for (const entry of offsets) {
+		if (entry.partition !== partition) continue;
+		if (entry.offset === "-1") return null;
+		return parseKafkaOffset({ offset: entry.offset });
+	}
+	throw new KafkaPartitionOffsetsNotFoundError({ topic, partition });
+}

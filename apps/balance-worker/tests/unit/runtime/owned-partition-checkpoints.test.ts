@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { parseCheckCommand, parseTrackCommand } from "@autumn/balance-engine";
 import { PartitionCheckpointPublisherError } from "../../../src/checkpoint/partitionCheckpointPublisher.js";
+import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
 import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
 import {
@@ -48,6 +49,7 @@ const createRuntime = ({
 			},
 			partitionResolver: { partitionForIdentity: () => 0 },
 			receiptPolicy: { retentionMs: 60_000, now: fixture.clock.now },
+			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
 			checkpointMaintenance: fixture.scheduler,
 		},
 		config: {

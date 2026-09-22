@@ -7,6 +7,9 @@ import {
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import { createPartitionWriter } from "../../../../src/processor/writer/createPartitionWriter.js";
+import { commandToFingerprint } from "../../../../src/processor/writer/receipt/commandToFingerprint.js";
+import { mutationToRecord } from "../../../../src/processor/writer/receipt/mutationToRecord.js";
+import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { createSubjectMap } from "../../../../src/processor/writer/subjectMap/createSubjectMap.js";
 import type { PartitionWriterContext } from "../../../../src/processor/writer/types/partitionWriter.js";
 import type { DurableMutationRecord } from "../../../../src/state/types/durableMutation.js";
@@ -22,27 +25,18 @@ const partition = 0;
 const customerKey = meteringIdentityToPartitionKey({ identity: testIdentity });
 
 describe("createSubjectMap", () => {
-	test("evicts one customer's subjects, entities included, and keeps its command ids", () => {
+	test("evicts one customer's subjects, entities included", () => {
 		const map = createSubjectMap();
 		const state = createState();
 		const entityKey = `${customerKey}:entity_1`;
 		map.setState({ subjectKey: customerKey, state });
 		map.setState({ subjectKey: entityKey, state });
 		map.setState({ subjectKey: "other", state });
-		map.rememberCommand({
-			customerKey,
-			commandId: "cmd",
-			fingerprint: "fp",
-			expiresAt: 10,
-		});
 
 		map.evictCustomer({ customerKey });
 		expect(map.readState({ subjectKey: customerKey })).toBeNull();
 		expect(map.readState({ subjectKey: entityKey })).toBeNull();
 		expect(map.readState({ subjectKey: "other" })).toEqual(state);
-		expect(
-			map.readCommand({ customerKey, commandId: "cmd", now: 0 }),
-		).not.toBeNull();
 	});
 
 	test("a pinned subject stays until its last pin is released, then goes", () => {
@@ -78,25 +72,6 @@ describe("createSubjectMap", () => {
 		expect(map.readState({ subjectKey: "b" })).toBeNull();
 		expect(map.readState({ subjectKey: "c" })).toEqual(c);
 	});
-
-	test("remembers a customer's recent commands until they expire", () => {
-		const map = createSubjectMap();
-		map.rememberCommand({
-			customerKey,
-			commandId: "cmd_1",
-			fingerprint: "fp",
-			expiresAt: 100,
-		});
-		expect(
-			map.readCommand({ customerKey, commandId: "cmd_1", now: 99 }),
-		).toEqual({ fingerprint: "fp", expiresAt: 100 });
-		expect(
-			map.readCommand({ customerKey, commandId: "cmd_1", now: 100 }),
-		).toBeNull();
-		expect(
-			map.readCommand({ customerKey, commandId: "cmd_9", now: 0 }),
-		).toBeNull();
-	});
 });
 
 /** A store with nothing resident, the way the postgres backend answers; apply just records what it saw. */
@@ -122,6 +97,10 @@ function createNullStore() {
 function createWriterOverNullStore() {
 	const store = createNullStore();
 	let nextOffset = 0n;
+	const recentCommands = createRecentCommands({
+		windowMs: 600_000,
+		now: () => 0,
+	});
 	const writer = createPartitionWriter({
 		ctx: {
 			stateStore: store.stateStore,
@@ -133,6 +112,7 @@ function createWriterOverNullStore() {
 				},
 			},
 			receiptPolicy: { retentionMs: 60_000, now: () => 1_700_000_000_000 },
+			recentCommands,
 		},
 		config: {
 			topic,
@@ -144,7 +124,7 @@ function createWriterOverNullStore() {
 			},
 		},
 	});
-	return { writer, store };
+	return { writer, store, recentCommands };
 }
 
 function trackSubmission({
@@ -244,6 +224,84 @@ describe("writer over a store with no resident state", () => {
 		).toBe(95);
 	});
 
+	test("a busy customer's early commands still dedupe: the memory is per partition, not 32 per customer", async () => {
+		const { writer, store } = createWriterOverNullStore();
+		const initial = createState({ balance: 1_000 });
+		const commandCount = 40;
+		for (let index = 0; index < commandCount; index++) {
+			await writer
+				.decide(
+					trackSubmission({
+						command: createTrackCommand({
+							identity: testIdentity,
+							commandId: `cmd_${index}`,
+							value: 1,
+						}),
+						initial,
+					}),
+				)
+				.waitForCommit();
+		}
+
+		expect(() =>
+			writer.decide(
+				trackSubmission({
+					command: createTrackCommand({
+						identity: testIdentity,
+						commandId: "cmd_0",
+						value: 1,
+					}),
+					initial,
+				}),
+			),
+		).toThrow("Command already applied: cmd_0");
+		expect(store.applied).toHaveLength(commandCount);
+	});
+
+	test("a record remembered from the log is a duplicate on retry, without this writer having decided it", () => {
+		const { writer, store, recentCommands } = createWriterOverNullStore();
+		const initial = createState({ balance: 100 });
+		const command = createTrackCommand({
+			identity: testIdentity,
+			commandId: "cmd_1",
+			value: 5,
+		});
+		const decided = trackSubmission({ command, initial }).mutate({
+			state: null,
+		});
+		if (decided.kind !== "write") throw new Error("Expected a mutation");
+		recentCommands.remember({
+			mutation: mutationToRecord({
+				mutation: decided.mutation,
+				fingerprint: commandToFingerprint({ command }),
+				receiptPolicy: { retentionMs: 60_000, now: () => 0 },
+			}),
+		});
+
+		expect(() => writer.decide(trackSubmission({ command, initial }))).toThrow(
+			"Command already applied: cmd_1",
+		);
+		expect(store.applied).toHaveLength(0);
+	});
+
+	test("evicting the customer's rows keeps its command ids, so a retry after eviction is still a duplicate", async () => {
+		const { writer, store } = createWriterOverNullStore();
+		const initial = createState({ balance: 100 });
+		const command = createTrackCommand({
+			identity: testIdentity,
+			commandId: "cmd_1",
+			value: 5,
+		});
+		await writer.decide(trackSubmission({ command, initial })).waitForCommit();
+		await writer.evict({ customerKey });
+		expect(writer.readFreshestState({ identity: testIdentity })).toBeNull();
+
+		expect(() => writer.decide(trackSubmission({ command, initial }))).toThrow(
+			"Command already applied: cmd_1",
+		);
+		expect(store.applied).toHaveLength(1);
+	});
+
 	test("a store that lands some records and fails one: every caller keeps the reply Kafka earned, and the writer recovers", async () => {
 		const poisonId = "cmd_2";
 		const stateStore: PartitionWriterContext["stateStore"] = {
@@ -284,6 +342,10 @@ describe("writer over a store with no resident state", () => {
 					},
 				},
 				receiptPolicy: { retentionMs: 60_000, now: () => 1_700_000_000_000 },
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => 0,
+				}),
 			},
 			config: {
 				topic,
@@ -373,6 +435,10 @@ describe("writer over a store with no resident state", () => {
 					retentionMs: 86_400_000,
 					now: () => 1_700_000_000_000,
 				},
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => 0,
+				}),
 			},
 			config: {
 				topic,

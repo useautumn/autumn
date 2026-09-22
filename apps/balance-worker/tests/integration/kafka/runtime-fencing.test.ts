@@ -10,6 +10,7 @@ import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
+import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
 import { OwnedPartitionProducerFencedError } from "../../../src/runtime/runtimeErrors.js";
 import type { PartitionRuntime } from "../../../src/runtime/types/partitionRuntime.js";
@@ -90,6 +91,7 @@ function createTestRuntime({
 			db: createSyntheticWorkerDb(),
 			catalogCache: createTestCatalogCache(),
 			receiptPolicy: { retentionMs: 86_400_000, now: Date.now },
+			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
 			producer,
 			appender: createMutationPublisher({ ctx: { producer } }),
 			follower: { readLogRange, readProgress, startAndCatchUp, stop },

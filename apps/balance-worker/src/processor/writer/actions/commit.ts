@@ -119,12 +119,7 @@ function settlePending({
 	pending: PendingMutation;
 }): void {
 	const { mutation } = pending;
-	scope.state.subjects.rememberCommand({
-		customerKey: pending.customerKey,
-		commandId: mutation.id,
-		fingerprint: mutation.receipt.fingerprint,
-		expiresAt: mutation.receipt.expiresAt,
-	});
+	scope.ctx.recentCommands.remember({ mutation });
 	removePendingMutation({ state: scope.state, pending });
 	pending.settlement.settle({ mutation, state: pending.nextState });
 }

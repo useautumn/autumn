@@ -19,6 +19,7 @@ export function createPartitionReplay({
 		status: "created",
 		position,
 		onUnavailable: null,
+		lastLogRange: null,
 		abortController: null,
 		startPromise: null,
 		stopPromise: null,
@@ -29,7 +30,7 @@ export function createPartitionReplay({
 		partition: number;
 		signal: AbortSignal;
 	}) {
-		return readReplayLogRange({ ctx, ...params });
+		return readReplayLogRange({ ctx, state, ...params });
 	}
 
 	function startAndCatchUp(params: {

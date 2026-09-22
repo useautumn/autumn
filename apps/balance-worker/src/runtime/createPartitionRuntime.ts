@@ -44,6 +44,7 @@ export function createPartitionRuntime({
 				db: dependencies.db,
 				catalogCache: dependencies.catalogCache,
 				receiptPolicy: dependencies.receiptPolicy,
+				recentCommands: dependencies.recentCommands,
 				assertCanRead,
 			},
 			config: {

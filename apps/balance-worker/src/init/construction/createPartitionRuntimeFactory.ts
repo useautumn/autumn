@@ -39,6 +39,7 @@ export function createPartitionRuntimeFactory({
 		topic,
 		partition,
 		follower,
+		recentCommands,
 	}: PartitionRuntimeFactoryInput): ConstructedPartitionRuntime {
 		const session = createProducerSession({
 			ctx: { kafka: ctx.kafka },
@@ -80,6 +81,7 @@ export function createPartitionRuntimeFactory({
 					retentionMs: config.trackReceiptRetentionMs,
 					now: Date.now,
 				},
+				recentCommands,
 			},
 			config: {
 				topic,

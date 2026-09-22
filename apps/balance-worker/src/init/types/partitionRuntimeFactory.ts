@@ -8,6 +8,7 @@ import type { Admin } from "kafkajs";
 import type { CatalogCache } from "../../catalog/types/catalogCache.js";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
+import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
 import type { PartitionWriterLimits } from "../../processor/writer/types/partitionWriter.js";
 import type {
 	PartitionBootstrapper,
@@ -31,6 +32,7 @@ export type PartitionRuntimeFactoryInput = {
 	topic: string;
 	partition: number;
 	follower: PartitionOutcomeFollowerPort;
+	recentCommands: RecentCommands;
 };
 
 export type ConstructedPartitionRuntime = {

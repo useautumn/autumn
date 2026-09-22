@@ -1,5 +1,5 @@
 import type { SubjectState } from "@autumn/balance-engine";
-import type { RememberedCommand, SubjectMap } from "./types/subjectMap.js";
+import type { SubjectMap } from "./types/subjectMap.js";
 
 /** Per partition writer; a worker holds many partitions, so the fleet total is this × partitions. */
 /** How much resident customer state a partition keeps. This is the cache that
@@ -9,8 +9,6 @@ import type { RememberedCommand, SubjectMap } from "./types/subjectMap.js";
  *  partitions this is 16 GiB across the fleet, under 3 GiB on a worker holding
  *  its ~85 partitions, against the 8 GiB a worker is given. */
 export const SUBJECT_MAP_MAX_BYTES = 32 * 1024 * 1024;
-/** A retry lands within seconds; a customer's last few commands cover it. */
-export const RECENT_COMMANDS_PER_CUSTOMER = 32;
 
 type Entry = {
 	state: SubjectState;
@@ -18,7 +16,6 @@ type Entry = {
 	pins: number;
 	/** Evicted while a commit was in flight: the rows go as soon as the last pin is released. */
 	evictOnUnpin: boolean;
-	recentCommands: Map<string, RememberedCommand>;
 };
 
 export const createSubjectMap = ({
@@ -49,7 +46,6 @@ export const createSubjectMap = ({
 			bytes: 0,
 			pins: 0,
 			evictOnUnpin: false,
-			recentCommands: new Map(),
 		};
 		entries.set(subjectKey, created);
 		return created;
@@ -100,9 +96,7 @@ export const createSubjectMap = ({
 		entry: Entry;
 	}) => {
 		totalBytes -= entry.bytes;
-		entry.bytes = 0;
-		entry.evictOnUnpin = false;
-		if (entry.recentCommands.size === 0) entries.delete(subjectKey);
+		entries.delete(subjectKey);
 	};
 
 	const unpin = ({ subjectKey }: { subjectKey: string }) => {
@@ -111,39 +105,6 @@ export const createSubjectMap = ({
 		entry.pins -= 1;
 		if (entry.pins === 0 && entry.evictOnUnpin)
 			dropState({ subjectKey, entry });
-	};
-
-	const rememberCommand = ({
-		customerKey,
-		commandId,
-		fingerprint,
-		expiresAt,
-	}: {
-		customerKey: string;
-		commandId: string;
-	} & RememberedCommand) => {
-		const { recentCommands } = entryOf({ subjectKey: customerKey });
-		recentCommands.delete(commandId);
-		recentCommands.set(commandId, { fingerprint, expiresAt });
-		while (recentCommands.size > RECENT_COMMANDS_PER_CUSTOMER) {
-			const oldest = recentCommands.keys().next().value;
-			if (oldest === undefined) break;
-			recentCommands.delete(oldest);
-		}
-	};
-
-	const readCommand = ({
-		customerKey,
-		commandId,
-		now,
-	}: {
-		customerKey: string;
-		commandId: string;
-		now: number;
-	}) => {
-		const remembered = entries.get(customerKey)?.recentCommands.get(commandId);
-		if (!remembered || remembered.expiresAt <= now) return null;
-		return remembered;
 	};
 
 	const evictCustomer = ({ customerKey }: { customerKey: string }) => {
@@ -166,8 +127,6 @@ export const createSubjectMap = ({
 		setState,
 		pin,
 		unpin,
-		rememberCommand,
-		readCommand,
 		evictCustomer,
 		clear,
 		sizeBytes: () => totalBytes,

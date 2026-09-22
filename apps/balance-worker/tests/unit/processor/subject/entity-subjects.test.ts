@@ -18,6 +18,7 @@ import { createSubjectHydrator } from "../../../../src/processor/subject/createS
 import { SubjectNotFoundError } from "../../../../src/processor/subject/subjectErrors.js";
 import type { PartitionProcessorScope } from "../../../../src/processor/types/partitionProcessor.js";
 import { createPartitionWriter } from "../../../../src/processor/writer/createPartitionWriter.js";
+import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type { CommittedOutcomeAppender } from "../../../../src/processor/writer/types/partitionWriter.js";
 import { openStateStore } from "../../../../src/state/openStateStore.js";
 import type { SqliteStateStore } from "../../../../src/state/types/stateStore.js";
@@ -153,8 +154,12 @@ const createFixture = () => {
 		retentionMs: 86_400_000,
 		now: () => 1_700_000_000_000,
 	};
+	const recentCommands = createRecentCommands({
+		windowMs: 600_000,
+		now: () => 0,
+	});
 	const writer = createPartitionWriter({
-		ctx: { stateStore: store, appender, receiptPolicy },
+		ctx: { stateStore: store, appender, receiptPolicy, recentCommands },
 		config: { topic, partition, limits },
 	});
 	const catalogCache = createTestCatalogCache({ db });
@@ -165,6 +170,7 @@ const createFixture = () => {
 			db,
 			catalogCache,
 			receiptPolicy,
+			recentCommands,
 			assertCanRead: () => undefined,
 			config: { topic, partition, writerLimits: limits },
 			writer,

@@ -1,4 +1,8 @@
 import {
+	BALANCE_WORKER_DEDUP_WINDOW_MS,
+	BALANCE_WORKER_REPLAY_FLOOR_LOOKUP_TIMEOUT_MS,
+} from "@autumn/env/balanceWorkerConstants";
+import {
 	createProgressTracker,
 	KafkaPartitionOffsetsNotFoundError,
 	readTopicHighWatermarks,
@@ -12,6 +16,7 @@ import type {
 	PartitionRuntimeResources,
 	Partitions,
 } from "../../partitions/types/partitions.js";
+import { createRecentCommands } from "../../processor/writer/recentCommands/createRecentCommands.js";
 import type {
 	WorkerPartitionHighWatermarks,
 	WorkerPartitionsConfig,
@@ -42,6 +47,12 @@ export function createWorkerPartitions({
 			partitionOffsets: ctx.partitionOffsets,
 			stateStore: ctx.stateStore,
 			positionTracker,
+			replayWindow: {
+				windowMs: BALANCE_WORKER_DEDUP_WINDOW_MS,
+				lookupTimeoutMs: BALANCE_WORKER_REPLAY_FLOOR_LOOKUP_TIMEOUT_MS,
+				now: Date.now,
+			},
+			logger: ctx.logger,
 		},
 		config: {
 			topic: config.topic,
@@ -56,8 +67,21 @@ export function createWorkerPartitions({
 		topic: string;
 		partition: number;
 	}): PartitionRuntimeResources {
-		const follower = meteringConsumer.createReplay({ partition });
-		const resources = ctx.createRuntime({ topic, partition, follower });
+		// One per partition: the writer and the log replay both remember into it, decide reads it.
+		const recentCommands = createRecentCommands({
+			windowMs: BALANCE_WORKER_DEDUP_WINDOW_MS,
+			now: Date.now,
+		});
+		const follower = meteringConsumer.createReplay({
+			partition,
+			recentCommands,
+		});
+		const resources = ctx.createRuntime({
+			topic,
+			partition,
+			follower,
+			recentCommands,
+		});
 		return { ...resources, markUnavailable: follower.markUnavailable };
 	}
 

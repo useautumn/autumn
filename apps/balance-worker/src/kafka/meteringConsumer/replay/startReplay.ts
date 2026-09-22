@@ -7,14 +7,17 @@ import type {
 	PartitionReplayContext,
 	PartitionReplayState,
 } from "../types/partitionReplay.js";
+import { readReplayFloor } from "./readReplayFloor.js";
 
 export async function readReplayLogRange({
 	ctx,
+	state,
 	topic,
 	partition,
 	signal,
 }: {
 	ctx: PartitionReplayContext;
+	state: PartitionReplayState;
 	topic: string;
 	partition: number;
 	signal: AbortSignal;
@@ -32,6 +35,7 @@ export async function readReplayLogRange({
 		partition,
 		highWatermark: range.logEndOffset,
 	});
+	state.lastLogRange = range;
 	return range;
 }
 
@@ -69,7 +73,6 @@ export async function startReplay({
 	state.position = { topic, partition };
 	state.onUnavailable = onUnavailable;
 	state.abortController = new AbortController();
-	ctx.consumption.resumePartition({ partition });
 	state.startPromise = catchUpPartition({
 		ctx,
 		state,
@@ -102,19 +105,34 @@ async function catchUpPartition({
 			logEndOffset: targetNextOffset,
 		});
 	}
+	// Readiness still means the bookmark reached log end; the records below it only refill recent commands.
 	ctx.positionTracker.advance({
 		topic,
 		partition,
 		nextOffset: storedNextOffset,
 	});
-	ctx.consumption.seekPartition({ partition, nextOffset: storedNextOffset });
-	ctx.consumption.resumeFetching({ partition });
-	await ctx.positionTracker.waitUntil({
-		topic,
-		partition,
-		nextOffset: targetNextOffset,
-		signal,
+	const floor = await readReplayFloor({
+		ctx,
+		state,
+		bookmark: storedNextOffset,
 	});
+	if (signal.aborted) throw signal.reason;
+	if (floor < storedNextOffset)
+		ctx.replayFloorByPartition.set(partition, floor);
+	try {
+		// Resume, seek and fetch back to back: nothing may be fetched from the old group offset in between.
+		ctx.consumption.resumePartition({ partition });
+		ctx.consumption.seekPartition({ partition, nextOffset: floor });
+		ctx.consumption.resumeFetching({ partition });
+		await ctx.positionTracker.waitUntil({
+			topic,
+			partition,
+			nextOffset: targetNextOffset,
+			signal,
+		});
+	} finally {
+		ctx.replayFloorByPartition.delete(partition);
+	}
 	if (signal.aborted) throw signal.reason;
 	state.status = "following";
 }

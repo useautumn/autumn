@@ -25,7 +25,8 @@ export type MeteringRecordHandler = {
 	applyRecord(
 		application: MeteringRecordApplication,
 	): TopicRecordResult | Promise<TopicRecordResult>;
-	onRecordError?(failure: MeteringRecordFailure): never;
+	/** Throws to fail the batch, or returns a result to stand in for the record's own. */
+	onRecordError?(failure: MeteringRecordFailure): TopicRecordResult;
 };
 
 export type MeteringConsumerDependencies = {

@@ -5,6 +5,7 @@ import type { MeteringIdentity, MutationRecord } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import { parsePartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { createPartitionProcessor } from "../../../../src/processor/createPartitionProcessor.js";
+import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { openStateStore } from "../../../../src/state/openStateStore.js";
 import type { SqliteStateStore } from "../../../../src/state/types/stateStore.js";
 import {
@@ -103,6 +104,11 @@ export const createReceiptReplayFixture = async ({
 				db: createSyntheticWorkerDb(),
 				catalogCache: createTestCatalogCache(),
 				receiptPolicy: { retentionMs: 86_400_000, now: () => now },
+				// The same clock: an expired receipt's id must be reusable, so the window must lapse with it.
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => now,
+				}),
 				assertCanRead: () => {},
 			},
 			config: {

@@ -26,6 +26,11 @@ export const BALANCE_WORKER_REQUEST_TIMEOUT_MS = 1_000;
  *  the background for whoever comes next. */
 export const BALANCE_WORKER_ROUTE_REFRESH_TIMEOUT_MS = 200;
 export const BALANCE_WORKER_RECEIPT_RETENTION_MS = 86_400_000;
+/** How long a partition remembers an applied command id: long enough for a caller's
+ *  retry after a 503, not the 24h the idempotency key claim already covers. */
+export const BALANCE_WORKER_DEDUP_WINDOW_MS = 600_000;
+/** The boot scan's offset lookup is best effort: past this it is skipped, never waited on. */
+export const BALANCE_WORKER_REPLAY_FLOOR_LOOKUP_TIMEOUT_MS = 5_000;
 export const BALANCE_WORKER_CHECKPOINT_PREFIX = "balance-checkpoints";
 export const BALANCE_WORKER_CHECKPOINT_INTERVAL_MS = 60_000;
 /** Also the committer's flush concurrency, since a flush holds one connection

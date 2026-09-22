@@ -23,6 +23,7 @@ import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
+import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { MutationBatchAppendError } from "../../../src/processor/writer/writerErrors.js";
 import type {
 	PartitionBootstrapper as OwnedPartitionBootstrapPort,
@@ -366,6 +367,7 @@ const createRuntime = ({
 			catalogCache: createTestCatalogCache(),
 			bootstrapper: { bootstrap },
 			receiptPolicy: { retentionMs: 86_400_000, now: () => 1_700_000_000_000 },
+			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
 			producer: workerProducer,
 			follower,
 			appender: createMutationPublisher({
@@ -1299,6 +1301,10 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				},
 				partitionResolver: { partitionForIdentity: () => partition },
 				receiptPolicy: { retentionMs: 1_000, now: () => 0 },
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => 0,
+				}),
 			},
 			config: {
 				topic,

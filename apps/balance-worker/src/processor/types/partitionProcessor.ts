@@ -18,6 +18,7 @@ import type { CatalogCache } from "../../catalog/types/catalogCache.js";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 import type { SubjectHydrator } from "../subject/types/subjectHydrator.js";
+import type { RecentCommands } from "../writer/recentCommands/types/recentCommands.js";
 import type {
 	CommittedOutcomeAppender,
 	PartitionWriter,
@@ -47,6 +48,7 @@ export type PartitionProcessorDependencies = {
 	db: WorkerDb;
 	appender: CommittedOutcomeAppender;
 	receiptPolicy: ReceiptPolicy;
+	recentCommands: RecentCommands;
 	assertCanRead(): void;
 };
 

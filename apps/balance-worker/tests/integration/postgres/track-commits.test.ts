@@ -288,6 +288,14 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					partition: PARTITION,
 				}),
 			).toBe(3n);
+
+			// The first worker's memory died with it; the log refilled the second's on boot.
+			await expect(
+				harness.client.track({
+					command: trackCommand({ customer, commandId: "cmd_1", value: 5 }),
+				}),
+			).rejects.toMatchObject({ workerCode: "DUPLICATE_COMMAND" });
+			expect(await customer.readBalance()).toBe(90);
 		}, 60_000);
 	},
 );

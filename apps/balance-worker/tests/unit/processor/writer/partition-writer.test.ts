@@ -27,6 +27,7 @@ import { SubjectNotFoundError } from "../../../../src/processor/subject/subjectE
 import type { PartitionProcessorScope } from "../../../../src/processor/types/partitionProcessor.js";
 import type { ReceiptPolicy } from "../../../../src/processor/types/receiptPolicy.js";
 import { createPartitionWriter as createPartitionWriterCore } from "../../../../src/processor/writer/createPartitionWriter.js";
+import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type {
 	MutateParams,
 	MutationResult,
@@ -270,8 +271,12 @@ const createPartitionTrackWriter = ({
 	limits: PartitionWriterLimits;
 	receiptPolicy?: ReceiptPolicy;
 }): TestWriter => {
+	const recentCommands = createRecentCommands({
+		windowMs: 600_000,
+		now: () => 0,
+	});
 	const writer = createPartitionWriterCore({
-		ctx: { stateStore, appender, receiptPolicy },
+		ctx: { stateStore, appender, receiptPolicy, recentCommands },
 		config: { topic, partition, limits },
 	});
 	const db = createSyntheticWorkerDb();
@@ -283,6 +288,7 @@ const createPartitionTrackWriter = ({
 			db,
 			catalogCache,
 			receiptPolicy: receiptPolicy,
+			recentCommands,
 			assertCanRead: () => undefined,
 			config: { topic, partition, writerLimits: limits },
 			writer,
@@ -1292,6 +1298,10 @@ describe("partition writer", () => {
 					stateStore: fixture.store,
 					appender,
 					receiptPolicy: defaultReceiptPolicy,
+					recentCommands: createRecentCommands({
+						windowMs: 600_000,
+						now: () => 0,
+					}),
 				},
 				config: { topic, partition, limits: defaultLimits },
 			});

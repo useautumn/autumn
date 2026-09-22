@@ -3,6 +3,7 @@ import type { KafkaProducerClient as OwnedPartitionProducerPort } from "@autumn/
 import type { ProducerConfig } from "kafkajs";
 import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
 import type { PartitionReplay as KafkaPartitionOutcomeFollower } from "../../../src/kafka/meteringConsumer/types/partitionReplay.js";
+import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import {
 	closeStoreFixture,
 	createKafkaOwnedPartitionRuntimeFactory,
@@ -96,8 +97,24 @@ describe("Kafka owned partition runtime factory", () => {
 			});
 			const follower = {} as KafkaPartitionOutcomeFollower;
 
-			createRuntime({ topic, partition: 0, follower });
-			createRuntime({ topic, partition: 1, follower });
+			createRuntime({
+				topic,
+				partition: 0,
+				follower,
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => 0,
+				}),
+			});
+			createRuntime({
+				topic,
+				partition: 1,
+				follower,
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => 0,
+				}),
+			});
 
 			expect(
 				producerConfigs.map(({ transactionalId }) => transactionalId),

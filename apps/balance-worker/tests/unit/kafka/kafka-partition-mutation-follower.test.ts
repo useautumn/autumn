@@ -47,6 +47,8 @@ async function coordinatesReplayWithoutMutatingConsumer(): Promise<void> {
 			stateStore: { readNextOffset },
 			partitionOffsets: { fetchTopicOffsets },
 			positionTracker: createProgressTracker(),
+			replayWindow: { windowMs: 600_000, lookupTimeoutMs: 50, now: () => 0 },
+			replayFloorByPartition: new Map(),
 			consumption: {
 				resumePartition,
 				withdrawPartition,
@@ -208,6 +210,124 @@ describe("Kafka partition outcome follower", () => {
 
 			expect(consumer.seeks).toEqual([{ topic, partition, offset: "0" }]);
 			expect(consumer.resumes).toEqual([{ topic, partitions: [partition] }]);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("seeks to the window floor below the bookmark and clears it once caught up", async () => {
+		const fixture = createStoreFixture({ nextOffset: 8n });
+		try {
+			const consumer = createPartitionControl();
+			const positionTracker = createProgressTracker();
+			const replayFloorByPartition = new Map<number, bigint>();
+			const follower = createKafkaPartitionOutcomeFollower({
+				consumer,
+				partitionOffsets: {
+					...createPartitionOffsets({ low: "0", high: "10" }),
+					fetchTopicOffsetsByTimestamp: async () => [
+						{ partition, offset: "3" },
+					],
+				},
+				stateStore: fixture.store,
+				positionTracker,
+				replayFloorByPartition,
+			});
+			await follower.readLogRange({ topic, partition, signal: activeSignal() });
+			const catchUp = follower.startAndCatchUp({
+				topic,
+				partition,
+				targetNextOffset: 10n,
+				onUnavailable: () => undefined,
+			});
+			await new Promise<void>(setImmediate);
+			expect(consumer.seeks).toEqual([{ topic, partition, offset: "3" }]);
+			expect(replayFloorByPartition.get(partition)).toBe(3n);
+			// Readiness is still measured from the bookmark, not the floor.
+			expect(positionTracker.read({ topic, partition })).toBe(8n);
+
+			positionTracker.advance({ topic, partition, nextOffset: 10n });
+			await catchUp;
+			expect(replayFloorByPartition.has(partition)).toBe(false);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test.each([
+		[
+			"the lookup throws",
+			async () => {
+				throw new Error("broker down");
+			},
+		],
+		["the lookup never answers", () => new Promise<never>(() => undefined)],
+		[
+			"nothing that recent is on the partition",
+			async () => [{ partition, offset: "-1" }],
+		],
+		["the admin has no timestamp lookup", undefined],
+	] as const)(
+		"starts at the bookmark when %s",
+		async (_, fetchTopicOffsetsByTimestamp) => {
+			const fixture = createStoreFixture({ nextOffset: 8n });
+			try {
+				const consumer = createPartitionControl();
+				const replayFloorByPartition = new Map<number, bigint>();
+				const follower = createKafkaPartitionOutcomeFollower({
+					consumer,
+					partitionOffsets: {
+						...createPartitionOffsets({ low: "0", high: "8" }),
+						...(fetchTopicOffsetsByTimestamp && {
+							fetchTopicOffsetsByTimestamp,
+						}),
+					},
+					stateStore: fixture.store,
+					positionTracker: createProgressTracker(),
+					replayFloorByPartition,
+				});
+				await follower.readLogRange({
+					topic,
+					partition,
+					signal: activeSignal(),
+				});
+				await follower.startAndCatchUp({
+					topic,
+					partition,
+					targetNextOffset: 8n,
+					onUnavailable: () => undefined,
+				});
+				expect(consumer.seeks).toEqual([{ topic, partition, offset: "8" }]);
+				expect(replayFloorByPartition.size).toBe(0);
+			} finally {
+				closeStoreFixture(fixture);
+			}
+		},
+	);
+
+	test("never seeks below the log start, even when the window reaches further back", async () => {
+		const fixture = createStoreFixture({ nextOffset: 8n });
+		try {
+			const consumer = createPartitionControl();
+			const follower = createKafkaPartitionOutcomeFollower({
+				consumer,
+				partitionOffsets: {
+					...createPartitionOffsets({ low: "5", high: "8" }),
+					fetchTopicOffsetsByTimestamp: async () => [
+						{ partition, offset: "3" },
+					],
+				},
+				stateStore: fixture.store,
+				positionTracker: createProgressTracker(),
+			});
+			await follower.readLogRange({ topic, partition, signal: activeSignal() });
+			await follower.startAndCatchUp({
+				topic,
+				partition,
+				targetNextOffset: 8n,
+				onUnavailable: () => undefined,
+			});
+			expect(consumer.seeks).toEqual([{ topic, partition, offset: "5" }]);
 		} finally {
 			closeStoreFixture(fixture);
 		}

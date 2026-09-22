@@ -26,6 +26,7 @@ import {
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
 import { createMeteringConsumer } from "../../../src/kafka/meteringConsumer/createMeteringConsumer.js";
+import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { createPartitionBootstrapper } from "../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
 import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
 import { OwnedPartitionProducerFencedError } from "../../../src/runtime/runtimeErrors.js";
@@ -809,6 +810,10 @@ describe("Kafka transaction boundary", () => {
 					maxPendingCommandsPerCustomer: 100,
 				},
 				receiptPolicy: { retentionMs: 86_400_000, now: Date.now },
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => 0,
+				}),
 				recoveryDrainTimeoutMs: timings.recoveryDrainTimeoutMs,
 			});
 		const firstRuntime = runtimeOf({ store: firstStore.store });
@@ -880,10 +885,18 @@ function createReplaySession({
 			partitionOffsets: admin,
 			stateStore: store,
 			positionTracker: createProgressTracker(),
+			replayWindow: {
+				windowMs: 600_000,
+				lookupTimeoutMs: 5_000,
+				now: Date.now,
+			},
 		},
 		config: { topic },
 	});
-	const follower = reader.createReplay({ partition });
+	const follower = reader.createReplay({
+		partition,
+		recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
+	});
 	let connected = false;
 	let readerStarted = false;
 	let joined = false;
@@ -990,6 +1003,7 @@ test("prepares without fencing and activates from the committed tail", async fun
 			bootstrapper,
 			partitionResolver: { partitionForIdentity: () => partition },
 			receiptPolicy: { retentionMs: 86_400_000, now: () => 1_700_000_000_000 },
+			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
 		},
 		config: {
 			topic: fixture.topic,

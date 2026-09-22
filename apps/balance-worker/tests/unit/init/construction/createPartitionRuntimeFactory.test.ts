@@ -4,6 +4,7 @@ import type { KafkaProducerClient } from "@autumn/kafka";
 import type { ProducerConfig } from "kafkajs";
 import { createPartitionRuntimeFactory } from "../../../../src/init/construction/createPartitionRuntimeFactory.js";
 import type { PartitionRuntimeFactoryConfig } from "../../../../src/init/types/partitionRuntimeFactory.js";
+import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { createPartitionBootstrapper } from "../../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
 import type {
 	PartitionOutcomeFollowerPort,
@@ -112,6 +113,10 @@ describe("Kafka owned partition runtime factory", () => {
 				runtime = factory({
 					topic,
 					partition: 0,
+					recentCommands: createRecentCommands({
+						windowMs: 600_000,
+						now: () => 0,
+					}),
 					follower: {
 						readLogRange: async () => ({
 							logStartOffset: 0n,
@@ -246,8 +251,24 @@ describe("Kafka owned partition runtime factory", () => {
 				config,
 			});
 			const follower = {} as PartitionOutcomeFollowerPort;
-			createRuntime({ topic, partition: 0, follower });
-			createRuntime({ topic, partition: 1, follower });
+			createRuntime({
+				topic,
+				partition: 0,
+				follower,
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => 0,
+				}),
+			});
+			createRuntime({
+				topic,
+				partition: 1,
+				follower,
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => 0,
+				}),
+			});
 			expect(
 				producerConfigs.map(({ transactionalId }) => transactionalId),
 			).toEqual([

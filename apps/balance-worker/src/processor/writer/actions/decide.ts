@@ -73,11 +73,7 @@ export function decide<Reply>({
 		);
 	}
 	// A store without records (postgres) still remembers the id: same request → duplicate, else conflict.
-	const remembered = state.subjects.readCommand({
-		customerKey,
-		commandId,
-		now: ctx.receiptPolicy.now(),
-	});
+	const remembered = ctx.recentCommands.read({ identity, commandId });
 	if (remembered) {
 		assertSameRequest({ commandId, fingerprint, record: remembered });
 		throw new PartitionWriterDuplicateCommandError({ commandId });

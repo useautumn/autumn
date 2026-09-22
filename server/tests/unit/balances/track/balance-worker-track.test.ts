@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from "bun:test";
+import { beforeEach, expect, spyOn, test } from "bun:test";
 import {
 	applyMutation,
 	catalogRowsToCatalog,
@@ -25,6 +25,8 @@ import {
 	fullSubjectToSubjectState,
 } from "@/internal/balances/balanceWorker/fullSubjectToSubjectState.js";
 import { trackParamsToTrackCommand } from "@/internal/balances/track/balanceWorker/balanceWorkerTrackRequest.js";
+import * as claimKey from "@/internal/misc/idempotency/actions/checkIdempotencyKey.js";
+import * as releaseKey from "@/internal/misc/idempotency/actions/releaseIdempotencyKey.js";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 import { createCustomerFixture } from "../balanceWorker/customer-fixture.js";
 
@@ -56,6 +58,10 @@ test("responses read the committed row, not the request", outcomeContract);
 test("worker refusals become existing API errors", errorContract);
 test("track responses respect the requested API version", versionContract);
 test("transport failures propagate without retry", failureContract);
+test(
+	"the body idempotency key is claimed like the Redis lane: kept on success and 409, released on 503",
+	claimContract,
+);
 
 function resetExecution(): void {
 	execution.reply = undefined;
@@ -352,4 +358,58 @@ function expectedBalance({
 		],
 		feature: customer.feature,
 	}).data;
+}
+
+async function claimContract() {
+	const customer = fixture();
+	const { ctx } = customer;
+	const claims: string[] = [];
+	const releases: string[] = [];
+	const claimSpy = spyOn(claimKey, "checkIdempotencyKey").mockImplementation(
+		async ({ idempotencyKey }) => {
+			claims.push(idempotencyKey);
+		},
+	);
+	const releaseSpy = spyOn(
+		releaseKey,
+		"releaseIdempotencyKey",
+	).mockImplementation(async ({ idempotencyKey }) => {
+		releases.push(idempotencyKey);
+	});
+	try {
+		execution.reply = trackReplyOf({ customer });
+		await runBalanceWorkerTrack({ ctx, body: customer.body });
+		expect(claims).toEqual([]);
+
+		const body = { ...customer.body, idempotency_key: "key_1" };
+		await runBalanceWorkerTrack({ ctx, body });
+		expect(claims).toEqual(["track:key_1"]);
+		expect(releases).toEqual([]);
+
+		// May have applied: the claim goes so the retry reaches the worker's own dedup.
+		execution.failure = new BalanceWorkerClientError({
+			code: "DEADLINE",
+			outcome: "unknown",
+			message: "no confirmation",
+		});
+		await expect(runBalanceWorkerTrack({ ctx, body })).rejects.toMatchObject({
+			statusCode: 503,
+		});
+		expect(releases).toEqual(["track:key_1"]);
+
+		execution.failure = new BalanceWorkerClientError({
+			code: "WORKER_ERROR",
+			outcome: "not_submitted",
+			message: "already applied",
+			workerCode: "DUPLICATE_COMMAND",
+		});
+		await expect(runBalanceWorkerTrack({ ctx, body })).rejects.toMatchObject({
+			statusCode: 409,
+		});
+		expect(releases).toEqual(["track:key_1"]);
+		expect(claims).toEqual(["track:key_1", "track:key_1", "track:key_1"]);
+	} finally {
+		claimSpy.mockRestore();
+		releaseSpy.mockRestore();
+	}
 }

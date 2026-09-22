@@ -86,7 +86,7 @@ import {
 	type ProgressTracker,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
-import type { Admin, Consumer } from "kafkajs";
+import type { Consumer } from "kafkajs";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "../../../src/init/construction/createWorkerPartitions.js";
 import type {
@@ -103,6 +103,8 @@ import {
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
 import { createPartitionReplay } from "../../../src/kafka/meteringConsumer/replay/createPartitionReplay.js";
+import type { PartitionReplayContext } from "../../../src/kafka/meteringConsumer/types/partitionReplay.js";
+import type { ReplayWindow } from "../../../src/kafka/meteringConsumer/types/replayWindow.js";
 import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
 import type {
 	PartitionRuntimeConfig,
@@ -250,12 +252,16 @@ export function createKafkaPartitionOutcomeFollower({
 	partitionOffsets,
 	stateStore,
 	positionTracker,
+	replayWindow = { windowMs: 600_000, lookupTimeoutMs: 50, now: () => 0 },
+	replayFloorByPartition = new Map(),
 }: {
 	assignedPartition?: number;
 	consumer: KafkaPartitionControlPort;
-	partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
+	partitionOffsets: PartitionReplayContext["partitionOffsets"];
 	stateStore: Pick<SqliteStateStore, "readNextOffset">;
 	positionTracker: ProgressTracker;
+	replayWindow?: ReplayWindow;
+	replayFloorByPartition?: Map<number, bigint>;
 }) {
 	async function withdrawPartition(): Promise<void> {}
 	function resumePartition(): void {}
@@ -280,6 +286,8 @@ export function createKafkaPartitionOutcomeFollower({
 			partitionOffsets,
 			stateStore,
 			positionTracker,
+			replayWindow,
+			replayFloorByPartition,
 			consumption: {
 				withdrawPartition,
 				resumePartition,

@@ -8,6 +8,7 @@ import type { MeteringRecord } from "@autumn/kafka";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import type { BalanceWorkerRequestContext } from "../../../src/http/types/balanceWorkerHttp.js";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
+import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { OwnedPartitionNotReadyError } from "../../../src/runtime/runtimeErrors.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
 import {
@@ -122,6 +123,7 @@ function createFixture({
 				},
 			},
 			receiptPolicy: { retentionMs: 86_400_000, now: () => 1_700_000_000_000 },
+			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
 			assertCanRead: () => undefined,
 		},
 		config: {

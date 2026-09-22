@@ -38,6 +38,7 @@ export function createPartitionProcessor({
 			stateStore: dependencies.stateStore,
 			appender: dependencies.appender,
 			receiptPolicy: dependencies.receiptPolicy,
+			recentCommands: dependencies.recentCommands,
 		},
 		config: {
 			topic: config.topic,

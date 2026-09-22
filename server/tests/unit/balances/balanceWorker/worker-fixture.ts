@@ -4,6 +4,7 @@ import type { MeteringRecord } from "@autumn/kafka";
 import { createCatalogCache } from "../../../../../apps/balance-worker/src/catalog/createCatalogCache.js";
 import { createBalanceWorkerApp } from "../../../../../apps/balance-worker/src/http/createBalanceWorkerApp.js";
 import { createPartitionProcessor } from "../../../../../apps/balance-worker/src/processor/createPartitionProcessor.js";
+import { createRecentCommands } from "../../../../../apps/balance-worker/src/processor/writer/recentCommands/createRecentCommands.js";
 import type { StateStore } from "../../../../../apps/balance-worker/src/state/types/stateStore.js";
 import type { WorkerDb } from "../../../../../apps/balance-worker/src/types/workerDb.js";
 
@@ -63,6 +64,7 @@ export function createWorkerFixture({
 				},
 			}),
 			receiptPolicy: { retentionMs: 86_400_000, now: () => now },
+			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
 			assertCanRead: () => undefined,
 		},
 		config: {

@@ -7,6 +7,7 @@ import type {
 } from "../../health/ownedPartitionHealth.js";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import type { ReceiptPolicy } from "../../processor/types/receiptPolicy.js";
+import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
 import type {
 	CommittedOutcomeAppender,
 	PartitionWriterContext,
@@ -60,6 +61,8 @@ export type PartitionRuntimeDependencies = {
 	db: WorkerDb;
 	catalogCache: CatalogCache;
 	receiptPolicy: ReceiptPolicy;
+	/** Per partition, shared with `follower`: what the writer applied and what the log replayed. */
+	recentCommands: RecentCommands;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 };
 

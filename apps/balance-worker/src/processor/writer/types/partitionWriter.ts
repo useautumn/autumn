@@ -7,6 +7,7 @@ import type {
 import type { MeteringRecord } from "@autumn/kafka";
 import type { StateStore } from "../../../state/types/stateStore.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
+import type { RecentCommands } from "../recentCommands/types/recentCommands.js";
 import type { SubjectMap } from "../subjectMap/types/subjectMap.js";
 import type {
 	CommittedMutation,
@@ -54,6 +55,8 @@ export type PartitionWriterContext = {
 	appender: CommittedOutcomeAppender;
 	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */
 	receiptPolicy: ReceiptPolicy;
+	/** Shared with the partition's log replay, which remembers records this writer never decided. */
+	recentCommands: RecentCommands;
 };
 
 export type PartitionWriterLimits = {

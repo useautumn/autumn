@@ -4,11 +4,14 @@ import {
 } from "@autumn/balance-worker-client";
 import {
 	RecaseError,
+	RouteGroup,
 	type TrackParams,
 	type TrackResponseV3,
 } from "@autumn/shared";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
+import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
 import { validateBalanceWorkerRequest } from "../../balanceWorker/validateBalanceWorkerRequest.js";
 import {
@@ -89,6 +92,24 @@ const trackEachFeature = async ({
 	return replies;
 };
 
+const trackOnWorker = async ({
+	ctx,
+	body,
+	client,
+}: {
+	ctx: AutumnContext;
+	body: TrackParams;
+	client: TrackClient;
+}): Promise<TrackResponseV3> => {
+	const featureIds = trackedFeatureIdsOf({ ctx, body });
+	try {
+		const replies = await trackEachFeature({ ctx, body, client, featureIds });
+		return trackRepliesToApiResponse({ ctx, body, replies });
+	} catch (cause) {
+		rethrowBalanceWorkerError({ cause });
+	}
+};
+
 export async function runBalanceWorkerTrack({
 	ctx,
 	body,
@@ -99,11 +120,12 @@ export async function runBalanceWorkerTrack({
 	client?: TrackClient;
 }): Promise<TrackResponseV3> {
 	validateBalanceWorkerRequest({ ctx, body });
-	const featureIds = trackedFeatureIdsOf({ ctx, body });
-	try {
-		const replies = await trackEachFeature({ ctx, body, client, featureIds });
-		return trackRepliesToApiResponse({ ctx, body, replies });
-	} catch (cause) {
-		rethrowBalanceWorkerError({ cause });
-	}
+	// The same 24h claim as runTrackWithRollout: a duplicate key is 409 before the worker sees it,
+	// and a 503 releases it so the retry reaches the worker's own dedup.
+	return withIdempotencyKey({
+		ctx,
+		idempotencyKey: getTrackBodyIdempotencyKey({ body }),
+		routeGroup: RouteGroup.Balances,
+		run: () => trackOnWorker({ ctx, body, client }),
+	});
 }
