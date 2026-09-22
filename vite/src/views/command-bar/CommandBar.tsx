@@ -39,7 +39,10 @@ import { navigateTo } from "@/utils/genUtils";
 import { impersonateUser } from "@/views/admin/adminUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CommandRow } from "@/views/command-bar/command-row";
-import { calculateRelevanceScore } from "@/views/command-bar/commandUtils";
+import {
+	calculateRelevanceScore,
+	excludeRegularOrgsFromPlatformResults,
+} from "@/views/command-bar/commandUtils";
 import { useCommandBarHotkeys } from "@/views/command-bar/useCommandBarHotkeys";
 import {
 	usePageCommandNavigate,
@@ -263,7 +266,10 @@ const CommandBar = () => {
 
 	const rawUsers = searchedUsersData?.rows || [];
 	const rawRegularOrgs = searchedOrgsData?.rows || [];
-	const rawPlatformOrgs = platformOrgsQuery.data?.rows || [];
+	const rawPlatformOrgs = excludeRegularOrgsFromPlatformResults({
+		regularOrgs: rawRegularOrgs,
+		platformOrgs: platformOrgsQuery.data?.rows || [],
+	});
 	const rawOrgs = [...rawRegularOrgs, ...rawPlatformOrgs];
 
 	const FAVOURITES_PAGE_SIZE = 10;

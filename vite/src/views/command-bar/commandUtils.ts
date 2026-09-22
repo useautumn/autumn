@@ -57,3 +57,10 @@ export function calculateRelevanceScore(
 	// Add 100 to differentiate from substring matches
 	return 100 + levenshteinDistance(lowerSearch, lowerText);
 }
+
+export function excludeRegularOrgsFromPlatformResults<
+	T extends { id: string },
+>({ regularOrgs, platformOrgs }: { regularOrgs: T[]; platformOrgs: T[] }): T[] {
+	const regularOrgIds = new Set(regularOrgs.map((org) => org.id));
+	return platformOrgs.filter((org) => !regularOrgIds.has(org.id));
+}
