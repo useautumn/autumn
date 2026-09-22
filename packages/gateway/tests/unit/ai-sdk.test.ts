@@ -84,6 +84,10 @@ describe("withAutumn", () => {
 		test(`tracks each tool-loop step exactly once (${streaming ? "streamText" : "generateText"})`, async () => {
 			const { autumn, calls } = createAutumn();
 			const base = createModel();
+			const firstStepUsage: LanguageModelV4Usage = {
+				inputTokens: { total: 26, noCache: 19, cacheRead: 3, cacheWrite: 4 },
+				outputTokens: { total: 11, text: 8, reasoning: 3 },
+			};
 			let modelCalls = 0;
 			const toolCall = {
 				type: "tool-call" as const,
@@ -106,7 +110,7 @@ describe("withAutumn", () => {
 						return {
 							content: [toolCall],
 							finishReason: toolFinishReason,
-							usage,
+							usage: firstStepUsage,
 							warnings: [],
 						};
 					},
@@ -120,7 +124,7 @@ describe("withAutumn", () => {
 									controller.enqueue({
 										type: "finish",
 										finishReason: toolFinishReason,
-										usage,
+										usage: firstStepUsage,
 									});
 									controller.close();
 								},
@@ -149,11 +153,20 @@ describe("withAutumn", () => {
 				: await generateText(options);
 			if ("consumeStream" in result) await result.consumeStream();
 			expect((await result.steps).length).toBe(2);
-			expect((await result.usage).inputTokens).toBe(26);
-			expect((await result.usage).outputTokens).toBe(14);
+			expect((await result.usage).inputTokens).toBe(39);
+			expect((await result.usage).outputTokens).toBe(18);
 			expect(modelCalls).toBe(2);
-			expect(calls).toEqual(
-				Array.from({ length: 2 }, () => ({
+			expect(calls).toEqual([
+				{
+					customerId: "cus_steps",
+					modelId: "openai/gpt-test",
+					inputTokens: 19,
+					outputTokens: 8,
+					cacheReadTokens: 3,
+					cacheWriteTokens: 4,
+					reasoningTokens: 3,
+				},
+				{
 					customerId: "cus_steps",
 					modelId: "openai/gpt-test",
 					inputTokens: 10,
@@ -161,8 +174,8 @@ describe("withAutumn", () => {
 					cacheReadTokens: 2,
 					cacheWriteTokens: 1,
 					reasoningTokens: 2,
-				})),
-			);
+				},
+			]);
 		});
 	}
 
