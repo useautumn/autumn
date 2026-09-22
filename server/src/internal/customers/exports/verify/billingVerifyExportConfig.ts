@@ -41,8 +41,8 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 		pageAttempts: 3,
 		retryDelayMs: 2_000,
 		maxRetryDelayMs: 20_000,
-		requestsPerSecond: 40,
-		sandboxRequestsPerSecond: 10,
+		requestsPerSecond: 25,
+		sandboxRequestsPerSecond: 5,
 	},
 	/** A dead pooled connection fails the retry too if it comes back before the
 	 * pool reaps it, and exhausted attempts restart the whole export — so these
