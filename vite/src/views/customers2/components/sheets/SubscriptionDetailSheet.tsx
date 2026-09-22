@@ -46,14 +46,23 @@ import {
 	SubscriptionDetailLicenses,
 } from "./SubscriptionDetailLicenses";
 import { SubscriptionLicenseRow } from "./SubscriptionLicenseRow";
-import { formatDiscountLabel } from "./subscriptionDetailUtils";
+import {
+	billingCycleAnchorFormOverrides,
+	formatDiscountLabel,
+	getPendingBillingCycleAnchor,
+} from "./subscriptionDetailUtils";
 import { usePendingPaymentLink } from "./usePendingPaymentLink";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
 
-function BillingAnchorMockup({ itemId }: { itemId: string | null }) {
+function PendingBillingCycleAnchorSection({
+	resetsAt,
+	itemId,
+}: {
+	resetsAt: number;
+	itemId: string | null;
+}) {
 	const setSheet = useSheetStore((s) => s.setSheet);
-	const scheduledAt = new Date("2026-10-15T09:00:00Z").getTime();
 	return (
 		<SheetSection>
 			<div className="mb-2 text-form-label">Upcoming billing change</div>
@@ -62,7 +71,7 @@ function BillingAnchorMockup({ itemId }: { itemId: string | null }) {
 				label="Cycle restarts"
 				value={
 					<div className="flex items-center gap-2">
-						<span>{format(scheduledAt, "MMM d, yyyy, HH:mm")}</span>
+						<span>{format(new Date(resetsAt), "MMM d, yyyy, HH:mm")}</span>
 						<IconButton
 							aria-label="Edit billing cycle anchor"
 							icon={<PencilSimpleIcon size={14} />}
@@ -74,11 +83,9 @@ function BillingAnchorMockup({ itemId }: { itemId: string | null }) {
 									type: "subscription-update",
 									itemId,
 									data: {
-										anchorMockupOverrides: {
-											resetBillingCycle: true,
-											billingCycleAnchorMode: "custom",
-											billingCycleAnchorDate: scheduledAt,
-										},
+										formOverrides: billingCycleAnchorFormOverrides({
+											resetsAt,
+										}),
 									},
 								})
 							}
@@ -182,6 +189,10 @@ export function SubscriptionDetailSheet() {
 		setSheet({ type: "subscription-update", itemId });
 	};
 
+	const pendingAnchorResetsAt = getPendingBillingCycleAnchor({
+		cusProduct,
+		nowMs,
+	});
 	const kindConfig = getPlanKindConfig(getCusProductKind(cusProduct));
 	const planBillingControls = billingControlsFromColumns(cusProduct.product);
 
@@ -406,10 +417,12 @@ export function SubscriptionDetailSheet() {
 				</div>
 			</SheetSection>
 
-			{import.meta.env.DEV &&
-				new URLSearchParams(window.location.search).has("anchor_mockup") && (
-					<BillingAnchorMockup itemId={itemId} />
-				)}
+			{pendingAnchorResetsAt !== null && canUpdate && (
+				<PendingBillingCycleAnchorSection
+					resetsAt={pendingAnchorResetsAt}
+					itemId={itemId}
+				/>
+			)}
 
 			{hasBillingControls(planBillingControls) && (
 				<SheetSection>

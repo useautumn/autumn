@@ -211,13 +211,13 @@ export function SubscriptionUpdateSheet() {
 			...(approvalSeed?.defaultOverrides as
 				| Partial<UpdateSubscriptionForm>
 				| undefined),
-			...(sheetData?.anchorMockupOverrides as
+			...(sheetData?.formOverrides as
 				| Partial<UpdateSubscriptionForm>
 				| undefined),
 		};
 	}, [
 		approvalSeed?.defaultOverrides,
-		sheetData?.anchorMockupOverrides,
+		sheetData?.formOverrides,
 		customizedProduct,
 		cusProduct?.customer_licenses,
 		features,
