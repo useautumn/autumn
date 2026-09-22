@@ -34,10 +34,18 @@ export const setupCustomerLicenseQuantityContext = ({
 		({ outgoingCustomerLicense, incomingPlanLicense }) => {
 			const licensePlanId = incomingPlanLicense.product.id;
 			if (explicitLicensePlanIds.has(licensePlanId)) return [];
-			const usage = customerLicenseToUsage({
-				customerLicense: outgoingCustomerLicense,
-			});
-			const paidQuantity = Math.max(0, usage - incomingPlanLicense.included);
+			const includedChanged =
+				outgoingCustomerLicense.planLicense?.included !== undefined &&
+				outgoingCustomerLicense.planLicense.included !==
+					incomingPlanLicense.included;
+			const paidQuantity = includedChanged
+				? Math.max(
+						0,
+						customerLicenseToUsage({
+							customerLicense: outgoingCustomerLicense,
+						}) - incomingPlanLicense.included,
+					)
+				: outgoingCustomerLicense.paid_quantity;
 
 			return [
 				{

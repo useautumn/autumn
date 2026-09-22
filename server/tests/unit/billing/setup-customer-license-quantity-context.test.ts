@@ -106,6 +106,30 @@ describe("setupCustomerLicenseQuantityContext", () => {
 		).toEqual([{ licensePlanId: "seat_b", totalQuantity: 5 }]);
 	});
 
+	test("preserves paid capacity when included seats do not change", () => {
+		const outgoingPlanLicense = planLicense({
+			id: "seat_a",
+			group: "team_seat",
+			included: 1,
+		});
+		const incomingPlanLicense = planLicense({
+			id: "seat_b",
+			group: "team_seat",
+			included: 1,
+		});
+
+		expect(
+			setupContext({
+				outgoingLicense: customerLicense({
+					planLicense: outgoingPlanLicense,
+					paidQuantity: 2,
+					usage: 2,
+				}),
+				incomingLicenses: [incomingPlanLicense],
+			}),
+		).toEqual([{ licensePlanId: "seat_b", totalQuantity: 3 }]);
+	});
+
 	test("does not carry over an explicitly requested zero", () => {
 		const outgoingPlanLicense = planLicense({
 			id: "seat_a",
