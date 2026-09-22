@@ -60,12 +60,15 @@ export const insertCollection = ({
 
 	const last = members[members.length - 1];
 	const lastEnd = last.range().end.index;
-	const after = source.slice(lastEnd);
-	const commaAfter = after.indexOf(",");
-	const hasTrailingComma =
-		commaAfter !== -1 && after.slice(0, commaAfter).trim() === "";
-	const insertAt = hasTrailingComma ? lastEnd + commaAfter + 1 : lastEnd;
-	const missingComma = hasTrailingComma ? "" : ",";
+	// The comma is an object child in the AST, so a comment between the member
+	// and its comma is skipped rather than mistaken for "no trailing comma".
+	const trailingComma = object
+		.children()
+		.find(
+			(child) => child.kind() === "," && child.range().start.index >= lastEnd,
+		);
+	const insertAt = trailingComma ? trailingComma.range().end.index : lastEnd;
+	const missingComma = trailingComma ? "" : ",";
 	// A one-line object keeps its shape: the key goes inline after the last pair.
 	const spansLines = object.text().includes("\n");
 	if (!spansLines) {

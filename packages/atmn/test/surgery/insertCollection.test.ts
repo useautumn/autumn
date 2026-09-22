@@ -111,3 +111,20 @@ export default atmn({
 	);
 	expect(insertCollection({ source, collection: "plans" })).toBe(source);
 });
+
+test("a comment between the last member and its comma is left where it is", () => {
+	expect(
+		insertCollection({
+			source: "export default atmn({ plans /* keep */, });\n",
+			collection: "rewards",
+		}),
+	).toBe("export default atmn({ plans /* keep */, rewards: [], });\n");
+	expect(
+		insertCollection({
+			source: "export default atmn({\n\tplans: [] /* keep */,\n});\n",
+			collection: "rewards",
+		}),
+	).toBe(
+		"export default atmn({\n\tplans: [] /* keep */,\n\trewards: [],\n});\n",
+	);
+});
