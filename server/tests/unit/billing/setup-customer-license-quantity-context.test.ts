@@ -24,12 +24,16 @@ const planLicense = ({
 const customerLicense = ({
 	planLicense,
 	paidQuantity,
+	usage,
 }: {
 	planLicense: FullPlanLicense;
 	paidQuantity: number;
+	usage: number;
 }) =>
 	({
 		license_internal_product_id: planLicense.product.internal_id,
+		granted: planLicense.included + paidQuantity,
+		remaining: planLicense.included + paidQuantity - usage,
 		paid_quantity: paidQuantity,
 		planLicense,
 	}) as FullCustomerLicense;
@@ -54,11 +58,59 @@ const setupContext = ({
 	});
 
 describe("setupCustomerLicenseQuantityContext", () => {
-	test("carries paid seats to an omitted 1:1 group successor", () => {
+	test("rebases omitted quantities when included seats increase", () => {
 		const outgoingPlanLicense = planLicense({
 			id: "seat_a",
 			group: "team_seat",
-			included: 0,
+			included: 1,
+		});
+		const incomingPlanLicense = planLicense({
+			id: "seat_b",
+			group: "team_seat",
+			included: 10,
+		});
+
+		expect(
+			setupContext({
+				outgoingLicense: customerLicense({
+					planLicense: outgoingPlanLicense,
+					paidQuantity: 1,
+					usage: 2,
+				}),
+				incomingLicenses: [incomingPlanLicense],
+			}),
+		).toEqual([{ licensePlanId: "seat_b", totalQuantity: 10 }]);
+	});
+
+	test("rebases omitted quantities when included seats decrease", () => {
+		const outgoingPlanLicense = planLicense({
+			id: "seat_a",
+			group: "team_seat",
+			included: 10,
+		});
+		const incomingPlanLicense = planLicense({
+			id: "seat_b",
+			group: "team_seat",
+			included: 3,
+		});
+
+		expect(
+			setupContext({
+				outgoingLicense: customerLicense({
+					planLicense: outgoingPlanLicense,
+					paidQuantity: 0,
+					usage: 5,
+				}),
+				incomingLicenses: [incomingPlanLicense],
+			}),
+		).toEqual([{ licensePlanId: "seat_b", totalQuantity: 5 }]);
+	});
+
+	test("preserves paid capacity when included seats do not change", () => {
+		const outgoingPlanLicense = planLicense({
+			id: "seat_a",
+			group: "team_seat",
+			included: 1,
 		});
 		const incomingPlanLicense = planLicense({
 			id: "seat_b",
@@ -70,11 +122,12 @@ describe("setupCustomerLicenseQuantityContext", () => {
 			setupContext({
 				outgoingLicense: customerLicense({
 					planLicense: outgoingPlanLicense,
-					paidQuantity: 3,
+					paidQuantity: 2,
+					usage: 2,
 				}),
 				incomingLicenses: [incomingPlanLicense],
 			}),
-		).toEqual([{ licensePlanId: "seat_b", totalQuantity: 4 }]);
+		).toEqual([{ licensePlanId: "seat_b", totalQuantity: 3 }]);
 	});
 
 	test("does not carry over an explicitly requested zero", () => {
@@ -97,6 +150,7 @@ describe("setupCustomerLicenseQuantityContext", () => {
 				outgoingLicense: customerLicense({
 					planLicense: outgoingPlanLicense,
 					paidQuantity: 3,
+					usage: 2,
 				}),
 				incomingLicenses: [incomingPlanLicense],
 			}),

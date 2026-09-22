@@ -146,6 +146,37 @@ describe("buildReissuePayload", () => {
 		});
 	});
 
+	it("sends the untouched registrations back alongside the edited one", () => {
+		const prefillWithTwo = {
+			...prefill,
+			otherTaxIds: [{ type: "fr_siren", value: "123456789" }],
+		};
+		const edited = { ...untouched(), taxIdValue: "FR99999999999" };
+		expect(
+			buildReissuePayload({
+				invoiceId: "inv_1",
+				form: edited,
+				prefill: prefillWithTwo,
+				lineItems,
+			}).customer,
+		).toEqual({
+			tax_ids: [
+				{ type: "eu_vat", value: "FR99999999999" },
+				{ type: "fr_siren", value: "123456789" },
+			],
+		});
+
+		const cleared = { ...untouched(), taxIdOptionId: null, taxIdValue: "" };
+		expect(
+			buildReissuePayload({
+				invoiceId: "inv_1",
+				form: cleared,
+				prefill: prefillWithTwo,
+				lineItems,
+			}).customer,
+		).toEqual({ tax_ids: [{ type: "fr_siren", value: "123456789" }] });
+	});
+
 	it("does not send tax_ids when there was none and none was entered", () => {
 		const form = {
 			...untouched(),

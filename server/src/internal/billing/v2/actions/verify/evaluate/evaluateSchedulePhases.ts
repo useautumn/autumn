@@ -78,10 +78,8 @@ export const evaluateSchedulePhases = async ({
 		const actualPhase =
 			actualPhaseIndex === -1 ? undefined : schedule.phases[actualPhaseIndex];
 		if (actualPhaseIndex !== -1) claimedPhases.add(actualPhaseIndex);
-		const phaseStartsAt =
-			i === 0
-				? (currentPhaseStart ?? expectedStartSeconds)
-				: expectedStartSeconds;
+		// Phase 0 is the live phase, so its findings carry no future start.
+		const phaseStartsAt = i === 0 ? undefined : expectedStartSeconds;
 
 		if (!actualPhase) {
 			mismatches.push({

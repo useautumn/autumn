@@ -259,6 +259,20 @@ describe("entsAreSame", () => {
 			);
 		});
 
+		test("boolean rows: a stored allowance of 0 equals unset", () => {
+			const booleanRow = { allowance_type: null, interval: null };
+			expectSame(
+				{ ...booleanRow, allowance: 0 },
+				{ ...booleanRow, allowance: null },
+				true,
+			);
+			expectSame(
+				{ allowance_type: AllowanceType.Fixed, allowance: 0 },
+				{ allowance_type: AllowanceType.Fixed, allowance: null },
+				false,
+			);
+		});
+
 		test("ignored when both rows are boolean: nothing to carry", () => {
 			const booleanRow = { allowance_type: null, interval: null };
 			expectSame(

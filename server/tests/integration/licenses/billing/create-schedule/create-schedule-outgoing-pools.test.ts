@@ -27,6 +27,7 @@
  */
 import { expect, test } from "bun:test";
 import {
+	type ApiCustomerV5,
 	type CheckResponseV3,
 	type CreateScheduleParamsV0Input,
 	ms,
@@ -36,6 +37,7 @@ import {
 	listLicensePools,
 } from "@tests/integration/licenses/licenseTestUtils";
 import { expectAssignmentsAnchoredToParent } from "@tests/integration/licenses/utils/expectAssignmentsAnchoredToParent";
+import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -67,6 +69,86 @@ const buildPlans = ({ prefix }: { prefix: string }) => {
 
 	return { currentPlan, nextPlan, seat };
 };
+
+test.concurrent(
+	`${chalk.yellowBright("create-schedule outgoing pools: immediate phase rebalances included seats")}`,
+	async () => {
+		const customerId = "cs-pools-included-rebalance";
+		const currentPlan = products.base({
+			id: "csp-inc-current",
+			group: "csp-inc-parent",
+			items: [items.monthlyPrice({ price: 250 }), items.dashboard()],
+		});
+		const nextPlan = products.base({
+			id: "csp-inc-next",
+			group: "csp-inc-parent",
+			items: [items.monthlyPrice({ price: 100 }), items.dashboard()],
+		});
+		const seat = products.base({
+			id: "csp-inc-seat",
+			group: "csp-inc-seat-licenses",
+			items: [items.monthlyPrice({ price: 10 })],
+		});
+		const { autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+				s.products({ list: [currentPlan, nextPlan, seat] }),
+			],
+			actions: [
+				s.licenses.link({
+					parentProductId: currentPlan.id,
+					licenseProductId: seat.id,
+					included: 1,
+				}),
+				s.licenses.link({
+					parentProductId: nextPlan.id,
+					licenseProductId: seat.id,
+					included: 10,
+				}),
+				s.billing.attach({
+					productId: currentPlan.id,
+					licenseQuantities: [{ licenseProductId: seat.id, quantity: 2 }],
+				}),
+				s.licenses.assign({ licenseProductId: seat.id, entityIndexes: [0, 1] }),
+			],
+		});
+
+		await autumnV2_3.billing.createSchedule<CreateScheduleParamsV0Input>({
+			customer_id: customerId,
+			phases: [
+				{ starts_at: "now", plans: [{ plan_id: nextPlan.id }] },
+				{
+					starts_at: Date.now() + ms.months(1),
+					plans: [{ plan_id: currentPlan.id }],
+				},
+			],
+		});
+
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		expectCustomerLicenses({
+			customer,
+			count: 1,
+			licenses: [
+				{
+					license_plan_id: seat.id,
+					parent_plan_id: nextPlan.id,
+					granted: 10,
+					usage: 2,
+					remaining: 8,
+					paid_quantity: 0,
+				},
+			],
+		});
+		await expectAssignmentsAnchoredToParent({
+			ctx,
+			customerId,
+			parentPlanId: nextPlan.id,
+			count: 2,
+		});
+	},
+);
 
 test.concurrent(
 	`${chalk.yellowBright("create-schedule outgoing pools: schedules a next phase while the customer holds an assigned seat")}`,

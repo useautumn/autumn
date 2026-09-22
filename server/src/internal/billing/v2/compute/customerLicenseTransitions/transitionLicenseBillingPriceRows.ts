@@ -7,6 +7,7 @@ import { isFixedPrice, isOneOffPrice } from "@autumn/shared";
 import { applyBasePriceOperationToLicenseBillingRows } from "@/internal/billing/v2/actions/batchTransition/compute/operations/basePriceOperations/applyBasePriceOperationToLicenseBillingRows";
 import { computeBasePriceOperation } from "@/internal/billing/v2/actions/batchTransition/compute/operations/basePriceOperations/computeBasePriceOperation";
 import { computeProductTransitions } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computeProductTransitions";
+import { capLicenseBillingBasePriceRows } from "./capLicenseBillingBasePriceRows.js";
 
 const priceIsRecurringBasePrice = ({ price }: { price: Price }): boolean =>
 	price.entitlement_id == null && isFixedPrice(price) && !isOneOffPrice(price);
@@ -69,14 +70,15 @@ export const transitionLicenseBillingPriceRows = ({
 			licenseBillingPriceRows: outgoingSeatRows,
 		}),
 	});
+	const targetQuantity = billableAssignedQuantity({
+		transition: customerLicenseTransition,
+		assignedSeatCount,
+	});
 	const rowsAfterBasePriceOperation =
 		applyBasePriceOperationToLicenseBillingRows({
 			licenseBillingPriceRows: outgoingSeatRows,
 			operation: basePriceOperation,
-			targetQuantity: billableAssignedQuantity({
-				transition: customerLicenseTransition,
-				assignedSeatCount,
-			}),
+			targetQuantity,
 			addRowContext: {
 				customerProductId: outgoingCustomerLicense.parent_customer_product_id,
 				source: {
@@ -85,8 +87,12 @@ export const transitionLicenseBillingPriceRows = ({
 				},
 			},
 		});
+	const cappedRows = capLicenseBillingBasePriceRows({
+		licenseBillingPriceRows: rowsAfterBasePriceOperation,
+		targetQuantity,
+	});
 
-	return rowsAfterBasePriceOperation.map((row) => {
+	return cappedRows.map((row) => {
 		return {
 			customerProductId: incomingCustomerLicense.parent_customer_product_id,
 			price: row.price,

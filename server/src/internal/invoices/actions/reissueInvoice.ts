@@ -186,6 +186,26 @@ const stripeLinesToAddLineParams = ({
 		metadata: { ...(line.metadata ?? {}), autumn_reissued_from_line: line.id },
 	}));
 
+/**
+ * A draft that survives a failed build is inert but clutters the customer.
+ * Stripe refuses to delete a subscription-linked draft, so that case is logged.
+ */
+const deleteDraft = async ({
+	ctx,
+	stripeCli,
+	draftId,
+}: {
+	ctx: AutumnContext;
+	stripeCli: Stripe;
+	draftId: string;
+}) => {
+	await stripeCli.invoices.del(draftId).catch((error) => {
+		ctx.logger.error(
+			`[reissueInvoice] failed to delete draft ${draftId}: ${error}`,
+		);
+	});
+};
+
 const createReplacementDraft = async ({
 	ctx,
 	customerId,
@@ -226,6 +246,27 @@ const createReplacementDraft = async ({
 	if (!stripeCusId) {
 		throw invalidRequest("Original invoice has no Stripe customer");
 	}
+
+	// Lines are resolved first so a bad edit fails before any draft exists.
+	const lines = await applyReissueLineEdits({
+		ctx,
+		customerId,
+		lines: stripeLinesToAddLineParams({
+			lines: await getStripeInvoiceLineItems({
+				stripeClient: stripeCli,
+				invoiceId: stripeInvoice.id,
+			}),
+			lineTaxRates:
+				overrides?.tax_rate_id === undefined
+					? "keep"
+					: overrides.tax_rate_id === null
+						? "none"
+						: "inherit",
+		}),
+		storedLines,
+		edits: lineEdits,
+		currency: stripeInvoice.currency,
+	});
 
 	const draft = await createStripeInvoice({
 		stripeCli,
@@ -283,39 +324,25 @@ const createReplacementDraft = async ({
 			? { account_tax_ids: overrides.account_tax_ids }
 			: {}),
 	};
-	if (Object.keys(invoiceFields).length > 0) {
-		await stripeCli.invoices.update(draft.id, invoiceFields);
-	}
+	// The draft exists from here on, so anything that fails must take it with it.
+	try {
+		if (Object.keys(invoiceFields).length > 0) {
+			await stripeCli.invoices.update(draft.id, invoiceFields);
+		}
 
-	const lines = await applyReissueLineEdits({
-		ctx,
-		customerId,
-		lines: stripeLinesToAddLineParams({
-			lines: await getStripeInvoiceLineItems({
-				stripeClient: stripeCli,
-				invoiceId: stripeInvoice.id,
-			}),
-			lineTaxRates:
-				overrides?.tax_rate_id === undefined
-					? "keep"
-					: overrides.tax_rate_id === null
-						? "none"
-						: "inherit",
-		}),
-		storedLines,
-		edits: lineEdits,
-		currency: stripeInvoice.currency,
-	});
-
-	let withLines = draft;
-	for (let start = 0; start < lines.length; start += ADD_LINES_BATCH_SIZE) {
-		withLines = await addStripeInvoiceLines({
-			stripeCli,
-			invoiceId: draft.id,
-			lines: lines.slice(start, start + ADD_LINES_BATCH_SIZE),
-		});
+		let withLines = draft;
+		for (let start = 0; start < lines.length; start += ADD_LINES_BATCH_SIZE) {
+			withLines = await addStripeInvoiceLines({
+				stripeCli,
+				invoiceId: draft.id,
+				lines: lines.slice(start, start + ADD_LINES_BATCH_SIZE),
+			});
+		}
+		return withLines;
+	} catch (error) {
+		await deleteDraft({ ctx, stripeCli, draftId: draft.id });
+		throw error;
 	}
-	return withLines;
 };
 
 /**
@@ -380,11 +407,7 @@ const previewReplacementDraft = async ({
 			dueDateMs,
 		});
 	} finally {
-		await stripeCli.invoices.del(draft.id).catch((error) => {
-			ctx.logger.error(
-				`[reissueInvoice] failed to delete preview draft ${draft.id}: ${error}`,
-			);
-		});
+		await deleteDraft({ ctx, stripeCli, draftId: draft.id });
 	}
 };
 
@@ -442,7 +465,7 @@ const issueReplacement = async ({
 	// The total is only guaranteed to match when nothing was adjusted.
 	const adjusted = Boolean(overrides || lineEdits || customerAdjusted);
 	if (!adjusted && draft.total !== stripeInvoice.total) {
-		await stripeCli.invoices.del(draft.id).catch(() => undefined);
+		await deleteDraft({ ctx, stripeCli, draftId: draft.id });
 		throw new RecaseError({
 			message: `Replacement total (${draft.total}) does not match the original (${stripeInvoice.total}); the invoice was not reissued`,
 			code: ErrCode.InternalError,
@@ -451,7 +474,7 @@ const issueReplacement = async ({
 	}
 
 	if (creditOriginal) {
-		return creditAndFinalize({ stripeCli, stripeInvoice, draft });
+		return creditAndFinalize({ ctx, stripeCli, stripeInvoice, draft });
 	}
 
 	// Automatic collection is what makes Stripe treat the replacement as the
@@ -501,10 +524,12 @@ const issueReplacement = async ({
  * on a paid invoice cannot be voided, which leaves a reversing balance entry.
  */
 const creditAndFinalize = async ({
+	ctx,
 	stripeCli,
 	stripeInvoice,
 	draft,
 }: {
+	ctx: AutumnContext;
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
 	draft: Stripe.Invoice;
@@ -526,8 +551,11 @@ const creditAndFinalize = async ({
 		});
 		return { finalized, creditNoteId: creditNote.id };
 	} catch (error) {
-		await reverseCredit({ stripeCli, stripeInvoice, creditNote, amount });
-		await stripeCli.invoices.del(draft.id).catch(() => undefined);
+		try {
+			await reverseCredit({ stripeCli, stripeInvoice, creditNote, amount });
+		} finally {
+			await deleteDraft({ ctx, stripeCli, draftId: draft.id });
+		}
 		throw error;
 	}
 };

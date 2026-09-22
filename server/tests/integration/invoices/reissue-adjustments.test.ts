@@ -351,6 +351,132 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("invoices.reissue adjustments: a rejected tax id keeps the existing registrations")}`,
+	async () => {
+		const customerId = "inv-reissue-adj-taxid-fail";
+		const pro = products.base({
+			id: "pro-reissue-adj-taxid-fail",
+			items: [items.monthlyPrice({ price: 20 })],
+		});
+		const { autumnV2_3, autumnV2_4 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		await attachInvoiceMode({ autumnV2_4, customerId, planId: pro.id });
+		const original = await firstInvoice({ autumnV2_3, customerId });
+
+		const persisted = await CusService.get({
+			db: ctx.db,
+			idOrInternalId: customerId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		const stripeCustomerId = persisted?.processor?.id ?? "";
+		await ctx.stripeCli.customers.createTaxId(stripeCustomerId, {
+			type: "eu_vat",
+			value: "FR12345678901",
+		});
+
+		// The second number is malformed, so Stripe rejects it.
+		await expectAutumnError({
+			func: () =>
+				autumnV2_3.post("/invoices.reissue", {
+					invoice_id: original.id,
+					customer: {
+						tax_ids: [
+							{ type: "eu_vat", value: "DE123456789" },
+							{ type: "eu_vat", value: "not-a-vat" },
+						],
+					},
+				}),
+		});
+
+		const taxIds = await ctx.stripeCli.customers.listTaxIds(stripeCustomerId);
+		expect(taxIds.data.map((taxId) => taxId.value)).toEqual(["FR12345678901"]);
+
+		// A set that keeps an existing id and adds one touches only the new one.
+		await autumnV2_3.post("/invoices.reissue", {
+			invoice_id: original.id,
+			customer: {
+				tax_ids: [
+					{ type: "eu_vat", value: "FR12345678901" },
+					{ type: "eu_vat", value: "DE123456789" },
+				],
+			},
+		});
+		const after = await ctx.stripeCli.customers.listTaxIds(stripeCustomerId);
+		expect(after.data.map((taxId) => taxId.value).sort()).toEqual([
+			"DE123456789",
+			"FR12345678901",
+		]);
+		expect(
+			after.data.find((taxId) => taxId.value === "FR12345678901")?.id,
+		).toBe(taxIds.data[0].id);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.reissue adjustments: a draft that fails to build is deleted")}`,
+	async () => {
+		const customerId = "inv-reissue-adj-draft-cleanup";
+		const pro = products.base({
+			id: "pro-reissue-adj-draft-cleanup",
+			items: [items.monthlyPrice({ price: 20 })],
+		});
+		const { autumnV2_3, autumnV2_4 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		await attachInvoiceMode({ autumnV2_4, customerId, planId: pro.id });
+		const original = await firstInvoice({ autumnV2_3, customerId });
+
+		const persisted = await CusService.get({
+			db: ctx.db,
+			idOrInternalId: customerId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		const stripeCustomerId = persisted?.processor?.id ?? "";
+
+		// An unknown line fails before any draft exists; an amount Stripe
+		// rejects fails after, and the preview draft is deleted on the way out.
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: () =>
+				autumnV2_3.post("/invoices.reissue", {
+					invoice_id: original.id,
+					lines: { remove: ["li_not_on_this_invoice"] },
+				}),
+		});
+		await expectAutumnError({
+			func: () =>
+				autumnV2_3.post("/invoices.reissue", {
+					invoice_id: original.id,
+					preview: true,
+					lines: { add: [{ description: "Too big", amount: 1e18 }] },
+				}),
+		});
+
+		const drafts = await ctx.stripeCli.invoices.list({
+			customer: stripeCustomerId,
+			status: "draft",
+			limit: 100,
+		});
+		expect(drafts.data).toEqual([]);
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("invoices.reissue adjustments: an added catalog plan is priced and attributed like invoices.create")}`,
 	async () => {
 		const customerId = "inv-reissue-adj-catalog";

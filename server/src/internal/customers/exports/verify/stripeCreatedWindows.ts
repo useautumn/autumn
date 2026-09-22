@@ -1,6 +1,6 @@
 import { addMonths } from "date-fns";
 import type Stripe from "stripe";
-import { STRIPE_SWEEP_WINDOW_MONTHS } from "./billingVerifyExportConfig.js";
+import { billingVerifyExportConfig } from "./billingVerifyExportConfig.js";
 
 const toSeconds = (ms: number) => Math.floor(ms / 1000);
 
@@ -10,15 +10,17 @@ const toSeconds = (ms: number) => Math.floor(ms / 1000);
 export const stripeCreatedWindows = ({
 	sinceMs,
 	untilMs,
+	windowMonths = billingVerifyExportConfig.sweep.windowMonths,
 }: {
 	sinceMs: number;
 	untilMs: number;
+	windowMonths?: number;
 }): Stripe.RangeQueryParam[] => {
 	const boundaries: number[] = [];
 	for (
 		let cursor = new Date(sinceMs);
 		cursor.getTime() < untilMs;
-		cursor = addMonths(cursor, STRIPE_SWEEP_WINDOW_MONTHS)
+		cursor = addMonths(cursor, windowMonths)
 	) {
 		boundaries.push(toSeconds(cursor.getTime()));
 	}

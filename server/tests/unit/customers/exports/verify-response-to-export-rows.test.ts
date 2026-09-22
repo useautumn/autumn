@@ -104,12 +104,6 @@ describe("verifyResponseToExportRow", () => {
 	});
 });
 
-const asyncList = <Item>(items: Item[]) => ({
-	async *[Symbol.asyncIterator]() {
-		yield* items;
-	},
-});
-
 const page = <Item>(data: Item[]) => Promise.resolve({ data, has_more: false });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -144,7 +138,7 @@ describe("sweepStripeSubscriptions", () => {
 				},
 			},
 			testHelpers: {
-				testClocks: { list: () => asyncList([{ id: "clock_1" }]) },
+				testClocks: { list: () => page([{ id: "clock_1" }]) },
 			},
 		} as unknown as Stripe;
 		return { listed, stripeCli };

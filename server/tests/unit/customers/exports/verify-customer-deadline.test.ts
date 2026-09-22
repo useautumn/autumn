@@ -47,8 +47,7 @@ describe("verifyCustomerToExportRows deadline", () => {
 			ctx,
 			scalar,
 			sweep,
-			timeoutMs: 50,
-			retryDelayMs: 0,
+			limits: { timeoutMs: 50, retryDelayMs: 0 },
 		});
 
 		expect(getFull).toHaveBeenCalledTimes(2);
@@ -67,10 +66,25 @@ describe("verifyCustomerToExportRows deadline", () => {
 			ctx,
 			scalar,
 			sweep,
-			timeoutMs: 50,
-			retryDelayMs: 0,
+			limits: { timeoutMs: 50, retryDelayMs: 0 },
 		});
 
 		expect(rows[0].details).toBe("boom");
+	});
+
+	it("retries a transient database error, not only a stall", async () => {
+		const getFull = spyOn(CusService, "getFull")
+			.mockRejectedValueOnce(new Error("Connection terminated unexpectedly"))
+			.mockImplementationOnce(neverSettles);
+
+		const rows = await verifyCustomerToExportRows({
+			ctx,
+			scalar,
+			sweep,
+			limits: { timeoutMs: 50, retryDelayMs: 0 },
+		});
+
+		expect(getFull).toHaveBeenCalledTimes(2);
+		expect(rows[0].details).toContain("timed out");
 	});
 });

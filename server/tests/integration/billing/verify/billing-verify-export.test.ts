@@ -339,12 +339,14 @@ test.concurrent(
 		const scalars = [subscribed.scalar, idleScalar];
 		const { ctx } = subscribed;
 
-		const swept = await filterBillingVerifyCandidates({
+		const { candidates } = await filterBillingVerifyCandidates({
 			ctx,
 			scalars,
 			sweep: sweepOf({ ctx, subscriptionsByStripeCustomerId: new Map() }),
 		});
-		expect(swept.map((scalar) => scalar.id)).toEqual([subscribed.scalar.id]);
+		expect(candidates.map((scalar) => scalar.id)).toEqual([
+			subscribed.scalar.id,
+		]);
 	},
 );
 

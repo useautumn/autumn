@@ -1,18 +1,43 @@
 import type Stripe from "stripe";
 import { mapWithConcurrency } from "@/internal/migrations/v2/batchOperations/execute/utils/mapWithConcurrency.js";
+import { retryBoundedAsync } from "@/utils/retryBoundedAsync.js";
 import {
-	STRIPE_LIST_PAGE_SIZE,
-	STRIPE_SWEEP_CONCURRENCY,
+	billingVerifyExportConfig,
+	type SweepLimits,
 } from "./billingVerifyExportConfig.js";
+import { listStripeSubscriptionPage } from "./listStripeSubscriptionPage.js";
 import { stripeCreatedWindows } from "./stripeCreatedWindows.js";
 
-const listTestClockIds = async ({ stripeCli }: { stripeCli: Stripe }) => {
+const listTestClockIds = async ({
+	stripeCli,
+	limits,
+}: {
+	stripeCli: Stripe;
+	limits?: SweepLimits;
+}) => {
+	const { pageSize, pageTimeoutMs, pageAttempts, retryDelayMs } = {
+		...billingVerifyExportConfig.sweep,
+		...limits,
+	};
 	const testClockIds: string[] = [];
-	const testClocks = stripeCli.testHelpers.testClocks.list({
-		limit: STRIPE_LIST_PAGE_SIZE,
-	});
-	for await (const testClock of testClocks) testClockIds.push(testClock.id);
-	return testClockIds;
+	let startingAfter: string | undefined;
+
+	while (true) {
+		const page = await retryBoundedAsync({
+			attempts: pageAttempts,
+			delayMs: retryDelayMs,
+			timeoutMs: pageTimeoutMs,
+			timeoutMessage: `Stripe test clock page timed out after ${pageTimeoutMs}ms`,
+			run: () =>
+				stripeCli.testHelpers.testClocks.list({
+					limit: pageSize,
+					starting_after: startingAfter,
+				}),
+		});
+		for (const testClock of page.data) testClockIds.push(testClock.id);
+		if (!page.has_more) return testClockIds;
+		startingAfter = page.data[page.data.length - 1]?.id;
+	}
 };
 
 /** One org-wide listing replaces a Stripe call per customer, fetched as
@@ -23,14 +48,22 @@ export const sweepStripeSubscriptions = async ({
 	includeTestClocks,
 	sinceMs,
 	untilMs,
+	limits,
 	onPage,
+	onRetry,
 }: {
 	stripeCli: Stripe;
 	includeTestClocks: boolean;
 	sinceMs: number;
 	untilMs: number;
+	limits?: SweepLimits;
 	onPage?: (subscriptionCount: number) => Promise<void> | void;
+	onRetry?: ({ attempt, error }: { attempt: number; error: unknown }) => void;
 }): Promise<Map<string, Stripe.Subscription[]>> => {
+	const { concurrency, windowMonths } = {
+		...billingVerifyExportConfig.sweep,
+		...limits,
+	};
 	const subscriptionsByStripeCustomerId = new Map<
 		string,
 		Stripe.Subscription[]
@@ -41,10 +74,12 @@ export const sweepStripeSubscriptions = async ({
 	) => {
 		let startingAfter: string | undefined;
 		while (true) {
-			const page = await stripeCli.subscriptions.list({
-				...params,
-				limit: STRIPE_LIST_PAGE_SIZE,
-				starting_after: startingAfter,
+			const page = await listStripeSubscriptionPage({
+				stripeCli,
+				params,
+				startingAfter,
+				limits,
+				onRetry,
 			});
 			for (const subscription of page.data) {
 				const stripeCustomerId =
@@ -63,14 +98,14 @@ export const sweepStripeSubscriptions = async ({
 	};
 
 	await mapWithConcurrency({
-		items: stripeCreatedWindows({ sinceMs, untilMs }),
-		concurrency: STRIPE_SWEEP_CONCURRENCY,
+		items: stripeCreatedWindows({ sinceMs, untilMs, windowMonths }),
+		concurrency,
 		run: (created) => collect({ created }),
 	});
 	if (includeTestClocks) {
 		await mapWithConcurrency({
-			items: await listTestClockIds({ stripeCli }),
-			concurrency: STRIPE_SWEEP_CONCURRENCY,
+			items: await listTestClockIds({ stripeCli, limits }),
+			concurrency,
 			run: (testClockId) => collect({ test_clock: testClockId }),
 		});
 	}
