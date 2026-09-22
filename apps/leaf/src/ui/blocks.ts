@@ -1603,6 +1603,10 @@ export const approvalStatusCard = ({
 }) => {
 	const phrases = actionPhrases({ env, preview, toolArgs, toolName });
 	const actor = mention(actorId);
+	// Stamps who approved so the channel keeps an audit trail of decisions.
+	const approvedBy = actor
+		? [CardText(`Approved by ${actor}`, { style: "muted" })]
+		: [];
 
 	// The "…" on the running sentence already signals in-progress; the ▸ line
 	// only appears once the action reports concrete progress.
@@ -1621,6 +1625,7 @@ export const approvalStatusCard = ({
 				...(statusLine
 					? [CardText(`▸ ${statusLine}`, { style: "muted" })]
 					: []),
+				...approvedBy,
 			],
 		});
 	}
@@ -1704,6 +1709,7 @@ export const approvalStatusCard = ({
 						]
 					: []),
 				CardText(lines.join("\n")),
+				...approvedBy,
 				...(dashboardUrl ? [Actions(viewInDashboardButton(dashboardUrl))] : []),
 			],
 		});
@@ -1715,6 +1721,7 @@ export const approvalStatusCard = ({
 			CardText(`✅ ${phrases.done}`),
 			...resolvedBody,
 			...(outcome.lines.length ? [CardText(outcome.lines.join("\n"))] : []),
+			...approvedBy,
 			...(outcome.links.length || dashboardUrl
 				? [
 						Actions([
