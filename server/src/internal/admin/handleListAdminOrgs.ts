@@ -1,4 +1,10 @@
-import { apiKeys, member, organizations, Scopes, user } from "@autumn/shared";
+import {
+	member,
+	OrgProvisioningSource,
+	organizations,
+	Scopes,
+	user,
+} from "@autumn/shared";
 import {
 	and,
 	desc,
@@ -11,7 +17,6 @@ import {
 	isNull,
 	lt,
 	or,
-	sql,
 } from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 import { getRequestBlockConfigFromSource } from "../misc/requestBlocks/requestBlockStore.js";
@@ -21,12 +26,7 @@ export const getAdminOrgTypeFilter = ({ platform }: { platform?: string }) =>
 		? and(
 				isNotNull(organizations.created_by),
 				eq(organizations.is_sandbox, false),
-				sql`EXISTS (
-					SELECT 1
-					FROM ${apiKeys}
-					WHERE ${apiKeys.org_id} = ${organizations.id}
-						AND ${apiKeys.name} = ${"Platform API Key"}
-				)`,
+				eq(organizations.provisioning_source, OrgProvisioningSource.Platform),
 			)
 		: isNull(organizations.created_by);
 

@@ -23,9 +23,8 @@ describe("getAdminOrgTypeFilter", () => {
 
 		expect(query.sql).toContain('"organizations"."created_by" is not null');
 		expect(query.sql).toContain('"organizations"."is_sandbox" = $1');
-		expect(query.sql).toContain('FROM "api_keys"');
-		expect(query.sql).toContain('"api_keys"."org_id" = "organizations"."id"');
-		expect(query.sql).toContain('"api_keys"."name" = $2');
-		expect(query.params).toEqual([false, "Platform API Key"]);
+		expect(query.sql).toContain('"organizations"."provisioning_source" = $2');
+		expect(query.sql).not.toContain('"api_keys"');
+		expect(query.params).toEqual([false, "platform"]);
 	});
 });

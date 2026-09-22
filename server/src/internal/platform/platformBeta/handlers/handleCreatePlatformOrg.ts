@@ -2,6 +2,7 @@ import {
 	AppEnv,
 	member,
 	type Organization,
+	OrgProvisioningSource,
 	organizations,
 	RecaseError,
 	Scopes,
@@ -106,6 +107,7 @@ export const handleCreatePlatformOrg = createRoute({
 				name,
 				isSandbox: false,
 				createMembership: true,
+				provisioningSource: OrgProvisioningSource.Platform,
 			});
 
 			logger.info(`Created new organization: ${org.id} (${orgSlug})`);
