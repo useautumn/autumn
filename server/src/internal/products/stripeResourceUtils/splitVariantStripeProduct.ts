@@ -1,4 +1,5 @@
 import { ErrCode, type FullProduct, RecaseError } from "@autumn/shared";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
@@ -122,6 +123,9 @@ export const splitVariantStripeProduct = async ({
 		await writeStripeIds({ ctx, variant, ...inherited });
 		throw error;
 	}
+
+	// listFull is cached, so the dashboard would keep serving the old mapping.
+	await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
 
 	return ProductService.getFull({
 		db: ctx.db,
