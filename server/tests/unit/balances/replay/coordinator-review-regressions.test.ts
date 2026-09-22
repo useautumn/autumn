@@ -187,6 +187,7 @@ function checkDecisionOf({
 		result: {
 			allowed: true,
 			reason: null,
+			limitType: null,
 			requiredBalance: 0,
 			fundingFeatureId: "messages",
 			isFlag: false,

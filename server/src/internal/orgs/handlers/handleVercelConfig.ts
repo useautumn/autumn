@@ -10,7 +10,6 @@ import {
 import { createSvixApp } from "@server/external/svix/svixHelpers.js";
 import { createSvixCli } from "@server/external/svix/svixUtils.js";
 import { createRoute } from "@server/honoMiddlewares/routeHandler.js";
-import type { ApplicationOut } from "svix";
 import { OrgService } from "../OrgService.js";
 
 export const getVercelConfigDisplay = ({
@@ -179,8 +178,8 @@ export const handleGetVercelSink = createRoute({
 		const { db, org, env } = c.get("ctx");
 		const vercelConfig = org.processor_configs?.vercel;
 		const svixCli = createSvixCli();
-		let liveApp: ApplicationOut | undefined;
-		let sandboxApp: ApplicationOut | undefined;
+		let liveApp: { id: string } | undefined;
+		let sandboxApp: { id: string } | undefined;
 
 		if (!vercelConfig) {
 			throw new InternalError({

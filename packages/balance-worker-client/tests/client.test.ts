@@ -389,6 +389,7 @@ test.concurrent(
 			result: {
 				allowed: true,
 				reason: null,
+				limitType: null,
 				requiredBalance: 1,
 				fundingFeatureId: "messages",
 				isFlag: false,

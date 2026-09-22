@@ -20,6 +20,7 @@ export const subjectRowsEnvelopeSchema = z.object({
 		spend_limits: true,
 		overage_allowed: true,
 		usage_limits: true,
+		usage_alerts: true,
 	}),
 	customer_products: z.array(CusProductSchema),
 	customer_prices: z.array(CustomerPriceSchema),

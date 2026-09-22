@@ -73,6 +73,8 @@ const trackReplyToCheckAnswer = ({
 		result: {
 			allowed,
 			reason: allowed ? null : "insufficient_balance",
+			// A refused track does not say which limit refused it; only a plain check does.
+			limitType: null,
 			requiredBalance: new Decimal(requiredBalanceOf({ body }))
 				.mul(reply.result.fundingCreditCost)
 				.toNumber(),
@@ -96,6 +98,7 @@ const nothingAttachedAnswer = ({
 		result: {
 			allowed,
 			reason: allowed ? null : "feature_not_attached",
+			limitType: null,
 			requiredBalance,
 			fundingFeatureId: null,
 			isFlag: false,

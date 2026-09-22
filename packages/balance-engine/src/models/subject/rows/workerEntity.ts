@@ -10,6 +10,7 @@ export const workerEntitySchema = EntitySchema.pick({
 	spend_limits: true,
 	overage_allowed: true,
 	usage_limits: true,
+	usage_alerts: true,
 }).strict();
 
 export type WorkerEntity = z.infer<typeof workerEntitySchema>;

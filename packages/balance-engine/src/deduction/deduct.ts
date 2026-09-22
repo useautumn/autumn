@@ -7,6 +7,7 @@ import type { DeductionRequest } from "./types/deductionRequest.js";
 import type { DeductionState } from "./types/deductionState.js";
 import { deltasToRowChanges } from "./utils/convertDeductionUtils.js";
 import { deductFromBucket } from "./utils/draw/deductFromBucket.js";
+import { deductionStateToLimitType } from "./utils/limits/deductionStateToLimitType.js";
 import { usageWindowsToRowChanges } from "./utils/limits/usageWindows.js";
 
 /** The forward draw: takes `deductionState.remaining` from the buckets in order, on top of whatever has already moved. */
@@ -46,6 +47,9 @@ export const deductionStateToOutcome = ({
 		appliedValue: new Decimal(request.value).minus(remaining).toNumber(),
 		remaining: remaining.toNumber(),
 		rejected,
+		limitType: remaining.gt(0)
+			? deductionStateToLimitType({ context, deductionState })
+			: null,
 		deltas,
 		changes: rejected
 			? []

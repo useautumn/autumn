@@ -2,6 +2,7 @@ import type { HeraldEnv } from "@autumn/env/herald";
 import { createKafkaClient, createKafkaTransport } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { EventsDb } from "@autumn/postgres";
+import type { SvixClient } from "@autumn/svix";
 import type { EventsTinybird } from "@autumn/tinybird";
 import { Kafka } from "kafkajs";
 import { createHeraldConsumers } from "../consumers/heraldConsumers.js";
@@ -18,6 +19,7 @@ export function createHerald({
 		logger: AutumnLogger;
 		eventsDb: EventsDb;
 		eventsTinybird: EventsTinybird | null;
+		svix: SvixClient | null;
 	};
 	config: { env: HeraldEnv };
 }): Herald {

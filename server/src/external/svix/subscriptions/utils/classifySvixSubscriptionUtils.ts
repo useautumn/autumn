@@ -1,19 +1,11 @@
 import type { AppEnv, Organization } from "@autumn/shared";
+import {
+	endpointsSubscribeToEvent,
+	filterEventTypesSubscribed,
+} from "@autumn/svix";
 import { listSvixEndpoints } from "../operations/listSvixEndpoints.js";
 
-type SvixEndpointLike = { filterTypes?: string[] | null };
-
-/** An endpoint with no filter types receives every event. */
-export const endpointReceivesEvent = ({
-	endpoint,
-	eventType,
-}: {
-	endpoint: SvixEndpointLike;
-	eventType: string;
-}): boolean => {
-	const filterTypes = endpoint.filterTypes ?? [];
-	return filterTypes.length === 0 || filterTypes.includes(eventType);
-};
+export { endpointReceivesEvent } from "@autumn/svix";
 
 /** Whether the org has any endpoint listening for `eventType`. */
 export const isSubscribedToEvent = async ({
@@ -26,9 +18,7 @@ export const isSubscribedToEvent = async ({
 	eventType: string;
 }): Promise<boolean> => {
 	const endpoints = (await listSvixEndpoints({ org, env })) ?? [];
-	return endpoints.some((endpoint) =>
-		endpointReceivesEvent({ endpoint, eventType }),
-	);
+	return endpointsSubscribeToEvent({ endpoints, eventType });
 };
 
 /** Which of `eventTypes` the org listens for — one endpoint fetch. */
@@ -42,9 +32,5 @@ export const isSubscribedToEvents = async ({
 	eventTypes: string[];
 }): Promise<string[]> => {
 	const endpoints = (await listSvixEndpoints({ org, env })) ?? [];
-	return eventTypes.filter((eventType) =>
-		endpoints.some((endpoint) =>
-			endpointReceivesEvent({ endpoint, eventType }),
-		),
-	);
+	return filterEventTypesSubscribed({ endpoints, eventTypes });
 };

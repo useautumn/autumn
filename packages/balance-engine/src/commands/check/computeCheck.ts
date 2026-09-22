@@ -29,6 +29,7 @@ export const computeCheck = ({
 		return {
 			allowed,
 			reason: allowed ? null : "feature_not_attached",
+			limitType: null,
 			requiredBalance: command.requiredBalance,
 			fundingFeatureId: null,
 			isFlag: false,
@@ -48,6 +49,7 @@ export const computeCheck = ({
 		return {
 			allowed: holdsFlag,
 			reason: holdsFlag ? null : "insufficient_balance",
+			limitType: null,
 			requiredBalance: command.requiredBalance,
 			fundingFeatureId: feature.id,
 			isFlag: true,
@@ -59,6 +61,7 @@ export const computeCheck = ({
 	return {
 		allowed,
 		reason: allowed ? null : "insufficient_balance",
+		limitType: allowed ? null : outcome.limitType,
 		requiredBalance: new Decimal(command.requiredBalance)
 			.mul(fundingRow?.creditCost ?? 1)
 			.toNumber(),

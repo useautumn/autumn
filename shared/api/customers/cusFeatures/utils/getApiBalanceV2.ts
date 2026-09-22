@@ -105,34 +105,21 @@ const getApiBalanceBreakdownItemV2 = ({
 	};
 };
 
-export const getApiBalanceV2 = ({
-	ctx,
+/** The balance the rows add up to, with the feature object attached only when the caller expanded it. Pure: no request context. */
+export const customerEntitlementsToApiBalance = ({
 	fullSubject,
 	customerEntitlements,
 	feature,
 	aggregatedFeatureBalance,
+	apiFeature,
 }: {
-	ctx: SharedContext;
 	fullSubject: Pick<FullSubjectView, "entity">;
 	customerEntitlements: CustomerEntitlementWithPricesView[];
 	feature: Feature;
 	aggregatedFeatureBalance?: FullAggregatedFeatureBalance;
+	apiFeature?: ReturnType<typeof dbToApiFeatureV1>;
 }): { data: ApiBalanceV1 } => {
 	const entityId = fullSubject.entity?.id ?? fullSubject.entity?.internal_id;
-
-	const apiFeature = expandIncludes({
-		expand: ctx.expand,
-		includes: [
-			CheckExpand.BalanceFeature,
-			CustomerExpand.BalancesFeature,
-			"feature",
-		],
-	})
-		? dbToApiFeatureV1({
-				ctx,
-				dbFeature: feature,
-			})
-		: undefined;
 
 	// console.log("customerEntitlements", customerEntitlements);
 	// console.log("aggregatedFeatureBalance", aggregatedFeatureBalance);
@@ -250,4 +237,36 @@ export const getApiBalanceV2 = ({
 	});
 
 	return { data: roundApiBalance({ apiBalance: merged }) };
+};
+
+export const getApiBalanceV2 = ({
+	ctx,
+	fullSubject,
+	customerEntitlements,
+	feature,
+	aggregatedFeatureBalance,
+}: {
+	ctx: SharedContext;
+	fullSubject: Pick<FullSubjectView, "entity">;
+	customerEntitlements: CustomerEntitlementWithPricesView[];
+	feature: Feature;
+	aggregatedFeatureBalance?: FullAggregatedFeatureBalance;
+}): { data: ApiBalanceV1 } => {
+	const apiFeature = expandIncludes({
+		expand: ctx.expand,
+		includes: [
+			CheckExpand.BalanceFeature,
+			CustomerExpand.BalancesFeature,
+			"feature",
+		],
+	})
+		? dbToApiFeatureV1({ ctx, dbFeature: feature })
+		: undefined;
+	return customerEntitlementsToApiBalance({
+		fullSubject,
+		customerEntitlements,
+		feature,
+		aggregatedFeatureBalance,
+		apiFeature,
+	});
 };

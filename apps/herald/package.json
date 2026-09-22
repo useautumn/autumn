@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@autumn/balance-engine": "workspace:*",
+		"@autumn/balance-webhooks": "workspace:*",
 		"@autumn/env": "workspace:*",
 		"@autumn/kafka": "workspace:*",
 		"@autumn/logging": "workspace:*",
@@ -19,6 +20,7 @@
 		"@autumn/shared": "workspace:*",
 		"@autumn/tinybird": "workspace:*",
 		"decimal.js": "^10.5.0",
+		"@autumn/svix": "workspace:*",
 		"kafkajs": "^2.2.4",
 		"zod": "^3.25.23"
 	},

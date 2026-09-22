@@ -43,6 +43,8 @@ export function createHeraldEnv(
 		// One group per deployment: herald's place in the log is this group's committed offsets.
 		HERALD_GROUP_ID: `${deployment}-herald`,
 		HERALD_EVENTS_DATABASE_URL: eventsDatabaseUrl,
+		/** Absent where Svix is not set up: herald then decides webhooks and delivers none. */
+		HERALD_SVIX_API_KEY: runtimeEnv.SVIX_API_KEY || null,
 	};
 }
 

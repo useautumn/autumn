@@ -3,8 +3,8 @@ import {
 	InternalError,
 	type Organization,
 	type RevenueCatProcessorConfig,
-	UpsertRevenueCatProcessorConfigSchema,
 	Scopes,
+	UpsertRevenueCatProcessorConfigSchema,
 } from "@autumn/shared";
 import { getRevenuecatAccessToken } from "@server/external/revenueCat/misc/getRevenuecatAccessToken.js";
 import {
@@ -18,7 +18,6 @@ import { createSvixCli } from "@server/external/svix/svixUtils.js";
 import { createRoute } from "@server/honoMiddlewares/routeHandler.js";
 import { decryptData, encryptData } from "@server/utils/encryptUtils.js";
 import { mask } from "@server/utils/genUtils.js";
-import type { ApplicationOut } from "svix";
 import { OrgService } from "../OrgService.js";
 
 const generateWebhookSecret = generateRevenuecatWebhookSecret;
@@ -217,8 +216,8 @@ const handleGetVercelSink = createRoute({
 		const { db, org, env } = c.get("ctx");
 		const vercelConfig = org.processor_configs?.vercel;
 		const svixCli = createSvixCli();
-		let liveApp: ApplicationOut | undefined;
-		let sandboxApp: ApplicationOut | undefined;
+		let liveApp: { id: string } | undefined;
+		let sandboxApp: { id: string } | undefined;
 
 		if (!vercelConfig) {
 			throw new InternalError({

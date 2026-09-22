@@ -136,6 +136,7 @@ test.concurrent(
 					result: {
 						allowed: false,
 						reason: "insufficient_balance",
+						limitType: "included",
 						requiredBalance: command.requiredBalance,
 						fundingFeatureId: command.featureId,
 						isFlag: false,

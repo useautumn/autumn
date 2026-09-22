@@ -37,6 +37,7 @@ describe("check computation", () => {
 		expect(decision).toEqual({
 			allowed: true,
 			reason: null,
+			limitType: null,
 			requiredBalance: 5,
 			fundingFeatureId: createCheckCommand().featureId,
 			isFlag: false,
@@ -53,6 +54,7 @@ describe("check computation", () => {
 		).toEqual({
 			allowed: false,
 			reason: "insufficient_balance",
+			limitType: "included",
 			requiredBalance: 11,
 			fundingFeatureId: createCheckCommand().featureId,
 			isFlag: false,

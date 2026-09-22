@@ -36,6 +36,7 @@ const emptyEnvelope: SubjectRowsEnvelope = {
 		spend_limits: null,
 		overage_allowed: null,
 		usage_limits: null,
+		usage_alerts: null,
 	},
 	customer_products: [],
 	customer_prices: [],
@@ -134,7 +135,20 @@ const createScope = ({
 const customerKey = meteringIdentityToPartitionKey({ identity });
 const freshEnvelope: SubjectRowsEnvelope = {
 	...emptyEnvelope,
-	customer: { ...emptyEnvelope.customer, usage_limits: [] },
+	customer: {
+		...emptyEnvelope.customer,
+		usage_limits: [],
+		// Alerts ride on the customer row: a load that dropped them would fire none downstream.
+		usage_alerts: [
+			{
+				feature_id: "messages",
+				enabled: true,
+				threshold: 800,
+				threshold_type: "usage",
+				basis: "balance",
+			},
+		],
+	},
 };
 /** Lets the load run up to its next await on the source. */
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -191,6 +205,9 @@ describe("ensure subject state", () => {
 
 		expect(sourceCalls()).toBe(2);
 		expect(state.customer?.usage_limits).toEqual([]);
+		expect(state.customer?.usage_alerts).toEqual(
+			freshEnvelope.customer.usage_alerts,
+		);
 		expect(writer.committed).toHaveLength(1);
 		expect(scope.state.inFlightLoads.count()).toBe(0);
 	});

@@ -116,11 +116,13 @@
       "version": "0.0.1",
       "dependencies": {
         "@autumn/balance-engine": "workspace:*",
+        "@autumn/balance-webhooks": "workspace:*",
         "@autumn/env": "workspace:*",
         "@autumn/kafka": "workspace:*",
         "@autumn/logging": "workspace:*",
         "@autumn/postgres": "workspace:*",
         "@autumn/shared": "workspace:*",
+        "@autumn/svix": "workspace:*",
         "@autumn/tinybird": "workspace:*",
         "decimal.js": "^10.5.0",
         "kafkajs": "^2.2.4",
@@ -488,6 +490,21 @@
         "typescript": "~5.8.3",
       },
     },
+    "packages/balance-webhooks": {
+      "name": "@autumn/balance-webhooks",
+      "version": "0.0.1",
+      "dependencies": {
+        "@autumn/balance-engine": "workspace:*",
+        "@autumn/logging": "workspace:*",
+        "@autumn/shared": "workspace:*",
+        "zod": "^3.25.23",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.14",
+        "@types/node": "^24.9.1",
+        "typescript": "~5.8.3",
+      },
+    },
     "packages/balance-worker-client": {
       "name": "@autumn/balance-worker-client",
       "version": "0.0.1",
@@ -692,6 +709,19 @@
         "@types/pg": "^8.20.0",
       },
     },
+    "packages/svix": {
+      "name": "@autumn/svix",
+      "version": "0.0.1",
+      "dependencies": {
+        "@autumn/shared": "workspace:*",
+        "svix": "^1.45.1",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.14",
+        "@types/node": "^24.9.1",
+        "typescript": "~5.8.3",
+      },
+    },
     "packages/tinybird": {
       "name": "@autumn/tinybird",
       "version": "0.0.1",
@@ -794,6 +824,7 @@
         "@autumn/agent-docs": "workspace:*",
         "@autumn/auth": "workspace:*",
         "@autumn/balance-engine": "workspace:*",
+        "@autumn/balance-webhooks": "workspace:*",
         "@autumn/balance-worker-client": "workspace:*",
         "@autumn/ducklake": "workspace:*",
         "@autumn/edge-config": "workspace:*",
@@ -803,6 +834,7 @@
         "@autumn/logging": "workspace:*",
         "@autumn/shared": "workspace:*",
         "@autumn/stripe-sync": "workspace:*",
+        "@autumn/svix": "workspace:*",
         "@aws-sdk/client-dynamodb": "^3.1095.0",
         "@aws-sdk/client-glue": "^3.958.0",
         "@aws-sdk/client-s3": "^3.1017.0",
@@ -1212,6 +1244,8 @@
 
     "@autumn/balance-engine": ["@autumn/balance-engine@workspace:packages/balance-engine"],
 
+    "@autumn/balance-webhooks": ["@autumn/balance-webhooks@workspace:packages/balance-webhooks"],
+
     "@autumn/balance-worker": ["@autumn/balance-worker@workspace:apps/balance-worker"],
 
     "@autumn/balance-worker-client": ["@autumn/balance-worker-client@workspace:packages/balance-worker-client"],
@@ -1251,6 +1285,8 @@
     "@autumn/sso-test-idp": ["@autumn/sso-test-idp@workspace:apps/sso-test-idp"],
 
     "@autumn/stripe-sync": ["@autumn/stripe-sync@workspace:packages/stripe-sync"],
+
+    "@autumn/svix": ["@autumn/svix@workspace:packages/svix"],
 
     "@autumn/testbench": ["@autumn/testbench@workspace:apps/testbench"],
 

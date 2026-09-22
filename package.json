@@ -29,6 +29,8 @@
 			"packages/balance-engine",
 			"packages/edge-config",
 			"packages/postgres",
+			"packages/balance-webhooks",
+			"packages/svix",
 			"packages/tinybird",
 			"packages/balance-worker-client",
 			"packages/kafka",

@@ -1,7 +1,9 @@
+import {
+	filterUsageAlertsForFeature,
+	type ScopedUsageAlerts,
+} from "@autumn/balance-webhooks";
 import { AppEnv, type Feature } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { ScopedUsageAlerts } from "../types/scopedUsageAlerts.js";
-import { filterUsageAlertsForFeature } from "./filterUsageAlertsForFeature.js";
 
 // Org alerts measure the tracked subject, entity included.
 export const resolveOrgScopeAlerts = ({
