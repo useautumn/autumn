@@ -168,32 +168,22 @@ export const buildBoundedVersioningCustomerProductsQuery = ({
 }) => {
 	const statuses = sqlIn({ values: [...VERSIONABLE_CUSTOMER_STATUSES] });
 
+	// One indexed pass over the candidate ids. Correlated EXISTS against an
+	// unnest() candidate hides the id from the planner, which then seq-scans
+	// customer_products once per subquery (12s+ on large orgs).
 	return sql`
 		SELECT
-			candidate.internal_product_id,
-			EXISTS (
-				SELECT 1
-				FROM customer_products cp
-				WHERE cp.internal_product_id = candidate.internal_product_id
-				LIMIT 1
-			) AS has_any_customer_products,
-			EXISTS (
-				SELECT 1
-				FROM customer_products cp
-				WHERE cp.internal_product_id = candidate.internal_product_id
-					AND cp.status IN (${statuses})
-				LIMIT 1
-			) AS has_versionable_customer_products,
-			EXISTS (
-				SELECT 1
-				FROM customer_products cp
-				WHERE cp.internal_product_id = candidate.internal_product_id
-					AND cp.status IN (${statuses})
-					AND cp.customer_license_link_id IS NULL
-				LIMIT 1
+			cp.internal_product_id,
+			TRUE AS has_any_customer_products,
+			bool_or(cp.status IN (${statuses}))
+				AS has_versionable_customer_products,
+			bool_or(
+				cp.status IN (${statuses})
+				AND cp.customer_license_link_id IS NULL
 			) AS has_versionable_direct_customer_products
-		FROM unnest(${sql.param(internalProductIds)}::text[])
-			AS candidate(internal_product_id)
+		FROM customer_products cp
+		WHERE cp.internal_product_id = ANY(${sql.param(internalProductIds)}::text[])
+		GROUP BY cp.internal_product_id
 	`;
 };
 

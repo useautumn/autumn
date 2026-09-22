@@ -25,3 +25,8 @@ dist-ssr
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Render harness output and scratch mockup subjects
+.render/
+render/subjects/*
+!render/subjects/example.tsx

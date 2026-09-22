@@ -17,6 +17,7 @@ import {
 	isCustomerProductPaid,
 	isCustomerProductPaidRecurring,
 	isCustomerProductRecurring,
+	isCustomerProductRevertingTrial,
 	isCustomerProductScheduled,
 	isCustomerProductTrialing,
 } from "./classifyCustomerProduct";
@@ -167,6 +168,12 @@ class CustomerProductChecker {
 		this.pendingPredicates.push(
 			(cp) => !!isCustomerProductTrialing(cp, { nowMs }),
 		);
+		return this;
+	}
+
+	/** Product is a trial that reverts on end — Autumn-only, never on Stripe */
+	revertingTrial() {
+		this.pendingPredicates.push(isCustomerProductRevertingTrial);
 		return this;
 	}
 

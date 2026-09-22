@@ -15,7 +15,13 @@ const listTestClockIds = async ({
 	stripeCli: Stripe;
 	limits?: SweepLimits;
 }) => {
-	const { pageSize, pageTimeoutMs, pageAttempts, retryDelayMs } = {
+	const {
+		pageSize,
+		pageTimeoutMs,
+		pageAttempts,
+		retryDelayMs,
+		maxRetryDelayMs,
+	} = {
 		...billingVerifyExportConfig.sweep,
 		...limits,
 	};
@@ -26,6 +32,7 @@ const listTestClockIds = async ({
 		const page = await retryBoundedAsync({
 			attempts: pageAttempts,
 			delayMs: retryDelayMs,
+			maxDelayMs: maxRetryDelayMs,
 			timeoutMs: pageTimeoutMs,
 			timeoutMessage: `Stripe test clock page timed out after ${pageTimeoutMs}ms`,
 			run: () =>

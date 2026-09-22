@@ -47,7 +47,7 @@ describe("verifyCustomerToExportRows deadline", () => {
 			ctx,
 			scalar,
 			sweep,
-			limits: { timeoutMs: 50, retryDelayMs: 0 },
+			limits: { timeoutMs: 50, retryDelayMs: 0, attempts: 2 },
 		});
 
 		expect(getFull).toHaveBeenCalledTimes(2);
@@ -66,10 +66,27 @@ describe("verifyCustomerToExportRows deadline", () => {
 			ctx,
 			scalar,
 			sweep,
-			limits: { timeoutMs: 50, retryDelayMs: 0 },
+			limits: { timeoutMs: 50, retryDelayMs: 0, attempts: 2 },
 		});
 
 		expect(rows[0].details).toBe("boom");
+	});
+
+	it("rides out a dead pooled connection that also fails the first retry", async () => {
+		const connectionError = new Error("Connection terminated unexpectedly");
+		const getFull = spyOn(CusService, "getFull").mockRejectedValue(
+			connectionError,
+		);
+
+		const rows = await verifyCustomerToExportRows({
+			ctx,
+			scalar,
+			sweep,
+			limits: { timeoutMs: 50, retryDelayMs: 0, maxRetryDelayMs: 0 },
+		});
+
+		expect(getFull).toHaveBeenCalledTimes(6);
+		expect(rows[0].details).toBe("Connection terminated unexpectedly");
 	});
 
 	it("retries a transient database error, not only a stall", async () => {
@@ -81,7 +98,7 @@ describe("verifyCustomerToExportRows deadline", () => {
 			ctx,
 			scalar,
 			sweep,
-			limits: { timeoutMs: 50, retryDelayMs: 0 },
+			limits: { timeoutMs: 50, retryDelayMs: 0, attempts: 2 },
 		});
 
 		expect(getFull).toHaveBeenCalledTimes(2);

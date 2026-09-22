@@ -13,7 +13,11 @@ const EXIT_TRANSITION = { duration: 0.25, ease: EASE_OUT, delay: 0.55 };
 const FILL_TRANSITION = { duration: 0.45, ease: EASE_OUT };
 /** The scan has no total, so the bar sweeps instead of filling; reduced
  * motion parks the segment mid-track instead. */
-const SCAN_TRANSITION = { duration: 1.4, ease: "easeInOut", repeat: Infinity };
+const SCAN_TRANSITION = {
+	duration: 1.4,
+	ease: "easeInOut",
+	repeat: Infinity,
+} as const;
 
 const PERCENT_MAX = 100;
 
@@ -96,6 +100,7 @@ export function CustomerExportActiveProgress({
 						<div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
 							{isScanning ? (
 								<motion.div
+									key="scan"
 									className="h-full w-1/3 rounded-full bg-primary"
 									initial={shouldReduceMotion ? false : { x: "-100%" }}
 									animate={{ x: shouldReduceMotion ? "100%" : "300%" }}
@@ -105,6 +110,7 @@ export function CustomerExportActiveProgress({
 								/>
 							) : (
 								<motion.div
+									key="fill"
 									className="h-full rounded-full bg-primary"
 									initial={false}
 									animate={{ width: `${percent}%` }}

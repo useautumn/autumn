@@ -26,6 +26,7 @@ import {
 	BillingControlsList,
 	hasBillingControls,
 } from "@/components/billing-controls/BillingControlsDisplay";
+import { getPendingBillingCycleAnchor } from "@/components/forms/update-subscription-v2/utils/pendingBillingCycleAnchor";
 import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
@@ -34,7 +35,6 @@ import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
-
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -142,6 +142,10 @@ export function SubscriptionDetailSheet() {
 		setSheet({ type: "subscription-update", itemId });
 	};
 
+	const pendingAnchorResetsAt = getPendingBillingCycleAnchor({
+		cusProduct,
+		nowMs,
+	});
 	const kindConfig = getPlanKindConfig(getCusProductKind(cusProduct));
 	const planBillingControls = billingControlsFromColumns(cusProduct.product);
 
@@ -365,6 +369,17 @@ export function SubscriptionDetailSheet() {
 					)}
 				</div>
 			</SheetSection>
+
+			{pendingAnchorResetsAt !== null && (
+				<SheetSection>
+					<div className="mb-2 text-form-label">Upcoming billing change</div>
+					<InfoRow
+						icon={<CalendarBlankIcon size={16} weight="duotone" />}
+						label="Cycle restarts"
+						value={formatDate(pendingAnchorResetsAt)}
+					/>
+				</SheetSection>
+			)}
 
 			{hasBillingControls(planBillingControls) && (
 				<SheetSection>

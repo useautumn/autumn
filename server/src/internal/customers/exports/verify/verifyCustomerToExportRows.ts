@@ -1,4 +1,7 @@
-import type { BillingVerifyExportRow } from "@autumn/shared";
+import {
+	type BillingVerifyExportRow,
+	STRIPE_LINKED_STATUSES,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { retryBoundedAsync } from "@/utils/retryBoundedAsync.js";
@@ -28,7 +31,7 @@ export const verifyCustomerToExportRows = async ({
 	sweep: BillingVerifySweep;
 	limits?: CustomerLimits;
 }): Promise<BillingVerifyExportRow[]> => {
-	const { timeoutMs, attempts, retryDelayMs } = {
+	const { timeoutMs, attempts, retryDelayMs, maxRetryDelayMs } = {
 		...billingVerifyExportConfig.customer,
 		...limits,
 	};
@@ -47,6 +50,7 @@ export const verifyCustomerToExportRows = async ({
 			ctx,
 			idOrInternalId: scalar.internal_id,
 			withEntities: true,
+			inStatuses: STRIPE_LINKED_STATUSES,
 		});
 		const params = { customer_id: scalar.id ?? scalar.internal_id };
 
@@ -76,6 +80,7 @@ export const verifyCustomerToExportRows = async ({
 		return await retryBoundedAsync({
 			attempts,
 			delayMs: retryDelayMs,
+			maxDelayMs: maxRetryDelayMs,
 			timeoutMs,
 			timeoutMessage: `Verification timed out after ${timeoutMs}ms`,
 			run: verifyOnce,

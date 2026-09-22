@@ -7,6 +7,7 @@ import {
 	type CustomerExportScalarRow,
 	getCustomerExportScalars,
 } from "../../queries/getCustomerExportScalars.js";
+import { retryExportDbRead } from "../../verify/retryExportDbRead.js";
 
 /** Keyset walk over the export's frozen population, one page of customers at a time. */
 export const walkCustomerExportPages = async function* ({
@@ -20,11 +21,16 @@ export const walkCustomerExportPages = async function* ({
 	population: CustomerExportPopulation;
 	pageSize?: number;
 }): AsyncGenerator<CustomerExportScalarRow[]> {
+	const readScalars = retryExportDbRead({
+		logger: ctx.logger,
+		operation: "getCustomerExportScalars",
+		query: getCustomerExportScalars,
+	});
 	let afterInternalId: string | null = null;
 	let hasMorePages = true;
 
 	while (hasMorePages) {
-		const scalars = await getCustomerExportScalars({
+		const scalars = await readScalars({
 			db: dbReplica ?? ctx.db,
 			orgId: ctx.org.id,
 			env: ctx.env,
