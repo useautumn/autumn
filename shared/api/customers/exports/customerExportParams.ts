@@ -54,7 +54,19 @@ export type ListCustomerExportsQuery = z.infer<
 	typeof ListCustomerExportsQuerySchema
 >;
 
+export const CustomerExportPhase = {
+	Scanning: "scanning",
+	Exporting: "exporting",
+} as const;
+
+export type CustomerExportPhase =
+	(typeof CustomerExportPhase)[keyof typeof CustomerExportPhase];
+
+export const CustomerExportPhaseSchema = z.enum(CustomerExportPhase);
+
+/** While scanning, processed_rows counts Stripe subscriptions found so far. */
 export const CustomerExportProgressSchema = z.object({
+	phase: CustomerExportPhaseSchema,
 	processed_rows: z.number(),
 	total_rows: z.number(),
 });
@@ -67,7 +79,10 @@ export const CUSTOMER_EXPORT_TOTAL_ROWS_KEY = "total_rows";
 
 export const CUSTOMER_EXPORT_PROCESSED_ROWS_KEY = "processed_rows";
 
-/** A retried run resets and re-counts, so processed is capped at the total. */
+export const CUSTOMER_EXPORT_PHASE_KEY = "phase";
+
+/** A retried run resets and re-counts, so processed is capped at the total
+ * once exporting; the scan count has no total to cap against. */
 export const runMetadataToCustomerExportProgress = ({
 	metadata,
 }: {
@@ -87,8 +102,19 @@ export const runMetadataToCustomerExportProgress = ({
 			? processedRaw
 			: 0;
 
+	const phase = CustomerExportPhaseSchema.safeParse(
+		metadata?.[CUSTOMER_EXPORT_PHASE_KEY],
+	);
+	const isScanning =
+		phase.success && phase.data === CustomerExportPhase.Scanning;
+
 	return {
-		processed_rows: Math.min(Math.max(processedRows, 0), totalRows),
+		phase: isScanning
+			? CustomerExportPhase.Scanning
+			: CustomerExportPhase.Exporting,
+		processed_rows: isScanning
+			? Math.max(processedRows, 0)
+			: Math.min(Math.max(processedRows, 0), totalRows),
 		total_rows: totalRows,
 	};
 };

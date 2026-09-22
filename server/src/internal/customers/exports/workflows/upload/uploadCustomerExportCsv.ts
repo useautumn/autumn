@@ -1,4 +1,4 @@
-import type { DbCustomerExport } from "@autumn/shared";
+import { CustomerExportPhase, type DbCustomerExport } from "@autumn/shared";
 import { dbReplica } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -53,13 +53,14 @@ export const uploadCustomerExportCsv = async ({
 
 	// The reporter is absent for inline runs; retries reset before re-walking.
 	await progress?.setTotalRows(totalCount);
-	await progress?.resetProcessedRows();
+	await progress?.setPhase(CustomerExportPhase.Exporting);
 
 	return await streamCustomerExportCsv({
 		ctx,
 		customerExport,
 		population,
 		destination: { bucket, region, key },
+		progress,
 		onCustomersProcessed: (customerCount) =>
 			progress?.incrementProcessedRows(customerCount),
 	});

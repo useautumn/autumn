@@ -84,6 +84,7 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 	route({
 		method: "POST",
 		url: "/balances/create",
+		flushBalances: true,
 	}),
 
 	route({
@@ -128,6 +129,7 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 	route({
 		method: "POST",
 		url: "/balances.create",
+		flushBalances: true,
 	}),
 
 	route({

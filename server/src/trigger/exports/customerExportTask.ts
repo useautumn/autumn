@@ -1,4 +1,5 @@
 import {
+	CUSTOMER_EXPORT_PHASE_KEY,
 	CUSTOMER_EXPORT_PROCESSED_ROWS_KEY,
 	CUSTOMER_EXPORT_TOTAL_ROWS_KEY,
 } from "@autumn/shared";
@@ -36,7 +37,8 @@ export const customerExportTask = task({
 				setTotalRows: (rowCount) => {
 					metadata.set(CUSTOMER_EXPORT_TOTAL_ROWS_KEY, rowCount);
 				},
-				resetProcessedRows: () => {
+				setPhase: (phase) => {
+					metadata.set(CUSTOMER_EXPORT_PHASE_KEY, phase);
 					metadata.set(CUSTOMER_EXPORT_PROCESSED_ROWS_KEY, 0);
 				},
 				incrementProcessedRows: async (rowCount) => {
