@@ -33,9 +33,9 @@ export const stripeInvoiceToPrefill = (
 	if (!stripeInvoice) return {};
 	const customer = liveCustomer(stripeInvoice);
 	const address = customer ? customer.address : stripeInvoice.customer_address;
-	const taxId = customer
-		? customer.tax_ids?.data[0]
-		: stripeInvoice.customer_tax_ids?.[0];
+	const [taxId, ...otherTaxIds] = customer
+		? (customer.tax_ids?.data ?? [])
+		: (stripeInvoice.customer_tax_ids ?? []);
 	const option = taxId
 		? findStripeTaxIdOption({
 				type: taxId.type,
@@ -47,5 +47,8 @@ export const stripeInvoiceToPrefill = (
 		address: addressToForm(address),
 		taxIdOptionId: option?.id ?? null,
 		taxIdValue: taxId?.value ?? "",
+		otherTaxIds: otherTaxIds.flatMap(({ type, value }) =>
+			value ? [{ type, value }] : [],
+		),
 	};
 };

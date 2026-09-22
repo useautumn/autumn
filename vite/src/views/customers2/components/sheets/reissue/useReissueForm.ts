@@ -34,11 +34,15 @@ export type ReissueFormState = {
 	taxIdValue: string;
 };
 
+export type ReissueTaxId = { type: string; value: string };
+
 export type ReissuePrefill = {
 	customerName?: string | null;
 	address?: Partial<ReissueAddress> | null;
 	taxIdOptionId?: string | null;
 	taxIdValue?: string | null;
+	/** Registrations beyond the one the form edits; sent back untouched. */
+	otherTaxIds?: ReissueTaxId[];
 };
 
 const EMPTY_ADDRESS: ReissueAddress = {
@@ -115,7 +119,13 @@ export const buildReissuePayload = ({
 	const taxIdChanged =
 		form.taxIdOptionId !== (prefill.taxIdOptionId ?? null) ||
 		trimmed(form.taxIdValue) !== trimmed(prefill.taxIdValue ?? "");
-	const hasTaxId = Boolean(form.taxIdOptionId && trimmed(form.taxIdValue));
+	const editedTaxId: ReissueTaxId | null =
+		form.taxIdOptionId && trimmed(form.taxIdValue)
+			? {
+					type: form.taxIdOptionId.split(":")[1],
+					value: trimmed(form.taxIdValue),
+				}
+			: null;
 	const hadTaxId = Boolean(prefill.taxIdOptionId && prefill.taxIdValue);
 	const customer = {
 		...(nameChanged && trimmed(form.customerName)
@@ -132,18 +142,15 @@ export const buildReissuePayload = ({
 					),
 				}
 			: {}),
-		...(taxIdChanged && hasTaxId
+		// tax_ids replaces the whole set, so the untouched ones ride along.
+		...(taxIdChanged && (editedTaxId || hadTaxId)
 			? {
 					tax_ids: [
-						{
-							type: form.taxIdOptionId?.split(":")[1],
-							value: trimmed(form.taxIdValue),
-						},
+						...(editedTaxId ? [editedTaxId] : []),
+						...(prefill.otherTaxIds ?? []),
 					],
 				}
-			: taxIdChanged && hadTaxId
-				? { tax_ids: [] }
-				: {}),
+			: {}),
 	};
 
 	return {

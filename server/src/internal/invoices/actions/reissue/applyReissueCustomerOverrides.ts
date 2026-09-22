@@ -4,6 +4,59 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 
+const taxIdKey = ({ type, value }: { type: string; value: string }) =>
+	`${type}:${value}`;
+
+/**
+ * Makes the customer's registrations equal the given set. New ones are created
+ * before anything is deleted, so a rejected number leaves the old set intact.
+ */
+const replaceCustomerTaxIds = async ({
+	stripeCli,
+	stripeCustomerId,
+	taxIds,
+}: {
+	stripeCli: Stripe;
+	stripeCustomerId: string;
+	taxIds: { type: string; value: string }[];
+}) => {
+	const existing = await stripeCli.customers.listTaxIds(stripeCustomerId, {
+		limit: 100,
+	});
+	const wanted = new Set(taxIds.map(taxIdKey));
+	const kept = new Set(
+		existing.data.filter((taxId) => wanted.has(taxIdKey(taxId))).map(taxIdKey),
+	);
+
+	const created: Stripe.TaxId[] = [];
+	try {
+		for (const taxId of taxIds) {
+			if (kept.has(taxIdKey(taxId))) continue;
+			created.push(
+				await stripeCli.customers.createTaxId(stripeCustomerId, {
+					type: taxId.type as Stripe.CustomerCreateTaxIdParams.Type,
+					value: taxId.value,
+				}),
+			);
+		}
+	} catch (error) {
+		await Promise.all(
+			created.map((taxId) =>
+				stripeCli.customers.deleteTaxId(stripeCustomerId, taxId.id),
+			),
+		);
+		throw error;
+	}
+
+	await Promise.all(
+		existing.data
+			.filter((taxId) => !kept.has(taxIdKey(taxId)))
+			.map((taxId) =>
+				stripeCli.customers.deleteTaxId(stripeCustomerId, taxId.id),
+			),
+	);
+};
+
 /**
  * Writes the customer-level corrections. These persist whether or not the
  * reissue completes: an address or tax number fixed here is meant to hold for
@@ -43,22 +96,11 @@ export const applyReissueCustomerOverrides = async ({
 	}
 
 	if (overrides?.tax_ids) {
-		const existing = await stripeCli.customers.listTaxIds(stripeCustomerId, {
-			limit: 100,
+		await replaceCustomerTaxIds({
+			stripeCli,
+			stripeCustomerId,
+			taxIds: overrides.tax_ids,
 		});
-		await Promise.all(
-			existing.data.map((taxId) =>
-				stripeCli.customers.deleteTaxId(stripeCustomerId, taxId.id),
-			),
-		);
-		await Promise.all(
-			overrides.tax_ids.map((taxId) =>
-				stripeCli.customers.createTaxId(stripeCustomerId, {
-					type: taxId.type as Stripe.CustomerCreateTaxIdParams.Type,
-					value: taxId.value,
-				}),
-			),
-		);
 	}
 
 	// Autumn is the source of truth the next getOrCreateStripeCustomer pushes to
