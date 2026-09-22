@@ -68,6 +68,26 @@ export const propertyRollupCoverageIsIncomplete = ({
 	);
 };
 
+/**
+ * Every grouped event carries the key, so populated coverage can never report
+ * fewer events than the grouped result. Seeing that means the coverage rollup
+ * is empty or mid-backfill, and trusting it would hide real gate loss.
+ */
+export const propertyRollupCoverageUnderReports = ({
+	rows,
+	coverage,
+}: {
+	rows: AggregateGroupablePipeRow[];
+	coverage: Record<string, number>;
+}): boolean => {
+	const groupedCounts = countRowsByEventName({ rows });
+	if (!groupedCounts) return false;
+
+	return Object.entries(groupedCounts).some(
+		([eventName, groupedCount]) => groupedCount > (coverage[eventName] ?? 0),
+	);
+};
+
 const totalEventCount = ({
 	rows,
 }: {
