@@ -612,6 +612,11 @@ export const evaluateItems = ({
 		}
 
 		if (!actual) {
+			const isUnpurchasedPrepaid =
+				catalogEntry !== undefined &&
+				isPrepaidPrice(catalogEntry.price) &&
+				expected.quantity === 0;
+			if (isUnpurchasedPrepaid) continue;
 			if (siblingQuantity > 0) {
 				if (siblingQuantity !== expected.quantity) {
 					mismatches.push({
