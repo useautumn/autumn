@@ -104,18 +104,21 @@ export const runAgentTurn = async ({
 		session: EveSessionRef;
 	}): RunTransport => ({
 		sendUserMessage: async ({ speaker, text }: FollowUpMessage) => {
+			const message = buildAgentTurnMessage({
+				env,
+				newSession: false,
+				orgSlug: org.slug,
+				params: { clientContext: params.clientContext, speaker, text },
+				pendingApprovals: prepared.pendingApprovals,
+			});
 			await postEveMessage({
 				auth,
 				clientContext: params.clientContext,
-				message: buildAgentTurnMessage({
-					env,
-					newSession: false,
-					orgSlug: org.slug,
-					params: { clientContext: params.clientContext, speaker, text },
-					pendingApprovals: prepared.pendingApprovals,
-				}),
+				message,
 				session,
 			});
+			// Follow-ups carry no attachments, so eve echoes this string verbatim.
+			return typeof message === "string" ? message : undefined;
 		},
 	});
 	// A turn that settles while a claimed follow-up is still coming is a real

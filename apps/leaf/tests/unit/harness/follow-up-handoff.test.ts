@@ -146,6 +146,24 @@ const activeRun = (key: string) => {
 	return run;
 };
 
+/** Echoes the posted text the way the real transport does, so the reader can
+ * match it against eve's `message.received`. */
+const followUpText = (text: string) => `[follow-up] ${text}`;
+
+const steeringRun = (key: string) => {
+	const run = registerRun({
+		key,
+		kind: "message",
+		ownerProviderUserId: "U1",
+		sendUserMessage: async ({ text }) => {
+			posted.push(text);
+			return followUpText(text);
+		},
+	});
+	run.resolveSessionId("eve_session_1");
+	return run;
+};
+
 const consume = ({
 	run,
 	settled,
@@ -281,6 +299,127 @@ describe("a follow-up eve already accepted", () => {
 			"Run is settling",
 		);
 		expect(posted).toEqual([]);
+		closeRun({ key: run.key, run });
+	});
+
+	/** Prod 2026-09-22 (Slack C0B9L4G35U2, 18:10:34Z): each follow-up steered
+	 * the running turn, and eve answered it in the replacement turn. The reader
+	 * still counted it as owed, so it waited on a turn that never came, kept
+	 * "Thinking…" up, and the backstop posted "That run took too long". */
+	test("that steered the running turn is answered by the replacement", async () => {
+		const run = steeringRun("handoff-6");
+		streamPasses = [
+			{
+				events: [
+					event({ turnId: "turn_1", type: "turn.started" }),
+					event({ message: "use new2 org", type: "message.received" }),
+					// index 2: the follow-up lands mid-turn and eve steers.
+					event({ turnId: "turn_1", type: "turn.cancelled" }),
+					event({ turnId: "turn_2", type: "turn.started" }),
+					event({
+						message: `use new2 org\n\n${followUpText("list my customers")}`,
+						type: "message.received",
+					}),
+					event({
+						finishReason: "stop",
+						message: "OK, now acting as new2. 120 customers.",
+						type: "message.completed",
+					}),
+					event({ type: "session.waiting" }),
+				],
+			},
+		];
+		const settled: unknown[] = [];
+		beforeEventAt = {
+			index: 2,
+			run: () => void run.injectFollowUp({ text: "list my customers" }),
+		};
+
+		const outcome = await consume({ run, settled });
+
+		expect(posted).toEqual(["list my customers"]);
+		// The replacement turn is the follow-up's answer: nothing to wait for.
+		expect(settled).toEqual([]);
+		expect(outcome).toMatchObject({
+			kind: "answered",
+			text: "OK, now acting as new2. 120 customers.",
+		});
+		expect(run.settling).toBe(true);
+		expect(streamCallCount).toBe(1);
+		closeRun({ key: run.key, run });
+	});
+
+	test("folded into one replacement turn are all answered by it", async () => {
+		const run = steeringRun("handoff-7");
+		streamPasses = [
+			{
+				events: [
+					event({ turnId: "turn_1", type: "turn.started" }),
+					// index 1: two follow-ups land before eve starts the next turn.
+					event({ turnId: "turn_1", type: "turn.cancelled" }),
+					event({ turnId: "turn_2", type: "turn.started" }),
+					event({
+						message: `${followUpText("first")}\n\n${followUpText("second")}`,
+						type: "message.received",
+					}),
+					event({
+						finishReason: "stop",
+						message: "Both done.",
+						type: "message.completed",
+					}),
+					event({ type: "session.waiting" }),
+				],
+			},
+		];
+		const settled: unknown[] = [];
+		beforeEventAt = {
+			index: 1,
+			run: () => {
+				void run.injectFollowUp({ text: "first" });
+				void run.injectFollowUp({ text: "second" });
+			},
+		};
+
+		const outcome = await consume({ run, settled });
+
+		expect(settled).toEqual([]);
+		expect(outcome).toMatchObject({ kind: "answered", text: "Both done." });
+		expect(run.settling).toBe(true);
+		closeRun({ key: run.key, run });
+	});
+
+	test("is still awaited when only an earlier identical message was received", async () => {
+		const run = steeringRun("handoff-8");
+		streamPasses = [
+			{
+				events: [
+					event({ turnId: "turn_1", type: "turn.started" }),
+					event({
+						message: followUpText("find me 1 customer"),
+						type: "message.received",
+					}),
+					...firstTurn.slice(1),
+					...replacementTurn,
+				],
+			},
+		];
+		const settled: unknown[] = [];
+		// Same text again, accepted as turn 1 settles: turn 1's message is not
+		// this follow-up, so its reply is still coming.
+		beforeEventAt = {
+			index: 3,
+			run: () => void run.injectFollowUp({ text: "find me 1 customer" }),
+		};
+
+		const outcome = await consume({ run, settled });
+
+		expect(settled).toEqual([
+			{ kind: "answered", text: "OK, now acting as resend in live." },
+		]);
+		expect(outcome).toMatchObject({
+			kind: "answered",
+			text: "GRACEX TECHNOLOGIES SRL — on Marketing Pro.",
+		});
 		closeRun({ key: run.key, run });
 	});
 });
