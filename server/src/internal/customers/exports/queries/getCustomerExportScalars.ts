@@ -3,7 +3,7 @@ import {
 	type CustomerExportSnapshot,
 	customers,
 } from "@autumn/shared";
-import { and, desc, lt, lte, sql } from "drizzle-orm";
+import { and, desc, lte, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { buildSearchPredicates } from "../../CusSearchService.js";
@@ -134,8 +134,7 @@ export const resolveCustomerExportPopulation = async ({
 	return { population: { upperBoundInternalId, createdAtCutoff }, totalCount };
 };
 
-/** Both snapshot bounds must remain unchanged for the entire keyset walk. */
-export const getCustomerExportScalars = async ({
+export const buildCustomerExportScalarsQuery = ({
 	db,
 	orgId,
 	env,
@@ -149,14 +148,12 @@ export const getCustomerExportScalars = async ({
 	orgId: string;
 	env: AppEnv;
 	snapshot: CustomerExportSnapshot;
-	upperBoundInternalId: string | null;
+	upperBoundInternalId: string;
 	createdAtCutoff: number;
 	afterInternalId: string | null;
 	limit?: number;
-}): Promise<CustomerExportScalarRow[]> => {
-	if (upperBoundInternalId === null) return [];
-
-	const matched = db
+}) =>
+	db
 		.select({
 			internal_id: customers.internal_id,
 			id: customers.id,
@@ -175,13 +172,38 @@ export const getCustomerExportScalars = async ({
 				}).whereRaw,
 				lte(customers.created_at, createdAtCutoff),
 				lte(customers.internal_id, upperBoundInternalId),
+				// Comparing internal_id alone lets the planner pick customers_pkey and
+				// filter org_id after, scanning every other org's rows in the tail.
 				afterInternalId
-					? lt(customers.internal_id, afterInternalId)
+					? sql`(${customers.org_id}, ${customers.env}, ${customers.internal_id}) < (${orgId}, ${env}, ${afterInternalId})`
 					: undefined,
 			),
 		)
-		.orderBy(desc(customers.internal_id))
+		.orderBy(
+			desc(customers.org_id),
+			desc(customers.env),
+			desc(customers.internal_id),
+		)
 		.limit(limit);
+
+/** Both snapshot bounds must remain unchanged for the entire keyset walk. */
+export const getCustomerExportScalars = async (params: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	snapshot: CustomerExportSnapshot;
+	upperBoundInternalId: string | null;
+	createdAtCutoff: number;
+	afterInternalId: string | null;
+	limit?: number;
+}): Promise<CustomerExportScalarRow[]> => {
+	const { db, upperBoundInternalId } = params;
+	if (upperBoundInternalId === null) return [];
+
+	const matched = buildCustomerExportScalarsQuery({
+		...params,
+		upperBoundInternalId,
+	});
 
 	return await db.execute<CustomerExportScalarRow>(
 		sql`${matched} ${planetScaleTag({ query: "getCustomerExportScalars" })}`,
