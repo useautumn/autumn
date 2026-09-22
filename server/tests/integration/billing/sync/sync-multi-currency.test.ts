@@ -6,7 +6,6 @@ import {
 	BillingInterval,
 	BillingMethod,
 	type CreatePlanParamsV2Input,
-	ErrCode,
 	filterCustomerProductsByActiveStatuses,
 	filterCustomerProductsByStripeSubscriptionId,
 	findActiveCustomerProductById,
@@ -18,7 +17,6 @@ import { customerProductToBasePrice } from "@shared/utils/cusProductUtils/conver
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -342,30 +340,14 @@ test(`${chalk.yellowBright("sync multi-currency: shared USD Price imports its EU
 			errorOnNotFound: true,
 		}).id,
 	).toBe(customBase.id);
-
-	await ctx.stripeCli.subscriptions.cancel(subscription.id);
-	const gbpSubscription = await createExternalSubscription({
-		customerId,
-		items: [{ price: sharedPrice.id }],
-		currency: "gbp",
-	});
-	const { params } = await subscriptionToSyncParams({
-		ctx,
-		customerId,
-		subscription: gbpSubscription,
-	});
-	await expectAutumnError({
-		errCode: ErrCode.CurrencyMismatch,
-		func: () => autumnV1.post("/billing.sync_v2", params),
-	});
 });
 
-test(`${chalk.yellowBright("sync multi-currency: existing USD customer rejects an EUR subscription")}`, async () => {
-	const planId = uniqueId("sync_mc_mismatch");
+test(`${chalk.yellowBright("sync multi-currency: leftover USD lock allows EUR sync and relocks")}`, async () => {
+	const planId = uniqueId("sync_mc_relock");
 	await createPlan({ planId });
 	const product = await initializeCurrency({ planId, currency: "eur" });
 	const { customerId, autumnV1 } = await initScenario({
-		customerId: uniqueId("sync-mc-mismatch-customer"),
+		customerId: uniqueId("sync-mc-relock-customer"),
 		setup: [
 			s.customer({ paymentMethod: "success", data: { currency: "usd" } }),
 		],
@@ -379,14 +361,12 @@ test(`${chalk.yellowBright("sync multi-currency: existing USD customer rejects a
 			},
 		],
 	});
-	const { params } = await subscriptionToSyncParams({
-		ctx,
-		customerId,
-		subscription,
-	});
 
-	await expectAutumnError({
-		errCode: ErrCode.CurrencyMismatch,
-		func: () => autumnV1.post("/billing.sync_v2", params),
-	});
+	await syncSubscription({ autumnV1, customerId, subscription });
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductActive({ customer, productId: planId });
+	expect(
+		(await CusService.getFull({ ctx, idOrInternalId: customerId })).currency,
+	).toBe("eur");
 });
