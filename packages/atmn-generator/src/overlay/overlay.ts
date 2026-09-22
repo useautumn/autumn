@@ -172,6 +172,16 @@ export const OVERLAY: Overlay = {
 				reason:
 					"A push-time input. A changed variantPlanId beside internalId is the rename.",
 			},
+			base_variant_id: {
+				hidden: true,
+				reason:
+					"A link instruction the server resolves into its internal base pointer, but the pulled value is the legacy monthly/annual grouping id, so a pull-then-push would invent a variant link. Membership in a base's variants[] is the only way a config states the relationship.",
+			},
+			"variants.base_variant_id": {
+				hidden: true,
+				reason:
+					"A push-time unlink (`null`); removing the entry from variants[] already unlinks. Omitted, the server leaves the pointer to the declaring base.",
+			},
 			"items.entity_feature_id": {
 				deprecated: true,
 				reason:

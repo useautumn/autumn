@@ -302,3 +302,41 @@ test("versioning the variant alongside its base lints clean", () => {
 		}),
 	).not.toThrow();
 });
+
+test("a field the CLI hides is refused when a config still states it", () => {
+	// A config pulled by an older release can carry baseVariantId; the server
+	// would read it as a variant link, so lint refuses it before anything is sent.
+	const issues = issuesOf(() =>
+		atmn({
+			features: [],
+			plans: [
+				plan({
+					planId: "max_annual",
+					name: "Max (annual)",
+					versionSlug: "v1",
+					active: true,
+					baseVariantId: "max_monthly",
+					variants: [
+						{
+							variantPlanId: "max_annual_eu",
+							name: "Max (annual, EU)",
+							versionSlug: "v1",
+							baseVariantId: null,
+						},
+					],
+					// biome-ignore lint/suspicious/noExplicitAny: a stale config states fields the type no longer has
+				} as any),
+			],
+		}),
+	);
+	expect(issues).toEqual([
+		{
+			path: 'plan "max_annual"',
+			message: "baseVariantId is not a config field. Remove it.",
+		},
+		{
+			path: 'plan "max_annual" › variant "max_annual_eu"',
+			message: "baseVariantId is not a config field. Remove it.",
+		},
+	]);
+});
