@@ -2064,9 +2064,6 @@ export const LINT_RULES: LintRules = {
 			name: {
 				minLength: 1,
 			},
-			planIds: {
-				minItems: 1,
-			},
 			internalId: {
 				minLength: 1,
 			},

@@ -50,11 +50,10 @@ const CreateCouponBaseSchema = ApiCouponV0Schema.omit({
 		internal_id: internalId,
 		name: z.string().min(1),
 		duration: CouponDurationSchema,
-		plan_ids: z
-			.array(z.string().min(1))
-			.min(1)
-			.nullable()
-			.meta({ description: "Plan IDs must be unique." }),
+		plan_ids: z.array(z.string().min(1)).nullable().meta({
+			description:
+				"Plan IDs must be unique. Null applies the coupon to all plans; an empty list applies it to none.",
+		}),
 		promo_codes: z
 			.array(
 				z

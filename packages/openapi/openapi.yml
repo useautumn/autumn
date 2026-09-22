@@ -74021,12 +74021,11 @@ paths:
                     plan_ids:
                       anyOf:
                         - type: array
-                          minItems: 1
                           items:
                             type: string
                             minLength: 1
                         - type: "null"
-                      description: Plan IDs must be unique.
+                      description: Plan IDs must be unique. Null applies the coupon to all plans; an empty list applies it to none.
                     promo_codes:
                       type: array
                       items:
@@ -74892,12 +74891,11 @@ paths:
                     plan_ids:
                       anyOf:
                         - type: array
-                          minItems: 1
                           items:
                             type: string
                             minLength: 1
                         - type: "null"
-                      description: Plan IDs must be unique. Null applies the coupon to all plans.
+                      description: Plan IDs must be unique. Null applies the coupon to all plans; an empty list applies it to none.
                     promo_codes:
                       type: array
                       items:

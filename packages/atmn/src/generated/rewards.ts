@@ -9,7 +9,7 @@ export type Coupon = {
 		type: "one_off" | "months" | "forever";
 		length: number | null;
 	};
-	/** Plan IDs must be unique. */
+	/** Plan IDs must be unique. Null applies the coupon to all plans; an empty list applies it to none. */
 	planIds: Array<string> | null;
 	/** Promo code values must be unique. */
 	promoCodes: Array<{
