@@ -19,10 +19,14 @@ import {
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getRewardPrices } from "@/internal/rewards/actions/getRewardPrices.js";
+import { validateCouponStripeProductScope } from "@/internal/rewards/actions/validateCouponStripeProductScope.js";
 import { validateRewardUniqueness } from "@/internal/rewards/actions/validateRewardUniqueness.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import { rewardMutationLock } from "@/internal/rewards/rewardLock.js";
-import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
+import {
+	getRewardCat,
+	initRewardStripePrices,
+} from "@/internal/rewards/rewardUtils.js";
 
 const UpdateCouponParamsSchema = z.object({
 	internalId: z.string(),
@@ -114,6 +118,8 @@ export const handleUpdateCoupon = createRoute({
 		// Preflight before deleting the old Stripe coupon, so a plan missing
 		// in Stripe fails the update while the existing coupon is still intact.
 		if (willRecreateStripeCoupon) {
+			await initRewardStripePrices({ ctx, prices });
+			await validateCouponStripeProductScope({ ctx, prices });
 			resolveCouponStripeProductIds({ reward: updatedReward, prices });
 		}
 

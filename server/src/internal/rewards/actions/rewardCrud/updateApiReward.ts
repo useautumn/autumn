@@ -1,6 +1,6 @@
 import {
-	ErrCode,
 	type CreateRewardParams,
+	ErrCode,
 	type Feature,
 	FeatureNotFoundError,
 	FeatureType,
@@ -23,7 +23,9 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { rewardRepo } from "../../repos/index.js";
+import { initRewardStripePrices } from "../../rewardUtils.js";
 import { getRewardPrices } from "../getRewardPrices.js";
+import { validateCouponStripeProductScope } from "../validateCouponStripeProductScope.js";
 import { validateRewardUniqueness } from "../validateRewardUniqueness.js";
 import { requireApiReward, toApiRewardResponse } from "./apiRewardUtils.js";
 
@@ -212,8 +214,11 @@ const recreateStripeCoupon = async ({
 		priceIds: updated.discount_config?.price_ids ?? [],
 	});
 
+	await initRewardStripePrices({ ctx, prices });
+
 	// Preflight before deleting, so a plan missing in Stripe fails the update
 	// while the existing coupon is still intact.
+	await validateCouponStripeProductScope({ ctx, prices });
 	resolveCouponStripeProductIds({ reward: updated, prices });
 
 	const stripeCli = createStripeCli({ org, env });

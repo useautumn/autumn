@@ -1,14 +1,25 @@
 import type { CatalogGetMappingsResponse, ProductV2 } from "@autumn/shared";
-import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
+import {
+	Button,
+	CopyButton,
+	IconTooltipButton,
+	Sheet,
+	SheetContent,
+	ShortcutButton,
+} from "@autumn/ui";
+import { GitBranchIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
+import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useAppForm } from "@/hooks/form/form";
 import { useCatalogMappings } from "@/hooks/queries/catalog/useCatalogMappings";
+import { useCreatePlanInStripe } from "@/hooks/queries/catalog/useCreatePlanInStripe";
+import { useSplitVariantStripeProduct } from "@/hooks/queries/catalog/useSplitVariantStripeProduct";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useStripeProductsResolveQuery } from "@/hooks/queries/useStripeProductsResolveQuery";
 import { CatalogMappingSaveConfirmDialog } from "./CatalogMappingSaveConfirmDialog";
@@ -24,21 +35,81 @@ import {
 } from "./catalogMappingsForm";
 import { MappingField } from "./MappingField";
 import { PlanMappingDetailSkeleton } from "./PlanMappingDetailSkeleton";
+import { useStripeProductLink } from "./useStripeProductLink";
 import { useStripeProductSearch } from "./useStripeProductSearch";
 
-const VariantList = ({ variants }: { variants: ProductV2[] }) => (
-	<div className="flex flex-col gap-1 pt-1 pl-5">
-		{variants.map((variant) => (
-			<div className="flex min-w-0 items-center gap-2 text-xs" key={variant.id}>
-				<span className="text-tertiary-foreground">└</span>
-				<span className="truncate text-foreground">{variant.name}</span>
-				<span className="ml-auto shrink-0 text-tertiary-foreground">
-					Inherits mapping
-				</span>
-			</div>
-		))}
-	</div>
-);
+const VariantList = ({
+	base,
+	variants,
+}: {
+	base: ProductV2;
+	variants: ProductV2[];
+}) => {
+	const splitVariant = useSplitVariantStripeProduct();
+	const getStripeProductHref = useStripeProductLink();
+
+	const sharesBaseProduct = (variant: ProductV2) =>
+		!variant.stripe_id || variant.stripe_id === base.stripe_id;
+
+	const sharedVariants = variants.filter(sharesBaseProduct);
+
+	return (
+		<div className="flex flex-col gap-1 pt-1 pl-5">
+			{variants.map((variant) => (
+				<div
+					className="flex min-w-0 items-center gap-2 text-xs"
+					key={variant.id}
+				>
+					<span className="text-tertiary-foreground">└</span>
+					<span className="truncate text-foreground">{variant.name}</span>
+					{sharesBaseProduct(variant) ? (
+						<Button
+							className="ml-auto h-auto shrink-0 px-0 text-xs"
+							disabled={splitVariant.isPending}
+							onClick={() => splitVariant.mutate([variant.id])}
+							variant="muted"
+						>
+							Create separate Stripe product
+						</Button>
+					) : (
+						<span className="ml-auto flex shrink-0 items-center gap-1">
+							<CopyButton
+								className="text-tertiary-foreground"
+								innerClassName="max-w-40 text-tiny-id truncate"
+								size="mini"
+								text={variant.stripe_id as string}
+							/>
+							<IconTooltipButton
+								icon={<StripeIcon size={12} />}
+								onClick={() =>
+									window.open(
+										getStripeProductHref(variant.stripe_id as string),
+										"_blank",
+										"noopener,noreferrer",
+									)
+								}
+								tooltip="Open in Stripe"
+							/>
+						</span>
+					)}
+				</div>
+			))}
+			{sharedVariants.length > 1 && (
+				<Button
+					className="mt-1 w-full justify-start gap-2 text-xs"
+					disabled={splitVariant.isPending}
+					onClick={() =>
+						splitVariant.mutate(sharedVariants.map((variant) => variant.id))
+					}
+					variant="muted"
+				>
+					<GitBranchIcon size={13} />
+					Split all variants
+				</Button>
+			)}
+		</div>
+	);
+};
 
 const PlanMappingDetailForm = ({
 	base,
@@ -56,6 +127,7 @@ const PlanMappingDetailForm = ({
 	onClose: () => void;
 }) => {
 	const { updateMappings, isSaving } = useCatalogMappings();
+	const createInStripe = useCreatePlanInStripe();
 	const [variantsExpanded, setVariantsExpanded] = useState(false);
 	const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
 	const {
@@ -158,10 +230,21 @@ const PlanMappingDetailForm = ({
 									initial={{ height: 0, opacity: 0 }}
 									transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
 								>
-									<VariantList variants={variants} />
+									<VariantList base={base} variants={variants} />
 								</motion.div>
 							)}
 						</AnimatePresence>
+					)}
+					{resolved.status === "unmapped" && (
+						<Button
+							className="w-full justify-start gap-2 text-xs"
+							disabled={createInStripe.isPending}
+							onClick={() => createInStripe.mutate(base.id)}
+							variant="muted"
+						>
+							<StripeIcon size={13} />
+							Create in Stripe
+						</Button>
 					)}
 				</div>
 
