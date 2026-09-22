@@ -39,6 +39,7 @@ test.concurrent("local development needs no balance worker settings", () => {
 		AWS_REGION: undefined,
 		KAFKA_BROKERS: ["127.0.0.1:19092"],
 		BALANCE_WORKER_OWNERSHIP_TOPIC: "local-ownership",
+		BALANCE_WORKER_COMMAND_TOPIC: "local-commands",
 	});
 });
 

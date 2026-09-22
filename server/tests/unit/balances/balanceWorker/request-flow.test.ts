@@ -322,6 +322,16 @@ test.concurrent(
 				confirmExpiredLock: async () => {
 					throw cause;
 				},
+				enqueue: async () => {
+					throw cause;
+				},
+				queue: {
+					track: async () => {
+						throw cause;
+					},
+				},
+				start: async () => undefined,
+				stop: async () => undefined,
 			};
 			const body: TrackParams = {
 				customer_id: "cus_test",

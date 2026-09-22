@@ -1,4 +1,9 @@
-import type { KafkaConfig, ProducerConfig, Transaction } from "kafkajs";
+import type {
+	KafkaConfig,
+	Producer,
+	ProducerConfig,
+	Transaction,
+} from "kafkajs";
 
 export type KafkaTransportConfig = Omit<
 	KafkaConfig,
@@ -11,6 +16,9 @@ export type KafkaTransportConfig = Omit<
 >;
 
 export type KafkaTransaction = Pick<Transaction, "send" | "commit" | "abort">;
+
+/** A plain producer: sends outside any transaction. */
+export type KafkaSender = Pick<Producer, "send">;
 
 export type KafkaProducer = {
 	transaction(): Promise<KafkaTransaction>;

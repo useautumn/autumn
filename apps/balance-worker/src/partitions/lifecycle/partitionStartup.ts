@@ -16,6 +16,25 @@ import type {
 import type { PartitionFailure } from "../types/partitions.js";
 import { clearPartitionRetry } from "./retryPartition.js";
 
+/** Queued commands wait until the runtime is admitted; a failed resume is reported, never fatal. */
+function resumeCommands({
+	ctx,
+	partition,
+}: {
+	ctx: AllocationScope["ctx"];
+	partition: number;
+}): void {
+	if (!ctx.config.commandTopic) return;
+	try {
+		ctx.consumer.resume({
+			topic: ctx.config.commandTopic,
+			partitions: [partition],
+		});
+	} catch (cause) {
+		reportPartitionError({ ctx, cause });
+	}
+}
+
 export function createPartitionEntries({
 	ctx,
 	state,
@@ -80,10 +99,12 @@ export function createPartitionEntries({
 }
 
 export async function startPartition({
+	ctx,
 	state,
 	entry,
 	allocationGeneration,
 }: {
+	ctx: AllocationScope["ctx"];
 	state: PartitionsState;
 	entry: PartitionEntry;
 	allocationGeneration: number;
@@ -120,6 +141,7 @@ export async function startPartition({
 			routeEpoch,
 			runtime: entry.runtime,
 		});
+		resumeCommands({ ctx, partition: entry.partition });
 	} finally {
 		entry.startupSettled = true;
 	}

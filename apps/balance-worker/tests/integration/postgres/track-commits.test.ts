@@ -8,7 +8,12 @@ import {
 	createBalanceWorkerClient,
 } from "@autumn/balance-worker-client";
 import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
-import { createOwnershipConsumer, type OwnershipConsumer } from "@autumn/kafka";
+import {
+	createCommandPublisher,
+	createIdempotentProducerConfig,
+	createOwnershipConsumer,
+	type OwnershipConsumer,
+} from "@autumn/kafka";
 import type { PostgresClient } from "@autumn/postgres";
 import { sql } from "drizzle-orm";
 import { Kafka, logLevel } from "kafkajs";
@@ -30,7 +35,7 @@ const OWNERSHIP_POLL_INTERVAL_MS = 50;
 
 type Harness = {
 	deployment: string;
-	topics: { metering: string; ownership: string };
+	topics: { metering: string; ownership: string; commands: string };
 	routing: OwnershipConsumer;
 	client: BalanceWorkerClient;
 	stop(): Promise<void>;
@@ -68,7 +73,11 @@ async function reserveLoopbackPort(): Promise<number> {
 
 async function createHarness(): Promise<Harness> {
 	const deployment = `pg-commit-${crypto.randomUUID()}`;
-	const topics = { metering: deployment, ownership: `${deployment}-owners` };
+	const topics = {
+		metering: deployment,
+		ownership: `${deployment}-owners`,
+		commands: `${deployment}-commands`,
+	};
 	const kafka = new Kafka({
 		clientId: deployment,
 		brokers,
@@ -85,6 +94,11 @@ async function createHarness(): Promise<Harness> {
 				replicationFactor: 1,
 			},
 			{
+				topic: topics.commands,
+				numPartitions: PARTITION_COUNT,
+				replicationFactor: 1,
+			},
+			{
 				topic: topics.ownership,
 				numPartitions: PARTITION_COUNT,
 				replicationFactor: 1,
@@ -97,13 +111,27 @@ async function createHarness(): Promise<Harness> {
 		config: { topic: topics.ownership },
 	});
 	await routing.start();
+	const producer = kafka.producer(
+		createIdempotentProducerConfig({
+			limits: { retryCount: 3, initialRetryTimeMs: 100, maxRetryTimeMs: 1_000 },
+		}),
+	);
+	await producer.connect();
 	const client = createBalanceWorkerClient({
-		ctx: { owners: routing },
+		ctx: {
+			owners: routing,
+			commandLog: createCommandPublisher({
+				ctx: { producer, topic: topics.commands },
+			}),
+		},
 		config: { partitionCount: PARTITION_COUNT, timeoutMs: 10_000 },
 	});
 	async function stop(): Promise<void> {
 		await routing.stop();
-		await admin.deleteTopics({ topics: [topics.metering, topics.ownership] });
+		await producer.disconnect();
+		await admin.deleteTopics({
+			topics: [topics.metering, topics.ownership, topics.commands],
+		});
 		await admin.disconnect();
 	}
 	return { deployment, topics, routing, client, stop };
@@ -129,6 +157,7 @@ async function startWorker({
 		}),
 		BALANCE_WORKER_METERING_TOPIC: harness.topics.metering,
 		BALANCE_WORKER_OWNERSHIP_TOPIC: harness.topics.ownership,
+		BALANCE_WORKER_COMMAND_TOPIC: harness.topics.commands,
 		BALANCE_WORKER_GROUP_ID: harness.deployment,
 		BALANCE_WORKER_PARTITION_COUNT: PARTITION_COUNT,
 	};
@@ -226,6 +255,23 @@ async function trackOrExplain(
 	}
 }
 
+async function waitForBalance({
+	customer,
+	balance,
+	attempts = 200,
+}: {
+	customer: SeededCustomer;
+	balance: number;
+	attempts?: number;
+}): Promise<number> {
+	let seen = await customer.readBalance();
+	for (let attempt = 0; attempt < attempts && seen !== balance; attempt++) {
+		await Bun.sleep(50);
+		seen = await customer.readBalance();
+	}
+	return seen;
+}
+
 const balanceOf = (
 	reply: { state: { customerEntitlements: { id: string; balance: number }[] } },
 	id: string,
@@ -263,7 +309,8 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			);
 			expect(reply.result.status).toBe("applied");
 			expect(balanceOf(reply, customer.customerEntitlementId)).toBe(95);
-			expect(await customer.readBalance()).toBe(95);
+			// The reply comes when Kafka has the record; Postgres follows a moment later.
+			expect(await waitForBalance({ customer, balance: 95 })).toBe(95);
 			expect(
 				await customer.readNextOffset({
 					topic: harness.topics.metering,
@@ -281,7 +328,7 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				trackCommand({ customer, commandId: "cmd_2", value: 5 }),
 			);
 			expect(balanceOf(next, customer.customerEntitlementId)).toBe(90);
-			expect(await customer.readBalance()).toBe(90);
+			expect(await waitForBalance({ customer, balance: 90 })).toBe(90);
 			// Offset 1 was the first transaction's commit marker; the second record sits at 2.
 			expect(
 				await customer.readNextOffset({
@@ -297,6 +344,18 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				}),
 			).rejects.toMatchObject({ workerCode: "DUPLICATE_COMMAND" });
 			expect(await customer.readBalance()).toBe(90);
+
+			// Queued, not sent: the owner consumes it from the command topic and the row still moves.
+			await harness.client.queue.track({
+				commands: [trackCommand({ customer, commandId: "cmd_3", value: 5 })],
+			});
+			expect(await waitForBalance({ customer, balance: 85 })).toBe(85);
+			// Queued again under the same id: consumed as a duplicate, nothing moves.
+			await harness.client.queue.track({
+				commands: [trackCommand({ customer, commandId: "cmd_3", value: 5 })],
+			});
+			await Bun.sleep(1_000);
+			expect(await customer.readBalance()).toBe(85);
 		}, 60_000);
 
 		test("a row deleted underneath a decision refuses that track alone: 409, bookmark past it, the next track re-hydrates, a restart replays it as settled", async () => {

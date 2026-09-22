@@ -142,10 +142,10 @@ if (process.env.TESTS_ORG && !process.env.UNIT_TESTS) {
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
 
 	// In-process evicts and expiries reach the balance worker only once this process knows who owns each partition.
-	const { startOwnershipConsumer } = await import(
-		"@/external/balanceWorker/getOwnershipConsumer.js"
+	const { startBalanceWorkerClient } = await import(
+		"@/external/balanceWorker/getBalanceWorkerClient.js"
 	);
-	await startOwnershipConsumer();
+	await startBalanceWorkerClient();
 
 	// Cache clears fan out to the instances the edge config names; without it
 	// the test process only clears "main" while the server may read elsewhere.

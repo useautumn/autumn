@@ -9,7 +9,7 @@ const LOCAL_KAFKA_BROKERS = "127.0.0.1:19092";
 
 export { balanceWorkerDeploymentToKafkaNames, getBalanceWorkerDeployment };
 
-/** What a server reads to find its workers: the Kafka cluster and the deployment's ownership topic. */
+/** What a server reads to reach its workers: the Kafka cluster, the deployment's ownership topic, and the topic it queues commands on. */
 export function createBalanceWorkerClientEnv(
 	runtimeEnv: Record<string, string | undefined>,
 ) {
@@ -25,6 +25,9 @@ export function createBalanceWorkerClientEnv(
 		BALANCE_WORKER_OWNERSHIP_TOPIC: balanceWorkerDeploymentToKafkaNames({
 			deployment,
 		}).ownershipTopic,
+		BALANCE_WORKER_COMMAND_TOPIC: balanceWorkerDeploymentToKafkaNames({
+			deployment,
+		}).commandTopic,
 	};
 }
 

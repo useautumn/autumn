@@ -124,7 +124,7 @@ command at two offsets (41 and 57) is Part A's job.
 | 7 | Both topics on one worker (B) | One consumer, two subscriptions, a custom `PartitionAssigner` that gives partition n of both topics to the same member. |
 | 8 | Fence for the command consumer (B) | `transaction.sendOffsets` inside the mutation's transaction. Postgres `command_next_offset` is the truth, Kafka's offset is a hint. |
 | 9 | A command that changes nothing (B) | A bookmark-only flush, the way `landFlush` already skips a refused record (`withoutChanges`). |
-| 10 | An async track that is refused (B) | Open. Nobody is waiting for the reply. |
+| 10 | An async track that is refused (B) | **settled** — logged at warn with the command id and reason, then dropped, in `consume/consumeTrack.ts`. Same accepted loss as a refused row after a log-durable reply. |
 | 11 | The 24h key claim for async and batch tracks (B) | **settled in principle** — it stays in DynamoDB. The worker has no DynamoDB, so the server claims before it appends: once per request for async, once per item for batch (today the SQS consumer claims batch items). A failed append releases the claim. |
 
 ## Before Part B ships

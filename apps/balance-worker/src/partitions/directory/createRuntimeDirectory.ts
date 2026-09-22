@@ -29,18 +29,26 @@ export function createRuntimeDirectory(): PartitionDirectory {
 		state.delete(target.partition);
 	}
 
+	function findOwnedRuntime(
+		target: PartitionTarget,
+	): PartitionRuntimePort | undefined {
+		const entry = state.get(target.partition);
+		if (!entry) return undefined;
+		const health = entry.runtime.getHealth();
+		if (health.status !== "ready" || health.failureReason !== null) {
+			withdraw(target);
+			return undefined;
+		}
+		return entry.runtime;
+	}
+
 	function findRuntime(
 		route: PartitionRoute,
 	): PartitionRuntimePort | undefined {
 		const entry = state.get(route.partition);
-		if (!entry) return undefined;
-		const health = entry.runtime.getHealth();
-		if (health.status !== "ready" || health.failureReason !== null) {
-			withdraw({ partition: route.partition });
-			return undefined;
-		}
+		if (!findOwnedRuntime(route) || !entry) return undefined;
 		return entry.routeEpoch === route.routeEpoch ? entry.runtime : undefined;
 	}
 
-	return { admit, withdraw, findRuntime };
+	return { admit, withdraw, findRuntime, findOwnedRuntime };
 }

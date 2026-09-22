@@ -175,6 +175,16 @@ test.concurrent(
 			confirmExpiredLock: async () => {
 				throw unsupported();
 			},
+			enqueue: async () => {
+				throw unsupported();
+			},
+			queue: {
+				track: async () => {
+					throw unsupported();
+				},
+			},
+			start: async () => undefined,
+			stop: async () => undefined,
 		};
 		const coordinator = createReplayHydrationCoordinator({
 			source: createLoadedSource({

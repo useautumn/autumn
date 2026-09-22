@@ -22,7 +22,7 @@ export function createPartitions({
 }): Partitions {
 	const ctx = { ...dependencies, config: resolvePartitionConfig(config) };
 	const state = createPartitionState();
-	const { findRuntime } = state.directory;
+	const { findRuntime, findOwnedRuntime } = state.directory;
 
 	function start(): Promise<void> {
 		return startPartitionService({ ctx, state });
@@ -36,7 +36,7 @@ export function createPartitions({
 		return listPartitionHealth({ state });
 	}
 
-	return { start, stop, partitions, findRuntime };
+	return { start, stop, partitions, findRuntime, findOwnedRuntime };
 }
 
 function resolvePartitionConfig(

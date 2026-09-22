@@ -18,6 +18,7 @@ const admin = ({
 		topics: [
 			env.BALANCE_WORKER_METERING_TOPIC,
 			env.BALANCE_WORKER_OWNERSHIP_TOPIC,
+			env.BALANCE_WORKER_COMMAND_TOPIC,
 		].map((name) => ({
 			name,
 			partitions: Array.from({ length: count }, (_, partitionId) => ({

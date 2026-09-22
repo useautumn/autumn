@@ -26,7 +26,7 @@ export type WorkerPartitionsContext = {
 	consumer: KafkaOwnedPartitionGroupConsumerPort;
 	partitionOffsets: KafkaOwnedPartitionGroupAdminPort &
 		Partial<Pick<Admin, "fetchTopicOffsetsByTimestamp">>;
-	logger?: Pick<AutumnLogger, "warn">;
+	logger?: Pick<AutumnLogger, "info" | "warn">;
 	stateStore: StateStore;
 	createRuntime: KafkaPartitionRuntimeFactory;
 	onError: PartitionsDependencies["onError"];
@@ -36,6 +36,8 @@ export type WorkerPartitionsContext = {
 
 export type WorkerPartitionsConfig = {
 	topic: string;
+	/** Consumed on the same membership when set; a bare partition group in a test has none. */
+	commandTopic?: string;
 	partitionsConsumedConcurrently: number;
 	healthRefreshIntervalMs: number;
 	partitionBootstrapRetryIntervalMs?: number;

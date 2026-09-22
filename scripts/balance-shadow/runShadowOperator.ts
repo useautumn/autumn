@@ -1,10 +1,14 @@
-import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
+import {
+	createBalanceWorkerClient,
+	createBalanceWorkerKafka,
+	createOwnersFromKafka,
+} from "@autumn/balance-worker-client";
 import {
 	BALANCE_WORKER_PARTITION_COUNT,
 	BALANCE_WORKER_REQUEST_TIMEOUT_MS,
 } from "@autumn/env/balanceWorkerConstants";
 import { initDrizzle } from "@server/db/initDrizzle.js";
-import { createServerOwnershipConsumer } from "@server/external/balanceWorker/getOwnershipConsumer.js";
+import { readBalanceWorkerKafkaConfig } from "@server/external/balanceWorker/balanceWorkerKafkaConfig.js";
 import { logger } from "@server/external/logtail/logtailUtils.js";
 import type { BalanceShadowConfig } from "@server/internal/balances/shadow/balanceShadowTypes.js";
 import { readBalanceShadowSubject } from "@server/internal/balances/shadow/operator/readBalanceShadowSubject.js";
@@ -44,9 +48,17 @@ export async function runShadowOperator({
 				"Redis routing config is unavailable; refusing a guessed baseline",
 			);
 	}
-	const owners = createServerOwnershipConsumer({
-		topic: config.ownershipTopic,
-		groupIdPrefix: "autumn-shadow-operator",
+	const owners = createOwnersFromKafka({
+		ctx: {
+			kafka: createBalanceWorkerKafka(
+				readBalanceWorkerKafkaConfig({ clientId: "autumn-shadow-operator" }),
+			),
+			logger,
+		},
+		config: {
+			topic: config.ownershipTopic,
+			groupIdPrefix: "autumn-shadow-operator",
+		},
 	});
 	const client = createBalanceWorkerClient({
 		ctx: { owners },

@@ -52,6 +52,8 @@ export type TopicConsumer = {
 
 export type TopicConsumerConfig = {
 	topic: string;
+	/** Subscribed alongside `topic`; their records reach the handler with their own topic name. */
+	secondaryTopics?: readonly string[];
 	partitionsConsumedConcurrently?: number;
 };
 

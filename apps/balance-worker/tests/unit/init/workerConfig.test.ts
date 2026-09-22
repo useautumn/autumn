@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createKafkaClient } from "@autumn/kafka";
+import { coPartitionedAssigner, createKafkaClient } from "@autumn/kafka";
 import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
 import { createWorkerConsumerConfig } from "../../../src/init/workerConfig.js";
 
@@ -50,6 +50,7 @@ describe("Kafka balance worker config", () => {
 			}),
 		).toEqual({
 			groupId: "balance-worker-staging",
+			partitionAssigners: [coPartitionedAssigner],
 			readUncommitted: false,
 			allowAutoTopicCreation: false,
 			maxWaitTimeInMs: 250,

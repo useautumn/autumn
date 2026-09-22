@@ -89,6 +89,7 @@ export async function createBalanceWorker({
 			},
 			config: {
 				topic: env.BALANCE_WORKER_METERING_TOPIC,
+				commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,
 				partitionsConsumedConcurrently: env.BALANCE_WORKER_PARTITION_COUNT,
 				healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
 			},

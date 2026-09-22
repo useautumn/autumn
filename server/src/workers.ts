@@ -2,7 +2,7 @@ import "dotenv/config";
 import cluster from "node:cluster";
 import { getAutumnEnv } from "@autumn/env";
 import { startBalanceShadow } from "./external/balanceWorker/balanceShadow.js";
-import { startOwnershipConsumer } from "./external/balanceWorker/getOwnershipConsumer.js";
+import { startBalanceWorkerClient } from "./external/balanceWorker/getBalanceWorkerClient.js";
 
 import { initInfisical } from "./external/infisical/initInfisical.js";
 import { logger } from "./external/logtail/logtailUtils.js";
@@ -114,10 +114,10 @@ if (cluster.isPrimary) {
 	await startAllEdgeConfigPolling({ logger });
 	startBalanceShadow();
 	// Queue jobs reach the balance worker too (lock expiry, evicts after billing), so they need its routing table.
-	void startOwnershipConsumer().catch((error) => {
+	void startBalanceWorkerClient().catch((error) => {
 		logger.error(
 			{ error },
-			"[balance-worker] Ownership consumer startup failed; routing will retry",
+			"[balance-worker] Client startup failed; routing will retry",
 		);
 	});
 

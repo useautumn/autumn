@@ -92,6 +92,14 @@ export function createTopicConsumer({
 function validateConsumerConfig(config: TopicConsumerConfig): void {
 	if (config.topic.trim().length === 0)
 		throw new Error("Kafka topic cannot be empty");
+	const topics = new Set([config.topic]);
+	for (const secondary of config.secondaryTopics ?? []) {
+		if (secondary.trim().length === 0 || topics.has(secondary))
+			throw new Error(
+				`Secondary Kafka topic is empty or repeated: ${secondary}`,
+			);
+		topics.add(secondary);
+	}
 	const concurrency = config.partitionsConsumedConcurrently ?? 1;
 	if (!Number.isSafeInteger(concurrency) || concurrency < 1) {
 		throw new RangeError(`Invalid concurrent partition count: ${concurrency}`);

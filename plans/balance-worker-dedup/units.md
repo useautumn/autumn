@@ -33,12 +33,30 @@ base `og/balance-kafka-msk-auth`). Part A ships on its own.
 
 ## Part B: async track on a command topic
 
+The server never touches a topic or a partition number. The client package is "how the server
+hands a command to a worker", and it gains a second transport beside HTTP:
+
+```
+client.track({ command })       HTTP, waits for the reply            exists
+client.enqueue({ commands })    Kafka, one append for many commands  unit 5
+      └─ partition = meteringIdentityToPartition(command.identity)   same math as resolveCommandRoute
+```
+
+The topic carries the engine's mutating command union, so a future command (reset, …) is an engine
+variant, a processor method and a consumer case; the transport does not change.
+
 | # | unit | branch | ends with this passing |
 |---|---|---|---|
-| 5 | **A command topic the server can append to.** `packages/kafka/src/topics/command/` in the metering topic's shape, keyed by `meteringIdentityToPartitionKey`, payload the existing track command. `${deployment}-commands` in env, `setupLocalTopics`, `validateBalanceWorkerTopics`. A plain idempotent producer config (today's needs a `transactionalId`). The server's producer accessor, with the partition set from `meteringIdentityToPartition`. | `command-topic` | kafka integration: the server appends, the record is on the partition the router would pick, and it parses |
-| 6 | **The owner consumes its own commands.** One consumer, both topics, a co-partitioning assigner. A command handler feeds `runtime.process` the same way `receiveTrack` does, so one `decide` serves both. | `command-consumer` | kafka + postgres integration: append a track command → the row moves; both topics' partition n land on one member across a rebalance |
-| 7 | **A crash never decides a command twice.** Optional `source` on the mutation record. `command_next_offset` on `partition_progress`, written in the same CTE as `next_offset`. After replay the command consumer seeks to it. `sendOffsets` in the mutation's transaction. A command that changes nothing moves the bookmark alone. | `command-bookmark` | integration: stop the worker between the Kafka append and the Postgres commit → restart → decided once. The same command at two offsets → applied once (unit 1's window) |
-| 8 | **The server's async track uses it.** On the worker path: claim the key in DynamoDB, append, 202; a failed append releases the claim. Batch track items go the same way with `${ctx.id}-${index}`, each item's key claimed by the server before its append, since the worker has no DynamoDB. | `async-track-worker` | `track-async.test.ts` and the batch idempotency suite on the worker path |
+| 5 | **The client can enqueue commands.** `packages/kafka/src/topics/command/` in the metering topic's shape: record = a mutating command, key = `meteringIdentityToPartitionKey`, a plain idempotent producer config beside the transactional one, `appendCommandRecords`. `${deployment}-commands` in env, `setupLocalTopics`, `validateBalanceWorkerTopics`. Client: `queue/enqueueCommands.ts`, `BalanceWorkerClient.enqueue`, a `commandLog` dependency. Server: `external/balanceWorker/getCommandProducer.ts`, injected by `getBalanceWorkerClient`. | `command-enqueue` | unit: the codec round-trips; `enqueue` groups by partition and appends once. kafka integration: `enqueue` two commands for two customers → each record sits on the partition `resolveCommandRoute` would pick, and parses back |
+| 6 | **The owner consumes its own commands.** One consumer, both topics, a co-partitioning assigner. A command handler feeds `runtime.process` the same way `receiveTrack` does, dispatching on `command.type`. | `command-consumer` | kafka + postgres integration: enqueue a track → the row moves; both topics' partition n land on one member across a rebalance |
+| 7 | **A crash never decides a command twice.** Optional `source` on the mutation record. `command_next_offset` on `partition_progress`, written in the same CTE as `next_offset`. After replay the command consumer seeks to it. `sendOffsets` in the mutation's transaction. A command that changes nothing moves the bookmark alone. | `command-bookmark` | integration: stop the worker between the Kafka append and the Postgres commit → restart → decided once. The same command at two offsets → applied once (Part A) |
+| 8 | **Async and batch track use it.** `async: true` on the worker path: claim the key, `enqueue`, 202. Batch: one command per item, `${ctx.id}-${index}` or `["track", key]`, every keyed item claimed in parallel before one `enqueue`; a failed append releases them all. | `async-track-worker` | `track-async.test.ts` and the batch idempotency suite on the worker path |
+
+### Unit 5, slices
+
+1. `packages/kafka`: the command topic (record schema, codec, publisher) and `createIdempotentProducerConfig`. Env name, local setup, boot validation.
+2. `packages/balance-worker-client`: `enqueue`, grouping commands by partition; the `CommandLog` port.
+3. Server: `getCommandProducer` and the injection. The kafka integration test.
 
 ## Status
 
@@ -48,4 +66,7 @@ base `og/balance-kafka-msk-auth`). Part A ships on its own.
 | 2 | done, uncommitted. One `recentCommands` per partition, made in `createWorkerPartitions.createRuntime` and handed to both the writer (through the runtime and processor contexts) and the replay (`createReplay({ partition, recentCommands })`). The record handler looks the set up by partition and remembers every record that landed. Worker unit suite green (496). |
 | 3 | done, uncommitted. The replay seeks to `max(logStart, offsetAt(now − W))`, capped at the bookmark; the lookup is best effort (missing call, error, timeout, nothing that recent → bookmark, warn). While the floor is set the handler reads below-bookmark records instead of seeking past them, and one it cannot parse is skipped with a warning instead of failing the partition. `postgres/track-commits.test.ts` proves restart → retry → 409 with the balance moved once. |
 | 4 | done, uncommitted. `runBalanceWorkerTrack` wraps its work in `withIdempotencyKey` with the body key and `RouteGroup.Balances`, the way `runTrackWithRollout` does; the handler is untouched. README describes the worker lane. Unit test beside the function's other contracts: no key → no claim; success and 409 keep it; 503 releases it. Not run: the integration body-idempotency suite (needs the dev stack). |
-| 5 to 8 | not started |
+| 5 | done, uncommitted. `client.enqueue({ commands })` → one `producer.send` with a partition per message. Boot validation of the command topic waits for unit 6, when the worker first depends on it; `setupLocalTopics` creates it now. The server connects its producer on the first append, never at boot, and disconnects it on shutdown. Green: kafka unit + `command-topic` integration on the real broker, client unit, env unit; server and worker typecheck. |
+| 5b | done, uncommitted. The client grew `queue.track` (a typed door over one `enqueue`; more doors as more commands queue), and a Kafka-backed factory: `createKafkaBalanceWorkerClient({ ctx: { kafka, logger }, config })` → `{ client, start, stop }`, with the ownership reader's start-with-retry and the lazy command producer moved out of the server. The server keeps `getBalanceWorkerClient` / `startBalanceWorkerClient` / `stopBalanceWorkerClient` and an env→connection reader; `getOwnershipConsumer.ts`, `getCommandLog.ts`, `createServerKafka.ts` are gone. Any process (API, SQS workers, cron, the shadow operator) builds the same client. |
+| 6 | done, uncommitted. `packages/kafka`: `coPartitionedAssigner` (partition n of every topic → one member), `secondaryTopics` on the topic consumer, topic routing in the metering consumer. Worker: `kafka/commandConsumer/` is the transport (parse the record, find the partition's admitted runtime, dispatch by `command.type`); `consume/` is the business layer, one file per command (`consumeTrack`: a refused or already-applied track is logged and dropped, anything a caller would get a 5xx for is thrown so Kafka redelivers). Command partitions stay paused from assignment until the runtime is admitted. Boot validates the command topic; a bare partition group in tests opts out. `postgres/track-commits.test.ts`: `queue.track` → the row moves; the same id queued again changes nothing. |
+| 7 to 8 | not started |

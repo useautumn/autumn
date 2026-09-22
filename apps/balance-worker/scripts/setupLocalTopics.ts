@@ -32,6 +32,11 @@ async function setup(): Promise<void> {
 				replicationFactor: 1,
 				configEntries: [{ name: "cleanup.policy", value: "compact" }],
 			},
+			{
+				topic: env.BALANCE_WORKER_COMMAND_TOPIC,
+				numPartitions: env.BALANCE_WORKER_PARTITION_COUNT,
+				replicationFactor: 1,
+			},
 		];
 		const existingTopics = new Set(await admin.listTopics());
 		const missingTopics = [];
@@ -42,7 +47,7 @@ async function setup(): Promise<void> {
 			await admin.createTopics({ waitForLeaders: true, topics: missingTopics });
 		await validateBalanceWorkerTopics({ admin, env });
 		console.info(
-			`Balance worker topics ready on ${env.KAFKA_BROKERS.join(", ")}: ${env.BALANCE_WORKER_METERING_TOPIC}, ${env.BALANCE_WORKER_OWNERSHIP_TOPIC} (${env.BALANCE_WORKER_PARTITION_COUNT} partitions)`,
+			`Balance worker topics ready on ${env.KAFKA_BROKERS.join(", ")}: ${env.BALANCE_WORKER_METERING_TOPIC}, ${env.BALANCE_WORKER_OWNERSHIP_TOPIC}, ${env.BALANCE_WORKER_COMMAND_TOPIC} (${env.BALANCE_WORKER_PARTITION_COUNT} partitions)`,
 		);
 	} finally {
 		await admin.disconnect();

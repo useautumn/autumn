@@ -20,9 +20,18 @@ export function createMeteringConsumer({
 	ctx: MeteringConsumerDependencies;
 	config: TopicConsumerConfig;
 }): TopicConsumer {
+	function secondaryHandlerOf({ topic }: { topic: string }) {
+		if (topic === config.topic) return undefined;
+		const handler = ctx.secondaryHandlers?.[topic];
+		if (!handler) throw new Error(`No handler subscribed for topic ${topic}`);
+		return handler;
+	}
+
 	function readResumeOffset(
 		position: TopicResumePosition,
 	): bigint | null | Promise<bigint | null> {
+		const secondary = secondaryHandlerOf(position);
+		if (secondary) return secondary.readResumeOffset(position);
 		return ctx.handler.readResumeOffset(position);
 	}
 
@@ -30,6 +39,8 @@ export function createMeteringConsumer({
 		input: TopicRecord,
 	): TopicRecordResult | Promise<TopicRecordResult> {
 		const { topic, partition, message } = input;
+		const secondary = secondaryHandlerOf(input);
+		if (secondary) return secondary.applyRecord(input);
 		try {
 			const position = {
 				topic,
@@ -55,7 +66,10 @@ export function createMeteringConsumer({
 			progress: ctx.progress,
 			handler: { readResumeOffset, applyRecord },
 		},
-		config,
+		config: {
+			...config,
+			secondaryTopics: Object.keys(ctx.secondaryHandlers ?? {}),
+		},
 	});
 }
 

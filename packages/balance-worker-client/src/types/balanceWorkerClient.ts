@@ -13,6 +13,11 @@ import type { FinalizeReply } from "../contracts/finalize.js";
 import type { InitializeReply } from "../contracts/initialize.js";
 import type { TrackReply } from "../contracts/track.js";
 import type { HttpClient } from "../http/types/httpClient.js";
+import type {
+	CommandLog,
+	CommandQueue,
+	EnqueueParams,
+} from "../queue/types/queue.js";
 import type { PartitionOwners } from "../routing/types/routing.js";
 
 export type TrackParams = { command: TrackCommand; signal?: AbortSignal };
@@ -36,10 +41,25 @@ export type BalanceWorkerClient = {
 	confirmExpiredLock(
 		params: ConfirmExpiredLockParams,
 	): Promise<ConfirmExpiredLockReply>;
+	/** The async half: `queue.track` is to `track` what Kafka is to HTTP. */
+	queue: CommandQueue;
+	/** A mixed batch of commands; the typed doors on `queue` are the usual way in. */
+	enqueue(params: EnqueueParams): Promise<void>;
+	/** Reads the ownership log through, retrying until it does; routing answers nothing before. */
+	start(): Promise<void>;
+	stop(): Promise<void>;
+};
+
+/** What a transport does at start and stop; a client over fakes has nothing to do. */
+export type ClientLifecycle = {
+	start(): Promise<void>;
+	stop(): Promise<void>;
 };
 export type BalanceWorkerClientDependencies = {
 	owners: PartitionOwners;
 	http?: HttpClient;
+	commandLog?: CommandLog;
+	lifecycle?: ClientLifecycle;
 };
 export type BalanceWorkerClientConfig = {
 	partitionCount: number;

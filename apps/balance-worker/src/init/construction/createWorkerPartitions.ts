@@ -8,6 +8,7 @@ import {
 	readTopicHighWatermarks,
 	subscribePartitionChanges,
 } from "@autumn/kafka";
+import { createCommandRecordHandler } from "../../kafka/commandConsumer/createCommandRecordHandler.js";
 import { createMeteringConsumer } from "../../kafka/meteringConsumer/createMeteringConsumer.js";
 import { createPartitions } from "../../partitions/createPartitions.js";
 import type {
@@ -41,6 +42,13 @@ export function createWorkerPartitions({
 		);
 	}
 	const positionTracker = createProgressTracker();
+	// Resolved per record: the partitions are built further down, once the consumer exists.
+	function findOwnedRuntime({ partition }: { partition: number }) {
+		return partitions.findOwnedRuntime({ partition });
+	}
+	const commandHandler = createCommandRecordHandler({
+		ctx: { findOwnedRuntime, logger: ctx.logger },
+	});
 	const meteringConsumer = createMeteringConsumer({
 		ctx: {
 			consumer: ctx.consumer,
@@ -52,6 +60,9 @@ export function createWorkerPartitions({
 				lookupTimeoutMs: BALANCE_WORKER_REPLAY_FLOOR_LOOKUP_TIMEOUT_MS,
 				now: Date.now,
 			},
+			...(config.commandTopic && {
+				commands: { topic: config.commandTopic, handler: commandHandler },
+			}),
 			logger: ctx.logger,
 		},
 		config: {
@@ -102,6 +113,16 @@ export function createWorkerPartitions({
 		ctx.consumer.pause([{ topic, partitions }]);
 	}
 
+	function resume({
+		topic,
+		partitions,
+	}: {
+		topic: string;
+		partitions: number[];
+	}): void {
+		ctx.consumer.resume([{ topic, partitions }]);
+	}
+
 	function connect(): Promise<void> {
 		return ctx.partitionOffsets.connect();
 	}
@@ -142,12 +163,13 @@ export function createWorkerPartitions({
 		positionTracker.observeHighWatermark(position);
 	}
 
-	return createPartitions({
+	const partitions: Partitions = createPartitions({
 		ctx: {
 			consumer: {
 				start: meteringConsumer.start,
 				stop: meteringConsumer.stop,
 				pause,
+				resume,
 			},
 			partitionOffsets: { connect, disconnect, fetchHighWatermarks },
 			progress: { readProgress, observeHighWatermark },
@@ -159,4 +181,5 @@ export function createWorkerPartitions({
 		},
 		config,
 	});
+	return partitions;
 }

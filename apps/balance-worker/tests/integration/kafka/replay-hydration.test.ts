@@ -91,7 +91,7 @@ const REPLAY_SELECTION: ReplayHydrationSelection = {
 	featureIds: [FEATURE_ID],
 };
 
-type ReplayTopics = { metering: string; ownership: string };
+type ReplayTopics = { metering: string; ownership: string; commands: string };
 
 type WorkerFixture = {
 	endpoint: string;
@@ -250,6 +250,7 @@ async function createReplayHarness(): Promise<ReplayHarness> {
 	const topics: ReplayTopics = {
 		metering: deployment,
 		ownership: `${deployment}-owners`,
+		commands: `${deployment}-commands`,
 	};
 	const kafka = new Kafka({
 		clientId: deployment,
@@ -264,6 +265,11 @@ async function createReplayHarness(): Promise<ReplayHarness> {
 			topics: [
 				{
 					topic: topics.metering,
+					numPartitions: PARTITION_COUNT,
+					replicationFactor: 1,
+				},
+				{
+					topic: topics.commands,
 					numPartitions: PARTITION_COUNT,
 					replicationFactor: 1,
 				},
@@ -286,7 +292,7 @@ async function createReplayHarness(): Promise<ReplayHarness> {
 	async function stop(): Promise<void> {
 		await routing.stop();
 		await admin.deleteTopics({
-			topics: [topics.metering, topics.ownership],
+			topics: [topics.metering, topics.ownership, topics.commands],
 		});
 		await admin.disconnect();
 	}
@@ -334,6 +340,7 @@ async function startBalanceWorkerFixture({
 		}),
 		BALANCE_WORKER_METERING_TOPIC: topics.metering,
 		BALANCE_WORKER_OWNERSHIP_TOPIC: topics.ownership,
+		BALANCE_WORKER_COMMAND_TOPIC: topics.commands,
 		BALANCE_WORKER_GROUP_ID: deployment,
 		BALANCE_WORKER_PARTITION_COUNT: PARTITION_COUNT,
 	};

@@ -1,5 +1,5 @@
 import type { ProducerConfig } from "kafkajs";
-import type { KafkaProducerLimits } from "../client/types/kafkaLimits.js";
+import type { KafkaIdempotentProducerLimits } from "../client/types/kafkaLimits.js";
 import { assertNonEmpty, assertPositiveSafeInteger } from "../lib/assert.js";
 import type { KafkaProducerSessionConfig } from "./types/producer.js";
 
@@ -38,7 +38,11 @@ export function createProducerConfig({
 	limits,
 }: KafkaProducerSessionConfig): ProducerConfig {
 	assertNonEmpty({ name: "transactionalId", value: transactionalId });
-	validateProducerLimits({ limits });
+	assertPositiveSafeInteger({
+		name: "transactionTimeoutMs",
+		value: limits.transactionTimeoutMs,
+	});
+	validateRetryLimits({ limits });
 
 	return {
 		transactionalId,
@@ -53,15 +57,30 @@ export function createProducerConfig({
 	};
 }
 
-function validateProducerLimits({
+/** No transactional id, so no fence: the broker still drops a retried send it already has. */
+export function createIdempotentProducerConfig({
 	limits,
 }: {
-	limits: KafkaProducerLimits;
+	limits: KafkaIdempotentProducerLimits;
+}): ProducerConfig {
+	validateRetryLimits({ limits });
+
+	return {
+		idempotent: true,
+		maxInFlightRequests: 1,
+		retry: {
+			retries: limits.retryCount,
+			initialRetryTime: limits.initialRetryTimeMs,
+			maxRetryTime: limits.maxRetryTimeMs,
+		},
+	};
+}
+
+function validateRetryLimits({
+	limits,
+}: {
+	limits: KafkaIdempotentProducerLimits;
 }): void {
-	assertPositiveSafeInteger({
-		name: "transactionTimeoutMs",
-		value: limits.transactionTimeoutMs,
-	});
 	assertPositiveSafeInteger({ name: "retryCount", value: limits.retryCount });
 	if (limits.retryCount > maximumKafkaProducerRetryCount) {
 		throw new RangeError(

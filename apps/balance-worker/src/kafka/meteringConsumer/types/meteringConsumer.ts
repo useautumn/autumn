@@ -1,4 +1,8 @@
-import type { KafkaConsumerClient, ProgressTracker } from "@autumn/kafka";
+import type {
+	KafkaConsumerClient,
+	ProgressTracker,
+	TopicRecordHandler,
+} from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
 import type { RecentCommands } from "../../../processor/writer/recentCommands/types/recentCommands.js";
@@ -25,5 +29,7 @@ export type MeteringConsumerContext = {
 	stateStore: StateStore;
 	positionTracker: ProgressTracker;
 	replayWindow: ReplayWindow;
+	/** Consumed on the same group membership, so partition n's commands reach partition n's owner. */
+	commands?: { topic: string; handler: TopicRecordHandler };
 	logger?: Pick<AutumnLogger, "warn">;
 };

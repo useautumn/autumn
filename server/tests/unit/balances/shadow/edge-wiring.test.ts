@@ -1,8 +1,8 @@
 import { expect, mock, spyOn, test } from "bun:test";
+import * as workerClient from "@autumn/balance-worker-client";
 import * as clientConfig from "@autumn/env/balanceWorkerClient";
 import { ADMIN_BALANCE_SHADOW_CONFIG_KEY } from "@/external/aws/s3/adminS3Config.js";
 import * as s3 from "@/external/aws/s3/bunS3EdgeConfigClient.js";
-import * as ownership from "@/external/balanceWorker/getOwnershipConsumer.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { BalanceShadowConfig } from "@/internal/balances/shadow/balanceShadowTypes.js";
 import * as registry from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
@@ -26,7 +26,7 @@ async function verifyEdgeWiring() {
 	});
 	const starts = mock(async () => {});
 	const stops = mock(async () => {});
-	spyOn(ownership, "createServerOwnershipConsumer").mockReturnValue({
+	spyOn(workerClient, "createOwnersFromKafka").mockReturnValue({
 		start: starts,
 		stop: stops,
 		refresh: async () => {},

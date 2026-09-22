@@ -45,6 +45,7 @@ export const createCheckpointServiceFixture = async () => {
 	const id = crypto.randomUUID();
 	const topic = `checkpoint-service-${id}`;
 	const ownershipTopic = `${topic}-owners`;
+	const commandTopic = `${topic}-commands`;
 	const bucket = `checkpoint-service-${id}`;
 	const directory = mkdtempSync(join(tmpdir(), "balance-checkpoint-service-"));
 	const endpoint = process.env.S3_TEST_ENDPOINT ?? "http://127.0.0.1:19000";
@@ -97,7 +98,7 @@ export const createCheckpointServiceFixture = async () => {
 		for (const service of services) await service.stop();
 		await routing.stop();
 		await producer.disconnect();
-		await admin.deleteTopics({ topics: [topic, ownershipTopic] });
+		await admin.deleteTopics({ topics: [topic, ownershipTopic, commandTopic] });
 		await admin.disconnect();
 		await s3.send(
 			new DeleteObjectCommand({
@@ -120,6 +121,7 @@ export const createCheckpointServiceFixture = async () => {
 			waitForLeaders: true,
 			topics: [
 				{ topic, numPartitions: 1, replicationFactor: 1 },
+				{ topic: commandTopic, numPartitions: 1, replicationFactor: 1 },
 				{
 					topic: ownershipTopic,
 					numPartitions: 1,
@@ -205,6 +207,7 @@ export const createCheckpointServiceFixture = async () => {
 			}),
 			BALANCE_WORKER_METERING_TOPIC: topic,
 			BALANCE_WORKER_OWNERSHIP_TOPIC: ownershipTopic,
+			BALANCE_WORKER_COMMAND_TOPIC: commandTopic,
 			BALANCE_WORKER_GROUP_ID: id,
 			BALANCE_WORKER_CHECKPOINT_INTERVAL_MS: intervalMs,
 			BALANCE_WORKER_PARTITION_COUNT: 1,

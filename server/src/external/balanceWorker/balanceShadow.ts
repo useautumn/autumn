@@ -1,4 +1,8 @@
-import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
+import {
+	createBalanceWorkerClient,
+	createBalanceWorkerKafka,
+	createOwnersFromKafka,
+} from "@autumn/balance-worker-client";
 import {
 	BALANCE_WORKER_PARTITION_COUNT,
 	BALANCE_WORKER_REQUEST_TIMEOUT_MS,
@@ -8,15 +12,23 @@ import { balanceShadowStore } from "@/internal/balances/shadow/balanceShadowStor
 import { createBalanceShadowController } from "@/internal/balances/shadow/createBalanceShadowController.js";
 import { startBalanceShadowSession } from "@/internal/balances/shadow/startBalanceShadowSession.js";
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
-import { createServerOwnershipConsumer } from "./getOwnershipConsumer.js";
+import { readBalanceWorkerKafkaConfig } from "./balanceWorkerKafkaConfig.js";
 
 const controller = createBalanceShadowController({
 	readConfig: balanceShadowStore.get,
 	runtimeEnv: process.env,
 	startSession: ({ config }) => {
-		const owners = createServerOwnershipConsumer({
-			topic: config.ownershipTopic,
-			groupIdPrefix: "autumn-server-shadow",
+		const owners = createOwnersFromKafka({
+			ctx: {
+				kafka: createBalanceWorkerKafka(
+					readBalanceWorkerKafkaConfig({ clientId: "autumn-server-shadow" }),
+				),
+				logger,
+			},
+			config: {
+				topic: config.ownershipTopic,
+				groupIdPrefix: "autumn-server-shadow",
+			},
 		});
 		const client = createBalanceWorkerClient({
 			ctx: { owners },

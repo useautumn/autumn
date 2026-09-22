@@ -1,5 +1,6 @@
 import type {
 	KafkaConsumerClient,
+	TopicRecordHandler,
 	TopicRecordResult,
 	TopicResumePosition,
 } from "../../../../consumer/types/consumer.js";
@@ -33,4 +34,6 @@ export type MeteringConsumerDependencies = {
 	consumer: KafkaConsumerClient;
 	handler: MeteringRecordHandler;
 	progress: ProgressTracker;
+	/** Other topics on the same group membership, each with its own raw record handler. */
+	secondaryHandlers?: Readonly<Record<string, TopicRecordHandler>>;
 };

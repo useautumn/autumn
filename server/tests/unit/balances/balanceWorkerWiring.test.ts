@@ -13,7 +13,6 @@ import {
 } from "@autumn/shared";
 import { type Context, Hono, type Next } from "hono";
 import * as rolloutAccess from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
-import * as ownershipAccess from "@/external/balanceWorker/getOwnershipConsumer.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleCheck } from "@/internal/api/check/handleCheck.js";
@@ -77,62 +76,6 @@ function refuseUnconfiguredKafka() {
 	);
 }
 
-test.each(["none", "msk_iam"] as const)(
-	"shared shadow and operator ownership reader uses %s without enabling direct routing",
-	(authMode) => {
-		balanceWorkerEnv = createClientEnv({
-			runtimeEnv: {
-				NODE_ENV: "production",
-				KAFKA_BROKERS: "broker:9098",
-				KAFKA_AUTH_MODE: authMode,
-				AWS_REGION: "us-east-1",
-				BALANCE_WORKER_DEPLOYMENT: "serving",
-			},
-		});
-		const interrupted = new Error("stop before opening any connection");
-		function interruptConnection(): never {
-			throw interrupted;
-		}
-		const createClient = spyOn(kafka, "createKafkaClient").mockImplementation(
-			interruptConnection,
-		);
-		const createTransport = spyOn(kafka, "createKafkaTransport");
-		expect(() =>
-			ownershipAccess.createServerOwnershipConsumer({
-				topic: "shadow-ownership",
-				groupIdPrefix: "shadow-reader",
-			}),
-		).toThrow(interrupted);
-		expect(createTransport).toHaveBeenCalledWith({
-			authMode,
-			region: "us-east-1",
-		});
-		expect(createClient).toHaveBeenCalledTimes(1);
-		expect(createClient.mock.calls[0]?.[0]).toMatchObject({
-			clientId: "shadow-reader",
-			brokers: ["broker:9098"],
-			limits: {
-				connectionTimeoutMs: 3000,
-				requestTimeoutMs: 10000,
-				retryCount: 3,
-				initialRetryTimeMs: 100,
-				maxRetryTimeMs: 1000,
-			},
-		});
-		expect(createClient.mock.calls[0]?.[0].transport).toEqual(
-			authMode === "none"
-				? {}
-				: {
-						ssl: true,
-						sasl: {
-							mechanism: "oauthbearer",
-							oauthBearerProvider: expect.any(Function),
-						},
-					},
-		);
-	},
-);
-
 function createContext({
 	env = AppEnv.Sandbox,
 }: {
@@ -167,24 +110,11 @@ function gatesBalanceWorkerOnTheRolloutFlagAlone(): void {
 async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 	let starts = 0;
 	let stops = 0;
-	let startupFailure: Error | undefined;
 	const info = spyOn(logger, "info").mockImplementation(ignoreLog);
-	const error = spyOn(logger, "error").mockImplementation(ignoreLog);
-	async function start(): Promise<void> {
-		starts++;
-		if (startupFailure) throw startupFailure;
-	}
-	async function stop(): Promise<void> {
-		stops++;
-	}
-	function findOwner(): undefined {
-		return undefined;
-	}
-	async function refresh(): Promise<void> {}
 	async function track(): Promise<never> {
 		throw new Error("The wiring test never sends a command");
 	}
-	const consumer = { start, stop, findOwner, refresh };
+	const queueNothing = async () => undefined;
 	const client = {
 		track,
 		check: track,
@@ -192,34 +122,37 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 		evict: track,
 		finalize: track,
 		confirmExpiredLock: track,
+		enqueue: queueNothing,
+		queue: { track: queueNothing },
+		start: async () => {
+			starts++;
+		},
+		stop: async () => {
+			stops++;
+		},
 	};
-	const createKafka = spyOn(kafka, "createKafkaClient");
-	const createConsumer = spyOn(
-		kafka,
-		"createOwnershipConsumer",
-	).mockReturnValue(consumer);
 	const createClient = spyOn(
 		workerClient,
-		"createBalanceWorkerClient",
+		"createKafkaBalanceWorkerClient",
 	).mockReturnValue(client);
 	// Query-isolated accessors keep private memoized fakes out of later tests.
-	const ownership: typeof ownershipAccess = await import(
-		new URL(
-			"../../../src/external/balanceWorker/getOwnershipConsumer.ts?balance-worker-wiring",
-			import.meta.url,
-		).href
-	);
+	const access: typeof import("@/external/balanceWorker/getBalanceWorkerClient.js") =
+		await import(
+			new URL(
+				"../../../src/external/balanceWorker/getBalanceWorkerClient.ts?balance-worker-wiring",
+				import.meta.url,
+			).href
+		);
 
 	const readClientConfig = refuseUnconfiguredKafka();
-	await ownership.startOwnershipConsumer();
-	await ownership.stopOwnershipConsumer();
+	await access.startBalanceWorkerClient();
+	await access.stopBalanceWorkerClient();
 	expect(readClientConfig).not.toHaveBeenCalled();
-	expect(createKafka).not.toHaveBeenCalled();
-	expect(createConsumer).not.toHaveBeenCalled();
+	expect(createClient).not.toHaveBeenCalled();
 	expect(starts).toBe(0);
 	expect(stops).toBe(0);
 	expect(info).toHaveBeenCalledWith(
-		"[balance-worker] Ownership consumer skipped: rollout disabled",
+		"[balance-worker] Client skipped: rollout disabled",
 	);
 	readClientConfig.mockImplementation(readBalanceWorkerClientEnv);
 
@@ -231,54 +164,28 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 		},
 		rolloutEnabled: true,
 	});
-	await ownership.startOwnershipConsumer();
-	expect(ownership.getOwnershipConsumer()).toBe(consumer);
-	expect(ownership.getOwnershipConsumer()).toBe(consumer);
-	expect(createKafka).toHaveBeenCalledTimes(1);
-	expect(createConsumer).toHaveBeenCalledTimes(1);
-	expect(createConsumer.mock.calls[0]?.[0].config).toEqual({
-		topic: "serving-ownership",
-		groupIdPrefix: "autumn-server-ownership",
-	});
-	expect(starts).toBe(1);
-	expect(info).toHaveBeenCalledWith(
-		{ brokers: ["broker:9092"], topic: "serving-ownership" },
-		"[balance-worker] Starting Kafka ownership consumer; waiting for initial catch-up",
-	);
-	expect(info).toHaveBeenLastCalledWith(
-		expect.stringMatching(
-			/Kafka ownership consumer ready; initial catch-up complete \(\d+ms\)/,
-		),
-	);
-
-	spyOn(ownershipAccess, "getOwnershipConsumer").mockReturnValue(consumer);
-	const access: typeof import("@/external/balanceWorker/getBalanceWorkerClient.js") =
-		await import(
-			new URL(
-				"../../../src/external/balanceWorker/getBalanceWorkerClient.ts?balance-worker-wiring",
-				import.meta.url,
-			).href
-		);
+	await access.startBalanceWorkerClient();
 	expect(access.getBalanceWorkerClient()).toBe(client);
 	expect(access.getBalanceWorkerClient()).toBe(client);
 	expect(createClient).toHaveBeenCalledTimes(1);
-	expect(createClient).toHaveBeenCalledWith({
-		ctx: { owners: consumer },
-		config: {
-			partitionCount: BALANCE_WORKER_PARTITION_COUNT,
-			timeoutMs: 1000,
+	expect(createClient.mock.calls[0]?.[0].config).toEqual({
+		kafka: {
+			clientId: "autumn-server-balance-worker",
+			brokers: ["broker:9092"],
+			authMode: "none",
+			region: undefined,
 		},
+		ownershipTopic: "serving-ownership",
+		commandTopic: "serving-commands",
+		groupIdPrefix: "autumn-server-ownership",
+		partitionCount: BALANCE_WORKER_PARTITION_COUNT,
+		timeoutMs: 1000,
+		routeRefreshTimeoutMs: 200,
+		catchUpTimeoutMs: expect.any(Number),
 	});
-	await ownership.stopOwnershipConsumer();
+	expect(starts).toBe(1);
+	await access.stopBalanceWorkerClient();
 	expect(stops).toBe(1);
-	info.mockClear();
-	startupFailure = new Error("Ownership catch-up deadline exceeded");
-	await expect(ownership.startOwnershipConsumer()).rejects.toBe(startupFailure);
-	expect(info).toHaveBeenCalledTimes(1);
-	expect(error).toHaveBeenCalledWith(
-		{ error: startupFailure, durationMs: expect.any(Number) },
-		"[balance-worker] Kafka ownership consumer startup failed",
-	);
 }
 
 async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {

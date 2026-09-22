@@ -511,6 +511,7 @@
       "dependencies": {
         "@autumn/balance-engine": "workspace:*",
         "@autumn/kafka": "workspace:*",
+        "kafkajs": "^2.2.4",
       },
       "devDependencies": {
         "@types/bun": "1.3.14",

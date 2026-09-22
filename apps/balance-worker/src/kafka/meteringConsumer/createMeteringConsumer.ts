@@ -30,7 +30,14 @@ export function createMeteringConsumer({
 		},
 	});
 	const consumer = createKafkaMeteringConsumer({
-		ctx: { consumer: ctx.consumer, handler, progress: ctx.positionTracker },
+		ctx: {
+			consumer: ctx.consumer,
+			handler,
+			progress: ctx.positionTracker,
+			...(ctx.commands && {
+				secondaryHandlers: { [ctx.commands.topic]: ctx.commands.handler },
+			}),
+		},
 		config,
 	});
 	const { start, stop, withdrawPartition, resumePartition } = consumer;

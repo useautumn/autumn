@@ -1,5 +1,6 @@
 import {
 	assertConsumerGroupTimings,
+	coPartitionedAssigner,
 	createConsumerGroupConfig,
 	type KafkaProducerLimits,
 	type KafkaProducerSessionConfig,
@@ -44,7 +45,11 @@ export function createWorkerConsumerConfig({
 	timings: KafkaBalanceWorkerTimings;
 }): ConsumerConfig {
 	assertKafkaBalanceWorkerTimings({ timings });
-	return createConsumerGroupConfig({ groupId, timings });
+	// Both topics share the membership; the assigner keeps partition n of each on one worker.
+	return {
+		...createConsumerGroupConfig({ groupId, timings }),
+		partitionAssigners: [coPartitionedAssigner],
+	};
 }
 
 export function createWorkerProducerConfig({
@@ -122,6 +127,7 @@ export async function validateBalanceWorkerTopics({
 	const topics = [
 		env.BALANCE_WORKER_METERING_TOPIC,
 		env.BALANCE_WORKER_OWNERSHIP_TOPIC,
+		env.BALANCE_WORKER_COMMAND_TOPIC,
 	];
 	const metadata = await admin.fetchTopicMetadata({ topics });
 	for (const topic of topics) {

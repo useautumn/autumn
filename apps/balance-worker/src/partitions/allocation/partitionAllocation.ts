@@ -163,6 +163,8 @@ function pauseAllocatedPartitions({
 	if (partitions.length === 0) return;
 	try {
 		ctx.consumer.pause({ topic: ctx.config.topic, partitions });
+		if (ctx.config.commandTopic)
+			ctx.consumer.pause({ topic: ctx.config.commandTopic, partitions });
 	} catch (cause) {
 		reportPartitionError({ ctx, cause });
 	}

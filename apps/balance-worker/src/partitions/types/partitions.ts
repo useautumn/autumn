@@ -61,6 +61,7 @@ export type PartitionConsumer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
 	pause(position: { topic: string; partitions: number[] }): void;
+	resume(position: { topic: string; partitions: number[] }): void;
 };
 
 export type PartitionOffsets = {
@@ -111,6 +112,8 @@ export type PartitionsDependencies = {
 
 export type PartitionsConfig = {
 	topic: string;
+	/** Held paused from assignment until the partition is admitted, so no command meets a runtime that is not ready. */
+	commandTopic?: string;
 	healthRefreshIntervalMs: number;
 	partitionBootstrapRetryIntervalMs?: number;
 };
@@ -124,6 +127,8 @@ export type Partitions = {
 	stop(): Promise<void>;
 	partitions(): OwnedPartitionHealth[];
 	findRuntime(route: PartitionRoute): PartitionRuntimePort | undefined;
+	/** For the partition's own queued commands: no route epoch, since no server chose the route. */
+	findOwnedRuntime(target: PartitionTarget): PartitionRuntimePort | undefined;
 };
 
 export type PartitionTarget = { partition: number };
@@ -143,4 +148,5 @@ export interface PartitionDirectory {
 	admit(admission: PartitionAdmission): void;
 	withdraw(target: PartitionTarget): void;
 	findRuntime(route: PartitionRoute): PartitionRuntimePort | undefined;
+	findOwnedRuntime(target: PartitionTarget): PartitionRuntimePort | undefined;
 }

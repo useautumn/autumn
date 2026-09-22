@@ -4,6 +4,10 @@ export type KafkaProducerLimits = {
 	initialRetryTimeMs: number;
 	maxRetryTimeMs: number;
 };
+export type KafkaIdempotentProducerLimits = Omit<
+	KafkaProducerLimits,
+	"transactionTimeoutMs"
+>;
 export type KafkaClientLimits = {
 	connectionTimeoutMs: number;
 	requestTimeoutMs: number;

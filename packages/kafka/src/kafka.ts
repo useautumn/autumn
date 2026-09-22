@@ -17,15 +17,18 @@ export type {
 	KafkaProducer,
 	KafkaProducerClient,
 	KafkaProducerFactory,
+	KafkaSender,
 	KafkaTransaction,
 	KafkaTransportConfig,
 } from "./client/types/kafkaClient.js";
 export type {
 	KafkaClientLimits,
 	KafkaConsumerGroupTimings,
+	KafkaIdempotentProducerLimits,
 	KafkaProducerLimits,
 } from "./client/types/kafkaLimits.js";
 export { KafkaPartitionOffsetsNotFoundError } from "./consumer/consumerErrors.js";
+export { coPartitionedAssigner } from "./consumer/coPartitionedAssigner.js";
 export { createProgressTracker } from "./consumer/createProgressTracker.js";
 export { createTopicConsumer } from "./consumer/createTopicConsumer.js";
 export {
@@ -77,6 +80,7 @@ export type { TopicSchema } from "./lib/types/topicSchema.js";
 export { meteringIdentityToPartition } from "./partitioning/meteringIdentityToPartition.js";
 export { createProducerSession } from "./producer/createProducerSession.js";
 export {
+	createIdempotentProducerConfig,
 	createProducerConfig,
 	partitionProducerTransactionalIdOf,
 } from "./producer/producerConfig.js";
@@ -86,6 +90,18 @@ export type {
 	KafkaProducerSession,
 	KafkaProducerSessionConfig,
 } from "./producer/types/producer.js";
+export {
+	commandTopic,
+	parseCommandRecord,
+	serializeCommandRecord,
+} from "./topics/command/commandTopic.js";
+export { createCommandPublisher } from "./topics/command/publisher/createCommandPublisher.js";
+export type {
+	CommandAppend,
+	CommandPublisher,
+	CommandPublisherContext,
+} from "./topics/command/publisher/types/commandPublisher.js";
+export type { CommandRecord } from "./topics/command/types/commandRecord.js";
 export { createMeteringConsumer } from "./topics/metering/consumer/createMeteringConsumer.js";
 export { createMeteringReader } from "./topics/metering/consumer/createMeteringReader.js";
 export type {

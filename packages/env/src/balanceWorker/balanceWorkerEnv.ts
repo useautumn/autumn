@@ -90,6 +90,7 @@ export function createBalanceWorkerEnv(
 		BALANCE_WORKER_DEPLOYMENT: deployment,
 		BALANCE_WORKER_METERING_TOPIC: kafkaNames.meteringTopic,
 		BALANCE_WORKER_OWNERSHIP_TOPIC: kafkaNames.ownershipTopic,
+		BALANCE_WORKER_COMMAND_TOPIC: kafkaNames.commandTopic,
 		BALANCE_WORKER_GROUP_ID: kafkaNames.consumerGroup,
 		BALANCE_WORKER_PARTITION_COUNT,
 		BALANCE_WORKER_MAX_REQUEST_BYTES,

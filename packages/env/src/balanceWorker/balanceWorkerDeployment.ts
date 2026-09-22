@@ -20,10 +20,16 @@ export function balanceWorkerDeploymentToKafkaNames({
 	deployment,
 }: {
 	deployment: string;
-}): { meteringTopic: string; ownershipTopic: string; consumerGroup: string } {
+}): {
+	meteringTopic: string;
+	ownershipTopic: string;
+	commandTopic: string;
+	consumerGroup: string;
+} {
 	return {
 		meteringTopic: `${deployment}-events`,
 		ownershipTopic: `${deployment}-ownership`,
+		commandTopic: `${deployment}-commands`,
 		consumerGroup: `${deployment}-workers`,
 	};
 }

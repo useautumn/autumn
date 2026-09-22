@@ -30,6 +30,7 @@ describe("Real balance worker HTTP service", () => {
 		const id = crypto.randomUUID();
 		const topic = `http-worker-${id}`;
 		const owners = `${topic}-owners`;
+		const commands = `${topic}-commands`;
 		const directory = mkdtempSync(join(tmpdir(), "balance-http-"));
 		const databasePath = join(directory, "state.sqlite");
 		const reservation = Bun.serve({
@@ -50,6 +51,7 @@ describe("Real balance worker HTTP service", () => {
 			}),
 			BALANCE_WORKER_METERING_TOPIC: topic,
 			BALANCE_WORKER_OWNERSHIP_TOPIC: owners,
+			BALANCE_WORKER_COMMAND_TOPIC: commands,
 			BALANCE_WORKER_GROUP_ID: id,
 			BALANCE_WORKER_PARTITION_COUNT: 1,
 		};
@@ -64,6 +66,7 @@ describe("Real balance worker HTTP service", () => {
 			waitForLeaders: true,
 			topics: [
 				{ topic, numPartitions: 1, replicationFactor: 1 },
+				{ topic: commands, numPartitions: 1, replicationFactor: 1 },
 				{
 					topic: owners,
 					numPartitions: 1,
@@ -213,7 +216,7 @@ describe("Real balance worker HTTP service", () => {
 		} finally {
 			await service.stop();
 			await routing.stop();
-			await admin.deleteTopics({ topics: [topic, owners] });
+			await admin.deleteTopics({ topics: [topic, owners, commands] });
 			await admin.disconnect();
 			rmSync(directory, { recursive: true, force: true });
 		}

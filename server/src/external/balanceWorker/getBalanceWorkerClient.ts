@@ -1,42 +1,59 @@
 import {
 	type BalanceWorkerClient,
-	createBalanceWorkerClient,
-	type PartitionOwner,
+	createKafkaBalanceWorkerClient,
+	type KafkaBalanceWorkerClientConfig,
 } from "@autumn/balance-worker-client";
+import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
 import {
+	BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS,
 	BALANCE_WORKER_PARTITION_COUNT,
 	BALANCE_WORKER_REQUEST_TIMEOUT_MS,
 	BALANCE_WORKER_ROUTE_REFRESH_TIMEOUT_MS,
 } from "@autumn/env/balanceWorkerConstants";
-import { getOwnershipConsumer } from "./getOwnershipConsumer.js";
+import { logger } from "@/external/logtail/logtailUtils.js";
+import { readBalanceWorkerKafkaConfig } from "./balanceWorkerKafkaConfig.js";
+import { getBalanceWorkerRolloutEnabled } from "./getBalanceWorkerRolloutEnabled.js";
 
 let balanceWorkerClient: BalanceWorkerClient | undefined;
 
-/** Looks the consumer up on every call instead of capturing it. A consumer that
- *  fails its startup cannot be restarted, so it gets replaced rather than
- *  revived, and this client has to follow the replacement. */
-/** Undefined until ownership has been read through at least once. Routing then
- *  resolves no owner and the caller gets a retryable answer, which is the truth:
- *  the server does not yet know who owns anything. */
-function findOwner(params: { partition: number }): PartitionOwner | undefined {
-	return getOwnershipConsumer()?.findOwner(params);
+function balanceWorkerClientConfig(): KafkaBalanceWorkerClientConfig {
+	const env = getBalanceWorkerClientEnv();
+	return {
+		kafka: readBalanceWorkerKafkaConfig({
+			clientId: "autumn-server-balance-worker",
+		}),
+		ownershipTopic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
+		commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,
+		groupIdPrefix: "autumn-server-ownership",
+		partitionCount: BALANCE_WORKER_PARTITION_COUNT,
+		timeoutMs: BALANCE_WORKER_REQUEST_TIMEOUT_MS,
+		// This client serves customer check and track calls, so a partition in
+		// the middle of moving has to fail quickly rather than hold the request.
+		routeRefreshTimeoutMs: BALANCE_WORKER_ROUTE_REFRESH_TIMEOUT_MS,
+		catchUpTimeoutMs: BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS,
+	};
 }
 
-async function refresh(): Promise<void> {
-	await getOwnershipConsumer()?.refresh();
-}
-
+/** Routing answers "no owner" until `startBalanceWorkerClient` has read the ownership log through. */
 export function getBalanceWorkerClient(): BalanceWorkerClient {
-	if (balanceWorkerClient) return balanceWorkerClient;
-	balanceWorkerClient = createBalanceWorkerClient({
-		ctx: { owners: { findOwner, refresh } },
-		config: {
-			partitionCount: BALANCE_WORKER_PARTITION_COUNT,
-			timeoutMs: BALANCE_WORKER_REQUEST_TIMEOUT_MS,
-			// This client serves customer check and track calls, so a partition in
-			// the middle of moving has to fail quickly rather than hold the request.
-			routeRefreshTimeoutMs: BALANCE_WORKER_ROUTE_REFRESH_TIMEOUT_MS,
-		},
+	balanceWorkerClient ??= createKafkaBalanceWorkerClient({
+		ctx: { logger },
+		config: balanceWorkerClientConfig(),
 	});
 	return balanceWorkerClient;
+}
+
+/** Retries until the ownership log is read through; callers must not let it gate their listener. */
+export async function startBalanceWorkerClient(): Promise<void> {
+	if (!getBalanceWorkerRolloutEnabled()) {
+		logger.info("[balance-worker] Client skipped: rollout disabled");
+		return;
+	}
+	await getBalanceWorkerClient().start();
+}
+
+export async function stopBalanceWorkerClient(): Promise<void> {
+	const running = balanceWorkerClient;
+	balanceWorkerClient = undefined;
+	await running?.stop();
 }

@@ -105,7 +105,7 @@ export async function startPartitions({
 	});
 
 	async function startOne({ entry }: { entry: PartitionEntry }): Promise<void> {
-		await startPartition({ state, entry, allocationGeneration });
+		await startPartition({ ctx, state, entry, allocationGeneration });
 	}
 
 	const results = await runBoundedStartups({

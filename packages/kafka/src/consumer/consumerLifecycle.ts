@@ -39,7 +39,7 @@ export async function startConsumer({
 	);
 	try {
 		await ctx.consumer.subscribe({
-			topics: [ctx.config.topic],
+			topics: [ctx.config.topic, ...(ctx.config.secondaryTopics ?? [])],
 			fromBeginning: true,
 		});
 		await ctx.consumer.run({

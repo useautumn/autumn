@@ -155,6 +155,7 @@ const fixture = ({
 					events.push("consumer-stop");
 				},
 				pause: () => undefined,
+				resume: () => undefined,
 			},
 			partitionOffsets: {
 				connect: async () => undefined,
@@ -492,6 +493,7 @@ describe("partitionLifecycle", function partitionLifecycleTests() {
 				pause: ({ partitions }) => {
 					lifecycle.push(`pause:${partitions.join(",")}`);
 				},
+				resume: () => undefined,
 			},
 			partitionOffsets: {
 				connect: async () => {

@@ -27,9 +27,9 @@ import {
 	stopBalanceShadow,
 } from "./external/balanceWorker/balanceShadow.js";
 import {
-	startOwnershipConsumer,
-	stopOwnershipConsumer,
-} from "./external/balanceWorker/getOwnershipConsumer.js";
+	startBalanceWorkerClient,
+	stopBalanceWorkerClient,
+} from "./external/balanceWorker/getBalanceWorkerClient.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import {
 	startAllEdgeConfigPolling,
@@ -136,10 +136,10 @@ const init = async ({
 	// Ownership discovery must not gate the HTTP listener: start() waits for the
 	// initial catch-up, and the load balancer kills the task long before a slow or
 	// failing Kafka connect finishes. Routing refreshes on its own afterwards.
-	void startOwnershipConsumer().catch((error) => {
+	void startBalanceWorkerClient().catch((error) => {
 		logger.error(
 			{ error },
-			"[balance-worker] Ownership consumer startup failed; routing will retry",
+			"[balance-worker] Client startup failed; routing will retry",
 		);
 	});
 	startBalanceShadow();
@@ -366,7 +366,7 @@ async function gracefulShutdown() {
 		stopAcceptingRequests?.();
 		await waitForInFlightRequestsToSettle({ timeoutMs: 10_000 });
 		await stopBalanceShadow();
-		await stopOwnershipConsumer();
+		await stopBalanceWorkerClient();
 
 		// Flush any buffered OTel spans before shutting down
 		if (otelSdk) {

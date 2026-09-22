@@ -5,6 +5,9 @@ import { sendFinalize } from "./commands/sendFinalize.js";
 import { sendInitialize } from "./commands/sendInitialize.js";
 import { sendTrack } from "./commands/sendTrack.js";
 import { createHttpClient } from "./http/createHttpClient.js";
+import { createCommandQueue } from "./queue/createCommandQueue.js";
+import { enqueueCommands } from "./queue/enqueueCommands.js";
+import type { EnqueueParams } from "./queue/types/queue.js";
 import type {
 	BalanceWorkerClient,
 	BalanceWorkerClientConfig,
@@ -37,6 +40,10 @@ export function createBalanceWorkerClient({
 		timeoutMs: config.timeoutMs,
 		routeRefreshTimeoutMs: config.routeRefreshTimeoutMs,
 	};
+	const queue = {
+		commandLog: dependencies.commandLog,
+		partitionCount: config.partitionCount,
+	};
 
 	function track(params: TrackParams) {
 		return sendTrack({ ctx, ...params });
@@ -62,5 +69,28 @@ export function createBalanceWorkerClient({
 		return sendConfirmExpiredLock({ ctx, ...params });
 	}
 
-	return { track, check, initialize, evict, finalize, confirmExpiredLock };
+	function enqueue(params: EnqueueParams) {
+		return enqueueCommands({ ctx: queue, ...params });
+	}
+
+	async function start(): Promise<void> {
+		await dependencies.lifecycle?.start();
+	}
+
+	async function stop(): Promise<void> {
+		await dependencies.lifecycle?.stop();
+	}
+
+	return {
+		track,
+		check,
+		initialize,
+		evict,
+		finalize,
+		confirmExpiredLock,
+		queue: createCommandQueue({ ctx: queue }),
+		enqueue,
+		start,
+		stop,
+	};
 }
