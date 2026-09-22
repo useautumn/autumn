@@ -397,9 +397,12 @@ const toFeatureAndPrice = ({
 			newPrice: price,
 		}) ?? null;
 
-	// Adopted V2 price: honoured as stated, existence-checked before Stripe init.
 	if (item.stripe_prepaid_price_v2_id) {
-		config.stripe_prepaid_price_v2_id = item.stripe_prepaid_price_v2_id;
+		config.stripe_prepaid_price_v2_id = stripePriceIdForInitializedPrice({
+			requestedStripePriceId: item.stripe_prepaid_price_v2_id,
+			currentPrice: stripeReusePrice ?? curPrice,
+			newPrice: price,
+		});
 	}
 
 	return { price, ent };
