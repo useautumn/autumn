@@ -29,6 +29,7 @@ export const handleListAdminOrgs = createRoute({
 		} = c.req.query();
 		const trimmedSearch = search?.trim();
 		const searchTerm = trimmedSearch ? trimmedSearch : undefined;
+		const isPlatformSearch = String(platform) === "true";
 
 		let after:
 			| {
@@ -60,7 +61,7 @@ export const handleListAdminOrgs = createRoute({
 			.from(organizations)
 			.where(
 				and(
-					platform === "true"
+					isPlatformSearch
 						? isNotNull(organizations.created_by)
 						: isNull(organizations.created_by),
 					searchTerm
