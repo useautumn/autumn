@@ -8,7 +8,7 @@
  *  - a free plan's trial stored with card_required true (the read API masks
  *    it to false: no card gate without a price)
  *  - a boolean feature's entitlement stored with carry_from_previous true
- *    (nothing to carry on a boolean; push writes false)
+ *    and allowance 0 (no balance on a boolean; push writes false / null)
  *  - a usage price with max_purchase 0 (a stated cap of 0, not an absent one)
  */
 
@@ -156,11 +156,11 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// Older writes left carry_from_previous true on boolean rows; push
-			// derives false, and the API never shows the column.
+			// Older writes left carry_from_previous true and allowance 0 on boolean
+			// rows; push derives false / null, and the API never shows either.
 			await scenario.ctx.db
 				.update(entitlements)
-				.set({ carry_from_previous: true })
+				.set({ carry_from_previous: true, allowance: 0 })
 				.where(
 					and(
 						eq(entitlements.org_id, scenario.ctx.org.id),
