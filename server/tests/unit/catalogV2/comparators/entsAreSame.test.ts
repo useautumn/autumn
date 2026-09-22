@@ -259,6 +259,15 @@ describe("entsAreSame", () => {
 			);
 		});
 
+		test("ignored on a boolean row: nothing to carry", () => {
+			const booleanRow = { allowance_type: null, interval: null };
+			expectSame(
+				{ ...booleanRow, carry_from_previous: true },
+				{ ...booleanRow, carry_from_previous: false },
+				true,
+			);
+		});
+
 		test("unset equals false", () => {
 			expectSame(
 				{ carry_from_previous: undefined },

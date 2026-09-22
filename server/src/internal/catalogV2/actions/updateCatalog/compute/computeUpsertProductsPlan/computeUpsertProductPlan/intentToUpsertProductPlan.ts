@@ -1,4 +1,4 @@
-import { productToProductKey } from "@autumn/shared";
+import { isFreeProduct, productToProductKey } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { assembleNextFullProduct } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/assembleNextFullProduct";
 import { computeCatalogEntitlementPricesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeCatalogEntitlementPricesPlan/computeCatalogEntitlementPricesPlan";
@@ -120,6 +120,9 @@ export const intentToUpsertProductPlan = ({
 		internalProductId: details.product.internal_id,
 		mode:
 			versioning === "new_version" ? { type: "version" } : { type: "update" },
+		// Same rule as resolveTrialCardRequired on the read side.
+		cardRequiredInert:
+			baseFullProduct !== null && isFreeProduct({ product: baseFullProduct }),
 	});
 
 	const entitlementPricesPlan = computeCatalogEntitlementPricesPlan({
