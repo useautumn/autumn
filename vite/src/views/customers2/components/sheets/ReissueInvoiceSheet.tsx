@@ -302,7 +302,7 @@ function ReissueInvoiceForm({
 					</SheetSection>
 				)}
 
-				<SheetSection withSeparator>
+				<SheetSection withSeparator className="flex flex-col gap-3">
 					<div className="flex items-center justify-between">
 						<FormLabel className="mb-0">Lines</FormLabel>
 						<IconButton

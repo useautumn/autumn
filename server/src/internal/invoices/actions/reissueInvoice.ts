@@ -24,7 +24,6 @@ import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils";
-import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeLineItemsToDbLineItems } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines";
 import {
@@ -270,9 +269,13 @@ const createReplacementDraft = async ({
 				stripeClient: stripeCli,
 				invoiceId: stripeInvoice.id,
 			}),
+			// Stripe Tax's own rates cannot be reapplied by hand; it recomputes
+			// them on the replacement since automatic tax carries over.
 			lineTaxRates:
 				overrides?.tax_rate_id === undefined
-					? "keep"
+					? stripeInvoice.automatic_tax?.enabled
+						? "inherit"
+						: "keep"
 					: overrides.tax_rate_id === null
 						? "none"
 						: "inherit",
@@ -298,7 +301,12 @@ const createReplacementDraft = async ({
 			override: overrides?.memo,
 			inherited: template?.memo ?? stripeInvoice.description,
 		}),
-		paymentMethodTypes: paymentMethodTypes as never,
+		// The org's invoice methods (e.g. customer_balance) are for send-invoice
+		// only; a card replacement uses the customer's payment method as before.
+		paymentMethodTypes:
+			collectionMethod === "send_invoice"
+				? (paymentMethodTypes as never)
+				: undefined,
 		metadata: {
 			...inheritedMetadata({ stripeInvoice, dropDeferredPointer }),
 			autumn_reissued_from: stripeInvoice.id,
@@ -633,24 +641,51 @@ const collectRemainderNow = async ({
 	// The reissue is already complete here, so a collection hiccup must not
 	// report it as failed; the replacement simply stays open.
 	try {
-		const paymentMethod = await getCusPaymentMethod({
-			stripeCli,
-			stripeId: stripeInvoiceToStripeCustomerId({ stripeInvoice: finalized }),
-		});
-		const { paid, invoice } = await payForInvoice({
-			stripeCli,
-			invoiceId: finalized.id,
-			paymentMethod,
-			logger: ctx.logger,
-			errorOnFail: false,
-		});
-		return paid && invoice ? invoice : finalized;
+		const fallback = await fallbackPaymentMethodId({ stripeCli, finalized });
+		return await stripeCli.invoices.pay(
+			finalized.id,
+			fallback ? { payment_method: fallback } : {},
+		);
 	} catch (error) {
 		ctx.logger.warn(
 			`[reissueInvoice] replacement ${finalized.id} left open; collection failed: ${error}`,
 		);
 		return finalized;
 	}
+};
+
+/**
+ * Stripe resolves the card to charge as invoice → subscription → customer
+ * default, so a method is only named when none of those is set.
+ */
+const fallbackPaymentMethodId = async ({
+	stripeCli,
+	finalized,
+}: {
+	stripeCli: Stripe;
+	finalized: Stripe.Invoice;
+}): Promise<string | null> => {
+	if (finalized.default_payment_method) return null;
+
+	const stripeSubId = stripeInvoiceToStripeSubscriptionId(finalized);
+	if (stripeSubId) {
+		const subscription = await stripeCli.subscriptions.retrieve(stripeSubId);
+		if (subscription.default_payment_method) return null;
+	}
+
+	const stripeCusId = stripeInvoiceToStripeCustomerId({
+		stripeInvoice: finalized,
+	});
+	const customer = await stripeCli.customers.retrieve(stripeCusId);
+	if (!customer.deleted && customer.invoice_settings.default_payment_method) {
+		return null;
+	}
+
+	const newest = await getCusPaymentMethod({
+		stripeCli,
+		stripeId: stripeCusId,
+	});
+	return newest?.id ?? null;
 };
 
 const reverseCredit = async ({
