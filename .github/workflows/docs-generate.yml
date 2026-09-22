@@ -30,6 +30,13 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Install Speakeasy CLI
+        env:
+          VERSION: 1.798.0
+        run: |
+          curl -fsSL https://go.speakeasy.com/cli-install.sh | sh
+          speakeasy --version
+
       - name: Generate API reference and docs snippets
         run: bun api --docs-only
 
