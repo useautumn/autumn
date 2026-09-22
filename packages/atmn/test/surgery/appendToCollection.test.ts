@@ -194,3 +194,27 @@ test("an anchor without a comma gets one before its trailing comment", () => {
 });
 `);
 });
+
+test("a comment inside an empty array survives the seeding", () => {
+	const output = appendToCollection({
+		source:
+			"export default atmn({\n\tfeatures: [ /* intentionally empty */ ],\n});\n",
+		collection: "features",
+		text: "next",
+	});
+	expect(output).toBe(
+		"export default atmn({\n\tfeatures: [\n\t\t/* intentionally empty */\n\t\tnext,\n\t],\n});\n",
+	);
+});
+
+test("a comment in a one-line array survives the reflow", () => {
+	const output = appendToCollection({
+		source: "export default atmn({\n\tfeatures: [a, /* keep */ b],\n});\n",
+		collection: "features",
+		text: "x({\n\t\t\ty: 1,\n\t\t})",
+		after: (element) => element.text() === "a",
+	});
+	expect(output).toBe(
+		"export default atmn({\n\tfeatures: [\n\t\ta,\n\t\tx({\n\t\t\ty: 1,\n\t\t}),\n\t\t/* keep */\n\t\tb,\n\t],\n});\n",
+	);
+});

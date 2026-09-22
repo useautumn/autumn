@@ -29,11 +29,11 @@ export const appendElementToArray = ({
 		// The seeded element's first line lands one tab deeper than the array.
 		const resolved = resolveText({ text, elementIndent: `${indent}\t` });
 		return root.commitEdits([
-			{
-				startPos: array.range().start.index,
-				endPos: array.range().end.index,
-				insertedText: `[\n${indent}\t${resolved},\n${indent}]`,
-			},
+			rebuildArrayEdit({
+				array,
+				lines: [...commentLines({ array }), `${resolved},`],
+				indent,
+			}),
 		]);
 	}
 	const last = elements[elements.length - 1];
@@ -91,19 +91,45 @@ export const appendElementToArray = ({
 			},
 		]);
 	}
-	// A one-line array cannot hold a multi-line element inline: reflow it.
-	const texts = elements.map((element) => element.text());
-	const position = anchorIndex === -1 ? texts.length : anchorIndex + 1;
-	texts.splice(position, 0, resolved);
-	const lines = texts.map((element) => `${elementIndent}${element},`);
+	// A one-line array cannot hold a multi-line element inline: reflow it,
+	// one line per element, with comments kept in place on their own lines.
+	const children = array.namedChildren();
+	const lines = children.map((child) =>
+		child.kind() === "comment" ? child.text() : `${child.text()},`,
+	);
+	const anchorStart = anchor.range().start.index;
+	const position =
+		anchorIndex === -1
+			? lines.length
+			: children.findIndex(
+					(child) => child.range().start.index === anchorStart,
+				) + 1;
+	lines.splice(position, 0, `${resolved},`);
 	return root.commitEdits([
-		{
-			startPos: array.range().start.index,
-			endPos: array.range().end.index,
-			insertedText: `[\n${lines.join("\n")}\n${lineIndent}]`,
-		},
+		rebuildArrayEdit({ array, lines, indent: lineIndent }),
 	]);
 };
+
+const commentLines = ({ array }: { array: SgNode }): string[] =>
+	array
+		.namedChildren()
+		.filter((child) => child.kind() === "comment")
+		.map((child) => child.text());
+
+/** The whole literal on its own lines, each entry one tab deeper than the array. */
+const rebuildArrayEdit = ({
+	array,
+	lines,
+	indent,
+}: {
+	array: SgNode;
+	lines: string[];
+	indent: string;
+}) => ({
+	startPos: array.range().start.index,
+	endPos: array.range().end.index,
+	insertedText: `[\n${lines.map((line) => `${indent}\t${line}`).join("\n")}\n${indent}]`,
+});
 
 /** Where the next element goes: past the anchor's comma and any comment that
  * shares its line, so `plan() /* note *\/,` and `plan(), // legacy` keep their trivia. */
