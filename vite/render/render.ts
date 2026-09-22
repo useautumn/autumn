@@ -106,111 +106,123 @@ await writeFile(stylesGenPath, stylesGen);
 const { createServer } = await import("vite");
 const react = (await import("@vitejs/plugin-react")).default;
 const tailwindcss = (await import("@tailwindcss/vite")).default;
-
-const server = await createServer({
-	configFile: false,
-	root: harnessDir,
-	cacheDir: path.join(
-		viteDir,
-		"node_modules/.vite-render",
-		String(process.pid),
-	),
-	publicDir: path.join(viteDir, "public"),
-	plugins: [react(), tailwindcss()],
-	resolve: {
-		dedupe: ["react", "react-dom", "recharts"],
-		alias: [
-			{ find: /^virtual:subject$/, replacement: subjectGen },
-			{ find: /^virtual:styles$/, replacement: stylesGenPath },
-			{ find: /^@autumn\/ui$/, replacement: path.join(uiDir, "src/index.ts") },
-			{ find: /^@autumn\/ui\//, replacement: `${path.join(uiDir, "src")}/` },
-			{ find: /^@\//, replacement: `${path.join(viteDir, "src")}/` },
-			{
-				find: /^autumn-js\/react$/,
-				replacement: path.join(
-					repoRoot,
-					"packages/autumn-js/src/react/index.ts",
-				),
-			},
-			{
-				find: /^autumn-js$/,
-				replacement: path.join(repoRoot, "packages/autumn-js/src/sdk/index.ts"),
-			},
-		],
-	},
-	optimizeDeps: {
-		exclude: ["@autumn/ui", "@autumn/shared", "autumn-js", "autumn-js/react"],
-	},
-	define: {
-		__APP_ENV__: JSON.stringify(""),
-		__WORKTREE_NUM__: JSON.stringify("1"),
-	},
-	server: {
-		fs: { allow: [repoRoot] },
-		port: 20_000 + Math.floor(Math.random() * 20_000),
-		host: "127.0.0.1",
-	},
-	logLevel: "error",
-});
-await server.listen();
-const baseUrl = server.resolvedUrls?.local[0];
-if (!baseUrl) throw new Error("Vite dev server produced no local URL");
-
-const viewportMatch = /^(\d+)x(\d+)$/.exec(values.viewport);
-if (!viewportMatch) throw new TypeError(`Invalid viewport: ${values.viewport}`);
-
 const { chromium } = await import("playwright-core");
-const browser = await chromium.launch({ channel: "chrome", headless: true });
-const page = await browser.newPage({
-	viewport: {
-		width: Number(viewportMatch[1]),
-		height: Number(viewportMatch[2]),
-	},
-	deviceScaleFactor: Number(values.scale),
-	hasTouch: values.touch,
-	isMobile: values.touch,
-});
 
-const outDir = values["out-dir"]
-	? path.resolve(values["out-dir"])
-	: path.join(viteDir, ".render");
-await mkdir(outDir, { recursive: true });
-const baseName =
-	values.name ?? path.basename(subjectPath, path.extname(subjectPath));
-
+const cacheDir = path.join(
+	viteDir,
+	"node_modules/.vite-render",
+	String(process.pid),
+);
 const written: string[] = [];
-for (const theme of themes) {
-	const query = new URLSearchParams({
-		theme,
-		preset: values.preset,
-		surface: values.surface,
-		pad: values.pad,
+let server: Awaited<ReturnType<typeof createServer>> | undefined;
+let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+try {
+	server = await createServer({
+		configFile: false,
+		root: harnessDir,
+		cacheDir,
+		publicDir: path.join(viteDir, "public"),
+		plugins: [react(), tailwindcss()],
+		resolve: {
+			dedupe: ["react", "react-dom", "recharts"],
+			alias: [
+				{ find: /^virtual:subject$/, replacement: subjectGen },
+				{ find: /^virtual:styles$/, replacement: stylesGenPath },
+				{
+					find: /^@autumn\/ui$/,
+					replacement: path.join(uiDir, "src/index.ts"),
+				},
+				{ find: /^@autumn\/ui\//, replacement: `${path.join(uiDir, "src")}/` },
+				{ find: /^@\//, replacement: `${path.join(viteDir, "src")}/` },
+				{
+					find: /^autumn-js\/react$/,
+					replacement: path.join(
+						repoRoot,
+						"packages/autumn-js/src/react/index.ts",
+					),
+				},
+				{
+					find: /^autumn-js$/,
+					replacement: path.join(
+						repoRoot,
+						"packages/autumn-js/src/sdk/index.ts",
+					),
+				},
+			],
+		},
+		optimizeDeps: {
+			exclude: ["@autumn/ui", "@autumn/shared", "autumn-js", "autumn-js/react"],
+		},
+		define: {
+			__APP_ENV__: JSON.stringify(""),
+			__WORKTREE_NUM__: JSON.stringify("1"),
+		},
+		server: {
+			fs: { allow: [repoRoot] },
+			port: 20_000 + Math.floor(Math.random() * 20_000),
+			host: "127.0.0.1",
+		},
+		logLevel: "error",
 	});
-	if (values.width) query.set("width", values.width);
-	if (values.guides) query.set("guides", "1");
-	if (values.inspect) query.set("inspect", "1");
-	await page.goto(`${baseUrl}?${query}`);
-	await page.waitForSelector(
-		"body[data-render-ready], body[data-render-error]",
-		{ timeout: 20_000 },
-	);
-	const renderError = await page.evaluate(() =>
-		document.body.getAttribute("data-render-error"),
-	);
-	if (renderError) throw new Error(renderError);
-	const file = path.join(outDir, `${baseName}-${theme}.png`);
-	if (values["full-page"]) {
-		await page.screenshot({ path: file, animations: "disabled" });
-	} else {
-		await page
-			.locator("#stage")
-			.screenshot({ path: file, animations: "disabled" });
-	}
-	written.push(file);
-}
+	await server.listen();
+	const baseUrl = server.resolvedUrls?.local[0];
+	if (!baseUrl) throw new Error("Vite dev server produced no local URL");
 
-await browser.close();
-await server.close();
-await rm(genDir, { recursive: true, force: true });
-await rm(server.config.cacheDir, { recursive: true, force: true });
+	const viewportMatch = /^(\d+)x(\d+)$/.exec(values.viewport);
+	if (!viewportMatch)
+		throw new TypeError(`Invalid viewport: ${values.viewport}`);
+
+	browser = await chromium.launch({ channel: "chrome", headless: true });
+	const page = await browser.newPage({
+		viewport: {
+			width: Number(viewportMatch[1]),
+			height: Number(viewportMatch[2]),
+		},
+		deviceScaleFactor: Number(values.scale),
+		hasTouch: values.touch,
+		isMobile: values.touch,
+	});
+
+	const outDir = values["out-dir"]
+		? path.resolve(values["out-dir"])
+		: path.join(viteDir, ".render");
+	await mkdir(outDir, { recursive: true });
+	const baseName =
+		values.name ?? path.basename(subjectPath, path.extname(subjectPath));
+
+	for (const theme of themes) {
+		const query = new URLSearchParams({
+			theme,
+			preset: values.preset,
+			surface: values.surface,
+			pad: values.pad,
+		});
+		if (values.width) query.set("width", values.width);
+		if (values.guides) query.set("guides", "1");
+		if (values.inspect) query.set("inspect", "1");
+		await page.goto(`${baseUrl}?${query}`);
+		await page.waitForSelector(
+			"body[data-render-ready], body[data-render-error]",
+			{ timeout: 20_000 },
+		);
+		const renderError = await page.evaluate(() =>
+			document.body.getAttribute("data-render-error"),
+		);
+		if (renderError) throw new Error(renderError);
+		const file = path.join(outDir, `${baseName}-${theme}.png`);
+		if (values["full-page"]) {
+			await page.screenshot({ path: file, animations: "disabled" });
+		} else {
+			await page
+				.locator("#stage")
+				.screenshot({ path: file, animations: "disabled" });
+		}
+		written.push(file);
+	}
+} finally {
+	await browser?.close();
+	await server?.close();
+	await rm(genDir, { recursive: true, force: true });
+	await rm(cacheDir, { recursive: true, force: true });
+}
 for (const file of written) console.log(file);
