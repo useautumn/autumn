@@ -1,12 +1,14 @@
 # syntax=docker/dockerfile:1
 
-# Shared runtime image for server + workers + cron + leaf.
+# Shared runtime image for Autumn's server, workers, and scheduled services.
 # Each FlightControl service runs the same image with a different command:
-#   server  -> bun start            (cwd /app/server)
-#   workers -> bun src/workers.ts   (cwd /app/server)
-#   cron    -> bun src/cron.ts      (cwd /app/server)
-#   leaf    -> bun leaf             (cwd /app/server; serves chat + MCP routes)
-#   ducklake -> bun src/ducklake.ts (cwd /app/server; FC job-scheduler one-shot)
+#   server          -> bun start           (cwd /app/server)
+#   workers         -> bun workers         (cwd /app/server)
+#   cron            -> bun cron            (cwd /app/server)
+#   balance-workers -> bun balance-workers (cwd /app/server)
+#   herald          -> bun herald          (cwd /app/server)
+#   leaf            -> bun leaf            (cwd /app/server; serves chat + MCP routes)
+#   ducklake        -> bun src/ducklake.ts (cwd /app/server; FC job-scheduler one-shot)
 FROM oven/bun:1.3.14 AS deps
 WORKDIR /app
 
@@ -25,6 +27,7 @@ COPY shared/package.json shared/
 COPY vite/package.json vite/
 COPY scripts/package.json scripts/
 COPY apps/leaf/package.json apps/leaf/
+COPY apps/herald/package.json apps/herald/
 COPY apps/checkout/package.json apps/checkout/
 COPY apps/docs/package.json apps/docs/
 COPY apps/sdk-test/package.json apps/sdk-test/
@@ -39,6 +42,7 @@ COPY packages/atmn-tests/package.json packages/atmn-tests/
 COPY packages/auth/package.json packages/auth/
 COPY packages/autumn-js/package.json packages/autumn-js/
 COPY packages/balance-engine/package.json packages/balance-engine/
+COPY packages/balance-webhooks/package.json packages/balance-webhooks/
 COPY packages/balance-worker-client/package.json packages/balance-worker-client/
 COPY packages/kafka/package.json packages/kafka/
 COPY packages/edge-config/package.json packages/edge-config/
@@ -51,6 +55,8 @@ COPY packages/logging/package.json packages/logging/
 COPY packages/mcp/package.json packages/mcp/
 COPY packages/openapi/package.json packages/openapi/
 COPY packages/render/package.json packages/render/
+COPY packages/svix/package.json packages/svix/
+COPY packages/tinybird/package.json packages/tinybird/
 COPY packages/ducklake/package.json packages/ducklake/
 COPY packages/sdk/package.json packages/sdk/
 COPY packages/stripe-sync/package.json packages/stripe-sync/

@@ -1,4 +1,5 @@
 import { getHeraldEnv } from "@autumn/env/herald";
+import { initInfisical } from "@autumn/shared/utils/infisical";
 import { createHerald, type Herald } from "./setup/createHerald.js";
 import { getEventsDb } from "./setup/getEventsDb.js";
 import { getEventsTinybird } from "./setup/getEventsTinybird.js";
@@ -6,6 +7,7 @@ import { getHeraldLogger } from "./setup/getHeraldLogger.js";
 import { getSvixClient } from "./setup/getSvixClient.js";
 
 async function main(): Promise<void> {
+	await initInfisical();
 	const logger = getHeraldLogger();
 	const herald = createHerald({
 		ctx: {
