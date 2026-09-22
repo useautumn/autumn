@@ -7,6 +7,8 @@
 import { expect, test } from "bun:test";
 import { feature } from "../src/generated/features";
 import { ConfigError } from "../src/generated/lintRuntime";
+import { plan } from "../src/generated/plans";
+import { coupon } from "../src/generated/rewards";
 import { atmn } from "../src/generated/wire";
 
 const issuesOf = (run: () => unknown): { path: string; message: string }[] => {
@@ -159,4 +161,39 @@ test("two features claiming one id are refused", () => {
 				'featureId "seats" is used more than once. Two features claiming one id race to define the same row.',
 		},
 	]);
+});
+
+test("a coupon with no plans is refused, and the message says what to do", () => {
+	const couponWith = (planIds: string[] | null) =>
+		coupon({
+			id: "sale",
+			name: "Sale",
+			type: "percentage_discount",
+			value: 10,
+			duration: { type: "one_off", length: null },
+			planIds,
+			promoCodes: [],
+		});
+	const pro = plan({
+		planId: "pro",
+		name: "Pro",
+		versionSlug: "v1",
+		active: true,
+	});
+
+	expect(
+		issuesOf(() => atmn({ plans: [pro], rewards: [couponWith([])] })),
+	).toEqual([
+		{
+			path: "reward[0] › coupon",
+			message:
+				"planIds is empty. A coupon must apply to at least one plan: list the plans it discounts, set planIds: null to apply it to every plan, or remove the coupon from your config.",
+		},
+	]);
+	expect(
+		issuesOf(() => atmn({ plans: [pro], rewards: [couponWith(null)] })),
+	).toEqual([]);
+	expect(
+		issuesOf(() => atmn({ plans: [pro], rewards: [couponWith(["pro"])] })),
+	).toEqual([]);
 });

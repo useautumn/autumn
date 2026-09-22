@@ -81,3 +81,9 @@ export const targetLacks = (rule: RuleOf<"targetLacks">): LintRule => ({
 	kind: "targetLacks",
 	...rule,
 });
+
+/** A stated list field must hold at least one entry. */
+export const nonEmpty = (rule: RuleOf<"nonEmpty">): LintRule => ({
+	kind: "nonEmpty",
+	...rule,
+});

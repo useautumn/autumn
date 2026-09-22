@@ -109,6 +109,12 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
+			/** A stated `field` must be a non-empty list; `null` is not checked here. */
+			readonly kind: "nonEmpty";
+			readonly field: string;
+			readonly because: string;
+	  }
+	| {
 			readonly kind: "compare";
 			readonly field: string;
 			readonly op: "<" | "<=" | ">" | ">=";
@@ -474,6 +480,11 @@ const entryRuleFailures = ({
 				(wanted) =>
 					`${rule.field} ${show(wanted)} is not in ${rule.in}. ${rule.because}`,
 			);
+		}
+		case "nonEmpty": {
+			const value = entry[rule.field];
+			if (!Array.isArray(value) || value.length > 0) return [];
+			return [`${rule.field} is empty. ${rule.because}`];
 		}
 		case "compare": {
 			const a = entry[rule.field];
