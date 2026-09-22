@@ -10,6 +10,8 @@
  *  - a boolean feature's entitlement stored with carry_from_previous true
  *    and allowance 0 (no balance on a boolean; push writes false / null)
  *  - a usage price with max_purchase 0 (a stated cap of 0, not an absent one)
+ *  - a consumable feature's entitlement stored with carry_from_previous true
+ *    (the API has no field for it, so a push keeps what the row holds)
  */
 
 import { expect, test } from "bun:test";
@@ -167,6 +169,18 @@ test.concurrent(
 						eq(entitlements.feature_id, analyticsId),
 					),
 				);
+			// A consumable row with carry_from_previous true is a live setting
+			// (balances carry on plan change) the config cannot state; push must
+			// neither diff on it nor flip it.
+			await scenario.ctx.db
+				.update(entitlements)
+				.set({ carry_from_previous: true })
+				.where(
+					and(
+						eq(entitlements.org_id, scenario.ctx.org.id),
+						eq(entitlements.feature_id, creditsId),
+					),
+				);
 
 			// The stored true must not read as a change on the next push.
 			await expectPreviewNone({
@@ -178,6 +192,26 @@ test.concurrent(
 			const plansFile = freshFiles.get("plans.ts") ?? "";
 			expect(plansFile).not.toContain("cardRequired");
 			expect(plansFile.match(/maxPurchase: 0/g)).toHaveLength(2);
+
+			// A push that does touch the plan (rename) must still keep the flag.
+			scenario.writeConfig(
+				(scenario.files().get("autumn.config.ts") ?? "").replace(
+					'name: "Starter (free)"',
+					'name: "Starter (free) renamed"',
+				),
+			);
+			await scenario.push();
+			const creditsRows = await scenario.ctx.db
+				.select({ carry: entitlements.carry_from_previous })
+				.from(entitlements)
+				.where(
+					and(
+						eq(entitlements.org_id, scenario.ctx.org.id),
+						eq(entitlements.feature_id, creditsId),
+					),
+				);
+			expect(creditsRows.length).toBeGreaterThan(0);
+			expect(creditsRows.every((row) => row.carry === true)).toBe(true);
 		} finally {
 			scenario.cleanup();
 		}
