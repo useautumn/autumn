@@ -8,6 +8,7 @@ import {
 	type InsertDbInvoiceLineItem,
 	type InvoiceTemplate,
 	MetadataType,
+	type PreviewInvoiceCredits,
 	ProcessorType,
 	RecaseError,
 	type ReissueCustomerOverrides,
@@ -198,6 +199,7 @@ const createReplacementDraft = async ({
 	lineEdits,
 	storedLines,
 	dropDeferredPointer,
+	linkSubscription,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -211,8 +213,12 @@ const createReplacementDraft = async ({
 	lineEdits?: ReissueLineEdits;
 	storedLines: DbInvoiceLineItem[];
 	dropDeferredPointer: boolean;
+	/** A linked draft fires invoice.created against the subscription's products. */
+	linkSubscription: boolean;
 }) => {
-	const stripeSubId = stripeInvoiceToStripeSubscriptionId(stripeInvoice);
+	const stripeSubId = linkSubscription
+		? stripeInvoiceToStripeSubscriptionId(stripeInvoice)
+		: undefined;
 	const stripeCusId =
 		typeof stripeInvoice.customer === "string"
 			? stripeInvoice.customer
@@ -313,6 +319,76 @@ const createReplacementDraft = async ({
 };
 
 /**
+ * Stripe is the only source of truth for tax, so a preview builds the real
+ * draft, reads its totals and deletes it. The draft is never linked to the
+ * subscription so its invoice.created webhook is a no-op, and customer
+ * corrections are not applied (a preview must not write).
+ */
+const previewReplacementDraft = async ({
+	ctx,
+	customerId,
+	stripeCli,
+	stripeInvoice,
+	template,
+	dueDate,
+	daysUntilDue,
+	overrides,
+	lineEdits,
+	storedLines,
+	dropDeferredPointer,
+	credits,
+	dueDateMs,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	stripeCli: Stripe;
+	stripeInvoice: Stripe.Invoice;
+	template?: InvoiceTemplate;
+	dueDate?: number;
+	daysUntilDue?: number;
+	overrides?: ReissueInvoiceOverrides;
+	lineEdits?: ReissueLineEdits;
+	storedLines: DbInvoiceLineItem[];
+	dropDeferredPointer: boolean;
+	credits?: PreviewInvoiceCredits;
+	dueDateMs: number | null;
+}): Promise<CreateInvoicePreview> => {
+	const draft = await createReplacementDraft({
+		ctx,
+		customerId,
+		stripeCli,
+		stripeInvoice,
+		template,
+		dueDate,
+		daysUntilDue,
+		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
+		overrides,
+		lineEdits,
+		storedLines,
+		dropDeferredPointer,
+		linkSubscription: false,
+	});
+	try {
+		return await previewReissuedInvoice({
+			stripeInvoice: draft,
+			lines: await getStripeInvoiceLineItems({
+				stripeClient: stripeCli,
+				invoiceId: draft.id,
+			}),
+			storedLines,
+			credits,
+			dueDateMs,
+		});
+	} finally {
+		await stripeCli.invoices.del(draft.id).catch((error) => {
+			ctx.logger.error(
+				`[reissueInvoice] failed to delete preview draft ${draft.id}: ${error}`,
+			);
+		});
+	}
+};
+
+/**
  * Creates and finalizes the replacement, then retires the original: an open
  * invoice is voided and its deferred pointers move across, while a paid one
  * keeps its money and gets a credit note instead.
@@ -360,6 +436,7 @@ const issueReplacement = async ({
 		lineEdits,
 		storedLines,
 		dropDeferredPointer: creditOriginal,
+		linkSubscription: true,
 	});
 
 	// The total is only guaranteed to match when nothing was adjusted.
@@ -724,12 +801,6 @@ export const reissueInvoice = async ({
 		invoiceIds: [row.invoice.id],
 	});
 
-	if (preview && (invoiceOverrides || customerOverrides || lineEdits)) {
-		throw invalidRequest(
-			"Preview does not yet account for adjustments; omit invoice, customer and lines to preview a plain reissue",
-		);
-	}
-
 	const dueDateMs = dueDate
 		? secondsToMs(dueDate)
 		: daysUntilDue
@@ -748,13 +819,18 @@ export const reissueInvoice = async ({
 			replacement: null,
 			voidedInvoiceId: null,
 			creditNoteId: null,
-			preview: previewReissuedInvoice({
+			preview: await previewReplacementDraft({
+				ctx,
+				customerId: previewCustomerId,
+				stripeCli,
 				stripeInvoice,
-				lines: await getStripeInvoiceLineItems({
-					stripeClient: stripeCli,
-					invoiceId: stripeInvoice.id,
-				}),
+				template,
+				dueDate,
+				daysUntilDue,
+				overrides: invoiceOverrides,
+				lineEdits,
 				storedLines,
+				dropDeferredPointer: creditOriginal,
 				credits,
 				dueDateMs,
 			}),

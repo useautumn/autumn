@@ -8,8 +8,8 @@ import {
 	buildUsagePriceCurrencies,
 	EntInterval,
 	type Entitlement,
-	entsAreSame,
 	ErrCode,
+	entsAreSame,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
@@ -23,24 +23,24 @@ import {
 	OnDecrease,
 	OnIncrease,
 	type Price,
-	pricesAreSame,
 	PriceType,
 	type ProductItem,
+	pricesAreSame,
 	shouldProrate,
+	stripePriceIdForInitializedPrice,
 	TierInfinite,
 	UsageModel,
 	type UsagePriceConfig,
 	type UsageTier,
-	stripePriceIdForInitializedPrice,
 } from "@autumn/shared";
 import { getBillingType } from "@server/internal/products/prices/priceUtils";
 import { itemCanBeProrated } from "@server/internal/products/product-items/productItemUtils/classifyItem";
 import RecaseError from "@server/utils/errorUtils";
 import { generateId, notNullish, nullish } from "@server/utils/genUtils";
 import {
-    isFeatureItem,
-    isFeaturePriceItem,
-    isPriceItem,
+	isFeatureItem,
+	isFeaturePriceItem,
+	isPriceItem,
 } from "./getItemType.js";
 
 const getResetUsage = ({
@@ -240,7 +240,7 @@ const toFeatureAndPrice = ({
 		carry_from_previous: !resetUsage,
 		entity_feature_id: item.entity_feature_id,
 		pooled: item.pooled ?? false,
-		usage_limit: item.usage_limit || null,
+		usage_limit: item.usage_limit ?? null,
 
 		rollover: item.config?.rollover,
 		expiry_duration: item.config?.expiry?.duration,

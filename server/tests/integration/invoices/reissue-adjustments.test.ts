@@ -279,6 +279,7 @@ test.concurrent(
 				name: "Acme SAS",
 				address: {
 					line1: "12 Rue de Rivoli",
+					line2: "Bâtiment B",
 					city: "Paris",
 					postal_code: "75004",
 					country: "FR",
@@ -312,7 +313,40 @@ test.concurrent(
 			invoice.stripe_id,
 		);
 		expect(replacement.customer_address?.country).toBe("FR");
+		expect(replacement.customer_address?.line2).toBe("Bâtiment B");
 		expect(replacement.customer_tax_ids?.[0]?.value).toBe("FR12345678901");
+
+		// The dashboard prefills from the live customer, which the endpoint expands.
+		const expanded = (await autumnV2_3.get(
+			`/invoices/${invoice.stripe_id}/stripe`,
+		)) as { customer: { name: string; address: { line2: string } } };
+		expect(expanded.customer.name).toBe("Acme SAS");
+		expect(expanded.customer.address.line2).toBe("Bâtiment B");
+
+		// A blank field and an empty tax_ids list clear rather than keep.
+		await autumnV2_3.post("/invoices.reissue", {
+			invoice_id: invoice.id,
+			customer: {
+				address: {
+					line1: "12 Rue de Rivoli",
+					line2: "",
+					city: "Paris",
+					state: "",
+					postal_code: "75004",
+					country: "FR",
+				},
+				tax_ids: [],
+			},
+		});
+		const cleared = await ctx.stripeCli.customers.retrieve(stripeCustomerId);
+		if (!cleared.deleted) {
+			expect(cleared.address?.line1).toBe("12 Rue de Rivoli");
+			// Stripe keeps a cleared sub-field as "" rather than dropping it.
+			expect(cleared.address?.line2 ?? "").toBe("");
+		}
+		const clearedTaxIds =
+			await ctx.stripeCli.customers.listTaxIds(stripeCustomerId);
+		expect(clearedTaxIds.data).toEqual([]);
 	},
 );
 

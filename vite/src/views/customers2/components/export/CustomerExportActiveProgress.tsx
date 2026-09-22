@@ -11,7 +11,8 @@ const ENTER_TRANSITION = { duration: 0.3, ease: EASE_OUT };
 /** Held back so the bar visibly completes to 100% before it collapses. */
 const EXIT_TRANSITION = { duration: 0.25, ease: EASE_OUT, delay: 0.55 };
 const FILL_TRANSITION = { duration: 0.45, ease: EASE_OUT };
-/** The scan has no total, so the bar sweeps instead of filling. */
+/** The scan has no total, so the bar sweeps instead of filling; reduced
+ * motion parks the segment mid-track instead. */
 const SCAN_TRANSITION = { duration: 1.4, ease: "easeInOut", repeat: Infinity };
 
 const PERCENT_MAX = 100;
@@ -52,8 +53,8 @@ const toLabel = ({
 
 export function CustomerExportActiveProgress({
 	activeExport,
-	scanningLabel = runningLabel,
 	runningLabel,
+	scanningLabel = runningLabel,
 }: {
 	activeExport: CustomerExportResponse | undefined;
 	scanningLabel?: string;
@@ -96,8 +97,8 @@ export function CustomerExportActiveProgress({
 							{isScanning ? (
 								<motion.div
 									className="h-full w-1/3 rounded-full bg-primary"
-									initial={{ x: "-100%" }}
-									animate={{ x: "300%" }}
+									initial={shouldReduceMotion ? false : { x: "-100%" }}
+									animate={{ x: shouldReduceMotion ? "100%" : "300%" }}
 									transition={
 										shouldReduceMotion ? { duration: 0 } : SCAN_TRANSITION
 									}
