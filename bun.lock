@@ -1125,6 +1125,7 @@
   ],
   "patchedDependencies": {
     "@chat-adapter/slack@4.38.1": "patches/@chat-adapter%2Fslack@4.38.1.patch",
+    "kafkajs@2.2.4": "patches/kafkajs@2.2.4.patch",
   },
   "overrides": {
     "@better-auth/passkey": "1.6.25",

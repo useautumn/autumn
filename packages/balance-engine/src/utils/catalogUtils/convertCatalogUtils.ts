@@ -83,11 +83,8 @@ export const planLicensesToItemCatalogKeys = ({
 	return [...keysByString.values()].sort(compareCatalogKeys);
 };
 
-export const catalogRowsToCatalog = ({
-	rows,
-}: {
-	rows: CatalogRow[];
-}): Catalog => {
+/** Groups already-validated rows into a catalog; `catalogRowsToCatalog` for raw rows. */
+export const assembleCatalog = ({ rows }: { rows: CatalogRow[] }): Catalog => {
 	const catalog: Catalog = {
 		entitlements: {},
 		products: {},
@@ -115,5 +112,11 @@ export const catalogRowsToCatalog = ({
 				break;
 		}
 	}
-	return parseCatalog({ input: catalog });
+	return catalog;
 };
+
+export const catalogRowsToCatalog = ({
+	rows,
+}: {
+	rows: CatalogRow[];
+}): Catalog => parseCatalog({ input: assembleCatalog({ rows }) });

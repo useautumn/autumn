@@ -1,0 +1,14 @@
+diff --git a/src/network/requestQueue/index.js b/src/network/requestQueue/index.js
+index eee14d66c3869d90f7bac0ac755ecbad3f2a2741..ac44131f5148611a3e3c6d412559b4f5837b4498 100644
+--- a/src/network/requestQueue/index.js
++++ b/src/network/requestQueue/index.js
+@@ -314,6 +314,9 @@ module.exports = class RequestQueue extends EventEmitter {
+       if (this.pending.length > 0) {
+         scheduleAt = scheduleAt > 0 ? scheduleAt : CHECK_PENDING_REQUESTS_INTERVAL
+       }
++      // Nothing pending and no throttle: a negative delay would become a 1ms
++      // timer that re-arms itself forever. The next enqueue or response checks again.
++      if (scheduleAt <= 0) return
+       this.throttleCheckTimeoutId = setTimeout(() => {
+         this.throttleCheckTimeoutId = null
+         this.checkPendingRequests()
