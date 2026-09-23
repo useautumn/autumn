@@ -27,7 +27,7 @@ export const setupUpdateSubscriptionIntent = ({
 	const featureQuantitiesParams = params.feature_quantities ?? [];
 
 	const itemsChanged = hasCustomItems(params.customize);
-	const licensesChanged = params.customize?.upsert_licenses !== undefined;
+	const licensesChanged = (params.customize?.upsert_licenses?.length ?? 0) > 0;
 	const versionChanged = params.version !== undefined;
 	const freeTrialChanged = resolveFreeTrialParam(params) !== undefined;
 
