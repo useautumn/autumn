@@ -4,6 +4,7 @@ import {
 	type AttachParamsV1Input,
 	CusProductStatus,
 	FreeTrialDuration,
+	type FullCusProduct,
 	ms,
 	type ProductV2,
 	type TrialOnEnd,
@@ -17,8 +18,10 @@ import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import type Stripe from "stripe";
+import { runProductCron } from "@/cron/productCron/runProductCron";
 import type { AutumnInt } from "@/external/autumn/autumnCli";
 import { CusService } from "@/internal/customers/CusService";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 export const TRIAL_DAYS = 14;
 export const EXTENDED_TRIAL_DAYS = 30;
@@ -51,10 +54,77 @@ export const setupRevertTrial = async ({
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	await scenario.autumnV2_3.billing.attach<AttachParamsV1Input>({
+	return {
+		...scenario,
+		pro,
+		enterprise,
+		...(await startRevertTrial({
+			scenario,
+			customerId,
+			pro,
+			enterprise,
+			featureQuantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		})),
+	};
+};
+
+export const startRevertTrial = async ({
+	scenario,
+	customerId,
+	pro,
+	enterprise,
+	entityId,
+	featureQuantities,
+}: {
+	scenario: { autumnV2_3: AutumnInt; ctx: TestContext };
+	customerId: string;
+	pro: ProductV2;
+	enterprise: ProductV2;
+	entityId?: string;
+	featureQuantities?: AttachParamsV1Input["feature_quantities"];
+}) => {
+	await attachRevertTrial({
+		autumn: scenario.autumnV2_3,
+		customerId,
+		planId: enterprise.id,
+		entityId,
+		featureQuantities,
+	});
+
+	const { trialCustomerProduct, pausedCustomerProduct } =
+		await getRevertTrialCustomerProducts({
+			ctx: scenario.ctx,
+			customerId,
+			trialProductId: enterprise.id,
+			pausedProductId: pro.id,
+			entityId,
+		});
+	const subscriptionBefore =
+		await scenario.ctx.stripeCli.subscriptions.retrieve(
+			pausedCustomerProduct.subscription_ids![0],
+		);
+
+	return { trialCustomerProduct, pausedCustomerProduct, subscriptionBefore };
+};
+
+export const attachRevertTrial = ({
+	autumn,
+	customerId,
+	planId,
+	entityId,
+	featureQuantities,
+}: {
+	autumn: AutumnInt;
+	customerId: string;
+	planId: string;
+	entityId?: string;
+	featureQuantities?: AttachParamsV1Input["feature_quantities"];
+}) =>
+	autumn.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
-		plan_id: enterprise.id,
-		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		entity_id: entityId,
+		plan_id: planId,
+		feature_quantities: featureQuantities,
 		customize: {
 			free_trial: {
 				duration_length: TRIAL_DAYS,
@@ -65,50 +135,41 @@ export const setupRevertTrial = async ({
 		},
 	});
 
-	const { trialCustomerProduct, pausedCustomerProduct } =
-		await getRevertTrialCustomerProducts({
-			ctx: scenario.ctx,
-			customerId,
-			trialProductId: enterprise.id,
-			pausedProductId: pro.id,
-		});
+const isOnEntity = ({
+	customerProduct,
+	entityId,
+}: {
+	customerProduct: FullCusProduct;
+	entityId?: string;
+}) => entityId === undefined || customerProduct.entity_id === entityId;
 
-	const subscriptionId = pausedCustomerProduct.subscription_ids![0];
-	const subscriptionBefore =
-		await scenario.ctx.stripeCli.subscriptions.retrieve(subscriptionId);
-
-	return {
-		...scenario,
-		pro,
-		enterprise,
-		trialCustomerProduct,
-		pausedCustomerProduct,
-		subscriptionBefore,
-	};
-};
-
-const getRevertTrialCustomerProducts = async ({
+export const getRevertTrialCustomerProducts = async ({
 	ctx,
 	customerId,
 	trialProductId,
 	pausedProductId,
+	entityId,
 }: {
 	ctx: TestContext;
 	customerId: string;
 	trialProductId: string;
 	pausedProductId: string;
+	entityId?: string;
 }) => {
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
 		inStatuses: ALL_STATUSES,
 	});
-	const trialCustomerProduct = fullCustomer.customer_products.find(
+	const onEntity = fullCustomer.customer_products.filter((customerProduct) =>
+		isOnEntity({ customerProduct, entityId }),
+	);
+	const trialCustomerProduct = onEntity.find(
 		(customerProduct) =>
 			customerProduct.product_id === trialProductId &&
 			customerProduct.status === CusProductStatus.Active,
 	);
-	const pausedCustomerProduct = fullCustomer.customer_products.find(
+	const pausedCustomerProduct = onEntity.find(
 		(customerProduct) => customerProduct.product_id === pausedProductId,
 	);
 
@@ -121,20 +182,12 @@ const getRevertTrialCustomerProducts = async ({
 	};
 };
 
-export const expectRevertTrialAfterUpdate = async ({
+export const expectSharedSubscriptionUntouched = async ({
 	ctx,
-	customerId,
-	trialProductId,
-	pausedProductId,
 	subscriptionBefore,
-	expectedTrialEndsAt,
 }: {
 	ctx: TestContext;
-	customerId: string;
-	trialProductId: string;
-	pausedProductId: string;
 	subscriptionBefore: Stripe.Subscription;
-	expectedTrialEndsAt: number;
 }) => {
 	const subscriptionAfter = await ctx.stripeCli.subscriptions.retrieve(
 		subscriptionBefore.id,
@@ -144,6 +197,26 @@ export const expectRevertTrialAfterUpdate = async ({
 		before: subscriptionBefore,
 		after: subscriptionAfter,
 	});
+};
+
+export const expectRevertTrialAfterUpdate = async ({
+	ctx,
+	customerId,
+	trialProductId,
+	pausedProductId,
+	subscriptionBefore,
+	expectedTrialEndsAt,
+	entityId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	trialProductId: string;
+	pausedProductId: string;
+	subscriptionBefore: Stripe.Subscription;
+	expectedTrialEndsAt: number;
+	entityId?: string;
+}) => {
+	await expectSharedSubscriptionUntouched({ ctx, subscriptionBefore });
 
 	const { trialCustomerProduct, pausedCustomerProduct } =
 		await getRevertTrialCustomerProducts({
@@ -151,6 +224,7 @@ export const expectRevertTrialAfterUpdate = async ({
 			customerId,
 			trialProductId,
 			pausedProductId,
+			entityId,
 		});
 
 	expect(pausedCustomerProduct.status).toBe(CusProductStatus.Paused);
@@ -161,6 +235,8 @@ export const expectRevertTrialAfterUpdate = async ({
 	expect(
 		Math.abs(trialCustomerProduct.trial_ends_at! - expectedTrialEndsAt),
 	).toBeLessThan(ms.hours(1));
+
+	return { trialCustomerProduct, pausedCustomerProduct };
 };
 
 export const extendRevertTrial = ({
@@ -187,26 +263,46 @@ export const extendRevertTrial = ({
 		},
 	});
 
-export const expectRevertTrialCancelled = async ({
+export const expireRevertTrialViaCron = async ({
+	ctx,
+	trialCustomerProductId,
+}: {
+	ctx: TestContext;
+	trialCustomerProductId: string;
+}) => {
+	await CusProductService.update({
+		ctx,
+		cusProductId: trialCustomerProductId,
+		updates: { trial_ends_at: Date.now() - ms.minutes(1) },
+	});
+	await runProductCron({ ctx: { db: ctx.db, logger: ctx.logger } });
+};
+
+export const expectRevertTrialReverted = async ({
 	ctx,
 	customerId,
 	trialProductId,
 	pausedProductId,
+	entityId,
 }: {
 	ctx: TestContext;
 	customerId: string;
 	trialProductId: string;
 	pausedProductId: string;
+	entityId?: string;
 }) => {
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
 		inStatuses: ALL_STATUSES,
 	});
-	const trialStatuses = fullCustomer.customer_products
+	const onEntity = fullCustomer.customer_products.filter((customerProduct) =>
+		isOnEntity({ customerProduct, entityId }),
+	);
+	const trialStatuses = onEntity
 		.filter((customerProduct) => customerProduct.product_id === trialProductId)
 		.map((customerProduct) => customerProduct.status);
-	const restoredCustomerProduct = fullCustomer.customer_products.find(
+	const restoredCustomerProduct = onEntity.find(
 		(customerProduct) => customerProduct.product_id === pausedProductId,
 	);
 
@@ -214,5 +310,5 @@ export const expectRevertTrialCancelled = async ({
 	expect(trialStatuses).not.toContain(CusProductStatus.Active);
 	expect(restoredCustomerProduct?.status).toBe(CusProductStatus.Active);
 
-	return fullCustomer;
+	return { fullCustomer, restoredCustomerProduct: restoredCustomerProduct! };
 };

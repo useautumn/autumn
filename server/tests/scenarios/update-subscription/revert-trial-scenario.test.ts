@@ -1,7 +1,12 @@
 import { test } from "bun:test";
 import { formatMs, type UpdateSubscriptionV1ParamsInput } from "@autumn/shared";
 import {
-	expectRevertTrialCancelled,
+	setupEntityRevertTrial,
+	setupLicenseRevertTrial,
+	setupPooledRevertTrial,
+} from "@tests/integration/billing/update-subscription/free-trial/utils/revertTrialScopedSetups";
+import {
+	expectRevertTrialReverted,
 	extendRevertTrial,
 	setupRevertTrial,
 } from "@tests/integration/billing/update-subscription/free-trial/utils/revertTrialUtils";
@@ -125,7 +130,7 @@ test.concurrent(
 			cancel_action: "cancel_immediately",
 		});
 
-		await expectRevertTrialCancelled({
+		await expectRevertTrialReverted({
 			ctx,
 			customerId,
 			trialProductId: enterprise.id,
@@ -169,3 +174,31 @@ test.concurrent(
 		await logSharedSubscription({ ctx, label: customerId, subscriptionBefore });
 	},
 );
+
+const scopedSetups = {
+	"revert-trial-entities": setupEntityRevertTrial,
+	"revert-trial-pooled": setupPooledRevertTrial,
+	"revert-trial-licenses": setupLicenseRevertTrial,
+};
+
+for (const [customerId, setup] of Object.entries(scopedSetups)) {
+	test.concurrent(
+		`${chalk.yellowBright(`revert-trial: ${customerId} — extend trial, Stripe untouched`)}`,
+		async () => {
+			const { autumnV2_3, ctx, trialCustomerProduct, subscriptionBefore } =
+				await setup({ customerId });
+
+			await extendRevertTrial({
+				autumn: autumnV2_3,
+				customerId,
+				subscriptionId: trialCustomerProduct.id,
+			});
+
+			await logSharedSubscription({
+				ctx,
+				label: customerId,
+				subscriptionBefore,
+			});
+		},
+	);
+}

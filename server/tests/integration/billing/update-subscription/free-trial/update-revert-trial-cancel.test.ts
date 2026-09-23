@@ -16,7 +16,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import chalk from "chalk";
 import {
-	expectRevertTrialCancelled,
+	expectRevertTrialReverted,
 	extendRevertTrial,
 	setupRevertTrial,
 } from "./utils/revertTrialUtils";
@@ -41,7 +41,7 @@ test.concurrent(
 			cancel_action: "cancel_immediately",
 		});
 
-		await expectRevertTrialCancelled({
+		await expectRevertTrialReverted({
 			ctx,
 			customerId,
 			trialProductId: enterprise.id,
@@ -76,7 +76,7 @@ test.concurrent(
 			cancel_action: "cancel_immediately",
 		});
 
-		const fullCustomer = await expectRevertTrialCancelled({
+		const { fullCustomer } = await expectRevertTrialReverted({
 			ctx,
 			customerId,
 			trialProductId: enterprise.id,
