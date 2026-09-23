@@ -69,7 +69,8 @@ const cusProductHasAllPrepaidFeatures = ({
 
 /** A paused plan (left behind by a revert trial) may be force-cancelled, but only when explicitly targeted. */
 const canCancelPausedWithoutBilling = (params: UpdateSubscriptionV1Params) =>
-	Boolean(params.cancel_action) &&
+	(params.cancel_action === "cancel_immediately" ||
+		params.cancel_action === "cancel_end_of_cycle") &&
 	params.no_billing_changes === true &&
 	Boolean(params.customer_product_id);
 

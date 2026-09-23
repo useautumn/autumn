@@ -182,6 +182,8 @@ export function useCustomerStateHandlers({
 					};
 				}),
 			);
+			// Already unscheduled: the phase copies are dropped, the plan stays once.
+			if (unscheduledPlans.some(isSamePlan)) return;
 			form.setFieldValue("unscheduledPlans", [
 				...unscheduledPlans,
 				...clonePlans([plan]),
