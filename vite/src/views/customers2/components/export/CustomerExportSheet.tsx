@@ -128,6 +128,7 @@ export function CustomerExportSheet({
 								activeExport={activeExport}
 								scanningLabel={copy.scanningLabel}
 								runningLabel={copy.runningLabel}
+								unitLabel={copy.unitLabel}
 							/>
 
 							<form.Subscribe selector={(state) => state.canSubmit}>

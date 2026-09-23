@@ -1,9 +1,14 @@
-import { CustomerExportPhase, type DbCustomerExport } from "@autumn/shared";
+import {
+	CustomerExportKind,
+	CustomerExportPhase,
+	type DbCustomerExport,
+} from "@autumn/shared";
 import { dbReplica } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
 import { CustomerExportService } from "../../CustomerExportService.js";
+import { countStripeLinkedCustomers } from "../../queries/getBillingVerifyCandidates.js";
 import { resolveCustomerExportPopulation } from "../../queries/getCustomerExportScalars.js";
 import type { CustomerExportProgressReporter } from "../customerExportProgressReporter.js";
 import { streamCustomerExportCsv } from "./streamCustomerExportCsv.js";
@@ -51,8 +56,22 @@ export const uploadCustomerExportCsv = async ({
 		},
 	});
 
+	// Verification skips customers with no Stripe-linked plan, and those it keeps
+	// sit at the end of the walk — counting every row leaves the bar stuck at
+	// nearly complete for most of the work.
+	const progressTotal =
+		customerExport.kind === CustomerExportKind.BillingVerify
+			? await countStripeLinkedCustomers({
+					db: readDb,
+					orgId,
+					env,
+					upperBoundInternalId: population.upperBoundInternalId,
+					createdAtCutoff: customerExport.created_at,
+				})
+			: totalCount;
+
 	// The reporter is absent for inline runs; retries reset before re-walking.
-	await progress?.setTotalRows(totalCount);
+	await progress?.setTotalRows(progressTotal);
 	await progress?.setPhase(CustomerExportPhase.Exporting);
 
 	return await streamCustomerExportCsv({
