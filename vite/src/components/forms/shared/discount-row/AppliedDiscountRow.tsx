@@ -18,7 +18,7 @@ export function AppliedDiscountRow({
 	onToggleRemoved: () => void;
 }) {
 	return (
-		<div className="flex items-center gap-2 h-8 px-2">
+		<div className="flex items-center gap-2 h-8">
 			<TicketIcon
 				size={13}
 				weight="duotone"
