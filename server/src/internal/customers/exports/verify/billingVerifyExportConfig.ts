@@ -46,8 +46,9 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 		sandboxRequestsPerSecond: 5,
 	},
 	/** Each verification needs a replica connection, so throughput plateaus at
-	 * roughly twice REPLICA_DB_POOL_MAX; past that the slots only queue.
-	 * Measured on prod: 68ms/customer at 8, 48ms at 16, 47ms at 24. */
+	 * roughly twice REPLICA_DB_POOL_MAX and extra slots only queue. Measured
+	 * against prod's pool of 5: 113ms/customer at 5, 82ms at 8, 80ms at 10 and
+	 * flat thereafter. Raising the replica pool is what moves this further. */
 	customer: {
 		concurrency: 16,
 		timeoutMs: 30_000,
