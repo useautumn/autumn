@@ -39,7 +39,7 @@ export const getOrCreateCachedPartialFullSubject = async ({
 			);
 			await updateCustomerData({
 				ctx,
-				fullSubject: cached,
+				customer: cached.customer,
 				customerData: params.customer_data,
 			});
 			return cached;

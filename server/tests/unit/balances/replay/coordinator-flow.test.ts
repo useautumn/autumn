@@ -161,6 +161,12 @@ test.concurrent(
 			check: async () => {
 				throw unsupported();
 			},
+			readSubjectState: async () => {
+				throw unsupported();
+			},
+			applyBillingPlan: async () => {
+				throw unsupported();
+			},
 			initialize: async ({ request }) => {
 				initializeCommands.push(request);
 				return {

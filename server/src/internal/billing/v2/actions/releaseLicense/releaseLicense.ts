@@ -1,6 +1,6 @@
 import type { ReleaseLicenseParamsV0 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 import { computeReleaseLicensePlan } from "./compute/computeReleaseLicensePlan.js";
 import { handleReleaseLicenseErrors } from "./errors/handleReleaseLicenseErrors.js";
 import { logReleaseLicensePlan } from "./logs/logReleaseLicensePlan.js";

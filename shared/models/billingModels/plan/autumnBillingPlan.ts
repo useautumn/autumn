@@ -5,6 +5,7 @@ import {
 	type AppEnv,
 	BillingVersion,
 	CusProductStatus,
+	CustomerSchema,
 	EntitlementSchema,
 	EntityBalanceSchema,
 	EntitySchema,
@@ -76,6 +77,17 @@ export const CustomerProductUpdateSchema = z.object({
 	}),
 });
 
+/** Customer columns a billing plan writes: filled from `customer_data`, or the Stripe customer it links. */
+export const CustomerUpdateSchema = z.object({
+	customer: CustomerSchema,
+	updates: CustomerSchema.pick({
+		name: true,
+		email: true,
+		send_email_receipts: true,
+		processor: true,
+	}).partial(),
+});
+
 export const PatchCustomerProductSchema = z.object({
 	customerProduct: FullCusProductSchema,
 	insertCustomerEntitlements: z.array(FullCustomerEntitlementSchema),
@@ -114,6 +126,9 @@ export const BalanceTransitionPlanSchema = z.object({
 export const AutumnBillingPlanSchema = z.object({
 	customerId: z.string(),
 	balanceTransitionPlan: BalanceTransitionPlanSchema.optional(),
+	// Inserted first and only if absent: the insert elects the one request that creates the customer.
+	insertCustomer: CustomerSchema.optional(),
+	updateCustomer: CustomerUpdateSchema.optional(),
 	// Inserted before customer products — provisioned rows may reference them.
 	insertEntities: z.array(EntitySchema).optional(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
@@ -232,6 +247,7 @@ export type BalanceTransitionUnsupportedReason = z.infer<
 	typeof BalanceTransitionUnsupportedReasonSchema
 >;
 export type CustomerProductUpdate = z.infer<typeof CustomerProductUpdateSchema>;
+export type CustomerUpdate = z.infer<typeof CustomerUpdateSchema>;
 
 export type UpdateCustomerEntitlement = z.infer<
 	typeof UpdateCustomerEntitlementSchema

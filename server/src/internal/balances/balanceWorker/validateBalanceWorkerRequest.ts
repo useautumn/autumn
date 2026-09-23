@@ -9,7 +9,7 @@ export function validateBalanceWorkerRequest({
 	ctx: BalanceWorkerRequestContext;
 	body: CheckParams | TrackParams;
 }): void {
-	if (body.customer_data || body.entity_data)
+	if (body.entity_data)
 		throw new BalanceWorkerUnsupportedError({
 			reason: "inline_customer_data_not_supported",
 		});

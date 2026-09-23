@@ -1,0 +1,34 @@
+import type { AutumnBillingPlan } from "@autumn/shared";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import { billingPlanCustomerProducts } from "./billingPlanRows.js";
+import { billingPlanToWorkerCustomerId } from "./billingPlanToWorkerCustomerId.js";
+import { billingPlanNamesItsEntities } from "./billingPlanToWorkerEntityIds.js";
+
+/** License seats are left out of the worker's state, so a plan writing one keeps to Postgres. */
+const writesNoLicenseSeats = ({
+	autumnBillingPlan,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+}): boolean =>
+	billingPlanCustomerProducts({ autumnBillingPlan }).every(
+		({ customer_license_link_id }) => !customer_license_link_id,
+	);
+
+/** Whether the worker can key every row it holds that the plan writes; the rest land in Postgres after it. */
+export const workerCanApplyBillingPlan = ({
+	autumnBillingPlan,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+}): boolean =>
+	billingPlanToWorkerCustomerId({ autumnBillingPlan }) !== null &&
+	billingPlanNamesItsEntities({ autumnBillingPlan }) &&
+	writesNoLicenseSeats({ autumnBillingPlan });
+
+/** Whether the customer's rows land through the worker instead of one Postgres transaction. */
+export const billingPlanRoutesToWorker = ({
+	autumnBillingPlan,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+}): boolean =>
+	isBalanceWorkerRolloutEnabled() &&
+	workerCanApplyBillingPlan({ autumnBillingPlan });

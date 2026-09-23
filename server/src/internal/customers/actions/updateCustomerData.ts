@@ -1,27 +1,25 @@
-import type { Customer, CustomerData, FullSubject } from "@autumn/shared";
+import type { Customer, CustomerData, CustomerUpdate } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { updateCachedCustomerData } from "@/internal/customers/cache/fullSubject/index.js";
 
-export const updateCustomerData = async ({
+/** The columns `customer_data` fills: an empty name or email, and a changed `send_email_receipts`. */
+export const customerDataToCustomerUpdates = ({
 	ctx,
-	fullSubject,
+	customer,
 	customerData,
 }: {
 	ctx: AutumnContext;
-	fullSubject: FullSubject;
+	customer: Customer;
 	customerData?: CustomerData;
-}) => {
+}): CustomerUpdate["updates"] => {
 	const { logger } = ctx;
-	const idOrInternalId =
-		fullSubject.customer.id || fullSubject.customer.internal_id;
-
-	const updates: Partial<Customer> = {};
-	if (!fullSubject.customer.name && customerData?.name) {
+	const updates: CustomerUpdate["updates"] = {};
+	if (!customer.name && customerData?.name) {
 		updates.name = customerData.name;
 	}
-	if (!fullSubject.customer.email && customerData?.email) {
+	if (!customer.email && customerData?.email) {
 		if (
 			z.email({ pattern: z.regexes.unicodeEmail }).safeParse(customerData.email)
 				.error
@@ -33,12 +31,29 @@ export const updateCustomerData = async ({
 	}
 	if (
 		customerData?.send_email_receipts !== undefined &&
-		fullSubject.customer.send_email_receipts !==
-			customerData.send_email_receipts
+		customer.send_email_receipts !== customerData.send_email_receipts
 	) {
 		updates.send_email_receipts = customerData.send_email_receipts;
 	}
+	return updates;
+};
 
+export const updateCustomerData = async ({
+	ctx,
+	customer,
+	customerData,
+}: {
+	ctx: AutumnContext;
+	customer: Customer;
+	customerData?: CustomerData;
+}) => {
+	const { logger } = ctx;
+	const idOrInternalId = customer.id || customer.internal_id;
+	const updates = customerDataToCustomerUpdates({
+		ctx,
+		customer,
+		customerData,
+	});
 	if (Object.keys(updates).length === 0) return false;
 
 	logger.info(`Updating customer details:`, {
@@ -51,7 +66,7 @@ export const updateCustomerData = async ({
 		update: updates,
 	});
 
-	Object.assign(fullSubject.customer, updates);
+	Object.assign(customer, updates);
 
 	await updateCachedCustomerData({
 		ctx,

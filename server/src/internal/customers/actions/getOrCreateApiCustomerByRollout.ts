@@ -1,6 +1,8 @@
 import type { CheckParams, TrackParams } from "@autumn/shared";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { readBalanceWorkerSubject } from "@/internal/balanceWorker/subject/readBalanceWorkerSubject.js";
+import { withCreateIfMissing } from "@/internal/balanceWorker/subject/withCreateIfMissing.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import {
 	getCustomerCreationRecoveryStage,
@@ -9,6 +11,7 @@ import {
 import { queueFailedCustomerCreation } from "@/internal/customers/recovery/queueFailedCustomerCreation.js";
 import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFromCustomerData.js";
 
@@ -29,6 +32,25 @@ export const getOrCreateApiCustomerByRollout = async ({
 	enqueueRecoveryOnTransientFailure?: boolean;
 	disableReplicaRead?: boolean;
 }) => {
+	// The worker is keyed by customer id and serves customer views only; the rest stay on Postgres.
+	if (
+		isBalanceWorkerRolloutEnabled() &&
+		params.customer_id &&
+		!params.entity_id
+	) {
+		const customerId = params.customer_id;
+		const fullSubject = await withCreateIfMissing({
+			ctx,
+			customerId,
+			customerData: params.customer_data,
+			run: async () => {
+				const subject = await readBalanceWorkerSubject({ ctx, customerId });
+				return { result: subject, customer: subject.customer };
+			},
+		});
+		return getApiCustomerV2({ ctx, fullSubject, withAutumnId });
+	}
+
 	setCustomerCreationRecoveryStage({ ctx, stage: "lookup" });
 
 	if (isFullSubjectRolloutEnabled({ ctx })) {

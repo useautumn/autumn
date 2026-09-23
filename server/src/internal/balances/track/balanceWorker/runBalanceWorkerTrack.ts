@@ -11,6 +11,11 @@ import {
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
+import {
+	apiVersionCreatesCustomer,
+	type RunWithCustomer,
+	withCreateIfMissing,
+} from "@/internal/balanceWorker/subject/withCreateIfMissing.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
 import { validateBalanceWorkerRequest } from "../../balanceWorker/validateBalanceWorkerRequest.js";
@@ -83,11 +88,14 @@ const trackOnWorker = async ({
 	ctx: AutumnContext;
 	body: TrackParams;
 	client: TrackClient;
-}): Promise<TrackResponseV3> => {
+}): Promise<RunWithCustomer<TrackResponseV3>> => {
 	const featureIds = trackedFeatureIdsOf({ ctx, body });
 	try {
 		const replies = await trackEachFeature({ ctx, body, client, featureIds });
-		return trackRepliesToApiResponse({ ctx, body, replies });
+		return {
+			result: trackRepliesToApiResponse({ ctx, body, replies }),
+			customer: replies[0]?.reply.state.customer ?? null,
+		};
 	} catch (cause) {
 		rethrowBalanceWorkerError({ cause });
 	}
@@ -109,6 +117,14 @@ export async function runBalanceWorkerTrack({
 		ctx,
 		idempotencyKey: getTrackBodyIdempotencyKey({ body }),
 		routeGroup: RouteGroup.Balances,
-		run: () => trackOnWorker({ ctx, body, client }),
+		// Around the whole fan-out, inside the claim: a retry after creating re-runs every feature under the same key.
+		run: () =>
+			withCreateIfMissing({
+				ctx,
+				createEnabled: apiVersionCreatesCustomer({ ctx }),
+				customerId: body.customer_id,
+				customerData: body.customer_data,
+				run: () => trackOnWorker({ ctx, body, client }),
+			}),
 	});
 }

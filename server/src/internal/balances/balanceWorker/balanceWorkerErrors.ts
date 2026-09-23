@@ -31,6 +31,12 @@ const UNAVAILABLE_CLIENT_CODES = new Set([
 	"COMMAND_LOG_UNAVAILABLE",
 ]);
 
+const STALE_SUBJECT_CODE = "balance_worker_stale_subject";
+
+/** The worker's copy of the customer was behind Postgres: it dropped the copy and wrote nothing. */
+export const isBalanceWorkerStaleSubjectError = (error: unknown): boolean =>
+	error instanceof RecaseError && error.code === STALE_SUBJECT_CODE;
+
 export function rethrowBalanceWorkerError({
 	cause,
 }: {
@@ -53,7 +59,7 @@ export function rethrowBalanceWorkerError({
 	) {
 		// The worker rolled the decision back and dropped its copy of the customer; a retry decides on fresh rows.
 		throw new RecaseError({
-			code: "balance_worker_stale_subject",
+			code: STALE_SUBJECT_CODE,
 			statusCode: 409,
 			message:
 				"Customer changed while the command was decided; nothing was applied, retry",
@@ -81,6 +87,17 @@ export function rethrowBalanceWorkerError({
 			code: ErrCode.CustomerNotFound,
 			statusCode: 404,
 			message: "Customer does not exist in this org and env",
+		});
+	}
+	if (
+		cause instanceof BalanceWorkerClientError &&
+		cause.workerCode === "ENTITY_NOT_FOUND"
+	) {
+		// Same code and status as the legacy path.
+		throw new RecaseError({
+			code: ErrCode.EntityNotFound,
+			statusCode: 404,
+			message: "Entity does not exist for this customer",
 		});
 	}
 	if (

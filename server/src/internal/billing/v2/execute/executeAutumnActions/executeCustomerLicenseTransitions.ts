@@ -9,15 +9,24 @@ import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRe
 import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTasksInline";
 import { generateId } from "@/utils/genUtils";
 
+/** A seat transition whose pool row is written, waiting to converge its seats. */
+export type PendingBatchTransition = {
+	transition: CustomerLicenseTransition;
+	executionScope: { batchTransitionId: string; assignmentCutoffMs: number };
+	runSynchronously: boolean;
+};
+
 /** Converges license pools and their assigned seat definitions.
- * Persists pre-existing successor pools during scheduled activation. */
+ * Persists pre-existing successor pools during scheduled activation.
+ * Writes the pool rows only; the seat convergence is started by `startBatchTransitions` once they commit. */
 export const executeCustomerLicenseTransitions = async ({
 	ctx,
 	customerLicenseTransitions,
 }: {
 	ctx: AutumnContext;
 	customerLicenseTransitions: CustomerLicenseTransition[] | undefined;
-}) => {
+}): Promise<PendingBatchTransition[]> => {
+	const pending: PendingBatchTransition[] = [];
 	const hasTransitions = (customerLicenseTransitions ?? []).length > 0;
 	// Small customers get their transition awaited in-request so upgrades are
 	// synchronous; the capped count keeps this probe O(threshold) for whales.
@@ -70,11 +79,27 @@ export const executeCustomerLicenseTransitions = async ({
 			});
 		}
 
-		const executionScope = {
-			batchTransitionId: generateId("batch_transition"),
-			assignmentCutoffMs: Date.now(),
-		};
+		pending.push({
+			transition,
+			executionScope: {
+				batchTransitionId: generateId("batch_transition"),
+				assignmentCutoffMs: Date.now(),
+			},
+			runSynchronously,
+		});
+	}
+	return pending;
+};
 
+/** Converges each written pool's seats: awaited for small customers, backgrounded for large ones. */
+export const startBatchTransitions = async ({
+	ctx,
+	pending,
+}: {
+	ctx: AutumnContext;
+	pending: PendingBatchTransition[];
+}): Promise<void> => {
+	for (const { transition, executionScope, runSynchronously } of pending) {
 		if (runSynchronously) {
 			await batchTransition({ ctx, transition, executionScope });
 			continue;
@@ -85,7 +110,7 @@ export const executeCustomerLicenseTransitions = async ({
 				(error) => {
 					ctx.logger.error("[licenseTransitions] batch transition failed", {
 						data: {
-							customerLicenseLinkId: updates.linkId,
+							customerLicenseLinkId: transition.updates.linkId,
 							error: error instanceof Error ? error.message : String(error),
 						},
 					});
@@ -102,7 +127,7 @@ export const executeCustomerLicenseTransitions = async ({
 				transition,
 				executionScope,
 			},
-			{ concurrencyKey: updates.linkId },
+			{ concurrencyKey: transition.updates.linkId },
 		);
 	}
 };

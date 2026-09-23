@@ -310,6 +310,12 @@ test.concurrent(
 				check: async () => {
 					throw cause;
 				},
+				readSubjectState: async () => {
+					throw cause;
+				},
+				applyBillingPlan: async () => {
+					throw cause;
+				},
 				track: async () => {
 					throw cause;
 				},

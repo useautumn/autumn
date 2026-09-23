@@ -1,7 +1,7 @@
 import type { AutumnBillingPlan, FullCustomer } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe.js";
 import type { CreateCustomerContext } from "./createCustomerContext.js";
 
@@ -24,14 +24,23 @@ export const finalizeCreateCustomer = async ({
 
 	if (!stripeSubscription) return fullCustomer;
 
-	// Link subscription_ids to customer products
-	for (const customerProduct of autumnBillingPlan.insertCustomerProducts) {
-		await CusProductService.update({
-			ctx,
-			cusProductId: customerProduct.id,
-			updates: { subscription_ids: customerProduct.subscription_ids },
-		});
-	}
+	// Stripe stamped these onto the plan after its rows were inserted; the link-back is a plan of its own.
+	await executeAutumnBillingPlan({
+		ctx,
+		autumnBillingPlan: {
+			customerId: autumnBillingPlan.customerId,
+			insertCustomerProducts: [],
+			updateCustomerProducts: autumnBillingPlan.insertCustomerProducts.map(
+				(customerProduct) => ({
+					customerProduct,
+					updates: {
+						subscription_ids: customerProduct.subscription_ids ?? undefined,
+						scheduled_ids: customerProduct.scheduled_ids ?? undefined,
+					},
+				}),
+			),
+		},
+	});
 
 	// Build final customer with subscription and products
 	return {

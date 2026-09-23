@@ -1,11 +1,8 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerEntitlementActions } from "@/internal/customers/cusProducts/cusEnts/actions";
-import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService";
 
-/**
- * Update customer entitlement balances and replaceables based on quantity changes.
- */
+/** Grant field updates and balance changes; their replaceable rows are written with the Postgres-only rows. */
 export const updateCustomerEntitlements = async ({
 	ctx,
 	customerId,
@@ -18,13 +15,7 @@ export const updateCustomerEntitlements = async ({
 	const { logger } = ctx;
 
 	for (const updateDetail of updates ?? []) {
-		const {
-			balanceChange = 0,
-			customerEntitlement,
-			updates,
-			insertReplaceables,
-			deletedReplaceables,
-		} = updateDetail;
+		const { balanceChange = 0, customerEntitlement, updates } = updateDetail;
 
 		logger.debug(
 			`updating customer entitlement ${customerEntitlement.id} ${balanceChange ? `+${balanceChange}` : updates ? JSON.stringify(updates) : "none"}`,
@@ -52,22 +43,6 @@ export const updateCustomerEntitlements = async ({
 				cusEntId: customerEntitlement.id,
 				delta: balanceChange,
 				featureId,
-			});
-		}
-
-		// 3. Handle replaceable inserts
-		if (insertReplaceables && insertReplaceables.length > 0) {
-			await RepService.insert({
-				ctx,
-				data: insertReplaceables,
-			});
-		}
-
-		// 4. Handle replaceable deletes
-		if (deletedReplaceables && deletedReplaceables.length > 0) {
-			await RepService.deleteInIds({
-				ctx,
-				ids: deletedReplaceables.map((r) => r.id),
 			});
 		}
 	}

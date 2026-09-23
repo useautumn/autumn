@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 const executeModulePath =
-	"@/internal/billing/v2/execute/executeAutumnBillingPlan";
+	"@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 const initProductModulePath =
 	"@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct";
 const billingWebhookModulePath =

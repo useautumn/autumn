@@ -99,7 +99,7 @@ export const getOrCreateCachedFullSubject = async ({
 
 	const customerDataUpdated = await updateCustomerData({
 		ctx,
-		fullSubject,
+		customer: fullSubject.customer,
 		customerData,
 	});
 

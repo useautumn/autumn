@@ -118,6 +118,8 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 	const client = {
 		track,
 		check: track,
+		readSubjectState: track,
+		applyBillingPlan: track,
 		initialize: track,
 		evict: track,
 		finalize: track,
