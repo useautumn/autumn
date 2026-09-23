@@ -1,4 +1,5 @@
-import { MetadataType, ms } from "@autumn/shared";
+import { MetadataType } from "@autumn/shared";
+import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { hasStripeInvoicePayment } from "@/external/stripe/invoices/utils/classifyStripeInvoice";
@@ -10,7 +11,7 @@ import { releaseExpiredPendingPlan } from "./execute/releaseExpiredPendingPlan";
 
 // Pending rows are inserted after the metadata row; a void that lands in between
 // must not delete the metadata, so the cron re-checks shortly instead.
-const RECHECK_DELAY_MS = ms.minutes(10);
+const RECHECK_DELAY_MINUTES = 10;
 
 /** A voided invoice with no payment can never be paid, so its pending plan expires now. */
 export const expirePendingPlanForVoidedInvoice = async ({
@@ -39,7 +40,9 @@ export const expirePendingPlanForVoidedInvoice = async ({
 		await MetadataService.update({
 			db: ctx.db,
 			id: metadata.id,
-			updates: { expires_at: Date.now() + RECHECK_DELAY_MS },
+			updates: {
+				expires_at: addMinutes(Date.now(), RECHECK_DELAY_MINUTES).getTime(),
+			},
 		});
 		return false;
 	}

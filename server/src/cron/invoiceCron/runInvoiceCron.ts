@@ -71,24 +71,14 @@ export const handleVoidInvoiceCron = async ({
 	}
 
 	if (metadata.type === MetadataType.DeferredInvoice) {
-		try {
-			await expirePendingPlanAtDueDate({
-				ctx: {
-					db,
-					logger,
-					org: { id: org.id },
-					env: customer.env,
-					redisV2: resolveRedisV2(),
-				},
-				stripeCli,
-				metadata,
-				stripeInvoice: invoice,
-			});
-		} catch (error) {
-			logger.error(
-				`Error expiring pending plan for invoice ${invoice.id}; retrying next run: ${error}`,
-			);
-		}
+		await expirePendingPlanAtDueDate({
+			ctx,
+			orgId: org.id,
+			env: customer.env,
+			stripeCli,
+			metadata,
+			stripeInvoice: invoice,
+		});
 		return;
 	}
 
