@@ -77017,6 +77017,143 @@ paths:
             res = autumn.sandboxes.reset(
                 request={},
             )
+  /v1/platform.get_stripe_connection:
+    post:
+      operationId: getStripeConnection
+      description: Read a managed organization's Stripe OAuth connection, account ID,
+        and authorization time in the selected environment.
+      tags:
+        - platform
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organization_slug:
+                  type: string
+                  minLength: 1
+                  description: Public tenant organization slug, without the master organization
+                    suffix.
+                env:
+                  enum:
+                    - test
+                    - live
+                  type: string
+                  description: Stripe connection environment to inspect or disconnect.
+              required:
+                - organization_slug
+                - env
+              title: GetStripeConnectionParams
+              examples:
+                - &a143
+                  organization_slug: my-app
+                  env: test
+            example: *a143
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connected:
+                    type: boolean
+                    description: Whether an OAuth connection is stored. Excludes platform-managed
+                      accounts, default sandbox accounts, and separate
+                      secret-key connections.
+                  account_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: OAuth-connected Stripe account ID, or null when absent.
+                  connected_at:
+                    anyOf:
+                      - type: number
+                      - type: "null"
+                    description: Connection timestamp in Unix milliseconds, or null for historical
+                      connections without a timestamp and when disconnected.
+                required:
+                  - connected
+                  - account_id
+                  - connected_at
+                title: GetStripeConnectionResponse
+                examples:
+                  - &a144
+                    connected: true
+                    account_id: acct_example
+                    connected_at: 1781113864000
+                  - connected: false
+                    account_id: null
+                    connected_at: null
+              example: *a144
+      x-speakeasy-name-override: getStripeConnection
+      parameters:
+        - &a147
+          name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
+  /v1/platform.disconnect_stripe:
+    post:
+      operationId: disconnectStripe
+      description: Revoke Autumn's Stripe OAuth access for a managed organization in
+        the selected environment. Does not delete the Stripe account or cancel
+        subscriptions.
+      tags:
+        - platform
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organization_slug:
+                  type: string
+                  minLength: 1
+                  description: Public tenant organization slug, without the master organization
+                    suffix.
+                env:
+                  enum:
+                    - test
+                    - live
+                  type: string
+                  description: Stripe connection environment to inspect or disconnect.
+              required:
+                - organization_slug
+                - env
+              title: DisconnectStripeParams
+              examples:
+                - &a145
+                  organization_slug: my-app
+                  env: test
+            example: *a145
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                required:
+                  - success
+                title: DisconnectStripeResponse
+                examples:
+                  - &a146
+                    success: true
+              example: *a146
+      x-speakeasy-name-override: disconnectStripe
+      parameters:
+        - *a147
 security:
   - secretKey: []
 x-speakeasy-globals:
