@@ -11,7 +11,9 @@ import {
 	catalogKeyToString,
 	catalogRowsToCatalog,
 	catalogRowToCatalogKey,
+	planLicensesToItemCatalogKeys,
 	subjectStateToCatalogKeys,
+	subjectStateToPlanLicenseCatalogKeys,
 } from "../../../../src/utils/catalogUtils/convertCatalogUtils.js";
 import { filterCatalogKeysMissingFrom } from "../../../../src/utils/catalogUtils/filterCatalogUtils.js";
 import { createSubjectState } from "../../../../src/utils/subjectStateUtils/createSubjectState.js";
@@ -195,6 +197,88 @@ describe("catalog from rows", () => {
 						productRow,
 					],
 				}),
+			}),
+		).toEqual([]);
+	});
+});
+
+const pool = ({
+	id,
+	planLicenseId,
+}: {
+	id: string;
+	planLicenseId: string | null;
+}) => ({
+	id,
+	link_id: `link_${id}`,
+	internal_customer_id: "cus_internal_1",
+	parent_customer_product_id: "cp_1",
+	license_internal_product_id: "prod_internal_seat",
+	plan_license_id: planLicenseId,
+	granted: 10,
+	remaining: 7,
+	paid_quantity: 5,
+	created_at: 1,
+	updated_at: 1,
+});
+
+const planLicenseRow = (id: string): CatalogRow => ({
+	table: "planLicenses",
+	row: {
+		id,
+		parent_internal_product_id: "prod_internal_1",
+		license_internal_product_id: "prod_internal_seat",
+		is_custom: false,
+		org_id: "org_1",
+		env: AppEnv.Sandbox,
+		included: 5,
+		prepaid_only: true,
+		customized: false,
+		metadata: {},
+		created_at: 1,
+		updated_at: 1,
+		price_ids: ["price_seat"],
+		entitlement_ids: ["ent_seat_b", "ent_seat_a"],
+		internal_feature_ids: ["feat_internal_1"],
+	},
+});
+
+describe("plan license catalog keys", () => {
+	test("a state names each pool's plan license once, and none for a pool without one", () => {
+		const withPools = createSubjectState({
+			identity,
+			customerLicenses: [
+				pool({ id: "cl_2", planLicenseId: "pl_b" }),
+				pool({ id: "cl_1", planLicenseId: "pl_a" }),
+				pool({ id: "cl_3", planLicenseId: "pl_a" }),
+				pool({ id: "cl_4", planLicenseId: null }),
+			],
+		});
+		expect(subjectStateToPlanLicenseCatalogKeys({ state: withPools })).toEqual([
+			{ table: "planLicenses", id: "pl_a" },
+			{ table: "planLicenses", id: "pl_b" },
+		]);
+		expect(subjectStateToCatalogKeys({ state: withPools })).toEqual([]);
+	});
+
+	test("a cached plan license names its product and effective items, once each", () => {
+		const catalog = catalogRowsToCatalog({
+			rows: [planLicenseRow("pl_a"), planLicenseRow("pl_b")],
+		});
+		expect(catalogRowToCatalogKey({ row: planLicenseRow("pl_a") })).toEqual({
+			table: "planLicenses",
+			id: "pl_a",
+		});
+		expect(planLicensesToItemCatalogKeys({ catalog })).toEqual([
+			{ table: "entitlements", id: "ent_seat_a" },
+			{ table: "entitlements", id: "ent_seat_b" },
+			{ table: "features", id: "feat_internal_1" },
+			{ table: "prices", id: "price_seat" },
+			{ table: "products", id: "prod_internal_seat" },
+		]);
+		expect(
+			planLicensesToItemCatalogKeys({
+				catalog: catalogRowsToCatalog({ rows: [] }),
 			}),
 		).toEqual([]);
 	});

@@ -6,11 +6,12 @@ export const catalogTableSchema = z.enum([
 	"products",
 	"features",
 	"prices",
+	"planLicenses",
 ]);
 
 export type CatalogTable = z.infer<typeof catalogTableSchema>;
 
-/** Which catalog row a state references: entitlements and prices by id, products and features by internal_id. */
+/** Which catalog row a state references: entitlements, prices and plan licenses by id, products and features by internal_id. */
 export const catalogKeySchema = z
 	.object({ table: catalogTableSchema, id: nonEmptyStringSchema })
 	.strict();

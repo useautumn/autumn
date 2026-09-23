@@ -8,7 +8,6 @@ import { BalanceWorkerUnsupportedError } from "../../balanceWorker/balanceWorker
 import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
 import { featureToInternalFeatureId } from "../../balanceWorker/featureToInternalFeatureId.js";
 import { requestContextToCommandBase } from "../../balanceWorker/requestContextToCommandBase.js";
-import { validateBalanceWorkerRequest } from "../../balanceWorker/validateBalanceWorkerRequest.js";
 
 export function checkParamsToCheckCommand({
 	ctx,
@@ -17,7 +16,6 @@ export function checkParamsToCheckCommand({
 	ctx: BalanceWorkerRequestContext;
 	body: CheckParams;
 }): CheckCommand {
-	validateBalanceWorkerRequest({ ctx, body });
 	if (!body.feature_id || body.product_id)
 		throw new BalanceWorkerUnsupportedError({
 			reason: "product_check_not_supported",

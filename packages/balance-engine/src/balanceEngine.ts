@@ -16,6 +16,7 @@ export {
 	toBillingPlanDeleteOp,
 	toBillingPlanIncrementOp,
 	toBillingPlanInsertOp,
+	toBillingPlanMoveEntriesOp,
 	toBillingPlanUpdateOp,
 } from "./commands/applyBillingPlan/toBillingPlanOp.js";
 export type { ApplyBillingPlanCommand } from "./commands/applyBillingPlan/types/applyBillingPlanCommand.js";
@@ -81,6 +82,7 @@ export type {
 	CatalogKey,
 	CatalogTable,
 } from "./models/catalog/catalogKey.js";
+export type { CatalogPlanLicense } from "./models/catalog/catalogPlanLicense.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
 export type { BaseCommand } from "./models/command/baseCommand.js";
 export type { CommandOrg } from "./models/command/commandOrg.js";
@@ -98,6 +100,9 @@ export type {
 } from "./models/mutation/mutationRecord.js";
 export type {
 	CustomerEntitlementIncrement,
+	PooledBalanceIncrement,
+	PooledContributionPromote,
+	PooledContributionRowChange,
 	RolloverIncrement,
 	RowChange,
 	TableRowChange,
@@ -111,6 +116,7 @@ export type {
 } from "./models/mutation/subjectStateMutation.js";
 export type { WorkerCustomer } from "./models/subject/rows/workerCustomer.js";
 export type { WorkerCustomerEntitlement } from "./models/subject/rows/workerCustomerEntitlement.js";
+export type { WorkerCustomerLicense } from "./models/subject/rows/workerCustomerLicense.js";
 export type { WorkerCustomerPrice } from "./models/subject/rows/workerCustomerPrice.js";
 export type { WorkerCustomerProduct } from "./models/subject/rows/workerCustomerProduct.js";
 export type { WorkerEntity } from "./models/subject/rows/workerEntity.js";
@@ -118,6 +124,8 @@ export type {
 	OpenLock,
 	WorkerLock,
 } from "./models/subject/rows/workerLock.js";
+export type { WorkerPooledBalance } from "./models/subject/rows/workerPooledBalance.js";
+export type { WorkerPooledContribution } from "./models/subject/rows/workerPooledContribution.js";
 export type { WorkerRollover } from "./models/subject/rows/workerRollover.js";
 export type { WorkerUsageWindow } from "./models/subject/rows/workerUsageWindow.js";
 export type { SubjectState } from "./models/subject/subjectState.js";
@@ -157,13 +165,16 @@ export {
 	catalogKeyToString,
 	catalogRowsToCatalog,
 	catalogRowToCatalogKey,
+	planLicensesToItemCatalogKeys,
 	subjectStateToCatalogKeys,
+	subjectStateToPlanLicenseCatalogKeys,
 } from "./utils/catalogUtils/convertCatalogUtils.js";
 export { filterCatalogKeysMissingFrom } from "./utils/catalogUtils/filterCatalogUtils.js";
 export { isSameCustomerIdentity } from "./utils/identityUtils/classifyIdentityUtils.js";
 export {
 	meteringIdentityToPartitionKey,
 	meteringIdentityToSubjectKey,
+	planCommandToEntityIdentities,
 } from "./utils/identityUtils/convertIdentityUtils.js";
 // utils
 export {
@@ -182,5 +193,5 @@ export {
 export {
 	fullSubjectToDueRows,
 	fullSubjectToPlansNeedingBillingCycleAnchor,
-	fullSubjectToPoolsNeedingPromotion,
+	fullSubjectToPoolsSummingContributions,
 } from "./utils/subjectUtils/fullSubjectToDueRows.js";

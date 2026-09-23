@@ -187,6 +187,8 @@ export const applyChanges = ({
 					}),
 				};
 				break;
+			case "pooledContributions":
+				break;
 			case "locks":
 				nextState = {
 					...nextState,

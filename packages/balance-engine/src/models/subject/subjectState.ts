@@ -2,6 +2,7 @@ import { z } from "zod/v4";
 import { meteringIdentitySchema } from "../identity/meteringIdentity.js";
 import { workerCustomerSchema } from "./rows/workerCustomer.js";
 import { workerCustomerEntitlementSchema } from "./rows/workerCustomerEntitlement.js";
+import { workerCustomerLicenseSchema } from "./rows/workerCustomerLicense.js";
 import { workerCustomerPriceSchema } from "./rows/workerCustomerPrice.js";
 import { workerCustomerProductSchema } from "./rows/workerCustomerProduct.js";
 import { workerEntitySchema } from "./rows/workerEntity.js";
@@ -26,6 +27,8 @@ export const subjectStateSchema = z
 		openLocks: z.array(openLockSchema).default([]),
 		/** The pools behind the customer's pooled rows; states stored before pools existed have none. */
 		pooledBalances: z.array(workerPooledBalanceSchema).default([]),
+		/** The license pools on the customer's products; states stored before licenses existed have none. */
+		customerLicenses: z.array(workerCustomerLicenseSchema).default([]),
 		entity: workerEntitySchema.nullable(),
 	})
 	.strict();

@@ -7,6 +7,7 @@ import {
 	PooledBalanceResetMode,
 	resetNeedsBillingCycleAnchor,
 } from "@autumn/shared";
+import type { WorkerPooledBalance } from "../../models/subject/rows/workerPooledBalance.js";
 import type {
 	WorkerFullCustomerEntitlementWithProduct,
 	WorkerFullSubject,
@@ -104,8 +105,15 @@ export const fullSubjectToPlansNeedingBillingCycleAnchor = ({
 	),
 ];
 
-/** The pools a reset at `asOf` refills from contributions: what the sender promotes and sums before deciding. Unlimited pools have no grant to recompute. */
-export const fullSubjectToPoolsNeedingPromotion = ({
+/** A pool whose grant is the sum of its shares; a license pool's is bought seats × the grant, an unlimited one has none. */
+const poolGrantIsSumOfShares = ({
+	pool,
+}: {
+	pool: WorkerPooledBalance;
+}): boolean => !pool.unlimited && pool.customer_license_link_id === null;
+
+/** The due pools whose grant is re-summed from their shares before the reset is decided. Every due pool is still promoted. */
+export const fullSubjectToPoolsSummingContributions = ({
 	fullSubject,
 	asOf,
 }: {
@@ -114,7 +122,7 @@ export const fullSubjectToPoolsNeedingPromotion = ({
 }): string[] => [
 	...new Set(
 		fullSubjectToDueRows({ fullSubject, asOf }).flatMap((row) =>
-			row.pooled_balance && !row.pooled_balance.unlimited
+			row.pooled_balance && poolGrantIsSumOfShares({ pool: row.pooled_balance })
 				? [row.pooled_balance.id]
 				: [],
 		),

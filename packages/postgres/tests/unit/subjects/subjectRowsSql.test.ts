@@ -35,7 +35,9 @@ describe("subjectRowsSql", () => {
 			null,
 			null,
 			"active,past_due",
+			"active,past_due",
 			1_700_000_000_000,
+			"active,past_due",
 			1_700_000_000_000,
 			1_700_000_000_000,
 		]);
@@ -106,10 +108,42 @@ describe("subjectRowsSql: pooled balances", () => {
 		);
 		expect(sql).toContain("AND ce.pooled_balance_id IS NOT NULL");
 		expect(sql).toContain("AND ce.pooled_contribution_id IS NULL");
-		expect(sql).toContain("AND pb.customer_license_link_id IS NULL");
+		// A license pool is served while its parent is live, like a seat.
+		expect(sql).toContain(
+			"pb.customer_license_link_id IS NULL\n\t\t\t\tOR EXISTS (",
+		);
+		expect(sql).toContain("WHERE cl.link_id = pb.customer_license_link_id");
 		expect(sql).toContain("SELECT * FROM pooled_entitlements");
 		expect(sql).toContain("'pooled_balances', COALESCE(");
+		// A contributing source is a product row like any other: it is held at balance 0 so a plan can zero or release it.
+		expect(sql).toContain(
+			"JOIN cus_products cp ON cp.id = ce.customer_product_id\n\t\tWHERE ce.pooled_balance_id IS NULL\n\t),",
+		);
 		// Product and loose rows still leave every pooled row out.
 		expect(sql.match(/ce\.pooled_balance_id IS NULL/g)).toHaveLength(2);
+	});
+});
+
+describe("subjectRowsSql: seats", () => {
+	test("a product is kept by its own status, a seat by its license parent's; the seat's own status column is never read", () => {
+		const { sql } = dialect.sqlToQuery(
+			subjectRowsSql({
+				ctx: { orgId: "org_1", env: "sandbox" },
+				customerId: "cus_1",
+				entityId: "ent_42",
+				statuses: ["active"],
+				asOfTimestampMs: 1_700_000_000_000,
+			}),
+		);
+		expect(sql).toContain(
+			"(cp.customer_license_link_id IS NULL AND cp.status = ANY(string_to_array($9, ',')))",
+		);
+		expect(sql).toContain(
+			"JOIN customer_products parent ON parent.id = cl.parent_customer_product_id",
+		);
+		expect(sql).toContain("WHERE cl.link_id = cp.customer_license_link_id");
+		expect(sql).toContain("AND parent.status = ANY(string_to_array($10, ','))");
+		expect(sql.match(/cp\.status/g)).toHaveLength(1);
+		expect(sql.match(/parent\.status = ANY/g)).toHaveLength(2);
 	});
 });

@@ -264,4 +264,25 @@ describe("foldSubjectRowChanges", () => {
 		});
 		expect(folded).toHaveLength(2);
 	});
+
+	test("a promote is set-based: two for one pool fold to the later, and it never folds into a row change", () => {
+		const promote = (dueBy: number) => ({
+			op: "promote" as const,
+			table: "pooledContributions" as const,
+			pooledBalanceId: "pool_1",
+			dueBy,
+		});
+		const { folded, foldedIndexOf } = foldSubjectRowChanges({
+			changes: [
+				promote(1),
+				{ op: "delete", table: "pooledContributions", id: "pbc_1" },
+				promote(2),
+			],
+		});
+		expect(folded).toEqual([
+			promote(2),
+			{ op: "delete", table: "pooledContributions", id: "pbc_1" },
+		]);
+		expect(foldedIndexOf).toEqual([0, 1, 0]);
+	});
 });

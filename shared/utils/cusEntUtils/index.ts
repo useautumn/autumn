@@ -53,6 +53,7 @@ export * from "./convertCusEntUtils/resolveSpendLimitOverageLimit";
 export * from "./cusEntUtils";
 export * from "./filterCusEntUtils";
 export * from "./filterCustomerEntitlements/filterCustomerEntitlementsByPooledBalanceSource";
+export * from "./filterCustomerEntitlements/filterPerEntityCustomerEntitlementsByFeature";
 export * from "./findCustomerEntitlement/findCustomerEntitlementByFeature";
 // Find utils
 export * from "./findCustomerEntitlement/findCustomerEntitlementById";

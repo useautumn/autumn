@@ -106,13 +106,17 @@ const PLAN_TABLES = {
 	entity: "entities",
 	customerProducts: "customerProducts",
 	customerPrices: "customerPrices",
+	pooledContributions: "pooledContributions",
 } as const satisfies Partial<Record<RowChange["table"], SubjectRowTable>>;
 
 type PlanTable = keyof typeof PLAN_TABLES;
-type PlanRowChange = Extract<RowChange, { table: PlanTable }>;
+type PlanRowChange = Exclude<
+	Extract<RowChange, { table: PlanTable }>,
+	{ op: "promote" }
+>;
 
 const isPlanRowChange = (change: RowChange): change is PlanRowChange =>
-	change.table in PLAN_TABLES;
+	change.table in PLAN_TABLES && change.op !== "promote";
 
 const planRowChangeToSubjectRowChange = ({
 	change,
@@ -145,6 +149,14 @@ const rowChangeToSubjectRowChange = ({
 	change: RowChange;
 	commandType: MutationCommand["type"];
 }): SubjectRowChange => {
+	// A reset's promote is set-based over rows the worker never holds; Postgres applies it as one statement.
+	if (change.table === "pooledContributions" && change.op === "promote")
+		return {
+			op: "promote",
+			table: "pooledContributions",
+			pooledBalanceId: change.pooledBalanceId,
+			dueBy: change.dueBy,
+		};
 	if (isPlanRowChange(change)) {
 		// An initialize's rows are Postgres's own baseline; only a plan brings rows Postgres lacks.
 		if (commandType !== "applyBillingPlan")

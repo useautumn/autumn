@@ -45,17 +45,19 @@ const readInvoices = async ({
 	});
 };
 
-/** A customer's full subject from the worker, with the ledgers it never holds read from Postgres beside it. */
+/** A subject's full view from the worker (the customer's rows, plus the named entity's own), with the ledgers it never holds read from Postgres beside it. */
 export const readBalanceWorkerSubject = async ({
 	ctx,
 	customerId,
+	entityId,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
+	entityId?: string | null;
 }): Promise<FullSubject> => {
 	const command = parseReadSubjectStateCommand({
 		input: {
-			...requestContextToCommandBase({ ctx, customerId }),
+			...requestContextToCommandBase({ ctx, customerId, entityId }),
 			type: "readSubjectState",
 			org: orgToCommandOrg({ org: ctx.org }),
 		},

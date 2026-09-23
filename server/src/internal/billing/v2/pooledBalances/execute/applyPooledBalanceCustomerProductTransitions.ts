@@ -5,6 +5,7 @@ import {
 	PooledBalanceResetMode,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { insertPooledBalanceEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/insertPooledBalanceEntitlements";
 import { CusService } from "@/internal/customers/CusService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { computePooledBalanceTransitionPlan } from "../compute/computePooledBalanceTransitionPlan";
@@ -67,6 +68,7 @@ export const applyPooledBalanceCustomerProductTransitions = async ({
 	});
 	if (!pooledBalancePlan) return refreshedFullCustomer;
 
+	await insertPooledBalanceEntitlements({ ctx, pooledBalancePlan });
 	await executePooledBalancePlan({ ctx, pooledBalancePlan });
 	return refreshFullCustomer({
 		ctx,

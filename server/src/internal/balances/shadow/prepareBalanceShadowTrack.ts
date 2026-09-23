@@ -14,7 +14,6 @@ import {
 	fullSubjectToCatalogRows,
 	fullSubjectToSubjectState,
 } from "../balanceWorker/fullSubjectToSubjectState.js";
-import { validateBalanceWorkerRequest } from "../balanceWorker/validateBalanceWorkerRequest.js";
 import { trackParamsToTrackCommand } from "../track/balanceWorker/balanceWorkerTrackRequest.js";
 import type { BalanceShadowConfig } from "./balanceShadowTypes.js";
 
@@ -51,7 +50,6 @@ export function prepareBalanceShadowTrack({
 	if (!Number.isFinite(body.value ?? 1) || (body.value ?? 1) < 0)
 		return { kind: "skip", reason: "value_not_supported" };
 	try {
-		validateBalanceWorkerRequest({ ctx, body });
 		const state = fullSubjectToSubjectState({
 			ctx,
 			fullSubject,

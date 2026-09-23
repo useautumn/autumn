@@ -12,6 +12,8 @@ import {
 	defaultProduct,
 	linkBackPlan,
 	newCustomer,
+	planOf,
+	workerEntity,
 } from "./billingPlanFixtures.js";
 
 const ctx = {
@@ -131,6 +133,35 @@ describe("applyBillingPlanOnWorker", () => {
 			await send({ autumnBillingPlan: createCustomerPlan(), client }),
 		).toEqual({ status: "customer_exists" });
 		expect(client.commandIds).toHaveLength(1);
+	});
+
+	test("a create that finds its own entity was applied; someone else's entity is the Postgres lane's 409", async () => {
+		const entityExists = (internal_id: string) =>
+			({
+				result: {
+					status: "entity_exists",
+					entity: { id: workerEntity.id, internal_id },
+				},
+				state: { customer: { internal_id: newCustomer.internal_id } },
+				catalog: {},
+			}) as unknown as ApplyBillingPlanReply;
+		const entityPlan = planOf({ insertEntities: [workerEntity] });
+
+		expect(
+			await send({
+				autumnBillingPlan: entityPlan,
+				client: scriptedClient([() => entityExists(workerEntity.internal_id)]),
+			}),
+		).toEqual({
+			status: "applied",
+			internalCustomerId: newCustomer.internal_id,
+		});
+
+		const error = await send({
+			autumnBillingPlan: entityPlan,
+			client: scriptedClient([() => entityExists("ent_internal_other")]),
+		}).catch((cause: unknown) => cause);
+		expect(error).toMatchObject({ code: "entity_already_exists" });
 	});
 
 	test("a resent create that finds its own customer was applied by the first attempt", async () => {

@@ -6,7 +6,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
 import { resolveIdempotencyTtlMs } from "@/internal/misc/idempotency/resolveIdempotencyTtl.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
-import { validateBalanceWorkerRequest } from "../../balanceWorker/validateBalanceWorkerRequest.js";
 import { trackParamsToTrackCommands } from "./balanceWorkerTrackRequest.js";
 
 type QueueClient = Pick<BalanceWorkerClient, "queue">;
@@ -26,7 +25,6 @@ const batchItemToCommands = ({
 	index: number;
 	ttlMs: number;
 }): TrackCommand[] => {
-	validateBalanceWorkerRequest({ ctx, body: item });
 	const itemCtx = { ...ctx, id: `${ctx.id}-${index}` };
 	const key = getTrackBodyIdempotencyKey({ body: item });
 	return trackParamsToTrackCommands({ ctx: itemCtx, body: item }).map(

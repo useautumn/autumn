@@ -14,6 +14,8 @@ export const incrementOpToRowChanges = ({
 	context: PlanRowChangeContext;
 }): RowChange[] => {
 	if (wasDeletedByPlan({ context, table: op.table, id: op.id })) return [];
+	if (op.table === "pooledBalances")
+		return [{ table: op.table, op: "increment", id: op.id, add: op.add }];
 	return [
 		{
 			table: op.table,

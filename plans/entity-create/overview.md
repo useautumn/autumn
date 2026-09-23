@@ -2,7 +2,7 @@
 author: john + claude
 feature: entity-create
 date: 2026-09-23
-status: draft, not yet approved
+status: units 1–6 done 2026-09-23; unit 7 (delete) parked
 ---
 
 # Entity creation as one AutumnBillingPlan
@@ -24,7 +24,7 @@ batchCreateEntities                        autoCreateEntity
    seat lock · usage_limit                   paid seat → 400
    adjustAllowance → Stripe (legacy)
    CusEntService.decrement(N − reps)
-   linked cusEnts: ce.entities[id] = allowance | inherit replaceable's key
+   per-entity cusEnts: ce.entities[id] = allowance | inherit replaceable's key
  claim id-less (update id/name/controls)   claim via EntityService.getNull (dead: `id = null`)
  EntityService.insert                      EntityService.insert (23505 → re-read)
  attachDefaultProductsToEntities           no defaults · billing_controls dropped
@@ -44,7 +44,7 @@ Facts that shape the design:
   invoice) is setup → compute → evaluate → execute: usage from balance (N seats in one call), replaceables
   both directions, proration config, discounts, full sub diff, trial skip, void + 402.
 - **It does not write the base seat change.** Track's Lua already deducted; an entity action must add
-  `−N` itself, and move linked `ce.entities` keys when it reuses a replaceable.
+  `−N` itself, and move per-entity `ce.entities` keys when it reuses a replaceable.
 - **`insertEntities` exists and routes to the worker** (`attachLicense` is its only filler). There is **no
   `updateEntities` facet** (claim, billing_controls) in the plan or the engine's op schema.
 - **The worker refuses id-less entities** (`billingPlanNamesItsEntities`): no external id, no subject key.
@@ -70,7 +70,7 @@ cusProduct holding F:
 ```
 seat cusEnt      balanceChange −N (+ reps reused)          increment: commutes with tracks
                  deleted/inserted replaceables
-linked cusEnts   ce.entities: add key (allowance)          per-key increment
+perEntity cusEnts ce.entities: add key (allowance)         per-key increment
                  or move a replaceable's key to the entity
 paid seat        allocatedInvoice compute → line items + sub quantity   (StripeBillingPlan)
 ```
@@ -81,8 +81,8 @@ Create uses `added`; delete (later) uses `removed`. One compute, both directions
 ### the action
 
 ```
-internal/entities/actions/createEntities/
-├── createEntities.ts                 orchestrator
+internal/entities/actions/createEntitiesV2/
+├── createEntitiesV2.ts               orchestrator
 ├── types.ts                          CreateEntitiesContext · CreateEntitiesOptions
 ├── setup/
 │   ├── setupCreateEntitiesContext.ts fullCustomer · requested → { inserted, claimed } · defaults
@@ -99,7 +99,7 @@ internal/entities/actions/common/seatChange/
 ```
 
 ```ts
-createEntities({ ctx, customerId, customerData, entities, options })
+createEntitiesV2({ ctx, customerId, customerData, entities, options })
   context = await setupCreateEntitiesContext(...)
   handleCreateEntitiesErrors({ context, options })
   plan    = computeCreateEntitiesPlan({ ctx, context })
@@ -138,9 +138,9 @@ Stripe done + Autumn failed is attach's existing hole, not a new one.
 
 | # | question | recommendation |
 |---|---|---|
-| 1 | Does a claim (id-less → id) use a seat? | **No.** The id-less row already took one; a claim is `updateEntities` (id, name, controls) + a linked key seed. Fixes the double decrement. |
+| 1 | Does a claim (id-less → id) use a seat? | **Decided: no.** The id-less row already took one; a claim is `updateEntities` (id, name, controls) + a per-entity key seed. Fixes the double decrement. |
 | 2 | Should `entity_data` attach entity defaults and write `billing_controls`? | **Yes.** Same action; only paid seats differ. Behavior change for `entity_data` callers on orgs with `default_applies_to_entities`. |
-| 3 | Folder | `internal/entities/actions/createEntities/`, mirroring `customers/actions/createWithDefaults/` (a domain action that emits a billing plan). The seat change sits in `entities/actions/common/` so delete reuses it. |
+| 3 | Folder | **Decided:** `internal/entities/actions/createEntitiesV2/`, mirroring `customers/actions/createWithDefaults/` (a domain action that emits a billing plan). The seat change sits in `entities/actions/common/` so delete reuses it. |
 | 4 | No Stripe subscription on a paid seat | Autumn only, no invoice (legacy behavior). v2 compute throws today, so guard in setup. |
 | 5 | Replaceables during a trial | Keep v2 semantics (created) unless a test says otherwise; legacy skipped them. |
 | 6 | Pooled contributions of entity defaults | In-plan `computePooledBalanceTransitionPlan`, as `attachLicense` does. Drops today's reset-before-transition; on the worker, resets are lazy anyway. |

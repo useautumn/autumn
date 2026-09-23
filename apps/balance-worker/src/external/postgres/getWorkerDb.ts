@@ -7,9 +7,10 @@ import {
 	getCatalogRows,
 	getSubjectRows,
 	insertPartitionProgress,
+	listPooledBalancesWithoutOtherContributions,
 	type PostgresClient,
-	promoteDuePooledContributions,
 	readPartitionProgress,
+	sumPooledContributionGrants,
 } from "@autumn/postgres";
 import type { CommitterDb } from "../../types/committerDb.js";
 import type { WorkerDb } from "../../types/workerDb.js";
@@ -61,11 +62,20 @@ export const createWorkerDb = ({
 			customerId: identity.customerId,
 			email,
 		}),
-	promoteDuePooledContributions: ({ pooledBalanceId, now }) =>
-		promoteDuePooledContributions({
+	sumPooledContributionGrants: ({ pooledBalanceIds, dueBy }) =>
+		sumPooledContributionGrants({
 			ctx: { db: ctx.postgres.db },
-			pooledBalanceId,
-			now,
+			pooledBalanceIds,
+			dueBy,
+		}),
+	listPooledBalancesWithoutOtherContributions: ({
+		pooledBalanceIds,
+		removedContributionIds,
+	}) =>
+		listPooledBalancesWithoutOtherContributions({
+			ctx: { db: ctx.postgres.db },
+			pooledBalanceIds,
+			removedContributionIds,
 		}),
 });
 

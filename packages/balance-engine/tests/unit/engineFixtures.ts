@@ -4,6 +4,7 @@ import {
 	CusProductStatus,
 	EntInterval,
 	FeatureType,
+	PooledBalanceResetMode,
 } from "@autumn/shared";
 import {
 	type Catalog,
@@ -19,8 +20,10 @@ import {
 	subjectStateToFullSubject,
 	type TrackResult,
 	type WorkerCustomerEntitlement,
+	type WorkerCustomerLicense,
 	type WorkerCustomerProduct,
 	type WorkerFullSubject,
+	type WorkerPooledBalance,
 } from "../../src/balanceEngine.js";
 
 export const identity = {
@@ -45,19 +48,58 @@ const entitlementIdOf = (customerEntitlementId: string) =>
 	`ent_${customerEntitlementId}`;
 export const testProductInternalId = "prod_internal_pro";
 
-export const createCustomerProduct = (): WorkerCustomerProduct => ({
-	id: "cp_1",
+export const createCustomerProduct = ({
+	id = "cp_1",
+	internalEntityId = null,
+	status = CusProductStatus.Active,
+	customerLicenseLinkId = null,
+	subscriptionIds,
+	canceledAt,
+}: {
+	id?: string;
+	internalEntityId?: string | null;
+	status?: CusProductStatus;
+	customerLicenseLinkId?: string | null;
+	subscriptionIds?: string[] | null;
+	canceledAt?: number | null;
+} = {}): WorkerCustomerProduct => ({
+	id,
 	internal_customer_id: "cus_internal_1",
 	internal_product_id: testProductInternalId,
-	internal_entity_id: null,
-	status: CusProductStatus.Active,
+	internal_entity_id: internalEntityId,
+	status,
 	options: [],
 	quantity: 1,
 	created_at: occurredAt,
 	starts_at: occurredAt,
 	access_starts_at: null,
 	ended_at: null,
-	customer_license_link_id: null,
+	customer_license_link_id: customerLicenseLinkId,
+	...(subscriptionIds !== undefined && { subscription_ids: subscriptionIds }),
+	...(canceledAt !== undefined && { canceled_at: canceledAt }),
+});
+
+/** A license pool on `parentCustomerProductId`, reachable from seats by `linkId`. */
+export const createCustomerLicense = ({
+	id = "cl_1",
+	linkId = "link_1",
+	parentCustomerProductId = "cp_1",
+}: {
+	id?: string;
+	linkId?: string;
+	parentCustomerProductId?: string;
+} = {}): WorkerCustomerLicense => ({
+	id,
+	link_id: linkId,
+	internal_customer_id: "cus_internal_1",
+	parent_customer_product_id: parentCustomerProductId,
+	license_internal_product_id: testProductInternalId,
+	plan_license_id: null,
+	granted: 10,
+	remaining: 7,
+	paid_quantity: 5,
+	created_at: occurredAt,
+	updated_at: occurredAt,
 });
 
 export const createCustomerEntitlement = ({
@@ -85,6 +127,42 @@ export const createCustomerEntitlement = ({
 	expires_at: null,
 	external_id: null,
 	created_at: occurredAt,
+});
+
+export const createPooledBalance = ({
+	id = "pool_1",
+	customerEntitlementId = "pool_ce",
+	granted = 100,
+	unlimited = false,
+	resetMode = PooledBalanceResetMode.Lazy,
+	customerLicenseLinkId = null,
+}: {
+	id?: string;
+	customerEntitlementId?: string;
+	granted?: number;
+	unlimited?: boolean;
+	resetMode?: PooledBalanceResetMode;
+	customerLicenseLinkId?: string | null;
+} = {}): WorkerPooledBalance => ({
+	id,
+	org_id: identity.orgId,
+	env: identity.env,
+	internal_customer_id: "cus_internal_1",
+	internal_feature_id: "feat_internal_messages",
+	unlimited,
+	granted,
+	interval: EntInterval.Month,
+	interval_count: 1,
+	reset_cycle_anchor: null,
+	reset_mode: resetMode,
+	stripe_subscription_id: null,
+	customer_license_link_id: customerLicenseLinkId,
+	rollover_signature: "",
+	customer_entitlement_id: customerEntitlementId,
+	last_applied_reset_at: null,
+	expires_at: null,
+	created_at: occurredAt,
+	updated_at: occurredAt,
 });
 
 export const entity = {

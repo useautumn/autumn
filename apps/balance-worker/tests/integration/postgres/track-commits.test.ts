@@ -32,10 +32,13 @@ import {
 	openFixturePostgres,
 	planEntityOfCustomer,
 	planNewCustomer,
+	planPooledEntities,
 	readWorktreeDatabaseUrl,
 	type SeededCustomer,
 	seedCustomer,
+	seedLicensePool,
 	seedPool,
+	seedSeat,
 } from "./postgresCustomerFixture.js";
 
 const brokers = (process.env.KAFKA_BROKERS ?? "").split(",").filter(Boolean);
@@ -49,7 +52,12 @@ const OWNERSHIP_POLL_INTERVAL_MS = 50;
 type Harness = {
 	admin: ReturnType<Kafka["admin"]>;
 	deployment: string;
-	topics: { metering: string; ownership: string; commands: string };
+	topics: {
+		metering: string;
+		ownership: string;
+		commands: string;
+		catalogInvalidations: string;
+	};
 	routing: OwnershipConsumer;
 	client: BalanceWorkerClient;
 	stop(): Promise<void>;
@@ -91,6 +99,8 @@ async function createHarness(): Promise<Harness> {
 		metering: deployment,
 		ownership: `${deployment}-owners`,
 		commands: `${deployment}-commands`,
+		// The worker derives this name from its deployment and refuses to start without it.
+		catalogInvalidations: `${deployment}-catalog-invalidations`,
 	};
 	const kafka = new Kafka({
 		clientId: deployment,
@@ -118,6 +128,11 @@ async function createHarness(): Promise<Harness> {
 				replicationFactor: 1,
 				configEntries: [{ name: "cleanup.policy", value: "compact" }],
 			},
+			{
+				topic: topics.catalogInvalidations,
+				numPartitions: 1,
+				replicationFactor: 1,
+			},
 		],
 	});
 	const routing = createOwnershipConsumer({
@@ -144,7 +159,12 @@ async function createHarness(): Promise<Harness> {
 		await routing.stop();
 		await producer.disconnect();
 		await admin.deleteTopics({
-			topics: [topics.metering, topics.ownership, topics.commands],
+			topics: [
+				topics.metering,
+				topics.ownership,
+				topics.commands,
+				topics.catalogInvalidations,
+			],
 		});
 		await admin.disconnect();
 	}
@@ -1032,6 +1052,193 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			}
 		}, 90_000);
 
+		test("plans of one customer sent at once run in order: an update sent right behind the create lands on it", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				// Not awaited in between: the rename reaches the worker while the create is still in flight.
+				const created = harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "queued_create" }),
+				});
+				const renamed = harness.client.applyBillingPlan({
+					request: planned.renameRequest({
+						commandId: "queued_rename",
+						name: "Grace",
+					}),
+				});
+
+				const replies = await Promise.all([created, renamed]);
+				expect(replies.map((reply) => reply.result.status)).toEqual([
+					"applied",
+					"applied",
+				]);
+				expect(replies[1]?.state.customer.name).toBe("Grace");
+				expect(await planned.readName()).toBe("Grace");
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("a pooled plan over two entities lands through the worker: pool, shares and zeroed sources, then a track draws from the pool", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "pooled_create" }),
+				});
+				const pool = await planPooledEntities({ postgres, seeded, planned });
+				try {
+					const reply = await harness.client.applyBillingPlan({
+						request: pool.request({ commandId: "pooled_attach" }),
+					});
+					expect(reply.result.status).toBe("applied");
+					expect(reply.state.pooledBalances).toEqual([
+						expect.objectContaining({ id: pool.poolId, granted: 200 }),
+					]);
+					expect(balanceOf(reply, pool.poolCustomerEntitlementId)).toBe(200);
+					// Sources live on their entities: zeroed, pointing at their share.
+					const [entityA] = pool.entities;
+					if (!entityA) throw new Error("the pool has two entities");
+					const entityRead = await harness.client.readSubjectState({
+						command: readSubjectStateCommand({
+							customer: { identity: entityA.identity },
+							requestId: "pooled_entity_read",
+						}),
+					});
+					expect(
+						entityRead.state.customerEntitlements.find(
+							({ id }) => id === entityA.sourceId,
+						),
+					).toMatchObject({
+						balance: 0,
+						pooled_contribution_id: expect.any(String),
+					});
+
+					// Postgres holds the same picture.
+					expect(await pool.readGranted()).toBe(200);
+					expect(await pool.readPoolBalance()).toBe(200);
+					expect(await pool.readSourceBalances()).toEqual([0, 0]);
+					expect(
+						(await pool.readContributions()).map(({ current }) => current),
+					).toEqual([100, 100]);
+
+					// A track through an entity draws from the pool.
+					const tracked = await trackOrExplain(
+						harness,
+						trackCommand({
+							customer: { ...seeded, identity: entityA.identity },
+							commandId: "pooled_entity_track",
+							value: 30,
+						}),
+					);
+					expect(tracked.result.status).toBe("applied");
+					expect(balanceOf(tracked, pool.poolCustomerEntitlementId)).toBe(170);
+				} finally {
+					await pool.cleanup();
+				}
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("an entity leaves the pool: its share goes and the pool shrinks; the last one leaving expires the pool", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "pooled_leave_create" }),
+				});
+				const pool = await planPooledEntities({ postgres, seeded, planned });
+				try {
+					await harness.client.applyBillingPlan({
+						request: pool.request({ commandId: "pooled_leave_attach" }),
+					});
+					const [entityA, entityB] = pool.entities;
+					if (!entityA || !entityB)
+						throw new Error("the pool has two entities");
+
+					const oneLeft = await harness.client.applyBillingPlan({
+						request: pool.removeRequest({
+							commandId: "pooled_leave_a",
+							entityId: entityA.id,
+						}),
+					});
+					expect(oneLeft.state.pooledBalances[0]).toMatchObject({
+						granted: 100,
+						expires_at: null,
+					});
+					expect(balanceOf(oneLeft, pool.poolCustomerEntitlementId)).toBe(100);
+					expect(await pool.readGranted()).toBe(100);
+					expect(
+						(await pool.readContributions()).map(({ source }) => source),
+					).toEqual([entityB.sourceId]);
+					expect(await pool.readExpiresAt()).toEqual({
+						pool: null,
+						poolCustomerEntitlement: null,
+					});
+
+					const lastLeft = await harness.client.applyBillingPlan({
+						request: pool.removeRequest({
+							commandId: "pooled_leave_b",
+							entityId: entityB.id,
+						}),
+					});
+					const expiredAt = lastLeft.state.pooledBalances[0]?.expires_at;
+					expect(expiredAt).toEqual(expect.any(Number));
+					expect(await pool.readContributions()).toEqual([]);
+					expect(await pool.readExpiresAt()).toEqual({
+						pool: expiredAt,
+						poolCustomerEntitlement: expiredAt,
+					});
+				} finally {
+					await pool.cleanup();
+				}
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("a pooled plan whose source's entity is not named is refused before anything is logged", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "pooled_unnamed_create" }),
+				});
+				const pool = await planPooledEntities({ postgres, seeded, planned });
+				try {
+					const [entityA] = pool.entities;
+					if (!entityA) throw new Error("the pool has two entities");
+					await expect(
+						harness.client.applyBillingPlan({
+							request: pool.request({
+								commandId: "pooled_unnamed",
+								entityIds: [entityA.id],
+							}),
+						}),
+					).rejects.toBeDefined();
+					expect(await pool.readGranted()).toBeNull();
+					expect(await pool.readContributions()).toEqual([]);
+				} finally {
+					await pool.cleanup();
+				}
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
 		test("one plan over the customer and an entity lands both, and each subject's memory holds only its own rows", async () => {
 			const worker = workers.at(-1) ?? (await startWorker({ harness }));
 			if (!workers.includes(worker)) workers.push(worker);
@@ -1313,6 +1520,118 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			}
 		}, 60_000);
 
+		test("two plans creating the same entity at once: one applies, the other finds it and writes nothing", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "entity_race_create" }),
+				});
+				const entityOf = (commandId: string) => ({
+					id: "seat_raced",
+					internal_id: `ent_int_${commandId}`,
+					internal_customer_id: planned.internalCustomerId,
+					org_id: seeded.orgId,
+					env: seeded.env,
+					created_at: Date.now(),
+					name: commandId,
+					deleted: false,
+					feature_id: seeded.featureId,
+					internal_feature_id: seeded.internalFeatureId,
+				});
+				const replies = await Promise.all(
+					["entity_race_a", "entity_race_b"].map((commandId) =>
+						harness.client.applyBillingPlan({
+							request: planned.opsRequest({
+								commandId,
+								entityIds: ["seat_raced"],
+								ops: [
+									{ op: "insert", table: "entity", row: entityOf(commandId) },
+								],
+							}),
+						}),
+					),
+				);
+				expect(replies.map((reply) => reply.result.status).sort()).toEqual([
+					"applied",
+					"entity_exists",
+				]);
+				const winner = replies.find(
+					(reply) => reply.result.status === "applied",
+				);
+				const loser = replies.find(
+					(reply) => reply.result.status === "entity_exists",
+				);
+				if (loser?.result.status !== "entity_exists" || !winner)
+					throw new Error("one reply of each is expected");
+				expect(loser.result.entity.id).toBe("seat_raced");
+				expect(await planned.readEntity("seat_raced")).toMatchObject({
+					name: loser.result.entity.internal_id.replace("ent_int_", ""),
+				});
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("a plan creating an entity Postgres already holds finds it, even when the worker had not read it", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "entity_held_create" }),
+				});
+				const entity = await planEntityOfCustomer({
+					postgres,
+					seeded,
+					planned,
+				});
+				try {
+					const entityId = entity.identity.entityId ?? "";
+					const reply = await harness.client.applyBillingPlan({
+						request: planned.opsRequest({
+							commandId: "entity_held_apply",
+							entityIds: [entityId],
+							ops: [
+								{
+									op: "insert",
+									table: "entity",
+									row: {
+										id: entityId,
+										internal_id: `ent_int_again_${planned.internalCustomerId}`,
+										internal_customer_id: planned.internalCustomerId,
+										org_id: seeded.orgId,
+										env: seeded.env,
+										created_at: Date.now(),
+										name: "Again",
+										deleted: false,
+										feature_id: seeded.featureId,
+										internal_feature_id: seeded.internalFeatureId,
+									},
+								},
+							],
+						}),
+					});
+					expect(reply.result).toMatchObject({
+						status: "entity_exists",
+						entity: { id: entityId },
+					});
+					expect(await planned.readEntity(entityId)).toMatchObject({
+						name: "Seat",
+					});
+				} finally {
+					await entity.cleanup();
+				}
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
 		test("a currency lock sets the currency once; a second lock leaves it", async () => {
 			const worker = workers.at(-1) ?? (await startWorker({ harness }));
 			if (!workers.includes(worker)) workers.push(worker);
@@ -1429,6 +1748,97 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				await seeded.cleanup();
 			}
 		}, 120_000);
+
+		/** Reads a fresh customer holding one license pool, through the worker. */
+		const readLicensePool = async ({ customized }: { customized: boolean }) => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const pool = await seedLicensePool({ postgres, seeded, customized });
+			const cleanup = async () => {
+				await pool.cleanup();
+				await seeded.cleanup();
+			};
+			try {
+				const read = await harness.client.readSubjectState({
+					command: readSubjectStateCommand({
+						customer: seeded,
+						requestId: `license_pool_read_${pool.id}`,
+					}),
+				});
+				return { seeded, pool, read, cleanup };
+			} catch (error) {
+				await cleanup();
+				throw error;
+			}
+		};
+
+		test("a read serves the customer's license pools with their seat counters, as Postgres holds them", async () => {
+			const { seeded, pool, read, cleanup } = await readLicensePool({
+				customized: false,
+			});
+			try {
+				expect(read.state.customerLicenses).toEqual([
+					expect.objectContaining({
+						id: pool.id,
+						link_id: pool.linkId,
+						parent_customer_product_id: seeded.customerProductId,
+						plan_license_id: pool.planLicenseId,
+						granted: 10,
+						remaining: 7,
+						paid_quantity: 5,
+					}),
+				]);
+			} finally {
+				await cleanup();
+			}
+		}, 60_000);
+
+		test("a read serves each pool's plan license from the catalog, made of the license product's base items", async () => {
+			const { seeded, pool, read, cleanup } = await readLicensePool({
+				customized: false,
+			});
+			try {
+				expect(read.catalog.planLicenses[pool.planLicenseId]).toMatchObject({
+					license_internal_product_id: seeded.internalProductId,
+					customized: false,
+					included: 5,
+					price_ids: [],
+					entitlement_ids: [seeded.entitlementId],
+					internal_feature_ids: [seeded.internalFeatureId],
+				});
+				expect(Object.keys(read.catalog.products)).toEqual([
+					seeded.internalProductId,
+				]);
+				expect(
+					read.catalog.entitlements[pool.customEntitlementId],
+				).toBeUndefined();
+			} finally {
+				await cleanup();
+			}
+		}, 60_000);
+
+		test("a customized plan license is made of its overlay's items, loaded in the same read", async () => {
+			const { seeded, pool, read, cleanup } = await readLicensePool({
+				customized: true,
+			});
+			try {
+				expect(read.catalog.planLicenses[pool.planLicenseId]).toMatchObject({
+					customized: true,
+					price_ids: [],
+					entitlement_ids: [pool.customEntitlementId],
+					internal_feature_ids: [seeded.internalFeatureId],
+				});
+				expect(
+					read.catalog.entitlements[pool.customEntitlementId],
+				).toMatchObject({
+					is_custom: true,
+					internal_product_id: seeded.internalProductId,
+				});
+			} finally {
+				await cleanup();
+			}
+		}, 60_000);
 
 		test("a reset on an edge date reads the subscription's anchor from Postgres and lands on the anchor's cycle end", async () => {
 			const worker = workers.at(-1) ?? (await startWorker({ harness }));
@@ -1620,6 +2030,101 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				]);
 			} finally {
 				await pool.cleanup();
+				await owner.cleanup();
+			}
+		}, 60_000);
+
+		test("a due license pool refills from its grant as it stands: nothing is re-summed, the shares still promote", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const DAY_MS = 24 * 60 * 60 * 1000;
+			const cycleEndedAt = Date.now() - DAY_MS;
+			const owner = await seedCustomer({ postgres, balance: 100 });
+			const license = await seedLicensePool({ postgres, seeded: owner });
+			// Bought seats × the grant is 150; a share's next value must not move it.
+			const pool = await seedPool({
+				postgres,
+				customer: owner,
+				granted: 150,
+				balance: 20,
+				nextResetAt: cycleEndedAt,
+				contributions: [{ current: 100, next: 40, effectiveAt: cycleEndedAt }],
+				customerLicenseLinkId: license.linkId,
+			});
+			try {
+				const reply = await trackOrExplain(
+					harness,
+					trackCommand({
+						customer: owner,
+						commandId: "license_pool_track",
+						value: 5,
+					}),
+				);
+				expect(reply.result.status).toBe("applied");
+				expect(balanceOf(reply, pool.poolCustomerEntitlementId)).toBe(145);
+
+				let landed = false;
+				for (let attempt = 0; attempt < 200 && !landed; attempt++) {
+					landed = (await pool.readBalance()) === 145;
+					if (!landed) await Bun.sleep(50);
+				}
+				expect(await pool.readBalance()).toBe(145);
+				expect(await pool.readGranted()).toBe(150);
+				expect(await pool.readNextResetAt()).toBeGreaterThan(Date.now());
+				expect(
+					(await pool.readContributions()).map(({ current, effective_at }) => [
+						current,
+						effective_at,
+					]),
+				).toEqual([[40, null]]);
+			} finally {
+				await pool.cleanup();
+				await license.cleanup();
+				await owner.cleanup();
+			}
+		}, 60_000);
+
+		test("a seat entity tracks from its seat grant through the worker while its own status column is stale", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const owner = await seedCustomer({ postgres, balance: 100 });
+			const license = await seedLicensePool({ postgres, seeded: owner });
+			const seat = await seedSeat({
+				postgres,
+				seeded: owner,
+				linkId: license.linkId,
+				seatStatus: "expired",
+				balance: 500,
+			});
+			try {
+				// Only the seat funds the entity: the customer's own grant is gone.
+				await owner.deleteGrant();
+				const reply = await trackOrExplain(
+					harness,
+					trackCommand({
+						customer: {
+							...owner,
+							identity: { ...owner.identity, entityId: seat.entityId },
+						},
+						commandId: "seat_track",
+						value: 5,
+					}),
+				);
+				expect(reply.result.status).toBe("applied");
+				expect(balanceOf(reply, seat.customerEntitlementId)).toBe(495);
+				let landed = 500;
+				for (let attempt = 0; attempt < 200 && landed !== 495; attempt++) {
+					const rows = await postgres.db.execute(
+						sql`SELECT balance FROM customer_entitlements WHERE id = ${seat.customerEntitlementId}`,
+					);
+					landed = Number(rows[0]?.balance);
+					if (landed !== 495) await Bun.sleep(50);
+				}
+				expect(landed).toBe(495);
+			} finally {
+				await seat.cleanup();
+				await license.cleanup();
+				await owner.restoreGrant({ balance: 100 });
 				await owner.cleanup();
 			}
 		}, 60_000);

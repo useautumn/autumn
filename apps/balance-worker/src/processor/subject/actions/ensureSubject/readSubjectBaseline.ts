@@ -31,6 +31,7 @@ export const readSubjectBaseline = async ({
 		usageWindows: envelope.usage_windows,
 		openLocks: envelope.open_locks,
 		pooledBalances: envelope.pooled_balances,
+		customerLicenses: envelope.customer_licenses,
 		entity: envelope.entity,
 	});
 };

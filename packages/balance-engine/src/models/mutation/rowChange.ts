@@ -29,6 +29,10 @@ import {
 	workerPooledBalanceSchema,
 } from "../subject/rows/workerPooledBalance.js";
 import {
+	type WorkerPooledContribution,
+	workerPooledContributionSchema,
+} from "../subject/rows/workerPooledContribution.js";
+import {
 	type WorkerRollover,
 	workerRolloverSchema,
 } from "../subject/rows/workerRollover.js";
@@ -38,6 +42,7 @@ import {
 } from "../subject/rows/workerUsageWindow.js";
 import {
 	customerEntitlementIncrementParts,
+	pooledBalanceIncrementParts,
 	type RowIncrement,
 	rolloverIncrementParts,
 	rowIncrementSchema,
@@ -127,6 +132,12 @@ export type RolloverIncrement = RowIncrement<
 	z.infer<typeof rolloverIncrementParts.add>,
 	z.infer<typeof rolloverIncrementParts.entries>
 >;
+export type PooledBalanceIncrement = RowIncrement<
+	"pooledBalances",
+	WorkerPooledBalance,
+	z.infer<typeof pooledBalanceIncrementParts.add>,
+	z.infer<typeof pooledBalanceIncrementParts.entries>
+>;
 export type UsageWindowIncrement = RowIncrement<
 	"usageWindows",
 	WorkerUsageWindow,
@@ -179,6 +190,35 @@ const writeOnceRowChangeSchema = <
 /** Nothing edits a lock row, which is what lets finalize trust the copy it is handed. */
 export type LockRowChange = WriteOnceRowChange<"locks", WorkerLock>;
 
+/** A reset moved a pool's due shares to their next value: one set-based statement for the committer, however many rows. */
+export type PooledContributionPromote = {
+	table: "pooledContributions";
+	op: "promote";
+	pooledBalanceId: string;
+	dueBy: number;
+};
+
+/** A pool's share from one source: carried by the record for the committer, never a state row. */
+export type PooledContributionRowChange =
+	| TableRowChange<"pooledContributions", WorkerPooledContribution>
+	| PooledContributionPromote;
+
+const pooledContributionRowChangeSchema = () =>
+	z.discriminatedUnion("op", [
+		...tableRowChangeOptions({
+			table: "pooledContributions",
+			rowSchema: workerPooledContributionSchema,
+		}),
+		z
+			.object({
+				table: z.literal("pooledContributions"),
+				op: z.literal("promote"),
+				pooledBalanceId: nonEmptyStringSchema,
+				dueBy: z.number(),
+			})
+			.strict(),
+	]);
+
 /** The customer row: inserted by the command that creates the subject, updated by a billing plan. Its id is `internal_id`. */
 export type CustomerRowChange = Exclude<
 	TableRowChange<"customer", WorkerCustomer>,
@@ -206,6 +246,8 @@ export type RowChange =
 	| TableRowChange<"usageWindows", WorkerUsageWindow>
 	| UsageWindowIncrement
 	| TableRowChange<"pooledBalances", WorkerPooledBalance>
+	| PooledBalanceIncrement
+	| PooledContributionRowChange
 	| LockRowChange;
 
 export const rowChangeSchema = z.discriminatedUnion("table", [
@@ -234,10 +276,12 @@ export const rowChangeSchema = z.discriminatedUnion("table", [
 		rowSchema: workerUsageWindowSchema,
 		parts: usageWindowIncrementParts,
 	}),
-	tableRowChangeSchema({
+	balanceRowChangeSchema({
 		table: "pooledBalances",
 		rowSchema: workerPooledBalanceSchema,
+		parts: pooledBalanceIncrementParts,
 	}),
+	pooledContributionRowChangeSchema(),
 	writeOnceRowChangeSchema({ table: "locks", rowSchema: workerLockSchema }),
 ]);
 

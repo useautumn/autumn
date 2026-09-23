@@ -47,6 +47,7 @@ const commandOf = ({
 	occurredAt: 1_700_000_000_000,
 	entityIds: [],
 	ops,
+	expiringPooledBalanceIds: [],
 });
 
 const createPlan = commandOf({

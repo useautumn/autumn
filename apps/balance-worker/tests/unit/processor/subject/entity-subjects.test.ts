@@ -12,7 +12,7 @@ import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import type { MeteringRecord } from "@autumn/kafka";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
-import { createCustomerCreates } from "../../../../src/processor/commands/applyBillingPlan/createCustomer/customerCreates.js";
+import { createCustomerPlans } from "../../../../src/processor/commands/applyBillingPlan/customerPlans/customerPlans.js";
 import { track } from "../../../../src/processor/commands/track.js";
 import { createAcceptedCommands } from "../../../../src/processor/common/acceptedCommands.js";
 import { createSubjectHydrator } from "../../../../src/processor/subject/createSubjectHydrator.js";
@@ -88,6 +88,7 @@ const entityEnvelope: SubjectRowsEnvelope = {
 	rollovers: [],
 	usage_windows: [],
 	pooled_balances: [],
+	customer_licenses: [],
 	open_locks: [],
 	entity: {
 		...entity,
@@ -151,7 +152,8 @@ const createFixture = () => {
 		getCatalogRows: createSyntheticWorkerDb().getCatalogRows,
 		getBillingCycleAnchors: async () => ({}),
 		claimCustomerByEmail: async () => null,
-		promoteDuePooledContributions: async () => null,
+		listPooledBalancesWithoutOtherContributions: async () => [],
+		sumPooledContributionGrants: async () => ({}),
 	};
 	const appender = new ControlledAppender();
 	const limits = {
@@ -188,7 +190,7 @@ const createFixture = () => {
 			}),
 		},
 		accepted: createAcceptedCommands(),
-		customerCreates: createCustomerCreates(),
+		customerPlans: createCustomerPlans(),
 	};
 	return {
 		store,

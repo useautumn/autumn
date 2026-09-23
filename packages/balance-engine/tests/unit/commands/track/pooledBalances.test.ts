@@ -13,6 +13,7 @@ import {
 	createCatalogRowsFor,
 	createCheckCommand,
 	createCustomerEntitlement,
+	createPooledBalance,
 	createTrackCommand,
 	entity,
 	identity,
@@ -50,13 +51,12 @@ const pooledState = ({
 		identity: { ...identity, entityId: withEntity ? entity.id : null },
 		customerEntitlements: [poolRow({ balance })],
 		pooledBalances: [
-			{
+			createPooledBalance({
 				id: POOL_ID,
-				customer_entitlement_id: POOL_ROW_ID,
+				customerEntitlementId: POOL_ROW_ID,
 				granted,
-				unlimited: false,
-				reset_mode: PooledBalanceResetMode.Subscription,
-			},
+				resetMode: PooledBalanceResetMode.Subscription,
+			}),
 		],
 		entity: withEntity ? entity : null,
 	});

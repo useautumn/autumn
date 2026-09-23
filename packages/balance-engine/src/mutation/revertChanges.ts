@@ -144,6 +144,8 @@ export const revertChanges = ({
 					}),
 				};
 				break;
+			case "pooledContributions":
+				break;
 			case "locks":
 				// A deleted lock's id is gone from memory, so only the insert can be walked back.
 				if (change.op === "delete")

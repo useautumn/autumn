@@ -35,6 +35,10 @@ import { PooledBalancePlanSchema } from "./pooledBalancePlan";
 export const UpdateCustomerEntitlementSchema = z.object({
 	customerEntitlement: FullCustomerEntitlementSchema,
 	balanceChange: z.number().optional(),
+	/** Per-entity balance deltas; a missing entry is seeded at 0, so it composes with tracks like `balanceChange`. */
+	entityBalanceChanges: z.record(z.string(), z.number()).optional(),
+	/** Per-entity entries re-keyed (`from → to`): a freed seat's balance parks under its replaceable id and returns on reuse. */
+	moveEntityBalances: z.record(z.string(), z.string()).optional(),
 
 	// For arrear billing:
 	updates: z
@@ -75,6 +79,19 @@ export const CustomerProductUpdateSchema = z.object({
 		billing_version: z.enum(BillingVersion).optional(),
 		is_custom: z.boolean().optional(),
 	}),
+});
+
+/** An id-less entity taking the id a create request names; written only while it is still id-less. */
+export const EntityClaimSchema = z.object({
+	entity: EntitySchema,
+	updates: EntitySchema.pick({
+		id: true,
+		name: true,
+		spend_limits: true,
+		usage_limits: true,
+		usage_alerts: true,
+		overage_allowed: true,
+	}).partial(),
 });
 
 /** Customer columns a billing plan writes: filled from `customer_data`, or the Stripe customer it links. */
@@ -131,6 +148,7 @@ export const AutumnBillingPlanSchema = z.object({
 	updateCustomer: CustomerUpdateSchema.optional(),
 	// Inserted before customer products — provisioned rows may reference them.
 	insertEntities: z.array(EntitySchema).optional(),
+	claimEntities: z.array(EntityClaimSchema).optional(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
 
 	updateCustomerProduct: CustomerProductUpdateSchema.optional(),
@@ -241,6 +259,7 @@ export const AutumnBillingPlanSchema = z.object({
 });
 
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;
+export type EntityClaim = z.infer<typeof EntityClaimSchema>;
 export type BalanceTransition = z.infer<typeof BalanceTransitionSchema>;
 export type BalanceTransitionPlan = z.infer<typeof BalanceTransitionPlanSchema>;
 export type BalanceTransitionUnsupportedReason = z.infer<

@@ -90,4 +90,23 @@ describe("subjectRowInsertSql", () => {
 			'INSERT INTO "entities" ("internal_id", "id", "usage_limits") VALUES ($1, $2, $3::text::jsonb) RETURNING "internal_id"',
 		);
 	});
+
+	test("a contribution row lands in pooled_balance_contributions, keyed by id", () => {
+		const { sql, params } = render({
+			table: "pooledContributions",
+			row: {
+				id: "pbc_1",
+				pooled_balance_id: "pool_1",
+				source_customer_product_id: "cp_1",
+				source_customer_entitlement_id: "ce_1",
+				current_contribution: 100,
+				next_cycle_contribution: 100,
+				effective_at: null,
+			},
+		});
+		expect(sql).toBe(
+			'INSERT INTO "pooled_balance_contributions" ("id", "pooled_balance_id", "source_customer_product_id", "source_customer_entitlement_id", "current_contribution", "next_cycle_contribution", "effective_at") VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING "id"',
+		);
+		expect(params).toEqual(["pbc_1", "pool_1", "cp_1", "ce_1", 100, 100, null]);
+	});
 });

@@ -1,6 +1,10 @@
 import type { CatalogRow } from "@autumn/balance-engine";
 import { LRUCache } from "lru-cache";
 import { invalidateCatalog } from "./actions/invalidateCatalog.js";
+import {
+	indexCatalogRow,
+	unindexCatalogRow,
+} from "./actions/invalidationIndex.js";
 import { loadCatalogRows } from "./actions/loadCatalogRows.js";
 import { putCatalogRows } from "./actions/putCatalogRows.js";
 import { readCatalog } from "./actions/readCatalog.js";
@@ -8,6 +12,7 @@ import type { CatalogCache } from "./types/catalogCache.js";
 import type {
 	CatalogCacheContext,
 	CatalogCacheScope,
+	KeysByInvalidationScope,
 } from "./types/catalogCacheContext.js";
 
 const validateConfig = ({ ctx }: { ctx: CatalogCacheContext }): void => {
@@ -23,6 +28,7 @@ export const createCatalogCache = ({
 	ctx: CatalogCacheContext;
 }): CatalogCache => {
 	validateConfig({ ctx });
+	const keysByScope: KeysByInvalidationScope = new Map();
 	const scope: CatalogCacheScope = {
 		ctx,
 		state: {
@@ -41,7 +47,11 @@ export const createCatalogCache = ({
 				// decision on the same key fails exactly the way this is meant to
 				// prevent. The row survives until `ensure` replaces it.
 				noDeleteOnStaleGet: true,
+				// The invalidation index follows the LRU exactly: every insert and every removal.
+				onInsert: (row, key) => indexCatalogRow({ keysByScope, key, row }),
+				dispose: (row, key) => unindexCatalogRow({ keysByScope, key, row }),
 			}),
+			keysByScope,
 			inFlight: new Map(),
 		},
 	};

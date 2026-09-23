@@ -28,9 +28,12 @@ export const getApiCustomerByRollout = async ({
 	singleflight?: boolean;
 	disableReplicaRead?: boolean;
 }) => {
-	// Entity views stay on Postgres until the worker serves them.
-	if (isBalanceWorkerRolloutEnabled() && !entityId) {
-		const fullSubject = await readBalanceWorkerSubject({ ctx, customerId });
+	if (isBalanceWorkerRolloutEnabled()) {
+		const fullSubject = await readBalanceWorkerSubject({
+			ctx,
+			customerId,
+			entityId,
+		});
 		return getApiCustomerV2({ ctx, fullSubject, withAutumnId });
 	}
 

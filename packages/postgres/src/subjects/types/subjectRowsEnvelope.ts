@@ -1,6 +1,7 @@
 import {
 	CusProductSchema,
 	CustomerEntitlementSchema,
+	CustomerLicenseRowSchema,
 	CustomerPriceSchema,
 	CustomerSchema,
 	EntitySchema,
@@ -19,8 +20,10 @@ export const subjectRowsEnvelopeSchema = z.object({
 	customer_entitlements: z.array(CustomerEntitlementSchema),
 	rollovers: z.array(RolloverSchema),
 	usage_windows: z.array(UsageWindowSchema),
-	/** The pools behind the pooled rows above; the worker keeps only the grant off each. */
+	/** The pools behind the pooled rows above. */
 	pooled_balances: z.array(PooledBalanceSchema),
+	/** License pools on the customer's products: seat counters the worker serves on `customers.get`. */
+	customer_licenses: z.array(CustomerLicenseRowSchema),
 	/** Ids only: the rest of a lock row is read at finalize, never held in memory. */
 	open_locks: z.array(z.object({ id: z.string(), lock_id: z.string() })),
 	entity: EntitySchema.nullable(),

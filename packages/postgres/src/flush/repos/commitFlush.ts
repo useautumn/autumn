@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 import { RowsInvalidError } from "../../common/parseRows.js";
 import { foldSubjectRowChanges } from "../../subjects/repos/applySubjectRowUpdates/foldSubjectRowChanges.js";
 import type { SubjectRowChange } from "../../subjects/types/subjectRowChange.js";
+import { subjectRowChangeLanded } from "../../subjects/types/subjectRowChange.js";
 import type { PostgresDb } from "../../types/postgresClient.js";
 import type { FlushRequest, FlushResult } from "../types/flush.js";
 import { flushSql } from "./flushSql.js";
@@ -57,11 +58,14 @@ export const commitFlush = async ({
 		folded,
 		statementTimeoutMs,
 	});
+	const landed = folded.map((change, index) =>
+		subjectRowChangeLanded({ change, touched: outcome.applied[index] ?? 0 }),
+	);
 
 	// A change folded away (inserted then deleted in this flush) applied by definition.
 	return {
 		applied: foldedIndexOf.map(
-			(index) => index === null || (outcome.applied[index] ?? 0) === 1,
+			(index) => index === null || landed[index] === true,
 		),
 	};
 };
@@ -99,8 +103,14 @@ const runFlushTransaction = async ({
 					advanced: parsed.data.bookmarks,
 				});
 			}
-			if (parsed.data.applied.some((count) => count !== 1))
-				throw new FlushRolledBack({ outcome: parsed.data });
+			const guardMissed = folded.some(
+				(change, index) =>
+					!subjectRowChangeLanded({
+						change,
+						touched: parsed.data.applied[index] ?? 0,
+					}),
+			);
+			if (guardMissed) throw new FlushRolledBack({ outcome: parsed.data });
 			return parsed.data;
 		});
 	} catch (cause) {

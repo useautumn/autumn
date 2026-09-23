@@ -5,7 +5,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
-import { validateBalanceWorkerRequest } from "../../balanceWorker/validateBalanceWorkerRequest.js";
 import { trackParamsToTrackCommands } from "./balanceWorkerTrackRequest.js";
 
 type QueueClient = Pick<BalanceWorkerClient, "queue">;
@@ -20,7 +19,6 @@ export async function runBalanceWorkerAsyncTrack({
 	body: TrackParams;
 	client?: QueueClient;
 }): Promise<void> {
-	validateBalanceWorkerRequest({ ctx, body });
 	const commands = trackParamsToTrackCommands({ ctx, body });
 	// A failed append is a 503, which releases the claim so the client can retry.
 	await withIdempotencyKey({

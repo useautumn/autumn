@@ -31,7 +31,8 @@ export {
 	readNextOffset,
 	readPartitionProgress,
 } from "./meteringLog/repos/partitionProgress.js";
-export { promoteDuePooledContributions } from "./pooledBalances/repos/promoteDuePooledContributions.js";
+export { listPooledBalancesWithoutOtherContributions } from "./pooledBalances/repos/listPooledBalancesWithoutOtherContributions.js";
+export { sumPooledContributionGrants } from "./pooledBalances/repos/sumPooledContributionGrants.js";
 export {
 	SubjectRowColumnNotCounterError,
 	UnknownSubjectRowColumnError,

@@ -53,6 +53,9 @@ export const assertInsertsHaveNamedOwners = ({
 				return productIds.has(op.row.customer_product_id);
 			case "rollovers":
 				return entitlementIds.has(op.row.cus_ent_id);
+			case "pooledBalances":
+			case "pooledContributions":
+				return true;
 		}
 	};
 	if (!inserts.every(hasNamedOwner))

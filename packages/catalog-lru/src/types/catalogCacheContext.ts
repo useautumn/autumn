@@ -17,9 +17,13 @@ export type CatalogCacheConfig = {
 	maxSizeBytes: number;
 };
 
+/** Invalidation scope (an org, or an org in one env) to the cached keys it expires. */
+export type KeysByInvalidationScope = Map<string, Set<string>>;
+
 /** Entries keyed by catalogKeyToString; one fetch per key in flight at a time. */
 export type CatalogCacheState = {
 	entries: LRUCache<string, CatalogRow>;
+	keysByScope: KeysByInvalidationScope;
 	inFlight: Map<string, Promise<void>>;
 };
 

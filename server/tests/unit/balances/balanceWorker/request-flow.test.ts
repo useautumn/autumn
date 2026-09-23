@@ -257,7 +257,6 @@ test.concurrent(
 			{ properties: { model: "model" } },
 			{ entity_id: "entity" },
 			{ customer_data: { name: "new name" } },
-			{ entity_data: { feature_id: "seats", name: "entity name" } },
 		];
 		for (const variant of variants)
 			await expect(

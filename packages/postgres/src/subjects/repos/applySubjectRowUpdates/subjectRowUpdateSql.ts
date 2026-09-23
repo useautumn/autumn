@@ -5,6 +5,7 @@ import {
 	customerProducts,
 	customers,
 	entities,
+	pooledBalanceContributions,
 	pooledBalances,
 	rollovers,
 	usageWindows,
@@ -38,6 +39,7 @@ const tables = {
 	rollovers,
 	usageWindows,
 	pooledBalances,
+	pooledContributions: pooledBalanceContributions,
 	locks: balanceLocks,
 } as const;
 
@@ -50,6 +52,7 @@ const tableNames: Record<SubjectRowTable, string> = {
 	rollovers: "rollovers",
 	usageWindows: "usage_windows",
 	pooledBalances: "pooled_balances",
+	pooledContributions: "pooled_balance_contributions",
 	locks: "balance_locks",
 };
 
@@ -190,6 +193,7 @@ const MAP_ENTRIES: Record<
 	},
 	usageWindows: {},
 	pooledBalances: {},
+	pooledContributions: {},
 	locks: {},
 };
 
@@ -352,6 +356,24 @@ export const subjectRowDeleteSql = ({
 	`;
 };
 
+/** Every share of the pool due by `dueBy` takes its next value; re-running finds nothing due and changes nothing. */
+export const promotePooledContributionsSql = ({
+	pooledBalanceId,
+	dueBy,
+}: {
+	pooledBalanceId: string;
+	dueBy: number;
+}): SQL => sql`
+	UPDATE pooled_balance_contributions
+	SET current_contribution = next_cycle_contribution,
+		effective_at = NULL,
+		updated_at = ${dueBy}
+	WHERE pooled_balance_id = ${pooledBalanceId}
+		AND effective_at IS NOT NULL
+		AND effective_at <= ${dueBy}
+	RETURNING id
+`;
+
 /** The CTE body for one folded change. */
 export const subjectRowChangeSql = ({
 	change,
@@ -365,5 +387,7 @@ export const subjectRowChangeSql = ({
 			return subjectRowDeleteSql({ table: change.table, id: change.id });
 		case "update":
 			return subjectRowUpdateSql({ update: change });
+		case "promote":
+			return promotePooledContributionsSql(change);
 	}
 };

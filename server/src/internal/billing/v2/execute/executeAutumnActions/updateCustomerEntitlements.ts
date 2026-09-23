@@ -1,6 +1,7 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerEntitlementActions } from "@/internal/customers/cusProducts/cusEnts/actions";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 
 /** Grant field updates and balance changes; their replaceable rows are written with the Postgres-only rows. */
 export const updateCustomerEntitlements = async ({
@@ -15,7 +16,13 @@ export const updateCustomerEntitlements = async ({
 	const { logger } = ctx;
 
 	for (const updateDetail of updates ?? []) {
-		const { balanceChange = 0, customerEntitlement, updates } = updateDetail;
+		const {
+			balanceChange = 0,
+			entityBalanceChanges,
+			moveEntityBalances,
+			customerEntitlement,
+			updates,
+		} = updateDetail;
 
 		logger.debug(
 			`updating customer entitlement ${customerEntitlement.id} ${balanceChange ? `+${balanceChange}` : updates ? JSON.stringify(updates) : "none"}`,
@@ -43,6 +50,22 @@ export const updateCustomerEntitlements = async ({
 				cusEntId: customerEntitlement.id,
 				delta: balanceChange,
 				featureId,
+			});
+		}
+
+		// 3. Per-entity moves and deltas (Postgres only; the route's refresh middleware refreshes the cache)
+		if (moveEntityBalances && Object.keys(moveEntityBalances).length > 0) {
+			await CusEntService.moveEntityBalances({
+				ctx,
+				id: customerEntitlement.id,
+				moves: moveEntityBalances,
+			});
+		}
+		if (entityBalanceChanges && Object.keys(entityBalanceChanges).length > 0) {
+			await CusEntService.incrementEntityBalances({
+				ctx,
+				id: customerEntitlement.id,
+				changes: entityBalanceChanges,
 			});
 		}
 	}

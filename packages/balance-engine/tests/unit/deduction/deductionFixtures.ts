@@ -112,7 +112,8 @@ const rowBeforeOf = ({
 export const balancesAfter = (outcome: DeductionOutcome) =>
 	outcome.changes.map((change) => {
 		if (change.op === "update") return [change.id, change.after];
-		if (change.op !== "increment") return change;
+		if (change.op !== "increment" || change.table === "pooledBalances")
+			return change;
 		const after = incrementRow({
 			row: rowBeforeOf({ outcome, table: change.table, id: change.id }),
 			change,

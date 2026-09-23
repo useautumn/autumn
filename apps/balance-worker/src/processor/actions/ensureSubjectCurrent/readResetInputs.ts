@@ -1,6 +1,6 @@
 import {
 	fullSubjectToPlansNeedingBillingCycleAnchor,
-	fullSubjectToPoolsNeedingPromotion,
+	fullSubjectToPoolsSummingContributions,
 	type ResetCommand,
 	type WorkerFullSubject,
 } from "@autumn/balance-engine";
@@ -31,31 +31,21 @@ const readBillingCycleAnchors = async ({
 	});
 };
 
-/** Promotes each due pool's contributions and keeps the grants that came back; a pool with no contributions has none. */
-const promotePools = async ({
+/** Each due pool's grant once its shares are promoted; the shares themselves move when the record lands. */
+const readPooledGranted = async ({
 	scope,
 	command,
 	fullSubject,
 }: ReadScope & { fullSubject: WorkerFullSubject }) => {
-	const pooledBalanceIds = fullSubjectToPoolsNeedingPromotion({
+	const pooledBalanceIds = fullSubjectToPoolsSummingContributions({
 		fullSubject,
 		asOf: command.occurredAt,
 	});
 	if (pooledBalanceIds.length === 0) return undefined;
-	const promoted = await Promise.all(
-		pooledBalanceIds.map(async (pooledBalanceId) => ({
-			pooledBalanceId,
-			granted: await scope.ctx.db.promoteDuePooledContributions({
-				pooledBalanceId,
-				now: command.occurredAt,
-			}),
-		})),
-	);
-	return Object.fromEntries(
-		promoted.flatMap(({ pooledBalanceId, granted }) =>
-			granted === null ? [] : [[pooledBalanceId, granted]],
-		),
-	);
+	return scope.ctx.db.sumPooledContributionGrants({
+		pooledBalanceIds,
+		dueBy: command.occurredAt,
+	});
 };
 
 /** Runs before the critical section; the common case is nothing due and no query. */
@@ -73,7 +63,7 @@ export const readResetInputs = async ({
 
 	const [billingCycleAnchors, pooledGranted] = await Promise.all([
 		readBillingCycleAnchors({ scope, command, fullSubject }),
-		promotePools({ scope, command, fullSubject }),
+		readPooledGranted({ scope, command, fullSubject }),
 	]);
 	return {
 		...(billingCycleAnchors && { billingCycleAnchors }),

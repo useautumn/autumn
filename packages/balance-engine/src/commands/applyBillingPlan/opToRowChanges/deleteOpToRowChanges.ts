@@ -8,7 +8,11 @@ import {
 	wasDeletedByPlan,
 } from "./planRowChangeContext.js";
 
-type DeletedRow = { table: BillingPlanDeleteOp["table"]; id: string };
+type StateDeleteOp = Exclude<
+	BillingPlanDeleteOp,
+	{ table: "pooledContributions" }
+>;
+type DeletedRow = { table: StateDeleteOp["table"]; id: string };
 
 const rolloversOf = ({
 	state,
@@ -52,7 +56,7 @@ export const deleteOpToRowChanges = ({
 	op,
 	context,
 }: {
-	op: BillingPlanDeleteOp;
+	op: StateDeleteOp;
 	context: PlanRowChangeContext;
 }): RowChange[] => {
 	const { state } = context;

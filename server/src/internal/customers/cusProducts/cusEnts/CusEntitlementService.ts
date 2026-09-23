@@ -730,6 +730,80 @@ export class CusEntService {
 		return data;
 	}
 
+	/** `entities[id].balance += delta` per key, seeding a missing entry at 0; other fields of the entry are kept. */
+	static async incrementEntityBalances({
+		ctx,
+		id,
+		changes,
+	}: {
+		ctx: RepoContext;
+		id: string;
+		changes: Record<string, number>;
+	}) {
+		const { db } = ctx;
+		const current = sql`coalesce(${customerEntitlements.entities}, '{}'::jsonb)`;
+		const deltas = sql.join(
+			Object.entries(changes).map(
+				([entityId, delta]) => sql`(${entityId}::text, ${delta}::numeric)`,
+			),
+			sql`, `,
+		);
+		const entry = sql`coalesce(${current} -> v.id, '{}'::jsonb)`;
+		const changed = sql`(
+			SELECT jsonb_object_agg(v.id, ${entry} || jsonb_build_object(
+				'id', v.id,
+				'balance', coalesce((${entry} ->> 'balance')::numeric, 0) + v.delta,
+				'adjustment', coalesce((${entry} ->> 'adjustment')::numeric, 0)
+			))
+			FROM (VALUES ${deltas}) AS v(id, delta)
+		)`;
+		return await db
+			.update(customerEntitlements)
+			.set({
+				entities: sql`${current} || ${changed}`,
+				cache_version: sql`${customerEntitlements.cache_version} + 1`,
+			})
+			.where(eq(customerEntitlements.id, id))
+			.returning();
+	}
+
+	/** Re-keys `entities[from]` as `entities[to]` (its `id` updated); a missing `from` moves nothing. */
+	static async moveEntityBalances({
+		ctx,
+		id,
+		moves,
+	}: {
+		ctx: RepoContext;
+		id: string;
+		moves: Record<string, string>;
+	}) {
+		const { db } = ctx;
+		const current = sql`coalesce(${customerEntitlements.entities}, '{}'::jsonb)`;
+		const pairs = sql.join(
+			Object.entries(moves).map(
+				([from, to]) => sql`(${from}::text, ${to}::text)`,
+			),
+			sql`, `,
+		);
+		const moved = sql`(
+			SELECT coalesce(jsonb_object_agg(v.to_key, (${current} -> v.from_key) || jsonb_build_object('id', v.to_key)), '{}'::jsonb)
+			FROM (VALUES ${pairs}) AS v(from_key, to_key)
+			WHERE ${current} ? v.from_key
+		)`;
+		const fromKeys = sql.join(
+			Object.keys(moves).map((from) => sql`${from}::text`),
+			sql`, `,
+		);
+		return await db
+			.update(customerEntitlements)
+			.set({
+				entities: sql`(${current} - array[${fromKeys}]) || ${moved}`,
+				cache_version: sql`${customerEntitlements.cache_version} + 1`,
+			})
+			.where(eq(customerEntitlements.id, id))
+			.returning();
+	}
+
 	static async decrement({
 		ctx,
 		id,

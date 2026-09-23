@@ -25,9 +25,14 @@ export type WorkerDb = {
 		identity: MeteringIdentity;
 		email: string;
 	}): Promise<string | null>;
-	/** Promotes a pool's due contributions and returns its grant now; null when the pool has no contributions. */
-	promoteDuePooledContributions(params: {
-		pooledBalanceId: string;
-		now: number;
-	}): Promise<number | null>;
+	/** Each pool's grant once its shares due by `dueBy` take their next value, by pool id; pools with no shares are absent. */
+	sumPooledContributionGrants(params: {
+		pooledBalanceIds: string[];
+		dueBy: number;
+	}): Promise<Record<string, number>>;
+	/** The pools among `pooledBalanceIds` left with no share once `removedContributionIds` go; license pools never. */
+	listPooledBalancesWithoutOtherContributions(params: {
+		pooledBalanceIds: string[];
+		removedContributionIds: string[];
+	}): Promise<string[]>;
 };

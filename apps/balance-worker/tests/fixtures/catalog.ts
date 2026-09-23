@@ -42,6 +42,7 @@ const syntheticCatalogRows = ({
 		event_names: [],
 	})),
 	prices: [],
+	plan_licenses: [],
 	products: ids.productInternalIds.map((internalId) => ({
 		id: "pro",
 		name: "Pro",
@@ -75,7 +76,8 @@ export const createSyntheticWorkerDb = ({
 	getCatalogRows: async (params) => syntheticCatalogRows(params),
 	getBillingCycleAnchors: async () => ({}),
 	claimCustomerByEmail: async () => null,
-	promoteDuePooledContributions: async () => null,
+	listPooledBalancesWithoutOtherContributions: async () => [],
+	sumPooledContributionGrants: async () => ({}),
 });
 
 /** A Postgres stand-in that knows nothing: every miss stays a miss. */
@@ -83,12 +85,14 @@ export const createEmptyWorkerDb = (): WorkerDb => ({
 	getSubjectRows: async () => null,
 	getBillingCycleAnchors: async () => ({}),
 	claimCustomerByEmail: async () => null,
-	promoteDuePooledContributions: async () => null,
+	listPooledBalancesWithoutOtherContributions: async () => [],
+	sumPooledContributionGrants: async () => ({}),
 	getCatalogRows: async () => ({
 		entitlements: [],
 		products: [],
 		features: [],
 		prices: [],
+		plan_licenses: [],
 	}),
 });
 

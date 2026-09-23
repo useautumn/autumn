@@ -7,15 +7,15 @@ import { parseCatalog } from "../../parsers.js";
 export const catalogKeyToString = ({ key }: { key: CatalogKey }): string =>
 	`${key.table}:${key.id}`;
 
-/** Entitlements and prices are addressed by id, products and features by internal_id. */
+/** Entitlements, prices and plan licenses are addressed by id, products and features by internal_id. */
 export const catalogRowToCatalogKey = ({
 	row,
 }: {
 	row: CatalogRow;
 }): CatalogKey =>
-	row.table === "entitlements" || row.table === "prices"
-		? { table: row.table, id: row.row.id }
-		: { table: row.table, id: row.row.internal_id };
+	row.table === "products" || row.table === "features"
+		? { table: row.table, id: row.row.internal_id }
+		: { table: row.table, id: row.row.id };
 
 const compareCatalogKeys = (left: CatalogKey, right: CatalogKey): number =>
 	left.table.localeCompare(right.table) || left.id.localeCompare(right.id);
@@ -45,6 +45,44 @@ export const subjectStateToCatalogKeys = ({
 	return [...keysByString.values()].sort(compareCatalogKeys);
 };
 
+/** The definitions of the state's license pools. Only a read renders them, so a link removed since hydration renders as none rather than failing. */
+export const subjectStateToPlanLicenseCatalogKeys = ({
+	state,
+}: {
+	state: SubjectState;
+}): CatalogKey[] =>
+	[
+		...new Set(
+			state.customerLicenses.flatMap(({ plan_license_id }) =>
+				plan_license_id ? [plan_license_id] : [],
+			),
+		),
+	]
+		.sort()
+		.map((id) => ({ table: "planLicenses", id }));
+
+/** The rows the catalog's plan licenses are made of: each license's product and its effective items. */
+export const planLicensesToItemCatalogKeys = ({
+	catalog,
+}: {
+	catalog: Catalog;
+}): CatalogKey[] => {
+	const keysByString = new Map<string, CatalogKey>();
+	const add = (key: CatalogKey) =>
+		keysByString.set(catalogKeyToString({ key }), key);
+
+	for (const planLicense of Object.values(catalog.planLicenses)) {
+		add({ table: "products", id: planLicense.license_internal_product_id });
+		for (const id of planLicense.price_ids) add({ table: "prices", id });
+		for (const id of planLicense.entitlement_ids)
+			add({ table: "entitlements", id });
+		for (const id of planLicense.internal_feature_ids)
+			add({ table: "features", id });
+	}
+
+	return [...keysByString.values()].sort(compareCatalogKeys);
+};
+
 export const catalogRowsToCatalog = ({
 	rows,
 }: {
@@ -55,6 +93,7 @@ export const catalogRowsToCatalog = ({
 		products: {},
 		features: {},
 		prices: {},
+		planLicenses: {},
 	};
 	for (const tagged of rows) {
 		const { id } = catalogRowToCatalogKey({ row: tagged });
@@ -70,6 +109,9 @@ export const catalogRowsToCatalog = ({
 				break;
 			case "prices":
 				catalog.prices[id] = tagged.row;
+				break;
+			case "planLicenses":
+				catalog.planLicenses[id] = tagged.row;
 				break;
 		}
 	}

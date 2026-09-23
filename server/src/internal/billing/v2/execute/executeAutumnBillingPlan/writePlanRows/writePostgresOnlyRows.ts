@@ -9,10 +9,8 @@ import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/exe
 import { insertCustomerLicensePools } from "@/internal/billing/v2/execute/executeAutumnActions/insertCustomerLicensePools";
 import { repointSchedulePhases } from "@/internal/billing/v2/execute/executeAutumnActions/repointSchedulePhases";
 import { writeCustomerEntitlementReplaceables } from "@/internal/billing/v2/execute/executeAutumnActions/writeCustomerEntitlementReplaceables";
-import { executePooledBalancePlan } from "@/internal/billing/v2/pooledBalances/execute/executePooledBalancePlan";
-import { pooledBalancePlanHasChanges } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan";
 
-/** The rows the balance worker does not hold yet: license pools and counters, pooled balances, schedule phases, replaceables. */
+/** The rows the balance worker does not hold yet: license pools and counters, schedule phases, replaceables. */
 export const writePostgresOnlyRows = async ({
 	ctx,
 	autumnBillingPlan,
@@ -28,11 +26,6 @@ export const writePostgresOnlyRows = async ({
 	await insertCustomerLicensePools({
 		ctx,
 		customerProducts: autumnBillingPlan.insertCustomerProducts,
-	});
-
-	await executePooledBalancePlan({
-		ctx,
-		pooledBalancePlan: autumnBillingPlan.pooledBalancePlan,
 	});
 
 	const pendingBatchTransitions = await executeCustomerLicenseTransitions({
@@ -58,9 +51,6 @@ export const planHasPostgresOnlyRows = ({
 	autumnBillingPlan.insertCustomerProducts.some(
 		({ customer_licenses }) => (customer_licenses?.length ?? 0) > 0,
 	) ||
-	pooledBalancePlanHasChanges({
-		pooledBalancePlan: autumnBillingPlan.pooledBalancePlan,
-	}) ||
 	(autumnBillingPlan.customerLicenseTransitions?.length ?? 0) > 0 ||
 	(autumnBillingPlan.schedulePhaseCustomerProductReplacements?.length ?? 0) >
 		0 ||

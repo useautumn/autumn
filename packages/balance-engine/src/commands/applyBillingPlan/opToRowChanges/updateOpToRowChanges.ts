@@ -2,6 +2,7 @@ import { StaleMutationError } from "../../../errors.js";
 import type { RowChange } from "../../../models/mutation/rowChange.js";
 import type { BillingPlanUpdateOp } from "../types/billingPlanOp.js";
 import {
+	findPlanRow,
 	type PlanRowChangeContext,
 	wasDeletedByPlan,
 } from "./planRowChangeContext.js";
@@ -51,7 +52,7 @@ export const updateOpToRowChanges = ({
 	op,
 	context,
 }: {
-	op: BillingPlanUpdateOp;
+	op: Exclude<BillingPlanUpdateOp, { table: "pooledContributions" }>;
 	context: PlanRowChangeContext;
 }): RowChange[] => {
 	if (op.table === "customer") return customerUpdate({ op, context });
@@ -70,9 +71,24 @@ export const updateOpToRowChanges = ({
 			},
 		];
 	}
-	const row = context.state?.customerEntitlements.find(
-		({ id }) => id === op.id,
-	);
+	if (op.table === "pooledBalances") {
+		const row = findPlanRow({ context, table: "pooledBalances", id: op.id });
+		if (!row) throw new StaleMutationError({ subject: op.id });
+		return [
+			{
+				table: op.table,
+				op: "update",
+				id: op.id,
+				before: columnsBefore({ row, set: op.set }),
+				after: op.set,
+			},
+		];
+	}
+	const row = findPlanRow({
+		context,
+		table: "customerEntitlements",
+		id: op.id,
+	});
 	if (!row) throw new StaleMutationError({ subject: op.id });
 	return [
 		{

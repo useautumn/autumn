@@ -64,6 +64,7 @@ const planOf = ({
 	occurredAt: 1_700_000_000_000,
 	entityIds,
 	ops,
+	expiringPooledBalanceIds: [],
 });
 
 const refusalOf = (run: () => unknown): unknown => {

@@ -10,6 +10,7 @@ import { insertCustomerProductsToPlanOps } from "./customerProducts/insertCustom
 import { patchCustomerProductsToPlanOps } from "./customerProducts/patchCustomerProductsToPlanOps.js";
 import { updateCustomerProductsToPlanOps } from "./customerProducts/updateCustomerProductsToPlanOps.js";
 import { insertEntitiesToPlanOps } from "./entities/insertEntitiesToPlanOps.js";
+import { pooledBalancePlanToPlanOps } from "./pooledBalances/pooledBalancePlanToPlanOps.js";
 
 /** Every row the worker holds that the plan writes, as ops in the order the Postgres lane writes them. */
 export const autumnBillingPlanToPlanOps = ({
@@ -27,4 +28,5 @@ export const autumnBillingPlanToPlanOps = ({
 	...updateCustomerProductsToPlanOps({ autumnBillingPlan }),
 	...deleteCustomerProductsToPlanOps({ autumnBillingPlan }),
 	...updateCustomerEntitlementsToPlanOps({ autumnBillingPlan }),
+	...pooledBalancePlanToPlanOps({ autumnBillingPlan }),
 ];

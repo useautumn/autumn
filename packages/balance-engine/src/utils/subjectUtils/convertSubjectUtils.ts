@@ -14,6 +14,7 @@ import type {
 	WorkerFullSubject,
 } from "../../models/subject/workerFullSubject.js";
 import { parseWorkerCustomerEntitlement } from "../../parsers.js";
+import { inheritParentCustomerProductLifecycle } from "./inheritParentCustomerProductLifecycle.js";
 
 /** The pool a pooled row draws from, present only when the row names one the state holds. */
 const poolOf = ({
@@ -89,7 +90,14 @@ export const subjectStateToFullSubject = ({
 }): WorkerFullSubject => {
 	const join = (row: WorkerCustomerEntitlement) =>
 		joinCustomerEntitlement({ row, state, catalog });
-	const customer_products = state.customerProducts.map((customerProduct) => {
+	const liveProducts = state.customerProducts.flatMap((row) => {
+		const customerProduct = inheritParentCustomerProductLifecycle({
+			row,
+			state,
+		});
+		return customerProduct ? [customerProduct] : [];
+	});
+	const customer_products = liveProducts.map((customerProduct) => {
 		const product = catalog.products[customerProduct.internal_product_id];
 		if (!product)
 			throw new CatalogRowMissingError({
@@ -107,7 +115,8 @@ export const subjectStateToFullSubject = ({
 				.map(join),
 		};
 	});
-	const productIds = new Set(state.customerProducts.map((row) => row.id));
+	// A dead seat's rows stay with it: a grant whose product the state holds is never loose.
+	const heldProductIds = new Set(state.customerProducts.map((row) => row.id));
 	const isPool = (row: WorkerCustomerEntitlement) =>
 		row.is_pooled_balance === true;
 	const extra_customer_entitlements = state.customerEntitlements
@@ -115,7 +124,7 @@ export const subjectStateToFullSubject = ({
 			(row) =>
 				!isPool(row) &&
 				(row.customer_product_id === null ||
-					!productIds.has(row.customer_product_id)),
+					!heldProductIds.has(row.customer_product_id)),
 		)
 		.map(join);
 	const pooled_customer_entitlements = state.customerEntitlements

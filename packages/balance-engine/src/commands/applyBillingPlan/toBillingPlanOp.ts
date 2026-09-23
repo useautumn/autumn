@@ -3,10 +3,13 @@ import { workerCustomerEntitlementSchema } from "../../models/subject/rows/worke
 import { workerCustomerPriceSchema } from "../../models/subject/rows/workerCustomerPrice.js";
 import { workerCustomerProductSchema } from "../../models/subject/rows/workerCustomerProduct.js";
 import { workerEntitySchema } from "../../models/subject/rows/workerEntity.js";
+import { workerPooledBalanceSchema } from "../../models/subject/rows/workerPooledBalance.js";
+import { workerPooledContributionSchema } from "../../models/subject/rows/workerPooledContribution.js";
 import { workerRolloverSchema } from "../../models/subject/rows/workerRollover.js";
 import { pickColumns } from "../../utils/subjectStateUtils/convertSubjectStateUtils.js";
 import {
 	type BillingPlanDeleteOp,
+	type BillingPlanIncrementOp,
 	type BillingPlanOp,
 	type BillingPlanUpdateOp,
 	billingPlanOpSchema,
@@ -19,6 +22,8 @@ const insertRowSchemas = {
 	customerPrices: workerCustomerPriceSchema,
 	customerEntitlements: workerCustomerEntitlementSchema,
 	rollovers: workerRolloverSchema,
+	pooledBalances: workerPooledBalanceSchema,
+	pooledContributions: workerPooledContributionSchema,
 } as const;
 
 export type BillingPlanInsertTable = keyof typeof insertRowSchemas;
@@ -68,24 +73,45 @@ export const toBillingPlanUpdateOp = ({
 export const toBillingPlanDeleteOp = ({
 	table,
 	id,
+	share,
 }: {
 	table: BillingPlanDeleteTable;
 	id: string;
-}): BillingPlanOp => billingPlanOpSchema.parse({ op: "delete", table, id });
+	/** A share's pool and source: the source is released when the share goes. */
+	share?: { pooledBalanceId: string; sourceCustomerEntitlementId: string };
+}): BillingPlanOp =>
+	billingPlanOpSchema.parse({ op: "delete", table, id, ...share });
 
-/** A grant's counters moved by `add`; zero deltas name nothing. */
+/** A grant's per-entity entries re-keyed; an empty map names nothing. */
+export const toBillingPlanMoveEntriesOp = ({
+	id,
+	moves,
+}: {
+	id: string;
+	moves: Record<string, string>;
+}): BillingPlanOp =>
+	billingPlanOpSchema.parse({
+		op: "moveEntries",
+		table: "customerEntitlements",
+		id,
+		moves,
+	});
+
+/** A row's counters moved by `add`; zero deltas name nothing. */
 export const toBillingPlanIncrementOp = ({
+	table = "customerEntitlements",
 	id,
 	add,
 	addEntries,
 }: {
+	table?: BillingPlanIncrementOp["table"];
 	id: string;
 	add: object;
 	addEntries?: object;
 }): BillingPlanOp =>
 	billingPlanOpSchema.parse({
 		op: "increment",
-		table: "customerEntitlements",
+		table,
 		id,
 		add: definedColumns(add),
 		...(addEntries ? { addEntries } : {}),

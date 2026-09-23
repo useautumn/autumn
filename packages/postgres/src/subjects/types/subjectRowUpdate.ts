@@ -21,4 +21,5 @@ export type SubjectRowTable =
 	| "rollovers"
 	| "usageWindows"
 	| "pooledBalances"
+	| "pooledContributions"
 	| "locks";

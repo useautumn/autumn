@@ -29,6 +29,16 @@ export const subjectRowsSql = ({
 	// A lock id is unique across the customer, so only the customer's own load carries open locks;
 	// a pool is customer-level too, and an entity command reads it off the customer's state.
 	const customerOwnedOnly = entityId === null ? sql`TRUE` : sql`FALSE`;
+	const statusList = sql`string_to_array(${statuses.join(",")}, ',')`;
+	// A seat or a license pool has no lifecycle of its own: the parent product behind its license link decides.
+	const licenseParentIsLive = ({ alias }: { alias: SQL }) => sql`EXISTS (
+					SELECT 1
+					FROM customer_licenses cl
+					JOIN customer_products parent ON parent.id = cl.parent_customer_product_id
+					WHERE cl.link_id = ${alias}.customer_license_link_id
+						AND cl.internal_customer_id = ${alias}.internal_customer_id
+						AND parent.status = ANY(${statusList})
+				)`;
 
 	return sql`
 	WITH customer_record AS (
@@ -51,13 +61,16 @@ export const subjectRowsSql = ({
 		LIMIT 1
 	),
 
+	-- A seat's own status is a copy a cron refreshes later; the parent behind its license link is the truth.
 	cus_products AS (
 		SELECT cp.*
 		FROM customer_products cp
 		WHERE cp.internal_customer_id IN (SELECT internal_id FROM customer_record)
 			AND ${ownedBySubject({ alias: sql`cp` })}
-			AND cp.customer_license_link_id IS NULL
-			AND cp.status = ANY(string_to_array(${statuses.join(",")}, ','))
+			AND (
+				(cp.customer_license_link_id IS NULL AND cp.status = ANY(${statusList}))
+				OR ${licenseParentIsLive({ alias: sql`cp` })}
+			)
 	),
 
 	cus_prices AS (
@@ -66,12 +79,12 @@ export const subjectRowsSql = ({
 		WHERE cpr.customer_product_id IN (SELECT id FROM cus_products)
 	),
 
+	-- A contributing source stays: it holds no balance, and a plan zeroes or releases it in place.
 	product_entitlements AS (
 		SELECT ce.*
 		FROM customer_entitlements ce
 		JOIN cus_products cp ON cp.id = ce.customer_product_id
 		WHERE ce.pooled_balance_id IS NULL
-			AND ce.pooled_contribution_id IS NULL
 	),
 
 	-- Same liveness rule as looseEntitlementIsLiveSql: a spendable balance, unlimited,
@@ -99,7 +112,7 @@ export const subjectRowsSql = ({
 	),
 
 	-- The pool behind pooled plan items: one customer-level row every entity draws from. Its sources
-	-- (pooled_contribution_id set) hold no balance and stay out. License pools are not served here.
+	-- (pooled_contribution_id set) hold no balance and stay out. A license pool is live while its parent is.
 	pooled_entitlements AS (
 		SELECT ce.*
 		FROM customer_entitlements ce
@@ -110,7 +123,10 @@ export const subjectRowsSql = ({
 			AND ce.internal_entity_id IS NULL
 			AND ce.pooled_balance_id IS NOT NULL
 			AND ce.pooled_contribution_id IS NULL
-			AND pb.customer_license_link_id IS NULL
+			AND (
+				pb.customer_license_link_id IS NULL
+				OR ${licenseParentIsLive({ alias: sql`pb` })}
+			)
 			AND (ce.expires_at IS NULL OR ce.expires_at > ${asOfTimestampMs})
 	),
 
@@ -140,6 +156,13 @@ export const subjectRowsSql = ({
 		FROM usage_windows uw
 		WHERE uw.internal_customer_id IN (SELECT internal_id FROM customer_record)
 			AND ${ownedBySubject({ alias: sql`uw` })}
+	),
+
+	-- License pools hang off the customer's own products; an entity's seats own none.
+	cus_licenses AS (
+		SELECT cl.*
+		FROM customer_licenses cl
+		WHERE cl.parent_customer_product_id IN (SELECT id FROM cus_products)
 	),
 
 	cus_open_locks AS (
@@ -173,6 +196,10 @@ export const subjectRowsSql = ({
 		),
 		'pooled_balances', COALESCE(
 			(SELECT json_agg(row_to_json(pb) ORDER BY pb.id) FROM cus_pooled_balances pb),
+			'[]'::json
+		),
+		'customer_licenses', COALESCE(
+			(SELECT json_agg(row_to_json(cl) ORDER BY cl.id) FROM cus_licenses cl),
 			'[]'::json
 		),
 		'open_locks', COALESCE(

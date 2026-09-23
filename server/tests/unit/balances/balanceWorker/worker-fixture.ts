@@ -33,7 +33,8 @@ export function createWorkerFixture({
 		getSubjectRows: async () => null,
 		getBillingCycleAnchors: async () => ({}),
 		claimCustomerByEmail: async () => null,
-		promoteDuePooledContributions: async () => null,
+		listPooledBalancesWithoutOtherContributions: async () => [],
+		sumPooledContributionGrants: async () => ({}),
 		getCatalogRows: async () => ({
 			entitlements: catalogRows.flatMap((row) =>
 				row.table === "entitlements" ? [row.row] : [],
@@ -46,6 +47,9 @@ export function createWorkerFixture({
 			),
 			prices: catalogRows.flatMap((row) =>
 				row.table === "prices" ? [row.row] : [],
+			),
+			plan_licenses: catalogRows.flatMap((row) =>
+				row.table === "planLicenses" ? [row.row] : [],
 			),
 		}),
 	};

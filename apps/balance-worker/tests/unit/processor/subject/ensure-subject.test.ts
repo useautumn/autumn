@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { CatalogRow, SubjectState } from "@autumn/balance-engine";
-import { createSubjectState } from "@autumn/balance-engine";
+import {
+	catalogKeyToString,
+	catalogRowToCatalogKey,
+	createSubjectState,
+} from "@autumn/balance-engine";
 import {
 	CatalogRowsNotFoundError,
 	createCatalogCache,
@@ -140,21 +144,35 @@ const createScope = ({
 		getSubjectRows: async () => null,
 		getBillingCycleAnchors: async () => ({}),
 		claimCustomerByEmail: async () => null,
-		promoteDuePooledContributions: async () => null,
+		listPooledBalancesWithoutOtherContributions: async () => [],
+		sumPooledContributionGrants: async () => ({}),
 		getCatalogRows: async ({ ids }) => {
 			calls.push(ids);
+			const asked = new Set([
+				...ids.entitlementIds.map((id) => `entitlements:${id}`),
+				...ids.productInternalIds.map((id) => `products:${id}`),
+				...ids.featureInternalIds.map((id) => `features:${id}`),
+				...ids.priceIds.map((id) => `prices:${id}`),
+				...ids.planLicenseIds.map((id) => `planLicenses:${id}`),
+			]);
+			const served = sourceRows.filter((row) =>
+				asked.has(catalogKeyToString({ key: catalogRowToCatalogKey({ row }) })),
+			);
 			return {
-				entitlements: sourceRows.flatMap((row) =>
+				entitlements: served.flatMap((row) =>
 					row.table === "entitlements" ? [row.row] : [],
 				),
-				products: sourceRows.flatMap((row) =>
+				products: served.flatMap((row) =>
 					row.table === "products" ? [row.row] : [],
 				),
-				features: sourceRows.flatMap((row) =>
+				features: served.flatMap((row) =>
 					row.table === "features" ? [row.row] : [],
 				),
-				prices: sourceRows.flatMap((row) =>
+				prices: served.flatMap((row) =>
 					row.table === "prices" ? [row.row] : [],
+				),
+				plan_licenses: served.flatMap((row) =>
+					row.table === "planLicenses" ? [row.row] : [],
 				),
 			};
 		},
@@ -198,6 +216,7 @@ describe("ensure subject", () => {
 				productInternalIds: ["prod_internal_1"],
 				featureInternalIds: [],
 				priceIds: [],
+				planLicenseIds: [],
 			},
 		]);
 		expect(Object.keys(subject.catalog.entitlements)).toEqual(["ent_1"]);
@@ -206,6 +225,77 @@ describe("ensure subject", () => {
 		).toHaveLength(1);
 		await ensureSubject({ scope, identity });
 		expect(calls).toHaveLength(1);
+	});
+
+	test("a pool's plan license loads with its items; a link Postgres no longer has never fails the command", async () => {
+		const pool = (id: string, planLicenseId: string) => ({
+			id,
+			link_id: `link_${id}`,
+			internal_customer_id: "cus_internal_1",
+			parent_customer_product_id: "cp_1",
+			license_internal_product_id: "prod_internal_1",
+			plan_license_id: planLicenseId,
+			granted: 10,
+			remaining: 7,
+			paid_quantity: 5,
+			created_at: 1,
+			updated_at: 1,
+		});
+		const withPools: SubjectState = {
+			...state,
+			customerLicenses: [
+				pool("cl_live", "pl_live"),
+				pool("cl_gone", "pl_gone"),
+			],
+		};
+		const [entitlement] = rows;
+		if (entitlement?.table !== "entitlements")
+			throw new Error("the fixture's first row is an entitlement");
+		const customEntitlement: CatalogRow = {
+			table: "entitlements",
+			row: { ...entitlement.row, id: "ent_custom", is_custom: true },
+		};
+		const planLicense: CatalogRow = {
+			table: "planLicenses",
+			row: {
+				id: "pl_live",
+				parent_internal_product_id: "prod_internal_1",
+				license_internal_product_id: "prod_internal_1",
+				is_custom: true,
+				org_id: "org_1",
+				env: AppEnv.Sandbox,
+				included: 5,
+				prepaid_only: true,
+				customized: true,
+				metadata: {},
+				created_at: 1,
+				updated_at: 1,
+				price_ids: [],
+				entitlement_ids: ["ent_custom"],
+				internal_feature_ids: ["feat_internal_1"],
+			},
+		};
+		const { scope, calls } = createScope({
+			storedState: withPools,
+			sourceRows: [...rows, customEntitlement, planLicense],
+		});
+
+		const subject = await ensureSubject({ scope, identity });
+
+		expect(Object.keys(subject.catalog.planLicenses)).toEqual(["pl_live"]);
+		expect(Object.keys(subject.catalog.entitlements).sort()).toEqual([
+			"ent_1",
+			"ent_custom",
+		]);
+		expect(calls.map(({ planLicenseIds }) => planLicenseIds)).toEqual([
+			[],
+			["pl_gone", "pl_live"],
+			[],
+		]);
+		expect(calls[2]?.entitlementIds).toEqual(["ent_custom"]);
+		expect(
+			readSubject({ scope, state: withPools, identity }).customer_products,
+		).toHaveLength(1);
 	});
 
 	test("names the rows no source can produce", async () => {

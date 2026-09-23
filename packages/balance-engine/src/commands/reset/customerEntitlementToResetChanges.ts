@@ -55,8 +55,13 @@ const customerEntitlementToRolloverChanges = ({
 	];
 };
 
-/** A pool refills from the grant its promoted contributions add up to; the sender did the sum, the row here reads it. */
-const promotePoolRow = ({
+/**
+ * Runs for every due row that is a pool's own row. Before the row refills like any other, its pool
+ * moves to the new cycle: the grant becomes the sum of its promoted shares (the sender summed it), and
+ * the shares take their next value in Postgres by one set-based change. The refill then reads the new
+ * grant. An unlimited pool has no grant to move.
+ */
+const promoteDuePool = ({
 	row,
 	command,
 }: {
@@ -64,19 +69,29 @@ const promotePoolRow = ({
 	command: ResetCommand;
 }): { row: DueRow; changes: RowChange[] } => {
 	const pool = row.pooled_balance;
-	const granted = pool && command.pooledGranted?.[pool.id];
-	if (!pool || granted === undefined || granted === pool.granted) {
-		return { row, changes: [] };
-	}
+	if (!pool || pool.unlimited) return { row, changes: [] };
+	const promoted = {
+		granted: command.pooledGranted?.[pool.id] ?? pool.granted,
+		last_applied_reset_at: command.occurredAt,
+	};
 	return {
-		row: { ...row, pooled_balance: { ...pool, granted } },
+		row: { ...row, pooled_balance: { ...pool, ...promoted } },
 		changes: [
 			{
 				table: "pooledBalances",
 				op: "update",
 				id: pool.id,
-				before: { granted: pool.granted },
-				after: { granted },
+				before: {
+					granted: pool.granted,
+					last_applied_reset_at: pool.last_applied_reset_at,
+				},
+				after: promoted,
+			},
+			{
+				table: "pooledContributions",
+				op: "promote",
+				pooledBalanceId: pool.id,
+				dueBy: command.occurredAt,
 			},
 		],
 	};
@@ -90,7 +105,8 @@ export const customerEntitlementToResetChanges = ({
 	row: DueRow;
 	command: ResetCommand;
 }): CustomerEntitlementReset => {
-	const { row, changes: poolChanges } = promotePoolRow({
+	// A pool row refills from its pool's grant, so the pool moves first and the row below sees the new grant.
+	const { row, changes: poolChanges } = promoteDuePool({
 		row: dueRow,
 		command,
 	});

@@ -13,6 +13,7 @@ describe("catalogRowsSql", () => {
 					productInternalIds: ["prod_1"],
 					featureInternalIds: ["feat_1"],
 					priceIds: ["price_1"],
+					planLicenseIds: ["pl_1"],
 				},
 			}),
 		);
@@ -24,6 +25,7 @@ describe("catalogRowsSql", () => {
 					productInternalIds: [],
 					featureInternalIds: ["feat_9"],
 					priceIds: [],
+					planLicenseIds: [],
 				},
 			}),
 		);
@@ -40,6 +42,9 @@ describe("catalogRowsSql", () => {
 			'["feat_1"]',
 			"org_1",
 			'["price_1"]',
+			"org_1",
+			"sandbox",
+			'["pl_1"]',
 		]);
 		expect(first.sql).toContain("jsonb_array_elements_text($2::text::jsonb)");
 		expect(first.sql).toBe(second.sql);

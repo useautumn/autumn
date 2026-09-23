@@ -5,6 +5,7 @@ import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/exec
 import { insertCustomerProductRows } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
 import type { AutumnBillingPlanResult } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
+import { executePooledBalancePlan } from "@/internal/billing/v2/pooledBalances/execute/executePooledBalancePlan";
 import {
 	getDeleteCustomerProducts,
 	getUpdateCustomerProducts,
@@ -13,7 +14,7 @@ import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 
-/** The rows the balance worker holds, written to Postgres in plan order. A customer insert that finds the row taken stops here. */
+/** The rows the balance worker holds, pools included, written to Postgres in plan order. A customer insert that finds the row taken stops here. */
 export const writeCustomerRowsInPostgres = async ({
 	ctx,
 	autumnBillingPlan,
@@ -28,6 +29,7 @@ export const writeCustomerRowsInPostgres = async ({
 		insertCustomerEntitlements,
 		patchCustomerProducts,
 		insertEntities,
+		claimEntities,
 		insertCustomerProducts,
 		lockCustomerCurrency,
 		updateCustomerEntitlements: customerEntitlementUpdates,
@@ -64,6 +66,14 @@ export const writeCustomerRowsInPostgres = async ({
 
 	if (insertEntities?.length) {
 		await EntityService.insert({ db, data: insertEntities });
+	}
+
+	for (const { entity, updates } of claimEntities ?? []) {
+		await EntityService.claim({
+			db,
+			internalId: entity.internal_id,
+			update: updates,
+		});
 	}
 
 	await insertCustomerProductRows({
@@ -105,6 +115,11 @@ export const writeCustomerRowsInPostgres = async ({
 		ctx,
 		customerId: autumnBillingPlan.customerId,
 		updates: customerEntitlementUpdates,
+	});
+
+	await executePooledBalancePlan({
+		ctx,
+		pooledBalancePlan: autumnBillingPlan.pooledBalancePlan,
 	});
 
 	return { status: "applied" };

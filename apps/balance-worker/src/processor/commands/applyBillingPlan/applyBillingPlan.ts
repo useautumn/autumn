@@ -4,10 +4,11 @@ import {
 } from "@autumn/balance-engine";
 import type { ApplyBillingPlanReply } from "@autumn/balance-worker-client/protocol";
 import type { PartitionProcessorScope } from "../../types/partitionProcessor.js";
-import { serializeCustomerCreate } from "./createCustomer/serializeCustomerCreate.js";
-import { decidePlan } from "./decidePlan.js";
-import { ensurePlanCatalog } from "./ensurePlanCatalog.js";
-import { ensurePlanSubjects } from "./planSubjects.js";
+import { serializeCustomerPlan } from "./customerPlans/serializeCustomerPlan.js";
+import { decidePlan } from "./decide/decidePlan.js";
+import { ensurePlanCatalog } from "./ensure/ensurePlanCatalog.js";
+import { ensurePlanSubjects } from "./ensure/ensurePlanSubjects.js";
+import { withExpiringPooledBalances } from "./ensure/withExpiringPooledBalances.js";
 import { replyOnceStored } from "./replyOnceStored.js";
 import { requirePostgresStore } from "./requirePostgresStore.js";
 
@@ -24,14 +25,15 @@ export async function applyBillingPlan({
 	});
 	requirePostgresStore({ scope });
 	scope.ctx.catalogCache.put({ rows: catalogRows });
-	const decided = await serializeCustomerCreate({
+	return serializeCustomerPlan({
 		scope,
 		command,
 		run: async () => {
 			await ensurePlanSubjects({ scope, command });
 			await ensurePlanCatalog({ scope, command });
-			return decidePlan({ scope, command });
+			const planned = await withExpiringPooledBalances({ scope, command });
+			const decided = await decidePlan({ scope, command: planned });
+			return replyOnceStored({ scope, decided });
 		},
 	});
-	return replyOnceStored({ scope, decided });
 }

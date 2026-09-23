@@ -5,7 +5,8 @@ import type { SubjectState } from "../../models/subject/subjectState.js";
 import { parseSubjectStateMutation } from "../../parsers.js";
 import { assertInsertsHaveNamedOwners } from "./assertInsertsHaveNamedOwners.js";
 import { opToRowChanges } from "./opToRowChanges/opToRowChanges.js";
-import type { PlanRowChangeContext } from "./opToRowChanges/planRowChangeContext.js";
+import { createPlanRowChangeContext } from "./opToRowChanges/planRowChangeContext.js";
+import { expiringPooledBalancesToRowChanges } from "./opToRowChanges/pooled/expiringPooledBalancesToRowChanges.js";
 import type { ApplyBillingPlanCommand } from "./types/applyBillingPlanCommand.js";
 
 /** The customer row a plan creates the subject with, if it creates one. */
@@ -49,7 +50,7 @@ export const computeApplyBillingPlan = ({
 	entities?: readonly WorkerEntity[];
 }): SubjectStateMutation => {
 	assertInsertsHaveNamedOwners({ command, state, entities });
-	const context: PlanRowChangeContext = { state, deletedRowKeys: new Set() };
+	const context = createPlanRowChangeContext({ state });
 	const revisionBefore = state?.revision ?? 0;
 	return parseSubjectStateMutation({
 		input: {
@@ -59,7 +60,10 @@ export const computeApplyBillingPlan = ({
 			identity: command.identity,
 			revision: { before: revisionBefore, after: revisionBefore + 1 },
 			command,
-			changes: command.ops.flatMap((op) => opToRowChanges({ op, context })),
+			changes: [
+				...command.ops.flatMap((op) => opToRowChanges({ op, context })),
+				...expiringPooledBalancesToRowChanges({ command, context }),
+			],
 			result: { type: "applyBillingPlan" },
 		},
 	});

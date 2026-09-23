@@ -14,6 +14,13 @@ const writesNoLicenseSeats = ({
 		({ customer_license_link_id }) => !customer_license_link_id,
 	);
 
+/** A claimed entity had no subject key before the plan, so the worker cannot guard it yet. */
+const claimsNoEntities = ({
+	autumnBillingPlan,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+}): boolean => (autumnBillingPlan.claimEntities ?? []).length === 0;
+
 /** Whether the worker can key every row it holds that the plan writes; the rest land in Postgres after it. */
 export const workerCanApplyBillingPlan = ({
 	autumnBillingPlan,
@@ -22,6 +29,7 @@ export const workerCanApplyBillingPlan = ({
 }): boolean =>
 	billingPlanToWorkerCustomerId({ autumnBillingPlan }) !== null &&
 	billingPlanNamesItsEntities({ autumnBillingPlan }) &&
+	claimsNoEntities({ autumnBillingPlan }) &&
 	writesNoLicenseSeats({ autumnBillingPlan });
 
 /** Whether the customer's rows land through the worker instead of one Postgres transaction. */

@@ -107,6 +107,8 @@ const foldChange = ({
 	folded: SubjectRowChange;
 	next: SubjectRowChange;
 }): SubjectRowChange | null => {
+	// Set-based changes carry no row: the later one stands.
+	if (next.op === "promote" || folded.op === "promote") return { ...next };
 	const { table } = folded;
 	const id = subjectRowIdOf(folded);
 	if (next.op === "insert") {

@@ -34,6 +34,7 @@ const emptyStateFor = ({
 		usageWindows: [],
 		openLocks: [],
 		pooledBalances: [],
+		customerLicenses: [],
 		entity: null,
 	};
 };

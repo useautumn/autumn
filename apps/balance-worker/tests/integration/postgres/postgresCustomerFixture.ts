@@ -328,6 +328,7 @@ export async function seedPool({
 	balance,
 	nextResetAt,
 	contributions,
+	customerLicenseLinkId = null,
 }: {
 	postgres: PostgresClient;
 	customer: SeededCustomer;
@@ -339,6 +340,8 @@ export async function seedPool({
 		next: number;
 		effectiveAt: number | null;
 	}[];
+	/** A license pool: live only while the link's parent product is. */
+	customerLicenseLinkId?: string | null;
 }): Promise<SeededPool> {
 	const suffix = crypto.randomUUID().slice(0, 8);
 	const now = Date.now();
@@ -377,6 +380,7 @@ export async function seedPool({
 		interval: EntInterval.Month,
 		reset_mode: PooledBalanceResetMode.Subscription,
 		customer_entitlement_id: poolCustomerEntitlementId,
+		customer_license_link_id: customerLicenseLinkId,
 		created_at: now,
 		updated_at: now,
 	});
@@ -547,6 +551,7 @@ export async function planNewCustomer({
 			productInternalIds: [seeded.internalProductId],
 			featureInternalIds: [seeded.internalFeatureId],
 			priceIds: [],
+			planLicenseIds: [],
 		},
 	});
 	const catalogRows: CatalogRow[] = [
@@ -572,6 +577,7 @@ export async function planNewCustomer({
 				schemaVersion: 1,
 				type: "applyBillingPlan",
 				commandId,
+				expiringPooledBalanceIds: [],
 				entityIds: [],
 				requestId: `req_${commandId}`,
 				identity,
@@ -683,6 +689,7 @@ export async function planNewCustomer({
 				schemaVersion: 1,
 				type: "applyBillingPlan",
 				commandId,
+				expiringPooledBalanceIds: [],
 				entityIds: [],
 				requestId: `req_${commandId}`,
 				identity,
@@ -725,6 +732,7 @@ export async function planNewCustomer({
 				schemaVersion: 1,
 				type: "applyBillingPlan",
 				commandId,
+				expiringPooledBalanceIds: [],
 				requestId: `req_${commandId}`,
 				identity,
 				occurredAt: now,
@@ -747,6 +755,7 @@ export async function planNewCustomer({
 				schemaVersion: 1,
 				type: "applyBillingPlan",
 				commandId,
+				expiringPooledBalanceIds: [],
 				entityIds: [],
 				requestId: `req_${commandId}`,
 				identity,
@@ -1023,4 +1032,407 @@ export async function planEntityOfCustomer({
 		readEntityGrantBalance,
 		cleanup,
 	};
+}
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+export type PlannedPool = {
+	poolId: string;
+	poolCustomerEntitlementId: string;
+	entities: { id: string; identity: MeteringIdentity; sourceId: string }[];
+	/** One plan: a product and source on each entity, the pool and its two shares on the customer. */
+	request(params: {
+		commandId: string;
+		entityIds?: string[];
+	}): ApplyBillingPlanRequest;
+	/** The entity leaves: its product goes (its source with it), its share is removed, the pool moves by −100. */
+	removeRequest(params: {
+		commandId: string;
+		entityId: string;
+	}): ApplyBillingPlanRequest;
+	readExpiresAt(): Promise<{
+		pool: number | null;
+		poolCustomerEntitlement: number | null;
+	}>;
+	readGranted(): Promise<number | null>;
+	readPoolBalance(): Promise<number | null>;
+	readSourceBalances(): Promise<(number | null)[]>;
+	readContributions(): Promise<{ source: string; current: number }[]>;
+	cleanup(): Promise<void>;
+};
+
+/** Two entities of the planned customer, each about to contribute 100 to one new lazy pool. */
+export async function planPooledEntities({
+	postgres,
+	seeded,
+	planned,
+}: {
+	postgres: PostgresClient;
+	seeded: SeededCustomer;
+	planned: PlannedCustomer;
+}): Promise<PlannedPool> {
+	const suffix = crypto.randomUUID().slice(0, 8);
+	const now = Date.now();
+	const { db } = postgres;
+	const poolId = `pool_${suffix}`;
+	const poolCustomerEntitlementId = `ce_pool_${suffix}`;
+	const entities = ["a", "b"].map((tag) => ({
+		id: `ent_pool_${tag}_${suffix}`,
+		internalId: `ent_int_pool_${tag}_${suffix}`,
+		productId: `cp_pool_${tag}_${suffix}`,
+		sourceId: `ce_src_${tag}_${suffix}`,
+		contributionId: `pbc_${tag}_${suffix}`,
+		identity: { ...planned.identity, entityId: `ent_pool_${tag}_${suffix}` },
+	}));
+	for (const entity of entities) {
+		await db.insert(schemas.entities).values({
+			id: entity.id,
+			internal_id: entity.internalId,
+			internal_customer_id: planned.internalCustomerId,
+			org_id: seeded.orgId,
+			env: seeded.env,
+			created_at: now,
+			name: "Seat",
+			feature_id: seeded.featureId,
+			internal_feature_id: seeded.internalFeatureId,
+		});
+	}
+
+	const createdOps = planned.request({ commandId: "pool_template" }).command
+		.ops;
+	const [productRow] = createdOps.flatMap((op) =>
+		op.op === "insert" && op.table === "customerProducts" ? [op.row] : [],
+	);
+	const [grantRow] = createdOps.flatMap((op) =>
+		op.op === "insert" && op.table === "customerEntitlements" ? [op.row] : [],
+	);
+	if (!productRow || !grantRow)
+		throw new Error("The created plan has no product or grant row");
+
+	function request({
+		commandId,
+		entityIds = entities.map(({ id }) => id),
+	}: {
+		commandId: string;
+		entityIds?: string[];
+	}): ApplyBillingPlanRequest {
+		const { command, catalogRows } = planned.request({ commandId });
+		return {
+			command: {
+				...command,
+				entityIds,
+				ops: [
+					...entities.flatMap((entity) => [
+						{
+							op: "insert" as const,
+							table: "customerProducts" as const,
+							row: {
+								...productRow,
+								id: entity.productId,
+								internal_entity_id: entity.internalId,
+								entity_id: entity.id,
+							},
+						},
+						{
+							op: "insert" as const,
+							table: "customerEntitlements" as const,
+							row: {
+								...grantRow,
+								id: entity.sourceId,
+								customer_product_id: entity.productId,
+								internal_entity_id: entity.internalId,
+								balance: 100,
+							},
+						},
+					]),
+					{
+						op: "insert" as const,
+						table: "customerEntitlements" as const,
+						row: {
+							...grantRow,
+							id: poolCustomerEntitlementId,
+							customer_product_id: null,
+							internal_entity_id: null,
+							balance: 200,
+							// Drawn before the customer's own grant: rows go soonest reset first.
+							next_reset_at: now + THIRTY_DAYS_MS,
+							is_pooled_balance: true,
+							pooled_balance_id: poolId,
+							pooled_contribution_id: null,
+						},
+					},
+					{
+						op: "insert" as const,
+						table: "pooledBalances" as const,
+						row: {
+							id: poolId,
+							org_id: seeded.orgId,
+							env: seeded.env,
+							internal_customer_id: planned.internalCustomerId,
+							internal_feature_id: seeded.internalFeatureId,
+							unlimited: false,
+							granted: 200,
+							interval: EntInterval.Month,
+							interval_count: 1,
+							reset_cycle_anchor: null,
+							reset_mode: PooledBalanceResetMode.Lazy,
+							stripe_subscription_id: null,
+							customer_license_link_id: null,
+							rollover_signature: "",
+							customer_entitlement_id: poolCustomerEntitlementId,
+							last_applied_reset_at: null,
+							expires_at: null,
+							created_at: now,
+							updated_at: now,
+						},
+					},
+					...entities.map((entity) => ({
+						op: "insert" as const,
+						table: "pooledContributions" as const,
+						row: {
+							id: entity.contributionId,
+							pooled_balance_id: poolId,
+							source_customer_product_id: entity.productId,
+							source_customer_entitlement_id: entity.sourceId,
+							current_contribution: 100,
+							next_cycle_contribution: 100,
+							effective_at: null,
+							created_at: now,
+							updated_at: now,
+						},
+					})),
+				],
+			},
+			catalogRows,
+		};
+	}
+
+	function removeRequest({
+		commandId,
+		entityId,
+	}: {
+		commandId: string;
+		entityId: string;
+	}): ApplyBillingPlanRequest {
+		const entity = entities.find(({ id }) => id === entityId);
+		if (!entity) throw new Error(`no planned entity ${entityId}`);
+		const { command, catalogRows } = planned.request({ commandId });
+		return {
+			command: {
+				...command,
+				entityIds: [entity.id],
+				ops: [
+					{
+						op: "delete" as const,
+						table: "customerProducts" as const,
+						id: entity.productId,
+					},
+					{
+						op: "increment" as const,
+						table: "customerEntitlements" as const,
+						id: poolCustomerEntitlementId,
+						add: { balance: -100 },
+					},
+					{
+						op: "increment" as const,
+						table: "pooledBalances" as const,
+						id: poolId,
+						add: { granted: -100 },
+					},
+					{
+						op: "delete" as const,
+						table: "pooledContributions" as const,
+						id: entity.contributionId,
+						pooledBalanceId: poolId,
+						sourceCustomerEntitlementId: entity.sourceId,
+					},
+				],
+			},
+			catalogRows,
+		};
+	}
+
+	const readExpiresAt = async () => ({
+		pool: await numberOf(
+			sql`SELECT expires_at FROM pooled_balances WHERE id = ${poolId}`,
+		),
+		poolCustomerEntitlement: await numberOf(
+			sql`SELECT expires_at FROM customer_entitlements WHERE id = ${poolCustomerEntitlementId}`,
+		),
+	});
+
+	const numberOf = async (query: ReturnType<typeof sql>) => {
+		const rows = await db.execute(query);
+		const [row] = rows;
+		const value = row ? Object.values(row)[0] : null;
+		return value === null || value === undefined ? null : Number(value);
+	};
+	const readGranted = () =>
+		numberOf(sql`SELECT granted FROM pooled_balances WHERE id = ${poolId}`);
+	const readPoolBalance = () =>
+		numberOf(
+			sql`SELECT balance FROM customer_entitlements WHERE id = ${poolCustomerEntitlementId}`,
+		);
+	const readSourceBalances = () =>
+		Promise.all(
+			entities.map(({ sourceId }) =>
+				numberOf(
+					sql`SELECT balance FROM customer_entitlements WHERE id = ${sourceId}`,
+				),
+			),
+		);
+	async function readContributions() {
+		const rows = await db.execute(
+			sql`SELECT source_customer_entitlement_id AS source, current_contribution AS current
+				FROM pooled_balance_contributions WHERE pooled_balance_id = ${poolId}
+				ORDER BY source_customer_entitlement_id`,
+		);
+		return rows.map((row) => ({
+			source: String(row.source),
+			current: Number(row.current),
+		}));
+	}
+
+	async function cleanup(): Promise<void> {
+		await db.execute(sql`DELETE FROM pooled_balances WHERE id = ${poolId}`);
+		await db.execute(
+			sql`DELETE FROM customer_entitlements WHERE id = ${poolCustomerEntitlementId}`,
+		);
+		for (const entity of entities) {
+			await db.execute(
+				sql`DELETE FROM customer_products WHERE id = ${entity.productId}`,
+			);
+			await db.execute(
+				sql`DELETE FROM entities WHERE internal_id = ${entity.internalId}`,
+			);
+		}
+	}
+
+	return {
+		poolId,
+		poolCustomerEntitlementId,
+		entities: entities.map(({ id, identity, sourceId }) => ({
+			id,
+			identity,
+			sourceId,
+		})),
+		request,
+		removeRequest,
+		readExpiresAt,
+		readGranted,
+		readPoolBalance,
+		readSourceBalances,
+		readContributions,
+		cleanup,
+	};
+}
+
+export type SeededSeat = {
+	entityId: string;
+	customerProductId: string;
+	customerEntitlementId: string;
+	cleanup(): Promise<void>;
+};
+
+/** An entity holding one seat of the seeded customer's license, with its own grant on the seeded feature. */
+export async function seedSeat({
+	postgres,
+	seeded,
+	linkId,
+	seatStatus,
+	balance = 5,
+}: {
+	postgres: PostgresClient;
+	seeded: SeededCustomer;
+	linkId: string;
+	/** The column the seat row carries; the parent's status is the truth. */
+	seatStatus: string;
+	balance?: number;
+}): Promise<SeededSeat> {
+	const { db } = postgres;
+	const suffix = crypto.randomUUID().slice(0, 8);
+	const entityId = `ent_seat_${suffix}`;
+	const internalEntityId = `ent_int_seat_${suffix}`;
+	const customerProductId = `cp_seat_${suffix}`;
+	const customerEntitlementId = `ce_seat_${suffix}`;
+	const now = Date.now();
+	await db.execute(sql`INSERT INTO entities
+		(id, internal_id, internal_customer_id, org_id, env, created_at, name, feature_id, internal_feature_id)
+		VALUES (${entityId}, ${internalEntityId}, ${seeded.internalCustomerId}, ${seeded.orgId}, ${seeded.env}, ${now}, 'Seat', ${seeded.featureId}, ${seeded.internalFeatureId})`);
+	await db.execute(sql`INSERT INTO customer_products
+		(id, internal_customer_id, internal_entity_id, internal_product_id, product_id, created_at, starts_at, status, options, billing_version, customer_license_link_id)
+		VALUES (${customerProductId}, ${seeded.internalCustomerId}, ${internalEntityId}, ${seeded.internalProductId}, 'pro', ${now}, ${now}, ${seatStatus}, ARRAY[]::jsonb[], 'v2', ${linkId})`);
+	await db.execute(sql`INSERT INTO customer_entitlements
+		(id, internal_customer_id, customer_id, internal_entity_id, customer_product_id, entitlement_id, internal_feature_id, feature_id, created_at, balance, adjustment)
+		VALUES (${customerEntitlementId}, ${seeded.internalCustomerId}, ${seeded.identity.customerId}, ${internalEntityId}, ${customerProductId}, ${seeded.entitlementId}, ${seeded.internalFeatureId}, ${seeded.featureId}, ${now}, ${balance}, 0)`);
+	return {
+		entityId,
+		customerProductId,
+		customerEntitlementId,
+		cleanup: async () => {
+			await db.execute(
+				sql`DELETE FROM customer_entitlements WHERE id = ${customerEntitlementId}`,
+			);
+			await db.execute(
+				sql`DELETE FROM customer_products WHERE id = ${customerProductId}`,
+			);
+			await db.execute(
+				sql`DELETE FROM entities WHERE internal_id = ${internalEntityId}`,
+			);
+		},
+	};
+}
+
+/** A pool on the seeded product licensing that product itself; it cascades away with the product. Its product also holds a custom entitlement, which only a customized license's overlay names. */
+export async function seedLicensePool({
+	postgres,
+	seeded,
+	customized = false,
+}: {
+	postgres: PostgresClient;
+	seeded: SeededCustomer;
+	customized?: boolean;
+}): Promise<{
+	id: string;
+	linkId: string;
+	planLicenseId: string;
+	customEntitlementId: string;
+	/** Runs before the seeded customer's cleanup: the overlay pins the entitlement it names. */
+	cleanup(): Promise<void>;
+}> {
+	const { db } = postgres;
+	const suffix = crypto.randomUUID().slice(0, 8);
+	const id = `cl_${suffix}`;
+	const linkId = `link_${suffix}`;
+	const planLicenseId = `pl_${suffix}`;
+	const customEntitlementId = `ent_custom_${suffix}`;
+	await db.execute(
+		sql`INSERT INTO entitlements
+			(id, org_id, internal_feature_id, internal_product_id, feature_id, created_at, allowance_type, allowance, interval, is_custom)
+			VALUES (${customEntitlementId}, ${seeded.orgId}, ${seeded.internalFeatureId}, ${seeded.internalProductId}, ${seeded.featureId}, 0, 'fixed', 5, 'month', true)`,
+	);
+	await db.execute(
+		sql`INSERT INTO plan_license
+			(id, parent_internal_product_id, license_internal_product_id, included, customized)
+			VALUES (${planLicenseId}, ${seeded.internalProductId}, ${seeded.internalProductId}, 5, ${customized})`,
+	);
+	if (customized) {
+		await db.execute(
+			sql`INSERT INTO license_entitlements (id, plan_license_id, entitlement_id)
+				VALUES (${`le_${suffix}`}, ${planLicenseId}, ${customEntitlementId})`,
+		);
+	}
+	await db.execute(
+		sql`INSERT INTO customer_licenses
+			(id, link_id, internal_customer_id, parent_customer_product_id, license_internal_product_id, plan_license_id, granted, remaining, paid_quantity)
+			VALUES (${id}, ${linkId}, ${seeded.internalCustomerId}, ${seeded.customerProductId}, ${seeded.internalProductId}, ${planLicenseId}, 10, 7, 5)`,
+	);
+
+	const cleanup = async () => {
+		await db.execute(sql`DELETE FROM plan_license WHERE id = ${planLicenseId}`);
+		await db.execute(
+			sql`DELETE FROM entitlements WHERE id = ${customEntitlementId}`,
+		);
+	};
+	return { id, linkId, planLicenseId, customEntitlementId, cleanup };
 }

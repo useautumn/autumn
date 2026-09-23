@@ -3,6 +3,7 @@ import type {
 	Customer,
 	CustomerEntitlement,
 	CustomerPrice,
+	DbCustomerLicense,
 	Entity,
 	PooledBalance,
 	Rollover,
@@ -18,6 +19,7 @@ import {
 	customerEntitlementRenderedColumns,
 	workerCustomerEntitlementSchema,
 } from "../../models/subject/rows/workerCustomerEntitlement.js";
+import { workerCustomerLicenseSchema } from "../../models/subject/rows/workerCustomerLicense.js";
 import { workerCustomerPriceSchema } from "../../models/subject/rows/workerCustomerPrice.js";
 import {
 	customerProductRenderedColumns,
@@ -95,6 +97,7 @@ export const customerRowsToSubjectState = ({
 	usageWindows,
 	openLocks = [],
 	pooledBalances = [],
+	customerLicenses = [],
 	entity,
 }: {
 	identity: MeteringIdentity;
@@ -116,6 +119,8 @@ export const customerRowsToSubjectState = ({
 	openLocks?: OpenLock[];
 	/** The pools behind the customer's pooled rows, as Postgres returns them. */
 	pooledBalances?: PooledBalance[];
+	/** The license pools on the customer's products; absent from a FullSubject built without them. */
+	customerLicenses?: DbCustomerLicense[];
 	entity: Entity | null;
 }): SubjectState =>
 	createSubjectState({
@@ -140,12 +145,30 @@ export const customerRowsToSubjectState = ({
 		pooledBalances: pooledBalances.map((row) =>
 			pickColumns({ schema: workerPooledBalanceSchema, row }),
 		),
+		customerLicenses: customerLicenses.map((row) =>
+			pickColumns({ schema: workerCustomerLicenseSchema, row }),
+		),
 		entity: entity
 			? pickColumns({ schema: workerEntitySchema, row: entity })
 			: null,
 	});
 
-/** The rows one owner holds in a view: its products and grants by `internal_entity_id`, prices and rollovers following them. */
+/** A grant's owner is its own `internal_entity_id`, else its product's: an entity plan's grants carry none of their own. */
+const grantOwnerOf = ({
+	state,
+	row,
+}: {
+	state: SubjectState;
+	row: SubjectState["customerEntitlements"][number];
+}): string | null => {
+	if (row.internal_entity_id) return row.internal_entity_id;
+	const product = state.customerProducts.find(
+		({ id }) => id === row.customer_product_id,
+	);
+	return product?.internal_entity_id ?? null;
+};
+
+/** The rows one owner holds in a view: its products and grants, prices and rollovers following them. */
 const rowsOwnedBy = ({
 	state,
 	internalEntityId,
@@ -161,7 +184,7 @@ const rowsOwnedBy = ({
 		productIds.has(row.customer_product_id),
 	);
 	const customerEntitlements = state.customerEntitlements.filter(
-		(row) => row.internal_entity_id === internalEntityId,
+		(row) => grantOwnerOf({ state, row }) === internalEntityId,
 	);
 	const entitlementIds = new Set(customerEntitlements.map((row) => row.id));
 	const rollovers = state.rollovers.filter((rollover) =>
@@ -196,6 +219,7 @@ const entityPartOf = ({
 	entity,
 	openLocks: [],
 	pooledBalances: [],
+	customerLicenses: [],
 });
 
 /**

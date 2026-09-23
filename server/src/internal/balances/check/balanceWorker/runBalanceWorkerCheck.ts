@@ -45,6 +45,8 @@ export async function runBalanceWorkerCheck({
 		createEnabled: apiVersionCreatesCustomer({ ctx }),
 		customerId: body.customer_id,
 		customerData: body.customer_data,
+		entityId: body.entity_id,
+		entityData: body.entity_data,
 		run: checkOnWorker,
 	});
 }

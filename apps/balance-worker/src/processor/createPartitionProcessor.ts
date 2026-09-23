@@ -11,7 +11,7 @@ import type {
 	TrackCommand,
 } from "@autumn/balance-engine";
 import { applyBillingPlan as applyBillingPlanPartition } from "./commands/applyBillingPlan/applyBillingPlan.js";
-import { createCustomerCreates } from "./commands/applyBillingPlan/createCustomer/customerCreates.js";
+import { createCustomerPlans } from "./commands/applyBillingPlan/customerPlans/customerPlans.js";
 import { check as checkPartition } from "./commands/check.js";
 import { confirmExpiredLock as confirmExpiredLockPartition } from "./commands/confirmExpiredLock.js";
 import { evict as evictPartition } from "./commands/evict.js";
@@ -67,7 +67,7 @@ export function createPartitionProcessor({
 	const scope: PartitionProcessorScope = {
 		ctx: { ...dependencies, config, writer, subjectHydrator },
 		accepted: createAcceptedCommands(),
-		customerCreates: createCustomerCreates(),
+		customerPlans: createCustomerPlans(),
 	};
 
 	return createProcessor({ scope });

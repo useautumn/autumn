@@ -6,7 +6,6 @@ import type {
 import { AppEnv, CheckParamsSchema, TrackParamsSchema } from "@autumn/shared";
 import { BalanceWorkerUnsupportedError } from "../../balanceWorker/balanceWorkerErrors.js";
 import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
-import { validateBalanceWorkerRequest } from "../../balanceWorker/validateBalanceWorkerRequest.js";
 import { checkParamsToCheckCommand } from "../../check/balanceWorker/balanceWorkerCheckRequest.js";
 import { trackParamsToTrackCommand } from "../../track/balanceWorker/balanceWorkerTrackRequest.js";
 import {
@@ -142,7 +141,6 @@ function planTrackCommand({
 	);
 	if (!parsed.success)
 		return { kind: "refused", reason: REQUEST_INVALID_REASON };
-	validateBalanceWorkerRequest({ ctx, body: parsed.data });
 	if (!parsed.data.feature_id)
 		throw new BalanceWorkerUnsupportedError({ reason: EVENT_NAME_REASON });
 	return {

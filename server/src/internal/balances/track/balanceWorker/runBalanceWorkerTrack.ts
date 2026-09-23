@@ -18,7 +18,6 @@ import {
 } from "@/internal/balanceWorker/subject/withCreateIfMissing.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
-import { validateBalanceWorkerRequest } from "../../balanceWorker/validateBalanceWorkerRequest.js";
 import {
 	type FeatureTrackReply,
 	trackRepliesToApiResponse,
@@ -110,7 +109,6 @@ export async function runBalanceWorkerTrack({
 	body: TrackParams;
 	client?: TrackClient;
 }): Promise<TrackResponseV3> {
-	validateBalanceWorkerRequest({ ctx, body });
 	// The same 24h claim as runTrackWithRollout: a duplicate key is 409 before the worker sees it,
 	// and a 503 releases it so the retry reaches the worker's own dedup.
 	return withIdempotencyKey({
@@ -124,6 +122,8 @@ export async function runBalanceWorkerTrack({
 				createEnabled: apiVersionCreatesCustomer({ ctx }),
 				customerId: body.customer_id,
 				customerData: body.customer_data,
+				entityId: body.entity_id,
+				entityData: body.entity_data,
 				run: () => trackOnWorker({ ctx, body, client }),
 			}),
 	});

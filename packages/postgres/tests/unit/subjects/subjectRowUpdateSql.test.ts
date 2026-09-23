@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { subjectRowUpdateSql } from "../../../src/subjects/repos/applySubjectRowUpdates/subjectRowUpdateSql.js";
+import {
+	promotePooledContributionsSql,
+	subjectRowUpdateSql,
+} from "../../../src/subjects/repos/applySubjectRowUpdates/subjectRowUpdateSql.js";
 import type { SubjectRowUpdate } from "../../../src/subjects/types/subjectRowUpdate.js";
 
 const dialect = new PgDialect();
@@ -34,6 +37,22 @@ describe("subjectRowUpdateSql", () => {
 			'UPDATE "customer_entitlements" SET "balance" = "balance" + $1 WHERE "id" = $2 RETURNING "id"',
 		);
 		expect(query.params).toEqual([-5, "ce_1"]);
+	});
+
+	test("a pool's grant moves by a share the way a balance does", () => {
+		const query = dialect.sqlToQuery(
+			subjectRowUpdateSql({
+				update: add({
+					table: "pooledBalances",
+					id: "pool_1",
+					add: { granted: 100 },
+				}),
+			}),
+		);
+		expect(flatten(query.sql)).toBe(
+			'UPDATE "pooled_balances" SET "granted" = "granted" + $1 WHERE "id" = $2 RETURNING "id"',
+		);
+		expect(query.params).toEqual([100, "pool_1"]);
 	});
 
 	test("a guarded add: a window consume must still be in the window it counted", () => {
@@ -248,5 +267,18 @@ describe("subjectRowUpdateSql", () => {
 				'WHERE "id" = $2 AND "subscription_ids" IS NOT DISTINCT FROM ARRAY[]::text[] AND "scheduled_ids" IS NOT DISTINCT FROM NULL RETURNING "id"',
 		);
 		expect(query.params).toEqual(["sub_1", "cp_1"]);
+	});
+
+	test("a promote moves every share of the pool due by the reset to its next value, in one statement", () => {
+		const query = dialect.sqlToQuery(
+			promotePooledContributionsSql({
+				pooledBalanceId: "pool_1",
+				dueBy: 1_700,
+			}),
+		);
+		expect(flatten(query.sql)).toBe(
+			"UPDATE pooled_balance_contributions SET current_contribution = next_cycle_contribution, effective_at = NULL, updated_at = $1 WHERE pooled_balance_id = $2 AND effective_at IS NOT NULL AND effective_at <= $3 RETURNING id",
+		);
+		expect(query.params).toEqual([1_700, "pool_1", 1_700]);
 	});
 });

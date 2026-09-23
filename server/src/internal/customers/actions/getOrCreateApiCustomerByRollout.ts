@@ -32,19 +32,22 @@ export const getOrCreateApiCustomerByRollout = async ({
 	enqueueRecoveryOnTransientFailure?: boolean;
 	disableReplicaRead?: boolean;
 }) => {
-	// The worker is keyed by customer id and serves customer views only; the rest stay on Postgres.
-	if (
-		isBalanceWorkerRolloutEnabled() &&
-		params.customer_id &&
-		!params.entity_id
-	) {
+	// The worker is keyed by customer id; an id-less customer stays on Postgres.
+	if (isBalanceWorkerRolloutEnabled() && params.customer_id) {
 		const customerId = params.customer_id;
+		const entityId = params.entity_id;
 		const fullSubject = await withCreateIfMissing({
 			ctx,
 			customerId,
 			customerData: params.customer_data,
+			entityId,
+			entityData: params.entity_data,
 			run: async () => {
-				const subject = await readBalanceWorkerSubject({ ctx, customerId });
+				const subject = await readBalanceWorkerSubject({
+					ctx,
+					customerId,
+					entityId,
+				});
 				return { result: subject, customer: subject.customer };
 			},
 		});

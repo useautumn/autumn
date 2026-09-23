@@ -91,13 +91,13 @@ export type AcceptedCommands = {
 	active: Set<Promise<unknown>>;
 };
 
-/** Creates of one customer, queued by customer key: each one's claim, check and decision finish before the next starts. */
-export type CustomerCreates = {
+/** Plans of one customer, queued by customer key: each one is decided and stored before the next starts. */
+export type CustomerPlans = {
 	tails: Map<string, Promise<void>>;
 };
 
 export type PartitionProcessorScope = {
 	ctx: PartitionProcessorContext;
 	accepted: AcceptedCommands;
-	customerCreates: CustomerCreates;
+	customerPlans: CustomerPlans;
 };

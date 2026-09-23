@@ -64,6 +64,7 @@ const planOf = ({
 	occurredAt: 1_700_000_000_000,
 	entityIds,
 	ops,
+	expiringPooledBalanceIds: [],
 });
 
 describe("a billing plan across the customer and its entities", () => {

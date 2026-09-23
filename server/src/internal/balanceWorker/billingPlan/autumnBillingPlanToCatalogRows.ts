@@ -23,7 +23,20 @@ const customerProductToCatalogRows = ({
 	),
 ];
 
-/** The catalog rows the plan's customer products reference, once each; the worker caches them beside the state. */
+/** A pool's synthetic entitlement and its feature: minted by the plan, so no source has them yet. */
+const pooledBalancesToCatalogRows = ({
+	autumnBillingPlan,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+}): CatalogRow[] =>
+	(autumnBillingPlan.pooledBalancePlan?.insertPoolBalances ?? []).flatMap(
+		({ entitlement }): CatalogRow[] => [
+			{ table: "entitlements", row: entitlement },
+			{ table: "features", row: entitlement.feature },
+		],
+	);
+
+/** The catalog rows the plan's customer products and pools reference, once each; the worker caches them beside the state. */
 export const autumnBillingPlanToCatalogRows = ({
 	autumnBillingPlan,
 }: {
@@ -35,14 +48,18 @@ export const autumnBillingPlanToCatalogRows = ({
 			({ customerProduct }) => customerProduct,
 		),
 	];
+	const rows = [
+		...customerProducts.flatMap((customerProduct) =>
+			customerProductToCatalogRows({ customerProduct }),
+		),
+		...pooledBalancesToCatalogRows({ autumnBillingPlan }),
+	];
 	const rowsByKey = new Map<string, CatalogRow>();
-	for (const customerProduct of customerProducts) {
-		for (const row of customerProductToCatalogRows({ customerProduct })) {
-			rowsByKey.set(
-				catalogKeyToString({ key: catalogRowToCatalogKey({ row }) }),
-				row,
-			);
-		}
+	for (const row of rows) {
+		rowsByKey.set(
+			catalogKeyToString({ key: catalogRowToCatalogKey({ row }) }),
+			row,
+		);
 	}
 	return [...rowsByKey.values()];
 };

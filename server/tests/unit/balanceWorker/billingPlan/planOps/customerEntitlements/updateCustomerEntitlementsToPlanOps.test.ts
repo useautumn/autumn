@@ -92,6 +92,68 @@ describe("updateCustomerEntitlementsToPlanOps", () => {
 		]);
 	});
 
+	test("per-entity balance changes ride on the increment as entry deltas", () => {
+		expect(
+			opsFor([
+				{ balanceChange: -2, entityBalanceChanges: { u1: 500, u2: 500 } },
+			]),
+		).toEqual([
+			{
+				op: "increment",
+				table: "customerEntitlements",
+				id: "grant_target",
+				add: { balance: -2 },
+				addEntries: {
+					entities: { u1: { balance: 500 }, u2: { balance: 500 } },
+				},
+			},
+		]);
+		expect(opsFor([{ entityBalanceChanges: { u1: 500 } }])).toEqual([
+			{
+				op: "increment",
+				table: "customerEntitlements",
+				id: "grant_target",
+				add: {},
+				addEntries: { entities: { u1: { balance: 500 } } },
+			},
+		]);
+		expect(opsFor([{ entityBalanceChanges: {} }])).toEqual([]);
+	});
+
+	test("moves re-key entries before the deltas land, and alone move nothing else", () => {
+		expect(
+			opsFor([
+				{
+					balanceChange: 1,
+					moveEntityBalances: { rep_1: "u1" },
+					entityBalanceChanges: { u2: 500 },
+				},
+			]),
+		).toEqual([
+			{
+				op: "moveEntries",
+				table: "customerEntitlements",
+				id: "grant_target",
+				moves: { rep_1: "u1" },
+			},
+			{
+				op: "increment",
+				table: "customerEntitlements",
+				id: "grant_target",
+				add: { balance: 1 },
+				addEntries: { entities: { u2: { balance: 500 } } },
+			},
+		]);
+		expect(opsFor([{ moveEntityBalances: { rep_1: "u1" } }])).toEqual([
+			{
+				op: "moveEntries",
+				table: "customerEntitlements",
+				id: "grant_target",
+				moves: { rep_1: "u1" },
+			},
+		]);
+	});
+
 	test("each update is converted in order", () => {
 		expect(
 			opsFor([

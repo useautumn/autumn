@@ -1,12 +1,13 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { PostgresContext } from "../../../types/postgresClient.js";
 import type { CatalogRowIds } from "../../types/catalogRowsEnvelope.js";
+import { planLicenseCatalogRowsSql } from "./planLicenseCatalogRowsSql.js";
 
 /** Bun's driver flattens a JS array to "a,b" and JSON-encodes a string bound as jsonb, so the list travels as text. */
 const idList = (ids: readonly string[]): SQL =>
 	sql`(SELECT jsonb_array_elements_text(${JSON.stringify(ids)}::text::jsonb))`;
 
-/** Four by-key lookups in one statement. Entitlements carry no env column, so the org scope is their safety net. */
+/** One by-key lookup per table in one statement. Entitlements and prices carry no env column, so the org scope is their safety net. */
 export const catalogRowsSql = ({
 	ctx,
 	ids,
@@ -43,6 +44,10 @@ export const catalogRowsSql = ({
 				FROM prices p
 				WHERE p.org_id = ${ctx.orgId}
 					AND p.id IN ${idList(ids.priceIds)}),
+			'[]'::json
+		),
+		'plan_licenses', COALESCE(
+			(${planLicenseCatalogRowsSql({ orgId: ctx.orgId, env: ctx.env, planLicenseIds: idList(ids.planLicenseIds) })}),
 			'[]'::json
 		)
 	) AS envelope

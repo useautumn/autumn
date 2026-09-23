@@ -12,6 +12,7 @@ import {
 	toBillingPlanDeleteOp,
 	toBillingPlanIncrementOp,
 	toBillingPlanInsertOp,
+	toBillingPlanMoveEntriesOp,
 	toBillingPlanUpdateOp,
 } from "../../../../src/balanceEngine.js";
 import {
@@ -73,6 +74,7 @@ const planOf = ({
 	occurredAt: 1_700_000_000_000,
 	entityIds,
 	ops,
+	expiringPooledBalanceIds: [],
 });
 
 const changesOf = ({
@@ -178,6 +180,51 @@ describe("a plan's delete, update and increment ops", () => {
 			next_reset_at: 1_800_000_000_000,
 			balance: 35,
 		});
+	});
+
+	test("a move re-keys the live per-entity entries it finds and leaves the rest", () => {
+		const held = {
+			...heldState(),
+			customerEntitlements: [
+				{
+					...createCustomerEntitlement({ balance: 10 }),
+					entities: {
+						rep_1: { id: "rep_1", balance: 120, adjustment: 7 },
+						u2: { id: "u2", balance: 500, adjustment: 0 },
+					},
+				},
+			],
+		};
+		const ops = [
+			toBillingPlanMoveEntriesOp({
+				id: "messages_monthly",
+				moves: { rep_1: "u1", rep_missing: "u3" },
+			}),
+		];
+		const next = applyMutation({
+			state: held,
+			mutation: computeApplyBillingPlan({
+				command: planOf({ ops }),
+				state: held,
+			}),
+		});
+		expect(next.customerEntitlements[0]?.entities).toEqual({
+			u1: { id: "u1", balance: 120, adjustment: 7 },
+			u2: { id: "u2", balance: 500, adjustment: 0 },
+		});
+
+		const untouched = computeApplyBillingPlan({
+			command: planOf({
+				ops: [
+					toBillingPlanMoveEntriesOp({
+						id: "messages_monthly",
+						moves: { rep_missing: "u3" },
+					}),
+				],
+			}),
+			state: held,
+		});
+		expect(untouched.changes).toEqual([]);
 	});
 
 	test("a currency lock sets the currency only while the customer has none", () => {

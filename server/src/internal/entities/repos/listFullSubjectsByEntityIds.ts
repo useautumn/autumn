@@ -7,8 +7,8 @@ import {
 import { sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectRowsQuery } from "@/internal/customers/repos/getFullSubject/getFullSubjectRowsQuery.js";
-import { unpackSubjectEnvelope } from "@/internal/customers/repos/getFullSubject/unpackSubjectEnvelope.js";
 import { resultToFullSubject } from "@/internal/customers/repos/getFullSubject/index.js";
+import { unpackSubjectEnvelope } from "@/internal/customers/repos/getFullSubject/unpackSubjectEnvelope.js";
 import { hydrateEntityRowsWithCustomerData } from "./hydrateEntityRowsWithCustomerData.js";
 
 /** Entity subjects for a specific set of entity ids — the bounded per-entity

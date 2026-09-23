@@ -61,6 +61,11 @@ export const rolloverIncrementParts = {
 		.strict(),
 };
 
+export const pooledBalanceIncrementParts = {
+	add: z.object({ granted: finiteNumberSchema }).partial().strict(),
+	entries: z.object({}).strict(),
+};
+
 export const usageWindowIncrementParts = {
 	add: z.object({ usage: finiteNumberSchema }).partial().strict(),
 	entries: z.object({}).strict(),

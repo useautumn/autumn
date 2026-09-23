@@ -12,6 +12,7 @@ const emptyEnvelope: CatalogRowsEnvelope = {
 	products: [],
 	features: [],
 	prices: [],
+	plan_licenses: [],
 };
 
 /** Returns only the rows that exist; a missing id is the caller's decision. */
@@ -26,7 +27,8 @@ export const getCatalogRows = async ({
 		ids.entitlementIds.length +
 		ids.productInternalIds.length +
 		ids.featureInternalIds.length +
-		ids.priceIds.length;
+		ids.priceIds.length +
+		ids.planLicenseIds.length;
 	if (wanted === 0) return emptyEnvelope;
 
 	const rows = await ctx.db.execute(catalogRowsSql({ ctx, ids }));

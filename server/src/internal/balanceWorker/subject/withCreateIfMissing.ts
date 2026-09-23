@@ -4,6 +4,8 @@ import {
 	type Customer,
 	type CustomerData,
 	CustomerSchema,
+	type EntityData,
+	EntityErrorCode,
 	ErrCode,
 	RecaseError,
 } from "@autumn/shared";
@@ -12,6 +14,7 @@ import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeA
 import { createCustomerWithDefaults } from "@/internal/customers/actions/createWithDefaults/createCustomerWithDefaults.js";
 import { linkStripeCustomer } from "@/internal/customers/actions/linkStripeCustomer.js";
 import { customerDataToCustomerUpdates } from "@/internal/customers/actions/updateCustomerData.js";
+import { createEntitiesV2 } from "@/internal/entities/actions/createEntitiesV2/createEntitiesV2.js";
 
 /** What `run` hands back: its result, and the customer row it ran against. */
 export type RunWithCustomer<Result> = {
@@ -19,9 +22,49 @@ export type RunWithCustomer<Result> = {
 	customer: WorkerCustomer | Customer | null;
 };
 
-/** By code, not class: the balance worker's mapped error is a plain RecaseError with the same code. */
-const isCustomerNotFound = (error: unknown): boolean =>
-	error instanceof RecaseError && error.code === ErrCode.CustomerNotFound;
+/** By code, not class: the balance worker's mapped errors are plain RecaseErrors with the same codes. */
+const hasErrorCode = (error: unknown, code: string): boolean =>
+	error instanceof RecaseError && error.code === code;
+
+/** Auto-creation never charges: a paid feature is refused, as legacy `autoCreateEntity` did. */
+const createMissingEntity = async ({
+	ctx,
+	customerId,
+	entityId,
+	entityData,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	entityId: string;
+	entityData?: EntityData;
+}): Promise<void> => {
+	if (!entityData?.feature_id)
+		throw new RecaseError({
+			message: `Entity with id ${entityId} not found. To automatically create this entity, please pass in 'feature_id' into the 'entity_data' field of the request body.`,
+			code: ErrCode.InvalidInputs,
+			statusCode: 400,
+		});
+	try {
+		await createEntitiesV2({
+			ctx,
+			params: {
+				customerId,
+				entities: [
+					{
+						id: entityId,
+						name: entityData.name ?? null,
+						feature_id: entityData.feature_id,
+						billing_controls: entityData.billing_controls,
+					},
+				],
+				allowPaidFeatures: false,
+			},
+		});
+	} catch (error) {
+		// A concurrent request created it first; the re-run reads it.
+		if (!hasErrorCode(error, EntityErrorCode.EntityAlreadyExists)) throw error;
+	}
+};
 
 /** Below API 2.1 check and track create a missing customer; from 2.1 a missing customer is a 404. */
 export const apiVersionCreatesCustomer = ({
@@ -61,39 +104,81 @@ const applyCustomerData = async ({
 		await linkStripeCustomer({ ctx, customer: { ...customerRow, ...updates } });
 };
 
+/** A missing customer implies its entity is missing too, so one miss says everything a run needs created. */
+const createMissing = async ({
+	ctx,
+	error,
+	customerId,
+	customerData,
+	entityId,
+	entityData,
+}: {
+	ctx: AutumnContext;
+	error: unknown;
+	customerId: string;
+	customerData?: CustomerData;
+	entityId?: string | null;
+	entityData?: EntityData;
+}): Promise<void> => {
+	const customerMissing = hasErrorCode(error, ErrCode.CustomerNotFound);
+	const entityMissing =
+		customerMissing || hasErrorCode(error, EntityErrorCode.EntityNotFound);
+	if (!entityMissing) throw error;
+
+	if (customerMissing)
+		await createCustomerWithDefaults({ ctx, customerId, customerData });
+	if (entityId)
+		await createMissingEntity({ ctx, customerId, entityId, entityData });
+};
+
 const runOrCreate = async <Result>({
 	ctx,
 	customerId,
 	customerData,
+	entityId,
+	entityData,
 	createEnabled,
 	run,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	customerData?: CustomerData;
+	entityId?: string | null;
+	entityData?: EntityData;
 	createEnabled: boolean;
 	run: () => Promise<RunWithCustomer<Result>>;
 }): Promise<RunWithCustomer<Result>> => {
 	try {
 		return await run();
 	} catch (error) {
-		if (!createEnabled || !isCustomerNotFound(error)) throw error;
+		if (!createEnabled) throw error;
+		await createMissing({
+			ctx,
+			error,
+			customerId,
+			customerData,
+			entityId,
+			entityData,
+		});
 	}
-	await createCustomerWithDefaults({ ctx, customerId, customerData });
 	return run();
 };
 
-/** The one place `customer_data` takes effect: run, create the customer on a miss, then apply it to the row `run` read. */
+/** The one place `customer_data` and `entity_data` take effect: run, create what a miss names, then apply `customer_data` to the row `run` read. */
 export const withCreateIfMissing = async <Result>({
 	ctx,
 	customerId,
 	customerData,
+	entityId,
+	entityData,
 	createEnabled = true,
 	run,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	customerData?: CustomerData;
+	entityId?: string | null;
+	entityData?: EntityData;
 	createEnabled?: boolean;
 	run: () => Promise<RunWithCustomer<Result>>;
 }): Promise<Result> => {
@@ -101,6 +186,8 @@ export const withCreateIfMissing = async <Result>({
 		ctx,
 		customerId,
 		customerData,
+		entityId,
+		entityData,
 		createEnabled,
 		run,
 	});

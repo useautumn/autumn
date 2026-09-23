@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY "idx_pooled_balance_contributions_pending" ON "pooled_balance_contributions" USING btree ("pooled_balance_id") WHERE "pooled_balance_contributions"."effective_at" IS NOT NULL;

@@ -10,7 +10,7 @@ import {
 	computeReset,
 	computeTrack,
 	createSubjectState,
-	fullSubjectToPoolsNeedingPromotion,
+	fullSubjectToPoolsSummingContributions,
 	type ResetCommand,
 	StaleMutationError,
 	type SubjectState,
@@ -20,6 +20,7 @@ import {
 import {
 	createCustomerEntitlement,
 	createCustomerProduct,
+	createPooledBalance,
 	createSubjectFor,
 	createTrackCommand,
 	identity,
@@ -304,10 +305,12 @@ describe("computeReset", () => {
 		granted = 150,
 		resetMode = PooledBalanceResetMode.Subscription,
 		unlimited = false,
+		customerLicenseLinkId = null,
 	}: {
 		granted?: number;
 		resetMode?: PooledBalanceResetMode;
 		unlimited?: boolean;
+		customerLicenseLinkId?: string | null;
 	} = {}): SubjectState =>
 		createSubjectState({
 			identity,
@@ -321,17 +324,18 @@ describe("computeReset", () => {
 				},
 			],
 			pooledBalances: [
-				{
+				createPooledBalance({
 					id: POOL_ID,
-					customer_entitlement_id: "pool_ce",
+					customerEntitlementId: "pool_ce",
 					granted,
 					unlimited,
-					reset_mode: resetMode,
-				},
+					resetMode,
+					customerLicenseLinkId,
+				}),
 			],
 		});
 
-	test("a pool refills from the grant the sender promoted, and the pool row moves with it", () => {
+	test("a pool refills from the grant its promoted shares sum to, and one promote moves the shares in Postgres", () => {
 		const state = pooledState({ granted: 150 });
 		const mutation = resetOf({
 			state,
@@ -342,8 +346,14 @@ describe("computeReset", () => {
 				table: "pooledBalances",
 				op: "update",
 				id: POOL_ID,
-				before: { granted: 150 },
-				after: { granted: 170 },
+				before: { granted: 150, last_applied_reset_at: null },
+				after: { granted: 170, last_applied_reset_at: asOf },
+			},
+			{
+				table: "pooledContributions",
+				op: "promote",
+				pooledBalanceId: POOL_ID,
+				dueBy: asOf,
 			},
 			expect.objectContaining({
 				table: "customerEntitlements",
@@ -352,20 +362,34 @@ describe("computeReset", () => {
 			}),
 		]);
 		const refilled = applyMutation({ state, mutation: mutation! });
-		expect(refilled.pooledBalances[0]?.granted).toBe(170);
+		expect(refilled.pooledBalances[0]).toMatchObject({
+			granted: 170,
+			last_applied_reset_at: asOf,
+		});
 		expect(refilled.customerEntitlements[0]?.balance).toBe(170);
 	});
 
-	test("without a promoted grant the pool refills from what it holds and its row is untouched", () => {
+	test("without a summed grant the pool refills from what it holds; the shares are still promoted, so none is left due", () => {
 		const state = pooledState({ granted: 150 });
 		const mutation = resetOf({ state });
-		expect(mutation?.changes.map((change) => change.table)).toEqual([
-			"customerEntitlements",
+		expect(
+			mutation?.changes.map((change) => `${change.op}:${change.table}`),
+		).toEqual([
+			"update:pooledBalances",
+			"promote:pooledContributions",
+			"update:customerEntitlements",
 		]);
 		expect(
 			applyMutation({ state, mutation: mutation! }).customerEntitlements[0]
 				?.balance,
 		).toBe(150);
+	});
+
+	test("an unlimited pool has no grant to move: its row is untouched", () => {
+		const mutation = resetOf({ state: pooledState({ unlimited: true }) });
+		expect(mutation?.changes.map((change) => change.table) ?? []).not.toContain(
+			"pooledBalances",
+		);
 	});
 
 	test("a lifetime pool never refills", () => {
@@ -376,14 +400,18 @@ describe("computeReset", () => {
 		).toBeNull();
 	});
 
-	test("only a due, limited pool asks for a promotion", () => {
+	test("only a due, limited, non-license pool has its shares summed", () => {
 		const poolsOf = (state: SubjectState) =>
-			fullSubjectToPoolsNeedingPromotion({
+			fullSubjectToPoolsSummingContributions({
 				fullSubject: createSubjectFor({ state }),
 				asOf,
 			});
 		expect(poolsOf(pooledState())).toEqual([POOL_ID]);
 		expect(poolsOf(pooledState({ unlimited: true }))).toEqual([]);
+		// A license pool's grant is bought seats × the grant, never a sum of shares.
+		expect(poolsOf(pooledState({ customerLicenseLinkId: "link_1" }))).toEqual(
+			[],
+		);
 		expect(
 			poolsOf(pooledState({ resetMode: PooledBalanceResetMode.Lifetime })),
 		).toEqual([]);

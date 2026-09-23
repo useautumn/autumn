@@ -8,7 +8,10 @@ import {
 	type BalanceWorkerClient,
 	BalanceWorkerClientError,
 } from "@autumn/balance-worker-client";
-import type { AutumnBillingPlan } from "@autumn/shared";
+import {
+	type AutumnBillingPlan,
+	EntityAlreadyExistsError,
+} from "@autumn/shared";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { rethrowBalanceWorkerError } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
@@ -59,7 +62,7 @@ const sendPlan = ({
 	return client.applyBillingPlan({ request });
 };
 
-/** A create that finds the customer it was inserting: an earlier attempt of this same request landed. */
+/** A create that finds the row it was inserting: an earlier attempt of this same request landed. Someone else's entity is the Postgres lane's 409. */
 const replyToResult = ({
 	reply,
 	autumnBillingPlan,
@@ -68,6 +71,15 @@ const replyToResult = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }): AutumnBillingPlanResult => {
 	const internalCustomerId = reply.state.customer.internal_id;
+	if (reply.result.status === "entity_exists") {
+		const { entity } = reply.result;
+		const createdByThisPlan = (autumnBillingPlan.insertEntities ?? []).some(
+			({ internal_id }) => internal_id === entity.internal_id,
+		);
+		if (!createdByThisPlan)
+			throw new EntityAlreadyExistsError({ entityId: entity.id });
+		return { status: "applied", internalCustomerId };
+	}
 	const createdByThisPlan =
 		autumnBillingPlan.insertCustomer?.internal_id === internalCustomerId;
 	const status = createdByThisPlan ? "applied" : reply.result.status;

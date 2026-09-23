@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type { CatalogKey, CatalogRow } from "@autumn/balance-engine";
+import {
+	type CatalogKey,
+	type CatalogRow,
+	catalogRowToCatalogKey,
+} from "@autumn/balance-engine";
 import type { CatalogRowIds } from "@autumn/postgres";
 import {
 	AllowanceType,
@@ -21,16 +25,18 @@ const identity = {
 const entitlementRow = ({
 	id,
 	isCustom = false,
+	productId = "prod_internal_1",
 }: {
 	id: string;
 	isCustom?: boolean;
+	productId?: string;
 }): CatalogRow => ({
 	table: "entitlements",
 	row: {
 		id,
 		created_at: 1_700_000_000_000,
 		internal_feature_id: "feat_internal_1",
-		internal_product_id: "prod_internal_1",
+		internal_product_id: productId,
 		is_custom: isCustom,
 		allowance_type: AllowanceType.Fixed,
 		allowance: 1000,
@@ -88,10 +94,36 @@ const priceRow = ({
 	},
 });
 
-const keyOf = (row: CatalogRow): CatalogKey =>
-	row.table === "entitlements" || row.table === "prices"
-		? { table: row.table, id: row.row.id }
-		: { table: row.table, id: row.row.internal_id };
+const planLicenseRow = ({
+	id,
+	parentProductId,
+	licenseProductId,
+}: {
+	id: string;
+	parentProductId: string;
+	licenseProductId: string;
+}): CatalogRow => ({
+	table: "planLicenses",
+	row: {
+		id,
+		parent_internal_product_id: parentProductId,
+		license_internal_product_id: licenseProductId,
+		is_custom: false,
+		org_id: "org_1",
+		env: AppEnv.Sandbox,
+		included: 5,
+		prepaid_only: true,
+		customized: false,
+		metadata: {},
+		created_at: 1,
+		updated_at: 1,
+		price_ids: [],
+		entitlement_ids: [],
+		internal_feature_ids: [],
+	},
+});
+
+const keyOf = (row: CatalogRow): CatalogKey => catalogRowToCatalogKey({ row });
 
 type FakeDb = Pick<CatalogRowsSource, "getCatalogRows"> & {
 	calls: CatalogRowIds[];
@@ -123,6 +155,7 @@ const createFakeDb = ({ rows }: { rows: CatalogRow[] }): FakeDb => {
 				products: rowsOf("products", ids.productInternalIds),
 				features: rowsOf("features", ids.featureInternalIds),
 				prices: rowsOf("prices", ids.priceIds),
+				plan_licenses: rowsOf("planLicenses", ids.planLicenseIds),
 			} as Awaited<ReturnType<CatalogRowsSource["getCatalogRows"]>>;
 		},
 	};
@@ -154,6 +187,7 @@ describe("catalog cache", () => {
 			products: {},
 			features: {},
 			prices: {},
+			planLicenses: {},
 		});
 		await cache.load({ identity, keys });
 
@@ -165,6 +199,7 @@ describe("catalog cache", () => {
 				productInternalIds: ["prod_x"],
 				featureInternalIds: [],
 				priceIds: [],
+				planLicenseIds: [],
 			},
 		]);
 	});
@@ -225,6 +260,11 @@ describe("catalog cache", () => {
 		});
 		const basePrice = priceRow({ id: "price_base" });
 		const customPrice = priceRow({ id: "price_custom", isCustom: true });
+		const planLicense = planLicenseRow({
+			id: "pl_seat",
+			parentProductId: "prod_team",
+			licenseProductId: "prod_seat",
+		});
 		const rows = [
 			base,
 			custom,
@@ -232,24 +272,61 @@ describe("catalog cache", () => {
 			liveFeature,
 			basePrice,
 			customPrice,
+			planLicense,
 		];
 		const cache = createCache({ db: createFakeDb({ rows: [] }) });
 		cache.put({ rows });
 
 		expect(cache.invalidate({ orgId: "org_1", env: "sandbox" })).toEqual({
-			expiredCount: 3,
+			expiredCount: 4,
 		});
 		await Bun.sleep(5);
 		const catalog = cache.read({ keys: rows.map(keyOf) });
 		expect(Object.keys(catalog.entitlements)).toEqual(["ent_custom"]);
 		expect(Object.keys(catalog.features)).toEqual(["feat_live"]);
 		expect(Object.keys(catalog.prices)).toEqual(["price_custom"]);
+		expect(catalog.planLicenses).toEqual({});
 		expect(
 			cache.read({ keys: [base].map(keyOf), allowStale: true }).entitlements,
 		).toHaveProperty("ent_base");
 		expect(cache.invalidate({ orgId: "org_other", env: "sandbox" })).toEqual({
 			expiredCount: 0,
 		});
+	});
+
+	test("the invalidation index follows the LRU: evicted and overwritten rows leave it", async () => {
+		const first = entitlementRow({ id: "ent_1" });
+		const rowBytes = JSON.stringify(first).length;
+		const cache = createCache({
+			db: createFakeDb({ rows: [] }),
+			maxSizeBytes: rowBytes * 2,
+		});
+		cache.put({
+			rows: [
+				first,
+				entitlementRow({ id: "ent_2" }),
+				entitlementRow({ id: "ent_3" }),
+			],
+		});
+		// ent_1 was evicted: the org names two rows, not three.
+		expect(cache.invalidate({ orgId: "org_1", env: "sandbox" })).toEqual({
+			expiredCount: 2,
+		});
+
+		const moved = entitlementRow({ id: "ent_2" });
+		moved.row.org_id = "org_2";
+		cache.put({ rows: [moved] });
+		expect(cache.invalidate({ orgId: "org_2", env: "sandbox" })).toEqual({
+			expiredCount: 1,
+		});
+		expect(cache.invalidate({ orgId: "org_1", env: "sandbox" })).toEqual({
+			expiredCount: 1,
+		});
+		await Bun.sleep(5);
+		expect(
+			cache.read({ keys: [first, moved].map(keyOf) }).entitlements,
+		).toEqual({});
+		expect(cache.size()).toBe(2);
 	});
 
 	test("a key the source cannot produce stays missing after a load", async () => {

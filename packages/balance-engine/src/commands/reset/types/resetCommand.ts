@@ -19,7 +19,7 @@ export const resetCommandSchema = mutatingCommandSchema
 		billingCycleAnchors: z
 			.record(nonEmptyStringSchema, timestampSchema)
 			.optional(),
-		/** Each due pool's grant after the sender promoted its due contributions, by pool id: the sum lives in Postgres, only the number travels. */
+		/** Each due pool's grant once its shares are promoted, by pool id: the sum over every share, read by the sender. */
 		pooledGranted: z
 			.record(nonEmptyStringSchema, finiteNumberSchema)
 			.optional(),
