@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { z } from "zod/v4";
+import { workerCustomerSchema } from "../../../../src/models/subject/rows/workerCustomer.js";
 import { workerCustomerEntitlementSchema } from "../../../../src/models/subject/rows/workerCustomerEntitlement.js";
 import { workerCustomerProductSchema } from "../../../../src/models/subject/rows/workerCustomerProduct.js";
 import { workerEntitySchema } from "../../../../src/models/subject/rows/workerEntity.js";
@@ -48,6 +49,53 @@ const rollover = {
 	entities: {},
 };
 
+/** The columns commands decide on: all a customer row carried before the worker served `customers.get`. */
+const customerLoggedBeforeWidening = {
+	internal_id: "cus_internal_1",
+	id: "cus_1",
+	config: null,
+	spend_limits: null,
+	overage_allowed: null,
+	usage_limits: null,
+	usage_alerts: null,
+};
+
+const customer = {
+	...customerLoggedBeforeWidening,
+	org_id: "org_1",
+	env: "sandbox",
+	created_at: 1_700_000_000_000,
+	name: "Ada",
+	email: "ada@example.com",
+	fingerprint: null,
+	processor: { type: "stripe", id: "cus_stripe_1" },
+	processors: null,
+	metadata: { plan: "team" },
+	send_email_receipts: false,
+	currency: "usd",
+	auto_topups: null,
+};
+
+const renderedCustomerProduct = {
+	...customerProduct,
+	product_id: "pro",
+	customer_id: "cus_1",
+	entity_id: null,
+	updated_at: null,
+	canceled: false,
+	trial_ends_at: 1_800_000_000_000,
+	canceled_at: null,
+	free_trial_id: "ft_1",
+	collection_method: "charge_automatically",
+	subscription_ids: ["sub_1"],
+	scheduled_ids: [],
+	processor: { type: "stripe" },
+	api_semver: null,
+	is_custom: false,
+	billing_version: "v1",
+	external_id: null,
+};
+
 const entity = {
 	id: "site_1",
 	internal_id: "ent_internal_1",
@@ -63,6 +111,17 @@ describe("worker rows", () => {
 			customerEntitlement,
 		],
 		["customer product", workerCustomerProductSchema, customerProduct],
+		["customer", workerCustomerSchema, customer],
+		[
+			"customer logged before the widening",
+			workerCustomerSchema,
+			customerLoggedBeforeWidening,
+		],
+		[
+			"customer product with the columns customers.get renders",
+			workerCustomerProductSchema,
+			renderedCustomerProduct,
+		],
 		["rollover", workerRolloverSchema, rollover],
 		["entity", workerEntitySchema, entity],
 	] as [string, z.ZodType, object][])(

@@ -1,8 +1,10 @@
+import { sendApplyBillingPlan } from "./commands/sendApplyBillingPlan.js";
 import { sendCheck } from "./commands/sendCheck.js";
 import { sendConfirmExpiredLock } from "./commands/sendConfirmExpiredLock.js";
 import { sendEvict } from "./commands/sendEvict.js";
 import { sendFinalize } from "./commands/sendFinalize.js";
 import { sendInitialize } from "./commands/sendInitialize.js";
+import { sendReadSubjectState } from "./commands/sendReadSubjectState.js";
 import { sendReset } from "./commands/sendReset.js";
 import { sendTrack } from "./commands/sendTrack.js";
 import { createHttpClient } from "./http/createHttpClient.js";
@@ -10,6 +12,7 @@ import { createCommandQueue } from "./queue/createCommandQueue.js";
 import { enqueueCommands } from "./queue/enqueueCommands.js";
 import type { EnqueueParams } from "./queue/types/queue.js";
 import type {
+	ApplyBillingPlanParams,
 	BalanceWorkerClient,
 	BalanceWorkerClientConfig,
 	BalanceWorkerClientDependencies,
@@ -18,6 +21,7 @@ import type {
 	EvictParams,
 	FinalizeParams,
 	InitializeParams,
+	ReadSubjectStateParams,
 	ResetParams,
 	TrackParams,
 } from "./types/balanceWorkerClient.js";
@@ -55,6 +59,14 @@ export function createBalanceWorkerClient({
 		return sendCheck({ ctx, ...params });
 	}
 
+	function readSubjectState(params: ReadSubjectStateParams) {
+		return sendReadSubjectState({ ctx, ...params });
+	}
+
+	function applyBillingPlan(params: ApplyBillingPlanParams) {
+		return sendApplyBillingPlan({ ctx, ...params });
+	}
+
 	function initialize(params: InitializeParams) {
 		return sendInitialize({ ctx, ...params });
 	}
@@ -90,7 +102,9 @@ export function createBalanceWorkerClient({
 	return {
 		track,
 		check,
+		readSubjectState,
 		initialize,
+		applyBillingPlan,
 		evict,
 		finalize,
 		confirmExpiredLock,

@@ -13,6 +13,10 @@ export type SubjectRowUpdate = {
 };
 
 export type SubjectRowTable =
+	| "customers"
+	| "entities"
+	| "customerProducts"
+	| "customerPrices"
 	| "customerEntitlements"
 	| "rollovers"
 	| "usageWindows"

@@ -18,9 +18,11 @@ export const recordToBalanceWebhooks = ({
 }: {
 	record: MutationRecord;
 }): BalanceWebhook[] => {
-	const subjects = recordToSubjects({ record });
+	// Only a record that moved a tracked feature can call for one; others are never reverted.
 	const tracked = recordToTrackedFeature({ record });
-	if (!subjects || !tracked) return [];
+	if (!tracked) return [];
+	const subjects = recordToSubjects({ record });
+	if (!subjects) return [];
 
 	const commands = recordToAffectedFeatures({
 		record,

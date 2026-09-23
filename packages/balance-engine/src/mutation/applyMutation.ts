@@ -3,21 +3,23 @@ import {
 	OutOfOrderMutationError,
 	SubjectStateMissingError,
 } from "../errors.js";
+import type { CustomerRowChange } from "../models/mutation/rowChange.js";
 import type { SubjectStateMutation } from "../models/mutation/subjectStateMutation.js";
 import type { SubjectState } from "../models/subject/subjectState.js";
 import { isSameCustomerIdentity } from "../utils/identityUtils/classifyIdentityUtils.js";
 import { applyChanges } from "./applyChanges.js";
 
-/** Only an initialize can start a state: it is the mutation that inserts the customer row. */
+/** Only a mutation that inserts the customer row can start a state: an initialize, or a plan that creates the customer. */
 const emptyStateFor = ({
 	mutation,
 }: {
 	mutation: SubjectStateMutation;
 }): SubjectState => {
 	const customerInsert = mutation.changes.find(
-		(change) => change.table === "customer",
+		(change): change is Extract<CustomerRowChange, { op: "insert" }> =>
+			change.table === "customer" && change.op === "insert",
 	);
-	if (mutation.command.type !== "initialize" || !customerInsert) {
+	if (!customerInsert) {
 		throw new SubjectStateMissingError();
 	}
 	return {

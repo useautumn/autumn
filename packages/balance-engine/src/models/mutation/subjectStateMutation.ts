@@ -1,4 +1,6 @@
 import { z } from "zod/v4";
+import { applyBillingPlanCommandSchema } from "../../commands/applyBillingPlan/types/applyBillingPlanCommand.js";
+import { applyBillingPlanResultSchema } from "../../commands/applyBillingPlan/types/applyBillingPlanResult.js";
 import { confirmExpiredLockCommandSchema } from "../../commands/confirmExpiredLock/types/confirmExpiredLockCommand.js";
 import { confirmExpiredLockResultSchema } from "../../commands/confirmExpiredLock/types/confirmExpiredLockResult.js";
 import { finalizeCommandSchema } from "../../commands/finalize/types/finalizeCommand.js";
@@ -11,7 +13,7 @@ import { trackCommandSchema } from "../../commands/track/types/trackCommand.js";
 import { trackResultSchema } from "../../commands/track/types/trackResult.js";
 import { nonEmptyStringSchema } from "../common/primitives.js";
 import { meteringIdentitySchema } from "../identity/meteringIdentity.js";
-import { rowChangeSchema } from "./rowChange.js";
+import { changesInsertCustomer, rowChangeSchema } from "./rowChange.js";
 
 // The command as it was sent, parsed loose on the log: a newer command field must not break an older replay.
 export const mutationCommandSchema = z.discriminatedUnion("type", [
@@ -20,6 +22,7 @@ export const mutationCommandSchema = z.discriminatedUnion("type", [
 	finalizeCommandSchema.loose(),
 	confirmExpiredLockCommandSchema.loose(),
 	resetCommandSchema.loose(),
+	applyBillingPlanCommandSchema.loose(),
 ]);
 
 export const mutationResultSchema = z.discriminatedUnion("type", [
@@ -28,6 +31,7 @@ export const mutationResultSchema = z.discriminatedUnion("type", [
 	finalizeResultSchema,
 	confirmExpiredLockResultSchema,
 	resetResultSchema,
+	applyBillingPlanResultSchema,
 ]);
 
 export const mutationSubjectSchema = z
@@ -89,6 +93,17 @@ export const refineSubjectStateMutation = (
 			code: "custom",
 			message: "the record id is the command id",
 			path: ["id"],
+		});
+	}
+	// A plan that creates the customer starts its log; an entity initialize re-inserts the customer row mid-log.
+	const planCreatesCustomer =
+		mutation.command.type === "applyBillingPlan" &&
+		changesInsertCustomer({ changes: mutation.changes });
+	if (planCreatesCustomer && mutation.revision.before !== 0) {
+		context.addIssue({
+			code: "custom",
+			message: "A plan that creates the customer must start at revision zero",
+			path: ["revision", "before"],
 		});
 	}
 	if (mutation.command.type === "initialize") {

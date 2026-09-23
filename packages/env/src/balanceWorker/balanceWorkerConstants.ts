@@ -69,3 +69,7 @@ export const BALANCE_WORKER_CATALOG_TTL_MS = 300_000;
  *  under in-flight decisions at 256 MiB, which surfaces as NOT_READY responses
  *  the caller cannot do anything useful with. */
 export const BALANCE_WORKER_CATALOG_MAX_BYTES = 536_870_912;
+
+/** Off: the committer lands every update and increment unconditionally, so a record on the log is a row in Postgres.
+ *  A guard only fails when a writer outside the worker changed the row, which is a product bug to fix, not a write to drop. */
+export const BALANCE_WORKER_COMMITTER_GUARDS_ENABLED = false;

@@ -1,11 +1,13 @@
 import { isDeepStrictEqual } from "node:util";
 import { StaleMutationError } from "../errors.js";
 import type {
+	CustomerRowChange,
 	LockRowChange,
 	RowChange,
 	TableRowChange,
 } from "../models/mutation/rowChange.js";
 import type { AnyRowIncrement } from "../models/mutation/rowIncrement.js";
+import type { WorkerCustomer } from "../models/subject/rows/workerCustomer.js";
 import type { OpenLock } from "../models/subject/rows/workerLock.js";
 import type { SubjectState } from "../models/subject/subjectState.js";
 import { incrementRow } from "./incrementRow.js";
@@ -77,6 +79,24 @@ const applyToTable = <Row extends StateRow>({
 	}
 };
 
+/** An update must name the subject's own customer and find the columns it read still in place. */
+const applyToCustomer = ({
+	customer,
+	change,
+}: {
+	customer: WorkerCustomer;
+	change: CustomerRowChange;
+}): WorkerCustomer => {
+	if (change.op === "insert") return change.row;
+	const isSameCustomer = customer.internal_id === change.id;
+	if (
+		!isSameCustomer ||
+		!rowMatchesBefore({ row: customer, before: change.before })
+	)
+		throw new StaleMutationError({ subject: change.id });
+	return { ...customer, ...change.after };
+};
+
 /** Memory keeps only the ids of an open lock; the row the change carries is for Postgres. */
 const applyToOpenLocks = ({
 	openLocks,
@@ -111,7 +131,10 @@ export const applyChanges = ({
 	for (const change of changes) {
 		switch (change.table) {
 			case "customer":
-				nextState = { ...nextState, customer: change.row };
+				nextState = {
+					...nextState,
+					customer: applyToCustomer({ customer: nextState.customer, change }),
+				};
 				break;
 			case "entity":
 				nextState = { ...nextState, entity: change.row };

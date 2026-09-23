@@ -80,6 +80,15 @@ export const revertChanges = ({
 		switch (change.table) {
 			// The customer row anchors the state; undoing its insert is undoing the state, which revision.before === 0 already says.
 			case "customer":
+				if (change.op === "insert") break;
+				if (
+					!rowMatchesAfter({ row: previousState.customer, after: change.after })
+				)
+					throw new StaleMutationError({ subject: change.id });
+				previousState = {
+					...previousState,
+					customer: { ...previousState.customer, ...change.before },
+				};
 				break;
 			case "entity":
 				previousState = { ...previousState, entity: null };

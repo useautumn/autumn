@@ -1,4 +1,8 @@
 export type {
+	ApplyBillingPlanReply,
+	BalanceWorkerApplyBillingPlanRequest,
+} from "./contracts/applyBillingPlan.js";
+export type {
 	BalanceWorkerCheckRequest,
 	CheckReply,
 } from "./contracts/check.js";
@@ -18,6 +22,10 @@ export type {
 	BalanceWorkerInitializeRequest,
 	InitializeReply,
 } from "./contracts/initialize.js";
+export type {
+	BalanceWorkerReadSubjectStateRequest,
+	ReadSubjectStateReply,
+} from "./contracts/readSubjectState.js";
 export type {
 	BalanceWorkerResetRequest,
 	ResetReply,

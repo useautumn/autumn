@@ -31,7 +31,7 @@ describe("subjectRowUpdateSql", () => {
 			}),
 		);
 		expect(flatten(query.sql)).toBe(
-			'UPDATE "customer_entitlements" SET "balance" = "balance" + $1 WHERE id = $2 RETURNING id',
+			'UPDATE "customer_entitlements" SET "balance" = "balance" + $1 WHERE "id" = $2 RETURNING "id"',
 		);
 		expect(query.params).toEqual([-5, "ce_1"]);
 	});
@@ -52,7 +52,7 @@ describe("subjectRowUpdateSql", () => {
 			}),
 		);
 		expect(flatten(query.sql)).toBe(
-			'UPDATE "usage_windows" SET "usage" = "usage" + $1 WHERE id = $2 AND abs("window_start_at" - $3) < $4 AND abs("window_end_at" - $5) < $6 AND "anchor_customer_entitlement_id" IS NOT DISTINCT FROM $7 RETURNING id',
+			'UPDATE "usage_windows" SET "usage" = "usage" + $1 WHERE "id" = $2 AND abs("window_start_at" - $3) < $4 AND abs("window_end_at" - $5) < $6 AND "anchor_customer_entitlement_id" IS NOT DISTINCT FROM $7 RETURNING "id"',
 		);
 		expect(query.params).toEqual([5, "uw_1", 1, 1e-9, 2, 1e-9, null]);
 	});
@@ -69,7 +69,7 @@ describe("subjectRowUpdateSql", () => {
 			}),
 		);
 		expect(flatten(query.sql)).toBe(
-			'UPDATE "usage_windows" SET "usage" = $1, "window_start_at" = $2, "updated_at" = $3 WHERE id = $4 AND abs("usage" - $5) < $6 AND abs("window_start_at" - $7) < $8 RETURNING id',
+			'UPDATE "usage_windows" SET "usage" = $1, "window_start_at" = $2, "updated_at" = $3 WHERE "id" = $4 AND abs("usage" - $5) < $6 AND abs("window_start_at" - $7) < $8 RETURNING "id"',
 		);
 		expect(query.params).toEqual([
 			5,
@@ -115,7 +115,7 @@ describe("subjectRowUpdateSql", () => {
 				"coalesce(\"entities\" -> $2, jsonb_build_object('id', $3::text, 'balance', 0, 'adjustment', 0)) || jsonb_build_object(" +
 				'$4::text, to_jsonb(coalesce(("entities" -> $5 ->> $6)::numeric, 0) + $7), ' +
 				'$8::text, to_jsonb(coalesce(("entities" -> $9 ->> $10)::numeric, 0) + $11))) ' +
-				"WHERE id = $12 RETURNING id",
+				'WHERE "id" = $12 RETURNING "id"',
 		);
 		expect(query.params).toEqual([
 			"ent_42",
@@ -173,7 +173,7 @@ describe("subjectRowUpdateSql", () => {
 			}),
 		);
 		expect(flatten(query.sql)).toBe(
-			'UPDATE "usage_windows" SET "usage" = $1 + $2, "window_start_at" = $3 WHERE id = $4 RETURNING id',
+			'UPDATE "usage_windows" SET "usage" = $1 + $2, "window_start_at" = $3 WHERE "id" = $4 RETURNING "id"',
 		);
 		expect(query.params).toEqual([0, 5, 2, "uw_1"]);
 	});
@@ -209,5 +209,44 @@ describe("subjectRowUpdateSql", () => {
 		expect(() =>
 			subjectRowUpdateSql({ update: add({ table: "rollovers", id: "ro_1" }) }),
 		).toThrow("sets no columns");
+	});
+
+	test("a customer is keyed on internal_id, and a jsonb guard compares as jsonb", () => {
+		const query = dialect.sqlToQuery(
+			subjectRowUpdateSql({
+				update: set({
+					table: "customers",
+					id: "cus_internal_1",
+					set: { processor: { id: "cus_stripe_1", type: "stripe" } },
+					guard: { processor: null },
+				}),
+			}),
+		);
+		expect(flatten(query.sql)).toBe(
+			'UPDATE "customers" SET "processor" = $1::text::jsonb WHERE "internal_id" = $2 AND "processor" IS NOT DISTINCT FROM $3::text::jsonb RETURNING "internal_id"',
+		);
+		expect(query.params).toEqual([
+			'{"id":"cus_stripe_1","type":"stripe"}',
+			"cus_internal_1",
+			null,
+		]);
+	});
+
+	test("a customer product's text[] columns are replaced and guarded as arrays", () => {
+		const query = dialect.sqlToQuery(
+			subjectRowUpdateSql({
+				update: set({
+					table: "customerProducts",
+					id: "cp_1",
+					set: { subscription_ids: ["sub_1"], scheduled_ids: [] },
+					guard: { subscription_ids: [], scheduled_ids: null },
+				}),
+			}),
+		);
+		expect(flatten(query.sql)).toBe(
+			'UPDATE "customer_products" SET "subscription_ids" = ARRAY[$1]::text[], "scheduled_ids" = ARRAY[]::text[] ' +
+				'WHERE "id" = $2 AND "subscription_ids" IS NOT DISTINCT FROM ARRAY[]::text[] AND "scheduled_ids" IS NOT DISTINCT FROM NULL RETURNING "id"',
+		);
+		expect(query.params).toEqual(["sub_1", "cp_1"]);
 	});
 });

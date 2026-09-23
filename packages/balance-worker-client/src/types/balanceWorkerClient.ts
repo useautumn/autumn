@@ -1,17 +1,21 @@
 import type {
+	ApplyBillingPlanRequest,
 	CheckCommand,
 	ConfirmExpiredLockCommand,
 	EvictCommand,
 	FinalizeCommand,
 	InitializeRequest,
+	ReadSubjectStateCommand,
 	ResetCommand,
 	TrackCommand,
 } from "@autumn/balance-engine";
+import type { ApplyBillingPlanReply } from "../contracts/applyBillingPlan.js";
 import type { CheckReply } from "../contracts/check.js";
 import type { ConfirmExpiredLockReply } from "../contracts/confirmExpiredLock.js";
 import type { EvictReply } from "../contracts/evict.js";
 import type { FinalizeReply } from "../contracts/finalize.js";
 import type { InitializeReply } from "../contracts/initialize.js";
+import type { ReadSubjectStateReply } from "../contracts/readSubjectState.js";
 import type { ResetReply } from "../contracts/reset.js";
 import type { TrackReply } from "../contracts/track.js";
 import type { HttpClient } from "../http/types/httpClient.js";
@@ -24,6 +28,10 @@ import type { PartitionOwners } from "../routing/types/routing.js";
 
 export type TrackParams = { command: TrackCommand; signal?: AbortSignal };
 export type CheckParams = { command: CheckCommand; signal?: AbortSignal };
+export type ReadSubjectStateParams = {
+	command: ReadSubjectStateCommand;
+	signal?: AbortSignal;
+};
 export type EvictParams = { command: EvictCommand; signal?: AbortSignal };
 export type ConfirmExpiredLockParams = {
 	command: ConfirmExpiredLockCommand;
@@ -31,6 +39,10 @@ export type ConfirmExpiredLockParams = {
 };
 export type FinalizeParams = { command: FinalizeCommand; signal?: AbortSignal };
 export type ResetParams = { command: ResetCommand; signal?: AbortSignal };
+export type ApplyBillingPlanParams = {
+	request: ApplyBillingPlanRequest;
+	signal?: AbortSignal;
+};
 export type InitializeParams = {
 	request: InitializeRequest;
 	signal?: AbortSignal;
@@ -38,7 +50,15 @@ export type InitializeParams = {
 export type BalanceWorkerClient = {
 	track(params: TrackParams): Promise<TrackReply>;
 	check(params: CheckParams): Promise<CheckReply>;
+	/** The subject's rows and catalog as its next command would see them; `customers.get` renders from them. */
+	readSubjectState(
+		params: ReadSubjectStateParams,
+	): Promise<ReadSubjectStateReply>;
 	initialize(params: InitializeParams): Promise<InitializeReply>;
+	/** A billing plan's changes to one customer, answered once Postgres holds them. */
+	applyBillingPlan(
+		params: ApplyBillingPlanParams,
+	): Promise<ApplyBillingPlanReply>;
 	evict(params: EvictParams): Promise<EvictReply>;
 	finalize(params: FinalizeParams): Promise<FinalizeReply>;
 	confirmExpiredLock(

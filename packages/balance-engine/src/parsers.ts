@@ -1,4 +1,8 @@
 import {
+	type ApplyBillingPlanRequest,
+	applyBillingPlanRequestSchema,
+} from "./commands/applyBillingPlan/types/applyBillingPlanRequest.js";
+import {
 	type CheckCommand,
 	checkCommandSchema,
 } from "./commands/check/types/checkCommand.js";
@@ -22,6 +26,10 @@ import {
 	type InitializeRequest,
 	initializeRequestSchema,
 } from "./commands/initialize/types/initializeRequest.js";
+import {
+	type ReadSubjectStateCommand,
+	readSubjectStateCommandSchema,
+} from "./commands/readSubjectState/types/readSubjectStateCommand.js";
 import {
 	type ResetCommand,
 	resetCommandSchema,
@@ -72,6 +80,12 @@ export const parseCheckCommand = ({
 	input: unknown;
 }): CheckCommand => checkCommandSchema.parse(input);
 
+export const parseReadSubjectStateCommand = ({
+	input,
+}: {
+	input: unknown;
+}): ReadSubjectStateCommand => readSubjectStateCommandSchema.parse(input);
+
 export const parseEvictCommand = ({
 	input,
 }: {
@@ -101,6 +115,12 @@ export const parseInitializeCommand = ({
 }: {
 	input: unknown;
 }): InitializeCommand => initializeCommandSchema.parse(input);
+
+export const parseApplyBillingPlanRequest = ({
+	input,
+}: {
+	input: unknown;
+}): ApplyBillingPlanRequest => applyBillingPlanRequestSchema.parse(input);
 
 export const parseInitializeRequest = ({
 	input,

@@ -1,4 +1,29 @@
 // commands
+export {
+	applyBillingPlanToSubjects,
+	type BillingPlanEntityPart,
+} from "./commands/applyBillingPlan/applyBillingPlanToSubjects.js";
+export {
+	computeApplyBillingPlan,
+	planInsertedEntities,
+	planInsertsCustomer,
+} from "./commands/applyBillingPlan/computeApplyBillingPlan.js";
+export {
+	type BillingPlanDeleteTable,
+	type BillingPlanInsertTable,
+	type BillingPlanUpdateTable,
+	toBillingPlanDeleteOp,
+	toBillingPlanIncrementOp,
+	toBillingPlanInsertOp,
+	toBillingPlanUpdateOp,
+} from "./commands/applyBillingPlan/toBillingPlanOp.js";
+export type { ApplyBillingPlanCommand } from "./commands/applyBillingPlan/types/applyBillingPlanCommand.js";
+export type { ApplyBillingPlanRequest } from "./commands/applyBillingPlan/types/applyBillingPlanRequest.js";
+export type { ApplyBillingPlanResult } from "./commands/applyBillingPlan/types/applyBillingPlanResult.js";
+export type {
+	BillingPlanOp,
+	BillingPlanUpdateOp,
+} from "./commands/applyBillingPlan/types/billingPlanOp.js";
 export { computeCheck } from "./commands/check/computeCheck.js";
 export type { CheckCommand } from "./commands/check/types/checkCommand.js";
 export type { CheckResult } from "./commands/check/types/checkResult.js";
@@ -13,6 +38,7 @@ export { computeInitialize } from "./commands/initialize/computeInitialize.js";
 export type { InitializeCommand } from "./commands/initialize/types/initializeCommand.js";
 export type { InitializeRequest } from "./commands/initialize/types/initializeRequest.js";
 export type { InitializeResult } from "./commands/initialize/types/initializeResult.js";
+export type { ReadSubjectStateCommand } from "./commands/readSubjectState/types/readSubjectStateCommand.js";
 export { computeReset } from "./commands/reset/computeReset.js";
 export type {
 	ResetCommand,
@@ -107,6 +133,7 @@ export { applyMutation } from "./mutation/applyMutation.js";
 export { incrementRow } from "./mutation/incrementRow.js";
 export { revertChanges } from "./mutation/revertChanges.js";
 export {
+	parseApplyBillingPlanRequest,
 	parseCatalog,
 	parseCatalogRow,
 	parseCheckCommand,
@@ -117,6 +144,7 @@ export {
 	parseInitializeRequest,
 	parseMeteringIdentity,
 	parseMutationRecord,
+	parseReadSubjectStateCommand,
 	parseResetCommand,
 	parseSubjectState,
 	parseSubjectStateMutation,
@@ -139,8 +167,11 @@ export {
 // utils
 export {
 	customerRowsToSubjectState,
+	mergeCustomerAndEntities,
 	mergeSubjectStates,
+	splitCustomerAndEntities,
 	splitSubjectState,
+	subjectStateToLogState,
 } from "./utils/subjectStateUtils/convertSubjectStateUtils.js";
 export { createSubjectState } from "./utils/subjectStateUtils/createSubjectState.js";
 export {

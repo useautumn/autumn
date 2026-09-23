@@ -1,12 +1,19 @@
 import {
 	balanceLocks,
 	customerEntitlements,
+	customerPrices,
+	customerProducts,
+	customers,
+	entities,
 	pooledBalances,
 	rollovers,
 	usageWindows,
 } from "@autumn/shared";
 import { getTableColumns, type SQL, sql } from "drizzle-orm";
-import type { SubjectRowChange } from "../../types/subjectRowChange.js";
+import {
+	type SubjectRowChange,
+	subjectRowKeyColumnOf,
+} from "../../types/subjectRowChange.js";
 import type {
 	SubjectRowTable,
 	SubjectRowUpdate,
@@ -15,9 +22,18 @@ import type {
 /** Balances are numeric read as JS numbers; the engine rounds at 1e-10, so equality is a tolerance. */
 const NUMERIC_TOLERANCE = 1e-9;
 
-type ColumnInfo = { name: string; columnType: string };
+type ColumnInfo = {
+	name: string;
+	columnType: string;
+	getSQLType(): string;
+	baseColumn?: { columnType: string };
+};
 
 const tables = {
+	customers,
+	entities,
+	customerProducts,
+	customerPrices,
 	customerEntitlements,
 	rollovers,
 	usageWindows,
@@ -26,6 +42,10 @@ const tables = {
 } as const;
 
 const tableNames: Record<SubjectRowTable, string> = {
+	customers: "customers",
+	entities: "entities",
+	customerProducts: "customer_products",
+	customerPrices: "customer_prices",
 	customerEntitlements: "customer_entitlements",
 	rollovers: "rollovers",
 	usageWindows: "usage_windows",
@@ -75,13 +95,33 @@ const jsonSql = (value: unknown): SQL =>
 	// Bound as text first: the driver would JSON-encode a string aimed straight at jsonb.
 	sql`${value === null ? null : JSON.stringify(value)}::text::jsonb`;
 
+/** `ARRAY[...]::<type>[]`, each element bound as its base column would be; the driver cannot infer an array's element type. */
+const arraySql = ({
+	info,
+	value,
+}: {
+	info: ColumnInfo;
+	value: unknown;
+}): SQL => {
+	if (!Array.isArray(value)) return sql`NULL`;
+	const elementsAreJson = info.baseColumn?.columnType === "PgJsonb";
+	const elements = value.map((element) =>
+		elementsAreJson ? jsonSql(element) : sql`${element}`,
+	);
+	return sql`ARRAY[${sql.join(elements, sql`, `)}]::${sql.raw(info.getSQLType())}`;
+};
+
 const valueSql = ({
 	info,
 	value,
 }: {
 	info: ColumnInfo;
 	value: unknown;
-}): SQL => (info.columnType === "PgJsonb" ? jsonSql(value) : sql`${value}`);
+}): SQL => {
+	if (info.columnType === "PgJsonb") return jsonSql(value);
+	if (info.columnType === "PgArray") return arraySql({ info, value });
+	return sql`${value}`;
+};
 
 const guardSql = ({
 	info,
@@ -126,6 +166,10 @@ const MAP_ENTRIES: Record<
 	SubjectRowTable,
 	Record<string, MapEntryBehaviour>
 > = {
+	customers: {},
+	entities: {},
+	customerProducts: {},
+	customerPrices: {},
 	customerEntitlements: {
 		entities: {
 			seed: (key) =>
@@ -243,7 +287,10 @@ const assignmentsOf = ({ update }: { update: SubjectRowUpdate }): SQL[] => {
 	return assignments;
 };
 
-/** UPDATE … SET <replaced columns, counters added> WHERE id = $id AND <guards> RETURNING id; no row back means the guard failed or the row is gone. */
+const keyColumnSql = ({ table }: { table: SubjectRowTable }): SQL =>
+	sql`${sql.identifier(subjectRowKeyColumnOf({ table }))}`;
+
+/** UPDATE … SET <replaced columns, counters added> WHERE <key> = $id AND <guards> RETURNING <key>; no row back means the guard failed or the row is gone. */
 export const subjectRowUpdateSql = ({
 	update,
 }: {
@@ -256,16 +303,17 @@ export const subjectRowUpdateSql = ({
 	const guards = Object.entries(update.guard).map(([column, value]) =>
 		guardSql({ info: columnOf({ table: update.table, column }), value }),
 	);
-	const where = sql.join([sql`id = ${update.id}`, ...guards], sql` AND `);
+	const key = keyColumnSql({ table: update.table });
+	const where = sql.join([sql`${key} = ${update.id}`, ...guards], sql` AND `);
 	return sql`
 		UPDATE ${sql.identifier(tableNames[update.table])}
 		SET ${sql.join(assignments, sql`, `)}
 		WHERE ${where}
-		RETURNING id
+		RETURNING ${key}
 	`;
 };
 
-/** INSERT … RETURNING id; the shared table is the column allowlist, jsonb values travel as text. */
+/** INSERT … RETURNING <key>; the shared table is the column allowlist, jsonb values travel as text. */
 export const subjectRowInsertSql = ({
 	table,
 	row,
@@ -285,7 +333,7 @@ export const subjectRowInsertSql = ({
 	return sql`
 		INSERT INTO ${sql.identifier(tableNames[table])} (${sql.join(columns, sql`, `)})
 		VALUES (${sql.join(values, sql`, `)})
-		RETURNING id
+		RETURNING ${keyColumnSql({ table })}
 	`;
 };
 
@@ -295,11 +343,14 @@ export const subjectRowDeleteSql = ({
 }: {
 	table: SubjectRowTable;
 	id: string;
-}): SQL => sql`
-	DELETE FROM ${sql.identifier(tableNames[table])}
-	WHERE id = ${id}
-	RETURNING id
-`;
+}): SQL => {
+	const key = keyColumnSql({ table });
+	return sql`
+		DELETE FROM ${sql.identifier(tableNames[table])}
+		WHERE ${key} = ${id}
+		RETURNING ${key}
+	`;
+};
 
 /** The CTE body for one folded change. */
 export const subjectRowChangeSql = ({

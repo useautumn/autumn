@@ -1,3 +1,4 @@
+import type { ApplyBillingPlanCommand } from "../../commands/applyBillingPlan/types/applyBillingPlanCommand.js";
 import type { ConfirmExpiredLockCommand } from "../../commands/confirmExpiredLock/types/confirmExpiredLockCommand.js";
 import type { FinalizeCommand } from "../../commands/finalize/types/finalizeCommand.js";
 import type { InitializeCommand } from "../../commands/initialize/types/initializeCommand.js";
@@ -10,4 +11,5 @@ export type MutatingCommand =
 	| InitializeCommand
 	| FinalizeCommand
 	| ConfirmExpiredLockCommand
-	| ResetCommand;
+	| ResetCommand
+	| ApplyBillingPlanCommand;

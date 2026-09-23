@@ -134,7 +134,7 @@ export type UsageWindowIncrement = RowIncrement<
 	z.infer<typeof usageWindowIncrementParts.entries>
 >;
 
-/** The subject's own row: inserted once by the initialize that names it, never updated by a mutation. */
+/** The entity's own row: inserted once by the initialize that names it, never updated by a mutation. */
 export type SubjectRowChange<Table extends string, Row> = {
 	table: Table;
 	op: "insert";
@@ -179,9 +179,23 @@ const writeOnceRowChangeSchema = <
 /** Nothing edits a lock row, which is what lets finalize trust the copy it is handed. */
 export type LockRowChange = WriteOnceRowChange<"locks", WorkerLock>;
 
+/** The customer row: inserted by the command that creates the subject, updated by a billing plan. Its id is `internal_id`. */
+export type CustomerRowChange = Exclude<
+	TableRowChange<"customer", WorkerCustomer>,
+	{ op: "delete" }
+>;
+
+const customerRowChangeSchema = () => {
+	const [insert, update] = tableRowChangeOptions({
+		table: "customer",
+		rowSchema: workerCustomerSchema,
+	});
+	return z.discriminatedUnion("op", [insert, update]);
+};
+
 /** One change to one row of the subject's state; a mutation applies a list of these in order. */
 export type RowChange =
-	| SubjectRowChange<"customer", WorkerCustomer>
+	| CustomerRowChange
 	| SubjectRowChange<"entity", WorkerEntity>
 	| TableRowChange<"customerProducts", WorkerCustomerProduct>
 	| TableRowChange<"customerPrices", WorkerCustomerPrice>
@@ -195,10 +209,7 @@ export type RowChange =
 	| LockRowChange;
 
 export const rowChangeSchema = z.discriminatedUnion("table", [
-	subjectRowChangeSchema({
-		table: "customer",
-		rowSchema: workerCustomerSchema,
-	}),
+	customerRowChangeSchema(),
 	subjectRowChangeSchema({ table: "entity", rowSchema: workerEntitySchema }),
 	tableRowChangeSchema({
 		table: "customerProducts",
@@ -229,3 +240,13 @@ export const rowChangeSchema = z.discriminatedUnion("table", [
 	}),
 	writeOnceRowChangeSchema({ table: "locks", rowSchema: workerLockSchema }),
 ]);
+
+/** Whether the changes create the subject: only a customer insert starts a state. */
+export const changesInsertCustomer = ({
+	changes,
+}: {
+	changes: readonly RowChange[];
+}): boolean =>
+	changes.some(
+		(change) => change.table === "customer" && change.op === "insert",
+	);

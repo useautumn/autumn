@@ -213,4 +213,55 @@ describe("foldSubjectRowChanges", () => {
 			}),
 		).toThrow("updated after delete");
 	});
+
+	test("a customer inserted and updated in one flush folds on internal_id into one insert", () => {
+		const { folded, foldedIndexOf } = foldSubjectRowChanges({
+			changes: [
+				{
+					op: "insert",
+					table: "customers",
+					row: { internal_id: "cus_internal_1", id: "cus_1", processor: null },
+				},
+				{
+					op: "update",
+					table: "customers",
+					id: "cus_internal_1",
+					set: { processor: { id: "cus_stripe_1" } },
+					add: {},
+					addEntries: {},
+					guard: { processor: null },
+				},
+			],
+		});
+		expect(folded).toEqual([
+			{
+				op: "insert",
+				table: "customers",
+				row: {
+					internal_id: "cus_internal_1",
+					id: "cus_1",
+					processor: { id: "cus_stripe_1" },
+				},
+			},
+		]);
+		expect(foldedIndexOf).toEqual([0, 0]);
+	});
+
+	test("two customers sharing an external id stay two rows", () => {
+		const { folded } = foldSubjectRowChanges({
+			changes: [
+				{
+					op: "insert",
+					table: "customers",
+					row: { internal_id: "cus_internal_1", id: "cus_1" },
+				},
+				{
+					op: "insert",
+					table: "customers",
+					row: { internal_id: "cus_internal_2", id: "cus_1" },
+				},
+			],
+		});
+		expect(folded).toHaveLength(2);
+	});
 });

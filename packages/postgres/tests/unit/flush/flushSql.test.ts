@@ -102,10 +102,10 @@ describe("flushSql", () => {
 		);
 		const sql = flatten(query.sql);
 		expect(sql).toContain(
-			'"u0" AS ( INSERT INTO "usage_windows" ("id", "usage", "filter_key") VALUES ($1, $2, $3) RETURNING id )',
+			'"u0" AS ( INSERT INTO "usage_windows" ("id", "usage", "filter_key") VALUES ($1, $2, $3) RETURNING "id" )',
 		);
 		expect(sql).toContain(
-			'"u1" AS ( DELETE FROM "rollovers" WHERE id = $4 RETURNING id )',
+			'"u1" AS ( DELETE FROM "rollovers" WHERE "id" = $4 RETURNING "id" )',
 		);
 		expect(query.params.slice(0, 4)).toEqual(["uw_1", 5, null, "ro_1"]);
 	});
