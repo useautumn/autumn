@@ -1,4 +1,5 @@
 import {
+	ACTIVE_STATUSES,
 	CusProductStatus,
 	type FullCusProduct,
 	filterCustomerProductsByStripeSubscriptionId,
@@ -17,9 +18,10 @@ const findCopiesOnPhase = ({
 	customerProducts: FullCusProduct[];
 	startsAt: SyncPhase["starts_at"];
 }): FullCusProduct[] => {
+	// Past-due plans are still live, so they belong to the current phase too.
 	if (startsAt === "now")
-		return customerProducts.filter(
-			(customerProduct) => customerProduct.status === CusProductStatus.Active,
+		return customerProducts.filter((customerProduct) =>
+			ACTIVE_STATUSES.includes(customerProduct.status),
 		);
 
 	const scheduled = customerProducts.filter(
