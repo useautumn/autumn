@@ -24,6 +24,7 @@ import {
 import { updateProduct } from "@/internal/product/actions/updateProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
+import { addSameBatchLicenseParents } from "../addSameBatchLicenseParents.js";
 import {
 	applyCatalogConfigResources,
 	assertNoCatalogConfigConflicts,
@@ -511,11 +512,15 @@ const resolveCatalogUpdateResponse = async ({
 
 export const updateCatalog = async ({
 	ctx,
-	params,
+	params: requestedParams,
 }: {
 	ctx: AutumnContext;
 	params: CatalogUpdateParams;
 }) => {
+	const params = await addSameBatchLicenseParents({
+		ctx,
+		params: requestedParams,
+	});
 	// Preflight the whole virtual catalog before any mutation; individual writes
 	// revalidate against the real product identities created by earlier plans.
 	const preview = await previewUpdateCatalog({ ctx, params });

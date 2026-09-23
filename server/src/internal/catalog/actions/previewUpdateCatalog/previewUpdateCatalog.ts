@@ -17,6 +17,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
+import { addSameBatchLicenseParents } from "../addSameBatchLicenseParents.js";
 import { previewCatalogConfigResources } from "../catalogConfigResources.js";
 import { preflightCatalogPlans } from "../catalogPlanPreflight.js";
 import {
@@ -246,11 +247,15 @@ const previewMigrationForInPlaceUpdate = async ({
  */
 export const previewUpdateCatalog = async ({
 	ctx,
-	params,
+	params: requestedParams,
 }: {
 	ctx: AutumnContext;
 	params: CatalogUpdateParams;
 }): Promise<CatalogPreviewUpdateResponse> => {
+	const params = await addSameBatchLicenseParents({
+		ctx,
+		params: requestedParams,
+	});
 	validateCatalogVariantUpdates({ params });
 	const configPreview = await previewCatalogConfigResources({ ctx, params });
 
