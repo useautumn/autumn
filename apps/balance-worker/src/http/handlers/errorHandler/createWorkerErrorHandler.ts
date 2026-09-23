@@ -38,7 +38,7 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 		cause: Error,
 		context: Context<BalanceWorkerHttpEnv>,
 	) {
-		let status: 400 | 404 | 409 | 422 | 503 | 500 = 500;
+		let status: 400 | 404 | 409 | 422 | 429 | 503 | 500 = 500;
 		let error: WorkerErrorResponse["error"] = {
 			code: "INTERNAL",
 			message: "Worker request failed",
@@ -145,18 +145,24 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 				code: "NOT_OWNER",
 				message: "Route is not admitted by this worker",
 			};
-		} else if (
-			cause instanceof OwnedPartitionNotReadyError ||
-			cause instanceof PartitionWriterCapacityError
-		) {
+		} else if (cause instanceof OwnedPartitionNotReadyError) {
 			status = 503;
 			error = {
 				code: "NOT_READY",
 				message: "Partition cannot accept this request",
 			};
+		} else if (cause instanceof PartitionWriterCapacityError) {
+			status = 429;
+			error = {
+				code: "OVERLOADED",
+				message:
+					"Partition is at capacity for this customer; retry with backoff",
+			};
 		}
 		const requestLog = context.get("requestLog");
-		requestLog.error = cause;
+		// Overload arrives in floods, and serialising a stack per rejection cost more
+		// CPU than accepting the request did, collapsing throughput on staging.
+		if (error.code !== "OVERLOADED") requestLog.error = cause;
 		requestLog.errorCode = error.code;
 		return context.json({ error } satisfies WorkerErrorResponse, status);
 	}

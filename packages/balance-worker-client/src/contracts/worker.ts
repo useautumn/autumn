@@ -9,6 +9,7 @@ export type WorkerErrorCode =
 	| "INVALID_REQUEST"
 	| "NOT_OWNER"
 	| "NOT_READY"
+	| "OVERLOADED"
 	| "NOT_INITIALIZED"
 	| "STALE_SUBJECT"
 	| "CUSTOMER_NOT_FOUND"
@@ -112,6 +113,8 @@ export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
 			return 422;
 		case "NOT_READY":
 			return 503;
+		case "OVERLOADED":
+			return 429;
 		case "RECORD_REFUSED":
 		case "INTERNAL":
 			return 500;

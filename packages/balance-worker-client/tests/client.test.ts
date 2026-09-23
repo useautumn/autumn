@@ -214,6 +214,7 @@ async function doesNotRetryWorkerErrors(): Promise<void> {
 	for (const [status, code] of [
 		[400, "INVALID_REQUEST"],
 		[503, "NOT_READY"],
+		[429, "OVERLOADED"],
 		[500, "INTERNAL"],
 	] as const) {
 		const fixture = createFixture({

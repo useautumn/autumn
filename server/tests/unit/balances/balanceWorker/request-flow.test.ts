@@ -300,8 +300,27 @@ test.concurrent(
 			outcome: "not_submitted",
 			message: "Postgres refused this command's rows",
 		});
+		const notReady = new BalanceWorkerClientError({
+			code: "WORKER_ERROR",
+			workerCode: "NOT_READY",
+			outcome: "not_submitted",
+			message: "Partition cannot accept this request",
+		});
+		const overloaded = new BalanceWorkerClientError({
+			code: "WORKER_ERROR",
+			workerCode: "OVERLOADED",
+			outcome: "not_submitted",
+			message: "Partition is at capacity",
+		});
 		const failure = new Error("Unknown committed result");
-		for (const cause of [missing, stale, refused, failure]) {
+		for (const cause of [
+			missing,
+			stale,
+			refused,
+			notReady,
+			overloaded,
+			failure,
+		]) {
 			const client: BalanceWorkerClient = {
 				initialize: async () => {
 					throw cause;
@@ -390,6 +409,16 @@ test.concurrent(
 					await expect(operation()).rejects.toMatchObject({
 						code: "balance_worker_record_refused",
 						statusCode: 500,
+					});
+				else if (cause === notReady)
+					await expect(operation()).rejects.toMatchObject({
+						code: "balance_worker_unavailable",
+						statusCode: 503,
+					});
+				else if (cause === overloaded)
+					await expect(operation()).rejects.toMatchObject({
+						code: "balance_worker_overloaded",
+						statusCode: 429,
 					});
 				else await expect(operation()).rejects.toBe(cause);
 			}

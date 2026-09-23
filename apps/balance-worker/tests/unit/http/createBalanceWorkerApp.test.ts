@@ -179,6 +179,10 @@ test(
 	logsFailedRequest,
 );
 test("logs early rejections and unmatched paths once", logsEarlyRequest);
+test(
+	"logs an overload rejection without its error, so shedding load stays cheap",
+	logsOverloadCheaply,
+);
 test("keeps concurrent request logs separate", isolatesRequestLogs);
 test(
 	"logging failures cannot change the response",
@@ -244,6 +248,18 @@ async function logsFailedRequest(): Promise<void> {
 		});
 		expect(logs[0][1]).toContain(cause.name);
 	}
+}
+
+async function logsOverloadCheaply(): Promise<void> {
+	const { post, logs } = fixture({ cause: new PartitionWriterCapacityError() });
+	const response = await post();
+	expect(response.status).toBe(429);
+	expect(logs).toHaveLength(1);
+	const [event, message] = logs[0] as [Record<string, unknown>, string];
+	// Serialising a stack per rejected request made overload collapse throughput on staging.
+	expect(event).toMatchObject({ statusCode: 429, errorCode: "OVERLOADED" });
+	expect(event.error).toBeUndefined();
+	expect(message).not.toContain("PartitionWriterCapacityError");
 }
 
 async function logsEarlyRequest(): Promise<void> {
@@ -512,8 +528,8 @@ describe("Balance worker HTTP", () => {
 		},
 		{
 			cause: new PartitionWriterCapacityError(),
-			status: 503,
-			code: "NOT_READY",
+			status: 429,
+			code: "OVERLOADED",
 		},
 		{
 			cause: new SubjectStaleError({
