@@ -14,7 +14,6 @@ const throwInvalidRequest = (message: string) => {
 	});
 };
 
-/** Update can only adjust a revert trial in place; starting, converting or removing one changes which plan owns the subscription. */
 export const handleUpdateRevertTrialErrors = ({
 	billingContext,
 }: {

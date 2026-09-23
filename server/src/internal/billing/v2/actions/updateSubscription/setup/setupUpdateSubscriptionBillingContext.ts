@@ -170,13 +170,13 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		fullProduct,
 	});
 
-	// A subscription we can't bill against — canceled, or owned by a different
-	// Stripe customer — must never fall through to creating a replacement
-	// subscription and charging again.
+	const isUnbillableSubscription =
+		canceledStripeSubscriptionId !== undefined ||
+		mismatchedStripeSubscriptionId !== undefined;
+
 	const skipBillingChanges =
 		skipBillingChangesBase ||
-		canceledStripeSubscriptionId !== undefined ||
-		mismatchedStripeSubscriptionId !== undefined ||
+		isUnbillableSubscription ||
 		isRevertTrialContext({ trialContext });
 
 	// 3. Determine final anchor based on product transitions

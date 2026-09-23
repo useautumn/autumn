@@ -1,10 +1,6 @@
 import type { FullCusProduct, TrialContext } from "@autumn/shared";
 import { isCustomerProductTrialing } from "@autumn/shared";
 
-/**
- * Inherits trial state from an existing customer product; undefined if not trialing.
- * Lapsed revert trials still inherit so they stay Autumn-only until the expiry cron reverts them.
- */
 export const inheritTrialFromCustomerProduct = ({
 	customerProduct,
 	currentEpochMs,

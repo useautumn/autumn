@@ -52,7 +52,6 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 1. Current customer product errors
 	handleCurrentCustomerProductErrors({ billingContext });
 
-	// 1b. Revert trial errors
 	handleUpdateRevertTrialErrors({ billingContext });
 
 	// 2. Product type transition errors
