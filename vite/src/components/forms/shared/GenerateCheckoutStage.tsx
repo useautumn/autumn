@@ -14,6 +14,7 @@ import {
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { ConfigRow } from "./ConfigRow";
 import { PreviewSection, type PreviewSectionQuery } from "./PreviewSection";
 import { PlanActivationSection } from "./SendInvoiceStage";
@@ -44,6 +45,7 @@ function ActivationPreviewStage({
 	buttonIcon,
 	scheduledStartDate,
 	showLongLivedCheckout = false,
+	showCheckoutExpiryWarning = false,
 	enablePlanImmediately,
 	onEnablePlanImmediatelyChange,
 	longLivedCheckout,
@@ -60,8 +62,10 @@ function ActivationPreviewStage({
 	buttonIcon: ReactNode;
 	scheduledStartDate?: number | null;
 	showLongLivedCheckout?: boolean;
+	showCheckoutExpiryWarning?: boolean;
 }) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const isLongLivedCheckout = showLongLivedCheckout && !!longLivedCheckout;
 
 	const handleSubmit = async () => {
 		setIsSubmitting(true);
@@ -109,6 +113,26 @@ function ActivationPreviewStage({
 							/>
 						}
 					/>
+				</SheetSection>
+			)}
+
+			{showCheckoutExpiryWarning && !isLongLivedCheckout && (
+				<SheetSection withSeparator={false} className="pb-0">
+					<InfoBox variant="warning">
+						This checkout link expires 24 hours after it's generated.
+						{showLongLivedCheckout
+							? " Turn on a long-lived checkout link if you're sending it to the customer."
+							: ""}
+					</InfoBox>
+				</SheetSection>
+			)}
+
+			{isLongLivedCheckout && enablePlanImmediately && (
+				<SheetSection withSeparator={false} className="pb-0">
+					<InfoBox variant="note">
+						With a long-lived link, the plan is enabled when the customer opens
+						the link, not when you generate it.
+					</InfoBox>
 				</SheetSection>
 			)}
 
@@ -201,6 +225,7 @@ export function GenerateCheckoutStage({
 			buttonLabel="Generate Checkout URL"
 			buttonIcon={<LinkIcon size={16} weight="bold" />}
 			showLongLivedCheckout={showLongLivedCheckout}
+			showCheckoutExpiryWarning
 			{...activation}
 		/>
 	);

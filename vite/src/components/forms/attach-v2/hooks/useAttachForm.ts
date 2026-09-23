@@ -48,7 +48,9 @@ export function useAttachForm({
 			currency: null,
 			noBillingChanges: false,
 			enablePlanImmediately: false,
-			longLivedCheckout: false,
+			// Dashboard checkout links are usually sent to the customer, so default to
+			// a link that outlives the 24h Stripe session.
+			longLivedCheckout: true,
 			carryOverBalances: false,
 			carryOverBalanceFeatureIds: [],
 			carryOverUsages: false,

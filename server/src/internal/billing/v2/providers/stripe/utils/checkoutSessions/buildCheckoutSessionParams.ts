@@ -1,10 +1,24 @@
+import { AuthType } from "@autumn/shared";
 import type Stripe from "stripe";
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
 import { buildCheckoutSessionMetadata } from "./buildCheckoutSessionMetadata";
 
-// A payable session blocks conflicting billing for its whole lifetime — keep it
-// 1h (Stripe min 30m, default 24h) unless the caller asks for more.
-const DEFAULT_SESSION_LIFETIME_SECONDS = 60 * 60;
+// A payable session can still complete after billing changed through a path that
+// skips the checkout lock, so API sessions stay short: 1h (Stripe min 30m, max 24h).
+const API_SESSION_LIFETIME_SECONDS = 60 * 60;
+
+// Dashboard links are usually sent to the customer (e.g. by email), so they get
+// Stripe's 24h max. Longer-lived links go through long_lived_checkout instead.
+const DASHBOARD_SESSION_LIFETIME_SECONDS = 24 * 60 * 60;
+
+export const getDefaultCheckoutSessionLifetimeSeconds = ({
+	authType,
+}: {
+	authType?: AuthType;
+}): number =>
+	authType === AuthType.Dashboard
+		? DASHBOARD_SESSION_LIFETIME_SECONDS
+		: API_SESSION_LIFETIME_SECONDS;
 
 /**
  * Deep-merges subscription_data so user-provided fields (e.g. metadata)
@@ -44,6 +58,7 @@ export const buildCheckoutSessionParams = ({
 	defaultSavedPaymentMethodOptions,
 	autumnMetadataId,
 	userMetadata,
+	defaultSessionLifetimeSeconds = API_SESSION_LIFETIME_SECONDS,
 }: {
 	params: Stripe.Checkout.SessionCreateParams;
 	checkoutSessionParams?: Partial<Stripe.Checkout.SessionCreateParams>;
@@ -53,6 +68,8 @@ export const buildCheckoutSessionParams = ({
 	defaultSavedPaymentMethodOptions?: Stripe.Checkout.SessionCreateParams.SavedPaymentMethodOptions;
 	autumnMetadataId?: string;
 	userMetadata?: Record<string, string>;
+	/** Used when the caller didn't pass checkout_session_params.expires_at. */
+	defaultSessionLifetimeSeconds?: number;
 }): Stripe.Checkout.SessionCreateParams => {
 	const mergedParams: Stripe.Checkout.SessionCreateParams = {
 		...(checkoutSessionParams ?? {}),
@@ -65,7 +82,7 @@ export const buildCheckoutSessionParams = ({
 		...mergedParams,
 		expires_at:
 			mergedParams.expires_at ??
-			Math.floor(Date.now() / 1000) + DEFAULT_SESSION_LIFETIME_SECONDS,
+			Math.floor(Date.now() / 1000) + defaultSessionLifetimeSeconds,
 		...(currency
 			? {
 					currency,
