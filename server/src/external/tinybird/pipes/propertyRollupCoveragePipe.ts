@@ -17,6 +17,8 @@ export const propertyRollupCoveragePipeParamsSchema = z.object({
 	start_date: z.string(),
 	end_date: z.string(),
 	property_key: z.string(),
+	customer_id: z.string().optional(),
+	entity_id: z.string().optional(),
 });
 
 export type PropertyRollupCoveragePipeParams = z.infer<
