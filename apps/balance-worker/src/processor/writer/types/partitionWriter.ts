@@ -18,6 +18,8 @@ import type {
 export type PartitionWriter = {
 	/** Snapshot: waits for the current writes to reach the store, not writes enqueued later. */
 	waitForStore(): Promise<void>;
+	/** Resolves once every batch handed to the store so far has been applied or failed. */
+	waitForApplies(): Promise<void>;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
 	/** Snapshot: waits for the mutations pending for this customer when called, not ones enqueued later. */
@@ -68,6 +70,9 @@ export type PartitionWriterLimits = {
 	maxPendingCommandsPerCustomer: number;
 	/** Encoded bytes one Kafka batch may carry; defaults to DEFAULT_MAX_BATCH_BYTES. */
 	maxBatchBytes?: number;
+	/** Committed batches allowed to wait for the store before committing pauses;
+	 *  defaults to DEFAULT_MAX_UNAPPLIED_BATCHES. */
+	maxUnappliedBatches?: number;
 };
 
 export type PartitionWriterConfig = {
@@ -113,8 +118,19 @@ export type PartitionWriterState = {
 	queue: PendingMutation[];
 	draining: boolean;
 	storeCompletion: Promise<void>;
+	/** Batches Kafka has but the store has not applied yet, oldest first. */
+	unapplied: UnappliedBatch[];
+	/** Resolves once every batch handed to the store so far has been applied, in log order. */
+	applyTail: Promise<void>;
+	/** Whether a store flush is running; the next one takes everything queued by then. */
+	applying: boolean;
 	drainScheduled: boolean;
 	recoveryError: Error | null;
+};
+
+export type UnappliedBatch = {
+	batch: PendingMutation[];
+	baseOffset: bigint;
 };
 
 export type PartitionWriterScope = {

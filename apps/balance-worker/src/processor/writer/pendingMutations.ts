@@ -30,6 +30,9 @@ export function createPartitionWriterState(): PartitionWriterState {
 		queue: [],
 		draining: false,
 		storeCompletion: Promise.resolve(),
+		unapplied: [],
+		applyTail: Promise.resolve(),
+		applying: false,
 		drainScheduled: false,
 		recoveryError: null,
 	};
@@ -119,6 +122,16 @@ export function loggedRecordOf({
 		after: { state: subjectStateToLogState({ state: nextState }) },
 	};
 }
+
+/** Bounds how far the store may trail the log: each unapplied batch keeps its
+ *  store-durability callers waiting and its milestones in memory. */
+export const DEFAULT_MAX_UNAPPLIED_BATCHES = 16;
+
+export const maxUnappliedBatchesOf = ({
+	limits,
+}: {
+	limits: PartitionWriterScope["config"]["limits"];
+}): number => limits.maxUnappliedBatches ?? DEFAULT_MAX_UNAPPLIED_BATCHES;
 
 export const maxBatchBytesOf = ({
 	limits,

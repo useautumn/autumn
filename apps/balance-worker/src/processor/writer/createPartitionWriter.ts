@@ -60,8 +60,14 @@ export function createPartitionWriter({
 		return scope.state.storeCompletion;
 	}
 
+	/** Every batch handed to the store so far, applied or failed; never rejects. */
+	function waitForApplies(): Promise<void> {
+		return scope.state.applyTail.catch(() => undefined);
+	}
+
 	return {
 		waitForStore,
+		waitForApplies,
 		decide,
 		waitForPendingCommits,
 		readFreshestState,

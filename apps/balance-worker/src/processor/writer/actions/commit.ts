@@ -7,6 +7,7 @@ import type {
 import {
 	loggedRecordOf,
 	maxBatchBytesOf,
+	maxUnappliedBatchesOf,
 	rejectAllPending,
 	removePendingMutation,
 } from "../pendingMutations.js";
@@ -19,6 +20,9 @@ import {
 	MutationBatchNotCommittedError,
 	PartitionWriterRecoveryRequiredError,
 } from "../writerErrors.js";
+
+/** Bounds one store flush; the committer writes a flush as a single statement. */
+const MAX_BATCHES_PER_FLUSH = 16;
 
 export function scheduleCommit({
 	scope,
@@ -35,25 +39,82 @@ export function scheduleCommit({
 	setImmediate(runScheduledDrain);
 }
 
-/** Kafka commit → store apply → settle waiters, one batch at a time until the queue empties. */
+/** Kafka commit → answer log callers → hand the batch to the store, then straight
+ *  on to the next batch. The store applies behind the log in order; the loop only
+ *  waits for it when too many batches are still unapplied. */
 async function commitOutcomes({
 	scope,
 }: {
 	scope: PartitionWriterScope;
 }): Promise<void> {
-	const { state } = scope;
+	const { state, config } = scope;
 	if (state.draining || state.recoveryError) return;
 	state.draining = true;
 	try {
 		while (state.queue.length > 0 && !state.recoveryError) {
+			while (
+				state.unapplied.length >=
+				maxUnappliedBatchesOf({ limits: config.limits })
+			) {
+				await state.unapplied[0]?.batch[0]?.settlement
+					.waitForStore()
+					.catch(() => undefined);
+				if (state.recoveryError) return;
+			}
 			const batch = takeBatch({ scope });
 			const baseOffset = await appendBatch({ scope, batch });
 			if (baseOffset === null) return;
 			settleAppended({ scope, batch });
-			if (!(await applyBatch({ scope, batch, baseOffset }))) return;
+			queueApply({ scope, batch, baseOffset });
 		}
 	} finally {
 		state.draining = false;
+	}
+}
+
+/** Hands a committed batch to the store. One flush runs at a time, and each takes
+ *  every batch queued behind the one before it, because a flush costs about the same
+ *  for one row as for hundreds. Order is the log's: batches join the queue in commit
+ *  order and a flush applies them in that order. */
+function queueApply({
+	scope,
+	batch,
+	baseOffset,
+}: {
+	scope: PartitionWriterScope;
+	batch: PendingMutation[];
+	baseOffset: bigint;
+}): void {
+	const { state } = scope;
+	state.unapplied.push({ batch, baseOffset });
+	if (state.applying) return;
+	state.applying = true;
+	state.applyTail = applyQueued({ scope });
+}
+
+async function applyQueued({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): Promise<void> {
+	const { state } = scope;
+	try {
+		while (state.unapplied.length > 0 && !state.recoveryError) {
+			const taken = state.unapplied.slice(0, MAX_BATCHES_PER_FLUSH);
+			const batch = taken.flatMap((entry) => entry.batch);
+			const records = taken.flatMap((entry) =>
+				durableRecordsOf({
+					scope,
+					batch: entry.batch,
+					baseOffset: entry.baseOffset,
+				}),
+			);
+			const ok = await applyBatch({ scope, batch, records });
+			state.unapplied.splice(0, taken.length);
+			if (!ok) return;
+		}
+	} finally {
+		state.applying = false;
 	}
 }
 
@@ -77,7 +138,13 @@ async function appendBatch({
 		}
 		return baseOffset;
 	} catch (cause) {
-		if (cause instanceof MutationBatchNotCommittedError) {
+		// Clearing speculative state is only safe when every committed batch is
+		// already in the store; otherwise memory holds rows the store lacks, so the
+		// partition rebuilds from the log instead.
+		if (
+			cause instanceof MutationBatchNotCommittedError &&
+			state.unapplied.length === 0
+		) {
 			rejectAllPending({
 				state,
 				batch,
@@ -132,14 +199,13 @@ function settlePending({
 async function applyBatch({
 	scope,
 	batch,
-	baseOffset,
+	records,
 }: {
 	scope: PartitionWriterScope;
 	batch: PendingMutation[];
-	baseOffset: bigint;
+	records: DurableMutationRecord[];
 }): Promise<boolean> {
 	try {
-		const records = durableRecordsOf({ scope, batch, baseOffset });
 		const results = await scope.ctx.stateStore.applyDurableMutations({
 			records,
 		});
@@ -189,6 +255,8 @@ async function applyBatch({
 	}
 }
 
+/** Every committed-but-unapplied batch still owns a store milestone, so recovery
+ *  rejects those along with whatever never reached Kafka. */
 function enterRecovery({
 	scope,
 	batch,
@@ -200,7 +268,10 @@ function enterRecovery({
 }): void {
 	const error = new PartitionWriterRecoveryRequiredError({ cause });
 	scope.state.recoveryError = error;
-	rejectAllPending({ state: scope.state, batch, error });
+	const owed = new Set<PendingMutation>(batch);
+	for (const unapplied of scope.state.unapplied)
+		for (const pending of unapplied.batch) owed.add(pending);
+	rejectAllPending({ state: scope.state, batch: [...owed], error });
 }
 
 // Only the log's copy carries `after`, and only the columns commands decide on; memory keeps the whole rows.

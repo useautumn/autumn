@@ -138,8 +138,11 @@ function createProcessor({
 		});
 	}
 
-	function drain() {
-		return settleAcceptedCommands({ accepted: scope.accepted });
+	/** Commands settle when Kafka has them, but the store applies behind the log,
+	 *  so a drained partition also waits for those applies before it lets go. */
+	async function drain() {
+		await settleAcceptedCommands({ accepted: scope.accepted });
+		await scope.ctx.writer.waitForApplies();
 	}
 
 	function initialize({ request }: { request: InitializeRequest }) {
