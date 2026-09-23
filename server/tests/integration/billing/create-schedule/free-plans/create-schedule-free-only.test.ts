@@ -186,3 +186,67 @@ test.concurrent(
 		expect(phasePrices.map((price) => price.unitAmount)).toEqual([0, 2000]);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("create-schedule free only: an existing free plan not re-listed in phase 1 still transitions")}`,
+	async () => {
+		const freeA = products.base({
+			id: "free-a",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const freeB = products.base({
+			id: "free-b",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+		const otherGroupFree = products.base({
+			id: "other-free",
+			group: "other",
+			items: [items.monthlyWords({ includedUsage: 50 })],
+		});
+
+		const { customerId, autumnV2_3, ctx, testClockId, advancedTo } =
+			await initScenario({
+				customerId: "sched-existing-free",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({
+						list: [freeA, freeB, otherGroupFree],
+						createInStripe: false,
+					}),
+				],
+				actions: [s.billing.attach({ productId: freeA.id })],
+			});
+
+		// Phase 1 leaves Free A's group alone, so Free A keeps running until Free B claims it,
+		// while the phase 1 plan ends at phase 2 because it isn't re-listed there.
+		const freeBStartsAt = addMonths(advancedTo, 1).getTime();
+		await autumnV2_3.billing.createSchedule<CreateScheduleParamsV0Input>({
+			customer_id: customerId,
+			phases: [
+				{ starts_at: advancedTo, plans: [{ plan_id: otherGroupFree.id }] },
+				{ starts_at: freeBStartsAt, plans: [{ plan_id: freeB.id }] },
+			],
+		});
+
+		await expectCustomerProducts({
+			customerId,
+			autumn: autumnV2_3,
+			active: [freeA.id, otherGroupFree.id],
+			scheduled: [freeB.id],
+		});
+
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			advanceTo: addHours(freeBStartsAt, 1).getTime(),
+			waitForSeconds: 30,
+		});
+
+		await expectCustomerProducts({
+			customerId,
+			autumn: autumnV2_3,
+			active: [freeB.id],
+			notPresent: [freeA.id, otherGroupFree.id],
+		});
+	},
+);
