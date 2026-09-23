@@ -18,6 +18,7 @@ export const MAIN_STRIPE_EVENT_TYPES: StripeEventType[] = [
 	"invoice.finalized",
 	"invoice.updated",
 	"subscription_schedule.canceled",
+	"subscription_schedule.released",
 	"subscription_schedule.updated",
 	"test_helpers.test_clock.ready",
 ];
@@ -35,7 +36,6 @@ export const SYNC_STRIPE_EVENT_TYPES: StripeEventType[] = [
 	// subscription schedules (extras beyond main)
 	"subscription_schedule.created",
 	"subscription_schedule.completed",
-	"subscription_schedule.released",
 
 	// payment methods
 	"payment_method.attached",
