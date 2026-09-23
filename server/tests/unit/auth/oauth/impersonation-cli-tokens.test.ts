@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { stripOAuthTokenPrefix } from "@autumn/auth";
 import { AUTUMN_ADMIN_OAUTH_CLIENT_ID } from "@autumn/auth/oauth";
 import {
 	AppEnv,
@@ -61,9 +62,13 @@ describe("createImpersonationCliTokens", () => {
 		}
 
 		// Stored hashed; the caller gets the prefixed raw token.
-		expect(result.sandboxToken).toStartWith("am_oauth_");
+		expect(result.sandboxToken).toStartWith("am_sk_test_oauth_");
+		expect(result.liveToken).toStartWith("am_sk_live_oauth_");
 		expect(tokens[0]?.token).toBe(
-			hashOAuthToken(result.sandboxToken.replace(/^am_oauth_/, "")),
+			hashOAuthToken(stripOAuthTokenPrefix({ token: result.sandboxToken })),
+		);
+		expect(tokens[1]?.token).toBe(
+			hashOAuthToken(stripOAuthTokenPrefix({ token: result.liveToken })),
 		);
 		expect(tokens[0]?.oauthConsentId).toBe(consents[0]?.id);
 		expect(tokens[1]?.oauthConsentId).toBe(consents[1]?.id);
