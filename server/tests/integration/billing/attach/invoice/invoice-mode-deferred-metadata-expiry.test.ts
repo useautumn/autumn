@@ -1,5 +1,5 @@
-// Contract: deferred invoice metadata is unbounded; action-required upgrade metadata keeps a short expiry.
-// Side effect: cron selection excludes null expires_at rows.
+// Contract: finalized deferred invoice metadata expires at the invoice due date; drafts are unbounded;
+// action-required upgrade metadata keeps a short expiry. Cron selection excludes null expires_at rows.
 
 import { expect, test } from "bun:test";
 import { type AttachParamsV1Input, MetadataType, ms } from "@autumn/shared";
@@ -8,6 +8,7 @@ import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import type Stripe from "stripe";
 import {
 	getExpiredInvoiceMetadata,
 	handleVoidInvoiceCron,
@@ -34,10 +35,75 @@ test(`${chalk.yellowBright("invoice-mode metadata expiry: custom payment methods
 	).toBe(now + ms.minutes(10));
 });
 
+test(`${chalk.yellowBright("invoice-mode metadata expiry: deferred invoices expire at due date only once finalized")}`, () => {
+	const dueDateSeconds = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+	const finalizedInvoice = {
+		status: "open",
+		due_date: dueDateSeconds,
+	} as Stripe.Invoice;
+	const draftInvoice = { status: "draft", due_date: null } as Stripe.Invoice;
+
+	expect(
+		getDeferredBillingMetadataExpiresAt({
+			deferredInvoiceMode: true,
+			stripeInvoice: finalizedInvoice,
+		}),
+	).toBe(dueDateSeconds * 1000);
+	expect(
+		getDeferredBillingMetadataExpiresAt({
+			deferredInvoiceMode: true,
+			stripeInvoice: draftInvoice,
+		}),
+	).toBeNull();
+});
+
 test.concurrent(
-	`${chalk.yellowBright("invoice-mode metadata expiry: deferred invoices do not auto-void")}`,
+	`${chalk.yellowBright("invoice-mode metadata expiry: finalized deferred invoices expire at their due date")}`,
 	async () => {
-		const customerId = "invoice-mode-deferred-no-expiry";
+		const customerId = "invoice-mode-deferred-due-date-expiry";
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		const result = await autumnV2_3.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			invoice_mode: {
+				enabled: true,
+				enable_plan_immediately: false,
+				finalize: true,
+			},
+		});
+
+		const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
+			result.invoice!.stripe_id,
+		);
+		expect(stripeInvoice.due_date).toBeGreaterThan(0);
+
+		const deferredMetadata = await MetadataService.getByStripeInvoiceId({
+			db: ctx.db,
+			stripeInvoiceId: stripeInvoice.id,
+			type: MetadataType.DeferredInvoice,
+		});
+
+		expect(deferredMetadata!.expires_at).toBe(stripeInvoice.due_date! * 1000);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoice-mode metadata expiry: draft deferred invoices never expire")}`,
+	async () => {
+		const customerId = "invoice-mode-deferred-draft-no-expiry";
 		const pro = products.pro({
 			id: "pro",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -58,7 +124,7 @@ test.concurrent(
 			invoice_mode: {
 				enabled: true,
 				enable_plan_immediately: false,
-				finalize: true,
+				finalize: false,
 			},
 		});
 
@@ -89,7 +155,7 @@ test.concurrent(
 			db: ctx.db,
 			now: Date.now(),
 			limit: 500,
-			cursor: null,
+			cursor: { expiresAt: Number(expiredMetadata.expires_at) - 1, id: "" },
 		});
 		const voidableIds = new Set(voidableMetadata.map((row) => row.id));
 

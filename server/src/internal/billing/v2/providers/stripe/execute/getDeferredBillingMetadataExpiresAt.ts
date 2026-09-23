@@ -1,17 +1,27 @@
-import { ms } from "@autumn/shared";
+import { addMinutes, fromUnixTime } from "date-fns";
+import type Stripe from "stripe";
+
+const DEFERRED_METADATA_EXPIRY_MINUTES = 10;
+
+const finalizedInvoiceDueDateMs = (stripeInvoice?: Stripe.Invoice) => {
+	if (stripeInvoice?.status !== "open" || !stripeInvoice.due_date) return null;
+	return fromUnixTime(stripeInvoice.due_date).getTime();
+};
 
 export const getDeferredBillingMetadataExpiresAt = ({
 	deferredInvoiceMode,
 	paymentMethod,
+	stripeInvoice,
 	now = Date.now(),
 }: {
 	deferredInvoiceMode: boolean;
 	paymentMethod?: { type?: string } | null;
+	stripeInvoice?: Stripe.Invoice;
 	now?: number;
 }) => {
-	if (deferredInvoiceMode || paymentMethod?.type === "custom") {
-		return null;
-	}
+	if (paymentMethod?.type === "custom") return null;
 
-	return now + ms.minutes(10);
+	if (deferredInvoiceMode) return finalizedInvoiceDueDateMs(stripeInvoice);
+
+	return addMinutes(now, DEFERRED_METADATA_EXPIRY_MINUTES).getTime();
 };

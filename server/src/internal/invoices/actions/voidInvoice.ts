@@ -2,7 +2,7 @@ import { ErrCode, ProcessorType, RecaseError } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { expirePendingForVoidedStripeInvoice } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingForVoidedStripeInvoice";
+import { expirePendingPlanForVoidedInvoice } from "@/internal/billing/v2/actions/expirePendingPlan/expirePendingPlanForVoidedInvoice";
 import { type InvoiceListRow, InvoiceService } from "../InvoiceService";
 import { updateInvoiceFromStripe } from "./updateFromStripe";
 
@@ -47,9 +47,9 @@ export const voidInvoice = async ({
 	const customerId = row.customer_id ?? row.invoice.internal_customer_id;
 
 	if (stripeInvoice.status === "void") {
-		await expirePendingForVoidedStripeInvoice({
+		await expirePendingPlanForVoidedInvoice({
 			ctx,
-			stripeInvoiceId: stripeInvoice.id,
+			stripeInvoice,
 			customerId,
 		});
 		await updateInvoiceFromStripe({ ctx, customerId, stripeInvoice });
@@ -66,9 +66,9 @@ export const voidInvoice = async ({
 
 	const voidedInvoice = await stripeCli.invoices.voidInvoice(stripeInvoice.id);
 
-	await expirePendingForVoidedStripeInvoice({
+	await expirePendingPlanForVoidedInvoice({
 		ctx,
-		stripeInvoiceId: voidedInvoice.id,
+		stripeInvoice: voidedInvoice,
 		customerId,
 	});
 	await updateInvoiceFromStripe({
