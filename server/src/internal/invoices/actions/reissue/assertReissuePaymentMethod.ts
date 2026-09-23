@@ -1,5 +1,5 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 
 const invalidRequest = (message: string) =>
 	new RecaseError({ message, code: ErrCode.InvalidRequest, statusCode: 400 });
@@ -25,7 +25,15 @@ export const assertReissuePaymentMethod = async ({
 
 	const paymentMethod = await stripeCli.paymentMethods
 		.retrieve(paymentMethodId)
-		.catch(() => null);
+		.catch((error: unknown) => {
+			if (
+				error instanceof Stripe.errors.StripeInvalidRequestError &&
+				error.code === "resource_missing"
+			) {
+				return null;
+			}
+			throw error;
+		});
 	const ownerId =
 		typeof paymentMethod?.customer === "string"
 			? paymentMethod.customer

@@ -354,13 +354,8 @@ const issueReplacement = async ({
 		dropDeferredPointer: creditOriginal,
 	});
 
-	// The total is only guaranteed to match when nothing was adjusted; the card charged never moves it.
-	const onlyChoosesPaymentMethod =
-		overrides?.payment_method_id !== undefined &&
-		Object.keys(overrides).length === 1;
-	const adjusted = Boolean(
-		(overrides && !onlyChoosesPaymentMethod) || lineEdits || customerAdjusted,
-	);
+	// The total is only guaranteed to match when nothing was adjusted.
+	const adjusted = Boolean(overrides || lineEdits || customerAdjusted);
 	if (!adjusted && draft.total !== stripeInvoice.total) {
 		await deleteDraft({ ctx, stripeCli, draftId: draft.id });
 		throw new RecaseError({

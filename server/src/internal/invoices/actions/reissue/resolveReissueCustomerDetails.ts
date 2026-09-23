@@ -10,22 +10,28 @@ const addressParams = ({ address }: { address?: Stripe.Address | null }) =>
 			)
 		: undefined;
 
+/** Stripe Tax falls back to the invoice's, then the subscription's, then the customer's default method. */
 const resolvePaymentMethodAddress = async ({
 	stripeCli,
 	stripeInvoice,
 	stripeCustomer,
+	paymentMethodId,
 }: {
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
 	stripeCustomer: ExpandedStripeCustomer;
+	paymentMethodId?: string;
 }) => {
-	const subscriptionId = stripeInvoiceToStripeSubscriptionId(stripeInvoice);
+	const subscriptionId = paymentMethodId
+		? null
+		: stripeInvoiceToStripeSubscriptionId(stripeInvoice);
 	const subscription = subscriptionId
 		? await stripeCli.subscriptions.retrieve(subscriptionId, {
 				expand: ["default_payment_method"],
 			})
 		: undefined;
 	const defaultPaymentMethod =
+		paymentMethodId ??
 		subscription?.default_payment_method ??
 		stripeCustomer.invoice_settings.default_payment_method;
 	const paymentMethod =
@@ -44,11 +50,13 @@ export const resolveReissueCustomerDetails = async ({
 	stripeInvoice,
 	stripeCustomer,
 	customerOverrides,
+	paymentMethodId,
 }: {
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
 	stripeCustomer: ExpandedStripeCustomer;
 	customerOverrides?: ReissueCustomerOverrides;
+	paymentMethodId?: string;
 }): Promise<Stripe.InvoiceCreatePreviewParams.CustomerDetails> => {
 	const taxIds =
 		customerOverrides?.tax_ids ??
@@ -70,6 +78,7 @@ export const resolveReissueCustomerDetails = async ({
 					stripeCli,
 					stripeInvoice,
 					stripeCustomer,
+					paymentMethodId,
 				});
 	return {
 		address,

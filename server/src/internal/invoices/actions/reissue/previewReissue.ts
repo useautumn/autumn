@@ -74,6 +74,7 @@ export const previewReissue = async ({
 			stripeInvoice,
 			stripeCustomer,
 			customerOverrides,
+			paymentMethodId: overrides?.payment_method_id,
 		}),
 		invoice_items: invoiceItems,
 	};

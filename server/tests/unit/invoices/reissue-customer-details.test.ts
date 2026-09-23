@@ -259,6 +259,26 @@ describe("reissue preview customer details", () => {
 		expect(details.address).toEqual({ country: "FR" });
 	});
 
+	test("uses the chosen payment method over the subscription and customer defaults", async () => {
+		const { stripeCli, retrieveSubscription, retrievePaymentMethod } =
+			stripeMocks({
+				defaultPaymentMethod: paymentMethod({ cardCountry: "DE" }),
+			});
+		const details = await resolveReissueCustomerDetails({
+			stripeCli,
+			stripeInvoice: invoice({ subscriptionId: "sub_test" }),
+			stripeCustomer: customer({
+				defaultPaymentMethod: paymentMethod({
+					billingAddress: address({ country: "GB" }),
+				}),
+			}),
+			paymentMethodId: "pm_chosen",
+		});
+		expect(retrievePaymentMethod).toHaveBeenCalledWith("pm_chosen");
+		expect(retrieveSubscription).not.toHaveBeenCalled();
+		expect(details.address).toMatchObject({ country: "FR" });
+	});
+
 	test("infers card country while preserving payment method postal code", async () => {
 		const { stripeCli, retrieveSubscription } = stripeMocks();
 		const details = await resolveReissueCustomerDetails({
