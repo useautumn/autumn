@@ -1,4 +1,5 @@
 import {
+	type AttachDiscount,
 	type AttachParamsV1,
 	type Checkout,
 	CheckoutAction,
@@ -76,18 +77,18 @@ export function augmentCheckoutParams({
 		});
 	};
 
-	const mergeDiscounts = ({
+	const mergeDiscounts = <TDiscount>({
 		originalDiscounts,
+		toDiscount,
 	}: {
-		originalDiscounts:
-			| AttachParamsV1["discounts"]
-			| UpdateSubscriptionV1Params["discounts"];
+		originalDiscounts: TDiscount[] | undefined;
+		toDiscount: (discount: AttachDiscount) => TDiscount;
 	}) => {
 		if (!body.discounts?.length) {
 			return originalDiscounts;
 		}
 
-		return [...(originalDiscounts ?? []), ...body.discounts];
+		return [...(originalDiscounts ?? []), ...body.discounts.map(toDiscount)];
 	};
 
 	switch (checkout.action) {
@@ -101,6 +102,7 @@ export function augmentCheckoutParams({
 				}),
 				discounts: mergeDiscounts({
 					originalDiscounts: originalParams.discounts,
+					toDiscount: (discount) => discount,
 				}),
 			};
 		}
@@ -114,6 +116,7 @@ export function augmentCheckoutParams({
 				}),
 				discounts: mergeDiscounts({
 					originalDiscounts: originalParams.discounts,
+					toDiscount: (discount) => ({ ...discount, action: "add" as const }),
 				}),
 			};
 		}

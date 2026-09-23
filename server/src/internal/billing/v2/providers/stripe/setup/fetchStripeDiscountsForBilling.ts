@@ -1,4 +1,9 @@
-import type { AttachDiscount, StripeDiscountWithCoupon } from "@autumn/shared";
+import {
+	type AttachDiscount,
+	isRemoveSubscriptionDiscount,
+	type StripeDiscountWithCoupon,
+	type UpdateSubscriptionDiscount,
+} from "@autumn/shared";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type {
@@ -6,6 +11,7 @@ import type {
 	StripeSubscriptionWithDiscounts,
 } from "@/external/stripe/subscriptions";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { removeDiscountsByRewardIds } from "../utils/discounts/removeDiscountsByRewardIds";
 import { resolveParamDiscounts } from "../utils/discounts/resolveParamDiscounts";
 import { stripeCustomerToDiscounts } from "../utils/discounts/stripeCustomerToDiscounts";
 import { subToDiscounts } from "../utils/discounts/subToDiscounts";
@@ -76,7 +82,7 @@ export const filterDeletedCouponDiscounts = async ({
 };
 
 /**
- * Fetches discounts for billing, combining existing Stripe discounts with optional param discounts.
+ * Fetches discounts for billing: existing Stripe discounts, minus param removals, plus param additions.
  * Deduplicates by coupon ID — logs and skips param discounts already on the subscription.
  * Filters out discounts with deleted coupons.
  */
@@ -89,17 +95,28 @@ export const fetchStripeDiscountsForBilling = async ({
 	ctx: AutumnContext;
 	stripeSubscription?: StripeSubscriptionWithDiscounts;
 	stripeCustomer?: StripeCustomerWithDiscount;
-	paramDiscounts?: AttachDiscount[];
+	paramDiscounts?: (AttachDiscount | UpdateSubscriptionDiscount)[];
 }): Promise<StripeDiscountWithCoupon[]> => {
-	const existingDiscounts = await extractStripeDiscounts({
-		ctx,
-		stripeSubscription,
-		stripeCustomer,
+	const removedRewardIds = (paramDiscounts ?? [])
+		.filter(isRemoveSubscriptionDiscount)
+		.map((discount) => discount.reward_id);
+	const addedDiscounts = (paramDiscounts ?? []).filter(
+		(discount): discount is AttachDiscount =>
+			!isRemoveSubscriptionDiscount(discount),
+	);
+
+	const existingDiscounts = removeDiscountsByRewardIds({
+		discounts: await extractStripeDiscounts({
+			ctx,
+			stripeSubscription,
+			stripeCustomer,
+		}),
+		rewardIds: removedRewardIds,
 	});
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-	if (!paramDiscounts?.length) {
+	if (!addedDiscounts.length) {
 		return existingDiscounts;
 		// return filterDeletedCouponDiscounts({
 		// 	stripeCli,
@@ -109,7 +126,7 @@ export const fetchStripeDiscountsForBilling = async ({
 
 	const resolvedParamDiscounts = await resolveParamDiscounts({
 		stripeCli,
-		discounts: paramDiscounts,
+		discounts: addedDiscounts,
 	});
 
 	// Re-sent codes already on the subscription are deduped below, not re-redeemed

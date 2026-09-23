@@ -1,6 +1,7 @@
 import { IconButton } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
+import type { ReactNode } from "react";
 import type { FormDiscount } from "@/components/forms/attach-v2/utils/discountUtils";
 import { ConfigRow } from "@/components/forms/shared/advanced-section";
 import { DiscountRow } from "./DiscountRow";
@@ -12,6 +13,7 @@ export function DiscountsConfigRow({
 	onAdd,
 	onUpdate,
 	onRemove,
+	appliedDiscounts,
 }: {
 	discounts: FormDiscount[];
 	description: string;
@@ -19,6 +21,8 @@ export function DiscountsConfigRow({
 	onAdd: () => void;
 	onUpdate: (params: { index: number; rewardId: string }) => void;
 	onRemove: (params: { index: number }) => void;
+	/** Discounts already on the subscription, listed above new rows. */
+	appliedDiscounts?: ReactNode;
 }) {
 	return (
 		<ConfigRow
@@ -36,6 +40,7 @@ export function DiscountsConfigRow({
 				</IconButton>
 			}
 		>
+			{appliedDiscounts}
 			{discounts.length > 0 && (
 				<div className="space-y-2">
 					<AnimatePresence initial={false} mode="popLayout">

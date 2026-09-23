@@ -1,4 +1,5 @@
 import type { StripeDiscountWithCoupon } from "@autumn/shared";
+import type Stripe from "stripe";
 
 const orderStripeDiscounts = (
 	stripeDiscounts: StripeDiscountWithCoupon[],
@@ -29,6 +30,27 @@ export const stripeDiscountsToParams = ({
 		if (d.promotionCodeId) return { promotion_code: d.promotionCodeId };
 		return { coupon: d.source.coupon.id };
 	});
+};
+
+/**
+ * `discounts` for a subscription update: undefined leaves Stripe untouched, and
+ * "" unsets it once every expanded discount on the subscription was removed.
+ */
+export const stripeDiscountsToSubscriptionUpdateParam = ({
+	stripeSubscription,
+	stripeDiscounts,
+}: {
+	stripeSubscription: Stripe.Subscription;
+	stripeDiscounts?: StripeDiscountWithCoupon[];
+}): ReturnType<typeof stripeDiscountsToParams> | "" | undefined => {
+	if (stripeDiscounts?.length)
+		return stripeDiscountsToParams({ stripeDiscounts });
+
+	// Unexpanded discount ids never reached stripeDiscounts, so they can't signal a removal.
+	const hadExpandedDiscounts = (stripeSubscription.discounts ?? []).some(
+		(discount) => typeof discount !== "string",
+	);
+	return stripeDiscounts && hadExpandedDiscounts ? "" : undefined;
 };
 
 /**

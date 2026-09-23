@@ -1,6 +1,5 @@
 import { CusProductStatus } from "@models/cusProductModels/cusProductEnums";
 import { z } from "zod/v4";
-import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingParamsBaseV1";
 import { CancelActionSchema } from "../common/cancelAction";
@@ -10,6 +9,7 @@ import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 import { SubscriptionParamsSchema } from "../common/subscriptionParams";
+import { UpdateSubscriptionDiscountsSchema } from "./updateSubscriptionDiscount";
 
 export const ExtUpdateSubscriptionV1ParamsSchema =
 	BillingParamsBaseV1Schema.extend({
@@ -17,9 +17,9 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 			description:
 				"The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.",
 		}),
-		discounts: z.array(AttachDiscountSchema).optional().meta({
+		discounts: UpdateSubscriptionDiscountsSchema.optional().meta({
 			description:
-				"List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
+				'Discounts to add or remove. Entries without an `action` are added and can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. `{ action: "remove", reward_id }` removes that discount from the subscription. Discounts not listed are left unchanged.',
 		}),
 		custom_line_items: z.array(CustomLineItemSchema).min(1).optional().meta({
 			description:

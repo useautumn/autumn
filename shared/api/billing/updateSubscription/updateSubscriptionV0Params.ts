@@ -1,7 +1,6 @@
 import { CusProductStatus } from "@models/cusProductModels/cusProductEnums";
 import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
-import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
@@ -11,6 +10,7 @@ import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 import { SubscriptionParamsSchema } from "../common/subscriptionParams";
+import { UpdateSubscriptionDiscountsSchema } from "./updateSubscriptionDiscount";
 
 export const ExtUpdateSubscriptionV0ParamsSchema =
 	BillingParamsBaseV0Schema.extend({
@@ -40,7 +40,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		no_billing_changes: z.boolean().optional(),
 		carry_over_usages: CarryOverUsagesSchema,
 		license_quantities: z.array(LicenseQuantityParamsSchema).optional(),
-		discounts: z.array(AttachDiscountSchema).optional(),
+		discounts: UpdateSubscriptionDiscountsSchema.optional(),
 		recalculate_balances: z
 			.object({
 				enabled: z.boolean(),
