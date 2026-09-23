@@ -23,5 +23,6 @@ export const inheritTrialFromCustomerProduct = ({
 		trialEndsAt: customerProduct.trial_ends_at ?? null,
 		appliesToBilling: false,
 		cardRequired: true,
+		onEnd: customerProduct.on_trial_end ?? undefined,
 	};
 };

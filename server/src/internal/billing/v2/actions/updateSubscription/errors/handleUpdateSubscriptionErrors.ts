@@ -19,6 +19,7 @@ import {
 import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors.js";
 import { handleUncancelErrors } from "./handleUncancelErrors.js";
 import { handleUpdateCheckoutErrors } from "./handleUpdateCheckoutErrors.js";
+import { handleUpdateRevertTrialErrors } from "./handleUpdateRevertTrialErrors.js";
 import { handleUpdateSubscriptionBillingCycleAnchorErrors } from "./handleUpdateSubscriptionBillingCycleAnchorErrors.js";
 import { handleUpdateSubscriptionCustomLineItemsErrors } from "./handleUpdateSubscriptionCustomLineItemsErrors.js";
 import { handleUpdateSubscriptionLicenseErrors } from "./handleUpdateSubscriptionLicenseErrors.js";
@@ -50,6 +51,9 @@ export const handleUpdateSubscriptionErrors = async ({
 
 	// 1. Current customer product errors
 	handleCurrentCustomerProductErrors({ billingContext });
+
+	// 1b. Revert trial errors
+	handleUpdateRevertTrialErrors({ billingContext });
 
 	// 2. Product type transition errors
 	handleProductTypeTransitionErrors({ billingContext, autumnBillingPlan });

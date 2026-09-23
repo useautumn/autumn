@@ -27,6 +27,7 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { setupIgnoreProrationBehavior } from "@/internal/billing/v2/setup/setupIgnoreProrationBehavior";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
+import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutMode";
 import { setupUpdateSubscriptionIntent } from "./setupUpdateSubscriptionIntent";
@@ -40,7 +41,6 @@ const FIELDS_WITH_BILLING_CHANGES = [
 	"cancel_action",
 	"billing_cycle_anchor",
 	"discounts",
-	"remove_discounts",
 	"custom_line_items",
 ] as const satisfies (keyof UpdateSubscriptionV1Params)[];
 
@@ -145,14 +145,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 			!preview && params.no_billing_changes !== true,
 	});
 
-	// A subscription we can't bill against — canceled, or owned by a different
-	// Stripe customer — must never fall through to creating a replacement
-	// subscription and charging again.
-	const skipBillingChanges =
-		skipBillingChangesBase ||
-		canceledStripeSubscriptionId !== undefined ||
-		mismatchedStripeSubscriptionId !== undefined;
-
 	const subscriptionTaxRate = stripeSubscription?.default_tax_rates?.[0];
 	const inheritedTaxRateId =
 		typeof subscriptionTaxRate === "string"
@@ -176,6 +168,15 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		params,
 		fullProduct,
 	});
+
+	// A subscription we can't bill against — canceled, or owned by a different
+	// Stripe customer — must never fall through to creating a replacement
+	// subscription and charging again.
+	const skipBillingChanges =
+		skipBillingChangesBase ||
+		canceledStripeSubscriptionId !== undefined ||
+		mismatchedStripeSubscriptionId !== undefined ||
+		isRevertTrialContext({ trialContext });
 
 	// 3. Determine final anchor based on product transitions
 	let billingCycleAnchorMs = setupBillingCycleAnchor({
