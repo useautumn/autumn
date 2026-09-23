@@ -42,7 +42,7 @@ export const setupEntityRevertTrial = async ({
 		...scenario,
 		pro,
 		enterprise,
-		trialEntity,
+		entityId: trialEntity.id,
 		siblingEntity,
 		...(await startRevertTrial({
 			scenario,
@@ -150,5 +150,12 @@ export const setupLicenseRevertTrial = async ({
 		entities: [{ entity_id: scenario.entities[0].id }],
 	});
 
-	return { ...scenario, pro, enterprise, seat, ...revertTrial };
+	return {
+		...scenario,
+		pro,
+		enterprise,
+		seat,
+		entityId: undefined,
+		...revertTrial,
+	};
 };

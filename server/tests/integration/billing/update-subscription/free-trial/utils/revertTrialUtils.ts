@@ -243,15 +243,18 @@ export const extendRevertTrial = ({
 	autumn,
 	customerId,
 	subscriptionId,
+	entityId,
 	onEnd,
 }: {
 	autumn: AutumnInt;
 	customerId: string;
 	subscriptionId: string;
+	entityId?: string;
 	onEnd?: TrialOnEnd;
 }) =>
 	autumn.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 		customer_id: customerId,
+		entity_id: entityId,
 		subscription_id: subscriptionId,
 		customize: {
 			free_trial: {

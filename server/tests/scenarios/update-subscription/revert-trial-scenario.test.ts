@@ -185,13 +185,19 @@ for (const [customerId, setup] of Object.entries(scopedSetups)) {
 	test.concurrent(
 		`${chalk.yellowBright(`revert-trial: ${customerId} — extend trial, Stripe untouched`)}`,
 		async () => {
-			const { autumnV2_3, ctx, trialCustomerProduct, subscriptionBefore } =
-				await setup({ customerId });
+			const {
+				autumnV2_3,
+				ctx,
+				entityId,
+				trialCustomerProduct,
+				subscriptionBefore,
+			} = await setup({ customerId });
 
 			await extendRevertTrial({
 				autumn: autumnV2_3,
 				customerId,
 				subscriptionId: trialCustomerProduct.id,
+				entityId,
 			});
 
 			await logSharedSubscription({

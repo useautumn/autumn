@@ -72,6 +72,31 @@ const expectPoolGrant = ({
 		},
 	});
 
+const expectSeatParent = async ({
+	ctx,
+	customerId,
+	parentCustomerProductId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	parentCustomerProductId: string;
+}) => {
+	const { assignments, pools } = await getLicenseDbState({
+		db: ctx.db,
+		customerId,
+	});
+	expect(assignments).toHaveLength(1);
+	const [assignment] = assignments;
+	expect(assignment.status).toBe(CusProductStatus.Active);
+
+	const assignmentPool = pools.find(
+		(pool) =>
+			pool.link_id === assignment.customer_license_link_id &&
+			pool.parent_customer_product_id === parentCustomerProductId,
+	);
+	expect(assignmentPool).toBeDefined();
+};
+
 test.concurrent(
 	`${chalk.yellowBright("update-revert-trial scoped 1: entity trial extended — sibling entity and shared sub untouched")}`,
 	async () => {
@@ -82,7 +107,7 @@ test.concurrent(
 			advancedTo,
 			pro,
 			enterprise,
-			trialEntity,
+			entityId,
 			siblingEntity,
 			trialCustomerProduct,
 			subscriptionBefore,
@@ -92,6 +117,7 @@ test.concurrent(
 			autumn: autumnV2_3,
 			customerId,
 			subscriptionId: trialCustomerProduct.id,
+			entityId,
 		});
 		const { trialCustomerProduct: extendedTrial } =
 			await expectRevertTrialAfterUpdate({
@@ -101,7 +127,7 @@ test.concurrent(
 				pausedProductId: pro.id,
 				subscriptionBefore,
 				expectedTrialEndsAt: advancedTo + ms.days(EXTENDED_TRIAL_DAYS),
-				entityId: trialEntity.id,
+				entityId,
 			});
 
 		await expireRevertTrialViaCron({
@@ -114,7 +140,7 @@ test.concurrent(
 			customerId,
 			trialProductId: enterprise.id,
 			pausedProductId: pro.id,
-			entityId: trialEntity.id,
+			entityId,
 		});
 		const siblingPro = fullCustomer.customer_products.find(
 			(customerProduct) =>
@@ -145,6 +171,7 @@ test.concurrent(
 			autumn: autumnV2_3,
 			customerId,
 			subscriptionId: trialCustomerProduct.id,
+			entityId,
 		});
 		const { trialCustomerProduct: extendedTrial } =
 			await expectRevertTrialAfterUpdate({
@@ -183,6 +210,7 @@ test.concurrent(
 			ctx,
 			pro,
 			enterprise,
+			entityId,
 			trialCustomerProduct,
 			subscriptionBefore,
 		} = await setupLicenseRevertTrial({ customerId });
@@ -191,6 +219,7 @@ test.concurrent(
 			autumn: autumnV2_3,
 			customerId,
 			subscriptionId: trialCustomerProduct.id,
+			entityId,
 		});
 		const { trialCustomerProduct: extendedTrial } =
 			await expectRevertTrialAfterUpdate({
@@ -201,11 +230,10 @@ test.concurrent(
 				subscriptionBefore,
 				expectedTrialEndsAt: Date.now() + ms.days(EXTENDED_TRIAL_DAYS),
 			});
-		const extendedState = await getLicenseDbState({ db: ctx.db, customerId });
-		expect(extendedState.assignments).toHaveLength(1);
-		expect(extendedState.assignments[0]).toMatchObject({
-			status: CusProductStatus.Active,
-			license_parent_customer_product_id: extendedTrial.id,
+		await expectSeatParent({
+			ctx,
+			customerId,
+			parentCustomerProductId: extendedTrial.id,
 		});
 
 		await expireRevertTrialViaCron({
@@ -219,14 +247,10 @@ test.concurrent(
 			trialProductId: enterprise.id,
 			pausedProductId: pro.id,
 		});
-		const revertedState = await getLicenseDbState({ db: ctx.db, customerId });
-		expect(revertedState.assignments[0]).toMatchObject({
-			status: CusProductStatus.Active,
-			license_parent_customer_product_id: restoredCustomerProduct.id,
+		await expectSeatParent({
+			ctx,
+			customerId,
+			parentCustomerProductId: restoredCustomerProduct.id,
 		});
-		const restoredPools = revertedState.pools.filter(
-			(pool) => pool.parent_customer_product_id === restoredCustomerProduct.id,
-		);
-		expect(restoredPools).toHaveLength(1);
 	},
 );
