@@ -1,16 +1,15 @@
 import { cn } from "@/lib/utils";
 import { BRACKET_CORNERS } from "../customer-stories/bracket-corners";
 
-const isBottomRightCorner = (corner: string) =>
-	corner.startsWith("bottom-0 right-0");
+const isTopRightCorner = (corner: string) => corner.startsWith("top-0 right-0");
 
 export default function TileCorners({
-	omitBottomRight = false,
+	omitTopRight = false,
 }: {
-	omitBottomRight?: boolean;
+	omitTopRight?: boolean;
 }) {
-	const corners = omitBottomRight
-		? BRACKET_CORNERS.filter((corner) => !isBottomRightCorner(corner))
+	const corners = omitTopRight
+		? BRACKET_CORNERS.filter((corner) => !isTopRightCorner(corner))
 		: BRACKET_CORNERS;
 
 	return (

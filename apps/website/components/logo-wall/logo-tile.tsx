@@ -40,7 +40,7 @@ export default function LogoTile({
 				}}
 			/>
 			{hasCaseStudy && <CaseStudyBadge />}
-			<TileCorners omitBottomRight={hasCaseStudy} />
+			<TileCorners omitTopRight={hasCaseStudy} />
 		</Link>
 	);
 }
