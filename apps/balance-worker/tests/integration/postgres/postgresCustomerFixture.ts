@@ -480,11 +480,16 @@ export type PlannedCustomer = {
 	internalCustomerId: string;
 	customerProductId: string;
 	customerEntitlementId: string;
-	/** The plan that creates the customer; `customerProductId` overrides the product row's id. */
+	/** The plan that creates the customer; `customerProductId` overrides the product row's id, `email` the customer's. */
 	request(params: {
 		commandId: string;
 		customerProductId?: string;
+		email?: string | null;
 	}): ApplyBillingPlanRequest;
+	/** An email-only customer (no id) with this email, as a checkout without a customer id leaves; its internal id. */
+	seedEmailOnlyCustomer(params: { email: string }): Promise<string>;
+	/** The internal id of the row holding this customer's id, if any. */
+	readInternalIdHoldingCustomerId(): Promise<unknown>;
 	/** A plan updating the created rows: the Stripe customer on the customer, a subscription on the product. */
 	linkBackRequest(params: {
 		commandId: string;
@@ -556,9 +561,11 @@ export async function planNewCustomer({
 	function request({
 		commandId,
 		customerProductId: productRowId = customerProductId,
+		email = null,
 	}: {
 		commandId: string;
 		customerProductId?: string;
+		email?: string | null;
 	}): ApplyBillingPlanRequest {
 		return {
 			command: {
@@ -580,7 +587,7 @@ export async function planNewCustomer({
 							env: AppEnv.Sandbox,
 							created_at: now,
 							name: "Ada",
-							email: null,
+							email,
 							fingerprint: null,
 							metadata: { plan: "team" },
 							processor: null,
@@ -828,19 +835,42 @@ export async function planNewCustomer({
 		return Number(rows[0]?.balance);
 	}
 
+	const emailOnlyInternalId = `${internalCustomerId}_email_only`;
+
+	async function seedEmailOnlyCustomer({
+		email,
+	}: {
+		email: string;
+	}): Promise<string> {
+		await db.execute(
+			sql`INSERT INTO customers (internal_id, id, org_id, env, created_at, name, email)
+				VALUES (${emailOnlyInternalId}, NULL, ${orgId}, ${env}, ${Date.now()}, 'Email only', ${email})`,
+		);
+		return emailOnlyInternalId;
+	}
+
+	async function readInternalIdHoldingCustomerId(): Promise<unknown> {
+		const rows = await db.execute(
+			sql`SELECT internal_id FROM customers WHERE org_id = ${orgId} AND env = ${env} AND id = ${customerId}`,
+		);
+		return rows[0]?.internal_id;
+	}
+
 	async function cleanup(): Promise<void> {
-		await db.execute(
-			sql`DELETE FROM customer_entitlements WHERE internal_customer_id = ${internalCustomerId}`,
-		);
-		await db.execute(
-			sql`DELETE FROM customer_products WHERE internal_customer_id = ${internalCustomerId}`,
-		);
-		await db.execute(
-			sql`DELETE FROM entities WHERE internal_customer_id = ${internalCustomerId}`,
-		);
-		await db.execute(
-			sql`DELETE FROM customers WHERE internal_id = ${internalCustomerId}`,
-		);
+		for (const internalId of [internalCustomerId, emailOnlyInternalId]) {
+			await db.execute(
+				sql`DELETE FROM customer_entitlements WHERE internal_customer_id = ${internalId}`,
+			);
+			await db.execute(
+				sql`DELETE FROM customer_products WHERE internal_customer_id = ${internalId}`,
+			);
+			await db.execute(
+				sql`DELETE FROM entities WHERE internal_customer_id = ${internalId}`,
+			);
+			await db.execute(
+				sql`DELETE FROM customers WHERE internal_id = ${internalId}`,
+			);
+		}
 	}
 
 	return {
@@ -849,6 +879,8 @@ export async function planNewCustomer({
 		customerProductId,
 		customerEntitlementId,
 		request,
+		seedEmailOnlyCustomer,
+		readInternalIdHoldingCustomerId,
 		linkBackRequest,
 		opsRequest,
 		renameRequest,

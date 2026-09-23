@@ -12,6 +12,7 @@ import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import type { MeteringRecord } from "@autumn/kafka";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
+import { createCustomerCreates } from "../../../../src/processor/commands/applyBillingPlan/createCustomer/customerCreates.js";
 import { track } from "../../../../src/processor/commands/track.js";
 import { createAcceptedCommands } from "../../../../src/processor/common/acceptedCommands.js";
 import { createSubjectHydrator } from "../../../../src/processor/subject/createSubjectHydrator.js";
@@ -149,6 +150,7 @@ const createFixture = () => {
 		},
 		getCatalogRows: createSyntheticWorkerDb().getCatalogRows,
 		getBillingCycleAnchors: async () => ({}),
+		claimCustomerByEmail: async () => null,
 		promoteDuePooledContributions: async () => null,
 	};
 	const appender = new ControlledAppender();
@@ -186,6 +188,7 @@ const createFixture = () => {
 			}),
 		},
 		accepted: createAcceptedCommands(),
+		customerCreates: createCustomerCreates(),
 	};
 	return {
 		store,

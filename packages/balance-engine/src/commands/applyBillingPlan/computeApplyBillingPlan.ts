@@ -1,4 +1,5 @@
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
+import type { WorkerCustomer } from "../../models/subject/rows/workerCustomer.js";
 import type { WorkerEntity } from "../../models/subject/rows/workerEntity.js";
 import type { SubjectState } from "../../models/subject/subjectState.js";
 import { parseSubjectStateMutation } from "../../parsers.js";
@@ -7,13 +8,24 @@ import { opToRowChanges } from "./opToRowChanges/opToRowChanges.js";
 import type { PlanRowChangeContext } from "./opToRowChanges/planRowChangeContext.js";
 import type { ApplyBillingPlanCommand } from "./types/applyBillingPlanCommand.js";
 
+/** The customer row a plan creates the subject with, if it creates one. */
+export const planInsertedCustomer = ({
+	command,
+}: {
+	command: ApplyBillingPlanCommand;
+}): WorkerCustomer | null => {
+	const [customer] = command.ops.flatMap((op) =>
+		op.op === "insert" && op.table === "customer" ? [op.row] : [],
+	);
+	return customer ?? null;
+};
+
 /** A plan that inserts the customer creates the subject, so it applies only where none exists. */
 export const planInsertsCustomer = ({
 	command,
 }: {
 	command: ApplyBillingPlanCommand;
-}): boolean =>
-	command.ops.some((op) => op.op === "insert" && op.table === "customer");
+}): boolean => planInsertedCustomer({ command }) !== null;
 
 /** The entities a plan creates: named on the command like any other, but not yet held anywhere. */
 export const planInsertedEntities = ({

@@ -19,6 +19,7 @@ import type {
 	TrackReply,
 } from "@autumn/balance-worker-client/protocol";
 import type { MeteringRecord } from "@autumn/kafka";
+import { createCustomerCreates } from "../../../../src/processor/commands/applyBillingPlan/createCustomer/customerCreates.js";
 import { initialize } from "../../../../src/processor/commands/initialize.js";
 import { track } from "../../../../src/processor/commands/track.js";
 import { createAcceptedCommands } from "../../../../src/processor/common/acceptedCommands.js";
@@ -307,6 +308,7 @@ const createPartitionTrackWriter = ({
 			}),
 		},
 		accepted: createAcceptedCommands(),
+		customerCreates: createCustomerCreates(),
 	};
 	return {
 		completeCommand: ({ source }) =>

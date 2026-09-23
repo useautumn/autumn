@@ -6,6 +6,7 @@ import {
 } from "../../processor/subject/subjectErrors.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
 import {
+	BillingPlanRowCollisionError,
 	CommitterStoppedError,
 	FlushRecordRefusedError,
 	StaleSubjectRowsError,
@@ -62,9 +63,8 @@ const refusalOf = ({
 	// A lock id is unique across the org but a writer knows only its own customers' locks, and a customer can be
 	// deleted between the decision and the write: both are the request's problem, with an answer of their own.
 	const { errno } = cause as Error & { errno?: unknown };
-	// A plan's insert collided with a row another writer created first: the worker's copy is behind Postgres.
 	if (command.type === "applyBillingPlan" && errno === UNIQUE_VIOLATION)
-		return new SubjectStaleError({ identity, cause });
+		return new BillingPlanRowCollisionError({ identity, cause });
 	const lockId = command.type === "track" ? command.lock?.lockId : undefined;
 	const isLockRow =
 		lockId && cause instanceof Error && cause.message.includes("balance_locks");
@@ -83,7 +83,9 @@ const reportRefusal = ({
 	ctx: CommitterContext;
 	refusal: Error;
 }): void => {
-	if (refusal instanceof SubjectStaleError)
+	if (refusal instanceof BillingPlanRowCollisionError)
+		ctx.logger?.error(`[committer] ${refusal.message}`);
+	else if (refusal instanceof SubjectStaleError)
 		ctx.logger?.warn(`[committer] ${refusal.message}`);
 	if (refusal instanceof FlushRecordRefusedError)
 		ctx.logger?.error(`[committer] ${refusal.message}`);

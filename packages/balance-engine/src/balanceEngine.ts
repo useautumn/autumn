@@ -5,6 +5,7 @@ export {
 } from "./commands/applyBillingPlan/applyBillingPlanToSubjects.js";
 export {
 	computeApplyBillingPlan,
+	planInsertedCustomer,
 	planInsertedEntities,
 	planInsertsCustomer,
 } from "./commands/applyBillingPlan/computeApplyBillingPlan.js";

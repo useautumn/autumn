@@ -1,3 +1,5 @@
+import type { MeteringIdentity } from "@autumn/balance-engine";
+import { SubjectStaleError } from "../processor/subject/subjectErrors.js";
 export class UnsupportedRowChangeError extends Error {
 	constructor({ table, op }: { table: string; op: string }) {
 		super(`Row change not supported by the postgres backend: ${op} ${table}`);
@@ -58,5 +60,20 @@ export class FlushRecordRefusedError extends Error {
 			},
 		);
 		this.name = "FlushRecordRefusedError";
+	}
+}
+
+/** A plan's row took a key Postgres already holds. The partition assigns its customers' ids, so a writer outside the worker did: a bug, not a race. */
+export class BillingPlanRowCollisionError extends SubjectStaleError {
+	constructor({
+		identity,
+		cause,
+	}: {
+		identity: MeteringIdentity;
+		cause: unknown;
+	}) {
+		super({ identity, cause });
+		this.name = "BillingPlanRowCollisionError";
+		this.message = `A billing plan's row for customer ${identity.customerId} collided with one written outside the worker in ${identity.orgId}/${identity.env}`;
 	}
 }

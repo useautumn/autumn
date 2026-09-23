@@ -32,6 +32,7 @@ export function createWorkerFixture({
 	const db: WorkerDb = {
 		getSubjectRows: async () => null,
 		getBillingCycleAnchors: async () => ({}),
+		claimCustomerByEmail: async () => null,
 		promoteDuePooledContributions: async () => null,
 		getCatalogRows: async () => ({
 			entitlements: catalogRows.flatMap((row) =>

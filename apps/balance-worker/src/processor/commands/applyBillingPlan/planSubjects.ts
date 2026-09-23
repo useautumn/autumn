@@ -10,6 +10,7 @@ import {
 } from "@autumn/balance-engine";
 import { SubjectNotFoundError } from "../../subject/subjectErrors.js";
 import type { PartitionProcessorScope } from "../../types/partitionProcessor.js";
+import { ensureCustomerToCreate } from "./createCustomer/ensureCustomerToCreate.js";
 
 const entityIdentitiesOf = ({
 	command,
@@ -18,7 +19,7 @@ const entityIdentitiesOf = ({
 }): MeteringIdentity[] =>
 	command.entityIds.map((entityId) => ({ ...command.identity, entityId }));
 
-/** A plan that creates the customer runs where none exists; every other subject it names must be resident. */
+/** The customer, and every entity the plan names but does not create, resident before the decision. */
 export const ensurePlanSubjects = async ({
 	scope,
 	command,
@@ -27,16 +28,17 @@ export const ensurePlanSubjects = async ({
 	command: ApplyBillingPlanCommand;
 }): Promise<void> => {
 	const { subjectHydrator } = scope.ctx;
-	try {
+
+	if (planInsertsCustomer({ command })) {
+		await ensureCustomerToCreate({ scope, command });
+	} else {
 		await subjectHydrator.ensure({ identity: command.identity });
-	} catch (error) {
-		const creatingCustomer =
-			error instanceof SubjectNotFoundError && planInsertsCustomer({ command });
-		if (!creatingCustomer) throw error;
 	}
+
 	const createdEntityIds = new Set(
 		planInsertedEntities({ command }).map(({ id }) => id),
 	);
+
 	for (const identity of entityIdentitiesOf({ command }))
 		if (!createdEntityIds.has(identity.entityId))
 			await subjectHydrator.ensure({ identity });

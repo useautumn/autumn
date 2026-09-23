@@ -1,5 +1,6 @@
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import {
+	claimCustomerByEmail,
 	commitFlush,
 	createPostgresClient,
 	getBillingCycleAnchors,
@@ -53,6 +54,12 @@ export const createWorkerDb = ({
 		getBillingCycleAnchors({
 			ctx: { db: ctx.postgres.db, orgId: identity.orgId, env: identity.env },
 			customerProductIds,
+		}),
+	claimCustomerByEmail: ({ identity, email }) =>
+		claimCustomerByEmail({
+			ctx: { db: ctx.postgres.db, orgId: identity.orgId, env: identity.env },
+			customerId: identity.customerId,
+			email,
 		}),
 	promoteDuePooledContributions: ({ pooledBalanceId, now }) =>
 		promoteDuePooledContributions({

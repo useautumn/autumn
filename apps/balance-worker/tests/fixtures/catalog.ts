@@ -75,6 +75,7 @@ export const createSyntheticWorkerDb = ({
 	getSubjectRows: async () => subjectRows,
 	getCatalogRows: async (params) => syntheticCatalogRows(params),
 	getBillingCycleAnchors: async () => ({}),
+	claimCustomerByEmail: async () => null,
 	promoteDuePooledContributions: async () => null,
 });
 
@@ -82,6 +83,7 @@ export const createSyntheticWorkerDb = ({
 export const createEmptyWorkerDb = (): WorkerDb => ({
 	getSubjectRows: async () => null,
 	getBillingCycleAnchors: async () => ({}),
+	claimCustomerByEmail: async () => null,
 	promoteDuePooledContributions: async () => null,
 	getCatalogRows: async () => ({
 		entitlements: [],

@@ -1352,6 +1352,84 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			}
 		}, 60_000);
 
+		test("a create whose email matches an email-only customer claims it: that row takes the id, no second customer is logged, and the worker serves it", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				const email = `${planned.internalCustomerId}@example.com`;
+				const emailOnlyInternalId = await planned.seedEmailOnlyCustomer({
+					email,
+				});
+
+				const claimed = await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "claim_create", email }),
+				});
+				expect(claimed.result.status).toBe("customer_exists");
+				expect(claimed.state.customer.internal_id).toBe(emailOnlyInternalId);
+				expect(await planned.readInternalIdHoldingCustomerId()).toBe(
+					emailOnlyInternalId,
+				);
+				expect(await planned.countCustomers()).toBe(1);
+				expect(await planned.readCustomerProduct()).toBeNull();
+
+				const read = await harness.client.readSubjectState({
+					command: readSubjectStateCommand({
+						customer: planned,
+						requestId: "claim_read",
+					}),
+				});
+				expect(read.state.customer.internal_id).toBe(emailOnlyInternalId);
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("two creates of one id at once, one able to claim an email-only customer: always one customer and nothing refused, whichever ran first", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			try {
+				for (let round = 0; round < 5; round++) {
+					const planned = await planNewCustomer({ postgres, seeded });
+					try {
+						const email = `${planned.internalCustomerId}@example.com`;
+						const emailOnlyInternalId = await planned.seedEmailOnlyCustomer({
+							email,
+						});
+						const replies = await Promise.all([
+							harness.client.applyBillingPlan({
+								request: planned.request({ commandId: `race_plain_${round}` }),
+							}),
+							harness.client.applyBillingPlan({
+								request: planned.request({
+									commandId: `race_claim_${round}`,
+									email,
+								}),
+							}),
+						]);
+						expect(await planned.countCustomers()).toBe(1);
+						const inserted = replies.some(
+							(reply) => reply.result.status === "applied",
+						);
+						// Whichever create ran first decided: the insert, or the claim.
+						expect(await planned.readInternalIdHoldingCustomerId()).toBe(
+							inserted ? planned.internalCustomerId : emailOnlyInternalId,
+						);
+						expect(
+							replies.filter((reply) => reply.result.status === "applied"),
+						).toHaveLength(inserted ? 1 : 0);
+					} finally {
+						await planned.cleanup();
+					}
+				}
+			} finally {
+				await seeded.cleanup();
+			}
+		}, 120_000);
+
 		test("a reset on an edge date reads the subscription's anchor from Postgres and lands on the anchor's cycle end", async () => {
 			const worker = workers.at(-1) ?? (await startWorker({ harness }));
 			if (!workers.includes(worker)) workers.push(worker);

@@ -6,6 +6,7 @@ export type {
 export { parseRows, RowsInvalidError } from "./common/parseRows.js";
 export { createPostgresClient } from "./createPostgresClient.js";
 export { getBillingCycleAnchors } from "./customerProducts/repos/getBillingCycleAnchors.js";
+export { claimCustomerByEmail } from "./customers/repos/claimCustomerByEmail.js";
 export { createEventsDb } from "./eventsDb/createEventsDb.js";
 export type {
 	RefusedUsageEvent,
