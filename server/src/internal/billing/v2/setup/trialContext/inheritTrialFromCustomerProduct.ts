@@ -1,5 +1,8 @@
 import type { FullCusProduct, TrialContext } from "@autumn/shared";
-import { isCustomerProductTrialing } from "@autumn/shared";
+import {
+	isCustomerProductRevertingTrial,
+	isCustomerProductTrialing,
+} from "@autumn/shared";
 
 export const inheritTrialFromCustomerProduct = ({
 	customerProduct,
@@ -8,7 +11,7 @@ export const inheritTrialFromCustomerProduct = ({
 	customerProduct: FullCusProduct;
 	currentEpochMs: number;
 }): TrialContext | undefined => {
-	const isRevertTrial = customerProduct.on_trial_end === "revert";
+	const isRevertTrial = isCustomerProductRevertingTrial(customerProduct);
 	const isTrialing = isCustomerProductTrialing(customerProduct, {
 		nowMs: currentEpochMs,
 	});

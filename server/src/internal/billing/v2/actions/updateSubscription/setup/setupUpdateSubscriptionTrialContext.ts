@@ -5,6 +5,7 @@ import type {
 	TrialContext,
 } from "@autumn/shared";
 import {
+	isCustomerProductRevertingTrial,
 	isProductPaidAndRecurring,
 	resolveFreeTrialParam,
 } from "@autumn/shared";
@@ -39,7 +40,7 @@ export const setupUpdateSubscriptionTrialContext = ({
 	fullProduct: FullProduct;
 	params: FreeTrialParamsSource;
 }): TrialContext | undefined => {
-	const isRevertTrial = customerProduct?.on_trial_end === "revert";
+	const isRevertTrial = isCustomerProductRevertingTrial(customerProduct);
 
 	// Handle explicit free_trial param (null or value), in either shape
 	const freeTrialParam = resolveFreeTrialParam(params);

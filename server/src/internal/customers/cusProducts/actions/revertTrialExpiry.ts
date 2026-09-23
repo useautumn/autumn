@@ -5,6 +5,7 @@ import {
 	type customerProducts,
 	customerProducts as customerProductsTable,
 	findCustomerProductById,
+	isCustomerProductRevertingTrial,
 	STRIPE_LINKED_STATUSES,
 } from "@autumn/shared";
 import { and, eq, type InferSelectModel } from "drizzle-orm";
@@ -35,7 +36,7 @@ export const tryProcessRevertExpiry = async ({
 	customerProduct: InferSelectModel<typeof customerProducts>;
 	customerId: string;
 }): Promise<boolean> => {
-	if (customerProduct.on_trial_end !== "revert") return false;
+	if (!isCustomerProductRevertingTrial(customerProduct)) return false;
 
 	const previousCusProductId = customerProduct.previous_customer_product_id;
 	if (!previousCusProductId) {

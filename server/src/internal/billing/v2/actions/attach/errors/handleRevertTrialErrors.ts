@@ -5,6 +5,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 
 /** Reject revert trials without an active paid subscription. */
 export const handleRevertTrialErrors = ({
@@ -13,7 +14,7 @@ export const handleRevertTrialErrors = ({
 	billingContext: Pick<BillingContext, "trialContext" | "fullCustomer">;
 }) => {
 	const { trialContext, fullCustomer } = billingContext;
-	if (trialContext?.onEnd !== "revert") return;
+	if (!isRevertTrialContext({ trialContext })) return;
 
 	if (
 		!hasActivePaidSubscription({

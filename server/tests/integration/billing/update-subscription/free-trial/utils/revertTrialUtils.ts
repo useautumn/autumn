@@ -5,6 +5,9 @@ import {
 	CusProductStatus,
 	FreeTrialDuration,
 	ms,
+	type ProductV2,
+	type TrialOnEnd,
+	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { expectStripeSubscriptionNotTrialing } from "@tests/integration/billing/utils/stripe/expectStripeSubscriptionNotTrialing";
 import { expectStripeSubscriptionUnchanged } from "@tests/integration/billing/utils/stripe/expectStripeSubscriptionUnchanged";
@@ -14,6 +17,7 @@ import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import type Stripe from "stripe";
+import type { AutumnInt } from "@/external/autumn/autumnCli";
 import { CusService } from "@/internal/customers/CusService";
 
 export const TRIAL_DAYS = 14;
@@ -21,8 +25,10 @@ export const EXTENDED_TRIAL_DAYS = 30;
 
 export const setupRevertTrial = async ({
 	customerId,
+	extraProducts = [],
 }: {
 	customerId: string;
+	extraProducts?: ProductV2[];
 }) => {
 	const pro = products.pro({
 		id: "pro",
@@ -40,7 +46,7 @@ export const setupRevertTrial = async ({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, enterprise] }),
+			s.products({ list: [pro, enterprise, ...extraProducts] }),
 		],
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
@@ -155,4 +161,58 @@ export const expectRevertTrialAfterUpdate = async ({
 	expect(
 		Math.abs(trialCustomerProduct.trial_ends_at! - expectedTrialEndsAt),
 	).toBeLessThan(ms.hours(1));
+};
+
+export const extendRevertTrial = ({
+	autumn,
+	customerId,
+	subscriptionId,
+	onEnd,
+}: {
+	autumn: AutumnInt;
+	customerId: string;
+	subscriptionId: string;
+	onEnd?: TrialOnEnd;
+}) =>
+	autumn.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+		customer_id: customerId,
+		subscription_id: subscriptionId,
+		customize: {
+			free_trial: {
+				duration_length: EXTENDED_TRIAL_DAYS,
+				duration_type: FreeTrialDuration.Day,
+				card_required: false,
+				...(onEnd && { on_end: onEnd }),
+			},
+		},
+	});
+
+export const expectRevertTrialCancelled = async ({
+	ctx,
+	customerId,
+	trialProductId,
+	pausedProductId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	trialProductId: string;
+	pausedProductId: string;
+}) => {
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+		inStatuses: ALL_STATUSES,
+	});
+	const trialStatuses = fullCustomer.customer_products
+		.filter((customerProduct) => customerProduct.product_id === trialProductId)
+		.map((customerProduct) => customerProduct.status);
+	const restoredCustomerProduct = fullCustomer.customer_products.find(
+		(customerProduct) => customerProduct.product_id === pausedProductId,
+	);
+
+	expect(trialStatuses).toContain(CusProductStatus.Expired);
+	expect(trialStatuses).not.toContain(CusProductStatus.Active);
+	expect(restoredCustomerProduct?.status).toBe(CusProductStatus.Active);
+
+	return fullCustomer;
 };

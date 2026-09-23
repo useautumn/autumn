@@ -19,8 +19,8 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import {
-	EXTENDED_TRIAL_DAYS,
 	expectRevertTrialAfterUpdate,
+	extendRevertTrial,
 	setupRevertTrial,
 	TRIAL_DAYS,
 } from "./utils/revertTrialUtils";
@@ -43,17 +43,11 @@ test.concurrent(
 			errCode: ErrCode.InvalidRequest,
 			errMessage: "Cannot change on_end of a revert trial",
 			func: () =>
-				autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
-					customer_id: customerId,
-					subscription_id: trialCustomerProduct.id,
-					customize: {
-						free_trial: {
-							duration_length: EXTENDED_TRIAL_DAYS,
-							duration_type: FreeTrialDuration.Day,
-							card_required: false,
-							on_end: "bill",
-						},
-					},
+				extendRevertTrial({
+					autumn: autumnV2_3,
+					customerId,
+					subscriptionId: trialCustomerProduct.id,
+					onEnd: "bill",
 				}),
 		});
 

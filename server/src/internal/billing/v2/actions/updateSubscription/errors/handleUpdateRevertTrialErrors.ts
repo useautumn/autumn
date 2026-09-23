@@ -1,5 +1,6 @@
 import {
 	ErrCode,
+	isCustomerProductRevertingTrial,
 	RecaseError,
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
@@ -23,7 +24,8 @@ export const handleUpdateRevertTrialErrors = ({
 	>;
 }) => {
 	const { trialContext, customerProduct } = billingContext;
-	const isCurrentlyRevertTrial = customerProduct.on_trial_end === "revert";
+	const isCurrentlyRevertTrial =
+		isCustomerProductRevertingTrial(customerProduct);
 
 	if (!isCurrentlyRevertTrial && isRevertTrialContext({ trialContext })) {
 		throwInvalidRequest(

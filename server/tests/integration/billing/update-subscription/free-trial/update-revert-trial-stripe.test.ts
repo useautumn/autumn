@@ -11,16 +11,13 @@
  */
 
 import { test } from "bun:test";
-import {
-	FreeTrialDuration,
-	ms,
-	type UpdateSubscriptionV1ParamsInput,
-} from "@autumn/shared";
+import { ms, type UpdateSubscriptionV1ParamsInput } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import chalk from "chalk";
 import {
 	EXTENDED_TRIAL_DAYS,
 	expectRevertTrialAfterUpdate,
+	extendRevertTrial,
 	setupRevertTrial,
 	TRIAL_DAYS,
 } from "./utils/revertTrialUtils";
@@ -39,17 +36,11 @@ test.concurrent(
 			subscriptionBefore,
 		} = await setupRevertTrial({ customerId });
 
-		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
-			customer_id: customerId,
-			subscription_id: trialCustomerProduct.id,
-			customize: {
-				free_trial: {
-					duration_length: EXTENDED_TRIAL_DAYS,
-					duration_type: FreeTrialDuration.Day,
-					card_required: false,
-					on_end: "revert",
-				},
-			},
+		await extendRevertTrial({
+			autumn: autumnV2_3,
+			customerId,
+			subscriptionId: trialCustomerProduct.id,
+			onEnd: "revert",
 		});
 
 		await expectRevertTrialAfterUpdate({
@@ -77,16 +68,10 @@ test.concurrent(
 			subscriptionBefore,
 		} = await setupRevertTrial({ customerId });
 
-		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
-			customer_id: customerId,
-			subscription_id: trialCustomerProduct.id,
-			customize: {
-				free_trial: {
-					duration_length: EXTENDED_TRIAL_DAYS,
-					duration_type: FreeTrialDuration.Day,
-					card_required: false,
-				},
-			},
+		await extendRevertTrial({
+			autumn: autumnV2_3,
+			customerId,
+			subscriptionId: trialCustomerProduct.id,
 		});
 
 		await expectRevertTrialAfterUpdate({
