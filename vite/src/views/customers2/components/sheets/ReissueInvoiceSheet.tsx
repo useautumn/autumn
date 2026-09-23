@@ -17,7 +17,6 @@ import {
 	SelectValue,
 	SheetAccordion,
 	SheetAccordionItem,
-	Switch,
 } from "@autumn/ui";
 import { PaperPlaneTiltIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -37,6 +36,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CountrySelect } from "./reissue/CountrySelect";
+import { getReissuePreviewState } from "./reissue/getReissuePreviewState";
 import { stripeInvoiceToPrefill } from "./reissue/stripeInvoiceToPrefill";
 import { TaxIdTypeSelect } from "./reissue/TaxIdTypeSelect";
 import {
@@ -46,6 +46,11 @@ import {
 } from "./reissue/useReissueForm";
 
 const NO_TEMPLATE = "none";
+const TAX_OPTIONS = [
+	{ label: "Keep current tax settings", value: "keep" },
+	{ label: "Automatic tax", value: "automatic" },
+	{ label: "No tax", value: "none" },
+];
 
 const RemoveButton = ({ onClick }: { onClick: () => void }) => (
 	<IconButton
@@ -143,40 +148,49 @@ function ReissueInvoiceForm({
 		setAddress,
 	} = useReissueForm({ prefill });
 
-	const payload = buildReissuePayload({
+	const payloadArgs = {
 		invoiceId: invoice.id,
 		form,
 		prefill,
 		lineItems,
-	});
-	const currentPreviewPayload = JSON.stringify({
-		...payload,
-		customer: undefined,
-		preview: true,
-	});
+	};
+	const payload = buildReissuePayload(payloadArgs);
+	const currentPreviewPayload = JSON.stringify(
+		buildReissuePayload({ ...payloadArgs, preview: true }),
+	);
 	const previewPayload = useDebounce({
 		value: currentPreviewPayload,
 		delayMs: 500,
 	});
-	// Inside the debounce the old total is still on the button.
-	const previewStale = previewPayload !== currentPreviewPayload;
 	const {
-		data: preview,
+		data: previewResult,
 		isFetching: previewing,
 		error: previewError,
 	} = useQuery({
-		queryKey: ["reissue-preview", previewPayload],
-		queryFn: async () => {
+		queryKey: buildQueryKey(["reissue-preview", previewPayload]),
+		queryFn: async ({ signal }) => {
 			const { data } = await axiosInstance.post<{
 				preview: CreateInvoicePreview;
-			}>("/v1/invoices.reissue", JSON.parse(previewPayload));
-			return data.preview;
+			}>("/v1/invoices.reissue", JSON.parse(previewPayload), { signal });
+			return { preview: data.preview, payload: previewPayload };
 		},
-		placeholderData: (previous) => previous,
+		retry: false,
+	});
+	const previewState = getReissuePreviewState({
+		form,
+		prefill,
+		currentPayload: currentPreviewPayload,
+		debouncedPayload: previewPayload,
+		successfulPayload: previewResult?.payload,
+		isFetching: previewing,
+		error: previewError ? getBackendErr(previewError, "Preview failed") : null,
 	});
 
 	const reissue = useMutation({
 		mutationFn: async () => {
+			if (!previewState.ready) {
+				throw new Error("Wait for a successful preview before reissuing.");
+			}
 			const { data } = await axiosInstance.post(
 				"/v1/invoices.reissue",
 				payload,
@@ -209,12 +223,10 @@ function ReissueInvoiceForm({
 			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 		});
 	const isPaid = invoice.status === InvoiceStatus.Paid;
-	const isTaxed = (taxedAmount ?? 0) > 0;
-	const total = money(preview?.total ?? invoice.total);
-	const invalidNetTerms =
-		form.netTermsDays !== "" &&
-		(!Number.isInteger(Number(form.netTermsDays)) ||
-			Number(form.netTermsDays) < 1);
+	const total =
+		previewState.ready && previewResult
+			? money(previewResult.preview.total)
+			: null;
 	const templateOptions = [
 		{ label: "Keep current footer", value: NO_TEMPLATE },
 		...templates.map((template) => ({
@@ -230,8 +242,8 @@ function ReissueInvoiceForm({
 					title="Reissue Invoice"
 					description={
 						isPaid
-							? `Credit this ${money(invoice.total)} invoice to the customer's balance and send a corrected ${total} one, which that balance covers.`
-							: `Send a new ${total} invoice and void this one.`
+							? `Credit this ${money(invoice.total)} invoice to the customer's balance and send a corrected${total ? ` ${total}` : ""} invoice.`
+							: `Send a new${total ? ` ${total}` : ""} invoice and void this one.`
 					}
 				/>
 
@@ -287,20 +299,40 @@ function ReissueInvoiceForm({
 					/>
 				</SheetSection>
 
-				{isTaxed && (
-					<SheetSection withSeparator>
-						<div className="flex items-center justify-between">
-							<FormLabel className="mb-0">Reissue without tax</FormLabel>
-							<Switch
-								checked={form.removeTax}
-								onCheckedChange={(checked) => patch({ removeTax: checked })}
-							/>
-						</div>
-						<span className="text-xs text-tertiary-foreground">
-							Drops the {money(taxedAmount ?? 0)} of tax on this invoice.
-						</span>
-					</SheetSection>
-				)}
+				<SheetSection withSeparator>
+					<FormLabel>Tax</FormLabel>
+					<Select
+						value={form.taxMode}
+						items={TAX_OPTIONS}
+						onValueChange={(value) => {
+							if (
+								value === "keep" ||
+								value === "automatic" ||
+								value === "none"
+							) {
+								patch({ taxMode: value });
+							}
+						}}
+					>
+						<SelectTrigger className="w-full" aria-label="Tax calculation">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{TAX_OPTIONS.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<span className="text-xs text-tertiary-foreground">
+						{form.taxMode === "automatic"
+							? "Calculates tax using the country, address and tax ID below. Replaces any manual tax rates."
+							: form.taxMode === "none"
+								? `Removes tax from the replacement invoice${taxedAmount ? ` (currently ${money(taxedAmount)})` : ""}.`
+								: "Preserves this invoice's automatic or manual tax settings."}
+					</span>
+				</SheetSection>
 
 				<SheetSection withSeparator className="flex flex-col gap-3">
 					<div className="flex items-center justify-between">
@@ -442,7 +474,7 @@ function ReissueInvoiceForm({
 					<SheetAccordionItem
 						value="customer"
 						title="Customer details"
-						description="Saved to the customer and used on every later invoice"
+						description="Saved to the customer only when you reissue"
 					>
 						<div className="space-y-4">
 							<Field label="Name">
@@ -453,7 +485,7 @@ function ReissueInvoiceForm({
 							</Field>
 							<Field
 								label="Address"
-								hint="Saved to the customer. The preview total uses the current address, so tax can shift once it changes."
+								hint="The tax preview updates as you edit the country, address and tax ID. Nothing is saved until you reissue."
 							>
 								<div className="space-y-2">
 									<Input
@@ -528,6 +560,17 @@ function ReissueInvoiceForm({
 											value={form.taxIdValue}
 											onChange={(e) => patch({ taxIdValue: e.target.value })}
 										/>
+										{(form.taxIdOptionId || form.taxIdValue) && (
+											<IconButton
+												variant="muted"
+												size="sm"
+												aria-label="Remove tax ID"
+												icon={<XIcon size={12} />}
+												onClick={() =>
+													patch({ taxIdOptionId: null, taxIdValue: "" })
+												}
+											/>
+										)}
 									</div>
 								</Field>
 							)}
@@ -551,20 +594,17 @@ function ReissueInvoiceForm({
 						className="w-full"
 						onClick={() => reissue.mutate()}
 						isLoading={reissue.isPending}
-						disabled={
-							invalidNetTerms ||
-							previewStale ||
-							previewing ||
-							Boolean(previewError)
-						}
+						disabled={!previewState.ready || reissue.isPending}
 					>
 						<PaperPlaneTiltIcon size={16} />
-						Reissue {total}
+						{previewState.recalculating
+							? "Recalculating…"
+							: `Reissue${total ? ` ${total}` : ""}`}
 					</Button>
 				</SheetFooter>
-				{previewError && (
-					<p className="px-4 pb-4 text-xs text-destructive">
-						{getBackendErr(previewError, "Preview failed")}
+				{previewState.error && (
+					<p role="alert" className="px-4 pb-4 text-xs text-destructive">
+						{previewState.error}
 					</p>
 				)}
 			</div>

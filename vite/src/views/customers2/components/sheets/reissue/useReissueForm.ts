@@ -21,7 +21,7 @@ export type ReissueFormState = {
 	email: string;
 	netTermsDays: string;
 	templateId: string | null;
-	removeTax: boolean;
+	taxMode: "keep" | "automatic" | "none";
 	amounts: Record<string, string>;
 	removedLineIds: string[];
 	addedLines: ReissueAddedLine[];
@@ -67,11 +67,13 @@ export const buildReissuePayload = ({
 	form,
 	prefill,
 	lineItems,
+	preview = false,
 }: {
 	invoiceId: string;
 	form: ReissueFormState;
 	prefill: ReissuePrefill;
 	lineItems: InvoiceLineItem[];
+	preview?: boolean;
 }) => {
 	const knownLineIds = new Set(lineItems.map((line) => line.id));
 	const updates = Object.entries(form.amounts).flatMap(([id, value]) =>
@@ -104,7 +106,8 @@ export const buildReissuePayload = ({
 			value: trimmed(field.value),
 		}));
 	const invoice = {
-		...(form.removeTax ? { tax_rate_id: null } : {}),
+		...(form.taxMode === "automatic" ? { automatic_tax: true } : {}),
+		...(form.taxMode === "none" ? { tax_rate_id: null } : {}),
 		...(customFields.length ? { custom_fields: customFields } : {}),
 		...(trimmed(form.memo) ? { memo: trimmed(form.memo) } : {}),
 		...(trimmed(form.footer) ? { footer: trimmed(form.footer) } : {}),
@@ -157,6 +160,7 @@ export const buildReissuePayload = ({
 
 	return {
 		invoice_id: invoiceId,
+		...(preview ? { preview: true } : {}),
 		...(form.templateId ? { invoice_template_id: form.templateId } : {}),
 		...(trimmed(form.email)
 			? { update_customer_email: trimmed(form.email) }
@@ -173,7 +177,7 @@ export const useReissueForm = ({ prefill }: { prefill: ReissuePrefill }) => {
 		email: "",
 		netTermsDays: "",
 		templateId: null,
-		removeTax: false,
+		taxMode: "keep",
 		amounts: {},
 		removedLineIds: [],
 		addedLines: [],

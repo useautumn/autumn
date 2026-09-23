@@ -1,15 +1,11 @@
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import type {
 	ReissueInvoiceParams,
 	ReissueInvoiceResponse,
 } from "@autumn/shared";
-import type Stripe from "stripe";
-import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
-import {
-	expectPreviewCustomerUnchanged,
-	expectStripeTaxPreviewCorrect,
-} from "./utils/expectStripeTaxPreviewCorrect";
+import { expectReissueTaxPreviewCorrect } from "./utils/expectReissueTaxPreviewCorrect";
 import { setupTaxedRenewal } from "./utils/setupTaxedRenewal";
+import { snapshotTaxPreviewState } from "./utils/snapshotTaxPreviewState";
 
 const addresses = {
 	FR: {
@@ -27,55 +23,60 @@ const addresses = {
 	},
 };
 
-test("Stripe preview: unsaved tax details match issued replacements without customer writes", async () => {
+test("invoices.reissue: unsaved country and VAT previews match issuance without writes", async () => {
 	const scenario = await setupTaxedRenewal({
 		customerId: "preview-tax-parity",
 	});
-	const { ctx, stripeCustomerId, autumnV2_4 } = scenario;
+	const { ctx, autumnV2_4 } = scenario;
 	const stripe = ctx.stripeCli;
 	let original = scenario.original;
-	const cases: {
-		address: Stripe.AddressParam;
-		taxIds: Stripe.InvoiceCreatePreviewParams.CustomerDetails.TaxId[];
-		total: number;
-	}[] = [
-		{ address: addresses.FR, taxIds: [], total: 2400 },
-		{ address: addresses.AU, taxIds: [], total: 2200 },
+	const cases = [
+		{ address: addresses.AU, taxIds: [], total: 22 },
+		{ address: addresses.FR, taxIds: [], total: 24 },
 		{
 			address: addresses.FR,
 			taxIds: [{ type: "eu_vat", value: "FR12345678901" }],
-			total: 2000,
+			total: 20,
 		},
 	];
+	const baseline = await snapshotTaxPreviewState({ scenario });
+	expect(baseline.invoices[0].status).toBe("open");
+	expect(baseline.invoices[0].automatic_tax.enabled).toBe(true);
+	expect(baseline.invoices[0].total).toBe(2400);
+	const previews: ReissueInvoiceResponse[] = [];
 	for (const { address, taxIds, total } of cases) {
-		const before = await stripe.customers.retrieve(stripeCustomerId);
-		const beforeTaxIds = await stripe.customers.listTaxIds(stripeCustomerId, {
-			limit: 100,
-		});
-		const preview = await stripe.invoices.createPreview({
-			customer_details: { address, tax_ids: taxIds, tax_exempt: "none" },
-			automatic_tax: { enabled: true },
-			currency: "usd",
-			discounts: "",
-			invoice_items: [
-				{
-					amount: 2000,
-					currency: "usd",
-					description: "Replacement line",
-					tax_behavior: "exclusive",
-					tax_code: "txcd_10000000",
-				},
-			],
-		});
-		expectStripeTaxPreviewCorrect({ preview, total });
-		expectPreviewCustomerUnchanged({
-			before,
-			after: await stripe.customers.retrieve(stripeCustomerId),
-			beforeTaxIds: beforeTaxIds.data,
-			afterTaxIds: (
-				await stripe.customers.listTaxIds(stripeCustomerId, { limit: 100 })
-			).data,
-		});
+		const response = (await autumnV2_4.post("/invoices.reissue", {
+			invoice_id: original.id,
+			preview: true,
+			net_terms_days: 14,
+			customer: { address, tax_ids: taxIds },
+		} satisfies ReissueInvoiceParams)) as ReissueInvoiceResponse;
+		expectReissueTaxPreviewCorrect({ response, total });
+		expect(await snapshotTaxPreviewState({ scenario })).toEqual(baseline);
+		previews.push(response);
+	}
+	const addedLines = Array.from({ length: 11 }, (_, index) => ({
+		description: `Synthetic extra line ${index + 1}`,
+		amount: 1,
+	}));
+	const paginatedPreview = (await autumnV2_4.post("/invoices.reissue", {
+		invoice_id: original.id,
+		preview: true,
+		invoice: { tax_rate_id: null },
+		lines: { add: addedLines },
+	} satisfies ReissueInvoiceParams)) as ReissueInvoiceResponse;
+	expect(paginatedPreview.invoice).toBeNull();
+	expect(paginatedPreview.preview.lines).toHaveLength(12);
+	expect(paginatedPreview.preview.subtotal).toBe(31);
+	expect(paginatedPreview.preview.total).toBe(31);
+	expect(paginatedPreview.preview.amount_due).toBe(31);
+	for (const line of addedLines) {
+		expect(paginatedPreview.preview.lines).toContainEqual(
+			expect.objectContaining(line),
+		);
+	}
+	expect(await snapshotTaxPreviewState({ scenario })).toEqual(baseline);
+	for (const [index, { address, taxIds, total }] of cases.entries()) {
 		const result = (await autumnV2_4.post("/invoices.reissue", {
 			invoice_id: original.id,
 			net_terms_days: 14,
@@ -83,67 +84,73 @@ test("Stripe preview: unsaved tax details match issued replacements without cust
 		} satisfies ReissueInvoiceParams)) as ReissueInvoiceResponse;
 		if (!result.invoice) throw new Error("Reissue returned no invoice");
 		original = result.invoice;
-		expectStripeTaxPreviewCorrect({
-			preview,
+		expectReissueTaxPreviewCorrect({
+			response: previews[index],
 			total,
 			issued: await stripe.invoices.retrieve(original.stripe_id),
 		});
 	}
 
-	const untaxed = (await autumnV2_4.post("/invoices.reissue", {
+	const disableTaxParams = {
 		invoice_id: original.id,
 		invoice: { tax_rate_id: null },
 		customer: { address: addresses.FR, tax_ids: [] },
+	} satisfies ReissueInvoiceParams;
+	const beforeDisable = await snapshotTaxPreviewState({ scenario });
+	const disablePreview = (await autumnV2_4.post("/invoices.reissue", {
+		...disableTaxParams,
+		preview: true,
 	} satisfies ReissueInvoiceParams)) as ReissueInvoiceResponse;
+	expectReissueTaxPreviewCorrect({
+		response: disablePreview,
+		total: 20,
+		automaticTax: false,
+	});
+	expect(await snapshotTaxPreviewState({ scenario })).toEqual(beforeDisable);
+	const untaxed = (await autumnV2_4.post(
+		"/invoices.reissue",
+		disableTaxParams,
+	)) as ReissueInvoiceResponse;
 	if (!untaxed.invoice) throw new Error("Untaxed reissue returned no invoice");
 	const untaxedStripe = await stripe.invoices.retrieve(
 		untaxed.invoice.stripe_id,
 	);
-	expectStripeTaxPreviewCorrect({
-		preview: untaxedStripe,
-		total: 2000,
+	expectReissueTaxPreviewCorrect({
+		response: disablePreview,
+		issued: untaxedStripe,
+		total: 20,
 		automaticTax: false,
 	});
-	const enabledPreview = await stripe.invoices.createPreview({
-		customer_details: {
-			address: addresses.FR,
-			tax_ids: [],
-			tax_exempt: "none",
-		},
-		automatic_tax: { enabled: true },
-		currency: "usd",
-		discounts: "",
-		invoice_items: [
-			{
-				amount: 2000,
-				currency: "usd",
-				tax_behavior: "exclusive",
-				tax_code: "txcd_10000000",
-			},
-		],
+	const beforeEnable = await snapshotTaxPreviewState({ scenario });
+	const inheritedPreview = (await autumnV2_4.post("/invoices.reissue", {
+		invoice_id: untaxed.invoice.id,
+		preview: true,
+	} satisfies ReissueInvoiceParams)) as ReissueInvoiceResponse;
+	expectReissueTaxPreviewCorrect({
+		response: inheritedPreview,
+		total: 20,
+		automaticTax: false,
 	});
-	const draft = await stripe.invoices.create({
-		customer: stripeCustomerId,
-		subscription: stripeInvoiceToStripeSubscriptionId(untaxedStripe),
-		automatic_tax: { enabled: true },
-		collection_method: "send_invoice",
-		days_until_due: 14,
-		auto_advance: false,
-	});
-	await stripe.invoiceItems.create({
-		customer: stripeCustomerId,
-		invoice: draft.id,
-		amount: 2000,
-		currency: "usd",
-		tax_behavior: "exclusive",
-		tax_code: "txcd_10000000",
-	});
-	const issued = await stripe.invoices.finalizeInvoice(draft.id, {
-		auto_advance: false,
-	});
-	expectStripeTaxPreviewCorrect({
-		preview: enabledPreview,
-		total: 2400,
-		issued,
+	expect(await snapshotTaxPreviewState({ scenario })).toEqual(beforeEnable);
+	const enableTaxParams = {
+		invoice_id: untaxed.invoice.id,
+		invoice: { automatic_tax: true },
+	} satisfies ReissueInvoiceParams;
+	const enabledPreview = (await autumnV2_4.post("/invoices.reissue", {
+		...enableTaxParams,
+		preview: true,
+	} satisfies ReissueInvoiceParams)) as ReissueInvoiceResponse;
+	expectReissueTaxPreviewCorrect({ response: enabledPreview, total: 24 });
+	expect(await snapshotTaxPreviewState({ scenario })).toEqual(beforeEnable);
+	const enabled = (await autumnV2_4.post(
+		"/invoices.reissue",
+		enableTaxParams,
+	)) as ReissueInvoiceResponse;
+	if (!enabled.invoice)
+		throw new Error("Tax-enabled reissue returned no invoice");
+	expectReissueTaxPreviewCorrect({
+		response: enabledPreview,
+		total: 24,
+		issued: await stripe.invoices.retrieve(enabled.invoice.stripe_id),
 	});
 }, 600_000);

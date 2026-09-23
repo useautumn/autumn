@@ -17,6 +17,10 @@ export const InvoiceCustomFieldSchema = z
 /** Changes scoped to the replacement invoice only. */
 export const ReissueInvoiceOverridesSchema = z
 	.object({
+		automatic_tax: z.boolean().optional().meta({
+			description:
+				"Enable or disable Stripe automatic tax on the replacement. Omit to inherit. Enabling clears inherited manual tax rates; use tax_rate_id: null to remove all tax.",
+		}),
 		custom_fields: z.array(InvoiceCustomFieldSchema).max(4).optional().meta({
 			description:
 				"Fields shown on this invoice only, such as a PO number. Up to four; pass an empty array to clear them.",
@@ -36,7 +40,11 @@ export const ReissueInvoiceOverridesSchema = z
 			description: "Memo shown near the top of the invoice.",
 		}),
 	})
-	.strict();
+	.strict()
+	.refine(
+		(value) => !(value.automatic_tax && value.tax_rate_id !== undefined),
+		{ message: "automatic_tax: true cannot be combined with tax_rate_id" },
+	);
 
 /** Changes written to the customer, which the replacement then snapshots. */
 export const ReissueCustomerOverridesSchema = z

@@ -8,7 +8,6 @@ import {
 	type InsertDbInvoiceLineItem,
 	type InvoiceTemplate,
 	MetadataType,
-	type PreviewInvoiceCredits,
 	ProcessorType,
 	RecaseError,
 	type ReissueCustomerOverrides,
@@ -40,8 +39,10 @@ import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/Invoice
 import { type InvoiceListRow, InvoiceService } from "../InvoiceService";
 import { invoiceLineItemRepo } from "../lineItems/repos";
 import { applyReissueCustomerOverrides } from "./reissue/applyReissueCustomerOverrides";
-import { applyReissueLineEdits } from "./reissue/applyReissueLineEdits";
+import { buildReissueLines } from "./reissue/buildReissueLines";
+import { previewReissue } from "./reissue/previewReissue";
 import { previewReissuedInvoice } from "./reissue/previewReissuedInvoice";
+import { resolveReissueTax } from "./reissue/resolveReissueTax";
 import { updateInvoiceFromStripe } from "./updateFromStripe";
 import { upsertInvoiceFromStripe } from "./upsertFromStripe";
 import { voidInvoice } from "./voidInvoice";
@@ -160,43 +161,6 @@ const resolveCollection = ({
 	};
 };
 
-const stripeLinesToAddLineParams = ({
-	lines,
-	lineTaxRates = "keep",
-}: {
-	lines: Stripe.InvoiceLineItem[];
-	/**
-	 * `keep` copies the original's per-line rates, `inherit` lets the invoice's
-	 * default rate apply, and `none` taxes the line at nothing regardless of it.
-	 */
-	lineTaxRates?: "keep" | "inherit" | "none";
-}): Stripe.InvoiceAddLinesParams.Line[] =>
-	lines.map((line) => ({
-		description: line.description ?? undefined,
-		// Discounts were already applied on the original, so copy net amounts.
-		amount:
-			line.amount -
-			(line.discount_amounts ?? []).reduce(
-				(total, discount) => total + discount.amount,
-				0,
-			),
-		discountable: false,
-		period: line.period
-			? { start: line.period.start, end: line.period.end }
-			: undefined,
-		tax_rates:
-			lineTaxRates === "none"
-				? ""
-				: lineTaxRates === "keep" && line.taxes?.length
-					? line.taxes.flatMap((tax) =>
-							tax.tax_rate_details?.tax_rate
-								? [tax.tax_rate_details.tax_rate]
-								: [],
-						)
-					: undefined,
-		metadata: { ...(line.metadata ?? {}), autumn_reissued_from_line: line.id },
-	}));
-
 /**
  * A draft that survives a failed build is inert but clutters the customer.
  * Stripe refuses to delete a subscription-linked draft, so that case is logged.
@@ -231,7 +195,6 @@ const createReplacementDraft = async ({
 	lineEdits,
 	storedLines,
 	dropDeferredPointer,
-	linkSubscription,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -246,12 +209,8 @@ const createReplacementDraft = async ({
 	lineEdits?: ReissueLineEdits;
 	storedLines: DbInvoiceLineItem[];
 	dropDeferredPointer: boolean;
-	/** A linked draft fires invoice.created against the subscription's products. */
-	linkSubscription: boolean;
 }) => {
-	const stripeSubId = linkSubscription
-		? stripeInvoiceToStripeSubscriptionId(stripeInvoice)
-		: undefined;
+	const stripeSubId = stripeInvoiceToStripeSubscriptionId(stripeInvoice);
 	const stripeCusId =
 		typeof stripeInvoice.customer === "string"
 			? stripeInvoice.customer
@@ -261,28 +220,18 @@ const createReplacementDraft = async ({
 	}
 
 	// Lines are resolved first so a bad edit fails before any draft exists.
-	const lines = await applyReissueLineEdits({
+	const lines = await buildReissueLines({
 		ctx,
 		customerId,
-		lines: stripeLinesToAddLineParams({
-			lines: await getStripeInvoiceLineItems({
-				stripeClient: stripeCli,
-				invoiceId: stripeInvoice.id,
-			}),
-			// Stripe Tax's own rates cannot be reapplied by hand; it recomputes
-			// them on the replacement since automatic tax carries over.
-			lineTaxRates:
-				overrides?.tax_rate_id === undefined
-					? stripeInvoice.automatic_tax?.enabled
-						? "inherit"
-						: "keep"
-					: overrides.tax_rate_id === null
-						? "none"
-						: "inherit",
-		}),
+		stripeCli,
+		stripeInvoice,
+		overrides,
+		lineEdits,
 		storedLines,
-		edits: lineEdits,
-		currency: stripeInvoice.currency,
+	});
+	const { automaticTax, defaultTaxRates } = resolveReissueTax({
+		stripeInvoice,
+		overrides,
 	});
 
 	const draft = await createStripeInvoice({
@@ -312,29 +261,14 @@ const createReplacementDraft = async ({
 			autumn_reissued_from: stripeInvoice.id,
 			autumn_source_billing_reason: stripeInvoice.billing_reason ?? "",
 		},
-		// Stripe would recompute automatic tax over the cleared rates.
-		automaticTax:
-			overrides?.tax_rate_id === null
-				? false
-				: (stripeInvoice.automatic_tax?.enabled ?? false),
-		// Omitted keeps the original's rate; null clears it; a value replaces it.
-		defaultTaxRates:
-			overrides?.tax_rate_id === undefined
-				? stripeInvoice.default_tax_rates?.map((rate) =>
-						typeof rate === "string" ? rate : rate.id,
-					)
-				: overrides.tax_rate_id
-					? [overrides.tax_rate_id]
-					: [],
+		automaticTax,
+		defaultTaxRates,
+		discounts: [],
 	});
 
 	const invoiceFields: Stripe.InvoiceUpdateParams = {
-		// A subscription's tax rate is inherited at creation; Stripe clears it
-		// only on update, and only for the empty string. Automatic tax is
-		// inherited the same way and would recompute the tax that was dropped.
-		...(overrides?.tax_rate_id === null
-			? { default_tax_rates: "", automatic_tax: { enabled: false } }
-			: {}),
+		default_tax_rates: defaultTaxRates.length ? defaultTaxRates : "",
+		automatic_tax: { enabled: automaticTax },
 		...(overrides?.custom_fields !== undefined
 			? {
 					custom_fields: overrides.custom_fields.length
@@ -348,6 +282,21 @@ const createReplacementDraft = async ({
 	};
 	// The draft exists from here on, so anything that fails must take it with it.
 	try {
+		const pendingLines = await getStripeInvoiceLineItems({
+			stripeClient: stripeCli,
+			invoiceId: draft.id,
+		});
+		for (
+			let start = 0;
+			start < pendingLines.length;
+			start += ADD_LINES_BATCH_SIZE
+		) {
+			await stripeCli.invoices.removeLines(draft.id, {
+				lines: pendingLines
+					.slice(start, start + ADD_LINES_BATCH_SIZE)
+					.map((line) => ({ id: line.id, behavior: "unassign" })),
+			});
+		}
 		if (Object.keys(invoiceFields).length > 0) {
 			await stripeCli.invoices.update(draft.id, invoiceFields);
 		}
@@ -364,75 +313,6 @@ const createReplacementDraft = async ({
 	} catch (error) {
 		await deleteDraft({ ctx, stripeCli, draftId: draft.id });
 		throw error;
-	}
-};
-
-/**
- * Stripe is the only source of truth for tax, so a preview builds the real
- * draft, reads its totals and deletes it. The draft is never linked to the
- * subscription so its invoice.created webhook is a no-op, and customer
- * corrections are not applied (a preview must not write).
- */
-const previewReplacementDraft = async ({
-	ctx,
-	customerId,
-	stripeCli,
-	stripeInvoice,
-	template,
-	collectionMethod,
-	dueDate,
-	daysUntilDue,
-	overrides,
-	lineEdits,
-	storedLines,
-	dropDeferredPointer,
-	credits,
-	dueDateMs,
-}: {
-	ctx: AutumnContext;
-	customerId: string;
-	stripeCli: Stripe;
-	stripeInvoice: Stripe.Invoice;
-	template?: InvoiceTemplate;
-	collectionMethod: "send_invoice" | "charge_automatically";
-	dueDate?: number;
-	daysUntilDue?: number;
-	overrides?: ReissueInvoiceOverrides;
-	lineEdits?: ReissueLineEdits;
-	storedLines: DbInvoiceLineItem[];
-	dropDeferredPointer: boolean;
-	credits?: PreviewInvoiceCredits;
-	dueDateMs: number | null;
-}): Promise<CreateInvoicePreview> => {
-	const draft = await createReplacementDraft({
-		ctx,
-		customerId,
-		stripeCli,
-		stripeInvoice,
-		template,
-		collectionMethod,
-		dueDate,
-		daysUntilDue,
-		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
-		overrides,
-		lineEdits,
-		storedLines,
-		dropDeferredPointer,
-		linkSubscription: false,
-	});
-	try {
-		return await previewReissuedInvoice({
-			stripeInvoice: draft,
-			lines: await getStripeInvoiceLineItems({
-				stripeClient: stripeCli,
-				invoiceId: draft.id,
-			}),
-			storedLines,
-			credits,
-			dueDateMs,
-		});
-	} finally {
-		await deleteDraft({ ctx, stripeCli, draftId: draft.id });
 	}
 };
 
@@ -487,7 +367,6 @@ const issueReplacement = async ({
 		lineEdits,
 		storedLines,
 		dropDeferredPointer: creditOriginal,
-		linkSubscription: true,
 	});
 
 	// The total is only guaranteed to match when nothing was adjusted.
@@ -962,11 +841,14 @@ export const reissueInvoice = async ({
 		: daysUntilDue
 			? Date.now() + daysUntilDue * 24 * 60 * 60 * 1000
 			: null;
+	const stripeCustomer = await getExpandedStripeCustomer({
+		ctx,
+		stripeCustomerId: stripeInvoiceToStripeCustomerId({ stripeInvoice }),
+		errorOnNotFound: true,
+		expandTax: Boolean(preview),
+	});
 	const credits = stripeCustomerToInvoiceCredits({
-		stripeCustomer: await getExpandedStripeCustomer({
-			ctx,
-			stripeCustomerId: stripeInvoiceToStripeCustomerId({ stripeInvoice }),
-		}),
+		stripeCustomer,
 		currency: stripeInvoice.currency,
 	});
 
@@ -975,19 +857,16 @@ export const reissueInvoice = async ({
 			replacement: null,
 			voidedInvoiceId: null,
 			creditNoteId: null,
-			preview: await previewReplacementDraft({
+			preview: await previewReissue({
 				ctx,
 				customerId: previewCustomerId,
 				stripeCli,
 				stripeInvoice,
-				template,
-				collectionMethod,
-				dueDate,
-				daysUntilDue,
+				stripeCustomer,
+				customerOverrides,
 				overrides: invoiceOverrides,
 				lineEdits,
 				storedLines,
-				dropDeferredPointer: creditOriginal,
 				credits,
 				dueDateMs,
 			}),
