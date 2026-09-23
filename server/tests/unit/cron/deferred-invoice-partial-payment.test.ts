@@ -148,8 +148,8 @@ await mockModuleWithRestore("@/internal/metadata/MetadataService.js", () => ({
 const { handleVoidInvoiceCron } = await import(
 	"@/cron/invoiceCron/runInvoiceCron.js"
 );
-const { expirePendingForVoidedStripeInvoice } = await import(
-	"@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingForVoidedStripeInvoice.js"
+const { expirePendingPlanForVoidedInvoice } = await import(
+	"@/internal/billing/v2/actions/expirePendingPlan/expirePendingPlanForVoidedInvoice.js"
 );
 
 const logger = {
@@ -203,7 +203,7 @@ test("cron: a partially paid voided invoice is left alone and stops being re-pic
 test("void webhook: a partially paid voided invoice keeps its pending plan", async () => {
 	resetState({ invoiceStatus: "void", amountPaid: 500 });
 
-	const expired = await expirePendingForVoidedStripeInvoice({
+	const expired = await expirePendingPlanForVoidedInvoice({
 		ctx: {
 			db: {} as never,
 			logger,

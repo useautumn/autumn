@@ -3,20 +3,17 @@ import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { hasStripeInvoicePayment } from "@/external/stripe/invoices/utils/classifyStripeInvoice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { expirePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { MetadataService } from "@/internal/metadata/MetadataService";
-import { cancelDeferredCreatedSubscription } from "./cancelDeferredCreatedSubscription";
-import { expirePendingCustomerProducts } from "./expirePendingCustomerProducts";
+import { releaseExpiredPendingPlan } from "./execute/releaseExpiredPendingPlan";
 
 // Pending rows are inserted after the metadata row; a void that lands in between
 // must not delete the metadata, so the cron re-checks shortly instead.
 const RECHECK_DELAY_MS = ms.minutes(10);
 
-/**
- * A voided invoice with no payment can no longer be paid, so the deferred plan waiting
- * on it expires now. Legacy invoice-checkout metadata keeps its cron cleanup.
- */
-export const expirePendingForVoidedStripeInvoice = async ({
+/** A voided invoice with no payment can never be paid, so its pending plan expires now. */
+export const expirePendingPlanForVoidedInvoice = async ({
 	ctx,
 	stripeInvoice,
 	customerId,
@@ -25,25 +22,19 @@ export const expirePendingForVoidedStripeInvoice = async ({
 	stripeInvoice: Stripe.Invoice;
 	customerId?: string;
 }): Promise<boolean> => {
+	// 1. Setup
 	const metadata = await MetadataService.getByStripeInvoiceId({
 		db: ctx.db,
 		stripeInvoiceId: stripeInvoice.id,
 		type: MetadataType.DeferredInvoice,
 	});
-	if (!metadata) return false;
+	if (!metadata || hasStripeInvoicePayment(stripeInvoice)) return false;
 
-	if (hasStripeInvoicePayment(stripeInvoice)) {
-		ctx.logger.info(
-			`[expirePendingForVoidedStripeInvoice] Keeping pending plan for voided invoice ${stripeInvoice.id} with a payment`,
-		);
-		return false;
-	}
-
+	// 2. Expire the plan
 	const expiredCount = await expirePendingCustomerProducts({
 		ctx,
 		metadataId: metadata.id,
 	});
-
 	if (expiredCount === 0) {
 		await MetadataService.update({
 			db: ctx.db,
@@ -53,25 +44,24 @@ export const expirePendingForVoidedStripeInvoice = async ({
 		return false;
 	}
 
-	await cancelDeferredCreatedSubscription({
+	// 3. Cancel the sub it created
+	await releaseExpiredPendingPlan({
 		ctx,
 		stripeCli: createStripeCli({ org: ctx.org, env: ctx.env }),
 		metadata,
 		stripeInvoice,
 	});
 
-	await MetadataService.delete({ db: ctx.db, id: metadata.id });
-
 	if (customerId) {
 		await deleteCachedFullCustomer({
 			ctx,
 			customerId,
-			source: "expirePendingForVoidedStripeInvoice",
+			source: "expirePendingPlanForVoidedInvoice",
 		});
 	}
 
 	ctx.logger.info(
-		`[expirePendingForVoidedStripeInvoice] Expired ${expiredCount} pending plan(s) for voided invoice ${stripeInvoice.id}`,
+		`[expirePendingPlanForVoidedInvoice] Expired ${expiredCount} pending plan(s) for voided invoice ${stripeInvoice.id}`,
 	);
 	return true;
 };

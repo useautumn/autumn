@@ -1,48 +1,10 @@
-import type { DeferredAutumnBillingPlanData } from "@autumn/shared";
 import { type Metadata, MetadataType, metadata } from "@autumn/shared";
-import { addDays } from "date-fns";
 import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
-import type { Stripe } from "stripe";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
-import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
-import { hasStripeInvoicePayment } from "@/external/stripe/invoices/utils/classifyStripeInvoice";
-import { cancelDeferredCreatedSubscription } from "@/internal/billing/v2/execute/pendingCustomerProducts/cancelDeferredCreatedSubscription";
-import { expirePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
-import { OrgService } from "@/internal/orgs/OrgService";
-import { createStripeCli } from "../../external/connect/createStripeCli";
-import { stripeInvoiceToStripeSubscriptionId } from "../../external/stripe/invoices/utils/convertStripeInvoice";
-import type { AttachParams } from "../../internal/customers/cusProducts/AttachParams";
-import { MetadataService } from "../../internal/metadata/MetadataService";
+import { expirePendingPlanAtDueDate } from "@/internal/billing/v2/actions/expirePendingPlan/expirePendingPlanAtDueDate";
 import type { CronContext } from "../utils/CronContext";
-
-const getOrgAndCustomerFromMetadata = async ({
-	ctx,
-	metadata,
-}: {
-	ctx: CronContext;
-	metadata: Metadata;
-}) => {
-	const { db } = ctx;
-	const data = metadata.data as AttachParams | DeferredAutumnBillingPlanData;
-	if ("org" in data) {
-		return { org: data.org, customer: data.customer };
-	} else if ("orgId" in data) {
-		const { orgId, env } = data;
-		const orgWithFeatures = await OrgService.getWithFeatures({
-			db,
-			orgId,
-			env,
-			allowNotFound: true,
-		});
-
-		return {
-			org: orgWithFeatures?.org,
-			customer: data.billingContext?.fullCustomer,
-		};
-	}
-
-	return { org: undefined, customer: undefined };
-};
+import { setupInvoiceCronContext } from "./setupInvoiceCronContext";
+import { voidExpiredLegacyInvoice } from "./voidExpiredLegacyInvoice";
 
 export const handleVoidInvoiceCron = async ({
 	ctx,
@@ -51,130 +13,29 @@ export const handleVoidInvoiceCron = async ({
 	ctx: CronContext;
 	metadata: Metadata;
 }) => {
-	const { logger, db } = ctx;
+	// 1. Setup
+	const invoiceCronContext = await setupInvoiceCronContext({ ctx, metadata });
+	if (!invoiceCronContext) return;
 
-	const { org, customer } = await getOrgAndCustomerFromMetadata({
-		ctx,
-		metadata,
-	});
-	if (!org || !customer) return;
+	// 2. Legacy invoice metadata keeps its original cleanup
+	if (metadata.type !== MetadataType.DeferredInvoice) {
+		await voidExpiredLegacyInvoice({ ctx, invoiceCronContext, metadata });
+		return;
+	}
 
-	const stripeCli = createStripeCli({ org, env: customer.env });
-
-	if (!metadata.stripe_invoice_id) return;
-
-	let invoice: Stripe.Invoice | undefined;
+	// 3. Deferred invoice reached its due date
+	const { stripeCli, stripeInvoice, repoContext } = invoiceCronContext;
 	try {
-		invoice = await stripeCli.invoices.retrieve(metadata.stripe_invoice_id);
-	} catch {
-		logger.warn(`Failed to retrieve invoice ${metadata.stripe_invoice_id}`);
-		return;
-	}
-
-	const subId = stripeInvoiceToStripeSubscriptionId(invoice);
-	const voidSub = metadata.type === MetadataType.InvoiceCheckout;
-	const expirePendingRows = async () => {
-		try {
-			await expirePendingCustomerProducts({
-				ctx: {
-					db,
-					logger,
-					org: { id: org.id },
-					env: customer.env,
-					redisV2: resolveRedisV2(),
-				},
-				metadataId: metadata.id,
-			});
-		} catch (error) {
-			logger.error(`Error expiring pending customer products: ${error}`);
-		}
-	};
-
-	console.log(
-		`Invoice: ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug}) - status: ${invoice.status}`,
-	);
-
-	const isPartiallyPaid =
-		invoice.status !== "paid" && hasStripeInvoicePayment(invoice);
-	if (isPartiallyPaid) {
-		await MetadataService.update({
-			db,
-			id: metadata.id,
-			updates: { expires_at: null },
-		});
-		logger.info(
-			`Invoice ${metadata.stripe_invoice_id} has a partial payment; leaving its pending plan in place`,
-		);
-		return;
-	}
-
-	const cleanUpUnpaidInvoice = async () => {
-		await expirePendingRows();
-		await cancelDeferredCreatedSubscription({
-			ctx,
+		await expirePendingPlanAtDueDate({
+			ctx: repoContext,
 			stripeCli,
 			metadata,
-			stripeInvoice: invoice,
+			stripeInvoice,
 		});
-		await MetadataService.delete({
-			db,
-			id: metadata.id,
-		});
-	};
-
-	if (invoice.status === "open") {
-		try {
-			await stripeCli.invoices.voidInvoice(metadata.stripe_invoice_id);
-			logger.info(
-				`voided invoice ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug})`,
-			);
-
-			if (voidSub && subId) {
-				logger.info(`Voiding sub ${subId} [created through invoice checkout]`);
-				try {
-					await stripeCli.subscriptions.cancel(subId);
-				} catch (error) {
-					logger.warn(`Error voiding sub ${subId}: ${error}`);
-				}
-			}
-
-			await cleanUpUnpaidInvoice();
-		} catch (error) {
-			if (
-				error instanceof Error &&
-				error.message.includes("pending payments waiting to clear")
-			) {
-				await MetadataService.update({
-					db,
-					id: metadata.id,
-					updates: { expires_at: addDays(Date.now(), 1).getTime() },
-				});
-				logger.info(
-					`Invoice ${metadata.stripe_invoice_id} has a pending payment; retrying cleanup in 24 hours`,
-				);
-				return;
-			}
-
-			logger.error(`Error voiding invoice: ${error}`);
-			if (
-				error instanceof Error &&
-				error.message.includes("cannot be voided")
-			) {
-				await MetadataService.delete({
-					db,
-					id: metadata.id,
-				});
-				return;
-			}
-		}
-	} else if (invoice.status === "void" || invoice.status === "uncollectible") {
-		try {
-			await cleanUpUnpaidInvoice();
-		} catch (error) {
-			logger.error(
-				`Error cleaning up unpaid invoice ${metadata.stripe_invoice_id}; retrying next run: ${error}`,
-			);
-		}
+	} catch (error) {
+		ctx.logger.error(
+			`Error expiring pending plan for invoice ${stripeInvoice.id}; retrying next run: ${error}`,
+		);
 	}
 };
 

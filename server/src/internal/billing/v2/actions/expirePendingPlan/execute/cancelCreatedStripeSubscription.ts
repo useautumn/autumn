@@ -4,7 +4,7 @@ import {
 	MetadataType,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { Logger } from "@/external/logtail/logtailUtils";
+import type { RepoContext } from "@/db/repoContext";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 
@@ -26,14 +26,14 @@ const deferredMetadataToCreatedStripeSubscriptionId = ({
 	return stripeInvoiceToStripeSubscriptionId(stripeInvoice);
 };
 
-/** Throws on Stripe failure so callers keep the metadata and the cron retries. */
-export const cancelDeferredCreatedSubscription = async ({
+/** Throws on Stripe failure so the caller keeps the metadata and the cron retries. */
+export const cancelCreatedStripeSubscription = async ({
 	ctx,
 	stripeCli,
 	metadata,
 	stripeInvoice,
 }: {
-	ctx: { logger: Logger };
+	ctx: RepoContext;
 	stripeCli: Stripe;
 	metadata: Metadata;
 	stripeInvoice: Stripe.Invoice;
@@ -53,6 +53,6 @@ export const cancelDeferredCreatedSubscription = async ({
 
 	await stripeCli.subscriptions.cancel(stripeSubscriptionId);
 	ctx.logger.info(
-		`[cancelDeferredCreatedSubscription] Canceled sub ${stripeSubscriptionId} for unpaid invoice ${stripeInvoice.id}`,
+		`[cancelCreatedStripeSubscription] Canceled sub ${stripeSubscriptionId} for unpaid invoice ${stripeInvoice.id}`,
 	);
 };
