@@ -4423,6 +4423,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       Stripe customer credit balance available, expressed as a positive number in major currency units.
     </DynamicResponseField>
 
+    <DynamicResponseField name="applied" type="number">
+      How much of that balance this invoice consumes, capped at its total. The rest stays on the customer.
+    </DynamicResponseField>
+
     <DynamicResponseField name="currency" type="string">
       Three-letter currency code.
     </DynamicResponseField>

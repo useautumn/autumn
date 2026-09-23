@@ -73,6 +73,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     <DynamicResponseField name="items" type="object[]">
       Line items on the invoice, one per line as shown in Stripe. Capped at 100. Empty for invoices recorded before line item storage.
       <Expandable title="properties">
+        <DynamicResponseField name="id" type="string">
+          The Autumn invoice line item ID. Stable across reads, and can be used to reference this line in later calls.
+        </DynamicResponseField>
+
         <DynamicResponseField name="description" type="string">
           Description of the invoice line item
         </DynamicResponseField>
@@ -151,6 +155,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     "hosted_invoice_url": "https://invoice.stripe.com/i/acct_123/test_456",
     "items": [
       {
+        "id": "invoice_li_2b3c4d5e6f7g8h",
         "description": "Pro plan",
         "plan_id": "pro_plan",
         "feature_id": null,
@@ -162,6 +167,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         "entities": []
       },
       {
+        "id": "invoice_li_3c4d5e6f7g8h9i",
         "description": "AI credits",
         "plan_id": "pro_plan",
         "feature_id": "ai_credits",

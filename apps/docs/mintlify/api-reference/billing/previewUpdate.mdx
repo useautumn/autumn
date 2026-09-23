@@ -1300,6 +1300,16 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="remove_discounts" type="object[]">
+  Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
+  <Expandable title="properties">
+    <DynamicParamField body="reward_id" type="string" required>
+      The ID of the reward (or Stripe coupon) to remove.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 <DynamicParamField body="custom_line_items" type="object[]">
   Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
   <Expandable title="properties">
@@ -4960,6 +4970,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   <Expandable title="properties">
     <DynamicResponseField name="balance" type="number">
       Stripe customer credit balance available, expressed as a positive number in major currency units.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="applied" type="number">
+      How much of that balance this invoice consumes, capped at its total. The rest stays on the customer.
     </DynamicResponseField>
 
     <DynamicResponseField name="currency" type="string">
