@@ -6,6 +6,7 @@ import {
 	type FullCusProduct,
 	hasCustomerProductEnded,
 	hasCustomerProductStarted,
+	timestampsMatch,
 } from "@autumn/shared";
 import type { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -48,6 +49,22 @@ const filterCustomerProductsForEventStart = ({
 		(customerProduct) =>
 			customerProduct.starts_at <= nextCycleStart &&
 			!hasCustomerProductEnded(customerProduct, { nowMs: nextCycleStart }),
+	);
+
+/** A plan whose own term ends at the transition has served its full period, so
+ * there is no unused time to credit back. */
+const outgoingPlansRunToBoundary = ({
+	outgoingCustomerProducts,
+	boundaryMs,
+}: {
+	outgoingCustomerProducts: FullCusProduct[];
+	boundaryMs: number;
+}): boolean =>
+	outgoingCustomerProducts.length > 0 &&
+	outgoingCustomerProducts.every(
+		(customerProduct) =>
+			customerProduct.ended_at != null &&
+			timestampsMatch(customerProduct.ended_at, boundaryMs),
 	);
 
 const scaleNextCycleAmounts = ({
@@ -181,9 +198,15 @@ export const billingPlanToNextCyclePreview = ({
 
 		// A reset starts a fresh full cycle, so we don't credit the old plan's
 		// leftover time — mirrors proration_behavior "none" on the Stripe phase.
-		const lineItemSpecs = event.resetsBillingCycle
-			? [chargeNewPlan]
-			: [chargeNewPlan, creditOldPlanUnusedTime];
+		const keepsOldPlanCredit =
+			!event.resetsBillingCycle &&
+			!outgoingPlansRunToBoundary({
+				outgoingCustomerProducts: event.outgoingCustomerProducts,
+				boundaryMs: event.startsAtMs,
+			});
+		const lineItemSpecs = keepsOldPlanCredit
+			? [chargeNewPlan, creditOldPlanUnusedTime]
+			: [chargeNewPlan];
 
 		const lineItemsResult = billingPlanToNextCycleLineItems({
 			ctx,
