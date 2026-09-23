@@ -120,6 +120,13 @@ export const evaluateCancelState = async ({
 						Math.abs(scheduleState.endsAtSeconds - cancelAtSeconds) <= 1));
 			if (scheduleImplementsCancel) return undefined;
 
+			const cancelAtImplementsCancel =
+				scheduleState.upcomingPhaseStarts.length === 0 &&
+				sub.cancel_at !== null &&
+				cancelAtSeconds !== undefined &&
+				Math.abs(sub.cancel_at - cancelAtSeconds) <= 1;
+			if (cancelAtImplementsCancel) return undefined;
+
 			if (scheduleState.scheduleActive) {
 				if (
 					scheduleState.upcomingPhaseStarts.length > 0 &&

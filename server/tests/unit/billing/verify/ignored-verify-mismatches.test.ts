@@ -122,19 +122,20 @@ describe("isQuantityOnlySchedule", () => {
 		).toBe(true);
 	});
 
-	it("is not quantity-only when a future phase adds a discount", () => {
+	it("stays quantity-only when a discount expires between phases", () => {
 		expect(
 			isQuantityOnlySchedule({
 				schedule: scheduleWith({
 					currentPrices: ["price_a"],
 					futurePrices: ["price_a"],
-					futureExtra: { discounts: [{ coupon: "SAVE20" }] },
+					currentExtra: { discounts: [{ coupon: "SAVE20" }] },
+					futureExtra: { discounts: [] },
 				}),
 			}),
-		).toBe(false);
+		).toBe(true);
 	});
 
-	it("is not quantity-only when a future phase changes tax settings", () => {
+	it("stays quantity-only when tax settings differ between phases", () => {
 		expect(
 			isQuantityOnlySchedule({
 				schedule: scheduleWith({
@@ -142,6 +143,57 @@ describe("isQuantityOnlySchedule", () => {
 					futurePrices: ["price_a"],
 					currentExtra: { automatic_tax: { enabled: false } },
 					futureExtra: { automatic_tax: { enabled: true } },
+				}),
+			}),
+		).toBe(true);
+	});
+
+	it("stays quantity-only when metadata differs between phases", () => {
+		expect(
+			isQuantityOnlySchedule({
+				schedule: scheduleWith({
+					currentPrices: ["price_a"],
+					futurePrices: ["price_a"],
+					currentExtra: { metadata: {} },
+					futureExtra: { metadata: { plan: "personal", country: "GB" } },
+				}),
+			}),
+		).toBe(true);
+	});
+
+	it("stays quantity-only when proration behavior differs between phases", () => {
+		expect(
+			isQuantityOnlySchedule({
+				schedule: scheduleWith({
+					currentPrices: ["price_a"],
+					futurePrices: ["price_a"],
+					currentExtra: { proration_behavior: "create_prorations" },
+					futureExtra: { proration_behavior: "none" },
+				}),
+			}),
+		).toBe(true);
+	});
+
+	it("is not quantity-only when a future phase changes currency", () => {
+		expect(
+			isQuantityOnlySchedule({
+				schedule: scheduleWith({
+					currentPrices: ["price_a"],
+					futurePrices: ["price_a"],
+					currentExtra: { currency: "usd" },
+					futureExtra: { currency: "eur" },
+				}),
+			}),
+		).toBe(false);
+	});
+
+	it("is not quantity-only when a future phase changes trial end", () => {
+		expect(
+			isQuantityOnlySchedule({
+				schedule: scheduleWith({
+					currentPrices: ["price_a"],
+					futurePrices: ["price_a"],
+					futureExtra: { trial_end: 1_800_000_000 },
 				}),
 			}),
 		).toBe(false);
