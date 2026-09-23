@@ -344,7 +344,10 @@ const issueReplacement = async ({
 		collectionMethod,
 		dueDate,
 		daysUntilDue,
-		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
+		paymentMethodTypes:
+			overrides?.payment_method_types ??
+			ctx.org.config.allowed_payment_methods ??
+			undefined,
 		overrides,
 		lines,
 		dropDeferredPointer: creditOriginal,
@@ -810,6 +813,14 @@ export const reissueInvoice = async ({
 		netTermsDays,
 		nowMs: Date.now(),
 	});
+	if (
+		invoiceOverrides?.payment_method_types &&
+		collectionMethod !== "send_invoice"
+	) {
+		throw invalidRequest(
+			"payment_method_types only applies to send-invoice replacements; pass net_terms_days to send this invoice for payment",
+		);
+	}
 
 	const previewCustomerId = row.customer_id ?? row.invoice.internal_customer_id;
 	const storedLines = await invoiceLineItemRepo.getByInvoiceIds({

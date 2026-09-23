@@ -51,5 +51,6 @@ export const stripeInvoiceToPrefill = (
 			value ? [{ type, value }] : [],
 		),
 		taxIdsIncomplete: customer?.tax_ids?.has_more ?? false,
+		sendsInvoice: stripeInvoice.collection_method === "send_invoice",
 	};
 };
