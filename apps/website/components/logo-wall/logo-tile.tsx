@@ -1,9 +1,13 @@
+import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { type Logo, logoHeightFactor } from "./logos";
+import CaseStudyBadge from "./case-study-badge";
+import { findCaseStudyHref, type Logo, logoHeightFactor } from "./logos";
 import TileCorners from "./tile-corners";
 import { TILE_FRAME } from "./tile-frame";
 
 const LOGO_UNIT = "min(12cqw, 24px)";
+
+const EXTERNAL_LINK_PROPS = { target: "_blank", rel: "noopener noreferrer" };
 
 export default function LogoTile({
 	logo,
@@ -12,11 +16,13 @@ export default function LogoTile({
 	logo: Logo;
 	className?: string;
 }) {
+	const caseStudyHref = findCaseStudyHref(logo);
+	const hasCaseStudy = caseStudyHref !== undefined;
+
 	return (
-		<a
-			href={logo.href}
-			target="_blank"
-			rel="noopener noreferrer"
+		<Link
+			href={caseStudyHref ?? logo.href}
+			{...(hasCaseStudy ? {} : EXTERNAL_LINK_PROPS)}
 			className={cn(
 				TILE_FRAME,
 				"@container group flex items-center justify-center outline-none",
@@ -33,7 +39,8 @@ export default function LogoTile({
 					height: `calc(${LOGO_UNIT} * ${logoHeightFactor(logo)})`,
 				}}
 			/>
-			<TileCorners />
-		</a>
+			{hasCaseStudy && <CaseStudyBadge />}
+			<TileCorners omitTopRight={hasCaseStudy} />
+		</Link>
 	);
 }

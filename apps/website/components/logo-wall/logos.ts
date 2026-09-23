@@ -1,3 +1,5 @@
+import { customerStoriesData } from "@/app/constant";
+
 export type Logo = {
 	id: string;
 	name: string;
@@ -11,6 +13,9 @@ const REFERENCE_ASPECT_RATIO = 4.5;
 
 export const logoHeightFactor = ({ aspectRatio, opticalScale = 1 }: Logo) =>
 	Math.sqrt(REFERENCE_ASPECT_RATIO / aspectRatio) * opticalScale;
+
+export const findCaseStudyHref = ({ id }: Logo) =>
+	customerStoriesData.find((story) => story.slug === id)?.href;
 
 export const LOGOS: Logo[] = [
 	{
