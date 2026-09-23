@@ -1,9 +1,9 @@
-import { AppEnv } from "@autumn/shared";
 import Stripe from "stripe";
 import {
 	initMasterStripe,
 	initPlatformStripe,
 } from "@/external/connect/initStripeCli.js";
+import { orgToStripeConnect } from "@/external/connect/stripeConnectField.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 export const isStripeAuthorizationCurrent = async ({
@@ -24,8 +24,7 @@ export const isStripeAuthorizationCurrent = async ({
 		return true;
 	if (connectedSecond !== undefined && connectedSecond < eventCreated)
 		return false;
-	const connect =
-		env === AppEnv.Live ? org.live_stripe_connect : org.test_stripe_connect;
+	const connect = orgToStripeConnect({ org, env });
 	const stripe = connect?.master_org_id
 		? initPlatformStripe({ masterOrg: org.master, env })
 		: initMasterStripe({ env });

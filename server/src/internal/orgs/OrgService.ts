@@ -13,6 +13,7 @@ import {
 	user,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
+import { stripeConnectField } from "@server/external/connect/stripeConnectField.js";
 import RecaseError from "@server/utils/errorUtils.js";
 import { addDays } from "date-fns";
 import {
@@ -23,6 +24,7 @@ import {
 	isNull,
 	like,
 	lt,
+	ne,
 	notExists,
 	or,
 	sql,
@@ -31,6 +33,8 @@ import { toPlanAliasMap } from "../catalogV2/productAliases/toPlanAliasMap.js";
 import { FeatureService } from "../features/FeatureService.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 
+const connectColumn = (env: AppEnv) => organizations[stripeConnectField(env)];
+
 const deauthorizedAccountWhere = ({
 	accountId,
 	env,
@@ -38,10 +42,8 @@ const deauthorizedAccountWhere = ({
 	accountId: string;
 	env: AppEnv;
 }) => {
-	const connect =
-		env === AppEnv.Live
-			? organizations.live_stripe_connect
-			: organizations.test_stripe_connect;
+	const connect = connectColumn(env);
+
 	return and(
 		or(
 			eq(sql`${connect}->>'account_id'`, accountId),
@@ -435,6 +437,28 @@ export class OrgService {
 		};
 	}
 
+	static async findByStripeAccountId({
+		db,
+		accountId,
+		env,
+		excludeOrgId,
+	}: {
+		db: DrizzleCli;
+		accountId: string;
+		env: AppEnv;
+		excludeOrgId?: string;
+	}): Promise<Organization | undefined> {
+		const connect = connectColumn(env);
+		const result = await db.query.organizations.findFirst({
+			where: and(
+				eq(sql`${connect}->>'account_id'`, accountId),
+				excludeOrgId ? ne(organizations.id, excludeOrgId) : undefined,
+			),
+		});
+
+		return result as Organization;
+	}
+
 	/** OAuth rows affected by a deauthorization; managed rows belong to another platform. */
 	static async listByDeauthorizedAccount({
 		db,
@@ -449,28 +473,40 @@ export class OrgService {
 			where: deauthorizedAccountWhere({ accountId, env }),
 			with: { master: true },
 		});
+
 		return rows.map((row) => ({
 			...(row as Organization),
 			config: OrgConfigSchema.parse(row.config || {}),
 		}));
 	}
 
-	static async findByStripeAccountId({
+	/** Binds an OAuth account, clearing any managed link or pending revocation for that env. */
+	static async updateStripeConnect({
 		db,
+		orgId,
 		accountId,
+		env,
 	}: {
 		db: DrizzleCli;
+		orgId: string;
 		accountId: string;
 		env: AppEnv;
-	}): Promise<Organization | undefined> {
-		const result = await db.query.organizations.findFirst({
-			where: or(
-				eq(sql`${organizations.test_stripe_connect}->>'account_id'`, accountId),
-				eq(sql`${organizations.live_stripe_connect}->>'account_id'`, accountId),
-			),
+	}): Promise<void> {
+		const connect = connectColumn(env);
+		const binding = JSON.stringify({
+			account_id: accountId,
+			connected_at: Date.now(),
 		});
 
-		return result as Organization;
+		await db
+			.update(organizations)
+			.set({
+				[stripeConnectField(env)]:
+					sql`(coalesce(${connect}, '{}'::jsonb) - 'revoked_account_id' - 'master_org_id') || ${binding}::jsonb`,
+			})
+			.where(eq(organizations.id, orgId));
+
+		await clearOrgCache({ db, orgId });
 	}
 
 	static async updateConnectWebhookSecret({

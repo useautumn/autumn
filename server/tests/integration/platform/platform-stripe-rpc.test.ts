@@ -164,7 +164,7 @@ test("platform Stripe RPC retries locally stale authorization after real Stripe 
 	}
 }, 120_000);
 
-test("Stripe OAuth cleanup preserves reconnects and rejects delayed revoked account binding", async () => {
+test("Stripe OAuth cleanup leaves managed replacements and reconnects alone", async () => {
 	const { ctx } = await initScenario({
 		setup: [s.platform.create({ name: "Stripe RPC concurrency" })],
 		actions: [],
@@ -219,17 +219,6 @@ test("Stripe OAuth cleanup preserves reconnects and rejects delayed revoked acco
 			(await OrgService.get({ db: ctx.db, orgId: ctx.org.id }))
 				.test_stripe_connect?.account_id,
 		).toBe(account.id);
-		await stripe.oauth.deauthorize({
-			client_id: process.env.STRIPE_SANDBOX_CLIENT_ID!,
-			stripe_user_id: account.id,
-		});
-		await expect(
-			bindOAuthAccount({
-				db: ctx.db,
-				orgId: ctx.org.id,
-				accountId: account.id,
-			}),
-		).rejects.toMatchObject({ code: "account_invalid" });
 	} finally {
 		await stripe.accounts.del(account.id).catch(() => {});
 		await OrgService.update({

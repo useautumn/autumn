@@ -1,10 +1,9 @@
 import { AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { initMasterStripe } from "@/external/connect/initStripeCli.js";
-import { connectOAuthAccount } from "@/internal/orgs/handlers/stripeHandlers/connectOAuthAccount.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 
-/** Binds an account through the production OAuth callback path. */
-export const bindOAuthAccount = async ({
+/** Binds an account through the same persistence the OAuth callback uses. */
+export const bindOAuthAccount = ({
 	db,
 	orgId,
 	accountId,
@@ -12,14 +11,10 @@ export const bindOAuthAccount = async ({
 	db: DrizzleCli;
 	orgId: string;
 	accountId: string;
-}) => {
-	const result = await connectOAuthAccount({
+}) =>
+	OrgService.updateStripeConnect({
 		db,
 		orgId,
 		accountId,
 		env: AppEnv.Sandbox,
-		stripe: initMasterStripe({ env: AppEnv.Sandbox }),
-		masterOrgId: null,
 	});
-	if (result.error) throw new Error(`OAuth binding failed: ${result.error}`);
-};

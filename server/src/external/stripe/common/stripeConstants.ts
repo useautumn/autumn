@@ -1,10 +1,10 @@
-import type { AppEnv } from "@autumn/shared";
 import type Stripe from "stripe";
 
 type StripeEventType = Stripe.WebhookEndpointCreateParams.EnabledEvent;
 
 /** Events Autumn actively handles in its webhook handler. */
 export const MAIN_STRIPE_EVENT_TYPES: StripeEventType[] = [
+	"account.application.deauthorized",
 	"checkout.session.completed",
 	"checkout.session.expired",
 	"customer.updated",
@@ -65,30 +65,3 @@ export const SYNC_STRIPE_EVENT_TYPES: StripeEventType[] = [
 	"payment_intent.payment_failed",
 	"payment_intent.canceled",
 ];
-
-/** Bounds Stripe calls made while holding Postgres locks. */
-export const LOCK_HELD_STRIPE_REQUEST_OPTIONS = {
-	timeout: 10_000,
-} satisfies Stripe.RequestOptions;
-
-/** Autumn's OAuth Connect endpoints also receive revocations; direct secret-key endpoints never do. */
-export const OAUTH_CONNECT_STRIPE_EVENT_TYPES: StripeEventType[] = [
-	...new Set<StripeEventType>([
-		...MAIN_STRIPE_EVENT_TYPES,
-		...SYNC_STRIPE_EVENT_TYPES,
-		"account.application.deauthorized",
-	]),
-];
-
-export const buildOAuthConnectWebhookParams = ({
-	publicApiUrl,
-	env,
-}: {
-	publicApiUrl: string;
-	env: AppEnv;
-}) =>
-	({
-		url: `${publicApiUrl}/webhooks/connect/${env}`,
-		enabled_events: OAUTH_CONNECT_STRIPE_EVENT_TYPES,
-		connect: true,
-	}) satisfies Stripe.WebhookEndpointCreateParams;

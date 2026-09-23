@@ -1,12 +1,13 @@
 import { AppEnv } from "@autumn/shared";
 import type { Context } from "hono";
 import { initDrizzle } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import { toPlatformOrg } from "@/internal/platform/platformBeta/handlers/platformOrgUtils.js";
 import { consumeOAuthState } from "@/internal/platform/platformBeta/utils/oauthStateUtils.js";
-import { connectOAuthAccount } from "./connectOAuthAccount.js";
 
 const failureMessages = {
 	access_denied:
@@ -31,109 +32,189 @@ const failureMessages = {
 		"The Stripe connection could not be completed. Please try again.",
 };
 
+/**
+ * Handles Stripe OAuth callback
+ * Uses Redis state for both standard and platform flows
+ */
 export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
-	const { code, state, error } = c.req.query();
+	const query = c.req.query();
+	const { code, state, error } = query;
+
+	// Get database connection
+	const { db } = initDrizzle();
+
+	// Build frontend redirect URL (default)
 	const frontendUrl = process.env.CLIENT_URL || "http://localhost:3000";
-	let redirectUrl = new URL(frontendUrl);
+	let redirectUrl = new URL(`${frontendUrl}`);
 	redirectUrl.searchParams.set("tab", "stripe");
-	const fail = (failure: keyof typeof failureMessages) => {
+
+	const fail = (
+		failure: keyof typeof failureMessages,
+		details: Record<string, string> = {},
+	) => {
+		for (const [key, value] of Object.entries(details))
+			redirectUrl.searchParams.set(key, value);
 		redirectUrl.searchParams.set("success", "false");
 		redirectUrl.searchParams.set("error", failure);
 		redirectUrl.searchParams.set("message", failureMessages[failure]);
 		return c.redirect(redirectUrl.toString());
 	};
+
+	if (!state) return fail("missing_parameters");
+
 	try {
-		if (!state) return fail("missing_parameters");
+		// Consume OAuth state from Redis
 		const redisState = await consumeOAuthState({ stateKey: state });
-		if (!redisState || redisState.provider === "revenuecat")
+
+		if (!redisState || redisState.provider === "revenuecat") {
 			return fail("invalid_state");
-		const { organization_slug, env, redirect_uri, master_org_id } = redisState;
-		redirectUrl = redirect_uri
-			? new URL(redirect_uri)
-			: new URL(
-					`${frontendUrl}${env === AppEnv.Sandbox ? "/sandbox" : ""}/dev?tab=stripe`,
-				);
-		for (const key of [
-			"success",
-			"error",
-			"message",
-			"connected_org_name",
-			"connected_org_slug",
-			"account_id",
-			"account_name",
-			"secret_key_account_id",
-		])
-			redirectUrl.searchParams.delete(key);
-		if (error)
+		}
+
+		// Extract state data
+		const {
+			organization_slug,
+			env: envStr,
+			redirect_uri,
+			master_org_id,
+		} = redisState;
+		const env = envStr === "live" ? AppEnv.Live : AppEnv.Sandbox;
+		const isPlatformFlow = master_org_id !== null;
+
+		// Use custom redirect URI if provided (platform flow)
+		if (isPlatformFlow) {
+			redirectUrl = new URL(redirect_uri);
+		} else {
+			redirectUrl = redirect_uri
+				? new URL(redirect_uri)
+				: new URL(
+						`${frontendUrl}${env === AppEnv.Sandbox ? "/sandbox" : ""}/dev?tab=stripe`,
+					);
+		}
+
+		// Handle OAuth error from Stripe, now that the caller's return URL is trusted
+		if (error) {
 			return fail(
 				error === "access_denied"
 					? "access_denied"
 					: "oauth_authorization_failed",
 			);
+		}
 		if (!code) return fail("missing_parameters");
-		const { db } = initDrizzle();
+
+		// Fetch the organization by slug
 		const org = await OrgService.getBySlug({ db, slug: organization_slug });
-		if (!org) return fail("org_not_found");
-		if (master_org_id && org.created_by !== master_org_id)
+
+		// Platform state may only connect orgs its master still owns
+		const ownershipChanged =
+			isPlatformFlow && org?.created_by !== master_org_id;
+		if (!org || ownershipChanged) {
+			console.error("Organization not found:", organization_slug);
 			return fail("org_not_found");
+		}
+
 		const stripe = initMasterStripe({ env });
 		const response = await stripe.oauth.token({
 			grant_type: "authorization_code",
 			code,
 		});
+
 		const accountId = response.stripe_user_id;
-		if (!accountId) return fail("account_id_not_found");
-		const result = await connectOAuthAccount({
+
+		if (!accountId) {
+			console.error("Account ID not found");
+			return fail("account_id_not_found");
+		}
+
+		// Check if account ID is already connected to another organization (reconnecting is fine)
+		const existingOrg = await OrgService.findByStripeAccountId({
+			db,
+			accountId,
+			env,
+			excludeOrgId: org.id,
+		});
+
+		if (existingOrg) {
+			console.error(
+				`Account ${accountId} is already connected to org ${existingOrg.id}`,
+			);
+
+			// Platform flow only learns about conflicts inside its own platform
+			if (isPlatformFlow) {
+				if (existingOrg.created_by !== master_org_id) {
+					return fail("account_already_connected");
+				}
+				const publicOrg = toPlatformOrg({
+					org: existingOrg,
+					masterOrgId: master_org_id,
+				});
+				return fail("account_already_connected", {
+					connected_org_name: publicOrg.name,
+					connected_org_slug: publicOrg.slug,
+				});
+			}
+
+			// Standard flow returns detailed error
+			const master = createStripeCli({ org: existingOrg, env });
+			// The conflict is still reported if the account can no longer be read
+			const account = await master.accounts
+				.retrieve(accountId)
+				.catch(() => null);
+			return fail("account_already_connected", {
+				account_id: accountId,
+				account_name: account?.company?.name || "",
+				connected_org_name: existingOrg.name || "",
+				connected_org_slug: existingOrg.slug || "",
+			});
+		}
+
+		// Both channels must point at the same Stripe account, else OAuth webhooks
+		// (this account) would be processed against secret-key billing state.
+		const secretKeyConnected = isStripeConnected({
+			org,
+			env,
+			throughSecretKey: true,
+		});
+		if (secretKeyConnected) {
+			try {
+				const secretKeyCli = createStripeCli({
+					org,
+					env,
+					throughSecretKey: true,
+				});
+				const secretKeyAccount = await secretKeyCli.accounts.retrieve();
+				if (secretKeyAccount.id !== accountId) {
+					return fail("account_mismatch", {
+						account_id: accountId,
+						secret_key_account_id: secretKeyAccount.id,
+					});
+				}
+			} catch (error) {
+				console.error(
+					`Failed to verify account match against secret key for org ${org.id} (${org.slug}):`,
+					error,
+				);
+				return fail("account_mismatch_check_failed");
+			}
+		}
+
+		// Fails if the grant was revoked after the token exchange
+		await stripe.balance.retrieve({}, { stripeAccount: accountId });
+
+		// Update organization with Stripe Connect account
+		await OrgService.updateStripeConnect({
 			db,
 			orgId: org.id,
 			accountId,
 			env,
-			stripe,
-			masterOrgId: master_org_id,
 		});
-		if (result.error === "account_already_connected" && !master_org_id) {
-			const account = await stripe.accounts
-				.retrieve(accountId)
-				.catch(() => null);
-			redirectUrl.searchParams.set("account_id", accountId);
-			redirectUrl.searchParams.set(
-				"account_name",
-				account?.company?.name || "",
-			);
-			redirectUrl.searchParams.set(
-				"connected_org_name",
-				result.conflict.name || "",
-			);
-			redirectUrl.searchParams.set(
-				"connected_org_slug",
-				result.conflict.slug || "",
-			);
-		}
-		// Platform callers only learn about conflicts inside their own platform.
-		if (
-			result.error === "account_already_connected" &&
-			master_org_id &&
-			result.targetOwner === master_org_id &&
-			result.conflict.created_by === master_org_id
-		) {
-			const publicOrg = toPlatformOrg({
-				org: result.conflict,
-				masterOrgId: master_org_id,
-			});
-			redirectUrl.searchParams.set("connected_org_name", publicOrg.name);
-			redirectUrl.searchParams.set("connected_org_slug", publicOrg.slug);
-		}
-		if (result.error === "account_mismatch") {
-			redirectUrl.searchParams.set("account_id", accountId);
-			redirectUrl.searchParams.set(
-				"secret_key_account_id",
-				result.secretKeyAccountId,
-			);
-		}
-		if (result.error) return fail(result.error);
+
+		console.log(`Successfully connected Stripe account for org ${org.id}`);
+
+		// Redirect to success
 		redirectUrl.searchParams.set("success", "true");
 		return c.redirect(redirectUrl.toString());
-	} catch {
+	} catch (error: unknown) {
+		console.error("Error in OAuth callback:", error);
 		return fail("oauth_callback_failed");
 	}
 };

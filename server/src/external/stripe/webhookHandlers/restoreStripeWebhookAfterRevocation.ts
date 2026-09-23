@@ -1,8 +1,9 @@
 import { getAutumnEnv } from "@autumn/env";
-import { AppEnv, organizations } from "@autumn/shared";
+import { AppEnv, type Organization, organizations } from "@autumn/shared";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { stripeConnectField } from "@/external/connect/stripeConnectField.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
@@ -12,27 +13,96 @@ import {
 	SYNC_STRIPE_EVENT_TYPES,
 } from "../common/stripeConstants.js";
 
+type Ctx = Pick<AutumnContext, "org" | "env" | "db" | "logger">;
+
+const stripeConfigFields = (env: AppEnv) =>
+	env === AppEnv.Live
+		? ({
+				keyField: "live_api_key",
+				webhookField: "live_webhook_secret",
+			} as const)
+		: ({
+				keyField: "test_api_key",
+				webhookField: "test_webhook_secret",
+			} as const);
+
+const isPendingRevocation = ({
+	org,
+	env,
+	accountId,
+}: {
+	org: Organization;
+	env: AppEnv;
+	accountId: string;
+}) => {
+	const connect = org[stripeConnectField(env)];
+	return !connect?.account_id && connect?.revoked_account_id === accountId;
+};
+
+/** Clears the pending marker (and stores a new webhook secret) only if nothing changed meanwhile. */
+const completeRevocation = async ({
+	ctx,
+	org,
+	accountId,
+	webhookSecret,
+}: {
+	ctx: Ctx;
+	org: Organization;
+	accountId: string;
+	webhookSecret?: string;
+}) => {
+	const { db, env } = ctx;
+	const connectField = stripeConnectField(env);
+	const connect = organizations[connectField];
+	const config = organizations.stripe_config;
+	const { keyField, webhookField } = stripeConfigFields(env);
+
+	const updated = await db
+		.update(organizations)
+		.set({
+			[connectField]: sql`${connect} - 'revoked_account_id'`,
+			...(webhookSecret && {
+				stripe_config: sql`jsonb_set(coalesce(${config}, '{}'::jsonb), ARRAY[${webhookField}]::text[], to_jsonb(${encryptData(webhookSecret)}::text))`,
+			}),
+		})
+		.where(
+			and(
+				eq(organizations.id, org.id),
+				eq(sql`${connect}->>'revoked_account_id'`, accountId),
+				isNull(sql`${connect}->>'account_id'`),
+				sql`${config}->>${keyField} IS NOT DISTINCT FROM ${org.stripe_config?.[keyField] ?? null}`,
+				sql`${config}->>${webhookField} IS NOT DISTINCT FROM ${org.stripe_config?.[webhookField] ?? null}`,
+			),
+		)
+		.returning({ id: organizations.id });
+
+	return updated.length > 0;
+};
+
+/**
+ * After OAuth is revoked, a kept secret key stops receiving events through Autumn's
+ * Connect endpoint, so give it a direct webhook before clearing the pending marker.
+ */
 export const restoreStripeWebhookAfterRevocation = async ({
 	ctx,
 	accountId,
 }: {
-	ctx: Pick<AutumnContext, "org" | "env" | "db" | "logger">;
+	ctx: Ctx;
 	accountId: string;
 }) => {
 	const { db, env, logger } = ctx;
 	const org = await OrgService.get({ db, orgId: ctx.org.id });
-	const connectField =
-		env === AppEnv.Live ? "live_stripe_connect" : "test_stripe_connect";
-	const keyField = env === AppEnv.Live ? "live_api_key" : "test_api_key";
-	const webhookField =
-		env === AppEnv.Live ? "live_webhook_secret" : "test_webhook_secret";
-	const connect = org[connectField];
-	if (connect?.account_id || connect?.revoked_account_id !== accountId) return;
-	const encryptedKey = org.stripe_config?.[keyField];
-	const needsWebhook = encryptedKey && !org.stripe_config?.[webhookField];
+	if (!isPendingRevocation({ org, env, accountId })) return;
+
+	const { keyField, webhookField } = stripeConfigFields(env);
+	const needsWebhook =
+		Boolean(org.stripe_config?.[keyField]) &&
+		!org.stripe_config?.[webhookField];
+
 	let stripe: Stripe | undefined;
 	let endpoint: Stripe.WebhookEndpoint | undefined;
 	let persisted = false;
+
 	try {
 		if (needsWebhook) {
 			stripe = createStripeCli({ org, env, throughSecretKey: true });
@@ -43,40 +113,27 @@ export const restoreStripeWebhookAfterRevocation = async ({
 					...SYNC_STRIPE_EVENT_TYPES,
 				],
 			});
-			if (!endpoint.secret)
+			if (!endpoint.secret) {
 				throw new Error("Stripe webhook signing secret was not returned");
+			}
 		}
-		const updated = await db
-			.update(organizations)
-			.set({
-				[connectField]: sql`${organizations[connectField]} - 'revoked_account_id'`,
-				...(endpoint?.secret
-					? {
-							stripe_config: sql`jsonb_set(coalesce(${organizations.stripe_config}, '{}'::jsonb), ARRAY[${webhookField}]::text[], to_jsonb(${encryptData(endpoint.secret)}::text))`,
-						}
-					: {}),
-			})
-			.where(
-				and(
-					eq(organizations.id, org.id),
-					eq(
-						sql`${organizations[connectField]}->>'revoked_account_id'`,
-						accountId,
-					),
-					isNull(sql`${organizations[connectField]}->>'account_id'`),
-					sql`${organizations.stripe_config}->>${keyField} IS NOT DISTINCT FROM ${encryptedKey ?? null}`,
-					sql`${organizations.stripe_config}->>${webhookField} IS NOT DISTINCT FROM ${org.stripe_config?.[webhookField] ?? null}`,
-				),
-			)
-			.returning({ id: organizations.id });
-		persisted = updated.length > 0;
-		if (!persisted) {
-			const current = await OrgService.get({ db, orgId: org.id });
-			if (
-				current[connectField]?.revoked_account_id === accountId &&
-				!current[connectField]?.account_id
-			)
-				throw new Error("Stripe connection changed during webhook restoration");
+
+		persisted = await completeRevocation({
+			ctx,
+			org,
+			accountId,
+			webhookSecret: endpoint?.secret,
+		});
+
+		const stillPending =
+			!persisted &&
+			isPendingRevocation({
+				org: await OrgService.get({ db, orgId: org.id }),
+				env,
+				accountId,
+			});
+		if (stillPending) {
+			throw new Error("Stripe connection changed during webhook restoration");
 		}
 	} catch (error) {
 		throw new Error(
@@ -84,8 +141,11 @@ export const restoreStripeWebhookAfterRevocation = async ({
 			{ cause: error },
 		);
 	} finally {
-		if (endpoint && stripe && !persisted)
+		// Never leave an endpoint behind whose secret we failed to store.
+		if (endpoint && stripe && !persisted) {
 			await stripe.webhookEndpoints.del(endpoint.id);
+		}
 	}
+
 	await clearOrgCache({ db, orgId: org.id, env, logger });
 };
