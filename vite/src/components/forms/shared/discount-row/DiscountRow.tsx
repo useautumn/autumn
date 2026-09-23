@@ -18,6 +18,7 @@ export function DiscountRow({
 	onUpdate,
 	onRemove,
 	defaultOpen = false,
+	excludedRewardIds = [],
 }: {
 	discounts: FormDiscount[];
 	index: number;
@@ -25,6 +26,8 @@ export function DiscountRow({
 	onUpdate: ({ rewardId }: { rewardId: string }) => void;
 	onRemove: () => void;
 	defaultOpen?: boolean;
+	/** Rewards that can't be picked here, e.g. ones already on the subscription. */
+	excludedRewardIds?: string[];
 }) {
 	const { rewards, rewardPrograms } = useRewardsQuery();
 	const { stripeCoupons } = useStripeCouponsQuery();
@@ -55,7 +58,8 @@ export function DiscountRow({
 		.filter(Boolean);
 
 	const availableOptions = allOptions.filter(
-		(o) => !selectedRewardIds.includes(o.id),
+		(o) =>
+			!selectedRewardIds.includes(o.id) && !excludedRewardIds.includes(o.id),
 	);
 
 	const currentRewardId =

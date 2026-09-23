@@ -67,6 +67,7 @@ export function UpdateSubscriptionAdvancedSection() {
 				onRemove={({ index }) =>
 					form.setFieldValue("discounts", removeDiscount(discounts, index))
 				}
+				excludedRewardIds={appliedDiscounts.map((discount) => discount.id)}
 				appliedDiscounts={appliedDiscounts.map((discount) => (
 					<AppliedDiscountRow
 						key={discount.id}

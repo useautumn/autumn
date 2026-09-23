@@ -14,6 +14,7 @@ export function DiscountsConfigRow({
 	onUpdate,
 	onRemove,
 	appliedDiscounts,
+	excludedRewardIds,
 }: {
 	discounts: FormDiscount[];
 	description: string;
@@ -23,6 +24,7 @@ export function DiscountsConfigRow({
 	onRemove: (params: { index: number }) => void;
 	/** Discounts already on the subscription, listed above new rows. */
 	appliedDiscounts?: ReactNode;
+	excludedRewardIds?: string[];
 }) {
 	return (
 		<ConfigRow
@@ -56,6 +58,7 @@ export function DiscountsConfigRow({
 									discounts={discounts}
 									index={index}
 									productId={productId}
+									excludedRewardIds={excludedRewardIds}
 									onUpdate={({ rewardId }) => onUpdate({ index, rewardId })}
 									onRemove={() => onRemove({ index })}
 								/>
