@@ -9,7 +9,7 @@ const OAUTH_TOKEN_PREFIXES = [
 const AUTUMN_CUSTOMER_JWT_PREFIX = "am_jwt_";
 
 export const isSecretKeyPrefix = ({ token }: { token: string }) =>
-	token.startsWith(AUTUMN_SECRET_KEY_PREFIX);
+	token.startsWith(AUTUMN_SECRET_KEY_PREFIX) && !isOAuthToken({ token });
 
 export const isPublishableKeyPrefix = ({ token }: { token: string }) =>
 	token.startsWith(AUTUMN_PUBLISHABLE_KEY_PREFIX);
