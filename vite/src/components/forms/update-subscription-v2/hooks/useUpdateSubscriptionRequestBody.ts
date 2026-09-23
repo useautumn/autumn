@@ -16,6 +16,7 @@ import {
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { getFreeTrial } from "../utils/getFreeTrial";
 import { billingCycleAnchorChanged } from "../utils/pendingBillingCycleAnchor";
+import { buildUpdateSubscriptionDiscounts } from "../utils/updateSubscriptionDiscounts";
 import type { UseUpdateSubscriptionForm } from "./useUpdateSubscriptionForm";
 
 type PrepaidItemInput = {
@@ -196,11 +197,8 @@ export function useUpdateSubscriptionRequestBody({
 				refundAmount,
 				noBillingChanges,
 				discounts,
+				removedRewardIds,
 			} = formValues;
-
-			const validDiscounts = discounts?.length
-				? discounts.filter((d) => "reward_id" in d && d.reward_id)
-				: undefined;
 
 			const base = {
 				customer_id: customerId ?? "",
@@ -278,7 +276,7 @@ export function useUpdateSubscriptionRequestBody({
 					: undefined,
 				carry_over_usages: resetUsage ? { enabled: false } : undefined,
 				no_billing_changes: noBillingChanges || undefined,
-				discounts: validDiscounts,
+				...buildUpdateSubscriptionDiscounts({ discounts, removedRewardIds }),
 				...(useInvoice
 					? {
 							invoice: true,

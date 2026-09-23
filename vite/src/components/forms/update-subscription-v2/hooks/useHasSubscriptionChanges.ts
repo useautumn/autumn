@@ -89,6 +89,7 @@ export function useHasSubscriptionChanges({
 			return true;
 
 		if (formValues.discounts?.length > 0) return true;
+		if (formValues.removedRewardIds?.length > 0) return true;
 
 		const trialChanges = generateTrialChanges({
 			customerProduct,
@@ -147,6 +148,7 @@ export function useHasSubscriptionChanges({
 		pendingBillingCycleAnchor,
 		formValues.noBillingChanges,
 		formValues.discounts,
+		formValues.removedRewardIds,
 		initialBillingBehavior,
 		formValues.removeTrial,
 		formValues.trialLength,

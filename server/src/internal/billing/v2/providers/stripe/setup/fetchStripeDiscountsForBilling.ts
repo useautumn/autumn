@@ -6,6 +6,7 @@ import type {
 	StripeSubscriptionWithDiscounts,
 } from "@/external/stripe/subscriptions";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { removeDiscountsByRewardIds } from "../utils/discounts/removeDiscountsByRewardIds";
 import { resolveParamDiscounts } from "../utils/discounts/resolveParamDiscounts";
 import { stripeCustomerToDiscounts } from "../utils/discounts/stripeCustomerToDiscounts";
 import { subToDiscounts } from "../utils/discounts/subToDiscounts";
@@ -76,7 +77,7 @@ export const filterDeletedCouponDiscounts = async ({
 };
 
 /**
- * Fetches discounts for billing, combining existing Stripe discounts with optional param discounts.
+ * Fetches discounts for billing: existing Stripe discounts, minus param removals, plus param additions.
  * Deduplicates by coupon ID — logs and skips param discounts already on the subscription.
  * Filters out discounts with deleted coupons.
  */
@@ -85,16 +86,21 @@ export const fetchStripeDiscountsForBilling = async ({
 	stripeSubscription,
 	stripeCustomer,
 	paramDiscounts,
+	removedRewardIds = [],
 }: {
 	ctx: AutumnContext;
 	stripeSubscription?: StripeSubscriptionWithDiscounts;
 	stripeCustomer?: StripeCustomerWithDiscount;
 	paramDiscounts?: AttachDiscount[];
+	removedRewardIds?: string[];
 }): Promise<StripeDiscountWithCoupon[]> => {
-	const existingDiscounts = await extractStripeDiscounts({
-		ctx,
-		stripeSubscription,
-		stripeCustomer,
+	const existingDiscounts = removeDiscountsByRewardIds({
+		discounts: await extractStripeDiscounts({
+			ctx,
+			stripeSubscription,
+			stripeCustomer,
+		}),
+		rewardIds: removedRewardIds,
 	});
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
