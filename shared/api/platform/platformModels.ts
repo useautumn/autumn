@@ -1,6 +1,54 @@
 import { queryInteger, queryStringArray } from "@api/common/queryHelpers.js";
 import { z } from "zod/v4";
 
+export const GetStripeConnectionParamsSchema = z.object({
+	organization_slug: z
+		.string()
+		.min(1)
+		.describe(
+			"Public tenant organization slug, without the master organization suffix.",
+		),
+	env: z
+		.enum(["test", "live"])
+		.describe("Stripe connection environment to inspect or disconnect."),
+});
+
+export const GetStripeConnectionResponseSchema = z.object({
+	connected: z
+		.boolean()
+		.describe(
+			"Whether an OAuth connection is stored. Excludes platform-managed accounts, default sandbox accounts, and separate secret-key connections.",
+		),
+	account_id: z
+		.string()
+		.nullable()
+		.describe("OAuth-connected Stripe account ID, or null when absent."),
+	connected_at: z
+		.number()
+		.nullable()
+		.describe(
+			"Connection timestamp in Unix milliseconds, or null for historical connections without a timestamp and when disconnected.",
+		),
+});
+
+export const DisconnectStripeParamsSchema = GetStripeConnectionParamsSchema;
+export const DisconnectStripeResponseSchema = z.object({
+	success: z.literal(true),
+});
+
+export type GetStripeConnectionParams = z.infer<
+	typeof GetStripeConnectionParamsSchema
+>;
+export type GetStripeConnectionResponse = z.infer<
+	typeof GetStripeConnectionResponseSchema
+>;
+export type DisconnectStripeParams = z.infer<
+	typeof DisconnectStripeParamsSchema
+>;
+export type DisconnectStripeResponse = z.infer<
+	typeof DisconnectStripeResponseSchema
+>;
+
 /**
  * Query params for GET /platform/users endpoint
  */
@@ -194,7 +242,9 @@ export const RevenueCatAppKeysSchema = z.object({
 	app_id: z.string(),
 	app_type: z
 		.string()
-		.describe("RevenueCat store type, e.g. test_store / app_store / play_store"),
+		.describe(
+			"RevenueCat store type, e.g. test_store / app_store / play_store",
+		),
 	name: z.string(),
 	api_keys: z.array(RevenueCatPublicApiKeySchema),
 });

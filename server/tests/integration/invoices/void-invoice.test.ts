@@ -4,7 +4,7 @@
  * Contract:
  *   POST /invoices.void { invoice_id } -> { invoice: ApiListInvoiceV1 }
  *   open invoice          → Stripe status void, our row updated inline
- *   deferred (pending)    → pending plan expires, metadata deleted
+ *   deferred (pending)    → pending plan expires, new sub canceled, metadata deleted
  *   already void          → 200, unchanged
  *   paid invoice          → 400
  *   non-Stripe            → 400
@@ -24,6 +24,7 @@ import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
@@ -136,6 +137,14 @@ test.concurrent(
 
 		const metadata = await MetadataService.get({ db: ctx.db, id: metadataId });
 		expect(metadata).toBeNull();
+
+		const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
+			invoice.stripe_id,
+		);
+		const stripeSubscription = await ctx.stripeCli.subscriptions.retrieve(
+			stripeInvoiceToStripeSubscriptionId(stripeInvoice)!,
+		);
+		expect(stripeSubscription.status).toBe("canceled");
 	},
 );
 

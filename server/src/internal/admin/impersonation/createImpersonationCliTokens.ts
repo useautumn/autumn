@@ -57,7 +57,7 @@ const insertTokenForEnv = async ({
 		});
 	});
 
-	return prefixOAuthToken({ token: rawToken });
+	return prefixOAuthToken({ token: rawToken, env });
 };
 
 /** One-hour sandbox + live tokens on the reserved admin client, attributed to the staff user. */

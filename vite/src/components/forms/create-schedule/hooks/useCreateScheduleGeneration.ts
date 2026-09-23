@@ -1,17 +1,17 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
+import type { CustomerStateForm } from "@/components/forms/customer-state/customerStateSchema";
+import type { UseCustomerStateForm } from "@/components/forms/customer-state/useCustomerStateForm";
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import { useBillingGeneration } from "@/components/forms/shared/generation/useBillingGeneration";
-import type { CreateScheduleForm } from "../createScheduleFormSchema";
 import { scheduleFormFromRequestBody } from "../utils/scheduleFormFromRequestBody";
-import type { UseCreateScheduleForm } from "./useCreateScheduleForm";
 
 export function useCreateScheduleGeneration({
 	form,
 	customerId,
 	currentRequest,
 }: {
-	form: UseCreateScheduleForm;
+	form: UseCustomerStateForm;
 	customerId: string | undefined;
 	currentRequest: Record<string, unknown> | null;
 }): BillingGenerationState {
@@ -29,7 +29,7 @@ export function useCreateScheduleGeneration({
 			// resets it outside checkout, so applying it would only fight that.
 			const { enablePlanImmediately: _ignored, ...applicable } = next;
 			for (const [key, value] of Object.entries(applicable)) {
-				form.setFieldValue(key as keyof CreateScheduleForm, value as never);
+				form.setFieldValue(key as keyof CustomerStateForm, value as never);
 			}
 		},
 		[form],

@@ -11,6 +11,11 @@ import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 import { SubscriptionParamsSchema } from "../common/subscriptionParams";
+import {
+	ADDS_AND_REMOVES_SAME_REWARD_MESSAGE,
+	addsAndRemovesSameReward,
+	RemoveDiscountsSchema,
+} from "./removeDiscount";
 
 export const ExtUpdateSubscriptionV0ParamsSchema =
 	BillingParamsBaseV0Schema.extend({
@@ -41,6 +46,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		carry_over_usages: CarryOverUsagesSchema,
 		license_quantities: z.array(LicenseQuantityParamsSchema).optional(),
 		discounts: z.array(AttachDiscountSchema).optional(),
+		remove_discounts: RemoveDiscountsSchema.optional(),
 		recalculate_balances: z
 			.object({
 				enabled: z.boolean(),
@@ -60,6 +66,9 @@ export const UpdateSubscriptionV0ParamsSchema =
 		customer_product_id: z.string().optional(),
 		redirect_mode: RedirectModeSchema.optional(),
 	})
+		.refine((data) => !addsAndRemovesSameReward(data), {
+			message: ADDS_AND_REMOVES_SAME_REWARD_MESSAGE,
+		})
 
 		.check((ctx) => {
 			if (ctx.value.options && ctx.value.options.length > 0) {

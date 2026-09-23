@@ -21,21 +21,22 @@ import {
 	useMemo,
 	useState,
 } from "react";
+import { CustomerStateProvider } from "@/components/forms/customer-state/CustomerStateProvider";
+import {
+	type CustomerStateForm,
+	type CustomerStatePlan,
+	getCreateSchedulePhaseTimingError,
+	hasPersistedCreateSchedule,
+} from "@/components/forms/customer-state/customerStateSchema";
+import {
+	type UseCustomerStateForm,
+	useCustomerStateForm,
+} from "@/components/forms/customer-state/useCustomerStateForm";
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import {
-	type CreateScheduleForm,
-	getCreateSchedulePhaseTimingError,
-	hasPersistedCreateSchedule,
-	type SchedulePlan,
-} from "../createScheduleFormSchema";
-import {
-	type UseCreateScheduleForm,
-	useCreateScheduleForm,
-} from "../hooks/useCreateScheduleForm";
 import { useCreateScheduleGeneration } from "../hooks/useCreateScheduleGeneration";
 import { useCreateScheduleMutation } from "../hooks/useCreateScheduleMutation";
 import { useCreateSchedulePreview } from "../hooks/useCreateSchedulePreview";
@@ -43,56 +44,21 @@ import {
 	useBuildCreateScheduleRequestBody,
 	useCreateScheduleRequestBody,
 } from "../hooks/useCreateScheduleRequestBody";
-import { useSchedulePhaseHandlers } from "../hooks/useSchedulePhaseHandlers";
-
-export type EditingPlan =
-	| { location: "phase"; phaseIndex: number; planIndex: number }
-	| { location: "unscheduled"; planIndex: number };
+import { useHasSchedule } from "../hooks/useHasSchedule";
 
 interface CreateScheduleFormContextValue {
 	generation: BillingGenerationState;
-	form: UseCreateScheduleForm;
-	formValues: CreateScheduleForm;
+	form: UseCustomerStateForm;
+	formValues: CustomerStateForm;
 	customerId: string | undefined;
 	nowMs: number;
 	products: ProductV2[];
 	features: Feature[];
 	isExistingSchedule: boolean;
-	/** The customer's active plans, offered as a starting point for phase one. */
-	existingPlans: SchedulePlan[];
 	/** First phase may start in the past — only when a new Stripe subscription will be created. */
 	allowFirstPhaseBackdate: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
-	isPhaseLocked: ({ phaseIndex }: { phaseIndex: number }) => boolean;
-
-	handleAddPhase: () => void;
-	handleInsertPhase: ({ afterIndex }: { afterIndex: number }) => void;
-	handleRemovePhase: ({ phaseIndex }: { phaseIndex: number }) => void;
-	handleAddPlan: ({ phaseIndex }: { phaseIndex: number }) => void;
-	handleRemovePlan: ({
-		phaseIndex,
-		planIndex,
-	}: {
-		phaseIndex: number;
-		planIndex: number;
-	}) => void;
-	handleAddUnscheduledPlan: () => void;
-	handleRemoveUnscheduledPlan: ({ planIndex }: { planIndex: number }) => void;
-	handleCopyFromPreviousPhase: ({ phaseIndex }: { phaseIndex: number }) => void;
-	handleCopyExistingPlans: ({
-		planIndex,
-		entityId,
-	}: {
-		planIndex: number;
-		entityId: string | null;
-	}) => void;
-
-	editingPlan: EditingPlan | null;
-	editingPlanValue: SchedulePlan | null;
-	setEditingPlan: (editing: EditingPlan | null) => void;
-	handlePlanEditSave: ({ plan }: { plan: SchedulePlan }) => void;
-
 	isPending: boolean;
 	handleSubmit: () => void;
 	handleInvoiceSubmit: (params: SendInvoiceSubmitParams) => Promise<{
@@ -114,15 +80,15 @@ const CreateScheduleFormReactContext =
 interface CreateScheduleFormProviderProps {
 	customerId: string | undefined;
 	nowMs?: number;
-	initialValues?: CreateScheduleForm;
-	existingPlans?: SchedulePlan[];
+	initialValues?: CustomerStateForm;
+	existingPlans?: CustomerStatePlan[];
 	onApplied?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 	children: ReactNode;
 }
 
-const NO_EXISTING_PLANS: SchedulePlan[] = [];
+const NO_EXISTING_PLANS: CustomerStatePlan[] = [];
 
 export function CreateScheduleFormProvider({
 	customerId,
@@ -136,10 +102,9 @@ export function CreateScheduleFormProvider({
 }: CreateScheduleFormProviderProps) {
 	const [nowMsFallback] = useState(Date.now);
 	const nowMs = nowMsProp ?? nowMsFallback;
-	const form = useCreateScheduleForm({ initialValues });
+	const form = useCustomerStateForm({ initialValues });
 	const { features } = useFeaturesQuery();
 	const { products } = useProductsQuery();
-	const [editingPlan, setEditingPlan] = useState<EditingPlan | null>(null);
 
 	const formValues = useStore(form.store, (state) => state.values);
 	const isDirty = useStore(form.store, (state) => state.isDirty);
@@ -149,6 +114,7 @@ export function CreateScheduleFormProvider({
 	);
 
 	const { customer } = useCusQuery();
+	const hasSchedule = useHasSchedule();
 	const fullCustomer = customer as FullCustomer | null;
 
 	// Only a new scoped subscription can backdate its immediate phase, so this
@@ -199,38 +165,6 @@ export function CreateScheduleFormProvider({
 	// usage-only plans still bill recurring even though nothing is due immediately.
 	const createsRecurringSubscription =
 		!hasActiveSubscription && immediatePlansPaidRecurring;
-
-	const editingPlanValue = useMemo(() => {
-		if (!editingPlan) return null;
-		if (editingPlan.location === "unscheduled") {
-			return formValues.unscheduledPlans[editingPlan.planIndex] ?? null;
-		}
-		return (
-			formValues.phases[editingPlan.phaseIndex]?.plans[editingPlan.planIndex] ??
-			null
-		);
-	}, [editingPlan, formValues.phases, formValues.unscheduledPlans]);
-
-	const {
-		isPhaseLocked,
-		handleAddPhase,
-		handleInsertPhase,
-		handleRemovePhase,
-		handleAddPlan,
-		handleRemovePlan,
-		handleAddUnscheduledPlan,
-		handleRemoveUnscheduledPlan,
-		handleCopyFromPreviousPhase,
-		handleCopyExistingPlans,
-		handlePlanEditSave,
-	} = useSchedulePhaseHandlers({
-		form,
-		nowMs,
-		products,
-		editingPlan,
-		setEditingPlan,
-		existingPlans,
-	});
 
 	const getPhases = useCallback(
 		() => form.store.state.values.phases,
@@ -347,23 +281,8 @@ export function CreateScheduleFormProvider({
 			products,
 			features,
 			isExistingSchedule,
-			existingPlans,
 			allowFirstPhaseBackdate,
 			createsRecurringSubscription,
-			isPhaseLocked,
-			handleAddPhase,
-			handleInsertPhase,
-			handleRemovePhase,
-			handleAddPlan,
-			handleRemovePlan,
-			handleAddUnscheduledPlan,
-			handleRemoveUnscheduledPlan,
-			handleCopyFromPreviousPhase,
-			handleCopyExistingPlans,
-			editingPlan,
-			editingPlanValue,
-			setEditingPlan,
-			handlePlanEditSave,
 			isPending,
 			handleSubmit,
 			handleInvoiceSubmit,
@@ -382,23 +301,8 @@ export function CreateScheduleFormProvider({
 			products,
 			features,
 			isExistingSchedule,
-			existingPlans,
 			allowFirstPhaseBackdate,
 			createsRecurringSubscription,
-			isPhaseLocked,
-			handleAddPhase,
-			handleInsertPhase,
-			handleRemovePhase,
-			handleAddPlan,
-			handleRemovePlan,
-			handleAddUnscheduledPlan,
-			handleRemoveUnscheduledPlan,
-			handleCopyFromPreviousPhase,
-			handleCopyExistingPlans,
-			editingPlan,
-			editingPlanValue,
-			setEditingPlan,
-			handlePlanEditSave,
 			isPending,
 			handleSubmit,
 			handleInvoiceSubmit,
@@ -413,7 +317,15 @@ export function CreateScheduleFormProvider({
 
 	return (
 		<CreateScheduleFormReactContext.Provider value={value}>
-			{children}
+			<CustomerStateProvider
+				form={form}
+				nowMs={nowMs}
+				existingPlans={existingPlans}
+				// Updating a schedule can't attach new plans, so only a new one can.
+				canMakeUnscheduled={!hasSchedule}
+			>
+				{children}
+			</CustomerStateProvider>
 		</CreateScheduleFormReactContext.Provider>
 	);
 }

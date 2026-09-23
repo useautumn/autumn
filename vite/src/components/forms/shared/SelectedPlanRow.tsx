@@ -1,5 +1,5 @@
 import type { ProductItem, ProductV2 } from "@autumn/shared";
-import { Badge, Button } from "@autumn/ui";
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import {
 	PackageIcon,
 	PencilSimpleIcon,
@@ -12,11 +12,39 @@ import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCur
 import { cn } from "@/lib/utils";
 import { getSelectedPlanPriceProduct } from "./selectedPlanRowUtils";
 
+const TOOLTIP_DELAY_MS = 250;
+
+/** A custom plan's icon turns green in place of a "Custom" tag. */
+function PlanIcon({
+	isAddOn,
+	isCustom,
+}: {
+	isAddOn: boolean;
+	isCustom?: boolean;
+}) {
+	const Icon = isAddOn ? PuzzlePieceIcon : PackageIcon;
+	const className = cn(
+		"size-3.5 shrink-0",
+		isCustom ? "text-green-500" : "text-tertiary-foreground",
+	);
+	if (!isCustom) return <Icon className={className} />;
+
+	return (
+		<Tooltip delayDuration={TOOLTIP_DELAY_MS}>
+			<TooltipTrigger asChild>
+				<Icon className={className} aria-label="Custom" />
+			</TooltipTrigger>
+			<TooltipContent side="top">Custom</TooltipContent>
+		</Tooltip>
+	);
+}
+
 export function SelectedPlanRow({
 	productId,
 	product,
 	customItems,
 	isCustom,
+	badge,
 	disabled,
 	accessory,
 	scope,
@@ -28,6 +56,7 @@ export function SelectedPlanRow({
 	product?: ProductV2;
 	customItems?: ProductItem[] | null;
 	isCustom?: boolean;
+	badge?: ReactNode;
 	disabled?: boolean;
 	accessory?: ReactNode;
 	scope?: string;
@@ -49,11 +78,7 @@ export function SelectedPlanRow({
 				disabled && "opacity-60",
 			)}
 		>
-			{product?.is_add_on ? (
-				<PuzzlePieceIcon className="size-3.5 shrink-0 text-tertiary-foreground" />
-			) : (
-				<PackageIcon className="size-3.5 shrink-0 text-tertiary-foreground" />
-			)}
+			<PlanIcon isAddOn={product?.is_add_on === true} isCustom={isCustom} />
 			<span className="min-w-0 flex-1 truncate">{name}</span>
 			{accessory}
 			{scope && (
@@ -69,11 +94,7 @@ export function SelectedPlanRow({
 							"group-hover:opacity-0 group-has-[:focus-visible]:opacity-0 [@media(hover:none)]:opacity-0",
 					)}
 				>
-					{isCustom && (
-						<Badge variant="green" size="sm">
-							Custom
-						</Badge>
-					)}
+					{badge}
 					{price ??
 						(priceProduct && (
 							<span className="text-xs tabular-nums text-tertiary-foreground">

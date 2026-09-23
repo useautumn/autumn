@@ -2,6 +2,7 @@ import { handleStripeInvoicePaid } from "@/external/stripe/webhookHandlers/handl
 import { handleStripeSubscriptionUpdated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/handleStripeSubscriptionUpdated.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
+import { handleStripeApplicationDeauthorized } from "./webhookHandlers/handleStripeApplicationDeauthorized.js";
 import { handleStripeCheckoutSessionCompleted } from "./webhookHandlers/handleStripeCheckoutSessionCompleted/handleStripeCheckoutSessionCompleted.js";
 import { handleStripeCheckoutSessionExpired } from "./webhookHandlers/handleStripeCheckoutSessionExpired/handleStripeCheckoutSessionExpired.js";
 import { handleStripeCustomerUpdated } from "./webhookHandlers/handleStripeCustomerUpdated.js";
@@ -29,6 +30,10 @@ export const runStripeWebhookHandlers = async ({
 	// await throwOnSimulatedWebhookFailure({ ctx });
 
 	switch (event.type) {
+		case "account.application.deauthorized":
+			await handleStripeApplicationDeauthorized({ ctx });
+			break;
+
 		case "customer.updated":
 			await handleStripeCustomerUpdated({ ctx, event });
 			break;

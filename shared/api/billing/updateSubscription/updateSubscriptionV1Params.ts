@@ -10,6 +10,11 @@ import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 import { SubscriptionParamsSchema } from "../common/subscriptionParams";
+import {
+	ADDS_AND_REMOVES_SAME_REWARD_MESSAGE,
+	addsAndRemovesSameReward,
+	RemoveDiscountsSchema,
+} from "./removeDiscount";
 
 export const ExtUpdateSubscriptionV1ParamsSchema =
 	BillingParamsBaseV1Schema.extend({
@@ -20,6 +25,10 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 		discounts: z.array(AttachDiscountSchema).optional().meta({
 			description:
 				"List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
+		}),
+		remove_discounts: RemoveDiscountsSchema.optional().meta({
+			description:
+				"Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.",
 		}),
 		custom_line_items: z.array(CustomLineItemSchema).min(1).optional().meta({
 			description:
@@ -93,6 +102,7 @@ const UPDATE_FIELDS = [
 	"status",
 	"redirect_mode",
 	"discounts",
+	"remove_discounts",
 	"custom_line_items",
 ] as const satisfies (keyof z.input<
 	typeof ExtUpdateSubscriptionV1ParamsSchema
@@ -107,7 +117,10 @@ export const UpdateSubscriptionV1ParamsSchema =
 	})
 		.refine((data) => UPDATE_FIELDS.some((key) => data[key] !== undefined), {
 			message:
-				"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, recalculate_balances, billing_cycle_anchor, discounts, or custom_line_items)",
+				"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, recalculate_balances, billing_cycle_anchor, discounts, remove_discounts, or custom_line_items)",
+		})
+		.refine((data) => !addsAndRemovesSameReward(data), {
+			message: ADDS_AND_REMOVES_SAME_REWARD_MESSAGE,
 		})
 		.refine((data) => !(data.refund_last_payment && data.proration_behavior), {
 			message:

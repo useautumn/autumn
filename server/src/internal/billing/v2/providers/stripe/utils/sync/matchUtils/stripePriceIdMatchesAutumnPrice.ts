@@ -11,5 +11,7 @@ export const stripePriceIdMatchesAutumnPrice = ({
 }): boolean => {
 	if (!candidate.stripePriceId) return false;
 
-	return getStripePriceIdsForAutumnPrice({ price }).includes(candidate.stripePriceId);
+	return getStripePriceIdsForAutumnPrice({ price }).includes(
+		candidate.stripePriceId,
+	);
 };

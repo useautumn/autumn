@@ -144,6 +144,10 @@ export const setupStripeBillingContext = async ({
 				stripeCustomer: localStripeCustomer,
 				paramDiscounts:
 					params && "discounts" in params ? params.discounts : undefined,
+				removedRewardIds:
+					params && "remove_discounts" in params
+						? params.remove_discounts?.map((discount) => discount.reward_id)
+						: undefined,
 			});
 		},
 		async stripeTaxRate() {

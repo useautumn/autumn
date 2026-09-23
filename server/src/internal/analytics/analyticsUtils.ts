@@ -18,6 +18,7 @@ import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSub
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { isFreeProduct } from "../products/productUtils.js";
+import { getFeatureCycleWindow } from "./utils/getFeatureCycleWindow.js";
 
 export const STANDARD_INTERVAL_DAYS: Record<string, number> = {
 	"24h": 1,
@@ -140,11 +141,13 @@ export async function getBillingCycleStartDate({
 	customer,
 	db,
 	intervalType,
+	featureIds,
 	ctx,
 }: {
 	customer?: FullCustomer;
 	db?: DrizzleCli;
 	intervalType?: "1bc" | "3bc" | "last_cycle";
+	featureIds?: string[];
 	ctx: AutumnContext;
 }) {
 	if (!customer || !db || !intervalType) {
@@ -158,6 +161,23 @@ export async function getBillingCycleStartDate({
 
 	if (cusProducts.length === 0) {
 		return {};
+	}
+
+	const featureCycle = featureIds?.length
+		? getFeatureCycleWindow({
+				customerProducts: cusProducts,
+				featureIds,
+				now: Date.now(),
+			})
+		: null;
+
+	if (featureCycle) {
+		return calculateBillingCycleResult(
+			[formatDateToString(new Date(featureCycle.start))],
+			[formatDateToString(new Date(featureCycle.end))],
+			[formatDateToString(new Date(featureCycle.createdAt))],
+			intervalType,
+		);
 	}
 
 	const fullProducts = cusProducts.map((cp: FullCusProduct) =>

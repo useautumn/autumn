@@ -10,8 +10,10 @@ import {
 } from "@/components/forms/shared/advanced-section";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
 import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
+import { AppliedDiscountRow } from "@/components/forms/shared/discount-row/AppliedDiscountRow";
 import { DiscountsConfigRow } from "@/components/forms/shared/discount-row/DiscountsConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
+import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
 export function UpdateSubscriptionAdvancedSection() {
@@ -24,8 +26,21 @@ export function UpdateSubscriptionAdvancedSection() {
 		resetUsage,
 		noBillingChanges,
 		discounts,
+		removedRewardIds,
 	} = formValues;
 	const { customerProduct, product } = formContext;
+	const { getDiscountsForSubscription } = useCusRewardsQuery();
+	const appliedDiscounts = getDiscountsForSubscription({
+		subscriptionIds: customerProduct.subscription_ids ?? [],
+	});
+
+	const toggleRemovedReward = (rewardId: string) =>
+		form.setFieldValue(
+			"removedRewardIds",
+			removedRewardIds.includes(rewardId)
+				? removedRewardIds.filter((id) => id !== rewardId)
+				: [...removedRewardIds, rewardId],
+		);
 
 	const rules = getBillingOptionRules({
 		flow: "update",
@@ -52,6 +67,15 @@ export function UpdateSubscriptionAdvancedSection() {
 				onRemove={({ index }) =>
 					form.setFieldValue("discounts", removeDiscount(discounts, index))
 				}
+				excludedRewardIds={appliedDiscounts.map((discount) => discount.id)}
+				appliedDiscounts={appliedDiscounts.map((discount) => (
+					<AppliedDiscountRow
+						key={discount.id}
+						discount={discount}
+						removed={removedRewardIds.includes(discount.id)}
+						onToggleRemoved={() => toggleRemovedReward(discount.id)}
+					/>
+				))}
 			/>
 
 			{rules.proration.visible && (

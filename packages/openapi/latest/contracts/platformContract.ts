@@ -1,12 +1,75 @@
 import {
+	DisconnectStripeParamsSchema,
+	DisconnectStripeResponseSchema,
 	GetRevenueCatKeysResponseSchema,
 	GetRevenueCatKeysSchema,
+	GetStripeConnectionParamsSchema,
+	GetStripeConnectionResponseSchema,
 	LinkRevenueCatResponseSchema,
 	LinkRevenueCatSchema,
 	SyncRevenueCatResponseSchema,
 	SyncRevenueCatSchema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
+
+export const platformGetStripeConnectionContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/platform.get_stripe_connection",
+		operationId: "getStripeConnection",
+		tags: ["platform"],
+		description:
+			"Read a managed organization's Stripe OAuth connection, account ID, and authorization time in the selected environment.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "getStripeConnection",
+		}),
+	})
+	.input(
+		GetStripeConnectionParamsSchema.meta({
+			title: "GetStripeConnectionParams",
+			examples: [{ organization_slug: "my-app", env: "test" }],
+		}),
+	)
+	.output(
+		GetStripeConnectionResponseSchema.meta({
+			title: "GetStripeConnectionResponse",
+			examples: [
+				{
+					connected: true,
+					account_id: "acct_example",
+					connected_at: 1781113864000,
+				},
+				{ connected: false, account_id: null, connected_at: null },
+			],
+		}),
+	);
+
+export const platformDisconnectStripeContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/platform.disconnect_stripe",
+		operationId: "disconnectStripe",
+		tags: ["platform"],
+		description:
+			"Revoke Autumn's Stripe OAuth access for a managed organization in the selected environment. Does not delete the Stripe account or cancel subscriptions.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "disconnectStripe",
+		}),
+	})
+	.input(
+		DisconnectStripeParamsSchema.meta({
+			title: "DisconnectStripeParams",
+			examples: [{ organization_slug: "my-app", env: "test" }],
+		}),
+	)
+	.output(
+		DisconnectStripeResponseSchema.meta({
+			title: "DisconnectStripeResponse",
+			examples: [{ success: true }],
+		}),
+	);
 
 export const platformLinkRevenueCatContract = oc
 	.route({
