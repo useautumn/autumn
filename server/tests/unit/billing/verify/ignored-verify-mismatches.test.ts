@@ -187,6 +187,32 @@ describe("isQuantityOnlySchedule", () => {
 		).toBe(false);
 	});
 
+	it("stays quantity-only when the current phase trials to its own end", () => {
+		expect(
+			isQuantityOnlySchedule({
+				schedule: scheduleWith({
+					currentPrices: ["price_a"],
+					futurePrices: ["price_a"],
+					currentExtra: { end_date: 200, trial_end: 200 },
+					futureExtra: { end_date: 300, trial_end: null },
+				}),
+			}),
+		).toBe(true);
+	});
+
+	it("is not quantity-only when a future phase is free for its whole span", () => {
+		expect(
+			isQuantityOnlySchedule({
+				schedule: scheduleWith({
+					currentPrices: ["price_a"],
+					futurePrices: ["price_a"],
+					currentExtra: { end_date: 200, trial_end: null },
+					futureExtra: { end_date: 300, trial_end: 300 },
+				}),
+			}),
+		).toBe(false);
+	});
+
 	it("is not quantity-only when a future phase changes trial end", () => {
 		expect(
 			isQuantityOnlySchedule({
