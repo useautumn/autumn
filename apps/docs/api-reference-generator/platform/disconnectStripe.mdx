@@ -5,7 +5,7 @@ openapi: "openapi POST /v1/platform.disconnect_stripe"
 
 Revoke Autumn's Stripe OAuth access for a tenant and clear its connection in the selected environment.
 
-Authenticate with your **master organization's secret key**, with `platform:write` scope. Pass the tenant's public `organization_slug` and an explicit `env`: `test` or `live`. You can only disconnect organizations created by your master organization.
+Authenticate with your **master organization's secret key**, with `platform:write` scope. Pass the tenant's public `organization_slug` and an explicit `env`: `test` or `live`. You can only disconnect organizations created by your master organization. The `env` field alone selects the connection: a test-mode or live-mode master key can manage either environment's connection.
 
 ## What disconnecting changes
 
@@ -23,4 +23,6 @@ If the request fails, do not assume the connection is still active: Stripe revoc
 
 - **Direct account-ID connections:** connections made through [Update Connected Stripe Account](/api-reference/platform/update-stripe) belong to your own Stripe platform, not Autumn's OAuth application. This endpoint rejects them with `400` rather than revoking the wrong authorization.
 - **Shared OAuth authorization:** if the same Stripe OAuth account is linked to another Autumn organization in this environment, the endpoint returns `409` without revoking access. Disconnecting that shared authorization could disrupt the other organization. Resolve the shared linkage before retrying.
-- **Permissions:** a missing API key returns `401`; a key without `platform:write` returns `403`. Neither changes the connection.
+- **Concurrent changes:** if the tenant's connection changes while the request runs, for example because the tenant reconnects, the endpoint returns `409` with `Stripe connection changed during disconnect; reload and retry`. Fetch the current status before retrying.
+- **Unknown organizations:** a slug that does not resolve to an organization created by your master organization returns `400` with `Organization with slug '<slug>' not found`, including slugs owned by other platforms.
+- **Permissions:** a missing API key returns `401`; a key without `platform:write` returns `403`. None of these responses changes the connection.

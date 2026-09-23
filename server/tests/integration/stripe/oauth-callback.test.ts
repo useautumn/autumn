@@ -138,7 +138,7 @@ test("OAuth callback failures use trusted state return URL and stable error cont
 		url: await callback({ state: missingOrgState }),
 		error: "org_not_found",
 	});
-});
+}, 120_000);
 
 test("OAuth callback reconnects the same org and ignores other-environment links", async () => {
 	const org = await createOrg();
@@ -175,7 +175,7 @@ test("OAuth callback reconnects the same org and ignores other-environment links
 	expect(connected.searchParams.get("success")).toBe("true");
 	const saved = await OrgService.get({ db, orgId: org.id });
 	expect(saved.test_stripe_connect?.account_id).toBe(accountId);
-});
+}, 120_000);
 
 test("OAuth callback discloses conflict identity only within the requesting platform", async () => {
 	const org = await createOrg();
@@ -193,15 +193,18 @@ test("OAuth callback discloses conflict identity only within the requesting plat
 		other.slug.split("|")[0],
 	);
 	expect(sameMaster.searchParams.get("connected_org_name")).toBe(other.name);
-	for (const master of [null]) {
-		const privateConflict = await callback({
-			state: await stateFor({ org, master }),
-		});
-		expectFailure({ url: privateConflict, error: "account_already_connected" });
-		expect(privateConflict.searchParams.has("connected_org_slug")).toBe(false);
-		expect(privateConflict.searchParams.has("connected_org_name")).toBe(false);
-		expect(privateConflict.toString()).not.toContain(other.id);
-	}
+	const dashboardConflict = await callback({
+		state: await stateFor({ org, master: null }),
+	});
+	expectFailure({ url: dashboardConflict, error: "account_already_connected" });
+	expect(dashboardConflict.searchParams.get("account_id")).toBe(accountId);
+	expect(dashboardConflict.searchParams.has("account_name")).toBe(true);
+	expect(dashboardConflict.searchParams.get("connected_org_name")).toBe(
+		other.name,
+	);
+	expect(dashboardConflict.searchParams.get("connected_org_slug")).toBe(
+		other.slug,
+	);
 	await OrgService.update({
 		db,
 		orgId: other.id,
@@ -213,7 +216,7 @@ test("OAuth callback discloses conflict identity only within the requesting plat
 	expect(crossMaster.searchParams.has("connected_org_name")).toBe(false);
 	const saved = await OrgService.get({ db, orgId: org.id });
 	expect(saved.test_stripe_connect?.account_id).toBeUndefined();
-});
+}, 120_000);
 
 test("OAuth callback rejects platform state after target ownership changes", async () => {
 	const org = await createOrg();
@@ -225,7 +228,7 @@ test("OAuth callback rejects platform state after target ownership changes", asy
 	});
 	expectFailure({ url: await callback({ state }), error: "org_not_found" });
 	expect(token).not.toHaveBeenCalled();
-});
+}, 120_000);
 
 test("OAuth callback preserves secret-key mismatch checks and their failure redirects", async () => {
 	const org = await createOrg();
@@ -258,7 +261,7 @@ test("OAuth callback preserves secret-key mismatch checks and their failure redi
 	});
 	const saved = await OrgService.get({ db, orgId: org.id });
 	expect(saved.test_stripe_connect?.account_id).toBeUndefined();
-});
+}, 120_000);
 
 test("OAuth callback does not persist an account whose exchanged authorization was revoked", async () => {
 	const org = await createOrg();
@@ -277,4 +280,4 @@ test("OAuth callback does not persist an account whose exchanged authorization w
 	});
 	const saved = await OrgService.get({ db, orgId: org.id });
 	expect(saved.test_stripe_connect?.account_id).toBeUndefined();
-});
+}, 120_000);

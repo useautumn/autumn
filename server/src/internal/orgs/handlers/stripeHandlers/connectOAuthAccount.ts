@@ -3,7 +3,9 @@ import { and, eq, ne, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { LOCK_HELD_STRIPE_REQUEST_OPTIONS } from "@/external/stripe/common/stripeConstants.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
+import { lockStripeOAuthAccount } from "@/internal/orgs/orgUtils/lockStripeOAuthAccount.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 
 export const connectOAuthAccount = async ({
@@ -22,9 +24,7 @@ export const connectOAuthAccount = async ({
 	masterOrgId: string | null;
 }) => {
 	const result = await db.transaction(async (tx) => {
-		await tx.execute(
-			sql`select pg_advisory_xact_lock(hashtextextended(${`stripe-oauth:${env}:${accountId}`}, 0))`,
-		);
+		await lockStripeOAuthAccount({ tx, env, accountId });
 		const [orgRow] = await tx
 			.select()
 			.from(organizations)
@@ -63,7 +63,7 @@ export const connectOAuthAccount = async ({
 					org,
 					env,
 					throughSecretKey: true,
-				}).accounts.retrieve();
+				}).accounts.retrieve({}, LOCK_HELD_STRIPE_REQUEST_OPTIONS);
 				if (secretKeyAccount.id !== accountId)
 					return {
 						error: "account_mismatch",
@@ -73,7 +73,10 @@ export const connectOAuthAccount = async ({
 				return { error: "account_mismatch_check_failed" } as const;
 			}
 		}
-		await stripe.balance.retrieve({}, { stripeAccount: accountId });
+		await stripe.balance.retrieve(
+			{},
+			{ ...LOCK_HELD_STRIPE_REQUEST_OPTIONS, stripeAccount: accountId },
+		);
 		const {
 			revoked_account_id: _revokedAccountId,
 			master_org_id: _masterOrgId,

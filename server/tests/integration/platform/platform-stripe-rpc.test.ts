@@ -8,6 +8,7 @@ import { createKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { encryptData } from "@/utils/encryptUtils.js";
+import { bindOAuthAccount } from "../stripe/utils/bindOAuthAccount.js";
 import { createOAuthCatalogFixture } from "../stripe/utils/createOAuthCatalogFixture.js";
 import { expectRevokedOAuthConfigCorrect } from "../stripe/utils/expectOAuthConnectionCorrect.js";
 import { expectStripeRpcCorrect } from "./utils/expectStripeRpcCorrect.js";
@@ -52,13 +53,22 @@ test("platform Stripe RPC rejects shared and managed accounts without revocation
 		env: "test",
 	};
 	try {
-		for (const { ctx } of [first, second])
-			await OrgService.updateStripeConnect({
-				db: ctx.db,
-				orgId: ctx.org.id,
-				accountId: account.id,
-				env: AppEnv.Sandbox,
-			});
+		await bindOAuthAccount({
+			db: first.ctx.db,
+			orgId: first.ctx.org.id,
+			accountId: account.id,
+		});
+		// Legacy shared rows predate OAuth uniqueness, so they are seeded directly.
+		await OrgService.update({
+			db: second.ctx.db,
+			orgId: second.ctx.org.id,
+			updates: {
+				test_stripe_connect: {
+					...second.ctx.org.test_stripe_connect,
+					account_id: account.id,
+				},
+			},
+		});
 		await expectStripeRpcCorrect({
 			response: await rpc({ operation: "disconnect_stripe", body }),
 			status: 409,
@@ -165,11 +175,10 @@ test("Stripe OAuth cleanup preserves reconnects and rejects delayed revoked acco
 		country: "US",
 	});
 	try {
-		await OrgService.updateStripeConnect({
+		await bindOAuthAccount({
 			db: ctx.db,
 			orgId: ctx.org.id,
 			accountId: account.id,
-			env: AppEnv.Sandbox,
 		});
 		const oldOrg = await OrgService.get({ db: ctx.db, orgId: ctx.org.id });
 		await OrgService.update({
@@ -195,11 +204,10 @@ test("Stripe OAuth cleanup preserves reconnects and rejects delayed revoked acco
 			...oldOrg.test_stripe_connect,
 			master_org_id: defaultCtx.org.id,
 		});
-		await OrgService.updateStripeConnect({
+		await bindOAuthAccount({
 			db: ctx.db,
 			orgId: ctx.org.id,
 			accountId: account.id,
-			env: AppEnv.Sandbox,
 		});
 		expect(
 			await clearRevokedStripeConnection({
@@ -216,11 +224,10 @@ test("Stripe OAuth cleanup preserves reconnects and rejects delayed revoked acco
 			stripe_user_id: account.id,
 		});
 		await expect(
-			OrgService.updateStripeConnect({
+			bindOAuthAccount({
 				db: ctx.db,
 				orgId: ctx.org.id,
 				accountId: account.id,
-				env: AppEnv.Sandbox,
 			}),
 		).rejects.toMatchObject({ code: "account_invalid" });
 	} finally {
@@ -407,6 +414,11 @@ test("platform Stripe RPC really deauthorizes and synchronously preserves unrela
 				body: { success: true },
 			});
 			await createOAuthCatalogFixture({ ctx });
+			await bindOAuthAccount({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				accountId: account.id,
+			});
 			await OrgService.update({
 				db: ctx.db,
 				orgId: ctx.org.id,
@@ -421,12 +433,6 @@ test("platform Stripe RPC really deauthorizes and synchronously preserves unrela
 							}
 						: {}),
 				},
-			});
-			await OrgService.updateStripeConnect({
-				db: ctx.db,
-				orgId: ctx.org.id,
-				accountId: account.id,
-				env: AppEnv.Sandbox,
 			});
 			const previousOrg = await OrgService.get({
 				db: ctx.db,

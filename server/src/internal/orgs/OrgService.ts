@@ -20,16 +20,36 @@ import {
 	eq,
 	inArray,
 	isNotNull,
+	isNull,
 	like,
 	lt,
 	notExists,
 	or,
 	sql,
 } from "drizzle-orm";
-import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 import { toPlanAliasMap } from "../catalogV2/productAliases/toPlanAliasMap.js";
 import { FeatureService } from "../features/FeatureService.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
+
+const deauthorizedAccountWhere = ({
+	accountId,
+	env,
+}: {
+	accountId: string;
+	env: AppEnv;
+}) => {
+	const connect =
+		env === AppEnv.Live
+			? organizations.live_stripe_connect
+			: organizations.test_stripe_connect;
+	return and(
+		or(
+			eq(sql`${connect}->>'account_id'`, accountId),
+			eq(sql`${connect}->>'revoked_account_id'`, accountId),
+		),
+		isNull(sql`${connect}->>'master_org_id'`),
+	);
+};
 
 export class OrgService {
 	static async getFromReq(req: any) {
@@ -353,16 +373,9 @@ export class OrgService {
 		accountId: string;
 		deauthorizedEnv?: AppEnv;
 	}) {
-		const connectColumn =
-			deauthorizedEnv === AppEnv.Live
-				? organizations.live_stripe_connect
-				: organizations.test_stripe_connect;
 		const result = await db.query.organizations.findFirst({
 			where: deauthorizedEnv
-				? or(
-						eq(sql`${connectColumn}->>'account_id'`, accountId),
-						eq(sql`${connectColumn}->>'revoked_account_id'`, accountId),
-					)
+				? deauthorizedAccountWhere({ accountId, env: deauthorizedEnv })
 				: or(
 						eq(
 							sql`${organizations.test_stripe_connect}->>'default_account_id'`,
@@ -422,6 +435,26 @@ export class OrgService {
 		};
 	}
 
+	/** OAuth rows affected by a deauthorization; managed rows belong to another platform. */
+	static async listByDeauthorizedAccount({
+		db,
+		accountId,
+		env,
+	}: {
+		db: DrizzleCli;
+		accountId: string;
+		env: AppEnv;
+	}): Promise<Organization[]> {
+		const rows = await db.query.organizations.findMany({
+			where: deauthorizedAccountWhere({ accountId, env }),
+			with: { master: true },
+		});
+		return rows.map((row) => ({
+			...(row as Organization),
+			config: OrgConfigSchema.parse(row.config || {}),
+		}));
+	}
+
 	static async findByStripeAccountId({
 		db,
 		accountId,
@@ -438,45 +471,6 @@ export class OrgService {
 		});
 
 		return result as Organization;
-	}
-
-	/**
-	 * Update Stripe Connect account ID for an organization
-	 */
-	static async updateStripeConnect({
-		db,
-		orgId,
-		accountId,
-		env,
-	}: {
-		db: DrizzleCli;
-		orgId: string;
-		accountId: string;
-		env: AppEnv;
-	}): Promise<void> {
-		const field =
-			env === AppEnv.Live ? "live_stripe_connect" : "test_stripe_connect";
-		await db.transaction(async (tx) => {
-			await tx.execute(
-				sql`SELECT pg_advisory_xact_lock(hashtextextended(${`stripe-oauth:${env}:${accountId}`}, 0))`,
-			);
-			await initMasterStripe({ env }).accounts.retrieve(accountId);
-			const updated = await tx
-				.update(organizations)
-				.set({
-					[field]: sql`(coalesce(${organizations[field]}, '{}'::jsonb) - 'revoked_account_id' - 'master_org_id') || ${JSON.stringify({ account_id: accountId, connected_at: Date.now() })}::jsonb`,
-				})
-				.where(eq(organizations.id, orgId))
-				.returning({ id: organizations.id });
-			if (!updated.length)
-				throw new RecaseError({
-					message: "Organization not found",
-					code: ErrCode.OrgNotFound,
-					statusCode: 404,
-				});
-		});
-
-		await clearOrgCache({ db, orgId });
 	}
 
 	static async updateConnectWebhookSecret({

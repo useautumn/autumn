@@ -2,11 +2,13 @@ import {
 	AppEnv,
 	ErrCode,
 	type Organization,
+	organizations,
 	RecaseError,
 	Scopes,
 	type StripeConfig,
 	type StripeConnectConfig,
 } from "@autumn/shared";
+import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { orgToAccountId } from "@/external/connect/connectUtils.js";
@@ -14,12 +16,14 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
+import { LOCK_HELD_STRIPE_REQUEST_OPTIONS } from "@/external/stripe/common/stripeConstants.js";
 import { createWebhookEndpoint } from "@/external/stripe/stripeOnboardingUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { clearStripeCatalogMappings } from "@/internal/catalog/actions/catalogMappings/clearStripeCatalogMappings.js";
 import { decryptData, encryptData } from "@/utils/encryptUtils.js";
 import { OrgService } from "../../OrgService.js";
 import { clearOrgCache } from "../../orgUtils/clearOrgCache.js";
+import { lockStripeOAuthAccount } from "../../orgUtils/lockStripeOAuthAccount.js";
 import { isStripeConnected } from "../../orgUtils.js";
 
 export type DisconnectChannel = "secret_key" | "oauth";
@@ -89,6 +93,29 @@ export const computeClearedStripeConnect = ({
 	return newConnect;
 };
 
+const readClearedStripeConnect = async ({
+	db,
+	orgId,
+	env,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+}): Promise<StripeConnectConfig> => {
+	const field = envFields(env).connect;
+	const [current] = await db
+		.select({ connect: organizations[field] })
+		.from(organizations)
+		.where(eq(organizations.id, orgId))
+		.for("update");
+	const {
+		account_id: _accountId,
+		connected_at: _connectedAt,
+		...connect
+	} = current?.connect ?? {};
+	return connect;
+};
+
 const deleteDirectWebhook = async ({
 	org,
 	env,
@@ -108,26 +135,26 @@ const deleteDirectWebhook = async ({
 };
 
 const deauthorizeOauth = async ({
-	org,
+	accountId,
 	env,
 	logger,
 }: {
-	org: Organization;
+	accountId: string;
 	env: AppEnv;
 	logger: Logger;
 }) => {
-	const accountId = orgToAccountId({ org, env, noDefaultAccount: true });
-	if (!accountId) return;
-
 	const masterStripe = initMasterStripe({ env });
 	try {
-		await masterStripe.oauth.deauthorize({
-			client_id:
-				env === AppEnv.Live
-					? process.env.STRIPE_LIVE_CLIENT_ID || ""
-					: process.env.STRIPE_SANDBOX_CLIENT_ID || "",
-			stripe_user_id: accountId,
-		});
+		await masterStripe.oauth.deauthorize(
+			{
+				client_id:
+					env === AppEnv.Live
+						? process.env.STRIPE_LIVE_CLIENT_ID || ""
+						: process.env.STRIPE_SANDBOX_CLIENT_ID || "",
+				stripe_user_id: accountId,
+			},
+			LOCK_HELD_STRIPE_REQUEST_OPTIONS,
+		);
 	} catch (error) {
 		logger.error("Failed to deauthorize account:", error);
 	}
@@ -224,14 +251,6 @@ const disconnectOauth = async ({
 		};
 	}
 
-	// Only after a successful re-register (above) — never leave the org with no
-	// working webhook if registration failed.
-	try {
-		await deauthorizeOauth({ org, env, logger });
-	} catch (error) {
-		logger.error(`Failed to deauthorize oauth for ${org.slug}`, { error });
-	}
-
 	return updates;
 };
 
@@ -275,10 +294,29 @@ export const handleDeleteStripe = createRoute({
 		}
 
 		// 3. Persist (nothing to clear if neither channel was connected for this env)
+		const oauthAccountId = clearOauth
+			? orgToAccountId({ org, env, noDefaultAccount: true })
+			: undefined;
 		if (Object.keys(updates).length > 0) {
 			await db.transaction(async (tx) => {
 				const txDb = tx as unknown as DrizzleCli;
-				await OrgService.update({ db: txDb, orgId: org.id, updates });
+				// Deauthorizing under the account lock keeps the deauthorization webhook from racing this write.
+				if (oauthAccountId)
+					await lockStripeOAuthAccount({ tx, env, accountId: oauthAccountId });
+				await OrgService.update({
+					db: txDb,
+					orgId: org.id,
+					updates: oauthAccountId
+						? {
+								...updates,
+								[envFields(env).connect]: await readClearedStripeConnect({
+									db: txDb,
+									orgId: org.id,
+									env,
+								}),
+							}
+						: updates,
+				});
 				if (clearCatalogMappings) {
 					await clearStripeCatalogMappings({
 						db: txDb,
@@ -286,6 +324,9 @@ export const handleDeleteStripe = createRoute({
 						env,
 					});
 				}
+				// Only after a successful re-register (above), so the org keeps a working webhook.
+				if (oauthAccountId)
+					await deauthorizeOauth({ accountId: oauthAccountId, env, logger });
 			});
 		}
 

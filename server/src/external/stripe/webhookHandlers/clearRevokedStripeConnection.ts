@@ -5,6 +5,7 @@ import { invalidateProductsCache } from "@/external/redis/actions/productsCache/
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { clearStripeCatalogMappings } from "@/internal/catalog/actions/catalogMappings/clearStripeCatalogMappings.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
+import { lockStripeOAuthAccount } from "@/internal/orgs/orgUtils/lockStripeOAuthAccount.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import { restoreStripeWebhookAfterRevocation } from "./restoreStripeWebhookAfterRevocation.js";
 
@@ -25,9 +26,7 @@ export const clearRevokedStripeConnection = async ({
 		env === AppEnv.Live ? "live_stripe_connect" : "test_stripe_connect";
 	const connect = org[connectField];
 	const revoked = await db.transaction(async (tx) => {
-		await tx.execute(
-			sql`SELECT pg_advisory_xact_lock(hashtextextended(${`stripe-oauth:${env}:${accountId}`}, 0))`,
-		);
+		await lockStripeOAuthAccount({ tx, env, accountId });
 		const [currentOrg] = await tx
 			.select()
 			.from(organizations)

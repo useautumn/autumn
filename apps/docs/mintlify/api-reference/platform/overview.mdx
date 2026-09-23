@@ -32,7 +32,7 @@ If you have your own Stripe Connect platform, simply pass us the Stripe account 
 
 ### 4. Manage the OAuth Connection
 
-Use [Get Stripe Connection](/api-reference/platform/getStripeConnection) to decide whether to show **Connect Stripe** or **Disconnect Stripe**. Call it after the OAuth redirect and when reopening your connection settings. Pass the tenant's public `organization_slug` and `env: "test"` or `env: "live"`; authenticate with your master organization's key, not the tenant's key.
+Use [Get Stripe Connection](/api-reference/platform/getStripeConnection) to decide whether to show **Connect Stripe** or **Disconnect Stripe**. Call it after the OAuth redirect and when reopening your connection settings. Pass the tenant's public `organization_slug` and `env: "test"` or `env: "live"`; authenticate with your master organization's key, not the tenant's key. The `env` field selects the connection independently of whether that key is a test or live key.
 
 The response identifies the OAuth account and its connection time. Historical connections may have `connected_at: null`. Default sandbox accounts, separate secret-key connections, and direct account-ID connections through your own Stripe platform do not count as Autumn OAuth connections.
 

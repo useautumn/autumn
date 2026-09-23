@@ -2,6 +2,7 @@ import { AppEnv, organizations, RecaseError } from "@autumn/shared";
 import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
+import { LOCK_HELD_STRIPE_REQUEST_OPTIONS } from "@/external/stripe/common/stripeConstants.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 export const deauthorizeStripeConnection = async ({
@@ -47,10 +48,10 @@ export const deauthorizeStripeConnection = async ({
 		});
 	const stripe = initMasterStripe({ env });
 	try {
-		await stripe.oauth.deauthorize({
-			client_id: clientId,
-			stripe_user_id: accountId,
-		});
+		await stripe.oauth.deauthorize(
+			{ client_id: clientId, stripe_user_id: accountId },
+			LOCK_HELD_STRIPE_REQUEST_OPTIONS,
+		);
 	} catch (error) {
 		if (
 			!(error instanceof Stripe.errors.StripeError) ||
@@ -59,7 +60,11 @@ export const deauthorizeStripeConnection = async ({
 		)
 			throw error;
 		try {
-			await stripe.accounts.retrieve(accountId);
+			await stripe.accounts.retrieve(
+				accountId,
+				{},
+				LOCK_HELD_STRIPE_REQUEST_OPTIONS,
+			);
 		} catch (lookupError) {
 			if (
 				lookupError instanceof Stripe.errors.StripeError &&

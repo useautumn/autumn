@@ -1,13 +1,13 @@
 /**
  * TDD test for the OAuth-SIDE account-match guard in handleOAuthCallback: adding
  * OAuth when a secret key already exists must reject if the OAuth account differs
- * from the secret-key account — BEFORE persisting (updateStripeConnect must not run).
+ * from the secret-key account — BEFORE persisting the connection.
  *
  * Contract under test:
  *   handleOAuthCallback:
  *     - secret key present + OAuth account differs -> redirect error=account_mismatch,
- *       updateStripeConnect NOT called
- *     - secret key present + OAuth account matches -> updateStripeConnect called, success redirect
+ *       connection NOT persisted
+ *     - secret key present + OAuth account matches -> connection persisted, success redirect
  */
 
 import { describe, expect, test } from "bun:test";
@@ -18,7 +18,7 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 const state = {
 	secretKeyAccountId: "acct_secret",
 	oauthAccountId: "acct_secret",
-	updateStripeConnectCalls: 0,
+	persistCalls: 0,
 };
 
 // Spread the real module so every export stays defined — a partial factory
@@ -50,7 +50,7 @@ await mockModuleWithRestore("@/db/initDrizzle.js", () => ({
 					update: () => ({
 						set: () => ({
 							where: async () => {
-								state.updateStripeConnectCalls++;
+								state.persistCalls++;
 							},
 						}),
 					}),
@@ -101,9 +101,6 @@ await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 			live_stripe_connect: {},
 		}),
 		findByStripeAccountId: async () => null,
-		updateStripeConnect: async () => {
-			state.updateStripeConnectCalls++;
-		},
 	},
 }));
 
@@ -128,23 +125,23 @@ describe("dual-auth: OAuth callback account-match guard", () => {
 	test("mismatched account redirects with account_mismatch and does NOT persist", async () => {
 		state.secretKeyAccountId = "acct_secret";
 		state.oauthAccountId = "acct_different_oauth";
-		state.updateStripeConnectCalls = 0;
+		state.persistCalls = 0;
 
 		const location = await callbackRedirect();
 
 		expect(location).toContain("error=account_mismatch");
 		expect(location).toContain("secret_key_account_id=acct_secret");
-		expect(state.updateStripeConnectCalls).toBe(0);
+		expect(state.persistCalls).toBe(0);
 	});
 
 	test("matching account persists and redirects success", async () => {
 		state.secretKeyAccountId = "acct_secret";
 		state.oauthAccountId = "acct_secret";
-		state.updateStripeConnectCalls = 0;
+		state.persistCalls = 0;
 
 		const location = await callbackRedirect();
 
 		expect(location).toContain("success=true");
-		expect(state.updateStripeConnectCalls).toBe(1);
+		expect(state.persistCalls).toBe(1);
 	});
 });

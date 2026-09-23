@@ -91,6 +91,25 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 			stripe,
 			masterOrgId: master_org_id,
 		});
+		if (result.error === "account_already_connected" && !master_org_id) {
+			const account = await stripe.accounts
+				.retrieve(accountId)
+				.catch(() => null);
+			redirectUrl.searchParams.set("account_id", accountId);
+			redirectUrl.searchParams.set(
+				"account_name",
+				account?.company?.name || "",
+			);
+			redirectUrl.searchParams.set(
+				"connected_org_name",
+				result.conflict.name || "",
+			);
+			redirectUrl.searchParams.set(
+				"connected_org_slug",
+				result.conflict.slug || "",
+			);
+		}
+		// Platform callers only learn about conflicts inside their own platform.
 		if (
 			result.error === "account_already_connected" &&
 			master_org_id &&

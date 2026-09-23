@@ -83,9 +83,6 @@ await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 			name: "Target Sandbox",
 		}),
 		findByStripeAccountId: async () => state.existingOrg,
-		updateStripeConnect: async (args: Record<string, unknown>) => {
-			state.updateConnectCalls.push(args);
-		},
 	},
 }));
 

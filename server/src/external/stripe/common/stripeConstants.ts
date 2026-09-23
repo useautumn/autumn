@@ -64,3 +64,8 @@ export const SYNC_STRIPE_EVENT_TYPES: StripeEventType[] = [
 	"payment_intent.payment_failed",
 	"payment_intent.canceled",
 ];
+
+/** Bounds Stripe calls made while holding Postgres locks. */
+export const LOCK_HELD_STRIPE_REQUEST_OPTIONS = {
+	timeout: 10_000,
+} satisfies Stripe.RequestOptions;
