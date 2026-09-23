@@ -1,9 +1,9 @@
 import { getAutumnEnv } from "@autumn/env";
-import { AppEnv, type Organization, organizations } from "@autumn/shared";
+import { type AppEnv, type Organization, organizations } from "@autumn/shared";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { stripeConnectField } from "@/external/connect/stripeConnectField.js";
+import { stripeEnvFields } from "@/external/connect/stripeEnvFields.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
@@ -15,17 +15,6 @@ import {
 
 type Ctx = Pick<AutumnContext, "org" | "env" | "db" | "logger">;
 
-const stripeConfigFields = (env: AppEnv) =>
-	env === AppEnv.Live
-		? ({
-				keyField: "live_api_key",
-				webhookField: "live_webhook_secret",
-			} as const)
-		: ({
-				keyField: "test_api_key",
-				webhookField: "test_webhook_secret",
-			} as const);
-
 const isPendingRevocation = ({
 	org,
 	env,
@@ -35,7 +24,7 @@ const isPendingRevocation = ({
 	env: AppEnv;
 	accountId: string;
 }) => {
-	const connect = org[stripeConnectField(env)];
+	const connect = org[stripeEnvFields(env).connect];
 	return !connect?.account_id && connect?.revoked_account_id === accountId;
 };
 
@@ -52,10 +41,11 @@ const completeRevocation = async ({
 	webhookSecret?: string;
 }) => {
 	const { db, env } = ctx;
-	const connectField = stripeConnectField(env);
+	const connectField = stripeEnvFields(env).connect;
 	const connect = organizations[connectField];
 	const config = organizations.stripe_config;
-	const { keyField, webhookField } = stripeConfigFields(env);
+	const { apiKey: keyField, webhookSecret: webhookField } =
+		stripeEnvFields(env);
 
 	const updated = await db
 		.update(organizations)
@@ -94,7 +84,8 @@ export const restoreStripeWebhookAfterRevocation = async ({
 	const org = await OrgService.get({ db, orgId: ctx.org.id });
 	if (!isPendingRevocation({ org, env, accountId })) return;
 
-	const { keyField, webhookField } = stripeConfigFields(env);
+	const { apiKey: keyField, webhookSecret: webhookField } =
+		stripeEnvFields(env);
 	const needsWebhook =
 		Boolean(org.stripe_config?.[keyField]) &&
 		!org.stripe_config?.[webhookField];

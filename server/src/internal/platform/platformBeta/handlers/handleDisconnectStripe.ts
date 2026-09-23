@@ -4,7 +4,7 @@ import {
 	RecaseError,
 	Scopes,
 } from "@autumn/shared";
-import { orgToStripeConnect } from "@/external/connect/stripeConnectField.js";
+import { orgToStripeConnect } from "@/external/connect/stripeEnvFields.js";
 import { clearRevokedStripeConnection } from "@/external/stripe/webhookHandlers/clearRevokedStripeConnection.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";

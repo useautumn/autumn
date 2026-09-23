@@ -13,7 +13,7 @@ import {
 	user,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
-import { stripeConnectField } from "@server/external/connect/stripeConnectField.js";
+import { stripeEnvFields } from "@server/external/connect/stripeEnvFields.js";
 import RecaseError from "@server/utils/errorUtils.js";
 import { addDays } from "date-fns";
 import {
@@ -33,7 +33,8 @@ import { toPlanAliasMap } from "../catalogV2/productAliases/toPlanAliasMap.js";
 import { FeatureService } from "../features/FeatureService.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 
-const connectColumn = (env: AppEnv) => organizations[stripeConnectField(env)];
+const connectColumn = (env: AppEnv) =>
+	organizations[stripeEnvFields(env).connect];
 
 const deauthorizedAccountWhere = ({
 	accountId,
@@ -501,7 +502,7 @@ export class OrgService {
 		await db
 			.update(organizations)
 			.set({
-				[stripeConnectField(env)]:
+				[stripeEnvFields(env).connect]:
 					sql`(coalesce(${connect}, '{}'::jsonb) - 'revoked_account_id' - 'master_org_id') || ${binding}::jsonb`,
 			})
 			.where(eq(organizations.id, orgId));

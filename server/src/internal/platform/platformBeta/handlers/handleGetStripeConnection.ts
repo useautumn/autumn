@@ -3,7 +3,7 @@ import {
 	GetStripeConnectionParamsSchema,
 	Scopes,
 } from "@autumn/shared";
-import { orgToStripeConnect } from "@/external/connect/stripeConnectField.js";
+import { orgToStripeConnect } from "@/external/connect/stripeEnvFields.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { validatePlatformOrg } from "../utils/validatePlatformOrg.js";
 

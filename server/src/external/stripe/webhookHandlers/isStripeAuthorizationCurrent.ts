@@ -3,7 +3,7 @@ import {
 	initMasterStripe,
 	initPlatformStripe,
 } from "@/external/connect/initStripeCli.js";
-import { orgToStripeConnect } from "@/external/connect/stripeConnectField.js";
+import { orgToStripeConnect } from "@/external/connect/stripeEnvFields.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 export const isStripeAuthorizationCurrent = async ({

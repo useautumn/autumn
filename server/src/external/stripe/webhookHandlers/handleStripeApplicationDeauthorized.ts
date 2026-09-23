@@ -1,5 +1,5 @@
 import type { Organization } from "@autumn/shared";
-import { orgToStripeConnect } from "@/external/connect/stripeConnectField.js";
+import { orgToStripeConnect } from "@/external/connect/stripeEnvFields.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext.js";
 import { clearRevokedStripeConnection } from "./clearRevokedStripeConnection.js";

@@ -3,8 +3,8 @@ import { and, eq, isNull, or, type SQL, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
 	orgToStripeConnect,
-	stripeConnectField,
-} from "@/external/connect/stripeConnectField.js";
+	stripeEnvFields,
+} from "@/external/connect/stripeEnvFields.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { clearStripeCatalogMappings } from "@/internal/catalog/actions/catalogMappings/clearStripeCatalogMappings.js";
@@ -23,7 +23,7 @@ const isRevocableConnection = ({
 	ctx: Ctx;
 	accountId: string;
 }): SQL | undefined => {
-	const connect = organizations[stripeConnectField(ctx.env)];
+	const connect = organizations[stripeEnvFields(ctx.env).connect];
 	const expected = orgToStripeConnect({ org: ctx.org, env: ctx.env });
 
 	const isPendingRevocation = and(
@@ -49,7 +49,7 @@ const markConnectionRevoked = async ({
 	accountId: string;
 }): Promise<boolean> => {
 	const { db, env, org } = ctx;
-	const field = stripeConnectField(env);
+	const field = stripeEnvFields(env).connect;
 	const revokedMarker = JSON.stringify({ revoked_account_id: accountId });
 
 	return db.transaction(async (tx) => {

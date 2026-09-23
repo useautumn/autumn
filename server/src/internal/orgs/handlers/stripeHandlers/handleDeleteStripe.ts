@@ -14,6 +14,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { orgToAccountId } from "@/external/connect/connectUtils.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
+import { stripeEnvFields } from "@/external/connect/stripeEnvFields.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { createWebhookEndpoint } from "@/external/stripe/stripeOnboardingUtils.js";
@@ -24,19 +25,6 @@ import { clearOrgCache } from "../../orgUtils/clearOrgCache.js";
 import { isStripeConnected } from "../../orgUtils.js";
 
 export type DisconnectChannel = "secret_key" | "oauth";
-
-const envFields = (env: AppEnv) =>
-	env === AppEnv.Sandbox
-		? ({
-				apiKey: "test_api_key",
-				webhookSecret: "test_webhook_secret",
-				connect: "test_stripe_connect",
-			} as const)
-		: ({
-				apiKey: "live_api_key",
-				webhookSecret: "live_webhook_secret",
-				connect: "live_stripe_connect",
-			} as const);
 
 export const resolveDisconnectChannels = ({
 	org,
@@ -69,7 +57,7 @@ export const computeClearedStripeConfig = ({
 	org: Organization;
 	env: AppEnv;
 }): StripeConfig => {
-	const { apiKey, webhookSecret } = envFields(env);
+	const { apiKey, webhookSecret } = stripeEnvFields(env);
 	return {
 		...(structuredClone(org.stripe_config) || {}),
 		[apiKey]: null,
@@ -84,7 +72,7 @@ export const computeClearedStripeConnect = ({
 	org: Organization;
 	env: AppEnv;
 }): StripeConnectConfig => {
-	const current = org[envFields(env).connect];
+	const current = org[stripeEnvFields(env).connect];
 	const newConnect: StripeConnectConfig = structuredClone(current) || {};
 	delete newConnect.account_id;
 	delete newConnect.connected_at;
@@ -145,7 +133,7 @@ export const reRegisterDirectWebhook = async ({
 	env: AppEnv;
 	logger: Logger;
 }): Promise<string | null> => {
-	const encryptedKey = org.stripe_config?.[envFields(env).apiKey];
+	const encryptedKey = org.stripe_config?.[stripeEnvFields(env).apiKey];
 	if (!encryptedKey) return null;
 
 	try {
@@ -195,7 +183,7 @@ const disconnectOauth = async ({
 	logger: Logger;
 	secretKeyKept: boolean;
 }): Promise<string | undefined> => {
-	const fields = envFields(env);
+	const fields = stripeEnvFields(env);
 
 	const needsDirectWebhook =
 		secretKeyKept &&
@@ -234,7 +222,7 @@ const persistDisconnect = async ({
 	directWebhookSecret?: string;
 	clearCatalogMappings: boolean;
 }) => {
-	const fields = envFields(env);
+	const fields = stripeEnvFields(env);
 	const connect = organizations[fields.connect];
 
 	const configPatch: StripeConfig = {
