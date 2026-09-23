@@ -1,5 +1,12 @@
 import type Stripe from "stripe";
 
+// A phase trialing to its own boundary says nothing about the next phase's
+// billing, and can never equal its trial_end, so it reads as no trial here.
+const trialEndOf = (phase: Stripe.SubscriptionSchedule.Phase) =>
+	phase.trial_end != null && phase.trial_end === phase.end_date
+		? null
+		: (phase.trial_end ?? null);
+
 const billingShapeOf = (phase: Stripe.SubscriptionSchedule.Phase) =>
 	JSON.stringify({
 		priceIds: (phase.items ?? [])
@@ -12,7 +19,7 @@ const billingShapeOf = (phase: Stripe.SubscriptionSchedule.Phase) =>
 				typeof item.price === "string" ? item.price : item.price?.id,
 			)
 			.sort((left, right) => String(left).localeCompare(String(right))),
-		trialEnd: phase.trial_end ?? null,
+		trialEnd: trialEndOf(phase),
 		currency: phase.currency,
 	});
 
