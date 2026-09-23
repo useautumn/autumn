@@ -17,12 +17,12 @@ import {
 	SelectValue,
 	SheetAccordion,
 	SheetAccordionItem,
-	Switch,
 } from "@autumn/ui";
 import { PaperPlaneTiltIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type Stripe from "stripe";
+import { PreviewSection } from "@/components/forms/shared/PreviewSection";
 import {
 	LayoutGroup,
 	SheetFooter,
@@ -36,9 +36,9 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { CountrySelect } from "./reissue/CountrySelect";
+import { getReissuePreviewState } from "./reissue/getReissuePreviewState";
+import { ReissueBillingDetails } from "./reissue/ReissueBillingDetails";
 import { stripeInvoiceToPrefill } from "./reissue/stripeInvoiceToPrefill";
-import { TaxIdTypeSelect } from "./reissue/TaxIdTypeSelect";
 import {
 	buildReissuePayload,
 	type ReissuePrefill,
@@ -102,7 +102,6 @@ export function ReissueInvoiceSheet() {
 		<ReissueInvoiceForm
 			invoice={invoice}
 			lineItems={(sheetData?.lineItems as InvoiceLineItem[] | undefined) ?? []}
-			taxedAmount={sheetData?.taxedAmount as number | undefined}
 			prefill={stripeInvoiceToPrefill(stripeInvoice)}
 			invoiceDetailData={sheetData ?? {}}
 		/>
@@ -112,13 +111,11 @@ export function ReissueInvoiceSheet() {
 function ReissueInvoiceForm({
 	invoice,
 	lineItems,
-	taxedAmount,
 	prefill,
 	invoiceDetailData,
 }: {
 	invoice: Invoice;
 	lineItems: InvoiceLineItem[];
-	taxedAmount?: number;
 	prefill: ReissuePrefill;
 	invoiceDetailData: Record<string, unknown>;
 }) {
@@ -143,40 +140,49 @@ function ReissueInvoiceForm({
 		setAddress,
 	} = useReissueForm({ prefill });
 
-	const payload = buildReissuePayload({
+	const payloadArgs = {
 		invoiceId: invoice.id,
 		form,
 		prefill,
 		lineItems,
-	});
-	const currentPreviewPayload = JSON.stringify({
-		...payload,
-		customer: undefined,
-		preview: true,
-	});
+	};
+	const payload = buildReissuePayload(payloadArgs);
+	const currentPreviewPayload = JSON.stringify(
+		buildReissuePayload({ ...payloadArgs, preview: true }),
+	);
 	const previewPayload = useDebounce({
 		value: currentPreviewPayload,
 		delayMs: 500,
 	});
-	// Inside the debounce the old total is still on the button.
-	const previewStale = previewPayload !== currentPreviewPayload;
 	const {
-		data: preview,
+		data: previewResult,
 		isFetching: previewing,
 		error: previewError,
 	} = useQuery({
-		queryKey: ["reissue-preview", previewPayload],
-		queryFn: async () => {
+		queryKey: buildQueryKey(["reissue-preview", previewPayload]),
+		queryFn: async ({ signal }) => {
 			const { data } = await axiosInstance.post<{
 				preview: CreateInvoicePreview;
-			}>("/v1/invoices.reissue", JSON.parse(previewPayload));
-			return data.preview;
+			}>("/v1/invoices.reissue", JSON.parse(previewPayload), { signal });
+			return { preview: data.preview, payload: previewPayload };
 		},
-		placeholderData: (previous) => previous,
+		retry: false,
+	});
+	const previewState = getReissuePreviewState({
+		form,
+		prefill,
+		currentPayload: currentPreviewPayload,
+		debouncedPayload: previewPayload,
+		successfulPayload: previewResult?.payload,
+		isFetching: previewing,
+		error: previewError ? getBackendErr(previewError, "Preview failed") : null,
 	});
 
 	const reissue = useMutation({
 		mutationFn: async () => {
+			if (!previewState.ready) {
+				throw new Error("Wait for a successful preview before reissuing.");
+			}
 			const { data } = await axiosInstance.post(
 				"/v1/invoices.reissue",
 				payload,
@@ -209,12 +215,10 @@ function ReissueInvoiceForm({
 			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 		});
 	const isPaid = invoice.status === InvoiceStatus.Paid;
-	const isTaxed = (taxedAmount ?? 0) > 0;
-	const total = money(preview?.total ?? invoice.total);
-	const invalidNetTerms =
-		form.netTermsDays !== "" &&
-		(!Number.isInteger(Number(form.netTermsDays)) ||
-			Number(form.netTermsDays) < 1);
+	const total =
+		previewState.ready && previewResult
+			? money(previewResult.preview.total)
+			: null;
 	const templateOptions = [
 		{ label: "Keep current footer", value: NO_TEMPLATE },
 		...templates.map((template) => ({
@@ -230,81 +234,14 @@ function ReissueInvoiceForm({
 					title="Reissue Invoice"
 					description={
 						isPaid
-							? `Credit this ${money(invoice.total)} invoice to the customer's balance and send a corrected ${total} one, which that balance covers.`
-							: `Send a new ${total} invoice and void this one.`
+							? `Credit this ${money(invoice.total)} invoice to the customer's balance and send a corrected${total ? ` ${total}` : ""} invoice.`
+							: `Send a new${total ? ` ${total}` : ""} invoice and void this one.`
 					}
 				/>
 
-				<SheetSection withSeparator>
-					<FormLabel>Invoice template</FormLabel>
-					<Select
-						value={form.templateId ?? NO_TEMPLATE}
-						onValueChange={(value) =>
-							patch({ templateId: value === NO_TEMPLATE ? null : value })
-						}
-						items={templateOptions}
-					>
-						<SelectTrigger className="w-full">
-							<SelectValue>
-								{templateOptions.find(
-									(option) => option.value === (form.templateId ?? NO_TEMPLATE),
-								)?.label ?? "Keep current footer"}
-							</SelectValue>
-						</SelectTrigger>
-						<SelectContent>
-							{templateOptions.map((option) => (
-								<SelectItem key={option.value} value={option.value}>
-									{option.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</SheetSection>
-
-				<SheetSection withSeparator>
-					<FormLabel>Send to</FormLabel>
-					<Input
-						placeholder={
-							customer?.email ?? "Leave empty to keep the same email"
-						}
-						value={form.email}
-						onChange={(e) => patch({ email: e.target.value })}
-					/>
-					<span className="text-xs text-tertiary-foreground">
-						Changes the customer's email in Stripe, so later invoices go there
-						too.
-					</span>
-				</SheetSection>
-
-				<SheetSection withSeparator>
-					<FormLabel>Payment terms</FormLabel>
-					<Input
-						type="number"
-						min={1}
-						placeholder="Days until due — empty keeps the current terms"
-						value={form.netTermsDays}
-						onChange={(e) => patch({ netTermsDays: e.target.value })}
-					/>
-				</SheetSection>
-
-				{isTaxed && (
-					<SheetSection withSeparator>
-						<div className="flex items-center justify-between">
-							<FormLabel className="mb-0">Reissue without tax</FormLabel>
-							<Switch
-								checked={form.removeTax}
-								onCheckedChange={(checked) => patch({ removeTax: checked })}
-							/>
-						</div>
-						<span className="text-xs text-tertiary-foreground">
-							Drops the {money(taxedAmount ?? 0)} of tax on this invoice.
-						</span>
-					</SheetSection>
-				)}
-
 				<SheetSection withSeparator className="flex flex-col gap-3">
 					<div className="flex items-center justify-between">
-						<FormLabel className="mb-0">Lines</FormLabel>
+						<FormLabel className="mb-0">Invoice items</FormLabel>
 						<IconButton
 							className="text-tertiary-foreground"
 							icon={<PlusIcon size={12} />}
@@ -371,13 +308,92 @@ function ReissueInvoiceForm({
 					</span>
 				</SheetSection>
 
+				<ReissueBillingDetails
+					form={form}
+					prefill={prefill}
+					patch={patch}
+					setAddress={setAddress}
+				/>
+
 				<SheetAccordion type="multiple">
 					<SheetAccordionItem
-						value="invoice"
-						title="This invoice"
-						description="Shown on the replacement only"
+						value="delivery"
+						title="Delivery & payment terms"
+						titleClassName="text-sub text-foreground"
 					>
 						<div className="space-y-4">
+							<div className="space-y-1.5">
+								<FormLabel>Send to</FormLabel>
+								<Input
+									placeholder={
+										customer?.email ?? "Leave empty to keep the same email"
+									}
+									value={form.email}
+									onChange={(e) => patch({ email: e.target.value })}
+								/>
+								<span className="text-xs text-tertiary-foreground">
+									Changes the customer's email in Stripe, so later invoices go
+									there too.
+								</span>
+							</div>
+
+							<div className="space-y-1.5">
+								<FormLabel>Payment terms</FormLabel>
+								<Input
+									type="number"
+									min={1}
+									placeholder="Days until due — empty keeps the current terms"
+									value={form.netTermsDays}
+									onChange={(e) => patch({ netTermsDays: e.target.value })}
+								/>
+							</div>
+						</div>
+					</SheetAccordionItem>
+					<SheetAccordionItem
+						value="content"
+						title="Invoice content"
+						titleClassName="text-sub text-foreground"
+					>
+						<div className="space-y-4">
+							<div className="space-y-1.5">
+								<FormLabel>Invoice template</FormLabel>
+								<Select
+									value={form.templateId ?? NO_TEMPLATE}
+									onValueChange={(value) =>
+										patch({
+											templateId: value === NO_TEMPLATE ? null : value,
+										})
+									}
+									items={templateOptions}
+								>
+									<SelectTrigger className="w-full">
+										<SelectValue>
+											{templateOptions.find(
+												(option) =>
+													option.value === (form.templateId ?? NO_TEMPLATE),
+											)?.label ?? "Keep current footer"}
+										</SelectValue>
+									</SelectTrigger>
+									<SelectContent>
+										{templateOptions.map((option) => (
+											<SelectItem key={option.value} value={option.value}>
+												{option.label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+
+							<Field label="Customer name">
+								<Input
+									aria-label="Customer name"
+									value={form.customerName}
+									onChange={(event) =>
+										patch({ customerName: event.target.value })
+									}
+								/>
+							</Field>
+
 							<Field label="Custom fields" hint="Up to four, e.g. a PO number.">
 								<div className="flex flex-col gap-2">
 									{form.customFields.map((field) => (
@@ -388,7 +404,9 @@ function ReissueInvoiceForm({
 												maxLength={30}
 												value={field.name}
 												onChange={(e) =>
-													updateCustomField(field._id, { name: e.target.value })
+													updateCustomField(field._id, {
+														name: e.target.value,
+													})
 												}
 											/>
 											<Input
@@ -438,102 +456,23 @@ function ReissueInvoiceForm({
 							</Field>
 						</div>
 					</SheetAccordionItem>
-
-					<SheetAccordionItem
-						value="customer"
-						title="Customer details"
-						description="Saved to the customer and used on every later invoice"
-					>
-						<div className="space-y-4">
-							<Field label="Name">
-								<Input
-									value={form.customerName}
-									onChange={(e) => patch({ customerName: e.target.value })}
-								/>
-							</Field>
-							<Field
-								label="Address"
-								hint="Saved to the customer. The preview total uses the current address, so tax can shift once it changes."
-							>
-								<div className="space-y-2">
-									<Input
-										placeholder="Line 1"
-										value={form.address.line1}
-										onChange={(e) => setAddress({ line1: e.target.value })}
-									/>
-									<Input
-										placeholder="Line 2"
-										value={form.address.line2}
-										onChange={(e) => setAddress({ line2: e.target.value })}
-									/>
-									<div className="grid grid-cols-3 gap-2">
-										<Input
-											placeholder="City"
-											value={form.address.city}
-											onChange={(e) => setAddress({ city: e.target.value })}
-										/>
-										<Input
-											placeholder="State"
-											value={form.address.state}
-											onChange={(e) => setAddress({ state: e.target.value })}
-										/>
-										<Input
-											placeholder="Postal code"
-											value={form.address.postal_code}
-											onChange={(e) =>
-												setAddress({ postal_code: e.target.value })
-											}
-										/>
-									</div>
-									<CountrySelect
-										value={form.address.country}
-										onValueChange={(country) => setAddress({ country })}
-									/>
-								</div>
-							</Field>
-							{prefill.taxIdsIncomplete ? (
-								<Field
-									label="Tax ID"
-									hint="This customer has more registrations than Stripe returned here. Edit them in Stripe so none are dropped."
-								>
-									<Input
-										disabled
-										value={form.taxIdValue}
-										placeholder="Number"
-									/>
-								</Field>
-							) : (
-								<Field
-									label="Tax ID"
-									hint={
-										prefill.otherTaxIds?.length
-											? `Pick the registration and paste the number as it appears on their paperwork. ${prefill.otherTaxIds.length} other registration${prefill.otherTaxIds.length === 1 ? "" : "s"} on this customer stay as they are.`
-											: "Pick the registration and paste the number as it appears on their paperwork."
-									}
-								>
-									<div className="flex items-center gap-2">
-										<TaxIdTypeSelect
-											value={form.taxIdOptionId}
-											onValueChange={(id) => {
-												const country = id.split(":")[0];
-												patch({ taxIdOptionId: id });
-												if (!form.address.country && country !== "EU") {
-													setAddress({ country });
-												}
-											}}
-										/>
-										<Input
-											className="flex-1"
-											placeholder="Number"
-											value={form.taxIdValue}
-											onChange={(e) => patch({ taxIdValue: e.target.value })}
-										/>
-									</div>
-								</Field>
-							)}
-						</div>
-					</SheetAccordionItem>
 				</SheetAccordion>
+				<PreviewSection
+					includeNextCycle={false}
+					showCreditNote={false}
+					previewQuery={{
+						isLoading: !previewState.ready && !previewState.error,
+						error: previewState.error ? new Error(previewState.error) : null,
+						data:
+							previewState.ready && previewResult
+								? {
+										...previewResult.preview,
+										line_items: [],
+										tax: previewResult.preview.tax ?? undefined,
+									}
+								: null,
+					}}
+				/>
 
 				<SheetFooter className="pt-4">
 					<Button
@@ -551,22 +490,14 @@ function ReissueInvoiceForm({
 						className="w-full"
 						onClick={() => reissue.mutate()}
 						isLoading={reissue.isPending}
-						disabled={
-							invalidNetTerms ||
-							previewStale ||
-							previewing ||
-							Boolean(previewError)
-						}
+						disabled={!previewState.ready || reissue.isPending}
 					>
 						<PaperPlaneTiltIcon size={16} />
-						Reissue {total}
+						{previewState.recalculating
+							? "Recalculating…"
+							: `Reissue${total ? ` ${total}` : ""}`}
 					</Button>
 				</SheetFooter>
-				{previewError && (
-					<p className="px-4 pb-4 text-xs text-destructive">
-						{getBackendErr(previewError, "Preview failed")}
-					</p>
-				)}
 			</div>
 		</LayoutGroup>
 	);

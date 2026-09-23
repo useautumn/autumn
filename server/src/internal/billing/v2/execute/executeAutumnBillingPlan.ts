@@ -119,8 +119,8 @@ export const executeAutumnBillingPlan = async ({
 		],
 	});
 
-	// Lock the customer's currency on the first paid attach (conditional: no-op if
-	// already set). Runs on commit only — never in preview.
+	// Lock / relock customer currency. No-op when already the target currency.
+	// Runs on commit only — never in preview.
 	if (autumnBillingPlan.lockCustomerCurrency) {
 		await CusService.lockCurrencyIfUnset({
 			ctx,

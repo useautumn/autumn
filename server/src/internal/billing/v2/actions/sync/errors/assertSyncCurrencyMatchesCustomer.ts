@@ -1,5 +1,8 @@
 import { ErrCode, RecaseError, type SyncBillingContext } from "@autumn/shared";
-import { syncContextHasPaidProduct } from "../utils/syncContextUtils";
+import {
+	customerHasLivePaidProduct,
+	syncContextHasPaidProduct,
+} from "../utils/syncContextUtils";
 
 export const assertSyncCurrencyMatchesCustomer = ({
 	syncContext,
@@ -10,7 +13,8 @@ export const assertSyncCurrencyMatchesCustomer = ({
 	if (
 		!customerCurrency ||
 		customerCurrency === syncContext.currency ||
-		!syncContextHasPaidProduct({ syncContext })
+		!syncContextHasPaidProduct({ syncContext }) ||
+		!customerHasLivePaidProduct({ fullCustomer: syncContext.fullCustomer })
 	) {
 		return;
 	}
