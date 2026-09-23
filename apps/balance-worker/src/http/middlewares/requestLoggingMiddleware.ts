@@ -41,8 +41,9 @@ function logRequestResult({
 	startedAt: number;
 }): void {
 	const requestLog = context.get("requestLog");
-	const { command, response, error, errorCode } = requestLog;
+	const { command, response, error, errorCode, batch } = requestLog;
 	const statusCode = context.res.status;
+	const identity = command?.identity ?? batch?.identity;
 	const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
 	const event = {
 		event: "balance_worker.request",
@@ -50,11 +51,11 @@ function logRequestResult({
 		durationMs,
 		// Same key and field names the server logs under, so one Axiom filter covers both services.
 		context: {
-			org_id: command?.identity.orgId,
-			org_slug: command?.org?.slug,
-			env: command?.identity.env,
-			customer_id: command?.identity.customerId,
-			entity_id: command?.identity.entityId,
+			org_id: identity?.orgId,
+			org_slug: command?.org?.slug ?? batch?.orgSlug,
+			env: identity?.env,
+			customer_id: identity?.customerId,
+			entity_id: identity?.entityId,
 		},
 		errorCode,
 		error,
@@ -66,17 +67,29 @@ function logRequestResult({
 		},
 		res: shouldLogResponse() ? (response ?? null) : undefined,
 		data: {
-			route: context.get("request")?.route,
+			route: context.get("request")?.route ?? batch?.route,
 			commandId: command?.commandId,
 			featureId: command?.featureId,
 			value: command?.value,
+			batch: batch && loggedBatchOf({ batch }),
 			...outcomeOf({ requestLog }),
 		},
 	};
 	const message = `[${statusCode}] ${context.req.method} ${context.req.path} ${durationMs}ms${error ? ` — ${error.name}` : ""}`;
-	if (statusCode >= 500) ctx.logger.error(event, message);
-	else if (statusCode >= 400) ctx.logger.warn(event, message);
+	// A batch answers 200 around its commands' failures; the worst of them sets the level.
+	const severity = Math.max(statusCode, batch?.worstStatus ?? 0);
+	if (severity >= 500) ctx.logger.error(event, message);
+	else if (severity >= 400) ctx.logger.warn(event, message);
 	else ctx.logger.info(event, message);
+}
+
+function loggedBatchOf({
+	batch,
+}: {
+	batch: NonNullable<BalanceWorkerRequestLog["batch"]>;
+}) {
+	const { count, succeeded, failed, errorCodes } = batch;
+	return { count, succeeded, failed, errorCodes };
 }
 
 function shouldLogResponse(): boolean {

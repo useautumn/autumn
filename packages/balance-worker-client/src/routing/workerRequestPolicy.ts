@@ -9,6 +9,21 @@ import {
 } from "../types/balanceWorkerClientErrors.js";
 import type { PartitionOwners, RequestDeadline } from "./types/routing.js";
 
+/** A request's whole budget: the client timeout, cut short by the caller's signal. */
+export function createRequestDeadline({
+	timeoutMs,
+	signal,
+}: {
+	timeoutMs: number;
+	signal?: AbortSignal;
+}): RequestDeadline {
+	const timeout = AbortSignal.timeout(timeoutMs);
+	return {
+		expiresAt: performance.now() + timeoutMs,
+		signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+	};
+}
+
 export function assertRequestDeadline({
 	deadline,
 	outcome,

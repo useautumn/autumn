@@ -97,4 +97,8 @@ export type BalanceWorkerClientConfig = {
 	 *  fails fast instead of spending a caller's whole budget. */
 	routeRefreshTimeoutMs?: number;
 	maxResponseBytes?: number;
+	/** Tracks for one partition share a `/v1/track-batch` request unless this is false. */
+	batchTracks?: boolean;
+	/** Most tracks one batch carries; defaults to 100. */
+	maxTrackBatchSize?: number;
 };

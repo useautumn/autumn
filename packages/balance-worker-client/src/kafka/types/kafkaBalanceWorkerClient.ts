@@ -49,6 +49,8 @@ export type KafkaBalanceWorkerClientConfig = {
 	partitionCount: number;
 	timeoutMs: number;
 	routeRefreshTimeoutMs?: number;
+	batchTracks?: boolean;
+	maxTrackBatchSize?: number;
 	catchUpTimeoutMs?: number;
 	startRetryDelaysMs?: readonly number[];
 };

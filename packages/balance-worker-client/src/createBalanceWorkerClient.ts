@@ -12,6 +12,7 @@ import { createHttpClient } from "./http/createHttpClient.js";
 import { createCommandQueue } from "./queue/createCommandQueue.js";
 import { enqueueCommands } from "./queue/enqueueCommands.js";
 import type { EnqueueParams } from "./queue/types/queue.js";
+import { createTrackBatcher } from "./routing/createTrackBatcher.js";
 import type {
 	ApplyBillingPlanParams,
 	BalanceWorkerClient,
@@ -52,7 +53,14 @@ export function createBalanceWorkerClient({
 		partitionCount: config.partitionCount,
 	};
 
+	// Batching is the default; turning it off falls back to one `/v1/track` request per track.
+	const trackBatcher =
+		config.batchTracks === false
+			? undefined
+			: createTrackBatcher({ ctx, maxBatchSize: config.maxTrackBatchSize });
+
 	function track(params: TrackParams) {
+		if (trackBatcher) return trackBatcher.track(params);
 		return sendTrack({ ctx, ...params });
 	}
 

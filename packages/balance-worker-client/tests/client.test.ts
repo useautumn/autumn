@@ -138,7 +138,12 @@ function createFixture({
 	}
 	const client = createBalanceWorkerClient({
 		ctx: { owners: { findOwner, refresh }, http: { postJson } },
-		config: { partitionCount: 1, timeoutMs, routeRefreshTimeoutMs },
+		config: {
+			partitionCount: 1,
+			timeoutMs,
+			routeRefreshTimeoutMs,
+			batchTracks: false,
+		},
 	});
 	return { client, stats, refreshed: refreshed.promise };
 }

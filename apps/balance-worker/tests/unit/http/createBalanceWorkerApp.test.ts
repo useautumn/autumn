@@ -92,10 +92,13 @@ const fixture = ({
 	cause,
 	owned = true,
 	actualPartition = 2,
+	causeFor,
 }: {
 	cause?: Error;
 	owned?: boolean;
 	actualPartition?: number;
+	/** Fails individual tracks by command id, for batches that mix outcomes. */
+	causeFor?: Record<string, Error>;
 } = {}) => {
 	const logs: unknown[][] = [];
 	function recordLog(...args: unknown[]): void {
@@ -114,6 +117,8 @@ const fixture = ({
 		track: async (params) => {
 			submitted.push(params);
 			if (cause) throw cause;
+			const itemCause = causeFor?.[params.command.commandId];
+			if (itemCause) throw itemCause;
 			return trackReply;
 		},
 		check: async ({ command }) => ({
@@ -168,7 +173,13 @@ const fixture = ({
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify(body),
 		});
-	return { app, ctx, post, submitted, lookups, logs };
+	const postBatch = (body: unknown) =>
+		app.request("/v1/track-batch", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(body),
+		});
+	return { app, ctx, post, postBatch, submitted, lookups, logs };
 };
 
 test(
@@ -608,5 +619,236 @@ describe("Balance worker HTTP", () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ status: "alive" });
 		expect(lookups).toEqual([]);
+	});
+});
+
+function commandWithId(id: string) {
+	return { ...command, commandId: id, requestId: id };
+}
+
+describe("Track batches", () => {
+	test("answers every command in order, mapping failures exactly as /v1/track does", async () => {
+		const causeFor: Record<string, Error> = {
+			overloaded: new PartitionWriterCapacityError(),
+			"too-large": new PartitionWriterRecordTooLargeError({
+				bytes: 2_000_000,
+				maxBatchBytes: 800_000,
+			}),
+			missing: new PartitionWriterStateNotFoundError({
+				customerKey: "missing",
+			}),
+			broken: new Error("secret details"),
+		};
+		const { postBatch, submitted, lookups } = fixture({ causeFor });
+		const ids = [
+			"first",
+			"overloaded",
+			"too-large",
+			"missing",
+			"broken",
+			"last",
+		];
+		const response = await postBatch({
+			route,
+			commands: ids.map(commandWithId),
+		});
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({
+			results: [
+				{ ok: true, reply: trackReply },
+				{
+					ok: false,
+					status: 429,
+					error: {
+						code: "OVERLOADED",
+						message:
+							"Partition is at capacity for this customer; retry with backoff",
+					},
+				},
+				{
+					ok: false,
+					status: 422,
+					error: {
+						code: "RECORD_TOO_LARGE",
+						message:
+							"This customer's state is too large to write in one record; nothing was applied",
+					},
+				},
+				{
+					ok: false,
+					status: 409,
+					error: {
+						code: "NOT_INITIALIZED",
+						message: "Customer must be initialized before check or track",
+					},
+				},
+				{
+					ok: false,
+					status: 500,
+					error: { code: "INTERNAL", message: "Worker request failed" },
+				},
+				{ ok: true, reply: trackReply },
+			],
+		});
+		expect(submitted).toEqual(
+			ids.map((id) => ({ command: commandWithId(id) })),
+		);
+		// Ownership is checked once for the whole batch.
+		expect(lookups).toEqual([route]);
+	});
+
+	test("runs a batch's commands concurrently so the writer can coalesce them", async () => {
+		const gate = Promise.withResolvers<void>();
+		const { ctx, postBatch } = fixture();
+		let started = 0;
+		const runtime = ctx.ownership.findRuntime(route);
+		if (!runtime) throw new Error("Fixture must own the route");
+		const process = runtime.process;
+		ctx.ownership.findRuntime = () => ({
+			process: async (run) => {
+				started++;
+				await gate.promise;
+				return process(run);
+			},
+		});
+		const pending = postBatch({
+			route,
+			commands: ["a", "b", "c"].map(commandWithId),
+		});
+		for (let turn = 0; turn < 20 && started < 3; turn++)
+			await new Promise((resolve) => setImmediate(resolve));
+		expect(started).toBe(3);
+		gate.resolve();
+		expect((await pending).status).toBe(200);
+	});
+
+	test("an invalid command fails alone as INVALID_REQUEST", async () => {
+		const { postBatch, submitted } = fixture();
+		const response = await postBatch({
+			route,
+			commands: [
+				commandWithId("a"),
+				{ ...commandWithId("b"), schemaVersion: 2 },
+				{ ...commandWithId("c"), type: "check" },
+				commandWithId("d"),
+			],
+		});
+		expect(response.status).toBe(200);
+		const { results } = await response.json();
+		expect(results.map((result: { ok: boolean }) => result.ok)).toEqual([
+			true,
+			false,
+			false,
+			true,
+		]);
+		for (const index of [1, 2])
+			expect(results[index]).toEqual({
+				ok: false,
+				status: 400,
+				error: { code: "INVALID_REQUEST", message: "Invalid worker request" },
+			});
+		expect(submitted).toEqual([
+			{ command: commandWithId("a") },
+			{ command: commandWithId("d") },
+		]);
+	});
+
+	test("a command for another partition fails alone as INVALID_REQUEST", async () => {
+		const { postBatch, submitted } = fixture({ actualPartition: 1 });
+		const response = await postBatch({ route, commands: [commandWithId("a")] });
+		expect(response.status).toBe(200);
+		expect((await response.json()).results).toEqual([
+			{
+				ok: false,
+				status: 400,
+				error: { code: "INVALID_REQUEST", message: "Invalid worker request" },
+			},
+		]);
+		expect(submitted).toEqual([]);
+	});
+
+	test("an unowned or stale route answers the whole batch NOT_OWNER, like /v1/track", async () => {
+		for (const owned of [true, false]) {
+			const { post, postBatch, submitted } = fixture({ owned });
+			const staleRoute = { ...route, routeEpoch: "1" };
+			const response = await postBatch({
+				route: staleRoute,
+				commands: [commandWithId("a"), commandWithId("b")],
+			});
+			const single = await post({ route: staleRoute, command });
+			expect(response.status).toBe(409);
+			expect(await response.json()).toEqual(await single.json());
+			expect(submitted).toEqual([]);
+		}
+	});
+
+	test.each([
+		null,
+		{},
+		{ route },
+		{ commands: [command] },
+		{ route, commands: [] },
+		{ route, commands: command },
+		{ route, commands: [command], extra: true },
+		{ route: { ...route, routeEpoch: "01" }, commands: [command] },
+		{ route, commands: Array.from({ length: 1001 }, () => command) },
+	])("rejects invalid batch envelope %#", async (body) => {
+		const { postBatch, submitted, lookups } = fixture();
+		const response = await postBatch(body);
+		expect(response.status).toBe(400);
+		expect((await response.json()).error.code).toBe("INVALID_REQUEST");
+		expect(submitted).toEqual([]);
+		expect(lookups).toEqual([]);
+	});
+
+	test("logs one line per batch with its size and failures counted by code", async () => {
+		const { postBatch, logs } = fixture({
+			causeFor: {
+				b: new PartitionWriterCapacityError(),
+				c: new PartitionWriterCapacityError(),
+				d: new PartitionWriterStateNotFoundError({ customerKey: "missing" }),
+			},
+		});
+		const response = await postBatch({
+			route,
+			commands: ["a", "b", "c", "d"].map((id) => ({
+				...commandWithId(id),
+				properties: { private: "never-log-this" },
+			})),
+		});
+		expect(response.status).toBe(200);
+		expect(logs).toHaveLength(1);
+		const [event] = logs[0] as [Record<string, unknown>, string];
+		expect(event).toMatchObject({
+			event: "balance_worker.request",
+			statusCode: 200,
+			req: { method: "POST", path: "/v1/track-batch" },
+			context: { org_id: "org", customer_id: "customer" },
+			data: {
+				route,
+				batch: {
+					count: 4,
+					succeeded: 1,
+					failed: 3,
+					errorCodes: { OVERLOADED: 2, NOT_INITIALIZED: 1 },
+				},
+			},
+		});
+		// Failures are counted, not serialised one stack at a time.
+		expect(event.error).toBeUndefined();
+		expect(JSON.stringify(logs)).not.toContain("never-log-this");
+	});
+
+	test("keeps one unexpected failure's cause per batch, not one per command", async () => {
+		const first = new Error("first failure");
+		const { postBatch, logs } = fixture({
+			causeFor: { a: first, b: new Error("second failure") },
+		});
+		await postBatch({ route, commands: ["a", "b"].map(commandWithId) });
+		expect(logs).toHaveLength(1);
+		expect(logs[0][0]).toMatchObject({
+			error: first,
+			data: { batch: { failed: 2, errorCodes: { INTERNAL: 2 } } },
+		});
 	});
 });

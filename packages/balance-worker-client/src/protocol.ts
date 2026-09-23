@@ -34,6 +34,13 @@ export type {
 	BalanceWorkerTrackRequest,
 	TrackReply,
 } from "./contracts/track.js";
+export {
+	type BalanceWorkerTrackBatchRequest,
+	MAX_TRACK_BATCH_COMMANDS,
+	parseTrackBatchRequest,
+	type TrackBatchItemResult,
+	type TrackBatchReply,
+} from "./contracts/trackBatch.js";
 export type {
 	PartitionRoute,
 	WorkerErrorCode,
