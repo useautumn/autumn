@@ -31,6 +31,7 @@ export type NextCycleEvent =
 	| ({
 			kind: "scheduled_change";
 			startsAtMs: number;
+			renewalBoundaryMs: number;
 			resetsBillingCycle: boolean;
 			incomingCustomerProducts: FullCusProduct[];
 			outgoingCustomerProducts: FullCusProduct[];

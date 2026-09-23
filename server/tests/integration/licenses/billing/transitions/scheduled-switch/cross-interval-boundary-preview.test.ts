@@ -1,23 +1,19 @@
-/**
- * A switch scheduled for end_of_cycle activates exactly on the renewal
- * boundary, so the outgoing plan has served its whole period and has no unused
- * time to refund.
- *
- * Red (current):  next_cycle carries "Unused" refund lines for the outgoing
- *                 plan and its licenses, covering the period AFTER the
- *                 boundary, so the total falls short of the boundary invoice.
- * Green (after):  next_cycle charges the incoming plan only.
- */
 import { expect, test } from "bun:test";
-import type { AttachParamsV1Input } from "@autumn/shared";
-import { BillingInterval } from "@autumn/shared";
+import type {
+	AttachParamsV1Input,
+	CreateScheduleParamsV0Input,
+} from "@autumn/shared";
+import { BillingInterval, ms } from "@autumn/shared";
 import { getBillingPeriod } from "@tests/integration/billing/utils/proration";
 import { TestFeature } from "@tests/setup/v2Features";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
-import { expectNextCycleHasNoRefundLines } from "../../utils/expectNextCycleHasNoRefundLines";
+import {
+	expectNextCycleHasNoRefundLines,
+	expectNextCycleHasRefundLines,
+} from "../../utils/expectNextCycleHasNoRefundLines";
 
 const SEATS = 2;
 const INCLUDED_SEATS = 1;
@@ -184,5 +180,51 @@ test.concurrent(
 			startsAt: billingPeriod.end,
 			total: MONTHLY_PRICE + paidSeats(fewerSeats) * MONTHLY_PRICE,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license scheduled transition: mid-cycle switch still credits the outgoing plan")}`,
+	async () => {
+		const customerId = "xinterval-midcycle-credit";
+		const fromParent = pricedPlan({
+			id: "xmid-from-parent",
+			group: "xmid-parent",
+			price: MONTHLY_PRICE,
+			interval: BillingInterval.Month,
+		});
+		const toParent = pricedPlan({
+			id: "xmid-to-parent",
+			group: "xmid-parent",
+			price: MONTHLY_PRICE,
+			interval: BillingInterval.Month,
+		});
+		const scenario = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [fromParent, toParent] }),
+			],
+			actions: [s.billing.attach({ productId: fromParent.id })],
+		});
+
+		const midCycleMs = scenario.advancedTo + ms.days(5);
+		await scenario.autumnV1.billing.createSchedule({
+			customer_id: customerId,
+			phases: [
+				{ starts_at: scenario.advancedTo, plans: [{ plan_id: fromParent.id }] },
+				{ starts_at: midCycleMs, plans: [{ plan_id: toParent.id }] },
+			],
+		} satisfies CreateScheduleParamsV0Input);
+
+		const preview =
+			await scenario.autumnV2_3.billing.previewAttach<AttachParamsV1Input>({
+				customer_id: customerId,
+				plan_id: toParent.id,
+				plan_schedule: "end_of_cycle",
+				redirect_mode: "if_required",
+			});
+
+		expectNextCycleHasRefundLines({ preview });
 	},
 );

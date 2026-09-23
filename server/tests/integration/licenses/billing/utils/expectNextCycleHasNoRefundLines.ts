@@ -2,8 +2,6 @@ import { expect } from "bun:test";
 import type { BillingPreviewResponse } from "@autumn/shared";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 
-/** A boundary transition bills the incoming plan for a full period, so the
- * preview carries no "Unused" credits and every line starts at the boundary. */
 export const expectNextCycleHasNoRefundLines = ({
 	preview,
 	startsAt,
@@ -46,4 +44,22 @@ export const expectNextCycleHasNoRefundLines = ({
 	expect(nextCycle.total, "Next cycle total should sum its line items").toEqual(
 		sum,
 	);
+};
+
+export const expectNextCycleHasRefundLines = ({
+	preview,
+}: {
+	preview: Pick<BillingPreviewResponse, "next_cycle">;
+}) => {
+	const nextCycle = preview.next_cycle;
+	expect(nextCycle, "Next cycle should be defined").toBeDefined();
+	if (!nextCycle) return;
+
+	const refundLines = nextCycle.line_items.filter((lineItem) =>
+		lineItem.description.startsWith("Unused "),
+	);
+	expect(
+		refundLines.length,
+		"A mid-cycle transition still has unused time to credit",
+	).toBeGreaterThan(0);
 };

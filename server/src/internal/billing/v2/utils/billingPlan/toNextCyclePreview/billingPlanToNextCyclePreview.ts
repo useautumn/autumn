@@ -51,20 +51,21 @@ const filterCustomerProductsForEventStart = ({
 			!hasCustomerProductEnded(customerProduct, { nowMs: nextCycleStart }),
 	);
 
-/** A plan whose own term ends at the transition has served its full period, so
- * there is no unused time to credit back. */
 const outgoingPlansRunToBoundary = ({
 	outgoingCustomerProducts,
-	boundaryMs,
+	transitionMs,
+	renewalBoundaryMs,
 }: {
 	outgoingCustomerProducts: FullCusProduct[];
-	boundaryMs: number;
+	transitionMs: number;
+	renewalBoundaryMs: number;
 }): boolean =>
+	timestampsMatch(transitionMs, renewalBoundaryMs) &&
 	outgoingCustomerProducts.length > 0 &&
 	outgoingCustomerProducts.every(
 		(customerProduct) =>
 			customerProduct.ended_at != null &&
-			timestampsMatch(customerProduct.ended_at, boundaryMs),
+			timestampsMatch(customerProduct.ended_at, renewalBoundaryMs),
 	);
 
 const scaleNextCycleAmounts = ({
@@ -202,7 +203,8 @@ export const billingPlanToNextCyclePreview = ({
 			!event.resetsBillingCycle &&
 			!outgoingPlansRunToBoundary({
 				outgoingCustomerProducts: event.outgoingCustomerProducts,
-				boundaryMs: event.startsAtMs,
+				transitionMs: event.startsAtMs,
+				renewalBoundaryMs: event.renewalBoundaryMs,
 			});
 		const lineItemSpecs = keepsOldPlanCredit
 			? [chargeNewPlan, creditOldPlanUnusedTime]
