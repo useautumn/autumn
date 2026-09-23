@@ -1,7 +1,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import { CopySimpleIcon, InfoIcon } from "@phosphor-icons/react";
-import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
-import { resolveCopySourceScope } from "../scheduleUtils";
+import { resolveCopySourceScope } from "@/components/forms/customer-state/customerStateUtils";
+import { useCustomerStateContext } from "../CustomerStateProvider";
 
 /** Seeds the opening phase with the customer's current plans at this row's scope. */
 export function CopyExistingPlansButton({
@@ -17,7 +17,7 @@ export function CopyExistingPlansButton({
 	scopeLabel?: string;
 }) {
 	const { formValues, existingPlans, handleCopyExistingPlans, isPhaseLocked } =
-		useCreateScheduleFormContext();
+		useCustomerStateContext();
 
 	// Copying fills this row alone, so other plans in the phase don't block it.
 	const copySource = resolveCopySourceScope({

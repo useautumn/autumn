@@ -1,5 +1,6 @@
 import {
 	type FullProduct,
+	isConsumablePrice,
 	isFixedPrice,
 	isPrepaidPrice,
 	type Organization,
@@ -58,6 +59,12 @@ export const stripeItemMatchesBasePrice = ({
 	return stripePriceShapesEqual(stripeItemShape, autumnBaseShape);
 };
 
+/** Autumn bills pay-as-you-go as a metered item or a $0 placeholder, never a
+ * flat charge, so a flat item on the same product can't be one. */
+const itemCanBeConsumable = ({ item }: { item: StripeItemSnapshot }) =>
+	item.recurring_usage_type === "metered" ||
+	Number(item.unit_amount_decimal ?? item.unit_amount ?? 0) === 0;
+
 /**
  * A non-fixed price keyed to the item's Stripe product claims it by id alone —
  * Autumn groups its own price variants (custom amounts) under that product.
@@ -71,6 +78,8 @@ const findKeyedPrice = ({
 }): Price | null =>
 	candidate.product.prices.find((price) => {
 		if (isFixedPrice(price)) return false;
+		if (isConsumablePrice(price) && !itemCanBeConsumable({ item }))
+			return false;
 		const config = price.config as UsagePriceConfig;
 		return config.stripe_product_id === item.stripe_product_id;
 	}) ?? null;

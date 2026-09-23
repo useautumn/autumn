@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
 
 /** The empty plan row: a product picker that greys out conflicting groups. */
-export function SchedulePlanPicker({
+export function CustomerStatePlanPicker({
 	products,
 	usedKeys,
 	siblingProductIds,

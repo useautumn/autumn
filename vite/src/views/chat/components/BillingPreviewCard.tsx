@@ -30,14 +30,14 @@ import { PlanPreviewCard, PlansBackdrop } from "./PlanPreviewCard";
 const asString = (value: unknown): string | undefined =>
 	typeof value === "string" && value ? value : undefined;
 
-type SchedulePhase = {
+type CustomerStatePhase = {
 	customize?: Record<string, unknown>;
 	plans?: { customize?: Record<string, unknown>; plan_id?: string }[];
 	starting_after?: string;
 	starts_at?: string | number;
 };
 
-const phaseTiming = (phase: SchedulePhase, index: number) => {
+const phaseTiming = (phase: CustomerStatePhase, index: number) => {
 	if (phase.starting_after) return `after ${phase.starting_after}`;
 	if (phase.starts_at === "now" || (index === 0 && !phase.starts_at)) {
 		return "now";
@@ -49,7 +49,7 @@ const phaseTiming = (phase: SchedulePhase, index: number) => {
 };
 
 /** createSchedule's dated phases as compact rows: timing + plans (+ custom price). */
-function SchedulePhases({ phases }: { phases: SchedulePhase[] }) {
+function SchedulePhases({ phases }: { phases: CustomerStatePhase[] }) {
 	if (phases.length === 0) return null;
 	return (
 		<div className="flex flex-col gap-1 rounded-lg border border-border bg-card px-3 py-2.5">
@@ -160,7 +160,7 @@ export function BillingPreviewCard({
 			? (folded as Record<string, unknown>)
 			: undefined;
 	const phases = Array.isArray(params?.phases)
-		? (params.phases as SchedulePhase[])
+		? (params.phases as CustomerStatePhase[])
 		: [];
 	const nextCycle = preview.next_cycle;
 	const totals = nextCycle

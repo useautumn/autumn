@@ -1,12 +1,8 @@
-import {
-	Button,
-	InlineAction,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@autumn/ui";
-import { InfoIcon, PlusIcon } from "@phosphor-icons/react";
+import { Button, InlineAction } from "@autumn/ui";
+import { PlusIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
+import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
+import { CustomerStateUnscheduledPlans } from "@/components/forms/customer-state/components/CustomerStateUnscheduledPlans";
 import { DisabledTooltipButton } from "@/components/forms/shared";
 import { BillingFooter } from "@/components/forms/shared/BillingFooter";
 import { BillingPromptToggle } from "@/components/forms/shared/generation/BillingPromptToggle";
@@ -23,11 +19,10 @@ import { CreateScheduleAdvancedSection } from "./CreateScheduleAdvancedSection";
 import { CreateScheduleGenerationBar } from "./CreateScheduleGenerationBar";
 import { SchedulePhaseCard } from "./SchedulePhaseCard";
 import { SchedulePreview } from "./SchedulePreview";
-import { UnscheduledPlanRow } from "./UnscheduledPlanRow";
 
 export function CreateScheduleSheetContent() {
-	const { form, formValues, handleAddPhase, handleAddUnscheduledPlan } =
-		useCreateScheduleFormContext();
+	const { form, formValues } = useCreateScheduleFormContext();
+	const { handleAddPhase } = useCustomerStateContext();
 	const { closeSheet, setSheet } = useSheetStore();
 	const hasSchedule = useHasSchedule();
 
@@ -69,47 +64,9 @@ export function CreateScheduleSheetContent() {
 					</InlineAction>
 				</SheetSection>
 
-				{/* Updating a schedule can't attach new plans, so this is create-only. */}
-				{!hasSchedule && (
-					<SheetSection withSeparator={false}>
-						{formValues.unscheduledPlans.length > 0 && (
-							<div className="mb-1.5 flex items-center gap-1.5">
-								<span className="text-xs text-subtle">Unscheduled plans</span>
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<InfoIcon
-											size={13}
-											className="shrink-0 text-subtle hover:text-muted-foreground transition-colors cursor-default"
-										/>
-									</TooltipTrigger>
-									<TooltipContent>
-										Billed with the first phase, then left alone — the schedule
-										never expires or replaces these
-									</TooltipContent>
-								</Tooltip>
-							</div>
-						)}
-
-						<div className="space-y-1.5">
-							{formValues.unscheduledPlans.map((plan, planIndex) => (
-								<UnscheduledPlanRow
-									key={`unscheduled-${planIndex}-${plan.productId || "empty"}`}
-									planIndex={planIndex}
-								/>
-							))}
-						</div>
-
-						<InlineAction
-							icon={<PlusIcon size={11} />}
-							onClick={handleAddUnscheduledPlan}
-							className={
-								formValues.unscheduledPlans.length > 0 ? "mt-1.5" : undefined
-							}
-						>
-							Add unscheduled plan
-						</InlineAction>
-					</SheetSection>
-				)}
+				<SheetSection withSeparator={false}>
+					<CustomerStateUnscheduledPlans />
+				</SheetSection>
 			</div>
 
 			<SheetFooter>

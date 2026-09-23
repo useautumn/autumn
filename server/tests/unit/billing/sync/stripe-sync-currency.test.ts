@@ -56,7 +56,7 @@ const schedule = () =>
 		phases: [
 			{
 				start_date: 1,
-				end_date: 2,
+				end_date: 4_102_444_800,
 				currency: "usd",
 				items: [{ price: stripePrice, quantity: 2, metadata: {} }],
 			},

@@ -8,20 +8,20 @@ import {
 	itemToBillingInterval,
 	itemToBillingIntervalCount,
 } from "@autumn/shared";
-import {
-	getProductGroupKey,
-	getUsedProductGroupKeys,
-} from "@/components/forms/shared/utils/planGroupUtils";
-import type { SchedulePhase, SchedulePlan } from "./createScheduleFormSchema";
+import type {
+	CustomerStatePhase,
+	CustomerStatePlan,
+} from "@/components/forms/customer-state/customerStateSchema";
+import { getUsedProductGroupKeys } from "@/components/forms/shared/utils/planGroupUtils";
 
 /** Plans sitting at exactly one scope — null is customer-level. */
 export function filterPlansByScope({
 	plans,
 	entityId,
 }: {
-	plans: SchedulePlan[];
+	plans: CustomerStatePlan[];
 	entityId: string | null;
-}): SchedulePlan[] {
+}): CustomerStatePlan[] {
 	return plans.filter((plan) => (plan.entityId ?? null) === entityId);
 }
 
@@ -31,10 +31,10 @@ function unheldPlansAtScope({
 	phasePlans,
 	entityId,
 }: {
-	existingPlans: SchedulePlan[];
-	phasePlans: SchedulePlan[];
+	existingPlans: CustomerStatePlan[];
+	phasePlans: CustomerStatePlan[];
 	entityId: string | null;
-}): SchedulePlan[] {
+}): CustomerStatePlan[] {
 	const held = new Set(
 		filterPlansByScope({ plans: phasePlans, entityId }).map(
 			(plan) => plan.productId,
@@ -55,12 +55,12 @@ export function resolveCopySourceScope({
 	phasePlans,
 	entityId,
 }: {
-	existingPlans: SchedulePlan[];
-	phasePlans: SchedulePlan[];
+	existingPlans: CustomerStatePlan[];
+	phasePlans: CustomerStatePlan[];
 	entityId: string | null;
 }): {
 	entityId: string | null;
-	plans: SchedulePlan[];
+	plans: CustomerStatePlan[];
 	isFallback: boolean;
 } | null {
 	const scopedPlans = unheldPlansAtScope({
@@ -98,8 +98,8 @@ export function getUnscheduledUsedGroupKeys({
 	products,
 	entityId = null,
 }: {
-	phases: SchedulePhase[];
-	unscheduledPlans: SchedulePlan[];
+	phases: CustomerStatePhase[];
+	unscheduledPlans: CustomerStatePlan[];
 	planIndex: number;
 	products: ProductV2[];
 	entityId?: string | null;
@@ -132,7 +132,7 @@ function findPhaseBillingInterval({
 	plans,
 	products,
 }: {
-	plans: SchedulePlan[];
+	plans: CustomerStatePlan[];
 	products: ProductV2[];
 }): IntervalConfig | null {
 	let longest: IntervalConfig | null = null;
@@ -169,7 +169,7 @@ export function resolveNextPhaseStartsAt({
 	products,
 	nowMs,
 }: {
-	phases: SchedulePhase[];
+	phases: CustomerStatePhase[];
 	afterIndex: number;
 	products: ProductV2[];
 	nowMs: number;
@@ -211,7 +211,7 @@ export function getUsedGroupKeys({
 	excludePlanIndex,
 	entityId = null,
 }: {
-	plans: SchedulePlan[];
+	plans: CustomerStatePlan[];
 	products: ProductV2[];
 	excludePlanIndex?: number;
 	entityId?: string | null;

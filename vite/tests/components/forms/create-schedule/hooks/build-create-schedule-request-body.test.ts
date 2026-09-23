@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { Feature, ProductItem, ProductV2 } from "@autumn/shared";
 import { AppEnv, UsageModel } from "@autumn/shared";
-import {
-	canResetScheduleBillingCycle,
-	EMPTY_SCHEDULE_PLAN,
-	type SchedulePhase,
-} from "@/components/forms/create-schedule/createScheduleFormSchema";
 import { buildCreateScheduleRequestBody } from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
+import {
+	type CustomerStatePhase,
+	canResetScheduleBillingCycle,
+	EMPTY_CUSTOMER_STATE_PLAN,
+} from "@/components/forms/customer-state/customerStateSchema";
 import {
 	buildCustomize,
 	buildCustomizeBasePrice,
@@ -96,7 +96,7 @@ const features: Feature[] = [
 ];
 
 const schedulePlan = (productId: string) => ({
-	...EMPTY_SCHEDULE_PLAN,
+	...EMPTY_CUSTOMER_STATE_PLAN,
 	productId,
 });
 
@@ -108,7 +108,7 @@ const schedulePhase = ({
 	startsAt?: number;
 	persistedStartsAt?: number;
 	productIds?: string[];
-}): SchedulePhase => ({
+}): CustomerStatePhase => ({
 	startsAt,
 	persistedStartsAt,
 	plans: productIds.map(schedulePlan),
@@ -364,7 +364,7 @@ describe("buildCreateScheduleRequestBody", () => {
 				{
 					startsAt: Date.now(),
 					persistedStartsAt: undefined,
-					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+					plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
 				},
 			],
 			products: defaultProducts,
@@ -393,7 +393,7 @@ describe("buildCreateScheduleRequestBody", () => {
 				{
 					startsAt: now,
 					persistedStartsAt: now,
-					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+					plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
 				},
 			],
 			products: defaultProducts,
@@ -414,7 +414,7 @@ describe("buildCreateScheduleRequestBody", () => {
 			phases: [schedulePhase({ startsAt: now, persistedStartsAt: now })],
 			unscheduledPlans: [
 				{ ...schedulePlan("prod_2"), entityId: "entity_1" },
-				{ ...EMPTY_SCHEDULE_PLAN },
+				{ ...EMPTY_CUSTOMER_STATE_PLAN },
 			],
 			products: [...defaultProducts, makeProduct({ id: "prod_2" })],
 			features,
@@ -431,7 +431,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
 			phases: [schedulePhase({ startsAt: now, persistedStartsAt: now })],
-			unscheduledPlans: [{ ...EMPTY_SCHEDULE_PLAN }],
+			unscheduledPlans: [{ ...EMPTY_CUSTOMER_STATE_PLAN }],
 			products: defaultProducts,
 			features,
 		});
@@ -449,7 +449,7 @@ describe("buildCreateScheduleRequestBody", () => {
 					persistedStartsAt: now,
 					plans: [
 						{
-							...EMPTY_SCHEDULE_PLAN,
+							...EMPTY_CUSTOMER_STATE_PLAN,
 							productId: "prod_1",
 							items: [basePriceItem, featurePriceItem],
 							isCustom: true,
@@ -478,7 +478,7 @@ describe("buildCreateScheduleRequestBody", () => {
 					persistedStartsAt: now,
 					plans: [
 						{
-							...EMPTY_SCHEDULE_PLAN,
+							...EMPTY_CUSTOMER_STATE_PLAN,
 							productId: "prod_1",
 							items: [basePriceItem, featurePriceItem],
 							isCustom: false,
@@ -503,7 +503,7 @@ describe("buildCreateScheduleRequestBody", () => {
 				{
 					startsAt: now,
 					persistedStartsAt: now,
-					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+					plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
 				},
 			],
 			products: defaultProducts,
@@ -523,8 +523,8 @@ describe("buildCreateScheduleRequestBody", () => {
 					startsAt: now,
 					persistedStartsAt: now,
 					plans: [
-						{ ...EMPTY_SCHEDULE_PLAN },
-						{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" },
+						{ ...EMPTY_CUSTOMER_STATE_PLAN },
+						{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" },
 					],
 				},
 			],
@@ -543,12 +543,12 @@ describe("buildCreateScheduleRequestBody", () => {
 				{
 					startsAt: null,
 					persistedStartsAt: undefined,
-					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+					plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
 				},
 				{
 					startsAt: null,
 					persistedStartsAt: undefined,
-					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_2" }],
+					plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_2" }],
 				},
 			],
 			products: defaultProducts,
@@ -568,11 +568,15 @@ describe("buildCreateScheduleRequestBody", () => {
 					persistedStartsAt: now,
 					plans: [
 						{
-							...EMPTY_SCHEDULE_PLAN,
+							...EMPTY_CUSTOMER_STATE_PLAN,
 							productId: "prod_1",
 							entityId: "entity_1",
 						},
-						{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_2", entityId: null },
+						{
+							...EMPTY_CUSTOMER_STATE_PLAN,
+							productId: "prod_2",
+							entityId: null,
+						},
 					],
 				},
 			],
@@ -621,7 +625,7 @@ describe("buildCreateScheduleRequestBody", () => {
 					persistedStartsAt: now,
 					plans: [
 						{
-							...EMPTY_SCHEDULE_PLAN,
+							...EMPTY_CUSTOMER_STATE_PLAN,
 							productId: "prod_1",
 							entityId: "entity_1",
 						},
@@ -631,7 +635,7 @@ describe("buildCreateScheduleRequestBody", () => {
 					startsAt: now + 1000 * 60 * 60 * 24 * 30,
 					plans: [
 						{
-							...EMPTY_SCHEDULE_PLAN,
+							...EMPTY_CUSTOMER_STATE_PLAN,
 							productId: "prod_1",
 							entityId: "entity_2",
 						},
@@ -641,7 +645,7 @@ describe("buildCreateScheduleRequestBody", () => {
 					startsAt: now + 1000 * 60 * 60 * 24 * 60,
 					plans: [
 						{
-							...EMPTY_SCHEDULE_PLAN,
+							...EMPTY_CUSTOMER_STATE_PLAN,
 							productId: "prod_1",
 							entityId: null,
 						},
@@ -666,7 +670,7 @@ describe("buildCreateScheduleRequestBody", () => {
 				{
 					startsAt: past,
 					persistedStartsAt: undefined,
-					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+					plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
 				},
 			],
 			products: defaultProducts,
@@ -688,7 +692,7 @@ describe("buildCreateScheduleRequestBody", () => {
 				{
 					startsAt: past,
 					persistedStartsAt: undefined,
-					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+					plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
 				},
 			],
 			products: defaultProducts,
@@ -745,12 +749,12 @@ describe("buildCreateScheduleRequestBody", () => {
 				{
 					startsAt: now,
 					persistedStartsAt: now,
-					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+					plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
 				},
 				{
 					startsAt: future,
 					persistedStartsAt: undefined,
-					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+					plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
 				},
 			],
 			products: defaultProducts,
@@ -774,12 +778,12 @@ describe("buildCreateScheduleRequestBody", () => {
 				{
 					startsAt: persistedStart,
 					persistedStartsAt: persistedStart,
-					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+					plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
 				},
 				{
 					startsAt: future,
 					persistedStartsAt: undefined,
-					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+					plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId: "prod_1" }],
 				},
 			],
 			products: defaultProducts,

@@ -1,18 +1,22 @@
+import { CalendarSlashIcon, CopySimpleIcon } from "@phosphor-icons/react";
+import { CopyExistingPlansButton } from "@/components/forms/customer-state/components/CopyExistingPlansButton";
+import { CustomerStatePlanPicker } from "@/components/forms/customer-state/components/CustomerStatePlanPicker";
+import { getUsedGroupKeys } from "@/components/forms/customer-state/customerStateUtils";
+import { findPreviousPhasePlan } from "@/components/forms/customer-state/useCustomerStateHandlers";
 import {
 	PlanPrepaidQuantityFields,
 	ScopedPlanRow,
 	SelectedPlanRow,
 	usePlanScopeField,
 } from "@/components/forms/shared";
+import type { PlanRowAction } from "@/components/forms/shared/PlanRowActionsMenu";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { cn } from "@/lib/utils";
-import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
-import { getUsedGroupKeys } from "../scheduleUtils";
-import { CopyExistingPlansButton } from "./CopyExistingPlansButton";
-import { CopyFromPreviousPhaseButton } from "./CopyFromPreviousPhaseButton";
-import { SchedulePlanPicker } from "./SchedulePlanPicker";
+import { useCustomerStateContext } from "../CustomerStateProvider";
+import { NotFoundBadge } from "./NotFoundBadge";
+import { PlanPriceLabel } from "./PlanPriceLabel";
 
-export function SchedulePlanRow({
+export function CustomerStatePlanRow({
 	phaseIndex,
 	planIndex,
 }: {
@@ -24,9 +28,13 @@ export function SchedulePlanRow({
 		formValues,
 		products,
 		handleRemovePlan,
+		handleCopyFromPreviousPhase,
+		handleMakeUnscheduled,
 		isPhaseLocked,
 		setEditingPlan,
-	} = useCreateScheduleFormContext();
+		canMakeUnscheduled,
+		isPlanNotFound,
+	} = useCustomerStateContext();
 	const { displayCurrency } = useCustomerDisplayCurrency();
 
 	const plan = formValues.phases[phaseIndex]?.plans[planIndex];
@@ -88,7 +96,7 @@ export function SchedulePlanRow({
 						isLocked && "opacity-60",
 					)}
 				>
-					<SchedulePlanPicker
+					<CustomerStatePlanPicker
 						products={availableProducts}
 						usedKeys={usedKeys}
 						siblingProductIds={selectedProductIdsInPhase}
@@ -100,9 +108,7 @@ export function SchedulePlanRow({
 									entityId={plan.entityId ?? null}
 									scopeLabel={hasEntities ? selectedLabel : undefined}
 								/>
-							) : (
-								<CopyFromPreviousPhaseButton phaseIndex={phaseIndex} />
-							)
+							) : undefined
 						}
 						disabled={isLocked}
 						onSelect={handleProductChange}
@@ -112,18 +118,60 @@ export function SchedulePlanRow({
 		);
 	}
 
+	const canCopyFromPreviousPhase =
+		!isLocked &&
+		Boolean(
+			findPreviousPhasePlan({ phases: formValues.phases, phaseIndex, plan }),
+		);
+	const rowActions: PlanRowAction[] = [
+		...(canCopyFromPreviousPhase
+			? [
+					{
+						label: "Copy from previous phase",
+						icon: <CopySimpleIcon size={14} />,
+						onSelect: () =>
+							handleCopyFromPreviousPhase({ phaseIndex, planIndex }),
+					},
+				]
+			: []),
+		...(!isLocked && canMakeUnscheduled
+			? [
+					{
+						label: "Make unscheduled",
+						icon: <CalendarSlashIcon size={14} />,
+						onSelect: () => handleMakeUnscheduled({ phaseIndex, planIndex }),
+					},
+				]
+			: []),
+	];
+
 	return (
 		<div className="space-y-1.5">
-			<ScopedPlanRow scope={scope}>
+			<ScopedPlanRow
+				scope={scope}
+				actions={rowActions}
+				onCustomize={
+					isLocked
+						? undefined
+						: () => setEditingPlan({ location: "phase", phaseIndex, planIndex })
+				}
+			>
 				<SelectedPlanRow
 					productId={plan.productId}
 					product={selectedProduct}
 					customItems={plan.items}
 					isCustom={plan.isCustom}
-					disabled={isLocked}
-					onEdit={() =>
-						setEditingPlan({ location: "phase", phaseIndex, planIndex })
+					price={
+						selectedProduct && (
+							<PlanPriceLabel product={selectedProduct} items={plan.items} />
+						)
 					}
+					badge={
+						isPlanNotFound({ location: "phase", phaseIndex, planIndex }) ? (
+							<NotFoundBadge />
+						) : undefined
+					}
+					disabled={isLocked}
 					onRemove={() => handleRemovePlan({ phaseIndex, planIndex })}
 				/>
 			</ScopedPlanRow>

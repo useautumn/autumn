@@ -115,17 +115,19 @@ export function AttachAdditionalPlanRow({
 
 	return (
 		<div className="space-y-1.5">
-			<ScopedPlanRow scope={scope}>
+			<ScopedPlanRow
+				scope={scope}
+				onCustomize={
+					formValues.grantFree
+						? undefined
+						: () => handleEditPlan({ additionalPlanId: plan._id })
+				}
+			>
 				<SelectedPlanRow
 					productId={plan.productId}
 					product={selectedProduct}
 					customItems={displayedItems}
 					isCustom={plan.isCustom || formValues.grantFree}
-					onEdit={
-						formValues.grantFree
-							? undefined
-							: () => handleEditPlan({ additionalPlanId: plan._id })
-					}
 					onRemove={() => handleRemovePlan({ id: plan._id })}
 				/>
 			</ScopedPlanRow>

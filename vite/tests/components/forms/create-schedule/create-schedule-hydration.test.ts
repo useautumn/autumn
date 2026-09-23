@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import type { FullCustomer, ProductV2 } from "@autumn/shared";
-import { cusProductToPlan } from "@/views/customers2/components/sheets/CreateScheduleSheet";
+import { customerProductToCustomerStatePlan } from "@/components/forms/customer-state/customerProductToCustomerStatePlan";
 
 test("hydrates the customer product's exact plan version", () => {
-	const plan = cusProductToPlan({
+	const plan = customerProductToCustomerStatePlan({
 		cusProduct: {
 			customer_entitlements: [],
 			customer_prices: [],

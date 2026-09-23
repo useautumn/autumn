@@ -2,10 +2,11 @@ import {
 	BillingBehaviorSchema,
 	type CustomizePlanLicense,
 	type ProductItem,
+	type SyncPlanInstance,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 
-export const SchedulePlanSchema = z.object({
+export const CustomerStatePlanSchema = z.object({
 	productId: z.string().min(1),
 	prepaidOptions: z.record(z.string(), z.number().nonnegative()),
 	items: z.custom<ProductItem[]>().nullable(),
@@ -14,11 +15,18 @@ export const SchedulePlanSchema = z.object({
 	version: z.number().positive().optional(),
 	// Only meaningful on the first phase — later phases inherit its scope.
 	entityId: z.string().nullable().optional(),
+
+	// Sync only — carried over from what Stripe bills.
+	/** Add-on instances to create from this row. */
+	quantity: z.number().int().min(1).optional(),
+	licenseQuantities: z
+		.custom<NonNullable<SyncPlanInstance["license_quantities"]>>()
+		.optional(),
 });
 
-export type SchedulePlan = z.infer<typeof SchedulePlanSchema>;
+export type CustomerStatePlan = z.infer<typeof CustomerStatePlanSchema>;
 
-export const EMPTY_SCHEDULE_PLAN: SchedulePlan = {
+export const EMPTY_CUSTOMER_STATE_PLAN: CustomerStatePlan = {
 	productId: "",
 	prepaidOptions: {},
 	items: null,
@@ -29,18 +37,23 @@ export const EMPTY_SCHEDULE_PLAN: SchedulePlan = {
 	entityId: null,
 };
 
-export const SchedulePhaseSchema = z.object({
+/** Where a plan row sits: in a phase, or among the unscheduled plans. */
+export type PlanLocation =
+	| { location: "phase"; phaseIndex: number; planIndex: number }
+	| { location: "unscheduled"; planIndex: number };
+
+export const CustomerStatePhaseSchema = z.object({
 	startsAt: z.number().nullable(),
 	persistedStartsAt: z.number().nullable().optional(),
-	plans: z.array(SchedulePlanSchema).min(1),
+	plans: z.array(CustomerStatePlanSchema).min(1),
 });
 
-export type SchedulePhase = z.infer<typeof SchedulePhaseSchema>;
+export type CustomerStatePhase = z.infer<typeof CustomerStatePhaseSchema>;
 
 export function hasPersistedCreateSchedule({
 	phases,
 }: {
-	phases: SchedulePhase[];
+	phases: CustomerStatePhase[];
 }) {
 	return phases[0]?.persistedStartsAt != null;
 }
@@ -48,7 +61,7 @@ export function hasPersistedCreateSchedule({
 export function hasMultipleImmediateSchedulePlans({
 	phases,
 }: {
-	phases: SchedulePhase[];
+	phases: CustomerStatePhase[];
 }) {
 	const immediatePhase = phases.find((phase) =>
 		phase.plans.some((plan) => plan.productId),
@@ -61,7 +74,7 @@ export function hasMultipleImmediateSchedulePlans({
 export function canResetScheduleBillingCycle({
 	phases,
 }: {
-	phases: SchedulePhase[];
+	phases: CustomerStatePhase[];
 }) {
 	return (
 		!hasMultipleImmediateSchedulePlans({ phases }) ||
@@ -73,7 +86,7 @@ export function getCurrentCreateSchedulePhaseIndex({
 	phases,
 	nowMs = Date.now(),
 }: {
-	phases: SchedulePhase[];
+	phases: CustomerStatePhase[];
 	nowMs?: number;
 }) {
 	if (!hasPersistedCreateSchedule({ phases })) return null;
@@ -94,7 +107,7 @@ export function hasCreateSchedulePhaseStarted({
 	phaseIndex,
 	nowMs = Date.now(),
 }: {
-	phases: SchedulePhase[];
+	phases: CustomerStatePhase[];
 	phaseIndex: number;
 	nowMs?: number;
 }) {
@@ -110,7 +123,7 @@ export function canCreateSchedulePhaseStartInPast({
 	phaseIndex,
 	nowMs = Date.now(),
 }: {
-	phases: SchedulePhase[];
+	phases: CustomerStatePhase[];
 	phaseIndex: number;
 	nowMs?: number;
 }) {
@@ -126,7 +139,7 @@ export function isCreateSchedulePhaseLocked({
 	phaseIndex,
 	nowMs = Date.now(),
 }: {
-	phases: SchedulePhase[];
+	phases: CustomerStatePhase[];
 	phaseIndex: number;
 	nowMs?: number;
 }) {
@@ -141,7 +154,7 @@ export function getCreateSchedulePhaseTimingError({
 	phases,
 	nowMs = Date.now(),
 }: {
-	phases: SchedulePhase[];
+	phases: CustomerStatePhase[];
 	nowMs?: number;
 }) {
 	let previousStartsAt = phases[0]?.startsAt ?? nowMs;
@@ -175,7 +188,7 @@ export function getPhaseTimingError({
 	phaseIndex,
 	nowMs = Date.now(),
 }: {
-	phases: SchedulePhase[];
+	phases: CustomerStatePhase[];
 	phaseIndex: number;
 	nowMs?: number;
 }): string | null {
@@ -200,11 +213,11 @@ export function getPhaseTimingError({
 	return null;
 }
 
-export const CreateScheduleFormSchema = z
+export const CustomerStateFormSchema = z
 	.object({
-		phases: z.array(SchedulePhaseSchema).min(1),
+		phases: z.array(CustomerStatePhaseSchema).min(1),
 		/** Billed with the first phase, then left alone by the schedule. */
-		unscheduledPlans: z.array(SchedulePlanSchema),
+		unscheduledPlans: z.array(CustomerStatePlanSchema),
 		billingBehavior: BillingBehaviorSchema.nullable(),
 		resetBillingCycle: z.boolean(),
 		enablePlanImmediately: z.boolean(),
@@ -227,4 +240,4 @@ export const CreateScheduleFormSchema = z
 		}
 	});
 
-export type CreateScheduleForm = z.infer<typeof CreateScheduleFormSchema>;
+export type CustomerStateForm = z.infer<typeof CustomerStateFormSchema>;
