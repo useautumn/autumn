@@ -317,8 +317,41 @@ function ReissueInvoiceForm({
 
 				<SheetAccordion type="multiple">
 					<SheetAccordionItem
-						value="settings"
-						title="Invoice settings"
+						value="delivery"
+						title="Delivery & payment terms"
+						titleClassName="text-sub text-foreground"
+					>
+						<div className="space-y-4">
+							<div className="space-y-1.5">
+								<FormLabel>Send to</FormLabel>
+								<Input
+									placeholder={
+										customer?.email ?? "Leave empty to keep the same email"
+									}
+									value={form.email}
+									onChange={(e) => patch({ email: e.target.value })}
+								/>
+								<span className="text-xs text-tertiary-foreground">
+									Changes the customer's email in Stripe, so later invoices go
+									there too.
+								</span>
+							</div>
+
+							<div className="space-y-1.5">
+								<FormLabel>Payment terms</FormLabel>
+								<Input
+									type="number"
+									min={1}
+									placeholder="Days until due — empty keeps the current terms"
+									value={form.netTermsDays}
+									onChange={(e) => patch({ netTermsDays: e.target.value })}
+								/>
+							</div>
+						</div>
+					</SheetAccordionItem>
+					<SheetAccordionItem
+						value="content"
+						title="Invoice content"
 						titleClassName="text-sub text-foreground"
 					>
 						<div className="space-y-4">
@@ -349,32 +382,6 @@ function ReissueInvoiceForm({
 										))}
 									</SelectContent>
 								</Select>
-							</div>
-
-							<div className="space-y-1.5">
-								<FormLabel>Send to</FormLabel>
-								<Input
-									placeholder={
-										customer?.email ?? "Leave empty to keep the same email"
-									}
-									value={form.email}
-									onChange={(e) => patch({ email: e.target.value })}
-								/>
-								<span className="text-xs text-tertiary-foreground">
-									Changes the customer's email in Stripe, so later invoices go
-									there too.
-								</span>
-							</div>
-
-							<div className="space-y-1.5">
-								<FormLabel>Payment terms</FormLabel>
-								<Input
-									type="number"
-									min={1}
-									placeholder="Days until due — empty keeps the current terms"
-									value={form.netTermsDays}
-									onChange={(e) => patch({ netTermsDays: e.target.value })}
-								/>
 							</div>
 
 							<Field label="Customer name">
