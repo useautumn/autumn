@@ -46,7 +46,10 @@ export const cancelDeferredCreatedSubscription = async ({
 
 	const stripeSubscription =
 		await stripeCli.subscriptions.retrieve(stripeSubscriptionId);
-	if (isStripeSubscriptionCanceled(stripeSubscription)) return;
+	const isAlreadyEnded =
+		isStripeSubscriptionCanceled(stripeSubscription) ||
+		stripeSubscription.status === "incomplete_expired";
+	if (isAlreadyEnded) return;
 
 	await stripeCli.subscriptions.cancel(stripeSubscriptionId);
 	ctx.logger.info(

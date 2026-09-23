@@ -7,7 +7,7 @@
  *   cron, void + partially paid     → untouched, expires_at cleared
  *   void webhook, partially paid    → pending plan untouched
  *   sub cancel fails                → metadata kept so the next cron run retries
- *   sub already canceled            → not canceled again, metadata deleted
+ *   sub already canceled / expired  → not canceled again, metadata deleted
  */
 
 import { expect, test } from "bun:test";
@@ -20,7 +20,7 @@ const STRIPE_SUBSCRIPTION_ID = "sub_deferred_created";
 const state = {
 	invoiceStatus: "open" as "open" | "void",
 	amountPaid: 0,
-	subscriptionStatus: "active" as "active" | "canceled",
+	subscriptionStatus: "active" as "active" | "canceled" | "incomplete_expired",
 	cancelFails: false,
 	voidedInvoiceIds: [] as string[],
 	canceledSubscriptionIds: [] as string[],
@@ -37,7 +37,7 @@ const resetState = ({
 }: {
 	invoiceStatus: "open" | "void";
 	amountPaid: number;
-	subscriptionStatus?: "active" | "canceled";
+	subscriptionStatus?: "active" | "canceled" | "incomplete_expired";
 	cancelFails?: boolean;
 }) => {
 	state.invoiceStatus = invoiceStatus;
@@ -235,6 +235,19 @@ test("cron: an already canceled sub is not canceled again", async () => {
 		invoiceStatus: "void",
 		amountPaid: 0,
 		subscriptionStatus: "canceled",
+	});
+
+	await runCron();
+
+	expect(state.canceledSubscriptionIds).toEqual([]);
+	expect(state.deletedMetadataIds).toEqual([metadata.id]);
+});
+
+test("cron: an incomplete_expired sub is not canceled", async () => {
+	resetState({
+		invoiceStatus: "void",
+		amountPaid: 0,
+		subscriptionStatus: "incomplete_expired",
 	});
 
 	await runCron();
