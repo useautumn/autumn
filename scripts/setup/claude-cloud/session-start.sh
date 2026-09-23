@@ -73,7 +73,37 @@ if [ ! -f "$MARKER" ]; then
 	log "bootstrap complete"
 fi
 
+# --- persisted session env --------------------------------------------------
+# Hook exports die with this process; CLAUDE_ENV_FILE carries them into every
+# later Bash call. The empty edge-config override ({}) keeps server + tests off
+# S3 edge config, whose misc-redis "backup" points at a Dragonfly the VM can't
+# reach ("Redis connection timeout for backup").
+: "${AUTUMN_EDGE_CONFIG_OVERRIDE_B64:=e30=}"
+export AUTUMN_EDGE_CONFIG_OVERRIDE_B64
+if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+	{
+		echo "export CLOUD_AGENT=1"
+		echo "export DW_HEADLESS=1"
+		echo "export AUTUMN_EDGE_CONFIG_OVERRIDE_B64=$AUTUMN_EDGE_CONFIG_OVERRIDE_B64"
+		echo "export PATH=\"$ROOT/node_modules/.bin:\$PATH\""
+	} >>"$CLAUDE_ENV_FILE"
+fi
+
 # --- runtime secrets (idempotent, cheap) -----------------------------------
+# Machine identity for cloud sessions without an injected INFISICAL_TOKEN.
+if [ -z "${INFISICAL_TOKEN:-}" ] && [ -n "${CODING_AGENT_CLIENT_ID:-}" ] \
+	&& [ -n "${CODING_AGENT_CLIENT_SECRET:-}" ] && command -v infisical >/dev/null 2>&1; then
+	INFISICAL_TOKEN="$(infisical login --method=universal-auth \
+		--client-id="$CODING_AGENT_CLIENT_ID" --client-secret="$CODING_AGENT_CLIENT_SECRET" \
+		--plain --silent 2>/dev/null || true)"
+	if [ -n "$INFISICAL_TOKEN" ]; then
+		export INFISICAL_TOKEN
+		log "Infisical: logged in with CODING_AGENT machine identity"
+	else
+		unset INFISICAL_TOKEN
+		log "WARNING: Infisical login with CODING_AGENT credentials failed"
+	fi
+fi
 if [ -n "${INFISICAL_TOKEN:-}" ]; then
 	umask 077
 	mkdir -p "${HOME}/.cache"
@@ -150,6 +180,36 @@ cat <<'EOF'
   from /mcp; never attempt interactive MCP OAuth in a cloud VM.
 - `bun t` (test suites) needs local Postgres via server/.env — never point
   tests at the Infisical PlanetScale DATABASE_URL.
+
+### Running integration (e2e) tests in Claude cloud
+
+This hook logs in to Infisical (CODING_AGENT_CLIENT_ID/SECRET) and caches the
+token in ~/.cache/autumn-infisical-token; the Stripe sandbox key lands in
+~/.cache/autumn-stripe-sandbox-secret-key. Tokens expire — re-run this hook
+(`bash scripts/setup/claude-cloud/session-start.sh`) to refresh them.
+
+- Machine-identity tokens need `--projectId` on every `infisical run`, so
+  `bun t` / `bun dw` fail as-is ("Project ID is required"). Wrap commands as:
+    export INFISICAL_TOKEN=$(cat ~/.cache/autumn-infisical-token)
+    ENV_FILE=.env infisical run --projectId=$(node -p "require('./.infisical.json').workspaceId") --env=dev --recursive --silent -- <cmd>
+- 1. Infra: `bun scripts/dw/index.ts start` (Postgres/Redis/ClickHouse/ElasticMQ
+  + migrations).
+- 2. Seed unit-test-org (fixes `Org with slug "unit-test-org" not found`), from
+  the repo root, inside the wrapper above:
+    env DATABASE_URL=<local url from server/.env> DATABASE_CRITICAL_URL=<same> \
+      AUTUMN_DB_DIRECT=1 STRIPE_SANDBOX_SECRET_KEY=$(cat ~/.cache/autumn-stripe-sandbox-secret-key) \
+      bun scripts/setup/setup-test.ts --ensure
+- 3. App: `bun dw` hard-requires the Neon CLI; skip it. From server/, inside the
+  wrapper: `bun src/workers.ts &` and `bun src/index.ts` (API on :8080).
+  Neither hot-reloads — after every `git checkout`, kill both by PID (not
+  `pkill -f`, which matches your own shell) and restart.
+- 4. Tests, from server/, inside the wrapper: `bun test --timeout 0 <file>`.
+- `Redis connection timeout for backup` means AUTUMN_EDGE_CONFIG_OVERRIDE_B64
+  is unset (this hook sets it to e30= = `{}`); server, workers and tests all
+  need it. It serves every S3 edge config's default.
+- "Fails on dev, passes on branch": `git checkout origin/dev`, then
+  `git checkout <branch> -- <test files>`, restart the server, run; then check
+  out the branch, restart, run again.
 EOF
 
 exit 0
