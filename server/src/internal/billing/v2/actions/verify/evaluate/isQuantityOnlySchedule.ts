@@ -1,13 +1,15 @@
 import type Stripe from "stripe";
 
-// A phase trialing to its own boundary says nothing about the next phase's
-// billing, and can never equal its trial_end, so it reads as no trial here.
-const trialEndOf = (phase: Stripe.SubscriptionSchedule.Phase) =>
-	phase.trial_end != null && phase.trial_end === phase.end_date
-		? null
-		: (phase.trial_end ?? null);
-
-const billingShapeOf = (phase: Stripe.SubscriptionSchedule.Phase) =>
+// The running phase trialing to its own boundary says nothing about what the
+// next phase bills, and can never equal its trial_end. A FUTURE phase doing so
+// is free for its whole duration, which is real drift and must still report.
+const billingShapeOf = ({
+	phase,
+	isCurrentPhase = false,
+}: {
+	phase: Stripe.SubscriptionSchedule.Phase;
+	isCurrentPhase?: boolean;
+}) =>
 	JSON.stringify({
 		priceIds: (phase.items ?? [])
 			.map((item) =>
@@ -19,7 +21,12 @@ const billingShapeOf = (phase: Stripe.SubscriptionSchedule.Phase) =>
 				typeof item.price === "string" ? item.price : item.price?.id,
 			)
 			.sort((left, right) => String(left).localeCompare(String(right))),
-		trialEnd: trialEndOf(phase),
+		trialEnd:
+			isCurrentPhase &&
+			phase.trial_end != null &&
+			phase.trial_end === phase.end_date
+				? null
+				: (phase.trial_end ?? null),
 		currency: phase.currency,
 	});
 
@@ -44,6 +51,11 @@ export const isQuantityOnlySchedule = ({
 	);
 	if (futurePhases.length === 0) return false;
 
-	const currentShape = billingShapeOf(currentPhase);
-	return futurePhases.every((phase) => billingShapeOf(phase) === currentShape);
+	const currentShape = billingShapeOf({
+		phase: currentPhase,
+		isCurrentPhase: true,
+	});
+	return futurePhases.every(
+		(phase) => billingShapeOf({ phase }) === currentShape,
+	);
 };
