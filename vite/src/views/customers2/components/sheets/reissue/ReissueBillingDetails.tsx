@@ -222,7 +222,7 @@ export function ReissueBillingDetails({
 				<p className="text-xs text-tertiary-foreground">
 					{prefill.taxIdsIncomplete
 						? "Edit registrations in Stripe so none are dropped; only part of the list was returned."
-						: "Only enter an ID supplied by the customer. This does not select a tax rate and may mean no VAT is collected."}
+						: "A tax ID change alone may not change the final tax amount."}
 				</p>
 				{!!prefill.otherTaxIds?.length && (
 					<p className="text-xs text-tertiary-foreground">
@@ -230,10 +230,6 @@ export function ReissueBillingDetails({
 					</p>
 				)}
 			</div>
-			<p className="text-xs text-tertiary-foreground">
-				The preview updates as you edit. Customer details are saved only when
-				you reissue.
-			</p>
 		</SheetSection>
 	);
 }

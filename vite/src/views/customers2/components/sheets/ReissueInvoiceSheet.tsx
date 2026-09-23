@@ -22,6 +22,7 @@ import { PaperPlaneTiltIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type Stripe from "stripe";
+import { PreviewSection } from "@/components/forms/shared/PreviewSection";
 import {
 	LayoutGroup,
 	SheetFooter,
@@ -37,7 +38,6 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { getReissuePreviewState } from "./reissue/getReissuePreviewState";
 import { ReissueBillingDetails } from "./reissue/ReissueBillingDetails";
-import { ReissuePreviewTotals } from "./reissue/ReissuePreviewTotals";
 import { stripeInvoiceToPrefill } from "./reissue/stripeInvoiceToPrefill";
 import {
 	buildReissuePayload,
@@ -229,7 +229,7 @@ function ReissueInvoiceForm({
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full min-h-0 flex-col">
+			<div className="flex h-full flex-col overflow-y-auto">
 				<SheetHeader
 					title="Reissue Invoice"
 					description={
@@ -239,266 +239,257 @@ function ReissueInvoiceForm({
 					}
 				/>
 
-				<div className="min-h-0 flex-1 overflow-y-auto">
-					<SheetSection withSeparator className="flex flex-col gap-3">
-						<div className="flex items-center justify-between">
-							<FormLabel className="mb-0">Invoice items</FormLabel>
-							<IconButton
-								className="text-tertiary-foreground"
-								icon={<PlusIcon size={12} />}
-								onClick={addLine}
-								size="sm"
-								variant="muted"
-							>
-								Add
-							</IconButton>
-						</div>
-						<div className="flex flex-col gap-2">
-							{lineItems.map((lineItem) => {
-								const removed = form.removedLineIds.includes(lineItem.id);
-								return (
-									<div
-										key={lineItem.id}
-										className={`flex items-center gap-2 ${removed ? "opacity-40" : ""}`}
+				<SheetSection withSeparator className="flex flex-col gap-3">
+					<div className="flex items-center justify-between">
+						<FormLabel className="mb-0">Invoice items</FormLabel>
+						<IconButton
+							className="text-tertiary-foreground"
+							icon={<PlusIcon size={12} />}
+							onClick={addLine}
+							size="sm"
+							variant="muted"
+						>
+							Add
+						</IconButton>
+					</div>
+					<div className="flex flex-col gap-2">
+						{lineItems.map((lineItem) => {
+							const removed = form.removedLineIds.includes(lineItem.id);
+							return (
+								<div
+									key={lineItem.id}
+									className={`flex items-center gap-2 ${removed ? "opacity-40" : ""}`}
+								>
+									<span
+										className={`flex-1 truncate text-sm text-secondary-foreground ${removed ? "line-through" : ""}`}
+										title={lineItem.description}
 									>
-										<span
-											className={`flex-1 truncate text-sm text-secondary-foreground ${removed ? "line-through" : ""}`}
-											title={lineItem.description}
-										>
-											{lineItem.description}
-										</span>
-										<Input
-											type="number"
-											className="h-7 w-24 shrink-0 text-right text-xs"
-											placeholder={String(lineItem.amount)}
-											value={form.amounts[lineItem.id] ?? ""}
-											disabled={removed}
-											onChange={(e) => setAmount(lineItem.id, e.target.value)}
-										/>
-										<RemoveButton onClick={() => toggleRemoved(lineItem.id)} />
-									</div>
-								);
-							})}
-							{form.addedLines.map((line) => (
-								<div key={line._id} className="flex items-center gap-2">
-									<Input
-										autoFocus={line.description === "" && line.amount === ""}
-										className="h-7 flex-1 text-xs"
-										placeholder="Description"
-										value={line.description}
-										onChange={(e) =>
-											updateAddedLine(line._id, { description: e.target.value })
-										}
-									/>
+										{lineItem.description}
+									</span>
 									<Input
 										type="number"
 										className="h-7 w-24 shrink-0 text-right text-xs"
-										placeholder="Amount"
-										value={line.amount}
-										onChange={(e) =>
-											updateAddedLine(line._id, { amount: e.target.value })
-										}
+										placeholder={String(lineItem.amount)}
+										value={form.amounts[lineItem.id] ?? ""}
+										disabled={removed}
+										onChange={(e) => setAmount(lineItem.id, e.target.value)}
 									/>
-									<RemoveButton onClick={() => removeAddedLine(line._id)} />
+									<RemoveButton onClick={() => toggleRemoved(lineItem.id)} />
 								</div>
-							))}
-						</div>
-						<span className="text-xs text-tertiary-foreground">
-							Edit an amount to bill it differently, remove a line to leave it
-							off, or add a custom charge.
-						</span>
-					</SheetSection>
-
-					<ReissueBillingDetails
-						form={form}
-						prefill={prefill}
-						patch={patch}
-						setAddress={setAddress}
-					/>
-
-					<SheetAccordion type="multiple">
-						<SheetAccordionItem
-							value="settings"
-							title="Invoice settings"
-							description="Email, payment terms and template"
-						>
-							<div className="space-y-4">
-								<div className="space-y-1.5">
-									<FormLabel>Invoice template</FormLabel>
-									<Select
-										value={form.templateId ?? NO_TEMPLATE}
-										onValueChange={(value) =>
-											patch({
-												templateId: value === NO_TEMPLATE ? null : value,
-											})
-										}
-										items={templateOptions}
-									>
-										<SelectTrigger className="w-full">
-											<SelectValue>
-												{templateOptions.find(
-													(option) =>
-														option.value === (form.templateId ?? NO_TEMPLATE),
-												)?.label ?? "Keep current footer"}
-											</SelectValue>
-										</SelectTrigger>
-										<SelectContent>
-											{templateOptions.map((option) => (
-												<SelectItem key={option.value} value={option.value}>
-													{option.label}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</div>
-
-								<div className="space-y-1.5">
-									<FormLabel>Send to</FormLabel>
-									<Input
-										placeholder={
-											customer?.email ?? "Leave empty to keep the same email"
-										}
-										value={form.email}
-										onChange={(e) => patch({ email: e.target.value })}
-									/>
-									<span className="text-xs text-tertiary-foreground">
-										Changes the customer's email in Stripe, so later invoices go
-										there too.
-									</span>
-								</div>
-
-								<div className="space-y-1.5">
-									<FormLabel>Payment terms</FormLabel>
-									<Input
-										type="number"
-										min={1}
-										placeholder="Days until due — empty keeps the current terms"
-										value={form.netTermsDays}
-										onChange={(e) => patch({ netTermsDays: e.target.value })}
-									/>
-								</div>
-
-								<Field label="Customer name">
-									<Input
-										aria-label="Customer name"
-										value={form.customerName}
-										onChange={(event) =>
-											patch({ customerName: event.target.value })
-										}
-									/>
-								</Field>
+							);
+						})}
+						{form.addedLines.map((line) => (
+							<div key={line._id} className="flex items-center gap-2">
+								<Input
+									autoFocus={line.description === "" && line.amount === ""}
+									className="h-7 flex-1 text-xs"
+									placeholder="Description"
+									value={line.description}
+									onChange={(e) =>
+										updateAddedLine(line._id, { description: e.target.value })
+									}
+								/>
+								<Input
+									type="number"
+									className="h-7 w-24 shrink-0 text-right text-xs"
+									placeholder="Amount"
+									value={line.amount}
+									onChange={(e) =>
+										updateAddedLine(line._id, { amount: e.target.value })
+									}
+								/>
+								<RemoveButton onClick={() => removeAddedLine(line._id)} />
 							</div>
-						</SheetAccordionItem>
-						<SheetAccordionItem
-							value="invoice"
-							title="This invoice"
-							description="Shown on the replacement only"
-						>
-							<div className="space-y-4">
-								<Field
-									label="Custom fields"
-									hint="Up to four, e.g. a PO number."
+						))}
+					</div>
+					<span className="text-xs text-tertiary-foreground">
+						Edit an amount to bill it differently, remove a line to leave it
+						off, or add a custom charge.
+					</span>
+				</SheetSection>
+
+				<ReissueBillingDetails
+					form={form}
+					prefill={prefill}
+					patch={patch}
+					setAddress={setAddress}
+				/>
+
+				<SheetAccordion type="multiple">
+					<SheetAccordionItem value="settings" title="Invoice settings">
+						<div className="space-y-4">
+							<div className="space-y-1.5">
+								<FormLabel>Invoice template</FormLabel>
+								<Select
+									value={form.templateId ?? NO_TEMPLATE}
+									onValueChange={(value) =>
+										patch({
+											templateId: value === NO_TEMPLATE ? null : value,
+										})
+									}
+									items={templateOptions}
 								>
-									<div className="flex flex-col gap-2">
-										{form.customFields.map((field) => (
-											<div key={field._id} className="flex items-center gap-2">
-												<Input
-													className="h-7 w-32 shrink-0 text-xs"
-													placeholder="Name"
-													maxLength={30}
-													value={field.name}
-													onChange={(e) =>
-														updateCustomField(field._id, {
-															name: e.target.value,
-														})
-													}
-												/>
-												<Input
-													className="h-7 flex-1 text-xs"
-													placeholder="Value"
-													maxLength={30}
-													value={field.value}
-													onChange={(e) =>
-														updateCustomField(field._id, {
-															value: e.target.value,
-														})
-													}
-												/>
-												<RemoveButton
-													onClick={() => removeCustomField(field._id)}
-												/>
-											</div>
+									<SelectTrigger className="w-full">
+										<SelectValue>
+											{templateOptions.find(
+												(option) =>
+													option.value === (form.templateId ?? NO_TEMPLATE),
+											)?.label ?? "Keep current footer"}
+										</SelectValue>
+									</SelectTrigger>
+									<SelectContent>
+										{templateOptions.map((option) => (
+											<SelectItem key={option.value} value={option.value}>
+												{option.label}
+											</SelectItem>
 										))}
-										{form.customFields.length < 4 && (
-											<div className="flex justify-end">
-												<IconButton
-													className="text-tertiary-foreground"
-													icon={<PlusIcon size={12} />}
-													onClick={addCustomField}
-													size="sm"
-													variant="muted"
-												>
-													Add
-												</IconButton>
-											</div>
-										)}
-									</div>
-								</Field>
-								<Field label="Memo">
-									<Input
-										placeholder="Keep the current memo"
-										value={form.memo}
-										onChange={(e) => patch({ memo: e.target.value })}
-									/>
-								</Field>
-								<Field label="Footer">
-									<Input
-										placeholder="Keep the current footer"
-										value={form.footer}
-										onChange={(e) => patch({ footer: e.target.value })}
-									/>
-								</Field>
+									</SelectContent>
+								</Select>
 							</div>
-						</SheetAccordionItem>
-					</SheetAccordion>
-				</div>
-				<div className="shrink-0 border-t bg-background">
-					<ReissuePreviewTotals
-						preview={previewState.ready ? previewResult?.preview : undefined}
-						error={previewState.error}
-						money={money}
-					/>
 
-					<SheetFooter className="pt-4">
-						<Button
-							variant="secondary"
-							className="w-full"
-							onClick={() =>
-								setSheet({ type: "invoice-detail", data: invoiceDetailData })
-							}
-							disabled={reissue.isPending}
-						>
-							Back
-						</Button>
-						<Button
-							variant="primary"
-							className="w-full"
-							onClick={() => reissue.mutate()}
-							isLoading={reissue.isPending}
-							disabled={!previewState.ready || reissue.isPending}
-						>
-							<PaperPlaneTiltIcon size={16} />
-							{previewState.recalculating
-								? "Recalculating…"
-								: `Reissue${total ? ` ${total}` : ""}`}
-						</Button>
-					</SheetFooter>
-					{previewState.error && (
-						<p role="alert" className="px-4 pb-4 text-xs text-destructive">
-							{previewState.error}
-						</p>
-					)}
-				</div>
+							<div className="space-y-1.5">
+								<FormLabel>Send to</FormLabel>
+								<Input
+									placeholder={
+										customer?.email ?? "Leave empty to keep the same email"
+									}
+									value={form.email}
+									onChange={(e) => patch({ email: e.target.value })}
+								/>
+								<span className="text-xs text-tertiary-foreground">
+									Changes the customer's email in Stripe, so later invoices go
+									there too.
+								</span>
+							</div>
+
+							<div className="space-y-1.5">
+								<FormLabel>Payment terms</FormLabel>
+								<Input
+									type="number"
+									min={1}
+									placeholder="Days until due — empty keeps the current terms"
+									value={form.netTermsDays}
+									onChange={(e) => patch({ netTermsDays: e.target.value })}
+								/>
+							</div>
+
+							<Field label="Customer name">
+								<Input
+									aria-label="Customer name"
+									value={form.customerName}
+									onChange={(event) =>
+										patch({ customerName: event.target.value })
+									}
+								/>
+							</Field>
+						</div>
+					</SheetAccordionItem>
+					<SheetAccordionItem value="invoice" title="This invoice">
+						<div className="space-y-4">
+							<Field label="Custom fields" hint="Up to four, e.g. a PO number.">
+								<div className="flex flex-col gap-2">
+									{form.customFields.map((field) => (
+										<div key={field._id} className="flex items-center gap-2">
+											<Input
+												className="h-7 w-32 shrink-0 text-xs"
+												placeholder="Name"
+												maxLength={30}
+												value={field.name}
+												onChange={(e) =>
+													updateCustomField(field._id, {
+														name: e.target.value,
+													})
+												}
+											/>
+											<Input
+												className="h-7 flex-1 text-xs"
+												placeholder="Value"
+												maxLength={30}
+												value={field.value}
+												onChange={(e) =>
+													updateCustomField(field._id, {
+														value: e.target.value,
+													})
+												}
+											/>
+											<RemoveButton
+												onClick={() => removeCustomField(field._id)}
+											/>
+										</div>
+									))}
+									{form.customFields.length < 4 && (
+										<div className="flex justify-end">
+											<IconButton
+												className="text-tertiary-foreground"
+												icon={<PlusIcon size={12} />}
+												onClick={addCustomField}
+												size="sm"
+												variant="muted"
+											>
+												Add
+											</IconButton>
+										</div>
+									)}
+								</div>
+							</Field>
+							<Field label="Memo">
+								<Input
+									placeholder="Keep the current memo"
+									value={form.memo}
+									onChange={(e) => patch({ memo: e.target.value })}
+								/>
+							</Field>
+							<Field label="Footer">
+								<Input
+									placeholder="Keep the current footer"
+									value={form.footer}
+									onChange={(e) => patch({ footer: e.target.value })}
+								/>
+							</Field>
+						</div>
+					</SheetAccordionItem>
+				</SheetAccordion>
+				<PreviewSection
+					includeNextCycle={false}
+					showCreditNote={false}
+					previewQuery={{
+						isLoading: !previewState.ready && !previewState.error,
+						error: previewState.error ? new Error(previewState.error) : null,
+						data:
+							previewState.ready && previewResult
+								? {
+										...previewResult.preview,
+										line_items: [],
+										tax: previewResult.preview.tax ?? undefined,
+									}
+								: null,
+					}}
+				/>
+
+				<SheetFooter className="pt-4">
+					<Button
+						variant="secondary"
+						className="w-full"
+						onClick={() =>
+							setSheet({ type: "invoice-detail", data: invoiceDetailData })
+						}
+						disabled={reissue.isPending}
+					>
+						Back
+					</Button>
+					<Button
+						variant="primary"
+						className="w-full"
+						onClick={() => reissue.mutate()}
+						isLoading={reissue.isPending}
+						disabled={!previewState.ready || reissue.isPending}
+					>
+						<PaperPlaneTiltIcon size={16} />
+						{previewState.recalculating
+							? "Recalculating…"
+							: `Reissue${total ? ` ${total}` : ""}`}
+					</Button>
+				</SheetFooter>
 			</div>
 		</LayoutGroup>
 	);
