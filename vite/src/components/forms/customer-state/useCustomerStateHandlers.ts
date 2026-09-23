@@ -182,12 +182,17 @@ export function useCustomerStateHandlers({
 					};
 				}),
 			);
-			// Already unscheduled: the phase copies are dropped, the plan stays once.
-			if (unscheduledPlans.some(isSamePlan)) return;
-			form.setFieldValue("unscheduledPlans", [
-				...unscheduledPlans,
-				...clonePlans([plan]),
-			]);
+			// Already unscheduled: the edited copy replaces it, so the plan stays
+			// once with the values just chosen.
+			const unscheduledCopy = clonePlans([plan]);
+			form.setFieldValue(
+				"unscheduledPlans",
+				unscheduledPlans.some(isSamePlan)
+					? unscheduledPlans.flatMap((other) =>
+							isSamePlan(other) ? unscheduledCopy : [other],
+						)
+					: [...unscheduledPlans, ...unscheduledCopy],
+			);
 		},
 		[form, isPhaseLocked],
 	);
