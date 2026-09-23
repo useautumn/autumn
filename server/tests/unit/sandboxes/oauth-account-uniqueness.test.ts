@@ -29,6 +29,7 @@ await mockModuleWithRestore(
 );
 await mockModuleWithRestore("@/external/connect/initStripeCli.js", () => ({
 	initMasterStripe: () => ({
+		balance: { retrieve: async () => ({}) },
 		oauth: { token: async () => ({ stripe_user_id: state.accountId }) },
 	}),
 }));
@@ -36,6 +37,7 @@ await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		getBySlug: async () => ({
 			id: "org_target",
+			created_by: "org_master",
 			slug: "target-sandbox",
 			name: "Target Sandbox",
 		}),

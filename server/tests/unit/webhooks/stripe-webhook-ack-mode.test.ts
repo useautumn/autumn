@@ -79,6 +79,11 @@ describe("classifyStripeWebhookAckMode", () => {
 		expected: "early" | "sync";
 	}[] = [
 		{
+			name: "account.application.deauthorized -> sync",
+			event: buildEvent({ type: "account.application.deauthorized" }),
+			expected: "sync",
+		},
+		{
 			name: "checkout.session.completed -> sync",
 			event: buildEvent({ type: "checkout.session.completed" }),
 			expected: "sync",

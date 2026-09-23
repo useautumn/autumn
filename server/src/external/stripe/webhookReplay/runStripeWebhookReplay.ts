@@ -1,6 +1,7 @@
 import { AuthType, tryCatch } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { runStripeWebhookHandlers } from "../runStripeWebhookHandlers.js";
@@ -53,7 +54,10 @@ export const runStripeWebhookReplay = async ({
 		...ctx,
 		authType: AuthType.Stripe,
 		stripeEvent,
-		stripeCli: createStripeCli({ org: ctx.org, env: ctx.env }),
+		stripeCli:
+			stripeEvent.type === "account.application.deauthorized"
+				? initMasterStripe({ env: ctx.env })
+				: createStripeCli({ org: ctx.org, env: ctx.env }),
 	};
 
 	const routedCtx = await attachStripeEventCustomer({ ctx: webhookCtx });
