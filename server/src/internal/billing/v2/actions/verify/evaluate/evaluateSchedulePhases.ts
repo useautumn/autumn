@@ -3,6 +3,7 @@ import type {
 	ScheduleMismatch,
 	SubscriptionMismatch,
 } from "@autumn/shared";
+import { getUnixTime } from "date-fns";
 import type Stripe from "stripe";
 import { similarUnix } from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils";
 import type {
@@ -47,17 +48,22 @@ export const evaluateSchedulePhases = async ({
 
 	const mismatches: SubscriptionMismatch[] = [];
 
-	if (schedule.phases.length !== scheduledPhases.length) {
+	const nowSeconds = getUnixTime(new Date());
+	const livePhases = schedule.phases.filter(
+		(phase) => phase.end_date === null || phase.end_date > nowSeconds,
+	);
+
+	if (livePhases.length !== scheduledPhases.length) {
 		mismatches.push({
 			type: "schedule_mismatch",
 			reason: "phase_count_mismatch",
 			expected_phase_count: scheduledPhases.length,
-			actual_phase_count: schedule.phases.length,
+			actual_phase_count: livePhases.length,
 		});
 	}
 
 	const currentPhaseStart =
-		schedule.current_phase?.start_date ?? schedule.phases[0]?.start_date;
+		schedule.current_phase?.start_date ?? livePhases[0]?.start_date;
 	// One expected phase claims one actual phase, so a genuine extra phase can't
 	// hide behind a sibling that already matched within the day tolerance.
 	const claimedPhases = new Set<number>();
@@ -65,7 +71,7 @@ export const evaluateSchedulePhases = async ({
 		const expectedPhase = scheduledPhases[i];
 		const expectedStartSeconds = expectedPhase.start_date as number;
 
-		const actualPhaseIndex = schedule.phases.findIndex(
+		const actualPhaseIndex = livePhases.findIndex(
 			(phase, phaseIndex) =>
 				!claimedPhases.has(phaseIndex) &&
 				(i === 0 && currentPhaseStart
@@ -76,7 +82,7 @@ export const evaluateSchedulePhases = async ({
 						})),
 		);
 		const actualPhase =
-			actualPhaseIndex === -1 ? undefined : schedule.phases[actualPhaseIndex];
+			actualPhaseIndex === -1 ? undefined : livePhases[actualPhaseIndex];
 		if (actualPhaseIndex !== -1) claimedPhases.add(actualPhaseIndex);
 		// Phase 0 is the live phase, so its findings carry no future start.
 		const phaseStartsAt = i === 0 ? undefined : expectedStartSeconds;

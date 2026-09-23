@@ -1,24 +1,20 @@
 import type Stripe from "stripe";
 
-/** Everything a phase can carry except the quantity a phase step changes.
- * Comparing the whole shape means a field Stripe adds later reads as a
- * difference until it is deliberately allowed, rather than being ignored. */
-const billingShapeOf = (phase: Stripe.SubscriptionSchedule.Phase) => {
-	const { start_date, end_date, items, ...rest } = phase;
-
-	return JSON.stringify({
-		...rest,
-		items: items
-			.map((item) => {
-				const { quantity, price, ...itemRest } = item;
-				const priceId = typeof price === "string" ? price : price?.id;
-				return { ...itemRest, priceId };
-			})
-			.sort((left, right) =>
-				String(left.priceId).localeCompare(String(right.priceId)),
-			),
+const billingShapeOf = (phase: Stripe.SubscriptionSchedule.Phase) =>
+	JSON.stringify({
+		priceIds: (phase.items ?? [])
+			.map((item) =>
+				typeof item.price === "string" ? item.price : item.price?.id,
+			)
+			.sort((left, right) => String(left).localeCompare(String(right))),
+		addInvoiceItems: (phase.add_invoice_items ?? [])
+			.map((item) =>
+				typeof item.price === "string" ? item.price : item.price?.id,
+			)
+			.sort((left, right) => String(left).localeCompare(String(right))),
+		trialEnd: phase.trial_end ?? null,
+		currency: phase.currency,
 	});
-};
 
 /** A schedule whose future phases differ from the one running now only by
  * quantity is a step the subscription webhook applies, so Autumn holds no
