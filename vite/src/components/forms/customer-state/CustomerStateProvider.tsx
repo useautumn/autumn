@@ -28,7 +28,8 @@ type CustomerStateContextValue = CustomerStateHandlers & {
 	/** The customer's active plans, offered as a starting point for phase one. */
 	existingPlans: CustomerStatePlan[];
 	canMakeUnscheduled: boolean;
-	isPlanNotFound: (location: PlanLocation) => boolean;
+	/** Why a plan has no Stripe item after the sync; empty when it does. */
+	planNotFoundReasons: (location: PlanLocation) => string[];
 	editingPlan: PlanLocation | null;
 	editingPlanValue: CustomerStatePlan | null;
 	setEditingPlan: (editing: PlanLocation | null) => void;
@@ -39,7 +40,8 @@ const CustomerStateContext = createContext<CustomerStateContextValue | null>(
 );
 
 const NO_EXISTING_PLANS: CustomerStatePlan[] = [];
-const NEVER_NOT_FOUND = () => false;
+const NO_NOT_FOUND_REASONS: string[] = [];
+const NEVER_NOT_FOUND = () => NO_NOT_FOUND_REASONS;
 
 /**
  * The customer's plans across phases, plus the row handlers that edit them.
@@ -51,14 +53,14 @@ export function CustomerStateProvider({
 	nowMs,
 	existingPlans = NO_EXISTING_PLANS,
 	canMakeUnscheduled,
-	isPlanNotFound = NEVER_NOT_FOUND,
+	planNotFoundReasons = NEVER_NOT_FOUND,
 	children,
 }: {
 	form: UseCustomerStateForm;
 	nowMs: number;
 	existingPlans?: CustomerStatePlan[];
 	canMakeUnscheduled: boolean;
-	isPlanNotFound?: (location: PlanLocation) => boolean;
+	planNotFoundReasons?: (location: PlanLocation) => string[];
 	children: ReactNode;
 }) {
 	const { products } = useProductsQuery();
@@ -96,7 +98,7 @@ export function CustomerStateProvider({
 			features,
 			existingPlans,
 			canMakeUnscheduled,
-			isPlanNotFound,
+			planNotFoundReasons,
 			editingPlan,
 			editingPlanValue,
 			setEditingPlan,
@@ -110,7 +112,7 @@ export function CustomerStateProvider({
 			features,
 			existingPlans,
 			canMakeUnscheduled,
-			isPlanNotFound,
+			planNotFoundReasons,
 			editingPlan,
 			editingPlanValue,
 		],

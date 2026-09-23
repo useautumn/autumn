@@ -33,7 +33,7 @@ export function CustomerStatePlanRow({
 		isPhaseLocked,
 		setEditingPlan,
 		canMakeUnscheduled,
-		isPlanNotFound,
+		planNotFoundReasons,
 	} = useCustomerStateContext();
 	const { displayCurrency } = useCustomerDisplayCurrency();
 
@@ -167,9 +167,13 @@ export function CustomerStatePlanRow({
 						)
 					}
 					badge={
-						isPlanNotFound({ location: "phase", phaseIndex, planIndex }) ? (
-							<NotFoundBadge />
-						) : undefined
+						<NotFoundBadge
+							reasons={planNotFoundReasons({
+								location: "phase",
+								phaseIndex,
+								planIndex,
+							})}
+						/>
 					}
 					disabled={isLocked}
 					onRemove={() => handleRemovePlan({ phaseIndex, planIndex })}
