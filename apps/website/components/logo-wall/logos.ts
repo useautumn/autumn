@@ -26,20 +26,20 @@ export const LOGOS: Logo[] = [
 		aspectRatio: 143 / 33,
 	},
 	{
-		id: "firecrawl",
-		name: "Firecrawl",
-		href: "https://firecrawl.dev",
-		src: "/images/logos/Firecrawl.svg.svg",
-		aspectRatio: 142 / 33,
-		opticalScale: 1.09,
-	},
-	{
 		id: "resend",
 		name: "Resend",
 		href: "https://resend.com",
 		src: "/images/logos/resend.svg",
 		aspectRatio: 377 / 81,
 		opticalScale: 0.89,
+	},
+	{
+		id: "firecrawl",
+		name: "Firecrawl",
+		href: "https://firecrawl.dev",
+		src: "/images/logos/Firecrawl.svg.svg",
+		aspectRatio: 142 / 33,
+		opticalScale: 1.09,
 	},
 	{
 		id: "mastra",
