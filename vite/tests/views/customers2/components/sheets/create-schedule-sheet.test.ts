@@ -7,10 +7,10 @@ import {
 	type FullCustomerSchedule,
 	type ProductV2,
 } from "@autumn/shared";
-import { EMPTY_SCHEDULE_PLAN } from "@/components/forms/create-schedule/createScheduleFormSchema";
+import { customerProductToCustomerStatePlan } from "@/components/forms/customer-state/customerProductToCustomerStatePlan";
+import { EMPTY_CUSTOMER_STATE_PLAN } from "@/components/forms/customer-state/customerStateSchema";
 import {
 	buildInitialValues,
-	cusProductToPlan,
 	getActiveCustomerPlans,
 } from "@/views/customers2/components/sheets/CreateScheduleSheet";
 
@@ -200,15 +200,15 @@ function makeCustomer({
 }
 
 // ---------------------------------------------------------------------------
-// cusProductToPlan
+// customerProductToCustomerStatePlan
 // ---------------------------------------------------------------------------
 
-describe("cusProductToPlan", () => {
+describe("customerProductToCustomerStatePlan", () => {
 	test("returns items: null for non-custom product", () => {
 		const cusProduct = makeCusProduct({ productId: "prod_1", isCustom: false });
 		const products = [makeProduct({ id: "prod_1" })];
 
-		const plan = cusProductToPlan({ cusProduct, products });
+		const plan = customerProductToCustomerStatePlan({ cusProduct, products });
 
 		expect(plan.productId).toBe("prod_1");
 		expect(plan.items).toBeNull();
@@ -224,7 +224,7 @@ describe("cusProductToPlan", () => {
 		});
 		const products = [makeProduct({ id: "prod_1" })];
 
-		const plan = cusProductToPlan({ cusProduct, products });
+		const plan = customerProductToCustomerStatePlan({ cusProduct, products });
 
 		expect(plan.items).not.toBeNull();
 		expect(plan.items!.length).toBe(1);
@@ -258,7 +258,7 @@ describe("cusProductToPlan", () => {
 		});
 		const products = [makeProduct({ id: "prod_1" })];
 
-		const plan = cusProductToPlan({ cusProduct, products });
+		const plan = customerProductToCustomerStatePlan({ cusProduct, products });
 
 		expect(plan.items).not.toBeNull();
 		expect(plan.items!.length).toBeGreaterThanOrEqual(1);
@@ -298,7 +298,7 @@ describe("cusProductToPlan", () => {
 		});
 		const products = [makeProduct({ id: "prod_1" })];
 
-		const plan = cusProductToPlan({ cusProduct, products });
+		const plan = customerProductToCustomerStatePlan({ cusProduct, products });
 
 		expect(plan.items).not.toBeNull();
 		const priceItem = plan.items!.find(
@@ -319,7 +319,7 @@ describe("cusProductToPlan", () => {
 		});
 		const products = [makeProduct({ id: "prod_1" })];
 
-		const plan = cusProductToPlan({ cusProduct, products });
+		const plan = customerProductToCustomerStatePlan({ cusProduct, products });
 
 		expect(plan.items).toBeNull();
 		expect(plan.isCustom).toBe(true);
@@ -336,7 +336,7 @@ describe("cusProductToPlan", () => {
 		});
 		const products = [makeProduct({ id: "prod_1" })];
 
-		const plan = cusProductToPlan({ cusProduct, products });
+		const plan = customerProductToCustomerStatePlan({ cusProduct, products });
 
 		expect(plan.isCustom).toBe(true);
 		expect(plan.items).not.toBeNull();
@@ -362,7 +362,7 @@ describe("cusProductToPlan", () => {
 		});
 		const products = [makeProduct({ id: "prod_1" })];
 
-		const plan = cusProductToPlan({ cusProduct, products });
+		const plan = customerProductToCustomerStatePlan({ cusProduct, products });
 
 		expect(plan.isCustom).toBe(true);
 	});
@@ -377,7 +377,7 @@ describe("cusProductToPlan", () => {
 		});
 		const products = [makeProduct({ id: "prod_1" })];
 
-		const plan = cusProductToPlan({ cusProduct, products });
+		const plan = customerProductToCustomerStatePlan({ cusProduct, products });
 
 		expect(plan.isCustom).toBe(false);
 	});
@@ -449,7 +449,7 @@ describe("cusProductToPlan", () => {
 			}),
 		];
 
-		const plan = cusProductToPlan({ cusProduct, products });
+		const plan = customerProductToCustomerStatePlan({ cusProduct, products });
 
 		expect(plan.isCustom).toBe(true);
 		expect(plan.items).not.toBeNull();
@@ -491,7 +491,7 @@ describe("cusProductToPlan", () => {
 			}),
 		];
 
-		const plan = cusProductToPlan({ cusProduct, products });
+		const plan = customerProductToCustomerStatePlan({ cusProduct, products });
 
 		expect(plan.isCustom).toBe(true);
 		expect(plan.items).not.toBeNull();
@@ -520,7 +520,7 @@ describe("cusProductToPlan", () => {
 			}),
 		];
 
-		const plan = cusProductToPlan({ cusProduct, products });
+		const plan = customerProductToCustomerStatePlan({ cusProduct, products });
 
 		expect(plan.prepaidOptions).toBeDefined();
 		expect(plan.prepaidOptions.credits).toBe(500);
@@ -530,7 +530,7 @@ describe("cusProductToPlan", () => {
 		const cusProduct = makeCusProduct({ productId: "prod_1" });
 		const products = [makeProduct({ id: "prod_1", items: [] })];
 
-		const plan = cusProductToPlan({ cusProduct, products });
+		const plan = customerProductToCustomerStatePlan({ cusProduct, products });
 
 		expect(plan.prepaidOptions).toEqual({});
 	});
@@ -539,7 +539,7 @@ describe("cusProductToPlan", () => {
 		const cusProduct = makeCusProduct({ productId: "prod_999" });
 		const products = [makeProduct({ id: "prod_1" })];
 
-		const plan = cusProductToPlan({ cusProduct, products });
+		const plan = customerProductToCustomerStatePlan({ cusProduct, products });
 
 		expect(plan.productId).toBe("prod_999");
 		expect(plan.prepaidOptions).toEqual({});
@@ -823,7 +823,7 @@ describe("buildInitialValues", () => {
 		expect(result.phases).toHaveLength(1);
 		expect(result.phases[0].startsAt).toBeNull();
 		expect(result.phases[0].plans).toHaveLength(1);
-		expect(result.phases[0].plans[0]).toEqual(EMPTY_SCHEDULE_PLAN);
+		expect(result.phases[0].plans[0]).toEqual(EMPTY_CUSTOMER_STATE_PLAN);
 	});
 
 	test("returns single empty plan when no active products and no schedule", () => {
@@ -833,7 +833,7 @@ describe("buildInitialValues", () => {
 
 		expect(result.phases).toHaveLength(1);
 		expect(result.phases[0].plans).toHaveLength(1);
-		expect(result.phases[0].plans[0]).toEqual(EMPTY_SCHEDULE_PLAN);
+		expect(result.phases[0].plans[0]).toEqual(EMPTY_CUSTOMER_STATE_PLAN);
 	});
 
 	test("handles undefined customer gracefully", () => {
@@ -845,7 +845,7 @@ describe("buildInitialValues", () => {
 
 		expect(result.phases).toHaveLength(1);
 		expect(result.phases[0].plans).toHaveLength(1);
-		expect(result.phases[0].plans[0]).toEqual(EMPTY_SCHEDULE_PLAN);
+		expect(result.phases[0].plans[0]).toEqual(EMPTY_CUSTOMER_STATE_PLAN);
 	});
 
 	test("merges customer and entity schedules into one timeline", () => {

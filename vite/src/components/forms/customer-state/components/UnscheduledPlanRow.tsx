@@ -1,3 +1,5 @@
+import { CustomerStatePlanPicker } from "@/components/forms/customer-state/components/CustomerStatePlanPicker";
+import { getUnscheduledUsedGroupKeys } from "@/components/forms/customer-state/customerStateUtils";
 import {
 	PlanPrepaidQuantityFields,
 	ScopedPlanRow,
@@ -5,9 +7,9 @@ import {
 	usePlanScopeField,
 } from "@/components/forms/shared";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
-import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
-import { getUnscheduledUsedGroupKeys } from "../scheduleUtils";
-import { SchedulePlanPicker } from "./SchedulePlanPicker";
+import { useCustomerStateContext } from "../CustomerStateProvider";
+import { NotFoundBadge } from "./NotFoundBadge";
+import { PlanPriceLabel } from "./PlanPriceLabel";
 
 export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 	const {
@@ -16,7 +18,8 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 		products,
 		handleRemoveUnscheduledPlan,
 		setEditingPlan,
-	} = useCreateScheduleFormContext();
+		isPlanNotFound,
+	} = useCustomerStateContext();
 	const { displayCurrency } = useCustomerDisplayCurrency();
 
 	const plan = formValues.unscheduledPlans[planIndex];
@@ -54,7 +57,7 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 		return (
 			<ScopedPlanRow scope={scope}>
 				<div className="group relative min-w-0 flex-1">
-					<SchedulePlanPicker
+					<CustomerStatePlanPicker
 						products={availableProducts}
 						usedKeys={usedKeys}
 						siblingProductIds={
@@ -74,13 +77,27 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 
 	return (
 		<div className="space-y-1.5">
-			<ScopedPlanRow scope={scope}>
+			<ScopedPlanRow
+				scope={scope}
+				onCustomize={() =>
+					setEditingPlan({ location: "unscheduled", planIndex })
+				}
+			>
 				<SelectedPlanRow
 					productId={plan.productId}
 					product={selectedProduct}
 					customItems={plan.items}
 					isCustom={plan.isCustom}
-					onEdit={() => setEditingPlan({ location: "unscheduled", planIndex })}
+					price={
+						selectedProduct && (
+							<PlanPriceLabel product={selectedProduct} items={plan.items} />
+						)
+					}
+					badge={
+						isPlanNotFound({ location: "unscheduled", planIndex }) ? (
+							<NotFoundBadge />
+						) : undefined
+					}
 					onRemove={() => handleRemoveUnscheduledPlan({ planIndex })}
 				/>
 			</ScopedPlanRow>

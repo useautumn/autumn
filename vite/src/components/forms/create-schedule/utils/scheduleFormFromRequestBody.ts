@@ -4,6 +4,11 @@ import type {
 	ProductItem,
 } from "@autumn/shared";
 import { addMonths, addYears } from "date-fns";
+import type {
+	CustomerStateForm,
+	CustomerStatePhase,
+	CustomerStatePlan,
+} from "@/components/forms/customer-state/customerStateSchema";
 import {
 	type FieldReaders,
 	overridesFromRequest,
@@ -13,15 +18,10 @@ import {
 	readString,
 	requestRecord,
 } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
-import type {
-	CreateScheduleForm,
-	SchedulePhase,
-	SchedulePlan,
-} from "../createScheduleFormSchema";
 
 type RequestBody = Record<string, unknown>;
 
-const PLAN_FIELD_READERS: FieldReaders<SchedulePlan> = {
+const PLAN_FIELD_READERS: FieldReaders<CustomerStatePlan> = {
 	entityId: readString("entity_id"),
 	items: readArray<ProductItem>("items"),
 	productId: readString("plan_id"),
@@ -36,7 +36,7 @@ const upsertLicensesFrom = (plan: Record<string, unknown>) => {
 		: null;
 };
 
-const planFrom = (value: unknown): SchedulePlan | undefined => {
+const planFrom = (value: unknown): CustomerStatePlan | undefined => {
 	const plan = requestRecord(value);
 	if (!plan || typeof plan.plan_id !== "string") return undefined;
 	const overrides = overridesFromRequest(plan, PLAN_FIELD_READERS);
@@ -52,7 +52,7 @@ const planFrom = (value: unknown): SchedulePlan | undefined => {
 	};
 };
 
-const plansFrom = (value: unknown): SchedulePlan[] =>
+const plansFrom = (value: unknown): CustomerStatePlan[] =>
 	Array.isArray(value)
 		? value.flatMap((plan) => {
 				const mapped = planFrom(plan);
@@ -83,8 +83,8 @@ const startsAtFrom = ({
  * request (per-plan customize already flattened to items) into form values. */
 export const scheduleFormFromRequestBody = (
 	request: RequestBody,
-	persistedPhases: SchedulePhase[] = [],
-): Partial<CreateScheduleForm> | undefined => {
+	persistedPhases: CustomerStatePhase[] = [],
+): Partial<CustomerStateForm> | undefined => {
 	if (!Array.isArray(request.phases) || !request.phases.length)
 		return undefined;
 	const persistedStarts = new Set(

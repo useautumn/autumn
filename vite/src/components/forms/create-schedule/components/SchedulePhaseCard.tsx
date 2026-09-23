@@ -1,22 +1,20 @@
 import {
 	DateInputUnix,
-	InlineAction,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@autumn/ui";
 import { InfoIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { CalendarIcon } from "lucide-react";
-import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
-import { cn } from "@/lib/utils";
-import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
+import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
+import { CustomerStatePhasePlans } from "@/components/forms/customer-state/components/CustomerStatePhasePlans";
 import {
 	canCreateSchedulePhaseStartInPast,
 	getPhaseTimingError,
 	hasCreateSchedulePhaseStarted,
-} from "../createScheduleFormSchema";
-import { getUsedGroupKeys } from "../scheduleUtils";
-import { SchedulePlanRow } from "./SchedulePlanRow";
+} from "@/components/forms/customer-state/customerStateSchema";
+import { cn } from "@/lib/utils";
+import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 
 const LOCKED_PHASE_MESSAGE = "This phase has passed and can't be edited.";
 const CURRENT_PHASE_TIME_LOCKED_MESSAGE =
@@ -32,18 +30,16 @@ export function SchedulePhaseCard({
 	phaseIndex,
 	hasConnector,
 }: SchedulePhaseCardProps) {
+	const { isExistingSchedule, allowFirstPhaseBackdate } =
+		useCreateScheduleFormContext();
 	const {
 		form,
 		formValues,
 		nowMs,
-		products,
-		isExistingSchedule,
-		allowFirstPhaseBackdate,
 		isPhaseLocked,
-		handleAddPlan,
 		handleInsertPhase,
 		handleRemovePhase,
-	} = useCreateScheduleFormContext();
+	} = useCustomerStateContext();
 
 	const phase = formValues.phases[phaseIndex];
 	if (!phase) return null;
@@ -55,12 +51,6 @@ export function SchedulePhaseCard({
 		phaseIndex,
 		nowMs,
 	});
-	const activeProducts = products.filter((p) => !p.archived);
-	// A new row starts customer-level, so that's the scope that can run out of plans.
-	const customerLevelKeys = getUsedGroupKeys({ plans: phase.plans, products });
-	const allPlansAdded = activeProducts.every((p) =>
-		customerLevelKeys.has(getProductGroupKey({ productId: p.id, products })),
-	);
 	const phaseTimingError = getPhaseTimingError({
 		phases: formValues.phases,
 		phaseIndex,
@@ -178,22 +168,7 @@ export function SchedulePhaseCard({
 						<PlusIcon size={9} weight="bold" />
 					</button>
 				)}
-				<div className="space-y-1.5">
-					{phase.plans.map((p, planIndex) => (
-						<SchedulePlanRow
-							key={`plan-${phaseIndex}-${planIndex}-${p.productId ?? "empty"}`}
-							phaseIndex={phaseIndex}
-							planIndex={planIndex}
-						/>
-					))}
-					<InlineAction
-						icon={<PlusIcon size={11} />}
-						onClick={() => handleAddPlan({ phaseIndex })}
-						disabled={allPlansAdded || isLocked}
-					>
-						Add plan
-					</InlineAction>
-				</div>
+				<CustomerStatePhasePlans phaseIndex={phaseIndex} />
 			</div>
 		</div>
 	);

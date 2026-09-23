@@ -1,10 +1,10 @@
-import { AppEnv, type ProductV2 } from "@autumn/shared";
 import { describe, expect, test } from "bun:test";
-import { EMPTY_SCHEDULE_PLAN } from "@/components/forms/create-schedule/createScheduleFormSchema";
+import { AppEnv, type ProductV2 } from "@autumn/shared";
+import { EMPTY_CUSTOMER_STATE_PLAN } from "@/components/forms/customer-state/customerStateSchema";
 import {
 	getUnscheduledUsedGroupKeys,
 	getUsedGroupKeys,
-} from "@/components/forms/create-schedule/scheduleUtils";
+} from "@/components/forms/customer-state/customerStateUtils";
 
 function makeProduct({
 	id,
@@ -40,7 +40,7 @@ const plan = ({
 }: {
 	productId: string;
 	entityId?: string | null;
-}) => ({ ...EMPTY_SCHEDULE_PLAN, productId, entityId });
+}) => ({ ...EMPTY_CUSTOMER_STATE_PLAN, productId, entityId });
 
 describe("getUsedGroupKeys", () => {
 	test("an entity-scoped plan does not block the same group at customer level", () => {
@@ -67,8 +67,12 @@ describe("getUsedGroupKeys", () => {
 			plan({ productId: "enterprise", entityId: "ent_1" }),
 		];
 
-		expect(getUsedGroupKeys({ plans, products, entityId: "ent_1" }).size).toBe(1);
-		expect(getUsedGroupKeys({ plans, products, entityId: "ent_2" }).size).toBe(0);
+		expect(getUsedGroupKeys({ plans, products, entityId: "ent_1" }).size).toBe(
+			1,
+		);
+		expect(getUsedGroupKeys({ plans, products, entityId: "ent_2" }).size).toBe(
+			0,
+		);
 	});
 
 	test("excludes the plan being edited", () => {
