@@ -61,6 +61,7 @@ const calculateDateRange = async ({
 					customer: params.customer,
 					db,
 					intervalType: intervalType as "1bc" | "3bc" | "last_cycle",
+					featureIds: params.event_names,
 					ctx,
 				})) as BillingCycleResult | null)
 			: null;
