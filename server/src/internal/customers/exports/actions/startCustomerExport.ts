@@ -10,7 +10,6 @@ import {
 import { getCustomerExportsS3Config } from "@/external/aws/s3/customerExportsS3Config.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getCustomerExportTriggerOptions } from "@/trigger/exports/customerExportQueue.js";
 import { customerExportTask } from "@/trigger/exports/customerExportTask.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
 import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTasksInline.js";
@@ -49,9 +48,6 @@ const triggerCustomerExportWithRetry = async ({
 			customerExportTask.trigger(payload, {
 				idempotencyKey: `customer-export:${exportId}`,
 				idempotencyKeyTTL: "7d",
-				...getCustomerExportTriggerOptions({
-					isDev: process.env.NODE_ENV === "development",
-				}),
 			}),
 	});
 
