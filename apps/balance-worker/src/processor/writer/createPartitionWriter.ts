@@ -1,3 +1,4 @@
+import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { adopt as adoptState } from "./actions/adopt.js";
 import {
 	decide as decideMutation,
@@ -31,7 +32,9 @@ export function createPartitionWriter({
 	function decide<Reply>(
 		submission: MutationSubmission<Reply>,
 	): DecidedMutation<Reply> {
-		return decideMutation({ scope, submission });
+		return timeSync({ label: "writer.decide" }, () =>
+			decideMutation({ scope, submission }),
+		);
 	}
 
 	function waitForPendingCommits({

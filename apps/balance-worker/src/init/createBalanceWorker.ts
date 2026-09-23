@@ -1,5 +1,7 @@
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
+import { createEventLoopStallMonitor } from "../logging/eventLoopStalls/createEventLoopStallMonitor.js";
+import { syncSections } from "../logging/eventLoopStalls/syncSections.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
 import { startWorker } from "./lifecycle/startWorker.js";
@@ -133,10 +135,30 @@ export async function createBalanceWorker({
 				endpoint: address.endpoint,
 			},
 		});
+		const reportsHealth = process.env.NODE_ENV === "production";
+		const stallMonitor = createEventLoopStallMonitor({
+			ctx: { logger: dependencies.logger, recorder: syncSections },
+			config: {
+				deployment: env.BALANCE_WORKER_DEPLOYMENT,
+				intervalMs: 10,
+				stallThresholdMs: 20,
+				logStallMs: 50,
+				reportEveryMs: 10_000,
+			},
+		});
+		function startTelemetry(): void {
+			healthReporter.start();
+			if (reportsHealth) stallMonitor.start();
+		}
+		function stopTelemetry(): void {
+			stallMonitor.stop();
+			healthReporter.stop();
+		}
 		const ctx: WorkerLifecycleContext = {
 			partitions,
 			edgeConfigs: resources.edgeConfigs,
-			healthReporter,
+			// The stall monitor rides the health reporter's lifecycle: both are telemetry the worker never waits on.
+			healthReporter: { start: startTelemetry, stop: stopTelemetry },
 			catalogInvalidations: resources.catalogInvalidations,
 			listen,
 			settleResources: resources.settleResources,

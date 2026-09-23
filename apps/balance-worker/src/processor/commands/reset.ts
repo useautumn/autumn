@@ -1,5 +1,6 @@
 import { parseResetCommand, type ResetCommand } from "@autumn/balance-engine";
 import type { ResetReply } from "@autumn/balance-worker-client/protocol";
+import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { decideReset } from "../actions/ensureSubjectCurrent/advanceResets.js";
 import { readResetInputs } from "../actions/ensureSubjectCurrent/readResetInputs.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
@@ -22,7 +23,10 @@ export async function reset({
 	const decided = ctx.writer.decide<ResetReply>({
 		command: anchored,
 		durability,
-		mutate: ({ state }) => decideReset({ scope, state, command: anchored }),
+		mutate: ({ state }) =>
+			timeSync({ label: "reset.decide" }, () =>
+				decideReset({ scope, state, command: anchored }),
+			),
 	});
 	const committed = await decided.waitForCommit();
 	if (!("mutation" in committed)) {

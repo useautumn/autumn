@@ -1,5 +1,6 @@
 import { UnsupportedCommandError } from "@autumn/balance-engine";
 import type { Context, MiddlewareHandler, Next } from "hono";
+import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import type {
 	BalanceWorkerHttpContext,
 	BalanceWorkerHttpEnv,
@@ -22,7 +23,9 @@ export function requestLoggingMiddleware({
 		const startedAt = performance.now();
 		await next();
 		try {
-			logRequestResult({ ctx, context, startedAt });
+			timeSync({ label: "request.log" }, () =>
+				logRequestResult({ ctx, context, startedAt }),
+			);
 		} catch (cause) {
 			// A logging failure cannot turn a committed request into an HTTP error.
 			console.error("Balance worker request logging failed", cause);

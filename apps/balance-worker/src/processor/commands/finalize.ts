@@ -8,6 +8,7 @@ import {
 	type SubjectState,
 } from "@autumn/balance-engine";
 import type { FinalizeReply } from "@autumn/balance-worker-client/protocol";
+import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
@@ -33,13 +34,15 @@ export async function finalize({
 	const decided = ctx.writer.decide<never>({
 		command: parsed,
 		mutate: ({ state }) =>
-			decideFinalize({
-				scope,
-				state,
-				customerKey,
-				command: parsed,
-				decidedAgainst,
-			}),
+			timeSync({ label: "finalize.decide" }, () =>
+				decideFinalize({
+					scope,
+					state,
+					customerKey,
+					command: parsed,
+					decidedAgainst,
+				}),
+			),
 	});
 
 	const { mutation, state } = await decided.waitForCommit();

@@ -7,6 +7,7 @@ import {
 	type SubjectState,
 } from "@autumn/balance-engine";
 import type { ApplyBillingPlanReply } from "@autumn/balance-worker-client/protocol";
+import { timeSync } from "../../../../logging/eventLoopStalls/syncSections.js";
 import { dropStaleSubject } from "../../../actions/dropStaleSubject.js";
 import { PartitionProcessorStateNotFoundError } from "../../../common/processorErrors.js";
 import { SubjectStaleError } from "../../../subject/subjectErrors.js";
@@ -82,7 +83,10 @@ export const decidePlan = async ({
 		return scope.ctx.writer.decide<ApplyBillingPlanReply>({
 			command,
 			durability: "store",
-			mutate: ({ state }) => decideApplyBillingPlan({ scope, state, command }),
+			mutate: ({ state }) =>
+				timeSync({ label: "applyBillingPlan.decide" }, () =>
+					decideApplyBillingPlan({ scope, state, command }),
+				),
 		});
 	} catch (cause) {
 		if (!(cause instanceof StaleMutationError)) throw cause;

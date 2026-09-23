@@ -1,4 +1,5 @@
 import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
+import { timeSync } from "../../../../logging/eventLoopStalls/syncSections.js";
 import type { InFlightLoad } from "../../inFlightLoads/types/inFlightLoad.js";
 import { SubjectLoadOvertakenError } from "../../subjectErrors.js";
 import type { SubjectScope } from "../../types/subject.js";
@@ -23,7 +24,9 @@ export const loadSubjectState = async ({
 		const baseline = await readSubjectBaseline({ scope, identity, occurredAt });
 		// Checked with no await before the keep, so overtaken rows never become resident.
 		if (!load.overtaken)
-			return keepSubjectBaseline({ scope, identity, baseline, occurredAt });
+			return timeSync({ label: "subject.hydrate" }, () =>
+				keepSubjectBaseline({ scope, identity, baseline, occurredAt }),
+			);
 		load.overtaken = false;
 	}
 	throw new SubjectLoadOvertakenError({ identity });

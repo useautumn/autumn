@@ -8,6 +8,7 @@ import {
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
+import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
@@ -34,13 +35,15 @@ export async function track({
 	const decided = ctx.writer.decide<never>({
 		command: parsed,
 		mutate: ({ state }) =>
-			decideTrack({
-				scope,
-				state,
-				customerKey,
-				command: parsed,
-				decidedAgainst,
-			}),
+			timeSync({ label: "track.decide" }, () =>
+				decideTrack({
+					scope,
+					state,
+					customerKey,
+					command: parsed,
+					decidedAgainst,
+				}),
+			),
 	});
 
 	// Asynchronous: Kafka commit, then SQLite apply.

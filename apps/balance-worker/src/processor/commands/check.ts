@@ -4,6 +4,7 @@ import {
 	parseCheckCommand,
 } from "@autumn/balance-engine";
 import type { CheckReply } from "@autumn/balance-worker-client/protocol";
+import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { readCurrentSubject } from "../actions/readCurrentSubject.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
@@ -20,13 +21,12 @@ export async function check({
 		scope,
 		command: parsed,
 	});
-	const fullSubject = scope.ctx.subjectHydrator.readSubject({
-		state,
-		identity: parsed.identity,
+	const result = timeSync({ label: "check.compute" }, () => {
+		const fullSubject = scope.ctx.subjectHydrator.readSubject({
+			state,
+			identity: parsed.identity,
+		});
+		return computeCheck({ fullSubject, command: parsed });
 	});
-	return {
-		result: computeCheck({ fullSubject, command: parsed }),
-		state,
-		catalog,
-	};
+	return { result, state, catalog };
 }
