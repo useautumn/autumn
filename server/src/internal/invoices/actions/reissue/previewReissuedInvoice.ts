@@ -7,14 +7,13 @@ import type {
 import { secondsToMs, stripeToAtmnAmount } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import type { ExpandedStripeInvoiceLineItem } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems";
 import { applyInvoiceCredits } from "@/internal/billing/v2/utils/billingPlan/preview/invoiceCredits/applyInvoiceCredits";
 
 const lineAmountAfterDiscounts = ({
 	line,
 	currency,
 }: {
-	line: ExpandedStripeInvoiceLineItem;
+	line: Stripe.InvoiceLineItem;
 	currency: string;
 }) =>
 	stripeToAtmnAmount({
@@ -69,7 +68,7 @@ export const previewReissuedInvoice = ({
 	settled = false,
 }: {
 	stripeInvoice: Stripe.Invoice;
-	lines: ExpandedStripeInvoiceLineItem[];
+	lines: Stripe.InvoiceLineItem[];
 	/** Autumn's rows for the original, which carry the plan and feature. */
 	storedLines: DbInvoiceLineItem[];
 	credits?: PreviewInvoiceCredits;
