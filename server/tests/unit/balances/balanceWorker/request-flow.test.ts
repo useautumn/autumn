@@ -312,6 +312,12 @@ test.concurrent(
 			outcome: "not_submitted",
 			message: "Partition is at capacity",
 		});
+		const tooLarge = new BalanceWorkerClientError({
+			code: "WORKER_ERROR",
+			workerCode: "RECORD_TOO_LARGE",
+			outcome: "not_submitted",
+			message: "Record exceeds the batch limit",
+		});
 		const failure = new Error("Unknown committed result");
 		for (const cause of [
 			missing,
@@ -319,6 +325,7 @@ test.concurrent(
 			refused,
 			notReady,
 			overloaded,
+			tooLarge,
 			failure,
 		]) {
 			const client: BalanceWorkerClient = {
@@ -419,6 +426,11 @@ test.concurrent(
 					await expect(operation()).rejects.toMatchObject({
 						code: "balance_worker_overloaded",
 						statusCode: 429,
+					});
+				else if (cause === tooLarge)
+					await expect(operation()).rejects.toMatchObject({
+						code: "balance_worker_record_too_large",
+						statusCode: 422,
 					});
 				else await expect(operation()).rejects.toBe(cause);
 			}

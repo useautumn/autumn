@@ -24,6 +24,7 @@ import { SubjectStaleError } from "../../../src/processor/subject/subjectErrors.
 import type { PartitionProcessor } from "../../../src/processor/types/partitionProcessor.js";
 import {
 	PartitionWriterCapacityError,
+	PartitionWriterRecordTooLargeError,
 	PartitionWriterStateNotFoundError,
 } from "../../../src/processor/writer/writerErrors.js";
 import {
@@ -530,6 +531,14 @@ describe("Balance worker HTTP", () => {
 			cause: new PartitionWriterCapacityError(),
 			status: 429,
 			code: "OVERLOADED",
+		},
+		{
+			cause: new PartitionWriterRecordTooLargeError({
+				bytes: 2_000_000,
+				maxBatchBytes: 800_000,
+			}),
+			status: 422,
+			code: "RECORD_TOO_LARGE",
 		},
 		{
 			cause: new SubjectStaleError({

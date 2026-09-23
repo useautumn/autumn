@@ -30,6 +30,7 @@ import { SubjectNotFoundError } from "../../../../src/processor/subject/subjectE
 import type { PartitionProcessorScope } from "../../../../src/processor/types/partitionProcessor.js";
 import type { ReceiptPolicy } from "../../../../src/processor/types/receiptPolicy.js";
 import { createPartitionWriter as createPartitionWriterCore } from "../../../../src/processor/writer/createPartitionWriter.js";
+import { RECORD_OVERHEAD_BYTES } from "../../../../src/processor/writer/pendingMutations.js";
 import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type {
 	MutateParams,
@@ -45,6 +46,7 @@ import {
 	MutationBatchNotCommittedError,
 	PartitionWriterCapacityError,
 	PartitionWriterCommandConflictError,
+	PartitionWriterRecordTooLargeError,
 	PartitionWriterRecoveryRequiredError,
 } from "../../../../src/processor/writer/writerErrors.js";
 import { openStateStore } from "../../../../src/state/openStateStore.js";
@@ -230,6 +232,9 @@ const closeFixture = ({
 	store.close();
 	rmSync(directory, { recursive: true, force: true });
 };
+
+const encodedRecordBytes = (record: MeteringRecord): number =>
+	Buffer.byteLength(JSON.stringify(record)) + RECORD_OVERHEAD_BYTES;
 
 const batchKeys = (batch: MeteringRecord[] | undefined) =>
 	batch?.map((mutation) => mutation.id);
@@ -1321,6 +1326,93 @@ describe("partition writer", () => {
 			]);
 			expect(duplicateDecision).toEqual(firstDecision);
 			expect(appender.batches[0]).toHaveLength(1);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	/** Kafka refuses a batch over the topic's max.message.bytes, and on staging
+	 *  that sent a partition into recovery and took its worker down. A full batch
+	 *  of large records must split instead. */
+	test("splits a batch by its encoded size, not only its record count", async () => {
+		const measured = createFixture({
+			identities: [firstIdentity, secondIdentity],
+		});
+		const fixture = createFixture({
+			identities: [firstIdentity, secondIdentity],
+		});
+		try {
+			const commands = ["cmd_a1", "cmd_b1", "cmd_a2", "cmd_b2"].map(
+				(commandId) =>
+					createCommand({
+						commandId,
+						identity: commandId.startsWith("cmd_a")
+							? firstIdentity
+							: secondIdentity,
+					}),
+			);
+			const probe = new RecordingCommittedAppender();
+			const probeWriter = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: measured.store,
+				appender: probe,
+				limits: defaultLimits,
+			});
+			await Promise.all(
+				commands.map((command) => probeWriter.submitTrack({ command })),
+			);
+			const sizes = probe.batches.flat().map(encodedRecordBytes);
+			expect(sizes).toHaveLength(4);
+
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: {
+					...defaultLimits,
+					maxBatchBytes: Math.max(...sizes) * 2 + 1,
+				},
+			});
+			await Promise.all(
+				commands.map((command) => writer.submitTrack({ command })),
+			);
+
+			expect(appender.batches.map((batch) => batch.length)).toEqual([2, 2]);
+			expect(appender.batches.flat().map((record) => record.id)).toEqual(
+				probe.batches.flat().map((record) => record.id),
+			);
+		} finally {
+			closeFixture(measured);
+			closeFixture(fixture);
+		}
+	});
+
+	test("rejects a record too large for any batch without disturbing the partition", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: { ...defaultLimits, maxBatchBytes: 64 },
+			});
+
+			for (const commandId of ["cmd_1", "cmd_2"]) {
+				await expect(
+					writer.submitTrack({ command: createCommand({ commandId }) }),
+				).rejects.toBeInstanceOf(PartitionWriterRecordTooLargeError);
+			}
+			expect(appender.batches).toEqual([]);
+			expect(
+				fixture.store.readState({ identity: firstIdentity }),
+			).toMatchObject({
+				revision: createState({ identity: firstIdentity }).revision,
+			});
 		} finally {
 			closeFixture(fixture);
 		}

@@ -77,6 +77,7 @@ function validateWriterConfig(config: PartitionWriterConfig): void {
 		throw new RangeError(`Invalid Kafka partition: ${config.partition}`);
 	}
 	for (const [name, value] of Object.entries(config.limits)) {
+		if (value === undefined) continue;
 		if (!Number.isSafeInteger(value) || value <= 0) {
 			throw new RangeError(`${name} must be a positive safe integer`);
 		}

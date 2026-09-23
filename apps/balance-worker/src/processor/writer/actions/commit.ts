@@ -1,11 +1,12 @@
 import { isDeepStrictEqual } from "node:util";
-import { subjectStateToLogState } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import type {
 	DurableMutationApplyResult,
 	DurableMutationRecord,
 } from "../../../state/types/durableMutation.js";
 import {
+	loggedRecordOf,
+	maxBatchBytesOf,
 	rejectAllPending,
 	removePendingMutation,
 } from "../pendingMutations.js";
@@ -40,12 +41,12 @@ async function commitOutcomes({
 }: {
 	scope: PartitionWriterScope;
 }): Promise<void> {
-	const { state, config } = scope;
+	const { state } = scope;
 	if (state.draining || state.recoveryError) return;
 	state.draining = true;
 	try {
 		while (state.queue.length > 0 && !state.recoveryError) {
-			const batch = state.queue.splice(0, config.limits.maxBatchSize);
+			const batch = takeBatch({ scope });
 			const baseOffset = await appendBatch({ scope, batch });
 			if (baseOffset === null) return;
 			settleAppended({ scope, batch });
@@ -203,12 +204,28 @@ function enterRecovery({
 }
 
 // Only the log's copy carries `after`, and only the columns commands decide on; memory keeps the whole rows.
+/** Up to maxBatchSize records and maxBatchBytes, and never empty: enqueue already
+ *  refused any single record over the byte limit. */
+function takeBatch({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): PendingMutation[] {
+	const { state, config } = scope;
+	const maxBatchBytes = maxBatchBytesOf({ limits: config.limits });
+	let count = 0;
+	let bytes = 0;
+	for (const pending of state.queue) {
+		if (count >= config.limits.maxBatchSize) break;
+		if (count > 0 && bytes + pending.encodedBytes > maxBatchBytes) break;
+		bytes += pending.encodedBytes;
+		count++;
+	}
+	return state.queue.splice(0, count);
+}
+
 function mutationOf(pending: PendingMutation): MeteringRecord {
-	if (!pending.logsAfter) return pending.mutation;
-	return {
-		...pending.mutation,
-		after: { state: subjectStateToLogState({ state: pending.nextState }) },
-	};
+	return loggedRecordOf(pending);
 }
 
 function durableRecordsOf({

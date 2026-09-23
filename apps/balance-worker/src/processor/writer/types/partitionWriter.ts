@@ -66,6 +66,8 @@ export type PartitionWriterLimits = {
 	maxBatchSize: number;
 	maxPendingCommands: number;
 	maxPendingCommandsPerCustomer: number;
+	/** Encoded bytes one Kafka batch may carry; defaults to DEFAULT_MAX_BATCH_BYTES. */
+	maxBatchBytes?: number;
 };
 
 export type PartitionWriterConfig = {
@@ -97,6 +99,8 @@ export type PendingMutation = {
 	/** Stamps nextState on the log's copy, never the store's. */
 	logsAfter?: boolean;
 	settlement: PendingSettlement;
+	/** Estimated bytes of this mutation's log record, measured once when queued. */
+	encodedBytes: number;
 	/** What `waitForPendingCommits()` snapshots for this customer. */
 	committed: Promise<CommittedMutation>;
 };

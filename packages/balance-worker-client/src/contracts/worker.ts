@@ -10,6 +10,7 @@ export type WorkerErrorCode =
 	| "NOT_OWNER"
 	| "NOT_READY"
 	| "OVERLOADED"
+	| "RECORD_TOO_LARGE"
 	| "NOT_INITIALIZED"
 	| "STALE_SUBJECT"
 	| "CUSTOMER_NOT_FOUND"
@@ -110,6 +111,7 @@ export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
 		case "LOCK_NOT_FOUND":
 			return 404;
 		case "CATALOG_NOT_FOUND":
+		case "RECORD_TOO_LARGE":
 			return 422;
 		case "NOT_READY":
 			return 503;

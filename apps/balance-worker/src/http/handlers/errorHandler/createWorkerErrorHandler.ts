@@ -23,6 +23,7 @@ import {
 	PartitionWriterCapacityError,
 	PartitionWriterCommandConflictError,
 	PartitionWriterDuplicateCommandError,
+	PartitionWriterRecordTooLargeError,
 	PartitionWriterStateNotFoundError,
 } from "../../../processor/writer/writerErrors.js";
 import { OwnedPartitionNotReadyError } from "../../../runtime/runtimeErrors.js";
@@ -150,6 +151,13 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 			error = {
 				code: "NOT_READY",
 				message: "Partition cannot accept this request",
+			};
+		} else if (cause instanceof PartitionWriterRecordTooLargeError) {
+			status = 422;
+			error = {
+				code: "RECORD_TOO_LARGE",
+				message:
+					"This customer's state is too large to write in one record; nothing was applied",
 			};
 		} else if (cause instanceof PartitionWriterCapacityError) {
 			status = 429;

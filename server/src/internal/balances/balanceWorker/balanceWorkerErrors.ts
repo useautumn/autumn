@@ -145,6 +145,17 @@ export function rethrowBalanceWorkerError({
 	}
 	if (
 		cause instanceof BalanceWorkerClientError &&
+		cause.workerCode === "RECORD_TOO_LARGE"
+	) {
+		throw new RecaseError({
+			code: "balance_worker_record_too_large",
+			statusCode: 422,
+			message:
+				"This customer's balance state is too large to record; nothing was applied",
+		});
+	}
+	if (
+		cause instanceof BalanceWorkerClientError &&
 		cause.workerCode === "OVERLOADED"
 	) {
 		throw new RecaseError({
