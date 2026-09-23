@@ -21,10 +21,7 @@
  */
 
 import type { Logger } from "@server/external/logtail/logtailUtils.js";
-import {
-	MAIN_STRIPE_EVENT_TYPES,
-	SYNC_STRIPE_EVENT_TYPES,
-} from "@server/external/stripe/common/stripeConstants.js";
+import { OAUTH_CONNECT_STRIPE_EVENT_TYPES } from "@server/external/stripe/common/stripeConstants.js";
 import pLimit from "p-limit";
 import {
 	STRIPE_SUBACCOUNT_CONCURRENCY,
@@ -76,8 +73,8 @@ const orchestratorLogger: Logger = {
 	child: () => orchestratorLogger,
 };
 
-/** All Stripe events the legacy webhook + sync middleware chain needs (plan §6a). */
-const WEBHOOK_EVENTS = [...MAIN_STRIPE_EVENT_TYPES, ...SYNC_STRIPE_EVENT_TYPES];
+/** Connect events the webhook chain needs, including OAuth revocations (plan §6a). */
+const WEBHOOK_EVENTS = OAUTH_CONNECT_STRIPE_EVENT_TYPES;
 
 /**
  * `accounts.create` is a PLATFORM-account write — creating N sub-accounts at once

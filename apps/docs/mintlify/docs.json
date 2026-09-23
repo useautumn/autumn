@@ -346,6 +346,8 @@
 							"api-reference/platform/overview",
 							"api-reference/platform/create-organization",
 							"api-reference/platform/oauth-url",
+							"api-reference/platform/getStripeConnection",
+							"api-reference/platform/disconnectStripe",
 							"api-reference/platform/update-stripe",
 							"api-reference/platform/list-users",
 							"api-reference/platform/list-orgs"

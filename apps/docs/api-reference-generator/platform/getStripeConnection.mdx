@@ -5,7 +5,7 @@ openapi: "openapi POST /v1/platform.get_stripe_connection"
 
 Read a tenant's Stripe OAuth connection before showing a **Connect Stripe** or **Disconnect Stripe** action in your application.
 
-Authenticate with your **master organization's secret key**, with `platform:read` scope. Pass the tenant's public `organization_slug` and an explicit `env`: `test` or `live`. You can only inspect organizations created by your master organization. The `env` field alone selects the connection: a test-mode or live-mode master key can manage either environment's connection.
+Authenticate with your **master organization's secret key**, with `platform:read` scope. Pass the tenant's public `organization_slug` and an explicit `env`: `test` or `live`. You can only inspect organizations created by your master organization. The `env` field alone selects the connection: a test-mode or live-mode master key can read either environment's connection.
 
 ## Interpreting the response
 

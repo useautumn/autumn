@@ -90,30 +90,28 @@ export const computeClearedStripeConnect = ({
 	const current = org[envFields(env).connect];
 	const newConnect: StripeConnectConfig = structuredClone(current) || {};
 	delete newConnect.account_id;
+	delete newConnect.connected_at;
 	return newConnect;
 };
 
-const readClearedStripeConnect = async ({
+/** Rereads the Stripe fields under a row lock so writes apply to current config, not a cached org. */
+const lockOrgStripeFields = async ({
 	db,
-	orgId,
-	env,
+	org,
 }: {
 	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
-}): Promise<StripeConnectConfig> => {
-	const field = envFields(env).connect;
+	org: Organization;
+}): Promise<Organization> => {
 	const [current] = await db
-		.select({ connect: organizations[field] })
+		.select({
+			stripe_config: organizations.stripe_config,
+			test_stripe_connect: organizations.test_stripe_connect,
+			live_stripe_connect: organizations.live_stripe_connect,
+		})
 		.from(organizations)
-		.where(eq(organizations.id, orgId))
+		.where(eq(organizations.id, org.id))
 		.for("update");
-	const {
-		account_id: _accountId,
-		connected_at: _connectedAt,
-		...connect
-	} = current?.connect ?? {};
-	return connect;
+	return { ...org, ...current };
 };
 
 const deleteDirectWebhook = async ({
@@ -199,20 +197,17 @@ const disconnectSecretKey = async ({
 	org: Organization;
 	env: AppEnv;
 	logger: Logger;
-}): Promise<Partial<Organization>> => {
+}) => {
 	try {
 		await deleteDirectWebhook({ org, env });
 	} catch (error) {
 		logger.error(`Failed to delete direct webhook for ${org.slug}`, { error });
 	}
-	return { stripe_config: computeClearedStripeConfig({ org, env }) };
 };
 
 /**
- * Disconnects OAuth: clears the connect account and deauthorizes it. If a secret
- * key is kept whose direct webhook was skipped under OAuth (and none is already
- * stored — that would mean a live webhook predates OAuth), registers one first so
- * the org keeps receiving events.
+ * Before OAuth is removed, registers a direct webhook for a kept secret key that has none,
+ * so the org keeps receiving events. Returns the encrypted secret to store, if any.
  */
 const disconnectOauth = async ({
 	org,
@@ -224,12 +219,8 @@ const disconnectOauth = async ({
 	env: AppEnv;
 	logger: Logger;
 	secretKeyKept: boolean;
-}): Promise<Partial<Organization>> => {
+}): Promise<string | undefined> => {
 	const fields = envFields(env);
-	const updates: Partial<Organization> = {
-		[fields.connect]: computeClearedStripeConnect({ org, env }),
-	};
-
 	const needsDirectWebhook =
 		secretKeyKept &&
 		!org.stripe_config?.[fields.webhookSecret] &&
@@ -245,13 +236,8 @@ const disconnectOauth = async ({
 				statusCode: 502,
 			});
 		}
-		updates.stripe_config = {
-			...(org.stripe_config || {}),
-			[fields.webhookSecret]: webhookSecret,
-		};
+		return webhookSecret;
 	}
-
-	return updates;
 };
 
 export const handleDeleteStripe = createRoute({
@@ -276,46 +262,50 @@ export const handleDeleteStripe = createRoute({
 				channel,
 			});
 
-		// 2. Disconnect each channel, collecting the org updates it produces
-		const updates: Partial<Organization> = {};
-		if (clearSecretKey) {
-			Object.assign(updates, await disconnectSecretKey({ org, env, logger }));
-		}
-		if (clearOauth) {
-			Object.assign(
-				updates,
-				await disconnectOauth({
+		// 2. Run each channel's Stripe side effects before persisting
+		if (clearSecretKey) await disconnectSecretKey({ org, env, logger });
+		const directWebhookSecret = clearOauth
+			? await disconnectOauth({
 					org,
 					env,
 					logger,
 					secretKeyKept: !clearSecretKey,
-				}),
-			);
-		}
+				})
+			: undefined;
 
-		// 3. Persist (nothing to clear if neither channel was connected for this env)
+		// 3. Persist key-level changes onto the locked row (nothing to do if no channel was connected)
 		const oauthAccountId = clearOauth
 			? orgToAccountId({ org, env, noDefaultAccount: true })
 			: undefined;
-		if (Object.keys(updates).length > 0) {
+		if (clearSecretKey || clearOauth) {
 			await db.transaction(async (tx) => {
 				const txDb = tx as unknown as DrizzleCli;
 				// Deauthorizing under the account lock keeps the deauthorization webhook from racing this write.
 				if (oauthAccountId)
 					await lockStripeOAuthAccount({ tx, env, accountId: oauthAccountId });
+				const current = await lockOrgStripeFields({ db: txDb, org });
+				const fields = envFields(env);
+				const stripeConfig = clearSecretKey
+					? computeClearedStripeConfig({ org: current, env })
+					: directWebhookSecret
+						? { ...(current.stripe_config || {}) }
+						: undefined;
+				if (stripeConfig && directWebhookSecret)
+					stripeConfig[fields.webhookSecret] = directWebhookSecret;
 				await OrgService.update({
 					db: txDb,
 					orgId: org.id,
-					updates: oauthAccountId
-						? {
-								...updates,
-								[envFields(env).connect]: await readClearedStripeConnect({
-									db: txDb,
-									orgId: org.id,
-									env,
-								}),
-							}
-						: updates,
+					updates: {
+						...(stripeConfig ? { stripe_config: stripeConfig } : {}),
+						...(clearOauth
+							? {
+									[fields.connect]: computeClearedStripeConnect({
+										org: current,
+										env,
+									}),
+								}
+							: {}),
+					},
 				});
 				if (clearCatalogMappings) {
 					await clearStripeCatalogMappings({
