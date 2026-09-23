@@ -20,6 +20,8 @@
 		"start": "bun $BUN_PROF_FLAGS src/index.ts",
 		"workers": "bun $BUN_PROF_FLAGS src/workers.ts",
 		"cron": "bun src/cron.ts",
+		"balance-workers": "bun --cwd=../apps/balance-worker --config=./bunfig.toml scripts/runWithCpuProfile.ts",
+		"herald": "bun --cwd=../apps/herald --config=./bunfig.toml src/main.ts",
 		"leaf": "bun ../apps/leaf/src/index.ts",
 		"check": "bun src/check.ts",
 		"t": "cd ../ && bun t $* && cd ./server",
