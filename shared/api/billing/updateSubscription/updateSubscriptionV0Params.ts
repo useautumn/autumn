@@ -1,6 +1,7 @@
 import { CusProductStatus } from "@models/cusProductModels/cusProductEnums";
 import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
+import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
@@ -10,7 +11,11 @@ import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 import { SubscriptionParamsSchema } from "../common/subscriptionParams";
-import { UpdateSubscriptionDiscountsSchema } from "./updateSubscriptionDiscount";
+import {
+	ADDS_AND_REMOVES_SAME_REWARD_MESSAGE,
+	addsAndRemovesSameReward,
+	RemoveDiscountsSchema,
+} from "./removeDiscount";
 
 export const ExtUpdateSubscriptionV0ParamsSchema =
 	BillingParamsBaseV0Schema.extend({
@@ -40,7 +45,8 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		no_billing_changes: z.boolean().optional(),
 		carry_over_usages: CarryOverUsagesSchema,
 		license_quantities: z.array(LicenseQuantityParamsSchema).optional(),
-		discounts: UpdateSubscriptionDiscountsSchema.optional(),
+		discounts: z.array(AttachDiscountSchema).optional(),
+		remove_discounts: RemoveDiscountsSchema.optional(),
 		recalculate_balances: z
 			.object({
 				enabled: z.boolean(),
@@ -60,6 +66,9 @@ export const UpdateSubscriptionV0ParamsSchema =
 		customer_product_id: z.string().optional(),
 		redirect_mode: RedirectModeSchema.optional(),
 	})
+		.refine((data) => !addsAndRemovesSameReward(data), {
+			message: ADDS_AND_REMOVES_SAME_REWARD_MESSAGE,
+		})
 
 		.check((ctx) => {
 			if (ctx.value.options && ctx.value.options.length > 0) {

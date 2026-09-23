@@ -191,7 +191,7 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 				params: {
 					...baseParams,
 					customize: { upsert_licenses: [] },
-					discounts: [{ action: "remove", reward_id: "launch_30" }],
+					remove_discounts: [{ reward_id: "launch_30" }],
 				},
 				checkoutMode: null,
 				customerProduct,

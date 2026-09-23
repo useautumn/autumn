@@ -39,7 +39,7 @@ export * from "./sync/syncProposalsV2";
 
 // Update Subscription
 export * from "./updateSubscription/previewUpdateSubscriptionResponse";
-export * from "./updateSubscription/updateSubscriptionDiscount";
+export * from "./updateSubscription/removeDiscount";
 export * from "./updateSubscription/updateSubscriptionV0Params";
 export * from "./updateSubscription/updateSubscriptionV1Params";
 

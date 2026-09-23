@@ -1,12 +1,12 @@
 /**
- * Edge cases for `{ action: "remove", reward_id }` on `billing.update`.
+ * Edge cases for `remove_discounts: [{ reward_id }]` on `billing.update`.
  *
  * Contract:
  *   4. Removing a coupon already removed in Stripe is a no-op; the rest of the update applies.
  *   5. Preview reflects the removal: the next cycle is billed at full price.
  *   6. With a scheduled downgrade, the removal survives the phase transition.
  *
- * Red (before):  `action` is stripped, so removals are treated as additions.
+ * Red (before):  `remove_discounts` is stripped, so nothing is removed.
  * Green (after): removals are resolved against the live subscription and schedule.
  */
 
@@ -84,7 +84,7 @@ test.concurrent(
 			feature_quantities: [
 				{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
 			],
-			discounts: [{ action: "remove", reward_id: launch.id }],
+			remove_discounts: [{ reward_id: launch.id }],
 		});
 
 		await expectSubscriptionDiscountsCorrect({ customerId, couponIds: [] });
@@ -129,7 +129,7 @@ test.concurrent(
 			await autumnV2_4.billing.previewUpdate<UpdateSubscriptionV1ParamsInput>({
 				customer_id: customerId,
 				plan_id: pro.id,
-				discounts: [{ action: "remove", reward_id: launch.id }],
+				remove_discounts: [{ reward_id: launch.id }],
 			});
 		const { total, next_cycle } = preview as PreviewUpdateSubscriptionResponse;
 
@@ -189,7 +189,7 @@ test.concurrent(
 		await autumnV2_4.billing.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: premium.id,
-			discounts: [{ action: "remove", reward_id: launch.id }],
+			remove_discounts: [{ reward_id: launch.id }],
 		});
 		await expectSubscriptionDiscountsCorrect({ customerId, couponIds: [] });
 

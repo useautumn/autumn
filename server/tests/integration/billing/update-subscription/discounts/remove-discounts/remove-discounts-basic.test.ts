@@ -1,13 +1,13 @@
 /**
- * `billing.update` removes subscription discounts via `{ action: "remove", reward_id }`.
+ * `billing.update` removes subscription discounts via `remove_discounts: [{ reward_id }]`.
  *
  * Contract:
  *   1. Removing one of two discounts leaves the other on the Stripe subscription.
  *   2. Removal and addition in the same request produce the combined result.
  *   3. Removing the only discount clears it in Stripe, and renewal bills full price.
  *
- * Red (before):  `action` is stripped as an unknown key, so every entry is added.
- * Green (after): removals drop the matching coupon; additions still apply.
+ * Red (before):  `remove_discounts` is stripped as an unknown key, so nothing is removed.
+ * Green (after): removals drop the matching coupon; `discounts` additions still apply.
  */
 
 import { test } from "bun:test";
@@ -60,7 +60,7 @@ test.concurrent(
 		await autumnV2_4.billing.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: pro.id,
-			discounts: [{ action: "remove", reward_id: launch.id }],
+			remove_discounts: [{ reward_id: launch.id }],
 		});
 
 		await expectSubscriptionDiscountsCorrect({
@@ -103,10 +103,8 @@ test.concurrent(
 		await autumnV2_4.billing.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: pro.id,
-			discounts: [
-				{ action: "remove", reward_id: launch.id },
-				{ action: "add", reward_id: loyalty.id },
-			],
+			discounts: [{ reward_id: loyalty.id }],
+			remove_discounts: [{ reward_id: launch.id }],
 		});
 
 		await expectSubscriptionDiscountsCorrect({
@@ -148,7 +146,7 @@ test.concurrent(
 		await autumnV2_4.billing.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: pro.id,
-			discounts: [{ action: "remove", reward_id: launch.id }],
+			remove_discounts: [{ reward_id: launch.id }],
 		});
 
 		await expectSubscriptionDiscountsCorrect({ customerId, couponIds: [] });

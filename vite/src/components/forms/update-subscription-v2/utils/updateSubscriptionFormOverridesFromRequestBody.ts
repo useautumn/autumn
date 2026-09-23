@@ -1,4 +1,5 @@
 import type {
+	AttachDiscount,
 	BillingBehavior,
 	CancelAction,
 	CustomizePlanLicense,
@@ -14,16 +15,24 @@ import {
 	readEnum,
 	readNumber,
 	readQuantities,
+	readStampedArray,
 	requestRecord,
 	trialOverridesFrom,
 } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
 import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
-import { splitUpdateSubscriptionDiscounts } from "./updateSubscriptionDiscounts";
 
 const UPDATE_FIELD_READERS: FieldReaders<UpdateSubscriptionForm> = {
 	addLicenses: readArray<CustomizePlanLicense>("upsert_licenses"),
 	billingBehavior: readEnum<BillingBehavior>("billing_behavior"),
 	cancelAction: readEnum<CancelAction>("cancel_action"),
+	discounts: readStampedArray<AttachDiscount>("discounts", "seeded-discount"),
+	removedRewardIds: (request) =>
+		Array.isArray(request.remove_discounts)
+			? (request.remove_discounts as { reward_id?: unknown }[]).flatMap(
+					(discount) =>
+						typeof discount?.reward_id === "string" ? [discount.reward_id] : [],
+				)
+			: undefined,
 	items: readArray<ProductItem>("items"),
 	licenseQuantities: readQuantities("license_quantities", "license_plan_id"),
 	noBillingChanges: readBoolean("no_billing_changes"),
@@ -44,8 +53,6 @@ export const updateSubscriptionFormOverridesFromRequestBody = (
 	request: Record<string, unknown>,
 ): Partial<UpdateSubscriptionForm> => ({
 	...overridesFromRequest(request, UPDATE_FIELD_READERS),
-	...(Array.isArray(request.discounts) &&
-		splitUpdateSubscriptionDiscounts(request.discounts)),
 	...anchorOverridesFrom(request.billing_cycle_anchor),
 	...trialOverridesFrom(freeTrialFromRequest(request), { removable: true }),
 });

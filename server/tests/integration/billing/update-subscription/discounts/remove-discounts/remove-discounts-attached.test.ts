@@ -62,7 +62,7 @@ test.concurrent(
 			customer_id: customerId,
 			product_id: pro.id,
 			upsert_licenses: [],
-			discounts: [{ action: "remove", reward_id: launch.id }],
+			remove_discounts: [{ reward_id: launch.id }],
 		};
 
 		const preview = (await autumnV1.subscriptions.previewUpdate(

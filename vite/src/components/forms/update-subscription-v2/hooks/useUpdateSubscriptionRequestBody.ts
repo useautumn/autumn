@@ -276,10 +276,7 @@ export function useUpdateSubscriptionRequestBody({
 					: undefined,
 				carry_over_usages: resetUsage ? { enabled: false } : undefined,
 				no_billing_changes: noBillingChanges || undefined,
-				discounts: buildUpdateSubscriptionDiscounts({
-					discounts,
-					removedRewardIds,
-				}),
+				...buildUpdateSubscriptionDiscounts({ discounts, removedRewardIds }),
 				...(useInvoice
 					? {
 							invoice: true,

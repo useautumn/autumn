@@ -1,9 +1,4 @@
-import {
-	type AttachDiscount,
-	isRemoveSubscriptionDiscount,
-	type StripeDiscountWithCoupon,
-	type UpdateSubscriptionDiscount,
-} from "@autumn/shared";
+import type { AttachDiscount, StripeDiscountWithCoupon } from "@autumn/shared";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type {
@@ -91,20 +86,14 @@ export const fetchStripeDiscountsForBilling = async ({
 	stripeSubscription,
 	stripeCustomer,
 	paramDiscounts,
+	removedRewardIds = [],
 }: {
 	ctx: AutumnContext;
 	stripeSubscription?: StripeSubscriptionWithDiscounts;
 	stripeCustomer?: StripeCustomerWithDiscount;
-	paramDiscounts?: (AttachDiscount | UpdateSubscriptionDiscount)[];
+	paramDiscounts?: AttachDiscount[];
+	removedRewardIds?: string[];
 }): Promise<StripeDiscountWithCoupon[]> => {
-	const removedRewardIds = (paramDiscounts ?? [])
-		.filter(isRemoveSubscriptionDiscount)
-		.map((discount) => discount.reward_id);
-	const addedDiscounts = (paramDiscounts ?? []).filter(
-		(discount): discount is AttachDiscount =>
-			!isRemoveSubscriptionDiscount(discount),
-	);
-
 	const existingDiscounts = removeDiscountsByRewardIds({
 		discounts: await extractStripeDiscounts({
 			ctx,
@@ -116,7 +105,7 @@ export const fetchStripeDiscountsForBilling = async ({
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-	if (!addedDiscounts.length) {
+	if (!paramDiscounts?.length) {
 		return existingDiscounts;
 		// return filterDeletedCouponDiscounts({
 		// 	stripeCli,
@@ -126,7 +115,7 @@ export const fetchStripeDiscountsForBilling = async ({
 
 	const resolvedParamDiscounts = await resolveParamDiscounts({
 		stripeCli,
-		discounts: addedDiscounts,
+		discounts: paramDiscounts,
 	});
 
 	// Re-sent codes already on the subscription are deduped below, not re-redeemed
