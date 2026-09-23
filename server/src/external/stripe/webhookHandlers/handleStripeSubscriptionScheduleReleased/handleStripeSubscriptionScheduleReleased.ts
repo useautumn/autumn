@@ -1,5 +1,4 @@
 import {
-	type FullCusProduct,
 	filterCustomerProductsByStripeSubscriptionId,
 	isCustomerProductScheduled,
 } from "@autumn/shared";
@@ -7,6 +6,7 @@ import type Stripe from "stripe";
 import { isAutumnManagedSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
+import { carriesReleasedPhaseEnd } from "./carriesReleasedPhaseEnd.js";
 
 /** A released schedule hands its subscription back under released_subscription. */
 const scheduleSubscriptionId = (schedule: Stripe.SubscriptionSchedule) =>
@@ -14,12 +14,6 @@ const scheduleSubscriptionId = (schedule: Stripe.SubscriptionSchedule) =>
 	(typeof schedule.subscription === "string"
 		? schedule.subscription
 		: schedule.subscription?.id);
-
-/** A live plan whose end date came from a phase the released schedule no longer has. */
-const carriesReleasedPhaseEnd = (customerProduct: FullCusProduct) =>
-	!isCustomerProductScheduled(customerProduct) &&
-	!customerProduct.canceled &&
-	customerProduct.ended_at != null;
 
 /**
  * Releasing a schedule leaves the subscription running on its current items
@@ -48,21 +42,23 @@ export const handleStripeSubscriptionScheduleReleased = async ({
 	}
 	if (!fullCustomer) return;
 
-	const subscriptionId = scheduleSubscriptionId(schedule);
 	const linked = filterCustomerProductsByStripeSubscriptionId({
 		customerProducts: fullCustomer.customer_products,
-		stripeSubscriptionId: subscriptionId,
+		stripeSubscriptionId: scheduleSubscriptionId(schedule),
 	});
 	const scheduledOnRelease = fullCustomer.customer_products.filter(
 		(customerProduct) =>
 			isCustomerProductScheduled(customerProduct) &&
 			customerProduct.scheduled_ids?.includes(schedule.id),
 	);
+	const endingOnRelease = linked.filter((customerProduct) =>
+		carriesReleasedPhaseEnd({ customerProduct, schedule }),
+	);
 
 	for (const customerProduct of scheduledOnRelease) {
 		await CusProductService.delete({ ctx, cusProductId: customerProduct.id });
 	}
-	for (const customerProduct of linked.filter(carriesReleasedPhaseEnd)) {
+	for (const customerProduct of endingOnRelease) {
 		await CusProductService.update({
 			ctx,
 			cusProductId: customerProduct.id,
@@ -71,6 +67,6 @@ export const handleStripeSubscriptionScheduleReleased = async ({
 	}
 
 	logger.info(
-		`[schedule.released] ${schedule.id}: dropped ${scheduledOnRelease.length} scheduled plan(s), cleared ${linked.filter(carriesReleasedPhaseEnd).length} phase end(s)`,
+		`[schedule.released] ${schedule.id}: dropped ${scheduledOnRelease.length} scheduled plan(s), cleared ${endingOnRelease.length} phase end(s)`,
 	);
 };
