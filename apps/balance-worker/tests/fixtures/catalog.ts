@@ -1,4 +1,5 @@
 import type { CatalogRow } from "@autumn/balance-engine";
+import { type CatalogCache, createCatalogCache } from "@autumn/catalog-lru";
 import type {
 	CatalogRowsEnvelope,
 	SubjectRowsEnvelope,
@@ -9,8 +10,6 @@ import {
 	EntInterval,
 	FeatureType,
 } from "@autumn/shared";
-import { createCatalogCache } from "../../src/catalog/createCatalogCache.js";
-import type { CatalogCache } from "../../src/catalog/types/catalogCache.js";
 import type { WorkerDb } from "../../src/types/workerDb.js";
 
 /** Fabricates catalog rows for whatever ids are asked, following the fixture id scheme (feat_<featureId>, ent_<id>). */

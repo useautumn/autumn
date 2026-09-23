@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { MeteringIdentity } from "@autumn/balance-engine";
+import { createCatalogCache } from "@autumn/catalog-lru";
 import { createIdempotencyKeyStore } from "@autumn/dynamodb";
 import {
 	createKafkaClient,
@@ -9,7 +10,6 @@ import {
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import { Kafka } from "kafkajs";
-import { createCatalogCache } from "../catalog/createCatalogCache.js";
 import type { PartitionCheckpointSource } from "../checkpoint/partitionCheckpointSource.js";
 import {
 	createCommitter,
@@ -23,6 +23,7 @@ import {
 	createWorkerDb,
 	createWorkerPostgresClient,
 } from "../external/postgres/getWorkerDb.js";
+import { createCatalogInvalidationConsumer } from "../kafka/createCatalogInvalidationConsumer.js";
 import { createPartitionBootstrapper } from "../runtime/bootstrap/createPartitionBootstrapper.js";
 import { createProgressBootstrapper } from "../runtime/bootstrap/createProgressBootstrapper.js";
 import type {
@@ -122,6 +123,13 @@ export async function openWorkerResources({
 				},
 			},
 		});
+		const catalogInvalidations = createCatalogInvalidationConsumer({
+			ctx: { kafka, catalogCache, logger: dependencies.logger },
+			config: {
+				topic: env.BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC,
+				groupIdPrefix: `${env.BALANCE_WORKER_DEPLOYMENT}-worker-catalog`,
+			},
+		});
 		let bootstrapper: PartitionBootstrapper;
 		if ((config.stateBackend ?? STATE_BACKEND) === "sqlite") {
 			mkdirSync(dirname(env.BALANCE_WORKER_SQLITE_PATH), { recursive: true });
@@ -171,6 +179,7 @@ export async function openWorkerResources({
 				dynamo,
 				idempotencyKeys,
 				catalogCache,
+				catalogInvalidations,
 				partitionResolver,
 				bootstrapper,
 				checkpoints,

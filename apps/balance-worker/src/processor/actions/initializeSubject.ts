@@ -6,7 +6,7 @@ import {
 	type SubjectState,
 } from "@autumn/balance-engine";
 import type { InitializeReply } from "@autumn/balance-worker-client/protocol";
-import type { CatalogCache } from "../../catalog/types/catalogCache.js";
+import type { CatalogCache } from "@autumn/catalog-lru";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import type { MutationResult } from "../writer/types/mutation.js";
 import type { PartitionWriter } from "../writer/types/partitionWriter.js";

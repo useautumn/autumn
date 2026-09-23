@@ -127,6 +127,7 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 		reset: track,
 		enqueue: queueNothing,
 		queue: { track: queueNothing, reset: queueNothing },
+		catalog: { invalidateOrgCatalog: queueNothing },
 		start: async () => {
 			starts++;
 		},
@@ -180,6 +181,7 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 		},
 		ownershipTopic: "serving-ownership",
 		commandTopic: "serving-commands",
+		catalogInvalidationTopic: "serving-catalog-invalidations",
 		groupIdPrefix: "autumn-server-ownership",
 		partitionCount: BALANCE_WORKER_PARTITION_COUNT,
 		timeoutMs: 1000,

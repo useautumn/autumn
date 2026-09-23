@@ -40,6 +40,11 @@ export async function completeWorkerShutdown({
 		errors.push(cause);
 	}
 	try {
+		await ctx.catalogInvalidations?.stop();
+	} catch (cause) {
+		errors.push(cause);
+	}
+	try {
 		await ctx.settleResources();
 		ctx.closeStore();
 	} catch (cause) {

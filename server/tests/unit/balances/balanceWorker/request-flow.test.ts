@@ -342,6 +342,11 @@ test.concurrent(
 						throw cause;
 					},
 				},
+				catalog: {
+					invalidateOrgCatalog: async () => {
+						throw cause;
+					},
+				},
 				start: async () => undefined,
 				stop: async () => undefined,
 			};

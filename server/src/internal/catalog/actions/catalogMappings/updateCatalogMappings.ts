@@ -2,8 +2,8 @@ import type {
 	CatalogUpdateMappingsParams,
 	CatalogUpdateMappingsResponse,
 } from "@autumn/shared";
-import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { invalidateOrgCatalog } from "../invalidateOrgCatalog.js";
 import { getCatalogMappings } from "./getCatalogMappings.js";
 import { applyItemMappings } from "./updateMappings/applyItemMappings.js";
 import { applyPlanMappings } from "./updateMappings/applyPlanMappings.js";
@@ -37,7 +37,7 @@ export const updateCatalogMappings = async ({
 	applyItemMappings({ params, contextsByPlanId, priceTargets });
 	await persistPriceTargets({ ctx, priceTargets });
 
-	await invalidateProductsCache({ orgId: org.id, env });
+	await invalidateOrgCatalog({ ctx, orgId: org.id, env });
 
 	return getCatalogMappings({ ctx, params });
 };

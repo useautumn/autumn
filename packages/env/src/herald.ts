@@ -22,10 +22,10 @@ export function createHeraldEnv(
 	if (!runtimeEnv.KAFKA_BROKERS && runtimeEnv.NODE_ENV === "production") {
 		throw new Error("KAFKA_BROKERS is required in production");
 	}
+	if (!runtimeEnv.DATABASE_URL) throw new Error("DATABASE_URL is required");
 	// Events have a database of their own where one is configured; otherwise they sit beside everything else.
 	const eventsDatabaseUrl =
 		runtimeEnv.NEON_EVENTS_DATABASE_URL ?? runtimeEnv.DATABASE_URL;
-	if (!eventsDatabaseUrl) throw new Error("DATABASE_URL is required");
 
 	const deployment = getBalanceWorkerDeployment({ runtimeEnv });
 	return {
@@ -40,9 +40,14 @@ export function createHeraldEnv(
 		),
 		HERALD_METERING_TOPIC: balanceWorkerDeploymentToKafkaNames({ deployment })
 			.meteringTopic,
+		HERALD_CATALOG_INVALIDATION_TOPIC: balanceWorkerDeploymentToKafkaNames({
+			deployment,
+		}).catalogInvalidationTopic,
 		// One group per deployment: herald's place in the log is this group's committed offsets.
 		HERALD_GROUP_ID: `${deployment}-herald`,
 		HERALD_EVENTS_DATABASE_URL: eventsDatabaseUrl,
+		/** The catalog rows a record's subject references, read on a cache miss. */
+		HERALD_DATABASE_URL: runtimeEnv.DATABASE_URL,
 		/** Absent where Svix is not set up: herald then decides webhooks and delivers none. */
 		HERALD_SVIX_API_KEY: runtimeEnv.SVIX_API_KEY || null,
 	};

@@ -4,11 +4,12 @@ import type { CatalogRowIds } from "@autumn/postgres";
 import {
 	AllowanceType,
 	AppEnv,
+	BillingInterval,
 	EntInterval,
 	FeatureType,
 } from "@autumn/shared";
-import { createCatalogCache } from "../../../src/catalog/createCatalogCache.js";
-import type { WorkerDb } from "../../../src/types/workerDb.js";
+import { createCatalogCache } from "../../src/createCatalogCache.js";
+import type { CatalogRowsSource } from "../../src/types/catalogCacheContext.js";
 
 const identity = {
 	orgId: "org_1",
@@ -62,12 +63,37 @@ const featureRow = ({
 	},
 });
 
+const priceRow = ({
+	id,
+	isCustom = false,
+}: {
+	id: string;
+	isCustom?: boolean;
+}): CatalogRow => ({
+	table: "prices",
+	row: {
+		id,
+		internal_product_id: "prod_internal_1",
+		org_id: "org_1",
+		created_at: 1_700_000_000_000,
+		is_custom: isCustom,
+		config: {
+			type: "fixed",
+			amount: 10,
+			interval: BillingInterval.Month,
+			feature_id: null,
+			internal_feature_id: null,
+		},
+		proration_config: null,
+	},
+});
+
 const keyOf = (row: CatalogRow): CatalogKey =>
 	row.table === "entitlements" || row.table === "prices"
 		? { table: row.table, id: row.row.id }
 		: { table: row.table, id: row.row.internal_id };
 
-type FakeDb = Pick<WorkerDb, "getCatalogRows"> & {
+type FakeDb = Pick<CatalogRowsSource, "getCatalogRows"> & {
 	calls: CatalogRowIds[];
 	release(): void;
 };
@@ -97,7 +123,7 @@ const createFakeDb = ({ rows }: { rows: CatalogRow[] }): FakeDb => {
 				products: rowsOf("products", ids.productInternalIds),
 				features: rowsOf("features", ids.featureInternalIds),
 				prices: rowsOf("prices", ids.priceIds),
-			} as Awaited<ReturnType<WorkerDb["getCatalogRows"]>>;
+			} as Awaited<ReturnType<CatalogRowsSource["getCatalogRows"]>>;
 		},
 	};
 };
@@ -107,7 +133,7 @@ const createCache = ({
 	mutableRowTtlMs = 60_000,
 	maxSizeBytes = 1_000_000,
 }: {
-	db: Pick<WorkerDb, "getCatalogRows">;
+	db: Pick<CatalogRowsSource, "getCatalogRows">;
 	mutableRowTtlMs?: number;
 	maxSizeBytes?: number;
 }) =>
@@ -189,7 +215,7 @@ describe("catalog cache", () => {
 		).not.toHaveProperty("ent_1");
 	});
 
-	test("invalidating an org drops its mutable rows and keeps custom entitlements", () => {
+	test("invalidating an org expires its mutable rows and keeps custom entitlements and prices", async () => {
 		const base = entitlementRow({ id: "ent_base" });
 		const custom = entitlementRow({ id: "ent_custom", isCustom: true });
 		const sandboxFeature = featureRow({ internalId: "feat_sandbox" });
@@ -197,19 +223,32 @@ describe("catalog cache", () => {
 			internalId: "feat_live",
 			env: AppEnv.Live,
 		});
+		const basePrice = priceRow({ id: "price_base" });
+		const customPrice = priceRow({ id: "price_custom", isCustom: true });
+		const rows = [
+			base,
+			custom,
+			sandboxFeature,
+			liveFeature,
+			basePrice,
+			customPrice,
+		];
 		const cache = createCache({ db: createFakeDb({ rows: [] }) });
-		cache.put({ rows: [base, custom, sandboxFeature, liveFeature] });
+		cache.put({ rows });
 
 		expect(cache.invalidate({ orgId: "org_1", env: "sandbox" })).toEqual({
-			droppedCount: 2,
+			expiredCount: 3,
 		});
-		const catalog = cache.read({
-			keys: [base, custom, sandboxFeature, liveFeature].map(keyOf),
-		});
+		await Bun.sleep(5);
+		const catalog = cache.read({ keys: rows.map(keyOf) });
 		expect(Object.keys(catalog.entitlements)).toEqual(["ent_custom"]);
 		expect(Object.keys(catalog.features)).toEqual(["feat_live"]);
+		expect(Object.keys(catalog.prices)).toEqual(["price_custom"]);
+		expect(
+			cache.read({ keys: [base].map(keyOf), allowStale: true }).entitlements,
+		).toHaveProperty("ent_base");
 		expect(cache.invalidate({ orgId: "org_other", env: "sandbox" })).toEqual({
-			droppedCount: 0,
+			expiredCount: 0,
 		});
 	});
 

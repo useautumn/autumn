@@ -24,12 +24,14 @@ export function balanceWorkerDeploymentToKafkaNames({
 	meteringTopic: string;
 	ownershipTopic: string;
 	commandTopic: string;
+	catalogInvalidationTopic: string;
 	consumerGroup: string;
 } {
 	return {
 		meteringTopic: `${deployment}-events`,
 		ownershipTopic: `${deployment}-ownership`,
 		commandTopic: `${deployment}-commands`,
+		catalogInvalidationTopic: `${deployment}-catalog-invalidations`,
 		consumerGroup: `${deployment}-workers`,
 	};
 }

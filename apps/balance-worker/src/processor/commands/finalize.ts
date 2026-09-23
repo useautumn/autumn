@@ -82,6 +82,6 @@ function decideFinalize({
 		kind: "write",
 		mutation,
 		nextState: applyMutation({ state, mutation }),
-		catalog: decidedAgainst.catalog,
+		logsAfter: true,
 	};
 }

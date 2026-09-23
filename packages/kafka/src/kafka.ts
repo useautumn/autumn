@@ -95,6 +95,25 @@ export type {
 	KafkaProducerSessionConfig,
 } from "./producer/types/producer.js";
 export {
+	catalogInvalidationTopic,
+	parseCatalogInvalidationRecord,
+	serializeCatalogInvalidationRecord,
+} from "./topics/catalogInvalidation/catalogInvalidationTopic.js";
+export { createCatalogInvalidationConsumer } from "./topics/catalogInvalidation/consumer/createCatalogInvalidationConsumer.js";
+export type {
+	CatalogInvalidationConsumer,
+	CatalogInvalidationConsumerConfig,
+	CatalogInvalidationHandler,
+	CatalogInvalidationKafka,
+} from "./topics/catalogInvalidation/consumer/types/catalogInvalidationConsumer.js";
+export { createCatalogInvalidationPublisher } from "./topics/catalogInvalidation/publisher/createCatalogInvalidationPublisher.js";
+export type {
+	CatalogInvalidation,
+	CatalogInvalidationPublisher,
+	CatalogInvalidationPublisherContext,
+} from "./topics/catalogInvalidation/publisher/types/catalogInvalidationPublisher.js";
+export type { CatalogInvalidationRecord } from "./topics/catalogInvalidation/types/catalogInvalidationRecord.js";
+export {
 	commandTopic,
 	parseCommandRecord,
 	serializeCommandRecord,

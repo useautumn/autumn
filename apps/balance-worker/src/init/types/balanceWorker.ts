@@ -1,9 +1,10 @@
+import type { CatalogCache } from "@autumn/catalog-lru";
 import type { DynamoClient, IdempotencyKeyStore } from "@autumn/dynamodb";
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
+import type { CatalogInvalidationConsumer } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { PostgresClient } from "@autumn/postgres";
 import type { Admin, Kafka } from "kafkajs";
-import type { CatalogCache } from "../../catalog/types/catalogCache.js";
 import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
 import type { WorkerEdgeConfigs } from "../../edgeConfig/createWorkerEdgeConfigs.js";
 import type { Partitions } from "../../partitions/types/partitions.js";
@@ -48,6 +49,8 @@ export type WorkerLifecycleContext = {
 	/** Polled before partitions start, so the first flush already sees the live knobs. */
 	edgeConfigs?: Pick<WorkerEdgeConfigs, "start">;
 	healthReporter?: { start(): void; stop(): void };
+	/** Drops an org's cached catalog rows when the server says they changed. */
+	catalogInvalidations?: Pick<CatalogInvalidationConsumer, "start" | "stop">;
 	listen(): WorkerListener;
 	settleResources(): Promise<void>;
 	closeStore(): void;
@@ -62,6 +65,7 @@ export type WorkerResourcesContext = {
 	dynamo: Pick<DynamoClient, "close">;
 	idempotencyKeys: IdempotencyKeyStore;
 	catalogCache: CatalogCache;
+	catalogInvalidations?: CatalogInvalidationConsumer;
 	partitionResolver: MeteringPartitionResolver;
 	bootstrapper: PartitionBootstrapper;
 	/** Only the sqlite backend checkpoints; the postgres backend's bookmark lives in Postgres. */

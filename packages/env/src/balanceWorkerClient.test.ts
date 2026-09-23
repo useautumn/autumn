@@ -40,6 +40,7 @@ test.concurrent("local development needs no balance worker settings", () => {
 		KAFKA_BROKERS: ["127.0.0.1:19092"],
 		BALANCE_WORKER_OWNERSHIP_TOPIC: "local-ownership",
 		BALANCE_WORKER_COMMAND_TOPIC: "local-commands",
+		BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC: "local-catalog-invalidations",
 	});
 });
 

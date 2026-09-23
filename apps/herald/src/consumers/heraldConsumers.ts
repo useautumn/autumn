@@ -1,3 +1,4 @@
+import type { CatalogCache } from "@autumn/catalog-lru";
 import type { AutumnLogger } from "@autumn/logging";
 import type { EventsDb } from "@autumn/postgres";
 import type { SvixClient } from "@autumn/svix";
@@ -14,6 +15,7 @@ export function createHeraldConsumers({
 		eventsDb: EventsDb;
 		eventsTinybird: EventsTinybird | null;
 		svix: SvixClient | null;
+		catalogCache: CatalogCache;
 		logger: AutumnLogger;
 	};
 }): StreamConsumer[] {

@@ -52,7 +52,7 @@ const decideApplyBillingPlan = ({
 		mutation,
 		nextState,
 		projectedStates,
-		catalog: subjectHydrator.readCatalog({ state: nextState }),
+		logsAfter: true,
 	};
 };
 

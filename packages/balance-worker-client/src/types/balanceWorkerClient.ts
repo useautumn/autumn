@@ -9,6 +9,7 @@ import type {
 	ResetCommand,
 	TrackCommand,
 } from "@autumn/balance-engine";
+import type { CatalogInvalidations } from "../catalog/types/catalogInvalidations.js";
 import type { ApplyBillingPlanReply } from "../contracts/applyBillingPlan.js";
 import type { CheckReply } from "../contracts/check.js";
 import type { ConfirmExpiredLockReply } from "../contracts/confirmExpiredLock.js";
@@ -70,6 +71,8 @@ export type BalanceWorkerClient = {
 	queue: CommandQueue;
 	/** A mixed batch of commands; the typed doors on `queue` are the usual way in. */
 	enqueue(params: EnqueueParams): Promise<void>;
+	/** Tells every worker and herald that an org's catalog changed, so their cached rows are dropped. */
+	catalog: CatalogInvalidations;
 	/** Reads the ownership log through, retrying until it does; routing answers nothing before. */
 	start(): Promise<void>;
 	stop(): Promise<void>;
@@ -84,6 +87,7 @@ export type BalanceWorkerClientDependencies = {
 	owners: PartitionOwners;
 	http?: HttpClient;
 	commandLog?: CommandLog;
+	catalogInvalidations?: CatalogInvalidations;
 	lifecycle?: ClientLifecycle;
 };
 export type BalanceWorkerClientConfig = {

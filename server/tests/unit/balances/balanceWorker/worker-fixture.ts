@@ -1,7 +1,7 @@
 import type { CatalogRow } from "@autumn/balance-engine";
 import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
+import { createCatalogCache } from "@autumn/catalog-lru";
 import type { MeteringRecord } from "@autumn/kafka";
-import { createCatalogCache } from "../../../../../apps/balance-worker/src/catalog/createCatalogCache.js";
 import { createBalanceWorkerApp } from "../../../../../apps/balance-worker/src/http/createBalanceWorkerApp.js";
 import { createPartitionProcessor } from "../../../../../apps/balance-worker/src/processor/createPartitionProcessor.js";
 import { createRecentCommands } from "../../../../../apps/balance-worker/src/processor/writer/recentCommands/createRecentCommands.js";

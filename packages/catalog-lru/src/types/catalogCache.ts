@@ -17,6 +17,7 @@ export type CatalogCache = {
 	}): Promise<void>;
 	put(params: { rows: CatalogRow[] }): void;
 	/** Drops the org's products, features and base entitlements; custom entitlements are minted, never edited. */
-	invalidate(params: { orgId: string; env: string }): { droppedCount: number };
+	/** Expires the org's mutable rows in this env; custom rows belong to one customer and stay. */
+	invalidate(params: { orgId: string; env: string }): { expiredCount: number };
 	size(): number;
 };

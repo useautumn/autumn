@@ -137,6 +137,7 @@ export async function createBalanceWorker({
 			partitions,
 			edgeConfigs: resources.edgeConfigs,
 			healthReporter,
+			catalogInvalidations: resources.catalogInvalidations,
 			listen,
 			settleResources: resources.settleResources,
 			closeStore: resources.closeStore,

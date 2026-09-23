@@ -7,10 +7,10 @@ import {
 	type WorkerErrorResponse,
 	WorkerProtocolError,
 } from "@autumn/balance-worker-client/protocol";
+import { CatalogRowsNotFoundError } from "@autumn/catalog-lru";
 import type { Context, ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod/v4";
-import { CatalogRowsNotFoundError } from "../../../catalog/catalogErrors.js";
 import { FlushRecordRefusedError } from "../../../committer/committerErrors.js";
 import { PartitionProcessorStateNotFoundError } from "../../../processor/common/processorErrors.js";
 import {

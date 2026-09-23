@@ -1,5 +1,4 @@
 import type {
-	Catalog,
 	MutatingCommand,
 	MutationRecord,
 	MutationSource,
@@ -47,8 +46,8 @@ export type MutationResult<Reply> =
 			nextState: SubjectState;
 			/** What each owner stores; absent, nextState is split into the customer and the entity it names. */
 			projectedStates?: SubjectState[];
-			/** The catalog the decision read; with it the log's readers can rebuild the subject. Absent when nothing downstream reads balances. */
-			catalog?: Catalog;
+			/** Stamp the subject as this mutation leaves it on the log, for readers that rebuild balances from it. */
+			logsAfter?: boolean;
 	  }
 	/** Nothing to write: reply immediately. */
 	| { kind: "reply"; reply: Reply };

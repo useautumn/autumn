@@ -75,6 +75,7 @@ function createFakeKafka({
 			},
 			ownershipTopic: "local-ownership",
 			commandTopic: "local-commands",
+			catalogInvalidationTopic: "local-catalog-invalidations",
 			groupIdPrefix: "test-owners",
 			partitionCount: 1,
 			timeoutMs: 1_000,

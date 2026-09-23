@@ -10,6 +10,7 @@ export type BalanceWorkerClientErrorCode =
 	| "INVALID_RESPONSE"
 	| "OWNERSHIP_UNAVAILABLE"
 	| "COMMAND_LOG_UNAVAILABLE"
+	| "CATALOG_INVALIDATIONS_UNAVAILABLE"
 	| "WORKER_ERROR";
 
 export class BalanceWorkerClientError extends Error {

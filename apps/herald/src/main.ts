@@ -1,9 +1,11 @@
 import { getHeraldEnv } from "@autumn/env/herald";
 import { initInfisical } from "@autumn/shared/utils/infisical";
 import { createHerald, type Herald } from "./setup/createHerald.js";
+import { getCatalogCache } from "./setup/getCatalogCache.js";
 import { getEventsDb } from "./setup/getEventsDb.js";
 import { getEventsTinybird } from "./setup/getEventsTinybird.js";
 import { getHeraldLogger } from "./setup/getHeraldLogger.js";
+import { getPostgres } from "./setup/getPostgres.js";
 import { getSvixClient } from "./setup/getSvixClient.js";
 
 async function main(): Promise<void> {
@@ -15,6 +17,8 @@ async function main(): Promise<void> {
 			eventsDb: getEventsDb(),
 			eventsTinybird: getEventsTinybird(),
 			svix: getSvixClient(),
+			catalogCache: getCatalogCache(),
+			postgres: getPostgres(),
 		},
 		config: { env: getHeraldEnv() },
 	});

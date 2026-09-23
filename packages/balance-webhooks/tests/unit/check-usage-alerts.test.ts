@@ -102,6 +102,9 @@ const catalogOf = ({
 	return catalog;
 };
 
+/** The record the log carries, with the catalog herald reads for it beside. */
+type LoggedRecord = MutationRecord & { catalog: Catalog };
+
 /** Tracks `value` and returns the record the log would carry. */
 const trackRecord = ({
 	customer = customerOf(),
@@ -121,7 +124,7 @@ const trackRecord = ({
 	value: number;
 	trackEntity?: boolean;
 	properties?: Record<string, unknown> | null;
-}): MutationRecord => {
+}): LoggedRecord => {
 	const state = createSubjectState({
 		identity,
 		customer,
@@ -160,16 +163,17 @@ const trackRecord = ({
 	return {
 		...mutation,
 		receipt: { fingerprint: "f", expiresAt: 1 },
-		after: { state: after, catalog },
+		after: { state: after },
+		catalog,
 	};
 };
 
-const usageAlertsOf = (record: MutationRecord) =>
-	recordToBalanceWebhooks({ record }).filter(
+const usageAlertsOf = ({ catalog, ...record }: LoggedRecord) =>
+	recordToBalanceWebhooks({ record, catalog }).filter(
 		({ eventType }) => eventType === "balances.usage_alert_triggered",
 	);
 
-const dataOf = (record: MutationRecord) =>
+const dataOf = (record: LoggedRecord) =>
 	usageAlertsOf(record).map(({ data }) => data as Record<string, unknown>);
 
 describe("a customer alert on a customer track", () => {
@@ -484,7 +488,7 @@ describe("a lock and its finalize", () => {
 	}: {
 		lockValue: number;
 		finalValue: number;
-	}): { onLock: MutationRecord; onFinalize: MutationRecord } => {
+	}): { onLock: LoggedRecord; onFinalize: LoggedRecord } => {
 		const customer = customerOf({
 			alerts: [alert({ threshold_type: "usage", threshold: 8 })],
 		});
@@ -543,11 +547,12 @@ describe("a lock and its finalize", () => {
 		});
 		const receipt = { fingerprint: "f", expiresAt: 1 };
 		return {
-			onLock: { ...lockMutation, receipt, after: { state: locked, catalog } },
+			onLock: { ...lockMutation, receipt, after: { state: locked }, catalog },
 			onFinalize: {
 				...finalizeMutation,
 				receipt,
-				after: { state: settled, catalog },
+				after: { state: settled },
+				catalog,
 			},
 		};
 	};

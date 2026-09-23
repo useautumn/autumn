@@ -17,9 +17,13 @@ const mutationSourceSchema = z
 	.object({ commandOffset: z.string().regex(/^\d+$/) })
 	.strict();
 
-/** The subject as the mutation left it, with the catalog it was decided against: undoing `changes` on it gives the subject as found. */
+/** The subject as the mutation left it: undoing `changes` on it gives the subject as found. */
 const mutationAfterSchema = z
-	.object({ state: subjectStateSchema, catalog: catalogSchema })
+	.object({
+		state: subjectStateSchema,
+		/** Stamped by older workers only; readers load the catalog themselves and ignore it. */
+		catalog: catalogSchema.optional(),
+	})
 	.strict();
 
 /** What the log, the store and a checkpoint hold: the engine's mutation plus the writer's receipt. */

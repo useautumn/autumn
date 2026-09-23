@@ -1,5 +1,5 @@
 import type { Catalog, SubjectState } from "@autumn/balance-engine";
-import type { CatalogCache } from "../../../catalog/types/catalogCache.js";
+import type { CatalogCache } from "@autumn/catalog-lru";
 import type { SubjectBaseline } from "../../../state/types/stateStore.js";
 import type { WorkerDb } from "../../../types/workerDb.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";

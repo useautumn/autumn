@@ -13,10 +13,10 @@ import { orgToAccountId } from "@/external/connect/connectUtils.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
-import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { createWebhookEndpoint } from "@/external/stripe/stripeOnboardingUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { clearStripeCatalogMappings } from "@/internal/catalog/actions/catalogMappings/clearStripeCatalogMappings.js";
+import { invalidateOrgCatalog } from "@/internal/catalog/actions/invalidateOrgCatalog.js";
 import { decryptData, encryptData } from "@/utils/encryptUtils.js";
 import { OrgService } from "../../OrgService.js";
 import { clearOrgCache } from "../../orgUtils/clearOrgCache.js";
@@ -290,7 +290,7 @@ export const handleDeleteStripe = createRoute({
 		}
 
 		if (clearCatalogMappings) {
-			await invalidateProductsCache({ orgId: org.id, env });
+			await invalidateOrgCatalog({ ctx, orgId: org.id, env });
 		}
 
 		return c.json({});

@@ -4,8 +4,9 @@ import {
 	type Organization,
 	ProductAlreadyExistsError,
 } from "@autumn/shared";
-import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { invalidateOrgCatalog } from "@/internal/catalog/actions/invalidateOrgCatalog.js";
+import { throwIfPlanIdReservedAsAlias } from "@/internal/catalogV2/productAliases/throwIfPlanIdReservedAsAlias.js";
 import { addCreditSystemMeteredFeatureIds } from "@/internal/features/creditSystemUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -14,7 +15,6 @@ import {
 	initProductInStripe,
 } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { throwIfPlanIdReservedAsAlias } from "@/internal/catalogV2/productAliases/throwIfPlanIdReservedAsAlias.js";
 import { copyBaseVariants } from "./copyBaseVariants.js";
 import { copyLicenseLinksForPlanCopy } from "./copyLicenseLinksForPlanCopy.js";
 import { copyMissingFeatures } from "./copyMissingFeatures.js";
@@ -171,8 +171,8 @@ export const copyProductForOrgs = async ({
 		copiedVariantIds,
 	});
 
-	await invalidateProductsCache({ orgId: toOrg.id, env: toEnv });
+	await invalidateOrgCatalog({ ctx, orgId: toOrg.id, env: toEnv });
 	if (crossOrg || fromEnv !== toEnv) {
-		await invalidateProductsCache({ orgId: fromOrg.id, env: fromEnv });
+		await invalidateOrgCatalog({ ctx, orgId: fromOrg.id, env: fromEnv });
 	}
 };

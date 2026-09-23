@@ -19,6 +19,7 @@ async function completeWorkerStartup({
 	state.status = "starting";
 	try {
 		await ctx.edgeConfigs?.start();
+		await ctx.catalogInvalidations?.start();
 		state.listener = ctx.listen();
 		ctx.healthReporter?.start();
 		await ctx.partitions.start();

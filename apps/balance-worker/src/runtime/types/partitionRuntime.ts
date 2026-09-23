@@ -1,5 +1,5 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
-import type { CatalogCache } from "../../catalog/types/catalogCache.js";
+import type { CatalogCache } from "@autumn/catalog-lru";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type {
 	OwnedPartitionFollowerProgress,

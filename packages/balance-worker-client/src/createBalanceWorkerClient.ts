@@ -1,3 +1,4 @@
+import { createCatalogInvalidations } from "./catalog/createCatalogInvalidations.js";
 import { sendApplyBillingPlan } from "./commands/sendApplyBillingPlan.js";
 import { sendCheck } from "./commands/sendCheck.js";
 import { sendConfirmExpiredLock } from "./commands/sendConfirmExpiredLock.js";
@@ -111,6 +112,9 @@ export function createBalanceWorkerClient({
 		reset,
 		queue: createCommandQueue({ ctx: queue }),
 		enqueue,
+		catalog: createCatalogInvalidations({
+			ctx: { publisher: dependencies.catalogInvalidations },
+		}),
 		start,
 		stop,
 	};

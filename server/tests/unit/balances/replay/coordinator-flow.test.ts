@@ -195,6 +195,11 @@ test.concurrent(
 					throw unsupported();
 				},
 			},
+			catalog: {
+				invalidateOrgCatalog: async () => {
+					throw unsupported();
+				},
+			},
 			start: async () => undefined,
 			stop: async () => undefined,
 		};

@@ -1,4 +1,5 @@
 import {
+	type Catalog,
 	type MutationRecord,
 	revertChanges,
 	subjectStateToFullSubject,
@@ -10,19 +11,21 @@ const isBalanceChange = (change: MutationRecord["changes"][number]): boolean =>
 	change.table !== "locks";
 
 /**
- * The subject as the mutation found it and as it left it, from the record alone. Null on a record written before
- * the log carried the subject, or on one that moved nothing.
+ * The subject as the mutation found it and as it left it, from the record and the catalog its rows reference.
+ * Null on a record written before the log carried the subject, or on one that moved nothing.
  */
 export const recordToSubjects = ({
 	record,
+	catalog,
 }: {
 	record: MutationRecord;
+	catalog: Catalog;
 }): { before: WorkerFullSubject; after: WorkerFullSubject } | null => {
 	if (!record.after) return null;
 	const changes = record.changes.filter(isBalanceChange);
 	if (changes.length === 0) return null;
 
-	const { state, catalog } = record.after;
+	const { state } = record.after;
 	const entityId = record.identity.entityId;
 	return {
 		before: subjectStateToFullSubject({

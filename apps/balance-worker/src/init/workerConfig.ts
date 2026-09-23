@@ -133,7 +133,20 @@ export async function validateBalanceWorkerTopics({
 		env.BALANCE_WORKER_OWNERSHIP_TOPIC,
 		env.BALANCE_WORKER_COMMAND_TOPIC,
 	];
-	const metadata = await admin.fetchTopicMetadata({ topics });
+	const metadata = await admin.fetchTopicMetadata({
+		topics: [...topics, env.BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC],
+	});
+	if (
+		!hasMatchingTopicPartitions({
+			topics: metadata.topics,
+			topic: env.BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC,
+			partitionCount: 1,
+		})
+	) {
+		throw new Error(
+			`${env.BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC} must exist with one partition; run the explicit local topic setup`,
+		);
+	}
 	for (const topic of topics) {
 		if (
 			!hasMatchingTopicPartitions({

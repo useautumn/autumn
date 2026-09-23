@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { CatalogRow, SubjectState } from "@autumn/balance-engine";
 import { createSubjectState } from "@autumn/balance-engine";
+import {
+	CatalogRowsNotFoundError,
+	createCatalogCache,
+} from "@autumn/catalog-lru";
 import type { CatalogRowIds } from "@autumn/postgres";
 import {
 	AllowanceType,
@@ -9,8 +13,6 @@ import {
 	EntInterval,
 	FeatureType,
 } from "@autumn/shared";
-import { CatalogRowsNotFoundError } from "../../../../src/catalog/catalogErrors.js";
-import { createCatalogCache } from "../../../../src/catalog/createCatalogCache.js";
 import { ensureSubject } from "../../../../src/processor/subject/actions/ensureSubject/ensureSubject.js";
 import { readSubject } from "../../../../src/processor/subject/actions/readSubject.js";
 import { createInFlightLoads } from "../../../../src/processor/subject/inFlightLoads/createInFlightLoads.js";

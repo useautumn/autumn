@@ -1,6 +1,7 @@
 import { createBalanceWorkerClient } from "../createBalanceWorkerClient.js";
 import type { BalanceWorkerClient } from "../types/balanceWorkerClient.js";
 import { createBalanceWorkerKafka } from "./createBalanceWorkerKafka.js";
+import { createCatalogInvalidationsFromKafka } from "./createCatalogInvalidationsFromKafka.js";
 import { createCommandLogFromKafka } from "./createCommandLogFromKafka.js";
 import { createOwnersFromKafka } from "./createOwnersFromKafka.js";
 import type {
@@ -32,6 +33,10 @@ export function createKafkaBalanceWorkerClient({
 		ctx: { kafka },
 		config: { topic: config.commandTopic },
 	});
+	const catalogInvalidations = createCatalogInvalidationsFromKafka({
+		ctx: { kafka },
+		config: { topic: config.catalogInvalidationTopic },
+	});
 
 	function start(): Promise<void> {
 		return owners.start();
@@ -40,10 +45,16 @@ export function createKafkaBalanceWorkerClient({
 	async function stop(): Promise<void> {
 		await owners.stop();
 		await commandLog.stop();
+		await catalogInvalidations.stop();
 	}
 
 	return createBalanceWorkerClient({
-		ctx: { owners, commandLog, lifecycle: { start, stop } },
+		ctx: {
+			owners,
+			commandLog,
+			catalogInvalidations,
+			lifecycle: { start, stop },
+		},
 		config: {
 			partitionCount: config.partitionCount,
 			timeoutMs: config.timeoutMs,

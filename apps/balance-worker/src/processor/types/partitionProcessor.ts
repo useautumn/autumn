@@ -21,7 +21,7 @@ import type {
 	ResetReply,
 	TrackReply,
 } from "@autumn/balance-worker-client/protocol";
-import type { CatalogCache } from "../../catalog/types/catalogCache.js";
+import type { CatalogCache } from "@autumn/catalog-lru";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 import type { SubjectHydrator } from "../subject/types/subjectHydrator.js";

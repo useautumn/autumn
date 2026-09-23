@@ -63,7 +63,7 @@ export const decideReset = ({
 		kind: "write",
 		mutation,
 		nextState: applyMutation({ state, mutation }),
-		catalog: scope.ctx.subjectHydrator.readCatalog({ state }),
+		logsAfter: true,
 	};
 };
 

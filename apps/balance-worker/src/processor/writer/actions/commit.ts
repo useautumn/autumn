@@ -204,13 +204,10 @@ function enterRecovery({
 
 // Only the log's copy carries `after`, and only the columns commands decide on; memory keeps the whole rows.
 function mutationOf(pending: PendingMutation): MeteringRecord {
-	if (!pending.catalog) return pending.mutation;
+	if (!pending.logsAfter) return pending.mutation;
 	return {
 		...pending.mutation,
-		after: {
-			state: subjectStateToLogState({ state: pending.nextState }),
-			catalog: pending.catalog,
-		},
+		after: { state: subjectStateToLogState({ state: pending.nextState }) },
 	};
 }
 

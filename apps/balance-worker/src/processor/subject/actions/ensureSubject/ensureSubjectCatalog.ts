@@ -1,15 +1,13 @@
-import {
-	type Catalog,
-	filterCatalogKeysMissingFrom,
-	type MeteringIdentity,
-	type SubjectState,
-	subjectStateToCatalogKeys,
+import type {
+	Catalog,
+	MeteringIdentity,
+	SubjectState,
 } from "@autumn/balance-engine";
-import { CatalogRowsNotFoundError } from "../../../../catalog/catalogErrors.js";
+import { ensureCatalogForState } from "@autumn/catalog-lru";
 import type { SubjectScope } from "../../types/subject.js";
 
 /** Every catalog row the state references is in the cache afterwards, or the command cannot be decided. */
-export const ensureSubjectCatalog = async ({
+export const ensureSubjectCatalog = ({
 	scope,
 	identity,
 	state,
@@ -17,20 +15,9 @@ export const ensureSubjectCatalog = async ({
 	scope: SubjectScope;
 	identity: MeteringIdentity;
 	state: SubjectState;
-}): Promise<Catalog> => {
-	const { catalogCache } = scope.ctx;
-	const keys = subjectStateToCatalogKeys({ state });
-
-	const cached = catalogCache.read({ keys });
-	const missing = filterCatalogKeysMissingFrom({ keys, catalog: cached });
-	if (missing.length === 0) return cached;
-
-	await catalogCache.load({ identity, keys: missing });
-
-	const loaded = catalogCache.read({ keys });
-	const stillMissing = filterCatalogKeysMissingFrom({ keys, catalog: loaded });
-	if (stillMissing.length > 0) {
-		throw new CatalogRowsNotFoundError({ keys: stillMissing });
-	}
-	return loaded;
-};
+}): Promise<Catalog> =>
+	ensureCatalogForState({
+		catalogCache: scope.ctx.catalogCache,
+		identity,
+		state,
+	});

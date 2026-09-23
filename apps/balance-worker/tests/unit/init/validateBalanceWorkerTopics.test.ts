@@ -16,12 +16,13 @@ const admin = ({
 } = {}) => ({
 	fetchTopicMetadata: async () => ({
 		topics: [
-			env.BALANCE_WORKER_METERING_TOPIC,
-			env.BALANCE_WORKER_OWNERSHIP_TOPIC,
-			env.BALANCE_WORKER_COMMAND_TOPIC,
-		].map((name) => ({
+			{ name: env.BALANCE_WORKER_METERING_TOPIC, count },
+			{ name: env.BALANCE_WORKER_OWNERSHIP_TOPIC, count },
+			{ name: env.BALANCE_WORKER_COMMAND_TOPIC, count },
+			{ name: env.BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC, count: 1 },
+		].map(({ name, count: partitionCount }) => ({
 			name,
-			partitions: Array.from({ length: count }, (_, partitionId) => ({
+			partitions: Array.from({ length: partitionCount }, (_, partitionId) => ({
 				partitionId,
 				partitionErrorCode: 0,
 				leader: 0,

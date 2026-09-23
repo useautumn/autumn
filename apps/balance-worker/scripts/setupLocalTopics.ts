@@ -2,6 +2,10 @@ import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { Kafka } from "kafkajs";
 import { validateBalanceWorkerTopics } from "../src/init/workerConfig.js";
 
+/** One partition keeps invalidations in order; an hour outlives any cache TTL, so nothing older matters. */
+const CATALOG_INVALIDATION_PARTITIONS = 1;
+const CATALOG_INVALIDATION_RETENTION_MS = "3600000";
+
 async function setup(): Promise<void> {
 	const env = createBalanceWorkerEnv({
 		...process.env,
@@ -37,6 +41,14 @@ async function setup(): Promise<void> {
 				numPartitions: env.BALANCE_WORKER_PARTITION_COUNT,
 				replicationFactor: 1,
 			},
+			{
+				topic: env.BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC,
+				numPartitions: CATALOG_INVALIDATION_PARTITIONS,
+				replicationFactor: 1,
+				configEntries: [
+					{ name: "retention.ms", value: CATALOG_INVALIDATION_RETENTION_MS },
+				],
+			},
 		];
 		const existingTopics = new Set(await admin.listTopics());
 		const missingTopics = [];
@@ -47,7 +59,7 @@ async function setup(): Promise<void> {
 			await admin.createTopics({ waitForLeaders: true, topics: missingTopics });
 		await validateBalanceWorkerTopics({ admin, env });
 		console.info(
-			`Balance worker topics ready on ${env.KAFKA_BROKERS.join(", ")}: ${env.BALANCE_WORKER_METERING_TOPIC}, ${env.BALANCE_WORKER_OWNERSHIP_TOPIC}, ${env.BALANCE_WORKER_COMMAND_TOPIC} (${env.BALANCE_WORKER_PARTITION_COUNT} partitions)`,
+			`Balance worker topics ready on ${env.KAFKA_BROKERS.join(", ")}: ${env.BALANCE_WORKER_METERING_TOPIC}, ${env.BALANCE_WORKER_OWNERSHIP_TOPIC}, ${env.BALANCE_WORKER_COMMAND_TOPIC} (${env.BALANCE_WORKER_PARTITION_COUNT} partitions), ${env.BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC}`,
 		);
 	} finally {
 		await admin.disconnect();

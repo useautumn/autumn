@@ -1,6 +1,6 @@
 import type { Context, Next } from "hono";
-import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { invalidateOrgCatalog } from "@/internal/catalog/actions/invalidateOrgCatalog.js";
 import { matchRoute } from "./middlewareUtils.js";
 
 /**
@@ -29,11 +29,19 @@ const productRoutes = [
 	// Batch catalog write (features + plans upsert)
 	{ method: "POST", url: "/catalog.update" },
 	{ method: "POST", url: "/catalogV2.update" },
+
+	// Feature routes: the balance worker and herald cache feature rows too
+	{ method: "POST", url: "/features" },
+	{ method: "POST", url: "/features/:feature_id" },
+	{ method: "DELETE", url: "/features/:feature_id" },
+	{ method: "POST", url: "/features.create" },
+	{ method: "POST", url: "/features.update" },
+	{ method: "POST", url: "/features.delete" },
 ];
 
 /**
- * Hono middleware that clears products cache after successful responses
- * for specific routes. Only handles simple cases where orgId/env come from ctx.
+ * Hono middleware that invalidates the catalog (products cache and the balance worker's rows)
+ * after responses for specific routes. Only handles simple cases where orgId/env come from ctx.
  *
  * Edge cases handled explicitly in handlers:
  * - handleCopyProductV2: invalidates source + target envs
@@ -63,8 +71,5 @@ export const refreshProductsCacheMiddleware = async (
 
 	if (!match) return;
 
-	await invalidateProductsCache({
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
+	await invalidateOrgCatalog({ ctx, orgId: ctx.org.id, env: ctx.env });
 };

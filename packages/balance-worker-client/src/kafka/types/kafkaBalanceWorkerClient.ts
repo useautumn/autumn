@@ -44,6 +44,7 @@ export type KafkaBalanceWorkerClientConfig = {
 	kafka: BalanceWorkerKafkaConfig;
 	ownershipTopic: string;
 	commandTopic: string;
+	catalogInvalidationTopic: string;
 	groupIdPrefix: string;
 	partitionCount: number;
 	timeoutMs: number;

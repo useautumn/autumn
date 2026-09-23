@@ -13,6 +13,7 @@
 	"dependencies": {
 		"@autumn/balance-engine": "workspace:*",
 		"@autumn/balance-webhooks": "workspace:*",
+		"@autumn/catalog-lru": "workspace:*",
 		"@autumn/env": "workspace:*",
 		"@autumn/kafka": "workspace:*",
 		"@autumn/logging": "workspace:*",

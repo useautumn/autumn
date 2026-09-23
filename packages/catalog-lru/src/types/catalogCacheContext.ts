@@ -1,6 +1,14 @@
-import type { CatalogRow } from "@autumn/balance-engine";
+import type { CatalogRow, MeteringIdentity } from "@autumn/balance-engine";
+import type { CatalogRowIds, CatalogRowsEnvelope } from "@autumn/postgres";
 import type { LRUCache } from "lru-cache";
-import type { WorkerDb } from "../../types/workerDb.js";
+
+/** Where a miss is read from: Postgres in every app, a stub in tests. */
+export type CatalogRowsSource = {
+	getCatalogRows(params: {
+		identity: MeteringIdentity;
+		ids: CatalogRowIds;
+	}): Promise<CatalogRowsEnvelope>;
+};
 
 export type CatalogCacheConfig = {
 	/** Products and features are edited in place; a cached copy is served at most this long if the invalidation signal is missed. */
@@ -16,7 +24,7 @@ export type CatalogCacheState = {
 };
 
 export type CatalogCacheContext = {
-	db: Pick<WorkerDb, "getCatalogRows">;
+	db: CatalogRowsSource;
 	config: CatalogCacheConfig;
 };
 

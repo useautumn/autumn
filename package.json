@@ -27,6 +27,7 @@
 			"packages/env",
 			"packages/logging",
 			"packages/balance-engine",
+			"packages/catalog-lru",
 			"packages/edge-config",
 			"packages/postgres",
 			"packages/dynamodb",

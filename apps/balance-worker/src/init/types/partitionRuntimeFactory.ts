@@ -1,3 +1,4 @@
+import type { CatalogCache } from "@autumn/catalog-lru";
 import type {
 	KafkaConsumerGroupTimings,
 	KafkaProducerFactory,
@@ -5,7 +6,6 @@ import type {
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
-import type { CatalogCache } from "../../catalog/types/catalogCache.js";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
