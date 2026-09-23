@@ -12,7 +12,10 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import { isStripeSubscriptionSchedulePhaseCurrent } from "@/external/stripe/subscriptionSchedules";
+import {
+	isStripeSubscriptionSchedulePhaseCurrent,
+	isStripeSubscriptionSchedulePhaseEnded,
+} from "@/external/stripe/subscriptionSchedules";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeSyncSchedule } from "@/internal/billing/v2/providers/stripe/utils/sync/fetchStripeSyncObjects";
 import { CusService } from "@/internal/customers/CusService";
@@ -53,7 +56,11 @@ const buildScheduleProposalPhases = ({
 }): SyncPhase[] => {
 	const nowSeconds = Math.floor(Date.now() / 1000);
 
-	return schedule.phases.map((schedulePhase) => {
+	const openPhases = schedule.phases.filter(
+		(phase) => !isStripeSubscriptionSchedulePhaseEnded({ phase, nowSeconds }),
+	);
+
+	return openPhases.map((schedulePhase) => {
 		const isCurrent = isStripeSubscriptionSchedulePhaseCurrent({
 			phase: schedulePhase,
 			nowSeconds,

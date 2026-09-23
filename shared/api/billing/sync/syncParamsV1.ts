@@ -106,6 +106,11 @@ export const SyncParamsV1Schema = z
 				"Caller-supplied plan instances grouped by phase. Omit for pure auto-sync.",
 		}),
 
+		unscheduled_plans: z.array(SyncPlanInstanceSchema).optional().meta({
+			description:
+				"Plans that start now and run across every phase instead of ending at the next phase boundary. Requires a live stripe_subscription_id.",
+		}),
+
 		carry_over_usage: z.boolean().optional().meta({
 			description:
 				"When a synced plan expires an existing plan (via expire_previous), carry the existing plan's consumed usage onto the new plan's balances for any shared feature on the same subject. Defaults to true. Set false to sync without touching balances.",

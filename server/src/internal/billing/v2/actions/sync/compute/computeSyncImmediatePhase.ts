@@ -1,12 +1,13 @@
 import {
 	type AutumnBillingPlan,
-	type CustomerLicenseUpdate,
 	CusProductStatus,
+	type CustomerLicenseUpdate,
 	type Entitlement,
 	type FullCusProduct,
 	type InsertPlanLicenseSpec,
 	type Price,
 	type SyncBillingContext,
+	type SyncProductContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/compute/computeCustomerLicenseQuantityChanges";
@@ -43,38 +44,38 @@ const expireCustomerProduct = ({
 	},
 });
 
+const EMPTY_IMMEDIATE_RESULT: ImmediatePhaseResult = {
+	insertCustomerProducts: [],
+	updateCustomerProducts: [],
+	customPrices: [],
+	customEntitlements: [],
+	insertPlanLicenses: [],
+	customerLicenseUpdates: [],
+};
+
 /**
- * Build the immediate-phase cusProducts to insert plus the existing
- * cusProducts to expire (when `expire_previous` was set on the input plan).
- *
- * Returns an empty result when the sync has no immediate phase or no live
- * Stripe subscription to derive lifecycle metadata from.
+ * Build cusProducts that start now, plus the existing cusProducts they expire
+ * (when `expire_previous` was set). `endsAt` null leaves them open-ended.
  */
-export const computeSyncImmediatePhase = ({
+const computeStartingNowProductContexts = ({
 	ctx,
 	syncContext,
+	productContexts,
+	endsAt,
 }: {
 	ctx: AutumnContext;
 	syncContext: SyncBillingContext;
+	productContexts: SyncProductContext[];
+	endsAt: number | null;
 }): ImmediatePhaseResult => {
 	const {
-		immediatePhase,
 		fullCustomer,
 		stripeSubscription,
 		currentEpochMs,
 		carryOverUsage,
 		carryOverUsages,
 	} = syncContext;
-	if (!immediatePhase || !stripeSubscription) {
-		return {
-			insertCustomerProducts: [],
-			updateCustomerProducts: [],
-			customPrices: [],
-			customEntitlements: [],
-			insertPlanLicenses: [],
-			customerLicenseUpdates: [],
-		};
-	}
+	if (!stripeSubscription) return EMPTY_IMMEDIATE_RESULT;
 
 	const insertCustomerProducts: FullCusProduct[] = [];
 	const updateCustomerProducts: CustomerProductUpdate[] = [];
@@ -83,7 +84,7 @@ export const computeSyncImmediatePhase = ({
 	const insertPlanLicenses: InsertPlanLicenseSpec[] = [];
 	const customerLicenseUpdates: CustomerLicenseUpdate[] = [];
 
-	for (const productContext of immediatePhase.productContexts) {
+	for (const productContext of productContexts) {
 		const currentCustomerProduct = productContext.currentCustomerProduct;
 		if (currentCustomerProduct?.product_id === productContext.fullProduct.id) {
 			const licenseQuantityChanges = computeCustomerLicenseQuantityChanges({
@@ -107,6 +108,12 @@ export const computeSyncImmediatePhase = ({
 					})
 				: undefined;
 
+		// Rollovers follow the features, not the plan: each one re-homes onto a
+		// matching feature on the new plan, or is dropped when none fits.
+		const existingRolloversConfig = currentCustomerProduct
+			? { fromCustomerProduct: currentCustomerProduct }
+			: undefined;
+
 		const insertedCustomerProduct = initImmediateSyncCustomerProduct({
 			ctx,
 			fullCustomer,
@@ -114,14 +121,15 @@ export const computeSyncImmediatePhase = ({
 			stripeSubscription,
 			currentEpochMs,
 			existingUsagesConfig,
+			existingRolloversConfig,
 		});
 
 		// A following phase ends this one — same shape createSchedule produces.
 		// Skipped when there is none, so a canceling sub keeps its Stripe end date.
-		if (immediatePhase.endsAt !== null) {
+		if (endsAt !== null) {
 			applyScheduleTimingToCustomerProductPlan({
 				result: { insertCustomerProduct: insertedCustomerProduct },
-				endedAt: immediatePhase.endsAt,
+				endedAt: endsAt,
 			});
 		}
 
@@ -149,3 +157,37 @@ export const computeSyncImmediatePhase = ({
 		customerLicenseUpdates,
 	};
 };
+
+/** The immediate phase's plans, each ending where the next phase starts. */
+export const computeSyncImmediatePhase = ({
+	ctx,
+	syncContext,
+}: {
+	ctx: AutumnContext;
+	syncContext: SyncBillingContext;
+}): ImmediatePhaseResult => {
+	const { immediatePhase } = syncContext;
+	if (!immediatePhase) return EMPTY_IMMEDIATE_RESULT;
+
+	return computeStartingNowProductContexts({
+		ctx,
+		syncContext,
+		productContexts: immediatePhase.productContexts,
+		endsAt: immediatePhase.endsAt,
+	});
+};
+
+/** Unscheduled plans start now and run across every phase. */
+export const computeSyncUnscheduledPlans = ({
+	ctx,
+	syncContext,
+}: {
+	ctx: AutumnContext;
+	syncContext: SyncBillingContext;
+}): ImmediatePhaseResult =>
+	computeStartingNowProductContexts({
+		ctx,
+		syncContext,
+		productContexts: syncContext.unscheduledProductContexts,
+		endsAt: null,
+	});

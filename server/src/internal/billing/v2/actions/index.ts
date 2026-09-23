@@ -14,6 +14,7 @@ import { previewRestore } from "@/internal/billing/v2/actions/restore/previewRes
 import { restore } from "@/internal/billing/v2/actions/restore/restore";
 import { rollback } from "@/internal/billing/v2/actions/rollback/rollback";
 import { setupPayment } from "@/internal/billing/v2/actions/setupPayment/setupPayment";
+import { previewSyncV2 } from "@/internal/billing/v2/actions/sync/previewSyncV2";
 import { sync } from "@/internal/billing/v2/actions/sync/sync";
 import { syncProposals } from "@/internal/billing/v2/actions/sync/syncProposals";
 import { syncProposalsV2 } from "@/internal/billing/v2/actions/sync/syncProposalsV2";
@@ -37,6 +38,7 @@ export const billingActions = {
 	previewRestore: previewRestore,
 	sync: sync,
 	syncV2: syncV2,
+	previewSyncV2: previewSyncV2,
 	syncProposals: syncProposals,
 	syncProposalsV2: syncProposalsV2,
 	verify: verify,

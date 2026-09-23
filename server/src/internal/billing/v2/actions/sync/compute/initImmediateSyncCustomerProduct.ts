@@ -1,5 +1,6 @@
 import {
 	BillingVersion,
+	type ExistingRolloversConfig,
 	type ExistingUsagesConfig,
 	type FullCusProduct,
 	type FullCustomer,
@@ -20,6 +21,7 @@ import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCus
  * the legacy `processSyncMapping` flow:
  *   - inherit trial/cancel timestamps from the Stripe subscription
  *   - anchor the reset cycle to the Stripe billing_cycle_anchor
+ *   - carry the previous plan's rollovers onto the matching features
  *   - link the Stripe subscription id
  *   - apply prepaid feature quantities + customize-derived custom prices/ents
  */
@@ -30,6 +32,7 @@ export const initImmediateSyncCustomerProduct = ({
 	stripeSubscription,
 	currentEpochMs,
 	existingUsagesConfig,
+	existingRolloversConfig,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
@@ -37,13 +40,10 @@ export const initImmediateSyncCustomerProduct = ({
 	stripeSubscription: Stripe.Subscription;
 	currentEpochMs: number;
 	existingUsagesConfig?: ExistingUsagesConfig;
+	existingRolloversConfig?: ExistingRolloversConfig;
 }): FullCusProduct => {
-	const {
-		fullProduct,
-		featureQuantities,
-		customerLicenseQuantities,
-		entity,
-	} = productContext;
+	const { fullProduct, featureQuantities, customerLicenseQuantities, entity } =
+		productContext;
 
 	const trialEndsAt = getTrialEndsAtFromStripe({ stripeSubscription });
 	const { canceledAt, endedAt } = getCancelFieldsFromStripe({
@@ -67,6 +67,7 @@ export const initImmediateSyncCustomerProduct = ({
 			trialEndsAt,
 			billingVersion: BillingVersion.V2,
 			existingUsagesConfig,
+			existingRolloversConfig,
 		},
 		initOptions: {
 			subscriptionId: stripeSubscription.id,

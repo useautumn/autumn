@@ -30,7 +30,7 @@ export * from "./restore/restoreParamsV1";
 // Setup Payment
 export * from "./setupPayment/setupPaymentParamsV0";
 export * from "./setupPayment/setupPaymentParamsV1";
-
+export * from "./sync/previewSyncV2";
 // Sync
 export * from "./sync/syncParamsV0";
 export * from "./sync/syncParamsV1";
