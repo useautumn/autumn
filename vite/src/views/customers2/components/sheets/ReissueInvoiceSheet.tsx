@@ -316,7 +316,11 @@ function ReissueInvoiceForm({
 				/>
 
 				<SheetAccordion type="multiple">
-					<SheetAccordionItem value="settings" title="Invoice settings">
+					<SheetAccordionItem
+						value="settings"
+						title="Invoice settings"
+						titleClassName="text-sub text-foreground"
+					>
 						<div className="space-y-4">
 							<div className="space-y-1.5">
 								<FormLabel>Invoice template</FormLabel>
@@ -382,10 +386,7 @@ function ReissueInvoiceForm({
 									}
 								/>
 							</Field>
-						</div>
-					</SheetAccordionItem>
-					<SheetAccordionItem value="invoice" title="This invoice">
-						<div className="space-y-4">
+
 							<Field label="Custom fields" hint="Up to four, e.g. a PO number.">
 								<div className="flex flex-col gap-2">
 									{form.customFields.map((field) => (
