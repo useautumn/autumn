@@ -15,6 +15,7 @@ import { mutationToRecord } from "../receipt/mutationToRecord.js";
 import type {
 	CommittedMutation,
 	DecidedMutation,
+	MutationDurability,
 	MutationSubmission,
 } from "../types/mutation.js";
 import type { PartitionWriterScope } from "../types/partitionWriter.js";
@@ -104,7 +105,12 @@ export function decide<Reply>({
 			source: submission.source,
 		}),
 		nextState: result.nextState,
-		durability: submission.durability ?? "log",
+		projectedStates: result.projectedStates,
+		durability: durabilityFor({
+			scope,
+			customerKey,
+			requested: submission.durability ?? "log",
+		}),
 		catalog: result.catalog,
 	});
 	scheduleCommit({ scope });
@@ -113,6 +119,24 @@ export function decide<Reply>({
 		committed: pending.committed,
 		stored: pending.settlement.waitForStore(),
 	});
+}
+
+/** A write decided on one the store has not taken yet waits for the store too: if that one is refused, this one sits on rows that never landed. */
+function durabilityFor({
+	scope,
+	customerKey,
+	requested,
+}: {
+	scope: PartitionWriterScope;
+	customerKey: string;
+	requested: MutationDurability;
+}): MutationDurability {
+	if (requested === "store") return "store";
+	const pending = scope.state.pendingByCustomerKey.get(customerKey) ?? [];
+	const followsUnlandedStoreWrite = [...pending].some(
+		(earlier) => earlier.durability === "store",
+	);
+	return followsUnlandedStoreWrite ? "store" : "log";
 }
 
 function decidedWith<Reply>({

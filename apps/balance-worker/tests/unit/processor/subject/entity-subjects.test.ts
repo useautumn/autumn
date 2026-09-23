@@ -65,6 +65,10 @@ const entityEnvelope: SubjectRowsEnvelope = {
 		id: identity.customerId,
 		org_id: identity.orgId,
 		env: AppEnv.Sandbox,
+		created_at: 0,
+		processor: null,
+		metadata: null,
+		send_email_receipts: false,
 		config: null,
 		spend_limits: null,
 		overage_allowed: null,
@@ -223,7 +227,14 @@ describe("entity subjects", () => {
 			expect(
 				fixture.store.readOwnState({ identity: entityIdentity })
 					?.customerEntitlements,
-			).toEqual([{ ...seatsRow, balance: 6 }]);
+			).toEqual([
+				{
+					...seatsRow,
+					feature_id: "seats",
+					separate_interval: false,
+					balance: 6,
+				},
+			]);
 			expect(fixture.store.readOwnState({ identity })?.revision).toBe(2);
 			expect(fixture.store.readOwnState({ identity })?.entity).toBeNull();
 

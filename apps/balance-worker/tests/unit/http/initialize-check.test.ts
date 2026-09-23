@@ -191,6 +191,7 @@ function createFixture({
 	};
 	return {
 		store,
+		app,
 		post,
 		batches,
 		close,
@@ -392,6 +393,57 @@ test.concurrent(
 					error: { code: "NOT_READY" },
 				});
 			}
+			expect(fixture.batches).toHaveLength(0);
+		} finally {
+			await fixture.close();
+		}
+	},
+);
+
+test.concurrent(
+	"a private store refuses a billing plan: its rows would never reach Postgres",
+	async () => {
+		const fixture = createFixture();
+		try {
+			const response = await fixture.app.request("/v1/apply-billing-plan", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({
+					route: { partition: 0, routeEpoch: "1" },
+					command: {
+						schemaVersion: 1,
+						type: "applyBillingPlan",
+						requestId: "plan",
+						commandId: "plan",
+						identity,
+						occurredAt: 1_700_000_000_000,
+						entityIds: [],
+						ops: [
+							{
+								op: "insert",
+								table: "customer",
+								row: {
+									internal_id: "cus_internal",
+									id: identity.customerId,
+									config: null,
+									spend_limits: null,
+									overage_allowed: null,
+									usage_limits: null,
+									usage_alerts: null,
+								},
+							},
+						],
+					},
+					payload: { catalogRows: [] },
+				}),
+			});
+			expect(response.status).toBe(400);
+			expect(await response.json()).toMatchObject({
+				error: {
+					code: "UNSUPPORTED_COMMAND",
+					reason: "billing_plan_needs_postgres_store",
+				},
+			});
 			expect(fixture.batches).toHaveLength(0);
 		} finally {
 			await fixture.close();

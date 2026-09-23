@@ -1,18 +1,22 @@
 import type {
+	ApplyBillingPlanRequest,
 	CheckCommand,
 	ConfirmExpiredLockCommand,
 	EvictCommand,
 	FinalizeCommand,
 	InitializeRequest,
 	MutationSource,
+	ReadSubjectStateCommand,
 	ResetCommand,
 	TrackCommand,
 } from "@autumn/balance-engine";
+import { applyBillingPlan as applyBillingPlanPartition } from "./commands/applyBillingPlan/applyBillingPlan.js";
 import { check as checkPartition } from "./commands/check.js";
 import { confirmExpiredLock as confirmExpiredLockPartition } from "./commands/confirmExpiredLock.js";
 import { evict as evictPartition } from "./commands/evict.js";
 import { finalize as finalizePartition } from "./commands/finalize.js";
 import { initialize as initializePartition } from "./commands/initialize.js";
+import { readSubjectState as readSubjectStatePartition } from "./commands/readSubjectState.js";
 import { reset as resetPartition } from "./commands/reset.js";
 import { track as trackPartition } from "./commands/track.js";
 import {
@@ -86,6 +90,20 @@ function createProcessor({
 		});
 	}
 
+	function readSubjectState({ command }: { command: ReadSubjectStateCommand }) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: readSubjectStatePartition({ scope, command }),
+		});
+	}
+
+	function applyBillingPlan({ request }: { request: ApplyBillingPlanRequest }) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: applyBillingPlanPartition({ scope, request }),
+		});
+	}
+
 	function evict({ command }: { command: EvictCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
@@ -151,6 +169,8 @@ function createProcessor({
 		execute,
 		track,
 		check,
+		applyBillingPlan,
+		readSubjectState,
 		initialize,
 		evict,
 		finalize,

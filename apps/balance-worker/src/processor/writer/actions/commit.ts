@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import { subjectStateToLogState } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import type {
 	DurableMutationApplyResult,
@@ -201,12 +202,15 @@ function enterRecovery({
 	rejectAllPending({ state: scope.state, batch, error });
 }
 
-// Only the log's copy carries `after`; the record the store and the dedup memory keep stays lean.
+// Only the log's copy carries `after`, and only the columns commands decide on; memory keeps the whole rows.
 function mutationOf(pending: PendingMutation): MeteringRecord {
 	if (!pending.catalog) return pending.mutation;
 	return {
 		...pending.mutation,
-		after: { state: pending.nextState, catalog: pending.catalog },
+		after: {
+			state: subjectStateToLogState({ state: pending.nextState }),
+			catalog: pending.catalog,
+		},
 	};
 }
 

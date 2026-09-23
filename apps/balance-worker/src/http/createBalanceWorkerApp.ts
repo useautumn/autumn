@@ -1,11 +1,13 @@
 import { Hono } from "hono";
 import { createWorkerErrorHandler } from "./handlers/errorHandler/createWorkerErrorHandler.js";
+import { receiveApplyBillingPlan } from "./handlers/receiveApplyBillingPlan.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveConfirmExpiredLock } from "./handlers/receiveConfirmExpiredLock.js";
 import { receiveEvict } from "./handlers/receiveEvict.js";
 import { receiveFinalize } from "./handlers/receiveFinalize.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveInitialize } from "./handlers/receiveInitialize.js";
+import { receiveReadSubjectState } from "./handlers/receiveReadSubjectState.js";
 import { receiveReset } from "./handlers/receiveReset.js";
 import { receiveTrack } from "./handlers/receiveTrack.js";
 import { requestLoggingMiddleware } from "./middlewares/requestLoggingMiddleware.js";
@@ -30,6 +32,8 @@ export function createBalanceWorkerApp({
 	commands.use(requestValidationMiddleware, runtimeRoutingMiddleware({ ctx }));
 	commands.post("/initialize", receiveInitialize);
 	commands.post("/check", receiveCheck);
+	commands.post("/apply-billing-plan", receiveApplyBillingPlan);
+	commands.post("/read-subject-state", receiveReadSubjectState);
 	commands.post("/track", receiveTrack);
 	commands.post("/evict", receiveEvict);
 	commands.post("/finalize", receiveFinalize);

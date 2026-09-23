@@ -107,6 +107,9 @@ const fixture = ({
 		initialize: async () => {
 			throw new Error("Initialization is not configured in this fixture");
 		},
+		applyBillingPlan: async () => {
+			throw new Error("Billing plans are not configured in this fixture");
+		},
 		track: async (params) => {
 			submitted.push(params);
 			if (cause) throw cause;
@@ -117,6 +120,10 @@ const fixture = ({
 				fullSubject: createSubjectFor({ state }),
 				command,
 			}),
+			state,
+			catalog: catalogRowsToCatalog({ rows: [] }),
+		}),
+		readSubjectState: async () => ({
 			state,
 			catalog: catalogRowsToCatalog({ rows: [] }),
 		}),

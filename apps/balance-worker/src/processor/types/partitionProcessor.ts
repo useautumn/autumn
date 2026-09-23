@@ -1,19 +1,23 @@
 import type {
+	ApplyBillingPlanRequest,
 	CheckCommand,
 	ConfirmExpiredLockCommand,
 	EvictCommand,
 	FinalizeCommand,
 	InitializeRequest,
 	MutationSource,
+	ReadSubjectStateCommand,
 	ResetCommand,
 	TrackCommand,
 } from "@autumn/balance-engine";
 import type {
+	ApplyBillingPlanReply,
 	CheckReply,
 	ConfirmExpiredLockReply,
 	EvictReply,
 	FinalizeReply,
 	InitializeReply,
+	ReadSubjectStateReply,
 	ResetReply,
 	TrackReply,
 } from "@autumn/balance-worker-client/protocol";
@@ -38,7 +42,13 @@ export type PartitionProcessor = {
 	}): Promise<Decision>;
 	track(params: { command: TrackCommand }): Promise<TrackReply>;
 	check(params: { command: CheckCommand }): Promise<CheckReply>;
+	readSubjectState(params: {
+		command: ReadSubjectStateCommand;
+	}): Promise<ReadSubjectStateReply>;
 	initialize(params: { request: InitializeRequest }): Promise<InitializeReply>;
+	applyBillingPlan(params: {
+		request: ApplyBillingPlanRequest;
+	}): Promise<ApplyBillingPlanReply>;
 	evict(params: { command: EvictCommand }): Promise<EvictReply>;
 	finalize(params: { command: FinalizeCommand }): Promise<FinalizeReply>;
 	confirmExpiredLock(params: {

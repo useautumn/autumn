@@ -769,6 +769,65 @@ describe("partition writer", () => {
 		}
 	});
 
+	test("a write decided on one the store has not taken yet waits for the store too", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new RecordingCommittedAppender();
+			const applyGate = Promise.withResolvers<void>();
+			const slowStore: PartitionProcessorScope["ctx"]["stateStore"] = {
+				...fixture.store,
+				applyDurableMutations: async ({ records }) => {
+					await applyGate.promise;
+					return records.map((record) => ({
+						kind: "applied" as const,
+						mutation: record.mutation,
+						nextOffset: record.position.offset + 1n,
+					}));
+				},
+			};
+			const writer = createPartitionWriterCore({
+				ctx: {
+					stateStore: slowStore,
+					appender,
+					receiptPolicy: defaultReceiptPolicy,
+					recentCommands: createRecentCommands({
+						windowMs: 600_000,
+						now: () => 0,
+					}),
+				},
+				config: { topic, partition, limits: defaultLimits },
+			});
+			const structural = createCommand({ commandId: "cmd_store_durable" });
+			const metered = createCommand({ commandId: "cmd_behind_it" });
+
+			const storeWrite = writer.decide({
+				command: structural,
+				durability: "store",
+				mutate: ({ state }) => decideForTest({ state, command: structural }),
+			});
+			// Asks for "log", but sits on rows the store has not taken yet.
+			const meteredWrite = writer.decide({
+				command: metered,
+				mutate: ({ state }) => decideForTest({ state, command: metered }),
+			});
+			let meteredSettled = false;
+			void meteredWrite.waitForCommit().then(() => {
+				meteredSettled = true;
+			});
+
+			await waitForBatch();
+			expect(appender.batches.length).toBeGreaterThan(0);
+			expect(meteredSettled).toBe(false);
+
+			applyGate.resolve();
+			await storeWrite.waitForCommit();
+			await meteredWrite.waitForCommit();
+			expect(meteredSettled).toBe(true);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
 	/** The Postgres-backed store answers null to every read on purpose: Postgres
 	 *  holds the baseline, so there is no receipt table to consult. A position
 	 *  the committer has already durably applied must therefore be accepted on

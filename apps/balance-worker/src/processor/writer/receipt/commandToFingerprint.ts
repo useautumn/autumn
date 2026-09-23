@@ -47,6 +47,15 @@ export const commandToFingerprint = ({
 		// The clock is the request, and it rides in the id; a retry carries the same id.
 		case "reset":
 			return JSON.stringify([...identityKey, command.type]);
+		// The plan's rows are the request; a retry with different rows is a conflict.
+		case "applyBillingPlan":
+			return JSON.stringify(
+				canonicalizeJsonValue(
+					JSON.parse(
+						JSON.stringify([...identityKey, command.entityIds, command.ops]),
+					),
+				),
+			);
 		// The baseline rows are the request; a retry with different rows is a conflict.
 		case "initialize":
 			return JSON.stringify(

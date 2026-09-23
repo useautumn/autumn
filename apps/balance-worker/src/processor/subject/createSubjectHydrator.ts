@@ -1,4 +1,5 @@
 import { ensureSubject } from "./actions/ensureSubject/ensureSubject.js";
+import { ensureSubjectCatalog } from "./actions/ensureSubject/ensureSubjectCatalog.js";
 import { readSubject, readSubjectCatalog } from "./actions/readSubject.js";
 import { createInFlightLoads } from "./inFlightLoads/createInFlightLoads.js";
 import type { SubjectHydratorContext, SubjectScope } from "./types/subject.js";
@@ -16,6 +17,8 @@ export const createSubjectHydrator = ({
 
 	return {
 		ensure: ({ identity }) => ensureSubject({ scope, identity }),
+		ensureCatalog: ({ identity, state }) =>
+			ensureSubjectCatalog({ scope, identity, state }),
 		readSubject: ({ state, identity }) =>
 			readSubject({ scope, state, identity }),
 		readCatalog: ({ state }) => readSubjectCatalog({ scope, state }),

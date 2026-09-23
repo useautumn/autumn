@@ -96,7 +96,8 @@ function loggedCommandOf({
 
 function outcomeOf({ requestLog }: { requestLog: BalanceWorkerRequestLog }) {
 	const { response, error } = requestLog;
-	const result = response?.result;
+	// A read decides nothing, so it has no result to report.
+	const result = response && "result" in response ? response.result : undefined;
 	// A track and a finalize both report a status and a reason.
 	const trackResult =
 		result &&

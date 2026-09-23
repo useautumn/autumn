@@ -45,6 +45,8 @@ export type MutationResult<Reply> =
 			kind: "write";
 			mutation: SubjectStateMutation;
 			nextState: SubjectState;
+			/** What each owner stores; absent, nextState is split into the customer and the entity it names. */
+			projectedStates?: SubjectState[];
 			/** The catalog the decision read; with it the log's readers can rebuild the subject. Absent when nothing downstream reads balances. */
 			catalog?: Catalog;
 	  }

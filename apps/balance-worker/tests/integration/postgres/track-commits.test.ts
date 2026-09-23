@@ -6,8 +6,10 @@ import { fileURLToPath } from "node:url";
 import {
 	type CheckCommand,
 	parseCheckCommand,
+	parseReadSubjectStateCommand,
 	parseResetCommand,
 	parseTrackCommand,
+	type ReadSubjectStateCommand,
 	type ResetCommand,
 	type TrackCommand,
 } from "@autumn/balance-engine";
@@ -28,6 +30,8 @@ import { Kafka, logLevel } from "kafkajs";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
 import {
 	openFixturePostgres,
+	planEntityOfCustomer,
+	planNewCustomer,
 	readWorktreeDatabaseUrl,
 	type SeededCustomer,
 	seedCustomer,
@@ -300,6 +304,31 @@ function checkCommand({
 			internalFeatureId: customer.internalFeatureId,
 			requiredBalance,
 			properties: null,
+			occurredAt: Date.now(),
+		},
+	});
+}
+
+function readSubjectStateCommand({
+	customer,
+	requestId,
+}: {
+	customer: Pick<SeededCustomer, "identity">;
+	requestId: string;
+}): ReadSubjectStateCommand {
+	return parseReadSubjectStateCommand({
+		input: {
+			schemaVersion: 1,
+			type: "readSubjectState",
+			org: {
+				config: {
+					reverse_deduction_order: false,
+					block_overdue_entitlements: false,
+					include_past_due: true,
+				},
+			},
+			requestId,
+			identity: customer.identity,
 			occurredAt: Date.now(),
 		},
 	});
@@ -692,6 +721,634 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			} finally {
 				await tracked.cleanup();
 				await checked.cleanup();
+			}
+		}, 60_000);
+
+		test("a read returns the whole customer and its products with every earlier track counted; a missing customer is not found", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const read = await seedCustomer({
+				postgres,
+				balance: 100,
+				billingCycleAnchor: Date.now(),
+			});
+			try {
+				await trackOrExplain(
+					harness,
+					trackCommand({ customer: read, commandId: "read_track", value: 5 }),
+				);
+
+				const reply = await harness.client.readSubjectState({
+					command: readSubjectStateCommand({
+						customer: read,
+						requestId: "read_whole",
+					}),
+				});
+				expect(balanceOf(reply, read.customerEntitlementId)).toBe(95);
+				expect(reply.state.customer).toMatchObject({
+					id: read.identity.customerId,
+					org_id: read.orgId,
+					name: read.identity.customerId,
+				});
+				expect(reply.state.customerProducts[0]).toMatchObject({
+					id: read.customerProductId,
+					product_id: "pro",
+					subscription_ids: [expect.stringMatching(/^sub_stripe_/)],
+				});
+
+				await expect(
+					harness.client.readSubjectState({
+						command: readSubjectStateCommand({
+							customer: {
+								identity: {
+									...read.identity,
+									customerId: `${read.identity.customerId}_missing`,
+								},
+							},
+							requestId: "read_missing",
+						}),
+					}),
+				).rejects.toMatchObject({ workerCode: "CUSTOMER_NOT_FOUND" });
+			} finally {
+				await read.cleanup();
+			}
+		}, 60_000);
+
+		test("a billing plan that creates a customer lands every row in Postgres, arrays included, and a track then draws on it", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				const reply = await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "plan_create" }),
+				});
+				expect(reply.result.status).toBe("applied");
+				expect(reply.state.customer).toMatchObject({
+					id: planned.identity.customerId,
+					name: "Ada",
+					metadata: { plan: "team" },
+				});
+				expect(await planned.countCustomers()).toBe(1);
+				expect(await planned.readCustomerProduct()).toEqual({
+					options: [{ feature_id: seeded.featureId, quantity: 3 }],
+					subscription_ids: [expect.stringMatching(/^sub_stripe_/)],
+					scheduled_ids: [],
+				});
+				expect(await planned.readBalance()).toBe(100);
+
+				const created = {
+					...seeded,
+					identity: planned.identity,
+					customerEntitlementId: planned.customerEntitlementId,
+					readBalance: planned.readBalance,
+				};
+				const tracked = await trackOrExplain(
+					harness,
+					trackCommand({
+						customer: created,
+						commandId: "plan_track",
+						value: 5,
+					}),
+				);
+				expect(tracked.result.status).toBe("applied");
+				expect(await waitForBalance({ customer: created, balance: 95 })).toBe(
+					95,
+				);
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("two plans creating the same customer at once: one applies, the other finds it and writes nothing", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				const replies = await Promise.all([
+					harness.client.applyBillingPlan({
+						request: planned.request({ commandId: "plan_race_a" }),
+					}),
+					harness.client.applyBillingPlan({
+						request: planned.request({ commandId: "plan_race_b" }),
+					}),
+				]);
+				expect(replies.map((reply) => reply.result.status).sort()).toEqual([
+					"applied",
+					"customer_exists",
+				]);
+				expect(await planned.countCustomers()).toBe(1);
+				expect(await planned.readBalance()).toBe(100);
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("a plan whose row collides with one Postgres already holds is refused as stale, leaves nothing behind, and a clean retry applies", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await expect(
+					harness.client.applyBillingPlan({
+						request: planned.request({
+							commandId: "plan_collide",
+							customerProductId: seeded.customerProductId,
+						}),
+					}),
+				).rejects.toMatchObject({ workerCode: "STALE_SUBJECT" });
+				expect(await planned.countCustomers()).toBe(0);
+
+				const retried = await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "plan_collide_retry" }),
+				});
+				expect(retried.result.status).toBe("applied");
+				expect(await planned.countCustomers()).toBe(1);
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("a plan's updates land on the customer and its product in Postgres, and the worker serves them", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "plan_update_create" }),
+				});
+				const linked = await harness.client.applyBillingPlan({
+					request: planned.linkBackRequest({ commandId: "plan_update_link" }),
+				});
+				expect(linked.result.status).toBe("applied");
+
+				const stripeCustomer = {
+					id: expect.stringMatching(/^cus_stripe_/),
+					type: "stripe",
+				};
+				expect(await planned.readProcessor()).toEqual(stripeCustomer);
+				expect(await planned.readCustomerProduct()).toEqual({
+					options: [{ feature_id: seeded.featureId, quantity: 3 }],
+					subscription_ids: [expect.stringMatching(/^sub_linked_/)],
+					scheduled_ids: [expect.stringMatching(/^sched_linked_/)],
+				});
+				const read = await harness.client.readSubjectState({
+					command: readSubjectStateCommand({
+						customer: planned,
+						requestId: "plan_update_read",
+					}),
+				});
+				expect(read.state.customer.processor).toEqual(stripeCustomer);
+				expect(read.state.customerProducts[0]?.subscription_ids).toEqual([
+					expect.stringMatching(/^sub_linked_/),
+				]);
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("an update overwrites a column another writer changed behind the worker: last write wins, as on the Postgres lane", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "plan_overwrite_create" }),
+				});
+				await planned.writeSubscriptionIdsBehindWorker(["sub_other_writer"]);
+
+				const linked = await harness.client.applyBillingPlan({
+					request: planned.linkBackRequest({
+						commandId: "plan_overwrite_link",
+					}),
+				});
+				expect(linked.result.status).toBe("applied");
+				expect(await planned.readCustomerProduct()).toMatchObject({
+					subscription_ids: [expect.stringMatching(/^sub_linked_/)],
+				});
+				expect(await planned.readProcessor()).toMatchObject({
+					type: "stripe",
+				});
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("an update of a product the worker does not hold is refused as stale before anything is logged", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "plan_missing_create" }),
+				});
+				await expect(
+					harness.client.applyBillingPlan({
+						request: planned.linkBackRequest({
+							commandId: "plan_missing_link",
+							customerProductId: "cp_not_held",
+						}),
+					}),
+				).rejects.toMatchObject({ workerCode: "STALE_SUBJECT" });
+				expect(await planned.readProcessor()).toBeNull();
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("a plan update of a row another writer deleted is refused by the store alone: the caller hears it, the bookmark moves past it, the partition keeps deciding, and a restart replays it as settled", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "poison_create" }),
+				});
+				const bookmarkBefore = await seeded.readNextOffset({
+					topic: harness.topics.metering,
+					partition: PARTITION,
+				});
+
+				// The worker still holds the product, so it decides the update; Postgres has nothing to update.
+				await planned.deleteCustomerProductBehindWorker();
+				await expect(
+					harness.client.applyBillingPlan({
+						request: planned.linkBackRequest({ commandId: "poison_link" }),
+					}),
+				).rejects.toMatchObject({ workerCode: "STALE_SUBJECT" });
+				// One record, one verdict: its customer update did not land either.
+				expect(await planned.readProcessor()).toBeNull();
+				const bookmarkAfter = await waitForBookmarkPast({
+					customer: seeded,
+					harness,
+					bookmark: bookmarkBefore,
+				});
+				expect(bookmarkAfter).toBeGreaterThan(bookmarkBefore as bigint);
+				// The refused record is in the log, so its id is spent even though nothing landed.
+				await expect(
+					harness.client.applyBillingPlan({
+						request: planned.linkBackRequest({ commandId: "poison_link" }),
+					}),
+				).rejects.toMatchObject({ workerCode: "DUPLICATE_COMMAND" });
+
+				// The partition keeps deciding and landing plans for this customer.
+				const renamed = await harness.client.applyBillingPlan({
+					request: planned.renameRequest({
+						commandId: "poison_rename",
+						name: "Grace",
+					}),
+				});
+				expect(renamed.result.status).toBe("applied");
+				expect(await planned.readName()).toBe("Grace");
+
+				// A restart replays the log past the refused record without tripping on it.
+				await worker.stop();
+				workers.splice(workers.indexOf(worker), 1);
+				const replacement = await startWorker({ harness });
+				workers.push(replacement);
+				const renamedAgain = await harness.client.applyBillingPlan({
+					request: planned.renameRequest({
+						commandId: "poison_rename_after_restart",
+						name: "Hopper",
+					}),
+				});
+				expect(renamedAgain.result.status).toBe("applied");
+				expect(await planned.readName()).toBe("Hopper");
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 90_000);
+
+		test("one plan over the customer and an entity lands both, and each subject's memory holds only its own rows", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "entity_plan_create" }),
+				});
+				const entity = await planEntityOfCustomer({
+					postgres,
+					seeded,
+					planned,
+				});
+				try {
+					const reply = await harness.client.applyBillingPlan({
+						request: entity.request({ commandId: "entity_plan_apply" }),
+					});
+					expect(reply.result.status).toBe("applied");
+					expect(await planned.readName()).toBe("Grace");
+					expect(await entity.readEntityGrantBalance()).toBe(20);
+
+					const customerRead = await harness.client.readSubjectState({
+						command: readSubjectStateCommand({
+							customer: planned,
+							requestId: "entity_plan_read_customer",
+						}),
+					});
+					expect(customerRead.state.customer.name).toBe("Grace");
+					expect(
+						customerRead.state.customerProducts.map((row) => row.id),
+					).not.toContain(entity.customerProductId);
+
+					const entityRead = await harness.client.readSubjectState({
+						command: readSubjectStateCommand({
+							customer: { identity: entity.identity },
+							requestId: "entity_plan_read_entity",
+						}),
+					});
+					expect(
+						entityRead.state.customerProducts.map((row) => row.id),
+					).toContain(entity.customerProductId);
+					expect(
+						entityRead.state.customerEntitlements.find(
+							(row) => row.id === entity.customerEntitlementId,
+						)?.balance,
+					).toBe(20);
+				} finally {
+					await entity.cleanup();
+				}
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("a plan over the customer and an entity is one verdict: an entity row that collides refuses the customer's change too", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "entity_atomic_create" }),
+				});
+				const entity = await planEntityOfCustomer({
+					postgres,
+					seeded,
+					planned,
+				});
+				try {
+					await expect(
+						harness.client.applyBillingPlan({
+							request: entity.request({
+								commandId: "entity_atomic_collide",
+								customerProductId: seeded.customerProductId,
+							}),
+						}),
+					).rejects.toMatchObject({ workerCode: "STALE_SUBJECT" });
+					expect(await planned.readName()).toBe("Ada");
+					expect(await entity.readEntityGrantBalance()).toBeNull();
+				} finally {
+					await entity.cleanup();
+				}
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("a plan naming an entity the customer does not have is refused before anything is logged", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "entity_missing_create" }),
+				});
+				const entity = await planEntityOfCustomer({
+					postgres,
+					seeded,
+					planned,
+				});
+				try {
+					await expect(
+						harness.client.applyBillingPlan({
+							request: entity.request({
+								commandId: "entity_missing_apply",
+								entityId: "ent_not_there",
+							}),
+						}),
+					).rejects.toMatchObject({ workerCode: "ENTITY_NOT_FOUND" });
+					expect(await planned.readName()).toBe("Ada");
+				} finally {
+					await entity.cleanup();
+				}
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("a plan deletes a product: its grant goes with it in Postgres and in the worker's memory", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "delete_create" }),
+				});
+				const deleted = await harness.client.applyBillingPlan({
+					request: planned.opsRequest({
+						commandId: "delete_product",
+						ops: [
+							{
+								op: "delete",
+								table: "customerProducts",
+								id: planned.customerProductId,
+							},
+						],
+					}),
+				});
+				expect(deleted.result.status).toBe("applied");
+				expect(deleted.state.customerProducts).toEqual([]);
+				expect(deleted.state.customerEntitlements).toEqual([]);
+				expect(await planned.readCustomerProduct()).toBeNull();
+				expect(Number.isNaN(await planned.readBalance())).toBe(true);
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("a plan moves a grant: an update replaces its reset date, an increment adds to the balance a track left", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "grant_create" }),
+				});
+				const created = {
+					...seeded,
+					identity: planned.identity,
+					customerEntitlementId: planned.customerEntitlementId,
+					readBalance: planned.readBalance,
+				};
+				await trackOrExplain(
+					harness,
+					trackCommand({
+						customer: created,
+						commandId: "grant_track",
+						value: 5,
+					}),
+				);
+				const nextResetAt = Date.now() + 86_400_000;
+				const moved = await harness.client.applyBillingPlan({
+					request: planned.opsRequest({
+						commandId: "grant_move",
+						ops: [
+							{
+								op: "update",
+								table: "customerEntitlements",
+								id: planned.customerEntitlementId,
+								set: { next_reset_at: nextResetAt },
+							},
+							{
+								op: "increment",
+								table: "customerEntitlements",
+								id: planned.customerEntitlementId,
+								add: { balance: 25 },
+							},
+						],
+					}),
+				});
+				expect(moved.result.status).toBe("applied");
+				expect(await planned.readBalance()).toBe(120);
+				expect(
+					moved.state.customerEntitlements.find(
+						({ id }) => id === planned.customerEntitlementId,
+					),
+				).toMatchObject({ balance: 120, next_reset_at: nextResetAt });
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("a plan creates an entity with a product on it; Postgres holds both and the entity's read serves them", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				const createOps = planned.request({ commandId: "entity_new_create" })
+					.command.ops;
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "entity_new_create" }),
+				});
+				const [productRow] = createOps.flatMap((op) =>
+					op.op === "insert" && op.table === "customerProducts" ? [op.row] : [],
+				);
+				if (!productRow) throw new Error("The created plan has no product");
+				const entity = {
+					id: "seat_new",
+					internal_id: `ent_int_${planned.internalCustomerId}`,
+					internal_customer_id: planned.internalCustomerId,
+					org_id: seeded.orgId,
+					env: seeded.env,
+					created_at: Date.now(),
+					name: "New seat",
+					deleted: false,
+					feature_id: seeded.featureId,
+					internal_feature_id: seeded.internalFeatureId,
+				};
+				const entityProductId = `cp_new_seat_${planned.internalCustomerId}`;
+				const reply = await harness.client.applyBillingPlan({
+					request: planned.opsRequest({
+						commandId: "entity_new_apply",
+						entityIds: [entity.id],
+						ops: [
+							{ op: "insert", table: "entity", row: entity },
+							{
+								op: "insert",
+								table: "customerProducts",
+								row: {
+									...productRow,
+									id: entityProductId,
+									internal_entity_id: entity.internal_id,
+									entity_id: entity.id,
+								},
+							},
+						],
+					}),
+				});
+				expect(reply.result.status).toBe("applied");
+				expect(await planned.readEntity(entity.id)).toMatchObject({
+					name: "New seat",
+				});
+
+				const entityRead = await harness.client.readSubjectState({
+					command: readSubjectStateCommand({
+						customer: {
+							identity: { ...planned.identity, entityId: entity.id },
+						},
+						requestId: "entity_new_read",
+					}),
+				});
+				expect(entityRead.state.entity?.id).toBe(entity.id);
+				expect(entityRead.state.customerProducts.map(({ id }) => id)).toContain(
+					entityProductId,
+				);
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
+			}
+		}, 60_000);
+
+		test("a currency lock sets the currency once; a second lock leaves it", async () => {
+			const worker = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(worker)) workers.push(worker);
+			const seeded = await seedCustomer({ postgres, balance: 100 });
+			const planned = await planNewCustomer({ postgres, seeded });
+			try {
+				await harness.client.applyBillingPlan({
+					request: planned.request({ commandId: "currency_create" }),
+				});
+				const lock = ({
+					commandId,
+					currency,
+				}: {
+					commandId: string;
+					currency: string;
+				}) =>
+					harness.client.applyBillingPlan({
+						request: planned.opsRequest({
+							commandId,
+							ops: [
+								{
+									op: "update",
+									table: "customer",
+									id: planned.internalCustomerId,
+									set: { currency },
+									whereUnset: true,
+								},
+							],
+						}),
+					});
+				await lock({ commandId: "currency_usd", currency: "usd" });
+				await lock({ commandId: "currency_eur", currency: "eur" });
+				expect(await planned.readCurrency()).toBe("usd");
+			} finally {
+				await planned.cleanup();
+				await seeded.cleanup();
 			}
 		}, 60_000);
 

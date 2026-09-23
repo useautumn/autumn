@@ -99,6 +99,7 @@ export function enqueueMutation({
 	customerKey,
 	mutation,
 	nextState,
+	projectedStates: explicitProjectedStates,
 	durability,
 	catalog,
 }: {
@@ -107,6 +108,7 @@ export function enqueueMutation({
 	customerKey: string;
 	mutation: MutationRecord;
 	nextState: SubjectState;
+	projectedStates?: SubjectState[];
 	durability: MutationDurability;
 	catalog?: Catalog;
 }): PendingMutation {
@@ -121,10 +123,8 @@ export function enqueueMutation({
 	}
 	const settlement = createPendingSettlement();
 	const committed = settlement.join({ kind: "new" });
-	const states = splitSubjectState({ state: nextState });
-	const projectedStates = states.entity
-		? [states.customer, states.entity]
-		: [states.customer];
+	const projectedStates =
+		explicitProjectedStates ?? projectedStatesOf({ state: nextState });
 	const pending: PendingMutation = {
 		pendingKey,
 		customerKey,
@@ -151,6 +151,12 @@ export function enqueueMutation({
 	state.storeCompletion = settlement.waitForStore();
 	return pending;
 }
+
+/** The customer's part, and the part of the entity the state names. */
+const projectedStatesOf = ({ state }: { state: SubjectState }) => {
+	const states = splitSubjectState({ state });
+	return states.entity ? [states.customer, states.entity] : [states.customer];
+};
 
 /** Snapshot at call time: mutations enqueued later must not extend the wait. */
 export function pendingCommitsFor({

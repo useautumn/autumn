@@ -1,11 +1,13 @@
 import type { TrackCommand } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client";
 import type {
+	ApplyBillingPlanReply,
 	CheckReply,
 	ConfirmExpiredLockReply,
 	FinalizeReply,
 	InitializeReply,
 	PartitionRoute,
+	ReadSubjectStateReply,
 	ResetReply,
 	WorkerErrorCode,
 	WorkerRequest,
@@ -40,6 +42,8 @@ export type BalanceWorkerRequestLog = {
 	response?:
 		| TrackReply
 		| CheckReply
+		| ApplyBillingPlanReply
+		| ReadSubjectStateReply
 		| InitializeReply
 		| FinalizeReply
 		| ConfirmExpiredLockReply

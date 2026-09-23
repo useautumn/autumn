@@ -15,6 +15,11 @@ export type SubjectHydrator = {
 		state: SubjectState;
 		identity: MeteringIdentity;
 	}): WorkerFullSubject;
+	/** Async, before the writer: loads the catalog rows a state references that the cache lacks. */
+	ensureCatalog(params: {
+		identity: MeteringIdentity;
+		state: SubjectState;
+	}): Promise<Catalog>;
 	/** Sync: the catalog rows that view was joined from, which a reply hands to the server so it need not load them. */
 	readCatalog(params: { state: SubjectState }): Catalog;
 	/** An evict arrived: any load of this customer still in flight started before it, so its rows cannot be trusted. */

@@ -1,7 +1,9 @@
-import type { RowChange } from "@autumn/balance-engine";
+import type { MutationCommand, RowChange } from "@autumn/balance-engine";
+import { BALANCE_WORKER_COMMITTER_GUARDS_ENABLED } from "@autumn/env/balanceWorkerConstants";
 import {
 	type FlushBookmark,
 	type SubjectRowChange,
+	type SubjectRowTable,
 	type SubjectRowUpdate,
 	subjectRowIdOf,
 } from "@autumn/postgres";
@@ -24,7 +26,12 @@ const definedNumbers = (record: Record<string, number | undefined>) =>
 		),
 	);
 
-type BalanceTable = SubjectRowChange["table"];
+type BalanceTable =
+	| "customerEntitlements"
+	| "rollovers"
+	| "usageWindows"
+	| "pooledBalances"
+	| "locks";
 type BalanceRowChange = Extract<RowChange, { table: BalanceTable }>;
 
 const isBalanceTable = (table: RowChange["table"]): table is BalanceTable =>
@@ -34,22 +41,35 @@ const isBalanceTable = (table: RowChange["table"]): table is BalanceTable =>
 	table === "pooledBalances" ||
 	table === "locks";
 
-/** An increment adds its counters; an update replaces its columns under the before guard. */
-const balanceRowChangeToUpdate = ({
+/** An update replaces its columns; with guards on, under its `before` unless a billing plan's, which lands last-write-wins. */
+const updateToSubjectRowUpdate = ({
+	table,
+	change,
+	commandType,
+}: {
+	table: SubjectRowTable;
+	change: { id: string; before: object; after: object };
+	commandType: MutationCommand["type"];
+}): SubjectRowUpdate => ({
+	table,
+	id: change.id,
+	set: { ...change.after },
+	add: {},
+	addEntries: {},
+	// `before` stays on the log for its readers either way.
+	guard:
+		BALANCE_WORKER_COMMITTER_GUARDS_ENABLED &&
+		commandType !== "applyBillingPlan"
+			? { ...change.before }
+			: {},
+});
+
+/** An increment adds its counters; with guards on, only while the row is still in the cycle it names. */
+const incrementToSubjectRowUpdate = ({
 	change,
 }: {
-	change: Extract<BalanceRowChange, { op: "update" | "increment" }>;
+	change: Extract<BalanceRowChange, { op: "increment" }>;
 }): SubjectRowUpdate => {
-	if (change.op === "update") {
-		return {
-			table: change.table,
-			id: change.id,
-			set: change.after,
-			add: {},
-			addEntries: {},
-			guard: change.before,
-		};
-	}
 	const entries: Record<
 		string,
 		Record<string, Record<string, number | undefined>> | undefined
@@ -76,16 +96,64 @@ const balanceRowChangeToUpdate = ({
 						],
 			),
 		),
-		guard: change.guard ?? {},
+		guard: BALANCE_WORKER_COMMITTER_GUARDS_ENABLED ? (change.guard ?? {}) : {},
 	};
 };
 
-/** The change as Postgres lands it; only the balance tables and their locks land today, the subject and plan rows wait for attach. */
-const rowChangeToSubjectRowChange = ({
+/** The subject's own rows: only a billing plan changes them. */
+const PLAN_TABLES = {
+	customer: "customers",
+	entity: "entities",
+	customerProducts: "customerProducts",
+	customerPrices: "customerPrices",
+} as const satisfies Partial<Record<RowChange["table"], SubjectRowTable>>;
+
+type PlanTable = keyof typeof PLAN_TABLES;
+type PlanRowChange = Extract<RowChange, { table: PlanTable }>;
+
+const isPlanRowChange = (change: RowChange): change is PlanRowChange =>
+	change.table in PLAN_TABLES;
+
+const planRowChangeToSubjectRowChange = ({
 	change,
 }: {
-	change: RowChange;
+	change: PlanRowChange;
 }): SubjectRowChange => {
+	const table = PLAN_TABLES[change.table];
+	switch (change.op) {
+		case "insert":
+			return { op: "insert", table, row: change.row };
+		case "update":
+			return {
+				op: "update",
+				...updateToSubjectRowUpdate({
+					table,
+					change,
+					commandType: "applyBillingPlan",
+				}),
+			};
+		case "delete":
+			return { op: "delete", table, id: change.id };
+	}
+};
+
+/** The change as Postgres lands it: the balance tables and their locks, and a billing plan's changes to the subject's own rows. */
+const rowChangeToSubjectRowChange = ({
+	change,
+	commandType,
+}: {
+	change: RowChange;
+	commandType: MutationCommand["type"];
+}): SubjectRowChange => {
+	if (isPlanRowChange(change)) {
+		// An initialize's rows are Postgres's own baseline; only a plan brings rows Postgres lacks.
+		if (commandType !== "applyBillingPlan")
+			throw new UnsupportedRowChangeError({
+				table: change.table,
+				op: change.op,
+			});
+		return planRowChangeToSubjectRowChange({ change });
+	}
 	if (!isBalanceTable(change.table)) {
 		throw new UnsupportedRowChangeError({ table: change.table, op: change.op });
 	}
@@ -100,10 +168,18 @@ const rowChangeToSubjectRowChange = ({
 		case "delete":
 			return { op: "delete", table: balanceChange.table, id: balanceChange.id };
 		case "update":
+			return {
+				op: "update",
+				...updateToSubjectRowUpdate({
+					table: balanceChange.table,
+					change: balanceChange,
+					commandType,
+				}),
+			};
 		case "increment":
 			return {
 				op: "update",
-				...balanceRowChangeToUpdate({ change: balanceChange }),
+				...incrementToSubjectRowUpdate({ change: balanceChange }),
 			};
 	}
 };
@@ -119,7 +195,12 @@ const collectChanges = ({
 	for (const call of flush.calls) {
 		for (const record of call.records) {
 			for (const change of record.mutation.changes) {
-				changes.push(rowChangeToSubjectRowChange({ change }));
+				changes.push(
+					rowChangeToSubjectRowChange({
+						change,
+						commandType: record.mutation.command.type,
+					}),
+				);
 				recordOf.push(record);
 			}
 		}

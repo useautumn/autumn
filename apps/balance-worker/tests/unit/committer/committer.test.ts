@@ -98,6 +98,51 @@ const addsOf = (updates: readonly SubjectRowChange[]) =>
 	updates.map((change) => (change.op === "update" ? change.add : null));
 
 describe("committer", () => {
+	test("with guards off, a reset's refill and a window's increment land unconditionally: the log's record is the row", async () => {
+		const fake = createGatedDb();
+		fake.openGate();
+		const committer = createCommitter({
+			ctx: { db: fake.db },
+			config: { concurrency: 1, maxRowsPerFlush: 500, retry },
+		});
+		const tracked = record({ partition: 0, offset: 10n, commandId: "guarded" });
+		const guardedChanges = [
+			{
+				table: "customerEntitlements" as const,
+				op: "update" as const,
+				id: "grant",
+				before: { next_reset_at: 1 },
+				after: { balance: 100, next_reset_at: 2 },
+			},
+			{
+				table: "customerEntitlements" as const,
+				op: "increment" as const,
+				id: "grant",
+				add: { balance: -5 },
+				guard: { next_reset_at: 2 },
+			},
+		];
+		await committer.apply({
+			topic,
+			partition: 0,
+			expectedOffset: 10n,
+			records: [
+				{
+					...tracked,
+					mutation: { ...tracked.mutation, changes: guardedChanges },
+				},
+			],
+		});
+
+		const [landed] = fake.transactions;
+		expect(
+			landed?.updates.map((change) =>
+				change.op === "update" ? change.guard : null,
+			),
+		).toEqual([{}, {}]);
+		await committer.drain();
+	});
+
 	test("calls queued during a flush fold into the next one, each settles with its own offset", async () => {
 		const fake = createGatedDb();
 		const committer = createCommitter({
