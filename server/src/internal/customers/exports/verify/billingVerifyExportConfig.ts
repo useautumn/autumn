@@ -21,6 +21,7 @@ type BillingVerifyExportConfig = {
 		maxMemoizedReads: number;
 		timeoutMs: number;
 		attempts: number;
+		requestsPerSecond: number;
 	};
 };
 
@@ -44,21 +45,23 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 		requestsPerSecond: 25,
 		sandboxRequestsPerSecond: 5,
 	},
-	/** A dead pooled connection fails the retry too if it comes back before the
-	 * pool reaps it, and exhausted attempts restart the whole export — so these
-	 * wait a guaranteed 30s across five backoffs, up to 60s. */
+	/** Each verification needs a replica connection, so throughput plateaus at
+	 * roughly twice REPLICA_DB_POOL_MAX; past that the slots only queue.
+	 * Measured on prod: 68ms/customer at 8, 48ms at 16, 47ms at 24. */
 	customer: {
-		concurrency: 8,
-		timeoutMs: 120_000,
+		concurrency: 16,
+		timeoutMs: 30_000,
 		attempts: 6,
 		retryDelayMs: 2_000,
 		maxRetryDelayMs: 30_000,
 	},
 	/** A memoized read is shared, so it must expire well inside the customer
-	 * deadline — otherwise a retry re-attaches to the same stalled promise. */
+	 * deadline; concurrency alone does not bound the request rate, so these
+	 * reads are paced against the same Stripe limit the sweep uses. */
 	stripeReader: {
 		maxMemoizedReads: 2000,
 		timeoutMs: 30_000,
 		attempts: 1,
+		requestsPerSecond: 40,
 	},
 };
