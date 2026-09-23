@@ -37,10 +37,12 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CountrySelect } from "./reissue/CountrySelect";
 import { getReissuePreviewState } from "./reissue/getReissuePreviewState";
+import { ReissuePaymentMethodSelect } from "./reissue/ReissuePaymentMethodSelect";
 import { stripeInvoiceToPrefill } from "./reissue/stripeInvoiceToPrefill";
 import { TaxIdTypeSelect } from "./reissue/TaxIdTypeSelect";
 import {
 	buildReissuePayload,
+	chargesPaymentMethod,
 	type ReissuePrefill,
 	useReissueForm,
 } from "./reissue/useReissueForm";
@@ -298,6 +300,16 @@ function ReissueInvoiceForm({
 						onChange={(e) => patch({ netTermsDays: e.target.value })}
 					/>
 				</SheetSection>
+
+				{chargesPaymentMethod({ form, prefill }) && (
+					<SheetSection withSeparator>
+						<ReissuePaymentMethodSelect
+							customerId={customer?.id ?? customer?.internal_id}
+							value={form.paymentMethodId}
+							onValueChange={(paymentMethodId) => patch({ paymentMethodId })}
+						/>
+					</SheetSection>
+				)}
 
 				<SheetSection withSeparator>
 					<FormLabel>Tax</FormLabel>

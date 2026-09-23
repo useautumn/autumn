@@ -42,6 +42,7 @@ const untouched = (): ReissueFormState => ({
 	},
 	taxIdOptionId: "FR:eu_vat",
 	taxIdValue: "FR12345678901",
+	paymentMethodId: null,
 });
 
 describe("buildReissuePayload", () => {
@@ -241,6 +242,38 @@ describe("buildReissuePayload", () => {
 				lineItems,
 			}).customer,
 		).toBeUndefined();
+	});
+});
+
+describe("reissue payment method", () => {
+	const chargingPrefill = { ...prefill, chargesAutomatically: true };
+	const withCard = { ...untouched(), paymentMethodId: "pm_chosen" };
+
+	it("sends the chosen card for a card-charged replacement", () => {
+		expect(
+			buildReissuePayload({
+				invoiceId: "inv_1",
+				form: withCard,
+				prefill: chargingPrefill,
+				lineItems,
+			}).invoice,
+		).toEqual({ payment_method_id: "pm_chosen" });
+	});
+
+	it("drops the card when nothing will be charged", () => {
+		for (const [form, nextPrefill] of [
+			[{ ...withCard, netTermsDays: "7" }, chargingPrefill],
+			[withCard, prefill],
+		] as const) {
+			expect(
+				buildReissuePayload({
+					invoiceId: "inv_1",
+					form,
+					prefill: nextPrefill,
+					lineItems,
+				}).invoice?.payment_method_id,
+			).toBeUndefined();
+		}
 	});
 });
 

@@ -38,6 +38,7 @@ import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/Invoice
 import { type InvoiceListRow, InvoiceService } from "../InvoiceService";
 import { invoiceLineItemRepo } from "../lineItems/repos";
 import { applyReissueCustomerOverrides } from "./reissue/applyReissueCustomerOverrides";
+import { assertReissuePaymentMethod } from "./reissue/assertReissuePaymentMethod";
 import { buildReissueLines } from "./reissue/buildReissueLines";
 import { previewReissue } from "./reissue/previewReissue";
 import { previewReissuedInvoice } from "./reissue/previewReissuedInvoice";
@@ -264,6 +265,9 @@ const createReplacementDraft = async ({
 		...(overrides?.account_tax_ids !== undefined
 			? { account_tax_ids: overrides.account_tax_ids }
 			: {}),
+		...(overrides?.payment_method_id
+			? { default_payment_method: overrides.payment_method_id }
+			: {}),
 	};
 	// The draft exists from here on, so anything that fails must take it with it.
 	try {
@@ -350,8 +354,13 @@ const issueReplacement = async ({
 		dropDeferredPointer: creditOriginal,
 	});
 
-	// The total is only guaranteed to match when nothing was adjusted.
-	const adjusted = Boolean(overrides || lineEdits || customerAdjusted);
+	// The total is only guaranteed to match when nothing was adjusted; the card charged never moves it.
+	const onlyChoosesPaymentMethod =
+		overrides?.payment_method_id !== undefined &&
+		Object.keys(overrides).length === 1;
+	const adjusted = Boolean(
+		(overrides && !onlyChoosesPaymentMethod) || lineEdits || customerAdjusted,
+	);
 	if (!adjusted && draft.total !== stripeInvoice.total) {
 		await deleteDraft({ ctx, stripeCli, draftId: draft.id });
 		throw new RecaseError({
@@ -809,6 +818,12 @@ export const reissueInvoice = async ({
 		stripeInvoice,
 		netTermsDays,
 		nowMs: Date.now(),
+	});
+	await assertReissuePaymentMethod({
+		stripeCli,
+		stripeCustomerId: stripeInvoiceToStripeCustomerId({ stripeInvoice }),
+		paymentMethodId: invoiceOverrides?.payment_method_id,
+		collectionMethod,
 	});
 
 	const previewCustomerId = row.customer_id ?? row.invoice.internal_customer_id;

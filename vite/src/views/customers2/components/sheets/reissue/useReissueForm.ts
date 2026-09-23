@@ -32,6 +32,7 @@ export type ReissueFormState = {
 	address: ReissueAddress;
 	taxIdOptionId: string | null;
 	taxIdValue: string;
+	paymentMethodId: string | null;
 };
 
 export type ReissueTaxId = { type: string; value: string };
@@ -45,6 +46,7 @@ export type ReissuePrefill = {
 	otherTaxIds?: ReissueTaxId[];
 	/** Stripe returned one page of registrations, so a replacement would drop the rest. */
 	taxIdsIncomplete?: boolean;
+	chargesAutomatically?: boolean;
 };
 
 const EMPTY_ADDRESS: ReissueAddress = {
@@ -60,6 +62,15 @@ let rowCounter = 0;
 const rowId = (prefix: string) => `${prefix}_${Date.now()}_${rowCounter++}`;
 
 const trimmed = (value: string) => value.trim();
+
+/** Payment terms turn the replacement into a send-invoice one, which nothing charges. */
+export const chargesPaymentMethod = ({
+	form,
+	prefill,
+}: {
+	form: ReissueFormState;
+	prefill: ReissuePrefill;
+}) => Boolean(prefill.chargesAutomatically) && !form.netTermsDays.trim();
 
 /** Only fields the user actually changed are sent, so an untouched sheet is a plain reissue. */
 export const buildReissuePayload = ({
@@ -111,6 +122,9 @@ export const buildReissuePayload = ({
 		...(customFields.length ? { custom_fields: customFields } : {}),
 		...(trimmed(form.memo) ? { memo: trimmed(form.memo) } : {}),
 		...(trimmed(form.footer) ? { footer: trimmed(form.footer) } : {}),
+		...(form.paymentMethodId && chargesPaymentMethod({ form, prefill })
+			? { payment_method_id: form.paymentMethodId }
+			: {}),
 	};
 
 	const addressChanged = (
@@ -188,6 +202,7 @@ export const useReissueForm = ({ prefill }: { prefill: ReissuePrefill }) => {
 		address: { ...EMPTY_ADDRESS, ...(prefill.address ?? {}) },
 		taxIdOptionId: prefill.taxIdOptionId ?? null,
 		taxIdValue: prefill.taxIdValue ?? "",
+		paymentMethodId: null,
 	}));
 
 	const patch = useCallback(

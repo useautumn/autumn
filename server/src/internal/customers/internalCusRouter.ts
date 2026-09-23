@@ -14,6 +14,7 @@ import { handleGetCustomerSchedule } from "./internalHandlers/handleGetCustomerS
 import { handleGetFullCustomers } from "./internalHandlers/handleGetFullCustomers.js";
 import { handleGetInvoiceLineItems } from "./internalHandlers/handleGetInvoiceLineItems.js";
 import { handleListCustomerExports } from "./internalHandlers/handleListCustomerExports.js";
+import { handleListCustomerPaymentMethods } from "./internalHandlers/handleListCustomerPaymentMethods.js";
 import { handleListEntitiesInternal } from "./internalHandlers/handleListEntitiesInternal.js";
 import { handleSearchCustomers } from "./internalHandlers/handleSearchCustomers.js";
 import { handleSyncCustomerEntitlementAnchors } from "./internalHandlers/handleSyncCustomerEntitlementAnchors.js";
@@ -48,6 +49,10 @@ internalCusRouter.get(
 internalCusRouter.get("/:customer_id/referrals", ...handleGetCusReferrals);
 internalCusRouter.get("/:customer_id/schedule", ...handleGetCustomerSchedule);
 internalCusRouter.get("/:customer_id/entities", ...handleListEntitiesInternal);
+internalCusRouter.get(
+	"/:customer_id/payment_methods",
+	...handleListCustomerPaymentMethods,
+);
 internalCusRouter.post(
 	"/:customer_id/invoice-line-items",
 	...handleGetInvoiceLineItems,

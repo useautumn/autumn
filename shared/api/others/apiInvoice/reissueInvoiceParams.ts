@@ -39,6 +39,10 @@ export const ReissueInvoiceOverridesSchema = z
 		memo: z.string().nullable().optional().meta({
 			description: "Memo shown near the top of the invoice.",
 		}),
+		payment_method_id: z.string().optional().meta({
+			description:
+				"Stripe payment method (pm_...) to charge the replacement with. Must belong to the customer. Only applies when the replacement is charged automatically; omit to use the subscription's or customer's default.",
+		}),
 	})
 	.strict()
 	.refine(
