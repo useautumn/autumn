@@ -76,6 +76,7 @@ test("future sync phases preserve customer license quantities", () => {
 		queuedCustomerProducts: [],
 		currentEpochMs: Date.now(),
 		acknowledgedWarnings: [],
+		expireUnlistedPlans: false,
 		carryOverUsage: true,
 	} satisfies SyncBillingContext;
 	const ctx = {

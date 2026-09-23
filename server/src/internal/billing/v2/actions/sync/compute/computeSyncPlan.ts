@@ -18,6 +18,7 @@ import {
 	computeSyncUnscheduledPlans,
 	type ImmediatePhaseResult,
 } from "./computeSyncImmediatePhase";
+import { computeUnlistedCustomerProductExpiries } from "./computeUnlistedCustomerProductExpiries";
 
 export type { ComputedSchedulePhase } from "./computeSyncFuturePhases";
 
@@ -64,6 +65,15 @@ export const computeSyncPlan = ({
 		computeSyncUnscheduledPlans({ ctx, syncContext }),
 	]);
 	const future = computeSyncFuturePhases({ ctx, syncContext });
+	immediate.updateCustomerProducts.push(
+		...computeUnlistedCustomerProductExpiries({
+			syncContext,
+			updateCustomerProducts: [
+				...immediate.updateCustomerProducts,
+				...future.updateCustomerProducts,
+			],
+		}),
+	);
 	const outgoingCustomerProducts: FullCusProduct[] = [];
 	for (const { customerProduct, updates } of [
 		...immediate.updateCustomerProducts,

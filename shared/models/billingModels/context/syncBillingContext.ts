@@ -63,6 +63,9 @@ export interface SyncBillingContext {
 	currentEpochMs: number;
 	acknowledgedWarnings: NonNullable<SyncParamsV1["acknowledge_warnings"]>;
 
+	/** Expire live plans linked to the subscription that the request leaves out. */
+	expireUnlistedPlans: boolean;
+
 	/** Carry an expired plan's consumed usage onto the replacement plan's
 	 * balances for shared features on the same subject. Defaults to true. */
 	carryOverUsage: boolean;
