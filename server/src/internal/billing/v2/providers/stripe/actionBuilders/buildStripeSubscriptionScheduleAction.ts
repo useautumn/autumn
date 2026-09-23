@@ -50,6 +50,14 @@ const phaseHasItems = (
 	return phase.items !== undefined && phase.items.length > 0;
 };
 
+const isFreePhasePlaceholderOnly = (
+	phase: Stripe.SubscriptionScheduleUpdateParams.Phase,
+): boolean =>
+	phaseHasItems(phase) &&
+	(phase.items ?? []).every(
+		(item) => item.metadata?.autumn_free_phase_placeholder === "true",
+	);
+
 /**
  * Filters out empty phases from both ends.
  * Stripe requires items in every phase.
@@ -75,16 +83,21 @@ const getScheduleScenario = ({
 	scheduledPhases,
 	endsWithEmptyPhase,
 	shouldCreateFutureSchedule,
+	hasSubscription,
 }: {
 	scheduledPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
 	endsWithEmptyPhase: boolean;
 	shouldCreateFutureSchedule: boolean;
+	hasSubscription: boolean;
 }): ScheduleScenario => {
 	if (scheduledPhases.length === 0) return "no_phases";
 	if (shouldCreateFutureSchedule) return "future_standalone";
 
 	if (scheduledPhases.length === 1) {
-		if (endsWithEmptyPhase) return "simple_cancel";
+		// A lone $0 placeholder has no subscription items to create a subscription from.
+		const needsStandaloneSchedule =
+			!hasSubscription && isFreePhasePlaceholderOnly(scheduledPhases[0]);
+		if (endsWithEmptyPhase && !needsStandaloneSchedule) return "simple_cancel";
 		if (!scheduledPhases[0].end_date) return "single_indefinite";
 	}
 
@@ -312,6 +325,7 @@ export const buildStripeSubscriptionScheduleAction = ({
 		scheduledPhases,
 		endsWithEmptyPhase,
 		shouldCreateFutureSchedule: isFutureSchedule,
+		hasSubscription: !!stripeSubscription,
 	});
 
 	return buildActionForScenario({

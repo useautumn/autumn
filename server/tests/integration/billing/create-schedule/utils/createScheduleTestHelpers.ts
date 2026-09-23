@@ -3,9 +3,12 @@ import {
 	customerPrices,
 	customerProducts,
 	prices,
+	products,
 } from "@autumn/shared";
 import type { initScenario } from "@tests/utils/testInitUtils/initScenario";
 import { and, eq, inArray } from "drizzle-orm";
+import type Stripe from "stripe";
+import { CusService } from "@/internal/customers/CusService";
 
 type Ctx = Awaited<ReturnType<typeof initScenario>>["ctx"];
 
@@ -120,4 +123,68 @@ export const getCheckoutId = (paymentUrl: string | null | undefined) => {
 	}
 
 	return checkoutId;
+};
+
+export const getProductStripeId = async ({
+	ctx,
+	productId,
+}: {
+	ctx: Ctx;
+	productId: string;
+}) => {
+	const [product] = await ctx.db
+		.select({ processor: products.processor })
+		.from(products)
+		.where(
+			and(
+				eq(products.id, productId),
+				eq(products.org_id, ctx.org.id),
+				eq(products.env, ctx.env),
+			),
+		);
+
+	return product?.processor?.id ?? null;
+};
+
+type StripePhasePrice = {
+	productId: string;
+	unitAmount: number | null;
+	active: boolean;
+};
+
+const toStripePhasePrice = (price: Stripe.Price): StripePhasePrice => ({
+	productId:
+		typeof price.product === "string" ? price.product : price.product.id,
+	unitAmount: price.unit_amount,
+	active: price.active,
+});
+
+/** Every phase item price of the customer's Stripe subscription schedules. */
+export const getStripeSchedulePhasePrices = async ({
+	ctx,
+	customerId,
+}: {
+	ctx: Ctx;
+	customerId: string;
+}): Promise<StripePhasePrice[]> => {
+	const customer = await CusService.get({
+		db: ctx.db,
+		idOrInternalId: customerId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+	const stripeCustomerId = customer?.processor?.id;
+	if (!stripeCustomerId) return [];
+
+	const schedules = await ctx.stripeCli.subscriptionSchedules.list({
+		customer: stripeCustomerId,
+		limit: 10,
+		expand: ["data.phases.items.price"],
+	});
+
+	return schedules.data.flatMap((schedule) =>
+		schedule.phases.flatMap((phase) =>
+			phase.items.map((item) => toStripePhasePrice(item.price as Stripe.Price)),
+		),
+	);
 };

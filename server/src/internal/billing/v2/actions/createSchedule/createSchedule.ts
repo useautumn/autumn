@@ -20,6 +20,7 @@ import {
 	handleCreateScheduleErrors,
 } from "./errors/handleCreateScheduleErrors";
 import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
+import { ensureFreePhaseStripeProducts } from "./utils/ensureFreePhaseStripeProducts";
 import { persistCreateSchedule } from "./utils/persistCreateSchedule";
 
 const buildPendingCreateScheduleResponse = ({
@@ -80,6 +81,12 @@ export const createSchedule = async ({
 		billingContext,
 		autumnBillingPlan,
 		immediatePhaseTransition,
+	});
+
+	await ensureFreePhaseStripeProducts({
+		ctx,
+		billingContext,
+		autumnBillingPlan,
 	});
 
 	const stripeBillingPlan = await evaluateStripeBillingPlan({

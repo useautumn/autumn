@@ -1,8 +1,6 @@
+import type { AutumnBillingPlan, StripeBillingPlan } from "@autumn/shared";
 import { CusProductStatus, cp } from "@autumn/shared";
-import type {
-	AutumnBillingPlan,
-	StripeBillingPlan,
-} from "@autumn/shared";
+import { isFreePhasePlaceholderCustomerProduct } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isFreePhasePlaceholderCustomerProduct";
 import { getUpdateCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 
 export const addStripeSubscriptionScheduleIdToBillingPlan = ({
@@ -15,9 +13,11 @@ export const addStripeSubscriptionScheduleIdToBillingPlan = ({
 	stripeSubscriptionScheduleId: string;
 }) => {
 	for (const customerProduct of autumnBillingPlan.insertCustomerProducts) {
-		const { valid } = cp(customerProduct).paid().recurring();
+		const { valid: isPaidRecurring } = cp(customerProduct).paid().recurring();
+		const isOnStripeSchedule =
+			isPaidRecurring || isFreePhasePlaceholderCustomerProduct(customerProduct);
 
-		if (!valid) continue;
+		if (!isOnStripeSchedule) continue;
 
 		customerProduct.scheduled_ids = [stripeSubscriptionScheduleId];
 	}
