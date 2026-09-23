@@ -77,7 +77,10 @@ export const getRolloverUpdates = ({
 	return update;
 };
 
-const calculateNextExpiry = (nextResetAt: number, config: RolloverConfig) => {
+export const calculateNextExpiry = (
+	nextResetAt: number,
+	config: RolloverConfig,
+) => {
 	if (nullish(config)) {
 		return null;
 	}
