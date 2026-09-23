@@ -1,8 +1,7 @@
 name: Release Impact
 
 on:
-  # _target so fork PRs get a checks:write token; it only runs after merge, on the base branch's code.
-  pull_request_target:
+  pull_request:
     types: [closed]
     branches:
       - dev
