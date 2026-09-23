@@ -1,7 +1,8 @@
 name: Release Impact
 
 on:
-  pull_request:
+  # _target so fork PRs get a checks:write token; it only runs after merge, on the base branch's code.
+  pull_request_target:
     types: [closed]
     branches:
       - dev
@@ -44,6 +45,7 @@ jobs:
           fi
           echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
           echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
+          echo "commit_count=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .commits)" >> "$GITHUB_OUTPUT"
 
       # Checks out the workflow's own ref so the impact script exists even when
       # backfilling a PR merged before it was added.
@@ -57,16 +59,23 @@ jobs:
         with:
           bun-version: 1.3.14
 
-      # Specs are regenerated from source at both commits because the committed
-      # yml files are only refreshed when someone runs `bun api`.
       # Regenerated from source: the committed yml only refreshes when someone runs `bun api`.
-      - name: Generate specs at parent and merge commit
+      - name: Generate specs before and after the PR
         env:
+          GH_TOKEN: ${{ github.token }}
           MERGE_SHA: ${{ steps.pr.outputs.merge_sha }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          COMMIT_COUNT: ${{ steps.pr.outputs.commit_count }}
         run: |
           set -euo pipefail
           cp scripts/release/releaseImpact.ts scripts/release/diffOpenApiOperations.ts "$RUNNER_TEMP/"
+          # Rebase merges land several PR commits, so walk back past every one the PR owns.
           base_sha=$(git rev-parse "$MERGE_SHA^1")
+          for _ in $(seq "$COMMIT_COUNT"); do
+            owned=$(gh api "repos/$GITHUB_REPOSITORY/commits/$base_sha/pulls" --jq "any(.[]; .number == $PR_NUMBER)")
+            [ "$owned" = true ] || break
+            base_sha=$(git rev-parse "$base_sha^1")
+          done
           echo "BASE_SHA=$base_sha" >> "$GITHUB_ENV"
           for side in base head; do
             sha=$base_sha
