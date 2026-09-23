@@ -140,6 +140,11 @@ export const warmFullSubjectCacheTask = task({
 	run: async (raw: unknown, { ctx: triggerCtx }) => {
 		const { orgId, env, customerId, source } = PayloadSchema.parse(raw);
 
+		// Already-queued prod runs OOM (TASK_PROCESS_OOM_KILLED); no-op them.
+		if (process.env.NODE_ENV === "production") {
+			return { warmed_customer: 0, warmed_entities: 0, total_entities: 0 };
+		}
+
 		const { ctx, logger } = await createTriggerContext({
 			orgId,
 			env,
