@@ -202,8 +202,8 @@ test(
 	WEBHOOK_TEST_TIMEOUT_MS,
 );
 
-/** Dashboard OAuth disconnect deauthorizes under the account lock, so the real
- * deauthorization webhook finds nothing left to rewrite. */
+/** Dashboard OAuth disconnect saves the local change before deauthorizing, so the
+ * real deauthorization webhook finds nothing left to rewrite. */
 test(
 	"dashboard OAuth disconnect revokes Stripe access and settles with its webhook",
 	async () => {
