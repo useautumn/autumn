@@ -13,7 +13,10 @@ import { addStripeSubscriptionToBillingPlan } from "@/internal/billing/v2/execut
 import { removeStripeSubscriptionIdFromBillingPlan } from "@/internal/billing/v2/execute/removeStripeSubscriptionIdFromBillingPlan";
 import { shouldDeferBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/shouldDeferBillingPlan";
 import { applyTemplateToDraft } from "@/internal/billing/v2/providers/stripe/utils/invoices/applyTemplateToDraft";
-import { finalizeStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
+import {
+	finalizeStripeInvoice,
+	updateStripeInvoice,
+} from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { executeStripeSubscriptionOperation } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/executeStripeSubscriptionOperation";
 import { getLatestInvoiceFromSubscriptionAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getLatestInvoiceFromSubscriptionAction";
 import { getRequiredActionFromSubscriptionInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getRequiredActionFromSubscriptionInvoice";
@@ -84,6 +87,24 @@ export const executeStripeSubscriptionAction = async ({
 		billingContext.shouldFinalizeFirstInvoice ??
 		billingContext.invoiceMode?.finalizeInvoice ??
 		false;
+
+	// Invoice-mode drafts (finalize: false) must stay in draft for manual
+	// review. Stripe creates subscription invoices with auto_advance on and
+	// would otherwise finalize and email them ~1 hour later.
+	const shouldKeepDraft =
+		Boolean(billingContext.invoiceMode) &&
+		!shouldFinalize &&
+		latestStripeInvoice?.status === "draft" &&
+		latestStripeInvoice.auto_advance === true;
+
+	if (latestStripeInvoice && shouldKeepDraft) {
+		logger.debug(`[execSubAction] Disabling auto_advance on draft invoice`);
+		latestStripeInvoice = await updateStripeInvoice({
+			stripeCli,
+			invoiceId: latestStripeInvoice.id,
+			params: { auto_advance: false },
+		});
+	}
 
 	if (
 		latestStripeInvoice &&
