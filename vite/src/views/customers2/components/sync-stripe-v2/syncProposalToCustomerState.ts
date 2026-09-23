@@ -9,6 +9,7 @@ import type {
 	SyncProposalV2,
 } from "@autumn/shared";
 import {
+	ACTIVE_STATUSES,
 	CusProductStatus,
 	filterCustomerProductsByStripeSubscriptionId,
 	isCustomerProductOnStripeSubscriptionSchedule,
@@ -76,9 +77,10 @@ const findCopiesOnPhase = ({
 	customerProducts: FullCusProduct[];
 	startsAt: SyncPhase["starts_at"];
 }): FullCusProduct[] => {
+	// Past-due plans are still live, so they belong to the current phase too.
 	if (startsAt === "now")
-		return customerProducts.filter(
-			(customerProduct) => customerProduct.status === CusProductStatus.Active,
+		return customerProducts.filter((customerProduct) =>
+			ACTIVE_STATUSES.includes(customerProduct.status),
 		);
 
 	const scheduled = customerProducts.filter(
@@ -238,7 +240,7 @@ export const syncProposalToCustomerState = ({
 		proposal.phases.length > 1 && Boolean(proposal.stripe_subscription_id);
 	const isOpenEnded = (customerProduct: FullCusProduct) =>
 		canUnschedule &&
-		customerProduct.status === CusProductStatus.Active &&
+		ACTIVE_STATUSES.includes(customerProduct.status) &&
 		!customerProduct.ended_at;
 
 	const toPlans = ({
