@@ -48,6 +48,7 @@ COPY packages/kafka/package.json packages/kafka/
 COPY packages/edge-config/package.json packages/edge-config/
 COPY packages/postgres/package.json packages/postgres/
 COPY packages/dynamodb/package.json packages/dynamodb/
+COPY packages/catalog-lru/package.json packages/catalog-lru/
 COPY apps/balance-worker/package.json apps/balance-worker/
 COPY packages/env/package.json packages/env/
 COPY packages/gateway/package.json packages/gateway/
