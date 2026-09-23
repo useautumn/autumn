@@ -63,9 +63,9 @@ export const createStripeInvoice = async ({
 				? { payment_settings: { payment_method_types: paymentMethodTypes } }
 				: {}),
 			...(discounts ? { discounts } : {}),
-			...(hasManualTaxRates ? { default_tax_rates: defaultTaxRates } : {}),
-			...(automaticTax && !hasManualTaxRates
-				? { automatic_tax: { enabled: true } }
+			...(defaultTaxRates ? { default_tax_rates: defaultTaxRates } : {}),
+			...(automaticTax !== undefined
+				? { automatic_tax: { enabled: automaticTax && !hasManualTaxRates } }
 				: {}),
 		},
 		autumnStripeRequestOptions({ source: "invoice.create" }),
