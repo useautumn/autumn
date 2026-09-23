@@ -92,6 +92,9 @@ export const listRawEvents = async ({
 					customer: params.customer,
 					db,
 					intervalType: intervalType as "1bc" | "3bc",
+					featureIds:
+						params.event_names ??
+						(params.event_name ? [params.event_name] : undefined),
 					ctx,
 				})) as BillingCycleResult | null)
 			: null;
