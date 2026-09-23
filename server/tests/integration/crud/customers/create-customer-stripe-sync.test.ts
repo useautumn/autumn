@@ -273,10 +273,10 @@ test(`${chalk.yellowBright("customers stripe sync: existing autumn customer is n
 	expect(fullCustomer.customer_products).toHaveLength(0);
 });
 
-test(`${chalk.yellowBright("customers stripe sync: failed import leaves no partial products")}`, async () => {
-	const customerId = `create-stripe-sync-resume-${runId}`;
+test(`${chalk.yellowBright("customers stripe sync: foreign-currency subscription relocks a customer with no paid plan")}`, async () => {
+	const customerId = `create-stripe-sync-relock-${runId}`;
 	const pro = products.pro({
-		id: `create-stripe-sync-resume-pro-${runId}`,
+		id: `create-stripe-sync-relock-pro-${runId}`,
 		items: [items.monthlyMessages({ includedUsage: 100 })],
 	});
 	const { autumnV1, ctx } = await initScenario({
@@ -284,26 +284,32 @@ test(`${chalk.yellowBright("customers stripe sync: failed import leaves no parti
 		actions: [],
 	});
 	const stripeCustomer = await createStripeCustomer({ ctx, key: customerId });
-	await createSubscription({
+	const stripeSubscription = await createSubscription({
 		ctx,
 		stripeCustomerId: stripeCustomer.id,
 		items: [{ price: await getBasePriceId({ ctx, productId: pro.id }) }],
 	});
 
-	await expect(
-		autumnV1.customers.create({
-			id: customerId,
-			stripe_id: stripeCustomer.id,
-			currency: "eur",
-			internalOptions: { disable_defaults: true },
-		} as never),
-	).rejects.toThrow();
+	// The currency lock only holds while a live paid plan exists, so an EUR
+	// customer with no plans imports the USD subscription and relocks to USD.
+	await autumnV1.customers.create({
+		id: customerId,
+		stripe_id: stripeCustomer.id,
+		currency: "eur",
+		internalOptions: { disable_defaults: true },
+	} as never);
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
 	});
+	const apiCustomer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	expect(fullCustomer.customer_products).toHaveLength(0);
+	await expectProductActive({ customer: apiCustomer, productId: pro.id });
+	expect(fullCustomer.currency).toBe("usd");
+	expect(fullCustomer.customer_products).toHaveLength(1);
+	expect(fullCustomer.customer_products[0]?.subscription_ids).toEqual([
+		stripeSubscription.id,
+	]);
 });
 
 test(`${chalk.yellowBright("customers stripe sync: same-group subscriptions never remain active twice")}`, async () => {
