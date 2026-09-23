@@ -106,8 +106,12 @@ export function balanceWorkerEnvToRuntimeConfig({
 		trackReceiptRetentionMs: env.BALANCE_WORKER_RECEIPT_RETENTION_MS,
 		producerLimits: {
 			transactionTimeoutMs: 10000,
-			retryCount: 2,
-			initialRetryTimeMs: 100,
+			// Back-to-back transactions routinely hit CONCURRENT_TRANSACTIONS while the
+			// coordinator is still writing the previous commit's markers, which clears in
+			// a few ms. Start the backoff there instead of at 100ms; eight doublings still
+			// ride out a broker blip for over a second before giving up.
+			retryCount: 8,
+			initialRetryTimeMs: 5,
 			maxRetryTimeMs: 1000,
 		},
 		timings: {
