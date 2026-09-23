@@ -36,7 +36,7 @@ export const stripeConnectSeederMiddleware = async (
 	// Step 1: Initialize master stripe client
 	let masterStripe: Stripe;
 	try {
-		masterStripe = initMasterStripe();
+		masterStripe = initMasterStripe({ env });
 	} catch (error) {
 		logger.error(`Failed to initialize master stripe client ${error}`);
 		return c.json({ error: "Failed to initialize stripe client" }, 500);
@@ -97,6 +97,8 @@ export const stripeConnectSeederMiddleware = async (
 		const data = await OrgService.getByAccountId({
 			db,
 			accountId,
+			deauthorizedEnv:
+				event.type === "account.application.deauthorized" ? env : undefined,
 		});
 		org = data.org;
 		features = data.features;
@@ -129,7 +131,10 @@ export const stripeConnectSeederMiddleware = async (
 	ctx.env = env;
 	ctx.authType = AuthType.Stripe;
 	ctx.stripeEvent = event;
-	ctx.stripeCli = createStripeCli({ org, env });
+	ctx.stripeCli =
+		event.type === "account.application.deauthorized"
+			? masterStripe
+			: createStripeCli({ org, env });
 
 	await next();
 };

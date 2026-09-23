@@ -2,40 +2,29 @@ import {
 	AppEnv,
 	ErrCode,
 	type Organization,
+	organizations,
 	RecaseError,
 	Scopes,
 	type StripeConfig,
 	type StripeConnectConfig,
 } from "@autumn/shared";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { orgToAccountId } from "@/external/connect/connectUtils.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
+import { stripeEnvFields } from "@/external/connect/stripeEnvFields.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { createWebhookEndpoint } from "@/external/stripe/stripeOnboardingUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { clearStripeCatalogMappings } from "@/internal/catalog/actions/catalogMappings/clearStripeCatalogMappings.js";
 import { decryptData, encryptData } from "@/utils/encryptUtils.js";
-import { OrgService } from "../../OrgService.js";
 import { clearOrgCache } from "../../orgUtils/clearOrgCache.js";
 import { isStripeConnected } from "../../orgUtils.js";
 
 export type DisconnectChannel = "secret_key" | "oauth";
-
-const envFields = (env: AppEnv) =>
-	env === AppEnv.Sandbox
-		? ({
-				apiKey: "test_api_key",
-				webhookSecret: "test_webhook_secret",
-				connect: "test_stripe_connect",
-			} as const)
-		: ({
-				apiKey: "live_api_key",
-				webhookSecret: "live_webhook_secret",
-				connect: "live_stripe_connect",
-			} as const);
 
 export const resolveDisconnectChannels = ({
 	org,
@@ -68,7 +57,7 @@ export const computeClearedStripeConfig = ({
 	org: Organization;
 	env: AppEnv;
 }): StripeConfig => {
-	const { apiKey, webhookSecret } = envFields(env);
+	const { apiKey, webhookSecret } = stripeEnvFields(env);
 	return {
 		...(structuredClone(org.stripe_config) || {}),
 		[apiKey]: null,
@@ -83,9 +72,10 @@ export const computeClearedStripeConnect = ({
 	org: Organization;
 	env: AppEnv;
 }): StripeConnectConfig => {
-	const current = org[envFields(env).connect];
+	const current = org[stripeEnvFields(env).connect];
 	const newConnect: StripeConnectConfig = structuredClone(current) || {};
 	delete newConnect.account_id;
+	delete newConnect.connected_at;
 	return newConnect;
 };
 
@@ -108,17 +98,14 @@ const deleteDirectWebhook = async ({
 };
 
 const deauthorizeOauth = async ({
-	org,
+	accountId,
 	env,
 	logger,
 }: {
-	org: Organization;
+	accountId: string;
 	env: AppEnv;
 	logger: Logger;
 }) => {
-	const accountId = orgToAccountId({ org, env, noDefaultAccount: true });
-	if (!accountId) return;
-
 	const masterStripe = initMasterStripe({ env });
 	try {
 		await masterStripe.oauth.deauthorize({
@@ -146,7 +133,7 @@ export const reRegisterDirectWebhook = async ({
 	env: AppEnv;
 	logger: Logger;
 }): Promise<string | null> => {
-	const encryptedKey = org.stripe_config?.[envFields(env).apiKey];
+	const encryptedKey = org.stripe_config?.[stripeEnvFields(env).apiKey];
 	if (!encryptedKey) return null;
 
 	try {
@@ -172,20 +159,18 @@ const disconnectSecretKey = async ({
 	org: Organization;
 	env: AppEnv;
 	logger: Logger;
-}): Promise<Partial<Organization>> => {
+}) => {
 	try {
 		await deleteDirectWebhook({ org, env });
 	} catch (error) {
 		logger.error(`Failed to delete direct webhook for ${org.slug}`, { error });
 	}
-	return { stripe_config: computeClearedStripeConfig({ org, env }) };
 };
 
 /**
- * Disconnects OAuth: clears the connect account and deauthorizes it. If a secret
- * key is kept whose direct webhook was skipped under OAuth (and none is already
- * stored — that would mean a live webhook predates OAuth), registers one first so
- * the org keeps receiving events.
+ * Before OAuth is removed: if a secret key is kept whose direct webhook was skipped
+ * under OAuth (and none is already stored — that would mean a live webhook predates
+ * OAuth), registers one so the org keeps receiving events. Returns its secret.
  */
 const disconnectOauth = async ({
 	org,
@@ -197,11 +182,8 @@ const disconnectOauth = async ({
 	env: AppEnv;
 	logger: Logger;
 	secretKeyKept: boolean;
-}): Promise<Partial<Organization>> => {
-	const fields = envFields(env);
-	const updates: Partial<Organization> = {
-		[fields.connect]: computeClearedStripeConnect({ org, env }),
-	};
+}): Promise<string | undefined> => {
+	const fields = stripeEnvFields(env);
 
 	const needsDirectWebhook =
 		secretKeyKept &&
@@ -218,21 +200,63 @@ const disconnectOauth = async ({
 				statusCode: 502,
 			});
 		}
-		updates.stripe_config = {
-			...(org.stripe_config || {}),
-			[fields.webhookSecret]: webhookSecret,
-		};
+		return webhookSecret;
 	}
+};
 
-	// Only after a successful re-register (above) — never leave the org with no
-	// working webhook if registration failed.
-	try {
-		await deauthorizeOauth({ org, env, logger });
-	} catch (error) {
-		logger.error(`Failed to deauthorize oauth for ${org.slug}`, { error });
-	}
+/** Writes only the keys this disconnect owns, so concurrent config changes survive. */
+const persistDisconnect = async ({
+	db,
+	org,
+	env,
+	clearSecretKey,
+	oauthAccountId,
+	directWebhookSecret,
+	clearCatalogMappings,
+}: {
+	db: DrizzleCli;
+	org: Organization;
+	env: AppEnv;
+	clearSecretKey: boolean;
+	oauthAccountId?: string;
+	directWebhookSecret?: string;
+	clearCatalogMappings: boolean;
+}) => {
+	const fields = stripeEnvFields(env);
+	const connect = organizations[fields.connect];
 
-	return updates;
+	const configPatch: StripeConfig = {
+		...(clearSecretKey
+			? { [fields.apiKey]: null, [fields.webhookSecret]: null }
+			: {}),
+		...(directWebhookSecret
+			? { [fields.webhookSecret]: directWebhookSecret }
+			: {}),
+	};
+	const hasConfigPatch = Object.keys(configPatch).length > 0;
+
+	await db.transaction(async (tx) => {
+		await tx
+			.update(organizations)
+			.set({
+				...(hasConfigPatch && {
+					stripe_config: sql`coalesce(${organizations.stripe_config}, '{}'::jsonb) || ${JSON.stringify(configPatch)}::jsonb`,
+				}),
+				// Leaves a replacement connection made since this request read the org alone.
+				...(oauthAccountId && {
+					[fields.connect]: sql`case when ${connect}->>'account_id' = ${oauthAccountId} then ${connect} - 'account_id' - 'connected_at' else ${connect} end`,
+				}),
+			})
+			.where(eq(organizations.id, org.id));
+
+		if (clearCatalogMappings) {
+			await clearStripeCatalogMappings({
+				db: tx as unknown as DrizzleCli,
+				orgId: org.id,
+				env,
+			});
+		}
+	});
 };
 
 export const handleDeleteStripe = createRoute({
@@ -257,37 +281,37 @@ export const handleDeleteStripe = createRoute({
 				channel,
 			});
 
-		// 2. Disconnect each channel, collecting the org updates it produces
-		const updates: Partial<Organization> = {};
-		if (clearSecretKey) {
-			Object.assign(updates, await disconnectSecretKey({ org, env, logger }));
-		}
-		if (clearOauth) {
-			Object.assign(
-				updates,
-				await disconnectOauth({
+		// 2. Run each channel's Stripe side effects
+		if (clearSecretKey) await disconnectSecretKey({ org, env, logger });
+		const directWebhookSecret = clearOauth
+			? await disconnectOauth({
 					org,
 					env,
 					logger,
 					secretKeyKept: !clearSecretKey,
-				}),
-			);
-		}
+				})
+			: undefined;
 
 		// 3. Persist (nothing to clear if neither channel was connected for this env)
-		if (Object.keys(updates).length > 0) {
-			await db.transaction(async (tx) => {
-				const txDb = tx as unknown as DrizzleCli;
-				await OrgService.update({ db: txDb, orgId: org.id, updates });
-				if (clearCatalogMappings) {
-					await clearStripeCatalogMappings({
-						db: txDb,
-						orgId: org.id,
-						env,
-					});
-				}
+		const oauthAccountId = clearOauth
+			? orgToAccountId({ org, env, noDefaultAccount: true })
+			: undefined;
+		if (clearSecretKey || clearOauth) {
+			await persistDisconnect({
+				db,
+				org,
+				env,
+				clearSecretKey,
+				oauthAccountId,
+				directWebhookSecret,
+				clearCatalogMappings,
 			});
 		}
+
+		// 4. Deauthorize only after the local disconnect is saved, so the revocation
+		// webhook finds nothing left to clear and cannot race this write.
+		if (oauthAccountId)
+			await deauthorizeOauth({ accountId: oauthAccountId, env, logger });
 
 		if (clearCatalogMappings) {
 			await invalidateProductsCache({ orgId: org.id, env });
