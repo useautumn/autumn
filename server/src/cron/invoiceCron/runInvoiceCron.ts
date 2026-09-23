@@ -5,6 +5,8 @@ import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import type { Stripe } from "stripe";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
+import { hasStripeInvoicePayment } from "@/external/stripe/invoices/utils/classifyStripeInvoice";
+import { cancelDeferredCreatedSubscription } from "@/internal/billing/v2/execute/pendingCustomerProducts/cancelDeferredCreatedSubscription";
 import { expirePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { createStripeCli } from "../../external/connect/createStripeCli";
@@ -92,6 +94,34 @@ export const handleVoidInvoiceCron = async ({
 		`Invoice: ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug}) - status: ${invoice.status}`,
 	);
 
+	const isPartiallyPaid =
+		invoice.status !== "paid" && hasStripeInvoicePayment(invoice);
+	if (isPartiallyPaid) {
+		await MetadataService.update({
+			db,
+			id: metadata.id,
+			updates: { expires_at: null },
+		});
+		logger.info(
+			`Invoice ${metadata.stripe_invoice_id} has a partial payment; leaving its pending plan in place`,
+		);
+		return;
+	}
+
+	const cleanUpUnpaidInvoice = async () => {
+		await expirePendingRows();
+		await cancelDeferredCreatedSubscription({
+			ctx,
+			stripeCli,
+			metadata,
+			stripeInvoice: invoice,
+		});
+		await MetadataService.delete({
+			db,
+			id: metadata.id,
+		});
+	};
+
 	if (invoice.status === "open") {
 		try {
 			await stripeCli.invoices.voidInvoice(metadata.stripe_invoice_id);
@@ -108,11 +138,7 @@ export const handleVoidInvoiceCron = async ({
 				}
 			}
 
-			await expirePendingRows();
-			await MetadataService.delete({
-				db,
-				id: metadata.id,
-			});
+			await cleanUpUnpaidInvoice();
 		} catch (error) {
 			if (
 				error instanceof Error &&
@@ -142,11 +168,7 @@ export const handleVoidInvoiceCron = async ({
 			}
 		}
 	} else if (invoice.status === "void" || invoice.status === "uncollectible") {
-		await expirePendingRows();
-		await MetadataService.delete({
-			db,
-			id: metadata.id,
-		});
+		await cleanUpUnpaidInvoice();
 	}
 };
 

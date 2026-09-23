@@ -49,7 +49,7 @@ export const handleInvoiceUpdated = async ({
 	if (invoiceObject.status === "void" && invoiceObject.id) {
 		await expirePendingForVoidedStripeInvoice({
 			ctx,
-			stripeInvoiceId: invoiceObject.id,
+			stripeInvoice: invoiceObject,
 			customerId: ctx.customerId,
 		});
 	}

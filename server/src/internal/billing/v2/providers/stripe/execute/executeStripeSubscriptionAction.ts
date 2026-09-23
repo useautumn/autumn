@@ -163,6 +163,7 @@ export const executeStripeSubscriptionAction = async ({
 			expiresAt: getDeferredBillingMetadataExpiresAt({
 				deferredInvoiceMode,
 				paymentMethod: billingContext.paymentMethod,
+				stripeInvoice: latestStripeInvoice,
 			}),
 			resumeAfter: StripeBillingStage.SubscriptionAction,
 		});

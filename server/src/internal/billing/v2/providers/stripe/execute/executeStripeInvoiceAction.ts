@@ -63,6 +63,7 @@ export const executeStripeInvoiceAction = async ({
 			expiresAt: getDeferredBillingMetadataExpiresAt({
 				deferredInvoiceMode,
 				paymentMethod: billingContext.paymentMethod,
+				stripeInvoice: invoice,
 			}),
 			resumeAfter: StripeBillingStage.InvoiceAction,
 		});

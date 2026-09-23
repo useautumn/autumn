@@ -49,7 +49,7 @@ export const voidInvoice = async ({
 	if (stripeInvoice.status === "void") {
 		await expirePendingForVoidedStripeInvoice({
 			ctx,
-			stripeInvoiceId: stripeInvoice.id,
+			stripeInvoice,
 			customerId,
 		});
 		await updateInvoiceFromStripe({ ctx, customerId, stripeInvoice });
@@ -68,7 +68,7 @@ export const voidInvoice = async ({
 
 	await expirePendingForVoidedStripeInvoice({
 		ctx,
-		stripeInvoiceId: voidedInvoice.id,
+		stripeInvoice: voidedInvoice,
 		customerId,
 	});
 	await updateInvoiceFromStripe({
