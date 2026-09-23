@@ -3,7 +3,7 @@ import {
 	type CustomerExportSnapshot,
 	customers,
 } from "@autumn/shared";
-import { and, desc, lte, sql } from "drizzle-orm";
+import { and, desc, lt, lte, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { buildSearchPredicates } from "../../CusSearchService.js";
@@ -172,10 +172,14 @@ export const buildCustomerExportScalarsQuery = ({
 				}).whereRaw,
 				lte(customers.created_at, createdAtCutoff),
 				lte(customers.internal_id, upperBoundInternalId),
-				// Comparing internal_id alone lets the planner pick customers_pkey and
-				// filter org_id after, scanning every other org's rows in the tail.
+				// Both terms are load-bearing: the row value keeps the planner off
+				// customers_pkey (which filters 7.1M other orgs' rows on the last
+				// pages), and the scalar bound is what the index can actually seek on.
 				afterInternalId
-					? sql`(${customers.org_id}, ${customers.env}, ${customers.internal_id}) < (${orgId}, ${env}, ${afterInternalId})`
+					? and(
+							sql`(${customers.org_id}, ${customers.env}, ${customers.internal_id}) < (${orgId}, ${env}, ${afterInternalId})`,
+							lt(customers.internal_id, afterInternalId),
+						)
 					: undefined,
 			),
 		)

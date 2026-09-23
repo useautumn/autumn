@@ -1,4 +1,5 @@
 import type { SubscriptionMismatch } from "@autumn/shared";
+import { differenceInSeconds, fromUnixTime } from "date-fns";
 import type Stripe from "stripe";
 import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { PhaseScenario } from "../compute/classifyPhaseScenario";
@@ -7,6 +8,20 @@ import {
 	orgIgnoresVerifyRule,
 } from "../ignoredVerifyMismatches";
 import { isQuantityOnlySchedule } from "./isQuantityOnlySchedule";
+
+const cancelsAtSameTime = ({
+	actualSeconds,
+	expectedSeconds,
+}: {
+	actualSeconds: number;
+	expectedSeconds: number;
+}) =>
+	Math.abs(
+		differenceInSeconds(
+			fromUnixTime(actualSeconds),
+			fromUnixTime(expectedSeconds),
+		),
+	) <= 1;
 
 /**
  * Checks whether the subscription has an active schedule with future phase
@@ -117,8 +132,21 @@ export const evaluateCancelState = async ({
 				scheduleState.upcomingPhaseStarts.length === 0 &&
 				(cancelAtSeconds === undefined ||
 					(scheduleState.endsAtSeconds !== undefined &&
-						Math.abs(scheduleState.endsAtSeconds - cancelAtSeconds) <= 1));
+						cancelsAtSameTime({
+							actualSeconds: scheduleState.endsAtSeconds,
+							expectedSeconds: cancelAtSeconds,
+						})));
 			if (scheduleImplementsCancel) return undefined;
+
+			const cancelAtImplementsCancel =
+				scheduleState.upcomingPhaseStarts.length === 0 &&
+				sub.cancel_at !== null &&
+				cancelAtSeconds !== undefined &&
+				cancelsAtSameTime({
+					actualSeconds: sub.cancel_at,
+					expectedSeconds: cancelAtSeconds,
+				});
+			if (cancelAtImplementsCancel) return undefined;
 
 			if (scheduleState.scheduleActive) {
 				if (
@@ -147,7 +175,10 @@ export const evaluateCancelState = async ({
 			}
 			if (
 				cancelAtSeconds !== undefined &&
-				Math.abs(sub.cancel_at - cancelAtSeconds) > 1
+				!cancelsAtSameTime({
+					actualSeconds: sub.cancel_at,
+					expectedSeconds: cancelAtSeconds,
+				})
 			) {
 				return {
 					type: "cancel_state_mismatch",
