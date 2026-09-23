@@ -138,6 +138,37 @@ describe("mapStreamWithConcurrency", () => {
 		expect(started).toBeLessThan(8);
 	});
 
+	it("stops pulling batches while an early one is still unsettled", async () => {
+		const blocker = deferred();
+		let pulled = 0;
+
+		const manyBatches = async function* () {
+			yield [1];
+			for (let index = 0; index < 50; index++) {
+				pulled++;
+				yield [];
+			}
+		};
+
+		const stream = mapStreamWithConcurrency({
+			batches: manyBatches(),
+			concurrency: 4,
+			maxPendingBatches: 4,
+			run: async (value: number) => {
+				await blocker.promise;
+				return value;
+			},
+		});
+
+		const collected = collect(stream);
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		const pulledWhileBlocked = pulled;
+		blocker.resolve();
+		await collected;
+
+		expect(pulledWhileBlocked).toBeLessThanOrEqual(4);
+	});
+
 	it("reports each batch once every one of its items has settled", async () => {
 		const completed: Array<{ size: number; results: number }> = [];
 

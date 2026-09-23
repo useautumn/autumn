@@ -56,12 +56,14 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 		retryDelayMs: 2_000,
 		maxRetryDelayMs: 30_000,
 	},
-	/** A memoized read is shared, so it must expire well inside the customer
-	 * deadline; concurrency alone does not bound the request rate, so these
-	 * reads are paced against the same Stripe limit the sweep uses. */
+	/** A memoized read is evicted only when its own deadline rejects it, so it
+	 * must expire well inside the customer deadline — otherwise the customer
+	 * attempt dies first and its retry re-attaches to the same stalled promise.
+	 * Concurrency alone does not bound the request rate, so these reads are
+	 * paced against the same Stripe limit the sweep uses. */
 	stripeReader: {
 		maxMemoizedReads: 2000,
-		timeoutMs: 30_000,
+		timeoutMs: 10_000,
 		attempts: 1,
 		requestsPerSecond: 40,
 	},

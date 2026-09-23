@@ -10,16 +10,22 @@ type PendingBatch<Item, Result> = {
 	reported: boolean;
 };
 
+const DEFAULT_MAX_PENDING_BATCHES = 8;
+
 /** One pool spanning every batch: a slow item holds a single slot rather than
  * stalling its whole batch, and slots stay full while batches are sparse. */
 export const mapStreamWithConcurrency = async function* <Item, Result>({
 	batches,
 	concurrency,
+	maxPendingBatches = DEFAULT_MAX_PENDING_BATCHES,
 	run,
 	onBatchSettled,
 }: {
 	batches: AsyncGenerator<Item[]>;
 	concurrency: number;
+	/** Bounds how far page production runs ahead of the oldest unsettled page;
+	 * sparse pages start nothing, so without this they are pulled unbounded. */
+	maxPendingBatches?: number;
 	run: (item: Item) => Promise<Result>;
 	onBatchSettled?: BatchSettled<Item, Result>;
 }): AsyncGenerator<Result> {
@@ -72,6 +78,14 @@ export const mapStreamWithConcurrency = async function* <Item, Result>({
 	};
 
 	for await (const batch of batches) {
+		if (failure) break;
+
+		while (order.length >= Math.max(1, maxPendingBatches) && !failure) {
+			if (inFlight.size === 0) break;
+			await drainOne();
+			yield* pending.splice(0).map(({ result }) => result);
+			await settleReportableBatches();
+		}
 		if (failure) break;
 
 		const owner: PendingBatch<Item, Result> = {
