@@ -29,20 +29,18 @@ export default function LogoTile({
 				className,
 			)}
 		>
-			<span className="relative flex max-w-[72%] justify-center">
-				<img
-					src={logo.src}
-					alt={logo.name}
-					loading="lazy"
-					draggable={false}
-					className="w-auto max-w-full object-contain select-none transition-[filter] duration-200 ease-out group-hover:brightness-[1.63] group-focus-visible:brightness-[1.63]"
-					style={{
-						height: `calc(${LOGO_UNIT} * ${logoHeightFactor(logo)})`,
-					}}
-				/>
-				{hasCaseStudy && <CaseStudyBadge />}
-			</span>
-			<TileCorners />
+			<img
+				src={logo.src}
+				alt={logo.name}
+				loading="lazy"
+				draggable={false}
+				className="w-auto max-w-[72%] object-contain select-none transition-[filter] duration-200 ease-out group-hover:brightness-[1.63] group-focus-visible:brightness-[1.63]"
+				style={{
+					height: `calc(${LOGO_UNIT} * ${logoHeightFactor(logo)})`,
+				}}
+			/>
+			{hasCaseStudy && <CaseStudyBadge />}
+			<TileCorners omitBottomRight={hasCaseStudy} />
 		</Link>
 	);
 }
