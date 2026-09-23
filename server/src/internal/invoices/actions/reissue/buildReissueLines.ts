@@ -1,7 +1,9 @@
-import type {
-	DbInvoiceLineItem,
-	ReissueInvoiceOverrides,
-	ReissueLineEdits,
+import {
+	type DbInvoiceLineItem,
+	ErrCode,
+	RecaseError,
+	type ReissueInvoiceOverrides,
+	type ReissueLineEdits,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems";
@@ -31,7 +33,7 @@ export const buildReissueLines = async ({
 		stripeClient: stripeCli,
 		invoiceId: stripeInvoice.id,
 	});
-	return applyReissueLineEdits({
+	const lines = await applyReissueLineEdits({
 		ctx,
 		customerId,
 		storedLines,
@@ -65,4 +67,12 @@ export const buildReissueLines = async ({
 			},
 		})),
 	});
+	if (lines.length > 250) {
+		throw new RecaseError({
+			message: "Stripe replacement invoices support at most 250 line items",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+	return lines;
 };

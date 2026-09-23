@@ -2,7 +2,6 @@ import { generateKsuid } from "@autumn/ksuid";
 import {
 	type CreateInvoicePreview,
 	cusProductToProduct,
-	type DbInvoiceLineItem,
 	ErrCode,
 	type FullCustomer,
 	type InsertDbInvoiceLineItem,
@@ -47,7 +46,7 @@ import { updateInvoiceFromStripe } from "./updateFromStripe";
 import { upsertInvoiceFromStripe } from "./upsertFromStripe";
 import { voidInvoice } from "./voidInvoice";
 
-const ADD_LINES_BATCH_SIZE = 100;
+const ADD_LINES_BATCH_SIZE = 50;
 
 type ReissueInvoiceResult = {
 	replacement: InvoiceListRow | null;
@@ -183,7 +182,6 @@ const deleteDraft = async ({
 
 const createReplacementDraft = async ({
 	ctx,
-	customerId,
 	stripeCli,
 	stripeInvoice,
 	template,
@@ -192,12 +190,10 @@ const createReplacementDraft = async ({
 	daysUntilDue,
 	paymentMethodTypes,
 	overrides,
-	lineEdits,
-	storedLines,
+	lines,
 	dropDeferredPointer,
 }: {
 	ctx: AutumnContext;
-	customerId: string;
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
 	template?: InvoiceTemplate;
@@ -206,8 +202,7 @@ const createReplacementDraft = async ({
 	daysUntilDue?: number;
 	paymentMethodTypes?: string[];
 	overrides?: ReissueInvoiceOverrides;
-	lineEdits?: ReissueLineEdits;
-	storedLines: DbInvoiceLineItem[];
+	lines: Stripe.InvoiceAddLinesParams.Line[];
 	dropDeferredPointer: boolean;
 }) => {
 	const stripeSubId = stripeInvoiceToStripeSubscriptionId(stripeInvoice);
@@ -219,16 +214,6 @@ const createReplacementDraft = async ({
 		throw invalidRequest("Original invoice has no Stripe customer");
 	}
 
-	// Lines are resolved first so a bad edit fails before any draft exists.
-	const lines = await buildReissueLines({
-		ctx,
-		customerId,
-		stripeCli,
-		stripeInvoice,
-		overrides,
-		lineEdits,
-		storedLines,
-	});
 	const { automaticTax, defaultTaxRates } = resolveReissueTax({
 		stripeInvoice,
 		overrides,
@@ -323,7 +308,6 @@ const createReplacementDraft = async ({
  */
 const issueReplacement = async ({
 	ctx,
-	customerId,
 	stripeCli,
 	invoiceId,
 	stripeInvoice,
@@ -333,12 +317,11 @@ const issueReplacement = async ({
 	daysUntilDue,
 	overrides,
 	lineEdits,
-	storedLines,
+	lines,
 	creditOriginal,
 	customerAdjusted,
 }: {
 	ctx: AutumnContext;
-	customerId: string;
 	stripeCli: Stripe;
 	invoiceId: string;
 	stripeInvoice: Stripe.Invoice;
@@ -348,14 +331,13 @@ const issueReplacement = async ({
 	daysUntilDue?: number;
 	overrides?: ReissueInvoiceOverrides;
 	lineEdits?: ReissueLineEdits;
-	storedLines: DbInvoiceLineItem[];
+	lines: Stripe.InvoiceAddLinesParams.Line[];
 	creditOriginal: boolean;
 	/** A corrected address or tax id legitimately moves the tax. */
 	customerAdjusted: boolean;
 }): Promise<{ finalized: Stripe.Invoice; creditNoteId: string | null }> => {
 	const draft = await createReplacementDraft({
 		ctx,
-		customerId,
 		stripeCli,
 		stripeInvoice,
 		template,
@@ -364,8 +346,7 @@ const issueReplacement = async ({
 		daysUntilDue,
 		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
 		overrides,
-		lineEdits,
-		storedLines,
+		lines,
 		dropDeferredPointer: creditOriginal,
 	});
 
@@ -835,6 +816,15 @@ export const reissueInvoice = async ({
 		db: ctx.db,
 		invoiceIds: [row.invoice.id],
 	});
+	const replacementLines = await buildReissueLines({
+		ctx,
+		customerId: previewCustomerId,
+		stripeCli,
+		stripeInvoice,
+		overrides: invoiceOverrides,
+		lineEdits,
+		storedLines,
+	});
 
 	const dueDateMs = dueDate
 		? secondsToMs(dueDate)
@@ -858,14 +848,12 @@ export const reissueInvoice = async ({
 			voidedInvoiceId: null,
 			creditNoteId: null,
 			preview: await previewReissue({
-				ctx,
-				customerId: previewCustomerId,
 				stripeCli,
 				stripeInvoice,
 				stripeCustomer,
 				customerOverrides,
 				overrides: invoiceOverrides,
-				lineEdits,
+				lines: replacementLines,
 				storedLines,
 				credits,
 				dueDateMs,
@@ -893,7 +881,6 @@ export const reissueInvoice = async ({
 		customerAdjusted: Boolean(
 			customerOverrides?.address || customerOverrides?.tax_ids,
 		),
-		customerId: previewCustomerId,
 		stripeCli,
 		invoiceId,
 		stripeInvoice,
@@ -903,7 +890,7 @@ export const reissueInvoice = async ({
 		daysUntilDue,
 		overrides: invoiceOverrides,
 		lineEdits,
-		storedLines,
+		lines: replacementLines,
 	});
 
 	await stripeCli.invoices.update(stripeInvoice.id, {
