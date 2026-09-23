@@ -1,9 +1,14 @@
 import { expect, test } from "bun:test";
 import type {
 	AttachParamsV1Input,
+	AttachPreviewResponse,
 	CreateScheduleParamsV0Input,
 } from "@autumn/shared";
-import { BillingInterval, ms } from "@autumn/shared";
+import {
+	BillingInterval,
+	ms,
+	truncateMsToSecondPrecision,
+} from "@autumn/shared";
 import { getBillingPeriod } from "@tests/integration/billing/utils/proration";
 import { TestFeature } from "@tests/setup/v2Features";
 import { products } from "@tests/utils/fixtures/products";
@@ -208,22 +213,24 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: fromParent.id })],
 		});
 
-		const midCycleMs = scenario.advancedTo + ms.days(5);
-		await scenario.autumnV1.billing.createSchedule({
-			customer_id: customerId,
-			phases: [
-				{ starts_at: scenario.advancedTo, plans: [{ plan_id: fromParent.id }] },
-				{ starts_at: midCycleMs, plans: [{ plan_id: toParent.id }] },
-			],
-		} satisfies CreateScheduleParamsV0Input);
-
-		const preview =
-			await scenario.autumnV2_3.billing.previewAttach<AttachParamsV1Input>({
+		const midCycleMs = truncateMsToSecondPrecision(
+			scenario.advancedTo + ms.days(5),
+		);
+		const preview: AttachPreviewResponse = await scenario.autumnV1.post(
+			"/billing.preview_create_schedule",
+			{
 				customer_id: customerId,
-				plan_id: toParent.id,
-				plan_schedule: "end_of_cycle",
-				redirect_mode: "if_required",
-			});
+				phases: [
+					{
+						starts_at: scenario.advancedTo,
+						plans: [{ plan_id: fromParent.id }],
+					},
+					{ starts_at: midCycleMs, plans: [{ plan_id: toParent.id }] },
+				],
+			} satisfies CreateScheduleParamsV0Input,
+		);
+
+		expect(preview.next_cycle?.starts_at).toBe(midCycleMs);
 
 		expectNextCycleHasRefundLines({ preview });
 	},
