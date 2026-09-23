@@ -3,7 +3,7 @@ import type {
 	ScheduleMismatch,
 	SubscriptionMismatch,
 } from "@autumn/shared";
-import { getUnixTime } from "date-fns";
+import { fromUnixTime, isAfter } from "date-fns";
 import type Stripe from "stripe";
 import { similarUnix } from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils";
 import type {
@@ -48,9 +48,10 @@ export const evaluateSchedulePhases = async ({
 
 	const mismatches: SubscriptionMismatch[] = [];
 
-	const nowSeconds = getUnixTime(new Date());
+	const now = new Date();
 	const livePhases = schedule.phases.filter(
-		(phase) => phase.end_date === null || phase.end_date > nowSeconds,
+		(phase) =>
+			phase.end_date === null || isAfter(fromUnixTime(phase.end_date), now),
 	);
 
 	if (livePhases.length !== scheduledPhases.length) {
