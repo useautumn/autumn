@@ -6,6 +6,8 @@
  *   cron, open + partially paid     → untouched, expires_at cleared so the cron stops re-picking it
  *   cron, void + partially paid     → untouched, expires_at cleared
  *   void webhook, partially paid    → pending plan untouched
+ *   sub cancel fails                → metadata kept so the next cron run retries
+ *   sub already canceled            → not canceled again, metadata deleted
  */
 
 import { expect, test } from "bun:test";
@@ -18,6 +20,8 @@ const STRIPE_SUBSCRIPTION_ID = "sub_deferred_created";
 const state = {
 	invoiceStatus: "open" as "open" | "void",
 	amountPaid: 0,
+	subscriptionStatus: "active" as "active" | "canceled",
+	cancelFails: false,
 	voidedInvoiceIds: [] as string[],
 	canceledSubscriptionIds: [] as string[],
 	expiredMetadataIds: [] as string[],
@@ -28,12 +32,18 @@ const state = {
 const resetState = ({
 	invoiceStatus,
 	amountPaid,
+	subscriptionStatus = "active",
+	cancelFails = false,
 }: {
 	invoiceStatus: "open" | "void";
 	amountPaid: number;
+	subscriptionStatus?: "active" | "canceled";
+	cancelFails?: boolean;
 }) => {
 	state.invoiceStatus = invoiceStatus;
 	state.amountPaid = amountPaid;
+	state.subscriptionStatus = subscriptionStatus;
+	state.cancelFails = cancelFails;
 	state.voidedInvoiceIds = [];
 	state.canceledSubscriptionIds = [];
 	state.expiredMetadataIds = [];
@@ -74,7 +84,12 @@ await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 			},
 		},
 		subscriptions: {
+			retrieve: async (id: string) => ({
+				id,
+				status: state.subscriptionStatus,
+			}),
 			cancel: async (id: string) => {
+				if (state.cancelFails) throw new Error("Stripe is unavailable");
 				state.canceledSubscriptionIds.push(id);
 			},
 		},
@@ -203,4 +218,27 @@ test("void webhook: a partially paid voided invoice keeps its pending plan", asy
 	expect(state.expiredMetadataIds).toEqual([]);
 	expect(state.canceledSubscriptionIds).toEqual([]);
 	expect(state.deletedMetadataIds).toEqual([]);
+});
+
+test("cron: a failed sub cancel keeps the metadata so the next run retries", async () => {
+	resetState({ invoiceStatus: "void", amountPaid: 0, cancelFails: true });
+
+	await runCron();
+
+	expect(state.expiredMetadataIds).toEqual([metadata.id]);
+	expect(state.canceledSubscriptionIds).toEqual([]);
+	expect(state.deletedMetadataIds).toEqual([]);
+});
+
+test("cron: an already canceled sub is not canceled again", async () => {
+	resetState({
+		invoiceStatus: "void",
+		amountPaid: 0,
+		subscriptionStatus: "canceled",
+	});
+
+	await runCron();
+
+	expect(state.canceledSubscriptionIds).toEqual([]);
+	expect(state.deletedMetadataIds).toEqual([metadata.id]);
 });

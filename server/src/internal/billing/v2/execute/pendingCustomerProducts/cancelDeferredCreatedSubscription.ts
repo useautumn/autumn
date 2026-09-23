@@ -6,6 +6,7 @@ import {
 import type Stripe from "stripe";
 import type { Logger } from "@/external/logtail/logtailUtils";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
+import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 
 /** Only a sub created for the pending plan is canceled; an updated sub still carries active plans. */
 const deferredMetadataToCreatedStripeSubscriptionId = ({
@@ -25,6 +26,7 @@ const deferredMetadataToCreatedStripeSubscriptionId = ({
 	return stripeInvoiceToStripeSubscriptionId(stripeInvoice);
 };
 
+/** Throws on Stripe failure so callers keep the metadata and the cron retries. */
 export const cancelDeferredCreatedSubscription = async ({
 	ctx,
 	stripeCli,
@@ -42,14 +44,12 @@ export const cancelDeferredCreatedSubscription = async ({
 	});
 	if (!stripeSubscriptionId) return;
 
-	try {
-		await stripeCli.subscriptions.cancel(stripeSubscriptionId);
-		ctx.logger.info(
-			`[cancelDeferredCreatedSubscription] Canceled sub ${stripeSubscriptionId} for unpaid invoice ${stripeInvoice.id}`,
-		);
-	} catch (error) {
-		ctx.logger.warn(
-			`[cancelDeferredCreatedSubscription] Failed to cancel sub ${stripeSubscriptionId}: ${error}`,
-		);
-	}
+	const stripeSubscription =
+		await stripeCli.subscriptions.retrieve(stripeSubscriptionId);
+	if (isStripeSubscriptionCanceled(stripeSubscription)) return;
+
+	await stripeCli.subscriptions.cancel(stripeSubscriptionId);
+	ctx.logger.info(
+		`[cancelDeferredCreatedSubscription] Canceled sub ${stripeSubscriptionId} for unpaid invoice ${stripeInvoice.id}`,
+	);
 };

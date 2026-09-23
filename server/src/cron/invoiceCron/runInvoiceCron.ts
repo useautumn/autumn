@@ -168,7 +168,13 @@ export const handleVoidInvoiceCron = async ({
 			}
 		}
 	} else if (invoice.status === "void" || invoice.status === "uncollectible") {
-		await cleanUpUnpaidInvoice();
+		try {
+			await cleanUpUnpaidInvoice();
+		} catch (error) {
+			logger.error(
+				`Error cleaning up unpaid invoice ${metadata.stripe_invoice_id}; retrying next run: ${error}`,
+			);
+		}
 	}
 };
 
