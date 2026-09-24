@@ -76,5 +76,10 @@ export const insertNewCusProducts = async ({
 	newCusProducts: FullCusProduct[];
 }) => {
 	await insertCustomerProductRows({ ctx, customerProducts: newCusProducts });
-	await insertCustomerLicensePools({ ctx, customerProducts: newCusProducts });
+	await insertCustomerLicensePools({
+		ctx,
+		customerLicenses: newCusProducts.flatMap(
+			(customerProduct) => customerProduct.customer_licenses ?? [],
+		),
+	});
 };

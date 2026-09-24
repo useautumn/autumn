@@ -72,6 +72,10 @@ export const runPlanSideEffects = async ({
 	const mayTouchLicenses =
 		(autumnBillingPlan.customerLicenseUpdates?.length ?? 0) > 0 ||
 		(autumnBillingPlan.insertPlanLicenses?.length ?? 0) > 0 ||
+		(autumnBillingPlan.patchCustomerProducts?.some(
+			(patch) => (patch.insertCustomerLicenses?.length ?? 0) > 0,
+		) ??
+			false) ||
 		(autumnBillingPlan.insertCustomerProducts?.some(
 			(customerProduct) => (customerProduct.customer_licenses?.length ?? 0) > 0,
 		) ??

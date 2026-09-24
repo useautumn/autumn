@@ -6,7 +6,10 @@ import {
 	type PendingBatchTransition,
 } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseTransitions";
 import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseUpdates";
-import { insertCustomerLicensePools } from "@/internal/billing/v2/execute/executeAutumnActions/insertCustomerLicensePools";
+import {
+	insertCustomerLicensePools,
+	planToNewCustomerLicensePools,
+} from "@/internal/billing/v2/execute/executeAutumnActions/insertCustomerLicensePools";
 import { repointSchedulePhases } from "@/internal/billing/v2/execute/executeAutumnActions/repointSchedulePhases";
 import { writeCustomerEntitlementReplaceables } from "@/internal/billing/v2/execute/executeAutumnActions/writeCustomerEntitlementReplaceables";
 
@@ -25,7 +28,7 @@ export const writePostgresOnlyRows = async ({
 
 	await insertCustomerLicensePools({
 		ctx,
-		customerProducts: autumnBillingPlan.insertCustomerProducts,
+		customerLicenses: planToNewCustomerLicensePools({ autumnBillingPlan }),
 	});
 
 	const pendingBatchTransitions = await executeCustomerLicenseTransitions({
@@ -48,9 +51,7 @@ export const planHasPostgresOnlyRows = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }): boolean =>
 	(autumnBillingPlan.customerLicenseUpdates?.length ?? 0) > 0 ||
-	autumnBillingPlan.insertCustomerProducts.some(
-		({ customer_licenses }) => (customer_licenses?.length ?? 0) > 0,
-	) ||
+	planToNewCustomerLicensePools({ autumnBillingPlan }).length > 0 ||
 	(autumnBillingPlan.customerLicenseTransitions?.length ?? 0) > 0 ||
 	(autumnBillingPlan.schedulePhaseCustomerProductReplacements?.length ?? 0) >
 		0 ||
