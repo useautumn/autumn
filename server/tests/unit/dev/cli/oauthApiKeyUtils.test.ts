@@ -77,13 +77,20 @@ describe("withAtmnAppKeyScopes", () => {
 			createdAt: new Date(),
 		});
 
-	const grant = ({ db }: { db: DrizzleCli }) =>
+	const grant = ({
+		db,
+		requestedScopes = null,
+	}: {
+		db: DrizzleCli;
+		requestedScopes?: string[] | null;
+	}) =>
 		withAtmnAppKeyScopes({
 			db,
 			clientId: "client_123",
 			userId: "user_123",
 			orgId: "org_123",
-			apiKeyScopes: cliScopes,
+			apiKeyScopes: requestedScopes ?? cliScopes,
+			requestedScopes,
 		});
 
 	test("adds the app scopes to atmn keys for a role that holds them", async () => {
@@ -115,5 +122,26 @@ describe("withAtmnAppKeyScopes", () => {
 		mockClient({ name: "Third Party App" });
 
 		expect(await grant({ db: dbWithRole("owner") })).toEqual(cliScopes);
+	});
+
+	test("mints exactly the explicitly requested scopes for atmn keys", async () => {
+		mockClient({ name: "atmn" });
+		const requestedScopes = ["customers:read"];
+
+		const scopes = await grant({ db: dbWithRole("owner"), requestedScopes });
+
+		expect(scopes).toEqual(requestedScopes);
+		for (const scope of ATMN_APP_KEY_SCOPES) {
+			expect(scopes).not.toContain(scope);
+		}
+	});
+
+	test("adds the role-capped app scopes when no scopes are requested", async () => {
+		mockClient({ name: "atmn" });
+
+		expect(await grant({ db: dbWithRole("owner") })).toEqual([
+			...cliScopes,
+			...ATMN_APP_KEY_SCOPES,
+		]);
 	});
 });

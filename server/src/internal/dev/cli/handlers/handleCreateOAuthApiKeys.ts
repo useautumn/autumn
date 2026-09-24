@@ -136,6 +136,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 			userId,
 			orgId,
 			apiKeyScopes,
+			requestedScopes,
 		});
 
 		const consent = await oauthConsentRepo.getForClientUserOrg({

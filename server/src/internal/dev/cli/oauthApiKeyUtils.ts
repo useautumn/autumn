@@ -68,20 +68,24 @@ export const tokenRecordFromResourceToken = (
 	};
 };
 
-/** Grants atmn keys the app scopes too, capped by the user's org role, so older CLIs get them. */
+/** Grants atmn keys the app scopes, capped by the user's org role, so older CLIs get them.
+ * Explicitly requested scopes are minted as-is, with no grant. */
 export const withAtmnAppKeyScopes = async ({
 	db,
 	clientId,
 	userId,
 	orgId,
 	apiKeyScopes,
+	requestedScopes,
 }: {
 	db: DrizzleCli;
 	clientId: string;
 	userId: string;
 	orgId: string;
 	apiKeyScopes: string[];
+	requestedScopes: string[] | null;
 }): Promise<string[]> => {
+	if (requestedScopes) return apiKeyScopes;
 	if (!(await isAtmnOAuthClientId({ db, clientId }))) return apiKeyScopes;
 
 	const { scopes: roleScopes } = await getScopesForUserInOrg({
