@@ -40,10 +40,30 @@ export const OAuthApiKeyRequestBodySchema = z
 
 export const parseRequestedScopes = (scopes: unknown) => {
 	const parsed = RequestedScopesSchema.safeParse(scopes);
-	if (parsed.success) return parsed.data ?? null;
+	if (!parsed.success) {
+		throw new RecaseError({
+			message: "Invalid scopes",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+	if (parsed.data?.length === 0) {
+		throw new RecaseError({
+			message: "scopes must not be empty",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
+	return parsed.data ?? null;
+};
+
+/** Keys with no scopes skip route scope checks, so never mint one. */
+export const assertMintableKeyScopes = (scopes: string[]) => {
+	if (scopes.length > 0) return;
 
 	throw new RecaseError({
-		message: "Invalid scopes",
+		message: "Cannot mint an API key with no scopes",
 		code: ErrCode.InvalidRequest,
 		statusCode: 400,
 	});
@@ -68,20 +88,24 @@ export const tokenRecordFromResourceToken = (
 	};
 };
 
-/** Grants atmn keys the app scopes too, capped by the user's org role, so older CLIs get them. */
+/** Grants atmn keys the app scopes, capped by the user's org role, so older CLIs get them.
+ * Explicitly requested scopes are minted as-is, with no grant. */
 export const withAtmnAppKeyScopes = async ({
 	db,
 	clientId,
 	userId,
 	orgId,
 	apiKeyScopes,
+	requestedScopes,
 }: {
 	db: DrizzleCli;
 	clientId: string;
 	userId: string;
 	orgId: string;
 	apiKeyScopes: string[];
+	requestedScopes: string[] | null;
 }): Promise<string[]> => {
+	if (requestedScopes) return apiKeyScopes;
 	if (!(await isAtmnOAuthClientId({ db, clientId }))) return apiKeyScopes;
 
 	const { scopes: roleScopes } = await getScopesForUserInOrg({
