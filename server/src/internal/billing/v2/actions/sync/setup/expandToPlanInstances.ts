@@ -4,6 +4,7 @@ import { findLinkedPlanInstances } from "./findLinkedPlanInstances";
 /**
  * A plan with quantity N becomes N product contexts, one cusProduct per
  * instance. Each replaces at most one existing instance, so a re-sync converges.
+ * A main plan stamped to an entity carries a rolled-up quantity and stays one row.
  */
 export const expandToPlanInstances = ({
 	fullCustomer,
@@ -14,6 +15,11 @@ export const expandToPlanInstances = ({
 	productContext: SyncProductContext;
 	stripeSubscriptionId?: string;
 }): SyncProductContext[] => {
+	const isEntityStampedMainPlan =
+		productContext.fullProduct.is_add_on !== true &&
+		productContext.plan.entity_id !== undefined;
+	if (isEntityStampedMainPlan) return [productContext];
+
 	const requested = productContext.plan.quantity ?? 1;
 	const replacesExisting =
 		stripeSubscriptionId !== undefined &&
