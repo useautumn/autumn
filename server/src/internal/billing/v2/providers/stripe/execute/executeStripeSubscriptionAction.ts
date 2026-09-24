@@ -143,12 +143,13 @@ export const executeStripeSubscriptionAction = async ({
 	let autumnInvoice: Invoice | undefined;
 	if (latestStripeInvoice) {
 		logger.debug(`[execSubAction] Upserting invoice from billing`);
-		autumnInvoice = await invoiceActions.upsertFromStripe({
+		const invoiceResult = await invoiceActions.upsertFromStripe({
 			ctx,
 			stripeInvoice: latestStripeInvoice,
 			fullCustomer: billingContext.fullCustomer,
 			fullProducts: billingContext.fullProducts,
 		});
+		autumnInvoice = invoiceResult.invoice;
 	}
 
 	addStripeSubscriptionToBillingPlan({

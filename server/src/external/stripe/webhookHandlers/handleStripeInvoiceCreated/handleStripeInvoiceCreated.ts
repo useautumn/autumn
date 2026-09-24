@@ -51,7 +51,7 @@ export const handleStripeInvoiceCreated = async ({
 	});
 
 	// Upsert Autumn invoice record
-	const autumnInvoice = await upsertAutumnInvoice({
+	const invoiceResult = await upsertAutumnInvoice({
 		ctx,
 		stripeInvoice: updatedStripeInvoice,
 		stripeSubscription: eventContext.stripeSubscription,
@@ -60,6 +60,7 @@ export const handleStripeInvoiceCreated = async ({
 	});
 
 	// Store invoice line items (async via SQS workflow)
+	const autumnInvoice = invoiceResult?.invoice;
 	if (autumnInvoice) {
 		const periodEndMs = secondsToMs(eventContext.stripeInvoice.period_end);
 		await storeRenewalLineItems({

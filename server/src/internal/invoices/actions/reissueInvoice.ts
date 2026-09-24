@@ -728,7 +728,7 @@ const storeReplacementInAutumn = async ({
 			cusProductToProduct({ cusProduct: customerProduct }),
 		);
 
-	const autumnInvoice = await upsertInvoiceFromStripe({
+	const { invoice: autumnInvoice } = await upsertInvoiceFromStripe({
 		ctx,
 		stripeInvoice: replacement,
 		fullCustomer,

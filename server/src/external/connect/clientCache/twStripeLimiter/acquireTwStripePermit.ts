@@ -1,0 +1,107 @@
+import { createHash, randomUUID } from "node:crypto";
+import { createTwStripeRequestDeadline } from "./createTwStripeRequestDeadline";
+import { getTwStripeRedis } from "./getTwStripeRedis";
+import admissionScript from "./stripeAdmission.lua" with { type: "text" };
+import { getTwStripeLane } from "./twStripeRequestContext";
+import type { TwStripeBudget } from "./types/twStripeAdmission";
+
+const CONNECTED_ACCOUNT_MAX_RPS = 5;
+const CONNECTED_ACCOUNT_MAX_INFLIGHT = 5;
+
+const getBudget = (): TwStripeBudget => {
+	const maxRps = Number(process.env.TW_STRIPE_MAX_RPS);
+	const maxInFlight = Number(process.env.TW_STRIPE_MAX_INFLIGHT);
+	if (
+		!Number.isFinite(maxRps) ||
+		maxRps <= 0 ||
+		!Number.isInteger(maxInFlight) ||
+		maxInFlight < 2
+	) {
+		throw new Error(
+			"Invalid shared Stripe budget: positive RPS and at least two in-flight slots required",
+		);
+	}
+	return { maxRps, maxInFlight };
+};
+
+export const acquireTwStripePermit = async ({
+	authorization,
+	stripeAccount,
+	timeoutMs,
+	requestTimeoutMs = timeoutMs,
+	signal,
+}: {
+	authorization: string;
+	stripeAccount?: string;
+	timeoutMs: number;
+	requestTimeoutMs?: number;
+	signal?: AbortSignal;
+}) => {
+	const deadline = createTwStripeRequestDeadline({ timeoutMs, signal });
+	const redis = getTwStripeRedis();
+	const { maxRps, maxInFlight } = getBudget();
+	const fingerprint = createHash("sha256").update(authorization).digest("hex");
+	const prefix = `tw:stripe:{${fingerprint}}`;
+	const account = stripeAccount
+		? createHash("sha256").update(stripeAccount).digest("hex")
+		: "platform";
+	const keys = [
+		...["state", "bulk", "webhook", "waiting"].map(
+			(suffix) => `${prefix}:${account}:${suffix}`,
+		),
+		`${prefix}:active`,
+		`${prefix}:activeBulk`,
+		`${prefix}:state`,
+		`${prefix}:${account}:active`,
+		`${prefix}:${account}:activeBulk`,
+	];
+	const id = randomUUID();
+	const lane = getTwStripeLane();
+	// Queueing time must not extend the in-flight lease left behind by a crashed worker.
+	const leaseMs = Math.max(requestTimeoutMs, 1000) + 5000;
+	const accountRps = stripeAccount
+		? Math.min(maxRps, CONNECTED_ACCOUNT_MAX_RPS)
+		: maxRps;
+	const args = [
+		id,
+		lane,
+		1000 / maxRps,
+		maxInFlight,
+		leaseMs,
+		1000 / accountRps,
+		stripeAccount
+			? Math.min(maxInFlight, CONNECTED_ACCOUNT_MAX_INFLIGHT)
+			: maxInFlight,
+	];
+	const startedAt = performance.now();
+	let released = false;
+	const release = async () => {
+		if (released) return;
+		released = true;
+		await redis.eval(admissionScript, keys.length, ...keys, "release", ...args);
+	};
+
+	try {
+		for (;;) {
+			deadline.remainingMs();
+			const result = (await redis.eval(
+				admissionScript,
+				keys.length,
+				...keys,
+				"acquire",
+				...args,
+			)) as [number, number];
+			deadline.remainingMs();
+			if (result[0] === 1)
+				return {
+					release,
+					lane,
+					waitMs: Math.round(performance.now() - startedAt),
+				};
+			await deadline.sleep(result[1]);
+		}
+	} catch (error) {
+		await release().catch(() => {});
+		throw error;
+	}
+};

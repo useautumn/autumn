@@ -117,6 +117,7 @@ const syncManualPastDue = async ({
 			fullCustomer,
 			customerProducts: [...fullCustomer.customer_products],
 			nowMs: Date.now(),
+			results: { errors: [] },
 			updatedCustomerProducts: [],
 			deletedCustomerProducts: [],
 			insertedCustomerProducts: [],
