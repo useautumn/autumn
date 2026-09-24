@@ -24,14 +24,14 @@ export const handleStripeSubscriptionScheduleReleased = async ({
 	}
 	if (!fullCustomer) return;
 
-	const { droppedCount, clearedCount } =
-		await customerProductActions.dropHeldSchedulePhases({
+	const { detachedCount, clearedCount } =
+		await customerProductActions.detachSchedulePhases({
 			ctx,
 			fullCustomer,
 			schedule,
 		});
 
 	logger.info(
-		`[schedule.released] ${schedule.id}: dropped ${droppedCount} scheduled plan(s), cleared ${clearedCount} phase end(s)`,
+		`[schedule.released] ${schedule.id}: detached ${detachedCount} scheduled plan(s), cleared ${clearedCount} phase end(s)`,
 	);
 };

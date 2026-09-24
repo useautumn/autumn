@@ -1,18 +1,18 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
-import type { HeldSchedulePhases } from "./types/heldSchedulePhases";
+import type { SchedulePhaseRows } from "./types/schedulePhaseRows";
 
-export const executeDropHeldSchedulePhases = async ({
+export const executeDetachSchedulePhases = async ({
 	ctx,
-	held,
+	rows,
 }: {
 	ctx: AutumnContext;
-	held: HeldSchedulePhases;
+	rows: SchedulePhaseRows;
 }) => {
-	for (const customerProduct of held.heldRows) {
+	for (const customerProduct of rows.scheduledRows) {
 		await CusProductService.delete({ ctx, cusProductId: customerProduct.id });
 	}
-	for (const customerProduct of held.phaseEndRows) {
+	for (const customerProduct of rows.phaseEndRows) {
 		await CusProductService.update({
 			ctx,
 			cusProductId: customerProduct.id,
@@ -21,7 +21,7 @@ export const executeDropHeldSchedulePhases = async ({
 	}
 
 	return {
-		droppedCount: held.heldRows.length,
-		clearedCount: held.phaseEndRows.length,
+		detachedCount: rows.scheduledRows.length,
+		clearedCount: rows.phaseEndRows.length,
 	};
 };

@@ -1,9 +1,9 @@
 import type { FullCusProduct } from "@autumn/shared";
 
-/** The rows Autumn holds for a Stripe schedule that Stripe no longer runs as imported. */
-export type HeldSchedulePhases = {
+/** Autumn's rows for a Stripe schedule that Stripe no longer runs as imported. */
+export type SchedulePhaseRows = {
 	/** Scheduled rows created for the schedule's future phases. */
-	heldRows: FullCusProduct[];
+	scheduledRows: FullCusProduct[];
 	/** Live rows whose end date is one of the schedule's phase boundaries. */
 	phaseEndRows: FullCusProduct[];
 };

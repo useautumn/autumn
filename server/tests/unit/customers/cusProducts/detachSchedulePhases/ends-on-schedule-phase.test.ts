@@ -9,7 +9,7 @@
 import { describe, expect, test } from "bun:test";
 import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
-import { endsOnSchedulePhase } from "@/internal/customers/cusProducts/actions/dropHeldSchedulePhases/endsOnSchedulePhase.js";
+import { endsOnSchedulePhase } from "@/internal/customers/cusProducts/actions/detachSchedulePhases/endsOnSchedulePhase.js";
 
 const PHASE_ONE_START = 1_790_000_000;
 const PHASE_TWO_START = 1_792_600_000;

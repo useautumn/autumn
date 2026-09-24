@@ -3,7 +3,7 @@ import { activateFreeSuccessorProduct } from "./activateFreeSuccessorProduct";
 import { activateScheduledCustomerProduct } from "./activateScheduled";
 import { cancelCustomerProduct } from "./cancelCustomerProduct";
 import { deleteScheduledCustomerProduct } from "./deleteScheduledCustomerProduct";
-import { dropHeldSchedulePhases } from "./dropHeldSchedulePhases/dropHeldSchedulePhases";
+import { detachSchedulePhases } from "./detachSchedulePhases/detachSchedulePhases";
 import { expireCustomerProductAndActivateDefault } from "./expireAndActivateDefault";
 import {
 	getExpiredCustomerProductsCache,
@@ -49,7 +49,7 @@ export const customerProductActions = {
 
 	/** Deletes any scheduled main customer product in the same group */
 	deleteScheduled: deleteScheduledCustomerProduct,
-	dropHeldSchedulePhases,
+	detachSchedulePhases,
 
 	/** Updates a customer product in both Postgres and the Redis FullCustomer cache */
 	updateDbAndCache: updateCustomerProductDbAndCache,

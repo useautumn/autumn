@@ -1,7 +1,7 @@
 /**
- * computeHeldSchedulePhases
+ * computeDetachSchedulePhases
  *
- * Held rows are the scheduled rows pointing at the schedule; phase-end rows are
+ * Scheduled rows are the ones pointing at the schedule; phase-end rows are
  * the live rows on its subscription whose end date sits on a phase boundary.
  * A released schedule names its subscription under released_subscription.
  */
@@ -9,7 +9,7 @@
 import { describe, expect, test } from "bun:test";
 import { CusProductStatus, type FullCustomer } from "@autumn/shared";
 import type Stripe from "stripe";
-import { computeHeldSchedulePhases } from "@/internal/customers/cusProducts/actions/dropHeldSchedulePhases/computeHeldSchedulePhases.js";
+import { computeDetachSchedulePhases } from "@/internal/customers/cusProducts/actions/detachSchedulePhases/computeDetachSchedulePhases.js";
 
 const PHASE_TWO_START = 1_792_600_000;
 
@@ -54,9 +54,9 @@ const schedule = ({
 		],
 	}) as unknown as Stripe.SubscriptionSchedule;
 
-describe("computeHeldSchedulePhases", () => {
-	test("splits held scheduled rows from live rows ending on a phase boundary", () => {
-		const held = computeHeldSchedulePhases({
+describe("computeDetachSchedulePhases", () => {
+	test("splits scheduled rows from live rows ending on a phase boundary", () => {
+		const rows = computeDetachSchedulePhases({
 			fullCustomer: customerWith([
 				row({
 					id: "live",
@@ -65,7 +65,7 @@ describe("computeHeldSchedulePhases", () => {
 					endedAt: PHASE_TWO_START * 1000,
 				}),
 				row({
-					id: "held",
+					id: "scheduled",
 					status: CusProductStatus.Scheduled,
 					subscriptionIds: ["sub_1"],
 					scheduledIds: ["sub_sched_1"],
@@ -80,12 +80,12 @@ describe("computeHeldSchedulePhases", () => {
 			schedule: schedule({ subscription: "sub_1" }),
 		});
 
-		expect(held.heldRows.map((r) => r.id)).toEqual(["held"]);
-		expect(held.phaseEndRows.map((r) => r.id)).toEqual(["live"]);
+		expect(rows.scheduledRows.map((r) => r.id)).toEqual(["scheduled"]);
+		expect(rows.phaseEndRows.map((r) => r.id)).toEqual(["live"]);
 	});
 
 	test("a released schedule resolves its subscription from released_subscription", () => {
-		const held = computeHeldSchedulePhases({
+		const rows = computeDetachSchedulePhases({
 			fullCustomer: customerWith([
 				row({
 					id: "live",
@@ -97,6 +97,6 @@ describe("computeHeldSchedulePhases", () => {
 			schedule: schedule({ subscription: null, releasedSubscription: "sub_1" }),
 		});
 
-		expect(held.phaseEndRows.map((r) => r.id)).toEqual(["live"]);
+		expect(rows.phaseEndRows.map((r) => r.id)).toEqual(["live"]);
 	});
 });
