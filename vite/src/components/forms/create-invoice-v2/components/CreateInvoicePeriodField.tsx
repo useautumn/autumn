@@ -7,7 +7,7 @@ import {
 	PopoverTrigger,
 } from "@autumn/ui";
 import { XIcon } from "@phosphor-icons/react";
-import { format, startOfDay } from "date-fns";
+import { endOfDay, format, startOfDay } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
@@ -47,21 +47,21 @@ export function CreateInvoicePeriodField() {
 	};
 
 	const handleSelect = (_range: DateRange | undefined, clickedDay: Date) => {
-		if (!pendingStart || clickedDay <= pendingStart) {
+		if (!pendingStart || clickedDay < pendingStart) {
 			setPendingStart(clickedDay);
 			return;
 		}
 
 		setPeriod({
 			start: startOfDay(pendingStart).getTime(),
-			end: startOfDay(clickedDay).getTime(),
+			end: endOfDay(clickedDay).getTime(),
 		});
 		handleOpenChange(false);
 	};
 
 	return (
 		<div>
-			<FormLabel>Billing period</FormLabel>
+			<FormLabel>Start and end dates</FormLabel>
 			<div className="relative">
 				<Popover open={open} onOpenChange={handleOpenChange}>
 					<PopoverTrigger asChild>
@@ -78,7 +78,7 @@ export function CreateInvoicePeriodField() {
 							{selectedRange ? (
 								`${format(selectedRange.from, RANGE_DATE_FORMAT)} → ${format(selectedRange.to, RANGE_DATE_FORMAT)}`
 							) : (
-								<span>Select dates to prorate plan charges</span>
+								<span>Select start and end dates</span>
 							)}
 						</button>
 					</PopoverTrigger>
@@ -95,7 +95,7 @@ export function CreateInvoicePeriodField() {
 				{selectedRange && (
 					<button
 						type="button"
-						aria-label="Clear billing period"
+						aria-label="Clear start and end dates"
 						className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-tertiary-foreground transition-colors hover:text-foreground"
 						onClick={() => setPeriod({ start: null, end: null })}
 					>
