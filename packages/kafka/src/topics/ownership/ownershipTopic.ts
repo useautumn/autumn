@@ -11,6 +11,7 @@ import type {
 import {
 	claimedOwnershipRecordSchema,
 	type OwnershipRecord,
+	readyOwnershipRecordSchema,
 	unownedOwnershipRecordSchema,
 } from "./types/ownershipRecord.js";
 
@@ -34,6 +35,16 @@ function parseUnowned({
 	return parsed.data;
 }
 
+function parseReady({
+	input,
+}: {
+	input: unknown;
+}): Extract<OwnershipRecord, { type: "ready" }> {
+	const parsed = readyOwnershipRecordSchema.safeParse(input);
+	if (!parsed.success) throw new InvalidRecordError({ cause: parsed.error });
+	return parsed.data;
+}
+
 function ownershipRecordToKey({ record }: { record: OwnershipRecord }): string {
 	return record.partition.toString();
 }
@@ -47,6 +58,8 @@ function parseOwnershipPayload({
 			return parseClaimed({ input: payload });
 		case "unowned":
 			return parseUnowned({ input: payload });
+		case "ready":
+			return parseReady({ input: payload });
 		default:
 			throw new InvalidRecordError();
 	}

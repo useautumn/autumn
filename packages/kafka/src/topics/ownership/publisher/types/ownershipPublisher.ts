@@ -1,7 +1,16 @@
-import type { KafkaProducer } from "../../../../client/types/kafkaClient.js";
+import type {
+	KafkaProducer,
+	KafkaSender,
+} from "../../../../client/types/kafkaClient.js";
 
 export type OwnershipPublisherContext = {
 	producer: KafkaProducer;
+	/** A plain producer for `ready`; without one the publisher can only claim and release. */
+	sender?: KafkaSender;
+};
+
+export type OwnershipReadinessContext = {
+	sender: KafkaSender;
 };
 
 export type OwnershipClaim = {
@@ -18,6 +27,13 @@ export type OwnershipRelease = {
 	endpoint: string;
 };
 
+export type OwnershipReadiness = {
+	partition: number;
+	/** The worker that has prepared the partition and is waiting to be named its owner. */
+	endpoint: string;
+	readyAt: number;
+};
+
 export type OwnershipPublication = {
 	routeEpoch: string;
 };
@@ -25,4 +41,5 @@ export type OwnershipPublication = {
 export type OwnershipPublisher = {
 	claim(params: OwnershipClaim): Promise<OwnershipPublication>;
 	release(params: OwnershipRelease): Promise<OwnershipPublication>;
+	announceReady(params: OwnershipReadiness): Promise<void>;
 };
