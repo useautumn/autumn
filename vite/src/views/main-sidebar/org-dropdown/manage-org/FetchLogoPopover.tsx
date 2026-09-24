@@ -31,6 +31,14 @@ export const FetchLogoPopover = ({
 		publicUrl: string;
 	} | null>(null);
 
+	// Forget the unsaved logo whenever the popover closes: removing, uploading
+	// or pasting a logo (all outside the popover) replace or delete the stored
+	// object, so the remembered URL would no longer be this fetched image.
+	const handleOpenChange = (nextOpen: boolean) => {
+		setOpen(nextOpen);
+		if (!nextOpen) setUnsavedLogo(null);
+	};
+
 	const handleFetch = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!url.trim()) return;
@@ -51,8 +59,7 @@ export const FetchLogoPopover = ({
 				setUnsavedLogo({ url, publicUrl });
 				return;
 			}
-			setUnsavedLogo(null);
-			setOpen(false);
+			handleOpenChange(false);
 			setUrl("");
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to fetch logo"));
@@ -62,7 +69,7 @@ export const FetchLogoPopover = ({
 	};
 
 	return (
-		<Popover open={open} onOpenChange={setOpen}>
+		<Popover open={open} onOpenChange={handleOpenChange}>
 			<PopoverTrigger asChild>
 				<Button variant="secondary" size="sm" disabled={disabled}>
 					<GlobeIcon className="size-3" />
