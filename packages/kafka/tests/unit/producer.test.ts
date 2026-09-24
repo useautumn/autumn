@@ -89,6 +89,7 @@ function usesBoundedSettingsWithoutStarting(): void {
 				"autumn-balance-worker:staging%2Feu-west-1:metering-events-v1:3",
 			idempotent: true,
 			maxInFlightRequests: 1,
+			createPartitioner: expect.any(Function),
 			transactionTimeout: 15_000,
 			retry: {
 				retries: 3,
@@ -411,4 +412,26 @@ test("reports each broker request the producer makes, and survives a throwing li
 		durationMs: 41,
 		pendingMs: 2,
 	});
+});
+
+test("partition producers use the named partition without scanning topic metadata", () => {
+	const { receivedConfigs } = createProducerFixture();
+	const createPartitioner = receivedConfigs[0]?.createPartitioner;
+	expect(createPartitioner).toBeDefined();
+	const partitionOf = createPartitioner?.();
+	let metadataRead = false;
+	const partitionMetadata = new Proxy([], {
+		get(target, key) {
+			metadataRead = true;
+			return Reflect.get(target, key);
+		},
+	});
+	expect(
+		partitionOf?.({
+			topic: "events",
+			partitionMetadata,
+			message: { partition: 5, value: "x" },
+		}),
+	).toBe(5);
+	expect(metadataRead).toBe(false);
 });
