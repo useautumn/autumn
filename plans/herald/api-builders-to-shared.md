@@ -86,6 +86,9 @@ the synthetic matrix exists. Trials, licenses, variants and RevenueCat came out 
 
 ## BEFORE MERGING INTO dev: port every renderer change dev made in the meantime
 
+Dev merges and the audit that goes with them are logged in `plans/balance-worker-dev-merges.md`;
+the last audited dev commit is recorded there, so only newer commits need this procedure.
+
 **Non-negotiable.** These functions build the JSON customers parse. This branch MOVED and
 REWROTE them, so a change someone lands on dev in the OLD location will not conflict
 cleanly: git sees "modified on dev, deleted here", and the easy resolution (keep the
