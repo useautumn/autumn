@@ -10,6 +10,7 @@ import { AdminOrgTable } from "@/views/admin/AdminOrgTable";
 import { AdminUserTable } from "@/views/admin/AdminUserTable";
 import { DefaultView } from "../DefaultView";
 import LoadingScreen from "../general/LoadingScreen";
+import { CachesTab } from "./components/CachesTab";
 import { CreateUser } from "./components/CreateUser";
 import { EdgeConfigTab } from "./components/EdgeConfigTab";
 import { QueueCronConfigsTab } from "./components/QueueCronConfigsTab";
@@ -22,6 +23,7 @@ const ADMIN_TAB_IDS = [
 	"slack-bot",
 	"edge-config",
 	"queue-cron-configs",
+	"caches",
 ] as const;
 
 type AdminTab = (typeof ADMIN_TAB_IDS)[number];
@@ -103,6 +105,7 @@ export const AdminView = () => {
 					<TabsTrigger value="queue-cron-configs">
 						Queue / Cron configs
 					</TabsTrigger>
+					<TabsTrigger value="caches">Caches</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="orgs" className="mt-4">
@@ -123,6 +126,10 @@ export const AdminView = () => {
 
 				<TabsContent value="queue-cron-configs" className="mt-4">
 					<QueueCronConfigsTab />
+				</TabsContent>
+
+				<TabsContent value="caches" className="mt-4">
+					<CachesTab />
 				</TabsContent>
 			</Tabs>
 		</div>

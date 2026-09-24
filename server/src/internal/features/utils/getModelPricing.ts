@@ -8,9 +8,11 @@ import {
 
 // Runs inside the track request path — a hanging models.dev must not hang tracks.
 const FETCH_TIMEOUT_MS = 5000;
+const MODELS_DEV_PRICING_URL = "https://models.dev/api.json?type=all";
 
 const fetchFromSource = async (): Promise<ModelPricingData> => {
-	const response = await fetch("https://models.dev/api.json", {
+	// type=all: the default feed omits specialized model types (e.g. decision models).
+	const response = await fetch(MODELS_DEV_PRICING_URL, {
 		signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 	});
 	if (!response.ok) {
