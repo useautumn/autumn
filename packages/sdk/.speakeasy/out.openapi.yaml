@@ -59884,6 +59884,16 @@ paths:
                   maximum: 9.007199254740991e+15
                   exclusiveMinimum: 0
                   description: Days until the invoice is due. Defaults to the template's terms, then the org default.
+                issue_date:
+                  type: integer
+                  minimum: 0
+                  maximum: 9.007199254740991e+15
+                  description: Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future.
+                due_date:
+                  type: integer
+                  minimum: 0
+                  maximum: 9.007199254740991e+15
+                  description: When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days.
                 tax_rate_id:
                   type: string
                   description: Stripe tax rate ID (txr_...) applied to every line.
@@ -60169,6 +60179,8 @@ paths:
                       amount_due:
                         type: number
                         description: "What the customer pays: the total less any credit applied."
+                      issue_date:
+                        type: number
                       due_date:
                         anyOf:
                           - type: number
@@ -60181,6 +60193,7 @@ paths:
                       - tax
                       - total
                       - amount_due
+                      - issue_date
                       - due_date
                 required:
                   - invoice
@@ -62096,6 +62109,8 @@ paths:
                       amount_due:
                         type: number
                         description: "What the customer pays: the total less any credit applied."
+                      issue_date:
+                        type: number
                       due_date:
                         anyOf:
                           - type: number
@@ -62108,6 +62123,7 @@ paths:
                       - tax
                       - total
                       - amount_due
+                      - issue_date
                       - due_date
                     description: The replacement's lines and totals.
                 required:

@@ -1506,6 +1506,10 @@ class CreateInvoiceParamsTypedDict(TypedDict):
     r"""ID of an invoice template whose footer, memo and default payment terms are applied."""
     net_terms_days: NotRequired[int]
     r"""Days until the invoice is due. Defaults to the template's terms, then the org default."""
+    issue_date: NotRequired[int]
+    r"""Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future."""
+    due_date: NotRequired[int]
+    r"""When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days."""
     tax_rate_id: NotRequired[str]
     r"""Stripe tax rate ID (txr_...) applied to every line."""
     period_start: NotRequired[int]
@@ -1534,6 +1538,12 @@ class CreateInvoiceParams(BaseModel):
     net_terms_days: Optional[int] = None
     r"""Days until the invoice is due. Defaults to the template's terms, then the org default."""
 
+    issue_date: Optional[int] = None
+    r"""Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future."""
+
+    due_date: Optional[int] = None
+    r"""When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days."""
+
     tax_rate_id: Optional[str] = None
     r"""Stripe tax rate ID (txr_...) applied to every line."""
 
@@ -1555,6 +1565,8 @@ class CreateInvoiceParams(BaseModel):
                 "discounts",
                 "invoice_template_id",
                 "net_terms_days",
+                "issue_date",
+                "due_date",
                 "tax_rate_id",
                 "period_start",
                 "period_end",
@@ -1911,6 +1923,7 @@ class CreateInvoicePreviewTypedDict(TypedDict):
     total: float
     amount_due: float
     r"""What the customer pays: the total less any credit applied."""
+    issue_date: float
     due_date: Nullable[float]
     invoice_credits: NotRequired[CreateInvoiceInvoiceCreditsTypedDict]
     r"""The customer's Stripe credit balance and how much of it this invoice consumes."""
@@ -1931,6 +1944,8 @@ class CreateInvoicePreview(BaseModel):
 
     amount_due: float
     r"""What the customer pays: the total less any credit applied."""
+
+    issue_date: float
 
     due_date: Nullable[float]
 

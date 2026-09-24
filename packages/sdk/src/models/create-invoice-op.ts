@@ -725,6 +725,14 @@ export type CreateInvoiceParams = {
    */
   netTermsDays?: number | undefined;
   /**
+   * Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future.
+   */
+  issueDate?: number | undefined;
+  /**
+   * When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days.
+   */
+  dueDate?: number | undefined;
+  /**
    * Stripe tax rate ID (txr_...) applied to every line.
    */
   taxRateId?: string | undefined;
@@ -931,6 +939,7 @@ export type CreateInvoicePreview = {
    * What the customer pays: the total less any credit applied.
    */
   amountDue: number;
+  issueDate: number;
   dueDate: number | null;
 };
 
@@ -2482,6 +2491,8 @@ export type CreateInvoiceParams$Outbound = {
   discounts?: Array<CreateInvoiceAttachDiscount$Outbound> | undefined;
   invoice_template_id?: string | undefined;
   net_terms_days?: number | undefined;
+  issue_date?: number | undefined;
+  due_date?: number | undefined;
   tax_rate_id?: string | undefined;
   period_start?: number | undefined;
   period_end?: number | undefined;
@@ -2504,6 +2515,8 @@ export const CreateInvoiceParams$outboundSchema: z.ZodMiniType<
     ),
     invoiceTemplateId: z.optional(z.string()),
     netTermsDays: z.optional(z.int()),
+    issueDate: z.optional(z.int()),
+    dueDate: z.optional(z.int()),
     taxRateId: z.optional(z.string()),
     periodStart: z.optional(z.int()),
     periodEnd: z.optional(z.int()),
@@ -2515,6 +2528,8 @@ export const CreateInvoiceParams$outboundSchema: z.ZodMiniType<
       customLineItems: "custom_line_items",
       invoiceTemplateId: "invoice_template_id",
       netTermsDays: "net_terms_days",
+      issueDate: "issue_date",
+      dueDate: "due_date",
       taxRateId: "tax_rate_id",
       periodStart: "period_start",
       periodEnd: "period_end",
@@ -2760,6 +2775,7 @@ export const CreateInvoicePreview$inboundSchema: z.ZodMiniType<
       z.lazy(() => CreateInvoiceInvoiceCredits$inboundSchema),
     ),
     amount_due: types.number(),
+    issue_date: types.number(),
     due_date: types.nullable(types.number()),
   }),
   z.transform((v) => {
@@ -2767,6 +2783,7 @@ export const CreateInvoicePreview$inboundSchema: z.ZodMiniType<
       "discount_total": "discountTotal",
       "invoice_credits": "invoiceCredits",
       "amount_due": "amountDue",
+      "issue_date": "issueDate",
       "due_date": "dueDate",
     });
   }),

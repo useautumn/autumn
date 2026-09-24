@@ -1,5 +1,6 @@
 import type { FullProduct, Invoice } from "@autumn/shared";
 import { ErrCode, RecaseError } from "@autumn/shared";
+import { fromUnixTime, getUnixTime } from "date-fns";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
@@ -28,8 +29,13 @@ export const executeStripeInvoicePlan = async ({
 	invoiceContext: CreateInvoiceContext;
 	lines: InvoiceLine[];
 	stripePlan: StripeInvoicePlan;
-}): Promise<{ invoice: Invoice; dueDateMs: number | null }> => {
+}): Promise<{
+	invoice: Invoice;
+	issueDateMs: number;
+	dueDateMs: number | null;
+}> => {
 	const { stripeCustomer, fullCustomer, template, currency } = invoiceContext;
+	const { issue_date: issueDate, due_date: dueDate } = invoiceContext.params;
 	if (!stripeCustomer) {
 		throw new RecaseError({
 			message: "Customer has no Stripe customer",
@@ -46,6 +52,8 @@ export const executeStripeInvoicePlan = async ({
 		currency,
 		collectionMethod: "send_invoice",
 		daysUntilDue: invoiceContext.daysUntilDue,
+		dueDate: dueDate && getUnixTime(dueDate),
+		effectiveAt: issueDate && getUnixTime(issueDate),
 		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
 		footer: template?.footer,
 		description: template?.memo,
@@ -119,6 +127,11 @@ export const executeStripeInvoicePlan = async ({
 
 	return {
 		invoice: autumnInvoice,
-		dueDateMs: finalized.due_date ? finalized.due_date * 1000 : null,
+		issueDateMs: fromUnixTime(
+			finalized.effective_at ?? finalized.created,
+		).getTime(),
+		dueDateMs: finalized.due_date
+			? fromUnixTime(finalized.due_date).getTime()
+			: null,
 	};
 };

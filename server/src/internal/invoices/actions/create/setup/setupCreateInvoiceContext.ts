@@ -67,6 +67,29 @@ const rejectRepeatingCoupons = ({
 	});
 };
 
+const rejectInvalidInvoiceDates = ({
+	params,
+	nowMs,
+}: {
+	params: CreateInvoiceParams;
+	nowMs: number;
+}) => {
+	if (params.issue_date !== undefined && params.issue_date > nowMs) {
+		throw new RecaseError({
+			message: "issue_date cannot be in the future",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+	if (params.due_date !== undefined && params.due_date <= nowMs) {
+		throw new RecaseError({
+			message: "due_date must be in the future",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+};
+
 export const setupCreateInvoiceContext = async ({
 	ctx,
 	params,
@@ -86,6 +109,7 @@ export const setupCreateInvoiceContext = async ({
 			statusCode: 400,
 		});
 	}
+	rejectInvalidInvoiceDates({ params, nowMs: Date.now() });
 
 	// A preview must not write: no customer is created or updated for one.
 	const fullCustomer = await getOrCreateCustomer({

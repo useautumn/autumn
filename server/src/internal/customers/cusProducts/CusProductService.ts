@@ -478,16 +478,24 @@ export class CusProductService {
 		ctx,
 		cusProductId,
 		updates,
+		inStatuses,
 	}: {
 		ctx: RepoContext;
 		cusProductId: string;
 		updates: Partial<InsertCustomerProduct>;
+		/** Skip rows another request has since moved out of these statuses, so a stale read can't revive them. */
+		inStatuses?: CusProductStatus[];
 	}) {
 		const { db } = ctx;
 		const results = await db
 			.update(customerProducts)
 			.set({ ...updates, updated_at: Date.now() })
-			.where(eq(customerProducts.id, cusProductId))
+			.where(
+				and(
+					eq(customerProducts.id, cusProductId),
+					inStatuses ? inArray(customerProducts.status, inStatuses) : undefined,
+				),
+			)
 			.returning({
 				internal_customer_id: customerProducts.internal_customer_id,
 			});
