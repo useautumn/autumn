@@ -76,3 +76,19 @@ export const BALANCE_WORKER_CATALOG_MAX_BYTES = 536_870_912;
 /** Off: the committer lands every update and increment unconditionally, so a record on the log is a row in Postgres.
  *  A guard only fails when a writer outside the worker changed the row, which is a product bug to fix, not a write to drop. */
 export const BALANCE_WORKER_COMMITTER_GUARDS_ENABLED = false;
+
+/** How long a revoked partition keeps serving while it waits for a successor's
+ *  `ready`. A successor prepares in under a second; past this the old owner
+ *  assumes nobody is coming and releases the way it always did. Must stay well
+ *  inside the deploy's stop timeout (90s in prod), since a graceful stop waits
+ *  this long per partition wave. */
+export const BALANCE_WORKER_HANDOFF_READY_TIMEOUT_MS = 5_000;
+/** How long a prepared successor waits to be named owner after announcing
+ *  `ready`. The predecessor only has to drain accepted work, normally one
+ *  track latency; past this it is dead or stuck and the successor claims for
+ *  itself, which fences whatever pen the predecessor still holds. */
+export const BALANCE_WORKER_HANDOFF_CLAIM_TIMEOUT_MS = 3_000;
+/** How long a request may wait at a successor that has been named owner but is
+ *  still fencing and catching up. The activation is a fence plus a bookmark
+ *  read; holding the request for it turns a NOT_READY into a 200. */
+export const BALANCE_WORKER_ACTIVATION_WAIT_MS = 500;

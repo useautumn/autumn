@@ -38,6 +38,8 @@ export type PartitionOutcomeFollowerPort = {
 		partition: number;
 		targetNextOffset: bigint;
 		onUnavailable: RuntimeUnavailableListener;
+		/** Skip the dedup window below the bookmark; a preparation follower already rebuilt it. */
+		fromBookmark?: boolean;
 	}): Promise<void>;
 	readProgress(params: {
 		topic: string;
@@ -62,6 +64,8 @@ export type PartitionRuntimeDependencies = {
 	producer: OwnedPartitionProducer;
 	appender: CommittedOutcomeAppender;
 	follower: PartitionOutcomeFollowerPort;
+	/** Read-only: feeds the dedup window before this worker owns the partition. Without one the runtime cannot prepare. */
+	preparationFollower?: PartitionOutcomeFollowerPort;
 	bootstrapper: PartitionBootstrapper;
 	partitionResolver: MeteringPartitionResolver;
 	db: WorkerDb;
@@ -77,6 +81,8 @@ export type PartitionRuntimeConfig = {
 	partition: number;
 	writerLimits: PartitionWriterLimits;
 	recoveryDrainTimeoutMs: number;
+	/** How long a command waits for an activating runtime before it is refused. */
+	activationWaitMs?: number;
 };
 
 export interface PartitionRuntimeContext extends PartitionRuntimeDependencies {
@@ -88,8 +94,8 @@ export type RuntimeFailure = { cause: unknown };
 export type RuntimeUnavailableListener = (failure: RuntimeFailure) => void;
 
 export type PartitionRuntime = {
-	// A preparation source must own its reader: stop settles all writes before activation reuses SQLite.
-	prepare(params: { follower: PartitionOutcomeFollowerPort }): Promise<void>;
+	/** Read-only, on the preparation follower: its stop settles before activation starts the real one. */
+	prepare(): Promise<void>;
 	activate(): Promise<void>;
 	drain(): Promise<void>;
 	waitForQuiescence(): Promise<void>;

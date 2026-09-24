@@ -1,5 +1,4 @@
 import { OwnedPartitionNotReadyError } from "../runtimeErrors.js";
-import type { PartitionOutcomeFollowerPort } from "../types/partitionRuntime.js";
 import type { PartitionRuntimeScope } from "../types/partitionRuntimeState.js";
 import {
 	completeRuntimePreparation,
@@ -16,23 +15,21 @@ export function startRuntime({
 			new OwnedPartitionNotReadyError({ status: state.status }),
 		);
 	}
-	state.status = "fencing";
-	state.startPromise = completeRuntimeStartup({ ctx, state });
+	state.status = prepared ? "activating" : "fencing";
+	state.startPromise = completeRuntimeStartup({ ctx, state, prepared });
 	return state.startPromise;
 }
 
 export function prepareRuntime({
 	ctx,
 	state,
-	follower,
-}: PartitionRuntimeScope & {
-	follower: PartitionOutcomeFollowerPort;
-}): Promise<void> {
+}: PartitionRuntimeScope): Promise<void> {
 	if (state.status !== "created")
 		return Promise.reject(
 			new OwnedPartitionNotReadyError({ status: state.status }),
 		);
-	if (follower === ctx.follower)
+	const follower = ctx.preparationFollower;
+	if (!follower || follower === ctx.follower)
 		return Promise.reject(
 			new Error("Preparation requires a separate read-only follower"),
 		);

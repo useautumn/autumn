@@ -39,6 +39,7 @@ export function createPartitionRuntimeFactory({
 		topic,
 		partition,
 		follower,
+		preparation,
 		recentCommands,
 	}: PartitionRuntimeFactoryInput): ConstructedPartitionRuntime {
 		const session = createProducerSession({
@@ -55,7 +56,11 @@ export function createPartitionRuntimeFactory({
 			config: { topic, partition },
 		});
 		const publication = createOwnershipPublisher({
-			ctx: { session: producer, partitionOffsets: ctx.ownershipOffsets },
+			ctx: {
+				session: producer,
+				partitionOffsets: ctx.ownershipOffsets,
+				handoff: ctx.ownershipHandoff,
+			},
 			config: { ...config.ownership, partition },
 		});
 		const appender = createMutationPublisher({
@@ -77,6 +82,7 @@ export function createPartitionRuntimeFactory({
 				checkpointMaintenance: ctx.checkpointMaintenance,
 				bootstrapper: ctx.bootstrapper,
 				follower,
+				preparationFollower: preparation,
 				producer,
 				appender: commitLogging.appender,
 				partitionResolver: ctx.partitionResolver,

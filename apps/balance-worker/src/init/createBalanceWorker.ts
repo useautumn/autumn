@@ -1,4 +1,5 @@
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
+import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
@@ -49,11 +50,19 @@ export async function createBalanceWorker({
 		},
 	});
 	try {
+		const ownershipHandoff = createOwnershipHandoffLink({
+			ctx: { kafka: resources.kafka, logger: dependencies.logger },
+			config: {
+				topic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
+				producerLimits: runtimeConfig.producerLimits,
+			},
+		});
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
 				logger: dependencies.logger,
 				kafka: resources.kafka,
 				ownershipOffsets: resources.admin,
+				ownershipHandoff,
 				stateStore: resources.stateStore,
 				db: resources.db,
 				catalogCache: resources.catalogCache,
@@ -84,6 +93,7 @@ export async function createBalanceWorker({
 				idempotencyKeys: resources.idempotencyKeys,
 				logger: dependencies.logger,
 				createRuntime,
+				ownershipLink: ownershipHandoff,
 				onError: dependencies.onError,
 				onUnhealthyPartition: dependencies.onError,
 				onServiceStopped: dependencies.onServiceStopped,

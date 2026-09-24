@@ -165,6 +165,7 @@ export type {
 	OwnershipTail,
 	OwnershipTailConfig,
 	OwnershipTailContext,
+	OwnershipTailKafka,
 	OwnershipTailRecord,
 } from "./topics/ownership/consumer/types/ownershipTail.js";
 export { ownershipTopic } from "./topics/ownership/ownershipTopic.js";
