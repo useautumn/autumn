@@ -22,7 +22,7 @@ export const REGISTRY_FILE = join(REGISTRY_DIR, "registry.json");
 export const SANDBOX_NAME_PREFIX = "tw";
 
 /** Pool size `N` default (`--max`). Auto-capped to file count, so small runs stay small. */
-export const DEFAULT_WORKERS = 200;
+export const DEFAULT_WORKERS = 400;
 
 // Files share the worker's org, database, cache, and Stripe account.
 // Run them sequentially so unrelated files cannot invalidate each other's state.
