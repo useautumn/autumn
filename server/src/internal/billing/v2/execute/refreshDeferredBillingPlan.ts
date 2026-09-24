@@ -1,10 +1,8 @@
-import {
-	type AutumnBillingPlan,
-	type BillingContext,
-	type BillingPlan,
-	type CustomerProductUpdate,
-	type FullCustomer,
-	findActiveCustomerProductById,
+import type {
+	AutumnBillingPlan,
+	BillingContext,
+	BillingPlan,
+	FullCustomer,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getStripeActiveSubscriptionSchedule } from "@/external/stripe/subscriptionSchedules/index";
@@ -12,29 +10,7 @@ import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { CusService } from "@/internal/customers/CusService";
-
-/** A plan replaced since the invoice was created is expired through its current row instead. */
-const toLiveCustomerProductUpdate = ({
-	update,
-	fullCustomer,
-}: {
-	update: CustomerProductUpdate;
-	fullCustomer: FullCustomer;
-}): CustomerProductUpdate | undefined => {
-	const isStillLive = fullCustomer.customer_products.some(
-		(customerProduct) => customerProduct.id === update.customerProduct.id,
-	);
-	if (isStillLive) return update;
-
-	const liveCustomerProduct = findActiveCustomerProductById({
-		fullCus: fullCustomer,
-		productId: update.customerProduct.product.id,
-		internalEntityId: update.customerProduct.internal_entity_id ?? undefined,
-	});
-	if (!liveCustomerProduct) return undefined;
-
-	return { ...update, customerProduct: liveCustomerProduct };
-};
+import { toLiveCustomerProductUpdate } from "./toLiveCustomerProductUpdate";
 
 const toLiveAutumnBillingPlan = ({
 	autumnBillingPlan,

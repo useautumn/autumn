@@ -171,12 +171,13 @@ export const syncCustomerProductStatus = async ({
 			{ data: updates },
 		);
 
-		await CusProductService.update({
+		const updatedRows = await CusProductService.update({
 			ctx,
 			cusProductId: customerProduct.id,
 			updates,
 			onlyIfStatusIn: ACTIVE_STATUSES,
 		});
+		if (updatedRows.length === 0) continue;
 
 		trackCustomerProductUpdate({
 			eventContext: subscriptionUpdatedContext,
