@@ -8,11 +8,14 @@
  * Red (current):  sync_v2 of a ×2 sub gives quantity 1 and verify reports
  *                 "expected 1, Stripe has 2"; a Stripe step 1→2 is skipped.
  * Green (after):  the row carries quantity 2, its included usage doubles, and
- *                 verify is clean; the webhook step re-syncs the row to ×2.
+ *                 verify is clean; the webhook step re-syncs the row to ×2; a
+ *                 later switch to a different plan at ×1 replaces the ×2 row
+ *                 and carries its usage.
  */
 
 import { expect, test } from "bun:test";
 import { CusProductStatus, type SyncParamsV1 } from "@autumn/shared";
+import { expectCustomerProductStatuses } from "@tests/integration/billing/utils/expectCustomerProductStatuses";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -30,6 +33,8 @@ import {
 } from "./utils/syncProductHelpers";
 
 const INCLUDED_MESSAGES = 100;
+const PREMIUM_INCLUDED_MESSAGES = 500;
+const TRACKED_MESSAGES = 50;
 
 const proWithMessages = () =>
 	products.pro({
@@ -136,6 +141,108 @@ test.concurrent(
 			productId: pro.id,
 			status: CusProductStatus.Active,
 			quantity: 2,
+		});
+
+		const verified = await verify({ ctx, params: { customer_id: customerId } });
+		expect(
+			verified.subscriptions.flatMap((subscription) => subscription.mismatches),
+		).toEqual([]);
+	},
+	WEBHOOK_TEST_TIMEOUT_MS,
+);
+
+test.concurrent(
+	`${chalk.yellowBright("sync base quantity: ×2 Pro switched to ×1 Premium in Stripe replaces the row and carries usage")}`,
+	async () => {
+		const customerId = "sync-base-qty-switch";
+		const pro = proWithMessages();
+		const premium = products.premium({
+			id: "premium",
+			items: [
+				items.monthlyMessages({ includedUsage: PREMIUM_INCLUDED_MESSAGES }),
+			],
+		});
+
+		const { autumnV1, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [],
+		});
+
+		const [proFull, premiumFull] = await Promise.all([
+			fetchFullProduct({ ctx, productId: pro.id }),
+			fetchFullProduct({ ctx, productId: premium.id }),
+		]);
+		const proPriceId = getBaseStripePriceId({ fullProduct: proFull });
+		const premiumPriceId = getBaseStripePriceId({ fullProduct: premiumFull });
+		const subscription = await ctx.stripeCli.subscriptions.create({
+			customer: await getStripeCustomerId({ ctx, customerId }),
+			items: [{ price: proPriceId, quantity: 2 }],
+		});
+
+		await autumnV1.post("/billing.sync_v2", {
+			customer_id: customerId,
+			stripe_subscription_id: subscription.id,
+			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id, quantity: 2 }] }],
+		} satisfies SyncParamsV1);
+		await expectCustomerProductQuantity({
+			ctx,
+			customerId,
+			productId: pro.id,
+			status: CusProductStatus.Active,
+			quantity: 2,
+		});
+
+		await autumnV1.track(
+			{
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: TRACKED_MESSAGES,
+			},
+			{ timeout: 3000 },
+		);
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			featureId: TestFeature.Messages,
+			granted: INCLUDED_MESSAGES * 2,
+			usage: TRACKED_MESSAGES,
+		});
+
+		const switched = await ctx.stripeCli.subscriptions.update(subscription.id, {
+			items: [
+				{
+					id: subscription.items.data[0].id,
+					price: premiumPriceId,
+					quantity: 1,
+				},
+			],
+			proration_behavior: "none",
+		});
+		expect(switched.items.data[0].price.id).toBe(premiumPriceId);
+
+		await expectCustomerProductQuantity({
+			ctx,
+			customerId,
+			productId: premium.id,
+			status: CusProductStatus.Active,
+			quantity: 1,
+		});
+		await expectCustomerProductStatuses({
+			ctx,
+			customerId,
+			productId: pro.id,
+			expected: { active: 0, expired: 1 },
+		});
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			featureId: TestFeature.Messages,
+			granted: PREMIUM_INCLUDED_MESSAGES,
+			usage: TRACKED_MESSAGES,
 		});
 
 		const verified = await verify({ ctx, params: { customer_id: customerId } });
