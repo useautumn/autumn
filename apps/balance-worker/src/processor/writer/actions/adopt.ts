@@ -1,4 +1,5 @@
 import {
+	meteringIdentityToPartitionKey,
 	meteringIdentityToSubjectKey,
 	type SubjectState,
 } from "@autumn/balance-engine";
@@ -15,6 +16,10 @@ export function adopt({
 	const subjectKey = meteringIdentityToSubjectKey({ identity: state.identity });
 	const existing = scope.state.subjects.readState({ subjectKey });
 	if (existing) return existing;
-	scope.state.subjects.setState({ subjectKey, state });
+	scope.state.subjects.setState({
+		subjectKey,
+		customerKey: meteringIdentityToPartitionKey({ identity: state.identity }),
+		state,
+	});
 	return state;
 }

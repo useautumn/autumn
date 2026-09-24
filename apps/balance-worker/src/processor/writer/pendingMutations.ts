@@ -141,7 +141,7 @@ export function enqueueMutation({
 		const subjectKey = pending.projectedSubjectKeys[index];
 		if (!subjectKey) continue;
 		state.subjects.pin({ subjectKey });
-		state.subjects.setState({ subjectKey, state: projected });
+		state.subjects.setState({ subjectKey, customerKey, state: projected });
 	}
 	state.pendingByKey.set(pendingKey, pending);
 	customerPending.add(pending);
