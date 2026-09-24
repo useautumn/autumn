@@ -20,16 +20,17 @@ const NEXT_RESET_AT = Date.UTC(2026, 9, 23, 5, 13);
 const buildCarryOverSource = ({
 	balance,
 	rollover,
-	hasOveragePrice = false,
+	priceBillWhen,
 }: {
 	balance: number;
 	rollover: RolloverConfig | null;
-	hasOveragePrice?: boolean;
+	/** Bill timing of the feature's usage price; omitted = no price (free). */
+	priceBillWhen?: BillWhen;
 }) =>
 	({
 		id: "cus_prod_hobby",
 		internal_entity_id: null,
-		customer_prices: hasOveragePrice
+		customer_prices: priceBillWhen
 			? [
 					{
 						id: "cus_price_hobby_credits",
@@ -39,7 +40,7 @@ const buildCarryOverSource = ({
 							entitlement_id: "ent_hobby_credits",
 							config: {
 								type: PriceType.Usage,
-								bill_when: BillWhen.EndOfPeriod,
+								bill_when: priceBillWhen,
 								interval: BillingInterval.Month,
 								feature_id: "credits",
 								internal_feature_id: "fe_credits",
@@ -118,12 +119,12 @@ const computeCarryOvers = ({
 	balance = 70,
 	rollover,
 	newCustomerProduct = buildNewCustomerProduct({ allowance: 0 }),
-	hasOveragePrice,
+	priceBillWhen,
 }: {
 	balance?: number;
 	rollover: RolloverConfig | null;
 	newCustomerProduct?: FullCusProduct;
-	hasOveragePrice?: boolean;
+	priceBillWhen?: BillWhen;
 }) =>
 	cusProductToExistingBalanceCarryOvers({
 		newCustomerProduct,
@@ -132,7 +133,7 @@ const computeCarryOvers = ({
 			carryOverSourceCustomerProduct: buildCarryOverSource({
 				balance,
 				rollover,
-				hasOveragePrice,
+				priceBillWhen,
 			}),
 			fullCustomer: {
 				id: "customer_1",
@@ -216,12 +217,25 @@ describe("cusProductToExistingBalanceCarryOvers negative balances", () => {
 			balance: -20,
 			rollover: null,
 			newCustomerProduct,
-			hasOveragePrice: true,
+			priceBillWhen: BillWhen.EndOfPeriod,
 		});
 
 		expect(customerEntitlements).toHaveLength(1);
 		expect(customerEntitlements[0].balance).toBe(-20);
 		expect(newCustomerProduct.customer_entitlements[0].balance).toBe(500);
+	});
+
+	test("prepaid (in-advance) debt is paid down: it is never invoiced in arrears", () => {
+		const newCustomerProduct = buildNewCustomerProduct({ allowance: 500 });
+		const { customerEntitlements } = computeCarryOvers({
+			balance: -20,
+			rollover: null,
+			newCustomerProduct,
+			priceBillWhen: BillWhen.StartOfPeriod,
+		});
+
+		expect(customerEntitlements).toHaveLength(0);
+		expect(newCustomerProduct.customer_entitlements[0].balance).toBe(480);
 	});
 
 	test("debt stays a loose row when the new plan has no grant for the feature", () => {

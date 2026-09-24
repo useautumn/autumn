@@ -10,6 +10,7 @@ import {
 	featureUtils,
 	type InsertCustomerEntitlement,
 	isBooleanCusEnt,
+	isConsumablePrice,
 	isEntityScopedCusEnt,
 	isOneOffPrepaidConsumableCustomerEntitlement,
 	isUnlimitedCusEnt,
@@ -175,12 +176,13 @@ export const cusProductToExistingBalanceCarryOvers = ({
 		const balance = cusEnt.balance ?? 0;
 		if (balance === 0) continue;
 
-		// Priced overage is invoiced in arrears on the outgoing plan, so only
-		// free overage is paid down from the new grant.
-		const isFreeOverage =
-			balance < 0 && !cusEntToCusPrice({ cusEnt: cusEntWithCusProduct });
+		// Pay-per-use overage is invoiced in arrears on the outgoing plan, so
+		// only unbilled debt (free or prepaid) is paid down from the new grant.
+		const cusPrice = cusEntToCusPrice({ cusEnt: cusEntWithCusProduct });
+		const isUnbilledDebt =
+			balance < 0 && !(cusPrice && isConsumablePrice(cusPrice.price));
 		if (
-			isFreeOverage &&
+			isUnbilledDebt &&
 			payDownDebtFromNewCustomerProduct({
 				newCustomerProduct,
 				internalFeatureId: cusEnt.entitlement.internal_feature_id,
