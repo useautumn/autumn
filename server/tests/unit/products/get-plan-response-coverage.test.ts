@@ -10,6 +10,8 @@ import {
 	FreeTrialDuration,
 	type FullPlanLicense,
 	type FullProduct,
+	OnDecrease,
+	OnIncrease,
 	type Price,
 	ResetInterval,
 } from "@autumn/shared";
@@ -282,21 +284,30 @@ describe("items", () => {
 		expect(plan.items.map((item) => item.feature_id)).toEqual(["messages"]);
 	});
 
-	test("proration is internal and never on an item", async () => {
+	test("a prepaid item carries its proration", async () => {
 		const plan = await render({
 			product: planOf({
 				planEntitlements: [messagesEntitlement()],
 				planPrices: [
-					prices.createPrepaid({
-						id: "pr_messages",
-						featureId: "messages",
-						entitlementId: "ent_messages",
-					}),
+					{
+						...prices.createPrepaid({
+							id: "pr_messages",
+							featureId: "messages",
+							entitlementId: "ent_messages",
+						}),
+						proration_config: {
+							on_increase: OnIncrease.ProrateImmediately,
+							on_decrease: OnDecrease.ProrateImmediately,
+						},
+					},
 				],
 			}),
 		});
 
-		expect(plan.items[0].proration).toBeUndefined();
+		expect(plan.items[0].proration).toEqual({
+			on_increase: OnIncrease.ProrateImmediately,
+			on_decrease: OnDecrease.ProrateImmediately,
+		});
 	});
 
 	test("the feature object rides on an item only when expanded", async () => {

@@ -35,7 +35,6 @@ export const productV2ToApiPlanV1 = ({
 	expand,
 	customerEligibility,
 	licenses,
-	includeProration = false,
 	includeProcessors = false,
 	revenuecatMapping,
 }: {
@@ -45,9 +44,6 @@ export const productV2ToApiPlanV1 = ({
 	expand?: string[];
 	customerEligibility?: ApiPlanV1["customer_eligibility"];
 	licenses?: ApiPlanLicenseV1[];
-	/** Proration is internal and stripped from plan responses; diff and patch
-	 * bases need it kept or every rebuilt item silently loses the config. */
-	includeProration?: boolean;
 	/** Stripe and RevenueCat ids, on the plan and its base price. Off for plans that get rebuilt into items, which would adopt those ids. */
 	includeProcessors?: boolean;
 	/** RevenueCat mappings live in their own table, so the row is read in. */
@@ -113,9 +109,7 @@ export const productV2ToApiPlanV1 = ({
 		features,
 		expand,
 		currency,
-	}).map((item) =>
-		includeProration ? item : { ...item, proration: undefined },
-	);
+	});
 
 	const freeTrial: ApiPlanV1["free_trial"] = product.free_trial
 		? {
