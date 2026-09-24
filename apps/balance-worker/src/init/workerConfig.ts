@@ -51,13 +51,17 @@ export function createWorkerConsumerConfig({
 }): ConsumerConfig {
 	assertKafkaBalanceWorkerTimings({ timings });
 	// Both topics share the membership; either assigner keeps partition n of each on one worker.
+	// The plain assigner stays advertised so a rollout can mix old and new workers in one group:
+	// Kafka only admits a member whose protocols overlap the group's, picks the one every member
+	// supports, and moves to the load-aware one on the first rebalance after the old workers leave.
 	return {
 		...createConsumerGroupConfig({ groupId, timings }),
-		partitionAssigners: [
-			partitionLoad
-				? createLoadAwareAssigner({ loads: partitionLoad })
-				: coPartitionedAssigner,
-		],
+		partitionAssigners: partitionLoad
+			? [
+					createLoadAwareAssigner({ loads: partitionLoad }),
+					coPartitionedAssigner,
+				]
+			: [coPartitionedAssigner],
 	};
 }
 

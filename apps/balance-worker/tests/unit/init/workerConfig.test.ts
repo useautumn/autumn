@@ -129,9 +129,11 @@ test("a worker that reports partition load gets the load-aware assigner", () => 
 		timings,
 		partitionLoad: { snapshot: () => new Map() },
 	});
-	const [assigner] = config.partitionAssigners ?? [];
+	const [assigner, fallback] = config.partitionAssigners ?? [];
 	expect(assigner).toBeDefined();
 	expect(assigner).not.toBe(coPartitionedAssigner);
+	// Still advertised, so old and new workers can share a group mid-rollout.
+	expect(fallback).toBe(coPartitionedAssigner);
 	expect(
 		assigner?.({
 			cluster: {} as never,
