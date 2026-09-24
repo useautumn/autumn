@@ -1,32 +1,54 @@
-import type { Customer, CustomerData } from "@autumn/shared";
+import type {
+	BillingDetailsParams,
+	Customer,
+	CustomerData,
+} from "@autumn/shared";
+import { updateStripeBillingDetails } from "@/external/stripe/customers/billingDetails/operations/updateStripeBillingDetails.js";
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { updateCachedCustomerData as updateCachedFullSubjectCustomerData } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerData.js";
 
-export const ensureStripeCustomerFromCustomerData = async ({
+const createLinkedStripeCustomer = async ({
 	ctx,
 	customer,
-	customerData,
 }: {
 	ctx: AutumnContext;
 	customer: Customer;
-	customerData?: CustomerData;
 }) => {
-	if (!customerData?.create_in_stripe || customer.processor?.id) return false;
-
 	await getOrCreateStripeCustomer({
 		ctx,
 		customer,
 	});
 
-	if (!customer.processor?.id) return false;
+	if (!customer.processor?.id) return;
 
-	const customerId = customer.id || customer.internal_id;
 	await updateCachedFullSubjectCustomerData({
 		ctx,
-		customerId,
+		customerId: customer.id || customer.internal_id,
 		updates: { processor: customer.processor },
 	});
+};
 
-	return true;
+export const ensureStripeCustomerFromCustomerData = async ({
+	ctx,
+	customer,
+	customerData,
+	billingDetails,
+}: {
+	ctx: AutumnContext;
+	customer: Customer;
+	customerData?: CustomerData;
+	billingDetails?: BillingDetailsParams;
+}) => {
+	const needsStripeCustomer =
+		customerData?.create_in_stripe || billingDetails !== undefined;
+
+	if (needsStripeCustomer && !customer.processor?.id) {
+		await createLinkedStripeCustomer({ ctx, customer });
+	}
+
+	const stripeCustomerId = customer.processor?.id;
+	if (billingDetails && stripeCustomerId) {
+		await updateStripeBillingDetails({ ctx, stripeCustomerId, billingDetails });
+	}
 };

@@ -904,7 +904,7 @@ class CreateInvoiceFeatureOverride(BaseModel):
         return m
 
 
-class CustomizeItemTypedDict(TypedDict):
+class CreateInvoiceCustomizeItemTypedDict(TypedDict):
     feature_id: str
     r"""The feature whose pricing is overridden on this invoice."""
     price: NotRequired[CreateInvoiceItemPriceTypedDict]
@@ -913,7 +913,7 @@ class CustomizeItemTypedDict(TypedDict):
     r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
 
 
-class CustomizeItem(BaseModel):
+class CreateInvoiceCustomizeItem(BaseModel):
     feature_id: str
     r"""The feature whose pricing is overridden on this invoice."""
 
@@ -940,22 +940,22 @@ class CustomizeItem(BaseModel):
         return m
 
 
-class InvoiceCustomizeTypedDict(TypedDict):
+class CreateInvoiceInvoiceCustomizeTypedDict(TypedDict):
     r"""Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed."""
 
     price: NotRequired[Nullable[CreateInvoicePriceTypedDict]]
     r"""Override the plan's base price for this invoice. Pass null or an amount of 0 to omit the base price line."""
-    items: NotRequired[List[CustomizeItemTypedDict]]
+    items: NotRequired[List[CreateInvoiceCustomizeItemTypedDict]]
     r"""Override feature pricing for this invoice. Only pricing fields are accepted; grants, resets and rollovers are not part of an invoice."""
 
 
-class InvoiceCustomize(BaseModel):
+class CreateInvoiceInvoiceCustomize(BaseModel):
     r"""Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed."""
 
     price: OptionalNullable[CreateInvoicePrice] = UNSET
     r"""Override the plan's base price for this invoice. Pass null or an amount of 0 to omit the base price line."""
 
-    items: Optional[List[CustomizeItem]] = None
+    items: Optional[List[CreateInvoiceCustomizeItem]] = None
     r"""Override feature pricing for this invoice. Only pricing fields are accepted; grants, resets and rollovers are not part of an invoice."""
 
     @model_serializer(mode="wrap")
@@ -991,7 +991,7 @@ CreateInvoiceBillingBehavior = Literal[
 r"""Which of the feature's prices to use: 'prepaid' or 'usage_based'."""
 
 
-class UsageTypedDict(TypedDict):
+class CreateInvoiceUsageTypedDict(TypedDict):
     feature_id: str
     r"""The metered feature whose units are being converted."""
     quantity: float
@@ -1000,7 +1000,7 @@ class UsageTypedDict(TypedDict):
     r"""Event properties used to pick the rate card dimension and multipliers."""
 
 
-class Usage(BaseModel):
+class CreateInvoiceUsage(BaseModel):
     feature_id: str
     r"""The metered feature whose units are being converted."""
 
@@ -1034,7 +1034,7 @@ class CreateInvoiceFeatureQuantityTypedDict(TypedDict):
     r"""Which of the feature's prices to use: 'prepaid' or 'usage_based'."""
     quantity: NotRequired[float]
     r"""Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits."""
-    usage: NotRequired[List[UsageTypedDict]]
+    usage: NotRequired[List[CreateInvoiceUsageTypedDict]]
     r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
     prorate: NotRequired[bool]
     r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
@@ -1050,7 +1050,7 @@ class CreateInvoiceFeatureQuantity(BaseModel):
     quantity: Optional[float] = None
     r"""Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits."""
 
-    usage: Optional[List[Usage]] = None
+    usage: Optional[List[CreateInvoiceUsage]] = None
     r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
 
     prorate: Optional[bool] = None
@@ -1073,7 +1073,7 @@ class CreateInvoiceFeatureQuantity(BaseModel):
         return m
 
 
-LicenseQuantityInterval = Literal[
+CreateInvoiceLicenseQuantityInterval = Literal[
     "one_off",
     "week",
     "month",
@@ -1084,26 +1084,26 @@ LicenseQuantityInterval = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class LicenseQuantityStripeTypedDict(TypedDict):
+class CreateInvoiceLicenseQuantityStripeTypedDict(TypedDict):
     price_id: str
     r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
 
 
-class LicenseQuantityStripe(BaseModel):
+class CreateInvoiceLicenseQuantityStripe(BaseModel):
     price_id: str
     r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
 
 
-class LicenseQuantityProcessorsTypedDict(TypedDict):
+class CreateInvoiceLicenseQuantityProcessorsTypedDict(TypedDict):
     r"""Bill this line under an existing Stripe price instead of an inline one."""
 
-    stripe: NotRequired[Nullable[LicenseQuantityStripeTypedDict]]
+    stripe: NotRequired[Nullable[CreateInvoiceLicenseQuantityStripeTypedDict]]
 
 
-class LicenseQuantityProcessors(BaseModel):
+class CreateInvoiceLicenseQuantityProcessors(BaseModel):
     r"""Bill this line under an existing Stripe price instead of an inline one."""
 
-    stripe: OptionalNullable[LicenseQuantityStripe] = UNSET
+    stripe: OptionalNullable[CreateInvoiceLicenseQuantityStripe] = UNSET
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -1131,28 +1131,28 @@ class LicenseQuantityProcessors(BaseModel):
         return m
 
 
-class LicenseQuantityPriceTypedDict(TypedDict):
+class CreateInvoiceLicenseQuantityPriceTypedDict(TypedDict):
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
-    interval: LicenseQuantityInterval
+    interval: CreateInvoiceLicenseQuantityInterval
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
-    processors: NotRequired[LicenseQuantityProcessorsTypedDict]
+    processors: NotRequired[CreateInvoiceLicenseQuantityProcessorsTypedDict]
     r"""Bill this line under an existing Stripe price instead of an inline one."""
 
 
-class LicenseQuantityPrice(BaseModel):
+class CreateInvoiceLicenseQuantityPrice(BaseModel):
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
 
-    interval: LicenseQuantityInterval
+    interval: CreateInvoiceLicenseQuantityInterval
     r"""Billing interval (e.g. 'month', 'year')."""
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
-    processors: Optional[LicenseQuantityProcessors] = None
+    processors: Optional[CreateInvoiceLicenseQuantityProcessors] = None
     r"""Bill this line under an existing Stripe price instead of an inline one."""
 
     @model_serializer(mode="wrap")
@@ -1175,13 +1175,13 @@ class LicenseQuantityPrice(BaseModel):
 class CreateInvoiceCustomizeTypedDict(TypedDict):
     r"""Override the license's per-seat price on this invoice."""
 
-    price: NotRequired[Nullable[LicenseQuantityPriceTypedDict]]
+    price: NotRequired[Nullable[CreateInvoiceLicenseQuantityPriceTypedDict]]
 
 
 class CreateInvoiceCustomize(BaseModel):
     r"""Override the license's per-seat price on this invoice."""
 
-    price: OptionalNullable[LicenseQuantityPrice] = UNSET
+    price: OptionalNullable[CreateInvoiceLicenseQuantityPrice] = UNSET
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -1209,14 +1209,14 @@ class CreateInvoiceCustomize(BaseModel):
         return m
 
 
-LicenseQuantityBillingBehavior = Literal[
+CreateInvoiceLicenseQuantityBillingBehavior = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""Which of the feature's prices to use: 'prepaid' or 'usage_based'."""
 
 
-class LicenseQuantityUsageTypedDict(TypedDict):
+class CreateInvoiceLicenseQuantityUsageTypedDict(TypedDict):
     feature_id: str
     r"""The metered feature whose units are being converted."""
     quantity: float
@@ -1225,7 +1225,7 @@ class LicenseQuantityUsageTypedDict(TypedDict):
     r"""Event properties used to pick the rate card dimension and multipliers."""
 
 
-class LicenseQuantityUsage(BaseModel):
+class CreateInvoiceLicenseQuantityUsage(BaseModel):
     feature_id: str
     r"""The metered feature whose units are being converted."""
 
@@ -1252,30 +1252,30 @@ class LicenseQuantityUsage(BaseModel):
         return m
 
 
-class LicenseQuantityFeatureQuantityTypedDict(TypedDict):
+class CreateInvoiceLicenseQuantityFeatureQuantityTypedDict(TypedDict):
     feature_id: str
     r"""The feature to bill."""
-    billing_behavior: LicenseQuantityBillingBehavior
+    billing_behavior: CreateInvoiceLicenseQuantityBillingBehavior
     r"""Which of the feature's prices to use: 'prepaid' or 'usage_based'."""
     quantity: NotRequired[float]
     r"""Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits."""
-    usage: NotRequired[List[LicenseQuantityUsageTypedDict]]
+    usage: NotRequired[List[CreateInvoiceLicenseQuantityUsageTypedDict]]
     r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
     prorate: NotRequired[bool]
     r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
 
 
-class LicenseQuantityFeatureQuantity(BaseModel):
+class CreateInvoiceLicenseQuantityFeatureQuantity(BaseModel):
     feature_id: str
     r"""The feature to bill."""
 
-    billing_behavior: LicenseQuantityBillingBehavior
+    billing_behavior: CreateInvoiceLicenseQuantityBillingBehavior
     r"""Which of the feature's prices to use: 'prepaid' or 'usage_based'."""
 
     quantity: Optional[float] = None
     r"""Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits."""
 
-    usage: Optional[List[LicenseQuantityUsage]] = None
+    usage: Optional[List[CreateInvoiceLicenseQuantityUsage]] = None
     r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
 
     prorate: Optional[bool] = None
@@ -1305,7 +1305,9 @@ class CreateInvoiceLicenseQuantityTypedDict(TypedDict):
     r"""Billable seats, exclusive of any included seats."""
     customize: NotRequired[CreateInvoiceCustomizeTypedDict]
     r"""Override the license's per-seat price on this invoice."""
-    feature_quantities: NotRequired[List[LicenseQuantityFeatureQuantityTypedDict]]
+    feature_quantities: NotRequired[
+        List[CreateInvoiceLicenseQuantityFeatureQuantityTypedDict]
+    ]
     r"""Feature charges priced through the license plan."""
     prorate: NotRequired[bool]
     r"""Whether to prorate seat charges against period_start / period_end. Defaults to true."""
@@ -1321,7 +1323,9 @@ class CreateInvoiceLicenseQuantity(BaseModel):
     customize: Optional[CreateInvoiceCustomize] = None
     r"""Override the license's per-seat price on this invoice."""
 
-    feature_quantities: Optional[List[LicenseQuantityFeatureQuantity]] = None
+    feature_quantities: Optional[List[CreateInvoiceLicenseQuantityFeatureQuantity]] = (
+        None
+    )
     r"""Feature charges priced through the license plan."""
 
     prorate: Optional[bool] = None
@@ -1384,7 +1388,7 @@ class CreateInvoicePlanTypedDict(TypedDict):
     r"""The catalog plan (or variant) whose pricing to use."""
     version: NotRequired[float]
     r"""Plan version. Defaults to the active version."""
-    customize: NotRequired[InvoiceCustomizeTypedDict]
+    customize: NotRequired[CreateInvoiceInvoiceCustomizeTypedDict]
     r"""Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed."""
     feature_quantities: NotRequired[List[CreateInvoiceFeatureQuantityTypedDict]]
     license_quantities: NotRequired[List[CreateInvoiceLicenseQuantityTypedDict]]
@@ -1401,7 +1405,7 @@ class CreateInvoicePlan(BaseModel):
     version: Optional[float] = None
     r"""Plan version. Defaults to the active version."""
 
-    customize: Optional[InvoiceCustomize] = None
+    customize: Optional[CreateInvoiceInvoiceCustomize] = None
     r"""Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed."""
 
     feature_quantities: Optional[List[CreateInvoiceFeatureQuantity]] = None
@@ -1616,6 +1620,8 @@ class CreateInvoiceEntity(BaseModel):
 
 
 class CreateInvoiceInvoiceItemTypedDict(TypedDict):
+    id: str
+    r"""The Autumn invoice line item ID. Stable across reads, and can be used to reference this line in later calls."""
     description: str
     r"""Description of the invoice line item"""
     period_start: Nullable[float]
@@ -1637,6 +1643,9 @@ class CreateInvoiceInvoiceItemTypedDict(TypedDict):
 
 
 class CreateInvoiceInvoiceItem(BaseModel):
+    id: str
+    r"""The Autumn invoice line item ID. Stable across reads, and can be used to reference this line in later calls."""
+
     description: str
     r"""Description of the invoice line item"""
 
@@ -1781,7 +1790,7 @@ class CreateInvoiceInvoice(BaseModel):
         return m
 
 
-class LineTypedDict(TypedDict):
+class CreateInvoiceLineTypedDict(TypedDict):
     plan_id: Nullable[str]
     feature_id: Nullable[str]
     description: str
@@ -1793,7 +1802,7 @@ class LineTypedDict(TypedDict):
     period_end: Nullable[float]
 
 
-class Line(BaseModel):
+class CreateInvoiceLine(BaseModel):
     plan_id: Nullable[str]
 
     feature_id: Nullable[str]
@@ -1853,20 +1862,64 @@ class CreateInvoiceTax(BaseModel):
     status: CreateInvoiceStatus
 
 
+class CreateInvoiceInvoiceCreditsTypedDict(TypedDict):
+    r"""The customer's Stripe credit balance and how much of it this invoice consumes."""
+
+    balance: float
+    r"""Stripe customer credit balance available, expressed as a positive number in major currency units."""
+    currency: str
+    r"""Three-letter currency code."""
+    applied: NotRequired[float]
+    r"""How much of that balance this invoice consumes, capped at its total. The rest stays on the customer."""
+
+
+class CreateInvoiceInvoiceCredits(BaseModel):
+    r"""The customer's Stripe credit balance and how much of it this invoice consumes."""
+
+    balance: float
+    r"""Stripe customer credit balance available, expressed as a positive number in major currency units."""
+
+    currency: str
+    r"""Three-letter currency code."""
+
+    applied: Optional[float] = None
+    r"""How much of that balance this invoice consumes, capped at its total. The rest stays on the customer."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["applied"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CreateInvoicePreviewTypedDict(TypedDict):
     currency: str
-    lines: List[LineTypedDict]
+    lines: List[CreateInvoiceLineTypedDict]
     subtotal: float
     discount_total: float
     tax: Nullable[CreateInvoiceTaxTypedDict]
     total: float
+    amount_due: float
+    r"""What the customer pays: the total less any credit applied."""
     due_date: Nullable[float]
+    invoice_credits: NotRequired[CreateInvoiceInvoiceCreditsTypedDict]
+    r"""The customer's Stripe credit balance and how much of it this invoice consumes."""
 
 
 class CreateInvoicePreview(BaseModel):
     currency: str
 
-    lines: List[Line]
+    lines: List[CreateInvoiceLine]
 
     subtotal: float
 
@@ -1876,19 +1929,36 @@ class CreateInvoicePreview(BaseModel):
 
     total: float
 
+    amount_due: float
+    r"""What the customer pays: the total less any credit applied."""
+
     due_date: Nullable[float]
+
+    invoice_credits: Optional[CreateInvoiceInvoiceCredits] = None
+    r"""The customer's Stripe credit balance and how much of it this invoice consumes."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
+        optional_fields = set(["invoice_credits"])
+        nullable_fields = set(["tax", "due_date"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                m[k] = val
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
 
         return m
 

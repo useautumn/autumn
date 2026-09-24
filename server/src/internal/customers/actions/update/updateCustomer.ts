@@ -2,6 +2,7 @@ import {
 	type Customer,
 	CustomerAlreadyExistsError,
 	CustomerNotFoundError,
+	ErrCode,
 	notNullish,
 	ProcessorType,
 	RecaseError,
@@ -12,6 +13,8 @@ import {
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { updateStripeBillingDetails } from "@/external/stripe/customers/billingDetails/operations/updateStripeBillingDetails.js";
+import { assertBillingDetailsWritable } from "@/external/stripe/customers/billingDetails/utils/assertBillingDetailsWritable.js";
 import {
 	autumnToStripeCustomerMetadata,
 	STRIPE_MAX_KEY_LENGTH,
@@ -45,6 +48,7 @@ export const updateCustomer = async ({
 		customer_id: customerId,
 		new_customer_id: newCustomerId,
 		billing_controls,
+		billing_details: billingDetails,
 		config,
 		...newCusData
 	} = params;
@@ -122,6 +126,24 @@ export const updateCustomer = async ({
 		logger.info(
 			`Updating customer's Stripe ID from ${originalCustomer.processor?.id} to ${stripeId}`,
 		);
+	}
+
+	// Billing details go first: Stripe is most likely to reject them (e.g. a bad VAT).
+	if (billingDetails) {
+		assertBillingDetailsWritable({ ctx });
+		if (!stripeId) {
+			throw new RecaseError({
+				message:
+					"billing_details requires a linked Stripe customer. Set stripe_id or create the customer in Stripe first.",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+		await updateStripeBillingDetails({
+			ctx,
+			stripeCustomerId: stripeId,
+			billingDetails,
+		});
 	}
 
 	const oldMetadata = originalCustomer.metadata || {};

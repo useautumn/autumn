@@ -319,6 +319,7 @@ components:
         - entities
         - referrals
         - payment_method
+        - billing_details
         - subscriptions.plan
         - purchases.plan
         - balances.feature
@@ -1765,6 +1766,97 @@ components:
             - {}
             - type: "null"
           description: The customer's default payment method.
+        billing_details:
+          anyOf:
+            - type: object
+              properties:
+                address:
+                  anyOf:
+                    - type: object
+                      properties:
+                        line1:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        line2:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        city:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        state:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        postal_code:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        country:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: Two-letter country code (ISO 3166-1 alpha-2).
+                      title: BillingDetailsAddress
+                    - type: "null"
+                tax_ids:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        description: Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See
+                          https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+                      value:
+                        type: string
+                        description: The tax ID, e.g. DE123456789.
+                    required:
+                      - type
+                      - value
+                    title: BillingDetailsTaxId
+                tax_exempt:
+                  anyOf:
+                    - enum:
+                        - none
+                        - exempt
+                        - reverse
+                      type: string
+                    - type: "null"
+                invoice_settings:
+                  type: object
+                  properties:
+                    custom_fields:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            maxLength: 40
+                            description: Label, e.g. PO Number.
+                          value:
+                            type: string
+                            maxLength: 140
+                        required:
+                          - name
+                          - value
+                        title: BillingDetailsCustomField
+                  required:
+                    - custom_fields
+              required:
+                - address
+                - tax_ids
+                - tax_exempt
+                - invoice_settings
+              title: BillingDetails
+              description: Billing details read live from the linked Stripe customer. Null
+                when no Stripe customer is linked.
+            - type: "null"
+          description: Billing details from the linked Stripe customer. Returned only if
+            billing_details is provided in the expand parameter.
       required:
         - id
         - name
@@ -5759,6 +5851,116 @@ paths:
                         behave normally. When set, this overrides the
                         organization-level disable_overage_billing setting.
                   description: Miscellaneous configurations for the customer.
+                billing_details:
+                  type: object
+                  properties:
+                    address:
+                      anyOf:
+                        - type: object
+                          properties:
+                            line1:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            line2:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            city:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            state:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            postal_code:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            country:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: Two-letter country code (ISO 3166-1 alpha-2).
+                          title: BillingDetailsAddress
+                        - type: "null"
+                      description: Billing address, used for tax and shown on invoices. Replaces the
+                        whole address, as in Stripe; null clears it.
+                    tax_ids:
+                      type: object
+                      properties:
+                        add:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              type:
+                                type: string
+                                description: Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See
+                                  https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+                              value:
+                                type: string
+                                description: The tax ID, e.g. DE123456789.
+                            required:
+                              - type
+                              - value
+                            title: BillingDetailsTaxId
+                          description: Tax IDs to add. IDs the customer already has are ignored.
+                        remove:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              type:
+                                type: string
+                                description: Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See
+                                  https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+                              value:
+                                type: string
+                                description: The tax ID, e.g. DE123456789.
+                            required:
+                              - type
+                              - value
+                            title: BillingDetailsTaxId
+                          description: Tax IDs to remove, matched by type and value. IDs the customer
+                            doesn't have are ignored.
+                      description: Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be
+                        edited, so change one by removing the old ID and adding
+                        the new one. IDs not listed are kept.
+                    tax_exempt:
+                      enum:
+                        - none
+                        - exempt
+                        - reverse
+                      type: string
+                      description: Tax exemption status. Use reverse for reverse-charge customers.
+                    invoice_settings:
+                      type: object
+                      properties:
+                        custom_fields:
+                          anyOf:
+                            - type: array
+                              maxItems: 4
+                              items:
+                                type: object
+                                properties:
+                                  name:
+                                    type: string
+                                    maxLength: 40
+                                    description: Label, e.g. PO Number.
+                                  value:
+                                    type: string
+                                    maxLength: 140
+                                required:
+                                  - name
+                                  - value
+                                title: BillingDetailsCustomField
+                            - type: "null"
+                          description: Up to 4 custom fields shown on every invoice, e.g. a PO number.
+                            Replaces the existing list; null clears it.
+                  description: Billing details to set on the Stripe customer. Creates the Stripe
+                    customer if needed.
                 expand:
                   type: array
                   items:
@@ -7324,6 +7526,97 @@ paths:
                       - {}
                       - type: "null"
                     description: The customer's default payment method.
+                  billing_details:
+                    anyOf:
+                      - type: object
+                        properties:
+                          address:
+                            anyOf:
+                              - type: object
+                                properties:
+                                  line1:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                  line2:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                  city:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                  state:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                  postal_code:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                  country:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                    description: Two-letter country code (ISO 3166-1 alpha-2).
+                                title: BillingDetailsAddress
+                              - type: "null"
+                          tax_ids:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                type:
+                                  type: string
+                                  description: Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See
+                                    https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+                                value:
+                                  type: string
+                                  description: The tax ID, e.g. DE123456789.
+                              required:
+                                - type
+                                - value
+                              title: BillingDetailsTaxId
+                          tax_exempt:
+                            anyOf:
+                              - enum:
+                                  - none
+                                  - exempt
+                                  - reverse
+                                type: string
+                              - type: "null"
+                          invoice_settings:
+                            type: object
+                            properties:
+                              custom_fields:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    name:
+                                      type: string
+                                      maxLength: 40
+                                      description: Label, e.g. PO Number.
+                                    value:
+                                      type: string
+                                      maxLength: 140
+                                  required:
+                                    - name
+                                    - value
+                                  title: BillingDetailsCustomField
+                            required:
+                              - custom_fields
+                        required:
+                          - address
+                          - tax_ids
+                          - tax_exempt
+                          - invoice_settings
+                        title: BillingDetails
+                        description: Billing details read live from the linked Stripe customer. Null
+                          when no Stripe customer is linked.
+                      - type: "null"
+                    description: Billing details from the linked Stripe customer. Returned only if
+                      billing_details is provided in the expand parameter.
                 required:
                   - id
                   - name
@@ -9216,6 +9509,117 @@ paths:
                         behave normally. When set, this overrides the
                         organization-level disable_overage_billing setting.
                   description: Miscellaneous configurations for the customer.
+                billing_details:
+                  type: object
+                  properties:
+                    address:
+                      anyOf:
+                        - type: object
+                          properties:
+                            line1:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            line2:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            city:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            state:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            postal_code:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            country:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: Two-letter country code (ISO 3166-1 alpha-2).
+                          title: BillingDetailsAddress
+                        - type: "null"
+                      description: Billing address, used for tax and shown on invoices. Replaces the
+                        whole address, as in Stripe; null clears it.
+                    tax_ids:
+                      type: object
+                      properties:
+                        add:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              type:
+                                type: string
+                                description: Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See
+                                  https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+                              value:
+                                type: string
+                                description: The tax ID, e.g. DE123456789.
+                            required:
+                              - type
+                              - value
+                            title: BillingDetailsTaxId
+                          description: Tax IDs to add. IDs the customer already has are ignored.
+                        remove:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              type:
+                                type: string
+                                description: Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See
+                                  https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+                              value:
+                                type: string
+                                description: The tax ID, e.g. DE123456789.
+                            required:
+                              - type
+                              - value
+                            title: BillingDetailsTaxId
+                          description: Tax IDs to remove, matched by type and value. IDs the customer
+                            doesn't have are ignored.
+                      description: Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be
+                        edited, so change one by removing the old ID and adding
+                        the new one. IDs not listed are kept.
+                    tax_exempt:
+                      enum:
+                        - none
+                        - exempt
+                        - reverse
+                      type: string
+                      description: Tax exemption status. Use reverse for reverse-charge customers.
+                    invoice_settings:
+                      type: object
+                      properties:
+                        custom_fields:
+                          anyOf:
+                            - type: array
+                              maxItems: 4
+                              items:
+                                type: object
+                                properties:
+                                  name:
+                                    type: string
+                                    maxLength: 40
+                                    description: Label, e.g. PO Number.
+                                  value:
+                                    type: string
+                                    maxLength: 140
+                                required:
+                                  - name
+                                  - value
+                                title: BillingDetailsCustomField
+                            - type: "null"
+                          description: Up to 4 custom fields shown on every invoice, e.g. a PO number.
+                            Replaces the existing list; null clears it.
+                  title: BillingDetailsParams
+                  description: Billing details stored on the linked Stripe customer. Requires a
+                    Stripe customer.
                 new_customer_id:
                   $ref: "#/components/schemas/CustomerId"
                   description: New ID for the customer
@@ -68110,6 +68514,23 @@ paths:
                         - type: string
                         - type: "null"
                       description: Memo shown near the top of the invoice.
+                    payment_method_types:
+                      type: array
+                      minItems: 1
+                      items:
+                        enum:
+                          - card
+                          - customer_balance
+                          - us_bank_account
+                          - sepa_debit
+                          - bacs_debit
+                          - acss_debit
+                          - link
+                        type: string
+                      description: Payment method types the customer can pay the replacement with,
+                        e.g. card and customer_balance (bank transfer).
+                        Overrides the org's allowed payment methods. Only
+                        applies to send-invoice replacements.
                   additionalProperties: false
                   description: Changes that apply to the replacement invoice only.
                 customer:
@@ -77237,6 +77658,29 @@ paths:
       x-speakeasy-name-override: getStripeConnection
       parameters:
         - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.platform.getStripeConnection({
+              organizationSlug: "my-app",
+              env: "test",
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.platform.get_stripe_connection(
+                organization_slug="my-app",
+                env="test",
+            )
   /v1/platform.disconnect_stripe:
     post:
       operationId: disconnectStripe
@@ -77292,6 +77736,29 @@ paths:
       x-speakeasy-name-override: disconnectStripe
       parameters:
         - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.platform.disconnectStripe({
+              organizationSlug: "my-app",
+              env: "test",
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.platform.disconnect_stripe(
+                organization_slug="my-app",
+                env="test",
+            )
   /v1/platform.link_revenuecat:
     post:
       operationId: linkRevenueCat

@@ -422,7 +422,7 @@ export type CreateInvoiceFeatureOverride = {
     | undefined;
 };
 
-export type CustomizeItem = {
+export type CreateInvoiceCustomizeItem = {
   /**
    * The feature whose pricing is overridden on this invoice.
    */
@@ -440,7 +440,7 @@ export type CustomizeItem = {
 /**
  * Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed.
  */
-export type InvoiceCustomize = {
+export type CreateInvoiceInvoiceCustomize = {
   /**
    * Override the plan's base price for this invoice. Pass null or an amount of 0 to omit the base price line.
    */
@@ -448,7 +448,7 @@ export type InvoiceCustomize = {
   /**
    * Override feature pricing for this invoice. Only pricing fields are accepted; grants, resets and rollovers are not part of an invoice.
    */
-  items?: Array<CustomizeItem> | undefined;
+  items?: Array<CreateInvoiceCustomizeItem> | undefined;
 };
 
 /**
@@ -465,7 +465,7 @@ export type CreateInvoiceBillingBehavior = ClosedEnum<
   typeof CreateInvoiceBillingBehavior
 >;
 
-export type Usage = {
+export type CreateInvoiceUsage = {
   /**
    * The metered feature whose units are being converted.
    */
@@ -496,7 +496,7 @@ export type CreateInvoiceFeatureQuantity = {
   /**
    * For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity.
    */
-  usage?: Array<Usage> | undefined;
+  usage?: Array<CreateInvoiceUsage> | undefined;
   /**
    * Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based.
    */
@@ -506,7 +506,7 @@ export type CreateInvoiceFeatureQuantity = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export const LicenseQuantityInterval = {
+export const CreateInvoiceLicenseQuantityInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -517,11 +517,11 @@ export const LicenseQuantityInterval = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export type LicenseQuantityInterval = ClosedEnum<
-  typeof LicenseQuantityInterval
+export type CreateInvoiceLicenseQuantityInterval = ClosedEnum<
+  typeof CreateInvoiceLicenseQuantityInterval
 >;
 
-export type LicenseQuantityStripe = {
+export type CreateInvoiceLicenseQuantityStripe = {
   /**
    * Stripe price ID. For prepaid with included > 0 this is the V2 price.
    */
@@ -531,11 +531,11 @@ export type LicenseQuantityStripe = {
 /**
  * Bill this line under an existing Stripe price instead of an inline one.
  */
-export type LicenseQuantityProcessors = {
-  stripe?: LicenseQuantityStripe | null | undefined;
+export type CreateInvoiceLicenseQuantityProcessors = {
+  stripe?: CreateInvoiceLicenseQuantityStripe | null | undefined;
 };
 
-export type LicenseQuantityPrice = {
+export type CreateInvoiceLicenseQuantityPrice = {
   /**
    * Base price amount for the plan, in major currency units (e.g. dollars).
    */
@@ -543,7 +543,7 @@ export type LicenseQuantityPrice = {
   /**
    * Billing interval (e.g. 'month', 'year').
    */
-  interval: LicenseQuantityInterval;
+  interval: CreateInvoiceLicenseQuantityInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -551,31 +551,31 @@ export type LicenseQuantityPrice = {
   /**
    * Bill this line under an existing Stripe price instead of an inline one.
    */
-  processors?: LicenseQuantityProcessors | undefined;
+  processors?: CreateInvoiceLicenseQuantityProcessors | undefined;
 };
 
 /**
  * Override the license's per-seat price on this invoice.
  */
 export type CreateInvoiceCustomize = {
-  price?: LicenseQuantityPrice | null | undefined;
+  price?: CreateInvoiceLicenseQuantityPrice | null | undefined;
 };
 
 /**
  * Which of the feature's prices to use: 'prepaid' or 'usage_based'.
  */
-export const LicenseQuantityBillingBehavior = {
+export const CreateInvoiceLicenseQuantityBillingBehavior = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * Which of the feature's prices to use: 'prepaid' or 'usage_based'.
  */
-export type LicenseQuantityBillingBehavior = ClosedEnum<
-  typeof LicenseQuantityBillingBehavior
+export type CreateInvoiceLicenseQuantityBillingBehavior = ClosedEnum<
+  typeof CreateInvoiceLicenseQuantityBillingBehavior
 >;
 
-export type LicenseQuantityUsage = {
+export type CreateInvoiceLicenseQuantityUsage = {
   /**
    * The metered feature whose units are being converted.
    */
@@ -590,7 +590,7 @@ export type LicenseQuantityUsage = {
   properties?: { [k: string]: any } | undefined;
 };
 
-export type LicenseQuantityFeatureQuantity = {
+export type CreateInvoiceLicenseQuantityFeatureQuantity = {
   /**
    * The feature to bill.
    */
@@ -598,7 +598,7 @@ export type LicenseQuantityFeatureQuantity = {
   /**
    * Which of the feature's prices to use: 'prepaid' or 'usage_based'.
    */
-  billingBehavior: LicenseQuantityBillingBehavior;
+  billingBehavior: CreateInvoiceLicenseQuantityBillingBehavior;
   /**
    * Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits.
    */
@@ -606,7 +606,7 @@ export type LicenseQuantityFeatureQuantity = {
   /**
    * For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity.
    */
-  usage?: Array<LicenseQuantityUsage> | undefined;
+  usage?: Array<CreateInvoiceLicenseQuantityUsage> | undefined;
   /**
    * Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based.
    */
@@ -629,7 +629,9 @@ export type CreateInvoiceLicenseQuantity = {
   /**
    * Feature charges priced through the license plan.
    */
-  featureQuantities?: Array<LicenseQuantityFeatureQuantity> | undefined;
+  featureQuantities?:
+    | Array<CreateInvoiceLicenseQuantityFeatureQuantity>
+    | undefined;
   /**
    * Whether to prorate seat charges against period_start / period_end. Defaults to true.
    */
@@ -662,7 +664,7 @@ export type CreateInvoicePlan = {
   /**
    * Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed.
    */
-  customize?: InvoiceCustomize | undefined;
+  customize?: CreateInvoiceInvoiceCustomize | undefined;
   featureQuantities?: Array<CreateInvoiceFeatureQuantity> | undefined;
   licenseQuantities?: Array<CreateInvoiceLicenseQuantity> | undefined;
   /**
@@ -771,6 +773,10 @@ export type CreateInvoiceEntity = {
 
 export type CreateInvoiceInvoiceItem = {
   /**
+   * The Autumn invoice line item ID. Stable across reads, and can be used to reference this line in later calls.
+   */
+  id: string;
+  /**
    * Description of the invoice line item
    */
   description: string;
@@ -867,7 +873,7 @@ export type CreateInvoiceInvoice = {
   items?: Array<CreateInvoiceInvoiceItem> | undefined;
 };
 
-export type Line = {
+export type CreateInvoiceLine = {
   planId: string | null;
   featureId: string | null;
   description: string;
@@ -892,13 +898,39 @@ export type CreateInvoiceTax = {
   status: CreateInvoiceStatus;
 };
 
+/**
+ * The customer's Stripe credit balance and how much of it this invoice consumes.
+ */
+export type CreateInvoiceInvoiceCredits = {
+  /**
+   * Stripe customer credit balance available, expressed as a positive number in major currency units.
+   */
+  balance: number;
+  /**
+   * How much of that balance this invoice consumes, capped at its total. The rest stays on the customer.
+   */
+  applied?: number | undefined;
+  /**
+   * Three-letter currency code.
+   */
+  currency: string;
+};
+
 export type CreateInvoicePreview = {
   currency: string;
-  lines: Array<Line>;
+  lines: Array<CreateInvoiceLine>;
   subtotal: number;
   discountTotal: number;
   tax: CreateInvoiceTax | null;
   total: number;
+  /**
+   * The customer's Stripe credit balance and how much of it this invoice consumes.
+   */
+  invoiceCredits?: CreateInvoiceInvoiceCredits | undefined;
+  /**
+   * What the customer pays: the total less any credit applied.
+   */
+  amountDue: number;
   dueDate: number | null;
 };
 
@@ -1912,16 +1944,16 @@ export function createInvoiceFeatureOverrideToJSON(
 }
 
 /** @internal */
-export type CustomizeItem$Outbound = {
+export type CreateInvoiceCustomizeItem$Outbound = {
   feature_id: string;
   price?: CreateInvoiceItemPrice$Outbound | undefined;
   feature_override?: CreateInvoiceFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
-export const CustomizeItem$outboundSchema: z.ZodMiniType<
-  CustomizeItem$Outbound,
-  CustomizeItem
+export const CreateInvoiceCustomizeItem$outboundSchema: z.ZodMiniType<
+  CreateInvoiceCustomizeItem$Outbound,
+  CreateInvoiceCustomizeItem
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -1938,32 +1970,40 @@ export const CustomizeItem$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function customizeItemToJSON(customizeItem: CustomizeItem): string {
-  return JSON.stringify(CustomizeItem$outboundSchema.parse(customizeItem));
+export function createInvoiceCustomizeItemToJSON(
+  createInvoiceCustomizeItem: CreateInvoiceCustomizeItem,
+): string {
+  return JSON.stringify(
+    CreateInvoiceCustomizeItem$outboundSchema.parse(createInvoiceCustomizeItem),
+  );
 }
 
 /** @internal */
-export type InvoiceCustomize$Outbound = {
+export type CreateInvoiceInvoiceCustomize$Outbound = {
   price?: CreateInvoicePrice$Outbound | null | undefined;
-  items?: Array<CustomizeItem$Outbound> | undefined;
+  items?: Array<CreateInvoiceCustomizeItem$Outbound> | undefined;
 };
 
 /** @internal */
-export const InvoiceCustomize$outboundSchema: z.ZodMiniType<
-  InvoiceCustomize$Outbound,
-  InvoiceCustomize
+export const CreateInvoiceInvoiceCustomize$outboundSchema: z.ZodMiniType<
+  CreateInvoiceInvoiceCustomize$Outbound,
+  CreateInvoiceInvoiceCustomize
 > = z.object({
   price: z.optional(
     z.nullable(z.lazy(() => CreateInvoicePrice$outboundSchema)),
   ),
-  items: z.optional(z.array(z.lazy(() => CustomizeItem$outboundSchema))),
+  items: z.optional(
+    z.array(z.lazy(() => CreateInvoiceCustomizeItem$outboundSchema)),
+  ),
 });
 
-export function invoiceCustomizeToJSON(
-  invoiceCustomize: InvoiceCustomize,
+export function createInvoiceInvoiceCustomizeToJSON(
+  createInvoiceInvoiceCustomize: CreateInvoiceInvoiceCustomize,
 ): string {
   return JSON.stringify(
-    InvoiceCustomize$outboundSchema.parse(invoiceCustomize),
+    CreateInvoiceInvoiceCustomize$outboundSchema.parse(
+      createInvoiceInvoiceCustomize,
+    ),
   );
 }
 
@@ -1973,29 +2013,35 @@ export const CreateInvoiceBillingBehavior$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreateInvoiceBillingBehavior);
 
 /** @internal */
-export type Usage$Outbound = {
+export type CreateInvoiceUsage$Outbound = {
   feature_id: string;
   quantity: number;
   properties?: { [k: string]: any } | undefined;
 };
 
 /** @internal */
-export const Usage$outboundSchema: z.ZodMiniType<Usage$Outbound, Usage> = z
-  .pipe(
-    z.object({
-      featureId: z.string(),
-      quantity: z.number(),
-      properties: z.optional(z.record(z.string(), z.any())),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        featureId: "feature_id",
-      });
-    }),
-  );
+export const CreateInvoiceUsage$outboundSchema: z.ZodMiniType<
+  CreateInvoiceUsage$Outbound,
+  CreateInvoiceUsage
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    quantity: z.number(),
+    properties: z.optional(z.record(z.string(), z.any())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
 
-export function usageToJSON(usage: Usage): string {
-  return JSON.stringify(Usage$outboundSchema.parse(usage));
+export function createInvoiceUsageToJSON(
+  createInvoiceUsage: CreateInvoiceUsage,
+): string {
+  return JSON.stringify(
+    CreateInvoiceUsage$outboundSchema.parse(createInvoiceUsage),
+  );
 }
 
 /** @internal */
@@ -2003,7 +2049,7 @@ export type CreateInvoiceFeatureQuantity$Outbound = {
   feature_id: string;
   billing_behavior: string;
   quantity?: number | undefined;
-  usage?: Array<Usage$Outbound> | undefined;
+  usage?: Array<CreateInvoiceUsage$Outbound> | undefined;
   prorate?: boolean | undefined;
 };
 
@@ -2016,7 +2062,7 @@ export const CreateInvoiceFeatureQuantity$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     billingBehavior: CreateInvoiceBillingBehavior$outboundSchema,
     quantity: z.optional(z.number()),
-    usage: z.optional(z.array(z.lazy(() => Usage$outboundSchema))),
+    usage: z.optional(z.array(z.lazy(() => CreateInvoiceUsage$outboundSchema))),
     prorate: z.optional(z.boolean()),
   }),
   z.transform((v) => {
@@ -2038,19 +2084,19 @@ export function createInvoiceFeatureQuantityToJSON(
 }
 
 /** @internal */
-export const LicenseQuantityInterval$outboundSchema: z.ZodMiniEnum<
-  typeof LicenseQuantityInterval
-> = z.enum(LicenseQuantityInterval);
+export const CreateInvoiceLicenseQuantityInterval$outboundSchema: z.ZodMiniEnum<
+  typeof CreateInvoiceLicenseQuantityInterval
+> = z.enum(CreateInvoiceLicenseQuantityInterval);
 
 /** @internal */
-export type LicenseQuantityStripe$Outbound = {
+export type CreateInvoiceLicenseQuantityStripe$Outbound = {
   price_id: string;
 };
 
 /** @internal */
-export const LicenseQuantityStripe$outboundSchema: z.ZodMiniType<
-  LicenseQuantityStripe$Outbound,
-  LicenseQuantityStripe
+export const CreateInvoiceLicenseQuantityStripe$outboundSchema: z.ZodMiniType<
+  CreateInvoiceLicenseQuantityStripe$Outbound,
+  CreateInvoiceLicenseQuantityStripe
 > = z.pipe(
   z.object({
     priceId: z.string(),
@@ -2062,56 +2108,64 @@ export const LicenseQuantityStripe$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function licenseQuantityStripeToJSON(
-  licenseQuantityStripe: LicenseQuantityStripe,
+export function createInvoiceLicenseQuantityStripeToJSON(
+  createInvoiceLicenseQuantityStripe: CreateInvoiceLicenseQuantityStripe,
 ): string {
   return JSON.stringify(
-    LicenseQuantityStripe$outboundSchema.parse(licenseQuantityStripe),
+    CreateInvoiceLicenseQuantityStripe$outboundSchema.parse(
+      createInvoiceLicenseQuantityStripe,
+    ),
   );
 }
 
 /** @internal */
-export type LicenseQuantityProcessors$Outbound = {
-  stripe?: LicenseQuantityStripe$Outbound | null | undefined;
+export type CreateInvoiceLicenseQuantityProcessors$Outbound = {
+  stripe?: CreateInvoiceLicenseQuantityStripe$Outbound | null | undefined;
 };
 
 /** @internal */
-export const LicenseQuantityProcessors$outboundSchema: z.ZodMiniType<
-  LicenseQuantityProcessors$Outbound,
-  LicenseQuantityProcessors
-> = z.object({
-  stripe: z.optional(
-    z.nullable(z.lazy(() => LicenseQuantityStripe$outboundSchema)),
-  ),
-});
+export const CreateInvoiceLicenseQuantityProcessors$outboundSchema:
+  z.ZodMiniType<
+    CreateInvoiceLicenseQuantityProcessors$Outbound,
+    CreateInvoiceLicenseQuantityProcessors
+  > = z.object({
+    stripe: z.optional(
+      z.nullable(
+        z.lazy(() => CreateInvoiceLicenseQuantityStripe$outboundSchema),
+      ),
+    ),
+  });
 
-export function licenseQuantityProcessorsToJSON(
-  licenseQuantityProcessors: LicenseQuantityProcessors,
+export function createInvoiceLicenseQuantityProcessorsToJSON(
+  createInvoiceLicenseQuantityProcessors:
+    CreateInvoiceLicenseQuantityProcessors,
 ): string {
   return JSON.stringify(
-    LicenseQuantityProcessors$outboundSchema.parse(licenseQuantityProcessors),
+    CreateInvoiceLicenseQuantityProcessors$outboundSchema.parse(
+      createInvoiceLicenseQuantityProcessors,
+    ),
   );
 }
 
 /** @internal */
-export type LicenseQuantityPrice$Outbound = {
+export type CreateInvoiceLicenseQuantityPrice$Outbound = {
   amount: number;
   interval: string;
   interval_count: number;
-  processors?: LicenseQuantityProcessors$Outbound | undefined;
+  processors?: CreateInvoiceLicenseQuantityProcessors$Outbound | undefined;
 };
 
 /** @internal */
-export const LicenseQuantityPrice$outboundSchema: z.ZodMiniType<
-  LicenseQuantityPrice$Outbound,
-  LicenseQuantityPrice
+export const CreateInvoiceLicenseQuantityPrice$outboundSchema: z.ZodMiniType<
+  CreateInvoiceLicenseQuantityPrice$Outbound,
+  CreateInvoiceLicenseQuantityPrice
 > = z.pipe(
   z.object({
     amount: z.number(),
-    interval: LicenseQuantityInterval$outboundSchema,
+    interval: CreateInvoiceLicenseQuantityInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     processors: z.optional(
-      z.lazy(() => LicenseQuantityProcessors$outboundSchema),
+      z.lazy(() => CreateInvoiceLicenseQuantityProcessors$outboundSchema),
     ),
   }),
   z.transform((v) => {
@@ -2121,17 +2175,19 @@ export const LicenseQuantityPrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function licenseQuantityPriceToJSON(
-  licenseQuantityPrice: LicenseQuantityPrice,
+export function createInvoiceLicenseQuantityPriceToJSON(
+  createInvoiceLicenseQuantityPrice: CreateInvoiceLicenseQuantityPrice,
 ): string {
   return JSON.stringify(
-    LicenseQuantityPrice$outboundSchema.parse(licenseQuantityPrice),
+    CreateInvoiceLicenseQuantityPrice$outboundSchema.parse(
+      createInvoiceLicenseQuantityPrice,
+    ),
   );
 }
 
 /** @internal */
 export type CreateInvoiceCustomize$Outbound = {
-  price?: LicenseQuantityPrice$Outbound | null | undefined;
+  price?: CreateInvoiceLicenseQuantityPrice$Outbound | null | undefined;
 };
 
 /** @internal */
@@ -2140,7 +2196,7 @@ export const CreateInvoiceCustomize$outboundSchema: z.ZodMiniType<
   CreateInvoiceCustomize
 > = z.object({
   price: z.optional(
-    z.nullable(z.lazy(() => LicenseQuantityPrice$outboundSchema)),
+    z.nullable(z.lazy(() => CreateInvoiceLicenseQuantityPrice$outboundSchema)),
   ),
 });
 
@@ -2153,21 +2209,22 @@ export function createInvoiceCustomizeToJSON(
 }
 
 /** @internal */
-export const LicenseQuantityBillingBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof LicenseQuantityBillingBehavior
-> = z.enum(LicenseQuantityBillingBehavior);
+export const CreateInvoiceLicenseQuantityBillingBehavior$outboundSchema:
+  z.ZodMiniEnum<typeof CreateInvoiceLicenseQuantityBillingBehavior> = z.enum(
+    CreateInvoiceLicenseQuantityBillingBehavior,
+  );
 
 /** @internal */
-export type LicenseQuantityUsage$Outbound = {
+export type CreateInvoiceLicenseQuantityUsage$Outbound = {
   feature_id: string;
   quantity: number;
   properties?: { [k: string]: any } | undefined;
 };
 
 /** @internal */
-export const LicenseQuantityUsage$outboundSchema: z.ZodMiniType<
-  LicenseQuantityUsage$Outbound,
-  LicenseQuantityUsage
+export const CreateInvoiceLicenseQuantityUsage$outboundSchema: z.ZodMiniType<
+  CreateInvoiceLicenseQuantityUsage$Outbound,
+  CreateInvoiceLicenseQuantityUsage
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -2181,51 +2238,56 @@ export const LicenseQuantityUsage$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function licenseQuantityUsageToJSON(
-  licenseQuantityUsage: LicenseQuantityUsage,
+export function createInvoiceLicenseQuantityUsageToJSON(
+  createInvoiceLicenseQuantityUsage: CreateInvoiceLicenseQuantityUsage,
 ): string {
   return JSON.stringify(
-    LicenseQuantityUsage$outboundSchema.parse(licenseQuantityUsage),
+    CreateInvoiceLicenseQuantityUsage$outboundSchema.parse(
+      createInvoiceLicenseQuantityUsage,
+    ),
   );
 }
 
 /** @internal */
-export type LicenseQuantityFeatureQuantity$Outbound = {
+export type CreateInvoiceLicenseQuantityFeatureQuantity$Outbound = {
   feature_id: string;
   billing_behavior: string;
   quantity?: number | undefined;
-  usage?: Array<LicenseQuantityUsage$Outbound> | undefined;
+  usage?: Array<CreateInvoiceLicenseQuantityUsage$Outbound> | undefined;
   prorate?: boolean | undefined;
 };
 
 /** @internal */
-export const LicenseQuantityFeatureQuantity$outboundSchema: z.ZodMiniType<
-  LicenseQuantityFeatureQuantity$Outbound,
-  LicenseQuantityFeatureQuantity
-> = z.pipe(
-  z.object({
-    featureId: z.string(),
-    billingBehavior: LicenseQuantityBillingBehavior$outboundSchema,
-    quantity: z.optional(z.number()),
-    usage: z.optional(
-      z.array(z.lazy(() => LicenseQuantityUsage$outboundSchema)),
-    ),
-    prorate: z.optional(z.boolean()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      featureId: "feature_id",
-      billingBehavior: "billing_behavior",
-    });
-  }),
-);
+export const CreateInvoiceLicenseQuantityFeatureQuantity$outboundSchema:
+  z.ZodMiniType<
+    CreateInvoiceLicenseQuantityFeatureQuantity$Outbound,
+    CreateInvoiceLicenseQuantityFeatureQuantity
+  > = z.pipe(
+    z.object({
+      featureId: z.string(),
+      billingBehavior:
+        CreateInvoiceLicenseQuantityBillingBehavior$outboundSchema,
+      quantity: z.optional(z.number()),
+      usage: z.optional(
+        z.array(z.lazy(() => CreateInvoiceLicenseQuantityUsage$outboundSchema)),
+      ),
+      prorate: z.optional(z.boolean()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        featureId: "feature_id",
+        billingBehavior: "billing_behavior",
+      });
+    }),
+  );
 
-export function licenseQuantityFeatureQuantityToJSON(
-  licenseQuantityFeatureQuantity: LicenseQuantityFeatureQuantity,
+export function createInvoiceLicenseQuantityFeatureQuantityToJSON(
+  createInvoiceLicenseQuantityFeatureQuantity:
+    CreateInvoiceLicenseQuantityFeatureQuantity,
 ): string {
   return JSON.stringify(
-    LicenseQuantityFeatureQuantity$outboundSchema.parse(
-      licenseQuantityFeatureQuantity,
+    CreateInvoiceLicenseQuantityFeatureQuantity$outboundSchema.parse(
+      createInvoiceLicenseQuantityFeatureQuantity,
     ),
   );
 }
@@ -2236,7 +2298,7 @@ export type CreateInvoiceLicenseQuantity$Outbound = {
   quantity: number;
   customize?: CreateInvoiceCustomize$Outbound | undefined;
   feature_quantities?:
-    | Array<LicenseQuantityFeatureQuantity$Outbound>
+    | Array<CreateInvoiceLicenseQuantityFeatureQuantity$Outbound>
     | undefined;
   prorate?: boolean | undefined;
 };
@@ -2250,9 +2312,9 @@ export const CreateInvoiceLicenseQuantity$outboundSchema: z.ZodMiniType<
     licensePlanId: z.string(),
     quantity: z.int(),
     customize: z.optional(z.lazy(() => CreateInvoiceCustomize$outboundSchema)),
-    featureQuantities: z.optional(
-      z.array(z.lazy(() => LicenseQuantityFeatureQuantity$outboundSchema)),
-    ),
+    featureQuantities: z.optional(z.array(z.lazy(() =>
+      CreateInvoiceLicenseQuantityFeatureQuantity$outboundSchema
+    ))),
     prorate: z.optional(z.boolean()),
   }),
   z.transform((v) => {
@@ -2308,7 +2370,7 @@ export function planAttachDiscountToJSON(
 export type CreateInvoicePlan$Outbound = {
   plan_id: string;
   version?: number | undefined;
-  customize?: InvoiceCustomize$Outbound | undefined;
+  customize?: CreateInvoiceInvoiceCustomize$Outbound | undefined;
   feature_quantities?: Array<CreateInvoiceFeatureQuantity$Outbound> | undefined;
   license_quantities?: Array<CreateInvoiceLicenseQuantity$Outbound> | undefined;
   discounts?: Array<PlanAttachDiscount$Outbound> | undefined;
@@ -2323,7 +2385,9 @@ export const CreateInvoicePlan$outboundSchema: z.ZodMiniType<
   z.object({
     planId: z.string(),
     version: z.optional(z.number()),
-    customize: z.optional(z.lazy(() => InvoiceCustomize$outboundSchema)),
+    customize: z.optional(
+      z.lazy(() => CreateInvoiceInvoiceCustomize$outboundSchema),
+    ),
     featureQuantities: z.optional(
       z.array(z.lazy(() => CreateInvoiceFeatureQuantity$outboundSchema)),
     ),
@@ -2505,6 +2569,7 @@ export const CreateInvoiceInvoiceItem$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
+    id: types.string(),
     description: types.string(),
     period_start: types.nullable(types.number()),
     period_end: types.nullable(types.number()),
@@ -2588,7 +2653,10 @@ export function createInvoiceInvoiceFromJSON(
 }
 
 /** @internal */
-export const Line$inboundSchema: z.ZodMiniType<Line, unknown> = z.pipe(
+export const CreateInvoiceLine$inboundSchema: z.ZodMiniType<
+  CreateInvoiceLine,
+  unknown
+> = z.pipe(
   z.object({
     plan_id: types.nullable(types.string()),
     feature_id: types.nullable(types.string()),
@@ -2611,13 +2679,13 @@ export const Line$inboundSchema: z.ZodMiniType<Line, unknown> = z.pipe(
   }),
 );
 
-export function lineFromJSON(
+export function createInvoiceLineFromJSON(
   jsonString: string,
-): SafeParseResult<Line, SDKValidationError> {
+): SafeParseResult<CreateInvoiceLine, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Line$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Line' from JSON`,
+    (x) => CreateInvoiceLine$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateInvoiceLine' from JSON`,
   );
 }
 
@@ -2657,22 +2725,48 @@ export function createInvoiceTaxFromJSON(
 }
 
 /** @internal */
+export const CreateInvoiceInvoiceCredits$inboundSchema: z.ZodMiniType<
+  CreateInvoiceInvoiceCredits,
+  unknown
+> = z.object({
+  balance: types.number(),
+  applied: types.optional(types.number()),
+  currency: types.string(),
+});
+
+export function createInvoiceInvoiceCreditsFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateInvoiceInvoiceCredits, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateInvoiceInvoiceCredits$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateInvoiceInvoiceCredits' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreateInvoicePreview$inboundSchema: z.ZodMiniType<
   CreateInvoicePreview,
   unknown
 > = z.pipe(
   z.object({
     currency: types.string(),
-    lines: z.array(z.lazy(() => Line$inboundSchema)),
+    lines: z.array(z.lazy(() => CreateInvoiceLine$inboundSchema)),
     subtotal: types.number(),
     discount_total: types.number(),
     tax: types.nullable(z.lazy(() => CreateInvoiceTax$inboundSchema)),
     total: types.number(),
+    invoice_credits: types.optional(
+      z.lazy(() => CreateInvoiceInvoiceCredits$inboundSchema),
+    ),
+    amount_due: types.number(),
     due_date: types.nullable(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "discount_total": "discountTotal",
+      "invoice_credits": "invoiceCredits",
+      "amount_due": "amountDue",
       "due_date": "dueDate",
     });
   }),

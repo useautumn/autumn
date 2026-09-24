@@ -61,7 +61,7 @@ InsertInvoicesStatus = Literal[
 r"""The invoice status."""
 
 
-class InvoiceRequestBodyTypedDict(TypedDict):
+class InsertInvoicesInvoiceRequestBodyTypedDict(TypedDict):
     customer_id: str
     r"""The customer this invoice belongs to."""
     stripe_id: str
@@ -86,7 +86,7 @@ class InvoiceRequestBodyTypedDict(TypedDict):
     r"""The hosted invoice URL, when available."""
 
 
-class InvoiceRequestBody(BaseModel):
+class InsertInvoicesInvoiceRequestBody(BaseModel):
     customer_id: str
     r"""The customer this invoice belongs to."""
 
@@ -156,12 +156,12 @@ class InvoiceRequestBody(BaseModel):
 
 
 class InsertInvoicesParamsTypedDict(TypedDict):
-    invoices: List[InvoiceRequestBodyTypedDict]
+    invoices: List[InsertInvoicesInvoiceRequestBodyTypedDict]
     r"""Invoices to insert or update, in response order."""
 
 
 class InsertInvoicesParams(BaseModel):
-    invoices: List[InvoiceRequestBody]
+    invoices: List[InsertInvoicesInvoiceRequestBody]
     r"""Invoices to insert or update, in response order."""
 
 
