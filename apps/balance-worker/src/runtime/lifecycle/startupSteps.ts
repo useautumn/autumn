@@ -1,3 +1,4 @@
+import { PartitionBootstrapRefusedError } from "../bootstrap/partitionBootstrapErrors.js";
 import { OwnedPartitionNotReadyError } from "../runtimeErrors.js";
 import type {
 	PartitionOutcomeFollowerPort,
@@ -97,9 +98,15 @@ export async function completeRuntimePreparation({
 	}
 
 	try {
-		const logRange = await follower.readLogRange({ topic, partition, signal });
+		let logRange = await follower.readLogRange({ topic, partition, signal });
 		signal.throwIfAborted();
-		await ctx.bootstrapper.bootstrap({ topic, partition, logRange, signal });
+		try {
+			await ctx.bootstrapper.bootstrap({ topic, partition, logRange, signal });
+		} catch (cause) {
+			// The owner is still writing: its bookmark can pass a log end read a moment earlier.
+			if (!isProgressAheadOfLiveLog({ cause })) throw cause;
+			logRange = await follower.readLogRange({ topic, partition, signal });
+		}
 		signal.throwIfAborted();
 		await follower.startAndCatchUp({
 			topic,
@@ -117,6 +124,13 @@ export async function completeRuntimePreparation({
 			throw new OwnedPartitionNotReadyError({ status: state.status });
 		throw await enterRuntimeRecovery({ ctx, state, cause });
 	}
+}
+
+function isProgressAheadOfLiveLog({ cause }: { cause: unknown }): boolean {
+	return (
+		cause instanceof PartitionBootstrapRefusedError &&
+		cause.reason === "local_state_ahead_of_log_end"
+	);
 }
 
 function assertStartupContinues({

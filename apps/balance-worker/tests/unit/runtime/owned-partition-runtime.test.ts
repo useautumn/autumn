@@ -25,6 +25,7 @@ import {
 } from "../../../src/kafka/createWorkerProducer.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { MutationBatchAppendError } from "../../../src/processor/writer/writerErrors.js";
+import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
 import type {
 	PartitionBootstrapper as OwnedPartitionBootstrapPort,
 	PartitionLogRange,
@@ -35,7 +36,10 @@ import {
 	OwnedPartitionProducerFencedError,
 	OwnedPartitionRecoveryRequiredError,
 } from "../../../src/runtime/runtimeErrors.js";
-import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
+import type {
+	PartitionOutcomeFollowerPort,
+	PartitionRuntimeDependencies,
+} from "../../../src/runtime/types/partitionRuntime.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
 import type { SqliteStateStore } from "../../../src/state/types/stateStore.js";
 import {
@@ -331,6 +335,7 @@ const createRuntime = ({
 	bootstrap = async () => ({ kind: "continued", nextOffset: 0n }),
 	partitionForIdentity = () => partition,
 	recoveryDrainTimeoutMs = 1_000,
+	storeApplyGate,
 }: {
 	store: SqliteStateStore;
 	producer: OwnedPartitionProducerPort;
@@ -338,6 +343,8 @@ const createRuntime = ({
 	bootstrap?: OwnedPartitionBootstrapPort["bootstrap"];
 	partitionForIdentity?: (identity: MeteringIdentity) => number;
 	recoveryDrainTimeoutMs?: number;
+	/** Holds every store apply, the way a slow Postgres committer would. */
+	storeApplyGate?: Promise<void>;
 }) => {
 	function createProducer(): OwnedPartitionProducerPort {
 		return producer;
@@ -360,10 +367,19 @@ const createRuntime = ({
 		ctx: { session },
 		config: { topic, partition },
 	});
+	const stateStore: PartitionRuntimeDependencies["stateStore"] = storeApplyGate
+		? {
+				...store,
+				applyDurableMutations: async (params) => {
+					await storeApplyGate;
+					return store.applyDurableMutations(params);
+				},
+			}
+		: store;
 	return createPartitionRuntime({
 		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
 		ctx: {
-			stateStore: store,
+			stateStore,
 			db: createSyntheticWorkerDb(),
 			catalogCache: createTestCatalogCache(),
 			bootstrapper: { bootstrap },
@@ -1230,6 +1246,40 @@ test("drain waits for accepted tracks but keeps the producer connected", async (
 	}
 });
 
+test("drain waits for the store apply behind a log-durability reply", async () => {
+	const fixture = createStoreFixture();
+	const storeApply = createDeferred<void>();
+	const producer = createFakeProducer();
+	const runtime = createRuntime({
+		store: fixture.store,
+		producer: producer.producer,
+		follower: createFollower().follower,
+		storeApplyGate: storeApply.promise,
+	});
+	try {
+		await runtime.start();
+		await runtime.process((processor) =>
+			processor.track({
+				command: createTrackCommand({ commandId: "cmd_store_drain" }),
+			}),
+		);
+		expect(fixture.store.readState({ identity })?.revision).toBe(0);
+		let drained = false;
+		const draining = runtime.drain().then(() => {
+			drained = true;
+		});
+		await waitForTurn();
+		expect(drained).toBe(false);
+		storeApply.resolve(undefined);
+		await draining;
+		expect(fixture.store.readState({ identity })?.revision).toBe(1);
+	} finally {
+		storeApply.resolve(undefined);
+		await runtime.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
 test("quiescence remains pending after recovery disposal until accepted apply settles", async () => {
 	const fixture = createStoreFixture();
 	const commit = createDeferred<void>();
@@ -1331,6 +1381,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 	const createFixture = ({
 		preparation: customizePreparation = (follower) => follower,
 		fence = async () => undefined,
+		bootstrap = async () => undefined,
 		activationWaitMs,
 	}: {
 		preparation?: (
@@ -1338,6 +1389,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 			active: PartitionOutcomeFollowerPort,
 		) => PartitionOutcomeFollowerPort;
 		fence?: () => Promise<void>;
+		bootstrap?: () => Promise<void>;
 		activationWaitMs?: number;
 	} = {}) => {
 		const storage = createStoreFixture();
@@ -1388,6 +1440,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				bootstrapper: {
 					bootstrap: async () => {
 						events.push("bootstrap");
+						await bootstrap();
 						return { kind: "continued", nextOffset: 0n };
 					},
 				},
@@ -1552,6 +1605,34 @@ describe("partitionPreparation", function partitionPreparationTests() {
 					"active:replay:9:from-bookmark",
 				]);
 				expect(f.runtime.getStatus()).toBe("ready");
+			} finally {
+				await f.cleanup();
+			}
+		});
+		test("preparation re-reads the log end when the live owner's bookmark has passed it", async () => {
+			let refusals = 0;
+			const f = createFixture({
+				bootstrap: async () => {
+					if (refusals++ > 0) return;
+					// The owner appended and advanced its bookmark while the range was being read.
+					f.setEnd(7n);
+					throw new PartitionBootstrapRefusedError({
+						topic,
+						partition,
+						reason: "local_state_ahead_of_log_end",
+					});
+				},
+			});
+			try {
+				await f.runtime.prepare();
+				expect(f.events).toEqual([
+					"prepare:range:5",
+					"bootstrap",
+					"prepare:range:7",
+					"prepare:replay:7",
+					"prepare:stop",
+				]);
+				expect(f.runtime.getStatus()).toBe("prepared");
 			} finally {
 				await f.cleanup();
 			}
