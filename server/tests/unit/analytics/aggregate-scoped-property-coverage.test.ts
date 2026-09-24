@@ -254,3 +254,29 @@ test(`${chalk.yellowBright(
 	expect(callsNamed("getCountAndSum")).toHaveLength(1);
 	expect(callsNamed("aggregateGroupable")).toHaveLength(1);
 });
+
+test(`${chalk.yellowBright(
+	"aggregate scoped coverage: propertyless events never turn a minor seam into a retry",
+)}`, async () => {
+	// Ninety events short of coverage (a seam) plus a thousand events that lack
+	// the key entirely: the all-events count exceeds the grouped count, but the
+	// missing value is nil, so there is nothing an ungated scan could recover.
+	groupedRows.length = 0;
+	groupedRows.push({
+		period: "2026-08-25 00:00:00",
+		event_name: "scrape",
+		group_value: "68694",
+		total_value: 1_000_000,
+		event_count: 1_000_000,
+	});
+	coverageRows = [{ event_name: "scrape", event_count: 1_000_090 }];
+	countAndSumTotals = { scrape: { count: 1_001_090, sum: 1_001_090 } };
+
+	await aggregate({
+		ctx,
+		params: scopedParams({ groupBy: "properties.apiKeyId" }),
+	});
+
+	expect(callsNamed("getCountAndSum")).toHaveLength(1);
+	expect(callsNamed("aggregateGroupable")).toHaveLength(1);
+});

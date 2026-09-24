@@ -35,6 +35,7 @@ import {
 import { getCountAndSum } from "./getCountAndSum.js";
 import {
 	groupedResultIsIncomplete,
+	groupedValueIsMateriallyShort,
 	propertyRollupCoverageShortfall,
 	propertyRollupCoverageUnderReports,
 	reportsMoreThan,
@@ -563,8 +564,19 @@ export const aggregate = async ({
 						rows: result.data,
 						coverage,
 					});
-					// "minor" stays null: the totals check below decides by value.
-					if (shortfall !== "minor") rollupIsIncomplete = shortfall === "major";
+					if (shortfall === "minor") {
+						const totals = await getCountAndSum({
+							ctx,
+							params,
+							dateRange: { startDate, endDate },
+						});
+						rollupIsIncomplete = groupedValueIsMateriallyShort({
+							rows: result.data,
+							totals,
+						});
+					} else {
+						rollupIsIncomplete = shortfall === "major";
+					}
 				}
 			}
 			if (rollupIsIncomplete === null) {

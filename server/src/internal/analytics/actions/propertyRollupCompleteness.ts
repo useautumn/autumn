@@ -87,6 +87,26 @@ export const propertyRollupCoverageShortfall = ({
 	return worst;
 };
 
+/**
+ * Value-only judgement for a minor count shortfall. The all-events totals also
+ * count events without the key, so their count proves nothing here; only a
+ * material share of value missing from the groups is worth the ungated scan.
+ */
+export const groupedValueIsMateriallyShort = ({
+	rows,
+	totals,
+}: {
+	rows: AggregateGroupablePipeRow[];
+	totals: EventTotals;
+}): boolean => {
+	const groupedSums = sumGroupedRowsByEventName({ rows });
+	return Object.entries(totals).some(([eventName, total]) => {
+		if (total.sum <= 0) return false;
+		const missing = total.sum - (groupedSums[eventName] ?? 0);
+		return missing / total.sum >= RETRY_SHORTFALL_RATIO;
+	});
+};
+
 export const propertyRollupCoverageIsIncomplete = ({
 	rows,
 	coverage,
