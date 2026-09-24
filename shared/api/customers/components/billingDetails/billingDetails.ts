@@ -4,15 +4,6 @@ export const MAX_INVOICE_CUSTOM_FIELDS = 4;
 
 export const TAX_EXEMPT_VALUES = ["none", "exempt", "reverse"] as const;
 
-export const TAX_EXEMPT_LABELS: Record<
-	(typeof TAX_EXEMPT_VALUES)[number],
-	string
-> = {
-	none: "Not exempt",
-	exempt: "Exempt",
-	reverse: "Reverse charge",
-};
-
 export const BillingDetailsAddressSchema = z
 	.object({
 		line1: z.string().nullish(),

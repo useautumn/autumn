@@ -1,4 +1,8 @@
-import type { ApiBillingDetails, Customer } from "@autumn/shared";
+import {
+	type ApiBillingDetails,
+	BILLING_DETAILS_LABELS,
+	type Customer,
+} from "@autumn/shared";
 import { DialogFooter, ShortcutButton } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
@@ -40,7 +44,9 @@ export const UpdateCustomerForm = ({
 			)}
 
 			<section className={FIELD_STACK}>
-				<h4 className="text-sm font-semibold">Billing details</h4>
+				<h4 className="text-sm font-semibold">
+					{BILLING_DETAILS_LABELS.section}
+				</h4>
 				<BillingDetailsSection
 					form={form}
 					isStripeLinked={isStripeLinked}

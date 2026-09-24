@@ -1,8 +1,7 @@
 import type { BillingDetailsParams } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/** Stripe unsets a field when sent "", so null in our params maps to "". */
-const nullToEmpty = <T>(value: T | null): T | "" => value ?? "";
+// Stripe unsets a field when sent "", so every null in our params maps to "".
 
 const addressToStripeAddress = (
 	address: NonNullable<BillingDetailsParams["address"]>,
@@ -10,7 +9,7 @@ const addressToStripeAddress = (
 	Object.fromEntries(
 		Object.entries(address)
 			.filter(([, value]) => value !== undefined)
-			.map(([key, value]) => [key, nullToEmpty(value)]),
+			.map(([key, value]) => [key, value ?? ""]),
 	);
 
 export const billingDetailsToStripeCustomerUpdate = ({
@@ -23,11 +22,11 @@ export const billingDetailsToStripeCustomerUpdate = ({
 
 	return {
 		...(address !== undefined && {
-			address: address === null ? "" : addressToStripeAddress(address),
+			address: address ? addressToStripeAddress(address) : "",
 		}),
 		...(tax_exempt !== undefined && { tax_exempt }),
 		...(customFields !== undefined && {
-			invoice_settings: { custom_fields: nullToEmpty(customFields) },
+			invoice_settings: { custom_fields: customFields ?? "" },
 		}),
 	};
 };

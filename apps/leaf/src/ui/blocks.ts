@@ -651,24 +651,36 @@ const compactValue = (value: unknown): string | null => {
 
 // Bare CRUD writes (update customer, create entity…) have no billing preview —
 // show what's being written as label/value fields so the card is never empty.
+type RequestField = { label: string; value: string };
+
+/** Request keys whose nested value renders as several readable fields. */
+const REQUEST_FIELD_EXPANDERS: Record<
+	string,
+	(value: unknown) => RequestField[]
+> = {
+	billing_details: billingDetailsFields,
+};
+
+const isVisibleRequestKey = (key: string) =>
+	!HIDDEN_REQUEST_KEYS.has(key) && !key.startsWith("_");
+
+const requestValueFields = (key: string, value: unknown): RequestField[] => {
+	const expand = REQUEST_FIELD_EXPANDERS[key];
+	if (expand) return expand(value);
+	const rendered = compactValue(value);
+	return rendered === null
+		? []
+		: [{ label: humanizeKey(key), value: rendered }];
+};
+
 const requestSummaryFields = (
 	toolArgs?: Record<string, unknown>,
-): FieldElement[] => {
-	const request = toolRequestFromArgs(toolArgs) ?? {};
-	const fields: FieldElement[] = [];
-	for (const [key, value] of Object.entries(request)) {
-		if (HIDDEN_REQUEST_KEYS.has(key) || key.startsWith("_")) continue;
-		if (key === "billing_details") {
-			fields.push(...billingDetailsFields(value).map((field) => Field(field)));
-			continue;
-		}
-		const rendered = compactValue(value);
-		if (rendered === null) continue;
-		fields.push(Field({ label: humanizeKey(key), value: rendered }));
-		if (fields.length >= MAX_REQUEST_FIELDS) break;
-	}
-	return fields;
-};
+): FieldElement[] =>
+	Object.entries(toolRequestFromArgs(toolArgs) ?? {})
+		.filter(([key]) => isVisibleRequestKey(key))
+		.flatMap(([key, value]) => requestValueFields(key, value))
+		.slice(0, MAX_REQUEST_FIELDS)
+		.map((field) => Field(field));
 
 const catalogApprovalContext = (preview: unknown) => {
 	const payload = parsePreviewPayload(preview);

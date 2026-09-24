@@ -1,23 +1,13 @@
 import {
 	BILLING_DETAILS_ADDRESS_FIELDS,
+	BILLING_DETAILS_ADDRESS_LABELS,
+	BILLING_DETAILS_LABELS,
 	MAX_INVOICE_CUSTOM_FIELDS,
 	TAX_EXEMPT_LABELS,
 } from "@autumn/shared";
 import { FIELD_GRID, FIELD_STACK, LABELED_FIELD } from "../fieldLayout";
 import type { UpdateCustomerForm } from "../useUpdateCustomerForm";
 import { RowListField } from "./RowListField";
-
-const ADDRESS_LABELS: Record<
-	(typeof BILLING_DETAILS_ADDRESS_FIELDS)[number],
-	string
-> = {
-	line1: "Address line 1",
-	line2: "Address line 2",
-	city: "City",
-	state: "State",
-	postal_code: "Postal code",
-	country: "Country",
-};
 
 const TAX_EXEMPT_OPTIONS = Object.entries(TAX_EXEMPT_LABELS).map(
 	([value, label]) => ({ value, label }),
@@ -33,7 +23,10 @@ export const BillingDetailsFields = ({
 			{BILLING_DETAILS_ADDRESS_FIELDS.map((key) => (
 				<form.AppField key={key} name={`billingDetails.address.${key}`}>
 					{(field) => (
-						<field.TextField label={ADDRESS_LABELS[key]} type="text" />
+						<field.TextField
+							label={BILLING_DETAILS_ADDRESS_LABELS[key]}
+							type="text"
+						/>
 					)}
 				</form.AppField>
 			))}
@@ -42,12 +35,12 @@ export const BillingDetailsFields = ({
 		<form.Field name="billingDetails.tax_ids">
 			{(field) => (
 				<RowListField
-					label="Tax IDs"
+					label={BILLING_DETAILS_LABELS.taxIds}
 					rows={field.state.value}
 					keyField="type"
 					keyPlaceholder="eu_vat"
 					valuePlaceholder="DE123456789"
-					addLabel="Add tax ID"
+					addLabel={BILLING_DETAILS_LABELS.addTaxId}
 					onChange={field.handleChange}
 				/>
 			)}
@@ -56,8 +49,8 @@ export const BillingDetailsFields = ({
 		<form.AppField name="billingDetails.tax_exempt">
 			{(field) => (
 				<field.SelectField
-					label="Tax exempt"
-					placeholder="Not exempt"
+					label={BILLING_DETAILS_LABELS.taxExempt}
+					placeholder={TAX_EXEMPT_LABELS.none}
 					options={TAX_EXEMPT_OPTIONS}
 					className={LABELED_FIELD}
 					hideFieldInfo
@@ -68,12 +61,12 @@ export const BillingDetailsFields = ({
 		<form.Field name="billingDetails.custom_fields">
 			{(field) => (
 				<RowListField
-					label="Invoice custom fields"
+					label={BILLING_DETAILS_LABELS.customFields}
 					rows={field.state.value}
 					keyField="name"
 					keyPlaceholder="PO Number"
 					valuePlaceholder="PO-10042"
-					addLabel="Add custom field"
+					addLabel={BILLING_DETAILS_LABELS.addCustomField}
 					maxRows={MAX_INVOICE_CUSTOM_FIELDS}
 					onChange={field.handleChange}
 				/>
