@@ -23,7 +23,6 @@ export {
 	getCreditRateCard,
 	getCreditSystemsFromFeature,
 	invalidCreditRateCard,
-	isEnablingInvoiceCreditFeature,
 	isInvoiceCreditFeature,
 	type ResolvedCreditSchemaItem,
 	resolveCreditDimensionRate,

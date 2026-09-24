@@ -3,6 +3,7 @@ import {
 	entitlementToCreditSystem,
 	getCreditCost,
 	getCreditRateCard,
+	isInvoiceCreditCustomerEntitlement,
 	isUnlimitedCustomerEntitlement,
 	RecaseError,
 } from "@autumn/shared";
@@ -36,6 +37,9 @@ export const resolveCreditCost = ({
 				sourceFeature: { id: featureId, internal_id: internalFeatureId },
 				creditSystem,
 				eventProperties,
+				invoiceCredit: isInvoiceCreditCustomerEntitlement({
+					customerEntitlement,
+				}),
 			}) ?? null;
 		if (rateCard && isUnlimitedCustomerEntitlement({ customerEntitlement }))
 			throw new UnsupportedCommandError({
