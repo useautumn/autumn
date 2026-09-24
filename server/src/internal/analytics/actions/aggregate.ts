@@ -35,7 +35,7 @@ import {
 import { getCountAndSum } from "./getCountAndSum.js";
 import {
 	groupedResultIsIncomplete,
-	propertyRollupCoverageIsIncomplete,
+	propertyRollupCoverageShortfall,
 	propertyRollupCoverageUnderReports,
 	reportsMoreThan,
 } from "./propertyRollupCompleteness.js";
@@ -559,10 +559,12 @@ export const aggregate = async ({
 						},
 					);
 				} else {
-					rollupIsIncomplete = propertyRollupCoverageIsIncomplete({
+					const shortfall = propertyRollupCoverageShortfall({
 						rows: result.data,
 						coverage,
 					});
+					// "minor" stays null: the totals check below decides by value.
+					if (shortfall !== "minor") rollupIsIncomplete = shortfall === "major";
 				}
 			}
 			if (rollupIsIncomplete === null) {

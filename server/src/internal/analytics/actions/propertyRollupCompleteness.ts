@@ -54,10 +54,38 @@ const countRowsByEventName = ({
 
 // The gated rollup carries small historical seams (backfill boundaries) that
 // exact coverage exposes. Recovering them means a raw-events scan over the whole
-// window, which times out on long windows, so only a shortfall a reader could
-// notice earns the retry. Below the floor every missing event still counts.
+// window, which times out on long windows. A shortfall a reader could notice
+// retries outright; a smaller one is judged by the value-aware totals check,
+// which shares the rollup's seams and only fires on real loss.
 const RETRY_SHORTFALL_RATIO = 0.005;
 const RETRY_SHORTFALL_FLOOR = 10_000;
+
+export type CoverageShortfall = "none" | "minor" | "major";
+
+export const propertyRollupCoverageShortfall = ({
+	rows,
+	coverage,
+}: {
+	rows: AggregateGroupablePipeRow[];
+	coverage: Record<string, number>;
+}): CoverageShortfall => {
+	const groupedCounts = countRowsByEventName({ rows });
+	if (!groupedCounts) return "none";
+
+	let worst: CoverageShortfall = "none";
+	for (const [eventName, propertyEventCount] of Object.entries(coverage)) {
+		const shortfall = propertyEventCount - (groupedCounts[eventName] ?? 0);
+		if (shortfall <= 0) continue;
+		if (
+			propertyEventCount < RETRY_SHORTFALL_FLOOR ||
+			shortfall / propertyEventCount >= RETRY_SHORTFALL_RATIO
+		) {
+			return "major";
+		}
+		worst = "minor";
+	}
+	return worst;
+};
 
 export const propertyRollupCoverageIsIncomplete = ({
 	rows,
@@ -65,17 +93,7 @@ export const propertyRollupCoverageIsIncomplete = ({
 }: {
 	rows: AggregateGroupablePipeRow[];
 	coverage: Record<string, number>;
-}): boolean => {
-	const groupedCounts = countRowsByEventName({ rows });
-	if (!groupedCounts) return false;
-
-	return Object.entries(coverage).some(([eventName, propertyEventCount]) => {
-		const shortfall = propertyEventCount - (groupedCounts[eventName] ?? 0);
-		if (shortfall <= 0) return false;
-		if (propertyEventCount < RETRY_SHORTFALL_FLOOR) return true;
-		return shortfall / propertyEventCount >= RETRY_SHORTFALL_RATIO;
-	});
-};
+}): boolean => propertyRollupCoverageShortfall({ rows, coverage }) === "major";
 
 /**
  * Every grouped event carries the key, so populated coverage can never report
