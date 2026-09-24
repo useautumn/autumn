@@ -1,4 +1,8 @@
-import type { CheckParams, TrackParams } from "@autumn/shared";
+import type {
+	BillingDetailsParams,
+	CheckParams,
+	TrackParams,
+} from "@autumn/shared";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
@@ -15,6 +19,7 @@ import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFrom
 export const getOrCreateApiCustomerByRollout = async ({
 	ctx,
 	params,
+	billingDetails,
 	source,
 	withAutumnId,
 	enqueueRecoveryOnTransientFailure = true,
@@ -24,6 +29,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 	params: Omit<TrackParams | CheckParams, "customer_id"> & {
 		customer_id: string | null;
 	};
+	billingDetails?: BillingDetailsParams;
 	source?: string;
 	withAutumnId?: boolean;
 	enqueueRecoveryOnTransientFailure?: boolean;
@@ -67,6 +73,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 		ctx,
 		customer: fullSubject.customer,
 		customerData: params.customer_data,
+		billingDetails,
 	});
 
 	return getApiCustomerV2({ ctx, fullSubject, withAutumnId });
