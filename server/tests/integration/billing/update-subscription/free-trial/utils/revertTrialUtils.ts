@@ -18,7 +18,7 @@ import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import type Stripe from "stripe";
-import { runProductCron } from "@/cron/productCron/runProductCron";
+import { expireTrialProductsForCustomer } from "@/cron/productCron/expireTrialProductsForCustomer";
 import type { AutumnInt } from "@/external/autumn/autumnCli";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -296,19 +296,24 @@ export const extendRevertTrial = ({
 		},
 	});
 
-export const expireRevertTrialViaCron = async ({
+export const expireRevertTrial = async ({
 	ctx,
-	trialCustomerProductId,
+	trialCustomerProduct,
 }: {
 	ctx: TestContext;
-	trialCustomerProductId: string;
+	trialCustomerProduct: FullCusProduct;
 }) => {
+	const nowMs = Date.now();
 	await CusProductService.update({
 		ctx,
-		cusProductId: trialCustomerProductId,
-		updates: { trial_ends_at: Date.now() - ms.minutes(1) },
+		cusProductId: trialCustomerProduct.id,
+		updates: { trial_ends_at: nowMs - ms.minutes(1) },
 	});
-	await runProductCron({ ctx: { db: ctx.db, logger: ctx.logger } });
+	await expireTrialProductsForCustomer({
+		ctx,
+		internalCustomerId: trialCustomerProduct.internal_customer_id,
+		nowMs,
+	});
 };
 
 export const expectRevertTrialReverted = async ({

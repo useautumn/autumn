@@ -1,7 +1,7 @@
 /**
  * billing.update on a revert trial across entities, pooled balances and licenses.
  * Extending the trial must leave the shared Stripe subscription and sibling state
- * untouched, and the expiry cron must still revert the replacement customer product.
+ * untouched, and trial expiry must still revert the replacement customer product.
  *
  * Contract:
  *   entities:  entity 0 trial extended → entity 1's Pro stays active; expiry restores entity 0's Pro
@@ -32,7 +32,7 @@ import {
 	expectRevertTrialAfterUpdate,
 	expectRevertTrialReverted,
 	expectSharedSubscriptionUntouched,
-	expireRevertTrialViaCron,
+	expireRevertTrial,
 	extendRevertTrial,
 } from "./utils/revertTrialUtils";
 
@@ -130,9 +130,9 @@ test.concurrent(
 				entityId,
 			});
 
-		await expireRevertTrialViaCron({
+		await expireRevertTrial({
 			ctx,
-			trialCustomerProductId: extendedTrial.id,
+			trialCustomerProduct: extendedTrial,
 		});
 
 		const { fullCustomer } = await expectRevertTrialReverted({
@@ -185,9 +185,9 @@ test.concurrent(
 			});
 		await expectPoolGrant({ ctx, customerId, granted: POOL_ENTERPRISE_GRANT });
 
-		await expireRevertTrialViaCron({
+		await expireRevertTrial({
 			ctx,
-			trialCustomerProductId: extendedTrial.id,
+			trialCustomerProduct: extendedTrial,
 		});
 
 		await expectRevertTrialReverted({
@@ -236,9 +236,9 @@ test.concurrent(
 			parentCustomerProductId: extendedTrial.id,
 		});
 
-		await expireRevertTrialViaCron({
+		await expireRevertTrial({
 			ctx,
-			trialCustomerProductId: extendedTrial.id,
+			trialCustomerProduct: extendedTrial,
 		});
 
 		const { restoredCustomerProduct } = await expectRevertTrialReverted({
