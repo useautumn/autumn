@@ -131,4 +131,9 @@ export DATABASE_CRITICAL_URL="$DATABASE_URL"
 bun db generate >/dev/null 2>&1 || true
 bun db migrate --bootstrap
 
+# Stored procedures (balance sync/deduction) are not migrations. Without them
+# Redis -> Postgres balance sync fails ("function sync_balances_v2 does not exist").
+log "Loading DB functions"
+bun scripts/migrations/migrate-functions.ts
+
 log "All services ready"
