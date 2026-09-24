@@ -3,6 +3,7 @@ import { ATMN_APP_KEY_SCOPES, ErrCode } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { oauthClientRepo } from "@/internal/auth/repos/index.js";
 import {
+	assertMintableKeyScopes,
 	parseRequestedScopes,
 	tokenRecordFromResourceToken,
 	withAtmnAppKeyScopes,
@@ -24,6 +25,26 @@ describe("oauthApiKeyUtils", () => {
 		} catch (error) {
 			expect((error as { code?: string }).code).toBe(ErrCode.InvalidRequest);
 		}
+	});
+
+	test("rejects an explicitly empty scope list", () => {
+		try {
+			parseRequestedScopes([]);
+			throw new Error("expected parseRequestedScopes to throw");
+		} catch (error) {
+			expect(error).toMatchObject({
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+				message: "scopes must not be empty",
+			});
+		}
+	});
+
+	test("refuses to mint a key with no scopes", () => {
+		expect(() => assertMintableKeyScopes([])).toThrow(
+			"Cannot mint an API key with no scopes",
+		);
+		expect(() => assertMintableKeyScopes(["customers:read"])).not.toThrow();
 	});
 
 	test("maps resource access token claims to an API-key token record", () => {

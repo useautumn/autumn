@@ -40,10 +40,30 @@ export const OAuthApiKeyRequestBodySchema = z
 
 export const parseRequestedScopes = (scopes: unknown) => {
 	const parsed = RequestedScopesSchema.safeParse(scopes);
-	if (parsed.success) return parsed.data ?? null;
+	if (!parsed.success) {
+		throw new RecaseError({
+			message: "Invalid scopes",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+	if (parsed.data?.length === 0) {
+		throw new RecaseError({
+			message: "scopes must not be empty",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
+	return parsed.data ?? null;
+};
+
+/** Keys with no scopes skip route scope checks, so never mint one. */
+export const assertMintableKeyScopes = (scopes: string[]) => {
+	if (scopes.length > 0) return;
 
 	throw new RecaseError({
-		message: "Invalid scopes",
+		message: "Cannot mint an API key with no scopes",
 		code: ErrCode.InvalidRequest,
 		statusCode: 400,
 	});

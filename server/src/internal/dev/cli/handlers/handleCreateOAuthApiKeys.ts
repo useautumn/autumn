@@ -14,6 +14,7 @@ import {
 import { oauthConsentRepo } from "@/internal/auth/repos/index.js";
 import { ApiKeyPrefix, createKey } from "../../apiKeys/apiKeyUtils.js";
 import {
+	assertMintableKeyScopes,
 	type OAuthApiKeyRequestBody,
 	OAuthApiKeyRequestBodySchema,
 	parseRequestedScopes,
@@ -138,6 +139,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 			apiKeyScopes,
 			requestedScopes,
 		});
+		assertMintableKeyScopes(mintedKeyScopes);
 
 		const consent = await oauthConsentRepo.getForClientUserOrg({
 			db,
