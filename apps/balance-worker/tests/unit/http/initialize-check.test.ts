@@ -450,3 +450,52 @@ test.concurrent(
 		}
 	},
 );
+
+test.concurrent(
+	"check and track replies carry only the rows that fund the asked-for feature",
+	async () => {
+		const twoFeatureState = createSubjectState({
+			identity,
+			customerEntitlements: [
+				createCustomerEntitlement({
+					id: "grant",
+					featureId: "messages",
+					balance: 10,
+				}),
+				createCustomerEntitlement({ id: "seats_grant", featureId: "seats" }),
+			],
+		});
+		const fixture = createFixture();
+		try {
+			await fixture.post({
+				path: "initialize",
+				command: {
+					...initialization,
+					state: twoFeatureState,
+					catalogRows: createCatalogRowsFor({ state: twoFeatureState }),
+				},
+			});
+			for (const [path, command] of [
+				["track", trackCommand],
+				["check", checkCommand],
+			] as const) {
+				const response = await fixture.post({ path, command });
+				expect(response.status).toBe(200);
+				const reply = await response.json();
+				// The seats row is the customer's, but nothing about messages needs it.
+				expect(
+					reply.state.customerEntitlements.map((row: { id: string }) => row.id),
+				).toEqual(["grant"]);
+				expect(Object.keys(reply.catalog.features)).toEqual(["feat_messages"]);
+				expect(Object.keys(reply.catalog.entitlements)).toEqual(["ent_grant"]);
+				// What the server still reads off every reply stays.
+				expect(reply.state.customer.id).toBe(identity.customerId);
+				expect(reply.state.customerProducts).toEqual(
+					twoFeatureState.customerProducts,
+				);
+			}
+		} finally {
+			await fixture.close();
+		}
+	},
+);

@@ -2,6 +2,7 @@ import {
 	type CheckCommand,
 	computeCheck,
 	parseCheckCommand,
+	slimSubjectForFeatures,
 } from "@autumn/balance-engine";
 import type { CheckReply } from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
@@ -28,5 +29,13 @@ export async function check({
 		});
 		return computeCheck({ fullSubject, command: parsed });
 	});
-	return { result, state, catalog };
+	// The caller reports this feature's balance, so the reply carries the rows that fund it, not the whole customer.
+	return {
+		result,
+		...slimSubjectForFeatures({
+			state,
+			catalog,
+			featureIds: [parsed.featureId],
+		}),
+	};
 }

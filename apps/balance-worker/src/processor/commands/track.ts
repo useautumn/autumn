@@ -5,6 +5,7 @@ import {
 	meteringIdentityToPartitionKey,
 	parseTrackCommand,
 	type SubjectState,
+	slimSubjectForFeatures,
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
@@ -51,13 +52,18 @@ export async function track({
 	if (mutation.result.type !== "track") {
 		throw new Error(`Track ${mutation.id} committed a non-track record`);
 	}
+	// A duplicate or joined command never ran the decision, so it reads the committed state's catalog.
+	const catalog =
+		decidedAgainst.catalog ?? ctx.subjectHydrator.readCatalog({ state });
+	// The caller reports this feature's balance, so the reply carries the rows that fund it, not the whole customer.
 	return {
 		result: mutation.result,
 		changes: mutation.changes,
-		state,
-		// A duplicate or joined command never ran the decision, so it reads the committed state's catalog.
-		catalog:
-			decidedAgainst.catalog ?? ctx.subjectHydrator.readCatalog({ state }),
+		...slimSubjectForFeatures({
+			state,
+			catalog,
+			featureIds: [parsed.featureId],
+		}),
 	};
 }
 
