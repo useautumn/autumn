@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { parseMutationRecord } from "@autumn/balance-engine";
 import {
 	InvalidRecordError,
 	RecordKeyMismatchError,
@@ -224,5 +225,25 @@ describe("serializeMeteringRecord memo", () => {
 		const other = serializeMeteringRecord({ record: createMutation() });
 		expect(other.value).not.toBe(first.value);
 		expect(other.value.equals(first.value)).toBe(true);
+	});
+});
+
+describe("serializeMeteringRecord trusts the writer", () => {
+	test("an engine-built record is encoded as given: the wire bytes match the validated form", () => {
+		const mutation = createMutation();
+		const { value } = serializeMeteringRecord({ record: mutation });
+		expect(JSON.parse(value.toString("utf8"))).toEqual({
+			schemaVersion: 1,
+			type: "mutation",
+			payload: parseMutationRecord({ input: mutation }),
+		});
+	});
+
+	test("a record of another type is still refused", () => {
+		expect(() =>
+			serializeMeteringRecord({
+				record: { ...createMutation(), type: "track_outcome" } as never,
+			}),
+		).toThrow(InvalidRecordError);
 	});
 });
