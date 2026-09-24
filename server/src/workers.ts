@@ -9,6 +9,7 @@ import {
 	startAllEdgeConfigPolling,
 	stopAllEdgeConfigPolling,
 } from "./internal/misc/edgeConfig/edgeConfigRegistry.js";
+import { startEdgeConfigRelay } from "./internal/misc/edgeConfig/edgeConfigRelay.js";
 import "./internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import "./internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 import "./internal/misc/requestBlocks/requestBlockStore.js";
@@ -38,6 +39,9 @@ if (cluster.isPrimary) {
 
 	console.log(`Starting ${NUM_PROCESSES} worker processes`);
 	console.log(`SQS URL: ${process.env.SQS_QUEUE_URL_V2}`);
+
+	// Before forking: forks inherit the relay flag and follow this primary.
+	await startEdgeConfigRelay({ clusterModule: cluster, logger });
 
 	// Fork workers
 	for (let i = 0; i < NUM_PROCESSES; i++) {

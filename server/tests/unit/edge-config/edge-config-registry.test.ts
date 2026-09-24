@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, jest, test } from "bun:test";
 import { createEdgeConfigRegistry } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
+import { createFakeEdgeConfigStore } from "./utils/fakeEdgeConfigStore.js";
 
 const registries: ReturnType<typeof createEdgeConfigRegistry>[] = [];
-
-const healthy = () => ({ healthy: true });
 
 /** Fake store whose health follows each refresh outcome in order. */
 const createFlakyStore = ({ outcomes }: { outcomes: boolean[] }) => {
@@ -12,7 +11,11 @@ const createFlakyStore = ({ outcomes }: { outcomes: boolean[] }) => {
 	const refresh = jest.fn(async () => {
 		isHealthy = outcomes[Math.min(refreshIndex++, outcomes.length - 1)]!;
 	});
-	return { refresh, getStatus: () => ({ healthy: isHealthy }) };
+	return {
+		...createFakeEdgeConfigStore({ s3Key: "admin/flaky.json" }),
+		refresh,
+		getStatus: () => ({ healthy: isHealthy }),
+	};
 };
 
 const createRegistry = ({
@@ -28,13 +31,20 @@ const createRegistry = ({
 		if (value instanceof Error) throw value;
 		return value ?? null;
 	});
+	// S3-path semantics: no Redis marker, S3 checked and failures retried on
+	// every tick (cadences are covered in edge-config-change-signal.test.ts).
 	const registry = createEdgeConfigRegistry({
 		readTimestamp,
 		writeTimestamp,
+		readRedisVersion: async () => null,
 		pollIntervalMs: 60_000,
+		s3CheckIntervalMs: 0,
+		failedRefreshRetryMs: 0,
+		follower: null,
 	});
-	const refresh = jest.fn(async () => {});
-	registry.register({ store: { refresh, getStatus: healthy } });
+	const store = createFakeEdgeConfigStore({ s3Key: "admin/a.json" });
+	const { refresh } = store;
+	registry.register({ store });
 	registries.push(registry);
 
 	return { readTimestamp, refresh, registry, writeTimestamp };
@@ -73,10 +83,9 @@ describe("edge config registry", () => {
 		const { refresh, registry } = createRegistry({
 			timestamps: ["v1", "v2"],
 		});
-		const secondRefresh = jest.fn(async () => {});
-		registry.register({
-			store: { refresh: secondRefresh, getStatus: healthy },
-		});
+		const second = createFakeEdgeConfigStore({ s3Key: "admin/b.json" });
+		const secondRefresh = second.refresh;
+		registry.register({ store: second });
 		await registry.start();
 
 		await registry.checkForChanges();
@@ -117,9 +126,10 @@ describe("edge config registry", () => {
 	test("loads a config registered after polling started", async () => {
 		const { registry } = createRegistry({ timestamps: ["v1", "v1"] });
 		await registry.start();
-		const lateRefresh = jest.fn(async () => {});
+		const late = createFakeEdgeConfigStore({ s3Key: "admin/late.json" });
+		const lateRefresh = late.refresh;
 
-		registry.register({ store: { refresh: lateRefresh, getStatus: healthy } });
+		registry.register({ store: late });
 		await Promise.resolve();
 
 		expect(lateRefresh).toHaveBeenCalledTimes(1);
@@ -187,14 +197,17 @@ describe("edge config registry", () => {
 	// The timestamp is the only propagation signal, so a write that never lands
 	// would otherwise leave every process serving stale config indefinitely.
 	test("refreshes on the backstop interval even when the timestamp is unchanged", async () => {
-		const refresh = jest.fn(async () => {});
+		const store = createFakeEdgeConfigStore({ s3Key: "admin/a.json" });
+		const { refresh } = store;
 		const registry = createEdgeConfigRegistry({
 			readTimestamp: async () => "v1",
 			writeTimestamp: async () => "v1",
+			readRedisVersion: async () => null,
 			pollIntervalMs: 60_000,
 			backstopIntervalMs: 20,
+			follower: null,
 		});
-		registry.register({ store: { refresh, getStatus: healthy } });
+		registry.register({ store });
 		registries.push(registry);
 		await registry.start();
 
