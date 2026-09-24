@@ -21,12 +21,15 @@ export const expectCustomerProductPhaseEnds = async ({
 	customerId,
 	expected,
 	absent = [],
+	absentStatuses = [],
 	settleTimeoutMs = WEBHOOK_SETTLE_TIMEOUT_MS,
 }: {
 	ctx: TestContext;
 	customerId: string;
 	expected: ExpectedPhaseEnd[];
 	absent?: string[];
+	/** Plans that must have no live row in the given status. */
+	absentStatuses?: { productId: string; status: CusProductStatus }[];
 	settleTimeoutMs?: number;
 }) =>
 	pollUntilAsserted({
@@ -56,6 +59,14 @@ export const expectCustomerProductPhaseEnds = async ({
 					(customerProduct) => customerProduct.product_id === productId,
 				);
 				expect(rows, `${productId} should have no live row`).toHaveLength(0);
+			}
+			for (const { productId, status } of absentStatuses) {
+				const rows = customerProducts.filter(
+					(customerProduct) =>
+						customerProduct.product_id === productId &&
+						customerProduct.status === status,
+				);
+				expect(rows, `${productId} should not be ${status}`).toHaveLength(0);
 			}
 		},
 	});

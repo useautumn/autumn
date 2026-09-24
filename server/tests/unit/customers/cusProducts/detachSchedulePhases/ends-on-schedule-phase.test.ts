@@ -1,5 +1,5 @@
 /**
- * carriesReleasedPhaseEnd
+ * endsOnSchedulePhase
  *
  * Only an end date that sits on one of the released schedule's phase
  * boundaries is stale. A canceling plan, a scheduled row, or an add-on whose
@@ -9,7 +9,7 @@
 import { describe, expect, test } from "bun:test";
 import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
-import { carriesReleasedPhaseEnd } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionScheduleReleased/carriesReleasedPhaseEnd.js";
+import { endsOnSchedulePhase } from "@/internal/customers/cusProducts/actions/detachSchedulePhases/endsOnSchedulePhase.js";
 
 const PHASE_ONE_START = 1_790_000_000;
 const PHASE_TWO_START = 1_792_600_000;
@@ -32,10 +32,10 @@ const customerProduct = ({
 	canceled?: boolean;
 }) => ({ ended_at: endedAt, status, canceled }) as unknown as FullCusProduct;
 
-describe("carriesReleasedPhaseEnd", () => {
+describe("endsOnSchedulePhase", () => {
 	test("an end date on the next phase start is stale", () => {
 		expect(
-			carriesReleasedPhaseEnd({
+			endsOnSchedulePhase({
 				customerProduct: customerProduct({ endedAt: PHASE_TWO_START * 1000 }),
 				schedule,
 			}),
@@ -44,7 +44,7 @@ describe("carriesReleasedPhaseEnd", () => {
 
 	test("tolerates Stripe's second precision", () => {
 		expect(
-			carriesReleasedPhaseEnd({
+			endsOnSchedulePhase({
 				customerProduct: customerProduct({
 					endedAt: PHASE_TWO_START * 1000 + 400,
 				}),
@@ -55,7 +55,7 @@ describe("carriesReleasedPhaseEnd", () => {
 
 	test("an end date the schedule never had is kept", () => {
 		expect(
-			carriesReleasedPhaseEnd({
+			endsOnSchedulePhase({
 				customerProduct: customerProduct({
 					endedAt: PHASE_TWO_START * 1000 + 86_400_000,
 				}),
@@ -66,7 +66,7 @@ describe("carriesReleasedPhaseEnd", () => {
 
 	test("a canceling plan keeps its end date", () => {
 		expect(
-			carriesReleasedPhaseEnd({
+			endsOnSchedulePhase({
 				customerProduct: customerProduct({
 					endedAt: PHASE_TWO_START * 1000,
 					canceled: true,
@@ -78,7 +78,7 @@ describe("carriesReleasedPhaseEnd", () => {
 
 	test("a scheduled row is not a phase end", () => {
 		expect(
-			carriesReleasedPhaseEnd({
+			endsOnSchedulePhase({
 				customerProduct: customerProduct({
 					endedAt: PHASE_TWO_END * 1000,
 					status: CusProductStatus.Scheduled,
@@ -90,7 +90,7 @@ describe("carriesReleasedPhaseEnd", () => {
 
 	test("no end date means nothing to clear", () => {
 		expect(
-			carriesReleasedPhaseEnd({
+			endsOnSchedulePhase({
 				customerProduct: customerProduct({ endedAt: null }),
 				schedule,
 			}),
