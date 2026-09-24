@@ -1,105 +1,3 @@
----
-title: "Managing Customers"
-description: "Learn how to view and manage customer information in Autumn"
----
-
-The customer details page provides a comprehensive view of a customer's information, subscriptions, and usage. You can access this by clicking on any customer from the [Customers page](https://app.useautumn.com/customers).
-
-The customer details page shows:
-
-- **Products**: View active subscriptions, status, billing dates, and feature limits
-- **Features**: Track usage, limits, reset dates and history graphs
-- **Invoices**: See billing history, payment status, amounts and hosted invoice pages
-- **Events**: View feature usage events that have been tracked for the customer
-
-## Editing Feature Balances
-
-You can directly edit a customer's feature balances via the dashboard, to give them additional allowance or alter how much they'll be charged for their next invoice (typically in case of errors).
-
-1. Navigate to the Customer details page
-2. Under "Available Features", click on the feature you want to edit the balance for.
-3. In the popup, enter the new balance value:
-   - If you're giving them more allowance (`granted`) of a feature, enter a **positive** number
-   - If you're changing how much usage they'll be charged for, enter a **negative** number
-4. Optionally, set a new usage reset date for the feature
-5. Click "Update"
-
-<Note>
-  Editing a balance will only last until the next reset date of the feature. If
-  you want to permanently set a new allowance, you should create a custom
-  product with the new allowance.
-</Note>
-
-<Tip>
-  If you want to give a customer access to a feature that isn't present in the
-  product they're on, you can create a custom product with the new feature.
-</Tip>
-
-## Adding a Coupon
-
-To apply a discount to a customer:
-
-1. Go to the customer's details page
-2. Under the "Rewards" section of the sidebar, click "Add Coupon"
-3. Select a reward from the available options
-4. Click "Add Reward"
-
-The discount will show up when a Checkout URL is generated for the customer via `attach`, or from their next invoice.
-
-## Updating Customer Properties
-
-You can update a customer's basic information through either the dashboard or API:
-
-#### Via Dashboard
-
-1. Navigate to the customer's details page
-2. On the right-hand side, you'll see a "Details" section in the sidebar. Click on any of the fields.
-3. Update the desired fields (name, email, etc.)
-4. Click "Update"
-
-#### Via API
-
-You can also update a customer's properties via the API, useful for when a customer changes their details in your application.
-
-<CodeGroup>
-
-```typescript TypeScript
-import { Autumn } from "autumn-js";
-
-const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
-
-await autumn.customers.update({
-  customerId: "user_123",
-  name: "Mr New Name",
-  email: "newemail@example.com",
-});
-```
-
-```python Python
-from autumn_sdk import Autumn
-
-autumn = Autumn("am_sk_test_1234")
-
-await autumn.customers.update(
-    customer_id="user_123",
-    name="Mr New Name",
-    email="newemail@example.com",
-)
-```
-
-```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
-  -H "Authorization: Bearer am_sk_test_1234" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "customer_id": "user_123",
-    "name": "Mr New Name",
-    "email": "newemail@example.com"
-  }'
-```
-
-</CodeGroup>
-
 ## Billing Details
 
 Billing details are the tax and invoicing fields stored on the customer's linked Stripe customer: billing address, tax IDs (e.g. VAT), tax exemption, and custom fields printed on every invoice (e.g. a PO number). Autumn doesn't store them; it writes them to Stripe and reads them back live.
@@ -174,10 +72,8 @@ const customer = await autumn.customers.get({
 
 You can also pass `billing_details` when creating a customer; Autumn creates the Stripe customer if needed. On update, the customer must already be linked to a Stripe customer.
 
-<Note>
   Invalid values (for example a malformed VAT number) are rejected with Stripe's
   error message, and changes from the same request are not left half-applied.
-</Note>
 
 In the dashboard, billing details are under **Edit customer** on the customer's page.
 
@@ -189,7 +85,5 @@ To delete a customer:
 2. Click the "Settings" icon in the top right
 3. Click "Delete"
 
-<Warning>
   Deleting a customer will not delete it in Stripe. If they have existing
   subscriptions, you should cancel them from Stripe if needed.
-</Warning>
