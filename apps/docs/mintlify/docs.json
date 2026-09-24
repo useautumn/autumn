@@ -216,7 +216,6 @@
 						"pages": [
 							"api-reference/core/check",
 							"api-reference/core/track",
-							"api-reference/balances/trackTokens",
 							"api-reference/core/batchTrack",
 							"api-reference/balances/createBalance",
 							"api-reference/balances/updateBalance",
@@ -233,7 +232,8 @@
 							"api-reference/customers/updateCustomer",
 							"api-reference/customers/deleteCustomer",
 							"api-reference/invoices/insertInvoices",
-							"api-reference/invoices/listInvoices"
+							"api-reference/invoices/listInvoices",
+							"api-reference/invoices/payInvoice"
 						]
 					},
 					{
@@ -249,6 +249,12 @@
 						"pages": [
 							"api-reference/events/listEvents",
 							"api-reference/events/aggregateEvents"
+						]
+					},
+					{
+						"group": "Logs",
+						"pages": [
+							"api-reference/logs/searchRequestLogs"
 						]
 					},
 					{
@@ -340,6 +346,8 @@
 							"api-reference/platform/overview",
 							"api-reference/platform/create-organization",
 							"api-reference/platform/oauth-url",
+							"api-reference/platform/getStripeConnection",
+							"api-reference/platform/disconnectStripe",
 							"api-reference/platform/update-stripe",
 							"api-reference/platform/list-users",
 							"api-reference/platform/list-orgs"

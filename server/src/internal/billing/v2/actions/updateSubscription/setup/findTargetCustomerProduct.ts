@@ -1,5 +1,6 @@
 import {
 	ATTACH_CONFLICT_STATUSES,
+	CusProductStatus,
 	cusProductToPrices,
 	ErrCode,
 	type FullCusProduct,
@@ -65,6 +66,17 @@ const cusProductHasAllPrepaidFeatures = ({
 	}
 	return true;
 };
+
+/** A paused plan (left behind by a revert trial) may be force-cancelled, but only when explicitly targeted. */
+const canCancelPausedWithoutBilling = (params: UpdateSubscriptionV1Params) =>
+	Boolean(params.cancel_action) &&
+	params.no_billing_changes === true &&
+	Boolean(params.customer_product_id);
+
+const targetableStatuses = (params: UpdateSubscriptionV1Params) =>
+	canCancelPausedWithoutBilling(params)
+		? [...ATTACH_CONFLICT_STATUSES, CusProductStatus.Paused]
+		: ATTACH_CONFLICT_STATUSES;
 
 /** Resolves the target without throwing — returns undefined if no match. */
 const resolveTargetCustomerProduct = ({
@@ -142,10 +154,11 @@ export const findTargetCustomerProduct = async ({
 	fullCustomer: FullCustomer;
 }): Promise<FullCusProduct> => {
 	const internalEntityId = fullCustomer.entity?.internal_id;
+	const statuses = targetableStatuses(params);
 
 	const candidates = fullCustomerToPlanProducts({ fullCustomer }).filter(
 		(cp) => {
-			if (!ATTACH_CONFLICT_STATUSES.includes(cp.status)) return false;
+			if (!statuses.includes(cp.status)) return false;
 			return isCusProductOnEntity({ cusProduct: cp, internalEntityId });
 		},
 	);
@@ -160,7 +173,7 @@ export const findTargetCustomerProduct = async ({
 		const fallback = await CusProductService.getFull({
 			db: ctx.db,
 			id: params.customer_product_id,
-			inStatuses: ATTACH_CONFLICT_STATUSES,
+			inStatuses: statuses,
 		});
 		const belongsToCustomer =
 			fallback?.internal_customer_id === fullCustomer.internal_id;

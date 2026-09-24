@@ -1,12 +1,12 @@
 import { expect } from "bun:test";
 import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import type { AutumnClient } from "../../../../packages/atmn-nightly/src/generated/client";
+import type { AutumnClient } from "../../../../packages/atmn/src/generated/client";
 import { uniqueTestId } from "../../integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	type AtmnScenario,
 	runCli,
-	TMP_ROOT,
+	scenarioDir,
 	wireOfConfig,
 } from "./initAtmnScenario.js";
 
@@ -78,13 +78,19 @@ export const expectRoundTrip = async ({
 		wire: await scenario.wireFromConfig(),
 	});
 
-	const freshDir = join(TMP_ROOT, uniqueTestId("atmn_fresh"));
-	mkdirSync(freshDir, { recursive: true });
+	const freshDir = scenarioDir({ id: uniqueTestId("atmn_fresh") });
 	try {
 		const pullFresh = () =>
 			runCli({
 				cwd: freshDir,
-				args: ["pull", ...(includeMappings ? ["--include-mappings"] : [])],
+				// An empty dir has no config to find; -c names it so headless pull
+				// scaffolds instead of stopping at the folder question.
+				args: [
+					"pull",
+					"-c",
+					".",
+					...(includeMappings ? ["--include-mappings"] : []),
+				],
 				secretKey: scenario.secretKey,
 				baseUrl: scenario.baseUrl,
 			});

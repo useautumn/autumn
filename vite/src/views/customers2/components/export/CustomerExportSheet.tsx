@@ -1,3 +1,4 @@
+import { CustomerExportKind } from "@autumn/shared";
 import {
 	ConditionalTooltip,
 	Sheet,
@@ -14,12 +15,14 @@ import { CustomerExportFieldSelector } from "./CustomerExportFieldSelector";
 import { CustomerExportFilterScope } from "./CustomerExportFilterScope";
 import { CustomerExportJobList } from "./CustomerExportJobList";
 import { CustomerExportOverview } from "./CustomerExportOverview";
+import { CUSTOMER_EXPORT_SHEET_COPY } from "./customerExportSheetCopy";
 import {
 	type CustomerExportSheetProps,
 	useCustomerExportSheet,
 } from "./useCustomerExportSheet";
 
 export function CustomerExportSheet({
+	kind,
 	open,
 	onOpenChange,
 }: CustomerExportSheetProps) {
@@ -45,7 +48,8 @@ export function CustomerExportSheet({
 		setPage,
 		totalExports,
 		totalPages,
-	} = useCustomerExportSheet({ open, onOpenChange });
+	} = useCustomerExportSheet({ kind, open, onOpenChange });
+	const copy = CUSTOMER_EXPORT_SHEET_COPY[kind];
 
 	return (
 		<Sheet open={open} onOpenChange={handleOpenChange}>
@@ -53,10 +57,7 @@ export function CustomerExportSheet({
 				<LayoutGroup>
 					<div className="flex h-full flex-col overflow-hidden">
 						<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-							<SheetHeader
-								title="Export customers"
-								description="Download your customer list as a CSV file."
-							/>
+							<SheetHeader title={copy.title} description={copy.description} />
 
 							<SheetSection title="Generate new export">
 								<div className="flex flex-col gap-3">
@@ -68,10 +69,16 @@ export function CustomerExportSheet({
 												isCountLoading={isExportCountLoading}
 												isFilteredExport={isFilteredExport}
 												columnsAction={
-													<CustomerExportFieldSelector
-														selectedFields={field.state.value}
-														onChange={(fields) => field.handleChange(fields)}
-													/>
+													kind === CustomerExportKind.Customers ? (
+														<CustomerExportFieldSelector
+															selectedFields={field.state.value}
+															onChange={(fields) => field.handleChange(fields)}
+														/>
+													) : (
+														<span className="text-tertiary-foreground">
+															Customer, subscription, issue and details
+														</span>
+													)
 												}
 												scopeRow={
 													hasFilters ? (
@@ -117,7 +124,11 @@ export function CustomerExportSheet({
 						</div>
 
 						<div className="border-border/40 border-t px-4 pt-3 pb-4">
-							<CustomerExportActiveProgress activeExport={activeExport} />
+							<CustomerExportActiveProgress
+								activeExport={activeExport}
+								scanningLabel={copy.scanningLabel}
+								runningLabel={copy.runningLabel}
+							/>
 
 							<form.Subscribe selector={(state) => state.canSubmit}>
 								{(canSubmit) => (
@@ -140,7 +151,7 @@ export function CustomerExportSheet({
 												}
 												metaShortcut="enter"
 											>
-												Start export
+												{copy.submitLabel}
 											</ShortcutButton>
 										</span>
 									</ConditionalTooltip>

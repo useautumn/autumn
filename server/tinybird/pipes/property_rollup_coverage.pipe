@@ -1,6 +1,9 @@
 DESCRIPTION >
     Counts events where a property is present, including values collapsed by the cardinality gate.
     The server compares this with returned grouped counts before deciding to retry ungated.
+    Org-wide callers read the org-grain rollup; a customer_id or entity_id scopes the count to the
+    same slice the grouped query read, so events outside the scope or without the key never look
+    like gate loss.
 
 TOKEN "property_rollup_coverage_read" READ
 
@@ -8,14 +11,52 @@ NODE endpoint
 TYPE endpoint
 SQL >
     %
-    SELECT
-        event_name,
-        sumMerge(event_count) as event_count
-    FROM events_org_property_coverage_hourly_mv
-    WHERE org_id = {{ String(org_id, '') }}
-        AND env = {{ String(env, 'test') }}
-        AND event_name IN {{ Array(event_names, 'String', default='[]') }}
-        AND property_key = {{ String(property_key, '') }}
-        AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
-        AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+    {% set has_customer = defined(customer_id) and String(customer_id, '') != '' %}
+    {% set has_entity = defined(entity_id) and String(entity_id, '') != '' %}
+    WITH
+        toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) AS window_start,
+        toDateTime({{ String(end_date, '2024-12-31 23:59:59') }}) AS window_end,
+        if(window_start = toStartOfHour(window_start), toStartOfHour(window_start), addHours(toStartOfHour(window_start), 1)) AS full_hours_start,
+        toStartOfHour(window_end) AS full_hours_end
+    SELECT event_name, sum(event_count_value) as event_count
+    FROM (
+        SELECT event_name, sumMerge(event_count) as event_count_value
+        FROM
+            {% if has_customer or has_entity %}
+            events_customer_property_coverage_hourly_mv
+            {% else %}
+            events_org_property_coverage_hourly_mv
+            {% end %}
+        WHERE org_id = {{ String(org_id, '') }}
+            AND env = {{ String(env, 'test') }}
+            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+            AND property_key = {{ String(property_key, '') }}
+            {% if has_customer %}
+            AND customer_id = {{ String(customer_id) }}
+            {% end %}
+            {% if has_entity %}
+            AND entity_id = {{ String(entity_id) }}
+            {% end %}
+            AND hour >= full_hours_start AND hour < full_hours_end
+        GROUP BY event_name
+
+        UNION ALL
+
+        SELECT event_name, count() as event_count_value
+        FROM events
+        WHERE org_id = {{ String(org_id, '') }}
+            AND env = {{ String(env, 'test') }}
+            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+            AND {{ column('properties.' + String(property_key, '')) }}::String IS NOT NULL
+            AND {{ column('properties.' + String(property_key, '')) }}::String != ''
+            {% if has_customer %}
+            AND customer_id = {{ String(customer_id) }}
+            {% end %}
+            {% if has_entity %}
+            AND entity_id = {{ String(entity_id) }}
+            {% end %}
+            AND timestamp >= window_start AND timestamp <= window_end
+            AND (timestamp < full_hours_start OR timestamp >= full_hours_end)
+        GROUP BY event_name
+    )
     GROUP BY event_name

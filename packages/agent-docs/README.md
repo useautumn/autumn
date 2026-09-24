@@ -13,14 +13,14 @@ agent-docs.config.ts     # WHAT translates + into WHICH formats (typed config)
 content/                 # agent-only mdx
   skills/<name>.mdx       #   skill = frontmatter + framing + insertion tags
 src/
-  config/                # config types + helpers (defineConfig, docs(), legacy())
+  config/                # config types + helpers (defineConfig, docs())
   translate/             # sources/mdx → artifacts
     ingest/              #   mdxToMarkdown, frontmatter parser
     composeSources.ts    #   resource body = sources concatenated
-    composeSkill.ts      #   skill = frontmatter + resolve <docs>/<legacy> tags
+    composeSkill.ts      #   skill = frontmatter + resolve <docs>/<part>/<reference> tags
     formats/             #   toMcpResource, toSkill + their types
   consume/               # per-caller utilities
-    mcp.ts               #   mcpResources + withAgentDocResources(base)
+    mcp.ts               #   mcpResources + agentDocResources
     skills.ts            #   skills + writeSkills({ targetDir })
   generated/             # runtime .ts artifacts (imported by consumers)
 generated/               # readable rendered .md / SKILL.md (inspect here)
@@ -50,10 +50,3 @@ bun run ts    # typecheck
 
 `@autumn/mcp` consumes `@autumn/agent-docs/mcp`; `writeSkills` (from
 `@autumn/agent-docs/skills`) emits installable SKILL.md folders (future atmn use).
-
-## Migration note
-
-Concept parts still read from `packages/mcp/src/resources-v2` via `legacy(...)` /
-`<legacy file=…>`; each migrates to a canonical docs page (becoming `docs(...)` /
-`<docs url=…>`) one at a time. MCP `concepts` output is held byte-identical to the
-pre-refactor resource.

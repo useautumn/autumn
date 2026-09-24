@@ -5,6 +5,8 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import { CircleHalfTiltIcon } from "@phosphor-icons/react";
 
+const TOOLTIP_DELAY_MS = 250;
+
 function maxValue(rollover: RolloverConfig): string {
 	if (rollover.max_percentage != null) return `${rollover.max_percentage}%`;
 	if (rollover.max == null) return "Unlimited";
@@ -27,7 +29,7 @@ export function RolloverIndicator({ rollover }: { rollover: RolloverConfig }) {
 	];
 
 	return (
-		<Tooltip>
+		<Tooltip delayDuration={TOOLTIP_DELAY_MS}>
 			<TooltipTrigger asChild>
 				{/* pointer-events-auto: read-only rows disable pointer events, which
 				 * would otherwise swallow the hover that opens this tooltip. */}

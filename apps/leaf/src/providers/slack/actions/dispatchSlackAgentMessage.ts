@@ -1,5 +1,8 @@
 import type { Attachment } from "chat";
-import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
+import type {
+	AgentContextMessage,
+	AgentTurnSpeaker,
+} from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import { isTransientNetworkError } from "../../../internal/agentRuntime/eve/streamErrors.js";
 import {
 	dispatchThreadMessage,
@@ -8,6 +11,7 @@ import {
 import {
 	type ActiveRun,
 	closeRun,
+	getRun,
 	registerRun,
 	runKeyForThread,
 } from "../../../internal/runs/runRegistry.js";
@@ -47,6 +51,51 @@ type DispatchSlackAgentMessageInput = {
 	target: ReplyTarget;
 	text: string;
 	threadId: string;
+};
+
+/** A subscribed thread delivers every reply; the model is told who spoke and
+ * whom they addressed, and declines replies meant for someone else. */
+const slackSpeakerFor = ({
+	author,
+	installation,
+	raw,
+}: {
+	author?: { email?: string; name: string };
+	installation: { bot_user_id?: string | null };
+	raw: unknown;
+}): AgentTurnSpeaker | undefined => {
+	if (!author) return undefined;
+	const mentionedUserIds = slackMentionedUserIds({ raw });
+	const botUserId = installation.bot_user_id ?? undefined;
+	// An installation without a stored bot id can't prove it was addressed;
+	// unknown reads as not mentioned, so delivery stays conditional.
+	const mentionsAgent = Boolean(
+		botUserId && mentionedUserIds.includes(botUserId),
+	);
+	const mentionsOthers = mentionedUserIds.some((id) => id !== botUserId);
+	return { ...author, mentionsAgent, mentionsOthers };
+};
+
+/** Only an injected follow-up needs the speaker before the run's own setup
+ * loads the installation; a run that is not live skips the lookup. */
+const injectionSpeakerFor = async ({
+	author,
+	raw,
+	runKey,
+	workspaceId,
+}: {
+	author?: { email?: string; name: string };
+	raw: unknown;
+	runKey: string;
+	workspaceId: string;
+}): Promise<AgentTurnSpeaker | undefined> => {
+	const active = getRun(runKey);
+	if (!author || !active || active.closed || active.settling) return undefined;
+	const installation = await findSlackInstallationForWorkspace({
+		workspaceId,
+	}).catch(() => undefined);
+	if (!installation) return undefined;
+	return slackSpeakerFor({ author, installation, raw });
 };
 
 const runAndReply = async ({
@@ -106,19 +155,7 @@ const runAndReply = async ({
 			});
 			return "close";
 		}
-		// A subscribed thread delivers every reply; the model is told who spoke
-		// and whom they addressed, and declines replies meant for someone else.
-		const mentionedUserIds = slackMentionedUserIds({ raw });
-		const botUserId = installation.bot_user_id ?? undefined;
-		// An installation without a stored bot id can't prove it was addressed;
-		// unknown reads as not mentioned, so delivery stays conditional.
-		const mentionsAgent = Boolean(
-			botUserId && mentionedUserIds.includes(botUserId),
-		);
-		const mentionsOthers = mentionedUserIds.some((id) => id !== botUserId);
-		const speaker = author
-			? { ...author, mentionsAgent, mentionsOthers }
-			: undefined;
+		const speaker = slackSpeakerFor({ author, installation, raw });
 
 		const session = createLeafSessionContext({
 			channelId,
@@ -182,6 +219,24 @@ const runAndReply = async ({
 			logger,
 			onAction: logAction,
 			onReasoning: evePresenter.onReasoning,
+			// A turn that settled while a follow-up was still to be read: post it
+			// now and leave the ticker running, because the reader is still on
+			// the stream waiting for the replacement turn.
+			onSettledTurn: async (settled) => {
+				if (settled.kind === "blocked" || settled.kind === "stopped") return;
+				await presentSlackAgentTurn({
+					channelId,
+					clientContext,
+					logAction,
+					logger,
+					providerUserId,
+					stopStatus: () => undefined,
+					target,
+					threadId,
+					turn: settled,
+				});
+				progress.thinking();
+			},
 			onThinking: progress.thinking,
 			providerUserId,
 			recentMessages,
@@ -275,6 +330,12 @@ export const dispatchSlackAgentMessage = async (
 			providerUserId: input.providerUserId,
 			runKey,
 			runNewMessage: () => runAndReply({ ...input, runKey }),
+			speaker: await injectionSpeakerFor({
+				author: input.author,
+				raw: input.raw,
+				runKey,
+				workspaceId: getSlackWorkspaceId(input.raw),
+			}),
 			text: input.text,
 		})) ?? "keep"
 	);

@@ -24,7 +24,7 @@ test("an inactive row with no active sibling names the plan and where rows belon
 
 	expect(error?.statusCode).toBe(400);
 	expect(error?.message).toBe(
-		'Cannot set active to false on plan "pro": no version of it is active in this update. At least one version of each plan must be active. planVersions is for historical inactive products, and plans is for the active version.',
+		'Cannot set active to false on plan "pro": no version of it is active in this update. Exactly one version of each plan must be active: true.',
 	);
 });
 

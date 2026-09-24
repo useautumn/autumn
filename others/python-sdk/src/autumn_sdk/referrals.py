@@ -391,6 +391,7 @@ class Referrals(BaseSDK):
         max_redemptions: OptionalNullable[int] = UNSET,
         plan_ids: OptionalNullable[List[str]] = UNSET,
         exclude_trial: OptionalNullable[bool] = UNSET,
+        internal_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -405,6 +406,7 @@ class Referrals(BaseSDK):
         :param max_redemptions: A positive redemption limit, or null for unlimited redemptions.
         :param plan_ids: Required when redeem_on is checkout. Plan IDs must be unique.
         :param exclude_trial: Whether checkouts that start a trial should skip granting the reward.
+        :param internal_id: Address an existing referral program by its stable id. Omit when creating — the server generates one.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -428,6 +430,7 @@ class Referrals(BaseSDK):
             max_redemptions=max_redemptions,
             plan_ids=plan_ids,
             exclude_trial=exclude_trial,
+            internal_id=internal_id,
         )
 
         req = self._build_request(
@@ -501,6 +504,7 @@ class Referrals(BaseSDK):
         max_redemptions: OptionalNullable[int] = UNSET,
         plan_ids: OptionalNullable[List[str]] = UNSET,
         exclude_trial: OptionalNullable[bool] = UNSET,
+        internal_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -515,6 +519,7 @@ class Referrals(BaseSDK):
         :param max_redemptions: A positive redemption limit, or null for unlimited redemptions.
         :param plan_ids: Required when redeem_on is checkout. Plan IDs must be unique.
         :param exclude_trial: Whether checkouts that start a trial should skip granting the reward.
+        :param internal_id: Address an existing referral program by its stable id. Omit when creating — the server generates one.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -538,6 +543,7 @@ class Referrals(BaseSDK):
             max_redemptions=max_redemptions,
             plan_ids=plan_ids,
             exclude_trial=exclude_trial,
+            internal_id=internal_id,
         )
 
         req = self._build_request_async(
@@ -994,9 +1000,9 @@ class Referrals(BaseSDK):
         reward_id: Optional[str] = None,
         redeem_on: Optional[models.UpdateReferralProgramRedeemOnRequest] = None,
         received_by: Optional[models.UpdateReferralProgramReceivedByRequest] = None,
-        max_redemptions: Optional[int] = None,
-        plan_ids: Optional[List[str]] = None,
-        exclude_trial: Optional[bool] = None,
+        max_redemptions: OptionalNullable[int] = UNSET,
+        plan_ids: OptionalNullable[List[str]] = UNSET,
+        exclude_trial: OptionalNullable[bool] = UNSET,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1008,9 +1014,9 @@ class Referrals(BaseSDK):
         :param reward_id: The ID of the reward granted when a code is redeemed.
         :param redeem_on: When the reward is granted: on redemption, or when the redeemer checks out.
         :param received_by: Who receives the reward: the referrer only, or both parties.
-        :param max_redemptions: A positive redemption limit.
-        :param plan_ids: Required when redeem_on is checkout. Plan IDs must be unique.
-        :param exclude_trial:
+        :param max_redemptions: A positive redemption limit. Omit to leave unchanged; null removes it.
+        :param plan_ids: Required when redeem_on is checkout. Plan IDs must be unique. Omit to leave unchanged; null removes them.
+        :param exclude_trial: Omit to leave unchanged; null removes it.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1104,9 +1110,9 @@ class Referrals(BaseSDK):
         reward_id: Optional[str] = None,
         redeem_on: Optional[models.UpdateReferralProgramRedeemOnRequest] = None,
         received_by: Optional[models.UpdateReferralProgramReceivedByRequest] = None,
-        max_redemptions: Optional[int] = None,
-        plan_ids: Optional[List[str]] = None,
-        exclude_trial: Optional[bool] = None,
+        max_redemptions: OptionalNullable[int] = UNSET,
+        plan_ids: OptionalNullable[List[str]] = UNSET,
+        exclude_trial: OptionalNullable[bool] = UNSET,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1118,9 +1124,9 @@ class Referrals(BaseSDK):
         :param reward_id: The ID of the reward granted when a code is redeemed.
         :param redeem_on: When the reward is granted: on redemption, or when the redeemer checks out.
         :param received_by: Who receives the reward: the referrer only, or both parties.
-        :param max_redemptions: A positive redemption limit.
-        :param plan_ids: Required when redeem_on is checkout. Plan IDs must be unique.
-        :param exclude_trial:
+        :param max_redemptions: A positive redemption limit. Omit to leave unchanged; null removes it.
+        :param plan_ids: Required when redeem_on is checkout. Plan IDs must be unique. Omit to leave unchanged; null removes them.
+        :param exclude_trial: Omit to leave unchanged; null removes it.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds

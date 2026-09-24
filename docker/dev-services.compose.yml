@@ -48,6 +48,16 @@ services:
       - "8000:8000"
     command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
 
+  # SQS emulator. Queue definitions live in the shared elasticmq.conf so
+  # worktrees and the canonical checkout create the same queues.
+  elasticmq:
+    image: softwaremill/elasticmq-native:latest
+    ports:
+      - "9324:9324"
+    volumes:
+      - ../scripts/setup/elasticmq.conf:/opt/elasticmq.conf:ro
+    command: ["-Dconfig.file=/opt/elasticmq.conf"]
+
   ngrok:
     image: ngrok/ngrok:latest
     profiles:

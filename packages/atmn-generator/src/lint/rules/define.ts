@@ -44,9 +44,11 @@ export const linkedOnce = (rule: RuleOf<"linkedOnce">): LintRule => ({
 	...rule,
 });
 
-/** Every version of one thing states its slug once there is more than one. */
-export const versionSlugs = (rule: RuleOf<"versionSlugs">): LintRule => ({
-	kind: "versionSlugs",
+/** Exactly one row per group carries `field: true`. */
+export const exactlyOneActive = (
+	rule: RuleOf<"exactlyOneActive">,
+): LintRule => ({
+	kind: "exactlyOneActive",
 	...rule,
 });
 
@@ -77,5 +79,11 @@ export const targetHas = (rule: RuleOf<"targetHas">): LintRule => ({
  * not be `true`, unless the entry's own parent already has `parentGuard` true. */
 export const targetLacks = (rule: RuleOf<"targetLacks">): LintRule => ({
 	kind: "targetLacks",
+	...rule,
+});
+
+/** A stated list field must hold at least one entry. */
+export const nonEmpty = (rule: RuleOf<"nonEmpty">): LintRule => ({
+	kind: "nonEmpty",
 	...rule,
 });

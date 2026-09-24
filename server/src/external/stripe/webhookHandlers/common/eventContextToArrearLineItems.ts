@@ -41,6 +41,7 @@ export const eventContextToArrearLineItems = async ({
 	periodEndMs,
 	cusEntFilter,
 	stripeDiscountable = true,
+	idempotencyScope,
 	invoiceCredits,
 }: {
 	ctx: StripeWebhookContext;
@@ -48,6 +49,8 @@ export const eventContextToArrearLineItems = async ({
 	periodEndMs?: number;
 	cusEntFilter?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
 	stripeDiscountable?: boolean;
+	/** Scopes usage line ids (e.g. to the Stripe invoice) so webhook retries regenerate the same ids. */
+	idempotencyScope?: string;
 	invoiceCredits?: {
 		cusEntFilter?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
 		idempotencyScope?: string;
@@ -85,6 +88,7 @@ export const eventContextToArrearLineItems = async ({
 			options: {
 				updateNextResetAt: true,
 				discountable: stripeDiscountable,
+				idempotencyScope,
 				invoiceCredits: invoiceCredits
 					? {
 							idempotencyScope: invoiceCredits.idempotencyScope,

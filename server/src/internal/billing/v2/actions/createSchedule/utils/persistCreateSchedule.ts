@@ -15,7 +15,7 @@ import { generateId } from "@/utils/genUtils";
  * A customer holds one schedule, so a new one replaces everything queued. Scope
  * lives on the plans inside the phases, never on the schedule itself.
  */
-const getExistingScheduleState = async ({
+export const getExistingScheduleState = async ({
 	ctx,
 	internalCustomerId,
 }: {

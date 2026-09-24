@@ -1,0 +1,758 @@
+[
+	{
+		"id": "header",
+		"at": null,
+		"lines": [
+			{
+				"id": "header-0",
+				"gutter": [
+					{
+						"id": "0-0",
+						"text": "┌─ ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "0-1",
+						"text": "basics-pro-growth-missing-price/with",
+						"tone": "cyan",
+						"bold": true
+					},
+					{
+						"id": "0-2",
+						"text": " · ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "0-3",
+						"text": "skills loaded ✓",
+						"tone": "green",
+						"bold": false
+					},
+					{
+						"id": "0-4",
+						"text": " · ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "0-5",
+						"text": "subscription auth",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "0-6",
+						"text": " · ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "0-7",
+						"text": "gpt-5.6-terra",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "0-8",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "0-9",
+						"text": "──────",
+						"tone": "dim",
+						"bold": false
+					}
+				],
+				"marker": null,
+				"kind": "header"
+			}
+		]
+	},
+	{
+		"id": "opening",
+		"at": 0,
+		"lines": [
+			{
+				"id": "opening-0",
+				"gutter": [
+					{
+						"id": "1-0",
+						"text": "│",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [],
+				"marker": null,
+				"kind": "plain"
+			},
+			{
+				"id": "opening-1",
+				"gutter": [
+					{
+						"id": "2-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "2-1",
+						"text": "user",
+						"tone": "blue",
+						"bold": true
+					}
+				],
+				"marker": null,
+				"kind": "plain"
+			},
+			{
+				"id": "opening-2",
+				"gutter": [
+					{
+						"id": "3-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "3-1",
+						"text": "│",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "3-2",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "3-2",
+						"text": "hey, setting up billing — we have a pro and a growth plan. pro comes with 500 AI messages a month,",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "opening-2-space",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "4-2",
+						"text": "growth gets 2,000. growth also comes with SSO, pro doesn't. no overage, no free plan or trials.",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"marker": null,
+				"kind": "speech"
+			}
+		]
+	},
+	{
+		"id": "setup",
+		"at": 3200,
+		"lines": [
+			{
+				"id": "setup-0",
+				"gutter": [
+					{
+						"id": "5-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "5-1",
+						"text": "●",
+						"tone": "cyan",
+						"bold": false
+					},
+					{
+						"id": "5-2",
+						"text": " used skill autumn:autumn-setup",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"marker": null,
+				"kind": "plain"
+			}
+		]
+	},
+	{
+		"id": "catalog",
+		"at": 3600,
+		"lines": [
+			{
+				"id": "catalog-0",
+				"gutter": [
+					{
+						"id": "6-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "6-1",
+						"text": "●",
+						"tone": "cyan",
+						"bold": false
+					},
+					{
+						"id": "6-2",
+						"text": " used skill autumn:autumn-catalog",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"marker": null,
+				"kind": "plain"
+			}
+		]
+	},
+	{
+		"id": "concepts",
+		"at": 4000,
+		"lines": [
+			{
+				"id": "concepts-0",
+				"gutter": [
+					{
+						"id": "7-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "7-1",
+						"text": "●",
+						"tone": "cyan",
+						"bold": false
+					},
+					{
+						"id": "7-2",
+						"text": " used skill autumn:autumn-concepts",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"marker": null,
+				"kind": "plain"
+			}
+		]
+	},
+	{
+		"id": "agent",
+		"at": 5400,
+		"lines": [
+			{
+				"id": "agent-0",
+				"gutter": [
+					{
+						"id": "8-0",
+						"text": "│",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [],
+				"marker": null,
+				"kind": "plain"
+			},
+			{
+				"id": "agent-1",
+				"gutter": [
+					{
+						"id": "9-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "9-1",
+						"text": "agent",
+						"tone": "white",
+						"bold": true
+					}
+				],
+				"marker": null,
+				"kind": "plain"
+			},
+			{
+				"id": "agent-2",
+				"gutter": [
+					{
+						"id": "10-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "10-1",
+						"text": "│",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "10-2",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "10-3",
+						"text": "I’ll use the Autumn setup workflow to turn that pricing into a sandbox catalog and push it.",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"marker": null,
+				"kind": "speech"
+			},
+			{
+				"id": "agent-3",
+				"gutter": [
+					{
+						"id": "11-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "11-1",
+						"text": "│",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "11-2",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [],
+				"marker": null,
+				"kind": "speech"
+			},
+			{
+				"id": "agent-4",
+				"gutter": [
+					{
+						"id": "12-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "12-1",
+						"text": "│",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "12-2",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "agent-4-label",
+						"text": "Your plans and prices",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"marker": "[ ] 1",
+				"kind": "speech"
+			},
+			{
+				"id": "agent-5",
+				"gutter": [
+					{
+						"id": "13-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "13-1",
+						"text": "│",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "13-2",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "agent-5-label",
+						"text": "What's included in each plan",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"marker": "[X] 2",
+				"kind": "speech"
+			},
+			{
+				"id": "agent-6",
+				"gutter": [
+					{
+						"id": "14-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "14-1",
+						"text": "│",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "14-2",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "agent-6-label",
+						"text": "How billing behaves (signup, trials, limits)",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"marker": "[X] 3",
+				"kind": "speech"
+			},
+			{
+				"id": "agent-7",
+				"gutter": [
+					{
+						"id": "15-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "15-1",
+						"text": "│",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "15-2",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "agent-7-label",
+						"text": "Licenses — paid seats, workspaces, projects (if any)",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"marker": "[ ] 4",
+				"kind": "speech"
+			},
+			{
+				"id": "agent-8",
+				"gutter": [
+					{
+						"id": "16-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "16-1",
+						"text": "│",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "16-2",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "agent-8-label",
+						"text": "Structure agreed",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"marker": "[ ] 5",
+				"kind": "speech"
+			},
+			{
+				"id": "agent-9",
+				"gutter": [
+					{
+						"id": "17-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "17-1",
+						"text": "│",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "17-2",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "agent-9-label",
+						"text": "Config written and checked",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"marker": "[ ] 6",
+				"kind": "speech"
+			},
+			{
+				"id": "agent-10",
+				"gutter": [
+					{
+						"id": "18-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "18-1",
+						"text": "│",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "18-2",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [],
+				"marker": null,
+				"kind": "speech"
+			},
+			{
+				"id": "agent-11",
+				"gutter": [
+					{
+						"id": "19-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "19-1",
+						"text": "│",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "19-2",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "19-3",
+						"text": "I have Pro (500 AI messages/month) and Growth (2,000/month plus SSO), with no free tier, trials,",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "agent-11-space",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "20-2",
+						"text": "or extra-usage charges. What are the price and billing interval for each plan?",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"marker": null,
+				"kind": "speech"
+			}
+		]
+	},
+	{
+		"id": "timing",
+		"at": 9000,
+		"lines": [
+			{
+				"id": "timing-0",
+				"gutter": [
+					{
+						"id": "21-0",
+						"text": "│",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [],
+				"marker": null,
+				"kind": "plain"
+			},
+			{
+				"id": "timing-1",
+				"gutter": [
+					{
+						"id": "22-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "22-1",
+						"text": "✓",
+						"tone": "green",
+						"bold": false
+					},
+					{
+						"id": "22-2",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "22-3",
+						"text": "turn 1 · 22.3s · $0.00",
+						"tone": "dim",
+						"bold": false
+					}
+				],
+				"marker": null,
+				"kind": "plain"
+			}
+		]
+	},
+	{
+		"id": "answer",
+		"at": 10500,
+		"lines": [
+			{
+				"id": "answer-0",
+				"gutter": [
+					{
+						"id": "23-0",
+						"text": "│",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [],
+				"marker": null,
+				"kind": "plain"
+			},
+			{
+				"id": "answer-1",
+				"gutter": [
+					{
+						"id": "24-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "24-1",
+						"text": "user",
+						"tone": "blue",
+						"bold": true
+					}
+				],
+				"marker": null,
+				"kind": "plain"
+			},
+			{
+				"id": "answer-2",
+				"gutter": [
+					{
+						"id": "25-0",
+						"text": "│  ",
+						"tone": "plain",
+						"bold": false
+					},
+					{
+						"id": "25-1",
+						"text": "│",
+						"tone": "dim",
+						"bold": false
+					},
+					{
+						"id": "25-2",
+						"text": " ",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"content": [
+					{
+						"id": "25-2",
+						"text": "Pro is $20/month and Growth is $50/month, both billed monthly only.",
+						"tone": "plain",
+						"bold": false
+					}
+				],
+				"marker": null,
+				"kind": "speech"
+			}
+		]
+	}
+]

@@ -33,16 +33,84 @@ import {
   GetPlanPlanItemFilter$inboundSchema,
   GetPlanPrice,
   GetPlanPrice$inboundSchema,
-  GetPlanPriceUpsertLicenseInterval,
-  GetPlanPriceUpsertLicenseInterval$inboundSchema,
   GetPlanProcessors,
   GetPlanProcessors$inboundSchema,
-  GetPlanUpsertLicenseAdditionalCurrency,
-  GetPlanUpsertLicenseAdditionalCurrency$inboundSchema,
-  GetPlanVariantDetailsBillingControls,
-  GetPlanVariantDetailsBillingControls$inboundSchema,
-} from "./get-plan-upsert-license-additional-currency.js";
+  GetPlanVariantDetailsAutoTopup,
+  GetPlanVariantDetailsAutoTopup$inboundSchema,
+  GetPlanVariantDetailsSpendLimit,
+  GetPlanVariantDetailsSpendLimit$inboundSchema,
+  GetPlanVariantDetailsUsageAlert,
+  GetPlanVariantDetailsUsageAlert$inboundSchema,
+  GetPlanVariantDetailsUsageLimit,
+  GetPlanVariantDetailsUsageLimit$inboundSchema,
+} from "./get-plan-variant-details-usage-alert.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+export type GetPlanVariantDetailsOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
+/**
+ * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+ */
+export type GetPlanVariantDetailsBillingControls = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<GetPlanVariantDetailsAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<GetPlanVariantDetailsSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<GetPlanVariantDetailsUsageLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<GetPlanVariantDetailsUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<GetPlanVariantDetailsOverageAllowed> | undefined;
+};
+
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export const GetPlanPriceUpsertLicenseInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export type GetPlanPriceUpsertLicenseInterval = OpenEnum<
+  typeof GetPlanPriceUpsertLicenseInterval
+>;
+
+export type GetPlanUpsertLicenseAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
 
 /**
  * Base price configuration for a plan.
@@ -306,6 +374,24 @@ export type GetPlanUpsertLicenseRollover = {
    * Number of periods before expiry.
    */
   expiryDurationLength?: number | undefined;
+};
+
+export const GetPlanUpsertLicenseDuration = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+export type GetPlanUpsertLicenseDuration = OpenEnum<
+  typeof GetPlanUpsertLicenseDuration
+>;
+
+/**
+ * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+ */
+export type GetPlanUpsertLicenseExpiry = {
+  duration: GetPlanUpsertLicenseDuration;
+  length: number;
 };
 
 export type GetPlanDimensionsUpsertLicense4 = {
@@ -626,6 +712,10 @@ export type GetPlanUpsertLicensePlanItem = {
    */
   rollover?: GetPlanUpsertLicenseRollover | undefined;
   /**
+   * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+   */
+  expiry?: GetPlanUpsertLicenseExpiry | undefined;
+  /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
   featureOverride?: GetPlanUpsertLicenseFeatureOverride | undefined;
@@ -867,6 +957,101 @@ export type GetPlanResponse = {
 };
 
 /** @internal */
+export const GetPlanVariantDetailsOverageAllowed$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsOverageAllowed,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function getPlanVariantDetailsOverageAllowedFromJSON(
+  jsonString: string,
+): SafeParseResult<GetPlanVariantDetailsOverageAllowed, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      GetPlanVariantDetailsOverageAllowed$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanVariantDetailsOverageAllowed' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetPlanVariantDetailsBillingControls$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsBillingControls,
+  unknown
+> = z.pipe(
+  z.object({
+    auto_topups: types.optional(
+      z.array(GetPlanVariantDetailsAutoTopup$inboundSchema),
+    ),
+    spend_limits: types.optional(
+      z.array(GetPlanVariantDetailsSpendLimit$inboundSchema),
+    ),
+    usage_limits: types.optional(
+      z.array(GetPlanVariantDetailsUsageLimit$inboundSchema),
+    ),
+    usage_alerts: types.optional(
+      z.array(GetPlanVariantDetailsUsageAlert$inboundSchema),
+    ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => GetPlanVariantDetailsOverageAllowed$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "auto_topups": "autoTopups",
+      "spend_limits": "spendLimits",
+      "usage_limits": "usageLimits",
+      "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
+    });
+  }),
+);
+
+export function getPlanVariantDetailsBillingControlsFromJSON(
+  jsonString: string,
+): SafeParseResult<GetPlanVariantDetailsBillingControls, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      GetPlanVariantDetailsBillingControls$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanVariantDetailsBillingControls' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetPlanPriceUpsertLicenseInterval$inboundSchema: z.ZodMiniType<
+  GetPlanPriceUpsertLicenseInterval,
+  unknown
+> = openEnums.inboundSchema(GetPlanPriceUpsertLicenseInterval);
+
+/** @internal */
+export const GetPlanUpsertLicenseAdditionalCurrency$inboundSchema:
+  z.ZodMiniType<GetPlanUpsertLicenseAdditionalCurrency, unknown> = z.object({
+    currency: types.string(),
+    amount: types.number(),
+  });
+
+export function getPlanUpsertLicenseAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<GetPlanUpsertLicenseAdditionalCurrency, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      GetPlanUpsertLicenseAdditionalCurrency$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanUpsertLicenseAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetPlanUpsertLicenseBasePrice$inboundSchema: z.ZodMiniType<
   GetPlanUpsertLicenseBasePrice,
   unknown
@@ -876,7 +1061,9 @@ export const GetPlanUpsertLicenseBasePrice$inboundSchema: z.ZodMiniType<
     interval: GetPlanPriceUpsertLicenseInterval$inboundSchema,
     interval_count: z._default(types.number(), 1),
     additional_currencies: types.optional(
-      z.array(GetPlanUpsertLicenseAdditionalCurrency$inboundSchema),
+      z.array(
+        z.lazy(() => GetPlanUpsertLicenseAdditionalCurrency$inboundSchema),
+      ),
     ),
   }),
   z.transform((v) => {
@@ -1181,6 +1368,31 @@ export function getPlanUpsertLicenseRolloverFromJSON(
     jsonString,
     (x) => GetPlanUpsertLicenseRollover$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'GetPlanUpsertLicenseRollover' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetPlanUpsertLicenseDuration$inboundSchema: z.ZodMiniType<
+  GetPlanUpsertLicenseDuration,
+  unknown
+> = openEnums.inboundSchema(GetPlanUpsertLicenseDuration);
+
+/** @internal */
+export const GetPlanUpsertLicenseExpiry$inboundSchema: z.ZodMiniType<
+  GetPlanUpsertLicenseExpiry,
+  unknown
+> = z.object({
+  duration: GetPlanUpsertLicenseDuration$inboundSchema,
+  length: types.number(),
+});
+
+export function getPlanUpsertLicenseExpiryFromJSON(
+  jsonString: string,
+): SafeParseResult<GetPlanUpsertLicenseExpiry, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetPlanUpsertLicenseExpiry$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanUpsertLicenseExpiry' from JSON`,
   );
 }
 
@@ -1787,6 +1999,9 @@ export const GetPlanUpsertLicensePlanItem$inboundSchema: z.ZodMiniType<
     rollover: types.optional(
       z.lazy(() => GetPlanUpsertLicenseRollover$inboundSchema),
     ),
+    expiry: types.optional(
+      z.lazy(() => GetPlanUpsertLicenseExpiry$inboundSchema),
+    ),
     feature_override: types.optional(
       z.lazy(() => GetPlanUpsertLicenseFeatureOverride$inboundSchema),
     ),
@@ -1987,7 +2202,7 @@ export const GetPlanCustomize$inboundSchema: z.ZodMiniType<
     remove_items: types.optional(z.array(GetPlanPlanItemFilter$inboundSchema)),
     free_trial: z.optional(z.nullable(GetPlanFreeTrialParams$inboundSchema)),
     billing_controls: types.optional(
-      GetPlanVariantDetailsBillingControls$inboundSchema,
+      z.lazy(() => GetPlanVariantDetailsBillingControls$inboundSchema),
     ),
     upsert_licenses: types.optional(
       z.array(z.lazy(() => GetPlanUpsertLicense$inboundSchema)),

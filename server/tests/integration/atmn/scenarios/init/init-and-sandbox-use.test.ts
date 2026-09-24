@@ -19,7 +19,6 @@
 import { expect, test } from "bun:test";
 import {
 	existsSync,
-	mkdirSync,
 	mkdtempSync,
 	readFileSync,
 	rmSync,
@@ -30,11 +29,12 @@ import { join } from "node:path";
 import {
 	CLI_PACKAGE_DIR,
 	initAtmnScenario,
+	TMP_ROOT,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { sandboxKeyName } from "../../../../../../packages/atmn-nightly/src/env/sandboxKeyName";
-import { createClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { sandboxKeyName } from "../../../../../../packages/atmn/src/env/sandboxKeyName";
+import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
 
 const CLI_ENTRY = join(CLI_PACKAGE_DIR, "src/cli.ts");
@@ -56,6 +56,7 @@ const runCliHeadless = ({
 		env: {
 			PATH: process.env.PATH ?? "",
 			HOME: process.env.HOME ?? "",
+			GIT_CEILING_DIRECTORIES: TMP_ROOT,
 			AUTUMN_BASE_URL: baseUrl,
 			// A package init writes depends on the CLI; from source that is this checkout.
 			ATMN_INIT_DEPENDENCY: `file:${CLI_PACKAGE_DIR}`,
@@ -103,6 +104,15 @@ const makeRepo = ({
 			"\t",
 		),
 	);
+	const locked = Bun.spawnSync(["bun", "install", "--lockfile-only"], {
+		cwd: root,
+		stdout: "pipe",
+		stderr: "pipe",
+	});
+	if (locked.exitCode !== 0)
+		throw new Error(
+			`${locked.stdout.toString()}${locked.stderr.toString()}`.trim(),
+		);
 	writeFileSync(join(root, ".env"), `AUTUMN_SECRET_KEY=${secretKey}\n`);
 	return root;
 };
@@ -149,27 +159,32 @@ test(`${chalk.yellowBright("atmn init: single repo pulls the catalog, writes ski
 			args: ["init"],
 			baseUrl,
 		});
-		expect(exitCode).toBe(0);
+		expect(exitCode, output).toBe(0);
 		expect(output).toContain("✓ Logged in as");
-		expect(output).toContain("✓ Wrote autumn.config.ts, planVersions/");
-		expect(output).toContain("✓ Added atmn-nightly to package.json");
-		expect(output).toContain("✓ Installed with npm");
+		expect(output).toContain(
+			"✓ Wrote autumn.config.ts, features.ts, plans.ts, rewards.ts",
+		);
+		expect(output).toContain("✓ Added atmn to package.json");
+		expect(output).toContain("✓ Installed with bun");
 		expect(output).toContain(
 			'✓ Wrote "atmn" script and marker to package.json',
 		);
 		expect(output).toContain("✓ Pulled 1 entry");
+		expect(output).toContain("✓ Path autumn");
 		expect(output).toContain(
-			"✓ Skills: skills/autumn-setup, autumn-catalog, autumn-integrate, autumn-concepts",
+			"✓ Skills: autumn/skills/autumn-setup, autumn-catalog, autumn-integrate, autumn-concepts",
 		);
 
-		expect(readFileSync(join(root, "autumn.config.ts"), "utf8")).toContain(
+		expect(readFileSync(join(root, "autumn/features.ts"), "utf8")).toContain(
 			messages,
 		);
-		expect(existsSync(join(root, "skills/autumn-catalog/SKILL.md"))).toBe(true);
+		expect(
+			existsSync(join(root, "autumn/skills/autumn-catalog/SKILL.md")),
+		).toBe(true);
 		const manifest = JSON.parse(
 			readFileSync(join(root, "package.json"), "utf8"),
 		);
-		expect(manifest.atmn).toEqual({ config: "autumn.config.ts" });
+		expect(manifest.atmn).toEqual({ config: "autumn/autumn.config.ts" });
 
 		// C5 — the marker means a plain push from the root finds the config.
 		const pushed = runCliHeadless({ cwd: root, args: ["push"], baseUrl });
@@ -213,7 +228,7 @@ test(`${chalk.yellowBright("atmn init: a monorepo is hint-driven headless, and t
 			args: ["init", "--path", "packages/autumn", "--name", "@app/autumn"],
 			baseUrl,
 		});
-		expect(third.exitCode).toBe(0);
+		expect(third.exitCode, third.output).toBe(0);
 		expect(third.output).toContain("✓ Name @app/autumn");
 		expect(third.output).toContain(
 			"Sandbox matches the config; nothing to pull",
@@ -232,7 +247,7 @@ test(`${chalk.yellowBright("atmn init: a monorepo is hint-driven headless, and t
 			config: "packages/autumn/autumn.config.ts",
 		});
 		expect(manifest.scripts.atmn).toBe(
-			'atmn-nightly -c "packages/autumn/autumn.config.ts"',
+			'atmn -c "packages/autumn/autumn.config.ts"',
 		);
 
 		// From the root, with no -c, the marker resolves the package's config.

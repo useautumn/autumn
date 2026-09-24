@@ -65,9 +65,7 @@ export const deleteBalance = async ({
 	}
 
 	for (const cusEnt of customerEntitlements) {
-		validateInvoiceCreditBalanceMutation({
-			feature: cusEnt.entitlement.feature,
-		});
+		validateInvoiceCreditBalanceMutation({ customerEntitlement: cusEnt });
 
 		if (isPaidCustomerEntitlement(cusEnt)) {
 			throw new RecaseError({

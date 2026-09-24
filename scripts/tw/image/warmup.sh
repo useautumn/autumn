@@ -50,6 +50,11 @@ export SQS_QUEUE_URL_V2="http://localhost:${ELASTICMQ_PORT}/000000000000/autumn.
 export TRACK_SQS_QUEUE_URL="http://localhost:${ELASTICMQ_PORT}/000000000000/autumn-track.fifo"
 export TRACK_ASYNC_SQS_QUEUE_URL="$TRACK_SQS_QUEUE_URL"
 export TRACK_ASYNC_STANDARD_SQS_QUEUE_URL="http://localhost:${ELASTICMQ_PORT}/000000000000/autumn-track-async"
+# The µVM's Redpanda; the `local` deployment names the balance worker's topics.
+KAFKA_PORT="${KAFKA_PORT:-19092}"
+export KAFKA_BROKERS="127.0.0.1:${KAFKA_PORT}"
+export KAFKA_AUTH_MODE="none"
+export BALANCE_WORKER_DEPLOYMENT="local"
 
 # Bypass Infisical for all DB CLI ops (env.ts:66-74): direct mode requires
 # DATABASE_URL injected, which we just set.
@@ -127,7 +132,7 @@ fi
 # ---------------------------------------------------------------------------
 log "Starting services for migrate + seed"
 TW_PREFIX="$TW_PREFIX" PG_PORT="$PG_PORT" DRAGONFLY_PORT="$DRAGONFLY_PORT" \
-  ELASTICMQ_PORT="$ELASTICMQ_PORT" bash "$SCRIPT_DIR/start-services.sh"
+  ELASTICMQ_PORT="$ELASTICMQ_PORT" KAFKA_PORT="$KAFKA_PORT" bash "$SCRIPT_DIR/start-services.sh"
 
 # ---------------------------------------------------------------------------
 # 3. Migrate (tables + trgm indexes). --bootstrap skips the CONCURRENTLY-index
@@ -170,6 +175,14 @@ bun scripts/migrations/migrate-functions.ts || die "migrate-functions FAILED"
 # ---------------------------------------------------------------------------
 log "Seeding test org (setup-test, createStripeAccount disabled)"
 bun scripts/setup/setup-test.ts --yes || die "setup-test seed FAILED"
+
+# ---------------------------------------------------------------------------
+# 5b. Balance worker topics on the µVM's Redpanda (idempotent: existing topics
+#     are kept). Baked into the warm snapshot so workers boot onto them.
+# ---------------------------------------------------------------------------
+log "Creating balance worker topics on $KAFKA_BROKERS"
+(cd apps/balance-worker && bun --config=./bunfig.toml scripts/setupLocalTopics.ts) \
+  || die "balance worker topic setup FAILED"
 
 # ---------------------------------------------------------------------------
 # 6. Clean-stop services for a snapshot-consistent filesystem (plan §5a step 6).

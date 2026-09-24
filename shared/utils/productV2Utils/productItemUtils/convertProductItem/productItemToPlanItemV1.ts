@@ -1,3 +1,4 @@
+import { behaviorToAllocatedBilling } from "@api/products/components/allocatedBilling.js";
 import { BillingMethod } from "@api/products/components/billingMethod.js";
 import { PlanExpand } from "@api/products/components/planExpand.js";
 import {
@@ -6,6 +7,7 @@ import {
 } from "@api/products/items/apiPlanItemV1.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { Infinite } from "@models/productModels/productEnums.js";
+import { AllocatedBillingBehavior } from "@models/productV2Models/productItemModels/productItemEnums.js";
 import {
 	type ProductItem,
 	UsageModel,
@@ -64,9 +66,8 @@ const itemToPlanFeaturePrice = ({
 
 	const includedUsage =
 		item.included_usage === Infinite ? 0 : (item.included_usage ?? 0);
-	const maxPurchase = item.usage_limit
-		? item.usage_limit - includedUsage
-		: null;
+	const maxPurchase =
+		item.usage_limit != null ? item.usage_limit - includedUsage : null;
 
 	const price =
 		item.tiers && item.tiers.length === 1 ? item.tiers[0].amount : item.price;
@@ -113,12 +114,16 @@ const itemToPlanFeaturePrice = ({
 	const processors = priceConfigToPriceProcessors({
 		config: item.price_config,
 	});
+	const allocatedBilling = behaviorToAllocatedBilling(
+		item.config?.allocated_billing_behavior,
+	);
 
 	return {
 		amount: price ?? undefined,
 		additional_currencies: additionalCurrencies,
 		tiers: tiers,
-		tier_behavior: item.tier_behavior ?? undefined,
+		// A flat price has no tiers to behave; only a tiered one carries it.
+		tier_behavior: tiers ? (item.tier_behavior ?? undefined) : undefined,
 
 		interval: itemToBillingInterval({ item }),
 		interval_count:
@@ -128,6 +133,7 @@ const itemToPlanFeaturePrice = ({
 
 		billing_units: item.billing_units ?? 1,
 		billing_method: billingMethod,
+		...(allocatedBilling ? { allocated_billing: allocatedBilling } : {}),
 		max_purchase: maxPurchase,
 		...(processors ? { processors } : {}),
 	};
@@ -172,17 +178,18 @@ const itemToPlanFeatureProration = ({
 	feature: Feature;
 }): ApiPlanItemV1["proration"] => {
 	if (!isFeaturePriceItem(item)) return undefined;
-	if (
+	const isPrepaid = item.usage_model === UsageModel.Prepaid;
+	const isLegacyAllocated =
 		isContUseFeature({ feature }) &&
-		item.usage_model === UsageModel.PayPerUse
-	) {
-		return undefined;
-	}
+		item.usage_model === UsageModel.PayPerUse &&
+		item.config?.allocated_billing_behavior ===
+			AllocatedBillingBehavior.Prorated;
 
 	const hasProrationKnobs =
 		Boolean(item.config?.on_increase) && Boolean(item.config?.on_decrease);
 
-	if (!hasProrationKnobs) return undefined;
+	if (!hasProrationKnobs || (!isPrepaid && !isLegacyAllocated))
+		return undefined;
 
 	return {
 		on_increase: item.config?.on_increase ?? undefined,

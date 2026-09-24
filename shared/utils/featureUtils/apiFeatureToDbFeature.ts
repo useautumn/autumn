@@ -39,6 +39,7 @@ import { mapRecordValues } from "../common/objectUtils.js";
 import { notNullish, nullish } from "../utils.js";
 import { buildAiCreditSystemConfig } from "./buildAiCreditSystemConfig.js";
 import { isAnyCreditSystem } from "./classifyFeature/isAnyCreditSystem.js";
+import { isConsumableFeature } from "./classifyFeature/isConsumableFeature.js";
 
 export const featureProcessorsToDbFields = ({
 	processors,
@@ -266,14 +267,12 @@ export const featureV1ToDbFeatureConfig = ({
 	const type = apiFeature.type || originalFeature.type;
 	const hasProviderMarkups = "provider_markups" in apiFeature;
 	const hasDefaultMarkup = "default_markup" in apiFeature;
-	const hasInvoiceCredit = apiFeature.invoice_credit !== undefined;
 
 	if (
 		isAiCreditSystem(type) &&
 		(isAiCreditSystem(apiFeature.type) ||
 			hasDefaultMarkup ||
-			hasProviderMarkups ||
-			hasInvoiceCredit)
+			hasProviderMarkups)
 	) {
 		const config = buildAiCreditSystemConfig({
 			defaultMarkup: hasDefaultMarkup
@@ -283,16 +282,10 @@ export const featureV1ToDbFeatureConfig = ({
 				? apiFeature.provider_markups
 				: originalFeature.config?.provider_markups,
 		});
-		return hasInvoiceCredit
-			? { ...config, invoice_credit: apiFeature.invoice_credit }
-			: config;
+		return config;
 	}
 
-	if (
-		nullish(apiFeature.consumable) &&
-		nullish(apiFeature.credit_schema) &&
-		!hasInvoiceCredit
-	)
+	if (nullish(apiFeature.consumable) && nullish(apiFeature.credit_schema))
 		return;
 
 	if (type === FeatureType.Boolean) return;
@@ -315,9 +308,6 @@ export const featureV1ToDbFeatureConfig = ({
 		return {
 			...originalFeature.config,
 			schema: newSchema,
-			invoice_credit: hasInvoiceCredit
-				? apiFeature.invoice_credit
-				: originalFeature.config?.invoice_credit,
 			usage_type: FeatureUsageType.Single,
 		};
 	}
@@ -336,7 +326,6 @@ export const featureV1ToDbFeature = ({
 }) => {
 	// Replace body...
 	const featureType = apiFeature.type;
-	const eventNames = apiFeature.event_names;
 
 	// Cloned — mutating the original's config in place would make the produced
 	// row and originalFeature indistinguishable to diffing.
@@ -359,13 +348,6 @@ export const featureV1ToDbFeature = ({
 				providerMarkups: apiFeature.provider_markups,
 			}),
 		);
-	}
-
-	if (
-		isAnyCreditSystem(apiFeature.type) &&
-		apiFeature.invoice_credit !== undefined
-	) {
-		newConfig.invoice_credit = apiFeature.invoice_credit;
 	}
 
 	if (apiFeature.credit_schema) {
@@ -394,7 +376,8 @@ export const featureV1ToDbFeature = ({
 			"archived" in apiFeature
 				? apiFeature.archived
 				: (originalFeature?.archived ?? false),
-		event_names: eventNames ?? [],
+		// Omitted event_names keeps the current ones: the CLI no longer states them.
+		event_names: apiFeature.event_names ?? originalFeature?.event_names ?? [],
 		model_markups: modelMarkups,
 		// Omitted display keeps the current (often LLM-generated) one.
 		display:
@@ -432,17 +415,14 @@ export const dbToApiFeatureV1 = ({
 		internal_id: dbFeature.internal_id,
 		name: dbFeature.name,
 		type: dbFeature.type,
+		// Boolean rows may carry a stale usage_type from a past type change; the
+		// predicate ignores it, so a re-pull never phantom-diffs on consumable.
 		consumable:
-			isAnyCreditSystem(dbFeature.type) ||
-			dbFeature.config?.usage_type === FeatureUsageType.Single,
+			isAnyCreditSystem(dbFeature.type) || isConsumableFeature(dbFeature),
 
 		credit_schema: Array.isArray(dbFeature.config?.schema)
 			? dbFeature.config.schema.map(dbCreditSchemaItemToApi)
 			: undefined,
-		invoice_credit:
-			dbFeature.type === FeatureType.CreditSystem
-				? (dbFeature.config?.invoice_credit ?? undefined)
-				: undefined,
 		model_markups: dbFeature.model_markups ?? undefined,
 		default_markup: dbFeature.config?.default_markup ?? undefined,
 		provider_markups: dbFeature.config?.provider_markups ?? undefined,

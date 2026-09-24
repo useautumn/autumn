@@ -19,7 +19,9 @@ export type LeafOp =
 	| "gt"
 	| "gte"
 	| "lt"
-	| "lte";
+	| "lte"
+	| "startsWith"
+	| "regex";
 
 export type LeafValue =
 	| string

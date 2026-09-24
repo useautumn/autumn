@@ -65,7 +65,6 @@ export const computeUpsertProductsPlan = ({
 			productStatesContext: fold.projected,
 			claimedProductKeys,
 			declaredVariants,
-			fullState: params.skip_deletions === false,
 		});
 
 		for (const upsert of upsertProductPlans) {

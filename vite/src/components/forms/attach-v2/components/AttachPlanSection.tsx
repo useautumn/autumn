@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { PlanItemsSection } from "@/components/forms/shared";
+import {
+	type LicenseQuantityEditor,
+	PlanItemsSection,
+} from "@/components/forms/shared";
 import { PlanEditButton } from "@/components/forms/shared/plan-items/PlanEditButton";
 import { PlanLicenseItemsSections } from "@/components/forms/shared/plan-items/PlanLicenseItemsSections";
 import { usePlanLicenseRows } from "@/components/forms/shared/plan-items/PlanLicensesSummary";
@@ -34,9 +37,27 @@ export function AttachPlanSection({
 	const { prepaidOptions, licenseQuantities } = formValues;
 
 	// Review keeps the staged totals visible read-only; grant-free hides them.
-	const licenseQuantityEditor = formValues.grantFree
-		? undefined
-		: { form, quantities: licenseQuantities, readOnly: hideEditButton };
+	const licenseQuantityEditor: LicenseQuantityEditor | undefined =
+		formValues.grantFree
+			? undefined
+			: {
+					quantities: licenseQuantities,
+					readOnly: hideEditButton,
+					onEditStart: ({ licensePlanId, quantity }) =>
+						form.setFieldValue(`licenseQuantities.${licensePlanId}`, quantity),
+					renderField: ({ licensePlanId, min }) => (
+						<form.AppField name={`licenseQuantities.${licensePlanId}`}>
+							{(field) => (
+								<field.QuantityField
+									fullWidth
+									hideFieldInfo
+									label=""
+									min={min}
+								/>
+							)}
+						</form.AppField>
+					),
+				};
 
 	const effectiveInitialPrepaidOptions = readOnly
 		? previewPrepaidOptions

@@ -1,6 +1,9 @@
 import { type Feature, isAiCreditSystem } from "@autumn/shared";
+import { Link } from "react-router";
+import { cn } from "@/lib/utils";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 import { aiModelCount, creditSources } from "./catalogGrouping";
+import { catalogCardClassName, featurePagePath } from "./catalogUi";
 
 /** Cells are one line of detail; past this the names stop being readable. */
 const MAX_SOURCES = 2;
@@ -28,7 +31,13 @@ export function CreditSystemCard({
 				.join(", ");
 
 	return (
-		<div className="flex min-w-0 flex-col gap-0.5 rounded-md border bg-interactive-secondary px-2 py-1.5">
+		<Link
+			to={featurePagePath({ featureId: creditSystem.id })}
+			className={cn(
+				"flex min-w-0 flex-col gap-0.5 rounded-md px-2 py-1.5",
+				catalogCardClassName,
+			)}
+		>
 			<div className="flex min-w-0 items-center gap-1.5">
 				{getFeatureIcon({ feature: creditSystem, size: 12 })}
 				<span className="truncate text-tiny text-foreground">
@@ -44,7 +53,7 @@ export function CreditSystemCard({
 				{/* Keeps every cell the same height whether or not it has detail. */}
 				{!detail && "\u00A0"}
 			</span>
-		</div>
+		</Link>
 	);
 }
 

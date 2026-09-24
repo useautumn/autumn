@@ -4,17 +4,22 @@ import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { prepaidTierStops } from "@/utils/billing/prepaidQuantityUtils";
 import { PrepaidQuantityControl } from "./plan-items/PrepaidQuantityControl";
 
+const DEFAULT_USAGE_MODELS = [UsageModel.Prepaid];
+
 export function PlanPrepaidQuantityFields({
 	items,
 	quantities,
 	currency,
 	readOnly = false,
+	usageModels = DEFAULT_USAGE_MODELS,
 	renderField,
 }: {
 	items?: ProductItem[] | null;
 	quantities: Record<string, number | undefined>;
 	currency?: string;
 	readOnly?: boolean;
+	/** Standalone invoices bill usage-based items too, not just prepaid. */
+	usageModels?: UsageModel[];
 	renderField: (params: {
 		featureId: string;
 		step: number;
@@ -25,7 +30,8 @@ export function PlanPrepaidQuantityFields({
 	const prepaidItems = (items ?? []).flatMap((item) => {
 		const featureId = item.feature_id;
 		if (
-			item.usage_model !== UsageModel.Prepaid ||
+			!item.usage_model ||
+			!usageModels.includes(item.usage_model) ||
 			!featureId ||
 			featureIds.has(featureId)
 		) {

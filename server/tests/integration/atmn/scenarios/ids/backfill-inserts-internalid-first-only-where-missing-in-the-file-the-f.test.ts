@@ -5,7 +5,10 @@
  */
 
 import { expect, test } from "bun:test";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import {
+	atmnImports,
+	initAtmnScenario,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
@@ -82,7 +85,9 @@ for (const location of LOCATIONS) {
 
 			const scenario = await initAtmnScenario({
 				setup: [
-					s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+					s.platform.create({
+						userEmail: `${uniqueTestId("atmn")}@autumn.test`,
+					}),
 				],
 				config: { raw },
 				files,
@@ -100,7 +105,9 @@ for (const location of LOCATIONS) {
 
 				const fixtureText = after.get(fixtureFile) ?? "";
 				expect(fixtureText).toMatch(
-					new RegExp(`feature\\(\\{ internalId: "[^"]+", featureId: "${featureId}"`),
+					new RegExp(
+						`feature\\(\\{ internalId: "[^"]+", featureId: "${featureId}"`,
+					),
 				);
 			} finally {
 				scenario.cleanup();

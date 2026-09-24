@@ -4,7 +4,7 @@
 	"type": "module",
 	"private": true,
 	"devDependencies": {
-		"atmn": "workspace:*",
+		"@autumn/atmn-old": "workspace:*",
 		"@types/bun": "1.3.14"
 	},
 	"peerDependencies": {

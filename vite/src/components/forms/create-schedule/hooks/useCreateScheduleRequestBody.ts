@@ -5,15 +5,15 @@ import type {
 	ProductV2,
 } from "@autumn/shared";
 import { useMemo } from "react";
-import { applyMultiPlanStageParams } from "@/components/forms/shared/utils/applyMultiPlanStageParams";
-import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
-import { buildBillingPlan } from "@/components/forms/shared/utils/buildPlanCustomize";
+import { customerStatePlanToApiPlan } from "@/components/forms/customer-state/customerStatePlanToApiPlan";
 import {
+	type CustomerStatePhase,
+	type CustomerStatePlan,
 	getCreateSchedulePhaseTimingError,
 	hasPersistedCreateSchedule,
-	type SchedulePhase,
-	type SchedulePlan,
-} from "../createScheduleFormSchema";
+} from "@/components/forms/customer-state/customerStateSchema";
+import { applyMultiPlanStageParams } from "@/components/forms/shared/utils/applyMultiPlanStageParams";
+import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 
 export function buildCreateScheduleRequestBody({
 	customerId,
@@ -27,8 +27,8 @@ export function buildCreateScheduleRequestBody({
 	allowFirstPhaseBackdate,
 }: {
 	customerId: string | undefined;
-	phases: SchedulePhase[];
-	unscheduledPlans?: SchedulePlan[];
+	phases: CustomerStatePhase[];
+	unscheduledPlans?: CustomerStatePlan[];
 	products: ProductV2[];
 	features: Feature[];
 	nowMs?: number;
@@ -41,18 +41,8 @@ export function buildCreateScheduleRequestBody({
 	if (getCreateSchedulePhaseTimingError({ phases, nowMs: now })) return null;
 	const hasPersistedSchedule = hasPersistedCreateSchedule({ phases });
 
-	const toApiPlan = (plan: SchedulePlan) =>
-		buildBillingPlan({
-			productId: plan.productId,
-			prepaidOptions: plan.prepaidOptions,
-			items: plan.items,
-			addLicenses: plan.addLicenses,
-			version: plan.version,
-			isCustom: plan.isCustom,
-			entityId: plan.entityId ?? null,
-			product: products.find((product) => product.id === plan.productId),
-			features,
-		});
+	const toApiPlan = (plan: CustomerStatePlan) =>
+		customerStatePlanToApiPlan({ plan, products, features });
 
 	const apiPhases = phases.map((phase, index) => {
 		let startsAt = phase.startsAt;
@@ -132,8 +122,8 @@ export function useCreateScheduleRequestBody({
 	allowFirstPhaseBackdate,
 }: {
 	customerId: string | undefined;
-	phases: SchedulePhase[];
-	unscheduledPlans?: SchedulePlan[];
+	phases: CustomerStatePhase[];
+	unscheduledPlans?: CustomerStatePlan[];
 	products: ProductV2[];
 	features: Feature[];
 	nowMs?: number;
@@ -184,8 +174,8 @@ export function useBuildCreateScheduleRequestBody({
 	products: ProductV2[];
 	features: Feature[];
 	nowMs?: number;
-	getPhases: () => SchedulePhase[];
-	getUnscheduledPlans?: () => SchedulePlan[];
+	getPhases: () => CustomerStatePhase[];
+	getUnscheduledPlans?: () => CustomerStatePlan[];
 	getBillingBehavior?: () => BillingBehavior | null;
 	getResetBillingCycle?: () => boolean;
 	getEnablePlanImmediately?: () => boolean;

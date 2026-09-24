@@ -5,7 +5,8 @@ import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import type { Stripe } from "stripe";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
-import { expirePendingCustomerProducts } from "@/internal/billing/v2/execute/expirePendingCustomerProducts";
+import { expirePendingPlanAtDueDate } from "@/internal/billing/v2/actions/expirePendingPlan/expirePendingPlanAtDueDate";
+import { expirePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { createStripeCli } from "../../external/connect/createStripeCli";
 import { stripeInvoiceToStripeSubscriptionId } from "../../external/stripe/invoices/utils/convertStripeInvoice";
@@ -66,6 +67,18 @@ export const handleVoidInvoiceCron = async ({
 		invoice = await stripeCli.invoices.retrieve(metadata.stripe_invoice_id);
 	} catch {
 		logger.warn(`Failed to retrieve invoice ${metadata.stripe_invoice_id}`);
+		return;
+	}
+
+	if (metadata.type === MetadataType.DeferredInvoice) {
+		await expirePendingPlanAtDueDate({
+			ctx,
+			orgId: org.id,
+			env: customer.env,
+			stripeCli,
+			metadata,
+			stripeInvoice: invoice,
+		});
 		return;
 	}
 

@@ -40,11 +40,17 @@ export const previewCreateScheduleWithContext = async ({
 		preview: true,
 	});
 
-	const { autumnBillingPlan } = computeCreateSchedulePlan({
+	const { autumnBillingPlan, immediatePhaseTransition } =
+		computeCreateSchedulePlan({
+			ctx,
+			billingContext,
+		});
+	await handleCreateScheduleComputeErrors({
 		ctx,
 		billingContext,
+		autumnBillingPlan,
+		immediatePhaseTransition,
 	});
-	handleCreateScheduleComputeErrors({ billingContext, autumnBillingPlan });
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,

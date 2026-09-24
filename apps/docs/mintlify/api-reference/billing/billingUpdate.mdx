@@ -287,6 +287,16 @@ const response = await autumn.billing.update({
           </Expandable>
         </DynamicParamField>
 
+        <DynamicParamField body="expiry" type="object">
+          Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+          <Expandable title="properties">
+            <DynamicParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+            <DynamicParamField body="length" type="number" required />
+
+          </Expandable>
+        </DynamicParamField>
+
         <DynamicParamField body="feature_override" type="object">
           Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
           <Expandable title="properties">
@@ -555,6 +565,16 @@ const response = await autumn.billing.update({
             <DynamicParamField body="expiry_duration_length" type="number">
               Number of periods before expiry.
             </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="expiry" type="object">
+          Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+          <Expandable title="properties">
+            <DynamicParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+            <DynamicParamField body="length" type="number" required />
 
           </Expandable>
         </DynamicParamField>
@@ -1089,6 +1109,16 @@ const response = await autumn.billing.update({
                   </Expandable>
                 </DynamicParamField>
 
+                <DynamicParamField body="expiry" type="object">
+                  Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                  <Expandable title="properties">
+                    <DynamicParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                    <DynamicParamField body="length" type="number" required />
+
+                  </Expandable>
+                </DynamicParamField>
+
                 <DynamicParamField body="feature_override" type="object">
                   Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                   <Expandable title="properties">
@@ -1299,6 +1329,20 @@ const response = await autumn.billing.update({
 
     <DynamicParamField body="promotion_code" type="string">
       The promotion code to apply as a discount.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="custom_line_items" type="object[]">
+  Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
+  <Expandable title="properties">
+    <DynamicParamField body="amount" type="number" required>
+      Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+    </DynamicParamField>
+
+    <DynamicParamField body="description" type="string" required>
+      Description for the line item.
     </DynamicParamField>
 
   </Expandable>

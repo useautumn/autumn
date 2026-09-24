@@ -9,17 +9,15 @@ export function mergeCodeSamples({
 	speakeasySdkDir,
 	pythonSdkDir,
 	outputPath,
+	baseOpenApiPath = path.join(speakeasySdkDir, ".speakeasy/out.openapi.yaml"),
 }: {
 	speakeasySdkDir: string;
 	pythonSdkDir: string;
 	outputPath: string;
+	baseOpenApiPath?: string;
 }): void {
 	console.log("Merging code samples from TypeScript and Python SDKs...");
 
-	const baseOpenApiPath = path.join(
-		speakeasySdkDir,
-		".speakeasy/out.openapi.yaml",
-	);
 	const tsOverlayPath = path.join(
 		speakeasySdkDir,
 		".speakeasy/code-samples.overlay.yaml",
@@ -31,7 +29,7 @@ export function mergeCodeSamples({
 
 	// Apply TypeScript code samples
 	exec({
-		command: `bunx speakeasy overlay apply --schema "${baseOpenApiPath}" --overlay "${tsOverlayPath}" --out "${outputPath}"`,
+		command: `speakeasy overlay apply --schema "${baseOpenApiPath}" --overlay "${tsOverlayPath}" --out "${outputPath}"`,
 		cwd: speakeasySdkDir,
 	});
 
@@ -41,7 +39,7 @@ export function mergeCodeSamples({
 		// Speakeasy picks output format from the extension (.yml/.yaml → YAML, else JSON).
 		const tempPath = `${outputPath.slice(0, -ext.length)}.tmp${ext}`;
 		exec({
-			command: `bunx speakeasy overlay apply --schema "${outputPath}" --overlay "${pythonOverlayPath}" --out "${tempPath}"`,
+			command: `speakeasy overlay apply --schema "${outputPath}" --overlay "${pythonOverlayPath}" --out "${tempPath}"`,
 			cwd: speakeasySdkDir,
 		});
 

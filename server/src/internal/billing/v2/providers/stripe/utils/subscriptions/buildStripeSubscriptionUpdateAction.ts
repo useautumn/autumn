@@ -8,14 +8,13 @@ import { msToSeconds } from "@shared/utils/common/unixUtils";
 import { notNullish } from "@shared/utils/utils";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
+import { stripeDiscountsToSubscriptionUpdateParam } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
 import { buildStripeSubscriptionUpdateParams } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionParams";
 import { shouldEnableStripeAutomaticTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax";
 
 export const buildStripeSubscriptionUpdateAction = ({
 	ctx,
 	billingContext,
-	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
 	autumnBillingPlan,
 	subItemsUpdate,
 	stripeSubscriptionScheduleAction,
@@ -37,6 +36,10 @@ export const buildStripeSubscriptionUpdateAction = ({
 	}
 
 	const trialEndsAt = trialContext?.trialEndsAt;
+	const discounts = stripeDiscountsToSubscriptionUpdateParam({
+		stripeSubscription,
+		stripeDiscounts,
+	});
 
 	// When a schedule manages the sub, leave trial_end/cancel alone — the
 	// schedule sets those via phase-level settings.
@@ -85,9 +88,7 @@ export const buildStripeSubscriptionUpdateAction = ({
 		proration_behavior: "none",
 		payment_behavior: "error_if_incomplete",
 
-		...(stripeDiscounts?.length && {
-			discounts: stripeDiscountsToParams({ stripeDiscounts }),
-		}),
+		...(discounts !== undefined && { discounts }),
 
 		...(shouldUpdateEndBehavior && {
 			trial_settings: {
@@ -115,7 +116,12 @@ export const buildStripeSubscriptionUpdateAction = ({
 		params.discounts,
 	].every((field) => field === undefined);
 
-	if (hasNoUpdates) {
+	// Anchor resets and custom invoices still need an update action when subscription items stay unchanged.
+	if (
+		hasNoUpdates &&
+		billingContext.requestedBillingCycleAnchor !== "now" &&
+		!autumnBillingPlan.customLineItems?.length
+	) {
 		return undefined;
 	}
 

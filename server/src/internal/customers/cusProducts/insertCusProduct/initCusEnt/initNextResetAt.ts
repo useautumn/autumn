@@ -1,5 +1,4 @@
 import {
-	AllowanceType,
 	BillingInterval,
 	EntInterval,
 	type EntitlementWithFeature,
@@ -27,10 +26,10 @@ export const initNextResetAt = ({
 	anchorToUnix?: number;
 	now: number;
 }) => {
-	// 1. If entitlement is boolean, or unlimited, or lifetime, then next reset at is null
+	// 1. If entitlement is boolean or lifetime, then next reset at is null
 	if (
 		entitlement.feature.type === FeatureType.Boolean ||
-		entitlement.allowance_type === AllowanceType.Unlimited ||
+		!entitlement.interval ||
 		entitlement.interval === EntInterval.Lifetime
 	) {
 		return null;

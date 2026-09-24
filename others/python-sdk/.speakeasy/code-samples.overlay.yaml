@@ -469,6 +469,24 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/customers.advance_test_clock"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.customers.advance_test_clock(customer_id="<id>", frozen_time=202884)
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/customers.delete"]["post"]
     update:
       x-codeSamples:
@@ -787,6 +805,45 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/invoices.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.invoices.create(customer_id="cus_123", plans=[
+                    {
+                        "plan_id": "pro",
+                        "feature_quantities": [
+                            {
+                                "feature_id": "seats",
+                                "billing_behavior": "prepaid",
+                                "quantity": 5,
+                            },
+                            {
+                                "feature_id": "credits",
+                                "billing_behavior": "usage_based",
+                                "quantity": 2500,
+                            },
+                        ],
+                    },
+                ], custom_line_items=[
+                    {
+                        "amount": 500,
+                        "description": "Implementation services",
+                    },
+                ], net_terms_days=30)
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/invoices.insert"]["post"]
     update:
       x-codeSamples:
@@ -837,6 +894,78 @@ actions:
                     "open",
                     "paid",
                 ])
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/invoices.listTemplates"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.invoices.list_templates(offset=0, limit=10)
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/invoices.pay"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.invoices.pay(invoice_id="inv_2b3c4d5e6f7g8h")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/invoices.reissue"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.invoices.reissue(invoice_id="inv_2b3c4d5e6f7g8h", invoice_template_id="inv_tmpl_bank_transfer")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/invoices.void"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.invoices.void(invoice_id="inv_2b3c4d5e6f7g8h")
 
                 # Handle response
                 print(res)
@@ -934,6 +1063,24 @@ actions:
                 res = autumn.licenses.release(customer_id="cus_123", entity_ids=[
                     "user_123",
                 ], license_plan_id="seat_plan")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/logs.search"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.logs.search(query="where status_code >= 400 | order by timestamp desc", limit=50)
 
                 # Handle response
                 print(res)
@@ -1341,6 +1488,78 @@ actions:
             ) as autumn:
 
                 res = autumn.rewards.update(reward_id="<id>")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/sandboxes.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.sandboxes.create(name="staging", color="blue", icon="Flask")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/sandboxes.delete"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.sandboxes.delete(id="org_123")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/sandboxes.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.sandboxes.list(request={})
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/sandboxes.reset"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.4.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.sandboxes.reset(request={})
 
                 # Handle response
                 print(res)

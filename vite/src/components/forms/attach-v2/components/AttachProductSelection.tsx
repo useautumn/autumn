@@ -137,13 +137,17 @@ export function AttachProductSelection({
 		<div className="space-y-2">
 			{isMultiPlan && productId ? (
 				<div className="space-y-1.5">
-					<ScopedPlanRow scope={scope}>
+					<ScopedPlanRow
+						scope={scope}
+						onCustomize={
+							formValues.grantFree ? undefined : () => handleEditPlan()
+						}
+					>
 						<SelectedPlanRow
 							productId={productId}
 							product={product}
 							customItems={displayedPrimaryItems}
 							isCustom={hasCustomizations || formValues.grantFree}
-							onEdit={formValues.grantFree ? undefined : () => handleEditPlan()}
 						/>
 					</ScopedPlanRow>
 					<AttachPlanPrepaidQuantityFields

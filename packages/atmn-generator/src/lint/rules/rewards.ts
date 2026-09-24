@@ -1,5 +1,5 @@
 import type { LintRule } from "../runtime/lintDocument";
-import { exists, unique } from "./define";
+import { exists, nonEmpty, unique } from "./define";
 
 const REWARD_ID_PATHS = ["coupon.id", "featureGrant.id"] as const;
 
@@ -16,6 +16,11 @@ export const rewardRules: LintRule[] = [
 ];
 
 export const couponRules: LintRule[] = [
+	nonEmpty({
+		field: "planIds",
+		because:
+			"A coupon must apply to at least one plan: list the plans it discounts, set planIds: null to apply it to every plan, or remove the coupon from your config.",
+	}),
 	exists({
 		field: "planIds",
 		in: "plans",

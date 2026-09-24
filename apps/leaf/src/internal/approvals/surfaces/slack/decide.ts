@@ -33,7 +33,6 @@ import { requiredScopesForApproval } from "../../utils/approvalScopeRequirements
 import { publicToolArgs } from "../../utils/toolRequest.js";
 import { dashboardUrlFor } from "./present.js";
 
-
 /** Grouped writes for card bodies and scope checks; step-listing failures
  * degrade to the legacy marker fallback rather than blocking the click. */
 const groupedStepsForApproval = async ({
@@ -469,8 +468,8 @@ export const handleApprovalActionWithDeps = async ({
 		if (event.thread) {
 			await continueAfterApproval({
 				approval: claimed,
+				outcome: result,
 				providerUserId,
-				result: "result" in result ? result.result : undefined,
 				// The action event's thread is generically typed; the reply surface
 				// is the same object the message path posts through.
 				target: event.thread as ReplyTarget,

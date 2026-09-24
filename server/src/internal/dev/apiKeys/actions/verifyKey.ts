@@ -12,10 +12,13 @@ export const verifyKey = async ({
 	db,
 	key,
 	requestId,
+	skipL1 = false,
 }: {
 	db: DrizzleCli;
 	key: string;
 	requestId?: string;
+	/** Read the verification payload (org + features) past this worker's L1. */
+	skipL1?: boolean;
 }): Promise<ApiKeyVerificationData | null> => {
 	const hashedKey = hashApiKey(key);
 
@@ -23,7 +26,11 @@ export const verifyKey = async ({
 		? AppEnv.Sandbox
 		: AppEnv.Live;
 
-	const cached = await getCachedSecretKeyVerification({ hashedKey, requestId });
+	const cached = await getCachedSecretKeyVerification({
+		hashedKey,
+		requestId,
+		skipL1,
+	});
 
 	if (cached) {
 		// Backfill `pendingMigrations` on payloads cached before the field

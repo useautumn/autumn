@@ -8,6 +8,7 @@ on:
       - "packages/autumn-js/**"
       - "packages/openapi/**"
       - "packages/sdk/**"
+      - "shared/**"
 
   workflow_dispatch:
     inputs:
@@ -19,15 +20,6 @@ on:
         options:
           - "true"
           - "false"
-      version-bump:
-        description: "Version bump type (for manual triggers)"
-        required: false
-        default: "patch"
-        type: choice
-        options:
-          - "patch"
-          - "minor"
-          - "major"
       test-package:
         description: "Publish to @useautumn/js-test instead (for testing)"
         required: false
@@ -45,13 +37,11 @@ jobs:
       contents: write
     with:
       package-dir: packages/autumn-js
-      commit-paths: packages/autumn-js packages/openapi packages/sdk
       install-speakeasy: true
       pre-build-command: bun api
       build-command: bun js:build
       typecheck-command: bun js:ts
       test-command: cd packages/sdk && bun test
-      version-bump: ${{ github.event_name == 'workflow_dispatch' && inputs.version-bump || '' }}
       dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || 'false' }}
       publish-name-override: ${{ github.event_name == 'workflow_dispatch' && inputs.test-package == 'true' && '@useautumn/js-test' || '' }}
     secrets:

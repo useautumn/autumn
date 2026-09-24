@@ -1,0 +1,1 @@
+ALTER TABLE "migration_item_runs" ADD COLUMN "skip_reason" text;

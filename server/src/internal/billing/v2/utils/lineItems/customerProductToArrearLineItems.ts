@@ -18,7 +18,7 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { isInvoiceCreditFeature } from "@/internal/features/creditSystemUtils.js";
+import { isInvoiceCreditCustomerEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditCustomerEntitlement.js";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
 export const customerProductToArrearLineItems = ({
@@ -48,6 +48,8 @@ export const customerProductToArrearLineItems = ({
 		updateNextResetAt?: boolean;
 		discountable?: boolean;
 		includeZeroAmounts?: boolean;
+		/** Scopes usage line ids to e.g. a Stripe invoice so retries regenerate the same ids. */
+		idempotencyScope?: string;
 		invoiceCredits?: {
 			idempotencyScope?: string;
 			fullyOffsetOverage?: boolean;
@@ -88,8 +90,8 @@ export const customerProductToArrearLineItems = ({
 			);
 		}
 
-		const isInvoiceCredit = isInvoiceCreditFeature({
-			feature: customerEntitlement.entitlement.feature,
+		const isInvoiceCredit = isInvoiceCreditCustomerEntitlement({
+			customerEntitlement,
 		});
 		const invoiceCreditOptions = options.invoiceCredits;
 		if (isInvoiceCredit) {
@@ -146,7 +148,7 @@ export const customerProductToArrearLineItems = ({
 				);
 			}
 		} else {
-			const lineItem = usagePriceToLineItem({
+			const generatedLineItem = usagePriceToLineItem({
 				cusEnt: customerEntitlement,
 				context,
 				options: {
@@ -154,6 +156,12 @@ export const customerProductToArrearLineItems = ({
 					discountable: options.discountable,
 				},
 			});
+			const lineItem = options.idempotencyScope
+				? {
+						...generatedLineItem,
+						id: `invoice_li_usage_${options.idempotencyScope}_${customerPrice.id}`,
+					}
+				: generatedLineItem;
 			if (options.includeZeroAmounts || lineItem.amount !== 0) {
 				lineItems.push(lineItem);
 			}

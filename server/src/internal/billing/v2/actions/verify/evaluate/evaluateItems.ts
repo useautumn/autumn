@@ -18,9 +18,11 @@ import { priceToStripeRecurringParams } from "@utils/productUtils/priceUtils/con
 import type Stripe from "stripe";
 import { stripePriceCanBill } from "@/external/stripe/prices/utils/classifyStripePriceUtils";
 import { stripePriceToAmount } from "@/external/stripe/prices/utils/convertStripePriceUtils";
+import { stripeSchedulePhaseItemToPriceId } from "@/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import { stripeInlinePriceMatchesStripePrice } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
-import { findPhaseItemForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/autumnToStripe/findPhaseItemForAutumnPrice";
 import { findSubscriptionItemForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/autumnToStripe/findSubscriptionItemForAutumnPrice";
+import { stripeCandidateMatchesAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/matchUtils/stripeCandidateMatchesAutumnPrice";
+import { normalizeStripePhaseItem } from "@/internal/billing/v2/providers/stripe/utils/sync/normalizeStripeObject";
 import type {
 	CusPriceCatalog,
 	StoredPriceCatalog,
@@ -62,7 +64,7 @@ export const normalizeActualPhaseItem = ({
 }: {
 	item: Stripe.SubscriptionSchedule.Phase.Item;
 }): NormalizedItem => {
-	const priceId = typeof item.price === "string" ? item.price : item.price.id;
+	const priceId = stripeSchedulePhaseItemToPriceId(item);
 	const autumnCusPriceId = item.metadata?.autumn_customer_price_id;
 	const priceObj =
 		typeof item.price !== "string" && "unit_amount_decimal" in item.price
@@ -146,12 +148,35 @@ const buildActualCandidates = ({
 			index,
 			autumnCustomerPriceId: metadata?.autumn_customer_price_id,
 			autumnPriceId: metadata?.autumn_price_id,
-			priceId: typeof item.price === "string" ? item.price : item.price.id,
+			priceId: stripeSchedulePhaseItemToPriceId(item),
 			price: priceObj,
 			quantity: item.quantity,
 		};
 	});
 };
+
+/** A scheduled item pairs as strictly as a live one: by its Stripe price when it
+ * has one, never by a shared Stripe product alone. */
+const findPhaseItemForAutumnPriceStrictly = ({
+	price,
+	product,
+	phaseItems,
+}: {
+	price: Price;
+	product: Product;
+	phaseItems: Stripe.SubscriptionSchedule.Phase.Item[];
+}) =>
+	phaseItems.find((phaseItem) =>
+		stripeCandidateMatchesAutumnPrice({
+			candidate: normalizeStripePhaseItem({ phaseItem }),
+			stripePrice:
+				typeof phaseItem.price === "object"
+					? (phaseItem.price as Stripe.Price)
+					: undefined,
+			price,
+			product,
+		}),
+	);
 
 /**
  * Finds the actual candidate that corresponds to an expected phase item, without reusing
@@ -286,15 +311,13 @@ const findActualIndex = ({
 			availableIndexes.has(index),
 		);
 		const matched = catalogEntry
-			? findPhaseItemForAutumnPrice({
+			? findPhaseItemForAutumnPriceStrictly({
 					price: catalogEntry.price,
 					product: catalogEntry.product,
 					phaseItems: availableItems,
 				})
 			: availableItems.find(
-					(item) =>
-						(typeof item.price === "string" ? item.price : item.price.id) ===
-						priceId,
+					(item) => stripeSchedulePhaseItemToPriceId(item) === priceId,
 				);
 		if (matched) return { index: actualPhaseItems.indexOf(matched) };
 	}
@@ -462,6 +485,7 @@ const buildMissingOrUnexpectedMismatch = ({
 			expected_amount: expected?.unitAmountDecimal,
 			actual_amount: actual?.unitAmountDecimal,
 			plan_name: catalogEntry?.product.name ?? undefined,
+			plan_id: catalogEntry?.product.id,
 			price_amount: price.config.amount ?? undefined,
 			price_interval: price.config.interval ?? undefined,
 			price_interval_count: price.config.interval_count ?? undefined,
@@ -474,6 +498,7 @@ const buildMissingOrUnexpectedMismatch = ({
 		return {
 			type: "prepaid_quantity_mismatch",
 			feature_id: price.config.feature_id ?? "unknown",
+			plan_id: catalogEntry?.product.id,
 			expected_quantity: expected?.quantity ?? 0,
 			actual_quantity: actual?.quantity ?? 0,
 			phase_starts_at: phaseStartsAt,
@@ -487,6 +512,7 @@ const buildMissingOrUnexpectedMismatch = ({
 		actual_price_id: actual?.priceId,
 		price_type: priceTypeOf(price),
 		feature_id: price?.config.feature_id ?? undefined,
+		plan_id: catalogEntry?.product.id,
 		expected_quantity: expected?.quantity,
 		actual_quantity: actual?.quantity,
 		...displayFromStripePrice(actualStripePrice),
@@ -613,6 +639,11 @@ export const evaluateItems = ({
 		}
 
 		if (!actual) {
+			const isUnpurchasedPrepaid =
+				catalogEntry !== undefined &&
+				isPrepaidPrice(catalogEntry.price) &&
+				expected.quantity === 0;
+			if (isUnpurchasedPrepaid) continue;
 			if (siblingQuantity > 0) {
 				if (siblingQuantity !== expected.quantity) {
 					mismatches.push({
@@ -672,6 +703,7 @@ export const evaluateItems = ({
 						feature_id: price.config.feature_id ?? "unknown",
 						expected_unit_amount: String(expectedTotal),
 						actual_unit_amount: String(actualTotal),
+						actual_price_id: actual.priceId,
 						phase_starts_at: phaseStartsAt,
 					});
 				} else {
@@ -680,6 +712,7 @@ export const evaluateItems = ({
 						reason: "amount_mismatch",
 						expected_amount: String(expectedTotal),
 						actual_amount: String(actualTotal),
+						actual_price_id: actual.priceId,
 						phase_starts_at: phaseStartsAt,
 					});
 				}
@@ -696,6 +729,7 @@ export const evaluateItems = ({
 					feature_id: price.config.feature_id ?? "unknown",
 					expected_quantity: expected.quantity,
 					actual_quantity: effectiveQuantity,
+					actual_price_id: actual.priceId,
 					phase_starts_at: phaseStartsAt,
 				});
 			} else {
@@ -707,6 +741,7 @@ export const evaluateItems = ({
 					expected_quantity: expected.quantity,
 					actual_quantity: effectiveQuantity,
 					...displayFromFixedPrice(catalogEntry),
+					actual_price_id: actual.priceId,
 					phase_starts_at: phaseStartsAt,
 				});
 			}
@@ -724,6 +759,7 @@ export const evaluateItems = ({
 					feature_id: price.config.feature_id ?? "unknown",
 					expected_unit_amount: expected.unitAmountDecimal,
 					actual_unit_amount: actual.unitAmountDecimal,
+					actual_price_id: actual.priceId,
 					phase_starts_at: phaseStartsAt,
 				});
 			} else if (price && isFixedPrice(price)) {
@@ -732,6 +768,7 @@ export const evaluateItems = ({
 					reason: "amount_mismatch",
 					expected_amount: expected.unitAmountDecimal,
 					actual_amount: actual.unitAmountDecimal,
+					actual_price_id: actual.priceId,
 					phase_starts_at: phaseStartsAt,
 				});
 			} else {
@@ -740,6 +777,7 @@ export const evaluateItems = ({
 					reason: "price_mismatch",
 					price_type: priceTypeOf(price),
 					feature_id: price?.config.feature_id ?? undefined,
+					actual_price_id: actual.priceId,
 					phase_starts_at: phaseStartsAt,
 				});
 			}

@@ -546,14 +546,16 @@ export const isOneOff = (prices: Price[]) => {
 export const initProductInStripe = async ({
 	ctx,
 	product,
+	includeLive = false,
 }: {
 	ctx: AutumnContext;
 	product: FullProduct;
+	includeLive?: boolean;
 }): Promise<undefined> => {
 	const { org, env, logger, db } = ctx;
 	await applyStripeResourceReuseForProduct({ ctx, product });
 
-	if (env === AppEnv.Live) return;
+	if (env === AppEnv.Live && !includeLive) return;
 	if (!isStripeConnected({ org, env })) return;
 	if (orgDisableStripeWrites({ ctx, includeSandbox: true })) return;
 

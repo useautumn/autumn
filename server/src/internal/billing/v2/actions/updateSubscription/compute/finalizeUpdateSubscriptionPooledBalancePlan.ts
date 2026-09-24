@@ -7,11 +7,12 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { applyCustomerLicensePlanOps } from "@/internal/billing/v2/utils/billingPlan/applyCustomerLicensePlanOps";
-import { mergePooledBalancePlans } from "@/internal/billing/v2/utils/billingPlan/mergePooledBalancePlans";
 import {
 	applyCustomerProductPatch,
 	getPatchCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import { mergePooledBalancePlans } from "@/internal/billing/v2/utils/billingPlan/mergePooledBalancePlans";
+import { computeUpdateQuantityPooledAnchorResetPlan } from "./updateQuantity/computeUpdateQuantityPooledAnchorResetPlan.js";
 
 export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 	ctx,
@@ -22,6 +23,17 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 	plan: AutumnBillingPlan;
 	billingContext: UpdateSubscriptionBillingContext;
 }): AutumnBillingPlan => {
+	if (
+		billingContext.intent === UpdateSubscriptionIntent.UpdateQuantity &&
+		billingContext.requestedBillingCycleAnchor === "now"
+	) {
+		return computeUpdateQuantityPooledAnchorResetPlan({
+			ctx,
+			billingContext,
+			plan,
+		});
+	}
+
 	// Keyed on plan contents: any quantity update that moves license pool
 	// counters re-snapshots the same parent customer product in place.
 	const movesLicensePools = (plan.customerLicenseUpdates?.length ?? 0) > 0;

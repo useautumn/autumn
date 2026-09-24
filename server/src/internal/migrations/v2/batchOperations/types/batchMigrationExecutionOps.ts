@@ -11,6 +11,7 @@ export const BatchMigrationInitialStateSchema = z.object({
 export const BatchMigrationExecutionAddSchema = z.object({
 	entitlement: EntitlementWithFeatureSchema,
 	initialState: BatchMigrationInitialStateSchema,
+	invoiceCredit: z.boolean().optional(),
 });
 
 export const RemoveByFilterSchema = z.object({
@@ -25,6 +26,7 @@ export const ReplaceByFilterSchema = z.object({
 	from: EntitlementPriceFilterSchema,
 	entitlement: EntitlementWithFeatureSchema,
 	initialState: BatchMigrationInitialStateSchema,
+	invoiceCredit: z.boolean().optional(),
 });
 
 export const BatchMigrationExecutionReplaceSchema = ReplaceByFilterSchema;

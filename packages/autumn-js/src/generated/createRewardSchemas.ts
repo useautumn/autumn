@@ -67,7 +67,7 @@ export const createRewardCouponRequestOutboundSchema = z.object({
 	value: z.number(),
 });
 
-export const createRewardExpiryRequestOutboundSchema = z.object({
+export const createRewardExpiryRequestBodyOutboundSchema = z.object({
 	type: z.string(),
 	length: z.number(),
 });
@@ -75,7 +75,7 @@ export const createRewardExpiryRequestOutboundSchema = z.object({
 export const createRewardGrantOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.number().nullable(),
-	expiry: createRewardExpiryRequestOutboundSchema.nullable(),
+	expiry: createRewardExpiryRequestBodyOutboundSchema.nullable(),
 });
 
 export const createRewardFeatureGrantPromoCodeOutboundSchema = z.object({
@@ -126,7 +126,7 @@ export const createRewardCouponRequestSchema = z.object({
 
 export const createRewardExpiryTypeRequestBodySchema = closedEnumSchema;
 
-export const createRewardExpiryRequestSchema = z.object({
+export const createRewardExpiryRequestBodySchema = z.object({
 	type: createRewardExpiryTypeRequestBodySchema,
 	length: z.number(),
 });
@@ -134,7 +134,7 @@ export const createRewardExpiryRequestSchema = z.object({
 export const createRewardGrantSchema = z.object({
 	featureId: z.string(),
 	included: z.number().nullable(),
-	expiry: createRewardExpiryRequestSchema.nullable(),
+	expiry: createRewardExpiryRequestBodySchema.nullable(),
 });
 
 export const createRewardFeatureGrantRequestSchema = z.object({

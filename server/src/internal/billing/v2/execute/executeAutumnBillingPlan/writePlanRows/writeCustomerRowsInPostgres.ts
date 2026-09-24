@@ -81,7 +81,7 @@ export const writeCustomerRowsInPostgres = async ({
 		customerProducts: insertCustomerProducts,
 	});
 
-	// Conditional: a customer that already has a currency keeps it.
+	// Lock / relock customer currency. No-op when already the target currency.
 	if (lockCustomerCurrency) {
 		await CusService.lockCurrencyIfUnset({
 			ctx,

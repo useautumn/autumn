@@ -1,18 +1,10 @@
 import type {
-	CustomizePlanLicense,
-	FrontendProduct,
 	FullCustomer,
 	FullCustomerSchedule,
-	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import {
-	CusProductStatus,
-	findCustomerProductById,
-	mapToProductItems,
-	productV2ToFrontendProduct,
-} from "@autumn/shared";
-import { useEffect, useMemo } from "react";
+import { CusProductStatus, findCustomerProductById } from "@autumn/shared";
+import { useMemo } from "react";
 import { toast } from "sonner";
 import {
 	CreateScheduleReviewContent,
@@ -22,25 +14,23 @@ import {
 	CreateScheduleFormProvider,
 	useCreateScheduleFormContext,
 } from "@/components/forms/create-schedule/context/CreateScheduleFormProvider";
-import {
-	type CreateScheduleForm,
-	EMPTY_SCHEDULE_PLAN,
-	type SchedulePlan,
-} from "@/components/forms/create-schedule/createScheduleFormSchema";
 import { useCustomerSchedules } from "@/components/forms/create-schedule/hooks/useCustomerSchedules";
+import { CustomerStatePlanEditor } from "@/components/forms/customer-state/components/CustomerStatePlanEditor";
+import { customerProductToCustomerStatePlan } from "@/components/forms/customer-state/customerProductToCustomerStatePlan";
+import {
+	type CustomerStateForm,
+	type CustomerStatePlan,
+	EMPTY_CUSTOMER_STATE_PLAN,
+} from "@/components/forms/customer-state/customerStateSchema";
 import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
-import { getSupportedPlanFormPatchFromDraftProduct } from "@/components/forms/shared/utils/planCustomizationUtils";
-import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { useEnv } from "@/utils/envUtils";
 import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
 import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
 type MergedSchedulePhase = {
 	starts_at: number;
@@ -67,78 +57,6 @@ function hasSchedulePhaseBillingCycleReset({
 				return cusProduct?.billing_cycle_anchor_resets_at === phase.starts_at;
 			}),
 	);
-}
-
-function reconstructCustomItems({
-	cusProduct,
-	product,
-}: {
-	cusProduct: FullCustomer["customer_products"][number];
-	product: ProductV2 | undefined;
-}): ProductItem[] | null {
-	const prices = cusProduct.customer_prices.map((cp) => cp.price);
-	const entitlements = cusProduct.customer_entitlements.map(
-		(ce) => ce.entitlement,
-	);
-	const features = cusProduct.customer_entitlements.map(
-		(ce) => ce.entitlement.feature,
-	);
-	const customerItems = mapToProductItems({ prices, entitlements, features });
-	const customerFeatureIds = new Set(
-		customerItems.map((item) => item.feature_id).filter(Boolean),
-	);
-	const customerHasBasePrice =
-		prices.length === 0 ||
-		customerItems.some((item) => !item.feature_id && item.price != null);
-	const missingProductItems =
-		product?.items?.filter((item) => {
-			if (!item.feature_id) return !customerHasBasePrice;
-			return !customerFeatureIds.has(item.feature_id);
-		}) ?? [];
-	const items = [...customerItems, ...missingProductItems];
-	return items.length > 0 ? items : null;
-}
-
-export function cusProductToPlan({
-	cusProduct,
-	products,
-}: {
-	cusProduct: FullCustomer["customer_products"][number];
-	products: ProductV2[];
-}) {
-	const product = products.find((p) => p.id === cusProduct.product_id);
-	const prepaidItems =
-		product?.items?.filter(
-			(item) => item.feature_id && item.usage_model === "prepaid",
-		) ?? [];
-
-	const prepaidOptions =
-		prepaidItems.length > 0 && cusProduct.options?.length > 0
-			? backendToDisplayQuantity({
-					backendOptions: cusProduct.options,
-					prepaidItems,
-				})
-			: {};
-
-	const isCustom =
-		cusProduct.is_custom ||
-		cusProduct.customer_prices.some((cp) => cp.price.is_custom) ||
-		cusProduct.customer_entitlements.some((ce) => ce.entitlement.is_custom);
-
-	const items = isCustom
-		? reconstructCustomItems({ cusProduct, product })
-		: null;
-
-	return {
-		...EMPTY_SCHEDULE_PLAN,
-		productId: cusProduct.product_id,
-		version: cusProduct.product.version,
-		prepaidOptions,
-		items,
-		isCustom,
-		// One schedule can span entities, so each plan carries its own scope.
-		entityId: cusProduct.entity_id ?? null,
-	};
 }
 
 /**
@@ -177,11 +95,13 @@ export function getActiveCustomerPlans({
 }: {
 	customer: FullCustomer | undefined;
 	products: ProductV2[];
-}): SchedulePlan[] {
+}): CustomerStatePlan[] {
 	return (
 		customer?.customer_products
 			.filter((cp) => cp.status === CusProductStatus.Active && !cp.canceled_at)
-			.map((cp) => cusProductToPlan({ cusProduct: cp, products })) ?? []
+			.map((cp) =>
+				customerProductToCustomerStatePlan({ cusProduct: cp, products }),
+			) ?? []
 	);
 }
 
@@ -195,7 +115,7 @@ export function buildInitialValues({
 	schedules: FullCustomerSchedule[];
 	products: ProductV2[];
 	nowMs?: number;
-}): CreateScheduleForm {
+}): CustomerStateForm {
 	const scheduledPhases = mergeSchedulePhases({ schedules });
 	// An id with no live customer product is a stale phase entry, not a plan the
 	// user has yet to pick — skip it rather than seed a blank row.
@@ -208,7 +128,9 @@ export function buildInitialValues({
 					fullCustomer: customer,
 					customerProductId: cpId,
 				});
-				return cusProduct ? [cusProductToPlan({ cusProduct, products })] : [];
+				return cusProduct
+					? [customerProductToCustomerStatePlan({ cusProduct, products })]
+					: [];
 			}),
 		}))
 		.filter((phase) => phase.plans.length > 0);
@@ -234,7 +156,7 @@ export function buildInitialValues({
 			{
 				startsAt: null,
 				persistedStartsAt: undefined,
-				plans: [{ ...EMPTY_SCHEDULE_PLAN }],
+				plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN }],
 			},
 		],
 		unscheduledPlans: [],
@@ -285,55 +207,7 @@ function ScheduleCheckoutContent() {
 }
 
 function CreateScheduleSheetBody() {
-	const {
-		products,
-		editingPlan,
-		editingPlanValue,
-		handlePlanEditSave,
-		setEditingPlan,
-	} = useCreateScheduleFormContext();
 	const sheetType = useSheetStore((s) => s.type);
-	const { setIsInlineEditorOpen } = useCustomerContext();
-
-	useEffect(() => {
-		setIsInlineEditorOpen(!!editingPlan);
-		return () => setIsInlineEditorOpen(false);
-	}, [editingPlan, setIsInlineEditorOpen]);
-
-	const planEditorProduct = useMemo(() => {
-		const product = products.find((p) => p.id === editingPlanValue?.productId);
-		if (!(editingPlanValue && product)) return undefined;
-		return productV2ToFrontendProduct({
-			product: {
-				...product,
-				items: editingPlanValue.items ?? product.items,
-				version: editingPlanValue.version ?? product.version,
-			},
-		});
-	}, [editingPlanValue, products]);
-
-	const handleInlineSave = (
-		draftProduct: FrontendProduct,
-		addLicenses?: CustomizePlanLicense[],
-	) => {
-		if (!(editingPlanValue && planEditorProduct)) return setEditingPlan(null);
-
-		const patch = getSupportedPlanFormPatchFromDraftProduct({
-			baseProduct: planEditorProduct,
-			draftProduct,
-		});
-		handlePlanEditSave({
-			plan: {
-				...editingPlanValue,
-				...(patch.items !== undefined && {
-					items: patch.items,
-					isCustom: true,
-				}),
-				...("version" in patch && { version: patch.version }),
-				...(addLicenses !== undefined && { addLicenses }),
-			},
-		});
-	};
 
 	let StageContent = CreateScheduleSheetContent;
 	if (sheetType === "create-schedule-send-invoice") {
@@ -347,16 +221,7 @@ function CreateScheduleSheetBody() {
 	return (
 		<>
 			<StageContent />
-			{planEditorProduct && (
-				<InlinePlanEditor
-					product={planEditorProduct}
-					onSave={handleInlineSave}
-					onCancel={() => setEditingPlan(null)}
-					isOpen={!!editingPlan}
-					enableLicenseEditing
-					initialAddLicenses={editingPlanValue?.addLicenses}
-				/>
-			)}
+			<CustomerStatePlanEditor />
 		</>
 	);
 }
@@ -373,7 +238,7 @@ export function CreateScheduleSheet() {
 	const schedules = useCustomerSchedules();
 
 	const seedOverrides = approvalSeed?.defaultOverrides as
-		| Partial<CreateScheduleForm>
+		| Partial<CustomerStateForm>
 		| undefined;
 	const initialValues = useMemo(() => {
 		const base = buildInitialValues({

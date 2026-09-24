@@ -13,6 +13,12 @@ export const INTERNAL_SPEC_PATH = join(
 	"../../../openapi/openapi-internal.yml",
 );
 
+/** The published spec: internal fields stripped, exactly what the docs and SDKs see. */
+export const PUBLIC_SPEC_PATH = join(
+	import.meta.dir,
+	"../../../openapi/openapi.yml",
+);
+
 const CATALOG_UPDATE_PATH = "/v1/catalogV2.update";
 
 export type OpenApiDocument = {
@@ -21,6 +27,8 @@ export type OpenApiDocument = {
 
 type OpenApiOperation = {
 	operationId?: string;
+	description?: string;
+	parameters?: { name?: string; in?: string; schema?: JsonSchema }[];
 	requestBody?: { content: Record<string, { schema: JsonSchema }> };
 	responses?: Record<
 		string,

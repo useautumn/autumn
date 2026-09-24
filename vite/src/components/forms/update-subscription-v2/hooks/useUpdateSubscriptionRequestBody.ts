@@ -15,6 +15,8 @@ import {
 } from "@/utils/billing/licenseQuantityUtils";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { getFreeTrial } from "../utils/getFreeTrial";
+import { billingCycleAnchorChanged } from "../utils/pendingBillingCycleAnchor";
+import { buildUpdateSubscriptionDiscounts } from "../utils/updateSubscriptionDiscounts";
 import type { UseUpdateSubscriptionForm } from "./useUpdateSubscriptionForm";
 
 type PrepaidItemInput = {
@@ -129,10 +131,12 @@ export function useUpdateSubscriptionRequestBody({
 	updateSubscriptionFormContext,
 	form,
 	currentPrepaidItems,
+	pendingBillingCycleAnchor,
 }: {
 	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
 	form: UseUpdateSubscriptionForm;
 	currentPrepaidItems: ProductItem[];
+	pendingBillingCycleAnchor: number | null;
 }) {
 	const { customerId, product, entityId, customerProduct } =
 		updateSubscriptionFormContext;
@@ -193,11 +197,8 @@ export function useUpdateSubscriptionRequestBody({
 				refundAmount,
 				noBillingChanges,
 				discounts,
+				removedRewardIds,
 			} = formValues;
-
-			const validDiscounts = discounts?.length
-				? discounts.filter((d) => "reward_id" in d && d.reward_id)
-				: undefined;
 
 			const base = {
 				customer_id: customerId ?? "",
@@ -259,14 +260,23 @@ export function useUpdateSubscriptionRequestBody({
 				...buildUpdateSubscriptionCustomizationParams({ items, addLicenses }),
 				version: version !== initialVersion ? version : undefined,
 				billing_behavior: billingBehavior || undefined,
-				billing_cycle_anchor: resolveBillingCycleAnchor({
-					resetBillingCycle,
-					billingCycleAnchorMode,
-					billingCycleAnchorDate,
-				}),
+				billing_cycle_anchor: billingCycleAnchorChanged({
+					formValues: {
+						resetBillingCycle,
+						billingCycleAnchorMode,
+						billingCycleAnchorDate,
+					},
+					pendingResetsAt: pendingBillingCycleAnchor,
+				})
+					? resolveBillingCycleAnchor({
+							resetBillingCycle,
+							billingCycleAnchorMode,
+							billingCycleAnchorDate,
+						})
+					: undefined,
 				carry_over_usages: resetUsage ? { enabled: false } : undefined,
 				no_billing_changes: noBillingChanges || undefined,
-				discounts: validDiscounts,
+				...buildUpdateSubscriptionDiscounts({ discounts, removedRewardIds }),
 				...(useInvoice
 					? {
 							invoice: true,
@@ -293,6 +303,7 @@ export function useUpdateSubscriptionRequestBody({
 			initialPrepaidOptions,
 			initialBackendQuantities,
 			initialLicenseQuantities,
+			pendingBillingCycleAnchor,
 		],
 	);
 

@@ -5,6 +5,7 @@ import {
 	type FeatureType,
 	FeatureUsageType,
 	isAiCreditSystem,
+	isAnyCreditSystem,
 	type ModelMarkups,
 	type ProviderMarkups,
 	type UpdateCatalogFeatureParams,
@@ -17,7 +18,6 @@ interface BuildFeatureMarkupParamsArgs {
 	defaultMarkup?: number | null;
 	providerMarkups?: ProviderMarkups;
 	schema?: CreditSchemaItem[];
-	invoiceCredit?: boolean;
 }
 
 interface FeatureMarkupParams {
@@ -25,7 +25,6 @@ interface FeatureMarkupParams {
 	default_markup?: number | null;
 	provider_markups?: ProviderMarkups;
 	credit_schema?: ApiCreditSchemaItem[];
-	invoice_credit?: boolean;
 }
 
 /**
@@ -39,15 +38,18 @@ export const buildFeatureMarkupParams = ({
 	defaultMarkup,
 	providerMarkups,
 	schema,
-	invoiceCredit,
 }: BuildFeatureMarkupParamsArgs): FeatureMarkupParams => {
 	const ai = isAiCreditSystem(type);
+	// Only a classic credit system has a rate card. A metered or boolean draft
+	// can still carry a schema left over from a type switch, and sending that
+	// fails API validation on rows the user never filled in.
+	const classicCreditSystem = isAnyCreditSystem(type) && !ai;
 	return {
 		model_markups: ai ? modelMarkups : undefined,
 		default_markup: ai ? defaultMarkup : undefined,
 		provider_markups: ai ? providerMarkups : undefined,
-		credit_schema: ai || !schema ? undefined : creditSchemaToApi(schema),
-		invoice_credit: ai ? undefined : invoiceCredit,
+		credit_schema:
+			classicCreditSystem && schema ? creditSchemaToApi(schema) : undefined,
 	};
 };
 
@@ -83,7 +85,6 @@ export const featureToCatalogFeatureParams = ({
 			defaultMarkup: feature.config?.default_markup,
 			providerMarkups: feature.config?.provider_markups,
 			schema: feature.config?.schema,
-			invoiceCredit: feature.config?.invoice_credit,
 		}),
 		...(archived !== undefined ? { archived } : {}),
 	};

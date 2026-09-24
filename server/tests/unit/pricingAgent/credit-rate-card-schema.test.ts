@@ -9,7 +9,6 @@ const creditFeature = {
 	name: "Credits",
 	type: "credit_system" as const,
 	display: { singular: "credit", plural: "credits" },
-	invoice_credit: true,
 	credit_schema: [
 		{
 			metered_feature_id: "feature_a",
@@ -32,7 +31,6 @@ describe("pricing-agent credit rate-card schema", () => {
 		});
 
 		expect(result.features[0]).toMatchObject({
-			invoice_credit: true,
 			credit_schema: [
 				{
 					metered_feature_id: "feature_a",

@@ -7,56 +7,41 @@ Per-unit pricing charges customers based on the quantity of a resource they use 
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Create a `non-consumable` metered feature and add it to a plan with a per-unit price:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const seats = feature({
-  id: 'seats',
-  name: 'Seats',
-  type: 'metered',
+  featureId: "seats",
+  name: "Seats",
+  type: "metered",
   consumable: false,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: seats.id,
+    {
+      featureId: seats.featureId,
       included: 5,
       price: {
         amount: 10,
-        interval: 'month',
-        billingMethod: 'usage_based',
+        interval: "month",
+        billingMethod: "usage_based",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [seats], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and create or edit a plan
-2. Add a `metered`, `non-consumable` feature (e.g., "Seats")
-3. Set an **included** amount (e.g., 5 seats for free)
-4. Add a **price** per unit (e.g., $10 per seat per month)
-5. Choose the **billing method**:
-   - **Prepaid** — customer selects quantity at checkout, charged upfront
-   - **Usage-based** — billed for actual usage at end of billing cycle
-6. Under **Advanced**, configure [proration](/documentation/modelling-pricing/proration) behavior for mid-cycle changes
-7. Save the plan
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## Billing methods
 

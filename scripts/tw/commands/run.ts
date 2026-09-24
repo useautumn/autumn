@@ -44,6 +44,7 @@ import {
 	DATABASE_URL,
 	DYNAMODB_ENDPOINT,
 	EDGE_CONFIG_OVERRIDE_B64,
+	KAFKA_BROKERS,
 	PROJECT_ROOT,
 	REDIS_URL,
 	REGISTRY_DIR,
@@ -656,6 +657,8 @@ const stripeBudgetForRun = ({
 
 /** Set once the pool is sized, before any worker env is built. */
 let stripeBudget = stripeBudgetForRun({ workers: 1 });
+/** Whether the run's servers route to the balance worker; set from `--balance-worker` before fan-out. */
+let balanceWorkerEnabled = true;
 
 const buildWorkerEnv = ({
 	stripeAccountId,
@@ -685,6 +688,12 @@ const buildWorkerEnv = ({
 		TRACK_ASYNC_SQS_QUEUE_URL,
 		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
 		DYNAMODB_ENDPOINT,
+		// The µVM's own Redpanda and balance worker (started by boot.ts); the
+		// `local` deployment names the topics warmup.sh created.
+		KAFKA_BROKERS,
+		KAFKA_AUTH_MODE: "none",
+		BALANCE_WORKER_DEPLOYMENT: "local",
+		BALANCE_WORKER_ROLLOUT_ENABLED: String(balanceWorkerEnabled),
 		// baked secrets (every worker).
 		ENCRYPTION_IV: requireSecret("ENCRYPTION_IV"),
 		ENCRYPTION_PASSWORD: requireSecret("ENCRYPTION_PASSWORD"),
@@ -792,6 +801,9 @@ const buildWarmEnv = (): Record<string, string> => ({
 	TRACK_ASYNC_SQS_QUEUE_URL,
 	TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
 	DYNAMODB_ENDPOINT,
+	KAFKA_BROKERS,
+	KAFKA_AUTH_MODE: "none",
+	BALANCE_WORKER_DEPLOYMENT: "local",
 	AUTUMN_DB_DIRECT: "1",
 	TW_WORKER_MODE: "1",
 	TW_SKIP_STRIPE_ACCOUNT: "1",
@@ -1397,6 +1409,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	// Size the per-worker Stripe budget now that the pool size is final — every
 	// worker env built below reads it.
 	stripeBudget = stripeBudgetForRun({ workers: effectiveWorkers });
+	balanceWorkerEnabled = args.balanceWorker;
 
 	// No per-worker webhook cap: the swarm registers ONE shared platform Connect
 	// webhook → the ingress sandbox, which routes each event to the owning worker by

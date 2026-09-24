@@ -5,6 +5,8 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
+import * as openEnums from "../types/enums.js";
+import { OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import {
@@ -12,7 +14,7 @@ import {
   ListPlansLicense$inboundSchema,
   ListPlansVariantDetails,
   ListPlansVariantDetails$inboundSchema,
-} from "./list-plans-interval-variant-remove-item-enum-1.js";
+} from "./list-plans-variant-add-item-feature-override-tier.js";
 import {
   ListPlansBillingControls,
   ListPlansBillingControls$inboundSchema,
@@ -30,12 +32,337 @@ import {
   ListPlansPrice$inboundSchema,
   ListPlansProcessors,
   ListPlansProcessors$inboundSchema,
-} from "./list-plans-variant-details-upsert-license-additional-currency.js";
-import {
-  ListPlansVariant,
-  ListPlansVariant$inboundSchema,
-} from "./list-plans-variant.js";
+} from "./list-plans-variant-details-usage-alert.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+import {
+  ListPlansVariantCustomize,
+  ListPlansVariantCustomize$inboundSchema,
+  VariantConfig,
+  VariantConfig$inboundSchema,
+  VariantEnv,
+  VariantEnv$inboundSchema,
+  VariantFreeTrial,
+  VariantFreeTrial$inboundSchema,
+  VariantItem,
+  VariantItem$inboundSchema,
+  VariantPlanAutoTopup,
+  VariantPlanAutoTopup$inboundSchema,
+  VariantPlanPrice,
+  VariantPlanPrice$inboundSchema,
+  VariantPlanSpendLimit,
+  VariantPlanSpendLimit$inboundSchema,
+  VariantPlanUsageLimitInterval,
+  VariantPlanUsageLimitInterval$inboundSchema,
+  VariantProcessors,
+  VariantProcessors$inboundSchema,
+} from "./variant-plan-usage-limit-interval.js";
+
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const VariantPlanAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type VariantPlanAnchor = OpenEnum<typeof VariantPlanAnchor>;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type VariantPlanUsageLimitFilter = {
+  properties: { [k: string]: string };
+};
+
+export type VariantPlanUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: VariantPlanUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: VariantPlanAnchor | undefined;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: VariantPlanUsageLimitFilter | undefined;
+};
+
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const VariantPlanThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type VariantPlanThresholdType = OpenEnum<
+  typeof VariantPlanThresholdType
+>;
+
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const VariantPlanBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type VariantPlanBasis = OpenEnum<typeof VariantPlanBasis>;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type VariantPlanUsageAlertFilter = {
+  properties: { [k: string]: string };
+};
+
+export type VariantPlanUsageAlert = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled: boolean;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: VariantPlanThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis: VariantPlanBasis;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: VariantPlanUsageAlertFilter | undefined;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type VariantPlanOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
+/**
+ * Plan-level billing controls used as customer defaults.
+ */
+export type VariantPlanBillingControls = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<VariantPlanAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<VariantPlanSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<VariantPlanUsageLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<VariantPlanUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<VariantPlanOverageAllowed> | undefined;
+};
+
+/**
+ * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
+ */
+export const VariantStatus = {
+  Active: "active",
+  Scheduled: "scheduled",
+} as const;
+/**
+ * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
+ */
+export type VariantStatus = OpenEnum<typeof VariantStatus>;
+
+/**
+ * The action that would occur if this plan were attached to the customer.
+ */
+export const VariantAttachAction = {
+  Activate: "activate",
+  Upgrade: "upgrade",
+  Downgrade: "downgrade",
+  None: "none",
+  Purchase: "purchase",
+} as const;
+/**
+ * The action that would occur if this plan were attached to the customer.
+ */
+export type VariantAttachAction = OpenEnum<typeof VariantAttachAction>;
+
+export type VariantCustomerEligibility = {
+  /**
+   * Whether the trial on this plan is available to this customer. For example, if the customer used the trial in the past, this will be false.
+   */
+  trialAvailable?: boolean | undefined;
+  /**
+   * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
+   */
+  status?: VariantStatus | undefined;
+  /**
+   * Whether the customer's active instance of this plan is set to cancel.
+   */
+  canceling?: boolean | undefined;
+  /**
+   * Whether the customer is currently on a free trial of this plan.
+   */
+  trialing?: boolean | undefined;
+  /**
+   * The action that would occur if this plan were attached to the customer.
+   */
+  attachAction: VariantAttachAction;
+};
+
+/**
+ * The variant's fully resolved plan (base + customize applied). Present when variants are expanded.
+ */
+export type ListPlansPlan = {
+  /**
+   * Unique identifier for the plan.
+   */
+  id: string;
+  /**
+   * Display name of the plan.
+   */
+  name: string;
+  /**
+   * Optional description of the plan.
+   */
+  description: string | null;
+  /**
+   * Group identifier for organizing related plans. Plans in the same group are mutually exclusive.
+   */
+  group: string | null;
+  /**
+   * Version number of the plan. Incremented when plan configuration changes.
+   */
+  version: number;
+  /**
+   * User-facing version identity. Defaults to v{n} when the version is minted.
+   */
+  versionSlug?: string | null | undefined;
+  /**
+   * Whether this is the active version of the plan. At most one version is active.
+   */
+  active?: boolean | undefined;
+  /**
+   * Whether this is an add-on plan that can be attached alongside a main plan.
+   */
+  addOn: boolean;
+  /**
+   * If true, this plan is automatically attached when a customer is created. Used for free plans.
+   */
+  autoEnable: boolean;
+  /**
+   * Base recurring price for the plan. Null for free plans or usage-only plans.
+   */
+  price: VariantPlanPrice | null;
+  /**
+   * Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.
+   */
+  items: Array<VariantItem>;
+  /**
+   * Payment processors this plan is connected to. Omitted when unset.
+   */
+  processors?: VariantProcessors | undefined;
+  /**
+   * Free trial configuration. If set, new customers can try this plan before being charged.
+   */
+  freeTrial?: VariantFreeTrial | undefined;
+  /**
+   * Unix timestamp (ms) when the plan was created.
+   */
+  createdAt: number;
+  /**
+   * Environment this plan belongs to ('sandbox' or 'live').
+   */
+  env: VariantEnv;
+  /**
+   * Whether the plan is archived. Archived plans cannot be attached to new customers.
+   */
+  archived: boolean;
+  /**
+   * Miscellaneous plan-level configuration flags.
+   */
+  config: VariantConfig;
+  /**
+   * Plan-level billing controls used as customer defaults.
+   */
+  billingControls?: VariantPlanBillingControls | undefined;
+  /**
+   * Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.
+   */
+  metadata: { [k: string]: any };
+  customerEligibility?: VariantCustomerEligibility | undefined;
+  /**
+   * Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from.
+   */
+  baseVariantId: string | null;
+};
+
+export type ListPlansVariant = {
+  /**
+   * The plan ID of the variant derived from this base plan.
+   */
+  variantPlanId: string;
+  /**
+   * Display name of the variant plan.
+   */
+  name: string;
+  /**
+   * The variant's declared divergence from its base plan — exactly what you would re-submit to recreate it.
+   */
+  customize?: ListPlansVariantCustomize | undefined;
+  /**
+   * The variant's fully resolved plan (base + customize applied). Present when variants are expanded.
+   */
+  plan?: ListPlansPlan | undefined;
+};
 
 /**
  * A plan defines features, pricing, entitlements, assignable licenses, and derived variants.
@@ -144,6 +471,317 @@ export type ListPlansResponse = {
 };
 
 /** @internal */
+export const VariantPlanAnchor$inboundSchema: z.ZodMiniType<
+  VariantPlanAnchor,
+  unknown
+> = openEnums.inboundSchema(VariantPlanAnchor);
+
+/** @internal */
+export const VariantPlanUsageLimitFilter$inboundSchema: z.ZodMiniType<
+  VariantPlanUsageLimitFilter,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), types.string()),
+});
+
+export function variantPlanUsageLimitFilterFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanUsageLimitFilter, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanUsageLimitFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanUsageLimitFilter' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanUsageLimit$inboundSchema: z.ZodMiniType<
+  VariantPlanUsageLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), true),
+    limit: types.number(),
+    interval: VariantPlanUsageLimitInterval$inboundSchema,
+    anchor: types.optional(VariantPlanAnchor$inboundSchema),
+    filter: types.optional(
+      z.lazy(() => VariantPlanUsageLimitFilter$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function variantPlanUsageLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanUsageLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanUsageLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanUsageLimit' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanThresholdType$inboundSchema: z.ZodMiniType<
+  VariantPlanThresholdType,
+  unknown
+> = openEnums.inboundSchema(VariantPlanThresholdType);
+
+/** @internal */
+export const VariantPlanBasis$inboundSchema: z.ZodMiniType<
+  VariantPlanBasis,
+  unknown
+> = openEnums.inboundSchema(VariantPlanBasis);
+
+/** @internal */
+export const VariantPlanUsageAlertFilter$inboundSchema: z.ZodMiniType<
+  VariantPlanUsageAlertFilter,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), types.string()),
+});
+
+export function variantPlanUsageAlertFilterFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanUsageAlertFilter, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanUsageAlertFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanUsageAlertFilter' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanUsageAlert$inboundSchema: z.ZodMiniType<
+  VariantPlanUsageAlert,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), true),
+    threshold: types.number(),
+    threshold_type: VariantPlanThresholdType$inboundSchema,
+    basis: z._default(VariantPlanBasis$inboundSchema, "balance"),
+    filter: types.optional(
+      z.lazy(() => VariantPlanUsageAlertFilter$inboundSchema),
+    ),
+    name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "threshold_type": "thresholdType",
+    });
+  }),
+);
+
+export function variantPlanUsageAlertFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanUsageAlert, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanUsageAlert$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanUsageAlert' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanOverageAllowed$inboundSchema: z.ZodMiniType<
+  VariantPlanOverageAllowed,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function variantPlanOverageAllowedFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanOverageAllowed, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanOverageAllowed$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanOverageAllowed' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanBillingControls$inboundSchema: z.ZodMiniType<
+  VariantPlanBillingControls,
+  unknown
+> = z.pipe(
+  z.object({
+    auto_topups: types.optional(z.array(VariantPlanAutoTopup$inboundSchema)),
+    spend_limits: types.optional(z.array(VariantPlanSpendLimit$inboundSchema)),
+    usage_limits: types.optional(
+      z.array(z.lazy(() => VariantPlanUsageLimit$inboundSchema)),
+    ),
+    usage_alerts: types.optional(
+      z.array(z.lazy(() => VariantPlanUsageAlert$inboundSchema)),
+    ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => VariantPlanOverageAllowed$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "auto_topups": "autoTopups",
+      "spend_limits": "spendLimits",
+      "usage_limits": "usageLimits",
+      "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
+    });
+  }),
+);
+
+export function variantPlanBillingControlsFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanBillingControls, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanBillingControls$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanBillingControls' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantStatus$inboundSchema: z.ZodMiniType<
+  VariantStatus,
+  unknown
+> = openEnums.inboundSchema(VariantStatus);
+
+/** @internal */
+export const VariantAttachAction$inboundSchema: z.ZodMiniType<
+  VariantAttachAction,
+  unknown
+> = openEnums.inboundSchema(VariantAttachAction);
+
+/** @internal */
+export const VariantCustomerEligibility$inboundSchema: z.ZodMiniType<
+  VariantCustomerEligibility,
+  unknown
+> = z.pipe(
+  z.object({
+    trial_available: types.optional(types.boolean()),
+    status: types.optional(VariantStatus$inboundSchema),
+    canceling: types.optional(types.boolean()),
+    trialing: types.optional(types.boolean()),
+    attach_action: VariantAttachAction$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "trial_available": "trialAvailable",
+      "attach_action": "attachAction",
+    });
+  }),
+);
+
+export function variantCustomerEligibilityFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantCustomerEligibility, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantCustomerEligibility$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantCustomerEligibility' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansPlan$inboundSchema: z.ZodMiniType<
+  ListPlansPlan,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    name: types.string(),
+    description: types.nullable(types.string()),
+    group: types.nullable(types.string()),
+    version: types.number(),
+    version_slug: z.optional(z.nullable(types.string())),
+    active: types.optional(types.boolean()),
+    add_on: types.boolean(),
+    auto_enable: types.boolean(),
+    price: types.nullable(VariantPlanPrice$inboundSchema),
+    items: z.array(VariantItem$inboundSchema),
+    processors: types.optional(VariantProcessors$inboundSchema),
+    free_trial: types.optional(VariantFreeTrial$inboundSchema),
+    created_at: types.number(),
+    env: VariantEnv$inboundSchema,
+    archived: types.boolean(),
+    config: VariantConfig$inboundSchema,
+    billing_controls: types.optional(
+      z.lazy(() => VariantPlanBillingControls$inboundSchema),
+    ),
+    metadata: z.record(z.string(), z.any()),
+    customer_eligibility: types.optional(
+      z.lazy(() => VariantCustomerEligibility$inboundSchema),
+    ),
+    base_variant_id: types.nullable(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "version_slug": "versionSlug",
+      "add_on": "addOn",
+      "auto_enable": "autoEnable",
+      "free_trial": "freeTrial",
+      "created_at": "createdAt",
+      "billing_controls": "billingControls",
+      "customer_eligibility": "customerEligibility",
+      "base_variant_id": "baseVariantId",
+    });
+  }),
+);
+
+export function listPlansPlanFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansPlan, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansPlan$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansPlan' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansVariant$inboundSchema: z.ZodMiniType<
+  ListPlansVariant,
+  unknown
+> = z.pipe(
+  z.object({
+    variant_plan_id: types.string(),
+    name: types.string(),
+    customize: types.optional(ListPlansVariantCustomize$inboundSchema),
+    plan: types.optional(z.lazy(() => ListPlansPlan$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "variant_plan_id": "variantPlanId",
+    });
+  }),
+);
+
+export function listPlansVariantFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansVariant, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansVariant$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansVariant' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansList$inboundSchema: z.ZodMiniType<
   ListPlansList,
   unknown
@@ -174,7 +812,9 @@ export const ListPlansList$inboundSchema: z.ZodMiniType<
     base_variant_id: types.nullable(types.string()),
     variant_details: types.optional(ListPlansVariantDetails$inboundSchema),
     licenses: types.optional(z.array(ListPlansLicense$inboundSchema)),
-    variants: types.optional(z.array(ListPlansVariant$inboundSchema)),
+    variants: types.optional(
+      z.array(z.lazy(() => ListPlansVariant$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {

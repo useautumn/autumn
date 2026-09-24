@@ -600,7 +600,21 @@ Auto top-ups are customer-level only because they create invoices and charge a p
 
 ## Plan-Level Defaults
 
-Every billing control can also be defined on a **plan** (in the dashboard under plan settings → billing controls, or via the `billingControls` field when creating or updating a plan). Plan-level controls act as defaults for every customer on that plan — set a daily usage limit once on your free tier instead of on each customer.
+Every billing control can also be defined on a **plan** (in the dashboard under plan settings → billing controls, via the `billingControls` field when creating or updating a plan, or in the [CLI config](/cli/config#plans) with the same field). Plan-level controls act as defaults for every customer on that plan — set a daily usage limit once on your free tier instead of on each customer.
+
+```ts autumn.config.ts
+export const free = plan({
+  planId: "free",
+  versionSlug: "v1",
+  active: true,
+  name: "Free",
+  autoEnable: true,
+  items: [{ featureId: "emails", included: 200, reset: { interval: "month" } }],
+  billingControls: {
+    usageLimits: [{ featureId: "emails", limit: 200, interval: "day" }],
+  },
+});
+```
 
 Resolution when a customer is on one or more plans:
 

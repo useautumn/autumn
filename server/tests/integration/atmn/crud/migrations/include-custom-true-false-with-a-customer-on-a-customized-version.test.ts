@@ -20,7 +20,7 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { createClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
 type PreviewMigrations =
 	| Array<{ plans: Array<{ planId: string; versions: number[] }> }>

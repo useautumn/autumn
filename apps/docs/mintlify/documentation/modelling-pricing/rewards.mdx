@@ -35,9 +35,58 @@ To create a free product reward, under reward **Type**, select "Free Product". T
   Use the redeem endpoint instead.
 </Warning>
 
+### Using the CLI
+
+Discount coupons and feature grants can also live in your `autumn.config.ts`, in the `rewards` list. A feature grant gives free usage of a feature when a code is redeemed. See the [config reference](/cli/config#rewards) for every field.
+
+```ts autumn.config.ts
+import { atmn, coupon, feature, featureGrant } from "atmn";
+
+export const messages = feature({
+  featureId: "messages",
+  name: "Messages",
+  type: "metered",
+  consumable: true,
+});
+
+export const launchDiscount = coupon({
+  id: "launch20",
+  name: "Launch discount",
+  type: "percentage_discount",
+  value: 20,
+  duration: { type: "months", length: 3 },
+  planIds: null,
+  promoCodes: [{ code: "LAUNCH20" }],
+});
+
+export const welcomeMessages = featureGrant({
+  id: "welcome_messages",
+  name: "Welcome messages",
+  grants: [
+    {
+      featureId: messages.featureId,
+      included: 500,
+      expiry: { type: "month", length: 1 },
+    },
+  ],
+  promoCodes: [{ code: "WELCOME", maxUses: null }],
+});
+
+export default atmn({
+  features: [messages],
+  rewards: [launchDiscount, welcomeMessages],
+});
+```
+
+Preview with `atmn push`, then apply with `atmn push --yes`.
+
+<Note>
+Free product rewards are managed in the dashboard only. The CLI leaves them as they are.
+</Note>
+
 ## Referral Programs
 
-Referral programs automatically grant rewards to customers who bring on new customers. You define the program in the Dashboard, then implement it in your application with just two API calls.
+Referral programs automatically grant rewards to customers who bring on new customers. You define the program in the Dashboard or your CLI config, then implement it in your application with just two API calls.
 
 ### Setting up
 
@@ -59,6 +108,35 @@ Referral programs automatically grant rewards to customers who bring on new cust
 | Exclude trial | Skip triggering for trial subscriptions |
 | Max redemptions | Limit how many times one referrer's code can be used |
 | Received by | `referrer` only, or `all` (both referrer and redeemer) |
+
+In the CLI config, a referral program is a `referralProgram()` entry in the `referralPrograms` list:
+
+```ts autumn.config.ts
+import { atmn, coupon, referralProgram } from "atmn";
+
+export const freeMonth = coupon({
+  id: "free-month",
+  name: "Free month",
+  type: "percentage_discount",
+  value: 100,
+  duration: { type: "months", length: 1 },
+  planIds: null,
+  promoCodes: [],
+});
+
+export const referrals = referralProgram({
+  id: "friend_referral",
+  rewardId: "free-month",
+  redeemOn: "customer_creation",
+  receivedBy: "all",
+  maxRedemptions: 10,
+});
+
+export default atmn({
+  rewards: [freeMonth],
+  referralPrograms: [referrals],
+});
+```
 
 ### Creating a referral code
 

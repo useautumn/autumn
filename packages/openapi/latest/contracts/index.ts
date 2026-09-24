@@ -21,13 +21,16 @@ import {
 	billingPreviewUpdateContract,
 	billingSetupPaymentContract,
 	billingUpdateContract,
+	legacyBillingAdvanceTestClockContract,
 } from "./billingContract.js";
 import {
+	catalogV2DiffContract,
 	catalogV2GetContract,
 	catalogV2PreviewUpdateContract,
 	catalogV2UpdateContract,
 } from "./catalogContract.js";
 import {
+	advanceTestClockContract,
 	deleteCustomerContract,
 	getCustomerContract,
 	getOrCreateCustomerContract,
@@ -54,9 +57,13 @@ import {
 	updateFeatureContract,
 } from "./featuresContract.js";
 import {
+	createInvoiceContract,
 	insertInvoicesContract,
 	listInvoicesContract,
+	listInvoiceTemplatesContract,
 	payInvoiceContract,
+	reissueInvoiceContract,
+	voidInvoiceContract,
 } from "./invoicesContract.js";
 import {
 	keysMintContract,
@@ -69,6 +76,7 @@ import {
 	listLicensesContract,
 	releaseLicenseContract,
 } from "./licensesContract.js";
+import { logsSearchContract } from "./logsContract.js";
 import {
 	organizationPreviewUpdateContract,
 	organizationUpdateContract,
@@ -81,7 +89,9 @@ import {
 	updatePlanContract,
 } from "./plansContract.js";
 import {
+	platformDisconnectStripeContract,
 	platformGetRevenueCatKeysContract,
+	platformGetStripeConnectionContract,
 	platformLinkRevenueCatContract,
 	platformSyncRevenueCatContract,
 } from "./platformContract.js";
@@ -115,6 +125,7 @@ export const v2_3ContractRouter = oc.router({
 	listCustomers: listCustomersContract,
 	updateCustomer: updateCustomerContract,
 	deleteCustomer: deleteCustomerContract,
+	advanceTestClock: advanceTestClockContract,
 
 	// Plans
 	plansCreate: createPlanContract,
@@ -132,6 +143,7 @@ export const v2_3ContractRouter = oc.router({
 
 	// Billing
 	billingAttach: billingAttachContract,
+	billingAdvanceTestClock: legacyBillingAdvanceTestClockContract,
 	billingCreateSchedule: billingCreateScheduleContract,
 	billingMultiAttach: billingMultiAttachContract,
 	billingPreviewAttach: billingPreviewAttachContract,
@@ -160,10 +172,17 @@ export const v2_3ContractRouter = oc.router({
 	eventsList: eventsListContract,
 	eventsAggregate: eventsAggregateContract,
 
+	// Logs
+	logsSearch: logsSearchContract,
+
 	// Invoices
+	invoicesCreate: createInvoiceContract,
 	invoicesInsert: insertInvoicesContract,
 	invoicesList: listInvoicesContract,
+	invoicesListTemplates: listInvoiceTemplatesContract,
 	invoicesPay: payInvoiceContract,
+	invoicesReissue: reissueInvoiceContract,
+	invoicesVoid: voidInvoiceContract,
 
 	// Licenses
 	licensesAttach: attachLicenseContract,
@@ -194,6 +213,8 @@ export const v2_3ContractRouter = oc.router({
 	rewardsRedeemCode: rewardsRedeemCodeContract,
 
 	// Platform
+	platformGetStripeConnection: platformGetStripeConnectionContract,
+	platformDisconnectStripe: platformDisconnectStripeContract,
 	platformLinkRevenueCat: platformLinkRevenueCatContract,
 	platformSyncRevenueCat: platformSyncRevenueCatContract,
 	platformGetRevenueCatKeys: platformGetRevenueCatKeysContract,
@@ -222,6 +243,7 @@ export const v2_3InternalContractRouter = oc.router({
 
 	// catalogV2 (internal — see catalogContract.ts)
 	catalogV2Get: catalogV2GetContract,
+	catalogV2Diff: catalogV2DiffContract,
 	catalogV2PreviewUpdate: catalogV2PreviewUpdateContract,
 	catalogV2Update: catalogV2UpdateContract,
 

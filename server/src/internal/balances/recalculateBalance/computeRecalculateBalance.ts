@@ -92,9 +92,7 @@ export const computeRecalculateBalance = async ({
 		});
 	}
 	for (const customerEntitlement of before) {
-		validateInvoiceCreditBalanceMutation({
-			feature: customerEntitlement.entitlement.feature,
-		});
+		validateInvoiceCreditBalanceMutation({ customerEntitlement });
 	}
 	const entityId = fullCustomer.entity?.id ?? undefined;
 	const totalUsage = cusEntsToRecalculateUsage({ cusEnts: before, entityId });

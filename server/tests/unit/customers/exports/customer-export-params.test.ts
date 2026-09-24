@@ -20,6 +20,7 @@ describe("CreateCustomerExportParamsSchema", () => {
 });
 
 const runningExportResponse = {
+	kind: "customers",
 	id: "cusexp_123",
 	status: CustomerExportStatus.Running,
 	fields: [CustomerExportField.Name],

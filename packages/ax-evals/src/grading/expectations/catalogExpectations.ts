@@ -1,4 +1,4 @@
-import type { ApiPlanParams } from "../../../../atmn/src/lib/transforms/sdkToApi/plan.ts";
+import type { ApiPlanParams } from "../../../../atmn-old/src/lib/transforms/sdkToApi/plan.ts";
 import type { AxRunOutput } from "../../types/axRunOutput.ts";
 import type { Expectation } from "../types/expectation.ts";
 import type { PlanSpec } from "../types/planSpec.ts";

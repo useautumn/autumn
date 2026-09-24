@@ -39,12 +39,15 @@ export function useVariantLinkVisibility(product: ProductV2) {
 		persistedBasePlanId: basePlanId,
 		planId: product.id,
 	});
+	const selectedBasePlan =
+		products.find((candidate) => candidate.id === selectedBasePlanId) ?? null;
 
 	return {
 		isVariant: basePlanId !== null,
 		hasVariants,
 		basePlanId,
 		selectedBasePlanId,
+		selectedBasePlan,
 		basePlan,
 		basePlanOptions,
 	};

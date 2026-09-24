@@ -72,12 +72,16 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "pro",
+			versionSlug: "v1",
+			active: true,
 			name: "Pro",
 			price: { amount: 30, interval: "month" },
 			items: [{ featureId: "domains", included: 5 }],
 		}),
 		plan({
 			planId: "extra_domains",
+			versionSlug: "v1",
+			active: true,
 			name: "Extra Domains",
 			addOn: true,
 			items: [

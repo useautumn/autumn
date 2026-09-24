@@ -313,6 +313,24 @@ describe("findProductLevelMatchForStripeItem", () => {
 		expect(match?.priceMatch?.matched_on.type).toBe("stripe_product_id");
 	});
 
+	test("a keyed pay-as-you-go price does not claim a flat licensed item", () => {
+		const keyedUsagePrice = usagePrice({ stripeProductId: "prod_shared" });
+		const withKeyedPrice: ProductLevelMatchCandidate = {
+			product: product({ id: "keyed", price: keyedUsagePrice }),
+			matched_on: {
+				type: "stripe_product_id",
+				stripe_product_id: "prod_shared",
+			},
+		};
+
+		const match = findProductLevelMatchForStripeItem({
+			item: stripeItem({ interval: "year", unitAmountDecimal: "600000" }),
+			candidates: [withKeyedPrice],
+		});
+
+		expect(match?.priceMatch ?? null).toBeNull();
+	});
+
 	test("does not guess when multiple candidates match the same base price shape", () => {
 		const variantA = candidate({
 			id: "variant_a",

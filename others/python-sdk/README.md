@@ -256,6 +256,7 @@ Use this when you know the customer exists or assert they exist without creating
 * [list](docs/sdks/customers/README.md#list) - Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 * [delete](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
+* [advance_test_clock](docs/sdks/customers/README.md#advance_test_clock) - Advance a customer's Stripe test clock to a future time in milliseconds. Only Stripe test-mode customers with a test clock are supported. Advancement is asynchronous; Stripe enforces clock status and advancement limits.
 
 ### [Entities](docs/sdks/entities/README.md)
 
@@ -300,8 +301,13 @@ Use this to permanently remove a feature. Note: features that are used in produc
 
 ### [Invoices](docs/sdks/invoices/README.md)
 
+* [create](docs/sdks/invoices/README.md#create) - Creates a standalone send-invoice Stripe invoice from catalog pricing and custom charges. Quantities are billable units, exclusive of any included usage; Autumn applies billing units and tiers. Nothing about the customer's plans, balances or subscriptions changes. Pass preview: true to get the calculated lines and totals without creating an invoice.
 * [insert](docs/sdks/invoices/README.md#insert) - Inserts or updates up to 500 historical invoices without reading or mutating the billing processor.
 * [list](docs/sdks/invoices/README.md#list) - Lists invoices with cursor pagination and optional filters (customer, entity, status, processor). Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
+* [list_templates](docs/sdks/invoices/README.md#list_templates) - Lists the organization's invoice templates, newest first, with offset pagination. Use a template's `id` as `invoice_template_id` when creating or reissuing an invoice.
+* [pay](docs/sdks/invoices/README.md#pay) - Marks an open Stripe invoice as paid out of band. No charge is attempted; use this when payment was collected elsewhere (e.g. a marketplace). Already-paid invoices are returned unchanged.
+* [reissue](docs/sdks/invoices/README.md#reissue) - Voids an open send-invoice Stripe invoice and issues a replacement with the same line items. An invoice template can supply the replacement's footer (e.g. bank details) and memo. The replacement keeps the original due date unless net_terms_days is passed, which is required once the original is past due. Pass update_customer_email to change the customer's billing email first so the replacement is sent there. The replacement stays linked to the same subscription and fulfils the same pending plan when paid.
+* [void](docs/sdks/invoices/README.md#void) - Voids an open or uncollectible Stripe invoice. Any plan still waiting on the invoice to be paid expires. Voiding an unpaid subscription invoice lets Stripe re-derive the subscription status from its remaining invoices, which can move a past-due subscription back to active. Already-void invoices are returned unchanged.
 
 ### [Keys](docs/sdks/keys/README.md)
 
@@ -313,6 +319,10 @@ Use this to permanently remove a feature. Note: features that are used in produc
 
 * [attach](docs/sdks/licenses/README.md#attach) - Assigns licenses to one or more entities.
 * [release](docs/sdks/licenses/README.md#release) - Releases licenses assigned to one or more entities.
+
+### [Logs](docs/sdks/logs/README.md)
+
+* [search](docs/sdks/logs/README.md#search) - Search API requests and incoming Stripe webhooks for your organization and environment.
 
 ### [Plans](docs/sdks/plans/README.md)
 
@@ -346,6 +356,13 @@ Use this to permanently remove a feature. Note: features that are used in produc
 * [update](docs/sdks/rewardssdk/README.md#update) - Update a coupon or feature grant. Omitted fields keep their current value.
 * [delete](docs/sdks/rewardssdk/README.md#delete) - Delete a coupon or feature grant.
 * [redeem_code](docs/sdks/rewardssdk/README.md#redeem_code) - Redeem a reward promo code for a customer.
+
+### [Sandboxes](docs/sdks/sandboxes/README.md)
+
+* [create](docs/sdks/sandboxes/README.md#create) - Creates a sandbox: an isolated copy of your organization with its own catalog, customers and secret key. Returns the sandbox's secret key once, in this response — store it, it cannot be read back. Authenticated with your organization's secret key (a sandbox's own key cannot create sandboxes).
+* [list](docs/sdks/sandboxes/README.md#list) - Lists every sandbox belonging to your organization, newest first. Secret keys are never returned here — only `sandboxes.create` shows one.
+* [delete](docs/sdks/sandboxes/README.md#delete) - Permanently deletes a sandbox and everything inside it: its catalog, customers and secret key. Cannot be undone.
+* [reset](docs/sdks/sandboxes/README.md#reset) - Wipes every customer, plan, feature and migration draft in the sandbox the calling key belongs to, leaving the sandbox itself, its secret keys and its settings in place. There is no id to pass: a sandbox's own key resets that sandbox, and an organization's test-mode key resets its default sandbox environment. Refused for live keys — only sandboxes can be reset. Cannot be undone.
 
 </details>
 <!-- End Available Resources and Operations [operations] -->

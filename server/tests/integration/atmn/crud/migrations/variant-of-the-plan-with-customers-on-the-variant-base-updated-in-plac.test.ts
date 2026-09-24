@@ -16,8 +16,8 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { runPush } from "../../../../../../packages/atmn-nightly/src/actions/push";
-import { createClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { runPush } from "../../../../../../packages/atmn/src/actions/push";
+import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
 /** `pro` v1 with a nested variant `pro_plus` that has no divergence of its
  * own, so it fully inherits price and items from the base. */
@@ -26,13 +26,14 @@ const proWithVariant = ({ amount }: { amount: number }): string => `{
 	],
 	plans: [
 		plan({
+			active: true,
 			planId: "pro",
 			versionSlug: "v1",
 			name: "Pro",
 			price: { amount: ${amount}, interval: "month" },
 			items: [{ featureId: "seats", included: 5 }],
 			variants: [
-				{ variantPlanId: "pro_plus", name: "Pro Plus" },
+				{ variantPlanId: "pro_plus", name: "Pro Plus", versionSlug: "v1" },
 			],
 		}),
 	],
@@ -91,6 +92,7 @@ test.concurrent(
 					result.preview.migrations as unknown as PreviewMigrations,
 					"pro_plus",
 				),
+				JSON.stringify(result.preview.migrations ?? [], null, 2),
 			).toBe(true);
 		} finally {
 			scenario.cleanup();
@@ -131,6 +133,7 @@ test.concurrent(
 					body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "pro",
 			versionSlug: "v2",
 			name: "Pro",
@@ -140,9 +143,9 @@ test.concurrent(
 				{ variantPlanId: "pro_plus", name: "Pro Plus", versionSlug: "v2" },
 			],
 		}),
-	],
-	planVersions: [
+	
 		plan({
+			active: false,
 			planId: "pro",
 			versionSlug: "v1",
 			name: "Pro",

@@ -1,5 +1,8 @@
 import type Stripe from "stripe";
-import { isStripeSubscriptionSchedulePhaseCurrent } from "@/external/stripe/subscriptionSchedules/utils/classifyStripeSubscriptionScheduleUtils";
+import {
+	isStripeSubscriptionSchedulePhaseCurrent,
+	isStripeSubscriptionSchedulePhaseEnded,
+} from "@/external/stripe/subscriptionSchedules/utils/classifyStripeSubscriptionScheduleUtils";
 import { stripeSubscriptionToStartDate } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import { normalizePhaseItem } from "./normalizePhaseItem";
 import { normalizeSubscriptionItem } from "./normalizeSubscriptionItem";
@@ -53,7 +56,10 @@ export const normalizeSubscriptionPhases = ({
 		];
 	}
 
-	return schedule.phases.map((phase, phaseIndex) => {
+	return schedule.phases.flatMap((phase, phaseIndex) => {
+		if (isStripeSubscriptionSchedulePhaseEnded({ phase, nowSeconds: nowSec }))
+			return [];
+
 		const items = phase.items
 			.map((phaseItem, itemIndex) =>
 				normalizePhaseItem({
@@ -64,14 +70,16 @@ export const normalizeSubscriptionPhases = ({
 			)
 			.filter((item): item is NonNullable<typeof item> => item !== null);
 
-		return {
-			start_date: phase.start_date,
-			end_date: phase.end_date ?? null,
-			is_current: isStripeSubscriptionSchedulePhaseCurrent({
-				phase,
-				nowSeconds: nowSec,
-			}),
-			items,
-		};
+		return [
+			{
+				start_date: phase.start_date,
+				end_date: phase.end_date ?? null,
+				is_current: isStripeSubscriptionSchedulePhaseCurrent({
+					phase,
+					nowSeconds: nowSec,
+				}),
+				items,
+			},
+		];
 	});
 };

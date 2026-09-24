@@ -17,12 +17,17 @@ export function DiscountRow({
 	productId,
 	onUpdate,
 	onRemove,
+	defaultOpen = false,
+	excludedRewardIds = [],
 }: {
 	discounts: FormDiscount[];
 	index: number;
 	productId: string | undefined;
 	onUpdate: ({ rewardId }: { rewardId: string }) => void;
 	onRemove: () => void;
+	defaultOpen?: boolean;
+	/** Rewards that can't be picked here, e.g. ones already on the subscription. */
+	excludedRewardIds?: string[];
 }) {
 	const { rewards, rewardPrograms } = useRewardsQuery();
 	const { stripeCoupons } = useStripeCouponsQuery();
@@ -53,7 +58,8 @@ export function DiscountRow({
 		.filter(Boolean);
 
 	const availableOptions = allOptions.filter(
-		(o) => !selectedRewardIds.includes(o.id),
+		(o) =>
+			!selectedRewardIds.includes(o.id) && !excludedRewardIds.includes(o.id),
 	);
 
 	const currentRewardId =
@@ -69,6 +75,7 @@ export function DiscountRow({
 					getOptionValue={(o: DiscountOption) => o.id}
 					getOptionLabel={(o: DiscountOption) => o.label}
 					getOptionSearchTerms={(o: DiscountOption) => o.searchTerms}
+					defaultOpen={defaultOpen}
 					placeholder="Select discount..."
 					searchable
 					searchPlaceholder="Search by name or code..."

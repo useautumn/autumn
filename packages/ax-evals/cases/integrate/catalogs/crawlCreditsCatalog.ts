@@ -19,6 +19,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "scale",
+			versionSlug: "v1",
+			active: true,
 			name: "Scale",
 			price: { amount: 500, interval: "month" },
 			items: [

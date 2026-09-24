@@ -54,11 +54,7 @@ For items 4 and 6, another skill owns the conversation and its checklist replace
 
 Don't message the user yet — just find out where things stand.
 
-Four skills share this job. If any of them is missing, install them all with one command from the project root:
-
-```bash
-npx skills add useautumn/skills -y
-```
+Four skills share this job, and they ship inside the `atmn` CLI: `atmn init` writes them next to the config and prints the `npx skills add <that folder> -y` line that registers them with your agent, and `atmn skills update` refreshes them when `push` or `pull` say they are older than the CLI. If any is missing here, that is Phase 2's job — never fetch them from anywhere else.
 
 `autumn-setup` (this file) is the flow. `autumn-catalog` is how to build the pricing, plus the exact `atmn` commands — load it in Phase 4. `autumn-integrate` is how the app calls Autumn — load it in Phase 6. `autumn-concepts` explains Autumn's objects — the other two load it themselves.
 
@@ -76,7 +72,7 @@ Start with two or three sentences: what's going to happen (connect this project 
 
 Then:
 
-1. Run `atmn init` from the project root with the user's package manager (`bunx atmn init`, `pnpm exec atmn init`, `yarn atmn init`, `npx atmn init` — read it off the lockfile). Every `atmn …` command below means that run command. One command does the whole connect step: it adds `atmn` as a dependency, places `autumn.config.ts` (its own package in a monorepo — it asks where, or takes `--path` and `--name`), pulls whatever the org already holds, and installs these skills beside the config. Each run prints what it did and, when it needs an answer, the flag to pass; run it again with the flag.
+1. Run `atmn init` from the project root with the user's package manager (`bunx atmn init`, `pnpm exec atmn init`, `yarn atmn init`, `npx atmn init` — read it off the lockfile). Every `atmn …` command below means that run command. One command does the whole connect step: it adds `atmn` as a dependency, places the config in `autumn/` (its own package in a monorepo — it asks where, or takes `--path` and `--name`), pulls whatever the org already holds, and installs these skills beside the config. Each run prints what it did and, when it needs an answer, the flag to pass; run it again with the flag.
 2. Key already there → `init` says who it's connected to and moves on. Say so in one line.
 3. No key → `init` stops and asks how to connect. Ask the user the same thing, one question, two options, plain words:
 

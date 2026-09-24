@@ -15,6 +15,7 @@ import {
 	ArrowsClockwiseIcon,
 	BroomIcon,
 	CaretDownIcon,
+	ClockIcon,
 	PencilSimpleIcon,
 	SlidersHorizontalIcon,
 	SubtractIcon,
@@ -37,15 +38,17 @@ import UpdateCustomerDialog from "@/views/customers/customer/components/UpdateCu
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { AddCouponDialog } from "./components/AddCouponDialog";
 import { CreateEntity } from "./components/CreateEntity";
+import { TestClockDialog } from "./components/TestClockDialog";
 
 export function CustomerActions() {
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [createEntityOpen, setCreateEntityOpen] = useState(false);
 	const [addCouponOpen, setAddCouponOpen] = useState(false);
+	const [testClockOpen, setTestClockOpen] = useState(false);
 	const [actionsOpen, setActionsOpen] = useState(false);
 	const [clearCacheLoading, setClearCacheLoading] = useState(false);
-	const { customer } = useCusQuery();
+	const { customer, testClockFrozenTimeMs, refetch } = useCusQuery();
 	const { org } = useOrg({ skipSandbox: false });
 	const { isAdmin } = useAdmin();
 	const setSheet = useSheetStore((s) => s.setSheet);
@@ -95,6 +98,12 @@ export function CustomerActions() {
 			/>
 			<CreateEntity open={createEntityOpen} setOpen={setCreateEntityOpen} />
 			<AddCouponDialog open={addCouponOpen} setOpen={setAddCouponOpen} />
+			{testClockOpen && testClockFrozenTimeMs != null && (
+				<TestClockDialog
+					frozenTime={testClockFrozenTimeMs}
+					setOpen={setTestClockOpen}
+				/>
+			)}
 
 			<DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
 				<DropdownMenuTrigger asChild>
@@ -157,6 +166,23 @@ export function CustomerActions() {
 								Sync from Stripe
 							</DropdownMenuItem>
 						)}
+					{testClockFrozenTimeMs != null && (
+						<DropdownMenuItem
+							onClick={async () => {
+								const result = await refetch();
+								if (result.isError) {
+									toast.error(
+										getBackendErr(result.error, "Failed to load test clock"),
+									);
+									return;
+								}
+								setTestClockOpen(true);
+							}}
+						>
+							<ClockIcon />
+							Test clock
+						</DropdownMenuItem>
+					)}
 					{isAdmin && (
 						<DropdownMenuItem
 							onClick={() => {

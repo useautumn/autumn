@@ -172,6 +172,7 @@ describe("credit cost through dimensions", () => {
 	test("getCreditRateCard keys attribution by the winning dimension", () => {
 		expect(
 			getCreditRateCard({
+				invoiceCredit: true,
 				sourceFeature: cpuMinutes,
 				creditSystem: credits,
 				eventProperties: { size: "large", region: "eu" },
@@ -182,7 +183,11 @@ describe("credit cost through dimensions", () => {
 			credit_amount: 20,
 		});
 		expect(
-			getCreditRateCard({ sourceFeature: cpuMinutes, creditSystem: credits }),
+			getCreditRateCard({
+				invoiceCredit: true,
+				sourceFeature: cpuMinutes,
+				creditSystem: credits,
+			}),
 		).toMatchObject({ source_internal_feature_id: "fe_cpu_minutes" });
 	});
 

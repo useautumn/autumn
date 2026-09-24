@@ -82,6 +82,7 @@ export * from "./productUtils/priceUtils/match/stripePriceMappingSlots";
 export * from "./productV2Utils/mapToProductV2";
 export * from "./productV2Utils/productItemUtils/classifyItemUtils";
 export * from "./productV2Utils/productItemUtils/getItemType";
+export * from "./productV2Utils/productItemUtils/isOneToOneUnitPriceItem";
 // Item utils
 export * from "./productV2Utils/productItemUtils/mapToItem";
 export * from "./productV2Utils/productItemUtils/matchPlanItem";
@@ -95,5 +96,5 @@ export * from "./productV3Utils/productItemUtils/productV3ItemUtils";
 
 // Stripe resource utils
 export * from "./stripeUtils/classifyStripeResource/isPreviewStripeId";
-
+export * from "./taxIdUtils/stripeTaxIdOptions";
 export * from "./utils";

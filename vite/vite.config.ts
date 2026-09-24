@@ -86,9 +86,9 @@ export default defineConfig({
 				__dirname,
 				"../packages/autumn-js/src/sdk/index.ts",
 			),
-			"atmn/skills": path.resolve(
+			"@autumn/atmn-old/skills": path.resolve(
 				__dirname,
-				"../packages/atmn/src/prompts/skills/index.ts",
+				"../packages/atmn-old/src/prompts/skills/index.ts",
 			),
 		},
 	},
@@ -123,7 +123,7 @@ export default defineConfig({
 		// Exclude workspace dependencies from pre-bundling to avoid cache issues
 		exclude: [
 			"@autumn/shared",
-			"atmn/skills",
+			"@autumn/atmn-old/skills",
 			"autumn-js",
 			"autumn-js/react",
 			"better-auth",

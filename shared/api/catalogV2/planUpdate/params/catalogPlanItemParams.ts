@@ -6,6 +6,7 @@ import {
 	planItemParamsIssues,
 } from "@api/products/items/crud/createPlanItemParamsV1.js";
 import type { z } from "zod/v4";
+import { catalogPlanItemIdentity } from "./catalogPlanItemIdentity.js";
 
 /**
  * The plan item schema plus Stripe price adoption. Adoption is scoped to the
@@ -33,6 +34,7 @@ export const CatalogPlanItemParamsV1Schema = PlanItemParamsObjectSchema.extend({
 		}
 	})
 	.meta({
+		"x-atmn-identity": catalogPlanItemIdentity,
 		title: "CatalogPlanItem",
 		description:
 			"Configuration for a feature item in a catalog plan, including usage limits, pricing, rollover settings and Stripe price adoption.",

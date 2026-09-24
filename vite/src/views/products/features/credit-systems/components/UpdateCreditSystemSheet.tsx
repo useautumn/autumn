@@ -9,6 +9,7 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
 import { getBackendErr } from "@/utils/genUtils";
+import { useSheetBrowserBack } from "../../hooks/useSheetBrowserBack";
 import { featureToCatalogFeatureParams } from "../../utils/buildFeatureMutationParams";
 import { useCreditSystemForm } from "../hooks/useCreditSystemForm";
 import { validateCreditSystem } from "../utils/validateCreditSystem";
@@ -121,12 +122,11 @@ function UpdateCreditSystemSheet({
 	selectedCreditSystem,
 	onSuccess,
 }: UpdateCreditSystemSheetProps) {
+	useSheetBrowserBack({ enabled: open });
+
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetContent
-				key={selectedCreditSystem?.internal_id}
-				className="flex flex-col overflow-hidden md:max-w-2xl"
-			>
+			<SheetContent className="flex flex-col overflow-hidden md:max-w-2xl">
 				<SheetHeader
 					title="Update Credit System"
 					description="Modify how this credit system is configured"

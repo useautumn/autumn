@@ -34,6 +34,7 @@ export async function generateApiReference({
 	outputDir,
 }: GenerateApiReferenceOptions): Promise<{
 	webhookPages: GeneratedWebhookPage[];
+	generatedPages: string[];
 }> {
 	console.log(`  Reading OpenAPI spec from: ${openApiPath}`);
 
@@ -41,6 +42,7 @@ export async function generateApiReference({
 	console.log(`  Found ${operations.length} operations`);
 
 	let generated = 0;
+	const generatedPages: string[] = [];
 
 	for (const operation of operations) {
 		const { tag, operationId } = operation;
@@ -58,6 +60,7 @@ export async function generateApiReference({
 
 		mkdirSync(path.dirname(outputPath), { recursive: true });
 		writeFileSync(outputPath, finalMdx, "utf-8");
+		generatedPages.push(`api-reference/${tag}/${operationId}`);
 		generated++;
 
 		console.log(`  Generated: ${tag}/${operationId}.mdx`);
@@ -92,6 +95,7 @@ export async function generateApiReference({
 			);
 			mkdirSync(path.dirname(outputPath), { recursive: true });
 			writeFileSync(outputPath, finalMdx, "utf-8");
+			generatedPages.push(relativePage);
 			generated++;
 
 			webhookPages.push({
@@ -120,6 +124,7 @@ export async function generateApiReference({
 		);
 		mkdirSync(path.dirname(outputPath), { recursive: true });
 		writeFileSync(outputPath, mdx, "utf-8");
+		generatedPages.push(relativePage);
 		generated++;
 
 		webhookPages.push({
@@ -134,7 +139,7 @@ export async function generateApiReference({
 
 	console.log(`  API reference generation complete: ${generated} generated`);
 
-	return { webhookPages };
+	return { webhookPages, generatedPages };
 }
 
 function formatEventTypeAsTitle(eventType: string): string {

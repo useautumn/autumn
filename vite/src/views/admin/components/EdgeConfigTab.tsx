@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { AgentProvisionRateLimitDialog } from "./AgentProvisionRateLimitDialog";
 import { AsyncBalanceUpdateDialog } from "./AsyncBalanceUpdateDialog";
 import { AsyncTrackDialog } from "./AsyncTrackDialog";
 import { BalanceShadowDialog } from "./BalanceShadowDialog";
@@ -157,6 +158,11 @@ export function EdgeConfigTab() {
 
 			<RateLimitRedisAllowlistDialog
 				open={openConfig === "rate-limit-redis-allowlist"}
+				onOpenChange={closeDialog}
+			/>
+
+			<AgentProvisionRateLimitDialog
+				open={openConfig === "agent-provision-rate-limit"}
 				onOpenChange={closeDialog}
 			/>
 

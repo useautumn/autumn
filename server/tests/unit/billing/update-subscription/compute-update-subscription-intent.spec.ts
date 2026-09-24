@@ -170,5 +170,34 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 
 			expect(result).toBe(UpdateSubscriptionIntent.UpdatePlan);
 		});
+
+		test("returns UpdatePlan when licenses are upserted", () => {
+			const result = setupUpdateSubscriptionIntent({
+				params: {
+					...baseParams,
+					customize: { upsert_licenses: [{ license_plan_id: "seat" }] },
+				},
+				checkoutMode: null,
+				customerProduct,
+			});
+
+			expect(result).toBe(UpdateSubscriptionIntent.UpdatePlan);
+		});
+	});
+
+	describe(chalk.cyan("No-op customize"), () => {
+		test("an empty upsert_licenses list is not a plan change", () => {
+			const result = setupUpdateSubscriptionIntent({
+				params: {
+					...baseParams,
+					customize: { upsert_licenses: [] },
+					remove_discounts: [{ reward_id: "launch_30" }],
+				},
+				checkoutMode: null,
+				customerProduct,
+			});
+
+			expect(result).toBe(UpdateSubscriptionIntent.None);
+		});
 	});
 });

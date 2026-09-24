@@ -15,6 +15,7 @@ DRAGONFLY_URL="https://dragonflydb.gateway.scarf.sh/latest/dragonfly-x86_64.tar.
 CRANE_URL="https://github.com/google/go-containerregistry/releases/download/v0.20.2/go-containerregistry_Linux_x86_64.tar.gz"
 GOAWS_IMAGE="admiralpiett/goaws:latest"
 DYNOXIDE_URL="https://github.com/nubo-db/dynoxide/releases/download/v0.13.0/dynoxide-x86_64-unknown-linux-musl.tar.gz"
+REDPANDA_IMAGE="docker.redpanda.com/redpandadata/redpanda:v26.2.3"
 
 export DEBIAN_FRONTEND=noninteractive
 export HOME="${HOME:-/root}"
@@ -60,6 +61,12 @@ curl -fsSL -o /tmp/dx.tar.gz "$DYNOXIDE_URL"
 tar -xzf /tmp/dx.tar.gz -C /tmp
 install -m0755 "$(find /tmp -type f -name 'dynoxide*' ! -name '*.tar.gz' | head -1)" "$BIN_DIR/dynoxide"
 rm -f /tmp/dx.tar.gz
+
+echo "[freestyle-base] 4c/7 Redpanda (native Kafka, via crane export)"
+crane export "$REDPANDA_IMAGE" /tmp/rp.tar
+tar -xf /tmp/rp.tar -C / opt/redpanda
+rm -f /tmp/rp.tar
+/opt/redpanda/bin/rpk version >/dev/null
 
 echo "[freestyle-base] 5/7 goaws config"
 cat > "$TW_PREFIX/goaws/goaws.yaml" <<'YAML'

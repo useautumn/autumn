@@ -23,10 +23,13 @@ import { spawn } from "bun";
 import chalk from "chalk";
 import { SERVER_PORT, TW_ENV } from "../constants.js";
 import {
+	balanceWorkerEnabled,
 	provisionSvixApp,
 	READY_SENTINEL,
 	startBackgroundProcs,
+	startBalanceWorker,
 	startServer,
+	waitForBalanceWorkerHealth,
 	waitForServerHealth,
 } from "./boot.js";
 
@@ -77,11 +80,20 @@ const main = async (): Promise<void> => {
 	if (isTruthyEnv(process.env.TW_SNAPSHOT_STALE)) {
 		const repoRoot = process.cwd();
 		log("stale snapshot — fast-forwarding worker to the target sha");
-		for (const pattern of ["bun src/index.ts", "bun src/workers.ts", "bun src/cron.ts"]) {
+		for (const pattern of [
+			"bun src/index.ts",
+			"bun src/workers.ts",
+			"bun src/cron.ts",
+			"bunfig.toml src/main.ts",
+		]) {
 			Bun.spawnSync(["pkill", "-f", pattern]);
 		}
 		const warmup = spawn(
-			["bash", join(repoRoot, "scripts/tw/image/warmup.sh"), process.env.TW_TARGET_SHA ?? "HEAD"],
+			[
+				"bash",
+				join(repoRoot, "scripts/tw/image/warmup.sh"),
+				process.env.TW_TARGET_SHA ?? "HEAD",
+			],
 			{
 				cwd: repoRoot,
 				stdout: "inherit",
@@ -94,12 +106,17 @@ const main = async (): Promise<void> => {
 		);
 		const warmupExit = await warmup.exited;
 		if (warmupExit !== 0) {
-			throw new Error(`[tw-fsboot] fast-forward warmup.sh exited ${warmupExit}`);
+			throw new Error(
+				`[tw-fsboot] fast-forward warmup.sh exited ${warmupExit}`,
+			);
 		}
+		if (balanceWorkerEnabled()) startBalanceWorker(repoRoot);
 		const serverProc = startServer(repoRoot, serverPort);
 		void serverProc.exited.then((code) => {
 			if (code !== 0) {
-				console.error(chalk.red(`[tw-fsboot] server exited early (code ${code})`));
+				console.error(
+					chalk.red(`[tw-fsboot] server exited early (code ${code})`),
+				);
 			}
 		});
 		startBackgroundProcs(repoRoot);
@@ -108,9 +125,20 @@ const main = async (): Promise<void> => {
 	// 1. The snapshot carries a running server (or the ff just restarted it).
 	await waitForServerHealth(
 		serverPort,
-		isTruthyEnv(process.env.TW_SNAPSHOT_STALE) ? 120_000 : RESUME_HEALTH_TIMEOUT_MS,
+		isTruthyEnv(process.env.TW_SNAPSHOT_STALE)
+			? 120_000
+			: RESUME_HEALTH_TIMEOUT_MS,
 	);
 	log(`server healthy on :${serverPort}`);
+	// The snapshot carries a running balance worker too (or the ff just restarted it).
+	if (balanceWorkerEnabled()) {
+		await waitForBalanceWorkerHealth(
+			isTruthyEnv(process.env.TW_SNAPSHOT_STALE)
+				? 120_000
+				: RESUME_HEALTH_TIMEOUT_MS,
+		);
+		log("balance worker healthy");
+	}
 
 	// 2 + 3. Per-worker DB binds.
 	if (isTruthyEnv(process.env.NEEDS_SVIX)) {

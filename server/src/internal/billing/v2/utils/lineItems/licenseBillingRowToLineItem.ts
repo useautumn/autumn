@@ -9,7 +9,9 @@ import {
 	orgToCurrency,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
+import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/billingContext/getBillingCycleAnchorForDirection.js";
+import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund.js";
+import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod.js";
 
 /** refund = prorated credit for the PRE licenseBillingRow, charge = prorated for POST.
  * buildLineItem flips the sign on refunds. */
@@ -27,12 +29,28 @@ export const licenseBillingRowToLineItem = ({
 	licenseProduct: FullProductWithoutLicenses;
 	customerProduct: FullCusProduct;
 	direction: "charge" | "refund";
-}): LineItem => {
+}): LineItem | undefined => {
 	const billingPeriod = getLineItemBillingPeriod({
-		billingContext,
+		billingContext: {
+			...billingContext,
+			billingCycleAnchorMs: getBillingCycleAnchorForDirection({
+				billingContext,
+				direction,
+			}),
+		},
 		price: licenseBillingRow.price,
 	});
 
+	let effectiveNow = billingContext.currentEpochMs;
+	if (direction === "refund" && billingPeriod) {
+		const action = augmentBillingContextForAnchorResetRefund({
+			currentEpochMs: effectiveNow,
+			billingPeriod,
+			anchorResetRefund: billingContext.anchorResetRefund,
+		});
+		if (action.type === "skip") return undefined;
+		if (action.type === "use_snapped_now") effectiveNow = action.snappedNow;
+	}
 	const context: LineItemContext = {
 		price: licenseBillingRow.price,
 		product: licenseProduct,
@@ -40,7 +58,7 @@ export const licenseBillingRowToLineItem = ({
 		billingPeriod,
 		direction,
 		billingTiming: "in_advance",
-		now: billingContext.currentEpochMs,
+		now: effectiveNow,
 		customerProduct,
 	};
 

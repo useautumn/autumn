@@ -39,6 +39,25 @@ await mockModuleWithRestore(
 		getOrSetCachedFullSubject: async (args: Record<string, unknown>) => {
 			state.getFullSubjectCalls.push(args);
 			return {
+				// Carries a live `messages` balance so the update core reaches
+				// updateRemainingV2 instead of the "no such balance" guard.
+				customer_products: [
+					{
+						status: "active",
+						customer_entitlements: [
+							{
+								id: "ce_messages",
+								invoice_credit: false,
+								pooled_contribution_id: null,
+								is_pooled_balance: false,
+								balance: 100,
+								entitlement: { feature: { id: "messages" } },
+							},
+						],
+					},
+				],
+				extra_customer_entitlements: [],
+				pooled_customer_entitlements: [],
 				customerId: args.customerId,
 				entityId: args.entityId,
 			};

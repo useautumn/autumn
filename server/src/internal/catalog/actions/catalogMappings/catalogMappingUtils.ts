@@ -182,7 +182,7 @@ export const buildProductMappingContext = ({
 				items: [item],
 				features,
 				currency,
-			}).map((entry) => ({ ...entry, proration: undefined }))[0];
+			})[0];
 
 			if (!price || !apiItem) return null;
 

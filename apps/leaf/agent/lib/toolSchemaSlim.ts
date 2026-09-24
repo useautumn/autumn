@@ -20,12 +20,36 @@ const slimValue = (value: JsonValue, depth: number): JsonValue => {
 	return slimToolSchema(value, depth);
 };
 
+// A `customize` object is a patch over a catalog plan: `add_items` /
+// `remove_items`. Its PUT-style `items` sibling replaces every plan item, which
+// on 2026-09-14 wiped a customer's Enterprise entitlements when the model
+// reached for it to "override emails". The model never needs the PUT form, so
+// it is not offered one; the MCP wire and public API keep it.
+const PATCH_STYLE_ITEM_KEYS = ["add_items", "remove_items"] as const;
+const PUT_STYLE_ITEMS_KEY = "items";
+
+const isCustomizeShape = (properties: JsonSchemaObject) =>
+	PATCH_STYLE_ITEM_KEYS.every((key) => key in properties);
+
+const hiddenFromModel = ({
+	name,
+	schema,
+	siblings,
+}: {
+	name: string;
+	schema: JsonValue;
+	siblings: JsonSchemaObject;
+}) =>
+	isInternal(schema) ||
+	(name === PUT_STYLE_ITEMS_KEY && isCustomizeShape(siblings));
+
 const slimProperties = (properties: JsonSchemaObject, depth: number) => {
 	const kept: JsonSchemaObject = {};
 	const dropped = new Set<string>();
 	for (const [name, schema] of Object.entries(properties)) {
-		if (isInternal(schema)) dropped.add(name);
-		else kept[name] = slimValue(schema, depth);
+		if (hiddenFromModel({ name, schema, siblings: properties })) {
+			dropped.add(name);
+		} else kept[name] = slimValue(schema, depth);
 	}
 	return { dropped, properties: kept };
 };

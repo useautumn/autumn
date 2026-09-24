@@ -1,0 +1,35 @@
+DESCRIPTION >
+    History backfill for events_customer_property_coverage_hourly_mv (deployed with BACKFILL skip:
+    the deploy-time populate over `events` exceeds Tinybird's per-query timeout). Fills the window
+    before the MV's promote seam in bounded chunks on on-demand compute, driven by
+    scripts/backfill_customer_property_coverage.sh. SQL mirrors
+    events_customer_property_coverage_hourly_mv_pipe EXACTLY so backfilled rows match
+    forward-materialized ones. Reads from `events`, writes only this rollup.
+
+    Seam safety: AggregatingMergeTree sums states and does not dedup; the window is half-open
+    [start_date, end_date). Keep every end_date <= the MV's promote hour so an hour is never
+    counted by both the forward trigger and a copy.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        org_id,
+        env,
+        customer_id,
+        coalesce(entity_id, '') as entity_id,
+        event_name,
+        kv.1 as property_key,
+        toStartOfHour(timestamp) as hour,
+        sumState(toUInt64(1)) as event_count
+    FROM events
+    ARRAY JOIN JSONExtractKeysAndValues(properties::String, 'String') as kv
+    WHERE timestamp >= {{DateTime(start_date, '2026-06-01 00:00:00')}}
+        AND timestamp < {{DateTime(end_date, '2026-06-01 01:00:00')}}
+        AND kv.2 != ''
+    GROUP BY org_id, env, customer_id, entity_id, event_name, property_key, hour
+
+TYPE COPY
+TARGET_DATASOURCE events_customer_property_coverage_hourly_mv
+COPY_SCHEDULE @on-demand
+COPY_MODE append

@@ -16,6 +16,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useCallback, useMemo, useRef } from "react";
 
 const DEFAULT_ROW_HEIGHT = 40;
+const SKELETON_ROW_BORDER_PX = 1;
+const UNMEASURED_ROWS = 60;
 const DEFAULT_OVERSCAN = 30;
 
 interface VirtualRowProps<T> {
@@ -182,18 +184,24 @@ export function TableBodyVirtualized() {
 	const spannedColumnCount = columns.length + (enableSelection ? 1 : 0);
 
 	const configuredSkeletonRows = virtualization?.skeletonRowCount;
-	const containerPx = scrollContainer?.clientHeight ?? 0;
+	const headerPx = scrollContainer?.querySelector("thead")?.offsetHeight ?? 0;
+	const containerPx = (scrollContainer?.clientHeight ?? 0) - headerPx;
 
 	let skeletonRowCount: number;
 	if (hasLoadedRef.current) {
 		skeletonRowCount = lastRowCountRef.current;
 	} else if (configuredSkeletonRows !== undefined) {
 		skeletonRowCount = configuredSkeletonRows;
+	} else if (containerPx > 0) {
+		skeletonRowCount = Math.max(
+			1,
+			Math.ceil(
+				(containerPx + SKELETON_ROW_BORDER_PX) /
+					(rowHeight + SKELETON_ROW_BORDER_PX),
+			),
+		);
 	} else {
-		skeletonRowCount =
-			containerPx > 0
-				? Math.max(1, Math.floor(containerPx / rowHeight))
-				: lastRowCountRef.current;
+		skeletonRowCount = Math.max(lastRowCountRef.current, UNMEASURED_ROWS);
 	}
 
 	if (showSkeleton) {

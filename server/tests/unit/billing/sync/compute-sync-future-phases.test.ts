@@ -72,6 +72,8 @@ test("future sync phases preserve customer license quantities", () => {
 				],
 			},
 		],
+		unscheduledProductContexts: [],
+		queuedCustomerProducts: [],
 		currentEpochMs: Date.now(),
 		acknowledgedWarnings: [],
 		carryOverUsage: true,

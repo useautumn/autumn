@@ -36,6 +36,8 @@ type ExpectedSiblingVersion = {
 	hasCustomers?: boolean;
 	/** true = plan_change present; false/null = absent. */
 	hasPlanChange?: boolean;
+	/** Containment over plan_change.previous_attributes. */
+	previousAttributes?: Record<string, unknown> | null;
 	licenseChanges?: ExpectedLicenseChange[] | null;
 	/** Containment over conflicts; pass `null` to assert absent/empty. */
 	conflicts?: CatalogConflictPreview[] | null;
@@ -124,6 +126,8 @@ type ExpectedVariant = {
 	versioning?: PlanPreviewVersioning;
 	hasCustomers?: boolean;
 	hasPlanChange?: boolean;
+	/** Containment over plan_change.previous_attributes. */
+	previousAttributes?: Record<string, unknown> | null;
 	conflicts?: CatalogConflictPreview[] | null;
 	customize?: PlanPreviewChange["customize"] | null;
 	priceChange?: PlanPreviewChange["price_change"] | null;
@@ -141,6 +145,28 @@ const expectAbsent = (value: unknown) => {
 
 const expectPresent = (value: unknown) => {
 	expect(value != null).toBe(true);
+};
+
+/** Exact key set, containment on values; `null` asserts no scalar changed. */
+const expectPreviousAttributesMatch = ({
+	actual,
+	expected,
+}: {
+	actual: Record<string, unknown> | null | undefined;
+	expected: Record<string, unknown> | null;
+}) => {
+	if (expected === null) {
+		expectAbsent(actual);
+		return;
+	}
+	expectPresent(actual);
+	expect(actual).toMatchObject(expected);
+	for (const key of Object.keys(actual ?? {})) {
+		expect(
+			Object.keys(expected),
+			`unexpected previous_attributes key ${key}`,
+		).toContain(key);
+	}
 };
 
 /** Slug identity of one preview row — direct, variant, or license parent. */
@@ -291,8 +317,8 @@ const expectLicenseParentsMatch = ({
 		}
 		if (expectedParent.nestedItemChanges !== undefined) {
 			const actualItems =
-				parent?.plan_change?.license_changes?.[0]?.plan_change
-					?.item_changes ?? [];
+				parent?.plan_change?.license_changes?.[0]?.plan_change?.item_changes ??
+				[];
 			for (const expectedItem of expectedParent.nestedItemChanges) {
 				expect(actualItems).toContainEqual(
 					expect.objectContaining(expectedItem),
@@ -363,6 +389,12 @@ const expectSiblingVersionsMatch = ({
 			expectPresent(sibling?.plan_change);
 		} else if (expectedSibling.hasPlanChange === false) {
 			expectAbsent(sibling?.plan_change);
+		}
+		if (expectedSibling.previousAttributes !== undefined) {
+			expectPreviousAttributesMatch({
+				actual: sibling?.plan_change?.previous_attributes,
+				expected: expectedSibling.previousAttributes,
+			});
 		}
 		if (expectedSibling.licenseChanges === null) {
 			expect(sibling?.plan_change?.license_changes).toBeUndefined();
@@ -529,22 +561,10 @@ export const expectPlanPreviewRowCorrect = ({
 		}
 	}
 	if (expected.previousAttributes !== undefined) {
-		if (expected.previousAttributes === null) {
-			expectAbsent(row.plan_change?.previous_attributes);
-		} else {
-			expectPresent(row.plan_change);
-			expect(row.plan_change?.previous_attributes).toMatchObject(
-				expected.previousAttributes,
-			);
-			for (const key of Object.keys(
-				row.plan_change?.previous_attributes ?? {},
-			)) {
-				expect(
-					Object.keys(expected.previousAttributes),
-					`unexpected previous_attributes key ${key}`,
-				).toContain(key);
-			}
-		}
+		expectPreviousAttributesMatch({
+			actual: row.plan_change?.previous_attributes,
+			expected: expected.previousAttributes,
+		});
 	}
 	if (expected.customize !== undefined) {
 		if (expected.customize === null) {
@@ -648,6 +668,12 @@ export const expectPlanPreviewRowCorrect = ({
 					expectPresent(variant?.plan_change);
 				} else if (expectedVariant.hasPlanChange === false) {
 					expectAbsent(variant?.plan_change);
+				}
+				if (expectedVariant.previousAttributes !== undefined) {
+					expectPreviousAttributesMatch({
+						actual: variant?.plan_change?.previous_attributes,
+						expected: expectedVariant.previousAttributes,
+					});
 				}
 				if (expectedVariant.conflicts !== undefined) {
 					expectConflictsMatch({

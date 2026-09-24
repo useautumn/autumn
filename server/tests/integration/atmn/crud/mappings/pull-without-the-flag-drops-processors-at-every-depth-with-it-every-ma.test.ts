@@ -16,16 +16,18 @@ import {
 	TMP_ROOT,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { runPull } from "../../../../../../packages/atmn-nightly/src/actions/pull";
-import type { AutumnClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { runPull } from "../../../../../../packages/atmn/src/actions/pull";
+import type { AutumnClient } from "../../../../../../packages/atmn/src/generated/client";
 
 // One plan carrying processors at every depth the CLI can emit them: plan-level
 // (stripe product), base-price-level (stripe price), item-price-level (stripe
 // price), plus a feature-level mapping.
 const proPlan = `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			createInStripe: false,
 			processors: { stripe: { productId: "prod_fake_depth_plan" } },
 			price: {

@@ -16,6 +16,8 @@ type CreateInvoiceParams = {
 	discounts?: Stripe.InvoiceCreateParams["discounts"];
 	collectionMethod?: "charge_automatically" | "send_invoice";
 	daysUntilDue?: number;
+	/** Unix seconds; takes precedence over daysUntilDue for send_invoice. */
+	dueDate?: number;
 	paymentMethodTypes?: InvoicePaymentMethod[];
 	description?: string;
 	footer?: string;
@@ -31,6 +33,7 @@ export const createStripeInvoice = async ({
 	currency,
 	collectionMethod = "charge_automatically",
 	daysUntilDue,
+	dueDate,
 	paymentMethodTypes,
 	description,
 	footer,
@@ -51,15 +54,18 @@ export const createStripeInvoice = async ({
 			...(footer ? { footer } : {}),
 			...(metadata ? { metadata } : {}),
 			collection_method: collectionMethod,
-			days_until_due:
-				collectionMethod === "send_invoice" ? (daysUntilDue ?? 30) : undefined,
+			...(collectionMethod === "send_invoice"
+				? dueDate
+					? { due_date: dueDate }
+					: { days_until_due: daysUntilDue ?? 30 }
+				: {}),
 			...(paymentMethodTypes?.length
 				? { payment_settings: { payment_method_types: paymentMethodTypes } }
 				: {}),
 			...(discounts ? { discounts } : {}),
-			...(hasManualTaxRates ? { default_tax_rates: defaultTaxRates } : {}),
-			...(automaticTax && !hasManualTaxRates
-				? { automatic_tax: { enabled: true } }
+			...(defaultTaxRates ? { default_tax_rates: defaultTaxRates } : {}),
+			...(automaticTax !== undefined
+				? { automatic_tax: { enabled: automaticTax && !hasManualTaxRates } }
 				: {}),
 		},
 		autumnStripeRequestOptions({ source: "invoice.create" }),
@@ -93,6 +99,47 @@ export const addStripeInvoiceLines = async ({
 
 	return invoice;
 };
+
+// ============================================
+// Update Invoice Line
+// ============================================
+
+export const updateStripeInvoiceLine = async ({
+	stripeCli,
+	invoiceId,
+	lineItemId,
+	params,
+}: {
+	stripeCli: Stripe;
+	invoiceId: string;
+	lineItemId: string;
+	params: Stripe.InvoiceUpdateLineItemParams;
+}): Promise<Stripe.InvoiceLineItem> =>
+	stripeCli.invoices.updateLineItem(
+		invoiceId,
+		lineItemId,
+		params,
+		autumnStripeRequestOptions({ source: "invoice.updateLineItem" }),
+	);
+
+// ============================================
+// Update Pending Invoice Item
+// ============================================
+
+export const updateStripeInvoiceItem = async ({
+	stripeCli,
+	invoiceItemId,
+	params,
+}: {
+	stripeCli: Stripe;
+	invoiceItemId: string;
+	params: Stripe.InvoiceItemUpdateParams;
+}): Promise<Stripe.InvoiceItem> =>
+	stripeCli.invoiceItems.update(
+		invoiceItemId,
+		params,
+		autumnStripeRequestOptions({ source: "invoiceItems.update" }),
+	);
 
 // ============================================
 // Update Invoice

@@ -60,6 +60,8 @@ export const seedScaleOverage = defineCase({
 	goldenConfig: messagingApiConfig({
 		extraPlans: `		plan({
 			planId: "api_scale",
+			versionSlug: "v1",
+			active: true,
 			name: "API Scale 500K",
 			group: "api",
 			price: { amount: 350, interval: "month" },
@@ -79,6 +81,7 @@ export const seedScaleOverage = defineCase({
 			variants: [
 				variant({
 					variantPlanId: "api_scale_1m",
+					versionSlug: "v1",
 					name: "API Scale 1M",
 					customize: {
 						price: { amount: 650, interval: "month" },
@@ -99,6 +102,7 @@ export const seedScaleOverage = defineCase({
 				}),
 				variant({
 					variantPlanId: "api_scale_2m",
+					versionSlug: "v1",
 					name: "API Scale 2M",
 					customize: {
 						price: { amount: 1150, interval: "month" },

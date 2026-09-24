@@ -1,7 +1,6 @@
 import {
 	type FullCusProduct,
 	type FullProduct,
-	filterCustomerProductsByStripeSubscriptionId,
 	type SyncParamsV1,
 	type SyncPhase,
 	type SyncPlanInstance,
@@ -23,6 +22,7 @@ import type {
 	PhaseMatch,
 	SubscriptionMatch,
 } from "./detect/types";
+import { stampEntityFromExistingLinks } from "./scope/stampEntityFromExistingLinks";
 
 const matchedPlanToSyncPlan = ({
 	matchedPlan,
@@ -53,55 +53,6 @@ const matchedPlanToSyncPlan = ({
 			({ license_plan_id, quantity }) => ({ license_plan_id, quantity }),
 		),
 	};
-};
-
-/**
- * Detection is scope-blind: it matches Stripe prices to catalog products with
- * no knowledge of the customer's existing customer products. When a product is
- * already linked to this Stripe subscription via an entity-scoped customer
- * product, re-syncing it without that binding would insert a duplicate at the
- * customer level (and `expire_previous` would miss the entity-scoped original).
- *
- * Stamp the existing entity binding onto each matched plan so the sync
- * re-attaches the product on the same entity and matches/expires the original.
- */
-const stampEntityFromExistingLinks = ({
-	phases,
-	subscription,
-	customerProducts,
-}: {
-	phases: SyncPhase[];
-	subscription?: Stripe.Subscription;
-	customerProducts: FullCusProduct[];
-}): SyncPhase[] => {
-	if (!subscription) return phases;
-
-	const linkedCustomerProducts = filterCustomerProductsByStripeSubscriptionId({
-		customerProducts,
-		stripeSubscriptionId: subscription.id,
-	});
-
-	// product id → existing entity binding (only entity-scoped links).
-	// `entity_id` accepts either the public or internal entity id, so the
-	// internal id stored on the customer product is sufficient.
-	const entityIdByProductId = new Map<string, string>();
-	for (const customerProduct of linkedCustomerProducts) {
-		const productId = customerProduct.product?.id;
-		if (customerProduct.internal_entity_id && productId) {
-			entityIdByProductId.set(productId, customerProduct.internal_entity_id);
-		}
-	}
-
-	if (entityIdByProductId.size === 0) return phases;
-
-	return phases.map((phase) => ({
-		...phase,
-		plans: phase.plans.map((plan) => {
-			if (plan.entity_id != null) return plan;
-			const entityId = entityIdByProductId.get(plan.plan_id);
-			return entityId ? { ...plan, entity_id: entityId } : plan;
-		}),
-	}));
 };
 
 const phaseMatchToSyncPhase = ({

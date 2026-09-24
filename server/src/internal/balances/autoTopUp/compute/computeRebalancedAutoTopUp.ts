@@ -81,9 +81,7 @@ export const computeRebalancedAutoTopUp = ({
 
 	if (!prepaidCusEnt) return { deltas: [] };
 
-	validateInvoiceCreditBalanceMutation({
-		feature: prepaidCusEnt.entitlement.feature,
-	});
+	validateInvoiceCreditBalanceMutation({ customerEntitlement: prepaidCusEnt });
 
 	const candidates = cusEntsForFeature.filter(
 		(cusEnt) =>

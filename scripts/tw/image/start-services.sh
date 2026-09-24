@@ -27,15 +27,22 @@ GOAWS_CONF="${GOAWS_CONF:-$GOAWS_DIR/goaws.yaml}"
 BIN_DIR="${TW_BIN_DIR:-$TW_PREFIX/bin}"
 GOAWS_BIN="${GOAWS_BIN:-$BIN_DIR/goaws}"
 LOG_DIR="${TW_LOG_DIR:-$TW_PREFIX/logs}"
+# Redpanda's own wrapper scripts hardcode /opt/redpanda, so it lives there, not under $BIN_DIR.
+REDPANDA_HOME="${REDPANDA_HOME:-/opt/redpanda}"
+REDPANDA_DIR="${REDPANDA_DIR:-$TW_PREFIX/redpanda}"
+REDPANDA_IMAGE="${REDPANDA_IMAGE:-docker.redpanda.com/redpandadata/redpanda:v26.2.3}"
 
 PG_PORT="${PG_PORT:-5432}"
 DRAGONFLY_PORT="${DRAGONFLY_PORT:-6379}"
 ELASTICMQ_PORT="${ELASTICMQ_PORT:-9324}"
 DYNAMODB_PORT="${DYNAMODB_PORT:-8000}"
 CLICKHOUSE_PORT="${CLICKHOUSE_PORT:-8123}"
+KAFKA_PORT="${KAFKA_PORT:-19092}"
+REDPANDA_ADMIN_PORT="${REDPANDA_ADMIN_PORT:-9644}"
+REDPANDA_RPC_PORT="${REDPANDA_RPC_PORT:-33145}"
 START_CLICKHOUSE="${TW_START_CLICKHOUSE:-0}"
 
-mkdir -p "$LOG_DIR" "$DRAGONFLY_DIR"
+mkdir -p "$LOG_DIR" "$DRAGONFLY_DIR" "$REDPANDA_DIR"
 
 # Find PG binaries (same probe as build-base.sh).
 PG_BINDIR=""
@@ -172,7 +179,64 @@ else
   DYNOXIDE_DISABLED=1
 fi
 
-# Wait for all four (started above) concurrently — readiness overlaps.
+# 3c. Redpanda (native Kafka, :$KAFKA_PORT) — the balance worker's log. One node in
+#     dev-container mode; data under $REDPANDA_DIR so the warm snapshot bakes the
+#     topics warmup.sh creates. Ready means every partition has a leader, which is
+#     what the worker's first offset reads need (a fresh leader answers
+#     OFFSET_NOT_AVAILABLE for a moment after election).
+#
+# Self-heal: base images built before Redpanda shipped lack it; extract it from
+# the OCI image via crane (no daemon), the way goaws is installed.
+ensure_redpanda() {
+  [ -x "$REDPANDA_HOME/bin/rpk" ] && return 0
+  CRANE_VERSION="${CRANE_VERSION:-v0.20.2}"
+  ARCH="$(uname -m)"
+  case "$ARCH" in
+    x86_64) CR_ARCH="x86_64" ;;
+    aarch64 | arm64) CR_ARCH="arm64" ;;
+    *) log "WARN: unsupported arch for Redpanda: $ARCH"; return 1 ;;
+  esac
+  log "Redpanda missing from base image — extracting $REDPANDA_IMAGE via crane"
+  TMP_RP="$(mktemp -d)"
+  if ! curl -fsSL -o "$TMP_RP/crane.tgz" \
+    "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_${CR_ARCH}.tar.gz"; then
+    rm -rf "$TMP_RP"; log "WARN: crane download failed"; return 1
+  fi
+  tar -xzf "$TMP_RP/crane.tgz" -C "$TMP_RP" crane
+  if ! "$TMP_RP/crane" export "$REDPANDA_IMAGE" "$TMP_RP/rp.tar"; then
+    rm -rf "$TMP_RP"; log "WARN: crane export of $REDPANDA_IMAGE failed"; return 1
+  fi
+  tar -xf "$TMP_RP/rp.tar" -C "$TMP_RP" opt/redpanda
+  if [ "$(id -u)" = "0" ]; then
+    mv "$TMP_RP/opt/redpanda" "$REDPANDA_HOME"
+  else
+    sudo mv "$TMP_RP/opt/redpanda" "$REDPANDA_HOME" && sudo chown -R "$(id -u):$(id -g)" "$REDPANDA_HOME"
+  fi
+  rm -rf "$TMP_RP"
+}
+
+redpanda_ready_probe="\"$REDPANDA_HOME/bin/rpk\" cluster health -X brokers=127.0.0.1:$KAFKA_PORT -X admin.hosts=127.0.0.1:$REDPANDA_ADMIN_PORT 2>/dev/null | grep -q 'Leaderless partitions (0)'"
+if eval "$redpanda_ready_probe" >/dev/null 2>&1; then
+  log "Redpanda already running"
+elif ensure_redpanda; then
+  log "Starting Redpanda on :$KAFKA_PORT (data $REDPANDA_DIR/data)"
+  nohup "$REDPANDA_HOME/bin/rpk" redpanda start \
+    --install-dir "$REDPANDA_HOME" --config "$REDPANDA_DIR/redpanda.yaml" \
+    --mode dev-container --smp 1 --memory 512M --reserve-memory 0M --overprovisioned \
+    --node-id 0 --check=false \
+    --kafka-addr "PLAINTEXT://127.0.0.1:$KAFKA_PORT" \
+    --advertise-kafka-addr "PLAINTEXT://127.0.0.1:$KAFKA_PORT" \
+    --rpc-addr "127.0.0.1:$REDPANDA_RPC_PORT" --advertise-rpc-addr "127.0.0.1:$REDPANDA_RPC_PORT" \
+    --set "redpanda.data_directory=$REDPANDA_DIR/data" \
+    --set "redpanda.admin=[{address: 127.0.0.1, port: $REDPANDA_ADMIN_PORT}]" \
+    --set redpanda.auto_create_topics_enabled=false \
+    >"$LOG_DIR/redpanda.log" 2>&1 &
+  disown || true
+else
+  die "Redpanda unavailable — the balance worker has no log to run on"
+fi
+
+# Wait for all five (started above) concurrently — readiness overlaps.
 wait_for "PostgreSQL" "pg_isready -h localhost -p $PG_PORT" 60 "$LOG_DIR/pg.log"
 wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING" 60 "$LOG_DIR/dragonfly.log"
 wait_for "goaws" "$goaws_ready_probe" 120 "$LOG_DIR/goaws.log"
@@ -185,6 +249,7 @@ fi
 if [ "${DYNOXIDE_DISABLED:-0}" != "1" ]; then
   wait_for "dynoxide" "$dynoxide_ready_probe" 60 "$LOG_DIR/dynoxide.log"
 fi
+wait_for "Redpanda" "$redpanda_ready_probe" 240 "$LOG_DIR/redpanda.log"
 
 # ---------------------------------------------------------------------------
 # 4. ClickHouse (optional).

@@ -80,6 +80,7 @@ test.concurrent(
 			(i) => i.feature_id === TestFeature.Words,
 		)!;
 		expect(wordsItem).toEqual({
+			id: expect.any(String),
 			description: expect.any(String),
 			period_start: expect.any(Number),
 			period_end: expect.any(Number),

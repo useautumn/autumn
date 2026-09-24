@@ -4,6 +4,7 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handlePlanHasCustomersV2 } from "@/internal/products/handlers/handlePlanHasCustomersV2.js";
 import { handleGetLicenseProducts } from "@/internal/products/internalHandlers/handleGetProducts.js";
 import { handleCopyProductV2 } from "./handlers/handleCopyProduct/handleCopyProductV2.js";
+import { handleCreatePlanInStripe } from "./handlers/handleCreatePlanInStripe.js";
 import { handleCreatePlan } from "./handlers/handleCreateProduct/handleCreatePlan.js";
 import { handleCreatePlanV2 } from "./handlers/handleCreateProduct/handleCreatePlanV2.js";
 import { handleCreateVariantV2 } from "./handlers/handleCreateVariant/handleCreateVariantV2.js";
@@ -15,6 +16,7 @@ import { handleGetPlanDeleteInfo } from "./handlers/handleGetPlanDeleteInfo.js";
 import { handleListPlansV2 } from "./handlers/handleListPlans/handleListPlansV2.js";
 import { handleListPlans } from "./handlers/handleListPlans.js";
 import { handlePreviewUpdatePlanV2 } from "./handlers/handlePreviewUpdatePlan/handlePreviewUpdatePlanV2.js";
+import { handleSplitVariantStripeProduct } from "./handlers/handleSplitVariantStripeProduct.js";
 import { handleUpdatePlanV1 } from "./handlers/handleUpdatePlan/handleUpdatePlanV1.js";
 import { handleUpdatePlanV2 } from "./handlers/handleUpdatePlan/handleUpdatePlanV2.js";
 
@@ -60,4 +62,9 @@ plansRpcRouter.post(
 );
 plansRpcRouter.post("/plans.has_customers", ...handlePlanHasCustomersV2);
 plansRpcRouter.post("/plans.create_variant", ...handleCreateVariantV2);
+plansRpcRouter.post(
+	"/plans.split_variant_stripe_product",
+	...handleSplitVariantStripeProduct,
+);
+plansRpcRouter.post("/plans.create_in_stripe", ...handleCreatePlanInStripe);
 plansRpcRouter.post("/plans.preview_update", ...handlePreviewUpdatePlanV2);

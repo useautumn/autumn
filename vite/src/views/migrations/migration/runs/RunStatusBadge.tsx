@@ -1,3 +1,4 @@
+import type { MigrationItemRunSkipReason } from "@autumn/shared";
 import { Badge } from "@autumn/ui";
 import {
 	CheckCircleIcon,
@@ -7,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import type { MigrationItemEventStatus } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
+import { skipBadgeSpec, skipReasonFromResponse } from "./skipBadge";
 
 export function ActiveRunDot({ className }: { className?: string }) {
 	return (
@@ -18,9 +20,9 @@ export function ActiveRunDot({ className }: { className?: string }) {
 }
 
 const LIVE_STYLES: Record<MigrationItemEventStatus, string> = {
-	succeeded: "bg-green-500/10 text-green-500 border-transparent",
-	skipped: "bg-muted text-muted-foreground border-transparent",
-	failed: "bg-red-500/10 text-red-500 border-transparent",
+	succeeded: "bg-green-500/10 text-green-500 border-green-500/20",
+	skipped: "bg-muted text-muted-foreground border-border",
+	failed: "bg-red-500/10 text-red-500 border-red-500/20",
 };
 
 const DRY_STYLES: Record<MigrationItemEventStatus, string> = {
@@ -41,45 +43,41 @@ const STATUS_ICONS: Record<MigrationItemEventStatus, Icon> = {
 	failed: XCircleIcon,
 };
 
-function isNoOpResponse(response: Record<string, unknown> | null): boolean {
-	if (!response) return false;
-	const preview = response.preview as
-		| {
-				plan_changes?: unknown[];
-				balance_changes?: unknown[];
-				flag_changes?: unknown[];
-		  }
-		| undefined;
-	if (!preview) return false;
-	return (
-		(preview.plan_changes?.length ?? 0) === 0 &&
-		(preview.balance_changes?.length ?? 0) === 0 &&
-		(preview.flag_changes?.length ?? 0) === 0
-	);
-}
-
 export function ItemEventStatusBadge({
 	status,
 	dryRun = false,
 	response = null,
+	skipReason,
 }: {
 	status: MigrationItemEventStatus;
 	dryRun?: boolean;
 	response?: Record<string, unknown> | null;
+	skipReason?: MigrationItemRunSkipReason | null;
 }) {
-	if (status === "skipped" && isNoOpResponse(response))
+	if (status === "skipped") {
+		const spec = skipBadgeSpec({
+			skipReason: skipReason ?? skipReasonFromResponse(response),
+			response,
+		});
+		const styles = dryRun ? DRY_STYLES : LIVE_STYLES;
 		return (
 			<Badge
 				variant="muted"
 				className={cn(
-					"gap-1 bg-muted text-tertiary-foreground",
-					dryRun ? "border-border border-dashed" : "border-transparent",
+					"gap-1",
+					spec.noChanges
+						? cn(
+								"bg-muted text-tertiary-foreground border-border",
+								dryRun && "border-dashed",
+							)
+						: styles.skipped,
 				)}
 			>
 				<MinusCircleIcon size={12} weight="fill" />
-				No Changes
+				{spec.label}
 			</Badge>
 		);
+	}
 
 	const StatusIcon = STATUS_ICONS[status];
 

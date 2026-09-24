@@ -43,6 +43,7 @@ await mockModuleWithRestore(
 
 await mockModuleWithRestore("@/external/connect/initStripeCli.js", () => ({
 	initMasterStripe: () => ({
+		balance: { retrieve: async () => ({}) },
 		oauth: {
 			token: async () => ({ stripe_user_id: state.oauthAccountId }),
 		},

@@ -56,7 +56,7 @@ const schedule = () =>
 		phases: [
 			{
 				start_date: 1,
-				end_date: 2,
+				end_date: 4_102_444_800,
 				currency: "usd",
 				items: [{ price: stripePrice, quantity: 2, metadata: {} }],
 			},
@@ -141,6 +141,7 @@ const product = {
 	is_add_on: false,
 	base_variant_id: null,
 	base_internal_product_id: null,
+	processor: { id: "prod_stripe" },
 	prices: [catalogPrice],
 } as FullProduct;
 const snapshot = {
@@ -163,21 +164,24 @@ const snapshot = {
 const itemDiff = ({
 	exact,
 	stripe = snapshot,
+	price = catalogPrice,
 }: {
 	exact: boolean;
 	stripe?: StripeItemSnapshot;
+	price?: Price & { config: FixedPriceConfig };
 }): ItemDiff => ({
 	stripe,
 	match: {
 		kind: "autumn_price",
 		matched_on: exact
-			? { type: "stripe_price_id", stripe_price_id: "price_shared" }
+			? { type: "stripe_price_id", stripe_price_id: stripe.stripe_price_id }
 			: {
 					type: "stripe_base_price_shape",
 					stripe_product_id: "prod_stripe",
-					stripe_price_id: "price_shared",
+					stripe_price_id: stripe.stripe_price_id,
+					currency: stripe.currency,
 				},
-		price: catalogPrice,
+		price,
 		product,
 	},
 });
@@ -192,17 +196,40 @@ describe("Stripe sync base rollup", () => {
 		expect(plan?.customize).toBeUndefined();
 	});
 
-	test("preserves a shape-matched source as a JPY quarterly custom base", () => {
+	test("same-currency shape hit on the mapped Stripe product selects the catalog base", () => {
 		const [plan] = itemDiffsToMatchedPlans({
 			itemDiffs: [itemDiff({ exact: false })],
 		});
 
+		expect(plan?.base.kind).toBe("matched");
+		expect(plan?.customize).toBeUndefined();
+	});
+
+	test("currency-mismatched shape hit on the mapped Stripe product stays custom", () => {
+		const [plan] = itemDiffsToMatchedPlans({
+			itemDiffs: [
+				itemDiff({
+					exact: false,
+					stripe: {
+						...snapshot,
+						currency: "eur",
+						unit_amount: 1800,
+						unit_amount_decimal: "1800",
+					},
+					price: {
+						...catalogPrice,
+						config: { ...catalogPrice.config, base_currency: "usd" },
+					},
+				}),
+			],
+		});
+
 		expect(plan?.base.kind).toBe("custom");
 		expect(plan?.customize?.price).toEqual({
-			amount: 4500,
+			amount: 18,
 			interval: BillingInterval.Month,
 			interval_count: 3,
-			base_currency: "jpy",
+			base_currency: "eur",
 			stripe_price_id: "price_shared",
 		});
 	});
@@ -214,6 +241,7 @@ describe("Stripe sync base rollup", () => {
 					exact: false,
 					stripe: {
 						...snapshot,
+						currency: "eur",
 						unit_amount: null,
 						unit_amount_decimal: null,
 					},

@@ -24,14 +24,6 @@ import {
   PreviewUpdateCustomizeFreeTrialParams,
   PreviewUpdateCustomizeFreeTrialParams$Outbound,
   PreviewUpdateCustomizeFreeTrialParams$outboundSchema,
-  PreviewUpdateDimensionsToUpsertLicenseEnum2,
-  PreviewUpdateDimensionsToUpsertLicenseEnum2$outboundSchema,
-  PreviewUpdateDimensionsUpsertLicense4,
-  PreviewUpdateDimensionsUpsertLicense4$Outbound,
-  PreviewUpdateDimensionsUpsertLicense4$outboundSchema,
-  PreviewUpdateDimensionsUpsertLicenseMatch3,
-  PreviewUpdateDimensionsUpsertLicenseMatch3$Outbound,
-  PreviewUpdateDimensionsUpsertLicenseMatch3$outboundSchema,
   PreviewUpdateFeatureQuantityRequestBody,
   PreviewUpdateFeatureQuantityRequestBody$Outbound,
   PreviewUpdateFeatureQuantityRequestBody$outboundSchema,
@@ -62,8 +54,58 @@ import {
   PreviewUpdateUpsertLicenseThresholdBilling,
   PreviewUpdateUpsertLicenseThresholdBilling$Outbound,
   PreviewUpdateUpsertLicenseThresholdBilling$outboundSchema,
-} from "./preview-update-dimensions-to-upsert-license-enum-2.js";
+} from "./preview-update-upsert-license-rollover.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+export const PreviewUpdateUpsertLicenseDuration = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+export type PreviewUpdateUpsertLicenseDuration = ClosedEnum<
+  typeof PreviewUpdateUpsertLicenseDuration
+>;
+
+/**
+ * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+ */
+export type PreviewUpdateUpsertLicenseExpiry = {
+  duration: PreviewUpdateUpsertLicenseDuration;
+  length: number;
+};
+
+export type PreviewUpdateDimensionsUpsertLicenseMatch4 =
+  | string
+  | number
+  | boolean;
+
+export type PreviewUpdateDimensionsUpsertLicense4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type PreviewUpdateDimensionsUpsertLicenseMatch3 =
+  | string
+  | number
+  | boolean;
+
+export const PreviewUpdateDimensionsToUpsertLicenseEnum2 = {
+  Inf: "inf",
+} as const;
+export type PreviewUpdateDimensionsToUpsertLicenseEnum2 = ClosedEnum<
+  typeof PreviewUpdateDimensionsToUpsertLicenseEnum2
+>;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
@@ -87,7 +129,7 @@ export type PreviewUpdateDimensionsUpsertLicense3 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
-  match: { [k: string]: PreviewUpdateDimensionsUpsertLicenseMatch3 };
+  match: { [k: string]: string | number | boolean };
   /**
    * Breaks ties between dimensions that match the same number of keys. Higher wins.
    */
@@ -389,6 +431,10 @@ export type PreviewUpdateUpsertLicensePlanItem = {
    */
   rollover?: PreviewUpdateUpsertLicenseRollover | undefined;
   /**
+   * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+   */
+  expiry?: PreviewUpdateUpsertLicenseExpiry | undefined;
+  /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
   featureOverride?: PreviewUpdateUpsertLicenseFeatureOverride | undefined;
@@ -597,6 +643,17 @@ export type PreviewUpdateAttachDiscount = {
   promotionCode?: string | undefined;
 };
 
+export type PreviewUpdateCustomLineItem = {
+  /**
+   * Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+   */
+  amount: number;
+  /**
+   * Description for the line item.
+   */
+  description: string;
+};
+
 /**
  * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
  */
@@ -717,6 +774,10 @@ export type PreviewUpdateParams = {
    * List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
    */
   discounts?: Array<PreviewUpdateAttachDiscount> | undefined;
+  /**
+   * Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
+   */
+  customLineItems?: Array<PreviewUpdateCustomLineItem> | undefined;
   /**
    * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
    */
@@ -1118,6 +1179,128 @@ export type PreviewUpdateResponse = {
 };
 
 /** @internal */
+export const PreviewUpdateUpsertLicenseDuration$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateUpsertLicenseDuration
+> = z.enum(PreviewUpdateUpsertLicenseDuration);
+
+/** @internal */
+export type PreviewUpdateUpsertLicenseExpiry$Outbound = {
+  duration: string;
+  length: number;
+};
+
+/** @internal */
+export const PreviewUpdateUpsertLicenseExpiry$outboundSchema: z.ZodMiniType<
+  PreviewUpdateUpsertLicenseExpiry$Outbound,
+  PreviewUpdateUpsertLicenseExpiry
+> = z.object({
+  duration: PreviewUpdateUpsertLicenseDuration$outboundSchema,
+  length: z.number(),
+});
+
+export function previewUpdateUpsertLicenseExpiryToJSON(
+  previewUpdateUpsertLicenseExpiry: PreviewUpdateUpsertLicenseExpiry,
+): string {
+  return JSON.stringify(
+    PreviewUpdateUpsertLicenseExpiry$outboundSchema.parse(
+      previewUpdateUpsertLicenseExpiry,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewUpdateDimensionsUpsertLicenseMatch4$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const PreviewUpdateDimensionsUpsertLicenseMatch4$outboundSchema:
+  z.ZodMiniType<
+    PreviewUpdateDimensionsUpsertLicenseMatch4$Outbound,
+    PreviewUpdateDimensionsUpsertLicenseMatch4
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function previewUpdateDimensionsUpsertLicenseMatch4ToJSON(
+  previewUpdateDimensionsUpsertLicenseMatch4:
+    PreviewUpdateDimensionsUpsertLicenseMatch4,
+): string {
+  return JSON.stringify(
+    PreviewUpdateDimensionsUpsertLicenseMatch4$outboundSchema.parse(
+      previewUpdateDimensionsUpsertLicenseMatch4,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewUpdateDimensionsUpsertLicense4$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const PreviewUpdateDimensionsUpsertLicense4$outboundSchema:
+  z.ZodMiniType<
+    PreviewUpdateDimensionsUpsertLicense4$Outbound,
+    PreviewUpdateDimensionsUpsertLicense4
+  > = z.pipe(
+    z.object({
+      match: z.record(
+        z.string(),
+        smartUnion([z.string(), z.number(), z.boolean()]),
+      ),
+      priority: z.optional(z.int()),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function previewUpdateDimensionsUpsertLicense4ToJSON(
+  previewUpdateDimensionsUpsertLicense4: PreviewUpdateDimensionsUpsertLicense4,
+): string {
+  return JSON.stringify(
+    PreviewUpdateDimensionsUpsertLicense4$outboundSchema.parse(
+      previewUpdateDimensionsUpsertLicense4,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewUpdateDimensionsUpsertLicenseMatch3$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const PreviewUpdateDimensionsUpsertLicenseMatch3$outboundSchema:
+  z.ZodMiniType<
+    PreviewUpdateDimensionsUpsertLicenseMatch3$Outbound,
+    PreviewUpdateDimensionsUpsertLicenseMatch3
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function previewUpdateDimensionsUpsertLicenseMatch3ToJSON(
+  previewUpdateDimensionsUpsertLicenseMatch3:
+    PreviewUpdateDimensionsUpsertLicenseMatch3,
+): string {
+  return JSON.stringify(
+    PreviewUpdateDimensionsUpsertLicenseMatch3$outboundSchema.parse(
+      previewUpdateDimensionsUpsertLicenseMatch3,
+    ),
+  );
+}
+
+/** @internal */
+export const PreviewUpdateDimensionsToUpsertLicenseEnum2$outboundSchema:
+  z.ZodMiniEnum<typeof PreviewUpdateDimensionsToUpsertLicenseEnum2> = z.enum(
+    PreviewUpdateDimensionsToUpsertLicenseEnum2,
+  );
+
+/** @internal */
 export type PreviewUpdateDimensionsUpsertLicenseToUnion2$Outbound =
   | number
   | string;
@@ -1182,7 +1365,7 @@ export function previewUpdateDimensionsUpsertLicenseTier2ToJSON(
 
 /** @internal */
 export type PreviewUpdateDimensionsUpsertLicense3$Outbound = {
-  match: { [k: string]: PreviewUpdateDimensionsUpsertLicenseMatch3$Outbound };
+  match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   tier_behavior: "graduated";
   tiers: Array<PreviewUpdateDimensionsUpsertLicenseTier2$Outbound>;
@@ -1197,7 +1380,7 @@ export const PreviewUpdateDimensionsUpsertLicense3$outboundSchema:
     z.object({
       match: z.record(
         z.string(),
-        PreviewUpdateDimensionsUpsertLicenseMatch3$outboundSchema,
+        smartUnion([z.string(), z.number(), z.boolean()]),
       ),
       priority: z.optional(z.int()),
       tierBehavior: z.literal("graduated"),
@@ -1234,7 +1417,7 @@ export const PreviewUpdateUpsertLicenseDimensionsUnion2$outboundSchema:
     PreviewUpdateUpsertLicenseDimensionsUnion2
   > = smartUnion([
     z.lazy(() => PreviewUpdateDimensionsUpsertLicense3$outboundSchema),
-    PreviewUpdateDimensionsUpsertLicense4$outboundSchema,
+    z.lazy(() => PreviewUpdateDimensionsUpsertLicense4$outboundSchema),
   ]);
 
 export function previewUpdateUpsertLicenseDimensionsUnion2ToJSON(
@@ -1332,7 +1515,7 @@ export const PreviewUpdateCreditSchemaUpsertLicense2$outboundSchema:
         z.string(),
         smartUnion([
           z.lazy(() => PreviewUpdateDimensionsUpsertLicense3$outboundSchema),
-          PreviewUpdateDimensionsUpsertLicense4$outboundSchema,
+          z.lazy(() => PreviewUpdateDimensionsUpsertLicense4$outboundSchema),
         ]),
       )),
       multipliers: z.optional(z.record(
@@ -1962,6 +2145,7 @@ export type PreviewUpdateUpsertLicensePlanItem$Outbound = {
   price?: PreviewUpdateUpsertLicensePrice$Outbound | undefined;
   proration?: PreviewUpdateUpsertLicenseProration$Outbound | undefined;
   rollover?: PreviewUpdateUpsertLicenseRollover$Outbound | undefined;
+  expiry?: PreviewUpdateUpsertLicenseExpiry$Outbound | undefined;
   feature_override?:
     | PreviewUpdateUpsertLicenseFeatureOverride$Outbound
     | undefined;
@@ -1984,6 +2168,9 @@ export const PreviewUpdateUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     price: z.optional(PreviewUpdateUpsertLicensePrice$outboundSchema),
     proration: z.optional(PreviewUpdateUpsertLicenseProration$outboundSchema),
     rollover: z.optional(PreviewUpdateUpsertLicenseRollover$outboundSchema),
+    expiry: z.optional(
+      z.lazy(() => PreviewUpdateUpsertLicenseExpiry$outboundSchema),
+    ),
     featureOverride: z.optional(
       z.lazy(() => PreviewUpdateUpsertLicenseFeatureOverride$outboundSchema),
     ),
@@ -2348,6 +2535,31 @@ export function previewUpdateAttachDiscountToJSON(
 }
 
 /** @internal */
+export type PreviewUpdateCustomLineItem$Outbound = {
+  amount: number;
+  description: string;
+};
+
+/** @internal */
+export const PreviewUpdateCustomLineItem$outboundSchema: z.ZodMiniType<
+  PreviewUpdateCustomLineItem$Outbound,
+  PreviewUpdateCustomLineItem
+> = z.object({
+  amount: z.number(),
+  description: z.string(),
+});
+
+export function previewUpdateCustomLineItemToJSON(
+  previewUpdateCustomLineItem: PreviewUpdateCustomLineItem,
+): string {
+  return JSON.stringify(
+    PreviewUpdateCustomLineItem$outboundSchema.parse(
+      previewUpdateCustomLineItem,
+    ),
+  );
+}
+
+/** @internal */
 export const PreviewUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
   typeof PreviewUpdateCancelAction
 > = z.enum(PreviewUpdateCancelAction);
@@ -2479,6 +2691,7 @@ export type PreviewUpdateParams$Outbound = {
   redirect_mode: string;
   subscription_id?: string | undefined;
   discounts?: Array<PreviewUpdateAttachDiscount$Outbound> | undefined;
+  custom_line_items?: Array<PreviewUpdateCustomLineItem$Outbound> | undefined;
   cancel_action?: string | undefined;
   billing_cycle_anchor?: string | number | undefined;
   no_billing_changes?: boolean | undefined;
@@ -2520,6 +2733,9 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
     discounts: z.optional(
       z.array(z.lazy(() => PreviewUpdateAttachDiscount$outboundSchema)),
     ),
+    customLineItems: z.optional(
+      z.array(z.lazy(() => PreviewUpdateCustomLineItem$outboundSchema)),
+    ),
     cancelAction: z.optional(PreviewUpdateCancelAction$outboundSchema),
     billingCycleAnchor: z.optional(smartUnion([z.string(), z.int()])),
     noBillingChanges: z.optional(z.boolean()),
@@ -2548,6 +2764,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
       prorationBehavior: "proration_behavior",
       redirectMode: "redirect_mode",
       subscriptionId: "subscription_id",
+      customLineItems: "custom_line_items",
       cancelAction: "cancel_action",
       billingCycleAnchor: "billing_cycle_anchor",
       noBillingChanges: "no_billing_changes",

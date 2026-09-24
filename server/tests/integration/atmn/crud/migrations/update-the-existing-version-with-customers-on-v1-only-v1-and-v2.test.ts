@@ -21,8 +21,8 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
-import { runPush } from "../../../../../../packages/atmn-nightly/src/actions/push";
-import { createClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { runPush } from "../../../../../../packages/atmn/src/actions/push";
+import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
 type PreviewMigrations =
 	| Array<{ plans: Array<{ planId: string; versions: number[] }> }>
@@ -68,8 +68,7 @@ for (const { name, customeredVersions } of customeredVersionCases) {
 				scenario.writeConfig(
 					atmnConfigSource({
 						body: configBody({
-							plans: versionedPro({ versionSlug: "v2", amount: 59 }),
-							planVersions: versionedPro({ versionSlug: "v1" }),
+							plans: `${versionedPro({ versionSlug: "v2", amount: 59 })}${versionedPro({ versionSlug: "v1", active: false })}`,
 						}),
 					}),
 				);
@@ -87,8 +86,7 @@ for (const { name, customeredVersions } of customeredVersionCases) {
 				scenario.writeConfig(
 					atmnConfigSource({
 						body: configBody({
-							plans: versionedPro({ versionSlug: "v2", amount: 69 }),
-							planVersions: versionedPro({ versionSlug: "v1", amount: 19 }),
+							plans: `${versionedPro({ versionSlug: "v2", amount: 69 })}${versionedPro({ versionSlug: "v1", amount: 19, active: false })}`,
 						}),
 					}),
 				);

@@ -18,6 +18,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "growth",
+			versionSlug: "v1",
+			active: true,
 			name: "Growth",
 			price: { amount: 49, interval: "month" },
 			items: [

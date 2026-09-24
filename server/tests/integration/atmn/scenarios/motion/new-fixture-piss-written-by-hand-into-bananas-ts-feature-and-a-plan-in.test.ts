@@ -1,5 +1,5 @@
 /**
- * atmn scenarios/motion — new fixture `piss` written by hand into `bananas.ts` (feature) [and a plan into `strawberries.ts`, a version into `poo.ts`] → push creates it; the backfill seeks out that file and inserts the single `internalId` line into that fixture, nothing else in the file changes
+ * atmn scenarios/motion — new fixture `piss` written by hand into `bananas.ts` (feature) [and a plan into `strawberries.ts`, a version into `poo.ts` (spread into plans)] → push creates it; the backfill seeks out that file and inserts the single `internalId` line into that fixture, nothing else in the file changes
  *
  * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
  *
@@ -46,8 +46,7 @@ import { atmn } from "${CLI_PACKAGE_DIR}/src/generated/wire";
 
 export default atmn({
 	features: bananas,
-	plans: strawberries,
-	planVersions: poo,
+	plans: [...strawberries, ...poo],
 });
 `;
 
@@ -66,7 +65,7 @@ export const bananas = [
 `,
 					"strawberries.ts": `${planImport}
 export const strawberries: Plan[] = [
-	plan({ planId: "${pro}", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
+	plan({ active: true, planId: "${pro}", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
 ];
 `,
 					"poo.ts": `${planImport}
@@ -96,7 +95,7 @@ export const poo: Plan[] = [];
 						"strawberries.ts",
 						existing.replace(
 							"];\n",
-							`\tplan({ planId: "${pissId}", name: "Piss", price: { amount: 5, interval: "month" } }),\n];\n`,
+							`\tplan({ active: true, planId: "${pissId}", name: "Piss", versionSlug: "v1", price: { amount: 5, interval: "month" } }),\n];\n`,
 						),
 					);
 				} else {
@@ -105,7 +104,7 @@ export const poo: Plan[] = [];
 						"poo.ts",
 						`${planImport}
 export const poo: Plan[] = [
-	plan({ planId: "${pro}", name: "Pro", versionSlug: "v0", price: { amount: 39, interval: "month" } }),
+	plan({ active: false, planId: "${pro}", name: "Pro", versionSlug: "v0", price: { amount: 39, interval: "month" } }),
 ];
 `,
 					);

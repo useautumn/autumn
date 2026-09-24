@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { COLLECTIONS, NESTED_FIXTURES, SINGLETONS } from "./collections";
 import { copyRuntime } from "./emit/copyRuntime";
+import { emitApiRoutesModule } from "./emit/emitApiRoutes";
 import { type ClientOperation, emitClientModule } from "./emit/emitClient";
 import {
 	emitBranchedCollectionModule,
@@ -22,13 +23,14 @@ import {
 	catalogUpdateSchema,
 	collectionItemSchema,
 	loadSpec,
+	PUBLIC_SPEC_PATH,
 	requestBodySchema,
 	responseSchema,
 	serverBaseUrl,
 } from "./spec/loadSpec";
 import { resolveRef } from "./spec/resolveRef";
 
-const OUTPUT_DIR = join(import.meta.dir, "../../atmn-nightly/src/generated");
+const OUTPUT_DIR = join(import.meta.dir, "../../atmn/src/generated");
 const REPO_ROOT = join(import.meta.dir, "../../..");
 
 const LINT_RUNTIME_SOURCE = join(
@@ -73,6 +75,13 @@ export const generate = async (): Promise<string[]> => {
 	mkdirSync(OUTPUT_DIR, { recursive: true });
 
 	const written: string[] = [];
+	copyRuntime({
+		from: join(import.meta.dir, "emit/runtime/mappingAssignments.ts"),
+		to: join(OUTPUT_DIR, "mappingAssignments.ts"),
+		sourceLabel:
+			"packages/atmn-generator/src/emit/runtime/mappingAssignments.ts",
+	});
+	written.push(join(OUTPUT_DIR, "mappingAssignments.ts"));
 	const write = ({ name, source }: { name: string; source: string }) => {
 		const path = join(OUTPUT_DIR, name);
 		writeFileSync(path, source, "utf8");
@@ -230,6 +239,11 @@ export const generate = async (): Promise<string[]> => {
 	const operations: ClientOperation[] = (
 		[
 			{
+				name: "diff",
+				path: "/v1/catalogV2.diff",
+				responseTypeName: "DiffCatalogResponse",
+			},
+			{
 				name: "previewUpdate",
 				path: "/v1/catalogV2.preview_update",
 				responseTypeName: "PreviewUpdateCatalogResponse",
@@ -324,6 +338,13 @@ export const generate = async (): Promise<string[]> => {
 	});
 
 	write({ name: "skills.ts", source: await emitSkillsModule() });
+
+	// `atmn api` mirrors the published surface: the public spec, never the
+	// internal one, so a field the docs hide cannot leak through a flag.
+	write({
+		name: "apiRoutes.ts",
+		source: emitApiRoutesModule({ spec: loadSpec({ path: PUBLIC_SPEC_PATH }) }),
+	});
 
 	await formatWithBiome({ paths: written });
 	return written;

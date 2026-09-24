@@ -5,6 +5,7 @@ import {
 	ApiUsageTierWithCurrenciesSchema,
 	additionalCurrencyPlanItemIssues,
 } from "@api/products/components/additionalCurrencies.js";
+import { AllocatedBillingFieldSchema } from "@api/products/components/allocatedBilling.js";
 import { BillingMethod } from "@api/products/components/billingMethod.js";
 import { DisplaySchema } from "@api/products/components/display.js";
 import { ApiPriceProcessorsSchema } from "@api/products/components/processors.js";
@@ -133,6 +134,7 @@ export const ApiPlanItemV1Schema = z
 					description:
 						"'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage.",
 				}),
+				allocated_billing: AllocatedBillingFieldSchema,
 				max_purchase: z.number().nullable().meta({
 					description:
 						"Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.",
@@ -203,6 +205,7 @@ export const ApiPlanItemV1Schema = z
 		entity_feature_id: z.string().optional().meta({
 			internal: true,
 		}),
+		mapping_identity: z.string().optional().meta({ internal: true }),
 		entitlement_id: z.string().optional().meta({
 			internal: true,
 		}),

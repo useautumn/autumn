@@ -6,6 +6,8 @@ export * from "./PlanItemsSection";
 export * from "./PlanPrepaidQuantityFields";
 export * from "./PlanScopeToggleButton";
 export * from "./PlanSectionTitle";
+export * from "./plan-items/LicenseQuantityControl";
+export * from "./plan-items/PlanLicensesSummary";
 export * from "./ScopedPlanRow";
 export * from "./SelectedPlanRow";
 export * from "./usePlanScopeField";

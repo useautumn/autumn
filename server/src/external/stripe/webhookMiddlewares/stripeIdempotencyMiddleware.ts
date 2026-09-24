@@ -2,7 +2,10 @@ import type { AppEnv } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { getMiscRedis } from "@/external/redis/initRedis";
-import { classifyStripeWebhookAckMode } from "./classifyStripeWebhookAckMode.js";
+import {
+	classifyStripeWebhookAckMode,
+	isStripeWebhookLockRequired,
+} from "./classifyStripeWebhookAckMode.js";
 import type { StripeWebhookHonoEnv } from "./stripeWebhookContext.js";
 
 const PROCESSING_TTL_MS = 5 * 60 * 1000;
@@ -69,7 +72,9 @@ export const releaseStripeWebhookEvent = async ({
  * ctx.webhookIdempotency hooks). A failed run deletes the lock so Stripe's
  * retry of the same event id reprocesses instead of being dropped.
  *
- * If Redis is unavailable or errors, the request is allowed through (fail-open).
+ * If Redis is unavailable or errors, the request is allowed through (fail-open),
+ * except for events that must never run twice concurrently (see
+ * isStripeWebhookLockRequired), which are 500ed so Stripe retries later.
  */
 export const stripeIdempotencyMiddleware = async (
 	c: Context<StripeWebhookHonoEnv>,
@@ -89,6 +94,12 @@ export const stripeIdempotencyMiddleware = async (
 	const claim = await claimStripeWebhookEvent({ eventKey });
 
 	if (claim === "unavailable") {
+		if (isStripeWebhookLockRequired({ event: stripeEvent })) {
+			ctx.logger.error(
+				`[stripeIdempotencyMiddleware] Redis unavailable and event requires the lock, asking Stripe to retry: ${stripeEvent.id}`,
+			);
+			return c.json({ received: false, lock_unavailable: true }, 500);
+		}
 		// Redis down or errored - fail open
 		ctx.logger.warn(
 			`[stripeIdempotencyMiddleware] Redis unavailable, allowing through: ${stripeEvent.id}`,

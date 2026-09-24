@@ -15,8 +15,8 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { runPush } from "../../../../../../packages/atmn-nightly/src/actions/push";
-import { createClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { runPush } from "../../../../../../packages/atmn/src/actions/push";
+import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
 /** A single paid plan; omitting it from `plans` is how a config drops a plan. */
 const catalogConfig = ({
@@ -31,6 +31,8 @@ const catalogConfig = ({
 			? `
 		{
 			planId: "${planId}",
+			active: true,
+			versionSlug: "v1",
 			name: "Pro",
 			price: { amount: 20, interval: "month" },
 			createInStripe: false,

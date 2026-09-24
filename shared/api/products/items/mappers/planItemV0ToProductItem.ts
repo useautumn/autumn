@@ -1,3 +1,4 @@
+import { allocatedBillingToBehavior } from "@api/products/components/allocatedBilling";
 import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0";
 import { Infinite } from "@models/productModels/productEnums";
 import {
@@ -86,8 +87,18 @@ const planItemV0ToItemConfig = ({
 		? apiFeatureOverrideToDb(planItemV0.feature_override)
 		: undefined;
 	const thresholdBilling = planItemV0.threshold_billing ?? undefined;
+	const allocatedBillingBehavior = allocatedBillingToBehavior(
+		planItemV0.price?.allocated_billing,
+	);
 
-	if (rollover || proration || featureOverride || thresholdBilling || expiry) {
+	if (
+		rollover ||
+		proration ||
+		featureOverride ||
+		thresholdBilling ||
+		expiry ||
+		allocatedBillingBehavior
+	) {
 		return {
 			rollover,
 			expiry,
@@ -95,6 +106,7 @@ const planItemV0ToItemConfig = ({
 			on_decrease: proration?.on_decrease,
 			feature_override: featureOverride,
 			threshold_billing: thresholdBilling,
+			allocated_billing_behavior: allocatedBillingBehavior,
 		} satisfies ProductItemConfig;
 	}
 	return undefined;
@@ -196,9 +208,11 @@ export const planItemV0ToProductItem = ({
 
 		usage_model: planItem.price?.usage_model,
 		billing_units: planItem.price?.billing_units,
-		usage_limit: planItem.price?.max_purchase
-			? planItem.price.max_purchase + (planItem.granted_balance ?? 0)
-			: undefined,
+		// 0 is a stated cap (no purchase beyond included), not an absent one.
+		usage_limit:
+			planItem.price?.max_purchase != null
+				? planItem.price.max_purchase + (planItem.granted_balance ?? 0)
+				: undefined,
 
 		reset_usage_when_enabled:
 			planItem.reset?.reset_when_enabled ?? resetUsageWhenEnabled,

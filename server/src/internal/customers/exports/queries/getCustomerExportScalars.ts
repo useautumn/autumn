@@ -21,6 +21,7 @@ export type CustomerExportScalarRow = {
 	id: string | null;
 	name: string | null;
 	email: string | null;
+	processor: { id?: string } | null;
 };
 
 export const getCustomerExportUpperBound = async ({
@@ -133,8 +134,7 @@ export const resolveCustomerExportPopulation = async ({
 	return { population: { upperBoundInternalId, createdAtCutoff }, totalCount };
 };
 
-/** Both snapshot bounds must remain unchanged for the entire keyset walk. */
-export const getCustomerExportScalars = async ({
+export const buildCustomerExportScalarsQuery = ({
 	db,
 	orgId,
 	env,
@@ -148,19 +148,18 @@ export const getCustomerExportScalars = async ({
 	orgId: string;
 	env: AppEnv;
 	snapshot: CustomerExportSnapshot;
-	upperBoundInternalId: string | null;
+	upperBoundInternalId: string;
 	createdAtCutoff: number;
 	afterInternalId: string | null;
 	limit?: number;
-}): Promise<CustomerExportScalarRow[]> => {
-	if (upperBoundInternalId === null) return [];
-
-	const matched = db
+}) =>
+	db
 		.select({
 			internal_id: customers.internal_id,
 			id: customers.id,
 			name: customers.name,
 			email: customers.email,
+			processor: customers.processor,
 		})
 		.from(customers)
 		.where(
@@ -173,13 +172,42 @@ export const getCustomerExportScalars = async ({
 				}).whereRaw,
 				lte(customers.created_at, createdAtCutoff),
 				lte(customers.internal_id, upperBoundInternalId),
+				// Both terms are load-bearing: the row value keeps the planner off
+				// customers_pkey (which filters 7.1M other orgs' rows on the last
+				// pages), and the scalar bound is what the index can actually seek on.
 				afterInternalId
-					? lt(customers.internal_id, afterInternalId)
+					? and(
+							sql`(${customers.org_id}, ${customers.env}, ${customers.internal_id}) < (${orgId}, ${env}, ${afterInternalId})`,
+							lt(customers.internal_id, afterInternalId),
+						)
 					: undefined,
 			),
 		)
-		.orderBy(desc(customers.internal_id))
+		.orderBy(
+			desc(customers.org_id),
+			desc(customers.env),
+			desc(customers.internal_id),
+		)
 		.limit(limit);
+
+/** Both snapshot bounds must remain unchanged for the entire keyset walk. */
+export const getCustomerExportScalars = async (params: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	snapshot: CustomerExportSnapshot;
+	upperBoundInternalId: string | null;
+	createdAtCutoff: number;
+	afterInternalId: string | null;
+	limit?: number;
+}): Promise<CustomerExportScalarRow[]> => {
+	const { db, upperBoundInternalId } = params;
+	if (upperBoundInternalId === null) return [];
+
+	const matched = buildCustomerExportScalarsQuery({
+		...params,
+		upperBoundInternalId,
+	});
 
 	return await db.execute<CustomerExportScalarRow>(
 		sql`${matched} ${planetScaleTag({ query: "getCustomerExportScalars" })}`,

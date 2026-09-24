@@ -120,6 +120,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "pro",
+			versionSlug: "v1",
+			active: true,
 			name: "Pro",
 			price: { amount: 30, interval: "month" },
 			freeTrial: {

@@ -16,6 +16,11 @@ export const ApiInvoiceItemEntitySchema = z.object({
 });
 
 export const ApiInvoiceItemSchema = z.object({
+	id: z.string().meta({
+		description:
+			"The Autumn invoice line item ID. Stable across reads, and can be used to reference this line in later calls.",
+		example: "invoice_li_2b3c4d5e6f7g8h",
+	}),
 	description: z.string().meta({
 		description: "Description of the invoice line item",
 		example: "Pro Plan - Monthly Subscription",

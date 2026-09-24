@@ -34,23 +34,27 @@ export const syncStripeEventToSyncDb = ({
 		const stripeAccountId =
 			stripeEvent.account ?? orgToAccountId({ org, env: ctx.env });
 
-		void processStripeSyncEvent({
-			event: stripeEvent,
-			stripeAccountId,
-			orgId: org.id,
-			env: ctx.env,
-		}).catch((error) => {
-			logger.error(`Stripe sync failed for event ${stripeEvent.id}: ${error}`, {
+		const logSyncFailure = (error: unknown) => {
+			logger.warn(`Stripe sync failed for event ${stripeEvent.id}: ${error}`, {
 				error: {
 					message: error instanceof Error ? error.message : String(error),
 				},
 				data: {
+					type: "stripe_sync_write_failed",
 					eventId: stripeEvent.id,
 					eventType: stripeEvent.type,
 					orgId: org.id,
 				},
 			});
-		});
+		};
+
+		void processStripeSyncEvent({
+			event: stripeEvent,
+			stripeAccountId,
+			orgId: org.id,
+			env: ctx.env,
+			onError: logSyncFailure,
+		}).catch(logSyncFailure);
 	} catch (error) {
 		logger.error(`Stripe sync middleware error: ${error}`);
 	}

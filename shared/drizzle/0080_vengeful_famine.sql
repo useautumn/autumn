@@ -1,0 +1,2 @@
+CREATE INDEX CONCURRENTLY "migration_runs_migration_internal_id_idx" ON "migration_runs" USING btree ("migration_internal_id");--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "migration_runs_active_org_idx" ON "migration_runs" USING btree ("org_id","env") WHERE "migration_runs"."status" IN ('queued', 'running');

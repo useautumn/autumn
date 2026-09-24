@@ -12,6 +12,7 @@ import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	CLI_PACKAGE_DIR,
+	cliProcessEnv,
 	initAtmnScenario,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -36,12 +37,16 @@ export default atmn({
 		plan({
 			planId: "${seat}",
 			name: "Seat",
+			active: true,
+			versionSlug: "v1",
 			price: { amount: 15, interval: "month" },
 			items: [{ featureId: "${seatsFeature}", included: 1 }],
 		}),
 		plan({
 			planId: "${enterprise}",
 			name: "Enterprise",
+			active: true,
+			versionSlug: "v1",
 			price: { amount: 999, interval: "month" },
 			items: [],
 			licenses: [seatLink],
@@ -52,7 +57,7 @@ export default atmn({
 		const licenseFile = ({ included }: { included: number }) =>
 			`import { license } from "${CLI_PACKAGE_DIR}/src/generated/licenses";
 
-export const seatLink = license({ licensePlanId: "${seat}", included: ${included} });
+export const seatLink = license({ licensePlanId: "${seat}", versionSlug: "v1", included: ${included} });
 `;
 
 		const scenario = await initAtmnScenario({
@@ -92,7 +97,7 @@ export const seatLink = license({ licensePlanId: "${seat}", included: ${included
 				{
 					cwd: scenario.cwd,
 					env: {
-						...process.env,
+						...cliProcessEnv(),
 						AUTUMN_SECRET_KEY: scenario.ctx.orgSecretKey,
 						AUTUMN_BASE_URL: scenario.baseUrl,
 					},

@@ -6,3 +6,6 @@ export const isFirstSubscriptionInvoice = (invoice: Stripe.Invoice): boolean =>
 export const isStripeInvoiceForNewPeriod = (stripeInvoice: Stripe.Invoice) => {
 	return stripeInvoice.billing_reason === "subscription_cycle";
 };
+
+export const hasStripeInvoicePayment = (stripeInvoice: Stripe.Invoice) =>
+	stripeInvoice.amount_paid > 0;

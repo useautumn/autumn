@@ -1,121 +1,152 @@
 ---
 title: "Getting started"
-description: "Install the CLI, authenticate, and sync your pricing config"
+description: "Set up the CLI, connect to Autumn, and sync your pricing config"
 ---
 
-The `atmn` CLI lets you define your pricing plans in code via an `autumn.config.ts` file, and sync them to Autumn with a single command.
+The `atmn` CLI keeps your pricing in code. You write your features and plans in an `autumn.config.ts` file, preview what would change, and push it to Autumn with one command.
 
-## Installation
+<Note>
+This page covers `atmn` 2. If you have a config from `atmn` 1.x, see [upgrading from 1.x](#upgrading-from-1x).
+</Note>
 
-Run the CLI directly with your package manager:
+## Set up a project
+
+Run `atmn init` in the root folder of your project:
 
 <CodeGroup>
 
-```bash bunx
-bunx atmn
+```bash bun
+bunx atmn init
+```
+
+```bash npm
+npx atmn init
 ```
 
 ```bash pnpm
-pnpm dlx atmn
-```
-
-```bash npx
-npx atmn
+pnpm dlx atmn init
 ```
 
 </CodeGroup>
 
-## Login
+`init` does the whole setup in one go:
 
-Authenticate with your Autumn account:
+1. **Connects you to Autumn.** If you don't have a key yet, it asks how you want to connect: sign in (opens your browser), or go keyless (creates a sandbox for you right away, no account needed).
+2. **Creates your config folder.** By default that's `autumn/`, holding `autumn.config.ts` next to `features.ts`, `plans.ts` and `rewards.ts`. In a monorepo it asks where the folder should go (default `packages/autumn`) and what to call the package.
+3. **Adds `atmn` to your `package.json`** and installs it, because the config imports from it. It also adds an `atmn` script and a small `"atmn"` field to your root `package.json`, so every command can find the config from anywhere in your repo.
+4. **Pulls what's already in Autumn** into the config files.
+5. **Installs the Autumn skills** next to the config, so your coding agent knows how to work with the CLI.
 
-```bash
-bunx atmn login
-```
-
-This opens your browser, lets you pick an organization, and saves API keys for both sandbox and production to your `.env` file:
+Your keys end up in a `.env` file at the root of your repo:
 
 ```bash .env
 AUTUMN_SECRET_KEY=am_sk_test_...
 AUTUMN_PROD_SECRET_KEY=am_sk_live_...
 ```
 
+<Tip>
+Went keyless? Your sandbox has no owner yet. Link it to an account within a few days with `bunx atmn login --claim you@example.com`. The key you already have keeps working.
+</Tip>
+
 <Check>
-You can verify your setup at any time with `bunx atmn env`, which shows your current organization and environment.
+You can check your setup at any time with `bunx atmn env`. It shows which organization, environment and key your commands will use.
 </Check>
 
-## Initialize a project
+## Log in on its own
 
-Run `atmn init` in your project root to create an `autumn.config.ts` file:
+You don't need `init` to connect. `atmn login` opens your browser, lets you pick an organization, and writes both keys to your `.env`:
 
 ```bash
-bunx atmn init
+bunx atmn login
 ```
 
-You'll be prompted to choose a starter template:
-
-| Template | Pricing model |
-|----------|--------------|
-| **T3 Chat** | Freemium with message limits and a credits add-on |
-| **Railway** | Credit-based infrastructure pricing with overage |
-| **Linear** | Per-seat pricing with team limits |
-| **OpenAI** | Credit system mapping multiple AI models |
-
-Pick whichever is closest to your use case, or start from scratch and build your own using the [config reference](/cli/config).
+Add `--keyless` to create a sandbox without an account instead.
 
 ## Push and pull
 
-Once you have an `autumn.config.ts`, sync it with Autumn:
+Once you have a config, sync it with Autumn:
 
 ```bash
-# Push local config to Autumn
+# Preview what would change
 bunx atmn push
 
-# Pull remote config into your local file
+# Apply the changes
+bunx atmn push --yes
+
+# Pull what's in Autumn into your local files
 bunx atmn pull
 ```
 
-`push` reads your config file, compares it with what's in Autumn, and applies the changes. In interactive mode you'll see a summary of what will be created, updated, or deleted before confirming.
+`push` reads your config, compares it with what's in Autumn, and shows what would be created, updated or deleted. Nothing changes until you add `--yes`. If a change affects a plan that already has customers, Autumn drafts a migration for you and `push` prints the link to run it.
 
-`pull` fetches your plans and features from Autumn and writes them into your local `autumn.config.ts`. If the file already exists, it does a smart in-place update that preserves your local formatting and comments where possible.
+After a push, the CLI writes an `internalId` into each feature and plan in your config. Leave it there. It's how the CLI knows to rename something instead of deleting and recreating it.
+
+`pull` fetches your features, plans and rewards from Autumn and writes them into `features.ts`, `plans.ts` and `rewards.ts`, keeping your formatting where it can. If you don't have a config yet, it asks where to create one.
 
 <Tip>
-Use `bunx atmn pull` to generate an `autumn.config.ts` from plans you've already created in the dashboard.
+Already made plans in the dashboard? Run `bunx atmn pull` to turn them into a config.
 </Tip>
-
-## Preview locally
-
-You can preview your plans without pushing anything:
-
-```bash
-bunx atmn preview
-```
-
-This renders a pricing table from your local config.
 
 ## Environments
 
-By default, all commands target your **sandbox** environment. Add the `-p` flag to target production:
+All commands use your **sandbox** by default. Add `-p` to target production:
 
 ```bash
 # Push to production
-bunx atmn push -p
+bunx atmn push -p --yes
 
 # Pull from production
 bunx atmn pull -p
 ```
 
 <Warning>
-Pushing to production will prompt for confirmation. Use `--yes` to skip the prompt automatically.
+`push -p` only previews the changes. Add `--yes` to apply them to production.
 </Warning>
+
+You can also create extra sandboxes for testing, each with its own plans and customers:
+
+```bash
+bunx atmn sandbox create staging --use   # create one and switch to it
+bunx atmn sandbox use --clear            # switch back to your main sandbox
+```
+
+See the [command reference](/cli/commands#sandboxes) for the full list.
+
+## Upgrading from 1.x
+
+`atmn` 2 uses a new config format. If you run a 1.x config, the CLI stops and tells you so instead of guessing. To move over:
+
+1. Note any changes you made to your config that aren't in Autumn yet.
+2. Rebuild the config from your organization. This rewrites `autumn.config.ts` and the `features.ts`, `plans.ts` and `rewards.ts` beside it. Other files are left alone.
+
+   ```bash
+   bunx atmn pull --overwrite --yes
+   ```
+
+3. Re-apply your pending changes in the new format, then `bunx atmn push`.
+
+What changed:
+
+| 1.x | 2.x |
+|-----|-----|
+| `feature({ id: "messages" })` | `feature({ featureId: "messages" })` |
+| `plan({ id: "pro" })` | `plan({ planId: "pro", versionSlug: "v1", active: true })` |
+| `item({ ... })` inside `items` | Plain objects inside `items`. There is no `item()` helper. |
+| Named exports only | The file ends with `export default atmn({ features, plans })` |
+| Plan versions handled by the CLI on push | Each version is its own `plan()` entry with the same `planId`. See [versions](/cli/config#versions). |
+| `atmn push` applied straight away | `atmn push` only previews. `atmn push --yes` applies. |
+| `atmn pull --force` | `atmn pull --overwrite --yes` |
+| `atmn nuke` | `atmn reset --yes` |
+| `atmn customers`, `atmn plans`, `atmn features`, `atmn events` | Removed. Use [`atmn api`](/cli/commands#api) to call any endpoint. |
+| `atmn preview`, `atmn logout`, `atmn config` | Removed. |
 
 **Next: Configuration reference**
 
-Learn how to define features, plans, and pricing in your `autumn.config.ts`.
+Learn how to define features, plans and pricing in your `autumn.config.ts`.
 
 <Card
   title="Configuration reference"
   href="/cli/config"
 >
-  Complete reference for features, plans, and plan features
+  Every builder and field available in autumn.config.ts
 </Card>

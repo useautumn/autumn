@@ -51,6 +51,22 @@ export const shouldUseOrgPropertyRollup = ({
 	!propertyKey.includes(".") &&
 	!skipPropertyRollup;
 
+// Property coverage counts events that carry the key, so events that simply
+// lack it never read as gate loss. Nested keys are not indexed by the coverage
+// rollups and fall back to all-event totals, which still forces the retry.
+export const shouldUsePropertyCoverageCheck = ({
+	groupColumn,
+	hasPropertyFilters,
+	propertyKey,
+}: {
+	groupColumn: GroupableColumn;
+	hasPropertyFilters: boolean;
+	propertyKey: string;
+}): boolean =>
+	groupColumn === "property" &&
+	!hasPropertyFilters &&
+	!propertyKey.includes(".");
+
 const parseUtcTimestamp = ({ value }: { value: string }): number => {
 	const normalized = value.replace(" ", "T").replace(/Z$/, "");
 	return Date.parse(`${normalized}Z`);
@@ -188,7 +204,7 @@ const fullDayStartSql = `if(
 	addDays(toStartOfDay({start_date:DateTime}), 1)
 )`;
 
-export const buildCountAndSumQuery = ({
+const buildCountAndSumSourceQuery = ({
 	source,
 	aggregateAll = false,
 	filterBySql = "",
@@ -217,7 +233,7 @@ export const buildCountAndSumQuery = ({
 			SELECT event_name, sum(event_count) as count, sum(total_value) as sum
 			FROM events_org_hourly_mv
 			WHERE org_id = {org_id:String} AND env = {env:String}
-				AND hour >= {start_date:DateTime} AND hour <= {end_date:DateTime}
+				AND hour >= full_hours_start AND hour < full_hours_end
 				AND event_name IN {event_names:Array(String)}
 			GROUP BY event_name
 		`;
@@ -230,7 +246,7 @@ export const buildCountAndSumQuery = ({
 			WHERE org_id = {org_id:String} AND env = {env:String}
 				${customerFilterSql({ aggregateAll })}
 				${entityFilterSql({ hasEntityId })}
-				AND hour >= {start_date:DateTime} AND hour <= {end_date:DateTime}
+				AND hour >= full_hours_start AND hour < full_hours_end
 				AND event_name IN {event_names:Array(String)}
 			GROUP BY event_name
 		`;
@@ -268,8 +284,56 @@ export const buildCountAndSumQuery = ({
 			WHERE org_id = {org_id:String} AND env = {env:String}
 				${customerFilter}
 				${entityFilter}
-				AND hour >= {start_date:DateTime} AND hour <= {end_date:DateTime}
+				AND hour >= full_hours_start AND hour < full_hours_end
 				AND (hour < ${fullDayStartSql} OR hour >= toStartOfDay({end_date:DateTime}))
+				AND event_name IN {event_names:Array(String)}
+			GROUP BY event_name
+		)
+		GROUP BY event_name
+	`;
+};
+
+export const buildCountAndSumQuery = ({
+	source,
+	aggregateAll = false,
+	filterBySql = "",
+	hasEntityId = false,
+}: {
+	source: CountAndSumSource;
+	aggregateAll?: boolean;
+	filterBySql?: string;
+	hasEntityId?: boolean;
+}): string => {
+	const rollupQuery = buildCountAndSumSourceQuery({
+		source,
+		aggregateAll,
+		filterBySql,
+		hasEntityId,
+	});
+	if (source === "raw_events") return rollupQuery;
+
+	return `
+		WITH
+			if(
+				{start_date:DateTime} = toStartOfHour({start_date:DateTime}),
+				toStartOfHour({start_date:DateTime}),
+				addHours(toStartOfHour({start_date:DateTime}), 1)
+			) AS full_hours_start,
+			toStartOfHour({end_date:DateTime}) AS full_hours_end
+		SELECT event_name, sum(event_count_value) AS count, sum(total_value_value) AS sum
+		FROM (
+			SELECT event_name, count AS event_count_value, sum AS total_value_value
+			FROM (${rollupQuery})
+
+			UNION ALL
+
+			SELECT event_name, count() AS event_count_value, sum(toFloat64(coalesce(value, 1))) AS total_value_value
+			FROM events
+			WHERE org_id = {org_id:String} AND env = {env:String}
+				${customerFilterSql({ aggregateAll: aggregateAll || source === "org_hourly" })}
+				${entityFilterSql({ hasEntityId })}${filterBySql}
+				AND timestamp >= {start_date:DateTime} AND timestamp <= {end_date:DateTime}
+				AND (timestamp < full_hours_start OR timestamp >= full_hours_end)
 				AND event_name IN {event_names:Array(String)}
 			GROUP BY event_name
 		)

@@ -2,6 +2,12 @@ import { CustomizePlanV1Schema } from "@api/billing/common/customizePlan/customi
 import { ApiPlanProcessorsSchema } from "@api/products/components/processors.js";
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
+import type { CatalogItemIdentityRecipe } from "./catalogPlanItemIdentity.js";
+
+export const catalogVariantIdentity = {
+	responseField: "mapping_identity",
+	components: [{ paths: ["variant_plan_id"], default: "" }],
+} as const satisfies CatalogItemIdentityRecipe;
 
 /** Base plan id for a pointer write. `null` detaches; omit leaves it unchanged. */
 export const CatalogBaseVariantIdSchema = z
@@ -40,13 +46,14 @@ export const CatalogVariantParamsSchema = z
 		}),
 		archived: z.boolean().optional().meta({
 			description:
-				"Archive or unarchive this variant. Omit to leave archived state unchanged.",
+				"Archive this variant. Omitted or false means the stated variant is live.",
 		}),
 		new_version_slug: z.string().nonempty().regex(idRegex).optional().meta({
 			description:
 				"Slug for the row this variant mints. Omit to inherit the base's `new_version_slug`, then `v{n}`. Ignored when this entry resolves to an existing row.",
 		}),
 		processors: ApiPlanProcessorsSchema.optional().meta({
+			"x-atmn-source-path": "plan.processors",
 			description:
 				"Overrides the base plan's processors for this variant. Omit to inherit when the base processors change.",
 		}),
@@ -66,6 +73,7 @@ export const CatalogVariantParamsSchema = z
 				"Cannot specify both version and version_slug. Use one, or omit both to target the active row.",
 			path: ["version_slug"],
 		},
-	);
+	)
+	.meta({ "x-atmn-identity": catalogVariantIdentity });
 
 export type CatalogVariantParams = z.infer<typeof CatalogVariantParamsSchema>;

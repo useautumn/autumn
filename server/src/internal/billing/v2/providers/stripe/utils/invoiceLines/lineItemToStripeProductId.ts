@@ -9,11 +9,12 @@ export const lineItemToStripeProductId = ({
 }: {
 	lineItem: LineItem;
 }): string | undefined => {
-	const isBase = isFixedPrice(lineItem.context.price);
-
 	const { price, product } = lineItem.context;
 
-	if (isBase) {
+	// Custom line items carry an empty price and bill by raw amount.
+	if (!price?.config) return undefined;
+
+	if (isFixedPrice(price)) {
 		return product.processor?.id;
 	}
 

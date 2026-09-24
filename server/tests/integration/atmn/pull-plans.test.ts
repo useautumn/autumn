@@ -33,17 +33,17 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 // Relative rather than a package import, for the same reason initAtmnScenario
 // imports runPush that way: the package publishes only its bin.
-import { runPull } from "../../../../packages/atmn-nightly/src/actions/pull";
-import { runPush } from "../../../../packages/atmn-nightly/src/actions/push";
+import { runPull } from "../../../../packages/atmn/src/actions/pull";
+import { runPush } from "../../../../packages/atmn/src/actions/push";
 import {
 	type AutumnClient,
 	createClient,
-} from "../../../../packages/atmn-nightly/src/generated/client";
+} from "../../../../packages/atmn/src/generated/client";
 import { uniqueTestId } from "../catalog-v2/utils/uniqueTestId.js";
 
 const CLI_PACKAGE_DIR = join(
 	import.meta.dir,
-	"../../../../packages/atmn-nightly",
+	"../../../../packages/atmn",
 );
 
 /**
@@ -65,7 +65,7 @@ export default atmn(${body});
  */
 const TMP_ROOT = join(
 	import.meta.dir,
-	"../../../../packages/atmn-nightly/test/.tmp",
+	"../../../../packages/atmn/test/.tmp",
 );
 
 const openConfigDir = (): {
@@ -197,6 +197,7 @@ const pushProV1ThenV2WithLicensedSeat = async (): Promise<ProFixture> => {
 	],
 	plans: [
 		plan({
+			active: true,
 			planId: "${pro}",
 			name: "Pro",
 			versionSlug: "v1",
@@ -215,6 +216,7 @@ const pushProV1ThenV2WithLicensedSeat = async (): Promise<ProFixture> => {
 			body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "${pro}",
 			name: "Pro",
 			versionSlug: "v2",
@@ -222,19 +224,23 @@ const pushProV1ThenV2WithLicensedSeat = async (): Promise<ProFixture> => {
 			items: [{ featureId: "${seats}", included: 1 }],
 		}),
 		plan({
+			active: true,
 			planId: "${seatPlan}",
 			name: "Seat",
+			versionSlug: "v1",
 			price: { amount: 15, interval: "month" },
 		}),
 		plan({
+			active: true,
 			planId: "${enterprisePlan}",
 			name: "Enterprise",
+			versionSlug: "v1",
 			price: { amount: 200, interval: "month" },
-			licenses: [{ licensePlanId: "${seatPlan}", included: 25 }],
+			licenses: [{ licensePlanId: "${seatPlan}", versionSlug: "v1", included: 25 }],
 		}),
-	],
-	planVersions: [
+	
 		plan({
+			active: false,
 			planId: "${pro}",
 			name: "Pro",
 			versionSlug: "v1",
@@ -334,6 +340,7 @@ test.concurrent(
 					body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "${pro}",
 			name: "Pro",
 			versionSlug: "v2",
@@ -348,19 +355,23 @@ test.concurrent(
 			price: { amount: 59, interval: "month" },
 		}),
 		plan({
+			active: true,
 			planId: "${seatPlan}",
 			name: "Seat",
+			versionSlug: "v1",
 			price: { amount: 15, interval: "month" },
 		}),
 		plan({
+			active: true,
 			planId: "${enterprisePlan}",
 			name: "Enterprise",
+			versionSlug: "v1",
 			price: { amount: 200, interval: "month" },
-			licenses: [{ licensePlanId: "${seatPlan}", included: 25 }],
+			licenses: [{ licensePlanId: "${seatPlan}", versionSlug: "v1", included: 25 }],
 		}),
-	],
-	planVersions: [
+	
 		plan({
+			active: false,
 			planId: "${pro}",
 			name: "Pro",
 			versionSlug: "v1",
@@ -396,7 +407,7 @@ test.concurrent(
 			]);
 
 			const text = readConfigText({ cwd: scenario.cwd });
-			expect(occurrencesOf({ text, needle: "active: false" })).toBe(1);
+			expect(occurrencesOf({ text, needle: "active: false" })).toBe(2);
 		} finally {
 			scenario.cleanup();
 			server.cleanup();

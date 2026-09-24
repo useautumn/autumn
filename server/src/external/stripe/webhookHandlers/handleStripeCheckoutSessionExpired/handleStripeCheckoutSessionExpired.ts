@@ -4,7 +4,7 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import {
 	expireCustomerProducts,
 	expirePendingCustomerProducts,
-} from "@/internal/billing/v2/execute/expirePendingCustomerProducts";
+} from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 

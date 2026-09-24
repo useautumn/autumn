@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 
 import { stringify } from "csv-stringify";
+import { CSV_EXPORT_STRINGIFY_OPTIONS } from "./csvExportStringifyOptions.js";
 
 export type CustomerExportRow = {
 	name: string | null;
@@ -28,13 +29,9 @@ export const createCustomerExportStringifier = ({
 	fields: CustomerExportField[];
 }) =>
 	stringify({
-		// Include a BOM so Excel reliably detects UTF-8.
-		bom: true,
-		header: true,
+		...CSV_EXPORT_STRINGIFY_OPTIONS,
 		columns: toOrderedColumns({ fields }),
 		cast: {
 			object: (value) => (Array.isArray(value) ? value.join(", ") : ""),
 		},
-		escape_formulas: true,
-		record_delimiter: "windows",
 	});

@@ -1,50 +1,29 @@
 import { Readable } from "node:stream";
-import type { CustomerExportSnapshot } from "@autumn/shared";
 import { dbReplica } from "@/db/initDrizzle.js";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CustomerExportRow } from "../../csv/createCustomerExportStringifier.js";
 import {
 	emptyPlanColumns,
 	getCustomerExportPlanColumns,
 } from "../../queries/getCustomerExportPlanColumns.js";
-import {
-	CUSTOMER_EXPORT_PAGE_SIZE,
-	type CustomerExportPopulation,
-	getCustomerExportScalars,
-} from "../../queries/getCustomerExportScalars.js";
 import { createOneOffProductLookup } from "../../queries/getOneOffProductLookup.js";
+import type { CustomerExportRowStreamFactory } from "./customerExportProducers.js";
+import { walkCustomerExportPages } from "./walkCustomerExportPages.js";
 
-export const createCustomerExportRowStream = ({
+export const createCustomerExportRowStream: CustomerExportRowStreamFactory = ({
 	ctx,
 	snapshot,
 	population,
 	onPageProcessed,
-}: {
-	ctx: AutumnContext;
-	snapshot: CustomerExportSnapshot;
-	population: CustomerExportPopulation;
-	onPageProcessed: (rowCount: number) => Promise<void> | void;
-}): Readable => {
+}) => {
 	const readDb = dbReplica ?? ctx.db;
 	const oneOffProductLookup = createOneOffProductLookup({ db: readDb });
 
 	const exportRows = async function* (): AsyncGenerator<CustomerExportRow> {
-		let afterInternalId: string | null = null;
-		let hasMorePages = true;
-
-		while (hasMorePages) {
-			const scalars = await getCustomerExportScalars({
-				db: readDb,
-				orgId: ctx.org.id,
-				env: ctx.env,
-				snapshot,
-				upperBoundInternalId: population.upperBoundInternalId,
-				createdAtCutoff: population.createdAtCutoff,
-				afterInternalId,
-			});
-			const lastScalar = scalars[scalars.length - 1];
-			if (!lastScalar) break;
-
+		for await (const scalars of walkCustomerExportPages({
+			ctx,
+			snapshot,
+			population,
+		})) {
 			const planColumnsByCustomer = await getCustomerExportPlanColumns({
 				db: readDb,
 				internalCustomerIds: scalars.map((scalar) => scalar.internal_id),
@@ -64,10 +43,10 @@ export const createCustomerExportRowStream = ({
 				};
 			}
 
-			await onPageProcessed(scalars.length);
-
-			afterInternalId = lastScalar.internal_id;
-			hasMorePages = scalars.length === CUSTOMER_EXPORT_PAGE_SIZE;
+			await onPageProcessed({
+				customerCount: scalars.length,
+				rowCount: scalars.length,
+			});
 		}
 	};
 

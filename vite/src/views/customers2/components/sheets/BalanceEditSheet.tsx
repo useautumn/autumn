@@ -142,14 +142,18 @@ export function BalanceEditSheet() {
 			</SheetHeader>
 
 			{isUnlimited ? (
-				<UnlimitedBalanceInfo
+				<UnlimitedBalanceForm
+					key={`${selectedCusEnt.id}-${effectiveEntityId ?? ""}`}
 					entity={derivedEntity}
+					entityId={effectiveEntityId}
 					selectedCusEnt={selectedCusEnt}
 					cusProduct={cusProduct}
+					featureId={featureId}
 					billingCycleEnd={billingCycleEnd}
 				/>
 			) : (
 				<BalanceEditForm
+					key={`${selectedCusEnt.id}-${effectiveEntityId ?? ""}`}
 					selectedCusEnt={selectedCusEnt}
 					entity={derivedEntity}
 					entityId={effectiveEntityId}
@@ -163,37 +167,124 @@ export function BalanceEditSheet() {
 	);
 }
 
-/* ─── Unlimited Info (no form needed) ─── */
+/* ─── Unlimited Form (usage + next reset only) ─── */
 
-function UnlimitedBalanceInfo({
+function UnlimitedBalanceForm({
 	entity,
+	entityId,
 	selectedCusEnt,
 	cusProduct,
+	featureId,
 	billingCycleEnd,
 }: {
 	entity: Entity | undefined;
+	entityId: string | null;
 	selectedCusEnt: FullCusEntWithFullCusProduct;
 	cusProduct: FullCusProduct | undefined;
+	featureId: string;
 	billingCycleEnd: number | null;
 }) {
-	// Customer-wide usage on the unlimited balance (includes per-entity slices)
-	const unlimitedUsage = cusEntsToUnlimitedUsage({
+	const { customer, refetch } = useCusQuery();
+	const { closeSheet: closeBalanceSheet } = useCustomerBalanceSheetStore();
+	const closeSheet = useSheetStore((s) => s.closeSheet);
+	const axiosInstance = useAxiosInstance();
+	const [loading, setLoading] = useState(false);
+
+	const initialUsage = cusEntsToUnlimitedUsage({
 		cusEnts: [selectedCusEnt],
+		entityId: entityId ?? undefined,
 	});
+	const initialNextResetAt = selectedCusEnt.next_reset_at ?? null;
+	const [usage, setUsage] = useState<number | null>(initialUsage);
+	const [nextResetAt, setNextResetAt] = useState<number | null>(
+		initialNextResetAt,
+	);
+
+	const isLifetime =
+		!selectedCusEnt.entitlement.interval ||
+		selectedCusEnt.entitlement.interval === EntInterval.Lifetime;
+	const usageChanged = usage !== initialUsage;
+	const nextResetAtChanged = nextResetAt !== initialNextResetAt;
+	const isDirty = usageChanged || nextResetAtChanged;
+
+	const handleSave = async () => {
+		if (usageChanged && (usage === null || Number.isNaN(usage) || usage < 0)) {
+			toast.error("Please enter a valid usage");
+			return;
+		}
+		setLoading(true);
+		try {
+			await axiosInstance.post("/v1/balances/update", {
+				customer_id: customer.id || customer.internal_id,
+				feature_id: featureId,
+				customer_entitlement_id: selectedCusEnt.id,
+				entity_id: entityId ?? undefined,
+				usage: usageChanged ? usage : undefined,
+				next_reset_at: nextResetAtChanged
+					? (nextResetAt ?? undefined)
+					: undefined,
+			});
+			toast.success("Updated successfully");
+			closeBalanceSheet();
+			closeSheet();
+			refetch();
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to update"));
+			setLoading(false);
+		}
+	};
 
 	return (
 		<div className="flex-1 overflow-y-auto">
-			<SheetSection withSeparator={false}>
+			<SheetSection withSeparator>
 				<EntitlementInfoRows
 					entity={entity}
 					selectedCusEnt={selectedCusEnt}
 					cusProduct={cusProduct}
 					isUnlimited
-					unlimitedUsage={unlimitedUsage}
 					billingCycleEnd={billingCycleEnd}
 				/>
 			</SheetSection>
-			<RolloversSection selectedCusEnt={selectedCusEnt} />
+			<RolloversSection selectedCusEnt={selectedCusEnt} entityId={entityId} />
+
+			<SheetSection withSeparator={false}>
+				<div className="flex flex-col gap-3">
+					<LabelInput
+						label="Usage"
+						placeholder="Enter usage"
+						className="w-full"
+						type="number"
+						value={notNullish(usage) ? String(usage) : ""}
+						onChange={(e) => {
+							const value = e.target.value;
+							setUsage(value === "" ? null : Number(value));
+						}}
+					/>
+					<div className="flex flex-col shrink-0 w-full">
+						<div className="text-form-label block mb-1">Next Reset</div>
+						<DateInputUnix
+							disabled={isLifetime}
+							unixDate={nextResetAt}
+							setUnixDate={setNextResetAt}
+							withTime
+							use24Hour
+						/>
+					</div>
+				</div>
+			</SheetSection>
+
+			<div className="px-4 pb-4">
+				<Button
+					variant="primary"
+					className="w-full"
+					isLoading={loading}
+					disabled={!isDirty}
+					onClick={handleSave}
+				>
+					Update
+				</Button>
+			</div>
+
 			<FeatureOverrideSection selectedCusEnt={selectedCusEnt} />
 			<PooledBalanceContributions
 				pooledBalance={selectedCusEnt.pooled_balance}
@@ -329,14 +420,12 @@ function EntitlementInfoRows({
 	selectedCusEnt,
 	cusProduct,
 	isUnlimited,
-	unlimitedUsage = 0,
 	billingCycleEnd,
 }: {
 	entity: Entity | undefined;
 	selectedCusEnt: FullCustomerEntitlement;
 	cusProduct: FullCusProduct | undefined;
 	isUnlimited: boolean;
-	unlimitedUsage?: number;
 	billingCycleEnd: number | null;
 }) {
 	const { customer } = useCusQuery();
@@ -417,9 +506,6 @@ function EntitlementInfoRows({
 						</span>
 					}
 				/>
-			)}
-			{isUnlimited && unlimitedUsage > 0 && (
-				<InfoRow label="Used" value={numberWithCommas(unlimitedUsage)} />
 			)}
 			{billingCycleEnd && (
 				<InfoRow

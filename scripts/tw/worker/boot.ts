@@ -41,9 +41,12 @@ import { join } from "node:path";
 import { type Subprocess, spawn } from "bun";
 import chalk from "chalk";
 import {
+	BALANCE_WORKER_PORT,
 	DRAGONFLY_PORT,
 	DYNAMODB_PORT,
 	ELASTICMQ_PORT,
+	KAFKA_BROKERS,
+	KAFKA_PORT,
 	PG_PORT,
 	SERVER_PORT,
 	TW_ENV,
@@ -65,6 +68,7 @@ const BACKGROUND_STRIPE_RPS = 3;
 
 const SERVICE_HEALTH_TIMEOUT_MS = 60_000;
 const SERVER_HEALTH_TIMEOUT_MS = 120_000;
+const BALANCE_WORKER_HEALTH_TIMEOUT_MS = 60_000;
 const POLL_INTERVAL_MS = 500;
 const TCP_CONNECT_TIMEOUT_MS = 1_000;
 
@@ -154,6 +158,63 @@ export const waitForServerHealth = async (
 	throw new Error(
 		`[tw-boot] server health (${url}) not ready within ${timeoutMs}ms (last status: ${lastStatus}) — aborting worker boot`,
 	);
+};
+
+/** Whether this worker's server routes to the balance worker; the orchestrator sends the flag. */
+export const balanceWorkerEnabled = (): boolean =>
+	process.env.BALANCE_WORKER_ROLLOUT_ENABLED !== "false";
+
+/** Waits for the balance worker's `GET /health` to answer 200. */
+export const waitForBalanceWorkerHealth = async (
+	timeoutMs: number,
+): Promise<void> => {
+	const deadline = Date.now() + timeoutMs;
+	const url = `http://127.0.0.1:${BALANCE_WORKER_PORT}/health`;
+	let lastStatus: number | string = "no-response";
+	while (Date.now() < deadline) {
+		try {
+			const response = await fetch(url, { signal: AbortSignal.timeout(2_000) });
+			if (response.ok) {
+				log(`balance worker health OK on :${BALANCE_WORKER_PORT}`);
+				return;
+			}
+			lastStatus = response.status;
+		} catch (error) {
+			lastStatus = (error as Error).name ?? "fetch-error";
+		}
+		await sleep(POLL_INTERVAL_MS);
+	}
+	throw new Error(
+		`[tw-boot] balance worker health (${url}) not ready within ${timeoutMs}ms (last status: ${lastStatus}) — aborting worker boot`,
+	);
+};
+
+/**
+ * Starts the balance worker (`apps/balance-worker`) on the µVM's Redpanda. State
+ * is in-memory: checkpoints are off and nothing outlives the µVM. Started before
+ * the server so partitions are owned by the time the first track arrives.
+ */
+export const startBalanceWorker = (repoRoot: string): Subprocess => {
+	const workerRoot = join(repoRoot, "apps/balance-worker");
+	log(
+		`starting balance worker (bun src/main.ts) on :${BALANCE_WORKER_PORT}, brokers ${KAFKA_BROKERS}`,
+	);
+	return spawn(["bun", "--config=./bunfig.toml", "src/main.ts"], {
+		cwd: workerRoot,
+		stdout: "inherit",
+		stderr: "inherit",
+		env: {
+			...process.env,
+			NODE_ENV: "development",
+			KAFKA_BROKERS,
+			KAFKA_AUTH_MODE: "none",
+			BALANCE_WORKER_DEPLOYMENT: "local",
+			BALANCE_WORKER_HOST: "127.0.0.1",
+			BALANCE_WORKER_PORT: String(BALANCE_WORKER_PORT),
+			BALANCE_WORKER_SQLITE_PATH: ":memory:",
+			BALANCE_WORKER_CHECKPOINT_MODE: "off",
+		} as Record<string, string>,
+	});
 };
 
 /**
@@ -319,6 +380,7 @@ const main = async (): Promise<void> => {
 		waitForTcpPort("PostgreSQL", PG_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("Dragonfly", DRAGONFLY_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("goaws (SQS)", ELASTICMQ_PORT, SERVICE_HEALTH_TIMEOUT_MS),
+		waitForTcpPort("Redpanda", KAFKA_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		// Non-fatal: start-services degrades without dynoxide on stale base
 		// images (the app fails open on an unreachable DynamoDB, and
 		// dynamo-gated tests skip). Short timeout keeps the degraded tail small.
@@ -386,6 +448,23 @@ const main = async (): Promise<void> => {
 	const { bindStripeAccount } = await import("./bindStripeAccount.js");
 	await bindStripeAccount({ orgId, stripeAccountId });
 
+	// 4b. The balance worker owns its partitions before the server takes traffic.
+	const balanceWorkerProc = balanceWorkerEnabled()
+		? startBalanceWorker(repoRoot)
+		: null;
+	if (balanceWorkerProc) {
+		void balanceWorkerProc.exited.then((code) => {
+			if (code !== 0) {
+				console.error(
+					chalk.red(`[tw-boot] balance worker exited early with code ${code}`),
+				);
+			}
+		});
+		await waitForBalanceWorkerHealth(BALANCE_WORKER_HEALTH_TIMEOUT_MS);
+	} else {
+		log("balance worker rollout off — server keeps the Postgres path");
+	}
+
 	// 5 + 6. Start the server and wait for health.
 	const serverProc = startServer(repoRoot, serverPort);
 	let serverExited = false;
@@ -429,7 +508,12 @@ const main = async (): Promise<void> => {
 	console.log(READY_SENTINEL);
 
 	// Keep the process alive so the server + workers + cron stay up for the run.
-	await Promise.all([serverProc.exited, workersProc.exited, cronProc.exited]);
+	await Promise.all([
+		serverProc.exited,
+		workersProc.exited,
+		cronProc.exited,
+		...(balanceWorkerProc ? [balanceWorkerProc.exited] : []),
+	]);
 };
 
 if (import.meta.main) {

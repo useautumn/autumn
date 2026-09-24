@@ -1,24 +1,27 @@
 #!/usr/bin/env bun
 
 /**
- * Local atmn: nightly's CLI, named `atmn`, run from a gitignored workspace so
- * a scaffolded autumn.config.ts resolves `from "atmn"` to nightly — not the
- * v1 package at packages/atmn.
+ * Local atmn runs from a gitignored workspace using the workspace CLI.
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { mkdir, symlink } from "node:fs/promises";
+import { mkdir, readlink, symlink, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { spawn } from "bun";
 
 const repoRoot = resolve(import.meta.dirname, "..");
 const workspace = join(repoRoot, "atmn");
-const nightly = join(repoRoot, "packages/atmn-nightly");
+const cli = join(repoRoot, "packages/atmn");
 
 await mkdir(join(workspace, "node_modules"), { recursive: true });
 const link = join(workspace, "node_modules/atmn");
-if (!existsSync(link)) {
-	await symlink(nightly, link);
+const linkedCli = await readlink(link).catch((error: NodeJS.ErrnoException) => {
+	if (error.code === "ENOENT") return null;
+	throw error;
+});
+if (linkedCli !== cli) {
+	if (linkedCli !== null) await unlink(link);
+	await symlink(cli, link);
 }
 
 if (!existsSync(join(workspace, "package.json"))) {
@@ -47,8 +50,16 @@ const worktreeServerUrl = (): string => {
 };
 
 const cmd = toWorktree
-	? ["bun", join(nightly, "src/cli.ts"), "--base-url", worktreeServerUrl(), ...forwarded]
-	: ["bun", join(nightly, "src/cli.ts"), ...forwarded];
+	? [
+			"bun",
+			join(cli, "src/cli.ts"),
+			"-c",
+			".",
+			"--base-url",
+			worktreeServerUrl(),
+			...forwarded,
+		]
+	: ["bun", join(cli, "src/cli.ts"), "-c", ".", ...forwarded];
 
 const child = spawn({
 	cmd,

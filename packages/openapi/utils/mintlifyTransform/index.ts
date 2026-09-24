@@ -5,6 +5,7 @@ import {
 	type GeneratedWebhookPage,
 	generateApiReference,
 } from "../apiReferenceGenerator/index.js";
+import { pruneApiReferencePages } from "../apiReferenceGenerator/pruneApiReferencePages.js";
 import { removeInternalFields } from "../openapiTransform/removeInternalFields.js";
 import { transformNode } from "./transformNode.js";
 
@@ -58,12 +59,13 @@ export async function generateMintlifyDocs({
 	console.log("Generating API reference MDX files...");
 	const manualMdxDir = path.resolve(docsDir, "../api-reference-generator");
 	const outputMdxDir = path.resolve(docsDir, "api-reference");
-	const { webhookPages } = await generateApiReference({
+	const { webhookPages, generatedPages } = await generateApiReference({
 		openApiPath,
 		manualMdxDir,
 		outputDir: outputMdxDir,
 	});
 	console.log("API reference MDX generation complete");
+	pruneApiReferencePages({ docsDir, generatedPages });
 
 	if (webhookPages.length > 0) {
 		updateDocsJsonWebhooks({ docsDir, webhookPages });
@@ -148,12 +150,10 @@ function updateDocsJsonWebhooks({
 		groupedPages.set(page.group, existing);
 	}
 
-	const subgroups = [...groupedPages.entries()].map(
-		([groupName, pages]) => ({
-			group: groupName,
-			pages,
-		}),
-	);
+	const subgroups = [...groupedPages.entries()].map(([groupName, pages]) => ({
+		group: groupName,
+		pages,
+	}));
 
 	const webhookEventsGroup = {
 		group: "Webhook Events",

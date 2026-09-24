@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
 	atmnConfigSource,
@@ -12,8 +13,7 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import type { AutumnClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
+import type { AutumnClient } from "../../../../../../packages/atmn/src/generated/client";
 
 type CatalogPlanRow = { id: string; version: number; archived: boolean };
 
@@ -38,19 +38,20 @@ test.concurrent(
 	`${chalk.yellowBright("atmn scenarios/versions: dropping a planVersions row from a stated collection archives it")}`,
 	async () => {
 		const scenario = await initAtmnScenario({
-			setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
 			config: `{ plans: [${paidMonthly({ planId: "pro", amount: 20 })}] }`,
 		});
 
 		try {
 			await scenario.push();
 
-			// Mint v2, restating v1 in planVersions — history now has one row.
+			// Mint v2, restating v1 as inactive history.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
-	plans: [${paidMonthly({ planId: "pro", amount: 30, extra: `\n\t\t\t\tversionSlug: "v2",` })}],
-	planVersions: [${paidMonthly({ planId: "pro", amount: 20, extra: `\n\t\t\t\tversionSlug: "v1",` })}],
+	plans: [${paidMonthly({ planId: "pro", amount: 30, extra: `\n\t\t\t\tversionSlug: "v2",` })}${paidMonthly({ planId: "pro", amount: 20, active: false, extra: `\n\t\t\t\tversionSlug: "v1",` })}],
 }`,
 				}),
 			);
@@ -62,15 +63,13 @@ test.concurrent(
 				expect.objectContaining({ version: 2, archived: false }),
 			]);
 
-			// Decision pending: dropping the v1 row from a stated `planVersions`
-			// collection asks the server to remove it. computeRemoveProductsPlan
-			// stamps absentee rows `willArchive`, so the intended outcome is a
-			// soft archive of v1 rather than a refusal.
+			// Dropping the v1 row from the stated collection asks the server to
+			// remove it. computeRemoveProductsPlan stamps absentee rows
+			// `willArchive`, so a held row is soft-archived rather than refused.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
 	plans: [${paidMonthly({ planId: "pro", amount: 30, extra: `\n\t\t\t\tversionSlug: "v2",` })}],
-	planVersions: [],
 }`,
 				}),
 			);

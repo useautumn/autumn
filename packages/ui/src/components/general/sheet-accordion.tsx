@@ -61,16 +61,21 @@ function SheetAccordionItem({
 	return (
 		<AccordionPrimitive.Item value={value} className={cn("", className)}>
 			<AccordionPrimitive.Header className="flex">
-				<AccordionPrimitive.Trigger className="flex flex-1 cursor-pointer items-start justify-between gap-4 px-4 py-3 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[aria-expanded=true]>svg]:rotate-180 hover:bg-accent/50">
+				<AccordionPrimitive.Trigger className="group flex flex-1 cursor-pointer items-start justify-between gap-4 px-4 py-3 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[aria-expanded=true]>svg]:rotate-180">
 					<div className="flex flex-col gap-1">
-						<h3 className={cn("text-sm font-medium", titleClassName)}>
+						<h3
+							className={cn(
+								"text-sm font-medium text-tertiary-foreground transition-colors group-hover:text-foreground",
+								titleClassName,
+							)}
+						>
 							{title}
 						</h3>
 						{description && (
 							<p className="text-body-secondary text-sm">{description}</p>
 						)}
 					</div>
-					<ChevronDownIcon className="text-muted-foreground pointer-events-none size-4 shrink-0 translate-y-0.5 transition-transform duration-200" />
+					<ChevronDownIcon className="text-tertiary-foreground pointer-events-none size-4 shrink-0 translate-y-0.5 transition-all duration-200 group-hover:text-foreground" />
 				</AccordionPrimitive.Trigger>
 			</AccordionPrimitive.Header>
 			<AccordionPrimitive.Panel className="data-closed:animate-accordion-up data-open:animate-accordion-down overflow-hidden">

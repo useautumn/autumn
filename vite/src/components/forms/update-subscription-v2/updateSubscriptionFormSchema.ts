@@ -35,6 +35,7 @@ export const UpdateSubscriptionFormSchema = z.object({
 	refundAmount: z.enum(["prorated", "full"]).nullable(),
 	noBillingChanges: z.boolean(),
 	discounts: z.custom<FormDiscount[]>(),
+	removedRewardIds: z.array(z.string()),
 });
 
 export type UpdateSubscriptionForm = z.infer<

@@ -14,11 +14,11 @@ import {
 import { stripeWebhookErrorWouldRedeliver } from "@/external/stripe/webhookReplay/stripeWebhookErrorWouldRedeliver.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
-import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
 import { batchResetCustomerEntitlementsV2 } from "@/internal/balances/batchReset/batchResetCustomerEntitlementsV2.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
 import { runQueuedFinalizeLock } from "@/internal/balances/finalizeLock/runQueuedFinalizeLock.js";
+import { runBalanceReplenishment } from "@/internal/balances/runBalanceReplenishment.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
@@ -401,7 +401,7 @@ export const processMessage = async ({
 				workerLogger.error("No context found for auto top-up job");
 				return;
 			}
-			await autoTopup({
+			await runBalanceReplenishment({
 				ctx,
 				payload: job.data,
 			});

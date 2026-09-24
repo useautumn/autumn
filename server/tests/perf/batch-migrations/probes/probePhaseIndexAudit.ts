@@ -256,6 +256,7 @@ const main = async () => {
 				initialState: computeCustomerEntitlementInitialState({ entitlement }),
 				rows,
 				now: Date.now(),
+				invoiceCredit: false,
 			},
 		)}`;
 

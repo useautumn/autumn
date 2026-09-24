@@ -25,9 +25,16 @@ alias dwl='bun dw logs'
 alias urls='bun dw identify | grep -E "URL|port"'
 
 # --- paths -------------------------------------------------------------------
-export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
+export PATH="$HOME/autumn/node_modules/.bin:$HOME/.bun/bin:$HOME/.local/bin:$PATH"
 
 # Land in the repo rather than the sandbox home.
 if [ -d "$HOME/autumn" ] && [ "$PWD" = "$HOME" ]; then
   cd "$HOME/autumn" || true
+fi
+
+# Conductor injects INFISICAL_CLIENT_ID/SECRET but no token, so `bun dw` would
+# drop into an interactive login. setup.sh cached one; reuse it.
+if [ -z "${INFISICAL_TOKEN:-}" ] && [ -s "$HOME/.cache/autumn-infisical-token" ]; then
+	INFISICAL_TOKEN="$(cat "$HOME/.cache/autumn-infisical-token")"
+	export INFISICAL_TOKEN
 fi

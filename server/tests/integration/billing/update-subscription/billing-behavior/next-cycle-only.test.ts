@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -92,12 +92,7 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: increase quantity - no i
 		count: 1, // Only initial attach, no proration invoice
 	});
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
 test.concurrent(`${chalk.yellowBright("next_cycle_only: decrease quantity - no immediate credit")}`, async () => {
@@ -160,12 +155,7 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: decrease quantity - no i
 		count: 1,
 	});
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -229,12 +219,7 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price incre
 		count: 1,
 	});
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
 test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price decrease - no immediate credit")}`, async () => {
@@ -285,12 +270,7 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price decre
 		count: 1,
 	});
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -462,10 +442,5 @@ test.concurrent(`${chalk.yellowBright("default behavior: prorate_immediately whe
 		count: 2,
 	});
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });

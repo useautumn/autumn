@@ -12,18 +12,19 @@ Tempting (wrong): fold the tiers into Starter as one prepaid volume-tiered item.
 Right — each tier IS the subscription, so each is a variant of the base plan:
 
 ```ts
-export const starter60k = starter.variant({
-  id: "starter_60k",
+export const starter60k = variant({
+  variantPlanId: "starter_60k",
+  versionSlug: "v1",
   name: "Starter 60K",
   customize: {
     price: { amount: 39, interval: "month" },
-    addItems: [item({ featureId: minutes.id, included: 60_000, reset: { interval: "month" }, price: minuteOverage })],
-    removeItems: [{ featureId: minutes.id }],
+    removeItems: [{ featureId: minutes.featureId }],
+    addItems: [{ featureId: minutes.featureId, included: 60_000, reset: { interval: "month" }, price: minuteOverage }],
   },
 });
 ```
 
-The base plan stays untouched; customers upgrade between tiers like between plans.
+`starter` lists it in `variants: [starter60k]`. The base plan stays untouched; customers upgrade between tiers like between plans.
 
 ## When one prepaid item IS right
 

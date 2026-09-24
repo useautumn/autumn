@@ -1,6 +1,6 @@
 import { afterEach, expect } from "bun:test";
 import { createServer, type IncomingMessage, type Server } from "node:http";
-import { Agent } from "@mastra/core/agent";
+import { Agent, type ToolsInput } from "@mastra/core/agent";
 import type { MessageListItem } from "@mastra/core/agent/message-list";
 import { Mastra } from "@mastra/core/mastra";
 import { InMemoryStore } from "@mastra/core/storage";
@@ -146,7 +146,8 @@ const createMcpConsumerAgent = async (auth: AutumnMcpAuth) => {
 		description: "A generic agent using MCP tools.",
 		instructions: "You are a helpful assistant.",
 		model: leafChatAgentDefaults.model,
-		tools,
+		// Inferring the MCP toolset through Agent's generics exceeds tsc's depth limit.
+		tools: tools as ToolsInput,
 	});
 	const mastra = new Mastra({
 		agents: { eval: agent },

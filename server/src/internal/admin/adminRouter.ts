@@ -20,6 +20,7 @@ import {
 	handleUpdateAdminOrgRedisPublicUrl,
 	handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
+import { handleGetAdminAgentProvisionRateLimitConfig } from "./handleGetAdminAgentProvisionRateLimitConfig";
 import { handleGetAdminAsyncBalanceUpdateConfig } from "./handleGetAdminAsyncBalanceUpdateConfig";
 import { handleGetAdminAsyncTrackConfig } from "./handleGetAdminAsyncTrackConfig";
 import { handleGetAdminBalanceShadowConfig } from "./handleGetAdminBalanceShadowConfig.js";
@@ -55,6 +56,7 @@ import {
 	handleGetSlackAdminInstall,
 	handleUpdateSlackAdminTarget,
 } from "./handleSlackAdminChat";
+import { handleUpsertAdminAgentProvisionRateLimitConfig } from "./handleUpsertAdminAgentProvisionRateLimitConfig";
 import { handleUpsertAdminAsyncBalanceUpdateConfig } from "./handleUpsertAdminAsyncBalanceUpdateConfig";
 import { handleUpsertAdminAsyncTrackConfig } from "./handleUpsertAdminAsyncTrackConfig";
 import { handleUpsertAdminBalanceShadowConfig } from "./handleUpsertAdminBalanceShadowConfig.js";
@@ -193,6 +195,14 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/rate-limit-redis-allowlist-config",
 	...handleUpsertAdminRateLimitRedisAllowlistConfig,
+);
+honoAdminRouter.get(
+	"/agent-provision-rate-limit-config",
+	...handleGetAdminAgentProvisionRateLimitConfig,
+);
+honoAdminRouter.put(
+	"/agent-provision-rate-limit-config",
+	...handleUpsertAdminAgentProvisionRateLimitConfig,
 );
 honoAdminRouter.get("/job-queue-config", ...handleGetAdminJobQueueConfig);
 honoAdminRouter.put("/job-queue-config", ...handleUpsertAdminJobQueueConfig);

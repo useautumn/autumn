@@ -29,12 +29,14 @@ import {
 	shouldUseMonthlyRollup,
 	shouldUseOrgDimensionRollup,
 	shouldUseOrgPropertyRollup,
+	shouldUsePropertyCoverageCheck,
 	shouldUsePropertyDailyRollup,
 } from "./dailyRollupRouting.js";
 import { getCountAndSum } from "./getCountAndSum.js";
 import {
 	groupedResultIsIncomplete,
 	propertyRollupCoverageIsIncomplete,
+	propertyRollupCoverageUnderReports,
 	reportsMoreThan,
 } from "./propertyRollupCompleteness.js";
 
@@ -116,6 +118,7 @@ export const calculateDateRange = async ({
 			customer: params.customer,
 			db,
 			intervalType: intervalType as "1bc" | "3bc" | "last_cycle",
+			featureIds: params.event_names,
 			ctx,
 		})) as BillingCycleResult | null;
 
@@ -521,8 +524,13 @@ export const aggregate = async ({
 			groupColumn === "property" && Object.keys(filterParams).length === 0;
 
 		if (readsGatedRollup) {
-			let rollupIsIncomplete: boolean;
-			if (useOrgPropertyRollup) {
+			let rollupIsIncomplete: boolean | null = null;
+			const usePropertyCoverage = shouldUsePropertyCoverageCheck({
+				groupColumn,
+				hasPropertyFilters: Object.keys(filterParams).length > 0,
+				propertyKey,
+			});
+			if (usePropertyCoverage) {
 				const coverageResult = await pipes.propertyRollupCoverage({
 					org_id: org.id,
 					env,
@@ -530,15 +538,34 @@ export const aggregate = async ({
 					start_date: startDate,
 					end_date: endDate,
 					property_key: propertyKey,
+					customer_id: customerId,
+					entity_id: params.entity_id,
 				});
 				const coverage = Object.fromEntries(
 					coverageResult.data.map((row) => [row.event_name, row.event_count]),
 				);
-				rollupIsIncomplete = propertyRollupCoverageIsIncomplete({
+				const coverageUnderReports = propertyRollupCoverageUnderReports({
 					rows: result.data,
 					coverage,
 				});
-			} else {
+				if (coverageUnderReports) {
+					ctx.logger.warn(
+						"Property coverage rollup under-reports grouped counts; falling back to event totals",
+						{
+							orgId: org.id,
+							propertyKey,
+							customerId,
+							entityId: params.entity_id,
+						},
+					);
+				} else {
+					rollupIsIncomplete = propertyRollupCoverageIsIncomplete({
+						rows: result.data,
+						coverage,
+					});
+				}
+			}
+			if (rollupIsIncomplete === null) {
 				const totals = await getCountAndSum({
 					ctx,
 					params,

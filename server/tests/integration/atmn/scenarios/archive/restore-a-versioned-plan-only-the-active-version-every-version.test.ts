@@ -7,6 +7,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
 	atmnConfigSource,
@@ -14,8 +15,7 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import type { AutumnClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
+import type { AutumnClient } from "../../../../../../packages/atmn/src/generated/client";
 
 type CatalogPlanRow = {
 	id: string;
@@ -45,8 +45,7 @@ const archiveBothVersions = async ({
 	scenario.writeConfig(
 		atmnConfigSource({
 			body: `{
-	plans: [plan({ planId: "pro", versionSlug: "v2", archived: true })],
-	planVersions: [plan({ planId: "pro", versionSlug: "v1", archived: true })],
+	plans: [plan({ active: true, planId: "pro", versionSlug: "v2", archived: true }), plan({ active: false, planId: "pro", versionSlug: "v1", archived: true })],
 }`,
 		}),
 	);
@@ -57,15 +56,16 @@ const setUpTwoArchivedVersions = async (): Promise<
 	Awaited<ReturnType<typeof initAtmnScenario>>
 > => {
 	const scenario = await initAtmnScenario({
-		setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
+		setup: [
+			s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+		],
 		config: `{ plans: [${paidMonthly({ planId: "pro", amount: 20, extra: `\n\t\t\t\tversionSlug: "v1",` })}] }`,
 	});
 	await scenario.push();
 	scenario.writeConfig(
 		atmnConfigSource({
 			body: `{
-	plans: [${paidMonthly({ planId: "pro", amount: 30, extra: `\n\t\t\t\tversionSlug: "v2",` })}],
-	planVersions: [${paidMonthly({ planId: "pro", amount: 20, extra: `\n\t\t\t\tversionSlug: "v1",` })}],
+	plans: [${paidMonthly({ planId: "pro", amount: 30, extra: `\n\t\t\t\tversionSlug: "v2",` })}${paidMonthly({ planId: "pro", amount: 20, active: false, extra: `\n\t\t\t\tversionSlug: "v1",` })}],
 }`,
 		}),
 	);
@@ -80,11 +80,10 @@ test.concurrent(
 		const scenario = await setUpTwoArchivedVersions();
 
 		try {
-			// Decision pending: planVersions is omitted, leaving v1 untouched —
-			// the intended reading of "omit a key to leave that collection alone".
+			// Only v2 is stated: v1, already archived and unheld, stays archived.
 			scenario.writeConfig(
 				atmnConfigSource({
-					body: `{ plans: [plan({ planId: "pro", versionSlug: "v2", archived: false })] }`,
+					body: `{ plans: [plan({ active: true, planId: "pro", versionSlug: "v2", archived: false })] }`,
 				}),
 			);
 			await scenario.push();
@@ -112,8 +111,7 @@ test.concurrent(
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
-	plans: [plan({ planId: "pro", versionSlug: "v2", archived: false })],
-	planVersions: [plan({ planId: "pro", versionSlug: "v1", archived: false })],
+	plans: [plan({ active: true, planId: "pro", versionSlug: "v2", archived: false }), plan({ active: false, planId: "pro", versionSlug: "v1", archived: false })],
 }`,
 				}),
 			);

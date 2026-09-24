@@ -2,6 +2,7 @@ import {
 	ACTIVE_CUSTOMER_EXPORT_STATUSES,
 	type AppEnv,
 	type CustomerExportField,
+	CustomerExportKind,
 	type CustomerExportSnapshot,
 	CustomerExportStatus,
 	customerExports,
@@ -12,8 +13,17 @@ import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 
+type ExportScope = { orgId: string; env: AppEnv; kind?: CustomerExportKind };
+
 const orgEnvScope = ({ orgId, env }: { orgId: string; env: AppEnv }) =>
 	and(eq(customerExports.org_id, orgId), eq(customerExports.env, env));
+
+const kindScope = ({
+	orgId,
+	env,
+	kind = CustomerExportKind.Customers,
+}: ExportScope) =>
+	and(orgEnvScope({ orgId, env }), eq(customerExports.kind, kind));
 
 export type CreateCustomerExportResult =
 	| { created: true; customerExport: DbCustomerExport }
@@ -25,6 +35,7 @@ export const CustomerExportService = {
 		db,
 		orgId,
 		env,
+		kind = CustomerExportKind.Customers,
 		fields,
 		snapshot,
 		requestedByUserId,
@@ -32,6 +43,7 @@ export const CustomerExportService = {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
+		kind?: CustomerExportKind;
 		fields: CustomerExportField[];
 		snapshot: CustomerExportSnapshot;
 		requestedByUserId?: string;
@@ -40,6 +52,7 @@ export const CustomerExportService = {
 			id: generateId("cusexp"),
 			org_id: orgId,
 			env,
+			kind,
 			status: CustomerExportStatus.Queued,
 			fields,
 			snapshot,
@@ -57,6 +70,7 @@ export const CustomerExportService = {
 				db,
 				orgId,
 				env,
+				kind,
 			});
 			return { created: false, activeExport };
 		}
@@ -66,17 +80,19 @@ export const CustomerExportService = {
 		db,
 		orgId,
 		env,
+		kind,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
+		kind?: CustomerExportKind;
 	}): Promise<DbCustomerExport | null> => {
 		const rows = await db
 			.select()
 			.from(customerExports)
 			.where(
 				and(
-					orgEnvScope({ orgId, env }),
+					kindScope({ orgId, env, kind }),
 					inArray(customerExports.status, [...ACTIVE_CUSTOMER_EXPORT_STATUSES]),
 				),
 			)
@@ -109,19 +125,21 @@ export const CustomerExportService = {
 		db,
 		orgId,
 		env,
+		kind,
 		limit,
 		offset = 0,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
+		kind?: CustomerExportKind;
 		limit: number;
 		offset?: number;
 	}): Promise<DbCustomerExport[]> =>
 		await db
 			.select()
 			.from(customerExports)
-			.where(orgEnvScope({ orgId, env }))
+			.where(kindScope({ orgId, env, kind }))
 			.orderBy(desc(customerExports.created_at))
 			.limit(limit)
 			.offset(offset),
@@ -130,15 +148,17 @@ export const CustomerExportService = {
 		db,
 		orgId,
 		env,
+		kind,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
+		kind?: CustomerExportKind;
 	}): Promise<number> => {
 		const rows = await db
 			.select({ value: count() })
 			.from(customerExports)
-			.where(orgEnvScope({ orgId, env }));
+			.where(kindScope({ orgId, env, kind }));
 
 		return rows[0]?.value ?? 0;
 	},

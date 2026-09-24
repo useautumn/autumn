@@ -90,7 +90,7 @@ export const workspaceSeatsConfig = ({
 	withStarter = true,
 }: {
 	withStarter?: boolean;
-} = {}): string => `import { atmn, feature, plan, variant } from "atmn";
+} = {}): string => `import { atmn, feature, license, plan, variant } from "atmn";
 
 export default atmn({
 	features: [
@@ -110,6 +110,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "workspace",
+			versionSlug: "v1",
+			active: true,
 			name: "Workspace",
 			price: { amount: 10, interval: "month" },
 			items: [
@@ -122,6 +124,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "team",
+			versionSlug: "v1",
+			active: true,
 			name: "Team",
 			price: { amount: 600, interval: "month" },
 			items: [
@@ -136,10 +140,13 @@ export default atmn({
 					},
 				},
 			],
-			licenses: [{ licensePlanId: "workspace", included: 10 }],
+			licenses: [
+				license({ licensePlanId: "workspace", versionSlug: "v1", included: 10 }),
+			],
 			variants: [
 				variant({
 					variantPlanId: "team_annual",
+					versionSlug: "v1",
 					name: "Team (Annual)",
 					customize: {
 						price: { amount: 6000, interval: "year" },
@@ -149,15 +156,21 @@ export default atmn({
 		}),
 		plan({
 			planId: "enterprise",
+			versionSlug: "v1",
+			active: true,
 			name: "Enterprise",
 			price: { amount: 25000, interval: "year" },
-			licenses: [{ licensePlanId: "workspace", included: 0 }],
+			licenses: [
+				license({ licensePlanId: "workspace", versionSlug: "v1", included: 0 }),
+			],
 			items: [],
 		}),
 ${
 	withStarter
 		? `		plan({
 			planId: "starter",
+			versionSlug: "v1",
+			active: true,
 			name: "Starter",
 			items: [
 				{
@@ -172,8 +185,9 @@ ${
 				},
 			],
 			licenses: [
-				{
+				license({
 					licensePlanId: "workspace",
+					versionSlug: "v1",
 					included: 1,
 					customize: {
 						price: { amount: 15, interval: "month" },
@@ -186,7 +200,7 @@ ${
 						],
 						removeItems: [{ featureId: "credits" }],
 					},
-				},
+				}),
 			],
 		}),
 `

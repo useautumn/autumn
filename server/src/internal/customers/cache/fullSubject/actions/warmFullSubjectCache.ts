@@ -18,6 +18,8 @@ const WARM_CACHE_CUSTOMER_IDS = new Set<string>([
 ]);
 
 export const shouldWarmCache = (customerId: string | undefined): boolean => {
+	// The warm task OOMs in prod on high-cardinality customers.
+	if (process.env.NODE_ENV === "production") return false;
 	if (!customerId) return false;
 	return WARM_CACHE_CUSTOMER_IDS.has(customerId);
 };

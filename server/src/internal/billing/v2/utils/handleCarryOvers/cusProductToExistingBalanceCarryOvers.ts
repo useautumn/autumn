@@ -3,6 +3,7 @@ import {
 	type AttachParamsV1,
 	addCusProductToCusEnt,
 	type Entitlement,
+	type FullCustomerEntitlement,
 	featureUtils,
 	type InsertCustomerEntitlement,
 	isBooleanCusEnt,
@@ -14,6 +15,30 @@ import {
 	initCarryOverCustomerEntitlement,
 	initCarryOverEntitlement,
 } from "@/internal/billing/v2/utils/handleCarryOvers/initCarryOverEntitlements";
+import { calculateNextExpiry } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
+
+/**
+ * A carried-over balance would have expired at the old plan's next reset. If
+ * the item rolls over, a positive leftover would instead have become a rollover
+ * at that reset, so give it the rollover's expiry (null = forever). Negative
+ * balances (debt) never roll over, so they keep the reset expiry.
+ */
+const getCarryOverExpiresAt = ({
+	cusEnt,
+	balance,
+	endOfCycleMs,
+}: {
+	cusEnt: FullCustomerEntitlement;
+	balance: number;
+	endOfCycleMs?: number;
+}): number | null => {
+	const resetAt = cusEnt.next_reset_at ?? endOfCycleMs ?? null;
+	const rolloverConfig = cusEnt.entitlement.rollover;
+
+	if (resetAt === null || !rolloverConfig || balance <= 0) return resetAt;
+
+	return calculateNextExpiry(resetAt, rolloverConfig);
+};
 
 export const cusProductToExistingBalanceCarryOvers = ({
 	attachBillingContext,
@@ -36,7 +61,8 @@ export const cusProductToExistingBalanceCarryOvers = ({
 
 	if (planTiming !== "immediate")
 		return { entitlements: [], customerEntitlements: [] };
-	if (!carryOverSourceCustomerProduct) return { entitlements: [], customerEntitlements: [] };
+	if (!carryOverSourceCustomerProduct)
+		return { entitlements: [], customerEntitlements: [] };
 	if (!carryOverParams?.enabled)
 		return { entitlements: [], customerEntitlements: [] };
 
@@ -66,8 +92,6 @@ export const cusProductToExistingBalanceCarryOvers = ({
 		if (featureIds && !featureIds.includes(cusEnt.entitlement.feature.id))
 			continue;
 
-		const expiresAt = cusEnt.next_reset_at ?? endOfCycleMs ?? null;
-
 		if (isEntityScopedCusEnt(cusEnt)) {
 			const entityPairs = Object.entries(cusEnt.entities)
 				.filter(([, entityBalance]) => entityBalance.balance !== 0)
@@ -86,7 +110,11 @@ export const cusProductToExistingBalanceCarryOvers = ({
 						customerId: customer.id,
 						internalEntityId: entity.internal_id,
 						balance: entityBalance.balance,
-						expiresAt,
+						expiresAt: getCarryOverExpiresAt({
+							cusEnt,
+							balance: entityBalance.balance,
+							endOfCycleMs,
+						}),
 					});
 					return [{ ent, cusEntRow }];
 				});
@@ -109,9 +137,10 @@ export const cusProductToExistingBalanceCarryOvers = ({
 			entitlementId: ent.id,
 			internalCustomerId: customer.internal_id,
 			customerId: customer.id,
-			internalEntityId: carryOverSourceCustomerProduct.internal_entity_id ?? null,
+			internalEntityId:
+				carryOverSourceCustomerProduct.internal_entity_id ?? null,
 			balance,
-			expiresAt,
+			expiresAt: getCarryOverExpiresAt({ cusEnt, balance, endOfCycleMs }),
 		});
 
 		entitlements.push(ent);

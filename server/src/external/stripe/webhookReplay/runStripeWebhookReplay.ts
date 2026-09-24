@@ -1,9 +1,11 @@
 import { AuthType, tryCatch } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { runStripeWebhookHandlers } from "../runStripeWebhookHandlers.js";
+import { isStripeWebhookLockRequired } from "../webhookMiddlewares/classifyStripeWebhookAckMode.js";
 import {
 	buildStripeWebhookEventKey,
 	claimStripeWebhookEvent,
@@ -23,7 +25,7 @@ export type StripeWebhookReplayPayload = {
 	failureReason: string;
 };
 
-/** Thrown when another instance holds the event lock; retryable via SQS. */
+/** Thrown when the event lock is held elsewhere or unavailable but required; retryable via SQS. */
 export class StripeWebhookReplayInFlightError extends Error {
 	constructor(eventId: string) {
 		super(`Stripe webhook replay in flight for event ${eventId}`);
@@ -52,7 +54,10 @@ export const runStripeWebhookReplay = async ({
 		...ctx,
 		authType: AuthType.Stripe,
 		stripeEvent,
-		stripeCli: createStripeCli({ org: ctx.org, env: ctx.env }),
+		stripeCli:
+			stripeEvent.type === "account.application.deauthorized"
+				? initMasterStripe({ env: ctx.env })
+				: createStripeCli({ org: ctx.org, env: ctx.env }),
 	};
 
 	const routedCtx = await attachStripeEventCustomer({ ctx: webhookCtx });
@@ -71,7 +76,11 @@ export const runStripeWebhookReplay = async ({
 		return;
 	}
 
-	if (claim === "in_flight") {
+	// Lock-required events must never run unlocked next to a Stripe redelivery.
+	const lockUnavailable =
+		claim === "unavailable" &&
+		isStripeWebhookLockRequired({ event: stripeEvent });
+	if (claim === "in_flight" || lockUnavailable) {
 		if (receiveCount >= STRIPE_WEBHOOK_REPLAY_MAX_ATTEMPTS) return;
 		throw new StripeWebhookReplayInFlightError(stripeEvent.id);
 	}

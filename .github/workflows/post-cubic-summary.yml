@@ -57,8 +57,6 @@ jobs:
           cubic_start_marker="## Summary by cubic"
           cubic_end_marker="<sup>"
           greptile_start_marker="<!-- greptile_comment -->"
-          greptile_summary_marker="</summary>"
-          greptile_end_marker="</details>"
           cubic_prefix="${PR_BODY%%"$cubic_start_marker"*}"
           greptile_prefix="${PR_BODY%%"$greptile_start_marker"*}"
 
@@ -68,14 +66,19 @@ jobs:
             summary="${summary%%"$cubic_end_marker"*}"
           else
             greptile_summary="${PR_BODY#*"$greptile_start_marker"}"
-            summary="${greptile_summary#*"$greptile_summary_marker"}"
-
-            if [ "$summary" = "$greptile_summary" ]; then
-              echo "::error::Greptile summary heading was not found"
-              exit 1
-            fi
-
-            summary="${summary%%"$greptile_end_marker"*}"
+            summary=$(GREPTILE_BODY="$greptile_summary" node -e '
+              const body = process.env.GREPTILE_BODY.split("<!-- /greptile_comment -->")[0];
+              const sections = body.matchAll(/<details\b[^>]*>\s*<summary\b[^>]*>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/gi);
+              const summary = Array.from(sections).find((section) => {
+                const heading = section[1].replace(/<[^>]+>/g, "").trim();
+                return /^(?:Greptile\s+)?Summary$/i.test(heading);
+              });
+              if (!summary || !summary[2].trim()) {
+                console.error("::error::Greptile summary section was not found or is empty");
+                process.exit(1);
+              }
+              process.stdout.write(summary[2]);
+            ')
           fi
 
           slack_summary=$(printf '%s' "$summary" | sed -E \
@@ -84,7 +87,7 @@ jobs:
             -e 's/&/\&amp;/g' \
             -e 's/</\&lt;/g' \
             -e 's/>/\&gt;/g')
-          printf -v SLACK_MESSAGE '*%s* :rocket:\n<%s|PR #%s>\n\n%s' \
+          printf -v SLACK_MESSAGE '*%s* :rocket:\n<%s|PR #%s>\n\n%s\n\n_When CI is green, react with :rocket: to merge._' \
             "$route_label" "$PR_URL" "$PR_NUMBER" "$slack_summary"
           export PR_URL SLACK_MESSAGE
 
@@ -141,7 +144,7 @@ jobs:
             route_label="$slack_head_ref → main"
           fi
 
-          printf -v SLACK_MESSAGE '*%s* :rocket:\n<%s|PR #%s>' \
+          printf -v SLACK_MESSAGE '*%s* :rocket:\n<%s|PR #%s>\n\n_When CI is green, react with :rocket: to merge._' \
             "$route_label" "$PR_URL" "$PR_NUMBER"
           export PR_URL SLACK_MESSAGE
 
@@ -194,7 +197,7 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           SLACK_SHIPPED_WEBHOOK_URL: ${{ secrets.SLACK_SHIPPED_WEBHOOK_URL }}
         run: |
-          if [ "$(node -e 'process.stdout.write(String(require("node:crypto").randomInt(100)))')" -ge 5 ]; then
+          if [ "$(node -e 'process.stdout.write(String(require("node:crypto").randomInt(100)))')" -ne 0 ]; then
             echo "No Honest Burgers trip for this merge"
             exit 0
           fi

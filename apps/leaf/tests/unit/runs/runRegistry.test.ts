@@ -45,6 +45,71 @@ describe("runRegistry", () => {
 		);
 	});
 
+	test("a transport bound with the session id carries follow-ups", async () => {
+		const sent: string[] = [];
+		const run = registerRun({
+			key: "k1c",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
+		// The Slack path registers before it knows the session; the turn binds
+		// the transport once eve has answered.
+		run.resolveSessionId("sesn_1", {
+			sendUserMessage: async ({ sessionId, text }) => {
+				sent.push(`${sessionId}:${text}`);
+			},
+		});
+
+		await run.injectFollowUp({ text: "late enough" });
+
+		expect(sent).toEqual(["sesn_1:late enough"]);
+		expect(run.pendingTurns).toBe(1);
+		closeRun({ key: "k1c", run });
+	});
+
+	test("injection is rejected once the run settles", async () => {
+		const run = registerRun({
+			key: "k1d",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendUserMessage: async () => undefined,
+		});
+		run.resolveSessionId("sesn_1");
+		run.settle();
+
+		expect(run.injectFollowUp({ text: "unread" })).rejects.toThrow(
+			"Run is settling",
+		);
+		expect(run.pendingTurns).toBe(0);
+		closeRun({ key: "k1d", run });
+	});
+
+	test("claims accepted follow-ups, or shuts the run, in one step", () => {
+		const run = registerRun({
+			key: "k1e",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendUserMessage: async () => undefined,
+		});
+		run.resolveSessionId("sesn_1");
+
+		// eve folds adjacent messages into one replacement turn, so a claim
+		// takes every message accepted so far rather than one per boundary.
+		run.pendingTurns = 2;
+		expect(run.claimFollowUpsOrSettle()).toBe(true);
+		expect(run.pendingTurns).toBe(0);
+		expect(run.settling).toBeUndefined();
+
+		// Nothing outstanding: the same call is what closes the run, so there is
+		// no moment where a message can be accepted by a reader that has left.
+		expect(run.claimFollowUpsOrSettle()).toBe(false);
+		expect(run.settling).toBe(true);
+		expect(run.injectFollowUp({ text: "too late" })).rejects.toThrow(
+			"Run is settling",
+		);
+		closeRun({ key: "k1e", run });
+	});
+
 	test("close ignores entries replaced by a newer run", () => {
 		const first = registerRun({
 			key: "k2",

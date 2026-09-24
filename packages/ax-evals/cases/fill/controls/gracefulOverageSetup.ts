@@ -58,6 +58,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "standard",
+			versionSlug: "v1",
+			active: true,
 			name: "Standard",
 			price: { amount: 99, interval: "month" },
 			items: [
@@ -70,6 +72,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "enterprise",
+			versionSlug: "v1",
+			active: true,
 			name: "Enterprise",
 			price: { amount: 30000, interval: "year" },
 			items: [

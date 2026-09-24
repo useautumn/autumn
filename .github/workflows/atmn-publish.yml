@@ -6,6 +6,11 @@ on:
       - main
     paths:
       - "packages/atmn/**"
+      - "packages/atmn-generator/**"
+      - "packages/agent-docs/**"
+      - "packages/openapi/**"
+      - "shared/**"
+      - "apps/docs/mintlify/**"
 
   workflow_dispatch:
     inputs:
@@ -17,15 +22,6 @@ on:
         options:
           - "true"
           - "false"
-      version-bump:
-        description: "Version bump type (for manual triggers)"
-        required: false
-        default: "patch"
-        type: choice
-        options:
-          - "patch"
-          - "minor"
-          - "major"
 
 jobs:
   publish:
@@ -35,7 +31,5 @@ jobs:
       contents: write
     with:
       package-dir: packages/atmn
-      # atmn's default `test` script is sandbox integration tests; release CI runs unit only
-      test-command: bun -F atmn test:unit
-      version-bump: ${{ github.event_name == 'workflow_dispatch' && inputs.version-bump || '' }}
+      pre-build-command: bun api --spec-only && bun -F @autumn/agent-docs gen && bun -F @autumn/atmn-generator generate
       dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || 'false' }}

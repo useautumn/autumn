@@ -34,15 +34,23 @@ export const buildSecretKeyCacheKey = (key: string) => {
 export const getCachedSecretKeyVerification = async ({
 	hashedKey,
 	requestId,
+	skipL1 = false,
 }: {
 	hashedKey: string;
 	requestId?: string;
+	/** Bypass this process's L1 and read Redis directly. clearSecretKeyCache
+	 *  only evicts the calling worker's L1, so a request that must see a write
+	 *  another worker just made (e.g. a plan referencing a feature created a
+	 *  moment ago) has to skip the local layer. */
+	skipL1?: boolean;
 }): Promise<ApiKeyVerificationData | null> => {
 	const miscRedis = resolveMiscRedis({ requestId });
 	const cacheKey = buildSecretKeyCacheKey(hashedKey);
 
-	const local = secretKeyL1.get(cacheKey);
-	if (local) return local.value;
+	if (!skipL1) {
+		const local = secretKeyL1.get(cacheKey);
+		if (local) return local.value;
+	}
 
 	const cached = await tryRedisOp({
 		operation: () => miscRedis.get(cacheKey),

@@ -19,8 +19,8 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { runPush } from "../../../../../../packages/atmn-nightly/src/actions/push";
-import { createClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { runPush } from "../../../../../../packages/atmn/src/actions/push";
+import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
 const EXTRA_ITEM = '\n\t\t\t\t\t{ featureId: "audit_log" },';
 
@@ -29,8 +29,7 @@ const paths = [
 		name: "create a new version",
 		nextBody: () =>
 			configBody({
-				plans: versionedPro({ versionSlug: "v2", amount: 59 }),
-				planVersions: versionedPro({ versionSlug: "v1" }),
+				plans: `${versionedPro({ versionSlug: "v2", amount: 59 })}${versionedPro({ versionSlug: "v1", active: false })}`,
 			}),
 	},
 	{

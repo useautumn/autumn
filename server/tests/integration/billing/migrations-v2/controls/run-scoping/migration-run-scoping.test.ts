@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
+	isTerminalMigrationRunStatus,
 	MigrationItemKind,
 	MigrationItemRunStatus,
 } from "@autumn/shared";
@@ -56,7 +57,7 @@ const waitForRunCompleted = async ({
 				internalId: runId,
 			});
 			if (!run) throw new Error("Run not found");
-			if (run.status !== "succeeded" && run.status !== "failed")
+			if (!isTerminalMigrationRunStatus(run.status))
 				throw new Error(`Run still ${run.status}`);
 		},
 	});

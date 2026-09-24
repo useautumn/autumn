@@ -1,0 +1,155 @@
+.apiLayout {
+	--workflow-unit: min(1px, calc(100cqw / 686));
+	display: grid;
+	grid-template-columns: 260fr 56fr 154fr 40fr 176fr;
+	align-items: center;
+	font-size: calc(13 * var(--workflow-unit));
+	line-height: 1.5;
+	font-variant-numeric: tabular-nums;
+}
+
+.sources {
+	display: grid;
+	grid-template-rows: calc(96 * var(--workflow-unit)) calc(
+			168 *
+			var(--workflow-unit)
+		);
+	gap: calc(16 * var(--workflow-unit));
+	min-width: 0;
+}
+
+.apiCard {
+	min-width: 0;
+	padding: calc(12 * var(--workflow-unit));
+	border: 1px solid var(--workflow-border);
+	border-radius: calc(4 * var(--workflow-unit));
+	background: var(--workflow-surface);
+}
+
+.apiDiagram .sourceTitle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin: 0 0 calc(12 * var(--workflow-unit));
+	padding: 0;
+	color: #eeeeee;
+	font-size: calc(13 * var(--workflow-unit));
+	font-weight: 500;
+	line-height: calc(20 * var(--workflow-unit));
+	text-wrap: balance;
+}
+
+.sourcePlan {
+	color: #888888;
+	font-size: calc(11 * var(--workflow-unit));
+	font-weight: 400;
+}
+
+.dashboardEditor,
+.resultFeature {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: calc(8 * var(--workflow-unit));
+	white-space: nowrap;
+}
+
+.allowanceInput {
+	display: flex;
+	align-items: center;
+	gap: calc(12 * var(--workflow-unit));
+	padding: calc(3 * var(--workflow-unit)) calc(8 * var(--workflow-unit));
+	border: 1px solid var(--workflow-border);
+	border-radius: calc(3 * var(--workflow-unit));
+	background: #0f0f0f;
+}
+
+.allowanceInput > span,
+.interval {
+	color: #888888;
+}
+
+.apiDiagram .inputCode {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	color: #cccccc;
+	font-size: calc(12 * var(--workflow-unit));
+	line-height: calc(18 * var(--workflow-unit));
+	white-space: pre;
+}
+
+.apiDiagram code {
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	font: inherit;
+	font-family: var(--font-geist-mono), monospace;
+}
+
+.fileComment {
+	color: #888888;
+	font-size: calc(11 * var(--workflow-unit));
+}
+
+.mergeConnector,
+.outputConnector {
+	display: block;
+	width: 100%;
+	overflow: visible;
+	stroke: #777777;
+	stroke-width: 1;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.mergeConnector {
+	height: calc(280 * var(--workflow-unit));
+}
+
+.outputConnector {
+	height: calc(16 * var(--workflow-unit));
+}
+
+.sharedEndpoint {
+	position: relative;
+	min-width: 0;
+}
+
+.endpointCard {
+	display: grid;
+	place-items: center;
+	height: calc(56 * var(--workflow-unit));
+	border-color: #9564ff33;
+	color: var(--workflow-accent);
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.endpointCaption {
+	position: absolute;
+	top: calc(100% + 10 * var(--workflow-unit));
+	width: 100%;
+	color: #888888;
+	font-size: calc(10 * var(--workflow-unit));
+	text-align: center;
+	white-space: nowrap;
+}
+
+.resultCard .sourceTitle {
+	margin-bottom: calc(12 * var(--workflow-unit));
+	padding-bottom: calc(12 * var(--workflow-unit));
+	border-bottom: 1px solid var(--workflow-border);
+}
+
+.successMark {
+	width: calc(14 * var(--workflow-unit));
+	height: calc(14 * var(--workflow-unit));
+	stroke: var(--workflow-accent);
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}

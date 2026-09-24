@@ -1,6 +1,9 @@
 import {
+	type FullCustomer,
+	isCustomerProductPaid,
 	type Price,
 	priceAmountsForCurrency,
+	RELEVANT_STATUSES,
 	type SyncBillingContext,
 } from "@autumn/shared";
 
@@ -43,6 +46,18 @@ export const syncContextHasPaidProduct = ({
 	);
 };
 
+export const customerHasLivePaidProduct = ({
+	fullCustomer,
+}: {
+	fullCustomer: FullCustomer;
+}) =>
+	fullCustomer.customer_products.some(
+		(customerProduct) =>
+			RELEVANT_STATUSES.includes(customerProduct.status) &&
+			isCustomerProductPaid(customerProduct),
+	);
+
+/** `undefined` = don't write `customers.currency`. A value sets or relocks it. */
 export const syncContextToCurrencyLock = ({
 	syncContext,
 }: {
@@ -50,11 +65,21 @@ export const syncContextToCurrencyLock = ({
 }) => {
 	if (
 		!syncContext.stripeSubscription ||
-		syncContext.fullCustomer.currency ||
 		!syncContextHasPaidProduct({ syncContext, scope: "immediate" })
 	) {
 		return undefined;
 	}
+
+	const currentCurrency = syncContext.fullCustomer.currency?.toLowerCase();
+	if (currentCurrency === syncContext.currency) return undefined;
+	// Live paid product already owns this lock; leftover currency is the relock case below.
+	if (
+		currentCurrency &&
+		customerHasLivePaidProduct({ fullCustomer: syncContext.fullCustomer })
+	) {
+		return undefined;
+	}
+
 	return {
 		internalCustomerId: syncContext.fullCustomer.internal_id,
 		currency: syncContext.currency,

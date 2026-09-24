@@ -1,5 +1,5 @@
 /**
- * atmn scenarios/surgery — `export const pro = plan({})` beside other exports → only that declaration goes, unused imports pruned
+ * atmn scenarios/surgery — `export const pro = plan({ active: true,})` beside other exports → only that declaration goes, unused imports pruned
  *
  * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
  */
@@ -13,7 +13,7 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
 test.concurrent(
-	"`export const pro = plan({})` beside other exports → only that declaration goes, unused imports pruned",
+	"`export const pro = plan({ active: true,})` beside other exports → only that declaration goes, unused imports pruned",
 	async () => {
 		const proId = uniqueTestId("atmn_export_pro");
 		const freeId = uniqueTestId("atmn_export_free");
@@ -29,14 +29,18 @@ test.concurrent(
 				"plans.ts": `import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";
 
 export const pro = plan({
+	active: true,
 	planId: "${proId}",
 	name: "Pro",
+	versionSlug: "v1",
 	price: { amount: 20, interval: "month" },
 });
 
 export const free = plan({
+	active: true,
 	planId: "${freeId}",
 	name: "Free",
+	versionSlug: "v1",
 });
 `,
 			},

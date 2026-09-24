@@ -10,8 +10,11 @@ import {
 	getResetBalancesUpdate,
 	getRolloverUpdates,
 	isCustomerEntitlementPrepaidWithSeparateResetInterval,
+	isPooledBalanceSourceCustomerEntitlement,
 	notNullish,
+	secondsToMs,
 } from "@autumn/shared";
+import { isStripeInvoiceForNewPeriod } from "@/external/stripe/invoices/utils/classifyStripeInvoice.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { isStripeSubscriptionVercel } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
@@ -20,7 +23,7 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
-import { logPrepaidPriceProcessed } from "../logs/logInvoiceCreatedPriceProcessing";
+import { logPrepaidPriceProcessed } from "../logs/logInvoiceCreatedPriceProcessing.js";
 
 /**
  * Handle reset balance?
@@ -31,11 +34,13 @@ const processPrepaidPrice = async ({
 	eventContext,
 	customerPrice,
 	customerEntitlement,
+	resetsBillingCycleAnchor,
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: InvoiceCreatedContext;
 	customerPrice: FullCustomerPrice;
 	customerEntitlement: FullCusEntWithFullCusProduct;
+	resetsBillingCycleAnchor: boolean;
 }) => {
 	const options = customerEntitlementToOptions({
 		customerEntitlement,
@@ -47,7 +52,7 @@ const processPrepaidPrice = async ({
 
 	if (!options) return;
 	const previousQuantity = options?.quantity ?? 0;
-	const resetQuantity = (options?.upcoming_quantity || options?.quantity) ?? 0;
+	const resetQuantity = options.upcoming_quantity ?? options.quantity ?? 0;
 	const config = customerPrice.price.config;
 	const billingUnits = config.billing_units || 1;
 	const newAllowance =
@@ -139,7 +144,17 @@ const processPrepaidPrice = async ({
 		id: customerEntitlement.id,
 		updates: {
 			...resetUpdate,
+			...(isPooledBalanceSourceCustomerEntitlement({ customerEntitlement })
+				? { balance: 0, additional_balance: 0, adjustment: 0, entities: null }
+				: {}),
 			next_reset_at: nextResetAt,
+			...(resetsBillingCycleAnchor
+				? {
+						reset_cycle_anchor: secondsToMs(
+							stripeSubscription.billing_cycle_anchor,
+						),
+					}
+				: {}),
 		},
 	});
 
@@ -164,9 +179,15 @@ export const processPrepaidPricesForInvoiceCreated = async ({
 }): Promise<void> => {
 	const { stripeInvoice, customerProducts, stripeSubscription } = eventContext;
 
-	const isNewPeriod = stripeInvoice.billing_reason === "subscription_cycle";
+	const isNewPeriod = isStripeInvoiceForNewPeriod(stripeInvoice);
+	const anchorResetCustomerProductIds = new Set(
+		eventContext.billingCycleAnchorResetCustomerProductIds,
+	);
+	const isAnchorResetInvoice =
+		stripeInvoice.billing_reason === "subscription_update" &&
+		anchorResetCustomerProductIds.size > 0;
 	const isVercelSubscription = isStripeSubscriptionVercel(stripeSubscription);
-	if (!isNewPeriod || isVercelSubscription) return;
+	if ((!isNewPeriod && !isAnchorResetInvoice) || isVercelSubscription) return;
 
 	const customerPrices = getCustomerPricesWithCustomerProducts({
 		customerProducts,
@@ -178,6 +199,10 @@ export const processPrepaidPricesForInvoiceCreated = async ({
 	for (const customerPrice of customerPrices) {
 		const cusProduct = customerPrice.customer_product;
 		if (!cusProduct) continue;
+		const resetsBillingCycleAnchor = anchorResetCustomerProductIds.has(
+			cusProduct.id,
+		);
+		if (!isNewPeriod && !resetsBillingCycleAnchor) continue;
 
 		const cusEnt = customerPriceToCustomerEntitlement({
 			customerPrice,
@@ -196,6 +221,7 @@ export const processPrepaidPricesForInvoiceCreated = async ({
 			eventContext,
 			customerPrice,
 			customerEntitlement: cusEntWithProduct,
+			resetsBillingCycleAnchor,
 		});
 	}
 };

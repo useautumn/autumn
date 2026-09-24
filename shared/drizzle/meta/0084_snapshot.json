@@ -1,6 +1,6 @@
 {
-  "id": "f3a28ab9-143b-4266-891c-d8f5276af4f5",
-  "prevId": "7793bf80-d050-49e9-ab9e-68b748ce1c7c",
+  "id": "90146018-e9b7-4f1d-a0f1-8dddf6c0ab8e",
+  "prevId": "034a0f33-16ee-4c92-b984-94725baecb99",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1873,6 +1873,13 @@
           "notNull": true,
           "default": "'{}'::jsonb"
         },
+        "invoice_credit": {
+          "name": "invoice_credit",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "numeric",
@@ -2289,6 +2296,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'customers'"
+        },
         "status": {
           "name": "status",
           "type": "text",
@@ -2390,8 +2404,8 @@
           "method": "btree",
           "with": {}
         },
-        "customer_exports_active_per_org_env_unique": {
-          "name": "customer_exports_active_per_org_env_unique",
+        "customer_exports_active_per_org_env_kind_unique": {
+          "name": "customer_exports_active_per_org_env_kind_unique",
           "columns": [
             {
               "expression": "org_id",
@@ -2401,6 +2415,12 @@
             },
             {
               "expression": "env",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "kind",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3277,6 +3297,22 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_products_stripe_linked_customer": {
+          "name": "idx_customer_products_stripe_linked_customer",
+          "columns": [
+            {
+              "expression": "internal_customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "cardinality(\"customer_products\".\"subscription_ids\") > 0 OR cardinality(\"customer_products\".\"scheduled_ids\") > 0",
+          "concurrently": true,
           "method": "btree",
           "with": {}
         },
@@ -6493,6 +6529,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "skip_reason": {
+          "name": "skip_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "timestamp": {
           "name": "timestamp",
           "type": "timestamp with time zone",
@@ -6873,6 +6915,43 @@
           "isUnique": true,
           "where": "\"migration_runs\".\"status\" IN ('queued', 'running')",
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "migration_runs_migration_internal_id_idx": {
+          "name": "migration_runs_migration_internal_id_idx",
+          "columns": [
+            {
+              "expression": "migration_internal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "migration_runs_active_org_idx": {
+          "name": "migration_runs_active_org_idx",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "env",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"migration_runs\".\"status\" IN ('queued', 'running')",
+          "concurrently": true,
           "method": "btree",
           "with": {}
         }
@@ -8022,6 +8101,12 @@
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
+        },
+        "command_next_offset": {
+          "name": "command_next_offset",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -8422,6 +8507,22 @@
             }
           ],
           "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_pooled_balance_contributions_pending": {
+          "name": "idx_pooled_balance_contributions_pending",
+          "columns": [
+            {
+              "expression": "pooled_balance_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"pooled_balance_contributions\".\"effective_at\" IS NOT NULL",
           "concurrently": true,
           "method": "btree",
           "with": {}

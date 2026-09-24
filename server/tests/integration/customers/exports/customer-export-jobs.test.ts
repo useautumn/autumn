@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
+	AppEnv,
 	CusProductStatus,
 	CustomerExportField,
+	CustomerExportKind,
 	CustomerExportStatus,
 	customerExports,
 	customerProducts,
@@ -38,7 +40,7 @@ describeDb("customer export jobs", () => {
 	const seededExportIds: string[] = [];
 	const seededCustomerProductIds: string[] = [];
 	const seededProductInternalIds: string[] = [];
-	const otherEnv = ctx.env === "sandbox" ? "live" : "sandbox";
+	const otherEnv = ctx.env === AppEnv.Sandbox ? AppEnv.Live : AppEnv.Sandbox;
 
 	const insertExport = async ({
 		status,
@@ -152,6 +154,55 @@ describeDb("customer export jobs", () => {
 			await CustomerExportService.markFailed({
 				db: ctx.db,
 				id: third.customerExport.id,
+				errorMessage: "cleanup",
+			});
+		}
+	});
+
+	test("each export kind has its own active slot and its own list", async () => {
+		// The other env keeps these active rows clear of suites that run real exports.
+		const scope = { db: ctx.db, orgId: ctx.org.id, env: otherEnv };
+		const customersExport = await CustomerExportService.createIfNoneActive({
+			...scope,
+			fields: ALL_FIELDS,
+			snapshot: emptySnapshot,
+		});
+		const verifyExport = await CustomerExportService.createIfNoneActive({
+			...scope,
+			kind: CustomerExportKind.BillingVerify,
+			fields: [],
+			snapshot: emptySnapshot,
+		});
+		const secondVerifyExport = await CustomerExportService.createIfNoneActive({
+			...scope,
+			kind: CustomerExportKind.BillingVerify,
+			fields: [],
+			snapshot: emptySnapshot,
+		});
+
+		expect(customersExport.created).toBe(true);
+		expect(verifyExport.created).toBe(true);
+		expect(secondVerifyExport.created).toBe(false);
+		if (!(customersExport.created && verifyExport.created)) return;
+		seededExportIds.push(
+			customersExport.customerExport.id,
+			verifyExport.customerExport.id,
+		);
+
+		const listedVerifyIds = (
+			await CustomerExportService.list({
+				...scope,
+				kind: CustomerExportKind.BillingVerify,
+				limit: 20,
+			})
+		).map((customerExport) => customerExport.id);
+		expect(listedVerifyIds).toContain(verifyExport.customerExport.id);
+		expect(listedVerifyIds).not.toContain(customersExport.customerExport.id);
+
+		for (const id of seededExportIds.slice(-2)) {
+			await CustomerExportService.markFailed({
+				db: ctx.db,
+				id,
 				errorMessage: "cleanup",
 			});
 		}

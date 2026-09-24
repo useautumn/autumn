@@ -1,5 +1,5 @@
 DESCRIPTION >
-    Reads events_deductions_hourly_mv for aggregate_on="deducted".
+    Reads complete hours from events_deductions_hourly_mv and exact raw edges for aggregate_on="deducted".
     Returns the finest grain the response needs — (period, balance, group_value) — and the server
     pivots it into values{} / balances[] / grouped_values{}. Both levels come from these rows:
     balances[] is the sum across group_value, grouped_values is the split.
@@ -29,25 +29,30 @@ NODE base
 DESCRIPTION >
     Filter to one customer's deductions and project the period and grouping value.
 
-    Two sources. The MV serves every query shape it can (no properties by design —
-    property values are unbounded and a property key in the rollup is the write
-    amplification trap). Property grouping instead reads RAW `events`, decoding the
-    deductions JSON at read time: acceptable ONLY because customer_id is mandatory
-    and leads the events sorting key, so the scan is one customer's rows in the
-    window — typically hundreds to a few thousand — not the org's.
+    Property grouping reads raw events throughout the window because the rollup has no properties.
+    Other queries combine complete hourly rollups with raw boundary events, scoped to one customer.
 SQL >
     %
     {% set use_property = defined(property_key) and String(property_key, '') != '' %}
-    {% if use_property %}
+    WITH
+        timestamp AS bin_timestamp,
+        toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) AS window_start,
+        toDateTime({{ String(end_date, '2024-12-31 23:59:59') }}) AS window_end,
+        if(window_start = toStartOfHour(window_start), toStartOfHour(window_start), addHours(toStartOfHour(window_start), 1)) AS full_hours_start,
+        toStartOfHour(window_end) AS full_hours_end
     SELECT
         {% if String(bin_size, 'day') == 'hour' %}
+        {% if use_property %}
         formatDateTime(toStartOfHour(timestamp, {{ String(timezone, 'UTC') }}), '%F %T') as period,
-        {% elif String(bin_size, 'day') == 'month' %}
-        formatDateTime(toStartOfMonth(timestamp, {{ String(timezone, 'UTC') }}), '%F %T') as period,
-        {% elif String(bin_size, 'day') == 'week' %}
-        formatDateTime(toStartOfWeek(timestamp, 1, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% else %}
-        formatDateTime(toStartOfDay(timestamp, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        formatDateTime(toStartOfHour(timestamp), '%F %T') as period,
+        {% end %}
+        {% elif String(bin_size, 'day') == 'month' %}
+        formatDateTime(toStartOfMonth(bin_timestamp, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% elif String(bin_size, 'day') == 'week' %}
+        formatDateTime(toStartOfWeek(bin_timestamp, 1, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% else %}
+        formatDateTime(toStartOfDay(bin_timestamp, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% end %}
         JSONExtractString(JSONExtractString(d), 'feature_id') as balance_feature_id,
         JSONExtractString(JSONExtractString(d), 'balance_id') as balance_id,
@@ -56,7 +61,17 @@ SQL >
             JSONExtractRaw(JSONExtractString(d), 'reset'),
             'interval'
         ) as reset_interval,
+        {% if use_property %}
         {{ column('properties.' + String(property_key, '')) }}::String as group_value,
+        {% elif String(group_column, '') == 'entity_id' %}
+        coalesce(entity_id, '') as group_value,
+        {% elif String(group_column, '') == 'source_feature_id' %}
+        event_name as group_value,
+        {% elif String(group_column, '') == 'plan_id' %}
+        JSONExtractString(JSONExtractString(d), 'plan_id') as group_value,
+        {% else %}
+        '' as group_value,
+        {% end %}
         sum(JSONExtractFloat(JSONExtractString(d), 'value')) as deducted,
         count() as deduction_count
     FROM events
@@ -65,8 +80,13 @@ SQL >
         org_id = {{ String(org_id, '') }}
         AND env = {{ String(env, 'test') }}
         AND customer_id = {{ String(customer_id, '') }}
-        AND timestamp >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
-        AND timestamp <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+        AND timestamp >= window_start AND timestamp <= window_end
+        {% if not use_property %}
+        AND (timestamp < full_hours_start OR timestamp >= full_hours_end)
+        {% if String(group_column, '') == 'entity_id' %}
+        AND coalesce(entity_id, '') != ''
+        {% end %}
+        {% end %}
         AND JSONExtractString(JSONExtractString(d), 'balance_id') != ''
         {% if defined(feature_ids) %}
         AND (
@@ -84,7 +104,8 @@ SQL >
         plan_id,
         reset_interval,
         group_value
-    {% else %}
+    {% if not use_property %}
+    UNION ALL
     SELECT
         {% if String(bin_size, 'day') == 'hour' %}
         formatDateTime(hour, '%F %T') as period,
@@ -115,8 +136,7 @@ SQL >
         org_id = {{ String(org_id, '') }}
         AND env = {{ String(env, 'test') }}
         AND customer_id = {{ String(customer_id, '') }}
-        AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
-        AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+        AND hour >= full_hours_start AND hour < full_hours_end
         {% if defined(feature_ids) %}
         AND (
             event_name IN {{ Array(feature_ids, 'String', default='[]') }}

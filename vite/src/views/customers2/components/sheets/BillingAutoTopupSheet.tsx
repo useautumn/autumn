@@ -9,9 +9,8 @@ import {
 	type FullCustomer,
 	formatAmount,
 	fullCustomerToCustomerEntitlements,
-	isOneOffPrice,
-	isPrepaidPrice,
-	isVolumeBasedCusEnt,
+	isOneOffCustomerEntitlement,
+	isPrepaidCustomerEntitlement,
 	PurchaseLimitInterval,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -118,15 +117,9 @@ export function BillingAutoTopupSheet() {
 			featureId,
 		});
 
-		const isOneOffPrepaid = (cusEnt: FullCusEntWithFullCusProduct) => {
-			const cusPrice = cusEntToCusPrice({ cusEnt });
-			return (
-				cusPrice &&
-				isOneOffPrice(cusPrice.price) &&
-				isPrepaidPrice(cusPrice.price) &&
-				!isVolumeBasedCusEnt(cusEnt)
-			);
-		};
+		const isOneOffPrepaid = (cusEnt: FullCusEntWithFullCusProduct) =>
+			isOneOffCustomerEntitlement(cusEnt) &&
+			isPrepaidCustomerEntitlement(cusEnt);
 
 		// Mirror the backend's resolution for customer-level auto-topups: the
 		// most recently attached product's one-off prepaid price is charged.
@@ -300,7 +293,7 @@ export function BillingAutoTopupSheet() {
 						{topupPriceInfo.hasPrice ? (
 							<InfoBox variant="note">
 								{topupPriceInfo.isTiered
-									? "Pricing for this feature is tiered — the charge per top-up depends on current usage."
+									? "Pricing for this feature is tiered — each top-up is priced by its quantity through the tiers."
 									: `Customer will be charged ${formatAmount({ currency: displayCurrency, amount: topupPriceInfo.unitAmount })} per ${topupPriceInfo.billingUnits === 1 ? "unit" : `${topupPriceInfo.billingUnits} units`}.`}
 							</InfoBox>
 						) : (

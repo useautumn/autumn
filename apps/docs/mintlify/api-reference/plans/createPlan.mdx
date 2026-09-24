@@ -353,6 +353,16 @@ await autumn.plans.create({
       </Expandable>
     </DynamicParamField>
 
+    <DynamicParamField body="expiry" type="object">
+      Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+      <Expandable title="properties">
+        <DynamicParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+        <DynamicParamField body="length" type="number" required />
+
+      </Expandable>
+    </DynamicParamField>
+
     <DynamicParamField body="feature_override" type="object">
       Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
       <Expandable title="properties">
@@ -665,6 +675,16 @@ await autumn.plans.create({
                 <DynamicParamField body="expiry_duration_length" type="number">
                   Number of periods before expiry.
                 </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="expiry" type="object">
+              Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+              <Expandable title="properties">
+                <DynamicParamField body="duration" type="'day' | 'week' | 'month' | 'year'" required />
+
+                <DynamicParamField body="length" type="number" required />
 
               </Expandable>
             </DynamicParamField>
@@ -1342,6 +1362,16 @@ await autumn.plans.create({
       </Expandable>
     </DynamicResponseField>
 
+    <DynamicResponseField name="expiry" type="object | null">
+      Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+      <Expandable title="properties">
+        <DynamicResponseField name="duration" type="'day' | 'week' | 'month' | 'year'" />
+
+        <DynamicResponseField name="length" type="number" />
+
+      </Expandable>
+    </DynamicResponseField>
+
     <DynamicResponseField name="feature_override" type="object">
       Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
       <Expandable title="properties">
@@ -1938,6 +1968,16 @@ await autumn.plans.create({
               </Expandable>
             </DynamicResponseField>
 
+            <DynamicResponseField name="expiry" type="object">
+              Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+              <Expandable title="properties">
+                <DynamicResponseField name="duration" type="'day' | 'week' | 'month' | 'year'" />
+
+                <DynamicResponseField name="length" type="number" />
+
+              </Expandable>
+            </DynamicResponseField>
+
             <DynamicResponseField name="feature_override" type="object">
               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
               <Expandable title="properties">
@@ -2463,6 +2503,16 @@ await autumn.plans.create({
                         <DynamicResponseField name="expiry_duration_length" type="number">
                           Number of periods before expiry.
                         </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="expiry" type="object">
+                      Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="duration" type="'day' | 'week' | 'month' | 'year'" />
+
+                        <DynamicResponseField name="length" type="number" />
 
                       </Expandable>
                     </DynamicResponseField>

@@ -15,6 +15,7 @@ import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import type Stripe from "stripe";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	handleCreateScheduleComputeErrors,
 	handleCreateScheduleErrors,
@@ -195,7 +196,7 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 		).resolves.toBeUndefined();
 	});
 
-	test("rejects license-backed products expired by the computed plan", () => {
+	test("allows license-backed products expired by the computed plan", async () => {
 		const customerProduct = {
 			id: "cus_product",
 			customer_licenses: [{ id: "license" }],
@@ -210,16 +211,41 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 			],
 		} as unknown as AutumnBillingPlan;
 
-		expect(() =>
+		await expect(
 			handleCreateScheduleComputeErrors({
+				ctx: {} as unknown as AutumnContext,
 				billingContext: buildContext({
 					immediateStartsAt: Date.now(),
 					currentEpochMs: Date.now(),
 				}),
 				autumnBillingPlan,
+				immediatePhaseTransition: {
+					outgoingCustomerProducts: [],
+					incomingCustomerProducts: [],
+				},
 			}),
-		).toThrow(
-			"billing.create_schedule does not support license-backed plans yet",
-		);
+		).resolves.toBeUndefined();
+	});
+
+	test("rejects a transition whose incoming pool grants fewer seats than assigned", async () => {
+		const autumnBillingPlan = {
+			insertCustomerProducts: [],
+			customerLicenseTransitions: [{ updates: { granted: 1, remaining: -1 } }],
+		} as unknown as AutumnBillingPlan;
+
+		await expect(
+			handleCreateScheduleComputeErrors({
+				ctx: {} as unknown as AutumnContext,
+				billingContext: buildContext({
+					immediateStartsAt: Date.now(),
+					currentEpochMs: Date.now(),
+				}),
+				autumnBillingPlan,
+				immediatePhaseTransition: {
+					outgoingCustomerProducts: [],
+					incomingCustomerProducts: [],
+				},
+			}),
+		).rejects.toThrow("2 assigned, but the incoming plan grants 1");
 	});
 });

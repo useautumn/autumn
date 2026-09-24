@@ -27,12 +27,12 @@ export * from "./catalogV2/planUpdate/preview/catalogVariantPreview.js";
 export * from "./catalogV2/planUpdate/preview/catalogVersioningPreview.js";
 export * from "./catalogV2/planUpdate/preview/planAliasReplacement.js";
 export * from "./catalogV2/planUpdate/versioning.js";
+export * from "./catalogV2/previewUpdateCatalogParams.js";
+export * from "./catalogV2/previewUpdateCatalogResponse.js";
 export * from "./catalogV2/rewardUpdate/components/catalogRewardV1.js";
 export * from "./catalogV2/rewardUpdate/params/catalogReferralProgramParams.js";
 export * from "./catalogV2/rewardUpdate/params/catalogRewardParams.js";
 export * from "./catalogV2/rewardUpdate/preview/catalogRewardPreview.js";
-export * from "./catalogV2/previewUpdateCatalogParams.js";
-export * from "./catalogV2/previewUpdateCatalogResponse.js";
 export * from "./catalogV2/updateCatalogParams.js";
 export * from "./catalogV2/updateCatalogResponse.js";
 // NOTE: coreOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
@@ -136,12 +136,16 @@ export * from "./features/crud/index.js";
 export * from "./features/prevVersions/apiFeatureV0.js";
 export * from "./features/prevVersions/featureV0OpModels.js";
 export * from "./others/apiInvoice/apiInvoiceItem.js";
-export * from "./others/apiInvoice/payInvoiceParams.js";
+export * from "./others/apiInvoice/createInvoiceParams.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";
 export * from "./others/apiInvoice/apiListInvoiceV1.js";
 export * from "./others/apiInvoice/insertInvoicesParams.js";
 export * from "./others/apiInvoice/insertInvoicesResponse.js";
 export * from "./others/apiInvoice/listInvoicesParams.js";
+export * from "./others/apiInvoice/listInvoiceTemplatesParams.js";
+export * from "./others/apiInvoice/payInvoiceParams.js";
+export * from "./others/apiInvoice/reissueInvoiceParams.js";
+export * from "./others/apiInvoice/voidInvoiceParams.js";
 // Models
 export * from "./platform/platformModels.js";
 // Utils

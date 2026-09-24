@@ -96,6 +96,9 @@ const applyEveEffect = async ({
 		case "reasoning":
 			onReasoning?.({ id: effect.id, text: effect.text });
 			return;
+		case "status":
+			await onAction?.(effect.text);
+			return;
 		case "thinking":
 			onThinking?.();
 			return;

@@ -22,6 +22,9 @@ export const classifyStripeWebhookAckMode = ({
 	if (!event) return "early";
 
 	switch (event.type) {
+		case "account.application.deauthorized":
+			return "sync";
+
 		// Sole executor of paid-product activation / abandoned-checkout cleanup.
 		case "checkout.session.completed":
 		case "checkout.session.expired":
@@ -67,3 +70,15 @@ export const classifyStripeWebhookAckMode = ({
 			return "early";
 	}
 };
+
+/**
+ * Cycle invoices write money to Stripe from this webhook, so overlapping
+ * deliveries must be impossible: without the event lock, ask Stripe to retry.
+ */
+export const isStripeWebhookLockRequired = ({
+	event,
+}: {
+	event: Stripe.Event | undefined;
+}): boolean =>
+	event?.type === "invoice.created" &&
+	event.data.object.billing_reason === "subscription_cycle";

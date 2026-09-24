@@ -36,7 +36,7 @@ export function FilterStep({
 }) {
 	const customerFilter = filter.customer ?? {};
 	const customerCount = useCustomerCount(customerFilter);
-	const hasCustomers = customerCount !== null && customerCount > 0;
+	const hasCustomers = customerCount !== 0;
 	const showPreview = hasActiveFilter(customerFilter);
 
 	return (
@@ -49,7 +49,7 @@ export function FilterStep({
 					onClick={onNext}
 					disabled={!hasCustomers}
 				>
-					{hasCustomers ? `Next (${customerCount.toLocaleString()})` : "Next"}
+					{customerCount ? `Next (${customerCount.toLocaleString()})` : "Next"}
 					<ArrowRightIcon size={14} />
 				</Button>
 			</StepIndicator>

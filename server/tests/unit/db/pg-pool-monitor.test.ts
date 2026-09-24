@@ -6,16 +6,18 @@
 import { describe, expect, mock, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import type { Pool, PoolClient } from "pg";
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const warn = mock((..._args: unknown[]) => {});
-mock.module("@/external/logtail/logtailUtils.js", () => ({
-	logger: {
-		info: mock(() => {}),
-		warn,
-		error: mock(() => {}),
-		debug: mock(() => {}),
-		child: () => ({}),
-	},
+const mockLogger = {
+	info: mock(() => {}),
+	warn,
+	error: mock(() => {}),
+	debug: mock(() => {}),
+	child: () => mockLogger,
+};
+await mockModuleWithRestore("@/external/logtail/logtailUtils.js", () => ({
+	logger: mockLogger,
 }));
 
 const { attachPoolErrorHandlers } = await import("@/db/pgPoolMonitor.js");

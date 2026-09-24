@@ -9,6 +9,7 @@ import {
 	selectCountAndSumSource,
 	shouldUseOrgDimensionRollup,
 	shouldUseOrgPropertyRollup,
+	shouldUsePropertyCoverageCheck,
 	shouldUsePropertyDailyRollup,
 } from "@/internal/analytics/actions/dailyRollupRouting.js";
 
@@ -65,6 +66,29 @@ test("org property rollup: routes only unfiltered aggregate-all property groups"
 	).toBe(false);
 	expect(
 		shouldUseOrgPropertyRollup({ ...base, skipPropertyRollup: true }),
+	).toBe(false);
+});
+
+// A customer-scoped `apiKeyId` 90d query: one event without the
+// property made the all-events total exceed the grouped count, which read as gate
+// loss and reran the query ungated over 19.5M rows. Scoped queries must reconcile
+// against property presence in the same scope, exactly like org-wide ones.
+test("property coverage check: covers scoped and org-wide top-level property groups", () => {
+	const base = {
+		groupColumn: "property" as const,
+		hasPropertyFilters: false,
+		propertyKey: "apiKeyId",
+	};
+
+	expect(shouldUsePropertyCoverageCheck(base)).toBe(true);
+	expect(
+		shouldUsePropertyCoverageCheck({ ...base, propertyKey: "metadata.region" }),
+	).toBe(false);
+	expect(
+		shouldUsePropertyCoverageCheck({ ...base, hasPropertyFilters: true }),
+	).toBe(false);
+	expect(
+		shouldUsePropertyCoverageCheck({ ...base, groupColumn: "customer_id" }),
 	).toBe(false);
 });
 

@@ -1,0 +1,334 @@
+.diagram {
+	container-type: inline-size;
+	width: 100%;
+	margin: 36px 0;
+	color: #c5c5c5;
+	font-family: var(--font-geist-sans), sans-serif;
+}
+
+.layout {
+	--diagram-unit: calc(100cqw / 688);
+	display: grid;
+	grid-template-columns: minmax(0, 1.42fr) calc(32 * var(--diagram-unit)) minmax(
+			0,
+			1fr
+		);
+	font-size: calc(12 * var(--diagram-unit));
+	line-height: 1.6;
+}
+
+.editorHeader {
+	display: flex;
+	align-items: center;
+	gap: calc(8 * var(--diagram-unit));
+	padding: calc(12 * var(--diagram-unit)) calc(15 * var(--diagram-unit));
+	border: 1px solid #292929;
+	border-radius: calc(5 * var(--diagram-unit)) calc(5 * var(--diagram-unit)) 0 0;
+	background: #191919;
+	color: #e7e7e7;
+	font-weight: 500;
+}
+
+.editorHeader svg,
+.fileHeader svg,
+.fileDetail svg {
+	width: calc(13 * var(--diagram-unit));
+	height: calc(13 * var(--diagram-unit));
+	flex: none;
+	stroke-width: 1.5;
+	color: #888888;
+}
+
+.exampleLabel {
+	margin-left: auto;
+	color: #777777;
+	font-size: calc(10 * var(--diagram-unit));
+	font-weight: 400;
+}
+
+.outputHeader {
+	grid-column: 3;
+	align-self: center;
+	color: #888888;
+	font-size: calc(11 * var(--diagram-unit));
+}
+
+.row {
+	display: grid;
+	grid-template-columns: subgrid;
+	grid-column: 1 / -1;
+}
+
+.source {
+	position: relative;
+	display: grid;
+	align-content: center;
+	min-width: 0;
+	padding: calc(14 * var(--diagram-unit)) calc(12 * var(--diagram-unit))
+		calc(14 * var(--diagram-unit)) calc(10 * var(--diagram-unit));
+	border-inline: 1px solid #292929;
+	background: #151515;
+	font-family: var(--font-geist-mono), monospace;
+	font-size: calc(11 * var(--diagram-unit));
+	font-weight: 450;
+	line-height: 1.7;
+}
+
+.source::before {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: calc(32 * var(--diagram-unit));
+	border-left: 1px solid #242424;
+	content: "";
+}
+
+.row:last-child .source {
+	border-bottom: 1px solid #292929;
+	border-radius: 0 0 calc(5 * var(--diagram-unit)) calc(5 * var(--diagram-unit));
+}
+
+.sourceIntro {
+	display: grid;
+	grid-template-columns: calc(22 * var(--diagram-unit)) 1fr;
+	margin-bottom: calc(10 * var(--diagram-unit));
+	color: #aaaaaa;
+}
+
+.lineNumber {
+	position: relative;
+	padding-right: calc(8 * var(--diagram-unit));
+	color: #646464;
+	font-size: calc(9 * var(--diagram-unit));
+	font-weight: 400;
+	text-align: right;
+	user-select: none;
+}
+
+.markdownHeading {
+	color: #e0e0e0;
+	font-weight: 550;
+}
+
+.markdownHeading,
+.sourceInstruction,
+.tagName {
+	padding-left: calc(10 * var(--diagram-unit));
+}
+
+.tagBlock {
+	position: relative;
+	display: grid;
+	grid-template-columns: calc(22 * var(--diagram-unit)) minmax(0, 1fr);
+	padding-block: calc(5 * var(--diagram-unit));
+	overflow-wrap: anywhere;
+}
+
+.tagBlock::before {
+	position: absolute;
+	inset: 0 0 0 calc(22 * var(--diagram-unit));
+	border-left: 1px solid #a780e080;
+	border-radius: 0 calc(3 * var(--diagram-unit)) calc(3 * var(--diagram-unit)) 0;
+	background: #9564ff0b;
+	content: "";
+}
+
+.tagName {
+	position: relative;
+	color: #c6a8f4;
+	font-weight: 500;
+}
+
+.attribute {
+	position: relative;
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	padding-inline: calc(22 * var(--diagram-unit)) calc(8 * var(--diagram-unit));
+	color: #aaa2b5;
+}
+
+.value {
+	color: #c3cbbb;
+}
+
+.pathSegment {
+	display: inline-block;
+	white-space: nowrap;
+}
+
+.connector {
+	position: absolute;
+	top: 50%;
+	left: calc(100% + 13 * var(--diagram-unit));
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: calc(32 * var(--diagram-unit));
+	transform: translateY(-50%);
+	color: #69616f;
+}
+
+.connector svg {
+	width: calc(25 * var(--diagram-unit));
+	height: calc(16 * var(--diagram-unit));
+	stroke-width: 1;
+}
+
+.output {
+	grid-column: 3;
+	min-width: 0;
+	align-self: center;
+	padding-block: calc(16 * var(--diagram-unit));
+}
+
+.resultTitle {
+	margin-bottom: calc(8 * var(--diagram-unit));
+	color: #eeeeee;
+	font-size: calc(13 * var(--diagram-unit));
+	font-weight: 500;
+	letter-spacing: -0.02em;
+}
+
+.outputFile {
+	overflow: hidden;
+	border: 1px solid #303030;
+	border-radius: calc(4 * var(--diagram-unit));
+	background: #151515;
+}
+
+.fileHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: calc(7 * var(--diagram-unit));
+	padding: calc(9 * var(--diagram-unit)) calc(10 * var(--diagram-unit));
+	border-bottom: 1px solid #292929;
+	background: #191919;
+	font-size: calc(9 * var(--diagram-unit));
+}
+
+.fileName {
+	display: flex;
+	align-items: center;
+	gap: calc(6 * var(--diagram-unit));
+	font-family: var(--font-geist-mono), monospace;
+}
+
+.action {
+	color: #b08aff;
+	font-family: var(--font-geist-sans), sans-serif;
+}
+
+.documentExcerpt {
+	padding: calc(10 * var(--diagram-unit)) calc(12 * var(--diagram-unit));
+	color: #a3a3a3;
+	font-size: calc(11 * var(--diagram-unit));
+}
+
+.documentTitle {
+	margin-bottom: calc(5 * var(--diagram-unit));
+	color: #d4d4d4;
+	font-family: var(--font-geist-mono), monospace;
+	font-size: calc(10 * var(--diagram-unit));
+}
+
+.ellipsis {
+	color: #666666;
+}
+
+.fileDetail {
+	display: flex;
+	align-items: center;
+	gap: calc(6 * var(--diagram-unit));
+	padding: calc(10 * var(--diagram-unit));
+	color: #a3a3a3;
+	font-size: calc(10.5 * var(--diagram-unit));
+}
+
+.detailSymbol {
+	width: calc(13 * var(--diagram-unit));
+	flex: none;
+	color: #b08aff;
+}
+
+.emittedInstruction {
+	margin-top: calc(10 * var(--diagram-unit));
+	padding-left: calc(10 * var(--diagram-unit));
+	border-left: 1px solid #333333;
+	color: #aaaaaa;
+	font-size: calc(10.5 * var(--diagram-unit));
+	overflow-wrap: anywhere;
+}
+
+.instructionLabel {
+	display: block;
+	margin-bottom: calc(3 * var(--diagram-unit));
+	color: #777777;
+	font-size: calc(9 * var(--diagram-unit));
+}
+
+.inlineCode {
+	color: #cab5ed;
+	font-family: var(--font-geist-mono), monospace;
+	font-size: 0.94em;
+}
+
+@container (max-width: 520px) {
+	.layout {
+		--diagram-unit: 1px;
+		grid-template-columns: minmax(0, 1fr);
+		border: 1px solid #292929;
+		border-radius: 5px;
+		overflow: hidden;
+	}
+
+	.editorHeader {
+		border: 0;
+		border-bottom: 1px solid #292929;
+		border-radius: 0;
+	}
+
+	.outputHeader,
+	.connector {
+		display: none;
+	}
+
+	.row {
+		display: block;
+	}
+
+	.source,
+	.row:last-child .source {
+		border: 0;
+		border-radius: 0;
+		padding: 16px 12px 14px 10px;
+		font-size: 11px;
+	}
+
+	.output {
+		padding: 14px 16px 18px;
+		border-top: 1px solid #242424;
+		border-bottom: 1px solid #333333;
+		background: #0f0f0f;
+	}
+
+	.row:last-child .output {
+		border-bottom: 0;
+	}
+
+	.resultTitle::before {
+		content: "↳";
+		margin-right: 8px;
+		color: #888888;
+	}
+
+	.fileHeader {
+		font-size: 10px;
+	}
+
+	.documentExcerpt,
+	.fileDetail,
+	.emittedInstruction {
+		font-size: 11px;
+	}
+}

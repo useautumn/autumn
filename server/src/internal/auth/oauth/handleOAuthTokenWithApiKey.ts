@@ -92,14 +92,14 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			tokenRecord,
 		});
 		const consentedTokenRecord = { ...tokenRecord, oauthConsentId };
-		const consentMetadata = oauthConsentId
-			? await oauthConsentRepo.getMetadataById({
+		const consent = oauthConsentId
+			? await oauthConsentRepo.getApiKeyRecord({
 					db,
 					consentId: oauthConsentId,
 				})
 			: null;
 		const grantReferenceId = getOAuthConsentOrgId({
-			metadata: consentMetadata,
+			metadata: consent?.metadata ?? null,
 			referenceId: tokenRecord.referenceId,
 		});
 
@@ -140,7 +140,10 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		) {
 			const responseBody = {
 				...body,
-				access_token: prefixOAuthToken({ token: accessToken }),
+				access_token: prefixOAuthToken({
+					token: accessToken,
+					env: consent?.env,
+				}),
 				scope: issuedScopes.join(" "),
 			};
 			if (heldReplayKey) {

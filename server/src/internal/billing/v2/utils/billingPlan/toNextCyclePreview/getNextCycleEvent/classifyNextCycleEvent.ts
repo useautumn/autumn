@@ -43,7 +43,15 @@ export const classifyNextCycleEvent = ({
 		startsAtMs: exactStartsAtMs,
 	});
 
-	if (timestampsMatch(startsAtMs, renewalBoundaryMs)) {
+	const isProductTransition = hasProductTransitionAt({
+		customerProducts: normalizedCustomerProducts,
+		startsAtMs,
+	});
+
+	// A plan change landing on the renewal boundary is still a transition. Taking
+	// the renewal branch drops the incoming plan's line items, because only that
+	// branch filters them to a billing period starting at the boundary.
+	if (timestampsMatch(startsAtMs, renewalBoundaryMs) && !isProductTransition) {
 		const activeCustomerProducts = getActiveCustomerProductsAt({
 			customerProducts,
 			startsAtMs: renewalBoundaryMs,
@@ -65,10 +73,6 @@ export const classifyNextCycleEvent = ({
 				startsAtMs,
 			),
 		);
-	const isProductTransition = hasProductTransitionAt({
-		customerProducts: normalizedCustomerProducts,
-		startsAtMs,
-	});
 	const isTrialEnd = hasTrialEndAt({
 		billingContext,
 		customerProducts: normalizedCustomerProducts,
@@ -106,6 +110,7 @@ export const classifyNextCycleEvent = ({
 			kind: "scheduled_change",
 			smallestInterval,
 			startsAtMs: exactStartsAtMs,
+			renewalBoundaryMs,
 			resetsBillingCycle: isAnchorReset,
 			incomingCustomerProducts,
 			outgoingCustomerProducts,
@@ -127,6 +132,7 @@ export const classifyNextCycleEvent = ({
 			kind: "scheduled_change",
 			smallestInterval,
 			startsAtMs: exactStartsAtMs,
+			renewalBoundaryMs,
 			resetsBillingCycle: isAnchorReset,
 			incomingCustomerProducts,
 			outgoingCustomerProducts,

@@ -137,6 +137,11 @@ export const isCustomerProductTrialing = (
 	return customerProduct.trial_ends_at && customerProduct.trial_ends_at > nowMs;
 };
 
+/** Attach writes nothing to Stripe for a trial that reverts on end. */
+export const isCustomerProductRevertingTrial = (
+	customerProduct?: FullCusProduct,
+) => customerProduct?.free_trial?.on_end === "revert";
+
 export const customerProductHasRelevantStatus = (cp?: FullCusProduct) => {
 	if (!cp) return false;
 	return RELEVANT_STATUSES.includes(cp.status);

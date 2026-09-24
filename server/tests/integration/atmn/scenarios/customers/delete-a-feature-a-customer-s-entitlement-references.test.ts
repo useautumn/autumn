@@ -15,8 +15,8 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { runPush } from "../../../../../../packages/atmn-nightly/src/actions/push";
-import { createClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { runPush } from "../../../../../../packages/atmn/src/actions/push";
+import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
 /** A plan with one item over a metered feature; `includeFeature: false` drops
  * both the feature and its item, as a user's config would after deleting it. */
@@ -39,7 +39,9 @@ const catalogConfig = ({
 	plans: [
 		{
 			planId: "${planId}",
+			active: true,
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 20, interval: "month" },
 			items: [${includeFeature ? `{ featureId: "${featureId}", included: 100, reset: { interval: "month" } }` : ""}],
 			createInStripe: false,

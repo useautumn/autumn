@@ -46,6 +46,11 @@ DRAGONFLY_VERSION="${DRAGONFLY_VERSION:-latest}" # dw uses :latest (dw.compose.y
 # which is a JVM app — the same class of problem that pushed elasticmq → goaws
 # here. Pinned (pre-1.0 project) so a release can't silently change behavior.
 DYNOXIDE_VERSION="${DYNOXIDE_VERSION:-v0.13.0}"
+# Redpanda: native Kafka for the balance worker (apache/kafka is a JVM app). Its
+# wrapper scripts hardcode /opt/redpanda, so the image's /opt/redpanda tree is
+# extracted as-is via crane. Pinned; dw runs apache/kafka in Docker instead.
+REDPANDA_IMAGE="${REDPANDA_IMAGE:-docker.redpanda.com/redpandadata/redpanda:v26.2.3}"
+REDPANDA_HOME="${REDPANDA_HOME:-/opt/redpanda}"
 INSTALL_CLICKHOUSE="${TW_INSTALL_CLICKHOUSE:-0}"
 
 PG_PORT="${PG_PORT:-5432}"
@@ -198,6 +203,31 @@ Local:
     - Name: autumn-track-async
 EOF
 log "Wrote goaws config to $GOAWS_CONF (autumn.fifo + autumn-track.fifo + autumn-track-async, dedup on)"
+
+# ---------------------------------------------------------------------------
+# 4c. Redpanda (native Kafka) — the balance worker's log. Extracted whole from
+#     the OCI image via crane (no daemon): /opt/redpanda/{bin,lib,libexec}.
+# ---------------------------------------------------------------------------
+if [ ! -x "$REDPANDA_HOME/bin/rpk" ]; then
+  ARCH="$(uname -m)"
+  case "$ARCH" in
+    x86_64) CR_ARCH="x86_64" ;;
+    aarch64 | arm64) CR_ARCH="arm64" ;;
+    *) die "unsupported arch for crane/Redpanda: $ARCH" ;;
+  esac
+  log "Fetching crane $CRANE_VERSION to extract Redpanda from $REDPANDA_IMAGE"
+  TMP_RP="$(mktemp -d)"
+  curl -fsSL -o "$TMP_RP/crane.tgz" \
+    "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_${CR_ARCH}.tar.gz"
+  tar -xzf "$TMP_RP/crane.tgz" -C "$TMP_RP" crane
+  "$TMP_RP/crane" export "$REDPANDA_IMAGE" "$TMP_RP/rp.tar"
+  tar -xf "$TMP_RP/rp.tar" -C "$TMP_RP" opt/redpanda
+  sudo mv "$TMP_RP/opt/redpanda" "$REDPANDA_HOME"
+  sudo chown -R "$(id -u):$(id -g)" "$REDPANDA_HOME"
+  rm -rf "$TMP_RP"
+fi
+"$REDPANDA_HOME/bin/rpk" version >/dev/null || die "rpk not runnable at $REDPANDA_HOME/bin/rpk"
+log "Redpanda installed at $REDPANDA_HOME"
 
 # ---------------------------------------------------------------------------
 # 4b. dynoxide (native DynamoDB emulator) — backs the idempotency-key store.

@@ -76,7 +76,11 @@ export const emitBatchMigrationItemEvents = async ({
 			toEvent({
 				customer,
 				status: "skipped",
-				response: { lane: "batch", reason: SKIP_REASON },
+				response: {
+					lane: "batch",
+					reason: SKIP_REASON,
+					skip_reason: pageResult.skipReasons?.[customer.internalId] ?? null,
+				},
 			}),
 		),
 	];

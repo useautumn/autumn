@@ -17,15 +17,6 @@ on:
         options:
           - "true"
           - "false"
-      version-bump:
-        description: "Version bump type (for manual triggers)"
-        required: false
-        default: "patch"
-        type: choice
-        options:
-          - "patch"
-          - "minor"
-          - "major"
 
 jobs:
   publish:
@@ -35,5 +26,4 @@ jobs:
       contents: write
     with:
       package-dir: packages/gateway
-      version-bump: ${{ github.event_name == 'workflow_dispatch' && inputs.version-bump || '' }}
       dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || 'false' }}

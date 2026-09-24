@@ -4,7 +4,7 @@
  * credits. Trimmed to what license integration cases need — no starter or
  * annual twins.
  */
-export const workspaceSeatsCatalog = `import { atmn, feature, plan } from "atmn";
+export const workspaceSeatsCatalog = `import { atmn, feature, license, plan } from "atmn";
 
 export default atmn({
 	features: [
@@ -30,6 +30,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "workspace",
+			versionSlug: "v1",
+			active: true,
 			name: "Workspace",
 			price: { amount: 10, interval: "month" },
 			items: [
@@ -42,9 +44,13 @@ export default atmn({
 		}),
 		plan({
 			planId: "team",
+			versionSlug: "v1",
+			active: true,
 			name: "Team",
 			price: { amount: 600, interval: "month" },
-			licenses: [{ licensePlanId: "workspace", included: 10 }],
+			licenses: [
+				license({ licensePlanId: "workspace", versionSlug: "v1", included: 10 }),
+			],
 		}),
 	],
 });

@@ -61,7 +61,7 @@ import {
 	getLicenseUpdatePayload,
 } from "../components/plan-licenses/useLicenseSaveRegistry";
 import { defaultVersionSlug } from "../components/versionLabel";
-import { useVariantLinkVisibility } from "../hooks/useVariantLinkVisibility";
+import { useVariantRelationshipChange } from "../hooks/useVariantRelationshipChange";
 import { mintVersionSlugError } from "../utils/versionSlug";
 import { LicenseChangeList } from "./LicenseChangeList";
 import { LicenseParentTargetsStep } from "./LicenseParentTargetsStep";
@@ -282,7 +282,7 @@ export default function PlanChangeDialog({
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
-	const { basePlanId: persistedBasePlanId } = useVariantLinkVisibility(product);
+	const relationship = useVariantRelationshipChange(product);
 	const { features = [] } = useFeaturesQuery();
 	const catalogLicenses = useOptionalProductContext()?.catalogLicenses ?? [];
 	const {
@@ -367,7 +367,7 @@ export default function PlanChangeDialog({
 		includeCustom,
 		isLatest,
 		namesByPlanId,
-		persistedBasePlanId,
+		resolveRelationship: relationship.resolve,
 	});
 
 	const customCount = Object.values(versionCounts).reduce(

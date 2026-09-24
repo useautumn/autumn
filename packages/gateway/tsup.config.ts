@@ -5,7 +5,7 @@ export default defineConfig({
 		"ai-sdk/index": "src/ai-sdk/index.ts",
 		"openrouter/index": "src/openrouter/index.ts",
 	},
-	format: ["cjs", "esm"],
+	format: ["esm"],
 	dts: true,
 	splitting: false,
 	sourcemap: false,

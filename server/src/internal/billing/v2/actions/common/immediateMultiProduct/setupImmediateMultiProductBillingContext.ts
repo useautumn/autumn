@@ -24,6 +24,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
+import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
@@ -357,6 +358,9 @@ export const setupImmediateMultiProductBillingContext = async ({
 			outgoingCusProductIds,
 		});
 
+	const customerLicenseBillingContext =
+		await setupCustomerLicenseBillingContext({ ctx, fullCustomer });
+
 	return {
 		fullCustomer,
 		fullProducts,
@@ -417,5 +421,6 @@ export const setupImmediateMultiProductBillingContext = async ({
 		dryRunStripe: preview,
 		storedChargeLineItems,
 		storedRefundLineItems,
+		customerLicenseBillingContext,
 	};
 };

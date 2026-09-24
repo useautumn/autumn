@@ -1,6 +1,6 @@
 {
-  "id": "7793bf80-d050-49e9-ab9e-68b748ce1c7c",
-  "prevId": "2ad89eed-5b7b-4790-82c7-e9e4898d1433",
+  "id": "034a0f33-16ee-4c92-b984-94725baecb99",
+  "prevId": "c287a128-f7b9-4a1e-a3c5-d6e217c2545f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -654,161 +654,6 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.balance_locks": {
-      "name": "balance_locks",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "org_id": {
-          "name": "org_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "env": {
-          "name": "env",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "lock_id": {
-          "name": "lock_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "internal_customer_id": {
-          "name": "internal_customer_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "customer_id": {
-          "name": "customer_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "entity_id": {
-          "name": "entity_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "feature_id": {
-          "name": "feature_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "overage_behavior": {
-          "name": "overage_behavior",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "properties": {
-          "name": "properties",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "deltas": {
-          "name": "deltas",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expiry_action": {
-          "name": "expiry_action",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "balance_locks_org_env_lock_id_key": {
-          "name": "balance_locks_org_env_lock_id_key",
-          "columns": [
-            {
-              "expression": "org_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "env",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "lock_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_balance_locks_internal_customer_id": {
-          "name": "idx_balance_locks_internal_customer_id",
-          "columns": [
-            {
-              "expression": "internal_customer_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_balance_locks_expires_at": {
-          "name": "idx_balance_locks_expires_at",
-          "columns": [
-            {
-              "expression": "expires_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -1859,6 +1704,13 @@
           "notNull": true,
           "default": "'{}'::jsonb"
         },
+        "invoice_credit": {
+          "name": "invoice_credit",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "numeric",
@@ -2275,6 +2127,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'customers'"
+        },
         "status": {
           "name": "status",
           "type": "text",
@@ -2376,8 +2235,8 @@
           "method": "btree",
           "with": {}
         },
-        "customer_exports_active_per_org_env_unique": {
-          "name": "customer_exports_active_per_org_env_unique",
+        "customer_exports_active_per_org_env_kind_unique": {
+          "name": "customer_exports_active_per_org_env_kind_unique",
           "columns": [
             {
               "expression": "org_id",
@@ -2387,6 +2246,12 @@
             },
             {
               "expression": "env",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "kind",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3263,6 +3128,22 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_products_stripe_linked_customer": {
+          "name": "idx_customer_products_stripe_linked_customer",
+          "columns": [
+            {
+              "expression": "internal_customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "cardinality(\"customer_products\".\"subscription_ids\") > 0 OR cardinality(\"customer_products\".\"scheduled_ids\") > 0",
+          "concurrently": true,
           "method": "btree",
           "with": {}
         },
@@ -6479,6 +6360,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "skip_reason": {
+          "name": "skip_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "timestamp": {
           "name": "timestamp",
           "type": "timestamp with time zone",
@@ -6859,6 +6746,43 @@
           "isUnique": true,
           "where": "\"migration_runs\".\"status\" IN ('queued', 'running')",
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "migration_runs_migration_internal_id_idx": {
+          "name": "migration_runs_migration_internal_id_idx",
+          "columns": [
+            {
+              "expression": "migration_internal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "migration_runs_active_org_idx": {
+          "name": "migration_runs_active_org_idx",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "env",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"migration_runs\".\"status\" IN ('queued', 'running')",
+          "concurrently": true,
           "method": "btree",
           "with": {}
         }
@@ -7983,45 +7907,6 @@
           ]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.partition_progress": {
-      "name": "partition_progress",
-      "schema": "",
-      "columns": {
-        "topic": {
-          "name": "topic",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "partition_id": {
-          "name": "partition_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "next_offset": {
-          "name": "next_offset",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "partition_progress_pkey": {
-          "name": "partition_progress_pkey",
-          "columns": [
-            "topic",
-            "partition_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

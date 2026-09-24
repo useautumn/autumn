@@ -6,6 +6,7 @@ import {
 	type Feature,
 	FeatureType,
 	findFeatureByInternalId,
+	hasMissingStripeResourcesForProduct,
 	isFixedPrice,
 	normalizePromoCodes,
 	notNullish,
@@ -171,10 +172,6 @@ export const initRewardStripePrices = async ({
 	ctx: AutumnContext;
 	prices: (Price & { product: Product })[];
 }) => {
-	if (prices.every((price) => !nullish(price.config.stripe_price_id))) {
-		return;
-	}
-
 	const internalProductIds = getUnique(
 		prices.map((p: Price) => p.internal_product_id).filter(notNullish),
 	);
@@ -183,25 +180,27 @@ export const initRewardStripePrices = async ({
 		internalIds: internalProductIds,
 	});
 
-	const batchInit: Promise<void>[] = [];
-	for (const product of products) {
-		batchInit.push(
-			initProductInStripe({
-				ctx,
-				product,
-			}),
-		);
-	}
-	await Promise.all(batchInit);
+	const uninitialised = products.filter((product) =>
+		hasMissingStripeResourcesForProduct({ product }),
+	);
 
+	await Promise.all(
+		uninitialised.map((product) =>
+			initProductInStripe({ ctx, product, includeLive: true }),
+		),
+	);
+
+	// initProductInStripe writes the new ids onto its own rows, not the caller's.
 	for (const price of prices) {
 		const product = products.find(
 			(p) => p.internal_id === price.internal_product_id,
 		);
+		if (!product) continue;
 
 		price.product = product as Product;
+		const initialised = product.prices.find(({ id }) => id === price.id);
+		if (initialised) price.config = initialised.config;
 	}
-	return;
 };
 
 const formatReward = ({ reward }: { reward: Reward }) => {

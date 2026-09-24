@@ -1,5 +1,8 @@
 import {
 	ErrCode,
+	type FullCusEntWithFullCusProduct,
+	type FullSubject,
+	fullSubjectToCustomerEntitlements,
 	notNullish,
 	RecaseError,
 	type UpdateBalanceParamsV0,
@@ -11,7 +14,7 @@ import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getUpdateBalanceProducerQueueUrl } from "@/queue/trackAsyncQueueUrls.js";
 import { buildCustomerEntitlementFilters } from "../../utils/buildCustomerEntitlementFilters.js";
-import { validateInvoiceCreditBalanceMutation } from "../../utils/validateInvoiceCreditBalanceMutation.js";
+import { validateInvoiceCreditBalanceMutationForFeature } from "../../utils/validateInvoiceCreditBalanceMutation.js";
 import { updateExpiresAtV2 } from "./updateExpiresAtV2.js";
 import { updateIncludedGrantV2 } from "./updateIncludedGrantV2.js";
 import { updateNextResetAtV2 } from "./updateNextResetAtV2.js";
@@ -21,14 +24,73 @@ import { updateUsageV2 } from "./updateUsageV2.js";
 const ASYNC_UPDATE_BALANCE_UNAVAILABLE_MESSAGE =
 	"Async balance update is not available right now";
 
+/** Names the filter that narrowed the lookup, so a typo reads as a typo. */
+const describeBalanceLookup = ({
+	params,
+}: {
+	params: UpdateBalanceParamsV0;
+}): string => {
+	const narrowedBy: string[] = [];
+	if (notNullish(params.balance_id)) {
+		narrowedBy.push(`balance_id '${params.balance_id}'`);
+	}
+	if (notNullish(params.customer_entitlement_id)) {
+		narrowedBy.push(
+			`customer_entitlement_id '${params.customer_entitlement_id}'`,
+		);
+	}
+	if (notNullish(params.interval)) {
+		narrowedBy.push(`interval '${params.interval}'`);
+	}
+	if (notNullish(params.entity_id)) {
+		narrowedBy.push(`entity_id '${params.entity_id}'`);
+	}
+
+	return narrowedBy.length > 0 ? ` matching ${narrowedBy.join(", ")}` : "";
+};
+
+/**
+ * A mutation that resolves no entitlements silently changed nothing and still
+ * reported success, so a typo'd balance_id, an unassigned feature and a fully
+ * drained grant were indistinguishable from a real update.
+ */
+const assertBalanceExists = ({
+	params,
+	fullSubject,
+	customerEntitlements,
+}: {
+	params: UpdateBalanceParamsV0;
+	fullSubject: FullSubject;
+	customerEntitlements: FullCusEntWithFullCusProduct[];
+}) => {
+	if (customerEntitlements.length > 0) return;
+
+	// The deduction path resolves by funding membership rather than by catalog
+	// feature, so only an empty result under BOTH readings means "nothing here".
+	const fundingEntitlements = fullSubjectToCustomerEntitlements({
+		fullSubject,
+		fundsFeatureId: params.feature_id,
+		customerEntitlementFilters: buildCustomerEntitlementFilters({ params }),
+	});
+	if (fundingEntitlements.length > 0) return;
+
+	throw new RecaseError({
+		message:
+			`No balance found for feature '${params.feature_id}' on customer '${params.customer_id}'${describeBalanceLookup({ params })}. ` +
+			"Call billing.attach to assign a plan that includes this feature, or balances.create to add a standalone grant.",
+		code: ErrCode.CustomerEntitlementNotFound,
+		statusCode: 404,
+	});
+};
+
 const validateBalanceMutation = ({
-	ctx,
 	params,
 	targetBalance,
+	fullSubject,
 }: {
-	ctx: AutumnContext;
 	params: UpdateBalanceParamsV0;
 	targetBalance?: number;
+	fullSubject: FullSubject;
 }) => {
 	const changesBalance =
 		notNullish(targetBalance) ||
@@ -38,9 +100,18 @@ const validateBalanceMutation = ({
 		notNullish(params.included_grant);
 	if (!changesBalance) return;
 
-	validateInvoiceCreditBalanceMutation({
-		feature: ctx.features.find((feature) => feature.id === params.feature_id),
+	const customerEntitlements = fullSubjectToCustomerEntitlements({
+		fullSubject,
+		featureIds: [params.feature_id],
+		customerEntitlementFilters: buildCustomerEntitlementFilters({ params }),
 	});
+
+	validateInvoiceCreditBalanceMutationForFeature({
+		customerEntitlements,
+		featureId: params.feature_id,
+	});
+
+	assertBalanceExists({ params, fullSubject, customerEntitlements });
 };
 
 /** Update balance using the FullSubject cache path. */
@@ -53,14 +124,14 @@ export const runUpdateBalanceV2 = async ({
 	params: UpdateBalanceParamsV0;
 	targetBalance?: number;
 }) => {
-	validateBalanceMutation({ ctx, params, targetBalance });
-
 	const fullSubject = await getOrSetCachedFullSubject({
 		ctx,
 		customerId: params.customer_id,
 		entityId: params.entity_id,
 		source: "handleUpdateBalance",
 	});
+
+	validateBalanceMutation({ params, targetBalance, fullSubject });
 
 	if (notNullish(params.add_to_balance) || notNullish(targetBalance)) {
 		await updateRemainingV2({ ctx, fullSubject, params });
@@ -183,7 +254,6 @@ export const updateBalanceV2 = async ({
 			ctx.testOptions?.asyncBalanceUpdate);
 
 	if (asyncBalanceUpdateEnabled) {
-		validateBalanceMutation({ ctx, params, targetBalance });
 		return queueUpdateBalanceV2({ ctx, params, targetBalance });
 	}
 

@@ -77,7 +77,7 @@ await mockModuleWithRestore(
 );
 
 const { discardPendingCustomerProduct } = await import(
-	"@/internal/billing/v2/execute/discardPendingCustomerProduct.js"
+	"@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingCustomerProduct.js"
 );
 
 const customerProduct = {

@@ -1,4 +1,3 @@
-import { isAxiomConfigured } from "@/external/axiom/initAxiom.js";
 import { queryAxiom } from "@/external/axiom/queryAxiom.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildRequestLogsApl } from "./buildRequestLogsApl.js";
@@ -21,10 +20,6 @@ export const searchRequestLogs = async ({
 	};
 	limit: number;
 }) => {
-	if (!isAxiomConfigured()) {
-		return { list: [], unconfigured: true };
-	}
-
 	const apl = buildRequestLogsApl({
 		ctx,
 		query,

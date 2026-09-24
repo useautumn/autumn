@@ -1,6 +1,6 @@
 ---
 name: autumn-concepts
-description: Understanding an unusual billing setup before acting on it — when a trial starts or ends billing, how entity- and seat-scoped subscriptions differ from the customer's own, what a customize diff actually changes, and how caps, overage, and top-ups behave. Load when a customer's state does not match the plain reading of their plan.
+description: Understanding Autumn's billing objects before acting on them — what a plan version is and what active means, when a trial starts or ends billing, how entity- and seat-scoped subscriptions differ from the customer's own, what a customize diff actually changes, and how caps, overage, and top-ups behave. Load before versioning, editing, or drafting a plan, or when a customer's state does not match the plain reading of their plan.
 ---
 
 # Concepts
@@ -44,7 +44,7 @@ Customer
 - balances[feature_id] -> Balance -> Feature
   - pooled balance: fed by entity grants, spent by any entity
   - rollover, expiry, usage windows live here
-- license pools[license] -> seats granted / assigned / remaining
+- licenses[] -> CustomerLicense -> seats granted / in use / remaining
 - flags[feature_id] -> Flag -> Feature
 - billing_controls -> customer-level usage controls
 - entities[] -> Entity -> same runtime shape scoped under Customer
@@ -66,7 +66,7 @@ Subscription/Purchase -> Balance or Flag provisioning
 
 Two relationships changed recently — worth stating plainly because older docs describe the old way:
 
-**Versions are groups of customers, not history.** A plan's versions used to be numbered steps in time, and the newest was always live. Now each version is a definition that some group of customers lives on, and one version is marked **active** — the one new customers get. You promote a version to active deliberately, when it's ready. Why it works this way: change a plan for *everyone* (say, add a feature to all versions) and that's an edit, not a new version. Change the terms so existing customers keep the old deal (say, raise the base price) and that's a new version — the old customers stay on theirs. Non-active versions are also how you stage plans during a migration from another billing setup.
+**Versions are groups of customers, not history.** A plan's versions used to be numbered steps in time, and the newest was always live. Now each version is a definition that some group of customers lives on, and exactly one is **active** — the one attach uses when no version is named. Which changes are edits and which are new versions, drafts, and how customers move: the plan definition below.
 
 **Plans connect to other plans.** A plan can have variants (an annual twin storing only its differences), and it can offer licenses (a small seat plan it hands out per seat). So plans form a graph, not a flat list.
 

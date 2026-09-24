@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
 	atmnConfigSource,
@@ -12,8 +13,7 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import type { AutumnClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
+import type { AutumnClient } from "../../../../../../packages/atmn/src/generated/client";
 
 type CatalogPlanRow = {
 	id: string;
@@ -40,20 +40,21 @@ test.concurrent(
 	`${chalk.yellowBright("atmn scenarios/versions: v1 pushed after v2 gets the higher creation-order number, and pull keeps it in planVersions rather than surfacing it as a draft")}`,
 	async () => {
 		const scenario = await initAtmnScenario({
-			setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
 			config: `{ plans: [${paidMonthly({ planId: "pro", amount: 30, extra: `\n\t\t\t\tversionSlug: "v2",` })}] }`,
 		});
 
 		try {
 			await scenario.push();
 
-			// v1 has never existed before — minting it into planVersions after v2
-			// is already live is what makes the server number it 2, not 1.
+			// v1 has never existed before — minting it as inactive history after
+			// v2 is already live is what makes the server number it 2, not 1.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
-	plans: [${paidMonthly({ planId: "pro", amount: 30, extra: `\n\t\t\t\tversionSlug: "v2",` })}],
-	planVersions: [${paidMonthly({ planId: "pro", amount: 20, extra: `\n\t\t\t\tversionSlug: "v1",` })}],
+	plans: [${paidMonthly({ planId: "pro", amount: 30, extra: `\n\t\t\t\tversionSlug: "v2",` })}${paidMonthly({ planId: "pro", amount: 20, active: false, extra: `\n\t\t\t\tversionSlug: "v1",` })}],
 }`,
 				}),
 			);
@@ -73,7 +74,7 @@ test.concurrent(
 			await scenario.pull();
 
 			// Membership is state: the wire has one `plans` array, and `active`
-			// on each row is what says plans vs planVersions — not a separate key.
+			// on each row is what says which version is live — not a separate key.
 			const wire = (await scenario.wireFromConfig()) as {
 				plans?: WirePlanRow[];
 			};

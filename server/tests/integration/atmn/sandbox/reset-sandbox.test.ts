@@ -22,11 +22,11 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { sandboxKeyName } from "../../../../../packages/atmn-nightly/src/env/sandboxKeyName";
+import { sandboxKeyName } from "../../../../../packages/atmn/src/env/sandboxKeyName";
 import {
 	type AutumnClient,
 	createClient,
-} from "../../../../../packages/atmn-nightly/src/generated/client";
+} from "../../../../../packages/atmn/src/generated/client";
 import { uniqueTestId } from "../../catalog-v2/utils/uniqueTestId.js";
 
 const CREATED_LINE = /^Created sandbox .+ \((?<id>[^)]+)\)\.$/m;
@@ -88,7 +88,7 @@ test(`${chalk.yellowBright("atmn reset: wipe a sandbox, then push it back")}`, a
 		config: `{ features: [
 				feature({ featureId: "${messages}", name: "Messages", type: "metered", consumable: true }),
 			], plans: [
-				plan({ planId: "${pro}", name: "Pro" }),
+				plan({ active: true, planId: "${pro}", name: "Pro", versionSlug: "v1", }),
 			] }`,
 	});
 	const { cwd, secretKey, baseUrl } = scenario;
@@ -120,14 +120,14 @@ test(`${chalk.yellowBright("atmn reset: wipe a sandbox, then push it back")}`, a
 		// R1 — nothing is sent without --yes.
 		const gated = atmn(["reset"]);
 		expect(gated).toContain(
-			`This wipes sandbox ${sandboxId}: every customer, plan, feature and migration draft. Keys and settings stay. Re-run with --yes to wipe.`,
+			`This wipes sandbox ${sandboxName} (${sandboxId}): every customer, plan, feature and migration draft. Keys and settings stay. Re-run with --yes to wipe.`,
 		);
 		expect(await liveCatalog({ client: sandboxClient })).toEqual(populated);
 
 		// R2 — the wipe takes the whole catalog.
 		const wiped = atmn(["reset", "--yes"]);
 		expect(wiped).toContain(
-			`Wiped sandbox ${sandboxId}. Run atmn push to rebuild it from your config.`,
+			`Wiped sandbox ${sandboxName} (${sandboxId}). Run atmn push to rebuild it from your config.`,
 		);
 		expect(await liveCatalog({ client: sandboxClient })).toEqual({
 			features: [],

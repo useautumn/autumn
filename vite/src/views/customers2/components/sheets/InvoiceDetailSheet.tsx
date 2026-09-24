@@ -5,25 +5,40 @@ import {
 	InvoiceStatus,
 	ProcessorType,
 } from "@autumn/shared";
-import { Badge, Button, InfoRow, MiniCopyButton } from "@autumn/ui";
+import {
+	Badge,
+	Button,
+	InfoRow,
+	MiniCopyButton,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import {
 	ArrowCounterClockwiseIcon,
 	ArrowSquareOutIcon,
 	CalendarBlankIcon,
 	CreditCardIcon,
 	HashIcon,
+	PaperPlaneTiltIcon,
+	ProhibitIcon,
 } from "@phosphor-icons/react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
+import { getBackendErr } from "@/utils/genUtils";
 import {
 	getStripeConnectViewAsLink,
 	getStripeInvoiceLink,
@@ -31,6 +46,10 @@ import {
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import {
+	resolveInvoiceProcessor,
+	useInvoiceMetadataQuery,
+} from "@/views/customers2/hooks/useInvoiceMetadataQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
 import { RefundInvoiceDialog } from "./RefundInvoiceDialog";
 
@@ -73,6 +92,7 @@ export function InvoiceDetailSheet({
 	taxedAmount: taxedAmountProp,
 }: InvoiceDetailSheetProps = {}) {
 	const sheetData = useSheetStore((s) => s.data);
+	const setSheet = useSheetStore((s) => s.setSheet);
 	const snapshotInvoice =
 		invoiceProp ?? (sheetData?.invoice as Invoice | undefined);
 	const { customer } = useCusQuery();
@@ -92,6 +112,42 @@ export function InvoiceDetailSheet({
 	const { isAdmin } = useAdmin();
 	const { masterStripeAccount } = useMasterStripeAccount();
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+	const axiosInstance = useAxiosInstance();
+	const queryClient = useQueryClient();
+	const buildQueryKey = useQueryKeyFactory();
+	const { refetch } = useCusQuery();
+
+	const voidInvoice = useMutation({
+		mutationFn: () =>
+			axiosInstance.post("/v1/invoices.void", { invoice_id: invoice?.id }),
+		onSuccess: async () => {
+			toast.success("Invoice voided");
+			await Promise.all([
+				refetch(),
+				queryClient.invalidateQueries({
+					queryKey: buildQueryKey([
+						"customer",
+						customer?.id || customer?.internal_id,
+					]),
+				}),
+			]);
+		},
+		onError: (error) => {
+			toast.error(getBackendErr(error, "Failed to void invoice"));
+		},
+	});
+
+	const invoiceIsStripe =
+		(invoice?.processor_type ?? ProcessorType.Stripe) === ProcessorType.Stripe;
+	const {
+		metadata: invoiceMetadata,
+		isLoading: metadataLoading,
+		isError: metadataError,
+	} = useInvoiceMetadataQuery({
+		customerId: customer?.id || customer?.internal_id,
+		stripeInvoiceId: invoice?.stripe_id,
+		enabled: invoiceIsStripe && invoice?.status === InvoiceStatus.Paid,
+	});
 
 	const productGroups = useMemo(() => {
 		// Bucket line items by product_id, then group within each bucket.
@@ -169,18 +225,42 @@ export function InvoiceDetailSheet({
 
 	if (!invoice) return null;
 
-	const invoiceProcessor = invoice.processor_type ?? ProcessorType.Stripe;
-	const invoiceIsStripe = invoiceProcessor === ProcessorType.Stripe;
+	const invoiceProcessor = resolveInvoiceProcessor({
+		processorType: invoice.processor_type,
+		metadata: invoiceMetadata,
+	});
 	const processorLabel =
-		invoiceProcessor === ProcessorType.RevenueCat ? "RevenueCat" : "Stripe";
-	const idLabel = `${processorLabel} ID`;
+		invoiceProcessor === ProcessorType.RevenueCat
+			? "RevenueCat"
+			: invoiceProcessor === "vercel"
+				? "Vercel"
+				: "Stripe";
+	// Vercel invoices are still Stripe-ledgered, so the id stays a Stripe id.
+	const idLabel =
+		invoiceProcessor === "vercel" ? "Stripe ID" : `${processorLabel} ID`;
 	const refundableAmount = Math.abs(invoice.amount_paid ?? invoice.total);
 	const isFullyRefunded =
 		invoice.refunded_amount > 0 && invoice.refunded_amount >= refundableAmount;
+	// Vercel invoices before the mapping existed can't be refunded from Autumn.
+	const vercelRefundBlocked =
+		invoiceProcessor === "vercel" && !invoiceMetadata.vercel_invoice_id;
 	const canRefund =
 		invoiceIsStripe &&
 		invoice.status === InvoiceStatus.Paid &&
-		!isFullyRefunded;
+		!isFullyRefunded &&
+		!metadataLoading &&
+		!metadataError &&
+		!vercelRefundBlocked;
+	const canVoid =
+		invoiceIsStripe &&
+		(invoice.status === InvoiceStatus.Open ||
+			invoice.status === InvoiceStatus.Uncollectible);
+	// An open invoice is voided and replaced; a paid one is credited and replaced.
+	// An uncollectible one is rejected.
+	const canReissue =
+		invoiceIsStripe &&
+		(invoice.status === InvoiceStatus.Open ||
+			(invoice.status === InvoiceStatus.Paid && !isFullyRefunded));
 	const stripeConnectViewAsInvoiceLink =
 		invoiceIsStripe && isAdmin && masterStripeAccount?.id && stripeAccount?.id
 			? getStripeConnectViewAsLink({
@@ -390,7 +470,7 @@ export function InvoiceDetailSheet({
 						onClick={handleViewInvoice}
 					>
 						<ArrowSquareOutIcon size={16} className="mr-1.5" />
-						Open Invoice
+						Open
 					</Button>
 				)}
 				{canRefund && (
@@ -401,6 +481,48 @@ export function InvoiceDetailSheet({
 					>
 						<ArrowCounterClockwiseIcon size={16} className="mr-1.5" />
 						Refund Invoice
+					</Button>
+				)}
+				{vercelRefundBlocked && !isFullyRefunded && (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<span className="flex-1">
+								<Button variant="primary" className="w-full" disabled>
+									<ArrowCounterClockwiseIcon size={16} className="mr-1.5" />
+									Refund Invoice
+								</Button>
+							</span>
+						</TooltipTrigger>
+						<TooltipContent className="max-w-64">
+							This Vercel invoice predates refund support in Autumn. Refund it
+							via Vercel support.
+						</TooltipContent>
+					</Tooltip>
+				)}
+				{canReissue && (
+					<Button
+						variant="primary"
+						className="flex-1"
+						onClick={() =>
+							setSheet({
+								type: "invoice-reissue",
+								data: { invoice, lineItems, taxedAmount },
+							})
+						}
+					>
+						<PaperPlaneTiltIcon size={16} className="mr-1.5" />
+						Reissue
+					</Button>
+				)}
+				{canVoid && (
+					<Button
+						variant="destructive"
+						className="flex-1"
+						onClick={() => voidInvoice.mutate()}
+						isLoading={voidInvoice.isPending}
+					>
+						<ProhibitIcon size={16} className="mr-1.5" />
+						Void
 					</Button>
 				)}
 			</div>

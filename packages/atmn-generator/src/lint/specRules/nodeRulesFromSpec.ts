@@ -3,8 +3,9 @@ import {
 	isRecordSchema,
 	type JsonSchema,
 	toCamelCase,
+	toSnakeCase,
 } from "../../casing/schemaKeyCasing";
-import { isInternalField, type Overlay } from "../../overlay/overlay";
+import { isHidden, isInternalField, type Overlay } from "../../overlay/overlay";
 import { resolveRef } from "../../spec/resolveRef";
 import type {
 	FieldConstraints,
@@ -21,7 +22,7 @@ import type {
 
 export type SpecNodeRules = Pick<
 	NodeRules,
-	"required" | "fields" | "keys" | "variants"
+	"required" | "fields" | "keys" | "variants" | "hidden"
 >;
 
 const CONSTRAINT_KEYS = [
@@ -38,6 +39,8 @@ const CONSTRAINT_KEYS = [
 
 type Shape = {
 	required: Set<string>;
+	/** Overlay-hidden fields: a config stating one is refused. */
+	hidden: Set<string>;
 	fields: Record<string, FieldConstraints>;
 	keys?: FieldConstraints;
 	variants?: NodeRules["variants"];
@@ -47,6 +50,7 @@ type Shape = {
 
 const emptyShape = (): Shape => ({
 	required: new Set(),
+	hidden: new Set(),
 	fields: {},
 	children: [],
 });
@@ -134,6 +138,7 @@ const constraintsOf = ({
 
 const mergeInto = ({ target, source }: { target: Shape; source: Shape }) => {
 	for (const field of source.required) target.required.add(field);
+	for (const field of source.hidden) target.hidden.add(field);
 	for (const [field, constraints] of Object.entries(source.fields)) {
 		if (target.fields[field] === undefined) target.fields[field] = constraints;
 	}
@@ -154,6 +159,7 @@ const shapeRulesOf = (shape: Shape): ShapeRules => {
 
 const hasContent = (shape: Shape): boolean =>
 	shape.required.size > 0 ||
+	shape.hidden.size > 0 ||
 	Object.keys(shape.fields).length > 0 ||
 	shape.keys !== undefined ||
 	shape.variants !== undefined;
@@ -166,6 +172,9 @@ const intersectShapes = (shapes: Shape[]): Shape => {
 	for (const field of first.required) {
 		if (rest.every((shape) => shape.required.has(field)))
 			out.required.add(field);
+	}
+	for (const shape of shapes) {
+		for (const field of shape.hidden) out.hidden.add(field);
 	}
 	for (const [field, constraints] of Object.entries(first.fields)) {
 		if (rest.every((shape) => sameValue(shape.fields[field], constraints)))
@@ -213,16 +222,39 @@ const variantsOf = (
 	return { variants: { on, byValue, ...(fallback ? { fallback } : {}) } };
 };
 
-const EXPOSE_NOTHING: Overlay = { collections: {}, exposeInternal: [] };
+/** Overlay `hidden` is keyed by collection then wire path below it. */
+const hiddenAt = ({
+	overlay,
+	wirePath,
+	wireKey,
+}: {
+	overlay: Overlay;
+	wirePath: string;
+	wireKey: string;
+}): boolean => {
+	const [collection, ...rest] = wirePath.split(".").filter(Boolean);
+	if (!collection) return false;
+	const path = [...rest, wireKey].join(".");
+	return isHidden({ overlay, collection, path });
+};
+
+const EXPOSE_NOTHING: Overlay = {
+	collections: {},
+	exposeInternal: [],
+	serverOwnedInternal: {},
+};
 
 const shapeOf = ({
 	schema,
 	root,
 	overlay,
+	wirePath,
 }: {
 	schema: JsonSchema | undefined;
 	root: JsonSchema;
 	overlay: Overlay;
+	/** Wire path from the collection root; hidden entries are keyed by it. */
+	wirePath: string;
 }): Shape => {
 	const resolved = resolveRef({ schema, root });
 	const shape = emptyShape();
@@ -246,6 +278,11 @@ const shapeOf = ({
 			continue;
 		}
 		const name = toCamelCase(wireKey);
+		if (hiddenAt({ overlay, wirePath, wireKey })) {
+			internal.add(wireKey);
+			shape.hidden.add(name);
+			continue;
+		}
 		const constraints = constraintsOf({ schema: property, root });
 		if (constraints) shape.fields[name] = constraints;
 		shape.children.push([name, property]);
@@ -257,15 +294,18 @@ const shapeOf = ({
 	for (const branch of resolved.allOf ?? []) {
 		mergeInto({
 			target: shape,
-			source: shapeOf({ schema: branch, root, overlay }),
+			source: shapeOf({ schema: branch, root, overlay, wirePath }),
 		});
 	}
 
 	const alternatives = alternativesOf({ schema: resolved, root }).map(
-		(branch) => shapeOf({ schema: branch, root, overlay }),
+		(branch) => shapeOf({ schema: branch, root, overlay, wirePath }),
 	);
-	for (const alternative of alternatives)
+	for (const alternative of alternatives) {
 		shape.children.push(...alternative.children);
+		// Hidden is a refusal, so any branch naming it keeps it out of the config.
+		for (const field of alternative.hidden) shape.hidden.add(field);
+	}
 
 	const contentful = alternatives.filter(hasContent);
 	if (contentful.length === 1 && contentful[0]) {
@@ -285,6 +325,7 @@ const shapeOf = ({
 
 const specRulesOf = (shape: Shape): SpecNodeRules | undefined => {
 	const out: Record<string, unknown> = { ...shapeRulesOf(shape) };
+	if (shape.hidden.size > 0) out.hidden = [...shape.hidden].sort();
 	if (shape.keys) out.keys = shape.keys;
 	if (shape.variants) out.variants = shape.variants;
 	return nonEmpty(out) as SpecNodeRules | undefined;
@@ -301,6 +342,10 @@ const intersectSpecRules = (
 		(b.required ?? []).includes(field),
 	);
 	if (required.length > 0) out.required = required;
+	const hidden = [
+		...new Set([...(a.hidden ?? []), ...(b.hidden ?? [])]),
+	].sort();
+	if (hidden.length > 0) out.hidden = hidden;
 	const fields = Object.fromEntries(
 		Object.entries(a.fields ?? {}).filter(([field, constraints]) =>
 			sameValue(b.fields?.[field], constraints),
@@ -332,10 +377,12 @@ export const nodeRulesFromSpec = ({
 	const visit = ({
 		schema: node,
 		path,
+		wirePath,
 		seen,
 	}: {
 		schema: JsonSchema | undefined;
 		path: string;
+		wirePath: string;
 		seen: Set<JsonSchema>;
 	}): void => {
 		const resolved = resolveRef({ schema: node, root });
@@ -343,11 +390,11 @@ export const nodeRulesFromSpec = ({
 		const nextSeen = new Set(seen).add(resolved);
 
 		if (resolved.items) {
-			visit({ schema: resolved.items, path, seen: nextSeen });
+			visit({ schema: resolved.items, path, wirePath, seen: nextSeen });
 			return;
 		}
 
-		const shape = shapeOf({ schema: resolved, root, overlay });
+		const shape = shapeOf({ schema: resolved, root, overlay, wirePath });
 		const rules = specRulesOf(shape);
 		if (rules) emit({ path, rules });
 
@@ -355,12 +402,13 @@ export const nodeRulesFromSpec = ({
 			visit({
 				schema: child,
 				path: path ? `${path}.${segment}` : segment,
+				wirePath: wirePath ? `${wirePath}.${toSnakeCase(segment)}` : segment,
 				seen: nextSeen,
 			});
 		}
 	};
 
-	visit({ schema, path: "", seen: new Set() });
+	visit({ schema, path: "", wirePath: "", seen: new Set() });
 
 	return Object.fromEntries(
 		Object.keys(out)

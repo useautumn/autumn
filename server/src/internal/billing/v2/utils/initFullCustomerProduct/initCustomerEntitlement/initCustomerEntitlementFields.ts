@@ -8,6 +8,7 @@ import {
 	isBooleanEntitlement,
 	isUnlimitedEntitlement,
 } from "@autumn/shared";
+import { isInvoiceCreditEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditEntitlement.js";
 import { entitlementToResetCycleAnchor } from "../cycleAnchorUtils";
 import { initCustomerEntitlementBalance } from "./initCustomerEntitlementBalance";
 import { initCustomerEntitlementNextResetAt } from "./initCustomerEntitlementNextResetAt";
@@ -32,9 +33,7 @@ export const initCustomerEntitlementFields = ({
 		entitlement,
 	});
 	const isBoolean = isBooleanEntitlement({ entitlement });
-	const unlimited = isBoolean
-		? null
-		: isUnlimitedEntitlement({ entitlement });
+	const unlimited = isBoolean ? null : isUnlimitedEntitlement({ entitlement });
 	const usageAllowed = initCustomerEntitlementUsageAllowed({
 		initContext,
 		initOptions,
@@ -60,6 +59,10 @@ export const initCustomerEntitlementFields = ({
 		entitlement,
 		price: relatedPrice,
 	});
+	const invoiceCredit = isInvoiceCreditEntitlement({
+		entitlement,
+		price: relatedPrice,
+	});
 
 	return {
 		internal_customer_id: initContext.fullCustomer.internal_id,
@@ -76,6 +79,7 @@ export const initCustomerEntitlementFields = ({
 		entities,
 		usage_allowed: usageAllowed,
 		separate_interval: separateInterval,
+		invoice_credit: invoiceCredit,
 		reset_cycle_anchor: resetCycleAnchor,
 		next_reset_at: nextResetAt,
 		expires_at: null,

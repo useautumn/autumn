@@ -35,11 +35,13 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import chalk from "chalk";
 import { Freestyle } from "freestyle";
 import {
+	BALANCE_WORKER_PORT,
 	DATABASE_CRITICAL_URL,
 	DATABASE_URL,
 	DYNAMODB_ENDPOINT,
 	EDGE_CONFIG_OVERRIDE_B64,
 	INGRESS_PORT,
+	KAFKA_BROKERS,
 	REDIS_URL,
 	SERVER_PORT,
 	SQS_QUEUE_URL_V2,
@@ -340,6 +342,13 @@ const warmServerEnv = (): Record<string, string> => {
 		TRACK_ASYNC_SQS_QUEUE_URL,
 		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
 		DYNAMODB_ENDPOINT,
+		KAFKA_BROKERS,
+		KAFKA_AUTH_MODE: "none",
+		BALANCE_WORKER_DEPLOYMENT: "local",
+		BALANCE_WORKER_HOST: "127.0.0.1",
+		BALANCE_WORKER_PORT: String(BALANCE_WORKER_PORT),
+		BALANCE_WORKER_SQLITE_PATH: ":memory:",
+		BALANCE_WORKER_CHECKPOINT_MODE: "off",
 		ENCRYPTION_IV: requireSecret("ENCRYPTION_IV"),
 		ENCRYPTION_PASSWORD: requireSecret("ENCRYPTION_PASSWORD"),
 		BETTER_AUTH_SECRET: requireSecret("BETTER_AUTH_SECRET"),
@@ -587,7 +596,7 @@ const refreshWarmSnapshotInBackground = (warmName: string): void => {
 			try {
 				await execOnVm(
 					vm,
-					"pkill -f 'bun src/index.ts' || true; pkill -f 'bun src/workers.ts' || true; pkill -f 'bun src/cron.ts' || true",
+					"pkill -f 'bun src/index.ts' || true; pkill -f 'bun src/workers.ts' || true; pkill -f 'bun src/cron.ts' || true; pkill -f 'bunfig.toml src/main.ts' || true",
 					30_000,
 				);
 				const checkout = await execOnVm(
@@ -655,7 +664,7 @@ export const freestyleProvider: ProviderImpl = {
 				// The resumed app procs hold ports + run OLD code; warmup restarts state.
 				await execOnVm(
 					vm,
-					"pkill -f 'bun src/index.ts' || true; pkill -f 'bun src/workers.ts' || true; pkill -f 'bun src/cron.ts' || true",
+					"pkill -f 'bun src/index.ts' || true; pkill -f 'bun src/workers.ts' || true; pkill -f 'bun src/cron.ts' || true; pkill -f 'bunfig.toml src/main.ts' || true",
 					30_000,
 				);
 				// Check out the TARGET ref before run.ts invokes warmup.sh — otherwise
@@ -739,7 +748,7 @@ export const freestyleProvider: ProviderImpl = {
 			// The snapshot's resumed Autumn app holds :8080 — the ingress needs it.
 			await execOnVm(
 				vmRef.vm,
-				"pkill -f 'bun src/index.ts' || true; pkill -f 'bun src/workers.ts' || true; pkill -f 'bun src/cron.ts' || true",
+				"pkill -f 'bun src/index.ts' || true; pkill -f 'bun src/workers.ts' || true; pkill -f 'bun src/cron.ts' || true; pkill -f 'bunfig.toml src/main.ts' || true",
 				30_000,
 			);
 		} else {
@@ -857,8 +866,10 @@ export const freestyleProvider: ProviderImpl = {
 			}
 		}
 
-		// Bake the RUNNING app into the snapshot: server + SQS workers + cron start
-		// here once, so forks resume them instead of paying ~30s of bun startup each.
+		// Bake the RUNNING app into the snapshot: balance worker + server + SQS
+		// workers + cron start here once, so forks resume them instead of paying
+		// ~30s of bun startup each. The worker is always baked; a run with the
+		// rollout off simply never routes to it.
 		const serverEnv = warmServerEnv();
 		await vm.fs.writeTextFile(VM_ENV_FILE, envFileContent(serverEnv));
 		const appDone = stage(
@@ -875,6 +886,11 @@ export const freestyleProvider: ProviderImpl = {
 				`mkdir -p ${TW_PREFIX}/logs`,
 				`printf '%s' ${shellQuote(serverEnv.STRIPE_SANDBOX_SECRET_KEY)} > ${STRIPE_KEY_FILE}`,
 				`chmod 600 ${STRIPE_KEY_FILE}`,
+				`cd ${REPO_ROOT}/apps/balance-worker`,
+				`nohup bun --config=./bunfig.toml src/main.ts > ${TW_PREFIX}/logs/balance-worker.log 2>&1 &`,
+				'bw=""',
+				`for i in $(seq 1 ${WARM_SERVER_HEALTH_TIMEOUT_S * 2}); do bw=$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://127.0.0.1:${BALANCE_WORKER_PORT}/health || true); [ "$bw" = 200 ] && break; sleep 0.5; done`,
+				`[ "$bw" = 200 ] || { echo "balance worker never became healthy (last=$bw)"; tail -40 ${TW_PREFIX}/logs/balance-worker.log; exit 1; }`,
 				`cd ${REPO_ROOT}/server`,
 				`nohup bun src/index.ts > ${TW_PREFIX}/logs/server.log 2>&1 &`,
 				`nohup bun src/workers.ts > ${TW_PREFIX}/logs/workers.log 2>&1 &`,

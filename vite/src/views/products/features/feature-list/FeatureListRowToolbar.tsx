@@ -1,4 +1,4 @@
-import { type Feature, FeatureType } from "@autumn/shared";
+import type { Feature } from "@autumn/shared";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -8,35 +8,19 @@ import {
 } from "@autumn/ui";
 import { ArchiveRestore, Delete, Pen } from "lucide-react";
 import { useState } from "react";
-import UpdateFeatureSheet from "../components/UpdateFeatureSheet";
-import UpdateCreditSystemSheet from "../credit-systems/components/UpdateCreditSystemSheet";
+import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 import { DeleteFeatureDialog } from "../feature-row-toolbar/DeleteFeatureDialog";
 
 export const FeatureListRowToolbar = ({ feature }: { feature: Feature }) => {
+	const { setQueryStates } = useProductsQueryState();
 	const [dropdownOpen, setDropdownOpen] = useState(false);
-	const [updateOpen, setUpdateOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
-
-	const isCreditSystem = feature.type === FeatureType.CreditSystem;
 
 	const deleteText = feature.archived ? "Unarchive" : "Delete";
 	const DeleteIcon = feature.archived ? ArchiveRestore : Delete;
 
 	return (
 		<>
-			{isCreditSystem ? (
-				<UpdateCreditSystemSheet
-					open={updateOpen}
-					setOpen={setUpdateOpen}
-					selectedCreditSystem={feature}
-				/>
-			) : (
-				<UpdateFeatureSheet
-					open={updateOpen}
-					setOpen={setUpdateOpen}
-					selectedFeature={feature}
-				/>
-			)}
 			<DeleteFeatureDialog
 				feature={feature}
 				open={deleteOpen}
@@ -55,7 +39,7 @@ export const FeatureListRowToolbar = ({ feature }: { feature: Feature }) => {
 							e.stopPropagation();
 							e.preventDefault();
 							setDropdownOpen(false);
-							setUpdateOpen(true);
+							setQueryStates({ feature: feature.id });
 						}}
 					>
 						<div className="flex items-center justify-between w-full gap-2">

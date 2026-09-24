@@ -72,6 +72,7 @@ export const CustomerEntitlementSchema = z.object({
 	// Optional at the model boundary for legacy cached/in-memory objects. The
 	// database column is non-null and defaults to an empty object.
 	usage_attribution: UsageAttributionSchema.optional(),
+	invoice_credit: z.boolean().optional(),
 
 	usage_allowed: z.boolean().nullable(),
 	separate_interval: z.boolean().default(false),

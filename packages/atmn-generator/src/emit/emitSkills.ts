@@ -21,7 +21,7 @@ const AGENT_DOCS_SKILLS = join(
 
 const CLI_PACKAGE_JSON = join(
 	import.meta.dir,
-	"../../../atmn-nightly/package.json",
+	"../../../atmn/package.json",
 );
 
 const FRONTMATTER = /^---\n([\s\S]*?)\n---\n?/;

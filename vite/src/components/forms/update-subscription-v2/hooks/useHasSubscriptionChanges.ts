@@ -14,6 +14,7 @@ import { useMemo } from "react";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import { hasStagedLicenseQuantityChanges } from "@/utils/billing/licenseQuantityUtils";
 import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
+import { billingCycleAnchorChanged } from "../utils/pendingBillingCycleAnchor";
 
 type PrepaidChangeItem = {
 	interval?: ProductItemInterval | null;
@@ -49,6 +50,7 @@ export function useHasSubscriptionChanges({
 	initialPrepaidOptions,
 	initialLicenseQuantities,
 	initialBillingBehavior,
+	pendingBillingCycleAnchor,
 	prepaidItems,
 	customerProduct,
 	currentVersion,
@@ -59,6 +61,7 @@ export function useHasSubscriptionChanges({
 	initialPrepaidOptions: Record<string, number | undefined>;
 	initialLicenseQuantities?: Record<string, number>;
 	initialBillingBehavior: BillingBehavior | null;
+	pendingBillingCycleAnchor: number | null;
 	prepaidItems: PrepaidItemWithFeature[];
 	customerProduct: FullCusProduct;
 	currentVersion: number;
@@ -67,9 +70,15 @@ export function useHasSubscriptionChanges({
 }): boolean {
 	return useMemo(() => {
 		if (formValues.billingBehavior !== initialBillingBehavior) return true;
-		if (formValues.resetBillingCycle) return true;
+		if (
+			billingCycleAnchorChanged({
+				formValues,
+				pendingResetsAt: pendingBillingCycleAnchor,
+			})
+		)
+			return true;
 		if (formValues.noBillingChanges) return true;
-		if (formValues.addLicenses !== null) return true;
+		if (formValues.addLicenses?.length) return true;
 
 		if (
 			hasStagedLicenseQuantityChanges({
@@ -80,6 +89,7 @@ export function useHasSubscriptionChanges({
 			return true;
 
 		if (formValues.discounts?.length > 0) return true;
+		if (formValues.removedRewardIds?.length > 0) return true;
 
 		const trialChanges = generateTrialChanges({
 			customerProduct,
@@ -133,8 +143,12 @@ export function useHasSubscriptionChanges({
 	}, [
 		formValues.billingBehavior,
 		formValues.resetBillingCycle,
+		formValues.billingCycleAnchorMode,
+		formValues.billingCycleAnchorDate,
+		pendingBillingCycleAnchor,
 		formValues.noBillingChanges,
 		formValues.discounts,
+		formValues.removedRewardIds,
 		initialBillingBehavior,
 		formValues.removeTrial,
 		formValues.trialLength,

@@ -13,6 +13,9 @@ export type ApiRequestLogEntry = {
 		org_id: string | null;
 		customer_id: string | null;
 		entity_id: string | null;
+		auth_type: string | null;
+		user_id: string | null;
+		user_email: string | null;
 	};
 	stripe: {
 		event_id: string | null;
@@ -116,6 +119,9 @@ export const projectRequestLog = (match: AxiomMatch): ApiRequestLogEntry => {
 				"context.entity_id",
 				"req.entity_id",
 			]),
+			auth_type: pickString(data, ["auth_type", "context.auth_type"]),
+			user_id: pickString(data, ["user_id", "context.user_id"]),
+			user_email: pickString(data, ["user_email", "context.user_email"]),
 		},
 		stripe: {
 			event_id: pickString(data, ["stripe_event_id", "stripe_event.id"]),

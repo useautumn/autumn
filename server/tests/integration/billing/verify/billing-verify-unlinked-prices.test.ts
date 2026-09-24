@@ -17,6 +17,12 @@
  *       strict -> mismatched.
  *     - Prepaid unlinked with a drifted quantity (total $ differs) -> still
  *       mismatched non-strict (totals comparison, not swallowed).
+ *     - A consumable or allocated price with no stripe_price_id for the
+ *       customer's currency contributes no expected item instead of throwing.
+ *       Non-base-currency prices are materialized in Stripe lazily (at attach /
+ *       migrate, never at catalog init), so an id-less one is normal state for
+ *       an imported customer -> no expected_state_error, and the rest of the
+ *       subscription still gets evaluated instead of being aborted.
  *   Side effects: none — verify stays read-only.
  *
  * Pre-impl red: spec builders throw on missing Stripe ids, so every verify
@@ -25,26 +31,20 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	findPriceByFeatureId,
-	type Price,
-	prices as pricesTable,
-} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { verify } from "@/internal/billing/v2/actions/verify/verify";
 import { CusService } from "@/internal/customers/CusService";
-import { ProductService } from "@/internal/products/ProductService";
 import {
 	corruptStripeSubscription,
 	listActiveStripeSubscriptions,
 } from "../restore/utils/corruptStripeSubscription";
+import { clearPriceStripeIds } from "./utils/clearPriceStripeIds";
 
 const stripeCustomerIdFor = async ({
 	ctx,
@@ -61,43 +61,6 @@ const stripeCustomerIdFor = async ({
 	if (!stripeCustomerId)
 		throw new Error(`Customer ${customerId} has no Stripe customer ID`);
 	return stripeCustomerId;
-};
-
-/** Nulls the given Stripe id slots on a product's price config — simulates a
- * price that was never materialized in Stripe. Returns the old Stripe ids. */
-const clearPriceStripeIds = async ({
-	ctx,
-	productId,
-	featureId,
-	slots,
-}: {
-	ctx: TestContext;
-	productId: string;
-	featureId?: string;
-	slots: string[];
-}): Promise<string[]> => {
-	const fullProduct = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: productId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-	const price = featureId
-		? findPriceByFeatureId({ prices: fullProduct.prices, featureId })
-		: fullProduct.prices.find((candidate) => !candidate.config.feature_id);
-	if (!price) throw new Error(`No matching price on product ${productId}`);
-
-	const config = { ...(price.config as unknown as Record<string, unknown>) };
-	const clearedIds: string[] = [];
-	for (const slot of slots) {
-		if (typeof config[slot] === "string") clearedIds.push(config[slot]);
-		config[slot] = null;
-	}
-	await ctx.db
-		.update(pricesTable)
-		.set({ config: config as Price["config"] })
-		.where(eq(pricesTable.id, price.id));
-	return clearedIds;
 };
 
 /** Clones a live sub item's price into a fresh Stripe price Autumn has never
@@ -428,5 +391,130 @@ test.concurrent(
 					mismatch.type === "prepaid_quantity_mismatch",
 			),
 		).toBe(true);
+	},
+);
+
+// Qontext's report: a usage price whose Stripe price for the customer's currency
+// is materialized lazily (at attach/migrate, never at catalog init), so an
+// imported customer legitimately has an Autumn price with no Stripe link.
+// `removeItemPriceIds` drops the live item too, which is what that state looks
+// like in Stripe: the meter simply does not exist yet.
+const setupUnlinkedUsagePrice = async ({
+	ctx,
+	customerId,
+	productId,
+	featureId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	productId: string;
+	featureId: string;
+}) => {
+	const clearedIds = await clearPriceStripeIds({
+		ctx,
+		productId,
+		featureId,
+		slots: ["stripe_price_id", "stripe_empty_price_id"],
+	});
+	const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
+	const [sub] = await listActiveStripeSubscriptions({ ctx, stripeCustomerId });
+	await corruptStripeSubscription({
+		ctx,
+		subscriptionId: sub.id,
+		mutations: { removeItemPriceIds: clearedIds },
+	});
+	return sub;
+};
+
+test.concurrent(
+	`${chalk.yellowBright("billing-verify unlinked-prices 6: consumable with no Stripe link -> correct, and later drift still caught")}`,
+	async () => {
+		const customerId = "verify-unlinked-consumable";
+
+		const pro = products.pro({
+			id: "pro",
+			items: [items.consumableMessages({ includedUsage: 200, price: 0.1 })],
+		});
+
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		await setupUnlinkedUsagePrice({
+			ctx,
+			customerId,
+			productId: pro.id,
+			featureId: TestFeature.Messages,
+		});
+
+		// ── Contract: the unlinked usage price is expected state, not drift ──
+		const clean = await verify({ ctx, params: { customer_id: customerId } });
+		expect(clean.subscriptions[0].mismatches).toEqual([]);
+		expect(clean.subscriptions[0].status).toBe("correct");
+
+		// ── Contract: evaluation continues past the skipped item — drift added
+		// afterwards is still reported, not swallowed with it ───────────────
+		const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
+		const [sub] = await listActiveStripeSubscriptions({
+			ctx,
+			stripeCustomerId,
+		});
+		const baseItem = sub.items.data[0];
+		if (!baseItem) throw new Error("Expected a base item on the sub");
+		const foreignPrice = await createUnlinkedClone({ ctx, item: baseItem });
+		await corruptStripeSubscription({
+			ctx,
+			subscriptionId: sub.id,
+			mutations: { addItems: [{ price: foreignPrice.id, quantity: 1 }] },
+		});
+
+		const drifted = await verify({
+			ctx,
+			params: { customer_id: customerId, strict: true },
+		});
+		expect(drifted.subscriptions[0].status).toBe("mismatched");
+		expect(
+			drifted.subscriptions[0].mismatches.some(
+				(mismatch) =>
+					mismatch.type === "item_mismatch" && mismatch.reason === "unexpected",
+			),
+		).toBe(true);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("billing-verify unlinked-prices 7: allocated with no Stripe link -> correct, no expected_state_error")}`,
+	async () => {
+		const customerId = "verify-unlinked-allocated";
+
+		const pro = products.pro({
+			id: "pro",
+			items: [items.allocatedV2Users({ includedUsage: 0, pricePerUnit: 10 })],
+		});
+
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		await setupUnlinkedUsagePrice({
+			ctx,
+			customerId,
+			productId: pro.id,
+			featureId: TestFeature.Users,
+		});
+
+		const result = await verify({ ctx, params: { customer_id: customerId } });
+		expect(result.subscriptions[0].mismatches).toEqual([]);
+		expect(result.subscriptions[0].status).toBe("correct");
 	},
 );

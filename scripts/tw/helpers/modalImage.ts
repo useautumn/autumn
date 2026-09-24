@@ -11,6 +11,7 @@
  *     db `autumn` created with `CREATE EXTENSION pg_trgm` on an EMPTY schema
  *   - Dragonfly  → /opt/autumn-tw/bin/dragonfly
  *   - goaws (native Go SQS, via crane) → /opt/autumn-tw/bin/goaws
+ *   - Redpanda (native Kafka, via crane) → /opt/redpanda (its wrappers hardcode it)
  *   - goaws config → /opt/autumn-tw/goaws/goaws.yaml (port 9324, AccountId
  *     "000000000000", EnableDuplicates env-level, queues autumn.fifo +
  *     autumn-track.fifo + autumn-track-async)
@@ -81,6 +82,8 @@ const CRANE_URL =
 const GOAWS_IMAGE = "admiralpiett/goaws:latest";
 const DYNOXIDE_URL =
 	"https://github.com/nubo-db/dynoxide/releases/download/v0.13.0/dynoxide-x86_64-unknown-linux-musl.tar.gz";
+/** Pinned with build-base.sh / freestyle-base.sh; the balance worker's log. */
+const REDPANDA_IMAGE = "docker.redpanda.com/redpandadata/redpanda:v26.2.3";
 
 /** Fixed layout — must match build-base.sh / start-services.sh exactly. */
 const TW_PREFIX = "/opt/autumn-tw";
@@ -153,6 +156,15 @@ export const buildBaseImage = (
 					"tar -xzf /tmp/dx.tar.gz -C /tmp && " +
 					"install -m0755 \"$(find /tmp -type f -name 'dynoxide*' ! -name '*.tar.gz' | head -1)\" " +
 					`${TW_PREFIX}/bin/dynoxide && rm -f /tmp/dx.tar.gz`,
+			])
+			// 4c. Redpanda (native Kafka) for the balance worker. apache/kafka is a
+			//     JVM app; Redpanda's /opt/redpanda tree is self-contained (bundled
+			//     libs) and its wrapper scripts hardcode that path, so it is
+			//     extracted whole via crane.
+			.dockerfileCommands([
+				`RUN crane export ${REDPANDA_IMAGE} /tmp/rp.tar && ` +
+					"tar -xf /tmp/rp.tar -C / opt/redpanda && rm /tmp/rp.tar && " +
+					"/opt/redpanda/bin/rpk version >/dev/null",
 			])
 			// 5. goaws config — port 9324 + AccountId "000000000000" + FIFO queues +
 			//    Standard autumn-track-async (TRACK_ASYNC_STANDARD_SQS_QUEUE_URL).

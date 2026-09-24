@@ -6,6 +6,8 @@ Autumn converts the token counts to a dollar cost server-side using live [models
 
 ## Install
 
+Requires Node.js 22+ and ESM imports. The AI SDK adapter targets AI SDK 7 and V4 language models; AI SDK 6 applications should stay on the previous gateway release.
+
 ```bash
 npm install @useautumn/gateway
 # or
@@ -30,7 +32,9 @@ const { text } = await generateText({ model, prompt: "Hello!" });
 // usage tracked automatically — streaming too
 ```
 
-The wrapped model is a drop-in `LanguageModelV3`. Usage is read from the response (or the stream's finish chunk) and reported as `<provider>/<model>` (e.g. `anthropic/claude-sonnet-4-5`). If your provider's name doesn't match its models.dev key, override it with `providerId`.
+The wrapped model is a drop-in `LanguageModelV4`. Usage is read per model call from the response (or the stream's finish chunk), including each step in a tool loop, and reported as `<provider>/<model>` (e.g. `anthropic/claude-sonnet-4-5`). Tracking does not use AI SDK 7's aggregated top-level `result.usage`.
+
+OpenAI, Anthropic, and Google provider names are normalized automatically: plain names and dotted SDK namespaces such as `openai.responses`, `anthropic.messages`, and `google.generative-ai` use their models.dev provider keys. Vercel's `gateway` namespace maps to `vercel`. Model IDs retain all dots and slashes. Other provider names pass through unchanged; use `providerId` for a custom mapping. Explicit overrides are always used verbatim.
 
 ## OpenRouter
 

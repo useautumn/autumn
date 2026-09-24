@@ -1,0 +1,196 @@
+---
+title: "Rebuilding our onboarding for agents"
+description: "How we revamped every layer of our stack, from the API to skills and evals, to help agents handle onboarding end to end."
+date: "2026-09-20"
+author: "John"
+image: "/images/blog/rebuilding-onboarding-for-agents/cover.png"
+imageScale: 0.9
+slug: "rebuilding-onboarding-for-agents"
+---
+
+We revamped our onboarding for the 6th time this month, but for the first time it was designed for agents to handle end to end. Agents are vastly different to humans, and there aren't really established best practices on how to build for them, so a lot of thought and experiment went into figuring this out.
+
+This meant rethinking each layer of the stack: from our API to the skills and tools given to the agent. If even one layer isn't optimized, you end up compensating in the layer above. For eg. an awkward API means stuffing your skills with weird workarounds. We learnt and did a bunch of interesting things along the way so I wanted to share them!
+
+To set the scene, here's how our onboarding works at a high level:
+
+<OnboardingDiagram />
+
+We'll primarily talk about the catalog step since it's the most complex part and basically 90% of our onboarding. It essentially involves translating your pricing into the Autumn data model.
+
+Now, basic cases like a $20/mo Pro plan with credits can usually be one-shotted, even without skills. The complex part is the long tail of edge cases like seat-based pricing, pooling credits at the org level, etc. that can sometimes be non-intuitive and therefore cause agents to trip up. What's even more complex is that the agent in this case is almost a 'middleman', where it's job is to ask the user the right questions to figure out what their pricing model is and how it should be modelled in Autumn. That's where they really trip up, so let's dive into how we solved this.
+
+---
+
+## It starts with the API
+
+The first layer we needed to rethink was our API. With humans, the onboarding was a lot more granular. We'd walk them step by step on the dashboard through a workflow which we felt most appropriate. It looked something like this:
+
+<DashboardCatalogDiagram />
+
+Agents on the other hand, consume information very differently to humans. It's also much better at writing code / config than making a series of tool calls. So the flow we designed for them was to build the user's catalog through a config file and use our CLI to push it (like terraform):
+
+<AgentCatalogDiagram />
+
+Originally, our API was optimized for the human workflow so managing your catalog meant calling granular endpoints like `/v1/features.{get,create,update}` and `/v1/plans.{get,create,update}`. With the agent however, they would work out the catalog as a whole before applying it to Autumn and it became clear pretty quickly that granular endpoints were the wrong abstraction.
+
+Apart from unnecessary round trips, the abstraction primarily broke because it treated each plan and feature as an individual resource and missed the relationships between them. For instance, say you’re creating a new plan with a new feature: the feature needs to exist before the plan can reference it, so the order by which you make these feature and plan calls matter.
+
+This is just a simple example, but we ultimately found ourselves frontloading pretty complicated logic to the CLI, which made things messy and unmaintainable. To solve this, we built a unified endpoint, `catalog.update`, which lets the user essentially create, delete and update features and plans all in one go. It takes the full catalog state and handles the relationships and validation server-side.
+
+### Agents require different modalities (config vs dashboard)
+
+With the `catalog.update` endpoint, because it's a superset over `features.update` and `plans.update`, we were elated because we thought that we could use it in our dashboard as well, and have a single source of truth for managing catalog logic, with the CLI and dashboard becoming thin interfaces over it.
+
+<SharedCatalogApiDiagram />
+
+However, there was one fundamental difference between a human+dashboard vs agent+config workflow which we couldn't reconcile: side effects.
+
+In the dashboard, a human updates one plan at a time, then decides how that change should affect other plans and customers. Let's say you add 100 messages to a pro plan, the user then decides through a series of questions:
+
+1. Should the changes propagate to sibling versions and variants?
+2. Should we migrate existing customers?
+3. Should it create a new version or update the existing one?
+
+Originally, we tried to integrate these questions into the CLI push flow as flags. However, this was pretty problematic for a couple of reasons. First of all, the agent needed to figure out what side effects its changes might have, then ask the user how they wanted to handle them. Secondly, it meant the config file was no longer the only place where changes to a plan could be defined. The server could make additional changes that weren’t reflected in the config, which we’d then need to pull back into the file. All of this created a ton of friction with the agent+config flow.
+
+So our solution was to give `catalog.update` two modes: `PATCH` for the dashboard flow, where you make a change and specify what else it should affect, and `PUT` for the config flow, where you define the full catalog state and apply it. For example, if the agent wants to add a feature to a plan and all its versions, it makes that change on each version in the config:
+
+<CatalogUpdateModesDiagram />
+
+This made applying config changes to Autumn way more straightforward for the agent. We’d cut out the intermediate steps it previously had to deal with, and the config remained the one source of truth for the catalog.
+
+---
+
+## The skill layer
+
+With the API in good shape, the next layer for us to focus on was our agent skills. I can't overstate how important these are for agent onboarding. In a dashboard, you guide the user through a sequence of screens and decisions. With an agent, that structure lives in the skill: how to guide the conversation, what to ask, and in what order. It's like a blueprint for your onboarding and needs the same level of care and thought you'd put into designing a dashboard flow.
+
+### Treat skills like an engineering problem
+
+With Autumn, a big challenge we faced was the variety of pricing models users brought to us, and how tricky they could be to express as config. For example, imagine you want to implement auto top ups. If these top up prices / quantities were specific to each plan, you'd model it as an item within each plan, but if they were common across all your plans, it's better modelled as a single add on plan.
+
+<CatalogTopupDiagram />
+
+To help the agent handle these nuances, we had to start treating the skill as a well defined workflow rather than a knowledge base. Essentially making it as deterministic as possible. This is the process we came up with:
+
+<CatalogSkillWorkflowDiagram />
+
+Interestingly, approaching the skill this way felt much more like writing code, where we could use familiar primitives like loops and functions. For instance, in the diagram above, when the agent reaches the seat-based pricing branch, it reads `fork-licences.md`, which contains its own workflow for how to handle licenses (what to ask the user, how to model their answers, etc.). This is very much like calling a function!
+
+### Real value comes from being able to handle edge cases
+
+LLMs are powerful. Even without skills, they can probably handle the first 90% of cases. If we ask an agent to build a “Pro plan for $20/mo, with 500 credits/mo,” it'll definitely get it right. The real value of skills is in teaching agents how to handle that last 10% of edge cases, which can ruin the product experience if tripped up on.
+
+Iterating on these cases manually is tedious and flaky though, and the solution to this is evals. As a billling platform, we invest a ton of time into integration tests and built our own framework that let us easily model a scenario and test it. I wrote about this [here](https://useautumn.com/blog/inching-towards-a-software-factory#building-an-internal-testing-framework). Given the success we've had there, we took a similar approach with our evals. We built a bunch of fixtures to let us quickly define in a structured way:
+
+1. The target config we expect the agent to produce
+2. A simulated user with a goal and a set of facts to answer questions from
+3. An LLM judge to check how the agent handled the conversation
+
+Here's an example of one of these:
+
+<EvalCodeExample>
+
+```tsx title="missingPrice.eval.ts"
+const missingPrice = defineCase({
+  name: "missing-plan-prices",
+  prompt: [
+    "Set up Pro with 500 AI messages a month, and Growth with 2,000.",
+    "No overage, free plan, or trials.",
+  ].join(" "),
+  simulatedUser: {
+    goal: "Get Pro and Growth set up in Autumn without using the dashboard.",
+    facts: [
+      "Pro costs $20/month and includes 500 AI messages/month.",
+      "Growth costs $50/month and includes 2,000 AI messages/month.",
+      "No overage, free plan, or trials.",
+    ].join("\n"),
+  },
+  expect: [
+    ...judge.conversation({
+      "asked for the prices":
+        "Did the agent ask what the plans cost before writing the config?",
+    }),
+    ...catalog({
+      plans: {
+        Pro: {
+          price: { amount: 20, interval: "month" },
+          items: [{ included: 500, reset: { interval: "month" } }],
+        },
+        Growth: {
+          price: { amount: 50, interval: "month" },
+          items: [{ included: 2000, reset: { interval: "month" } }],
+        },
+      },
+    }),
+  ],
+});
+```
+
+</EvalCodeExample>
+
+A couple of learnings from building these evals:
+
+1. It's important to keep the eval as close to the real thing as possible. Our evals are run using a real agent environment. Each run creates a temporary folder with `atmn` installed, connected to a lightweight Autumn org, and a real Claude Code session is started using the SDK, with our skills installed. The agent operates exactly as it would in your own terminal.
+
+2. A realistic onboarding involves multiple back and forths between the user and an agent. In order to set this up, we had to simulate a user by using a lightweight LLM, handing it facts and a goal (the target pricing model), and letting it drive the conversation.
+
+3. You can't just rely on the scores of the eval. You also need to follow the conversation and get a feel for what onboarding with the agent is actually like. To do this, we made each run print the full conversation and tool calls in real time, much like you'd see in your own terminal. This made it easier to understand where the agent got stuck, or where the flow felt awkward even when the final config was correct.
+
+<EvalConversation />
+
+### Keeping our skills DRY
+
+The last problem we faced when writing our skills was keeping it DRY. When we first wrote them, we realized that a lot of the things we were writing, especially on the knowlege capture (as opposed to process definition) side was already written in our docs. Eventually, this became quite difficult to maintain because there were now separate sources of truths for our "docs" which could diverge or go stale.
+
+We initially tried solving this by simply linking our docs within the agent skills. However, this caused a couple of issues:
+
+1. Some content needs to be rewritten for agents. Agents and humans understand things differently. With a human, you need to try and 'teach' them a concept, for eg. using analogies. These aren't optimal for an agent. Instead, things that aren't intuitive to a human, like data models, structures and relationships, are often understood well by agents
+
+2. Pasting a link within the skill and hoping the agent makes a web fetch to read it hasn't been very reliable in our testing. The agent is way more likely to use the contents of the docs if it's pasted directly in the main `SKILL.md`, or a reference file.
+
+3. It's not just deduplication between our docs and skills that we needed to solve. We often found ourselves writing the same knowledge in different skills.
+
+Our final solution which we found worked quite well was having a central package in our monorepo called `agent-docs`. In here, each skill is written as an mdx file, where we have custom tags to reference other sections in our docs, or sections in other skills. We then have a small parser which reads in these mdx files and converts them into the final skill for agents. Here's a diagram of how it works:
+
+<AgentDocsDiagram />
+
+Ultimately, this allowed us to be extremely intentional about what knowledge we wanted to write for the agent, and what we reused from our docs or other skills, which we could choose to either put inline (for the more essential ones), or in reference.md files. All while keeping our docs DRY!
+
+---
+
+## Putting it together
+
+Finally, all that's left is orchestrating the various layers into one smooth onboarding. The aim here was to allow an agent to complete our onboarding end to end, with no human intervention (except asking questions abour their pricing model). To do this, there was just one missing piece left: allowing an agent to onboard without a human.
+
+### Implementing agent auth
+
+There's an auth protocol being devloped by WorkOS called auth.md, which defines the different ways an agent can sign up for a service on its own (on the user's behalf). For our use case, this is how it would've worked:
+
+<AuthMdDiagram />
+
+*Source: [WorkOS’s user-claimed flow](https://workos.com/auth-md/docs/flows/claimed), using an anonymous start.*
+
+We tried to follow this flow as closely as possible, but made slight customizations due to the nature of our app:
+
+1. The main actor in Autumn is an organization. Users mainly exist to sign in and join teams, while the catalog and billing resources belong to the org.
+2. We're primarily an API, so to onboard you need an org API key to manage your catalog and integrate Autumn into your app (eg. creating customers and subscriptions)
+
+Since the agent would need a key regardless, and it's all the agent really needs, instead of issuing an oauth access token in the beginning, we simply provision an org and API key for an agent. Afterwards, the claim flow is the same. Here's a diagram of how our version works:
+
+<AutumnKeylessDiagram />
+
+### Building the setup skill
+
+With agent auth built, we could finally package everything up nicely into one setup skill, which looked like this:
+
+<SetupWorkflowDiagram />
+
+And just like that, our onboarding is now a simple copy and paste into your favourite agent:
+
+```
+Add Autumn billing to my app: https://useautumn.com/SKILL.md
+```
+
+Try it out for yourself to let us know how it goes :)

@@ -1,0 +1,1067 @@
+import { expect, test } from "bun:test";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { runPull } from "../src/actions/pull";
+import { AutumnApiError, type AutumnClient } from "../src/generated/client";
+import { createPrompter } from "../src/prompt/prompt";
+
+/**
+ * Pull against a fake client: preview and catalog responses are canned
+ * camelCase objects shaped like the generated response types, so the whole
+ * reversal runs without a server.
+ */
+
+const tempDir = ({ name }: { name: string }): string => {
+	const dir = join(import.meta.dir, ".tmp", `pull-${name}`);
+	mkdirSync(dir, { recursive: true });
+	return dir;
+};
+
+const writeConfig = ({ dir, text }: { dir: string; text: string }): string => {
+	const path = join(dir, "autumn.config.ts");
+	writeFileSync(path, text, "utf8");
+	return path;
+};
+
+const fakeClient = ({
+	preview,
+	catalog,
+}: {
+	preview: unknown;
+	catalog: unknown;
+}): AutumnClient =>
+	({
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
+		diff: async () => preview,
+		update: async () => ({}),
+		get: async () => catalog,
+	}) as unknown as AutumnClient;
+
+/** A terminal that answers every question with `answer`. */
+const answering = (answer: string) =>
+	createPrompter({
+		interactive: true,
+		write: () => {},
+		readLine: async () => answer,
+	});
+
+const seatsRow = {
+	id: "seats",
+	name: "Seats",
+	type: "boolean",
+	consumable: false,
+	archived: false,
+};
+
+const messagesRow = {
+	id: "messages",
+	name: "Messages",
+	type: "metered",
+	consumable: true,
+	archived: false,
+};
+
+test("a delete-action appends the server row into an inline array", async () => {
+	const dir = tempDir({ name: "delete-append" });
+	const path = writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [],",
+			"});",
+			"",
+		].join("\n"),
+	});
+	let output = "";
+	const result = await runPull({
+		client: fakeClient({
+			preview: { features: [{ featureId: "messages", action: "delete" }] },
+			catalog: { features: [messagesRow], plans: [] },
+		}),
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+	});
+
+	expect(result).toEqual({
+		configPath: path,
+		appended: ["messages"],
+		replaced: [],
+		deleted: [],
+	});
+	expect(output).toBe("+ messages\nPulled.\n");
+	expect(readFileSync(path, "utf8")).toBe(
+		[
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [",
+			"\t\tfeature({",
+			'\t\t\tname: "Messages",',
+			'\t\t\ttype: "metered",',
+			"\t\t\tconsumable: true,",
+			'\t\t\tfeatureId: "messages",',
+			"\t\t}),",
+			"\t],",
+			"});",
+			"",
+		].join("\n"),
+	);
+
+	const module = await import(`${path}?v=pulled`);
+	const wire = module.default as { features: Record<string, unknown>[] };
+	expect(wire.features).toHaveLength(1);
+	expect(wire.features[0]).toEqual({
+		name: "Messages",
+		type: "metered",
+		consumable: true,
+		feature_id: "messages",
+	});
+});
+
+test("an update-action replaces an inline fixture, leaving the rest byte-identical", async () => {
+	const dir = tempDir({ name: "update-inline" });
+	const path = writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"// a comment that must survive",
+			"export default atmn({",
+			"\tfeatures: [",
+			"\t\tfeature({",
+			'\t\t\tfeatureId: "seats",',
+			'\t\t\tname: "Seats",',
+			'\t\t\ttype: "boolean",',
+			"\t\t}),",
+			"\t\tfeature({",
+			'\t\t\tfeatureId: "messages",',
+			'\t\t\tname: "Messages",',
+			'\t\t\ttype: "metered",',
+			"\t\t\tconsumable: false,",
+			"\t\t}),",
+			"\t],",
+			"});",
+			"",
+		].join("\n"),
+	});
+	let output = "";
+	const result = await runPull({
+		client: fakeClient({
+			preview: { features: [{ featureId: "messages", action: "update" }] },
+			catalog: { features: [seatsRow, messagesRow], plans: [] },
+		}),
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+	});
+
+	expect(result.replaced).toEqual(["messages"]);
+	expect(result.appended).toEqual([]);
+	expect(result.deleted).toEqual([]);
+	expect(output).toBe("~ messages\nPulled.\n");
+	expect(readFileSync(path, "utf8")).toBe(
+		[
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"// a comment that must survive",
+			"export default atmn({",
+			"\tfeatures: [",
+			"\t\tfeature({",
+			'\t\t\tfeatureId: "seats",',
+			'\t\t\tname: "Seats",',
+			'\t\t\ttype: "boolean",',
+			"\t\t}),",
+			"\t\tfeature({",
+			'\t\t\tname: "Messages",',
+			'\t\t\ttype: "metered",',
+			"\t\t\tconsumable: true,",
+			'\t\t\tfeatureId: "messages",',
+			"\t\t}),",
+			"\t],",
+			"});",
+			"",
+		].join("\n"),
+	);
+
+	const module = await import(`${path}?v=pulled`);
+	const wire = module.default as { features: Record<string, unknown>[] };
+	expect(wire.features).toHaveLength(2);
+	expect(wire.features[0]).toEqual({
+		feature_id: "seats",
+		name: "Seats",
+		type: "boolean",
+	});
+	expect(wire.features[1]).toEqual({
+		name: "Messages",
+		type: "metered",
+		consumable: true,
+		feature_id: "messages",
+	});
+});
+
+test("an update-action replaces an exported fixture in its own file, not the config", async () => {
+	const dir = tempDir({ name: "update-exported" });
+	const featuresPath = join(dir, "features.ts");
+	writeFileSync(
+		featuresPath,
+		[
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export const seats = feature({",
+			'\tfeatureId: "seats",',
+			'\tname: "Seats",',
+			'\ttype: "boolean",',
+			"});",
+			"",
+		].join("\n"),
+		"utf8",
+	);
+	const path = writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { seats } from "./features";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [seats],",
+			"});",
+			"",
+		].join("\n"),
+	});
+	const configBefore = readFileSync(path, "utf8");
+	let output = "";
+	const result = await runPull({
+		client: fakeClient({
+			preview: { features: [{ featureId: "seats", action: "update" }] },
+			catalog: { features: [seatsRow], plans: [] },
+		}),
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+	});
+
+	expect(result.replaced).toEqual(["seats"]);
+	expect(output).toBe("~ seats\nPulled.\n");
+	expect(readFileSync(path, "utf8")).toBe(configBefore);
+	expect(readFileSync(featuresPath, "utf8")).toBe(
+		[
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export const seats = feature({",
+			'\tname: "Seats",',
+			'\ttype: "boolean",',
+			"\tconsumable: false,",
+			'\tfeatureId: "seats",',
+			"});",
+			"",
+		].join("\n"),
+	);
+
+	const module = await import(`${featuresPath}?v=pulled`);
+	const seats = module.seats as Record<string, unknown>;
+	expect(seats.featureId).toBe("seats");
+	expect(seats.consumable).toBe(false);
+});
+
+test("a create-action removes an inline fixture with its comma", async () => {
+	const dir = tempDir({ name: "create-inline" });
+	const path = writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [",
+			"\t\tfeature({",
+			'\t\t\tfeatureId: "seats",',
+			'\t\t\tname: "Seats",',
+			'\t\t\ttype: "boolean",',
+			"\t\t}),",
+			"\t\tfeature({",
+			'\t\t\tfeatureId: "messages",',
+			'\t\t\tname: "Messages",',
+			'\t\t\ttype: "metered",',
+			"\t\t\tconsumable: true,",
+			"\t\t}),",
+			"\t],",
+			"});",
+			"",
+		].join("\n"),
+	});
+	let output = "";
+	const result = await runPull({
+		client: fakeClient({
+			preview: {
+				features: [
+					{ featureId: "seats", action: "none" },
+					{ featureId: "messages", action: "create" },
+				],
+			},
+			catalog: { features: [seatsRow], plans: [] },
+		}),
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+	});
+
+	expect(result.deleted).toEqual(["messages"]);
+	expect(output).toBe("- messages\nPulled.\n");
+	expect(readFileSync(path, "utf8")).toBe(
+		[
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [",
+			"\t\tfeature({",
+			'\t\t\tfeatureId: "seats",',
+			'\t\t\tname: "Seats",',
+			'\t\t\ttype: "boolean",',
+			"\t\t}),",
+			"\t],",
+			"});",
+			"",
+		].join("\n"),
+	);
+
+	const module = await import(`${path}?v=pulled`);
+	const wire = module.default as { features: Record<string, unknown>[] };
+	expect(wire.features).toHaveLength(1);
+	expect(wire.features[0]).toEqual({
+		feature_id: "seats",
+		name: "Seats",
+		type: "boolean",
+	});
+});
+
+test("a create-action removes the export, the import and the array entry", async () => {
+	const dir = tempDir({ name: "create-exported" });
+	const featuresPath = join(dir, "features.ts");
+	writeFileSync(
+		featuresPath,
+		[
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export const seats = feature({",
+			'\tfeatureId: "seats",',
+			'\tname: "Seats",',
+			'\ttype: "boolean",',
+			"});",
+			"",
+			"export const messages = feature({",
+			'\tfeatureId: "messages",',
+			'\tname: "Messages",',
+			'\ttype: "metered",',
+			"\tconsumable: true,",
+			"});",
+			"",
+		].join("\n"),
+		"utf8",
+	);
+	const path = writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { messages, seats } from "./features";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [seats, messages],",
+			"});",
+			"",
+		].join("\n"),
+	});
+	let output = "";
+	const result = await runPull({
+		client: fakeClient({
+			preview: { features: [{ featureId: "messages", action: "create" }] },
+			catalog: { features: [], plans: [] },
+		}),
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+	});
+
+	expect(result.deleted).toEqual(["messages"]);
+	expect(output).toBe("- messages\nPulled.\n");
+	expect(readFileSync(featuresPath, "utf8")).toBe(
+		[
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export const seats = feature({",
+			'\tfeatureId: "seats",',
+			'\tname: "Seats",',
+			'\ttype: "boolean",',
+			"});",
+			"",
+			"",
+		].join("\n"),
+	);
+	expect(readFileSync(path, "utf8")).toBe(
+		[
+			'import { atmn } from "../../../src/generated/wire";',
+			// removeSpecifierEdit drops the specifier plus one comma, so the
+			// remaining one keeps its original leading space.
+			'import { seats } from "./features";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [seats],",
+			"});",
+			"",
+		].join("\n"),
+	);
+
+	const module = await import(`${path}?v=pulled`);
+	const wire = module.default as { features: Record<string, unknown>[] };
+	expect(wire.features).toHaveLength(1);
+	expect(wire.features[0]).toEqual({
+		feature_id: "seats",
+		name: "Seats",
+		type: "boolean",
+	});
+});
+
+test("a none-action changes nothing and reports nothing to pull", async () => {
+	const dir = tempDir({ name: "none" });
+	const path = writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [",
+			"\t\tfeature({",
+			'\t\t\tfeatureId: "seats",',
+			'\t\t\tname: "Seats",',
+			'\t\t\ttype: "boolean",',
+			"\t\t}),",
+			"\t],",
+			"});",
+			"",
+		].join("\n"),
+	});
+	const before = readFileSync(path, "utf8");
+	let output = "";
+	const result = await runPull({
+		client: fakeClient({
+			preview: { features: [{ featureId: "seats", action: "none" }] },
+			catalog: { features: [seatsRow], plans: [] },
+		}),
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+	});
+
+	expect(result.appended).toEqual([]);
+	expect(result.replaced).toEqual([]);
+	expect(result.deleted).toEqual([]);
+	expect(output).toBe("Nothing to pull.\n");
+	expect(readFileSync(path, "utf8")).toBe(before);
+});
+
+test("includeMappings drops processors by default and keeps them when set", async () => {
+	const row = {
+		...messagesRow,
+		id: "api_calls",
+		name: "API Calls",
+		processors: { stripe: { productId: "prod_123", meterId: "meter_456" } },
+	};
+	const preview = { features: [{ featureId: "api_calls", action: "delete" }] };
+	const catalog = { features: [row], plans: [] };
+
+	const offDir = tempDir({ name: "mappings-off" });
+	const offPath = writeConfig({
+		dir: offDir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [],",
+			"});",
+			"",
+		].join("\n"),
+	});
+	await runPull({
+		client: fakeClient({ preview, catalog }),
+		cwd: offDir,
+		write: () => {},
+	});
+	const offText = readFileSync(offPath, "utf8");
+	expect(offText).not.toContain("processors");
+	const offModule = await import(`${offPath}?v=pulled`);
+	const offWire = offModule.default as {
+		features: Record<string, unknown>[];
+	};
+	expect(offWire.features[0]).toEqual({
+		name: "API Calls",
+		type: "metered",
+		consumable: true,
+		feature_id: "api_calls",
+	});
+
+	const onDir = tempDir({ name: "mappings-on" });
+	const onPath = writeConfig({
+		dir: onDir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [],",
+			"});",
+			"",
+		].join("\n"),
+	});
+	await runPull({
+		client: fakeClient({ preview, catalog }),
+		cwd: onDir,
+		includeMappings: true,
+		write: () => {},
+	});
+	const onText = readFileSync(onPath, "utf8");
+	expect(onText).toContain(
+		[
+			"\t\t\tprocessors: {",
+			"\t\t\t\tstripe: {",
+			'\t\t\t\t\tproductId: "prod_123",',
+			'\t\t\t\t\tmeterId: "meter_456",',
+			"\t\t\t\t},",
+			"\t\t\t},",
+		].join("\n"),
+	);
+	const onModule = await import(`${onPath}?v=pulled`);
+	const onWire = onModule.default as {
+		features: Record<string, unknown>[];
+	};
+	expect(onWire.features[0]).toEqual({
+		name: "API Calls",
+		type: "metered",
+		consumable: true,
+		feature_id: "api_calls",
+		processors: {
+			stripe: { product_id: "prod_123", meter_id: "meter_456" },
+		},
+	});
+});
+
+test("an archived server row with a delete-action is not appended", async () => {
+	const dir = tempDir({ name: "archived" });
+	const path = writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [],",
+			"});",
+			"",
+		].join("\n"),
+	});
+	const before = readFileSync(path, "utf8");
+	let output = "";
+	const result = await runPull({
+		client: fakeClient({
+			preview: { features: [{ featureId: "messages", action: "delete" }] },
+			catalog: {
+				features: [{ ...messagesRow, archived: true }],
+				plans: [],
+			},
+		}),
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+	});
+
+	expect(result.appended).toEqual([]);
+	expect(output).toBe("Nothing to pull.\n");
+	expect(readFileSync(path, "utf8")).toBe(before);
+});
+
+test("a fixture that is not a plain literal stops the pull before any write", async () => {
+	const { runPull, UnlocatableFixturesError } = await import(
+		"../src/actions/pull"
+	);
+	const dir = `${import.meta.dir}/.tmp/pull-unlocatable`;
+	const { mkdirSync, readFileSync, writeFileSync } = await import("node:fs");
+	mkdirSync(dir, { recursive: true });
+	const configPath = `${dir}/autumn.config.ts`;
+	const before = [
+		'import { feature } from "../../../src/generated/features";',
+		'import { atmn } from "../../../src/generated/wire";',
+		"",
+		'const ids = ["seats"];',
+		"export default atmn({",
+		"\tfeatures: ids.map((id) =>",
+		'\t\tfeature({ featureId: id, name: "Seats", type: "boolean" }),',
+		"\t),",
+		"});",
+		"",
+	].join("\n");
+	writeFileSync(configPath, before, "utf8");
+
+	const client = {
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
+		diff: async () => ({
+			features: [{ featureId: "seats", action: "update" }],
+			plans: [],
+		}),
+		update: async () => ({}),
+		get: async () => ({
+			features: [
+				{
+					id: "seats",
+					name: "Seats (server)",
+					type: "boolean",
+					consumable: false,
+					archived: false,
+				},
+			],
+			plans: [],
+		}),
+	};
+
+	await expect(
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		runPull({ client: client as any, cwd: dir, write: () => {} }),
+	).rejects.toBeInstanceOf(UnlocatableFixturesError);
+	await expect(
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		runPull({ client: client as any, cwd: dir, write: () => {} }),
+	).rejects.toThrow(/features "seats": replace with the server's copy/);
+	expect(readFileSync(configPath, "utf8")).toBe(before);
+});
+
+test("a first pull scaffolds the config and fills it from the server", async () => {
+	const { runPull } = await import("../src/actions/pull");
+	const { existsSync, rmSync } = await import("node:fs");
+	const dir = `${import.meta.dir}/.tmp/pull-first`;
+	rmSync(dir, { recursive: true, force: true });
+	const { mkdirSync } = await import("node:fs");
+	mkdirSync(dir, { recursive: true });
+
+	const client = {
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
+		diff: async () => ({
+			features: [
+				{ featureId: "seats", action: "delete" },
+				{ featureId: "messages", action: "delete" },
+			],
+			plans: [],
+		}),
+		update: async () => ({}),
+		get: async () => ({
+			features: [
+				{
+					id: "seats",
+					name: "Seats",
+					type: "boolean",
+					consumable: false,
+					archived: false,
+				},
+				{
+					id: "messages",
+					name: "Messages",
+					type: "metered",
+					consumable: true,
+					archived: false,
+				},
+			],
+			plans: [],
+		}),
+	};
+	const printed: string[] = [];
+	const result = await runPull({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: client as any,
+		cwd: dir,
+		write: (text) => printed.push(text),
+		imports: {
+			atmn: "../../../src/generated/wire",
+			builders: "../../../src/generated/features",
+		},
+		prompter: answering(dir),
+	});
+
+	expect(result.appended.sort()).toEqual(["messages", "seats"]);
+	expect(printed[0]).toStartWith("Scaffolded ");
+	// One file per surface; the root only imports and states settings.
+	for (const file of ["features.ts", "plans.ts", "rewards.ts"])
+		expect(existsSync(`${dir}/${file}`)).toBe(true);
+	expect(existsSync(`${dir}/planVersions`)).toBe(false);
+	const root = readFileSync(`${dir}/autumn.config.ts`, "utf8");
+	expect(root).toContain('import { features } from "./features";');
+	expect(root).toContain('import { plans } from "./plans";');
+	expect(root).toContain(
+		'import { rewards, referralPrograms } from "./rewards";',
+	);
+	expect(root).not.toContain("feature(");
+	// The rows landed in the collection file the root imports.
+	const featuresFile = readFileSync(`${dir}/features.ts`, "utf8");
+	expect(featuresFile).toContain('featureId: "seats"');
+	expect(featuresFile).toContain('featureId: "messages"');
+
+	const module = await import(`${dir}/autumn.config.ts?v=first`);
+	// biome-ignore lint/suspicious/noExplicitAny: the executed wire
+	const wire = module.default as any;
+	expect(
+		wire.features.map((row: { feature_id: string }) => row.feature_id).sort(),
+	).toEqual(["messages", "seats"]);
+});
+
+test("--overwrite without --yes warns and changes nothing", async () => {
+	const dir = tempDir({ name: "overwrite-confirmation" });
+	const configPath = writeConfig({
+		dir,
+		text: "export default { features: [] };\n",
+	});
+	const appPath = join(dir, "app.ts");
+	writeFileSync(appPath, "export const app = true;\n", "utf8");
+	let calls = 0;
+	let output = "";
+
+	const result = await runPull({
+		client: {
+			diff: async () => {
+				calls += 1;
+				return {};
+			},
+			get: async () => {
+				calls += 1;
+				return {};
+			},
+		} as unknown as AutumnClient,
+		cwd: dir,
+		overwrite: true,
+		write: (text) => {
+			output += text;
+		},
+	});
+
+	expect(result).toEqual({
+		configPath,
+		appended: [],
+		replaced: [],
+		deleted: [],
+	});
+	expect(calls).toBe(0);
+	expect(readFileSync(configPath, "utf8")).toBe(
+		"export default { features: [] };\n",
+	);
+	expect(readFileSync(appPath, "utf8")).toBe("export const app = true;\n");
+	expect(output).toBe(
+		"This rewrites autumn.config.ts and the features.ts, plans.ts and rewards.ts beside it from your org's catalog. Other files are left alone. Re-run with --yes to overwrite.\n",
+	);
+});
+
+test("--overwrite --yes rewrites the config and its collection files, then pulls fresh; other files stay", async () => {
+	const dir = tempDir({ name: "overwrite" });
+	// A config for some other org, plus a file that is not atmn's.
+	const configPath = writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [",
+			'\t\tfeature({ featureId: "credits", name: "Credits", type: "metered", consumable: true }),',
+			"\t],",
+			"});",
+			"",
+		].join("\n"),
+	});
+	writeFileSync(join(dir, "old.ts"), "export const old = 1;\n");
+
+	// The fake never sees the stale rows: a diff of the empty shell only.
+	let diffed: unknown;
+	const client = {
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
+		diff: async (wire: unknown) => {
+			diffed = wire;
+			return { features: [{ featureId: "seats", action: "delete" }] };
+		},
+		get: async () => ({ features: [seatsRow], plans: [] }),
+	};
+	const result = await runPull({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: client as any,
+		cwd: dir,
+		write: () => {},
+		imports: {
+			atmn: "../../../src/generated/wire",
+			builders: "../../../src/generated/features",
+		},
+		overwrite: true,
+		yes: true,
+	});
+
+	expect((diffed as { features: unknown[] }).features).toEqual([]);
+	expect(result.appended).toEqual(["seats"]);
+	expect(readFileSync(join(dir, "old.ts"), "utf8")).toBe(
+		"export const old = 1;\n",
+	);
+	const text = readFileSync(join(dir, "features.ts"), "utf8");
+	expect(text).toContain('featureId: "seats"');
+	expect(text).not.toContain("credits");
+	const root = readFileSync(configPath, "utf8");
+	expect(root).toContain('import { features } from "./features";');
+	expect(root).not.toContain("credits");
+});
+
+test("--overwrite --yes leaves a collection file alone when it is not atmn's, and keeps that collection inline", async () => {
+	const dir = tempDir({ name: "overwrite-foreign-file" });
+	const configPath = writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			"",
+			"export default atmn({ features: [], plans: [] });",
+			"",
+		].join("\n"),
+	});
+	// The user's own plans.ts: no atmn import, so it is not ours to rewrite.
+	const usersPlans = 'export const plans = ["mine"];\n';
+	writeFileSync(join(dir, "plans.ts"), usersPlans);
+
+	let output = "";
+	await runPull({
+		client: fakeClient({
+			preview: { features: [{ featureId: "seats", action: "delete" }] },
+			catalog: { features: [seatsRow], plans: [] },
+		}),
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+		imports: {
+			atmn: "../../../src/generated/wire",
+			builders: "../../../src/generated/features",
+		},
+		overwrite: true,
+		yes: true,
+	});
+
+	expect(readFileSync(join(dir, "plans.ts"), "utf8")).toBe(usersPlans);
+	const root = readFileSync(configPath, "utf8");
+	expect(root).not.toContain('from "./plans"');
+	expect(root).toContain("plans: [],");
+	expect(root).toContain('import { features } from "./features";');
+	expect(readFileSync(join(dir, "features.ts"), "utf8")).toContain(
+		'featureId: "seats"',
+	);
+	expect(output).toContain("Left alone (not atmn files): plans.ts");
+});
+
+test("--overwrite --yes with no config is a first pull: scaffold, delete nothing", async () => {
+	const dir = tempDir({ name: "overwrite-no-config" });
+	const appPath = join(dir, "app.ts");
+	writeFileSync(appPath, "export const app = true;\n", "utf8");
+
+	const result = await runPull({
+		client: fakeClient({
+			preview: { features: [{ featureId: "seats", action: "delete" }] },
+			catalog: { features: [seatsRow], plans: [] },
+		}),
+		cwd: dir,
+		write: () => {},
+		imports: {
+			atmn: "../../../src/generated/wire",
+			builders: "../../../src/generated/features",
+		},
+		overwrite: true,
+		yes: true,
+		prompter: answering(dir),
+	});
+
+	expect(result.appended).toEqual(["seats"]);
+	expect(readFileSync(appPath, "utf8")).toBe("export const app = true;\n");
+	expect(readFileSync(join(dir, "features.ts"), "utf8")).toContain(
+		'featureId: "seats"',
+	);
+});
+
+test("--overwrite --yes rebuilds a 1.x config without loading it first", async () => {
+	const dir = tempDir({ name: "overwrite-legacy" });
+	const configPath = writeConfig({
+		dir,
+		text: [
+			'import { feature, item, plan } from "atmn";',
+			"",
+			'export const seats = feature({ id: "seats", name: "Seats", type: "boolean" });',
+			"",
+		].join("\n"),
+	});
+
+	const result = await runPull({
+		client: fakeClient({
+			preview: { features: [{ featureId: "seats", action: "delete" }] },
+			catalog: { features: [seatsRow], plans: [] },
+		}),
+		cwd: dir,
+		write: () => {},
+		imports: {
+			atmn: "../../../src/generated/wire",
+			builders: "../../../src/generated/features",
+		},
+		overwrite: true,
+		yes: true,
+	});
+
+	expect(result.appended).toEqual(["seats"]);
+	const root = readFileSync(configPath, "utf8");
+	expect(root).not.toContain("item");
+	expect(root).toContain("export default atmn({");
+	expect(readFileSync(join(dir, "features.ts"), "utf8")).toContain(
+		'featureId: "seats"',
+	);
+});
+
+test("a diff the server refuses points at --overwrite; other failures do not", async () => {
+	const dir = tempDir({ name: "overwrite-hint" });
+	writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			"",
+			"export default atmn({ features: [] });",
+			"",
+		].join("\n"),
+	});
+	const failing = (error: Error) =>
+		({
+			previewUpdateOrganization: async () => ({ config: { changes: [] } }),
+			diff: async () => {
+				throw error;
+			},
+			get: async () => ({ features: [], plans: [] }),
+		}) as unknown as AutumnClient;
+
+	const refused = new AutumnApiError({
+		status: 400,
+		body: { message: "Cannot change type of feature credits" },
+		path: "/v1/catalogV2.diff",
+	});
+	await expect(
+		runPull({ client: failing(refused), cwd: dir, write: () => {} }),
+	).rejects.toThrow(/atmn pull --overwrite/);
+
+	const unauthorized = new AutumnApiError({
+		status: 401,
+		body: { message: "Invalid secret key" },
+		path: "/v1/catalogV2.diff",
+	});
+	await expect(
+		runPull({ client: failing(unauthorized), cwd: dir, write: () => {} }),
+	).rejects.not.toThrow(/--overwrite/);
+});
+
+test("a reward naming an archived plan is pulled without it, and the drop is said", async () => {
+	const dir = tempDir({ name: "archived-plan-refs" });
+	const path = writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [],",
+			"\tplans: [],",
+			"\trewards: [],",
+			"\treferralPrograms: [],",
+			"});",
+			"",
+		].join("\n"),
+	});
+	const proRow = {
+		id: "pro",
+		internalId: "prod_pro",
+		name: "Pro",
+		version: 1,
+		versionSlug: "v1",
+		active: true,
+		archived: false,
+		items: [],
+	};
+	const couponRow = {
+		coupon: {
+			id: "launch",
+			internalId: "rew_launch",
+			name: "Launch",
+			duration: { type: "forever", length: null },
+			// `retired` is archived: the catalog no longer surfaces it.
+			planIds: ["pro", "retired"],
+			promoCodes: [{ code: "LAUNCH" }],
+			type: "percentage_discount",
+			value: 10,
+		},
+	};
+	const programRow = {
+		id: "friends",
+		internalId: "rp_friends",
+		rewardId: "launch",
+		redeemOn: "checkout",
+		receivedBy: "referrer",
+		planIds: ["retired"],
+	};
+	let output = "";
+	const result = await runPull({
+		client: fakeClient({
+			preview: {
+				features: [],
+				plans: [
+					{
+						planId: "pro",
+						version: 1,
+						versionSlug: "v1",
+						active: true,
+						action: "delete",
+						internalId: "prod_pro",
+						state: { hasCustomers: false },
+					},
+				],
+				rewards: [{ id: "launch", action: "delete" }],
+				referralPrograms: [{ id: "friends", action: "delete" }],
+			},
+			catalog: {
+				features: [],
+				plans: [proRow],
+				rewards: [couponRow],
+				referralPrograms: [programRow],
+			},
+		}),
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+	});
+
+	expect(result.appended.sort()).toEqual(["friends", "launch", "pro@v1"]);
+	expect(readFileSync(path, "utf8")).not.toContain('"retired"');
+	expect(output).toContain(
+		'↳ coupon "launch" no longer names plan "retired": not in the catalog (archived), so not in the config',
+	);
+	expect(output).toContain(
+		'↳ referral program "friends" no longer names plan "retired": not in the catalog (archived), so not in the config',
+	);
+	// The pulled config lints clean and pushes what it declares.
+	// biome-ignore lint/suspicious/noExplicitAny: the executed wire
+	const wire = (await import(`${path}?v=${Date.now()}`)).default as any;
+	expect(wire.rewards[0].coupon.plan_ids).toEqual(["pro"]);
+	expect(wire.referral_programs[0].plan_ids).toEqual([]);
+});

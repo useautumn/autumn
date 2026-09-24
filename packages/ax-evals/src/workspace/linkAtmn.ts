@@ -3,9 +3,8 @@ import { join } from "node:path";
 import { ATMN_DIR } from "./workspacePaths.ts";
 
 /**
- * Nightly lives at `node_modules/atmn` so configs `from "atmn"` resolve, and
- * `atmn` on PATH is nightly talking to the local server. ATMN_CONFIG_PACKAGE
- * keeps a first `atmn pull` from writing `from "atmn-nightly"`.
+ * The workspace package lives at `node_modules/atmn` so configs resolve the
+ * CLI under test. The wrapper pins the run's dev server with `--base-url`.
  */
 export const linkAtmn = async ({
 	dir,
@@ -21,8 +20,7 @@ export const linkAtmn = async ({
 		atmnBin,
 		`#!/bin/bash
 export AUTUMN_BASE_URL="${backendUrl}"
-export ATMN_CONFIG_PACKAGE=atmn
-exec bun "${join(ATMN_DIR, "src/cli.ts")}" --local "$@"
+exec bun "${join(ATMN_DIR, "src/cli.ts")}" --base-url "${backendUrl}" "$@"
 `,
 	);
 	await chmod(atmnBin, 0o755);

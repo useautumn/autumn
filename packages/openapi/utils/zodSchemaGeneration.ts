@@ -32,7 +32,10 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 		sdkFile: "open-customer-portal-op.ts",
 		outputFile: "openCustomerPortalSchemas.ts",
 	},
-	{ sdkFile: "setup-payment-op.ts", outputFile: "setupPaymentSchemas.ts" },
+	{
+		sdkFile: "setup-payment-response.ts",
+		outputFile: "setupPaymentSchemas.ts",
+	},
 	{ sdkFile: "multi-attach-op.ts", outputFile: "multiAttachSchemas.ts" },
 	{
 		sdkFile: "preview-multi-attach-op.ts",
@@ -40,7 +43,7 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 	},
 	{ sdkFile: "list-plans-response.ts", outputFile: "listPlansSchemas.ts" },
 	{
-		sdkFile: "list-plans-variant-details-upsert-license-additional-currency.ts",
+		sdkFile: "list-plans-variant-details-usage-alert.ts",
 		outputFile: "listPlansParamsSchemas.ts",
 	},
 	{ sdkFile: "list-events-op.ts", outputFile: "listEventsSchemas.ts" },

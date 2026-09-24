@@ -153,6 +153,11 @@ export const CLICKHOUSE_PORT = 8123;
 /** dynoxide (native DynamoDB emulator — no JVM in the µVM; the Docker flows
  *  use amazon/dynamodb-local instead). Backs the idempotency-key store. */
 export const DYNAMODB_PORT = 8000;
+/** Redpanda (native Kafka; the Docker flows use apache/kafka). Same port as dw's base worktree. */
+export const KAFKA_PORT = 19092;
+export const KAFKA_BROKERS = `127.0.0.1:${KAFKA_PORT}`;
+/** The balance worker's loopback listener (`BALANCE_WORKER_PORT` default). */
+export const BALANCE_WORKER_PORT = 8082;
 
 /**
  * Build-time localhost service URLs for a worker (plan §5a / §11a). All point at

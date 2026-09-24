@@ -15,8 +15,8 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { runPush } from "../../../../../../packages/atmn-nightly/src/actions/push";
-import { createClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { runPush } from "../../../../../../packages/atmn/src/actions/push";
+import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
 /** Two metered features and a plan holding one item over each; `keepFeatures`
  * false drops the whole `features` array and every item that used them. */
@@ -42,7 +42,9 @@ const catalogConfig = ({
 	plans: [
 		{
 			planId: "${planId}",
+			active: true,
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 20, interval: "month" },
 			items: [${
 				keepFeatures

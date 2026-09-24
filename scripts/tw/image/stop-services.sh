@@ -9,6 +9,7 @@
 #   - PostgreSQL: pg_ctl -m fast stop -w  (clean shutdown, checkpoints to disk)
 #   - Dragonfly:  SAVE (persist dump) then SHUTDOWN NOSAVE
 #   - elasticmq:  SIGTERM (queues are re-declared from config on next boot)
+#   - Redpanda:   SIGTERM and wait; it flushes its log on the way down
 #
 # Best-effort + idempotent: a service that is already stopped is fine.
 set -euo pipefail
@@ -78,6 +79,23 @@ if pgrep -f "$BIN_DIR/goaws" >/dev/null 2>&1; then
   pkill -TERM -f "$BIN_DIR/goaws" || true
 else
   log "goaws not running"
+fi
+
+# ---------------------------------------------------------------------------
+# 3b. Redpanda — SIGTERM, then wait for the process to leave so the data dir
+#     under $TW_PREFIX/redpanda is quiescent when the snapshot is taken. rpk
+#     execs the wrapper, whose command line is "redpanda --redpanda-cfg …".
+# ---------------------------------------------------------------------------
+if pgrep -f 'redpanda --redpanda-cfg' >/dev/null 2>&1; then
+  log "SIGTERM Redpanda"
+  pkill -TERM -f 'redpanda --redpanda-cfg' || true
+  for _ in $(seq 1 60); do
+    pgrep -f 'redpanda --redpanda-cfg' >/dev/null 2>&1 || break
+    sleep 0.5
+  done
+  pgrep -f 'redpanda --redpanda-cfg' >/dev/null 2>&1 && log "WARN: Redpanda still running after 30s"
+else
+  log "Redpanda not running"
 fi
 
 # ---------------------------------------------------------------------------

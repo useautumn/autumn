@@ -2,12 +2,13 @@ import {
 	type AutumnBillingPlan,
 	billingContextToCurrency,
 	cusEntToCusPrice,
+	cusProductToPrices,
 	InternalError,
+	isLosingPrepaidQuantityPrice,
 	type LineItemContext,
 	type StripeBillingPlan,
 	type StripeInvoiceAction,
 	type UsagePriceConfig,
-	usagePriceToLineItem,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -15,11 +16,9 @@ import { lineItemsToInvoiceAddLinesParams } from "@/internal/billing/v2/provider
 import { entitlementToExpiry } from "@/internal/billing/v2/utils/expiringGrants/entitlementExpiry.js";
 import { routeRemainderToExpiringGrant } from "@/internal/billing/v2/utils/expiringGrants/routeRemainderToExpiringGrant.js";
 import type { AutoTopupContext } from "../autoTopupContext.js";
-import {
-	buildUpdatedOptions,
-	updateCusEntOptionsInline,
-} from "../helpers/autoTopUpUtils.js";
+import { buildUpdatedOptions } from "../helpers/autoTopUpUtils.js";
 import { computeRebalancedAutoTopUp } from "./computeRebalancedAutoTopUp.js";
+import { topUpQuantityToLineItem } from "./topUpQuantityToLineItem.js";
 
 /** Compute the auto top-up billing plan + stripe invoice action. Throws if line item amount is <= 0. */
 export const computeAutoTopupPlan = ({
@@ -39,20 +38,22 @@ export const computeAutoTopupPlan = ({
 	const feature = customerEntitlement.entitlement.feature;
 	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement })!;
 	const quantity = autoTopupConfig.quantity;
-	const isThresholdBilling =
-		autoTopupContext.actionSource === "threshold_billing";
 
 	// A. Convert credits to packs (billing units)
 	const priceConfig = cusPrice.price.config as UsagePriceConfig;
 	const billingUnits = priceConfig.billing_units || 1;
 	const topUpPacks = new Decimal(quantity).div(billingUnits).toNumber();
-	// Expiring items keep their option quantity for the charge only — each
-	// purchase is recorded on its own loose grant instead.
+	// Expiring items are recorded on their own loose grant, and a one-off price
+	// that loses the prepaid tie-break does not own the feature-keyed quantity.
 	const hasExpiry = Boolean(
 		entitlementToExpiry({ entitlement: customerEntitlement.entitlement }),
 	);
+	const ownsFeatureQuantity = !isLosingPrepaidQuantityPrice({
+		price: cusPrice.price,
+		prices: cusProductToPrices({ cusProduct }),
+	});
 	const updateCustomerProduct =
-		isThresholdBilling || hasExpiry
+		hasExpiry || !ownsFeatureQuantity
 			? undefined
 			: {
 					customerProduct: cusProduct,
@@ -61,33 +62,24 @@ export const computeAutoTopupPlan = ({
 					},
 				};
 
-	const inlineCusEnt = isThresholdBilling
-		? { ...customerEntitlement, balance: -quantity }
-		: updateCusEntOptionsInline({
-				cusEnt: customerEntitlement,
-				feature,
-				quantity: topUpPacks,
-			});
-
 	// B. Build line item
-	const lineItem = usagePriceToLineItem({
-		cusEnt: inlineCusEnt,
-		context: {
-			price: cusPrice.price,
-			product: cusProduct.product,
-			feature,
-			currency: billingContextToCurrency({
-				org,
-				billingContext: autoTopupContext,
-			}),
-			direction: "charge",
-			now: Date.now(),
-			billingTiming: "in_advance",
-		} satisfies LineItemContext,
-		options: {
-			shouldProrateOverride: false,
-			chargeImmediatelyOverride: true,
-		},
+	const lineItemContext = {
+		price: cusPrice.price,
+		product: cusProduct.product,
+		feature,
+		currency: billingContextToCurrency({
+			org,
+			billingContext: autoTopupContext,
+		}),
+		direction: "charge",
+		now: Date.now(),
+		billingTiming: "in_advance",
+	} satisfies LineItemContext;
+
+	const lineItem = topUpQuantityToLineItem({
+		cusEnt: customerEntitlement,
+		quantity,
+		context: lineItemContext,
 	});
 
 	if (lineItem.amount <= 0) {

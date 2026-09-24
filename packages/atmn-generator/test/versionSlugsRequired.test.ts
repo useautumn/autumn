@@ -1,6 +1,6 @@
 /**
- * Once a plan has more than one version, a slug-less row stops meaning "the
- * v1" and starts meaning "whichever"; every version has to say which it is.
+ * Every plan row and every `variants[]` entry states versionSlug. A missing
+ * slug is `versionSlug is required`, not an implicit v1.
  */
 
 import { expect, test } from "bun:test";
@@ -13,113 +13,95 @@ import {
 
 const noHints: LintHints = { recordPaths: new Set(), frozenPaths: new Set() };
 
-const rules: LintRules = { plans: LINT_REGISTRY.plans };
+const rules: LintRules = {
+	plans: LINT_REGISTRY.plans,
+	"plans.variants": LINT_REGISTRY["plans.variants"],
+};
 
 type PlanFixture = Record<string, unknown>;
 
-/** `atmn()` folds planVersions into plans before linting, stamping `active`. */
+/** One `plans` array: the live rows carry `active: true`, the rest `active: false`. */
 const stated = ({
-	plans,
-	planVersions = [],
+	live,
+	history = [],
 }: {
-	plans: PlanFixture[];
-	planVersions?: PlanFixture[];
+	live: PlanFixture[];
+	history?: PlanFixture[];
 }): Record<string, unknown> => ({
 	plans: [
-		...plans.map((row) => ({ ...row, active: true })),
-		...planVersions.map((row) => ({ ...row, active: false })),
+		...live.map((row) => ({ ...row, active: true })),
+		...history.map((row) => ({ ...row, active: false })),
 	],
 });
 
 const issuesFor = (document: Record<string, unknown>) =>
 	lintDocument({ document, rules, hints: noHints });
 
-const SLUG_HINT = "Add versionSlug to every version so they can be told apart.";
-
-test("two rows of one plan where one lacks versionSlug are refused, once", () => {
-	expect(
-		issuesFor(
-			stated({
-				plans: [{ planId: "pro", name: "Pro", versionSlug: "v2" }],
-				planVersions: [{ planId: "pro", name: "Pro" }],
-			}),
-		),
-	).toEqual([
-		{
-			path: 'plan "pro"',
-			message: `Plan "pro" has 2 versions but only 1 states versionSlug. ${SLUG_HINT}`,
-		},
+test("a single slug-less plan row is refused", () => {
+	expect(issuesFor(stated({ live: [{ planId: "pro", name: "Pro" }] }))).toEqual([
+		{ path: 'plan "pro"', message: "versionSlug is required." },
 	]);
 });
 
-test("a single slug-less row is the implicit v1 and lints clean", () => {
+test("a slug-less row next to an explicit v1 asks for versionSlug, not a v1 clash", () => {
 	expect(
-		issuesFor(stated({ plans: [{ planId: "pro", name: "Pro" }] })),
-	).toEqual([]);
+		issuesFor(
+			stated({
+				live: [{ planId: "pro", name: "Pro", versionSlug: "v2" }],
+				history: [
+					{ planId: "pro", name: "Pro", versionSlug: "v1" },
+					{ planId: "pro", name: "Pro" },
+				],
+			}),
+		),
+	).toEqual([{ path: 'plan "pro"', message: "versionSlug is required." }]);
 });
 
 test("every version stating its slug lints clean", () => {
 	expect(
 		issuesFor(
 			stated({
-				plans: [{ planId: "pro", name: "Pro", versionSlug: "v2" }],
-				planVersions: [{ planId: "pro", name: "Pro", versionSlug: "v1" }],
+				live: [{ planId: "pro", name: "Pro", versionSlug: "v2" }],
+				history: [{ planId: "pro", name: "Pro", versionSlug: "v1" }],
 			}),
 		),
 	).toEqual([]);
 });
 
-test("a variant declared under two versions where one entry lacks its slug is refused", () => {
-	const issues = issuesFor(
-		stated({
-			plans: [
-				{
-					planId: "pro",
-					name: "Pro",
-					versionSlug: "v2",
-					variants: [{ variantPlanId: "proYearly", versionSlug: "v2" }],
-				},
-			],
-			planVersions: [
-				{
-					planId: "pro",
-					name: "Pro",
-					versionSlug: "v1",
-					variants: [{ variantPlanId: "proYearly" }],
-				},
-			],
-		}),
-	);
-	expect(issues).toEqual([
-		{
-			path: 'plan "pro"',
-			message: `Variant "proYearly" is declared under 2 versions of "pro" but only 1 states versionSlug. ${SLUG_HINT}`,
-		},
-	]);
-});
-
-test("a variant declared once without a slug lints clean", () => {
+test("a variant entry without versionSlug is refused", () => {
 	expect(
 		issuesFor(
 			stated({
-				plans: [
+				live: [
 					{
 						planId: "pro",
 						name: "Pro",
+						versionSlug: "v1",
 						variants: [{ variantPlanId: "proYearly" }],
 					},
 				],
 			}),
 		),
-	).toEqual([]);
+	).toEqual([
+		{
+			path: 'plan "pro" › variant "proYearly"',
+			message: "versionSlug is required.",
+		},
+	]);
 });
 
-test("a plan with an active row beside its history lints clean", () => {
+test("a variant entry that states versionSlug lints clean", () => {
 	expect(
 		issuesFor(
 			stated({
-				plans: [{ planId: "pro", name: "Pro", versionSlug: "v2" }],
-				planVersions: [{ planId: "pro", name: "Pro", versionSlug: "v1" }],
+				live: [
+					{
+						planId: "pro",
+						name: "Pro",
+						versionSlug: "v1",
+						variants: [{ variantPlanId: "proYearly", versionSlug: "v1" }],
+					},
+				],
 			}),
 		),
 	).toEqual([]);

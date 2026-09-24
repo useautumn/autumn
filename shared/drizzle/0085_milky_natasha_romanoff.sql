@@ -1,1 +1,0 @@
-ALTER TABLE "partition_progress" ADD COLUMN "command_next_offset" bigint;

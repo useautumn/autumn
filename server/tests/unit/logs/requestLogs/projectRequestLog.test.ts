@@ -22,6 +22,9 @@ describe("projectRequestLog", () => {
 				org_id: "org_123",
 				customer_id: "cus_123",
 				entity_id: "ent_123",
+				auth_type: "dashboard",
+				user_id: "user_123",
+				user_email: "dev@useautumn.com",
 			},
 		});
 
@@ -38,6 +41,9 @@ describe("projectRequestLog", () => {
 				org_id: "org_123",
 				customer_id: "cus_123",
 				entity_id: "ent_123",
+				auth_type: "dashboard",
+				user_id: "user_123",
+				user_email: "dev@useautumn.com",
 			},
 			stripe: {
 				event_id: null,
@@ -71,6 +77,9 @@ describe("projectRequestLog", () => {
 		expect(log.request.path).toBe("/v1/check");
 		expect(log.context.org_id).toBe("org_123");
 		expect(log.context.customer_id).toBe("cus_123");
+		expect(log.context.auth_type).toBeNull();
+		expect(log.context.user_id).toBeNull();
+		expect(log.context.user_email).toBeNull();
 		expect(log.response_body).toEqual({ error: "failed" });
 	});
 

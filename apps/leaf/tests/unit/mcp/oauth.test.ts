@@ -3,9 +3,10 @@ import {
 	getProtectedResourceMetadata,
 	UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND,
 } from "@autumn/auth/oauth";
-import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
+import { AppEnv, DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
 import { Scopes } from "@autumn/shared/scopeDefinitions";
 import type { OAuthAccessTokenDb } from "@autumn/shared/utils/auth/oauthAccessTokens";
+import { autumnMcpHeaders } from "../../../src/internal/autumnMcp/headers.js";
 import type { OAuthHttpError } from "../../../src/mcp/auth/protectedResourceMetadata.js";
 import {
 	buildAuthForRequest,
@@ -76,6 +77,55 @@ const rejectionFrom = async ({
 };
 
 describe("MCP OAuth auth resolution", () => {
+	test.each(["am_sk_test_oauth_", "am_sk_live_oauth_"])(
+		"keeps %s tokens on the OAuth path with their stored scopes",
+		async (prefix) => {
+			const token = `${prefix}token`;
+			const headers = autumnMcpHeaders({ appEnv: AppEnv.Sandbox, token });
+			expect(headers["secret-key"]).toBeUndefined();
+			const auth = await buildAuthForRequest({
+				headers: new Headers({ ...headers, "secret-key": token }),
+				db: oauthTokenDb({
+					userId: "user_1",
+					referenceId: "org_1",
+					resource: resourceUrl,
+					scopes: [Scopes.Plans.Read],
+				}),
+				flags: flags as MCPOAuthFlags,
+				logger,
+				resourceUrl,
+			});
+			expect(auth.authMethod).toBe("oauth");
+			expect(auth.scopes).toEqual([Scopes.Plans.Read]);
+		},
+	);
+
+	test.each(["am_sk_test_oauth_", "am_sk_live_oauth_"])(
+		"validates %s token existence, identity, and audience",
+		async (prefix) => {
+			for (const row of [
+				undefined,
+				{ referenceId: "org_1", scopes: [Scopes.Plans.Read] },
+				{
+					userId: "user_1",
+					referenceId: "org_1",
+					resource: internalResourceUrl,
+					scopes: [Scopes.Plans.Read],
+				},
+			]) {
+				await expect(
+					buildAuthForRequest({
+						headers: new Headers({ authorization: `Bearer ${prefix}token` }),
+						db: oauthTokenDb(row),
+						flags: flags as MCPOAuthFlags,
+						logger,
+						resourceUrl,
+					}),
+				).rejects.toMatchObject({ status: 401, error: "invalid_token" });
+			}
+		},
+	);
+
 	test("advertises the Leaf OAuth scope allowlist without offline_access", () => {
 		expect(
 			getProtectedResourceMetadata({

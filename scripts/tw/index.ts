@@ -102,6 +102,7 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 	// accepted as an explicit no-op for back-compat).
 	const dashboard = !args.includes("--no-dashboard");
 	const fanoutBench = args.includes("--fanout-bench");
+	const balanceWorker = parseStringFlag(args, "--balance-worker") !== "false";
 
 	// Cloud backend. Default modalv2 (Modal's V2 sandbox backend: 10k concurrent,
 	// 20+/s, no pacing). `--provider=modal` is the classic V1 backend (5/s + 100
@@ -140,6 +141,7 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 		dashboard,
 		provider,
 		fanoutBench,
+		balanceWorker,
 	};
 };
 
@@ -197,6 +199,7 @@ const printUsage = (): void => {
 			"  --no-dashboard   disable the live web dashboard (on by default; opens + keeps it up after the run)",
 			"  --provider=NAME  cloud backend: modalv2 (default, high-scale), modal (classic V1), vercel, or freestyle (memory-snapshot restores)",
 			"  --fanout-bench   provision + report fan-out timings, then tear down (no tests)",
+			"  --balance-worker=false   keep balances and billing plans on the Postgres path (the worker path is the default)",
 			"",
 			chalk.bold("Env:"),
 			"  STRIPE_TEST_KEY_POOL   comma-separated Stripe platform secret keys; workers",

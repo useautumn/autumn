@@ -11,8 +11,12 @@ openapi: "platform POST /platform/organizations/stripe"
 
 Use this endpoint when you want to manage Stripe accounts on behalf of your tenants using your own Stripe Connect credentials, rather than having them go through the OAuth flow.
 
+This is for platforms that already operate their own Stripe Connect integration. It is not needed for tenants connecting through Autumn's [Stripe OAuth flow](/api-reference/platform/oauth-url), and it cannot grant access to an arbitrary Stripe account just from its ID.
+
 ## Validation
 
+- Authenticate from your backend with your master organization's Autumn secret key and `platform:write` scope. Do not expose that key to tenants.
+- `organization_slug` must resolve to an organization created by your authenticated master organization. Other platforms' organizations cannot be updated.
 - Your organization must have the corresponding Stripe secret key connected (test/live)
 - The endpoint validates that your master Stripe account can access the provided account ID
 - If validation fails, you'll receive a descriptive error message

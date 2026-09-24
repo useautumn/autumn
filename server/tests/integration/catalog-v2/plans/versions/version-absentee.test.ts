@@ -5,12 +5,13 @@
  * Contract:
  *   V1  v1 + v2 exist, v2 active; payload states v2 only with
  *       skip_version_deletions: false → v1 is no longer a live version
- *   V2  the same with a customer on v1 → v1 is archived, not gone, and the
- *       customer still holds it
+ *   V2  the same with a customer on v1 → reject; versions cannot archive alone
  *   V3  the same payload without the flag → v1 untouched
  */
 
 import { expect, test } from "bun:test";
+import { ErrCode } from "@autumn/shared";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -79,7 +80,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 skip_version_deletions: a version a customer holds is archived, not lost")}`,
+	`${chalk.yellowBright("catalogV2 skip_version_deletions: a customer-held version cannot be archived alone")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({
 			setup: [
@@ -93,12 +94,18 @@ test.concurrent(
 		await twoVersions({ autumnV2_3, planId });
 		await seedVersionableCustomer({ ctx, planId, version: 1 });
 
-		await autumnV2_3.catalogV2.update({
-			skip_deletions: false,
-			skip_version_deletions: false,
-			plans: [{ plan_id: planId, name: "Pro", version_slug: "v2" }],
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: `${planId} v1 still has customers. Either expire or migrate them and delete the version, or archive all versions of ${planId}`,
+			func: () =>
+				autumnV2_3.catalogV2.update({
+					skip_deletions: false,
+					skip_version_deletions: false,
+					plans: [{ plan_id: planId, name: "Pro", version_slug: "v2" }],
+				}),
 		});
 		expect(await liveVersions({ autumnV2_3, planId })).toEqual([
+			{ slug: "v1", active: false },
 			{ slug: "v2", active: true },
 		]);
 		const rows = await ProductService.listFull({
@@ -111,7 +118,7 @@ test.concurrent(
 		});
 		const v1 = rows.find((row) => row.version === 1);
 		expect(v1).toBeDefined();
-		expect(v1?.archived).toBe(true);
+		expect(v1?.archived).toBe(false);
 	},
 );
 

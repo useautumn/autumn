@@ -38,7 +38,7 @@ export const deriveVariantMints = ({
 		// writes the customer-bearing row instead of minting from it.
 		const carriesContent =
 			target.follow === true ||
-			target.customize != null ||
+			target.customize !== undefined ||
 			target.processors !== undefined;
 		if (!carriesContent) return [];
 		if (

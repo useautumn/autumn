@@ -21,6 +21,28 @@ function stripInternalMarkers(value: Record<string, unknown>): void {
 	delete value["x-internal"];
 }
 
+const HTTP_METHODS = new Set([
+	"get",
+	"put",
+	"post",
+	"delete",
+	"options",
+	"head",
+	"patch",
+	"trace",
+]);
+
+/** Deletes every entry whose value is an internal node; returns the deleted keys. */
+function deleteInternalEntries(record: Record<string, unknown>): Set<string> {
+	const removed = new Set<string>();
+	for (const [key, value] of Object.entries(record)) {
+		if (!isInternalNode(value)) continue;
+		delete record[key];
+		removed.add(key);
+	}
+	return removed;
+}
+
 /**
  * Recursively sanitizes a node by removing internal fields and markers.
  */
@@ -41,26 +63,20 @@ function sanitizeNode(node: unknown): void {
 
 	// Handle object properties - remove internal fields
 	if (isRecord(node.properties)) {
-		const properties = node.properties as Record<string, unknown>;
-		const requiredSet = Array.isArray(node.required)
-			? new Set(
-					node.required.filter(
-						(requiredKey): requiredKey is string =>
-							typeof requiredKey === "string",
-					),
-				)
-			: null;
-
-		for (const [propertyName, propertySchema] of Object.entries(properties)) {
-			// Remove fields marked with x-internal or internal
-			if (isInternalNode(propertySchema)) {
-				delete properties[propertyName];
-				requiredSet?.delete(propertyName);
-			}
+		const removed = deleteInternalEntries(node.properties);
+		if (Array.isArray(node.required)) {
+			node.required = node.required.filter((key) => !removed.has(key));
 		}
+	}
 
-		if (requiredSet) {
-			node.required = [...requiredSet];
+	// Handle paths - remove internal operations, then path items with none left
+	if (isRecord(node.paths)) {
+		for (const [path, pathItem] of Object.entries(node.paths)) {
+			if (!isRecord(pathItem)) continue;
+			deleteInternalEntries(pathItem);
+			if (!Object.keys(pathItem).some((key) => HTTP_METHODS.has(key))) {
+				delete node.paths[path];
+			}
 		}
 	}
 

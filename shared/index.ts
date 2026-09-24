@@ -19,9 +19,11 @@ export * from "./api/billing/openBillingPortal/openBillingPortalParamsV1";
 export * from "./api/billing/openBillingPortal/openBillingPortalResponse";
 export * from "./api/billing/updateSubscription/previewUpdateSubscriptionResponse";
 export * from "./api/billingControls/index";
+export * from "./api/catalogV2/planUpdate/params/catalogPlanItemIdentity";
 // Cursor pagination utilities
 export * from "./api/common/cursorPaginationSchemas";
 export * from "./api/common/paginationConfigs";
+export * from "./api/customers/advanceTestClock/advanceTestClock";
 export * from "./api/customers/components/customerExpand/customerExpand";
 export * from "./api/entities/crud/createEntityParams";
 export * from "./api/entities/crud/getEntityParams";

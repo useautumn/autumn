@@ -51,7 +51,9 @@ export const declaredVariantTargets = ({
 			return rows.map((row) => ({
 				row,
 				declared: true,
-				...(variant.customize ? { customize: variant.customize } : {}),
+				...(variant.customize !== undefined
+					? { customize: variant.customize }
+					: {}),
 				...(variant.processors !== undefined
 					? { processors: variant.processors }
 					: {}),

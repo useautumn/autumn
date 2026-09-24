@@ -76,6 +76,7 @@ export type EveTurnEffect =
 			kind: "save_session";
 			pendingRequests?: ReadonlyArray<EvePendingRequest>;
 	  }>
+	| Readonly<{ kind: "status"; text: string }>
 	| Readonly<{ kind: "thinking" }>
 	| Readonly<{ kind: "throw"; message: string }>;
 
@@ -239,16 +240,21 @@ const reduceActionResult = ({
 	if (!result?.callId) {
 		return { effects: [], progress: { ...progress, lastPreview } };
 	}
-	const recordedWrites = isGatedWriteTool(result.toolName)
-		? [
-				...progress.recordedWrites,
-				{
-					callId: result.callId,
-					input: progress.toolInputs.get(result.callId) ?? {},
-					toolName: normalizeToolName(result.toolName ?? ""),
-				},
-			]
-		: progress.recordedWrites;
+	// A write the agent process refused (thrown tool error → "failed") or eve
+	// denied ("rejected") never ran, so it has nothing to approve.
+	const writeCompleted =
+		event.status === undefined || event.status === "completed";
+	const recordedWrites =
+		isGatedWriteTool(result.toolName) && writeCompleted
+			? [
+					...progress.recordedWrites,
+					{
+						callId: result.callId,
+						input: progress.toolInputs.get(result.callId) ?? {},
+						toolName: normalizeToolName(result.toolName ?? ""),
+					},
+				]
+			: progress.recordedWrites;
 	logger.info("Eve tool completed", {
 		event: "leaf.eve_tool_completed",
 		data: {
@@ -405,6 +411,41 @@ const reduceInputRequest = ({
 	};
 };
 
+export const STEERED_TURN_STATUS = "Re-planning with your latest message";
+
+/** A steer cancelled the turn: eve discards its unfinished output and starts
+ * a replacement turn that has every buffered message in context. Text the
+ * cancelled turn streamed is not a reply, so it goes; writes it completed
+ * stay recorded — eve does not roll side effects back. Clearing `turnStarted`
+ * makes the `session.waiting` that follows a cancel a boundary to read past,
+ * not a turn end; the replacement's own `turn.started` re-arms the reducer. */
+const reduceCancelledTurn = ({
+	progress,
+}: {
+	progress: EveTurnProgress;
+}): EveTurnTransition => ({
+	effects: [
+		...(progress.reasoningStreamId
+			? [
+					{
+						id: progress.reasoningStreamId,
+						kind: "reasoning" as const,
+						text: "",
+					},
+				]
+			: []),
+		{ kind: "status", text: STEERED_TURN_STATUS },
+	],
+	progress: {
+		...progress,
+		declinedReply: false,
+		finalText: "",
+		pendingText: "",
+		reasoningStreamId: undefined,
+		turnStarted: false,
+	},
+});
+
 const reduceTerminalEvent = ({
 	progress,
 }: {
@@ -460,6 +501,11 @@ export const reduceEveTurnEvent = ({
 	}
 	if (event.type === "action.result") {
 		return reduceActionResult({ capturedPreview, event, progress });
+	}
+	if (event.type === "turn.cancelled") {
+		return progress.turnStarted
+			? reduceCancelledTurn({ progress })
+			: { effects: [], progress };
 	}
 	if (!(progress.turnStarted || isTurnActivityEvent(event))) {
 		return { effects: [], progress };

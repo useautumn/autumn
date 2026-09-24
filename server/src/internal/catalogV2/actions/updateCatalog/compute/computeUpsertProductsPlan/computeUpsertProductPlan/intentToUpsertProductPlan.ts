@@ -1,4 +1,4 @@
-import { productToProductKey } from "@autumn/shared";
+import { isFreeProduct, productToProductKey } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { assembleNextFullProduct } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/assembleNextFullProduct";
 import { computeCatalogEntitlementPricesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeCatalogEntitlementPricesPlan/computeCatalogEntitlementPricesPlan";
@@ -42,13 +42,11 @@ export const intentToUpsertProductPlan = ({
 	intent,
 	productStatesContext,
 	declaredVariants,
-	fullState,
 }: {
 	ctx: AutumnContext;
 	intent: ProductUpsertIntent;
 	productStatesContext: ProductStatesContext;
 	declaredVariants?: DeclaredVariantsMap;
-	fullState?: boolean;
 }): UpsertProductPlan => {
 	const { productKey, source, baseInternalProductId } = intent;
 	const { currentFullProduct, customerUsage } = productKeyToState({
@@ -109,20 +107,11 @@ export const intentToUpsertProductPlan = ({
 		version: productKey.version,
 		baseFullProduct,
 		currentActive,
-		fullState,
 		latestExistingVersion: maxVersion === 0 ? undefined : maxVersion,
 		...(pointer !== undefined ? { baseInternalProductId: pointer } : {}),
 		...(variantBaseFullProduct
 			? { baseProcessor: variantBaseFullProduct.processor }
 			: {}),
-	});
-
-	const freeTrialPlan = computeFreeTrialPlan({
-		freeTrialParams: planParams.free_trial,
-		currentFreeTrial: baseFullProduct?.free_trial ?? null,
-		internalProductId: details.product.internal_id,
-		mode:
-			versioning === "new_version" ? { type: "version" } : { type: "update" },
 	});
 
 	const entitlementPricesPlan = computeCatalogEntitlementPricesPlan({
@@ -140,6 +129,24 @@ export const intentToUpsertProductPlan = ({
 					},
 				}
 			: {}),
+	});
+
+	// The plan as this update leaves it: a free plan has no card gate, so the
+	// trial's card_required is inert there (isTrialCardRequired's rule).
+	const resultingPrices = entitlementPricesPlan
+		? [
+				...entitlementPricesPlan.prices.same,
+				...entitlementPricesPlan.prices.updated,
+				...entitlementPricesPlan.prices.new,
+			]
+		: (baseFullProduct?.prices ?? []);
+	const freeTrialPlan = computeFreeTrialPlan({
+		freeTrialParams: planParams.free_trial,
+		currentFreeTrial: baseFullProduct?.free_trial ?? null,
+		internalProductId: details.product.internal_id,
+		mode:
+			versioning === "new_version" ? { type: "version" } : { type: "update" },
+		cardRequiredInert: isFreeProduct({ prices: resultingPrices }),
 	});
 
 	const nextFullProduct = assembleNextFullProduct({

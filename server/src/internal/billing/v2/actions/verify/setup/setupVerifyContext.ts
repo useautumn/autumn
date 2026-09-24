@@ -3,10 +3,13 @@ import {
 	customerProductsToStripeSubscriptionIds,
 	type FullCusProduct,
 	type FullCustomer,
+	isCustomerProductRevertingTrial,
 	notNullish,
+	STRIPE_LINKED_STATUSES,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 
@@ -34,18 +37,26 @@ export type VerifyContext = {
 	activeSubscriptionIds: Set<string> | null;
 };
 
+/** Matches on subscription OR schedule: a scheduled customer product carries no
+ * subscription_ids, so the subscription alone loses every future phase. */
 const isRelevantForSubscription = ({
 	customerProduct,
 	stripeSubscriptionId,
+	stripeSubscriptionScheduleId,
 }: {
 	customerProduct: FullCusProduct;
 	stripeSubscriptionId: string;
+	stripeSubscriptionScheduleId?: string;
 }) =>
+	STRIPE_LINKED_STATUSES.includes(customerProduct.status) &&
+	!isCustomerProductRevertingTrial(customerProduct) &&
 	cp(customerProduct)
 		.paid()
 		.recurring()
-		.hasRelevantStatus()
-		.onStripeSubscription({ stripeSubscriptionId }).valid;
+		.onStripeSubscription({ stripeSubscriptionId })
+		.or.paid()
+		.recurring()
+		.onStripeSchedule({ stripeSubscriptionScheduleId }).valid;
 
 /** Sub items never include price `tiers` — fetch them once per tiered price
  * so evaluation can reason about what a tiered item actually bills. */
@@ -118,6 +129,7 @@ export const setupVerifyContext = async ({
 			ctx,
 			idOrInternalId: customerId,
 			withEntities: true,
+			inStatuses: STRIPE_LINKED_STATUSES,
 		}));
 
 	const cusProducts = fullCustomer.customer_products;
@@ -159,8 +171,15 @@ export const setupVerifyContext = async ({
 				expand: ["discounts.coupon"],
 			}));
 
+		const stripeSubscriptionScheduleId = stripeSubscriptionToScheduleId({
+			stripeSubscription,
+		});
 		const relatedCusProducts = cusProducts.filter((customerProduct) =>
-			isRelevantForSubscription({ customerProduct, stripeSubscriptionId }),
+			isRelevantForSubscription({
+				customerProduct,
+				stripeSubscriptionId,
+				stripeSubscriptionScheduleId,
+			}),
 		);
 
 		targets.push({

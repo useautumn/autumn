@@ -16,36 +16,40 @@ Pay-per-use (usage-based) pricing charges customers based on how much of a featu
 Create a consumable feature with a `usage_based` price:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const notifications = feature({
-  id: 'notifications',
-  name: 'Notifications',
-  type: 'metered',
+  featureId: "notifications",
+  name: "Notifications",
+  type: "metered",
   consumable: true,
 });
 
 export const payAsYouGo = plan({
-  id: 'pay_as_you_go',
-  name: 'Pay As You Go',
-  group: 'main',
+  planId: "pay_as_you_go",
+  versionSlug: "v1",
+  active: true,
+  name: "Pay As You Go",
+  group: "main",
   items: [
-    item({
-      featureId: notifications.id,
+    {
+      featureId: notifications.featureId,
       included: 1000,
-      reset: { interval: 'month' },
+      reset: { interval: "month" },
       price: {
         amount: 1,
-        interval: 'month',
+        interval: "month",
         billingUnits: 1000,
-        billingMethod: 'usage_based',
+        billingMethod: "usage_based",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [notifications], plans: [payAsYouGo] });
 ```
 
-Push changes with `atmn push`.
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 </Tab>
 <Tab title="Dashboard">
