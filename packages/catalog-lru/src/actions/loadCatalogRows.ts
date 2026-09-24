@@ -30,6 +30,9 @@ const envelopeToCatalogRows = ({
 	...envelope.plan_licenses.map(
 		(row): CatalogRow => ({ table: "planLicenses", row }),
 	),
+	...envelope.free_trials.map(
+		(row): CatalogRow => ({ table: "freeTrials", row }),
+	),
 ];
 
 const fetchAndPut = async ({
@@ -49,6 +52,7 @@ const fetchAndPut = async ({
 			featureInternalIds: idsOf({ keys, table: "features" }),
 			priceIds: idsOf({ keys, table: "prices" }),
 			planLicenseIds: idsOf({ keys, table: "planLicenses" }),
+			freeTrialIds: idsOf({ keys, table: "freeTrials" }),
 		},
 	});
 	putCatalogRows({ scope, rows: envelopeToCatalogRows({ envelope }) });

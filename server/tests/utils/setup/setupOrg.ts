@@ -4,6 +4,8 @@ import { ensureOrgSvixApps } from "@tests/utils/setup/ensureOrgSvixApps.js";
 import axios from "axios";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
+import { waitForRedisReady } from "@/external/redis/initRedis.js";
+import { getMiscRedisTargets } from "@/external/redis/miscCache/resolveMiscRedis.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
@@ -22,7 +24,9 @@ export const ensureV2Features = async ({
 }) => {
 	const wanted = Object.values(getFeatures({ orgId }));
 	const existing = await FeatureService.list({ db, orgId, env });
-	const existingById = new Map(existing.map((feature) => [feature.id, feature]));
+	const existingById = new Map(
+		existing.map((feature) => [feature.id, feature]),
+	);
 	const missing = wanted.filter((feature) => !existingById.has(feature.id));
 	if (missing.length > 0) {
 		const inserted = await FeatureService.insert({
@@ -35,6 +39,11 @@ export const ensureV2Features = async ({
 				`ensureV2Features: insert failed for ${missing.map((feature) => feature.id).join(",")}`,
 			);
 		}
+		// The insert's own cache clear runs before this process's Redis is ready and no-ops; the server would serve the old feature list for an hour.
+		for (const target of getMiscRedisTargets()) {
+			await waitForRedisReady(target.redis, target.instanceName);
+		}
+		await clearOrgCache({ db, orgId, env, logger: console });
 	}
 
 	for (const feature of wanted) {

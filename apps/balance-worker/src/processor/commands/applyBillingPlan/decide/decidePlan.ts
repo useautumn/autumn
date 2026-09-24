@@ -67,7 +67,6 @@ const decideApplyBillingPlan = ({
 		mutation,
 		nextState,
 		projectedStates,
-		logsAfter: true,
 	};
 };
 

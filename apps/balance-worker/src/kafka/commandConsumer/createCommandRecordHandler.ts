@@ -6,6 +6,7 @@ import {
 	type TopicRecordResult,
 	type TopicResumePosition,
 } from "@autumn/kafka";
+import { consumeEvict } from "../../consume/consumeEvict.js";
 import { consumeReset } from "../../consume/consumeReset.js";
 import { consumeTrack } from "../../consume/consumeTrack.js";
 import { settleQueuedFailure } from "../../consume/settleQueuedFailure.js";
@@ -75,6 +76,9 @@ export function createCommandRecordHandler({
 							ctx: { processor, logger: ctx.logger },
 							command,
 						});
+						break;
+					case "evict":
+						await consumeEvict({ ctx: { processor }, command });
 						break;
 					default:
 						ctx.logger?.warn("Queued command skipped: not consumable yet", {

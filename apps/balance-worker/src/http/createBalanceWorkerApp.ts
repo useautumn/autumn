@@ -5,6 +5,7 @@ import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveConfirmExpiredLock } from "./handlers/receiveConfirmExpiredLock.js";
 import { receiveEvict } from "./handlers/receiveEvict.js";
 import { receiveFinalize } from "./handlers/receiveFinalize.js";
+import { receiveFlush } from "./handlers/receiveFlush.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveInitialize } from "./handlers/receiveInitialize.js";
 import { receiveReadSubjectState } from "./handlers/receiveReadSubjectState.js";
@@ -39,6 +40,7 @@ export function createBalanceWorkerApp({
 	commands.post("/read-subject-state", receiveReadSubjectState);
 	commands.post("/track", receiveTrack);
 	commands.post("/evict", receiveEvict);
+	commands.post("/flush", receiveFlush);
 	commands.post("/finalize", receiveFinalize);
 	commands.post("/confirm-expired-lock", receiveConfirmExpiredLock);
 	commands.post("/reset", receiveReset);

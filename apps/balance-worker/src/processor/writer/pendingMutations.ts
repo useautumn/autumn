@@ -1,9 +1,9 @@
 import {
+	type MutationEffect,
 	type MutationRecord,
 	meteringIdentityToSubjectKey,
 	type SubjectState,
 	splitSubjectState,
-	subjectStateToLogState,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import { createSubjectMap } from "./subjectMap/createSubjectMap.js";
@@ -106,21 +106,16 @@ export const DEFAULT_MAX_BATCH_BYTES = 800_000;
 /** Key, envelope and Kafka's per-record framing beside the JSON payload. */
 export const RECORD_OVERHEAD_BYTES = 256;
 
-/** The record the log receives: the mutation, plus the state it left behind when it logs one. */
+/** The record the log receives: the mutation plus its effects; the store, receipts and checkpoints hold it without them. */
 export function loggedRecordOf({
 	mutation,
-	nextState,
-	logsAfter,
+	effects,
 }: {
 	mutation: MutationRecord;
-	nextState: SubjectState;
-	logsAfter?: boolean;
+	effects?: MutationEffect[];
 }): MeteringRecord {
-	if (!logsAfter) return mutation;
-	return {
-		...mutation,
-		after: { state: subjectStateToLogState({ state: nextState }) },
-	};
+	if (!effects) return mutation;
+	return { ...mutation, effects };
 }
 
 /** Bounds how far the store may trail the log: each unapplied batch keeps its
@@ -148,7 +143,7 @@ export function enqueueMutation({
 	nextState,
 	projectedStates: explicitProjectedStates,
 	durability,
-	logsAfter,
+	effects,
 }: {
 	scope: PartitionWriterScope;
 	pendingKey: string;
@@ -157,7 +152,7 @@ export function enqueueMutation({
 	nextState: SubjectState;
 	projectedStates?: SubjectState[];
 	durability: MutationDurability;
-	logsAfter?: boolean;
+	effects?: MutationEffect[];
 }): PendingMutation {
 	const { state, config } = scope;
 	const customerPending =
@@ -170,7 +165,7 @@ export function enqueueMutation({
 	}
 	// Refused before anything is projected: a record no batch can carry would
 	// otherwise fail at commit and take the partition, and its worker, with it.
-	const loggedRecord = loggedRecordOf({ mutation, nextState, logsAfter });
+	const loggedRecord = loggedRecordOf({ mutation, effects });
 	const encodedBytes =
 		(scope.ctx.appender.encodedBytesOf?.({ record: loggedRecord }) ??
 			Buffer.byteLength(JSON.stringify(loggedRecord))) + RECORD_OVERHEAD_BYTES;
@@ -193,7 +188,7 @@ export function enqueueMutation({
 		mutation,
 		nextState,
 		durability,
-		logsAfter,
+		effects,
 		loggedRecord,
 		settlement,
 		encodedBytes,
@@ -203,7 +198,7 @@ export function enqueueMutation({
 		const subjectKey = pending.projectedSubjectKeys[index];
 		if (!subjectKey) continue;
 		state.subjects.pin({ subjectKey });
-		state.subjects.setState({ subjectKey, state: projected });
+		state.subjects.setState({ subjectKey, customerKey, state: projected });
 	}
 	state.pendingByKey.set(pendingKey, pending);
 	customerPending.add(pending);

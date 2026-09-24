@@ -1,6 +1,7 @@
 import {
 	meteringIdentityToPartitionKey,
 	parseConfirmExpiredLockCommand,
+	parseEvictCommand,
 	parseFinalizeCommand,
 	parseInitializeCommand,
 	parseResetCommand,
@@ -39,6 +40,8 @@ function parseCommandPayload({
 				return parseConfirmExpiredLockCommand({ input: payload });
 			case "reset":
 				return parseResetCommand({ input: payload });
+			case "evict":
+				return parseEvictCommand({ input: payload });
 			default:
 				throw new InvalidRecordError();
 		}

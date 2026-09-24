@@ -4,8 +4,26 @@ export {
 	dbControlEdgeConfig,
 	defaultDbControlEdgeConfig,
 } from "./configs/dbControl/dbControlEdgeConfig.js";
+export {
+	defaultMiscRedisConfig,
+	type MiscRedisBackup,
+	MiscRedisBackupSchema,
+	type MiscRedisConfig,
+	MiscRedisConfigSchema,
+	type MiscRedisInstanceName,
+	MiscRedisInstanceNameSchema,
+	type MiscRedisRamp,
+	MiscRedisRampSchema,
+	miscRedisEdgeConfig,
+	otherMiscRedisInstance,
+	toLegacyMiscRedisInstanceName,
+} from "./configs/miscRedis/miscRedisEdgeConfig.js";
 export { EdgeConfigNotConfiguredError } from "./errors.js";
-export { DB_CONTROL_CONFIG_KEY, EDGE_CONFIG_TIMESTAMP_KEY } from "./keys.js";
+export {
+	DB_CONTROL_CONFIG_KEY,
+	EDGE_CONFIG_TIMESTAMP_KEY,
+	MISC_REDIS_CONFIG_KEY,
+} from "./keys.js";
 export {
 	createEdgeConfigRegistry,
 	type EdgeConfigRegistry,

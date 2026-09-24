@@ -28,6 +28,7 @@ export {
 	fullCustomerToPlanProducts,
 	fullSubjectToPlanProducts,
 	getPlanBillingControlProducts,
+	type PlanControlCustomerProduct,
 	resolveBillingControl,
 	resolveBillingControlWithProduct,
 } from "./planBillingControlUtils.js";

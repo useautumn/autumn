@@ -55,6 +55,7 @@ const envelope = {
 		},
 	],
 	rollovers: [],
+	replaceables: [],
 	entities: [],
 	products: [
 		{

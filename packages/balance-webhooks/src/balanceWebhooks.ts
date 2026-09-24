@@ -1,5 +1,4 @@
-export { recordToBalanceWebhooks } from "./recordToBalanceWebhooks.js";
-export type { BalanceWebhook } from "./types/balanceWebhook.js";
+export { subjectsToBalanceWebhooks } from "./subjectsToBalanceWebhooks.js";
 
 // The pure half of the usage-alert decision, shared with the server's legacy path.
 export {

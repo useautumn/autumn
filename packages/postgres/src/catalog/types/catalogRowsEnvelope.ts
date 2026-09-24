@@ -1,6 +1,7 @@
 import {
 	EntitlementSchema,
 	FeatureSchema,
+	FreeTrialSchema,
 	PlanLicenseRowSchema,
 	PriceSchema,
 	ProductSchema,
@@ -22,15 +23,20 @@ export const catalogRowsEnvelopeSchema = z.object({
 			internal_feature_ids: z.array(z.string()),
 		}),
 	),
+	/** Scoped by the product each trial belongs to: the table carries no org or env of its own. */
+	free_trials: z.array(
+		FreeTrialSchema.extend({ org_id: z.string(), env: z.string() }),
+	),
 });
 
 export type CatalogRowsEnvelope = z.infer<typeof catalogRowsEnvelopeSchema>;
 
-/** Which rows to fetch: entitlements, prices and plan licenses by id, products and features by internal_id. */
+/** Which rows to fetch: entitlements, prices, plan licenses and free trials by id, products and features by internal_id. */
 export type CatalogRowIds = {
 	entitlementIds: string[];
 	productInternalIds: string[];
 	featureInternalIds: string[];
 	priceIds: string[];
 	planLicenseIds: string[];
+	freeTrialIds: string[];
 };

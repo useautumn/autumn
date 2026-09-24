@@ -1,9 +1,9 @@
 import {
 	LockAlreadyExistsError,
 	LockNotFoundError,
-	type MutatingCommand,
 	UnsupportedCommandError,
 } from "@autumn/balance-engine";
+import type { CommandRecord } from "@autumn/kafka";
 import { FlushRecordRefusedError } from "../committer/committerErrors.js";
 import { PartitionProcessorStateNotFoundError } from "../processor/common/processorErrors.js";
 import { SubjectNotFoundError } from "../processor/subject/subjectErrors.js";
@@ -56,12 +56,12 @@ export const settleQueuedFailure = ({
 	cause,
 }: {
 	ctx: Pick<ConsumeContext, "logger">;
-	command: MutatingCommand;
+	command: CommandRecord;
 	cause: unknown;
 }): void => {
 	const fields = {
 		commandType: command.type,
-		commandId: command.commandId,
+		commandId: "commandId" in command ? command.commandId : undefined,
 		requestId: command.requestId,
 		customerId: command.identity.customerId,
 	};

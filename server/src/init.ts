@@ -48,7 +48,6 @@ import "./internal/misc/miscRedisConfig/miscRedisConfigStore.js";
 import "./internal/misc/cacheV2Ramp/cacheV2RampStore.js";
 import "./internal/misc/jobQueues/jobQueueStore.js";
 import "./internal/misc/batchReset/batchResetConfigStore.js";
-import "./internal/misc/resetJob/resetJobStore.js";
 import "./internal/misc/resetJobV2/resetJobV2Store.js";
 import "./internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 import "./internal/misc/asyncTrack/asyncTrackStore.js";
@@ -75,6 +74,7 @@ import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
 import { globalEventBatchingManager } from "./internal/balances/events/EventBatchingManager.js";
 import { globalSyncBatchingManagerV3 } from "./internal/balances/utils/sync/SyncBatchingManagerV3.js";
+import { getSqsJobs } from "./queue/getSqsJobs.js";
 import { shutdownSqsSendBatchers } from "./queue/queueUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import {
@@ -393,6 +393,7 @@ async function gracefulShutdown() {
 			}
 		}
 		await shutdownSqsSendBatchers();
+		await getSqsJobs().shutdown();
 		await Promise.all([
 			client.end(),
 			clientCritical.end(),

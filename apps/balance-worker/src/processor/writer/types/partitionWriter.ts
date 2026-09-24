@@ -1,5 +1,6 @@
 import type {
 	MeteringIdentity,
+	MutationEffect,
 	MutationRecord,
 	SubjectState,
 } from "@autumn/balance-engine";
@@ -28,7 +29,7 @@ export type PartitionWriter = {
 	readFreshestState(params: {
 		identity: MeteringIdentity;
 	}): SubjectState | null;
-	/** Waits for the customer's pending commits, then drops its resident rows so the next command re-reads the database. */
+	/** Drops the customer's resident rows once Postgres holds its earlier writes, so the next command re-reads them whole. */
 	evict(params: { customerKey: string }): Promise<void>;
 	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there. */
 	adopt(params: { state: SubjectState }): SubjectState;
@@ -103,8 +104,8 @@ export type PendingMutation = {
 	nextState: SubjectState;
 	/** Whether the caller is answered at the append or after the store applies. */
 	durability: MutationDurability;
-	/** Stamps nextState on the log's copy, never the store's. */
-	logsAfter?: boolean;
+	/** Stamped on the log's copy, never the store's. */
+	effects?: MutationEffect[];
 	/** The record the log gets, built once: the appender measured this object and sends this object. */
 	loggedRecord: MeteringRecord;
 	settlement: PendingSettlement;

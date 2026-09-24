@@ -49,6 +49,18 @@ export const catalogRowsSql = ({
 		'plan_licenses', COALESCE(
 			(${planLicenseCatalogRowsSql({ orgId: ctx.orgId, env: ctx.env, planLicenseIds: idList(ids.planLicenseIds) })}),
 			'[]'::json
+		),
+		'free_trials', COALESCE(
+			(SELECT json_agg(
+				to_jsonb(ft.*) || jsonb_build_object('org_id', p.org_id, 'env', p.env)
+				ORDER BY ft.id
+			)
+				FROM free_trials ft
+				JOIN products p ON p.internal_id = ft.internal_product_id
+				WHERE p.org_id = ${ctx.orgId}
+					AND p.env = ${ctx.env}
+					AND ft.id IN ${idList(ids.freeTrialIds)}),
+			'[]'::json
 		)
 	) AS envelope
 `;

@@ -25,6 +25,9 @@ export const BALANCE_WORKER_REQUEST_TIMEOUT_MS = 1_000;
  *  request gives up and answers 503, and the refresh it started carries on in
  *  the background for whoever comes next. */
 export const BALANCE_WORKER_ROUTE_REFRESH_TIMEOUT_MS = 200;
+/** A flush only waits for the committer's next batch, normally milliseconds. Past this the
+ *  caller reads Postgres as it is rather than holding a billing request on a slow worker. */
+export const BALANCE_WORKER_FLUSH_TIMEOUT_MS = 300;
 export const BALANCE_WORKER_RECEIPT_RETENTION_MS = 86_400_000;
 /** How long a partition remembers an applied command id: long enough for a caller's
  *  retry after a 503, not the 24h the idempotency key claim already covers. */

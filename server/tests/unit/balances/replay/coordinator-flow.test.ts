@@ -175,6 +175,7 @@ test.concurrent(
 				};
 			},
 			evict: async () => ({ evicted: false }),
+			flush: async () => ({ stored: true as const }),
 			finalize: async () => {
 				throw unsupported();
 			},
@@ -192,6 +193,9 @@ test.concurrent(
 					throw unsupported();
 				},
 				reset: async () => {
+					throw unsupported();
+				},
+				evict: async () => {
 					throw unsupported();
 				},
 			},

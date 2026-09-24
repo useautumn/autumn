@@ -10,6 +10,7 @@ type SubjectStateRows = Partial<
 		| "customerPrices"
 		| "customerEntitlements"
 		| "rollovers"
+		| "replaceables"
 		| "usageWindows"
 		| "openLocks"
 		| "pooledBalances"
@@ -33,6 +34,7 @@ export const createSubjectState = ({
 	customerPrices = [],
 	customerEntitlements = [],
 	rollovers = [],
+	replaceables = [],
 	usageWindows = [],
 	openLocks = [],
 	pooledBalances = [],
@@ -49,6 +51,7 @@ export const createSubjectState = ({
 			customerPrices,
 			customerEntitlements,
 			rollovers,
+			replaceables,
 			usageWindows,
 			openLocks,
 			pooledBalances,

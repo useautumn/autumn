@@ -11,6 +11,7 @@ import {
 	BillingInterval,
 	EntInterval,
 	FeatureType,
+	FreeTrialDuration,
 } from "@autumn/shared";
 import { createCatalogCache } from "../../src/createCatalogCache.js";
 import type { CatalogRowsSource } from "../../src/types/catalogCacheContext.js";
@@ -123,6 +124,31 @@ const planLicenseRow = ({
 	},
 });
 
+const freeTrialRow = ({
+	id,
+	productId = "prod_internal_1",
+	env = AppEnv.Sandbox,
+}: {
+	id: string;
+	productId?: string;
+	env?: AppEnv;
+}): CatalogRow => ({
+	table: "freeTrials",
+	row: {
+		id,
+		created_at: 1,
+		internal_product_id: productId,
+		duration: FreeTrialDuration.Day,
+		length: 7,
+		unique_fingerprint: false,
+		is_custom: false,
+		card_required: true,
+		on_end: null,
+		org_id: "org_1",
+		env,
+	},
+});
+
 const keyOf = (row: CatalogRow): CatalogKey => catalogRowToCatalogKey({ row });
 
 type FakeDb = Pick<CatalogRowsSource, "getCatalogRows"> & {
@@ -156,6 +182,7 @@ const createFakeDb = ({ rows }: { rows: CatalogRow[] }): FakeDb => {
 				features: rowsOf("features", ids.featureInternalIds),
 				prices: rowsOf("prices", ids.priceIds),
 				plan_licenses: rowsOf("planLicenses", ids.planLicenseIds),
+				free_trials: rowsOf("freeTrials", ids.freeTrialIds),
 			} as Awaited<ReturnType<CatalogRowsSource["getCatalogRows"]>>;
 		},
 	};
@@ -188,6 +215,7 @@ describe("catalog cache", () => {
 			features: {},
 			prices: {},
 			planLicenses: {},
+			freeTrials: {},
 		});
 		await cache.load({ identity, keys });
 
@@ -200,6 +228,7 @@ describe("catalog cache", () => {
 				featureInternalIds: [],
 				priceIds: [],
 				planLicenseIds: [],
+				freeTrialIds: [],
 			},
 		]);
 	});
@@ -265,6 +294,8 @@ describe("catalog cache", () => {
 			parentProductId: "prod_team",
 			licenseProductId: "prod_seat",
 		});
+		const sandboxTrial = freeTrialRow({ id: "ft_sandbox" });
+		const liveTrial = freeTrialRow({ id: "ft_live", env: AppEnv.Live });
 		const rows = [
 			base,
 			custom,
@@ -273,12 +304,14 @@ describe("catalog cache", () => {
 			basePrice,
 			customPrice,
 			planLicense,
+			sandboxTrial,
+			liveTrial,
 		];
 		const cache = createCache({ db: createFakeDb({ rows: [] }) });
 		cache.put({ rows });
 
 		expect(cache.invalidate({ orgId: "org_1", env: "sandbox" })).toEqual({
-			expiredCount: 4,
+			expiredCount: 5,
 		});
 		await Bun.sleep(5);
 		const catalog = cache.read({ keys: rows.map(keyOf) });
@@ -286,6 +319,7 @@ describe("catalog cache", () => {
 		expect(Object.keys(catalog.features)).toEqual(["feat_live"]);
 		expect(Object.keys(catalog.prices)).toEqual(["price_custom"]);
 		expect(catalog.planLicenses).toEqual({});
+		expect(Object.keys(catalog.freeTrials)).toEqual(["ft_live"]);
 		expect(
 			cache.read({ keys: [base].map(keyOf), allowStale: true }).entitlements,
 		).toHaveProperty("ent_base");

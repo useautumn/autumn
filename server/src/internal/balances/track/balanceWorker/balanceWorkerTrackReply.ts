@@ -4,6 +4,7 @@ import {
 	AffectedResource,
 	type ApiBalanceV1,
 	applyResponseVersionChanges,
+	type Customer,
 	fullSubjectToCustomerEntitlements,
 	fullSubjectToRelevantFeatures,
 	InsufficientBalanceError,
@@ -17,7 +18,38 @@ import {
 } from "../../balanceWorker/workerStateToApiBalance.js";
 
 /** One worker track and the feature it was sent for; an event name yields one per feature it maps to. */
-export type FeatureTrackReply = { featureId: string; reply: TrackReply };
+export type FeatureTrackReply = {
+	engine: "worker";
+	featureId: string;
+	reply: TrackReply;
+};
+
+/** One feature the worker refused, tracked on Postgres instead: the legacy response, unversioned, and the customer row it read. */
+export type FeatureTrackPostgresResponse = {
+	engine: "postgres";
+	featureId: string;
+	response: TrackResponseV3;
+	customer: Customer;
+};
+
+export type FeatureTrackOutcome =
+	| FeatureTrackReply
+	| FeatureTrackPostgresResponse;
+
+/** The pieces a response is assembled from, whichever engine produced them. */
+type ResponseParts = {
+	fundingBalances: ApiBalanceV1[];
+	balances: Record<string, ApiBalanceV1 | null>;
+	deductions: NonNullable<TrackResponseV3["deductions"]>;
+};
+
+const isWorkerReply = (
+	outcome: FeatureTrackOutcome,
+): outcome is FeatureTrackReply => outcome.engine === "worker";
+
+const isPostgresResponse = (
+	outcome: FeatureTrackOutcome,
+): outcome is FeatureTrackPostgresResponse => outcome.engine === "postgres";
 
 /** The legacy `balances` map: each tracked feature and the credit systems that can fund it, null where the customer holds none. */
 const balancesOf = ({
@@ -26,7 +58,7 @@ const balancesOf = ({
 }: {
 	ctx: AutumnContext;
 	subjects: { featureId: string; fullSubject: WorkerFullSubject }[];
-}): Record<string, ApiBalanceV1 | null> | undefined => {
+}): Record<string, ApiBalanceV1 | null> => {
 	const balances: Record<string, ApiBalanceV1 | null> = {};
 	for (const { featureId, fullSubject } of subjects) {
 		const relevantFeatures = fullSubjectToRelevantFeatures({
@@ -45,11 +77,10 @@ const balancesOf = ({
 				: null;
 		}
 	}
-	return Object.keys(balances).length < 2 ? undefined : balances;
+	return balances;
 };
 
-/** The one place worker track replies become the API's track response. */
-export function trackRepliesToApiResponse({
+const workerResponseParts = ({
 	ctx,
 	body,
 	replies,
@@ -57,7 +88,7 @@ export function trackRepliesToApiResponse({
 	ctx: AutumnContext;
 	body: TrackParams;
 	replies: FeatureTrackReply[];
-}): TrackResponseV3 {
+}): ResponseParts => {
 	const value = body.value ?? 1;
 	// Each reply carries only the rows that fund its own feature, so every feature is read off the reply that tracked it.
 	const subjects = replies.map(({ featureId, reply }) => ({
@@ -98,16 +129,66 @@ export function trackRepliesToApiResponse({
 		});
 	}
 
+	return {
+		fundingBalances,
+		balances: balancesOf({ ctx, subjects }),
+		// The worker reports the per-balance breakdown with its decision, the same one its usage event carries.
+		deductions: replies.flatMap(({ reply }) => reply.result.deductions),
+	};
+};
+
+/** Postgres already answered in the API shape; its balance is the tracked feature's funding balance. */
+const postgresResponseParts = ({
+	responses,
+}: {
+	responses: FeatureTrackPostgresResponse[];
+}): ResponseParts => ({
+	fundingBalances: responses.flatMap(({ response }) =>
+		response.balance ? [response.balance] : [],
+	),
+	balances: Object.assign(
+		{},
+		...responses.map(
+			({ featureId, response }) =>
+				response.balances ?? { [featureId]: response.balance },
+		),
+	),
+	deductions: responses.flatMap(({ response }) => response.deductions ?? []),
+});
+
+/** The one place track outcomes, from either engine, become the API's track response. */
+export function trackOutcomesToApiResponse({
+	ctx,
+	body,
+	outcomes,
+}: {
+	ctx: AutumnContext;
+	body: TrackParams;
+	outcomes: FeatureTrackOutcome[];
+}): TrackResponseV3 {
+	const replies = outcomes.filter(isWorkerReply);
+	const worker: ResponseParts =
+		replies.length > 0
+			? workerResponseParts({ ctx, body, replies })
+			: { fundingBalances: [], balances: {}, deductions: [] };
+	const postgres = postgresResponseParts({
+		responses: outcomes.filter(isPostgresResponse),
+	});
+	const fundingBalances = [
+		...worker.fundingBalances,
+		...postgres.fundingBalances,
+	];
+	const balances = { ...worker.balances, ...postgres.balances };
+
 	return applyResponseVersionChanges<TrackResponseV3>({
 		ctx,
 		input: {
 			customer_id: body.customer_id,
 			entity_id: body.entity_id ?? undefined,
-			value,
+			value: body.value ?? 1,
 			balance: fundingBalances.length === 1 ? fundingBalances[0] : null,
-			balances: balancesOf({ ctx, subjects }),
-			// The worker reports the per-balance breakdown with its decision, the same one its usage event carries.
-			deductions: replies.flatMap(({ reply }) => reply.result.deductions),
+			balances: Object.keys(balances).length < 2 ? undefined : balances,
+			deductions: [...worker.deductions, ...postgres.deductions],
 		},
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Track,

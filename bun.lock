@@ -39,7 +39,9 @@
       "name": "@autumn/balance-worker",
       "version": "0.0.1",
       "dependencies": {
+        "@autumn/auto-topup": "workspace:*",
         "@autumn/balance-engine": "workspace:*",
+        "@autumn/balance-webhooks": "workspace:*",
         "@autumn/balance-worker-client": "workspace:*",
         "@autumn/catalog-lru": "workspace:*",
         "@autumn/dynamodb": "workspace:*",
@@ -117,14 +119,19 @@
       "name": "@autumn/herald",
       "version": "0.0.1",
       "dependencies": {
+        "@autumn/auto-topup": "workspace:*",
         "@autumn/balance-engine": "workspace:*",
         "@autumn/balance-webhooks": "workspace:*",
+        "@autumn/cache": "workspace:*",
         "@autumn/catalog-lru": "workspace:*",
+        "@autumn/edge-config": "workspace:*",
+        "@autumn/encryption": "workspace:*",
         "@autumn/env": "workspace:*",
         "@autumn/kafka": "workspace:*",
         "@autumn/logging": "workspace:*",
         "@autumn/postgres": "workspace:*",
         "@autumn/shared": "workspace:*",
+        "@autumn/sqs": "workspace:*",
         "@autumn/svix": "workspace:*",
         "@autumn/tinybird": "workspace:*",
         "decimal.js": "^10.5.0",
@@ -422,6 +429,22 @@
         "typescript": "~5.8.3",
       },
     },
+    "packages/auto-topup": {
+      "name": "@autumn/auto-topup",
+      "version": "0.0.1",
+      "dependencies": {
+        "@autumn/cache": "workspace:*",
+        "@autumn/logging": "workspace:*",
+        "@autumn/shared": "workspace:*",
+        "@autumn/sqs": "workspace:*",
+      },
+      "devDependencies": {
+        "@autumn/balance-engine": "workspace:*",
+        "@types/bun": "1.3.14",
+        "@types/node": "^24.9.1",
+        "typescript": "~5.8.3",
+      },
+    },
     "packages/autumn-js": {
       "name": "autumn-js",
       "version": "1.2.17",
@@ -521,6 +544,21 @@
         "typescript": "~5.8.3",
       },
     },
+    "packages/cache": {
+      "name": "@autumn/cache",
+      "version": "0.0.1",
+      "dependencies": {
+        "@autumn/edge-config": "workspace:*",
+        "@autumn/logging": "workspace:*",
+        "@autumn/shared": "workspace:*",
+        "ioredis": "^5.5.0",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.14",
+        "@types/node": "^24.9.1",
+        "typescript": "~5.8.3",
+      },
+    },
     "packages/catalog-lru": {
       "name": "@autumn/catalog-lru",
       "version": "0.0.1",
@@ -571,6 +609,15 @@
         "@aws-sdk/client-s3": "^3.1017.0",
         "zod": "^3.25.23",
       },
+      "devDependencies": {
+        "@types/bun": "1.3.14",
+        "@types/node": "^24.9.1",
+        "typescript": "~5.8.3",
+      },
+    },
+    "packages/encryption": {
+      "name": "@autumn/encryption",
+      "version": "0.0.1",
       "devDependencies": {
         "@types/bun": "1.3.14",
         "@types/node": "^24.9.1",
@@ -729,6 +776,23 @@
         "typescript-eslint": "^8.65.0",
       },
     },
+    "packages/sqs": {
+      "name": "@autumn/sqs",
+      "version": "0.0.1",
+      "dependencies": {
+        "@autumn/env": "workspace:*",
+        "@autumn/logging": "workspace:*",
+        "@autumn/shared": "workspace:*",
+        "@aws-sdk/client-sqs": "^3.958.0",
+        "ksuid": "^3.0.0",
+        "zod": "^3.25.23",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.14",
+        "@types/node": "^24.9.1",
+        "typescript": "~5.8.3",
+      },
+    },
     "packages/stripe-sync": {
       "name": "@autumn/stripe-sync",
       "version": "1.0.0",
@@ -855,9 +919,11 @@
         "@anthropic-ai/sdk": "^0.32.1",
         "@autumn/agent-docs": "workspace:*",
         "@autumn/auth": "workspace:*",
+        "@autumn/auto-topup": "workspace:*",
         "@autumn/balance-engine": "workspace:*",
         "@autumn/balance-webhooks": "workspace:*",
         "@autumn/balance-worker-client": "workspace:*",
+        "@autumn/cache": "workspace:*",
         "@autumn/catalog-lru": "workspace:*",
         "@autumn/ducklake": "workspace:*",
         "@autumn/dynamodb": "workspace:*",
@@ -867,6 +933,7 @@
         "@autumn/ksuid": "workspace:*",
         "@autumn/logging": "workspace:*",
         "@autumn/shared": "workspace:*",
+        "@autumn/sqs": "workspace:*",
         "@autumn/stripe-sync": "workspace:*",
         "@autumn/svix": "workspace:*",
         "@aws-sdk/client-dynamodb": "^3.1095.0",
@@ -1278,6 +1345,8 @@
 
     "@autumn/auth": ["@autumn/auth@workspace:packages/auth"],
 
+    "@autumn/auto-topup": ["@autumn/auto-topup@workspace:packages/auto-topup"],
+
     "@autumn/ax-evals": ["@autumn/ax-evals@workspace:packages/ax-evals"],
 
     "@autumn/balance-engine": ["@autumn/balance-engine@workspace:packages/balance-engine"],
@@ -1288,6 +1357,8 @@
 
     "@autumn/balance-worker-client": ["@autumn/balance-worker-client@workspace:packages/balance-worker-client"],
 
+    "@autumn/cache": ["@autumn/cache@workspace:packages/cache"],
+
     "@autumn/catalog-lru": ["@autumn/catalog-lru@workspace:packages/catalog-lru"],
 
     "@autumn/docs": ["@autumn/docs@workspace:apps/docs"],
@@ -1297,6 +1368,8 @@
     "@autumn/dynamodb": ["@autumn/dynamodb@workspace:packages/dynamodb"],
 
     "@autumn/edge-config": ["@autumn/edge-config@workspace:packages/edge-config"],
+
+    "@autumn/encryption": ["@autumn/encryption@workspace:packages/encryption"],
 
     "@autumn/env": ["@autumn/env@workspace:packages/env"],
 
@@ -1323,6 +1396,8 @@
     "@autumn/server": ["@autumn/server@workspace:server"],
 
     "@autumn/shared": ["@autumn/shared@workspace:shared"],
+
+    "@autumn/sqs": ["@autumn/sqs@workspace:packages/sqs"],
 
     "@autumn/sso-test-idp": ["@autumn/sso-test-idp@workspace:apps/sso-test-idp"],
 
@@ -7083,6 +7158,8 @@
     "@autumn/shared/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "@autumn/shared/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+
+    "@autumn/sqs/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@autumn/sso-test-idp/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 

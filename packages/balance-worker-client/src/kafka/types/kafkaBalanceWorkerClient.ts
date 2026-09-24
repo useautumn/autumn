@@ -48,9 +48,12 @@ export type KafkaBalanceWorkerClientConfig = {
 	groupIdPrefix: string;
 	partitionCount: number;
 	timeoutMs: number;
+	appendTimeoutMs?: number;
 	routeRefreshTimeoutMs?: number;
 	batchTracks?: boolean;
 	maxTrackBatchSize?: number;
 	catchUpTimeoutMs?: number;
 	startRetryDelaysMs?: readonly number[];
+	/** A process that queues or publishes connects its producers at start, so no first call pays the connect. Off for one that never appends. */
+	connectProducersOnStart?: boolean;
 };

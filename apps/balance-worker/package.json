@@ -16,7 +16,9 @@
 		"test:postgres": "bun ../../scripts/devServices/runKafkaTests.ts tests/integration/postgres"
 	},
 	"dependencies": {
+		"@autumn/auto-topup": "workspace:*",
 		"@autumn/balance-engine": "workspace:*",
+		"@autumn/balance-webhooks": "workspace:*",
 		"@autumn/balance-worker-client": "workspace:*",
 		"@autumn/catalog-lru": "workspace:*",
 		"@autumn/dynamodb": "workspace:*",

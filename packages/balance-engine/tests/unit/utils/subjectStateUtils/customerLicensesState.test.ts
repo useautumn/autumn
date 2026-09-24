@@ -41,6 +41,7 @@ const customerWithPool = () =>
 		customerPrices: [],
 		customerEntitlements: [],
 		rollovers: [],
+		replaceables: [],
 		usageWindows: [],
 		customerLicenses: [hydratedPoolRow],
 		entity: null,

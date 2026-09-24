@@ -1,9 +1,9 @@
 import type {
-	MutatingCommand,
+	EvictCommand,
 	ResetCommand,
 	TrackCommand,
 } from "@autumn/balance-engine";
-import type { CommandPublisher } from "@autumn/kafka";
+import type { CommandPublisher, CommandRecord } from "@autumn/kafka";
 
 /** Where queued commands go; the owner of each partition consumes them later. */
 export type CommandLog = Pick<CommandPublisher, "append">;
@@ -11,12 +11,28 @@ export type CommandLog = Pick<CommandPublisher, "append">;
 export type QueueContext = {
 	commandLog?: CommandLog;
 	partitionCount: number;
+	/** The client's append budget (`appendTimeoutMs`). */
+	timeoutMs: number;
 };
 
-export type EnqueueParams = { commands: readonly MutatingCommand[] };
+export type EnqueueParams = {
+	commands: readonly CommandRecord[];
+	signal?: AbortSignal;
+};
 
 /** Queued for the partition owners; nobody waits for a reply. */
 export type CommandQueue = {
-	track(params: { commands: readonly TrackCommand[] }): Promise<void>;
-	reset(params: { commands: readonly ResetCommand[] }): Promise<void>;
+	track(params: {
+		commands: readonly TrackCommand[];
+		signal?: AbortSignal;
+	}): Promise<void>;
+	reset(params: {
+		commands: readonly ResetCommand[];
+		signal?: AbortSignal;
+	}): Promise<void>;
+	/** Batch writers' evict: the owner drops each customer's copy in log order, after the store has its earlier writes. */
+	evict(params: {
+		commands: readonly EvictCommand[];
+		signal?: AbortSignal;
+	}): Promise<void>;
 };

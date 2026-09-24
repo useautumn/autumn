@@ -1,7 +1,6 @@
 import type { PartitionWriterScope } from "../types/partitionWriter.js";
-import { waitForPendingCommits } from "./decide.js";
 
-/** Commits already in flight land first; a command arriving meanwhile pins its subject, and the map drops that one on unpin. */
+/** Drops the customer's resident rows; a subject pinned by an in-flight commit goes when that commit releases it. */
 export async function evict({
 	scope,
 	customerKey,
@@ -9,6 +8,7 @@ export async function evict({
 	scope: PartitionWriterScope;
 	customerKey: string;
 }): Promise<void> {
-	await waitForPendingCommits({ scope, customerKey });
+	// The next command re-reads Postgres, so the worker's own writes must be there first.
+	await scope.state.storeCompletion;
 	scope.state.subjects.evictCustomer({ customerKey });
 }

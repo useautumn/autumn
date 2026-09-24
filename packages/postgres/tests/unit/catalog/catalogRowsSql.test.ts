@@ -14,6 +14,7 @@ describe("catalogRowsSql", () => {
 					featureInternalIds: ["feat_1"],
 					priceIds: ["price_1"],
 					planLicenseIds: ["pl_1"],
+					freeTrialIds: ["ft_1"],
 				},
 			}),
 		);
@@ -26,6 +27,7 @@ describe("catalogRowsSql", () => {
 					featureInternalIds: ["feat_9"],
 					priceIds: [],
 					planLicenseIds: [],
+					freeTrialIds: [],
 				},
 			}),
 		);
@@ -45,7 +47,14 @@ describe("catalogRowsSql", () => {
 			"org_1",
 			"sandbox",
 			'["pl_1"]',
+			"org_1",
+			"sandbox",
+			'["ft_1"]',
 		]);
+		// A free trial carries no org or env of its own: its product's scope it.
+		expect(first.sql).toContain(
+			"FROM free_trials ft\n\t\t\t\tJOIN products p ON p.internal_id = ft.internal_product_id",
+		);
 		expect(first.sql).toContain("jsonb_array_elements_text($2::text::jsonb)");
 		expect(first.sql).toBe(second.sql);
 		expect(first.sql).not.toContain("org_1");

@@ -11,8 +11,24 @@ mock.module(marksModulePath, () => ({
 	...realMarks,
 	markCustomersUpdatedAt: async () => {},
 }));
+// The worker evict is a Kafka append; capture it instead.
+const evictsModulePath =
+	"@/internal/balances/balanceWorker/queueBalanceWorkerEvicts.js";
+const realEvicts = { ...(await import(evictsModulePath)) };
+const queuedEvicts: { customerId: string }[][] = [];
+mock.module(evictsModulePath, () => ({
+	...realEvicts,
+	queueBalanceWorkerEvicts: async ({
+		customers,
+	}: {
+		customers: { customerId: string }[];
+	}) => {
+		queuedEvicts.push(customers);
+	},
+}));
 afterAll(() => {
 	mock.module(marksModulePath, () => realMarks);
+	mock.module(evictsModulePath, () => realEvicts);
 });
 
 const { batchInvalidateCachedFullSubjects } = await import(
@@ -163,6 +179,22 @@ describe("batchInvalidateCachedFullSubjects", () => {
 			expect(new Set(primary.calls.writeOps).size).toBe(20_000);
 		},
 	);
+
+	test("queues one worker evict batch for the page, before any Redis write", async () => {
+		queuedEvicts.length = 0;
+		const primary = createFakeRedis();
+		const customers = ["cus_1", "cus_2"].map((customerId) => ({
+			orgId: "org_test",
+			env: "sandbox" as AppEnv,
+			customerId,
+		}));
+		await batchInvalidateCachedFullSubjects({
+			customers,
+			featuresByOrgEnv: {},
+			getRedisTargetsForCustomer: () => [primary.redis],
+		});
+		expect(queuedEvicts).toEqual([customers]);
+	});
 
 	test("limits migration pipelines to 250 subjects and retries the same batch", async () => {
 		const primary = createFakeRedis({ errorTupleWrites: 1 });

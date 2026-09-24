@@ -24,7 +24,6 @@ import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
 import { runOneOffCleanup } from "./oneoffCron/runOneOffCleanup.js";
 import { runOneOffExpiry } from "./oneoffCron/runOneOffExpiry.js";
 import { runProductCron } from "./productCron/runProductCron.js";
-import { runResetLoop } from "./resetCron/runResetLoop.js";
 import { runSeatSyncCron } from "./seatSyncCron/runSeatSyncCron.js";
 import type { CronContext } from "./utils/CronContext.js";
 
@@ -85,7 +84,6 @@ const main = async () => {
 		runProductCron({ ctx }),
 		runInvoiceCron({ ctx }),
 		runOneOffExpiry({ ctx }),
-		// runClearExpiredResetCron({ ctx }),
 	]);
 };
 
@@ -159,13 +157,8 @@ main();
 oneOffCleanupTick();
 dbProbesTick();
 
-// V1 and V2 loops are fully independent, each gated by its own edge config
-// (reset-job / reset-job-v2), so either can be flipped without a deploy.
+// Gated by the reset-job-v2 edge config, so it can be flipped without a deploy.
 const resetLoopController = new AbortController();
-const resetLoopPromise = runResetLoop({
-	ctx,
-	signal: resetLoopController.signal,
-});
 const resetLoopV2Promise = runResetLoopV2({
 	ctx,
 	signal: resetLoopController.signal,
@@ -184,11 +177,7 @@ const shutdown = async (signal: string) => {
 	stopBlueGreenHeartbeat({ serviceName: "cron" });
 	stopBlueGreenSlotStorePolling({ serviceName: "cron" });
 	stopAllEdgeConfigPolling();
-	await Promise.all([
-		resetLoopPromise,
-		resetLoopV2Promise,
-		lockSweepLoopPromise,
-	]);
+	await Promise.all([resetLoopV2Promise, lockSweepLoopPromise]);
 	await shutdownSqsSendBatchers();
 	await client.end();
 	await probeClient.end();

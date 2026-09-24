@@ -12,6 +12,7 @@ import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
+import { decideEffects } from "../effects/decideEffects.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type { MutationResult } from "../writer/types/mutation.js";
 
@@ -89,10 +90,15 @@ function decideTrack({
 		identity: command.identity,
 	});
 	const mutation = computeTrack({ fullSubject, command });
+	const nextState = applyMutation({ state, mutation });
+	const after = scope.ctx.subjectHydrator.readSubject({
+		state: nextState,
+		identity: command.identity,
+	});
 	return {
 		kind: "write",
 		mutation,
-		nextState: applyMutation({ state, mutation }),
-		logsAfter: true,
+		nextState,
+		effects: decideEffects({ mutation, before: fullSubject, after }),
 	};
 }

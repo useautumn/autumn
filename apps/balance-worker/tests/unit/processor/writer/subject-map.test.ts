@@ -30,9 +30,9 @@ describe("createSubjectMap", () => {
 		const map = createSubjectMap();
 		const state = createState();
 		const entityKey = `${customerKey}:entity_1`;
-		map.setState({ subjectKey: customerKey, state });
-		map.setState({ subjectKey: entityKey, state });
-		map.setState({ subjectKey: "other", state });
+		map.setState({ subjectKey: customerKey, customerKey, state });
+		map.setState({ subjectKey: entityKey, customerKey, state });
+		map.setState({ subjectKey: "other", customerKey: "other", state });
 
 		map.evictCustomer({ customerKey });
 		expect(map.readState({ subjectKey: customerKey })).toBeNull();
@@ -40,10 +40,27 @@ describe("createSubjectMap", () => {
 		expect(map.readState({ subjectKey: "other" })).toEqual(state);
 	});
 
+	test("an evict finds the customer's subjects through the index, and an LRU drop leaves the index clean", () => {
+		const map = createSubjectMap({ maxBytes: 1 });
+		const state = createState();
+		const entityKey = `${customerKey}:entity_1`;
+		map.setState({ subjectKey: customerKey, customerKey, state });
+		// Over the bound: the customer's row is dropped by LRU, the entity's stays as the one just written.
+		map.setState({ subjectKey: entityKey, customerKey, state });
+		expect(map.readState({ subjectKey: customerKey })).toBeNull();
+		expect(map.readState({ subjectKey: entityKey })).toEqual(state);
+
+		map.evictCustomer({ customerKey });
+		expect(map.readState({ subjectKey: entityKey })).toBeNull();
+		expect(map.sizeBytes()).toBe(0);
+		// Nothing left for the customer: a second evict is a no-op, not an error.
+		map.evictCustomer({ customerKey });
+	});
+
 	test("a pinned subject stays until its last pin is released, then goes", () => {
 		const map = createSubjectMap();
 		const state = createState();
-		map.setState({ subjectKey: customerKey, state });
+		map.setState({ subjectKey: customerKey, customerKey, state });
 		map.pin({ subjectKey: customerKey });
 		map.pin({ subjectKey: customerKey });
 		map.evictCustomer({ customerKey });
@@ -61,14 +78,14 @@ describe("createSubjectMap", () => {
 		const b = createState({ identity: { ...testIdentity, customerId: "b" } });
 		const c = createState({ identity: { ...testIdentity, customerId: "c" } });
 		map.pin({ subjectKey: "a" });
-		map.setState({ subjectKey: "a", state: a });
-		map.setState({ subjectKey: "b", state: b });
+		map.setState({ subjectKey: "a", customerKey: "a", state: a });
+		map.setState({ subjectKey: "b", customerKey: "b", state: b });
 
 		// Over the bound, but a is pinned and b was just written: nothing to evict.
 		expect(map.readState({ subjectKey: "a" })).toEqual(a);
 		expect(map.readState({ subjectKey: "b" })).toEqual(b);
 		map.unpin({ subjectKey: "a" });
-		map.setState({ subjectKey: "c", state: c });
+		map.setState({ subjectKey: "c", customerKey: "c", state: c });
 		expect(map.readState({ subjectKey: "a" })).toBeNull();
 		expect(map.readState({ subjectKey: "b" })).toBeNull();
 		expect(map.readState({ subjectKey: "c" })).toEqual(c);

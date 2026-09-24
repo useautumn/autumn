@@ -273,7 +273,7 @@ function enterRecovery({
 	rejectAllPending({ state: scope.state, batch: [...owed], error });
 }
 
-// Only the log's copy carries `after`, and only the columns commands decide on; memory keeps the whole rows.
+// Only the log's copy carries the effects; the store, its receipts and checkpoints hold the record without them.
 /** Up to maxBatchSize records and maxBatchBytes, and never empty: enqueue already
  *  refused any single record over the byte limit. */
 function takeBatch({

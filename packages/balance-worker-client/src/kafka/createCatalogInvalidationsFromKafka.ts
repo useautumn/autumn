@@ -9,6 +9,8 @@ import type {
 import type { BalanceWorkerKafka } from "./types/kafkaBalanceWorkerClient.js";
 
 export type CatalogInvalidationsFromKafka = CatalogInvalidations & {
+	/** Pays the producer connect now, so the first publish does not. */
+	connect(): Promise<void>;
 	stop(): Promise<void>;
 };
 
@@ -54,5 +56,5 @@ export function createCatalogInvalidationsFromKafka({
 		await producer.disconnect();
 	}
 
-	return { invalidateOrgCatalog, stop };
+	return { connect, invalidateOrgCatalog, stop };
 }

@@ -1,6 +1,7 @@
 import {
 	DB_CONTROL_CONFIG_KEY,
 	EDGE_CONFIG_TIMESTAMP_KEY,
+	MISC_REDIS_CONFIG_KEY,
 } from "@autumn/edge-config";
 
 export const ADMIN_REQUEST_BLOCK_CONFIG_KEY = "admin/request-block-config.json";
@@ -17,12 +18,10 @@ export const ADMIN_AGENT_PROVISION_RATE_LIMIT_CONFIG_KEY =
 	"admin/agent-provision-rate-limit-config.json";
 export const ADMIN_REDIS_V2_CACHE_CONFIG_KEY =
 	"admin/redis-v2-cache-config.json";
-export const ADMIN_MAIN_REDIS_CACHE_CONFIG_KEY =
-	"admin/main-redis-cache-config.json";
+export const ADMIN_MAIN_REDIS_CACHE_CONFIG_KEY = MISC_REDIS_CONFIG_KEY;
 export const ADMIN_CACHE_V2_RAMP_CONFIG_KEY = "admin/cache-v2-ramp-config.json";
 export const ADMIN_JOB_QUEUE_CONFIG_KEY = "admin/job-queue-config.json";
 export const ADMIN_BATCH_RESET_CONFIG_KEY = "admin/batch-reset-config.json";
-export const ADMIN_RESET_JOB_CONFIG_KEY = "admin/reset-job-config.json";
 export const ADMIN_RESET_JOB_V2_CONFIG_KEY = "admin/reset-job-v2-config.json";
 export const ADMIN_MISCELLANEOUS_EDGE_CONFIG_KEY =
 	"admin/miscellaneous-edge-config.json";
@@ -109,11 +108,6 @@ export const getAdminEdgeConfigSources = () => ({
 			id: "batch-resets",
 			label: "Lazy Batch Resets",
 			key: ADMIN_BATCH_RESET_CONFIG_KEY,
-		},
-		{
-			id: "reset-job",
-			label: "Reset Job",
-			key: ADMIN_RESET_JOB_CONFIG_KEY,
 		},
 		{
 			id: "reset-job-v2",

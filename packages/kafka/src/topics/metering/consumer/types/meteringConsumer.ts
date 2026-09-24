@@ -5,7 +5,6 @@ import type {
 	TopicResumePosition,
 } from "../../../../consumer/types/consumer.js";
 import type { ProgressTracker } from "../../../../consumer/types/progress.js";
-import type { MeteringSnapshotReading } from "../../meteringTopic.js";
 import type { MeteringRecord } from "../../types/meteringRecord.js";
 
 export type MeteringRecordApplication = {
@@ -43,6 +42,4 @@ export type MeteringConsumerDependencies = {
 	progress: ProgressTracker;
 	/** Other topics on the same group membership, each with its own raw record handler. */
 	secondaryHandlers?: Readonly<Record<string, TopicRecordHandler>>;
-	/** How records are decoded; "skip" leaves out the `after` snapshot this handler never reads. */
-	snapshot?: MeteringSnapshotReading;
 };

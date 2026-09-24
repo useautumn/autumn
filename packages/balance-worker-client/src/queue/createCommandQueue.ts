@@ -1,4 +1,8 @@
-import type { ResetCommand, TrackCommand } from "@autumn/balance-engine";
+import type {
+	EvictCommand,
+	ResetCommand,
+	TrackCommand,
+} from "@autumn/balance-engine";
 import { enqueueCommands } from "./enqueueCommands.js";
 import type { CommandQueue, QueueContext } from "./types/queue.js";
 
@@ -8,13 +12,35 @@ export function createCommandQueue({
 }: {
 	ctx: QueueContext;
 }): CommandQueue {
-	function track({ commands }: { commands: readonly TrackCommand[] }) {
-		return enqueueCommands({ ctx, commands });
+	function track({
+		commands,
+		signal,
+	}: {
+		commands: readonly TrackCommand[];
+		signal?: AbortSignal;
+	}) {
+		return enqueueCommands({ ctx, commands, signal });
 	}
 
-	function reset({ commands }: { commands: readonly ResetCommand[] }) {
-		return enqueueCommands({ ctx, commands });
+	function reset({
+		commands,
+		signal,
+	}: {
+		commands: readonly ResetCommand[];
+		signal?: AbortSignal;
+	}) {
+		return enqueueCommands({ ctx, commands, signal });
 	}
 
-	return { track, reset };
+	function evict({
+		commands,
+		signal,
+	}: {
+		commands: readonly EvictCommand[];
+		signal?: AbortSignal;
+	}) {
+		return enqueueCommands({ ctx, commands, signal });
+	}
+
+	return { track, reset, evict };
 }

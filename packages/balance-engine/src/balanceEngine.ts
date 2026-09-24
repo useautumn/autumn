@@ -36,16 +36,14 @@ export type { EvictCommand } from "./commands/evict/types/evictCommand.js";
 export { computeFinalize } from "./commands/finalize/computeFinalize.js";
 export type { FinalizeCommand } from "./commands/finalize/types/finalizeCommand.js";
 export type { FinalizeResult } from "./commands/finalize/types/finalizeResult.js";
+export type { FlushCommand } from "./commands/flush/types/flushCommand.js";
 export { computeInitialize } from "./commands/initialize/computeInitialize.js";
 export type { InitializeCommand } from "./commands/initialize/types/initializeCommand.js";
 export type { InitializeRequest } from "./commands/initialize/types/initializeRequest.js";
 export type { InitializeResult } from "./commands/initialize/types/initializeResult.js";
 export type { ReadSubjectStateCommand } from "./commands/readSubjectState/types/readSubjectStateCommand.js";
 export { computeReset } from "./commands/reset/computeReset.js";
-export type {
-	ResetCommand,
-	ResetDurability,
-} from "./commands/reset/types/resetCommand.js";
+export type { ResetCommand } from "./commands/reset/types/resetCommand.js";
 export type {
 	ResetResult,
 	ResetRow,
@@ -68,7 +66,6 @@ export type { UnsupportedCommandReason } from "./errors.js";
 // boundary
 export {
 	CatalogRowMissingError,
-	IrreversibleChangeError,
 	LockAlreadyExistsError,
 	LockNotFoundError,
 	MutationSubjectMismatchError,
@@ -78,6 +75,7 @@ export {
 	UnsupportedCommandError,
 } from "./errors.js";
 export type { Catalog } from "./models/catalog/catalog.js";
+export type { CatalogFreeTrial } from "./models/catalog/catalogFreeTrial.js";
 export type {
 	CatalogKey,
 	CatalogTable,
@@ -85,6 +83,7 @@ export type {
 export type { CatalogPlanLicense } from "./models/catalog/catalogPlanLicense.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
 export type { BaseCommand } from "./models/command/baseCommand.js";
+export type { CommandDurability } from "./models/command/commandDurability.js";
 export type { CommandOrg } from "./models/command/commandOrg.js";
 export type { MutatingCommand } from "./models/command/mutatingCommand.js";
 export { orgToCommandOrg } from "./models/command/orgToCommandOrg.js";
@@ -93,7 +92,11 @@ export type { JsonValue } from "./models/common/json.js";
 export { canonicalizeJsonValue } from "./models/common/json.js";
 export type { MeteringIdentity } from "./models/identity/meteringIdentity.js";
 export type {
-	MutationAfter,
+	AutoTopupEffect,
+	BalanceWebhookEffect,
+	MutationEffect,
+} from "./models/mutation/mutationEffect.js";
+export type {
 	MutationReceipt,
 	MutationRecord,
 	MutationSource,
@@ -126,6 +129,7 @@ export type {
 } from "./models/subject/rows/workerLock.js";
 export type { WorkerPooledBalance } from "./models/subject/rows/workerPooledBalance.js";
 export type { WorkerPooledContribution } from "./models/subject/rows/workerPooledContribution.js";
+export type { WorkerReplaceable } from "./models/subject/rows/workerReplaceable.js";
 export type { WorkerRollover } from "./models/subject/rows/workerRollover.js";
 export type { WorkerUsageWindow } from "./models/subject/rows/workerUsageWindow.js";
 export type { SubjectState } from "./models/subject/subjectState.js";
@@ -140,7 +144,6 @@ export type {
 export { applyChanges } from "./mutation/applyChanges.js";
 export { applyMutation } from "./mutation/applyMutation.js";
 export { incrementRow } from "./mutation/incrementRow.js";
-export { revertChanges } from "./mutation/revertChanges.js";
 export {
 	parseApplyBillingPlanRequest,
 	parseCatalog,
@@ -149,6 +152,7 @@ export {
 	parseConfirmExpiredLockCommand,
 	parseEvictCommand,
 	parseFinalizeCommand,
+	parseFlushCommand,
 	parseInitializeCommand,
 	parseInitializeRequest,
 	parseMeteringIdentity,
@@ -168,6 +172,7 @@ export {
 	catalogRowToCatalogKey,
 	planLicensesToItemCatalogKeys,
 	subjectStateToCatalogKeys,
+	subjectStateToFreeTrialCatalogKeys,
 	subjectStateToPlanLicenseCatalogKeys,
 } from "./utils/catalogUtils/convertCatalogUtils.js";
 export { filterCatalogKeysMissingFrom } from "./utils/catalogUtils/filterCatalogUtils.js";
@@ -184,7 +189,6 @@ export {
 	mergeSubjectStates,
 	splitCustomerAndEntities,
 	splitSubjectState,
-	subjectStateToLogState,
 } from "./utils/subjectStateUtils/convertSubjectStateUtils.js";
 export { createSubjectState } from "./utils/subjectStateUtils/createSubjectState.js";
 export {

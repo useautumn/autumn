@@ -5,12 +5,13 @@ import {
 	computeFinalize,
 	computeTrack,
 	createSubjectState,
-	type MutationRecord,
 	type SubjectState,
+	type SubjectStateMutation,
 	subjectStateToFullSubject,
 	type WorkerCustomer,
 	type WorkerCustomerEntitlement,
 	type WorkerEntity,
+	type WorkerFullSubject,
 } from "@autumn/balance-engine";
 import { type DbUsageAlert, ResetInterval } from "@autumn/shared";
 import { customerWith } from "../../../balance-engine/tests/unit/deduction/deductionFixtures.js";
@@ -23,7 +24,7 @@ import {
 	identity,
 	occurredAt,
 } from "../../../balance-engine/tests/unit/engineFixtures.js";
-import { recordToBalanceWebhooks } from "../../src/balanceWebhooks.js";
+import { subjectsToBalanceWebhooks } from "../../src/balanceWebhooks.js";
 
 /**
  * The usage-alert matrix: which alerts a track considers (customer, plan, entity, org) for a customer
@@ -102,11 +103,15 @@ const catalogOf = ({
 	return catalog;
 };
 
-/** The record the log carries, with the catalog herald reads for it beside. */
-type LoggedRecord = MutationRecord & { catalog: Catalog };
+/** What the worker hands the decision: the mutation with the subject as it found it and as it left it. */
+type DecidedOn = {
+	mutation: SubjectStateMutation;
+	before: WorkerFullSubject;
+	after: WorkerFullSubject;
+};
 
-/** Tracks `value` and returns the record the log would carry. */
-const trackRecord = ({
+/** Tracks `value` and returns what the worker decides effects over. */
+const trackOn = ({
 	customer = customerOf(),
 	customerEntitlements = [createCustomerEntitlement({ balance: 10 })],
 	withEntity,
@@ -124,7 +129,7 @@ const trackRecord = ({
 	value: number;
 	trackEntity?: boolean;
 	properties?: Record<string, unknown> | null;
-}): LoggedRecord => {
+}): DecidedOn => {
 	const state = createSubjectState({
 		identity,
 		customer,
@@ -159,27 +164,29 @@ const trackRecord = ({
 		fullSubject: subjectStateToFullSubject({ state, catalog, entityId }),
 		command,
 	});
-	const after = applyMutation({ state, mutation });
 	return {
-		...mutation,
-		receipt: { fingerprint: "f", expiresAt: 1 },
-		after: { state: after },
-		catalog,
+		mutation,
+		before: subjectStateToFullSubject({ state, catalog, entityId }),
+		after: subjectStateToFullSubject({
+			state: applyMutation({ state, mutation }),
+			catalog,
+			entityId,
+		}),
 	};
 };
 
-const usageAlertsOf = ({ catalog, ...record }: LoggedRecord) =>
-	recordToBalanceWebhooks({ record, catalog }).filter(
+const usageAlertsOf = (decided: DecidedOn) =>
+	subjectsToBalanceWebhooks(decided).filter(
 		({ eventType }) => eventType === "balances.usage_alert_triggered",
 	);
 
-const dataOf = (record: LoggedRecord) =>
-	usageAlertsOf(record).map(({ data }) => data as Record<string, unknown>);
+const dataOf = (decided: DecidedOn) =>
+	usageAlertsOf(decided).map(({ data }) => data as Record<string, unknown>);
 
 describe("a customer alert on a customer track", () => {
 	test("fires once the usage crosses the threshold, naming the customer and the feature", () => {
 		const [data] = dataOf(
-			trackRecord({ customer: customerOf({ alerts: [alert()] }), value: 8 }),
+			trackOn({ customer: customerOf({ alerts: [alert()] }), value: 8 }),
 		);
 
 		expect(data).toEqual({
@@ -198,7 +205,7 @@ describe("a customer alert on a customer track", () => {
 	test("does not fire below the threshold", () => {
 		expect(
 			usageAlertsOf(
-				trackRecord({ customer: customerOf({ alerts: [alert()] }), value: 7 }),
+				trackOn({ customer: customerOf({ alerts: [alert()] }), value: 7 }),
 			),
 		).toEqual([]);
 	});
@@ -206,7 +213,7 @@ describe("a customer alert on a customer track", () => {
 	test("does not fire again once already past it", () => {
 		expect(
 			usageAlertsOf(
-				trackRecord({
+				trackOn({
 					customer: customerOf({ alerts: [alert()] }),
 					customerEntitlements: [createCustomerEntitlement({ balance: 1 })],
 					value: 1,
@@ -218,7 +225,7 @@ describe("a customer alert on a customer track", () => {
 	test("a disabled alert never fires", () => {
 		expect(
 			usageAlertsOf(
-				trackRecord({
+				trackOn({
 					customer: customerOf({ alerts: [alert({ enabled: false })] }),
 					value: 10,
 				}),
@@ -229,7 +236,7 @@ describe("a customer alert on a customer track", () => {
 	test("every threshold type reads the balance its own way", () => {
 		const fired = (overrides: Partial<DbUsageAlert>, value: number) =>
 			usageAlertsOf(
-				trackRecord({
+				trackOn({
 					customer: customerOf({ alerts: [alert(overrides)] }),
 					value,
 				}),
@@ -249,7 +256,7 @@ describe("a customer alert on a customer track", () => {
 
 	test("two alerts crossed by one track both fire", () => {
 		const data = dataOf(
-			trackRecord({
+			trackOn({
 				customer: customerOf({
 					alerts: [alert({ threshold: 50 }), alert({ threshold: 80 })],
 				}),
@@ -265,7 +272,7 @@ describe("a customer alert on a customer track", () => {
 
 describe("plan alerts at customer scope", () => {
 	test("the plan's alert is used when the customer has none for the feature", () => {
-		const data = dataOf(trackRecord({ planAlerts: [alert()], value: 8 }));
+		const data = dataOf(trackOn({ planAlerts: [alert()], value: 8 }));
 
 		expect(data).toHaveLength(1);
 		expect(data[0]?.customer_id).toBe(identity.customerId);
@@ -273,7 +280,7 @@ describe("plan alerts at customer scope", () => {
 
 	test("a customer alert shadows the plan's; they never merge", () => {
 		const data = dataOf(
-			trackRecord({
+			trackOn({
 				customer: customerOf({ alerts: [alert({ threshold: 90 })] }),
 				planAlerts: [alert({ threshold: 50 })],
 				value: 8,
@@ -289,7 +296,7 @@ describe("an entity track", () => {
 
 	test("fires the tracked entity's own alert, naming the entity", () => {
 		const data = dataOf(
-			trackRecord({
+			trackOn({
 				customerEntitlements: [perEntityRow()],
 				withEntity: entityOf({ alerts: [entityAlert()] }),
 				value: 4,
@@ -308,7 +315,7 @@ describe("an entity track", () => {
 
 	test("a customer alert on an entity track measures the customer's balance, and names no entity", () => {
 		const data = dataOf(
-			trackRecord({
+			trackOn({
 				customer: customerOf({
 					alerts: [alert({ threshold_type: "usage", threshold: 4 })],
 				}),
@@ -326,7 +333,7 @@ describe("an entity track", () => {
 
 	test("customer, entity and org alerts all fire, each on its own balance", () => {
 		const data = dataOf(
-			trackRecord({
+			trackOn({
 				customer: customerOf({
 					alerts: [alert({ threshold_type: "usage", threshold: 4 })],
 				}),
@@ -349,7 +356,7 @@ describe("an entity track", () => {
 
 	test("the webhook's tags name the tracked entity even for a customer-scope alert", () => {
 		const [webhook] = usageAlertsOf(
-			trackRecord({
+			trackOn({
 				customer: customerOf({
 					alerts: [alert({ threshold_type: "usage", threshold: 4 })],
 				}),
@@ -371,7 +378,7 @@ describe("a customer track", () => {
 	test("never considers an entity's alerts", () => {
 		expect(
 			usageAlertsOf(
-				trackRecord({
+				trackOn({
 					customerEntitlements: [perEntityRow()],
 					withEntity: entityOf({
 						alerts: [alert({ threshold_type: "usage", threshold: 1 })],
@@ -386,10 +393,10 @@ describe("a customer track", () => {
 describe("org alerts", () => {
 	test("in sandbox the sandbox list applies and the live list is ignored", () => {
 		const sandbox = usageAlertsOf(
-			trackRecord({ orgAlerts: { sandbox: [alert()] }, value: 8 }),
+			trackOn({ orgAlerts: { sandbox: [alert()] }, value: 8 }),
 		);
 		const live = usageAlertsOf(
-			trackRecord({ orgAlerts: { live: [alert()] }, value: 8 }),
+			trackOn({ orgAlerts: { live: [alert()] }, value: 8 }),
 		);
 
 		expect(sandbox).toHaveLength(1);
@@ -399,7 +406,7 @@ describe("org alerts", () => {
 	test("an org alert with no feature applies to every feature", () => {
 		expect(
 			usageAlertsOf(
-				trackRecord({
+				trackOn({
 					orgAlerts: { sandbox: [alert({ feature_id: undefined })] },
 					value: 8,
 				}),
@@ -410,7 +417,7 @@ describe("org alerts", () => {
 	test("org and customer alerts at the same threshold both fire", () => {
 		expect(
 			usageAlertsOf(
-				trackRecord({
+				trackOn({
 					customer: customerOf({ alerts: [alert()] }),
 					orgAlerts: { sandbox: [alert()] },
 					value: 8,
@@ -423,7 +430,7 @@ describe("org alerts", () => {
 describe("basis", () => {
 	test("usage_limit measures the cap's window, and reports it", () => {
 		const [data] = dataOf(
-			trackRecord({
+			trackOn({
 				customer: customerOf({
 					alerts: [
 						alert({
@@ -454,7 +461,7 @@ describe("basis", () => {
 	test("an unlimited balance never fires a balance-basis alert", () => {
 		expect(
 			usageAlertsOf(
-				trackRecord({
+				trackOn({
 					customer: customerOf({
 						alerts: [alert({ threshold_type: "usage", threshold: 1 })],
 					}),
@@ -471,7 +478,7 @@ describe("basis", () => {
 describe("idempotency", () => {
 	test("the key names the org, env, customer, scope, feature, basis, threshold and minute", () => {
 		const [webhook] = usageAlertsOf(
-			trackRecord({ customer: customerOf({ alerts: [alert()] }), value: 8 }),
+			trackOn({ customer: customerOf({ alerts: [alert()] }), value: 8 }),
 		);
 
 		expect(webhook?.idempotencyKey).toBe(
@@ -481,14 +488,14 @@ describe("idempotency", () => {
 });
 
 describe("a lock and its finalize", () => {
-	/** A lock that takes `lockValue`, then a finalize that settles it at `finalValue`; both records as the log carries them. */
+	/** A lock that takes `lockValue`, then a finalize that settles it at `finalValue`; both as the worker decides them. */
 	const lockThenFinalize = ({
 		lockValue,
 		finalValue,
 	}: {
 		lockValue: number;
 		finalValue: number;
-	}): { onLock: LoggedRecord; onFinalize: LoggedRecord } => {
+	}): { onLock: DecidedOn; onFinalize: DecidedOn } => {
 		const customer = customerOf({
 			alerts: [alert({ threshold_type: "usage", threshold: 8 })],
 		});
@@ -545,14 +552,22 @@ describe("a lock and its finalize", () => {
 			state: locked,
 			mutation: finalizeMutation,
 		});
-		const receipt = { fingerprint: "f", expiresAt: 1 };
-		return {
-			onLock: { ...lockMutation, receipt, after: { state: locked }, catalog },
-			onFinalize: {
-				...finalizeMutation,
-				receipt,
-				after: { state: settled },
+		const subjectOf = (subjectState: SubjectState) =>
+			subjectStateToFullSubject({
+				state: subjectState,
 				catalog,
+				entityId: null,
+			});
+		return {
+			onLock: {
+				mutation: lockMutation,
+				before: subjectOf(state),
+				after: subjectOf(locked),
+			},
+			onFinalize: {
+				mutation: finalizeMutation,
+				before: subjectOf(locked),
+				after: subjectOf(settled),
 			},
 		};
 	};

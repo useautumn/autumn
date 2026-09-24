@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
+	type EvictCommand,
+	parseEvictCommand,
 	parseResetCommand,
 	parseTrackCommand,
 	type ResetCommand,
@@ -31,6 +33,7 @@ function createFixture({
 	commandNextOffset?: bigint | null;
 } = {}) {
 	const tracked: TrackCommand[] = [];
+	const evicted: EvictCommand[] = [];
 	const sources: unknown[] = [];
 	const completed: unknown[] = [];
 	const logs: string[] = [];
@@ -59,6 +62,11 @@ function createFixture({
 					if (outcome instanceof Error) throw outcome;
 					return { result: null };
 				},
+				evict: async (params: { command: EvictCommand }) => {
+					evicted.push(params.command);
+					if (outcome instanceof Error) throw outcome;
+					return { evicted: true };
+				},
 			};
 			return run(processor as never);
 		},
@@ -74,7 +82,7 @@ function createFixture({
 			} as never,
 		},
 	});
-	return { handler, tracked, sources, logs, completed };
+	return { handler, tracked, evicted, sources, logs, completed };
 }
 
 const command = parseTrackCommand({
@@ -97,10 +105,20 @@ const resetCommand = parseResetCommand({
 	},
 });
 
+const evictCommand = parseEvictCommand({
+	input: {
+		schemaVersion: 1,
+		type: "evict",
+		requestId: "req_evict",
+		identity: testIdentity,
+		occurredAt: 1_700_000_000_000,
+	},
+});
+
 function recordOf({
 	command: record,
 }: {
-	command: TrackCommand | ResetCommand;
+	command: TrackCommand | ResetCommand | EvictCommand;
 }) {
 	return {
 		topic,
@@ -182,6 +200,14 @@ describe("command record handler", () => {
 		const idle = createFixture();
 		await idle.handler.applyRecord(recordOf({ command: resetCommand }));
 		expect(idle.logs).toEqual(["info:Queued reset found nothing due"]);
+	});
+
+	test("a queued evict reaches the processor and its offset is bookmarked like any consumed record", async () => {
+		const fixture = createFixture();
+		await fixture.handler.applyRecord(recordOf({ command: evictCommand }));
+		expect(fixture.evicted).toEqual([evictCommand]);
+		expect(fixture.completed).toEqual([{ commandOffset: "7" }]);
+		expect(fixture.logs).toEqual([]);
 	});
 
 	test("anything else is thrown so Kafka redelivers, and an unowned partition never consumes", async () => {

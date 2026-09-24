@@ -1,8 +1,10 @@
+import type { MiscCache } from "@autumn/cache";
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type { HeraldEnv } from "@autumn/env/herald";
 import { createKafkaClient, createKafkaTransport } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { EventsDb, PostgresClient } from "@autumn/postgres";
+import type { SqsJobs } from "@autumn/sqs";
 import type { SvixClient } from "@autumn/svix";
 import type { EventsTinybird } from "@autumn/tinybird";
 import { Kafka } from "kafkajs";
@@ -24,6 +26,9 @@ export function createHerald({
 		svix: SvixClient | null;
 		catalogCache: CatalogCache;
 		postgres: Pick<PostgresClient, "close">;
+		miscCache: Pick<MiscCache, "getActive" | "close">;
+		sqsJobs: Pick<SqsJobs, "autoTopup" | "shutdown">;
+		edgeConfigs: { start(): Promise<void>; stop(): void };
 	};
 	config: { env: HeraldEnv };
 }): Herald {
@@ -67,7 +72,21 @@ export function createHerald({
 		});
 	}
 
+	/** The misc client connects on first use, and a claim on a connecting client is refused: open it before the log is read. */
+	async function openMiscCache(): Promise<void> {
+		try {
+			await ctx.miscCache.getActive().ping();
+		} catch (cause) {
+			ctx.logger.warn(
+				{ error: cause, type: "herald_misc_cache_cold" },
+				"Misc cache did not answer at start; its first claims may be refused",
+			);
+		}
+	}
+
 	async function start(): Promise<void> {
+		await ctx.edgeConfigs.start();
+		await openMiscCache();
 		await catalogInvalidations.start();
 		for (const consumer of running) await consumer.start();
 		ctx.logger.info(
@@ -78,6 +97,9 @@ export function createHerald({
 	async function stop(): Promise<void> {
 		for (const consumer of running) await consumer.stop();
 		await catalogInvalidations.stop();
+		ctx.edgeConfigs.stop();
+		await ctx.sqsJobs.shutdown();
+		ctx.miscCache.close();
 		await Promise.all([ctx.eventsDb.close(), ctx.postgres.close()]);
 	}
 

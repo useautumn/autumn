@@ -37,8 +37,6 @@ export function createMeteringConsumer({
 			consumer: ctx.consumer,
 			handler,
 			progress: ctx.positionTracker,
-			// The worker applies row changes and never reads the snapshot; decoding it cost as much as writing it.
-			snapshot: "skip",
 			...(ctx.commands && {
 				secondaryHandlers: { [ctx.commands.topic]: ctx.commands.handler },
 			}),

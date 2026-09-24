@@ -99,6 +99,19 @@ describe.skipIf(!databaseUrl)("seat subject rows", () => {
 		}
 	});
 
+	const loadCustomer = async ({ seeded }: { seeded: SeededCustomer }) => {
+		const envelope = await getSubjectRows({
+			ctx: { db: postgres.db, orgId: seeded.orgId, env: seeded.env },
+			customerId: seeded.identity.customerId,
+			asOfTimestampMs: Date.now(),
+		});
+		if (!envelope) throw new Error("customer not found");
+		return {
+			productIds: envelope.customer_products.map(({ id }) => id),
+			entitlementIds: envelope.customer_entitlements.map(({ id }) => id),
+		};
+	};
+
 	const loadCustomerPools = async ({ seeded }: { seeded: SeededCustomer }) => {
 		const envelope = await getSubjectRows({
 			ctx: { db: postgres.db, orgId: seeded.orgId, env: seeded.env },
@@ -129,6 +142,28 @@ describe.skipIf(!databaseUrl)("seat subject rows", () => {
 			expect(await loadCustomerPools({ seeded })).toEqual([]);
 		} finally {
 			await pool.cleanup();
+			await license.cleanup();
+			await seeded.cleanup();
+		}
+	});
+
+	test("a spare seat, held by no entity, stays out of the customer's rows though its parent is live", async () => {
+		const seeded = await seedCustomer({ postgres });
+		const license = await seedLicensePool({ postgres, seeded });
+		const seat = await seedSeat({
+			postgres,
+			seeded,
+			linkId: license.linkId,
+			seatStatus: "active",
+			spare: true,
+		});
+		try {
+			expect(await loadCustomer({ seeded })).toEqual({
+				productIds: [seeded.customerProductId],
+				entitlementIds: [seeded.customerEntitlementId],
+			});
+		} finally {
+			await seat.cleanup();
 			await license.cleanup();
 			await seeded.cleanup();
 		}

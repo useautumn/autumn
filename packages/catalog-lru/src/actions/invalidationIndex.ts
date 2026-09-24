@@ -11,6 +11,7 @@ const scopeOf = ({ row }: { row: CatalogRow }): string | null => {
 		case "products":
 		case "features":
 		case "planLicenses":
+		case "freeTrials":
 			return orgEnvScope({ orgId: row.row.org_id, env: row.row.env });
 	}
 };

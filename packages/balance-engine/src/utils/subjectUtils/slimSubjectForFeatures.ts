@@ -64,6 +64,7 @@ const catalogFor = ({
 		features: {},
 		prices: {},
 		planLicenses: {},
+		freeTrials: {},
 	};
 	const pick = (key: CatalogKey) => {
 		const row = catalog[key.table][key.id];

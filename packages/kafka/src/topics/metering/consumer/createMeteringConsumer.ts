@@ -53,7 +53,6 @@ export function createMeteringConsumer({
 			const record = parseMeteringRecord({
 				key: message.key,
 				value: message.value,
-				snapshot: ctx.snapshot,
 			});
 			const application = ctx.handler.applyRecord({ position, record });
 			return application instanceof Promise

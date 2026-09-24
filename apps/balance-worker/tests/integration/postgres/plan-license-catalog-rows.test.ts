@@ -243,6 +243,7 @@ const noOtherIds = {
 	productInternalIds: [],
 	featureInternalIds: [],
 	priceIds: [],
+	freeTrialIds: [],
 };
 
 describe.skipIf(!databaseUrl)("plan license catalog rows", () => {
@@ -402,6 +403,7 @@ describe.skipIf(!databaseUrl)("plan license catalog rows", () => {
 				featureInternalIds: [ids.featureB],
 				priceIds: [ids.customPrice],
 				planLicenseIds: [ids.customizedPlanLicense],
+				freeTrialIds: [],
 			},
 		});
 

@@ -143,7 +143,6 @@ export type {
 	MeteringLogEntry,
 	MeteringReader,
 } from "./topics/metering/consumer/types/meteringReader.js";
-export type { MeteringSnapshotReading } from "./topics/metering/meteringTopic.js";
 export {
 	meteringTopic,
 	parseMeteringRecord,

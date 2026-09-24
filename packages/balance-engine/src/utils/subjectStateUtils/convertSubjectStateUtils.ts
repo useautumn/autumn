@@ -11,27 +11,21 @@ import type {
 } from "@autumn/shared";
 import type { z } from "zod/v4";
 import type { MeteringIdentity } from "../../models/identity/meteringIdentity.js";
-import {
-	customerRenderedColumns,
-	workerCustomerSchema,
-} from "../../models/subject/rows/workerCustomer.js";
-import {
-	customerEntitlementRenderedColumns,
-	workerCustomerEntitlementSchema,
-} from "../../models/subject/rows/workerCustomerEntitlement.js";
+import { workerCustomerSchema } from "../../models/subject/rows/workerCustomer.js";
+import { workerCustomerEntitlementSchema } from "../../models/subject/rows/workerCustomerEntitlement.js";
 import { workerCustomerLicenseSchema } from "../../models/subject/rows/workerCustomerLicense.js";
 import { workerCustomerPriceSchema } from "../../models/subject/rows/workerCustomerPrice.js";
+import { workerCustomerProductSchema } from "../../models/subject/rows/workerCustomerProduct.js";
 import {
-	customerProductRenderedColumns,
-	workerCustomerProductSchema,
-} from "../../models/subject/rows/workerCustomerProduct.js";
-import {
-	entityRenderedColumns,
 	type WorkerEntity,
 	workerEntitySchema,
 } from "../../models/subject/rows/workerEntity.js";
 import type { OpenLock } from "../../models/subject/rows/workerLock.js";
 import { workerPooledBalanceSchema } from "../../models/subject/rows/workerPooledBalance.js";
+import {
+	type WorkerReplaceableInput,
+	workerReplaceableSchema,
+} from "../../models/subject/rows/workerReplaceable.js";
 import { workerRolloverSchema } from "../../models/subject/rows/workerRollover.js";
 import { workerUsageWindowSchema } from "../../models/subject/rows/workerUsageWindow.js";
 import type { SubjectState } from "../../models/subject/subjectState.js";
@@ -53,39 +47,6 @@ export const pickColumns = <Schema extends z.ZodObject>({
 		),
 	);
 
-const withoutColumns = <Row extends object>({
-	row,
-	columns,
-}: {
-	row: Row;
-	columns: Record<string, true>;
-}): Row =>
-	Object.fromEntries(
-		Object.entries(row).filter(([column]) => !(column in columns)),
-	) as Row;
-
-/** The state as the log snapshots it: the columns commands decide on, without what only `customers.get` renders. */
-export const subjectStateToLogState = ({
-	state,
-}: {
-	state: SubjectState;
-}): SubjectState => ({
-	...state,
-	customer: withoutColumns({
-		row: state.customer,
-		columns: customerRenderedColumns,
-	}),
-	customerProducts: state.customerProducts.map((row) =>
-		withoutColumns({ row, columns: customerProductRenderedColumns }),
-	),
-	customerEntitlements: state.customerEntitlements.map((row) =>
-		withoutColumns({ row, columns: customerEntitlementRenderedColumns }),
-	),
-	entity: state.entity
-		? withoutColumns({ row: state.entity, columns: entityRenderedColumns })
-		: null,
-});
-
 /** The one definition of "a customer's state from its rows"; the server's initialize and the worker's hydration both call it. */
 export const customerRowsToSubjectState = ({
 	identity,
@@ -94,6 +55,7 @@ export const customerRowsToSubjectState = ({
 	customerPrices,
 	customerEntitlements,
 	rollovers,
+	replaceables = [],
 	usageWindows,
 	openLocks = [],
 	pooledBalances = [],
@@ -114,6 +76,8 @@ export const customerRowsToSubjectState = ({
 	customerPrices: CustomerPrice[];
 	customerEntitlements: CustomerEntitlement[];
 	rollovers: Rollover[];
+	/** A v1 allocated grant's replaceable seats; absent from rows that never had them. */
+	replaceables?: WorkerReplaceableInput[];
 	usageWindows: UsageWindow[];
 	/** Absent when the rows come from the server's FullSubject, which does not carry locks. */
 	openLocks?: OpenLock[];
@@ -137,6 +101,9 @@ export const customerRowsToSubjectState = ({
 		),
 		rollovers: rollovers.map((row) =>
 			pickColumns({ schema: workerRolloverSchema, row }),
+		),
+		replaceables: replaceables.map((row) =>
+			pickColumns({ schema: workerReplaceableSchema, row }),
 		),
 		usageWindows: usageWindows.map((row) =>
 			pickColumns({ schema: workerUsageWindowSchema, row }),
@@ -190,11 +157,15 @@ const rowsOwnedBy = ({
 	const rollovers = state.rollovers.filter((rollover) =>
 		entitlementIds.has(rollover.cus_ent_id),
 	);
+	const replaceables = state.replaceables.filter((replaceable) =>
+		entitlementIds.has(replaceable.cus_ent_id),
+	);
 	return {
 		customerProducts,
 		customerPrices,
 		customerEntitlements,
 		rollovers,
+		replaceables,
 	};
 };
 
@@ -272,6 +243,10 @@ export const mergeCustomerAndEntities = ({
 		...customer.rollovers,
 		...entities.flatMap((entity) => entity.rollovers),
 	],
+	replaceables: [
+		...customer.replaceables,
+		...entities.flatMap((entity) => entity.replaceables),
+	],
 	usageWindows: [
 		...customer.usageWindows,
 		...entities.flatMap((entity) => entity.usageWindows),
@@ -301,6 +276,7 @@ export const mergeSubjectStates = ({
 					...entity.customerEntitlements,
 				],
 				rollovers: [...customer.rollovers, ...entity.rollovers],
+				replaceables: [...customer.replaceables, ...entity.replaceables],
 				usageWindows: [...customer.usageWindows, ...entity.usageWindows],
 				pooledBalances: [...customer.pooledBalances, ...entity.pooledBalances],
 			}

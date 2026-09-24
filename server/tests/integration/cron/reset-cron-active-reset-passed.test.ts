@@ -1,13 +1,13 @@
 import { expect, test } from "bun:test";
 import { customerEntitlements, ProductItemInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
+import { runBatchResetOnCustomerEntitlements } from "@tests/utils/cusProductUtils/resetTestUtils.js";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 
 const getMessageCusEnt = async ({
 	ctx,
@@ -34,7 +34,7 @@ const getMessageCusEnt = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("reset cron: active reset passed only includes Autumn-owned price-backed entitlements")}`,
+	`${chalk.yellowBright("reset cron: only Autumn-owned price-backed entitlements are reset; Stripe-owned ones reset via invoice")}`,
 	async () => {
 		const stripeOwnedCustomerId = "reset-cron-stripe-owned";
 		const autumnOwnedCustomerId = "reset-cron-separate-interval";
@@ -68,17 +68,13 @@ test.concurrent(
 		await autumnV2_2.billing.attach({
 			customer_id: stripeOwnedCustomerId,
 			plan_id: stripeOwnedPlan.id,
-			feature_quantities: [
-				{ feature_id: TestFeature.Messages, quantity: 300 },
-			],
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 300 }],
 			redirect_mode: "if_required",
 		});
 		await autumnV2_2.billing.attach({
 			customer_id: autumnOwnedCustomerId,
 			plan_id: autumnOwnedPlan.id,
-			feature_quantities: [
-				{ feature_id: TestFeature.Messages, quantity: 300 },
-			],
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 300 }],
 			redirect_mode: "if_required",
 		});
 
@@ -100,30 +96,24 @@ test.concurrent(
 			.set({ next_reset_at: now - 1_000 })
 			.where(eq(customerEntitlements.id, autumnOwnedCusEnt.id));
 
-		const resetCusEnts = await CusEntService.getActiveResetPassed({
-			db: ctx.db,
-			customDateUnix: now,
-			includeSeparateIntervalResets: true,
+		const run = await runBatchResetOnCustomerEntitlements({
+			ctx,
+			customerEntitlementIds: [stripeOwnedCusEnt.id, autumnOwnedCusEnt.id],
 		});
-		const resetCusEntIds = resetCusEnts.map((cusEnt) => cusEnt.id);
-
-		expect(resetCusEntIds).not.toContain(stripeOwnedCusEnt.id);
-		expect(resetCusEntIds).toContain(autumnOwnedCusEnt.id);
-
-		const resetCusEntsWithoutSeparateIntervals =
-			await CusEntService.getActiveResetPassed({
-				db: ctx.db,
-				customDateUnix: now,
-				includeSeparateIntervalResets: false,
-			});
-		const resetCusEntIdsWithoutSeparateIntervals =
-			resetCusEntsWithoutSeparateIntervals.map((cusEnt) => cusEnt.id);
-
-		expect(resetCusEntIdsWithoutSeparateIntervals).not.toContain(
-			stripeOwnedCusEnt.id,
+		const appliedIds = run.appliedResetMutations.map(
+			({ customerEntitlementId }) => customerEntitlementId,
 		);
-		expect(resetCusEntIdsWithoutSeparateIntervals).not.toContain(
-			autumnOwnedCusEnt.id,
-		);
+
+		// The Stripe-owned row resets when its invoice does, never by the cron.
+		expect(appliedIds).not.toContain(stripeOwnedCusEnt.id);
+		expect(
+			run.verdicts.some(
+				(verdict) =>
+					verdict.customerEntitlementId === stripeOwnedCusEnt.id &&
+					verdict.kind === "resets_via_invoice",
+			),
+		).toBe(true);
+		// The Autumn-owned row (its own reset interval) is the cron's to reset.
+		expect(appliedIds).toContain(autumnOwnedCusEnt.id);
 	},
 );

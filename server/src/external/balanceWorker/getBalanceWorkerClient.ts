@@ -32,6 +32,8 @@ function balanceWorkerClientConfig(): KafkaBalanceWorkerClientConfig {
 		// the middle of moving has to fail quickly rather than hold the request.
 		routeRefreshTimeoutMs: BALANCE_WORKER_ROUTE_REFRESH_TIMEOUT_MS,
 		catchUpTimeoutMs: BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS,
+		// Every server evicts and publishes, so the connect is paid at boot, not by the first request's append.
+		connectProducersOnStart: true,
 	};
 }
 
@@ -44,12 +46,14 @@ export function getBalanceWorkerClient(): BalanceWorkerClient {
 	return balanceWorkerClient;
 }
 
-/** Retries until the ownership log is read through; callers must not let it gate their listener. */
+/**
+ * Retries until the ownership log is read through; callers must not let it gate their listener.
+ * Started whatever the rollout says: evicts and catalog invalidations reach the workers either way, so a flip never finds stale memory.
+ */
 export async function startBalanceWorkerClient(): Promise<void> {
-	if (!getBalanceWorkerRolloutEnabled()) {
-		logger.info("[balance-worker] Client skipped: rollout disabled");
-		return;
-	}
+	logger.info(
+		`[balance-worker] Client starting; rollout ${getBalanceWorkerRolloutEnabled() ? "on" : "off"}`,
+	);
 	await getBalanceWorkerClient().start();
 }
 

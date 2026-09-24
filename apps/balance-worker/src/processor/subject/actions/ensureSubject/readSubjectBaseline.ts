@@ -28,6 +28,7 @@ export const readSubjectBaseline = async ({
 		customerPrices: envelope.customer_prices,
 		customerEntitlements: envelope.customer_entitlements,
 		rollovers: envelope.rollovers,
+		replaceables: envelope.replaceables,
 		usageWindows: envelope.usage_windows,
 		openLocks: envelope.open_locks,
 		pooledBalances: envelope.pooled_balances,

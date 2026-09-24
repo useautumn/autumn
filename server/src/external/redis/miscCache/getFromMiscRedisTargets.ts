@@ -1,25 +1,6 @@
-import { tryRedisOp } from "../utils/runRedisOp.js";
-import { getMiscRedisTargets } from "./resolveMiscRedis.js";
+import type { MiscCache } from "@autumn/cache";
+import { getMiscCache } from "./getMiscCache.js";
 
-/** Read a cross-request key from the active instance first, then any other
- *  live target — a flip mid-handoff can leave the value on either side. */
-export const getFromMiscRedisTargets = async ({
-	key,
-	source,
-	onError,
-}: {
-	key: string;
-	source: string;
-	onError?: (error: unknown) => void;
-}): Promise<string | null> => {
-	for (const { redis } of getMiscRedisTargets()) {
-		const value = await tryRedisOp({
-			operation: () => redis.get(key),
-			source,
-			redisInstance: redis,
-			onError,
-		});
-		if (value) return value;
-	}
-	return null;
-};
+export const getFromMiscRedisTargets = (
+	params: Parameters<MiscCache["getFromTargets"]>[0],
+): Promise<string | null> => getMiscCache().getFromTargets(params);

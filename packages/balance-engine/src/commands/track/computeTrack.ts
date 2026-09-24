@@ -6,6 +6,7 @@ import {
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
+import { isPaidAllocatedV1Deduction } from "./isPaidAllocatedV1Deduction.js";
 import { trackCommandToDeductionRequest } from "./trackCommandToDeductionRequest.js";
 import { trackOutcomeToMutation } from "./trackOutcomeToMutation.js";
 import type { TrackCommand } from "./types/trackCommand.js";
@@ -36,6 +37,11 @@ export const computeTrack = ({
 		!outcome.context.overdueBlocked
 	) {
 		throw new UnsupportedCommandError({ reason: "feature_not_found" });
+	}
+	if (isPaidAllocatedV1Deduction({ outcome })) {
+		throw new UnsupportedCommandError({
+			reason: "paid_allocated_not_supported",
+		});
 	}
 
 	return trackOutcomeToMutation({

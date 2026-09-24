@@ -7,6 +7,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { createFakeMiscCache } from "../../utils/fakeMiscCache.js";
 
 const mockState = {
 	runTrackV3Calls: [] as Record<string, unknown>[],
@@ -51,11 +52,11 @@ const fakeMiscRedis = {
 	set: async () => "OK",
 	del: async () => 1,
 } as never;
+const fakeMiscCache = createFakeMiscCache({ main: fakeMiscRedis });
 await mockModuleWithRestore(
-	"@/external/redis/miscCache/miscRedisInstances.js",
+	"@/external/redis/miscCache/getMiscCache.js",
 	() => ({
-		getMiscMainRedis: () => fakeMiscRedis,
-		getMiscBackupRedis: () => null,
+		getMiscCache: () => fakeMiscCache,
 	}),
 );
 

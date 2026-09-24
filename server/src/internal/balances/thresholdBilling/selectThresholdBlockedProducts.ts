@@ -1,9 +1,9 @@
+import { isThresholdBillingPrice } from "@autumn/auto-topup";
 import {
 	CusProductStatus,
 	type FullCusProduct,
 	type FullCustomer,
 } from "@autumn/shared";
-import { isThresholdBillingPrice } from "./isThresholdBillingPrice.js";
 
 /**
  * A customer can hold several threshold plans, each with its own unpaid

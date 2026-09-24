@@ -347,6 +347,9 @@ test.concurrent(
 				evict: async () => {
 					throw cause;
 				},
+				flush: async () => {
+					throw cause;
+				},
 				finalize: async () => {
 					throw cause;
 				},
@@ -364,6 +367,9 @@ test.concurrent(
 						throw cause;
 					},
 					reset: async () => {
+						throw cause;
+					},
+					evict: async () => {
 						throw cause;
 					},
 				},

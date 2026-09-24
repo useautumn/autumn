@@ -6,7 +6,12 @@ import type { SubjectState } from "@autumn/balance-engine";
  */
 export type SubjectMap = {
 	readState(params: { subjectKey: string }): SubjectState | null;
-	setState(params: { subjectKey: string; state: SubjectState }): void;
+	/** `customerKey` is the subject's customer, so an evict of the customer finds its entities without a walk. */
+	setState(params: {
+		subjectKey: string;
+		customerKey: string;
+		state: SubjectState;
+	}): void;
 	/** Held while a mutation is pending for the subject; released after commit. */
 	pin(params: { subjectKey: string }): void;
 	unpin(params: { subjectKey: string }): void;

@@ -13,9 +13,11 @@ const owner = { partition: 0, routeEpoch: "1", endpoint: "http://worker-a" };
 function createFakeKafka({
 	startFailures = 0,
 	connectFailure,
+	connectProducersOnStart = false,
 }: {
 	startFailures?: number;
 	connectFailure?: Error;
+	connectProducersOnStart?: boolean;
 } = {}) {
 	const events: string[] = [];
 	const sent: ProducerRecord[] = [];
@@ -80,6 +82,7 @@ function createFakeKafka({
 			partitionCount: 1,
 			timeoutMs: 1_000,
 			startRetryDelaysMs: [1],
+			connectProducersOnStart,
 		},
 	});
 	return { client, events, sent, logs, createConsumer };
@@ -182,4 +185,38 @@ test("a connection is built without connecting, with MSK IAM transport when aske
 			authMode: "msk_iam",
 		}),
 	).toThrow("MSK IAM authentication requires a region");
+});
+
+test("a process that appends connects both producers at start, and a failed connect is left to the first append", async () => {
+	const fixture = createFakeKafka({ connectProducersOnStart: true });
+	try {
+		await fixture.client.start();
+		expect(
+			fixture.events.filter((event) => event === "producer:connect"),
+		).toHaveLength(2);
+		await fixture.client.queue.track({ commands: [command] });
+		expect(
+			fixture.events.filter((event) => event === "producer:connect"),
+		).toHaveLength(2);
+		await fixture.client.stop();
+	} finally {
+		fixture.createConsumer.mockRestore();
+	}
+
+	const failing = createFakeKafka({
+		connectFailure: new Error("no broker"),
+		connectProducersOnStart: true,
+	});
+	try {
+		await failing.client.start();
+		expect(
+			failing.logs.some((line) => line.includes("did not connect at start")),
+		).toBe(true);
+		await expect(
+			failing.client.queue.track({ commands: [command] }),
+		).rejects.toThrow("no broker");
+		await failing.client.stop();
+	} finally {
+		failing.createConsumer.mockRestore();
+	}
 });

@@ -51,6 +51,9 @@ export function createWorkerFixture({
 			plan_licenses: catalogRows.flatMap((row) =>
 				row.table === "planLicenses" ? [row.row] : [],
 			),
+			free_trials: catalogRows.flatMap((row) =>
+				row.table === "freeTrials" ? [row.row] : [],
+			),
 		}),
 	};
 	const processor = createPartitionProcessor({

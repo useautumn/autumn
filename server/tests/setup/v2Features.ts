@@ -39,6 +39,8 @@ export enum TestFeature {
 	AiCreditsTiered = "ai_credits_tiered", // AI credit system with global + provider markup tiers
 
 	Orbs = "orbs", // credit system that wraps an AI credit system (1000 orbs per $1)
+	EventSeats = "event_seats", // cont use, tracked by "seat-event" beside EventActions
+	EventActions = "event_actions", // single use, tracked by "seat-event" beside EventSeats
 }
 
 export const getFeatures = ({ orgId }: { orgId: string }) => ({
@@ -75,6 +77,20 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 		orgId,
 		env: AppEnv.Sandbox,
 		usageType: FeatureUsageType.Continuous,
+	}),
+	[TestFeature.EventSeats]: constructMeteredFeature({
+		featureId: TestFeature.EventSeats,
+		orgId,
+		env: AppEnv.Sandbox,
+		usageType: FeatureUsageType.Continuous,
+		eventNames: ["seat-event"],
+	}),
+	[TestFeature.EventActions]: constructMeteredFeature({
+		featureId: TestFeature.EventActions,
+		orgId,
+		env: AppEnv.Sandbox,
+		usageType: FeatureUsageType.Single,
+		eventNames: ["seat-event"],
 	}),
 	[TestFeature.Words]: constructMeteredFeature({
 		featureId: TestFeature.Words,

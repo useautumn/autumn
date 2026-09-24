@@ -552,6 +552,7 @@ export async function planNewCustomer({
 			featureInternalIds: [seeded.internalFeatureId],
 			priceIds: [],
 			planLicenseIds: [],
+			freeTrialIds: [],
 		},
 	});
 	const catalogRows: CatalogRow[] = [
@@ -1341,6 +1342,7 @@ export async function seedSeat({
 	linkId,
 	seatStatus,
 	balance = 5,
+	spare = false,
 }: {
 	postgres: PostgresClient;
 	seeded: SeededCustomer;
@@ -1348,17 +1350,21 @@ export async function seedSeat({
 	/** The column the seat row carries; the parent's status is the truth. */
 	seatStatus: string;
 	balance?: number;
+	/** A seat nobody holds yet: no entity row, entity columns null. */
+	spare?: boolean;
 }): Promise<SeededSeat> {
 	const { db } = postgres;
 	const suffix = crypto.randomUUID().slice(0, 8);
 	const entityId = `ent_seat_${suffix}`;
-	const internalEntityId = `ent_int_seat_${suffix}`;
+	const internalEntityId = spare ? null : `ent_int_seat_${suffix}`;
 	const customerProductId = `cp_seat_${suffix}`;
 	const customerEntitlementId = `ce_seat_${suffix}`;
 	const now = Date.now();
-	await db.execute(sql`INSERT INTO entities
+	if (internalEntityId) {
+		await db.execute(sql`INSERT INTO entities
 		(id, internal_id, internal_customer_id, org_id, env, created_at, name, feature_id, internal_feature_id)
 		VALUES (${entityId}, ${internalEntityId}, ${seeded.internalCustomerId}, ${seeded.orgId}, ${seeded.env}, ${now}, 'Seat', ${seeded.featureId}, ${seeded.internalFeatureId})`);
+	}
 	await db.execute(sql`INSERT INTO customer_products
 		(id, internal_customer_id, internal_entity_id, internal_product_id, product_id, created_at, starts_at, status, options, billing_version, customer_license_link_id)
 		VALUES (${customerProductId}, ${seeded.internalCustomerId}, ${internalEntityId}, ${seeded.internalProductId}, 'pro', ${now}, ${now}, ${seatStatus}, ARRAY[]::jsonb[], 'v2', ${linkId})`);
@@ -1376,9 +1382,11 @@ export async function seedSeat({
 			await db.execute(
 				sql`DELETE FROM customer_products WHERE id = ${customerProductId}`,
 			);
-			await db.execute(
-				sql`DELETE FROM entities WHERE internal_id = ${internalEntityId}`,
-			);
+			if (internalEntityId) {
+				await db.execute(
+					sql`DELETE FROM entities WHERE internal_id = ${internalEntityId}`,
+				);
+			}
 		},
 	};
 }

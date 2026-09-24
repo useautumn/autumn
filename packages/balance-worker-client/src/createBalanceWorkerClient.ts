@@ -4,6 +4,7 @@ import { sendCheck } from "./commands/sendCheck.js";
 import { sendConfirmExpiredLock } from "./commands/sendConfirmExpiredLock.js";
 import { sendEvict } from "./commands/sendEvict.js";
 import { sendFinalize } from "./commands/sendFinalize.js";
+import { sendFlush } from "./commands/sendFlush.js";
 import { sendInitialize } from "./commands/sendInitialize.js";
 import { sendReadSubjectState } from "./commands/sendReadSubjectState.js";
 import { sendReset } from "./commands/sendReset.js";
@@ -22,11 +23,15 @@ import type {
 	ConfirmExpiredLockParams,
 	EvictParams,
 	FinalizeParams,
+	FlushParams,
 	InitializeParams,
 	ReadSubjectStateParams,
 	ResetParams,
 	TrackParams,
 } from "./types/balanceWorkerClient.js";
+
+/** An append's default budget: a first append may include the producer connect, and no customer request waits on it. */
+const DEFAULT_APPEND_TIMEOUT_MS = 3_000;
 
 export function createBalanceWorkerClient({
 	ctx: dependencies,
@@ -48,9 +53,11 @@ export function createBalanceWorkerClient({
 		timeoutMs: config.timeoutMs,
 		routeRefreshTimeoutMs: config.routeRefreshTimeoutMs,
 	};
+	const appendTimeoutMs = config.appendTimeoutMs ?? DEFAULT_APPEND_TIMEOUT_MS;
 	const queue = {
 		commandLog: dependencies.commandLog,
 		partitionCount: config.partitionCount,
+		timeoutMs: appendTimeoutMs,
 	};
 
 	// Batching is the default; turning it off falls back to one `/v1/track` request per track.
@@ -84,6 +91,10 @@ export function createBalanceWorkerClient({
 		return sendEvict({ ctx, ...params });
 	}
 
+	function flush(params: FlushParams) {
+		return sendFlush({ ctx, ...params });
+	}
+
 	function finalize(params: FinalizeParams) {
 		return sendFinalize({ ctx, ...params });
 	}
@@ -115,13 +126,17 @@ export function createBalanceWorkerClient({
 		initialize,
 		applyBillingPlan,
 		evict,
+		flush,
 		finalize,
 		confirmExpiredLock,
 		reset,
 		queue: createCommandQueue({ ctx: queue }),
 		enqueue,
 		catalog: createCatalogInvalidations({
-			ctx: { publisher: dependencies.catalogInvalidations },
+			ctx: {
+				publisher: dependencies.catalogInvalidations,
+				timeoutMs: appendTimeoutMs,
+			},
 		}),
 		start,
 		stop,

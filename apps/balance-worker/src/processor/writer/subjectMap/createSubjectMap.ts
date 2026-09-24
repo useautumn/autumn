@@ -12,6 +12,8 @@ export const SUBJECT_MAP_MAX_BYTES = 32 * 1024 * 1024;
 
 type Entry = {
 	state: SubjectState;
+	/** Set once the entry holds state; a pin-only placeholder has none. */
+	customerKey: string | null;
 	bytes: number;
 	pins: number;
 	/** Evicted while a commit was in flight: the rows go as soon as the last pin is released. */
@@ -25,6 +27,8 @@ export const createSubjectMap = ({
 } = {}): SubjectMap => {
 	// Insertion order is recency: a read re-inserts, eviction walks from the front.
 	const entries = new Map<string, Entry>();
+	// A customer's subject keys (its own and its entities'), so an evict never walks the partition.
+	const subjectKeysByCustomer = new Map<string, Set<string>>();
 	let totalBytes = 0;
 
 	const touch = ({
@@ -43,6 +47,7 @@ export const createSubjectMap = ({
 		if (existing) return existing;
 		const created: Entry = {
 			state: null as unknown as SubjectState,
+			customerKey: null,
 			bytes: 0,
 			pins: 0,
 			evictOnUnpin: false,
@@ -56,8 +61,7 @@ export const createSubjectMap = ({
 		for (const [subjectKey, entry] of entries) {
 			if (totalBytes <= maxBytes) return;
 			if (entry.pins > 0 || subjectKey === except) continue;
-			entries.delete(subjectKey);
-			totalBytes -= entry.bytes;
+			dropState({ subjectKey, entry });
 		}
 	};
 
@@ -68,14 +72,43 @@ export const createSubjectMap = ({
 		return entry.state;
 	};
 
+	const index = ({
+		subjectKey,
+		customerKey,
+	}: {
+		subjectKey: string;
+		customerKey: string;
+	}) => {
+		const keys = subjectKeysByCustomer.get(customerKey) ?? new Set<string>();
+		keys.add(subjectKey);
+		subjectKeysByCustomer.set(customerKey, keys);
+	};
+
+	const unindex = ({
+		subjectKey,
+		customerKey,
+	}: {
+		subjectKey: string;
+		customerKey: string;
+	}) => {
+		const keys = subjectKeysByCustomer.get(customerKey);
+		if (!keys) return;
+		keys.delete(subjectKey);
+		if (keys.size === 0) subjectKeysByCustomer.delete(customerKey);
+	};
+
 	const setState = ({
 		subjectKey,
+		customerKey,
 		state,
 	}: {
 		subjectKey: string;
+		customerKey: string;
 		state: SubjectState;
 	}) => {
 		const entry = entryOf({ subjectKey });
+		entry.customerKey = customerKey;
+		index({ subjectKey, customerKey });
 		totalBytes -= entry.bytes;
 		entry.state = state;
 		entry.bytes = JSON.stringify(state).length;
@@ -97,6 +130,8 @@ export const createSubjectMap = ({
 	}) => {
 		totalBytes -= entry.bytes;
 		entries.delete(subjectKey);
+		if (entry.customerKey !== null)
+			unindex({ subjectKey, customerKey: entry.customerKey });
 	};
 
 	const unpin = ({ subjectKey }: { subjectKey: string }) => {
@@ -108,10 +143,11 @@ export const createSubjectMap = ({
 	};
 
 	const evictCustomer = ({ customerKey }: { customerKey: string }) => {
-		for (const [subjectKey, entry] of entries) {
-			const belongsToCustomer =
-				subjectKey === customerKey || subjectKey.startsWith(`${customerKey}:`);
-			if (!belongsToCustomer) continue;
+		const keys = subjectKeysByCustomer.get(customerKey);
+		if (!keys) return;
+		for (const subjectKey of [...keys]) {
+			const entry = entries.get(subjectKey);
+			if (!entry) continue;
 			if (entry.pins > 0) entry.evictOnUnpin = true;
 			else dropState({ subjectKey, entry });
 		}
@@ -119,6 +155,7 @@ export const createSubjectMap = ({
 
 	const clear = () => {
 		entries.clear();
+		subjectKeysByCustomer.clear();
 		totalBytes = 0;
 	};
 

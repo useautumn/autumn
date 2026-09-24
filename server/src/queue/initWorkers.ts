@@ -31,6 +31,7 @@ import {
 	recordPollAttempt,
 } from "./blueGreen/blueGreenHeartbeat.js";
 import { initBlueGreen, shutdownBlueGreen } from "./blueGreen/initBlueGreen.js";
+import { getSqsJobs } from "./getSqsJobs.js";
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
@@ -76,12 +77,6 @@ type JobOverride = {
 // preserves backpressure; background dispatch is only safe for rare,
 // low-volume work that does not use a shared concurrency limit.
 const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
-	// Rare (handful per day); fire-and-forget is safe.
-	[JobName.Migration]: {
-		ack: "upfront",
-		dispatch: "background",
-		timeoutMs: null,
-	},
 	// Can exceed VisibilityTimeout on large orgs; redelivery causes a
 	// self-amplifying Redis UNLINK storm. Inline so one worker's concurrency
 	// stays capped at the receive batch size.
@@ -635,6 +630,7 @@ export const initWorkers = async ({
 		}
 		await stopBalanceShadow();
 		await shutdownSqsSendBatchers();
+		await getSqsJobs().shutdown();
 
 		const isProd = process.env.NODE_ENV === "production";
 		if (isProd) {

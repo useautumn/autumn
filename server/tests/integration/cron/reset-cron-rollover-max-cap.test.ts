@@ -1,7 +1,7 @@
 /**
  * TDD test for rollover `max` not being enforced on the reset-cron path.
  *
- * The cron loader (CusEntService.getActiveResetPassed) maps every cusEnt with a
+ * The V1 cron loader mapped every cusEnt with a
  * hardcoded `rollovers: []`. RolloverService.clearExcessRollovers then computes
  * `[...fullCusEnt.rollovers, ...newRows]`, so it only ever sees the single new
  * row and never the previously-accumulated forever-expiry rows — the cap never
@@ -19,18 +19,19 @@ import { expect, test } from "bun:test";
 import {
 	customerEntitlements,
 	ProductItemInterval,
-	type ResetCusEnt,
 	RolloverExpiryDurationType,
 	rollovers,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
+import {
+	findResetEligibleRow,
+	runResetOnCustomerEntitlement,
+} from "@tests/utils/cusProductUtils/resetTestUtils.js";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
-import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlement";
 import { CusService } from "@/internal/customers/CusService";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem";
 
 const INCLUDED = 300;
@@ -86,27 +87,18 @@ test.concurrent(
 			.set({ next_reset_at: now - 1000 })
 			.where(eq(customerEntitlements.id, cusEntId));
 
-		// Load the cusEnt exactly as the cron does (rollovers hardcoded to []).
-		const resetCusEnts = await CusEntService.getActiveResetPassed({
-			db: ctx.db,
-			customDateUnix: now,
-		});
-		const cronCusEnt = resetCusEnts.find((cusEnt) => cusEnt.id === cusEntId);
 		expect(
-			cronCusEnt,
-			"cusEnt should be selected by getActiveResetPassed",
-		).toBeDefined();
-		expect(cronCusEnt?.rollovers).toEqual([]);
+			await findResetEligibleRow({ ctx, customerEntitlementId: cusEntId }),
+			"cusEnt should be selected by the reset scan",
+		).not.toBeNull();
 
-		// Drive several reset cycles. The short-duration reset path does not
-		// persist balance/next_reset_at itself, so the unused INCLUDED balance
-		// is banked each cycle.
+		// Drive several reset cycles through the V2 cron's lane; each banks the
+		// unused INCLUDED balance as a rollover.
 		for (let cycle = 0; cycle < RESET_CYCLES; cycle++) {
-			const updatedCusEnts: ResetCusEnt[] = [];
-			await resetCustomerEntitlement({
+			await runResetOnCustomerEntitlement({
 				ctx,
-				cusEnt: cronCusEnt as ResetCusEnt,
-				updatedCusEnts,
+				customerId,
+				customerEntitlementId: cusEntId,
 			});
 		}
 

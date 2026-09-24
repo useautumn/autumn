@@ -1,7 +1,6 @@
 import { z } from "zod/v4";
-import { catalogSchema } from "../catalog/catalog.js";
 import { nonEmptyStringSchema, timestampSchema } from "../common/primitives.js";
-import { subjectStateSchema } from "../subject/subjectState.js";
+import { mutationEffectSchema } from "./mutationEffect.js";
 import {
 	refineSubjectStateMutation,
 	subjectStateMutationShape,
@@ -17,15 +16,6 @@ const mutationSourceSchema = z
 	.object({ commandOffset: z.string().regex(/^\d+$/) })
 	.strict();
 
-/** The subject as the mutation left it: undoing `changes` on it gives the subject as found. */
-const mutationAfterSchema = z
-	.object({
-		state: subjectStateSchema,
-		/** Stamped by older workers only; readers load the catalog themselves and ignore it. */
-		catalog: catalogSchema.optional(),
-	})
-	.strict();
-
 /** What the log, the store and a checkpoint hold: the engine's mutation plus the writer's receipt. */
 export const mutationRecordSchema = z
 	.object({
@@ -33,13 +23,12 @@ export const mutationRecordSchema = z
 		receipt: mutationReceiptSchema,
 		/** Consumed commands only: the committer moves the command bookmark past it with the rows. */
 		source: mutationSourceSchema.optional(),
-		/** On the log only, for its readers: never replayed, and dropped before the record is stored or checkpointed. */
-		after: mutationAfterSchema.optional(),
+		/** What must happen elsewhere because of this mutation. On the log only, for its readers: never replayed, and dropped before the record is stored or checkpointed. */
+		effects: z.array(mutationEffectSchema).optional(),
 	})
 	.strict()
 	.superRefine(refineSubjectStateMutation);
 
-export type MutationAfter = z.infer<typeof mutationAfterSchema>;
 export type MutationReceipt = z.infer<typeof mutationReceiptSchema>;
 export type MutationSource = z.infer<typeof mutationSourceSchema>;
 export type MutationRecord = z.infer<typeof mutationRecordSchema>;

@@ -1,79 +1,54 @@
+import { subjectToAutoTopupTriggers } from "@autumn/auto-topup";
+import type { WorkerFullSubject } from "@autumn/balance-engine";
 import {
-	deduplicateArray,
 	type Feature,
-	type FullCustomer,
-	fullCustomerToCustomerEntitlements,
+	type FullSubject,
+	fullSubjectToFullCustomer,
 } from "@autumn/shared";
-import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { resolveThresholdSettlement } from "../thresholdBilling/resolve/resolveThresholdSettlement.js";
-import { enqueueAutoTopupWithBurstSuppression } from "./helpers/enqueueAutoTopupWithBurstSuppression.js";
-import { fullCustomerToAutoTopupObjects } from "./helpers/fullCustomerToAutoTopupObjects.js";
+import { dispatchAutoTopup } from "./helpers/dispatchAutoTopup.js";
 import { sendAutoTopupFailedWebhook } from "./webhooks/sendAutoTopupFailedWebhook.js";
 
-/** Lightweight pre-check + SQS enqueue for auto top-ups after a deduction. */
+const isServerSubject = (
+	fullSubject: FullSubject | WorkerFullSubject,
+): fullSubject is FullSubject => "subjectType" in fullSubject;
+
+/** After a deduction or a check: dispatch a job for every feature at or under its top-up threshold. */
 export const triggerAutoTopUp = async ({
 	ctx,
-	newFullCus,
+	fullSubject,
 	feature,
+	now = Date.now(),
 }: {
 	ctx: AutumnContext;
-	newFullCus: FullCustomer;
+	/** The server's own view, or the worker's reply; the predicate reads either. */
+	fullSubject: FullSubject | WorkerFullSubject;
 	feature: Feature;
+	now?: number;
 }) => {
-	const relevantFeatureIds = deduplicateArray([
-		feature.id,
-		...fullCustomerToCustomerEntitlements({
-			fullCustomer: newFullCus,
-			fundsFeatureId: feature.id,
-		}).map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
-	]);
+	const triggers = subjectToAutoTopupTriggers({
+		fullSubject,
+		featureId: feature.id,
+		now,
+	});
+	const customerId =
+		fullSubject.customer.id || fullSubject.customer.internal_id;
 
-	for (const relevantFeatureId of relevantFeatureIds) {
-		const resolved = fullCustomerToAutoTopupObjects({
-			fullCustomer: newFullCus,
-			featureId: relevantFeatureId,
-		});
+	for (const { featureId, autoTopupConfig } of triggers) {
+		const dispatched = await dispatchAutoTopup({ ctx, customerId, featureId });
 
-		const settlement = resolveThresholdSettlement({
-			fullCustomer: newFullCus,
-			featureId: relevantFeatureId,
-		});
-
-		if (!resolved?.balanceBelowThreshold && settlement.kind !== "settle") {
-			continue;
-		}
-
-		// Enqueue the auto top-up job
-		const customerId = newFullCus.id || newFullCus.internal_id;
-
-		let enqueueResult: Awaited<
-			ReturnType<typeof enqueueAutoTopupWithBurstSuppression>
-		>;
-		try {
-			enqueueResult = await enqueueAutoTopupWithBurstSuppression({
-				ctx,
-				customerId,
-				featureId: relevantFeatureId,
-			});
-		} catch (error) {
-			if (!(error instanceof RedisUnavailableError)) throw error;
-			enqueueResult = {
-				enqueued: false as const,
-				reason: "redis_unavailable" as const,
-			};
-		}
-
-		if (enqueueResult?.reason === "redis_unavailable" && resolved) {
+		if (dispatched.reason === "redis_unavailable" && autoTopupConfig) {
 			await sendAutoTopupFailedWebhook({
 				ctx,
 				customerId,
-				featureId: relevantFeatureId,
+				featureId,
 				reason: "redis_unavailable",
-				message: `Redis unavailable, skipping auto top-up enqueue for customer ${customerId} and feature ${relevantFeatureId}`,
-				fullCustomer: newFullCus,
-				autoTopupConfig: resolved.autoTopupConfig,
-				suppressionKey: `auto_topup_failed_webhook:${ctx.org.id}:${ctx.env}:${customerId}:${relevantFeatureId}:redis_unavailable:${Math.floor(Date.now() / 3_600_000)}`,
+				message: `Redis unavailable, skipping auto top-up enqueue for customer ${customerId} and feature ${featureId}`,
+				fullCustomer: isServerSubject(fullSubject)
+					? fullSubjectToFullCustomer({ fullSubject })
+					: undefined,
+				autoTopupConfig,
+				suppressionKey: `auto_topup_failed_webhook:${ctx.org.id}:${ctx.env}:${customerId}:${featureId}:redis_unavailable:${Math.floor(Date.now() / 3_600_000)}`,
 				suppressionTtlMs: 3_600_000,
 			});
 		}

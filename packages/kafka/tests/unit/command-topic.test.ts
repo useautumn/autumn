@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { TrackCommand } from "@autumn/balance-engine";
+import type { EvictCommand, TrackCommand } from "@autumn/balance-engine";
 import {
 	meteringIdentityToPartitionKey,
+	parseEvictCommand,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
 import { CompressionTypes, type ProducerRecord } from "kafkajs";
@@ -37,6 +38,16 @@ const track: TrackCommand = parseTrackCommand({
 	},
 });
 
+const evict: EvictCommand = parseEvictCommand({
+	input: {
+		schemaVersion: 1,
+		type: "evict",
+		requestId: "req_evict",
+		identity: testIdentity,
+		occurredAt: 1_700_000_000_000,
+	},
+});
+
 describe("command topic", () => {
 	test("a command round-trips, keyed like the metering log", () => {
 		const serialized = serializeCommandRecord({ record: track });
@@ -44,6 +55,14 @@ describe("command topic", () => {
 			meteringIdentityToPartitionKey({ identity: track.identity }),
 		);
 		expect(parseCommandRecord(serialized)).toEqual(track);
+	});
+
+	test("an evict rides the same topic under the customer's key", () => {
+		const serialized = serializeCommandRecord({ record: evict });
+		expect(serialized.key.toString("utf8")).toBe(
+			meteringIdentityToPartitionKey({ identity: evict.identity }),
+		);
+		expect(parseCommandRecord(serialized)).toEqual(evict);
 	});
 
 	test("a record with another command's key, or an unknown command type, is invalid", () => {

@@ -7,6 +7,7 @@ import type { WorkerCustomerProduct } from "./rows/workerCustomerProduct.js";
 import type { WorkerEntity } from "./rows/workerEntity.js";
 import type { OpenLock } from "./rows/workerLock.js";
 import type { WorkerPooledBalance } from "./rows/workerPooledBalance.js";
+import type { WorkerReplaceable } from "./rows/workerReplaceable.js";
 import type { WorkerRollover } from "./rows/workerRollover.js";
 import type { WorkerUsageWindow } from "./rows/workerUsageWindow.js";
 
@@ -14,6 +15,8 @@ import type { WorkerUsageWindow } from "./rows/workerUsageWindow.js";
 export type WorkerFullCustomerEntitlement = WorkerCustomerEntitlement & {
 	entitlement: Entitlement & { feature: Feature };
 	rollovers: WorkerRollover[];
+	/** A v1 allocated grant's; the API balance folds their count in. */
+	replaceables: WorkerReplaceable[];
 	/** The pool a pooled row draws from, joined by `pooled_balance_id`; null on every other row. */
 	pooled_balance?: WorkerPooledBalance;
 };

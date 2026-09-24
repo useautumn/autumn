@@ -4,7 +4,6 @@ import {
 	mergeSubjectStates,
 	parseSubjectState,
 	type RowChange,
-	revertChanges,
 	StaleMutationError,
 	splitSubjectState,
 	type WorkerLock,
@@ -78,12 +77,6 @@ describe("lock row changes", () => {
 				changes: [{ table: "locks", op: "delete", id: "lck_1" }],
 			}),
 		).toThrow(StaleMutationError);
-	});
-
-	test.concurrent("an insert can be walked back", () => {
-		const changes = [insertLock(createLock())];
-		const opened = applyChanges({ state: createState(), changes });
-		expect(revertChanges({ state: opened, changes }).openLocks).toEqual([]);
 	});
 
 	test.concurrent("the customer's state owns every open lock", () => {

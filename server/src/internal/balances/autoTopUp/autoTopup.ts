@@ -1,3 +1,4 @@
+import type { AutoTopupJobPayload } from "@autumn/auto-topup";
 import { AppEnv, ms } from "@autumn/shared";
 import {
 	clearAutoTopupPendingKey,
@@ -12,8 +13,6 @@ import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/l
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
 import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct.js";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import type { AutoTopupContext } from "./autoTopupContext.js";
 import { computeAutoTopupPlan } from "./compute/computeAutoTopupPlan.js";
 import { buildAutoTopUpLockKey } from "./helpers/autoTopUpUtils.js";
@@ -36,7 +35,7 @@ export const autoTopup = async ({
 	payload,
 }: {
 	ctx: AutumnContext;
-	payload: AutoTopUpPayload;
+	payload: AutoTopupJobPayload;
 }) => {
 	const { org, env, logger } = ctx;
 	const { customerId, featureId } = payload;
@@ -176,17 +175,6 @@ export const autoTopup = async ({
 			return;
 		}
 
-		// A loose grant is a new row, not a patch: nothing else refreshes the
-		// cached subject, so drop it or the credits stay invisible.
-		if (autumnBillingPlan.insertCustomerEntitlements?.length) {
-			await invalidateCachedFullSubject({ ctx, customerId });
-			await deleteCachedFullCustomer({
-				ctx,
-				customerId,
-				source: "auto-topup-expiring-grant",
-			});
-		}
-
 		const customerProductUpdate = autumnBillingPlan.updateCustomerProduct;
 		if (customerProductUpdate?.updates.options) {
 			const customerProductId = customerProductUpdate.customerProduct.id;
@@ -197,6 +185,9 @@ export const autoTopup = async ({
 				updates: customerProductUpdate.updates,
 			});
 		}
+
+		// The plan wrote the new balance past the worker and only patched the legacy cache: evict both, so the next read is the top-up.
+		await invalidateCachedFullSubject({ ctx, customerId });
 
 		await sendAutoTopupSucceededWebhook({
 			ctx,

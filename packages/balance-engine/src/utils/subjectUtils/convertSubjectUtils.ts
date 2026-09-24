@@ -57,6 +57,9 @@ const joinCustomerEntitlement = ({
 		rollovers: state.rollovers.filter(
 			(rollover) => rollover.cus_ent_id === row.id,
 		),
+		replaceables: state.replaceables.filter(
+			(replaceable) => replaceable.cus_ent_id === row.id,
+		),
 		...poolOf({ row, state }),
 	};
 };

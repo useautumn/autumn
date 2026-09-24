@@ -16,6 +16,7 @@ import {
 	CusProductStatus,
 	EntInterval,
 	FeatureType,
+	FreeTrialDuration,
 } from "@autumn/shared";
 import { ensureSubject } from "../../../../src/processor/subject/actions/ensureSubject/ensureSubject.js";
 import { readSubject } from "../../../../src/processor/subject/actions/readSubject.js";
@@ -154,6 +155,7 @@ const createScope = ({
 				...ids.featureInternalIds.map((id) => `features:${id}`),
 				...ids.priceIds.map((id) => `prices:${id}`),
 				...ids.planLicenseIds.map((id) => `planLicenses:${id}`),
+				...ids.freeTrialIds.map((id) => `freeTrials:${id}`),
 			]);
 			const served = sourceRows.filter((row) =>
 				asked.has(catalogKeyToString({ key: catalogRowToCatalogKey({ row }) })),
@@ -173,6 +175,9 @@ const createScope = ({
 				),
 				plan_licenses: served.flatMap((row) =>
 					row.table === "planLicenses" ? [row.row] : [],
+				),
+				free_trials: served.flatMap((row) =>
+					row.table === "freeTrials" ? [row.row] : [],
 				),
 			};
 		},
@@ -217,6 +222,7 @@ describe("ensure subject", () => {
 				featureInternalIds: [],
 				priceIds: [],
 				planLicenseIds: [],
+				freeTrialIds: [],
 			},
 		]);
 		expect(Object.keys(subject.catalog.entitlements)).toEqual(["ent_1"]);
@@ -225,6 +231,49 @@ describe("ensure subject", () => {
 		).toHaveLength(1);
 		await ensureSubject({ scope, identity });
 		expect(calls).toHaveLength(1);
+	});
+
+	test("a product's free trial loads beside its rows; one Postgres no longer has never fails the command", async () => {
+		const [customerProduct] = state.customerProducts;
+		if (!customerProduct) throw new Error("the fixture's state has a product");
+		const withTrials: SubjectState = {
+			...state,
+			customerProducts: [
+				{ ...customerProduct, free_trial_id: "ft_live" },
+				{ ...customerProduct, id: "cp_gone", free_trial_id: "ft_gone" },
+			],
+		};
+		const freeTrial: CatalogRow = {
+			table: "freeTrials",
+			row: {
+				id: "ft_live",
+				created_at: 1,
+				internal_product_id: "prod_internal_1",
+				duration: FreeTrialDuration.Day,
+				length: 7,
+				unique_fingerprint: false,
+				is_custom: false,
+				card_required: true,
+				on_end: "revert",
+				org_id: "org_1",
+				env: AppEnv.Sandbox,
+			},
+		};
+		const { scope, calls } = createScope({
+			storedState: withTrials,
+			sourceRows: [...rows, freeTrial],
+		});
+
+		const subject = await ensureSubject({ scope, identity });
+
+		expect(Object.keys(subject.catalog.freeTrials)).toEqual(["ft_live"]);
+		expect(calls.map(({ freeTrialIds }) => freeTrialIds)).toEqual([
+			[],
+			["ft_gone", "ft_live"],
+		]);
+		expect(
+			readSubject({ scope, state: withTrials, identity }).customer_products,
+		).toHaveLength(2);
 	});
 
 	test("a pool's plan license loads with its items; a link Postgres no longer has never fails the command", async () => {

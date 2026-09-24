@@ -14,11 +14,13 @@ import {
 	ApiVersion,
 	ApiVersionClass,
 	ErrCode,
+	type FullSubject,
 	fullSubjectToFullCustomer,
 	getApiBalance,
 	InsufficientBalanceError,
 	ResetInterval,
 	type TrackParams,
+	type TrackResponseV3,
 } from "@autumn/shared";
 import {
 	fullSubjectToCatalogRows,
@@ -34,6 +36,11 @@ const execution = {
 	reply: undefined as TrackReply | undefined,
 	commands: [] as TrackCommand[],
 	failure: undefined as Error | undefined,
+	postgresResponse: undefined as TrackResponseV3 | undefined,
+	/** The Postgres lane's steps in the order they ran: evict, read, postgres, evict. */
+	postgresLane: [] as string[],
+	postgresBodies: [] as TrackParams[],
+	fullSubject: undefined as FullSubject | undefined,
 };
 
 await mockModuleWithRestore(
@@ -43,6 +50,14 @@ await mockModuleWithRestore(
 await mockModuleWithRestore(
 	"@/internal/balances/events/EventBatchingManager.js",
 	eventsModule,
+);
+await mockModuleWithRestore(
+	"@/internal/customers/repos/getFullSubject/index.js",
+	fullSubjectModule,
+);
+await mockModuleWithRestore(
+	"@/internal/balances/track/v3/runPostgresTrackV3.js",
+	postgresTrackModule,
 );
 const { runBalanceWorkerTrack } = await import(
 	"@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js"
@@ -62,11 +77,19 @@ test(
 	"the body idempotency key is claimed like the Redis lane: kept on success and 409, released on 503",
 	claimContract,
 );
+test(
+	"a paid allocated refusal is tracked on Postgres and answered in the same shape",
+	paidAllocatedContract,
+);
 
 function resetExecution(): void {
 	execution.reply = undefined;
 	execution.commands.length = 0;
 	execution.failure = undefined;
+	execution.postgresResponse = undefined;
+	execution.postgresLane.length = 0;
+	execution.postgresBodies.length = 0;
+	execution.fullSubject = undefined;
 }
 
 function clientModule() {
@@ -74,7 +97,33 @@ function clientModule() {
 }
 
 function getClient() {
-	return { track };
+	return { track, evict };
+}
+
+async function evict(): Promise<{ evicted: boolean }> {
+	execution.postgresLane.push("evict");
+	return { evicted: true };
+}
+
+function fullSubjectModule() {
+	return {
+		getFullSubject: async () => {
+			execution.postgresLane.push("read");
+			return execution.fullSubject;
+		},
+	};
+}
+
+function postgresTrackModule() {
+	return {
+		runPostgresTrackV3: async ({ body }: { body: TrackParams }) => {
+			execution.postgresLane.push("postgres");
+			execution.postgresBodies.push(body);
+			if (!execution.postgresResponse)
+				throw new Error("No Postgres response staged");
+			return execution.postgresResponse;
+		},
+	};
 }
 
 async function track({
@@ -412,4 +461,54 @@ async function claimContract() {
 		claimSpy.mockRestore();
 		releaseSpy.mockRestore();
 	}
+}
+
+async function paidAllocatedContract() {
+	const customer = fixture();
+	const { ctx, body } = customer;
+	execution.failure = new BalanceWorkerClientError({
+		code: "WORKER_ERROR",
+		outcome: "not_submitted",
+		message: "Unsupported command: paid_allocated_not_supported",
+		workerCode: "UNSUPPORTED_COMMAND",
+		workerReason: "paid_allocated_not_supported",
+	});
+	execution.fullSubject = customer.fullSubject;
+	const postgresBalance = expectedBalance({ customer, balance: 69 });
+	const deductions = [
+		{
+			balance_id: "messages_grant",
+			feature_id: "messages",
+			plan_id: "pro",
+			reset: { interval: ResetInterval.Month, resets_at: 1_800_000_000_000 },
+			value: 3,
+		},
+	];
+	execution.postgresResponse = {
+		customer_id: body.customer_id,
+		value: body.value ?? 1,
+		balance: postgresBalance,
+		deductions,
+	};
+
+	const response = await runBalanceWorkerTrack({ ctx, body });
+
+	expect(response).toEqual({
+		customer_id: "cus_test",
+		entity_id: undefined,
+		value: 3,
+		balance: postgresBalance,
+		deductions,
+	});
+	// The worker was asked once; Postgres ran this one feature between two evicts.
+	expect(execution.commands).toHaveLength(1);
+	expect(execution.postgresLane).toEqual([
+		"evict",
+		"read",
+		"postgres",
+		"evict",
+	]);
+	expect(execution.postgresBodies).toEqual([
+		{ ...body, feature_id: "messages" },
+	]);
 }

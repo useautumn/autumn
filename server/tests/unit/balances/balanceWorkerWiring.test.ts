@@ -107,7 +107,7 @@ function gatesBalanceWorkerOnTheRolloutFlagAlone(): void {
 	}
 }
 
-async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
+async function startsAndMemoizesWhateverTheRolloutSays(): Promise<void> {
 	let starts = 0;
 	let stops = 0;
 	const info = spyOn(logger, "info").mockImplementation(ignoreLog);
@@ -122,11 +122,12 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 		applyBillingPlan: track,
 		initialize: track,
 		evict: track,
+		flush: track,
 		finalize: track,
 		confirmExpiredLock: track,
 		reset: track,
 		enqueue: queueNothing,
-		queue: { track: queueNothing, reset: queueNothing },
+		queue: { track: queueNothing, reset: queueNothing, evict: queueNothing },
 		catalog: { invalidateOrgCatalog: queueNothing },
 		start: async () => {
 			starts++;
@@ -148,27 +149,22 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 			).href
 		);
 
-	const readClientConfig = refuseUnconfiguredKafka();
-	await access.startBalanceWorkerClient();
-	await access.stopBalanceWorkerClient();
-	expect(readClientConfig).not.toHaveBeenCalled();
-	expect(createClient).not.toHaveBeenCalled();
-	expect(starts).toBe(0);
-	expect(stops).toBe(0);
-	expect(info).toHaveBeenCalledWith(
-		"[balance-worker] Client skipped: rollout disabled",
-	);
-	readClientConfig.mockImplementation(readBalanceWorkerClientEnv);
-
 	balanceWorkerEnv = createClientEnv({
 		runtimeEnv: {
 			...localEnv,
 			KAFKA_BROKERS: "broker:9092",
 			BALANCE_WORKER_DEPLOYMENT: "serving",
 		},
-		rolloutEnabled: true,
+		// Off: evicts and catalog invalidations still need the client, so a flip finds nothing stale.
+		rolloutEnabled: false,
 	});
+	// The preload may have memoized a real client on this module; start from nothing.
+	await access.stopBalanceWorkerClient();
+	stops = 0;
 	await access.startBalanceWorkerClient();
+	expect(info).toHaveBeenCalledWith(
+		"[balance-worker] Client starting; rollout off",
+	);
 	expect(access.getBalanceWorkerClient()).toBe(client);
 	expect(access.getBalanceWorkerClient()).toBe(client);
 	expect(createClient).toHaveBeenCalledTimes(1);
@@ -187,6 +183,7 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 		timeoutMs: 1000,
 		routeRefreshTimeoutMs: 200,
 		catchUpTimeoutMs: expect.any(Number),
+		connectProducersOnStart: true,
 	});
 	expect(starts).toBe(1);
 	await access.stopBalanceWorkerClient();
@@ -344,8 +341,8 @@ test(
 	gatesBalanceWorkerOnTheRolloutFlagAlone,
 );
 test(
-	"disabled boot avoids Kafka; enabled accessors memoize ownership and client",
-	startsAndMemoizesOnlyWhenEnabled,
+	"the client starts whatever the rollout says, and its accessors memoize it",
+	startsAndMemoizesWhateverTheRolloutSays,
 );
 test(
 	"track selects one path and never falls back after a balance worker failure",
