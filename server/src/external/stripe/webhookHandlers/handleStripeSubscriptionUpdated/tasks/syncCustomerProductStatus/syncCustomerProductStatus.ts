@@ -174,6 +174,7 @@ export const syncCustomerProductStatus = async ({
 			ctx,
 			cusProductId: customerProduct.id,
 			updates,
+			expectedStatus: customerProduct.status,
 		});
 
 		trackCustomerProductUpdate({

@@ -2,6 +2,7 @@ import {
 	CheckoutStatus,
 	type DeferredAutumnBillingPlanData,
 	type Metadata,
+	StripeBillingStage,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -9,6 +10,7 @@ import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/cre
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { promotePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/promotePendingCustomerProducts";
+import { refreshDeferredBillingPlan } from "@/internal/billing/v2/execute/refreshDeferredBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
 import { publishBillingTransition } from "@/internal/billing/v2/publish/publishBillingTransition.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
@@ -34,7 +36,16 @@ export const executeDeferredBillingPlan = async ({
 
 	if (data.orgId !== ctx.org.id || data.env !== ctx.env) return;
 
-	const { billingPlan, billingContext, resumeAfter } = data;
+	const { resumeAfter } = data;
+	const subscriptionNotYetUpdated =
+		resumeAfter === StripeBillingStage.InvoiceAction;
+	const { billingPlan, billingContext } = subscriptionNotYetUpdated
+		? await refreshDeferredBillingPlan({
+				ctx,
+				billingPlan: data.billingPlan,
+				billingContext: data.billingContext,
+			})
+		: data;
 
 	addToExtraLogs({
 		ctx,

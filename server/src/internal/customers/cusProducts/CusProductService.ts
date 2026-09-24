@@ -478,16 +478,26 @@ export class CusProductService {
 		ctx,
 		cusProductId,
 		updates,
+		expectedStatus,
 	}: {
 		ctx: RepoContext;
 		cusProductId: string;
 		updates: Partial<InsertCustomerProduct>;
+		/** Only write if the row still has this status, so a stale read can't overwrite a newer change. */
+		expectedStatus?: CusProductStatus;
 	}) {
 		const { db } = ctx;
 		const results = await db
 			.update(customerProducts)
 			.set({ ...updates, updated_at: Date.now() })
-			.where(eq(customerProducts.id, cusProductId))
+			.where(
+				and(
+					eq(customerProducts.id, cusProductId),
+					expectedStatus
+						? eq(customerProducts.status, expectedStatus)
+						: undefined,
+				),
+			)
 			.returning({
 				internal_customer_id: customerProducts.internal_customer_id,
 			});
