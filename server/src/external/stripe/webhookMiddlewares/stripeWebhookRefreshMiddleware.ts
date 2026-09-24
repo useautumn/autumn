@@ -17,6 +17,7 @@ const updateProductEvents = [
 const coreEvents = [
 	"customer.subscription.deleted",
 	"subscription_schedule.canceled",
+	"subscription_schedule.released",
 	"subscription_schedule.updated",
 	"checkout.session.completed",
 	"checkout.session.expired",
