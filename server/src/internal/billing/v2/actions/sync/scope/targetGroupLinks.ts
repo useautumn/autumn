@@ -17,7 +17,8 @@ const targetGroupKey = ({
 /**
  * Missing/blank group is itself a valid group key (the implicit "default"
  * group most catalogs use) -- it is NOT ambiguous on its own. Ambiguity only
- * exists when two non-add-on products collide on the same entity+group key.
+ * exists when two different non-add-on products collide on the same
+ * entity+group key; several rows of the same product are instances of it.
  */
 const normalizeProductGroup = ({ group }: { group?: string | null }): string =>
 	group ?? "";
@@ -53,7 +54,12 @@ export const linkedCustomerProductsToTargetGroupMap = ({
 			internalEntityId: linkedProduct.internal_entity_id,
 			group,
 		});
-		if (targets.has(key)) return { ok: false };
+		const existing = targets.get(key);
+		if (existing) {
+			if (existing.product.id !== linkedProduct.product.id)
+				return { ok: false };
+			continue;
+		}
 
 		targets.set(key, linkedProduct);
 	}

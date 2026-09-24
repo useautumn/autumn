@@ -523,4 +523,99 @@ describe("buildIncrementalSyncParams", () => {
 			reason: "no_changed_targets",
 		});
 	});
+
+	test("treats several rows of the same main plan as instances, not ambiguity", () => {
+		const pro = product({ id: "pro" });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+			syncPlans: [syncPlan({ productId: pro.id, quantity: 2 })],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [
+				linkedCustomerProduct({ product: pro, id: "cp_pro_1" }),
+				linkedCustomerProduct({ product: pro, id: "cp_pro_2" }),
+			],
+		});
+
+		expect(result).toMatchObject({
+			shouldSync: false,
+			reason: "no_changed_targets",
+		});
+	});
+
+	test("attaches the missing main-plan instances when Stripe quantity rises", () => {
+		const pro = product({ id: "pro" });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+			syncPlans: [syncPlan({ productId: pro.id, quantity: 3 })],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [
+				linkedCustomerProduct({ product: pro, id: "cp_pro_1" }),
+			],
+		});
+
+		if (!result.shouldSync) throw new Error(result.reason);
+		expect(result.params?.phases?.[0]?.plans).toEqual([
+			{ expire_previous: false, plan_id: "pro", quantity: 2 },
+		]);
+		expect(result.removedCustomerProducts).toEqual([]);
+	});
+
+	test("expires surplus main-plan instances when Stripe quantity falls", () => {
+		const pro = product({ id: "pro" });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+			syncPlans: [syncPlan({ productId: pro.id, quantity: 1 })],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [
+				linkedCustomerProduct({ product: pro, id: "cp_pro_1" }),
+				linkedCustomerProduct({ product: pro, id: "cp_pro_2" }),
+				linkedCustomerProduct({ product: pro, id: "cp_pro_3" }),
+			],
+		});
+
+		if (!result.shouldSync) throw new Error(result.reason);
+		expect(result.params).toBeNull();
+		expect(result.removedCustomerProducts.map((row) => row.id)).toEqual([
+			"cp_pro_2",
+			"cp_pro_3",
+		]);
+	});
+
+	test("on a plan change, replaces one outgoing instance and expires the rest", () => {
+		const pro = product({ id: "pro" });
+		const premium = product({ id: "premium" });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: premium })],
+			syncPlans: [syncPlan({ productId: premium.id, quantity: 1 })],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [
+				linkedCustomerProduct({ product: pro, id: "cp_pro_1" }),
+				linkedCustomerProduct({ product: pro, id: "cp_pro_2" }),
+			],
+		});
+
+		if (!result.shouldSync) throw new Error(result.reason);
+		expect(result.params?.phases?.[0]?.plans).toEqual([
+			syncPlan({ productId: premium.id, quantity: 1 }),
+		]);
+		expect(result.removedCustomerProducts.map((row) => row.id)).toEqual([
+			"cp_pro_2",
+		]);
+	});
 });

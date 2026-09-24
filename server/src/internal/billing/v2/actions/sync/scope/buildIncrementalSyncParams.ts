@@ -53,17 +53,18 @@ const matchedPlansByProductId = ({
 	return { ok: true, plansByProductId };
 };
 
-/** Active linked cusProducts for this add-on plan — one row per purchased instance. */
-const linkedAddOnInstances = ({
+/** Active linked cusProducts of one plan in the sync plan's scope — one row per instance. */
+const linkedPlanInstances = ({
 	linkedCustomerProducts,
+	productId,
 	syncPlan,
 }: {
 	linkedCustomerProducts: FullCusProduct[];
+	productId: string;
 	syncPlan: SyncPlanInstance;
 }) =>
 	linkedCustomerProducts.filter((linkedProduct) => {
-		if (!isCustomerProductAddOn(linkedProduct)) return false;
-		if (linkedProduct.product.id !== syncPlan.plan_id) return false;
+		if (linkedProduct.product.id !== productId) return false;
 		return syncPlan.entity_id
 			? linkedProduct.internal_entity_id === syncPlan.entity_id
 			: !linkedProduct.internal_entity_id;
@@ -170,6 +171,7 @@ export const buildIncrementalSyncParams = ({
 	}
 
 	const changedPlans: SyncPlanInstance[] = [];
+	const surplusInstances: FullCusProduct[] = [];
 	for (const syncPlan of phase.plans) {
 		const matchedPlan = matchedPlanMap.plansByProductId.get(syncPlan.plan_id);
 		if (!matchedPlan) {
@@ -183,8 +185,9 @@ export const buildIncrementalSyncParams = ({
 		// from the base item's Stripe quantity, never from prepaid items —
 		// prepaid pack counts live in syncPlan.feature_quantities instead).
 		if (matchedPlan.product.is_add_on === true) {
-			const linkedInstances = linkedAddOnInstances({
+			const linkedInstances = linkedPlanInstances({
 				linkedCustomerProducts,
+				productId: syncPlan.plan_id,
 				syncPlan,
 			});
 			const desiredQuantity = syncPlan.quantity ?? 1;
@@ -229,16 +232,44 @@ export const buildIncrementalSyncParams = ({
 			linkedProduct.product.id !== target.productId ||
 			versionChanged
 		) {
+			// The sync replaces one outgoing instance with usage carry; the rest expire.
+			if (linkedProduct) {
+				const outgoingInstances = linkedPlanInstances({
+					linkedCustomerProducts,
+					productId: linkedProduct.product.id,
+					syncPlan,
+				});
+				surplusInstances.push(
+					...outgoingInstances.filter(
+						(instance) => instance.id !== linkedProduct.id,
+					),
+				);
+			}
 			changedPlans.push(syncPlan);
 			continue;
 		}
 
-		// Same product at a new base quantity: replace the row so its line
-		// items and balances pick up the new multiplier.
-		const baseQuantityDrifted =
-			(linkedProduct.quantity ?? 1) !== (syncPlan.quantity ?? 1);
-		if (baseQuantityDrifted) {
-			changedPlans.push(syncPlan);
+		// Same plan at a different Stripe quantity: add or expire instances.
+		const instances = linkedPlanInstances({
+			linkedCustomerProducts,
+			productId: target.productId,
+			syncPlan,
+		});
+		const desiredQuantity = syncPlan.quantity ?? 1;
+		if (instances.length < desiredQuantity) {
+			changedPlans.push({
+				...syncPlan,
+				quantity: desiredQuantity - instances.length,
+				expire_previous: false,
+			});
+			continue;
+		}
+		if (instances.length > desiredQuantity) {
+			surplusInstances.push(
+				...instances
+					.filter((instance) => instance.id !== linkedProduct.id)
+					.slice(0, instances.length - desiredQuantity),
+			);
 			continue;
 		}
 
@@ -263,13 +294,14 @@ export const buildIncrementalSyncParams = ({
 	const matchedPlanIds = new Set(
 		phaseMatch.plans.map((matchedPlan) => matchedPlan.product.id),
 	);
-	const removedCustomerProducts = hasUnmatchedItems
+	const removedAddOns = hasUnmatchedItems
 		? []
 		: linkedCustomerProducts.filter(
 				(linkedProduct) =>
 					isCustomerProductAddOn(linkedProduct) &&
 					!matchedPlanIds.has(linkedProduct.product.id),
 			);
+	const removedCustomerProducts = [...removedAddOns, ...surplusInstances];
 
 	if (changedPlans.length === 0 && removedCustomerProducts.length === 0) {
 		return {

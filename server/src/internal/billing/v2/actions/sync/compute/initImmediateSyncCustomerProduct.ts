@@ -15,7 +15,6 @@ import {
 	getTrialEndsAtFromStripe,
 } from "@/internal/billing/v2/actions/sync/utils/initSyncFromStripe";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
-import { syncPlanRowQuantity } from "../utils/syncPlanRowQuantity";
 
 /**
  * Build the immediate-phase cusProduct row for one plan instance, mirroring
@@ -82,7 +81,6 @@ export const initImmediateSyncCustomerProduct = ({
 				stripeStatus: stripeSubscription.status,
 			}),
 			internalEntityId: entity?.internal_id,
-			quantity: syncPlanRowQuantity({ productContext }),
 		},
 	});
 };

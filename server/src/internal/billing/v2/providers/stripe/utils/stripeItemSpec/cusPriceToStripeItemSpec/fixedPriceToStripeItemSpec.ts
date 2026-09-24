@@ -35,7 +35,7 @@ export const fixedPriceToStripeItemSpec = ({
 				cusProduct,
 				currency,
 			}),
-			quantity: cusProduct.quantity ?? 1,
+			quantity: 1,
 			autumnPrice: price,
 			autumnProduct: product,
 			metadata: { inline_price: "true", inline_mode: "true" },
@@ -56,7 +56,7 @@ export const fixedPriceToStripeItemSpec = ({
 
 	return {
 		stripePriceId,
-		quantity: cusProduct.quantity ?? 1,
+		quantity: 1,
 		autumnPrice: price,
 		autumnProduct: product,
 	};

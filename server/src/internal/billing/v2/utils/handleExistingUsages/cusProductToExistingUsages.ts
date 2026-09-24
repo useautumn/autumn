@@ -3,7 +3,6 @@ import {
 	cusEntsToUnlimitedUsage,
 	cusEntsToUsage,
 	cusEntToBalance,
-	cusEntToStartingBalance,
 	ErrCode,
 	type ExistingUsages,
 	type FullCusProduct,
@@ -106,9 +105,7 @@ export const cusProductToExistingUsages = ({
 
 		// 1. If it's entity scoped
 		if (isEntityScopedCusEnt(cusEnt)) {
-			const entityAllowance = cusEntToStartingBalance({
-				cusEnt: cusEntWithCusProduct,
-			});
+			const entityAllowance = cusEnt.entitlement.allowance ?? 0;
 			for (const [entityId, entityBalance] of Object.entries(cusEnt.entities)) {
 				// Usage = startingBalance + adjustment - currentBalance
 				const entityUsage = new Decimal(entityAllowance)

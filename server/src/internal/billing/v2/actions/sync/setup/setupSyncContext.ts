@@ -49,7 +49,8 @@ const resolvePlanEntity = ({
 	return entity;
 };
 
-const findLinkedAddOnCustomerProduct = ({
+/** Active instances of the plan already linked to this Stripe subscription. */
+const findLinkedPlanInstances = ({
 	fullCustomer,
 	fullProduct,
 	stripeSubscriptionId,
@@ -59,8 +60,8 @@ const findLinkedAddOnCustomerProduct = ({
 	fullProduct: SyncProductContext["fullProduct"];
 	stripeSubscriptionId: string;
 	internalEntityId?: string;
-}): FullCusProduct | undefined =>
-	fullCustomer.customer_products.find((customerProduct) => {
+}): FullCusProduct[] =>
+	fullCustomer.customer_products.filter((customerProduct) => {
 		if (customerProduct.product?.id !== fullProduct.id) return false;
 		if ((customerProduct.internal_entity_id ?? undefined) !== internalEntityId)
 			return false;
@@ -111,12 +112,12 @@ const buildProductContext = async ({
 			// same-product instance linked to this Stripe subscription so
 			// quantity changes and webhook re-deliveries converge.
 			currentCustomerProduct = stripeSubscriptionId
-				? findLinkedAddOnCustomerProduct({
+				? findLinkedPlanInstances({
 						fullCustomer,
 						fullProduct,
 						stripeSubscriptionId,
 						internalEntityId: entity?.internal_id,
-					})
+					})[0]
 				: undefined;
 		} else {
 			const transition = setupAttachTransitionContext({
@@ -224,15 +225,30 @@ const buildPlanProductContexts = async ({
 		claimedStripePriceIds,
 	});
 
-	// Expand add-on plans with quantity > 1 into N independent product contexts
-	// so the executor inserts one cusProduct per add-on instance.
+	// A plan with quantity N becomes N product contexts, one cusProduct per
+	// instance. Each replaces at most one existing instance, so a re-sync converges.
 	return linkedProductContexts.flatMap((productContext) => {
 		const requested = productContext.plan.quantity ?? 1;
-		const shouldExpand =
-			productContext.fullProduct.is_add_on === true && requested > 1;
-		return shouldExpand
-			? Array.from({ length: requested }, () => productContext)
-			: [productContext];
+		const otherInstances =
+			stripeSubscriptionId && productContext.plan.expire_previous === true
+				? findLinkedPlanInstances({
+						fullCustomer,
+						fullProduct: productContext.fullProduct,
+						stripeSubscriptionId,
+						internalEntityId: productContext.entity?.internal_id,
+					}).filter(
+						(instance) =>
+							instance.id !== productContext.currentCustomerProduct?.id,
+					)
+				: [];
+		return Array.from({ length: requested }, (_, index) =>
+			index === 0
+				? productContext
+				: {
+						...productContext,
+						currentCustomerProduct: otherInstances[index - 1],
+					},
+		);
 	});
 };
 

@@ -17,7 +17,6 @@ import { initCustomerEntitlementEntities } from "./initCustomerEntitlementEntiti
 export const initCustomerEntitlementBalance = ({
 	initContext,
 	entitlement,
-	productQuantity,
 }: {
 	initContext:
 		| InitCustomerEntitlementContext
@@ -27,8 +26,6 @@ export const initCustomerEntitlementBalance = ({
 				featureQuantities: FeatureOptions[];
 		  };
 	entitlement: EntitlementWithFeature;
-	/** Instances of the plan on the row; included usage scales with it. */
-	productQuantity?: number;
 }): { balance: number; entities: Record<string, EntityBalance> | null } => {
 	const { fullCustomer, featureQuantities } = initContext;
 
@@ -80,7 +77,6 @@ export const initCustomerEntitlementBalance = ({
 		entitlement,
 		options,
 		relatedPrice: price,
-		productQuantity,
 	});
 
 	// 3. Get entitlement entities if entity scoped

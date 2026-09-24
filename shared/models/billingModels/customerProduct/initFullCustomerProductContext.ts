@@ -82,8 +82,6 @@ export interface InitFullCustomerProductOptions {
 	startsAt?: number; // Used for scheduling product
 	accessStartsAt?: number;
 	endedAt?: number; // Used for scheduling product
-	/** Instances of the plan on one row; line items and starting balances multiply by it. */
-	quantity?: number;
 
 	// Optional + random
 	apiSemver?: ApiVersion;
