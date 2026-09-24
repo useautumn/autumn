@@ -28,7 +28,7 @@ test.concurrent(
 
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
-			errMessage: "Stripe customer",
+			errMessage: `Customer ${customerId} isn't linked to a Stripe customer`,
 			func: () =>
 				autumnV2_3.customers.update(customerId, {
 					billing_details: { tax_exempt: "exempt" },
