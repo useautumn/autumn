@@ -1,5 +1,6 @@
 import type { BillingPlan, FullCustomer } from "@autumn/shared";
 import type Stripe from "stripe";
+import { isCustomerProductLive } from "./toLiveAutumnBillingPlan";
 
 const updatesReplacedCustomerProduct = ({
 	billingPlan,
@@ -10,12 +11,14 @@ const updatesReplacedCustomerProduct = ({
 }) => {
 	const { updateCustomerProduct, updateCustomerProducts = [] } =
 		billingPlan.autumn;
-	const liveIds = new Set(
-		fullCustomer.customer_products.map((customerProduct) => customerProduct.id),
-	);
 
 	return [updateCustomerProduct, ...updateCustomerProducts].some(
-		(update) => update && !liveIds.has(update.customerProduct.id),
+		(update) =>
+			update &&
+			!isCustomerProductLive({
+				customerProduct: update.customerProduct,
+				fullCustomer,
+			}),
 	);
 };
 

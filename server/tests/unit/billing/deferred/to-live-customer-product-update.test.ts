@@ -9,7 +9,7 @@ import {
 	type CustomerProductUpdate,
 	type FullCusProduct,
 } from "@autumn/shared";
-import { toLiveCustomerProductUpdate } from "@/internal/billing/v2/execute/toLiveCustomerProductUpdate";
+import { toLiveCustomerProductUpdate } from "@/internal/billing/v2/execute/refreshDeferredBillingPlan/toLiveAutumnBillingPlan";
 import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct.js";
 import { makeFullCustomer } from "../billing-change-response/helpers/makeFullCustomer.js";
 

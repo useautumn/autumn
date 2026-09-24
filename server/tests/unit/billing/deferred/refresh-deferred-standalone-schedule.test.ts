@@ -49,7 +49,7 @@ await mockModuleWithRestore(
 );
 
 const { refreshDeferredBillingPlan } = await import(
-	"@/internal/billing/v2/execute/refreshDeferredBillingPlan.js"
+	"@/internal/billing/v2/execute/refreshDeferredBillingPlan/refreshDeferredBillingPlan.js"
 );
 
 test("a standalone schedule that still exists keeps the snapshot", async () => {

@@ -10,7 +10,7 @@ import {
 	type FullCusProduct,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import { isDeferredSnapshotStale } from "@/internal/billing/v2/execute/isDeferredSnapshotStale";
+import { isDeferredSnapshotStale } from "@/internal/billing/v2/execute/refreshDeferredBillingPlan/isDeferredSnapshotStale";
 import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct.js";
 import { makeFullCustomer } from "../billing-change-response/helpers/makeFullCustomer.js";
 

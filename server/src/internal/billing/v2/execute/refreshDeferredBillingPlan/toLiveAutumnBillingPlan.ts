@@ -1,10 +1,22 @@
 import {
+	type AutumnBillingPlan,
 	type CustomerProductUpdate,
 	type FullCusProduct,
 	type FullCustomer,
 	findActiveCustomerProductById,
 	findMainActiveCustomerProductByGroup,
 } from "@autumn/shared";
+
+export const isCustomerProductLive = ({
+	customerProduct,
+	fullCustomer,
+}: {
+	customerProduct: FullCusProduct;
+	fullCustomer: FullCustomer;
+}) =>
+	fullCustomer.customer_products.some(
+		(liveCustomerProduct) => liveCustomerProduct.id === customerProduct.id,
+	);
 
 /** Only a plan this billing plan replaces with a new main plan in its group may move to a successor. */
 const isReplacedByIncomingPlan = ({
@@ -62,17 +74,44 @@ export const toLiveCustomerProductUpdate = ({
 	fullCustomer: FullCustomer;
 	insertCustomerProducts: FullCusProduct[];
 }): CustomerProductUpdate | undefined => {
-	const isStillLive = fullCustomer.customer_products.some(
-		(customerProduct) => customerProduct.id === update.customerProduct.id,
-	);
-	if (isStillLive) return update;
+	const { customerProduct } = update;
+	if (isCustomerProductLive({ customerProduct, fullCustomer })) return update;
 
 	const liveCustomerProduct = findReplacementCustomerProduct({
-		customerProduct: update.customerProduct,
+		customerProduct,
 		fullCustomer,
 		insertCustomerProducts,
 	});
 	if (!liveCustomerProduct) return undefined;
 
 	return { ...update, customerProduct: liveCustomerProduct };
+};
+
+export const toLiveAutumnBillingPlan = ({
+	autumnBillingPlan,
+	fullCustomer,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+	fullCustomer: FullCustomer;
+}): AutumnBillingPlan => {
+	const {
+		updateCustomerProduct,
+		updateCustomerProducts,
+		insertCustomerProducts,
+	} = autumnBillingPlan;
+	const toLive = (update: CustomerProductUpdate) =>
+		toLiveCustomerProductUpdate({
+			update,
+			fullCustomer,
+			insertCustomerProducts,
+		});
+
+	return {
+		...autumnBillingPlan,
+		updateCustomerProduct:
+			updateCustomerProduct && toLive(updateCustomerProduct),
+		updateCustomerProducts: updateCustomerProducts?.flatMap(
+			(update) => toLive(update) ?? [],
+		),
+	};
 };

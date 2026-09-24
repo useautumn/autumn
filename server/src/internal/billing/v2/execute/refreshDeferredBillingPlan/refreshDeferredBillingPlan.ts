@@ -1,10 +1,7 @@
 import {
-	type AutumnBillingPlan,
 	type BillingContext,
 	type BillingPlan,
-	type CustomerProductUpdate,
 	type DeferredAutumnBillingPlanData,
-	type FullCustomer,
 	StripeBillingStage,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
@@ -14,36 +11,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { CusService } from "@/internal/customers/CusService";
 import { isDeferredSnapshotStale } from "./isDeferredSnapshotStale";
-import { toLiveCustomerProductUpdate } from "./toLiveCustomerProductUpdate";
-
-const toLiveAutumnBillingPlan = ({
-	autumnBillingPlan,
-	fullCustomer,
-}: {
-	autumnBillingPlan: AutumnBillingPlan;
-	fullCustomer: FullCustomer;
-}): AutumnBillingPlan => {
-	const {
-		updateCustomerProduct,
-		updateCustomerProducts,
-		insertCustomerProducts,
-	} = autumnBillingPlan;
-	const toLive = (update: CustomerProductUpdate) =>
-		toLiveCustomerProductUpdate({
-			update,
-			fullCustomer,
-			insertCustomerProducts,
-		});
-
-	return {
-		...autumnBillingPlan,
-		updateCustomerProduct:
-			updateCustomerProduct && toLive(updateCustomerProduct),
-		updateCustomerProducts: updateCustomerProducts?.flatMap(
-			(update) => toLive(update) ?? [],
-		),
-	};
-};
+import { toLiveAutumnBillingPlan } from "./toLiveAutumnBillingPlan";
 
 const fetchLiveBillingContext = async ({
 	ctx,
