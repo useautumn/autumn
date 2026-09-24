@@ -11,6 +11,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 import { createFullCusProduct } from "../../add-product/createFullCusProduct.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
 import { CusEntService } from "../../cusProducts/cusEnts/CusEntitlementService.js";
@@ -67,6 +68,14 @@ export const handleDecreaseAndTransfer = async ({
 		},
 	});
 
+	// Hide the destination's plans so creating the split-off copy never expires them.
+	const cusProductsOutsideDestination = fullCus.customer_products.filter(
+		(customerProduct) =>
+			toEntity
+				? customerProduct.internal_entity_id !== toEntity.internal_id
+				: notNullish(customerProduct.internal_entity_id),
+	);
+
 	await createFullCusProduct({
 		db,
 		logger,
@@ -86,7 +95,7 @@ export const handleDecreaseAndTransfer = async ({
 				optionsList: cusProduct.options,
 				scenario: AttachScenario.New,
 
-				cusProducts: fullCus.customer_products,
+				cusProducts: cusProductsOutsideDestination,
 				replaceables: [],
 				entities: fullCus.entities,
 				features,

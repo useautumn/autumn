@@ -5,7 +5,7 @@ import type {
 } from "./billingDetails";
 
 export const BILLING_DETAILS_LABELS = {
-	section: "Billing details",
+	section: "Billing Details",
 	address: "Address",
 	taxIds: "Tax IDs",
 	taxExempt: "Tax exempt",
