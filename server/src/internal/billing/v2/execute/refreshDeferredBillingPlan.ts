@@ -11,6 +11,7 @@ import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { CusService } from "@/internal/customers/CusService";
+import { isDeferredSnapshotStale } from "./isDeferredSnapshotStale";
 import { toLiveCustomerProductUpdate } from "./toLiveCustomerProductUpdate";
 
 const toLiveAutumnBillingPlan = ({
@@ -83,8 +84,8 @@ const fetchLiveBillingContext = async ({
 };
 
 /**
- * The customer and subscription can change between invoice creation and payment, so the
- * subscription update is rebuilt from their live state rather than replayed from the snapshot.
+ * If the customer or subscription changed between invoice creation and payment, the subscription
+ * update is rebuilt from their live state; otherwise the snapshot is replayed unchanged.
  */
 export const refreshDeferredBillingPlan = async ({
 	ctx,
@@ -99,6 +100,13 @@ export const refreshDeferredBillingPlan = async ({
 		ctx,
 		billingContext,
 	});
+
+	const snapshotIsStale = isDeferredSnapshotStale({
+		billingPlan,
+		fullCustomer: liveBillingContext.fullCustomer,
+		stripeSubscription: liveBillingContext.stripeSubscription,
+	});
+	if (!snapshotIsStale) return { billingPlan, billingContext };
 
 	const liveAutumnBillingPlan = toLiveAutumnBillingPlan({
 		autumnBillingPlan: billingPlan.autumn,
