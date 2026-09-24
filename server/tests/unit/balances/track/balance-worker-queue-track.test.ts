@@ -18,6 +18,7 @@ function fixture({ failure }: { failure?: Error } = {}) {
 				queued.push(commands);
 			},
 			reset: async () => undefined,
+			evict: async () => undefined,
 		},
 	};
 	const body: TrackParams = {

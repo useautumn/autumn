@@ -194,6 +194,9 @@ test.concurrent(
 				reset: async () => {
 					throw unsupported();
 				},
+				evict: async () => {
+					throw unsupported();
+				},
 			},
 			catalog: {
 				invalidateOrgCatalog: async () => {

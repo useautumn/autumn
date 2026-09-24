@@ -27,6 +27,9 @@ import type {
 	TrackParams,
 } from "./types/balanceWorkerClient.js";
 
+/** An append's default budget: a first append may include the producer connect, and no customer request waits on it. */
+const DEFAULT_APPEND_TIMEOUT_MS = 3_000;
+
 export function createBalanceWorkerClient({
 	ctx: dependencies,
 	config,
@@ -47,9 +50,11 @@ export function createBalanceWorkerClient({
 		timeoutMs: config.timeoutMs,
 		routeRefreshTimeoutMs: config.routeRefreshTimeoutMs,
 	};
+	const appendTimeoutMs = config.appendTimeoutMs ?? DEFAULT_APPEND_TIMEOUT_MS;
 	const queue = {
 		commandLog: dependencies.commandLog,
 		partitionCount: config.partitionCount,
+		timeoutMs: appendTimeoutMs,
 	};
 
 	function track(params: TrackParams) {
@@ -113,7 +118,10 @@ export function createBalanceWorkerClient({
 		queue: createCommandQueue({ ctx: queue }),
 		enqueue,
 		catalog: createCatalogInvalidations({
-			ctx: { publisher: dependencies.catalogInvalidations },
+			ctx: {
+				publisher: dependencies.catalogInvalidations,
+				timeoutMs: appendTimeoutMs,
+			},
 		}),
 		start,
 		stop,

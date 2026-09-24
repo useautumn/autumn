@@ -4,6 +4,7 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { createRedisPipeline } from "@/external/redis/utils/createRedisPipeline.js";
 import { throwOnPipelineConnectionError } from "@/external/redis/utils/pipelineErrors.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
+import { queueBalanceWorkerEvicts } from "@/internal/balances/balanceWorker/queueBalanceWorkerEvicts.js";
 import { markCustomersUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { timeout } from "@/utils/genUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
@@ -287,6 +288,9 @@ export const batchInvalidateCachedFullSubjects = async ({
 	const marksStartedAt = Date.now();
 	await markCustomersUpdatedAt({ customers });
 	addPhase({ phase: "invalidate_marks_db", startedAt: marksStartedAt });
+
+	// The worker's copies go the same way, queued so the owners drop them in log order.
+	await queueBalanceWorkerEvicts({ customers });
 
 	const customersByRedis = new Map<Redis, BatchInvalidateCustomer[]>();
 	for (const customer of customers) {

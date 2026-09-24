@@ -1,5 +1,6 @@
 import type { CommandAppend } from "@autumn/kafka";
 import { meteringIdentityToPartition } from "@autumn/kafka/partitioning";
+import { withAppendDeadline } from "../append/withAppendDeadline.js";
 import { BalanceWorkerClientError } from "../types/balanceWorkerClientErrors.js";
 import type { EnqueueParams, QueueContext } from "./types/queue.js";
 
@@ -7,6 +8,7 @@ import type { EnqueueParams, QueueContext } from "./types/queue.js";
 export async function enqueueCommands({
 	ctx,
 	commands,
+	signal,
 }: EnqueueParams & { ctx: QueueContext }): Promise<void> {
 	if (commands.length === 0) return;
 	if (!ctx.commandLog) {
@@ -26,5 +28,9 @@ export async function enqueueCommands({
 			command,
 		});
 	}
-	await ctx.commandLog.append({ records });
+	const commandLog = ctx.commandLog;
+	function append(): Promise<void> {
+		return commandLog.append({ records });
+	}
+	await withAppendDeadline({ timeoutMs: ctx.timeoutMs, signal, run: append });
 }

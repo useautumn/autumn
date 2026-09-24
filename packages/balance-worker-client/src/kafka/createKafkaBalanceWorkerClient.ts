@@ -38,8 +38,26 @@ export function createKafkaBalanceWorkerClient({
 		config: { topic: config.catalogInvalidationTopic },
 	});
 
-	function start(): Promise<void> {
-		return owners.start();
+	/** Best effort: a producer that fails to connect now connects on its first append instead. */
+	async function connectProducers(): Promise<void> {
+		for (const [name, producer] of [
+			["command log", commandLog],
+			["catalog invalidations", catalogInvalidations],
+		] as const) {
+			try {
+				await producer.connect();
+			} catch (cause) {
+				ctx.logger?.warn(
+					{ error: cause },
+					`[balance-worker-client] ${name} producer did not connect at start; the first append will retry`,
+				);
+			}
+		}
+	}
+
+	async function start(): Promise<void> {
+		await owners.start();
+		if (config.connectProducersOnStart) await connectProducers();
 	}
 
 	async function stop(): Promise<void> {
@@ -58,6 +76,7 @@ export function createKafkaBalanceWorkerClient({
 		config: {
 			partitionCount: config.partitionCount,
 			timeoutMs: config.timeoutMs,
+			appendTimeoutMs: config.appendTimeoutMs,
 			routeRefreshTimeoutMs: config.routeRefreshTimeoutMs,
 		},
 	});

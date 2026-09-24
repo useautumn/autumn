@@ -42,10 +42,7 @@ export type { InitializeRequest } from "./commands/initialize/types/initializeRe
 export type { InitializeResult } from "./commands/initialize/types/initializeResult.js";
 export type { ReadSubjectStateCommand } from "./commands/readSubjectState/types/readSubjectStateCommand.js";
 export { computeReset } from "./commands/reset/computeReset.js";
-export type {
-	ResetCommand,
-	ResetDurability,
-} from "./commands/reset/types/resetCommand.js";
+export type { ResetCommand } from "./commands/reset/types/resetCommand.js";
 export type {
 	ResetResult,
 	ResetRow,
@@ -85,6 +82,10 @@ export type {
 export type { CatalogPlanLicense } from "./models/catalog/catalogPlanLicense.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
 export type { BaseCommand } from "./models/command/baseCommand.js";
+export {
+	type CommandDurability,
+	commandDurabilitySchema,
+} from "./models/command/commandDurability.js";
 export type { CommandOrg } from "./models/command/commandOrg.js";
 export type { MutatingCommand } from "./models/command/mutatingCommand.js";
 export { orgToCommandOrg } from "./models/command/orgToCommandOrg.js";

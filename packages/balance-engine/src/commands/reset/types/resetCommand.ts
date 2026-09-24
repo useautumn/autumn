@@ -1,14 +1,12 @@
 import { z } from "zod/v4";
 import { mutatingCommandSchema } from "../../../models/command/baseCommand.js";
+import { commandDurabilitySchema } from "../../../models/command/commandDurability.js";
 import { commandOrgSchema } from "../../../models/command/commandOrg.js";
 import {
 	finiteNumberSchema,
 	nonEmptyStringSchema,
 	timestampSchema,
 } from "../../../models/common/primitives.js";
-
-export const resetDurabilitySchema = z.enum(["log", "store"]);
-export type ResetDurability = z.infer<typeof resetDurabilitySchema>;
 
 /** Brings the subject's cycles up to `occurredAt`: every row due by then refills. The clock is the request. */
 export const resetCommandSchema = mutatingCommandSchema
@@ -24,7 +22,7 @@ export const resetCommandSchema = mutatingCommandSchema
 			.record(nonEmptyStringSchema, finiteNumberSchema)
 			.optional(),
 		/** "store" keeps the sender waiting until the refill is in Postgres; absent means once Kafka has it. */
-		durability: resetDurabilitySchema.optional(),
+		durability: commandDurabilitySchema.optional(),
 	})
 	.strict();
 

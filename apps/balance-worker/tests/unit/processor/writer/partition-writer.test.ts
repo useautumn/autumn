@@ -1776,4 +1776,60 @@ describe("partition writer", () => {
 			closeFixture(fixture);
 		}
 	});
+
+	test("an evict drops the copy only once the store holds the customer's writes", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new RecordingCommittedAppender();
+			const applyGate = Promise.withResolvers<void>();
+			const slowStore: PartitionProcessorScope["ctx"]["stateStore"] = {
+				...fixture.store,
+				applyDurableMutations: async (params) => {
+					await applyGate.promise;
+					return fixture.store.applyDurableMutations(params);
+				},
+			};
+			const writer = createPartitionWriterCore({
+				ctx: {
+					stateStore: slowStore,
+					appender,
+					receiptPolicy: defaultReceiptPolicy,
+					recentCommands: createRecentCommands({
+						windowMs: 600_000,
+						now: () => 0,
+					}),
+				},
+				config: { topic, partition, limits: defaultLimits },
+			});
+			const command = createCommand({ commandId: "cmd_before_evict" });
+			const write = writer.decide({
+				command,
+				mutate: ({ state }) => decideForTest({ state, command }),
+			});
+			// Kafka has the track; the store has not taken it yet.
+			await write.waitForCommit();
+
+			let evicted = false;
+			const evict = writer
+				.evict({
+					customerKey: meteringIdentityToPartitionKey({
+						identity: firstIdentity,
+					}),
+				})
+				.then(() => {
+					evicted = true;
+				});
+			await waitForBatch();
+			expect(evicted).toBe(false);
+
+			applyGate.resolve();
+			await evict;
+			expect(evicted).toBe(true);
+			expect(
+				readBalance({ store: fixture.store, identity: firstIdentity }),
+			).toMatchObject({ balance: 5 });
+		} finally {
+			closeFixture(fixture);
+		}
+	});
 });

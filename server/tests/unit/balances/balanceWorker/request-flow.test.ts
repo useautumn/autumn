@@ -340,6 +340,9 @@ test.concurrent(
 					reset: async () => {
 						throw cause;
 					},
+					evict: async () => {
+						throw cause;
+					},
 				},
 				catalog: {
 					invalidateOrgCatalog: async () => {

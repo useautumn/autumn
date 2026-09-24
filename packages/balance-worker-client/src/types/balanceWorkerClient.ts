@@ -93,6 +93,8 @@ export type BalanceWorkerClientDependencies = {
 export type BalanceWorkerClientConfig = {
 	partitionCount: number;
 	timeoutMs: number;
+	/** The budget over a Kafka append (queued commands, catalog invalidations); nobody's request waits on these, so it is looser than `timeoutMs`. Default 3s. */
+	appendTimeoutMs?: number;
 	/** Caps what an ownership refresh may take out of `timeoutMs`, so a rebalance
 	 *  fails fast instead of spending a caller's whole budget. */
 	routeRefreshTimeoutMs?: number;

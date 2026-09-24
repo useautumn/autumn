@@ -1,22 +1,24 @@
+import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { requestContextToCommandBase } from "./requestContextToCommandBase.js";
 
 /**
  * Another writer just changed the customer's rows, so the owning worker must forget its copy.
- * Waited on so the caller's next request sees fresh rows; a failure is logged and never fails the write.
+ * Returns once the copy is gone and the worker's earlier writes are in Postgres; a failure is logged and never fails the write.
+ * Not gated on the rollout: invalidation reaches both caches so a flip in either direction finds nothing stale.
  */
 export async function evictBalanceWorkerCustomer({
 	ctx,
 	customerId,
+	client = getBalanceWorkerClient(),
 }: {
 	ctx: AutumnContext;
 	customerId: string;
+	client?: Pick<BalanceWorkerClient, "evict">;
 }): Promise<void> {
-	if (!isBalanceWorkerRolloutEnabled()) return;
 	try {
-		await getBalanceWorkerClient().evict({
+		await client.evict({
 			command: {
 				...requestContextToCommandBase({ ctx, customerId }),
 				type: "evict",
