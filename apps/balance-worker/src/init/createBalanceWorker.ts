@@ -2,6 +2,10 @@ import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
 import { createEventLoopStallMonitor } from "../logging/eventLoopStalls/createEventLoopStallMonitor.js";
 import { syncSections } from "../logging/eventLoopStalls/syncSections.js";
+import {
+	createKafkaRequestReporter,
+	kafkaRequestTimings,
+} from "../logging/kafkaRequestTimings.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
 import { startWorker } from "./lifecycle/startWorker.js";
@@ -146,11 +150,18 @@ export async function createBalanceWorker({
 				reportEveryMs: 10_000,
 			},
 		});
+		const kafkaRequestReporter = createKafkaRequestReporter({
+			ctx: { logger: dependencies.logger, timings: kafkaRequestTimings },
+			config: { deployment: env.BALANCE_WORKER_DEPLOYMENT },
+		});
 		function startTelemetry(): void {
 			healthReporter.start();
-			if (reportsHealth) stallMonitor.start();
+			if (!reportsHealth) return;
+			stallMonitor.start();
+			kafkaRequestReporter.start();
 		}
 		function stopTelemetry(): void {
+			kafkaRequestReporter.stop();
 			stallMonitor.stop();
 			healthReporter.stop();
 		}

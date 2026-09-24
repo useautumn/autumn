@@ -3,6 +3,7 @@ import { createMutationPublisher } from "../../kafka/createMutationPublisher.js"
 import { createOwnershipPublisher } from "../../kafka/createOwnershipPublisher.js";
 import { createWorkerProducer } from "../../kafka/createWorkerProducer.js";
 import { createPartitionCommitLogging } from "../../logging/createPartitionCommitLogging.js";
+import { kafkaRequestTimings } from "../../logging/kafkaRequestTimings.js";
 import { createPartitionRuntime } from "../../runtime/createPartitionRuntime.js";
 import type {
 	ConstructedPartitionRuntime,
@@ -42,7 +43,7 @@ export function createPartitionRuntimeFactory({
 		recentCommands,
 	}: PartitionRuntimeFactoryInput): ConstructedPartitionRuntime {
 		const session = createProducerSession({
-			ctx: { kafka: ctx.kafka },
+			ctx: { kafka: ctx.kafka, onRequest: kafkaRequestTimings.record },
 			config: createWorkerProducerConfig({
 				deploymentEnvironment: config.deploymentEnvironment,
 				topic,

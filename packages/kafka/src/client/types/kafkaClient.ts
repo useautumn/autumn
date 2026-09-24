@@ -27,9 +27,22 @@ export type KafkaProducer = {
 	transaction(): Promise<KafkaTransaction>;
 };
 
+/** One request to a broker, as kafkajs instruments it. */
+export type KafkaRequestTiming = {
+	apiName: string;
+	broker: string;
+	/** Sent to response. */
+	durationMs: number;
+	/** Queued in the client before it was sent. */
+	pendingMs: number;
+};
+
 export type KafkaProducerClient = KafkaProducer & {
 	connect(): Promise<void>;
 	disconnect(): Promise<void>;
+	/** kafkajs instrumentation; absent on test doubles. */
+	on?: Producer["on"];
+	events?: Pick<Producer["events"], "REQUEST">;
 };
 
 export type KafkaProducerFactory = {

@@ -361,3 +361,54 @@ test(
 	"traverses nested errors without cycling or accepting unrelated causes",
 	traversesNestedAndCyclicCauses,
 );
+
+test("reports each broker request the producer makes, and survives a throwing listener", () => {
+	type RequestListener = (event: {
+		payload: {
+			apiName: string;
+			broker: string;
+			duration: number;
+			pendingDuration: number;
+		};
+	}) => void;
+	let listener: RequestListener | undefined;
+	const client = {
+		connect: async () => {},
+		disconnect: async () => {},
+		transaction: async (): Promise<KafkaTransaction> => {
+			throw new Error("unused");
+		},
+		events: { REQUEST: "producer.network.request" as const },
+		on: (_event: string, handler: RequestListener) => {
+			listener = handler;
+			return () => {};
+		},
+	};
+	const timings: unknown[] = [];
+	createProducerSession({
+		ctx: {
+			kafka: { producer: () => client as unknown as KafkaProducerClient },
+			onRequest: (timing) => {
+				timings.push(timing);
+				if (timings.length === 2) throw new Error("listener failed");
+			},
+		},
+		config,
+	});
+	const event = {
+		payload: {
+			apiName: "EndTxn",
+			broker: "b-1:9098",
+			duration: 41,
+			pendingDuration: 2,
+		},
+	};
+	listener?.(event);
+	expect(() => listener?.(event)).not.toThrow();
+	expect(timings[0]).toEqual({
+		apiName: "EndTxn",
+		broker: "b-1:9098",
+		durationMs: 41,
+		pendingMs: 2,
+	});
+});

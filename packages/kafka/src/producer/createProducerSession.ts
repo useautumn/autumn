@@ -1,5 +1,8 @@
+import type { RequestEvent } from "kafkajs";
 import type {
+	KafkaProducerClient,
 	KafkaProducerFactory,
+	KafkaRequestTiming,
 	KafkaTransaction,
 } from "../client/types/kafkaClient.js";
 import { createProducerConfig } from "./producerConfig.js";
@@ -14,12 +17,21 @@ export function createProducerSession({
 	ctx: dependencies,
 	config,
 }: {
-	ctx: { kafka: KafkaProducerFactory };
+	ctx: {
+		kafka: KafkaProducerFactory;
+		/** Called for every broker request this producer makes. Must not throw. */
+		onRequest?: (timing: KafkaRequestTiming) => void;
+	};
 	config: KafkaProducerSessionConfig;
 }): KafkaProducerSession {
 	const ctx = {
 		producer: dependencies.kafka.producer(createProducerConfig(config)),
 	};
+	if (dependencies.onRequest)
+		observeRequests({
+			producer: ctx.producer,
+			onRequest: dependencies.onRequest,
+		});
 	const state: ProducerSessionState = {
 		initialized: false,
 		closed: false,
@@ -71,4 +83,27 @@ export function createProducerSession({
 	}
 
 	return { connect, fence, transaction, isUsable, disconnect };
+}
+
+function observeRequests({
+	producer,
+	onRequest,
+}: {
+	producer: KafkaProducerClient;
+	onRequest: (timing: KafkaRequestTiming) => void;
+}): void {
+	if (!producer.on || !producer.events) return;
+	function report({ payload }: RequestEvent): void {
+		try {
+			onRequest({
+				apiName: payload.apiName,
+				broker: payload.broker,
+				durationMs: payload.duration,
+				pendingMs: payload.pendingDuration,
+			});
+		} catch {
+			// Timing is telemetry; it must never fail a produce.
+		}
+	}
+	producer.on(producer.events.REQUEST, report);
 }
