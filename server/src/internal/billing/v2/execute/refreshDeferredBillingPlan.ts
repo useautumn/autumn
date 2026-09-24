@@ -1,9 +1,11 @@
-import type {
-	AutumnBillingPlan,
-	BillingContext,
-	BillingPlan,
-	CustomerProductUpdate,
-	FullCustomer,
+import {
+	type AutumnBillingPlan,
+	type BillingContext,
+	type BillingPlan,
+	type CustomerProductUpdate,
+	type DeferredAutumnBillingPlanData,
+	type FullCustomer,
+	StripeBillingStage,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getStripeActiveSubscriptionSchedule } from "@/external/stripe/subscriptionSchedules/index";
@@ -89,13 +91,18 @@ const fetchLiveBillingContext = async ({
  */
 export const refreshDeferredBillingPlan = async ({
 	ctx,
-	billingPlan,
-	billingContext,
+	deferredData,
 }: {
 	ctx: AutumnContext;
-	billingPlan: BillingPlan;
-	billingContext: BillingContext;
+	deferredData: DeferredAutumnBillingPlanData;
 }): Promise<{ billingPlan: BillingPlan; billingContext: BillingContext }> => {
+	const { billingPlan, billingContext, resumeAfter } = deferredData;
+
+	// Past the invoice action the subscription was already updated, so there is nothing to rebuild
+	const subscriptionNotYetUpdated =
+		resumeAfter === StripeBillingStage.InvoiceAction;
+	if (!subscriptionNotYetUpdated) return { billingPlan, billingContext };
+
 	const liveBillingContext = await fetchLiveBillingContext({
 		ctx,
 		billingContext,

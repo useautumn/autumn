@@ -2,7 +2,6 @@ import {
 	CheckoutStatus,
 	type DeferredAutumnBillingPlanData,
 	type Metadata,
-	StripeBillingStage,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -37,15 +36,10 @@ export const executeDeferredBillingPlan = async ({
 	if (data.orgId !== ctx.org.id || data.env !== ctx.env) return;
 
 	const { resumeAfter } = data;
-	const subscriptionNotYetUpdated =
-		resumeAfter === StripeBillingStage.InvoiceAction;
-	const { billingPlan, billingContext } = subscriptionNotYetUpdated
-		? await refreshDeferredBillingPlan({
-				ctx,
-				billingPlan: data.billingPlan,
-				billingContext: data.billingContext,
-			})
-		: data;
+	const { billingPlan, billingContext } = await refreshDeferredBillingPlan({
+		ctx,
+		deferredData: data,
+	});
 
 	addToExtraLogs({
 		ctx,
