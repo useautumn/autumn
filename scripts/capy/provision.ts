@@ -31,6 +31,11 @@ import { connect } from "node:net";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import {
+	ensureFakecloudQueues,
+	FAKECLOUD_ACCOUNT_ID,
+	FAKECLOUD_SCHEDULER_ROLE_ARN,
+} from "../dw/helpers/fakecloud.ts";
+import {
 	applyCommittedMigrations,
 	loadDbFunctions,
 } from "../dw/helpers/migration.ts";
@@ -60,7 +65,7 @@ const NEON_TEMPLATE_BRANCH = "dw-template";
 const SERVER_PORT = 8080;
 const VITE_PORT = 3000;
 const DRAGONFLY_PORT = 6379;
-const ELASTICMQ_PORT = 9324;
+const FAKECLOUD_PORT = 4566;
 const DYNAMODB_PORT = 8000;
 const TRIGGER_PORT = 8030;
 const TRIGGER_PROJECT_REF = "proj_cwiutfmpdzfcshxevkok";
@@ -334,7 +339,7 @@ function writeEnvFiles(
 
 	const dbUrl = forceSslVerifyFull(databaseUrl);
 	const redisUrl = `redis://localhost:${DRAGONFLY_PORT}`;
-	const sqsBase = `http://localhost:${ELASTICMQ_PORT}/000000000000`;
+	const sqsBase = `http://localhost:${FAKECLOUD_PORT}/${FAKECLOUD_ACCOUNT_ID}`;
 
 	const serverEnv: Record<string, string> = {
 		SERVER_PORT: String(SERVER_PORT),
@@ -358,6 +363,7 @@ function writeEnvFiles(
 		TRACK_ASYNC_SQS_QUEUE_URL: `${sqsBase}/autumn-track.fifo`,
 		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL: `${sqsBase}/autumn-track-async`,
 		STRIPE_WEBHOOK_SQS_QUEUE_URL: `${sqsBase}/autumn-stripe-webhook.fifo`,
+		AWS_EVENTBRIDGE_SCHEDULER_ROLE_ARN: FAKECLOUD_SCHEDULER_ROLE_ARN,
 		TRIGGER_API_URL: `http://localhost:${TRIGGER_PORT}`,
 		TRIGGER_ACCESS_TOKEN: triggerAccessToken,
 		TRIGGER_SERVER_SECRET_KEY: triggerSecretKey,
@@ -683,10 +689,12 @@ async function main(): Promise<void> {
 	// published ports before provisioning anything that writes their URLs.
 	await waitForDragonfly();
 	await Promise.all([
-		waitForHttpService("elasticmq", ELASTICMQ_PORT),
+		waitForHttpService("fakecloud", FAKECLOUD_PORT),
 		waitForHttpService("dynamodb", DYNAMODB_PORT),
 		waitForHttpService("trigger.dev", TRIGGER_PORT, 120),
 	]);
+	// fakecloud has no startup config for seeding queues; create them like bun dw does.
+	await ensureFakecloudQueues({ port: FAKECLOUD_PORT });
 	const trigger = ensureTriggerProject();
 
 	// 2. Neon auth + branch + migrations.
