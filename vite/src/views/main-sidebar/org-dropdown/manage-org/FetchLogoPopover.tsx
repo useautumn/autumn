@@ -16,7 +16,8 @@ export const FetchLogoPopover = ({
 	onFetched,
 	disabled,
 }: {
-	onFetched: (publicUrl: string) => Promise<void>;
+	/** Saves the fetched logo; resolves false if the save failed. */
+	onFetched: (publicUrl: string) => Promise<boolean>;
 	disabled?: boolean;
 }) => {
 	const axiosInstance = useAxiosInstance();
@@ -33,7 +34,9 @@ export const FetchLogoPopover = ({
 			const { data } = await axiosInstance.post("/organization/logo/fetch", {
 				url,
 			});
-			await onFetched(data.publicUrl);
+			// Keep the popover (and the typed URL) open so a failed save can be retried.
+			const saved = await onFetched(data.publicUrl);
+			if (!saved) return;
 			setOpen(false);
 			setUrl("");
 		} catch (error) {

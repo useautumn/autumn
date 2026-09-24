@@ -72,7 +72,7 @@ const OrgLogoUploader: React.FC = () => {
 	);
 
 	const saveLogoUrl = useCallback(
-		async (publicUrl: string) => {
+		async (publicUrl: string): Promise<boolean> => {
 			// Uploads overwrite the same S3 key, so the URL is byte-identical each
 			// time. Store a cache-bust token so every surface that renders org.logo
 			// (this preview + the sidebar org selector) repaints the new image.
@@ -82,10 +82,11 @@ const OrgLogoUploader: React.FC = () => {
 			});
 			if (error) {
 				toast.error(error.message || "Failed to update logo");
-				return;
+				return false;
 			}
 			await mutate();
 			toast.success("Successfully updated logo");
+			return true;
 		},
 		[mutate],
 	);
