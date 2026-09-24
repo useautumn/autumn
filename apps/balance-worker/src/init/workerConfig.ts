@@ -116,6 +116,8 @@ export function balanceWorkerEnvToRuntimeConfig({
 			maxPendingCommands: 4000,
 			maxPendingCommandsPerCustomer: 1000,
 			subjectMapMaxBytes: env.BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES,
+			// A busy partition carries several tracks per commit instead of one; a quiet one never waits.
+			commitLingerMs: 5,
 		},
 		trackReceiptRetentionMs: env.BALANCE_WORKER_RECEIPT_RETENTION_MS,
 		producerLimits: {

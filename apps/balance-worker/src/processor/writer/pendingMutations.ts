@@ -39,6 +39,8 @@ export function createPartitionWriterState({
 		applying: false,
 		drainScheduled: false,
 		recoveryError: null,
+		lastBatchSize: 0,
+		lingerWake: null,
 	};
 }
 
@@ -209,6 +211,10 @@ export function enqueueMutation({
 	state.pendingByCustomerKey.set(customerKey, customerPending);
 	state.queue.push(pending);
 	state.storeCompletion = settlement.waitForStore();
+	// A lingering commit loop has what it was waiting for.
+	if (state.lingerWake && state.queue.length >= config.limits.maxBatchSize) {
+		state.lingerWake();
+	}
 	return pending;
 }
 

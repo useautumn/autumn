@@ -1290,6 +1290,86 @@ describe("partition writer", () => {
 		}
 	});
 
+	test("a busy partition lingers so the next commit carries what arrives; a quiet one never waits", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: { ...defaultLimits, commitLingerMs: 40 },
+			});
+			const later = (ms: number) =>
+				new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+			// Quiet: one at a time, each committed alone and at once.
+			await writer.submitTrack({
+				command: createCommand({ commandId: "q_1" }),
+			});
+			const second = writer.submitTrack({
+				command: createCommand({ commandId: "q_2" }),
+			});
+			await later(8);
+			await Promise.all([
+				second,
+				writer.submitTrack({ command: createCommand({ commandId: "q_3" }) }),
+			]);
+			expect(appender.batches.map((batch) => batch.length)).toEqual([1, 1, 1]);
+
+			// Busy: two together mark the partition busy, so the next commit lingers and carries both later arrivals.
+			await Promise.all([
+				writer.submitTrack({ command: createCommand({ commandId: "b_1" }) }),
+				writer.submitTrack({ command: createCommand({ commandId: "b_2" }) }),
+			]);
+			const third = writer.submitTrack({
+				command: createCommand({ commandId: "b_3" }),
+			});
+			await later(8);
+			await Promise.all([
+				third,
+				writer.submitTrack({ command: createCommand({ commandId: "b_4" }) }),
+			]);
+			expect(appender.batches.map((batch) => batch.length)).toEqual([
+				1, 1, 1, 2, 2,
+			]);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("a full batch ends the linger early", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: { ...defaultLimits, maxBatchSize: 2, commitLingerMs: 2_000 },
+			});
+			await Promise.all([
+				writer.submitTrack({ command: createCommand({ commandId: "b_1" }) }),
+				writer.submitTrack({ command: createCommand({ commandId: "b_2" }) }),
+			]);
+			const startedAt = performance.now();
+			const first = writer.submitTrack({
+				command: createCommand({ commandId: "b_3" }),
+			});
+			await new Promise<void>((resolve) => setTimeout(resolve, 5));
+			await Promise.all([
+				first,
+				writer.submitTrack({ command: createCommand({ commandId: "b_4" }) }),
+			]);
+			expect(performance.now() - startedAt).toBeLessThan(500);
+			expect(appender.batches.map((batch) => batch.length)).toEqual([2, 2]);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
 	test("admits duplicate waiters while enforcing partition capacity", async () => {
 		const fixture = createFixture({
 			identities: [firstIdentity, secondIdentity],

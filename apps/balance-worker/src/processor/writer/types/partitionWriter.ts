@@ -78,6 +78,8 @@ export type PartitionWriterLimits = {
 	maxUnappliedBatches?: number;
 	/** Resident customer state the partition keeps before the oldest is dropped; defaults to the map's own bound. */
 	subjectMapMaxBytes?: number;
+	/** On a busy partition, how long the writer waits for a batch to fill before committing it; unset or 0 commits at once. */
+	commitLingerMs?: number;
 };
 
 export type PartitionWriterConfig = {
@@ -133,6 +135,10 @@ export type PartitionWriterState = {
 	applying: boolean;
 	drainScheduled: boolean;
 	recoveryError: Error | null;
+	/** Records in the last batch taken; more than one means arrivals outpace commits and a linger pays. */
+	lastBatchSize: number;
+	/** Set while the loop lingers; enqueue calls it once the queue holds a full batch. */
+	lingerWake: (() => void) | null;
 };
 
 export type UnappliedBatch = {

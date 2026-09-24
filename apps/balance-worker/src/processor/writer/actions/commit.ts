@@ -60,7 +60,10 @@ async function commitOutcomes({
 					.catch(() => undefined);
 				if (state.recoveryError) return;
 			}
+			await lingerForBatch({ scope });
+			if (state.recoveryError) return;
 			const batch = takeBatch({ scope });
+			state.lastBatchSize = batch.length;
 			const baseOffset = await appendBatch({ scope, batch });
 			if (baseOffset === null) return;
 			settleAppended({ scope, batch });
@@ -69,6 +72,37 @@ async function commitOutcomes({
 	} finally {
 		state.draining = false;
 	}
+}
+
+/**
+ * Waits for more of the queue before the next commit, but only where it pays.
+ * A commit is three broker round trips whatever it carries, and on a busy
+ * partition the commits arrive back to back with one or two records each: the
+ * partition's throughput is then bounded by commits per second, and every track
+ * waits behind that stream. A short linger lets a busy partition carry several
+ * tracks per commit instead. A quiet partition, where the last batch held one
+ * record, never waits: a linger there gathers nothing and costs every track
+ * its length. A full batch ends the wait early.
+ */
+async function lingerForBatch({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): Promise<void> {
+	const { state, config } = scope;
+	const lingerMs = config.limits.commitLingerMs ?? 0;
+	if (lingerMs <= 0 || state.lastBatchSize <= 1) return;
+	if (state.queue.length >= config.limits.maxBatchSize) return;
+	await new Promise<void>((resolve) => {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		function wake(): void {
+			clearTimeout(timer);
+			state.lingerWake = null;
+			resolve();
+		}
+		state.lingerWake = wake;
+		timer = setTimeout(wake, lingerMs);
+	});
 }
 
 /** Hands a committed batch to the store. One flush runs at a time, and each takes
