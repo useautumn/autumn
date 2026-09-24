@@ -8,6 +8,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
+import type { PartitionLoad } from "../../processor/writer/partitionLoad/createPartitionLoad.js";
 import type { ProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
 import type { PartitionWriterLimits } from "../../processor/writer/types/partitionWriter.js";
@@ -58,6 +59,8 @@ export type PartitionRuntimeFactoryContext = {
 	bootstrapper: PartitionBootstrapper;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 	partitionResolver: MeteringPartitionResolver;
+	/** Shared by every partition runtime; the consumer group's assigner reads it on each rejoin. */
+	partitionLoad?: PartitionLoad;
 };
 
 export type PartitionRuntimeFactoryConfig = {

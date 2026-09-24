@@ -2,8 +2,10 @@ import {
 	assertConsumerGroupTimings,
 	coPartitionedAssigner,
 	createConsumerGroupConfig,
+	createLoadAwareAssigner,
 	type KafkaProducerLimits,
 	type KafkaProducerSessionConfig,
+	type PartitionLoadSource,
 	partitionProducerTransactionalIdOf,
 } from "@autumn/kafka";
 import type { Admin, ConsumerConfig, ITopicMetadata } from "kafkajs";
@@ -40,15 +42,22 @@ export function assertKafkaBalanceWorkerTimings({
 export function createWorkerConsumerConfig({
 	groupId,
 	timings,
+	partitionLoad,
 }: {
 	groupId: string;
 	timings: KafkaBalanceWorkerTimings;
+	/** When given, partitions are dealt by the load the workers report rather than by number. */
+	partitionLoad?: PartitionLoadSource;
 }): ConsumerConfig {
 	assertKafkaBalanceWorkerTimings({ timings });
-	// Both topics share the membership; the assigner keeps partition n of each on one worker.
+	// Both topics share the membership; either assigner keeps partition n of each on one worker.
 	return {
 		...createConsumerGroupConfig({ groupId, timings }),
-		partitionAssigners: [coPartitionedAssigner],
+		partitionAssigners: [
+			partitionLoad
+				? createLoadAwareAssigner({ loads: partitionLoad })
+				: coPartitionedAssigner,
+		],
 	};
 }
 

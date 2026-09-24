@@ -61,7 +61,7 @@ export function createPartitionRuntimeFactory({
 			config: { ...config.ownership, partition },
 		});
 		const appender = createMutationPublisher({
-			ctx: { producer, producedOffsets },
+			ctx: { producer, producedOffsets, partitionLoad: ctx.partitionLoad },
 			config: config.commands,
 		});
 		const commitLogging = createPartitionCommitLogging({

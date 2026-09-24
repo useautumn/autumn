@@ -6,6 +6,7 @@ import {
 	createKafkaRequestReporter,
 	kafkaRequestTimings,
 } from "../logging/kafkaRequestTimings.js";
+import { createPartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
 import { startWorker } from "./lifecycle/startWorker.js";
@@ -55,8 +56,11 @@ export async function createBalanceWorker({
 		},
 	});
 	try {
+		// Every partition runtime records what it commits here; the consumer group reports it when it rejoins.
+		const partitionLoad = createPartitionLoad({ now: Date.now });
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
+				partitionLoad,
 				logger: dependencies.logger,
 				kafka: resources.kafka,
 				ownershipOffsets: resources.admin,
@@ -83,6 +87,7 @@ export async function createBalanceWorker({
 					createWorkerConsumerConfig({
 						groupId: env.BALANCE_WORKER_GROUP_ID,
 						timings: runtimeConfig.timings,
+						partitionLoad,
 					}),
 				),
 				partitionOffsets: resources.kafka.admin(),

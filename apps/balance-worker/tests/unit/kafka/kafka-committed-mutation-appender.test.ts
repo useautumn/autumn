@@ -336,3 +336,32 @@ test("an appended batch is remembered as this writer's own offsets", async () =>
 	// The fake producer reports baseOffset 41 for every batch.
 	expect(remembered).toEqual([{ from: 41n, to: 42n }]);
 });
+
+test("an appended batch adds its encoded bytes to the partition's load", async () => {
+	const fake = createFakeProducer();
+	const recorded: { partition: number; bytes: number }[] = [];
+	const appender = createMutationPublisher({
+		ctx: {
+			producer: fake.producer,
+			partitionLoad: {
+				record: (entry) => {
+					recorded.push(entry);
+				},
+				forget: () => undefined,
+				snapshot: () => new Map(),
+			},
+		},
+	});
+	const state = createState();
+	const outcomes = [
+		createMutation({ state, commandId: "a" }),
+		createMutation({ state, commandId: "b" }),
+	];
+	await appender.appendCommitted({ topic, partition, outcomes });
+	const expected = outcomes.reduce(
+		(sum, record) => sum + appender.encodedBytesOf({ record }),
+		0,
+	);
+	expect(recorded).toEqual([{ partition, bytes: expected }]);
+	expect(expected).toBeGreaterThan(0);
+});

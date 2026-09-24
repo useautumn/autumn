@@ -6,6 +6,7 @@ import {
 	sendTransactionalOffsets,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
+import type { PartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
 import type { ProducedOffsets } from "../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { CommittedOutcomeAppender } from "../processor/writer/types/partitionWriter.js";
 import { MutationBatchNotCommittedError } from "../processor/writer/writerErrors.js";
@@ -15,7 +16,11 @@ export function createMutationPublisher({
 	ctx,
 	config,
 }: {
-	ctx: { producer: KafkaProducer; producedOffsets?: ProducedOffsets };
+	ctx: {
+		producer: KafkaProducer;
+		producedOffsets?: ProducedOffsets;
+		partitionLoad?: PartitionLoad;
+	};
 	config?: { commandTopic: string; groupId: string };
 }): Required<CommittedOutcomeAppender> {
 	const publisher = createMeteringPublisher({ ctx });
@@ -51,6 +56,7 @@ export function createMutationPublisher({
 				from: appended.baseOffset,
 				to: appended.baseOffset + BigInt(outcomes.length) - 1n,
 			});
+			ctx.partitionLoad?.record({ partition, bytes: bytesOf({ outcomes }) });
 			return appended;
 		} catch (cause) {
 			const translated = translateKafkaProducerError({
@@ -70,6 +76,17 @@ export function createMutationPublisher({
 	function encodedBytesOf({ record }: { record: MeteringRecord }): number {
 		const { key, value } = serializeMeteringRecord({ record });
 		return key.length + value.length;
+	}
+
+	/** The encodings were kept when the batch was measured, so this is a sum, not a second serialisation. */
+	function bytesOf({
+		outcomes,
+	}: {
+		outcomes: readonly MeteringRecord[];
+	}): number {
+		let bytes = 0;
+		for (const record of outcomes) bytes += encodedBytesOf({ record });
+		return bytes;
 	}
 
 	function offsetsOf({

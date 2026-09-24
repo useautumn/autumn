@@ -34,6 +34,11 @@ export { coPartitionedAssigner } from "./consumer/coPartitionedAssigner.js";
 export { createProgressTracker } from "./consumer/createProgressTracker.js";
 export { createTopicConsumer } from "./consumer/createTopicConsumer.js";
 export {
+	balancePartitions,
+	createLoadAwareAssigner,
+	type PartitionLoadSource,
+} from "./consumer/loadAwareAssigner.js";
+export {
 	readPartitionLogRange,
 	readPartitionOffsetAtTimestamp,
 	readTopicHighWatermarks,
