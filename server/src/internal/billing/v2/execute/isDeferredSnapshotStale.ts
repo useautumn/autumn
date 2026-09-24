@@ -41,15 +41,39 @@ const conflictsWithLiveSubscriptionItems = ({
 	);
 };
 
+/** It targets a schedule that was replaced, or creates one when the subscription now has one. */
+const conflictsWithLiveSchedule = ({
+	billingPlan,
+	stripeSubscriptionSchedule,
+}: {
+	billingPlan: BillingPlan;
+	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
+}) => {
+	const { subscriptionScheduleAction } = billingPlan.stripe;
+	if (!subscriptionScheduleAction) return false;
+
+	if (subscriptionScheduleAction.type === "create") {
+		return Boolean(stripeSubscriptionSchedule);
+	}
+
+	return (
+		subscriptionScheduleAction.stripeSubscriptionScheduleId !==
+		stripeSubscriptionSchedule?.id
+	);
+};
+
 /** Whether the customer or subscription changed under a deferred plan since it was computed. */
 export const isDeferredSnapshotStale = ({
 	billingPlan,
 	fullCustomer,
 	stripeSubscription,
+	stripeSubscriptionSchedule,
 }: {
 	billingPlan: BillingPlan;
 	fullCustomer: FullCustomer;
 	stripeSubscription?: Stripe.Subscription;
+	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 }) =>
 	updatesReplacedCustomerProduct({ billingPlan, fullCustomer }) ||
-	conflictsWithLiveSubscriptionItems({ billingPlan, stripeSubscription });
+	conflictsWithLiveSubscriptionItems({ billingPlan, stripeSubscription }) ||
+	conflictsWithLiveSchedule({ billingPlan, stripeSubscriptionSchedule });

@@ -118,3 +118,51 @@ test("a price the subscription already carries makes it stale", () => {
 		}),
 	).toBe(true);
 });
+
+const makeSchedulePlan = (
+	subscriptionScheduleAction: Record<string, unknown>,
+) =>
+	({
+		autumn: { insertCustomerProducts: [] },
+		stripe: { subscriptionScheduleAction },
+	}) as unknown as BillingPlan;
+
+const makeSchedule = (id: string) =>
+	({ id }) as unknown as Stripe.SubscriptionSchedule;
+
+test("a schedule action on the live schedule keeps the snapshot", () => {
+	expect(
+		isDeferredSnapshotStale({
+			billingPlan: makeSchedulePlan({
+				type: "update",
+				stripeSubscriptionScheduleId: "sub_sched_1",
+				params: {},
+			}),
+			fullCustomer: makeFullCustomer({ customerProducts: [pro] }),
+			stripeSubscriptionSchedule: makeSchedule("sub_sched_1"),
+		}),
+	).toBe(false);
+});
+
+test("a schedule replaced since the snapshot makes it stale", () => {
+	expect(
+		isDeferredSnapshotStale({
+			billingPlan: makeSchedulePlan({
+				type: "release",
+				stripeSubscriptionScheduleId: "sub_sched_old",
+			}),
+			fullCustomer: makeFullCustomer({ customerProducts: [pro] }),
+			stripeSubscriptionSchedule: makeSchedule("sub_sched_new"),
+		}),
+	).toBe(true);
+});
+
+test("creating a schedule when one now exists makes it stale", () => {
+	expect(
+		isDeferredSnapshotStale({
+			billingPlan: makeSchedulePlan({ type: "create", params: {} }),
+			fullCustomer: makeFullCustomer({ customerProducts: [pro] }),
+			stripeSubscriptionSchedule: makeSchedule("sub_sched_new"),
+		}),
+	).toBe(true);
+});

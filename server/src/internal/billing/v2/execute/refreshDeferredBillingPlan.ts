@@ -105,6 +105,7 @@ export const refreshDeferredBillingPlan = async ({
 		billingPlan,
 		fullCustomer: liveBillingContext.fullCustomer,
 		stripeSubscription: liveBillingContext.stripeSubscription,
+		stripeSubscriptionSchedule: liveBillingContext.stripeSubscriptionSchedule,
 	});
 	if (!snapshotIsStale) return { billingPlan, billingContext };
 
