@@ -15,6 +15,7 @@ import type {
 	FormInvoiceLicense,
 	FormInvoicePlan,
 } from "../createInvoiceFormSchema";
+import { invoiceDaysToParams } from "../utils/invoiceDates";
 import { productItemsToInvoiceCustomize } from "../utils/productItemsToInvoiceCustomize";
 
 const toDiscounts = ({ discounts }: { discounts: FormDiscount[] }) => {
@@ -127,8 +128,11 @@ export function buildCreateInvoiceRequestBody({
 		...(hasPeriod
 			? { period_start: form.periodStart, period_end: form.periodEnd }
 			: {}),
-		...(form.issueDate === null ? {} : { issue_date: form.issueDate }),
-		...(form.dueDate === null ? {} : { due_date: form.dueDate }),
+		...invoiceDaysToParams({
+			issueDay: form.issueDay,
+			dueDay: form.dueDay,
+			now: new Date(),
+		}),
 		...(preview ? { preview: true } : {}),
 	} as CreateInvoiceParams;
 }

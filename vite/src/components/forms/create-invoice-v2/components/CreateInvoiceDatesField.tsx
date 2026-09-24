@@ -12,34 +12,30 @@ import { CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
-import {
-	calendarDaysToInvoiceDates,
-	invoiceDatesToCalendarDays,
-} from "../utils/invoiceDates";
 
 const RANGE_DATE_FORMAT = "MMM d, yyyy";
 
 export function CreateInvoiceDatesField() {
 	const { form, formValues } = useCreateInvoiceFormContext();
-	const { issueDate, dueDate } = formValues;
+	const { issueDay, dueDay } = formValues;
 	const [open, setOpen] = useState(false);
 	const [pendingIssueDay, setPendingIssueDay] = useState<Date | null>(null);
 	const today = startOfToday();
 
 	const selectedRange =
-		issueDate !== null && dueDate !== null
-			? invoiceDatesToCalendarDays({ issueDate, dueDate })
+		issueDay !== null && dueDay !== null
+			? { from: new Date(issueDay), to: new Date(dueDay) }
 			: undefined;
 
-	const setDates = ({
+	const setDays = ({
 		issue,
 		due,
 	}: {
-		issue: number | null;
-		due: number | null;
+		issue: Date | null;
+		due: Date | null;
 	}) => {
-		form.setFieldValue("issueDate", issue);
-		form.setFieldValue("dueDate", due);
+		form.setFieldValue("issueDay", issue?.getTime() ?? null);
+		form.setFieldValue("dueDay", due?.getTime() ?? null);
 	};
 
 	const displayedRange: DateRange | undefined = pendingIssueDay
@@ -59,12 +55,7 @@ export function CreateInvoiceDatesField() {
 		}
 		if (!pendingIssueDay) return;
 
-		const dates = calendarDaysToInvoiceDates({
-			issueDay: pendingIssueDay,
-			dueDay: clickedDay,
-			now: new Date(),
-		});
-		setDates({ issue: dates.issueDate, due: dates.dueDate });
+		setDays({ issue: pendingIssueDay, due: clickedDay });
 		handleOpenChange(false);
 	};
 
@@ -114,7 +105,7 @@ export function CreateInvoiceDatesField() {
 						type="button"
 						aria-label="Clear invoice dates"
 						className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-tertiary-foreground transition-colors hover:text-foreground"
-						onClick={() => setDates({ issue: null, due: null })}
+						onClick={() => setDays({ issue: null, due: null })}
 					>
 						<XIcon className="size-3.5" />
 					</button>

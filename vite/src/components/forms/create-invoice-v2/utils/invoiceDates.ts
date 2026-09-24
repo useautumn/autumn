@@ -1,5 +1,5 @@
 import { UTCDate } from "@date-fns/utc";
-import { getDate, getMonth, getYear, min } from "date-fns";
+import { getDate, getMonth, getYear, isSameDay, min } from "date-fns";
 
 const MIDDAY_HOUR = 12;
 
@@ -7,32 +7,20 @@ const MIDDAY_HOUR = 12;
 const toMiddayUtc = (day: Date) =>
 	new UTCDate(getYear(day), getMonth(day), getDate(day), MIDDAY_HOUR);
 
-const toLocalCalendarDay = (unixMs: number) => {
-	const utcDay = new UTCDate(unixMs);
-	return new Date(getYear(utcDay), getMonth(utcDay), getDate(utcDay));
-};
-
-/** Stripe rejects a future issue date, so an issue date of today is capped at now. */
-export const calendarDaysToInvoiceDates = ({
+/** An issue day of today is left to Stripe, which stamps it with its own "now". */
+export const invoiceDaysToParams = ({
 	issueDay,
 	dueDay,
 	now,
 }: {
-	issueDay: Date;
-	dueDay: Date;
+	issueDay: number | null;
+	dueDay: number | null;
 	now: Date;
-}) => ({
-	issueDate: min([toMiddayUtc(issueDay), now]).getTime(),
-	dueDate: toMiddayUtc(dueDay).getTime(),
-});
-
-export const invoiceDatesToCalendarDays = ({
-	issueDate,
-	dueDate,
-}: {
-	issueDate: number;
-	dueDate: number;
-}) => ({
-	from: toLocalCalendarDay(issueDate),
-	to: toLocalCalendarDay(dueDate),
+}): { issue_date?: number; due_date?: number } => ({
+	...(issueDay === null || isSameDay(issueDay, now)
+		? {}
+		: { issue_date: min([toMiddayUtc(new Date(issueDay)), now]).getTime() }),
+	...(dueDay === null
+		? {}
+		: { due_date: toMiddayUtc(new Date(dueDay)).getTime() }),
 });

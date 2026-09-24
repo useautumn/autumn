@@ -32,8 +32,8 @@ const baseForm = (): CreateInvoiceForm => ({
 	taxRateId: null,
 	periodStart: null,
 	periodEnd: null,
-	issueDate: null,
-	dueDate: null,
+	issueDay: null,
+	dueDay: null,
 });
 
 /** Quantity fields mount on keys that do not exist yet, so writes must not need an intermediate. */

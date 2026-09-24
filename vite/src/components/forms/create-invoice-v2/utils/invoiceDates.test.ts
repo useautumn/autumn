@@ -1,45 +1,36 @@
 import { describe, expect, test } from "bun:test";
-import {
-	calendarDaysToInvoiceDates,
-	invoiceDatesToCalendarDays,
-} from "./invoiceDates";
+import { invoiceDaysToParams } from "./invoiceDates";
 
-const issueDay = new Date(2026, 8, 7);
-const dueDay = new Date(2026, 9, 14);
-const now = new Date("2026-09-24T15:00:00.000Z");
+const issueDay = new Date(2026, 8, 7).getTime();
+const dueDay = new Date(2026, 9, 14).getTime();
+const now = new Date(2026, 8, 24, 15);
 
-describe("calendarDaysToInvoiceDates", () => {
-	test("sends the picked days at midday UTC", () => {
-		const dates = calendarDaysToInvoiceDates({ issueDay, dueDay, now });
+describe("invoiceDaysToParams", () => {
+	test("sends past issue and future due days at midday UTC", () => {
+		const params = invoiceDaysToParams({ issueDay, dueDay, now });
 
-		expect(new Date(dates.issueDate).toISOString()).toBe(
+		expect(new Date(params.issue_date ?? 0).toISOString()).toBe(
 			"2026-09-07T12:00:00.000Z",
 		);
-		expect(new Date(dates.dueDate).toISOString()).toBe(
+		expect(new Date(params.due_date ?? 0).toISOString()).toBe(
 			"2026-10-14T12:00:00.000Z",
 		);
 	});
 
-	test("caps an issue date of today at now", () => {
-		const dates = calendarDaysToInvoiceDates({
-			issueDay: new Date(2026, 8, 24),
+	test("leaves an issue day of today to Stripe", () => {
+		const params = invoiceDaysToParams({
+			issueDay: new Date(2026, 8, 24).getTime(),
 			dueDay,
-			now: new Date("2026-09-24T09:00:00.000Z"),
+			now,
 		});
 
-		expect(new Date(dates.issueDate).toISOString()).toBe(
-			"2026-09-24T09:00:00.000Z",
-		);
+		expect(params).not.toHaveProperty("issue_date");
+		expect(params).toHaveProperty("due_date");
 	});
-});
 
-describe("invoiceDatesToCalendarDays", () => {
-	test("round-trips to the picked calendar days", () => {
-		const days = invoiceDatesToCalendarDays(
-			calendarDaysToInvoiceDates({ issueDay, dueDay, now }),
+	test("sends nothing when no days are picked", () => {
+		expect(invoiceDaysToParams({ issueDay: null, dueDay: null, now })).toEqual(
+			{},
 		);
-
-		expect(days.from.getTime()).toBe(issueDay.getTime());
-		expect(days.to.getTime()).toBe(dueDay.getTime());
 	});
 });
