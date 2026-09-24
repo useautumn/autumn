@@ -12,6 +12,7 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -267,30 +268,37 @@ export const expectLicensePooledGrant = async ({
 		remaining: granted - usage,
 		usage,
 	});
-	await expectPooledBalanceCorrect({
-		db: ctx.db,
-		customerId,
-		filter: {
-			customerLicenseLinkId,
-			internalFeatureId: feature.internal_id,
-		},
-		pool: {
-			balance: granted - usage,
-			adjustment: 0,
-			granted,
-			customerLicenseLinkId,
-			...lifecycle,
-		},
-		contributions: {
-			count: contributionCount ?? seatCount,
-			currentContribution: grantPerSeat,
-			nextCycleContribution: grantPerSeat,
-		},
-		sources: {
-			count: contributionCount ?? seatCount,
-			balance: 0,
-			adjustment: 0,
-		},
+	// The read above may have reset the pool on the worker; Postgres lands that a moment later.
+	await pollUntilAsserted({
+		fetch: async () => undefined,
+		assert: () =>
+			expectPooledBalanceCorrect({
+				db: ctx.db,
+				customerId,
+				filter: {
+					customerLicenseLinkId,
+					internalFeatureId: feature.internal_id,
+				},
+				pool: {
+					balance: granted - usage,
+					adjustment: 0,
+					granted,
+					customerLicenseLinkId,
+					...lifecycle,
+				},
+				contributions: {
+					count: contributionCount ?? seatCount,
+					currentContribution: grantPerSeat,
+					nextCycleContribution: grantPerSeat,
+				},
+				sources: {
+					count: contributionCount ?? seatCount,
+					balance: 0,
+					adjustment: 0,
+				},
+			}),
+		timeoutMs: 15_000,
+		intervalMs: 500,
 	});
 };
 

@@ -1,17 +1,14 @@
 /**
- * getActiveResetPassed: seat cusEnts (license assignments) inherit the pool
+ * The V2 reset hydration: seat cusEnts (license assignments) inherit the pool
  * parent's lifecycle.
  *
  * Contract under test:
- *   - Seat cusEnt under an ACTIVE parent is returned, with the parent's
+ *   - Seat cusEnt under an ACTIVE parent hydrates with the parent's
  *     status + subscription_ids overlaid on customer_product (so
  *     resetsViaInvoice / Stripe-anchor logic behaves like the parent's).
- *   - After the parent expires, the seat cusEnt drops out of the sweep —
+ *   - After the parent expires, the seat cusEnt hydrates as expired —
  *     no reliance on the seat row's own (stale) status.
  *   - Non-seat cusEnts are untouched by the inheritance path.
- *
- * The sweep is app-wide: our rows are pinned to epoch-tiny next_reset_at
- * values so they sort into the first page, then asserted by id.
  */
 import { expect, test } from "bun:test";
 import {
@@ -27,9 +24,7 @@ import chalk from "chalk";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-
-const SWEEP_PAGE = 500;
+import { getResetContextByIds } from "@/internal/customers/cusProducts/cusEnts/repos/getResetContextByIds.js";
 
 test.concurrent(
 	`${chalk.yellowBright("reset-cron: seat cusEnts inherit parent lifecycle in the sweep")}`,
@@ -108,25 +103,22 @@ test.concurrent(
 			);
 		expect(seatCusEnt).toBeDefined();
 
-		// Pin our rows to the front of the app-wide sweep ordering.
-		await ctx.db
-			.update(customerEntitlements)
-			.set({ next_reset_at: 1000 })
-			.where(eq(customerEntitlements.id, seatCusEnt.id));
-
-		// ── Active parent: seat swept, parent lifecycle overlaid ─────────
-		const activeSweep = await CusEntService.getActiveResetPassed({
+		// ── Active parent: seat hydrates with the parent lifecycle overlaid ──
+		const activeHydration = await getResetContextByIds({
 			db: ctx.db,
-			batchSize: SWEEP_PAGE,
-			limit: SWEEP_PAGE,
+			customerEntitlementIds: [seatCusEnt.id],
 		});
-		const sweptSeat = activeSweep.find((row) => row.id === seatCusEnt.id);
+		const hydratedSeat = activeHydration.customerEntitlements.find(
+			(row) => row.id === seatCusEnt.id,
+		);
 		expect(
-			sweptSeat,
-			"seat cusEnt missing from sweep under active parent",
+			hydratedSeat,
+			"seat cusEnt missing from hydration under active parent",
 		).toBeDefined();
-		expect(sweptSeat?.customer_product?.status).toBe(CusProductStatus.Active);
-		expect(sweptSeat?.customer_product?.subscription_ids).toEqual(
+		expect(hydratedSeat?.customer_product?.status).toBe(
+			CusProductStatus.Active,
+		);
+		expect(hydratedSeat?.customer_product?.subscription_ids).toEqual(
 			parentCusProduct?.subscription_ids ?? [],
 		);
 
@@ -137,14 +129,17 @@ test.concurrent(
 			updates: { status: CusProductStatus.Expired },
 		});
 
-		const expiredSweep = await CusEntService.getActiveResetPassed({
+		const expiredHydration = await getResetContextByIds({
 			db: ctx.db,
-			batchSize: SWEEP_PAGE,
-			limit: SWEEP_PAGE,
+			customerEntitlementIds: [seatCusEnt.id],
 		});
+		const expiredSeat = expiredHydration.customerEntitlements.find(
+			(row) => row.id === seatCusEnt.id,
+		);
+		// Either the hydration drops it with its dead parent, or it carries the parent's expiry; never the seat's own status.
 		expect(
-			expiredSweep.find((row) => row.id === seatCusEnt.id),
-		).toBeUndefined();
+			expiredSeat?.customer_product?.status ?? CusProductStatus.Expired,
+		).toBe(CusProductStatus.Expired);
 
 		// Seat row status is still active in the DB — exclusion came from the
 		// parent join, not a write.

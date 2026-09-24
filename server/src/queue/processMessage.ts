@@ -33,7 +33,6 @@ import { batchResetCustomerEntitlements } from "@/internal/customers/actions/res
 import { replayFailedCustomerCreation } from "@/internal/customers/recovery/replayFailedCustomerCreation.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
-import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
 import { isBatchResetEnabled } from "@/internal/misc/batchReset/batchResetConfigStore.js";
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
@@ -208,15 +207,6 @@ export const processMessage = async ({
 				ctx,
 				messageId: message.MessageId,
 			});
-		}
-
-		if (job.name === JobName.Migration) {
-			if (!ctx) {
-				workerLogger.error("No context found for migration job");
-				return;
-			}
-			await runMigrationTask({ ctx, payload: job.data });
-			return;
 		}
 
 		if (job.name === JobName.CustomerCreationRecovery) {

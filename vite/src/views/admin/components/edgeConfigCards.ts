@@ -47,7 +47,6 @@ export type EdgeConfigCardId =
 export type QueueCronCardId =
 	| "job-queues"
 	| "batch-reset-v2"
-	| "reset-job"
 	| "lazy-batch-resets";
 
 export type EdgeConfigCardDef<Id extends string = EdgeConfigCardId> = {
@@ -539,27 +538,6 @@ export const QUEUE_CRON_CARDS: EdgeConfigCardDef<QueueCronCardId>[] = [
 				label:
 					typeof scanBatchSize === "number"
 						? `Running, scan ${scanBatchSize}`
-						: "Running",
-				tone: "active",
-			};
-		},
-	},
-	{
-		id: "reset-job",
-		title: "Reset Job",
-		description:
-			"Continuously reset due balances in small, serialized batches.",
-		icon: Clock,
-		endpoint: "/admin/reset-job-config",
-		deriveStatus: (data) => {
-			const config = asRecord(data);
-			if (config.enabled !== true) return { label: "Stopped", tone: "warning" };
-
-			const batchSize = config.batchSize;
-			return {
-				label:
-					typeof batchSize === "number"
-						? `Running, batch ${batchSize}`
 						: "Running",
 				tone: "active",
 			};

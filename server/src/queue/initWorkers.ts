@@ -76,12 +76,6 @@ type JobOverride = {
 // preserves backpressure; background dispatch is only safe for rare,
 // low-volume work that does not use a shared concurrency limit.
 const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
-	// Rare (handful per day); fire-and-forget is safe.
-	[JobName.Migration]: {
-		ack: "upfront",
-		dispatch: "background",
-		timeoutMs: null,
-	},
 	// Can exceed VisibilityTimeout on large orgs; redelivery causes a
 	// self-amplifying Redis UNLINK storm. Inline so one worker's concurrency
 	// stays capped at the receive batch size.

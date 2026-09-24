@@ -12,7 +12,6 @@ import {
 	customers,
 	ErrCode,
 	entitlements,
-	type FullCusEntWithProduct,
 	type FullCustomerEntitlement,
 	features,
 	type InsertCustomerEntitlement,
@@ -20,7 +19,6 @@ import {
 	pooledBalances,
 	prices,
 	products,
-	type ResetCusEnt,
 	rollovers,
 } from "@autumn/shared";
 import {
@@ -40,7 +38,6 @@ import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext";
-import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { markCustomersUpdatedAtByInternalIds } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { licensePooledBalanceIsLiveSql } from "@/internal/customers/licensePooledBalanceIsLiveSql.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -518,91 +515,6 @@ export class CusEntService {
 		return unionAll(branch1, branch2, branch3)
 			.orderBy(sql`"sort_reset"`, sql`"sort_id"`)
 			.limit(batchSize);
-	}
-
-	static async getActiveResetPassed({
-		db,
-		customDateUnix,
-		batchSize = 1000,
-		limit,
-		includeSeparateIntervalResets = true,
-		onPageFetched,
-	}: {
-		db: DrizzleCli;
-		customDateUnix?: number;
-		batchSize?: number;
-		limit?: number;
-		includeSeparateIntervalResets?: boolean;
-		/** Test seam: runs between pages to exercise mid-pagination mutations. */
-		onPageFetched?: (page: ResetCusEnt[]) => void | Promise<void>;
-	}) {
-		const allResults: FullCusEntWithProduct[] = [];
-		const now = customDateUnix ?? Date.now();
-		let cursor: { nextResetAt: number; id: string } | null = null;
-		const emittedIds = new Set<string>();
-
-		while (true) {
-			const page = await withStatementTimeout(db, async (tx) =>
-				CusEntService.buildActiveResetPassedPage({
-					db: tx,
-					now,
-					batchSize,
-					cursor,
-					includeSeparateIntervalResets,
-				}),
-			);
-
-			if (page.length === 0) break;
-
-			const freshRows: typeof page = [];
-			for (const item of page) {
-				const id = item.customer_entitlements.id;
-				if (emittedIds.has(id)) continue;
-				emittedIds.add(id);
-				freshRows.push(item);
-			}
-
-			const mappedData = freshRows.map((item) => ({
-				...item.customer_entitlements,
-				entitlement: {
-					...item.entitlements,
-					feature: item.features,
-				},
-				// Seats inherit the parent's lifecycle so downstream reset logic
-				// (resetsViaInvoice, Stripe anchor) behaves like the parent's.
-				customer_product: item.customer_products
-					? {
-							...item.customer_products,
-							status:
-								(item.parent_status as CusProductStatus | null) ??
-								item.customer_products.status,
-							subscription_ids:
-								(item.parent_subscription_ids as string[] | null) ??
-								item.customer_products.subscription_ids,
-						}
-					: item.customer_products,
-				customer: item.customers,
-				pooled_balance: item.pooled_balances ?? undefined,
-				replaceables: [],
-				rollovers: [],
-			})) as ResetCusEnt[];
-
-			allResults.push(...mappedData);
-			console.log(`Fetched ${allResults.length} entitlements to reset`);
-
-			const lastRow = page[page.length - 1].customer_entitlements;
-			cursor = {
-				nextResetAt: Number(lastRow.next_reset_at),
-				id: lastRow.id,
-			};
-
-			if (onPageFetched) await onPageFetched(mappedData);
-
-			if (page.length < batchSize) break;
-			if (limit && allResults.length >= limit) break;
-		}
-
-		return allResults as ResetCusEnt[];
 	}
 
 	static async update({

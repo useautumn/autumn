@@ -39,7 +39,6 @@ import { handleGetAdminRateLimitOverridesConfig } from "./handleGetAdminRateLimi
 import { handleGetAdminRateLimitRedisAllowlistConfig } from "./handleGetAdminRateLimitRedisAllowlistConfig";
 import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheConfig";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
-import { handleGetAdminResetJobConfig } from "./handleGetAdminResetJobConfig";
 import { handleGetAdminResetJobV2Config } from "./handleGetAdminResetJobV2Config";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
 
@@ -74,7 +73,6 @@ import { handleUpsertAdminRateLimitOverridesConfig } from "./handleUpsertAdminRa
 import { handleUpsertAdminRateLimitRedisAllowlistConfig } from "./handleUpsertAdminRateLimitRedisAllowlistConfig";
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
-import { handleUpsertAdminResetJobConfig } from "./handleUpsertAdminResetJobConfig";
 import { handleUpsertAdminResetJobV2Config } from "./handleUpsertAdminResetJobV2Config";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
 import { handleUpsertSlackMcpOAuthClient } from "./handleUpsertSlackMcpOAuthClient";
@@ -211,8 +209,6 @@ honoAdminRouter.put(
 	"/batch-reset-config",
 	...handleUpsertAdminBatchResetConfig,
 );
-honoAdminRouter.get("/reset-job-config", ...handleGetAdminResetJobConfig);
-honoAdminRouter.put("/reset-job-config", ...handleUpsertAdminResetJobConfig);
 honoAdminRouter.get("/reset-job-v2-config", ...handleGetAdminResetJobV2Config);
 honoAdminRouter.put(
 	"/reset-job-v2-config",

@@ -48,7 +48,6 @@ import "./internal/misc/miscRedisConfig/miscRedisConfigStore.js";
 import "./internal/misc/cacheV2Ramp/cacheV2RampStore.js";
 import "./internal/misc/jobQueues/jobQueueStore.js";
 import "./internal/misc/batchReset/batchResetConfigStore.js";
-import "./internal/misc/resetJob/resetJobStore.js";
 import "./internal/misc/resetJobV2/resetJobV2Store.js";
 import "./internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 import "./internal/misc/asyncTrack/asyncTrackStore.js";
