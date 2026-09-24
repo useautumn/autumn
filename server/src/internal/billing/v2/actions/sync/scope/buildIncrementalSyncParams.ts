@@ -8,6 +8,9 @@ import {
 } from "@autumn/shared";
 import type { MatchedPlan, SubscriptionMatch } from "../detect/types";
 import { findLicenseQuantityDrifts } from "./findLicenseQuantityDrifts";
+import { linkedPlanInstances } from "./planInstances/linkedPlanInstances";
+import { outgoingInstancesToExpire } from "./planInstances/outgoingInstancesToExpire";
+import { planInstanceCountChange } from "./planInstances/planInstanceCountChange";
 import {
 	linkedCustomerProductsToTargetGroupMap,
 	matchedPlanToTargetGroupLink,
@@ -52,23 +55,6 @@ const matchedPlansByProductId = ({
 
 	return { ok: true, plansByProductId };
 };
-
-/** Active linked cusProducts of one plan in the sync plan's scope — one row per instance. */
-const linkedPlanInstances = ({
-	linkedCustomerProducts,
-	productId,
-	syncPlan,
-}: {
-	linkedCustomerProducts: FullCusProduct[];
-	productId: string;
-	syncPlan: SyncPlanInstance;
-}) =>
-	linkedCustomerProducts.filter((linkedProduct) => {
-		if (linkedProduct.product.id !== productId) return false;
-		return syncPlan.entity_id
-			? linkedProduct.internal_entity_id === syncPlan.entity_id
-			: !linkedProduct.internal_entity_id;
-	});
 
 /** Current API-side prepaid totals (packs × billing_units + allowance). */
 const linkedPrepaidFeatureTotals = ({
@@ -232,44 +218,27 @@ export const buildIncrementalSyncParams = ({
 			linkedProduct.product.id !== target.productId ||
 			versionChanged
 		) {
-			// The sync replaces one outgoing instance with usage carry; the rest expire.
 			if (linkedProduct) {
-				const outgoingInstances = linkedPlanInstances({
-					linkedCustomerProducts,
-					productId: linkedProduct.product.id,
-					syncPlan,
-				});
 				surplusInstances.push(
-					...outgoingInstances.filter(
-						(instance) => instance.id !== linkedProduct.id,
-					),
+					...outgoingInstancesToExpire({
+						linkedCustomerProducts,
+						replacedProduct: linkedProduct,
+						syncPlan,
+					}),
 				);
 			}
 			changedPlans.push(syncPlan);
 			continue;
 		}
 
-		// Same plan at a different Stripe quantity: add or expire instances.
-		const instances = linkedPlanInstances({
+		const countChange = planInstanceCountChange({
 			linkedCustomerProducts,
-			productId: target.productId,
+			linkedProduct,
 			syncPlan,
 		});
-		const desiredQuantity = syncPlan.quantity ?? 1;
-		if (instances.length < desiredQuantity) {
-			changedPlans.push({
-				...syncPlan,
-				quantity: desiredQuantity - instances.length,
-				expire_previous: false,
-			});
-			continue;
-		}
-		if (instances.length > desiredQuantity) {
-			surplusInstances.push(
-				...instances
-					.filter((instance) => instance.id !== linkedProduct.id)
-					.slice(0, instances.length - desiredQuantity),
-			);
+		if (countChange) {
+			if (countChange.attach) changedPlans.push(countChange.attach);
+			surplusInstances.push(...countChange.expire);
 			continue;
 		}
 

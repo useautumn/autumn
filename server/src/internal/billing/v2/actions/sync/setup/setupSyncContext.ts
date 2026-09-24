@@ -1,6 +1,5 @@
 import {
 	CusProductStatus,
-	cp,
 	type Entity,
 	EntityNotFoundError,
 	ErrCode,
@@ -29,6 +28,8 @@ import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
+import { expandToPlanInstances } from "./expandToPlanInstances";
+import { findLinkedPlanInstances } from "./findLinkedPlanInstances";
 import { linkSyncedPricesToStripe } from "./linkSyncedPricesToStripe";
 import { prepareSyncedCustomBasePrice } from "./prepareSyncedCustomBasePrice";
 
@@ -48,27 +49,6 @@ const resolvePlanEntity = ({
 	}
 	return entity;
 };
-
-/** Active instances of the plan already linked to this Stripe subscription. */
-const findLinkedPlanInstances = ({
-	fullCustomer,
-	fullProduct,
-	stripeSubscriptionId,
-	internalEntityId,
-}: {
-	fullCustomer: FullCustomer;
-	fullProduct: SyncProductContext["fullProduct"];
-	stripeSubscriptionId: string;
-	internalEntityId?: string;
-}): FullCusProduct[] =>
-	fullCustomer.customer_products.filter((customerProduct) => {
-		if (customerProduct.product?.id !== fullProduct.id) return false;
-		if ((customerProduct.internal_entity_id ?? undefined) !== internalEntityId)
-			return false;
-		return cp(customerProduct)
-			.hasActiveStatus()
-			.onStripeSubscription({ stripeSubscriptionId }).valid;
-	});
 
 const buildProductContext = async ({
 	ctx,
@@ -225,31 +205,13 @@ const buildPlanProductContexts = async ({
 		claimedStripePriceIds,
 	});
 
-	// A plan with quantity N becomes N product contexts, one cusProduct per
-	// instance. Each replaces at most one existing instance, so a re-sync converges.
-	return linkedProductContexts.flatMap((productContext) => {
-		const requested = productContext.plan.quantity ?? 1;
-		const otherInstances =
-			stripeSubscriptionId && productContext.plan.expire_previous === true
-				? findLinkedPlanInstances({
-						fullCustomer,
-						fullProduct: productContext.fullProduct,
-						stripeSubscriptionId,
-						internalEntityId: productContext.entity?.internal_id,
-					}).filter(
-						(instance) =>
-							instance.id !== productContext.currentCustomerProduct?.id,
-					)
-				: [];
-		return Array.from({ length: requested }, (_, index) =>
-			index === 0
-				? productContext
-				: {
-						...productContext,
-						currentCustomerProduct: otherInstances[index - 1],
-					},
-		);
-	});
+	return linkedProductContexts.flatMap((productContext) =>
+		expandToPlanInstances({
+			fullCustomer,
+			productContext,
+			stripeSubscriptionId,
+		}),
+	);
 };
 
 /**
