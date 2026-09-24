@@ -24,6 +24,12 @@ export const FetchLogoPopover = ({
 	const [open, setOpen] = useState(false);
 	const [url, setUrl] = useState("");
 	const [fetching, setFetching] = useState(false);
+	// A logo already fetched (and stored in S3) for `url` whose save failed.
+	// Retrying reuses it instead of paying for another Context.dev lookup.
+	const [unsavedLogo, setUnsavedLogo] = useState<{
+		url: string;
+		publicUrl: string;
+	} | null>(null);
 
 	const handleFetch = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -31,12 +37,21 @@ export const FetchLogoPopover = ({
 
 		setFetching(true);
 		try {
-			const { data } = await axiosInstance.post("/organization/logo/fetch", {
-				url,
-			});
+			let publicUrl = unsavedLogo?.url === url ? unsavedLogo.publicUrl : null;
+			if (!publicUrl) {
+				const { data } = await axiosInstance.post("/organization/logo/fetch", {
+					url,
+				});
+				publicUrl = data.publicUrl as string;
+			}
+
 			// Keep the popover (and the typed URL) open so a failed save can be retried.
-			const saved = await onFetched(data.publicUrl);
-			if (!saved) return;
+			const saved = await onFetched(publicUrl);
+			if (!saved) {
+				setUnsavedLogo({ url, publicUrl });
+				return;
+			}
+			setUnsavedLogo(null);
 			setOpen(false);
 			setUrl("");
 		} catch (error) {
