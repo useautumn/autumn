@@ -113,19 +113,11 @@ describe("fullSubjectToDueRows", () => {
 		expect(dueRowIds({ row: { customer_product_id: null } })).toEqual([ROW_ID]);
 	});
 
-	test("lifetime, unlimited and boolean grants never refill", () => {
+	test("lifetime and boolean grants never refill", () => {
 		expect(
 			dueRowIds({
 				catalog: (catalog) => {
 					catalog.entitlements[ENTITLEMENT_ID].interval = EntInterval.Lifetime;
-				},
-			}),
-		).toEqual([]);
-		expect(
-			dueRowIds({
-				catalog: (catalog) => {
-					catalog.entitlements[ENTITLEMENT_ID].allowance_type =
-						AllowanceType.Unlimited;
 				},
 			}),
 		).toEqual([]);
@@ -138,6 +130,25 @@ describe("fullSubjectToDueRows", () => {
 		).toEqual([]);
 	});
 
+	test("an unlimited grant refills on its interval, never as a lifetime grant", () => {
+		expect(
+			dueRowIds({
+				catalog: (catalog) => {
+					catalog.entitlements[ENTITLEMENT_ID].allowance_type =
+						AllowanceType.Unlimited;
+				},
+			}),
+		).toEqual([ROW_ID]);
+		expect(
+			dueRowIds({
+				catalog: (catalog) => {
+					catalog.entitlements[ENTITLEMENT_ID].allowance_type =
+						AllowanceType.Unlimited;
+					catalog.entitlements[ENTITLEMENT_ID].interval = EntInterval.Lifetime;
+				},
+			}),
+		).toEqual([]);
+	});
 	test("a past-due plan refills only when its product ignores past due", () => {
 		expect(
 			dueRowIds({ product: { status: CusProductStatus.PastDue } }),

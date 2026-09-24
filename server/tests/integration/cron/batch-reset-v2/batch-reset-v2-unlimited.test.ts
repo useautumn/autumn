@@ -16,8 +16,12 @@
  */
 
 import { expect, test } from "bun:test";
-import { EntInterval, ms, ProductItemInterval } from "@autumn/shared";
-import { UTCDate } from "@date-fns/utc";
+import {
+	EntInterval,
+	getNextResetAt,
+	ms,
+	ProductItemInterval,
+} from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -26,7 +30,6 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { getNextResetAt } from "@/utils/timeUtils.js";
 import {
 	fetchCustomerEntitlementRow,
 	runBatchResetV2,
@@ -100,9 +103,10 @@ test.concurrent(
 		expect(row.balance).toBe(0);
 		expect(row.next_reset_at).toBe(
 			getNextResetAt({
-				curReset: new UTCDate(pastTime),
+				curReset: pastTime,
 				interval: EntInterval.Month,
 				intervalCount: 1,
+				now: Date.now(),
 			}),
 		);
 
