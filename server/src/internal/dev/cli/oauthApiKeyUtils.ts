@@ -1,10 +1,15 @@
 import {
+	ATMN_APP_KEY_SCOPES,
 	ErrCode,
+	isScopeSubset,
 	isValidScope,
 	RecaseError,
 	type ScopeString,
 } from "@autumn/shared";
+import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
 import { z } from "zod/v4";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { isAtmnOAuthClientId } from "@/internal/auth/oauth/atmnOAuthClients.js";
 
 export type OAuthApiKeyRequestBody = {
 	resource?: unknown;
@@ -61,4 +66,32 @@ export const tokenRecordFromResourceToken = (
 			"",
 		scopes: scope ? scope.split(" ") : [],
 	};
+};
+
+/** Grants atmn keys the app scopes too, capped by the user's org role, so older CLIs get them. */
+export const withAtmnAppKeyScopes = async ({
+	db,
+	clientId,
+	userId,
+	orgId,
+	apiKeyScopes,
+}: {
+	db: DrizzleCli;
+	clientId: string;
+	userId: string;
+	orgId: string;
+	apiKeyScopes: string[];
+}): Promise<string[]> => {
+	if (!(await isAtmnOAuthClientId({ db, clientId }))) return apiKeyScopes;
+
+	const { scopes: roleScopes } = await getScopesForUserInOrg({
+		db,
+		userId,
+		organizationId: orgId,
+	});
+	const grantedAppScopes = ATMN_APP_KEY_SCOPES.filter((scope) =>
+		isScopeSubset([scope], roleScopes),
+	);
+
+	return [...new Set([...apiKeyScopes, ...grantedAppScopes])];
 };

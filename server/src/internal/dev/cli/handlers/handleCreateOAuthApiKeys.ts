@@ -17,6 +17,7 @@ import {
 	type OAuthApiKeyRequestBody,
 	OAuthApiKeyRequestBodySchema,
 	parseRequestedScopes,
+	withAtmnAppKeyScopes,
 } from "../oauthApiKeyUtils.js";
 
 const parseBody = (rawBody: string): OAuthApiKeyRequestBody => {
@@ -129,6 +130,14 @@ export const handleCreateOAuthApiKeys = createRoute({
 			});
 		}
 
+		const mintedKeyScopes = await withAtmnAppKeyScopes({
+			db,
+			clientId,
+			userId,
+			orgId,
+			apiKeyScopes,
+		});
+
 		const consent = await oauthConsentRepo.getForClientUserOrg({
 			db,
 			clientId,
@@ -154,7 +163,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 				userId,
 				prefix: ApiKeyPrefix.Sandbox,
 				meta,
-				scopes: apiKeyScopes,
+				scopes: mintedKeyScopes,
 			}),
 			createKey({
 				db,
@@ -164,7 +173,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 				userId,
 				prefix: ApiKeyPrefix.Live,
 				meta,
-				scopes: apiKeyScopes,
+				scopes: mintedKeyScopes,
 			}),
 		]);
 
@@ -174,7 +183,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 			org_id: orgId,
 			user_id: userId,
 			client_id: clientId,
-			scopes: apiKeyScopes,
+			scopes: mintedKeyScopes,
 		});
 	},
 });
