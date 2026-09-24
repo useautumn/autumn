@@ -116,7 +116,7 @@ test.concurrent(
 		const ukVat = { type: "gb_vat", value: "GB123456789" };
 
 		await autumnV2_3.customers.update(customerId, {
-			billing_details: { tax_ids: { add: [germanVat, ukVat] } },
+			billing_details: { tax_ids: { add: [germanVat, ukVat, germanVat] } },
 		});
 		await expectBillingDetailsCorrect({
 			autumn: autumnV2_3,

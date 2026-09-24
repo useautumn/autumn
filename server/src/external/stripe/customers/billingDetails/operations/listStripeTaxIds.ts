@@ -1,16 +1,15 @@
 import type Stripe from "stripe";
 
 const STRIPE_TAX_ID_PAGE_LIMIT = 100;
+const MAX_TAX_IDS = 1000;
 
-export const listStripeTaxIds = async ({
+export const listStripeTaxIds = ({
 	stripeCli,
 	stripeCustomerId,
 }: {
 	stripeCli: Stripe;
 	stripeCustomerId: string;
-}) => {
-	const { data } = await stripeCli.customers.listTaxIds(stripeCustomerId, {
-		limit: STRIPE_TAX_ID_PAGE_LIMIT,
-	});
-	return data;
-};
+}) =>
+	stripeCli.customers
+		.listTaxIds(stripeCustomerId, { limit: STRIPE_TAX_ID_PAGE_LIMIT })
+		.autoPagingToArray({ limit: MAX_TAX_IDS });

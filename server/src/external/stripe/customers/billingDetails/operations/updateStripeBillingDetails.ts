@@ -18,15 +18,16 @@ export const updateStripeBillingDetails = async ({
 		billingDetails,
 	});
 
-	if (Object.keys(customerUpdate).length > 0) {
-		await stripeCli.customers.update(stripeCustomerId, customerUpdate);
-	}
-
+	// Tax IDs first: an invalid VAT then fails before anything else is written.
 	if (billingDetails.tax_ids) {
 		await applyStripeTaxIdChanges({
 			stripeCli,
 			stripeCustomerId,
 			taxIds: billingDetails.tax_ids,
 		});
+	}
+
+	if (Object.keys(customerUpdate).length > 0) {
+		await stripeCli.customers.update(stripeCustomerId, customerUpdate);
 	}
 };

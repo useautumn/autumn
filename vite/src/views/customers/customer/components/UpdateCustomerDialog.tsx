@@ -7,7 +7,7 @@ import {
 	SmallSpinner,
 } from "@autumn/ui";
 import { useParams } from "react-router";
-import { useCustomerObjectQuery } from "@/views/customers2/customer/hooks/useCustomerObjectQuery";
+import { useCusBillingDetailsQuery } from "../hooks/useCusBillingDetailsQuery";
 import { UpdateCustomerForm } from "./updateCustomer/UpdateCustomerForm";
 
 const UpdateCustomerDialog = ({
@@ -18,10 +18,13 @@ const UpdateCustomerDialog = ({
 	setOpen: (open: boolean) => void;
 }) => {
 	const { customer_id } = useParams();
-	const { data: customerObject, isLoading } = useCustomerObjectQuery({
+	const {
+		data: billingDetails,
+		isLoading,
+		error,
+	} = useCusBillingDetailsQuery({
 		customerId: customer_id,
-		scopeEntityId: null,
-		enabled: true,
+		enabled: !!selectedCustomer.processor?.id,
 	});
 
 	return (
@@ -32,13 +35,13 @@ const UpdateCustomerDialog = ({
 					Edit customer details and billing configuration.
 				</DialogDescription>
 			</DialogHeader>
-
 			{isLoading ? (
 				<SmallSpinner />
 			) : (
 				<UpdateCustomerForm
 					customer={selectedCustomer}
-					billingDetails={customerObject?.billing_details}
+					billingDetails={billingDetails}
+					billingDetailsError={error}
 					onSaved={() => setOpen(false)}
 				/>
 			)}

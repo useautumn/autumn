@@ -2,7 +2,7 @@ import type { ApiBillingDetails, Customer } from "@autumn/shared";
 import { DialogFooter, ShortcutButton } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
-import { BillingDetailsFields } from "./billingDetails/BillingDetailsFields";
+import { BillingDetailsSection } from "./billingDetails/BillingDetailsSection";
 import { CustomerDetailsFields } from "./CustomerDetailsFields";
 import { FIELD_STACK } from "./fieldLayout";
 import { useUpdateCustomerForm } from "./useUpdateCustomerForm";
@@ -10,10 +10,12 @@ import { useUpdateCustomerForm } from "./useUpdateCustomerForm";
 export const UpdateCustomerForm = ({
 	customer,
 	billingDetails,
+	billingDetailsError,
 	onSaved,
 }: {
 	customer: Customer;
 	billingDetails: ApiBillingDetails | null | undefined;
+	billingDetailsError: unknown;
 	onSaved: () => void;
 }) => {
 	const { form, initialValues, isSaving } = useUpdateCustomerForm({
@@ -23,7 +25,7 @@ export const UpdateCustomerForm = ({
 	});
 	const stripeId = useStore(form.store, (state) => state.values.stripeId);
 	const stripeIdChanged = stripeId !== initialValues.stripeId;
-	const canEditBillingDetails = !!initialValues.stripeId && !stripeIdChanged;
+	const isStripeLinked = !!initialValues.stripeId && !stripeIdChanged;
 
 	return (
 		<>
@@ -39,14 +41,11 @@ export const UpdateCustomerForm = ({
 
 			<section className={FIELD_STACK}>
 				<h4 className="text-sm font-semibold">Billing details</h4>
-				{canEditBillingDetails ? (
-					<BillingDetailsFields form={form} />
-				) : (
-					<InfoBox variant="note">
-						Billing details are stored on the Stripe customer. Link a Stripe
-						customer (and save) to edit address, tax IDs and invoice fields.
-					</InfoBox>
-				)}
+				<BillingDetailsSection
+					form={form}
+					isStripeLinked={isStripeLinked}
+					loadError={billingDetailsError}
+				/>
 			</section>
 
 			<DialogFooter>

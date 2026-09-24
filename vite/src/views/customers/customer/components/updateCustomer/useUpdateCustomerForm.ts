@@ -17,6 +17,7 @@ import {
 const CUSTOMER_QUERY_KEYS = [
 	"customer",
 	"customer-object",
+	"customer_billing_details",
 	"full_customers",
 	"customers",
 ] as const;

@@ -4,11 +4,12 @@
  * Contract:
  *   update without a Stripe customer    -> 400, nothing written
  *   expand without a Stripe customer    -> billing_details: null
- *   invalid tax id with a removal       -> 400 (Stripe error), removal not applied
+ *   invalid tax id with other changes   -> 400 (Stripe error); removal, address and email
+ *                                          are not written to Stripe
  */
 
-import { test } from "bun:test";
-import { ErrCode } from "@autumn/shared";
+import { expect, test } from "bun:test";
+import { type ApiCustomerV5, ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -44,7 +45,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("billing details: invalid tax id keeps existing ones")}`,
 	async () => {
-		const { customerId, autumnV2_3 } = await initScenario({
+		const { customerId, autumnV2_3, ctx } = await initScenario({
 			customerId: "billing-details-invalid-tax-id",
 			setup: [s.customer({ testClock: false })],
 			actions: [],
@@ -59,7 +60,9 @@ test.concurrent(
 			errCode: ErrCode.StripeError,
 			func: () =>
 				autumnV2_3.customers.update(customerId, {
+					email: "changed@example.com",
 					billing_details: {
+						address: { city: "Munich", country: "DE" },
 						tax_ids: {
 							add: [{ type: "eu_vat", value: "not-a-vat" }],
 							remove: [germanVat],
@@ -68,10 +71,16 @@ test.concurrent(
 				}),
 		});
 
-		await expectBillingDetailsCorrect({
+		const customer = await expectBillingDetailsCorrect({
 			autumn: autumnV2_3,
 			customerId,
 			expected: { tax_ids: [germanVat] },
 		});
+		const stripeCustomer = await ctx.stripeCli.customers.retrieve(
+			(customer as ApiCustomerV5).stripe_id as string,
+		);
+		expect("email" in stripeCustomer && stripeCustomer.email).not.toBe(
+			"changed@example.com",
+		);
 	},
 );

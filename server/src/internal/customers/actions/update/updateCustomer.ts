@@ -127,12 +127,20 @@ export const updateCustomer = async ({
 		);
 	}
 
-	if (billingDetails && !stripeId) {
-		throw new RecaseError({
-			message:
-				"billing_details requires a linked Stripe customer. Set stripe_id or create the customer in Stripe first.",
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
+	// Billing details go first: Stripe is most likely to reject them (e.g. a bad VAT).
+	if (billingDetails) {
+		if (!stripeId) {
+			throw new RecaseError({
+				message:
+					"billing_details requires a linked Stripe customer. Set stripe_id or create the customer in Stripe first.",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+		await updateStripeBillingDetails({
+			ctx,
+			stripeCustomerId: stripeId,
+			billingDetails,
 		});
 	}
 
@@ -180,14 +188,6 @@ export const updateCustomer = async ({
 	if (Object.keys(stripeUpdate).length > 0 && stripeId) {
 		const stripeCli = createStripeCli({ org, env });
 		await stripeCli.customers.update(stripeId, stripeUpdate);
-	}
-
-	if (billingDetails && stripeId) {
-		await updateStripeBillingDetails({
-			ctx,
-			stripeCustomerId: stripeId,
-			billingDetails,
-		});
 	}
 
 	// Prepare update data — only include defined billing control fields

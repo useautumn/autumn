@@ -3,8 +3,10 @@ import {
 	BILLING_DETAILS_ADDRESS_FIELDS,
 	type BillingDetailsParams,
 	type BillingDetailsTaxId,
+	notNullish,
 	taxIdKey,
 } from "@autumn/shared";
+import { isEqual, mapValues } from "lodash";
 
 type AddressField = (typeof BILLING_DETAILS_ADDRESS_FIELDS)[number];
 type Row = Record<string, string>;
@@ -30,25 +32,15 @@ export const billingDetailsToFormValues = (
 	custom_fields: billingDetails?.invoice_settings.custom_fields ?? [],
 });
 
-const trimRow = <T extends Row>(row: T) =>
-	Object.fromEntries(
-		Object.entries(row).map(([key, value]) => [key, value.trim()]),
-	) as T;
-
 /** Trimmed rows with a value; blank rows the user added but never filled are dropped. */
 const filledRows = <T extends Row & { value: string }>(rows: T[]) =>
-	rows.map(trimRow).filter((row) => row.value !== "");
-
-const isSame = (a: unknown, b: unknown) =>
-	JSON.stringify(a) === JSON.stringify(b);
+	rows
+		.map((row) => mapValues(row, (value) => value.trim()) as T)
+		.filter((row) => row.value !== "");
 
 const addressChange = (address: BillingDetailsFormValues["address"]) => {
-	const trimmed = trimRow(address);
-	const isEmpty = Object.values(trimmed).every((value) => value === "");
-	if (isEmpty) return null;
-	return Object.fromEntries(
-		Object.entries(trimmed).map(([key, value]) => [key, value || null]),
-	);
+	const trimmed = mapValues(address, (value) => value.trim() || null);
+	return Object.values(trimmed).some(notNullish) ? trimmed : null;
 };
 
 const taxIdsMissingFrom = (
@@ -88,7 +80,7 @@ export const billingDetailsChanges = ({
 	const changes: BillingDetailsParams = {};
 
 	const address = addressChange(current.address);
-	if (!isSame(address, addressChange(initial.address))) {
+	if (!isEqual(address, addressChange(initial.address))) {
 		changes.address = address;
 	}
 
@@ -103,7 +95,7 @@ export const billingDetailsChanges = ({
 	}
 
 	const customFields = filledRows(current.custom_fields);
-	if (!isSame(customFields, initial.custom_fields)) {
+	if (!isEqual(customFields, initial.custom_fields)) {
 		changes.invoice_settings = {
 			custom_fields: customFields.length > 0 ? customFields : null,
 		};
