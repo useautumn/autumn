@@ -27,6 +27,7 @@ import {
 	startAllEdgeConfigPolling,
 	stopAllEdgeConfigPolling,
 } from "./internal/misc/edgeConfig/edgeConfigRegistry.js";
+import { startEdgeConfigRelay } from "./internal/misc/edgeConfig/edgeConfigRelay.js";
 
 // Edge config modules self-register on import
 import "./internal/misc/requestBlocks/requestBlockStore.js";
@@ -197,6 +198,9 @@ if (process.env.NODE_ENV === "development") {
 
 		const numWorkers = getServerForkCount();
 		console.log(`Forking ${numWorkers} workers`);
+
+		// Before forking: forks inherit the relay flag and follow this primary.
+		await startEdgeConfigRelay({ clusterModule: cluster, logger });
 
 		for (let i = 0; i < numWorkers; i++) {
 			cluster.fork();

@@ -1,15 +1,19 @@
 import { ErrCode, ms } from "@autumn/shared";
-import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import type { z } from "zod/v4";
 import { getAdminS3Config } from "@/external/aws/s3/adminS3Config.js";
 import {
 	createBunS3EdgeConfigClient,
 	type EdgeConfigS3Client,
 } from "@/external/aws/s3/bunS3EdgeConfigClient.js";
-import { getS3BodyAsString } from "@/external/aws/s3/s3Utils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import {
+	type EdgeConfigFollower,
+	getEdgeConfigFollower,
+} from "./edgeConfigFollower.js";
 import { writeEdgeConfigTimestamp } from "./edgeConfigTimestamp.js";
+import { readEdgeConfigRaw } from "./readEdgeConfigRaw.js";
 
 export type EdgeConfigStatus = {
 	configured: boolean;
@@ -66,12 +70,15 @@ export const createEdgeConfigStore = <T>({
 		? ms.seconds(1)
 		: ms.seconds(10),
 	s3Client: injectedS3Client,
+	follower,
 }: {
 	s3Key: string;
 	schema: z.ZodType<T>;
 	defaultValue: () => T;
 	pollIntervalMs?: number;
 	s3Client?: EdgeConfigS3Client;
+	/** Undefined resolves the process-wide follower (cluster forks only). */
+	follower?: EdgeConfigFollower | null;
 }) => {
 	let runtimeConfig: T = defaultValue();
 	let runtimeStatus: EdgeConfigStatus = {
@@ -80,6 +87,7 @@ export const createEdgeConfigStore = <T>({
 		error: "Edge config not yet initialized",
 	};
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
+	let following = false;
 
 	// When the base64 test override is present, seed this store's config from it
 	// (or its default) once and operate fully in-memory — no S3, no polling.
@@ -115,33 +123,23 @@ export const createEdgeConfigStore = <T>({
 		return createBunS3EdgeConfigClient({ region });
 	};
 
+	const parseRaw = (raw: string | null): T => {
+		const body = raw?.trim();
+		return body ? schema.parse(JSON.parse(body)) : defaultValue();
+	};
+
 	const readFromSource = async (): Promise<T> => {
 		// Override mode: serve the in-memory (env-seeded) config, never touch S3.
 		if (override) {
 			return runtimeConfig;
 		}
 
-		const { bucket, key, configured } = getConfigLocation();
+		const { key, configured } = getConfigLocation();
+		if (!configured) return defaultValue();
 
-		if (!configured || !bucket || !key) return defaultValue();
-
-		const client = resolveClient();
-		try {
-			const response = await client.send(
-				new GetObjectCommand({ Bucket: bucket, Key: key }),
-			);
-
-			if (!response.Body) return defaultValue();
-
-			const raw = (await getS3BodyAsString({ body: response.Body })).trim();
-			if (!raw) return defaultValue();
-
-			return schema.parse(JSON.parse(raw));
-		} catch (error) {
-			const name = error instanceof Error ? error.name : "";
-			if (name === "NoSuchKey") return defaultValue();
-			throw error;
-		}
+		return parseRaw(
+			await readEdgeConfigRaw({ key, s3Client: resolveClient() }),
+		);
 	};
 
 	const writeToSource = async ({
@@ -185,7 +183,7 @@ export const createEdgeConfigStore = <T>({
 		// The config object is durable by now, so a lost signal must not fail the
 		// write or strand this process on the old value; the backstop still catches it.
 		try {
-			await writeEdgeConfigTimestamp({ s3Client: client });
+			await writeEdgeConfigTimestamp({ s3Client: client, logger });
 		} catch (error) {
 			logger?.error(
 				`Edge config "${s3Key}" written but timestamp signal failed; propagation waits for the backstop refresh: ${error}`,
@@ -201,13 +199,65 @@ export const createEdgeConfigStore = <T>({
 		};
 	};
 
+	const markFailed = ({
+		error,
+		logger,
+	}: {
+		error: unknown;
+		logger?: Logger;
+	}) => {
+		const errMsg =
+			error instanceof Error ? error.message : "Failed to load config";
+		const previouslyHealthy = runtimeStatus.healthy;
+		const sameError = runtimeStatus.error === errMsg;
+
+		runtimeStatus = {
+			configured: true,
+			healthy: false,
+			lastFetchAt: runtimeStatus.lastFetchAt,
+			lastSuccessAt: runtimeStatus.lastSuccessAt,
+			error: errMsg,
+		};
+
+		// Log on first failure or whenever the error changes. Suppresses the
+		// poll-loop spam that otherwise fires every pollIntervalMs when S3
+		// credentials are missing/invalid in dev.
+		if (previouslyHealthy || !sameError) {
+			logger?.warn(`Failed to refresh edge config "${s3Key}": ${error}`);
+		}
+	};
+
+	/** Parses a body fetched elsewhere (the cluster relay) exactly as refresh
+	 *  would: null/empty serves the default, a bad body keeps the last good one. */
+	const applyRaw = ({
+		raw,
+		logger,
+	}: {
+		raw: string | null;
+		logger?: Logger;
+	}) => {
+		if (override) return;
+		runtimeStatus = { ...runtimeStatus, lastFetchAt: nowIso() };
+		try {
+			runtimeConfig = parseRaw(raw);
+			runtimeStatus = {
+				configured: true,
+				healthy: true,
+				lastFetchAt: runtimeStatus.lastFetchAt,
+				lastSuccessAt: nowIso(),
+			};
+		} catch (error) {
+			markFailed({ error, logger });
+		}
+	};
+
 	const refresh = async ({ logger }: { logger?: Logger } = {}) => {
 		// Override mode: config is fixed from env; nothing to refresh.
 		if (override) {
 			return;
 		}
 
-		const { configured } = getConfigLocation();
+		const { key, configured } = getConfigLocation();
 		runtimeStatus = {
 			...runtimeStatus,
 			configured,
@@ -226,36 +276,14 @@ export const createEdgeConfigStore = <T>({
 			return;
 		}
 
+		let raw: string | null;
 		try {
-			const config = await readFromSource();
-			runtimeConfig = config;
-			runtimeStatus = {
-				configured: true,
-				healthy: true,
-				lastFetchAt: runtimeStatus.lastFetchAt,
-				lastSuccessAt: nowIso(),
-			};
+			raw = await readEdgeConfigRaw({ key, s3Client: resolveClient() });
 		} catch (error) {
-			const errMsg =
-				error instanceof Error ? error.message : "Failed to load config";
-			const previouslyHealthy = runtimeStatus.healthy;
-			const sameError = runtimeStatus.error === errMsg;
-
-			runtimeStatus = {
-				configured: true,
-				healthy: false,
-				lastFetchAt: runtimeStatus.lastFetchAt,
-				lastSuccessAt: runtimeStatus.lastSuccessAt,
-				error: errMsg,
-			};
-
-			// Log on first failure or whenever the error changes. Suppresses the
-			// poll-loop spam that otherwise fires every pollIntervalMs when S3
-			// credentials are missing/invalid in dev.
-			if (previouslyHealthy || !sameError) {
-				logger?.warn(`Failed to refresh edge config "${s3Key}": ${error}`);
-			}
+			markFailed({ error, logger });
+			return;
 		}
+		applyRaw({ raw, logger });
 	};
 
 	const startPolling = async ({ logger }: { logger?: Logger } = {}) => {
@@ -263,7 +291,21 @@ export const createEdgeConfigStore = <T>({
 		if (override) {
 			return;
 		}
-		if (pollTimer) return;
+		if (pollTimer || following) return;
+
+		// Cluster forks take this key from the primary's relay at its own interval.
+		const activeFollower =
+			follower === undefined ? getEdgeConfigFollower() : follower;
+		if (activeFollower) {
+			following = true;
+			const { timedOutKeys } = await activeFollower.follow({
+				entries: [
+					{ key: s3Key, pollIntervalMs, store: { applyRaw, markFailed } },
+				],
+				logger,
+			});
+			if (timedOutKeys.length === 0) return;
+		}
 
 		await refresh({ logger });
 		pollTimer = setInterval(() => {
@@ -279,9 +321,12 @@ export const createEdgeConfigStore = <T>({
 	};
 
 	return {
+		s3Key,
 		get: () => runtimeConfig,
 		getStatus: () => runtimeStatus,
 		refresh,
+		applyRaw,
+		markFailed,
 		startPolling,
 		stopPolling,
 		readFromSource,
