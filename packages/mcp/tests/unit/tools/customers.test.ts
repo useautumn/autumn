@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { CustomerExpand } from "@autumn/shared";
 import { customers } from "../../../src/tools/customers.js";
 
 test("updateCustomer accepts billing_details", () => {
@@ -26,8 +27,8 @@ test("updateCustomer accepts billing_details", () => {
 test("getCustomer accepts the billing_details expand", () => {
 	const parsed = customers.schemas.getCustomer.parse({
 		customer_id: "customer_123",
-		expand: ["billing_details"],
+		expand: [CustomerExpand.BillingDetails],
 	});
 
-	expect(parsed.expand).toEqual(["billing_details"]);
+	expect(parsed.expand).toEqual([CustomerExpand.BillingDetails]);
 });
