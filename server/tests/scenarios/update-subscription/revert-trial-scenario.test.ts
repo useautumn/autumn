@@ -41,139 +41,121 @@ const logSharedSubscription = async ({
 	});
 };
 
-test.concurrent(
-	`${chalk.yellowBright("revert-trial: setup only — QA updates from the dashboard")}`,
-	async () => {
-		const customerId = "revert-trial-qa";
-		const { trialCustomerProduct } = await setupRevertTrial({ customerId });
+test(`${chalk.yellowBright("revert-trial: setup only — QA updates from the dashboard")}`, async () => {
+	const customerId = "revert-trial-qa";
+	const { trialCustomerProduct } = await setupRevertTrial({ customerId });
 
-		console.log(chalk.green(`[${customerId}] ready`), {
-			trialEndsAt: formatMs(trialCustomerProduct.trial_ends_at),
-		});
-	},
-);
+	console.log(chalk.green(`[${customerId}] ready`), {
+		trialEndsAt: formatMs(trialCustomerProduct.trial_ends_at),
+	});
+});
 
-test.concurrent(
-	`${chalk.yellowBright("revert-trial: extend trial (on_end revert) — Stripe untouched")}`,
-	async () => {
-		const customerId = "revert-trial-extend";
-		const { autumnV2_3, ctx, trialCustomerProduct, subscriptionBefore } =
-			await setupRevertTrial({ customerId });
+test(`${chalk.yellowBright("revert-trial: extend trial (on_end revert) — Stripe untouched")}`, async () => {
+	const customerId = "revert-trial-extend";
+	const { autumnV2_3, ctx, trialCustomerProduct, subscriptionBefore } =
+		await setupRevertTrial({ customerId });
 
-		await extendRevertTrial({
-			autumn: autumnV2_3,
-			customerId,
-			subscriptionId: trialCustomerProduct.id,
-			onEnd: "revert",
-		});
+	await extendRevertTrial({
+		autumn: autumnV2_3,
+		customerId,
+		subscriptionId: trialCustomerProduct.id,
+		onEnd: "revert",
+	});
 
-		await logSharedSubscription({ ctx, label: customerId, subscriptionBefore });
-	},
-);
+	await logSharedSubscription({ ctx, label: customerId, subscriptionBefore });
+});
 
-test.concurrent(
-	`${chalk.yellowBright("revert-trial: extend trial without on_end (dashboard shape) — inherits revert")}`,
-	async () => {
-		const customerId = "revert-trial-extend-inherit";
-		const { autumnV2_3, ctx, trialCustomerProduct, subscriptionBefore } =
-			await setupRevertTrial({ customerId });
+test(`${chalk.yellowBright("revert-trial: extend trial without on_end (dashboard shape) — inherits revert")}`, async () => {
+	const customerId = "revert-trial-extend-inherit";
+	const { autumnV2_3, ctx, trialCustomerProduct, subscriptionBefore } =
+		await setupRevertTrial({ customerId });
 
-		await extendRevertTrial({
-			autumn: autumnV2_3,
-			customerId,
-			subscriptionId: trialCustomerProduct.id,
-		});
+	await extendRevertTrial({
+		autumn: autumnV2_3,
+		customerId,
+		subscriptionId: trialCustomerProduct.id,
+	});
 
-		await logSharedSubscription({ ctx, label: customerId, subscriptionBefore });
-	},
-);
+	await logSharedSubscription({ ctx, label: customerId, subscriptionBefore });
+});
 
-test.concurrent(
-	`${chalk.yellowBright("revert-trial: change prepaid quantity — trial kept, Stripe untouched")}`,
-	async () => {
-		const customerId = "revert-trial-quantity";
-		const { autumnV2_3, ctx, trialCustomerProduct, subscriptionBefore } =
-			await setupRevertTrial({ customerId });
+test(`${chalk.yellowBright("revert-trial: change prepaid quantity — trial kept, Stripe untouched")}`, async () => {
+	const customerId = "revert-trial-quantity";
+	const { autumnV2_3, ctx, trialCustomerProduct, subscriptionBefore } =
+		await setupRevertTrial({ customerId });
 
-		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
-			customer_id: customerId,
-			subscription_id: trialCustomerProduct.id,
-			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 300 }],
-		});
+	await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+		customer_id: customerId,
+		subscription_id: trialCustomerProduct.id,
+		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 300 }],
+	});
 
-		await logSharedSubscription({ ctx, label: customerId, subscriptionBefore });
-	},
-);
+	await logSharedSubscription({ ctx, label: customerId, subscriptionBefore });
+});
 
-test.concurrent(
-	`${chalk.yellowBright("revert-trial: extend then cancel immediately — Pro restored")}`,
-	async () => {
-		const customerId = "revert-trial-cancel";
-		const {
-			autumnV2_3,
-			ctx,
-			pro,
-			enterprise,
-			trialCustomerProduct,
-			subscriptionBefore,
-		} = await setupRevertTrial({ customerId });
+test(`${chalk.yellowBright("revert-trial: extend then cancel immediately — Pro restored")}`, async () => {
+	const customerId = "revert-trial-cancel";
+	const {
+		autumnV2_3,
+		ctx,
+		pro,
+		enterprise,
+		trialCustomerProduct,
+		subscriptionBefore,
+	} = await setupRevertTrial({ customerId });
 
-		await extendRevertTrial({
-			autumn: autumnV2_3,
-			customerId,
-			subscriptionId: trialCustomerProduct.id,
-			onEnd: "revert",
-		});
-		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
-			customer_id: customerId,
-			plan_id: enterprise.id,
-			cancel_action: "cancel_immediately",
-		});
+	await extendRevertTrial({
+		autumn: autumnV2_3,
+		customerId,
+		subscriptionId: trialCustomerProduct.id,
+		onEnd: "revert",
+	});
+	await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+		customer_id: customerId,
+		plan_id: enterprise.id,
+		cancel_action: "cancel_immediately",
+	});
 
-		await expectRevertTrialReverted({
-			ctx,
-			customerId,
-			trialProductId: enterprise.id,
-			pausedProductId: pro.id,
-		});
-		await logSharedSubscription({ ctx, label: customerId, subscriptionBefore });
-	},
-);
+	await expectRevertTrialReverted({
+		ctx,
+		customerId,
+		trialProductId: enterprise.id,
+		pausedProductId: pro.id,
+	});
+	await logSharedSubscription({ ctx, label: customerId, subscriptionBefore });
+});
 
-test.concurrent(
-	`${chalk.yellowBright("revert-trial: convert to bill / remove trial — both rejected")}`,
-	async () => {
-		const customerId = "revert-trial-rejected";
-		const { autumnV2_3, ctx, trialCustomerProduct, subscriptionBefore } =
-			await setupRevertTrial({ customerId });
+test(`${chalk.yellowBright("revert-trial: convert to bill / remove trial — both rejected")}`, async () => {
+	const customerId = "revert-trial-rejected";
+	const { autumnV2_3, ctx, trialCustomerProduct, subscriptionBefore } =
+		await setupRevertTrial({ customerId });
 
-		const rejectedUpdates = {
-			convertToBill: () =>
-				extendRevertTrial({
-					autumn: autumnV2_3,
-					customerId,
-					subscriptionId: trialCustomerProduct.id,
-					onEnd: "bill",
-				}),
-			removeTrial: () =>
-				autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
-					customer_id: customerId,
-					subscription_id: trialCustomerProduct.id,
-					customize: { free_trial: null },
-				}),
-		};
+	const rejectedUpdates = {
+		convertToBill: () =>
+			extendRevertTrial({
+				autumn: autumnV2_3,
+				customerId,
+				subscriptionId: trialCustomerProduct.id,
+				onEnd: "bill",
+			}),
+		removeTrial: () =>
+			autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+				customer_id: customerId,
+				subscription_id: trialCustomerProduct.id,
+				customize: { free_trial: null },
+			}),
+	};
 
-		for (const [name, update] of Object.entries(rejectedUpdates)) {
-			const message = await update().then(
-				() => "ACCEPTED (unexpected)",
-				(error: Error) => error.message,
-			);
-			console.log(chalk.magenta(`[${customerId}] ${name}`), message);
-		}
+	for (const [name, update] of Object.entries(rejectedUpdates)) {
+		const message = await update().then(
+			() => "ACCEPTED (unexpected)",
+			(error: Error) => error.message,
+		);
+		console.log(chalk.magenta(`[${customerId}] ${name}`), message);
+	}
 
-		await logSharedSubscription({ ctx, label: customerId, subscriptionBefore });
-	},
-);
+	await logSharedSubscription({ ctx, label: customerId, subscriptionBefore });
+});
 
 const scopedSetups = {
 	"revert-trial-entities": setupEntityRevertTrial,
@@ -182,29 +164,26 @@ const scopedSetups = {
 };
 
 for (const [customerId, setup] of Object.entries(scopedSetups)) {
-	test.concurrent(
-		`${chalk.yellowBright(`revert-trial: ${customerId} — extend trial, Stripe untouched`)}`,
-		async () => {
-			const {
-				autumnV2_3,
-				ctx,
-				entityId,
-				trialCustomerProduct,
-				subscriptionBefore,
-			} = await setup({ customerId });
+	test(`${chalk.yellowBright(`revert-trial: ${customerId} — extend trial, Stripe untouched`)}`, async () => {
+		const {
+			autumnV2_3,
+			ctx,
+			entityId,
+			trialCustomerProduct,
+			subscriptionBefore,
+		} = await setup({ customerId });
 
-			await extendRevertTrial({
-				autumn: autumnV2_3,
-				customerId,
-				subscriptionId: trialCustomerProduct.id,
-				entityId,
-			});
+		await extendRevertTrial({
+			autumn: autumnV2_3,
+			customerId,
+			subscriptionId: trialCustomerProduct.id,
+			entityId,
+		});
 
-			await logSharedSubscription({
-				ctx,
-				label: customerId,
-				subscriptionBefore,
-			});
-		},
-	);
+		await logSharedSubscription({
+			ctx,
+			label: customerId,
+			subscriptionBefore,
+		});
+	});
 }
