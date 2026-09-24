@@ -24,6 +24,7 @@ import {
 	handleUpdateCustomButtons,
 } from "./handlers/handleCustomButtons.js";
 import { handleDeleteOrgLogo } from "./handlers/handleDeleteOrgLogo.js";
+import { handleFetchOrgLogo } from "./handlers/handleFetchOrgLogo.js";
 import { handleGetOnboardingStatus } from "./handlers/handleGetOnboardingStatus.js";
 import { handleGetOrgFlags } from "./handlers/handleGetOrgFlags.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
@@ -72,6 +73,7 @@ internalOrgRouter.get("/members", ...handleGetOrgMembers);
 internalOrgRouter.post("/remove-member", ...handleRemoveMember);
 internalOrgRouter.get("/upload_url", ...handleGetUploadUrl);
 internalOrgRouter.delete("/logo", ...handleDeleteOrgLogo);
+internalOrgRouter.post("/logo/fetch", ...handleFetchOrgLogo);
 internalOrgRouter.get("/invites", ...handleGetInvites);
 // Mounted under /organization, so this resolves to
 // POST /organization/onboardingStatus.

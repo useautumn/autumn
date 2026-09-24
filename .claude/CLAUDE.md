@@ -145,3 +145,13 @@ cd server && bun ts
 ```
 
 This ensures TypeScript compilation succeeds before committing changes.
+
+---
+
+## Context.dev (web / brand data)
+
+- **Env var:** `CONTEXT_DEV_API_KEY` (server-only secret, lives in Infisical). Never expose it to `vite/`.
+- **Wrapper:** all Context.dev calls go through `server/src/external/contextDev/contextDevClient.ts` (auth, `Retry-After` on 429, bounded backoff on 408/5xx). Don't call `api.context.dev` from anywhere else; mock this module in tests — every real call costs credits.
+- **Endpoints in use:**
+  - `POST /v1/brand/retrieve` (10 credits) — org logo fetch in `server/src/internal/orgs/handlers/handleFetchOrgLogo.ts` (`POST /organization/logo/fetch`). Docs: https://docs.context.dev/api-reference/brand-intelligence/brand
+- Docs root: https://docs.context.dev (append `.md` for plain markdown).
