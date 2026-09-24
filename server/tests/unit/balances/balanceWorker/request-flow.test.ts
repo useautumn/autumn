@@ -321,6 +321,9 @@ test.concurrent(
 				evict: async () => {
 					throw cause;
 				},
+				flush: async () => {
+					throw cause;
+				},
 				finalize: async () => {
 					throw cause;
 				},

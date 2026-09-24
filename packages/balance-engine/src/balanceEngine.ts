@@ -36,6 +36,7 @@ export type { EvictCommand } from "./commands/evict/types/evictCommand.js";
 export { computeFinalize } from "./commands/finalize/computeFinalize.js";
 export type { FinalizeCommand } from "./commands/finalize/types/finalizeCommand.js";
 export type { FinalizeResult } from "./commands/finalize/types/finalizeResult.js";
+export type { FlushCommand } from "./commands/flush/types/flushCommand.js";
 export { computeInitialize } from "./commands/initialize/computeInitialize.js";
 export type { InitializeCommand } from "./commands/initialize/types/initializeCommand.js";
 export type { InitializeRequest } from "./commands/initialize/types/initializeRequest.js";
@@ -151,6 +152,7 @@ export {
 	parseConfirmExpiredLockCommand,
 	parseEvictCommand,
 	parseFinalizeCommand,
+	parseFlushCommand,
 	parseInitializeCommand,
 	parseInitializeRequest,
 	parseMeteringIdentity,

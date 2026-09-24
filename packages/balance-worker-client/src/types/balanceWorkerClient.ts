@@ -4,6 +4,7 @@ import type {
 	ConfirmExpiredLockCommand,
 	EvictCommand,
 	FinalizeCommand,
+	FlushCommand,
 	InitializeRequest,
 	ReadSubjectStateCommand,
 	ResetCommand,
@@ -15,6 +16,7 @@ import type { CheckReply } from "../contracts/check.js";
 import type { ConfirmExpiredLockReply } from "../contracts/confirmExpiredLock.js";
 import type { EvictReply } from "../contracts/evict.js";
 import type { FinalizeReply } from "../contracts/finalize.js";
+import type { FlushReply } from "../contracts/flush.js";
 import type { InitializeReply } from "../contracts/initialize.js";
 import type { ReadSubjectStateReply } from "../contracts/readSubjectState.js";
 import type { ResetReply } from "../contracts/reset.js";
@@ -34,6 +36,7 @@ export type ReadSubjectStateParams = {
 	signal?: AbortSignal;
 };
 export type EvictParams = { command: EvictCommand; signal?: AbortSignal };
+export type FlushParams = { command: FlushCommand; signal?: AbortSignal };
 export type ConfirmExpiredLockParams = {
 	command: ConfirmExpiredLockCommand;
 	signal?: AbortSignal;
@@ -61,6 +64,8 @@ export type BalanceWorkerClient = {
 		params: ApplyBillingPlanParams,
 	): Promise<ApplyBillingPlanReply>;
 	evict(params: EvictParams): Promise<EvictReply>;
+	/** Answers once Postgres holds the customer's accepted writes; a caller about to read Postgres sends it first. */
+	flush(params: FlushParams): Promise<FlushReply>;
 	finalize(params: FinalizeParams): Promise<FinalizeReply>;
 	confirmExpiredLock(
 		params: ConfirmExpiredLockParams,

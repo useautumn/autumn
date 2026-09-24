@@ -4,6 +4,7 @@ import type {
 	ConfirmExpiredLockCommand,
 	EvictCommand,
 	FinalizeCommand,
+	FlushCommand,
 	InitializeRequest,
 	MutationSource,
 	ReadSubjectStateCommand,
@@ -16,6 +17,7 @@ import { check as checkPartition } from "./commands/check.js";
 import { confirmExpiredLock as confirmExpiredLockPartition } from "./commands/confirmExpiredLock.js";
 import { evict as evictPartition } from "./commands/evict.js";
 import { finalize as finalizePartition } from "./commands/finalize.js";
+import { flush as flushPartition } from "./commands/flush.js";
 import { initialize as initializePartition } from "./commands/initialize.js";
 import { readSubjectState as readSubjectStatePartition } from "./commands/readSubjectState.js";
 import { reset as resetPartition } from "./commands/reset.js";
@@ -113,6 +115,13 @@ function createProcessor({
 		});
 	}
 
+	function flush({ command }: { command: FlushCommand }) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: flushPartition({ scope, command }),
+		});
+	}
+
 	function finalize({ command }: { command: FinalizeCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
@@ -175,6 +184,7 @@ function createProcessor({
 		readSubjectState,
 		initialize,
 		evict,
+		flush,
 		finalize,
 		confirmExpiredLock,
 		reset,

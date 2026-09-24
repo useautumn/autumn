@@ -4,6 +4,7 @@ import type {
 	ConfirmExpiredLockCommand,
 	EvictCommand,
 	FinalizeCommand,
+	FlushCommand,
 	InitializeRequest,
 	MutationSource,
 	ReadSubjectStateCommand,
@@ -16,6 +17,7 @@ import type {
 	ConfirmExpiredLockReply,
 	EvictReply,
 	FinalizeReply,
+	FlushReply,
 	InitializeReply,
 	ReadSubjectStateReply,
 	ResetReply,
@@ -50,6 +52,7 @@ export type PartitionProcessor = {
 		request: ApplyBillingPlanRequest;
 	}): Promise<ApplyBillingPlanReply>;
 	evict(params: { command: EvictCommand }): Promise<EvictReply>;
+	flush(params: { command: FlushCommand }): Promise<FlushReply>;
 	finalize(params: { command: FinalizeCommand }): Promise<FinalizeReply>;
 	confirmExpiredLock(params: {
 		command: ConfirmExpiredLockCommand;

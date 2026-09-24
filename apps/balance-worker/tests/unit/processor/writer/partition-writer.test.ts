@@ -1832,4 +1832,78 @@ describe("partition writer", () => {
 			closeFixture(fixture);
 		}
 	});
+
+	test("flush answers only once the store holds the customer's accepted writes, and drops nothing", async () => {
+		const fixture = createFixture();
+		const gate = Promise.withResolvers<void>();
+		try {
+			const appender = new RecordingCommittedAppender();
+			const processor = createPartitionProcessor({
+				ctx: {
+					stateStore: {
+						...fixture.store,
+						applyDurableMutations: async (params) => {
+							await gate.promise;
+							return fixture.store.applyDurableMutations(params);
+						},
+					},
+					appender,
+					db: createSyntheticWorkerDb(),
+					catalogCache: createTestCatalogCache(),
+					receiptPolicy: defaultReceiptPolicy,
+					recentCommands: createRecentCommands({
+						windowMs: 600_000,
+						now: () => 0,
+					}),
+					assertCanRead: () => {},
+				},
+				config: { topic, partition, writerLimits: defaultLimits },
+			});
+			// Answered on the log; the store has not taken it yet.
+			await processor.track({
+				command: createCommand({ commandId: "before_flush" }),
+			});
+
+			let flushed = false;
+			const flush = processor
+				.flush({
+					command: {
+						schemaVersion: 1,
+						type: "flush",
+						requestId: "req_flush",
+						identity: firstIdentity,
+						occurredAt: 1_700_000_000_000,
+					},
+				})
+				.then((reply) => {
+					flushed = true;
+					return reply;
+				});
+			await waitForBatch();
+			expect(flushed).toBe(false);
+
+			gate.resolve();
+			expect(await flush).toEqual({ stored: true });
+			expect(
+				readBalance({ store: fixture.store, identity: firstIdentity }),
+			).toMatchObject({ balance: 5 });
+			// The copy is still resident: a read answers from memory without a load.
+			expect(
+				processor.readSubjectState({
+					command: {
+						schemaVersion: 1,
+						type: "readSubjectState",
+						requestId: "req_read",
+						identity: firstIdentity,
+						occurredAt: 1_700_000_000_000,
+						org: testOrg,
+					},
+				}),
+			).resolves.toMatchObject({ state: { revision: 1 } });
+		} finally {
+			gate.resolve();
+			await waitForBatch();
+			closeFixture(fixture);
+		}
+	});
 });

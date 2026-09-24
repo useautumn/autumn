@@ -19,6 +19,10 @@ export type {
 	FinalizeReply,
 } from "./contracts/finalize.js";
 export type {
+	BalanceWorkerFlushRequest,
+	FlushReply,
+} from "./contracts/flush.js";
+export type {
 	BalanceWorkerInitializeRequest,
 	InitializeReply,
 } from "./contracts/initialize.js";

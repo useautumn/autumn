@@ -19,6 +19,10 @@ import {
 	finalizeCommandSchema,
 } from "./commands/finalize/types/finalizeCommand.js";
 import {
+	type FlushCommand,
+	flushCommandSchema,
+} from "./commands/flush/types/flushCommand.js";
+import {
 	type InitializeCommand,
 	initializeCommandSchema,
 } from "./commands/initialize/types/initializeCommand.js";
@@ -85,6 +89,12 @@ export const parseReadSubjectStateCommand = ({
 }: {
 	input: unknown;
 }): ReadSubjectStateCommand => readSubjectStateCommandSchema.parse(input);
+
+export const parseFlushCommand = ({
+	input,
+}: {
+	input: unknown;
+}): FlushCommand => flushCommandSchema.parse(input);
 
 export const parseEvictCommand = ({
 	input,

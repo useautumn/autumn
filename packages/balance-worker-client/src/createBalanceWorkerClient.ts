@@ -4,6 +4,7 @@ import { sendCheck } from "./commands/sendCheck.js";
 import { sendConfirmExpiredLock } from "./commands/sendConfirmExpiredLock.js";
 import { sendEvict } from "./commands/sendEvict.js";
 import { sendFinalize } from "./commands/sendFinalize.js";
+import { sendFlush } from "./commands/sendFlush.js";
 import { sendInitialize } from "./commands/sendInitialize.js";
 import { sendReadSubjectState } from "./commands/sendReadSubjectState.js";
 import { sendReset } from "./commands/sendReset.js";
@@ -21,6 +22,7 @@ import type {
 	ConfirmExpiredLockParams,
 	EvictParams,
 	FinalizeParams,
+	FlushParams,
 	InitializeParams,
 	ReadSubjectStateParams,
 	ResetParams,
@@ -81,6 +83,10 @@ export function createBalanceWorkerClient({
 		return sendEvict({ ctx, ...params });
 	}
 
+	function flush(params: FlushParams) {
+		return sendFlush({ ctx, ...params });
+	}
+
 	function finalize(params: FinalizeParams) {
 		return sendFinalize({ ctx, ...params });
 	}
@@ -112,6 +118,7 @@ export function createBalanceWorkerClient({
 		initialize,
 		applyBillingPlan,
 		evict,
+		flush,
 		finalize,
 		confirmExpiredLock,
 		reset,

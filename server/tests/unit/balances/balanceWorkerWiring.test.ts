@@ -122,6 +122,7 @@ async function startsAndMemoizesWhateverTheRolloutSays(): Promise<void> {
 		applyBillingPlan: track,
 		initialize: track,
 		evict: track,
+		flush: track,
 		finalize: track,
 		confirmExpiredLock: track,
 		reset: track,
