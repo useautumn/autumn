@@ -1,13 +1,17 @@
 import { test } from "bun:test";
 import { formatMs, type UpdateSubscriptionV1ParamsInput } from "@autumn/shared";
 import {
+	setupEntityProSubscriptions,
 	setupEntityRevertTrial,
+	setupLicenseProSubscription,
 	setupLicenseRevertTrial,
+	setupPooledProSubscription,
 	setupPooledRevertTrial,
 } from "@tests/integration/billing/update-subscription/free-trial/utils/revertTrialScopedSetups";
 import {
 	expectRevertTrialReverted,
 	extendRevertTrial,
+	setupProSubscription,
 	setupRevertTrial,
 } from "@tests/integration/billing/update-subscription/free-trial/utils/revertTrialUtils";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -184,6 +188,25 @@ for (const [customerId, setup] of Object.entries(scopedSetups)) {
 			ctx,
 			label: customerId,
 			subscriptionBefore,
+		});
+	});
+}
+
+const activeSubscriptionSetups = {
+	"revert-trial-e2e": setupProSubscription,
+	"revert-trial-e2e-entities": setupEntityProSubscriptions,
+	"revert-trial-e2e-pooled": setupPooledProSubscription,
+	"revert-trial-e2e-licenses": setupLicenseProSubscription,
+};
+
+for (const [customerId, setup] of Object.entries(activeSubscriptionSetups)) {
+	test(`${chalk.yellowBright(`revert-trial e2e: ${customerId} — active Pro sub, attach the revert trial yourself`)}`, async () => {
+		const { pro, enterprise, entityId } = await setup({ customerId });
+
+		console.log(chalk.green(`[${customerId}] ready`), {
+			activePlan: pro.id,
+			revertTrialPlan: enterprise.id,
+			entityId,
 		});
 	});
 }

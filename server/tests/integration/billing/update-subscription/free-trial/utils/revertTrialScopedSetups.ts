@@ -2,12 +2,12 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
-import { startRevertTrial } from "./revertTrialUtils";
+import { addRevertTrial } from "./revertTrialUtils";
 
 export const POOL_PRO_GRANT = 100;
 export const POOL_ENTERPRISE_GRANT = 300;
 
-export const setupEntityRevertTrial = async ({
+export const setupEntityProSubscriptions = async ({
 	customerId,
 }: {
 	customerId: string;
@@ -44,17 +44,10 @@ export const setupEntityRevertTrial = async ({
 		enterprise,
 		entityId: trialEntity.id,
 		siblingEntity,
-		...(await startRevertTrial({
-			scenario,
-			customerId,
-			pro,
-			enterprise,
-			entityId: trialEntity.id,
-		})),
 	};
 };
 
-export const setupPooledRevertTrial = async ({
+export const setupPooledProSubscription = async ({
 	customerId,
 }: {
 	customerId: string;
@@ -87,24 +80,11 @@ export const setupPooledRevertTrial = async ({
 		],
 		actions: [s.billing.attach({ productId: pro.id, entityIndex: 0 })],
 	});
-	const entityId = scenario.entities[0].id;
 
-	return {
-		...scenario,
-		pro,
-		enterprise,
-		entityId,
-		...(await startRevertTrial({
-			scenario,
-			customerId,
-			pro,
-			enterprise,
-			entityId,
-		})),
-	};
+	return { ...scenario, pro, enterprise, entityId: scenario.entities[0].id };
 };
 
-export const setupLicenseRevertTrial = async ({
+export const setupLicenseProSubscription = async ({
 	customerId,
 }: {
 	customerId: string;
@@ -138,24 +118,43 @@ export const setupLicenseRevertTrial = async ({
 		],
 	});
 
-	const revertTrial = await startRevertTrial({
-		scenario,
+	return { ...scenario, pro, enterprise, seat, entityId: undefined };
+};
+
+export const setupEntityRevertTrial = async ({
+	customerId,
+}: {
+	customerId: string;
+}) =>
+	addRevertTrial({
 		customerId,
-		pro,
-		enterprise,
-	});
-	await scenario.autumnV2_3.post("/licenses.attach", {
-		customer_id: customerId,
-		plan_id: seat.id,
-		entities: [{ entity_id: scenario.entities[0].id }],
+		subscription: await setupEntityProSubscriptions({ customerId }),
 	});
 
-	return {
-		...scenario,
-		pro,
-		enterprise,
-		seat,
-		entityId: undefined,
-		...revertTrial,
-	};
+export const setupPooledRevertTrial = async ({
+	customerId,
+}: {
+	customerId: string;
+}) =>
+	addRevertTrial({
+		customerId,
+		subscription: await setupPooledProSubscription({ customerId }),
+	});
+
+export const setupLicenseRevertTrial = async ({
+	customerId,
+}: {
+	customerId: string;
+}) => {
+	const revertTrial = await addRevertTrial({
+		customerId,
+		subscription: await setupLicenseProSubscription({ customerId }),
+	});
+	await revertTrial.autumnV2_3.post("/licenses.attach", {
+		customer_id: customerId,
+		plan_id: revertTrial.seat.id,
+		entities: [{ entity_id: revertTrial.entities[0].id }],
+	});
+
+	return revertTrial;
 };

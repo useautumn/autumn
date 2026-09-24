@@ -26,7 +26,7 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 export const TRIAL_DAYS = 14;
 export const EXTENDED_TRIAL_DAYS = 30;
 
-export const setupRevertTrial = async ({
+export const setupProSubscription = async ({
 	customerId,
 	extraProducts = [],
 }: {
@@ -54,19 +54,49 @@ export const setupRevertTrial = async ({
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	return {
-		...scenario,
-		pro,
-		enterprise,
-		...(await startRevertTrial({
-			scenario,
-			customerId,
-			pro,
-			enterprise,
-			featureQuantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
-		})),
-	};
+	return { ...scenario, pro, enterprise, entityId: undefined };
 };
+
+export const setupRevertTrial = async ({
+	customerId,
+	extraProducts,
+}: {
+	customerId: string;
+	extraProducts?: ProductV2[];
+}) =>
+	addRevertTrial({
+		customerId,
+		subscription: await setupProSubscription({ customerId, extraProducts }),
+		featureQuantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+	});
+
+export const addRevertTrial = async <
+	Subscription extends {
+		autumnV2_3: AutumnInt;
+		ctx: TestContext;
+		pro: ProductV2;
+		enterprise: ProductV2;
+		entityId?: string;
+	},
+>({
+	customerId,
+	subscription,
+	featureQuantities,
+}: {
+	customerId: string;
+	subscription: Subscription;
+	featureQuantities?: AttachParamsV1Input["feature_quantities"];
+}) => ({
+	...subscription,
+	...(await startRevertTrial({
+		scenario: subscription,
+		customerId,
+		pro: subscription.pro,
+		enterprise: subscription.enterprise,
+		entityId: subscription.entityId,
+		featureQuantities,
+	})),
+});
 
 export const startRevertTrial = async ({
 	scenario,
