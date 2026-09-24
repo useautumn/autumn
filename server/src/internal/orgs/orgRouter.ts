@@ -55,6 +55,7 @@ import { handleConnectStripe } from "./handlers/stripeHandlers/handleConnectStri
 import { handleDeleteStripe } from "./handlers/stripeHandlers/handleDeleteStripe.js";
 import { handleGetOAuthUrl } from "./handlers/stripeHandlers/handleGetOAuthUrl.js";
 import { handleGetStripeAccount } from "./handlers/stripeHandlers/handleGetStripeAccount.js";
+import { handleGetStripePaymentMethodTypes } from "./handlers/stripeHandlers/handleGetStripePaymentMethodTypes.js";
 import { handleResolveStripeProducts } from "./handlers/stripeHandlers/handleResolveStripeProducts.js";
 import { handleSearchStripePrices } from "./handlers/stripeHandlers/handleSearchStripePrices.js";
 import { handleSearchStripeProducts } from "./handlers/stripeHandlers/handleSearchStripeProducts.js";
@@ -73,6 +74,10 @@ internalOrgRouter.post("/remove-member", ...handleRemoveMember);
 internalOrgRouter.get("/upload_url", ...handleGetUploadUrl);
 internalOrgRouter.delete("/logo", ...handleDeleteOrgLogo);
 internalOrgRouter.get("/invites", ...handleGetInvites);
+internalOrgRouter.get(
+	"/stripe/payment_method_types",
+	...handleGetStripePaymentMethodTypes,
+);
 // Mounted under /organization, so this resolves to
 // POST /organization/onboardingStatus.
 internalOrgRouter.post("/onboardingStatus", ...handleGetOnboardingStatus);
