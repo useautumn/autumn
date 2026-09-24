@@ -67,9 +67,10 @@ const fetchLiveBillingContext = async ({
 			})
 		: undefined;
 
-	const subscriptionScheduleId = stripeSubscriptionToScheduleId({
-		stripeSubscription,
-	});
+	// A standalone (future-start) schedule is not on the subscription, so fall back to the snapshot's
+	const subscriptionScheduleId =
+		stripeSubscriptionToScheduleId({ stripeSubscription }) ??
+		billingContext.stripeSubscriptionSchedule?.id;
 	const stripeSubscriptionSchedule = subscriptionScheduleId
 		? await getStripeActiveSubscriptionSchedule({
 				stripeClient: stripeCli,
