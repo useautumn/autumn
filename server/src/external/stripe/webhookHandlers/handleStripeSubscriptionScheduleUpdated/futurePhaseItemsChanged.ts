@@ -1,3 +1,4 @@
+import { fromUnixTime, isAfter } from "date-fns";
 import type Stripe from "stripe";
 
 const itemShape = (phase: Stripe.SubscriptionSchedule.Phase) =>
@@ -23,7 +24,11 @@ export const futurePhaseItemsChanged = ({
 	nowSeconds: number;
 }): boolean =>
 	currentPhases.some((phase, index) => {
-		if (phase.start_date <= nowSeconds) return false;
+		const hasNotStarted = isAfter(
+			fromUnixTime(phase.start_date),
+			fromUnixTime(nowSeconds),
+		);
+		if (!hasNotStarted) return false;
 		const previous = previousPhases[index];
 		return !previous || itemShape(previous) !== itemShape(phase);
 	});
