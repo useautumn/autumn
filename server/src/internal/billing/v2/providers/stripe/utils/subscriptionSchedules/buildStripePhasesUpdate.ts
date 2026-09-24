@@ -245,11 +245,14 @@ export const buildStripePhasesUpdate = ({
 	billingContext,
 	customerProducts,
 	trialEndsAt,
+	useFreePhaseStripeProduct = false,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
 	trialEndsAt?: number;
+	/** Only create_schedule places free-phase placeholders on the free plan's own product. */
+	useFreePhaseStripeProduct?: boolean;
 }): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
 	// Normalize all timestamps to second-level precision for Stripe compatibility.
 	// This is done once at the entry point so downstream functions work with clean data.
@@ -344,7 +347,9 @@ export const buildStripePhasesUpdate = ({
 			const placeholderItem = buildFreeRecurringPlaceholderItem({
 				ctx,
 				customerProducts: normalizedCustomerProducts,
-				phaseCustomerProducts: activeCustomerProducts,
+				phaseCustomerProducts: useFreePhaseStripeProduct
+					? activeCustomerProducts
+					: [],
 			});
 			if (placeholderItem) phaseItems.push(placeholderItem);
 		}

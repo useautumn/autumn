@@ -12,10 +12,16 @@ export const addStripeSubscriptionScheduleIdToBillingPlan = ({
 	stripeBillingPlan: StripeBillingPlan;
 	stripeSubscriptionScheduleId: string;
 }) => {
+	// Only create_schedule puts free plans on a Stripe schedule via a $0 placeholder.
+	const linksFreePlaceholders =
+		autumnBillingPlan.ownsSchedulePersistence === true;
+
 	for (const customerProduct of autumnBillingPlan.insertCustomerProducts) {
 		const { valid: isPaidRecurring } = cp(customerProduct).paid().recurring();
 		const isOnStripeSchedule =
-			isPaidRecurring || isFreePhasePlaceholderCustomerProduct(customerProduct);
+			isPaidRecurring ||
+			(linksFreePlaceholders &&
+				isFreePhasePlaceholderCustomerProduct(customerProduct));
 
 		if (!isOnStripeSchedule) continue;
 
