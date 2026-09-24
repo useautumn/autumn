@@ -22,6 +22,12 @@ export type SubjectHydrator = {
 	}): Promise<Catalog>;
 	/** Sync: the catalog rows that view was joined from, which a reply hands to the server so it need not load them. */
 	readCatalog(params: { state: SubjectState }): Catalog;
+	/** Sync: the same view over a catalog the caller already read, so a command that builds the subject twice reads the catalog once. */
+	readSubjectWith(params: {
+		state: SubjectState;
+		catalog: Catalog;
+		identity: MeteringIdentity;
+	}): WorkerFullSubject;
 	/** An evict arrived: any load of this customer still in flight started before it, so its rows cannot be trusted. */
 	overtakeInFlightLoads(params: { customerKey: string }): void;
 };

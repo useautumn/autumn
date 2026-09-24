@@ -57,6 +57,22 @@ function createFixture() {
 		identity,
 		customerProducts: [createCustomerProduct()],
 		customerEntitlements: [messages, credits, seats, storage],
+		replaceables: [
+			{
+				id: "rp_seats",
+				cus_ent_id: seats.id,
+				created_at: occurredAt,
+				from_entity_id: null,
+				delete_next_cycle: false,
+			},
+			{
+				id: "rp_messages",
+				cus_ent_id: messages.id,
+				created_at: occurredAt,
+				from_entity_id: "ent_1",
+				delete_next_cycle: true,
+			},
+		],
 		rollovers: [
 			{
 				id: "ro_messages",
@@ -99,6 +115,10 @@ describe("slimSubjectForFeatures", () => {
 			credits.id,
 		]);
 		expect(slim.state.rollovers.map((row) => row.id)).toEqual(["ro_messages"]);
+		// Replaceables belong to a row too; a dropped row's seats go with it.
+		expect(slim.state.replaceables.map((row) => row.id)).toEqual([
+			"rp_messages",
+		]);
 		expect(Object.keys(slim.catalog.entitlements).sort()).toEqual(
 			[messages.entitlement_id, credits.entitlement_id].sort(),
 		);

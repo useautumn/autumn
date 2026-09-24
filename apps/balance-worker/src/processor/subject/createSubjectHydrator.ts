@@ -1,3 +1,4 @@
+import { subjectStateToFullSubject } from "@autumn/balance-engine";
 import { ensureSubject } from "./actions/ensureSubject/ensureSubject.js";
 import { ensureSubjectCatalog } from "./actions/ensureSubject/ensureSubjectCatalog.js";
 import { readSubject, readSubjectCatalog } from "./actions/readSubject.js";
@@ -22,6 +23,12 @@ export const createSubjectHydrator = ({
 		readSubject: ({ state, identity }) =>
 			readSubject({ scope, state, identity }),
 		readCatalog: ({ state }) => readSubjectCatalog({ scope, state }),
+		readSubjectWith: ({ state, catalog, identity }) =>
+			subjectStateToFullSubject({
+				state,
+				catalog,
+				entityId: identity.entityId,
+			}),
 		overtakeInFlightLoads: ({ customerKey }) =>
 			scope.state.inFlightLoads.overtakeCustomer({ customerKey }),
 	};

@@ -11,8 +11,8 @@ import {
 /**
  * The state and catalog a reply needs to answer for `featureIds`, and nothing
  * more: the rows that can fund those features (their own balances and any
- * credit system whose effective schema covers them), their rollovers, and the
- * catalog rows those reference. Everything about the customer itself, its
+ * credit system whose effective schema covers them), their rollovers and
+ * replaceables, and the catalog rows those reference. Everything about the customer itself, its
  * products, prices, licenses and pools stays, since the caller reads those too.
  *
  * A check or track reply used to carry the customer's whole state, so its cost
@@ -43,6 +43,9 @@ export const slimSubjectForFeatures = ({
 		...state,
 		customerEntitlements,
 		rollovers: state.rollovers.filter((row) => keptRowIds.has(row.cus_ent_id)),
+		replaceables: state.replaceables.filter((row) =>
+			keptRowIds.has(row.cus_ent_id),
+		),
 	};
 	return {
 		state: slimState,

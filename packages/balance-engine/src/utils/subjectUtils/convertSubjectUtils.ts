@@ -16,27 +16,76 @@ import type {
 import { parseWorkerCustomerEntitlement } from "../../parsers.js";
 import { inheritParentCustomerProductLifecycle } from "./inheritParentCustomerProductLifecycle.js";
 
+/**
+ * The state's child rows grouped by the parent they hang off, built once per
+ * conversion. The joins below used to filter the whole array for every row,
+ * which made a large customer's view quadratic in its row count; a track
+ * builds the view twice (as found and as left), so that was where its thread
+ * time went.
+ */
+type SubjectRowIndex = {
+	rolloversByRow: Map<string, SubjectState["rollovers"]>;
+	replaceablesByRow: Map<string, SubjectState["replaceables"]>;
+	poolsById: Map<string, WorkerPooledBalance>;
+	pricesByProduct: Map<string, WorkerCustomerPrice[]>;
+	entitlementsByProduct: Map<string, WorkerCustomerEntitlement[]>;
+};
+
+const groupBy = <Row>(
+	rows: readonly Row[],
+	keyOf: (row: Row) => string | null | undefined,
+): Map<string, Row[]> => {
+	const groups = new Map<string, Row[]>();
+	for (const row of rows) {
+		const key = keyOf(row);
+		if (key === null || key === undefined) continue;
+		const group = groups.get(key);
+		if (group) group.push(row);
+		else groups.set(key, [row]);
+	}
+	return groups;
+};
+
+const indexSubjectRows = ({
+	state,
+}: {
+	state: SubjectState;
+}): SubjectRowIndex => ({
+	rolloversByRow: groupBy(state.rollovers, (row) => row.cus_ent_id),
+	replaceablesByRow: groupBy(state.replaceables, (row) => row.cus_ent_id),
+	poolsById: new Map(state.pooledBalances.map((pool) => [pool.id, pool])),
+	pricesByProduct: groupBy(
+		state.customerPrices,
+		(row) => row.customer_product_id,
+	),
+	entitlementsByProduct: groupBy(
+		state.customerEntitlements,
+		(row) => row.customer_product_id,
+	),
+});
+
 /** The pool a pooled row draws from, present only when the row names one the state holds. */
 const poolOf = ({
 	row,
-	state,
+	index,
 }: {
 	row: WorkerCustomerEntitlement;
-	state: SubjectState;
+	index: SubjectRowIndex;
 }): { pooled_balance?: WorkerPooledBalance } => {
-	const pool = state.pooledBalances.find(
-		(candidate) => candidate.id === row.pooled_balance_id,
-	);
+	const pool =
+		row.pooled_balance_id === null || row.pooled_balance_id === undefined
+			? undefined
+			: index.poolsById.get(row.pooled_balance_id);
 	return pool ? { pooled_balance: pool } : {};
 };
 
 const joinCustomerEntitlement = ({
 	row,
-	state,
+	index,
 	catalog,
 }: {
 	row: WorkerCustomerEntitlement;
-	state: SubjectState;
+	index: SubjectRowIndex;
 	catalog: Catalog;
 }): WorkerFullCustomerEntitlement => {
 	const entitlement = catalog.entitlements[row.entitlement_id];
@@ -54,13 +103,9 @@ const joinCustomerEntitlement = ({
 	return {
 		...row,
 		entitlement: { ...entitlement, feature },
-		rollovers: state.rollovers.filter(
-			(rollover) => rollover.cus_ent_id === row.id,
-		),
-		replaceables: state.replaceables.filter(
-			(replaceable) => replaceable.cus_ent_id === row.id,
-		),
-		...poolOf({ row, state }),
+		rollovers: index.rolloversByRow.get(row.id) ?? [],
+		replaceables: index.replaceablesByRow.get(row.id) ?? [],
+		...poolOf({ row, index }),
 	};
 };
 
@@ -91,8 +136,9 @@ export const subjectStateToFullSubject = ({
 	catalog: Catalog;
 	entityId?: string | null;
 }): WorkerFullSubject => {
+	const index = indexSubjectRows({ state });
 	const join = (row: WorkerCustomerEntitlement) =>
-		joinCustomerEntitlement({ row, state, catalog });
+		joinCustomerEntitlement({ row, index, catalog });
 	const liveProducts = state.customerProducts.flatMap((row) => {
 		const customerProduct = inheritParentCustomerProductLifecycle({
 			row,
@@ -110,12 +156,12 @@ export const subjectStateToFullSubject = ({
 		return {
 			...customerProduct,
 			product,
-			customer_prices: state.customerPrices
-				.filter((row) => row.customer_product_id === customerProduct.id)
-				.map((row) => joinCustomerPrice({ row, catalog })),
-			customer_entitlements: state.customerEntitlements
-				.filter((row) => row.customer_product_id === customerProduct.id)
-				.map(join),
+			customer_prices: (
+				index.pricesByProduct.get(customerProduct.id) ?? []
+			).map((row) => joinCustomerPrice({ row, catalog })),
+			customer_entitlements: (
+				index.entitlementsByProduct.get(customerProduct.id) ?? []
+			).map(join),
 		};
 	});
 	// A dead seat's rows stay with it: a grant whose product the state holds is never loose.

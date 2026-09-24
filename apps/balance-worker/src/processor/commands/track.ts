@@ -83,16 +83,20 @@ function decideTrack({
 	command: TrackCommand;
 }): MutationResult<never> {
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
-	decidedAgainst.catalog = scope.ctx.subjectHydrator.readCatalog({ state });
+	// One catalog read serves both views: the rows a mutation adds reference catalog the state already held.
+	const catalog = scope.ctx.subjectHydrator.readCatalog({ state });
+	decidedAgainst.catalog = catalog;
 
-	const fullSubject = scope.ctx.subjectHydrator.readSubject({
+	const fullSubject = scope.ctx.subjectHydrator.readSubjectWith({
 		state,
+		catalog,
 		identity: command.identity,
 	});
 	const mutation = computeTrack({ fullSubject, command });
 	const nextState = applyMutation({ state, mutation });
-	const after = scope.ctx.subjectHydrator.readSubject({
+	const after = scope.ctx.subjectHydrator.readSubjectWith({
 		state: nextState,
+		catalog,
 		identity: command.identity,
 	});
 	return {
