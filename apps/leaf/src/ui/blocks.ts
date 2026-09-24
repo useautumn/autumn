@@ -40,6 +40,7 @@ import {
 import { attachBillingEditsFromRequest } from "../internal/approvals/domain/attachBillingEdits.js";
 import { isFailedApprovalPreview } from "../internal/approvals/utils/fetchApprovalPreview.js";
 import { toolRequestFromArgs } from "../internal/approvals/utils/toolRequest.js";
+import { billingDetailsFields } from "./billingDetailsFields.js";
 import {
 	catalogActionToChange,
 	catalogItemActionToChange,
@@ -657,6 +658,10 @@ const requestSummaryFields = (
 	const fields: FieldElement[] = [];
 	for (const [key, value] of Object.entries(request)) {
 		if (HIDDEN_REQUEST_KEYS.has(key) || key.startsWith("_")) continue;
+		if (key === "billing_details") {
+			fields.push(...billingDetailsFields(value).map((field) => Field(field)));
+			continue;
+		}
 		const rendered = compactValue(value);
 		if (rendered === null) continue;
 		fields.push(Field({ label: humanizeKey(key), value: rendered }));

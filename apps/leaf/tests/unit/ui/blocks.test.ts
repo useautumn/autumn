@@ -851,6 +851,61 @@ describe("approval card", () => {
 		expect(json).not.toContain('"customer_id"');
 	});
 
+	test("renders billing details as one readable field each", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "updateCustomer",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					billing_details: {
+						address: { line1: "1 Main St", city: "Berlin", country: "DE" },
+						tax_ids: {
+							add: [{ type: "eu_vat", value: "DE123456789" }],
+							remove: [{ type: "gb_vat", value: "GB123456789" }],
+						},
+						tax_exempt: "reverse",
+						invoice_settings: {
+							custom_fields: [{ name: "PO Number", value: "4500463831" }],
+						},
+					},
+				},
+			},
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain('"label":"Address","value":"1 Main St, Berlin, DE"');
+		expect(json).toContain(
+			'"label":"Add tax IDs","value":"EU VAT DE123456789"',
+		);
+		expect(json).toContain(
+			'"label":"Remove tax IDs","value":"GB VAT GB123456789"',
+		);
+		expect(json).toContain('"label":"Tax exempt","value":"Reverse charge"');
+		expect(json).toContain('"label":"PO Number","value":"4500463831"');
+		expect(json).not.toContain("Billing details");
+	});
+
+	test("renders cleared billing details explicitly", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "updateCustomer",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					billing_details: {
+						address: null,
+						invoice_settings: { custom_fields: null },
+					},
+				},
+			},
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain('"label":"Address","value":"Cleared"');
+		expect(json).toContain('"label":"Invoice custom fields","value":"Cleared"');
+	});
+
 	test("omits the changes block when nothing is customized", () => {
 		const card = approvalCard({
 			id: "approval_1",

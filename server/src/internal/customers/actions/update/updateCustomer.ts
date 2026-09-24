@@ -2,6 +2,7 @@ import {
 	type Customer,
 	CustomerAlreadyExistsError,
 	CustomerNotFoundError,
+	ErrCode,
 	notNullish,
 	ProcessorType,
 	RecaseError,
@@ -12,6 +13,7 @@ import {
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { updateStripeBillingDetails } from "@/external/stripe/customers/billingDetails/operations/updateStripeBillingDetails.js";
 import {
 	autumnToStripeCustomerMetadata,
 	STRIPE_MAX_KEY_LENGTH,
@@ -45,6 +47,7 @@ export const updateCustomer = async ({
 		customer_id: customerId,
 		new_customer_id: newCustomerId,
 		billing_controls,
+		billing_details: billingDetails,
 		config,
 		...newCusData
 	} = params;
@@ -124,6 +127,15 @@ export const updateCustomer = async ({
 		);
 	}
 
+	if (billingDetails && !stripeId) {
+		throw new RecaseError({
+			message:
+				"billing_details requires a linked Stripe customer. Set stripe_id or create the customer in Stripe first.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
 	const oldMetadata = originalCustomer.metadata || {};
 	const newMetadata = newCusData.metadata || {};
 	const deletedMetadataKeys: string[] = [];
@@ -168,6 +180,14 @@ export const updateCustomer = async ({
 	if (Object.keys(stripeUpdate).length > 0 && stripeId) {
 		const stripeCli = createStripeCli({ org, env });
 		await stripeCli.customers.update(stripeId, stripeUpdate);
+	}
+
+	if (billingDetails && stripeId) {
+		await updateStripeBillingDetails({
+			ctx,
+			stripeCustomerId: stripeId,
+			billingDetails,
+		});
 	}
 
 	// Prepare update data — only include defined billing control fields

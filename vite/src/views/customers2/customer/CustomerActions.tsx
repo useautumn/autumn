@@ -86,7 +86,6 @@ export function CustomerActions() {
 			<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
 				<UpdateCustomerDialog
 					selectedCustomer={customer}
-					open={isModalOpen}
 					setOpen={setIsModalOpen}
 				/>
 			</Dialog>
