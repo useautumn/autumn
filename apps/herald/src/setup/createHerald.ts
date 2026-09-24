@@ -4,6 +4,7 @@ import type { HeraldEnv } from "@autumn/env/herald";
 import { createKafkaClient, createKafkaTransport } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { EventsDb, PostgresClient } from "@autumn/postgres";
+import type { SqsJobs } from "@autumn/sqs";
 import type { SvixClient } from "@autumn/svix";
 import type { EventsTinybird } from "@autumn/tinybird";
 import { Kafka } from "kafkajs";
@@ -26,6 +27,7 @@ export function createHerald({
 		catalogCache: CatalogCache;
 		postgres: Pick<PostgresClient, "close">;
 		miscCache: Pick<MiscCache, "getActive" | "close">;
+		sqsJobs: Pick<SqsJobs, "shutdown">;
 		edgeConfigs: { start(): Promise<void>; stop(): void };
 	};
 	config: { env: HeraldEnv };
@@ -83,6 +85,7 @@ export function createHerald({
 		for (const consumer of running) await consumer.stop();
 		await catalogInvalidations.stop();
 		ctx.edgeConfigs.stop();
+		await ctx.sqsJobs.shutdown();
 		ctx.miscCache.close();
 		await Promise.all([ctx.eventsDb.close(), ctx.postgres.close()]);
 	}

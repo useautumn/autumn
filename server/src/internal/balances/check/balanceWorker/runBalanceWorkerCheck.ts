@@ -12,6 +12,7 @@ import { parseCheckParamsForLock } from "../../utils/lock/parseCheckParamsForLoc
 import { checkAnswerToApiResponse } from "./balanceWorkerCheckReply.js";
 import { checkParamsToCheckCommand } from "./balanceWorkerCheckRequest.js";
 import { runDeductingCheck } from "./runDeductingCheck.js";
+import { triggerAutoTopupFromCheckAnswer } from "./triggerAutoTopupFromCheckAnswer.js";
 
 /** One worker call per check: a read when it only asks, a track when it also deducts. */
 export async function runBalanceWorkerCheck({
@@ -32,6 +33,7 @@ export async function runBalanceWorkerCheck({
 			const answer = deducts
 				? await runDeductingCheck({ ctx, body, client })
 				: await client.check({ command });
+			triggerAutoTopupFromCheckAnswer({ ctx, command, answer });
 			return {
 				result: checkAnswerToApiResponse({ ctx, command, answer }),
 				customer: answer.state?.customer ?? null,

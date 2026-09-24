@@ -74,6 +74,7 @@ import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
 import { globalEventBatchingManager } from "./internal/balances/events/EventBatchingManager.js";
 import { globalSyncBatchingManagerV3 } from "./internal/balances/utils/sync/SyncBatchingManagerV3.js";
+import { getSqsJobs } from "./queue/getSqsJobs.js";
 import { shutdownSqsSendBatchers } from "./queue/queueUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import {
@@ -392,6 +393,7 @@ async function gracefulShutdown() {
 			}
 		}
 		await shutdownSqsSendBatchers();
+		await getSqsJobs().shutdown();
 		await Promise.all([
 			client.end(),
 			clientCritical.end(),

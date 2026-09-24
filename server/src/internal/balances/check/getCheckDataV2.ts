@@ -5,7 +5,6 @@ import {
 	FeatureNotFoundError,
 	FeatureType,
 	fullSubjectToCreditSystems,
-	fullSubjectToFullCustomer,
 	getApiSubject,
 	getFeatureToUseForCheck,
 	withTimeout,
@@ -138,13 +137,13 @@ export const getCheckDataV2 = async ({
 		: evaluationFeature;
 
 	// Trigger auto top-up
-	triggerAutoTopUp({
-		ctx,
-		newFullCus: fullSubjectToFullCustomer({ fullSubject }),
-		feature: featureToUse,
-	}).catch((error) => {
-		ctx.logger.error(`[getCheckData] Failed to trigger auto top-up: ${error}`);
-	});
+	triggerAutoTopUp({ ctx, fullSubject, feature: featureToUse }).catch(
+		(error) => {
+			ctx.logger.error(
+				`[getCheckData] Failed to trigger auto top-up: ${error}`,
+			);
+		},
+	);
 
 	return {
 		customerId: customer_id,

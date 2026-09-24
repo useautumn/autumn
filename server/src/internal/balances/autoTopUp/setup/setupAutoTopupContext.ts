@@ -1,4 +1,8 @@
 import {
+	type AutoTopupJobPayload,
+	subjectToAutoTopupObjects,
+} from "@autumn/auto-topup";
+import {
 	type AutoTopup,
 	type BillingAutoTopupFailureReason,
 	BillingVersion,
@@ -6,6 +10,7 @@ import {
 	cusProductToProduct,
 	customerPriceToBillingUnits,
 	type FullCustomer,
+	fullCustomerToFullSubject,
 	roundUsageToNearestBillingUnit,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -15,9 +20,7 @@ import {
 	hasRoomForExpiringGrant,
 	isExpiringPurchase,
 } from "@/internal/billing/v2/utils/expiringGrants/hasRoomForExpiringGrant.js";
-import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import type { AutoTopupContext } from "../autoTopupContext.js";
-import { fullCustomerToAutoTopupObjects } from "../helpers/fullCustomerToAutoTopupObjects.js";
 import { preflightAutoTopupLimits } from "../helpers/limits/preflightAutoTopupLimits.js";
 
 export type AutoTopupSetupFailure = {
@@ -39,7 +42,7 @@ export const setupAutoTopupContext = async ({
 	payload,
 }: {
 	ctx: AutumnContext;
-	payload: AutoTopUpPayload;
+	payload: AutoTopupJobPayload;
 }): Promise<SetupAutoTopupContextResult> => {
 	const { logger } = ctx;
 	const { customerId, featureId } = payload;
@@ -67,9 +70,10 @@ export const setupAutoTopupContext = async ({
 	}
 
 	// 2. Extract auto-topup objects (config, cusEnt) from fullCustomer
-	const resolved = fullCustomerToAutoTopupObjects({
-		fullCustomer,
+	const resolved = subjectToAutoTopupObjects({
+		fullSubject: fullCustomerToFullSubject({ fullCustomer }),
 		featureId,
+		now: Date.now(),
 	});
 
 	if (!resolved) {

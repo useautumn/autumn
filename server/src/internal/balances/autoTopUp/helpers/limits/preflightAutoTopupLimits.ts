@@ -1,3 +1,4 @@
+import type { AutoTopupJobPayload } from "@autumn/auto-topup";
 import type {
 	AutoTopup,
 	AutoTopupLimitState,
@@ -7,7 +8,6 @@ import type {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { AutoTopUpPayload } from "@/queue/workflows";
 import { autoTopupLimitRepo } from "../../repos";
 import {
 	addToLimitsUpdate,
@@ -25,7 +25,7 @@ export const preflightAutoTopupLimits = async ({
 	paymentMethod,
 }: {
 	ctx: AutumnContext;
-	payload: AutoTopUpPayload;
+	payload: AutoTopupJobPayload;
 	fullCustomer: FullCustomer;
 	autoTopupConfig: AutoTopup;
 	paymentMethod?: Stripe.PaymentMethod | null;

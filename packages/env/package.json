@@ -39,6 +39,11 @@
 			"types": "./src/cache.ts",
 			"import": "./src/cache.ts",
 			"default": "./src/cache.ts"
+		},
+		"./sqs": {
+			"types": "./src/sqs.ts",
+			"import": "./src/sqs.ts",
+			"default": "./src/sqs.ts"
 		}
 	},
 	"scripts": {

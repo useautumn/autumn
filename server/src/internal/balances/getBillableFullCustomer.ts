@@ -3,7 +3,9 @@ import {
 	type FullCustomer,
 	fullSubjectToFullCustomer,
 } from "@autumn/shared";
+import { getBalanceWorkerRolloutEnabled } from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
@@ -18,6 +20,17 @@ export const getBillableFullCustomer = async ({
 	customerId: string;
 	source: string;
 }): Promise<FullCustomer | undefined> => {
+	// The worker owns the balances: land its writes, then read Postgres itself. The subject cache is not kept fresh on this path.
+	if (getBalanceWorkerRolloutEnabled()) {
+		await flushBalanceWorkerCustomer({ ctx, customerId });
+		return CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			inStatuses: ACTIVE_STATUSES,
+			withSubs: true,
+		});
+	}
+
 	// A Redis failure is just a cache miss here — the DB paths below cover it.
 	const cachedFullSubject = await getCachedFullSubject({
 		ctx,

@@ -31,6 +31,7 @@ import {
 	recordPollAttempt,
 } from "./blueGreen/blueGreenHeartbeat.js";
 import { initBlueGreen, shutdownBlueGreen } from "./blueGreen/initBlueGreen.js";
+import { getSqsJobs } from "./getSqsJobs.js";
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
@@ -629,6 +630,7 @@ export const initWorkers = async ({
 		}
 		await stopBalanceShadow();
 		await shutdownSqsSendBatchers();
+		await getSqsJobs().shutdown();
 
 		const isProd = process.env.NODE_ENV === "production";
 		if (isProd) {

@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@autumn/balance-engine": "workspace:*",
+		"@autumn/auto-topup": "workspace:*",
 		"@autumn/balance-webhooks": "workspace:*",
 		"@autumn/cache": "workspace:*",
 		"@autumn/edge-config": "workspace:*",
@@ -22,6 +23,7 @@
 		"@autumn/logging": "workspace:*",
 		"@autumn/postgres": "workspace:*",
 		"@autumn/shared": "workspace:*",
+		"@autumn/sqs": "workspace:*",
 		"@autumn/tinybird": "workspace:*",
 		"decimal.js": "^10.5.0",
 		"@autumn/svix": "workspace:*",

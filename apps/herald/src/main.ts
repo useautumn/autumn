@@ -8,6 +8,7 @@ import { getHeraldEdgeConfigs } from "./setup/getHeraldEdgeConfigs.js";
 import { getHeraldLogger } from "./setup/getHeraldLogger.js";
 import { getMiscCache } from "./setup/getMiscCache.js";
 import { getPostgres } from "./setup/getPostgres.js";
+import { getSqsJobs } from "./setup/getSqsJobs.js";
 import { getSvixClient } from "./setup/getSvixClient.js";
 
 async function main(): Promise<void> {
@@ -22,6 +23,7 @@ async function main(): Promise<void> {
 			catalogCache: getCatalogCache(),
 			postgres: getPostgres(),
 			miscCache: getMiscCache(),
+			sqsJobs: getSqsJobs(),
 			edgeConfigs: getHeraldEdgeConfigs(),
 		},
 		config: { env: getHeraldEnv() },

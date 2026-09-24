@@ -30,6 +30,8 @@
 			"packages/catalog-lru",
 			"packages/edge-config",
 			"packages/postgres",
+			"packages/auto-topup",
+			"packages/sqs",
 			"packages/cache",
 			"packages/encryption",
 			"packages/dynamodb",

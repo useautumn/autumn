@@ -260,8 +260,6 @@ export const executePostgresDeductionV2 = async ({
 				mutationLogs: mutation_logs ?? [],
 			});
 
-			const newFullCustomer = fullSubjectToFullCustomer({ fullSubject });
-
 			fireTrackWebhooks({
 				ctx,
 				oldFullSubject,
@@ -274,7 +272,7 @@ export const executePostgresDeductionV2 = async ({
 			if (resolvedOptions.triggerAutoTopUp) {
 				triggerAutoTopUp({
 					ctx,
-					newFullCus: newFullCustomer,
+					fullSubject,
 					feature: deduction.feature,
 				}).catch((error) => {
 					ctx.logger.error(

@@ -1,8 +1,12 @@
-import { BillingVersion, cusProductToProduct } from "@autumn/shared";
+import { resolveThresholdSettlement } from "@autumn/auto-topup";
+import {
+	BillingVersion,
+	cusProductToProduct,
+	fullCustomerToFullSubject,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getBillableFullCustomer } from "@/internal/balances/getBillableFullCustomer.js";
 import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeCustomerForBilling.js";
-import { resolveThresholdSettlement } from "../resolve/resolveThresholdSettlement.js";
 import type { ThresholdBillingContext } from "../thresholdBillingContext.js";
 
 export type SetupThresholdBillingResult =
@@ -34,7 +38,11 @@ export const setupThresholdBillingContext = async ({
 		return { ok: false, reason: "customer_unavailable" };
 	}
 
-	const settlement = resolveThresholdSettlement({ fullCustomer, featureId });
+	const settlement = resolveThresholdSettlement({
+		fullSubject: fullCustomerToFullSubject({ fullCustomer }),
+		featureId,
+		now: Date.now(),
+	});
 	if (settlement.kind !== "settle") {
 		return { ok: false, reason: settlement.kind };
 	}
