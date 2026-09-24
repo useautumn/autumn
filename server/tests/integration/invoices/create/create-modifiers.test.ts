@@ -786,7 +786,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("invoices.create: a future issue_date or past due_date is refused")}`,
+	`${chalk.yellowBright("invoices.create: a future issue_date, past due_date or due before issue is refused")}`,
 	async () => {
 		const customerId = "inv-create-dates-invalid";
 		const pro = products.pro({ id: "pro-create-dates-invalid", items: [] });
@@ -820,6 +820,19 @@ test.concurrent(
 						customer_id: customerId,
 						plans: [{ plan_id: pro.id }],
 						due_date: subDays(new Date(), 1).getTime(),
+					},
+				}),
+		});
+		await expectAutumnError({
+			errMessage: "due_date must be after issue_date",
+			func: () =>
+				createInvoice({
+					autumnV2_3,
+					params: {
+						customer_id: customerId,
+						plans: [{ plan_id: pro.id }],
+						issue_date: subDays(new Date(), 1).getTime(),
+						due_date: subDays(new Date(), 2).getTime(),
 					},
 				}),
 		});

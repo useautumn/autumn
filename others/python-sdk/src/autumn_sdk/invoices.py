@@ -32,6 +32,8 @@ class Invoices(BaseSDK):
         ] = None,
         invoice_template_id: Optional[str] = None,
         net_terms_days: Optional[int] = None,
+        issue_date: Optional[int] = None,
+        due_date: Optional[int] = None,
         tax_rate_id: Optional[str] = None,
         period_start: Optional[int] = None,
         period_end: Optional[int] = None,
@@ -49,6 +51,8 @@ class Invoices(BaseSDK):
         :param discounts: Discounts applied to the whole invoice.
         :param invoice_template_id: ID of an invoice template whose footer, memo and default payment terms are applied.
         :param net_terms_days: Days until the invoice is due. Defaults to the template's terms, then the org default.
+        :param issue_date: Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future.
+        :param due_date: When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days.
         :param tax_rate_id: Stripe tax rate ID (txr_...) applied to every line.
         :param period_start: Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start.
         :param period_end: End of the period being invoiced, in milliseconds.
@@ -81,6 +85,8 @@ class Invoices(BaseSDK):
             ),
             invoice_template_id=invoice_template_id,
             net_terms_days=net_terms_days,
+            issue_date=issue_date,
+            due_date=due_date,
             tax_rate_id=tax_rate_id,
             period_start=period_start,
             period_end=period_end,
@@ -169,6 +175,8 @@ class Invoices(BaseSDK):
         ] = None,
         invoice_template_id: Optional[str] = None,
         net_terms_days: Optional[int] = None,
+        issue_date: Optional[int] = None,
+        due_date: Optional[int] = None,
         tax_rate_id: Optional[str] = None,
         period_start: Optional[int] = None,
         period_end: Optional[int] = None,
@@ -186,6 +194,8 @@ class Invoices(BaseSDK):
         :param discounts: Discounts applied to the whole invoice.
         :param invoice_template_id: ID of an invoice template whose footer, memo and default payment terms are applied.
         :param net_terms_days: Days until the invoice is due. Defaults to the template's terms, then the org default.
+        :param issue_date: Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future.
+        :param due_date: When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days.
         :param tax_rate_id: Stripe tax rate ID (txr_...) applied to every line.
         :param period_start: Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start.
         :param period_end: End of the period being invoiced, in milliseconds.
@@ -218,6 +228,8 @@ class Invoices(BaseSDK):
             ),
             invoice_template_id=invoice_template_id,
             net_terms_days=net_terms_days,
+            issue_date=issue_date,
+            due_date=due_date,
             tax_rate_id=tax_rate_id,
             period_start=period_start,
             period_end=period_end,

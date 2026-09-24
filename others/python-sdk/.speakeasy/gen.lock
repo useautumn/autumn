@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 05940b80-1ef8-40f4-9878-822fb2792070
 management:
-  docChecksum: d965334aa7ec62a243ce71a6dd5426bc
+  docChecksum: b584323318d1862c6f98cf5aeef8a42a
   docVersion: 2.4.0
   speakeasyVersion: 1.762.0
   generationVersion: 2.882.0
   releaseVersion: 1.1.0
   configChecksum: 16593a23b9d6e917b198473dd835d916
 persistentEdits:
-  generation_id: 52385378-f8a0-49f2-a8a4-1dd81e448ea2
-  pristine_commit_hash: 4b9f6e296b386cdb5c56bfc450af1a890e64f7b3
-  pristine_tree_hash: 209506fd836e5d10d048e821ad7c9eae32cbae58
+  generation_id: da91a5f1-1e3e-4bec-b6f9-741e377a4664
+  pristine_commit_hash: 6196f75c59f936f1dc125cc498989b77e897e1a1
+  pristine_tree_hash: e8cbfaabb7263e3c2fd413a6a403b48c6b248bab
 features:
   python:
     additionalDependencies: 1.0.0
@@ -3428,16 +3428,16 @@ trackedFiles:
     pristine_git_object: 595930b7c6e676a9241aef82cec0e7132f9ac172
   docs/models/createinvoiceparams.md:
     id: 91dc40be4fcc
-    last_write_checksum: sha1:85c3b2123a88c03bfc248f3343c7d95026f5d5a4
-    pristine_git_object: de5285e1fa470d07ab79b1d07cbd012c68113f82
+    last_write_checksum: sha1:3c216bddd08b8d73db84176ad18e4d731f8c4afd
+    pristine_git_object: f2f7585fd95b60e78d212f32b9473aba9c88eb4c
   docs/models/createinvoiceplan.md:
     id: 111aaefa9a3e
     last_write_checksum: sha1:33b71429204f820c4e08f5e9b10f3ba5bab35332
     pristine_git_object: 27d479d4ec0c489c403d7e13a238b4437e3f9abc
   docs/models/createinvoicepreview.md:
     id: 21adb2ad935b
-    last_write_checksum: sha1:0ae39f242543e22b1f6a23fe920c2f6b06f9f262
-    pristine_git_object: ad8ca347e3e4acb880a90f343459d0fd083d7281
+    last_write_checksum: sha1:baf905aa5efba48731b2b60d81a3e51918bb2e29
+    pristine_git_object: 48fdf68c016a266bc893fcf817301e6d0e7603be
   docs/models/createinvoiceprice.md:
     id: e1f0cbea06f6
     last_write_checksum: sha1:9b532bcc5aefb857e6e512fc79e0775d57a6ccaa
@@ -14804,8 +14804,8 @@ trackedFiles:
     pristine_git_object: 9af4b3785be9ecd0ff437536b1bbedb81e2d9242
   docs/models/reissueinvoicepreview.md:
     id: f6e7a4ccdb62
-    last_write_checksum: sha1:32934595382b1ca57c80bf51b7e16147c03c2524
-    pristine_git_object: 50bffaa92e05ce2c64ad1696bba4346195041627
+    last_write_checksum: sha1:1fbcd02127166fb786981c5fd8c3c43144ed3999
+    pristine_git_object: 9fc1dcb2f83f494f16d7f10aab7f5eb1d293bba3
   docs/models/reissueinvoiceprice.md:
     id: 4974aeb7a07e
     last_write_checksum: sha1:7dea586bd148b503600bdeb59bb7ecb898574f66
@@ -19968,8 +19968,8 @@ trackedFiles:
     pristine_git_object: 8c076be1d520ad5b1785877914e94286177209e9
   docs/sdks/invoices/README.md:
     id: a3f76a06eded
-    last_write_checksum: sha1:f9ed13ab59b01811e203aca64556d70d10acbda5
-    pristine_git_object: ab701bb1dc4850ef0afc620bdbbfa127252fc94f
+    last_write_checksum: sha1:d680156bf9a088d809aa18c7be76f2c9d8bed3ac
+    pristine_git_object: 60e3b57917d087c9c77e60429ee914609faface7
   docs/sdks/keys/README.md:
     id: 9a567cd0daf2
     last_write_checksum: sha1:8977c2514a4f034f190185179a17e1dc6d3f2c0f
@@ -20092,8 +20092,8 @@ trackedFiles:
     pristine_git_object: 89560b566073785535643e694c112bedbd3db13d
   src/autumn_sdk/invoices.py:
     id: 25223c7e4c52
-    last_write_checksum: sha1:a8f40a7302e8de9915e9024661962ed7d5e55a44
-    pristine_git_object: 383474072be85c27c7c7a6d6d5522511043018a0
+    last_write_checksum: sha1:dd2487ccb73f7b2ea5d08a1d374a3cb61e6f56f0
+    pristine_git_object: 945e9c085a2f228b70a0dd7133b9f90d9f898dd3
   src/autumn_sdk/keys.py:
     id: 078ab2a6d01a
     last_write_checksum: sha1:809ab7ca51e2ebfead59fc15c2712747f74f38b0
@@ -20164,8 +20164,8 @@ trackedFiles:
     pristine_git_object: 6597935f5626592f3feaab71fcd0bab871a91667
   src/autumn_sdk/models/createinvoiceop.py:
     id: 48a4d2c54b33
-    last_write_checksum: sha1:4ff46f6922b93ada8360f97c441127ef40465a19
-    pristine_git_object: 4c59256daef7da32a95972fe1b25587b79cfa341
+    last_write_checksum: sha1:dc26cb00d29a7947ebdd811c6ac17180ac3ac224
+    pristine_git_object: b9293d52370e5a683a0ad191365ff321995bbd0f
   src/autumn_sdk/models/createplan_item_tier_additional_currency_response.py:
     id: 93fdc09ea54f
     last_write_checksum: sha1:92dae7633674e347663687fd6be11b1d8b0d0797
@@ -20428,8 +20428,8 @@ trackedFiles:
     pristine_git_object: 84519f08b115b5c027c5b2c05997a93b5d4f0c17
   src/autumn_sdk/models/reissueinvoiceop.py:
     id: 1d3b9bb2dc5b
-    last_write_checksum: sha1:2538cc7936604eb2cca1bde8832b76c33489e466
-    pristine_git_object: 2e3e04683f983f97fa1e0556611d2f2ac171983d
+    last_write_checksum: sha1:97728195cc77f77cdfda516f6f841acb34ef17f8
+    pristine_git_object: ffa180262bd0e5ea172f19a326dd4b2944a4ed54
   src/autumn_sdk/models/releaselicenseop.py:
     id: 29d50398c57a
     last_write_checksum: sha1:db54c8d7ff18176408b2b86a1a92a970d707b69a
@@ -21518,7 +21518,7 @@ examples:
         application/json: {"customer_id": "cus_123", "plans": [{"plan_id": "pro", "feature_quantities": [{"feature_id": "seats", "billing_behavior": "prepaid", "quantity": 5}, {"feature_id": "credits", "billing_behavior": "usage_based", "quantity": 2500}]}], "custom_line_items": [{"amount": 500, "description": "Implementation services"}], "net_terms_days": 30}
       responses:
         "200":
-          application/json: {"invoice": {"plan_ids": ["pro_plan"], "stripe_id": "in_1A2B3C4D5E6F7G8H", "processor_type": "stripe", "status": "open", "total": 29.99, "currency": "usd", "created_at": 1759247877000, "hosted_invoice_url": "https://invoice.stripe.com/i/acct_123/test_456", "id": "inv_2b3c4d5e6f7g8h", "customer_id": "cus_123", "entity_id": null, "amount_paid": 29.99, "refunded_amount": 0, "items": [{"id": "invoice_li_2b3c4d5e6f7g8h", "description": "Pro plan", "period_start": 1759247877000, "period_end": 1761839877000, "plan_id": "pro_plan", "feature_id": null, "feature_name": null, "quantity": null, "amount": 20, "entities": []}, {"id": "invoice_li_3c4d5e6f7g8h9i", "description": "AI credits", "period_start": 1759247877000, "period_end": 1761839877000, "plan_id": "pro_plan", "feature_id": "ai_credits", "feature_name": "AI Credits", "quantity": 4995, "amount": 9.99, "entities": [{"entity_id": "acme-docs-prod", "quantity": 4995, "amount": 9.99}]}]}, "preview": {"currency": "usd", "lines": [], "subtotal": 29.99, "discount_total": 0, "tax": null, "total": 29.99, "invoice_credits": {"balance": 10, "applied": 10, "currency": "usd"}, "amount_due": 19.99, "due_date": 1761839877000}}
+          application/json: {"invoice": {"plan_ids": ["pro_plan"], "stripe_id": "in_1A2B3C4D5E6F7G8H", "processor_type": "stripe", "status": "open", "total": 29.99, "currency": "usd", "created_at": 1759247877000, "hosted_invoice_url": "https://invoice.stripe.com/i/acct_123/test_456", "id": "inv_2b3c4d5e6f7g8h", "customer_id": "cus_123", "entity_id": null, "amount_paid": 29.99, "refunded_amount": 0, "items": [{"id": "invoice_li_2b3c4d5e6f7g8h", "description": "Pro plan", "period_start": 1759247877000, "period_end": 1761839877000, "plan_id": "pro_plan", "feature_id": null, "feature_name": null, "quantity": null, "amount": 20, "entities": []}, {"id": "invoice_li_3c4d5e6f7g8h9i", "description": "AI credits", "period_start": 1759247877000, "period_end": 1761839877000, "plan_id": "pro_plan", "feature_id": "ai_credits", "feature_name": "AI Credits", "quantity": 4995, "amount": 9.99, "entities": [{"entity_id": "acme-docs-prod", "quantity": 4995, "amount": 9.99}]}]}, "preview": {"currency": "usd", "lines": [], "subtotal": 29.99, "discount_total": 0, "tax": null, "total": 29.99, "invoice_credits": {"balance": 10, "applied": 10, "currency": "usd"}, "amount_due": 19.99, "issue_date": 7918.57, "due_date": 1761839877000}}
   listInvoiceTemplates:
     speakeasy-default-list-invoice-templates:
       parameters:
@@ -21548,7 +21548,7 @@ examples:
         application/json: {"invoice_id": "inv_2b3c4d5e6f7g8h", "invoice_template_id": "inv_tmpl_bank_transfer"}
       responses:
         "200":
-          application/json: {"invoice": {"plan_ids": ["pro_plan"], "stripe_id": "in_1A2B3C4D5E6F7G8H", "processor_type": "stripe", "status": "open", "total": 29.99, "currency": "usd", "created_at": 1759247877000, "hosted_invoice_url": "https://invoice.stripe.com/i/acct_123/test_456", "id": "inv_3c4d5e6f7g8h9i", "customer_id": "cus_123", "entity_id": null, "amount_paid": 29.99, "refunded_amount": 0, "items": [{"id": "invoice_li_2b3c4d5e6f7g8h", "description": "Pro plan", "period_start": 1759247877000, "period_end": 1761839877000, "plan_id": "pro_plan", "feature_id": null, "feature_name": null, "quantity": null, "amount": 20, "entities": []}, {"id": "invoice_li_3c4d5e6f7g8h9i", "description": "AI credits", "period_start": 1759247877000, "period_end": 1761839877000, "plan_id": "pro_plan", "feature_id": "ai_credits", "feature_name": "AI Credits", "quantity": 4995, "amount": 9.99, "entities": [{"entity_id": "acme-docs-prod", "quantity": 4995, "amount": 9.99}]}]}, "voided_invoice_id": "inv_2b3c4d5e6f7g8h", "credit_note_id": "<id>", "preview": {"currency": "usd", "lines": [], "subtotal": 29.99, "discount_total": 0, "tax": null, "total": 29.99, "amount_due": 29.99, "due_date": 1761839877000}}
+          application/json: {"invoice": {"plan_ids": ["pro_plan"], "stripe_id": "in_1A2B3C4D5E6F7G8H", "processor_type": "stripe", "status": "open", "total": 29.99, "currency": "usd", "created_at": 1759247877000, "hosted_invoice_url": "https://invoice.stripe.com/i/acct_123/test_456", "id": "inv_3c4d5e6f7g8h9i", "customer_id": "cus_123", "entity_id": null, "amount_paid": 29.99, "refunded_amount": 0, "items": [{"id": "invoice_li_2b3c4d5e6f7g8h", "description": "Pro plan", "period_start": 1759247877000, "period_end": 1761839877000, "plan_id": "pro_plan", "feature_id": null, "feature_name": null, "quantity": null, "amount": 20, "entities": []}, {"id": "invoice_li_3c4d5e6f7g8h9i", "description": "AI credits", "period_start": 1759247877000, "period_end": 1761839877000, "plan_id": "pro_plan", "feature_id": "ai_credits", "feature_name": "AI Credits", "quantity": 4995, "amount": 9.99, "entities": [{"entity_id": "acme-docs-prod", "quantity": 4995, "amount": 9.99}]}]}, "voided_invoice_id": "inv_2b3c4d5e6f7g8h", "credit_note_id": "<id>", "preview": {"currency": "usd", "lines": [], "subtotal": 29.99, "discount_total": 0, "tax": null, "total": 29.99, "amount_due": 29.99, "issue_date": 5088.9, "due_date": 1761839877000}}
   voidInvoice:
     speakeasy-default-void-invoice:
       parameters:

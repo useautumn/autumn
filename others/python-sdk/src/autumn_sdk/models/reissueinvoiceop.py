@@ -2179,6 +2179,7 @@ class ReissueInvoicePreviewTypedDict(TypedDict):
     total: float
     amount_due: float
     r"""What the customer pays: the total less any credit applied."""
+    issue_date: float
     due_date: Nullable[float]
     invoice_credits: NotRequired[ReissueInvoiceInvoiceCreditsTypedDict]
     r"""The customer's Stripe credit balance and how much of it this invoice consumes."""
@@ -2201,6 +2202,8 @@ class ReissueInvoicePreview(BaseModel):
 
     amount_due: float
     r"""What the customer pays: the total less any credit applied."""
+
+    issue_date: float
 
     due_date: Nullable[float]
 
