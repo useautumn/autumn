@@ -18,9 +18,6 @@ import type { CreateInvoiceContext } from "../setup/setupCreateInvoiceContext";
 
 const ADD_LINES_BATCH_SIZE = 100;
 
-const msToUnixSeconds = (unixMs?: number) =>
-	unixMs === undefined ? undefined : getUnixTime(unixMs);
-
 /** Creates, populates and finalizes the Stripe invoice, then mirrors it into Autumn. */
 export const executeStripeInvoicePlan = async ({
 	ctx,
@@ -38,6 +35,7 @@ export const executeStripeInvoicePlan = async ({
 	dueDateMs: number | null;
 }> => {
 	const { stripeCustomer, fullCustomer, template, currency } = invoiceContext;
+	const { issue_date: issueDate, due_date: dueDate } = invoiceContext.params;
 	if (!stripeCustomer) {
 		throw new RecaseError({
 			message: "Customer has no Stripe customer",
@@ -54,8 +52,8 @@ export const executeStripeInvoicePlan = async ({
 		currency,
 		collectionMethod: "send_invoice",
 		daysUntilDue: invoiceContext.daysUntilDue,
-		dueDate: msToUnixSeconds(invoiceContext.params.due_date),
-		effectiveAt: msToUnixSeconds(invoiceContext.params.issue_date),
+		dueDate: dueDate && getUnixTime(dueDate),
+		effectiveAt: issueDate && getUnixTime(issueDate),
 		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
 		footer: template?.footer,
 		description: template?.memo,
