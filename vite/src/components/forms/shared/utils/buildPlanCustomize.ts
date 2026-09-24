@@ -3,11 +3,15 @@ import type {
 	CreatePlanItemParamsV1,
 	CustomizePlanLicense,
 	Feature,
+	FixedPriceConfig,
 	MultiAttachParamsV0,
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import { productItemsToPlanItemsV1 } from "@autumn/shared";
+import {
+	billingToItemInterval,
+	productItemsToPlanItemsV1,
+} from "@autumn/shared";
 import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
 
 export interface PlanCustomize {
@@ -72,12 +76,26 @@ export function buildCustomizeItems({
 	);
 }
 
+/** The Stripe price the base price already bills under, while its amount and
+ * interval are untouched — an edited price must mint a new one. */
+function unchangedBaseStripePriceId({ item }: { item: ProductItem }) {
+	const config = item.price_config as Partial<FixedPriceConfig> | undefined;
+	if (!config?.stripe_price_id) return undefined;
+	const isUnchanged =
+		config.amount === item.price &&
+		billingToItemInterval({ billingInterval: config.interval }) ===
+			item.interval &&
+		(config.interval_count ?? 1) === (item.interval_count ?? 1);
+	return isUnchanged ? config.stripe_price_id : undefined;
+}
+
 export function buildCustomizeBasePrice({ items }: { items: ProductItem[] }) {
 	const priceItem = items.find(
 		(item) => item.price != null && !item.feature_id,
 	);
 	if (!priceItem || priceItem.price === 0) return null;
 	if (!priceItem.interval) return undefined;
+	const stripePriceId = unchangedBaseStripePriceId({ item: priceItem });
 	return {
 		amount: priceItem.price,
 		interval: priceItem.interval,
@@ -88,6 +106,7 @@ export function buildCustomizeBasePrice({ items }: { items: ProductItem[] }) {
 			? { entitlement_id: priceItem.entitlement_id }
 			: {}),
 		...(priceItem.price_id ? { price_id: priceItem.price_id } : {}),
+		...(stripePriceId ? { stripe_price_id: stripePriceId } : {}),
 	};
 }
 

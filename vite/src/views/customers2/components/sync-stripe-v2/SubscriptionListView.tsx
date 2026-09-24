@@ -4,53 +4,8 @@ import { LinkIcon } from "@phosphor-icons/react";
 import type Stripe from "stripe";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { cn } from "@/lib/utils";
-
-const formatStripeCurrency = ({
-	amount,
-	currency,
-}: {
-	amount: number;
-	currency: string;
-}): string => {
-	const dollars = amount / 100;
-	try {
-		return new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency: currency.toUpperCase(),
-			minimumFractionDigits: dollars % 1 === 0 ? 0 : 2,
-			maximumFractionDigits: 2,
-		}).format(dollars);
-	} catch {
-		return `${dollars.toFixed(2)} ${currency.toUpperCase()}`;
-	}
-};
-
-const formatItemPrice = ({
-	price,
-}: {
-	price: Stripe.Price | null | undefined;
-}): string => {
-	if (!price) return "—";
-	const currency = price.currency ?? "usd";
-
-	if (price.billing_scheme === "tiered") {
-		return price.tiers_mode === "volume" ? "Volume" : "Tiered";
-	}
-
-	const usageType = price.recurring?.usage_type;
-	if (usageType === "metered") {
-		if (price.unit_amount != null) {
-			return `${formatStripeCurrency({ amount: price.unit_amount, currency })}/unit (metered)`;
-		}
-		return "Metered usage";
-	}
-
-	if (price.unit_amount != null) {
-		return formatStripeCurrency({ amount: price.unit_amount, currency });
-	}
-
-	return "—";
-};
+import { formatStripeItemPrice } from "./formatStripeItemPrice";
+import { StripeStatusBadge } from "./StripeStatusBadge";
 
 const getStripeProductName = ({
 	product,
@@ -67,7 +22,7 @@ const StripeItemRow = ({ item }: { item: Stripe.SubscriptionItem }) => {
 	const price = item.price;
 	const productName =
 		getStripeProductName({ product: price?.product }) ?? "Item";
-	const priceLabel = formatItemPrice({ price });
+	const priceLabel = formatStripeItemPrice({ price });
 	const quantity = item.quantity ?? 1;
 	const showQuantity = quantity > 1 && price?.billing_scheme !== "tiered";
 
@@ -94,7 +49,7 @@ const ScheduleItemRow = ({
 	const productName =
 		getStripeProductName({ product: price?.product }) ??
 		(typeof rawPrice === "string" ? rawPrice : "Item");
-	const priceLabel = formatItemPrice({ price });
+	const priceLabel = formatStripeItemPrice({ price });
 	const quantity = item.quantity ?? 1;
 	const showQuantity = quantity > 1 && price?.billing_scheme !== "tiered";
 
@@ -152,9 +107,12 @@ const ProposalCard = ({
 				</div>
 			)}
 
-			<span className="block text-xs font-mono text-tertiary-foreground truncate">
-				{objectLabel}
-			</span>
+			<div className="flex items-center justify-between gap-2">
+				<span className="min-w-0 text-xs font-mono text-tertiary-foreground truncate">
+					{objectLabel}
+				</span>
+				<StripeStatusBadge proposal={proposal} />
+			</div>
 
 			{sub && sub.items.data.length > 0 && (
 				<div className="space-y-1.5">
