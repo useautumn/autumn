@@ -79,15 +79,18 @@ export const setCachedModelPricing = async ({
 	});
 };
 
-/** Seconds until the primary copy expires, or null when nothing is cached. */
-export const getModelPricingCacheTtl = async (): Promise<number | null> => {
+/** Seconds until the primary copy expires, null when nothing is cached, undefined when Redis failed. */
+export const getModelPricingCacheTtl = async (): Promise<
+	number | null | undefined
+> => {
 	const miscRedis = getMiscRedis();
 	const ttl = await tryRedisOp({
 		operation: () => miscRedis.ttl(MODEL_PRICING_CACHE_KEY),
 		source: "model-pricing-cache:ttl",
 		redisInstance: miscRedis,
 	});
-	return ttl !== undefined && ttl > 0 ? ttl : null;
+	if (ttl === undefined) return undefined;
+	return ttl > 0 ? ttl : null;
 };
 
 /** Drops the primary copy so the next lookup refetches; the stale copy stays as the outage fallback. */

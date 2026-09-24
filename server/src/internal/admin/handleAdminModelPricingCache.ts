@@ -11,6 +11,12 @@ export const handleGetAdminModelPricingCache = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {
 		const ttlSeconds = await getModelPricingCacheTtl();
+		if (ttlSeconds === undefined) {
+			throw new InternalError({
+				message: "Failed to read the models.dev pricing cache",
+				code: ErrCode.InternalError,
+			});
+		}
 		return c.json({
 			key: MODEL_PRICING_CACHE_KEY,
 			cached: ttlSeconds !== null,
