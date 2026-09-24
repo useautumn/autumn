@@ -10,6 +10,7 @@ import {
 import type { FinalizeReply } from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
+import { withResidentSubject } from "../actions/withResidentSubject.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import { decideEffects } from "../effects/decideEffects.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
@@ -28,22 +29,25 @@ export async function finalize({
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: parsed.identity,
 	});
-	await ensureSubjectCurrent({ scope, command: parsed });
-
 	// Filled by the decision, which is the only place that knows which rows it was made against.
 	const decidedAgainst: { catalog?: Catalog } = {};
-	const decided = ctx.writer.decide<never>({
-		command: parsed,
-		mutate: ({ state }) =>
-			timeSync({ label: "finalize.decide" }, () =>
-				decideFinalize({
-					scope,
-					state,
-					customerKey,
-					command: parsed,
-					decidedAgainst,
-				}),
-			),
+	const decided = await withResidentSubject({
+		customerKey,
+		ensure: () => ensureSubjectCurrent({ scope, command: parsed }),
+		attempt: () =>
+			ctx.writer.decide<never>({
+				command: parsed,
+				mutate: ({ state }) =>
+					timeSync({ label: "finalize.decide" }, () =>
+						decideFinalize({
+							scope,
+							state,
+							customerKey,
+							command: parsed,
+							decidedAgainst,
+						}),
+					),
+			}),
 	});
 
 	const { mutation, state } = await decided.waitForCommit();
