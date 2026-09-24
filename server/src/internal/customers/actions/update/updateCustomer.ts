@@ -133,8 +133,7 @@ export const updateCustomer = async ({
 		assertBillingDetailsWritable({ ctx });
 		if (!stripeId) {
 			throw new RecaseError({
-				message:
-					"billing_details requires a linked Stripe customer. Set stripe_id or create the customer in Stripe first.",
+				message: `Customer ${customerId} isn't linked to a Stripe customer, so its billing details can't be saved (they're stored in Stripe). Link one with stripe_id, or create the customer in Stripe first.`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});
