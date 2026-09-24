@@ -43,6 +43,7 @@ const syntheticCatalogRows = ({
 	})),
 	prices: [],
 	plan_licenses: [],
+	free_trials: [],
 	products: ids.productInternalIds.map((internalId) => ({
 		id: "pro",
 		name: "Pro",
@@ -93,6 +94,7 @@ export const createEmptyWorkerDb = (): WorkerDb => ({
 		features: [],
 		prices: [],
 		plan_licenses: [],
+		free_trials: [],
 	}),
 });
 

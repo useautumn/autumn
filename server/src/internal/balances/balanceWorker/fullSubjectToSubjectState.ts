@@ -177,5 +177,27 @@ export function fullSubjectToCatalogRows({
 			}),
 		),
 	);
-	return [...entitlementRows, ...featureRows, ...productRows, ...priceRows];
+	// The trial carries no org or env of its own; its product scopes it for invalidation.
+	const freeTrialRows = rows.customerProducts.flatMap(
+		(customerProduct): CatalogRow[] =>
+			customerProduct.free_trial
+				? [
+						{
+							table: "freeTrials",
+							row: {
+								...customerProduct.free_trial,
+								org_id: customerProduct.product.org_id,
+								env: customerProduct.product.env,
+							},
+						},
+					]
+				: [],
+	);
+	return [
+		...entitlementRows,
+		...featureRows,
+		...productRows,
+		...priceRows,
+		...freeTrialRows,
+	];
 }

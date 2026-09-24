@@ -1,5 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { PostgresContext } from "../../../types/postgresClient.js";
+import { SUBJECT_ROW_LIMITS } from "./subjectRowLimits.js";
 
 /**
  * Single-subject port of getFullSubjectRowsQuery, keeping only what the balance worker
@@ -55,41 +56,50 @@ export const subjectRowsSql = ({
 		SELECT e.*
 		FROM entities e
 		WHERE e.internal_customer_id IN (SELECT internal_id FROM customer_record)
-			AND e.deleted IS NOT TRUE
 			AND (e.id = ${entityId} OR e.internal_id = ${entityId})
 		ORDER BY (e.id = ${entityId}) DESC
 		LIMIT 1
 	),
 
 	-- A seat's own status is a copy a cron refreshes later; the parent behind its license link is the truth.
-	cus_products AS (
+	-- A spare seat (no entity yet) is nobody's to draw from, so it stays out of the customer's rows.
+	subject_customer_products AS (
 		SELECT cp.*
 		FROM customer_products cp
+		JOIN products prod ON prod.internal_id = cp.internal_product_id
 		WHERE cp.internal_customer_id IN (SELECT internal_id FROM customer_record)
 			AND ${ownedBySubject({ alias: sql`cp` })}
 			AND (
 				(cp.customer_license_link_id IS NULL AND cp.status = ANY(${statusList}))
-				OR ${licenseParentIsLive({ alias: sql`cp` })}
+				OR (
+					cp.internal_entity_id IS NOT NULL
+					AND ${licenseParentIsLive({ alias: sql`cp` })}
+				)
 			)
+		ORDER BY
+			EXISTS (SELECT 1 FROM customer_prices cpr WHERE cpr.customer_product_id = cp.id) DESC,
+			prod.is_add_on ASC,
+			cp.created_at DESC
+		LIMIT ${SUBJECT_ROW_LIMITS.customerProducts}
 	),
 
-	cus_prices AS (
+	subject_customer_prices AS (
 		SELECT cpr.*
 		FROM customer_prices cpr
-		WHERE cpr.customer_product_id IN (SELECT id FROM cus_products)
+		WHERE cpr.customer_product_id IN (SELECT id FROM subject_customer_products)
 	),
 
 	-- A contributing source stays: it holds no balance, and a plan zeroes or releases it in place.
-	product_entitlements AS (
+	cp_customer_entitlements AS (
 		SELECT ce.*
 		FROM customer_entitlements ce
-		JOIN cus_products cp ON cp.id = ce.customer_product_id
+		JOIN subject_customer_products cp ON cp.id = ce.customer_product_id
 		WHERE ce.pooled_balance_id IS NULL
 	),
 
 	-- Same liveness rule as looseEntitlementIsLiveSql: a spendable balance, unlimited,
 	-- a boolean flag, or a pending reset. Drained one-off grants drop out.
-	loose_entitlements AS (
+	loose_customer_entitlements AS (
 		SELECT ce.*
 		FROM customer_entitlements ce
 		WHERE ce.internal_customer_id IN (SELECT internal_id FROM customer_record)
@@ -109,11 +119,13 @@ export const subjectRowsSql = ({
 					WHERE e.id = ce.entitlement_id AND f.type = 'boolean'
 				)
 			)
+		ORDER BY ce.id DESC
+		LIMIT ${SUBJECT_ROW_LIMITS.looseCustomerEntitlements}
 	),
 
 	-- The pool behind pooled plan items: one customer-level row every entity draws from. Its sources
 	-- (pooled_contribution_id set) hold no balance and stay out. A license pool is live while its parent is.
-	pooled_entitlements AS (
+	pooled_customer_entitlements AS (
 		SELECT ce.*
 		FROM customer_entitlements ce
 		JOIN pooled_balances pb ON pb.id = ce.pooled_balance_id
@@ -128,30 +140,32 @@ export const subjectRowsSql = ({
 				OR ${licenseParentIsLive({ alias: sql`pb` })}
 			)
 			AND (ce.expires_at IS NULL OR ce.expires_at > ${asOfTimestampMs})
+		ORDER BY ce.id DESC
+		LIMIT ${SUBJECT_ROW_LIMITS.pooledCustomerEntitlements}
 	),
 
-	cus_pooled_balances AS (
+	subject_pooled_balances AS (
 		SELECT pb.*
 		FROM pooled_balances pb
-		WHERE pb.id IN (SELECT pooled_balance_id FROM pooled_entitlements)
+		WHERE pb.id IN (SELECT pooled_balance_id FROM pooled_customer_entitlements)
 	),
 
-	all_entitlements AS (
-		SELECT * FROM product_entitlements
+	all_customer_entitlements AS (
+		SELECT * FROM cp_customer_entitlements
 		UNION ALL
-		SELECT * FROM loose_entitlements
+		SELECT * FROM loose_customer_entitlements
 		UNION ALL
-		SELECT * FROM pooled_entitlements
+		SELECT * FROM pooled_customer_entitlements
 	),
 
-	cus_rollovers AS (
+	subject_rollovers AS (
 		SELECT ro.*
 		FROM rollovers ro
-		WHERE ro.cus_ent_id IN (SELECT id FROM all_entitlements)
+		WHERE ro.cus_ent_id IN (SELECT id FROM all_customer_entitlements)
 			AND (ro.expires_at IS NULL OR ro.expires_at > ${asOfTimestampMs})
 	),
 
-	cus_usage_windows AS (
+	subject_usage_windows AS (
 		SELECT uw.*
 		FROM usage_windows uw
 		WHERE uw.internal_customer_id IN (SELECT internal_id FROM customer_record)
@@ -159,13 +173,13 @@ export const subjectRowsSql = ({
 	),
 
 	-- License pools hang off the customer's own products; an entity's seats own none.
-	cus_licenses AS (
+	subject_customer_licenses AS (
 		SELECT cl.*
 		FROM customer_licenses cl
-		WHERE cl.parent_customer_product_id IN (SELECT id FROM cus_products)
+		WHERE cl.parent_customer_product_id IN (SELECT id FROM subject_customer_products)
 	),
 
-	cus_open_locks AS (
+	subject_open_locks AS (
 		SELECT bl.id, bl.lock_id
 		FROM balance_locks bl
 		WHERE bl.internal_customer_id IN (SELECT internal_id FROM customer_record)
@@ -175,35 +189,35 @@ export const subjectRowsSql = ({
 	SELECT json_build_object(
 		'customer', (SELECT row_to_json(c) FROM customer_record c),
 		'customer_products', COALESCE(
-			(SELECT json_agg(row_to_json(cp) ORDER BY cp.created_at DESC, cp.id) FROM cus_products cp),
+			(SELECT json_agg(row_to_json(cp) ORDER BY cp.created_at DESC, cp.id) FROM subject_customer_products cp),
 			'[]'::json
 		),
 		'customer_prices', COALESCE(
-			(SELECT json_agg(row_to_json(cpr) ORDER BY cpr.id) FROM cus_prices cpr),
+			(SELECT json_agg(row_to_json(cpr) ORDER BY cpr.id) FROM subject_customer_prices cpr),
 			'[]'::json
 		),
 		'customer_entitlements', COALESCE(
-			(SELECT json_agg(row_to_json(ce) ORDER BY ce.id) FROM all_entitlements ce),
+			(SELECT json_agg(row_to_json(ce) ORDER BY ce.id) FROM all_customer_entitlements ce),
 			'[]'::json
 		),
 		'rollovers', COALESCE(
-			(SELECT json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST, ro.id) FROM cus_rollovers ro),
+			(SELECT json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST, ro.id) FROM subject_rollovers ro),
 			'[]'::json
 		),
 		'usage_windows', COALESCE(
-			(SELECT json_agg(row_to_json(uw) ORDER BY uw.id) FROM cus_usage_windows uw),
+			(SELECT json_agg(row_to_json(uw) ORDER BY uw.id) FROM subject_usage_windows uw),
 			'[]'::json
 		),
 		'pooled_balances', COALESCE(
-			(SELECT json_agg(row_to_json(pb) ORDER BY pb.id) FROM cus_pooled_balances pb),
+			(SELECT json_agg(row_to_json(pb) ORDER BY pb.id) FROM subject_pooled_balances pb),
 			'[]'::json
 		),
 		'customer_licenses', COALESCE(
-			(SELECT json_agg(row_to_json(cl) ORDER BY cl.id) FROM cus_licenses cl),
+			(SELECT json_agg(row_to_json(cl) ORDER BY cl.id) FROM subject_customer_licenses cl),
 			'[]'::json
 		),
 		'open_locks', COALESCE(
-			(SELECT json_agg(row_to_json(bl) ORDER BY bl.id) FROM cus_open_locks bl),
+			(SELECT json_agg(row_to_json(bl) ORDER BY bl.id) FROM subject_open_locks bl),
 			'[]'::json
 		),
 		'entity', (SELECT row_to_json(e) FROM entity_record e)

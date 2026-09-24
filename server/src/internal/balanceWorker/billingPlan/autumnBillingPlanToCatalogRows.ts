@@ -6,12 +6,32 @@ import {
 import type { AutumnBillingPlan, FullCusProduct } from "@autumn/shared";
 import { getUpdateCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations.js";
 
+/** The trial carries no org or env of its own; the product it belongs to scopes it for invalidation. */
+const freeTrialToCatalogRows = ({
+	customerProduct,
+}: {
+	customerProduct: FullCusProduct;
+}): CatalogRow[] =>
+	customerProduct.free_trial
+		? [
+				{
+					table: "freeTrials",
+					row: {
+						...customerProduct.free_trial,
+						org_id: customerProduct.product.org_id,
+						env: customerProduct.product.env,
+					},
+				},
+			]
+		: [];
+
 const customerProductToCatalogRows = ({
 	customerProduct,
 }: {
 	customerProduct: FullCusProduct;
 }): CatalogRow[] => [
 	{ table: "products", row: customerProduct.product },
+	...freeTrialToCatalogRows({ customerProduct }),
 	...customerProduct.customer_prices.map(
 		({ price }): CatalogRow => ({ table: "prices", row: price }),
 	),

@@ -5,6 +5,7 @@ import {
 	CusProductStatus,
 	EntInterval,
 	FeatureType,
+	FreeTrialDuration,
 } from "@autumn/shared";
 import type { CatalogRow } from "../../../../src/models/catalog/catalogRow.js";
 import {
@@ -13,6 +14,7 @@ import {
 	catalogRowToCatalogKey,
 	planLicensesToItemCatalogKeys,
 	subjectStateToCatalogKeys,
+	subjectStateToFreeTrialCatalogKeys,
 	subjectStateToPlanLicenseCatalogKeys,
 } from "../../../../src/utils/catalogUtils/convertCatalogUtils.js";
 import { filterCatalogKeysMissingFrom } from "../../../../src/utils/catalogUtils/filterCatalogUtils.js";
@@ -281,5 +283,62 @@ describe("plan license catalog keys", () => {
 				catalog: catalogRowsToCatalog({ rows: [] }),
 			}),
 		).toEqual([]);
+	});
+});
+
+const freeTrialRow = (id: string): CatalogRow => ({
+	table: "freeTrials",
+	row: {
+		id,
+		created_at: 1,
+		internal_product_id: "prod_internal_1",
+		duration: FreeTrialDuration.Day,
+		length: 7,
+		unique_fingerprint: false,
+		is_custom: false,
+		card_required: true,
+		on_end: "revert",
+		org_id: "org_1",
+		env: AppEnv.Sandbox,
+	},
+});
+
+describe("free trial catalog keys", () => {
+	test("a state names each product's free trial once, and none for a product without one", () => {
+		const withTrials = createSubjectState({
+			identity,
+			customerProducts: [
+				{ ...customerProduct, id: "cp_b", free_trial_id: "ft_b" },
+				{ ...customerProduct, id: "cp_a", free_trial_id: "ft_a" },
+				{ ...customerProduct, id: "cp_a2", free_trial_id: "ft_a" },
+				{ ...customerProduct, id: "cp_none", free_trial_id: null },
+				customerProduct,
+			],
+		});
+		expect(subjectStateToFreeTrialCatalogKeys({ state: withTrials })).toEqual([
+			{ table: "freeTrials", id: "ft_a" },
+			{ table: "freeTrials", id: "ft_b" },
+		]);
+		expect(subjectStateToCatalogKeys({ state: withTrials })).toEqual([
+			{ table: "products", id: "prod_internal_1" },
+		]);
+	});
+
+	test("a free trial row is keyed by id and lands under freeTrials", () => {
+		expect(catalogRowToCatalogKey({ row: freeTrialRow("ft_a") })).toEqual({
+			table: "freeTrials",
+			id: "ft_a",
+		});
+		const catalog = catalogRowsToCatalog({ rows: [freeTrialRow("ft_a")] });
+		expect(Object.keys(catalog.freeTrials)).toEqual(["ft_a"]);
+		expect(
+			filterCatalogKeysMissingFrom({
+				keys: [
+					{ table: "freeTrials", id: "ft_a" },
+					{ table: "freeTrials", id: "ft_gone" },
+				],
+				catalog,
+			}),
+		).toEqual([{ table: "freeTrials", id: "ft_gone" }]);
 	});
 });

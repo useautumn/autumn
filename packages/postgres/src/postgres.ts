@@ -38,6 +38,7 @@ export {
 	UnknownSubjectRowColumnError,
 } from "./subjects/repos/applySubjectRowUpdates/subjectRowUpdateSql.js";
 export { getSubjectRows } from "./subjects/repos/getSubjectRows/getSubjectRows.js";
+export { SUBJECT_ROW_LIMITS } from "./subjects/repos/getSubjectRows/subjectRowLimits.js";
 export { SubjectRowsInvalidError } from "./subjects/subjectErrors.js";
 export {
 	type SubjectRowChange,

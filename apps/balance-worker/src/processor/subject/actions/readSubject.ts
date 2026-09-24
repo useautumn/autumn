@@ -4,6 +4,7 @@ import {
 	type MeteringIdentity,
 	type SubjectState,
 	subjectStateToCatalogKeys,
+	subjectStateToFreeTrialCatalogKeys,
 	subjectStateToFullSubject,
 	type WorkerFullSubject,
 } from "@autumn/balance-engine";
@@ -27,6 +28,7 @@ export const readSubjectCatalog = ({
 		keys: [
 			...keys,
 			...readPlanLicenseCatalogKeys({ scope, state, allowStale: true }),
+			...subjectStateToFreeTrialCatalogKeys({ state }),
 		],
 		allowStale: true,
 	});

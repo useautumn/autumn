@@ -7,7 +7,7 @@ import { parseCatalog } from "../../parsers.js";
 export const catalogKeyToString = ({ key }: { key: CatalogKey }): string =>
 	`${key.table}:${key.id}`;
 
-/** Entitlements, prices and plan licenses are addressed by id, products and features by internal_id. */
+/** Entitlements, prices, plan licenses and free trials are addressed by id, products and features by internal_id. */
 export const catalogRowToCatalogKey = ({
 	row,
 }: {
@@ -61,6 +61,22 @@ export const subjectStateToPlanLicenseCatalogKeys = ({
 		.sort()
 		.map((id) => ({ table: "planLicenses", id }));
 
+/** The trials behind the state's products. Only a read renders them, so a trial removed since hydration renders as none rather than failing. */
+export const subjectStateToFreeTrialCatalogKeys = ({
+	state,
+}: {
+	state: SubjectState;
+}): CatalogKey[] =>
+	[
+		...new Set(
+			state.customerProducts.flatMap(({ free_trial_id }) =>
+				free_trial_id ? [free_trial_id] : [],
+			),
+		),
+	]
+		.sort()
+		.map((id) => ({ table: "freeTrials", id }));
+
 /** The rows the catalog's plan licenses are made of: each license's product and its effective items. */
 export const planLicensesToItemCatalogKeys = ({
 	catalog,
@@ -94,6 +110,7 @@ export const catalogRowsToCatalog = ({
 		features: {},
 		prices: {},
 		planLicenses: {},
+		freeTrials: {},
 	};
 	for (const tagged of rows) {
 		const { id } = catalogRowToCatalogKey({ row: tagged });
@@ -112,6 +129,9 @@ export const catalogRowsToCatalog = ({
 				break;
 			case "planLicenses":
 				catalog.planLicenses[id] = tagged.row;
+				break;
+			case "freeTrials":
+				catalog.freeTrials[id] = tagged.row;
 				break;
 		}
 	}

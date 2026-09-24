@@ -75,6 +75,7 @@ export {
 	UnsupportedCommandError,
 } from "./errors.js";
 export type { Catalog } from "./models/catalog/catalog.js";
+export type { CatalogFreeTrial } from "./models/catalog/catalogFreeTrial.js";
 export type {
 	CatalogKey,
 	CatalogTable,
@@ -168,6 +169,7 @@ export {
 	catalogRowToCatalogKey,
 	planLicensesToItemCatalogKeys,
 	subjectStateToCatalogKeys,
+	subjectStateToFreeTrialCatalogKeys,
 	subjectStateToPlanLicenseCatalogKeys,
 } from "./utils/catalogUtils/convertCatalogUtils.js";
 export { filterCatalogKeysMissingFrom } from "./utils/catalogUtils/filterCatalogUtils.js";

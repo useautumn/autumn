@@ -4,6 +4,7 @@ import {
 	planLicensesToItemCatalogKeys,
 	type SubjectState,
 	subjectStateToCatalogKeys,
+	subjectStateToFreeTrialCatalogKeys,
 	subjectStateToPlanLicenseCatalogKeys,
 } from "@autumn/balance-engine";
 import {
@@ -36,6 +37,23 @@ const ensurePlanLicenseCatalog = async ({
 	});
 };
 
+/** Best effort, like plan licenses: only a read renders a trial, so one removed since hydration must not fail a track. */
+const ensureFreeTrialCatalog = async ({
+	scope,
+	identity,
+	state,
+}: {
+	scope: SubjectScope;
+	identity: MeteringIdentity;
+	state: SubjectState;
+}): Promise<void> => {
+	await ensureCatalogForKeys({
+		catalogCache: scope.ctx.catalogCache,
+		identity,
+		keys: subjectStateToFreeTrialCatalogKeys({ state }),
+	});
+};
+
 /** Every catalog row the state references is in the cache afterwards, or the command cannot be decided. */
 export const ensureSubjectCatalog = async ({
 	scope,
@@ -49,10 +67,12 @@ export const ensureSubjectCatalog = async ({
 	const { catalogCache } = scope.ctx;
 	await ensureCatalogForState({ catalogCache, identity, state });
 	await ensurePlanLicenseCatalog({ scope, identity, state });
+	await ensureFreeTrialCatalog({ scope, identity, state });
 	return catalogCache.read({
 		keys: [
 			...subjectStateToCatalogKeys({ state }),
 			...readPlanLicenseCatalogKeys({ scope, state }),
+			...subjectStateToFreeTrialCatalogKeys({ state }),
 		],
 	});
 };
