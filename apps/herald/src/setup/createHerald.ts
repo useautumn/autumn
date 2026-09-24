@@ -27,7 +27,7 @@ export function createHerald({
 		catalogCache: CatalogCache;
 		postgres: Pick<PostgresClient, "close">;
 		miscCache: Pick<MiscCache, "getActive" | "close">;
-		sqsJobs: Pick<SqsJobs, "shutdown">;
+		sqsJobs: Pick<SqsJobs, "autoTopup" | "shutdown">;
 		edgeConfigs: { start(): Promise<void>; stop(): void };
 	};
 	config: { env: HeraldEnv };
@@ -72,8 +72,21 @@ export function createHerald({
 		});
 	}
 
+	/** The misc client connects on first use, and a claim on a connecting client is refused: open it before the log is read. */
+	async function openMiscCache(): Promise<void> {
+		try {
+			await ctx.miscCache.getActive().ping();
+		} catch (cause) {
+			ctx.logger.warn(
+				{ error: cause, type: "herald_misc_cache_cold" },
+				"Misc cache did not answer at start; its first claims may be refused",
+			);
+		}
+	}
+
 	async function start(): Promise<void> {
 		await ctx.edgeConfigs.start();
+		await openMiscCache();
 		await catalogInvalidations.start();
 		for (const consumer of running) await consumer.start();
 		ctx.logger.info(

@@ -1,11 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
 	applyMutation,
-	type Catalog,
 	computeFinalize,
 	computeTrack,
 	createSubjectState,
-	type MutationRecord,
 	type SubjectState,
 	type SubjectStateMutation,
 	subjectStateToFullSubject,
@@ -20,9 +18,9 @@ import {
 	identity,
 	occurredAt,
 } from "../../../balance-engine/tests/unit/engineFixtures.js";
-import { recordToBalanceWebhooks } from "../../src/balanceWebhooks.js";
+import { subjectsToBalanceWebhooks } from "../../src/balanceWebhooks.js";
 
-/** Which webhooks one record of the balance log calls for, decided from the record alone. */
+/** Which webhooks one mutation calls for, decided from the subject as it found it and as it left it. */
 
 const stateWith = ({
 	balance,
@@ -41,32 +39,29 @@ const stateWith = ({
 const subjectOf = ({ state }: { state: SubjectState }) =>
 	subjectStateToFullSubject({ state, catalog: createCatalogFor({ state }) });
 
-/** What the writer puts on the log: the mutation, its receipt, and the subject as the mutation left it. */
-const logged = ({
+/** What the worker hands the decision: the mutation with the subject as it found it and as it left it. */
+const decidedOn = ({
 	state,
 	mutation,
 }: {
 	state: SubjectState;
 	mutation: SubjectStateMutation;
-}): MutationRecord => {
-	const after = applyMutation({ state, mutation });
-	return {
-		...mutation,
-		receipt: { fingerprint: "f", expiresAt: 1 },
-		after: { state: after },
-	};
-};
+}) => ({
+	mutation,
+	before: subjectOf({ state }),
+	after: subjectOf({ state: applyMutation({ state, mutation }) }),
+});
 
-/** The catalog the record's rows reference, as herald reads it from its own cache. */
-const catalogOf = ({ record }: { record: MutationRecord }): Catalog =>
-	createCatalogFor({
-		state: record.after?.state ?? stateWith({ balance: 0 }),
-	});
+const webhooksOf = ({
+	state,
+	mutation,
+}: {
+	state: SubjectState;
+	mutation: SubjectStateMutation;
+}) => subjectsToBalanceWebhooks(decidedOn({ state, mutation }));
 
-const webhooksOf = ({ record }: { record: MutationRecord }) =>
-	recordToBalanceWebhooks({ record, catalog: catalogOf({ record }) });
-
-const trackRecord = ({
+/** Tracks `value` against an allowance of `balance`. */
+const trackOn = ({
 	balance,
 	value,
 	overageBehavior = "cap" as const,
@@ -74,23 +69,22 @@ const trackRecord = ({
 	balance: number;
 	value: number;
 	overageBehavior?: "cap" | "reject";
-}): MutationRecord => {
+}): { state: SubjectState; mutation: SubjectStateMutation } => {
 	const state = stateWith({ balance });
 	const mutation = computeTrack({
 		fullSubject: subjectOf({ state }),
 		command: createTrackCommand({ value, overageBehavior }),
 	});
-	return logged({ state, mutation });
+	return { state, mutation };
 };
 
 describe("limit reached", () => {
 	test("a track that empties the allowance fires, naming the customer, the feature and the limit", () => {
-		const webhooks = webhooksOf({
-			record: trackRecord({ balance: 10, value: 10 }),
-		});
+		const webhooks = webhooksOf(trackOn({ balance: 10, value: 10 }));
 
 		expect(webhooks).toEqual([
 			{
+				type: "balance_webhook",
 				eventType: "balances.limit_reached",
 				data: {
 					customer_id: identity.customerId,
@@ -103,33 +97,23 @@ describe("limit reached", () => {
 	});
 
 	test("a track that leaves some allowance does not fire", () => {
-		expect(
-			webhooksOf({ record: trackRecord({ balance: 10, value: 3 }) }),
-		).toEqual([]);
+		expect(webhooksOf(trackOn({ balance: 10, value: 3 }))).toEqual([]);
 	});
 
 	test("a track on an allowance that was already empty does not fire again", () => {
-		expect(
-			webhooksOf({ record: trackRecord({ balance: 0, value: 1 }) }),
-		).toEqual([]);
+		expect(webhooksOf(trackOn({ balance: 0, value: 1 }))).toEqual([]);
 	});
 
 	test("a refused track moved nothing, so nothing fires", () => {
 		expect(
-			webhooksOf({
-				record: trackRecord({
+			webhooksOf(
+				trackOn({
 					balance: 3,
 					value: 5,
 					overageBehavior: "reject",
 				}),
-			}),
+			),
 		).toEqual([]);
-	});
-
-	test("a record from before the log carried the subject is skipped", () => {
-		const { after: _after, ...older } = trackRecord({ balance: 10, value: 10 });
-
-		expect(webhooksOf({ record: older })).toEqual([]);
 	});
 
 	test("a lock that empties the allowance fires, and settling it fires nothing more", () => {
@@ -169,11 +153,10 @@ describe("limit reached", () => {
 			},
 		});
 
-		const onLock = webhooksOf({
-			record: logged({ state, mutation: lockMutation }),
-		});
+		const onLock = webhooksOf({ state, mutation: lockMutation });
 		const onFinalize = webhooksOf({
-			record: logged({ state: locked, mutation: finalizeMutation }),
+			state: locked,
+			mutation: finalizeMutation,
 		});
 
 		expect(onLock.map(({ eventType }) => eventType)).toEqual([
@@ -219,9 +202,7 @@ describe("limit reached", () => {
 			},
 		});
 
-		expect(
-			webhooksOf({ record: logged({ state: locked, mutation: release }) }),
-		).toEqual([]);
+		expect(webhooksOf({ state: locked, mutation: release })).toEqual([]);
 	});
 
 	test("a track that spends a daily cap names the cap, its window and the usage in it", () => {
@@ -243,7 +224,7 @@ describe("limit reached", () => {
 			command: createTrackCommand({ value: 5, overageBehavior: "cap" }),
 		});
 
-		const [webhook] = webhooksOf({ record: logged({ state, mutation }) });
+		const [webhook] = webhooksOf({ state, mutation });
 
 		expect(webhook?.data).toMatchObject({
 			feature_id: "messages",
@@ -276,7 +257,7 @@ describe("limit reached", () => {
 			},
 		});
 
-		const [webhook] = webhooksOf({ record: logged({ state, mutation }) });
+		const [webhook] = webhooksOf({ state, mutation });
 
 		expect(webhook?.data).toMatchObject({
 			limit_type: "usage_limit",

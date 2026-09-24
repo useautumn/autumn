@@ -1,11 +1,10 @@
 import { expect, test } from "bun:test";
 import {
-	applyMutation,
 	computeTrack,
 	createSubjectState,
+	type MutationEffect,
 	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
-import type { CatalogCache } from "@autumn/catalog-lru";
 import type { SvixClient, SvixMessage } from "@autumn/svix";
 import {
 	createCatalogFor,
@@ -17,8 +16,25 @@ import {
 import { createBalanceWebhooksConsumer } from "../../../../src/consumers/balanceWebhooks/balanceWebhooksConsumer.js";
 import type { StreamRecord } from "../../../../src/stream/types/streamConsumer.js";
 
-/** A track of `value` against an allowance of 10, as the log carries it. */
-const trackOf = ({ value }: { value: number }): StreamRecord => {
+const limitReached: MutationEffect = {
+	type: "balance_webhook",
+	eventType: "balances.limit_reached",
+	data: { customer_id: identity.customerId, feature_id: "messages" },
+	tags: [`customer_id.${identity.customerId}`],
+};
+
+const topUp: MutationEffect = {
+	type: "auto_topup",
+	featureId: "messages",
+	reason: "balance_below_threshold",
+};
+
+/** A track as the worker logs it, with whatever effects it decided. */
+const trackWith = ({
+	effects,
+}: {
+	effects?: MutationEffect[];
+}): StreamRecord => {
 	const state = createSubjectState({
 		identity,
 		customerProducts: [createCustomerProduct()],
@@ -30,56 +46,46 @@ const trackOf = ({ value }: { value: number }): StreamRecord => {
 			catalog: createCatalogFor({ state }),
 		}),
 		command: {
-			...createTrackCommand({ value, overageBehavior: "cap" }),
+			...createTrackCommand({ value: 10, overageBehavior: "cap" }),
 			org: {
 				...createTrackCommand().org,
 				svix: { sandbox_app_id: "app_sandbox_1", live_app_id: null },
 			},
 		},
 	});
-	const after = applyMutation({ state, mutation });
 	return {
 		position: { topic: "local-events", partition: 0, offset: 1n },
 		record: {
 			...mutation,
 			receipt: { fingerprint: "f", expiresAt: 1 },
-			after: { state: after },
+			...(effects && { effects }),
 		},
 	};
 };
 
-const emptyingTrack = (): StreamRecord => trackOf({ value: 10 });
-
 const logger = { info() {}, warn() {}, error() {} };
 
-/** Answers every key from the fixture's catalog, as a warm cache would. */
-const catalogCache: Pick<CatalogCache, "read" | "load"> = {
-	read: () =>
-		createCatalogFor({ state: emptyingTrack().record.after?.state as never }),
-	load: async () => {},
-};
+const svixThat = (
+	sendMessage: (params: {
+		appId: string;
+		message: SvixMessage;
+	}) => Promise<void>,
+): SvixClient => ({ sendMessage }) as unknown as SvixClient;
 
-test("a record's webhooks go to the app its org delivers through in that env", async () => {
+test("a record's webhook effects go to the app its org delivers through in that env; other effects are not its business", async () => {
 	const sent: { appId: string; eventType: string }[] = [];
 	const consumer = createBalanceWebhooksConsumer({
 		ctx: {
 			logger,
-			catalogCache,
-			svix: {
-				sendMessage: async ({
-					appId,
-					message,
-				}: {
-					appId: string;
-					message: SvixMessage;
-				}) => {
-					sent.push({ appId, eventType: message.eventType });
-				},
-			} as unknown as SvixClient,
+			svix: svixThat(async ({ appId, message }) => {
+				sent.push({ appId, eventType: message.eventType });
+			}),
 		},
 	});
 
-	await consumer.handle({ records: [emptyingTrack()] });
+	await consumer.handle({
+		records: [trackWith({ effects: [limitReached, topUp] })],
+	});
 
 	expect(sent).toEqual([
 		{ appId: "app_sandbox_1", eventType: "balances.limit_reached" },
@@ -88,11 +94,11 @@ test("a record's webhooks go to the app its org delivers through in that env", a
 
 test("without Svix the job reads the log and delivers nothing", async () => {
 	const consumer = createBalanceWebhooksConsumer({
-		ctx: { logger, catalogCache, svix: null },
+		ctx: { logger, svix: null },
 	});
 
 	await expect(
-		consumer.handle({ records: [emptyingTrack()] }),
+		consumer.handle({ records: [trackWith({ effects: [limitReached] })] }),
 	).resolves.toBeUndefined();
 });
 
@@ -101,36 +107,41 @@ test("a send that fails is logged and does not stop the batch", async () => {
 	const consumer = createBalanceWebhooksConsumer({
 		ctx: {
 			logger: { ...logger, error: (...args: unknown[]) => errors.push(args) },
-			catalogCache,
-			svix: {
-				sendMessage: async () => {
-					throw new Error("svix is down");
-				},
-			} as unknown as SvixClient,
+			svix: svixThat(async () => {
+				throw new Error("svix is down");
+			}),
 		},
 	});
 
 	await expect(
-		consumer.handle({ records: [emptyingTrack(), emptyingTrack()] }),
+		consumer.handle({
+			records: [
+				trackWith({ effects: [limitReached] }),
+				trackWith({ effects: [limitReached] }),
+			],
+		}),
 	).resolves.toBeUndefined();
 	expect(errors).toHaveLength(2);
 });
 
-test("a track that leaves some allowance delivers nothing", async () => {
+test("a record with no webhook effects delivers nothing", async () => {
 	const sent: string[] = [];
 	const consumer = createBalanceWebhooksConsumer({
 		ctx: {
 			logger,
-			catalogCache,
-			svix: {
-				sendMessage: async ({ message }: { message: SvixMessage }) => {
-					sent.push(message.eventType);
-				},
-			} as unknown as SvixClient,
+			svix: svixThat(async ({ message }) => {
+				sent.push(message.eventType);
+			}),
 		},
 	});
 
-	await consumer.handle({ records: [trackOf({ value: 3 })] });
+	await consumer.handle({
+		records: [
+			trackWith({}),
+			trackWith({ effects: [] }),
+			trackWith({ effects: [topUp] }),
+		],
+	});
 
 	expect(sent).toEqual([]);
 });

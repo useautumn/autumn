@@ -1,4 +1,5 @@
 import {
+	type BalanceWebhookEffect,
 	type CheckCommand,
 	computeCheck,
 	type WorkerFullSubject,
@@ -8,7 +9,6 @@ import {
 	customerToSvixTags,
 	WebhookEventType,
 } from "@autumn/shared";
-import type { BalanceWebhook } from "../types/balanceWebhook.js";
 import { findBlockingUsageLimit } from "./findBlockingUsageLimit.js";
 
 /** Fires when the feature went from allowed to refused: what prod's checkLimitReached sends, decided from the log alone. */
@@ -20,7 +20,7 @@ export const checkLimitReached = ({
 	command: CheckCommand;
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
-}): BalanceWebhook[] => {
+}): BalanceWebhookEffect[] => {
 	const wasAllowed = computeCheck({ fullSubject: before, command }).allowed;
 	if (!wasAllowed) return [];
 	const now = computeCheck({ fullSubject: after, command });
@@ -45,6 +45,7 @@ export const checkLimitReached = ({
 
 	return [
 		{
+			type: "balance_webhook",
 			eventType: WebhookEventType.BalancesLimitReached,
 			data,
 			tags: customerToSvixTags({ customerId, entityId }),

@@ -1,5 +1,6 @@
 import type {
 	MutatingCommand,
+	MutationEffect,
 	MutationRecord,
 	MutationSource,
 	SubjectState,
@@ -46,8 +47,8 @@ export type MutationResult<Reply> =
 			nextState: SubjectState;
 			/** What each owner stores; absent, nextState is split into the customer and the entity it names. */
 			projectedStates?: SubjectState[];
-			/** Stamp the subject as this mutation leaves it on the log, for readers that rebuild balances from it. */
-			logsAfter?: boolean;
+			/** What must happen elsewhere because of this mutation; stamped on the log's copy for its readers. */
+			effects?: MutationEffect[];
 	  }
 	/** Nothing to write: reply immediately. */
 	| { kind: "reply"; reply: Reply };

@@ -1,5 +1,4 @@
-import { recordToBalanceWebhooks } from "@autumn/balance-webhooks";
-import type { CatalogCache } from "@autumn/catalog-lru";
+import type { BalanceWebhookEffect } from "@autumn/balance-engine";
 import type { AutumnLogger } from "@autumn/logging";
 import type { SvixClient } from "@autumn/svix";
 import type {
@@ -7,15 +6,17 @@ import type {
 	StreamRecord,
 } from "../../stream/types/streamConsumer.js";
 import { deliverBalanceWebhook } from "./actions/deliverBalanceWebhook.js";
-import { readRecordCatalog } from "./actions/readRecordCatalog.js";
 
-/** Fires the webhooks each record calls for, one record at a time, so a customer's webhooks arrive in balance order. */
+const isBalanceWebhookEffect = (effect: {
+	type: string;
+}): effect is BalanceWebhookEffect => effect.type === "balance_webhook";
+
+/** Sends the webhooks the worker decided, one record at a time, so a customer's webhooks arrive in balance order. */
 export function createBalanceWebhooksConsumer({
 	ctx,
 }: {
 	ctx: {
 		svix: SvixClient | null;
-		catalogCache: Pick<CatalogCache, "read" | "load">;
 		logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	};
 }): StreamConsumer {
@@ -27,10 +28,8 @@ export function createBalanceWebhooksConsumer({
 		const { svix } = ctx;
 		if (!svix) return;
 		for (const { record } of records) {
-			const catalog = await readRecordCatalog({ ctx, record });
-			if (!catalog) continue;
-
-			for (const webhook of recordToBalanceWebhooks({ record, catalog })) {
+			const webhooks = (record.effects ?? []).filter(isBalanceWebhookEffect);
+			for (const webhook of webhooks) {
 				await deliverBalanceWebhook({ ctx: { ...ctx, svix }, record, webhook });
 			}
 		}

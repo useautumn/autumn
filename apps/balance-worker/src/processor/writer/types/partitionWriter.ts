@@ -1,5 +1,6 @@
 import type {
 	MeteringIdentity,
+	MutationEffect,
 	MutationRecord,
 	SubjectState,
 } from "@autumn/balance-engine";
@@ -94,8 +95,8 @@ export type PendingMutation = {
 	nextState: SubjectState;
 	/** Whether the caller is answered at the append or after the store applies. */
 	durability: MutationDurability;
-	/** Stamps nextState on the log's copy, never the store's. */
-	logsAfter?: boolean;
+	/** Stamped on the log's copy, never the store's. */
+	effects?: MutationEffect[];
 	settlement: PendingSettlement;
 	/** What `waitForPendingCommits()` snapshots for this customer. */
 	committed: Promise<CommittedMutation>;

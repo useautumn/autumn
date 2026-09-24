@@ -1,6 +1,9 @@
-import type { CheckCommand, WorkerFullSubject } from "@autumn/balance-engine";
+import type {
+	BalanceWebhookEffect,
+	CheckCommand,
+	WorkerFullSubject,
+} from "@autumn/balance-engine";
 import { findFeatureOnSubject } from "../common/findSubject/findFeatureOnSubject.js";
-import type { BalanceWebhook } from "../types/balanceWebhook.js";
 import { resolveScopeApiBalances } from "./measure/measureBalanceBasis.js";
 import { measureUsageAlert } from "./measure/measureUsageAlert.js";
 import { resolveAlertScopes } from "./resolveAlertScopes.js";
@@ -16,7 +19,7 @@ export const checkUsageAlerts = ({
 	command: CheckCommand;
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
-}): BalanceWebhook[] => {
+}): BalanceWebhookEffect[] => {
 	const now = command.occurredAt;
 	const feature = findFeatureOnSubject({
 		fullSubject: after,
@@ -26,7 +29,7 @@ export const checkUsageAlerts = ({
 	if (!feature) return [];
 
 	const tracked = { before, after };
-	const webhooks: BalanceWebhook[] = [];
+	const webhooks: BalanceWebhookEffect[] = [];
 	for (const scoped of resolveAlertScopes({
 		command,
 		fullSubject: after,

@@ -13,14 +13,14 @@ import { applyRecord } from "./applyRecord.js";
 
 /**
  * Re-parsed through JSON so an in-memory mutation and a replayed one persist identically.
- * `after` is for the log's other readers: the store, its receipts and checkpoints hold the record without it.
+ * `effects` are for the log's other readers: the store, its receipts and checkpoints hold the record without them.
  */
 const parsePersistedMutation = ({
 	record,
 }: {
 	record: DurableMutationRecord;
 }): DurableMutationRecord => {
-	const { after: _after, ...mutation } = record.mutation;
+	const { effects: _effects, ...mutation } = record.mutation;
 	return {
 		position: record.position,
 		mutation: parseMutationRecord({

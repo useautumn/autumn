@@ -6,7 +6,6 @@ import {
 	computeApplyBillingPlan,
 	parseApplyBillingPlanRequest,
 	planInsertsCustomer,
-	revertChanges,
 	StaleMutationError,
 	type SubjectState,
 	SubjectStateMissingError,
@@ -175,10 +174,6 @@ describe("computeApplyBillingPlan", () => {
 			type: "stripe",
 		});
 		expect(next.customerProducts[0]?.subscription_ids).toEqual(["sub_1"]);
-		expect(revertChanges({ state: next, changes: mutation.changes })).toEqual({
-			...state,
-			revision: 2,
-		});
 		expect(planInsertsCustomer({ command: linkBack })).toBe(false);
 	});
 

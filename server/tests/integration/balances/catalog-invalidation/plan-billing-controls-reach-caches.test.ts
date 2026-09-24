@@ -1,15 +1,14 @@
 /**
- * A plan edit reaches the catalog copies the balance worker and herald hold, inside their TTL.
+ * A plan edit reaches the catalog copies the balance workers hold, inside their TTL.
  *
  * Contract:
  *   - `plans.update({ disable_version, billing_controls })` edits the product row in place and publishes a
- *     catalog invalidation; every worker and herald expires the org's cached rows.
- *   - Worker: a plan-level usage limit added after the worker cached the product gates the
- *     next `check`.
- *   - Herald: a plan-level usage alert added after herald cached the product fires
- *     `balances.usage_alert_triggered` on the next crossing.
+ *     catalog invalidation; every worker expires the org's cached rows.
+ *   - A plan-level usage limit added after the worker cached the product gates the next `check`.
+ *   - A plan-level usage alert added after the worker cached the product is decided on the next
+ *     track and fires `balances.usage_alert_triggered` through herald.
  *
- * Red (no invalidation): both caches serve the product as first read for five minutes, so
+ * Red (no invalidation): the cache serves the product as first read for five minutes, so
  * `check` stays allowed and no alert fires.
  */
 

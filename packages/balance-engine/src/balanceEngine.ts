@@ -66,7 +66,6 @@ export type { UnsupportedCommandReason } from "./errors.js";
 // boundary
 export {
 	CatalogRowMissingError,
-	IrreversibleChangeError,
 	LockAlreadyExistsError,
 	LockNotFoundError,
 	MutationSubjectMismatchError,
@@ -84,10 +83,7 @@ export type {
 export type { CatalogPlanLicense } from "./models/catalog/catalogPlanLicense.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
 export type { BaseCommand } from "./models/command/baseCommand.js";
-export {
-	type CommandDurability,
-	commandDurabilitySchema,
-} from "./models/command/commandDurability.js";
+export type { CommandDurability } from "./models/command/commandDurability.js";
 export type { CommandOrg } from "./models/command/commandOrg.js";
 export type { MutatingCommand } from "./models/command/mutatingCommand.js";
 export { orgToCommandOrg } from "./models/command/orgToCommandOrg.js";
@@ -96,7 +92,11 @@ export type { JsonValue } from "./models/common/json.js";
 export { canonicalizeJsonValue } from "./models/common/json.js";
 export type { MeteringIdentity } from "./models/identity/meteringIdentity.js";
 export type {
-	MutationAfter,
+	AutoTopupEffect,
+	BalanceWebhookEffect,
+	MutationEffect,
+} from "./models/mutation/mutationEffect.js";
+export type {
 	MutationReceipt,
 	MutationRecord,
 	MutationSource,
@@ -144,7 +144,6 @@ export type {
 export { applyChanges } from "./mutation/applyChanges.js";
 export { applyMutation } from "./mutation/applyMutation.js";
 export { incrementRow } from "./mutation/incrementRow.js";
-export { revertChanges } from "./mutation/revertChanges.js";
 export {
 	parseApplyBillingPlanRequest,
 	parseCatalog,
@@ -189,7 +188,6 @@ export {
 	mergeSubjectStates,
 	splitCustomerAndEntities,
 	splitSubjectState,
-	subjectStateToLogState,
 } from "./utils/subjectStateUtils/convertSubjectStateUtils.js";
 export { createSubjectState } from "./utils/subjectStateUtils/createSubjectState.js";
 export {

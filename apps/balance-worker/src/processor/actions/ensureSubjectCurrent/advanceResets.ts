@@ -63,7 +63,6 @@ export const decideReset = ({
 		kind: "write",
 		mutation,
 		nextState: applyMutation({ state, mutation }),
-		logsAfter: true,
 	};
 };
 

@@ -1,4 +1,7 @@
-import type { CheckCommand } from "@autumn/balance-engine";
+import type {
+	BalanceWebhookEffect,
+	CheckCommand,
+} from "@autumn/balance-engine";
 import {
 	type BalancesUsageAlertTriggered,
 	customerToSvixTags,
@@ -9,7 +12,6 @@ import {
 	usageLimitFilterKey,
 	WebhookEventType,
 } from "@autumn/shared";
-import type { BalanceWebhook } from "../types/balanceWebhook.js";
 import type { AlertScope, UsageAlertMeasurement } from "./types/usageAlert.js";
 
 export const buildUsageAlertPayload = ({
@@ -107,9 +109,10 @@ export const usageAlertToWebhook = ({
 	scope: AlertScope;
 	entityId?: string;
 	measurement: UsageAlertMeasurement;
-}): BalanceWebhook => {
+}): BalanceWebhookEffect => {
 	const { customerId, orgId, env } = command.identity;
 	return {
+		type: "balance_webhook",
 		eventType: WebhookEventType.BalancesUsageAlertTriggered,
 		data: buildUsageAlertPayload({
 			customerId,

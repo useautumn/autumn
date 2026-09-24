@@ -1,5 +1,7 @@
-import type { MutationRecord } from "@autumn/balance-engine";
-import type { BalanceWebhook } from "@autumn/balance-webhooks";
+import type {
+	BalanceWebhookEffect,
+	MutationRecord,
+} from "@autumn/balance-engine";
 import type { AutumnLogger } from "@autumn/logging";
 import type { SvixClient } from "@autumn/svix";
 import { recordToWebhookAppId } from "./recordToWebhookAppId.js";
@@ -15,7 +17,7 @@ export const deliverBalanceWebhook = async ({
 		logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	};
 	record: MutationRecord;
-	webhook: BalanceWebhook;
+	webhook: BalanceWebhookEffect;
 }): Promise<void> => {
 	const appId = recordToWebhookAppId({ record });
 	if (!appId) {

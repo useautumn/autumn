@@ -1,4 +1,5 @@
 import {
+	type MutationEffect,
 	type MutationRecord,
 	meteringIdentityToSubjectKey,
 	type SubjectState,
@@ -100,7 +101,7 @@ export function enqueueMutation({
 	nextState,
 	projectedStates: explicitProjectedStates,
 	durability,
-	logsAfter,
+	effects,
 }: {
 	scope: PartitionWriterScope;
 	pendingKey: string;
@@ -109,7 +110,7 @@ export function enqueueMutation({
 	nextState: SubjectState;
 	projectedStates?: SubjectState[];
 	durability: MutationDurability;
-	logsAfter?: boolean;
+	effects?: MutationEffect[];
 }): PendingMutation {
 	const { state, config } = scope;
 	const customerPending =
@@ -133,7 +134,7 @@ export function enqueueMutation({
 		mutation,
 		nextState,
 		durability,
-		logsAfter,
+		effects,
 		settlement,
 		committed,
 	};

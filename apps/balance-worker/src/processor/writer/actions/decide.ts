@@ -111,7 +111,7 @@ export function decide<Reply>({
 			customerKey,
 			requested: submission.durability ?? "log",
 		}),
-		logsAfter: result.logsAfter,
+		effects: result.effects,
 	});
 	scheduleCommit({ scope });
 	return decidedWith<Reply>({

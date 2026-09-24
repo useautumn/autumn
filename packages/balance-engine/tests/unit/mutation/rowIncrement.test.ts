@@ -8,7 +8,6 @@ import type {
 import {
 	applyChanges,
 	createSubjectState,
-	revertChanges,
 	StaleMutationError,
 } from "../../../src/balanceEngine.js";
 import { deduct } from "../../../src/deduction/deduct.js";
@@ -188,7 +187,6 @@ describe("applying an increment", () => {
 
 		const applied = applyChanges({ state, changes: [change] });
 		expect(rowOf(applied).usage_attribution).toEqual({});
-		expect(revertChanges({ state: applied, changes: [change] })).toEqual(state);
 	});
 });
 

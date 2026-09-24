@@ -5,14 +5,6 @@ export class StaleMutationError extends Error {
 	}
 }
 
-/** A delete carries only an id, so the row it removed cannot be restored from the change alone. */
-export class IrreversibleChangeError extends Error {
-	constructor({ subject }: { subject: string }) {
-		super(`Change cannot be reverted for ${subject}`);
-		this.name = "IrreversibleChangeError";
-	}
-}
-
 export class OutOfOrderMutationError extends Error {
 	constructor({
 		stateRevision,

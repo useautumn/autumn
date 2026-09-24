@@ -1,4 +1,7 @@
-import type { CheckCommand, MutationRecord } from "@autumn/balance-engine";
+import type {
+	CheckCommand,
+	SubjectStateMutation,
+} from "@autumn/balance-engine";
 import { parseCheckCommand } from "@autumn/balance-engine";
 import type { Feature } from "@autumn/shared";
 
@@ -6,12 +9,12 @@ import type { Feature } from "@autumn/shared";
 const A_HAIR_ABOVE_ZERO = 0.0000001;
 
 /** The feature a mutation moved and the properties it carried: a track names them; a finalize settles the lock's. */
-export const recordToTrackedFeature = ({
-	record,
+export const mutationToTrackedFeature = ({
+	mutation,
 }: {
-	record: MutationRecord;
+	mutation: SubjectStateMutation;
 }): { featureId: string; properties: CheckCommand["properties"] } | null => {
-	const { command } = record;
+	const { command } = mutation;
 	if (command.type === "track") {
 		return { featureId: command.featureId, properties: command.properties };
 	}
@@ -25,23 +28,23 @@ export const recordToTrackedFeature = ({
 };
 
 /** The check the API would answer right after this mutation, for one of the features it moved. */
-export const recordToCheckCommand = ({
-	record,
+export const mutationToCheckCommand = ({
+	mutation,
 	feature,
 }: {
-	record: MutationRecord;
+	mutation: SubjectStateMutation;
 	feature: Feature;
 }): CheckCommand | null => {
-	const tracked = recordToTrackedFeature({ record });
-	const { command } = record;
+	const tracked = mutationToTrackedFeature({ mutation });
+	const { command } = mutation;
 	if (!tracked || (command.type !== "track" && command.type !== "finalize"))
 		return null;
 	return parseCheckCommand({
 		input: {
 			schemaVersion: 1,
 			type: "check",
-			requestId: record.id,
-			identity: record.identity,
+			requestId: mutation.id,
+			identity: mutation.identity,
 			occurredAt: command.occurredAt,
 			org: command.org,
 			featureId: feature.id,

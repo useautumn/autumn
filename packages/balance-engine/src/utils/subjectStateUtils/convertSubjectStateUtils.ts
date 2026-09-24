@@ -11,22 +11,12 @@ import type {
 } from "@autumn/shared";
 import type { z } from "zod/v4";
 import type { MeteringIdentity } from "../../models/identity/meteringIdentity.js";
-import {
-	customerRenderedColumns,
-	workerCustomerSchema,
-} from "../../models/subject/rows/workerCustomer.js";
-import {
-	customerEntitlementRenderedColumns,
-	workerCustomerEntitlementSchema,
-} from "../../models/subject/rows/workerCustomerEntitlement.js";
+import { workerCustomerSchema } from "../../models/subject/rows/workerCustomer.js";
+import { workerCustomerEntitlementSchema } from "../../models/subject/rows/workerCustomerEntitlement.js";
 import { workerCustomerLicenseSchema } from "../../models/subject/rows/workerCustomerLicense.js";
 import { workerCustomerPriceSchema } from "../../models/subject/rows/workerCustomerPrice.js";
+import { workerCustomerProductSchema } from "../../models/subject/rows/workerCustomerProduct.js";
 import {
-	customerProductRenderedColumns,
-	workerCustomerProductSchema,
-} from "../../models/subject/rows/workerCustomerProduct.js";
-import {
-	entityRenderedColumns,
 	type WorkerEntity,
 	workerEntitySchema,
 } from "../../models/subject/rows/workerEntity.js";
@@ -56,39 +46,6 @@ export const pickColumns = <Schema extends z.ZodObject>({
 				.filter(([, value]) => value !== undefined),
 		),
 	);
-
-const withoutColumns = <Row extends object>({
-	row,
-	columns,
-}: {
-	row: Row;
-	columns: Record<string, true>;
-}): Row =>
-	Object.fromEntries(
-		Object.entries(row).filter(([column]) => !(column in columns)),
-	) as Row;
-
-/** The state as the log snapshots it: the columns commands decide on, without what only `customers.get` renders. */
-export const subjectStateToLogState = ({
-	state,
-}: {
-	state: SubjectState;
-}): SubjectState => ({
-	...state,
-	customer: withoutColumns({
-		row: state.customer,
-		columns: customerRenderedColumns,
-	}),
-	customerProducts: state.customerProducts.map((row) =>
-		withoutColumns({ row, columns: customerProductRenderedColumns }),
-	),
-	customerEntitlements: state.customerEntitlements.map((row) =>
-		withoutColumns({ row, columns: customerEntitlementRenderedColumns }),
-	),
-	entity: state.entity
-		? withoutColumns({ row: state.entity, columns: entityRenderedColumns })
-		: null,
-});
 
 /** The one definition of "a customer's state from its rows"; the server's initialize and the worker's hydration both call it. */
 export const customerRowsToSubjectState = ({

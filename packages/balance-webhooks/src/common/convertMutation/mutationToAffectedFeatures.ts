@@ -1,12 +1,19 @@
-import type { MutationRecord, WorkerFullSubject } from "@autumn/balance-engine";
+import type {
+	SubjectStateMutation,
+	WorkerFullSubject,
+} from "@autumn/balance-engine";
 import {
 	type Feature,
 	fullSubjectToCustomerEntitlements,
 } from "@autumn/shared";
 
-const changedRowIds = ({ record }: { record: MutationRecord }): Set<string> =>
+const changedRowIds = ({
+	mutation,
+}: {
+	mutation: SubjectStateMutation;
+}): Set<string> =>
 	new Set(
-		record.changes.flatMap((change) => {
+		mutation.changes.flatMap((change) => {
 			const isBalanceTable =
 				change.table === "customerEntitlements" || change.table === "rollovers";
 			if (!isBalanceTable) return [];
@@ -18,20 +25,20 @@ const changedRowIds = ({ record }: { record: MutationRecord }): Set<string> =>
  * The features whose rows the mutation moved: the tracked one, and a credit system that paid for it.
  * Prod checks every one of them; with nothing moved it falls back to the tracked feature.
  */
-export const recordToAffectedFeatures = ({
-	record,
+export const mutationToAffectedFeatures = ({
+	mutation,
 	fullSubject,
 	trackedFeatureId,
 }: {
-	record: MutationRecord;
+	mutation: SubjectStateMutation;
 	fullSubject: WorkerFullSubject;
 	trackedFeatureId: string;
 }): Feature[] => {
-	const changed = changedRowIds({ record });
+	const changed = changedRowIds({ mutation });
 	const byId = new Map<string, Feature>();
 	for (const customerEntitlement of fullSubjectToCustomerEntitlements({
 		fullSubject,
-		now: record.command.occurredAt,
+		now: mutation.command.occurredAt,
 	})) {
 		const moved =
 			changed.has(customerEntitlement.id) ||
@@ -45,7 +52,7 @@ export const recordToAffectedFeatures = ({
 	const tracked = fullSubjectToCustomerEntitlements({
 		fullSubject,
 		featureIds: [trackedFeatureId],
-		now: record.command.occurredAt,
+		now: mutation.command.occurredAt,
 	})[0]?.entitlement.feature;
 	return tracked ? [tracked] : [];
 };
