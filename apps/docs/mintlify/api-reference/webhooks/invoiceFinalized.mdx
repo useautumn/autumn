@@ -60,6 +60,10 @@ openapi: "api/openapi.yml webhook invoice.finalized"
 <ParamField body="items" type="object[]">
   Line items on the invoice, one per line as shown in Stripe. Capped at 100. Empty for invoices recorded before line item storage.
   <Expandable title="properties">
+    <ParamField body="id" type="string" required>
+      The Autumn invoice line item ID. Stable across reads, and can be used to reference this line in later calls.
+    </ParamField>
+
     <ParamField body="description" type="string" required>
       Description of the invoice line item
     </ParamField>
