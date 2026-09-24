@@ -398,17 +398,19 @@ async function waitFor(
 	const deadline = Date.now() + timeoutMs;
 	while (!condition()) {
 		if (Date.now() > deadline) {
-			console.error(
+			const dump = join(
+				process.env.BENCH_OUT_DIR ?? tmpdir(),
+				`ownership-handoff-timeout-${deployment}.json`,
+			);
+			await Bun.write(
+				dump,
 				JSON.stringify(
-					{
-						workerEvents: workerEvents.slice(-40),
-						ownershipEvents: ownershipEvents.slice(-20),
-						outcomes: outcomes.slice(-10),
-					},
+					{ workerEvents, ownershipEvents, outcomes, rawHttp },
 					null,
 					1,
 				),
 			);
+			console.error(`timeout diagnostics: ${dump}`);
 			throw new Error(`Timed out waiting for ${what}`);
 		}
 		await Bun.sleep(10);
@@ -425,16 +427,28 @@ function claimsAfter(t0: number): Map<number, OwnershipEvent> {
 			byPartition.set(event.partition, event);
 	return byPartition;
 }
+// A partition the roster hands back to its owner writes nothing on the ownership log, so the
+// transition is settled once the roster has moved, the log has been quiet, and every partition
+// has served a 200 since whichever of those came last.
 function settled(t0: number): boolean {
-	const claims = claimsAfter(t0);
-	if (claims.size < PARTITION_COUNT) return false;
-	for (const [partition, claim] of claims)
+	const joins = workerEvents.filter(
+		(e) => e.event === "consumer.group_join" && e.t >= t0,
+	);
+	if (joins.length === 0) return false;
+	const lastJoin = Math.max(...joins.map((e) => e.t));
+	const lastRecord = Math.max(
+		t0,
+		...ownershipEvents.filter((e) => e.seenAt >= t0).map((e) => e.seenAt),
+	);
+	const lastActivity = Math.max(lastJoin, lastRecord);
+	if (Date.now() - lastActivity < 1_500) return false;
+	for (const partition of customers.keys())
 		if (
 			!outcomes.some(
 				(o) =>
 					o.partition === partition &&
 					o.outcome === "200" &&
-					o.doneAt >= claim.seenAt,
+					o.sentAt >= lastActivity,
 			)
 		)
 			return false;
@@ -577,6 +591,9 @@ function analyze({
 						extra(e),
 				)?.t ?? null;
 			const status = (to: string) => step("runtime.status", (e) => e.to === to);
+			const prepareAt = step("runtime.prepare");
+			const prepared = step("runtime.prepared");
+			const announced = step("ready.announced");
 			const startAt = step("runtime.start");
 			const fenced = status("bootstrapping");
 			const bootstrapped = status("catching_up");
@@ -598,6 +615,9 @@ function analyze({
 				windowWithdrawToOkMs: withdraw ? firstOk.doneAt - withdraw.t : null,
 				windowT0ToOkMs: firstOk.doneAt - t0,
 				startup: {
+					prepareMs: diff(prepareAt, prepared),
+					announcedToActivateMs: diff(announced, startAt),
+					activateMs: diff(startAt, ready),
 					connectAndFenceMs: diff(startAt, fenced),
 					bootstrapMs: diff(fenced, bootstrapped),
 					replayMs: diff(bootstrapped, ready),
