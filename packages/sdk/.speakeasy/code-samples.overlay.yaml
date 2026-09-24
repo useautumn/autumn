@@ -1461,6 +1461,29 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/platform.disconnect_stripe"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.platform.disconnectStripe({
+                organizationSlug: "my-app",
+                env: "test",
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/platform.get_revenuecat_keys"]["post"]
     update:
       x-codeSamples:
@@ -1477,6 +1500,29 @@ actions:
             async function run() {
               const result = await autumn.platform.getRevenueCatKeys({
                 organizationSlug: "acme",
+                env: "test",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/platform.get_stripe_connection"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.platform.getStripeConnection({
+                organizationSlug: "my-app",
                 env: "test",
               });
 

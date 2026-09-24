@@ -53,6 +53,10 @@ export type VoidInvoiceEntity = {
 
 export type VoidInvoiceItem = {
   /**
+   * The Autumn invoice line item ID. Stable across reads, and can be used to reference this line in later calls.
+   */
+  id: string;
+  /**
    * Description of the invoice line item
    */
   description: string;
@@ -223,6 +227,7 @@ export const VoidInvoiceItem$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
+    id: types.string(),
     description: types.string(),
     period_start: types.nullable(types.number()),
     period_end: types.nullable(types.number()),

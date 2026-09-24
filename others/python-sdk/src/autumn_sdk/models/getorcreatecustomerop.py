@@ -523,6 +523,237 @@ class GetOrCreateCustomerConfig(BaseModel):
         return m
 
 
+class GetOrCreateCustomerBillingDetailsAddressTypedDict(TypedDict):
+    line1: NotRequired[Nullable[str]]
+    line2: NotRequired[Nullable[str]]
+    city: NotRequired[Nullable[str]]
+    state: NotRequired[Nullable[str]]
+    postal_code: NotRequired[Nullable[str]]
+    country: NotRequired[Nullable[str]]
+    r"""Two-letter country code (ISO 3166-1 alpha-2)."""
+
+
+class GetOrCreateCustomerBillingDetailsAddress(BaseModel):
+    line1: OptionalNullable[str] = UNSET
+
+    line2: OptionalNullable[str] = UNSET
+
+    city: OptionalNullable[str] = UNSET
+
+    state: OptionalNullable[str] = UNSET
+
+    postal_code: OptionalNullable[str] = UNSET
+
+    country: OptionalNullable[str] = UNSET
+    r"""Two-letter country code (ISO 3166-1 alpha-2)."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["line1", "line2", "city", "state", "postal_code", "country"]
+        )
+        nullable_fields = set(
+            ["line1", "line2", "city", "state", "postal_code", "country"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class GetOrCreateCustomerAddBillingDetailsTaxIDTypedDict(TypedDict):
+    type: str
+    r"""Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id"""
+    value: str
+    r"""The tax ID, e.g. DE123456789."""
+
+
+class GetOrCreateCustomerAddBillingDetailsTaxID(BaseModel):
+    type: str
+    r"""Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id"""
+
+    value: str
+    r"""The tax ID, e.g. DE123456789."""
+
+
+class GetOrCreateCustomerRemoveBillingDetailsTaxIDTypedDict(TypedDict):
+    type: str
+    r"""Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id"""
+    value: str
+    r"""The tax ID, e.g. DE123456789."""
+
+
+class GetOrCreateCustomerRemoveBillingDetailsTaxID(BaseModel):
+    type: str
+    r"""Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id"""
+
+    value: str
+    r"""The tax ID, e.g. DE123456789."""
+
+
+class GetOrCreateCustomerTaxIdsTypedDict(TypedDict):
+    r"""Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept."""
+
+    add: NotRequired[List[GetOrCreateCustomerAddBillingDetailsTaxIDTypedDict]]
+    r"""Tax IDs to add. IDs the customer already has are ignored."""
+    remove: NotRequired[List[GetOrCreateCustomerRemoveBillingDetailsTaxIDTypedDict]]
+    r"""Tax IDs to remove, matched by type and value. IDs the customer doesn't have are ignored."""
+
+
+class GetOrCreateCustomerTaxIds(BaseModel):
+    r"""Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept."""
+
+    add: Optional[List[GetOrCreateCustomerAddBillingDetailsTaxID]] = None
+    r"""Tax IDs to add. IDs the customer already has are ignored."""
+
+    remove: Optional[List[GetOrCreateCustomerRemoveBillingDetailsTaxID]] = None
+    r"""Tax IDs to remove, matched by type and value. IDs the customer doesn't have are ignored."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["add", "remove"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetOrCreateCustomerTaxExempt = Literal[
+    "none",
+    "exempt",
+    "reverse",
+]
+r"""Tax exemption status. Use reverse for reverse-charge customers."""
+
+
+class GetOrCreateCustomerBillingDetailsCustomFieldTypedDict(TypedDict):
+    name: str
+    r"""Label, e.g. PO Number."""
+    value: str
+
+
+class GetOrCreateCustomerBillingDetailsCustomField(BaseModel):
+    name: str
+    r"""Label, e.g. PO Number."""
+
+    value: str
+
+
+class GetOrCreateCustomerInvoiceSettingsTypedDict(TypedDict):
+    custom_fields: NotRequired[
+        Nullable[List[GetOrCreateCustomerBillingDetailsCustomFieldTypedDict]]
+    ]
+    r"""Up to 4 custom fields shown on every invoice, e.g. a PO number. Replaces the existing list; null clears it."""
+
+
+class GetOrCreateCustomerInvoiceSettings(BaseModel):
+    custom_fields: OptionalNullable[
+        List[GetOrCreateCustomerBillingDetailsCustomField]
+    ] = UNSET
+    r"""Up to 4 custom fields shown on every invoice, e.g. a PO number. Replaces the existing list; null clears it."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["custom_fields"])
+        nullable_fields = set(["custom_fields"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class GetOrCreateCustomerBillingDetailsTypedDict(TypedDict):
+    r"""Billing details to set on the Stripe customer. Creates the Stripe customer if needed."""
+
+    address: NotRequired[Nullable[GetOrCreateCustomerBillingDetailsAddressTypedDict]]
+    r"""Billing address, used for tax and shown on invoices. Replaces the whole address, as in Stripe; null clears it."""
+    tax_ids: NotRequired[GetOrCreateCustomerTaxIdsTypedDict]
+    r"""Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept."""
+    tax_exempt: NotRequired[GetOrCreateCustomerTaxExempt]
+    r"""Tax exemption status. Use reverse for reverse-charge customers."""
+    invoice_settings: NotRequired[GetOrCreateCustomerInvoiceSettingsTypedDict]
+
+
+class GetOrCreateCustomerBillingDetails(BaseModel):
+    r"""Billing details to set on the Stripe customer. Creates the Stripe customer if needed."""
+
+    address: OptionalNullable[GetOrCreateCustomerBillingDetailsAddress] = UNSET
+    r"""Billing address, used for tax and shown on invoices. Replaces the whole address, as in Stripe; null clears it."""
+
+    tax_ids: Optional[GetOrCreateCustomerTaxIds] = None
+    r"""Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept."""
+
+    tax_exempt: Optional[GetOrCreateCustomerTaxExempt] = None
+    r"""Tax exemption status. Use reverse for reverse-charge customers."""
+
+    invoice_settings: Optional[GetOrCreateCustomerInvoiceSettings] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["address", "tax_ids", "tax_exempt", "invoice_settings"])
+        nullable_fields = set(["address"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 class GetOrCreateCustomerParamsTypedDict(TypedDict):
     customer_id: Nullable[str]
     name: NotRequired[Nullable[str]]
@@ -547,6 +778,8 @@ class GetOrCreateCustomerParamsTypedDict(TypedDict):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
     config: NotRequired[GetOrCreateCustomerConfigTypedDict]
     r"""Miscellaneous configurations for the customer."""
+    billing_details: NotRequired[GetOrCreateCustomerBillingDetailsTypedDict]
+    r"""Billing details to set on the Stripe customer. Creates the Stripe customer if needed."""
     expand: NotRequired[List[CustomerExpand]]
     r"""Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature."""
 
@@ -587,6 +820,9 @@ class GetOrCreateCustomerParams(BaseModel):
     config: Optional[GetOrCreateCustomerConfig] = None
     r"""Miscellaneous configurations for the customer."""
 
+    billing_details: Optional[GetOrCreateCustomerBillingDetails] = None
+    r"""Billing details to set on the Stripe customer. Creates the Stripe customer if needed."""
+
     expand: Optional[List[CustomerExpand]] = None
     r"""Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature."""
 
@@ -605,6 +841,7 @@ class GetOrCreateCustomerParams(BaseModel):
                 "currency",
                 "billing_controls",
                 "config",
+                "billing_details",
                 "expand",
             ]
         )

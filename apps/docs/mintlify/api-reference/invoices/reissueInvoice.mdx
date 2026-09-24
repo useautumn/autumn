@@ -62,6 +62,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       Memo shown near the top of the invoice.
     </DynamicParamField>
 
+    <DynamicParamField body="payment_method_types" type="('card' | 'customer_balance' | 'us_bank_account' | 'sepa_debit' | 'bacs_debit' | 'acss_debit' | 'link')[]">
+      Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. Only applies to send-invoice replacements.
+    </DynamicParamField>
+
   </Expandable>
 </DynamicParamField>
 

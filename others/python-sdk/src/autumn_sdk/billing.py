@@ -2012,6 +2012,12 @@ class Billing(BaseSDK):
                 List[models.BillingUpdateAttachDiscountTypedDict],
             ]
         ] = None,
+        remove_discounts: Optional[
+            Union[
+                List[models.BillingUpdateRemoveDiscount],
+                List[models.BillingUpdateRemoveDiscountTypedDict],
+            ]
+        ] = None,
         custom_line_items: Optional[
             Union[
                 List[models.BillingUpdateCustomLineItem],
@@ -2067,6 +2073,7 @@ class Billing(BaseSDK):
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
@@ -2113,6 +2120,9 @@ class Billing(BaseSDK):
             subscription_id=subscription_id,
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.BillingUpdateAttachDiscount]]
+            ),
+            remove_discounts=utils.get_pydantic_model(
+                remove_discounts, Optional[List[models.BillingUpdateRemoveDiscount]]
             ),
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.BillingUpdateCustomLineItem]]
@@ -2229,6 +2239,12 @@ class Billing(BaseSDK):
                 List[models.BillingUpdateAttachDiscountTypedDict],
             ]
         ] = None,
+        remove_discounts: Optional[
+            Union[
+                List[models.BillingUpdateRemoveDiscount],
+                List[models.BillingUpdateRemoveDiscountTypedDict],
+            ]
+        ] = None,
         custom_line_items: Optional[
             Union[
                 List[models.BillingUpdateCustomLineItem],
@@ -2284,6 +2300,7 @@ class Billing(BaseSDK):
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
@@ -2330,6 +2347,9 @@ class Billing(BaseSDK):
             subscription_id=subscription_id,
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.BillingUpdateAttachDiscount]]
+            ),
+            remove_discounts=utils.get_pydantic_model(
+                remove_discounts, Optional[List[models.BillingUpdateRemoveDiscount]]
             ),
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.BillingUpdateCustomLineItem]]
@@ -2446,6 +2466,12 @@ class Billing(BaseSDK):
                 List[models.PreviewUpdateAttachDiscountTypedDict],
             ]
         ] = None,
+        remove_discounts: Optional[
+            Union[
+                List[models.PreviewUpdateRemoveDiscount],
+                List[models.PreviewUpdateRemoveDiscountTypedDict],
+            ]
+        ] = None,
         custom_line_items: Optional[
             Union[
                 List[models.PreviewUpdateCustomLineItem],
@@ -2501,6 +2527,7 @@ class Billing(BaseSDK):
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
@@ -2548,6 +2575,9 @@ class Billing(BaseSDK):
             subscription_id=subscription_id,
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.PreviewUpdateAttachDiscount]]
+            ),
+            remove_discounts=utils.get_pydantic_model(
+                remove_discounts, Optional[List[models.PreviewUpdateRemoveDiscount]]
             ),
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewUpdateCustomLineItem]]
@@ -2664,6 +2694,12 @@ class Billing(BaseSDK):
                 List[models.PreviewUpdateAttachDiscountTypedDict],
             ]
         ] = None,
+        remove_discounts: Optional[
+            Union[
+                List[models.PreviewUpdateRemoveDiscount],
+                List[models.PreviewUpdateRemoveDiscountTypedDict],
+            ]
+        ] = None,
         custom_line_items: Optional[
             Union[
                 List[models.PreviewUpdateCustomLineItem],
@@ -2719,6 +2755,7 @@ class Billing(BaseSDK):
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
@@ -2766,6 +2803,9 @@ class Billing(BaseSDK):
             subscription_id=subscription_id,
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.PreviewUpdateAttachDiscount]]
+            ),
+            remove_discounts=utils.get_pydantic_model(
+                remove_discounts, Optional[List[models.PreviewUpdateRemoveDiscount]]
             ),
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewUpdateCustomLineItem]]

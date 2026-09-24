@@ -287,7 +287,8 @@ class Invoices(BaseSDK):
         self,
         *,
         invoices: Union[
-            List[models.InvoiceRequestBody], List[models.InvoiceRequestBodyTypedDict]
+            List[models.InsertInvoicesInvoiceRequestBody],
+            List[models.InsertInvoicesInvoiceRequestBodyTypedDict],
         ],
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -314,7 +315,7 @@ class Invoices(BaseSDK):
 
         request = models.InsertInvoicesParams(
             invoices=utils.get_pydantic_model(
-                invoices, List[models.InvoiceRequestBody]
+                invoices, List[models.InsertInvoicesInvoiceRequestBody]
             ),
         )
 
@@ -381,7 +382,8 @@ class Invoices(BaseSDK):
         self,
         *,
         invoices: Union[
-            List[models.InvoiceRequestBody], List[models.InvoiceRequestBodyTypedDict]
+            List[models.InsertInvoicesInvoiceRequestBody],
+            List[models.InsertInvoicesInvoiceRequestBodyTypedDict],
         ],
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -408,7 +410,7 @@ class Invoices(BaseSDK):
 
         request = models.InsertInvoicesParams(
             invoices=utils.get_pydantic_model(
-                invoices, List[models.InvoiceRequestBody]
+                invoices, List[models.InsertInvoicesInvoiceRequestBody]
             ),
         )
 
@@ -1061,7 +1063,18 @@ class Invoices(BaseSDK):
         invoice_id: str,
         invoice_template_id: Optional[str] = None,
         net_terms_days: Optional[int] = None,
+        preview: Optional[bool] = None,
         update_customer_email: Optional[str] = None,
+        invoice: Optional[
+            Union[
+                models.ReissueInvoiceInvoiceRequestBody,
+                models.ReissueInvoiceInvoiceRequestBodyTypedDict,
+            ]
+        ] = None,
+        customer: Optional[
+            Union[models.ReissueInvoiceCustomer, models.ReissueInvoiceCustomerTypedDict]
+        ] = None,
+        lines: Optional[Union[models.Lines, models.LinesTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1071,8 +1084,12 @@ class Invoices(BaseSDK):
 
         :param invoice_id: The Autumn invoice ID to void and replace.
         :param invoice_template_id: ID of an invoice template (configured in billing settings) whose footer and memo are applied to the replacement invoice.
-        :param net_terms_days: Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed.
+        :param net_terms_days: Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed. A card-charged invoice has no due date and its replacement is charged immediately; setting this makes the replacement a send-invoice one instead.
+        :param preview: If true, returns the replacement invoice's lines and totals without voiding anything or issuing it.
         :param update_customer_email: Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address.
+        :param invoice: Changes that apply to the replacement invoice only.
+        :param customer: Changes written to the customer, which the replacement snapshots and later invoices inherit.
+        :param lines: Add, change or drop lines relative to the original.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1092,7 +1109,15 @@ class Invoices(BaseSDK):
             invoice_id=invoice_id,
             invoice_template_id=invoice_template_id,
             net_terms_days=net_terms_days,
+            preview=preview,
             update_customer_email=update_customer_email,
+            invoice=utils.get_pydantic_model(
+                invoice, Optional[models.ReissueInvoiceInvoiceRequestBody]
+            ),
+            customer=utils.get_pydantic_model(
+                customer, Optional[models.ReissueInvoiceCustomer]
+            ),
+            lines=utils.get_pydantic_model(lines, Optional[models.Lines]),
         )
 
         req = self._build_request(
@@ -1160,7 +1185,18 @@ class Invoices(BaseSDK):
         invoice_id: str,
         invoice_template_id: Optional[str] = None,
         net_terms_days: Optional[int] = None,
+        preview: Optional[bool] = None,
         update_customer_email: Optional[str] = None,
+        invoice: Optional[
+            Union[
+                models.ReissueInvoiceInvoiceRequestBody,
+                models.ReissueInvoiceInvoiceRequestBodyTypedDict,
+            ]
+        ] = None,
+        customer: Optional[
+            Union[models.ReissueInvoiceCustomer, models.ReissueInvoiceCustomerTypedDict]
+        ] = None,
+        lines: Optional[Union[models.Lines, models.LinesTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1170,8 +1206,12 @@ class Invoices(BaseSDK):
 
         :param invoice_id: The Autumn invoice ID to void and replace.
         :param invoice_template_id: ID of an invoice template (configured in billing settings) whose footer and memo are applied to the replacement invoice.
-        :param net_terms_days: Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed.
+        :param net_terms_days: Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed. A card-charged invoice has no due date and its replacement is charged immediately; setting this makes the replacement a send-invoice one instead.
+        :param preview: If true, returns the replacement invoice's lines and totals without voiding anything or issuing it.
         :param update_customer_email: Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address.
+        :param invoice: Changes that apply to the replacement invoice only.
+        :param customer: Changes written to the customer, which the replacement snapshots and later invoices inherit.
+        :param lines: Add, change or drop lines relative to the original.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1191,7 +1231,15 @@ class Invoices(BaseSDK):
             invoice_id=invoice_id,
             invoice_template_id=invoice_template_id,
             net_terms_days=net_terms_days,
+            preview=preview,
             update_customer_email=update_customer_email,
+            invoice=utils.get_pydantic_model(
+                invoice, Optional[models.ReissueInvoiceInvoiceRequestBody]
+            ),
+            customer=utils.get_pydantic_model(
+                customer, Optional[models.ReissueInvoiceCustomer]
+            ),
+            lines=utils.get_pydantic_model(lines, Optional[models.Lines]),
         )
 
         req = self._build_request_async(

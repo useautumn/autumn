@@ -642,6 +642,16 @@ export type BillingUpdateAttachDiscount = {
   promotionCode?: string | undefined;
 };
 
+/**
+ * A discount to remove from the subscription. Discounts that are no longer applied are ignored.
+ */
+export type BillingUpdateRemoveDiscount = {
+  /**
+   * The ID of the reward (or Stripe coupon) to remove.
+   */
+  rewardId: string;
+};
+
 export type BillingUpdateCustomLineItem = {
   /**
    * Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
@@ -771,6 +781,10 @@ export type UpdateSubscriptionParams = {
    * List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
    */
   discounts?: Array<BillingUpdateAttachDiscount> | undefined;
+  /**
+   * Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
+   */
+  removeDiscounts?: Array<BillingUpdateRemoveDiscount> | undefined;
   /**
    * Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
    */
@@ -2246,6 +2260,36 @@ export function billingUpdateAttachDiscountToJSON(
 }
 
 /** @internal */
+export type BillingUpdateRemoveDiscount$Outbound = {
+  reward_id: string;
+};
+
+/** @internal */
+export const BillingUpdateRemoveDiscount$outboundSchema: z.ZodMiniType<
+  BillingUpdateRemoveDiscount$Outbound,
+  BillingUpdateRemoveDiscount
+> = z.pipe(
+  z.object({
+    rewardId: z.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      rewardId: "reward_id",
+    });
+  }),
+);
+
+export function billingUpdateRemoveDiscountToJSON(
+  billingUpdateRemoveDiscount: BillingUpdateRemoveDiscount,
+): string {
+  return JSON.stringify(
+    BillingUpdateRemoveDiscount$outboundSchema.parse(
+      billingUpdateRemoveDiscount,
+    ),
+  );
+}
+
+/** @internal */
 export type BillingUpdateCustomLineItem$Outbound = {
   amount: number;
   description: string;
@@ -2400,6 +2444,7 @@ export type UpdateSubscriptionParams$Outbound = {
   redirect_mode: string;
   subscription_id?: string | undefined;
   discounts?: Array<BillingUpdateAttachDiscount$Outbound> | undefined;
+  remove_discounts?: Array<BillingUpdateRemoveDiscount$Outbound> | undefined;
   custom_line_items?: Array<BillingUpdateCustomLineItem$Outbound> | undefined;
   cancel_action?: string | undefined;
   billing_cycle_anchor?: string | number | undefined;
@@ -2442,6 +2487,9 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
     discounts: z.optional(
       z.array(z.lazy(() => BillingUpdateAttachDiscount$outboundSchema)),
     ),
+    removeDiscounts: z.optional(
+      z.array(z.lazy(() => BillingUpdateRemoveDiscount$outboundSchema)),
+    ),
     customLineItems: z.optional(
       z.array(z.lazy(() => BillingUpdateCustomLineItem$outboundSchema)),
     ),
@@ -2473,6 +2521,7 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       prorationBehavior: "proration_behavior",
       redirectMode: "redirect_mode",
       subscriptionId: "subscription_id",
+      removeDiscounts: "remove_discounts",
       customLineItems: "custom_line_items",
       cancelAction: "cancel_action",
       billingCycleAnchor: "billing_cycle_anchor",
