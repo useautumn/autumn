@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { isAutumnManagedStripeSchedule } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 import { futurePhaseItemsChanged } from "./futurePhaseItemsChanged.js";
 import { getSchedulePhaseMoves } from "./getSchedulePhaseMoves.js";
@@ -21,7 +22,14 @@ export const handleStripeSubscriptionScheduleUpdated = async ({
 	const previousPhases = event.data.previous_attributes?.phases;
 
 	if (!previousPhases) return;
+	if (previousPhases.length !== schedule.phases.length) {
+		ctx.logger.warn(
+			`[handleStripeSubscriptionScheduleUpdated] skipping structural phase change (${previousPhases.length} -> ${schedule.phases.length} phases) on schedule ${schedule.id}`,
+		);
+		return;
+	}
 	if (schedule.status === "active") {
+		if (isAutumnManagedStripeSchedule({ schedule })) return;
 		const changed = futurePhaseItemsChanged({
 			previousPhases,
 			currentPhases: schedule.phases,
@@ -31,12 +39,6 @@ export const handleStripeSubscriptionScheduleUpdated = async ({
 		return;
 	}
 	if (schedule.status !== "not_started") return;
-	if (previousPhases.length !== schedule.phases.length) {
-		ctx.logger.warn(
-			`[handleStripeSubscriptionScheduleUpdated] skipping structural phase change (${previousPhases.length} -> ${schedule.phases.length} phases) on schedule ${schedule.id}`,
-		);
-		return;
-	}
 
 	const moves = getSchedulePhaseMoves({
 		previousPhases,

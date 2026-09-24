@@ -73,6 +73,23 @@ describe("futurePhaseItemsChanged", () => {
 		).toBe(false);
 	});
 
+	test("a future phase that moved index but kept its items is not", () => {
+		expect(
+			futurePhaseItemsChanged({
+				previousPhases: [
+					phase({ start: PAST }),
+					phase({ start: FUTURE, quantity: 2 }),
+					phase({ start: FUTURE + 1_000, quantity: 3 }),
+				],
+				currentPhases: [
+					phase({ start: PAST }),
+					phase({ start: FUTURE + 1_000, quantity: 3 }),
+				],
+				nowSeconds: NOW,
+			}),
+		).toBe(false);
+	});
+
 	test("identical future phases are not", () => {
 		expect(
 			futurePhaseItemsChanged({

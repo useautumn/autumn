@@ -10,7 +10,8 @@ const itemShape = (phase: Stripe.SubscriptionSchedule.Phase) =>
 			.sort((left, right) => left.price.localeCompare(right.price)),
 	);
 
-/** True when a phase that has not started yet changed price or quantity. */
+/** True when a phase that has not started yet changed price or quantity.
+ * Phases pair by start date, so a reordered index is not an edit. */
 export const futurePhaseItemsChanged = ({
 	previousPhases,
 	currentPhases,
@@ -20,8 +21,10 @@ export const futurePhaseItemsChanged = ({
 	currentPhases: Stripe.SubscriptionSchedule.Phase[];
 	nowSeconds: number;
 }): boolean =>
-	currentPhases.some((phase, index) => {
+	currentPhases.some((phase) => {
 		if (phase.start_date <= nowSeconds) return false;
-		const previous = previousPhases[index];
+		const previous = previousPhases.find(
+			(candidate) => candidate.start_date === phase.start_date,
+		);
 		return !previous || itemShape(previous) !== itemShape(phase);
 	});
