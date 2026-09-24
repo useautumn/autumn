@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { ROLE_SCOPES } from "@autumn/shared";
+import { META_SCOPES, ROLE_SCOPES } from "@autumn/shared";
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { getTrustedClientIp } from "@/internal/misc/rateLimiter/public/getTrustedClientIp.js";
@@ -91,6 +91,44 @@ describe("agent onboarding", () => {
 		expect(AGENT_USER_API_KEY_SCOPES.length).toBeGreaterThan(0);
 		expect(AGENT_PROVISIONAL_API_KEY_SCOPES).not.toContain("apiKeys:write");
 		expect(AGENT_USER_API_KEY_SCOPES).toContain("apiKeys:write");
+	});
+
+	test("provisional keys get exactly the keyless agent scope set", () => {
+		const scopes: string[] = [...AGENT_PROVISIONAL_API_KEY_SCOPES];
+		expect(scopes.sort()).toEqual(
+			[
+				"organisation:read",
+				"organisation:write",
+				"features:read",
+				"features:write",
+				"plans:read",
+				"plans:write",
+				"rewards:read",
+				"rewards:write",
+				"customers:read",
+				"customers:write",
+				"balances:read",
+				"balances:write",
+				"billing:read",
+				"billing:write",
+				"analytics:read",
+				"migrations:read",
+				"migrations:write",
+			].sort(),
+		);
+		expect(scopes).toContain("analytics:read");
+		expect(scopes).toContain("migrations:read");
+		expect(scopes).toContain("migrations:write");
+		for (const scope of [
+			"apiKeys:read",
+			"apiKeys:write",
+			"platform:read",
+			"platform:write",
+			...META_SCOPES,
+		]) {
+			expect(scopes).not.toContain(scope);
+		}
+		expect(scopes).not.toContain("");
 	});
 
 	test("user-bound keys only receive scopes the member already has", () => {
