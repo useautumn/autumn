@@ -134,3 +134,19 @@ test("fetch carries an abort timeout so a hanging models.dev cannot hang tracks"
 	expect(capturedSignal).toBeInstanceOf(AbortSignal);
 	expect(capturedSignal?.aborted).toBe(false);
 });
+
+test("fetches the full feed so specialized model types are included", async () => {
+	let capturedUrl: string | undefined;
+	globalThis.fetch = Object.assign(
+		async (input: unknown) => {
+			fetchCalls++;
+			capturedUrl = String(input);
+			return Response.json(pricingData);
+		},
+		{ preconnect: realFetch.preconnect },
+	) as typeof fetch;
+
+	await getModelsDevPricing();
+
+	expect(capturedUrl).toBe("https://models.dev/api.json?type=all");
+});

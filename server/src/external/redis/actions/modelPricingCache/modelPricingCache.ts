@@ -7,8 +7,10 @@ export type ModelPricingData = Record<string, ModelsDevProvider>;
 /** Pinned: global (non-org) read-through of models.dev — no request affinity,
  *  and a flip just refetches. Stale copy outlives the primary as a fallback
  *  for models.dev outages. */
-export const MODEL_PRICING_CACHE_KEY = "models_dev_pricing";
-export const MODEL_PRICING_STALE_CACHE_KEY = "models_dev_pricing_stale";
+/** Bump when the fetched feed's URL or shape changes, so no stale-shape copy is served. */
+export const MODEL_PRICING_CACHE_VERSION = 2;
+export const MODEL_PRICING_CACHE_KEY = `models_dev_pricing:v${MODEL_PRICING_CACHE_VERSION}`;
+export const MODEL_PRICING_STALE_CACHE_KEY = `models_dev_pricing_stale:v${MODEL_PRICING_CACHE_VERSION}`;
 export const MODEL_PRICING_TTL_SECONDS = 60 * 60 * 3;
 export const MODEL_PRICING_STALE_TTL_SECONDS = 60 * 60 * 24 * 3;
 
