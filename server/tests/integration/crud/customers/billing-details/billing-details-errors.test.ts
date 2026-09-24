@@ -4,8 +4,9 @@
  * Contract:
  *   update without a Stripe customer    -> 400, nothing written
  *   expand without a Stripe customer    -> billing_details: null
- *   invalid tax id with other changes   -> 400 (Stripe error); removal, address and email
- *                                          are not written to Stripe
+ *   invalid tax id with other changes   -> 400 (Stripe error); a valid tax ID added in the
+ *                                          same request is undone, and the removal, address
+ *                                          and email are not written to Stripe
  */
 
 import { expect, test } from "bun:test";
@@ -64,7 +65,10 @@ test.concurrent(
 					billing_details: {
 						address: { city: "Munich", country: "DE" },
 						tax_ids: {
-							add: [{ type: "eu_vat", value: "not-a-vat" }],
+							add: [
+								{ type: "gb_vat", value: "GB123456789" },
+								{ type: "eu_vat", value: "not-a-vat" },
+							],
 							remove: [germanVat],
 						},
 					},

@@ -43,12 +43,16 @@ const addressChange = (address: BillingDetailsFormValues["address"]) => {
 	return Object.values(trimmed).some(notNullish) ? trimmed : null;
 };
 
+/** Compared trimmed so stray whitespace in Stripe never reads as an edit. */
+const trimmedTaxIdKey = (taxId: BillingDetailsTaxId) =>
+	taxIdKey(mapValues(taxId, (value) => value.trim()));
+
 const taxIdsMissingFrom = (
 	taxIds: BillingDetailsTaxId[],
 	other: BillingDetailsTaxId[],
 ) => {
-	const otherKeys = new Set(other.map(taxIdKey));
-	return taxIds.filter((taxId) => !otherKeys.has(taxIdKey(taxId)));
+	const otherKeys = new Set(other.map(trimmedTaxIdKey));
+	return taxIds.filter((taxId) => !otherKeys.has(trimmedTaxIdKey(taxId)));
 };
 
 /** Stripe tax IDs can't be edited, so an edited row becomes a remove plus an add. */
@@ -95,7 +99,7 @@ export const billingDetailsChanges = ({
 	}
 
 	const customFields = filledRows(current.custom_fields);
-	if (!isEqual(customFields, initial.custom_fields)) {
+	if (!isEqual(customFields, filledRows(initial.custom_fields))) {
 		changes.invoice_settings = {
 			custom_fields: customFields.length > 0 ? customFields : null,
 		};

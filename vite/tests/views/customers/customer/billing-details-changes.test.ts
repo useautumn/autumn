@@ -34,3 +34,18 @@ test("an empty new row is ignored and a deleted row is removed", () => {
 		tax_ids: { remove: [germanVat] },
 	});
 });
+
+test("stray whitespace already in Stripe is not treated as an edit", () => {
+	const withSpaces = billingDetailsToFormValues({
+		address: null,
+		tax_ids: [{ type: "eu_vat", value: " DE123456789 " }],
+		tax_exempt: "none",
+		invoice_settings: {
+			custom_fields: [{ name: "PO Number ", value: "PO-1" }],
+		},
+	});
+
+	expect(
+		billingDetailsChanges({ initial: withSpaces, current: withSpaces }),
+	).toBeUndefined();
+});

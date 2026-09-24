@@ -1,6 +1,8 @@
 import { z } from "zod/v4";
 
 export const MAX_INVOICE_CUSTOM_FIELDS = 4;
+export const MAX_INVOICE_CUSTOM_FIELD_NAME_LENGTH = 40;
+export const MAX_INVOICE_CUSTOM_FIELD_VALUE_LENGTH = 140;
 
 export const TAX_EXEMPT_VALUES = ["none", "exempt", "reverse"] as const;
 
@@ -37,8 +39,11 @@ export const taxIdKey = ({ type, value }: BillingDetailsTaxId) =>
 
 export const BillingDetailsCustomFieldSchema = z
 	.object({
-		name: z.string().meta({ description: "Label, e.g. PO Number." }),
-		value: z.string(),
+		name: z
+			.string()
+			.max(MAX_INVOICE_CUSTOM_FIELD_NAME_LENGTH)
+			.meta({ description: "Label, e.g. PO Number." }),
+		value: z.string().max(MAX_INVOICE_CUSTOM_FIELD_VALUE_LENGTH),
 	})
 	.meta({ title: "BillingDetailsCustomField" });
 
