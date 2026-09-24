@@ -30,7 +30,7 @@ import {
 	finalizeStripeInvoice,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { stripeCustomerToInvoiceCredits } from "@/internal/billing/v2/utils/billingPlan/preview/invoiceCredits/stripeCustomerToInvoiceCredits";
-import { checkoutRepo } from "@/internal/checkouts";
+import { checkoutRepo } from "@/internal/checkouts/repos/checkoutRepo";
 import { CusService } from "@/internal/customers/CusService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { MetadataService } from "@/internal/metadata/MetadataService";
