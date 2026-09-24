@@ -30,16 +30,29 @@ function parseMeteringPayload({
 	}
 }
 
+/** Each record object's encoding, kept for as long as the record itself is. */
+const encodings = new WeakMap<MeteringRecord, { key: Buffer; value: Buffer }>();
+
+/**
+ * Validates and encodes a record once per object. The writer measures a
+ * record's size when it is queued and the publisher sends the same object
+ * later, so a record carrying a large customer state is only walked once.
+ * Records are treated as immutable from the first call on.
+ */
 export function serializeMeteringRecord({
 	record,
 }: {
 	record: MeteringRecord;
 }): { key: Buffer; value: Buffer } {
+	const cached = encodings.get(record);
+	if (cached) return cached;
 	const payload = parseMeteringPayload({ type: record.type, payload: record });
-	return serializeTopicRecord({
+	const encoded = serializeTopicRecord({
 		key: meteringRecordToKey({ record: payload }),
 		record: payload,
 	});
+	encodings.set(record, encoded);
+	return encoded;
 }
 
 export function parseMeteringRecord({

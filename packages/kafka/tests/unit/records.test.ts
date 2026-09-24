@@ -212,3 +212,17 @@ test("round-trips an initialize mutation", function roundTripsInitialization() {
 		}),
 	).toEqual(initialization);
 });
+
+describe("serializeMeteringRecord memo", () => {
+	test("a record object is validated and encoded once, however often it is sent", () => {
+		const mutation = createMutation();
+		const first = serializeMeteringRecord({ record: mutation });
+		const second = serializeMeteringRecord({ record: mutation });
+		expect(second.value).toBe(first.value);
+		expect(second.key).toBe(first.key);
+		// A different object, even an equal one, is its own encoding.
+		const other = serializeMeteringRecord({ record: createMutation() });
+		expect(other.value).not.toBe(first.value);
+		expect(other.value.equals(first.value)).toBe(true);
+	});
+});

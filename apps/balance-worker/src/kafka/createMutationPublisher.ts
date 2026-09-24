@@ -4,6 +4,7 @@ import {
 	type KafkaProducer,
 	type MeteringRecord,
 	sendTransactionalOffsets,
+	serializeMeteringRecord,
 } from "@autumn/kafka";
 import type { CommittedOutcomeAppender } from "../processor/writer/types/partitionWriter.js";
 import { MutationBatchNotCommittedError } from "../processor/writer/writerErrors.js";
@@ -59,6 +60,12 @@ export function createMutationPublisher({
 		}
 	}
 
+	/** Serialising here is not wasted: the encoding is kept on the record and reused when it is sent. */
+	function encodedBytesOf({ record }: { record: MeteringRecord }): number {
+		const { key, value } = serializeMeteringRecord({ record });
+		return key.length + value.length;
+	}
+
 	function offsetsOf({
 		partition,
 		nextOffset,
@@ -98,5 +105,5 @@ export function createMutationPublisher({
 		}
 	}
 
-	return { appendCommitted, commitCommandOffset };
+	return { appendCommitted, commitCommandOffset, encodedBytesOf };
 }

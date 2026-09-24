@@ -40,6 +40,8 @@ export type CommittedOutcomeAppender = {
 		partition: number;
 		nextOffset: bigint;
 	}): Promise<void>;
+	/** Bytes `appendCommitted` would put on the wire for this record; absent, the writer estimates from JSON. Measuring here lets the appender keep the encoding it later sends. */
+	encodedBytesOf?(params: { record: MeteringRecord }): number;
 	/** Atomically commits all mutations contiguously and returns the first record's offset. */
 	appendCommitted(params: {
 		topic: string;
@@ -103,8 +105,10 @@ export type PendingMutation = {
 	durability: MutationDurability;
 	/** Stamps nextState on the log's copy, never the store's. */
 	logsAfter?: boolean;
+	/** The record the log gets, built once: the appender measured this object and sends this object. */
+	loggedRecord: MeteringRecord;
 	settlement: PendingSettlement;
-	/** Estimated bytes of this mutation's log record, measured once when queued. */
+	/** Bytes of `loggedRecord` on the wire, measured once when queued. */
 	encodedBytes: number;
 	/** What `waitForPendingCommits()` snapshots for this customer. */
 	committed: Promise<CommittedMutation>;

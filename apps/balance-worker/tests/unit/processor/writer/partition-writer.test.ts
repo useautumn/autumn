@@ -2176,3 +2176,37 @@ describe("partition writer", () => {
 		}
 	});
 });
+
+test("a record is measured by the appender once and sent as the same object", async () => {
+	const fixture = createFixture();
+	try {
+		const measured: MeteringRecord[] = [];
+		const appender = new (class extends RecordingCommittedAppender {
+			encodedBytesOf({ record }: { record: MeteringRecord }): number {
+				measured.push(record);
+				return 100_000;
+			}
+		})();
+		const writer = createPartitionTrackWriter({
+			topic,
+			partition,
+			stateStore: fixture.store,
+			appender,
+			// Room for one measured record per batch, so the appender's size is what batches by.
+			limits: { ...defaultLimits, maxBatchBytes: 150_000 },
+		});
+		await Promise.all(
+			["cmd_1", "cmd_2", "cmd_3"].map((commandId) =>
+				writer.submitTrack({ command: createCommand({ commandId }) }),
+			),
+		);
+		const sent = appender.batches.flat();
+		expect(measured).toHaveLength(3);
+		expect(sent).toHaveLength(3);
+		// Identity, not equality: the publisher's encoding is keyed by the object.
+		for (const record of sent) expect(measured).toContain(record);
+		expect(appender.batches.map((batch) => batch.length)).toEqual([1, 1, 1]);
+	} finally {
+		closeFixture(fixture);
+	}
+});

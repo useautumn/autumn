@@ -170,10 +170,10 @@ export function enqueueMutation({
 	}
 	// Refused before anything is projected: a record no batch can carry would
 	// otherwise fail at commit and take the partition, and its worker, with it.
+	const loggedRecord = loggedRecordOf({ mutation, nextState, logsAfter });
 	const encodedBytes =
-		Buffer.byteLength(
-			JSON.stringify(loggedRecordOf({ mutation, nextState, logsAfter })),
-		) + RECORD_OVERHEAD_BYTES;
+		(scope.ctx.appender.encodedBytesOf?.({ record: loggedRecord }) ??
+			Buffer.byteLength(JSON.stringify(loggedRecord))) + RECORD_OVERHEAD_BYTES;
 	const maxBatchBytes = maxBatchBytesOf({ limits: config.limits });
 	if (encodedBytes > maxBatchBytes)
 		throw new PartitionWriterRecordTooLargeError({
@@ -194,6 +194,7 @@ export function enqueueMutation({
 		nextState,
 		durability,
 		logsAfter,
+		loggedRecord,
 		settlement,
 		encodedBytes,
 		committed,

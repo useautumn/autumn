@@ -5,7 +5,6 @@ import type {
 	DurableMutationRecord,
 } from "../../../state/types/durableMutation.js";
 import {
-	loggedRecordOf,
 	maxBatchBytesOf,
 	maxUnappliedBatchesOf,
 	rejectAllPending,
@@ -296,7 +295,7 @@ function takeBatch({
 }
 
 function mutationOf(pending: PendingMutation): MeteringRecord {
-	return loggedRecordOf(pending);
+	return pending.loggedRecord;
 }
 
 function durableRecordsOf({
