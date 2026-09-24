@@ -152,6 +152,31 @@ describe("S3 partition checkpoint storage", () => {
 		expect(client.headCalls).toBe(1);
 	});
 
+	test("reports the checkpoint's serialized size with one HEAD and no GET", async () => {
+		const client = new InMemoryS3CheckpointObjectClient();
+		const storage = createStorage(client);
+		const signal = new AbortController().signal;
+		await expect(
+			storage.size?.({ topic, partition, signal }),
+		).resolves.toBeNull();
+
+		await storage.publish({ checkpoint: checkpointAt(42n), signal });
+		const headCalls = client.headCalls;
+		const expected = Number(client.object?.metadata["serialized-bytes"]);
+		expect(expected).toBeGreaterThan(0);
+		await expect(storage.size?.({ topic, partition, signal })).resolves.toBe(
+			expected,
+		);
+		expect(client.headCalls).toBe(headCalls + 1);
+		expect(client.getCalls).toBe(0);
+
+		// An object whose metadata this version cannot read still reports its stored length.
+		if (client.object) client.object = { ...client.object, metadata: {} };
+		await expect(storage.size?.({ topic, partition, signal })).resolves.toBe(
+			client.object?.contentLength ?? null,
+		);
+	});
+
 	test("returns null for a partition without a checkpoint", async () => {
 		const client = new InMemoryS3CheckpointObjectClient();
 		const storage = createStorage(client);
