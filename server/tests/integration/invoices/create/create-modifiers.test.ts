@@ -25,6 +25,7 @@ import {
 } from "./utils/expectCreatedInvoiceCorrect";
 
 const PRO_BASE = 20;
+const PREMIUM_BASE = 50;
 
 test.concurrent(
 	`${chalk.yellowBright("invoices.create: invoice discount applies to everything, plan discount only to its plan")}`,
@@ -211,6 +212,126 @@ test.concurrent(
 			expect(line.period.start * 1000).toBe(periodStart);
 			expect(line.period.end * 1000).toBe(periodEnd);
 		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create: a plan's own period overrides the invoice period")}`,
+	async () => {
+		const customerId = "inv-create-plan-period";
+		const pro = products.pro({ id: "pro-create-plan-period", items: [] });
+		const premium = products.premium({
+			id: "premium-create-plan-period",
+			items: [],
+		});
+		const { ctx, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [],
+		});
+
+		// Pro bills its own half cycle; premium inherits the full invoice cycle.
+		const invoicePeriod = {
+			start: Date.UTC(2026, 8, 1),
+			end: Date.UTC(2026, 9, 1),
+		};
+		const proPeriod = {
+			start: Date.UTC(2026, 8, 1),
+			end: Date.UTC(2026, 8, 16),
+		};
+		const response = await createInvoice({
+			autumnV2_3,
+			params: {
+				customer_id: customerId,
+				period_start: invoicePeriod.start,
+				period_end: invoicePeriod.end,
+				plans: [
+					{
+						plan_id: pro.id,
+						period_start: proPeriod.start,
+						period_end: proPeriod.end,
+					},
+					{ plan_id: premium.id },
+				],
+			},
+		});
+
+		const { stripeInvoice } = await expectCreatedInvoiceCorrect({
+			ctx,
+			response,
+			lines: [
+				{ amount: PRO_BASE / 2, prorated: true },
+				{ amount: PREMIUM_BASE, prorated: true },
+			],
+			total: PRO_BASE / 2 + PREMIUM_BASE,
+		});
+
+		const [proLine, premiumLine] = response.preview.lines;
+		expect(proLine.plan_id).toBe(pro.id);
+		expect(proLine.period_start).toBe(proPeriod.start);
+		expect(proLine.period_end).toBe(proPeriod.end);
+		expect(premiumLine.plan_id).toBe(premium.id);
+		expect(premiumLine.period_start).toBe(invoicePeriod.start);
+		expect(premiumLine.period_end).toBe(invoicePeriod.end);
+
+		const stripePeriods = stripeInvoice.lines.data
+			.map((line) => ({
+				start: line.period.start * 1000,
+				end: line.period.end * 1000,
+			}))
+			.sort((a, b) => a.end - b.end);
+		expect(stripePeriods).toEqual([proPeriod, invoicePeriod]);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create: a plan period needs both bounds, end after start")}`,
+	async () => {
+		const customerId = "inv-create-plan-period-invalid";
+		const pro = products.pro({
+			id: "pro-create-plan-period-invalid",
+			items: [],
+		});
+		const { autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		await expectAutumnError({
+			errMessage: "Plan period_start and period_end must be provided together",
+			func: () =>
+				createInvoice({
+					autumnV2_3,
+					params: {
+						customer_id: customerId,
+						plans: [{ plan_id: pro.id, period_start: Date.UTC(2026, 8, 1) }],
+					},
+				}),
+		});
+		await expectAutumnError({
+			errMessage: "Plan period_end must be after period_start",
+			func: () =>
+				createInvoice({
+					autumnV2_3,
+					params: {
+						customer_id: customerId,
+						plans: [
+							{
+								plan_id: pro.id,
+								period_start: Date.UTC(2026, 8, 16),
+								period_end: Date.UTC(2026, 8, 1),
+							},
+						],
+					},
+				}),
+		});
 	},
 );
 

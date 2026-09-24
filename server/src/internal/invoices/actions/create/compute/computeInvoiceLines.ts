@@ -42,12 +42,14 @@ export type InvoiceLine = {
 
 const lineContext = ({
 	invoiceContext,
+	plan,
 	price,
 	product,
 	feature,
 	nowMs,
 }: {
 	invoiceContext: CreateInvoiceContext;
+	plan: InvoicePlanContext;
 	price: Price;
 	product: FullProduct;
 	feature?: Feature;
@@ -57,7 +59,7 @@ const lineContext = ({
 	product,
 	feature,
 	currency: invoiceContext.currency,
-	effectivePeriod: invoiceContext.period,
+	effectivePeriod: plan.period,
 	direction: "charge",
 	now: nowMs,
 	billingTiming: "in_advance",
@@ -257,12 +259,13 @@ const computeFeatureLine = ({
 			? prorateInvoiceLineAmount({
 					price,
 					amount: baseAmount,
-					period: invoiceContext.period,
+					period: plan.period,
 				})
 			: baseAmount);
 
 	const context = lineContext({
 		invoiceContext,
+		plan,
 		price,
 		product,
 		feature,
@@ -277,7 +280,7 @@ const computeFeatureLine = ({
 			includePeriodDescription: false,
 		}),
 		quantity: units,
-		prorated: prorate && Boolean(invoiceContext.period),
+		prorated: prorate && Boolean(plan.period),
 		planKey: plan.planKey,
 		planId: product.id,
 		featureId: feature.id,
@@ -318,6 +321,7 @@ const computePlanLines = ({
 		const prorate = !named && (params.prorate ?? true);
 		const context = lineContext({
 			invoiceContext,
+			plan,
 			price: base.price,
 			product: fullProduct,
 			nowMs,
@@ -331,12 +335,12 @@ const computePlanLines = ({
 						? prorateInvoiceLineAmount({
 								price: base.price,
 								amount: base.amount,
-								period: invoiceContext.period,
+								period: plan.period,
 							})
 						: base.amount),
 				description: fixedPriceToDescription({ price: base.price, context }),
 				quantity: null,
-				prorated: prorate && Boolean(invoiceContext.period),
+				prorated: prorate && Boolean(plan.period),
 				planKey: plan.planKey,
 				planId: fullProduct.id,
 				featureId: null,
@@ -381,6 +385,7 @@ const computePlanLines = ({
 			const prorate = !namedLicense && (license.prorate ?? true);
 			const context = lineContext({
 				invoiceContext,
+				plan,
 				price: resolved.price,
 				product: resolved.licenseProduct,
 				nowMs,
@@ -394,7 +399,7 @@ const computePlanLines = ({
 							? prorateInvoiceLineAmount({
 									price: resolved.price,
 									amount: resolved.amount,
-									period: invoiceContext.period,
+									period: plan.period,
 								})
 							: resolved.amount),
 					description: fixedPriceToDescription({
@@ -403,7 +408,7 @@ const computePlanLines = ({
 						quantity: license.quantity,
 					}),
 					quantity: license.quantity,
-					prorated: prorate && Boolean(invoiceContext.period),
+					prorated: prorate && Boolean(plan.period),
 					planKey: plan.planKey,
 					planId: resolved.licenseProduct.id,
 					featureId: null,

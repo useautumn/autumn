@@ -30,6 +30,8 @@ export type InvoicePlanContext = {
 	params: NonNullable<CreateInvoiceParams["plans"]>[number];
 	fullProduct: FullProduct;
 	discounts: StripeDiscountWithCoupon[];
+	/** The plan's own period, falling back to the invoice-level one. */
+	period?: InvoicePeriod;
 };
 
 export type CreateInvoiceContext = {
@@ -40,7 +42,6 @@ export type CreateInvoiceContext = {
 	plans: InvoicePlanContext[];
 	template?: InvoiceTemplate;
 	daysUntilDue: number;
-	period?: InvoicePeriod;
 	taxRate?: Stripe.TaxRate;
 	invoiceDiscounts: StripeDiscountWithCoupon[];
 	namedStripePrices: NamedStripePrices;
@@ -49,6 +50,17 @@ export type CreateInvoiceContext = {
 
 const DEFAULT_NET_TERMS_DAYS = 30;
 const DEFAULT_CURRENCY = "usd";
+
+const toInvoicePeriod = ({
+	periodStart,
+	periodEnd,
+}: {
+	periodStart?: number;
+	periodEnd?: number;
+}): InvoicePeriod | undefined =>
+	periodStart !== undefined && periodEnd !== undefined
+		? { start: periodStart, end: periodEnd }
+		: undefined;
 
 // Stripe cannot apply a `repeating` coupon to a one-off invoice.
 const rejectRepeatingCoupons = ({
@@ -121,6 +133,11 @@ export const setupCreateInvoiceContext = async ({
 		});
 	}
 
+	const invoicePeriod = toInvoicePeriod({
+		periodStart: params.period_start,
+		periodEnd: params.period_end,
+	});
+
 	const plans = await Promise.all(
 		(params.plans ?? []).map(async (planParams, index) => {
 			const fullProduct = await ProductService.getFull({
@@ -146,6 +163,11 @@ export const setupCreateInvoiceContext = async ({
 					stripeCli,
 					discounts: planParams.discounts ?? [],
 				}),
+				period:
+					toInvoicePeriod({
+						periodStart: planParams.period_start,
+						periodEnd: planParams.period_end,
+					}) ?? invoicePeriod,
 			};
 		}),
 	);
@@ -177,10 +199,6 @@ export const setupCreateInvoiceContext = async ({
 			template?.net_terms_days ??
 			ctx.org.config.default_invoice_net_terms_days ??
 			DEFAULT_NET_TERMS_DAYS,
-		period:
-			params.period_start !== undefined && params.period_end !== undefined
-				? { start: params.period_start, end: params.period_end }
-				: undefined,
 		taxRate,
 		invoiceDiscounts,
 		namedStripePrices,
