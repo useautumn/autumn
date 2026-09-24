@@ -6,7 +6,7 @@ import { BaseApiCustomerSchema } from "./baseApiCustomer";
 import { ApiCusReferralSchema } from "./components/apiCusReferral";
 import { ApiInvoicePreviewV0Schema } from "./components/apiInvoicePreview/apiInvoicePreviewV0";
 import { ApiTrialsUsedV1Schema } from "./components/apiTrialsUsed/apiTrialsUsedV1";
-import { ApiBillingDetailsSchema } from "./components/billingDetails/billingDetails";
+import { ApiBillingDetailsExpandSchema } from "./components/billingDetails/billingDetails";
 import { ApiBalanceSchema } from "./cusFeatures/apiBalance";
 import { ApiSubscriptionSchema } from "./cusPlans/apiSubscription";
 
@@ -38,10 +38,7 @@ export const ApiCusExpandSchema = z.object({
 	payment_method: z.any().nullish().meta({
 		description: "The customer's default payment method.",
 	}),
-	billing_details: ApiBillingDetailsSchema.nullish().meta({
-		description:
-			"Billing details from the linked Stripe customer. Returned only if billing_details is provided in the expand parameter.",
-	}),
+	billing_details: ApiBillingDetailsExpandSchema,
 });
 
 // V4 base customer - adds V0 subscriptions and balances

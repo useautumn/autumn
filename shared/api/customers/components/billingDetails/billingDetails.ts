@@ -1,5 +1,18 @@
 import { z } from "zod/v4";
 
+export const MAX_INVOICE_CUSTOM_FIELDS = 4;
+
+export const TAX_EXEMPT_VALUES = ["none", "exempt", "reverse"] as const;
+
+export const TAX_EXEMPT_LABELS: Record<
+	(typeof TAX_EXEMPT_VALUES)[number],
+	string
+> = {
+	none: "Not exempt",
+	exempt: "Exempt",
+	reverse: "Reverse charge",
+};
+
 export const BillingDetailsAddressSchema = z
 	.object({
 		line1: z.string().nullish(),
@@ -13,6 +26,9 @@ export const BillingDetailsAddressSchema = z
 	})
 	.meta({ title: "BillingDetailsAddress" });
 
+export const BILLING_DETAILS_ADDRESS_FIELDS =
+	BillingDetailsAddressSchema.keyof().options;
+
 export const BillingDetailsTaxIdSchema = z
 	.object({
 		type: z.string().meta({
@@ -22,6 +38,11 @@ export const BillingDetailsTaxIdSchema = z
 		value: z.string().meta({ description: "The tax ID, e.g. DE123456789." }),
 	})
 	.meta({ title: "BillingDetailsTaxId" });
+
+export type BillingDetailsTaxId = z.infer<typeof BillingDetailsTaxIdSchema>;
+
+export const taxIdKey = ({ type, value }: BillingDetailsTaxId) =>
+	`${type}:${value}`;
 
 export const BillingDetailsCustomFieldSchema = z
 	.object({
@@ -42,16 +63,7 @@ export const BillingDetailsTaxIdChangesSchema = z
 	})
 	.meta({ title: "BillingDetailsTaxIdChanges" });
 
-export const TaxExemptSchema = z.enum(["none", "exempt", "reverse"]);
-
-export const TAX_EXEMPT_LABELS: Record<
-	z.infer<typeof TaxExemptSchema>,
-	string
-> = {
-	none: "Not exempt",
-	exempt: "Exempt",
-	reverse: "Reverse charge",
-};
+export const TaxExemptSchema = z.enum(TAX_EXEMPT_VALUES);
 
 export const BillingDetailsParamsSchema = z
 	.object({
@@ -71,11 +83,10 @@ export const BillingDetailsParamsSchema = z
 			.object({
 				custom_fields: z
 					.array(BillingDetailsCustomFieldSchema)
-					.max(4)
+					.max(MAX_INVOICE_CUSTOM_FIELDS)
 					.nullish()
 					.meta({
-						description:
-							"Up to 4 custom fields shown on every invoice, e.g. a PO number. Replaces the existing list; null clears it.",
+						description: `Up to ${MAX_INVOICE_CUSTOM_FIELDS} custom fields shown on every invoice, e.g. a PO number. Replaces the existing list; null clears it.`,
 					}),
 			})
 			.optional(),
@@ -99,6 +110,13 @@ export const ApiBillingDetailsSchema = z
 		title: "BillingDetails",
 		description:
 			"Billing details read live from the linked Stripe customer. Null when no Stripe customer is linked.",
+	});
+
+/** The expand field, shared by every customer response version. */
+export const ApiBillingDetailsExpandSchema =
+	ApiBillingDetailsSchema.nullish().meta({
+		description:
+			"Billing details from the linked Stripe customer. Returned only if billing_details is provided in the expand parameter.",
 	});
 
 export type BillingDetailsParams = z.infer<typeof BillingDetailsParamsSchema>;

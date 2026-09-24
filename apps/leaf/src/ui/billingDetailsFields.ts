@@ -1,28 +1,49 @@
 import {
+	BILLING_DETAILS_ADDRESS_FIELDS,
 	type BillingDetailsParams,
 	BillingDetailsParamsSchema,
+	type BillingDetailsTaxId,
 	TAX_EXEMPT_LABELS,
 } from "@autumn/shared";
 
 type BillingDetailsField = { label: string; value: string };
+type TaxIdChanges = NonNullable<BillingDetailsParams["tax_ids"]>;
+type CustomFields = NonNullable<
+	BillingDetailsParams["invoice_settings"]
+>["custom_fields"];
 
 const CLEARED = "Cleared";
 
+const TAX_ID_CHANGE_LABELS: Record<keyof TaxIdChanges, string> = {
+	add: "Add tax IDs",
+	remove: "Remove tax IDs",
+};
+
 const addressText = (address: BillingDetailsParams["address"]) => {
 	if (!address) return CLEARED;
-	const { line1, line2, city, state, postal_code, country } = address;
-	return [line1, line2, city, state, postal_code, country]
+	return BILLING_DETAILS_ADDRESS_FIELDS.map((key) => address[key])
 		.filter(Boolean)
 		.join(", ");
 };
 
-const taxIdText = ({ type, value }: { type: string; value: string }) =>
+const taxIdText = ({ type, value }: BillingDetailsTaxId) =>
 	`${type.replace(/_/g, " ").toUpperCase()} ${value}`;
 
+const taxIdFields = (taxIds: TaxIdChanges = {}): BillingDetailsField[] =>
+	(Object.keys(TAX_ID_CHANGE_LABELS) as (keyof TaxIdChanges)[]).flatMap(
+		(change) =>
+			taxIds[change]?.length
+				? [
+						{
+							label: TAX_ID_CHANGE_LABELS[change],
+							value: taxIds[change].map(taxIdText).join(", "),
+						},
+					]
+				: [],
+	);
+
 const customFieldEntries = (
-	customFields: NonNullable<
-		BillingDetailsParams["invoice_settings"]
-	>["custom_fields"],
+	customFields: CustomFields,
 ): BillingDetailsField[] => {
 	if (!customFields?.length) {
 		return [{ label: "Invoice custom fields", value: CLEARED }];
@@ -41,18 +62,7 @@ export const billingDetailsFields = (value: unknown): BillingDetailsField[] => {
 	if (address !== undefined) {
 		fields.push({ label: "Address", value: addressText(address) });
 	}
-	if (tax_ids?.add?.length) {
-		fields.push({
-			label: "Add tax IDs",
-			value: tax_ids.add.map(taxIdText).join(", "),
-		});
-	}
-	if (tax_ids?.remove?.length) {
-		fields.push({
-			label: "Remove tax IDs",
-			value: tax_ids.remove.map(taxIdText).join(", "),
-		});
-	}
+	fields.push(...taxIdFields(tax_ids));
 	if (tax_exempt) {
 		fields.push({ label: "Tax exempt", value: TAX_EXEMPT_LABELS[tax_exempt] });
 	}

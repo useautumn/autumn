@@ -6,7 +6,7 @@ import { AppEnv } from "@models/genModels/genEnums";
 import { z } from "zod/v4";
 import { ApiInvoiceV0Schema } from "../../others/apiInvoice/prevVersions/apiInvoiceV0";
 import { ApiTrialsUsedV0Schema } from "../components/apiTrialsUsed/prevVersions/apiTrialsUsedV0";
-import { ApiBillingDetailsSchema } from "../components/billingDetails/billingDetails";
+import { ApiBillingDetailsExpandSchema } from "../components/billingDetails/billingDetails";
 import { ApiCusFeatureV3Schema } from "../cusFeatures/previousVersions/apiCusFeatureV3";
 import { ApiCusProductV3Schema } from "../cusPlans/previousVersions/apiCusProductV3";
 
@@ -143,10 +143,7 @@ export const ApiCusExpandV3Schema = z.object({
 	payment_method: z.any().nullish().meta({
 		description: cusDescriptions.payment_method,
 	}),
-	billing_details: ApiBillingDetailsSchema.nullish().meta({
-		description:
-			"Billing details from the linked Stripe customer. Returned only if billing_details is provided in the expand parameter.",
-	}),
+	billing_details: ApiBillingDetailsExpandSchema,
 });
 
 export const ApiCustomerV3Schema = z.object({

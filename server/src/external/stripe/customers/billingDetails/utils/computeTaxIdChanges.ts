@@ -1,10 +1,7 @@
-import type { BillingDetailsParams } from "@autumn/shared";
+import { type BillingDetailsParams, taxIdKey } from "@autumn/shared";
 import type Stripe from "stripe";
 
 type TaxIdChanges = NonNullable<BillingDetailsParams["tax_ids"]>;
-
-const taxIdKey = ({ type, value }: { type: string; value: string }) =>
-	`${type}:${value}`;
 
 /** Adds skip IDs the customer already has; removes skip IDs it doesn't. */
 export const computeTaxIdChanges = ({

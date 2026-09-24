@@ -1,21 +1,18 @@
-import type { ApiBillingDetails, BillingDetailsParams } from "@autumn/shared";
+import {
+	type ApiBillingDetails,
+	BILLING_DETAILS_ADDRESS_FIELDS,
+	type BillingDetailsParams,
+	type BillingDetailsTaxId,
+	taxIdKey,
+} from "@autumn/shared";
 
-export const ADDRESS_FIELDS = [
-	"line1",
-	"line2",
-	"city",
-	"state",
-	"postal_code",
-	"country",
-] as const;
-
-type AddressField = (typeof ADDRESS_FIELDS)[number];
-type TaxExempt = NonNullable<ApiBillingDetails["tax_exempt"]>;
+type AddressField = (typeof BILLING_DETAILS_ADDRESS_FIELDS)[number];
+type Row = Record<string, string>;
 
 export type BillingDetailsFormValues = {
 	address: Record<AddressField, string>;
-	tax_ids: ApiBillingDetails["tax_ids"];
-	tax_exempt: TaxExempt;
+	tax_ids: BillingDetailsTaxId[];
+	tax_exempt: NonNullable<ApiBillingDetails["tax_exempt"]>;
 	custom_fields: ApiBillingDetails["invoice_settings"]["custom_fields"];
 };
 
@@ -23,28 +20,41 @@ export const billingDetailsToFormValues = (
 	billingDetails: ApiBillingDetails | null | undefined,
 ): BillingDetailsFormValues => ({
 	address: Object.fromEntries(
-		ADDRESS_FIELDS.map((key) => [key, billingDetails?.address?.[key] ?? ""]),
+		BILLING_DETAILS_ADDRESS_FIELDS.map((key) => [
+			key,
+			billingDetails?.address?.[key] ?? "",
+		]),
 	) as BillingDetailsFormValues["address"],
 	tax_ids: billingDetails?.tax_ids ?? [],
 	tax_exempt: billingDetails?.tax_exempt ?? "none",
 	custom_fields: billingDetails?.invoice_settings.custom_fields ?? [],
 });
 
-const trimmedAddress = (address: BillingDetailsFormValues["address"]) =>
+const trimRow = <T extends Row>(row: T) =>
 	Object.fromEntries(
-		ADDRESS_FIELDS.map((key) => [key, address[key].trim() || null]),
-	) as Record<AddressField, string | null>;
+		Object.entries(row).map(([key, value]) => [key, value.trim()]),
+	) as T;
 
-const hasValue = (row: { value: string }) => row.value.trim() !== "";
+/** Trimmed rows with a value; blank rows the user added but never filled are dropped. */
+const filledRows = <T extends Row & { value: string }>(rows: T[]) =>
+	rows.map(trimRow).filter((row) => row.value !== "");
 
 const isSame = (a: unknown, b: unknown) =>
 	JSON.stringify(a) === JSON.stringify(b);
 
-type TaxId = BillingDetailsFormValues["tax_ids"][number];
+const addressChange = (address: BillingDetailsFormValues["address"]) => {
+	const trimmed = trimRow(address);
+	const isEmpty = Object.values(trimmed).every((value) => value === "");
+	if (isEmpty) return null;
+	return Object.fromEntries(
+		Object.entries(trimmed).map(([key, value]) => [key, value || null]),
+	);
+};
 
-const taxIdKey = ({ type, value }: TaxId) => `${type.trim()}:${value.trim()}`;
-
-const taxIdsMissingFrom = (taxIds: TaxId[], other: TaxId[]) => {
+const taxIdsMissingFrom = (
+	taxIds: BillingDetailsTaxId[],
+	other: BillingDetailsTaxId[],
+) => {
 	const otherKeys = new Set(other.map(taxIdKey));
 	return taxIds.filter((taxId) => !otherKeys.has(taxIdKey(taxId)));
 };
@@ -54,10 +64,10 @@ const taxIdChanges = ({
 	initial,
 	current,
 }: {
-	initial: TaxId[];
-	current: TaxId[];
+	initial: BillingDetailsTaxId[];
+	current: BillingDetailsTaxId[];
 }): BillingDetailsParams["tax_ids"] => {
-	const filled = current.filter(hasValue);
+	const filled = filledRows(current);
 	const add = taxIdsMissingFrom(filled, initial);
 	const remove = taxIdsMissingFrom(initial, filled);
 	if (add.length === 0 && remove.length === 0) return undefined;
@@ -67,7 +77,7 @@ const taxIdChanges = ({
 	};
 };
 
-/** Only the lanes the user edited, so untouched Stripe data is never rewritten. */
+/** Only the fields the user edited, so untouched Stripe data is never rewritten. */
 export const billingDetailsChanges = ({
 	initial,
 	current,
@@ -77,10 +87,9 @@ export const billingDetailsChanges = ({
 }): BillingDetailsParams | undefined => {
 	const changes: BillingDetailsParams = {};
 
-	const address = trimmedAddress(current.address);
-	if (!isSame(address, trimmedAddress(initial.address))) {
-		const isEmpty = Object.values(address).every((value) => value === null);
-		changes.address = isEmpty ? null : address;
+	const address = addressChange(current.address);
+	if (!isSame(address, addressChange(initial.address))) {
+		changes.address = address;
 	}
 
 	const taxIds = taxIdChanges({
@@ -93,7 +102,7 @@ export const billingDetailsChanges = ({
 		changes.tax_exempt = current.tax_exempt;
 	}
 
-	const customFields = current.custom_fields.filter(hasValue);
+	const customFields = filledRows(current.custom_fields);
 	if (!isSame(customFields, initial.custom_fields)) {
 		changes.invoice_settings = {
 			custom_fields: customFields.length > 0 ? customFields : null,

@@ -1,12 +1,16 @@
-import { TAX_EXEMPT_LABELS } from "@autumn/shared";
+import {
+	BILLING_DETAILS_ADDRESS_FIELDS,
+	MAX_INVOICE_CUSTOM_FIELDS,
+	TAX_EXEMPT_LABELS,
+} from "@autumn/shared";
 import { FIELD_GRID, FIELD_STACK, LABELED_FIELD } from "../fieldLayout";
 import type { UpdateCustomerForm } from "../useUpdateCustomerForm";
-import { ADDRESS_FIELDS } from "./billingDetailsFormValues";
 import { RowListField } from "./RowListField";
 
-const MAX_INVOICE_CUSTOM_FIELDS = 4;
-
-const ADDRESS_LABELS: Record<(typeof ADDRESS_FIELDS)[number], string> = {
+const ADDRESS_LABELS: Record<
+	(typeof BILLING_DETAILS_ADDRESS_FIELDS)[number],
+	string
+> = {
 	line1: "Address line 1",
 	line2: "Address line 2",
 	city: "City",
@@ -26,7 +30,7 @@ export const BillingDetailsFields = ({
 }) => (
 	<div className={FIELD_STACK}>
 		<div className={FIELD_GRID}>
-			{ADDRESS_FIELDS.map((key) => (
+			{BILLING_DETAILS_ADDRESS_FIELDS.map((key) => (
 				<form.AppField key={key} name={`billingDetails.address.${key}`}>
 					{(field) => (
 						<field.TextField label={ADDRESS_LABELS[key]} type="text" />
