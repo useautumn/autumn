@@ -422,6 +422,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Days until the invoice is due. Defaults to the template's terms, then the org default.
 </DynamicParamField>
 
+<DynamicParamField body="issue_date" type="integer">
+  Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future.
+</DynamicParamField>
+
+<DynamicParamField body="due_date" type="integer">
+  When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days.
+</DynamicParamField>
+
 <DynamicParamField body="tax_rate_id" type="string">
   Stripe tax rate ID (txr_...) applied to every line.
 </DynamicParamField>
@@ -626,6 +634,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     <DynamicResponseField name="amount_due" type="number">
       What the customer pays: the total less any credit applied.
     </DynamicResponseField>
+
+    <DynamicResponseField name="issue_date" type="number" />
 
     <DynamicResponseField name="due_date" type="number | null" />
 

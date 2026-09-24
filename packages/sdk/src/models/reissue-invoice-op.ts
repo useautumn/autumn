@@ -1044,6 +1044,7 @@ export type ReissueInvoicePreview = {
    * What the customer pays: the total less any credit applied.
    */
   amountDue: number;
+  issueDate: number;
   dueDate: number | null;
 };
 
@@ -3107,6 +3108,7 @@ export const ReissueInvoicePreview$inboundSchema: z.ZodMiniType<
       z.lazy(() => ReissueInvoiceInvoiceCredits$inboundSchema),
     ),
     amount_due: types.number(),
+    issue_date: types.number(),
     due_date: types.nullable(types.number()),
   }),
   z.transform((v) => {
@@ -3114,6 +3116,7 @@ export const ReissueInvoicePreview$inboundSchema: z.ZodMiniType<
       "discount_total": "discountTotal",
       "invoice_credits": "invoiceCredits",
       "amount_due": "amountDue",
+      "issue_date": "issueDate",
       "due_date": "dueDate",
     });
   }),

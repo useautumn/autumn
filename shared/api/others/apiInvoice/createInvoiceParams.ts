@@ -190,6 +190,14 @@ export const CreateInvoiceParamsSchema = z
 			description:
 				"Days until the invoice is due. Defaults to the template's terms, then the org default.",
 		}),
+		issue_date: UnixMsTimestampSchema.optional().meta({
+			description:
+				"Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future.",
+		}),
+		due_date: UnixMsTimestampSchema.optional().meta({
+			description:
+				"When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days.",
+		}),
 		tax_rate_id: z.string().optional().meta({
 			description: "Stripe tax rate ID (txr_...) applied to every line.",
 		}),
@@ -217,6 +225,13 @@ export const CreateInvoiceParamsSchema = z
 			params.period_end === undefined ||
 			params.period_end > params.period_start,
 		{ message: "period_end must be after period_start." },
+	)
+	.refine(
+		(params) =>
+			params.issue_date === undefined ||
+			params.due_date === undefined ||
+			params.due_date > params.issue_date,
+		{ message: "due_date must be after issue_date." },
 	);
 
 export const CreateInvoicePreviewLineSchema = z.object({
@@ -252,6 +267,7 @@ export const CreateInvoicePreviewSchema = z.object({
 	amount_due: z.number().meta({
 		description: "What the customer pays: the total less any credit applied.",
 	}),
+	issue_date: z.number(),
 	due_date: z.number().nullable(),
 });
 
