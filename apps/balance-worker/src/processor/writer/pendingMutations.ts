@@ -22,9 +22,13 @@ import {
 	PartitionWriterRecordTooLargeError,
 } from "./writerErrors.js";
 
-export function createPartitionWriterState(): PartitionWriterState {
+export function createPartitionWriterState({
+	subjectMapMaxBytes,
+}: {
+	subjectMapMaxBytes?: number;
+} = {}): PartitionWriterState {
 	return {
-		subjects: createSubjectMap(),
+		subjects: createSubjectMap({ maxBytes: subjectMapMaxBytes }),
 		pendingByKey: new Map(),
 		pendingByCustomerKey: new Map(),
 		queue: [],

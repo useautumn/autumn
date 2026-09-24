@@ -26,7 +26,9 @@ export function createPartitionWriter({
 	const scope: PartitionWriterScope = {
 		ctx,
 		config,
-		state: createPartitionWriterState(),
+		state: createPartitionWriterState({
+			subjectMapMaxBytes: config.limits.subjectMapMaxBytes,
+		}),
 	};
 
 	function decide<Reply>(

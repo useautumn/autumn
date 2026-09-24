@@ -76,6 +76,8 @@ export type PartitionWriterLimits = {
 	/** Committed batches allowed to wait for the store before committing pauses;
 	 *  defaults to DEFAULT_MAX_UNAPPLIED_BATCHES. */
 	maxUnappliedBatches?: number;
+	/** Resident customer state the partition keeps before the oldest is dropped; defaults to the map's own bound. */
+	subjectMapMaxBytes?: number;
 };
 
 export type PartitionWriterConfig = {

@@ -73,6 +73,15 @@ export const BALANCE_WORKER_CATALOG_TTL_MS = 300_000;
  *  the caller cannot do anything useful with. */
 export const BALANCE_WORKER_CATALOG_MAX_BYTES = 536_870_912;
 
+/** Resident customer state per partition. The map was 32 MiB when a worker held
+ *  ~85 of 512 partitions; at 64 partitions a worker holds two or three, and a
+ *  partition whose hot working set (one multi-entity customer plus a few hundred
+ *  active ones) exceeds the bound thrashes: every projection evicts the oldest
+ *  states, the next request re-reads them from Postgres, and readers caught
+ *  between ensure and read answer NOT_INITIALIZED. 256 MiB of JSON per partition
+ *  is under a gigabyte of heap on a 4 GB task holding three. */
+export const BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES = 268_435_456;
+
 /** Off: the committer lands every update and increment unconditionally, so a record on the log is a row in Postgres.
  *  A guard only fails when a writer outside the worker changed the row, which is a product bug to fix, not a write to drop. */
 export const BALANCE_WORKER_COMMITTER_GUARDS_ENABLED = false;

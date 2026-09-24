@@ -115,6 +115,7 @@ export function balanceWorkerEnvToRuntimeConfig({
 			// Sized for one customer bursting 500 parallel tracks, the largest the balance suites send.
 			maxPendingCommands: 4000,
 			maxPendingCommandsPerCustomer: 1000,
+			subjectMapMaxBytes: env.BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES,
 		},
 		trackReceiptRetentionMs: env.BALANCE_WORKER_RECEIPT_RETENTION_MS,
 		producerLimits: {
