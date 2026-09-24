@@ -21,6 +21,8 @@ export function useCreateInvoiceForm({
 		taxRateId: null,
 		periodStart: null,
 		periodEnd: null,
+		issueDate: null,
+		dueDate: null,
 		...defaultOverrides,
 	}));
 

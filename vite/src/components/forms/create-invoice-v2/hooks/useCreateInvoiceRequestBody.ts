@@ -127,6 +127,8 @@ export function buildCreateInvoiceRequestBody({
 		...(hasPeriod
 			? { period_start: form.periodStart, period_end: form.periodEnd }
 			: {}),
+		...(form.issueDate === null ? {} : { issue_date: form.issueDate }),
+		...(form.dueDate === null ? {} : { due_date: form.dueDate }),
 		...(preview ? { preview: true } : {}),
 	} as CreateInvoiceParams;
 }

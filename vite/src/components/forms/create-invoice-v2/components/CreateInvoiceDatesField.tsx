@@ -7,64 +7,70 @@ import {
 	PopoverTrigger,
 } from "@autumn/ui";
 import { XIcon } from "@phosphor-icons/react";
-import { format } from "date-fns";
+import { format, isAfter, startOfToday } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
 import {
-	calendarDaysToInvoicePeriod,
-	invoicePeriodToCalendarDays,
-} from "../utils/invoicePeriodDays";
+	calendarDaysToInvoiceDates,
+	invoiceDatesToCalendarDays,
+} from "../utils/invoiceDates";
 
 const RANGE_DATE_FORMAT = "MMM d, yyyy";
 
-export function CreateInvoicePeriodField() {
+export function CreateInvoiceDatesField() {
 	const { form, formValues } = useCreateInvoiceFormContext();
-	const { periodStart, periodEnd } = formValues;
+	const { issueDate, dueDate } = formValues;
 	const [open, setOpen] = useState(false);
-	const [pendingStart, setPendingStart] = useState<Date | null>(null);
+	const [pendingIssueDay, setPendingIssueDay] = useState<Date | null>(null);
+	const today = startOfToday();
 
 	const selectedRange =
-		periodStart !== null && periodEnd !== null
-			? invoicePeriodToCalendarDays({ start: periodStart, end: periodEnd })
+		issueDate !== null && dueDate !== null
+			? invoiceDatesToCalendarDays({ issueDate, dueDate })
 			: undefined;
 
-	const setPeriod = ({
-		start,
-		end,
+	const setDates = ({
+		issue,
+		due,
 	}: {
-		start: number | null;
-		end: number | null;
+		issue: number | null;
+		due: number | null;
 	}) => {
-		form.setFieldValue("periodStart", start);
-		form.setFieldValue("periodEnd", end);
+		form.setFieldValue("issueDate", issue);
+		form.setFieldValue("dueDate", due);
 	};
 
-	const displayedRange: DateRange | undefined = pendingStart
-		? { from: pendingStart, to: undefined }
+	const displayedRange: DateRange | undefined = pendingIssueDay
+		? { from: pendingIssueDay, to: undefined }
 		: selectedRange;
 
 	const handleOpenChange = (nextOpen: boolean) => {
-		setPendingStart(null);
+		setPendingIssueDay(null);
 		setOpen(nextOpen);
 	};
 
 	const handleSelect = (_range: DateRange | undefined, clickedDay: Date) => {
-		if (!pendingStart || clickedDay < pendingStart) {
-			setPendingStart(clickedDay);
+		const isFutureDay = isAfter(clickedDay, today);
+		if (!isFutureDay) {
+			setPendingIssueDay(clickedDay);
 			return;
 		}
+		if (!pendingIssueDay) return;
 
-		setPeriod(
-			calendarDaysToInvoicePeriod({ from: pendingStart, to: clickedDay }),
-		);
+		const dates = calendarDaysToInvoiceDates({
+			issueDay: pendingIssueDay,
+			dueDay: clickedDay,
+			now: new Date(),
+		});
+		setDates({ issue: dates.issueDate, due: dates.dueDate });
 		handleOpenChange(false);
 	};
 
 	return (
 		<div>
-			<FormLabel>Start and end dates</FormLabel>
+			<FormLabel>Invoice dates</FormLabel>
 			<div className="relative">
 				<Popover open={open} onOpenChange={handleOpenChange}>
 					<PopoverTrigger asChild>
@@ -79,28 +85,36 @@ export function CreateInvoicePeriodField() {
 						>
 							<CalendarIcon className="size-3.5 shrink-0 text-tertiary-foreground ml-1" />
 							{selectedRange ? (
-								`${format(selectedRange.from, RANGE_DATE_FORMAT)} → ${format(selectedRange.to, RANGE_DATE_FORMAT)}`
+								`Issued ${format(selectedRange.from, RANGE_DATE_FORMAT)} → Due ${format(selectedRange.to, RANGE_DATE_FORMAT)}`
 							) : (
-								<span>Select start and end dates</span>
+								<span>Select issue and due dates</span>
 							)}
 						</button>
 					</PopoverTrigger>
 					<PopoverContent align="end" className="w-auto p-0">
+						<div className="border-b px-3 py-2 text-xs text-tertiary-foreground">
+							{pendingIssueDay
+								? "Select the due date"
+								: "Select the issue date"}
+						</div>
 						<Calendar
 							mode="range"
 							numberOfMonths={2}
 							selected={displayedRange}
 							onSelect={handleSelect}
 							defaultMonth={displayedRange?.from}
+							disabled={
+								pendingIssueDay ? { before: pendingIssueDay } : { after: today }
+							}
 						/>
 					</PopoverContent>
 				</Popover>
 				{selectedRange && (
 					<button
 						type="button"
-						aria-label="Clear start and end dates"
+						aria-label="Clear invoice dates"
 						className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-tertiary-foreground transition-colors hover:text-foreground"
-						onClick={() => setPeriod({ start: null, end: null })}
+						onClick={() => setDates({ issue: null, due: null })}
 					>
 						<XIcon className="size-3.5" />
 					</button>

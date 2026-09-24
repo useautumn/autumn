@@ -1,5 +1,6 @@
 import type { FullProduct, Invoice } from "@autumn/shared";
 import { ErrCode, RecaseError } from "@autumn/shared";
+import { fromUnixTime, getUnixTime } from "date-fns";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
@@ -17,6 +18,9 @@ import type { CreateInvoiceContext } from "../setup/setupCreateInvoiceContext";
 
 const ADD_LINES_BATCH_SIZE = 100;
 
+const msToUnixSeconds = (unixMs?: number) =>
+	unixMs === undefined ? undefined : getUnixTime(unixMs);
+
 /** Creates, populates and finalizes the Stripe invoice, then mirrors it into Autumn. */
 export const executeStripeInvoicePlan = async ({
 	ctx,
@@ -28,7 +32,11 @@ export const executeStripeInvoicePlan = async ({
 	invoiceContext: CreateInvoiceContext;
 	lines: InvoiceLine[];
 	stripePlan: StripeInvoicePlan;
-}): Promise<{ invoice: Invoice; dueDateMs: number | null }> => {
+}): Promise<{
+	invoice: Invoice;
+	issueDateMs: number;
+	dueDateMs: number | null;
+}> => {
 	const { stripeCustomer, fullCustomer, template, currency } = invoiceContext;
 	if (!stripeCustomer) {
 		throw new RecaseError({
@@ -46,6 +54,8 @@ export const executeStripeInvoicePlan = async ({
 		currency,
 		collectionMethod: "send_invoice",
 		daysUntilDue: invoiceContext.daysUntilDue,
+		dueDate: msToUnixSeconds(invoiceContext.params.due_date),
+		effectiveAt: msToUnixSeconds(invoiceContext.params.issue_date),
 		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
 		footer: template?.footer,
 		description: template?.memo,
@@ -119,6 +129,11 @@ export const executeStripeInvoicePlan = async ({
 
 	return {
 		invoice: autumnInvoice,
-		dueDateMs: finalized.due_date ? finalized.due_date * 1000 : null,
+		issueDateMs: fromUnixTime(
+			finalized.effective_at ?? finalized.created,
+		).getTime(),
+		dueDateMs: finalized.due_date
+			? fromUnixTime(finalized.due_date).getTime()
+			: null,
 	};
 };

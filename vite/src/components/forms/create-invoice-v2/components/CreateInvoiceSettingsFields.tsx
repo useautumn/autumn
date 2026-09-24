@@ -9,7 +9,7 @@ import {
 } from "@autumn/ui";
 import { useInvoiceTemplatesQuery } from "@/hooks/queries/useInvoiceTemplatesQuery";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
-import { CreateInvoicePeriodField } from "./CreateInvoicePeriodField";
+import { CreateInvoiceDatesField } from "./CreateInvoiceDatesField";
 
 const NO_TEMPLATE = "none";
 
@@ -92,7 +92,7 @@ export function CreateInvoiceSettingsFields() {
 				/>
 			</div>
 
-			<CreateInvoicePeriodField />
+			<CreateInvoiceDatesField />
 		</div>
 	);
 }

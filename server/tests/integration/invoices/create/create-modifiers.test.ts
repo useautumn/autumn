@@ -17,6 +17,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { addDays, getUnixTime, subDays } from "date-fns";
 import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/InvoiceTemplateService";
 import { generateId } from "@/utils/genUtils";
 import {
@@ -25,7 +26,6 @@ import {
 } from "./utils/expectCreatedInvoiceCorrect";
 
 const PRO_BASE = 20;
-const PREMIUM_BASE = 50;
 
 test.concurrent(
 	`${chalk.yellowBright("invoices.create: invoice discount applies to everything, plan discount only to its plan")}`,
@@ -212,126 +212,6 @@ test.concurrent(
 			expect(line.period.start * 1000).toBe(periodStart);
 			expect(line.period.end * 1000).toBe(periodEnd);
 		}
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("invoices.create: a plan's own period overrides the invoice period")}`,
-	async () => {
-		const customerId = "inv-create-plan-period";
-		const pro = products.pro({ id: "pro-create-plan-period", items: [] });
-		const premium = products.premium({
-			id: "premium-create-plan-period",
-			items: [],
-		});
-		const { ctx, autumnV2_3 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, premium] }),
-			],
-			actions: [],
-		});
-
-		// Pro bills its own half cycle; premium inherits the full invoice cycle.
-		const invoicePeriod = {
-			start: Date.UTC(2026, 8, 1),
-			end: Date.UTC(2026, 9, 1),
-		};
-		const proPeriod = {
-			start: Date.UTC(2026, 8, 1),
-			end: Date.UTC(2026, 8, 16),
-		};
-		const response = await createInvoice({
-			autumnV2_3,
-			params: {
-				customer_id: customerId,
-				period_start: invoicePeriod.start,
-				period_end: invoicePeriod.end,
-				plans: [
-					{
-						plan_id: pro.id,
-						period_start: proPeriod.start,
-						period_end: proPeriod.end,
-					},
-					{ plan_id: premium.id },
-				],
-			},
-		});
-
-		const { stripeInvoice } = await expectCreatedInvoiceCorrect({
-			ctx,
-			response,
-			lines: [
-				{ amount: PRO_BASE / 2, prorated: true },
-				{ amount: PREMIUM_BASE, prorated: true },
-			],
-			total: PRO_BASE / 2 + PREMIUM_BASE,
-		});
-
-		const [proLine, premiumLine] = response.preview.lines;
-		expect(proLine.plan_id).toBe(pro.id);
-		expect(proLine.period_start).toBe(proPeriod.start);
-		expect(proLine.period_end).toBe(proPeriod.end);
-		expect(premiumLine.plan_id).toBe(premium.id);
-		expect(premiumLine.period_start).toBe(invoicePeriod.start);
-		expect(premiumLine.period_end).toBe(invoicePeriod.end);
-
-		const stripePeriods = stripeInvoice.lines.data
-			.map((line) => ({
-				start: line.period.start * 1000,
-				end: line.period.end * 1000,
-			}))
-			.sort((a, b) => a.end - b.end);
-		expect(stripePeriods).toEqual([proPeriod, invoicePeriod]);
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("invoices.create: a plan period needs both bounds, end after start")}`,
-	async () => {
-		const customerId = "inv-create-plan-period-invalid";
-		const pro = products.pro({
-			id: "pro-create-plan-period-invalid",
-			items: [],
-		});
-		const { autumnV2_3 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro] }),
-			],
-			actions: [],
-		});
-
-		await expectAutumnError({
-			errMessage: "Plan period_start and period_end must be provided together",
-			func: () =>
-				createInvoice({
-					autumnV2_3,
-					params: {
-						customer_id: customerId,
-						plans: [{ plan_id: pro.id, period_start: Date.UTC(2026, 8, 1) }],
-					},
-				}),
-		});
-		await expectAutumnError({
-			errMessage: "Plan period_end must be after period_start",
-			func: () =>
-				createInvoice({
-					autumnV2_3,
-					params: {
-						customer_id: customerId,
-						plans: [
-							{
-								plan_id: pro.id,
-								period_start: Date.UTC(2026, 8, 16),
-								period_end: Date.UTC(2026, 8, 1),
-							},
-						],
-					},
-				}),
-		});
 	},
 );
 
@@ -862,5 +742,86 @@ test.concurrent(
 		const line = stripeInvoice.lines.data[0];
 		expect(line.pricing?.price_details?.price).toBe(stripePrice.id);
 		expect(line.quantity).toBe(3);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create: issue_date and due_date set the Stripe invoice dates")}`,
+	async () => {
+		const customerId = "inv-create-dates";
+		const pro = products.pro({ id: "pro-create-dates", items: [] });
+		const { ctx, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		const issueDate = subDays(new Date(), 10).getTime();
+		const dueDate = addDays(new Date(), 20).getTime();
+		const response = await createInvoice({
+			autumnV2_3,
+			params: {
+				customer_id: customerId,
+				plans: [{ plan_id: pro.id }],
+				net_terms_days: 5,
+				issue_date: issueDate,
+				due_date: dueDate,
+			},
+		});
+
+		const { stripeInvoice } = await expectCreatedInvoiceCorrect({
+			ctx,
+			response,
+			lines: [{ amount: PRO_BASE, prorated: false }],
+			total: PRO_BASE,
+		});
+		expect(stripeInvoice.effective_at).toBe(getUnixTime(issueDate));
+		expect(stripeInvoice.due_date).toBe(getUnixTime(dueDate));
+		expect(response.preview.issue_date).toBe(getUnixTime(issueDate) * 1000);
+		expect(response.preview.due_date).toBe(getUnixTime(dueDate) * 1000);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create: a future issue_date or past due_date is refused")}`,
+	async () => {
+		const customerId = "inv-create-dates-invalid";
+		const pro = products.pro({ id: "pro-create-dates-invalid", items: [] });
+		const { autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		await expectAutumnError({
+			errMessage: "issue_date cannot be in the future",
+			func: () =>
+				createInvoice({
+					autumnV2_3,
+					params: {
+						customer_id: customerId,
+						plans: [{ plan_id: pro.id }],
+						issue_date: addDays(new Date(), 1).getTime(),
+					},
+				}),
+		});
+		await expectAutumnError({
+			errMessage: "due_date must be in the future",
+			func: () =>
+				createInvoice({
+					autumnV2_3,
+					params: {
+						customer_id: customerId,
+						plans: [{ plan_id: pro.id }],
+						due_date: subDays(new Date(), 1).getTime(),
+					},
+				}),
+		});
 	},
 );

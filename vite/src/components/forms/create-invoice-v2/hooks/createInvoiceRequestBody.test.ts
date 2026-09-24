@@ -12,6 +12,8 @@ const emptyForm = (): CreateInvoiceForm => ({
 	taxRateId: null,
 	periodStart: null,
 	periodEnd: null,
+	issueDate: null,
+	dueDate: null,
 });
 
 const planItems = [
@@ -261,6 +263,23 @@ describe("buildCreateInvoiceRequestBody", () => {
 			period_start: 1789430400000,
 			period_end: 1792022400000,
 			preview: true,
+		});
+	});
+
+	test("sends the issue and due dates", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				issueDate: 1788782400000,
+				dueDate: 1791979200000,
+				customLineItems: [{ _id: "c1", description: "Setup", amount: 10 }],
+			},
+		});
+
+		expect(body).toMatchObject({
+			issue_date: 1788782400000,
+			due_date: 1791979200000,
 		});
 	});
 

@@ -140,7 +140,7 @@ export function InvoicePreviewDocument({
 								<dl className="mt-[2.2em]">
 									<MetaRow
 										label="Date of issue"
-										value={formatDate(Date.now())}
+										value={formatDate(preview.issue_date)}
 									/>
 									{preview.due_date ? (
 										<MetaRow

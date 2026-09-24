@@ -167,28 +167,8 @@ export const InvoicePlanParamsSchema = z
 			description:
 				"Whether to prorate the base price against period_start / period_end. Defaults to true.",
 		}),
-		period_start: UnixMsTimestampSchema.optional().meta({
-			description:
-				"Start of the period this plan is invoiced for, in milliseconds. Overrides the invoice-level period_start for this plan's lines.",
-		}),
-		period_end: UnixMsTimestampSchema.optional().meta({
-			description:
-				"End of the period this plan is invoiced for, in milliseconds. Overrides the invoice-level period_end for this plan's lines.",
-		}),
 	})
-	.strict()
-	.refine(
-		(plan) =>
-			(plan.period_start === undefined) === (plan.period_end === undefined),
-		{ message: "Plan period_start and period_end must be provided together." },
-	)
-	.refine(
-		(plan) =>
-			plan.period_start === undefined ||
-			plan.period_end === undefined ||
-			plan.period_end > plan.period_start,
-		{ message: "Plan period_end must be after period_start." },
-	);
+	.strict();
 
 export const CreateInvoiceParamsSchema = z
 	.object({
@@ -210,12 +190,20 @@ export const CreateInvoiceParamsSchema = z
 			description:
 				"Days until the invoice is due. Defaults to the template's terms, then the org default.",
 		}),
+		issue_date: UnixMsTimestampSchema.optional().meta({
+			description:
+				"Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future.",
+		}),
+		due_date: UnixMsTimestampSchema.optional().meta({
+			description:
+				"When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days.",
+		}),
 		tax_rate_id: z.string().optional().meta({
 			description: "Stripe tax rate ID (txr_...) applied to every line.",
 		}),
 		period_start: UnixMsTimestampSchema.optional().meta({
 			description:
-				"Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start. A plan's own period_start / period_end takes precedence.",
+				"Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start.",
 		}),
 		period_end: UnixMsTimestampSchema.optional().meta({
 			description: "End of the period being invoiced, in milliseconds.",
@@ -237,6 +225,13 @@ export const CreateInvoiceParamsSchema = z
 			params.period_end === undefined ||
 			params.period_end > params.period_start,
 		{ message: "period_end must be after period_start." },
+	)
+	.refine(
+		(params) =>
+			params.issue_date === undefined ||
+			params.due_date === undefined ||
+			params.due_date > params.issue_date,
+		{ message: "due_date must be after issue_date." },
 	);
 
 export const CreateInvoicePreviewLineSchema = z.object({
@@ -272,6 +267,7 @@ export const CreateInvoicePreviewSchema = z.object({
 	amount_due: z.number().meta({
 		description: "What the customer pays: the total less any credit applied.",
 	}),
+	issue_date: z.number(),
 	due_date: z.number().nullable(),
 });
 
