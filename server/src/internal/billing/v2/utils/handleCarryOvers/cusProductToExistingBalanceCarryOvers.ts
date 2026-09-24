@@ -2,7 +2,10 @@ import {
 	type AttachBillingContext,
 	type AttachParamsV1,
 	addCusProductToCusEnt,
+	cusEntToCusPrice,
+	cusProductsToCusEnts,
 	type Entitlement,
+	type FullCusProduct,
 	type FullCustomerEntitlement,
 	featureUtils,
 	type InsertCustomerEntitlement,
@@ -11,6 +14,7 @@ import {
 	isOneOffPrepaidConsumableCustomerEntitlement,
 	isUnlimitedCusEnt,
 } from "@autumn/shared";
+import { deductFromCusEntsTypescript } from "@/internal/balances/track/deductUtils/deductFromCusEntsTypescript";
 import {
 	initCarryOverCustomerEntitlement,
 	initCarryOverEntitlement,
@@ -40,12 +44,56 @@ const getCarryOverExpiresAt = ({
 	return calculateNextExpiry(resetAt, rolloverConfig);
 };
 
+/**
+ * Pays carried debt down from the new plan's own grant for the feature, so the
+ * incoming allowance is reduced instead of a separate negative row being kept
+ * (which API balances clamp to 0 and which expires unpaid). Mutates the new
+ * product's cusEnts in place. Returns false when the new plan has no finite,
+ * customer-level grant for the feature to absorb the debt.
+ */
+const payDownDebtFromNewCustomerProduct = ({
+	newCustomerProduct,
+	internalFeatureId,
+	debt,
+}: {
+	newCustomerProduct: FullCusProduct;
+	internalFeatureId: string;
+	debt: number;
+}): boolean => {
+	const targets = cusProductsToCusEnts({
+		cusProducts: [newCustomerProduct],
+		internalFeatureIds: [internalFeatureId],
+	}).filter(
+		(cusEnt) => !isUnlimitedCusEnt(cusEnt) && !isEntityScopedCusEnt(cusEnt),
+	);
+	if (targets.length === 0) return false;
+
+	deductFromCusEntsTypescript({
+		cusEnts: targets,
+		amountToDeduct: debt,
+		allowOverage: true,
+	});
+
+	// cusProductsToCusEnts returns copies, so write the paid-down balances back.
+	for (const target of targets) {
+		const original = newCustomerProduct.customer_entitlements.find(
+			(cusEnt) => cusEnt.id === target.id,
+		);
+		if (!original) continue;
+		original.balance = target.balance;
+		original.adjustment = target.adjustment;
+	}
+	return true;
+};
+
 export const cusProductToExistingBalanceCarryOvers = ({
 	attachBillingContext,
 	params,
+	newCustomerProduct,
 }: {
 	attachBillingContext: AttachBillingContext;
 	params: AttachParamsV1;
+	newCustomerProduct: FullCusProduct;
 }): {
 	entitlements: Entitlement[];
 	customerEntitlements: InsertCustomerEntitlement[];
@@ -126,6 +174,20 @@ export const cusProductToExistingBalanceCarryOvers = ({
 
 		const balance = cusEnt.balance ?? 0;
 		if (balance === 0) continue;
+
+		// Priced overage is invoiced in arrears on the outgoing plan, so only
+		// free overage is paid down from the new grant.
+		const isFreeOverage =
+			balance < 0 && !cusEntToCusPrice({ cusEnt: cusEntWithCusProduct });
+		if (
+			isFreeOverage &&
+			payDownDebtFromNewCustomerProduct({
+				newCustomerProduct,
+				internalFeatureId: cusEnt.entitlement.internal_feature_id,
+				debt: -balance,
+			})
+		)
+			continue;
 
 		const ent = initCarryOverEntitlement({
 			cusEnt,
