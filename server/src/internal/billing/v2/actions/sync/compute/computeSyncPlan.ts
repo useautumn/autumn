@@ -66,13 +66,7 @@ export const computeSyncPlan = ({
 	]);
 	const future = computeSyncFuturePhases({ ctx, syncContext });
 	immediate.updateCustomerProducts.push(
-		...computeUnlistedCustomerProductExpiries({
-			syncContext,
-			updateCustomerProducts: [
-				...immediate.updateCustomerProducts,
-				...future.updateCustomerProducts,
-			],
-		}),
+		...computeUnlistedCustomerProductExpiries({ syncContext }),
 	);
 	const outgoingCustomerProducts: FullCusProduct[] = [];
 	for (const { customerProduct, updates } of [
