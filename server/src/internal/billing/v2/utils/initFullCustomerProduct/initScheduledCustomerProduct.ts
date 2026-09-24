@@ -35,6 +35,7 @@ export const initScheduledCustomerProduct = ({
 	subscriptionId,
 	subscriptionScheduleId,
 	internalEntityId,
+	quantity,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
@@ -55,6 +56,7 @@ export const initScheduledCustomerProduct = ({
 	subscriptionId?: string;
 	subscriptionScheduleId?: string;
 	internalEntityId?: string;
+	quantity?: number;
 }): FullCusProduct => {
 	const startsAtSecondsPrecision = truncateMsToSecondPrecision(startsAt);
 	const endsAtSecondsPrecision =
@@ -86,6 +88,7 @@ export const initScheduledCustomerProduct = ({
 			subscriptionId,
 			subscriptionScheduleId,
 			internalEntityId,
+			quantity,
 		},
 	});
 };

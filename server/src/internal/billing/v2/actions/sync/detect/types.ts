@@ -75,7 +75,6 @@ export type PlanWarning =
 	| { type: "base_price_dropped" }
 	| { type: "base_price_adopted"; stripe_item_id: string }
 	| { type: "extra_items_under_plan"; stripe_item_ids: string[] }
-	| { type: "base_plan_quantity_gt_one"; quantity: number }
 	| { type: "license_price_unresolvable"; stripe_item_ids: string[] };
 
 /** A license plan's seat item folded into its parent's matched plan. */

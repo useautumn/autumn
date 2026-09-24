@@ -4,7 +4,7 @@
  * nothing for Autumn to apply stay at info.
  *
  * Red (before): every skip was a free-text info line, so seat changes skipped
- *               for `base_quantity_gt_one` or `ambiguous_linked_targets` drifted
+ *               for `custom_feature_price` or `ambiguous_linked_targets` drifted
  *               unnoticed.
  * Green (after): warn + structured `skip_reason`, info only for routine reasons.
  */
@@ -20,19 +20,19 @@ describe("logAutoSyncSkip", () => {
 			logger,
 			source: "sub.updated",
 			stripeSubscriptionId: "sub_123",
-			reason: "base_quantity_gt_one",
-			details: "Plan team is not an add-on",
+			reason: "custom_feature_price",
+			details: "Stripe items use custom prices for feature items",
 		});
 
 		expect(logger.info).not.toHaveBeenCalled();
 		expect(logger.warn).toHaveBeenCalledWith(
-			"sub.updated auto-sync skipping sub_123: base_quantity_gt_one - Plan team is not an add-on",
+			"sub.updated auto-sync skipping sub_123: custom_feature_price - Stripe items use custom prices for feature items",
 			{
 				data: {
 					type: "stripe_auto_sync_skip",
 					source: "sub.updated",
 					stripe_subscription_id: "sub_123",
-					skip_reason: "base_quantity_gt_one",
+					skip_reason: "custom_feature_price",
 				},
 			},
 		);

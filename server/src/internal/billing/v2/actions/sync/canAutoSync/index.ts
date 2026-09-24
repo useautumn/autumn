@@ -80,17 +80,6 @@ export const canAutoSync = ({
 		};
 	}
 
-	const bigQuantityPlan = currentPhase.plans.find((plan) =>
-		plan.warnings.some((w) => w.type === "base_plan_quantity_gt_one"),
-	);
-	if (bigQuantityPlan) {
-		return {
-			eligible: false,
-			reason: "base_quantity_gt_one",
-			details: `Plan ${bigQuantityPlan.product.id} is not an add-on but its Stripe item has quantity > 1.`,
-		};
-	}
-
 	const allowedSet = new Set(allowedWarnings);
 	const blockingWarnings = currentPhase.plans.flatMap((plan) =>
 		plan.warnings

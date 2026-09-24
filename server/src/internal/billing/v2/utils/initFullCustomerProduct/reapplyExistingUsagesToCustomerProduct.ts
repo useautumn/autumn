@@ -57,6 +57,7 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 				featureQuantities: customerProduct.options,
 			},
 			entitlement: cusEnt.entitlement,
+			productQuantity: customerProduct.quantity ?? 1,
 		});
 
 		cusEnt.balance = balance;

@@ -233,6 +233,15 @@ export const buildIncrementalSyncParams = ({
 			continue;
 		}
 
+		// Same product at a new base quantity: replace the row so its line
+		// items and balances pick up the new multiplier.
+		const baseQuantityDrifted =
+			(linkedProduct.quantity ?? 1) !== (syncPlan.quantity ?? 1);
+		if (baseQuantityDrifted) {
+			changedPlans.push(syncPlan);
+			continue;
+		}
+
 		// Same product still attached — seat quantity changes converge the
 		// pool in place instead of re-attaching the parent.
 		const licenseQuantityDrifts = findLicenseQuantityDrifts({

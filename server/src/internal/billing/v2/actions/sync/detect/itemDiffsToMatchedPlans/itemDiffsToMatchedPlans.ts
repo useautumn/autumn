@@ -65,12 +65,7 @@ const diffsToMatchedPlan = ({
 		extras,
 		customize: baseDecision.customize,
 		warnings: [
-			...derivePlanWarnings({
-				baseDecision,
-				extras,
-				quantity,
-				isAddOn: product.is_add_on === true,
-			}),
+			...derivePlanWarnings({ baseDecision, extras }),
 			...licenseWarnings,
 		],
 		...(licenses.length > 0 ? { licenses } : {}),

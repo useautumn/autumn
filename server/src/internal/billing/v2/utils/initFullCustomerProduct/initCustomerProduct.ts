@@ -127,7 +127,7 @@ export const initCustomerProduct = ({
 		scheduled_ids: scheduleIds,
 		collection_method: collectionMethod ?? CollectionMethod.ChargeAutomatically,
 
-		quantity: 1,
+		quantity: initOptions?.quantity ?? 1,
 
 		// Placeholder: derived from the resulting item set in
 		// applyDerivedCustomerProductIsCustom before this row is written.

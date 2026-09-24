@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { initScheduledCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initScheduledCustomerProduct";
+import { syncPlanRowQuantity } from "../utils/syncPlanRowQuantity";
 
 export type ComputedSchedulePhase = {
 	startsAt: number;
@@ -86,6 +87,7 @@ export const computeSyncFuturePhases = ({
 				subscriptionId: stripeSubscription?.id,
 				subscriptionScheduleId: stripeSchedule?.id,
 				internalEntityId: productContext.entity?.internal_id,
+				quantity: syncPlanRowQuantity({ productContext }),
 			});
 			insertCustomerProducts.push(cusProduct);
 			phaseIds.push(cusProduct.id);

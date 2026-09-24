@@ -38,13 +38,9 @@ export const groupItemDiffsByPlan = ({
 export const derivePlanWarnings = ({
 	baseDecision,
 	extras,
-	quantity,
-	isAddOn,
 }: {
 	baseDecision: PlanBaseDecision;
 	extras: PlanExtra[];
-	quantity: number;
-	isAddOn: boolean;
 }): PlanWarning[] => {
 	const warnings: PlanWarning[] = [...baseDecision.warnings];
 	if (extras.length > 0) {
@@ -52,9 +48,6 @@ export const derivePlanWarnings = ({
 			type: "extra_items_under_plan",
 			stripe_item_ids: extras.map((extra) => extra.stripe_item_id),
 		});
-	}
-	if (baseDecision.baseStripeItem && quantity > 1 && !isAddOn) {
-		warnings.push({ type: "base_plan_quantity_gt_one", quantity });
 	}
 	return warnings;
 };

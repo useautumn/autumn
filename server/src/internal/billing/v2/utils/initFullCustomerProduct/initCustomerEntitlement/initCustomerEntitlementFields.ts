@@ -31,6 +31,7 @@ export const initCustomerEntitlementFields = ({
 	const { balance, entities } = initCustomerEntitlementBalance({
 		initContext,
 		entitlement,
+		productQuantity: initOptions?.quantity,
 	});
 	const isBoolean = isBooleanEntitlement({ entitlement });
 	const unlimited = isBoolean ? null : isUnlimitedEntitlement({ entitlement });
