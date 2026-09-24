@@ -13,6 +13,9 @@
 	"dependencies": {
 		"@autumn/balance-engine": "workspace:*",
 		"@autumn/balance-webhooks": "workspace:*",
+		"@autumn/cache": "workspace:*",
+		"@autumn/edge-config": "workspace:*",
+		"@autumn/encryption": "workspace:*",
 		"@autumn/catalog-lru": "workspace:*",
 		"@autumn/env": "workspace:*",
 		"@autumn/kafka": "workspace:*",

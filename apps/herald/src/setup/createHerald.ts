@@ -1,3 +1,4 @@
+import type { MiscCache } from "@autumn/cache";
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type { HeraldEnv } from "@autumn/env/herald";
 import { createKafkaClient, createKafkaTransport } from "@autumn/kafka";
@@ -24,6 +25,8 @@ export function createHerald({
 		svix: SvixClient | null;
 		catalogCache: CatalogCache;
 		postgres: Pick<PostgresClient, "close">;
+		miscCache: Pick<MiscCache, "getActive" | "close">;
+		edgeConfigs: { start(): Promise<void>; stop(): void };
 	};
 	config: { env: HeraldEnv };
 }): Herald {
@@ -68,6 +71,7 @@ export function createHerald({
 	}
 
 	async function start(): Promise<void> {
+		await ctx.edgeConfigs.start();
 		await catalogInvalidations.start();
 		for (const consumer of running) await consumer.start();
 		ctx.logger.info(
@@ -78,6 +82,8 @@ export function createHerald({
 	async function stop(): Promise<void> {
 		for (const consumer of running) await consumer.stop();
 		await catalogInvalidations.stop();
+		ctx.edgeConfigs.stop();
+		ctx.miscCache.close();
 		await Promise.all([ctx.eventsDb.close(), ctx.postgres.close()]);
 	}
 

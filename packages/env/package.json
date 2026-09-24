@@ -34,6 +34,11 @@
 			"types": "./src/herald.ts",
 			"import": "./src/herald.ts",
 			"default": "./src/herald.ts"
+		},
+		"./cache": {
+			"types": "./src/cache.ts",
+			"import": "./src/cache.ts",
+			"default": "./src/cache.ts"
 		}
 	},
 	"scripts": {
