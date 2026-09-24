@@ -47,7 +47,7 @@ test("a decision that found no state is retried the same way", async () => {
 	expect(attempts).toBe(2);
 });
 
-test("other failures are not retried and the state error surfaces after three attempts", async () => {
+test("other failures are not retried and the state error surfaces after two attempts", async () => {
 	let attempts = 0;
 	await expect(
 		withResidentSubject({
@@ -75,6 +75,6 @@ test("other failures are not retried and the state error surfaces after three at
 			},
 		}),
 	).rejects.toThrow(PartitionProcessorStateNotFoundError);
-	expect(ensures).toBe(3);
-	expect(retries).toEqual([1, 2]);
+	expect(ensures).toBe(2);
+	expect(retries).toEqual([1]);
 });

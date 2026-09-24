@@ -64,6 +64,7 @@ export function createPartitionProcessor({
 			writer,
 			receiptPolicy: dependencies.receiptPolicy,
 			baseline: dependencies.stateStore.baseline,
+			logger: dependencies.logger,
 		},
 	});
 	const scope: PartitionProcessorScope = {

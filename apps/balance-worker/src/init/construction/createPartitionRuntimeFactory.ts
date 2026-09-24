@@ -74,6 +74,7 @@ export function createPartitionRuntimeFactory({
 		const runtime = createPartitionRuntime({
 			ctx: {
 				stateStore: commitLogging.stateStore,
+				logger: ctx.logger,
 				db: ctx.db,
 				catalogCache: ctx.catalogCache,
 				checkpointMaintenance: ctx.checkpointMaintenance,

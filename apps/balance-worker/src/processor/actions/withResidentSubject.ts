@@ -1,7 +1,7 @@
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 
-// Exhausting this takes an evict landing inside every one of these attempts, back to back.
-const MAX_ATTEMPTS = 3;
+// One extra hydration: a second evict inside the same request is not worth a third Postgres read of a state that may be very large.
+const MAX_ATTEMPTS = 2;
 
 /**
  * Runs `attempt` against a resident subject, hydrating again when the rows
@@ -15,8 +15,8 @@ const MAX_ATTEMPTS = 3;
  * of 409s for every reader in flight, and a hot customer can be evicted
  * repeatedly. `attempt` may return `null` (nothing to read) or throw
  * `PartitionProcessorStateNotFoundError` (the decision found no state);
- * either way the subject is ensured again and `attempt` re-run, up to
- * three times, before the error reaches the caller.
+ * either way the subject is ensured again and `attempt` re-run once
+ * before the error reaches the caller.
  */
 export async function withResidentSubject<Result>({
 	ensure,

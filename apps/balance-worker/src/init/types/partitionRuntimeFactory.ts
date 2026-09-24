@@ -49,7 +49,8 @@ export type KafkaOwnedPartitionRuntimeFactory = (
 ) => ConstructedPartitionRuntime;
 
 export type PartitionRuntimeFactoryContext = {
-	logger?: Pick<AutumnLogger, "debug"> & Partial<Pick<AutumnLogger, "error">>;
+	logger?: Pick<AutumnLogger, "debug"> &
+		Partial<Pick<AutumnLogger, "error" | "warn">>;
 	kafka: KafkaProducerFactory;
 	ownershipOffsets: Pick<Admin, "fetchTopicOffsets">;
 	stateStore: StateStore;

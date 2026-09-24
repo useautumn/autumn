@@ -24,6 +24,7 @@ import type {
 	TrackReply,
 } from "@autumn/balance-worker-client/protocol";
 import type { CatalogCache } from "@autumn/catalog-lru";
+import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 import type { SubjectHydrator } from "../subject/types/subjectHydrator.js";
@@ -74,6 +75,7 @@ export type PartitionProcessorDependencies = {
 	receiptPolicy: ReceiptPolicy;
 	recentCommands: RecentCommands;
 	assertCanRead(): void;
+	logger?: Partial<Pick<AutumnLogger, "warn">>;
 };
 
 export type PartitionProcessorConfig = {
