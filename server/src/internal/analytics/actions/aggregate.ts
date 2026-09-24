@@ -578,14 +578,30 @@ export const aggregate = async ({
 			}
 
 			if (rollupIsIncomplete) {
-				const ungated = await pipes.aggregateGroupable({
-					...pipeParams,
-					skip_property_rollup: "1",
-				});
+				// The raw-events scan can exceed Tinybird's query timeout on long
+				// windows; the gated result is the better answer than a failed request.
+				const ungated = await pipes
+					.aggregateGroupable({ ...pipeParams, skip_property_rollup: "1" })
+					.catch((error: unknown) => {
+						ctx.logger.warn(
+							"Ungated property retry failed; keeping gated result",
+							{
+								orgId: org.id,
+								propertyKey,
+								customerId,
+								entityId: params.entity_id,
+								startDate,
+								endDate,
+								error: error instanceof Error ? error.message : String(error),
+							},
+						);
+						return null;
+					});
 
 				// A shortfall means gate loss OR events without the property; only the
 				// first is recoverable, and only the retry can tell them apart.
 				if (
+					ungated &&
 					reportsMoreThan({ candidate: ungated.data, current: result.data })
 				) {
 					result = ungated;

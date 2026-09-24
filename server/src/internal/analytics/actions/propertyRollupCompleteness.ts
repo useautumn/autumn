@@ -52,6 +52,13 @@ const countRowsByEventName = ({
 	return counts;
 };
 
+// The gated rollup carries small historical seams (backfill boundaries) that
+// exact coverage exposes. Recovering them means a raw-events scan over the whole
+// window, which times out on long windows, so only a shortfall a reader could
+// notice earns the retry. Below the floor every missing event still counts.
+const RETRY_SHORTFALL_RATIO = 0.005;
+const RETRY_SHORTFALL_FLOOR = 10_000;
+
 export const propertyRollupCoverageIsIncomplete = ({
 	rows,
 	coverage,
@@ -62,10 +69,12 @@ export const propertyRollupCoverageIsIncomplete = ({
 	const groupedCounts = countRowsByEventName({ rows });
 	if (!groupedCounts) return false;
 
-	return Object.entries(coverage).some(
-		([eventName, propertyEventCount]) =>
-			(groupedCounts[eventName] ?? 0) < propertyEventCount,
-	);
+	return Object.entries(coverage).some(([eventName, propertyEventCount]) => {
+		const shortfall = propertyEventCount - (groupedCounts[eventName] ?? 0);
+		if (shortfall <= 0) return false;
+		if (propertyEventCount < RETRY_SHORTFALL_FLOOR) return true;
+		return shortfall / propertyEventCount >= RETRY_SHORTFALL_RATIO;
+	});
 };
 
 /**

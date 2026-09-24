@@ -39,12 +39,16 @@ const groupedRows = [
 
 let coverageRows: Array<{ event_name: string; event_count: number }> = [];
 let countAndSumTotals: Record<string, { count: number; sum: number }> = {};
+let ungatedFailure: Error | null = null;
 
 mock.module(tinybirdModulePath, () => ({
 	...realTinybird,
 	getTinybirdPipes: () => ({
 		aggregateGroupable: async (params: Record<string, unknown>) => {
 			calls.push({ name: "aggregateGroupable", params });
+			if (params.skip_property_rollup === "1" && ungatedFailure) {
+				throw ungatedFailure;
+			}
 			return { data: groupedRows };
 		},
 		propertyRollupCoverage: async (params: Record<string, unknown>) => {
@@ -71,6 +75,7 @@ beforeEach(() => {
 	calls.length = 0;
 	coverageRows = [];
 	countAndSumTotals = {};
+	ungatedFailure = null;
 });
 
 const ctx = {
@@ -169,4 +174,21 @@ test(`${chalk.yellowBright(
 	expect(callsNamed("propertyRollupCoverage")).toHaveLength(1);
 	expect(callsNamed("getCountAndSum")).toHaveLength(1);
 	expect(callsNamed("aggregateGroupable")).toHaveLength(2);
+});
+
+test(`${chalk.yellowBright(
+	"aggregate scoped coverage: a failed ungated retry keeps the gated result instead of failing the request",
+)}`, async () => {
+	coverageRows = [{ event_name: "scrape", event_count: 200 }];
+	ungatedFailure = new Error(
+		"Timeout exceeded: elapsed 60001 ms, maximum: 60000 ms",
+	);
+
+	const { formatted } = await aggregate({
+		ctx,
+		params: scopedParams({ groupBy: "properties.apiKeyId" }),
+	});
+
+	expect(callsNamed("aggregateGroupable")).toHaveLength(2);
+	expect(formatted.rows).toBeGreaterThan(0);
 });
