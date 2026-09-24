@@ -144,6 +144,7 @@ export async function createBalanceWorker({
 			ctx: { logger: dependencies.logger, recorder: syncSections },
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
+				endpoint: address.endpoint,
 				intervalMs: 10,
 				stallThresholdMs: 20,
 				logStallMs: 50,
@@ -152,7 +153,10 @@ export async function createBalanceWorker({
 		});
 		const kafkaRequestReporter = createKafkaRequestReporter({
 			ctx: { logger: dependencies.logger, timings: kafkaRequestTimings },
-			config: { deployment: env.BALANCE_WORKER_DEPLOYMENT },
+			config: {
+				deployment: env.BALANCE_WORKER_DEPLOYMENT,
+				endpoint: address.endpoint,
+			},
 		});
 		function startTelemetry(): void {
 			healthReporter.start();

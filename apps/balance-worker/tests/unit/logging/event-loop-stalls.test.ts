@@ -37,6 +37,7 @@ function createFixture({
 		},
 		config: {
 			deployment: "tf-balance-staging-v2-64",
+			endpoint: "http://10.192.11.9:8082",
 			intervalMs: 10,
 			stallThresholdMs: 20,
 			logStallMs: 50,
@@ -95,6 +96,7 @@ test("a long synchronous section is logged as a stall, named", () => {
 		event: "balance_worker.event_loop_stall",
 		workerDeployment: "tf-balance-staging-v2-64",
 		data: {
+			workerEndpoint: "http://10.192.11.9:8082",
 			lagMs: 63,
 			sections: [
 				{ label: "applyBillingPlan.decide", durationMs: 70 },

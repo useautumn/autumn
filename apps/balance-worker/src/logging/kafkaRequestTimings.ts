@@ -159,7 +159,7 @@ export function createKafkaRequestReporter({
 		logger: Pick<AutumnLogger, "info">;
 		timings: Pick<ReturnType<typeof createKafkaRequestTimings>, "drain">;
 	};
-	config: { deployment: string };
+	config: { deployment: string; endpoint: string };
 }): { start(): void; stop(): void } {
 	let timer: ReturnType<typeof setInterval> | undefined;
 
@@ -170,7 +170,7 @@ export function createKafkaRequestReporter({
 					{
 						event: "balance_worker.kafka_requests",
 						workerDeployment: config.deployment,
-						data: summary,
+						data: { workerEndpoint: config.endpoint, ...summary },
 					},
 					`Kafka ${summary.api}: ${summary.count} requests, p50 ${summary.p50}ms p99 ${summary.p99}ms`,
 				);

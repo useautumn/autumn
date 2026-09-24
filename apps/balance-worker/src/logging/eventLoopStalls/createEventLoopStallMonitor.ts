@@ -3,6 +3,8 @@ import type { SyncSectionRecorder } from "./syncSections.js";
 
 type EventLoopStallMonitorConfig = {
 	deployment: string;
+	/** Which worker, so one saturated worker is not averaged away across the fleet. */
+	endpoint: string;
 	/** How often the probe timer should fire. */
 	intervalMs: number;
 	/** Lateness counted as a stall. */
@@ -82,7 +84,12 @@ export function createEventLoopStallMonitor({
 			{
 				event: "balance_worker.event_loop_stall",
 				workerDeployment: config.deployment,
-				data: { lagMs: round(lagMs), sections, attributedMs },
+				data: {
+					workerEndpoint: config.endpoint,
+					lagMs: round(lagMs),
+					sections,
+					attributedMs,
+				},
 			},
 			`Balance worker thread blocked ${round(lagMs)}ms${sections[0] ? ` (${sections[0].label} ${sections[0].durationMs}ms)` : " (unattributed)"}`,
 		);
@@ -104,6 +111,7 @@ export function createEventLoopStallMonitor({
 				event: "balance_worker.event_loop",
 				workerDeployment: config.deployment,
 				data: {
+					workerEndpoint: config.endpoint,
 					windowMs: round(tickedAt - lastReportAt),
 					stalls: window.stalls,
 					stalledMs: round(window.stalledMs),
