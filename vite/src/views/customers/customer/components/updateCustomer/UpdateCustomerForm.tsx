@@ -3,7 +3,14 @@ import {
 	BILLING_DETAILS_LABELS,
 	type Customer,
 } from "@autumn/shared";
-import { DialogFooter, ShortcutButton } from "@autumn/ui";
+import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+	DialogFooter,
+	ShortcutButton,
+} from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { BillingDetailsSection } from "./billingDetails/BillingDetailsSection";
@@ -43,16 +50,20 @@ export const UpdateCustomerForm = ({
 				</InfoBox>
 			)}
 
-			<section className={FIELD_STACK}>
-				<h4 className="text-sm font-semibold">
-					{BILLING_DETAILS_LABELS.section}
-				</h4>
-				<BillingDetailsSection
-					form={form}
-					isStripeLinked={isStripeLinked}
-					loadError={billingDetailsError}
-				/>
-			</section>
+			<Accordion className="-mx-1">
+				<AccordionItem value="billing-details">
+					<AccordionTrigger className="px-1 py-1 font-semibold">
+						{BILLING_DETAILS_LABELS.section}
+					</AccordionTrigger>
+					<AccordionContent className={`${FIELD_STACK} px-1 pt-2 pb-1`}>
+						<BillingDetailsSection
+							form={form}
+							isStripeLinked={isStripeLinked}
+							loadError={billingDetailsError}
+						/>
+					</AccordionContent>
+				</AccordionItem>
+			</Accordion>
 
 			<DialogFooter>
 				<ShortcutButton
