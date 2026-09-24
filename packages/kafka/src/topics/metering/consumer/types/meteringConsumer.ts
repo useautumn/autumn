@@ -5,6 +5,7 @@ import type {
 	TopicResumePosition,
 } from "../../../../consumer/types/consumer.js";
 import type { ProgressTracker } from "../../../../consumer/types/progress.js";
+import type { MeteringSnapshotReading } from "../../meteringTopic.js";
 import type { MeteringRecord } from "../../types/meteringRecord.js";
 
 export type MeteringRecordApplication = {
@@ -23,6 +24,12 @@ export type MeteringRecordHandler = {
 	readResumeOffset(
 		position: TopicResumePosition,
 	): bigint | null | Promise<bigint | null>;
+	/** Asked before the record is decoded; false passes it unread, as if applied. Absent, every record is applied. */
+	shouldApply?(position: {
+		topic: string;
+		partition: number;
+		offset: bigint;
+	}): boolean;
 	applyRecord(
 		application: MeteringRecordApplication,
 	): TopicRecordResult | Promise<TopicRecordResult>;
@@ -36,4 +43,6 @@ export type MeteringConsumerDependencies = {
 	progress: ProgressTracker;
 	/** Other topics on the same group membership, each with its own raw record handler. */
 	secondaryHandlers?: Readonly<Record<string, TopicRecordHandler>>;
+	/** How records are decoded; "skip" leaves out the `after` snapshot this handler never reads. */
+	snapshot?: MeteringSnapshotReading;
 };

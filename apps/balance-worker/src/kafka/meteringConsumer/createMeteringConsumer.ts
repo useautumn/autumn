@@ -2,6 +2,7 @@ import {
 	createMeteringConsumer as createKafkaMeteringConsumer,
 	type TopicConsumerConfig,
 } from "@autumn/kafka";
+import type { ProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
 import { createMeteringRecordHandler } from "./createMeteringRecordHandler.js";
 import { createPartitionReplay } from "./replay/createPartitionReplay.js";
@@ -19,12 +20,14 @@ export function createMeteringConsumer({
 	config: TopicConsumerConfig;
 }): MeteringConsumer {
 	const recentCommandsByPartition = new Map<number, RecentCommands>();
+	const producedOffsetsByPartition = new Map<number, ProducedOffsets>();
 	const replayFloorByPartition = new Map<number, bigint>();
 	const replayByPartition = new Map<number, PartitionReplay>();
 	const handler = createMeteringRecordHandler({
 		ctx: {
 			...ctx,
 			recentCommandsByPartition,
+			producedOffsetsByPartition,
 			replayFloorByPartition,
 			replayByPartition,
 		},
@@ -34,6 +37,8 @@ export function createMeteringConsumer({
 			consumer: ctx.consumer,
 			handler,
 			progress: ctx.positionTracker,
+			// The worker applies row changes and never reads the snapshot; decoding it cost as much as writing it.
+			snapshot: "skip",
 			...(ctx.commands && {
 				secondaryHandlers: { [ctx.commands.topic]: ctx.commands.handler },
 			}),
@@ -45,8 +50,12 @@ export function createMeteringConsumer({
 	function createReplay({
 		partition,
 		recentCommands,
+		producedOffsets,
 	}: Parameters<MeteringConsumer["createReplay"]>[0]): PartitionReplay {
 		recentCommandsByPartition.set(partition, recentCommands);
+		if (producedOffsets)
+			producedOffsetsByPartition.set(partition, producedOffsets);
+		else producedOffsetsByPartition.delete(partition);
 		const replay = createPartitionReplay({
 			ctx: {
 				stateStore: ctx.stateStore,

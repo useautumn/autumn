@@ -308,3 +308,31 @@ describe("Kafka committed track outcome appender", () => {
 		expect(fake.lifecycle).toEqual([]);
 	});
 });
+
+test("an appended batch is remembered as this writer's own offsets", async () => {
+	const fake = createFakeProducer();
+	const remembered: { from: bigint; to: bigint }[] = [];
+	const appender = createMutationPublisher({
+		ctx: {
+			producer: fake.producer,
+			producedOffsets: {
+				remember: (range) => {
+					remembered.push(range);
+				},
+				has: () => false,
+				size: () => remembered.length,
+			},
+		},
+	});
+	const state = createState();
+	await appender.appendCommitted({
+		topic,
+		partition,
+		outcomes: [
+			createMutation({ state, commandId: "a" }),
+			createMutation({ state, commandId: "b" }),
+		],
+	});
+	// The fake producer reports baseOffset 41 for every batch.
+	expect(remembered).toEqual([{ from: 41n, to: 42n }]);
+});

@@ -6,6 +6,7 @@ import {
 	sendTransactionalOffsets,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
+import type { ProducedOffsets } from "../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { CommittedOutcomeAppender } from "../processor/writer/types/partitionWriter.js";
 import { MutationBatchNotCommittedError } from "../processor/writer/writerErrors.js";
 import { translateKafkaProducerError } from "./workerKafkaErrors.js";
@@ -14,7 +15,7 @@ export function createMutationPublisher({
 	ctx,
 	config,
 }: {
-	ctx: { producer: KafkaProducer };
+	ctx: { producer: KafkaProducer; producedOffsets?: ProducedOffsets };
 	config?: { commandTopic: string; groupId: string };
 }): Required<CommittedOutcomeAppender> {
 	const publisher = createMeteringPublisher({ ctx });
@@ -40,12 +41,17 @@ export function createMutationPublisher({
 				commandNextOffset !== undefined
 					? offsetsOf({ partition, nextOffset: commandNextOffset })
 					: undefined;
-			return await publisher.append({
+			const appended = await publisher.append({
 				topic,
 				partition,
 				records: outcomes,
 				offsets,
 			});
+			ctx.producedOffsets?.remember({
+				from: appended.baseOffset,
+				to: appended.baseOffset + BigInt(outcomes.length) - 1n,
+			});
+			return appended;
 		} catch (cause) {
 			const translated = translateKafkaProducerError({
 				topic,

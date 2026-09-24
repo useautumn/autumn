@@ -18,6 +18,7 @@ import type {
 	PartitionRuntimeResources,
 	Partitions,
 } from "../../partitions/types/partitions.js";
+import { createProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
 import { createRecentCommands } from "../../processor/writer/recentCommands/createRecentCommands.js";
 import type {
 	WorkerPartitionHighWatermarks,
@@ -96,15 +97,19 @@ export function createWorkerPartitions({
 			windowMs: BALANCE_WORKER_DEDUP_WINDOW_MS,
 			now: Date.now,
 		});
+		// Also one per runtime: the writer remembers what it produced, the replay passes those records unread.
+		const producedOffsets = createProducedOffsets();
 		const follower = meteringConsumer.createReplay({
 			partition,
 			recentCommands,
+			producedOffsets,
 		});
 		const resources = ctx.createRuntime({
 			topic,
 			partition,
 			follower,
 			recentCommands,
+			producedOffsets,
 		});
 		return { ...resources, markUnavailable: follower.markUnavailable };
 	}

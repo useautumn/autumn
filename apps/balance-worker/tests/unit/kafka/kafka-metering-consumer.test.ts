@@ -24,6 +24,7 @@ import {
 	KafkaPartitionInvariantError,
 	StateBehindKafkaLogStartError,
 } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
+import { createProducedOffsets } from "../../../src/processor/writer/producedOffsets/createProducedOffsets.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import {
 	applyDurableMutation,
@@ -1907,4 +1908,36 @@ describe("consumerLifecycle", function consumerLifecycleTests() {
 		"consumer shutdown disconnects and removes listeners even when stop fails",
 		stopFailureStillDisconnects,
 	);
+});
+
+test("the handler passes offsets this partition's writer produced and reads everything else", () => {
+	const fixture = createStoreFixture({ nextOffset: 0n });
+	const produced = createProducedOffsets();
+	produced.remember({ from: 5n, to: 6n });
+	const handler = createMeteringRecordHandler({
+		ctx: {
+			stateStore: fixture.store,
+			partitionOffsets: {
+				fetchTopicOffsets: async () => {
+					throw new Error("No broker read expected");
+				},
+			},
+			recentCommandsByPartition: new Map(),
+			producedOffsetsByPartition: new Map([[partition, produced]]),
+			replayFloorByPartition: new Map(),
+			replayByPartition: new Map(),
+		},
+	});
+	try {
+		const at = (offset: bigint, part = partition) =>
+			handler.shouldApply?.({ topic, partition: part, offset });
+		expect(at(4n)).toBe(true);
+		expect(at(5n)).toBe(false);
+		expect(at(6n)).toBe(false);
+		expect(at(7n)).toBe(true);
+		// Another partition's records are never ours.
+		expect(at(5n, partition + 1)).toBe(true);
+	} finally {
+		fixture.store.close();
+	}
 });

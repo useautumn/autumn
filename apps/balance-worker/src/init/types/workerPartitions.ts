@@ -7,6 +7,7 @@ import type {
 	PartitionRuntimeResources,
 	PartitionsDependencies,
 } from "../../partitions/types/partitions.js";
+import type { ProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
 import type { StateStore } from "../../state/types/stateStore.js";
 
@@ -21,6 +22,7 @@ export type KafkaPartitionRuntimeFactory = (position: {
 	partition: number;
 	follower: PartitionReplay;
 	recentCommands: RecentCommands;
+	producedOffsets?: ProducedOffsets;
 }) => Omit<PartitionRuntimeResources, "markUnavailable">;
 
 export type WorkerPartitionsContext = {

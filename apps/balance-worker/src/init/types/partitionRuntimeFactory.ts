@@ -8,6 +8,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
+import type { ProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
 import type { PartitionWriterLimits } from "../../processor/writer/types/partitionWriter.js";
 import type {
@@ -33,6 +34,8 @@ export type PartitionRuntimeFactoryInput = {
 	partition: number;
 	follower: PartitionOutcomeFollowerPort;
 	recentCommands: RecentCommands;
+	/** Offsets this runtime's writer produced; its consumer passes them unread. */
+	producedOffsets?: ProducedOffsets;
 };
 
 export type ConstructedPartitionRuntime = {

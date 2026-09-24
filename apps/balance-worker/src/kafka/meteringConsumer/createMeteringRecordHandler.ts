@@ -8,6 +8,7 @@ import {
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
+import type { ProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
 import type { DurableMutationApplyResult } from "../../state/types/durableMutation.js";
 import type { StateStore } from "../../state/types/stateStore.js";
@@ -25,6 +26,8 @@ export function createMeteringRecordHandler({
 		stateStore: StateStore;
 		partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
 		recentCommandsByPartition: ReadonlyMap<number, RecentCommands>;
+		/** Absent for a partition means every record is read. */
+		producedOffsetsByPartition?: ReadonlyMap<number, ProducedOffsets>;
 		replayFloorByPartition: ReadonlyMap<number, bigint>;
 		/** The replay reading each partition; a log it cannot read parks that partition through it. */
 		replayByPartition: ReadonlyMap<
@@ -105,6 +108,16 @@ export function createMeteringRecordHandler({
 		return storedNextOffset;
 	}
 
+	/** A record this process's writer produced was projected and queued for the store when it was decided; the writer also remembered its command. Reading it back would only repeat that. */
+	function shouldApply(position: {
+		topic: string;
+		partition: number;
+		offset: bigint;
+	}): boolean {
+		const produced = ctx.producedOffsetsByPartition?.get(position.partition);
+		return !produced?.has({ offset: position.offset });
+	}
+
 	/** Stays synchronous for a resident store: the writer-race offset must be visible before the next record. */
 	function applyRecord({
 		position,
@@ -171,7 +184,7 @@ export function createMeteringRecordHandler({
 		return undefined;
 	}
 
-	return { readResumeOffset, applyRecord, onRecordError };
+	return { readResumeOffset, shouldApply, applyRecord, onRecordError };
 }
 
 function readPosition({

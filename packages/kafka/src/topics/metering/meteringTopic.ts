@@ -62,17 +62,37 @@ export function serializeMeteringRecord({
 	return encoded;
 }
 
+/** Whether a reader needs the record's `after` snapshot: the state as the mutation left it. */
+export type MeteringSnapshotReading = "validate" | "skip";
+
+/**
+ * With `snapshot: "skip"` the record comes back without `after` and only the
+ * rest is validated. The worker's own consumer applies row changes and never
+ * reads the snapshot, and on a customer with a large state the schema walk
+ * over it cost as much as the encode did. Readers that render the snapshot,
+ * such as Herald, keep the default.
+ */
 export function parseMeteringRecord({
 	key,
 	value,
+	snapshot = "validate",
 }: {
 	key: Buffer | null;
 	value: Buffer | null;
+	snapshot?: MeteringSnapshotReading;
 }): MeteringRecord {
 	const envelope = readTopicEnvelope({ value });
-	const record = parseMeteringPayload(envelope);
+	const payload =
+		snapshot === "skip" ? withoutSnapshot(envelope.payload) : envelope.payload;
+	const record = parseMeteringPayload({ type: envelope.type, payload });
 	assertTopicRecordKey({ key, expectedKey: meteringRecordToKey({ record }) });
 	return record;
+}
+
+function withoutSnapshot(payload: unknown): unknown {
+	if (typeof payload !== "object" || payload === null) return payload;
+	const { after: _snapshot, ...rest } = payload as { after?: unknown };
+	return rest;
 }
 
 export const meteringTopic: TopicSchema<MeteringRecord> = {

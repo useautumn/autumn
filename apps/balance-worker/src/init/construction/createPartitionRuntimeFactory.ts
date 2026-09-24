@@ -41,6 +41,7 @@ export function createPartitionRuntimeFactory({
 		partition,
 		follower,
 		recentCommands,
+		producedOffsets,
 	}: PartitionRuntimeFactoryInput): ConstructedPartitionRuntime {
 		const session = createProducerSession({
 			ctx: { kafka: ctx.kafka, onRequest: kafkaRequestTimings.record },
@@ -60,7 +61,7 @@ export function createPartitionRuntimeFactory({
 			config: { ...config.ownership, partition },
 		});
 		const appender = createMutationPublisher({
-			ctx: { producer },
+			ctx: { producer, producedOffsets },
 			config: config.commands,
 		});
 		const commitLogging = createPartitionCommitLogging({
