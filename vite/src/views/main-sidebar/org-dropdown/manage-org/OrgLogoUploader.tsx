@@ -12,6 +12,12 @@ import { FetchLogoPopover } from "./FetchLogoPopover";
 
 const MAX_SIZE_MB = 10;
 
+const isEditableTarget = (target: EventTarget | null) =>
+	target instanceof HTMLElement &&
+	(target instanceof HTMLInputElement ||
+		target instanceof HTMLTextAreaElement ||
+		target.isContentEditable);
+
 const OrgLogoUploader: React.FC = () => {
 	const { org, mutate } = useOrg();
 	const [error, setError] = useState<string | null>(null);
@@ -111,10 +117,12 @@ const OrgLogoUploader: React.FC = () => {
 		await uploadFile(file);
 	};
 
-	// Pasting an image anywhere on the page sets it as the logo. Text pastes
-	// (e.g. into the name/slug inputs) carry no image file and pass through.
+	// Pasting an image anywhere on the page sets it as the logo. Pastes into
+	// editable fields (e.g. the name/slug inputs) are left alone, even when the
+	// clipboard also carries an image.
 	useEffect(() => {
 		const handlePaste = (e: ClipboardEvent) => {
+			if (isEditableTarget(e.target)) return;
 			const imageFile = Array.from(e.clipboardData?.files ?? []).find((file) =>
 				file.type.startsWith("image/"),
 			);

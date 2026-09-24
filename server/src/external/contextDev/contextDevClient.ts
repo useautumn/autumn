@@ -59,12 +59,18 @@ const getRetryDelayMs = ({
 	response?: Response;
 	attempt: number;
 }) => {
-	const retryAfter = response?.headers.get("retry-after");
-	const retryAfterSeconds = retryAfter ? Number(retryAfter) : Number.NaN;
-	if (Number.isFinite(retryAfterSeconds)) {
-		return Math.min(retryAfterSeconds * 1000, MAX_RETRY_AFTER_MS);
-	}
-	return BASE_BACKOFF_MS * 2 ** attempt;
+	const backoffMs = BASE_BACKOFF_MS * 2 ** attempt;
+	const retryAfter = response?.headers.get("retry-after")?.trim();
+	if (!retryAfter) return backoffMs;
+
+	// Retry-After is either delay-seconds or an HTTP-date.
+	const retryAfterSeconds = Number(retryAfter);
+	const retryAfterMs = Number.isFinite(retryAfterSeconds)
+		? retryAfterSeconds * 1000
+		: Date.parse(retryAfter) - Date.now();
+	if (!Number.isFinite(retryAfterMs)) return backoffMs;
+
+	return Math.min(Math.max(retryAfterMs, 0), MAX_RETRY_AFTER_MS);
 };
 
 const contextDevRequest = async <T>({

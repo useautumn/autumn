@@ -16,6 +16,7 @@ import { createRoute } from "../../../honoMiddlewares/routeHandler";
 
 const MAX_LOGO_BYTES = 10 * 1024 * 1024;
 const LOGO_DOWNLOAD_TIMEOUT_MS = 15_000;
+const LOGO_CDN_HOST_SUFFIXES = [".brand.dev", ".context.dev"] as const;
 
 const bodySchema = z.object({
 	url: z.string().trim().min(1).max(2048),
@@ -64,7 +65,7 @@ const pickBestLogo = (logos: ContextDevLogo[]) => {
 	};
 
 	return [...logos]
-		.filter((logo) => logo.url?.startsWith("https://"))
+		.filter((logo) => isAllowedLogoUrl(logo.url))
 		.sort((a, b) => {
 			const scoreA = scoreLogo(a);
 			const scoreB = scoreLogo(b);
@@ -76,28 +77,89 @@ const pickBestLogo = (logos: ContextDevLogo[]) => {
 		})[0];
 };
 
-const downloadLogo = async (url: string) => {
-	const response = await fetch(url, {
-		signal: AbortSignal.timeout(LOGO_DOWNLOAD_TIMEOUT_MS),
+// Logo URLs come from Context.dev's own CDN. Only download from there, and
+// never follow redirects, so a logo URL can't steer this server-side fetch at
+// an internal address (SSRF) whose response would land in a public bucket.
+const isAllowedLogoHost = (hostname: string) =>
+	LOGO_CDN_HOST_SUFFIXES.some(
+		(suffix) => hostname === suffix.slice(1) || hostname.endsWith(suffix),
+	);
+
+const isAllowedLogoUrl = (url: string) => {
+	try {
+		const parsed = new URL(url);
+		return parsed.protocol === "https:" && isAllowedLogoHost(parsed.hostname);
+	} catch {
+		return false;
+	}
+};
+
+const logoDownloadFailedError = () =>
+	new RecaseError({
+		message: "Couldn't download a logo for that website",
+		code: ErrCode.InvalidRequest,
+		statusCode: 404,
 	});
+
+const logoTooLargeError = () =>
+	new RecaseError({
+		message: "Logo is larger than 10MB",
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
+
+/** Reads the body but aborts as soon as it exceeds MAX_LOGO_BYTES. */
+const readBodyWithLimit = async (response: Response) => {
+	const reader = response.body?.getReader();
+	if (!reader) throw logoDownloadFailedError();
+
+	const chunks: Uint8Array[] = [];
+	let totalBytes = 0;
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		totalBytes += value.byteLength;
+		if (totalBytes > MAX_LOGO_BYTES) {
+			await reader.cancel();
+			throw logoTooLargeError();
+		}
+		chunks.push(value);
+	}
+
+	const bytes = new Uint8Array(totalBytes);
+	let offset = 0;
+	for (const chunk of chunks) {
+		bytes.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	return bytes;
+};
+
+const downloadLogo = async (url: string) => {
+	if (!isAllowedLogoUrl(url)) throw logoDownloadFailedError();
+
+	let response: Response;
+	try {
+		response = await fetch(url, {
+			redirect: "error",
+			signal: AbortSignal.timeout(LOGO_DOWNLOAD_TIMEOUT_MS),
+		});
+	} catch {
+		throw logoDownloadFailedError();
+	}
+
 	const contentType = response.headers.get("content-type") ?? "";
 	if (!response.ok || !contentType.startsWith("image/")) {
-		throw new RecaseError({
-			message: "Couldn't download a logo for that website",
-			code: ErrCode.InvalidRequest,
-			statusCode: 404,
-		});
+		throw logoDownloadFailedError();
 	}
 
-	const bytes = await response.arrayBuffer();
-	if (bytes.byteLength > MAX_LOGO_BYTES) {
-		throw new RecaseError({
-			message: "Logo is larger than 10MB",
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
+	const declaredLength = Number(response.headers.get("content-length"));
+	if (declaredLength > MAX_LOGO_BYTES) {
+		await response.body?.cancel();
+		throw logoTooLargeError();
 	}
 
+	const bytes = await readBodyWithLimit(response);
 	return { bytes, contentType };
 };
 
