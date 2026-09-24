@@ -87,7 +87,9 @@ const timeBoxed = async (
 const teardownEntry = async (entry: RegistryEntry): Promise<void> => {
 	log(
 		`killing run ${entry.runId} (${entry.subAccounts.length} sub-account(s), ${entry.sandboxes.length} sandbox(es)${
-			entry.svixAppId ? ", 1 svix app" : ""
+			registry.getSvixAppIds(entry).length
+				? `, ${registry.getSvixAppIds(entry).length} svix app(s)`
+				: ""
 		})`,
 	);
 
@@ -114,10 +116,8 @@ const teardownEntry = async (entry: RegistryEntry): Promise<void> => {
 		);
 	}
 
-	if (entry.svixAppId) {
-		await timeBoxed(`delete svix app ${entry.svixAppId}`, () =>
-			deleteSvixApp(entry.svixAppId as string),
-		);
+	for (const appId of registry.getSvixAppIds(entry)) {
+		await timeBoxed(`delete svix app ${appId}`, () => deleteSvixApp(appId));
 	}
 
 	for (const sandbox of entry.sandboxes) {

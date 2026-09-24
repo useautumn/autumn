@@ -14,6 +14,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils.js";
 import { createReward } from "@tests/utils/productUtils.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { getDiscount } from "@tests/utils/stripeUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
@@ -22,7 +23,6 @@ import { addHours, addMonths } from "date-fns";
 import { Decimal } from "decimal.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 
 const testCase = "coupon2";
 
@@ -141,7 +141,7 @@ test(
 				addMonths(new Date(), 1),
 				hoursToFinalizeInvoice,
 			).getTime(),
-			waitForSeconds: 20,
+			minimumWaitForSeconds: 20,
 		});
 
 		const customerAfterCycle = await autumn.customers.get(customerId);

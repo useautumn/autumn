@@ -106,7 +106,11 @@ function FileList({
 						<span className="truncate font-mono text-tertiary-foreground">
 							{f.name}
 						</span>
-						<FileStatusBadge status={f.status} />
+						<FileStatusBadge
+							status={f.status}
+							passedOnRetry={f.passedOnRetry}
+							workerDeaths={f.workerDeaths}
+						/>
 					</button>
 				))}
 				{filtered.length === 0 ? (
@@ -147,7 +151,11 @@ export function PerFile({
 					{row ? (
 						<div className="flex shrink-0 flex-wrap items-center gap-2">
 							<span className="font-mono text-sm">{row.name}</span>
-							<FileStatusBadge status={row.status} />
+							<FileStatusBadge
+								status={row.status}
+								passedOnRetry={row.passedOnRetry}
+								workerDeaths={row.workerDeaths}
+							/>
 							<Pill tone="green">✓ {row.passed}</Pill>
 							<Pill tone="red">✗ {row.failed}</Pill>
 							{row.durationMs ? (

@@ -148,7 +148,29 @@ const handleMapWrite = async (req, res) => {
 		return;
 	}
 
-	const { accountId, workerUrl, map } = payload;
+	const { accountId, workerUrl, workerAccountId, map } = payload;
+	if (accountId && workerAccountId) {
+		const ownerUrl = routes.get(workerAccountId);
+		if (!ownerUrl) {
+			sendJson(res, HTTP_BAD_REQUEST, {
+				error: "worker account is not registered",
+			});
+			return;
+		}
+		const existingUrl = routes.get(accountId);
+		if (existingUrl && existingUrl !== ownerUrl) {
+			sendJson(res, 409, {
+				error: "account already belongs to another worker",
+			});
+			return;
+		}
+		routes.set(accountId, ownerUrl);
+		logInfo(
+			`mapped sub-organization account ${accountId} to worker ${workerAccountId}`,
+		);
+		sendJson(res, HTTP_OK, { size: routes.size });
+		return;
+	}
 	if (accountId && workerUrl) {
 		routes.set(accountId, workerUrl);
 		logInfo(`mapped account ${accountId} → ${workerUrl}`);
