@@ -14,6 +14,7 @@ import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { updateStripeBillingDetails } from "@/external/stripe/customers/billingDetails/operations/updateStripeBillingDetails.js";
+import { assertBillingDetailsWritable } from "@/external/stripe/customers/billingDetails/utils/assertBillingDetailsWritable.js";
 import {
 	autumnToStripeCustomerMetadata,
 	STRIPE_MAX_KEY_LENGTH,
@@ -129,6 +130,7 @@ export const updateCustomer = async ({
 
 	// Billing details go first: Stripe is most likely to reject them (e.g. a bad VAT).
 	if (billingDetails) {
+		assertBillingDetailsWritable({ ctx });
 		if (!stripeId) {
 			throw new RecaseError({
 				message:

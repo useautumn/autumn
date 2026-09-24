@@ -9,11 +9,12 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
-from typing import List, Literal, Optional, Union
-from typing_extensions import Annotated, NotRequired, TypedDict
+from pydantic.functional_validators import AfterValidator
+from typing import Any, Dict, List, Literal, Optional, Union
+from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
 class ReissueInvoiceGlobalsTypedDict(TypedDict):
@@ -44,15 +45,1748 @@ class ReissueInvoiceGlobals(BaseModel):
         return m
 
 
+class CustomFieldTypedDict(TypedDict):
+    name: str
+    value: str
+
+
+class CustomField(BaseModel):
+    name: str
+
+    value: str
+
+
+PaymentMethodType = Literal[
+    "card",
+    "customer_balance",
+    "us_bank_account",
+    "sepa_debit",
+    "bacs_debit",
+    "acss_debit",
+    "link",
+]
+
+
+class ReissueInvoiceInvoiceRequestBodyTypedDict(TypedDict):
+    r"""Changes that apply to the replacement invoice only."""
+
+    automatic_tax: NotRequired[bool]
+    r"""Enable or disable Stripe automatic tax on the replacement. Omit to inherit. Enabling clears inherited manual tax rates; use tax_rate_id: null to remove all tax."""
+    custom_fields: NotRequired[List[CustomFieldTypedDict]]
+    r"""Fields shown on this invoice only, such as a PO number. Up to four; pass an empty array to clear them."""
+    tax_rate_id: NotRequired[Nullable[str]]
+    r"""Stripe tax rate applied to every line. Omit to keep the original's tax, or pass null to issue the replacement with no tax."""
+    account_tax_ids: NotRequired[Nullable[List[str]]]
+    r"""Your own Stripe tax registrations (atx_...) shown as the seller's tax numbers. Not the customer's."""
+    footer: NotRequired[Nullable[str]]
+    r"""Footer text, overriding the original's and any template's."""
+    memo: NotRequired[Nullable[str]]
+    r"""Memo shown near the top of the invoice."""
+    payment_method_types: NotRequired[List[PaymentMethodType]]
+    r"""Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. Only applies to send-invoice replacements."""
+
+
+class ReissueInvoiceInvoiceRequestBody(BaseModel):
+    r"""Changes that apply to the replacement invoice only."""
+
+    automatic_tax: Optional[bool] = None
+    r"""Enable or disable Stripe automatic tax on the replacement. Omit to inherit. Enabling clears inherited manual tax rates; use tax_rate_id: null to remove all tax."""
+
+    custom_fields: Optional[List[CustomField]] = None
+    r"""Fields shown on this invoice only, such as a PO number. Up to four; pass an empty array to clear them."""
+
+    tax_rate_id: OptionalNullable[str] = UNSET
+    r"""Stripe tax rate applied to every line. Omit to keep the original's tax, or pass null to issue the replacement with no tax."""
+
+    account_tax_ids: OptionalNullable[List[str]] = UNSET
+    r"""Your own Stripe tax registrations (atx_...) shown as the seller's tax numbers. Not the customer's."""
+
+    footer: OptionalNullable[str] = UNSET
+    r"""Footer text, overriding the original's and any template's."""
+
+    memo: OptionalNullable[str] = UNSET
+    r"""Memo shown near the top of the invoice."""
+
+    payment_method_types: Optional[List[PaymentMethodType]] = None
+    r"""Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. Only applies to send-invoice replacements."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "automatic_tax",
+                "custom_fields",
+                "tax_rate_id",
+                "account_tax_ids",
+                "footer",
+                "memo",
+                "payment_method_types",
+            ]
+        )
+        nullable_fields = set(["tax_rate_id", "account_tax_ids", "footer", "memo"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class AddressTypedDict(TypedDict):
+    r"""Billing address. Drives tax when the org uses Stripe Tax, and is snapshotted onto the replacement."""
+
+    line1: NotRequired[str]
+    line2: NotRequired[str]
+    city: NotRequired[str]
+    state: NotRequired[str]
+    postal_code: NotRequired[str]
+    country: NotRequired[str]
+
+
+class Address(BaseModel):
+    r"""Billing address. Drives tax when the org uses Stripe Tax, and is snapshotted onto the replacement."""
+
+    line1: Optional[str] = None
+
+    line2: Optional[str] = None
+
+    city: Optional[str] = None
+
+    state: Optional[str] = None
+
+    postal_code: Optional[str] = None
+
+    country: Optional[str] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["line1", "line2", "city", "state", "postal_code", "country"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class TaxIDTypedDict(TypedDict):
+    type: str
+    value: str
+
+
+class TaxID(BaseModel):
+    type: str
+
+    value: str
+
+
+class InvoiceSettingsCustomFieldsTypedDict(TypedDict):
+    name: str
+    value: str
+
+
+class InvoiceSettingsCustomFields(BaseModel):
+    name: str
+
+    value: str
+
+
+class ReissueInvoiceCustomerTypedDict(TypedDict):
+    r"""Changes written to the customer, which the replacement snapshots and later invoices inherit."""
+
+    email: NotRequired[str]
+    r"""Billing email. Same as update_customer_email; passing both with different values is rejected."""
+    name: NotRequired[str]
+    r"""Customer name shown on this and every later invoice."""
+    address: NotRequired[AddressTypedDict]
+    r"""Billing address. Drives tax when the org uses Stripe Tax, and is snapshotted onto the replacement."""
+    tax_ids: NotRequired[List[TaxIDTypedDict]]
+    r"""The customer's own tax registrations, e.g. { type: 'eu_vat', value: 'FR123...' }. Replaces the existing set; pass an empty array to remove them."""
+    invoice_settings_custom_fields: NotRequired[
+        Nullable[List[InvoiceSettingsCustomFieldsTypedDict]]
+    ]
+    r"""Custom fields shown on this and every future invoice. Use invoice.custom_fields for this invoice alone."""
+
+
+class ReissueInvoiceCustomer(BaseModel):
+    r"""Changes written to the customer, which the replacement snapshots and later invoices inherit."""
+
+    email: Optional[str] = None
+    r"""Billing email. Same as update_customer_email; passing both with different values is rejected."""
+
+    name: Optional[str] = None
+    r"""Customer name shown on this and every later invoice."""
+
+    address: Optional[Address] = None
+    r"""Billing address. Drives tax when the org uses Stripe Tax, and is snapshotted onto the replacement."""
+
+    tax_ids: Optional[List[TaxID]] = None
+    r"""The customer's own tax registrations, e.g. { type: 'eu_vat', value: 'FR123...' }. Replaces the existing set; pass an empty array to remove them."""
+
+    invoice_settings_custom_fields: OptionalNullable[
+        List[InvoiceSettingsCustomFields]
+    ] = UNSET
+    r"""Custom fields shown on this and every future invoice. Use invoice.custom_fields for this invoice alone."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["email", "name", "address", "tax_ids", "invoice_settings_custom_fields"]
+        )
+        nullable_fields = set(["invoice_settings_custom_fields"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval (e.g. 'month', 'year')."""
+
+
+class ReissueInvoiceStripeTypedDict(TypedDict):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class ReissueInvoiceStripe(BaseModel):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class ReissueInvoiceProcessorsTypedDict(TypedDict):
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    stripe: NotRequired[Nullable[ReissueInvoiceStripeTypedDict]]
+
+
+class ReissueInvoiceProcessors(BaseModel):
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    stripe: OptionalNullable[ReissueInvoiceStripe] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe"])
+        nullable_fields = set(["stripe"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoicePriceTypedDict(TypedDict):
+    amount: float
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
+    interval: ReissueInvoiceInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    processors: NotRequired[ReissueInvoiceProcessorsTypedDict]
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+
+class ReissueInvoicePrice(BaseModel):
+    amount: float
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
+
+    interval: ReissueInvoiceInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    processors: Optional[ReissueInvoiceProcessors] = None
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count", "processors"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoicePriceToTypedDict = TypeAliasType(
+    "ReissueInvoicePriceToTypedDict", Union[float, str]
+)
+
+
+ReissueInvoicePriceTo = TypeAliasType("ReissueInvoicePriceTo", Union[float, str])
+
+
+class ReissueInvoiceAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: NotRequired[float]
+    r"""Per-unit amount for this tier in this currency."""
+    flat_amount: NotRequired[float]
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
+
+
+class ReissueInvoiceAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: Optional[float] = None
+    r"""Per-unit amount for this tier in this currency."""
+
+    flat_amount: Optional[float] = None
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoicePriceTierTypedDict(TypedDict):
+    to: ReissueInvoicePriceToTypedDict
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[List[ReissueInvoiceAdditionalCurrencyTypedDict]]
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
+
+class ReissueInvoicePriceTier(BaseModel):
+    to: ReissueInvoicePriceTo
+
+    amount: Optional[float] = None
+
+    flat_amount: Optional[float] = None
+
+    additional_currencies: Optional[List[ReissueInvoiceAdditionalCurrency]] = None
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceTierBehavior = Literal[
+    "graduated",
+    "volume",
+]
+
+
+ReissueInvoiceItemInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval. For consumable features, should match reset.interval."""
+
+
+ReissueInvoiceBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+
+class ReissueInvoiceItemStripeTypedDict(TypedDict):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class ReissueInvoiceItemStripe(BaseModel):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class ReissueInvoiceItemProcessorsTypedDict(TypedDict):
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    stripe: NotRequired[Nullable[ReissueInvoiceItemStripeTypedDict]]
+
+
+class ReissueInvoiceItemProcessors(BaseModel):
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    stripe: OptionalNullable[ReissueInvoiceItemStripe] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe"])
+        nullable_fields = set(["stripe"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoiceItemPriceTypedDict(TypedDict):
+    r"""Pricing to use for this feature on this invoice."""
+
+    interval: ReissueInvoiceItemInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+    billing_method: ReissueInvoiceBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+    amount: NotRequired[float]
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    tiers: NotRequired[List[ReissueInvoicePriceTierTypedDict]]
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+    tier_behavior: NotRequired[ReissueInvoiceTierBehavior]
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    billing_units: NotRequired[float]
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+    processors: NotRequired[ReissueInvoiceItemProcessorsTypedDict]
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+
+class ReissueInvoiceItemPrice(BaseModel):
+    r"""Pricing to use for this feature on this invoice."""
+
+    interval: ReissueInvoiceItemInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+
+    billing_method: ReissueInvoiceBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+    amount: Optional[float] = None
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+
+    tiers: Optional[List[ReissueInvoicePriceTier]] = None
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+
+    tier_behavior: Optional[ReissueInvoiceTierBehavior] = None
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    billing_units: Optional[float] = 1
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+
+    processors: Optional[ReissueInvoiceItemProcessors] = None
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "amount",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+                "billing_units",
+                "processors",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceDimensionsMatch4TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsMatch4TypedDict", Union[str, float, bool]
+)
+
+
+ReissueInvoiceDimensionsMatch4 = TypeAliasType(
+    "ReissueInvoiceDimensionsMatch4", Union[str, float, bool]
+)
+
+
+class ReissueInvoiceDimensions4TypedDict(TypedDict):
+    match: Dict[str, ReissueInvoiceDimensionsMatch4TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class ReissueInvoiceDimensions4(BaseModel):
+    match: Dict[str, ReissueInvoiceDimensionsMatch4]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceDimensionsMatch3TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsMatch3TypedDict", Union[str, float, bool]
+)
+
+
+ReissueInvoiceDimensionsMatch3 = TypeAliasType(
+    "ReissueInvoiceDimensionsMatch3", Union[str, float, bool]
+)
+
+
+ReissueInvoiceDimensionsToEnum2 = Literal["inf",]
+
+
+ReissueInvoiceDimensionsToUnion2TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsToUnion2TypedDict",
+    Union[float, ReissueInvoiceDimensionsToEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+ReissueInvoiceDimensionsToUnion2 = TypeAliasType(
+    "ReissueInvoiceDimensionsToUnion2", Union[float, ReissueInvoiceDimensionsToEnum2]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class ReissueInvoiceDimensionsTier2TypedDict(TypedDict):
+    to: ReissueInvoiceDimensionsToUnion2TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class ReissueInvoiceDimensionsTier2(BaseModel):
+    to: ReissueInvoiceDimensionsToUnion2
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class ReissueInvoiceDimensions3TypedDict(TypedDict):
+    match: Dict[str, ReissueInvoiceDimensionsMatch3TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[ReissueInvoiceDimensionsTier2TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class ReissueInvoiceDimensions3(BaseModel):
+    match: Dict[str, ReissueInvoiceDimensionsMatch3]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[ReissueInvoiceDimensionsTier2]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceDimensionsUnion2TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsUnion2TypedDict",
+    Union[ReissueInvoiceDimensions4TypedDict, ReissueInvoiceDimensions3TypedDict],
+)
+
+
+ReissueInvoiceDimensionsUnion2 = TypeAliasType(
+    "ReissueInvoiceDimensionsUnion2",
+    Union[ReissueInvoiceDimensions4, ReissueInvoiceDimensions3],
+)
+
+
+ReissueInvoiceMultipliersMatch2TypedDict = TypeAliasType(
+    "ReissueInvoiceMultipliersMatch2TypedDict", Union[str, float, bool]
+)
+
+
+ReissueInvoiceMultipliersMatch2 = TypeAliasType(
+    "ReissueInvoiceMultipliersMatch2", Union[str, float, bool]
+)
+
+
+class ReissueInvoiceMultipliers2TypedDict(TypedDict):
+    match: Dict[str, ReissueInvoiceMultipliersMatch2TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class ReissueInvoiceMultipliers2(BaseModel):
+    match: Dict[str, ReissueInvoiceMultipliersMatch2]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoiceCreditSchema2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[Dict[str, ReissueInvoiceDimensionsUnion2TypedDict]]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, ReissueInvoiceMultipliers2TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+
+class ReissueInvoiceCreditSchema2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, ReissueInvoiceDimensionsUnion2]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, ReissueInvoiceMultipliers2]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceDimensionsMatch2TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsMatch2TypedDict", Union[str, float, bool]
+)
+
+
+ReissueInvoiceDimensionsMatch2 = TypeAliasType(
+    "ReissueInvoiceDimensionsMatch2", Union[str, float, bool]
+)
+
+
+class ReissueInvoiceDimensions2TypedDict(TypedDict):
+    match: Dict[str, ReissueInvoiceDimensionsMatch2TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class ReissueInvoiceDimensions2(BaseModel):
+    match: Dict[str, ReissueInvoiceDimensionsMatch2]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceDimensionsMatch1TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsMatch1TypedDict", Union[str, float, bool]
+)
+
+
+ReissueInvoiceDimensionsMatch1 = TypeAliasType(
+    "ReissueInvoiceDimensionsMatch1", Union[str, float, bool]
+)
+
+
+ReissueInvoiceDimensionsToEnum1 = Literal["inf",]
+
+
+ReissueInvoiceDimensionsToUnion1TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsToUnion1TypedDict",
+    Union[float, ReissueInvoiceDimensionsToEnum1],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+ReissueInvoiceDimensionsToUnion1 = TypeAliasType(
+    "ReissueInvoiceDimensionsToUnion1", Union[float, ReissueInvoiceDimensionsToEnum1]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class ReissueInvoiceDimensionsTier1TypedDict(TypedDict):
+    to: ReissueInvoiceDimensionsToUnion1TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class ReissueInvoiceDimensionsTier1(BaseModel):
+    to: ReissueInvoiceDimensionsToUnion1
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class ReissueInvoiceDimensions1TypedDict(TypedDict):
+    match: Dict[str, ReissueInvoiceDimensionsMatch1TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[ReissueInvoiceDimensionsTier1TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class ReissueInvoiceDimensions1(BaseModel):
+    match: Dict[str, ReissueInvoiceDimensionsMatch1]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[ReissueInvoiceDimensionsTier1]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceDimensionsUnion1TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsUnion1TypedDict",
+    Union[ReissueInvoiceDimensions2TypedDict, ReissueInvoiceDimensions1TypedDict],
+)
+
+
+ReissueInvoiceDimensionsUnion1 = TypeAliasType(
+    "ReissueInvoiceDimensionsUnion1",
+    Union[ReissueInvoiceDimensions2, ReissueInvoiceDimensions1],
+)
+
+
+ReissueInvoiceMultipliersMatch1TypedDict = TypeAliasType(
+    "ReissueInvoiceMultipliersMatch1TypedDict", Union[str, float, bool]
+)
+
+
+ReissueInvoiceMultipliersMatch1 = TypeAliasType(
+    "ReissueInvoiceMultipliersMatch1", Union[str, float, bool]
+)
+
+
+class ReissueInvoiceMultipliers1TypedDict(TypedDict):
+    match: Dict[str, ReissueInvoiceMultipliersMatch1TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class ReissueInvoiceMultipliers1(BaseModel):
+    match: Dict[str, ReissueInvoiceMultipliersMatch1]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceToEnum = Literal["inf",]
+
+
+ReissueInvoiceFeatureOverrideToUnionTypedDict = TypeAliasType(
+    "ReissueInvoiceFeatureOverrideToUnionTypedDict", Union[float, ReissueInvoiceToEnum]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+ReissueInvoiceFeatureOverrideToUnion = TypeAliasType(
+    "ReissueInvoiceFeatureOverrideToUnion", Union[float, ReissueInvoiceToEnum]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class ReissueInvoiceFeatureOverrideTierTypedDict(TypedDict):
+    to: ReissueInvoiceFeatureOverrideToUnionTypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class ReissueInvoiceFeatureOverrideTier(BaseModel):
+    to: ReissueInvoiceFeatureOverrideToUnion
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class ReissueInvoiceCreditSchema1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[ReissueInvoiceFeatureOverrideTierTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[Dict[str, ReissueInvoiceDimensionsUnion1TypedDict]]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, ReissueInvoiceMultipliers1TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+    tier_behavior: Literal["graduated"]
+
+
+class ReissueInvoiceCreditSchema1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[ReissueInvoiceFeatureOverrideTier]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, ReissueInvoiceDimensionsUnion1]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, ReissueInvoiceMultipliers1]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceCreditSchemaUnionTypedDict = TypeAliasType(
+    "ReissueInvoiceCreditSchemaUnionTypedDict",
+    Union[ReissueInvoiceCreditSchema2TypedDict, ReissueInvoiceCreditSchema1TypedDict],
+)
+
+
+ReissueInvoiceCreditSchemaUnion = TypeAliasType(
+    "ReissueInvoiceCreditSchemaUnion",
+    Union[ReissueInvoiceCreditSchema2, ReissueInvoiceCreditSchema1],
+)
+
+
+class ReissueInvoiceFeatureOverrideTypedDict(TypedDict):
+    r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
+
+    credit_schema: NotRequired[List[ReissueInvoiceCreditSchemaUnionTypedDict]]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class ReissueInvoiceFeatureOverride(BaseModel):
+    r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
+
+    credit_schema: Optional[List[ReissueInvoiceCreditSchemaUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class AddItemTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature whose pricing is overridden on this invoice."""
+    price: NotRequired[ReissueInvoiceItemPriceTypedDict]
+    r"""Pricing to use for this feature on this invoice."""
+    feature_override: NotRequired[ReissueInvoiceFeatureOverrideTypedDict]
+    r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
+
+
+class AddItem(BaseModel):
+    feature_id: str
+    r"""The feature whose pricing is overridden on this invoice."""
+
+    price: Optional[ReissueInvoiceItemPrice] = None
+    r"""Pricing to use for this feature on this invoice."""
+
+    feature_override: Optional[ReissueInvoiceFeatureOverride] = None
+    r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price", "feature_override"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoiceInvoiceCustomizeTypedDict(TypedDict):
+    r"""Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed."""
+
+    price: NotRequired[Nullable[ReissueInvoicePriceTypedDict]]
+    r"""Override the plan's base price for this invoice. Pass null or an amount of 0 to omit the base price line."""
+    items: NotRequired[List[AddItemTypedDict]]
+    r"""Override feature pricing for this invoice. Only pricing fields are accepted; grants, resets and rollovers are not part of an invoice."""
+
+
+class ReissueInvoiceInvoiceCustomize(BaseModel):
+    r"""Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed."""
+
+    price: OptionalNullable[ReissueInvoicePrice] = UNSET
+    r"""Override the plan's base price for this invoice. Pass null or an amount of 0 to omit the base price line."""
+
+    items: Optional[List[AddItem]] = None
+    r"""Override feature pricing for this invoice. Only pricing fields are accepted; grants, resets and rollovers are not part of an invoice."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price", "items"])
+        nullable_fields = set(["price"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceBillingBehavior = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""Which of the feature's prices to use: 'prepaid' or 'usage_based'."""
+
+
+class ReissueInvoiceUsageTypedDict(TypedDict):
+    feature_id: str
+    r"""The metered feature whose units are being converted."""
+    quantity: float
+    r"""Billable units of the metered feature. Converted to the credit-system feature through its rate card."""
+    properties: NotRequired[Dict[str, Any]]
+    r"""Event properties used to pick the rate card dimension and multipliers."""
+
+
+class ReissueInvoiceUsage(BaseModel):
+    feature_id: str
+    r"""The metered feature whose units are being converted."""
+
+    quantity: float
+    r"""Billable units of the metered feature. Converted to the credit-system feature through its rate card."""
+
+    properties: Optional[Dict[str, Any]] = None
+    r"""Event properties used to pick the rate card dimension and multipliers."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["properties"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoiceFeatureQuantityTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature to bill."""
+    billing_behavior: ReissueInvoiceBillingBehavior
+    r"""Which of the feature's prices to use: 'prepaid' or 'usage_based'."""
+    quantity: NotRequired[float]
+    r"""Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits."""
+    usage: NotRequired[List[ReissueInvoiceUsageTypedDict]]
+    r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
+    prorate: NotRequired[bool]
+    r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
+
+
+class ReissueInvoiceFeatureQuantity(BaseModel):
+    feature_id: str
+    r"""The feature to bill."""
+
+    billing_behavior: ReissueInvoiceBillingBehavior
+    r"""Which of the feature's prices to use: 'prepaid' or 'usage_based'."""
+
+    quantity: Optional[float] = None
+    r"""Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits."""
+
+    usage: Optional[List[ReissueInvoiceUsage]] = None
+    r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
+
+    prorate: Optional[bool] = None
+    r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["quantity", "usage", "prorate"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceLicenseQuantityInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval (e.g. 'month', 'year')."""
+
+
+class ReissueInvoiceLicenseQuantityStripeTypedDict(TypedDict):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class ReissueInvoiceLicenseQuantityStripe(BaseModel):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class ReissueInvoiceLicenseQuantityProcessorsTypedDict(TypedDict):
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    stripe: NotRequired[Nullable[ReissueInvoiceLicenseQuantityStripeTypedDict]]
+
+
+class ReissueInvoiceLicenseQuantityProcessors(BaseModel):
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    stripe: OptionalNullable[ReissueInvoiceLicenseQuantityStripe] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe"])
+        nullable_fields = set(["stripe"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoiceLicenseQuantityPriceTypedDict(TypedDict):
+    amount: float
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
+    interval: ReissueInvoiceLicenseQuantityInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    processors: NotRequired[ReissueInvoiceLicenseQuantityProcessorsTypedDict]
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+
+class ReissueInvoiceLicenseQuantityPrice(BaseModel):
+    amount: float
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
+
+    interval: ReissueInvoiceLicenseQuantityInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    processors: Optional[ReissueInvoiceLicenseQuantityProcessors] = None
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count", "processors"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoiceCustomizeTypedDict(TypedDict):
+    r"""Override the license's per-seat price on this invoice."""
+
+    price: NotRequired[Nullable[ReissueInvoiceLicenseQuantityPriceTypedDict]]
+
+
+class ReissueInvoiceCustomize(BaseModel):
+    r"""Override the license's per-seat price on this invoice."""
+
+    price: OptionalNullable[ReissueInvoiceLicenseQuantityPrice] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price"])
+        nullable_fields = set(["price"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceLicenseQuantityBillingBehavior = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""Which of the feature's prices to use: 'prepaid' or 'usage_based'."""
+
+
+class ReissueInvoiceLicenseQuantityUsageTypedDict(TypedDict):
+    feature_id: str
+    r"""The metered feature whose units are being converted."""
+    quantity: float
+    r"""Billable units of the metered feature. Converted to the credit-system feature through its rate card."""
+    properties: NotRequired[Dict[str, Any]]
+    r"""Event properties used to pick the rate card dimension and multipliers."""
+
+
+class ReissueInvoiceLicenseQuantityUsage(BaseModel):
+    feature_id: str
+    r"""The metered feature whose units are being converted."""
+
+    quantity: float
+    r"""Billable units of the metered feature. Converted to the credit-system feature through its rate card."""
+
+    properties: Optional[Dict[str, Any]] = None
+    r"""Event properties used to pick the rate card dimension and multipliers."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["properties"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoiceLicenseQuantityFeatureQuantityTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature to bill."""
+    billing_behavior: ReissueInvoiceLicenseQuantityBillingBehavior
+    r"""Which of the feature's prices to use: 'prepaid' or 'usage_based'."""
+    quantity: NotRequired[float]
+    r"""Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits."""
+    usage: NotRequired[List[ReissueInvoiceLicenseQuantityUsageTypedDict]]
+    r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
+    prorate: NotRequired[bool]
+    r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
+
+
+class ReissueInvoiceLicenseQuantityFeatureQuantity(BaseModel):
+    feature_id: str
+    r"""The feature to bill."""
+
+    billing_behavior: ReissueInvoiceLicenseQuantityBillingBehavior
+    r"""Which of the feature's prices to use: 'prepaid' or 'usage_based'."""
+
+    quantity: Optional[float] = None
+    r"""Billable feature units in total, exclusive of any included usage. Not per seat or per entity. For a credit-system feature this is the number of credits."""
+
+    usage: Optional[List[ReissueInvoiceLicenseQuantityUsage]] = None
+    r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
+
+    prorate: Optional[bool] = None
+    r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["quantity", "usage", "prorate"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoiceLicenseQuantityTypedDict(TypedDict):
+    license_plan_id: str
+    r"""The license plan linked to the parent plan."""
+    quantity: int
+    r"""Billable seats, exclusive of any included seats."""
+    customize: NotRequired[ReissueInvoiceCustomizeTypedDict]
+    r"""Override the license's per-seat price on this invoice."""
+    feature_quantities: NotRequired[
+        List[ReissueInvoiceLicenseQuantityFeatureQuantityTypedDict]
+    ]
+    r"""Feature charges priced through the license plan."""
+    prorate: NotRequired[bool]
+    r"""Whether to prorate seat charges against period_start / period_end. Defaults to true."""
+
+
+class ReissueInvoiceLicenseQuantity(BaseModel):
+    license_plan_id: str
+    r"""The license plan linked to the parent plan."""
+
+    quantity: int
+    r"""Billable seats, exclusive of any included seats."""
+
+    customize: Optional[ReissueInvoiceCustomize] = None
+    r"""Override the license's per-seat price on this invoice."""
+
+    feature_quantities: Optional[List[ReissueInvoiceLicenseQuantityFeatureQuantity]] = (
+        None
+    )
+    r"""Feature charges priced through the license plan."""
+
+    prorate: Optional[bool] = None
+    r"""Whether to prorate seat charges against period_start / period_end. Defaults to true."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["customize", "feature_quantities", "prorate"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoiceAttachDiscountTypedDict(TypedDict):
+    r"""A discount to apply. Can be either a reward ID or a promotion code."""
+
+    reward_id: NotRequired[str]
+    r"""The ID of the reward to apply as a discount."""
+    promotion_code: NotRequired[str]
+    r"""The promotion code to apply as a discount."""
+
+
+class ReissueInvoiceAttachDiscount(BaseModel):
+    r"""A discount to apply. Can be either a reward ID or a promotion code."""
+
+    reward_id: Optional[str] = None
+    r"""The ID of the reward to apply as a discount."""
+
+    promotion_code: Optional[str] = None
+    r"""The promotion code to apply as a discount."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["reward_id", "promotion_code"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class Add2TypedDict(TypedDict):
+    plan_id: str
+    r"""The catalog plan (or variant) whose pricing to use."""
+    version: NotRequired[float]
+    r"""Plan version. Defaults to the active version."""
+    customize: NotRequired[ReissueInvoiceInvoiceCustomizeTypedDict]
+    r"""Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed."""
+    feature_quantities: NotRequired[List[ReissueInvoiceFeatureQuantityTypedDict]]
+    license_quantities: NotRequired[List[ReissueInvoiceLicenseQuantityTypedDict]]
+    discounts: NotRequired[List[ReissueInvoiceAttachDiscountTypedDict]]
+    r"""Discounts applied only to this plan's lines."""
+    prorate: NotRequired[bool]
+    r"""Whether to prorate the base price against period_start / period_end. Defaults to true."""
+
+
+class Add2(BaseModel):
+    plan_id: str
+    r"""The catalog plan (or variant) whose pricing to use."""
+
+    version: Optional[float] = None
+    r"""Plan version. Defaults to the active version."""
+
+    customize: Optional[ReissueInvoiceInvoiceCustomize] = None
+    r"""Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed."""
+
+    feature_quantities: Optional[List[ReissueInvoiceFeatureQuantity]] = None
+
+    license_quantities: Optional[List[ReissueInvoiceLicenseQuantity]] = None
+
+    discounts: Optional[List[ReissueInvoiceAttachDiscount]] = None
+    r"""Discounts applied only to this plan's lines."""
+
+    prorate: Optional[bool] = None
+    r"""Whether to prorate the base price against period_start / period_end. Defaults to true."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "version",
+                "customize",
+                "feature_quantities",
+                "license_quantities",
+                "discounts",
+                "prorate",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class Add1TypedDict(TypedDict):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+    description: str
+    r"""Description for the line item."""
+
+
+class Add1(BaseModel):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+
+    description: str
+    r"""Description for the line item."""
+
+
+AddUnionTypedDict = TypeAliasType(
+    "AddUnionTypedDict", Union[Add1TypedDict, Add2TypedDict]
+)
+r"""Either a custom charge (description + amount) or a catalog plan priced like invoices.create."""
+
+
+AddUnion = TypeAliasType("AddUnion", Union[Add1, Add2])
+r"""Either a custom charge (description + amount) or a catalog plan priced like invoices.create."""
+
+
+class ReissueInvoiceUpdateTypedDict(TypedDict):
+    id: str
+    r"""The invoice line item ID from invoices.list items."""
+    amount: NotRequired[float]
+    description: NotRequired[str]
+
+
+class ReissueInvoiceUpdate(BaseModel):
+    id: str
+    r"""The invoice line item ID from invoices.list items."""
+
+    amount: Optional[float] = None
+
+    description: Optional[str] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "description"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class LinesTypedDict(TypedDict):
+    r"""Add, change or drop lines relative to the original."""
+
+    add: NotRequired[List[AddUnionTypedDict]]
+    update: NotRequired[List[ReissueInvoiceUpdateTypedDict]]
+    remove: NotRequired[List[str]]
+    r"""Invoice line item IDs to leave off the replacement."""
+
+
+class Lines(BaseModel):
+    r"""Add, change or drop lines relative to the original."""
+
+    add: Optional[List[AddUnion]] = None
+
+    update: Optional[List[ReissueInvoiceUpdate]] = None
+
+    remove: Optional[List[str]] = None
+    r"""Invoice line item IDs to leave off the replacement."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["add", "update", "remove"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class ReissueInvoiceParamsTypedDict(TypedDict):
     invoice_id: str
     r"""The Autumn invoice ID to void and replace."""
     invoice_template_id: NotRequired[str]
     r"""ID of an invoice template (configured in billing settings) whose footer and memo are applied to the replacement invoice."""
     net_terms_days: NotRequired[int]
-    r"""Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed."""
+    r"""Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed. A card-charged invoice has no due date and its replacement is charged immediately; setting this makes the replacement a send-invoice one instead."""
+    preview: NotRequired[bool]
+    r"""If true, returns the replacement invoice's lines and totals without voiding anything or issuing it."""
     update_customer_email: NotRequired[str]
     r"""Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address."""
+    invoice: NotRequired[ReissueInvoiceInvoiceRequestBodyTypedDict]
+    r"""Changes that apply to the replacement invoice only."""
+    customer: NotRequired[ReissueInvoiceCustomerTypedDict]
+    r"""Changes written to the customer, which the replacement snapshots and later invoices inherit."""
+    lines: NotRequired[LinesTypedDict]
+    r"""Add, change or drop lines relative to the original."""
 
 
 class ReissueInvoiceParams(BaseModel):
@@ -63,15 +1797,35 @@ class ReissueInvoiceParams(BaseModel):
     r"""ID of an invoice template (configured in billing settings) whose footer and memo are applied to the replacement invoice."""
 
     net_terms_days: Optional[int] = None
-    r"""Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed."""
+    r"""Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed. A card-charged invoice has no due date and its replacement is charged immediately; setting this makes the replacement a send-invoice one instead."""
+
+    preview: Optional[bool] = None
+    r"""If true, returns the replacement invoice's lines and totals without voiding anything or issuing it."""
 
     update_customer_email: Optional[str] = None
     r"""Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address."""
 
+    invoice: Optional[ReissueInvoiceInvoiceRequestBody] = None
+    r"""Changes that apply to the replacement invoice only."""
+
+    customer: Optional[ReissueInvoiceCustomer] = None
+    r"""Changes written to the customer, which the replacement snapshots and later invoices inherit."""
+
+    lines: Optional[Lines] = None
+    r"""Add, change or drop lines relative to the original."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["invoice_template_id", "net_terms_days", "update_customer_email"]
+            [
+                "invoice_template_id",
+                "net_terms_days",
+                "preview",
+                "update_customer_email",
+                "invoice",
+                "customer",
+                "lines",
+            ]
         )
         serialized = handler(self)
         m = {}
@@ -131,7 +1885,9 @@ class ReissueInvoiceEntity(BaseModel):
         return m
 
 
-class ReissueInvoiceItemTypedDict(TypedDict):
+class ReissueInvoiceInvoiceItemTypedDict(TypedDict):
+    id: str
+    r"""The Autumn invoice line item ID. Stable across reads, and can be used to reference this line in later calls."""
     description: str
     r"""Description of the invoice line item"""
     period_start: Nullable[float]
@@ -152,7 +1908,10 @@ class ReissueInvoiceItemTypedDict(TypedDict):
     r"""How this line splits by entity. Empty for customer-level lines. Only populated for invoices finalized after entity attribution shipped."""
 
 
-class ReissueInvoiceItem(BaseModel):
+class ReissueInvoiceInvoiceItem(BaseModel):
+    id: str
+    r"""The Autumn invoice line item ID. Stable across reads, and can be used to reference this line in later calls."""
+
     description: str
     r"""Description of the invoice line item"""
 
@@ -195,9 +1954,7 @@ class ReissueInvoiceItem(BaseModel):
         return m
 
 
-class ReissueInvoiceInvoiceTypedDict(TypedDict):
-    r"""The replacement invoice."""
-
+class ReissueInvoiceInvoiceResponseTypedDict(TypedDict):
     plan_ids: List[str]
     r"""Array of plan IDs included in this invoice"""
     stripe_id: str
@@ -224,13 +1981,11 @@ class ReissueInvoiceInvoiceTypedDict(TypedDict):
     r"""The billing processor that owns this invoice."""
     hosted_invoice_url: NotRequired[Nullable[str]]
     r"""URL to the Stripe-hosted invoice page"""
-    items: NotRequired[List[ReissueInvoiceItemTypedDict]]
+    items: NotRequired[List[ReissueInvoiceInvoiceItemTypedDict]]
     r"""Line items on the invoice, one per line as shown in Stripe. Capped at 100. Empty for invoices recorded before line item storage."""
 
 
-class ReissueInvoiceInvoice(BaseModel):
-    r"""The replacement invoice."""
-
+class ReissueInvoiceInvoiceResponse(BaseModel):
     plan_ids: List[str]
     r"""Array of plan IDs included in this invoice"""
 
@@ -270,7 +2025,7 @@ class ReissueInvoiceInvoice(BaseModel):
     hosted_invoice_url: OptionalNullable[str] = UNSET
     r"""URL to the Stripe-hosted invoice page"""
 
-    items: Optional[List[ReissueInvoiceItem]] = None
+    items: Optional[List[ReissueInvoiceInvoiceItem]] = None
     r"""Line items on the invoice, one per line as shown in Stripe. Capped at 100. Empty for invoices recorded before line item storage."""
 
     @model_serializer(mode="wrap")
@@ -301,20 +2056,235 @@ class ReissueInvoiceInvoice(BaseModel):
         return m
 
 
+class ReissueInvoiceLineTypedDict(TypedDict):
+    plan_id: Nullable[str]
+    feature_id: Nullable[str]
+    description: str
+    amount: float
+    amount_after_discounts: float
+    quantity: Nullable[float]
+    prorated: bool
+    period_start: Nullable[float]
+    period_end: Nullable[float]
+
+
+class ReissueInvoiceLine(BaseModel):
+    plan_id: Nullable[str]
+
+    feature_id: Nullable[str]
+
+    description: str
+
+    amount: float
+
+    amount_after_discounts: float
+
+    quantity: Nullable[float]
+
+    prorated: bool
+
+    period_start: Nullable[float]
+
+    period_end: Nullable[float]
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                m[k] = val
+
+        return m
+
+
+ReissueInvoiceStatus = Union[
+    Literal[
+        "complete",
+        "incomplete",
+    ],
+    UnrecognizedStr,
+]
+
+
+class ReissueInvoiceTaxTypedDict(TypedDict):
+    total: float
+    amount_inclusive: float
+    amount_exclusive: float
+    status: ReissueInvoiceStatus
+
+
+class ReissueInvoiceTax(BaseModel):
+    total: float
+
+    amount_inclusive: float
+
+    amount_exclusive: float
+
+    status: ReissueInvoiceStatus
+
+
+class ReissueInvoiceInvoiceCreditsTypedDict(TypedDict):
+    r"""The customer's Stripe credit balance and how much of it this invoice consumes."""
+
+    balance: float
+    r"""Stripe customer credit balance available, expressed as a positive number in major currency units."""
+    currency: str
+    r"""Three-letter currency code."""
+    applied: NotRequired[float]
+    r"""How much of that balance this invoice consumes, capped at its total. The rest stays on the customer."""
+
+
+class ReissueInvoiceInvoiceCredits(BaseModel):
+    r"""The customer's Stripe credit balance and how much of it this invoice consumes."""
+
+    balance: float
+    r"""Stripe customer credit balance available, expressed as a positive number in major currency units."""
+
+    currency: str
+    r"""Three-letter currency code."""
+
+    applied: Optional[float] = None
+    r"""How much of that balance this invoice consumes, capped at its total. The rest stays on the customer."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["applied"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoicePreviewTypedDict(TypedDict):
+    r"""The replacement's lines and totals."""
+
+    currency: str
+    lines: List[ReissueInvoiceLineTypedDict]
+    subtotal: float
+    discount_total: float
+    tax: Nullable[ReissueInvoiceTaxTypedDict]
+    total: float
+    amount_due: float
+    r"""What the customer pays: the total less any credit applied."""
+    due_date: Nullable[float]
+    invoice_credits: NotRequired[ReissueInvoiceInvoiceCreditsTypedDict]
+    r"""The customer's Stripe credit balance and how much of it this invoice consumes."""
+
+
+class ReissueInvoicePreview(BaseModel):
+    r"""The replacement's lines and totals."""
+
+    currency: str
+
+    lines: List[ReissueInvoiceLine]
+
+    subtotal: float
+
+    discount_total: float
+
+    tax: Nullable[ReissueInvoiceTax]
+
+    total: float
+
+    amount_due: float
+    r"""What the customer pays: the total less any credit applied."""
+
+    due_date: Nullable[float]
+
+    invoice_credits: Optional[ReissueInvoiceInvoiceCredits] = None
+    r"""The customer's Stripe credit balance and how much of it this invoice consumes."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["invoice_credits"])
+        nullable_fields = set(["tax", "due_date"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 class ReissueInvoiceResponseTypedDict(TypedDict):
     r"""OK"""
 
-    invoice: ReissueInvoiceInvoiceTypedDict
-    r"""The replacement invoice."""
-    voided_invoice_id: str
-    r"""The Autumn ID of the original invoice, now void."""
+    invoice: Nullable[ReissueInvoiceInvoiceResponseTypedDict]
+    r"""The replacement invoice. Null when preview is true."""
+    voided_invoice_id: Nullable[str]
+    r"""The Autumn ID of the original invoice, now void. Null when previewing, and when the original was paid and got a credit note instead."""
+    credit_note_id: Nullable[str]
+    r"""The Stripe credit note issued against a paid original, whose amount lands on the customer's balance and covers the replacement. Null when the original was open and voided instead."""
+    preview: ReissueInvoicePreviewTypedDict
+    r"""The replacement's lines and totals."""
 
 
 class ReissueInvoiceResponse(BaseModel):
     r"""OK"""
 
-    invoice: ReissueInvoiceInvoice
-    r"""The replacement invoice."""
+    invoice: Nullable[ReissueInvoiceInvoiceResponse]
+    r"""The replacement invoice. Null when preview is true."""
 
-    voided_invoice_id: str
-    r"""The Autumn ID of the original invoice, now void."""
+    voided_invoice_id: Nullable[str]
+    r"""The Autumn ID of the original invoice, now void. Null when previewing, and when the original was paid and got a credit note instead."""
+
+    credit_note_id: Nullable[str]
+    r"""The Stripe credit note issued against a paid original, whose amount lands on the customer's balance and covers the replacement. Null when the original was open and voided instead."""
+
+    preview: ReissueInvoicePreview
+    r"""The replacement's lines and totals."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                m[k] = val
+
+        return m
+
+
+try:
+    ReissueInvoiceDimensions3.model_rebuild()
+except NameError:
+    pass
+try:
+    ReissueInvoiceDimensions1.model_rebuild()
+except NameError:
+    pass
+try:
+    ReissueInvoiceCreditSchema1.model_rebuild()
+except NameError:
+    pass

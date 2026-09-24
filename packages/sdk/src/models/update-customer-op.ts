@@ -379,6 +379,106 @@ export type UpdateCustomerConfigRequestBody = {
   disableOverageBilling?: boolean | undefined;
 };
 
+export type UpdateCustomerBillingDetailsAddress = {
+  line1?: string | null | undefined;
+  line2?: string | null | undefined;
+  city?: string | null | undefined;
+  state?: string | null | undefined;
+  postalCode?: string | null | undefined;
+  /**
+   * Two-letter country code (ISO 3166-1 alpha-2).
+   */
+  country?: string | null | undefined;
+};
+
+export type UpdateCustomerAddBillingDetailsTaxId = {
+  /**
+   * Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+   */
+  type: string;
+  /**
+   * The tax ID, e.g. DE123456789.
+   */
+  value: string;
+};
+
+export type UpdateCustomerRemoveBillingDetailsTaxId = {
+  /**
+   * Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+   */
+  type: string;
+  /**
+   * The tax ID, e.g. DE123456789.
+   */
+  value: string;
+};
+
+/**
+ * Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept.
+ */
+export type UpdateCustomerTaxIds = {
+  /**
+   * Tax IDs to add. IDs the customer already has are ignored.
+   */
+  add?: Array<UpdateCustomerAddBillingDetailsTaxId> | undefined;
+  /**
+   * Tax IDs to remove, matched by type and value. IDs the customer doesn't have are ignored.
+   */
+  remove?: Array<UpdateCustomerRemoveBillingDetailsTaxId> | undefined;
+};
+
+/**
+ * Tax exemption status. Use reverse for reverse-charge customers.
+ */
+export const UpdateCustomerTaxExempt = {
+  None: "none",
+  Exempt: "exempt",
+  Reverse: "reverse",
+} as const;
+/**
+ * Tax exemption status. Use reverse for reverse-charge customers.
+ */
+export type UpdateCustomerTaxExempt = ClosedEnum<
+  typeof UpdateCustomerTaxExempt
+>;
+
+export type UpdateCustomerBillingDetailsCustomField = {
+  /**
+   * Label, e.g. PO Number.
+   */
+  name: string;
+  value: string;
+};
+
+export type UpdateCustomerInvoiceSettings = {
+  /**
+   * Up to 4 custom fields shown on every invoice, e.g. a PO number. Replaces the existing list; null clears it.
+   */
+  customFields?:
+    | Array<UpdateCustomerBillingDetailsCustomField>
+    | null
+    | undefined;
+};
+
+/**
+ * Billing details stored on the linked Stripe customer. Requires a Stripe customer.
+ */
+export type BillingDetailsParams = {
+  /**
+   * Billing address, used for tax and shown on invoices. Replaces the whole address, as in Stripe; null clears it.
+   */
+  address?: UpdateCustomerBillingDetailsAddress | null | undefined;
+  /**
+   * Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept.
+   */
+  taxIds?: UpdateCustomerTaxIds | undefined;
+  /**
+   * Tax exemption status. Use reverse for reverse-charge customers.
+   */
+  taxExempt?: UpdateCustomerTaxExempt | undefined;
+  invoiceSettings?: UpdateCustomerInvoiceSettings | undefined;
+};
+
 export type UpdateCustomerParams = {
   /**
    * ID of the customer to update
@@ -417,6 +517,10 @@ export type UpdateCustomerParams = {
    * Miscellaneous configurations for the customer.
    */
   config?: UpdateCustomerConfigRequestBody | undefined;
+  /**
+   * Billing details stored on the linked Stripe customer. Requires a Stripe customer.
+   */
+  billingDetails?: BillingDetailsParams | undefined;
   /**
    * Your unique identifier for the customer
    */
@@ -2202,6 +2306,236 @@ export function updateCustomerConfigRequestBodyToJSON(
 }
 
 /** @internal */
+export type UpdateCustomerBillingDetailsAddress$Outbound = {
+  line1?: string | null | undefined;
+  line2?: string | null | undefined;
+  city?: string | null | undefined;
+  state?: string | null | undefined;
+  postal_code?: string | null | undefined;
+  country?: string | null | undefined;
+};
+
+/** @internal */
+export const UpdateCustomerBillingDetailsAddress$outboundSchema: z.ZodMiniType<
+  UpdateCustomerBillingDetailsAddress$Outbound,
+  UpdateCustomerBillingDetailsAddress
+> = z.pipe(
+  z.object({
+    line1: z.optional(z.nullable(z.string())),
+    line2: z.optional(z.nullable(z.string())),
+    city: z.optional(z.nullable(z.string())),
+    state: z.optional(z.nullable(z.string())),
+    postalCode: z.optional(z.nullable(z.string())),
+    country: z.optional(z.nullable(z.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      postalCode: "postal_code",
+    });
+  }),
+);
+
+export function updateCustomerBillingDetailsAddressToJSON(
+  updateCustomerBillingDetailsAddress: UpdateCustomerBillingDetailsAddress,
+): string {
+  return JSON.stringify(
+    UpdateCustomerBillingDetailsAddress$outboundSchema.parse(
+      updateCustomerBillingDetailsAddress,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateCustomerAddBillingDetailsTaxId$Outbound = {
+  type: string;
+  value: string;
+};
+
+/** @internal */
+export const UpdateCustomerAddBillingDetailsTaxId$outboundSchema: z.ZodMiniType<
+  UpdateCustomerAddBillingDetailsTaxId$Outbound,
+  UpdateCustomerAddBillingDetailsTaxId
+> = z.object({
+  type: z.string(),
+  value: z.string(),
+});
+
+export function updateCustomerAddBillingDetailsTaxIdToJSON(
+  updateCustomerAddBillingDetailsTaxId: UpdateCustomerAddBillingDetailsTaxId,
+): string {
+  return JSON.stringify(
+    UpdateCustomerAddBillingDetailsTaxId$outboundSchema.parse(
+      updateCustomerAddBillingDetailsTaxId,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateCustomerRemoveBillingDetailsTaxId$Outbound = {
+  type: string;
+  value: string;
+};
+
+/** @internal */
+export const UpdateCustomerRemoveBillingDetailsTaxId$outboundSchema:
+  z.ZodMiniType<
+    UpdateCustomerRemoveBillingDetailsTaxId$Outbound,
+    UpdateCustomerRemoveBillingDetailsTaxId
+  > = z.object({
+    type: z.string(),
+    value: z.string(),
+  });
+
+export function updateCustomerRemoveBillingDetailsTaxIdToJSON(
+  updateCustomerRemoveBillingDetailsTaxId:
+    UpdateCustomerRemoveBillingDetailsTaxId,
+): string {
+  return JSON.stringify(
+    UpdateCustomerRemoveBillingDetailsTaxId$outboundSchema.parse(
+      updateCustomerRemoveBillingDetailsTaxId,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateCustomerTaxIds$Outbound = {
+  add?: Array<UpdateCustomerAddBillingDetailsTaxId$Outbound> | undefined;
+  remove?: Array<UpdateCustomerRemoveBillingDetailsTaxId$Outbound> | undefined;
+};
+
+/** @internal */
+export const UpdateCustomerTaxIds$outboundSchema: z.ZodMiniType<
+  UpdateCustomerTaxIds$Outbound,
+  UpdateCustomerTaxIds
+> = z.object({
+  add: z.optional(
+    z.array(z.lazy(() => UpdateCustomerAddBillingDetailsTaxId$outboundSchema)),
+  ),
+  remove: z.optional(
+    z.array(
+      z.lazy(() => UpdateCustomerRemoveBillingDetailsTaxId$outboundSchema),
+    ),
+  ),
+});
+
+export function updateCustomerTaxIdsToJSON(
+  updateCustomerTaxIds: UpdateCustomerTaxIds,
+): string {
+  return JSON.stringify(
+    UpdateCustomerTaxIds$outboundSchema.parse(updateCustomerTaxIds),
+  );
+}
+
+/** @internal */
+export const UpdateCustomerTaxExempt$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateCustomerTaxExempt
+> = z.enum(UpdateCustomerTaxExempt);
+
+/** @internal */
+export type UpdateCustomerBillingDetailsCustomField$Outbound = {
+  name: string;
+  value: string;
+};
+
+/** @internal */
+export const UpdateCustomerBillingDetailsCustomField$outboundSchema:
+  z.ZodMiniType<
+    UpdateCustomerBillingDetailsCustomField$Outbound,
+    UpdateCustomerBillingDetailsCustomField
+  > = z.object({
+    name: z.string(),
+    value: z.string(),
+  });
+
+export function updateCustomerBillingDetailsCustomFieldToJSON(
+  updateCustomerBillingDetailsCustomField:
+    UpdateCustomerBillingDetailsCustomField,
+): string {
+  return JSON.stringify(
+    UpdateCustomerBillingDetailsCustomField$outboundSchema.parse(
+      updateCustomerBillingDetailsCustomField,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateCustomerInvoiceSettings$Outbound = {
+  custom_fields?:
+    | Array<UpdateCustomerBillingDetailsCustomField$Outbound>
+    | null
+    | undefined;
+};
+
+/** @internal */
+export const UpdateCustomerInvoiceSettings$outboundSchema: z.ZodMiniType<
+  UpdateCustomerInvoiceSettings$Outbound,
+  UpdateCustomerInvoiceSettings
+> = z.pipe(
+  z.object({
+    customFields: z.optional(z.nullable(z.array(z.lazy(() =>
+      UpdateCustomerBillingDetailsCustomField$outboundSchema
+    )))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      customFields: "custom_fields",
+    });
+  }),
+);
+
+export function updateCustomerInvoiceSettingsToJSON(
+  updateCustomerInvoiceSettings: UpdateCustomerInvoiceSettings,
+): string {
+  return JSON.stringify(
+    UpdateCustomerInvoiceSettings$outboundSchema.parse(
+      updateCustomerInvoiceSettings,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingDetailsParams$Outbound = {
+  address?: UpdateCustomerBillingDetailsAddress$Outbound | null | undefined;
+  tax_ids?: UpdateCustomerTaxIds$Outbound | undefined;
+  tax_exempt?: string | undefined;
+  invoice_settings?: UpdateCustomerInvoiceSettings$Outbound | undefined;
+};
+
+/** @internal */
+export const BillingDetailsParams$outboundSchema: z.ZodMiniType<
+  BillingDetailsParams$Outbound,
+  BillingDetailsParams
+> = z.pipe(
+  z.object({
+    address: z.optional(z.nullable(z.lazy(() =>
+      UpdateCustomerBillingDetailsAddress$outboundSchema
+    ))),
+    taxIds: z.optional(z.lazy(() =>
+      UpdateCustomerTaxIds$outboundSchema
+    )),
+    taxExempt: z.optional(UpdateCustomerTaxExempt$outboundSchema),
+    invoiceSettings: z.optional(
+      z.lazy(() => UpdateCustomerInvoiceSettings$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      taxIds: "tax_ids",
+      taxExempt: "tax_exempt",
+      invoiceSettings: "invoice_settings",
+    });
+  }),
+);
+
+export function billingDetailsParamsToJSON(
+  billingDetailsParams: BillingDetailsParams,
+): string {
+  return JSON.stringify(
+    BillingDetailsParams$outboundSchema.parse(billingDetailsParams),
+  );
+}
+
+/** @internal */
 export type UpdateCustomerParams$Outbound = {
   customer_id: string;
   name?: string | null | undefined;
@@ -2215,6 +2549,7 @@ export type UpdateCustomerParams$Outbound = {
     | UpdateCustomerBillingControlsRequestBody$Outbound
     | undefined;
   config?: UpdateCustomerConfigRequestBody$Outbound | undefined;
+  billing_details?: BillingDetailsParams$Outbound | undefined;
   new_customer_id?: string | undefined;
 };
 
@@ -2238,6 +2573,9 @@ export const UpdateCustomerParams$outboundSchema: z.ZodMiniType<
     config: z.optional(
       z.lazy(() => UpdateCustomerConfigRequestBody$outboundSchema),
     ),
+    billingDetails: z.optional(
+      z.lazy(() => BillingDetailsParams$outboundSchema),
+    ),
     newCustomerId: z.optional(z.string()),
   }),
   z.transform((v) => {
@@ -2246,6 +2584,7 @@ export const UpdateCustomerParams$outboundSchema: z.ZodMiniType<
       stripeId: "stripe_id",
       sendEmailReceipts: "send_email_receipts",
       billingControls: "billing_controls",
+      billingDetails: "billing_details",
       newCustomerId: "new_customer_id",
     });
   }),

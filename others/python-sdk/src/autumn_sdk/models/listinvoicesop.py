@@ -164,6 +164,8 @@ class ListInvoicesEntity(BaseModel):
 
 
 class ListInvoicesItemTypedDict(TypedDict):
+    id: str
+    r"""The Autumn invoice line item ID. Stable across reads, and can be used to reference this line in later calls."""
     description: str
     r"""Description of the invoice line item"""
     period_start: Nullable[float]
@@ -185,6 +187,9 @@ class ListInvoicesItemTypedDict(TypedDict):
 
 
 class ListInvoicesItem(BaseModel):
+    id: str
+    r"""The Autumn invoice line item ID. Stable across reads, and can be used to reference this line in later calls."""
+
     description: str
     r"""Description of the invoice line item"""
 

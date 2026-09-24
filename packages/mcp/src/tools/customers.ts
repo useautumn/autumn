@@ -52,7 +52,7 @@ const domain = {
 		operation({
 			id: "updateCustomer",
 			description:
-				"Update an existing Autumn customer. For invoice_mode billing, set missing email with customer_id and email before previewing billing so linked Stripe customer records are updated. Use billing_details for billing address, tax IDs (e.g. VAT), tax exemption, and invoice custom fields such as a PO number; these are written to the linked Stripe customer. For tax IDs use tax_ids.add and tax_ids.remove; IDs you don't list are kept. To change a VAT number, remove the old one and add the new one.",
+				"Update an existing Autumn customer. For invoice_mode billing, set missing email with customer_id and email before previewing billing so linked Stripe customer records are updated. Use billing_details for billing address, tax IDs (e.g. VAT), tax exemption, and invoice custom fields such as a PO number; these are written to the linked Stripe customer. For tax IDs use tax_ids.add and tax_ids.remove; IDs you don't list are kept. To change a VAT number, remove the old one and add the new one. address and invoice_settings.custom_fields replace the whole value, so read the current ones first (getCustomer with expand billing_details) and send them back with your change.",
 			destructive: true,
 		}),
 		operation({

@@ -2128,6 +2128,8 @@ class PreviewAttachInvoiceCreditsTypedDict(TypedDict):
     r"""Stripe customer credit balance available, expressed as a positive number in major currency units."""
     currency: str
     r"""Three-letter currency code."""
+    applied: NotRequired[float]
+    r"""How much of that balance this invoice consumes, capped at its total. The rest stays on the customer."""
 
 
 class PreviewAttachInvoiceCredits(BaseModel):
@@ -2138,6 +2140,25 @@ class PreviewAttachInvoiceCredits(BaseModel):
 
     currency: str
     r"""Three-letter currency code."""
+
+    applied: Optional[float] = None
+    r"""How much of that balance this invoice consumes, capped at its total. The rest stays on the customer."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["applied"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 class PreviewAttachResponseTypedDict(TypedDict):
