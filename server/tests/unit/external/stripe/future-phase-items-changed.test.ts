@@ -2,7 +2,7 @@
  * futurePhaseItemsChanged
  *
  * Only a phase that has not started yet counts. A quantity or price edit on
- * it is a change; the current phase splitting or moving is not.
+ * it is a change; a date move, or an edit to the running phase, is not.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -73,17 +73,16 @@ describe("futurePhaseItemsChanged", () => {
 		).toBe(false);
 	});
 
-	test("a future phase that moved index but kept its items is not", () => {
+	test("a future phase moved to a new date with the same items is not", () => {
 		expect(
 			futurePhaseItemsChanged({
 				previousPhases: [
 					phase({ start: PAST }),
 					phase({ start: FUTURE, quantity: 2 }),
-					phase({ start: FUTURE + 1_000, quantity: 3 }),
 				],
 				currentPhases: [
 					phase({ start: PAST }),
-					phase({ start: FUTURE + 1_000, quantity: 3 }),
+					phase({ start: FUTURE + 1_000, quantity: 2 }),
 				],
 				nowSeconds: NOW,
 			}),

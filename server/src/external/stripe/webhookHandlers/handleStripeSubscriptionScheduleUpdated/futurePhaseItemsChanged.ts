@@ -11,7 +11,8 @@ const itemShape = (phase: Stripe.SubscriptionSchedule.Phase) =>
 	);
 
 /** True when a phase that has not started yet changed price or quantity.
- * Phases pair by start date, so a reordered index is not an edit. */
+ * Phases pair by index (the caller has ruled out a phase count change), so a
+ * phase moved to a new date with the same items is not an edit. */
 export const futurePhaseItemsChanged = ({
 	previousPhases,
 	currentPhases,
@@ -21,10 +22,8 @@ export const futurePhaseItemsChanged = ({
 	currentPhases: Stripe.SubscriptionSchedule.Phase[];
 	nowSeconds: number;
 }): boolean =>
-	currentPhases.some((phase) => {
+	currentPhases.some((phase, index) => {
 		if (phase.start_date <= nowSeconds) return false;
-		const previous = previousPhases.find(
-			(candidate) => candidate.start_date === phase.start_date,
-		);
+		const previous = previousPhases[index];
 		return !previous || itemShape(previous) !== itemShape(phase);
 	});
