@@ -886,6 +886,50 @@ describe("approval card", () => {
 		expect(json).not.toContain("Billing details");
 	});
 
+	test("shows every billing change even past the field cap", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "updateCustomer",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					billing_details: {
+						address: { line1: "1 Main St", country: "DE" },
+						tax_ids: {
+							add: [{ type: "eu_vat", value: "DE123456789" }],
+							remove: [{ type: "gb_vat", value: "GB123456789" }],
+						},
+						tax_exempt: "reverse",
+						invoice_settings: {
+							custom_fields: [
+								{ name: "PO Number", value: "PO-1" },
+								{ name: "Cost Center", value: "42" },
+								{ name: "Project", value: "Apollo" },
+							],
+						},
+					},
+				},
+			},
+		});
+
+		expect(JSON.stringify(card)).toContain(
+			'"label":"Project","value":"Apollo"',
+		);
+	});
+
+	test("ignores a __proto__ request key", () => {
+		const request = JSON.parse(
+			'{"customer_id":"cus_1","__proto__":"x","name":"Acme"}',
+		);
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "updateCustomer",
+			toolArgs: { request },
+		});
+
+		expect(JSON.stringify(card)).toContain('"label":"Name","value":"Acme"');
+	});
+
 	test("renders cleared billing details explicitly", () => {
 		const card = approvalCard({
 			id: "approval_1",

@@ -653,20 +653,17 @@ const compactValue = (value: unknown): string | null => {
 // show what's being written as label/value fields so the card is never empty.
 type RequestField = { label: string; value: string };
 
-/** Request keys whose nested value renders as several readable fields. */
-const REQUEST_FIELD_EXPANDERS: Record<
+/** Request keys whose nested value renders as several readable fields. Never capped:
+ * approvers must see every change they approve. */
+const REQUEST_FIELD_EXPANDERS = new Map<
 	string,
 	(value: unknown) => RequestField[]
-> = {
-	billing_details: billingDetailsFields,
-};
+>([["billing_details", billingDetailsFields]]);
 
 const isVisibleRequestKey = (key: string) =>
 	!HIDDEN_REQUEST_KEYS.has(key) && !key.startsWith("_");
 
-const requestValueFields = (key: string, value: unknown): RequestField[] => {
-	const expand = REQUEST_FIELD_EXPANDERS[key];
-	if (expand) return expand(value);
+const compactRequestField = (key: string, value: unknown): RequestField[] => {
 	const rendered = compactValue(value);
 	return rendered === null
 		? []
@@ -675,12 +672,19 @@ const requestValueFields = (key: string, value: unknown): RequestField[] => {
 
 const requestSummaryFields = (
 	toolArgs?: Record<string, unknown>,
-): FieldElement[] =>
-	Object.entries(toolRequestFromArgs(toolArgs) ?? {})
-		.filter(([key]) => isVisibleRequestKey(key))
-		.flatMap(([key, value]) => requestValueFields(key, value))
-		.slice(0, MAX_REQUEST_FIELDS)
-		.map((field) => Field(field));
+): FieldElement[] => {
+	const entries = Object.entries(toolRequestFromArgs(toolArgs) ?? {}).filter(
+		([key]) => isVisibleRequestKey(key),
+	);
+	const compactFields = entries
+		.filter(([key]) => !REQUEST_FIELD_EXPANDERS.has(key))
+		.flatMap(([key, value]) => compactRequestField(key, value))
+		.slice(0, MAX_REQUEST_FIELDS);
+	const expandedFields = entries.flatMap(
+		([key, value]) => REQUEST_FIELD_EXPANDERS.get(key)?.(value) ?? [],
+	);
+	return [...compactFields, ...expandedFields].map((field) => Field(field));
+};
 
 const catalogApprovalContext = (preview: unknown) => {
 	const payload = parsePreviewPayload(preview);
