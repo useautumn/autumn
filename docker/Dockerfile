@@ -49,6 +49,10 @@ COPY packages/edge-config/package.json packages/edge-config/
 COPY packages/postgres/package.json packages/postgres/
 COPY packages/dynamodb/package.json packages/dynamodb/
 COPY packages/catalog-lru/package.json packages/catalog-lru/
+COPY packages/auto-topup/package.json packages/auto-topup/
+COPY packages/sqs/package.json packages/sqs/
+COPY packages/cache/package.json packages/cache/
+COPY packages/encryption/package.json packages/encryption/
 COPY apps/balance-worker/package.json apps/balance-worker/
 COPY packages/env/package.json packages/env/
 COPY packages/gateway/package.json packages/gateway/
