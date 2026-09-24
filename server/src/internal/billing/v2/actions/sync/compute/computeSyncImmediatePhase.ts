@@ -13,6 +13,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/compute/computeCustomerLicenseQuantityChanges";
 import { applyScheduleTimingToCustomerProductPlan } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { resolveSyncExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveSyncExistingUsagesConfig";
+import { syncPlanRowQuantity } from "../utils/syncPlanRowQuantity";
 import { initImmediateSyncCustomerProduct } from "./initImmediateSyncCustomerProduct";
 
 type CustomerProductUpdate = NonNullable<
@@ -86,7 +87,13 @@ const computeStartingNowProductContexts = ({
 
 	for (const productContext of productContexts) {
 		const currentCustomerProduct = productContext.currentCustomerProduct;
-		if (currentCustomerProduct?.product_id === productContext.fullProduct.id) {
+		const samePlan =
+			currentCustomerProduct?.product_id === productContext.fullProduct.id;
+		const sameBaseQuantity =
+			(currentCustomerProduct?.quantity ?? 1) ===
+			syncPlanRowQuantity({ productContext });
+		// A base quantity change replaces the row; seat changes alone converge in place.
+		if (currentCustomerProduct && samePlan && sameBaseQuantity) {
 			const licenseQuantityChanges = computeCustomerLicenseQuantityChanges({
 				customerProduct: currentCustomerProduct,
 				customerLicenseQuantities: productContext.customerLicenseQuantities,

@@ -28,6 +28,7 @@ const create = ({
 	startsAt,
 	endedAt,
 	processorType,
+	quantity = 1,
 }: {
 	id?: string;
 	productId?: string;
@@ -42,6 +43,7 @@ const create = ({
 	startsAt?: number;
 	endedAt?: number | null;
 	processorType?: ProcessorType;
+	quantity?: number;
 }): FullCusProduct => ({
 	id,
 	internal_product_id: `internal_${productId}`,
@@ -66,7 +68,7 @@ const create = ({
 	subscription_ids: subscriptionIds,
 	scheduled_ids: [],
 	processor: processorType ? { type: processorType } : undefined,
-	quantity: 1,
+	quantity,
 	api_semver: null,
 	is_custom: false,
 	customer_prices: customerPrices,
