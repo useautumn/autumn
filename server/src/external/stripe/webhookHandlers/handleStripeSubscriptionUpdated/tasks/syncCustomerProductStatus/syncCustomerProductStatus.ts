@@ -1,4 +1,5 @@
 import {
+	ACTIVE_STATUSES,
 	AttachScenario,
 	type CollectionMethod,
 	CusProductStatus,
@@ -174,7 +175,7 @@ export const syncCustomerProductStatus = async ({
 			ctx,
 			cusProductId: customerProduct.id,
 			updates,
-			expectedStatus: customerProduct.status,
+			onlyIfStatusIn: ACTIVE_STATUSES,
 		});
 
 		trackCustomerProductUpdate({

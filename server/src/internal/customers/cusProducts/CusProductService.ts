@@ -478,13 +478,13 @@ export class CusProductService {
 		ctx,
 		cusProductId,
 		updates,
-		expectedStatus,
+		onlyIfStatusIn,
 	}: {
 		ctx: RepoContext;
 		cusProductId: string;
 		updates: Partial<InsertCustomerProduct>;
-		/** Only write if the row still has this status, so a stale read can't overwrite a newer change. */
-		expectedStatus?: CusProductStatus;
+		/** Skip rows another request has since moved out of these statuses, so a stale read can't revive them. */
+		onlyIfStatusIn?: CusProductStatus[];
 	}) {
 		const { db } = ctx;
 		const results = await db
@@ -493,8 +493,8 @@ export class CusProductService {
 			.where(
 				and(
 					eq(customerProducts.id, cusProductId),
-					expectedStatus
-						? eq(customerProducts.status, expectedStatus)
+					onlyIfStatusIn
+						? inArray(customerProducts.status, onlyIfStatusIn)
 						: undefined,
 				),
 			)
