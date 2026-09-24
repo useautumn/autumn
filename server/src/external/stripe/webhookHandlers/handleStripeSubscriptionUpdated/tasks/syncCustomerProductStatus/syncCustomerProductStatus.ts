@@ -175,7 +175,7 @@ export const syncCustomerProductStatus = async ({
 			ctx,
 			cusProductId: customerProduct.id,
 			updates,
-			onlyIfStatusIn: ACTIVE_STATUSES,
+			inStatuses: ACTIVE_STATUSES,
 		});
 		if (updatedRows.length === 0) continue;
 

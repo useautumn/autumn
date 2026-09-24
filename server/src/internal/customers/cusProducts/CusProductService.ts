@@ -478,13 +478,13 @@ export class CusProductService {
 		ctx,
 		cusProductId,
 		updates,
-		onlyIfStatusIn,
+		inStatuses,
 	}: {
 		ctx: RepoContext;
 		cusProductId: string;
 		updates: Partial<InsertCustomerProduct>;
 		/** Skip rows another request has since moved out of these statuses, so a stale read can't revive them. */
-		onlyIfStatusIn?: CusProductStatus[];
+		inStatuses?: CusProductStatus[];
 	}) {
 		const { db } = ctx;
 		const results = await db
@@ -493,9 +493,7 @@ export class CusProductService {
 			.where(
 				and(
 					eq(customerProducts.id, cusProductId),
-					onlyIfStatusIn
-						? inArray(customerProducts.status, onlyIfStatusIn)
-						: undefined,
+					inStatuses ? inArray(customerProducts.status, inStatuses) : undefined,
 				),
 			)
 			.returning({
