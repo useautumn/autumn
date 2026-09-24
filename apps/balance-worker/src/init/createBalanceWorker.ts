@@ -12,7 +12,6 @@ import { createWorkerPartitions } from "./construction/createWorkerPartitions.js
 import { startWorker } from "./lifecycle/startWorker.js";
 import { stopWorker } from "./lifecycle/stopWorker.js";
 import { resolveWorkerAddress } from "./resolveWorkerAddress.js";
-import { seedPartitionLoadFromCheckpoints } from "./seedPartitionLoad.js";
 import type {
 	BalanceWorker,
 	BalanceWorkerConfig,
@@ -58,19 +57,7 @@ export async function createBalanceWorker({
 	});
 	try {
 		// Every partition runtime records what it commits here; the consumer group reports it when it rejoins.
-		// Seeded from checkpoint sizes so the first assignment after a deploy already knows the heavy partitions.
 		const partitionLoad = createPartitionLoad({ now: Date.now });
-		await seedPartitionLoadFromCheckpoints({
-			ctx: {
-				source: dependencies.checkpointSource ?? resources.checkpoints?.source,
-				partitionLoad,
-				logger: dependencies.logger,
-			},
-			config: {
-				topic: env.BALANCE_WORKER_METERING_TOPIC,
-				partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
-			},
-		});
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
 				partitionLoad,

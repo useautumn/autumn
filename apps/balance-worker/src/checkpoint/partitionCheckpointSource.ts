@@ -11,16 +11,6 @@ export type PartitionCheckpointSource = {
 		partition: number;
 		signal: AbortSignal;
 	}): Promise<PartitionCheckpointV1 | null>;
-	/** The latest checkpoint's serialized size without loading it; null when the partition has none. */
-	size?({
-		topic,
-		partition,
-		signal,
-	}: {
-		topic: string;
-		partition: number;
-		signal: AbortSignal;
-	}): Promise<number | null>;
 };
 
 export class PartitionCheckpointSourceError extends Error {

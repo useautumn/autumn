@@ -12,7 +12,6 @@ import { isRetriableS3Error } from "./s3CheckpointErrors.js";
 import type {
 	S3CheckpointObject,
 	S3CheckpointObjectClient,
-	S3CheckpointObjectHead,
 } from "./s3CheckpointObjectClient.js";
 import {
 	assertCheckpointMatchesObject,
@@ -80,27 +79,5 @@ export const createS3PartitionCheckpointSource = ({
 			partition,
 		});
 		return checkpoint;
-	},
-	size: async ({ topic, partition, signal }) => {
-		const key = keyFor({ topic, partition });
-		assertS3CheckpointRequestNotAborted({ signal });
-		let head: S3CheckpointObjectHead | null;
-		try {
-			head = await client.head({ bucket, key, signal });
-		} catch (cause) {
-			assertS3CheckpointRequestNotAborted({ signal });
-			throw new PartitionCheckpointSourceError({
-				message: `Unable to read checkpoint size ${key}`,
-				retriable: isRetriableS3Error({ error: cause }),
-				cause,
-			});
-		}
-		if (!head) return null;
-		// The stored size is the uncompressed checkpoint; an object without readable metadata still has a length.
-		try {
-			return storedCheckpointMetadataOf({ object: head }).serializedBytes;
-		} catch {
-			return head.contentLength;
-		}
 	},
 });
