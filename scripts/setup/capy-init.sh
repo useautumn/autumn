@@ -99,10 +99,10 @@ log "pulling local service images"
   cd "$REPO_ROOT"
   COMPOSE_PROJECT_NAME=autumn-capy \
   DRAGONFLY_PORT=6379 \
-  ELASTICMQ_PORT=9324 \
+  FAKECLOUD_PORT=4566 \
   DYNAMODB_PORT=8000 \
     docker compose -f "$COMPOSE_FILE" pull \
-      dragonfly elasticmq dynamodb
+      dragonfly fakecloud dynamodb
 )
 
 docker compose -f "$TRIGGER_COMPOSE_FILE" config --images \
