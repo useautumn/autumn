@@ -5,7 +5,7 @@ import { SUBJECT_ROW_LIMITS } from "./subjectRowLimits.js";
 /**
  * Single-subject port of getFullSubjectRowsQuery, keeping only what the balance worker
  * holds for one subject: its products in the given statuses, their prices and entitlements,
- * live loose entitlements, unexpired rollovers, its usage-window counters, and the ids of its open locks. Customer-level rows
+ * live loose entitlements, unexpired rollovers, replaceables, its usage-window counters, and the ids of its open locks. Customer-level rows
  * when no entity is named, else the entity's own rows. Catalog rows come from getCatalogRows.
  * Expiry is evaluated at `asOfTimestampMs` so a replay sees the same rows as the original.
  */
@@ -165,6 +165,12 @@ export const subjectRowsSql = ({
 			AND (ro.expires_at IS NULL OR ro.expires_at > ${asOfTimestampMs})
 	),
 
+	subject_replaceables AS (
+		SELECT rep.*
+		FROM replaceables rep
+		WHERE rep.cus_ent_id IN (SELECT id FROM all_customer_entitlements)
+	),
+
 	subject_usage_windows AS (
 		SELECT uw.*
 		FROM usage_windows uw
@@ -202,6 +208,10 @@ export const subjectRowsSql = ({
 		),
 		'rollovers', COALESCE(
 			(SELECT json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST, ro.id) FROM subject_rollovers ro),
+			'[]'::json
+		),
+		'replaceables', COALESCE(
+			(SELECT json_agg(row_to_json(rep) ORDER BY rep.created_at ASC, rep.id) FROM subject_replaceables rep),
 			'[]'::json
 		),
 		'usage_windows', COALESCE(

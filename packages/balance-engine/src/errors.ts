@@ -57,6 +57,7 @@ export type UnsupportedCommandReason =
 	| "credit_rate_invalid"
 	| "entity_not_found"
 	| "feature_not_found"
+	| "paid_allocated_not_supported"
 	| "rate_card_on_unlimited_row"
 	| "rate_card_with_additional_balance"
 	| "subject_mismatch";

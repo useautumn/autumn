@@ -31,6 +31,7 @@ const emptyStateFor = ({
 		customerPrices: [],
 		customerEntitlements: [],
 		rollovers: [],
+		replaceables: [],
 		usageWindows: [],
 		openLocks: [],
 		pooledBalances: [],

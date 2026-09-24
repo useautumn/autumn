@@ -40,7 +40,7 @@ Key files:
   (`normalizedToFullSubject.ts:350`). Worker catalog has no free trials, field
   undefined. Affects `expand=subscriptions.plan` and
   `isCustomerProductRevertingTrial`.
-- [~] 8. (skipped, v1 allocated is deprecated) `replaceables` always `[]` (`workerStateToFullSubject.ts:25`). Renders
+- [x] 8. (needed after all: v1 allocated balances fold replaceables in; now a state table like rollovers, read by subjectRowsSql) `replaceables` always `[]` (`workerStateToFullSubject.ts:25`). Renders
   `unused: 0` for allocated v1 features (`balanceUtils.ts:81`).
 - [~] 9. (skipped, being deprecated; the worker path never aggregates) Entity aggregation for API < V2.4. Legacy computes
   `aggregated_customer_*` for customer subjects when `shouldAggregateEntityData`.

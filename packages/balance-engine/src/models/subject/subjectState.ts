@@ -8,6 +8,7 @@ import { workerCustomerProductSchema } from "./rows/workerCustomerProduct.js";
 import { workerEntitySchema } from "./rows/workerEntity.js";
 import { openLockSchema } from "./rows/workerLock.js";
 import { workerPooledBalanceSchema } from "./rows/workerPooledBalance.js";
+import { workerReplaceableSchema } from "./rows/workerReplaceable.js";
 import { workerRolloverSchema } from "./rows/workerRollover.js";
 import { workerUsageWindowSchema } from "./rows/workerUsageWindow.js";
 
@@ -22,6 +23,8 @@ export const subjectStateSchema = z
 		customerPrices: z.array(workerCustomerPriceSchema),
 		customerEntitlements: z.array(workerCustomerEntitlementSchema),
 		rollovers: z.array(workerRolloverSchema),
+		/** Read for `customers.get` only; states stored before replaceables were held have none. */
+		replaceables: z.array(workerReplaceableSchema).default([]),
 		usageWindows: z.array(workerUsageWindowSchema),
 		/** The customer's open locks, ids only; states stored before locks existed have none. */
 		openLocks: z.array(openLockSchema).default([]),

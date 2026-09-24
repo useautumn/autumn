@@ -57,7 +57,7 @@ function logRequestResult({
 			entity_id: command?.identity.entityId,
 		},
 		errorCode,
-		error,
+		error: error && loggedErrorOf({ error, statusCode }),
 		req: {
 			id: command?.requestId ?? requestLog.id,
 			method: context.req.method,
@@ -77,6 +77,18 @@ function logRequestResult({
 	if (statusCode >= 500) ctx.logger.error(event, message);
 	else if (statusCode >= 400) ctx.logger.warn(event, message);
 	else ctx.logger.info(event, message);
+}
+
+/** A 4xx is the caller's answer, not a fault: its name and message say everything, the stack is noise. */
+function loggedErrorOf({
+	error,
+	statusCode,
+}: {
+	error: Error;
+	statusCode: number;
+}): Error | { name: string; message: string } {
+	if (statusCode >= 500) return error;
+	return { name: error.name, message: error.message };
 }
 
 function shouldLogResponse(): boolean {

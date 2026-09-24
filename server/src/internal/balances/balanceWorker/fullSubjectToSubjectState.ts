@@ -132,6 +132,9 @@ export function fullSubjectToSubjectState({
 		rollovers: rows.customerEntitlements.flatMap(
 			(customerEntitlement) => customerEntitlement.rollovers,
 		),
+		replaceables: rows.customerEntitlements.flatMap(
+			(customerEntitlement) => customerEntitlement.replaceables,
+		),
 		usageWindows: (fullSubject.usage_windows ?? []).filter(
 			(usageWindow) => usageWindow.internal_entity_id == null,
 		),

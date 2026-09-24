@@ -460,3 +460,42 @@ describe("workerStateToFullSubject: free trials", () => {
 		]);
 	});
 });
+
+describe("workerStateToFullSubject: replaceables", () => {
+	test("a v1 allocated grant renders the replaceables the state holds for it; other rows carry none", () => {
+		const base = customerMemory({ customerProducts: [parent] });
+		const [grant] = base.customerEntitlements;
+		if (!grant) throw new Error("fixture has no grant");
+		const replaceable = {
+			id: "rep_1",
+			cus_ent_id: grant.id,
+			created_at: 1,
+			from_entity_id: null,
+			delete_next_cycle: false,
+		};
+		const state = {
+			...base,
+			replaceables: [
+				replaceable,
+				{ ...replaceable, id: "rep_other", cus_ent_id: "ce_other" },
+			],
+		};
+		const catalog = catalogRowsToCatalog({
+			rows: autumnBillingPlanToCatalogRows({
+				autumnBillingPlan: {
+					customerId: "cus_test",
+					insertCustomerProducts: [parent],
+				},
+			}),
+		});
+		const fullSubject = workerStateToFullSubject({
+			state,
+			catalog,
+			subscriptions: [],
+			invoices: [],
+		});
+		expect(
+			fullSubject.customer_products[0]?.customer_entitlements[0]?.replaceables,
+		).toEqual([replaceable]);
+	});
+});

@@ -57,6 +57,9 @@ const ownedRowsOf = ({
 		),
 		customerEntitlements,
 		rollovers: customerEntitlements.flatMap(({ rollovers }) => rollovers),
+		replaceables: customerEntitlements.flatMap(
+			({ replaceables }) => replaceables ?? [],
+		),
 		usageWindows: [],
 	};
 };

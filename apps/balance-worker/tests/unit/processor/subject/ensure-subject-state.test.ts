@@ -46,6 +46,7 @@ const emptyEnvelope: SubjectRowsEnvelope = {
 	customer_prices: [],
 	customer_entitlements: [],
 	rollovers: [],
+	replaceables: [],
 	usage_windows: [],
 	pooled_balances: [],
 	customer_licenses: [],

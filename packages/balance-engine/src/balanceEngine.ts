@@ -129,6 +129,7 @@ export type {
 } from "./models/subject/rows/workerLock.js";
 export type { WorkerPooledBalance } from "./models/subject/rows/workerPooledBalance.js";
 export type { WorkerPooledContribution } from "./models/subject/rows/workerPooledContribution.js";
+export type { WorkerReplaceable } from "./models/subject/rows/workerReplaceable.js";
 export type { WorkerRollover } from "./models/subject/rows/workerRollover.js";
 export type { WorkerUsageWindow } from "./models/subject/rows/workerUsageWindow.js";
 export type { SubjectState } from "./models/subject/subjectState.js";

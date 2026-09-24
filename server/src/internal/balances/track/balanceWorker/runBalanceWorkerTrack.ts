@@ -3,7 +3,6 @@ import {
 	BalanceWorkerClientError,
 } from "@autumn/balance-worker-client";
 import {
-	RecaseError,
 	RouteGroup,
 	type TrackParams,
 	type TrackResponseV3,
@@ -16,11 +15,14 @@ import {
 	type RunWithCustomer,
 	withCreateIfMissing,
 } from "@/internal/balanceWorker/subject/withCreateIfMissing.js";
+import { withPaidAllocatedFallback } from "@/internal/balanceWorker/subject/withPaidAllocatedFallback.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
+import { getTrackFeatureDeductions } from "../utils/getFeatureDeductions.js";
+import { runPostgresTrackV3 } from "../v3/runPostgresTrackV3.js";
 import {
-	type FeatureTrackReply,
-	trackRepliesToApiResponse,
+	type FeatureTrackOutcome,
+	trackOutcomesToApiResponse,
 } from "./balanceWorkerTrackReply.js";
 import {
 	trackedFeatureIdsOf,
@@ -29,75 +31,111 @@ import {
 
 type TrackClient = Pick<BalanceWorkerClient, "track">;
 
-const isDuplicateCommand = ({ cause }: { cause: unknown }): boolean =>
-	cause instanceof BalanceWorkerClientError &&
-	cause.workerCode === "DUPLICATE_COMMAND";
+type FeatureTrackScope = {
+	ctx: AutumnContext;
+	body: TrackParams;
+	client: TrackClient;
+	featureId: string;
+};
+
+const isDuplicateCommand = (error: unknown): boolean =>
+	error instanceof BalanceWorkerClientError &&
+	error.workerCode === "DUPLICATE_COMMAND";
 
 /** An event can map to features this customer does not hold; the legacy path deducts nothing for those. */
-const isFeatureNotHeld = ({ cause }: { cause: unknown }): boolean =>
-	cause instanceof BalanceWorkerClientError &&
-	cause.workerCode === "UNSUPPORTED_COMMAND" &&
-	cause.workerReason === "feature_not_found";
+const isFeatureNotHeld = (error: unknown): boolean =>
+	error instanceof BalanceWorkerClientError &&
+	error.workerCode === "UNSUPPORTED_COMMAND" &&
+	error.workerReason === "feature_not_found";
+
+/** One feature on exactly one engine: the worker, or Postgres when the worker refuses a v1 paid allocated grant. */
+const trackFeature = ({
+	ctx,
+	body,
+	client,
+	featureId,
+}: FeatureTrackScope): Promise<FeatureTrackOutcome> =>
+	withPaidAllocatedFallback<FeatureTrackOutcome>({
+		ctx,
+		customerId: body.customer_id,
+		entityId: body.entity_id,
+		worker: async () => {
+			const reply = await client.track({
+				command: trackParamsToTrackCommand({
+					ctx,
+					body: { ...body, feature_id: featureId },
+					isFanOut: !body.feature_id,
+				}),
+			});
+			return { engine: "worker", featureId, reply };
+		},
+		// The lane legacy defers to as well: it locks the customer, deducts and invoices.
+		postgres: async ({ fullSubject }) => {
+			const response = await runPostgresTrackV3({
+				ctx,
+				fullSubject,
+				body: { ...body, feature_id: featureId },
+				featureDeductions: getTrackFeatureDeductions({
+					ctx,
+					featureId,
+					lock: body.lock,
+					value: body.value,
+				}),
+			});
+			return {
+				engine: "postgres",
+				featureId,
+				response,
+				customer: fullSubject.customer,
+			};
+		},
+	});
 
 /**
- * One worker track per feature, in order. Features the customer lacks, or already applied under this
- * idempotency key, are skipped so a retry finishes a partial run; with nothing applied the skip reason is thrown.
+ * One track per feature, in order. On a fan-out, features the customer lacks or already applied under
+ * this idempotency key are skipped so a retry finishes a partial run; with nothing applied, a duplicate
+ * outranks a feature the customer lacks as the reason the caller hears. Every other error is the API's.
  */
 const trackEachFeature = async ({
 	ctx,
 	body,
 	client,
-	featureIds,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	client: TrackClient;
-	featureIds: string[];
-}): Promise<FeatureTrackReply[]> => {
+}): Promise<FeatureTrackOutcome[]> => {
 	const isFanOut = !body.feature_id;
-	const replies: FeatureTrackReply[] = [];
-	let skipped: unknown;
-	for (const featureId of featureIds) {
+	const outcomes: FeatureTrackOutcome[] = [];
+	const skipped: unknown[] = [];
+	for (const featureId of trackedFeatureIdsOf({ ctx, body })) {
 		try {
-			const reply = await client.track({
-				command: trackParamsToTrackCommand({
-					ctx,
-					body: { ...body, feature_id: featureId },
-					isFanOut,
-				}),
-			});
-			replies.push({ featureId, reply });
-		} catch (cause) {
-			const isSkippable =
-				isDuplicateCommand({ cause }) || isFeatureNotHeld({ cause });
-			if (!isFanOut || !isSkippable) throw cause;
-			// A duplicate outranks a feature the customer lacks: it is what the caller must hear about.
-			if (!skipped || isDuplicateCommand({ cause })) skipped = cause;
+			outcomes.push(await trackFeature({ ctx, body, client, featureId }));
+		} catch (error) {
+			const isSkippable = isDuplicateCommand(error) || isFeatureNotHeld(error);
+			if (!isFanOut || !isSkippable)
+				rethrowBalanceWorkerError({ cause: error });
+			skipped.push(error);
 		}
 	}
-	if (replies.length === 0) throw skipped;
-	return replies;
+	if (outcomes.length === 0)
+		rethrowBalanceWorkerError({
+			cause: skipped.find(isDuplicateCommand) ?? skipped[0],
+		});
+	return outcomes;
 };
 
-const trackOnWorker = async ({
-	ctx,
-	body,
-	client,
+/** The customer row the first outcome was decided against, for `customer_data` to apply to. */
+const customerOf = ({
+	outcomes,
 }: {
-	ctx: AutumnContext;
-	body: TrackParams;
-	client: TrackClient;
-}): Promise<RunWithCustomer<TrackResponseV3>> => {
-	const featureIds = trackedFeatureIdsOf({ ctx, body });
-	try {
-		const replies = await trackEachFeature({ ctx, body, client, featureIds });
-		return {
-			result: trackRepliesToApiResponse({ ctx, body, replies }),
-			customer: replies[0]?.reply.state.customer ?? null,
-		};
-	} catch (cause) {
-		rethrowBalanceWorkerError({ cause });
-	}
+	outcomes: FeatureTrackOutcome[];
+}): RunWithCustomer<never>["customer"] => {
+	const [first] = outcomes;
+	if (!first) return null;
+	return first.engine === "worker"
+		? first.reply.state.customer
+		: first.customer;
 };
 
 export async function runBalanceWorkerTrack({
@@ -124,7 +162,13 @@ export async function runBalanceWorkerTrack({
 				customerData: body.customer_data,
 				entityId: body.entity_id,
 				entityData: body.entity_data,
-				run: () => trackOnWorker({ ctx, body, client }),
+				run: async () => {
+					const outcomes = await trackEachFeature({ ctx, body, client });
+					return {
+						result: trackOutcomesToApiResponse({ ctx, body, outcomes }),
+						customer: customerOf({ outcomes }),
+					};
+				},
 			}),
 	});
 }

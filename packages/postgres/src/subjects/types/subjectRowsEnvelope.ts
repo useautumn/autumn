@@ -6,6 +6,7 @@ import {
 	CustomerSchema,
 	EntitySchema,
 	PooledBalanceSchema,
+	ReplaceableSchema,
 	RolloverSchema,
 	UsageWindowSchema,
 } from "@autumn/shared";
@@ -19,6 +20,8 @@ export const subjectRowsEnvelopeSchema = z.object({
 	customer_prices: z.array(CustomerPriceSchema),
 	customer_entitlements: z.array(CustomerEntitlementSchema),
 	rollovers: z.array(RolloverSchema),
+	/** A v1 allocated grant's replaceable seats; `customers.get` folds their count into the balance. */
+	replaceables: z.array(ReplaceableSchema),
 	usage_windows: z.array(UsageWindowSchema),
 	/** The pools behind the pooled rows above. */
 	pooled_balances: z.array(PooledBalanceSchema),

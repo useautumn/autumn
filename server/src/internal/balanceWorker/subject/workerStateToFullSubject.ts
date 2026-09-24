@@ -39,13 +39,6 @@ const isLiveLooseEntitlement = ({
 	customerEntitlement.next_reset_at != null ||
 	customerEntitlement.entitlement.feature.type === FeatureType.Boolean;
 
-/** The worker holds no replaceables; the shared shape wants the list. */
-const withReplaceables = ({
-	customerEntitlement,
-}: {
-	customerEntitlement: WorkerFullCustomerEntitlement;
-}) => ({ ...customerEntitlement, replaceables: [] });
-
 /** The Postgres read drops expired rollovers once, at hydration; a resident row must drop them by the clock at read. */
 const withoutExpiredRollovers = ({
 	customerEntitlement,
@@ -60,17 +53,6 @@ const withoutExpiredRollovers = ({
 	),
 });
 
-const toRenderedCustomerEntitlement = ({
-	customerEntitlement,
-	now,
-}: {
-	customerEntitlement: WorkerFullCustomerEntitlement;
-	now: number;
-}) =>
-	withReplaceables({
-		customerEntitlement: withoutExpiredRollovers({ customerEntitlement, now }),
-	});
-
 const toFullCustomerEntitlement = ({
 	customerEntitlement,
 	now,
@@ -79,7 +61,7 @@ const toFullCustomerEntitlement = ({
 	now: number;
 }): FullCustomerEntitlement =>
 	FullCustomerEntitlementSchema.parse(
-		toRenderedCustomerEntitlement({ customerEntitlement, now }),
+		withoutExpiredRollovers({ customerEntitlement, now }),
 	);
 
 /** A product's license pools as the worker holds them, each with its definition; a removed link keeps planLicense null. */
@@ -287,7 +269,7 @@ export const workerStateToFullSubject = ({
 							isRendered(customerEntitlement),
 					)
 					.map((customerEntitlement) =>
-						toRenderedCustomerEntitlement({ customerEntitlement, now }),
+						withoutExpiredRollovers({ customerEntitlement, now }),
 					),
 				customer_licenses: customerLicensesOf({
 					state,

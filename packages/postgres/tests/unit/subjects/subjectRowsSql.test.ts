@@ -180,5 +180,8 @@ describe("subjectRowsSql: limits", () => {
 		expect(sql).toContain(
 			"WHERE cpr.customer_product_id IN (SELECT id FROM subject_customer_products)",
 		);
+		expect(sql).toContain(
+			"WHERE rep.cus_ent_id IN (SELECT id FROM all_customer_entitlements)",
+		);
 	});
 });
