@@ -6,7 +6,8 @@ export type AutoSyncRejectionReason =
 	| "plan_warnings"
 	| "base_price_unresolvable"
 	| "custom_feature_price"
-	| "base_quantity_gt_one";
+	| "base_quantity_gt_one"
+	| "future_phase_edited";
 
 export type AutoSyncEligibility =
 	| { eligible: true }

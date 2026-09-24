@@ -25,7 +25,11 @@ export const logAutoSyncSkip = ({
 	details,
 }: {
 	logger: SkipLogger;
-	source: "sub.created" | "sub.updated" | "customer.create";
+	source:
+		| "sub.created"
+		| "sub.updated"
+		| "customer.create"
+		| "schedule.updated";
 	stripeSubscriptionId: string | null;
 	stripeScheduleId?: string | null;
 	reason: AutoSyncSkipReason;
