@@ -160,12 +160,18 @@ const rowsOwnedBy = ({
 	const replaceables = state.replaceables.filter((replaceable) =>
 		entitlementIds.has(replaceable.cus_ent_id),
 	);
+	// A window counts for its own entity or for the customer; left out of the split, both parts
+	// kept every window and each merge doubled them, so a windowed entity's state grew by 2^writes.
+	const usageWindows = state.usageWindows.filter(
+		(row) => (row.internal_entity_id ?? null) === internalEntityId,
+	);
 	return {
 		customerProducts,
 		customerPrices,
 		customerEntitlements,
 		rollovers,
 		replaceables,
+		usageWindows,
 	};
 };
 
