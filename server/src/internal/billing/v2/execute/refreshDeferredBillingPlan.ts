@@ -2,6 +2,7 @@ import type {
 	AutumnBillingPlan,
 	BillingContext,
 	BillingPlan,
+	CustomerProductUpdate,
 	FullCustomer,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
@@ -19,18 +20,24 @@ const toLiveAutumnBillingPlan = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	fullCustomer: FullCustomer;
 }): AutumnBillingPlan => {
-	const { updateCustomerProduct, updateCustomerProducts } = autumnBillingPlan;
+	const {
+		updateCustomerProduct,
+		updateCustomerProducts,
+		insertCustomerProducts,
+	} = autumnBillingPlan;
+	const toLive = (update: CustomerProductUpdate) =>
+		toLiveCustomerProductUpdate({
+			update,
+			fullCustomer,
+			insertCustomerProducts,
+		});
 
 	return {
 		...autumnBillingPlan,
 		updateCustomerProduct:
-			updateCustomerProduct &&
-			toLiveCustomerProductUpdate({
-				update: updateCustomerProduct,
-				fullCustomer,
-			}),
+			updateCustomerProduct && toLive(updateCustomerProduct),
 		updateCustomerProducts: updateCustomerProducts?.flatMap(
-			(update) => toLiveCustomerProductUpdate({ update, fullCustomer }) ?? [],
+			(update) => toLive(update) ?? [],
 		),
 	};
 };

@@ -6,13 +6,30 @@ import {
 	findMainActiveCustomerProductByGroup,
 } from "@autumn/shared";
 
-/** The row now holding a replaced plan's place: the same product, else a main plan's group successor. */
+/** Only a plan this billing plan replaces with a new main plan in its group may move to a successor. */
+const isReplacedByIncomingPlan = ({
+	customerProduct,
+	insertCustomerProducts,
+}: {
+	customerProduct: FullCusProduct;
+	insertCustomerProducts: FullCusProduct[];
+}) =>
+	!customerProduct.product.is_add_on &&
+	insertCustomerProducts.some(
+		(incoming) =>
+			!incoming.product.is_add_on &&
+			incoming.product.group === customerProduct.product.group,
+	);
+
+/** The row now holding a replaced plan's place: the same product, else a replaced plan's group successor. */
 const findReplacementCustomerProduct = ({
 	customerProduct,
 	fullCustomer,
+	insertCustomerProducts,
 }: {
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
+	insertCustomerProducts: FullCusProduct[];
 }) => {
 	const internalEntityId = customerProduct.internal_entity_id ?? undefined;
 
@@ -21,7 +38,12 @@ const findReplacementCustomerProduct = ({
 		productId: customerProduct.product.id,
 		internalEntityId,
 	});
-	if (sameProduct || customerProduct.product.is_add_on) return sameProduct;
+	if (
+		sameProduct ||
+		!isReplacedByIncomingPlan({ customerProduct, insertCustomerProducts })
+	) {
+		return sameProduct;
+	}
 
 	return findMainActiveCustomerProductByGroup({
 		fullCus: fullCustomer,
@@ -34,9 +56,11 @@ const findReplacementCustomerProduct = ({
 export const toLiveCustomerProductUpdate = ({
 	update,
 	fullCustomer,
+	insertCustomerProducts,
 }: {
 	update: CustomerProductUpdate;
 	fullCustomer: FullCustomer;
+	insertCustomerProducts: FullCusProduct[];
 }): CustomerProductUpdate | undefined => {
 	const isStillLive = fullCustomer.customer_products.some(
 		(customerProduct) => customerProduct.id === update.customerProduct.id,
@@ -46,6 +70,7 @@ export const toLiveCustomerProductUpdate = ({
 	const liveCustomerProduct = findReplacementCustomerProduct({
 		customerProduct: update.customerProduct,
 		fullCustomer,
+		insertCustomerProducts,
 	});
 	if (!liveCustomerProduct) return undefined;
 
