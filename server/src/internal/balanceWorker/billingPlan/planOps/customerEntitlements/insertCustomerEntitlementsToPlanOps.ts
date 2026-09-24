@@ -22,15 +22,21 @@ const withTableDefaults = (row: InsertCustomerEntitlement) => ({
 	external_id: row.external_id ?? null,
 });
 
-/** Loose grants the plan adds beside any product, such as an expiring top-up. */
+/** Loose grants the plan adds beside any product. A top-up's expiring grant starts at 0: the worker credits it the live remainder. */
 export const insertCustomerEntitlementsToPlanOps = ({
 	autumnBillingPlan,
 }: {
 	autumnBillingPlan: AutumnBillingPlan;
-}): BillingPlanOp[] =>
-	(autumnBillingPlan.insertCustomerEntitlements ?? []).map((row) =>
+}): BillingPlanOp[] => {
+	const creditedId =
+		autumnBillingPlan.autoTopupRebalance?.creditedCustomerEntitlementId;
+	return (autumnBillingPlan.insertCustomerEntitlements ?? []).map((row) =>
 		toBillingPlanInsertOp({
 			table: "customerEntitlements",
-			row: withTableDefaults(row),
+			row: {
+				...withTableDefaults(row),
+				...(row.id === creditedId ? { balance: 0 } : {}),
+			},
 		}),
 	);
+};

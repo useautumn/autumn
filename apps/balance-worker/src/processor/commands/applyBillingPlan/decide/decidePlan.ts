@@ -13,6 +13,7 @@ import { SubjectStaleError } from "../../../subject/subjectErrors.js";
 import type { PartitionProcessorScope } from "../../../types/partitionProcessor.js";
 import type { MutationResult } from "../../../writer/types/mutation.js";
 import { readEntityParts } from "./readEntityParts.js";
+import { readPlanCatalog } from "./readPlanCatalog.js";
 
 /** Runs inside the writer's critical section: no await, no I/O. */
 const decideApplyBillingPlan = ({
@@ -60,6 +61,7 @@ const decideApplyBillingPlan = ({
 		command,
 		customer: state,
 		entityParts: parts,
+		catalog: readPlanCatalog({ scope, command, customer: state, parts }),
 	});
 	return {
 		kind: "write",

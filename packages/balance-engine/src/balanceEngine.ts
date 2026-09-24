@@ -17,6 +17,7 @@ export {
 	toBillingPlanIncrementOp,
 	toBillingPlanInsertOp,
 	toBillingPlanMoveEntriesOp,
+	toBillingPlanRebalanceOp,
 	toBillingPlanUpdateOp,
 } from "./commands/applyBillingPlan/toBillingPlanOp.js";
 export type { ApplyBillingPlanCommand } from "./commands/applyBillingPlan/types/applyBillingPlanCommand.js";
@@ -56,6 +57,12 @@ export type {
 	TrackLock,
 } from "./commands/track/types/trackCommand.js";
 export type { TrackResult } from "./commands/track/types/trackResult.js";
+export { rebalance } from "./common/rebalance/rebalance.js";
+export type {
+	RebalanceDelta,
+	RebalanceOutcome,
+} from "./common/rebalance/types/rebalanceOutcome.js";
+export type { RebalanceRequest } from "./common/rebalance/types/rebalanceRequest.js";
 // deduction
 export { deduct } from "./deduction/deduct.js";
 export type { DeductionContext } from "./deduction/types/deductionContext.js";
@@ -169,6 +176,7 @@ export {
 	catalogKeyToString,
 	catalogRowsToCatalog,
 	catalogRowToCatalogKey,
+	mergeCatalogs,
 	planLicensesToItemCatalogKeys,
 	subjectStateToCatalogKeys,
 	subjectStateToFreeTrialCatalogKeys,

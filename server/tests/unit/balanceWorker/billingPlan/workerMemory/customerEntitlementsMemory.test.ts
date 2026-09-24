@@ -27,14 +27,6 @@ const updatesOnA = (updates: GrantUpdate[]) =>
 		...update,
 	}));
 
-const deltas = (entries: { grantId: string; delta: number }[]) => ({
-	deltas: entries.map(({ grantId, delta }) => ({
-		cusEntId: grantId,
-		featureId: "messages",
-		delta,
-	})),
-});
-
 const grantIn = ({
 	customer,
 	id,
@@ -72,22 +64,6 @@ describe("grant facets in worker memory", () => {
 			memory: memory(),
 		});
 		expect(grantIn({ customer, id: "grant_cp_a" }).balance).toBe(70);
-	});
-
-	test("auto top-up deltas are not the worker's yet: they leave its memory untouched", async () => {
-		const { customer, mutation } = await applyPlanToWorkerMemory({
-			autumnBillingPlan: planOf({
-				updateCustomerEntitlements: updatesOnA([{ balanceChange: 1 }]),
-				autoTopupRebalance: deltas([
-					{ grantId: "grant_cp_a", delta: 40 },
-					{ grantId: "grant_cp_b", delta: -15 },
-				]),
-			}),
-			memory: memory(),
-		});
-		expect(grantIn({ customer, id: "grant_cp_a" }).balance).toBe(101);
-		expect(grantIn({ customer, id: "grant_cp_b" }).balance).toBe(100);
-		expect(mutation?.changes).toHaveLength(1);
 	});
 
 	test("a loose grant is held beside the products, with the table's defaults", async () => {

@@ -45,6 +45,7 @@ export class CatalogRowMissingError extends Error {
 
 export type UnsupportedCommandReason =
 	| "billing_plan_needs_postgres_store"
+	| "billing_plan_rebalance_needs_catalog"
 	| "billing_plan_row_owner_not_named"
 	| "credit_rate_invalid"
 	| "entity_not_found"

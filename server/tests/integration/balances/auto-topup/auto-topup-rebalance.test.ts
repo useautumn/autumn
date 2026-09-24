@@ -1,4 +1,4 @@
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { setCustomerOverageAllowed } from "@tests/integration/balances/utils/overage-allowed-utils/customerOverageAllowedUtils.js";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -14,6 +14,21 @@ import { makeAutoTopupConfig } from "./utils/makeAutoTopupConfig.js";
 
 /** Wait time for SQS auto top-up processing */
 const AUTO_TOPUP_WAIT_MS = 40000;
+
+/** One plan's balance, so paydown is checked per cusEnt rather than only in total. */
+const planBalanceOf = ({
+	customer,
+	planId,
+}: {
+	customer: ApiCustomerV5;
+	planId: string;
+}) => {
+	const breakdown = customer.balances[TestFeature.Messages].breakdown?.find(
+		(item) => item.plan_id === planId,
+	);
+	expect(breakdown).toBeDefined();
+	return breakdown!;
+};
 
 /**
  * ATU Rebalance: verifies that auto top-up quantities first pay down existing overage
@@ -107,6 +122,13 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			remaining: 100,
 		});
+		// Base paid down exactly to 0 (usage = its full 1000), the rest on the add-on.
+		expect(
+			planBalanceOf({ customer: after, planId: baseProd.id }),
+		).toMatchObject({ remaining: 0, usage: 1000 });
+		expect(
+			planBalanceOf({ customer: after, planId: oneOffProd.id }).remaining,
+		).toBe(100);
 
 		// Invoice: 600 credits / 100 billing_units = 6 packs × $10 = $60.
 		await expectCustomerInvoiceCorrect({
@@ -181,6 +203,12 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			remaining: 900,
 		});
+		expect(
+			planBalanceOf({ customer: after, planId: baseProd.id }).remaining,
+		).toBe(200);
+		expect(
+			planBalanceOf({ customer: after, planId: oneOffProd.id }).remaining,
+		).toBe(700);
 
 		// Invoice: 600 credits = 6 packs × $10 = $60. Plus the attach invoice for 1 pack = $10.
 		await expectCustomerInvoiceCorrect({
@@ -263,6 +291,13 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			remaining: 0,
 		});
+		// Usage tells -400 (1400 used) from an unpaid -1000 (2000 used).
+		expect(planBalanceOf({ customer: after, planId: baseProd.id }).usage).toBe(
+			1400,
+		);
+		expect(
+			planBalanceOf({ customer: after, planId: oneOffProd.id }).remaining,
+		).toBe(0);
 
 		// Invoice still charged full 600 (6 packs × $10 = $60).
 		await expectCustomerInvoiceCorrect({

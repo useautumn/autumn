@@ -137,3 +137,26 @@ export const catalogRowsToCatalog = ({
 	}
 	return parseCatalog({ input: catalog });
 };
+
+/** One catalog holding every row of each; a row both hold is the same row. */
+export const mergeCatalogs = ({
+	catalogs,
+}: {
+	catalogs: Catalog[];
+}): Catalog => ({
+	entitlements: Object.assign(
+		{},
+		...catalogs.map((catalog) => catalog.entitlements),
+	),
+	products: Object.assign({}, ...catalogs.map((catalog) => catalog.products)),
+	features: Object.assign({}, ...catalogs.map((catalog) => catalog.features)),
+	prices: Object.assign({}, ...catalogs.map((catalog) => catalog.prices)),
+	planLicenses: Object.assign(
+		{},
+		...catalogs.map((catalog) => catalog.planLicenses),
+	),
+	freeTrials: Object.assign(
+		{},
+		...catalogs.map((catalog) => catalog.freeTrials),
+	),
+});

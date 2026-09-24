@@ -11,7 +11,6 @@ import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBilling
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan.js";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult.js";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan.js";
-import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
 import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct.js";
 import type { AutoTopupContext } from "./autoTopupContext.js";
 import { computeAutoTopupPlan } from "./compute/computeAutoTopupPlan.js";
@@ -185,9 +184,6 @@ export const autoTopup = async ({
 				updates: customerProductUpdate.updates,
 			});
 		}
-
-		// The plan wrote the new balance past the worker and only patched the legacy cache: evict both, so the next read is the top-up.
-		await invalidateCachedFullSubject({ ctx, customerId });
 
 		await sendAutoTopupSucceededWebhook({
 			ctx,

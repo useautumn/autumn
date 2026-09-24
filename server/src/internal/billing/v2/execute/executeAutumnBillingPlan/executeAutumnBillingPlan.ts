@@ -38,8 +38,10 @@ export const executeAutumnBillingPlan = async ({
 			internalCustomerId: written.internalCustomerId,
 		};
 
-	// 3. Balance moves the worker does not apply yet
-	await applyPlanRebalances({ ctx, autumnBillingPlan });
+	// 3. Purchases, when the worker did not size them with the rows. Temporary: its Redis patch can't run inside
+	// the Postgres transaction; remove with the Postgres write path (and `rebalancesApplied` with it).
+	if (!written.rebalancesApplied)
+		await applyPlanRebalances({ ctx, autumnBillingPlan });
 
 	// 4. Side effects
 	await runPlanSideEffects({

@@ -55,6 +55,15 @@ const attachedAt = (row: {
 	customer_product: AutoTopupCustomerProduct;
 }): number => row.customer_product.created_at ?? 0;
 
+/** Attaches at the same instant (a frozen test clock) order by id: a KSUID leads with its creation second. */
+const attachedLater = ({
+	left,
+	right,
+}: {
+	left: { customer_product: AutoTopupCustomerProduct };
+	right: { customer_product: AutoTopupCustomerProduct };
+}): number => right.customer_product.id.localeCompare(left.customer_product.id);
+
 /** The enabled config and the one-off prepaid row its top-up charges through; null when either is missing. */
 export const subjectToAutoTopupObjects = <
 	CE extends AutoTopupCustomerEntitlement,
@@ -112,7 +121,8 @@ export const subjectToAutoTopupObjects = <
 		: candidates.sort(
 				(left, right) =>
 					chargeSourceRank(left) - chargeSourceRank(right) ||
-					attachedAt(right) - attachedAt(left),
+					attachedAt(right) - attachedAt(left) ||
+					attachedLater({ left, right }),
 			)[0];
 	if (!customerEntitlement) return null;
 

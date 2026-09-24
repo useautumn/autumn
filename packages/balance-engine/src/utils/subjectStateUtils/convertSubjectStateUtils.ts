@@ -121,7 +121,7 @@ export const customerRowsToSubjectState = ({
 	});
 
 /** A grant's owner is its own `internal_entity_id`, else its product's: an entity plan's grants carry none of their own. */
-const grantOwnerOf = ({
+export const grantOwnerOf = ({
 	state,
 	row,
 }: {

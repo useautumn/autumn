@@ -116,3 +116,24 @@ export const toBillingPlanIncrementOp = ({
 		add: definedColumns(add),
 		...(addEntries ? { addEntries } : {}),
 	});
+
+/** A purchase the worker sizes against the rows the plan leaves: pay rows in overage down to 0, credit the rest. */
+export const toBillingPlanRebalanceOp = ({
+	id,
+	featureId,
+	quantity,
+	creditedId,
+}: {
+	id: string;
+	featureId: string;
+	quantity: number;
+	creditedId: string | null;
+}): BillingPlanOp =>
+	billingPlanOpSchema.parse({
+		op: "rebalance",
+		table: "customerEntitlements",
+		id,
+		featureId,
+		quantity,
+		creditedId,
+	});

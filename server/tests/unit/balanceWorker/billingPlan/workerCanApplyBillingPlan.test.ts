@@ -46,6 +46,34 @@ describe("workerCanApplyBillingPlan", () => {
 		).toBe(true);
 	});
 
+	test("a top-up goes to the worker only when it names its purchase", () => {
+		const deltas = [
+			{ cusEntId: "cus_ent_1", featureId: "messages", delta: 50 },
+		];
+		expect(
+			workerCanApplyBillingPlan({
+				autumnBillingPlan: {
+					...linkBackPlan(),
+					autoTopupRebalance: { deltas },
+				},
+			}),
+		).toBe(false);
+		expect(
+			workerCanApplyBillingPlan({
+				autumnBillingPlan: {
+					...linkBackPlan(),
+					autoTopupRebalance: {
+						deltas,
+						customerEntitlementId: "cus_ent_1",
+						featureId: "messages",
+						quantity: 50,
+						creditedCustomerEntitlementId: "cus_ent_1",
+					},
+				},
+			}),
+		).toBe(true);
+	});
+
 	test("a plan must name exactly one customer, by its id", () => {
 		expect(
 			workerCanApplyBillingPlan({

@@ -1,3 +1,4 @@
+import type { Catalog } from "../../models/catalog/catalog.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerEntity } from "../../models/subject/rows/workerEntity.js";
 import type { SubjectState } from "../../models/subject/subjectState.js";
@@ -44,12 +45,15 @@ export const applyBillingPlanToSubjects = ({
 	command,
 	customer,
 	entityParts,
+	catalog,
 }: {
 	command: ApplyBillingPlanCommand;
 	/** Null when the plan creates the customer. */
 	customer: SubjectState | null;
 	/** The named entities that already exist; the ones the plan creates are added here. */
 	entityParts: readonly BillingPlanEntityPart[];
+	/** The rows the plan's state and inserts join to; a rebalance reads them. */
+	catalog?: Catalog;
 }): {
 	mutation: SubjectStateMutation;
 	nextState: SubjectState;
@@ -64,7 +68,12 @@ export const applyBillingPlanToSubjects = ({
 				entities: parts.map(({ state }) => state),
 			})
 		: null;
-	const mutation = computeApplyBillingPlan({ command, state: view, entities });
+	const mutation = computeApplyBillingPlan({
+		command,
+		state: view,
+		entities,
+		catalog,
+	});
 	const nextState = applyMutation({ state: view, mutation });
 	const owners = splitCustomerAndEntities({ state: nextState, entities });
 	return {

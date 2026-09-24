@@ -486,4 +486,49 @@ describe("computeRebalancedAutoTopUp", () => {
 			{ cusEntId: prepaid.id, featureId: "messages", delta: 500 },
 		]);
 	});
+
+	test("11. only the purchased row's own customer or entity is paid down", () => {
+		const onEntity = (
+			customerEntitlement: FullCusEntWithFullCusProduct,
+			internalEntityId: string,
+		) =>
+			({
+				...customerEntitlement,
+				customer_product: {
+					...customerEntitlement.customer_product,
+					internal_entity_id: internalEntityId,
+				},
+			}) as FullCusEntWithFullCusProduct;
+		const prepaid = createCustomerEntitlement({ id: "prepaid", balance: 0 });
+		const customerOverage = createCustomerEntitlement({
+			id: "customer",
+			balance: -100,
+			usageAllowed: true,
+		});
+		const entityOverage = onEntity(
+			createCustomerEntitlement({
+				id: "entity",
+				balance: -200,
+				usageAllowed: true,
+			}),
+			"internal-entity-1",
+		);
+		const fullCustomer = buildFullCustomer([
+			customerOverage,
+			entityOverage,
+			prepaid,
+		]);
+
+		expect(
+			computeRebalancedAutoTopUp({
+				fullCustomer,
+				featureId: "messages",
+				quantity: 600,
+				prepaidCustomerEntitlementId: prepaid.id,
+			}).deltas,
+		).toEqual([
+			{ cusEntId: customerOverage.id, featureId: "messages", delta: 100 },
+			{ cusEntId: prepaid.id, featureId: "messages", delta: 500 },
+		]);
+	});
 });
