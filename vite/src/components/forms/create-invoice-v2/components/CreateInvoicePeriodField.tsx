@@ -7,11 +7,15 @@ import {
 	PopoverTrigger,
 } from "@autumn/ui";
 import { XIcon } from "@phosphor-icons/react";
-import { endOfDay, format, startOfDay } from "date-fns";
+import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
+import {
+	calendarDaysToInvoicePeriod,
+	invoicePeriodToCalendarDays,
+} from "../utils/invoicePeriodDays";
 
 const RANGE_DATE_FORMAT = "MMM d, yyyy";
 
@@ -23,7 +27,7 @@ export function CreateInvoicePeriodField() {
 
 	const selectedRange =
 		periodStart !== null && periodEnd !== null
-			? { from: new Date(periodStart), to: new Date(periodEnd) }
+			? invoicePeriodToCalendarDays({ start: periodStart, end: periodEnd })
 			: undefined;
 
 	const setPeriod = ({
@@ -52,10 +56,9 @@ export function CreateInvoicePeriodField() {
 			return;
 		}
 
-		setPeriod({
-			start: startOfDay(pendingStart).getTime(),
-			end: endOfDay(clickedDay).getTime(),
-		});
+		setPeriod(
+			calendarDaysToInvoicePeriod({ from: pendingStart, to: clickedDay }),
+		);
 		handleOpenChange(false);
 	};
 
