@@ -133,6 +133,36 @@ test("a check above the threshold dispatches nothing", async () => {
 	expect(dispatched).toEqual([]);
 });
 
+test("a deducting check dispatches nothing from the server: its record reaches herald", async () => {
+	const { ctx, state, catalog } = topUpFixture({ balance: 0, threshold: 20 });
+	const client = clientAnswering({
+		state,
+		catalog,
+		fundingFeatureId: "messages",
+	});
+	await runBalanceWorkerCheck({
+		ctx,
+		body: { ...body, send_event: true },
+		client: {
+			...client,
+			track: async () => ({
+				result: {
+					status: "applied",
+					deltas: [],
+					deductions: [],
+					fundingFeatureId: "messages",
+					internalProductId: null,
+					fundingCreditCost: 1,
+				},
+				state,
+				catalog,
+			}),
+		} as never,
+	});
+	await flush();
+	expect(dispatched).toEqual([]);
+});
+
 test("a check on an unattached feature dispatches nothing", async () => {
 	const { ctx, state, catalog } = topUpFixture({ balance: 0, threshold: 20 });
 	await runBalanceWorkerCheck({

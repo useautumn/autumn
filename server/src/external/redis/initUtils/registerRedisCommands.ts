@@ -15,7 +15,6 @@ import {
 	UPDATE_CACHED_INVOICE_V2_SCRIPT,
 	UPDATE_CUSTOMER_DATA_V2_SCRIPT,
 	UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT,
-	UPDATE_ENTITY_DATA_V2_SCRIPT,
 	UPDATE_SUBJECT_BALANCES_SCRIPT,
 } from "../../../_luaScriptsV2/luaScriptsV2.js";
 
@@ -84,11 +83,6 @@ export const registerRedisCommands = ({
 	redisInstance.defineCommand("updateFullSubjectCustomerDataV2", {
 		numberOfKeys: 1,
 		lua: UPDATE_CUSTOMER_DATA_V2_SCRIPT,
-	});
-
-	redisInstance.defineCommand("updateFullSubjectEntityDataV2", {
-		numberOfKeys: 1,
-		lua: UPDATE_ENTITY_DATA_V2_SCRIPT,
 	});
 
 	redisInstance.defineCommand("getDelFullSubjectBalanceFields", {

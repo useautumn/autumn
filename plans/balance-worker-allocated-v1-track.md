@@ -100,7 +100,7 @@ Each is a thin end-to-end slice with a runnable test at the end.
 2. [x] **Whole matrix green.** The seven `allocated-invoice/` suites plus
    `event-fan-out` (new fixture features `EventSeats` and `EventActions` sharing
    "seat-event"). Revealed: the worker view needs replaceables for v1 allocated
-   balances; now read beside the state for continuous rows only. Harness fix:
+   balances; now a state table like rollovers, read by `subjectRowsSql`. Harness fix:
    `ensureV2Features` clears the org cache once Redis is ready, since the insert's
    own clear no-ops before that.
 3. [~] **Queued track.** Decided: no Postgres fallback. A queued paid allocated

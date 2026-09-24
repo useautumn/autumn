@@ -20,7 +20,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
 import { assertCustomerUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertCustomerUsageLimitAlertsResolvable";
 import { CusService } from "@/internal/customers/CusService";
-import { invalidateCachedFullSubject } from "../../cache/fullSubject/index.js";
 import { usageWindowRepo } from "../../usageWindows/repos/index.js";
 import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
 import { getUsageLimitConfigUpdate } from "./getUsageLimitConfigUpdate.js";
@@ -243,13 +242,6 @@ export const updateCustomer = async ({
 
 	ctx.skipCache = true;
 	const resolvedCustomerId = newCustomerId ?? customerId;
-	if (usageWindows.length > 0) {
-		await invalidateCachedFullSubject({
-			ctx,
-			customerId: resolvedCustomerId,
-			source: "updateCustomer:usage",
-		});
-	}
 
 	const apiCustomer = await getApiCustomerByRollout({
 		disableReplicaRead: true,
