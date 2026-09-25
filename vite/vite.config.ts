@@ -17,8 +17,15 @@ const vitePort = process.env.VITE_PORT
 	: 3000;
 const frontendUrl = process.env.VITE_FRONTEND_URL || "";
 const isCapyDev = process.env.CAPY_DEV === "1";
-if (isCapyDev) {
+// Serve the API through vite's dev proxy so the browser stays on one origin.
+// Capy sandboxes need it for their single public host; Tesser boxes need it
+// because the laptop proxy rewrites Origin to the upstream port, which breaks
+// cross-port CORS to :8080 (see scripts/tesser/dev.sh).
+const isSameOriginApi = isCapyDev || process.env.SAME_ORIGIN_API === "1";
+if (isSameOriginApi) {
 	process.env.VITE_BACKEND_URL = "/__autumn_api";
+}
+if (isCapyDev) {
 	process.env.VITE_CAPY_DEV = "1";
 }
 
@@ -159,7 +166,7 @@ export default defineConfig({
 			".ngrok.app",
 			".ngrok-free.app",
 		],
-		proxy: isCapyDev
+		proxy: isSameOriginApi
 			? {
 					"/__autumn_api": {
 						target: "http://127.0.0.1:8080",
@@ -170,21 +177,25 @@ export default defineConfig({
 						target: "http://127.0.0.1:8080",
 						changeOrigin: false,
 					},
-					"/o/oauth2": {
-						target: "http://127.0.0.1:4000",
-						changeOrigin: false,
-						configure: (proxy) => {
-							proxy.on("proxyRes", (response) => {
-								const location = response.headers.location;
-								if (!location) return;
-								response.headers.location = relativeRedirectLocation(location);
-							});
+					// Google OAuth emulator: Capy sandboxes only.
+					...(isCapyDev && {
+						"/o/oauth2": {
+							target: "http://127.0.0.1:4000",
+							changeOrigin: false,
+							configure: (proxy) => {
+								proxy.on("proxyRes", (response) => {
+									const location = response.headers.location;
+									if (!location) return;
+									response.headers.location =
+										relativeRedirectLocation(location);
+								});
+							},
 						},
-					},
-					"/_emulate": {
-						target: "http://127.0.0.1:4000",
-						changeOrigin: false,
-					},
+						"/_emulate": {
+							target: "http://127.0.0.1:4000",
+							changeOrigin: false,
+						},
+					}),
 				}
 			: undefined,
 		watch: {
