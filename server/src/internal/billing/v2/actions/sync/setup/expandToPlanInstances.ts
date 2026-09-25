@@ -6,7 +6,6 @@ import type {
 import { planExpandsByQuantity } from "../utils/planExpandsByQuantity";
 import { findLinkedPlanInstances } from "./findLinkedPlanInstances";
 
-/** The replaced row plus every other instance of its plan on the subscription. */
 const findOutgoingInstances = ({
 	fullCustomer,
 	currentCustomerProduct,
@@ -28,11 +27,6 @@ const findOutgoingInstances = ({
 	return [currentCustomerProduct, ...siblings];
 };
 
-/**
- * A plan with quantity N becomes N product contexts, one cusProduct per
- * instance. Each new row replaces one outgoing instance; outgoing instances
- * left over are superseded by the first, so a re-sync converges on N rows.
- */
 export const expandToPlanInstances = ({
 	fullCustomer,
 	productContext,

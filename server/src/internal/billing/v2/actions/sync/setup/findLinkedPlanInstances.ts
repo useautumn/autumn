@@ -1,6 +1,5 @@
 import { cp, type FullCusProduct, type FullCustomer } from "@autumn/shared";
 
-/** Active instances of a plan already linked to this Stripe subscription. */
 export const findLinkedPlanInstances = ({
 	fullCustomer,
 	productId,

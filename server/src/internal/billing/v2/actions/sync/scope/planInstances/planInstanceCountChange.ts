@@ -3,12 +3,6 @@ import type { MatchedPlan } from "../../detect/types";
 import { planExpandsByQuantity } from "../../utils/planExpandsByQuantity";
 import { linkedPlanInstances } from "./linkedPlanInstances";
 
-/**
- * The same plan at a different Stripe quantity, as the plan to sync. Missing
- * instances attach alongside the existing ones; a smaller quantity re-syncs
- * the whole group so surplus rows expire with their usage carried. Null when
- * the count already matches.
- */
 export const planInstanceCountChange = ({
 	linkedCustomerProducts,
 	linkedProduct,

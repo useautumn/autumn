@@ -5,10 +5,6 @@ import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { CusService } from "@/internal/customers/CusService";
 
-/**
- * Re-reads the customer until the plan has exactly `expected` rows per status
- * and at least `atLeast` rows per status, each at quantity 1.
- */
 export const expectPlanRowCounts = async ({
 	ctx,
 	customerId,
@@ -21,7 +17,6 @@ export const expectPlanRowCounts = async ({
 	customerId: string;
 	productId: string;
 	expected: Partial<Record<CusProductStatus, number>>;
-	/** Lower bounds, for rows whose exact count depends on import races. */
 	atLeast?: Partial<Record<CusProductStatus, number>>;
 	settleTimeoutMs?: number;
 }) =>

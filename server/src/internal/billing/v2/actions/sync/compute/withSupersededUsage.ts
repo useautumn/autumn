@@ -1,9 +1,5 @@
 import type { FullCusProduct } from "@autumn/shared";
 
-/**
- * The carry source for a replaced row that also supersedes other instances of
- * its plan: their entitlements join its own, so usage across all of them carries.
- */
 export const withSupersededUsage = ({
 	customerProduct,
 	supersededInstances = [],
