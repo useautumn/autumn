@@ -34,8 +34,10 @@ export const classifyStripeWebhookAckMode = ({
 		case "customer.updated":
 			return "sync";
 
-		// Deferred billing plan execution (invoice-mode checkout, 3DS completion).
-		case "invoice.paid": {
+		// Deferred billing plan execution (invoice-mode checkout, 3DS completion),
+		// or pending-plan expiry when a draft is deleted.
+		case "invoice.paid":
+		case "invoice.deleted": {
 			const invoice = event.data.object;
 			return invoice.metadata?.autumn_metadata_id ? "sync" : "early";
 		}

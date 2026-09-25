@@ -4,7 +4,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { executeDeferredBillingPlan } from "@/internal/billing/v2/execute/executeDeferredBillingPlan";
+import { executeClaimedDeferredInvoicePlan } from "@/internal/billing/v2/execute/executeClaimedDeferredInvoicePlan";
 import { isImmediateInvoiceMode } from "@/internal/billing/v2/utils/billingContext/isImmediateInvoiceMode";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
@@ -29,5 +29,5 @@ export const activatePendingPlanOnInvoiceFinalized = async ({
 		`[invoice.finalized] Activating pending plan for invoice ${stripeInvoice.id}`,
 	);
 
-	await executeDeferredBillingPlan({ ctx, metadata, stripeInvoice });
+	await executeClaimedDeferredInvoicePlan({ ctx, metadata, stripeInvoice });
 };

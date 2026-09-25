@@ -28,25 +28,35 @@ export interface SendInvoiceSubmitParams {
 	netTermsDays?: number;
 }
 
-const IMMEDIATE_ACTIVATION_DESCRIPTION =
+const CHECKOUT_IMMEDIATE_ACTIVATION_DESCRIPTION =
+	"Plan activates now, payment is collected separately.";
+
+const INVOICE_IMMEDIATE_ACTIVATION_DESCRIPTION =
 	"Plan activates once the invoice is finalized, payment is collected separately.";
 
-const DEFAULT_ACTIVATION_COPY = {
-	immediate: {
-		title: "Enable plan immediately",
-		description: IMMEDIATE_ACTIVATION_DESCRIPTION,
-	},
-	delayed: {
-		title: "Enable plan after payment",
-		description: "Plan activates only after the customer completes payment.",
-	},
-} as const;
+const getDefaultActivationCopy = (immediateDescription: string) =>
+	({
+		immediate: {
+			title: "Enable plan immediately",
+			description: immediateDescription,
+		},
+		delayed: {
+			title: "Enable plan after payment",
+			description: "Plan activates only after the customer completes payment.",
+		},
+	}) as const;
 
-const getScheduledActivationCopy = (scheduledStartDate: number) =>
+const getScheduledActivationCopy = ({
+	scheduledStartDate,
+	immediateDescription,
+}: {
+	scheduledStartDate: number;
+	immediateDescription: string;
+}) =>
 	({
 		immediate: {
 			title: "Enable Immediately",
-			description: IMMEDIATE_ACTIVATION_DESCRIPTION,
+			description: immediateDescription,
 		},
 		delayed: {
 			title: "Enable at Start Date",
@@ -59,16 +69,18 @@ export function PlanActivationSection({
 	setEnableImmediately,
 	disabled,
 	scheduledStartDate,
+	immediateDescription = CHECKOUT_IMMEDIATE_ACTIVATION_DESCRIPTION,
 }: {
 	enableImmediately: boolean;
 	setEnableImmediately: (value: boolean) => void;
 	disabled?: boolean;
 	scheduledStartDate?: number | null;
+	immediateDescription?: string;
 }) {
 	const activationCopy =
 		scheduledStartDate != null
-			? getScheduledActivationCopy(scheduledStartDate)
-			: DEFAULT_ACTIVATION_COPY;
+			? getScheduledActivationCopy({ scheduledStartDate, immediateDescription })
+			: getDefaultActivationCopy(immediateDescription);
 
 	return (
 		<SheetSection
@@ -312,6 +324,7 @@ export function SendInvoiceStage({
 				setEnableImmediately={setEnableImmediately}
 				disabled={needsEmail}
 				scheduledStartDate={scheduledStartDate}
+				immediateDescription={INVOICE_IMMEDIATE_ACTIVATION_DESCRIPTION}
 			/>
 
 			<InvoiceSettingsSection

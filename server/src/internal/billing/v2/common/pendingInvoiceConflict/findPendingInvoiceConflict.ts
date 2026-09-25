@@ -11,8 +11,9 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { retrieveStripeInvoiceIfExists } from "@/external/stripe/invoices/operations/retrieveStripeInvoiceIfExists";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
@@ -46,26 +47,6 @@ const unpayableInvoiceMessage = ({
 			? "invoice has no payment page"
 			: `invoice is ${stripeInvoice.status}`;
 	return `The pending plan '${customerProduct.product.name}' cannot be paid (${reason}). Cancel or review the pending plan before attaching another plan.`;
-};
-
-const isStripeResourceMissing = (error: unknown) =>
-	error instanceof Stripe.errors.StripeInvalidRequestError &&
-	error.code === "resource_missing";
-
-/** Only a confirmed-missing invoice is skipped; any other failure must fail closed. */
-const retrieveInvoiceIfExists = async ({
-	stripeCli,
-	stripeInvoiceId,
-}: {
-	stripeCli: Stripe;
-	stripeInvoiceId: string;
-}): Promise<Stripe.Invoice | undefined> => {
-	try {
-		return await stripeCli.invoices.retrieve(stripeInvoiceId);
-	} catch (error) {
-		if (isStripeResourceMissing(error)) return undefined;
-		throw error;
-	}
 };
 
 /** Uncapped: fullCustomer.customer_products is limited and orders pending rows last. */
@@ -125,7 +106,7 @@ const listPendingInvoiceCandidates = async ({
 			customerProduct,
 			metadataId: metadata.id,
 			stripeInvoiceId: metadata.stripe_invoice_id,
-			stripeInvoice: await retrieveInvoiceIfExists({
+			stripeInvoice: await retrieveStripeInvoiceIfExists({
 				stripeCli,
 				stripeInvoiceId: metadata.stripe_invoice_id,
 			}),

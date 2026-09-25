@@ -123,6 +123,22 @@ describe("classifyStripeWebhookAckMode", () => {
 			expected: "sync",
 		},
 		{
+			name: "invoice.deleted with autumn_metadata_id -> sync",
+			event: buildEvent({
+				type: "invoice.deleted",
+				object: { metadata: { autumn_metadata_id: "meta_1" } },
+			}),
+			expected: "sync",
+		},
+		{
+			name: "invoice.deleted without metadata -> early",
+			event: buildEvent({
+				type: "invoice.deleted",
+				object: { metadata: null },
+			}),
+			expected: "early",
+		},
+		{
 			name: "invoice.finalized with autumn_metadata_id -> sync",
 			event: buildEvent({
 				type: "invoice.finalized",
