@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { WebhookEventType } from "../webhookEventType.js";
 import { isLocalWebhookUrl } from "./isLocalWebhookUrl.js";
+import { isVercelEvent } from "./webhookAppKind.js";
 
 /**
  * Webhook endpoint request/response models. Shared between the server handlers
@@ -54,7 +55,16 @@ export const WebhookEventTypeSchema = z
 export const WebhookEventsSchema = z
 	.array(WebhookEventTypeSchema)
 	.min(1, "List at least one event; an empty list isn't allowed.")
-	.describe("The events sent to this webhook. At least one.");
+	.refine(
+		(events) => events.every(isVercelEvent) || !events.some(isVercelEvent),
+		{
+			message:
+				"vercel.* events can't be mixed with other events in one webhook; make one webhook for each",
+		},
+	)
+	.describe(
+		"The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.",
+	);
 
 const descriptionField = z.string().describe("A note for your own reference.");
 
@@ -71,9 +81,9 @@ export const WebhookSchema = z.object({
 	url: z.string().describe("The URL Autumn sends events to."),
 	description: z.string().nullable().describe("A note for your own reference."),
 	events: z
-		.array(WebhookEventTypeSchema)
+		.array(z.string())
 		.describe(
-			"The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event.",
+			"The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.",
 		),
 	disabled: z
 		.boolean()

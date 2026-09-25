@@ -3,33 +3,43 @@ import {
 	RecaseError,
 	type SyncWebhooksResponse,
 	type Webhook,
+	type WebhookAppKind,
 	type WebhookParams,
 	type WebhookSyncChange,
 	type WebhookSyncError,
+	webhookAppKindOf,
 } from "@autumn/shared";
+import type { WebhookApp } from "../apps/webhookApps.js";
 import { createWebhook } from "../createWebhook.js";
 import { updateWebhook } from "../updateWebhook.js";
 import { adoptWebhook } from "./adoptWebhook.js";
 import { computeWebhookSyncChanges } from "./computeWebhookSyncChanges.js";
-import { listSyncRemote } from "./listSyncRemote.js";
+import { listSyncRemote, type SyncRemote } from "./listSyncRemote.js";
 
 type ItemOutcome =
 	| { ok: true; webhook: Webhook; secret?: string }
 	| { ok: false; id: string; error: unknown };
 
 const applyChange = async ({
-	appId,
+	remote,
+	appIdForKind,
 	change,
 	params,
 }: {
-	appId: string;
+	remote: SyncRemote;
+	appIdForKind: (kind: WebhookAppKind) => Promise<string>;
 	change: Exclude<WebhookSyncChange, { action: "unmanaged" }>;
 	params: WebhookParams;
 }): Promise<ItemOutcome> => {
 	try {
 		if (change.action === "create") {
+			const appId = await appIdForKind(
+				webhookAppKindOf({ events: params.events }),
+			);
 			return { ok: true, ...(await createWebhook({ appId, params })) };
 		}
+		const existingId = change.action === "adopt" ? change.before.id : change.id;
+		const appId = remote.appIdOf.get(existingId) as string;
 		if (change.action === "adopt") {
 			const webhook = await adoptWebhook({
 				appId,
@@ -79,16 +89,19 @@ const throwWhenNothingSucceeded = ({
 /** Applies preview_sync's creates, adoptions and updates. Unmanaged webhooks are
  * left alone, and only newly created ones return a secret. */
 export const syncWebhooks = async ({
-	appId,
+	apps,
+	appIdForKind,
 	stated,
 }: {
-	appId: string;
+	apps: WebhookApp[];
+	/** The app a created webhook goes to, created on first use. */
+	appIdForKind: (kind: WebhookAppKind) => Promise<string>;
 	stated: WebhookParams[];
 }): Promise<SyncWebhooksResponse> => {
-	const { remote, uidlessIds } = await listSyncRemote({ appId });
+	const synced = await listSyncRemote({ apps });
+	const { remote, uidlessIds } = synced;
 	const { changes, errors: planned } = computeWebhookSyncChanges({
-		remote,
-		uidlessIds,
+		...synced,
 		stated,
 		now: Date.now(),
 	});
@@ -98,7 +111,7 @@ export const syncWebhooks = async ({
 		changes.flatMap((change) => {
 			const params = statedById.get(change.id);
 			if (!params || change.action === "unmanaged") return [];
-			return [applyChange({ appId, change, params })];
+			return [applyChange({ remote: synced, appIdForKind, change, params })];
 		}),
 	);
 

@@ -220,3 +220,52 @@ test("a stated ep_ id of a dashboard webhook updates it, even when its URL chang
 		},
 	]);
 });
+
+test("a webhook can't move between the Vercel app and the main app: error, no change", () => {
+	const inVercel = remote({
+		id: "provisioning",
+		events: ["vercel.resources.provisioned"] as WebhookEventType[],
+	});
+	const changes = computeWebhookSyncChanges({
+		remote: [remote(), inVercel],
+		remoteKinds: new Map([["provisioning", "vercel"]]),
+		stated: [
+			stated({ events: ["vercel.resources.deleted"] as WebhookEventType[] }),
+			stated({
+				id: "provisioning",
+				events: ["billing.updated"] as WebhookEventType[],
+			}),
+		],
+		now: NOW,
+	});
+	expect(
+		changes.changes.filter((change) => change.action !== "unmanaged"),
+	).toEqual([]);
+	expect(changes.errors.map((error) => error.id)).toEqual([
+		"billing",
+		"provisioning",
+	]);
+	expect(changes.errors[0]?.message).toContain("make a new webhook");
+});
+
+test("adoption only takes a dashboard webhook from the app the stated events belong to", () => {
+	const dashboardMain = remote({
+		id: "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5",
+		url: "https://example.com/shared",
+	});
+	const changes = computeWebhookSyncChanges({
+		remote: [dashboardMain],
+		uidlessIds: new Set([dashboardMain.id]),
+		stated: [
+			stated({
+				id: "provisioning",
+				url: "https://example.com/shared",
+				events: ["vercel.resources.provisioned"] as WebhookEventType[],
+			}),
+		],
+		now: NOW,
+	});
+	expect(
+		changes.changes.find((change) => change.id === "provisioning")?.action,
+	).toBe("create");
+});

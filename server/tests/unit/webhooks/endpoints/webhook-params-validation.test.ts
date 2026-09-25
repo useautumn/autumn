@@ -115,6 +115,25 @@ describe("webhook params", () => {
 		expect(parsed).toEqual({ id: "billing" });
 	});
 
+	test("events: vercel.* can't be mixed with other events, anywhere events are stated", () => {
+		const mixed = ["vercel.resources.provisioned", "billing.updated"];
+		expect(accepts({ events: mixed })).toBe(false);
+		expect(
+			UpdateWebhookParamsSchema.safeParse({ id: "billing", events: mixed })
+				.success,
+		).toBe(false);
+		expect(
+			SyncWebhooksParamsSchema.safeParse({
+				webhooks: [params({ events: mixed })],
+			}).success,
+		).toBe(false);
+		expect(
+			accepts({
+				events: ["vercel.resources.provisioned", "vercel.resources.deleted"],
+			}),
+		).toBe(true);
+	});
+
 	test("sync rejects the same id twice", () => {
 		expect(
 			SyncWebhooksParamsSchema.safeParse({

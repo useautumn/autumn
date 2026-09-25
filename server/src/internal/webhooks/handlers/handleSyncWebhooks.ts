@@ -1,6 +1,9 @@
 import { Scopes, SyncWebhooksParamsSchema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { ensureSvixAppId } from "../actions/ensureSvixAppId.js";
+import {
+	ensureWebhookAppId,
+	listWebhookApps,
+} from "../actions/apps/webhookApps.js";
 import { syncWebhooks } from "../actions/sync/syncWebhooks.js";
 
 export const handleSyncWebhooks = createRoute({
@@ -9,9 +12,12 @@ export const handleSyncWebhooks = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { webhooks } = c.req.valid("json");
-
-		const appId = await ensureSvixAppId({ ctx });
-
-		return c.json(await syncWebhooks({ appId, stated: webhooks }));
+		return c.json(
+			await syncWebhooks({
+				apps: await listWebhookApps({ ctx }),
+				appIdForKind: (kind) => ensureWebhookAppId({ ctx, kind }),
+				stated: webhooks,
+			}),
+		);
 	},
 });

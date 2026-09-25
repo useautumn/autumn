@@ -77789,7 +77789,8 @@ paths:
                       - vercel.webhooks.event
                     type: string
                     description: An event type the webhook receives.
-                  description: The events sent to this webhook. At least one.
+                  description: The events sent to this webhook. At least one. `vercel.*` events
+                    can't be mixed with other events.
                 description:
                   type: string
                   description: A note for your own reference.
@@ -77831,23 +77832,11 @@ paths:
                   events:
                     type: array
                     items:
-                      enum:
-                        - customer.products.updated
-                        - customer.threshold_reached
-                        - balances.usage_alert_triggered
-                        - balances.limit_reached
-                        - billing.auto_topup_failed
-                        - billing.auto_topup_succeeded
-                        - billing.updated
-                        - invoice.finalized
-                        - vercel.resources.deleted
-                        - vercel.resources.provisioned
-                        - vercel.resources.rotate_secrets
-                        - vercel.webhooks.event
                       type: string
-                      description: An event type the webhook receives.
-                    description: The events sent to this webhook. Empty only for a webhook made in
-                      the dashboard that receives every event.
+                    description: The events sent to this webhook, as `WebhookEventType` names; a
+                      type newer than your client is returned as-is. Empty only
+                      for a webhook made in the dashboard that receives every
+                      event.
                   disabled:
                     type: boolean
                     description: When true, no events are sent to the webhook.
@@ -77936,23 +77925,11 @@ paths:
                   events:
                     type: array
                     items:
-                      enum:
-                        - customer.products.updated
-                        - customer.threshold_reached
-                        - balances.usage_alert_triggered
-                        - balances.limit_reached
-                        - billing.auto_topup_failed
-                        - billing.auto_topup_succeeded
-                        - billing.updated
-                        - invoice.finalized
-                        - vercel.resources.deleted
-                        - vercel.resources.provisioned
-                        - vercel.resources.rotate_secrets
-                        - vercel.webhooks.event
                       type: string
-                      description: An event type the webhook receives.
-                    description: The events sent to this webhook. Empty only for a webhook made in
-                      the dashboard that receives every event.
+                    description: The events sent to this webhook, as `WebhookEventType` names; a
+                      type newer than your client is returned as-is. Empty only
+                      for a webhook made in the dashboard that receives every
+                      event.
                   disabled:
                     type: boolean
                     description: When true, no events are sent to the webhook.
@@ -78029,23 +78006,11 @@ paths:
                         events:
                           type: array
                           items:
-                            enum:
-                              - customer.products.updated
-                              - customer.threshold_reached
-                              - balances.usage_alert_triggered
-                              - balances.limit_reached
-                              - billing.auto_topup_failed
-                              - billing.auto_topup_succeeded
-                              - billing.updated
-                              - invoice.finalized
-                              - vercel.resources.deleted
-                              - vercel.resources.provisioned
-                              - vercel.resources.rotate_secrets
-                              - vercel.webhooks.event
                             type: string
-                            description: An event type the webhook receives.
-                          description: The events sent to this webhook. Empty only for a webhook made in
-                            the dashboard that receives every event.
+                          description: The events sent to this webhook, as `WebhookEventType` names; a
+                            type newer than your client is returned as-is. Empty
+                            only for a webhook made in the dashboard that
+                            receives every event.
                         disabled:
                           type: boolean
                           description: When true, no events are sent to the webhook.
@@ -78127,7 +78092,8 @@ paths:
                       - vercel.webhooks.event
                     type: string
                     description: An event type the webhook receives.
-                  description: The events sent to this webhook. At least one.
+                  description: The events sent to this webhook. At least one. `vercel.*` events
+                    can't be mixed with other events.
                 description:
                   type: string
                   description: A note for your own reference.
@@ -78163,23 +78129,11 @@ paths:
                   events:
                     type: array
                     items:
-                      enum:
-                        - customer.products.updated
-                        - customer.threshold_reached
-                        - balances.usage_alert_triggered
-                        - balances.limit_reached
-                        - billing.auto_topup_failed
-                        - billing.auto_topup_succeeded
-                        - billing.updated
-                        - invoice.finalized
-                        - vercel.resources.deleted
-                        - vercel.resources.provisioned
-                        - vercel.resources.rotate_secrets
-                        - vercel.webhooks.event
                       type: string
-                      description: An event type the webhook receives.
-                    description: The events sent to this webhook. Empty only for a webhook made in
-                      the dashboard that receives every event.
+                    description: The events sent to this webhook, as `WebhookEventType` names; a
+                      type newer than your client is returned as-is. Empty only
+                      for a webhook made in the dashboard that receives every
+                      event.
                   disabled:
                     type: boolean
                     description: When true, no events are sent to the webhook.
@@ -78307,7 +78261,8 @@ paths:
                             - vercel.webhooks.event
                           type: string
                           description: An event type the webhook receives.
-                        description: The events sent to this webhook. At least one.
+                        description: The events sent to this webhook. At least one. `vercel.*` events
+                          can't be mixed with other events.
                       description:
                         type: string
                         description: A note for your own reference.
@@ -78367,23 +78322,11 @@ paths:
                                 events:
                                   type: array
                                   items:
-                                    enum:
-                                      - customer.products.updated
-                                      - customer.threshold_reached
-                                      - balances.usage_alert_triggered
-                                      - balances.limit_reached
-                                      - billing.auto_topup_failed
-                                      - billing.auto_topup_succeeded
-                                      - billing.updated
-                                      - invoice.finalized
-                                      - vercel.resources.deleted
-                                      - vercel.resources.provisioned
-                                      - vercel.resources.rotate_secrets
-                                      - vercel.webhooks.event
                                     type: string
-                                    description: An event type the webhook receives.
-                                  description: The events sent to this webhook. Empty only for a webhook made in
-                                    the dashboard that receives every event.
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a
+                                    type newer than your client is returned
+                                    as-is. Empty only for a webhook made in the
+                                    dashboard that receives every event.
                                 disabled:
                                   type: boolean
                                   description: When true, no events are sent to the webhook.
@@ -78429,23 +78372,11 @@ paths:
                                 events:
                                   type: array
                                   items:
-                                    enum:
-                                      - customer.products.updated
-                                      - customer.threshold_reached
-                                      - balances.usage_alert_triggered
-                                      - balances.limit_reached
-                                      - billing.auto_topup_failed
-                                      - billing.auto_topup_succeeded
-                                      - billing.updated
-                                      - invoice.finalized
-                                      - vercel.resources.deleted
-                                      - vercel.resources.provisioned
-                                      - vercel.resources.rotate_secrets
-                                      - vercel.webhooks.event
                                     type: string
-                                    description: An event type the webhook receives.
-                                  description: The events sent to this webhook. Empty only for a webhook made in
-                                    the dashboard that receives every event.
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a
+                                    type newer than your client is returned
+                                    as-is. Empty only for a webhook made in the
+                                    dashboard that receives every event.
                                 disabled:
                                   type: boolean
                                   description: When true, no events are sent to the webhook.
@@ -78481,23 +78412,11 @@ paths:
                                 events:
                                   type: array
                                   items:
-                                    enum:
-                                      - customer.products.updated
-                                      - customer.threshold_reached
-                                      - balances.usage_alert_triggered
-                                      - balances.limit_reached
-                                      - billing.auto_topup_failed
-                                      - billing.auto_topup_succeeded
-                                      - billing.updated
-                                      - invoice.finalized
-                                      - vercel.resources.deleted
-                                      - vercel.resources.provisioned
-                                      - vercel.resources.rotate_secrets
-                                      - vercel.webhooks.event
                                     type: string
-                                    description: An event type the webhook receives.
-                                  description: The events sent to this webhook. Empty only for a webhook made in
-                                    the dashboard that receives every event.
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a
+                                    type newer than your client is returned
+                                    as-is. Empty only for a webhook made in the
+                                    dashboard that receives every event.
                                 disabled:
                                   type: boolean
                                   description: When true, no events are sent to the webhook.
@@ -78544,23 +78463,11 @@ paths:
                                 events:
                                   type: array
                                   items:
-                                    enum:
-                                      - customer.products.updated
-                                      - customer.threshold_reached
-                                      - balances.usage_alert_triggered
-                                      - balances.limit_reached
-                                      - billing.auto_topup_failed
-                                      - billing.auto_topup_succeeded
-                                      - billing.updated
-                                      - invoice.finalized
-                                      - vercel.resources.deleted
-                                      - vercel.resources.provisioned
-                                      - vercel.resources.rotate_secrets
-                                      - vercel.webhooks.event
                                     type: string
-                                    description: An event type the webhook receives.
-                                  description: The events sent to this webhook. Empty only for a webhook made in
-                                    the dashboard that receives every event.
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a
+                                    type newer than your client is returned
+                                    as-is. Empty only for a webhook made in the
+                                    dashboard that receives every event.
                                 disabled:
                                   type: boolean
                                   description: When true, no events are sent to the webhook.
@@ -78596,23 +78503,11 @@ paths:
                                 events:
                                   type: array
                                   items:
-                                    enum:
-                                      - customer.products.updated
-                                      - customer.threshold_reached
-                                      - balances.usage_alert_triggered
-                                      - balances.limit_reached
-                                      - billing.auto_topup_failed
-                                      - billing.auto_topup_succeeded
-                                      - billing.updated
-                                      - invoice.finalized
-                                      - vercel.resources.deleted
-                                      - vercel.resources.provisioned
-                                      - vercel.resources.rotate_secrets
-                                      - vercel.webhooks.event
                                     type: string
-                                    description: An event type the webhook receives.
-                                  description: The events sent to this webhook. Empty only for a webhook made in
-                                    the dashboard that receives every event.
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a
+                                    type newer than your client is returned
+                                    as-is. Empty only for a webhook made in the
+                                    dashboard that receives every event.
                                 disabled:
                                   type: boolean
                                   description: When true, no events are sent to the webhook.
@@ -78659,23 +78554,11 @@ paths:
                                 events:
                                   type: array
                                   items:
-                                    enum:
-                                      - customer.products.updated
-                                      - customer.threshold_reached
-                                      - balances.usage_alert_triggered
-                                      - balances.limit_reached
-                                      - billing.auto_topup_failed
-                                      - billing.auto_topup_succeeded
-                                      - billing.updated
-                                      - invoice.finalized
-                                      - vercel.resources.deleted
-                                      - vercel.resources.provisioned
-                                      - vercel.resources.rotate_secrets
-                                      - vercel.webhooks.event
                                     type: string
-                                    description: An event type the webhook receives.
-                                  description: The events sent to this webhook. Empty only for a webhook made in
-                                    the dashboard that receives every event.
+                                  description: The events sent to this webhook, as `WebhookEventType` names; a
+                                    type newer than your client is returned
+                                    as-is. Empty only for a webhook made in the
+                                    dashboard that receives every event.
                                 disabled:
                                   type: boolean
                                   description: When true, no events are sent to the webhook.
@@ -78791,7 +78674,8 @@ paths:
                             - vercel.webhooks.event
                           type: string
                           description: An event type the webhook receives.
-                        description: The events sent to this webhook. At least one.
+                        description: The events sent to this webhook. At least one. `vercel.*` events
+                          can't be mixed with other events.
                       description:
                         type: string
                         description: A note for your own reference.
@@ -78843,23 +78727,11 @@ paths:
                         events:
                           type: array
                           items:
-                            enum:
-                              - customer.products.updated
-                              - customer.threshold_reached
-                              - balances.usage_alert_triggered
-                              - balances.limit_reached
-                              - billing.auto_topup_failed
-                              - billing.auto_topup_succeeded
-                              - billing.updated
-                              - invoice.finalized
-                              - vercel.resources.deleted
-                              - vercel.resources.provisioned
-                              - vercel.resources.rotate_secrets
-                              - vercel.webhooks.event
                             type: string
-                            description: An event type the webhook receives.
-                          description: The events sent to this webhook. Empty only for a webhook made in
-                            the dashboard that receives every event.
+                          description: The events sent to this webhook, as `WebhookEventType` names; a
+                            type newer than your client is returned as-is. Empty
+                            only for a webhook made in the dashboard that
+                            receives every event.
                         disabled:
                           type: boolean
                           description: When true, no events are sent to the webhook.

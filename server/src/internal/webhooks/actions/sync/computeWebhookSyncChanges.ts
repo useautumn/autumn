@@ -1,8 +1,11 @@
-import type {
-	Webhook,
-	WebhookParams,
-	WebhookSyncChange,
-	WebhookSyncError,
+import {
+	WEBHOOK_APP_SWITCH_MESSAGE,
+	type Webhook,
+	type WebhookAppKind,
+	type WebhookParams,
+	type WebhookSyncChange,
+	type WebhookSyncError,
+	webhookAppKindOf,
 } from "@autumn/shared";
 
 const sameEvents = ({ a, b }: { a: string[]; b: string[] }) => {
@@ -60,15 +63,20 @@ const createdWebhook = ({
 const planAdoptions = ({
 	newIds,
 	uidless,
+	kindOf,
 }: {
 	newIds: WebhookParams[];
 	uidless: Webhook[];
+	kindOf: (webhook: Webhook) => WebhookAppKind;
 }) => {
 	const adoptions = new Map<string, Webhook>();
 	const errors: WebhookSyncError[] = [];
 
 	for (const params of newIds) {
-		const matches = uidless.filter((webhook) => webhook.url === params.url);
+		const kind = webhookAppKindOf({ events: params.events });
+		const matches = uidless.filter(
+			(webhook) => webhook.url === params.url && kindOf(webhook) === kind,
+		);
 		const claimants = newIds.filter((other) => other.url === params.url);
 		if (matches.length > 1) {
 			errors.push({
@@ -93,14 +101,19 @@ const planAdoptions = ({
 export const computeWebhookSyncChanges = ({
 	remote,
 	uidlessIds = new Set(),
+	remoteKinds = new Map(),
 	stated,
 	now,
 }: {
 	remote: Webhook[];
 	uidlessIds?: Set<string>;
+	/** Which app each remote webhook lives in; the main app when absent. */
+	remoteKinds?: Map<string, WebhookAppKind>;
 	stated: WebhookParams[];
 	now: number;
 }): { changes: WebhookSyncChange[]; errors: WebhookSyncError[] } => {
+	const kindOf = (webhook: Webhook): WebhookAppKind =>
+		remoteKinds.get(webhook.id) ?? "main";
 	// A dashboard endpoint stated by its own `ep_…` id is addressed directly;
 	// only the ones the request doesn't name are up for adoption by URL.
 	const statedIds = new Set(stated.map((params) => params.id));
@@ -118,7 +131,16 @@ export const computeWebhookSyncChanges = ({
 	const { adoptions, errors } = planAdoptions({
 		newIds: stated.filter((params) => !ownedById.has(params.id)),
 		uidless,
+		kindOf,
 	});
+	for (const params of stated) {
+		const existing = ownedById.get(params.id);
+		if (
+			existing &&
+			kindOf(existing) !== webhookAppKindOf({ events: params.events })
+		)
+			errors.push({ id: params.id, message: WEBHOOK_APP_SWITCH_MESSAGE });
+	}
 	const failedIds = new Set(errors.map((error) => error.id));
 
 	const statedChanges = stated.flatMap((params): WebhookSyncChange[] => {
