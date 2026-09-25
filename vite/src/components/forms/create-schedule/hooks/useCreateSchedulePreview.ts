@@ -8,8 +8,8 @@ export function useCreateSchedulePreview({
 	requestBody: CreateScheduleParamsV0Input | null;
 }) {
 	return useBillingPreview({
-		path: BILLING_OPERATIONS.createSchedule.previewPath,
-		queryKeyPrefix: "create-schedule-preview",
+		path: BILLING_OPERATIONS.setPlans.previewPath,
+		queryKeyPrefix: "set-plans-preview",
 		requestBody,
 	});
 }
