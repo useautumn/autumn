@@ -1,9 +1,8 @@
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@autumn/ui";
-import { cn } from "@/lib/utils";
 import type { ReviewChangeSection } from "../../utils/review/types/reviewChange";
-import { ReviewChangeRowItem } from "./ReviewChangeRowItem";
-
-export type ReviewChangeSystem = "autumn" | "stripe";
+import { ReviewChangePhaseBlock } from "./ReviewChangePhaseBlock";
+import { ReviewStripeIdsPopover } from "./ReviewStripeIdsPopover";
+import { type ReviewChangeSystem, ReviewSystemMark } from "./ReviewSystemMark";
 
 export function ReviewChangeGroup({
 	value,
@@ -18,23 +17,18 @@ export function ReviewChangeGroup({
 }) {
 	return (
 		<AccordionItem value={value} className="border-b border-border">
-			<AccordionTrigger className="items-center gap-2.5 py-3 hover:no-underline">
-				<span
-					className={cn(
-						"size-2 shrink-0 rounded-[2px]",
-						system === "autumn" ? "bg-primary" : "bg-indigo-500",
-					)}
-				/>
-				<span className="flex-1 text-sm font-medium text-foreground">
-					{title}
-				</span>
+			<AccordionTrigger className="h-11 items-center gap-2.5 rounded-none py-0 hover:no-underline [&>svg]:translate-y-0">
+				<ReviewSystemMark system={system} />
+				<span className="text-sm font-medium text-foreground">{title}</span>
+				<ReviewStripeIdsPopover stripeIds={section.stripeIds} />
+				<span className="flex-1" />
 				<span className="text-xs font-normal text-subtle">
 					{section.summary}
 				</span>
 			</AccordionTrigger>
-			<AccordionContent className="flex flex-col gap-1.5 pb-3.5 pl-[18px]">
-				{section.rows.map((row) => (
-					<ReviewChangeRowItem key={row.key} row={row} />
+			<AccordionContent className="flex flex-col gap-2 pb-3.5 pl-[18px]">
+				{section.phases.map((phase) => (
+					<ReviewChangePhaseBlock key={phase.key} phase={phase} />
 				))}
 			</AccordionContent>
 		</AccordionItem>

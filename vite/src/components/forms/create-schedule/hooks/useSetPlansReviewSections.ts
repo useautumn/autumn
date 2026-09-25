@@ -1,13 +1,14 @@
 import type { ProductV2, SetPlansPreviewWarning } from "@autumn/shared";
 import { useMemo } from "react";
 import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
-import { getBasePriceLabel } from "@/components/forms/customer-state/customerStatePlanPrice";
 import type { CustomerStatePlan } from "@/components/forms/customer-state/customerStateSchema";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { balanceChangesToReviewSection } from "../utils/review/balanceChangesToReviewSection";
 import { planChangesToReviewSection } from "../utils/review/planChangesToReviewSection";
-import { processorChangesToReviewSection } from "../utils/review/processorChangesToReviewSection";
+import { processorItemsToReviewSection } from "../utils/review/processorItemsToReviewSection";
+import { recurringTotalLabel } from "../utils/review/recurringTotalLabel";
+import { reviewPlanPriceLabel } from "../utils/review/reviewPlanPriceLabel";
 import type { ReviewChangeSection } from "../utils/review/types/reviewChange";
 
 export type SetPlansReviewSections = {
@@ -32,8 +33,16 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 
 		const unscheduledPlanIds = toPlanIds(formValues.unscheduledPlans);
 		const priceLabelFor = (product: ProductV2) =>
-			getBasePriceLabel({
+			reviewPlanPriceLabel({
 				product: productForDisplay(product),
+				features,
+				currency: displayCurrency,
+			});
+		const phaseTotalFor = (planIds: string[]) =>
+			recurringTotalLabel({
+				products: products
+					.filter((product) => planIds.includes(product.id))
+					.map(productForDisplay),
 				currency: displayCurrency,
 			});
 
@@ -46,13 +55,13 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 					...unscheduledPlanIds,
 				]),
 				existingPlanIds: toPlanIds(existingPlans),
-				context: { products, priceLabelFor },
+				context: { products, priceLabelFor, phaseTotalFor },
 			}),
 			balances: balanceChangesToReviewSection({
 				phases: preview.phases,
 				features,
 			}),
-			processor: processorChangesToReviewSection({ preview }),
+			processor: processorItemsToReviewSection({ preview }),
 		};
 	}, [
 		preview,

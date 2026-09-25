@@ -1,31 +1,40 @@
-export type ReviewChangeTone =
-	| "new"
-	| "ending"
-	| "kept"
-	| "changed"
-	| "processor";
+export type ReviewChangeTone = "new" | "ending" | "kept" | "changed";
 
-export type ReviewChangeIcon =
-	| "plan"
-	| "addOn"
-	| "balance"
-	| "subscription"
-	| "schedule"
-	| "item";
+export type ReviewChangeValue = {
+	amount: string;
+	suffix?: string;
+};
+
+export type ReviewChangeQuantity = {
+	current: number;
+	previous?: number;
+};
 
 export type ReviewChangeRow = {
 	key: string;
-	icon: ReviewChangeIcon;
 	title: string;
-	detail?: string;
-	code?: string;
-	tone: ReviewChangeTone;
+	description?: string;
+	flag?: string;
+	tone?: ReviewChangeTone;
+	value?: ReviewChangeValue;
+	quantity?: ReviewChangeQuantity;
+};
+
+export type ReviewChangePhase = {
+	key: string;
 	label: string;
-	value?: string;
-	isEnding?: boolean;
+	total?: string;
+	rows: ReviewChangeRow[];
+};
+
+export type ReviewStripeId = {
+	key: string;
+	label: string;
+	id: string;
 };
 
 export type ReviewChangeSection = {
-	rows: ReviewChangeRow[];
+	phases: ReviewChangePhase[];
 	summary: string;
+	stripeIds: ReviewStripeId[];
 };

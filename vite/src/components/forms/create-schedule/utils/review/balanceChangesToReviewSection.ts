@@ -7,14 +7,16 @@ import {
 } from "@autumn/shared";
 import {
 	formatPhaseDate,
-	futurePhasePrefix,
 	joinDetail,
+	phaseLabel,
 	summarizeCounts,
+	withoutEmptyPhases,
 } from "./phaseTiming";
 import type {
 	ReviewChangeRow,
 	ReviewChangeSection,
 	ReviewChangeTone,
+	ReviewChangeValue,
 } from "./types/reviewChange";
 
 type BalanceBehavior = "added" | "removed" | "reset" | "carried" | "updated";
@@ -33,14 +35,6 @@ const BEHAVIOR_TONE: Record<BalanceBehavior, ReviewChangeTone> = {
 	reset: "changed",
 	carried: "kept",
 	updated: "kept",
-};
-
-const BEHAVIOR_LABEL: Record<BalanceBehavior, string> = {
-	added: "New",
-	removed: "Removed",
-	reset: "Reset",
-	carried: "Carried over",
-	updated: "Updated",
 };
 
 const BEHAVIOR_SUMMARY_LABEL: Record<BalanceBehavior, string> = {
@@ -75,42 +69,60 @@ const classifyBalanceChange = ({
 
 const formatQuantity = (value: number) => value.toLocaleString();
 
-const describeFieldChange = ({
-	label,
+const describeGranted = ({
 	before,
 	after,
 }: {
-	label: string;
-	before: number;
-	after: number;
+	before: PreviewBalance;
+	after: PreviewBalance;
 }) =>
-	before === after
-		? undefined
-		: `${label} ${formatQuantity(before)} → ${formatQuantity(after)}`;
+	before.granted === after.granted || before.granted === 0
+		? `${formatQuantity(after.granted)} granted`
+		: `${formatQuantity(before.granted)} → ${formatQuantity(after.granted)} granted`;
 
-const describeResetChange = ({
+const describeReset = ({
 	before,
 	after,
 }: {
-	before: number | null;
-	after: number | null;
+	before: PreviewBalance;
+	after: PreviewBalance;
 }) => {
-	if (before === after || after === null) return undefined;
-	return `Resets ${formatPhaseDate({ startsAt: after })}`;
+	if (before.next_reset_at === after.next_reset_at) return undefined;
+	if (after.next_reset_at === null) return undefined;
+	return `resets ${formatPhaseDate({ startsAt: after.next_reset_at })}`;
 };
 
-const balanceValue = (balance: PreviewBalance) =>
-	balance.unlimited ? "Unlimited" : `${formatQuantity(balance.remaining)} left`;
+/** Every number is labelled so the row reads as "<feature>: granted, used, left". */
+const describeBalance = ({
+	before,
+	after,
+}: {
+	before: PreviewBalance;
+	after: PreviewBalance;
+}) => {
+	if (after.unlimited) return "Unlimited";
+	return joinDetail([
+		describeGranted({ before, after }),
+		`${formatQuantity(after.usage)} used`,
+		describeReset({ before, after }),
+	]);
+};
+
+const balanceValue = (balance: PreviewBalance): ReviewChangeValue => {
+	if (balance.unlimited) return { amount: "Unlimited" };
+	return {
+		amount: formatQuantity(balance.remaining),
+		suffix: `of ${formatQuantity(balance.granted)} left`,
+	};
+};
 
 const balanceChangeToRow = ({
 	change,
 	phaseIndex,
-	startsAt,
 	features,
 }: {
 	change: PreviewBalanceChange;
 	phaseIndex: number;
-	startsAt: number;
 	features: Feature[];
 }): ReviewChangeRow & { behavior: BalanceBehavior } => {
 	const before = balanceBefore(change);
@@ -121,29 +133,10 @@ const balanceChangeToRow = ({
 	return {
 		key: `balance-${phaseIndex}-${change.feature_id}`,
 		behavior,
-		icon: "balance",
 		title: feature?.name ?? change.feature_id,
-		detail: joinDetail([
-			futurePhasePrefix({ phaseIndex, startsAt }),
-			describeFieldChange({
-				label: "Granted",
-				before: before.granted,
-				after: after.granted,
-			}),
-			describeFieldChange({
-				label: "Usage",
-				before: before.usage,
-				after: after.usage,
-			}),
-			describeResetChange({
-				before: before.next_reset_at,
-				after: after.next_reset_at,
-			}),
-		]),
+		description: describeBalance({ before, after }),
 		tone: BEHAVIOR_TONE[behavior],
-		label: BEHAVIOR_LABEL[behavior],
 		value: balanceValue(after),
-		isEnding: behavior === "removed",
 	};
 };
 
@@ -154,19 +147,17 @@ export const balanceChangesToReviewSection = ({
 	phases: SetPlansPreviewPhase[];
 	features: Feature[];
 }): ReviewChangeSection => {
-	const rows = phases.flatMap((phase, phaseIndex) =>
-		phase.balance_changes.map((change) =>
-			balanceChangeToRow({
-				change,
-				phaseIndex,
-				startsAt: phase.starts_at,
-				features,
-			}),
+	const phaseRows = phases.map((phase, phaseIndex) => ({
+		key: `balances-${phaseIndex}`,
+		label: phaseLabel({ phaseIndex, startsAt: phase.starts_at }),
+		rows: phase.balance_changes.map((change) =>
+			balanceChangeToRow({ change, phaseIndex, features }),
 		),
-	);
+	}));
+	const rows = phaseRows.flatMap((phase) => phase.rows);
 
 	return {
-		rows,
+		phases: withoutEmptyPhases(phaseRows),
 		summary: summarizeCounts({
 			counts: BEHAVIOR_ORDER.map((behavior) => [
 				BEHAVIOR_SUMMARY_LABEL[behavior],
@@ -174,5 +165,6 @@ export const balanceChangesToReviewSection = ({
 			]),
 			emptyLabel: "No changes",
 		}),
+		stripeIds: [],
 	};
 };

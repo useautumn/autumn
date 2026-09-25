@@ -8,27 +8,15 @@ export const isImmediatePhase = ({ phaseIndex }: { phaseIndex: number }) =>
 export const formatPhaseDate = ({ startsAt }: { startsAt: number }) =>
 	format(startsAt, "MMM d");
 
-/** "now" for the immediate phase, otherwise the phase's start date. */
-export const formatPhaseTiming = ({
+/** "Now" for the immediate phase, otherwise the phase's start date. */
+export const phaseLabel = ({
 	phaseIndex,
 	startsAt,
 }: {
 	phaseIndex: number;
 	startsAt: number;
 }) =>
-	isImmediatePhase({ phaseIndex }) ? "now" : formatPhaseDate({ startsAt });
-
-/** Detail prefix that places a future-phase row on the timeline. */
-export const futurePhasePrefix = ({
-	phaseIndex,
-	startsAt,
-}: {
-	phaseIndex: number;
-	startsAt: number;
-}) =>
-	isImmediatePhase({ phaseIndex })
-		? undefined
-		: `From ${formatPhaseDate({ startsAt })}`;
+	isImmediatePhase({ phaseIndex }) ? "Now" : formatPhaseDate({ startsAt });
 
 export const joinDetail = (parts: (string | undefined)[]) => {
 	const present = parts.filter((part): part is string => !!part);
@@ -47,3 +35,7 @@ export const summarizeCounts = ({
 		.map(([label, count]) => `${count} ${label}`);
 	return parts.length > 0 ? parts.join(" · ") : emptyLabel;
 };
+
+export const withoutEmptyPhases = <Phase extends { rows: unknown[] }>(
+	phases: Phase[],
+) => phases.filter((phase) => phase.rows.length > 0);

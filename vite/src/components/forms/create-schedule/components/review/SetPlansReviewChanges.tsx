@@ -1,5 +1,4 @@
 import { Accordion } from "@autumn/ui";
-import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useSetPlansReviewSections } from "../../hooks/useSetPlansReviewSections";
 import { ReviewChangeGroup } from "./ReviewChangeGroup";
 import { ReviewWarnings } from "./ReviewWarnings";
@@ -12,36 +11,40 @@ export function SetPlansReviewChanges() {
 	if (!sections) return null;
 
 	const { warnings, plans, balances, processor } = sections;
+	const hasProcessorChanges =
+		processor.phases.length > 0 || processor.stripeIds.length > 0;
 
 	return (
-		<SheetSection withSeparator={false} className="pb-0">
-			<div className="flex flex-col gap-1">
-				<ReviewWarnings warnings={warnings} />
-				<Accordion type="multiple" defaultValue={DEFAULT_OPEN_GROUPS}>
+		<div className="flex flex-col">
+			<ReviewWarnings warnings={warnings} />
+			<Accordion
+				type="multiple"
+				defaultValue={DEFAULT_OPEN_GROUPS}
+				className="px-4 pt-1"
+			>
+				<ReviewChangeGroup
+					value="plans"
+					system="autumn"
+					title="Plans"
+					section={plans}
+				/>
+				{balances.phases.length > 0 && (
 					<ReviewChangeGroup
-						value="plans"
+						value="balances"
 						system="autumn"
-						title="Plans"
-						section={plans}
+						title="Balances"
+						section={balances}
 					/>
-					{balances.rows.length > 0 && (
-						<ReviewChangeGroup
-							value="balances"
-							system="autumn"
-							title="Balances"
-							section={balances}
-						/>
-					)}
-					{processor.rows.length > 0 && (
-						<ReviewChangeGroup
-							value="subscription"
-							system="stripe"
-							title="Subscription"
-							section={processor}
-						/>
-					)}
-				</Accordion>
-			</div>
-		</SheetSection>
+				)}
+				{hasProcessorChanges && (
+					<ReviewChangeGroup
+						value="subscription"
+						system="stripe"
+						title="Subscription"
+						section={processor}
+					/>
+				)}
+			</Accordion>
+		</div>
 	);
 }

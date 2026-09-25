@@ -1,13 +1,15 @@
 import { expect, test } from "bun:test";
 import type {
 	Feature,
+	ProcessorItem,
+	ProcessorItemPrice,
 	ProductV2,
 	SetPlansPreviewPhase,
 	SetPlansPreviewResponse,
 } from "@autumn/shared";
 import { balanceChangesToReviewSection } from "@/components/forms/create-schedule/utils/review/balanceChangesToReviewSection";
 import { planChangesToReviewSection } from "@/components/forms/create-schedule/utils/review/planChangesToReviewSection";
-import { processorChangesToReviewSection } from "@/components/forms/create-schedule/utils/review/processorChangesToReviewSection";
+import { processorItemsToReviewSection } from "@/components/forms/create-schedule/utils/review/processorItemsToReviewSection";
 
 const NOW = Date.UTC(2026, 8, 25);
 const NOV_1 = Date.UTC(2026, 10, 1);
@@ -35,7 +37,7 @@ const phase = (
 	starts_at: startsAt,
 	plan_changes: [],
 	balance_changes: [],
-	processor_item_changes: [],
+	processor_items: [],
 	...overrides,
 });
 
@@ -74,17 +76,47 @@ test("plan rows mark starting, ending and kept plans per phase", () => {
 			["premium", "seats"],
 		],
 		existingPlanIds: ["pro", "seats"],
-		context: { products, priceLabelFor: (product) => `${product.id}-price` },
+		context: {
+			products,
+			priceLabelFor: (product) => `$${product.id.length}/mo`,
+			phaseTotalFor: (planIds) => `${planIds.length} plans`,
+		},
 	});
 
 	expect(
-		section.rows.map((row) => [row.title, row.label, row.tone, row.value]),
+		section.phases.map((phase) => [
+			phase.label,
+			phase.total,
+			phase.rows.map((row) => [
+				row.title,
+				row.description,
+				row.tone,
+				row.value,
+			]),
+		]),
 	).toEqual([
-		["Premium", "Starts now", "new", "premium-price"],
-		["Pro", "Ends now", "ending", "-$13.33"],
-		["Seats", "Kept", "kept", "seats-price"],
-		["Seats", "Starts Nov 1", "new", "seats-price"],
-		["Premium", "Kept", "kept", "premium-price"],
+		[
+			"Now",
+			"2 plans",
+			[
+				["Premium", "Starts", "new", { amount: "$7", suffix: "/mo" }],
+				[
+					"Pro",
+					"Unused time credited",
+					"ending",
+					{ amount: "-$13.33", suffix: "credit" },
+				],
+				["Seats", "Kept", "kept", { amount: "$5", suffix: "/mo" }],
+			],
+		],
+		[
+			"Nov 1",
+			"2 plans",
+			[
+				["Seats", "Starts", "new", { amount: "$5", suffix: "/mo" }],
+				["Premium", "Kept", "kept", { amount: "$7", suffix: "/mo" }],
+			],
+		],
 	]);
 	expect(section.summary).toBe("2 now · 1 on Nov 1");
 });
@@ -127,21 +159,69 @@ test("balance rows classify reset and carried-over usage", () => {
 	});
 
 	expect(
-		section.rows.map((row) => [row.title, row.label, row.detail, row.value]),
+		section.phases.map((phase) => [
+			phase.label,
+			phase.rows.map((row) => [row.description, row.value]),
+		]),
 	).toEqual([
-		["API Credits", "Carried over", "Granted 100 → 500", "260 left"],
 		[
-			"API Credits",
-			"Reset",
-			"From Nov 1 · Granted 500 → 100 · Usage 240 → 0",
-			"100 left",
+			"Now",
+			[
+				[
+					"100 → 500 granted · 240 used",
+					{ amount: "260", suffix: "of 500 left" },
+				],
+			],
+		],
+		[
+			"Nov 1",
+			[
+				[
+					"500 → 100 granted · 0 used",
+					{ amount: "100", suffix: "of 100 left" },
+				],
+			],
 		],
 	]);
 	expect(section.summary).toBe("1 reset · 1 carried over");
 });
 
-test("processor rows list subscription actions and item changes", () => {
-	const section = processorChangesToReviewSection({
+const monthly = (unitAmount: number): ProcessorItemPrice => ({
+	currency: "usd",
+	unit_amount: unitAmount,
+	interval: "month",
+	interval_count: 1,
+	usage_type: "licensed",
+	tiers_mode: null,
+	tiers: null,
+	units_per_quantity: null,
+});
+
+test("Stripe rows list the end state per phase, named by plan", () => {
+	const item = (overrides: Partial<ProcessorItem>): ProcessorItem => ({
+		item_id: null,
+		price_id: "price_premium",
+		plan_id: "premium",
+		feature_id: null,
+		display_name: "Premium",
+		feature_name: null,
+		quantity: 1,
+		price: monthly(50),
+		amount: 50,
+		creates_price: false,
+		managed_by_autumn: true,
+		...overrides,
+	});
+	const seats = item({
+		price_id: "price_seats",
+		feature_id: "seats",
+		feature_name: "Seats",
+		quantity: 4,
+		price: monthly(10),
+		amount: 40,
+	});
+
+	const section = processorItemsToReviewSection({
 		preview: preview({
 			processor_changes: [
 				{
@@ -153,43 +233,76 @@ test("processor rows list subscription actions and item changes", () => {
 			],
 			phases: [
 				phase(NOW, {
-					processor_item_changes: [
-						{
-							action: "deleted",
-							item_id: "si_1",
+					processor_items: [
+						item({}),
+						item({
 							price_id: "price_legacy",
 							plan_id: null,
-							feature_id: null,
 							display_name: "Legacy Support",
-							quantity: 1,
-							previous_attributes: null,
-							creates_price: false,
 							managed_by_autumn: false,
-						},
-						{
-							action: "updated",
-							item_id: "si_2",
-							price_id: "price_seats",
-							plan_id: "seats",
-							feature_id: null,
-							display_name: "Seats",
-							quantity: 4,
-							previous_attributes: { quantity: 2 },
-							creates_price: false,
-							managed_by_autumn: true,
-						},
+							price: null,
+							amount: null,
+						}),
 					],
 				}),
+				phase(NOV_1, { processor_items: [item({}), seats] }),
 			],
 		}),
 	});
 
 	expect(
-		section.rows.map((row) => [row.title, row.label, row.detail, row.value]),
+		section.phases.map((phase) => [
+			phase.label,
+			phase.total,
+			phase.rows.map((row) => [
+				row.title,
+				row.description,
+				row.flag,
+				row.value,
+				row.quantity,
+			]),
+		]),
 	).toEqual([
-		["Subscription", "Updated", undefined, undefined],
-		["Legacy Support", "Removed", "Not in Autumn", "× 1"],
-		["Seats", "Updated", undefined, "× 2 → 4"],
+		[
+			"Now",
+			"$50/mo",
+			[
+				[
+					"Premium",
+					"Base price",
+					undefined,
+					{ amount: "$50", suffix: "/mo" },
+					undefined,
+				],
+				["Legacy Support", undefined, "Not in Autumn", undefined, undefined],
+			],
+		],
+		[
+			"Nov 1",
+			"$90/mo",
+			[
+				[
+					"Premium",
+					"Base price",
+					undefined,
+					{ amount: "$50", suffix: "/mo" },
+					undefined,
+				],
+				[
+					"Premium",
+					"Seats · $10 each",
+					undefined,
+					{ amount: "$40", suffix: "/mo" },
+					{ current: 4 },
+				],
+			],
+		],
 	]);
-	expect(section.summary).toBe("1 removed · 1 updated");
+	expect(section.summary).toBe("2 items now · 2 on Nov 1");
+	expect(section.stripeIds.map((stripeId) => stripeId.id)).toEqual([
+		"sub_1",
+		"price_premium",
+		"price_legacy",
+		"price_seats",
+	]);
 });
