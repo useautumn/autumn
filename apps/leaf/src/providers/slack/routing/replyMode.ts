@@ -8,7 +8,7 @@ import { findSlackInstallationForWorkspace } from "../installations.js";
 import { controlMessageFrom } from "./controlMessage.js";
 
 /** The author's own run is still live, so an untagged correction ("actually
- * make it $20") reaches it as a follow-up instead of being dropped. */
+ * make it $20") reaches it instead of being dropped. */
 const authorOwnsLiveRun = ({
 	message,
 	thread,
@@ -26,7 +26,9 @@ const authorOwnsLiveRun = ({
 			workspaceId,
 		}),
 	);
-	if (!active || active.closed || active.stop || active.settling) return false;
+	// A settling run still counts: the coordinator queues the correction as
+	// the next run instead of injecting it.
+	if (!active || active.closed || active.stop) return false;
 	return active.ownerProviderUserId === message.author.userId;
 };
 

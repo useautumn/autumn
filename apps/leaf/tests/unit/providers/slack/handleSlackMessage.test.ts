@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import type { Message, Thread } from "chat";
+import type { Message, StateAdapter, Thread } from "chat";
 import { createSlackMessageHandlers } from "../../../../src/providers/slack/handlers/handleSlackMessage.js";
 
 let disposition: "close" | "keep" = "close";
@@ -11,9 +11,18 @@ const getRecentMessages = mock(async () => recentMessages);
 let skipReply = false;
 const shouldSkipReply = mock(async (_input: unknown) => skipReply);
 
+let lists = new Map<string, unknown[]>();
+const state = {
+	appendToList: async (key: string, value: unknown) => {
+		lists.set(key, [...(lists.get(key) ?? []), value]);
+	},
+	getList: async (key: string) => lists.get(key) ?? [],
+} as unknown as StateAdapter;
+
 const dependencies = {
 	dispatch: dispatchSlackAgentMessage,
 	getRecentMessages,
+	getState: () => state,
 	shouldSkipReply,
 };
 const {
@@ -43,7 +52,6 @@ const createMessage = ({
 const createThread = (history: Message[] = []) => {
 	const addReaction = mock(async () => {});
 	const unsubscribe = mock(async () => {});
-	let state: Record<string, unknown> | null = null;
 	return {
 		addReaction,
 		thread: {
@@ -54,12 +62,6 @@ const createThread = (history: Message[] = []) => {
 			channelId: "C1",
 			id: "slack:C1:1",
 			recentMessages: history,
-			setState: async (next: Record<string, unknown>) => {
-				state = { ...state, ...next };
-			},
-			get state() {
-				return Promise.resolve(state);
-			},
 			unsubscribe,
 		} as unknown as Thread,
 		unsubscribe,
@@ -68,6 +70,7 @@ const createThread = (history: Message[] = []) => {
 
 type DispatchInput = {
 	missedMessages: () => Promise<unknown>;
+	onMissedMessagesDelivered: () => Promise<void>;
 	recentMessages: () => Promise<unknown>;
 };
 
@@ -78,6 +81,7 @@ beforeEach(() => {
 	disposition = "close";
 	skipReply = false;
 	shouldSkipReply.mockClear();
+	lists = new Map();
 	dispatchSlackAgentMessage.mockClear();
 	getRecentMessages.mockClear();
 });
@@ -175,6 +179,11 @@ describe("handleSubscribedSlackMessage", () => {
 		// The missed-message lookup reuses the history the run already loaded.
 		await lastDispatchInput().recentMessages();
 		expect(getRecentMessages).toHaveBeenCalledTimes(1);
+
+		// Once the turn has run with them, the next mention starts clean.
+		await lastDispatchInput().onMissedMessagesDelivered();
+		await handleSubscribedSlackMessage(thread, tagged);
+		expect(await lastDispatchInput().missedMessages()).toBeUndefined();
 	});
 
 	test("ignores bot-authored messages", async () => {

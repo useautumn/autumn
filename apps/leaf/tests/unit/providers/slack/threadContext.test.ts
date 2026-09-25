@@ -1,10 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { Message, Thread } from "chat";
+import type { Message, StateAdapter, Thread } from "chat";
 import {
 	getEarlierThreadMessages,
 	getRecentMessages,
+	loadMissedMessages,
 	recordSkippedMessage,
-	takeMissedMessages,
 } from "../../../../src/providers/slack/threadContext.js";
 
 const message = ({
@@ -48,97 +48,157 @@ describe("getRecentMessages", () => {
 	});
 });
 
-/** A thread whose state lives in memory, like the Postgres-backed original. */
-const statefulThread = (recentMessages: Message[] = []) => {
-	let state: Record<string, unknown> | null = null;
+/** The list half of the Postgres state adapter, in memory. */
+const memoryState = () => {
+	const lists = new Map<string, unknown[]>();
 	return {
-		get state() {
-			return Promise.resolve(state);
+		appendToList: async (
+			key: string,
+			value: unknown,
+			options?: { maxLength?: number },
+		) => {
+			const list = [...(lists.get(key) ?? []), value];
+			lists.set(
+				key,
+				options?.maxLength ? list.slice(-options.maxLength) : list,
+			);
 		},
-		recentMessages,
-		refresh: mock(async () => {}),
-		setState: mock(async (next: Record<string, unknown>) => {
-			state = { ...state, ...next };
-		}),
-	} as unknown as Thread & {
-		setState: ReturnType<typeof mock>;
-	};
+		getList: async (key: string) => lists.get(key) ?? [],
+		lists,
+	} as unknown as StateAdapter & { lists: Map<string, unknown[]> };
 };
 
+const threadWith = (recentMessages: Message[] = []) =>
+	({ id: "slack:C1:1", recentMessages }) as unknown as Thread;
+
 describe("skipped replies", () => {
-	test("replays skipped replies in order and clears them once taken", async () => {
+	test("replays skipped replies in order until marked delivered", async () => {
+		const state = memoryState();
 		const skippedA = message({ id: "2", text: "add a $10 seat add-on" });
 		const skippedB = message({ id: "3", text: "and make it annual" });
 		const current = message({ id: "4", text: "@Autumn do the above" });
-		const thread = statefulThread([
+		const thread = threadWith([
 			message({ id: "1", text: "@Autumn set up Pro" }),
 			skippedA,
 			skippedB,
 			current,
 		]);
 
-		await recordSkippedMessage(thread, skippedA);
-		await recordSkippedMessage(thread, skippedB);
+		await Promise.all([
+			recordSkippedMessage(thread, skippedA, state),
+			recordSkippedMessage(thread, skippedB, state),
+		]);
 
-		expect(await takeMissedMessages(thread, current)).toEqual({
+		const loaded = await loadMissedMessages(thread, current, state);
+		expect(loaded?.missed).toEqual({
 			messages: [
 				{ author: "Charlie", isBot: false, text: "add a $10 seat add-on" },
 				{ author: "Charlie", isBot: false, text: "and make it annual" },
 			],
 			omittedCount: 0,
 		});
-		expect(await takeMissedMessages(thread, current)).toBeUndefined();
+
+		// A turn that never ran leaves them for the next mention.
+		expect((await loadMissedMessages(thread, current, state))?.missed).toEqual(
+			loaded?.missed,
+		);
+
+		await loaded?.markDelivered();
+		expect(await loadMissedMessages(thread, current, state)).toBeUndefined();
+	});
+
+	test("a reply skipped while a turn ran is still replayed afterwards", async () => {
+		const state = memoryState();
+		const first = message({ id: "1", text: "make it annual" });
+		const later = message({ id: "2", text: "use dollars" });
+		const current = message({ id: "3", text: "@Autumn go" });
+		const thread = threadWith([first, later, current]);
+
+		await recordSkippedMessage(thread, first, state);
+		const loaded = await loadMissedMessages(thread, current, state);
+		await recordSkippedMessage(thread, later, state);
+		await loaded?.markDelivered();
+
+		expect(
+			(await loadMissedMessages(thread, current, state))?.missed?.messages,
+		).toEqual([{ author: "Charlie", isBot: false, text: "use dollars" }]);
 	});
 
 	test("returns nothing when no reply was skipped", async () => {
 		const current = message({ id: "1", text: "@Autumn hi" });
 
 		expect(
-			await takeMissedMessages(statefulThread([current]), current),
+			await loadMissedMessages(threadWith([current]), current, memoryState()),
 		).toBeUndefined();
 	});
 
 	test("counts skipped replies that fell out of the fetched window", async () => {
+		const state = memoryState();
 		const kept = message({ id: "9", text: "still visible" });
 		const current = message({ id: "10", text: "@Autumn do the above" });
-		const thread = statefulThread([kept, current]);
+		const thread = threadWith([kept, current]);
 
-		await recordSkippedMessage(thread, message({ id: "1", text: "too old" }));
-		await recordSkippedMessage(thread, kept);
+		await recordSkippedMessage(
+			thread,
+			message({ id: "1", text: "too old" }),
+			state,
+		);
+		await recordSkippedMessage(thread, kept, state);
 
-		expect(await takeMissedMessages(thread, current)).toEqual({
+		expect((await loadMissedMessages(thread, current, state))?.missed).toEqual({
 			messages: [{ author: "Charlie", isBot: false, text: "still visible" }],
 			omittedCount: 1,
 		});
 	});
 
-	test("keeps the newest replies within the character budget", async () => {
-		const long = "x".repeat(15_000);
-		const older = message({ id: "1", text: long });
-		const newer = message({ id: "2", text: long });
+	test("an oversized reply is truncated rather than hiding older ones", async () => {
+		const state = memoryState();
+		const older = message({ id: "1", text: "use the annual interval" });
+		const pasted = message({ id: "2", text: "x".repeat(30_000) });
 		const current = message({ id: "3", text: "@Autumn do the above" });
-		const thread = statefulThread([older, newer, current]);
+		const thread = threadWith([older, pasted, current]);
 
-		await recordSkippedMessage(thread, older);
-		await recordSkippedMessage(thread, newer);
+		await recordSkippedMessage(thread, older, state);
+		await recordSkippedMessage(thread, pasted, state);
 
-		const missed = await takeMissedMessages(thread, current);
-		expect(missed?.messages.map(({ text }) => text)).toEqual([long]);
-		expect(missed?.omittedCount).toBe(1);
+		const missed = (await loadMissedMessages(thread, current, state))?.missed;
+		expect(missed?.omittedCount).toBe(0);
+		expect(missed?.messages[0]?.text).toBe("use the annual interval");
+		expect(missed?.messages[1]?.text).toEndWith("…[truncated]");
+		expect(missed?.messages[1]?.text.length).toBeLessThan(5000);
+	});
+
+	test("keeps the newest replies within the character budget", async () => {
+		const state = memoryState();
+		const replies = Array.from({ length: 7 }, (_, index) =>
+			message({ id: String(index), text: "y".repeat(4000) }),
+		);
+		const current = message({ id: "7", text: "@Autumn do the above" });
+		const thread = threadWith([...replies, current]);
+
+		for (const reply of replies) {
+			await recordSkippedMessage(thread, reply, state);
+		}
+
+		const missed = (await loadMissedMessages(thread, current, state))?.missed;
+		expect(missed?.messages).toHaveLength(5);
+		expect(missed?.omittedCount).toBe(2);
 	});
 
 	test("remembers at most the 50 latest skipped replies", async () => {
-		const thread = statefulThread();
+		const state = memoryState();
+		const thread = threadWith();
 		for (let index = 0; index < 55; index++) {
 			await recordSkippedMessage(
 				thread,
 				message({ id: String(index), text: "chatter" }),
+				state,
 			);
 		}
 
-		const state = (await thread.state) as { leafSkippedMessageIds: string[] };
-		expect(state.leafSkippedMessageIds).toHaveLength(50);
-		expect(state.leafSkippedMessageIds[0]).toBe("5");
+		const skipped = state.lists.get("leaf:skipped-replies:slack:C1:1");
+		expect(skipped).toHaveLength(50);
+		expect(skipped?.[0]).toBe("5");
 	});
 });
 
@@ -148,9 +208,10 @@ describe("getEarlierThreadMessages", () => {
 			message({ id: String(index), text: `message ${index}` }),
 		);
 		const current = message({ id: "10", text: "@Autumn do the above" });
-		const thread = statefulThread([...history, current]);
 
-		expect(getEarlierThreadMessages(thread, current)).toEqual({
+		expect(
+			getEarlierThreadMessages(threadWith([...history, current]), current),
+		).toEqual({
 			messages: [
 				{ author: "Charlie", isBot: false, text: "message 0" },
 				{ author: "Charlie", isBot: false, text: "message 1" },
@@ -162,8 +223,12 @@ describe("getEarlierThreadMessages", () => {
 
 	test("returns nothing when the recent window covers the thread", () => {
 		const current = message({ id: "2", text: "@Autumn hi" });
-		const thread = statefulThread([message({ id: "1", text: "hey" }), current]);
 
-		expect(getEarlierThreadMessages(thread, current)).toBeUndefined();
+		expect(
+			getEarlierThreadMessages(
+				threadWith([message({ id: "1", text: "hey" }), current]),
+				current,
+			),
+		).toBeUndefined();
 	});
 });

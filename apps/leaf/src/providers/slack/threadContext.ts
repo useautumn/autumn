@@ -1,4 +1,4 @@
-import type { Message, Thread } from "chat";
+import { Chat, type Message, type StateAdapter, type Thread } from "chat";
 import type {
 	AgentContextMessage,
 	AgentMissedMessages,
@@ -10,11 +10,18 @@ const RECENT_MESSAGES_LIMIT = 8;
 // replayed; the character budget keeps a long thread from swamping the prompt.
 const MISSED_MESSAGES_LIMIT = 50;
 const MISSED_MESSAGES_CHAR_BUDGET = 20_000;
+// One pasted log must not crowd every other missed reply out of the budget.
+const MISSED_MESSAGE_CHAR_LIMIT = 4000;
+const TRUNCATED_SUFFIX = " …[truncated]";
+// Matches the chat SDK's thread-state lifetime.
+const SKIPPED_REPLIES_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-type LeafThreadState = {
-	/** Replies skipped in mentions-only mode, oldest first. */
-	leafSkippedMessageIds?: string[];
-};
+const skippedRepliesKey = (threadId: string) =>
+	`leaf:skipped-replies:${threadId}`;
+const deliveredRepliesKey = (threadId: string) =>
+	`leaf:delivered-replies:${threadId}`;
+
+const chatState = () => Chat.getSingleton().getState();
 
 const isPlanBlock = (block: unknown) =>
 	typeof block === "object" &&
@@ -39,31 +46,36 @@ const toContextMessage = (message: Message): AgentContextMessage => ({
 	text: message.text,
 });
 
-/** The newest messages that fit the limit and character budget, oldest first. */
+const truncateText = (text: string) =>
+	text.length > MISSED_MESSAGE_CHAR_LIMIT
+		? `${text.slice(0, MISSED_MESSAGE_CHAR_LIMIT)}${TRUNCATED_SUFFIX}`
+		: text;
+
+/** The newest messages that fit the limit and character budget, oldest first;
+ * each message is capped first, so the newest always makes it in. */
 const fitMissedMessages = (
 	messages: ReadonlyArray<Message>,
 ): AgentMissedMessages => {
-	const kept: Message[] = [];
+	const kept: AgentContextMessage[] = [];
 	let characters = 0;
 	for (const message of [...messages].reverse()) {
-		characters += message.text.length;
+		const contextMessage = {
+			...toContextMessage(message),
+			text: truncateText(message.text),
+		};
+		characters += contextMessage.text.length;
 		if (
 			kept.length >= MISSED_MESSAGES_LIMIT ||
 			characters > MISSED_MESSAGES_CHAR_BUDGET
 		) {
 			break;
 		}
-		kept.push(message);
+		kept.push(contextMessage);
 	}
 	return {
-		messages: kept.reverse().map(toContextMessage),
+		messages: kept.reverse(),
 		omittedCount: messages.length - kept.length,
 	};
-};
-
-const readSkippedMessageIds = async (thread: Thread) => {
-	const state = (await thread.state) as LeafThreadState | null;
-	return state?.leafSkippedMessageIds ?? [];
 };
 
 export const getRecentMessages = async (
@@ -91,18 +103,19 @@ export const getRecentMessages = async (
 };
 
 /** Remembers a reply the agent was not tagged in, so the next turn that does
- * tag it can catch up on what it skipped. */
+ * tag it can catch up on what it skipped. The append is atomic, so replies
+ * arriving together are all kept. */
 export const recordSkippedMessage = async (
 	thread: Thread,
 	message: Message,
+	state?: StateAdapter,
 ) => {
 	try {
-		const skipped = await readSkippedMessageIds(thread);
-		await thread.setState({
-			leafSkippedMessageIds: [...skipped, message.id].slice(
-				-MISSED_MESSAGES_LIMIT,
-			),
-		} satisfies LeafThreadState);
+		await (state ?? chatState()).appendToList(
+			skippedRepliesKey(thread.id),
+			message.id,
+			{ maxLength: MISSED_MESSAGES_LIMIT, ttlMs: SKIPPED_REPLIES_TTL_MS },
+		);
 	} catch (error) {
 		logger.warn("Could not record skipped Slack message", {
 			data: { error },
@@ -111,36 +124,58 @@ export const recordSkippedMessage = async (
 	}
 };
 
-/** The skipped replies still in the refreshed history, oldest first; they
- * are cleared from thread state once handed to a turn. Call after
- * `getRecentMessages` has refreshed the thread. */
-export const takeMissedMessages = async (
+export type LoadedMissedMessages = Readonly<{
+	missed?: AgentMissedMessages;
+	/** Marks these replies as seen; call once a turn has actually run with
+	 * them, so a blocked or failed turn leaves them for the next mention. */
+	markDelivered: () => Promise<void>;
+}>;
+
+/** The skipped replies not yet handed to a turn, oldest first. Call after
+ * `getRecentMessages` has refreshed the thread. Both lists are append-only
+ * and trimmed to the same length in the same order, so the delivered list
+ * always covers the delivered ids still in the skipped list. */
+export const loadMissedMessages = async (
 	thread: Thread,
 	currentMessage: Message,
-): Promise<AgentMissedMessages | undefined> => {
+	state?: StateAdapter,
+): Promise<LoadedMissedMessages | undefined> => {
 	try {
-		const skippedIds = await readSkippedMessageIds(thread);
-		if (!skippedIds.length) return undefined;
-		const skipped = new Set(skippedIds);
+		const store = state ?? chatState();
+		const [skippedIds, deliveredIds] = await Promise.all([
+			store.getList<string>(skippedRepliesKey(thread.id)),
+			store.getList<string>(deliveredRepliesKey(thread.id)),
+		]);
+		const delivered = new Set(deliveredIds);
+		const pendingIds = skippedIds.filter((id) => !delivered.has(id));
+		if (!pendingIds.length) return undefined;
+
+		const pending = new Set(pendingIds);
 		const available = thread.recentMessages.filter(
 			(message) =>
-				skipped.has(message.id) &&
+				pending.has(message.id) &&
 				message.id !== currentMessage.id &&
 				isContextMessage(message),
 		);
 		// Skipped ids that fell out of the fetched window can't be replayed.
 		const windowIds = new Set(thread.recentMessages.map(({ id }) => id));
-		const outOfWindow = skippedIds.filter((id) => !windowIds.has(id)).length;
-
-		// Re-read so a reply skipped while this turn set up stays recorded.
-		const latestIds = await readSkippedMessageIds(thread);
-		await thread.setState({
-			leafSkippedMessageIds: latestIds.filter((id) => !skipped.has(id)),
-		} satisfies LeafThreadState);
-
+		const outOfWindow = pendingIds.filter((id) => !windowIds.has(id)).length;
 		const missed = fitMissedMessages(available);
-		if (!missed.messages.length && !outOfWindow) return undefined;
-		return { ...missed, omittedCount: missed.omittedCount + outOfWindow };
+
+		return {
+			markDelivered: async () => {
+				for (const id of pendingIds) {
+					await store.appendToList(deliveredRepliesKey(thread.id), id, {
+						maxLength: MISSED_MESSAGES_LIMIT,
+						ttlMs: SKIPPED_REPLIES_TTL_MS,
+					});
+				}
+			},
+			missed:
+				missed.messages.length || outOfWindow
+					? { ...missed, omittedCount: missed.omittedCount + outOfWindow }
+					: undefined,
+		};
 	} catch (error) {
 		logger.warn("Could not load skipped Slack messages", {
 			data: { error },

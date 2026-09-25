@@ -45,6 +45,8 @@ type DispatchSlackAgentMessageInput = {
 	/** Loaded only when a new run starts; an injected follow-up leaves them for
 	 * the next run. */
 	missedMessages?: () => Promise<AgentMissedMessages | undefined>;
+	/** Called once a turn has run with the missed messages in its prompt. */
+	onMissedMessagesDelivered?: () => Promise<void>;
 	providerUserId: string;
 	raw: unknown;
 	react?: (input: { action: "add" | "remove"; emoji: string }) => Promise<void>;
@@ -108,6 +110,7 @@ const runAndReply = async ({
 	channelId,
 	clientContext,
 	missedMessages: missedMessagesInput,
+	onMissedMessagesDelivered,
 	providerUserId,
 	raw,
 	react,
@@ -252,6 +255,17 @@ const runAndReply = async ({
 			text,
 			threadId,
 		});
+
+		// A blocked turn never reached the agent; anything else put the missed
+		// messages into the session, so they need not be replayed again.
+		if (output.kind !== "blocked") {
+			await onMissedMessagesDelivered?.().catch((error: unknown) => {
+				logger.warn("Could not mark missed Slack messages delivered", {
+					event: "leaf.slack_missed_messages_mark_failed",
+					data: { error },
+				});
+			});
+		}
 
 		if (output.kind === "stopped") {
 			await progress.fail("Stopped by user");

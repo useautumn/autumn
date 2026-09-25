@@ -112,6 +112,14 @@ describe("shouldSkipUntaggedReply", () => {
 					thread,
 				}),
 			).toBe(true);
+			// Settling, the run is about to reply: the correction still counts.
+			run.settling = true;
+			expect(
+				await shouldSkipUntaggedReply({
+					message: reply({ text: "actually make it $20" }),
+					thread,
+				}),
+			).toBe(false);
 		} finally {
 			closeRun({ key, run });
 		}
