@@ -4,6 +4,7 @@ import {
 	computeApplyBillingPlan,
 	createSubjectState,
 	mergeCustomerAndEntities,
+	type RowChange,
 	type WorkerCustomerEntitlement,
 } from "../../../../src/balanceEngine.js";
 import {
@@ -97,9 +98,14 @@ const rebalancePlan = ({
 	expiringPooledBalanceIds: [],
 });
 
-const balanceIncrementsOf = (changes: { id?: string; add?: unknown }[]) =>
+/** Each entitlement increment's balance move, by row id; a mutation's changes are read-only and mixed. */
+const balanceIncrementsOf = (changes: readonly RowChange[]) =>
 	Object.fromEntries(
-		changes.map(({ id, add }) => [id, (add as { balance: number }).balance]),
+		changes.flatMap((change) =>
+			change.op === "increment" && change.table === "customerEntitlements"
+				? [[change.id, change.add.balance]]
+				: [],
+		),
 	);
 
 describe("a plan's rebalance", () => {

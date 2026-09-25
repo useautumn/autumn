@@ -10,6 +10,7 @@ import type {
 	KafkaTransaction,
 } from "../client/types/kafkaClient.js";
 import { assertNonEmpty } from "../lib/assert.js";
+import { sendIdempotentBatch } from "./sendIdempotentBatch.js";
 
 async function abortTransaction({
 	transaction,
@@ -50,6 +51,23 @@ export async function sendTransactionalBatch({
 	if (messages.length === 0) {
 		throw new RangeError("Kafka batch cannot be empty");
 	}
+	// An idempotent session has no transactions: the same batch goes out as one plain produce.
+	// Offsets cannot ride along; a caller that commits them branches before reaching here.
+	if (producer.mode === "idempotent") {
+		if (offsets) {
+			throw new Error(
+				"An idempotent producer commits offsets through the consumer group, not in a batch",
+			);
+		}
+		if (!producer.send)
+			throw new Error("Idempotent batches need a producer with a plain send");
+		return sendIdempotentBatch({
+			sender: { send: producer.send },
+			topic,
+			partition,
+			messages,
+		});
+	}
 
 	async function send(
 		transaction: KafkaTransaction,
@@ -71,6 +89,7 @@ export async function sendTransactionalBatch({
 		if (offsets) await transaction.sendOffsets(offsets);
 		return { baseOffset };
 	}
+
 	return runTransaction({ producer, send });
 }
 
@@ -82,6 +101,11 @@ export async function sendTransactionalOffsets({
 	producer: KafkaProducer;
 	offsets: KafkaOffsetCommit;
 }): Promise<void> {
+	if (producer.mode === "idempotent") {
+		throw new Error(
+			"An idempotent producer commits offsets through the consumer group, not in a transaction",
+		);
+	}
 	function send(transaction: KafkaTransaction): Promise<void> {
 		return transaction.sendOffsets(offsets);
 	}
