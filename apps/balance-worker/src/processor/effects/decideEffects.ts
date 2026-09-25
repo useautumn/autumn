@@ -1,4 +1,5 @@
 import type {
+	DeductionOutcome,
 	MutationEffect,
 	SubjectStateMutation,
 	WorkerFullSubject,
@@ -11,11 +12,14 @@ export const decideEffects = ({
 	mutation,
 	before,
 	after,
+	deduction,
 }: {
 	mutation: SubjectStateMutation;
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
+	/** The deduction the mutation was made from. */
+	deduction: DeductionOutcome;
 }): MutationEffect[] => [
-	...subjectsToBalanceWebhooks({ mutation, before, after }),
+	...subjectsToBalanceWebhooks({ mutation, before, after, deduction }),
 	...decideAutoTopupEffects({ mutation, after }),
 ];
