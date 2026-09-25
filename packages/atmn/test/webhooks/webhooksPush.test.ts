@@ -379,3 +379,52 @@ test("a catalog that still fails after settings apply surfaces its error", async
 	});
 	await expect(push).rejects.toThrow("EUR prices need multi-currency enabled");
 });
+
+test("a deferred catalog that still fails after settings stops the push before webhooks sync", async () => {
+	const dir = projectWith({ body: `${MULTI_CURRENCY}\n${WEBHOOKS}` });
+	const { order, client } = multiCurrencyClient({ stillFails: true });
+	const calls = order;
+	const withWebhooks = {
+		...client,
+		previewSyncWebhooks: async () => ({
+			changes: [
+				{
+					action: "create",
+					id: "billing",
+					webhook: state("https://staging.example.com/autumn"),
+				},
+			],
+		}),
+		syncWebhooks: async () => {
+			calls.push("syncWebhooks");
+			return { webhooks: [], secrets: [], errors: [] };
+		},
+	};
+	let output = "";
+	let failure: unknown;
+	try {
+		await runPush({
+			// biome-ignore lint/suspicious/noExplicitAny: a fake client
+			client: withWebhooks as any,
+			cwd: dir,
+			write: (text) => {
+				output += text;
+			},
+			webhookEnv: async () => SANDBOX,
+		});
+	} catch (error) {
+		failure = error;
+	}
+	expect(calls).toContain("updateOrganization");
+	expect(calls).not.toContain("syncWebhooks");
+	expect(calls).not.toContain("update");
+	// A rejected runPush is what makes the CLI exit non-zero.
+	expect(failure).toBeInstanceOf(Error);
+	expect(String((failure as Error).message)).toBe(
+		[
+			"Applied settings, but the catalog still fails its preview, so the catalog and webhooks were not applied:",
+			"  plan pro: EUR prices need multi-currency enabled",
+		].join("\n"),
+	);
+	expect(output).toContain("Applied settings.");
+});

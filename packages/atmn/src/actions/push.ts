@@ -218,44 +218,69 @@ const renderLintWarnings = ({ warnings }: { warnings: LintIssue[] }): string =>
 		.join("\n");
 
 /**
- * Settings, then the catalog: a flag like multi_currency changes what the
- * catalog accepts, so after a settings write the catalog is previewed again
- * against the settings as they now are, and applied only if work remains.
+ * A flag like multi_currency changes what the catalog accepts, so after a
+ * settings write the catalog is previewed again against the settings as they
+ * now are. The catalog preview to apply comes back.
  */
-const applySettingsThenCatalog = async ({
+const applySettings = async ({
 	client,
 	settingsBody,
 	settings,
 	catalogPreview,
 	wire,
-	configPath,
 	write,
 	migrationLinkBase,
-	showCatalogPreview,
+	catalogDeferred,
 }: {
 	client: AutumnClient;
 	settingsBody: Record<string, unknown> | undefined;
 	settings: SettingsPreview | undefined;
 	catalogPreview: CatalogPreview;
 	wire: Record<string, unknown>;
+	write: (text: string) => void;
+	migrationLinkBase?: string;
+	/** The catalog was never shown: its re-preview is printed, and a failure names what was left unapplied. */
+	catalogDeferred: boolean;
+}): Promise<CatalogPreview> => {
+	if (settingsBody === undefined || !settingsHaveWork({ settings }))
+		return catalogPreview;
+	try {
+		await client.updateOrganization(settingsBody);
+	} catch (error) {
+		throw withSettingsScopeHint({ error });
+	}
+	write("\nApplied settings.\n");
+	let preview: CatalogPreview;
+	try {
+		preview = (await client.previewUpdate(wire)) as CatalogPreview;
+	} catch (error) {
+		if (!catalogDeferred) throw error;
+		throw new Error(
+			`Applied settings, but the catalog still fails its preview, so the catalog and webhooks were not applied:\n  ${error instanceof Error ? error.message : String(error)}`,
+			{ cause: error },
+		);
+	}
+	if (catalogDeferred)
+		write(`\n${renderPreview({ preview, migrationLinkBase })}\n`);
+	return preview;
+};
+
+/** Apply the catalog preview settings left behind, when it has work. */
+const applyCatalog = async ({
+	client,
+	preview,
+	wire,
+	configPath,
+	write,
+	migrationLinkBase,
+}: {
+	client: AutumnClient;
+	preview: CatalogPreview;
+	wire: Record<string, unknown>;
 	configPath: string;
 	write: (text: string) => void;
 	migrationLinkBase?: string;
-	/** The catalog was never shown: print its re-preview before applying it. */
-	showCatalogPreview: boolean;
 }): Promise<{ applied?: unknown; migrationIds: string[] }> => {
-	let preview = catalogPreview;
-	if (settingsBody !== undefined && settingsHaveWork({ settings })) {
-		try {
-			await client.updateOrganization(settingsBody);
-		} catch (error) {
-			throw withSettingsScopeHint({ error });
-		}
-		write("\nApplied settings.\n");
-		preview = (await client.previewUpdate(wire)) as CatalogPreview;
-		if (showCatalogPreview)
-			write(`\n${renderPreview({ preview, migrationLinkBase })}\n`);
-	}
 	if (previewIsEmpty({ preview })) return { migrationIds: [] };
 
 	const applied = (await client.update(wire)) as {
@@ -377,21 +402,37 @@ export const runPush = async ({
 	if (dryRun || previewIsEmpty({ preview }))
 		return { configPath, preview, migrationIds: [], catalogDeferred };
 
-	const applied = await settleLanes<{
-		catalog: { applied?: unknown; migrationIds: string[] };
-		webhooks: unknown;
-	}>({
-		catalog: applySettingsThenCatalog({
+	const settingsStep = () =>
+		applySettings({
 			client,
 			settingsBody,
 			settings,
 			catalogPreview,
 			wire,
+			write,
+			migrationLinkBase,
+			catalogDeferred,
+		});
+	const catalogStep = (previewAfterSettings: CatalogPreview) =>
+		applyCatalog({
+			client,
+			preview: previewAfterSettings,
+			wire,
 			configPath,
 			write,
 			migrationLinkBase,
-			showCatalogPreview: catalogDeferred,
-		}),
+		});
+	// A deferred catalog is unproven until settings apply: webhooks wait on its
+	// re-preview. Otherwise settings → catalog runs beside the webhooks sync.
+	const settled = catalogDeferred ? await settingsStep() : undefined;
+	const applied = await settleLanes<{
+		catalog: { applied?: unknown; migrationIds: string[] };
+		webhooks: unknown;
+	}>({
+		catalog:
+			settled === undefined
+				? settingsStep().then(catalogStep)
+				: catalogStep(settled),
 		webhooks: applyWebhooks({
 			client,
 			lane: webhooks,
