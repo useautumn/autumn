@@ -148,10 +148,12 @@ function createProcessor({
 		});
 	}
 
-	/** Commands settle when Kafka has them, but the store applies behind the log,
-	 *  so a drained partition also waits for those applies before it lets go. */
+	/** Commands settle when Kafka has them, but the store applies behind the log:
+	 *  a "log" reply lands before its store apply, so a drained partition waits for
+	 *  the current store completion and for every batch handed to the store before it lets go. */
 	async function drain() {
 		await settleAcceptedCommands({ accepted: scope.accepted });
+		await Promise.allSettled([scope.ctx.writer.waitForStore()]);
 		await scope.ctx.writer.waitForApplies();
 	}
 

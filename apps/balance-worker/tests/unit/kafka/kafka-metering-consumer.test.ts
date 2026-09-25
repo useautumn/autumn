@@ -1443,12 +1443,39 @@ describe("replay window", () => {
 			}
 		},
 	);
+	test("a read-only partition remembers every record and writes nothing to the store", async () => {
+		const readOnlyPartitions = new Set([partition]);
+		const { fixture, recentCommands, handler } = createWindowedHandler({
+			floor: null,
+			readOnlyPartitions,
+		});
+		try {
+			const state = createState();
+			const record = createMutation({ state });
+			// Above the bookmark, where a writing follower would apply it.
+			const result = await handler.applyRecord({
+				position: { topic, partition, offset: 5n },
+				record,
+			});
+			expect(result).toBeUndefined();
+			expect(recentCommands.read({ identity, commandId: record.id })).toEqual({
+				fingerprint: record.receipt.fingerprint,
+			});
+			expect(fixture.store.readState({ identity })).toBeNull();
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(3n);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
 	function createWindowedHandler({
 		floor,
 		withReplay = true,
+		readOnlyPartitions,
 	}: {
 		floor: bigint | null;
 		withReplay?: boolean;
+		readOnlyPartitions?: ReadonlySet<number>;
 	}) {
 		const fixture = createStoreFixture({ nextOffset: 3n });
 		const recentCommands = createRecentCommands({
@@ -1473,6 +1500,7 @@ describe("replay window", () => {
 					floor === null ? [] : [[partition, floor]],
 				),
 				replayByPartition: new Map(withReplay ? [[partition, replay]] : []),
+				readOnlyPartitions,
 				logger: { warn: (...args: unknown[]) => warnings.push(args) },
 			},
 		});

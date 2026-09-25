@@ -14,6 +14,7 @@ import { createMeteringConsumer } from "../../kafka/meteringConsumer/createMeter
 import { createPartitions } from "../../partitions/createPartitions.js";
 import type {
 	PartitionChangeListeners,
+	PartitionFailure,
 	PartitionProgress,
 	PartitionRuntimeResources,
 	Partitions,
@@ -104,14 +105,24 @@ export function createWorkerPartitions({
 			recentCommands,
 			producedOffsets,
 		});
+		const preparation = meteringConsumer.createReplay({
+			partition,
+			recentCommands,
+			readOnly: true,
+		});
 		const resources = ctx.createRuntime({
 			topic,
 			partition,
 			follower,
+			preparation,
 			recentCommands,
 			producedOffsets,
 		});
-		return { ...resources, markUnavailable: follower.markUnavailable };
+		function markUnavailable(failure: PartitionFailure): void {
+			preparation.markUnavailable(failure);
+			follower.markUnavailable(failure);
+		}
+		return { ...resources, markUnavailable };
 	}
 
 	function subscribeChanges(listeners: PartitionChangeListeners): () => void {
@@ -220,6 +231,8 @@ export function createWorkerPartitions({
 			progress: { readProgress, observeHighWatermark },
 			subscribePartitionChanges: subscribeChanges,
 			createRuntime,
+			ownershipLink: ctx.ownershipLink,
+			awaitReadyAnnouncement: ctx.awaitReadyAnnouncement,
 			onError: ctx.onError,
 			onUnhealthyPartition: ctx.onUnhealthyPartition,
 			onServiceStopped: ctx.onServiceStopped,

@@ -72,6 +72,7 @@ export type BalanceWorkerHttpContext = {
 		findRuntime(
 			route: PartitionRoute,
 		): BalanceWorkerRequestContext["runtime"] | undefined;
+		awaitHandoff?(target: { partition: number }): Promise<void>;
 	};
 	partitionResolver: MeteringPartitionResolver;
 	logger: Pick<AutumnLogger, "debug" | "info" | "warn" | "error">;

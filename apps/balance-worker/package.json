@@ -12,6 +12,9 @@
 		"test:kafka": "bun ../../scripts/devServices/runKafkaTests.ts tests/integration/kafka",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",
 		"benchmark:checkpoint": "bun --config=./bunfig.toml tests/benchmarks/checkpoint-capture.ts",
+		"benchmark:handoff": "bun --config=./bunfig.toml tests/benchmarks/ownership-handoff/run.ts",
+		"benchmark:handoff:summarize": "bun tests/benchmarks/ownership-handoff/summarize.ts",
+		"benchmark:handoff:worker": "bun --config=./bunfig.toml tests/benchmarks/ownership-handoff/benchWorker.ts",
 		"ts": "tsc --noEmit",
 		"test:postgres": "bun ../../scripts/devServices/runKafkaTests.ts tests/integration/postgres"
 	},

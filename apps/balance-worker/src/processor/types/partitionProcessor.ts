@@ -59,7 +59,7 @@ export type PartitionProcessor = {
 		command: ConfirmExpiredLockCommand;
 	}): Promise<ConfirmExpiredLockReply>;
 	reset(params: { command: ResetCommand }): Promise<ResetReply>;
-	/** Settles every accepted command; the runtime awaits this before disposal. */
+	/** Settles every accepted command and the store applies behind them; the runtime awaits this before disposal. */
 	drain(): Promise<void>;
 };
 

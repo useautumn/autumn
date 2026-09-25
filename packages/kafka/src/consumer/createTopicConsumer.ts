@@ -55,6 +55,7 @@ export function createTopicConsumer({
 		state.withdrawnPartitions.delete(partition);
 	}
 
+	// A stopped consumer has no group to steer; kafkajs throws, and a partition retiring after the group was left has nothing left to pause.
 	function seekPartition({
 		partition,
 		nextOffset,
@@ -62,6 +63,7 @@ export function createTopicConsumer({
 		partition: number;
 		nextOffset: bigint;
 	}): void {
+		if (state.isStopped) return;
 		ctx.consumer.seek({
 			topic: config.topic,
 			partition,
@@ -70,10 +72,12 @@ export function createTopicConsumer({
 	}
 
 	function pausePartition({ partition }: { partition: number }): void {
+		if (state.isStopped) return;
 		ctx.consumer.pause([{ topic: config.topic, partitions: [partition] }]);
 	}
 
 	function resumeFetching({ partition }: { partition: number }): void {
+		if (state.isStopped) return;
 		ctx.consumer.resume([{ topic: config.topic, partitions: [partition] }]);
 	}
 

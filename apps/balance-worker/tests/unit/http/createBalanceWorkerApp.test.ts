@@ -93,12 +93,14 @@ const fixture = ({
 	owned = true,
 	actualPartition = 2,
 	causeFor,
+	awaitHandoff,
 }: {
 	cause?: Error;
 	owned?: boolean;
 	actualPartition?: number;
 	/** Fails individual tracks by command id, for batches that mix outcomes. */
 	causeFor?: Record<string, Error>;
+	awaitHandoff?: BalanceWorkerHttpContext["ownership"]["awaitHandoff"];
 } = {}) => {
 	const logs: unknown[][] = [];
 	function recordLog(...args: unknown[]): void {
@@ -158,7 +160,7 @@ const fixture = ({
 			: undefined;
 	};
 	const ctx: BalanceWorkerHttpContext = {
-		ownership: { findRuntime },
+		ownership: { findRuntime, awaitHandoff },
 		partitionResolver: { partitionForIdentity: () => actualPartition },
 		logger: {
 			debug: recordLog,
@@ -508,6 +510,31 @@ describe("Balance worker HTTP", () => {
 			expect((await response.json()).error.code).toBe("NOT_OWNER");
 			expect(submitted).toEqual([]);
 		}
+	});
+	test("a withdrawn route answers NOT_OWNER only once its handoff has settled", async () => {
+		const settled = Promise.withResolvers<void>();
+		let awaited = 0;
+		const { post, submitted } = fixture({
+			owned: false,
+			awaitHandoff: async () => {
+				awaited++;
+				await settled.promise;
+			},
+		});
+		let answered = false;
+		const response = (async () => {
+			const reply = await post();
+			answered = true;
+			return reply;
+		})();
+		await Bun.sleep(5);
+		expect(awaited).toBe(1);
+		expect(answered).toBe(false);
+		settled.resolve();
+		const reply = await response;
+		expect(reply.status).toBe(409);
+		expect((await reply.json()).error.code).toBe("NOT_OWNER");
+		expect(submitted).toEqual([]);
 	});
 	test("maps runtime readiness races centrally", async () => {
 		const { post } = fixture({

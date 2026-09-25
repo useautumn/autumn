@@ -7,6 +7,7 @@ import type {
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
+import type { OwnershipHandoffLink } from "../../kafka/createOwnershipHandoffLink.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
 import type { PartitionLoad } from "../../processor/writer/partitionLoad/createPartitionLoad.js";
 import type { ProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
@@ -34,6 +35,8 @@ export type PartitionRuntimeFactoryInput = {
 	topic: string;
 	partition: number;
 	follower: PartitionOutcomeFollowerPort;
+	/** Read-only replay of the same partition for preparation; absent in a bare test. */
+	preparation?: PartitionOutcomeFollowerPort;
 	recentCommands: RecentCommands;
 	/** Offsets this runtime's writer produced; its consumer passes them unread. */
 	producedOffsets?: ProducedOffsets;
@@ -53,6 +56,7 @@ export type PartitionRuntimeFactoryContext = {
 		Partial<Pick<AutumnLogger, "error" | "warn">>;
 	kafka: KafkaProducerFactory;
 	ownershipOffsets: Pick<Admin, "fetchTopicOffsets">;
+	ownershipHandoff?: Pick<OwnershipHandoffLink, "tail" | "sender">;
 	stateStore: StateStore;
 	db: WorkerDb;
 	catalogCache: CatalogCache;

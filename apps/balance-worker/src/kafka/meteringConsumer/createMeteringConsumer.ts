@@ -23,6 +23,7 @@ export function createMeteringConsumer({
 	const producedOffsetsByPartition = new Map<number, ProducedOffsets>();
 	const replayFloorByPartition = new Map<number, bigint>();
 	const replayByPartition = new Map<number, PartitionReplay>();
+	const readOnlyPartitions = new Set<number>();
 	const handler = createMeteringRecordHandler({
 		ctx: {
 			...ctx,
@@ -30,6 +31,7 @@ export function createMeteringConsumer({
 			producedOffsetsByPartition,
 			replayFloorByPartition,
 			replayByPartition,
+			readOnlyPartitions,
 		},
 	});
 	const consumer = createKafkaMeteringConsumer({
@@ -49,6 +51,7 @@ export function createMeteringConsumer({
 		partition,
 		recentCommands,
 		producedOffsets,
+		readOnly = false,
 	}: Parameters<MeteringConsumer["createReplay"]>[0]): PartitionReplay {
 		recentCommandsByPartition.set(partition, recentCommands);
 		if (producedOffsets)
@@ -66,8 +69,22 @@ export function createMeteringConsumer({
 			},
 			position: { topic: config.topic, partition },
 		});
-		replayByPartition.set(partition, replay);
-		return replay;
+		// A partition has one read-only and one writing replay; the handler parks whichever is reading.
+		function startAndCatchUp(
+			params: Parameters<PartitionReplay["startAndCatchUp"]>[0],
+		): Promise<void> {
+			replayByPartition.set(partition, replay);
+			if (readOnly) readOnlyPartitions.add(partition);
+			return replay.startAndCatchUp(params);
+		}
+		async function stop(): Promise<void> {
+			try {
+				await replay.stop();
+			} finally {
+				if (readOnly) readOnlyPartitions.delete(partition);
+			}
+		}
+		return { ...replay, startAndCatchUp, stop };
 	}
 
 	return { start, stop, createReplay, withdrawPartition, resumePartition };

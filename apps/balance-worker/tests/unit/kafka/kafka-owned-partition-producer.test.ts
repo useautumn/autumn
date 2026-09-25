@@ -8,8 +8,11 @@ import {
 	type KafkaProducerSession,
 	type KafkaTransaction,
 	type KafkaProducerClient as OwnedPartitionProducerPort,
+	type OwnershipRecord,
+	type OwnershipTailRecord,
+	ownershipTopic,
 } from "@autumn/kafka";
-import type { ProducerConfig } from "kafkajs";
+import type { ProducerConfig, ProducerRecord } from "kafkajs";
 import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
 import { createOwnershipPublisher } from "../../../src/kafka/createOwnershipPublisher.js";
 import {
@@ -295,12 +298,59 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 		commitFailure,
 		sendFailure,
 		metadataPartitions = [2],
+		withHandoff = false,
 	}: {
 		commitFailure?: Error;
 		sendFailure?: Error;
 		metadataPartitions?: number[];
+		withHandoff?: boolean;
 	} = {}) => {
 		const events: string[] = [];
+		const tailListeners = new Map<
+			number,
+			Set<(entry: OwnershipTailRecord) => void>
+		>();
+		const sent: {
+			topic: string;
+			partition: number;
+			record: OwnershipRecord;
+		}[] = [];
+		const handoff = {
+			tail: {
+				tailPartition: ({
+					partition,
+					onRecord,
+					signal,
+				}: {
+					partition: number;
+					onRecord: (entry: OwnershipTailRecord) => void;
+					signal: AbortSignal;
+				}) => {
+					const listeners = tailListeners.get(partition) ?? new Set();
+					listeners.add(onRecord);
+					tailListeners.set(partition, listeners);
+					signal.addEventListener("abort", () => listeners.delete(onRecord));
+				},
+			},
+			sender: {
+				send: async ({ topic, messages }: ProducerRecord) => {
+					for (const message of messages)
+						sent.push({
+							topic,
+							partition: message.partition ?? -1,
+							record: ownershipTopic.parse({
+								key: Buffer.isBuffer(message.key) ? message.key : null,
+								value: Buffer.isBuffer(message.value) ? message.value : null,
+							}),
+						});
+					return [];
+				},
+			},
+		};
+		const deliver = (entry: OwnershipTailRecord) => {
+			for (const listener of [...(tailListeners.get(entry.partition) ?? [])])
+				listener(entry);
+		};
 		let offset = 10;
 		const producer = {
 			connect: async () => {
@@ -352,11 +402,117 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 							low: "0",
 						})),
 				},
+				...(withHandoff && { handoff }),
 			},
 			config: { topic: "owners", partition: 2, endpoint: "http://worker.test" },
 		});
-		return { session, publication, events };
+		return {
+			session,
+			publication,
+			events,
+			sent,
+			deliver,
+			listenerCount: () => tailListeners.get(2)?.size ?? 0,
+		};
 	};
+
+	describe("Partition handoff publication", () => {
+		const record = ({
+			type,
+			endpoint,
+		}: {
+			type: "ready" | "claimed";
+			endpoint: string;
+		}): OwnershipRecord =>
+			type === "ready"
+				? { schemaVersion: 1, type, partition: 2, endpoint, readyAt: 1 }
+				: { schemaVersion: 1, type, partition: 2, endpoint, claimedAt: 1 };
+
+		test("claim names the successor when asked, this worker otherwise", async () => {
+			const f = fixture();
+			await f.session.connect();
+			await f.session.fence();
+			await f.publication.claim({ endpoint: "http://successor.test" });
+			await f.publication.claim();
+			expect(
+				f.events.filter((event) => event === "send:owners:2"),
+			).toHaveLength(2);
+		});
+		test("announces ready through the plain producer, not the fenced session", async () => {
+			const f = fixture({ withHandoff: true });
+			await f.publication.announceReady();
+			expect(f.events).toEqual([]);
+			expect(f.sent).toEqual([
+				{
+					topic: "owners",
+					partition: 2,
+					record: {
+						schemaVersion: 1,
+						type: "ready",
+						partition: 2,
+						endpoint: "http://worker.test",
+						readyAt: expect.any(Number),
+					},
+				},
+			]);
+		});
+		test("awaitReady resolves on another worker's ready, ignoring its own and other record types", async () => {
+			const f = fixture({ withHandoff: true });
+			const controller = new AbortController();
+			const ready = f.publication.awaitReady({ signal: controller.signal });
+			f.deliver({
+				partition: 2,
+				offset: 1n,
+				record: record({ type: "claimed", endpoint: "http://other.test" }),
+			});
+			f.deliver({
+				partition: 2,
+				offset: 2n,
+				record: record({ type: "ready", endpoint: "http://worker.test" }),
+			});
+			f.deliver({
+				partition: 2,
+				offset: 3n,
+				record: record({ type: "ready", endpoint: "http://successor.test" }),
+			});
+			expect(await ready).toEqual({ endpoint: "http://successor.test" });
+			expect(f.listenerCount()).toBe(0);
+		});
+		test("awaitClaim resolves with the offset of the claim naming this worker", async () => {
+			const f = fixture({ withHandoff: true });
+			const controller = new AbortController();
+			const claim = f.publication.awaitClaim({ signal: controller.signal });
+			f.deliver({
+				partition: 2,
+				offset: 7n,
+				record: record({ type: "claimed", endpoint: "http://other.test" }),
+			});
+			f.deliver({
+				partition: 2,
+				offset: 8n,
+				record: record({ type: "claimed", endpoint: "http://worker.test" }),
+			});
+			expect(await claim).toEqual({ routeEpoch: "8" });
+		});
+		test("an aborted wait rejects with the reason and stops listening", async () => {
+			const f = fixture({ withHandoff: true });
+			const controller = new AbortController();
+			const claim = f.publication.awaitClaim({ signal: controller.signal });
+			expect(f.listenerCount()).toBe(1);
+			controller.abort(new Error("gave up"));
+			await expect(claim).rejects.toThrow("gave up");
+			expect(f.listenerCount()).toBe(0);
+		});
+		test("without a handoff link nothing is announced and a wait only ends with its signal", async () => {
+			const f = fixture();
+			await f.publication.announceReady();
+			expect(f.events).toEqual([]);
+			const controller = new AbortController();
+			const ready = f.publication.awaitReady({ signal: controller.signal });
+			controller.abort(new Error("timed out"));
+			await expect(ready).rejects.toThrow("timed out");
+		});
+	});
 
 	describe("Partition ownership producer session", () => {
 		test("cleanup never initializes or reconnects an unused session", async () => {

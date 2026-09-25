@@ -1,3 +1,7 @@
+import {
+	BALANCE_WORKER_HANDOFF_CLAIM_TIMEOUT_MS,
+	BALANCE_WORKER_HANDOFF_READY_TIMEOUT_MS,
+} from "@autumn/env/balanceWorkerConstants";
 import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
 import { createRuntimeDirectory } from "./directory/createRuntimeDirectory.js";
 import { listPartitionHealth } from "./health/partitionHealth.js";
@@ -10,6 +14,7 @@ import type {
 	Partitions,
 	PartitionsConfig,
 	PartitionsDependencies,
+	PartitionTarget,
 	ResolvedPartitionsConfig,
 } from "./types/partitions.js";
 
@@ -36,7 +41,18 @@ export function createPartitions({
 		return listPartitionHealth({ state });
 	}
 
-	return { start, stop, partitions, findRuntime, findOwnedRuntime };
+	function awaitHandoff({ partition }: PartitionTarget): Promise<void> {
+		return state.handoffSettlements.get(partition) ?? Promise.resolve();
+	}
+
+	return {
+		start,
+		stop,
+		partitions,
+		findRuntime,
+		findOwnedRuntime,
+		awaitHandoff,
+	};
 }
 
 function resolvePartitionConfig(
@@ -48,10 +64,16 @@ function resolvePartitionConfig(
 		...config,
 		partitionBootstrapRetryIntervalMs:
 			config.partitionBootstrapRetryIntervalMs ?? 30_000,
+		handoffReadyTimeoutMs:
+			config.handoffReadyTimeoutMs ?? BALANCE_WORKER_HANDOFF_READY_TIMEOUT_MS,
+		handoffClaimTimeoutMs:
+			config.handoffClaimTimeoutMs ?? BALANCE_WORKER_HANDOFF_CLAIM_TIMEOUT_MS,
 	};
 	for (const name of [
 		"healthRefreshIntervalMs",
 		"partitionBootstrapRetryIntervalMs",
+		"handoffReadyTimeoutMs",
+		"handoffClaimTimeoutMs",
 	] as const) {
 		if (!Number.isSafeInteger(options[name]) || options[name] <= 0) {
 			throw new RangeError(`${name} must be a positive safe integer`);
@@ -64,7 +86,9 @@ function createPartitionState(): PartitionsState {
 	return {
 		directory: createRuntimeDirectory(),
 		entries: new Map(),
+		handingOff: new Map(),
 		retiringEntries: new Map(),
+		handoffSettlements: new Map(),
 		terminalHealthByPartition: new Map(),
 		partitionRetryTimers: new Map(),
 		status: "created",
@@ -73,6 +97,7 @@ function createPartitionState(): PartitionsState {
 		lifecycle: Promise.resolve(),
 		stopPromise: null,
 		offsetsConnected: false,
+		ownershipLinked: false,
 		healthRefreshTimer: null,
 		healthRefreshPromise: null,
 		unsubscribePartitionChanges: null,

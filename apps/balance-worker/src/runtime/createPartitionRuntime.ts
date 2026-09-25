@@ -13,7 +13,6 @@ import {
 } from "./lifecycle/stopRuntime.js";
 import { type ProcessorRun, processCommand } from "./processCommand.js";
 import type {
-	PartitionOutcomeFollowerPort,
 	PartitionRuntime,
 	PartitionRuntimeConfig,
 	PartitionRuntimeContext,
@@ -64,12 +63,8 @@ export function createPartitionRuntime({
 		return startRuntime({ ctx, state });
 	}
 
-	function prepare({
-		follower,
-	}: {
-		follower: PartitionOutcomeFollowerPort;
-	}): Promise<void> {
-		return prepareRuntime({ ctx, state, follower });
+	function prepare(): Promise<void> {
+		return prepareRuntime({ ctx, state });
 	}
 
 	function activate(): Promise<void> {
@@ -137,6 +132,13 @@ function validateRuntimeConfig(config: PartitionRuntimeConfig): void {
 		throw new RangeError(
 			"recoveryDrainTimeoutMs must be a positive safe integer",
 		);
+	}
+	if (
+		config.activationWaitMs !== undefined &&
+		(!Number.isSafeInteger(config.activationWaitMs) ||
+			config.activationWaitMs <= 0)
+	) {
+		throw new RangeError("activationWaitMs must be a positive safe integer");
 	}
 }
 

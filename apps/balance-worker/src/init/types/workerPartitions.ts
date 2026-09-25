@@ -21,6 +21,7 @@ export type KafkaPartitionRuntimeFactory = (position: {
 	topic: string;
 	partition: number;
 	follower: PartitionReplay;
+	preparation: PartitionReplay;
 	recentCommands: RecentCommands;
 	producedOffsets?: ProducedOffsets;
 }) => Omit<PartitionRuntimeResources, "markUnavailable">;
@@ -33,6 +34,8 @@ export type WorkerPartitionsContext = {
 	logger?: Pick<AutumnLogger, "info" | "warn">;
 	stateStore: StateStore;
 	createRuntime: KafkaPartitionRuntimeFactory;
+	ownershipLink?: PartitionsDependencies["ownershipLink"];
+	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
 	onError: PartitionsDependencies["onError"];
 	onUnhealthyPartition: PartitionsDependencies["onUnhealthyPartition"];
 	onServiceStopped?: PartitionsDependencies["onServiceStopped"];
@@ -45,6 +48,8 @@ export type WorkerPartitionsConfig = {
 	partitionsConsumedConcurrently: number;
 	healthRefreshIntervalMs: number;
 	partitionBootstrapRetryIntervalMs?: number;
+	handoffReadyTimeoutMs?: number;
+	handoffClaimTimeoutMs?: number;
 };
 
 export type WorkerPartitionHighWatermarks = {

@@ -72,7 +72,12 @@ export async function withdrawPartitions({
 		if (result.status === "rejected") throw result.reason;
 }
 
-function closePartitionAdmission({ entry }: { entry: PartitionEntry }): void {
+export function closePartitionAdmission({
+	entry,
+}: {
+	entry: PartitionEntry;
+}): void {
+	entry.withdrawn = true;
 	entry.unsubscribeUnavailable?.();
 	entry.unsubscribeUnavailable = null;
 	entry.drain ??= drainPartition({ entry });
@@ -99,6 +104,8 @@ export function retirePartition({
 	entry: PartitionEntry;
 }): Promise<void> {
 	if (entry.retirement) return entry.retirement;
+	// A pending claim wait must let go: the entry is leaving, whoever the log names.
+	entry.handoffAbort.abort(new Error("Partition retired"));
 	closePartitionAdmission({ entry });
 	entry.retirement = completePartitionRetirement({ ctx, entry });
 	return entry.retirement;

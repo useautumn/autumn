@@ -44,6 +44,7 @@ const createRuntime = ({
 			},
 			appender: { appendCommitted: async () => ({ baseOffset: 2n }) },
 			follower,
+			preparationFollower: { ...follower },
 			bootstrapper: {
 				bootstrap: async () => ({ kind: "continued", nextOffset: 1n }),
 			},
@@ -66,7 +67,6 @@ const createRuntime = ({
 	return {
 		runtime,
 		identity: state.identity,
-		preparationFollower: { ...follower },
 		loseFollower: () => unavailable?.({ cause: new Error("follower lost") }),
 	};
 };
@@ -76,9 +76,9 @@ describe("owned partition checkpoints", () => {
 		"does not register during preparation and starts only on activation",
 		async () => {
 			const fixture = createSchedulerFixture();
-			const { runtime, preparationFollower } = createRuntime({ fixture });
+			const { runtime } = createRuntime({ fixture });
 			try {
-				await runtime.prepare({ follower: preparationFollower });
+				await runtime.prepare();
 				expect(runtime.getStatus()).toBe("prepared");
 				await fixture.clock.advance(500);
 				expect(fixture.clock.pendingTimers).toBe(0);

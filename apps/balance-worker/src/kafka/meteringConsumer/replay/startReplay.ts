@@ -46,6 +46,7 @@ export async function startReplay({
 	partition,
 	targetNextOffset,
 	onUnavailable,
+	fromBookmark = false,
 }: {
 	ctx: PartitionReplayContext;
 	state: PartitionReplayState;
@@ -53,6 +54,7 @@ export async function startReplay({
 	partition: number;
 	targetNextOffset: bigint;
 	onUnavailable: RuntimeUnavailableListener;
+	fromBookmark?: boolean;
 }): Promise<void> {
 	if (state.status !== "created")
 		throw new Error(
@@ -77,6 +79,7 @@ export async function startReplay({
 		ctx,
 		state,
 		targetNextOffset,
+		fromBookmark,
 		signal: state.abortController.signal,
 	});
 	return state.startPromise;
@@ -86,11 +89,13 @@ async function catchUpPartition({
 	ctx,
 	state,
 	targetNextOffset,
+	fromBookmark,
 	signal,
 }: {
 	ctx: PartitionReplayContext;
 	state: PartitionReplayState;
 	targetNextOffset: bigint;
+	fromBookmark: boolean;
 	signal: AbortSignal;
 }): Promise<void> {
 	const { topic, partition } = state.position;
@@ -105,11 +110,9 @@ async function catchUpPartition({
 			logEndOffset: targetNextOffset,
 		});
 	}
-	const floor = await readReplayFloor({
-		ctx,
-		state,
-		bookmark: storedNextOffset,
-	});
+	const floor = fromBookmark
+		? storedNextOffset
+		: await readReplayFloor({ ctx, state, bookmark: storedNextOffset });
 	if (signal.aborted) throw signal.reason;
 	// A new replay must rebuild recent commands even if an earlier runtime reached the target.
 	ctx.positionTracker.reset({ topic, partition, nextOffset: floor });
