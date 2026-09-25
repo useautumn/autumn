@@ -51,15 +51,17 @@ export const handleStripeInvoiceCreated = async ({
 	});
 
 	// Upsert Autumn invoice record
-	const autumnInvoice = await upsertAutumnInvoice({
+	const invoiceResult = await upsertAutumnInvoice({
 		ctx,
 		stripeInvoice: updatedStripeInvoice,
 		stripeSubscription: eventContext.stripeSubscription,
 		customerProducts: eventContext.customerProducts,
 		options: { skipNonCycleInvoices: !shouldStoreScheduleProrationInvoice },
 	});
+	eventContext.results.invoice = invoiceResult;
 
 	// Store invoice line items (async via SQS workflow)
+	const autumnInvoice = invoiceResult?.invoice;
 	if (autumnInvoice) {
 		const periodEndMs = secondsToMs(eventContext.stripeInvoice.period_end);
 		await storeRenewalLineItems({
@@ -71,4 +73,6 @@ export const handleStripeInvoiceCreated = async ({
 			periodEndMs,
 		});
 	}
+
+	ctx.handlerResult = { type: "invoice.created", context: eventContext };
 };

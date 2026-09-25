@@ -11,21 +11,9 @@ import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/han
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/actions/activateFreeSuccessorProduct";
 import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
+import type { CustomerProductActivation } from "../types/customerProductActivation";
 
-/**
- * Expires a customer product and activates the default product if needed.
- *
- * This action:
- * 1. Sets status to Expired
- * 2. Sends the products_updated (Expired) webhook
- * 3. Activates free successor (scheduled or default) if no other active product in group
- * 4. Emits billing.updated when emitBillingUpdated is set (opt-in — some callers
- *    batch their own emission)
- *
- * @returns updates - The updates applied to the expired customer product
- * @returns activatedCustomerProduct - If a scheduled product was activated (UPDATE)
- * @returns insertedCustomerProduct - If a new default product was created (INSERT)
- */
+/** Billing webhook emission is opt-in because some callers batch their own events. */
 export const expireCustomerProductAndActivateDefault = async ({
 	ctx,
 	customerProduct,
@@ -42,7 +30,7 @@ export const expireCustomerProductAndActivateDefault = async ({
 	activatedAt?: number;
 }): Promise<{
 	updates: Partial<InsertCustomerProduct>;
-	activatedCustomerProduct?: FullCusProduct;
+	activation?: CustomerProductActivation;
 	insertedCustomerProduct?: FullCusProduct;
 }> => {
 	const { org, env } = ctx;
@@ -92,7 +80,7 @@ export const expireCustomerProductAndActivateDefault = async ({
 	});
 
 	// 3. Activate free successor (scheduled or default)
-	const { activatedCustomerProduct, insertedCustomerProduct } =
+	const { activation, insertedCustomerProduct } =
 		await activateFreeSuccessorProduct({
 			ctx,
 			fromCustomerProduct: customerProduct,
@@ -107,11 +95,11 @@ export const expireCustomerProductAndActivateDefault = async ({
 			originalFullCustomer,
 			updateCustomerProducts: [
 				{ customerProduct, updates },
-				...(activatedCustomerProduct
+				...(activation
 					? [
 							{
-								customerProduct: activatedCustomerProduct,
-								updates: { status: CusProductStatus.Active },
+								customerProduct: activation.before,
+								updates: { status: activation.after.status },
 							},
 						]
 					: []),
@@ -122,5 +110,9 @@ export const expireCustomerProductAndActivateDefault = async ({
 		});
 	}
 
-	return { updates, activatedCustomerProduct, insertedCustomerProduct };
+	return {
+		updates,
+		activation,
+		insertedCustomerProduct,
+	};
 };

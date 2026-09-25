@@ -1,6 +1,7 @@
-import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
+import type { FullCusProduct } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
+import type { CustomerProductActivation } from "@/internal/customers/cusProducts/types/customerProductActivation";
 import type { StripeSubscriptionDeletedContext } from "../handleStripeSubscriptionDeleted/setupStripeSubscriptionDeletedContext";
 import type { StripeSubscriptionUpdatedContext } from "../handleStripeSubscriptionUpdated/stripeSubscriptionUpdatedContext";
 import {
@@ -23,12 +24,12 @@ export const expireAndActivateWithTracking = async ({
 	customerProduct: FullCusProduct;
 }): Promise<{
 	expiredCustomerProduct: FullCusProduct;
-	activatedCustomerProduct?: FullCusProduct;
+	activation?: CustomerProductActivation;
 	insertedCustomerProduct?: FullCusProduct;
 }> => {
 	const { fullCustomer } = eventContext;
 
-	const { updates, activatedCustomerProduct, insertedCustomerProduct } =
+	const { updates, activation, insertedCustomerProduct } =
 		await customerProductActions.expireAndActivateDefault({
 			ctx,
 			customerProduct,
@@ -42,11 +43,16 @@ export const expireAndActivateWithTracking = async ({
 		updates,
 	});
 
-	if (activatedCustomerProduct) {
+	if (activation) {
 		trackCustomerProductUpdate({
 			eventContext,
-			customerProduct: activatedCustomerProduct,
-			updates: { status: CusProductStatus.Active },
+			customerProduct: activation.before,
+			updates: {
+				status: activation.after.status,
+				starts_at: activation.after.starts_at,
+				subscription_ids: activation.after.subscription_ids,
+				scheduled_ids: activation.after.scheduled_ids,
+			},
 		});
 	}
 
@@ -59,7 +65,7 @@ export const expireAndActivateWithTracking = async ({
 
 	return {
 		expiredCustomerProduct,
-		activatedCustomerProduct,
+		activation,
 		insertedCustomerProduct,
 	};
 };

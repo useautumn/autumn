@@ -8,6 +8,7 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import { computeScheduledPooledAnchorResetPlan } from "@/internal/billing/v2/pooledBalances/compute/computeScheduledPooledAnchorResetPlan.js";
 import { executePooledBalancePlan } from "@/internal/billing/v2/pooledBalances/execute/executePooledBalancePlan.js";
 import { resetPooledBalances } from "@/internal/billing/v2/pooledBalances/execute/resetPooledBalances.js";
+import { pooledBalancePlanHasChanges } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
 export const resetSubscriptionPooledBalances = async ({
@@ -36,6 +37,9 @@ export const resetSubscriptionPooledBalances = async ({
 			),
 		});
 		await executePooledBalancePlan({ ctx, pooledBalancePlan });
+		if (pooledBalancePlanHasChanges({ pooledBalancePlan })) {
+			eventContext.results.customerStateChanged = true;
+		}
 		const pools = pooledBalancePlan.updatePoolBalances.map(
 			(update) => update.pooledCustomerEntitlement,
 		);
@@ -45,6 +49,7 @@ export const resetSubscriptionPooledBalances = async ({
 				id: pool.id,
 				updates: { reset_cycle_anchor: pool.reset_cycle_anchor },
 			});
+			eventContext.results.customerStateChanged = true;
 		}
 		await resetPooledBalances({
 			ctx,
@@ -75,10 +80,11 @@ export const resetSubscriptionPooledBalances = async ({
 
 	if (resettablePooledCustomerEntitlements.length === 0) return;
 
-	await resetPooledBalances({
+	const balancesChanged = await resetPooledBalances({
 		ctx,
 		fullCustomer: eventContext.fullCustomer,
 		pooledCustomerEntitlements: resettablePooledCustomerEntitlements,
 		source: "invoice-created-pooled-balance-reset",
 	});
+	if (balancesChanged) eventContext.results.customerStateChanged = true;
 };

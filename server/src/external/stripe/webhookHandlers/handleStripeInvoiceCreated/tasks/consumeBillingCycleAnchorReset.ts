@@ -27,4 +27,7 @@ export const consumeBillingCycleAnchorReset = async ({
 				}),
 		),
 	);
+	if (eventContext.billingCycleAnchorResetCustomerProductIds.length > 0) {
+		eventContext.results.customerStateChanged = true;
+	}
 };

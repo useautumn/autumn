@@ -96,7 +96,7 @@ export const executeStripeInvoicePlan = async ({
 				.map((product) => [product.internal_id, product] as const),
 		).values(),
 	];
-	const autumnInvoice = await upsertInvoiceFromStripe({
+	const { invoice: autumnInvoice } = await upsertInvoiceFromStripe({
 		ctx,
 		stripeInvoice: finalized,
 		fullCustomer,
