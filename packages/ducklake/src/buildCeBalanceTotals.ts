@@ -1,4 +1,4 @@
-import { getCeLakeTables } from "./ceLakeTables.js";
+import { CE_LAKE_TABLES } from "./ceLakeTables.js";
 import { getLakeMetadataLocation } from "./lakeMetadata.js";
 import type { DuckDbConnection } from "./localDuckDb.js";
 
@@ -88,7 +88,7 @@ export const buildCeBalanceTotalsParquet = async ({
 }): Promise<{ parquetUrl: string }> => {
 	const [ceMetas, entMeta, featureMeta, cpMeta] = await Promise.all([
 		Promise.all(
-			getCeLakeTables().map((table) => getLakeMetadataLocation({ table })),
+			CE_LAKE_TABLES.map((table) => getLakeMetadataLocation({ table })),
 		),
 		getLakeMetadataLocation({ table: "entitlements" }),
 		getLakeMetadataLocation({ table: "features" }),

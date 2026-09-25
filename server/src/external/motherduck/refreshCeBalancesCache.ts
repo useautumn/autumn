@@ -1,4 +1,4 @@
-import { getCeLakeTables } from "@autumn/ducklake/ceLakeTables";
+import { CE_LAKE_TABLES } from "@autumn/ducklake/ceLakeTables";
 import { CE_BALANCES_CACHE_PROJECTION } from "@autumn/shared";
 import { GetTableCommand, GlueClient } from "@aws-sdk/client-glue";
 import { sql } from "drizzle-orm";
@@ -110,7 +110,6 @@ export const refreshCeBalancesCache = async ({
 
 	inFlight = (async () => {
 		const startedAt = performance.now();
-		const ceLakeTables = getCeLakeTables();
 		const [
 			ceMetadataLocations,
 			entMetadataLocation,
@@ -118,7 +117,9 @@ export const refreshCeBalancesCache = async ({
 			featureMetadataLocation,
 		] = await Promise.all([
 			Promise.all(
-				ceLakeTables.map((table) => getCurrentLakeMetadataLocation({ table })),
+				CE_LAKE_TABLES.map((table) =>
+					getCurrentLakeMetadataLocation({ table }),
+				),
 			),
 			getCurrentLakeMetadataLocation({ table: "entitlements" }),
 			getCurrentLakeMetadataLocation({ table: "customer_products" }),
@@ -168,7 +169,7 @@ export const refreshCeBalancesCache = async ({
 				type: "md_cache_refresh",
 				rowCount,
 				metadataLocations: Object.fromEntries(
-					ceLakeTables.map((table, i) => [table, ceMetadataLocations[i]]),
+					CE_LAKE_TABLES.map((table, i) => [table, ceMetadataLocations[i]]),
 				),
 				durationMs: Math.round(performance.now() - startedAt),
 			},
