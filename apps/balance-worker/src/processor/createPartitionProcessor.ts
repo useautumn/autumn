@@ -70,6 +70,7 @@ export function createPartitionProcessor({
 			writer,
 			receiptPolicy: dependencies.receiptPolicy,
 			baseline: dependencies.stateStore.baseline,
+			logger: dependencies.logger,
 		},
 	});
 	const scope: PartitionProcessorScope = {
@@ -153,6 +154,9 @@ function createProcessor({
 		});
 	}
 
+	/** Commands settle when Kafka has them, but the store applies behind the log:
+	 *  a "log" reply lands before its store apply, so a drained partition waits for
+	 *  the current store completion and for every batch handed to the store before it lets go. */
 	function updateBalance({ command }: { command: UpdateBalanceCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
@@ -180,8 +184,8 @@ function createProcessor({
 
 	async function drain() {
 		await settleAcceptedCommands({ accepted: scope.accepted });
-		// A "log" reply lands before its store apply; a successor must find that apply finished too.
 		await Promise.allSettled([scope.ctx.writer.waitForStore()]);
+		await scope.ctx.writer.waitForApplies();
 	}
 
 	function initialize({ request }: { request: InitializeRequest }) {

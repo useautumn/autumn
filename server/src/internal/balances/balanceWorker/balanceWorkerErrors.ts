@@ -145,7 +145,30 @@ export function rethrowBalanceWorkerError({
 	}
 	if (
 		cause instanceof BalanceWorkerClientError &&
-		UNAVAILABLE_CLIENT_CODES.has(cause.code)
+		cause.workerCode === "RECORD_TOO_LARGE"
+	) {
+		throw new RecaseError({
+			code: "balance_worker_record_too_large",
+			statusCode: 422,
+			message:
+				"This customer's balance state is too large to record; nothing was applied",
+		});
+	}
+	if (
+		cause instanceof BalanceWorkerClientError &&
+		cause.workerCode === "OVERLOADED"
+	) {
+		throw new RecaseError({
+			code: "balance_worker_overloaded",
+			statusCode: 429,
+			message:
+				"Too many concurrent requests for this customer; retry with backoff",
+		});
+	}
+	if (
+		cause instanceof BalanceWorkerClientError &&
+		(UNAVAILABLE_CLIENT_CODES.has(cause.code) ||
+			cause.workerCode === "NOT_READY")
 	) {
 		// "unknown" means the command may already have been applied, so the caller
 		// must reuse its idempotency key rather than retry blind.

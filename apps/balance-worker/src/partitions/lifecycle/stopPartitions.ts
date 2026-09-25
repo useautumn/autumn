@@ -142,6 +142,7 @@ async function completePartitionRetirement({
 		try {
 			await entry.runtime.stop();
 		} finally {
+			ctx.served?.release({ partition: entry.partition });
 			await entry.runtime.waitForQuiescence();
 		}
 	}

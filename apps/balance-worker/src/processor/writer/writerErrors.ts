@@ -5,6 +5,19 @@ export class PartitionWriterCapacityError extends Error {
 	}
 }
 
+/** One record alone is bigger than a batch may be, so no batch can ever carry it. */
+export class PartitionWriterRecordTooLargeError extends Error {
+	constructor({
+		bytes,
+		maxBatchBytes,
+	}: { bytes: number; maxBatchBytes: number }) {
+		super(
+			`Mutation record of ${bytes} bytes exceeds the ${maxBatchBytes} byte batch limit`,
+		);
+		this.name = "PartitionWriterRecordTooLargeError";
+	}
+}
+
 export class PartitionWriterStateNotFoundError extends Error {
 	constructor({ customerKey }: { customerKey: string }) {
 		super(`Partition writer state not found: ${customerKey}`);

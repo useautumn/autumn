@@ -88,6 +88,7 @@ describe("Kafka owned partition producer", () => {
 				"autumn-balance-worker:staging%2Feu-west-1:metering-events-v1:3",
 			idempotent: true,
 			maxInFlightRequests: 1,
+			createPartitioner: expect.any(Function),
 			transactionTimeout: 15_000,
 			retry: {
 				retries: 3,
@@ -154,7 +155,18 @@ function createFailingSession({
 	function isUsable(): boolean {
 		return true;
 	}
-	return { connect, fence, transaction, disconnect, isUsable };
+	async function send(): ReturnType<KafkaProducerSession["send"]> {
+		throw cause;
+	}
+	return {
+		connect,
+		fence,
+		transaction,
+		send,
+		disconnect,
+		isUsable,
+		mode: "transactional",
+	};
 }
 
 function createFencingError(): Error {

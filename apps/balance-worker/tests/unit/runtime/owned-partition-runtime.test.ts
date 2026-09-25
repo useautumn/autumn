@@ -598,7 +598,7 @@ describe("owned partition runtime", () => {
 		}
 	});
 
-	test("makes a later check wait for the customer's committed track", async () => {
+	test("a later check answers from the projection while the customer's track is still committing", async () => {
 		const fixture = createStoreFixture();
 		const commit = createDeferred<void>();
 		const fakeProducer = createFakeProducer({
@@ -629,16 +629,18 @@ describe("owned partition runtime", () => {
 
 			await waitForTurn();
 			expect(fakeProducer.lifecycle).toContain("producer:commit");
-			expect(checkSettled).toBe(false);
+			// The deduction is projected; the read does not pay for the commit still in flight.
+			expect(checkSettled).toBe(true);
+			await expect(checkPromise).resolves.toMatchObject({
+				result: { allowed: true },
+				state: { revision: 1, customerEntitlements: [{ balance: 5 }] },
+			});
+			expect(fixture.store.readState({ identity })?.revision).toBe(0);
 
 			commit.resolve(undefined);
 			await expect(trackPromise).resolves.toMatchObject({
 				result: { status: "applied" },
 				state: { customerEntitlements: [{ balance: 5 }] },
-			});
-			await expect(checkPromise).resolves.toMatchObject({
-				result: { allowed: true },
-				state: { revision: 1, customerEntitlements: [{ balance: 5 }] },
 			});
 		} finally {
 			await runtime.stop();
@@ -647,7 +649,7 @@ describe("owned partition runtime", () => {
 	});
 
 	test.concurrent(
-		"rejects a waiting check after an ambiguous track commit",
+		"a check racing an ambiguous track commit answers from the projection; the next one is rejected",
 		async () => {
 			const fixture = createStoreFixture();
 			const commit = createDeferred<void>();
@@ -680,12 +682,23 @@ describe("owned partition runtime", () => {
 				await waitForTurn();
 				expect(fakeProducer.lifecycle).toContain("producer:commit");
 
+				// Answered before the commit's fate was known: the one window in which a read reports a deduction that never landed.
+				expect(await check).toMatchObject({
+					result: { allowed: true },
+					state: { revision: 1, customerEntitlements: [{ balance: 5 }] },
+				});
 				commit.resolve(undefined);
 
 				expect(await track).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
-				expect(await check).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
 				expect(runtime.getStatus()).toBe("recovery_required");
 				expect(fixture.store.readState({ identity })?.revision).toBe(0);
+				await expect(
+					runtime.process((processor) =>
+						processor.check({
+							command: createCheckCommand({ requestId: "req_after_ambiguity" }),
+						}),
+					),
+				).rejects.toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
 			} finally {
 				commit.resolve(undefined);
 				await runtime.stop();
@@ -695,7 +708,7 @@ describe("owned partition runtime", () => {
 	);
 
 	test.concurrent(
-		"rejects a waiting check after follower loss but replies to the committed track",
+		"a check racing follower loss answers from the projection; the next one is rejected, the track still replies",
 		async () => {
 			const fixture = createStoreFixture();
 			const commit = createDeferred<void>();
@@ -728,6 +741,10 @@ describe("owned partition runtime", () => {
 				await waitForTurn();
 				expect(fakeProducer.lifecycle).toContain("producer:commit");
 
+				expect(await check).toMatchObject({
+					result: { allowed: true },
+					state: { revision: 1, customerEntitlements: [{ balance: 5 }] },
+				});
 				fakeFollower.emitUnavailable({
 					cause: new Error("outcome follower stopped"),
 				});
@@ -737,9 +754,15 @@ describe("owned partition runtime", () => {
 					result: { status: "applied" },
 					state: { customerEntitlements: [{ balance: 5 }] },
 				});
-				expect(await check).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
 				expect(runtime.getStatus()).toBe("recovery_required");
 				expect(fixture.store.readState({ identity })?.revision).toBe(1);
+				await expect(
+					runtime.process((processor) =>
+						processor.check({
+							command: createCheckCommand({ requestId: "req_after_loss" }),
+						}),
+					),
+				).rejects.toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
 			} finally {
 				commit.resolve(undefined);
 				await runtime.stop();
@@ -1108,13 +1131,14 @@ describe("owned partition runtime", () => {
 					command: createCheckCommand({ requestId: "req_during_abort" }),
 				}),
 			);
+			// Decided before the append failed, so this read saw a deduction the abort then rolled back; the next read does not.
+			await expect(check).resolves.toMatchObject({
+				result: { allowed: true },
+				state: { revision: 1, customerEntitlements: [{ balance: 5 }] },
+			});
 			await expect(track).rejects.toBeInstanceOf(MutationBatchAppendError);
 
 			expect(runtime.getStatus()).toBe("ready");
-			await expect(check).resolves.toMatchObject({
-				result: { allowed: true },
-				state: { revision: 0, customerEntitlements: [{ balance: 10 }] },
-			});
 			await expect(
 				runtime.process((processor) =>
 					processor.check({

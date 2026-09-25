@@ -8,6 +8,7 @@ import { resolveCommandRoute } from "./resolveCommandRoute.js";
 import type { RoutedCommand, RoutingContext } from "./types/routing.js";
 import {
 	assertRequestDeadline,
+	createRequestDeadline,
 	isNotOwnerResponse,
 	refreshCommandRoute,
 } from "./workerRequestPolicy.js";
@@ -26,11 +27,7 @@ export async function sendToOwner<Response>({
 	payload?: unknown;
 	signal?: AbortSignal;
 }): Promise<Response> {
-	const deadline = {
-		expiresAt: performance.now() + ctx.timeoutMs,
-		signal: AbortSignal.timeout(ctx.timeoutMs),
-	};
-	if (signal) deadline.signal = AbortSignal.any([signal, deadline.signal]);
+	const deadline = createRequestDeadline({ timeoutMs: ctx.timeoutMs, signal });
 	assertRequestDeadline({ deadline, outcome: "not_submitted" });
 	// Retries must not observe caller mutations after the first send.
 	const snapshot = structuredClone(command);

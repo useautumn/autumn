@@ -108,6 +108,11 @@ export type PartitionsDependencies = {
 	progress: PartitionProgressTracker;
 	subscribePartitionChanges: SubscribePartitionChanges;
 	createRuntime: PartitionRuntimeFactory;
+	/** What this worker reports as its own when the group rebalances: claimed when a partition's runtime is built, released once it has stopped. */
+	served?: {
+		claim(entry: { partition: number }): void;
+		release(entry: { partition: number }): void;
+	};
 	/** The ownership tail and the plain producer behind `announceReady`; started before the group is joined. */
 	ownershipLink?: { start(): Promise<void>; stop(): Promise<void> };
 	/** When a prepared partition may announce `ready`; unset means as soon as it is prepared. */

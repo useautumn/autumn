@@ -23,6 +23,12 @@ export type MeteringRecordHandler = {
 	readResumeOffset(
 		position: TopicResumePosition,
 	): bigint | null | Promise<bigint | null>;
+	/** Asked before the record is decoded; false passes it unread, as if applied. Absent, every record is applied. */
+	shouldApply?(position: {
+		topic: string;
+		partition: number;
+		offset: bigint;
+	}): boolean;
 	applyRecord(
 		application: MeteringRecordApplication,
 	): TopicRecordResult | Promise<TopicRecordResult>;

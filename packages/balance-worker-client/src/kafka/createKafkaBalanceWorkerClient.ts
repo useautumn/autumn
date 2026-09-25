@@ -78,6 +78,8 @@ export function createKafkaBalanceWorkerClient({
 			timeoutMs: config.timeoutMs,
 			appendTimeoutMs: config.appendTimeoutMs,
 			routeRefreshTimeoutMs: config.routeRefreshTimeoutMs,
+			batchTracks: config.batchTracks,
+			maxTrackBatchSize: config.maxTrackBatchSize,
 		},
 	});
 }

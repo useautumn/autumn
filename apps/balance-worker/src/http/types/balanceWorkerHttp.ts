@@ -1,4 +1,4 @@
-import type { TrackCommand } from "@autumn/balance-engine";
+import type { MeteringIdentity, TrackCommand } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client";
 import type {
 	ApplyBillingPlanReply,
@@ -56,6 +56,21 @@ export type BalanceWorkerRequestLog = {
 		| RecalculateBalanceReply;
 	error?: Error;
 	errorCode?: WorkerErrorCode;
+	/** A track batch logs once: its size and failures counted by code, never one line per command. */
+	batch?: BalanceWorkerBatchLog;
+};
+
+export type BalanceWorkerBatchLog = {
+	route: PartitionRoute;
+	count: number;
+	succeeded: number;
+	failed: number;
+	errorCodes: Partial<Record<WorkerErrorCode, number>>;
+	/** The worst status any command was answered with, so the line logs at that level. */
+	worstStatus: number;
+	/** Org of the first command; customer and entity only when every command shares them. */
+	identity?: Partial<MeteringIdentity>;
+	orgSlug?: string;
 };
 
 export type BalanceWorkerHttpContext = {

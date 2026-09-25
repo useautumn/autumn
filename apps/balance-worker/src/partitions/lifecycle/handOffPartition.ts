@@ -103,6 +103,7 @@ async function handOffPartition({
 		try {
 			await entry.runtime.stop();
 		} finally {
+			ctx.served?.release({ partition });
 			try {
 				await entry.runtime.waitForQuiescence();
 			} finally {

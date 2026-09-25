@@ -5,6 +5,7 @@ import type {
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
+import type { ProducedOffsets } from "../../../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { RecentCommands } from "../../../processor/writer/recentCommands/types/recentCommands.js";
 import type { StateStore } from "../../../state/types/stateStore.js";
 import type { PartitionReplay } from "./partitionReplay.js";
@@ -18,6 +19,8 @@ export type MeteringConsumer = {
 	createReplay(position: {
 		partition: number;
 		recentCommands: RecentCommands;
+		/** Records the partition's own writer produced are passed unread. */
+		producedOffsets?: ProducedOffsets;
 		readOnly?: boolean;
 	}): PartitionReplay;
 	withdrawPartition(position: { partition: number }): Promise<void>;

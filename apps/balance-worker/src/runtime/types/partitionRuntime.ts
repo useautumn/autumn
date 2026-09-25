@@ -1,5 +1,6 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
 import type { CatalogCache } from "@autumn/catalog-lru";
+import type { AutumnLogger } from "@autumn/logging";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type {
 	OwnedPartitionFollowerProgress,
@@ -70,6 +71,7 @@ export type PartitionRuntimeDependencies = {
 	partitionResolver: MeteringPartitionResolver;
 	db: WorkerDb;
 	catalogCache: CatalogCache;
+	logger?: Partial<Pick<AutumnLogger, "warn">>;
 	receiptPolicy: ReceiptPolicy;
 	/** Per partition, shared with `follower`: what the writer applied and what the log replayed. */
 	recentCommands: RecentCommands;

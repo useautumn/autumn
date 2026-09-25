@@ -1,3 +1,4 @@
+import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { adopt as adoptState } from "./actions/adopt.js";
 import {
 	decide as decideMutation,
@@ -25,13 +26,17 @@ export function createPartitionWriter({
 	const scope: PartitionWriterScope = {
 		ctx,
 		config,
-		state: createPartitionWriterState(),
+		state: createPartitionWriterState({
+			subjectMapMaxBytes: config.limits.subjectMapMaxBytes,
+		}),
 	};
 
 	function decide<Reply>(
 		submission: MutationSubmission<Reply>,
 	): DecidedMutation<Reply> {
-		return decideMutation({ scope, submission });
+		return timeSync({ label: "writer.decide" }, () =>
+			decideMutation({ scope, submission }),
+		);
 	}
 
 	function waitForPendingCommits({
@@ -40,6 +45,10 @@ export function createPartitionWriter({
 		customerKey: string;
 	}): Promise<void> {
 		return waitForCustomerCommits({ scope, customerKey });
+	}
+
+	function assertCommitsHealthy(): void {
+		if (scope.state.recoveryError) throw scope.state.recoveryError;
 	}
 
 	function readFreshestState({
@@ -60,10 +69,17 @@ export function createPartitionWriter({
 		return scope.state.storeCompletion;
 	}
 
+	/** Every batch handed to the store so far, applied or failed; never rejects. */
+	function waitForApplies(): Promise<void> {
+		return scope.state.applyTail.catch(() => undefined);
+	}
+
 	return {
 		waitForStore,
+		waitForApplies,
 		decide,
 		waitForPendingCommits,
+		assertCommitsHealthy,
 		readFreshestState,
 		evict,
 		adopt,
@@ -77,6 +93,7 @@ function validateWriterConfig(config: PartitionWriterConfig): void {
 		throw new RangeError(`Invalid Kafka partition: ${config.partition}`);
 	}
 	for (const [name, value] of Object.entries(config.limits)) {
+		if (value === undefined) continue;
 		if (!Number.isSafeInteger(value) || value <= 0) {
 			throw new RangeError(`${name} must be a positive safe integer`);
 		}

@@ -443,6 +443,8 @@ describe("Kafka owned partition group", () => {
 			const started: number[] = [];
 			const stopped: number[] = [];
 			const unavailable: unknown[] = [];
+			const claimed: number[] = [];
+			const released: number[] = [];
 			const group = createKafkaOwnedPartitionGroup({
 				consumer,
 				partitionOffsets: createPartitionOffsets(),
@@ -456,6 +458,14 @@ describe("Kafka owned partition group", () => {
 					stopped,
 					unavailable,
 				}),
+				served: {
+					claim: ({ partition }) => {
+						claimed.push(partition);
+					},
+					release: ({ partition }) => {
+						released.push(partition);
+					},
+				},
 				onError: () => undefined,
 				onUnhealthyPartition: () => undefined,
 			});
@@ -465,6 +475,7 @@ describe("Kafka owned partition group", () => {
 				() =>
 					group.findRuntime({ partition: 0, routeEpoch: "0" }) !== undefined,
 			);
+			expect(claimed).toEqual([0]);
 
 			consumer.emitRebalancing();
 			consumer.emitGroupJoin([0]);
@@ -472,6 +483,9 @@ describe("Kafka owned partition group", () => {
 			expect(started).toEqual([0]);
 			expect(stopped).toEqual([]);
 			expect(unavailable).toEqual([]);
+			// Kept through the rebalance: still reported as this worker's own, never released.
+			expect(claimed).toEqual([0]);
+			expect(released).toEqual([]);
 			expect(
 				group.findRuntime({ partition: 0, routeEpoch: "0" }),
 			).toBeDefined();
@@ -487,6 +501,8 @@ describe("Kafka owned partition group", () => {
 			expect(started).toEqual([0, 1]);
 			expect(stopped).toEqual([0]);
 			expect(unavailable).toEqual([]);
+			expect(claimed).toEqual([0, 1]);
+			expect(released).toEqual([0]);
 			await group.stop();
 		} finally {
 			closeStoreFixture(fixture);

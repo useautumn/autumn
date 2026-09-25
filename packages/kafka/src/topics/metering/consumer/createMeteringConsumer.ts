@@ -47,6 +47,9 @@ export function createMeteringConsumer({
 				partition,
 				offset: parseKafkaOffset({ offset: message.offset }),
 			};
+			// A record this process wrote is already projected and queued for the store; decoding it again is the cost being avoided.
+			if (ctx.handler.shouldApply && !ctx.handler.shouldApply(position))
+				return undefined;
 			const record = parseMeteringRecord({
 				key: message.key,
 				value: message.value,

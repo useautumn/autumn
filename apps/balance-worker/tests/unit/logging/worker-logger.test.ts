@@ -30,3 +30,25 @@ test.concurrent(
 		}
 	},
 );
+
+test("deployed workers log once, to stdout, and leave shipping to FireLens", () => {
+	const previous = process.env.NODE_ENV;
+	let options: Parameters<typeof logging.createAppLogger>[0] | undefined;
+	const captured = new Error("Captured logger configuration");
+	const factory = spyOn(logging, "createAppLogger").mockImplementation(
+		(input) => {
+			options = input;
+			throw captured;
+		},
+	);
+	try {
+		process.env.NODE_ENV = "production";
+		expect(() => getBalanceWorkerLogger()).toThrow(captured);
+		// FireLens already ships stdout to Axiom; a pino Axiom transport as well
+		// sent every line twice and cost ~10% of a busy worker's CPU.
+		expect(options?.outputs).toEqual(["console-json"]);
+	} finally {
+		factory.mockRestore();
+		process.env.NODE_ENV = previous;
+	}
+});

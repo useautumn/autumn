@@ -48,5 +48,23 @@ export function createWorkerProducer({
 		}
 	}
 
-	return { connect, fence, disconnect, transaction, isUsable };
+	async function send(
+		...params: Parameters<KafkaProducerSession["send"]>
+	): ReturnType<KafkaProducerSession["send"]> {
+		try {
+			return await session.send(...params);
+		} catch (cause) {
+			throw translateKafkaProducerError({ topic, partition, cause });
+		}
+	}
+
+	return {
+		connect,
+		fence,
+		disconnect,
+		transaction,
+		send,
+		isUsable,
+		mode: session.mode,
+	};
 }

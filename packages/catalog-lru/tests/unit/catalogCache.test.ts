@@ -409,6 +409,35 @@ test("an expired row is hidden from a strict read and still available to a stale
 	]);
 });
 
+test("a cached row is validated once, not on every read", () => {
+	const ent = entitlementRow({ id: "ent_1" });
+	const feature = featureRow({ internalId: "feat_internal_1" });
+	const cache = createCache({ db: createFakeDb({ rows: [] }) });
+	cache.put({ rows: [ent, feature] });
+	const keys = [keyOf(ent), keyOf(feature)];
+
+	const first = cache.read({ keys });
+	const second = cache.read({ keys });
+
+	// Every track reads the catalog, so re-parsing each read cost ~10% of a saturated worker's CPU.
+	expect(second.entitlements.ent_1).toBe(first.entitlements.ent_1);
+	expect(second.features.feat_internal_1).toBe(first.features.feat_internal_1);
+	expect(second).toEqual(first);
+});
+
+test("an invalid cached row still fails the read that uses it", () => {
+	const ent = entitlementRow({ id: "ent_1" });
+	const broken = {
+		...ent,
+		row: { ...ent.row, allowance: "lots" },
+	} as unknown as CatalogRow;
+	const cache = createCache({ db: createFakeDb({ rows: [] }) });
+	cache.put({ rows: [broken] });
+
+	expect(() => cache.read({ keys: [keyOf(ent)] })).toThrow();
+	expect(() => cache.read({ keys: [keyOf(ent)] })).toThrow();
+});
+
 describe("catalog cache change count", () => {
 	test("moves when rows are set, expired or evicted; a read leaves it", () => {
 		const ent = entitlementRow({ id: "ent_1" });

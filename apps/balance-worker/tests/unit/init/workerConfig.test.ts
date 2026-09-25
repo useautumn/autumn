@@ -122,3 +122,23 @@ describe("Kafka balance worker config", () => {
 		).toThrow("retryCount");
 	});
 });
+
+test("a worker that reports partition load gets the load-aware assigner", () => {
+	const config = createWorkerConsumerConfig({
+		groupId: "balance-worker-staging",
+		timings,
+		partitionLoad: { snapshot: () => new Map() },
+	});
+	const [assigner, fallback] = config.partitionAssigners ?? [];
+	expect(assigner).toBeDefined();
+	expect(assigner).not.toBe(coPartitionedAssigner);
+	// Still advertised, so old and new workers can share a group mid-rollout.
+	expect(fallback).toBe(coPartitionedAssigner);
+	expect(
+		assigner?.({
+			cluster: {} as never,
+			groupId: "balance-worker-staging",
+			logger: {} as never,
+		}).name,
+	).toBe("LoadAwareCoPartitionedAssigner");
+});

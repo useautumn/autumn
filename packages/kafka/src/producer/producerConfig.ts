@@ -1,9 +1,27 @@
-import type { ProducerConfig } from "kafkajs";
+import {
+	type ICustomPartitioner,
+	type PartitionerArgs,
+	Partitioners,
+	type ProducerConfig,
+} from "kafkajs";
 import type { KafkaIdempotentProducerLimits } from "../client/types/kafkaLimits.js";
 import { assertNonEmpty, assertPositiveSafeInteger } from "../lib/assert.js";
 import type { KafkaProducerSessionConfig } from "./types/producer.js";
 
 const maximumKafkaProducerRetryCount = 10;
+
+/**
+ * Partition producers always name their partition, but kafkajs still ran its
+ * default partitioner over the topic's metadata for every message: about 3% of a
+ * busy worker's CPU. Honour the named partition and only fall back when absent.
+ */
+export function explicitPartitioner(): ReturnType<ICustomPartitioner> {
+	const fallback = Partitioners.DefaultPartitioner();
+	function partitionOf(args: PartitionerArgs): number {
+		return args.message.partition ?? fallback(args);
+	}
+	return partitionOf;
+}
 
 export function partitionProducerTransactionalIdOf({
 	prefix,
@@ -36,7 +54,15 @@ export function partitionProducerTransactionalIdOf({
 export function createProducerConfig({
 	transactionalId,
 	limits,
+	mode = "transactional",
 }: KafkaProducerSessionConfig): ProducerConfig {
+	// One round trip per commit: no transactional id, so no broker-side fence; the owner's epoch travels in the record instead.
+	if (mode === "idempotent") {
+		return {
+			...createIdempotentProducerConfig({ limits }),
+			createPartitioner: explicitPartitioner,
+		};
+	}
 	assertNonEmpty({ name: "transactionalId", value: transactionalId });
 	assertPositiveSafeInteger({
 		name: "transactionTimeoutMs",
@@ -48,6 +74,7 @@ export function createProducerConfig({
 		transactionalId,
 		idempotent: true,
 		maxInFlightRequests: 1,
+		createPartitioner: explicitPartitioner,
 		transactionTimeout: limits.transactionTimeoutMs,
 		retry: {
 			retries: limits.retryCount,

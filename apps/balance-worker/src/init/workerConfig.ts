@@ -2,8 +2,11 @@ import {
 	assertConsumerGroupTimings,
 	coPartitionedAssigner,
 	createConsumerGroupConfig,
+	createLoadAwareAssigner,
+	type KafkaCommitMode,
 	type KafkaProducerLimits,
 	type KafkaProducerSessionConfig,
+	type PartitionLoadSource,
 	partitionProducerTransactionalIdOf,
 } from "@autumn/kafka";
 import type { Admin, ConsumerConfig, ITopicMetadata } from "kafkajs";
@@ -40,15 +43,26 @@ export function assertKafkaBalanceWorkerTimings({
 export function createWorkerConsumerConfig({
 	groupId,
 	timings,
+	partitionLoad,
 }: {
 	groupId: string;
 	timings: KafkaBalanceWorkerTimings;
+	/** When given, partitions are dealt by the load the workers report rather than by number. */
+	partitionLoad?: PartitionLoadSource;
 }): ConsumerConfig {
 	assertKafkaBalanceWorkerTimings({ timings });
-	// Both topics share the membership; the assigner keeps partition n of each on one worker.
+	// Both topics share the membership; either assigner keeps partition n of each on one worker.
+	// The plain assigner stays advertised so a rollout can mix old and new workers in one group:
+	// Kafka only admits a member whose protocols overlap the group's, picks the one every member
+	// supports, and moves to the load-aware one on the first rebalance after the old workers leave.
 	return {
 		...createConsumerGroupConfig({ groupId, timings }),
-		partitionAssigners: [coPartitionedAssigner],
+		partitionAssigners: partitionLoad
+			? [
+					createLoadAwareAssigner({ loads: partitionLoad }),
+					coPartitionedAssigner,
+				]
+			: [coPartitionedAssigner],
 	};
 }
 
@@ -57,11 +71,13 @@ export function createWorkerProducerConfig({
 	topic,
 	partition,
 	limits,
+	mode,
 }: {
 	deploymentEnvironment: string;
 	topic: string;
 	partition: number;
 	limits: KafkaProducerLimits;
+	mode?: KafkaCommitMode;
 }): KafkaProducerSessionConfig {
 	return {
 		transactionalId: partitionProducerTransactionalIdOf({
@@ -71,6 +87,7 @@ export function createWorkerProducerConfig({
 			partition,
 		}),
 		limits,
+		...(mode === undefined ? {} : { mode }),
 	};
 }
 
@@ -83,6 +100,7 @@ export function balanceWorkerEnvToRuntimeConfig({
 }): PartitionRuntimeFactoryConfig {
 	return {
 		deploymentEnvironment: env.BALANCE_WORKER_DEPLOYMENT,
+		commit: { mode: env.BALANCE_WORKER_COMMIT_MODE },
 		commands: {
 			commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,
 			groupId: env.BALANCE_WORKER_GROUP_ID,
@@ -102,12 +120,19 @@ export function balanceWorkerEnvToRuntimeConfig({
 			// Sized for one customer bursting 500 parallel tracks, the largest the balance suites send.
 			maxPendingCommands: 4000,
 			maxPendingCommandsPerCustomer: 1000,
+			subjectMapMaxBytes: env.BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES,
+			// A busy partition carries several tracks per commit instead of one; a quiet one never waits.
+			commitLingerMs: 5,
 		},
 		trackReceiptRetentionMs: env.BALANCE_WORKER_RECEIPT_RETENTION_MS,
 		producerLimits: {
 			transactionTimeoutMs: 10000,
-			retryCount: 2,
-			initialRetryTimeMs: 100,
+			// Back-to-back transactions routinely hit CONCURRENT_TRANSACTIONS while the
+			// coordinator is still writing the previous commit's markers, which clears in
+			// a few ms. Start the backoff there instead of at 100ms; eight doublings still
+			// ride out a broker blip for over a second before giving up.
+			retryCount: 8,
+			initialRetryTimeMs: 5,
 			maxRetryTimeMs: 1000,
 		},
 		timings: {

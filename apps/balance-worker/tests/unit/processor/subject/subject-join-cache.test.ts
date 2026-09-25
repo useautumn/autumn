@@ -114,3 +114,20 @@ describe("subject join cache", () => {
 		expect(catalogJoins).toBe(2);
 	});
 });
+
+describe("peekCatalog", () => {
+	test("answers only with a catalog joined for this state at the current change count", () => {
+		const fixture = createFixture();
+		const state = createState();
+		const catalog = catalogRowsToCatalog({ rows: [] });
+		expect(fixture.joinCache.peekCatalog({ state })).toBeNull();
+		expect(fixture.joinCache.readCatalog({ state, join: () => catalog })).toBe(
+			catalog,
+		);
+		expect(fixture.joinCache.peekCatalog({ state })).toBe(catalog);
+		// A replaced state is a different object; the catalog moving invalidates the join.
+		expect(fixture.joinCache.peekCatalog({ state: createState() })).toBeNull();
+		fixture.moveCatalog();
+		expect(fixture.joinCache.peekCatalog({ state })).toBeNull();
+	});
+});

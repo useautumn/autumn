@@ -1,6 +1,14 @@
+import type { KafkaOffsetCommit } from "@autumn/kafka";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
+import { createEventLoopStallMonitor } from "../logging/eventLoopStalls/createEventLoopStallMonitor.js";
+import { syncSections } from "../logging/eventLoopStalls/syncSections.js";
+import {
+	createKafkaRequestReporter,
+	kafkaRequestTimings,
+} from "../logging/kafkaRequestTimings.js";
+import { createPartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
 import { startWorker } from "./lifecycle/startWorker.js";
@@ -50,6 +58,26 @@ export async function createBalanceWorker({
 		},
 	});
 	try {
+		// Every partition runtime records what it commits here; the consumer group reports it when it rejoins.
+		const partitionLoad = createPartitionLoad({ now: Date.now });
+		const consumer = resources.kafka.consumer(
+			createWorkerConsumerConfig({
+				groupId: env.BALANCE_WORKER_GROUP_ID,
+				timings: runtimeConfig.timings,
+				partitionLoad,
+			}),
+		);
+		// With idempotent commits no transaction carries a command's offset, so the group commits it itself.
+		async function commitCommandOffsets(
+			offsets: KafkaOffsetCommit,
+		): Promise<void> {
+			const flat: { topic: string; partition: number; offset: string }[] = [];
+			for (const { topic, partitions } of offsets.topics) {
+				for (const { partition, offset } of partitions)
+					flat.push({ topic, partition, offset });
+			}
+			await consumer.commitOffsets(flat);
+		}
 		const ownershipHandoff = createOwnershipHandoffLink({
 			ctx: { kafka: resources.kafka, logger: dependencies.logger },
 			config: {
@@ -59,6 +87,7 @@ export async function createBalanceWorker({
 		});
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
+				partitionLoad,
 				logger: dependencies.logger,
 				kafka: resources.kafka,
 				ownershipOffsets: resources.admin,
@@ -69,6 +98,7 @@ export async function createBalanceWorker({
 				partitionResolver: resources.partitionResolver,
 				bootstrapper: resources.bootstrapper,
 				checkpointMaintenance: resources.checkpoints?.maintenance,
+				commandOffsets: { commit: commitCommandOffsets },
 			},
 			config: runtimeConfig,
 		});
@@ -82,17 +112,13 @@ export async function createBalanceWorker({
 
 		const partitions = createWorkerPartitions({
 			ctx: {
-				consumer: resources.kafka.consumer(
-					createWorkerConsumerConfig({
-						groupId: env.BALANCE_WORKER_GROUP_ID,
-						timings: runtimeConfig.timings,
-					}),
-				),
+				consumer,
 				partitionOffsets: resources.kafka.admin(),
 				stateStore: resources.stateStore,
 				idempotencyKeys: resources.idempotencyKeys,
 				logger: dependencies.logger,
 				createRuntime,
+				served: partitionLoad,
 				ownershipLink: ownershipHandoff,
 				onError: dependencies.onError,
 				onUnhealthyPartition: dependencies.onError,
@@ -143,10 +169,41 @@ export async function createBalanceWorker({
 				endpoint: address.endpoint,
 			},
 		});
+		const reportsHealth = process.env.NODE_ENV === "production";
+		const stallMonitor = createEventLoopStallMonitor({
+			ctx: { logger: dependencies.logger, recorder: syncSections },
+			config: {
+				deployment: env.BALANCE_WORKER_DEPLOYMENT,
+				endpoint: address.endpoint,
+				intervalMs: 10,
+				stallThresholdMs: 20,
+				logStallMs: 50,
+				reportEveryMs: 10_000,
+			},
+		});
+		const kafkaRequestReporter = createKafkaRequestReporter({
+			ctx: { logger: dependencies.logger, timings: kafkaRequestTimings },
+			config: {
+				deployment: env.BALANCE_WORKER_DEPLOYMENT,
+				endpoint: address.endpoint,
+			},
+		});
+		function startTelemetry(): void {
+			healthReporter.start();
+			if (!reportsHealth) return;
+			stallMonitor.start();
+			kafkaRequestReporter.start();
+		}
+		function stopTelemetry(): void {
+			kafkaRequestReporter.stop();
+			stallMonitor.stop();
+			healthReporter.stop();
+		}
 		const ctx: WorkerLifecycleContext = {
 			partitions,
 			edgeConfigs: resources.edgeConfigs,
-			healthReporter,
+			// The stall monitor rides the health reporter's lifecycle: both are telemetry the worker never waits on.
+			healthReporter: { start: startTelemetry, stop: stopTelemetry },
 			catalogInvalidations: resources.catalogInvalidations,
 			listen,
 			settleResources: resources.settleResources,

@@ -7,6 +7,7 @@ import type {
 	PartitionRuntimeResources,
 	PartitionsDependencies,
 } from "../../partitions/types/partitions.js";
+import type { ProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
 import type { StateStore } from "../../state/types/stateStore.js";
 
@@ -22,6 +23,7 @@ export type KafkaPartitionRuntimeFactory = (position: {
 	follower: PartitionReplay;
 	preparation: PartitionReplay;
 	recentCommands: RecentCommands;
+	producedOffsets?: ProducedOffsets;
 }) => Omit<PartitionRuntimeResources, "markUnavailable">;
 
 export type WorkerPartitionsContext = {
@@ -32,6 +34,7 @@ export type WorkerPartitionsContext = {
 	logger?: Pick<AutumnLogger, "info" | "warn">;
 	stateStore: StateStore;
 	createRuntime: KafkaPartitionRuntimeFactory;
+	served?: PartitionsDependencies["served"];
 	ownershipLink?: PartitionsDependencies["ownershipLink"];
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
 	onError: PartitionsDependencies["onError"];

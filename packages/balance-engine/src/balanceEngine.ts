@@ -222,3 +222,4 @@ export {
 	fullSubjectToPlansNeedingBillingCycleAnchor,
 	fullSubjectToPoolsSummingContributions,
 } from "./utils/subjectUtils/fullSubjectToDueRows.js";
+export { slimSubjectForFeatures } from "./utils/subjectUtils/slimSubjectForFeatures.js";

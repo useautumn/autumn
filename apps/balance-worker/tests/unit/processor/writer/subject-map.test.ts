@@ -236,6 +236,8 @@ describe("writer over a store with no resident state", () => {
 				}),
 			),
 		).toThrow("Command id reused with different input: cmd_1");
+		// The store applies behind the log; wait for it before counting what landed.
+		await writer.waitForStore();
 		expect(store.applied).toHaveLength(1);
 		expect(
 			balanceOf(writer.readFreshestState({ identity: testIdentity })),
@@ -273,6 +275,7 @@ describe("writer over a store with no resident state", () => {
 				}),
 			),
 		).toThrow("Command already applied: cmd_0");
+		await writer.waitForStore();
 		expect(store.applied).toHaveLength(commandCount);
 	});
 

@@ -1,5 +1,6 @@
 import { UnsupportedCommandError } from "@autumn/balance-engine";
 import type { Context, MiddlewareHandler, Next } from "hono";
+import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import type {
 	BalanceWorkerHttpContext,
 	BalanceWorkerHttpEnv,
@@ -22,7 +23,9 @@ export function requestLoggingMiddleware({
 		const startedAt = performance.now();
 		await next();
 		try {
-			logRequestResult({ ctx, context, startedAt });
+			timeSync({ label: "request.log" }, () =>
+				logRequestResult({ ctx, context, startedAt }),
+			);
 		} catch (cause) {
 			// A logging failure cannot turn a committed request into an HTTP error.
 			console.error("Balance worker request logging failed", cause);
@@ -41,20 +44,23 @@ function logRequestResult({
 	startedAt: number;
 }): void {
 	const requestLog = context.get("requestLog");
-	const { command, response, error, errorCode } = requestLog;
+	const { command, response, error, errorCode, batch } = requestLog;
 	const statusCode = context.res.status;
+	const identity = command?.identity ?? batch?.identity;
 	const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
+	// A batch answers 200 around its commands' failures; the worst of them sets the level.
+	const severity = Math.max(statusCode, batch?.worstStatus ?? 0);
 	const event = {
 		event: "balance_worker.request",
 		statusCode,
 		durationMs,
 		// Same key and field names the server logs under, so one Axiom filter covers both services.
 		context: {
-			org_id: command?.identity.orgId,
-			org_slug: command?.org?.slug,
-			env: command?.identity.env,
-			customer_id: command?.identity.customerId,
-			entity_id: command?.identity.entityId,
+			org_id: identity?.orgId,
+			org_slug: command?.org?.slug ?? batch?.orgSlug,
+			env: identity?.env,
+			customer_id: identity?.customerId,
+			entity_id: identity?.entityId,
 		},
 		errorCode,
 		error: error && loggedErrorOf({ error, statusCode }),
@@ -62,21 +68,33 @@ function logRequestResult({
 			id: command?.requestId ?? requestLog.id,
 			method: context.req.method,
 			path: context.req.path,
-			body: command && loggedCommandOf({ command }),
+			// The command is a large object the logger walks and serialises on every call; a success reports its outcome fields instead.
+			body:
+				severity >= 400 && command ? loggedCommandOf({ command }) : undefined,
 		},
 		res: shouldLogResponse() ? (response ?? null) : undefined,
 		data: {
-			route: context.get("request")?.route,
+			route: context.get("request")?.route ?? batch?.route,
 			commandId: command?.commandId,
 			featureId: command?.featureId,
 			value: command?.value,
+			batch: batch && loggedBatchOf({ batch }),
 			...outcomeOf({ requestLog }),
 		},
 	};
 	const message = `[${statusCode}] ${context.req.method} ${context.req.path} ${durationMs}ms${error ? ` — ${error.name}` : ""}`;
-	if (statusCode >= 500) ctx.logger.error(event, message);
-	else if (statusCode >= 400) ctx.logger.warn(event, message);
+	if (severity >= 500) ctx.logger.error(event, message);
+	else if (severity >= 400) ctx.logger.warn(event, message);
 	else ctx.logger.info(event, message);
+}
+
+function loggedBatchOf({
+	batch,
+}: {
+	batch: NonNullable<BalanceWorkerRequestLog["batch"]>;
+}) {
+	const { count, succeeded, failed, errorCodes } = batch;
+	return { count, succeeded, failed, errorCodes };
 }
 
 /** A 4xx is the caller's answer, not a fault: its name and message say everything, the stack is noise. */

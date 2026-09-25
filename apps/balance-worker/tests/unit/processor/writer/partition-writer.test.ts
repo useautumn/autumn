@@ -30,6 +30,7 @@ import { SubjectNotFoundError } from "../../../../src/processor/subject/subjectE
 import type { PartitionProcessorScope } from "../../../../src/processor/types/partitionProcessor.js";
 import type { ReceiptPolicy } from "../../../../src/processor/types/receiptPolicy.js";
 import { createPartitionWriter as createPartitionWriterCore } from "../../../../src/processor/writer/createPartitionWriter.js";
+import { RECORD_OVERHEAD_BYTES } from "../../../../src/processor/writer/pendingMutations.js";
 import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type {
 	MutateParams,
@@ -45,6 +46,7 @@ import {
 	MutationBatchNotCommittedError,
 	PartitionWriterCapacityError,
 	PartitionWriterCommandConflictError,
+	PartitionWriterRecordTooLargeError,
 	PartitionWriterRecoveryRequiredError,
 } from "../../../../src/processor/writer/writerErrors.js";
 import { openStateStore } from "../../../../src/state/openStateStore.js";
@@ -231,6 +233,9 @@ const closeFixture = ({
 	rmSync(directory, { recursive: true, force: true });
 };
 
+const encodedRecordBytes = (record: MeteringRecord): number =>
+	Buffer.byteLength(JSON.stringify(record)) + RECORD_OVERHEAD_BYTES;
+
 const batchKeys = (batch: MeteringRecord[] | undefined) =>
 	batch?.map((mutation) => mutation.id);
 
@@ -252,6 +257,7 @@ const defaultReceiptPolicy = {
 };
 
 type TestWriter = {
+	waitForStore(): Promise<void>;
 	completeCommand(params: { source: { commandOffset: string } }): Promise<void>;
 	submitTrack(params: {
 		command: TrackCommand;
@@ -311,6 +317,7 @@ const createPartitionTrackWriter = ({
 		customerPlans: createCustomerPlans(),
 	};
 	return {
+		waitForStore: () => writer.waitForApplies(),
 		completeCommand: ({ source }) =>
 			executeCommand({ scope, source, run: async () => undefined }),
 		submitTrack: ({ command, source }) =>
@@ -1283,6 +1290,86 @@ describe("partition writer", () => {
 		}
 	});
 
+	test("a busy partition lingers so the next commit carries what arrives; a quiet one never waits", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: { ...defaultLimits, commitLingerMs: 40 },
+			});
+			const later = (ms: number) =>
+				new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+			// Quiet: one at a time, each committed alone and at once.
+			await writer.submitTrack({
+				command: createCommand({ commandId: "q_1" }),
+			});
+			const second = writer.submitTrack({
+				command: createCommand({ commandId: "q_2" }),
+			});
+			await later(8);
+			await Promise.all([
+				second,
+				writer.submitTrack({ command: createCommand({ commandId: "q_3" }) }),
+			]);
+			expect(appender.batches.map((batch) => batch.length)).toEqual([1, 1, 1]);
+
+			// Busy: two together mark the partition busy, so the next commit lingers and carries both later arrivals.
+			await Promise.all([
+				writer.submitTrack({ command: createCommand({ commandId: "b_1" }) }),
+				writer.submitTrack({ command: createCommand({ commandId: "b_2" }) }),
+			]);
+			const third = writer.submitTrack({
+				command: createCommand({ commandId: "b_3" }),
+			});
+			await later(8);
+			await Promise.all([
+				third,
+				writer.submitTrack({ command: createCommand({ commandId: "b_4" }) }),
+			]);
+			expect(appender.batches.map((batch) => batch.length)).toEqual([
+				1, 1, 1, 2, 2,
+			]);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("a full batch ends the linger early", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: { ...defaultLimits, maxBatchSize: 2, commitLingerMs: 2_000 },
+			});
+			await Promise.all([
+				writer.submitTrack({ command: createCommand({ commandId: "b_1" }) }),
+				writer.submitTrack({ command: createCommand({ commandId: "b_2" }) }),
+			]);
+			const startedAt = performance.now();
+			const first = writer.submitTrack({
+				command: createCommand({ commandId: "b_3" }),
+			});
+			await new Promise<void>((resolve) => setTimeout(resolve, 5));
+			await Promise.all([
+				first,
+				writer.submitTrack({ command: createCommand({ commandId: "b_4" }) }),
+			]);
+			expect(performance.now() - startedAt).toBeLessThan(500);
+			expect(appender.batches.map((batch) => batch.length)).toEqual([2, 2]);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
 	test("admits duplicate waiters while enforcing partition capacity", async () => {
 		const fixture = createFixture({
 			identities: [firstIdentity, secondIdentity],
@@ -1321,6 +1408,398 @@ describe("partition writer", () => {
 			]);
 			expect(duplicateDecision).toEqual(firstDecision);
 			expect(appender.batches[0]).toHaveLength(1);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	/** The store is a projection of the log, so the next batch can go to Kafka
+	 *  while the previous one is still being applied. Waiting for the apply capped
+	 *  a partition at batch / (commit + apply), about 1,100/s with a 75ms store. */
+	test("commits the next batch while the previous store apply is in flight", async () => {
+		const fixture = createFixture({
+			identities: [firstIdentity, secondIdentity],
+		});
+		const gates = [
+			Promise.withResolvers<void>(),
+			Promise.withResolvers<void>(),
+		];
+		const applied: string[][] = [];
+		try {
+			const appender = new RecordingCommittedAppender();
+			let call = 0;
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				limits: defaultLimits,
+				appender,
+				stateStore: {
+					...fixture.store,
+					applyDurableMutations: async (params) => {
+						const gate = gates[call++];
+						await gate?.promise;
+						applied.push(params.records.map((record) => record.mutation.id));
+						return fixture.store.applyDurableMutations(params);
+					},
+				},
+			});
+			const first = await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1" }),
+			});
+			await waitForBatch();
+			const second = await writer.submitTrack({
+				command: createCommand({
+					commandId: "cmd_2",
+					identity: secondIdentity,
+				}),
+			});
+
+			expect(first).toMatchObject({ state: { revision: 1 } });
+			expect(second).toMatchObject({ state: { revision: 1 } });
+			expect(batchKeys(appender.batches[0])).toEqual(["cmd_1"]);
+			expect(batchKeys(appender.batches[1])).toEqual(["cmd_2"]);
+			expect(applied).toEqual([]);
+
+			gates[1]?.resolve();
+			await waitForBatch();
+			expect(applied).toEqual([]);
+			gates[0]?.resolve();
+			await waitForBatch();
+			await waitForBatch();
+			expect(applied).toEqual([["cmd_1"], ["cmd_2"]]);
+		} finally {
+			for (const gate of gates) gate.resolve();
+			closeFixture(fixture);
+		}
+	});
+
+	/** A store flush costs about the same for one row as for hundreds, so batches
+	 *  that pile up behind a slow flush go to the store together, still in order. */
+	test("batches waiting behind a flush are applied together in one call", async () => {
+		const fixture = createFixture({
+			identities: [firstIdentity, secondIdentity],
+		});
+		const gate = Promise.withResolvers<void>();
+		const applied: string[][] = [];
+		try {
+			const appender = new RecordingCommittedAppender();
+			let call = 0;
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				limits: defaultLimits,
+				appender,
+				stateStore: {
+					...fixture.store,
+					applyDurableMutations: async (params) => {
+						if (call++ === 0) await gate.promise;
+						applied.push(params.records.map((record) => record.mutation.id));
+						return fixture.store.applyDurableMutations(params);
+					},
+				},
+			});
+			await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1" }),
+			});
+			await waitForBatch();
+			await writer.submitTrack({
+				command: createCommand({
+					commandId: "cmd_2",
+					identity: secondIdentity,
+				}),
+			});
+			await waitForBatch();
+			await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_3" }),
+			});
+			expect(appender.batches).toHaveLength(3);
+
+			gate.resolve();
+			await writer.waitForStore();
+			expect(applied).toEqual([["cmd_1"], ["cmd_2", "cmd_3"]]);
+			expect(
+				fixture.store.readState({ identity: firstIdentity }),
+			).toMatchObject({
+				revision: 2,
+			});
+		} finally {
+			gate.resolve();
+			closeFixture(fixture);
+		}
+	});
+
+	test("a failed apply behind committed batches still stops the partition", async () => {
+		const fixture = createFixture({
+			identities: [firstIdentity, secondIdentity],
+		});
+		const gate = Promise.withResolvers<void>();
+		try {
+			const appender = new RecordingCommittedAppender();
+			let call = 0;
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				limits: defaultLimits,
+				appender,
+				stateStore: {
+					...fixture.store,
+					applyDurableMutations: async (params) => {
+						call++;
+						if (call === 1) {
+							await gate.promise;
+							throw new Error("disk write failed");
+						}
+						return fixture.store.applyDurableMutations(params);
+					},
+				},
+			});
+			await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1" }),
+			});
+			await waitForBatch();
+			await writer.submitTrack({
+				command: createCommand({
+					commandId: "cmd_2",
+					identity: secondIdentity,
+				}),
+			});
+			expect(appender.batches).toHaveLength(2);
+
+			gate.resolve();
+			await waitForBatch();
+			await waitForBatch();
+			// Never applied out of order: the second batch waits for the first, then recovery.
+			expect(call).toBe(1);
+			await expect(
+				writer.submitTrack({ command: createCommand({ commandId: "cmd_3" }) }),
+			).rejects.toBeInstanceOf(PartitionWriterRecoveryRequiredError);
+		} finally {
+			gate.resolve();
+			closeFixture(fixture);
+		}
+	});
+
+	/** A partition handed to another worker must not keep writing the store after
+	 *  it has stopped: its drain waits for applies still queued behind the log. */
+	test("draining waits for committed batches to reach the store", async () => {
+		const fixture = createFixture();
+		const gate = Promise.withResolvers<void>();
+		let applied = false;
+		try {
+			const processor = createPartitionProcessor({
+				ctx: {
+					stateStore: {
+						...fixture.store,
+						applyDurableMutations: async (params) => {
+							await gate.promise;
+							const result = fixture.store.applyDurableMutations(params);
+							applied = true;
+							return result;
+						},
+					},
+					appender: new RecordingCommittedAppender(),
+					db: createSyntheticWorkerDb(),
+					catalogCache: createTestCatalogCache(),
+					receiptPolicy: defaultReceiptPolicy,
+					recentCommands: createRecentCommands({
+						windowMs: 600_000,
+						now: () => 0,
+					}),
+					assertCanRead: () => {},
+				},
+				config: { topic, partition, writerLimits: defaultLimits },
+			});
+			await processor.track({ command: createCommand({ commandId: "cmd_1" }) });
+			let drained = false;
+			const draining = processor.drain().then(() => {
+				drained = true;
+			});
+			await waitForBatch();
+			expect(drained).toBe(false);
+			gate.resolve();
+			await draining;
+			expect(applied).toBe(true);
+		} finally {
+			gate.resolve();
+			await waitForBatch();
+			closeFixture(fixture);
+		}
+	});
+
+	test("a definite append failure behind an unapplied batch rebuilds from the log", async () => {
+		const fixture = createFixture({
+			identities: [firstIdentity, secondIdentity],
+		});
+		const gate = Promise.withResolvers<void>();
+		try {
+			const recording = new RecordingCommittedAppender();
+			let appends = 0;
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				limits: defaultLimits,
+				appender: {
+					appendCommitted: async (params) => {
+						appends++;
+						if (appends === 2)
+							throw new MutationBatchNotCommittedError({
+								cause: new Error("broker refused"),
+							});
+						return recording.appendCommitted(params);
+					},
+				},
+				stateStore: {
+					...fixture.store,
+					applyDurableMutations: async (params) => {
+						await gate.promise;
+						return fixture.store.applyDurableMutations(params);
+					},
+				},
+			});
+			await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1" }),
+			});
+			await waitForBatch();
+			await expect(
+				writer.submitTrack({
+					command: createCommand({
+						commandId: "cmd_2",
+						identity: secondIdentity,
+					}),
+				}),
+			).rejects.toBeInstanceOf(PartitionWriterRecoveryRequiredError);
+		} finally {
+			gate.resolve();
+			await waitForBatch();
+			closeFixture(fixture);
+		}
+	});
+
+	test("stops committing once too many batches wait for the store", async () => {
+		const fixture = createFixture({
+			identities: [firstIdentity, secondIdentity],
+		});
+		const gate = Promise.withResolvers<void>();
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				limits: { ...defaultLimits, maxBatchSize: 1, maxUnappliedBatches: 1 },
+				appender,
+				stateStore: {
+					...fixture.store,
+					applyDurableMutations: async (params) => {
+						await gate.promise;
+						return fixture.store.applyDurableMutations(params);
+					},
+				},
+			});
+			const first = writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1" }),
+			});
+			const second = writer.submitTrack({
+				command: createCommand({
+					commandId: "cmd_2",
+					identity: secondIdentity,
+				}),
+			});
+			await first;
+			await waitForBatch();
+			await waitForBatch();
+			expect(appender.batches).toHaveLength(1);
+
+			gate.resolve();
+			await second;
+			expect(appender.batches).toHaveLength(2);
+		} finally {
+			gate.resolve();
+			closeFixture(fixture);
+		}
+	});
+
+	/** Kafka refuses a batch over the topic's max.message.bytes, and on staging
+	 *  that sent a partition into recovery and took its worker down. A full batch
+	 *  of large records must split instead. */
+	test("splits a batch by its encoded size, not only its record count", async () => {
+		const measured = createFixture({
+			identities: [firstIdentity, secondIdentity],
+		});
+		const fixture = createFixture({
+			identities: [firstIdentity, secondIdentity],
+		});
+		try {
+			const commands = ["cmd_a1", "cmd_b1", "cmd_a2", "cmd_b2"].map(
+				(commandId) =>
+					createCommand({
+						commandId,
+						identity: commandId.startsWith("cmd_a")
+							? firstIdentity
+							: secondIdentity,
+					}),
+			);
+			const probe = new RecordingCommittedAppender();
+			const probeWriter = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: measured.store,
+				appender: probe,
+				limits: defaultLimits,
+			});
+			await Promise.all(
+				commands.map((command) => probeWriter.submitTrack({ command })),
+			);
+			const sizes = probe.batches.flat().map(encodedRecordBytes);
+			expect(sizes).toHaveLength(4);
+
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: {
+					...defaultLimits,
+					maxBatchBytes: Math.max(...sizes) * 2 + 1,
+				},
+			});
+			await Promise.all(
+				commands.map((command) => writer.submitTrack({ command })),
+			);
+
+			expect(appender.batches.map((batch) => batch.length)).toEqual([2, 2]);
+			expect(appender.batches.flat().map((record) => record.id)).toEqual(
+				probe.batches.flat().map((record) => record.id),
+			);
+		} finally {
+			closeFixture(measured);
+			closeFixture(fixture);
+		}
+	});
+
+	test("rejects a record too large for any batch without disturbing the partition", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: { ...defaultLimits, maxBatchBytes: 64 },
+			});
+
+			for (const commandId of ["cmd_1", "cmd_2"]) {
+				await expect(
+					writer.submitTrack({ command: createCommand({ commandId }) }),
+				).rejects.toBeInstanceOf(PartitionWriterRecordTooLargeError);
+			}
+			expect(appender.batches).toEqual([]);
+			expect(
+				fixture.store.readState({ identity: firstIdentity }),
+			).toMatchObject({
+				revision: createState({ identity: firstIdentity }).revision,
+			});
 		} finally {
 			closeFixture(fixture);
 		}
@@ -1906,4 +2385,38 @@ describe("partition writer", () => {
 			closeFixture(fixture);
 		}
 	});
+});
+
+test("a record is measured by the appender once and sent as the same object", async () => {
+	const fixture = createFixture();
+	try {
+		const measured: MeteringRecord[] = [];
+		const appender = new (class extends RecordingCommittedAppender {
+			encodedBytesOf({ record }: { record: MeteringRecord }): number {
+				measured.push(record);
+				return 100_000;
+			}
+		})();
+		const writer = createPartitionTrackWriter({
+			topic,
+			partition,
+			stateStore: fixture.store,
+			appender,
+			// Room for one measured record per batch, so the appender's size is what batches by.
+			limits: { ...defaultLimits, maxBatchBytes: 150_000 },
+		});
+		await Promise.all(
+			["cmd_1", "cmd_2", "cmd_3"].map((commandId) =>
+				writer.submitTrack({ command: createCommand({ commandId }) }),
+			),
+		);
+		const sent = appender.batches.flat();
+		expect(measured).toHaveLength(3);
+		expect(sent).toHaveLength(3);
+		// Identity, not equality: the publisher's encoding is keyed by the object.
+		for (const record of sent) expect(measured).toContain(record);
+		expect(appender.batches.map((batch) => batch.length)).toEqual([1, 1, 1]);
+	} finally {
+		closeFixture(fixture);
+	}
 });
