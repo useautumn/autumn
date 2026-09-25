@@ -170,8 +170,8 @@ cat <<'EOF'
   `bun ai/src/cli.ts sync --copy`, run by this hook on the first session start.
   If /tdd or /explain are missing, run that command and check the ai submodule.
 - Local infra (Postgres/Redis/ClickHouse/ElasticMQ) is installed but NOT
-  running. Start it with `bun scripts/dw/index.ts start` (seeds unit-test-org,
-  opens the Cloudflare public URL). Run `bun dw` when a task needs the app.
+  running. Start it with step 1 under "Running integration (e2e) tests" below
+  (seeds unit-test-org, opens the Cloudflare public URL).
 - There is no port preview in Claude cloud. To view the dashboard, use the
   public URLs from `bun dw identify` (autumn-wt1-<hash>.autumnworktree.com).
 - Executor's executor-cloud MCP authenticates through a user-scope headers helper that fetches
@@ -188,22 +188,31 @@ token in ~/.cache/autumn-infisical-token; the Stripe sandbox key lands in
 ~/.cache/autumn-stripe-sandbox-secret-key. Tokens expire — re-run this hook
 (`bash scripts/setup/claude-cloud/session-start.sh`) to refresh them.
 
-- Machine-identity tokens need `--projectId` on every `infisical run`, so
-  `bun t` / `bun dw` fail as-is ("Project ID is required"). Wrap commands as:
-    export INFISICAL_TOKEN=$(cat ~/.cache/autumn-infisical-token)
-    ENV_FILE=.env infisical run --projectId=$(node -p "require('./.infisical.json').workspaceId") --env=dev --recursive --silent -- <cmd>
-- 1. Infra: `bun scripts/dw/index.ts start` (Postgres/Redis/ClickHouse/ElasticMQ
-  + migrations).
-- 2. Seed unit-test-org (fixes `Org with slug "unit-test-org" not found`), from
-  the repo root, inside the wrapper above:
-    env DATABASE_URL=<local url from server/.env> DATABASE_CRITICAL_URL=<same> \
-      AUTUMN_DB_DIRECT=1 STRIPE_SANDBOX_SECRET_KEY=$(cat ~/.cache/autumn-stripe-sandbox-secret-key) \
-      bun scripts/setup/setup-test.ts --ensure
-- 3. App: `bun dw` hard-requires the Neon CLI; skip it. From server/, inside the
-  wrapper: `bun src/workers.ts &` and `bun src/index.ts` (API on :8080).
-  Neither hot-reloads — after every `git checkout`, kill both by PID (not
-  `pkill -f`, which matches your own shell) and restart.
-- 4. Tests, from server/, inside the wrapper: `bun test --timeout 0 <file>`.
+- `infisical run --env=dev` injects the PlanetScale dev DATABASE_URL, and
+  machine-identity tokens need `--projectId`, so plain `bun t` / `bun dw` either
+  fail ("Project ID is required") or hit the remote DB. Use the wrapper, which
+  adds `--projectId`, re-applies server/.env(.local) so DB/Redis/SQS stay local,
+  exports the Stripe sandbox key + edge-config override, and refuses to run
+  when DATABASE_URL is not local:
+    bash scripts/setup/claude-cloud/with-env.sh [dir] -- <cmd>
+- 1. Infra (also after a VM restart, check `uptime`), via the wrapper so the
+  unit-test-org seed gets the Stripe sandbox key:
+    bash scripts/setup/claude-cloud/with-env.sh -- bun scripts/dw/index.ts start
+  Starts Postgres/Redis/ClickHouse/ElasticMQ, runs migrations, loads DB
+  functions and seeds unit-test-org. Ignore the cloudflared warning.
+  If the seed is missing (`Org with slug "unit-test-org" not found`):
+    bash scripts/setup/claude-cloud/with-env.sh -- bun scripts/setup/setup-test.ts --ensure
+  If balance sync logs `function sync_balances_v2 ... does not exist`, the DB
+  functions are missing:
+    bash scripts/setup/claude-cloud/with-env.sh -- bun scripts/migrations/migrate-functions.ts
+- 2. App: `bun dw` hard-requires the Neon CLI; skip it. Start (or restart after
+  any checkout/edit, neither hot-reloads) the API on :8080 and the workers:
+    bash scripts/setup/claude-cloud/restart-app.sh
+  Logs: ~/.autumn-agent/server.log and ~/.autumn-agent/workers.log.
+- 3. Tests: `bash scripts/setup/claude-cloud/with-env.sh server -- bun test --timeout 0 <file>`
+  Unit tests (tests/unit) need the wrapper too: the test preload builds a context.
+- TDD red run: `git stash push -- server/src`, restart-app.sh, run the test
+  (expect red), `git stash pop`, restart-app.sh, run again (expect green).
 - `Redis connection timeout for backup` means AUTUMN_EDGE_CONFIG_OVERRIDE_B64
   is unset (this hook sets it to e30= = `{}`); server, workers and tests all
   need it. It serves every S3 edge config's default.

@@ -38086,6 +38086,22 @@ paths:
                     must be an active plan billed on the same subscription as
                     the attach (or a free plan); plans on a separate
                     subscription are rejected.
+                remove_discounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      reward_id:
+                        type: string
+                        description: The ID of the reward (or Stripe coupon) to remove.
+                    required:
+                      - reward_id
+                    additionalProperties: false
+                    title: RemoveDiscount
+                    description: A discount to remove from the subscription. Discounts that are no
+                      longer applied are ignored.
+                  description: Discounts to remove from the subscription, by reward ID. Discounts
+                    not listed are left unchanged.
               required:
                 - customer_id
                 - plan_id
@@ -49648,6 +49664,22 @@ paths:
                     must be an active plan billed on the same subscription as
                     the attach (or a free plan); plans on a separate
                     subscription are rejected.
+                remove_discounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      reward_id:
+                        type: string
+                        description: The ID of the reward (or Stripe coupon) to remove.
+                    required:
+                      - reward_id
+                    additionalProperties: false
+                    title: RemoveDiscount
+                    description: A discount to remove from the subscription. Discounts that are no
+                      longer applied are ignored.
+                  description: Discounts to remove from the subscription, by reward ID. Discounts
+                    not listed are left unchanged.
               required:
                 - customer_id
                 - plan_id
@@ -60886,6 +60918,22 @@ paths:
                     must be an active plan billed on the same subscription as
                     the attach (or a free plan); plans on a separate
                     subscription are rejected.
+                remove_discounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      reward_id:
+                        type: string
+                        description: The ID of the reward (or Stripe coupon) to remove.
+                    required:
+                      - reward_id
+                    additionalProperties: false
+                    title: RemoveDiscount
+                    description: A discount to remove from the subscription. Discounts that are no
+                      longer applied are ignored.
+                  description: Discounts to remove from the subscription, by reward ID. Discounts
+                    not listed are left unchanged.
               required:
                 - customer_id
               title: SetupPaymentParams

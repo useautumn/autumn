@@ -6,26 +6,23 @@ import { kernelExecute } from "./kernelExecute.js";
 import { invoiceCheckout } from "./playwright/invoiceCheckout.js";
 import { playwrightPool } from "./playwrightPool.js";
 
-/**
- * Complete a Stripe Invoice Checkout form.
- * Kernel mode: serializes invoiceCheckout via fn.toString() and runs in-VM.
- * Local mode: runs invoiceCheckout directly with a local Playwright browser.
- */
+/** Complete the hosted invoice in an isolated browser context. */
 export const completeInvoiceCheckoutV2 = async ({
 	url,
 	ctx,
 	customerId,
 }: {
 	url: string;
-	/** Pass both to fall back to paying via the Stripe API when the hosted page
-	 * fails to confirm — Stripe's page markup is not what these tests assert. */
+	/** Allows API payment only when Stripe presents an external CAPTCHA challenge. */
 	ctx?: TestContext;
 	customerId?: string;
 }): Promise<void> => {
 	try {
 		await runInvoiceCheckout({ url });
 	} catch (error) {
-		if (!ctx || !customerId) throw error;
+		const requiresChallenge =
+			error instanceof Error && error.name === "StripeBrowserChallengeError";
+		if (!requiresChallenge || !ctx || !customerId) throw error;
 
 		console.log(
 			`[completeInvoiceCheckoutV2] Hosted page failed (${error}); paying via Stripe API`,

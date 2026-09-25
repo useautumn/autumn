@@ -71,6 +71,13 @@ export const applyCustomizeToProduct = ({
 				price: customize.price.amount,
 				interval: customize.price.interval,
 				interval_count: customize.price.interval_count ?? 1,
+				// Lets the base price keep its Stripe price until it's edited.
+				price_config: {
+					amount: customize.price.amount,
+					interval: customize.price.interval,
+					interval_count: customize.price.interval_count ?? 1,
+					stripe_price_id: customize.price.stripe_price_id,
+				},
 			} as ProductItem,
 		];
 	}

@@ -27,7 +27,6 @@
  */
 
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { deleteSvixApp as serverDeleteSvixApp } from "@server/external/svix/svixHelpers.js";
 import {
@@ -36,9 +35,9 @@ import {
 	resolveTestPaths,
 } from "@tests/_groups/index.ts";
 import chalk from "chalk";
+import { BALANCE_SYNC_SQS_QUEUE_URL } from "../worker/prepareBalanceSyncQueue.js";
 import pLimit from "p-limit";
 import { TEST_ORG_CONFIG } from "../../setupTestUtils/createTestOrg.ts";
-import type { TestExecutor } from "../../testScripts/testExecutor.ts";
 import {
 	DATABASE_CRITICAL_URL,
 	DATABASE_URL,
@@ -49,6 +48,7 @@ import {
 	REGISTRY_DIR,
 	SERVER_PORT,
 	SQS_QUEUE_URL_V2,
+	STRIPE_WEBHOOK_SQS_QUEUE_URL,
 	TRACK_ASYNC_SQS_QUEUE_URL,
 	TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
 	TRACK_SQS_QUEUE_URL,
@@ -64,6 +64,7 @@ import {
 } from "../dashboard/hub.ts";
 import {
 	type DashboardServer,
+	getDashboardSnapshot,
 	startDashboardServer,
 } from "../dashboard/server.ts";
 import {
@@ -89,6 +90,7 @@ import {
 	sandboxName,
 	vercelTags,
 } from "../helpers/owner.ts";
+import { planShardWorkers } from "../helpers/planShardWorkers.ts";
 import { WorkerPool } from "../helpers/pool.ts";
 import {
 	createWarmSandbox,
@@ -114,6 +116,7 @@ import {
 	registerConnectIngressWebhook,
 	validateStripeKeyPool,
 } from "../helpers/stripe.ts";
+import { stripeBudgetForRun } from "../helpers/stripeBudget.ts";
 import {
 	allPoolKeys,
 	decodeSubAccount,
@@ -129,7 +132,8 @@ import {
 	createSvixApp as orchestratorCreateSvixApp,
 	partitionShards,
 } from "../helpers/svix.ts";
-import { runSwarmTests } from "../tui/runnerCore.ts";
+import { createTestFileResolver } from "../testDiscovery/createTestFileResolver";
+import { runShardTests } from "../tui/runShardTests.ts";
 import {
 	bumpAccountDone,
 	bumpSandboxDone,
@@ -440,118 +444,6 @@ const timeBoxed = async (
 
 const TESTS_DIR = join(PROJECT_ROOT, "server", "tests");
 
-/** Recursively collect `*.test.ts` files under a directory (mirrors the dispatcher). */
-const collectTestFilesFromDir = async (dir: string): Promise<string[]> => {
-	const files: string[] = [];
-	const walk = async (current: string): Promise<void> => {
-		const entries = await readdir(current);
-		for (const entry of entries) {
-			const fullPath = join(current, entry);
-			const entryStat = await stat(fullPath);
-			if (entryStat.isDirectory()) {
-				await walk(fullPath);
-			} else if (entry.endsWith(".test.ts")) {
-				files.push(fullPath);
-			}
-		}
-	};
-	await walk(dir);
-	return files;
-};
-
-/**
- * Recursively find the first file under `baseDir` whose path ends with
- * `/${pathSuffix}` (mirrors the dispatcher's `findFileByPath`). `_groups` file
- * paths are relative to the test ROOT (e.g. `billing/attach/...test.ts`) but the
- * files actually live under a sub-tree (`server/tests/integration/billing/...`),
- * so a plain `join(TESTS_DIR, groupPath)` misses them — we suffix-search instead.
- */
-const findFileBySuffix = async (
-	baseDir: string,
-	pathSuffix: string,
-): Promise<string | undefined> => {
-	const normalizedSuffix = `/${pathSuffix}`;
-	const walk = async (current: string): Promise<string | undefined> => {
-		const entries = await readdir(current);
-		for (const entry of entries) {
-			const fullPath = join(current, entry);
-			const entryStat = await stat(fullPath);
-			if (entryStat.isDirectory()) {
-				const found = await walk(fullPath);
-				if (found) {
-					return found;
-				}
-			} else if (fullPath.endsWith(normalizedSuffix)) {
-				return fullPath;
-			}
-		}
-		return undefined;
-	};
-	return walk(baseDir);
-};
-
-/**
- * Recursively find the first directory under `baseDir` whose path ends with
- * `/${pathSuffix}` (mirrors the dispatcher's `findFolderByPath`), for
- * directory-style `_groups` paths nested below the test root.
- */
-const findFolderBySuffix = async (
-	baseDir: string,
-	pathSuffix: string,
-): Promise<string | undefined> => {
-	const normalizedSuffix = `/${pathSuffix}`;
-	const walk = async (current: string): Promise<string | undefined> => {
-		const entries = await readdir(current);
-		for (const entry of entries) {
-			const fullPath = join(current, entry);
-			const entryStat = await stat(fullPath);
-			if (entryStat.isDirectory()) {
-				if (fullPath.endsWith(normalizedSuffix)) {
-					return fullPath;
-				}
-				const found = await walk(fullPath);
-				if (found) {
-					return found;
-				}
-			}
-		}
-		return undefined;
-	};
-	return walk(baseDir);
-};
-
-/**
- * Resolve one `_groups` path to absolute test files. A path can be either a
- * single `.test.ts` FILE or a DIRECTORY, and it may sit at the exact
- * `server/tests/<groupPath>` location OR nested deeper (e.g. under
- * `server/tests/integration/`). Try the exact location first (cheap), then fall
- * back to a recursive suffix search — the same two-step the `bun t` dispatcher
- * uses, so file-list groups (whose paths are individual files) resolve too.
- */
-const resolveGroupPath = async (groupPath: string): Promise<string[]> => {
-	const exactPath = join(TESTS_DIR, groupPath);
-	try {
-		const entryStat = await stat(exactPath);
-		if (entryStat.isFile() && groupPath.endsWith(".test.ts")) {
-			return [exactPath];
-		}
-		if (entryStat.isDirectory()) {
-			return collectTestFilesFromDir(exactPath);
-		}
-	} catch {
-		// Falls through — the path doesn't exist at the exact location.
-	}
-
-	// Not at the exact location: suffix-search the test tree (mirrors the
-	// dispatcher). Files resolve to themselves; directories are walked.
-	if (groupPath.endsWith(".test.ts")) {
-		const found = await findFileBySuffix(TESTS_DIR, groupPath);
-		return found ? [found] : [];
-	}
-	const foundDir = await findFolderBySuffix(TESTS_DIR, groupPath);
-	return foundDir ? collectTestFilesFromDir(foundDir) : [];
-};
-
 /**
  * Resolve the positional args (group/suite names, or `server/tests`-relative
  * paths) to a de-duplicated, sorted list of absolute test files — the SAME
@@ -564,6 +456,7 @@ const resolveTestFiles = async (
 ): Promise<string[]> => {
 	const args = groupsOrPatterns.length > 0 ? groupsOrPatterns : ["core"];
 	const files = new Set<string>();
+	const resolver = await createTestFileResolver({ rootDir: TESTS_DIR });
 
 	for (const arg of args) {
 		const groupPaths = resolveTestPaths({ name: arg });
@@ -573,7 +466,7 @@ const resolveTestFiles = async (
 			const label = matchedGroup ? "group" : suiteGroups ? "suite" : "paths";
 			log(`matched ${label} "${arg}" (${groupPaths.length} path(s))`);
 			for (const groupPath of groupPaths) {
-				for (const file of await resolveGroupPath(groupPath)) {
+				for (const file of resolver.resolvePath({ path: groupPath })) {
 					files.add(file);
 				}
 			}
@@ -581,7 +474,7 @@ const resolveTestFiles = async (
 		}
 
 		// Not a known group/suite — treat the arg itself as a server/tests path.
-		const resolved = await resolveGroupPath(arg);
+		const resolved = resolver.resolvePath({ path: arg });
 		if (resolved.length === 0) {
 			warn(`no test files matched "${arg}"`);
 		}
@@ -621,53 +514,26 @@ const requireSecret = (name: string): string => {
 /** Resolved commit sha for this run (set in run()); workers fast-forward to it. */
 let resolvedTargetSha = "";
 
-/**
- * Per-worker Stripe budget for the TEST process, sized so that every worker
- * sharing a pool key stays under Stripe's ~25 req/s per-key ceiling combined.
- *
- * Workers are assigned keys round-robin, so with more workers than keys each key
- * carries `ceil(workers / keys)` of them — at 300 workers on 152 keys that's 2,
- * and an undivided budget would put ~46 req/s on a 25 req/s key. Dividing keeps
- * a big fan-out correct at the cost of pacing each worker more slowly.
- */
-const FULL_STRIPE_RPS = 14;
-const FULL_STRIPE_IN_FLIGHT = 8;
-const MIN_STRIPE_RPS = 2;
-const MIN_STRIPE_IN_FLIGHT = 2;
-
-const stripeBudgetForRun = ({
-	workers,
-}: {
-	workers: number;
-}): { maxRps: number; maxInFlight: number } => {
-	const workersPerKey = Math.max(1, Math.ceil(workers / stripeKeyPoolSize()));
-
-	return {
-		maxRps: Math.max(
-			MIN_STRIPE_RPS,
-			Math.floor(FULL_STRIPE_RPS / workersPerKey),
-		),
-		maxInFlight: Math.max(
-			MIN_STRIPE_IN_FLIGHT,
-			Math.floor(FULL_STRIPE_IN_FLIGHT / workersPerKey),
-		),
-	};
-};
-
-/** Set once the pool is sized, before any worker env is built. */
-let stripeBudget = stripeBudgetForRun({ workers: 1 });
+let stripeBudget = stripeBudgetForRun({
+	workers: 1,
+	keys: stripeKeyPoolSize(),
+});
 
 const buildWorkerEnv = ({
 	stripeAccountId,
 	stripeSecretKey,
 	isSvixShard,
 	svixAppId,
+	ingressUrl,
+	ingressToken,
 }: {
 	stripeAccountId: string;
 	/** This worker's pool key — MUST match the key its sub-account was created on. */
 	stripeSecretKey: string;
 	isSvixShard: boolean;
 	svixAppId?: string;
+	ingressUrl: string;
+	ingressToken: string;
 }): Record<string, string> => {
 	const env: Record<string, string> = {
 		NODE_ENV: "development",
@@ -680,7 +546,9 @@ const buildWorkerEnv = ({
 		REDIS_URL,
 		MISC_CACHE_DRAGONFLY_PUBLIC_URL: REDIS_URL,
 		CACHE_V2_DRAGONFLY_URL: REDIS_URL,
+		BALANCE_SYNC_SQS_QUEUE_URL,
 		SQS_QUEUE_URL_V2,
+		STRIPE_WEBHOOK_SQS_QUEUE_URL,
 		TRACK_SQS_QUEUE_URL,
 		TRACK_ASYNC_SQS_QUEUE_URL,
 		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
@@ -699,6 +567,8 @@ const buildWorkerEnv = ({
 		// so a dummy satisfies it (plan §6a) — otherwise the worker 500s every webhook.
 		STRIPE_SANDBOX_WEBHOOK_SECRET: "whsec_tw_skipverify",
 		STRIPE_ACCOUNT_ID: stripeAccountId,
+		TW_STRIPE_INGRESS_URL: ingressUrl,
+		TW_STRIPE_INGRESS_TOKEN: ingressToken,
 		ORG_ID: TEST_ORG_CONFIG.id,
 		// The exact commit under test — freestyle workers fast-forward to it at
 		// boot (inert on other providers).
@@ -716,12 +586,13 @@ const buildWorkerEnv = ({
 		// Workers have no trigger.dev key: migrations run inline in-process
 		// (shouldRunMigrationInline) instead of via the durable layer.
 		TW_WORKER_MODE: "1",
-		// Stripe budget for the TEST process (the server/workers/cron take a
-		// smaller slice each — see boot.ts). Stripe sheds per KEY on both
-		// concurrent width and request rate, so the budget is divided by how many
-		// workers share this key.
+		// Reused Stripe accounts retain idempotency responses from earlier cloned databases.
+		TW_STRIPE_IDEMPOTENCY_NAMESPACE: crypto.randomUUID(),
+		// All processes share the same allocation through this worker's Redis.
+		TW_STRIPE_REDIS_URL: REDIS_URL,
 		TW_STRIPE_MAX_RPS: String(stripeBudget.maxRps),
 		TW_STRIPE_MAX_INFLIGHT: String(stripeBudget.maxInFlight),
+		...(process.env.TW_STRIPE_TRACE === "1" ? { TW_STRIPE_TRACE: "1" } : {}),
 		// The µVM is isolated and has NO AWS creds, so the S3-backed edge configs
 		// (rollout, cache-v2-ramp, redis-v2-cache, blue-green, …) can't be read —
 		// they'd poll S3 every 1s and spam CredentialsProviderError, AND the
@@ -787,7 +658,9 @@ const buildWarmEnv = (): Record<string, string> => ({
 	REDIS_URL,
 	MISC_CACHE_DRAGONFLY_PUBLIC_URL: REDIS_URL,
 	CACHE_V2_DRAGONFLY_URL: REDIS_URL,
+	BALANCE_SYNC_SQS_QUEUE_URL,
 	SQS_QUEUE_URL_V2,
+	STRIPE_WEBHOOK_SQS_QUEUE_URL,
 	TRACK_SQS_QUEUE_URL,
 	TRACK_ASYNC_SQS_QUEUE_URL,
 	TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
@@ -1044,7 +917,6 @@ const provisionWorker = async ({
 	runId,
 	warmName,
 	isSvixShard,
-	svixAppId,
 	ownerEmail,
 	ingressUrl,
 	ingressToken,
@@ -1057,7 +929,6 @@ const provisionWorker = async ({
 	runId: string;
 	warmName: string;
 	isSvixShard: boolean;
-	svixAppId?: string;
 	ownerEmail: string;
 	ingressUrl: string;
 	ingressToken: string;
@@ -1095,6 +966,12 @@ const provisionWorker = async ({
 	bumpStripeDone();
 	const stripeMs = Date.now() - fanoutStart;
 
+	let svixAppId: string | undefined;
+	if (isSvixShard) {
+		svixAppId = await provisionSvixApp(() => orchestratorCreateSvixApp(orgId));
+		await registry.addSvixApp({ runId, svixAppId });
+	}
+
 	// 2. Fork the worker with its per-worker env (fork does NOT copy env). The SDK
 	//    forks from the warm parent's NAME (its current snapshot is the warm one).
 	const sandbox = await forkWorker({
@@ -1105,6 +982,8 @@ const provisionWorker = async ({
 			stripeSecretKey,
 			isSvixShard,
 			svixAppId,
+			ingressUrl,
+			ingressToken,
 		}),
 		tags: vercelTags(owner, runId),
 		signal,
@@ -1148,6 +1027,8 @@ const provisionWorker = async ({
 
 	return { handle, sandbox, timing: { stripeMs, createMs, tunnelMs, readyMs } };
 };
+
+const provisionSvixApp = pLimit(10);
 
 // ============================================================================
 // Teardown (§9a — idempotent, orchestrator-driven from the registry)
@@ -1295,10 +1176,8 @@ const teardown = async ({
 		);
 	}
 
-	if (entry.svixAppId) {
-		await timeBoxed(`delete svix app ${entry.svixAppId}`, () =>
-			deleteSvixApp(entry.svixAppId as string),
-		);
+	for (const appId of registry.getSvixAppIds(entry)) {
+		await timeBoxed(`delete svix app ${appId}`, () => deleteSvixApp(appId));
 	}
 
 	// Delete sandboxes concurrently too (bounded) — terminating N µVMs serially is
@@ -1371,32 +1250,23 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 
 	const { svixFiles, normalFiles } = await partitionShards(allFiles);
 
-	// Svix/webhook tests are skipped for now: they need a Trigger.dev runner
-	// (TRIGGER_SECRET_KEY) plus a browser (Kernel/Playwright) that aren't wired
-	// into the swarm yet, so they would only ever fail. Drop them from the run and
-	// surface the count. The remaining files run mixed into the pool with no
-	// dedicated shard — no blocking, no --max>=2 requirement.
-	if (svixFiles.length > 0) {
-		warn(
-			`skipping ${svixFiles.length} svix/webhook file(s) for now (Trigger + browser not wired into the swarm)`,
-		);
-	}
-	if (normalFiles.length === 0) {
-		throw new Error(
-			"no runnable test files after skipping svix/webhook files — nothing to run",
-		);
-	}
-	log(`running ${normalFiles.length} file(s) on the pool (svix skipped)`);
-
-	// Pool sizing: never over-provision (plan §8.7). One worker covers ≥1 file.
-	// No dedicated svix shard anymore, so the whole pool runs the normal files.
 	const requestedWorkers = Math.max(1, args.workers);
-	const effectiveWorkers = Math.min(requestedWorkers, normalFiles.length);
-	const needsSvixShard = false;
+	const { totalWorkers: effectiveWorkers, svixWorkers } = planShardWorkers({
+		workers: requestedWorkers,
+		normalFileCount: normalFiles.length,
+		svixFileCount: svixFiles.length,
+	});
+	if (svixWorkers > 0) requireSecret("SVIX_API_KEY");
+	log(
+		`running ${normalFiles.length} normal and ${svixFiles.length} Svix files on ${effectiveWorkers} isolated workers`,
+	);
 
 	// Size the per-worker Stripe budget now that the pool size is final — every
 	// worker env built below reads it.
-	stripeBudget = stripeBudgetForRun({ workers: effectiveWorkers });
+	stripeBudget = stripeBudgetForRun({
+		workers: effectiveWorkers,
+		keys: stripeKeyPoolSize(),
+	});
 
 	// No per-worker webhook cap: the swarm registers ONE shared platform Connect
 	// webhook → the ingress sandbox, which routes each event to the owning worker by
@@ -1541,33 +1411,31 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		// delivers events for the accounts it owns). The ingress routes every event
 		// to the owning worker by `event.account` regardless of which key sent it.
 		const usedKeys = Math.min(stripeKeyPoolSize(), effectiveWorkers);
-		for (let keyIndex = 0; keyIndex < usedKeys; keyIndex++) {
-			const webhookId = await registerConnectIngressWebhook(
-				ingress.publicUrl,
-				stripeKeyByIndex(keyIndex),
-			);
-			await registry.addWebhook(runId, {
-				sandboxName: ingress.sandbox.name,
-				accountId: webhookKeyTag(keyIndex),
-				webhookId,
-			});
+		const registerIngress = pLimit(10);
+		const registrations = await Promise.allSettled(
+			Array.from({ length: usedKeys }, (_, keyIndex) =>
+				registerIngress(async () => {
+					const webhookId = await registerConnectIngressWebhook(
+						ingress.publicUrl,
+						stripeKeyByIndex(keyIndex),
+					);
+					await registry.addWebhook(runId, {
+						sandboxName: ingress.sandbox.name,
+						accountId: webhookKeyTag(keyIndex),
+						webhookId,
+					});
+				}),
+			),
+		);
+		// Finish recording concurrent successes before a failure starts teardown.
+		for (const registration of registrations) {
+			if (registration.status === "rejected") throw registration.reason;
 		}
 		log(
 			`ingress ready (${ingress.publicUrl}), ${usedKeys} platform Connect webhook(s) registered across the key pool`,
 		);
 
 		// ----- FAN-OUT --------------------------------------------------------
-		// Worker 0 is the dedicated svix shard when svix files exist (plan §7).
-		// The orchestrator creates + RECORDS the one svix app BEFORE that worker
-		// boots, so a fork/boot failure can never orphan an untracked Svix app
-		// (§9a); the worker only binds the recorded id into svix_config.
-		let svixAppId: string | undefined;
-		if (needsSvixShard) {
-			log("creating dedicated svix shard app (orchestrator-driven, §9a)");
-			svixAppId = await orchestratorCreateSvixApp(TEST_ORG_CONFIG.id);
-			await registry.setSvixApp(runId, svixAppId);
-			log(`svix app ${svixAppId} created and recorded`);
-		}
 
 		// Claim pooled Stripe sub-accounts (reuse clean, create the shortfall) under
 		// the cross-machine git-ref lock — Stripe metadata read-modify-write is racy
@@ -1615,7 +1483,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		const fanoutStart = Date.now();
 		const provisionTasks: Promise<ProvisionedWorker>[] = [];
 		for (let idx = 0; idx < effectiveWorkers; idx++) {
-			const isSvixShard = needsSvixShard && idx === 0;
+			const isSvixShard = idx < svixWorkers;
 			const workerName = expectedNames[idx];
 			provisionTasks.push(
 				provisionWorker({
@@ -1624,7 +1492,6 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 					runId,
 					warmName,
 					isSvixShard,
-					svixAppId: isSvixShard ? svixAppId : undefined,
 					ownerEmail,
 					ingressUrl: ingress.publicUrl,
 					ingressToken: ingress.token,
@@ -1747,89 +1614,62 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			sandboxByName.set(handle.name, sandbox);
 		}
 
-		const svixShard = needsSvixShard
-			? provisioned.find(({ handle }) => handle.isSvixShard)
-			: undefined;
-		// If the dedicated svix shard was the worker that failed to provision, its
-		// files can't run — surface that loudly rather than silently dropping them.
-		if (needsSvixShard && !svixShard && svixFiles.length > 0) {
-			warn(
-				`fan-out: the svix shard failed to provision — ${svixFiles.length} svix file(s) will be SKIPPED this run`,
-			);
-		}
-
 		const resolveSandbox = (
 			worker: WorkerHandle,
 		): ProviderSandbox | undefined => sandboxByName.get(worker.name);
+		const svixHandles = provisioned
+			.filter(({ handle }) => handle.isSvixShard)
+			.map(({ handle }) => handle);
+		const normalHandles = provisioned
+			.filter(({ handle }) => !handle.isSvixShard)
+			.map(({ handle }) => handle);
+		if (svixFiles.length > 0 && svixHandles.length === 0)
+			throw new Error(
+				"No Svix workers provisioned; cannot run selected Svix tests",
+			);
+		if (normalFiles.length > 0 && normalHandles.length === 0)
+			throw new Error(
+				"No normal workers provisioned; cannot run selected tests",
+			);
 
-		// Drive the swarm TUI's RUN phase.
+		const svixPool = new WorkerPool(svixHandles, 1);
+		const normalPool = new WorkerPool(
+			normalHandles,
+			Math.max(1, args.perWorker),
+		);
+
+		const stopCulling = startCulling(normalPool, resolveSandbox);
 		milestone(
-			"run: executing tests across the pool — live progress in the dashboard",
+			"run: executing tests across both pools — live progress in the dashboard",
 		);
 		setPhase("run");
-
-		// Wall-clock of the RUN phase — the correct parallel-aware test duration
-		// (the per-file durations summed by the runner over-count by ~Nx).
 		const runPhaseStart = Date.now();
-
-		// Route svix files onto the svix shard, normal onto the rest. The routing
-		// constraint is a build-time partition (plan §7): the svix files run on a
-		// pool of exactly the one svix shard, the normal files on a pool of the
-		// rest. When there's no svix shard, the whole pool runs the normal files.
-		if (svixShard && svixFiles.length > 0) {
-			log(`running ${svixFiles.length} svix file(s) on the dedicated shard`);
-			const svixPool = new WorkerPool(
-				[svixShard.handle],
-				Math.max(1, args.perWorker),
-			);
-			const svixExecutor = new RemoteExecutor({
-				pool: svixPool,
-				resolveSandbox,
-				toWorkerPath: toSandboxPath,
+		try {
+			await runShardTests({
+				shards: [
+					{
+						files: svixFiles,
+						executor: new RemoteExecutor({
+							pool: svixPool,
+							resolveSandbox,
+							toWorkerPath: toSandboxPath,
+						}),
+						maxParallel: Math.max(1, svixHandles.length),
+					},
+					{
+						files: normalFiles,
+						executor: new RemoteExecutor({
+							pool: normalPool,
+							resolveSandbox,
+							toWorkerPath: toSandboxPath,
+						}),
+						maxParallel: Math.max(1, normalHandles.length * args.perWorker),
+					},
+				],
 			});
-			await runFiles(svixFiles, svixExecutor, {
-				maxParallel: Math.max(1, args.perWorker),
-			});
+		} finally {
+			stopCulling();
 			svixPool.close();
-		}
-
-		if (normalFiles.length > 0) {
-			log(`running ${normalFiles.length} normal file(s) on the pool`);
-			const normalHandles = provisioned
-				.filter(({ handle }) => !(svixShard && handle.isSvixShard))
-				.map(({ handle }) => handle);
-			// Never construct a WorkerPool([]) while files remain: an empty pool's
-			// `acquire()` parks forever and hangs the run. The worker-count guard
-			// above should make this unreachable, but fail loud rather than hang.
-			if (normalHandles.length === 0) {
-				throw new Error(
-					`${normalFiles.length} normal file(s) remain but no normal workers are available (svix shard consumed the only worker) — pass --max>=2`,
-				);
-			}
-			const normalPool = new WorkerPool(
-				normalHandles,
-				Math.max(1, args.perWorker),
-			);
-			const normalExecutor = new RemoteExecutor({
-				pool: normalPool,
-				resolveSandbox,
-				toWorkerPath: toSandboxPath,
-			});
-			const normalParallel = Math.max(
-				1,
-				normalHandles.length * Math.max(1, args.perWorker),
-			);
-			// Demand-tracked culling: terminate idle workers beyond a 30%-of-initial
-			// buffer while the run drains, so we stop paying for the ~N idle sandboxes
-			// the stragglers leave behind. Busy workers are never culled.
-			const stopCulling = startCulling(normalPool, resolveSandbox);
-			try {
-				await runFiles(normalFiles, normalExecutor, {
-					maxParallel: normalParallel,
-				});
-			} finally {
-				stopCulling();
-			}
 			normalPool.close();
 		}
 
@@ -1880,6 +1720,10 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 				costLine,
 				logFile: runLogFile,
 			});
+			writeFileSync(
+				runLogFile.replace(/\.log$/, ".json"),
+				JSON.stringify({ runId, snapshot: getDashboardSnapshot() }, null, 2),
+			);
 		};
 		// Preliminary publish — sandboxes are about to be torn down, so this
 		// lifetime is within a few seconds of the final.
@@ -2028,22 +1872,4 @@ let lastRunCost: CostEstimate | undefined;
 export const getLastRunWallMs = (): number => lastRunWallMs;
 export const getLastRunCost = (): CostEstimate | undefined => lastRunCost;
 
-/**
- * Run a file set through the headless swarm runner (`runSwarmTests`), which drives
- * the opentui store. The pLimit window + two-phase retry + worker-death reschedule
- * live in `tui/runnerCore.ts`; this is a thin await. `bun t` keeps its own Ink
- * runner (`runTestsV2.tsx`) — the swarm no longer touches it.
- */
-const runFiles = async (
-	files: string[],
-	executor: TestExecutor,
-	opts: { maxParallel: number },
-): Promise<void> => {
-	if (files.length === 0) {
-		return;
-	}
-	await runSwarmTests(files, executor, { maxParallel: opts.maxParallel });
-};
-
-/** Propagate the worst test verdict to the process exit code (set in `index.ts`). */
 export const getLastRunExitCode = (): number => lastRunExitCode;

@@ -668,6 +668,12 @@ export const initWorkers = async ({
 			queueUrl: QUEUE_URL,
 			defaultEnabled: true,
 		},
+		// TW-only: a separate poller keeps sync moving while primary jobs wait for Stripe.
+		{
+			queueId: "balanceSync",
+			queueUrl: process.env.BALANCE_SYNC_SQS_QUEUE_URL,
+			defaultEnabled: true,
+		},
 		{
 			queueId: JOB_QUEUE_IDS.track,
 			queueUrl: process.env.TRACK_SQS_QUEUE_URL,

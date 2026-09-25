@@ -16,6 +16,7 @@ import {
 	readEnum,
 	readNumber,
 	readQuantities,
+	readRewardIds,
 	readStampedArray,
 	readString,
 	readStringArray,
@@ -44,6 +45,7 @@ const ATTACH_FIELD_READERS: FieldReaders<AttachForm> = {
 	productId: readString("product_id"),
 	prorationBehavior: readEnum<BillingBehavior>("billing_behavior"),
 	removePlanIds: readStringArray("remove_plan_ids"),
+	removedRewardIds: readRewardIds("remove_discounts"),
 	startDate: readNumber("starts_at"),
 	version: readNumber("version"),
 	customLineItems: (request) =>

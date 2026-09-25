@@ -7,6 +7,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleCancelEndOfCycleErrors";
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
+import { handleRevertTrialErrors } from "@/internal/billing/v2/common/errors/handleRevertTrialErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { computeFieldUpdates } from "../compute/computeFieldUpdates.js";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors.js";
@@ -50,6 +51,11 @@ export const handleUpdateSubscriptionErrors = async ({
 
 	// 1. Current customer product errors
 	handleCurrentCustomerProductErrors({ billingContext });
+
+	handleRevertTrialErrors({
+		billingContext,
+		updatedCustomerProduct: customerProduct,
+	});
 
 	// 2. Product type transition errors
 	handleProductTypeTransitionErrors({ billingContext, autumnBillingPlan });

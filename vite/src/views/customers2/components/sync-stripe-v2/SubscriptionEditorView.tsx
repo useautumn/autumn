@@ -33,12 +33,14 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useVerifyStripeQuery } from "@/views/customers2/components/verify-stripe/hooks/useVerifyStripeQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { customerStateToSyncParams } from "./customerStateToSyncParams";
+import { formatStripeItemPrice } from "./formatStripeItemPrice";
 import { usePreviewSyncV2 } from "./hooks/usePreviewSyncV2";
 import {
-	isPlanPriceMissing,
+	findMissingPlanPrices,
 	type StripeItemMark,
 	stripeItemMark,
 } from "./previewMismatches";
+import { StripeStatusBadge } from "./StripeStatusBadge";
 import { syncProposalToCustomerState } from "./syncProposalToCustomerState";
 
 type DisplayItem = {
@@ -53,20 +55,13 @@ type PhaseSection = {
 	displayItems: DisplayItem[];
 };
 
-const formatPriceAmount = ({
-	unitAmount,
-	billingScheme,
+const withQuantity = ({
+	label,
 	quantity,
 }: {
-	unitAmount?: number | null;
-	billingScheme?: string | null;
+	label: string;
 	quantity?: number | null;
-}): string => {
-	if (billingScheme === "tiered") return "tiered";
-	if (unitAmount === null || unitAmount === undefined) return "—";
-	const amount = `$${(unitAmount / 100).toFixed(2)}`;
-	return quantity && quantity > 1 ? `${amount} × ${quantity}` : amount;
-};
+}) => (quantity && quantity > 1 ? `${label} × ${quantity}` : label);
 
 const itemsFromStripeSubscription = ({
 	sub,
@@ -83,9 +78,8 @@ const itemsFromStripeSubscription = ({
 			key: item.id,
 			name: productName,
 			stripePriceId: item.price?.id ?? "",
-			priceLabel: formatPriceAmount({
-				unitAmount: item.price?.unit_amount,
-				billingScheme: item.price?.billing_scheme,
+			priceLabel: withQuantity({
+				label: formatStripeItemPrice({ price: item.price }),
 				quantity: item.quantity,
 			}),
 		};
@@ -114,9 +108,8 @@ const itemsFromSchedulePhase = ({
 			key: `${phaseIndex}:${itemIndex}`,
 			name: productName,
 			stripePriceId: priceId,
-			priceLabel: formatPriceAmount({
-				unitAmount: expanded?.unit_amount,
-				billingScheme: expanded?.billing_scheme,
+			priceLabel: withQuantity({
+				label: formatStripeItemPrice({ price: expanded }),
 				quantity: item.quantity,
 			}),
 		};
@@ -327,7 +320,7 @@ function SubscriptionEditor({
 			subscription.stripe_subscription_id === proposal.stripe_subscription_id,
 	)?.mismatches;
 
-	const handleIsPlanNotFound = useCallback(
+	const handlePlanNotFoundReasons = useCallback(
 		(location: PlanLocation) => {
 			const isUnscheduled = location.location === "unscheduled";
 			const plan = isUnscheduled
@@ -335,12 +328,14 @@ function SubscriptionEditor({
 				: formValues.phases[location.phaseIndex]?.plans[location.planIndex];
 			// Unscheduled plans bill alongside the first phase.
 			const phase = proposal.phases[isUnscheduled ? 0 : location.phaseIndex];
-			if (!plan?.productId || !phase) return false;
-			return isPlanPriceMissing({
+			if (!plan?.productId || !phase) return [];
+			return findMissingPlanPrices({
 				previewMismatches,
 				planId: plan.productId,
 				startsAt: phase.starts_at,
-			});
+			}).map(
+				(mismatch) => mismatch.message ?? "No Stripe item bills this price",
+			);
 		},
 		[formValues, proposal, previewMismatches],
 	);
@@ -358,7 +353,7 @@ function SubscriptionEditor({
 			canMakeUnscheduled={
 				isMultiPhase && Boolean(proposal.stripe_subscription_id)
 			}
-			isPlanNotFound={handleIsPlanNotFound}
+			planNotFoundReasons={handlePlanNotFoundReasons}
 		>
 			<div className="flex flex-col flex-1 overflow-hidden">
 				<div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
@@ -391,6 +386,7 @@ function SubscriptionEditor({
 									<ArrowSquareOutIcon size={13} />
 								</button>
 							)}
+							<StripeStatusBadge proposal={proposal} />
 						</div>
 					</div>
 

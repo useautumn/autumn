@@ -5,6 +5,7 @@ import {
 	type FullCusProduct,
 	findMainActiveCustomerProductByGroup,
 	isCustomerProductCanceling,
+	isCustomerProductRevertingTrial,
 	isFutureStartDate,
 	ms,
 	nullish,
@@ -18,6 +19,7 @@ import { computeCancelUpdates } from "./computeCancelUpdates";
 import { computeCustomerProductToDelete } from "./computeCustomerProductToDelete";
 import { computeDefaultCustomerProduct } from "./computeDefaultCustomerProduct";
 import { computeEndOfCycleMs } from "./computeEndOfCycleMs";
+
 const computeScheduledAddOnsToDelete = ({
 	billingContext,
 }: {
@@ -148,7 +150,7 @@ const applyRevertTrialUnpause = ({
 	plan: AutumnBillingPlan;
 }): AutumnBillingPlan => {
 	const { customerProduct, fullCustomer } = billingContext;
-	const isRevertTrial = customerProduct.on_trial_end === "revert";
+	const isRevertTrial = isCustomerProductRevertingTrial(customerProduct);
 	const hasPreviousProduct = !!customerProduct.previous_customer_product_id;
 
 	if (!isRevertTrial || !hasPreviousProduct) return plan;
@@ -226,8 +228,9 @@ export const computeCancelPlan = ({
 
 	// Step 4: Create default product (if applicable)
 	// Skip when cancelling a revert trial — the previous plan will be restored instead.
-	const isRevertTrialCancel =
-		billingContext.customerProduct.on_trial_end === "revert";
+	const isRevertTrialCancel = isCustomerProductRevertingTrial(
+		billingContext.customerProduct,
+	);
 	const defaultCustomerProduct = isRevertTrialCancel
 		? undefined
 		: computeDefaultCustomerProduct({

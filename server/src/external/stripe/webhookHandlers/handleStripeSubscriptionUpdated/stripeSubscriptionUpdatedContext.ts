@@ -5,6 +5,7 @@ import type {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
+import type { StripeSubscriptionUpdateResults } from "./types/stripeSubscriptionUpdateResults";
 
 /**
  * Previous attributes from Stripe subscription.updated event.
@@ -36,6 +37,7 @@ export interface StripeSubscriptionUpdatedContext {
 	customerProducts: FullCusProduct[];
 	/** Current time in ms, respecting test clocks */
 	nowMs: number;
+	results: StripeSubscriptionUpdateResults;
 
 	updatedCustomerProducts: {
 		customerProduct: FullCusProduct;

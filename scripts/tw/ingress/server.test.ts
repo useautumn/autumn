@@ -164,6 +164,85 @@ test("unmapped accounts remain ignored", async () => {
 	await response.text();
 });
 
+const mapSubAccount = ({
+	accountId,
+	workerAccountId,
+}: {
+	accountId: string;
+	workerAccountId: string;
+}) =>
+	fetch(`${ingressUrl}/ingress/map`, {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			"x-ingress-token": process.env.INGRESS_TOKEN ?? "",
+		},
+		body: JSON.stringify({ accountId, workerAccountId }),
+	});
+
+test("sub-organization events reach only their owning worker and preserve its status", async () => {
+	let receivedAccount: string | undefined;
+	const worker = createServer(async (request, response) => {
+		const chunks = [];
+		for await (const chunk of request) chunks.push(chunk);
+		receivedAccount = JSON.parse(Buffer.concat(chunks).toString()).account;
+		response.writeHead(503);
+		response.end();
+	});
+	try {
+		await mapWorker({
+			workerUrl: await listen(worker),
+			accountId: "acct_parent",
+		});
+		for (let attempt = 0; attempt < 2; attempt++) {
+			const registration = await mapSubAccount({
+				accountId: "acct_sub_org",
+				workerAccountId: "acct_parent",
+			});
+			expect(registration.status).toBe(200);
+			await registration.text();
+		}
+		const delivered = await postEvent({ accountId: "acct_sub_org" });
+		expect(delivered.status).toBe(503);
+		await delivered.text();
+		expect(receivedAccount).toBe("acct_sub_org");
+	} finally {
+		await close(worker);
+	}
+});
+
+test("an unknown worker cannot register a sub-organization account", async () => {
+	const response = await mapSubAccount({
+		accountId: "acct_unknown_child",
+		workerAccountId: "acct_unknown_parent",
+	});
+	expect(response.status).toBe(400);
+	await response.text();
+});
+
+test("a sub-organization account cannot be reassigned to another worker", async () => {
+	await mapWorker({
+		workerUrl: "http://127.0.0.1:1",
+		accountId: "acct_owner_a",
+	});
+	await mapWorker({
+		workerUrl: "http://127.0.0.1:2",
+		accountId: "acct_owner_b",
+	});
+	const registered = await mapSubAccount({
+		accountId: "acct_owned_child",
+		workerAccountId: "acct_owner_a",
+	});
+	expect(registered.status).toBe(200);
+	await registered.text();
+	const rejected = await mapSubAccount({
+		accountId: "acct_owned_child",
+		workerAccountId: "acct_owner_b",
+	});
+	expect(rejected.status).toBe(409);
+	await rejected.text();
+});
+
 test("invalid event payload is rejected", async () => {
 	const response = await fetch(`${ingressUrl}/ingress/connect/sandbox`, {
 		method: "POST",

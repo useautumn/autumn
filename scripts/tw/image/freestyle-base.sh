@@ -76,6 +76,7 @@ Local:
     - Name: autumn.fifo
     - Name: autumn-track.fifo
     - Name: autumn-track-async
+    - Name: autumn-stripe-webhook.fifo
 YAML
 
 echo "[freestyle-base] 6/7 bun (pinned to .bun-version) + node symlink"

@@ -74,7 +74,7 @@ export function SelectedPlanRow({
 	return (
 		<div
 			className={cn(
-				"group flex h-input min-w-0 w-full items-center gap-2 rounded-lg input-base input-shadow-default px-3 text-sm text-foreground",
+				"flex h-input min-w-0 w-full items-center gap-2 rounded-lg input-base input-shadow-default px-3 text-sm text-foreground",
 				disabled && "opacity-60",
 			)}
 		>
@@ -86,52 +86,41 @@ export function SelectedPlanRow({
 					{scope}
 				</span>
 			)}
-			<div className="relative flex min-w-[60px] shrink-0 items-center justify-end gap-1.5">
-				<div
-					className={cn(
-						"flex items-center gap-1.5 transition-opacity duration-150",
-						hasActions &&
-							"group-hover:opacity-0 group-has-[:focus-visible]:opacity-0 [@media(hover:none)]:opacity-0",
-					)}
-				>
-					{badge}
-					{price ??
-						(priceProduct && (
-							<span className="text-xs tabular-nums text-tertiary-foreground">
-								<PriceDisplay
-									product={priceProduct}
-									currency={displayCurrency}
-								/>
-							</span>
-						))}
-				</div>
-				{hasActions && (
-					<div className="absolute right-0 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100">
-						{onEdit && (
-							<Button
-								variant="skeleton"
-								size="icon"
-								className="size-6 text-tertiary-foreground hover:text-foreground focus-visible:text-foreground"
-								onClick={onEdit}
-								aria-label={`Edit ${name}`}
-							>
-								<PencilSimpleIcon size={13} />
-							</Button>
-						)}
-						{onRemove && (
-							<Button
-								variant="skeleton"
-								size="icon"
-								className="size-6 text-tertiary-foreground hover:text-destructive focus-visible:text-destructive"
-								onClick={onRemove}
-								aria-label={`Remove ${name}`}
-							>
-								<XIcon size={13} />
-							</Button>
-						)}
-					</div>
-				)}
+			<div className="flex shrink-0 items-center gap-1.5">
+				{badge}
+				{price ??
+					(priceProduct && (
+						<span className="text-xs tabular-nums text-tertiary-foreground">
+							<PriceDisplay product={priceProduct} currency={displayCurrency} />
+						</span>
+					))}
 			</div>
+			{hasActions && (
+				<div className="-mr-1.5 flex shrink-0 items-center gap-0.5">
+					{onEdit && (
+						<Button
+							variant="skeleton"
+							size="icon"
+							className="size-6 text-tertiary-foreground hover:text-foreground focus-visible:text-foreground"
+							onClick={onEdit}
+							aria-label={`Edit ${name}`}
+						>
+							<PencilSimpleIcon size={13} />
+						</Button>
+					)}
+					{onRemove && (
+						<Button
+							variant="skeleton"
+							size="icon"
+							className="size-6 text-tertiary-foreground hover:text-destructive focus-visible:text-destructive"
+							onClick={onRemove}
+							aria-label={`Remove ${name}`}
+						>
+							<XIcon size={13} />
+						</Button>
+					)}
+				</div>
+			)}
 		</div>
 	);
 }

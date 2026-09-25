@@ -92,8 +92,10 @@ export type RegistryEntry = {
 	sandboxes: RegistrySandbox[];
 	/** Stripe Connect sub-account ids (`acct_*`) created for this run. */
 	subAccounts: string[];
-	/** The single dedicated Svix shard's app id, if the run needed Svix (§7). */
+	/** Legacy single-application runs remain cleanable. */
 	svixAppId?: string;
+	/** Each Svix worker owns a separate application. */
+	svixAppIds?: string[];
 	webhooks: RegistryWebhook[];
 };
 

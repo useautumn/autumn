@@ -30,6 +30,7 @@ export type TuiTestFile = {
 	attempt: number;
 	willRetry: boolean;
 	passedOnRetry: boolean;
+	workerDeaths?: number;
 	failedTests: TuiFailedTest[];
 	crashError?: string;
 };

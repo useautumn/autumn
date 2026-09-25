@@ -71,6 +71,7 @@ const processAllocatedPrice = async ({
 		ctx,
 		ids: replaceables.map((r) => r.id),
 	});
+	eventContext.results.customerStateChanged = true;
 
 	logAllocatedPriceProcessed({
 		ctx,
