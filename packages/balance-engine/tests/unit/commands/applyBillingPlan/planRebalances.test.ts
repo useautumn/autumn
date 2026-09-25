@@ -4,6 +4,7 @@ import {
 	computeApplyBillingPlan,
 	createSubjectState,
 	mergeCustomerAndEntities,
+	type RowChange,
 	type WorkerCustomerEntitlement,
 } from "../../../../src/balanceEngine.js";
 import {
@@ -97,9 +98,13 @@ const rebalancePlan = ({
 	expiringPooledBalanceIds: [],
 });
 
-const balanceIncrementsOf = (changes: { id?: string; add?: unknown }[]) =>
+const balanceIncrementsOf = (changes: RowChange[]) =>
 	Object.fromEntries(
-		changes.map(({ id, add }) => [id, (add as { balance: number }).balance]),
+		changes.flatMap((change) =>
+			change.table === "customerEntitlements" && change.op === "increment"
+				? [[change.id, change.add.balance]]
+				: [],
+		),
 	);
 
 describe("a plan's rebalance", () => {
