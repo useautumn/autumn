@@ -86,6 +86,27 @@ function parseOwnershipPayload({
 	}
 }
 
+const OWNERSHIP_RECORD_TYPES = new Set<OwnershipRecord["type"]>([
+	"claimed",
+	"unowned",
+	"ready",
+	"draining",
+]);
+
+/** The first `ready` records were keyed like the owner; they still read, they are just never written. */
+function isLegacyReadyKey({
+	key,
+	record,
+}: {
+	key: Buffer | null;
+	record: OwnershipRecord;
+}): boolean {
+	return (
+		record.type === "ready" &&
+		key?.toString("utf8") === record.partition.toString()
+	);
+}
+
 function parseOwnershipRecord({
 	key,
 	value,
@@ -94,8 +115,24 @@ function parseOwnershipRecord({
 	value: Buffer | null;
 }): OwnershipRecord {
 	const record = parseOwnershipPayload(readTopicEnvelope({ value }));
+	if (isLegacyReadyKey({ key, record })) return record;
 	assertTopicRecordKey({ key, expectedKey: ownershipRecordToKey({ record }) });
 	return record;
+}
+
+/** For the owner table: a record type this build does not know is a signal for
+ *  someone else, not a reason to stop routing. Malformed known types still throw. */
+export function parseOwnershipRecordIfKnown({
+	key,
+	value,
+}: {
+	key: Buffer | null;
+	value: Buffer | null;
+}): OwnershipRecord | null {
+	const envelope = readTopicEnvelope({ value });
+	if (!OWNERSHIP_RECORD_TYPES.has(envelope.type as OwnershipRecord["type"]))
+		return null;
+	return parseOwnershipRecord({ key, value });
 }
 
 function serializeOwnershipRecord({ record }: { record: OwnershipRecord }): {

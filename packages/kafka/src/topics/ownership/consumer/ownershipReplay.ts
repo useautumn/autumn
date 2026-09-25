@@ -1,4 +1,7 @@
-import { ownershipTopic } from "../ownershipTopic.js";
+import {
+	ownershipTopic,
+	parseOwnershipRecordIfKnown,
+} from "../ownershipTopic.js";
 import type { OwnershipLog } from "../types/ownershipLog.js";
 import type { OwnershipRecord } from "../types/ownershipRecord.js";
 import type { PartitionOwner } from "../types/partitionOwner.js";
@@ -36,11 +39,15 @@ export function applyOwnershipMessage({
 	partition: number;
 	offset: bigint;
 }): void {
-	const record = ownershipTopic.parse(message);
-	if (record.partition !== partition)
-		throw new Error("Ownership record does not match its Kafka partition");
 	const previous = state.lastAppliedOffsets.get(partition);
 	if (previous !== undefined && previous >= offset) return;
+	const record = parseOwnershipRecordIfKnown(message);
+	if (record === null) {
+		state.lastAppliedOffsets.set(partition, offset);
+		return;
+	}
+	if (record.partition !== partition)
+		throw new Error("Ownership record does not match its Kafka partition");
 	if (record.type === "claimed") {
 		state.owners.set(partition, {
 			partition,

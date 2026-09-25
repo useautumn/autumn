@@ -76,11 +76,16 @@ export function createOwnershipPublisher({
 		});
 	}
 
-	async function announceDraining(): Promise<void> {
+	async function announceDraining({
+		successor,
+	}: {
+		successor: string;
+	}): Promise<void> {
 		if (!ctx.handoff) return;
 		await publisher.announceDraining({
 			partition: config.partition,
 			endpoint: config.endpoint,
+			successor,
 			drainingAt: Date.now(),
 		});
 	}
@@ -135,8 +140,9 @@ export function createOwnershipPublisher({
 	}: {
 		signal: AbortSignal;
 	}): Promise<{ endpoint: string }> {
+		// Only a drain handing to this worker re-arms its wait; one naming another successor is not ours.
 		function matchDraining({ record }: OwnershipTailRecord) {
-			if (record.type !== "draining" || record.endpoint === config.endpoint)
+			if (record.type !== "draining" || record.successor !== config.endpoint)
 				return undefined;
 			return { endpoint: record.endpoint };
 		}

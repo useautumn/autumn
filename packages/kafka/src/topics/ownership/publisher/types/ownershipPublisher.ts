@@ -38,6 +38,7 @@ export type OwnershipDraining = {
 	partition: number;
 	/** The owner that has withdrawn and is draining before naming its successor. */
 	endpoint: string;
+	successor: string;
 	drainingAt: number;
 };
 

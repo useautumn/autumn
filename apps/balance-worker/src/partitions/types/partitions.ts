@@ -31,7 +31,7 @@ export type PartitionOwnershipPublication = {
 	release(): Promise<void>;
 	announceReady(): Promise<void>;
 	/** Tells the successor this worker has withdrawn and is draining, so it holds its claim timeout. */
-	announceDraining(): Promise<void>;
+	announceDraining(params: { successor: string }): Promise<void>;
 	/** Resolves with the successor's endpoint on its `ready`, rejects with the signal's reason. */
 	awaitReady(params: { signal: AbortSignal }): Promise<{ endpoint: string }>;
 	/** Resolves with the predecessor's endpoint on its `draining`, rejects with the signal's reason. */

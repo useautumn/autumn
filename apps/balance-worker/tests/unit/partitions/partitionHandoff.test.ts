@@ -30,7 +30,7 @@ const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 5));
 
 type OwnershipEvent =
 	| { type: "ready"; partition: number; endpoint: string }
-	| { type: "draining"; partition: number; endpoint: string }
+	| { type: "draining"; partition: number; endpoint: string; successor: string }
 	| { type: "claimed"; partition: number; endpoint: string; routeEpoch: string }
 	| { type: "unowned"; partition: number; endpoint: string };
 
@@ -82,6 +82,8 @@ type WorkerOptions = {
 	log: ReturnType<typeof createOwnershipLog>;
 	config?: Partial<PartitionsConfig>;
 	drainGate?: Promise<void>;
+	/** Holds the `draining` send; a slow topic must never hold the drain itself. */
+	announceDrainingGate?: Promise<void>;
 	prepareGate?: Promise<void>;
 	activateGate?: Promise<void>;
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
@@ -92,6 +94,7 @@ const createWorker = ({
 	log,
 	config,
 	drainGate,
+	announceDrainingGate,
 	prepareGate,
 	activateGate,
 	awaitReadyAnnouncement,
@@ -166,9 +169,10 @@ const createWorker = ({
 				record("announce");
 				log.publish({ type: "ready", partition, endpoint });
 			},
-			announceDraining: async () => {
+			announceDraining: async ({ successor }) => {
 				record("draining");
-				log.publish({ type: "draining", partition, endpoint });
+				await announceDrainingGate;
+				log.publish({ type: "draining", partition, endpoint, successor });
 			},
 			awaitDraining: ({ signal }) =>
 				log.await({
@@ -176,7 +180,7 @@ const createWorker = ({
 					match: (event) =>
 						event.type === "draining" &&
 						event.partition === partition &&
-						event.endpoint !== endpoint
+						event.successor === endpoint
 							? { endpoint: event.endpoint }
 							: undefined,
 				}),
@@ -456,6 +460,67 @@ describe("partition handoff", () => {
 			expect(B.errors).toEqual([]);
 		} finally {
 			drain.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a draining record naming another successor does not hold this one past the claim timeout", async () => {
+		const log = createOwnershipLog();
+		const drain = deferred();
+		const A = createWorker({ name: "A", log, drainGate: drain.promise });
+		const B = createWorker({ name: "B", log });
+		const C = createWorker({
+			name: "C",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 5_000 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			// B is chosen, then the roster moves the partition on to C before A finishes.
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => A.has("draining:2"));
+			B.revoke();
+			await C.ownership.start();
+			C.assign([2]);
+			// A's drain is addressed to B: C hears nothing for itself and claims after its own timeout.
+			await waitFor(() => C.has("claim:C:2"));
+			expect(C.errors).toEqual([]);
+		} finally {
+			drain.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+			await C.ownership.stop();
+		}
+	});
+
+	test("a slow draining send does not hold the drain or the claim", async () => {
+		const log = createOwnershipLog();
+		const send = deferred();
+		const A = createWorker({
+			name: "A",
+			log,
+			announceDrainingGate: send.promise,
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 5_000 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			// The send never completes, yet A drains and names B regardless.
+			await waitFor(() => B.status(2) === "ready");
+			expect(A.index("drained:2")).toBeLessThan(A.index("claim:B:2"));
+			expect(B.has("claim:B:2")).toBe(false);
+			expect(A.errors).toEqual([]);
+		} finally {
+			send.resolve();
 			await A.ownership.stop();
 			await B.ownership.stop();
 		}

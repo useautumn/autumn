@@ -69,9 +69,16 @@ describe("ownershipRecords", function ownershipRecordsTests() {
 			// Never the owner's key: a compacted topic would otherwise keep the ready and drop the claim.
 			expect(serialized.key.toString("utf8")).toBe("7:ready");
 			expect(ownershipTopic.parse(serialized)).toEqual(record);
-			expect(() =>
+			// Records the first release wrote under the owner's key still read; a wrong key otherwise fails.
+			expect(
 				ownershipTopic.parse({
 					key: Buffer.from("7", "utf8"),
+					value: serialized.value,
+				}),
+			).toEqual(record);
+			expect(() =>
+				ownershipTopic.parse({
+					key: Buffer.from("8:ready", "utf8"),
 					value: serialized.value,
 				}),
 			).toThrow(RecordKeyMismatchError);
@@ -83,6 +90,7 @@ describe("ownershipRecords", function ownershipRecordsTests() {
 				type: "draining" as const,
 				partition: 7,
 				endpoint: "http://10.0.0.4:8080",
+				successor: "http://10.0.0.5:8080",
 				drainingAt: 1_700_000_000_300,
 			};
 			const serialized = ownershipTopic.serialize({ record });
@@ -305,6 +313,7 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 		await producer.announceDraining({
 			partition,
 			endpoint: "http://10.0.0.4:8080",
+			successor: "http://10.0.0.5:8080",
 			drainingAt: 1_700_000_000_300,
 		});
 
@@ -325,13 +334,19 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 			type: "draining",
 			partition,
 			endpoint: "http://10.0.0.4:8080",
+			successor: "http://10.0.0.5:8080",
 			drainingAt: 1_700_000_000_300,
 		});
 		await expect(
 			createOwnershipPublisher({
 				ctx: { producer: fake.producer },
 				config: { topic },
-			}).announceDraining({ partition, endpoint: "http://x", drainingAt: 1 }),
+			}).announceDraining({
+				partition,
+				endpoint: "http://x",
+				successor: "http://y",
+				drainingAt: 1,
+			}),
 		).rejects.toThrow("plain producer");
 	}
 
@@ -633,6 +648,7 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 				type: "draining",
 				partition,
 				endpoint: "http://worker:8080",
+				successor: "http://10.0.0.5:8080",
 				drainingAt: 3,
 			},
 		});
@@ -645,6 +661,38 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 			routeEpoch: "2",
 		});
 		expect(state.lastAppliedOffsets.get(partition)).toBe(4n);
+		// A `ready` keyed like the owner (the first release wrote them that way) still reads.
+		const legacyReady = {
+			key: Buffer.from(String(partition)),
+			value: ready.value,
+		};
+		expect(ownershipTopic.parse(legacyReady)).toMatchObject({ type: "ready" });
+		applyOwnershipMessage({
+			state,
+			message: legacyReady,
+			partition,
+			offset: 5n,
+		});
+		// A record type this build does not know is skipped, never fatal for routing.
+		const unknown = {
+			key: Buffer.from(`${partition}:handover`),
+			value: Buffer.from(
+				JSON.stringify({ schemaVersion: 1, type: "handover", payload: {} }),
+			),
+		};
+		applyOwnershipMessage({ state, message: unknown, partition, offset: 6n });
+		expect(state.owners.get(partition)?.routeEpoch).toBe("2");
+		expect(state.lastAppliedOffsets.get(partition)).toBe(6n);
+		// A malformed record of a known type still fails.
+		const broken = {
+			key: Buffer.from(String(partition)),
+			value: Buffer.from(
+				JSON.stringify({ schemaVersion: 1, type: "claimed", payload: {} }),
+			),
+		};
+		expect(() =>
+			applyOwnershipMessage({ state, message: broken, partition, offset: 7n }),
+		).toThrow();
 	}
 
 	function preservesReleaseOrdering(): void {

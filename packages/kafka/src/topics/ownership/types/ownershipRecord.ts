@@ -48,6 +48,8 @@ export const drainingOwnershipRecordSchema = z
 		type: z.literal("draining"),
 		partition: partitionSchema,
 		endpoint: nonEmptyStringSchema,
+		/** The worker this drain hands to; any other successor keeps its own timeout. */
+		successor: nonEmptyStringSchema,
 		drainingAt: z.number().int().nonnegative(),
 	})
 	.strict();

@@ -11,6 +11,7 @@ export async function announceDraining({
 	topic,
 	partition,
 	endpoint,
+	successor,
 	drainingAt,
 }: OwnershipDraining & {
 	ctx: OwnershipReadinessContext;
@@ -22,6 +23,7 @@ export async function announceDraining({
 			type: "draining",
 			partition,
 			endpoint,
+			successor,
 			drainingAt,
 		},
 	});
