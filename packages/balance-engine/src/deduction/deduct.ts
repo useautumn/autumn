@@ -42,6 +42,7 @@ export const deductionStateToOutcome = ({
 		refusedAsOverdue ||
 		(remaining.gt(0) && request.overageBehavior === "reject");
 	return {
+		request,
 		context,
 		requestedValue: request.value,
 		appliedValue: new Decimal(request.value).minus(remaining).toNumber(),
@@ -51,6 +52,7 @@ export const deductionStateToOutcome = ({
 			? deductionStateToLimitType({ context, deductionState })
 			: null,
 		deltas,
+		usageWindowConsumed: deductionState.usageWindowConsumed,
 		changes: rejected
 			? []
 			: [
@@ -60,6 +62,36 @@ export const deductionStateToOutcome = ({
 	};
 };
 
+/** Where a draw starts: the balances and caps an earlier draw on the same context left behind. */
+export type DeductionStart = Pick<
+	DeductionState,
+	"deltas" | "usageWindowConsumed"
+>;
+
+const STORED_BALANCES: DeductionStart = {
+	deltas: [],
+	usageWindowConsumed: new Map(),
+};
+
+/** Take the requested units on a context already set up, from the stored balances or from where `from` left them. The outcome carries both draws. */
+export const deductOnContext = ({
+	context,
+	request,
+	from = STORED_BALANCES,
+}: {
+	context: DeductionContext;
+	request: DeductionRequest;
+	from?: DeductionStart;
+}): DeductionOutcome => {
+	const deductionState: DeductionState = {
+		remaining: new Decimal(request.value),
+		deltas: [...from.deltas],
+		usageWindowConsumed: new Map(from.usageWindowConsumed),
+	};
+	deductFromBuckets({ context, deductionState });
+	return deductionStateToOutcome({ context, deductionState, request });
+};
+
 /** Take the requested units from the subject; negative values refund. Pure: same inputs, same outcome. */
 export const deduct = ({
 	fullSubject,
@@ -67,13 +99,8 @@ export const deduct = ({
 }: {
 	fullSubject: WorkerFullSubject;
 	request: DeductionRequest;
-}): DeductionOutcome => {
-	const context = setupDeductionContext({ fullSubject, request });
-	const deductionState: DeductionState = {
-		remaining: new Decimal(request.value),
-		deltas: [],
-		usageWindowConsumed: new Map(),
-	};
-	deductFromBuckets({ context, deductionState });
-	return deductionStateToOutcome({ context, deductionState, request });
-};
+}): DeductionOutcome =>
+	deductOnContext({
+		context: setupDeductionContext({ fullSubject, request }),
+		request,
+	});
