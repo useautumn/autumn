@@ -22,6 +22,8 @@ export type MeteringConsumer = {
 		/** Records the partition's own writer produced are passed unread. */
 		producedOffsets?: ProducedOffsets;
 		readOnly?: boolean;
+		/** The epoch the partition's writer holds; a fence in the log above it parks the replay as fenced. */
+		ownerEpoch?: () => string | undefined;
 	}): PartitionReplay;
 	withdrawPartition(position: { partition: number }): Promise<void>;
 	resumePartition(position: { partition: number }): void;

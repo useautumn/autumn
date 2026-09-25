@@ -5,6 +5,7 @@ import {
 	SubjectStaleError,
 } from "../../processor/subject/subjectErrors.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
+import type { OwnerFence } from "../../state/types/stateStore.js";
 import {
 	BillingPlanRowCollisionError,
 	CommitterStoppedError,
@@ -251,6 +252,7 @@ const landRecordsOneByOne = async ({
 }): Promise<FlushOutcome> => {
 	let nextOffset = call.expectedOffset;
 	let commandNextOffset: bigint | undefined;
+	let ownerFence: OwnerFence | undefined;
 	const rejections: FlushRejection[] = [];
 	for (const record of call.records) {
 		const single = recordCall({ call, record, expectedOffset: nextOffset });
@@ -262,6 +264,7 @@ const landRecordsOneByOne = async ({
 			nextOffset = outcomes.get(single)?.nextOffset ?? nextOffset;
 			commandNextOffset =
 				outcomes.get(single)?.commandNextOffset ?? commandNextOffset;
+			ownerFence = outcomes.get(single)?.ownerFence ?? ownerFence;
 		} catch (cause) {
 			const refused = await settleRefusedRecord({
 				scope,
@@ -275,6 +278,7 @@ const landRecordsOneByOne = async ({
 				return {
 					nextOffset,
 					commandNextOffset,
+					ownerFence,
 					failure: refused.failure,
 					rejections,
 				};
@@ -282,7 +286,7 @@ const landRecordsOneByOne = async ({
 			rejections.push(refused.rejection);
 		}
 	}
-	return { nextOffset, commandNextOffset, rejections };
+	return { nextOffset, commandNextOffset, ownerFence, rejections };
 };
 
 /**

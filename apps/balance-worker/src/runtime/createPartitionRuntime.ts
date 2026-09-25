@@ -1,6 +1,7 @@
 import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
 import { createPartitionProcessor } from "../processor/createPartitionProcessor.js";
 import { getRuntimeHealth } from "./getRuntimeHealth.js";
+import { fenceRuntime } from "./lifecycle/fenceRuntime.js";
 import {
 	activateRuntime,
 	prepareRuntime,
@@ -70,6 +71,9 @@ export function createPartitionRuntime({
 	function activate(): Promise<void> {
 		return activateRuntime({ ctx, state });
 	}
+	function fence(): Promise<void> {
+		return fenceRuntime({ ctx, state });
+	}
 
 	function drain(): Promise<void> {
 		return drainRuntime({ ctx, state });
@@ -109,6 +113,7 @@ export function createPartitionRuntime({
 		start,
 		prepare,
 		activate,
+		fence,
 		drain,
 		stop,
 		waitForQuiescence,

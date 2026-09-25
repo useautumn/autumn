@@ -2,6 +2,7 @@ import type { CommitterDb } from "../types/committerDb.js";
 import { applyDurableMutations } from "./actions/applyDurableMutations.js";
 import {
 	advanceCommandNextOffset as advanceCommandProgress,
+	advanceOwnerFence as advanceOwnerFenceProgress,
 	initializePartition,
 	loadProgress,
 } from "./actions/partitionProgress.js";
@@ -61,6 +62,19 @@ export const createCommitterStateStore = ({
 			run: () => advanceCommandProgress({ ctx, ...params }),
 		});
 	}
+	function advanceOwnerFence(
+		params: Parameters<
+			NonNullable<CommitterStateStore["advanceOwnerFence"]>
+		>[0],
+	): Promise<void> {
+		return runInLane({
+			position: params,
+			run: () => advanceOwnerFenceProgress({ ctx, ...params }),
+		});
+	}
+	function readOwnerFence(params: PartitionPosition) {
+		return ctx.progress.readOwnerFence(params);
+	}
 	function loadPartitionProgress(params: PartitionPosition) {
 		return loadProgress({ ctx, ...params });
 	}
@@ -89,6 +103,8 @@ export const createCommitterStateStore = ({
 		initializePartition: initialize,
 		readNextOffset,
 		readCommandNextOffset,
+		readOwnerFence,
+		advanceOwnerFence,
 		readState: readAbsent,
 		readOwnState: readAbsent,
 		readReceipt: readAbsent,

@@ -3,6 +3,7 @@ import type {
 	ConsumerEndBatchProcessEvent,
 	ConsumerRunConfig,
 	EachBatchPayload,
+	IHeaders,
 	KafkaMessage,
 	OffsetsByTopicPartition,
 } from "kafkajs";
@@ -14,6 +15,8 @@ import type {
 	TopicRecordResult,
 } from "../../src/consumer/types/consumer.js";
 import { InvalidRecordError } from "../../src/lib/recordErrors.js";
+import { OWNER_EPOCH_HEADER } from "../../src/producer/sendIdempotentBatch.js";
+import { OWNER_FENCE_HEADER } from "../../src/producer/sendOwnerFence.js";
 import { createMeteringConsumer } from "../../src/topics/metering/consumer/createMeteringConsumer.js";
 import type {
 	MeteringRecordApplication,
@@ -131,6 +134,7 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 			offset: string;
 			key: Buffer | null;
 			value: Buffer | null;
+			headers?: IHeaders;
 		}>;
 		lastOffset?: string;
 		uncommittedPartition?: number | string;
@@ -139,7 +143,12 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 		let resolvedOffset: string | undefined;
 		const messages: KafkaMessage[] = [];
 		for (const record of records)
-			messages.push({ ...record, timestamp: "0", attributes: 0, headers: {} });
+			messages.push({
+				timestamp: "0",
+				attributes: 0,
+				headers: {},
+				...record,
+			});
 		function firstOffset(): string | null {
 			return messages[0]?.offset ?? null;
 		}
@@ -769,6 +778,70 @@ async function deliversTypedRecordsWithoutChangingOffsets(): Promise<void> {
 	await consumer.stop();
 }
 
+async function routesFencesAndEpochsFromHeaders(): Promise<void> {
+	const fixture = createConsumerFixture();
+	const records = createMeteringRecords();
+	const applied: unknown[] = [];
+	const consumer = createMeteringConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: {
+				readResumeOffset,
+				applyRecord: (application) => {
+					applied.push({ kind: "record", ...application });
+				},
+				applyFence: (fence) => {
+					applied.push({ kind: "fence", ...fence });
+				},
+			},
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	await fixture.deliverBatch({
+		records: [
+			{
+				offset: "0",
+				...serializeMeteringRecord({ record: records.initialization }),
+			},
+			{
+				offset: "1",
+				key: Buffer.from("owner-fence"),
+				value: Buffer.from("{}"),
+				headers: { [OWNER_EPOCH_HEADER]: "12", [OWNER_FENCE_HEADER]: "1" },
+			},
+			{
+				offset: "2",
+				...serializeMeteringRecord({ record: records.outcome }),
+				headers: { [OWNER_EPOCH_HEADER]: "12" },
+			},
+		],
+	});
+	expect(applied).toEqual([
+		{
+			kind: "record",
+			position: { topic, partition, offset: 0n },
+			record: records.initialization,
+			ownerEpoch: undefined,
+		},
+		{
+			kind: "fence",
+			position: { topic, partition, offset: 1n },
+			ownerEpoch: 12n,
+		},
+		{
+			kind: "record",
+			position: { topic, partition, offset: 2n },
+			record: records.outcome,
+			ownerEpoch: 12n,
+		},
+	]);
+	// The fence's value is never decoded as a mutation, so nothing about it can fail parsing.
+	expect(fixture.commits).toEqual([[{ topic, partition, offset: "3" }]]);
+	await consumer.stop();
+}
+
 async function reportsCodecFailureThroughApplicationBoundary(): Promise<void> {
 	const fixture = createConsumerFixture();
 	const progress = createProgressTracker();
@@ -862,6 +935,10 @@ function meteringConsumerTests(): void {
 	test(
 		"metering consumer applies engine-parsed initializations and outcomes in order",
 		deliversTypedRecordsWithoutChangingOffsets,
+	);
+	test(
+		"routes fence markers to applyFence and hands records their owner epoch",
+		routesFencesAndEpochsFromHeaders,
 	);
 	test(
 		"metering consumer delegates codec error policy without committing",

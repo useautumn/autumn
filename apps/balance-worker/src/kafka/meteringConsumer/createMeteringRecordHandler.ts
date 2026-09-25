@@ -1,4 +1,5 @@
 import {
+	type MeteringFenceApplication,
 	type MeteringRecordApplication,
 	type MeteringRecordFailure,
 	type MeteringRecordHandler,
@@ -10,13 +11,18 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
 import type { ProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
+import {
+	OwnedPartitionProducerFencedError,
+	OwnerEpochSupersededError,
+} from "../../runtime/runtimeErrors.js";
 import type { DurableMutationApplyResult } from "../../state/types/durableMutation.js";
-import type { StateStore } from "../../state/types/stateStore.js";
+import type { OwnerFence, StateStore } from "../../state/types/stateStore.js";
 import {
 	isPartitionInvariantCause,
 	KafkaPartitionInvariantError,
 	StateBehindKafkaLogStartError,
 } from "./meteringErrors.js";
+import { createStaleRecordLog } from "./staleRecordLog.js";
 import type { PartitionReplay } from "./types/partitionReplay.js";
 
 export function createMeteringRecordHandler({
@@ -36,9 +42,88 @@ export function createMeteringRecordHandler({
 		>;
 		/** Partitions another worker still owns: their records feed the dedup window and nothing else. */
 		readOnlyPartitions?: ReadonlySet<number>;
+		/** The epoch this worker's writer holds each partition under; a fence above it means the partition is lost. */
+		ownerEpochByPartition?: ReadonlyMap<number, () => string | undefined>;
 		logger?: Pick<AutumnLogger, "warn">;
+		now?: () => number;
 	};
 }): MeteringRecordHandler {
+	// The fence as read from the log so far, ahead of the store's bookmark; the store's copy seeds it.
+	const fenceByPartition = new Map<number, OwnerFence>();
+	const staleRecords = createStaleRecordLog({
+		logger: ctx.logger,
+		now: ctx.now,
+	});
+	function currentFence({
+		topic,
+		partition,
+	}: {
+		topic: string;
+		partition: number;
+	}): OwnerFence | null {
+		const seen = fenceByPartition.get(partition);
+		if (seen) return seen;
+		const stored =
+			ctx.stateStore.readOwnerFence?.({ topic, partition }) ?? null;
+		if (stored) fenceByPartition.set(partition, stored);
+		return stored;
+	}
+	/** Written after the fence by an epoch the fence outranks: a stale owner's, dropped whoever is reading. */
+	function isStale({
+		position,
+		ownerEpoch,
+	}: {
+		position: { topic: string; partition: number; offset: bigint };
+		ownerEpoch: bigint | undefined;
+	}): OwnerFence | null {
+		if (ownerEpoch === undefined) return null;
+		const fence = currentFence(position);
+		if (!fence) return null;
+		if (position.offset <= fence.offset || ownerEpoch >= fence.epoch)
+			return null;
+		return fence;
+	}
+	/** A marker raises the partition's fence; one from above this worker's own epoch ends its ownership. */
+	function applyFence({
+		position,
+		ownerEpoch,
+	}: MeteringFenceApplication):
+		| { nextOffset: bigint }
+		| undefined
+		| Promise<{ nextOffset: bigint } | undefined> {
+		const { topic, partition } = position;
+		const current = currentFence(position);
+		if (current && current.epoch >= ownerEpoch) return undefined;
+		const fence: OwnerFence = { epoch: ownerEpoch, offset: position.offset };
+		fenceByPartition.set(partition, fence);
+		if (ctx.readOnlyPartitions?.has(partition)) return undefined;
+		const own = ctx.ownerEpochByPartition?.get(partition)?.();
+		if (own !== undefined && BigInt(own) < ownerEpoch) {
+			parkPartition({
+				topic,
+				partition,
+				cause: new OwnedPartitionProducerFencedError({
+					topic,
+					partition,
+					cause: new OwnerEpochSupersededError({
+						topic,
+						partition,
+						ownEpoch: BigInt(own),
+						fenceEpoch: ownerEpoch,
+						fenceOffset: position.offset,
+					}),
+				}),
+			});
+			return undefined;
+		}
+		const advanced = ctx.stateStore.advanceOwnerFence?.({
+			topic,
+			partition,
+			fence,
+		});
+		if (advanced instanceof Promise) return advanced.then(() => undefined);
+		return undefined;
+	}
 	/** Parks the partition behind the unreadable record; without a replay to park, the failure is thrown as before. */
 	function parkPartition({
 		topic,
@@ -124,10 +209,16 @@ export function createMeteringRecordHandler({
 	function applyRecord({
 		position,
 		record,
+		ownerEpoch,
 	}: MeteringRecordApplication):
 		| { nextOffset: bigint }
 		| undefined
 		| Promise<{ nextOffset: bigint } | undefined> {
+		const fence = isStale({ position, ownerEpoch });
+		if (fence && ownerEpoch !== undefined) {
+			staleRecords.record({ ...position, ownerEpoch, fence });
+			return undefined;
+		}
 		if (ctx.readOnlyPartitions?.has(position.partition)) {
 			ctx.recentCommandsByPartition
 				.get(position.partition)
@@ -192,7 +283,13 @@ export function createMeteringRecordHandler({
 		return undefined;
 	}
 
-	return { readResumeOffset, shouldApply, applyRecord, onRecordError };
+	return {
+		readResumeOffset,
+		shouldApply,
+		applyFence,
+		applyRecord,
+		onRecordError,
+	};
 }
 
 function readPosition({
