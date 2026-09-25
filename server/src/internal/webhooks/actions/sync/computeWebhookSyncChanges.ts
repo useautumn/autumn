@@ -77,7 +77,11 @@ const planAdoptions = ({
 		const matches = uidless.filter(
 			(webhook) => webhook.url === params.url && kindOf(webhook) === kind,
 		);
-		const claimants = newIds.filter((other) => other.url === params.url);
+		const claimants = newIds.filter(
+			(other) =>
+				other.url === params.url &&
+				webhookAppKindOf({ events: other.events }) === kind,
+		);
 		if (matches.length > 1) {
 			errors.push({
 				id: params.id,

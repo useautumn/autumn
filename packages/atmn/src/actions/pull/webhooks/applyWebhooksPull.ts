@@ -10,6 +10,13 @@ import type {
 } from "./types";
 import { updateWebhook } from "./updateWebhook";
 
+const isVercelWebhook = (events: unknown): boolean =>
+	Array.isArray(events) &&
+	events.length > 0 &&
+	events.every(
+		(event) => typeof event === "string" && event.startsWith("vercel."),
+	);
+
 const merge = (target: WebhookEditResult, source: WebhookEditResult): void => {
 	target.lines.push(...source.lines);
 	target.warnings.push(...source.warnings);
@@ -46,8 +53,12 @@ export const applyWebhooksPull = ({
 
 	for (const webhook of remote) {
 		if (fromDashboard(webhook)) {
+			// Vercel and other webhooks live in separate apps: a URL only
+			// matches within one.
 			const represented = (stated ?? []).find(
-				(row) => row.url?.[envKey] === webhook.url,
+				(row) =>
+					row.url?.[envKey] === webhook.url &&
+					isVercelWebhook(row.events) === isVercelWebhook(webhook.events),
 			);
 			if (represented !== undefined) {
 				present.add(represented.id);

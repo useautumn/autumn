@@ -527,3 +527,30 @@ test("pull keeps event names this atmn doesn't know, verbatim", () => {
 	expect(source).toContain('"billing.from_the_future"');
 	expect(source).toContain('"billing.updated"');
 });
+
+test("a dashboard webhook only matches a config webhook of the same kind (vercel or not) by URL", () => {
+	const before = `export default atmn({
+	webhooks: [
+		webhook({ id: "billing", events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } }),
+	],
+});
+`;
+	const { source, lines } = pullInto({
+		source: before,
+		remoteList: [
+			remote("billing", "https://x.dev/h"),
+			remote(DASHBOARD_ID, "https://x.dev/h", {
+				events: ["vercel.resources.provisioned"],
+			}),
+		],
+		stated: [
+			{
+				id: "billing",
+				events: ["billing.updated"],
+				url: { sandbox: "https://x.dev/h" },
+			},
+		],
+	});
+	expect(source).toContain('events: ["billing.updated"]');
+	expect(lines[0]).toMatch(/^\+ webhook wh_\S+ \(made in the dashboard/);
+});

@@ -16,8 +16,8 @@ import {
 	DropdownMenuTrigger,
 	LongInput,
 } from "@autumn/ui";
-import { ChatCircleTextIcon, QuestionIcon } from "@phosphor-icons/react";
-import { GraduationCap } from "lucide-react";
+import { ChatCircleTextIcon } from "@phosphor-icons/react";
+import { CircleQuestionMark, GraduationCap } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -60,7 +60,7 @@ export function SidebarContact() {
 				<DropdownMenuTrigger render={<div />} nativeButton={false}>
 					<NavButton
 						env={env}
-						icon={<QuestionIcon size={16} weight="duotone" />}
+						icon={<CircleQuestionMark strokeWidth={1.5} />}
 						title="Contact us"
 						onClick={() => {}}
 						isGroup

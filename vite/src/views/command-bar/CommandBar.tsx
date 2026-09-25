@@ -2,8 +2,11 @@ import { AppEnv, type Customer } from "@autumn/shared";
 import {
 	CommandDialog,
 	CommandEmpty,
+	CommandFooter,
 	CommandGroup,
+	CommandHint,
 	CommandInput,
+	CommandKbd,
 	CommandList,
 	Skeleton,
 } from "@autumn/ui";
@@ -596,7 +599,7 @@ const CommandBar = () => {
 	const renderMainPage = () => (
 		<>
 			{filteredNavigationItems.length > 0 && (
-				<CommandGroup className="p-1.5">
+				<CommandGroup heading="Suggestions">
 					{filteredNavigationItems.map((item) => (
 						<CommandRow
 							key={item.title}
@@ -610,7 +613,7 @@ const CommandBar = () => {
 			)}
 
 			{showResults && matchedPages.length > 0 && (
-				<CommandGroup heading="Pages" className="p-1.5">
+				<CommandGroup heading="Pages">
 					{matchedPages.map(({ page }) => (
 						<CommandRow
 							key={page.path ?? page.href}
@@ -629,7 +632,7 @@ const CommandBar = () => {
 			{showResults && (
 				<>
 					{sortedResults.length > 0 && (
-						<CommandGroup heading="Results" className="p-1.5">
+						<CommandGroup heading="Results">
 							{sortedResults.map((result) => {
 								if (result.type === "customer") {
 									const customer = result.data;
@@ -712,7 +715,7 @@ const CommandBar = () => {
 					? `Favourites · Page ${favouritesPage + 1} of ${totalFavouritesPages}`
 					: "Favourites";
 			return (
-				<CommandGroup heading={heading} className="p-1.5">
+				<CommandGroup heading={heading}>
 					{paginatedFavourites.map((fav) => {
 						if (fav.kind === "org") {
 							return (
@@ -840,7 +843,7 @@ const CommandBar = () => {
 						)}
 
 						{userResults.length > 0 && (
-							<CommandGroup heading="Users" className="p-1.5">
+							<CommandGroup heading="Users">
 								{userResults.map((result) => {
 									const user = result.data as User;
 									const displayName = user.name || user.email || user.id;
@@ -915,7 +918,7 @@ const CommandBar = () => {
 		}
 
 		return (
-			<CommandGroup heading="Theme" className="p-1.5">
+			<CommandGroup heading="Theme">
 				{options.map((option) => (
 					<CommandRow
 						key={option.value}
@@ -936,7 +939,7 @@ const CommandBar = () => {
 		return (
 			<>
 				{orgs && orgs.length > 0 && (
-					<CommandGroup className="p-1.5">
+					<CommandGroup>
 						{orgs
 							.filter((org) => {
 								if (!search) return true;
@@ -1012,7 +1015,7 @@ const CommandBar = () => {
 	);
 
 	return (
-		<CommandDialog open={open} onOpenChange={handleOpenChange}>
+		<CommandDialog open={open} onOpenChange={handleOpenChange} size="compact">
 			<CommandInput
 				placeholder={PAGE_PLACEHOLDERS[currentPage]}
 				value={search}
@@ -1025,6 +1028,15 @@ const CommandBar = () => {
 					? lastRenderedContentRef.current
 					: currentContent}
 			</CommandList>
+			<CommandFooter>
+				<CommandHint>
+					Navigate <CommandKbd>↑</CommandKbd>
+					<CommandKbd>↓</CommandKbd>
+				</CommandHint>
+				<CommandHint>
+					Open <CommandKbd>↵</CommandKbd>
+				</CommandHint>
+			</CommandFooter>
 		</CommandDialog>
 	);
 };
