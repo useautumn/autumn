@@ -7,8 +7,8 @@ import { grantOwnerOf } from "../../../utils/subjectStateUtils/convertSubjectSta
 import { subjectStateToFullSubject } from "../../../utils/subjectUtils/convertSubjectUtils.js";
 import type { BillingPlanRebalanceOp } from "../types/billingPlanOp.js";
 
-/** The external id of the entity that owns the row, or null for a customer-level row. */
-const ownerEntityIdOf = ({
+/** The entity that owns the row, or null for a customer-level row. */
+const ownerEntityOf = ({
 	state,
 	entities,
 	row,
@@ -16,14 +16,14 @@ const ownerEntityIdOf = ({
 	state: SubjectState;
 	entities: readonly WorkerEntity[];
 	row: SubjectState["customerEntitlements"][number];
-}): string | null => {
+}): WorkerEntity | null => {
 	const internalEntityId = grantOwnerOf({ state, row });
 	if (!internalEntityId) return null;
 	const entity = entities.find(
 		({ internal_id }) => internal_id === internalEntityId,
 	);
 	if (!entity?.id) throw new StaleMutationError({ subject: row.id });
-	return entity.id;
+	return entity;
 };
 
 /** The customer or entity that owns the purchased row, as it stands; a row the worker does not hold means its copy is behind. */
@@ -42,9 +42,11 @@ export const purchasedRowToFullSubject = ({
 		({ id }) => id === op.id,
 	);
 	if (!purchasedRow) throw new StaleMutationError({ subject: op.id });
+	// The plan's state is the customer's merged with its named entities: an entity's view needs that entity set on it.
+	const entity = ownerEntityOf({ state, entities, row: purchasedRow });
 	return subjectStateToFullSubject({
-		state,
+		state: entity ? { ...state, entity } : state,
 		catalog,
-		entityId: ownerEntityIdOf({ state, entities, row: purchasedRow }),
+		entityId: entity?.id ?? null,
 	});
 };

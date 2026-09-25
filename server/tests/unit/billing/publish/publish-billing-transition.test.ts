@@ -8,6 +8,10 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
+// These cover the legacy Redis lane; the worker lane skips publishing entirely.
+const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+
 const calls: string[] = [];
 const publishedPlans: unknown[] = [];
 const persistedTransitions: unknown[] = [];
@@ -196,6 +200,20 @@ test("keeps compute-time exclusions after deferred plan serialization", async ()
 	);
 });
 
+test("with the balance worker on, publishes nothing", async () => {
+	process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+	try {
+		await publishBillingTransition({ ctx, billingContext, billingPlan });
+		expect(calls).toHaveLength(0);
+		expect(ctx.skipSubjectCacheDeletion).toBe(false);
+	} finally {
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+	}
+});
+
 afterAll(() => {
 	mock.restore();
+	if (previousRollout === undefined)
+		delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
 });

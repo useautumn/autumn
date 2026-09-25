@@ -181,3 +181,30 @@ export const fullCustomerEntitlementToRow = ({
 				.filter(([, value]) => value !== undefined),
 		),
 	});
+
+/** The subject with some grants edited or removed (`edit` returns null): a what-if view a balance edit draws on. */
+export const fullSubjectWithCustomerEntitlements = ({
+	fullSubject,
+	edit,
+}: {
+	fullSubject: WorkerFullSubject;
+	edit: (
+		customerEntitlement: WorkerFullCustomerEntitlement,
+	) => WorkerFullCustomerEntitlement | null;
+}): WorkerFullSubject => {
+	const editAll = <Row extends WorkerFullCustomerEntitlement>(rows: Row[]) =>
+		rows.flatMap((row) => {
+			const edited = edit(row);
+			return edited ? [{ ...row, ...edited }] : [];
+		});
+	return {
+		...fullSubject,
+		customer_products: fullSubject.customer_products.map((customerProduct) => ({
+			...customerProduct,
+			customer_entitlements: editAll(customerProduct.customer_entitlements),
+		})),
+		extra_customer_entitlements: editAll(
+			fullSubject.extra_customer_entitlements,
+		),
+	};
+};

@@ -53,6 +53,9 @@ export const computeFinalize = ({
 		featureId: lock.feature_id,
 		internalFeatureId: command.internalFeatureId,
 		overageBehavior: lock.overage_behavior,
+		includesCreditSystems: true,
+		enforcesSpendLimit: true,
+		countsUsageWindows: true,
 		properties: command.properties ?? lock.properties,
 		// A release gives back regardless; only taking more is subject to the overdue block.
 		enforceOverdueBlock: true,

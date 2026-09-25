@@ -1,7 +1,12 @@
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { FullCustomerEntitlementView } from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import { cusEntsToBalance } from "./cusEntsToBalance";
 
 export const RECALCULATE_CUSTOMER_SCOPE = "__customer__";
+
+/** What scoping reads of a row: its owner, directly or through its product. */
+type RecalculateScopeCustomerEntitlement = FullCustomerEntitlementView & {
+	customer_product: { internal_entity_id?: string | null } | null;
+};
 
 /**
  * Balances are only ever recalculated against siblings with the same scope: a
@@ -11,7 +16,7 @@ export const RECALCULATE_CUSTOMER_SCOPE = "__customer__";
 export const cusEntToRecalculateScopeKey = ({
 	cusEnt,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: RecalculateScopeCustomerEntitlement;
 }): string =>
 	cusEnt.internal_entity_id ??
 	cusEnt.customer_product?.internal_entity_id ??
@@ -29,7 +34,7 @@ export const getRecalculableScopeKeys = ({
 	cusEnts,
 	entityId,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: RecalculateScopeCustomerEntitlement[];
 	entityId?: string;
 }): Set<string> => {
 	const scopes = new Map<
@@ -60,6 +65,6 @@ export const hasRecalculableScope = ({
 	cusEnts,
 	entityId,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: RecalculateScopeCustomerEntitlement[];
 	entityId?: string;
 }): boolean => getRecalculableScopeKeys({ cusEnts, entityId }).size > 0;

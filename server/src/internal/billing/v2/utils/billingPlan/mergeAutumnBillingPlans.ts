@@ -101,6 +101,11 @@ export const mergeAutumnBillingPlans = ({
 		incoming: incoming.customLineItems,
 		getKey: (lineItem) => `${lineItem.description}:${lineItem.amount}`,
 	}),
+	existingEntities: mergeByKey({
+		base: base.existingEntities,
+		incoming: incoming.existingEntities,
+		getKey: (entity) => entity.internal_id,
+	}),
 	insertCustomerEntitlements: mergeById({
 		base: base.insertCustomerEntitlements,
 		incoming: incoming.insertCustomerEntitlements,

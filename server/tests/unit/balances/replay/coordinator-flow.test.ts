@@ -185,6 +185,15 @@ test.concurrent(
 			reset: async () => {
 				throw unsupported();
 			},
+			updateBalance: async () => {
+				throw unsupported();
+			},
+			deleteBalance: async () => {
+				throw unsupported();
+			},
+			recalculateBalance: async () => {
+				throw unsupported();
+			},
 			enqueue: async () => {
 				throw unsupported();
 			},
@@ -193,6 +202,9 @@ test.concurrent(
 					throw unsupported();
 				},
 				reset: async () => {
+					throw unsupported();
+				},
+				updateBalance: async () => {
 					throw unsupported();
 				},
 				evict: async () => {

@@ -33,6 +33,9 @@ export type { CheckResult } from "./commands/check/types/checkResult.js";
 export { computeConfirmExpiredLock } from "./commands/confirmExpiredLock/computeConfirmExpiredLock.js";
 export type { ConfirmExpiredLockCommand } from "./commands/confirmExpiredLock/types/confirmExpiredLockCommand.js";
 export type { ConfirmExpiredLockResult } from "./commands/confirmExpiredLock/types/confirmExpiredLockResult.js";
+export { computeDeleteBalance } from "./commands/deleteBalance/computeDeleteBalance.js";
+export type { DeleteBalanceCommand } from "./commands/deleteBalance/types/deleteBalanceCommand.js";
+export type { DeleteBalanceResult } from "./commands/deleteBalance/types/deleteBalanceResult.js";
 export type { EvictCommand } from "./commands/evict/types/evictCommand.js";
 export { computeFinalize } from "./commands/finalize/computeFinalize.js";
 export type { FinalizeCommand } from "./commands/finalize/types/finalizeCommand.js";
@@ -43,6 +46,12 @@ export type { InitializeCommand } from "./commands/initialize/types/initializeCo
 export type { InitializeRequest } from "./commands/initialize/types/initializeRequest.js";
 export type { InitializeResult } from "./commands/initialize/types/initializeResult.js";
 export type { ReadSubjectStateCommand } from "./commands/readSubjectState/types/readSubjectStateCommand.js";
+export {
+	computeRecalculateBalance,
+	type RecalculateBalanceDecision,
+} from "./commands/recalculateBalance/computeRecalculateBalance.js";
+export type { RecalculateBalanceCommand } from "./commands/recalculateBalance/types/recalculateBalanceCommand.js";
+export type { RecalculateBalanceResult } from "./commands/recalculateBalance/types/recalculateBalanceResult.js";
 export { computeReset } from "./commands/reset/computeReset.js";
 export type { ResetCommand } from "./commands/reset/types/resetCommand.js";
 export type {
@@ -57,6 +66,9 @@ export type {
 	TrackLock,
 } from "./commands/track/types/trackCommand.js";
 export type { TrackResult } from "./commands/track/types/trackResult.js";
+export { computeUpdateBalance } from "./commands/updateBalance/computeUpdateBalance.js";
+export type { UpdateBalanceCommand } from "./commands/updateBalance/types/updateBalanceCommand.js";
+export type { UpdateBalanceResult } from "./commands/updateBalance/types/updateBalanceResult.js";
 export { rebalance } from "./common/rebalance/rebalance.js";
 export type {
 	RebalanceDelta,
@@ -157,6 +169,7 @@ export {
 	parseCatalogRow,
 	parseCheckCommand,
 	parseConfirmExpiredLockCommand,
+	parseDeleteBalanceCommand,
 	parseEvictCommand,
 	parseFinalizeCommand,
 	parseFlushCommand,
@@ -165,10 +178,12 @@ export {
 	parseMeteringIdentity,
 	parseMutationRecord,
 	parseReadSubjectStateCommand,
+	parseRecalculateBalanceCommand,
 	parseResetCommand,
 	parseSubjectState,
 	parseSubjectStateMutation,
 	parseTrackCommand,
+	parseUpdateBalanceCommand,
 	parseWorkerCustomerEntitlement,
 	parseWorkerLock,
 } from "./parsers.js";

@@ -19,6 +19,7 @@ import { withPaidAllocatedFallback } from "@/internal/balanceWorker/subject/with
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
 import { getTrackFeatureDeductions } from "../utils/getFeatureDeductions.js";
+import { getQueuedTrackResponse } from "../utils/getQueuedTrackResponse.js";
 import { runPostgresTrackV3 } from "../v3/runPostgresTrackV3.js";
 import {
 	type FeatureTrackOutcome,
@@ -28,6 +29,7 @@ import {
 	trackedFeatureIdsOf,
 	trackParamsToTrackCommand,
 } from "./balanceWorkerTrackRequest.js";
+import { runBalanceWorkerAsyncTrack } from "./runBalanceWorkerAsyncTrack.js";
 
 type TrackClient = Pick<BalanceWorkerClient, "track">;
 
@@ -138,20 +140,33 @@ const customerOf = ({
 		: first.customer;
 };
 
+/** Applied on the worker and answered, or queued for it and answered with the queued response when async. */
 export async function runBalanceWorkerTrack({
 	ctx,
 	body,
+	isAsync = false,
+	validateTrackBodyIdempotencyKey = true,
 	client = getBalanceWorkerClient(),
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
+	isAsync?: boolean;
+	/** False when the caller already claimed the body key (a queued replay). */
+	validateTrackBodyIdempotencyKey?: boolean;
 	client?: TrackClient;
 }): Promise<TrackResponseV3> {
+	if (isAsync) {
+		await runBalanceWorkerAsyncTrack({ ctx, body });
+		return getQueuedTrackResponse({ ctx, body });
+	}
+
 	// The same 24h claim as runTrackWithRollout: a duplicate key is 409 before the worker sees it,
 	// and a 503 releases it so the retry reaches the worker's own dedup.
 	return withIdempotencyKey({
 		ctx,
-		idempotencyKey: getTrackBodyIdempotencyKey({ body }),
+		idempotencyKey: validateTrackBodyIdempotencyKey
+			? getTrackBodyIdempotencyKey({ body })
+			: null,
 		routeGroup: RouteGroup.Balances,
 		// Around the whole fan-out, inside the claim: a retry after creating re-runs every feature under the same key.
 		run: () =>

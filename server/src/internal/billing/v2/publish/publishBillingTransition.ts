@@ -3,6 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { preserveSubjectCache } from "@/internal/customers/cache/fullSubject/actions/preserveSubjectCache.js";
 import { publishCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/publishCachedFullSubject.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { persistOrQueuePublishedBalanceTransitions } from "./persistPublishedBalanceTransitions.js";
 import { shouldPublishBillingTransition } from "./shouldPublishBillingTransition.js";
 
@@ -17,6 +18,9 @@ export const publishBillingTransition = async ({
 	billingPlan: BillingPlan;
 	executionDeferred?: boolean;
 }): Promise<void> => {
+	// The worker holds the live balances and the plan carries usage itself: nothing to rebase in Redis.
+	if (isBalanceWorkerRolloutEnabled()) return;
+
 	// 1. Decide whether this plan has a supported runtime transition
 	const decision = shouldPublishBillingTransition({
 		billingPlan,

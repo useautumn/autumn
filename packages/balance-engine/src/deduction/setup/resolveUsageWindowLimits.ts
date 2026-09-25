@@ -21,6 +21,7 @@ export const resolveUsageWindowLimits = ({
 	request: DeductionRequest;
 	customerEntitlements: WorkerFullCustomerEntitlementWithProduct[];
 }): UsageWindowLimit[] => {
+	if (!request.countsUsageWindows) return [];
 	if (
 		customerEntitlements.some((customerEntitlement) =>
 			isUnlimitedCustomerEntitlement({ customerEntitlement }),

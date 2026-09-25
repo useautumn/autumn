@@ -16,6 +16,7 @@ test("one queued evict per distinct customer, under one request id", async () =>
 			queue: {
 				track: async () => undefined,
 				reset: async () => undefined,
+				updateBalance: async () => undefined,
 				evict: async ({ commands }) => {
 					batches.push([...commands]);
 				},
@@ -42,6 +43,7 @@ test("nothing to evict appends nothing, and a failed append is swallowed", async
 			queue: {
 				track: async () => undefined,
 				reset: async () => undefined,
+				updateBalance: async () => undefined,
 				evict: async () => {
 					appends++;
 				},
@@ -56,6 +58,7 @@ test("nothing to evict appends nothing, and a failed append is swallowed", async
 				queue: {
 					track: async () => undefined,
 					reset: async () => undefined,
+					updateBalance: async () => undefined,
 					evict: async () => {
 						throw new Error("broker down");
 					},

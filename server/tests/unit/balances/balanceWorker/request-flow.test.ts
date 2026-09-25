@@ -333,6 +333,15 @@ test.concurrent(
 				reset: async () => {
 					throw cause;
 				},
+				updateBalance: async () => {
+					throw cause;
+				},
+				deleteBalance: async () => {
+					throw cause;
+				},
+				recalculateBalance: async () => {
+					throw cause;
+				},
 				enqueue: async () => {
 					throw cause;
 				},
@@ -341,6 +350,9 @@ test.concurrent(
 						throw cause;
 					},
 					reset: async () => {
+						throw cause;
+					},
+					updateBalance: async () => {
 						throw cause;
 					},
 					evict: async () => {

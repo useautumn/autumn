@@ -19,6 +19,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
 import { assertCustomerUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertCustomerUsageLimitAlertsResolvable";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 import { CusService } from "@/internal/customers/CusService";
 import { usageWindowRepo } from "../../usageWindows/repos/index.js";
 import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
@@ -220,6 +221,8 @@ export const updateCustomer = async ({
 		delete updateData.id;
 	}
 
+	const { id: renamedId, ...fieldUpdates } = updateData;
+
 	await db.transaction(async (tx) => {
 		const txCtx = { ...ctx, db: tx as unknown as DrizzleCli };
 
@@ -233,11 +236,27 @@ export const updateCustomer = async ({
 
 		await usageWindowRepo.setWindows({ db: txCtx.db, windows: usageWindows });
 
-		await CusService.update({
-			ctx: txCtx,
-			idOrInternalId: originalCustomer.id || originalCustomer.internal_id,
-			update: updateData,
-		});
+		// The worker keys a customer by its id: rename in Postgres first, so the plan below loads it under the new one.
+		if (renamedId !== undefined)
+			await CusService.update({
+				ctx: txCtx,
+				idOrInternalId: originalCustomer.id || originalCustomer.internal_id,
+				update: { id: renamedId },
+			});
+	});
+
+	// Through the worker when it holds the customer, so the read below and any top-up it dispatches see the new row.
+	const customer = {
+		...originalCustomer,
+		id: renamedId ?? originalCustomer.id,
+	};
+	await executeAutumnBillingPlan({
+		ctx,
+		autumnBillingPlan: {
+			customerId: customer.id ?? customer.internal_id,
+			insertCustomerProducts: [],
+			updateCustomer: { customer, updates: fieldUpdates },
+		},
 	});
 
 	ctx.skipCache = true;

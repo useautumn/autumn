@@ -150,6 +150,10 @@ export const AutumnBillingPlanSchema = z.object({
 	updateCustomer: CustomerUpdateSchema.optional(),
 	// Inserted before customer products — provisioned rows may reference them.
 	insertEntities: z.array(EntitySchema).optional(),
+	/** Existing entities the plan writes rows for, so it can name them by external id (a grant created for an entity). */
+	existingEntities: z
+		.array(EntitySchema.pick({ internal_id: true, id: true }))
+		.optional(),
 	claimEntities: z.array(EntityClaimSchema).optional(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
 

@@ -3,7 +3,6 @@ import {
 	fullSubjectToCustomerEntitlements,
 	isCustomerEntitlementInOverage,
 	isCustomerProductLicenseAssignment,
-	isEntityCusEnt,
 	sortCusEntsForPaydown,
 } from "@autumn/shared";
 import type {
@@ -13,6 +12,12 @@ import type {
 import type { RebalanceRequest } from "./types/rebalanceRequest.js";
 
 type CustomerEntitlement = WorkerFullCustomerEntitlementWithProduct;
+
+/** The entity that owns the row, or null for a customer-level one: the same test the server's paydown uses. */
+const ownerEntityOf = (customerEntitlement: CustomerEntitlement) =>
+	customerEntitlement.internal_entity_id ??
+	customerEntitlement.customer_product?.internal_entity_id ??
+	null;
 
 const REBALANCE_STATUSES = [CusProductStatus.Active, CusProductStatus.PastDue];
 
@@ -46,15 +51,13 @@ export const selectCustomerEntitlementsInOverage = ({
 	purchased: CustomerEntitlement;
 	request: RebalanceRequest;
 }): CustomerEntitlement[] => {
-	// The subject is the purchased row's own, so its level alone tells its rows from the customer's.
-	const purchasedIsEntityLevel = isEntityCusEnt({ cusEnt: purchased });
+	const purchasedOwner = ownerEntityOf(purchased);
 	return sortCusEntsForPaydown({
 		customerEntitlements: featureCustomerEntitlements.filter(
 			(customerEntitlement) =>
 				customerEntitlement.id !== purchased.id &&
 				customerEntitlement.id !== request.creditedCustomerEntitlementId &&
-				isEntityCusEnt({ cusEnt: customerEntitlement }) ===
-					purchasedIsEntityLevel &&
+				ownerEntityOf(customerEntitlement) === purchasedOwner &&
 				isCustomerEntitlementInOverage({ customerEntitlement }),
 		),
 	});

@@ -11,6 +11,10 @@ import {
 	confirmExpiredLockCommandSchema,
 } from "./commands/confirmExpiredLock/types/confirmExpiredLockCommand.js";
 import {
+	type DeleteBalanceCommand,
+	deleteBalanceCommandSchema,
+} from "./commands/deleteBalance/types/deleteBalanceCommand.js";
+import {
 	type EvictCommand,
 	evictCommandSchema,
 } from "./commands/evict/types/evictCommand.js";
@@ -35,6 +39,10 @@ import {
 	readSubjectStateCommandSchema,
 } from "./commands/readSubjectState/types/readSubjectStateCommand.js";
 import {
+	type RecalculateBalanceCommand,
+	recalculateBalanceCommandSchema,
+} from "./commands/recalculateBalance/types/recalculateBalanceCommand.js";
+import {
 	type ResetCommand,
 	resetCommandSchema,
 } from "./commands/reset/types/resetCommand.js";
@@ -42,6 +50,10 @@ import {
 	type TrackCommand,
 	trackCommandSchema,
 } from "./commands/track/types/trackCommand.js";
+import {
+	type UpdateBalanceCommand,
+	updateBalanceCommandSchema,
+} from "./commands/updateBalance/types/updateBalanceCommand.js";
 import { type Catalog, catalogSchema } from "./models/catalog/catalog.js";
 import {
 	type CatalogRow,
@@ -113,6 +125,24 @@ export const parseResetCommand = ({
 }: {
 	input: unknown;
 }): ResetCommand => resetCommandSchema.parse(input);
+
+export const parseUpdateBalanceCommand = ({
+	input,
+}: {
+	input: unknown;
+}): UpdateBalanceCommand => updateBalanceCommandSchema.parse(input);
+
+export const parseDeleteBalanceCommand = ({
+	input,
+}: {
+	input: unknown;
+}): DeleteBalanceCommand => deleteBalanceCommandSchema.parse(input);
+
+export const parseRecalculateBalanceCommand = ({
+	input,
+}: {
+	input: unknown;
+}): RecalculateBalanceCommand => recalculateBalanceCommandSchema.parse(input);
 
 export const parseFinalizeCommand = ({
 	input,

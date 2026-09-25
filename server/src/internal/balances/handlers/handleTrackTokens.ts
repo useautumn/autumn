@@ -5,10 +5,12 @@ import {
 	TrackTokensParamsSchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { runBalanceWorkerTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js";
 import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import { getQueuedTrackResponse } from "@/internal/balances/track/utils/getQueuedTrackResponse.js";
 import { getTokenTrackParams } from "@/internal/balances/track/utils/getTokenTrackParams.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
 export const handleTrackTokens = createRoute({
 	scopes: [Scopes.Balances.Write],
@@ -23,6 +25,14 @@ export const handleTrackTokens = createRoute({
 			ctx,
 			input: body,
 		});
+
+		if (isBalanceWorkerRolloutEnabled()) {
+			const isAsync = trackBody.async === true;
+			return c.json(
+				await runBalanceWorkerTrack({ ctx, body: trackBody, isAsync }),
+				isAsync ? 202 : 200,
+			);
+		}
 
 		if (trackBody.async === true) {
 			await runAsyncTrack({ ctx, body: trackBody });

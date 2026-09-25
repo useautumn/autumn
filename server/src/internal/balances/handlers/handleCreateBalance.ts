@@ -1,6 +1,5 @@
 import {
 	CreateBalanceParamsV0Schema,
-	fullSubjectToFullCustomer,
 	RouteGroup,
 	Scopes,
 } from "@autumn/shared";
@@ -8,11 +7,8 @@ import { FeatureNotFoundError } from "@shared/index";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { prepareNewBalanceForInsertion } from "@/internal/balances/createBalance/prepareNewBalanceForInsertion";
 import { validateCreateBalanceParams } from "@/internal/balances/createBalance/validateCreateBalance";
-import { CusService } from "@/internal/customers/CusService";
-import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
-import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
+import { getSubjectFullCustomer } from "@/internal/balances/utils/getSubjectFullCustomer.js";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 
 export const handleCreateBalance = createRoute({
 	scopes: [Scopes.Balances.Write],
@@ -26,21 +22,12 @@ export const handleCreateBalance = createRoute({
 		const feature = ctx.features.find((f) => f.id === feature_id);
 		if (!feature) throw new FeatureNotFoundError({ featureId: feature_id });
 
-		const fullCustomer = isFullSubjectRolloutEnabled({ ctx })
-			? fullSubjectToFullCustomer({
-					fullSubject: await getOrSetCachedFullSubject({
-						ctx,
-						customerId: customer_id,
-						entityId: entity_id,
-						source: "handleCreateBalance",
-					}),
-				})
-			: await CusService.getFull({
-					ctx,
-					idOrInternalId: customer_id,
-					entityId: entity_id,
-					withEntities: true,
-				});
+		const fullCustomer = await getSubjectFullCustomer({
+			ctx,
+			customerId: customer_id,
+			entityId: entity_id,
+			source: "handleCreateBalance",
+		});
 
 		await validateCreateBalanceParams({
 			ctx,
@@ -57,14 +44,23 @@ export const handleCreateBalance = createRoute({
 				params: createBalanceParams,
 			});
 
-		await EntitlementService.insert({
-			db: ctx.db,
-			data: [newEntitlement],
-		});
-
-		await CusEntService.insert({
+		// Through the plan executor, so the grant lands on the worker's log like every other balance write.
+		await executeAutumnBillingPlan({
 			ctx,
-			data: [newCustomerEntitlement],
+			autumnBillingPlan: {
+				customerId: customer_id,
+				// A grant for an entity names it, so the plan reaches the worker with the entity's part.
+				existingEntities: fullCustomer.entity ? [fullCustomer.entity] : [],
+				insertCustomerProducts: [],
+				customEntitlements: [newEntitlement],
+				// The column is not null; the model types it nullable.
+				insertCustomerEntitlements: [
+					{
+						...newCustomerEntitlement,
+						balance: newCustomerEntitlement.balance ?? 0,
+					},
+				],
+			},
 		});
 
 		return c.json({ success: true });

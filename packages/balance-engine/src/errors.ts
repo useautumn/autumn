@@ -44,13 +44,19 @@ export class CatalogRowMissingError extends Error {
 }
 
 export type UnsupportedCommandReason =
+	| "balance_not_found"
 	| "billing_plan_needs_postgres_store"
 	| "billing_plan_rebalance_needs_catalog"
 	| "billing_plan_row_owner_not_named"
 	| "credit_rate_invalid"
 	| "entity_not_found"
 	| "feature_not_found"
+	| "invoice_credit_not_mutable"
+	| "lifetime_balance_has_no_reset"
 	| "paid_allocated_not_supported"
+	| "paid_balance_not_deletable"
+	| "paid_recurring_balance_cannot_expire"
+	| "pooled_balance_not_deletable"
 	| "rate_card_on_unlimited_row"
 	| "rate_card_with_additional_balance"
 	| "subject_mismatch";

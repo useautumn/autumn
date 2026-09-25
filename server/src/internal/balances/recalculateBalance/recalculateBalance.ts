@@ -2,6 +2,8 @@ import type { RecalculateBalanceParamsV0 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import { runBalanceWorkerRecalculateBalance } from "./balanceWorker/runBalanceWorkerRecalculateBalance.js";
 import { computeRecalculateBalance } from "./computeRecalculateBalance";
 
 /**
@@ -18,6 +20,10 @@ export const recalculateBalance = async ({
 	ctx: AutumnContext;
 	params: RecalculateBalanceParamsV0;
 }): Promise<void> => {
+	if (isBalanceWorkerRolloutEnabled()) {
+		await runBalanceWorkerRecalculateBalance({ ctx, params, preview: false });
+		return;
+	}
 	const { fullCustomer, before, after } = await computeRecalculateBalance({
 		ctx,
 		params,

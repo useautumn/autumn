@@ -6,13 +6,16 @@ import {
 
 type NamedEntity = { internalId: string; id: string };
 
-/** Entities the plan can name by external id: the ones it creates, and the ones its products are provisioned on. */
+/** Entities the plan can name by external id: the ones it creates, the existing ones it lists, and the ones its products are provisioned on. */
 const namedEntitiesOf = ({
 	autumnBillingPlan,
 }: {
 	autumnBillingPlan: AutumnBillingPlan;
 }): NamedEntity[] => [
-	...(autumnBillingPlan.insertEntities ?? []).flatMap((entity) =>
+	...[
+		...(autumnBillingPlan.insertEntities ?? []),
+		...(autumnBillingPlan.existingEntities ?? []),
+	].flatMap((entity) =>
 		entity.id ? [{ internalId: entity.internal_id, id: entity.id }] : [],
 	),
 	...billingPlanCustomerProducts({ autumnBillingPlan }).flatMap(

@@ -32,6 +32,7 @@ export * from "./classifyCusEnt/isCusEntDisplayExpired";
 export * from "./classifyCusEnt/isCusEntExpired";
 export * from "./classifyCusEnt/isCustomerEntitlementInOverage";
 export * from "./classifyCusEnt/isInvoiceCreditCustomerEntitlement";
+export * from "./classifyCusEnt/isLiveLooseCustomerEntitlement";
 export * from "./classifyCusEnt/isPooledBalanceCustomerEntitlement";
 export * from "./classifyCusEnt/isUnlimitedCustomerEntitlement";
 // Classify utils

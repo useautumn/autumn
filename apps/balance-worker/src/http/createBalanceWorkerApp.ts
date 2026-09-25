@@ -3,14 +3,17 @@ import { createWorkerErrorHandler } from "./handlers/errorHandler/createWorkerEr
 import { receiveApplyBillingPlan } from "./handlers/receiveApplyBillingPlan.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveConfirmExpiredLock } from "./handlers/receiveConfirmExpiredLock.js";
+import { receiveDeleteBalance } from "./handlers/receiveDeleteBalance.js";
 import { receiveEvict } from "./handlers/receiveEvict.js";
 import { receiveFinalize } from "./handlers/receiveFinalize.js";
 import { receiveFlush } from "./handlers/receiveFlush.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveInitialize } from "./handlers/receiveInitialize.js";
 import { receiveReadSubjectState } from "./handlers/receiveReadSubjectState.js";
+import { receiveRecalculateBalance } from "./handlers/receiveRecalculateBalance.js";
 import { receiveReset } from "./handlers/receiveReset.js";
 import { receiveTrack } from "./handlers/receiveTrack.js";
+import { receiveUpdateBalance } from "./handlers/receiveUpdateBalance.js";
 import { requestLoggingMiddleware } from "./middlewares/requestLoggingMiddleware.js";
 import { requestValidationMiddleware } from "./middlewares/requestValidationMiddleware.js";
 import { runtimeRoutingMiddleware } from "./middlewares/runtimeRouting/runtimeRoutingMiddleware.js";
@@ -41,6 +44,9 @@ export function createBalanceWorkerApp({
 	commands.post("/finalize", receiveFinalize);
 	commands.post("/confirm-expired-lock", receiveConfirmExpiredLock);
 	commands.post("/reset", receiveReset);
+	commands.post("/update-balance", receiveUpdateBalance);
+	commands.post("/delete-balance", receiveDeleteBalance);
+	commands.post("/recalculate-balance", receiveRecalculateBalance);
 	app.route("/v1", commands);
 	return app;
 }

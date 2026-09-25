@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	test,
+} from "bun:test";
 import {
 	ApiVersionClass,
 	AppEnv,
@@ -11,7 +19,12 @@ import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { getSqsClient } from "@/queue/initSqs.js";
 import { createFakeMiscCache } from "../../utils/fakeMiscCache.js";
 
+// The legacy lane is what most cases here cover; the worker case turns the rollout on itself.
+const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+
 const mockState = {
+	runBalanceWorkerTrackCalls: [] as Record<string, unknown>[],
 	runTrackWithRolloutCalls: [] as Record<string, unknown>[],
 	queueCommands: [] as Record<string, unknown>[],
 	originalSend: null as null | SQSClient["send"],
@@ -111,12 +124,24 @@ await mockModuleWithRestore(
 );
 
 await mockModuleWithRestore(
-	"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
+	"@/internal/balances/utils/getSubjectFullCustomer.js",
 	() => ({
-		getOrSetCachedFullSubject: async () => ({
-			customer: { id: "cus_123" },
+		getSubjectFullCustomer: async () => ({
+			id: "cus_123",
 			customer_products: [],
+			extra_customer_entitlements: [],
+			entities: [],
 		}),
+	}),
+);
+
+await mockModuleWithRestore(
+	"@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js",
+	() => ({
+		runBalanceWorkerTrack: async (args: { body: typeof trackBody }) => {
+			mockState.runBalanceWorkerTrackCalls.push(args);
+			return { customer_id: args.body.customer_id, value: args.body.value };
+		},
 	}),
 );
 
@@ -166,6 +191,12 @@ const createCtx = (): AutumnContext =>
 describe("handleTrackTokens", () => {
 	let restoreQueueEnv: (() => void) | undefined;
 
+	afterAll(() => {
+		if (previousRollout === undefined)
+			delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+		else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
+	});
+
 	afterEach(() => {
 		if (mockState.originalSend) {
 			const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
@@ -177,9 +208,34 @@ describe("handleTrackTokens", () => {
 	});
 
 	beforeEach(() => {
+		mockState.runBalanceWorkerTrackCalls = [];
 		mockState.runTrackWithRolloutCalls = [];
 		mockState.queueCommands = [];
 		mockState.queuedForReplay = false;
+	});
+
+	test("with the balance worker on, tracks the converted body on the worker", async () => {
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+		try {
+			const response = await createApp({ ctx: createCtx() }).request(
+				"/track_tokens",
+				{
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify(requestBody),
+				},
+			);
+
+			expect(response.status).toBe(200);
+			expect(mockState.runBalanceWorkerTrackCalls).toHaveLength(1);
+			expect(mockState.runBalanceWorkerTrackCalls[0]).toMatchObject({
+				body: trackBody,
+				isAsync: false,
+			});
+			expect(mockState.runTrackWithRolloutCalls).toHaveLength(0);
+		} finally {
+			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+		}
 	});
 
 	test("tracks converted token usage through the rollout path", async () => {
