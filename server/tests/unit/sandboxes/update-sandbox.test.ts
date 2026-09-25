@@ -90,6 +90,35 @@ describe("updateSandboxForOrg (ownership-guarded)", () => {
 		expect(state.updateCalls.length).toBe(0);
 	});
 
+	test("an existing spaced name stays valid: colour update, and resending the unchanged name", async () => {
+		state.target = sandbox({ name: "Old Spaced Name" });
+		await call("org_sandbox", { color: "amber" });
+		await call("org_sandbox", { name: "Old Spaced Name", color: "blue" });
+		expect(state.updateCalls.length).toBe(2);
+	});
+
+	test("rejects a rename to a name with a space, no update", async () => {
+		state.target = sandbox({ name: "Old Spaced Name" });
+		await expect(
+			call("org_sandbox", { name: "New Spaced Name" }),
+		).rejects.toMatchObject({
+			code: ErrCode.InvalidRequest,
+			message: expect.stringContaining("spaces"),
+		});
+		expect(state.updateCalls.length).toBe(0);
+	});
+
+	test("rejects a rename whose slug is live or sandbox, no update", async () => {
+		state.target = sandbox({ name: "staging" });
+		for (const name of ["Live", "SANDBOX"]) {
+			await expect(call("org_sandbox", { name })).rejects.toMatchObject({
+				code: ErrCode.InvalidRequest,
+				message: expect.stringContaining("environment names"),
+			});
+		}
+		expect(state.updateCalls.length).toBe(0);
+	});
+
 	test("updates an owned sandbox, mapping tokens to columns", async () => {
 		state.target = sandbox();
 		await call("org_sandbox", {

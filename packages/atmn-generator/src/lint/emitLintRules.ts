@@ -60,6 +60,7 @@ export const emitLintRulesModule = ({
 						rules: entry?.rules,
 					}),
 					keys: spec?.keys,
+					values: spec?.values,
 					variants: spec?.variants,
 					rules: entry?.rules,
 				},

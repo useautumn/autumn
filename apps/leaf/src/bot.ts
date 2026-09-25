@@ -21,6 +21,7 @@ import {
 import { handleAssistantThreadStarted } from "./providers/slack/handlers/handleAssistantThreadStarted.js";
 import { handleSlackCatalogDecision } from "./providers/slack/handlers/handleSlackCatalogDecision.js";
 import {
+	handleEditedSlackMessage,
 	handleSlackMessage,
 	handleSlackThreadStart,
 	handleSubscribedSlackMessage,
@@ -112,6 +113,7 @@ bot.onNewMention(async (thread, message) => {
 	await handleSlackThreadStart(thread, message);
 });
 bot.onSubscribedMessage(handleSubscribedSlackMessage);
+bot.onMessageUpdated(handleEditedSlackMessage);
 bot.onSlashCommand(handleSlackSlashCommand);
 bot.onAction(
 	["approve_billing_action", "cancel_billing_action"],

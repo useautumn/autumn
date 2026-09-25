@@ -19,10 +19,7 @@ const AGENT_DOCS_SKILLS = join(
 	"../../../agent-docs/src/generated/skills.generated.ts",
 );
 
-const CLI_PACKAGE_JSON = join(
-	import.meta.dir,
-	"../../../atmn/package.json",
-);
+const CLI_PACKAGE_JSON = join(import.meta.dir, "../../../atmn/package.json");
 
 const FRONTMATTER = /^---\n([\s\S]*?)\n---\n?/;
 

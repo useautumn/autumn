@@ -1,6 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { COLLECTIONS, NESTED_FIXTURES, SINGLETONS } from "./collections";
+import {
+	COLLECTIONS,
+	NESTED_FIXTURES,
+	SINGLETONS,
+	SYNCED_LISTS,
+} from "./collections";
 import { copyRuntime } from "./emit/copyRuntime";
 import { emitApiRoutesModule } from "./emit/emitApiRoutes";
 import { type ClientOperation, emitClientModule } from "./emit/emitClient";
@@ -13,9 +18,16 @@ import { emitLabelsModule } from "./emit/emitLabelsModule";
 import { emitSingletonModule } from "./emit/emitSingleton";
 import { emitSkillsModule } from "./emit/emitSkills";
 import { emitWireModule } from "./emit/emitWire";
-import { renamedPaths, wirePathHints, withRenames } from "./emit/freeFormPaths";
+import {
+	renamedPaths,
+	type WirePathHints,
+	wirePathHints,
+	withRenames,
+} from "./emit/freeFormPaths";
 import { emitLintRulesModule } from "./lint/emitLintRules";
+import { knownValues } from "./lint/rules/define";
 import { LINT_REGISTRY } from "./lint/rules/registry";
+import { LOCAL_URL_CHECK } from "./lint/rules/webhooks";
 import { nodeRulesFromSpec } from "./lint/specRules/nodeRulesFromSpec";
 import { validateRegistry } from "./lint/validateRegistry";
 import { OVERLAY } from "./overlay/overlay";
@@ -29,6 +41,12 @@ import {
 	serverBaseUrl,
 } from "./spec/loadSpec";
 import { resolveRef } from "./spec/resolveRef";
+import {
+	lintEnvelope,
+	openEnumValues,
+	syncedListItemSchema,
+	syncedListsEnvelope,
+} from "./spec/syncedListSchema";
 
 const OUTPUT_DIR = join(import.meta.dir, "../../atmn/src/generated");
 const REPO_ROOT = join(import.meta.dir, "../../..");
@@ -42,6 +60,18 @@ const FIXTURE_RUNTIME_SOURCE = join(
 	import.meta.dir,
 	"emit/runtime/emitFixture.ts",
 );
+
+/**
+ * Shared rules the CLI must apply exactly as the server does. Each file imports
+ * nothing, so it is copied verbatim rather than re-stated.
+ */
+const SHARED_RUNTIMES = [
+	{ from: "shared/models/orgModels/sandboxName.ts", to: "sandboxName.ts" },
+	{
+		from: "shared/api/webhooks/endpoints/isLocalWebhookUrl.ts",
+		to: "isLocalWebhookUrl.ts",
+	},
+] as const;
 
 /**
  * Emitted source is not formatted by hand — it goes through the repo-pinned
@@ -67,6 +97,44 @@ const formatWithBiome = async ({
 		);
 	}
 };
+
+const withOpenEnumRules = ({
+	spec,
+	registry,
+}: {
+	spec: ReturnType<typeof loadSpec>;
+	registry: typeof LINT_REGISTRY;
+}): typeof LINT_REGISTRY =>
+	Object.entries(SYNCED_LISTS).reduce((acc, [name, meta]) => {
+		const entry = acc[name] ?? {};
+		return {
+			...acc,
+			[name]: {
+				...entry,
+				rules: [
+					...(entry.rules ?? []),
+					...meta.openEnums.map((field) =>
+						knownValues({
+							field,
+							values: openEnumValues({ spec, meta, field }),
+							warning: true,
+							because:
+								"isn't known to this atmn version; the server will check it.",
+						}),
+					),
+				],
+			},
+		};
+	}, registry);
+
+const mergeHints = (
+	left: WirePathHints,
+	right: WirePathHints,
+): WirePathHints => ({
+	recordPaths: [...left.recordPaths, ...right.recordPaths],
+	frozenPaths: [...left.frozenPaths, ...right.frozenPaths],
+	renamedPaths: { ...left.renamedPaths, ...right.renamedPaths },
+});
 
 export const generate = async (): Promise<string[]> => {
 	const spec = loadSpec();
@@ -130,6 +198,29 @@ export const generate = async (): Promise<string[]> => {
 		});
 	}
 
+	for (const [name, meta] of Object.entries(SYNCED_LISTS)) {
+		write({
+			name: `${name}.ts`,
+			source: emitCollectionModule({
+				name,
+				builder: meta.builder,
+				typeName: meta.typeName,
+				schema: syncedListItemSchema({ spec, meta }),
+				overlay: OVERLAY,
+				describe: meta.describe,
+			}),
+		});
+	}
+
+	for (const { from, to } of SHARED_RUNTIMES) {
+		copyRuntime({
+			from: join(REPO_ROOT, from),
+			to: join(OUTPUT_DIR, to),
+			sourceLabel: from,
+		});
+		written.push(join(OUTPUT_DIR, to));
+	}
+
 	for (const [name, meta] of Object.entries(SINGLETONS)) {
 		const body = requestBodySchema({ spec, path: meta.operationPath });
 		const schema = body.properties?.[meta.wireKey];
@@ -172,14 +263,18 @@ export const generate = async (): Promise<string[]> => {
 			collections: COLLECTIONS,
 			nested: NESTED_FIXTURES,
 			singletons: SINGLETONS,
+			syncedLists: SYNCED_LISTS,
 		}),
 	});
 
 	// A typo in a rule's path or field would otherwise ship as a rule that
 	// never fires.
+	const listsEnvelope = syncedListsEnvelope({ spec, lists: SYNCED_LISTS });
+	// An open enum's known names come from the spec, so they can't go stale.
+	const registry = withOpenEnumRules({ spec, registry: LINT_REGISTRY });
 	validateRegistry({
-		registry: LINT_REGISTRY,
-		schema: envelope,
+		registry,
+		schema: lintEnvelope({ spec, lists: SYNCED_LISTS }),
 		root,
 		overlay: OVERLAY,
 	});
@@ -206,8 +301,9 @@ export const generate = async (): Promise<string[]> => {
 					root,
 					overlay: OVERLAY,
 				}),
+				...nodeRulesFromSpec({ schema: listsEnvelope, root, overlay: OVERLAY }),
 			},
-			registry: LINT_REGISTRY,
+			registry,
 		}),
 	});
 	write({
@@ -219,7 +315,10 @@ export const generate = async (): Promise<string[]> => {
 		name: "wire.ts",
 		source: emitWireModule({
 			catalogHints: withRenames({
-				hints: wirePathHints({ schema: envelope, root }),
+				hints: mergeHints(
+					wirePathHints({ schema: envelope, root }),
+					wirePathHints({ schema: listsEnvelope, root }),
+				),
 				renames: renamedPaths({
 					overlay: OVERLAY,
 					roots: Object.fromEntries(
@@ -231,6 +330,8 @@ export const generate = async (): Promise<string[]> => {
 			}),
 			collections: COLLECTIONS,
 			singletons: SINGLETONS,
+			syncedLists: SYNCED_LISTS,
+			checks: [{ name: LOCAL_URL_CHECK, from: "./isLocalWebhookUrl.js" }],
 		}),
 	});
 
@@ -298,6 +399,25 @@ export const generate = async (): Promise<string[]> => {
 				path: "/v1/sandboxes.reset",
 				responseTypeName: "ResetSandboxResponse",
 				requestTypeName: "ResetSandboxParams",
+			},
+			// Synced-list operations take the entries push resolved for the target env.
+			{
+				name: "listWebhooks",
+				path: "/v1/webhooks.list",
+				responseTypeName: "ListWebhooksResponse",
+				requestTypeName: "ListWebhooksParams",
+			},
+			{
+				name: "previewSyncWebhooks",
+				path: "/v1/webhooks.preview_sync",
+				responseTypeName: "PreviewSyncWebhooksResponse",
+				requestTypeName: "SyncWebhooksParams",
+			},
+			{
+				name: "syncWebhooks",
+				path: "/v1/webhooks.sync",
+				responseTypeName: "SyncWebhooksResponse",
+				requestTypeName: "SyncWebhooksParams",
 			},
 		] as const
 	).map(({ name, path, responseTypeName, ...rest }) => {

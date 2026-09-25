@@ -90,6 +90,14 @@ export const branchSpecs = ({
 }): CollectionSpec[] =>
 	spec.branches?.map((branch) => branchSpecOf({ spec, branch })) ?? [spec];
 
+/** A list keyed by id outside the catalog: emitted like a collection item,
+ * with fields a config states once per environment. */
+export type SyncedListSpec = CollectionSpec & {
+	readonly wireKey: string;
+	/** Fixture fields holding `{ live?, sandbox?, [sandboxSlug]? }` maps. */
+	readonly envKeyed: readonly string[];
+};
+
 export type SingletonSpec = {
 	/** The request-body field the object is sent as. */
 	readonly wireKey: string;

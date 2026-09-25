@@ -117,6 +117,15 @@ import {
 	listSandboxesContract,
 	resetSandboxContract,
 } from "./sandboxesContract.js";
+import {
+	createWebhookContract,
+	deleteWebhookContract,
+	getWebhookContract,
+	listWebhooksContract,
+	previewSyncWebhooksContract,
+	syncWebhooksContract,
+	updateWebhookContract,
+} from "./webhooksContract.js";
 
 export const v2_3ContractRouter = oc.router({
 	// Customers
@@ -229,6 +238,15 @@ export const v2_3ContractRouter = oc.router({
 	sandboxesList: listSandboxesContract,
 	sandboxesDelete: deleteSandboxContract,
 	sandboxesReset: resetSandboxContract,
+
+	// Webhooks (endpoints Autumn sends events to)
+	webhooksCreate: createWebhookContract,
+	webhooksGet: getWebhookContract,
+	webhooksList: listWebhooksContract,
+	webhooksUpdate: updateWebhookContract,
+	webhooksDelete: deleteWebhookContract,
+	webhooksPreviewSync: previewSyncWebhooksContract,
+	webhooksSync: syncWebhooksContract,
 });
 
 /**
