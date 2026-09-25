@@ -1,12 +1,14 @@
 /** Aborts the upstream when no item arrives within the idle window; the
- * caller distinguishes the timeout from a real abort via `timedOut`. */
+ * caller distinguishes the timeout from a real abort via `timedOut`. A window
+ * given as a function is read again each time the timer is armed, so a caller
+ * can keep every gap inside a deadline rather than only the first. */
 export async function* idleGuardedStream<Item>({
 	idleTimeoutMs,
 	onIdleTimeout,
 	open,
 	signal,
 }: {
-	idleTimeoutMs: number;
+	idleTimeoutMs: number | (() => number);
 	onIdleTimeout: () => Error;
 	open: (
 		signal: AbortSignal,
@@ -18,10 +20,13 @@ export async function* idleGuardedStream<Item>({
 	signal?.addEventListener("abort", abortUpstream, { once: true });
 	let timedOut = false;
 	const armIdleTimer = () =>
-		setTimeout(() => {
-			timedOut = true;
-			controller.abort();
-		}, idleTimeoutMs);
+		setTimeout(
+			() => {
+				timedOut = true;
+				controller.abort();
+			},
+			typeof idleTimeoutMs === "function" ? idleTimeoutMs() : idleTimeoutMs,
+		);
 	let idleTimer = armIdleTimer();
 	try {
 		for await (const item of await open(controller.signal)) {

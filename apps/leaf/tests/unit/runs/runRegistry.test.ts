@@ -110,7 +110,7 @@ describe("runRegistry", () => {
 		closeRun({ key: "k1e", run });
 	});
 
-	test("a turn start covers only follow-ups eve had already accepted", async () => {
+	test("only a turn start after a cancel covers accepted follow-ups", async () => {
 		const accepts: Array<() => void> = [];
 		const run = registerRun({
 			key: "k1f",
@@ -129,7 +129,14 @@ describe("runRegistry", () => {
 		accepts[0]?.();
 		await accepted;
 
-		// The accepted one is in the turn that starts now; the other may not be.
+		// A start with no cancel after the accept may be a turn that predates
+		// the message, so it covers nothing.
+		run.coverAcceptedFollowUps();
+		expect(run.pendingTurns).toBe(2);
+
+		// The cancel the accepted one caused arms it; the replacement's start
+		// covers it. The other was still posting at the cancel, so stays owed.
+		run.noteTurnCancelled();
 		run.coverAcceptedFollowUps();
 		expect(run.pendingTurns).toBe(1);
 
@@ -141,6 +148,7 @@ describe("runRegistry", () => {
 		await inFlight;
 		const later = run.injectFollowUp({ text: "after the claim" });
 		await Bun.sleep(0);
+		run.noteTurnCancelled();
 		run.coverAcceptedFollowUps();
 		expect(run.pendingTurns).toBe(1);
 

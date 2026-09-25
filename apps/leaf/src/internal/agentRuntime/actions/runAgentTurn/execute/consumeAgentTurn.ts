@@ -39,9 +39,10 @@ const MIN_IDLE_WINDOW_MS = ms.seconds(1);
 
 /** A quiet window must end by the time the turn may settle. A full window
  * opened near the deadline outlives the caller's backstop, which then kills
- * the run with a timeout warning instead of letting it settle on its own. A
- * working child keeps the full window, because the deadline does not settle
- * such a turn. */
+ * the run with a timeout warning instead of letting it settle on its own.
+ * Read again at every arm, since each event restarts the window. The deadline
+ * always lands before the quiet cap, because activity starts after it is set.
+ * A working child keeps the full window: the deadline does not settle it. */
 const idleWindowFor = ({
 	activity,
 	deadlineAt,
@@ -49,15 +50,12 @@ const idleWindowFor = ({
 	activity: TurnActivity;
 	deadlineAt?: number;
 }) => {
-	if (activity.activeChildren() > 0) return STREAM_IDLE_TIMEOUT_MS;
-	const untilQuietCap = MAX_QUIET_MS - activity.msSinceActivity();
-	const untilDeadline =
-		deadlineAt === undefined
-			? Number.POSITIVE_INFINITY
-			: deadlineAt - Date.now();
+	if (deadlineAt === undefined || activity.activeChildren() > 0) {
+		return STREAM_IDLE_TIMEOUT_MS;
+	}
 	return Math.max(
 		MIN_IDLE_WINDOW_MS,
-		Math.min(STREAM_IDLE_TIMEOUT_MS, untilQuietCap, untilDeadline),
+		Math.min(STREAM_IDLE_TIMEOUT_MS, deadlineAt - Date.now()),
 	);
 };
 
@@ -128,7 +126,7 @@ const streamPassEvents = async ({
 		stop: NonNullable<ActiveRun["stop"]>;
 	}) => Promise<EveTurnOutcome>;
 	emitSettledTurn: (outcome: EveTurnOutcome) => Promise<void>;
-	idleTimeoutMs: number;
+	idleTimeoutMs: () => number;
 	onFirstStreamEvent?: () => void;
 	run?: ActiveRun;
 	signal: AbortSignal;
@@ -157,6 +155,7 @@ const streamPassEvents = async ({
 				};
 			}
 
+			if (event.type === "turn.cancelled") run?.noteTurnCancelled();
 			if (event.type === "turn.started") run?.coverAcceptedFollowUps();
 
 			const result = await applyEveEvent({ ...turn, event, progress });
@@ -390,7 +389,7 @@ export const consumeAgentTurn = async ({
 				abandonForStop,
 				activity,
 				emitSettledTurn,
-				idleTimeoutMs: idleWindowFor({ activity, deadlineAt }),
+				idleTimeoutMs: () => idleWindowFor({ activity, deadlineAt }),
 				onFirstStreamEvent: streamedAnyEvent ? undefined : onFirstStreamEvent,
 				run,
 				signal: abortController.signal,

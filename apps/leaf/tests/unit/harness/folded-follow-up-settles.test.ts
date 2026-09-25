@@ -66,7 +66,7 @@ await mockLeafModule({
 		streamEveEvents: async function* ({
 			idleTimeoutMs = DEFAULT_IDLE_WINDOW_MS,
 		}: {
-			idleTimeoutMs?: number;
+			idleTimeoutMs?: number | (() => number);
 		}) {
 			const events = streamPasses[streamCallCount] ?? [];
 			streamCallCount += 1;
@@ -82,9 +82,12 @@ await mockLeafModule({
 				index += 1;
 				yield event;
 			}
-			// eve has nothing more to say: the window runs out in full.
-			idleWindows.push(idleTimeoutMs);
-			advanceClock(idleTimeoutMs);
+			// eve has nothing more to say: the window armed after the last event
+			// runs out in full.
+			const window =
+				typeof idleTimeoutMs === "function" ? idleTimeoutMs() : idleTimeoutMs;
+			idleWindows.push(window);
+			advanceClock(window);
 			throw new MockEveStreamIdleTimeoutError("Eve stream idle timeout");
 		},
 	}),
@@ -227,5 +230,36 @@ describe("a follow-up folded into the reply it was waiting for", () => {
 		expect(elapsedMs).toBeLessThan(TURN_BACKSTOP_MS);
 		// The last window was cut short to end on the deadline.
 		expect(idleWindows.at(-1)).toBeLessThan(idleWindows[0]);
+	});
+
+	test("a late event does not stretch the wait past the deadline", async () => {
+		let acceptPost = () => {};
+		const run = registerRun({
+			key: "folded-follow-up-3",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendUserMessage: () =>
+				new Promise<void>((resolve) => {
+					acceptPost = resolve;
+				}),
+		});
+		run.resolveSessionId("eve_session_1");
+		streamPasses = [steeredIntoOneReply];
+		beforeEventAt.set(1, () => void run.injectFollowUp({ text: FOLLOW_UP }));
+		// The replacement works for 140s before replying, so the window armed
+		// after its reply opens 10s before the deadline.
+		beforeEventAt.set(4, () => {
+			advanceClock(140_000);
+			acceptPost();
+		});
+		const settled: unknown[] = [];
+
+		const outcome = await consume({ run, settled });
+
+		expect(settled).toEqual([{ kind: "answered", text: MERGED_REPLY }]);
+		expect(outcome).toEqual({ declined: true, kind: "silent" });
+		const elapsedMs = nowMs - TURN_START.getTime();
+		expect(elapsedMs).toBeLessThanOrEqual(turnDeadlineFrom({ startedAt: 0 }));
+		expect(idleWindows).toEqual([10_000]);
 	});
 });
