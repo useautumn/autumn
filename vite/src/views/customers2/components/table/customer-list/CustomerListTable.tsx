@@ -1,4 +1,4 @@
-import { AppEnv, type FullCustomer } from "@autumn/shared";
+import type { FullCustomer } from "@autumn/shared";
 import { IconButton, useColumnVisibility } from "@autumn/ui";
 import { ArrowSquareOutIcon, UsersIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
@@ -9,7 +9,6 @@ import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { getLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import {
 	balanceFilterQueryKey,
@@ -39,10 +38,8 @@ export function CustomerListTable({
 	isFetchingUncached: boolean;
 }) {
 	const { org } = useOrg();
-	const env = useEnv();
 
-	const tableContainerHeight =
-		env === AppEnv.Sandbox ? "calc(100vh - 230px)" : "calc(100vh - 190px)";
+	const tableContainerHeight = "calc(100vh - 190px)";
 
 	const { features } = useFeaturesQuery();
 	const { queryStates, setFilters, currentCursor } = useCustomerFilters();
