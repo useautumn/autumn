@@ -1,38 +1,41 @@
-/** biome-ignore-all lint/a11y/noStaticElementInteractions: shush */
 "use client";
 
 import { AppEnv } from "@autumn/shared";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
+	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	Skeleton,
 } from "@autumn/ui";
-import { Check, Import, Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
 import { useOrg } from "@/hooks/common/useOrg";
 import {
 	type SandboxSummary,
 	useSandboxesQuery,
 } from "@/hooks/queries/useSandboxesQuery";
-import { sandboxColorClass } from "@/hooks/sandbox/sandboxDisplay";
 import { sandboxBasePath } from "@/hooks/sandbox/sandboxUrl";
 import {
-	type ActiveSandbox,
 	setActiveSandbox,
 	useActiveSandbox,
 } from "@/hooks/sandbox/useActiveSandbox";
-import { cn } from "@/lib/utils";
 import { envToPath } from "@/utils/genUtils";
-import { CopySandboxDialog } from "./env-dropdown/CopySandboxDialog";
 import { CreateSandboxDialog } from "./env-dropdown/CreateSandboxDialog";
-import { DeleteSandboxDialog } from "./env-dropdown/DeleteSandboxDialog";
-import { EditSandboxDialog } from "./env-dropdown/EditSandboxDialog";
+import { EnvironmentIcon } from "./env-dropdown/EnvironmentIcon";
+import { EnvironmentMenuItem } from "./env-dropdown/EnvironmentMenuItem";
+import { EnvironmentMenuSearch } from "./env-dropdown/EnvironmentMenuSearch";
 import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
+import { ManageEnvironmentsDialog } from "./env-dropdown/manage-environments/ManageEnvironmentsDialog";
 import { useSidebarContext } from "./SidebarContext";
+
+const SEARCHABLE_ENVIRONMENT_COUNT = 6;
+
+const matchesQuery = ({ name, query }: { name: string; query: string }) =>
+	name.toLowerCase().includes(query.trim().toLowerCase());
 
 export const useEnvChange = () => {
 	const navigate = useNavigate();
@@ -62,17 +65,10 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 		enabled: !isLoading && !!org,
 	});
 
-	const [isHovered, setIsHovered] = useState(false);
 	const [open, setOpen] = useState(false);
+	const [query, setQuery] = useState("");
 	const [createOpen, setCreateOpen] = useState(false);
-	const [sandboxToDelete, setSandboxToDelete] = useState<SandboxSummary | null>(
-		null,
-	);
-	const [sandboxToEdit, setSandboxToEdit] = useState<SandboxSummary | null>(
-		null,
-	);
-	const [sandboxToCopyInto, setSandboxToCopyInto] =
-		useState<SandboxSummary | null>(null);
+	const [manageOpen, setManageOpen] = useState(false);
 	const handleEnvChange = useEnvChange();
 	const { expanded } = useSidebarContext();
 
@@ -81,188 +77,138 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 
 	if (isResolving || willRedirectToSandbox) {
 		return (
-			<div className={cn("flex text-muted-foreground text-xs gap-1 px-3")}>
-				<Skeleton className={cn("h-6", expanded ? "w-full" : "w-7")} />
+			<div className="flex text-xs text-muted-foreground">
+				<Skeleton className="h-8 w-full rounded-lg" />
 			</div>
 		);
 	}
+
+	const handleOpenChange = (next: boolean) => {
+		setOpen(next);
+		if (!next) {
+			setQuery("");
+		}
+	};
 
 	const selectMainEnv = (target: AppEnv) => {
 		setActiveSandbox(null);
 		handleEnvChange(target);
 	};
 
-	const selectSandbox = (sandbox: ActiveSandbox) => {
-		setActiveSandbox(sandbox);
+	const selectSandbox = (sandbox: SandboxSummary) => {
+		setActiveSandbox({
+			id: sandbox.id,
+			name: sandbox.name,
+			color: sandbox.color,
+			icon: sandbox.icon,
+		});
 		handleEnvChange(AppEnv.Sandbox);
 	};
 
-	const itemClass =
-		"flex justify-between items-center text-muted-foreground gap-2";
+	const isDeployed = !!org?.deployed;
 	const inLegacySandbox = env === AppEnv.Sandbox && !activeSandbox;
+	const environmentCount = sandboxes.length + (isDeployed ? 2 : 1);
+	const isSearchable = environmentCount >= SEARCHABLE_ENVIRONMENT_COUNT;
+
+	const showProduction =
+		isDeployed && matchesQuery({ name: "Production", query });
+	const showLegacySandbox = matchesQuery({ name: "Sandbox", query });
+	const visibleSandboxes = sandboxes.filter((sandbox) =>
+		matchesQuery({ name: sandbox.name, query }),
+	);
+	const hasSandboxResults = showLegacySandbox || visibleSandboxes.length > 0;
 
 	return (
-		<div
-			className={cn("flex text-muted-foreground text-xs gap-1 px-3")}
-			onMouseEnter={() => setIsHovered(true)}
-			onMouseLeave={() => setIsHovered(false)}
-		>
-			<DropdownMenu open={open} onOpenChange={setOpen}>
-				<ExpandedEnvTrigger isHovered={isHovered} />
+		<div className="flex text-xs text-muted-foreground">
+			<DropdownMenu open={open} onOpenChange={handleOpenChange}>
+				<ExpandedEnvTrigger />
 
 				<DropdownMenuContent
 					side="bottom"
 					align="start"
-					className="w-(--anchor-width)"
+					className={expanded ? "w-(--anchor-width)" : "w-52"}
 				>
-					<DropdownMenuItem
-						className={itemClass}
-						onClick={() => selectMainEnv(AppEnv.Sandbox)}
-					>
-						<span>Sandbox</span>
-						{inLegacySandbox && (
-							<Check size={12} className="!h-4 text-tertiary-foreground" />
-						)}
-					</DropdownMenuItem>
-
-					{org?.deployed && (
-						<DropdownMenuItem
-							className={itemClass}
-							onClick={() => selectMainEnv(AppEnv.Live)}
-						>
-							<span>Production</span>
-							{env === AppEnv.Live && (
-								<Check size={12} className="!h-4 text-tertiary-foreground" />
-							)}
-						</DropdownMenuItem>
+					{isSearchable && (
+						<EnvironmentMenuSearch query={query} onQueryChange={setQuery} />
 					)}
 
-					{sandboxes.length > 0 && <DropdownMenuSeparator />}
+					{showProduction && (
+						<DropdownMenuGroup>
+							<DropdownMenuLabel className="px-2 text-tertiary-foreground">
+								Live
+							</DropdownMenuLabel>
+							<EnvironmentMenuItem
+								icon={<EnvironmentIcon isLive className="size-3.5" />}
+								name="Production"
+								isActive={env === AppEnv.Live}
+								onSelect={() => selectMainEnv(AppEnv.Live)}
+							/>
+						</DropdownMenuGroup>
+					)}
 
-					{sandboxes.map((sandbox) => {
-						const isActive =
-							env === AppEnv.Sandbox && activeSandbox?.id === sandbox.id;
-						return (
-							<DropdownMenuItem
-								key={sandbox.id}
-								className={itemClass}
-								onClick={() =>
-									selectSandbox({
-										id: sandbox.id,
-										name: sandbox.name,
-										color: sandbox.color,
-										icon: sandbox.icon,
-									})
-								}
-							>
-								<span className="flex items-center gap-2 truncate">
-									<PhosphorIcon
-										name={sandbox.icon}
-										className={cn(
-											"size-3 shrink-0",
-											sandboxColorClass(sandbox.color),
-										)}
-									/>
-									<span className="truncate">{sandbox.name}</span>
-								</span>
-								<span className="flex shrink-0 items-center gap-1">
-									{isActive && (
-										<Check
-											size={12}
-											className="!h-4 text-tertiary-foreground"
-										/>
-									)}
-									<button
-										aria-label={`Edit ${sandbox.name}`}
-										className="text-muted-foreground transition-colors hover:text-foreground"
-										onClick={(e) => {
-											e.stopPropagation();
-											setOpen(false);
-											setSandboxToEdit(sandbox);
-										}}
-										type="button"
-									>
-										<Pencil size={12} className="!h-3 w-3" />
-									</button>
-									{sandboxes.length > 1 && (
-										<button
-											aria-label={`Import into ${sandbox.name}`}
-											className="text-muted-foreground transition-colors hover:text-foreground"
-											onClick={(e) => {
-												e.stopPropagation();
-												setOpen(false);
-												setSandboxToCopyInto(sandbox);
-											}}
-											type="button"
-										>
-											<Import size={12} className="!h-3 w-3" />
-										</button>
-									)}
-									<button
-										aria-label={`Delete ${sandbox.name}`}
-										className="text-muted-foreground transition-colors hover:text-destructive"
-										onClick={(e) => {
-											e.stopPropagation();
-											setOpen(false);
-											setSandboxToDelete(sandbox);
-										}}
-										type="button"
-									>
-										<Trash2 size={12} className="!h-3 w-3" />
-									</button>
-								</span>
-							</DropdownMenuItem>
-						);
-					})}
+					{hasSandboxResults && (
+						<DropdownMenuGroup>
+							<DropdownMenuLabel className="px-2 text-tertiary-foreground">
+								Sandboxes
+							</DropdownMenuLabel>
+							{showLegacySandbox && (
+								<EnvironmentMenuItem
+									icon={<EnvironmentIcon className="size-3.5" />}
+									name="Sandbox"
+									isActive={inLegacySandbox}
+									onSelect={() => selectMainEnv(AppEnv.Sandbox)}
+								/>
+							)}
+							{visibleSandboxes.map((sandbox) => (
+								<EnvironmentMenuItem
+									key={sandbox.id}
+									icon={
+										<EnvironmentIcon sandbox={sandbox} className="size-3.5" />
+									}
+									name={sandbox.name}
+									isActive={
+										env === AppEnv.Sandbox && activeSandbox?.id === sandbox.id
+									}
+									onSelect={() => selectSandbox(sandbox)}
+								/>
+							))}
+						</DropdownMenuGroup>
+					)}
+
+					{!showProduction && !hasSandboxResults && (
+						<p className="px-2 py-1.5 text-sm text-tertiary-foreground">
+							No environments found
+						</p>
+					)}
 
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
-						className="flex items-center gap-2 text-muted-foreground"
-						onClick={() => {
-							setOpen(false);
-							setCreateOpen(true);
-						}}
+						className="h-7 gap-2 px-2"
+						onClick={() => setCreateOpen(true)}
 					>
-						<Plus size={12} className="!h-3 w-3 shrink-0" />
-						<span>New sandbox</span>
+						<Plus className="size-3.5" />
+						New sandbox
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						className="h-7 gap-2 px-2"
+						onClick={() => setManageOpen(true)}
+					>
+						<SlidersHorizontal className="size-3.5" />
+						Manage sandboxes
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<CreateSandboxDialog open={createOpen} onOpenChange={setCreateOpen} />
-			{sandboxToDelete && (
-				<DeleteSandboxDialog
-					sandbox={sandboxToDelete}
-					open
-					setOpen={(next) => {
-						if (!next) {
-							setSandboxToDelete(null);
-						}
-					}}
-				/>
-			)}
-			{sandboxToEdit && (
-				<EditSandboxDialog
-					sandbox={sandboxToEdit}
-					open
-					setOpen={(next) => {
-						if (!next) {
-							setSandboxToEdit(null);
-						}
-					}}
-				/>
-			)}
-			{sandboxToCopyInto && (
-				<CopySandboxDialog
-					target={sandboxToCopyInto}
-					sandboxes={sandboxes}
-					open
-					setOpen={(next) => {
-						if (!next) {
-							setSandboxToCopyInto(null);
-						}
-					}}
-				/>
-			)}
+			<ManageEnvironmentsDialog
+				open={manageOpen}
+				onOpenChange={setManageOpen}
+				sandboxes={sandboxes}
+				isDeployed={isDeployed}
+				onCreateSandbox={() => {
+					setManageOpen(false);
+					setCreateOpen(true);
+				}}
+			/>
 		</div>
 	);
 };

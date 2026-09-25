@@ -102,6 +102,8 @@ const DialogContent = React.forwardRef<
 				className={cn(
 					"data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 fixed top-[50%] left-[50%] z-[180] grid translate-x-[-50%] translate-y-[-50%] rounded-lg shadow-lg ring-1 ring-foreground/10 duration-200",
 					"w-full max-w-md gap-3 bg-background",
+					// Dims this dialog while a nested dialog is open on top of it.
+					"after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-black/50 after:opacity-0 after:transition-opacity after:duration-200 after:content-[''] data-nested-dialog-open:after:opacity-100 dark:after:bg-black/60",
 					"p-4",
 					className,
 				)}

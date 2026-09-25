@@ -11,11 +11,9 @@ export const OrgLogo = ({ org }: { org: FrontendOrg }) => {
 	const showLogo = Boolean(org?.logo) && org.logo !== failedLogoUrl;
 
 	return (
-		// Centred in a 16px slot to match the nav icons, so the sidebar has one
-		// vertical line of icons rather than the logo sitting proud of it.
 		<div
 			className={cn(
-				"rounded-md overflow-hidden flex items-center justify-center w-4 h-4 min-w-4 min-h-4",
+				"flex size-5 min-h-5 min-w-5 items-center justify-center overflow-hidden rounded-md ring-1 ring-black/10 dark:ring-[#2A2A2A]",
 			)}
 		>
 			{showLogo ? (
@@ -26,7 +24,7 @@ export const OrgLogo = ({ org }: { org: FrontendOrg }) => {
 					src={org.logo}
 				/>
 			) : (
-				<span className="w-full h-full flex items-center justify-center bg-linear-to-r from-purple-600 via-purple-500 to-purple-gradient text-white text-[10px]">
+				<span className="w-full h-full flex items-center justify-center bg-linear-to-r from-purple-600 via-purple-500 to-purple-gradient text-white text-[11px]">
 					{firstLetter}
 				</span>
 			)}
