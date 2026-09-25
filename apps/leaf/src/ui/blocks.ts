@@ -247,6 +247,18 @@ const removedPlansFromPreview = (preview: unknown) => {
 	});
 };
 
+/** A trial that reverts on end hands the replaced plan back afterwards, so
+ * that plan is paused rather than removed. Mirrors the dashboard's attach
+ * sheet: only a trial set on the request with a positive length counts. */
+const attachPausesOutgoing = (request: Record<string, unknown>) => {
+	const trial = getRecord(
+		getRecord(customizeWithFreeTrial(request)).free_trial,
+	);
+	return (
+		(getNumber(trial.duration_length) ?? 0) > 0 && trial.on_end === "revert"
+	);
+};
+
 // Tier 1 of the card hierarchy: customer and plan are the subject of the
 // action, so they render as a sentence — never as label/value fields.
 const actionPhrases = ({
@@ -320,13 +332,14 @@ const actionPhrases = ({
 						}),
 					)
 					.join(", ");
-				const removing = (verb: string) =>
+				const pausing = attachPausesOutgoing(request);
+				const outgoing = (verb: string) =>
 					removedLabels ? ` and ${verb} ${removedLabels}` : "";
 				return {
-					done: `Attached ${target}${removing("removed")}`,
+					done: `Attached ${target}${outgoing(pausing ? "paused" : "removed")}`,
 					failed: `Couldn't attach ${target}`,
-					pending: `Attach ${target}${removing("remove")}`,
-					running: `Attaching ${target}${removing("removing")}`,
+					pending: `Attach ${target}${outgoing(pausing ? "pause" : "remove")}`,
+					running: `Attaching ${target}${outgoing(pausing ? "pausing" : "removing")}`,
 				};
 			}
 			case "updateSubscription": {

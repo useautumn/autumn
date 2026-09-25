@@ -97,6 +97,39 @@ describe("approval card", () => {
 		);
 	});
 
+	test("a revert-on-end trial pauses the replaced plan", () => {
+		const preview = wrapMcpResult({
+			preview: {
+				currency: "usd",
+				incoming: [{ plan_id: "scale", plan: { name: "Scale" } }],
+				outgoing: [{ plan_id: "launch", plan: { name: "Launch" } }],
+				total: 0,
+			},
+		});
+		const cardFor = (freeTrial: Record<string, unknown>) =>
+			JSON.stringify(
+				approvalCard({
+					id: "approval_1",
+					env: AppEnv.Sandbox,
+					toolName: "attach",
+					toolArgs: {
+						request: { ...attachArgs.request, free_trial: freeTrial },
+					},
+					preview,
+				}),
+			);
+		const trial = { duration_length: 14, duration_type: "day" };
+
+		const reverting = cardFor({ ...trial, on_end: "revert" });
+		expect(reverting).toContain(
+			"and pausing **<https://app.useautumn.com/sandbox/products/launch|Launch>**",
+		);
+		expect(reverting).not.toContain("and removing");
+		expect(cardFor({ ...trial, on_end: "bill" })).toContain(
+			"and removing **<https://app.useautumn.com/sandbox/products/launch|Launch>**",
+		);
+	});
+
 	test("an in-place plan update is not shown as a removal", () => {
 		const card = approvalCard({
 			id: "approval_1",
