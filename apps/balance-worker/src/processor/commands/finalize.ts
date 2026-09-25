@@ -1,8 +1,9 @@
 import {
 	applyMutation,
 	type Catalog,
-	computeFinalize,
+	deductFinalize,
 	type FinalizeCommand,
+	finalizeOutcomeToMutation,
 	meteringIdentityToPartitionKey,
 	parseFinalizeCommand,
 	type SubjectState,
@@ -78,7 +79,12 @@ function decideFinalize({
 		state,
 		identity: command.identity,
 	});
-	const mutation = computeFinalize({ fullSubject, command });
+	const deduction = deductFinalize({ fullSubject, command });
+	const mutation = finalizeOutcomeToMutation({
+		command,
+		outcome: deduction,
+		fullSubject,
+	});
 	const nextState = applyMutation({ state, mutation });
 	const after = scope.ctx.subjectHydrator.readSubject({
 		state: nextState,
@@ -88,6 +94,11 @@ function decideFinalize({
 		kind: "write",
 		mutation,
 		nextState,
-		effects: decideEffects({ mutation, before: fullSubject, after }),
+		effects: decideEffects({
+			mutation,
+			before: fullSubject,
+			after,
+			deduction,
+		}),
 	};
 }

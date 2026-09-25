@@ -27,6 +27,7 @@ export type {
 	BillingPlanOp,
 	BillingPlanUpdateOp,
 } from "./commands/applyBillingPlan/types/billingPlanOp.js";
+export { checkRefusedByDeduction } from "./commands/check/checkRefusedByDeduction.js";
 export { computeCheck } from "./commands/check/computeCheck.js";
 export type { CheckCommand } from "./commands/check/types/checkCommand.js";
 export type { CheckResult } from "./commands/check/types/checkResult.js";
@@ -38,6 +39,8 @@ export type { DeleteBalanceCommand } from "./commands/deleteBalance/types/delete
 export type { DeleteBalanceResult } from "./commands/deleteBalance/types/deleteBalanceResult.js";
 export type { EvictCommand } from "./commands/evict/types/evictCommand.js";
 export { computeFinalize } from "./commands/finalize/computeFinalize.js";
+export { deductFinalize } from "./commands/finalize/deductFinalize.js";
+export { finalizeOutcomeToMutation } from "./commands/finalize/finalizeOutcomeToMutation.js";
 export type { FinalizeCommand } from "./commands/finalize/types/finalizeCommand.js";
 export type { FinalizeResult } from "./commands/finalize/types/finalizeResult.js";
 export type { FlushCommand } from "./commands/flush/types/flushCommand.js";
@@ -59,6 +62,8 @@ export type {
 	ResetRow,
 } from "./commands/reset/types/resetResult.js";
 export { computeTrack } from "./commands/track/computeTrack.js";
+export { deductTrack } from "./commands/track/deductTrack.js";
+export { trackOutcomeToMutation } from "./commands/track/trackOutcomeToMutation.js";
 export type {
 	OverageBehavior,
 	TrackCommand,

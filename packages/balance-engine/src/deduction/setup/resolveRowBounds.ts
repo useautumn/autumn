@@ -13,7 +13,16 @@ import type { WorkerFullCustomerEntitlementWithProduct } from "../../models/subj
 import type { DeductionRow } from "../types/deductionRow.js";
 import type { CreditCost } from "./resolveCreditCosts.js";
 
-/** A free allocated grant may run over unless the caller rejects; a plan or customer control can enable or veto overage for the whole feature. */
+/** The one row whose bounds follow the request: a free allocated grant may run over unless the caller rejects. */
+export const isFreeAllocatedRow = ({
+	customerEntitlement,
+}: {
+	customerEntitlement: WorkerFullCustomerEntitlementWithProduct;
+}): boolean =>
+	isAllocatedCustomerEntitlement(customerEntitlement) &&
+	isFreeCustomerEntitlement(customerEntitlement);
+
+/** A plan or customer control can enable or veto overage for the whole feature. */
 const usageAllowedOf = ({
 	customerEntitlement,
 	control,
@@ -25,12 +34,10 @@ const usageAllowedOf = ({
 	featureHasNativeOverage: boolean;
 	overageBehavior: OverageBehavior;
 }): boolean => {
-	const isFreeAllocated =
-		isAllocatedCustomerEntitlement(customerEntitlement) &&
-		isFreeCustomerEntitlement(customerEntitlement);
 	const native =
 		Boolean(customerEntitlement.usage_allowed) ||
-		(isFreeAllocated && overageBehavior !== "reject");
+		(isFreeAllocatedRow({ customerEntitlement }) &&
+			overageBehavior !== "reject");
 	if (control?.enabled === true && !featureHasNativeOverage) return true;
 	if (control?.enabled === false) return false;
 	return native;

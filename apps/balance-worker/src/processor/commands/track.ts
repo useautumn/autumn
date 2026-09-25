@@ -1,10 +1,11 @@
 import {
 	applyMutation,
 	type Catalog,
-	computeTrack,
+	deductTrack,
 	meteringIdentityToPartitionKey,
 	type SubjectState,
 	type TrackCommand,
+	trackOutcomeToMutation,
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
@@ -72,7 +73,12 @@ function decideTrack({
 		state,
 		identity: command.identity,
 	});
-	const mutation = computeTrack({ fullSubject, command });
+	const deduction = deductTrack({ fullSubject, command });
+	const mutation = trackOutcomeToMutation({
+		command,
+		outcome: deduction,
+		fullSubject,
+	});
 	const nextState = applyMutation({ state, mutation });
 	const after = scope.ctx.subjectHydrator.readSubject({
 		state: nextState,
@@ -82,6 +88,11 @@ function decideTrack({
 		kind: "write",
 		mutation,
 		nextState,
-		effects: decideEffects({ mutation, before: fullSubject, after }),
+		effects: decideEffects({
+			mutation,
+			before: fullSubject,
+			after,
+			deduction,
+		}),
 	};
 }

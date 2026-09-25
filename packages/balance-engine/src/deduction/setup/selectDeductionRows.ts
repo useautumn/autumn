@@ -35,12 +35,12 @@ const byExpiresAt = (left: WorkerRollover, right: WorkerRollover): number =>
 	(right.expires_at ?? Number.POSITIVE_INFINITY);
 
 /** `getCheckSubject`: a past-due product stops funding when the org blocks overdue usage on a check, or when it bills by threshold. */
-const isOverdueBlocked = ({
+export const isOverdueBlocked = ({
 	customerProduct,
 	request,
 }: {
 	customerProduct: WorkerFullCustomerProduct;
-	request: DeductionRequest;
+	request: Pick<DeductionRequest, "enforceOverdueBlock" | "org">;
 }): boolean =>
 	customerProduct.status === CusProductStatus.PastDue &&
 	!customerProduct.product.config?.ignore_past_due &&
