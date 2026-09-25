@@ -89,7 +89,6 @@ test("failed retirement stops the group without starting a replacement", async (
 });
 
 import { describe, expect, test } from "bun:test";
-import { KafkaPartitionAssignmentRevokedError } from "@autumn/kafka";
 import type {
 	ConsumerCrashEvent,
 	ConsumerGroupJoinEvent,
@@ -436,9 +435,10 @@ describe("Kafka owned partition group", () => {
 		}
 	});
 
-	test("revokes every runtime and re-fences a retained partition", async () => {
+	test("a partition assigned back after a rebalance keeps its runtime; one assigned away retires", async () => {
 		const fixture = createStoreFixture();
 		try {
+			initializePartitions({ store: fixture.store });
 			const consumer = createFakeGroupConsumer();
 			const started: number[] = [];
 			const stopped: number[] = [];
@@ -461,18 +461,32 @@ describe("Kafka owned partition group", () => {
 			});
 			await group.start();
 			consumer.emitGroupJoin([0]);
-			await waitFor(() => started.length === 1);
+			await waitFor(
+				() =>
+					group.findRuntime({ partition: 0, routeEpoch: "0" }) !== undefined,
+			);
 
 			consumer.emitRebalancing();
-			await waitFor(() => stopped.length === 1);
 			consumer.emitGroupJoin([0]);
-			await waitFor(() => started.length === 2);
+			await new Promise<void>(setImmediate);
+			expect(started).toEqual([0]);
+			expect(stopped).toEqual([]);
+			expect(unavailable).toEqual([]);
+			expect(
+				group.findRuntime({ partition: 0, routeEpoch: "0" }),
+			).toBeDefined();
+			// Only the partitions this worker did not keep are paused for a fresh start.
+			expect(consumer.pauses.filter((pause) => pause.topic === topic)).toEqual([
+				{ topic, partitions: [0] },
+			]);
 
-			expect(started).toEqual([0, 0]);
+			consumer.emitRebalancing();
+			consumer.emitGroupJoin([1]);
+			await waitFor(() => started.length === 2);
+			await waitFor(() => stopped.length === 1);
+			expect(started).toEqual([0, 1]);
 			expect(stopped).toEqual([0]);
-			expect(unavailable[0]).toBeInstanceOf(
-				KafkaPartitionAssignmentRevokedError,
-			);
+			expect(unavailable).toEqual([]);
 			await group.stop();
 		} finally {
 			closeStoreFixture(fixture);
@@ -655,7 +669,7 @@ describe("Kafka owned partition group", () => {
 		}
 	});
 
-	test("stops owned runtimes before stopping the shared consumer", async () => {
+	test("leaves the group before retiring owned runtimes", async () => {
 		const fixture = createStoreFixture();
 		try {
 			const consumer = createFakeGroupConsumer();
@@ -689,13 +703,13 @@ describe("Kafka owned partition group", () => {
 
 			const stopping = group.stop();
 			await waitFor(() => lifecycle.includes("runtime-stop-start"));
-			expect(lifecycle).not.toContain("consumer-stop");
+			expect(lifecycle.indexOf("consumer-stop")).toBeLessThan(
+				lifecycle.indexOf("runtime-stop-start"),
+			);
 
 			stopGate.resolve();
 			await stopping;
-			expect(lifecycle.indexOf("runtime-stop-end")).toBeLessThan(
-				lifecycle.indexOf("consumer-stop"),
-			);
+			expect(lifecycle.at(-1)).toBe("runtime-stop-end");
 		} finally {
 			closeStoreFixture(fixture);
 		}
@@ -1311,6 +1325,8 @@ test("admission seeks the command bookmark before resuming, even when no batch a
 			commandTopic: "commands",
 			partitionsConsumedConcurrently: 1,
 			healthRefreshIntervalMs: 60_000,
+			handoffReadyTimeoutMs: 1,
+			handoffClaimTimeoutMs: 1,
 		},
 	});
 	try {

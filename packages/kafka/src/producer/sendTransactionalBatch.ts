@@ -54,10 +54,13 @@ export async function sendTransactionalBatch({
 	async function send(
 		transaction: KafkaTransaction,
 	): Promise<{ baseOffset: bigint }> {
-		const partitionMessages = messages.map((message) => ({
-			...message,
-			partition,
-		}));
+		const partitionMessages: {
+			key: Buffer;
+			value: Buffer;
+			partition: number;
+		}[] = [];
+		for (const message of messages)
+			partitionMessages.push({ ...message, partition });
 		const metadata = await transaction.send({
 			topic,
 			messages: partitionMessages,
@@ -79,10 +82,10 @@ export async function sendTransactionalOffsets({
 	producer: KafkaProducer;
 	offsets: KafkaOffsetCommit;
 }): Promise<void> {
-	return runTransaction({
-		producer,
-		send: (transaction) => transaction.sendOffsets(offsets),
-	});
+	function send(transaction: KafkaTransaction): Promise<void> {
+		return transaction.sendOffsets(offsets);
+	}
+	return runTransaction({ producer, send });
 }
 
 async function runTransaction<Result>({

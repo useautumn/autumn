@@ -112,6 +112,9 @@ for (const scenario of ["JOIN", "GRACEFUL_LEAVE", "HARD_KILL"]) {
 		"\nStartup breakdown of the new owner, per partition (median / max ms):\n",
 	);
 	const startupKeys = [
+		"prepareMs",
+		"announcedToActivateMs",
+		"activateMs",
 		"connectAndFenceMs",
 		"bootstrapMs",
 		"replayMs",

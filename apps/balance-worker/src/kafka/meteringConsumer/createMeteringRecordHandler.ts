@@ -31,6 +31,8 @@ export function createMeteringRecordHandler({
 			number,
 			Pick<PartitionReplay, "markUnavailable">
 		>;
+		/** Partitions another worker still owns: their records feed the dedup window and nothing else. */
+		readOnlyPartitions?: ReadonlySet<number>;
 		logger?: Pick<AutumnLogger, "warn">;
 	};
 }): MeteringRecordHandler {
@@ -113,6 +115,12 @@ export function createMeteringRecordHandler({
 		| { nextOffset: bigint }
 		| undefined
 		| Promise<{ nextOffset: bigint } | undefined> {
+		if (ctx.readOnlyPartitions?.has(position.partition)) {
+			ctx.recentCommandsByPartition
+				.get(position.partition)
+				?.remember({ mutation: record });
+			return undefined;
+		}
 		const applied = ctx.stateStore.applyDurableMutations({
 			records: [{ position, mutation: record }],
 		});

@@ -154,3 +154,45 @@ epoch X, refresh until `owners.findOwner(p).routeEpoch > X` or the 200ms cap.
 2. Ownership tail reader per partition means one extra Kafka fetch stream per owned partition
    (512 in prod). Cheap, but confirm against the broker connection budget the plans already worry about.
 3. `HANDOFF_READY_TIMEOUT_MS` vs ECS stopTimeout on the Flightcontrol service (unknown, default 30s).
+
+## Decisions
+
+Recorded while implementing (2026-09-24, PR "feat(kafka)+feat(balance-worker): partition handoff").
+
+- **One ownership tail per worker, not per partition** (open question 2). kafkajs has no group-less
+  `assign`; every `kafka.consumer()` is its own cluster and group join, so a per-partition tail is
+  256 joins at once on a prod revoke. `createOwnershipTail` runs one consumer per worker from the
+  log end; `tailPartition` is an in-memory listener. `fromOffset` is unnecessary: a listener is
+  always registered before the record it waits for can exist.
+- **A→A keeps its runtime and its follower** (open question 1). kafkajs rebuilds its offset manager
+  on every join and the topic consumer re-runs `readResumeOffset` on the first batch after GROUP_JOIN,
+  so the kept partition seeks back to its bookmark on its own. The worker only skips the assignment
+  pause for kept partitions.
+- **Ready timeout vs stopTimeout** (open question 3): prod stopTimeout is 90s; 5s per wave fits.
+- **Hold-then-409.** Invariant 1 wins over the client paragraph: A writes `claimed{B}` *after* its
+  drain, so a request that reaches A between withdraw and that claim is held (`awaitHandoff`) and
+  answered 409 only once the claim is durable; the client's refresh then finds B. The sentence "A
+  writes `claimed{B}` before withdrawing" in the client section is wrong.
+- **Drain includes the store apply.** A "log"-durability reply lands before its Postgres apply;
+  `processor.drain()` now also waits for the writer's store completion, otherwise B loads a bookmark
+  A is still advancing and its first flush conflicts (seen in the first benchmark run).
+- **Activation re-runs `bootstrap` and starts the follower at the bookmark.** For postgres the
+  bootstrap *is* the `loadProgress` read of the bookmark A just advanced; skipping it would replay
+  against a stale mirror. The window below the bookmark is not re-read: preparation already rebuilt
+  the dedup window.
+- **Preparation tolerates `local_state_ahead_of_log_end`** and re-reads the log end: the owner is
+  live and its bookmark can pass a log end read a moment earlier. Preparation still calls
+  `bootstrap`; for postgres that is a read except on a never-bookmarked partition.
+- **`ready` goes through a plain idempotent producer**, not the partition's transactional one,
+  whose first transaction is the fence.
+- **When to announce `ready` is a hook**, `PartitionsDependencies.awaitReadyAnnouncement`
+  (default: as soon as prepared). Blue-green will drive it from the slot switch; the protocol itself
+  never consults group membership.
+- **Blue-green flag, unchanged here:** `packages/env` derives the group id, every topic name and the
+  transactional-id prefix from the single `BALANCE_WORKER_DEPLOYMENT` string
+  (`balanceWorkerDeployment.ts`, `workerConfig.ts createWorkerProducerConfig`). Blue-green needs
+  group id = deployment + slot while topics and transactional ids stay deployment-only, so the two
+  fleets share the log and the fence but not the roster.
+- **Benchmark harness:** a partition that stays with its owner no longer writes an ownership record,
+  so `settled()` keys on the roster settling plus a 200 per partition after the last activity;
+  startup rows gained prepare / announce→activate / activate columns.

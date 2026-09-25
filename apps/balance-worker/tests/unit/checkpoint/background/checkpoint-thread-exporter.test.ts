@@ -86,6 +86,8 @@ describe("background checkpoint exporter", () => {
 				await fixture.close();
 			}
 		},
+		// Two worker-thread spin-ups and a paused read: CI runners take ~4.5s of the default 5s.
+		20_000,
 	);
 
 	test.concurrent(
@@ -248,6 +250,8 @@ describe("background checkpoint exporter", () => {
 				await fixture.close();
 			}
 		},
+		// Two worker-thread spin-ups and a paused read: CI runners take ~4.5s of the default 5s.
+		20_000,
 	);
 
 	test.concurrent(

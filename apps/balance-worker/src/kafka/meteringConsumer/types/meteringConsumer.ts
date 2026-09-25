@@ -13,10 +13,12 @@ import type { ReplayWindow } from "./replayWindow.js";
 export type MeteringConsumer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
-	/** The replay remembers every record it sees land into the partition's `recentCommands`. */
+	/** The replay remembers every record it sees land into the partition's `recentCommands`.
+	 *  A read-only replay remembers and nothing else: no store write, no bookmark. */
 	createReplay(position: {
 		partition: number;
 		recentCommands: RecentCommands;
+		readOnly?: boolean;
 	}): PartitionReplay;
 	withdrawPartition(position: { partition: number }): Promise<void>;
 	resumePartition(position: { partition: number }): void;

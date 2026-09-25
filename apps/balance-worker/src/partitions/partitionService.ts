@@ -6,6 +6,7 @@ import {
 	startHealthRefresh,
 	stopHealthRefresh,
 } from "./health/partitionHealth.js";
+import { beginPartitionHandoffs } from "./lifecycle/handOffPartition.js";
 import { clearPartitionRetries } from "./lifecycle/retryPartition.js";
 import {
 	detachPartitions,
@@ -14,6 +15,7 @@ import {
 import { reportPartitionError } from "./reportPartitionError.js";
 import type {
 	AllocationScope,
+	PartitionEntry,
 	PartitionsScope,
 } from "./types/partitionState.js";
 
@@ -30,6 +32,8 @@ export async function startPartitionService({
 	try {
 		await ctx.partitionOffsets.connect();
 		state.offsetsConnected = true;
+		await ctx.ownershipLink?.start();
+		state.ownershipLinked = true;
 		await ctx.consumer.start();
 		startHealthRefresh({ ctx, state });
 	} catch (cause) {
@@ -37,13 +41,10 @@ export async function startPartitionService({
 		stopHealthRefresh({ state });
 		state.unsubscribePartitionChanges?.();
 		state.unsubscribePartitionChanges = null;
-		if (state.offsetsConnected) {
-			state.offsetsConnected = false;
-			try {
-				await ctx.partitionOffsets.disconnect();
-			} catch {
-				// Keep the original startup failure.
-			}
+		try {
+			await disconnectPartitionResources({ ctx, state });
+		} catch {
+			// Keep the original startup failure.
 		}
 		throw cause;
 	}
@@ -66,18 +67,48 @@ export function stopPartitionService({
 	state.unsubscribePartitionChanges?.();
 	state.unsubscribePartitionChanges = null;
 
-	const entriesToStop = detachPartitions({ state });
+	// Serving partitions keep serving until a successor is ready; the rest stop as before.
+	const handingOff = [
+		...state.handingOff.values(),
+		...beginPartitionHandoffs({ ctx, state }),
+	];
+	const entriesToStop = [...handingOff, ...detachPartitions({ state })];
 	const previousLifecycle = state.lifecycle;
 	const healthRefresh = state.healthRefreshPromise;
-	const stopping = stopPartitions({ ctx, entriesToStop });
 	state.stopPromise = finishPartitionServiceStop({
 		ctx,
 		state,
 		previousLifecycle,
 		healthRefresh,
-		stopping,
+		entriesToStop,
 	});
 	return state.stopPromise;
+}
+
+async function disconnectPartitionResources({
+	ctx,
+	state,
+}: PartitionsScope): Promise<void> {
+	const errors: unknown[] = [];
+	if (state.ownershipLinked) {
+		state.ownershipLinked = false;
+		try {
+			await ctx.ownershipLink?.stop();
+		} catch (cause) {
+			errors.push(cause);
+		}
+	}
+	if (state.offsetsConnected) {
+		state.offsetsConnected = false;
+		try {
+			await ctx.partitionOffsets.disconnect();
+		} catch (cause) {
+			errors.push(cause);
+		}
+	}
+	if (errors.length === 1) throw errors[0];
+	if (errors.length > 1)
+		throw new AggregateError(errors, "Partition resources did not disconnect");
 }
 
 export function requestPartitionServiceStop({
@@ -105,6 +136,20 @@ export async function stopServiceThenNotify({
 	}
 }
 
+/** No later assignment may reuse a half-retired runtime, so this worker is finished. */
+export function failPartitionRetirement({
+	ctx,
+	state,
+	cause,
+}: PartitionsScope & { cause: unknown }): void {
+	state.retirementFailed = true;
+	reportPartitionError({ ctx, cause });
+	function stopAfterRetirementFailure(): void {
+		void stopServiceThenNotify({ ctx, state });
+	}
+	queueMicrotask(stopAfterRetirementFailure);
+}
+
 export async function stopPartitionServiceSafely({
 	ctx,
 	state,
@@ -121,33 +166,31 @@ async function finishPartitionServiceStop({
 	state,
 	previousLifecycle,
 	healthRefresh,
-	stopping,
+	entriesToStop,
 }: PartitionsScope & {
 	previousLifecycle: Promise<void>;
 	healthRefresh: Promise<void> | null;
-	stopping: Promise<void>;
+	entriesToStop: PartitionEntry[];
 }): Promise<void> {
-	const results = await Promise.allSettled([
-		previousLifecycle,
-		stopping,
-		healthRefresh,
-	]);
 	const errors: unknown[] = [];
-	for (const result of results) {
-		if (result.status === "rejected") errors.push(result.reason);
-	}
+	// Leave the group first: successors are assigned and prepare while this worker still serves.
 	try {
 		await ctx.consumer.stop();
 	} catch (cause) {
 		errors.push(cause);
 	}
-	if (state.offsetsConnected) {
-		state.offsetsConnected = false;
-		try {
-			await ctx.partitionOffsets.disconnect();
-		} catch (cause) {
-			errors.push(cause);
-		}
+	const results = await Promise.allSettled([
+		previousLifecycle,
+		stopPartitions({ ctx, entriesToStop }),
+		healthRefresh,
+	]);
+	for (const result of results) {
+		if (result.status === "rejected") errors.push(result.reason);
+	}
+	try {
+		await disconnectPartitionResources({ ctx, state });
+	} catch (cause) {
+		errors.push(cause);
 	}
 	state.status = "stopped";
 	if (errors.length === 1) throw errors[0];

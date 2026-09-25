@@ -11,6 +11,7 @@ import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/p
 import {
 	createTestRuntimeResources,
 	type LifecycleTestRuntime,
+	noHandoffPublication,
 } from "../kafka/kafka-test-fixtures.js";
 
 const deferred = () => {
@@ -78,7 +79,8 @@ const fixture = ({
 				failureReason: status === "recovery_required" ? "failed" : null,
 			});
 		const runtime = {
-			start: async () => {
+			prepare: async () => undefined,
+			activate: async () => {
 				events.push(`start:${partition}`);
 				await startGate;
 				if (status !== "created") throw new Error("startup cancelled");
@@ -119,6 +121,7 @@ const fixture = ({
 			runtime,
 			markUnavailable: () => undefined,
 			publication: {
+				...noHandoffPublication,
 				claim: async () => {
 					events.push(`claim:${partition}`);
 					await claimGate;
@@ -143,7 +146,12 @@ const fixture = ({
 	};
 	const failures = new Map<number, () => void>();
 	const ownership = createPartitions({
-		config: { topic: "metering", healthRefreshIntervalMs: 60_000 },
+		config: {
+			topic: "metering",
+			healthRefreshIntervalMs: 60_000,
+			handoffReadyTimeoutMs: 1,
+			handoffClaimTimeoutMs: 1,
+		},
 		ctx: {
 			onServiceStopped: () => {
 				events.push("service-stopped");
@@ -214,7 +222,8 @@ async function factoryMethodsKeepInstanceStateWhenDetached(): Promise<void> {
 
 		const stopping = stop();
 		expect(stop()).toBe(stopping);
-		expect(findRuntime(route)).toBeUndefined();
+		// The route stays up until a successor is ready or the wait times out.
+		await waitFor(() => findRuntime(route) === undefined);
 		await stopping;
 		expect(second.ownership.findRuntime(route)).toBe(
 			second.runtimes.get(2)?.runtime,
@@ -304,17 +313,21 @@ describe("Ownership publication and admission", () => {
 			f.events.indexOf("disconnect:2"),
 		);
 	});
-	test("withdraws synchronously and waits for accepted local apply before releasing", async () => {
+	test("keeps serving after a revoke, then withdraws and waits for accepted local apply before releasing", async () => {
 		const drain = deferred();
 		const f = fixture({ drainGate: drain.promise });
 		await f.ownership.start();
 		f.assign();
 		await waitFor(() => f.events.includes("claimed:2"));
 		f.revoke();
+		expect(f.ownership.findRuntime({ partition: 2, routeEpoch: "100" })).toBe(
+			f.runtimes.get(2)?.runtime,
+		);
+		// No successor announces itself here, so the ready wait times out into the release path.
+		await waitFor(() => f.events.includes("gate-closed:2"));
 		expect(
 			f.ownership.findRuntime({ partition: 2, routeEpoch: "100" }),
 		).toBeUndefined();
-		expect(f.events).toContain("gate-closed:2");
 		expect(f.events).not.toContain("release:2");
 		drain.resolve();
 		await f.ownership.stop();
@@ -407,17 +420,20 @@ describe("Ownership publication and admission", () => {
 		await waitFor(() => f.events.includes("claimed:1"));
 		await f.ownership.stop();
 	});
-	test("unproven quiescence prevents all later assignments from reusing SQLite", async () => {
+	test("unproven quiescence stops the worker and refuses every later assignment", async () => {
 		const f = fixture({ quiescenceError: new Error("replay stop failed") });
 		await f.ownership.start();
 		f.assign();
 		await waitFor(() => f.events.includes("claimed:2"));
 		f.revoke();
-		f.assign([1]);
 		await waitFor(() => f.events.includes("consumer-stop"));
+		expect(f.events).toContain("service-stopped");
+		const startsBeforeStop = f.events.filter((e) => e === "start:1").length;
 		f.assign([1]);
 		await Bun.sleep(1);
-		expect(f.events).not.toContain("start:1");
+		expect(f.events.filter((e) => e === "start:1")).toHaveLength(
+			startsBeforeStop,
+		);
 		await f.ownership.stop();
 	});
 
@@ -565,6 +581,8 @@ describe("partitionLifecycle", function partitionLifecycleTests() {
 				topic,
 				healthRefreshIntervalMs,
 				partitionBootstrapRetryIntervalMs: 1,
+				handoffReadyTimeoutMs: 1,
+				handoffClaimTimeoutMs: 1,
 			},
 		});
 		const causeForPartition = ({ partition }: { partition: number }): Error =>
@@ -620,7 +638,7 @@ describe("partitionLifecycle", function partitionLifecycleTests() {
 			]);
 		});
 
-		test("aggregates shared cleanup failures and settles runtime stop errors first", async () => {
+		test("aggregates shared cleanup failures: group leave, then runtime stops, then offsets", async () => {
 			const consumerStopFailure = new Error("consumer stop failed");
 			const offsetsStopFailure = new Error("offsets disconnect failed");
 			const runtimeStopFailure = new Error("runtime stop failed");
@@ -657,15 +675,15 @@ describe("partitionLifecycle", function partitionLifecycleTests() {
 			expect(failure).toMatchObject({
 				message: "Failed to stop Kafka owned partition group",
 				errors: [
-					expect.objectContaining({ errors: [runtimeStopFailure] }),
 					consumerStopFailure,
+					expect.objectContaining({ errors: [runtimeStopFailure] }),
 					offsetsStopFailure,
 				],
 			});
-			expect(fixture.lifecycle.slice(-2)).toEqual([
-				"consumer-stop",
-				"offsets-disconnect",
-			]);
+			expect(fixture.lifecycle.slice(-1)).toEqual(["offsets-disconnect"]);
+			expect(fixture.lifecycle.indexOf("consumer-stop")).toBeGreaterThan(
+				fixture.lifecycle.indexOf("unsubscribe"),
+			);
 		});
 
 		test("disconnects offsets and preserves the initial consumer startup failure", async () => {

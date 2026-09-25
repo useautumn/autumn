@@ -1,3 +1,4 @@
+import type { PartitionRuntimeStatus } from "../../runtime/types/partitionRuntimeState.js";
 import type { PartitionDirectoryState } from "../types/partitionState.js";
 import type {
 	PartitionAdmission,
@@ -17,7 +18,7 @@ export function createRuntimeDirectory(): PartitionDirectory {
 		const health = runtime.getHealth();
 		if (
 			health.partition !== partition ||
-			health.status !== "ready" ||
+			!isServing({ status: health.status }) ||
 			health.failureReason !== null
 		) {
 			throw new Error("Cannot admit an unavailable partition");
@@ -35,7 +36,10 @@ export function createRuntimeDirectory(): PartitionDirectory {
 		const entry = state.get(target.partition);
 		if (!entry) return undefined;
 		const health = entry.runtime.getHealth();
-		if (health.status !== "ready" || health.failureReason !== null) {
+		if (
+			!isServing({ status: health.status }) ||
+			health.failureReason !== null
+		) {
 			withdraw(target);
 			return undefined;
 		}
@@ -51,4 +55,9 @@ export function createRuntimeDirectory(): PartitionDirectory {
 	}
 
 	return { admit, withdraw, findRuntime, findOwnedRuntime };
+}
+
+/** An activating runtime is admitted already: it was named owner, and a command waits at its gate. */
+function isServing({ status }: { status: PartitionRuntimeStatus }): boolean {
+	return status === "ready" || status === "activating";
 }

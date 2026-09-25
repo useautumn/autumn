@@ -17,6 +17,7 @@ import {
 	createWorkerConsumerConfig,
 } from "../../../src/init/workerConfig.js";
 import { openWorkerResources } from "../../../src/init/workerResources.js";
+import { createOwnershipHandoffLink } from "../../../src/kafka/createOwnershipHandoffLink.js";
 import type { StateBackend } from "../../../src/state/stateBackend.js";
 
 const env = JSON.parse(process.env.BENCH_WORKER_ENV ?? "null") as
@@ -62,11 +63,19 @@ const resources = await openWorkerResources({
 		retryPolicy: runtimeConfig.checkpointRetryPolicy,
 	},
 });
+const ownershipHandoff = createOwnershipHandoffLink({
+	ctx: { kafka: resources.kafka, logger },
+	config: {
+		topic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
+		producerLimits: runtimeConfig.producerLimits,
+	},
+});
 const runtimeFactory = createPartitionRuntimeFactory({
 	ctx: {
 		logger,
 		kafka: resources.kafka,
 		ownershipOffsets: resources.admin,
+		ownershipHandoff,
 		stateStore: resources.stateStore,
 		db: resources.db,
 		catalogCache: resources.catalogCache,
@@ -82,8 +91,7 @@ function createRuntime(params: PartitionRuntimeFactoryInput) {
 	const { partition } = params;
 	const built = runtimeFactory(params);
 	const runtime = resources.registerRuntime(built.runtime);
-	async function start(): Promise<void> {
-		emit("runtime.start", { partition });
+	function watchStatus(): () => void {
 		let last = runtime.getHealth().status;
 		const poll = setInterval(() => {
 			const status = runtime.getHealth().status;
@@ -91,14 +99,34 @@ function createRuntime(params: PartitionRuntimeFactoryInput) {
 			emit("runtime.status", { partition, from: last, to: status });
 			last = status;
 		}, 1);
-		try {
-			await runtime.start();
-		} finally {
+		return () => {
 			clearInterval(poll);
 			const status = runtime.getHealth().status;
 			if (status !== last)
 				emit("runtime.status", { partition, from: last, to: status });
-			emit("runtime.started", { partition, status });
+		};
+	}
+	async function prepare(): Promise<void> {
+		emit("runtime.prepare", { partition });
+		const stop = watchStatus();
+		try {
+			await runtime.prepare();
+		} finally {
+			stop();
+			emit("runtime.prepared", { partition });
+		}
+	}
+	async function activate(): Promise<void> {
+		emit("runtime.start", { partition });
+		const stop = watchStatus();
+		try {
+			await runtime.activate();
+		} finally {
+			stop();
+			emit("runtime.started", {
+				partition,
+				status: runtime.getHealth().status,
+			});
 		}
 	}
 	async function drain(): Promise<void> {
@@ -107,10 +135,16 @@ function createRuntime(params: PartitionRuntimeFactoryInput) {
 		await runtime.drain();
 		emit("drained", { partition });
 	}
-	async function claim(): Promise<{ routeEpoch: string }> {
-		emit("claim.start", { partition });
-		const result = await built.publication.claim();
-		emit("claim.done", { partition, routeEpoch: result.routeEpoch });
+	async function claim(params?: {
+		endpoint: string;
+	}): Promise<{ routeEpoch: string }> {
+		emit("claim.start", { partition, endpoint: params?.endpoint });
+		const result = await built.publication.claim(params);
+		emit("claim.done", {
+			partition,
+			routeEpoch: result.routeEpoch,
+			endpoint: params?.endpoint,
+		});
 		return result;
 	}
 	async function release(): Promise<void> {
@@ -118,9 +152,13 @@ function createRuntime(params: PartitionRuntimeFactoryInput) {
 		await built.publication.release();
 		emit("release.done", { partition });
 	}
+	async function announceReady(): Promise<void> {
+		await built.publication.announceReady();
+		emit("ready.announced", { partition });
+	}
 	return {
-		runtime: { ...runtime, start, drain },
-		publication: { claim, release },
+		runtime: { ...runtime, prepare, activate, drain },
+		publication: { ...built.publication, claim, release, announceReady },
 	};
 }
 
@@ -150,6 +188,7 @@ const partitions = createWorkerPartitions({
 		idempotencyKeys: resources.idempotencyKeys,
 		logger,
 		createRuntime,
+		ownershipLink: ownershipHandoff,
 		onError: ({ cause }) => emit("error", { cause: describe(cause) }),
 		onUnhealthyPartition: ({ cause }) =>
 			emit("unhealthy", { cause: describe(cause) }),
