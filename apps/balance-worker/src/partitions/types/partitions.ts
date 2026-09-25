@@ -2,7 +2,10 @@ import type { OwnedPartitionHealth } from "../../health/ownedPartitionHealth.js"
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 
 export interface PartitionRuntimePort {
-	start(): Promise<void>;
+	/** Read-only: rebuilds the dedup window from the log, writes nothing durable. */
+	prepare(): Promise<void>;
+	/** Fences and catches up from the bookmark; only after the predecessor has drained. */
+	activate(): Promise<void>;
 	stop(): Promise<void>;
 	drain(): Promise<void>;
 	waitForQuiescence(): Promise<void>;
@@ -23,8 +26,14 @@ export type PartitionConsumerCrash = PartitionFailure & { restart: boolean };
 export type PartitionUnavailableListener = (failure: PartitionFailure) => void;
 
 export type PartitionOwnershipPublication = {
-	claim(): Promise<{ routeEpoch: string }>;
+	/** Names `endpoint` as the owner, this worker when omitted. */
+	claim(params?: { endpoint: string }): Promise<{ routeEpoch: string }>;
 	release(): Promise<void>;
+	announceReady(): Promise<void>;
+	/** Resolves with the successor's endpoint on its `ready`, rejects with the signal's reason. */
+	awaitReady(params: { signal: AbortSignal }): Promise<{ endpoint: string }>;
+	/** Resolves with the route epoch of a `claimed` naming this worker, rejects with the signal's reason. */
+	awaitClaim(params: { signal: AbortSignal }): Promise<{ routeEpoch: string }>;
 };
 
 export type PartitionRuntimeResources = {
@@ -99,6 +108,13 @@ export type PartitionsDependencies = {
 	progress: PartitionProgressTracker;
 	subscribePartitionChanges: SubscribePartitionChanges;
 	createRuntime: PartitionRuntimeFactory;
+	/** The ownership tail and the plain producer behind `announceReady`; started before the group is joined. */
+	ownershipLink?: { start(): Promise<void>; stop(): Promise<void> };
+	/** When a prepared partition may announce `ready`; unset means as soon as it is prepared. */
+	awaitReadyAnnouncement?(params: {
+		partition: number;
+		signal: AbortSignal;
+	}): Promise<void>;
 	onError(failure: PartitionFailure): void;
 	onUnhealthyPartition(failure: {
 		topic: string;
@@ -119,10 +135,16 @@ export type PartitionsConfig = {
 	commandTopic?: string;
 	healthRefreshIntervalMs: number;
 	partitionBootstrapRetryIntervalMs?: number;
+	/** How long a revoked partition keeps serving while it waits for a successor's `ready`. */
+	handoffReadyTimeoutMs?: number;
+	/** How long a prepared partition waits to be named owner before it claims for itself. */
+	handoffClaimTimeoutMs?: number;
 };
 
 export interface ResolvedPartitionsConfig extends PartitionsConfig {
 	partitionBootstrapRetryIntervalMs: number;
+	handoffReadyTimeoutMs: number;
+	handoffClaimTimeoutMs: number;
 }
 
 export type Partitions = {
@@ -130,6 +152,8 @@ export type Partitions = {
 	stop(): Promise<void>;
 	partitions(): OwnedPartitionHealth[];
 	findRuntime(route: PartitionRoute): PartitionRuntimePort | undefined;
+	/** Settles once a partition mid-handoff has named its successor, so a caller can refresh its route once. */
+	awaitHandoff(target: PartitionTarget): Promise<void>;
 	/** For the partition's own queued commands: no route epoch, since no server chose the route. */
 	findOwnedRuntime(target: PartitionTarget): PartitionRuntimePort | undefined;
 };

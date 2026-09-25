@@ -38,6 +38,7 @@ export function createPartitionReplay({
 		partition: number;
 		targetNextOffset: bigint;
 		onUnavailable: RuntimeUnavailableListener;
+		fromBookmark?: boolean;
 	}): Promise<void> {
 		return startReplay({ ctx, state, ...params });
 	}

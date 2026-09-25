@@ -162,16 +162,24 @@ export function createKafkaOwnedPartitionGroup(
 		async function process(): Promise<never> {
 			throw new Error("Not used by group fixture");
 		}
+		async function prepare(): Promise<void> {}
 		return {
 			runtime: {
 				drain,
 				subscribeUnavailable,
 				process,
+				prepare,
+				activate: runtime.start,
 				...runtime,
 				waitForQuiescence,
 				getHealth,
 			},
-			publication: runtime.publication ?? { claim, release },
+			publication: {
+				...noHandoffPublication,
+				claim,
+				release,
+				...runtime.publication,
+			},
 		};
 	}
 	return createWorkerPartitions({
@@ -181,9 +189,31 @@ export function createKafkaOwnedPartitionGroup(
 			partitionsConsumedConcurrently,
 			healthRefreshIntervalMs,
 			partitionBootstrapRetryIntervalMs,
+			handoffReadyTimeoutMs: 1,
+			handoffClaimTimeoutMs: 1,
 		},
 	});
 }
+
+/** No ownership tail: a wait only ends when its signal does, so the group falls back to claiming for itself. */
+function awaitSignal<Result>({
+	signal,
+}: {
+	signal: AbortSignal;
+}): Promise<Result> {
+	return new Promise<Result>((_, reject) => {
+		function abort(): void {
+			reject(signal.reason);
+		}
+		if (signal.aborted) abort();
+		else signal.addEventListener("abort", abort, { once: true });
+	});
+}
+async function announceReady(): Promise<void> {}
+export const noHandoffPublication: Pick<
+	PartitionOwnershipPublication,
+	"announceReady" | "awaitReady" | "awaitClaim"
+> = { announceReady, awaitReady: awaitSignal, awaitClaim: awaitSignal };
 export type KafkaOwnedPartitionGroupConsumerPort = KafkaConsumerClient;
 export type KafkaPartitionRuntimeFactory = (
 	input: Parameters<WorkerPartitionsContext["createRuntime"]>[0],
@@ -195,7 +225,7 @@ export type KafkaPartitionRuntimeFactory = (
 	subscribeUnavailable?(
 		listener: (failure: { cause: unknown }) => void,
 	): () => void;
-	publication?: PartitionOwnershipPublication;
+	publication?: Pick<PartitionOwnershipPublication, "claim" | "release">;
 };
 export type KafkaPartitionControlPort = Pick<
 	Consumer,
@@ -365,8 +395,8 @@ import {
 
 export type LifecycleTestRuntime = Pick<
 	PartitionRuntimePort,
-	"start" | "stop" | "getHealth"
->;
+	"stop" | "getHealth"
+> & { start(): Promise<void> };
 
 export const createTestRuntimeResources = ({
 	runtime,
@@ -387,12 +417,14 @@ export const createTestRuntimeResources = ({
 	return {
 		runtime: {
 			...runtime,
+			prepare: drain,
+			activate: runtime.start,
 			drain,
 			waitForQuiescence: drain,
 			subscribeUnavailable,
 			process,
 		},
-		publication: { claim, release },
+		publication: { ...noHandoffPublication, claim, release },
 		markUnavailable,
 	};
 };

@@ -24,7 +24,11 @@ export interface AllocationScope extends PartitionsScope {
 export type PartitionsState = {
 	directory: PartitionDirectory;
 	entries: Map<number, PartitionEntry>;
+	/** Revoked but still serving until a successor is ready or the wait times out. */
+	handingOff: Map<number, PartitionEntry>;
 	retiringEntries: Map<number, PartitionEntry>;
+	/** Withdrawn routes whose successor is not yet named; a request meeting one waits here. */
+	handoffSettlements: Map<number, Promise<void>>;
 	terminalHealthByPartition: Map<number, OwnedPartitionHealth>;
 	partitionRetryTimers: Map<number, ReturnType<typeof setTimeout>>;
 	status: "created" | "running" | "stopping" | "stopped";
@@ -33,6 +37,7 @@ export type PartitionsState = {
 	lifecycle: Promise<void>;
 	stopPromise: Promise<void> | null;
 	offsetsConnected: boolean;
+	ownershipLinked: boolean;
 	healthRefreshTimer: ReturnType<typeof setInterval> | null;
 	healthRefreshPromise: Promise<void> | null;
 	unsubscribePartitionChanges: Unsubscribe | null;
@@ -54,6 +59,10 @@ export type PartitionEntry = PartitionRuntimeResources & {
 	claimed: boolean;
 	publicationFailed: boolean;
 	unsubscribeUnavailable: Unsubscribe | null;
+	/** Aborts whatever the entry waits for on the ownership log: a claim, a successor's ready. */
+	handoffAbort: AbortController;
+	/** True once the entry stopped serving; a handoff cannot be cancelled past this. */
+	withdrawn: boolean;
 	retirement: Promise<void> | null;
 	drain: Promise<PartitionCleanupResult> | null;
 };

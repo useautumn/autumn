@@ -25,6 +25,7 @@ import {
 } from "../../../src/kafka/createWorkerProducer.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { MutationBatchAppendError } from "../../../src/processor/writer/writerErrors.js";
+import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
 import type {
 	PartitionBootstrapper as OwnedPartitionBootstrapPort,
 	PartitionLogRange,
@@ -35,7 +36,10 @@ import {
 	OwnedPartitionProducerFencedError,
 	OwnedPartitionRecoveryRequiredError,
 } from "../../../src/runtime/runtimeErrors.js";
-import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
+import type {
+	PartitionOutcomeFollowerPort,
+	PartitionRuntimeDependencies,
+} from "../../../src/runtime/types/partitionRuntime.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
 import type { SqliteStateStore } from "../../../src/state/types/stateStore.js";
 import {
@@ -331,6 +335,7 @@ const createRuntime = ({
 	bootstrap = async () => ({ kind: "continued", nextOffset: 0n }),
 	partitionForIdentity = () => partition,
 	recoveryDrainTimeoutMs = 1_000,
+	storeApplyGate,
 }: {
 	store: SqliteStateStore;
 	producer: OwnedPartitionProducerPort;
@@ -338,6 +343,8 @@ const createRuntime = ({
 	bootstrap?: OwnedPartitionBootstrapPort["bootstrap"];
 	partitionForIdentity?: (identity: MeteringIdentity) => number;
 	recoveryDrainTimeoutMs?: number;
+	/** Holds every store apply, the way a slow Postgres committer would. */
+	storeApplyGate?: Promise<void>;
 }) => {
 	function createProducer(): OwnedPartitionProducerPort {
 		return producer;
@@ -360,10 +367,19 @@ const createRuntime = ({
 		ctx: { session },
 		config: { topic, partition },
 	});
+	const stateStore: PartitionRuntimeDependencies["stateStore"] = storeApplyGate
+		? {
+				...store,
+				applyDurableMutations: async (params) => {
+					await storeApplyGate;
+					return store.applyDurableMutations(params);
+				},
+			}
+		: store;
 	return createPartitionRuntime({
 		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
 		ctx: {
-			stateStore: store,
+			stateStore,
 			db: createSyntheticWorkerDb(),
 			catalogCache: createTestCatalogCache(),
 			bootstrapper: { bootstrap },
@@ -1230,6 +1246,40 @@ test("drain waits for accepted tracks but keeps the producer connected", async (
 	}
 });
 
+test("drain waits for the store apply behind a log-durability reply", async () => {
+	const fixture = createStoreFixture();
+	const storeApply = createDeferred<void>();
+	const producer = createFakeProducer();
+	const runtime = createRuntime({
+		store: fixture.store,
+		producer: producer.producer,
+		follower: createFollower().follower,
+		storeApplyGate: storeApply.promise,
+	});
+	try {
+		await runtime.start();
+		await runtime.process((processor) =>
+			processor.track({
+				command: createTrackCommand({ commandId: "cmd_store_drain" }),
+			}),
+		);
+		expect(fixture.store.readState({ identity })?.revision).toBe(0);
+		let drained = false;
+		const draining = runtime.drain().then(() => {
+			drained = true;
+		});
+		await waitForTurn();
+		expect(drained).toBe(false);
+		storeApply.resolve(undefined);
+		await draining;
+		expect(fixture.store.readState({ identity })?.revision).toBe(1);
+	} finally {
+		storeApply.resolve(undefined);
+		await runtime.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
 test("quiescence remains pending after recovery disposal until accepted apply settles", async () => {
 	const fixture = createStoreFixture();
 	const commit = createDeferred<void>();
@@ -1328,7 +1378,20 @@ test(
 describe("partitionPreparation", function partitionPreparationTests() {
 	const { closeStoreFixture, createStoreFixture, partition, topic } =
 		preparationFixtures;
-	const createFixture = () => {
+	const createFixture = ({
+		preparation: customizePreparation = (follower) => follower,
+		fence = async () => undefined,
+		bootstrap = async () => undefined,
+		activationWaitMs,
+	}: {
+		preparation?: (
+			follower: PartitionOutcomeFollowerPort,
+			active: PartitionOutcomeFollowerPort,
+		) => PartitionOutcomeFollowerPort;
+		fence?: () => Promise<void>;
+		bootstrap?: () => Promise<void>;
+		activationWaitMs?: number;
+	} = {}) => {
 		const storage = createStoreFixture();
 		const events: string[] = [];
 		let end = 5n;
@@ -1338,8 +1401,10 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				events.push(`${name}:range:${end}`);
 				return { logStartOffset: 0n, logEndOffset: end };
 			},
-			startAndCatchUp: async ({ targetNextOffset }) => {
-				events.push(`${name}:replay:${targetNextOffset}`);
+			startAndCatchUp: async ({ targetNextOffset, fromBookmark }) => {
+				events.push(
+					`${name}:replay:${targetNextOffset}${fromBookmark ? ":from-bookmark" : ""}`,
+				);
 				if (failPrepare && name === "prepare") throw new Error("replay failed");
 			},
 			readProgress: () => ({ consumedNextOffset: null, highWatermark: null }),
@@ -1348,6 +1413,10 @@ describe("partitionPreparation", function partitionPreparationTests() {
 			},
 		});
 		const follower = createFollower("active");
+		const preparation = customizePreparation(
+			createFollower("prepare"),
+			follower,
+		);
 		const runtime = createPartitionRuntime({
 			ctx: {
 				stateStore: storage.store,
@@ -1359,6 +1428,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 					},
 					fence: async () => {
 						events.push("fence");
+						await fence();
 					},
 					disconnect: async () => {
 						events.push("disconnect");
@@ -1366,9 +1436,11 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				},
 				appender: { appendCommitted: async () => ({ baseOffset: 0n }) },
 				follower,
+				preparationFollower: preparation,
 				bootstrapper: {
 					bootstrap: async () => {
 						events.push("bootstrap");
+						await bootstrap();
 						return { kind: "continued", nextOffset: 0n };
 					},
 				},
@@ -1388,13 +1460,13 @@ describe("partitionPreparation", function partitionPreparationTests() {
 					maxPendingCommandsPerCustomer: 10,
 				},
 				recoveryDrainTimeoutMs: 10,
+				activationWaitMs,
 			},
 		});
 		return {
 			runtime,
 			follower,
 			events,
-			preparation: createFollower("prepare"),
 			setEnd: (value: bigint) => {
 				end = value;
 			},
@@ -1410,20 +1482,21 @@ describe("partitionPreparation", function partitionPreparationTests() {
 
 	describe("runtime preparation", () => {
 		test("late preparation failure cannot poison the activated runtime", async () => {
-			const fixture = createFixture();
 			let unavailable: ((failure: { cause: unknown }) => void) | undefined;
-			const follower = {
-				...fixture.preparation,
-				startAndCatchUp: async (
-					params: Parameters<
-						PartitionOutcomeFollowerPort["startAndCatchUp"]
-					>[0],
-				) => {
-					unavailable = params.onUnavailable;
-				},
-			};
+			const fixture = createFixture({
+				preparation: (follower) => ({
+					...follower,
+					startAndCatchUp: async (
+						params: Parameters<
+							PartitionOutcomeFollowerPort["startAndCatchUp"]
+						>[0],
+					) => {
+						unavailable = params.onUnavailable;
+					},
+				}),
+			});
 			try {
-				await fixture.runtime.prepare({ follower });
+				await fixture.runtime.prepare();
 				unavailable?.({ cause: new Error("stale reader callback") });
 				await fixture.runtime.activate();
 				expect(fixture.runtime.getStatus()).toBe("ready");
@@ -1432,24 +1505,25 @@ describe("partitionPreparation", function partitionPreparationTests() {
 			}
 		});
 		test("stop cancels a pending preparation and waits for reader shutdown", async () => {
-			const fixture = createFixture();
 			let finishReplay = () => {};
 			const replay = new Promise<void>((resolve) => {
 				finishReplay = resolve;
 			});
 			let started = false;
-			const follower = {
-				...fixture.preparation,
-				startAndCatchUp: async () => {
-					started = true;
-					await replay;
-				},
-				stop: async () => {
-					fixture.events.push("reader-closed");
-					finishReplay();
-				},
-			};
-			const preparing = fixture.runtime.prepare({ follower });
+			const fixture = createFixture({
+				preparation: (follower) => ({
+					...follower,
+					startAndCatchUp: async () => {
+						started = true;
+						await replay;
+					},
+					stop: async () => {
+						fixture.events.push("reader-closed");
+						finishReplay();
+					},
+				}),
+			});
+			const preparing = fixture.runtime.prepare();
 			const rejected = preparing.catch((cause: unknown) => cause);
 			try {
 				await new Promise<void>((resolve) => setImmediate(resolve));
@@ -1467,14 +1541,14 @@ describe("partitionPreparation", function partitionPreparationTests() {
 		});
 
 		test("preparation is not complete until cleanup succeeds", async () => {
-			const fixture = createFixture();
 			let finishCleanup = () => {};
 			const cleanup = new Promise<void>((resolve) => {
 				finishCleanup = resolve;
 			});
-			const preparing = fixture.runtime.prepare({
-				follower: { ...fixture.preparation, stop: () => cleanup },
+			const fixture = createFixture({
+				preparation: (follower) => ({ ...follower, stop: () => cleanup }),
 			});
+			const preparing = fixture.runtime.prepare();
 			try {
 				await new Promise<void>((resolve) => setImmediate(resolve));
 				expect(fixture.runtime.getStatus()).toBe("preparing");
@@ -1489,18 +1563,18 @@ describe("partitionPreparation", function partitionPreparationTests() {
 		});
 
 		test("cleanup failure prevents activation", async () => {
-			const fixture = createFixture();
+			const fixture = createFixture({
+				preparation: (follower) => ({
+					...follower,
+					stop: async () => {
+						throw new Error("reader cleanup failed");
+					},
+				}),
+			});
 			try {
-				await expect(
-					fixture.runtime.prepare({
-						follower: {
-							...fixture.preparation,
-							stop: async () => {
-								throw new Error("reader cleanup failed");
-							},
-						},
-					}),
-				).rejects.toThrow("requires recovery");
+				await expect(fixture.runtime.prepare()).rejects.toThrow(
+					"requires recovery",
+				);
 				expect(fixture.runtime.getStatus()).toBe("recovery_required");
 				await expect(fixture.runtime.activate()).rejects.toThrow();
 				expect(fixture.events).not.toContain("connect");
@@ -1511,7 +1585,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 		test("prepares without producer authority and closes replay before activation", async () => {
 			const f = createFixture();
 			try {
-				await f.runtime.prepare({ follower: f.preparation });
+				await f.runtime.prepare();
 				expect(f.events).toEqual([
 					"prepare:range:5",
 					"bootstrap",
@@ -1520,16 +1594,87 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				]);
 				expect(f.runtime.getStatus()).toBe("prepared");
 				f.setEnd(9n);
-				await f.runtime.activate();
+				const activation = f.runtime.activate();
+				expect(f.runtime.getStatus()).toBe("activating");
+				await activation;
 				expect(f.events.slice(4)).toEqual([
 					"connect",
 					"fence",
 					"active:range:9",
 					"bootstrap",
-					"active:replay:9",
+					"active:replay:9:from-bookmark",
 				]);
 				expect(f.runtime.getStatus()).toBe("ready");
 			} finally {
+				await f.cleanup();
+			}
+		});
+		test("preparation re-reads the log end when the live owner's bookmark has passed it", async () => {
+			let refusals = 0;
+			const f = createFixture({
+				bootstrap: async () => {
+					if (refusals++ > 0) return;
+					// The owner appended and advanced its bookmark while the range was being read.
+					f.setEnd(7n);
+					throw new PartitionBootstrapRefusedError({
+						topic,
+						partition,
+						reason: "local_state_ahead_of_log_end",
+					});
+				},
+			});
+			try {
+				await f.runtime.prepare();
+				expect(f.events).toEqual([
+					"prepare:range:5",
+					"bootstrap",
+					"prepare:range:7",
+					"prepare:replay:7",
+					"prepare:stop",
+				]);
+				expect(f.runtime.getStatus()).toBe("prepared");
+			} finally {
+				await f.cleanup();
+			}
+		});
+		test("a command meeting an activating runtime waits for it instead of failing", async () => {
+			let finishFence = () => {};
+			const fence = new Promise<void>((resolve) => {
+				finishFence = resolve;
+			});
+			const f = createFixture({ fence: () => fence });
+			try {
+				await f.runtime.prepare();
+				const activation = f.runtime.activate();
+				expect(f.runtime.getStatus()).toBe("activating");
+				const command = f.runtime.process(async () => "served");
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(f.runtime.getStatus()).toBe("activating");
+				finishFence();
+				await activation;
+				expect(await command).toBe("served");
+			} finally {
+				finishFence();
+				await f.cleanup();
+			}
+		});
+		test("a command stops waiting for activation after the bounded wait", async () => {
+			let finishFence = () => {};
+			const fence = new Promise<void>((resolve) => {
+				finishFence = resolve;
+			});
+			const f = createFixture({ fence: () => fence, activationWaitMs: 10 });
+			try {
+				await f.runtime.prepare();
+				const activation = f.runtime.activate();
+				await expect(
+					f.runtime.process(async () => "served"),
+				).rejects.toBeInstanceOf(OwnedPartitionNotReadyError);
+				finishFence();
+				await activation;
+				expect(await f.runtime.process(async () => "served")).toBe("served");
+			} finally {
+				finishFence();
 				await f.cleanup();
 			}
 		});
@@ -1564,9 +1709,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 			const f = createFixture();
 			try {
 				f.fail();
-				await expect(
-					f.runtime.prepare({ follower: f.preparation }),
-				).rejects.toThrow("requires recovery");
+				await expect(f.runtime.prepare()).rejects.toThrow("requires recovery");
 				expect(f.events).toContain("prepare:stop");
 				expect(f.events).not.toContain("connect");
 				await expect(f.runtime.activate()).rejects.toThrow();
@@ -1575,11 +1718,9 @@ describe("partitionPreparation", function partitionPreparationTests() {
 			}
 		});
 		test("rejects using the active follower as the preparation source", async () => {
-			const f = createFixture();
+			const f = createFixture({ preparation: (_, active) => active });
 			try {
-				await expect(
-					f.runtime.prepare({ follower: f.follower }),
-				).rejects.toThrow("separate");
+				await expect(f.runtime.prepare()).rejects.toThrow("separate");
 				expect(f.events).toEqual([]);
 			} finally {
 				await f.cleanup();

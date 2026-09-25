@@ -68,6 +68,8 @@ export function listPartitionHealth({
 	const health = new Map<number, OwnedPartitionHealth>();
 	for (const entry of state.retiringEntries.values())
 		health.set(entry.partition, entry.runtime.getHealth());
+	for (const entry of state.handingOff.values())
+		health.set(entry.partition, entry.runtime.getHealth());
 	for (const [partition, terminal] of state.terminalHealthByPartition)
 		health.set(partition, terminal);
 	for (const entry of state.entries.values())

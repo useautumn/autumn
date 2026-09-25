@@ -12,7 +12,7 @@ import {
 
 const commandIdentitySchema = z.object({ identity: z.unknown() });
 
-export function resolveRequestRuntime({
+export async function resolveRequestRuntime({
 	ctx,
 	route,
 	command,
@@ -20,12 +20,14 @@ export function resolveRequestRuntime({
 	ctx: BalanceWorkerHttpContext;
 	route: PartitionRoute;
 	command: unknown;
-}): BalanceWorkerRequestContext["runtime"] {
+}): Promise<BalanceWorkerRequestContext["runtime"]> {
 	const envelope = commandIdentitySchema.parse(command);
 	const identity = parseMeteringIdentity({ input: envelope.identity });
 	const partition = ctx.partitionResolver.partitionForIdentity({ identity });
 	if (partition !== route.partition) throw new PartitionRouteMismatchError();
 	const runtime = ctx.ownership.findRuntime(route);
-	if (!runtime) throw new PartitionRouteNotOwnedError();
-	return runtime;
+	if (runtime) return runtime;
+	// Mid-handoff the successor is not named yet: answering now would send the caller back here.
+	await ctx.ownership.awaitHandoff?.({ partition });
+	throw new PartitionRouteNotOwnedError();
 }

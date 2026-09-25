@@ -11,6 +11,7 @@ import { reportPartitionError } from "../reportPartitionError.js";
 import type {
 	AllocationScope,
 	PartitionEntry,
+	PartitionScope,
 	PartitionsState,
 } from "../types/partitionState.js";
 import type { PartitionFailure } from "../types/partitions.js";
@@ -56,22 +57,14 @@ export function createPartitionEntries({
 				claimed: false,
 				publicationFailed: false,
 				unsubscribeUnavailable: null,
+				handoffAbort: new AbortController(),
+				withdrawn: false,
 				retirement: null,
 				drain: null,
 			};
 			entries.push(entry);
 			state.entries.set(partition, entry);
-			function onUnavailable(failure: PartitionFailure): void {
-				onPartitionUnavailable({
-					ctx,
-					state,
-					entry,
-					allocationGeneration,
-					cause: failure.cause,
-				});
-			}
-			entry.unsubscribeUnavailable =
-				entry.runtime.subscribeUnavailable(onUnavailable);
+			subscribeEntryUnavailable({ ctx, state, entry, allocationGeneration });
 		} catch (cause) {
 			reportPartitionError({ ctx, cause });
 			const progress = ctx.progress.readProgress({ topic, partition });
@@ -94,52 +87,130 @@ export function createPartitionEntries({
 	return entries;
 }
 
+export function subscribeEntryUnavailable({
+	ctx,
+	state,
+	entry,
+	allocationGeneration,
+}: PartitionScope): void {
+	function onUnavailable(failure: PartitionFailure): void {
+		onPartitionUnavailable({
+			ctx,
+			state,
+			entry,
+			allocationGeneration,
+			cause: failure.cause,
+		});
+	}
+	entry.unsubscribeUnavailable?.();
+	entry.unsubscribeUnavailable =
+		entry.runtime.subscribeUnavailable(onUnavailable);
+}
+
+/** prepare → announce ready → named owner by the predecessor (or claim for itself) → activate → admit. */
 export async function startPartition({
 	ctx,
 	state,
 	entry,
 	allocationGeneration,
-}: {
-	ctx: AllocationScope["ctx"];
-	state: PartitionsState;
-	entry: PartitionEntry;
-	allocationGeneration: number;
-}): Promise<void> {
+}: PartitionScope): Promise<void> {
+	const { partition } = entry;
+	function isStillStarting(): boolean {
+		return (
+			isCurrentAllocation({ state, allocationGeneration }) &&
+			state.entries.get(partition) === entry
+		);
+	}
 	try {
-		await entry.runtime.start();
-		if (
-			!isCurrentAllocation({ state, allocationGeneration }) ||
-			state.entries.get(entry.partition) !== entry
-		)
-			return;
+		await entry.runtime.prepare();
+		if (!isStillStarting()) return;
+		await ctx.awaitReadyAnnouncement?.({
+			partition,
+			signal: entry.handoffAbort.signal,
+		});
+		if (!isStillStarting()) return;
 
+		const handedOff = await awaitHandoffClaim({ ctx, entry });
+		if (!isStillStarting()) return;
+
+		const activation = entry.runtime.activate();
+		try {
+			// Named owner already: requests routed here wait at the gate while the runtime fences.
+			if (handedOff) admitPartition({ state, entry, routeEpoch: handedOff });
+			await activation;
+		} catch (cause) {
+			state.directory.withdraw({ partition });
+			throw cause;
+		}
+		if (!isStillStarting()) return;
 		const health = entry.runtime.getHealth();
 		if (health.status !== "ready" || health.failureReason !== null) return;
 
-		let routeEpoch: string;
-		try {
-			entry.claimAttempted = true;
-			({ routeEpoch } = await entry.publication.claim());
-			entry.claimed = true;
-		} catch (cause) {
-			entry.publicationFailed = true;
-			throw cause;
+		if (!handedOff) {
+			let routeEpoch: string;
+			try {
+				entry.claimAttempted = true;
+				({ routeEpoch } = await entry.publication.claim());
+				entry.claimed = true;
+			} catch (cause) {
+				entry.publicationFailed = true;
+				throw cause;
+			}
+			if (!isStillStarting()) return;
+			admitPartition({ state, entry, routeEpoch });
 		}
-
-		if (
-			!isCurrentAllocation({ state, allocationGeneration }) ||
-			state.entries.get(entry.partition) !== entry
-		)
-			return;
-
-		state.directory.admit({
-			partition: entry.partition,
-			routeEpoch,
-			runtime: entry.runtime,
-		});
-		await resumeCommands({ ctx, partition: entry.partition });
+		await resumeCommands({ ctx, partition });
 	} finally {
 		entry.startupSettled = true;
+	}
+}
+
+function admitPartition({
+	state,
+	entry,
+	routeEpoch,
+}: {
+	state: PartitionsState;
+	entry: PartitionEntry;
+	routeEpoch: string;
+}): void {
+	state.directory.admit({
+		partition: entry.partition,
+		routeEpoch,
+		runtime: entry.runtime,
+	});
+}
+
+/** The route epoch of the predecessor's `claimed` naming this worker, or null when none came in time. */
+async function awaitHandoffClaim({
+	ctx,
+	entry,
+}: {
+	ctx: AllocationScope["ctx"];
+	entry: PartitionEntry;
+}): Promise<string | null> {
+	const timeout = new AbortController();
+	function expire(): void {
+		timeout.abort(new Error("Handoff claim timed out"));
+	}
+	const signal = AbortSignal.any([entry.handoffAbort.signal, timeout.signal]);
+	// Listen before announcing: the claim can only follow the announcement, so nothing is missed.
+	const claim = entry.publication.awaitClaim({ signal });
+	void Promise.allSettled([claim]);
+	const timer = setTimeout(expire, ctx.config.handoffClaimTimeoutMs);
+	try {
+		await entry.publication.announceReady();
+		const { routeEpoch } = await claim;
+		entry.claimAttempted = true;
+		entry.claimed = true;
+		return routeEpoch;
+	} catch (cause) {
+		if (entry.handoffAbort.signal.aborted) throw cause;
+		if (!timeout.signal.aborted) reportPartitionError({ ctx, cause });
+		return null;
+	} finally {
+		clearTimeout(timer);
+		timeout.abort(new Error("Handoff claim wait settled"));
 	}
 }
 

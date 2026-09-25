@@ -151,6 +151,7 @@ export type {
 export type { MeteringRecord } from "./topics/metering/types/meteringRecord.js";
 export { createKafkaOwnershipLog } from "./topics/ownership/consumer/createKafkaOwnershipLog.js";
 export { createOwnershipConsumer } from "./topics/ownership/consumer/createOwnershipConsumer.js";
+export { createOwnershipTail } from "./topics/ownership/consumer/createOwnershipTail.js";
 export {
 	applyOwnershipRecord,
 	readOwnershipToEnd,
@@ -160,11 +161,22 @@ export type {
 	OwnershipConsumerConfig,
 	OwnershipKafka,
 } from "./topics/ownership/consumer/types/ownershipConsumer.js";
+export type {
+	OwnershipTail,
+	OwnershipTailConfig,
+	OwnershipTailContext,
+	OwnershipTailKafka,
+	OwnershipTailRecord,
+} from "./topics/ownership/consumer/types/ownershipTail.js";
 export { ownershipTopic } from "./topics/ownership/ownershipTopic.js";
+export { announceReady } from "./topics/ownership/publisher/announceReady.js";
 export { claimPartition } from "./topics/ownership/publisher/claimPartition.js";
 export { createOwnershipPublisher } from "./topics/ownership/publisher/createOwnershipPublisher.js";
 export { releasePartition } from "./topics/ownership/publisher/releasePartition.js";
-export type { OwnershipPublisher } from "./topics/ownership/publisher/types/ownershipPublisher.js";
+export type {
+	OwnershipPublisher,
+	OwnershipReadiness,
+} from "./topics/ownership/publisher/types/ownershipPublisher.js";
 export type {
 	OwnershipLog,
 	OwnershipLogRecord,

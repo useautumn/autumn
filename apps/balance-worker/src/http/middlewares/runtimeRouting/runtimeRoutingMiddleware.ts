@@ -15,7 +15,7 @@ export function runtimeRoutingMiddleware({
 		next: Next,
 	) {
 		const { route, command } = context.get("request");
-		const runtime = resolveRequestRuntime({
+		const runtime = await resolveRequestRuntime({
 			ctx,
 			route,
 			command,

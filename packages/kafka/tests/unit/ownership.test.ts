@@ -56,6 +56,20 @@ describe("ownershipRecords", function ownershipRecordsTests() {
 			expect(ownershipTopic.parse(serialized)).toEqual(record);
 		});
 
+		test("round-trips a ready record", () => {
+			const record = {
+				schemaVersion: 1 as const,
+				type: "ready" as const,
+				partition: 7,
+				endpoint: "http://10.0.0.8:8080",
+				readyAt: 1_700_000_000_200,
+			};
+			const serialized = ownershipTopic.serialize({ record });
+
+			expect(serialized.key.toString("utf8")).toBe("7");
+			expect(ownershipTopic.parse(serialized)).toEqual(record);
+		});
+
 		test("rejects a record whose Kafka key names another partition", () => {
 			const serialized = ownershipTopic.serialize({ record: claimed });
 
@@ -216,12 +230,78 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 		).toBe("unowned");
 	}
 
+	async function announcesReadyOutsideTransactions(): Promise<void> {
+		const fake = createFakeProducer();
+		const sent: ProducerRecord[] = [];
+		async function send(record: ProducerRecord): Promise<RecordMetadata[]> {
+			sent.push(record);
+			return [];
+		}
+		const producer = createOwnershipPublisher({
+			ctx: { producer: fake.producer, sender: { send } },
+			config: { topic },
+		});
+
+		await producer.announceReady({
+			partition,
+			endpoint: "http://10.0.0.8:8080",
+			readyAt: 1_700_000_000_200,
+		});
+
+		expect(fake.records).toEqual([]);
+		expect(sent[0]).toMatchObject({ topic, acks: -1 });
+		expect(sent[0]?.messages[0]).toMatchObject({ partition });
+		expect(
+			ownershipTopic.parse({
+				key: Buffer.isBuffer(sent[0]?.messages[0]?.key)
+					? sent[0].messages[0].key
+					: null,
+				value: Buffer.isBuffer(sent[0]?.messages[0]?.value)
+					? sent[0].messages[0].value
+					: null,
+			}),
+		).toEqual({
+			schemaVersion: 1,
+			type: "ready",
+			partition,
+			endpoint: "http://10.0.0.8:8080",
+			readyAt: 1_700_000_000_200,
+		});
+	}
+
+	async function refusesReadyWithoutSender(): Promise<void> {
+		const fake = createFakeProducer();
+		const producer = createOwnershipPublisher({
+			ctx: { producer: fake.producer },
+			config: { topic },
+		});
+
+		await expect(
+			producer.announceReady({
+				partition,
+				endpoint: "http://10.0.0.8:8080",
+				readyAt: 1,
+			}),
+		).rejects.toThrow("plain producer");
+		expect(fake.records).toEqual([]);
+	}
+
 	test(
 		"claims with a transactional write and returns the offset epoch",
 		publishesClaimAndReturnsEpoch,
 	);
 
 	test("releases with an unowned record", publishesRelease);
+
+	test(
+		"announces readiness with a plain send, never a transaction",
+		announcesReadyOutsideTransactions,
+	);
+
+	test(
+		"refuses to announce readiness without a plain producer",
+		refusesReadyWithoutSender,
+	);
 });
 
 describe("ownershipConsumption", function ownershipConsumptionTests() {
@@ -448,6 +528,44 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 			crash,
 		};
 	}
+	function ignoresReadyRecordsInTheOwnerTable(): void {
+		const state: OwnershipConsumerState = {
+			status: "started",
+			owners: new Map(),
+			lastAppliedOffsets: new Map(),
+			lifetime: new AbortController(),
+		};
+		const ready = ownershipTopic.serialize({
+			record: {
+				schemaVersion: 1,
+				type: "ready",
+				partition,
+				endpoint: "http://successor:8080",
+				readyAt: 1,
+			},
+		});
+		const claim = ownershipTopic.serialize({
+			record: {
+				schemaVersion: 1,
+				type: "claimed",
+				partition,
+				endpoint: "http://worker:8080",
+				claimedAt: 2,
+			},
+		});
+		applyOwnershipMessage({ state, message: ready, partition, offset: 1n });
+		expect(state.owners.has(partition)).toBe(false);
+		expect(state.lastAppliedOffsets.get(partition)).toBe(1n);
+		applyOwnershipMessage({ state, message: claim, partition, offset: 2n });
+		applyOwnershipMessage({ state, message: ready, partition, offset: 3n });
+		expect(state.owners.get(partition)).toEqual({
+			partition,
+			endpoint: "http://worker:8080",
+			routeEpoch: "2",
+		});
+		expect(state.lastAppliedOffsets.get(partition)).toBe(3n);
+	}
+
 	function preservesReleaseOrdering(): void {
 		const state: OwnershipConsumerState = {
 			status: "started",
@@ -615,6 +733,10 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 		preservesReleaseOrdering,
 	);
 	test(
+		"ready records advance the offset without touching the owner table",
+		ignoresReadyRecordsInTheOwnerTable,
+	);
+	test(
 		"follows claims/releases and resumes after a rejoin without explicit refresh",
 		followsWithoutRefreshing,
 	);
@@ -712,7 +834,61 @@ describe("ownershipReplay", function ownershipReplayTests() {
 		releasedAt: 1_700_000_000_100,
 	};
 
+	const ready = {
+		schemaVersion: 1 as const,
+		type: "ready" as const,
+		partition: 7,
+		endpoint: "http://10.0.0.8:8080",
+		readyAt: 1_700_000_000_200,
+	};
+
 	describe("applyOwnershipRecord", () => {
+		test("a later claim supersedes the current owner whoever wrote it", () => {
+			// A handoff has the predecessor write the claim on the successor's behalf;
+			// the table only sees a claim naming a new endpoint at a later offset.
+			const held = applyOwnershipRecord({
+				owners: new Map(),
+				record: claimed,
+				offset: 3n,
+			});
+			const handedOff = applyOwnershipRecord({
+				owners: held,
+				record: { ...claimed, endpoint: "http://10.0.0.8:8080" },
+				offset: 9n,
+			});
+
+			expect(handedOff.get(7)).toEqual({
+				partition: 7,
+				endpoint: "http://10.0.0.8:8080",
+				routeEpoch: "9",
+			});
+		});
+
+		test("ready never changes the owner", () => {
+			expect(
+				applyOwnershipRecord({
+					owners: new Map(),
+					record: ready,
+					offset: 1n,
+				}).has(7),
+			).toBe(false);
+			const held = applyOwnershipRecord({
+				owners: new Map(),
+				record: claimed,
+				offset: 3n,
+			});
+
+			expect(
+				applyOwnershipRecord({ owners: held, record: ready, offset: 4n }).get(
+					7,
+				),
+			).toEqual({
+				partition: 7,
+				endpoint: "http://10.0.0.4:8080",
+				routeEpoch: "3",
+			});
+		});
+
 		test("ignores a release from a worker that no longer holds the partition", () => {
 			// The case that stranded claims in staging: one worker claims, loses the
 			// partition to another on rebalance, then withdraws. Its withdrawal must

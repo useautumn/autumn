@@ -7,6 +7,7 @@ import type {
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
+import type { OwnershipHandoffLink } from "../../kafka/createOwnershipHandoffLink.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
 import type { PartitionWriterLimits } from "../../processor/writer/types/partitionWriter.js";
@@ -32,6 +33,8 @@ export type PartitionRuntimeFactoryInput = {
 	topic: string;
 	partition: number;
 	follower: PartitionOutcomeFollowerPort;
+	/** Read-only replay of the same partition for preparation; absent in a bare test. */
+	preparation?: PartitionOutcomeFollowerPort;
 	recentCommands: RecentCommands;
 };
 
@@ -48,6 +51,7 @@ export type PartitionRuntimeFactoryContext = {
 	logger?: Pick<AutumnLogger, "debug"> & Partial<Pick<AutumnLogger, "error">>;
 	kafka: KafkaProducerFactory;
 	ownershipOffsets: Pick<Admin, "fetchTopicOffsets">;
+	ownershipHandoff?: Pick<OwnershipHandoffLink, "tail" | "sender">;
 	stateStore: StateStore;
 	db: WorkerDb;
 	catalogCache: CatalogCache;
