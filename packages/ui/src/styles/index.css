@@ -90,9 +90,9 @@ html {
 	--overlay-border: #e5e5e5;
 	--overlay-separator: #efefef;
 	--overlay-hover: rgb(0 0 0 / 0.045);
-	--overlay-shadow: 0 12px 32px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.05);
+	--overlay-shadow: 0 4px 12px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.04);
 	--overlay-dialog-shadow:
-		0 24px 64px rgb(0 0 0 / 0.16), 0 2px 8px rgb(0 0 0 / 0.06);
+		0 8px 24px rgb(0 0 0 / 0.07), 0 1px 3px rgb(0 0 0 / 0.04);
 
 	--input: #dddddd;
 
@@ -185,9 +185,9 @@ html {
 	--overlay-border: #2a2a2a;
 	--overlay-separator: #262626;
 	--overlay-hover: rgb(255 255 255 / 0.06);
-	--overlay-shadow: 0 12px 32px rgb(0 0 0 / 0.65), 0 2px 6px rgb(0 0 0 / 0.4);
+	--overlay-shadow: 0 4px 12px rgb(0 0 0 / 0.25), 0 1px 2px rgb(0 0 0 / 0.2);
 	--overlay-dialog-shadow:
-		0 24px 64px rgb(0 0 0 / 0.7), 0 2px 8px rgb(0 0 0 / 0.5);
+		0 8px 24px rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.2);
 
 	--chart-grid-stroke: #262626;
 
