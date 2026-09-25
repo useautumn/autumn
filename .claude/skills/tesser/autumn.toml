@@ -15,6 +15,7 @@
 
 ports = [3000, 8080, 3001] # dashboard, API, checkout
 size = "large"
+box_address = true # sign-ins live on http://<box_id>.localhost, so bare localhost pages move there
 
 [run]
 setup = "bash scripts/tesser/setup.sh"
