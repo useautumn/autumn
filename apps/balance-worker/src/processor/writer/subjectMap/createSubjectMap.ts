@@ -1,4 +1,5 @@
 import type { SubjectState } from "@autumn/balance-engine";
+import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
 import type { SubjectMap } from "./types/subjectMap.js";
 
 /** Per partition writer; a worker holds many partitions, so the fleet total is this × partitions. */
@@ -112,7 +113,10 @@ export const createSubjectMap = ({
 		index({ subjectKey, customerKey });
 		totalBytes -= entry.bytes;
 		entry.state = state;
-		entry.bytes = JSON.stringify(state).length;
+		entry.bytes = timeSync(
+			{ label: "subject.weigh" },
+			() => JSON.stringify(state).length,
+		);
 		totalBytes += entry.bytes;
 		touch({ subjectKey, entry });
 		evictUntilWithinBound({ except: subjectKey });

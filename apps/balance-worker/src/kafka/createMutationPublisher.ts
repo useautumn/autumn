@@ -8,6 +8,7 @@ import {
 	sendTransactionalOffsets,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
+import { timeSync } from "../logging/eventLoopStalls/syncSections.js";
 import type { PartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
 import type { ProducedOffsets } from "../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { CommittedOutcomeAppender } from "../processor/writer/types/partitionWriter.js";
@@ -87,7 +88,9 @@ export function createMutationPublisher({
 
 	/** Serialising here is not wasted: the encoding is kept on the record and reused when it is sent. */
 	function encodedBytesOf({ record }: { record: MeteringRecord }): number {
-		const { key, value } = serializeMeteringRecord({ record });
+		const { key, value } = timeSync({ label: "record.encode" }, () =>
+			serializeMeteringRecord({ record }),
+		);
 		return key.length + value.length;
 	}
 
