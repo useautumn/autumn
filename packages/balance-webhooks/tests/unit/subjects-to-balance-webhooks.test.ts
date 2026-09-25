@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
 	applyMutation,
-	computeFinalize,
-	computeTrack,
+	computeFinalizeDecision,
+	computeTrackDecision,
 	createSubjectState,
+	type DeductionDecision,
 	type SubjectState,
-	type SubjectStateMutation,
 	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
 import { ResetInterval } from "@autumn/shared";
@@ -39,26 +39,27 @@ const stateWith = ({
 const subjectOf = ({ state }: { state: SubjectState }) =>
 	subjectStateToFullSubject({ state, catalog: createCatalogFor({ state }) });
 
-/** What the worker hands the decision: the mutation with the subject as it found it and as it left it. */
+/** What the worker hands the decision: the mutation and its deduction, with the subject as it found it and as it left it. */
 const decidedOn = ({
 	state,
-	mutation,
+	decision: { mutation, outcome },
 }: {
 	state: SubjectState;
-	mutation: SubjectStateMutation;
+	decision: DeductionDecision;
 }) => ({
 	mutation,
+	outcome,
 	before: subjectOf({ state }),
 	after: subjectOf({ state: applyMutation({ state, mutation }) }),
 });
 
 const webhooksOf = ({
 	state,
-	mutation,
+	decision,
 }: {
 	state: SubjectState;
-	mutation: SubjectStateMutation;
-}) => subjectsToBalanceWebhooks(decidedOn({ state, mutation }));
+	decision: DeductionDecision;
+}) => subjectsToBalanceWebhooks(decidedOn({ state, decision }));
 
 /** Tracks `value` against an allowance of `balance`. */
 const trackOn = ({
@@ -69,13 +70,13 @@ const trackOn = ({
 	balance: number;
 	value: number;
 	overageBehavior?: "cap" | "reject";
-}): { state: SubjectState; mutation: SubjectStateMutation } => {
+}): { state: SubjectState; decision: DeductionDecision } => {
 	const state = stateWith({ balance });
-	const mutation = computeTrack({
+	const decision = computeTrackDecision({
 		fullSubject: subjectOf({ state }),
 		command: createTrackCommand({ value, overageBehavior }),
 	});
-	return { state, mutation };
+	return { state, decision };
 };
 
 describe("limit reached", () => {
@@ -118,7 +119,7 @@ describe("limit reached", () => {
 
 	test("a lock that empties the allowance fires, and settling it fires nothing more", () => {
 		const state = stateWith({ balance: 8 });
-		const lockMutation = computeTrack({
+		const lock = computeTrackDecision({
 			fullSubject: subjectOf({ state }),
 			command: {
 				...createTrackCommand({ value: 8, commandId: "cmd_lock" }),
@@ -130,13 +131,13 @@ describe("limit reached", () => {
 				},
 			},
 		});
-		const lockChange = lockMutation.changes.find(
+		const lockChange = lock.mutation.changes.find(
 			(change) => change.table === "locks" && change.op === "insert",
 		);
 		if (lockChange?.table !== "locks" || lockChange.op !== "insert")
 			throw new Error("Expected the track to open a lock");
-		const locked = applyMutation({ state, mutation: lockMutation });
-		const finalizeMutation = computeFinalize({
+		const locked = applyMutation({ state, mutation: lock.mutation });
+		const finalize = computeFinalizeDecision({
 			fullSubject: subjectOf({ state: locked }),
 			command: {
 				schemaVersion: 1,
@@ -153,11 +154,8 @@ describe("limit reached", () => {
 			},
 		});
 
-		const onLock = webhooksOf({ state, mutation: lockMutation });
-		const onFinalize = webhooksOf({
-			state: locked,
-			mutation: finalizeMutation,
-		});
+		const onLock = webhooksOf({ state, decision: lock });
+		const onFinalize = webhooksOf({ state: locked, decision: finalize });
 
 		expect(onLock.map(({ eventType }) => eventType)).toEqual([
 			"balances.limit_reached",
@@ -167,7 +165,7 @@ describe("limit reached", () => {
 
 	test("releasing a lock that had emptied the allowance fires nothing: the balance came back", () => {
 		const state = stateWith({ balance: 8 });
-		const lockMutation = computeTrack({
+		const lock = computeTrackDecision({
 			fullSubject: subjectOf({ state }),
 			command: {
 				...createTrackCommand({ value: 8, commandId: "cmd_lock" }),
@@ -179,13 +177,13 @@ describe("limit reached", () => {
 				},
 			},
 		});
-		const lockChange = lockMutation.changes.find(
+		const lockChange = lock.mutation.changes.find(
 			(change) => change.table === "locks" && change.op === "insert",
 		);
 		if (lockChange?.table !== "locks" || lockChange.op !== "insert")
 			throw new Error("Expected the track to open a lock");
-		const locked = applyMutation({ state, mutation: lockMutation });
-		const release = computeFinalize({
+		const locked = applyMutation({ state, mutation: lock.mutation });
+		const release = computeFinalizeDecision({
 			fullSubject: subjectOf({ state: locked }),
 			command: {
 				schemaVersion: 1,
@@ -202,7 +200,7 @@ describe("limit reached", () => {
 			},
 		});
 
-		expect(webhooksOf({ state: locked, mutation: release })).toEqual([]);
+		expect(webhooksOf({ state: locked, decision: release })).toEqual([]);
 	});
 
 	test("a track that spends a daily cap names the cap, its window and the usage in it", () => {
@@ -219,12 +217,12 @@ describe("limit reached", () => {
 				],
 			}),
 		});
-		const mutation = computeTrack({
+		const decision = computeTrackDecision({
 			fullSubject: subjectOf({ state }),
 			command: createTrackCommand({ value: 5, overageBehavior: "cap" }),
 		});
 
-		const [webhook] = webhooksOf({ state, mutation });
+		const [webhook] = webhooksOf({ state, decision });
 
 		expect(webhook?.data).toMatchObject({
 			feature_id: "messages",
@@ -249,7 +247,7 @@ describe("limit reached", () => {
 				],
 			}),
 		});
-		const mutation = computeTrack({
+		const decision = computeTrackDecision({
 			fullSubject: subjectOf({ state }),
 			command: {
 				...createTrackCommand({ value: 2, overageBehavior: "cap" }),
@@ -257,7 +255,7 @@ describe("limit reached", () => {
 			},
 		});
 
-		const [webhook] = webhooksOf({ state, mutation });
+		const [webhook] = webhooksOf({ state, decision });
 
 		expect(webhook?.data).toMatchObject({
 			limit_type: "usage_limit",

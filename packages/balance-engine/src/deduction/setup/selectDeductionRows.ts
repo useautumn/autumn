@@ -3,7 +3,6 @@ import {
 	fullSubjectToCustomerEntitlements,
 	isThresholdBillingCustomerProduct,
 	isUnlimitedCustomerEntitlement,
-	orgToInStatuses,
 } from "@autumn/shared";
 import type { WorkerRollover } from "../../models/subject/rows/workerRollover.js";
 import type {
@@ -11,7 +10,7 @@ import type {
 	WorkerFullCustomerProduct,
 	WorkerFullSubject,
 } from "../../models/subject/workerFullSubject.js";
-import type { DeductionRequest } from "../types/deductionRequest.js";
+import type { DeductionSelection } from "../types/deductionRequest.js";
 
 /** The sort prefers unlimited only within a tier; the sink contract needs it first outright. */
 const hoistUnlimited = ({
@@ -34,34 +33,33 @@ const byExpiresAt = (left: WorkerRollover, right: WorkerRollover): number =>
 	(left.expires_at ?? Number.POSITIVE_INFINITY) -
 	(right.expires_at ?? Number.POSITIVE_INFINITY);
 
-/** `getCheckSubject`: a past-due product stops funding when the org blocks overdue usage on a check, or when it bills by threshold. */
+/** `getCheckSubject`: a past-due product stops funding when the selection blocks overdue usage, or when it bills by threshold. */
 const isOverdueBlocked = ({
 	customerProduct,
-	request,
+	selection,
 }: {
 	customerProduct: WorkerFullCustomerProduct;
-	request: DeductionRequest;
+	selection: DeductionSelection;
 }): boolean =>
 	customerProduct.status === CusProductStatus.PastDue &&
 	!customerProduct.product.config?.ignore_past_due &&
-	((request.enforceOverdueBlock &&
-		request.org.config.block_overdue_entitlements) ||
+	(selection.blocksOverdue ||
 		isThresholdBillingCustomerProduct({ customerProduct }));
 
-/** Which rows the request draws from, in draw order, and their rollovers: the same selection and sort the Lua path uses. */
+/** Which rows the selection draws from, in draw order, and their rollovers: the same selection and sort the Lua path uses. */
 export const selectDeductionRows = ({
 	fullSubject,
-	request,
+	selection,
 }: {
 	fullSubject: WorkerFullSubject;
-	request: DeductionRequest;
+	selection: DeductionSelection;
 }): {
 	customerEntitlements: WorkerFullCustomerEntitlementWithProduct[];
 	rollovers: WorkerRollover[];
 	overdueBlocked: boolean;
 } => {
 	const blockedProducts = fullSubject.customer_products.filter(
-		(customerProduct) => isOverdueBlocked({ customerProduct, request }),
+		(customerProduct) => isOverdueBlocked({ customerProduct, selection }),
 	);
 	const fundingSubject = {
 		...fullSubject,
@@ -72,13 +70,13 @@ export const selectDeductionRows = ({
 	const customerEntitlements = hoistUnlimited({
 		customerEntitlements: fullSubjectToCustomerEntitlements({
 			fullSubject: fundingSubject,
-			...(request.includesCreditSystems
-				? { fundsFeatureId: request.featureId }
-				: { featureIds: [request.featureId] }),
-			customerEntitlementFilters: request.customerEntitlementFilters,
-			inStatuses: orgToInStatuses({ org: request.org }),
-			reverseOrder: request.org.config.reverse_deduction_order,
-			now: request.now,
+			...(selection.includesCreditSystems
+				? { fundsFeatureId: selection.featureId }
+				: { featureIds: [selection.featureId] }),
+			customerEntitlementFilters: selection.customerEntitlementFilters,
+			inStatuses: selection.inStatuses,
+			reverseOrder: selection.reverseOrder,
+			now: selection.now,
 		}),
 	});
 	// State outlives a rollover's expiry; the hydration query drops these, the draw must too.
@@ -86,13 +84,13 @@ export const selectDeductionRows = ({
 		.flatMap((customerEntitlement) => customerEntitlement.rollovers)
 		.filter(
 			(rollover) =>
-				rollover.expires_at === null || rollover.expires_at > request.now,
+				rollover.expires_at === null || rollover.expires_at > selection.now,
 		)
 		.sort(byExpiresAt);
 	const overdueBlocked = blockedProducts.some((customerProduct) =>
 		customerProduct.customer_entitlements.some(
 			(customerEntitlement) =>
-				customerEntitlement.entitlement.feature.id === request.featureId,
+				customerEntitlement.entitlement.feature.id === selection.featureId,
 		),
 	);
 	return { customerEntitlements, rollovers, overdueBlocked };

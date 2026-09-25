@@ -1,7 +1,7 @@
 import {
 	applyMutation,
 	type Catalog,
-	computeTrack,
+	computeTrackDecision,
 	meteringIdentityToPartitionKey,
 	type SubjectState,
 	slimSubjectForFeatures,
@@ -94,7 +94,8 @@ function decideTrack({
 		catalog,
 		identity: command.identity,
 	});
-	const mutation = computeTrack({ fullSubject, command });
+	const decision = computeTrackDecision({ fullSubject, command });
+	const { mutation } = decision;
 	const nextState = applyMutation({ state, mutation });
 	const after = scope.ctx.subjectHydrator.readSubjectWith({
 		state: nextState,
@@ -105,6 +106,6 @@ function decideTrack({
 		kind: "write",
 		mutation,
 		nextState,
-		effects: decideEffects({ mutation, before: fullSubject, after }),
+		effects: decideEffects({ decision, before: fullSubject, after }),
 	};
 }

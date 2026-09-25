@@ -1,3 +1,4 @@
+import { toDeductionSelection } from "../../deduction/toDeductionSelection.js";
 import type { DeductionRequest } from "../../deduction/types/deductionRequest.js";
 import type { CheckCommand } from "./types/checkCommand.js";
 
@@ -7,15 +8,16 @@ export const checkCommandToDeductionRequest = ({
 }: {
 	command: CheckCommand;
 }): DeductionRequest => ({
-	featureId: command.featureId,
-	internalFeatureId: command.internalFeatureId,
+	selection: toDeductionSelection({
+		featureId: command.featureId,
+		internalFeatureId: command.internalFeatureId,
+		now: command.occurredAt,
+		properties: command.properties,
+		includesCreditSystems: true,
+		countsUsageWindows: true,
+		org: command.org,
+		enforceOverdueBlock: true,
+	}),
+	terms: { overageBehavior: "reject", enforcesSpendLimit: true },
 	value: command.requiredBalance,
-	overageBehavior: "reject",
-	properties: command.properties,
-	includesCreditSystems: true,
-	enforcesSpendLimit: true,
-	countsUsageWindows: true,
-	enforceOverdueBlock: true,
-	now: command.occurredAt,
-	org: command.org,
 });

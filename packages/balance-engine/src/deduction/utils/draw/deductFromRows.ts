@@ -30,11 +30,11 @@ export type DeductionBucket =
 const boundsOf = ({
 	row,
 	bucket,
-	context,
+	deductionState,
 }: {
 	row: DeductionRow;
 	bucket: DeductionBucket;
-	context: DeductionContext;
+	deductionState: DeductionState;
 }): { floor: number | null; ceiling: number | null } => {
 	switch (bucket) {
 		case "unlimited":
@@ -44,8 +44,8 @@ const boundsOf = ({
 			return { floor: 0, ceiling: 0 };
 		case "overage":
 			return {
-				floor: allowsNegative({ context }) ? null : row.minBalance,
-				ceiling: allowsNegative({ context }) ? null : row.maxBalance,
+				floor: allowsNegative({ deductionState }) ? null : row.minBalance,
+				ceiling: allowsNegative({ deductionState }) ? null : row.maxBalance,
 			};
 	}
 };
@@ -100,7 +100,7 @@ const creditsFor = ({
 	row.rateCard
 		? new Decimal(
 				creditRateToCost({
-					featureId: context.featureId,
+					featureId: context.selection.featureId,
 					creditSystemId: row.featureId,
 					rate: row.rateCard,
 					amount: units.toNumber(),
@@ -151,13 +151,13 @@ export const deductFromRows = ({
 	for (const row of rows) {
 		if (deductionState.remaining.isZero()) return;
 
-		const bounds = boundsOf({ row, bucket, context });
+		const bounds = boundsOf({ row, bucket, deductionState });
 		const refund = isRefund({ deductionState });
 
 		// Windowed caps bound how many tracked units this row may give; a refund is never capped, overflow skips the gate but still counts.
 		const windowRow = bucket === "rollovers" ? null : row;
 		const windowHeadroom =
-			refund || context.overageBehavior === "overflow"
+			refund || allowsNegative({ deductionState })
 				? null
 				: deductionRowToUsageWindowHeadroom({
 						context,
@@ -173,7 +173,7 @@ export const deductFromRows = ({
 
 		// A spend limit caps the overage bucket in place of the row's floor, as the Lua gate does.
 		const headroom =
-			bucket === "overage" && !refund && context.enforcesSpendLimit
+			bucket === "overage" && !refund && deductionState.terms.enforcesSpendLimit
 				? deductionRowToSpendLimitHeadroom({ context, deductionState, row })
 				: null;
 		const amount = creditsFor({ context, row, units, deductionState });

@@ -11,6 +11,7 @@ import {
 	StaleMutationError,
 } from "../../../src/balanceEngine.js";
 import { deduct } from "../../../src/deduction/deduct.js";
+import { createDeductionRequest } from "../deduction/deductionFixtures.js";
 import {
 	createCustomerEntitlement,
 	createCustomerProduct,
@@ -195,19 +196,7 @@ describe("an increment under a concurrent writer", () => {
 		const decidedOn = stateWith({ row: { balance: 10 } });
 		const outcome = deduct({
 			fullSubject: createSubjectFor({ state: decidedOn }),
-			request: {
-				featureId: "messages",
-				internalFeatureId: "feat_messages",
-				value: 6,
-				overageBehavior: "cap",
-				includesCreditSystems: true,
-				enforcesSpendLimit: true,
-				countsUsageWindows: true,
-				properties: null,
-				enforceOverdueBlock: false,
-				now: occurredAt,
-				org,
-			},
+			request: createDeductionRequest({ value: 6, org }),
 		});
 		const resetElsewhere = stateWith({
 			row: { balance: 100, next_reset_at: 2 },
@@ -334,19 +323,7 @@ describe("what a deduction logs", () => {
 		});
 		const outcome = deduct({
 			fullSubject: createSubjectFor({ state }),
-			request: {
-				featureId: "messages",
-				internalFeatureId: "feat_messages",
-				value: 5,
-				overageBehavior: "cap",
-				includesCreditSystems: true,
-				enforcesSpendLimit: true,
-				countsUsageWindows: true,
-				properties: null,
-				enforceOverdueBlock: false,
-				now: occurredAt,
-				org,
-			},
+			request: createDeductionRequest({ value: 5, org }),
 		});
 
 		expect(outcome.changes.map((change) => [change.table, change.op])).toEqual([

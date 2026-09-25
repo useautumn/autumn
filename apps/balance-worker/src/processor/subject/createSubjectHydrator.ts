@@ -1,4 +1,5 @@
 import { subjectStateToFullSubject } from "@autumn/balance-engine";
+import { BALANCE_WORKER_CATALOG_RECHECK_MS } from "@autumn/env/balanceWorkerConstants";
 import { ensureSubject } from "./actions/ensureSubject/ensureSubject.js";
 import { ensureSubjectCatalog } from "./actions/ensureSubject/ensureSubjectCatalog.js";
 import { readSubject, readSubjectCatalog } from "./actions/readSubject.js";
@@ -16,7 +17,12 @@ export const createSubjectHydrator = ({
 		ctx,
 		state: {
 			inFlightLoads: createInFlightLoads(),
-			joinCache: createSubjectJoinCache({ ctx }),
+			joinCache: createSubjectJoinCache({
+				ctx: {
+					catalogCache: ctx.catalogCache,
+					config: { catalogRecheckMs: BALANCE_WORKER_CATALOG_RECHECK_MS },
+				},
+			}),
 		},
 	};
 
@@ -35,5 +41,7 @@ export const createSubjectHydrator = ({
 			}),
 		overtakeInFlightLoads: ({ customerKey }) =>
 			scope.state.inFlightLoads.overtakeCustomer({ customerKey }),
+		inheritCatalog: ({ from, to, changes }) =>
+			scope.state.joinCache.inheritCatalog({ from, to, changes }),
 	};
 };

@@ -1,6 +1,7 @@
 import type {
 	Catalog,
 	MeteringIdentity,
+	RowChange,
 	SubjectState,
 	WorkerFullSubject,
 } from "@autumn/balance-engine";
@@ -30,4 +31,10 @@ export type SubjectHydrator = {
 	}): WorkerFullSubject;
 	/** An evict arrived: any load of this customer still in flight started before it, so its rows cannot be trusted. */
 	overtakeInFlightLoads(params: { customerKey: string }): void;
+	/** The writer advanced a state; when the mutation kept its catalog keys, the next state starts with the same joined catalog. */
+	inheritCatalog(params: {
+		from: SubjectState | null;
+		to: SubjectState;
+		changes: RowChange[];
+	}): void;
 };

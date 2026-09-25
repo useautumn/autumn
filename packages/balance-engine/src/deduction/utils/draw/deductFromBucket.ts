@@ -1,7 +1,11 @@
 import type { DeductionContext } from "../../types/deductionContext.js";
 import type { DeductionRow } from "../../types/deductionRow.js";
 import type { DeductionState } from "../../types/deductionState.js";
-import { allowsNegative, isRefund } from "../classifyDeductionUtils.js";
+import {
+	allowsNegative,
+	isRefund,
+	isUsageAllowed,
+} from "../classifyDeductionUtils.js";
 import { type DeductionBucket, deductFromRows } from "./deductFromRows.js";
 
 /** Which rows a bucket visits; deductFromRows knows how far the bucket lets them move. */
@@ -29,8 +33,10 @@ const bucketToRows = ({
 		// Rows that may go below zero. Overflow admits every row; a refund lifts every row up to its grant.
 		case "overage": {
 			const admitsEveryRow =
-				allowsNegative({ context }) || isRefund({ deductionState });
-			return context.rows.filter((row) => admitsEveryRow || row.usageAllowed);
+				allowsNegative({ deductionState }) || isRefund({ deductionState });
+			return context.rows.filter(
+				(row) => admitsEveryRow || isUsageAllowed({ row, deductionState }),
+			);
 		}
 	}
 };

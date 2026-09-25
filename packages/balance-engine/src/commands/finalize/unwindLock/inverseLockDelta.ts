@@ -52,7 +52,7 @@ const rateCardInverseOf = ({
 	const units = lockCharged ? Decimal.min(taken, currentUnits).neg() : taken;
 	const credits = new Decimal(
 		creditRateToCost({
-			featureId: context.featureId,
+			featureId: context.selection.featureId,
 			creditSystemId: row.featureId,
 			rate: row.rateCard,
 			amount: units.toNumber(),

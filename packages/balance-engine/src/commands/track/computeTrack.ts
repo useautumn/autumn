@@ -1,4 +1,5 @@
 import { deduct } from "../../deduction/deduct.js";
+import type { DeductionDecision } from "../../deduction/types/deductionDecision.js";
 import { isPaidAllocatedV1Deduction } from "../../deduction/utils/classifyDeductionUtils.js";
 import {
 	LockAlreadyExistsError,
@@ -11,14 +12,14 @@ import { trackCommandToDeductionRequest } from "./trackCommandToDeductionRequest
 import { trackOutcomeToMutation } from "./trackOutcomeToMutation.js";
 import type { TrackCommand } from "./types/trackCommand.js";
 
-/** Pure: the same subject and command always yield the same mutation. Dedup is the writer's job. */
-export const computeTrack = ({
+/** Pure: the same subject and command always yield the same decision. Dedup is the writer's job. */
+export const computeTrackDecision = ({
 	fullSubject,
 	command,
 }: {
 	fullSubject: WorkerFullSubject;
 	command: TrackCommand;
-}): SubjectStateMutation => {
+}): DeductionDecision => {
 	assertCommandSupported({ fullSubject, command });
 
 	// Checked before the deduction: a duplicate lock deducts nothing and writes nothing.
@@ -44,9 +45,17 @@ export const computeTrack = ({
 		});
 	}
 
-	return trackOutcomeToMutation({
-		command,
+	return {
+		mutation: trackOutcomeToMutation({ command, outcome, fullSubject }),
 		outcome,
-		fullSubject,
-	});
+	};
 };
+
+export const computeTrack = ({
+	fullSubject,
+	command,
+}: {
+	fullSubject: WorkerFullSubject;
+	command: TrackCommand;
+}): SubjectStateMutation =>
+	computeTrackDecision({ fullSubject, command }).mutation;

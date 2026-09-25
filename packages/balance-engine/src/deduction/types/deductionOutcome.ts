@@ -1,3 +1,4 @@
+import type { Decimal } from "decimal.js";
 import type { RowChange } from "../../models/mutation/rowChange.js";
 import type { DeductionLimitType } from "../utils/limits/deductionStateToLimitType.js";
 import type { DeductionContext } from "./deductionContext.js";
@@ -14,5 +15,7 @@ export type DeductionOutcome = {
 	/** The limit that left it short; null when the whole value was covered, or nothing funds the feature. */
 	limitType: DeductionLimitType | null;
 	deltas: DeductionDelta[];
+	/** What each windowed cap took, by limit key, in the cap's own unit; a later draw on the same context starts from it. */
+	usageWindowConsumed: Map<string, Decimal>;
 	changes: RowChange[];
 };

@@ -9,7 +9,7 @@ import {
 } from "@autumn/shared";
 import { UnsupportedCommandError } from "../../errors.js";
 import type { WorkerFullCustomerEntitlementWithProduct } from "../../models/subject/workerFullSubject.js";
-import type { DeductionRequest } from "../types/deductionRequest.js";
+import type { DeductionSelection } from "../types/deductionRequest.js";
 
 export type CreditCost = {
 	creditCost: number;
@@ -21,16 +21,16 @@ export type CreditCost = {
 /** `computeCreditCosts` for one row: credits per tracked unit under the row's effective schema, and the rate card if usage is attributed. */
 export const resolveCreditCost = ({
 	customerEntitlement,
-	request,
+	selection,
 }: {
 	customerEntitlement: WorkerFullCustomerEntitlementWithProduct;
-	request: DeductionRequest;
+	selection: DeductionSelection;
 }): CreditCost => {
-	const { featureId, internalFeatureId } = request;
+	const { featureId, internalFeatureId } = selection;
 	const creditSystem = entitlementToCreditSystem({
 		entitlement: customerEntitlement.entitlement,
 	});
-	const eventProperties = request.properties ?? undefined;
+	const eventProperties = selection.properties ?? undefined;
 	try {
 		const rateCard =
 			getCreditRateCard({

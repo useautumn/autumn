@@ -71,7 +71,10 @@ export const setBalance = ({
 	command: UpdateBalanceCommand;
 }): DeductionOutcome => {
 	const baseRequest = updateBalanceCommandToDeductionRequest({ command });
-	const context = setupDeductionContext({ fullSubject, request: baseRequest });
+	const context = setupDeductionContext({
+		fullSubject,
+		selection: baseRequest.selection,
+	});
 	const targetBalance = updateBalanceCommandToTargetBalance({
 		command,
 		context,
@@ -85,6 +88,7 @@ export const setBalance = ({
 	const request = { ...baseRequest, value };
 	const deductionState = {
 		remaining: new Decimal(request.value),
+		terms: request.terms,
 		deltas: [],
 		usageWindowConsumed: new Map(),
 	};

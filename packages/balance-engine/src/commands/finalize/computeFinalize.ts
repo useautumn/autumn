@@ -6,6 +6,8 @@ import {
 	deductionStateToOutcome,
 } from "../../deduction/deduct.js";
 import { setupDeductionContext } from "../../deduction/setup/setupDeductionContext.js";
+import { toDeductionSelection } from "../../deduction/toDeductionSelection.js";
+import type { DeductionDecision } from "../../deduction/types/deductionDecision.js";
 import type { DeductionRequest } from "../../deduction/types/deductionRequest.js";
 import { LockNotFoundError } from "../../errors.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
@@ -19,13 +21,13 @@ import { unwindLock } from "./unwindLock/unwindLock.js";
  * Settles a lock: give back what the final value does not need, newest bucket first, then take whatever it
  * needs beyond the lock. Both halves are deltas, so the row changes come from the same converter a track uses.
  */
-export const computeFinalize = ({
+export const computeFinalizeDecision = ({
 	fullSubject,
 	command,
 }: {
 	fullSubject: WorkerFullSubject;
 	command: FinalizeCommand;
-}): SubjectStateMutation => {
+}): DeductionDecision => {
 	assertCommandSupported({ fullSubject, command });
 	const { lock } = command;
 
@@ -48,20 +50,24 @@ export const computeFinalize = ({
 
 	// The lock's terms govern, whatever the finalize call would prefer.
 	const lockRequest: DeductionRequest = {
+		selection: toDeductionSelection({
+			featureId: lock.feature_id,
+			internalFeatureId: command.internalFeatureId,
+			now: command.occurredAt,
+			properties: command.properties ?? lock.properties,
+			includesCreditSystems: true,
+			countsUsageWindows: true,
+			org: command.org,
+			// A release gives back regardless; only taking more is subject to the overdue block.
+			enforceOverdueBlock: true,
+		}),
+		terms: { overageBehavior: lock.overage_behavior, enforcesSpendLimit: true },
 		value: additionalValue,
-		featureId: lock.feature_id,
-		internalFeatureId: command.internalFeatureId,
-		overageBehavior: lock.overage_behavior,
-		includesCreditSystems: true,
-		enforcesSpendLimit: true,
-		countsUsageWindows: true,
-		properties: command.properties ?? lock.properties,
-		// A release gives back regardless; only taking more is subject to the overdue block.
-		enforceOverdueBlock: true,
-		now: command.occurredAt,
-		org: command.org,
 	};
-	const context = setupDeductionContext({ fullSubject, request: lockRequest });
+	const context = setupDeductionContext({
+		fullSubject,
+		selection: lockRequest.selection,
+	});
 
 	const unwound = unwindLock({
 		fullSubject,
@@ -77,6 +83,7 @@ export const computeFinalize = ({
 	// The forward draw starts from what the unwind moved, so it sees the balances and headroom just given back.
 	const deductionState = {
 		remaining: new Decimal(request.value),
+		terms: request.terms,
 		deltas: unwound.deltas,
 		usageWindowConsumed: unwound.usageWindowConsumed,
 	};
@@ -84,7 +91,7 @@ export const computeFinalize = ({
 	const outcome = deductionStateToOutcome({ context, deductionState, request });
 
 	const { rejected } = outcome;
-	return {
+	const mutation: SubjectStateMutation = {
 		schemaVersion: 1,
 		type: "mutation",
 		id: command.commandId,
@@ -112,4 +119,14 @@ export const computeFinalize = ({
 			}),
 		},
 	};
+	return { mutation, outcome };
 };
+
+export const computeFinalize = ({
+	fullSubject,
+	command,
+}: {
+	fullSubject: WorkerFullSubject;
+	command: FinalizeCommand;
+}): SubjectStateMutation =>
+	computeFinalizeDecision({ fullSubject, command }).mutation;

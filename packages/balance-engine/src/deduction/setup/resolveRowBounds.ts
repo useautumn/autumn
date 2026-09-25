@@ -7,34 +7,37 @@ import {
 	isFreeCustomerEntitlement,
 	isUnlimitedCustomerEntitlement,
 } from "@autumn/shared";
-import type { OverageBehavior } from "../../commands/track/types/trackCommand.js";
 import type { WorkerRollover } from "../../models/subject/rows/workerRollover.js";
 import type { WorkerFullCustomerEntitlementWithProduct } from "../../models/subject/workerFullSubject.js";
 import type { DeductionRow } from "../types/deductionRow.js";
 import type { CreditCost } from "./resolveCreditCosts.js";
 
-/** A free allocated grant may run over unless the caller rejects; a plan or customer control can enable or veto overage for the whole feature. */
+/** The row's own overage: a plan or customer control can enable or veto it for the whole feature. */
 const usageAllowedOf = ({
 	customerEntitlement,
 	control,
 	featureHasNativeOverage,
-	overageBehavior,
 }: {
 	customerEntitlement: WorkerFullCustomerEntitlementWithProduct;
 	control: DbOverageAllowed | undefined;
 	featureHasNativeOverage: boolean;
-	overageBehavior: OverageBehavior;
 }): boolean => {
-	const isFreeAllocated =
-		isAllocatedCustomerEntitlement(customerEntitlement) &&
-		isFreeCustomerEntitlement(customerEntitlement);
-	const native =
-		Boolean(customerEntitlement.usage_allowed) ||
-		(isFreeAllocated && overageBehavior !== "reject");
 	if (control?.enabled === true && !featureHasNativeOverage) return true;
 	if (control?.enabled === false) return false;
-	return native;
+	return Boolean(customerEntitlement.usage_allowed);
 };
+
+/** A free allocated grant may run over unless the draw rejects; a control that vetoes overage vetoes this too. */
+const freeAllocatedOf = ({
+	customerEntitlement,
+	control,
+}: {
+	customerEntitlement: WorkerFullCustomerEntitlementWithProduct;
+	control: DbOverageAllowed | undefined;
+}): boolean =>
+	control?.enabled !== false &&
+	isAllocatedCustomerEntitlement(customerEntitlement) &&
+	isFreeCustomerEntitlement(customerEntitlement);
 
 /** A customer-level row whose balances live in `entities`; a row of the per-entity kind carries `internal_entity_id` and holds its balance like any row. */
 const isPerEntityMapRow = ({
@@ -67,6 +70,7 @@ type RowBounds = Pick<
 	| "rateUnits"
 	| "ownerId"
 	| "usageAllowed"
+	| "freeAllocated"
 	| "minBalance"
 	| "unlimited"
 	| "skipsRollovers"
@@ -78,24 +82,22 @@ const resolveRowBounds = ({
 	creditCost,
 	overageAllowedByFeatureId,
 	nativeOverageFeatureIds,
-	overageBehavior,
 }: {
 	customerEntitlement: WorkerFullCustomerEntitlementWithProduct;
 	creditCost: CreditCost;
 	overageAllowedByFeatureId: Record<string, DbOverageAllowed>;
 	nativeOverageFeatureIds: Set<string>;
-	overageBehavior: OverageBehavior;
 }): RowBounds => {
 	const featureId = customerEntitlement.entitlement.feature.id;
 	const unlimited = isUnlimitedCustomerEntitlement({ customerEntitlement });
 	const maxOverage = getMaxOverage({ cusEnt: customerEntitlement });
+	const control = overageAllowedByFeatureId[featureId];
 	const usageAllowed =
 		unlimited ||
 		usageAllowedOf({
 			customerEntitlement,
-			control: overageAllowedByFeatureId[featureId],
+			control,
 			featureHasNativeOverage: nativeOverageFeatureIds.has(featureId),
-			overageBehavior,
 		});
 	return {
 		id: customerEntitlement.id,
@@ -109,6 +111,8 @@ const resolveRowBounds = ({
 			: 0,
 		ownerId: customerEntitlement.id,
 		usageAllowed,
+		freeAllocated:
+			!unlimited && freeAllocatedOf({ customerEntitlement, control }),
 		minBalance: unlimited || maxOverage === undefined ? null : -maxOverage,
 		unlimited,
 		skipsRollovers: creditCost.skipsRollovers,
@@ -142,21 +146,18 @@ export const customerEntitlementToDeductionRows = ({
 	creditCost,
 	overageAllowedByFeatureId,
 	nativeOverageFeatureIds,
-	overageBehavior,
 }: {
 	customerEntitlement: WorkerFullCustomerEntitlementWithProduct;
 	entityId: string | null;
 	creditCost: CreditCost;
 	overageAllowedByFeatureId: Record<string, DbOverageAllowed>;
 	nativeOverageFeatureIds: Set<string>;
-	overageBehavior: OverageBehavior;
 }): DeductionRow[] => {
 	const bounds = resolveRowBounds({
 		customerEntitlement,
 		creditCost,
 		overageAllowedByFeatureId,
 		nativeOverageFeatureIds,
-		overageBehavior,
 	});
 
 	if (!isPerEntityMapRow({ customerEntitlement })) {
@@ -201,6 +202,7 @@ export const rolloverToDeductionRow = ({
 	rateUnits: owner.rateUnits,
 	ownerId: owner.ownerId,
 	usageAllowed: false,
+	freeAllocated: false,
 	minBalance: 0,
 	maxBalance: 0,
 	unlimited: false,

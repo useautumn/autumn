@@ -11,7 +11,10 @@ import { createState, createSubjectFor } from "../../../fixtures/mutations.js";
 const createFixture = () => {
 	let changeCount = 0;
 	const joinCache = createSubjectJoinCache({
-		ctx: { catalogCache: { changeCount: () => changeCount } },
+		ctx: {
+			catalogCache: { changeCount: () => changeCount },
+			config: { catalogRecheckMs: 300_000 },
+		},
 	});
 	let joins = 0;
 	const joinFor =
@@ -129,5 +132,98 @@ describe("peekCatalog", () => {
 		expect(fixture.joinCache.peekCatalog({ state: createState() })).toBeNull();
 		fixture.moveCatalog();
 		expect(fixture.joinCache.peekCatalog({ state })).toBeNull();
+	});
+});
+
+describe("inheritCatalog", () => {
+	/** A join cache whose clock the test moves. */
+	const createClockedFixture = ({ recheckMs }: { recheckMs: number }) => {
+		let changeCount = 0;
+		let clock = 1_000;
+		const joinCache = createSubjectJoinCache({
+			ctx: {
+				catalogCache: { changeCount: () => changeCount },
+				config: { catalogRecheckMs: recheckMs },
+				now: () => clock,
+			},
+		});
+		return {
+			joinCache,
+			moveCatalog: () => {
+				changeCount += 1;
+			},
+			advanceClock: (ms: number) => {
+				clock += ms;
+			},
+		};
+	};
+	const increment = {
+		table: "customerEntitlements",
+		op: "increment",
+		id: "messages_monthly",
+		add: { balance: -1 },
+	} as const;
+
+	test("a state advanced by increments keeps its predecessor's joined catalog", () => {
+		const { joinCache } = createClockedFixture({ recheckMs: 60_000 });
+		const from = createState();
+		const to = { ...from, revision: from.revision + 1 };
+		const catalog = catalogRowsToCatalog({ rows: [] });
+		joinCache.readCatalog({ state: from, join: () => catalog });
+
+		joinCache.inheritCatalog({ from, to, changes: [increment] });
+
+		expect(joinCache.peekCatalog({ state: to })).toBe(catalog);
+	});
+
+	test("a mutation that inserts a catalog-referencing row hands nothing on", () => {
+		const { joinCache } = createClockedFixture({ recheckMs: 60_000 });
+		const from = createState();
+		const to = { ...from, revision: from.revision + 1 };
+		joinCache.readCatalog({
+			state: from,
+			join: () => catalogRowsToCatalog({ rows: [] }),
+		});
+
+		joinCache.inheritCatalog({
+			from,
+			to,
+			changes: [
+				increment,
+				{
+					table: "customerProducts",
+					op: "insert",
+					row: createState().customerProducts[0]!,
+				},
+			],
+		});
+
+		expect(joinCache.peekCatalog({ state: to })).toBeNull();
+	});
+
+	test("an inherited catalog is re-read once its recheck is due, and after the catalog moves", () => {
+		const { joinCache, moveCatalog, advanceClock } = createClockedFixture({
+			recheckMs: 60_000,
+		});
+		const first = createState();
+		const second = { ...first, revision: 1 };
+		const third = { ...first, revision: 2 };
+		const catalog = catalogRowsToCatalog({ rows: [] });
+		joinCache.readCatalog({ state: first, join: () => catalog });
+
+		advanceClock(59_000);
+		joinCache.inheritCatalog({ from: first, to: second, changes: [increment] });
+		expect(joinCache.peekCatalog({ state: second })).toBe(catalog);
+
+		advanceClock(2_000);
+		expect(joinCache.peekCatalog({ state: second })).toBeNull();
+		joinCache.inheritCatalog({ from: second, to: third, changes: [increment] });
+		expect(joinCache.peekCatalog({ state: third })).toBeNull();
+
+		const rejoined = catalogRowsToCatalog({ rows: [] });
+		joinCache.readCatalog({ state: third, join: () => rejoined });
+		expect(joinCache.peekCatalog({ state: third })).toBe(rejoined);
+		moveCatalog();
+		expect(joinCache.peekCatalog({ state: third })).toBeNull();
 	});
 });

@@ -23,7 +23,7 @@ const liveWindowOf = ({
 	});
 	if (
 		!existing ||
-		existing.window_end_at <= context.now ||
+		existing.window_end_at <= context.selection.now ||
 		existing.window_start_at !== limit.window_start_at
 	)
 		return null;
@@ -180,7 +180,7 @@ export const usageWindowsToRowChanges = ({
 			window_start_at: limit.window_start_at,
 			window_end_at: limit.window_end_at,
 			usage: consumed.toNumber(),
-			updated_at: context.now,
+			updated_at: context.selection.now,
 		};
 		// A live counter adds, guarded by the window it counts in; a rolled one is re-stamped and restarted.
 		const live = liveWindowOf({ context, limit });
