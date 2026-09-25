@@ -31,7 +31,7 @@ beforeAll(async () => {
 		db,
 		masterOrg: defaultCtx.org,
 		actorUser,
-		name: "SDK Contract Sandbox",
+		name: "SDK-Contract-Sandbox",
 	});
 	sandbox = created.org;
 	sandboxKey = created.secret_key;

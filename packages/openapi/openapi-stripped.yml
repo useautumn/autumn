@@ -76379,8 +76379,9 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 100
-                  pattern: \S
-                  description: A name for the sandbox, unique within your organization.
+                  pattern: ^\S+$
+                  description: A name for the sandbox, unique within your organization. No spaces,
+                    and it can't be `live` or `sandbox`.
                 color:
                   enum:
                     - gray

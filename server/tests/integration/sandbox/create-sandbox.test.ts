@@ -85,7 +85,7 @@ describe("createSandboxForOrg", () => {
 			db,
 			masterOrg: defaultCtx.org,
 			actorUser,
-			name: "My QA Sandbox",
+			name: "My-QA-Sandbox",
 		});
 		createdOrg = org;
 
@@ -129,7 +129,7 @@ describe("createSandboxForOrg", () => {
 			db,
 			masterOrg: master,
 			actorUser,
-			name: "Config Inherit Sandbox",
+			name: "Config-Inherit-Sandbox",
 		});
 		inheritSandbox = org;
 
