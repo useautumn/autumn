@@ -32,6 +32,8 @@ export type PushResult = {
 	/** Absent on a dry run, or when the preview showed nothing to do. */
 	applied?: unknown;
 	migrationIds: string[];
+	/** The catalog preview waits on settings: a dry run shows no catalog at all. */
+	catalogDeferred?: boolean;
 };
 
 /** The settings lane of one push: absent when the config states no `settings`. */
@@ -192,6 +194,23 @@ export const configSearchDirs = ({
 	return [...new Set([project.configDir, cwd, ...project.envDirs])];
 };
 
+/** A preview that never saw the catalog must not read as clean. */
+export const pushExitCode = ({
+	apply,
+	result,
+}: {
+	apply: boolean;
+	result: Pick<PushResult, "catalogDeferred">;
+}): number => (!apply && result.catalogDeferred === true ? 1 : 0);
+
+/** Why the catalog is missing from the preview, and what `--yes` does about it. */
+const renderCatalogDeferral = ({ error }: { error: unknown }): string =>
+	[
+		"Catalog: not previewed yet. It depends on the settings above, so it is previewed again once they apply.",
+		`  Against the current settings it fails: ${error instanceof Error ? error.message : String(error)}`,
+		"  With --yes: settings apply, then the catalog is previewed again and applied if that preview passes.",
+	].join("\n");
+
 /** A lint warning never refuses the config; it is printed above the preview. */
 const renderLintWarnings = ({ warnings }: { warnings: LintIssue[] }): string =>
 	warnings
@@ -212,6 +231,7 @@ const applySettingsThenCatalog = async ({
 	configPath,
 	write,
 	migrationLinkBase,
+	showCatalogPreview,
 }: {
 	client: AutumnClient;
 	settingsBody: Record<string, unknown> | undefined;
@@ -221,6 +241,8 @@ const applySettingsThenCatalog = async ({
 	configPath: string;
 	write: (text: string) => void;
 	migrationLinkBase?: string;
+	/** The catalog was never shown: print its re-preview before applying it. */
+	showCatalogPreview: boolean;
 }): Promise<{ applied?: unknown; migrationIds: string[] }> => {
 	let preview = catalogPreview;
 	if (settingsBody !== undefined && settingsHaveWork({ settings })) {
@@ -231,6 +253,8 @@ const applySettingsThenCatalog = async ({
 		}
 		write("\nApplied settings.\n");
 		preview = (await client.previewUpdate(wire)) as CatalogPreview;
+		if (showCatalogPreview)
+			write(`\n${renderPreview({ preview, migrationLinkBase })}\n`);
 	}
 	if (previewIsEmpty({ preview })) return { migrationIds: [] };
 
@@ -323,9 +347,18 @@ export const runPush = async ({
 			webhookEnv,
 		}),
 	});
-	if (previews.failures.length > 0)
-		throw new PushLanesError({ stage: "preview", failures: previews.failures });
 	const { settings, webhooks } = previews.values;
+	// A catalog that needs a pending setting (multi_currency, say) can only be
+	// previewed once that setting applies: its error waits for the re-preview.
+	const catalogDeferral =
+		settingsBody !== undefined && settingsHaveWork({ settings })
+			? previews.failures.find((failure) => failure.lane === "catalog")
+			: undefined;
+	const failures = previews.failures.filter(
+		(failure) => failure !== catalogDeferral,
+	);
+	if (failures.length > 0)
+		throw new PushLanesError({ stage: "preview", failures });
 	const catalogPreview = previews.values.catalog ?? {};
 
 	const preview: CatalogPreview = {
@@ -334,12 +367,15 @@ export const runPush = async ({
 		...(webhooks === undefined ? {} : { webhooks: webhooks.preview }),
 	};
 	write(`${renderPreview({ preview, migrationLinkBase })}\n`);
+	if (catalogDeferral !== undefined)
+		write(`\n${renderCatalogDeferral({ error: catalogDeferral.error })}\n`);
 
 	const renameHint = possibleRenameHint({ preview, wire: wire as WireLike });
 	if (renameHint !== null) write(`${renameHint}\n\n`);
 
+	const catalogDeferred = catalogDeferral !== undefined;
 	if (dryRun || previewIsEmpty({ preview }))
-		return { configPath, preview, migrationIds: [] };
+		return { configPath, preview, migrationIds: [], catalogDeferred };
 
 	const applied = await settleLanes<{
 		catalog: { applied?: unknown; migrationIds: string[] };
@@ -354,6 +390,7 @@ export const runPush = async ({
 			configPath,
 			write,
 			migrationLinkBase,
+			showCatalogPreview: catalogDeferred,
 		}),
 		webhooks: applyWebhooks({
 			client,
@@ -371,5 +408,6 @@ export const runPush = async ({
 		preview,
 		applied: applied.values.catalog?.applied,
 		migrationIds: applied.values.catalog?.migrationIds ?? [],
+		catalogDeferred,
 	};
 };

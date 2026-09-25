@@ -14,7 +14,7 @@ import {
 	runKeylessLogin,
 } from "./actions/login/keyless";
 import { runPull } from "./actions/pull";
-import { runPush } from "./actions/push";
+import { pushExitCode, runPush } from "./actions/push";
 import { runReset } from "./actions/reset/runReset";
 import { runSandboxCreate } from "./actions/sandbox/createSandbox";
 import { runSandboxDelete } from "./actions/sandbox/deleteSandbox";
@@ -406,6 +406,8 @@ Linking a keyless org to an account:
 					dryRun: !apply,
 					webhookEnv: webhookEnvFor({ target, command }),
 				});
+				// A dry run that never saw the catalog must not read as clean.
+				process.exitCode = pushExitCode({ apply, result });
 				if (!apply && !previewIsEmpty({ preview: result.preview }))
 					process.stdout.write(
 						options.dryRun === true

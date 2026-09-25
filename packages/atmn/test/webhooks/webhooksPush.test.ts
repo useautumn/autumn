@@ -8,7 +8,7 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runPush } from "../../src/actions/push";
+import { pushExitCode, runPush } from "../../src/actions/push";
 import type { WebhookEnv } from "../../src/actions/webhooks/types/webhookEnv";
 
 const SRC = join(import.meta.dir, "../../src/generated");
@@ -280,4 +280,100 @@ test("every failing preview lane is reported in one error", async () => {
 			"    billing: Webhook URL must use https.",
 		].join("\n"),
 	);
+});
+
+/** A EUR price is refused until multi_currency is on, as the server does. */
+const multiCurrencyClient = ({ stillFails = false } = {}) => {
+	const order: string[] = [];
+	let multiCurrency = false;
+	return {
+		order,
+		client: {
+			previewUpdateOrganization: async () => {
+				order.push("previewUpdateOrganization");
+				return {
+					config: {
+						changes: [
+							{
+								key: "multi_currency",
+								action: "update",
+								previous: false,
+								current: true,
+							},
+						],
+					},
+				};
+			},
+			updateOrganization: async () => {
+				order.push("updateOrganization");
+				multiCurrency = true;
+				return { config: {} };
+			},
+			previewUpdate: async () => {
+				order.push("previewUpdate");
+				if (!multiCurrency || stillFails)
+					throw new Error("plan pro: EUR prices need multi-currency enabled");
+				return catalogWithWork;
+			},
+			update: async () => {
+				order.push("update");
+				return { results: {}, migrations: [] };
+			},
+		},
+	};
+};
+
+const MULTI_CURRENCY = `\tfeatures: [],\n\tsettings: { multiCurrency: true },`;
+
+test("multiCurrency + a EUR price: the catalog preview waits for settings instead of failing the push", async () => {
+	const dryDir = projectWith({ body: MULTI_CURRENCY });
+	const dry = multiCurrencyClient();
+	let dryOutput = "";
+	const dryResult = await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: dry.client as any,
+		cwd: dryDir,
+		dryRun: true,
+		write: (text) => {
+			dryOutput += text;
+		},
+	});
+	expect(pushExitCode({ apply: false, result: dryResult })).toBe(1);
+	expect(dry.order).not.toContain("updateOrganization");
+	expect(dryOutput).toContain("Settings (1)");
+	expect(dryOutput).toContain(
+		"Catalog: not previewed yet. It depends on the settings above",
+	);
+	expect(dryOutput).toContain("EUR prices need multi-currency enabled");
+
+	const applyDir = projectWith({ body: MULTI_CURRENCY });
+	const applied = multiCurrencyClient();
+	let output = "";
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: applied.client as any,
+		cwd: applyDir,
+		write: (text) => {
+			output += text;
+		},
+	});
+	expect(
+		applied.order.filter((call) => call !== "previewUpdateOrganization"),
+	).toEqual(["previewUpdate", "updateOrganization", "previewUpdate", "update"]);
+	// The catalog was never shown before: its re-preview is printed before it applies.
+	expect(output.indexOf("Features (1)")).toBeGreaterThan(
+		output.indexOf("Applied settings."),
+	);
+});
+
+test("a catalog that still fails after settings apply surfaces its error", async () => {
+	const dir = projectWith({ body: MULTI_CURRENCY });
+	const { client } = multiCurrencyClient({ stillFails: true });
+	const push = runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: client as any,
+		cwd: dir,
+		write: () => {},
+	});
+	await expect(push).rejects.toThrow("EUR prices need multi-currency enabled");
 });
