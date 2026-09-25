@@ -116,6 +116,9 @@ const streamPassEvents = async ({
 			sawEvent = true;
 			activity.touch();
 			advanceStreamCursor(session);
+			if (event.type === "message.received") {
+				run?.noteMessageReceived(event.message);
+			}
 
 			if (run?.stop) {
 				return {

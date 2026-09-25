@@ -15,9 +15,11 @@ export type FollowUpMessage = Readonly<{
 /** How the run reaches its eve session; bound once the session is known. */
 export type RunTransport = Readonly<{
 	sendInterrupt?: (sessionId: string) => Promise<void>;
+	/** Resolves with the exact text posted when the transport knows it — eve
+	 * echoes it in the `message.received` of the turn that answers it. */
 	sendUserMessage?: (
 		input: FollowUpMessage & { sessionId: string },
-	) => Promise<void>;
+	) => Promise<unknown>;
 }>;
 
 export type ActiveRun = {
@@ -54,6 +56,10 @@ export type ActiveRun = {
 	 * turn is coming and it must keep reading, because the message is already
 	 * posted and its reply would otherwise run with nobody attached. */
 	claimFollowUpsOrSettle: () => boolean;
+	/** Records a `message.received` from the run's stream. eve steers a
+	 * follow-up by starting a replacement turn with that message, so a
+	 * follow-up seen here has its reply in that turn — not in a later one. */
+	noteMessageReceived: (message: string) => void;
 	/** The turn settled locally and nobody reads the stream any more: a message
 	 * posted now would run unread. Set the instant the reader returns, before
 	 * the reply or approval card is presented, so late arrivals queue instead. */
@@ -121,6 +127,36 @@ export const registerRun = ({
 	// Reservations are taken before the post lands, so a reader that is about
 	// to stop needs to know an answer is still outstanding.
 	const inFlightPosts = new Set<Promise<unknown>>();
+	// receivedFloor: only messages eve received after the reservation can be
+	// this follow-up, so an earlier identical message never answers it.
+	const followUps = new Set<{ receivedFloor: number; text?: string }>();
+	const receivedMessages: string[] = [];
+
+	/** Follow-ups whose `message.received` already streamed: the turn that just
+	 * settled answered them. Each match consumes its text, so two identical
+	 * follow-ups need two occurrences. */
+	const takeAnsweredFollowUps = () => {
+		let answered = 0;
+		for (const followUp of followUps) {
+			const text = followUp.text?.trim();
+			if (!text) continue;
+			for (
+				let index = followUp.receivedFloor;
+				index < receivedMessages.length;
+				index += 1
+			) {
+				const received = receivedMessages[index] ?? "";
+				const at = received.indexOf(text);
+				if (at === -1) continue;
+				receivedMessages[index] =
+					received.slice(0, at) + received.slice(at + text.length);
+				answered += 1;
+				break;
+			}
+		}
+		followUps.clear();
+		return answered;
+	};
 
 	const assertAcceptingFollowUps = () => {
 		if (run.closed || run.stop) throw new Error("Run is closing");
@@ -143,13 +179,19 @@ export const registerRun = ({
 			const send = transport.sendUserMessage;
 			if (!send) throw new Error("Run has no follow-up transport");
 			run.pendingTurns += 1;
+			const followUp: { receivedFloor: number; text?: string } = {
+				receivedFloor: receivedMessages.length,
+			};
+			followUps.add(followUp);
 			// No separate interrupt: the post itself steers, so the cancel and
 			// the replacement message travel as one durable command.
 			const post = send({ ...input, sessionId: resolved });
 			inFlightPosts.add(post);
 			try {
-				await post;
+				const posted = await post;
+				if (typeof posted === "string") followUp.text = posted;
 			} catch (error) {
+				followUps.delete(followUp);
 				// The reader may have claimed this reservation while the post was
 				// in flight, which would already have zeroed the count.
 				run.pendingTurns = Math.max(0, run.pendingTurns - 1);
@@ -189,15 +231,21 @@ export const registerRun = ({
 			// the same synchronous block as its last settling check, so between
 			// that block and this one there is no point where a message can be
 			// posted to eve while this reader is on its way out.
-			if (run.pendingTurns > 0) {
+			// A follow-up that steered the turn which just settled is already
+			// answered; only the rest still have a replacement turn coming.
+			const owed = run.pendingTurns - takeAnsweredFollowUps();
+			run.pendingTurns = 0;
+			if (owed > 0) {
 				// eve may fold several buffered messages into one replacement
 				// turn, so claim them all; anything injected after this claim is
 				// caught by the next boundary.
-				run.pendingTurns = 0;
 				return true;
 			}
 			run.settling = true;
 			return false;
+		},
+		noteMessageReceived: (message) => {
+			receivedMessages.push(message);
 		},
 		settle: () => {
 			run.settling = true;
