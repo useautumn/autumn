@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { ceBalanceTotalsSql } from "../src/buildCeBalanceTotals.js";
-import { CE_LAKE_TABLES, getCeLakeTables } from "../src/ceLakeTables.js";
+import { CE_LAKE_SHARD_TABLES, getCeLakeTables } from "../src/ceLakeTables.js";
 
 const meta = (table: string) =>
 	`s3://autumn-lake-prod-us-east-2/internal/${table}/warehouse/metadata/00001-abc.metadata.json`;
@@ -12,9 +12,16 @@ const otherMetas = {
 };
 
 describe("getCeLakeTables", () => {
-	test("defaults to the 8 RisingWave shard tables", () => {
-		expect(getCeLakeTables({ override: "" })).toEqual(CE_LAKE_TABLES);
-		expect(CE_LAKE_TABLES).toEqual(
+	test("defaults to the single customer_entitlements table", () => {
+		expect(getCeLakeTables({ override: "" })).toEqual([
+			"customer_entitlements",
+		]);
+	});
+
+	test("documents the 8 RisingWave shards as the cutover value", () => {
+		expect(
+			getCeLakeTables({ override: CE_LAKE_SHARD_TABLES.join(",") }),
+		).toEqual(
 			Array.from(
 				{ length: 8 },
 				(_, shard) => `customer_entitlements_s${shard}`,
@@ -30,6 +37,14 @@ describe("getCeLakeTables", () => {
 
 	test("rejects an override with no table names", () => {
 		expect(() => getCeLakeTables({ override: " , " })).toThrow();
+	});
+
+	test("rejects an override that repeats a table", () => {
+		expect(() =>
+			getCeLakeTables({
+				override: "customer_entitlements_s0, customer_entitlements_s0",
+			}),
+		).toThrow("duplicate");
 	});
 });
 
@@ -48,7 +63,7 @@ describe("ducklake ce_balance_totals build", () => {
 	});
 
 	test("unions every shard exactly once", () => {
-		const ceMetas = CE_LAKE_TABLES.map(meta);
+		const ceMetas = CE_LAKE_SHARD_TABLES.map(meta);
 		const query = ceBalanceTotalsSql({ ceMetas, ...otherMetas });
 
 		expect(query.match(/UNION ALL/g)).toHaveLength(7);
