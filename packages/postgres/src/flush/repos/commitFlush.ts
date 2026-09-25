@@ -42,18 +42,23 @@ export const commitFlush = async ({
 	request,
 	statementTimeoutMs,
 }: {
-	ctx: { db: Pick<PostgresDb, "transaction"> };
+	ctx: {
+		db: Pick<PostgresDb, "transaction">;
+		/** Times the synchronous parts (folding the changes, building the statement) so a stall can be attributed to them. */
+		timing?: <Value>(label: string, run: () => Value) => Value;
+	};
 	request: FlushRequest;
 	statementTimeoutMs: number;
 }): Promise<FlushResult> => {
-	const { folded, foldedIndexOf } = foldSubjectRowChanges({
-		changes: request.changes,
-	});
+	const time = ctx.timing ?? ((_label, run) => run());
+	const { folded, foldedIndexOf } = time("flush.fold", () =>
+		foldSubjectRowChanges({ changes: request.changes }),
+	);
 	if (request.bookmarks.length === 0)
 		return { applied: foldedIndexOf.map(() => true) };
 
 	const outcome = await runFlushTransaction({
-		ctx,
+		ctx: { db: ctx.db, timing: time },
 		request,
 		folded,
 		statementTimeoutMs,
@@ -77,7 +82,10 @@ const runFlushTransaction = async ({
 	folded,
 	statementTimeoutMs,
 }: {
-	ctx: { db: Pick<PostgresDb, "transaction"> };
+	ctx: {
+		db: Pick<PostgresDb, "transaction">;
+		timing: <Value>(label: string, run: () => Value) => Value;
+	};
 	request: FlushRequest;
 	folded: readonly SubjectRowChange[];
 	statementTimeoutMs: number;
@@ -87,9 +95,10 @@ const runFlushTransaction = async ({
 			await tx.execute(
 				sql`SET LOCAL statement_timeout = ${sql.raw(String(Math.trunc(statementTimeoutMs)))}`,
 			);
-			const rows = await tx.execute(
+			const statement = ctx.timing("flush.sql", () =>
 				flushSql({ changes: folded, bookmarks: request.bookmarks }),
 			);
+			const rows = await tx.execute(statement);
 			const parsed = outcomeSchema.safeParse(rows[0]);
 			if (!parsed.success) {
 				throw new RowsInvalidError({
