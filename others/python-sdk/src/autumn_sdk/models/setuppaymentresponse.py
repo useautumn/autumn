@@ -1272,6 +1272,20 @@ class SetupPaymentLicenseQuantity(BaseModel):
     r"""Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid."""
 
 
+class SetupPaymentRemoveDiscountTypedDict(TypedDict):
+    r"""A discount to remove from the subscription. Discounts that are no longer applied are ignored."""
+
+    reward_id: str
+    r"""The ID of the reward (or Stripe coupon) to remove."""
+
+
+class SetupPaymentRemoveDiscount(BaseModel):
+    r"""A discount to remove from the subscription. Discounts that are no longer applied are ignored."""
+
+    reward_id: str
+    r"""The ID of the reward (or Stripe coupon) to remove."""
+
+
 class SetupPaymentParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
@@ -1325,6 +1339,8 @@ class SetupPaymentParamsTypedDict(TypedDict):
     r"""Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
     remove_plan_ids: NotRequired[List[str]]
     r"""Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected."""
+    remove_discounts: NotRequired[List[SetupPaymentRemoveDiscountTypedDict]]
+    r"""Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged."""
 
 
 class SetupPaymentParams(BaseModel):
@@ -1406,6 +1422,9 @@ class SetupPaymentParams(BaseModel):
     remove_plan_ids: Optional[List[str]] = None
     r"""Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected."""
 
+    remove_discounts: Optional[List[SetupPaymentRemoveDiscount]] = None
+    r"""Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -1435,6 +1454,7 @@ class SetupPaymentParams(BaseModel):
                 "tax_rate_id",
                 "currency",
                 "remove_plan_ids",
+                "remove_discounts",
             ]
         )
         nullable_fields = set(["free_trial"])

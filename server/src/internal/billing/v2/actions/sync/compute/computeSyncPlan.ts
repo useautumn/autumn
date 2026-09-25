@@ -13,7 +13,12 @@ import {
 	type ComputedSchedulePhase,
 	computeSyncFuturePhases,
 } from "./computeSyncFuturePhases";
-import { computeSyncImmediatePhase } from "./computeSyncImmediatePhase";
+import {
+	computeSyncImmediatePhase,
+	computeSyncUnscheduledPlans,
+	type ImmediatePhaseResult,
+} from "./computeSyncImmediatePhase";
+import { computeUnlistedCustomerProductExpiries } from "./computeUnlistedCustomerProductExpiries";
 
 export type { ComputedSchedulePhase } from "./computeSyncFuturePhases";
 
@@ -34,6 +39,17 @@ const hasMultiplePhases = ({
 }): boolean =>
 	(syncContext.immediatePhase ? 1 : 0) + syncContext.futurePhases.length > 1;
 
+const combineStartingNowResults = (
+	results: ImmediatePhaseResult[],
+): ImmediatePhaseResult => ({
+	insertCustomerProducts: results.flatMap((r) => r.insertCustomerProducts),
+	updateCustomerProducts: results.flatMap((r) => r.updateCustomerProducts),
+	customPrices: results.flatMap((r) => r.customPrices),
+	customEntitlements: results.flatMap((r) => r.customEntitlements),
+	insertPlanLicenses: results.flatMap((r) => r.insertPlanLicenses),
+	customerLicenseUpdates: results.flatMap((r) => r.customerLicenseUpdates),
+});
+
 /** Compose the AutumnBillingPlan from the immediate + future phase computations. */
 export const computeSyncPlan = ({
 	ctx,
@@ -42,8 +58,16 @@ export const computeSyncPlan = ({
 	ctx: AutumnContext;
 	syncContext: SyncBillingContext;
 }): ComputedSyncPlan => {
-	const immediate = computeSyncImmediatePhase({ ctx, syncContext });
+	const immediatePhase = computeSyncImmediatePhase({ ctx, syncContext });
+	// Unscheduled plans start now too, but sit outside every schedule phase.
+	const immediate = combineStartingNowResults([
+		immediatePhase,
+		computeSyncUnscheduledPlans({ ctx, syncContext }),
+	]);
 	const future = computeSyncFuturePhases({ ctx, syncContext });
+	immediate.updateCustomerProducts.push(
+		...computeUnlistedCustomerProductExpiries({ syncContext }),
+	);
 	const outgoingCustomerProducts: FullCusProduct[] = [];
 	for (const { customerProduct, updates } of [
 		...immediate.updateCustomerProducts,
@@ -98,6 +122,14 @@ export const computeSyncPlan = ({
 			immediate.customerLicenseUpdates.length > 0
 				? immediate.customerLicenseUpdates
 				: undefined,
+		// Saving the new schedule replaces the old one and the plans it had queued,
+		// so the old schedule's phases must not be re-pointed at this sync's plans.
+		...(hasMultiplePhases({ syncContext })
+			? {
+					deleteCustomerProducts: syncContext.queuedCustomerProducts,
+					ownsSchedulePersistence: true,
+				}
+			: {}),
 		lockCustomerCurrency: syncContextToCurrencyLock({ syncContext }),
 		upsertSubscriptions,
 		pooledBalancePlan,
@@ -113,7 +145,7 @@ export const computeSyncPlan = ({
 			? {
 					startsAt: syncContext.immediatePhase.startsAt,
 					endsAt: syncContext.immediatePhase.endsAt,
-					customerProductIds: preparedImmediateCustomerProducts.map(
+					customerProductIds: immediatePhase.insertCustomerProducts.map(
 						(cp) => cp.id,
 					),
 				}

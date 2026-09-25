@@ -33,6 +33,7 @@ import {
 	removeCustomLineItem,
 	updateCustomLineItem,
 } from "@/components/forms/shared/CustomLineItemRows";
+import { AppliedDiscountRow } from "@/components/forms/shared/discount-row/AppliedDiscountRow";
 import { DiscountsConfigRow } from "@/components/forms/shared/discount-row/DiscountsConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,7 @@ import { getAttachScheduledStartDate } from "../utils/buildAttachPreviewTotals";
 import {
 	addDiscount,
 	removeDiscount,
+	toggleRemovedRewardId,
 	updateDiscount,
 } from "../utils/discountUtils";
 
@@ -117,10 +119,12 @@ export function AttachAdvancedSection() {
 		previewQuery,
 		additionalPlans,
 		billingOptions,
+		appliedDiscounts,
 	} = useAttachFormContext();
 	const isMultiPlan = additionalPlans.isMultiPlan;
 	const {
 		discounts,
+		removedRewardIds,
 		newBillingSubscription,
 		resetBillingCycle,
 		billingCycleAnchorMode,
@@ -206,6 +210,12 @@ export function AttachAdvancedSection() {
 	const handleAddDiscount = () => {
 		form.setFieldValue("discounts", addDiscount(discounts));
 	};
+
+	const toggleRemovedReward = (rewardId: string) =>
+		form.setFieldValue(
+			"removedRewardIds",
+			toggleRemovedRewardId({ removedRewardIds, rewardId }),
+		);
 
 	const handleAddCustomLineItem = () => {
 		form.setFieldValue("customLineItems", addCustomLineItem(customLineItems));
@@ -453,6 +463,15 @@ export function AttachAdvancedSection() {
 				onRemove={({ index }) =>
 					form.setFieldValue("discounts", removeDiscount(discounts, index))
 				}
+				excludedRewardIds={appliedDiscounts.map((discount) => discount.id)}
+				appliedDiscounts={appliedDiscounts.map((discount) => (
+					<AppliedDiscountRow
+						key={discount.id}
+						discount={discount}
+						removed={removedRewardIds.includes(discount.id)}
+						onToggleRemoved={() => toggleRemovedReward(discount.id)}
+					/>
+				))}
 			/>
 
 			{rules.proration.visible && (

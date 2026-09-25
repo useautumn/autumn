@@ -1,5 +1,10 @@
-import type { CheckParams, TrackParams } from "@autumn/shared";
+import type {
+	BillingDetailsParams,
+	CheckParams,
+	TrackParams,
+} from "@autumn/shared";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
+import { assertBillingDetailsWritable } from "@/external/stripe/customers/billingDetails/utils/assertBillingDetailsWritable.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import {
@@ -15,6 +20,7 @@ import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFrom
 export const getOrCreateApiCustomerByRollout = async ({
 	ctx,
 	params,
+	billingDetails,
 	source,
 	withAutumnId,
 	enqueueRecoveryOnTransientFailure = true,
@@ -24,11 +30,13 @@ export const getOrCreateApiCustomerByRollout = async ({
 	params: Omit<TrackParams | CheckParams, "customer_id"> & {
 		customer_id: string | null;
 	};
+	billingDetails?: BillingDetailsParams;
 	source?: string;
 	withAutumnId?: boolean;
 	enqueueRecoveryOnTransientFailure?: boolean;
 	disableReplicaRead?: boolean;
 }) => {
+	if (billingDetails) assertBillingDetailsWritable({ ctx });
 	setCustomerCreationRecoveryStage({ ctx, stage: "lookup" });
 
 	if (isFullSubjectRolloutEnabled({ ctx })) {
@@ -55,6 +63,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 					await queueFailedCustomerCreation({
 						ctx,
 						params,
+						billingDetails,
 						source,
 						withAutumnId,
 						failureStage: getCustomerCreationRecoveryStage({ ctx }),
@@ -67,6 +76,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 		ctx,
 		customer: fullSubject.customer,
 		customerData: params.customer_data,
+		billingDetails,
 	});
 
 	return getApiCustomerV2({ ctx, fullSubject, withAutumnId });

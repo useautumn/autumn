@@ -9,8 +9,8 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiListInvoiceV1 } from "@autumn/shared";
-import { organizations } from "@autumn/shared";
+import { type ApiListInvoiceV1, ErrCode, organizations } from "@autumn/shared";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
@@ -126,4 +126,32 @@ test(`${chalk.yellowBright("invoices.reissue: send-invoice replacement of a card
 			]);
 		},
 	});
+});
+
+test(`${chalk.yellowBright("invoices.reissue: payment_method_types adds bank transfer to a send-invoice replacement")}`, async () => {
+	const { ctx, autumnV2_3, original } = await cardInvoiceScenario({
+		customerId: "inv-reissue-method-types",
+		planId: "pro-reissue-method-types",
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		func: () =>
+			autumnV2_3.post("/invoices.reissue", {
+				invoice_id: original.id,
+				invoice: { payment_method_types: ["card", "customer_balance"] },
+			}),
+	});
+
+	const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
+		invoice_id: original.id,
+		net_terms_days: 7,
+		invoice: { payment_method_types: ["card", "customer_balance"] },
+	})) as { invoice: ApiListInvoiceV1 };
+	const replacement = await ctx.stripeCli.invoices.retrieve(invoice.stripe_id);
+	expect(replacement.collection_method).toBe("send_invoice");
+	expect(replacement.payment_settings.payment_method_types).toEqual([
+		"card",
+		"customer_balance",
+	]);
 });

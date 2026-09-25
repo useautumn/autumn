@@ -504,12 +504,15 @@ export const processConsumablePricesForInvoiceCreated = async ({
 		data: updateCustomerEntitlements,
 	});
 
-	await deleteCachedFullCustomer({
-		ctx,
-		customerId:
-			eventContext.fullCustomer.id ?? eventContext.fullCustomer.internal_id,
-		source: "invoice-created-consumable-reset",
-	});
+	if (updateCustomerEntitlements.length > 0) {
+		eventContext.results.customerStateChanged = true;
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId:
+				eventContext.fullCustomer.id ?? eventContext.fullCustomer.internal_id,
+			source: "invoice-created-consumable-reset",
+		});
+	}
 
 	await Promise.all(
 		updateCustomerEntitlements.map(async (update) => {

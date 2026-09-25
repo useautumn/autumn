@@ -14,6 +14,10 @@ import {
 	handleUpsertAdminMiscRedisBackup,
 } from "./handleAdminMiscRedisConfig";
 import {
+	handleClearAdminModelPricingCache,
+	handleGetAdminModelPricingCache,
+} from "./handleAdminModelPricingCache";
+import {
 	handleDeleteAdminOrgRedisConfig,
 	handleGetAdminOrgRedisConfig,
 	handleUpdateAdminOrgRedisMigration,
@@ -142,6 +146,11 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/async-balance-update-config",
 	...handleUpsertAdminAsyncBalanceUpdateConfig,
+);
+honoAdminRouter.get("/model-pricing-cache", ...handleGetAdminModelPricingCache);
+honoAdminRouter.delete(
+	"/model-pricing-cache",
+	...handleClearAdminModelPricingCache,
 );
 honoAdminRouter.get("/async-track-config", ...handleGetAdminAsyncTrackConfig);
 honoAdminRouter.put(

@@ -40,6 +40,7 @@ import {
 import { attachBillingEditsFromRequest } from "../internal/approvals/domain/attachBillingEdits.js";
 import { isFailedApprovalPreview } from "../internal/approvals/utils/fetchApprovalPreview.js";
 import { toolRequestFromArgs } from "../internal/approvals/utils/toolRequest.js";
+import { billingDetailsFields } from "./billingDetailsFields.js";
 import {
 	catalogActionToChange,
 	catalogItemActionToChange,
@@ -650,19 +651,39 @@ const compactValue = (value: unknown): string | null => {
 
 // Bare CRUD writes (update customer, create entity…) have no billing preview —
 // show what's being written as label/value fields so the card is never empty.
+type RequestField = { label: string; value: string };
+
+/** Request keys whose nested value renders as several readable fields. Never capped:
+ * approvers must see every change they approve. */
+const REQUEST_FIELD_EXPANDERS = new Map<
+	string,
+	(value: unknown) => RequestField[]
+>([["billing_details", billingDetailsFields]]);
+
+const isVisibleRequestKey = (key: string) =>
+	!HIDDEN_REQUEST_KEYS.has(key) && !key.startsWith("_");
+
+const compactRequestField = (key: string, value: unknown): RequestField[] => {
+	const rendered = compactValue(value);
+	return rendered === null
+		? []
+		: [{ label: humanizeKey(key), value: rendered }];
+};
+
 const requestSummaryFields = (
 	toolArgs?: Record<string, unknown>,
 ): FieldElement[] => {
-	const request = toolRequestFromArgs(toolArgs) ?? {};
-	const fields: FieldElement[] = [];
-	for (const [key, value] of Object.entries(request)) {
-		if (HIDDEN_REQUEST_KEYS.has(key) || key.startsWith("_")) continue;
-		const rendered = compactValue(value);
-		if (rendered === null) continue;
-		fields.push(Field({ label: humanizeKey(key), value: rendered }));
-		if (fields.length >= MAX_REQUEST_FIELDS) break;
-	}
-	return fields;
+	const entries = Object.entries(toolRequestFromArgs(toolArgs) ?? {}).filter(
+		([key]) => isVisibleRequestKey(key),
+	);
+	const compactFields = entries
+		.filter(([key]) => !REQUEST_FIELD_EXPANDERS.has(key))
+		.flatMap(([key, value]) => compactRequestField(key, value))
+		.slice(0, MAX_REQUEST_FIELDS);
+	const expandedFields = entries.flatMap(
+		([key, value]) => REQUEST_FIELD_EXPANDERS.get(key)?.(value) ?? [],
+	);
+	return [...compactFields, ...expandedFields].map((field) => Field(field));
 };
 
 const catalogApprovalContext = (preview: unknown) => {

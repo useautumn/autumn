@@ -11,17 +11,8 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { INVOICE_PAYMENT_METHOD_OPTIONS } from "@/utils/invoicePaymentMethodOptions";
 import { SettingsRow } from "../../SettingsRow";
-
-const PAYMENT_METHOD_OPTIONS = [
-	{ value: "card", label: "Card" },
-	{ value: "customer_balance", label: "Bank transfer" },
-	{ value: "us_bank_account", label: "ACH direct debit" },
-	{ value: "sepa_debit", label: "SEPA direct debit" },
-	{ value: "bacs_debit", label: "Bacs direct debit" },
-	{ value: "acss_debit", label: "Pre-authorized debit (Canada)" },
-	{ value: "link", label: "Link" },
-] as const satisfies readonly { value: InvoicePaymentMethod; label: string }[];
 
 export const AllowedPaymentMethodsSubsection = () => {
 	const { org, mutate: refetchOrg } = useOrg();
@@ -52,7 +43,7 @@ export const AllowedPaymentMethodsSubsection = () => {
 		method: InvoicePaymentMethod;
 		checked: boolean;
 	}) => {
-		const next = PAYMENT_METHOD_OPTIONS.filter((option) => {
+		const next = INVOICE_PAYMENT_METHOD_OPTIONS.filter((option) => {
 			if (option.value === method) return checked;
 			return selected.includes(option.value);
 		}).map((option) => option.value);
@@ -84,7 +75,7 @@ export const AllowedPaymentMethodsSubsection = () => {
 					</IconButton>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-[260px]">
-					{PAYMENT_METHOD_OPTIONS.map((option) => (
+					{INVOICE_PAYMENT_METHOD_OPTIONS.map((option) => (
 						<DropdownMenuCheckboxItem
 							key={option.value}
 							checked={selected.includes(option.value)}

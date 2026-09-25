@@ -2,6 +2,7 @@ import { Switch } from "@autumn/ui";
 import {
 	addDiscount,
 	removeDiscount,
+	toggleRemovedRewardId,
 	updateDiscount,
 } from "@/components/forms/attach-v2/utils/discountUtils";
 import {
@@ -37,9 +38,7 @@ export function UpdateSubscriptionAdvancedSection() {
 	const toggleRemovedReward = (rewardId: string) =>
 		form.setFieldValue(
 			"removedRewardIds",
-			removedRewardIds.includes(rewardId)
-				? removedRewardIds.filter((id) => id !== rewardId)
-				: [...removedRewardIds, rewardId],
+			toggleRemovedRewardId({ removedRewardIds, rewardId }),
 		);
 
 	const rules = getBillingOptionRules({

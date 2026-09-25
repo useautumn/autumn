@@ -39,6 +39,7 @@ export const setupStripeSubscriptionUpdatedContext = async ({
 		fullCustomer,
 		customerProducts: [...fullCustomer.customer_products],
 		nowMs,
+		results: { errors: [] },
 		updatedCustomerProducts: [],
 		deletedCustomerProducts: [],
 		insertedCustomerProducts: [],

@@ -38,7 +38,7 @@ type ClientData = { subFile?: string; subWorker?: string; subErrors?: boolean };
 
 const basename = (path: string): string => path.split("/").pop() ?? path;
 
-const snapshot = () => {
+export const getDashboardSnapshot = () => {
 	const s = getTuiState();
 	const t = runTallies();
 	return {
@@ -83,6 +83,9 @@ const snapshot = () => {
 			worker: getWorkerOf(f.file),
 			durationMs: getDurationMs(f.file),
 			currentTest: f.currentTest,
+			attempt: f.attempt,
+			passedOnRetry: f.passedOnRetry,
+			workerDeaths: f.workerDeaths ?? 0,
 			willRetry: f.willRetry,
 			failedTests: f.failedTests,
 		})),
@@ -146,7 +149,9 @@ export const startDashboardServer = (): DashboardServer => {
 		websocket: {
 			open(ws) {
 				clients.add(ws);
-				ws.send(JSON.stringify({ type: "snapshot", data: snapshot() }));
+				ws.send(
+					JSON.stringify({ type: "snapshot", data: getDashboardSnapshot() }),
+				);
 			},
 			close(ws) {
 				clients.delete(ws);
@@ -226,7 +231,10 @@ export const startDashboardServer = (): DashboardServer => {
 		if (clients.size === 0) {
 			return;
 		}
-		const payload = JSON.stringify({ type: "snapshot", data: snapshot() });
+		const payload = JSON.stringify({
+			type: "snapshot",
+			data: getDashboardSnapshot(),
+		});
 		for (const ws of clients) {
 			ws.send(payload);
 		}

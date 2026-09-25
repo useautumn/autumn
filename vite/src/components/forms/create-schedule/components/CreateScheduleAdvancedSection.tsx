@@ -1,14 +1,14 @@
 import {
+	canResetScheduleBillingCycle,
+	hasMultipleImmediateSchedulePlans,
+} from "@/components/forms/customer-state/customerStateSchema";
+import {
 	AdvancedSection,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
 import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
-import {
-	canResetScheduleBillingCycle,
-	hasMultipleImmediateSchedulePlans,
-} from "../createScheduleFormSchema";
 
 export function CreateScheduleAdvancedSection() {
 	const { form, formValues } = useCreateScheduleFormContext();

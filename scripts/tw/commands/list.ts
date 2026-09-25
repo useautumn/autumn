@@ -11,7 +11,7 @@
 
 import chalk from "chalk";
 import { getOwner } from "../helpers/owner.ts";
-import { listRuns } from "../helpers/registry.ts";
+import { getSvixAppIds, listRuns } from "../helpers/registry.ts";
 import { listSandboxesByOwner } from "../helpers/vercel.ts";
 import type { RegistryEntry } from "../types.ts";
 
@@ -97,7 +97,9 @@ export const list = async (): Promise<void> => {
 						: "") +
 					`  sub-accounts: ${run.subAccounts.length}` +
 					`  webhooks: ${run.webhooks.length}` +
-					(run.svixAppId ? `  svix-app: ${run.svixAppId}` : ""),
+					(getSvixAppIds(run).length
+						? `  svix-apps: ${getSvixAppIds(run).length}`
+						: ""),
 			),
 		);
 

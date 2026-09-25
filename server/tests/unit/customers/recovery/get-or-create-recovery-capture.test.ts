@@ -5,6 +5,7 @@
  * - A transient FullSubject failure is still returned as the existing overload 503.
  * - The validated request is captured once with the execution stage at failure.
  * - Recovery workers can explicitly disable capture to prevent recursive enqueue.
+ * - billing_details is captured too, so a replayed creation still applies it.
  */
 
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
@@ -78,7 +79,7 @@ const { getOrCreateApiCustomerByRollout } = await import(
 const buildContext = () =>
 	({
 		id: "req_customer_123",
-		org: { id: "org_123" },
+		org: { id: "org_123", config: {} },
 		env: AppEnv.Live,
 		apiVersion: new ApiVersionClass(ApiVersion.V2_1),
 		extraLogs: {},
@@ -121,6 +122,24 @@ describe("getOrCreateApiCustomerByRollout recovery capture", () => {
 				withAutumnId: true,
 				failureStage: "lookup",
 			}),
+		]);
+	});
+
+	test("captures billing details for replay", async () => {
+		const billingDetails = {
+			tax_ids: { add: [{ type: "eu_vat", value: "DE123" }] },
+		};
+
+		await expect(
+			getOrCreateApiCustomerByRollout({
+				ctx: buildContext(),
+				params,
+				billingDetails,
+			}),
+		).rejects.toMatchObject({ statusCode: 503 });
+
+		expect(mockState.queueCalls).toEqual([
+			expect.objectContaining({ billingDetails }),
 		]);
 	});
 

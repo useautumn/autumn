@@ -306,6 +306,106 @@ export type GetOrCreateCustomerConfig = {
   disableOverageBilling?: boolean | undefined;
 };
 
+export type GetOrCreateCustomerBillingDetailsAddress = {
+  line1?: string | null | undefined;
+  line2?: string | null | undefined;
+  city?: string | null | undefined;
+  state?: string | null | undefined;
+  postalCode?: string | null | undefined;
+  /**
+   * Two-letter country code (ISO 3166-1 alpha-2).
+   */
+  country?: string | null | undefined;
+};
+
+export type GetOrCreateCustomerAddBillingDetailsTaxId = {
+  /**
+   * Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+   */
+  type: string;
+  /**
+   * The tax ID, e.g. DE123456789.
+   */
+  value: string;
+};
+
+export type GetOrCreateCustomerRemoveBillingDetailsTaxId = {
+  /**
+   * Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+   */
+  type: string;
+  /**
+   * The tax ID, e.g. DE123456789.
+   */
+  value: string;
+};
+
+/**
+ * Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept.
+ */
+export type GetOrCreateCustomerTaxIds = {
+  /**
+   * Tax IDs to add. IDs the customer already has are ignored.
+   */
+  add?: Array<GetOrCreateCustomerAddBillingDetailsTaxId> | undefined;
+  /**
+   * Tax IDs to remove, matched by type and value. IDs the customer doesn't have are ignored.
+   */
+  remove?: Array<GetOrCreateCustomerRemoveBillingDetailsTaxId> | undefined;
+};
+
+/**
+ * Tax exemption status. Use reverse for reverse-charge customers.
+ */
+export const GetOrCreateCustomerTaxExempt = {
+  None: "none",
+  Exempt: "exempt",
+  Reverse: "reverse",
+} as const;
+/**
+ * Tax exemption status. Use reverse for reverse-charge customers.
+ */
+export type GetOrCreateCustomerTaxExempt = ClosedEnum<
+  typeof GetOrCreateCustomerTaxExempt
+>;
+
+export type GetOrCreateCustomerBillingDetailsCustomField = {
+  /**
+   * Label, e.g. PO Number.
+   */
+  name: string;
+  value: string;
+};
+
+export type GetOrCreateCustomerInvoiceSettings = {
+  /**
+   * Up to 4 custom fields shown on every invoice, e.g. a PO number. Replaces the existing list; null clears it.
+   */
+  customFields?:
+    | Array<GetOrCreateCustomerBillingDetailsCustomField>
+    | null
+    | undefined;
+};
+
+/**
+ * Billing details to set on the Stripe customer. Creates the Stripe customer if needed.
+ */
+export type GetOrCreateCustomerBillingDetails = {
+  /**
+   * Billing address, used for tax and shown on invoices. Replaces the whole address, as in Stripe; null clears it.
+   */
+  address?: GetOrCreateCustomerBillingDetailsAddress | null | undefined;
+  /**
+   * Tax IDs to add or remove (e.g. VAT). Stripe tax IDs cannot be edited, so change one by removing the old ID and adding the new one. IDs not listed are kept.
+   */
+  taxIds?: GetOrCreateCustomerTaxIds | undefined;
+  /**
+   * Tax exemption status. Use reverse for reverse-charge customers.
+   */
+  taxExempt?: GetOrCreateCustomerTaxExempt | undefined;
+  invoiceSettings?: GetOrCreateCustomerInvoiceSettings | undefined;
+};
+
 export type GetOrCreateCustomerParams = {
   customerId: string | null;
   /**
@@ -352,6 +452,10 @@ export type GetOrCreateCustomerParams = {
    * Miscellaneous configurations for the customer.
    */
   config?: GetOrCreateCustomerConfig | undefined;
+  /**
+   * Billing details to set on the Stripe customer. Creates the Stripe customer if needed.
+   */
+  billingDetails?: GetOrCreateCustomerBillingDetails | undefined;
   /**
    * Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
    */
@@ -815,6 +919,249 @@ export function getOrCreateCustomerConfigToJSON(
 }
 
 /** @internal */
+export type GetOrCreateCustomerBillingDetailsAddress$Outbound = {
+  line1?: string | null | undefined;
+  line2?: string | null | undefined;
+  city?: string | null | undefined;
+  state?: string | null | undefined;
+  postal_code?: string | null | undefined;
+  country?: string | null | undefined;
+};
+
+/** @internal */
+export const GetOrCreateCustomerBillingDetailsAddress$outboundSchema:
+  z.ZodMiniType<
+    GetOrCreateCustomerBillingDetailsAddress$Outbound,
+    GetOrCreateCustomerBillingDetailsAddress
+  > = z.pipe(
+    z.object({
+      line1: z.optional(z.nullable(z.string())),
+      line2: z.optional(z.nullable(z.string())),
+      city: z.optional(z.nullable(z.string())),
+      state: z.optional(z.nullable(z.string())),
+      postalCode: z.optional(z.nullable(z.string())),
+      country: z.optional(z.nullable(z.string())),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        postalCode: "postal_code",
+      });
+    }),
+  );
+
+export function getOrCreateCustomerBillingDetailsAddressToJSON(
+  getOrCreateCustomerBillingDetailsAddress:
+    GetOrCreateCustomerBillingDetailsAddress,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerBillingDetailsAddress$outboundSchema.parse(
+      getOrCreateCustomerBillingDetailsAddress,
+    ),
+  );
+}
+
+/** @internal */
+export type GetOrCreateCustomerAddBillingDetailsTaxId$Outbound = {
+  type: string;
+  value: string;
+};
+
+/** @internal */
+export const GetOrCreateCustomerAddBillingDetailsTaxId$outboundSchema:
+  z.ZodMiniType<
+    GetOrCreateCustomerAddBillingDetailsTaxId$Outbound,
+    GetOrCreateCustomerAddBillingDetailsTaxId
+  > = z.object({
+    type: z.string(),
+    value: z.string(),
+  });
+
+export function getOrCreateCustomerAddBillingDetailsTaxIdToJSON(
+  getOrCreateCustomerAddBillingDetailsTaxId:
+    GetOrCreateCustomerAddBillingDetailsTaxId,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerAddBillingDetailsTaxId$outboundSchema.parse(
+      getOrCreateCustomerAddBillingDetailsTaxId,
+    ),
+  );
+}
+
+/** @internal */
+export type GetOrCreateCustomerRemoveBillingDetailsTaxId$Outbound = {
+  type: string;
+  value: string;
+};
+
+/** @internal */
+export const GetOrCreateCustomerRemoveBillingDetailsTaxId$outboundSchema:
+  z.ZodMiniType<
+    GetOrCreateCustomerRemoveBillingDetailsTaxId$Outbound,
+    GetOrCreateCustomerRemoveBillingDetailsTaxId
+  > = z.object({
+    type: z.string(),
+    value: z.string(),
+  });
+
+export function getOrCreateCustomerRemoveBillingDetailsTaxIdToJSON(
+  getOrCreateCustomerRemoveBillingDetailsTaxId:
+    GetOrCreateCustomerRemoveBillingDetailsTaxId,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerRemoveBillingDetailsTaxId$outboundSchema.parse(
+      getOrCreateCustomerRemoveBillingDetailsTaxId,
+    ),
+  );
+}
+
+/** @internal */
+export type GetOrCreateCustomerTaxIds$Outbound = {
+  add?: Array<GetOrCreateCustomerAddBillingDetailsTaxId$Outbound> | undefined;
+  remove?:
+    | Array<GetOrCreateCustomerRemoveBillingDetailsTaxId$Outbound>
+    | undefined;
+};
+
+/** @internal */
+export const GetOrCreateCustomerTaxIds$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerTaxIds$Outbound,
+  GetOrCreateCustomerTaxIds
+> = z.object({
+  add: z.optional(
+    z.array(z.lazy(() =>
+      GetOrCreateCustomerAddBillingDetailsTaxId$outboundSchema
+    )),
+  ),
+  remove: z.optional(
+    z.array(z.lazy(() =>
+      GetOrCreateCustomerRemoveBillingDetailsTaxId$outboundSchema
+    )),
+  ),
+});
+
+export function getOrCreateCustomerTaxIdsToJSON(
+  getOrCreateCustomerTaxIds: GetOrCreateCustomerTaxIds,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerTaxIds$outboundSchema.parse(getOrCreateCustomerTaxIds),
+  );
+}
+
+/** @internal */
+export const GetOrCreateCustomerTaxExempt$outboundSchema: z.ZodMiniEnum<
+  typeof GetOrCreateCustomerTaxExempt
+> = z.enum(GetOrCreateCustomerTaxExempt);
+
+/** @internal */
+export type GetOrCreateCustomerBillingDetailsCustomField$Outbound = {
+  name: string;
+  value: string;
+};
+
+/** @internal */
+export const GetOrCreateCustomerBillingDetailsCustomField$outboundSchema:
+  z.ZodMiniType<
+    GetOrCreateCustomerBillingDetailsCustomField$Outbound,
+    GetOrCreateCustomerBillingDetailsCustomField
+  > = z.object({
+    name: z.string(),
+    value: z.string(),
+  });
+
+export function getOrCreateCustomerBillingDetailsCustomFieldToJSON(
+  getOrCreateCustomerBillingDetailsCustomField:
+    GetOrCreateCustomerBillingDetailsCustomField,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerBillingDetailsCustomField$outboundSchema.parse(
+      getOrCreateCustomerBillingDetailsCustomField,
+    ),
+  );
+}
+
+/** @internal */
+export type GetOrCreateCustomerInvoiceSettings$Outbound = {
+  custom_fields?:
+    | Array<GetOrCreateCustomerBillingDetailsCustomField$Outbound>
+    | null
+    | undefined;
+};
+
+/** @internal */
+export const GetOrCreateCustomerInvoiceSettings$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerInvoiceSettings$Outbound,
+  GetOrCreateCustomerInvoiceSettings
+> = z.pipe(
+  z.object({
+    customFields: z.optional(z.nullable(z.array(z.lazy(() =>
+      GetOrCreateCustomerBillingDetailsCustomField$outboundSchema
+    )))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      customFields: "custom_fields",
+    });
+  }),
+);
+
+export function getOrCreateCustomerInvoiceSettingsToJSON(
+  getOrCreateCustomerInvoiceSettings: GetOrCreateCustomerInvoiceSettings,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerInvoiceSettings$outboundSchema.parse(
+      getOrCreateCustomerInvoiceSettings,
+    ),
+  );
+}
+
+/** @internal */
+export type GetOrCreateCustomerBillingDetails$Outbound = {
+  address?:
+    | GetOrCreateCustomerBillingDetailsAddress$Outbound
+    | null
+    | undefined;
+  tax_ids?: GetOrCreateCustomerTaxIds$Outbound | undefined;
+  tax_exempt?: string | undefined;
+  invoice_settings?: GetOrCreateCustomerInvoiceSettings$Outbound | undefined;
+};
+
+/** @internal */
+export const GetOrCreateCustomerBillingDetails$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerBillingDetails$Outbound,
+  GetOrCreateCustomerBillingDetails
+> = z.pipe(
+  z.object({
+    address: z.optional(z.nullable(z.lazy(() =>
+      GetOrCreateCustomerBillingDetailsAddress$outboundSchema
+    ))),
+    taxIds: z.optional(z.lazy(() =>
+      GetOrCreateCustomerTaxIds$outboundSchema
+    )),
+    taxExempt: z.optional(GetOrCreateCustomerTaxExempt$outboundSchema),
+    invoiceSettings: z.optional(
+      z.lazy(() => GetOrCreateCustomerInvoiceSettings$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      taxIds: "tax_ids",
+      taxExempt: "tax_exempt",
+      invoiceSettings: "invoice_settings",
+    });
+  }),
+);
+
+export function getOrCreateCustomerBillingDetailsToJSON(
+  getOrCreateCustomerBillingDetails: GetOrCreateCustomerBillingDetails,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerBillingDetails$outboundSchema.parse(
+      getOrCreateCustomerBillingDetails,
+    ),
+  );
+}
+
+/** @internal */
 export type GetOrCreateCustomerParams$Outbound = {
   customer_id: string | null;
   name?: string | null | undefined;
@@ -828,6 +1175,7 @@ export type GetOrCreateCustomerParams$Outbound = {
   currency?: string | null | undefined;
   billing_controls?: GetOrCreateCustomerBillingControls$Outbound | undefined;
   config?: GetOrCreateCustomerConfig$Outbound | undefined;
+  billing_details?: GetOrCreateCustomerBillingDetails$Outbound | undefined;
   expand?: Array<string> | undefined;
 };
 
@@ -851,6 +1199,9 @@ export const GetOrCreateCustomerParams$outboundSchema: z.ZodMiniType<
       z.lazy(() => GetOrCreateCustomerBillingControls$outboundSchema),
     ),
     config: z.optional(z.lazy(() => GetOrCreateCustomerConfig$outboundSchema)),
+    billingDetails: z.optional(
+      z.lazy(() => GetOrCreateCustomerBillingDetails$outboundSchema),
+    ),
     expand: z.optional(z.array(CustomerExpand$outboundSchema)),
   }),
   z.transform((v) => {
@@ -861,6 +1212,7 @@ export const GetOrCreateCustomerParams$outboundSchema: z.ZodMiniType<
       autoEnablePlanId: "auto_enable_plan_id",
       sendEmailReceipts: "send_email_receipts",
       billingControls: "billing_controls",
+      billingDetails: "billing_details",
     });
   }),
 );

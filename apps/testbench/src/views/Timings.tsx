@@ -136,7 +136,11 @@ export function Timings({ snap }: { snap: Snapshot }) {
 								{f.name}
 							</span>
 							<span className="flex shrink-0 items-center gap-2">
-								<FileStatusBadge status={f.status} />
+								<FileStatusBadge
+									status={f.status}
+									passedOnRetry={f.passedOnRetry}
+									workerDeaths={f.workerDeaths}
+								/>
 								<span className="w-16 text-right font-mono text-foreground text-xs tabular-nums">
 									{(f.durationMs / 1000).toFixed(1)}s
 								</span>

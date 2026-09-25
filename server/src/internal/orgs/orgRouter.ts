@@ -24,6 +24,7 @@ import {
 	handleUpdateCustomButtons,
 } from "./handlers/handleCustomButtons.js";
 import { handleDeleteOrgLogo } from "./handlers/handleDeleteOrgLogo.js";
+import { handleFetchOrgLogo } from "./handlers/handleFetchOrgLogo.js";
 import { handleGetOnboardingStatus } from "./handlers/handleGetOnboardingStatus.js";
 import { handleGetOrgFlags } from "./handlers/handleGetOrgFlags.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
@@ -55,6 +56,7 @@ import { handleConnectStripe } from "./handlers/stripeHandlers/handleConnectStri
 import { handleDeleteStripe } from "./handlers/stripeHandlers/handleDeleteStripe.js";
 import { handleGetOAuthUrl } from "./handlers/stripeHandlers/handleGetOAuthUrl.js";
 import { handleGetStripeAccount } from "./handlers/stripeHandlers/handleGetStripeAccount.js";
+import { handleGetStripePaymentMethodTypes } from "./handlers/stripeHandlers/handleGetStripePaymentMethodTypes.js";
 import { handleResolveStripeProducts } from "./handlers/stripeHandlers/handleResolveStripeProducts.js";
 import { handleSearchStripePrices } from "./handlers/stripeHandlers/handleSearchStripePrices.js";
 import { handleSearchStripeProducts } from "./handlers/stripeHandlers/handleSearchStripeProducts.js";
@@ -72,7 +74,12 @@ internalOrgRouter.get("/members", ...handleGetOrgMembers);
 internalOrgRouter.post("/remove-member", ...handleRemoveMember);
 internalOrgRouter.get("/upload_url", ...handleGetUploadUrl);
 internalOrgRouter.delete("/logo", ...handleDeleteOrgLogo);
+internalOrgRouter.post("/logo/fetch", ...handleFetchOrgLogo);
 internalOrgRouter.get("/invites", ...handleGetInvites);
+internalOrgRouter.get(
+	"/stripe/payment_method_types",
+	...handleGetStripePaymentMethodTypes,
+);
 // Mounted under /organization, so this resolves to
 // POST /organization/onboardingStatus.
 internalOrgRouter.post("/onboardingStatus", ...handleGetOnboardingStatus);

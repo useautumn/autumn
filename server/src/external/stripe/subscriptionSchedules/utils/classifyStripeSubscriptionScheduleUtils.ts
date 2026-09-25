@@ -14,6 +14,15 @@ export const isStripeSubscriptionSchedulePhaseCurrent = ({
 	return true;
 };
 
+/** Stripe keeps completed phases on an active schedule. */
+export const isStripeSubscriptionSchedulePhaseEnded = ({
+	phase,
+	nowSeconds,
+}: {
+	phase: Stripe.SubscriptionSchedule.Phase;
+	nowSeconds: number;
+}): boolean => phase.end_date != null && nowSeconds >= phase.end_date;
+
 /** Checks if a Stripe subscription schedule is in its last phase. */
 export const isStripeSubscriptionScheduleInLastPhase = ({
 	stripeSubscriptionSchedule,

@@ -6,6 +6,7 @@
  */
 
 import { Svix } from "svix";
+import { createTestWait } from "../../utils/testWait/createTestWait";
 
 // ─── Svix Admin Client ───────────────────────────────────────────────────────
 
@@ -66,14 +67,16 @@ export const getPlayWebhookUrl = (token: string): string => {
 export const getPlayHistory = async ({
 	token,
 	iterator,
+	signal,
 }: {
 	token: string;
 	iterator?: string;
+	signal?: AbortSignal;
 }): Promise<SvixPlayHistory> => {
 	const url = new URL(`${SVIX_PLAY_API_BASE}/history/${token}/`);
 	if (iterator) url.searchParams.set("iterator", iterator);
 
-	const response = await fetch(url.toString());
+	const response = await fetch(url.toString(), { signal });
 
 	if (!response.ok)
 		throw new Error(`Failed to get Svix Play history: ${response.status}`);
@@ -98,36 +101,48 @@ export const waitForWebhook = async <T = unknown>({
 	predicate,
 	timeoutMs = 10000,
 	logWebhook = true,
+	signal,
 }: {
 	token: string;
 	predicate: (payload: T) => boolean;
 	timeoutMs?: number;
 	logWebhook?: boolean;
+	signal?: AbortSignal;
 }): Promise<{ event: SvixPlayEvent; payload: T } | null> => {
-	const startTime = Date.now();
+	const wait = createTestWait({
+		timeoutMs,
+		signal,
+		description: "Wait for Svix webhook delivery",
+	});
+	try {
+		while (true) {
+			const history = await wait.run(() =>
+				getPlayHistory({ token, signal: wait.signal }),
+			);
 
-	while (Date.now() - startTime < timeoutMs) {
-		const history = await getPlayHistory({ token });
-
-		for (const event of history.data) {
-			try {
-				const payload = parseEventBody<T>(event);
-				if (predicate(payload)) {
-					if (logWebhook) {
-						process.stdout.write("\n── webhook ────────────────────────\n");
-						process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+			for (const event of history.data) {
+				try {
+					const payload = parseEventBody<T>(event);
+					if (predicate(payload)) {
+						if (logWebhook) {
+							process.stdout.write("\n── webhook ────────────────────────\n");
+							process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+						}
+						return { event, payload };
 					}
-					return { event, payload };
+				} catch {
+					// Skip events that can't be parsed.
 				}
-			} catch {
-				// Skip events that can't be parsed
 			}
+			await wait.sleep(500);
 		}
-
-		await new Promise((resolve) => setTimeout(resolve, 500));
+	} catch (error) {
+		signal?.throwIfAborted();
+		if (wait.signal.aborted) return null;
+		throw error;
+	} finally {
+		wait.close();
 	}
-
-	return null;
 };
 
 // ─── Event Type Registration ───────────────────────────────────────────────

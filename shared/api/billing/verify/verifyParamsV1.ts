@@ -49,6 +49,9 @@ export const ItemMismatchSchema = z.object({
 	actual_quantity: z.number().optional(),
 	/** Display context: plan name + major-unit price, when resolvable. */
 	plan_name: z.string().optional(),
+	plan_id: z.string().optional().meta({
+		description: "The Autumn plan this mismatch belongs to, when resolvable.",
+	}),
 	price_amount: z.number().optional(),
 	price_interval: z.string().optional(),
 	price_interval_count: z.number().optional(),
@@ -71,6 +74,9 @@ export const BasePriceMismatchSchema = z.object({
 	actual_amount: z.string().optional(),
 	/** Display context: plan name + major-unit price (e.g. Pro at 300/mo). */
 	plan_name: z.string().optional(),
+	plan_id: z.string().optional().meta({
+		description: "The Autumn plan this mismatch belongs to, when resolvable.",
+	}),
 	price_amount: z.number().optional(),
 	price_interval: z.string().optional(),
 	price_interval_count: z.number().optional(),
@@ -84,7 +90,13 @@ export const PrepaidQuantityMismatchSchema = z.object({
 	type: z.literal("prepaid_quantity_mismatch"),
 	message,
 	severity,
+	actual_price_id: z.string().optional().meta({
+		description: "The Stripe price of the item this mismatch is about.",
+	}),
 	feature_id: z.string(),
+	plan_id: z.string().optional().meta({
+		description: "The Autumn plan this mismatch belongs to, when resolvable.",
+	}),
 	expected_quantity: z.number(),
 	actual_quantity: z.number(),
 	phase_starts_at: z.number().optional(),
@@ -98,6 +110,9 @@ export const PrepaidPriceMismatchSchema = z.object({
 	type: z.literal("prepaid_price_mismatch"),
 	message,
 	severity,
+	actual_price_id: z.string().optional().meta({
+		description: "The Stripe price of the item this mismatch is about.",
+	}),
 	feature_id: z.string(),
 	expected_unit_amount: z.string(),
 	actual_unit_amount: z.string(),

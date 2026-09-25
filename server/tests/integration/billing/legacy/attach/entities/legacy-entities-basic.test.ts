@@ -32,7 +32,7 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { timeout } from "@/utils/genUtils";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Attach to entity via checkout
@@ -440,7 +440,7 @@ test.concurrent(`${chalk.yellowBright("legacy-entities 5: downgrade entity produ
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfMonths: 1,
-		waitForSeconds: 30,
+		minimumWaitForSeconds: 30,
 	});
 
 	// Verify entity 1 has Pro active

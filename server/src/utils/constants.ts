@@ -42,6 +42,7 @@ export const WEBHOOK_EVENTS = [
 	"invoice.finalized",
 	"invoice.updated",
 	"subscription_schedule.canceled",
+	"subscription_schedule.released",
 	"subscription_schedule.updated",
 	"test_helpers.test_clock.ready",
 ];

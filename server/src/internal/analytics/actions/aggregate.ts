@@ -29,12 +29,15 @@ import {
 	shouldUseMonthlyRollup,
 	shouldUseOrgDimensionRollup,
 	shouldUseOrgPropertyRollup,
+	shouldUsePropertyCoverageCheck,
 	shouldUsePropertyDailyRollup,
 } from "./dailyRollupRouting.js";
 import { getCountAndSum } from "./getCountAndSum.js";
 import {
 	groupedResultIsIncomplete,
-	propertyRollupCoverageIsIncomplete,
+	groupedValueIsMateriallyShort,
+	propertyRollupCoverageShortfall,
+	propertyRollupCoverageUnderReports,
 	reportsMoreThan,
 } from "./propertyRollupCompleteness.js";
 
@@ -522,8 +525,13 @@ export const aggregate = async ({
 			groupColumn === "property" && Object.keys(filterParams).length === 0;
 
 		if (readsGatedRollup) {
-			let rollupIsIncomplete: boolean;
-			if (useOrgPropertyRollup) {
+			let rollupIsIncomplete: boolean | null = null;
+			const usePropertyCoverage = shouldUsePropertyCoverageCheck({
+				groupColumn,
+				hasPropertyFilters: Object.keys(filterParams).length > 0,
+				propertyKey,
+			});
+			if (usePropertyCoverage) {
 				const coverageResult = await pipes.propertyRollupCoverage({
 					org_id: org.id,
 					env,
@@ -531,15 +539,47 @@ export const aggregate = async ({
 					start_date: startDate,
 					end_date: endDate,
 					property_key: propertyKey,
+					customer_id: customerId,
+					entity_id: params.entity_id,
 				});
 				const coverage = Object.fromEntries(
 					coverageResult.data.map((row) => [row.event_name, row.event_count]),
 				);
-				rollupIsIncomplete = propertyRollupCoverageIsIncomplete({
+				const coverageUnderReports = propertyRollupCoverageUnderReports({
 					rows: result.data,
 					coverage,
 				});
-			} else {
+				if (coverageUnderReports) {
+					ctx.logger.warn(
+						"Property coverage rollup under-reports grouped counts; falling back to event totals",
+						{
+							orgId: org.id,
+							propertyKey,
+							customerId,
+							entityId: params.entity_id,
+						},
+					);
+				} else {
+					const shortfall = propertyRollupCoverageShortfall({
+						rows: result.data,
+						coverage,
+					});
+					if (shortfall === "minor") {
+						const totals = await getCountAndSum({
+							ctx,
+							params,
+							dateRange: { startDate, endDate },
+						});
+						rollupIsIncomplete = groupedValueIsMateriallyShort({
+							rows: result.data,
+							totals,
+						});
+					} else {
+						rollupIsIncomplete = shortfall === "major";
+					}
+				}
+			}
+			if (rollupIsIncomplete === null) {
 				const totals = await getCountAndSum({
 					ctx,
 					params,
@@ -552,14 +592,30 @@ export const aggregate = async ({
 			}
 
 			if (rollupIsIncomplete) {
-				const ungated = await pipes.aggregateGroupable({
-					...pipeParams,
-					skip_property_rollup: "1",
-				});
+				// The raw-events scan can exceed Tinybird's query timeout on long
+				// windows; the gated result is the better answer than a failed request.
+				const ungated = await pipes
+					.aggregateGroupable({ ...pipeParams, skip_property_rollup: "1" })
+					.catch((error: unknown) => {
+						ctx.logger.warn(
+							"Ungated property retry failed; keeping gated result",
+							{
+								orgId: org.id,
+								propertyKey,
+								customerId,
+								entityId: params.entity_id,
+								startDate,
+								endDate,
+								error: error instanceof Error ? error.message : String(error),
+							},
+						);
+						return null;
+					});
 
 				// A shortfall means gate loss OR events without the property; only the
 				// first is recoverable, and only the retry can tell them apart.
 				if (
+					ungated &&
 					reportsMoreThan({ candidate: ungated.data, current: result.data })
 				) {
 					result = ungated;

@@ -51,6 +51,22 @@ export const shouldUseOrgPropertyRollup = ({
 	!propertyKey.includes(".") &&
 	!skipPropertyRollup;
 
+// Property coverage counts events that carry the key, so events that simply
+// lack it never read as gate loss. Nested keys are not indexed by the coverage
+// rollups and fall back to all-event totals, which still forces the retry.
+export const shouldUsePropertyCoverageCheck = ({
+	groupColumn,
+	hasPropertyFilters,
+	propertyKey,
+}: {
+	groupColumn: GroupableColumn;
+	hasPropertyFilters: boolean;
+	propertyKey: string;
+}): boolean =>
+	groupColumn === "property" &&
+	!hasPropertyFilters &&
+	!propertyKey.includes(".");
+
 const parseUtcTimestamp = ({ value }: { value: string }): number => {
 	const normalized = value.replace(" ", "T").replace(/Z$/, "");
 	return Date.parse(`${normalized}Z`);

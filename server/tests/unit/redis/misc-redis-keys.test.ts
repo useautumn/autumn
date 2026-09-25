@@ -113,8 +113,8 @@ describe("misc redis key formats", () => {
 	});
 
 	test("model pricing", () => {
-		expect(MODEL_PRICING_CACHE_KEY).toBe("models_dev_pricing");
-		expect(MODEL_PRICING_STALE_CACHE_KEY).toBe("models_dev_pricing_stale");
+		expect(MODEL_PRICING_CACHE_KEY).toBe("models_dev_pricing:v2");
+		expect(MODEL_PRICING_STALE_CACHE_KEY).toBe("models_dev_pricing_stale:v2");
 		expect(MODEL_PRICING_TTL_SECONDS).toBe(60 * 60 * 3);
 		expect(MODEL_PRICING_STALE_TTL_SECONDS).toBe(60 * 60 * 24 * 3);
 	});
