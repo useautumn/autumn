@@ -45,8 +45,16 @@ function parseReady({
 	return parsed.data;
 }
 
+/** Key scheme on a compacted topic: `claimed` and `unowned` share the
+ *  partition's key, so compaction keeps only the latest word on who owns it.
+ *  A handoff signal such as `ready` is keyed `<partition>:<type>` so it only
+ *  ever compacts against its own kind; under the owner's key it would replace
+ *  the current `claimed` once a segment rolled, and a cold-starting owner
+ *  table would see no owner while the predecessor was still serving. */
 function ownershipRecordToKey({ record }: { record: OwnershipRecord }): string {
-	return record.partition.toString();
+	if (record.type === "claimed" || record.type === "unowned")
+		return record.partition.toString();
+	return `${record.partition}:${record.type}`;
 }
 
 function parseOwnershipPayload({

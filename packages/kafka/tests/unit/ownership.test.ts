@@ -56,7 +56,7 @@ describe("ownershipRecords", function ownershipRecordsTests() {
 			expect(ownershipTopic.parse(serialized)).toEqual(record);
 		});
 
-		test("round-trips a ready record", () => {
+		test("round-trips a ready record under its own compaction key", () => {
 			const record = {
 				schemaVersion: 1 as const,
 				type: "ready" as const,
@@ -66,8 +66,15 @@ describe("ownershipRecords", function ownershipRecordsTests() {
 			};
 			const serialized = ownershipTopic.serialize({ record });
 
-			expect(serialized.key.toString("utf8")).toBe("7");
+			// Never the owner's key: a compacted topic would otherwise keep the ready and drop the claim.
+			expect(serialized.key.toString("utf8")).toBe("7:ready");
 			expect(ownershipTopic.parse(serialized)).toEqual(record);
+			expect(() =>
+				ownershipTopic.parse({
+					key: Buffer.from("7", "utf8"),
+					value: serialized.value,
+				}),
+			).toThrow(RecordKeyMismatchError);
 		});
 
 		test("rejects a record whose Kafka key names another partition", () => {
