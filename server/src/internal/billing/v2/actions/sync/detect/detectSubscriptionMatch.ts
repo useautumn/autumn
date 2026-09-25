@@ -36,8 +36,9 @@ export const detectSubscriptionMatch = async ({
 	/** Optional pre-fetched catalog (callers matching many subscriptions pass
 	 * this to avoid a per-call fetch). */
 	fullProducts?: FullProduct[];
-	/** Products already linked to the subscription — an item no plan claims
-	 * stays on these instead of falling back to another plan. */
+	/** Products currently linked to the subscription — an item no plan claims
+	 * in the current phase stays on these instead of falling back to another
+	 * plan. */
 	linkedInternalProductIds?: ReadonlySet<string>;
 }): Promise<SubscriptionMatch> => {
 	if (!subscription && !schedule) {
@@ -75,7 +76,11 @@ export const detectSubscriptionMatch = async ({
 					item,
 					fullProducts,
 					org: ctx.org,
-					linkedInternalProductIds,
+					// Linked products are current-phase state; future phases match
+					// on the catalog alone.
+					linkedInternalProductIds: snapshot.is_current
+						? linkedInternalProductIds
+						: undefined,
 				}),
 			),
 			org: ctx.org,
