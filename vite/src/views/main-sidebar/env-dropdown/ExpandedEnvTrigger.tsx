@@ -18,12 +18,12 @@ export const ExpandedEnvTrigger = () => {
 	return (
 		<DropdownMenuTrigger
 			aria-label={`Environment: ${label}`}
-			className="flex w-full cursor-pointer select-none items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+			className="flex w-full cursor-pointer select-none items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
 		>
 			<div
 				className={cn(
-					"flex h-7 w-full items-center gap-2 overflow-hidden rounded-md border bg-interactive-secondary text-foreground transition-colors duration-150 ease-out hover:bg-interactive-secondary-hover",
-					expanded ? "justify-between px-2" : "w-7 justify-center px-0",
+					"flex h-8 w-full items-center gap-2 overflow-hidden rounded-lg border bg-interactive-secondary text-foreground transition-colors duration-150 ease-out hover:bg-interactive-secondary-hover dark:border-[#262626] dark:bg-[#1A1A1A] dark:text-[#EDEDED] dark:hover:bg-[#1F1F1F]",
+					expanded ? "justify-between px-2.5" : "justify-center px-0",
 				)}
 			>
 				<span className="flex min-w-0 items-center gap-2">
@@ -33,11 +33,16 @@ export const ExpandedEnvTrigger = () => {
 						className="size-3.5"
 					/>
 					{expanded && (
-						<span className="truncate text-sm font-medium">{label}</span>
+						<span className="truncate text-[13px] font-[550] leading-4">
+							{label}
+						</span>
 					)}
 				</span>
 				{expanded && (
-					<ChevronsUpDown className="size-3.5 shrink-0 text-tertiary-foreground" />
+					<ChevronsUpDown
+						className="size-3.5 shrink-0 text-[#8A8A8A] dark:text-[#6B6B6B]"
+						strokeWidth={1.75}
+					/>
 				)}
 			</div>
 		</DropdownMenuTrigger>

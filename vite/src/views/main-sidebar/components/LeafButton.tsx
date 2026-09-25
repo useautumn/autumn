@@ -1,9 +1,13 @@
 import { useIsMobile } from "@autumn/ui";
-import { LeafIcon } from "@phosphor-icons/react";
+import { Leaf } from "lucide-react";
 import { useLeafPanelStore } from "@/hooks/stores/useLeafPanelStore";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useSidebarContext } from "@/views/main-sidebar/SidebarContext";
+import {
+	sidebarIconClass,
+	sidebarRowClass,
+} from "@/views/main-sidebar/sidebarRowClass";
 
 export const LeafButton = () => {
 	const { isAdmin } = useAdmin();
@@ -24,15 +28,11 @@ export const LeafButton = () => {
 				e.currentTarget.blur();
 				togglePanel();
 			}}
-			className={cn(
-				"cursor-pointer font-medium text-sm flex items-center text-muted-foreground px-2 h-7 rounded-lg w-full hover:text-foreground border border-transparent focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-				open &&
-					"border border-border !text-foreground bg-interactive-secondary",
-			)}
+			className={sidebarRowClass({ isActive: open })}
 		>
-			<div className="flex items-center gap-2">
-				<div className="flex justify-center w-4 h-4 items-center rounded-sm">
-					<LeafIcon size={16} weight="fill" />
+			<div className="flex min-w-0 flex-1 items-center gap-2.5">
+				<div className={sidebarIconClass({ isActive: open })}>
+					<Leaf strokeWidth={1.5} />
 				</div>
 				<span
 					className={cn(

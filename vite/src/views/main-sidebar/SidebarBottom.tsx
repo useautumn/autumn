@@ -1,6 +1,6 @@
 "use client";
 
-import { BooksIcon } from "@phosphor-icons/react";
+import { BookOpen } from "lucide-react";
 import { useEnv } from "@/utils/envUtils";
 import { WorkbenchButton } from "@/views/customers2/customer/workbench/WorkbenchButton";
 import { LeafButton } from "./components/LeafButton";
@@ -14,14 +14,14 @@ export default function SidebarBottom() {
 	return (
 		// One px-2 column for everything, so the card and the collapsed rail's
 		// icon sit on the same inset as the nav rows.
-		<div className="flex flex-col gap-1 px-2 pt-4">
+		<div className="flex flex-col gap-px pt-4">
 			<OnboardingCard />
-			<div className="flex flex-col gap-1 mb-2">
+			<div className="flex flex-col gap-px">
 				<LeafButton />
 				<WorkbenchButton />
 				<NavButton
 					value="docs"
-					icon={<BooksIcon size={16} weight="duotone" />}
+					icon={<BookOpen strokeWidth={1.5} />}
 					title="Docs"
 					env={env}
 					href="https://docs.useautumn.com"

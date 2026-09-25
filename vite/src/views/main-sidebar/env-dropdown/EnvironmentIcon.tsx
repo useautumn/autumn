@@ -13,7 +13,12 @@ export const EnvironmentIcon = ({
 	className?: string;
 }) => {
 	if (isLive) {
-		return <Sailboat className={cn("size-4 shrink-0", className)} />;
+		return (
+			<Sailboat
+				className={cn("size-4 shrink-0 text-primary", className)}
+				strokeWidth={1.75}
+			/>
+		);
 	}
 	if (sandbox?.icon) {
 		return (
@@ -27,5 +32,10 @@ export const EnvironmentIcon = ({
 			/>
 		);
 	}
-	return <FlaskConical className={cn("size-4 shrink-0", className)} />;
+	return (
+		<FlaskConical
+			className={cn("size-4 shrink-0 text-sandbox", className)}
+			strokeWidth={1.75}
+		/>
+	);
 };

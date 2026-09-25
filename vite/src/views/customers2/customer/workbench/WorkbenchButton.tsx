@@ -1,10 +1,14 @@
 import { useIsMobile } from "@autumn/ui";
-import { TerminalWindowIcon } from "@phosphor-icons/react";
+import { SquareTerminal } from "lucide-react";
 import { useMatch } from "react-router";
 import { useWorkbenchStore } from "@/hooks/stores/useWorkbenchStore";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useSidebarContext } from "@/views/main-sidebar/SidebarContext";
+import {
+	sidebarIconClass,
+	sidebarRowClass,
+} from "@/views/main-sidebar/sidebarRowClass";
 
 export const WorkbenchButton = () => {
 	const { isAdmin } = useAdmin();
@@ -27,15 +31,11 @@ export const WorkbenchButton = () => {
 				e.currentTarget.blur();
 				toggle();
 			}}
-			className={cn(
-				"cursor-pointer font-medium text-sm flex items-center text-muted-foreground px-2 h-7 rounded-lg w-full hover:text-foreground border border-transparent focus:outline-none focus-visible:outline-none",
-				isOpen &&
-					"border border-border !text-foreground bg-interactive-secondary",
-			)}
+			className={sidebarRowClass({ isActive: isOpen })}
 		>
-			<div className="flex items-center gap-2">
-				<div className="flex justify-center w-4 h-4 items-center rounded-sm">
-					<TerminalWindowIcon size={16} weight="duotone" />
+			<div className="flex min-w-0 flex-1 items-center gap-2.5">
+				<div className={sidebarIconClass({ isActive: isOpen })}>
+					<SquareTerminal strokeWidth={1.5} />
 				</div>
 				<span
 					className={cn(

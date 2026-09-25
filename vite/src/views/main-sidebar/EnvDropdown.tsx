@@ -23,7 +23,6 @@ import {
 	setActiveSandbox,
 	useActiveSandbox,
 } from "@/hooks/sandbox/useActiveSandbox";
-import { cn } from "@/lib/utils";
 import { envToPath } from "@/utils/genUtils";
 import { CreateSandboxDialog } from "./env-dropdown/CreateSandboxDialog";
 import { EnvironmentIcon } from "./env-dropdown/EnvironmentIcon";
@@ -78,8 +77,8 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 
 	if (isResolving || willRedirectToSandbox) {
 		return (
-			<div className="flex gap-1 px-3 text-xs text-muted-foreground">
-				<Skeleton className={cn("h-7", expanded ? "w-full" : "w-7")} />
+			<div className="flex text-xs text-muted-foreground">
+				<Skeleton className="h-8 w-full rounded-lg" />
 			</div>
 		);
 	}
@@ -120,7 +119,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	const hasSandboxResults = showLegacySandbox || visibleSandboxes.length > 0;
 
 	return (
-		<div className="flex gap-1 px-3 text-xs text-muted-foreground">
+		<div className="flex text-xs text-muted-foreground">
 			<DropdownMenu open={open} onOpenChange={handleOpenChange}>
 				<ExpandedEnvTrigger />
 
@@ -156,7 +155,6 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 								<EnvironmentMenuItem
 									icon={<EnvironmentIcon className="size-3.5" />}
 									name="Sandbox"
-									hint="Default"
 									isActive={inLegacySandbox}
 									onSelect={() => selectMainEnv(AppEnv.Sandbox)}
 								/>

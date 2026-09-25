@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { notNullish, pushPage } from "@/utils/genUtils";
 import { useSidebarContext } from "./SidebarContext";
+import { sidebarIconClass, sidebarRowClass } from "./sidebarRowClass";
 
 export const NavButton = ({
 	value,
@@ -22,6 +23,7 @@ export const NavButton = ({
 	isSubNav = false,
 	isGroup = false,
 	badge,
+	isDefaultSubValue = false,
 }: {
 	value?: string;
 	subValue?: string;
@@ -36,6 +38,7 @@ export const NavButton = ({
 	isSubNav?: boolean;
 	isGroup?: boolean;
 	badge?: ReactNode;
+	isDefaultSubValue?: boolean;
 }) => {
 	// Get window path
 	const finalEnv = useEnv();
@@ -44,8 +47,10 @@ export const NavButton = ({
 	const [searchParams] = useSearchParams();
 	const subTab = searchParams.get("tab");
 
-	const isActive =
-		tab === value && (subValue ? subTab === subValue : true) && isOpen !== true;
+	const subTabMatches = subValue
+		? subTab === subValue || (isDefaultSubValue && !subTab)
+		: true;
+	const isActive = tab === value && subTabMatches && isOpen !== true;
 
 	const [isHovered, setIsHovered] = useState(false);
 	const showTooltip = !expanded && isHovered;
@@ -53,15 +58,11 @@ export const NavButton = ({
 	const TabComponent = () => {
 		return (
 			<>
-				<div className="flex items-center gap-2">
-					{icon && (
-						<div className="flex justify-center !w-4 !h-4 items-center rounded-sm">
-							{icon}
-						</div>
-					)}
+				<div className="flex min-w-0 flex-1 items-center gap-2.5">
+					{icon && <div className={sidebarIconClass({ isActive })}>{icon}</div>}
 					<span
 						className={cn(
-							"whitespace-nowrap",
+							"truncate whitespace-nowrap",
 							expanded
 								? "opacity-100 translate-x-0"
 								: "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
@@ -91,13 +92,8 @@ export const NavButton = ({
 	};
 
 	const outerDivClass = cn(
-		`cursor-pointer font-medium
-           text-sm flex items-center text-muted-foreground px-2 h-7 rounded-lg w-full hover:text-foreground border border-transparent`,
-		(!isGroup || !expanded) && " hover:text-foreground text-muted-foreground",
-		isActive &&
-			"border border-border !text-foreground bg-interactive-secondary",
-		isSubNav &&
-			"pl-4 font-normal rounded-none rounded-tr-md rounded-br-md border-l-0 text-tertiary-foreground",
+		sidebarRowClass({ isActive }),
+		isSubNav && "pl-4",
 		className,
 	);
 

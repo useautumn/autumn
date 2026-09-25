@@ -27,10 +27,7 @@ export const BuiltInEnvironmentSummary = ({
 		<>
 			<EnvironmentDetailHeader
 				icon={
-					<EnvironmentIcon
-						isLive={kind === "production"}
-						className="size-4 text-muted-foreground"
-					/>
+					<EnvironmentIcon isLive={kind === "production"} className="size-4" />
 				}
 				title={environment.title}
 				subtitle="Built in"
