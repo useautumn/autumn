@@ -478,3 +478,32 @@ test("pull never appends webhooks after a root spread, and never deletes a compu
 		},
 	]);
 });
+
+test("a dashboard webhook receiving every event is never written as events: []", () => {
+	const before = `export default atmn({
+	webhooks: [
+		webhook({ id: "billing", events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } }),
+	],
+});
+`;
+	const { source, lines } = pullInto({
+		source: before,
+		remoteList: [
+			remote(DASHBOARD_ID, "https://x.dev/h", { events: [] }),
+			remote("ep_9Zz7c9LmNpRsTuVwXyZa1b3d4e5", "https://x.dev/all", {
+				events: [],
+			}),
+		],
+		stated: [
+			{
+				id: "billing",
+				events: ["billing.updated"],
+				url: { sandbox: "https://x.dev/h" },
+			},
+		],
+	});
+	expect(source).toBe(before);
+	expect(lines).toEqual([
+		"· webhook ep_9Zz7c9LmNpRsTuVwXyZa1b3d4e5 receives every event; give it an event list in the dashboard, or add it to your config, to manage it here",
+	]);
+});

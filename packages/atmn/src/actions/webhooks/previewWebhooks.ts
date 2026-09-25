@@ -29,6 +29,12 @@ export const previewWebhooks = async ({
 		envKey: env.key,
 	});
 	const body = { webhooks };
-	const { changes } = await client.previewSyncWebhooks(body);
+	const { changes, errors } = await client.previewSyncWebhooks(body);
+	// Refused items (several dashboard webhooks on one URL, say) fail the lane
+	// here, beside every other lane's errors, rather than at apply.
+	if (errors.length > 0)
+		throw new Error(
+			errors.map(({ id, message }) => `${id}: ${message}`).join("\n"),
+		);
 	return { preview: { changes }, body, env };
 };

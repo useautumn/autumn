@@ -29,7 +29,17 @@ export const applyWebhooks = async ({
 		envDirs,
 		cwd,
 	});
-	write(`\nApplied webhooks.\n${saved.map((line) => `${line}\n`).join("")}`);
+	const failed = new Set(result.errors.map(({ id }) => id));
+	// An adopted webhook keeps its signing secret, so nothing is written for it.
+	const adopted = lane.preview.changes
+		.filter((change) => change.action === "adopt" && !failed.has(change.id))
+		.map(
+			(change) =>
+				`Adopted ${change.id} (existing dashboard webhook); its signing secret is unchanged, nothing written`,
+		);
+	write(
+		`\nApplied webhooks.\n${[...adopted, ...saved].map((line) => `${line}\n`).join("")}`,
+	);
 	if (result.errors.length > 0)
 		throw new Error(
 			result.errors.map(({ id, message }) => `${id}: ${message}`).join("\n"),

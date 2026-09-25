@@ -14,9 +14,7 @@ export const webhooksHaveWork = ({
 }: {
 	webhooks: WebhooksPreview | undefined;
 }): boolean =>
-	(webhooks?.changes ?? []).some(
-		(change) => change.action === "create" || change.action === "update",
-	);
+	(webhooks?.changes ?? []).some((change) => change.action !== "unmanaged");
 
 const DETAIL_INDENT = "      ";
 
@@ -53,6 +51,15 @@ const renderChange = ({ change }: { change: WebhookChange }): string[] => {
 		return [
 			`  ${chalk.green(`+ ${change.id}`)}${chalk.dim(`  ${change.webhook.url}`)}`,
 			`${DETAIL_INDENT}${chalk.dim(`events: ${list(change.webhook.events)}`)}`,
+		];
+	if (change.action === "adopt")
+		return [
+			`  ${chalk.yellow(`~ ${change.id}`)}  ${chalk.bold("adopt")}  ${chalk.dim("existing dashboard webhook · signing secret unchanged")}`,
+			...updateDetails({
+				id: change.id,
+				before: change.before,
+				after: change.after,
+			}),
 		];
 	if (change.action === "update")
 		return [

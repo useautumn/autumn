@@ -62,6 +62,12 @@ export const applyWebhooksPull = ({
 				);
 				continue;
 			}
+			if (webhook.events.length === 0) {
+				result.lines.push(
+					`· webhook ${webhook.id} receives every event; give it an event list in the dashboard, or add it to your config, to manage it here`,
+				);
+				continue;
+			}
 			const id = newId();
 			const failure = appendWebhook({
 				pull,

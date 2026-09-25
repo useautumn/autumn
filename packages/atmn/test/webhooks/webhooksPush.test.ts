@@ -5,7 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pushExitCode, runPush } from "../../src/actions/push";
@@ -128,6 +128,7 @@ test("the three previews run together and render as one preview", async () => {
 			sent = body;
 			await previews.arrive("previewSyncWebhooks");
 			return {
+				errors: [],
 				changes: [
 					{
 						action: "update",
@@ -206,6 +207,7 @@ test("--yes: settings apply before the catalog, and webhooks sync alongside, sav
 			return { results: {}, migrations: [] };
 		},
 		previewSyncWebhooks: async () => ({
+			errors: [],
 			changes: [
 				{
 					action: "create",
@@ -387,6 +389,7 @@ test("a deferred catalog that still fails after settings stops the push before w
 	const withWebhooks = {
 		...client,
 		previewSyncWebhooks: async () => ({
+			errors: [],
 			changes: [
 				{
 					action: "create",
@@ -427,4 +430,88 @@ test("a deferred catalog that still fails after settings stops the push before w
 		].join("\n"),
 	);
 	expect(output).toContain("Applied settings.");
+});
+
+const dashboardState = (url: string) => ({
+	...state(url),
+	id: "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5",
+});
+
+test("adopt: the preview names it, and applying writes no secret", async () => {
+	const dir = projectWith({ body: `\tfeatures: [],\n${WEBHOOKS}` });
+	const url = "https://staging.example.com/autumn";
+	const client = {
+		previewUpdate: async () => ({ features: [], plans: [] }),
+		previewSyncWebhooks: async () => ({
+			errors: [],
+			changes: [
+				{
+					action: "adopt",
+					id: "billing",
+					before: dashboardState(url),
+					after: state(url),
+				},
+			],
+		}),
+		syncWebhooks: async () => ({
+			webhooks: [state(url)],
+			secrets: [],
+			errors: [],
+		}),
+	};
+	let output = "";
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: client as any,
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+		webhookEnv: async () => SANDBOX,
+	});
+	expect(output).toContain(
+		"~ billing  adopt  existing dashboard webhook · signing secret unchanged",
+	);
+	expect(output).toContain(
+		"Adopted billing (existing dashboard webhook); its signing secret is unchanged, nothing written",
+	);
+	expect(output).not.toContain("Saved webhook secret");
+	expect(existsSync(join(dir, ".env"))).toBe(false);
+	expect(existsSync(join(dir, ".env.local"))).toBe(false);
+});
+
+test("preview_sync errors fail the push before any write, beside other lanes' errors", async () => {
+	const dir = projectWith({ body: `\tfeatures: [],\n${WEBHOOKS}` });
+	const calls: string[] = [];
+	const client = {
+		previewUpdate: async () => {
+			throw new Error("plan pro: price must be positive");
+		},
+		previewSyncWebhooks: async () => ({
+			changes: [],
+			errors: [
+				{
+					id: "billing",
+					message:
+						"2 dashboard webhooks use this URL; delete the extras or give one an id in the dashboard",
+				},
+			],
+		}),
+		update: async () => calls.push("update"),
+		syncWebhooks: async () => calls.push("syncWebhooks"),
+	};
+	const push = runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: client as any,
+		cwd: dir,
+		write: () => {},
+		webhookEnv: async () => SANDBOX,
+	});
+	await expect(push).rejects.toThrow(
+		"  webhooks\n    billing: 2 dashboard webhooks use this URL; delete the extras or give one an id in the dashboard",
+	);
+	await expect(push).rejects.toThrow(
+		"  catalog\n    plan pro: price must be positive",
+	);
+	expect(calls).toEqual([]);
 });

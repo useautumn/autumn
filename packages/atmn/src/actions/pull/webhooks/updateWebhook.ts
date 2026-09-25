@@ -25,7 +25,8 @@ const fieldAssignments = ({
 	stated: StatedWebhook;
 }): Assignment[] => {
 	const assignments: Assignment[] = [];
-	if (!sameEvents(stated.events, webhook.events))
+	// `[]` is a dashboard webhook receiving every event: not a list a config can state.
+	if (webhook.events.length > 0 && !sameEvents(stated.events, webhook.events))
 		assignments.push({
 			path: ["events"],
 			text: `[${webhook.events.map((event) => JSON.stringify(event)).join(", ")}]`,

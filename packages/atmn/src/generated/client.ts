@@ -52442,7 +52442,7 @@ updatedAt: number;
 }>;
 };
 export type PreviewSyncWebhooksResponse = {
-/** What `webhooks.sync` would do. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone. */
+/** What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone. */
 changes: Array<{
 action: "create";
 id: string;
@@ -52498,6 +52498,41 @@ createdAt: number;
 updatedAt: number;
 };
 } | {
+action: "adopt";
+id: string;
+before: {
+/** The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID. */
+id: string;
+/** The URL Autumn sends events to. */
+url: string;
+/** A note for your own reference. */
+description: string | null;
+/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** When true, no events are sent to the webhook. */
+disabled: boolean;
+/** When the webhook was created, ms since epoch. */
+createdAt: number;
+/** When the webhook was last changed, ms since epoch. */
+updatedAt: number;
+};
+after: {
+/** The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID. */
+id: string;
+/** The URL Autumn sends events to. */
+url: string;
+/** A note for your own reference. */
+description: string | null;
+/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** When true, no events are sent to the webhook. */
+disabled: boolean;
+/** When the webhook was created, ms since epoch. */
+createdAt: number;
+/** When the webhook was last changed, ms since epoch. */
+updatedAt: number;
+};
+} | {
 action: "unmanaged";
 id: string;
 webhook: {
@@ -52516,6 +52551,11 @@ createdAt: number;
 /** When the webhook was last changed, ms since epoch. */
 updatedAt: number;
 };
+}>;
+/** Listed webhooks `webhooks.sync` would refuse, e.g. when several dashboard webhooks share the URL. */
+errors: Array<{
+id: string;
+message: string;
 }>;
 };
 export type SyncWebhooksResponse = {
