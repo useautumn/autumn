@@ -1,5 +1,6 @@
 import { expect } from "bun:test";
 import {
+	CusProductStatus,
 	customerLicenses,
 	customerProducts,
 	products as productsTable,
@@ -55,6 +56,7 @@ const getScheduledLicensePools = async ({
 			and(
 				eq(customerProducts.customer_id, customerId),
 				eq(customerProducts.product_id, parentPlanId),
+				eq(customerProducts.status, CusProductStatus.Scheduled),
 			),
 		);
 };
