@@ -12,6 +12,8 @@ const emptyForm = (): CreateInvoiceForm => ({
 	taxRateId: null,
 	periodStart: null,
 	periodEnd: null,
+	issueDay: null,
+	dueDay: null,
 });
 
 const planItems = [
@@ -262,6 +264,25 @@ describe("buildCreateInvoiceRequestBody", () => {
 			period_end: 1792022400000,
 			preview: true,
 		});
+	});
+
+	test("sends the issue and due dates", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				issueDay: new Date(2026, 8, 7).getTime(),
+				dueDay: new Date(2099, 9, 14).getTime(),
+				customLineItems: [{ _id: "c1", description: "Setup", amount: 10 }],
+			},
+		});
+
+		expect(new Date(body?.issue_date ?? 0).toISOString()).toBe(
+			"2026-09-07T12:00:00.000Z",
+		);
+		expect(new Date(body?.due_date ?? 0).toISOString()).toBe(
+			"2099-10-14T12:00:00.000Z",
+		);
 	});
 
 	test("ignores a half-set period", () => {

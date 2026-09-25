@@ -10,6 +10,13 @@ export type AgentContextMessage = Readonly<{
 	text: string;
 }>;
 
+/** Thread messages the agent never received because they did not tag it,
+ * handed to the next turn that does; `omittedCount` older ones did not fit. */
+export type AgentMissedMessages = Readonly<{
+	messages: ReadonlyArray<AgentContextMessage>;
+	omittedCount: number;
+}>;
+
 export type AgentTurnAttachment = Readonly<{
 	data: Buffer;
 	mimeType: string;
@@ -79,6 +86,7 @@ export type AgentTurnSpeaker = Readonly<{
 export type AgentTurnParams = Readonly<{
 	attachments?: ReadonlyArray<AgentTurnAttachment>;
 	clientContext?: Readonly<Record<string, unknown>>;
+	missedMessages?: AgentMissedMessages;
 	questionResponse?: { optionId: string; requestId: string };
 	recentMessages?: ReadonlyArray<AgentContextMessage>;
 	speaker?: AgentTurnSpeaker;

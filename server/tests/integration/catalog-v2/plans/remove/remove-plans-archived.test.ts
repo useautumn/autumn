@@ -1,7 +1,5 @@
-/**
- * catalogV2.update — archived plans stay pinned (no settings fan-out);
- * drafts skip archived rows; variants[].archived unarchives.
- */
+// Archived plans stay pinned; migration drafts skip archived rows.
+// Declaring an unchanged variant preserves its archive state unless explicitly restored.
 
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -16,6 +14,7 @@ import {
 	withCatalogPlans,
 } from "../licenses/utils/seedLicensePlans.js";
 import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
+import { expectPlanPreviewRowCorrect } from "../preview/utils/expectPlanPreview.js";
 import { cleanupPlanCustomerRefs } from "../utils/cleanupPlanCustomerRefs.js";
 import {
 	deleteDbPlans,
@@ -187,7 +186,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 remove plans: stating archived plans and variants restores them; no draft")}`,
+	`${chalk.yellowBright("catalogV2 remove plans: explicit variant restore and archived-plan draft skip")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({
 			setup: [s.platform.create({ setupDefaultFeatures: true })],
@@ -230,27 +229,38 @@ test.concurrent(
 				expected: [{ id: variantId, archived: true }],
 			});
 
-			const restoreParams = {
+			await autumnV2_3.catalogV2.update({
 				plans: [
 					{
 						plan_id: baseId,
 						variants: [{ variant_plan_id: variantId }],
 					},
 				],
+			});
+			await expectDbPlansCorrect({
+				ctx,
+				expected: [{ id: variantId, archived: true }],
+			});
+
+			const restoreParams = {
+				plans: [
+					{
+						plan_id: baseId,
+						variants: [{ variant_plan_id: variantId, archived: false }],
+					},
+				],
 			};
 			const restorePreview =
 				await autumnV2_3.catalogV2.previewUpdate(restoreParams);
-			expect(
-				restorePreview.plans.some(
-					(plan) =>
-						plan.plan_id === baseId &&
-						plan.variants?.some(
-							(variant) =>
-								variant.plan_id === variantId &&
-								variant.plan_change?.previous_attributes?.archived === true,
-						),
-				),
-			).toBe(true);
+			expectPlanPreviewRowCorrect({
+				preview: restorePreview,
+				expected: {
+					planId: baseId,
+					variants: [
+						{ planId: variantId, previousAttributes: { archived: true } },
+					],
+				},
+			});
 			await autumnV2_3.catalogV2.update(restoreParams);
 			await expectDbPlansCorrect({
 				ctx,

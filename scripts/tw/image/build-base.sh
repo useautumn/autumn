@@ -201,6 +201,7 @@ Local:
     - Name: autumn.fifo
     - Name: autumn-track.fifo
     - Name: autumn-track-async
+    - Name: autumn-stripe-webhook.fifo
 EOF
 log "Wrote goaws config to $GOAWS_CONF (autumn.fifo + autumn-track.fifo + autumn-track-async, dedup on)"
 

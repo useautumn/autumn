@@ -36,7 +36,9 @@ export const fixedPriceToDescription = ({
 			context,
 		});
 
-		description = `${description} (${periodDescription})`;
+		if (periodDescription) {
+			description = `${description} (${periodDescription})`;
+		}
 	}
 
 	if (context.direction === "refund") {

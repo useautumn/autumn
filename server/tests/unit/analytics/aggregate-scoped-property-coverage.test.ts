@@ -27,7 +27,13 @@ const realCountAndSum = { ...(await import(countAndSumModulePath)) };
 type Call = { name: string; params: Record<string, unknown> };
 const calls: Call[] = [];
 
-const groupedRows = [
+const groupedRows: Array<{
+	period: string;
+	event_name: string;
+	group_value: string;
+	total_value: number;
+	event_count: number;
+}> = [
 	{
 		period: "2026-08-25 00:00:00",
 		event_name: "scrape",
@@ -39,12 +45,16 @@ const groupedRows = [
 
 let coverageRows: Array<{ event_name: string; event_count: number }> = [];
 let countAndSumTotals: Record<string, { count: number; sum: number }> = {};
+let ungatedFailure: Error | null = null;
 
 mock.module(tinybirdModulePath, () => ({
 	...realTinybird,
 	getTinybirdPipes: () => ({
 		aggregateGroupable: async (params: Record<string, unknown>) => {
 			calls.push({ name: "aggregateGroupable", params });
+			if (params.skip_property_rollup === "1" && ungatedFailure) {
+				throw ungatedFailure;
+			}
 			return { data: groupedRows };
 		},
 		propertyRollupCoverage: async (params: Record<string, unknown>) => {
@@ -69,8 +79,17 @@ afterAll(() => {
 
 beforeEach(() => {
 	calls.length = 0;
+	groupedRows.length = 0;
+	groupedRows.push({
+		period: "2026-08-25 00:00:00",
+		event_name: "scrape",
+		group_value: "68694",
+		total_value: 99,
+		event_count: 99,
+	});
 	coverageRows = [];
 	countAndSumTotals = {};
+	ungatedFailure = null;
 });
 
 const ctx = {
@@ -169,4 +188,95 @@ test(`${chalk.yellowBright(
 	expect(callsNamed("propertyRollupCoverage")).toHaveLength(1);
 	expect(callsNamed("getCountAndSum")).toHaveLength(1);
 	expect(callsNamed("aggregateGroupable")).toHaveLength(2);
+});
+
+test(`${chalk.yellowBright(
+	"aggregate scoped coverage: a failed ungated retry keeps the gated result instead of failing the request",
+)}`, async () => {
+	coverageRows = [{ event_name: "scrape", event_count: 200 }];
+	ungatedFailure = new Error(
+		"Timeout exceeded: elapsed 60001 ms, maximum: 60000 ms",
+	);
+
+	const { formatted } = await aggregate({
+		ctx,
+		params: scopedParams({ groupBy: "properties.apiKeyId" }),
+	});
+
+	expect(callsNamed("aggregateGroupable")).toHaveLength(2);
+	expect(formatted.rows).toBeGreaterThan(0);
+});
+
+test(`${chalk.yellowBright(
+	"aggregate scoped coverage: a small count shortfall defers to the value-aware totals check",
+)}`, async () => {
+	// One gate-dropped event out of a million by count, but it carries most of
+	// the usage: the count tolerance alone would skip it, the totals sum catches it.
+	groupedRows.length = 0;
+	groupedRows.push({
+		period: "2026-08-25 00:00:00",
+		event_name: "scrape",
+		group_value: "68694",
+		total_value: 1_000_000,
+		event_count: 1_000_000,
+	});
+	coverageRows = [{ event_name: "scrape", event_count: 1_000_001 }];
+	countAndSumTotals = { scrape: { count: 1_000_001, sum: 9_000_000 } };
+
+	await aggregate({
+		ctx,
+		params: scopedParams({ groupBy: "properties.apiKeyId" }),
+	});
+
+	expect(callsNamed("getCountAndSum")).toHaveLength(1);
+	expect(callsNamed("aggregateGroupable")).toHaveLength(2);
+});
+
+test(`${chalk.yellowBright(
+	"aggregate scoped coverage: a small count shortfall the totals agree with is a seam, not gate loss",
+)}`, async () => {
+	groupedRows.length = 0;
+	groupedRows.push({
+		period: "2026-08-25 00:00:00",
+		event_name: "scrape",
+		group_value: "68694",
+		total_value: 1_000_000,
+		event_count: 1_000_000,
+	});
+	coverageRows = [{ event_name: "scrape", event_count: 1_000_090 }];
+	countAndSumTotals = { scrape: { count: 1_000_000, sum: 1_000_000 } };
+
+	await aggregate({
+		ctx,
+		params: scopedParams({ groupBy: "properties.apiKeyId" }),
+	});
+
+	expect(callsNamed("getCountAndSum")).toHaveLength(1);
+	expect(callsNamed("aggregateGroupable")).toHaveLength(1);
+});
+
+test(`${chalk.yellowBright(
+	"aggregate scoped coverage: propertyless events never turn a minor seam into a retry",
+)}`, async () => {
+	// Ninety events short of coverage (a seam) plus a thousand events that lack
+	// the key entirely: the all-events count exceeds the grouped count, but the
+	// missing value is nil, so there is nothing an ungated scan could recover.
+	groupedRows.length = 0;
+	groupedRows.push({
+		period: "2026-08-25 00:00:00",
+		event_name: "scrape",
+		group_value: "68694",
+		total_value: 1_000_000,
+		event_count: 1_000_000,
+	});
+	coverageRows = [{ event_name: "scrape", event_count: 1_000_090 }];
+	countAndSumTotals = { scrape: { count: 1_001_090, sum: 1_001_090 } };
+
+	await aggregate({
+		ctx,
+		params: scopedParams({ groupBy: "properties.apiKeyId" }),
+	});
+
+	expect(callsNamed("getCountAndSum")).toHaveLength(1);
+	expect(callsNamed("aggregateGroupable")).toHaveLength(1);
 });

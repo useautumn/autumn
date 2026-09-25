@@ -33,7 +33,7 @@ export const resetPooledBalances = async ({
 		if (result) computed.push({ cusEntId: customerEntitlement.id, result });
 	}
 
-	if (computed.length === 0) return;
+	if (computed.length === 0) return false;
 
 	const resets = computed.map(({ cusEntId, result }) =>
 		processResetResultToResetCusEntParam({
@@ -55,11 +55,17 @@ export const resetPooledBalances = async ({
 	const anyPromoted = computed.some(
 		({ result }) => result.pooledContributionsPromoted,
 	);
-	if (Object.keys(applied).length > 0 || anyPromoted) {
+	const balancesChanged = Object.keys(applied).length > 0 || anyPromoted;
+	if (balancesChanged) {
 		await invalidateCachedFullSubject({
 			ctx,
 			customerId: fullCustomer.id ?? fullCustomer.internal_id,
 			source,
 		});
 	}
+	// Granted can be reconciled even when another request won the balance reset.
+	const grantedUpdated = computed.some(
+		({ result }) => result.pooledGranted !== undefined,
+	);
+	return balancesChanged || grantedUpdated;
 };

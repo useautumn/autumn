@@ -37,6 +37,7 @@ export const computeReissueCatalogLines = async ({
 	return evaluateStripeInvoicePlan({
 		invoiceContext,
 		lines: computeInvoiceLines({ ctx, invoiceContext }),
+		issueDateMs: Date.now(),
 		dueDateMs: null,
 	}).lines;
 };

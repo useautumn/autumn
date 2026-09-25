@@ -22,16 +22,11 @@ export const REGISTRY_FILE = join(REGISTRY_DIR, "registry.json");
 export const SANDBOX_NAME_PREFIX = "tw";
 
 /** Pool size `N` default (`--max`). Auto-capped to file count, so small runs stay small. */
-export const DEFAULT_WORKERS = 200;
+export const DEFAULT_WORKERS = 400;
 
-/**
- * Per-worker file concurrency `K` default (`--per-worker`). Each worker hosts one
- * server + PG + Dragonfly + goaws and runs up to `K` org-isolated test files at
- * once (the pool admits a worker while `inFlight < K`, least-loaded first); total
- * in-flight is `workers × K`, the rest queue. 3 keeps a worker busy without
- * thrashing its single server+PG; tune via `--per-worker`.
- */
-export const DEFAULT_PER_WORKER = 3;
+// Files share the worker's org, database, cache, and Stripe account.
+// Run them sequentially so unrelated files cannot invalidate each other's state.
+export const DEFAULT_PER_WORKER = 1;
 
 /**
  * Max concurrent Stripe Connect sub-account creations. `accounts.create` is a
@@ -167,6 +162,9 @@ export const BALANCE_WORKER_PORT = 8082;
  * balance-worker rollout to 100% — mirrors ADMIN_ROLLOUT_CONFIG_KEY on the server. */
 export const EDGE_CONFIG_OVERRIDE_B64 = Buffer.from(
 	JSON.stringify({
+		"admin/job-queue-config.json": {
+			queues: { stripeWebhookReplay: { enabled: true } },
+		},
 		"admin/rollout-config.json": {
 			rollouts: {
 				"balance-worker": {
@@ -186,6 +184,7 @@ export const REDIS_URL = `redis://localhost:${DRAGONFLY_PORT}`;
 export const MISC_CACHE_DRAGONFLY_PUBLIC_URL = REDIS_URL;
 export const CACHE_V2_DRAGONFLY_URL = REDIS_URL;
 export const ELASTICMQ_BASE_URL = `http://localhost:${ELASTICMQ_PORT}/000000000000`;
+export const STRIPE_WEBHOOK_SQS_QUEUE_URL = `${ELASTICMQ_BASE_URL}/autumn-stripe-webhook.fifo`;
 export const SQS_QUEUE_URL_V2 = `${ELASTICMQ_BASE_URL}/autumn.fifo`;
 export const TRACK_SQS_QUEUE_URL = `${ELASTICMQ_BASE_URL}/autumn-track.fifo`;
 /** Legacy FIFO async-track URL — kept so workers dual-consume during rollout. */

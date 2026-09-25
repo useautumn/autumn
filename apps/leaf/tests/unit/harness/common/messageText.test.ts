@@ -165,4 +165,58 @@ describe("Harness message text", () => {
 	test("extractUserMessageText returns the raw text when unwrapped", () => {
 		expect(extractUserMessageText("just text")).toBe("just text");
 	});
+
+	test("replays replies the agent skipped before the tagged message", () => {
+		const text = buildAgentMessageText({
+			env: "sandbox",
+			newSession: false,
+			params: {
+				missedMessages: {
+					messages: [
+						{ author: "Alice", isBot: false, text: "add a $10 seat add-on" },
+						{ author: "Bob", isBot: false, text: "and make it annual" },
+					],
+					omittedCount: 0,
+				},
+				speaker: { mentionsAgent: true, name: "Alice" },
+				text: "@Autumn do the above",
+			},
+		});
+
+		expect(text).toContain("Thread messages you have not seen yet");
+		expect(text).toContain(
+			"Alice: add a $10 seat add-on\nBob: and make it annual",
+		);
+		expect(text).not.toContain("left out");
+		expect(extractUserMessageText(text)).toBe("@Autumn do the above");
+	});
+
+	test("says how many skipped replies did not fit", () => {
+		const text = buildAgentMessageText({
+			env: "sandbox",
+			newSession: false,
+			params: {
+				missedMessages: {
+					messages: [{ author: "Bob", isBot: false, text: "annual too" }],
+					omittedCount: 3,
+				},
+				text: "@Autumn do the above",
+			},
+		});
+
+		expect(text).toContain("3 older messages were left out.");
+	});
+
+	test("adds no missed-messages section when nothing was skipped", () => {
+		const text = buildAgentMessageText({
+			env: "sandbox",
+			newSession: false,
+			params: {
+				missedMessages: { messages: [], omittedCount: 0 },
+				text: "@Autumn hi",
+			},
+		});
+
+		expect(text).not.toContain("Thread messages you have not seen yet");
+	});
 });

@@ -1226,6 +1226,20 @@ class BillingUpdateAttachDiscount(BaseModel):
         return m
 
 
+class BillingUpdateRemoveDiscountTypedDict(TypedDict):
+    r"""A discount to remove from the subscription. Discounts that are no longer applied are ignored."""
+
+    reward_id: str
+    r"""The ID of the reward (or Stripe coupon) to remove."""
+
+
+class BillingUpdateRemoveDiscount(BaseModel):
+    r"""A discount to remove from the subscription. Discounts that are no longer applied are ignored."""
+
+    reward_id: str
+    r"""The ID of the reward (or Stripe coupon) to remove."""
+
+
 class BillingUpdateCustomLineItemTypedDict(TypedDict):
     amount: float
     r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
@@ -1357,6 +1371,8 @@ class UpdateSubscriptionParamsTypedDict(TypedDict):
     r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
     discounts: NotRequired[List[BillingUpdateAttachDiscountTypedDict]]
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
+    remove_discounts: NotRequired[List[BillingUpdateRemoveDiscountTypedDict]]
+    r"""Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged."""
     custom_line_items: NotRequired[List[BillingUpdateCustomLineItemTypedDict]]
     r"""Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription."""
     cancel_action: NotRequired[BillingUpdateCancelAction]
@@ -1414,6 +1430,9 @@ class UpdateSubscriptionParams(BaseModel):
     discounts: Optional[List[BillingUpdateAttachDiscount]] = None
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
 
+    remove_discounts: Optional[List[BillingUpdateRemoveDiscount]] = None
+    r"""Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged."""
+
     custom_line_items: Optional[List[BillingUpdateCustomLineItem]] = None
     r"""Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription."""
 
@@ -1456,6 +1475,7 @@ class UpdateSubscriptionParams(BaseModel):
                 "redirect_mode",
                 "subscription_id",
                 "discounts",
+                "remove_discounts",
                 "custom_line_items",
                 "cancel_action",
                 "billing_cycle_anchor",

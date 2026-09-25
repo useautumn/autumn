@@ -12,6 +12,7 @@ CustomerExpand = Literal[
     "entities",
     "referrals",
     "payment_method",
+    "billing_details",
     "subscriptions.plan",
     "purchases.plan",
     "balances.feature",

@@ -49,6 +49,7 @@ import { Result } from "../types/fp.js";
  * @param currency - Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency. (optional)
  * @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
  * @param config - Miscellaneous configurations for the customer. (optional)
+ * @param billingDetails - Billing details to set on the Stripe customer. Creates the Stripe customer if needed. (optional)
  * @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
  */
 export function customersGetOrCreate(

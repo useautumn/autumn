@@ -18,7 +18,7 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 		products,
 		handleRemoveUnscheduledPlan,
 		setEditingPlan,
-		isPlanNotFound,
+		planNotFoundReasons,
 	} = useCustomerStateContext();
 	const { displayCurrency } = useCustomerDisplayCurrency();
 
@@ -94,9 +94,12 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 						)
 					}
 					badge={
-						isPlanNotFound({ location: "unscheduled", planIndex }) ? (
-							<NotFoundBadge />
-						) : undefined
+						<NotFoundBadge
+							reasons={planNotFoundReasons({
+								location: "unscheduled",
+								planIndex,
+							})}
+						/>
 					}
 					onRemove={() => handleRemoveUnscheduledPlan({ planIndex })}
 				/>

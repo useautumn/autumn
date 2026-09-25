@@ -1,8 +1,8 @@
 import {
-    AffectedResource,
-    CreateCustomerParamsV1Schema,
-    CustomerDataSchema,
-    Scopes,
+	AffectedResource,
+	CreateCustomerParamsV1Schema,
+	CustomerDataSchema,
+	Scopes,
 } from "@autumn/shared";
 import type { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -28,6 +28,7 @@ export const getOrCreateCustomerV2 = async ({
 			entity_id: params.entity_id,
 			entity_data: params.entity_data,
 		},
+		billingDetails: params.billing_details,
 		source: "handleGetOrCreateCustomerV2",
 		withAutumnId: params.with_autumn_id,
 	});
@@ -51,7 +52,7 @@ export const handleGetOrCreateCustomerV2 = createRoute({
 		applySubjectLookupDbOnly({ ctx });
 
 		const apiCustomer = await getOrCreateCustomerV2({ ctx, params });
-		
+
 		return c.json(apiCustomer);
 	},
 });

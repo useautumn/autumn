@@ -97,6 +97,7 @@ const processPrepaidPrice = async ({
 				options: newOptions,
 			},
 		});
+		eventContext.results.customerStateChanged = true;
 
 		if (ent.interval === EntInterval.Lifetime) {
 			const difference =
@@ -157,6 +158,8 @@ const processPrepaidPrice = async ({
 				: {}),
 		},
 	});
+
+	eventContext.results.customerStateChanged = true;
 
 	logPrepaidPriceProcessed({
 		ctx,

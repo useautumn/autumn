@@ -240,12 +240,19 @@ fi
 wait_for "PostgreSQL" "pg_isready -h localhost -p $PG_PORT" 60 "$LOG_DIR/pg.log"
 wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING" 60 "$LOG_DIR/dragonfly.log"
 wait_for "goaws" "$goaws_ready_probe" 120 "$LOG_DIR/goaws.log"
-# Self-heal: older base images may lack autumn-track-async in goaws.yaml.
-# CreateQueue is idempotent when the config already declares it.
-if ! curl -sS -o /dev/null \
-  "http://localhost:${ELASTICMQ_PORT}/?Action=CreateQueue&QueueName=autumn-track-async&Version=2012-11-05"; then
-  log "WARN: CreateQueue autumn-track-async failed"
-fi
+# Cached base images may predate queues added to the worker environment.
+for queue_name in autumn-track-async autumn-stripe-webhook.fifo; do
+  queue_attributes=""
+  if [[ "$queue_name" == *.fifo ]]; then
+    queue_attributes="&Attribute.1.Name=FifoQueue&Attribute.1.Value=true"
+  fi
+  if ! curl -fsS -o /dev/null \
+    --data "Action=CreateQueue&QueueName=${queue_name}&Version=2012-11-05${queue_attributes}" \
+    "http://localhost:${ELASTICMQ_PORT}/"; then
+    log "ERROR: CreateQueue ${queue_name} failed"
+    exit 1
+  fi
+done
 if [ "${DYNOXIDE_DISABLED:-0}" != "1" ]; then
   wait_for "dynoxide" "$dynoxide_ready_probe" 60 "$LOG_DIR/dynoxide.log"
 fi

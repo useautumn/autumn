@@ -44,7 +44,7 @@ export const InsertInvoicesStatus = {
  */
 export type InsertInvoicesStatus = ClosedEnum<typeof InsertInvoicesStatus>;
 
-export type InvoiceRequestBody = {
+export type InsertInvoicesInvoiceRequestBody = {
   /**
    * The customer this invoice belongs to.
    */
@@ -95,7 +95,7 @@ export type InsertInvoicesParams = {
   /**
    * Invoices to insert or update, in response order.
    */
-  invoices: Array<InvoiceRequestBody>;
+  invoices: Array<InsertInvoicesInvoiceRequestBody>;
 };
 
 /**
@@ -185,7 +185,7 @@ export const InsertInvoicesStatus$outboundSchema: z.ZodMiniEnum<
 > = z.enum(InsertInvoicesStatus);
 
 /** @internal */
-export type InvoiceRequestBody$Outbound = {
+export type InsertInvoicesInvoiceRequestBody$Outbound = {
   customer_id: string;
   plan_ids?: Array<string> | undefined;
   stripe_id: string;
@@ -200,9 +200,9 @@ export type InvoiceRequestBody$Outbound = {
 };
 
 /** @internal */
-export const InvoiceRequestBody$outboundSchema: z.ZodMiniType<
-  InvoiceRequestBody$Outbound,
-  InvoiceRequestBody
+export const InsertInvoicesInvoiceRequestBody$outboundSchema: z.ZodMiniType<
+  InsertInvoicesInvoiceRequestBody$Outbound,
+  InsertInvoicesInvoiceRequestBody
 > = z.pipe(
   z.object({
     customerId: z.string(),
@@ -234,17 +234,19 @@ export const InvoiceRequestBody$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function invoiceRequestBodyToJSON(
-  invoiceRequestBody: InvoiceRequestBody,
+export function insertInvoicesInvoiceRequestBodyToJSON(
+  insertInvoicesInvoiceRequestBody: InsertInvoicesInvoiceRequestBody,
 ): string {
   return JSON.stringify(
-    InvoiceRequestBody$outboundSchema.parse(invoiceRequestBody),
+    InsertInvoicesInvoiceRequestBody$outboundSchema.parse(
+      insertInvoicesInvoiceRequestBody,
+    ),
   );
 }
 
 /** @internal */
 export type InsertInvoicesParams$Outbound = {
-  invoices: Array<InvoiceRequestBody$Outbound>;
+  invoices: Array<InsertInvoicesInvoiceRequestBody$Outbound>;
 };
 
 /** @internal */
@@ -252,7 +254,9 @@ export const InsertInvoicesParams$outboundSchema: z.ZodMiniType<
   InsertInvoicesParams$Outbound,
   InsertInvoicesParams
 > = z.object({
-  invoices: z.array(z.lazy(() => InvoiceRequestBody$outboundSchema)),
+  invoices: z.array(
+    z.lazy(() => InsertInvoicesInvoiceRequestBody$outboundSchema),
+  ),
 });
 
 export function insertInvoicesParamsToJSON(

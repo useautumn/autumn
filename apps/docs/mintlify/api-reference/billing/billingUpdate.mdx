@@ -1334,6 +1334,16 @@ const response = await autumn.billing.update({
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="remove_discounts" type="object[]">
+  Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
+  <Expandable title="properties">
+    <DynamicParamField body="reward_id" type="string" required>
+      The ID of the reward (or Stripe coupon) to remove.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 <DynamicParamField body="custom_line_items" type="object[]">
   Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
   <Expandable title="properties">

@@ -13,6 +13,7 @@ import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/erro
 import { matchCustomerLicenseSuccessors } from "@/internal/billing/v2/compute/customerLicenseTransitions/matchCustomerLicenseSuccessors";
 import { pairCustomerProducts } from "@/internal/billing/v2/compute/pairCustomerProducts";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
+import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import type { ImmediatePhaseTransition } from "../compute/computeCreateSchedulePlan";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 
@@ -38,7 +39,7 @@ export const handleCreateScheduleErrors = async ({
 
 	handleFirstPhaseStartDateErrors({ billingContext, preview });
 
-	if (billingContext.trialContext?.onEnd === "revert") {
+	if (isRevertTrialContext({ trialContext: billingContext.trialContext })) {
 		throw new RecaseError({
 			code: ErrCode.InvalidRequest,
 			message: "Cannot use on_end: 'revert' with create_schedule.",

@@ -9,6 +9,7 @@ import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/cre
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 import { promotePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/promotePendingCustomerProducts";
+import { refreshDeferredBillingPlan } from "@/internal/billing/v2/execute/refreshDeferredBillingPlan/refreshDeferredBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
 import { publishBillingTransition } from "@/internal/billing/v2/publish/publishBillingTransition.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
@@ -34,7 +35,11 @@ export const executeDeferredBillingPlan = async ({
 
 	if (data.orgId !== ctx.org.id || data.env !== ctx.env) return;
 
-	const { billingPlan, billingContext, resumeAfter } = data;
+	const { resumeAfter } = data;
+	const { billingPlan, billingContext } = await refreshDeferredBillingPlan({
+		ctx,
+		deferredData: data,
+	});
 
 	addToExtraLogs({
 		ctx,

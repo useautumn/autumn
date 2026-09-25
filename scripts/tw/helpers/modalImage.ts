@@ -175,7 +175,7 @@ export const buildBaseImage = (
 					"'  Port: 9324' '  Region: us-east-1' '  AccountId: \"000000000000\"' " +
 					"'  LogToFile: false' '  LogLevel: warn' '  EnableDuplicates: true' " +
 					"'  Queues:' '    - Name: autumn.fifo' '    - Name: autumn-track.fifo' " +
-					"'    - Name: autumn-track-async' " +
+					"'    - Name: autumn-track-async' '    - Name: autumn-stripe-webhook.fifo' " +
 					`> ${TW_PREFIX}/goaws/goaws.yaml`,
 			])
 			// 6. bun → /usr/local/bin/bun (pinned to .bun-version, so `bun` resolves for

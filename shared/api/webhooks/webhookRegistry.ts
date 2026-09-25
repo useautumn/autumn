@@ -24,6 +24,22 @@ export interface WebhookDefinition {
 }
 
 export const webhookRegistry: WebhookDefinition[] = [
+	// ── Customer ──────────────────────────────────────────────────────────
+	{
+		eventType: WebhookEventType.CustomerProductsUpdated,
+		operationId: "customerProductsUpdated",
+		title: "Products Updated",
+		group: "Customer",
+		description: "",
+	},
+	{
+		eventType: WebhookEventType.CustomerThresholdReached,
+		operationId: "customerThresholdReached",
+		title: "Threshold Reached",
+		group: "Customer",
+		description: "",
+	},
+
 	// ── Balances ──────────────────────────────────────────────────────────
 	{
 		eventType: WebhookEventType.BalancesUsageAlertTriggered,

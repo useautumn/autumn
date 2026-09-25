@@ -1,5 +1,10 @@
-import type { CheckParams, TrackParams } from "@autumn/shared";
+import type {
+	BillingDetailsParams,
+	CheckParams,
+	TrackParams,
+} from "@autumn/shared";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
+import { assertBillingDetailsWritable } from "@/external/stripe/customers/billingDetails/utils/assertBillingDetailsWritable.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { readBalanceWorkerSubject } from "@/internal/balanceWorker/subject/readBalanceWorkerSubject.js";
 import { withCreateIfMissing } from "@/internal/balanceWorker/subject/withCreateIfMissing.js";
@@ -17,6 +22,7 @@ import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFrom
 export const getOrCreateApiCustomerByRollout = async ({
 	ctx,
 	params,
+	billingDetails,
 	source,
 	withAutumnId,
 	enqueueRecoveryOnTransientFailure = true,
@@ -26,11 +32,14 @@ export const getOrCreateApiCustomerByRollout = async ({
 	params: Omit<TrackParams | CheckParams, "customer_id"> & {
 		customer_id: string | null;
 	};
+	billingDetails?: BillingDetailsParams;
 	source?: string;
 	withAutumnId?: boolean;
 	enqueueRecoveryOnTransientFailure?: boolean;
 	disableReplicaRead?: boolean;
 }) => {
+	if (billingDetails) assertBillingDetailsWritable({ ctx });
+
 	// The worker is keyed by customer id; an id-less customer stays on Postgres.
 	if (
 		params.customer_id &&
@@ -79,6 +88,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 					await queueFailedCustomerCreation({
 						ctx,
 						params,
+						billingDetails,
 						source,
 						withAutumnId,
 						failureStage: getCustomerCreationRecoveryStage({ ctx }),
@@ -91,6 +101,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 		ctx,
 		customer: fullSubject.customer,
 		customerData: params.customer_data,
+		billingDetails,
 	});
 
 	return getApiCustomerV2({ ctx, fullSubject, withAutumnId });

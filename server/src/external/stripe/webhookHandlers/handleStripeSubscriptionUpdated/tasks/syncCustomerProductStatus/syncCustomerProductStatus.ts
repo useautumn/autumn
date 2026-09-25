@@ -1,4 +1,5 @@
 import {
+	ACTIVE_STATUSES,
 	AttachScenario,
 	type CollectionMethod,
 	CusProductStatus,
@@ -170,11 +171,13 @@ export const syncCustomerProductStatus = async ({
 			{ data: updates },
 		);
 
-		await CusProductService.update({
+		const updatedRows = await CusProductService.update({
 			ctx,
 			cusProductId: customerProduct.id,
 			updates,
+			inStatuses: ACTIVE_STATUSES,
 		});
+		if (updatedRows.length === 0) continue;
 
 		trackCustomerProductUpdate({
 			eventContext: subscriptionUpdatedContext,
@@ -200,13 +203,14 @@ export const syncCustomerProductStatus = async ({
 	}
 
 	// Safety net: fix any customer products with unexpected statuses
-	await fixUnexpectedStatuses({
-		ctx,
-		stripeSubscription,
-		fullCustomer,
-		autumnStatus,
-		trialEndsAt,
-		collectionMethod,
-		previousAttributes,
-	});
+	subscriptionUpdatedContext.results.repairedCustomerProducts =
+		await fixUnexpectedStatuses({
+			ctx,
+			stripeSubscription,
+			fullCustomer,
+			autumnStatus,
+			trialEndsAt,
+			collectionMethod,
+			previousAttributes,
+		});
 };

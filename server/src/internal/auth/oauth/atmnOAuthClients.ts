@@ -80,6 +80,12 @@ const ATMN_OAUTH_SCOPES = new Set<string>([
 	// atmn v3 `sandbox create|delete` mint and drop sub-orgs through /v1/sandboxes.*
 	"platform:read",
 	"platform:write",
+	// Minted keys double as an app's AUTUMN_SECRET_KEY for track, attach, and usage.
+	"analytics:read",
+	"balances:read",
+	"balances:write",
+	"billing:read",
+	"billing:write",
 ]);
 
 const metadataMarksAtmn = (metadata: unknown) => {

@@ -5,6 +5,7 @@ import type {
 	TrialContext,
 } from "@autumn/shared";
 import {
+	isCustomerProductRevertingTrial,
 	isProductPaidAndRecurring,
 	resolveFreeTrialParam,
 } from "@autumn/shared";
@@ -21,9 +22,10 @@ import {
  *
  * Logic:
  * 1. If a free_trial param passed (customize.free_trial or the shorthand) → Use it (null removes trial, value sets fresh trial)
- * 2. If paid product with trialing subscription → Inherit from subscription
- * 3. If customer product is trialing (free product case) → Inherit from customer product
- * 4. Otherwise → No trial context
+ * 2. If revert trial → Inherit from customer product (its subscription belongs to the paused plan)
+ * 3. If paid product with trialing subscription → Inherit from subscription
+ * 4. If customer product is trialing (free product case) → Inherit from customer product
+ * 5. Otherwise → No trial context
  */
 export const setupUpdateSubscriptionTrialContext = ({
 	stripeSubscription,
@@ -38,16 +40,25 @@ export const setupUpdateSubscriptionTrialContext = ({
 	fullProduct: FullProduct;
 	params: FreeTrialParamsSource;
 }): TrialContext | undefined => {
+	const isRevertTrial = isCustomerProductRevertingTrial(customerProduct);
+
 	// Handle explicit free_trial param (null or value), in either shape
 	const freeTrialParam = resolveFreeTrialParam(params);
 	if (freeTrialParam !== undefined) {
-		return handleFreeTrialParam({
+		const trialContext = handleFreeTrialParam({
 			freeTrialParams: freeTrialParam,
 			stripeSubscription,
 			customerProduct,
 			fullProduct,
 			currentEpochMs,
 		});
+
+		if (!trialContext || !isRevertTrial) return trialContext;
+		return { ...trialContext, onEnd: trialContext.onEnd ?? "revert" };
+	}
+
+	if (customerProduct && isRevertTrial) {
+		return inheritTrialFromCustomerProduct({ customerProduct, currentEpochMs });
 	}
 
 	// Inherit from stripe subscription (paid product case)

@@ -39,6 +39,11 @@ export const CLI_OAUTH_SCOPES = [
 	"apiKeys:write",
 	"platform:read",
 	"platform:write",
+	"analytics:read",
+	"balances:read",
+	"balances:write",
+	"billing:read",
+	"billing:write",
 ] as const;
 
 export const getOAuthRedirectUri = ({ port }: { port: number }): string =>

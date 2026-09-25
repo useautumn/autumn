@@ -100,4 +100,9 @@ export const handleStripeSubscriptionUpdated = async ({
 		ctx,
 		eventContext: subscriptionUpdatedContext,
 	});
+
+	ctx.handlerResult = {
+		type: event.type,
+		context: subscriptionUpdatedContext,
+	};
 };

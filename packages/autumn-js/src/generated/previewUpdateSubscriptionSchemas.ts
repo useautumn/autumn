@@ -106,6 +106,10 @@ export const previewUpdateAttachDiscountSchema = z.object({
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const previewUpdateRemoveDiscountSchema = z.object({
+	rewardId: z.string(),
+});
+
 export const previewUpdateCustomLineItemSchema = z.object({
 	amount: z.number(),
 	description: z.string(),
@@ -220,6 +224,7 @@ export const previewUpdateOutgoingFeatureQuantitySchema = z.object({
 
 export const previewUpdateInvoiceCreditsSchema = z.object({
 	balance: z.number(),
+	applied: z.union([z.number(), z.undefined()]).optional(),
 	currency: z.string(),
 });
 
@@ -475,6 +480,10 @@ export const previewUpdateInvoiceModeOutboundSchema = z.object({
 export const previewUpdateAttachDiscountOutboundSchema = z.object({
 	reward_id: z.union([z.string(), z.undefined()]).optional(),
 	promotion_code: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const previewUpdateRemoveDiscountOutboundSchema = z.object({
+	reward_id: z.string(),
 });
 
 export const previewUpdateCustomLineItemOutboundSchema = z.object({
@@ -859,6 +868,9 @@ export const previewUpdateParamsSchema = z.object({
 	discounts: z
 		.union([z.array(previewUpdateAttachDiscountSchema), z.undefined()])
 		.optional(),
+	removeDiscounts: z
+		.union([z.array(previewUpdateRemoveDiscountSchema), z.undefined()])
+		.optional(),
 	customLineItems: z
 		.union([z.array(previewUpdateCustomLineItemSchema), z.undefined()])
 		.optional(),
@@ -1055,6 +1067,9 @@ export const previewUpdateParamsOutboundSchema = z.object({
 	subscription_id: z.union([z.string(), z.undefined()]).optional(),
 	discounts: z
 		.union([z.array(previewUpdateAttachDiscountOutboundSchema), z.undefined()])
+		.optional(),
+	remove_discounts: z
+		.union([z.array(previewUpdateRemoveDiscountOutboundSchema), z.undefined()])
 		.optional(),
 	custom_line_items: z
 		.union([z.array(previewUpdateCustomLineItemOutboundSchema), z.undefined()])

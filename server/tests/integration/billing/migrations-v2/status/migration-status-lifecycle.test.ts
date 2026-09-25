@@ -1,15 +1,5 @@
-/**
- * Computed migration status on /migrations.list and /migrations.runs.list.
- *
- * Contract:
- *   list[i].status     "draft" | "waiting" | "running" | "run"
- *   list[i].blocked_by the blocking migration's id while waiting, else null
- *   runs.list carries the same two fields at the top level
- *   Dry runs, `only` runs and `limit` runs never move a migration off draft.
- *   A Run All that reached execution makes it `run`, even after a later
- *   failed/canceled run. A queued Run All behind another migration's
- *   executing run is `waiting`.
- */
+// Only unscoped live runs affect migration status; the latest started run's outcome wins.
+// A queued run waits while another migration is executing; both list endpoints agree.
 
 import { expect, test } from "bun:test";
 import {
@@ -241,7 +231,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("migration status: run survives later failed or canceled runs; canceled-before-start stays draft")}`,
+	`${chalk.yellowBright("migration status: latest started run reports failed or canceled; canceled-before-start stays draft")}`,
 	async () => {
 		const customerId = "mig-status-history";
 		const ranId = `${customerId}-ran`;
@@ -289,12 +279,12 @@ test.concurrent(
 		await expectMigrationStatusCorrect({
 			autumn: autumnV2_2,
 			migrationId: ranId,
-			status: "run",
+			status: "failed",
 		});
 		await expectMigrationStatusCorrect({
 			autumn: autumnV2_2,
 			migrationId: canceledAfterStartId,
-			status: "run",
+			status: "canceled",
 		});
 		await expectMigrationStatusCorrect({
 			autumn: autumnV2_2,
