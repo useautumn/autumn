@@ -1,8 +1,4 @@
-import {
-	type CheckCommand,
-	computeCheck,
-	parseCheckCommand,
-} from "@autumn/balance-engine";
+import { type CheckCommand, computeCheck } from "@autumn/balance-engine";
 import type { CheckReply } from "@autumn/balance-worker-client/protocol";
 import { readCurrentSubject } from "../actions/readCurrentSubject.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
@@ -15,17 +11,13 @@ export async function check({
 	scope: PartitionProcessorScope;
 	command: CheckCommand;
 }): Promise<CheckReply> {
-	const parsed = parseCheckCommand({ input: command });
-	const { state, catalog } = await readCurrentSubject({
-		scope,
-		command: parsed,
-	});
+	const { state, catalog } = await readCurrentSubject({ scope, command });
 	const fullSubject = scope.ctx.subjectHydrator.readSubject({
 		state,
-		identity: parsed.identity,
+		identity: command.identity,
 	});
 	return {
-		result: computeCheck({ fullSubject, command: parsed }),
+		result: computeCheck({ fullSubject, command }),
 		state,
 		catalog,
 	};

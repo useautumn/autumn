@@ -2,7 +2,6 @@ import { fullSubjectToMutationSubject } from "../../common/usageEvent/fullSubjec
 import { LockNotFoundError } from "../../errors.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
-import { parseSubjectStateMutation } from "../../parsers.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
 import type { ConfirmExpiredLockCommand } from "./types/confirmExpiredLockCommand.js";
 
@@ -23,20 +22,18 @@ export const computeConfirmExpiredLock = ({
 	);
 	if (!isOpen) throw new LockNotFoundError({ lockId: lock.lock_id });
 
-	return parseSubjectStateMutation({
-		input: {
-			schemaVersion: 1,
-			type: "mutation",
-			id: command.commandId,
-			identity: command.identity,
-			subject: fullSubjectToMutationSubject({ fullSubject }),
-			revision: {
-				before: fullSubject.revision,
-				after: fullSubject.revision + 1,
-			},
-			command,
-			changes: [{ table: "locks", op: "delete", id: lock.id }],
-			result: { type: "confirmExpiredLock", status: "expired" },
+	return {
+		schemaVersion: 1,
+		type: "mutation",
+		id: command.commandId,
+		identity: command.identity,
+		subject: fullSubjectToMutationSubject({ fullSubject }),
+		revision: {
+			before: fullSubject.revision,
+			after: fullSubject.revision + 1,
 		},
-	});
+		command,
+		changes: [{ table: "locks", op: "delete", id: lock.id }],
+		result: { type: "confirmExpiredLock", status: "expired" },
+	};
 };

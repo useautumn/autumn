@@ -144,7 +144,7 @@ describe("meteringTopic", () => {
 		).toEqual(mutation);
 	});
 
-	test("round-trips optional command sources and refuses invalid offsets", () => {
+	test("round-trips optional command sources and refuses invalid offsets on read", () => {
 		const mutation = {
 			...createMutation(),
 			source: { commandOffset: "9007199254740993" },
@@ -154,9 +154,11 @@ describe("meteringTopic", () => {
 		).toEqual(mutation);
 		for (const commandOffset of ["-1", "1.5", "not_an_offset"]) {
 			expect(() =>
-				serializeMeteringRecord({
-					record: { ...mutation, source: { commandOffset } },
-				}),
+				parseMeteringRecord(
+					serializeMeteringRecord({
+						record: { ...mutation, source: { commandOffset } },
+					}),
+				),
 			).toThrow(InvalidRecordError);
 		}
 	});

@@ -3,7 +3,6 @@ import {
 	type Catalog,
 	computeTrack,
 	meteringIdentityToPartitionKey,
-	parseTrackCommand,
 	type SubjectState,
 	type TrackCommand,
 } from "@autumn/balance-engine";
@@ -23,25 +22,18 @@ export async function track({
 	command: TrackCommand;
 }): Promise<TrackReply> {
 	const { ctx } = scope;
-	const parsed = parseTrackCommand({ input: command });
 	const customerKey = meteringIdentityToPartitionKey({
-		identity: parsed.identity,
+		identity: command.identity,
 	});
-	await ensureSubjectCurrent({ scope, command: parsed });
+	await ensureSubjectCurrent({ scope, command });
 
 	// Synchronous: `mutate` runs against the freshest state and the mutation is enqueued before this returns.
 	// Filled by the decision, which is the only place that knows which rows it was made against.
 	const decidedAgainst: { catalog?: Catalog } = {};
 	const decided = ctx.writer.decide<never>({
-		command: parsed,
+		command,
 		mutate: ({ state }) =>
-			decideTrack({
-				scope,
-				state,
-				customerKey,
-				command: parsed,
-				decidedAgainst,
-			}),
+			decideTrack({ scope, state, customerKey, command, decidedAgainst }),
 	});
 
 	// Asynchronous: Kafka commit, then SQLite apply.

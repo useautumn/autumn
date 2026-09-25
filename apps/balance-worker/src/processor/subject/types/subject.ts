@@ -5,6 +5,7 @@ import type { WorkerDb } from "../../../types/workerDb.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 import type { PartitionWriter } from "../../writer/types/partitionWriter.js";
 import type { InFlightLoads } from "../inFlightLoads/types/inFlightLoad.js";
+import type { SubjectJoinCache } from "../subjectJoinCache/types/subjectJoinCache.js";
 
 /** A customer's rows plus the catalog rows they reference: what every command computes against. */
 export type Subject = {
@@ -23,6 +24,7 @@ export type SubjectHydratorContext = {
 
 export type SubjectHydratorState = {
 	inFlightLoads: InFlightLoads;
+	joinCache: SubjectJoinCache;
 };
 
 export type SubjectScope = {

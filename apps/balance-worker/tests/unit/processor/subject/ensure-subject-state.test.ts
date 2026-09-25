@@ -13,6 +13,7 @@ import {
 	SubjectLoadOvertakenError,
 	SubjectNotFoundError,
 } from "../../../../src/processor/subject/subjectErrors.js";
+import { createSubjectJoinCache } from "../../../../src/processor/subject/subjectJoinCache/createSubjectJoinCache.js";
 import type { SubjectScope } from "../../../../src/processor/subject/types/subject.js";
 import { commandToFingerprint } from "../../../../src/processor/writer/receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../../../../src/processor/writer/receipt/mutationToRecord.js";
@@ -114,9 +115,10 @@ const createScope = ({
 	};
 	let sourceCalls = 0;
 	let releasedAll = false;
+	const catalogCache = createTestCatalogCache();
 	const scope: SubjectScope = {
 		ctx: {
-			catalogCache: createTestCatalogCache(),
+			catalogCache,
 			db: {
 				getSubjectRows: async () => {
 					const read = sourceCalls;
@@ -128,7 +130,10 @@ const createScope = ({
 			writer,
 			receiptPolicy: { retentionMs: 60_000, now: () => 1_700_000_000_000 },
 		},
-		state: { inFlightLoads: createInFlightLoads() },
+		state: {
+			inFlightLoads: createInFlightLoads(),
+			joinCache: createSubjectJoinCache({ ctx: { catalogCache } }),
+		},
 	};
 	return {
 		scope,

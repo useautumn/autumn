@@ -21,10 +21,11 @@ export const checkLimitReached = ({
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
 }): BalanceWebhookEffect[] => {
-	const wasAllowed = computeCheck({ fullSubject: before, command }).allowed;
-	if (!wasAllowed) return [];
+	// After first: almost every track leaves the feature allowed, so one deduction answers it.
 	const now = computeCheck({ fullSubject: after, command });
 	if (now.allowed) return [];
+	const wasAllowed = computeCheck({ fullSubject: before, command }).allowed;
+	if (!wasAllowed) return [];
 
 	const { customerId, entityId } = command.identity;
 	const limitType = now.limitType ?? "included";

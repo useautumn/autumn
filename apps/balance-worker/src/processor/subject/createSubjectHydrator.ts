@@ -2,6 +2,7 @@ import { ensureSubject } from "./actions/ensureSubject/ensureSubject.js";
 import { ensureSubjectCatalog } from "./actions/ensureSubject/ensureSubjectCatalog.js";
 import { readSubject, readSubjectCatalog } from "./actions/readSubject.js";
 import { createInFlightLoads } from "./inFlightLoads/createInFlightLoads.js";
+import { createSubjectJoinCache } from "./subjectJoinCache/createSubjectJoinCache.js";
 import type { SubjectHydratorContext, SubjectScope } from "./types/subject.js";
 import type { SubjectHydrator } from "./types/subjectHydrator.js";
 
@@ -12,7 +13,10 @@ export const createSubjectHydrator = ({
 }): SubjectHydrator => {
 	const scope: SubjectScope = {
 		ctx,
-		state: { inFlightLoads: createInFlightLoads() },
+		state: {
+			inFlightLoads: createInFlightLoads(),
+			joinCache: createSubjectJoinCache({ ctx }),
+		},
 	};
 
 	return {
