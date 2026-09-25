@@ -58,6 +58,7 @@ export const setupDeductionContext = ({
 		entityId,
 		now: request.now,
 		overageBehavior: request.overageBehavior,
+		enforcesSpendLimit: request.enforcesSpendLimit,
 		customerEntitlements,
 		rollovers,
 		rows,

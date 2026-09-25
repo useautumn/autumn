@@ -4,11 +4,14 @@ import type {
 	ApplyBillingPlanReply,
 	CheckReply,
 	ConfirmExpiredLockReply,
+	DeleteBalanceReply,
 	FinalizeReply,
 	InitializeReply,
 	PartitionRoute,
 	ReadSubjectStateReply,
+	RecalculateBalanceReply,
 	ResetReply,
+	UpdateBalanceReply,
 	WorkerErrorCode,
 	WorkerRequest,
 } from "@autumn/balance-worker-client/protocol";
@@ -47,7 +50,10 @@ export type BalanceWorkerRequestLog = {
 		| InitializeReply
 		| FinalizeReply
 		| ConfirmExpiredLockReply
-		| ResetReply;
+		| ResetReply
+		| UpdateBalanceReply
+		| DeleteBalanceReply
+		| RecalculateBalanceReply;
 	error?: Error;
 	errorCode?: WorkerErrorCode;
 	/** A track batch logs once: its size and failures counted by code, never one line per command. */

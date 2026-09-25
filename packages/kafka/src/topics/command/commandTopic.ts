@@ -6,6 +6,7 @@ import {
 	parseInitializeCommand,
 	parseResetCommand,
 	parseTrackCommand,
+	parseUpdateBalanceCommand,
 } from "@autumn/balance-engine";
 import { InvalidRecordError } from "../../lib/recordErrors.js";
 import {
@@ -42,6 +43,8 @@ function parseCommandPayload({
 				return parseResetCommand({ input: payload });
 			case "evict":
 				return parseEvictCommand({ input: payload });
+			case "updateBalance":
+				return parseUpdateBalanceCommand({ input: payload });
 			default:
 				throw new InvalidRecordError();
 		}

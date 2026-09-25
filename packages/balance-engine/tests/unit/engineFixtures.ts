@@ -13,8 +13,11 @@ import {
 	catalogRowsToCatalog,
 	createSubjectState,
 	parseCheckCommand,
+	parseDeleteBalanceCommand,
 	parseInitializeRequest,
+	parseRecalculateBalanceCommand,
 	parseTrackCommand,
+	parseUpdateBalanceCommand,
 	type SubjectState,
 	type SubjectStateMutation,
 	subjectStateToFullSubject,
@@ -326,6 +329,103 @@ export const createTrackCommand = ({
 			value,
 			overageBehavior,
 			properties,
+			occurredAt,
+		},
+	});
+
+export const createUpdateBalanceCommand = ({
+	commandId = "cmd_update_1",
+	featureId = "messages",
+	entityId = null,
+	customerEntitlementFilters,
+	remaining,
+	usage,
+	addToBalance,
+	includedGrant,
+	nextResetAt,
+	expiresAt,
+}: {
+	commandId?: string;
+	featureId?: string;
+	entityId?: string | null;
+	customerEntitlementFilters?: {
+		cusEntIds?: string[];
+		balanceId?: string;
+	};
+	remaining?: number;
+	usage?: number;
+	addToBalance?: number;
+	includedGrant?: number;
+	nextResetAt?: number;
+	expiresAt?: number;
+} = {}) =>
+	parseUpdateBalanceCommand({
+		input: {
+			schemaVersion: 1,
+			type: "updateBalance",
+			org,
+			commandId,
+			requestId: "req_update_1",
+			identity: { ...identity, entityId },
+			featureId,
+			internalFeatureId: internalFeatureIdOf(featureId),
+			customerEntitlementFilters,
+			remaining,
+			usage,
+			addToBalance,
+			includedGrant,
+			nextResetAt,
+			expiresAt,
+			occurredAt,
+		},
+	});
+
+export const createDeleteBalanceCommand = ({
+	featureId = "messages",
+	entityId = null,
+	customerEntitlementFilters,
+	recalculate = false,
+}: {
+	featureId?: string;
+	entityId?: string | null;
+	customerEntitlementFilters?: { cusEntIds?: string[]; balanceId?: string };
+	recalculate?: boolean;
+} = {}) =>
+	parseDeleteBalanceCommand({
+		input: {
+			schemaVersion: 1,
+			type: "deleteBalance",
+			org,
+			commandId: "cmd_delete_1",
+			requestId: "req_delete_1",
+			identity: { ...identity, entityId },
+			featureId,
+			customerEntitlementFilters,
+			recalculate,
+			occurredAt,
+		},
+	});
+
+export const createRecalculateBalanceCommand = ({
+	featureId = "messages",
+	entityId = null,
+	preview = false,
+}: {
+	featureId?: string;
+	entityId?: string | null;
+	preview?: boolean;
+} = {}) =>
+	parseRecalculateBalanceCommand({
+		input: {
+			schemaVersion: 1,
+			type: "recalculateBalance",
+			org,
+			commandId: "cmd_recalculate_1",
+			requestId: "req_recalculate_1",
+			identity: { ...identity, entityId },
+			featureId,
+			internalFeatureId: internalFeatureIdOf(featureId),
+			preview,
 			occurredAt,
 		},
 	});

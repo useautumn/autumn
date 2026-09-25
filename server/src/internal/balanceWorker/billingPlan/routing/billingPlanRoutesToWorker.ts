@@ -1,5 +1,6 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import { autoTopupRebalanceToPurchase } from "../planOps/customerEntitlements/rebalancesToPlanOps.js";
 import { billingPlanCustomerProducts } from "./billingPlanRows.js";
 import { billingPlanToWorkerCustomerId } from "./billingPlanToWorkerCustomerId.js";
 import { billingPlanNamesItsEntities } from "./billingPlanToWorkerEntityIds.js";
@@ -21,6 +22,17 @@ const claimsNoEntities = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }): boolean => (autumnBillingPlan.claimEntities ?? []).length === 0;
 
+/** A top-up without its purchase fields carries only fixed deltas: those land in Postgres, as before the worker sized them. */
+const topUpNamesItsPurchase = ({
+	autumnBillingPlan,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+}): boolean => {
+	const { autoTopupRebalance } = autumnBillingPlan;
+	if (!autoTopupRebalance) return true;
+	return autoTopupRebalanceToPurchase({ autoTopupRebalance }) !== null;
+};
+
 /** Whether the worker can key every row it holds that the plan writes; the rest land in Postgres after it. */
 export const workerCanApplyBillingPlan = ({
 	autumnBillingPlan,
@@ -30,7 +42,8 @@ export const workerCanApplyBillingPlan = ({
 	billingPlanToWorkerCustomerId({ autumnBillingPlan }) !== null &&
 	billingPlanNamesItsEntities({ autumnBillingPlan }) &&
 	claimsNoEntities({ autumnBillingPlan }) &&
-	writesNoLicenseSeats({ autumnBillingPlan });
+	writesNoLicenseSeats({ autumnBillingPlan }) &&
+	topUpNamesItsPurchase({ autumnBillingPlan });
 
 /** Whether the customer's rows land through the worker instead of one Postgres transaction. */
 export const billingPlanRoutesToWorker = ({

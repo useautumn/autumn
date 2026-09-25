@@ -80,6 +80,25 @@ describe("config resolution", () => {
 		expect(result?.autoTopupConfig.threshold).toBe(5);
 	});
 
+	test("O5b attaches at the same instant: the later id is the most recent", () => {
+		const s = subject({
+			autoTopups: [autoTopupFor()],
+			plans: [
+				oneOffPrepaidPlan({ id: "cus_prod_3Jn36older" }),
+				oneOffPrepaidPlan({ id: "cus_prod_3Jn37newer" }),
+			],
+		});
+		// The legacy copy has no tie-break (input order), so this case checks the new function alone.
+		const result = subjectToAutoTopupObjects({
+			fullSubject: s,
+			featureId: FEATURE,
+			now: NOW,
+		});
+		expect(result?.customerEntitlement.customer_product_id).toBe(
+			"cus_prod_3Jn37newer",
+		);
+	});
+
 	test("O6 a plan config charges its own plan's row even when a cheaper one exists", () => {
 		const s = subject({
 			plans: [

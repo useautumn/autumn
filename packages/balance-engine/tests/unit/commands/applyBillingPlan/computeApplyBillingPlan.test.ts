@@ -104,13 +104,9 @@ describe("computeApplyBillingPlan", () => {
 				},
 			],
 		});
-		const mutation = computeApplyBillingPlan({
-			command: productsOnly,
-			state: null,
-		});
-		expect(() => applyMutation({ state: null, mutation })).toThrow(
-			SubjectStateMissingError,
-		);
+		expect(() =>
+			computeApplyBillingPlan({ command: productsOnly, state: null }),
+		).toThrow(SubjectStateMissingError);
 	});
 
 	test("only a plan with a customer insert creates the customer", () => {

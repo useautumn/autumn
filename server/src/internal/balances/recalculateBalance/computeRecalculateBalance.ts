@@ -8,12 +8,12 @@ import {
 	getRecalculableScopeKeys,
 	getResetBalancesUpdate,
 	type RecalculateBalanceParamsV0,
-	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deductFromCusEntsTypescript } from "@/internal/balances/track/deductUtils/deductFromCusEntsTypescript";
 import { CusService } from "@/internal/customers/CusService";
+import { balanceRowsNotFoundError } from "../utils/balanceRowsNotFoundError.js";
 import { buildCustomerEntitlementFilters } from "../utils/buildCustomerEntitlementFilters";
 import { validateInvoiceCreditBalanceMutation } from "../utils/validateInvoiceCreditBalanceMutation.js";
 
@@ -86,9 +86,9 @@ export const computeRecalculateBalance = async ({
 		customerEntitlementFilters: buildCustomerEntitlementFilters({ params }),
 	});
 	if (before.length === 0) {
-		throw new RecaseError({
-			message: `Balance not found for feature ${feature_id} and customer ${customer_id}`,
-			statusCode: 404,
+		throw balanceRowsNotFoundError({
+			customerId: customer_id,
+			featureId: feature_id,
 		});
 	}
 	for (const customerEntitlement of before) {

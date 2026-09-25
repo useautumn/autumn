@@ -105,6 +105,12 @@ await mockModuleWithRestore(
 	() => ({ updateExpiresAtV2: async () => {} }),
 );
 
+// The legacy lane is what these cases pin; the worker lane has its own suites.
+await mockModuleWithRestore(
+	"@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js",
+	() => ({ isBalanceWorkerRolloutEnabled: () => false }),
+);
+
 const { processMessage, shouldRetrySqsJobError } = await import(
 	// @ts-expect-error - Bun cache-busting query isolates module mocks.
 	"@/queue/processMessage.js?updateBalance"

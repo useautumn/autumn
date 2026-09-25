@@ -30,7 +30,9 @@ export * from "./classifyCusEnt/cusEntsHaveUsageAllowed";
 export * from "./classifyCusEnt/customerEntitlementFundsFeature";
 export * from "./classifyCusEnt/isCusEntDisplayExpired";
 export * from "./classifyCusEnt/isCusEntExpired";
+export * from "./classifyCusEnt/isCustomerEntitlementInOverage";
 export * from "./classifyCusEnt/isInvoiceCreditCustomerEntitlement";
+export * from "./classifyCusEnt/isLiveLooseCustomerEntitlement";
 export * from "./classifyCusEnt/isPooledBalanceCustomerEntitlement";
 export * from "./classifyCusEnt/isUnlimitedCustomerEntitlement";
 // Classify utils
@@ -77,5 +79,6 @@ export * from "./rolloverUtils/cusEntToEffectiveRolloverMax";
 export * from "./rolloverUtils/getRolloverUpdates";
 export * from "./rolloverUtils/performMaximumClearing";
 export * from "./sortCusEntsForDeduction";
+export * from "./sortCusEntsForPaydown";
 export * from "./usageAttribution/buildUsageAttributionKey";
 export * from "./usageAttribution/parseUsageAttributionKey";

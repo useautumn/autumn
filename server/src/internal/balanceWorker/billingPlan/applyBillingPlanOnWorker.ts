@@ -33,26 +33,33 @@ const isStaleSubject = (cause: unknown): boolean =>
 	cause instanceof BalanceWorkerClientError &&
 	cause.workerCode === "STALE_SUBJECT";
 
-/** Every attempt is a fresh command: a refused command's id stays spent in the log. */
+/** The worker already holds this command: an earlier send of it landed. */
+const isDuplicateCommand = (cause: unknown): boolean =>
+	cause instanceof BalanceWorkerClientError &&
+	cause.workerCode === "DUPLICATE_COMMAND";
+
+/** Sent under the given id: the same id is deduplicated by the worker, a new id is a new command. */
 const sendPlan = ({
 	ctx,
 	client,
 	customerId,
 	autumnBillingPlan,
 	ops,
+	commandId,
 }: {
 	ctx: AutumnContext;
 	client: PlanClient;
 	customerId: string;
 	autumnBillingPlan: AutumnBillingPlan;
 	ops: BillingPlanOp[];
+	commandId: string;
 }): Promise<ApplyBillingPlanReply> => {
 	const request: ApplyBillingPlanRequest = parseApplyBillingPlanRequest({
 		input: {
 			command: {
 				...requestContextToCommandBase({ ctx, customerId }),
 				type: "applyBillingPlan",
-				commandId: generateId("plan"),
+				commandId,
 				entityIds: billingPlanToWorkerEntityIds({ autumnBillingPlan }),
 				ops,
 			},
@@ -86,7 +93,7 @@ const replyToResult = ({
 	return { status, internalCustomerId };
 };
 
-/** The plan as one worker mutation. An unknown outcome, or a stale copy on an update, is sent once more as a new command. */
+/** The plan as one worker mutation. An unknown outcome is resent under the same id; a stale copy on an update, as a new command. */
 export const applyBillingPlanOnWorker = async ({
 	ctx,
 	customerId,
@@ -103,20 +110,24 @@ export const applyBillingPlanOnWorker = async ({
 	if (ops.length === 0) return { status: "applied" };
 
 	const createsCustomer = Boolean(autumnBillingPlan.insertCustomer);
-	const send = () =>
-		sendPlan({ ctx, client, customerId, autumnBillingPlan, ops });
-	const sendsAgain = (cause: unknown) =>
-		isUnknownOutcome(cause) || (!createsCustomer && isStaleSubject(cause));
+	const send = ({ commandId }: { commandId: string }) =>
+		sendPlan({ ctx, client, customerId, autumnBillingPlan, ops, commandId });
+	const commandId = generateId("plan");
 	try {
-		const reply = await send().catch((cause: unknown) => {
-			if (!sendsAgain(cause)) throw cause;
-			return send();
+		const reply = await send({ commandId }).catch((cause: unknown) => {
+			// The first send may have landed: the same id again applies it at most once (a rebalance is not idempotent).
+			if (isUnknownOutcome(cause)) return send({ commandId });
+			// A refused command's id stays spent in the log, so a stale copy is retried as a new command.
+			if (!createsCustomer && isStaleSubject(cause))
+				return send({ commandId: generateId("plan") });
+			throw cause;
 		});
 		return replyToResult({ reply, autumnBillingPlan });
 	} catch (cause) {
 		// A create refused as stale collided with a customer Postgres already holds.
 		if (createsCustomer && isStaleSubject(cause))
 			return { status: "customer_exists" };
+		if (isDuplicateCommand(cause)) return { status: "applied" };
 		rethrowBalanceWorkerError({ cause });
 	}
 };

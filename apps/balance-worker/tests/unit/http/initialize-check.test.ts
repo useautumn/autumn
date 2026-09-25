@@ -2,7 +2,9 @@ import { expect, test } from "bun:test";
 import {
 	createSubjectState,
 	parseCheckCommand,
+	parseDeleteBalanceCommand,
 	parseTrackCommand,
+	parseUpdateBalanceCommand,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
@@ -87,6 +89,35 @@ const trackCommand = parseTrackCommand({
 		value: 5,
 		overageBehavior: "reject",
 		properties: null,
+		occurredAt: 1_700_000_000_000,
+	},
+});
+
+const updateBalanceCommand = parseUpdateBalanceCommand({
+	input: {
+		schemaVersion: 1,
+		type: "updateBalance",
+		org: trackCommand.org,
+		requestId: "update",
+		commandId: "update",
+		identity,
+		featureId: "messages",
+		internalFeatureId: "feat_messages",
+		remaining: 3,
+		occurredAt: 1_700_000_000_000,
+	},
+});
+
+const deleteBalanceCommand = parseDeleteBalanceCommand({
+	input: {
+		schemaVersion: 1,
+		type: "deleteBalance",
+		org: trackCommand.org,
+		requestId: "delete",
+		commandId: "delete",
+		identity,
+		featureId: "messages",
+		recalculate: false,
 		occurredAt: 1_700_000_000_000,
 	},
 });
@@ -493,6 +524,91 @@ test.concurrent(
 					twoFeatureState.customerProducts,
 				);
 			}
+		} finally {
+			await fixture.close();
+		}
+	},
+);
+
+test.concurrent(
+	"update balance sets the rows to the target once, and writes nothing when they already hold it",
+	async () => {
+		const fixture = createFixture();
+		try {
+			await fixture.post({ path: "initialize", command: initialization });
+			const updated = await fixture.post({
+				path: "update-balance",
+				command: updateBalanceCommand,
+			});
+			expect(updated.status).toBe(200);
+			expect(await updated.json()).toMatchObject({
+				result: { type: "updateBalance" },
+			});
+			expect(
+				fixture.store.readState({ identity })?.customerEntitlements,
+			).toMatchObject([{ balance: 3 }]);
+
+			const retried = await fixture.post({
+				path: "update-balance",
+				command: { ...updateBalanceCommand, requestId: "retry" },
+			});
+			expect(await retried.json()).toMatchObject({
+				result: { type: "updateBalance" },
+			});
+			const unchanged = await fixture.post({
+				path: "update-balance",
+				command: { ...updateBalanceCommand, commandId: "update_again" },
+			});
+			expect(await unchanged.json()).toEqual({ result: null });
+			expect(
+				fixture.batches.flat().map((record) => record.command.type),
+			).toEqual(["initialize", "updateBalance"]);
+
+			const missing = await fixture.post({
+				path: "update-balance",
+				command: {
+					...updateBalanceCommand,
+					commandId: "update_typo",
+					customerEntitlementFilters: { balanceId: "typo" },
+				},
+			});
+			expect(await missing.json()).toMatchObject({
+				error: { code: "UNSUPPORTED_COMMAND" },
+			});
+		} finally {
+			await fixture.close();
+		}
+	},
+);
+
+test.concurrent(
+	"delete balance removes the grant once, and a retry is deduplicated",
+	async () => {
+		const fixture = createFixture();
+		try {
+			await fixture.post({ path: "initialize", command: initialization });
+			const deleted = await fixture.post({
+				path: "delete-balance",
+				command: deleteBalanceCommand,
+			});
+			expect(deleted.status).toBe(200);
+			expect(await deleted.json()).toMatchObject({
+				result: { type: "deleteBalance", deletedIds: ["grant"] },
+			});
+			expect(
+				fixture.store.readState({ identity })?.customerEntitlements,
+			).toEqual([]);
+
+			const retried = await fixture.post({
+				path: "delete-balance",
+				command: { ...deleteBalanceCommand, requestId: "retry" },
+			});
+			expect(await retried.json()).toMatchObject({
+				result: { deletedIds: ["grant"] },
+			});
+			expect(
+				fixture.batches.flat().map((record) => record.command.type),
+			).toEqual(["initialize", "deleteBalance"]);
 		} finally {
 			await fixture.close();
 		}

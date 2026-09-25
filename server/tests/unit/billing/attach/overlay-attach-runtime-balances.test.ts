@@ -8,6 +8,10 @@ import { products } from "@tests/utils/fixtures/db/products.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { applyExistingStatesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/applyExisting/applyExistingStatesToCustomerProduct.js";
 
+// These cover the legacy Redis lane; the worker lane never overlays.
+const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+
 const cachedSubjectCalls: Record<string, unknown>[] = [];
 let runtimeFullCustomer = customers.create({});
 
@@ -191,6 +195,25 @@ describe("attach runtime balance overlay", () => {
 	});
 });
 
+test("with the balance worker on, the Postgres customer is used as-is", async () => {
+	process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+	try {
+		const fullCustomer = customers.create({});
+		const calledBefore = cachedSubjectCalls.length;
+		const result = await overlayAttachRuntimeBalances({
+			ctx: { skipCache: false } as AutumnContext,
+			fullCustomer,
+		});
+		expect(result).toBe(fullCustomer);
+		expect(cachedSubjectCalls).toHaveLength(calledBefore);
+	} finally {
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+	}
+});
+
 afterAll(() => {
 	mock.restore();
+	if (previousRollout === undefined)
+		delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
 });

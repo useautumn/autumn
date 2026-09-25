@@ -100,7 +100,7 @@ const incrementToSubjectRowUpdate = ({
 	};
 };
 
-/** The subject's own rows: only a billing plan changes them. */
+/** The subject's own rows: a billing plan's, and any command's that edits one (a delete marking its product custom). */
 const PLAN_TABLES = {
 	customer: "customers",
 	entity: "entities",
@@ -158,8 +158,8 @@ const rowChangeToSubjectRowChange = ({
 			dueBy: change.dueBy,
 		};
 	if (isPlanRowChange(change)) {
-		// An initialize's rows are Postgres's own baseline; only a plan brings rows Postgres lacks.
-		if (commandType !== "applyBillingPlan")
+		// An initialize's rows are what Postgres already holds; writing them back would re-insert them.
+		if (commandType === "initialize")
 			throw new UnsupportedRowChangeError({
 				table: change.table,
 				op: change.op,

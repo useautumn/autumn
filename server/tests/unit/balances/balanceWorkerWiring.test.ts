@@ -126,8 +126,16 @@ async function startsAndMemoizesWhateverTheRolloutSays(): Promise<void> {
 		finalize: track,
 		confirmExpiredLock: track,
 		reset: track,
+		updateBalance: track,
+		deleteBalance: track,
+		recalculateBalance: track,
 		enqueue: queueNothing,
-		queue: { track: queueNothing, reset: queueNothing, evict: queueNothing },
+		queue: {
+			track: queueNothing,
+			reset: queueNothing,
+			updateBalance: queueNothing,
+			evict: queueNothing,
+		},
 		catalog: { invalidateOrgCatalog: queueNothing },
 		start: async () => {
 			starts++;

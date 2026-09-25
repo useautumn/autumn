@@ -1,4 +1,5 @@
 import { deduct } from "../../deduction/deduct.js";
+import { isPaidAllocatedV1Deduction } from "../../deduction/utils/classifyDeductionUtils.js";
 import {
 	LockAlreadyExistsError,
 	UnsupportedCommandError,
@@ -6,7 +7,6 @@ import {
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
-import { isPaidAllocatedV1Deduction } from "./isPaidAllocatedV1Deduction.js";
 import { trackCommandToDeductionRequest } from "./trackCommandToDeductionRequest.js";
 import { trackOutcomeToMutation } from "./trackOutcomeToMutation.js";
 import type { TrackCommand } from "./types/trackCommand.js";

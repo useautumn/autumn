@@ -2,26 +2,32 @@ import type {
 	ApplyBillingPlanRequest,
 	CheckCommand,
 	ConfirmExpiredLockCommand,
+	DeleteBalanceCommand,
 	EvictCommand,
 	FinalizeCommand,
 	FlushCommand,
 	InitializeRequest,
 	MutationSource,
 	ReadSubjectStateCommand,
+	RecalculateBalanceCommand,
 	ResetCommand,
 	TrackCommand,
+	UpdateBalanceCommand,
 } from "@autumn/balance-engine";
 import type {
 	ApplyBillingPlanReply,
 	CheckReply,
 	ConfirmExpiredLockReply,
+	DeleteBalanceReply,
 	EvictReply,
 	FinalizeReply,
 	FlushReply,
 	InitializeReply,
 	ReadSubjectStateReply,
+	RecalculateBalanceReply,
 	ResetReply,
 	TrackReply,
+	UpdateBalanceReply,
 } from "@autumn/balance-worker-client/protocol";
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type { AutumnLogger } from "@autumn/logging";
@@ -59,6 +65,15 @@ export type PartitionProcessor = {
 		command: ConfirmExpiredLockCommand;
 	}): Promise<ConfirmExpiredLockReply>;
 	reset(params: { command: ResetCommand }): Promise<ResetReply>;
+	updateBalance(params: {
+		command: UpdateBalanceCommand;
+	}): Promise<UpdateBalanceReply>;
+	deleteBalance(params: {
+		command: DeleteBalanceCommand;
+	}): Promise<DeleteBalanceReply>;
+	recalculateBalance(params: {
+		command: RecalculateBalanceCommand;
+	}): Promise<RecalculateBalanceReply>;
 	/** Settles every accepted command and the store applies behind them; the runtime awaits this before disposal. */
 	drain(): Promise<void>;
 };

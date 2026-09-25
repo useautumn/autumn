@@ -33,6 +33,8 @@ const state = {
 	updateRemainingCalls: [] as Record<string, unknown>[],
 	originalSend: null as SQSClient["send"] | null,
 	subjectProducts: [] as Record<string, unknown>[],
+	workerRollout: false,
+	queuedWorkerCommands: [] as unknown[],
 };
 
 await mockModuleWithRestore(
@@ -80,6 +82,25 @@ await mockModuleWithRestore(
 await mockModuleWithRestore(
 	"@/internal/balances/updateBalance/v2/updateExpiresAtV2.js",
 	() => ({ updateExpiresAtV2: async () => {} }),
+);
+
+// Off by default: the legacy lane is what most cases pin; the worker lane has its own suites.
+await mockModuleWithRestore(
+	"@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js",
+	() => ({ isBalanceWorkerRolloutEnabled: () => state.workerRollout }),
+);
+
+await mockModuleWithRestore(
+	"@/external/balanceWorker/getBalanceWorkerClient.js",
+	() => ({
+		getBalanceWorkerClient: () => ({
+			queue: {
+				updateBalance: async ({ commands }: { commands: unknown[] }) => {
+					state.queuedWorkerCommands.push(...commands);
+				},
+			},
+		}),
+	}),
 );
 
 const { runUpdateBalanceV2, updateBalanceV2 } = await import(
@@ -170,6 +191,8 @@ describe("updateBalanceV2 async routing", () => {
 		state.getFullSubjectCalls = [];
 		state.updateRemainingCalls = [];
 		state.subjectProducts = [];
+		state.workerRollout = false;
+		state.queuedWorkerCommands = [];
 		_setAsyncBalanceUpdateConfigForTesting({
 			config: AsyncBalanceUpdateConfigSchema.parse({}),
 		});
@@ -201,6 +224,39 @@ describe("updateBalanceV2 async routing", () => {
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalQueueUrl;
 		process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = originalStandardQueueUrl;
 		process.env.UPDATE_BALANCE_SQS_QUEUE_URL = originalUpdateBalanceQueueUrl;
+	});
+
+	test("on the worker path, an async update is a queued command, not an SQS job", async () => {
+		state.workerRollout = true;
+		_setAsyncBalanceUpdateConfigForTesting({
+			config: { enabledOrgIds: ["test-org"] },
+		});
+		const ctx = createCtx();
+		ctx.org = {
+			...ctx.org,
+			config: {
+				reverse_deduction_order: false,
+				block_overdue_entitlements: false,
+				include_past_due: true,
+			},
+		} as AutumnContext["org"];
+		ctx.features = [
+			{ id: "messages", internal_id: "feat_messages" } as Feature,
+		];
+
+		await updateBalanceV2({ ctx, params, targetBalance: 40 });
+
+		expect(state.queueCommands).toHaveLength(0);
+		expect(state.queuedWorkerCommands).toEqual([
+			expect.objectContaining({
+				type: "updateBalance",
+				commandId: ctx.id,
+				featureId: "messages",
+				remaining: 40,
+			}),
+		]);
+		expect(state.getFullSubjectCalls).toHaveLength(0);
+		expect(ctx.testOptions?.skipCacheDeletion).toBe(true);
 	});
 
 	test("enqueues configured async updates without running synchronous mutation helpers", async () => {

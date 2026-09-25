@@ -11,6 +11,10 @@ export type {
 	ConfirmExpiredLockReply,
 } from "./contracts/confirmExpiredLock.js";
 export type {
+	BalanceWorkerDeleteBalanceRequest,
+	DeleteBalanceReply,
+} from "./contracts/deleteBalance.js";
+export type {
 	BalanceWorkerEvictRequest,
 	EvictReply,
 } from "./contracts/evict.js";
@@ -31,6 +35,10 @@ export type {
 	ReadSubjectStateReply,
 } from "./contracts/readSubjectState.js";
 export type {
+	BalanceWorkerRecalculateBalanceRequest,
+	RecalculateBalanceReply,
+} from "./contracts/recalculateBalance.js";
+export type {
 	BalanceWorkerResetRequest,
 	ResetReply,
 } from "./contracts/reset.js";
@@ -45,6 +53,10 @@ export {
 	type TrackBatchItemResult,
 	type TrackBatchReply,
 } from "./contracts/trackBatch.js";
+export type {
+	BalanceWorkerUpdateBalanceRequest,
+	UpdateBalanceReply,
+} from "./contracts/updateBalance.js";
 export type {
 	PartitionRoute,
 	WorkerErrorCode,

@@ -29,12 +29,6 @@ declare module "ioredis" {
 			cacheTtlSeconds: string,
 			nowMs: string,
 		): Promise<string>;
-		updateFullSubjectEntityDataV2(
-			subjectKey: string,
-			updatesJson: string,
-			cacheTtlSeconds: string,
-			nowMs: string,
-		): Promise<string>;
 		getDelFullSubjectBalanceFields(
 			numKeys: number,
 			...args: string[]

@@ -57,11 +57,13 @@ const creditsSystem = ({
 		value,
 		properties = null,
 		overageBehavior = "cap" as const,
+		includesCreditSystems = true,
 	}: {
 		state: SubjectState;
 		value: number;
 		properties?: Record<string, string> | null;
 		overageBehavior?: "cap" | "reject" | "overflow";
+		includesCreditSystems?: boolean;
 	}) =>
 		deduct({
 			fullSubject: subjectStateToFullSubject({
@@ -72,6 +74,7 @@ const creditsSystem = ({
 				internalFeatureId: "feat_messages",
 				org,
 				overageBehavior,
+				includesCreditSystems,
 				properties,
 				value,
 			}),
@@ -114,6 +117,30 @@ describe("credit systems", () => {
 				["own", { balance: 0 }],
 				["credits_row", { balance: 96 }],
 			]);
+		},
+	);
+
+	test.concurrent(
+		"without credit systems, only the feature's own rows are drawn",
+		() => {
+			const { creditRow, run } = creditsSystem({
+				schemaItem: { credit_amount: 2 },
+			});
+			const outcome = run({
+				state: createSubjectState({
+					identity,
+					customerProducts: [createCustomerProduct()],
+					customerEntitlements: [
+						createCustomerEntitlement({ id: "own", balance: 3 }),
+						creditRow(100),
+					],
+				}),
+				value: 5,
+				includesCreditSystems: false,
+			});
+
+			expect(outcome).toMatchObject({ appliedValue: 3, remaining: 2 });
+			expect(balancesAfter(outcome)).toEqual([["own", { balance: 0 }]]);
 		},
 	);
 

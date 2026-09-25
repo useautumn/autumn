@@ -2,13 +2,16 @@ import { createCatalogInvalidations } from "./catalog/createCatalogInvalidations
 import { sendApplyBillingPlan } from "./commands/sendApplyBillingPlan.js";
 import { sendCheck } from "./commands/sendCheck.js";
 import { sendConfirmExpiredLock } from "./commands/sendConfirmExpiredLock.js";
+import { sendDeleteBalance } from "./commands/sendDeleteBalance.js";
 import { sendEvict } from "./commands/sendEvict.js";
 import { sendFinalize } from "./commands/sendFinalize.js";
 import { sendFlush } from "./commands/sendFlush.js";
 import { sendInitialize } from "./commands/sendInitialize.js";
 import { sendReadSubjectState } from "./commands/sendReadSubjectState.js";
+import { sendRecalculateBalance } from "./commands/sendRecalculateBalance.js";
 import { sendReset } from "./commands/sendReset.js";
 import { sendTrack } from "./commands/sendTrack.js";
+import { sendUpdateBalance } from "./commands/sendUpdateBalance.js";
 import { createHttpClient } from "./http/createHttpClient.js";
 import { createCommandQueue } from "./queue/createCommandQueue.js";
 import { enqueueCommands } from "./queue/enqueueCommands.js";
@@ -21,13 +24,16 @@ import type {
 	BalanceWorkerClientDependencies,
 	CheckParams,
 	ConfirmExpiredLockParams,
+	DeleteBalanceParams,
 	EvictParams,
 	FinalizeParams,
 	FlushParams,
 	InitializeParams,
 	ReadSubjectStateParams,
+	RecalculateBalanceParams,
 	ResetParams,
 	TrackParams,
+	UpdateBalanceParams,
 } from "./types/balanceWorkerClient.js";
 
 /** An append's default budget: a first append may include the producer connect, and no customer request waits on it. */
@@ -107,6 +113,18 @@ export function createBalanceWorkerClient({
 		return sendReset({ ctx, ...params });
 	}
 
+	function updateBalance(params: UpdateBalanceParams) {
+		return sendUpdateBalance({ ctx, ...params });
+	}
+
+	function deleteBalance(params: DeleteBalanceParams) {
+		return sendDeleteBalance({ ctx, ...params });
+	}
+
+	function recalculateBalance(params: RecalculateBalanceParams) {
+		return sendRecalculateBalance({ ctx, ...params });
+	}
+
 	function enqueue(params: EnqueueParams) {
 		return enqueueCommands({ ctx: queue, ...params });
 	}
@@ -130,6 +148,9 @@ export function createBalanceWorkerClient({
 		finalize,
 		confirmExpiredLock,
 		reset,
+		updateBalance,
+		deleteBalance,
+		recalculateBalance,
 		queue: createCommandQueue({ ctx: queue }),
 		enqueue,
 		catalog: createCatalogInvalidations({

@@ -150,6 +150,10 @@ export const AutumnBillingPlanSchema = z.object({
 	updateCustomer: CustomerUpdateSchema.optional(),
 	// Inserted before customer products — provisioned rows may reference them.
 	insertEntities: z.array(EntitySchema).optional(),
+	/** Existing entities the plan writes rows for, so it can name them by external id (a grant created for an entity). */
+	existingEntities: z
+		.array(EntitySchema.pick({ internal_id: true, id: true }))
+		.optional(),
 	claimEntities: z.array(EntityClaimSchema).optional(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
 
@@ -205,9 +209,8 @@ export const AutumnBillingPlanSchema = z.object({
 	pooledBalancePlan: PooledBalancePlanSchema.optional(),
 
 	/**
-	 * Pre-computed auto top-up rebalance deltas. The compute step sizes paydown + prepaid
-	 * remainder from the context's FullCustomer snapshot; the executor just loops these
-	 * and applies each via adjustBalanceDbAndCache (atomic SQL balance + delta).
+	 * A purchase's paydown + remainder, sized at compute time from the context's FullCustomer; the
+	 * Postgres lane applies these deltas. The worker re-sizes live from the purchase fields below.
 	 */
 	autoTopupRebalance: z
 		.object({
@@ -218,6 +221,12 @@ export const AutumnBillingPlanSchema = z.object({
 					delta: z.number(),
 				}),
 			),
+			/** The purchased cusEnt; absent on plans saved before the worker sized rebalances. */
+			customerEntitlementId: z.string().optional(),
+			featureId: z.string().optional(),
+			quantity: z.number().optional(),
+			/** Where the remainder lands: the purchased cusEnt, an expiring grant, or null when none was planned. */
+			creditedCustomerEntitlementId: z.string().nullable().optional(),
 		})
 		.optional(),
 

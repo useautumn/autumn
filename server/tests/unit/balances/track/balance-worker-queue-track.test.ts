@@ -18,6 +18,7 @@ function fixture({ failure }: { failure?: Error } = {}) {
 				queued.push(commands);
 			},
 			reset: async () => undefined,
+			updateBalance: async () => undefined,
 			evict: async () => undefined,
 		},
 	};

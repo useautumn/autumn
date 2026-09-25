@@ -16,6 +16,8 @@ import {
 export type WrittenPlanRows = AutumnBillingPlanResult & {
 	/** Seat transitions whose pool rows committed; empty when nothing was written. */
 	pendingBatchTransitions: PendingBatchTransition[];
+	/** The worker sized the plan's purchases with its rows; otherwise Postgres applies them after. */
+	rebalancesApplied: boolean;
 };
 
 /** Rollout off: both steps in one transaction, as the plan always landed. */
@@ -35,19 +37,31 @@ const writePlanRowsInPostgres = async ({
 					autumnBillingPlan,
 				});
 				if (customerRows.status === "customer_exists")
-					return { ...customerRows, pendingBatchTransitions: [] };
+					return {
+						...customerRows,
+						pendingBatchTransitions: [],
+						rebalancesApplied: false,
+					};
 				const pendingBatchTransitions = await writePostgresOnlyRows({
 					ctx: transactionCtx,
 					autumnBillingPlan,
 				});
-				return { ...customerRows, pendingBatchTransitions };
+				return {
+					...customerRows,
+					pendingBatchTransitions,
+					rebalancesApplied: false,
+				};
 			},
 		}),
 	);
 	if (!error) return data;
 	// A concurrent insert of the same customer committed first.
 	if (autumnBillingPlan.insertCustomer && isUniqueConstraintError(error))
-		return { status: "customer_exists", pendingBatchTransitions: [] };
+		return {
+			status: "customer_exists",
+			pendingBatchTransitions: [],
+			rebalancesApplied: false,
+		};
 	throw error;
 };
 
