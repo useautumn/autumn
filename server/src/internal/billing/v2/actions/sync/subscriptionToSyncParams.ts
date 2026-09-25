@@ -1,6 +1,7 @@
 import {
 	type FullCusProduct,
 	type FullProduct,
+	filterCustomerProductsByStripeSubscriptionId,
 	type SyncParamsV1,
 	type SyncPhase,
 	type SyncPlanInstance,
@@ -134,12 +135,22 @@ export const subscriptionToSyncParams = async ({
 		}
 	}
 
+	const linkedInternalProductIds = resolvedSubscription
+		? new Set(
+				filterCustomerProductsByStripeSubscriptionId({
+					customerProducts: resolvedCustomerProducts,
+					stripeSubscriptionId: resolvedSubscription.id,
+				}).map((customerProduct) => customerProduct.internal_product_id),
+			)
+		: undefined;
+
 	const match = await detectSubscriptionMatch({
 		ctx,
 		subscription: resolvedSubscription,
 		schedule: resolvedSchedule,
 		billingCurrency: fullCustomer?.currency,
 		fullProducts,
+		linkedInternalProductIds,
 	});
 
 	const detectedPhases: SyncPhase[] = match.phaseMatches
