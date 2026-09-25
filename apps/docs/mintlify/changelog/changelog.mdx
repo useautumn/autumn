@@ -4,6 +4,58 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="September 24th 2026">
+  ## Create invoices from the dashboard
+
+  You can now build and send a one-off invoice from a customer's page, with a live Stripe-style preview that updates as you edit. Add catalog plans (including license seats), custom lines and coupons, pick a template, and set the issue and due dates. The same flow is available through [`invoices.create`](/api-reference/invoices/createInvoice), which now accepts optional `issue_date` and `due_date`. Previews report how much of the customer's Stripe credit balance the invoice consumes — [#3494](https://github.com/useautumn/autumn/pull/3494), [#3663](https://github.com/useautumn/autumn/pull/3663), [#3547](https://github.com/useautumn/autumn/pull/3547)
+
+  ## Reissue invoices with corrections
+
+  [`invoices.reissue`](/api-reference/invoices/reissueInvoice) and the dashboard reissue sheet now let you fix an invoice instead of just replacing it. Edit line amounts, remove lines or add custom charges. Update custom fields, memo and footer on the replacement, and correct the customer's name, address and tax ID. Paid invoices can be reissued too: the original gets a credit note and the credit settles the corrected replacement. Paid card invoices that cost more are charged immediately. Tax is previewed live from the edited country and VAT number, you can choose which payment methods the replacement accepts, and `preview: true` shows the result without issuing anything — [#3517](https://github.com/useautumn/autumn/pull/3517), [#3553](https://github.com/useautumn/autumn/pull/3553), [#3584](https://github.com/useautumn/autumn/pull/3584), [#3614](https://github.com/useautumn/autumn/pull/3614), [#3641](https://github.com/useautumn/autumn/pull/3641)
+
+  ## Customer billing details
+
+  `customers.create` and `customers.update` accept a new `billing_details` object for the billing address, tax IDs, tax exemption and invoice custom fields (like a PO number). Autumn writes these straight to the linked Stripe customer. Read them back with `expand=billing_details`. The dashboard's edit customer dialog gains a matching billing details section. See [billing details](/documentation/customers/managing-customers#billing-details) — [#3652](https://github.com/useautumn/autumn/pull/3652), [#3656](https://github.com/useautumn/autumn/pull/3656)
+
+  ## Remove subscription discounts
+
+  [`billing.update`](/api-reference/billing/billingUpdate) accepts `remove_discounts` to take coupons off an active subscription. The dashboard shows applied discounts alongside the discount picker and hides coupons already on the subscription — [#3622](https://github.com/useautumn/autumn/pull/3622)
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - The [AI SDK gateway](/documentation/external-providers/ai-sdk) now supports AI SDK v7. AI SDK 6 apps should stay on the previous gateway release — [#3563](https://github.com/useautumn/autumn/pull/3563)
+      - Vercel marketplace invoices can be refunded from Autumn, and refunds made in Vercel are recorded on the invoice — [#3438](https://github.com/useautumn/autumn/pull/3438)
+      - A new billing verify export checks every Stripe-linked customer against Stripe and returns one row per customer with its issues. Organizations can opt out of a reviewed mismatch — [#3529](https://github.com/useautumn/autumn/pull/3529), [#3546](https://github.com/useautumn/autumn/pull/3546), [#3555](https://github.com/useautumn/autumn/pull/3555), [#3604](https://github.com/useautumn/autumn/pull/3604)
+      - Platform organizations can [read](/api-reference/platform/getStripeConnection) and [disconnect](/api-reference/platform/disconnectStripe) a Stripe OAuth connection. Revoked Stripe connections are now detected and cleared automatically — [#3597](https://github.com/useautumn/autumn/pull/3597)
+      - [`advance_test_clock`](/api-reference/customers/advanceTestClock) now lives under customers and needs the `customers:write` scope. The previous billing route still works — [#3530](https://github.com/useautumn/autumn/pull/3530)
+      - The subscription details view shows a scheduled billing cycle anchor, and the update subscription form prefills it — [#3560](https://github.com/useautumn/autumn/pull/3560)
+      - Set your organization logo by fetching it from your website URL, or paste an image to upload it — [#3647](https://github.com/useautumn/autumn/pull/3647)
+      - API keys created by `atmn` include app runtime scopes and honor explicitly requested scopes. OAuth token prefixes now include the environment — [#3651](https://github.com/useautumn/autumn/pull/3651), [#3654](https://github.com/useautumn/autumn/pull/3654), [#3633](https://github.com/useautumn/autumn/pull/3633)
+      - `eventNames` on features is soft-deprecated in the `atmn` config. `atmn pull` places new plan versions beside their siblings, and a coupon with no plans is refused with a clear message — [#3582](https://github.com/useautumn/autumn/pull/3582), [#3578](https://github.com/useautumn/autumn/pull/3578), [#3586](https://github.com/useautumn/autumn/pull/3586)
+      - Coupons are now scoped to whole Stripe products. **Create in Stripe** can finish a plan whose product was created but whose prices were not — [#3501](https://github.com/useautumn/autumn/pull/3501)
+      - SDK fail-open is limited to `check` and `track`. Other customer calls now surface errors normally — [#3516](https://github.com/useautumn/autumn/pull/3516), [#3512](https://github.com/useautumn/autumn/pull/3512)
+      - `billing_details` requests on a customer not linked to Stripe, or on an org with Stripe writes disabled, return a clear 400 — [#3656](https://github.com/useautumn/autumn/pull/3656), [#3659](https://github.com/useautumn/autumn/pull/3659)
+      - AI credit systems can be used as reward feature grant targets — [#3503](https://github.com/useautumn/autumn/pull/3503)
+    </Accordion>
+    <Accordion title="Fixes">
+      - Unpaid deferred invoice plans now expire at the invoice due date: the invoice is voided, the pending plan expires and the Stripe subscription is canceled. Paid deferred plans are rebuilt from live Stripe state if it changed in the meantime — [#3620](https://github.com/useautumn/autumn/pull/3620), [#3646](https://github.com/useautumn/autumn/pull/3646)
+      - Subscription drafts created with `invoice_mode.finalize: false` stay in draft instead of being finalized and emailed by Stripe about an hour later — [#3375](https://github.com/useautumn/autumn/pull/3375)
+      - Plan changes landing exactly on the renewal boundary are treated as scheduled changes, and their previews no longer include "Unused" credit lines for the outgoing plan — [#3543](https://github.com/useautumn/autumn/pull/3543), [#3612](https://github.com/useautumn/autumn/pull/3612)
+      - A finite grant now supersedes an unlimited one for the same feature and entity, so customers no longer read as unlimited by mistake — [#3528](https://github.com/useautumn/autumn/pull/3528)
+      - Carried-over balances on rollover items get the rollover expiry — [#3608](https://github.com/useautumn/autumn/pull/3608)
+      - Free-plan schedule transitions now work through Stripe schedules — [#3637](https://github.com/useautumn/autumn/pull/3637)
+      - Stripe sync keeps a plan on its own subscription when a second subscription is created, reacts to edits on future phases of a running schedule, and handles released schedules correctly. Skipped syncs and failed mirror writes are now reported — [#3533](https://github.com/useautumn/autumn/pull/3533), [#3645](https://github.com/useautumn/autumn/pull/3645), [#3631](https://github.com/useautumn/autumn/pull/3631), [#3535](https://github.com/useautumn/autumn/pull/3535)
+      - Pooled balances sync their reset anchor, and pooled trial contributions expire on time — [#3628](https://github.com/useautumn/autumn/pull/3628), [#3556](https://github.com/useautumn/autumn/pull/3556)
+      - Analytics billing-cycle ranges follow the charted feature's reset cycle — [#3630](https://github.com/useautumn/autumn/pull/3630)
+      - Fixed price lines on invoices no longer show empty period brackets — [#3658](https://github.com/useautumn/autumn/pull/3658)
+      - Catalog pushes no longer flag unchanged stored values, like a boolean row's allowance or `carry_from_previous`, as plan updates — [#3558](https://github.com/useautumn/autumn/pull/3558), [#3570](https://github.com/useautumn/autumn/pull/3570), [#3575](https://github.com/useautumn/autumn/pull/3575)
+      - `atmn pull` drops reward links to archived plans and no longer invents variant links on round-trip — [#3520](https://github.com/useautumn/autumn/pull/3520), [#3548](https://github.com/useautumn/autumn/pull/3548), [#3551](https://github.com/useautumn/autumn/pull/3551)
+      - Abandoned migration runs are reconciled, and no-op runs show up in the migrations list — [#3504](https://github.com/useautumn/autumn/pull/3504)
+      - Fixed a render loop on the customer page — [#3534](https://github.com/useautumn/autumn/pull/3534)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="September 17th 2026">
   ## `atmn` 2.0
 
