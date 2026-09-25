@@ -16,3 +16,9 @@ export const sandboxKeyName = ({
 
 /** The env var `atmn sandbox create --use` writes to pin a target sandbox. */
 export const SANDBOX_PIN_NAME = "AUTUMN_SANDBOX_ID";
+
+const SANDBOX_KEY_NAME = /^AUTUMN_SANDBOX_[A-Z0-9_]+_SECRET_KEY$/;
+
+/** Whether an env var is a named sandbox's key, as `sandboxKeyName` writes it. */
+export const isSandboxKeyName = (name: string): name is SandboxSecretKeyName =>
+	SANDBOX_KEY_NAME.test(name);

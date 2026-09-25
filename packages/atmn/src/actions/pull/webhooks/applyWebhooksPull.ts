@@ -17,6 +17,24 @@ const isVercelWebhook = (events: unknown): boolean =>
 		(event) => typeof event === "string" && event.startsWith("vercel."),
 	);
 
+/** The config as it reads once this env's remote webhook is written into it. */
+const statedFrom = ({
+	row,
+	webhook,
+	envKey,
+}: {
+	row: StatedWebhook | undefined;
+	webhook: RemoteWebhook;
+	envKey: string;
+}): StatedWebhook => ({
+	...row,
+	id: webhook.id,
+	url: { ...row?.url, [envKey]: webhook.url },
+	events: webhook.events.length > 0 ? webhook.events : row?.events,
+	description: webhook.description,
+	disabled: webhook.disabled,
+});
+
 const merge = (target: WebhookEditResult, source: WebhookEditResult): void => {
 	target.lines.push(...source.lines);
 	target.warnings.push(...source.warnings);
@@ -43,9 +61,11 @@ export const applyWebhooksPull = ({
 	envKey: string;
 	/** Mints the id a dashboard webhook is written under. */
 	newId?: () => string;
-}): WebhookEditResult => {
+}): WebhookEditResult & { stated: StatedWebhook[] } => {
 	const result: WebhookEditResult = { lines: [], warnings: [], unlocated: [] };
 	const statedById = new Map((stated ?? []).map((row) => [row.id, row]));
+	// What the next env pulled into the same files sees as the config.
+	const next = new Map(statedById);
 	// An id the config states is the config's, whatever its shape.
 	const fromDashboard = (webhook: RemoteWebhook): boolean =>
 		!statedById.has(webhook.id) && isDashboardWebhook(webhook);
@@ -62,6 +82,14 @@ export const applyWebhooksPull = ({
 			);
 			if (represented !== undefined) {
 				present.add(represented.id);
+				next.set(
+					represented.id,
+					statedFrom({
+						row: represented,
+						webhook: { ...webhook, id: represented.id },
+						envKey,
+					}),
+				);
 				merge(
 					result,
 					updateWebhook({
@@ -85,15 +113,20 @@ export const applyWebhooksPull = ({
 				webhook: { ...webhook, id },
 				envKey,
 			});
-			if (failure === null)
+			if (failure === null) {
+				next.set(
+					id,
+					statedFrom({ row: undefined, webhook: { ...webhook, id }, envKey }),
+				);
 				result.lines.push(
 					`+ webhook ${id} (made in the dashboard; push adopts it by URL)`,
 				);
-			else result.unlocated.push({ id, action: failure });
+			} else result.unlocated.push({ id, action: failure });
 			continue;
 		}
 		present.add(webhook.id);
 		const row = statedById.get(webhook.id);
+		next.set(webhook.id, statedFrom({ row, webhook, envKey }));
 		if (row !== undefined) {
 			merge(result, updateWebhook({ pull, webhook, stated: row, envKey }));
 			continue;
@@ -106,6 +139,9 @@ export const applyWebhooksPull = ({
 	for (const row of stated ?? []) {
 		if (present.has(row.id) || row.url?.[envKey] === undefined) continue;
 		merge(result, removeWebhookEnv({ pull, stated: row, envKey }));
+		const { [envKey]: _removed, ...url } = row.url;
+		if (Object.keys(url).length === 0) next.delete(row.id);
+		else next.set(row.id, { ...row, url });
 	}
-	return result;
+	return { ...result, stated: [...next.values()] };
 };
