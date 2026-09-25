@@ -15,6 +15,7 @@ export const createWorkerDrainer = ({
 	server,
 	exit,
 	drainTimeoutMs,
+	graceMs,
 	maxDrainMs = DEFAULT_MAX_DRAIN_MS,
 	idleSweepIntervalMs = 1_000,
 	getActiveRequestCount,
@@ -24,6 +25,7 @@ export const createWorkerDrainer = ({
 	server: DrainableServer;
 	exit: (code: number) => void;
 	drainTimeoutMs: number;
+	graceMs: number;
 	/** Hard bound for a fork that never goes idle (a truly hung request). */
 	maxDrainMs?: number;
 	idleSweepIntervalMs?: number;
@@ -46,27 +48,16 @@ export const createWorkerDrainer = ({
 
 			const drainStartedAt = Date.now();
 			let exited = false;
+			let idleSweep: ReturnType<typeof setInterval> | null = null;
 			let deadline: ReturnType<typeof setTimeout> | null = null;
 			const exitOnce = (reason: string) => {
 				if (exited) return;
 				exited = true;
-				clearInterval(idleSweep);
+				if (idleSweep) clearInterval(idleSweep);
 				if (deadline) clearTimeout(deadline);
 				log(`[ForkRecycle] Worker ${process.pid} exiting (${reason})`);
 				exit(0);
 			};
-
-			log(`[ForkRecycle] Worker ${process.pid} draining`);
-			server.close(() => exitOnce("drained"));
-
-			// First sweep only after a full interval: gives in-flight responses a
-			// beat to carry `Connection: close` so pooled sockets retire themselves
-			// instead of being evicted out from under the client.
-			const idleSweep = setInterval(
-				() => server.closeIdleConnections?.(),
-				idleSweepIntervalMs,
-			);
-			idleSweep.unref?.();
 
 			const onDeadline = () => {
 				const activeRequests = getActiveRequestCount?.() ?? 0;
@@ -92,7 +83,23 @@ export const createWorkerDrainer = ({
 				deadline = setTimeout(onDeadline, intervalMs);
 				deadline.unref?.();
 			};
-			armDeadline();
+
+			const closeServer = () => {
+				log(
+					`[ForkRecycle] Worker ${process.pid} closing server after ${graceMs}ms grace`,
+				);
+				server.close(() => exitOnce("drained"));
+				idleSweep = setInterval(
+					() => server.closeIdleConnections?.(),
+					idleSweepIntervalMs,
+				);
+				idleSweep.unref?.();
+				armDeadline();
+			};
+
+			log(`[ForkRecycle] Worker ${process.pid} draining`);
+			const grace = setTimeout(closeServer, graceMs);
+			grace.unref?.();
 		},
 	};
 };
