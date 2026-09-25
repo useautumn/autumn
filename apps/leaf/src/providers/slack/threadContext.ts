@@ -4,6 +4,7 @@ import type {
 	AgentMissedMessages,
 } from "../../internal/agentRuntime/domain/agentTurnContext.js";
 import { logger } from "../../lib/logger.js";
+import { getSlackWorkspaceId } from "./context.js";
 
 const RECENT_MESSAGES_LIMIT = 8;
 // `thread.refresh()` fetches the latest 50 messages, so nothing older can be
@@ -15,11 +16,32 @@ const MISSED_MESSAGE_CHAR_LIMIT = 4000;
 const TRUNCATED_SUFFIX = " …[truncated]";
 // Matches the chat SDK's thread-state lifetime.
 const SKIPPED_REPLIES_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+// Room for every skip in the window plus its delivery.
+const REPLY_EVENTS_LIMIT = MISSED_MESSAGES_LIMIT * 2;
 
-const skippedRepliesKey = (threadId: string) =>
-	`leaf:skipped-replies:${threadId}`;
-const deliveredRepliesKey = (threadId: string) =>
-	`leaf:delivered-replies:${threadId}`;
+/** One append-only log per thread, so skips and deliveries share a single
+ * TTL and trimming (newest kept) never drops a delivery whose skip survives. */
+type ReplyEvent = Readonly<{ id: string; kind: "delivered" | "skipped" }>;
+
+// A Slack Connect channel keeps its id and timestamps in every workspace it
+// is shared with, so the workspace is part of the key.
+const replyEventsKey = ({
+	message,
+	thread,
+}: {
+	message: Message;
+	thread: Thread;
+}) => `leaf:reply-events:${getSlackWorkspaceId(message.raw)}:${thread.id}`;
+
+const appendReplyEvent = (
+	store: StateAdapter,
+	key: string,
+	event: ReplyEvent,
+) =>
+	store.appendToList(key, event, {
+		maxLength: REPLY_EVENTS_LIMIT,
+		ttlMs: SKIPPED_REPLIES_TTL_MS,
+	});
 
 const chatState = () => Chat.getSingleton().getState();
 
@@ -111,10 +133,10 @@ export const recordSkippedMessage = async (
 	state?: StateAdapter,
 ) => {
 	try {
-		await (state ?? chatState()).appendToList(
-			skippedRepliesKey(thread.id),
-			message.id,
-			{ maxLength: MISSED_MESSAGES_LIMIT, ttlMs: SKIPPED_REPLIES_TTL_MS },
+		await appendReplyEvent(
+			state ?? chatState(),
+			replyEventsKey({ message, thread }),
+			{ id: message.id, kind: "skipped" },
 		);
 	} catch (error) {
 		logger.warn("Could not record skipped Slack message", {
@@ -132,9 +154,7 @@ export type LoadedMissedMessages = Readonly<{
 }>;
 
 /** The skipped replies not yet handed to a turn, oldest first. Call after
- * `getRecentMessages` has refreshed the thread. Both lists are append-only
- * and trimmed to the same length in the same order, so the delivered list
- * always covers the delivered ids still in the skipped list. */
+ * `getRecentMessages` has refreshed the thread. */
 export const loadMissedMessages = async (
 	thread: Thread,
 	currentMessage: Message,
@@ -142,12 +162,15 @@ export const loadMissedMessages = async (
 ): Promise<LoadedMissedMessages | undefined> => {
 	try {
 		const store = state ?? chatState();
-		const [skippedIds, deliveredIds] = await Promise.all([
-			store.getList<string>(skippedRepliesKey(thread.id)),
-			store.getList<string>(deliveredRepliesKey(thread.id)),
-		]);
-		const delivered = new Set(deliveredIds);
-		const pendingIds = skippedIds.filter((id) => !delivered.has(id));
+		const key = replyEventsKey({ message: currentMessage, thread });
+		const events = await store.getList<ReplyEvent>(key);
+		const delivered = new Set(
+			events.filter(({ kind }) => kind === "delivered").map(({ id }) => id),
+		);
+		const pendingIds = events
+			.filter(({ id, kind }) => kind === "skipped" && !delivered.has(id))
+			.map(({ id }) => id)
+			.slice(-MISSED_MESSAGES_LIMIT);
 		if (!pendingIds.length) return undefined;
 
 		const pending = new Set(pendingIds);
@@ -165,10 +188,7 @@ export const loadMissedMessages = async (
 		return {
 			markDelivered: async () => {
 				for (const id of pendingIds) {
-					await store.appendToList(deliveredRepliesKey(thread.id), id, {
-						maxLength: MISSED_MESSAGES_LIMIT,
-						ttlMs: SKIPPED_REPLIES_TTL_MS,
-					});
+					await appendReplyEvent(store, key, { id, kind: "delivered" });
 				}
 			},
 			missed:

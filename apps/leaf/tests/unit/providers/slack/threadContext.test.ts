@@ -10,7 +10,7 @@ import {
 const message = ({
 	id,
 	isBot = false,
-	raw = {},
+	raw = { team_id: "T1" },
 	text,
 }: {
 	id: string;
@@ -185,20 +185,35 @@ describe("skipped replies", () => {
 		expect(missed?.omittedCount).toBe(2);
 	});
 
-	test("remembers at most the 50 latest skipped replies", async () => {
+	test("replays at most the 50 latest skipped replies", async () => {
 		const state = memoryState();
-		const thread = threadWith();
-		for (let index = 0; index < 55; index++) {
-			await recordSkippedMessage(
-				thread,
-				message({ id: String(index), text: "chatter" }),
-				state,
-			);
+		const replies = Array.from({ length: 55 }, (_, index) =>
+			message({ id: String(index), text: "ok" }),
+		);
+		const current = message({ id: "55", text: "@Autumn do the above" });
+		const thread = threadWith([...replies, current]);
+		for (const reply of replies) {
+			await recordSkippedMessage(thread, reply, state);
 		}
 
-		const skipped = state.lists.get("leaf:skipped-replies:slack:C1:1");
-		expect(skipped).toHaveLength(50);
-		expect(skipped?.[0]).toBe("5");
+		const missed = (await loadMissedMessages(thread, current, state))?.missed;
+		expect(missed?.messages).toHaveLength(50);
+		expect(missed?.omittedCount).toBe(0);
+	});
+
+	test("keeps each workspace's skipped replies apart", async () => {
+		const state = memoryState();
+		const inOther = message({
+			id: "1",
+			raw: { team_id: "T2" },
+			text: "other workspace",
+		});
+		const current = message({ id: "2", text: "@Autumn do the above" });
+		const thread = threadWith([inOther, current]);
+
+		await recordSkippedMessage(thread, inOther, state);
+
+		expect(await loadMissedMessages(thread, current, state)).toBeUndefined();
 	});
 });
 
