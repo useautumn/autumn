@@ -33,7 +33,8 @@ export async function runBalanceWorkerCheck({
 			const answer = deducts
 				? await runDeductingCheck({ ctx, body, client })
 				: await client.check({ command });
-			triggerAutoTopupFromCheckAnswer({ ctx, command, answer });
+			// A deducting check is a track on the worker: its record reaches herald, which dispatches. Only a plain check has no record.
+			if (!deducts) triggerAutoTopupFromCheckAnswer({ ctx, command, answer });
 			return {
 				result: checkAnswerToApiResponse({ ctx, command, answer }),
 				customer: answer.state?.customer ?? null,

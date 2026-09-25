@@ -6,7 +6,7 @@ import {
 import type { PartitionProcessorScope } from "../../../types/partitionProcessor.js";
 
 /** The rows the plan inserts, as a state, so their catalog references are found the way a subject's are. */
-const insertedRowsState = ({
+export const planInsertedRowsState = ({
 	command,
 }: {
 	command: ApplyBillingPlanCommand;
@@ -36,6 +36,6 @@ export const ensurePlanCatalog = async ({
 }): Promise<void> => {
 	await scope.ctx.subjectHydrator.ensureCatalog({
 		identity: command.identity,
-		state: insertedRowsState({ command }),
+		state: planInsertedRowsState({ command }),
 	});
 };

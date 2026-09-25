@@ -46,6 +46,34 @@ describe("workerCanApplyBillingPlan", () => {
 		).toBe(true);
 	});
 
+	test("a top-up goes to the worker only when it names its purchase", () => {
+		const deltas = [
+			{ cusEntId: "cus_ent_1", featureId: "messages", delta: 50 },
+		];
+		expect(
+			workerCanApplyBillingPlan({
+				autumnBillingPlan: {
+					...linkBackPlan(),
+					autoTopupRebalance: { deltas },
+				},
+			}),
+		).toBe(false);
+		expect(
+			workerCanApplyBillingPlan({
+				autumnBillingPlan: {
+					...linkBackPlan(),
+					autoTopupRebalance: {
+						deltas,
+						customerEntitlementId: "cus_ent_1",
+						featureId: "messages",
+						quantity: 50,
+						creditedCustomerEntitlementId: "cus_ent_1",
+					},
+				},
+			}),
+		).toBe(true);
+	});
+
 	test("a plan must name exactly one customer, by its id", () => {
 		expect(
 			workerCanApplyBillingPlan({
@@ -104,6 +132,37 @@ describe("workerCanApplyBillingPlan", () => {
 				],
 			}),
 		).toBe(false);
+	});
+
+	test("a grant created for an existing entity goes to the worker once the plan names that entity", () => {
+		const grant = {
+			id: "cus_ent_loose_1",
+			customer_id: "cus_test",
+			internal_customer_id: newCustomer.internal_id,
+			internal_entity_id: "ent_internal_1",
+			internal_feature_id: "feat_internal_messages",
+			feature_id: "messages",
+			customer_product_id: null,
+			entitlement_id: "ent_loose_1",
+			created_at: 1,
+		};
+		const grantPlan = {
+			customerId: "cus_test",
+			insertCustomerProducts: [],
+			insertCustomerEntitlements: [grant],
+		};
+
+		expect(workerCanApplyBillingPlan({ autumnBillingPlan: grantPlan })).toBe(
+			false,
+		);
+		expect(
+			workerCanApplyBillingPlan({
+				autumnBillingPlan: {
+					...grantPlan,
+					existingEntities: [{ internal_id: "ent_internal_1", id: "seat_1" }],
+				},
+			}),
+		).toBe(true);
 	});
 
 	test("a license seat keeps the plan on Postgres; license pools and carried rollovers do not", () => {

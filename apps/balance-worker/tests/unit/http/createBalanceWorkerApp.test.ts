@@ -140,6 +140,15 @@ const fixture = ({
 		reset: async () => {
 			throw new Error("Reset is not configured in this fixture");
 		},
+		updateBalance: async () => {
+			throw new Error("Update balance is not configured in this fixture");
+		},
+		deleteBalance: async () => {
+			throw new Error("Delete balance is not configured in this fixture");
+		},
+		recalculateBalance: async () => {
+			throw new Error("Recalculate balance is not configured in this fixture");
+		},
 		drain: async () => undefined,
 	};
 	const process: BalanceWorkerRequestContext["runtime"]["process"] = (run) =>

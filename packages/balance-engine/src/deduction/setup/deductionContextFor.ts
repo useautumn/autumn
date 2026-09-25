@@ -6,7 +6,7 @@ import { isFreeAllocatedRow } from "./resolveRowBounds.js";
 import { isOverdueBlocked } from "./selectDeductionRows.js";
 import { setupDeductionContext } from "./setupDeductionContext.js";
 
-/** Setup reads the feature, the event, the clock and the org from a request; two requests that share them share rows. */
+/** Setup reads the feature, the event, the clock, the org and the row rules from a request; two requests that share them share rows. */
 const sharesSetupInputs = ({
 	left,
 	right,
@@ -18,7 +18,11 @@ const sharesSetupInputs = ({
 	left.internalFeatureId === right.internalFeatureId &&
 	left.properties === right.properties &&
 	left.now === right.now &&
-	left.org === right.org;
+	left.org === right.org &&
+	left.includesCreditSystems === right.includesCreditSystems &&
+	left.enforcesSpendLimit === right.enforcesSpendLimit &&
+	left.countsUsageWindows === right.countsUsageWindows &&
+	left.customerEntitlementFilters === right.customerEntitlementFilters;
 
 /** Whether the overdue rule shuts out the same products for both requests. */
 const blocksSameProducts = ({

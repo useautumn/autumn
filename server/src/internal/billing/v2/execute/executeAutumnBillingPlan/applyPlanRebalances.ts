@@ -3,7 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
 import { executeOneOffPurchaseRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeOneOffPurchaseRebalance";
 
-/** Balance moves the balance worker does not apply yet, straight to Postgres once the plan's rows committed. */
+/** Purchases applied in Postgres once the plan's rows committed there; the worker sizes its own. */
 export const applyPlanRebalances = async ({
 	ctx,
 	autumnBillingPlan,

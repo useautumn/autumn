@@ -10,7 +10,7 @@
  *   - Messages without a body idempotency_key never touch the claim.
  */
 
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { AppEnv, ErrCode, RecaseError, type TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
@@ -20,6 +20,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 const claimCalls: Array<{ idempotencyKey: string }> = [];
 const releaseCalls: Array<{ idempotencyKey: string }> = [];
 const runTrackV3Calls: Array<{ body: TrackParams }> = [];
+
+// These cover the legacy replay; the worker case turns the rollout on itself.
+const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 
 await mockModuleWithRestore(
 	"@/internal/misc/idempotency/actions/checkIdempotencyKey.js",
@@ -167,4 +171,10 @@ describe("runQueuedTrack body idempotency", () => {
 			).toHaveLength(0);
 		},
 	);
+});
+
+afterAll(() => {
+	if (previousRollout === undefined)
+		delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
 });

@@ -6,7 +6,7 @@ import {
 } from "../../errors.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
-import { isPaidAllocatedV1Deduction } from "./isPaidAllocatedV1Deduction.js";
+import { isPaidAllocatedV1Deduction } from "../../deduction/utils/classifyDeductionUtils.js";
 import { trackCommandToDeductionRequest } from "./trackCommandToDeductionRequest.js";
 import type { TrackCommand } from "./types/trackCommand.js";
 

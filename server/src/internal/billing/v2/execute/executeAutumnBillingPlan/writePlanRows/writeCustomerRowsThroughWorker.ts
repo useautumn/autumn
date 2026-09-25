@@ -12,6 +12,11 @@ import { markCustomerUpdatedAt } from "@/internal/customers/customerLsns/markCus
 import { withPlanTransaction } from "./withPlanTransaction";
 import { writeCustomerRowsInPostgres } from "./writeCustomerRowsInPostgres";
 
+export type WrittenCustomerRows = AutumnBillingPlanResult & {
+	/** The worker sized the plan's purchases with its rows; false when the rows fell back to Postgres. */
+	rebalancesApplied: boolean;
+};
+
 /** The rows the worker holds, as one worker mutation answered once Postgres holds them. A create's email claim happens in the worker. */
 export const writeCustomerRowsThroughWorker = async ({
 	ctx,
@@ -19,7 +24,7 @@ export const writeCustomerRowsThroughWorker = async ({
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
-}): Promise<AutumnBillingPlanResult> => {
+}): Promise<WrittenCustomerRows> => {
 	const customerId = billingPlanToWorkerCustomerId({ autumnBillingPlan });
 	if (!customerId)
 		throw new InternalError({
@@ -30,12 +35,14 @@ export const writeCustomerRowsThroughWorker = async ({
 		applyBillingPlanOnWorker({ ctx, customerId, autumnBillingPlan }),
 	);
 	// Still behind after a resend: the legacy write instead; the worker dropped its copy, so its next read is fresh.
-	if (isBalanceWorkerStaleSubjectError(error))
-		return withPlanTransaction({
+	if (isBalanceWorkerStaleSubjectError(error)) {
+		const written = await withPlanTransaction({
 			ctx,
 			run: (transactionCtx) =>
 				writeCustomerRowsInPostgres({ ctx: transactionCtx, autumnBillingPlan }),
 		});
+		return { ...written, rebalancesApplied: false };
+	}
 	if (error) throw error;
 
 	// Replica reads of this customer pin to the primary for a while: a create or claim, like any structural write.
@@ -46,5 +53,5 @@ export const writeCustomerRowsThroughWorker = async ({
 		customerId,
 		internalCustomerId: result.internalCustomerId,
 	});
-	return result;
+	return { ...result, rebalancesApplied: true };
 };

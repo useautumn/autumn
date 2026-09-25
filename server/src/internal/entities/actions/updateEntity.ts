@@ -11,8 +11,6 @@ import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { assertEntityUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertEntityUsageLimitAlertsResolvable.js";
 import { getUsageLimitConfigUpdate } from "@/internal/customers/actions/update/getUsageLimitConfigUpdate.js";
 import { prepareUsageLimitUsage } from "@/internal/customers/actions/update/prepareUsageLimitUsage.js";
-import { updateCachedEntityData } from "@/internal/customers/cache/fullSubject/actions/updateCachedEntityData.js";
-import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
 import { usageWindowRepo } from "@/internal/customers/usageWindows/repos/index.js";
 
@@ -96,20 +94,5 @@ export const updateEntity = async ({
 				});
 		});
 	}
-	if (hasConfigUpdates)
-		await updateCachedEntityData({
-			ctx,
-			customerId,
-			entityId,
-			updates: filteredUpdates,
-		});
-	if (usageWindows.length > 0)
-		await invalidateCachedFullSubject({
-			ctx,
-			customerId,
-			entityId,
-			source: "updateEntity:usage",
-		});
-
 	return entity.id ?? entity.internal_id;
 };

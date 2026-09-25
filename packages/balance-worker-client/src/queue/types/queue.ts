@@ -2,6 +2,7 @@ import type {
 	EvictCommand,
 	ResetCommand,
 	TrackCommand,
+	UpdateBalanceCommand,
 } from "@autumn/balance-engine";
 import type { CommandPublisher, CommandRecord } from "@autumn/kafka";
 
@@ -28,6 +29,11 @@ export type CommandQueue = {
 	}): Promise<void>;
 	reset(params: {
 		commands: readonly ResetCommand[];
+		signal?: AbortSignal;
+	}): Promise<void>;
+	/** `balances.update` on the async path: the owner decides it in log order. */
+	updateBalance(params: {
+		commands: readonly UpdateBalanceCommand[];
 		signal?: AbortSignal;
 	}): Promise<void>;
 	/** Batch writers' evict: the owner drops each customer's copy in log order, after the store has its earlier writes. */

@@ -4,6 +4,7 @@ import { insertCustomerToPlanOps } from "./customer/insertCustomerToPlanOps.js";
 import { lockCustomerCurrencyToPlanOps } from "./customer/lockCustomerCurrencyToPlanOps.js";
 import { updateCustomerToPlanOps } from "./customer/updateCustomerToPlanOps.js";
 import { insertCustomerEntitlementsToPlanOps } from "./customerEntitlements/insertCustomerEntitlementsToPlanOps.js";
+import { rebalancesToPlanOps } from "./customerEntitlements/rebalancesToPlanOps.js";
 import { updateCustomerEntitlementsToPlanOps } from "./customerEntitlements/updateCustomerEntitlementsToPlanOps.js";
 import { deleteCustomerProductsToPlanOps } from "./customerProducts/deleteCustomerProductsToPlanOps.js";
 import { insertCustomerProductsToPlanOps } from "./customerProducts/insertCustomerProductsToPlanOps.js";
@@ -12,7 +13,7 @@ import { updateCustomerProductsToPlanOps } from "./customerProducts/updateCustom
 import { insertEntitiesToPlanOps } from "./entities/insertEntitiesToPlanOps.js";
 import { pooledBalancePlanToPlanOps } from "./pooledBalances/pooledBalancePlanToPlanOps.js";
 
-/** Every row the worker holds that the plan writes, as ops in the order the Postgres lane writes them. */
+/** Every row the worker holds that the plan writes, as ops in the order the Postgres lane writes them; purchases last, sized by the worker. */
 export const autumnBillingPlanToPlanOps = ({
 	autumnBillingPlan,
 }: {
@@ -29,4 +30,5 @@ export const autumnBillingPlanToPlanOps = ({
 	...deleteCustomerProductsToPlanOps({ autumnBillingPlan }),
 	...updateCustomerEntitlementsToPlanOps({ autumnBillingPlan }),
 	...pooledBalancePlanToPlanOps({ autumnBillingPlan }),
+	...rebalancesToPlanOps({ autumnBillingPlan }),
 ];

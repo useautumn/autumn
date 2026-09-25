@@ -11,6 +11,7 @@ export type DeductionContext = {
 	entityId: string | null;
 	now: number;
 	overageBehavior: OverageBehavior;
+	enforcesSpendLimit: boolean;
 	/** The selected entitlements in draw order; an unlimited one, if any, is first. */
 	customerEntitlements: WorkerFullCustomerEntitlementWithProduct[];
 	/** Their rollovers, soonest-expiring first. */

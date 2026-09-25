@@ -10,7 +10,6 @@ import {
 import type { Context } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { runBalanceWorkerAsyncTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerAsyncTrack.js";
 import { runBalanceWorkerTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js";
 import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
@@ -41,13 +40,11 @@ async function track(
 		body.async === true ||
 		isAsyncTrackEnabled({ orgId: ctx.org.id, orgSlug: ctx.org.slug });
 
-	if (isBalanceWorkerRolloutEnabled()) {
-		if (isAsync) {
-			await runBalanceWorkerAsyncTrack({ ctx, body });
-			return c.json(getQueuedTrackResponse({ ctx, body }), 202);
-		}
-		return c.json(await runBalanceWorkerTrack({ ctx, body }));
-	}
+	if (isBalanceWorkerRolloutEnabled())
+		return c.json(
+			await runBalanceWorkerTrack({ ctx, body, isAsync }),
+			isAsync ? 202 : 200,
+		);
 
 	const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
 

@@ -50,6 +50,14 @@ const staleSubject = () =>
 		workerCode: "STALE_SUBJECT",
 	});
 
+const duplicateCommand = () =>
+	new BalanceWorkerClientError({
+		code: "WORKER_ERROR",
+		outcome: "not_submitted",
+		message: "duplicate",
+		workerCode: "DUPLICATE_COMMAND",
+	});
+
 /** Answers each send in turn and records the command ids it was sent. */
 const scriptedClient = (answers: (() => ApplyBillingPlanReply)[]) => {
 	const commandIds: string[] = [];
@@ -83,7 +91,7 @@ const send = ({
 	});
 
 describe("applyBillingPlanOnWorker", () => {
-	test("an unknown outcome is sent once more as a new command", async () => {
+	test("an unknown outcome is sent once more under the same id, so it applies at most once", async () => {
 		const client = scriptedClient([
 			() => {
 				throw timedOut();
@@ -93,7 +101,20 @@ describe("applyBillingPlanOnWorker", () => {
 		const result = await send({ autumnBillingPlan: linkBackPlan(), client });
 		expect(result.status).toBe("applied");
 		expect(client.commandIds).toHaveLength(2);
-		expect(new Set(client.commandIds).size).toBe(2);
+		expect(new Set(client.commandIds).size).toBe(1);
+	});
+
+	test("a resend the worker already holds is the first send landing: applied", async () => {
+		const client = scriptedClient([
+			() => {
+				throw timedOut();
+			},
+			() => {
+				throw duplicateCommand();
+			},
+		]);
+		const result = await send({ autumnBillingPlan: linkBackPlan(), client });
+		expect(result.status).toBe("applied");
 	});
 
 	test("an update refused as stale is sent once more; stale twice surfaces for the Postgres fallback", async () => {

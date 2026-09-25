@@ -2,26 +2,32 @@ import type {
 	ApplyBillingPlanRequest,
 	CheckCommand,
 	ConfirmExpiredLockCommand,
+	DeleteBalanceCommand,
 	EvictCommand,
 	FinalizeCommand,
 	FlushCommand,
 	InitializeRequest,
 	MutationSource,
 	ReadSubjectStateCommand,
+	RecalculateBalanceCommand,
 	ResetCommand,
 	TrackCommand,
+	UpdateBalanceCommand,
 } from "@autumn/balance-engine";
 import { applyBillingPlan as applyBillingPlanPartition } from "./commands/applyBillingPlan/applyBillingPlan.js";
 import { createCustomerPlans } from "./commands/applyBillingPlan/customerPlans/customerPlans.js";
 import { check as checkPartition } from "./commands/check.js";
 import { confirmExpiredLock as confirmExpiredLockPartition } from "./commands/confirmExpiredLock.js";
+import { deleteBalance as deleteBalancePartition } from "./commands/deleteBalance.js";
 import { evict as evictPartition } from "./commands/evict.js";
 import { finalize as finalizePartition } from "./commands/finalize.js";
 import { flush as flushPartition } from "./commands/flush.js";
 import { initialize as initializePartition } from "./commands/initialize.js";
 import { readSubjectState as readSubjectStatePartition } from "./commands/readSubjectState.js";
+import { recalculateBalance as recalculateBalancePartition } from "./commands/recalculateBalance.js";
 import { reset as resetPartition } from "./commands/reset.js";
 import { track as trackPartition } from "./commands/track.js";
+import { updateBalance as updateBalancePartition } from "./commands/updateBalance.js";
 import {
 	acceptCommand,
 	createAcceptedCommands,
@@ -147,6 +153,31 @@ function createProcessor({
 		});
 	}
 
+	function updateBalance({ command }: { command: UpdateBalanceCommand }) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: updateBalancePartition({ scope, command }),
+		});
+	}
+
+	function deleteBalance({ command }: { command: DeleteBalanceCommand }) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: deleteBalancePartition({ scope, command }),
+		});
+	}
+
+	function recalculateBalance({
+		command,
+	}: {
+		command: RecalculateBalanceCommand;
+	}) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: recalculateBalancePartition({ scope, command }),
+		});
+	}
+
 	async function drain() {
 		await settleAcceptedCommands({ accepted: scope.accepted });
 		// A "log" reply lands before its store apply; a successor must find that apply finished too.
@@ -190,6 +221,9 @@ function createProcessor({
 		finalize,
 		confirmExpiredLock,
 		reset,
+		updateBalance,
+		deleteBalance,
+		recalculateBalance,
 		drain,
 	};
 }

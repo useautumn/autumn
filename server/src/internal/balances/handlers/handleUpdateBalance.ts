@@ -8,7 +8,6 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { updateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 
 export const handleUpdateBalance = createRoute({
 	scopes: [Scopes.Balances.Write],
@@ -35,9 +34,6 @@ export const handleUpdateBalance = createRoute({
 		}
 
 		const targetBalance = params.remaining ?? params.current_balance;
-
-		if (isFullSubjectRolloutEnabled({ ctx })) {
-		}
 
 		await updateBalanceV2({ ctx, params, targetBalance });
 

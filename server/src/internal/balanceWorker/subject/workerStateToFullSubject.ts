@@ -16,6 +16,7 @@ import {
 	type FullCustomerLicense,
 	type FullSubject,
 	type Invoice,
+	isLiveLooseCustomerEntitlement,
 	type Subscription,
 } from "@autumn/shared";
 import { catalogToFreeTrial } from "./catalogToFreeTrial.js";
@@ -27,17 +28,6 @@ const isPooledContributionSource = ({
 }: {
 	customerEntitlement: WorkerFullCustomerEntitlement;
 }) => customerEntitlement.pooled_contribution_id != null;
-
-/** Same rule as the Postgres read: a loose grant drained to 0 after hydration is gone, like legacy's cache hits. */
-const isLiveLooseEntitlement = ({
-	customerEntitlement,
-}: {
-	customerEntitlement: WorkerFullCustomerEntitlement;
-}) =>
-	customerEntitlement.balance !== 0 ||
-	customerEntitlement.unlimited === true ||
-	customerEntitlement.next_reset_at != null ||
-	customerEntitlement.entitlement.feature.type === FeatureType.Boolean;
 
 /** The Postgres read drops expired rollovers once, at hydration; a resident row must drop them by the clock at read. */
 const withoutExpiredRollovers = ({
@@ -237,7 +227,7 @@ export const workerStateToFullSubject = ({
 		workerFullSubject.extra_customer_entitlements.filter(
 			(customerEntitlement) =>
 				!isPooledContributionSource({ customerEntitlement }) &&
-				isLiveLooseEntitlement({ customerEntitlement }),
+				isLiveLooseCustomerEntitlement({ customerEntitlement }),
 		);
 	const renderedFlagIds = renderedFlagIdsOf({
 		customerProducts,

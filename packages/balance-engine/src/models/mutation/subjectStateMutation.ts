@@ -3,14 +3,20 @@ import { applyBillingPlanCommandSchema } from "../../commands/applyBillingPlan/t
 import { applyBillingPlanResultSchema } from "../../commands/applyBillingPlan/types/applyBillingPlanResult.js";
 import { confirmExpiredLockCommandSchema } from "../../commands/confirmExpiredLock/types/confirmExpiredLockCommand.js";
 import { confirmExpiredLockResultSchema } from "../../commands/confirmExpiredLock/types/confirmExpiredLockResult.js";
+import { deleteBalanceCommandSchema } from "../../commands/deleteBalance/types/deleteBalanceCommand.js";
+import { deleteBalanceResultSchema } from "../../commands/deleteBalance/types/deleteBalanceResult.js";
 import { finalizeCommandSchema } from "../../commands/finalize/types/finalizeCommand.js";
 import { finalizeResultSchema } from "../../commands/finalize/types/finalizeResult.js";
 import { initializeCommandSchema } from "../../commands/initialize/types/initializeCommand.js";
 import { initializeResultSchema } from "../../commands/initialize/types/initializeResult.js";
+import { recalculateBalanceCommandSchema } from "../../commands/recalculateBalance/types/recalculateBalanceCommand.js";
+import { recalculateBalanceResultSchema } from "../../commands/recalculateBalance/types/recalculateBalanceResult.js";
 import { resetCommandSchema } from "../../commands/reset/types/resetCommand.js";
 import { resetResultSchema } from "../../commands/reset/types/resetResult.js";
 import { trackCommandSchema } from "../../commands/track/types/trackCommand.js";
 import { trackResultSchema } from "../../commands/track/types/trackResult.js";
+import { updateBalanceCommandSchema } from "../../commands/updateBalance/types/updateBalanceCommand.js";
+import { updateBalanceResultSchema } from "../../commands/updateBalance/types/updateBalanceResult.js";
 import { nonEmptyStringSchema } from "../common/primitives.js";
 import { meteringIdentitySchema } from "../identity/meteringIdentity.js";
 import { changesInsertCustomer, rowChangeSchema } from "./rowChange.js";
@@ -23,6 +29,9 @@ export const mutationCommandSchema = z.discriminatedUnion("type", [
 	confirmExpiredLockCommandSchema.loose(),
 	resetCommandSchema.loose(),
 	applyBillingPlanCommandSchema.loose(),
+	updateBalanceCommandSchema.loose(),
+	deleteBalanceCommandSchema.loose(),
+	recalculateBalanceCommandSchema.loose(),
 ]);
 
 export const mutationResultSchema = z.discriminatedUnion("type", [
@@ -32,6 +41,9 @@ export const mutationResultSchema = z.discriminatedUnion("type", [
 	confirmExpiredLockResultSchema,
 	resetResultSchema,
 	applyBillingPlanResultSchema,
+	updateBalanceResultSchema,
+	deleteBalanceResultSchema,
+	recalculateBalanceResultSchema,
 ]);
 
 export const mutationSubjectSchema = z

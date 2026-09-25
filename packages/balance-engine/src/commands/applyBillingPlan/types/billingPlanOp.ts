@@ -1,5 +1,8 @@
 import { z } from "zod/v4";
-import { nonEmptyStringSchema } from "../../../models/common/primitives.js";
+import {
+	finiteNumberSchema,
+	nonEmptyStringSchema,
+} from "../../../models/common/primitives.js";
 import {
 	customerEntitlementIncrementParts,
 	pooledBalanceIncrementParts,
@@ -189,6 +192,20 @@ const moveEntriesOpSchema = z
 	})
 	.strict();
 
+/** A purchase sized against the rows as the plan's other ops leave them: rows in overage paid down to 0, the rest credited. */
+const rebalanceOpSchema = z
+	.object({
+		op: z.literal("rebalance"),
+		table: z.literal("customerEntitlements"),
+		/** The purchased row; its owner is the subject whose rows are paid down. */
+		id: nonEmptyStringSchema,
+		featureId: nonEmptyStringSchema,
+		quantity: finiteNumberSchema,
+		/** The row credited with what is left; null credits the first row paid down. */
+		creditedId: nonEmptyStringSchema.nullable(),
+	})
+	.strict();
+
 /** One change a billing plan makes to the subject's rows. */
 export const billingPlanOpSchema = z.discriminatedUnion("op", [
 	insertOpSchema,
@@ -196,6 +213,7 @@ export const billingPlanOpSchema = z.discriminatedUnion("op", [
 	deleteOpSchema,
 	incrementOpSchema,
 	moveEntriesOpSchema,
+	rebalanceOpSchema,
 ]);
 
 export type BillingPlanOp = z.infer<typeof billingPlanOpSchema>;
@@ -204,3 +222,6 @@ export type BillingPlanUpdateOp = z.infer<typeof updateOpSchema>;
 export type BillingPlanDeleteOp = z.infer<typeof deleteOpSchema>;
 export type BillingPlanIncrementOp = z.infer<typeof incrementOpSchema>;
 export type BillingPlanMoveEntriesOp = z.infer<typeof moveEntriesOpSchema>;
+export type BillingPlanRebalanceOp = z.infer<typeof rebalanceOpSchema>;
+/** Every op but a rebalance: each converts on its own, against the rows as found. */
+export type BillingPlanRowOp = Exclude<BillingPlanOp, BillingPlanRebalanceOp>;

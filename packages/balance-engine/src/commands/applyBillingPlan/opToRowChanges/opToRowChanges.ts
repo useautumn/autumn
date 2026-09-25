@@ -1,7 +1,7 @@
 import type { RowChange } from "../../../models/mutation/rowChange.js";
 import type {
 	BillingPlanInsertOp,
-	BillingPlanOp,
+	BillingPlanRowOp,
 } from "../types/billingPlanOp.js";
 import { deleteOpToRowChanges } from "./deleteOpToRowChanges.js";
 import { incrementOpToRowChanges } from "./incrementOpToRowChanges.js";
@@ -30,7 +30,7 @@ export const opToRowChanges = ({
 	op,
 	context,
 }: {
-	op: BillingPlanOp;
+	op: BillingPlanRowOp;
 	context: PlanRowChangeContext;
 }): RowChange[] => {
 	if (op.table === "pooledContributions")

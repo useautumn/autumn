@@ -48,7 +48,7 @@ export const isOverdueBlocked = ({
 		request.org.config.block_overdue_entitlements) ||
 		isThresholdBillingCustomerProduct({ customerProduct }));
 
-/** Which rows fund the feature, in draw order, and their rollovers: the same selection and sort the Lua path uses. */
+/** Which rows the request draws from, in draw order, and their rollovers: the same selection and sort the Lua path uses. */
 export const selectDeductionRows = ({
 	fullSubject,
 	request,
@@ -72,7 +72,10 @@ export const selectDeductionRows = ({
 	const customerEntitlements = hoistUnlimited({
 		customerEntitlements: fullSubjectToCustomerEntitlements({
 			fullSubject: fundingSubject,
-			fundsFeatureId: request.featureId,
+			...(request.includesCreditSystems
+				? { fundsFeatureId: request.featureId }
+				: { featureIds: [request.featureId] }),
+			customerEntitlementFilters: request.customerEntitlementFilters,
 			inStatuses: orgToInStatuses({ org: request.org }),
 			reverseOrder: request.org.config.reverse_deduction_order,
 			now: request.now,

@@ -173,7 +173,7 @@ export const deductFromRows = ({
 
 		// A spend limit caps the overage bucket in place of the row's floor, as the Lua gate does.
 		const headroom =
-			bucket === "overage" && !refund
+			bucket === "overage" && !refund && context.enforcesSpendLimit
 				? deductionRowToSpendLimitHeadroom({ context, deductionState, row })
 				: null;
 		const amount = creditsFor({ context, row, units, deductionState });

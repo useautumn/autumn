@@ -56,6 +56,32 @@ export const commandToFingerprint = ({
 					),
 				),
 			);
+		// Every field is the request; a retry asking for a different balance is a conflict.
+		case "updateBalance":
+			return JSON.stringify([
+				...identityKey,
+				command.featureId,
+				canonicalizeJsonValue(command.customerEntitlementFilters ?? null),
+				command.remaining ?? null,
+				command.usage ?? null,
+				command.addToBalance ?? null,
+				command.includedGrant ?? null,
+				command.nextResetAt ?? null,
+				command.expiresAt ?? null,
+			]);
+		case "deleteBalance":
+			return JSON.stringify([
+				...identityKey,
+				command.featureId ?? null,
+				canonicalizeJsonValue(command.customerEntitlementFilters ?? null),
+				command.recalculate,
+			]);
+		case "recalculateBalance":
+			return JSON.stringify([
+				...identityKey,
+				command.featureId,
+				canonicalizeJsonValue(command.customerEntitlementFilters ?? null),
+			]);
 		// The baseline rows are the request; a retry with different rows is a conflict.
 		case "initialize":
 			return JSON.stringify(

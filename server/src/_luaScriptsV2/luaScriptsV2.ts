@@ -20,7 +20,6 @@ import updateCachedInvoiceV2Script from "./fullSubject/updateCachedInvoice.lua";
 import updateCustomerDataV2Script from "./fullSubject/updateCustomerDataV2.lua";
 import updateCustomerProductOptionsScript from "./fullSubject/updateCustomerProduct/updateCustomerProductOptions.lua";
 import updateCustomerProductV2MainScript from "./fullSubject/updateCustomerProduct/updateCustomerProductV2.lua";
-import updateEntityDataV2Script from "./fullSubject/updateEntityDataV2.lua";
 
 // ============================================================================
 // FULL SUBJECT DEDUCTION HELPERS (V2 cache — per-feature hash balances)
@@ -60,7 +59,6 @@ export const UPDATE_CUSTOMER_DATA_V2_SCRIPT = `${updateCustomerDataV2Script}`;
 export const GETDEL_SHARED_BALANCE_FIELDS_SCRIPT = `${getDelSharedBalanceFieldsScript}`;
 
 /** Atomically update top-level entity fields in the cached FullSubject. */
-export const UPDATE_ENTITY_DATA_V2_SCRIPT = `${updateEntityDataV2Script}`;
 
 /** Atomically upsert an invoice in the cached FullSubject invoices array. */
 export const UPDATE_CACHED_INVOICE_V2_SCRIPT = `${updateCachedInvoiceV2Script}`;

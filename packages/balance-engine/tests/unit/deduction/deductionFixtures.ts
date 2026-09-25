@@ -29,6 +29,10 @@ export const deductFrom = ({
 	usageWindows = [],
 	value,
 	overageBehavior = "cap",
+	includesCreditSystems = true,
+	enforcesSpendLimit = true,
+	customerEntitlementFilters,
+	countsUsageWindows = true,
 	orgConfig = org.config,
 	properties = null,
 }: {
@@ -46,6 +50,10 @@ export const deductFrom = ({
 	}[];
 	value: number;
 	overageBehavior?: "cap" | "reject" | "overflow";
+	includesCreditSystems?: boolean;
+	enforcesSpendLimit?: boolean;
+	customerEntitlementFilters?: DeductionRequest["customerEntitlementFilters"];
+	countsUsageWindows?: boolean;
 	orgConfig?: CommandOrg["config"];
 }) =>
 	deduct({
@@ -62,6 +70,10 @@ export const deductFrom = ({
 		request: createDeductionRequest({
 			org: { config: orgConfig },
 			overageBehavior,
+			includesCreditSystems,
+			enforcesSpendLimit,
+			customerEntitlementFilters,
+			countsUsageWindows,
 			properties,
 			value,
 		}),
@@ -72,6 +84,10 @@ export const createDeductionRequest = ({
 	internalFeatureId = `feat_${featureId}`,
 	value,
 	overageBehavior = "cap",
+	includesCreditSystems = true,
+	enforcesSpendLimit = true,
+	customerEntitlementFilters,
+	countsUsageWindows = true,
 	properties = null,
 	enforceOverdueBlock = false,
 	now = occurredAt,
@@ -82,6 +98,10 @@ export const createDeductionRequest = ({
 	internalFeatureId,
 	value,
 	overageBehavior,
+	includesCreditSystems,
+	enforcesSpendLimit,
+	customerEntitlementFilters,
+	countsUsageWindows,
 	properties,
 	enforceOverdueBlock,
 	now,

@@ -8,6 +8,8 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import { runBalanceWorkerTrack } from "./balanceWorker/runBalanceWorkerTrack.js";
 import { getTrackFeatureDeductionsForBody } from "./utils/getFeatureDeductions.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
 
@@ -34,13 +36,15 @@ export const runQueuedTrack = async ({
 				? getTrackBodyIdempotencyKey({ body })
 				: null,
 			routeGroup: RouteGroup.Balances,
+			// Claimed here, so the worker path must not claim it again.
 			run: () =>
-				runTrackV3({
-					ctx,
-					body,
-					featureDeductions,
-					apiVersion,
-				}),
+				isBalanceWorkerRolloutEnabled()
+					? runBalanceWorkerTrack({
+							ctx,
+							body,
+							validateTrackBodyIdempotencyKey: false,
+						})
+					: runTrackV3({ ctx, body, featureDeductions, apiVersion }),
 		});
 	} catch (error) {
 		if (

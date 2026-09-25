@@ -4,6 +4,11 @@ import {
 	type RecalculateBalancePreview,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import {
+	recalculateResultToPreview,
+	runBalanceWorkerRecalculateBalance,
+} from "./balanceWorker/runBalanceWorkerRecalculateBalance.js";
 import { computeRecalculateBalance } from "./computeRecalculateBalance";
 
 /**
@@ -17,6 +22,14 @@ export const recalculateBalancePreview = async ({
 	ctx: AutumnContext;
 	params: RecalculateBalanceParamsV0;
 }): Promise<RecalculateBalancePreview> => {
+	if (isBalanceWorkerRolloutEnabled())
+		return recalculateResultToPreview({
+			result: await runBalanceWorkerRecalculateBalance({
+				ctx,
+				params,
+				preview: true,
+			}),
+		});
 	const { before, after, entityId, totalUsage } =
 		await computeRecalculateBalance({ ctx, params });
 	const afterById = new Map(after.map((cusEnt) => [cusEnt.id, cusEnt]));
