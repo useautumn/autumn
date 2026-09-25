@@ -1,38 +1,25 @@
-# Autumn on a Tesser box: `tesser dev autumn`.
+# `tesser dev autumn`: scripts/dev.ts on one box, on top of the local Postgres,
+# Redis, ClickHouse and ElasticMQ from scripts/setup/agent-services.sh. Open the
+# http://<box_id>.localhost:3000 URL it prints.
 #
-# One box runs the whole stack (dashboard on vite :3000, API server :8080,
-# workers, checkout :3001, leaf, Trigger.dev dev, `stripe listen`) on
-# top of local Postgres 18, Redis Stack, ClickHouse, ElasticMQ and DynamoDB
-# Local, started by scripts/setup/agent-services.sh (the Claude cloud infra path).
-#
-# Open the http://<box_id>.localhost:3000 URL that `tesser dev` prints. The
-# dashboard calls the API through vite (/__autumn_api), never by host.
-#
-# Where commands run:
-#   typecheck  the worktree's workbench, never this box: tsgo needs ~6 GB and
-#              gets OOM-killed next to the stack.
-#                tesser exec -- bun install    (once per workbench)
-#                tesser exec -- bun ts
-#   tests      this box, since they need its Postgres and Redis:
-#                tesser exec <box_id> -- bash scripts/setup/claude-cloud/with-env.sh server -- bun test <file>
-#
-# Secrets, two modes (see scripts/tesser/dev.sh):
-#   with Infisical    team secrets from Infisical dev, unit-test-org seeded,
-#                     Stripe sandbox webhooks forwarded. Once per Tesser org,
-#                     with the machine identity Claude cloud sessions use
-#                     (each command reads its value from stdin):
+# Team secrets come from Infisical dev once the machine identity Claude cloud
+# sessions use is set (each command reads its value from stdin):
 #   tesser env set autumn CODING_AGENT_CLIENT_ID
 #   tesser env set autumn CODING_AGENT_CLIENT_SECRET
-#   without Infisical box-local random auth/encryption secrets and a fresh
-#                     local DB; the sign-in OTP shows up in `tesser logs`.
+# Without it the box starts on an empty database with Stripe, Trigger.dev and
+# email off, and the sign-in code prints in `tesser logs`.
+#
+# Typecheck on the workbench (`tesser exec -- bun ts`): tsgo needs ~6 GB and is
+# OOM-killed next to the stack. Tests need this box's Postgres:
+#   tesser exec <box_id> -- bash scripts/setup/claude-cloud/with-env.sh server -- bun test <file>
 
-ports = [3000, 8080, 3001]  # vite, server, checkout; 3000 is primary. leaf (:3099) only talks to Slack
-size = "large"                     # bun install, Postgres, ClickHouse, a JVM and six bun/vite processes
+ports = [3000, 8080, 3001] # dashboard, API, checkout
+size = "large"
 
 [run]
-setup = "bash scripts/tesser/setup.sh" # bun, system services, Stripe + Infisical CLIs, bun install (idempotent)
-dev = "bash scripts/tesser/dev.sh"     # local infra + migrations, then scripts/dev.ts
+setup = "bash scripts/tesser/setup.sh"
+dev = "bash scripts/tesser/dev.sh"
 
 [health]
 path = "/"
-timeout = "20m"                    # covers setup + dev on a new box: apt installs, bun install, migrations, vite
+timeout = "20m"

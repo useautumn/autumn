@@ -17,15 +17,8 @@ const vitePort = process.env.VITE_PORT
 	: 3000;
 const frontendUrl = process.env.VITE_FRONTEND_URL || "";
 const isCapyDev = process.env.CAPY_DEV === "1";
-// Serve the API through vite's dev proxy so the browser stays on one origin.
-// Capy sandboxes need it for their single public host; Tesser boxes need it
-// because the page is served on both <box_id>.localhost and bare localhost,
-// and cookies don't cross between the two (see scripts/tesser/dev.sh).
-const isSameOriginApi = isCapyDev || process.env.SAME_ORIGIN_API === "1";
-if (isSameOriginApi) {
-	process.env.VITE_BACKEND_URL = "/__autumn_api";
-}
 if (isCapyDev) {
+	process.env.VITE_BACKEND_URL = "/__autumn_api";
 	process.env.VITE_CAPY_DEV = "1";
 }
 
@@ -166,7 +159,7 @@ export default defineConfig({
 			".ngrok.app",
 			".ngrok-free.app",
 		],
-		proxy: isSameOriginApi
+		proxy: isCapyDev
 			? {
 					"/__autumn_api": {
 						target: "http://127.0.0.1:8080",
@@ -177,25 +170,21 @@ export default defineConfig({
 						target: "http://127.0.0.1:8080",
 						changeOrigin: false,
 					},
-					// Google OAuth emulator: Capy sandboxes only.
-					...(isCapyDev && {
-						"/o/oauth2": {
-							target: "http://127.0.0.1:4000",
-							changeOrigin: false,
-							configure: (proxy) => {
-								proxy.on("proxyRes", (response) => {
-									const location = response.headers.location;
-									if (!location) return;
-									response.headers.location =
-										relativeRedirectLocation(location);
-								});
-							},
+					"/o/oauth2": {
+						target: "http://127.0.0.1:4000",
+						changeOrigin: false,
+						configure: (proxy) => {
+							proxy.on("proxyRes", (response) => {
+								const location = response.headers.location;
+								if (!location) return;
+								response.headers.location = relativeRedirectLocation(location);
+							});
 						},
-						"/_emulate": {
-							target: "http://127.0.0.1:4000",
-							changeOrigin: false,
-						},
-					}),
+					},
+					"/_emulate": {
+						target: "http://127.0.0.1:4000",
+						changeOrigin: false,
+					},
 				}
 			: undefined,
 		watch: {
