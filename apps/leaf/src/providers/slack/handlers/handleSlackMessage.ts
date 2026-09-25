@@ -1,7 +1,14 @@
-import type { Message, Thread } from "chat";
+import { Chat, type Message, type StateAdapter, type Thread } from "chat";
+import type { AgentMissedMessages } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
 import { dispatchSlackAgentMessage } from "../actions/dispatchSlackAgentMessage.js";
-import { getRecentMessages } from "../threadContext.js";
+import { shouldSkipUntaggedReply } from "../routing/replyMode.js";
+import {
+	getEarlierThreadMessages,
+	getRecentMessages,
+	loadMissedMessages,
+	recordSkippedMessage,
+} from "../threadContext.js";
 
 const logUnsubscribeFailure = (error: unknown) => {
 	rootLogger.error("Could not close Slack thread subscription", error, {
@@ -26,17 +33,56 @@ const unsubscribe = (thread: Thread) =>
 type HandlerDependencies = Readonly<{
 	dispatch: typeof dispatchSlackAgentMessage;
 	getRecentMessages: typeof getRecentMessages;
+	getState: () => StateAdapter;
+	shouldSkipReply: typeof shouldSkipUntaggedReply;
 }>;
+
+/** Loads the thread once per message: missed-message lookups read the
+ * history `getRecentMessages` refreshed, so they wait on the same load. */
+const threadHistoryLoader = ({
+	getMessages,
+	message,
+	thread,
+}: {
+	getMessages: typeof getRecentMessages;
+	message: Message;
+	thread: Thread;
+}) => {
+	let recent: ReturnType<typeof getRecentMessages> | undefined;
+	const recentMessages = () => {
+		recent ??= getMessages(thread, message);
+		return recent;
+	};
+	const afterRefresh =
+		(
+			load: (
+				thread: Thread,
+				message: Message,
+			) =>
+				| AgentMissedMessages
+				| undefined
+				| Promise<AgentMissedMessages | undefined>,
+		) =>
+		async () => {
+			await recentMessages();
+			return await load(thread, message);
+		};
+	return { afterRefresh, recentMessages };
+};
 
 const dispatchMessage = async ({
 	message,
 	dispatch,
+	missedMessages,
+	onMissedMessagesDelivered,
 	recentMessages,
 	showRunPlan,
 	thread,
 }: {
 	message: Message;
 	dispatch: typeof dispatchSlackAgentMessage;
+	missedMessages?: () => Promise<AgentMissedMessages | undefined>;
+	onMissedMessagesDelivered?: () => Promise<void>;
 	recentMessages:
 		| Awaited<ReturnType<typeof getRecentMessages>>
 		| (() => ReturnType<typeof getRecentMessages>);
@@ -54,6 +100,8 @@ const dispatchMessage = async ({
 				message.author.userId,
 		},
 		channelId: thread.channelId,
+		missedMessages,
+		onMissedMessagesDelivered,
 		providerUserId: message.author.userId,
 		raw: message.raw,
 		react: async ({ action, emoji }) => {
@@ -76,6 +124,8 @@ const dispatchMessage = async ({
 export const createSlackMessageHandlers = ({
 	dispatch = dispatchSlackAgentMessage,
 	getRecentMessages: getMessages = getRecentMessages,
+	getState = () => Chat.getSingleton().getState(),
+	shouldSkipReply = shouldSkipUntaggedReply,
 }: Partial<HandlerDependencies> = {}) => {
 	const handleSlackMessage = async (thread: Thread, message: Message) => {
 		if (shouldSkipMessage(message)) return;
@@ -90,26 +140,48 @@ export const createSlackMessageHandlers = ({
 
 	const handleSlackThreadStart = async (thread: Thread, message: Message) => {
 		if (shouldSkipMessage(message)) return;
+		const history = threadHistoryLoader({ getMessages, message, thread });
 		await dispatchMessage({
 			dispatch,
 			message,
-			recentMessages: () => getMessages(thread, message),
+			missedMessages: history.afterRefresh(getEarlierThreadMessages),
+			recentMessages: history.recentMessages,
 			showRunPlan: true,
 			thread,
 		});
 	};
 
-	// Every reply in a subscribed thread is answered; "stop" and "stop replying"
-	// are the only way out, handled as control commands inside dispatch.
+	// Every reply in a subscribed thread is answered unless the workspace is in
+	// mentions-only mode, where untagged replies are recorded and replayed to
+	// the next turn that tags the agent. "stop" and "stop replying" always get
+	// through, handled as control commands inside dispatch.
 	const handleSubscribedSlackMessage = async (
 		thread: Thread,
 		message: Message,
 	) => {
 		if (shouldSkipMessage(message)) return;
+		if (await shouldSkipReply({ message, thread })) {
+			rootLogger.info("Skipping untagged Slack reply", {
+				event: "leaf.slack_message_skipped",
+				data: { reason: "not_mentioned" },
+			});
+			await recordSkippedMessage(thread, message, getState());
+			return;
+		}
+		const history = threadHistoryLoader({ getMessages, message, thread });
+		let markDelivered: (() => Promise<void>) | undefined;
 		await dispatchMessage({
 			dispatch,
 			message,
-			recentMessages: () => getMessages(thread, message),
+			missedMessages: history.afterRefresh(async () => {
+				const loaded = await loadMissedMessages(thread, message, getState());
+				markDelivered = loaded?.markDelivered;
+				return loaded?.missed;
+			}),
+			onMissedMessagesDelivered: async () => {
+				await markDelivered?.();
+			},
+			recentMessages: history.recentMessages,
 			showRunPlan: false,
 			thread,
 		});

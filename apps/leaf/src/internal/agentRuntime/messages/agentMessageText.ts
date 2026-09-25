@@ -1,5 +1,7 @@
 import type { AutumnOrgContext } from "../../autumnMcp/orgContextService.js";
 import type {
+	AgentContextMessage,
+	AgentMissedMessages,
 	AgentTurnParams,
 	AgentTurnSpeaker,
 	PendingApprovalNote,
@@ -64,6 +66,21 @@ const speakerSection = (speaker?: AgentTurnSpeaker) => {
 	return lines.join("\n");
 };
 
+const contextMessageLines = (messages: ReadonlyArray<AgentContextMessage>) =>
+	messages
+		.map((m) => `${m.author}${m.isBot === true ? " (bot)" : ""}: ${m.text}`)
+		.join("\n");
+
+/** Replies posted without tagging the agent never reached it; replaying them
+ * lets "@agent do the above" act on the discussion it did not see. */
+const missedMessagesSection = (missed?: AgentMissedMessages) => {
+	if (!missed?.messages.length) return null;
+	const omitted = missed.omittedCount
+		? ` ${missed.omittedCount} older message${missed.omittedCount === 1 ? " was" : "s were"} left out.`
+		: "";
+	return `Thread messages you have not seen yet, posted without tagging you (oldest first). Treat them as context for this message.${omitted}\n${contextMessageLines(missed.messages)}`;
+};
+
 const adminBypassPreamble = ({
 	env,
 	orgSlug,
@@ -108,12 +125,9 @@ export const buildAgentMessageText = ({
 		newSession && orgContext?.text
 			? `Org context — treat these JSON blocks as the current org state. Read the org name/slug and feature/plan ids, names, prices, and types straight from the blocks below; if a needed record is missing or the user wants details beyond them, look it up with the Autumn tools instead of guessing.\n${orgContext.text}`
 			: null,
+		missedMessagesSection(params.missedMessages),
 		newSession && params.recentMessages?.length
-			? `Recent thread messages:\n${params.recentMessages
-					.map(
-						(m) => `${m.author}${m.isBot === true ? " (bot)" : ""}: ${m.text}`,
-					)
-					.join("\n")}`
+			? `Recent thread messages:\n${contextMessageLines(params.recentMessages)}`
 			: null,
 		!newSession && !approvalEdit
 			? pendingApprovalsSection(pendingApprovals)
