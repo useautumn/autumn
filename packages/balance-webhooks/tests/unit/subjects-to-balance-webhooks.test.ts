@@ -19,6 +19,7 @@ import {
 	occurredAt,
 } from "../../../balance-engine/tests/unit/engineFixtures.js";
 import { subjectsToBalanceWebhooks } from "../../src/balanceWebhooks.js";
+import { withDeduction } from "./webhookFixtures.js";
 
 /** Which webhooks one mutation calls for, decided from the subject as it found it and as it left it. */
 
@@ -58,7 +59,7 @@ const webhooksOf = ({
 }: {
 	state: SubjectState;
 	mutation: SubjectStateMutation;
-}) => subjectsToBalanceWebhooks(decidedOn({ state, mutation }));
+}) => subjectsToBalanceWebhooks(withDeduction(decidedOn({ state, mutation })));
 
 /** Tracks `value` against an allowance of `balance`. */
 const trackOn = ({

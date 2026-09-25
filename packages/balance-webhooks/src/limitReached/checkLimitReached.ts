@@ -1,7 +1,8 @@
 import {
 	type BalanceWebhookEffect,
 	type CheckCommand,
-	computeCheck,
+	checkRefusedByDeduction,
+	type DeductionOutcome,
 	type WorkerFullSubject,
 } from "@autumn/balance-engine";
 import {
@@ -11,24 +12,27 @@ import {
 } from "@autumn/shared";
 import { findBlockingUsageLimit } from "./findBlockingUsageLimit.js";
 
-/** Fires when the feature went from allowed to refused: what prod's checkLimitReached sends, decided from the log alone. */
+/** Fires when the deduction took the feature from allowed to refused: what prod's checkLimitReached sends, decided from the log alone. */
 export const checkLimitReached = ({
 	command,
 	before,
 	after,
+	deduction,
 }: {
 	command: CheckCommand;
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
+	deduction: DeductionOutcome;
 }): BalanceWebhookEffect[] => {
-	// After first: almost every track leaves the feature allowed, so one deduction answers it.
-	const now = computeCheck({ fullSubject: after, command });
-	if (now.allowed) return [];
-	const wasAllowed = computeCheck({ fullSubject: before, command }).allowed;
-	if (!wasAllowed) return [];
+	const refused = checkRefusedByDeduction({
+		fullSubject: before,
+		command,
+		deduction,
+	});
+	if (!refused) return [];
 
 	const { customerId, entityId } = command.identity;
-	const limitType = now.limitType ?? "included";
+	const limitType = refused.limitType ?? "included";
 
 	// A windowed cap is named in full, its live window and filter with it, so the receiver knows which one closed.
 	const blockingUsageLimit =

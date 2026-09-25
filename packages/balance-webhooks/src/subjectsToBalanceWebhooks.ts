@@ -1,5 +1,6 @@
 import type {
 	BalanceWebhookEffect,
+	DeductionOutcome,
 	SubjectStateMutation,
 	WorkerFullSubject,
 } from "@autumn/balance-engine";
@@ -20,10 +21,13 @@ export const subjectsToBalanceWebhooks = ({
 	mutation,
 	before,
 	after,
+	deduction,
 }: {
 	mutation: SubjectStateMutation;
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
+	/** The deduction the mutation was made from. */
+	deduction: DeductionOutcome;
 }): BalanceWebhookEffect[] => {
 	// Only a mutation that moved a tracked feature can call for one; others are never crossed.
 	const tracked = mutationToTrackedFeature({ mutation });
@@ -36,7 +40,7 @@ export const subjectsToBalanceWebhooks = ({
 	}).flatMap((feature) => mutationToCheckCommand({ mutation, feature }) ?? []);
 
 	return commands.flatMap((command) => [
-		...checkLimitReached({ command, before, after }),
+		...checkLimitReached({ command, before, after, deduction }),
 		...checkUsageAlerts({ command, before, after }),
 	]);
 };

@@ -25,6 +25,7 @@ import {
 	occurredAt,
 } from "../../../balance-engine/tests/unit/engineFixtures.js";
 import { subjectsToBalanceWebhooks } from "../../src/balanceWebhooks.js";
+import { withDeduction } from "./webhookFixtures.js";
 
 /**
  * The usage-alert matrix: which alerts a track considers (customer, plan, entity, org) for a customer
@@ -176,7 +177,7 @@ const trackOn = ({
 };
 
 const usageAlertsOf = (decided: DecidedOn) =>
-	subjectsToBalanceWebhooks(decided).filter(
+	subjectsToBalanceWebhooks(withDeduction(decided)).filter(
 		({ eventType }) => eventType === "balances.usage_alert_triggered",
 	);
 
