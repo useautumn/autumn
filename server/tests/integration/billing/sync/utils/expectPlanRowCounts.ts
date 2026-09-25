@@ -5,18 +5,24 @@ import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { CusService } from "@/internal/customers/CusService";
 
-/** Re-reads the customer until the plan has exactly the given number of rows per status, each at quantity 1. */
+/**
+ * Re-reads the customer until the plan has exactly `expected` rows per status
+ * and at least `atLeast` rows per status, each at quantity 1.
+ */
 export const expectPlanRowCounts = async ({
 	ctx,
 	customerId,
 	productId,
 	expected,
+	atLeast = {},
 	settleTimeoutMs = WEBHOOK_SETTLE_TIMEOUT_MS,
 }: {
 	ctx: TestContext;
 	customerId: string;
 	productId: string;
 	expected: Partial<Record<CusProductStatus, number>>;
+	/** Lower bounds, for rows whose exact count depends on import races. */
+	atLeast?: Partial<Record<CusProductStatus, number>>;
 	settleTimeoutMs?: number;
 }) =>
 	pollUntilAsserted({
@@ -40,6 +46,13 @@ export const expectPlanRowCounts = async ({
 			for (const [status, count] of Object.entries(expected)) {
 				const inStatus = rows.filter((row) => row.status === status);
 				expect(inStatus, `${productId} ${status} rows`).toHaveLength(count);
+			}
+			for (const [status, minimum] of Object.entries(atLeast)) {
+				const inStatus = rows.filter((row) => row.status === status);
+				expect(
+					inStatus.length,
+					`${productId} ${status} rows (at least)`,
+				).toBeGreaterThanOrEqual(minimum);
 			}
 			for (const row of rows) {
 				expect(row.quantity ?? 1, `${productId} row quantity`).toBe(1);
