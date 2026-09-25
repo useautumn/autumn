@@ -170,13 +170,18 @@ async function reroutesOnce(): Promise<void> {
 		url: "http://worker-b:8080/v1/track",
 		body: { route: { partition: 0, routeEpoch: "2" }, command },
 	});
-	const stillStale = createFixture({ responses: [stale, stale] });
+	// A partition mid-handoff can answer NOT_OWNER more than once; the client keeps refreshing within its budget.
+	const settles = createFixture({ responses: [stale, stale, success] });
+	expect(await settles.client.track({ command })).toEqual(trackReply);
+	expect(settles.stats().requests).toHaveLength(3);
+	expect(settles.stats().refreshes).toBe(2);
+	const stillStale = createFixture({ responses: [stale, stale, stale, stale] });
 	await expect(stillStale.client.track({ command })).rejects.toMatchObject({
 		code: "ROUTE_STILL_STALE",
 		outcome: "not_submitted",
 	});
-	expect(stillStale.stats().requests).toHaveLength(2);
-	expect(stillStale.stats().refreshes).toBe(1);
+	expect(stillStale.stats().requests).toHaveLength(4);
+	expect(stillStale.stats().refreshes).toBe(3);
 }
 
 async function refreshesMissingOwner(): Promise<void> {
@@ -190,12 +195,16 @@ async function refreshesMissingOwner(): Promise<void> {
 		outcome: "not_submitted",
 	});
 	expect(missing.stats().requests).toHaveLength(0);
-	const staleAfterMiss = createFixture({ owner: null, responses: [stale] });
+	const staleAfterMiss = createFixture({
+		owner: null,
+		responses: [stale, stale, stale],
+	});
 	await expect(staleAfterMiss.client.track({ command })).rejects.toMatchObject({
 		code: "ROUTE_STILL_STALE",
 	});
-	expect(staleAfterMiss.stats().refreshes).toBe(1);
-	expect(staleAfterMiss.stats().requests).toHaveLength(1);
+	// The first refresh found the owner and used up the first attempt; the stale answers spent the other three.
+	expect(staleAfterMiss.stats().refreshes).toBe(3);
+	expect(staleAfterMiss.stats().requests).toHaveLength(3);
 }
 
 async function preservesCommandAcrossRetry(): Promise<void> {
