@@ -22,6 +22,14 @@ export type MeteringAppend = {
 	offsets?: KafkaOffsetCommit;
 };
 
+export type MeteringFence = {
+	topic: string;
+	partition: number;
+	ownerEpoch: string;
+};
+
 export type MeteringPublisher = {
 	append(params: MeteringAppend): Promise<{ baseOffset: bigint }>;
+	/** Writes the owner's fence marker; null when the broker fences instead (a transactional producer). */
+	fence(params: MeteringFence): Promise<{ offset: bigint } | null>;
 };

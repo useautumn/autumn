@@ -8,6 +8,7 @@ import type {
 	TopicResumePosition,
 } from "../../../consumer/types/consumer.js";
 import { parseMeteringRecord } from "../meteringTopic.js";
+import { readOwnerHeaders } from "../ownerHeaders.js";
 import type {
 	MeteringConsumerDependencies,
 	MeteringRecordHandler,
@@ -50,11 +51,27 @@ export function createMeteringConsumer({
 			// A record this process wrote is already projected and queued for the store; decoding it again is the cost being avoided.
 			if (ctx.handler.shouldApply && !ctx.handler.shouldApply(position))
 				return undefined;
+			const owner = readOwnerHeaders({ headers: message.headers });
+			if (owner.fence) {
+				if (owner.ownerEpoch === undefined || !ctx.handler.applyFence)
+					return undefined;
+				const fenced = ctx.handler.applyFence({
+					position,
+					ownerEpoch: owner.ownerEpoch,
+				});
+				return fenced instanceof Promise
+					? settleRecordApplication({ ctx, input, application: fenced })
+					: fenced;
+			}
 			const record = parseMeteringRecord({
 				key: message.key,
 				value: message.value,
 			});
-			const application = ctx.handler.applyRecord({ position, record });
+			const application = ctx.handler.applyRecord({
+				position,
+				record,
+				ownerEpoch: owner.ownerEpoch,
+			});
 			return application instanceof Promise
 				? settleRecordApplication({ ctx, input, application })
 				: application;

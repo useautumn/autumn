@@ -18,11 +18,15 @@ const nextOffsetSchema = z
 const progressRowSchema = z.object({
 	next_offset: nextOffsetSchema,
 	command_next_offset: nextOffsetSchema.nullable(),
+	owner_epoch: nextOffsetSchema.nullable().optional(),
+	owner_fence_offset: nextOffsetSchema.nullable().optional(),
 });
 
 export type PartitionProgressRow = {
 	nextOffset: bigint;
 	commandNextOffset: bigint | null;
+	/** The latest ownership fence in the partition's log, or null before any owner wrote one. */
+	ownerFence: { epoch: bigint; offset: bigint } | null;
 };
 
 export const readPartitionProgress = async ({
@@ -33,7 +37,7 @@ export const readPartitionProgress = async ({
 	ctx: ProgressContext;
 } & PartitionPosition): Promise<PartitionProgressRow | null> => {
 	const rows = await ctx.db.execute(sql`
-		SELECT next_offset, command_next_offset
+		SELECT next_offset, command_next_offset, owner_epoch, owner_fence_offset
 		FROM partition_progress
 		WHERE topic = ${topic} AND partition_id = ${partition}
 	`);
@@ -46,9 +50,17 @@ export const readPartitionProgress = async ({
 			issues: parsed.error.issues,
 		});
 	}
+	const { owner_epoch, owner_fence_offset } = parsed.data;
 	return {
 		nextOffset: parsed.data.next_offset,
 		commandNextOffset: parsed.data.command_next_offset,
+		ownerFence:
+			owner_epoch === null ||
+			owner_epoch === undefined ||
+			owner_fence_offset === null ||
+			owner_fence_offset === undefined
+				? null
+				: { epoch: owner_epoch, offset: owner_fence_offset },
 	};
 };
 

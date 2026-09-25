@@ -4,6 +4,7 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import {
 	insertPartitionProgress,
 	readNextOffset,
+	readPartitionProgress,
 } from "../../../src/meteringLog/repos/partitionProgress.js";
 
 const dialect = new PgDialect();
@@ -33,6 +34,40 @@ describe("partitionProgress repo", () => {
 			await readNextOffset({ ctx: { db }, topic: "metering", partition: 7 }),
 		).toBeNull();
 		expect(statements[0]?.params).toEqual(["metering", 7]);
+	});
+
+	test("readPartitionProgress returns the owner fence as one pair, or null before any", async () => {
+		const fenced = capturingDb({
+			rows: [
+				{
+					next_offset: "43",
+					command_next_offset: null,
+					owner_epoch: "512",
+					owner_fence_offset: 40,
+				},
+			],
+		});
+		expect(
+			await readPartitionProgress({
+				ctx: { db: fenced.db },
+				topic: "metering",
+				partition: 7,
+			}),
+		).toEqual({
+			nextOffset: 43n,
+			commandNextOffset: null,
+			ownerFence: { epoch: 512n, offset: 40n },
+		});
+		const unfenced = capturingDb({
+			rows: [{ next_offset: "43", command_next_offset: "2" }],
+		});
+		expect(
+			await readPartitionProgress({
+				ctx: { db: unfenced.db },
+				topic: "metering",
+				partition: 7,
+			}),
+		).toEqual({ nextOffset: 43n, commandNextOffset: 2n, ownerFence: null });
 	});
 
 	test("readNextOffset refuses a value that is not an offset", async () => {

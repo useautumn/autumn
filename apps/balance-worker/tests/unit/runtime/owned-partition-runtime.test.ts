@@ -399,6 +399,113 @@ const createRuntime = ({
 };
 
 describe("owned partition runtime", () => {
+	function createBareFencedRuntime({
+		fenceOwnership,
+	}: {
+		fenceOwnership: () => Promise<{ offset: bigint } | null>;
+	}) {
+		const fixture = createStoreFixture();
+		const events: string[] = [];
+		const fakeFollower = createFollower({ lifecycle: events });
+		const follower: PartitionOutcomeFollowerPort = {
+			...fakeFollower.follower,
+			awaitNextOffset: async ({ nextOffset }) => {
+				events.push(`follower:await:${nextOffset}`);
+			},
+		};
+		const runtime = createPartitionRuntime({
+			ctx: {
+				stateStore: fixture.store,
+				db: createSyntheticWorkerDb(),
+				catalogCache: createTestCatalogCache(),
+				producer: {
+					connect: async () => {
+						events.push("producer:connect");
+					},
+					fence: async () => {
+						events.push("producer:fence");
+					},
+					fenceOwnership: async () => {
+						events.push("producer:fence-marker");
+						return fenceOwnership();
+					},
+					disconnect: async () => {
+						events.push("producer:disconnect");
+					},
+				},
+				appender: { appendCommitted: async () => ({ baseOffset: 0n }) },
+				follower,
+				bootstrapper: {
+					bootstrap: async () => ({ kind: "continued", nextOffset: 0n }),
+				},
+				partitionResolver: { partitionForIdentity: () => partition },
+				receiptPolicy: { retentionMs: 1_000, now: () => 0 },
+				recentCommands: createRecentCommands({
+					windowMs: 600_000,
+					now: () => 0,
+				}),
+			},
+			config: {
+				topic,
+				partition,
+				writerLimits,
+				recoveryDrainTimeoutMs: 10,
+			},
+		});
+		return { runtime, events, fixture };
+	}
+
+	test("fence after the claim writes the marker and reads up to it before anything is admitted", async () => {
+		const f = createBareFencedRuntime({
+			fenceOwnership: async () => ({ offset: 41n }),
+		});
+		try {
+			await f.runtime.start();
+			expect(f.runtime.getStatus()).toBe("ready");
+			f.events.length = 0;
+			await f.runtime.fence();
+			expect(f.events).toEqual(["producer:fence-marker", "follower:await:42"]);
+			expect(f.runtime.getStatus()).toBe("ready");
+		} finally {
+			await f.runtime.stop().catch(() => undefined);
+			closeStoreFixture(f.fixture);
+		}
+	});
+
+	test("a producer with no marker to write makes the fence a no-op, and it is refused before the runtime is ready", async () => {
+		const f = createBareFencedRuntime({ fenceOwnership: async () => null });
+		try {
+			await expect(f.runtime.fence()).rejects.toBeInstanceOf(
+				OwnedPartitionNotReadyError,
+			);
+			await f.runtime.start();
+			f.events.length = 0;
+			await f.runtime.fence();
+			expect(f.events).toEqual(["producer:fence-marker"]);
+		} finally {
+			await f.runtime.stop().catch(() => undefined);
+			closeStoreFixture(f.fixture);
+		}
+	});
+
+	test("a marker that cannot be written sends the runtime into recovery instead of serving unfenced", async () => {
+		const f = createBareFencedRuntime({
+			fenceOwnership: async () => {
+				throw new Error("broker unreachable");
+			},
+		});
+		try {
+			await f.runtime.start();
+			await expect(f.runtime.fence()).rejects.toBeInstanceOf(
+				OwnedPartitionRecoveryRequiredError,
+			);
+			expect(f.runtime.getStatus()).toBe("recovery_required");
+		} finally {
+			await f.runtime.stop().catch(() => undefined);
+			closeStoreFixture(f.fixture);
+		}
+	});
+
 	test("fences the previous owner and catches up before serving", async () => {
 		const fixture = createStoreFixture();
 		const catchUp = createDeferred<void>();

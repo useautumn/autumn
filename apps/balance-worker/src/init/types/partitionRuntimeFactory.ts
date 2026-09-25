@@ -10,6 +10,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type { OwnershipHandoffLink } from "../../kafka/createOwnershipHandoffLink.js";
+import type { OwnerEpochCell } from "../../kafka/ownerEpochCell.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
 import type { PartitionLoad } from "../../processor/writer/partitionLoad/createPartitionLoad.js";
 import type { ProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
@@ -42,6 +43,8 @@ export type PartitionRuntimeFactoryInput = {
 	recentCommands: RecentCommands;
 	/** Offsets this runtime's writer produced; its consumer passes them unread. */
 	producedOffsets?: ProducedOffsets;
+	/** Where the claim's epoch is published; the follower reads it to recognise a fence from above. */
+	ownerEpoch?: OwnerEpochCell;
 };
 
 export type ConstructedPartitionRuntime = {

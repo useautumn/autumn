@@ -24,6 +24,7 @@ export function createMeteringConsumer({
 	const replayFloorByPartition = new Map<number, bigint>();
 	const replayByPartition = new Map<number, PartitionReplay>();
 	const readOnlyPartitions = new Set<number>();
+	const ownerEpochByPartition = new Map<number, () => string | undefined>();
 	const handler = createMeteringRecordHandler({
 		ctx: {
 			...ctx,
@@ -32,6 +33,7 @@ export function createMeteringConsumer({
 			replayFloorByPartition,
 			replayByPartition,
 			readOnlyPartitions,
+			ownerEpochByPartition,
 		},
 	});
 	const consumer = createKafkaMeteringConsumer({
@@ -52,8 +54,11 @@ export function createMeteringConsumer({
 		recentCommands,
 		producedOffsets,
 		readOnly = false,
+		ownerEpoch,
 	}: Parameters<MeteringConsumer["createReplay"]>[0]): PartitionReplay {
 		recentCommandsByPartition.set(partition, recentCommands);
+		if (ownerEpoch && !readOnly)
+			ownerEpochByPartition.set(partition, ownerEpoch);
 		if (producedOffsets)
 			producedOffsetsByPartition.set(partition, producedOffsets);
 		else producedOffsetsByPartition.delete(partition);
@@ -82,6 +87,11 @@ export function createMeteringConsumer({
 				await replay.stop();
 			} finally {
 				if (readOnly) readOnlyPartitions.delete(partition);
+				else if (
+					ownerEpoch &&
+					ownerEpochByPartition.get(partition) === ownerEpoch
+				)
+					ownerEpochByPartition.delete(partition);
 			}
 		}
 		return { ...replay, startAndCatchUp, stop };

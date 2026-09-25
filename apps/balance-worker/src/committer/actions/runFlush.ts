@@ -236,13 +236,19 @@ const commandNextOffsetOf = ({
 
 const bookmarkOf = ({ call }: { call: FlushCall }): FlushBookmark | null => {
 	const last = call.records.at(-1);
-	if (!last && call.commandNextOffset === undefined) return null;
+	if (
+		!last &&
+		call.commandNextOffset === undefined &&
+		call.ownerFence === undefined
+	)
+		return null;
 	return {
 		topic: call.topic,
 		partition: call.partition,
 		expectedOffset: call.expectedOffset,
 		nextOffset: last ? last.position.offset + 1n : call.expectedOffset,
 		commandNextOffset: commandNextOffsetOf({ call }),
+		ownerFence: call.ownerFence,
 	};
 };
 
@@ -261,6 +267,7 @@ export const runFlush = async ({
 		outcomes.set(call, {
 			nextOffset: bookmark?.nextOffset ?? call.expectedOffset,
 			commandNextOffset: bookmark?.commandNextOffset,
+			ownerFence: bookmark?.ownerFence,
 		});
 		if (bookmark) bookmarks.push(bookmark);
 	}

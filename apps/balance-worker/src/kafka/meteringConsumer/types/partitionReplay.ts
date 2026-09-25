@@ -25,6 +25,13 @@ export type PartitionReplay = {
 		fromBookmark?: boolean;
 	}): Promise<void>;
 	readProgress(position: PartitionPosition): PartitionProgress;
+	/** Resolves once the replay has applied everything below `nextOffset`; rejects with the signal's reason. */
+	awaitNextOffset(params: {
+		topic: string;
+		partition: number;
+		nextOffset: bigint;
+		signal?: AbortSignal;
+	}): Promise<void>;
 	stop(): Promise<void>;
 	markUnavailable(failure: { cause: unknown }): void;
 };

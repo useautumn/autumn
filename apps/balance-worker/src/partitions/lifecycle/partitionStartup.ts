@@ -158,6 +158,9 @@ export async function startPartition({
 				throw cause;
 			}
 			if (!isStillStarting()) return;
+			// The claim names this worker; the marker written under its epoch is what fences the last one.
+			await entry.runtime.fence?.();
+			if (!isStillStarting()) return;
 			admitPartition({ state, entry, routeEpoch });
 		}
 		await resumeCommands({ ctx, partition });

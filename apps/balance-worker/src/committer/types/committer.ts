@@ -1,5 +1,5 @@
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
-import type { StateStore } from "../../state/types/stateStore.js";
+import type { OwnerFence, StateStore } from "../../state/types/stateStore.js";
 import type { CommitterDb } from "../../types/committerDb.js";
 
 /** Knobs an operator can move while the worker runs; null leaves the boot value in place. */
@@ -44,6 +44,8 @@ export type FlushOutcome = {
 	nextOffset: bigint;
 	/** Moved only when a record in the call came from the command topic. */
 	commandNextOffset?: bigint;
+	/** Carried only by a call that landed an ownership fence. */
+	ownerFence?: OwnerFence;
 	failure?: { record: DurableMutationRecord; cause: unknown };
 	rejections?: FlushRejection[];
 };
@@ -52,6 +54,7 @@ export type FlushOutcome = {
 export type FlushCall = PartitionPosition & {
 	expectedOffset: bigint;
 	commandNextOffset?: bigint;
+	ownerFence?: OwnerFence;
 	records: readonly DurableMutationRecord[];
 	rows: number;
 	settle: ReturnType<typeof Promise.withResolvers<FlushOutcome>>;
@@ -80,6 +83,7 @@ export type Committer = {
 		params: PartitionPosition & {
 			expectedOffset: bigint;
 			commandNextOffset?: bigint;
+			ownerFence?: OwnerFence;
 			records: readonly DurableMutationRecord[];
 		},
 	): Promise<FlushOutcome>;

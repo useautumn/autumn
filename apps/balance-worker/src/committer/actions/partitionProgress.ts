@@ -7,6 +7,7 @@ import {
 	ConflictingPartitionInitializationError,
 	PartitionProgressNotFoundError,
 } from "../../state/stateStoreErrors.js";
+import type { OwnerFence } from "../../state/types/stateStore.js";
 import type { PartitionPosition } from "../types/committer.js";
 import type { CommitterStateStoreContext } from "../types/committerStateStoreContext.js";
 
@@ -23,6 +24,8 @@ export const loadProgress = async ({
 			...position,
 			commandNextOffset: stored.commandNextOffset,
 		});
+	if (stored.ownerFence !== null)
+		ctx.progress.setOwnerFence({ ...position, fence: stored.ownerFence });
 };
 
 /** Creates the bookmark once; the same offset again is a no-op, a different one is a conflict. */
@@ -46,6 +49,32 @@ export const initializePartition = async ({
 	await ctx.db.insertPartitionProgress({ topic, partition, nextOffset });
 	ctx.progress.setNextOffset({ topic, partition, nextOffset });
 };
+
+/** Lands the fence beside the bookmark without moving it; the record that follows the marker moves the bookmark past it. */
+export async function advanceOwnerFence({
+	ctx,
+	fence,
+	...position
+}: {
+	ctx: CommitterStateStoreContext;
+	fence: OwnerFence;
+} & PartitionPosition): Promise<void> {
+	assertOffset({ offset: fence.offset });
+	if (fence.epoch < 0n)
+		throw new RangeError(`Invalid owner epoch: ${fence.epoch}`);
+	const current = ctx.progress.readOwnerFence(position);
+	if (current !== null && current.epoch >= fence.epoch) return;
+	const expectedOffset = ctx.progress.readNextOffset(position);
+	if (expectedOffset === null)
+		throw new PartitionProgressNotFoundError(position);
+	await ctx.committer.apply({
+		...position,
+		expectedOffset,
+		records: [],
+		ownerFence: fence,
+	});
+	ctx.progress.setOwnerFence({ ...position, fence });
+}
 
 export async function advanceCommandNextOffset({
 	ctx,
