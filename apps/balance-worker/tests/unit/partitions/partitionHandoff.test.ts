@@ -461,6 +461,37 @@ describe("partition handoff", () => {
 		}
 	});
 
+	test("a drain the store refused names no successor; the successor claims for itself", async () => {
+		const log = createOwnershipLog();
+		const refused = Promise.reject(new Error("store refused the apply"));
+		void refused.catch(() => undefined);
+		const A = createWorker({ name: "A", log, drainGate: refused });
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 40 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => A.has("stop:2"));
+			expect(A.has("claim:B:2")).toBe(false);
+			expect(A.has("release:2")).toBe(false);
+			expect(
+				log.records.some(
+					(event) => event.type === "claimed" && event.endpoint === B.endpoint,
+				),
+			).toBe(false);
+			await waitFor(() => B.status(2) === "ready", 1_000);
+			expect(B.has("claim:B:2")).toBe(true);
+		} finally {
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
 	test("the drain cap bounds how long a draining predecessor can hold the successor", async () => {
 		const log = createOwnershipLog();
 		const drain = deferred();

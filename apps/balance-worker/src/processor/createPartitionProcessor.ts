@@ -184,8 +184,10 @@ function createProcessor({
 
 	async function drain() {
 		await settleAcceptedCommands({ accepted: scope.accepted });
-		await Promise.allSettled([scope.ctx.writer.waitForStore()]);
+		// A "log" reply lands before its store apply; a successor must find every apply
+		// finished, and a store that refused one must fail the drain, not be swallowed.
 		await scope.ctx.writer.waitForApplies();
+		await scope.ctx.writer.waitForStore();
 	}
 
 	function initialize({ request }: { request: InitializeRequest }) {
