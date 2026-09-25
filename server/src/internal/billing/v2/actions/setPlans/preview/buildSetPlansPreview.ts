@@ -9,6 +9,10 @@ import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSche
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { getDeleteCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { buildSetPlansPreviewPhases } from "./buildSetPlansPreviewPhases";
+import { buildAutumnStripePriceIndex } from "./processorItems/buildAutumnStripePriceIndex";
+import { buildStripePriceLookup } from "./processorItems/price/buildStripePriceLookup";
+import { stripeSubscriptionToProcessorItems } from "./processorItems/stripeSubscriptionToProcessorItems";
+import type { ProcessorItemContext } from "./processorItems/types/processorItemContext";
 import { setPlansPreviewToWarnings } from "./setPlansPreviewToWarnings";
 import { stripeBillingPlanToProcessorChanges } from "./stripeBillingPlanToProcessorChanges";
 
@@ -30,11 +34,27 @@ export const buildSetPlansPreview = async ({
 		billingContext,
 		billingPlan,
 	});
+	const processorItemContext: ProcessorItemContext = {
+		priceIndex: buildAutumnStripePriceIndex({
+			customerProducts: [
+				...billingContext.fullCustomer.customer_products,
+				...billingPlan.autumn.insertCustomerProducts,
+			],
+			features: ctx.features,
+		}),
+		stripePrices: await buildStripePriceLookup({
+			ctx,
+			stripeBillingPlan: billingPlan.stripe,
+			stripeSubscription: billingContext.stripeSubscription,
+		}),
+		currency: attachPreview.currency,
+	};
 	const previewPhases = await buildSetPlansPreviewPhases({
 		ctx,
 		billingContext,
 		billingPlan,
 		phases,
+		processorItemContext,
 	});
 	const processorChanges = stripeBillingPlanToProcessorChanges({
 		stripeBillingPlan: billingPlan.stripe,
@@ -47,6 +67,10 @@ export const buildSetPlansPreview = async ({
 		processor_changes: processorChanges,
 		warnings: setPlansPreviewToWarnings({
 			phases: previewPhases,
+			liveProcessorItems: stripeSubscriptionToProcessorItems({
+				stripeSubscription: billingContext.stripeSubscription,
+				context: processorItemContext,
+			}),
 			processorChanges,
 			deletedCustomerProducts: getDeleteCustomerProducts({
 				autumnBillingPlan: billingPlan.autumn,

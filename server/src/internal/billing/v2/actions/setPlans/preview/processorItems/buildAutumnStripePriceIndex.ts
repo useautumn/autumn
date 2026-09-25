@@ -29,8 +29,10 @@ export const buildAutumnStripePriceIndex = ({
 				: undefined;
 			const autumnStripePrice: AutumnStripePrice = {
 				planId: customerProduct.product_id,
+				planName: customerProduct.product.name,
 				featureId,
-				displayName: feature?.name ?? customerProduct.product.name,
+				featureName: feature?.name ?? null,
+				price,
 			};
 
 			priceIndex.byAutumnPriceId.set(price.id, autumnStripePrice);

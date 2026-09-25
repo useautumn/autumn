@@ -16,15 +16,14 @@ const summarizePhase = (phase: SetPlansPreviewPhase) => ({
 		change.previous_attributes.granted,
 		change.balance.granted,
 	]),
-	stripeItems: phase.processor_item_changes.map((change) => [
-		change.action,
-		change.plan_id,
-		change.managed_by_autumn,
+	stripeItems: phase.processor_items.map((item) => [
+		item.plan_id,
+		item.managed_by_autumn,
 	]),
 });
 
 test.concurrent(
-	`${chalk.yellowBright("preview-set-plans: reports plan, balance and Stripe changes per phase")}`,
+	`${chalk.yellowBright("preview-set-plans: reports plan and balance changes and the Stripe end state per phase")}`,
 	async () => {
 		const customerId = "preview-set-plans-phases";
 		const pro = products.base({
@@ -70,10 +69,7 @@ test.concurrent(
 					["expired", pro.id],
 				],
 				granted: [[TestFeature.Messages, 100, 500]],
-				stripeItems: [
-					["created", premium.id, true],
-					["deleted", pro.id, true],
-				],
+				stripeItems: [[premium.id, true]],
 			},
 			{
 				plans: [
@@ -81,10 +77,7 @@ test.concurrent(
 					["expired", premium.id],
 				],
 				granted: [[TestFeature.Messages, 500, 100]],
-				stripeItems: [
-					["created", pro.id, true],
-					["deleted", premium.id, true],
-				],
+				stripeItems: [[pro.id, true]],
 			},
 		]);
 		expect(preview.processor_changes).toEqual([

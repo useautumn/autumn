@@ -4,13 +4,36 @@ import {
 	notNullish,
 	type PreviewBalanceChange,
 	type ProcessorChange,
-	type ProcessorItemChange,
+	type ProcessorItem,
 	type SetPlansPreviewPhase,
 	type SetPlansPreviewWarning,
 } from "@autumn/shared";
 
-const removesUnmanagedItem = (itemChange: ProcessorItemChange) =>
-	itemChange.action === "deleted" && !itemChange.managed_by_autumn;
+/** Unmanaged live items that the immediate phase's end state no longer holds. */
+const removedUnmanagedItems = ({
+	liveProcessorItems,
+	immediateItems,
+}: {
+	liveProcessorItems: ProcessorItem[];
+	immediateItems: ProcessorItem[];
+}) => {
+	const keptItemIds = new Set(immediateItems.map((item) => item.item_id));
+	return liveProcessorItems.filter(
+		(item) => !item.managed_by_autumn && !keptItemIds.has(item.item_id),
+	);
+};
+
+const priceCreatingItems = (items: ProcessorItem[]) =>
+	items
+		.filter((item) => item.creates_price)
+		.filter(
+			(item, index, all) =>
+				all.findIndex(
+					(other) =>
+						(other.price_id ?? other.display_name) ===
+						(item.price_id ?? item.display_name),
+				) === index,
+		);
 
 const resetsUsage = (balanceChange: PreviewBalanceChange) => {
 	const previousUsage = balanceChange.previous_attributes.usage;
@@ -35,31 +58,34 @@ const hasPendingQuantityChange = (customerProduct: FullCusProduct) =>
 
 export const setPlansPreviewToWarnings = ({
 	phases,
+	liveProcessorItems,
 	processorChanges,
 	deletedCustomerProducts,
 	outgoingCustomerProducts,
 	requestedProrationBehavior,
 }: {
 	phases: SetPlansPreviewPhase[];
+	liveProcessorItems: ProcessorItem[];
 	processorChanges: ProcessorChange[];
 	deletedCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
 	requestedProrationBehavior?: BillingBehavior;
 }): SetPlansPreviewWarning[] => {
-	const itemChanges = phases.flatMap((phase) => phase.processor_item_changes);
+	const processorItems = phases.flatMap((phase) => phase.processor_items);
 	const balanceChanges = phases.flatMap((phase) => phase.balance_changes);
 
 	return [
-		...itemChanges.filter(removesUnmanagedItem).map((itemChange) => ({
+		...removedUnmanagedItems({
+			liveProcessorItems,
+			immediateItems: phases[0]?.processor_items ?? [],
+		}).map((item) => ({
 			type: "unmanaged_stripe_item_removed" as const,
-			message: `${itemChange.display_name} isn't managed by Autumn and will be removed from Stripe.`,
+			message: `${item.display_name} isn't managed by Autumn and will be removed from Stripe.`,
 		})),
-		...itemChanges
-			.filter((itemChange) => itemChange.creates_price)
-			.map((itemChange) => ({
-				type: "new_stripe_price_created" as const,
-				message: `A new Stripe price will be created for ${itemChange.display_name}.`,
-			})),
+		...priceCreatingItems(processorItems).map((item) => ({
+			type: "new_stripe_price_created" as const,
+			message: `A new Stripe price will be created for ${item.display_name}.`,
+		})),
 		...balanceChanges.filter(resetsUsage).map((balanceChange) => ({
 			type: "usage_reset" as const,
 			message: `Usage for ${balanceChange.feature_id} restarts from zero.`,

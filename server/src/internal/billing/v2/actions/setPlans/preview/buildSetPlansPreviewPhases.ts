@@ -8,10 +8,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildBalanceChanges } from "@/internal/billing/v2/actions/buildBillingChanges/buildBalanceChanges/buildBalanceChanges";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/compute/computeCreateSchedulePlan";
 import { buildSetPlansPhaseCustomers } from "./buildSetPlansPhaseCustomers";
-import { buildAutumnStripePriceIndex } from "./processorItems/buildAutumnStripePriceIndex";
-import { checkoutSessionActionToProcessorItemChanges } from "./processorItems/checkoutSessionActionToProcessorItemChanges";
-import { scheduleActionToProcessorItemChanges } from "./processorItems/scheduleActionToProcessorItemChanges";
-import { subscriptionActionToProcessorItemChanges } from "./processorItems/subscriptionActionToProcessorItemChanges";
+import { checkoutSessionActionToProcessorItems } from "./processorItems/checkoutSessionActionToProcessorItems";
+import { scheduleActionToProcessorItems } from "./processorItems/scheduleActionToProcessorItems";
+import { subscriptionActionToProcessorItems } from "./processorItems/subscriptionActionToProcessorItems";
+import type { ProcessorItemContext } from "./processorItems/types/processorItemContext";
 import { setPlansPhasesToPlanChanges } from "./setPlansPhasesToPlanChanges";
 
 export const buildSetPlansPreviewPhases = async ({
@@ -19,11 +19,13 @@ export const buildSetPlansPreviewPhases = async ({
 	billingContext,
 	billingPlan,
 	phases,
+	processorItemContext,
 }: {
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
 	billingPlan: BillingPlan;
 	phases: SchedulePhasePlan[];
+	processorItemContext: ProcessorItemContext;
 }): Promise<SetPlansPreviewPhase[]> => {
 	const { fullCustomer, stripeSubscription } = billingContext;
 	const { autumn: autumnBillingPlan, stripe: stripeBillingPlan } = billingPlan;
@@ -46,29 +48,22 @@ export const buildSetPlansPreviewPhases = async ({
 		phaseCustomers,
 	});
 
-	const priceIndex = buildAutumnStripePriceIndex({
-		customerProducts: [
-			...fullCustomer.customer_products,
-			...autumnBillingPlan.insertCustomerProducts,
-		],
-		features: ctx.features,
-	});
-	const itemChangesByPhase = [
+	const processorItemsByPhase = [
 		[
-			...subscriptionActionToProcessorItemChanges({
+			...subscriptionActionToProcessorItems({
 				subscriptionAction: stripeBillingPlan.subscriptionAction,
 				stripeSubscription,
-				priceIndex,
+				context: processorItemContext,
 			}),
-			...checkoutSessionActionToProcessorItemChanges({
+			...checkoutSessionActionToProcessorItems({
 				checkoutSessionAction: stripeBillingPlan.checkoutSessionAction,
-				priceIndex,
+				context: processorItemContext,
 			}),
 		],
-		...scheduleActionToProcessorItemChanges({
+		...scheduleActionToProcessorItems({
 			subscriptionScheduleAction: stripeBillingPlan.subscriptionScheduleAction,
 			phases,
-			priceIndex,
+			context: processorItemContext,
 		}),
 	];
 
@@ -79,6 +74,6 @@ export const buildSetPlansPreviewPhases = async ({
 			beforeBalances: phaseBalances[phaseIndex].balances,
 			afterBalances: phaseBalances[phaseIndex + 1].balances,
 		}),
-		processor_item_changes: itemChangesByPhase[phaseIndex],
+		processor_items: processorItemsByPhase[phaseIndex],
 	}));
 };

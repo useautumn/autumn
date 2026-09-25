@@ -1,6 +1,10 @@
-import { isPreviewStripeId, type ProcessorItemChange } from "@autumn/shared";
+import { isPreviewStripeId, type ProcessorItem } from "@autumn/shared";
 import type Stripe from "stripe";
+import type { InlinePriceData } from "./price/inlinePriceDataToProcessorItemPrice";
+import { processorItemAmount } from "./price/processorItemAmount";
+import { resolveProcessorItemPrice } from "./price/resolveProcessorItemPrice";
 import type { AutumnStripePriceIndex } from "./types/autumnStripePriceIndex";
+import type { ProcessorItemContext } from "./types/processorItemContext";
 
 type StripeItemMetadata = Stripe.Emptyable<Stripe.MetadataParam> | undefined;
 
@@ -28,49 +32,54 @@ const findAutumnStripePrice = ({
 const isFreePhasePlaceholder = (metadata?: StripeItemMetadata) =>
 	metadata ? metadata.autumn_free_phase_placeholder === "true" : false;
 
-export const toProcessorItemChange = ({
-	action,
+/** Names an item after the Autumn plan it bills for and describes how Stripe charges it. */
+export const toProcessorItem = ({
 	itemId = null,
 	stripePriceId,
-	inlinePrice = false,
+	inlinePriceData,
 	metadata,
 	quantity,
-	previousQuantity,
 	fallbackName,
-	priceIndex,
+	context,
 }: {
-	action: ProcessorItemChange["action"];
 	itemId?: string | null;
 	stripePriceId?: string;
-	inlinePrice?: boolean;
+	inlinePriceData?: InlinePriceData;
 	metadata?: StripeItemMetadata;
 	quantity?: number | null;
-	previousQuantity?: number | null;
 	fallbackName?: string | null;
-	priceIndex: AutumnStripePriceIndex;
-}): ProcessorItemChange => {
+	context: ProcessorItemContext;
+}): ProcessorItem => {
 	const autumnStripePrice = findAutumnStripePrice({
-		priceIndex,
+		priceIndex: context.priceIndex,
 		stripePriceId,
 		metadata,
 	});
+	const price = resolveProcessorItemPrice({
+		stripePriceId,
+		inlinePriceData,
+		autumnStripePrice,
+		context,
+	});
+	const itemQuantity = quantity ?? null;
 
 	return {
-		action,
 		item_id: itemId,
 		price_id: stripePriceId ?? null,
 		plan_id: autumnStripePrice?.planId ?? null,
 		feature_id: autumnStripePrice?.featureId ?? null,
 		display_name:
-			autumnStripePrice?.displayName ??
+			autumnStripePrice?.planName ??
 			fallbackName ??
 			stripePriceId ??
 			"Stripe item",
-		quantity: quantity ?? null,
-		previous_attributes:
-			previousQuantity === undefined ? null : { quantity: previousQuantity },
+		feature_name: autumnStripePrice?.featureName ?? null,
+		quantity: itemQuantity,
+		price,
+		amount: processorItemAmount({ price, quantity: itemQuantity }),
 		creates_price:
-			inlinePrice || isPreviewStripeId({ stripeId: stripePriceId }),
+			inlinePriceData !== undefined ||
+			isPreviewStripeId({ stripeId: stripePriceId }),
 		managed_by_autumn:
 			autumnStripePrice !== undefined || isFreePhasePlaceholder(metadata),
 	};

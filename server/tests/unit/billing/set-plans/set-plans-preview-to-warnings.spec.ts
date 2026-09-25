@@ -1,23 +1,22 @@
 import { describe, expect, test } from "bun:test";
 import type {
 	FullCusProduct,
-	ProcessorItemChange,
+	ProcessorItem,
 	SetPlansPreviewPhase,
 } from "@autumn/shared";
 import { setPlansPreviewToWarnings } from "@/internal/billing/v2/actions/setPlans/preview/setPlansPreviewToWarnings";
 import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct";
 
-const itemChange = (
-	overrides: Partial<ProcessorItemChange>,
-): ProcessorItemChange => ({
-	action: "created",
+const processorItem = (overrides: Partial<ProcessorItem>): ProcessorItem => ({
 	item_id: null,
 	price_id: "price_1",
 	plan_id: "pro",
 	feature_id: null,
 	display_name: "pro",
+	feature_name: null,
 	quantity: 1,
-	previous_attributes: null,
+	price: null,
+	amount: null,
 	creates_price: false,
 	managed_by_autumn: true,
 	...overrides,
@@ -29,7 +28,7 @@ const phase = (
 	starts_at: 0,
 	plan_changes: [],
 	balance_changes: [],
-	processor_item_changes: [],
+	processor_items: [],
 	...overrides,
 });
 
@@ -39,11 +38,12 @@ describe("setPlansPreviewToWarnings", () => {
 			setPlansPreviewToWarnings({
 				phases: [
 					phase({
-						processor_item_changes: [
-							itemChange({}),
-							itemChange({ action: "deleted", item_id: "si_base" }),
-						],
+						processor_items: [processorItem({ item_id: "si_base" })],
 					}),
+				],
+				liveProcessorItems: [
+					processorItem({ item_id: "si_base" }),
+					processorItem({ item_id: "si_old_pro" }),
 				],
 				processorChanges: [
 					{
@@ -84,15 +84,22 @@ describe("setPlansPreviewToWarnings", () => {
 							previous_attributes: { usage: 40, granted: 100 },
 						},
 					],
-					processor_item_changes: [
-						itemChange({
-							action: "deleted",
-							display_name: "Support add-on",
-							managed_by_autumn: false,
-							plan_id: null,
-						}),
-						itemChange({ display_name: "premium", creates_price: true }),
+					processor_items: [
+						processorItem({ display_name: "premium", creates_price: true }),
 					],
+				}),
+				phase({
+					processor_items: [
+						processorItem({ display_name: "premium", creates_price: true }),
+					],
+				}),
+			],
+			liveProcessorItems: [
+				processorItem({
+					item_id: "si_support",
+					display_name: "Support add-on",
+					managed_by_autumn: false,
+					plan_id: null,
 				}),
 			],
 			processorChanges: [
