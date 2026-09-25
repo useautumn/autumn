@@ -410,11 +410,14 @@ export default atmn({
 		write: (text) => {
 			output += text;
 		},
-		webhookEnv: async () => ({
-			key: "sandbox",
-			live: false,
-			orgId: async () => "org_ab12",
-		}),
+		webhookEnvs: () => [
+			{
+				keyName: "AUTUMN_SECRET_KEY",
+				label: "sandbox",
+				envKey: async () => "sandbox",
+				listWebhooks: client.listWebhooks,
+			},
+		],
 	});
 	expect(started.sort()).toEqual([
 		"diff",

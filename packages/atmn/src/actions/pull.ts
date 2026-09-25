@@ -31,13 +31,14 @@ import {
 	scaffoldConfig,
 } from "./pull/scaffoldConfig";
 import { applyWebhooksPull } from "./pull/webhooks/applyWebhooksPull";
+import { readWebhookEnvs } from "./pull/webhooks/readWebhookEnvs";
 import type { StatedWebhook } from "./pull/webhooks/types";
+import type { WebhookPullEnv } from "./pull/webhooks/webhookPullEnvs";
 import { configSearchDirs } from "./push";
 import {
 	backfillInternalIds,
 	identityRowsFromCatalog,
 } from "./push/backfillInternalIds";
-import type { WebhookEnv } from "./webhooks/types/webhookEnv";
 
 export type PullResult = {
 	configPath: string;
@@ -67,8 +68,8 @@ export type PullOptions = {
 	yes?: boolean;
 	/** Asks where a first pull should put the config; headless by default. */
 	prompter?: Prompter;
-	/** The target env for the webhook lane; without it webhooks are not pulled. */
-	webhookEnv?: () => Promise<WebhookEnv>;
+	/** Every env the webhook lane reads, whatever the target; none when absent. */
+	webhookEnvs?: () => WebhookPullEnv[];
 };
 
 const OVERWRITE_HINT =
@@ -229,7 +230,7 @@ export const runPull = async ({
 	overwrite = false,
 	yes = false,
 	prompter = createPrompter({ interactive: false, write }),
-	webhookEnv,
+	webhookEnvs,
 }: PullOptions): Promise<PullResult> => {
 	const project = resolveProject({ cwd, configFlag });
 	if (overwrite && !yes) {
@@ -286,9 +287,7 @@ export const runPull = async ({
 			singletons.settings ?? { config: {} },
 		) as Promise<SettingsPreview>,
 		// Always listed, like settings: a webhook the config never named is pulled in.
-		webhookEnv === undefined
-			? undefined
-			: Promise.all([webhookEnv(), client.listWebhooks({})]),
+		readWebhookEnvs({ envs: webhookEnvs?.() ?? [] }),
 	]);
 
 	const files = new Map<string, string>();
@@ -374,15 +373,17 @@ export const runPull = async ({
 		);
 	}
 
-	const webhookWarnings: string[] = [];
-	if (webhooks !== undefined) {
-		const [env, { list }] = webhooks;
+	const webhookWarnings = [...webhooks.skipped];
+	let stated = lists.webhooks as StatedWebhook[] | undefined;
+	// Only an env whose list succeeded may remove its urls from the config.
+	for (const { envKey, list } of webhooks.read) {
 		const applied = applyWebhooksPull({
 			pull: { configPath, files },
 			remote: list,
-			stated: lists.webhooks as StatedWebhook[] | undefined,
-			envKey: env.key,
+			stated,
+			envKey,
 		});
+		stated = applied.stated;
 		lines.push(...applied.lines);
 		webhookWarnings.push(...applied.warnings);
 		unlocated.push(
