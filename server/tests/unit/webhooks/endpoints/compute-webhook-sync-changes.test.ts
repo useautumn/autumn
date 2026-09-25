@@ -269,3 +269,39 @@ test("adoption only takes a dashboard webhook from the app the stated events bel
 		changes.changes.find((change) => change.id === "provisioning")?.action,
 	).toBe("create");
 });
+
+test("two new webhooks at one URL in different apps each adopt their own dashboard webhook", () => {
+	const url = "https://example.com/both";
+	const main = remote({ id: "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5", url });
+	const vercel = remote({
+		id: "ep_9Zz7c9LmNpRsTuVwXyZa1b3d4e5",
+		url,
+		events: ["vercel.resources.provisioned"] as WebhookEventType[],
+	});
+	const changes = computeWebhookSyncChanges({
+		remote: [main, vercel],
+		uidlessIds: new Set([main.id, vercel.id]),
+		remoteKinds: new Map([[vercel.id, "vercel"]]),
+		stated: [
+			stated({ id: "billing", url }),
+			stated({
+				id: "provisioning",
+				url,
+				events: ["vercel.resources.provisioned"] as WebhookEventType[],
+			}),
+		],
+		now: NOW,
+	});
+	expect(changes.errors).toEqual([]);
+	expect(
+		changes.changes
+			.filter((change) => change.action === "adopt")
+			.map((change) => [
+				change.id,
+				change.action === "adopt" && change.before.id,
+			]),
+	).toEqual([
+		["billing", main.id],
+		["provisioning", vercel.id],
+	]);
+});
