@@ -80,6 +80,12 @@ class Billing(BaseSDK):
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
         remove_plan_ids: Optional[List[str]] = None,
+        remove_discounts: Optional[
+            Union[
+                List[models.AttachRemoveDiscount],
+                List[models.AttachRemoveDiscountTypedDict],
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -120,6 +126,7 @@ class Billing(BaseSDK):
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+        :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -185,6 +192,9 @@ class Billing(BaseSDK):
             tax_rate_id=tax_rate_id,
             currency=currency,
             remove_plan_ids=remove_plan_ids,
+            remove_discounts=utils.get_pydantic_model(
+                remove_discounts, Optional[List[models.AttachRemoveDiscount]]
+            ),
         )
 
         req = self._build_request(
@@ -317,6 +327,12 @@ class Billing(BaseSDK):
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
         remove_plan_ids: Optional[List[str]] = None,
+        remove_discounts: Optional[
+            Union[
+                List[models.AttachRemoveDiscount],
+                List[models.AttachRemoveDiscountTypedDict],
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -357,6 +373,7 @@ class Billing(BaseSDK):
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+        :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -422,6 +439,9 @@ class Billing(BaseSDK):
             tax_rate_id=tax_rate_id,
             currency=currency,
             remove_plan_ids=remove_plan_ids,
+            remove_discounts=utils.get_pydantic_model(
+                remove_discounts, Optional[List[models.AttachRemoveDiscount]]
+            ),
         )
 
         req = self._build_request_async(
@@ -1216,6 +1236,12 @@ class Billing(BaseSDK):
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
         remove_plan_ids: Optional[List[str]] = None,
+        remove_discounts: Optional[
+            Union[
+                List[models.PreviewAttachRemoveDiscount],
+                List[models.PreviewAttachRemoveDiscountTypedDict],
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1256,6 +1282,7 @@ class Billing(BaseSDK):
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+        :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1322,6 +1349,9 @@ class Billing(BaseSDK):
             tax_rate_id=tax_rate_id,
             currency=currency,
             remove_plan_ids=remove_plan_ids,
+            remove_discounts=utils.get_pydantic_model(
+                remove_discounts, Optional[List[models.PreviewAttachRemoveDiscount]]
+            ),
         )
 
         req = self._build_request(
@@ -1464,6 +1494,12 @@ class Billing(BaseSDK):
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
         remove_plan_ids: Optional[List[str]] = None,
+        remove_discounts: Optional[
+            Union[
+                List[models.PreviewAttachRemoveDiscount],
+                List[models.PreviewAttachRemoveDiscountTypedDict],
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1504,6 +1540,7 @@ class Billing(BaseSDK):
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+        :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1570,6 +1607,9 @@ class Billing(BaseSDK):
             tax_rate_id=tax_rate_id,
             currency=currency,
             remove_plan_ids=remove_plan_ids,
+            remove_discounts=utils.get_pydantic_model(
+                remove_discounts, Optional[List[models.PreviewAttachRemoveDiscount]]
+            ),
         )
 
         req = self._build_request_async(
@@ -3582,6 +3622,12 @@ class Billing(BaseSDK):
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
         remove_plan_ids: Optional[List[str]] = None,
+        remove_discounts: Optional[
+            Union[
+                List[models.SetupPaymentRemoveDiscount],
+                List[models.SetupPaymentRemoveDiscountTypedDict],
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -3615,6 +3661,7 @@ class Billing(BaseSDK):
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+        :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -3673,6 +3720,9 @@ class Billing(BaseSDK):
             tax_rate_id=tax_rate_id,
             currency=currency,
             remove_plan_ids=remove_plan_ids,
+            remove_discounts=utils.get_pydantic_model(
+                remove_discounts, Optional[List[models.SetupPaymentRemoveDiscount]]
+            ),
         )
 
         req = self._build_request(
@@ -3805,6 +3855,12 @@ class Billing(BaseSDK):
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
         remove_plan_ids: Optional[List[str]] = None,
+        remove_discounts: Optional[
+            Union[
+                List[models.SetupPaymentRemoveDiscount],
+                List[models.SetupPaymentRemoveDiscountTypedDict],
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -3838,6 +3894,7 @@ class Billing(BaseSDK):
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+        :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -3896,6 +3953,9 @@ class Billing(BaseSDK):
             tax_rate_id=tax_rate_id,
             currency=currency,
             remove_plan_ids=remove_plan_ids,
+            remove_discounts=utils.get_pydantic_model(
+                remove_discounts, Optional[List[models.SetupPaymentRemoveDiscount]]
+            ),
         )
 
         req = self._build_request_async(

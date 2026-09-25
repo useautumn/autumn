@@ -123,6 +123,10 @@ export const setupPaymentLicenseQuantitySchema = z.object({
 	quantity: z.number(),
 });
 
+export const setupPaymentRemoveDiscountSchema = z.object({
+	rewardId: z.string(),
+});
+
 export const setupPaymentResponseSchema = z.object({
 	customerId: z.string(),
 	entityId: z.union([z.string(), z.undefined()]).optional(),
@@ -388,6 +392,10 @@ export const setupPaymentCarryOverUsagesOutboundSchema = z.object({
 export const setupPaymentLicenseQuantityOutboundSchema = z.object({
 	license_plan_id: z.string(),
 	quantity: z.number(),
+});
+
+export const setupPaymentRemoveDiscountOutboundSchema = z.object({
+	reward_id: z.string(),
 });
 
 const closedEnumSchema = z.any();
@@ -759,6 +767,9 @@ export const setupPaymentParamsSchema = z.object({
 	taxRateId: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	removePlanIds: z.union([z.array(z.string()), z.undefined()]).optional(),
+	removeDiscounts: z
+		.union([z.array(setupPaymentRemoveDiscountSchema), z.undefined()])
+		.optional(),
 });
 
 export const setupPaymentUpsertLicensePlanItemOutboundSchema = z.object({
@@ -906,4 +917,7 @@ export const setupPaymentParamsOutboundSchema = z.object({
 	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	remove_plan_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
+	remove_discounts: z
+		.union([z.array(setupPaymentRemoveDiscountOutboundSchema), z.undefined()])
+		.optional(),
 });

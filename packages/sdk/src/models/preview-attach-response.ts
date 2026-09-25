@@ -712,6 +712,16 @@ export type PreviewAttachLicenseQuantity = {
   quantity: number;
 };
 
+/**
+ * A discount to remove from the subscription. Discounts that are no longer applied are ignored.
+ */
+export type PreviewAttachRemoveDiscount = {
+  /**
+   * The ID of the reward (or Stripe coupon) to remove.
+   */
+  rewardId: string;
+};
+
 export type PreviewAttachParams = {
   /**
    * The ID of the customer to attach the plan to.
@@ -839,6 +849,10 @@ export type PreviewAttachParams = {
    * Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
    */
   removePlanIds?: Array<string> | undefined;
+  /**
+   * Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
+   */
+  removeDiscounts?: Array<PreviewAttachRemoveDiscount> | undefined;
 };
 
 export type PreviewAttachDiscount = {
@@ -2715,6 +2729,36 @@ export function previewAttachLicenseQuantityToJSON(
 }
 
 /** @internal */
+export type PreviewAttachRemoveDiscount$Outbound = {
+  reward_id: string;
+};
+
+/** @internal */
+export const PreviewAttachRemoveDiscount$outboundSchema: z.ZodMiniType<
+  PreviewAttachRemoveDiscount$Outbound,
+  PreviewAttachRemoveDiscount
+> = z.pipe(
+  z.object({
+    rewardId: z.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      rewardId: "reward_id",
+    });
+  }),
+);
+
+export function previewAttachRemoveDiscountToJSON(
+  previewAttachRemoveDiscount: PreviewAttachRemoveDiscount,
+): string {
+  return JSON.stringify(
+    PreviewAttachRemoveDiscount$outboundSchema.parse(
+      previewAttachRemoveDiscount,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
@@ -2749,6 +2793,7 @@ export type PreviewAttachParams$Outbound = {
   tax_rate_id?: string | undefined;
   currency?: string | undefined;
   remove_plan_ids?: Array<string> | undefined;
+  remove_discounts?: Array<PreviewAttachRemoveDiscount$Outbound> | undefined;
 };
 
 /** @internal */
@@ -2809,6 +2854,9 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     taxRateId: z.optional(z.string()),
     currency: z.optional(z.string()),
     removePlanIds: z.optional(z.array(z.string())),
+    removeDiscounts: z.optional(
+      z.array(z.lazy(() => PreviewAttachRemoveDiscount$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2838,6 +2886,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       enablePlanImmediately: "enable_plan_immediately",
       taxRateId: "tax_rate_id",
       removePlanIds: "remove_plan_ids",
+      removeDiscounts: "remove_discounts",
     });
   }),
 );

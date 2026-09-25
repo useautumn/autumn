@@ -131,6 +131,10 @@ export const previewAttachLicenseQuantitySchema = z.object({
 	quantity: z.number(),
 });
 
+export const previewAttachRemoveDiscountSchema = z.object({
+	rewardId: z.string(),
+});
+
 export const previewAttachDiscountSchema = z.object({
 	amountOff: z.number(),
 	percentOff: z.union([z.number(), z.undefined()]).optional(),
@@ -502,6 +506,10 @@ export const previewAttachCarryOverUsagesOutboundSchema = z.object({
 export const previewAttachLicenseQuantityOutboundSchema = z.object({
 	license_plan_id: z.string(),
 	quantity: z.number(),
+});
+
+export const previewAttachRemoveDiscountOutboundSchema = z.object({
+	reward_id: z.string(),
 });
 
 const closedEnumSchema = z.any();
@@ -895,6 +903,9 @@ export const previewAttachParamsSchema = z.object({
 	taxRateId: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	removePlanIds: z.union([z.array(z.string()), z.undefined()]).optional(),
+	removeDiscounts: z
+		.union([z.array(previewAttachRemoveDiscountSchema), z.undefined()])
+		.optional(),
 });
 
 export const previewAttachIncomingSchema = z.object({
@@ -1101,4 +1112,7 @@ export const previewAttachParamsOutboundSchema = z.object({
 	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	remove_plan_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
+	remove_discounts: z
+		.union([z.array(previewAttachRemoveDiscountOutboundSchema), z.undefined()])
+		.optional(),
 });
