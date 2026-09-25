@@ -50,6 +50,6 @@ export const expandToPlanInstances = ({
 	return Array.from({ length: requested }, (_, index) => ({
 		...productContext,
 		currentCustomerProduct: outgoing[index],
-		supersededInstances: index === 0 ? outgoing.slice(requested) : undefined,
+		extraOutgoingInstances: index === 0 ? outgoing.slice(requested) : undefined,
 	}));
 };

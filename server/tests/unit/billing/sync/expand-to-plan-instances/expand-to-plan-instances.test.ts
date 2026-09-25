@@ -3,7 +3,7 @@
  *
  * A plan with quantity N becomes N rows only when it carries no purchased
  * units. Each new row replaces one outgoing instance of the replaced plan;
- * outgoing instances left over are superseded by the first row.
+ * outgoing instances left over expire with the first row, which carries their usage.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -115,10 +115,10 @@ describe("expandToPlanInstances", () => {
 			"cp_pro_1",
 			"cp_pro_2",
 		]);
-		expect(contexts[0].supersededInstances).toEqual([]);
+		expect(contexts[0].extraOutgoingInstances).toEqual([]);
 	});
 
-	test("supersedes outgoing instances left over after a plan change", () => {
+	test("hands outgoing instances left over after a plan change to the first row", () => {
 		const pro1 = row({ id: "cp_pro_1", productId: "pro" });
 		const pro2 = row({ id: "cp_pro_2", productId: "pro" });
 		const contexts = expandToPlanInstances({
@@ -132,7 +132,7 @@ describe("expandToPlanInstances", () => {
 
 		expect(contexts).toHaveLength(1);
 		expect(contexts[0].currentCustomerProduct?.id).toBe("cp_pro_1");
-		expect(contexts[0].supersededInstances?.map((r) => r.id)).toEqual([
+		expect(contexts[0].extraOutgoingInstances?.map((r) => r.id)).toEqual([
 			"cp_pro_2",
 		]);
 	});

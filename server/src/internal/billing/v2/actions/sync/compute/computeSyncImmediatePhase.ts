@@ -14,7 +14,7 @@ import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/com
 import { applyScheduleTimingToCustomerProductPlan } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { resolveSyncExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveSyncExistingUsagesConfig";
 import { initImmediateSyncCustomerProduct } from "./initImmediateSyncCustomerProduct";
-import { withSupersededUsage } from "./withSupersededUsage";
+import { outgoingInstancesToCarrySource } from "./outgoingInstancesToCarrySource";
 
 type CustomerProductUpdate = NonNullable<
 	AutumnBillingPlan["updateCustomerProducts"]
@@ -101,9 +101,9 @@ const computeStartingNowProductContexts = ({
 		}
 
 		const carrySource = currentCustomerProduct
-			? withSupersededUsage({
+			? outgoingInstancesToCarrySource({
 					customerProduct: currentCustomerProduct,
-					supersededInstances: productContext.supersededInstances,
+					extraOutgoingInstances: productContext.extraOutgoingInstances,
 				})
 			: undefined;
 		const existingUsagesConfig =
@@ -149,7 +149,7 @@ const computeStartingNowProductContexts = ({
 			...(productContext.currentCustomerProduct
 				? [productContext.currentCustomerProduct]
 				: []),
-			...(productContext.supersededInstances ?? []),
+			...(productContext.extraOutgoingInstances ?? []),
 		];
 		for (const replacedRow of replacedRows) {
 			updateCustomerProducts.push(

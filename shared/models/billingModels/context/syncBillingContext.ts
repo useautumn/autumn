@@ -30,7 +30,7 @@ export interface SyncProductContext {
 	entity?: Entity;
 	/** Existing active cusProduct in the same product group, if `expire_previous` was set. */
 	currentCustomerProduct?: FullCusProduct;
-	supersededInstances?: FullCusProduct[];
+	extraOutgoingInstances?: FullCusProduct[];
 	accessStartsAt?: number;
 }
 
