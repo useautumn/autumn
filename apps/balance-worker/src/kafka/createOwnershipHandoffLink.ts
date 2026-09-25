@@ -44,7 +44,12 @@ export function createOwnershipHandoffLink({
 
 	async function start(): Promise<void> {
 		await sender.connect();
-		await tail.start();
+		try {
+			await tail.start();
+		} catch (cause) {
+			await sender.disconnect();
+			throw cause;
+		}
 	}
 
 	async function stop(): Promise<void> {
