@@ -94,6 +94,11 @@ export function decide<Reply>({
 			stored: state.storeCompletion,
 		});
 
+	ctx.onStateAdvanced?.({
+		from: currentState,
+		to: result.nextState,
+		changes: result.mutation.changes,
+	});
 	const pending = enqueueMutation({
 		scope,
 		pendingKey,

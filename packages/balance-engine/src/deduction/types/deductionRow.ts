@@ -18,8 +18,10 @@ export type DeductionRow = {
 	rateUnits: number;
 	/** The customer entitlement that carries usage attribution: itself, or the rollover's owner. */
 	ownerId: string;
-	/** The row may be drawn below zero in the overage bucket. */
+	/** The row may be drawn below zero in the overage bucket: its own flag, a control, or unlimited. */
 	usageAllowed: boolean;
+	/** A free allocated grant may also run over, unless the draw rejects; decided per draw by `isUsageAllowed`. */
+	freeAllocated: boolean;
 	/** Lowest balance a deduction may leave; null means unbounded. */
 	minBalance: number | null;
 	/** Highest balance a refund may leave; null means unbounded. */

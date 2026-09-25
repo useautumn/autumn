@@ -1,11 +1,12 @@
-import { AppEnv, AuthType } from "@autumn/shared";
 import { describe, expect, test } from "bun:test";
+import { AppEnv, AuthType } from "@autumn/shared";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	buildVercelEventContext,
 	enrichVercelAppLogger,
 } from "@/external/vercel/misc/vercelLogContext.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getCustomerBucket } from "@/internal/misc/rollouts/rolloutUtils.js";
 
 const createCapturingLogger = () => {
 	const childCalls: unknown[] = [];
@@ -53,14 +54,6 @@ describe("vercelLogContext", () => {
 			entityId: "ent_123",
 			apiVersion: { semver: "1.2.0" },
 			scopes: ["customers:read"],
-			rolloutSnapshot: {
-				rolloutId: "v2-cache",
-				enabled: true,
-				percent: 100,
-				previousPercent: 50,
-				changedAt: 1,
-				customerBucket: 42,
-			},
 		} as AutumnContext;
 
 		expect(enrichVercelAppLogger({ ctx })).toBe(logger);
@@ -76,8 +69,8 @@ describe("vercelLogContext", () => {
 						entity_id: "ent_123",
 						api_version: "1.2.0",
 						scopes: ["customers:read"],
-						full_subject_bucket: 42,
-						full_subject_rollout_enabled: true,
+						full_subject_bucket: getCustomerBucket({ customerId: "cus_123" }),
+						balance_worker_rollout_enabled: true,
 					},
 				},
 			},

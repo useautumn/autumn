@@ -1,3 +1,4 @@
+import { usesSubjectCache } from "../../usesSubjectCache.js";
 import type { CheckParams, FullSubject, TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { updateCustomerData } from "@/internal/customers/actions/updateCustomerData.js";
@@ -20,9 +21,9 @@ export const getOrCreateCachedPartialFullSubject = async ({
 	source?: string;
 	useDelayedPostgresBackupRead?: boolean;
 }): Promise<FullSubject> => {
-	const { skipCache, logger } = ctx;
-	const useRedis = !skipCache;
+	const { logger } = ctx;
 	const { customer_id: customerId, entity_id: entityId } = params;
+	const useRedis = usesSubjectCache({ ctx, customerId });
 
 	if (customerId && useRedis) {
 		const { fullSubject: cached } = await getCachedPartialFullSubject({

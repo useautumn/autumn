@@ -18,7 +18,6 @@ import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddlewar
 import { refreshProductsCacheMiddleware } from "../honoMiddlewares/refreshProductsCacheMiddleware.js";
 import { requestBlockMiddleware } from "../honoMiddlewares/requestBlockMiddleware.js";
 import { responseFilterMiddleware } from "../honoMiddlewares/responseFilter/responseFilterMiddleware.js";
-import { rolloutMiddleware } from "../honoMiddlewares/rolloutMiddleware.js";
 import { secretKeyMiddleware } from "../honoMiddlewares/secretKeyMiddleware.js";
 
 import { traceEnrichMiddleware } from "../honoMiddlewares/traceMiddleware.js";
@@ -51,7 +50,6 @@ apiRouter.use("*", secretKeyMiddleware);
 apiRouter.use("*", planAliasMiddleware);
 apiRouter.use("*", requestBlockMiddleware);
 apiRouter.use("*", orgConfigMiddleware);
-apiRouter.use("*", rolloutMiddleware);
 apiRouter.use("*", orgRedisMiddleware);
 apiRouter.use("*", apiVersionMiddleware);
 apiRouter.use("*", customerJwtVersionMiddleware);

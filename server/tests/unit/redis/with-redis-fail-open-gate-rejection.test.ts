@@ -147,14 +147,6 @@ const makeContext = () =>
 		logger: noopLogger,
 		extraLogs: {},
 		features: [],
-		rolloutSnapshot: {
-			rolloutId: "v2-cache",
-			enabled: true,
-			percent: 100,
-			previousPercent: 100,
-			changedAt: 0,
-			customerBucket: 0,
-		},
 		// biome-ignore lint/suspicious/noExplicitAny: minimal test context
 	}) as any;
 

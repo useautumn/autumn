@@ -5,6 +5,10 @@ import {
 	getRolloutConfigFromSource,
 	getRolloutConfigStatus,
 } from "@/internal/misc/rollouts/rolloutConfigStore.js";
+import {
+	ACTIVE_ROLLOUT_ID,
+	ROLLOUT_SETTLE_MS,
+} from "@/internal/misc/rollouts/rolloutUtils.js";
 
 export const handleGetRollouts = createRoute({
 	scopes: [Scopes.Superuser],
@@ -32,6 +36,8 @@ export const handleGetRollouts = createRoute({
 				: [];
 
 		return c.json({
+			activeRolloutId: ACTIVE_ROLLOUT_ID,
+			settleMs: ROLLOUT_SETTLE_MS,
 			rollouts: config.rollouts,
 			orgsById: Object.fromEntries(orgs.map((org) => [org.id, org])),
 			configHealthy: status.healthy,

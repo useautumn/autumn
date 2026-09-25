@@ -10,7 +10,6 @@ import {
 } from "@/internal/customers/recovery/customerCreationRecoveryStage.js";
 import { queueFailedCustomerCreation } from "@/internal/customers/recovery/queueFailedCustomerCreation.js";
 import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFromCustomerData.js";
@@ -33,7 +32,10 @@ export const getOrCreateApiCustomerByRollout = async ({
 	disableReplicaRead?: boolean;
 }) => {
 	// The worker is keyed by customer id; an id-less customer stays on Postgres.
-	if (isBalanceWorkerRolloutEnabled() && params.customer_id) {
+	if (
+		params.customer_id &&
+		isBalanceWorkerRolloutEnabled({ ctx, customerId: params.customer_id })
+	) {
 		const customerId = params.customer_id;
 		const entityId = params.entity_id;
 		const fullSubject = await withCreateIfMissing({
@@ -55,9 +57,6 @@ export const getOrCreateApiCustomerByRollout = async ({
 	}
 
 	setCustomerCreationRecoveryStage({ ctx, stage: "lookup" });
-
-	if (isFullSubjectRolloutEnabled({ ctx })) {
-	}
 
 	const lookup = ({ skipCache }: { skipCache: boolean }) =>
 		getOrCreateCachedFullSubject({

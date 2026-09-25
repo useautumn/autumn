@@ -200,17 +200,43 @@ const entityPartOf = ({
 });
 
 /**
+ * A customer's own view holding nothing its customer part would leave out: no entity, no entity-owned row,
+ * no price, rollover or replaceable whose owner row is gone. For such a view the split is the identity.
+ */
+const isOwnCustomerPart = ({ state }: { state: SubjectState }): boolean => {
+	if (state.entity !== null || state.identity.entityId !== null) return false;
+	const hasProduct = (id: string) =>
+		state.customerProducts.some((row) => row.id === id);
+	const hasEntitlement = (id: string) =>
+		state.customerEntitlements.some((row) => row.id === id);
+	return (
+		state.customerProducts.every((row) => row.internal_entity_id === null) &&
+		state.customerPrices.every((row) => hasProduct(row.customer_product_id)) &&
+		state.customerEntitlements.every(
+			(row) => row.internal_entity_id === null,
+		) &&
+		state.rollovers.every((row) => hasEntitlement(row.cus_ent_id)) &&
+		state.replaceables.every((row) => hasEntitlement(row.cus_ent_id)) &&
+		state.usageWindows.every((row) => (row.internal_entity_id ?? null) === null)
+	);
+};
+
+/**
  * The rows a subject view is stored as: customer-level rows under the customer's identity,
  * and the entity with its own rows under its identity. Rollovers follow their customer entitlement.
+ * A view with nothing to split out is returned as is, so a cache keyed on the state object still finds it.
  */
 export const splitSubjectState = ({
 	state,
 }: {
 	state: SubjectState;
-}): { customer: SubjectState; entity: SubjectState | null } => ({
-	customer: customerPartOf({ state }),
-	entity: state.entity ? entityPartOf({ state, entity: state.entity }) : null,
-});
+}): { customer: SubjectState; entity: SubjectState | null } => {
+	if (isOwnCustomerPart({ state })) return { customer: state, entity: null };
+	return {
+		customer: customerPartOf({ state }),
+		entity: state.entity ? entityPartOf({ state, entity: state.entity }) : null,
+	};
+};
 
 /** A view spanning the customer and several entities, as each owner stores it. */
 export const splitCustomerAndEntities = ({

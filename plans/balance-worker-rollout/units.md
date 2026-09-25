@@ -6,11 +6,33 @@ Each unit is end to end and ends on a passing test; stop for review after each.
 |---|---|---|
 | 1 | **The snapshot holds every rollout; the flip is scheduled.** `RolloutSnapshot` becomes `{ customerBucket, rollouts: Record<rolloutId, RolloutSnapshotEntry> }`; `computeRolloutSnapshot` fills every entry. New `resolveRolloutDecision({ rolloutId, orgId, customerId, now })` → `{ enabled, crossed, effectiveAt }` with `effectiveAt = changedAt + ROLLOUT_SETTLE_MS`; `isSnapshotCacheStale` compares against `effectiveAt`. Rollout store `retainOnError: true`; `deleteRollout` refuses `percent > 0`. `v2-cache` consumers and the two dead transition tests removed. | unit: decision before/after effectiveAt, crossed forward/back/none, org override beats global, retainOnError keeps the last config through an S3 error. |
 | 2 | **One routing function behind every gate.** `isBalanceWorkerRolloutEnabled({ ctx, customerId })`: snapshot memo for that customer, else the store (rule 1); `resolveBalanceWorkerRouting({ orgId, customerId })` for cron rows. `attachRolloutToContext` at every customer-binding site in the coverage map (api router, stripe ×3, revcat, vercel, checkout, SQS `createWorkerContext`, trigger, migrate-customer). All twenty gates replaced; the cache refuses routed customers (rule 2) and `skipCache` leaves `baseMiddleware`; `handleCheck.failOpen.skip` per customer; batch track split per item; `billingPlanRoutesToWorker` takes ctx; queued `UpdateBalance` through `runUpdateBalance`; test-clock reset through the lazy-reset gate. Finalize flag-free (PG lock row, else Redis receipt). Reset cron lane per subject; lock sweep always on. Env var deleted. Lands as two stacked branches: request paths, then SQS / trigger / cron / webhook paths. | integration: two orgs on one server, one at 100% and one at 0% — track/check/customers.get/attach take the worker for one and Redis for the other (assert via the routed log field and the Redis key's presence). One org at 50%: a customer in bucket <50 routes, one ≥50 does not. Reset cron with both lanes in one page. Finalize of a Redis-taken lock after the org rolled forward. |
-| 3 | **Forward handoff.** `ensureBalanceWorkerHandoff({ ctx })` in `rolloutMiddleware` and the customer-aware context factories: crossed forward + Redis view older than `effectiveAt` → `invalidateCachedFullSubject({ flushBalances: true, strict: true })`; on failure the request runs legacy. `syncItemV4` evicts the worker after syncing a routed customer. | integration mirroring `rollout-track-transition`: org at 0%, track 10 (Redis, unsynced), flip to 100%, wait for `effectiveAt`, track 10 (worker) → `customers.get` shows 80 and Postgres shows 80. A queued Redis sync that lands after the flip leaves the worker's next check correct. |
-| 4 | **Back handoff.** FullSubject read path: crossed back + view older than `effectiveAt` → drop; inside `effectiveAt + HYDRATION_HOLD_MS` → the request runs with `skipCache` (Postgres lane, no view); after the hold, before hydrating → strict `flushBalanceWorkerCustomer` + evict, bounded, logged on failure. No worker change. | integration: 100% → track (worker) → flip to 0% → track inside the hold (Postgres lane, no Redis key) → track after the hold (Redis) → balances exact at each step. Then: a worker track sent just before `effectiveAt` whose commit lands during the hold is in the first hydrated view. |
-| 5 | **Operator surface.** Admin UI: the `balance-worker` rollout pre-created, `effectiveAt` countdown, delete refused at non-zero. Log fields from the overview. `bun balance-routing status <org>` prints the decision, bucket split and last handoff counts from Axiom. | admin route unit tests; one manual run against staging recorded in this file. |
+| 3 | **Done 2026-09-25, simple form.** **Forward handoff.** The worker reads a slightly stale Postgres at flip time; the one thing that must not happen is a late Redis sync overwriting what the worker has since acked. `syncItemV4` drops the sync for a routed customer (`skipped / customer_on_worker`). The explicit pre-flush (flush Redis balances before a crossed customer's first worker command) was deliberately not built: it needs a call at ~11 worker adapters to save at most ~3s of Redis tracks per crossing. | unit: a routed customer's sync writes nothing and reads no cache. |
+| 4 | **Deferred 2026-09-25.** **Back handoff.** What ships: the pre-flip Redis view is evicted on its first read after the rollback settles (`isRolloutCacheStale`, crossed back), and Redis rehydrates from Postgres. Not built: the worker flush before hydration and the hydration hold. Cost: a worker commit still landing after Redis hydrated is one track Redis does not see until the next invalidation, the same class as the forward flip. | existing unit coverage of the stale check (forward then back, once per flip). |
+| 5 | **Done 2026-09-25.** **Operator surface.** Admin page rebuilt as the balance-worker rollout (`vite/src/views/admin/edge-config/`): one global percent with a live "X% → Y% in Ns" status, per-org overrides as a list, add/edit/remove; `GET /admin/rollouts` returns `activeRolloutId` and `settleMs`. Delete guard, `balance_worker_rollout_enabled` log field, `customer_on_worker` sync skip reason. `rollout-track-transition.test.ts` is real: it proves the lane per phase from the Redis view's `_cachedAt`; it runs only against a server on `BALANCE_WORKER_ROLLOUT_ENABLED=config`. Left: an Axiom query per org for routed requests and `customer_on_worker` skips after a flip. | the transition test green on a config-driven local stack. |
 
 Order: 1 → 2 → 3 → 4 → 5. Unit 2 is the big diff and should land in two stacked branches (request-path gates, then cron/webhook gates).
+
+## Status, 2026-09-25
+
+Units 1, 2, 3, 5 landed (commit `6e2b90c07d` plus the review fixes below); 4 deferred. The design drifted from the
+rows above in three ways: there is no request snapshot (every gate resolves from the store, `customerId`
+required), the settle window is 15s in production and 5s locally, and one rollout id `balance-worker` covers
+both envs.
+
+Review fixes after an adversarial pass over the landed diff: the invalidation flush (`flushBalances`) skips
+routed customers; trigger polls the rollout store through `startEdgeConfigPolling({ stores })`; the env
+override is `true` / `false` / `config`, unset meaning the config against production (`NODE_ENV=production`
+or `ENV_FILE=.env.prod`) and the local default elsewhere; every percent change goes through
+`scheduleRolloutPercent`, so a new org override inherits the global percent; removing an override just
+deletes it; the stale check reads a pruned list of `decreases`, so a bucket is evicted once by the decrease
+that sent it back however many changes follow; the two log-field sites guard on `ctx.org`.
+
+Accepted, not built: a Redis lock still open when its customer flips forward settles on the old Redis hash
+and its sync is dropped, so a release's refund never reaches Postgres. Only locks open across the flip
+instant. The fix, if ever wanted, is a routed branch in `runFinalizeLockV2` that calls the existing
+`runPostgresFinalizeLockV2` and evicts the worker. Also left: stale reads on the dashboard customer page
+(`getCusUsageLimitsWithUsage` caches by internal id) and Slack unfurls; batch-track lanes are not atomic;
+a shadow operator script imports the removed snapshot; `packages/logging` still names the old log field.
 
 ## Folder structure
 
@@ -36,7 +58,7 @@ server/src/external/balanceWorker/getBalanceWorkerRolloutEnabled.ts             
 
 ## Unit 1 case matrix
 
-`resolveRolloutDecision({ rolloutId, orgId, customerId, now })` over a config entry `{ percent, previousPercent, changedAt, orgs }`:
+`isRolloutEnabled` and `isRolloutCacheStale` (`{ rolloutId, orgId, customerId, now }`) over a config entry `{ percent, previousPercent, changedAt, orgs }`:
 
 | # | config | customer | now | enabled | crossed |
 |---|---|---|---|---|---|

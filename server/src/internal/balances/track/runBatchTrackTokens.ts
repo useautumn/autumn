@@ -1,8 +1,6 @@
 import type { BatchTrackTokensParams, TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
-import { runBalanceWorkerBatchTrack } from "./balanceWorker/runBalanceWorkerBatchTrack.js";
-import { runBatchTrack } from "./runBatchTrack.js";
+import { runBatchTrackByRollout } from "./runBatchTrackByRollout.js";
 import { getTokenTrackParams } from "./utils/getTokenTrackParams.js";
 
 export const runBatchTrackTokens = async ({
@@ -22,7 +20,5 @@ export const runBatchTrackTokens = async ({
 		trackBodies.push(trackBody);
 	}
 
-	if (isBalanceWorkerRolloutEnabled())
-		return runBalanceWorkerBatchTrack({ ctx, body: trackBodies });
-	return runBatchTrack({ ctx, body: trackBodies });
+	await runBatchTrackByRollout({ ctx, body: trackBodies });
 };

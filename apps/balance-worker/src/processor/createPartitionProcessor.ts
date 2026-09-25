@@ -56,6 +56,7 @@ export function createPartitionProcessor({
 			appender: dependencies.appender,
 			receiptPolicy: dependencies.receiptPolicy,
 			recentCommands: dependencies.recentCommands,
+			onStateAdvanced: (advanced) => subjectHydrator.inheritCatalog(advanced),
 		},
 		config: {
 			topic: config.topic,

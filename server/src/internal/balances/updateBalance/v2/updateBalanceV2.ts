@@ -75,7 +75,7 @@ export const runUpdateBalanceV2 = async ({
 	params: UpdateBalanceParamsV0;
 	targetBalance?: number;
 }): Promise<void> => {
-	if (isBalanceWorkerRolloutEnabled()) {
+	if (isBalanceWorkerRolloutEnabled({ ctx, customerId: params.customer_id })) {
 		await runBalanceWorkerUpdateBalance({ ctx, params, targetBalance });
 		return;
 	}
@@ -101,7 +101,10 @@ export const updateBalanceV2 = async ({
 			ctx.testOptions?.asyncBalanceUpdate);
 
 	// On the worker path an async update is a queued command, as an async track is; SQS stays the legacy queue.
-	if (asyncBalanceUpdateEnabled && isBalanceWorkerRolloutEnabled()) {
+	if (
+		asyncBalanceUpdateEnabled &&
+		isBalanceWorkerRolloutEnabled({ ctx, customerId: params.customer_id })
+	) {
 		return runBalanceWorkerAsyncUpdateBalance({ ctx, params, targetBalance });
 	}
 	if (asyncBalanceUpdateEnabled) {

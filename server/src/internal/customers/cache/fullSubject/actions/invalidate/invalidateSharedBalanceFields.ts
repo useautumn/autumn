@@ -3,6 +3,7 @@ import type { Redis } from "ioredis";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { flushSubjectBalancesToDb } from "@/internal/balances/utils/sync/flushSubjectBalancesToDb.js";
 import type { UsageWindowUpdate } from "@/internal/balances/utils/types/usageWindowUpdate.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildSharedFullSubjectBalanceKey } from "../../builders/buildSharedFullSubjectBalanceKey.js";
@@ -50,13 +51,27 @@ export const invalidateSharedBalanceFields = async ({
 	const cachedRaw = await tryRedisRead(() => redisV2.get(subjectKey), redisV2);
 	if (!cachedRaw) return;
 
-	if (!FLUSH_BALANCES_ON_INVALIDATION || !flushBalances) {
-		await deleteFieldsFromManifest({ ctx, customerId, cachedRaw, redisV2 });
+	if (flushIsSafe({ ctx, customerId, flushBalances })) {
+		await getDelFieldsFromManifest({ ctx, customerId, cachedRaw, redisV2 });
 		return;
 	}
 
-	await getDelFieldsFromManifest({ ctx, customerId, cachedRaw, redisV2 });
+	await deleteFieldsFromManifest({ ctx, customerId, cachedRaw, redisV2 });
 };
+
+/** The worker owns a routed customer's rows: whatever Redis still holds for them predates the flip and is only dropped. */
+const flushIsSafe = ({
+	ctx,
+	customerId,
+	flushBalances,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	flushBalances: boolean;
+}): boolean =>
+	FLUSH_BALANCES_ON_INVALIDATION &&
+	flushBalances &&
+	!isBalanceWorkerRolloutEnabled({ ctx, customerId });
 
 type BalanceFieldTargets = {
 	internalCustomerId: string;

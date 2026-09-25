@@ -19,7 +19,12 @@ export const publishBillingTransition = async ({
 	executionDeferred?: boolean;
 }): Promise<void> => {
 	// The worker holds the live balances and the plan carries usage itself: nothing to rebase in Redis.
-	if (isBalanceWorkerRolloutEnabled()) return;
+	const externalCustomerId = billingContext.fullCustomer.id;
+	if (
+		externalCustomerId &&
+		isBalanceWorkerRolloutEnabled({ ctx, customerId: externalCustomerId })
+	)
+		return;
 
 	// 1. Decide whether this plan has a supported runtime transition
 	const decision = shouldPublishBillingTransition({

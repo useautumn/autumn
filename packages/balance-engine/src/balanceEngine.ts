@@ -27,6 +27,10 @@ export type {
 	BillingPlanOp,
 	BillingPlanUpdateOp,
 } from "./commands/applyBillingPlan/types/billingPlanOp.js";
+export {
+	type CheckAfterDeduction,
+	checkAfterDeduction,
+} from "./commands/check/checkAfterDeduction.js";
 export { computeCheck } from "./commands/check/computeCheck.js";
 export type { CheckCommand } from "./commands/check/types/checkCommand.js";
 export type { CheckResult } from "./commands/check/types/checkResult.js";
@@ -37,7 +41,10 @@ export { computeDeleteBalance } from "./commands/deleteBalance/computeDeleteBala
 export type { DeleteBalanceCommand } from "./commands/deleteBalance/types/deleteBalanceCommand.js";
 export type { DeleteBalanceResult } from "./commands/deleteBalance/types/deleteBalanceResult.js";
 export type { EvictCommand } from "./commands/evict/types/evictCommand.js";
-export { computeFinalize } from "./commands/finalize/computeFinalize.js";
+export {
+	computeFinalize,
+	computeFinalizeDecision,
+} from "./commands/finalize/computeFinalize.js";
 export type { FinalizeCommand } from "./commands/finalize/types/finalizeCommand.js";
 export type { FinalizeResult } from "./commands/finalize/types/finalizeResult.js";
 export type { FlushCommand } from "./commands/flush/types/flushCommand.js";
@@ -58,7 +65,10 @@ export type {
 	ResetResult,
 	ResetRow,
 } from "./commands/reset/types/resetResult.js";
-export { computeTrack } from "./commands/track/computeTrack.js";
+export {
+	computeTrack,
+	computeTrackDecision,
+} from "./commands/track/computeTrack.js";
 export type {
 	OverageBehavior,
 	TrackCommand,
@@ -78,6 +88,7 @@ export type { RebalanceRequest } from "./common/rebalance/types/rebalanceRequest
 // deduction
 export { deduct } from "./deduction/deduct.js";
 export type { DeductionContext } from "./deduction/types/deductionContext.js";
+export type { DeductionDecision } from "./deduction/types/deductionDecision.js";
 export type { DeductionDelta } from "./deduction/types/deductionDelta.js";
 export type { DeductionOutcome } from "./deduction/types/deductionOutcome.js";
 export type { DeductionRow } from "./deduction/types/deductionRow.js";
@@ -187,6 +198,7 @@ export {
 	parseWorkerCustomerEntitlement,
 	parseWorkerLock,
 } from "./parsers.js";
+export { changesKeepCatalogKeys } from "./utils/catalogUtils/classifyCatalogUtils.js";
 export {
 	catalogKeyToString,
 	catalogRowsToCatalog,

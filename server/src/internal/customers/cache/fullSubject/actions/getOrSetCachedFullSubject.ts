@@ -1,3 +1,4 @@
+import { usesSubjectCache } from "../usesSubjectCache.js";
 import {
 	CustomerNotFoundError,
 	EntityNotFoundError,
@@ -29,8 +30,8 @@ export const getOrSetCachedFullSubject = async ({
 	runLazyResets?: boolean;
 	readFrom?: SubjectReadFrom;
 }): Promise<FullSubject> => {
-	const { skipCache, logger } = ctx;
-	const useRedis = !skipCache;
+	const { logger } = ctx;
+	const useRedis = usesSubjectCache({ ctx, customerId });
 
 	let fetchedSubjectViewEpoch = 0;
 

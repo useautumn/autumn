@@ -291,7 +291,10 @@ export class CusService {
 
 				// Skip reset only when executeWithHealthTracking explicitly chose the
 				// replica. Lazy reset writes themselves go through dbGeneral.
-				if (isBalanceWorkerRolloutEnabled()) {
+				if (
+					fullCus.id &&
+					isBalanceWorkerRolloutEnabled({ ctx, customerId: fullCus.id })
+				) {
 					// The worker owns the rows: it refills and lands them, then the read is repeated on fresh rows.
 					const refilled = await resetCustomerEntitlementsViaWorker({
 						ctx,

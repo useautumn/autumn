@@ -64,14 +64,6 @@ afterAll(() => {
 
 const buildContext = async ({ customerId }: { customerId: string }) => {
 	const ctx = (await createTestContext()) as unknown as AutumnContext;
-	ctx.rolloutSnapshot = {
-		rolloutId: "v2-cache",
-		enabled: true,
-		percent: 100,
-		previousPercent: 100,
-		changedAt: 0,
-		customerBucket: 0,
-	};
 	ctx.customerId = customerId;
 	return ctx;
 };

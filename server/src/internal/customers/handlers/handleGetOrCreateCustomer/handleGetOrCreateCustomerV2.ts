@@ -9,7 +9,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
 import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 
 export const getOrCreateCustomerV2 = async ({
 	ctx,
@@ -35,7 +34,7 @@ export const getOrCreateCustomerV2 = async ({
 
 	const duration = Date.now() - start;
 	ctx.logger.debug(
-		`[post-customer] path=${isFullSubjectRolloutEnabled({ ctx }) ? "v2" : "v1"} duration: ${duration}ms`,
+		`[post-customer] duration: ${duration}ms`,
 	);
 
 	return apiCustomer;

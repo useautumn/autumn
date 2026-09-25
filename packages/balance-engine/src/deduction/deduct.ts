@@ -40,7 +40,7 @@ export const deductionStateToOutcome = ({
 		context.overdueBlocked && context.rows.length === 0 && remaining.gt(0);
 	const rejected =
 		refusedAsOverdue ||
-		(remaining.gt(0) && request.overageBehavior === "reject");
+		(remaining.gt(0) && request.terms.overageBehavior === "reject");
 	return {
 		context,
 		requestedValue: request.value,
@@ -51,6 +51,7 @@ export const deductionStateToOutcome = ({
 			? deductionStateToLimitType({ context, deductionState })
 			: null,
 		deltas,
+		usageWindowConsumed: deductionState.usageWindowConsumed,
 		changes: rejected
 			? []
 			: [
@@ -68,9 +69,13 @@ export const deduct = ({
 	fullSubject: WorkerFullSubject;
 	request: DeductionRequest;
 }): DeductionOutcome => {
-	const context = setupDeductionContext({ fullSubject, request });
+	const context = setupDeductionContext({
+		fullSubject,
+		selection: request.selection,
+	});
 	const deductionState: DeductionState = {
 		remaining: new Decimal(request.value),
+		terms: request.terms,
 		deltas: [],
 		usageWindowConsumed: new Map(),
 	};

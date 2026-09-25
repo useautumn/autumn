@@ -2,7 +2,7 @@
 author: john + claude
 feature: balance-worker-rollout
 date: 2026-09-25
-status: approved 2026-09-25
+status: approved 2026-09-25; units 1-3 landed, 4 deferred, see units.md
 ---
 
 # Rolling the balance worker out per org, per env, per customer bucket
@@ -93,7 +93,7 @@ identity the worker is keyed by carries it.
 ### the flip is scheduled, not immediate
 
 ```
-effectiveAt = changedAt + ROLLOUT_SETTLE_MS     (30s = 3 × the 10s config poll)
+effectiveAt = changedAt + ROLLOUT_SETTLE_MS     (15s in production, past the 10s config poll; 5s locally)
 before effectiveAt: route by previousPercent    after: route by percent
 ```
 
@@ -237,10 +237,10 @@ Always-legacy paths that stay legacy on purpose (they write Postgres and evict):
 |---|---|---|
 | 1 | Percent per customer, splitting one org across both write paths? | Yes. The worker is customer-keyed; pools, entities, licenses all hang off the customer. Nothing spans customers on the worker side. `routing.md`'s "org+env is the unit" predates the handoff design. |
 | 2 | Env scope? | None. One id, `balance-worker`; an org rolls both envs together (decided 2026-09-25). |
-| 3 | Scheduled flip (`effectiveAt`) or immediate? | Scheduled, 30s. Immediate keeps a 10s poll-skew window on every flip. |
+| 3 | Scheduled flip (`effectiveAt`) or immediate? | Scheduled: 15s in production, 5s locally. Immediate keeps a 10s poll-skew window on every flip. |
 | 4 | Worker bumps `cache_version` so a stale Redis sync self-heals? | No (John, 2026-09-25): the worker stays isolated. Rollback safety is the cache's job: the hydration hold plus the strict flush mean a pre-commit view is never built. |
 | 5 | Strict flush/evict variants or reuse best-effort? | Strict for the handoff only (`strict: true` option; throws instead of warn). Best-effort stays for every other caller. |
-| 6 | Forward handoff site: middleware or each gate? | `attachRolloutToContext` wherever a context binds its customer (map above); the middleware is one caller of it. |
+| 6 | Forward handoff site: middleware or each gate? | Neither, in the end: no explicit pre-flush was built (see units.md unit 3). The worker reads a slightly stale Postgres and `syncItemV4` drops a routed customer's late sync. |
 | 7 | Retire `v2-cache` machinery? | Yes in unit 1: `isFullSubjectRolloutEnabled`, `getFullSubjectRolloutSnapshot`, the two dead transition tests, `FULL_SUBJECT_ROLLOUT_ID`. The snapshot becomes a map so both could coexist, but nothing needs the old one. |
 
 ## Open questions
@@ -248,9 +248,7 @@ Always-legacy paths that stay legacy on purpose (they write Postgres and evict):
 - `getDelSharedBalanceFields` uses the customer-level view as its manifest; entity-level hashes with no
   customer view are not flushed. Confirm whether an entity's balances can outlive its customer view (3-day TTL
   both) before relying on it for the forward handoff.
-- Should the settle window be operator-visible as a field (`effectiveAt` stored) instead of derived? Derived
-  keeps the schema; stored survives a constant change mid-rollout. Recommendation: derived, constant in
-  `balanceWorkerConstants.ts`.
+- Settle window: derived, constant in `rolloutUtils.ts`; the admin page reads it from `GET /admin/rollouts`.
 - The Redis migration staleness check (`isRedisMigrationCacheStale`) is a sibling; leave it alone.
 
 ## Observability

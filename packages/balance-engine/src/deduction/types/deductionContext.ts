@@ -1,17 +1,15 @@
 import type { UsageWindowLimit } from "@autumn/shared";
-import type { OverageBehavior } from "../../commands/track/types/trackCommand.js";
 import type { WorkerRollover } from "../../models/subject/rows/workerRollover.js";
 import type { WorkerUsageWindow } from "../../models/subject/rows/workerUsageWindow.js";
 import type { WorkerFullCustomerEntitlementWithProduct } from "../../models/subject/workerFullSubject.js";
+import type { DeductionSelection } from "./deductionRequest.js";
 import type { DeductionRow } from "./deductionRow.js";
 
-/** Everything a deduction needs, decided once from the subject; the buckets never read the subject. */
+/** The rows a selection found on the subject, bounded and ready to draw from; the buckets never read the subject. */
 export type DeductionContext = {
-	featureId: string;
+	/** What selected these rows; a request with the same selection draws from this context. */
+	selection: DeductionSelection;
 	entityId: string | null;
-	now: number;
-	overageBehavior: OverageBehavior;
-	enforcesSpendLimit: boolean;
 	/** The selected entitlements in draw order; an unlimited one, if any, is first. */
 	customerEntitlements: WorkerFullCustomerEntitlementWithProduct[];
 	/** Their rollovers, soonest-expiring first. */

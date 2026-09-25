@@ -1,6 +1,7 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import { getCustomerBucket } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { addAppContextToLogs } from "@/utils/logging/addContextToLogs";
 import { logRequestResult } from "./requestLogging/logRequestResult.js";
 
@@ -81,10 +82,9 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const customerId = ctx.customerId;
 	const entityId = ctx.entityId;
 
-	const fullSubjectBucket =
-		customerId && ctx.rolloutSnapshot?.customerBucket !== undefined
-			? (ctx.rolloutSnapshot.customerBucket ?? undefined)
-			: undefined;
+	const fullSubjectBucket = customerId
+		? getCustomerBucket({ customerId })
+		: undefined;
 
 	ctx.logger = addAppContextToLogs({
 		logger: ctx.logger,
@@ -101,9 +101,10 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			api_version: ctx.apiVersion?.semver,
 			scopes: ctx.scopes,
 			full_subject_bucket: fullSubjectBucket ?? undefined,
-			full_subject_rollout_enabled: customerId
-				? isFullSubjectRolloutEnabled({ ctx })
-				: undefined,
+			balance_worker_rollout_enabled:
+				ctx.org && customerId
+					? isBalanceWorkerRolloutEnabled({ ctx, customerId })
+					: undefined,
 		},
 	});
 

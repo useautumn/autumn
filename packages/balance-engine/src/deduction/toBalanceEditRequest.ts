@@ -1,5 +1,6 @@
 import type { CustomerEntitlementFilters } from "@autumn/shared";
 import type { CommandOrg } from "../models/command/commandOrg.js";
+import { toDeductionSelection } from "./toDeductionSelection.js";
 import type { DeductionRequest } from "./types/deductionRequest.js";
 
 /** An admin edit to a balance, not a customer's consumption: no floors, no spend limit, no overdue block, no event properties. */
@@ -22,16 +23,17 @@ export const toBalanceEditRequest = ({
 	org: CommandOrg;
 	now: number;
 }): DeductionRequest => ({
-	featureId,
-	internalFeatureId,
+	selection: toDeductionSelection({
+		featureId,
+		internalFeatureId,
+		now,
+		properties: null,
+		includesCreditSystems,
+		countsUsageWindows,
+		customerEntitlementFilters,
+		org,
+		enforceOverdueBlock: false,
+	}),
+	terms: { overageBehavior: "overflow", enforcesSpendLimit: false },
 	value,
-	overageBehavior: "overflow",
-	includesCreditSystems,
-	enforcesSpendLimit: false,
-	customerEntitlementFilters,
-	countsUsageWindows,
-	properties: null,
-	enforceOverdueBlock: false,
-	now,
-	org,
 });

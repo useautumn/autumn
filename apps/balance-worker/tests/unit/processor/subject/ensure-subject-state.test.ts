@@ -132,7 +132,9 @@ const createScope = ({
 		},
 		state: {
 			inFlightLoads: createInFlightLoads(),
-			joinCache: createSubjectJoinCache({ ctx: { catalogCache } }),
+			joinCache: createSubjectJoinCache({
+				ctx: { catalogCache, config: { catalogRecheckMs: 300_000 } },
+			}),
 		},
 	};
 	return {

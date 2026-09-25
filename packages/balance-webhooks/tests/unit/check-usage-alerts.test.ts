@@ -2,11 +2,11 @@ import { describe, expect, test } from "bun:test";
 import {
 	applyMutation,
 	type Catalog,
-	computeFinalize,
-	computeTrack,
+	computeFinalizeDecision,
+	computeTrackDecision,
 	createSubjectState,
+	type DeductionDecision,
 	type SubjectState,
-	type SubjectStateMutation,
 	subjectStateToFullSubject,
 	type WorkerCustomer,
 	type WorkerCustomerEntitlement,
@@ -103,9 +103,8 @@ const catalogOf = ({
 	return catalog;
 };
 
-/** What the worker hands the decision: the mutation with the subject as it found it and as it left it. */
-type DecidedOn = {
-	mutation: SubjectStateMutation;
+/** What the worker hands the decision: the mutation and its deduction, with the subject as it found it and as it left it. */
+type DecidedOn = DeductionDecision & {
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
 };
@@ -160,12 +159,13 @@ const trackOn = ({
 			},
 		},
 	};
-	const mutation = computeTrack({
+	const { mutation, outcome } = computeTrackDecision({
 		fullSubject: subjectStateToFullSubject({ state, catalog, entityId }),
 		command,
 	});
 	return {
 		mutation,
+		outcome,
 		before: subjectStateToFullSubject({ state, catalog, entityId }),
 		after: subjectStateToFullSubject({
 			state: applyMutation({ state, mutation }),
@@ -506,7 +506,7 @@ describe("a lock and its finalize", () => {
 			customerEntitlements: [createCustomerEntitlement({ balance: 10 })],
 		});
 		const catalog = catalogOf({ state, perEntity: false });
-		const lockMutation = computeTrack({
+		const lock = computeTrackDecision({
 			fullSubject: subjectStateToFullSubject({
 				state,
 				catalog,
@@ -522,13 +522,13 @@ describe("a lock and its finalize", () => {
 				},
 			},
 		});
-		const lockChange = lockMutation.changes.find(
+		const lockChange = lock.mutation.changes.find(
 			(change) => change.table === "locks" && change.op === "insert",
 		);
 		if (lockChange?.table !== "locks" || lockChange.op !== "insert")
 			throw new Error("Expected the check to open a lock");
-		const locked = applyMutation({ state, mutation: lockMutation });
-		const finalizeMutation = computeFinalize({
+		const locked = applyMutation({ state, mutation: lock.mutation });
+		const finalize = computeFinalizeDecision({
 			fullSubject: subjectStateToFullSubject({
 				state: locked,
 				catalog,
@@ -550,7 +550,7 @@ describe("a lock and its finalize", () => {
 		});
 		const settled = applyMutation({
 			state: locked,
-			mutation: finalizeMutation,
+			mutation: finalize.mutation,
 		});
 		const subjectOf = (subjectState: SubjectState) =>
 			subjectStateToFullSubject({
@@ -560,12 +560,12 @@ describe("a lock and its finalize", () => {
 			});
 		return {
 			onLock: {
-				mutation: lockMutation,
+				...lock,
 				before: subjectOf(state),
 				after: subjectOf(locked),
 			},
 			onFinalize: {
-				mutation: finalizeMutation,
+				...finalize,
 				before: subjectOf(locked),
 				after: subjectOf(settled),
 			},

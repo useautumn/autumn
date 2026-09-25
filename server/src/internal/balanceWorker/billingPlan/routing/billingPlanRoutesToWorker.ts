@@ -1,4 +1,5 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { autoTopupRebalanceToPurchase } from "../planOps/customerEntitlements/rebalancesToPlanOps.js";
 import { billingPlanCustomerProducts } from "./billingPlanRows.js";
@@ -47,9 +48,16 @@ export const workerCanApplyBillingPlan = ({
 
 /** Whether the customer's rows land through the worker instead of one Postgres transaction. */
 export const billingPlanRoutesToWorker = ({
+	ctx,
 	autumnBillingPlan,
 }: {
+	ctx: Pick<AutumnContext, "org">;
 	autumnBillingPlan: AutumnBillingPlan;
-}): boolean =>
-	isBalanceWorkerRolloutEnabled() &&
-	workerCanApplyBillingPlan({ autumnBillingPlan });
+}): boolean => {
+	const customerId = billingPlanToWorkerCustomerId({ autumnBillingPlan });
+	return (
+		customerId !== null &&
+		isBalanceWorkerRolloutEnabled({ ctx, customerId }) &&
+		workerCanApplyBillingPlan({ autumnBillingPlan })
+	);
+};

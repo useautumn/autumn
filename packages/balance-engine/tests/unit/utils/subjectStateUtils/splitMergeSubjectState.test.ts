@@ -95,3 +95,60 @@ describe("subject states", () => {
 		]);
 	});
 });
+
+describe("a customer's own view", () => {
+	test("is returned as its own customer part, the same object", () => {
+		const state = createSubjectState({
+			identity,
+			customerProducts: [createCustomerProduct()],
+			customerEntitlements: [customerRow],
+			rollovers: [
+				{
+					id: "ro_customer",
+					cus_ent_id: customerRow.id,
+					balance: 3,
+					usage: 0,
+					expires_at: null,
+					entities: {},
+				},
+			],
+		});
+
+		const states = splitSubjectState({ state });
+
+		expect(states.customer).toBe(state);
+		expect(states.entity).toBeNull();
+	});
+
+	test("still splits when a row's owner is gone, or an entity-owned row is present without its entity", () => {
+		const orphanedRollover = createSubjectState({
+			identity,
+			customerProducts: [createCustomerProduct()],
+			customerEntitlements: [customerRow],
+			rollovers: [
+				{
+					id: "ro_orphan",
+					cus_ent_id: "ce_deleted",
+					balance: 3,
+					usage: 0,
+					expires_at: null,
+					entities: {},
+				},
+			],
+		});
+		const split = splitSubjectState({ state: orphanedRollover });
+		expect(split.customer).not.toBe(orphanedRollover);
+		expect(split.customer.rollovers).toEqual([]);
+
+		const entityRowWithoutEntity = createSubjectState({
+			identity,
+			customerProducts: [createCustomerProduct()],
+			customerEntitlements: [customerRow, entityRow],
+		});
+		const splitAgain = splitSubjectState({ state: entityRowWithoutEntity });
+		expect(splitAgain.customer).not.toBe(entityRowWithoutEntity);
+		expect(
+			splitAgain.customer.customerEntitlements.map(({ id }) => id),
+		).toEqual([customerRow.id]);
+	});
+});

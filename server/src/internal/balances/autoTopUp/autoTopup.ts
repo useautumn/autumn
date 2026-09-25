@@ -179,7 +179,7 @@ export const autoTopup = async ({
 		const customerProductUpdate = autumnBillingPlan.updateCustomerProduct;
 		if (
 			customerProductUpdate?.updates.options &&
-			!isBalanceWorkerRolloutEnabled()
+			!isBalanceWorkerRolloutEnabled({ ctx, customerId })
 		) {
 			const customerProductId = customerProductUpdate.customerProduct.id;
 			await updateCachedCustomerProductV2({

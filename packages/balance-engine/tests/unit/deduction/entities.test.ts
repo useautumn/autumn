@@ -20,10 +20,13 @@ import {
 	createCustomerProduct,
 	entity,
 	identity,
-	occurredAt,
 	org,
 } from "../engineFixtures.js";
-import { balancesAfter, customerWith } from "./deductionFixtures.js";
+import {
+	balancesAfter,
+	createDeductionRequest,
+	customerWith,
+} from "./deductionFixtures.js";
 
 const ENTITY_FEATURE_ID = "seats";
 const OTHER_ENTITY_ID = "ent_07";
@@ -67,20 +70,10 @@ const createEntityCatalogFor = ({
 const createRequest = ({
 	value,
 	overageBehavior = "cap",
-}: Pick<DeductionRequest, "value"> &
-	Partial<Pick<DeductionRequest, "overageBehavior">>): DeductionRequest => ({
-	featureId: "messages",
-	internalFeatureId: "feat_messages",
-	value,
-	overageBehavior,
-	includesCreditSystems: true,
-	enforcesSpendLimit: true,
-	countsUsageWindows: true,
-	properties: null,
-	enforceOverdueBlock: false,
-	now: occurredAt,
-	org,
-});
+}: {
+	value: number;
+	overageBehavior?: DeductionRequest["terms"]["overageBehavior"];
+}): DeductionRequest => createDeductionRequest({ value, overageBehavior, org });
 
 const deductFrom = ({
 	customer,
@@ -98,7 +91,7 @@ const deductFrom = ({
 	entityId?: string | null;
 	entityRow?: WorkerEntity;
 	value: number;
-	overageBehavior?: DeductionRequest["overageBehavior"];
+	overageBehavior?: DeductionRequest["terms"]["overageBehavior"];
 	perEntityIds?: string[];
 }) => {
 	const state = createSubjectState({

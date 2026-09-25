@@ -49,7 +49,11 @@ export const overlayAttachRuntimeBalances = async ({
 	entityId?: string;
 }): Promise<FullCustomer> => {
 	// The worker holds the live balances; the Redis subject is not kept fresh on its path.
-	if (ctx.skipCache || isBalanceWorkerRolloutEnabled()) return fullCustomer;
+	// An id-less customer never routes to the worker.
+	const routedToWorker = fullCustomer.id
+		? isBalanceWorkerRolloutEnabled({ ctx, customerId: fullCustomer.id })
+		: false;
+	if (ctx.skipCache || routedToWorker) return fullCustomer;
 
 	const { fullSubject } = await getCachedFullSubject({
 		ctx,

@@ -47,7 +47,10 @@ export const deleteBalance = async ({
 	}
 
 	// The worker holds no expired grant, and only the dashboard deletes one.
-	if (isBalanceWorkerRolloutEnabled() && !includeExpired) {
+	if (
+		isBalanceWorkerRolloutEnabled({ ctx, customerId: customer_id }) &&
+		!includeExpired
+	) {
 		await runBalanceWorkerDeleteBalance({ ctx, params });
 		return;
 	}

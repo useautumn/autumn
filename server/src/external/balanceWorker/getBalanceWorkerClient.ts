@@ -12,7 +12,13 @@ import {
 } from "@autumn/env/balanceWorkerConstants";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { readBalanceWorkerKafkaConfig } from "./balanceWorkerKafkaConfig.js";
-import { getBalanceWorkerRolloutEnabled } from "./getBalanceWorkerRolloutEnabled.js";
+import { getBalanceWorkerRolloutOverride } from "./getBalanceWorkerRolloutEnabled.js";
+
+const rolloutOverrideLabel = (): string => {
+	const override = getBalanceWorkerRolloutOverride();
+	if (override === undefined) return "config";
+	return override ? "on" : "off";
+};
 
 let balanceWorkerClient: BalanceWorkerClient | undefined;
 
@@ -52,7 +58,7 @@ export function getBalanceWorkerClient(): BalanceWorkerClient {
  */
 export async function startBalanceWorkerClient(): Promise<void> {
 	logger.info(
-		`[balance-worker] Client starting; rollout ${getBalanceWorkerRolloutEnabled() ? "on" : "off"}`,
+		`[balance-worker] Client starting; rollout ${rolloutOverrideLabel()}`,
 	);
 	await getBalanceWorkerClient().start();
 }

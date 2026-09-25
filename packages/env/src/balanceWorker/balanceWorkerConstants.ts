@@ -68,6 +68,9 @@ export const BALANCE_WORKER_PARTITION_STARTUP_CONCURRENCY = 16;
 export const BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS = 180_000;
 
 export const BALANCE_WORKER_CATALOG_TTL_MS = 300_000;
+/** A customer's joined catalog is handed from one state to the next across its tracks; this is how long
+ * before `ensure` re-reads its rows, bounding staleness the same way the ttl does for the cache. */
+export const BALANCE_WORKER_CATALOG_RECHECK_MS = BALANCE_WORKER_CATALOG_TTL_MS;
 /** Shared per worker rather than per partition. Staging evicted rows out from
  *  under in-flight decisions at 256 MiB, which surfaces as NOT_READY responses
  *  the caller cannot do anything useful with. */

@@ -1,10 +1,12 @@
-import { type FinalizeCommand, orgToCommandOrg } from "@autumn/balance-engine";
+import {
+	type FinalizeCommand,
+	orgToCommandOrg,
+	type WorkerLock,
+} from "@autumn/balance-engine";
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import {
-	ErrCode,
 	type FinalizeLockParamsV0,
 	InsufficientBalanceError,
-	RecaseError,
 } from "@autumn/shared";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -12,14 +14,6 @@ import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErro
 import { featureToInternalFeatureId } from "../../balanceWorker/featureToInternalFeatureId.js";
 import { cancelLockExpirySchedule } from "../../balanceWorker/lockExpirySchedule.js";
 import { requestContextToCommandBase } from "../../balanceWorker/requestContextToCommandBase.js";
-import { getBalanceLock } from "./getBalanceLock.js";
-
-/** Same message as the legacy path: the expiry job recognises an already-settled lock by it. */
-const lockNotFoundError = ({ lockId }: { lockId: string }): RecaseError =>
-	new RecaseError({
-		message: `Lock not found for ID: ${lockId}`,
-		code: ErrCode.InvalidRequest,
-	});
 
 /** Release settles at zero, an override at that value, a plain confirm at whatever the lock took. */
 const finalValueOf = ({
@@ -32,17 +26,14 @@ const finalValueOf = ({
 export async function runBalanceWorkerFinalize({
 	ctx,
 	params,
+	lock,
 	client = getBalanceWorkerClient(),
-	loadLock = getBalanceLock,
 }: {
 	ctx: AutumnContext;
 	params: FinalizeLockParamsV0;
+	lock: WorkerLock;
 	client?: Pick<BalanceWorkerClient, "finalize">;
-	loadLock?: typeof getBalanceLock;
 }): Promise<{ success: true }> {
-	const lock = await loadLock({ ctx, lockId: params.lock_id });
-	if (!lock) throw lockNotFoundError({ lockId: params.lock_id });
-
 	const command: FinalizeCommand = {
 		...requestContextToCommandBase({
 			ctx,

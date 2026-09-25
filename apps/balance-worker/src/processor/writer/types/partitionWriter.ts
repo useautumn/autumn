@@ -2,6 +2,7 @@ import type {
 	MeteringIdentity,
 	MutationEffect,
 	MutationRecord,
+	RowChange,
 	SubjectState,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
@@ -67,6 +68,12 @@ export type PartitionWriterContext = {
 	receiptPolicy: ReceiptPolicy;
 	/** Shared with the partition's log replay, which remembers records this writer never decided. */
 	recentCommands: RecentCommands;
+	/** A decision replaced a customer's projection: `to` follows `from` by the mutation's changes. */
+	onStateAdvanced?: (params: {
+		from: SubjectState | null;
+		to: SubjectState;
+		changes: RowChange[];
+	}) => void;
 };
 
 export type PartitionWriterLimits = {

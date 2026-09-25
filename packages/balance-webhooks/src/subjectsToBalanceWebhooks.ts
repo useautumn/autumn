@@ -1,27 +1,30 @@
 import type {
 	BalanceWebhookEffect,
+	DeductionOutcome,
 	SubjectStateMutation,
 	WorkerFullSubject,
 } from "@autumn/balance-engine";
 import { isBalanceChange } from "./common/classifyChange/isBalanceChange.js";
-import { mutationToAffectedFeatures } from "./common/convertMutation/mutationToAffectedFeatures.js";
 import {
 	mutationToCheckCommand,
 	mutationToTrackedFeature,
 } from "./common/convertMutation/mutationToCheckCommand.js";
+import { outcomeToAffectedFeatures } from "./common/convertOutcome/outcomeToAffectedFeatures.js";
 import { checkLimitReached } from "./limitReached/checkLimitReached.js";
 import { checkUsageAlerts } from "./usageAlerts/checkUsageAlerts.js";
 
 /**
- * Every webhook one mutation calls for, given the subject as it found it and as it left it: each check
- * runs for each feature the mutation moved (the tracked one, and a credit system that paid for it).
+ * Every webhook one mutation calls for, given the deduction behind it and the subject as it found it and as it
+ * left it: each check runs for each feature the deduction moved (the tracked one, and a credit system that paid for it).
  */
 export const subjectsToBalanceWebhooks = ({
 	mutation,
+	outcome,
 	before,
 	after,
 }: {
 	mutation: SubjectStateMutation;
+	outcome: DeductionOutcome;
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
 }): BalanceWebhookEffect[] => {
@@ -29,14 +32,14 @@ export const subjectsToBalanceWebhooks = ({
 	const tracked = mutationToTrackedFeature({ mutation });
 	if (!tracked || !mutation.changes.some(isBalanceChange)) return [];
 
-	const commands = mutationToAffectedFeatures({
-		mutation,
+	const commands = outcomeToAffectedFeatures({
+		outcome,
 		fullSubject: after,
 		trackedFeatureId: tracked.featureId,
 	}).flatMap((feature) => mutationToCheckCommand({ mutation, feature }) ?? []);
 
 	return commands.flatMap((command) => [
-		...checkLimitReached({ command, before, after }),
+		...checkLimitReached({ command, outcome, before, after }),
 		...checkUsageAlerts({ command, before, after }),
 	]);
 };

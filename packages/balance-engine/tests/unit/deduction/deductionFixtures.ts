@@ -10,6 +10,7 @@ import {
 	incrementRow,
 } from "../../../src/balanceEngine.js";
 import { deduct } from "../../../src/deduction/deduct.js";
+import { toDeductionSelection } from "../../../src/deduction/toDeductionSelection.js";
 import type { DeductionRequest } from "../../../src/deduction/types/deductionRequest.js";
 import {
 	createCustomerProduct,
@@ -52,7 +53,7 @@ export const deductFrom = ({
 	overageBehavior?: "cap" | "reject" | "overflow";
 	includesCreditSystems?: boolean;
 	enforcesSpendLimit?: boolean;
-	customerEntitlementFilters?: DeductionRequest["customerEntitlementFilters"];
+	customerEntitlementFilters?: DeductionRequest["selection"]["customerEntitlementFilters"];
 	countsUsageWindows?: boolean;
 	orgConfig?: CommandOrg["config"];
 }) =>
@@ -79,6 +80,7 @@ export const deductFrom = ({
 		}),
 	});
 
+/** A request from flat inputs: the selection's org settings and the draw's terms both derived here, as the commands do. */
 export const createDeductionRequest = ({
 	featureId = "messages",
 	internalFeatureId = `feat_${featureId}`,
@@ -92,20 +94,33 @@ export const createDeductionRequest = ({
 	enforceOverdueBlock = false,
 	now = occurredAt,
 	org,
-}: Partial<DeductionRequest> &
-	Pick<DeductionRequest, "value" | "org">): DeductionRequest => ({
-	featureId,
-	internalFeatureId,
+}: {
+	featureId?: string;
+	internalFeatureId?: string;
+	value: number;
+	overageBehavior?: DeductionRequest["terms"]["overageBehavior"];
+	includesCreditSystems?: boolean;
+	enforcesSpendLimit?: boolean;
+	customerEntitlementFilters?: DeductionRequest["selection"]["customerEntitlementFilters"];
+	countsUsageWindows?: boolean;
+	properties?: DeductionRequest["selection"]["properties"];
+	enforceOverdueBlock?: boolean;
+	now?: number;
+	org: CommandOrg;
+}): DeductionRequest => ({
+	selection: toDeductionSelection({
+		featureId,
+		internalFeatureId,
+		now,
+		properties,
+		includesCreditSystems,
+		countsUsageWindows,
+		customerEntitlementFilters,
+		org,
+		enforceOverdueBlock,
+	}),
+	terms: { overageBehavior, enforcesSpendLimit },
 	value,
-	overageBehavior,
-	includesCreditSystems,
-	enforcesSpendLimit,
-	customerEntitlementFilters,
-	countsUsageWindows,
-	properties,
-	enforceOverdueBlock,
-	now,
-	org,
 });
 
 const rowBeforeOf = ({

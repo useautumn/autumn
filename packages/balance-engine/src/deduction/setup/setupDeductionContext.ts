@@ -1,6 +1,6 @@
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import type { DeductionContext } from "../types/deductionContext.js";
-import type { DeductionRequest } from "../types/deductionRequest.js";
+import type { DeductionSelection } from "../types/deductionRequest.js";
 import { resolveBillingControls } from "./resolveBillingControls.js";
 import { resolveCreditCost } from "./resolveCreditCosts.js";
 import {
@@ -10,25 +10,25 @@ import {
 import { resolveUsageWindowLimits } from "./resolveUsageWindowLimits.js";
 import { selectDeductionRows } from "./selectDeductionRows.js";
 
-/** Everything a deduction needs, decided once; the buckets never read the subject. */
+/** The selection's rows, bounded, decided once; the buckets never read the subject. */
 export const setupDeductionContext = ({
 	fullSubject,
-	request,
+	selection,
 }: {
 	fullSubject: WorkerFullSubject;
-	request: DeductionRequest;
+	selection: DeductionSelection;
 }): DeductionContext => {
 	const { customerEntitlements, rollovers, overdueBlocked } =
-		selectDeductionRows({ fullSubject, request });
+		selectDeductionRows({ fullSubject, selection });
 	const { spendLimitByFeatureId, overageAllowedByFeatureId } =
 		resolveBillingControls({
 			fullSubject,
-			featureId: request.featureId,
+			featureId: selection.featureId,
 			customerEntitlements,
 		});
 	const usageWindowLimits = resolveUsageWindowLimits({
 		fullSubject,
-		request,
+		selection,
 		customerEntitlements,
 	});
 	// A control that enables overage only lifts features with no natively overage-allowed row.
@@ -42,10 +42,9 @@ export const setupDeductionContext = ({
 		customerEntitlementToDeductionRows({
 			customerEntitlement,
 			entityId,
-			creditCost: resolveCreditCost({ customerEntitlement, request }),
+			creditCost: resolveCreditCost({ customerEntitlement, selection }),
 			overageAllowedByFeatureId,
 			nativeOverageFeatureIds,
-			overageBehavior: request.overageBehavior,
 		}),
 	);
 	const ownersOf = (customerEntitlementId: string) =>
@@ -54,11 +53,8 @@ export const setupDeductionContext = ({
 		);
 
 	return {
-		featureId: request.featureId,
+		selection,
 		entityId,
-		now: request.now,
-		overageBehavior: request.overageBehavior,
-		enforcesSpendLimit: request.enforcesSpendLimit,
 		customerEntitlements,
 		rollovers,
 		rows,

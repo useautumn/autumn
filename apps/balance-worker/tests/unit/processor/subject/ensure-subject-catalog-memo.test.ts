@@ -19,7 +19,11 @@ function createScope() {
 	};
 	const scope = {
 		ctx: { catalogCache },
-		state: { joinCache: createSubjectJoinCache({ ctx: { catalogCache } }) },
+		state: {
+			joinCache: createSubjectJoinCache({
+				ctx: { catalogCache, config: { catalogRecheckMs: 300_000 } },
+			}),
+		},
 	} as unknown as SubjectScope;
 	return { scope, catalogCache, reads: () => reads };
 }
