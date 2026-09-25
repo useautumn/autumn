@@ -61192,8 +61192,9 @@ paths:
         checked against Autumn's customer_products.
 
         @param subscriptionIds - Optional whitelist of Stripe subscription IDs
-        to verify. Defaults to every paid-recurring subscription on the
-        customer. (optional)
+        to verify. Defaults to every subscription linked to the customer's
+        plans, plus any other active Stripe subscription on the customer, which
+        is reported as not linked to Autumn. (optional)
 
         @param strict - When true, report missing usage-based items and
         unexpected metered Stripe items. Defaults to false. (optional)
@@ -61220,7 +61221,9 @@ paths:
                   items:
                     type: string
                   description: Optional whitelist of Stripe subscription IDs to verify. Defaults
-                    to every paid-recurring subscription on the customer.
+                    to every subscription linked to the customer's plans, plus
+                    any other active Stripe subscription on the customer, which
+                    is reported as not linked to Autumn.
                 strict:
                   type: boolean
                   description: When true, report missing usage-based items and unexpected metered

@@ -569,6 +569,27 @@ const response = await client.billing.previewMultiUpdate({ customerId: "cus_123"
 @returns A preview with the combined total plus one entry per subscription, each with its own line items, totals, and next-cycle preview.
 * [openCustomerPortal](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
 * [setupPayment](docs/sdks/billing/README.md#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
+* [verify](docs/sdks/billing/README.md#verify) - Checks a customer's Stripe subscriptions against Autumn's record of their plans and reports any drift. Read-only: it never changes Autumn or Stripe.
+
+Use this endpoint to audit that a customer's Stripe subscriptions, items, quantities, prices, schedules and cancellation state match what Autumn expects, for example after a migration or a manual change in Stripe.
+
+@example
+```typescript
+// Verify every subscription for a customer
+const response = await client.billing.verify({ customerId: "cus_123" });
+```
+
+@example
+```typescript
+// Verify specific subscriptions in strict mode
+const response = await client.billing.verify({ customerId: "cus_123", subscriptionIds: ["sub_1234"], strict: true });
+```
+
+@param customerId - Autumn customer whose Stripe subscriptions should be checked against Autumn's customer_products.
+@param subscriptionIds - Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. (optional)
+@param strict - When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false. (optional)
+
+@returns A verify response with account-level mismatches and a per-subscription status (correct or mismatched) with the mismatches found.
 * [import](docs/sdks/billing/README.md#import) - Import
 
 ### [Customers](docs/sdks/customers/README.md)
@@ -1229,6 +1250,27 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param licenseQuantities - Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
+- [`billingVerify`](docs/sdks/billing/README.md#verify) - Checks a customer's Stripe subscriptions against Autumn's record of their plans and reports any drift. Read-only: it never changes Autumn or Stripe.
+
+Use this endpoint to audit that a customer's Stripe subscriptions, items, quantities, prices, schedules and cancellation state match what Autumn expects, for example after a migration or a manual change in Stripe.
+
+@example
+```typescript
+// Verify every subscription for a customer
+const response = await client.billing.verify({ customerId: "cus_123" });
+```
+
+@example
+```typescript
+// Verify specific subscriptions in strict mode
+const response = await client.billing.verify({ customerId: "cus_123", subscriptionIds: ["sub_1234"], strict: true });
+```
+
+@param customerId - Autumn customer whose Stripe subscriptions should be checked against Autumn's customer_products.
+@param subscriptionIds - Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. (optional)
+@param strict - When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false. (optional)
+
+@returns A verify response with account-level mismatches and a per-subscription status (correct or mismatched) with the mismatches found.
 - [`check`](docs/sdks/autumn/README.md#check) - Checks whether a customer currently has enough balance to use a feature.
 
 Use this to gate access before a feature action. Enable sendEvent when you want to check and consume balance atomically in one request.

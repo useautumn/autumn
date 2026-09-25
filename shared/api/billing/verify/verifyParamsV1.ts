@@ -7,7 +7,7 @@ export const VerifyParamsV1Schema = z.object({
 	}),
 	subscription_ids: z.array(z.string()).optional().meta({
 		description:
-			"Optional whitelist of Stripe subscription IDs to verify. Defaults to every paid-recurring subscription on the customer.",
+			"Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn.",
 	}),
 	strict: z.boolean().optional().meta({
 		description:

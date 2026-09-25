@@ -2303,7 +2303,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: false,
 				description:
-					"Optional whitelist of Stripe subscription IDs to verify. Defaults to every paid-recurring subscription on the customer.",
+					"Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn.",
 			},
 			{
 				name: "strict",

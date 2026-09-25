@@ -14,6 +14,7 @@ import { billingPreviewMultiUpdate } from "../funcs/billing-preview-multi-update
 import { billingPreviewUpdate } from "../funcs/billing-preview-update.js";
 import { billingSetupPayment } from "../funcs/billing-setup-payment.js";
 import { billingUpdate } from "../funcs/billing-update.js";
+import { billingVerify } from "../funcs/billing-verify.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
 import { unwrapAsync } from "../types/fp.js";
@@ -472,6 +473,40 @@ export class Billing extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.SetupPaymentResponse> {
     return unwrapAsync(billingSetupPayment(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Checks a customer's Stripe subscriptions against Autumn's record of their plans and reports any drift. Read-only: it never changes Autumn or Stripe.
+   *
+   * Use this endpoint to audit that a customer's Stripe subscriptions, items, quantities, prices, schedules and cancellation state match what Autumn expects, for example after a migration or a manual change in Stripe.
+   *
+   * @example
+   * ```typescript
+   * // Verify every subscription for a customer
+   * const response = await client.billing.verify({ customerId: "cus_123" });
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // Verify specific subscriptions in strict mode
+   * const response = await client.billing.verify({ customerId: "cus_123", subscriptionIds: ["sub_1234"], strict: true });
+   * ```
+   *
+   * @param customerId - Autumn customer whose Stripe subscriptions should be checked against Autumn's customer_products.
+   * @param subscriptionIds - Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. (optional)
+   * @param strict - When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false. (optional)
+   *
+   * @returns A verify response with account-level mismatches and a per-subscription status (correct or mismatched) with the mismatches found.
+   */
+  async verify(
+    request: models.VerifyParams,
+    options?: RequestOptions,
+  ): Promise<models.VerifyResponse> {
+    return unwrapAsync(billingVerify(
       this,
       request,
       options,

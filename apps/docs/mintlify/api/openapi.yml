@@ -61026,7 +61026,9 @@ paths:
                   items:
                     type: string
                   description: Optional whitelist of Stripe subscription IDs to verify. Defaults
-                    to every paid-recurring subscription on the customer.
+                    to every subscription linked to the customer's plans, plus
+                    any other active Stripe subscription on the customer, which
+                    is reported as not linked to Autumn.
                 strict:
                   type: boolean
                   description: When true, report missing usage-based items and unexpected metered
@@ -61822,6 +61824,25 @@ paths:
       x-speakeasy-name-override: verify
       parameters:
         - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.billing.verify({
+              customerId: "cus_123",
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.billing.verify(customer_id="cus_123")
   /v1/billing.import:
     post:
       operationId: import
