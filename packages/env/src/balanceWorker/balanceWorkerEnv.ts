@@ -5,6 +5,7 @@ import {
 	BALANCE_WORKER_CATALOG_TTL_MS,
 	BALANCE_WORKER_CHECKPOINT_INTERVAL_MS,
 	BALANCE_WORKER_CHECKPOINT_PREFIX,
+	BALANCE_WORKER_COMMIT_MODE,
 	BALANCE_WORKER_DATABASE_POOL_SIZE,
 	BALANCE_WORKER_MAX_REQUEST_BYTES,
 	BALANCE_WORKER_PARTITION_COUNT,
@@ -26,6 +27,9 @@ import { validateBalanceWorkerEnv } from "./validateBalanceWorkerEnv.js";
 /** Every variable a balance worker reads, by what it is for. Kafka auth, the deployment and fixed settings join below. */
 const kafka = z.object({
 	KAFKA_BROKERS: brokerList,
+	BALANCE_WORKER_COMMIT_MODE: z
+		.enum(["transactional", "idempotent"])
+		.default(BALANCE_WORKER_COMMIT_MODE),
 });
 
 const listener = z.object({

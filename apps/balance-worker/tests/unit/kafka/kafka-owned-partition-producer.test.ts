@@ -155,7 +155,18 @@ function createFailingSession({
 	function isUsable(): boolean {
 		return true;
 	}
-	return { connect, fence, transaction, disconnect, isUsable };
+	async function send(): ReturnType<KafkaProducerSession["send"]> {
+		throw cause;
+	}
+	return {
+		connect,
+		fence,
+		transaction,
+		send,
+		disconnect,
+		isUsable,
+		mode: "transactional",
+	};
 }
 
 function createFencingError(): Error {

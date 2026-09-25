@@ -20,6 +20,21 @@ describe("Balance worker environment", () => {
 		expect(env.BALANCE_WORKER_ENDPOINT).toBe("http://127.0.0.1:8082");
 		expect(env.BALANCE_WORKER_PARTITION_COUNT).toBe(4);
 	});
+	test("commits idempotently unless a deployment says otherwise", () => {
+		expect(createBalanceWorkerEnv(valid).BALANCE_WORKER_COMMIT_MODE).toBe(
+			"idempotent",
+		);
+		expect(
+			createBalanceWorkerEnv({
+				...valid,
+				BALANCE_WORKER_COMMIT_MODE: "transactional",
+			}).BALANCE_WORKER_COMMIT_MODE,
+		).toBe("transactional");
+		expect(() =>
+			createBalanceWorkerEnv({ ...valid, BALANCE_WORKER_COMMIT_MODE: "fast" }),
+		).toThrow();
+	});
+
 	test("derives every Kafka name from the deployment", () => {
 		const env = createBalanceWorkerEnv({
 			...valid,

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { MutationRecord } from "@autumn/balance-engine";
 import {
 	CompressionTypes,
+	KafkaJSProtocolError,
 	type ProducerRecord,
 	type RecordMetadata,
 } from "kafkajs";
@@ -11,6 +12,8 @@ import {
 	type KafkaProducer,
 	type KafkaTransaction,
 	KafkaTransactionStateUnknownError,
+	OWNER_EPOCH_HEADER,
+	sendIdempotentBatch,
 	sendTransactionalBatch,
 } from "../../src/kafka.js";
 import { createState, createTrackMutation } from "../meteringFixtures.js";
@@ -382,3 +385,116 @@ function meteringPublisherTests(): void {
 
 describe("transactionalBatch", transactionalBatchTests);
 describe("meteringPublisher", meteringPublisherTests);
+
+describe("idempotent batches", () => {
+	const topic = "metering-events-v1";
+	const partition = 3;
+	const message = { key: Buffer.from("k"), value: Buffer.from("v") };
+
+	function createFakeSender({
+		sendError,
+		metadata = [{ topicName: topic, partition, errorCode: 0, baseOffset: "7" }],
+	}: {
+		sendError?: Error;
+		metadata?: RecordMetadata[];
+	} = {}) {
+		const records: ProducerRecord[] = [];
+		async function send(record: ProducerRecord): Promise<RecordMetadata[]> {
+			records.push(record);
+			if (sendError) throw sendError;
+			return metadata;
+		}
+		return { records, sender: { send } };
+	}
+
+	test("one produce with acks=all carries the batch and the owner's epoch; nothing else is sent", async () => {
+		const fake = createFakeSender();
+		const appended = await sendIdempotentBatch({
+			sender: fake.sender,
+			topic,
+			partition,
+			messages: [message, message],
+			ownerEpoch: "2516",
+		});
+		expect(appended.baseOffset).toBe(7n);
+		expect(fake.records).toHaveLength(1);
+		const [record] = fake.records;
+		expect(record?.acks).toBe(-1);
+		expect(record?.messages).toHaveLength(2);
+		expect(record?.messages[0]?.partition).toBe(partition);
+		expect(record?.messages[0]?.headers).toEqual({
+			[OWNER_EPOCH_HEADER]: "2516",
+		});
+	});
+
+	test("a broker refusal is a batch not committed; a lost reply leaves the outcome unknown", async () => {
+		const refused = createFakeSender({
+			sendError: new KafkaJSProtocolError(
+				Object.assign(new Error("too large"), {
+					type: "MESSAGE_TOO_LARGE",
+					code: 10,
+					retriable: false,
+				}),
+			),
+		});
+		await expect(
+			sendIdempotentBatch({
+				sender: refused.sender,
+				topic,
+				partition,
+				messages: [message],
+			}),
+		).rejects.toBeInstanceOf(KafkaBatchNotCommittedError);
+
+		const lost = createFakeSender({
+			sendError: new Error("request timed out"),
+		});
+		await expect(
+			sendIdempotentBatch({
+				sender: lost.sender,
+				topic,
+				partition,
+				messages: [message],
+			}),
+		).rejects.toBeInstanceOf(KafkaTransactionStateUnknownError);
+	});
+
+	test("the publisher commits command offsets through the consumer when idempotent", async () => {
+		const fake = createFakeSender();
+		const committed: unknown[] = [];
+		const publisher = createMeteringPublisher({
+			ctx: {
+				producer: {
+					transaction: async () => {
+						throw new Error("no transactions");
+					},
+					send: fake.sender.send,
+				},
+				commit: { mode: "idempotent" },
+				ownerEpoch: () => "99",
+				commandOffsets: {
+					commit: async (offsets) => {
+						committed.push(offsets);
+					},
+				},
+			},
+		});
+		const offsets = {
+			consumerGroupId: "g",
+			topics: [
+				{ topic: "commands", partitions: [{ partition, offset: "12" }] },
+			],
+		};
+		const appended = await publisher.append({
+			topic,
+			partition,
+			records: [createTrackMutation({})],
+			offsets,
+		});
+		expect(appended.baseOffset).toBe(7n);
+		expect(committed).toEqual([offsets]);
+		expect(fake.records[0]?.messages[0]?.headers).toEqual({
+			[OWNER_EPOCH_HEADER]: "99",
+		});
+	});
+});

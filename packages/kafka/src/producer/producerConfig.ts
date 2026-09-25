@@ -54,7 +54,15 @@ export function partitionProducerTransactionalIdOf({
 export function createProducerConfig({
 	transactionalId,
 	limits,
+	mode = "transactional",
 }: KafkaProducerSessionConfig): ProducerConfig {
+	// One round trip per commit: no transactional id, so no broker-side fence; the owner's epoch travels in the record instead.
+	if (mode === "idempotent") {
+		return {
+			...createIdempotentProducerConfig({ limits }),
+			createPartitioner: explicitPartitioner,
+		};
+	}
 	assertNonEmpty({ name: "transactionalId", value: transactionalId });
 	assertPositiveSafeInteger({
 		name: "transactionTimeoutMs",

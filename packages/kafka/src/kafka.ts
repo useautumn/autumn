@@ -14,6 +14,7 @@ export {
 	parseKafkaOffset,
 } from "./client/kafkaOffsetUtils.js";
 export type {
+	KafkaCommitMode,
 	KafkaOffsetCommit,
 	KafkaProducer,
 	KafkaProducerClient,
@@ -92,6 +93,10 @@ export {
 	partitionProducerTransactionalIdOf,
 } from "./producer/producerConfig.js";
 export { isKafkaProducerFencingCause } from "./producer/producerErrors.js";
+export {
+	OWNER_EPOCH_HEADER,
+	sendIdempotentBatch,
+} from "./producer/sendIdempotentBatch.js";
 export {
 	sendTransactionalBatch,
 	sendTransactionalOffsets,

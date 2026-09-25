@@ -1,3 +1,4 @@
+import type { KafkaOffsetCommit } from "@autumn/kafka";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
@@ -59,6 +60,24 @@ export async function createBalanceWorker({
 	try {
 		// Every partition runtime records what it commits here; the consumer group reports it when it rejoins.
 		const partitionLoad = createPartitionLoad({ now: Date.now });
+		const consumer = resources.kafka.consumer(
+			createWorkerConsumerConfig({
+				groupId: env.BALANCE_WORKER_GROUP_ID,
+				timings: runtimeConfig.timings,
+				partitionLoad,
+			}),
+		);
+		// With idempotent commits no transaction carries a command's offset, so the group commits it itself.
+		async function commitCommandOffsets(
+			offsets: KafkaOffsetCommit,
+		): Promise<void> {
+			const flat: { topic: string; partition: number; offset: string }[] = [];
+			for (const { topic, partitions } of offsets.topics) {
+				for (const { partition, offset } of partitions)
+					flat.push({ topic, partition, offset });
+			}
+			await consumer.commitOffsets(flat);
+		}
 		const ownershipHandoff = createOwnershipHandoffLink({
 			ctx: { kafka: resources.kafka, logger: dependencies.logger },
 			config: {
@@ -79,6 +98,7 @@ export async function createBalanceWorker({
 				partitionResolver: resources.partitionResolver,
 				bootstrapper: resources.bootstrapper,
 				checkpointMaintenance: resources.checkpoints?.maintenance,
+				commandOffsets: { commit: commitCommandOffsets },
 			},
 			config: runtimeConfig,
 		});
@@ -92,13 +112,7 @@ export async function createBalanceWorker({
 
 		const partitions = createWorkerPartitions({
 			ctx: {
-				consumer: resources.kafka.consumer(
-					createWorkerConsumerConfig({
-						groupId: env.BALANCE_WORKER_GROUP_ID,
-						timings: runtimeConfig.timings,
-						partitionLoad,
-					}),
-				),
+				consumer,
 				partitionOffsets: resources.kafka.admin(),
 				stateStore: resources.stateStore,
 				idempotencyKeys: resources.idempotencyKeys,

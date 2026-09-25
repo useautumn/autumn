@@ -1,6 +1,8 @@
 import {
 	createMeteringPublisher,
 	KafkaBatchNotCommittedError,
+	type KafkaCommitMode,
+	type KafkaOffsetCommit,
 	type KafkaProducer,
 	type MeteringRecord,
 	sendTransactionalOffsets,
@@ -20,10 +22,21 @@ export function createMutationPublisher({
 		producer: KafkaProducer;
 		producedOffsets?: ProducedOffsets;
 		partitionLoad?: PartitionLoad;
+		/** Defaults to transactional. */
+		commit?: { mode: KafkaCommitMode };
+		ownerEpoch?(): string | undefined;
+		commandOffsets?: { commit(offsets: KafkaOffsetCommit): Promise<void> };
 	};
 	config?: { commandTopic: string; groupId: string };
 }): Required<CommittedOutcomeAppender> {
-	const publisher = createMeteringPublisher({ ctx });
+	const publisher = createMeteringPublisher({
+		ctx: {
+			producer: ctx.producer,
+			commit: ctx.commit,
+			ownerEpoch: ctx.ownerEpoch,
+			commandOffsets: ctx.commandOffsets,
+		},
+	});
 
 	async function appendCommitted({
 		topic,
@@ -119,10 +132,14 @@ export function createMutationPublisher({
 		nextOffset: bigint;
 	}): Promise<void> {
 		try {
-			await sendTransactionalOffsets({
-				producer: ctx.producer,
-				offsets: offsetsOf({ partition, nextOffset }),
-			});
+			const offsets = offsetsOf({ partition, nextOffset });
+			if (ctx.commit?.mode === "idempotent") {
+				if (!ctx.commandOffsets)
+					throw new Error("Idempotent commits need a command offset committer");
+				await ctx.commandOffsets.commit(offsets);
+				return;
+			}
+			await sendTransactionalOffsets({ producer: ctx.producer, offsets });
 		} catch (cause) {
 			throw translateKafkaProducerError({ topic, partition, cause });
 		}

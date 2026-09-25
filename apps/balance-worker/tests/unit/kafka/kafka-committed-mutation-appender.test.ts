@@ -368,3 +368,60 @@ test("an appended batch adds its encoded bytes to the partition's load", async (
 	expect(recorded).toEqual([{ partition, bytes: expected }]);
 	expect(expected).toBeGreaterThan(0);
 });
+
+describe("idempotent commits", () => {
+	test("a batch is one plain produce stamped with the owner's epoch, and command offsets go through the group", async () => {
+		const sends: unknown[] = [];
+		const committed: unknown[] = [];
+		const producer: KafkaProducer = {
+			transaction: async () => {
+				throw new Error("no transactions in idempotent mode");
+			},
+			send: async (record) => {
+				sends.push(record);
+				return [
+					{ topicName: topic, partition, errorCode: 0, baseOffset: "41" },
+				];
+			},
+		};
+		let epoch: string | undefined;
+		const appender = createMutationPublisher({
+			ctx: {
+				producer,
+				commit: { mode: "idempotent" },
+				ownerEpoch: () => epoch,
+				commandOffsets: {
+					commit: async (offsets) => {
+						committed.push(offsets);
+					},
+				},
+			},
+			config: { commandTopic: "commands", groupId: "workers" },
+		});
+		epoch = "2516";
+		const appended = await appender.appendCommitted({
+			topic,
+			partition,
+			outcomes: [createMutation({ state: createState() })],
+		});
+		expect(appended.baseOffset).toBe(41n);
+		expect(sends).toHaveLength(1);
+		const record = sends[0] as {
+			acks: number;
+			messages: { headers?: Record<string, string> }[];
+		};
+		expect(record.acks).toBe(-1);
+		expect(record.messages[0]?.headers).toEqual({ ownerEpoch: "2516" });
+		expect(committed).toEqual([]);
+
+		await appender.commitCommandOffset({ topic, partition, nextOffset: 12n });
+		expect(committed).toEqual([
+			{
+				consumerGroupId: "workers",
+				topics: [
+					{ topic: "commands", partitions: [{ partition, offset: "12" }] },
+				],
+			},
+		]);
+	});
+});

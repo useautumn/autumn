@@ -1,6 +1,8 @@
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type {
+	KafkaCommitMode,
 	KafkaConsumerGroupTimings,
+	KafkaOffsetCommit,
 	KafkaProducerFactory,
 	KafkaProducerLimits,
 } from "@autumn/kafka";
@@ -66,6 +68,8 @@ export type PartitionRuntimeFactoryContext = {
 	partitionResolver: MeteringPartitionResolver;
 	/** Shared by every partition runtime; the consumer group's assigner reads it on each rejoin. */
 	partitionLoad?: PartitionLoad;
+	/** Commits command offsets through the consumer group when no transaction carries them (idempotent commits). */
+	commandOffsets?: { commit(offsets: KafkaOffsetCommit): Promise<void> };
 };
 
 export type PartitionRuntimeFactoryConfig = {
@@ -77,5 +81,7 @@ export type PartitionRuntimeFactoryConfig = {
 	writerLimits: PartitionWriterLimits;
 	trackReceiptRetentionMs: number;
 	producerLimits: KafkaProducerLimits;
+	/** Defaults to transactional. */
+	commit?: { mode: KafkaCommitMode };
 	timings: KafkaBalanceWorkerTimings;
 };

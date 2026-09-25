@@ -82,6 +82,16 @@ export const BALANCE_WORKER_CATALOG_MAX_BYTES = 536_870_912;
  *  at hydration; the budget then belongs per worker, split across its partitions. */
 export const BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES = 33_554_432;
 
+/** How a partition's writer commits a batch to the log. Transactional is three
+ *  broker round trips per commit (register the partition, produce, end the
+ *  transaction) and the broker fences a stale owner. Idempotent is one round
+ *  trip: the batch goes out with acks=all and the acknowledgement is the
+ *  commit, while the owner's epoch travels in a record header for readers to
+ *  judge by. Tracks wait on a commit twice over (the one in flight, then their
+ *  own), so the mode sets the track tail directly. Overridable per deployment
+ *  with BALANCE_WORKER_COMMIT_MODE. */
+export const BALANCE_WORKER_COMMIT_MODE = "idempotent" as const;
+
 /** Off: the committer lands every update and increment unconditionally, so a record on the log is a row in Postgres.
  *  A guard only fails when a writer outside the worker changed the row, which is a product bug to fix, not a write to drop. */
 export const BALANCE_WORKER_COMMITTER_GUARDS_ENABLED = false;

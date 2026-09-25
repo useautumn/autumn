@@ -3,6 +3,7 @@ import {
 	coPartitionedAssigner,
 	createConsumerGroupConfig,
 	createLoadAwareAssigner,
+	type KafkaCommitMode,
 	type KafkaProducerLimits,
 	type KafkaProducerSessionConfig,
 	type PartitionLoadSource,
@@ -70,11 +71,13 @@ export function createWorkerProducerConfig({
 	topic,
 	partition,
 	limits,
+	mode,
 }: {
 	deploymentEnvironment: string;
 	topic: string;
 	partition: number;
 	limits: KafkaProducerLimits;
+	mode?: KafkaCommitMode;
 }): KafkaProducerSessionConfig {
 	return {
 		transactionalId: partitionProducerTransactionalIdOf({
@@ -84,6 +87,7 @@ export function createWorkerProducerConfig({
 			partition,
 		}),
 		limits,
+		...(mode === undefined ? {} : { mode }),
 	};
 }
 
@@ -96,6 +100,7 @@ export function balanceWorkerEnvToRuntimeConfig({
 }): PartitionRuntimeFactoryConfig {
 	return {
 		deploymentEnvironment: env.BALANCE_WORKER_DEPLOYMENT,
+		commit: { mode: env.BALANCE_WORKER_COMMIT_MODE },
 		commands: {
 			commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,
 			groupId: env.BALANCE_WORKER_GROUP_ID,
