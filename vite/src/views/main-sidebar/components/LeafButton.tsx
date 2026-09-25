@@ -7,6 +7,7 @@ import { useSidebarContext } from "@/views/main-sidebar/SidebarContext";
 import {
 	sidebarIconClass,
 	sidebarRowClass,
+	sidebarRowContentClass,
 } from "@/views/main-sidebar/sidebarRowClass";
 
 export const LeafButton = () => {
@@ -28,22 +29,16 @@ export const LeafButton = () => {
 				e.currentTarget.blur();
 				togglePanel();
 			}}
-			className={sidebarRowClass({ isActive: open })}
+			className={sidebarRowClass({
+				isActive: open,
+				isCollapsed: !expanded,
+			})}
 		>
-			<div className="flex min-w-0 flex-1 items-center gap-2.5">
+			<div className={sidebarRowContentClass({ isCollapsed: !expanded })}>
 				<div className={sidebarIconClass({ isActive: open })}>
 					<Leaf strokeWidth={1.5} />
 				</div>
-				<span
-					className={cn(
-						"whitespace-nowrap",
-						expanded
-							? "opacity-100 translate-x-0"
-							: "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
-					)}
-				>
-					Leaf
-				</span>
+				{expanded && <span className="truncate whitespace-nowrap">Leaf</span>}
 			</div>
 		</button>
 	);

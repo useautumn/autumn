@@ -128,7 +128,7 @@ export const MainSidebar = ({
 						? "min-w-[220px]"
 						: expanded
 							? "min-w-[220px] max-w-[220px]"
-							: "min-w-[50px] max-w-[50px]",
+							: "min-w-[52px] max-w-[52px]",
 				)}
 			>
 				<div className="relative flex flex-col gap-3.5">

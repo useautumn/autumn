@@ -7,7 +7,11 @@ import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { notNullish, pushPage } from "@/utils/genUtils";
 import { useSidebarContext } from "./SidebarContext";
-import { sidebarIconClass, sidebarRowClass } from "./sidebarRowClass";
+import {
+	sidebarIconClass,
+	sidebarRowClass,
+	sidebarRowContentClass,
+} from "./sidebarRowClass";
 
 export const NavButton = ({
 	value,
@@ -58,18 +62,11 @@ export const NavButton = ({
 	const TabComponent = () => {
 		return (
 			<>
-				<div className="flex min-w-0 flex-1 items-center gap-2.5">
+				<div className={sidebarRowContentClass({ isCollapsed: !expanded })}>
 					{icon && <div className={sidebarIconClass({ isActive })}>{icon}</div>}
-					<span
-						className={cn(
-							"truncate whitespace-nowrap",
-							expanded
-								? "opacity-100 translate-x-0"
-								: "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
-						)}
-					>
-						{title}
-					</span>
+					{expanded && (
+						<span className="truncate whitespace-nowrap">{title}</span>
+					)}
 					{badge && expanded && badge}
 				</div>
 				{online && (
@@ -92,7 +89,7 @@ export const NavButton = ({
 	};
 
 	const outerDivClass = cn(
-		sidebarRowClass({ isActive }),
+		sidebarRowClass({ isActive, isCollapsed: !expanded }),
 		isSubNav && "pl-4",
 		className,
 	);
@@ -112,6 +109,8 @@ export const NavButton = ({
 								})
 					}
 					className={outerDivClass}
+					aria-label={expanded ? undefined : title}
+					title={expanded ? undefined : title}
 					target={href ? "_blank" : undefined}
 					onClick={() => {
 						// Close mobile sidebar on navigation (skip external links)
@@ -123,7 +122,13 @@ export const NavButton = ({
 					<TabComponent />
 				</Link>
 			) : (
-				<button type="button" className={outerDivClass} onClick={onClick}>
+				<button
+					type="button"
+					className={outerDivClass}
+					aria-label={expanded ? undefined : title}
+					title={expanded ? undefined : title}
+					onClick={onClick}
+				>
 					<TabComponent />
 				</button>
 			)}

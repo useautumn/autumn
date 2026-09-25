@@ -8,6 +8,7 @@ import { useSidebarContext } from "@/views/main-sidebar/SidebarContext";
 import {
 	sidebarIconClass,
 	sidebarRowClass,
+	sidebarRowContentClass,
 } from "@/views/main-sidebar/sidebarRowClass";
 
 export const WorkbenchButton = () => {
@@ -31,22 +32,18 @@ export const WorkbenchButton = () => {
 				e.currentTarget.blur();
 				toggle();
 			}}
-			className={sidebarRowClass({ isActive: isOpen })}
+			className={sidebarRowClass({
+				isActive: isOpen,
+				isCollapsed: !expanded,
+			})}
 		>
-			<div className="flex min-w-0 flex-1 items-center gap-2.5">
+			<div className={sidebarRowContentClass({ isCollapsed: !expanded })}>
 				<div className={sidebarIconClass({ isActive: isOpen })}>
 					<SquareTerminal strokeWidth={1.5} />
 				</div>
-				<span
-					className={cn(
-						"whitespace-nowrap",
-						expanded
-							? "opacity-100 translate-x-0"
-							: "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
-					)}
-				>
-					Workbench
-				</span>
+				{expanded && (
+					<span className="truncate whitespace-nowrap">Workbench</span>
+				)}
 			</div>
 		</button>
 	);

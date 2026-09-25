@@ -27,14 +27,30 @@ function Command({
 }
 
 // Palette-only sizing, applied through data-slots so inline pickers keep their compact rows.
-const COMMAND_DIALOG_SLOT_STYLES = [
-	"[&_[data-slot=command-input-wrapper]]:h-13 [&_[data-slot=command-input-wrapper]]:shrink-0 [&_[data-slot=command-input-wrapper]]:gap-3 [&_[data-slot=command-input-wrapper]]:px-4",
-	"[&_[data-slot=command-input]]:text-md",
-	"[&_[data-slot=command-list]]:max-h-[360px] [&_[data-slot=command-list]]:min-h-0 [&_[data-slot=command-list]]:flex-1",
-	"[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-tertiary-foreground",
-	"[&_[data-slot=command-item]]:h-9 [&_[data-slot=command-item]]:gap-2.5 [&_[data-slot=command-item]]:rounded-lg [&_[data-slot=command-item]]:px-2.5",
-	"[&_[data-slot=command-item][data-selected=true]]:bg-foreground/6",
-];
+const COMMAND_DIALOG_SLOT_STYLES = {
+	default: [
+		"[&_[data-slot=command-input-wrapper]]:h-13 [&_[data-slot=command-input-wrapper]]:shrink-0 [&_[data-slot=command-input-wrapper]]:gap-3 [&_[data-slot=command-input-wrapper]]:px-4",
+		"[&_[data-slot=command-input]]:text-md",
+		"[&_[data-slot=command-list]]:max-h-[360px] [&_[data-slot=command-list]]:min-h-0 [&_[data-slot=command-list]]:flex-1",
+		"[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-tertiary-foreground",
+		"[&_[data-slot=command-item]]:h-9 [&_[data-slot=command-item]]:gap-2.5 [&_[data-slot=command-item]]:rounded-lg [&_[data-slot=command-item]]:px-2.5",
+		"[&_[data-slot=command-item][data-selected=true]]:bg-foreground/6",
+	],
+	compact: [
+		"[&_[data-slot=command-input-wrapper]]:h-11 [&_[data-slot=command-input-wrapper]]:shrink-0 [&_[data-slot=command-input-wrapper]]:gap-2.5 [&_[data-slot=command-input-wrapper]]:px-3.5",
+		"[&_[data-slot=command-input]]:text-sm",
+		"[&_[data-slot=command-list]]:max-h-[320px] [&_[data-slot=command-list]]:min-h-0 [&_[data-slot=command-list]]:flex-1",
+		"[&_[cmdk-group]]:p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-tertiary-foreground",
+		"[&_[data-slot=command-item]]:h-8 [&_[data-slot=command-item]]:gap-2 [&_[data-slot=command-item]]:rounded-md [&_[data-slot=command-item]]:px-2",
+		"[&_[data-slot=command-item][data-selected=true]]:bg-foreground/6",
+		"[&_[data-slot=command-footer]]:h-9 [&_[data-slot=command-footer]]:px-3",
+	],
+} as const;
+
+const COMMAND_DIALOG_WIDTH = {
+	default: "max-w-[640px]",
+	compact: "max-w-[540px]",
+} as const;
 
 function CommandDialog({
 	title = "Command Palette",
@@ -42,12 +58,14 @@ function CommandDialog({
 	children,
 	className,
 	showCloseButton = false,
+	size = "default",
 	...props
 }: React.ComponentProps<typeof Dialog> & {
 	title?: string;
 	description?: string;
 	className?: string;
 	showCloseButton?: boolean;
+	size?: keyof typeof COMMAND_DIALOG_SLOT_STYLES;
 	children?: React.ReactNode;
 }) {
 	return (
@@ -58,7 +76,8 @@ function CommandDialog({
 			</DialogHeader>
 			<DialogContent
 				className={cn(
-					"top-[18%] flex max-h-[calc(82dvh-1rem)] max-w-[640px] translate-y-0 flex-col gap-0 overflow-hidden rounded-xl bg-interactive-secondary p-0 shadow-2xl ring-foreground/8",
+					"top-[18%] flex max-h-[calc(82dvh-1rem)] translate-y-0 flex-col gap-0 overflow-hidden rounded-xl bg-interactive-secondary p-0 shadow-2xl ring-foreground/8",
+					COMMAND_DIALOG_WIDTH[size],
 					className,
 				)}
 				overlayClassName="dark:bg-black/60"
@@ -66,7 +85,10 @@ function CommandDialog({
 			>
 				<Command
 					shouldFilter={false}
-					className={cn("min-h-0 rounded-none", COMMAND_DIALOG_SLOT_STYLES)}
+					className={cn(
+						"min-h-0 rounded-none",
+						COMMAND_DIALOG_SLOT_STYLES[size],
+					)}
 				>
 					{children}
 				</Command>

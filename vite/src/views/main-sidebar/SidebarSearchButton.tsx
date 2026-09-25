@@ -11,8 +11,8 @@ export const SidebarSearchButton = () => {
 		<button
 			aria-label="Search"
 			className={cn(
-				"flex h-[30px] w-full shrink-0 items-center gap-2 rounded-lg bg-interactive-secondary text-[13px] font-[450] leading-4 text-[#8A8A8A] outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:bg-[#1A1A1A] dark:text-[#7A7A7A] dark:hover:text-[#A1A1A1]",
-				expanded ? "px-2.5" : "justify-center px-0",
+				"flex shrink-0 items-center gap-2 rounded-lg bg-interactive-secondary text-[13px] font-[450] leading-4 text-[#8A8A8A] outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:bg-[#1A1A1A] dark:text-[#7A7A7A] dark:hover:text-[#A1A1A1]",
+				expanded ? "h-[30px] w-full px-2.5" : "size-8 justify-center px-0",
 			)}
 			onClick={openCommandBar}
 			type="button"

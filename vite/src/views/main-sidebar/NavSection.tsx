@@ -17,7 +17,7 @@ export const NavSection = ({
 					{title}
 				</span>
 			)}
-			{title && !expanded && <div className="mx-2 mb-1.5 h-px bg-border" />}
+			{title && !expanded && <div className="mx-1.5 mb-1.5 h-px bg-border" />}
 			{children}
 		</div>
 	);

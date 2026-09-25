@@ -76,7 +76,7 @@ export const OrgDropdown = () => {
 	return (
 		// px-2 in both states so the logo keeps the nav rows' inset instead of
 		// stepping inwards when the sidebar expands.
-		<div className="flex">
+		<div className={cn("flex", !expanded && "justify-center")}>
 			<CreateNewOrg dialogType={dialogType} setDialogType={setDialogType} />
 
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
@@ -92,23 +92,16 @@ export const OrgDropdown = () => {
 					<DropdownMenuTrigger asChild>
 						<Button
 							className={cn(
-								// Always left-aligned: centring when collapsed made the logo
-								// slide across as the name shrank to zero width.
-								// px-2 + gap-2 mirrors NavButton exactly, so the logo shares the
-								// nav icons' vertical line.
-								"bg-transparent! border-0! h-8! w-full cursor-pointer items-center justify-start gap-2 rounded-md px-1.5!",
-								expanded ? "shimmer-hover" : "hover:bg-transparent",
+								"bg-transparent! border-0! h-8! w-full cursor-pointer items-center rounded-md",
+								expanded
+									? "shimmer-hover justify-start gap-2 px-1.5!"
+									: "justify-center gap-0 px-0! hover:bg-transparent",
 							)}
 							variant="skeleton"
 						>
 							<OrgLogo org={org} />
 							<div
-								className={cn(
-									"flex items-center gap-2 transition-[opacity,transform] duration-200",
-									expanded
-										? "opacity-100 translate-x-0"
-										: "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
-								)}
+								className={cn("flex items-center gap-2", !expanded && "hidden")}
 							>
 								<span className="max-w-28 truncate text-[13px] font-[550] leading-4 tracking-[-0.005em] text-foreground dark:text-[#EDEDED]">
 									{org?.name}
