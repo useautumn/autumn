@@ -1,6 +1,3 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
 import {
 	Button,
 	Dialog,
@@ -11,6 +8,9 @@ import {
 	DialogTitle,
 	Input,
 } from "@autumn/ui";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import {
 	type SandboxSummary,
 	useDeleteSandbox,
@@ -55,7 +55,7 @@ export const DeleteSandboxDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="bg-card">
+			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Delete sandbox</DialogTitle>
 					<DialogDescription>

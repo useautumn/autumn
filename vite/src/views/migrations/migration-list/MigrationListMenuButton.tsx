@@ -24,7 +24,7 @@ export function MigrationListMenuButton() {
 					className="!h-7"
 				/>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="text-muted-foreground">
+			<DropdownMenuContent align="end">
 				<DropdownMenuItem
 					className="flex items-center cursor-pointer"
 					onClick={() => {

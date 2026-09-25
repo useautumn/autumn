@@ -78,7 +78,7 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
 			<PopoverContent
 				sideOffset={2}
 				align="start"
-				className="bg-interactive-secondary border flex flex-col gap-3 pt-3 w-[350px]"
+				className="flex flex-col gap-3 pt-3 w-[350px]"
 				onEscapeKeyDown={() => setOpen(false)}
 				onPointerDownOutside={() => setOpen(false)}
 			>

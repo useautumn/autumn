@@ -467,7 +467,6 @@ function BalanceActionsCell({
 					<ToolbarButton onClick={(event) => event.stopPropagation()} />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent
-					className="text-muted-foreground"
 					align="end"
 					onClick={(event) => event.stopPropagation()}
 				>

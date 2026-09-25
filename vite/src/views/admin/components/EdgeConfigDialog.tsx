@@ -225,7 +225,7 @@ export function EdgeConfigDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-4xl bg-card">
+			<DialogContent className="max-w-4xl">
 				<DialogHeader>
 					<DialogTitle>
 						Request Blocking — {orgId ? `Org: ${orgId}` : "Select Organization"}

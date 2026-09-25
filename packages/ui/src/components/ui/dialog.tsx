@@ -75,7 +75,7 @@ function DialogCloseButton() {
 	return (
 		<DialogPrimitive.Close
 			data-slot="dialog-close"
-			className="ring-offset-background focus:ring-ring data-open:bg-accent data-open:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+			className="absolute top-3 right-3 grid size-6 place-items-center rounded-md text-tertiary-foreground transition-colors duration-150 hover:bg-overlay-hover hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5"
 		>
 			<XIcon />
 			<span className="sr-only">Close</span>
@@ -95,9 +95,8 @@ const DialogContent = React.forwardRef<
 			ref={ref}
 			data-slot="dialog-content"
 			className={cn(
-				"data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 fixed top-[50%] left-[50%] z-[180] grid translate-x-[-50%] translate-y-[-50%] rounded-lg shadow-lg ring-1 ring-foreground/10 duration-200",
-				"w-full max-w-md gap-3 bg-background",
-				"p-4",
+				"data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-[0.97] data-open:zoom-in-[0.97] fixed top-[50%] left-[50%] z-[180] grid translate-x-[-50%] translate-y-[-50%] duration-150",
+				"w-[calc(100%-2rem)] max-w-[400px] gap-3 rounded-2xl border border-overlay-border bg-overlay-dialog p-4 text-muted-foreground shadow-overlay-dialog",
 				className,
 			)}
 			{...props}
@@ -113,7 +112,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="dialog-header"
-			className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
+			className={cn("flex flex-col gap-0.5 pr-7 text-left", className)}
 			{...props}
 		/>
 	);
@@ -124,7 +123,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="dialog-footer"
 			className={cn(
-				"flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+				"flex flex-col-reverse gap-2 pt-1 sm:flex-row *:flex-1",
 				className,
 			)}
 			{...props}
@@ -139,7 +138,10 @@ const DialogTitle = React.forwardRef<
 	<DialogPrimitive.Title
 		ref={ref}
 		data-slot="dialog-title"
-		className={cn("text-lg leading-none font-semibold", className)}
+		className={cn(
+			"font-semibold text-foreground text-sm leading-[18px] tracking-[-0.01em]",
+			className,
+		)}
 		{...props}
 	/>
 ));
@@ -152,7 +154,10 @@ const DialogDescription = React.forwardRef<
 	<DialogPrimitive.Description
 		ref={ref}
 		data-slot="dialog-description"
-		className={cn("text-tertiary-foreground text-sm", className)}
+		className={cn(
+			"text-[12.5px] text-tertiary-foreground leading-[18px]",
+			className,
+		)}
 		{...props}
 	/>
 ));

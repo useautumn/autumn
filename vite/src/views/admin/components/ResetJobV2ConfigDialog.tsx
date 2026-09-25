@@ -34,7 +34,7 @@ export const ResetJobV2ConfigDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-2xl bg-card">
+			<DialogContent className="max-w-2xl">
 				<DialogHeader>
 					<DialogTitle className="text-balance">Batch Reset V2</DialogTitle>
 					<DialogDescription className="text-pretty">

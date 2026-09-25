@@ -156,7 +156,7 @@ export function CustomerValuePicker({
 				</PopoverTrigger>
 				<PopoverContent
 					align="start"
-					className="w-(--anchor-width) p-0 z-200 rounded-md overflow-hidden"
+					className="w-(--anchor-width) p-0 z-200 overflow-hidden"
 					style={{
 						transformOrigin: "var(--radix-popover-content-transform-origin)",
 					}}

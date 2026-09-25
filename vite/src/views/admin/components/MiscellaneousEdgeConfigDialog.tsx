@@ -45,7 +45,7 @@ export function MiscellaneousEdgeConfigDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-4xl bg-card">
+			<DialogContent className="max-w-4xl">
 				<DialogHeader>
 					<DialogTitle className="text-balance">
 						Miscellaneous Edge Config

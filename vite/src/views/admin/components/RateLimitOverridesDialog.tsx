@@ -241,7 +241,7 @@ export function RateLimitOverridesDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-h-[calc(100dvh-2rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-card">
+			<DialogContent className="max-h-[calc(100dvh-2rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
 				<DialogHeader>
 					<DialogTitle className="text-balance">
 						Rate Limit Overrides

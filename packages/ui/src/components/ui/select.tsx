@@ -1,5 +1,13 @@
 "use client";
 
+import {
+	overlayItemClassName,
+	overlayItemHighlightClassName,
+	overlayItemIndicatorClassName,
+	overlayLabelClassName,
+	overlaySeparatorClassName,
+	overlaySurfaceClassName,
+} from "@autumn/ui/lib/overlay-classes";
 import { cn } from "@autumn/ui/lib/utils";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
@@ -75,7 +83,7 @@ function SelectTrigger({
 		>
 			{children}
 			<SelectPrimitive.Icon>
-				<ChevronDownIcon className="size-4 opacity-50" />
+				<ChevronDownIcon className="size-3.5 text-tertiary-foreground" />
 			</SelectPrimitive.Icon>
 		</SelectPrimitive.Trigger>
 	);
@@ -106,7 +114,8 @@ function SelectContent({
 				<SelectPrimitive.Popup
 					data-slot="select-content"
 					className={cn(
-						"bg-interactive-secondary text-muted-foreground relative max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-x-hidden overflow-y-auto rounded-lg shadow-md ring-1 ring-foreground/10 p-1",
+						"relative max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-x-hidden overflow-y-auto p-1",
+						overlaySurfaceClassName,
 						className,
 					)}
 					{...props}
@@ -125,7 +134,7 @@ function SelectLabel({
 	return (
 		<SelectPrimitive.GroupLabel
 			data-slot="select-label"
-			className={cn("text-muted-foreground px-2 py-1.5 text-xs", className)}
+			className={cn(overlayLabelClassName, className)}
 			{...props}
 		/>
 	);
@@ -144,16 +153,18 @@ function SelectItem({
 		<SelectPrimitive.Item
 			data-slot="select-item"
 			className={cn(
-				"data-highlighted:bg-accent data-highlighted:text-accent-foreground data-highlighted:**:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pl-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-				indicator ? "pr-8" : "pr-1.5",
+				overlayItemClassName,
+				overlayItemHighlightClassName,
+				"w-full *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+				indicator ? "pr-8" : "pr-2",
 				className,
 			)}
 			{...props}
 		>
 			{indicator ? (
-				<span className="pointer-events-none absolute right-2 flex items-center justify-center">
+				<span className={overlayItemIndicatorClassName}>
 					<SelectPrimitive.ItemIndicator>
-						<CheckIcon className="size-4" />
+						<CheckIcon className="text-foreground" />
 					</SelectPrimitive.ItemIndicator>
 				</span>
 			) : null}
@@ -168,7 +179,11 @@ function SelectSeparator({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="select-separator"
-			className={cn("bg-border pointer-events-none -mx-1 my-1 h-px", className)}
+			className={cn(
+				overlaySeparatorClassName,
+				"pointer-events-none",
+				className,
+			)}
 			{...props}
 		/>
 	);

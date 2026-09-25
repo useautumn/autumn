@@ -111,7 +111,7 @@ export function AssignLicenseToEntityDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-			<DialogContent className="w-[420px] bg-card">
+			<DialogContent className="w-[420px]">
 				<DialogHeader>
 					<DialogTitle>Assign {pool?.license_plan_name}</DialogTitle>
 					<DialogDescription>

@@ -60,7 +60,7 @@ export function CreditBillingUnits({
 					<span className="min-w-0 truncate text-xs">{label}</span>
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent className="max-w-[200px] p-3 pt-2 z-200" align="start">
+			<PopoverContent className="max-w-[200px] pt-2 z-200" align="start">
 				<LabelInput
 					label={
 						isAiChild

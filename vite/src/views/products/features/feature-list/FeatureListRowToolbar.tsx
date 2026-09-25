@@ -32,7 +32,7 @@ export const FeatureListRowToolbar = ({ feature }: { feature: Feature }) => {
 				<DropdownMenuTrigger asChild>
 					<ToolbarButton />
 				</DropdownMenuTrigger>
-				<DropdownMenuContent className="text-muted-foreground" align="end">
+				<DropdownMenuContent align="end">
 					<DropdownMenuItem
 						className="flex items-center text-xs"
 						onClick={(e) => {

@@ -143,7 +143,7 @@ export const PasskeysManager = () => {
 						<KeyRound size={14} />
 						Add passkey
 					</Button>
-					<DialogContent className="w-md bg-card">
+					<DialogContent className="w-md">
 						<DialogHeader>
 							<DialogTitle>Add a passkey</DialogTitle>
 							<DialogDescription>
@@ -243,7 +243,7 @@ export const PasskeysManager = () => {
 					if (!open) setConfirmDeleteId(null);
 				}}
 			>
-				<DialogContent className="w-md bg-card">
+				<DialogContent className="w-md">
 					<DialogHeader>
 						<DialogTitle>Remove passkey</DialogTitle>
 						<DialogDescription>

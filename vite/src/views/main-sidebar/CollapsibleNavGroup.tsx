@@ -1,13 +1,13 @@
 import type { AppEnv } from "@autumn/shared";
-import type { ReactNode } from "react";
-import { useState } from "react";
-import { Link } from "react-router";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@autumn/ui";
+import type { ReactNode } from "react";
+import { useState } from "react";
+import { Link } from "react-router";
 import { cn } from "@/lib/utils";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { pushPage } from "@/utils/genUtils";
@@ -56,11 +56,7 @@ export const CollapsibleNavGroup = ({
 						isGroup
 					/>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent
-					side="right"
-					align="start"
-					className="border border-zinc-200 shadow-sm"
-				>
+				<DropdownMenuContent side="right" align="start">
 					{subTabs.map((subTab, index) => (
 						<DropdownMenuItem key={index} asChild>
 							<Link
