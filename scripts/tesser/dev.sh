@@ -11,8 +11,9 @@
 # Two modes:
 #   with Infisical    the machine identity Claude cloud sessions use, once per
 #                     Tesser org:
-#                       tesser env set autumn CODING_AGENT_CLIENT_ID CODING_AGENT_CLIENT_SECRET
-#                     (each bare name reads its value from stdin). Team secrets
+#                       tesser env set autumn CODING_AGENT_CLIENT_ID
+#                       tesser env set autumn CODING_AGENT_CLIENT_SECRET
+#                     (each reads its value from stdin). Team secrets
 #                     from Infisical dev, unit-test-org seeded, Stripe sandbox
 #                     webhooks forwarded; DB/Redis/queues stay on the box.
 #   without Infisical random ENCRYPTION_* / BETTER_AUTH_SECRET persisted on the
@@ -34,8 +35,9 @@ export GIT_TERMINAL_PROMPT=0
 export AUTUMN_EDGE_CONFIG_OVERRIDE_B64="${AUTUMN_EDGE_CONFIG_OVERRIDE_B64:-e30=}"
 
 # --- browser-facing URLs: the box's own address ------------------------------
-# The laptop proxy rewrites Origin to the upstream port, so the browser must
-# never call :8080 across origins: SAME_ORIGIN_API makes vite proxy
+# A page on <box_id>.localhost that calls bare localhost:8080 sends no
+# cookies, and bare localhost:3000 shows whichever box is focused, so the
+# dashboard must never name the API's host: SAME_ORIGIN_API makes vite proxy
 # /__autumn_api and /api/auth to the server, and the page only talks to :3000.
 if [ -n "${TESSER_BOX_ID:-}" ]; then
 	host="${TESSER_BOX_ID}.localhost"

@@ -3,7 +3,8 @@
 #
 # Runs on the box before every `tesser dev autumn`, so every step is guarded
 # and returns in seconds once done. Boxes are Ubuntu with Node, Docker and
-# passwordless sudo, but no bun.
+# passwordless sudo; their bun is whatever was latest when the image was
+# built, so the pinned one goes first on PATH.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 log() { echo "[tesser-setup] $*"; }

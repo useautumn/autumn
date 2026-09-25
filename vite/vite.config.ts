@@ -19,8 +19,8 @@ const frontendUrl = process.env.VITE_FRONTEND_URL || "";
 const isCapyDev = process.env.CAPY_DEV === "1";
 // Serve the API through vite's dev proxy so the browser stays on one origin.
 // Capy sandboxes need it for their single public host; Tesser boxes need it
-// because the laptop proxy rewrites Origin to the upstream port, which breaks
-// cross-port CORS to :8080 (see scripts/tesser/dev.sh).
+// because the page is served on both <box_id>.localhost and bare localhost,
+// and cookies don't cross between the two (see scripts/tesser/dev.sh).
 const isSameOriginApi = isCapyDev || process.env.SAME_ORIGIN_API === "1";
 if (isSameOriginApi) {
 	process.env.VITE_BACKEND_URL = "/__autumn_api";
