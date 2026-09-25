@@ -9,6 +9,9 @@ import {
 /** Marks a record that a config states per environment; the type emitter names its keys. */
 export const ENV_KEYED_MARKER = "x-env-keyed";
 
+/** Marks an enum list a newer server may extend: typed as the enum or any string. */
+export const OPEN_ENUM_MARKER = "x-open-enum";
+
 /** `live`, `sandbox`, or a sandbox's slug: lowercase, digits, `_` and `-`, never a space. */
 export const ENV_KEY_PATTERN = "^[a-z0-9_-]+$";
 
@@ -47,7 +50,11 @@ export const syncedListItemSchema = ({
 		properties: Object.fromEntries(
 			Object.entries(item.properties).map(([key, schema]) => [
 				key,
-				meta.envKeyed.includes(key) ? envKeyedSchema(schema) : schema,
+				meta.envKeyed.includes(key)
+					? envKeyedSchema(schema)
+					: meta.openEnums.includes(key)
+						? { ...schema, [OPEN_ENUM_MARKER]: true }
+						: schema,
 			]),
 		),
 	};
@@ -69,6 +76,26 @@ export const syncedListsEnvelope = ({
 		]),
 	),
 });
+
+/** The names an open-enum list field knows today, read off the sync body. */
+export const openEnumValues = ({
+	spec,
+	meta,
+	field,
+}: {
+	spec: OpenApiDocument;
+	meta: SyncedListMeta;
+	field: string;
+}): string[] => {
+	const body = requestBodySchema({ spec, path: meta.operationPath });
+	const values =
+		body.properties?.[meta.wireKey]?.items?.properties?.[field]?.items?.enum;
+	if (!Array.isArray(values))
+		throw new Error(
+			`open enum \`${field}\` has no item enum on ${meta.operationPath}.`,
+		);
+	return values as string[];
+};
 
 /** Everything a config states, for lint: the catalog envelope plus every synced list. */
 export const lintEnvelope = ({

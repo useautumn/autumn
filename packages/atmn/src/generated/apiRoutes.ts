@@ -4127,7 +4127,8 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				name: "events",
 				type: "json",
 				required: true,
-				description: "The events sent to this webhook. At least one.",
+				description:
+					"The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.",
 			},
 			{
 				name: "description",
@@ -4195,7 +4196,8 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				name: "events",
 				type: "json",
 				required: false,
-				description: "The events sent to this webhook. At least one.",
+				description:
+					"The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.",
 			},
 			{
 				name: "description",

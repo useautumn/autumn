@@ -25,6 +25,7 @@ import {
 	withRenames,
 } from "./emit/freeFormPaths";
 import { emitLintRulesModule } from "./lint/emitLintRules";
+import { knownValues } from "./lint/rules/define";
 import { LINT_REGISTRY } from "./lint/rules/registry";
 import { LOCAL_URL_CHECK } from "./lint/rules/webhooks";
 import { nodeRulesFromSpec } from "./lint/specRules/nodeRulesFromSpec";
@@ -42,6 +43,7 @@ import {
 import { resolveRef } from "./spec/resolveRef";
 import {
 	lintEnvelope,
+	openEnumValues,
 	syncedListItemSchema,
 	syncedListsEnvelope,
 } from "./spec/syncedListSchema";
@@ -95,6 +97,35 @@ const formatWithBiome = async ({
 		);
 	}
 };
+
+const withOpenEnumRules = ({
+	spec,
+	registry,
+}: {
+	spec: ReturnType<typeof loadSpec>;
+	registry: typeof LINT_REGISTRY;
+}): typeof LINT_REGISTRY =>
+	Object.entries(SYNCED_LISTS).reduce((acc, [name, meta]) => {
+		const entry = acc[name] ?? {};
+		return {
+			...acc,
+			[name]: {
+				...entry,
+				rules: [
+					...(entry.rules ?? []),
+					...meta.openEnums.map((field) =>
+						knownValues({
+							field,
+							values: openEnumValues({ spec, meta, field }),
+							warning: true,
+							because:
+								"isn't known to this atmn version; the server will check it.",
+						}),
+					),
+				],
+			},
+		};
+	}, registry);
 
 const mergeHints = (
 	left: WirePathHints,
@@ -239,8 +270,10 @@ export const generate = async (): Promise<string[]> => {
 	// A typo in a rule's path or field would otherwise ship as a rule that
 	// never fires.
 	const listsEnvelope = syncedListsEnvelope({ spec, lists: SYNCED_LISTS });
+	// An open enum's known names come from the spec, so they can't go stale.
+	const registry = withOpenEnumRules({ spec, registry: LINT_REGISTRY });
 	validateRegistry({
-		registry: LINT_REGISTRY,
+		registry,
 		schema: lintEnvelope({ spec, lists: SYNCED_LISTS }),
 		root,
 		overlay: OVERLAY,
@@ -270,7 +303,7 @@ export const generate = async (): Promise<string[]> => {
 				}),
 				...nodeRulesFromSpec({ schema: listsEnvelope, root, overlay: OVERLAY }),
 			},
-			registry: LINT_REGISTRY,
+			registry,
 		}),
 	});
 	write({

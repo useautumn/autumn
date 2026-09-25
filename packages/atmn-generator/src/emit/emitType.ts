@@ -13,7 +13,7 @@ import {
 	isInternalField,
 	isRequiredByOverlay,
 } from "../overlay/overlay";
-import { ENV_KEYED_MARKER } from "../spec/syncedListSchema";
+import { ENV_KEYED_MARKER, OPEN_ENUM_MARKER } from "../spec/syncedListSchema";
 
 /**
  * Emits TypeScript source for a fixture type. Formatting is deliberately not a
@@ -72,7 +72,10 @@ export const typeExpression = ({
 		const item = schema.items
 			? typeExpression({ schema: schema.items, path, context })
 			: "unknown";
-		return `Array<${item}>`;
+		// A newer server may send names this CLI doesn't list yet.
+		return schema[OPEN_ENUM_MARKER] === true
+			? `Array<${item} | (string & {})>`
+			: `Array<${item}>`;
 	}
 
 	if (type === "object" || schema.properties || isRecordSchema(schema)) {

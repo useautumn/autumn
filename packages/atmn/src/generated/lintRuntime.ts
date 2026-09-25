@@ -123,6 +123,22 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
+			/** Each name in list `field` should be one of `values`; any other is
+			 * reported, as a warning when `warning` is set. */
+			readonly kind: "knownValues";
+			readonly field: string;
+			readonly values: readonly string[];
+			readonly warning?: true;
+			readonly because: string;
+	  }
+	| {
+			/** List `field` holds names starting with `prefix` only, or none of them. */
+			readonly kind: "uniformPrefix";
+			readonly field: string;
+			readonly prefix: string;
+			readonly because: string;
+	  }
+	| {
 			/** A stated string `field`, or every value of a map `field`, must not
 			 * satisfy the named `check` the caller supplies to `lintDocument`. */
 			readonly kind: "rejects";
@@ -512,6 +528,24 @@ const entryRuleFailures = ({
 				: isEntry(value) && Object.keys(value).length === 0;
 			return empty ? [`${rule.field} is empty. ${rule.because}`] : [];
 		}
+		case "knownValues": {
+			const value = entry[rule.field];
+			if (!Array.isArray(value)) return [];
+			return value
+				.filter(
+					(item): item is string =>
+						typeof item === "string" && !rule.values.includes(item),
+				)
+				.map((item) => `\`${item}\` ${rule.because}`);
+		}
+		case "uniformPrefix": {
+			const value = entry[rule.field];
+			if (!Array.isArray(value)) return [];
+			const prefixed = value.filter(
+				(item) => typeof item === "string" && item.startsWith(rule.prefix),
+			).length;
+			return prefixed === 0 || prefixed === value.length ? [] : [rule.because];
+		}
 		case "rejects": {
 			const value = entry[rule.field];
 			const check = checks[rule.check];
@@ -812,7 +846,7 @@ const checkEntry = ({
 		checkVariants({ entry, variants: node.variants, at, issues: walk.issues });
 	}
 	for (const rule of node.rules ?? []) {
-		const warning = rule.kind === "nonEmpty" && rule.warning === true;
+		const warning = "warning" in rule && rule.warning === true;
 		for (const message of entryRuleFailures({
 			entry,
 			rule,

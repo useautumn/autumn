@@ -10,7 +10,7 @@ export type Webhook = {
 		sandbox?: string;
 		[sandboxSlug: string]: string | undefined;
 	};
-	/** The events sent to this webhook. At least one. */
+	/** The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events. */
 	events: Array<
 		| "customer.products.updated"
 		| "customer.threshold_reached"
@@ -24,6 +24,7 @@ export type Webhook = {
 		| "vercel.resources.provisioned"
 		| "vercel.resources.rotate_secrets"
 		| "vercel.webhooks.event"
+		| (string & {})
 	>;
 	/** A note for your own reference. */
 	description?: string;

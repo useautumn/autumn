@@ -97,7 +97,7 @@ webhooks: Array<{
 id: string;
 /** The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work. */
 url: string;
-/** The events sent to this webhook. At least one. */
+/** The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events. */
 events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
 /** A note for your own reference. */
 description?: string;
@@ -52431,8 +52431,8 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
-events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
 /** When the webhook was created, ms since epoch. */
@@ -52453,8 +52453,8 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
-events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
 /** When the webhook was created, ms since epoch. */
@@ -52472,8 +52472,8 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
-events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
 /** When the webhook was created, ms since epoch. */
@@ -52488,8 +52488,8 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
-events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
 /** When the webhook was created, ms since epoch. */
@@ -52507,8 +52507,8 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
-events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
 /** When the webhook was created, ms since epoch. */
@@ -52523,8 +52523,8 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
-events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
 /** When the webhook was created, ms since epoch. */
@@ -52542,8 +52542,8 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
-events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
 /** When the webhook was created, ms since epoch. */
@@ -52567,8 +52567,8 @@ id: string;
 url: string;
 /** A note for your own reference. */
 description: string | null;
-/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
-events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<string>;
 /** When true, no events are sent to the webhook. */
 disabled: boolean;
 /** When the webhook was created, ms since epoch. */

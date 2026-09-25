@@ -121,3 +121,37 @@ test("an empty url map is a warning carried beside the document, never a refusal
 	expect(warnings[0]?.path).toBe('webhook "billing"');
 	expect(warnings[0]?.message).toContain("registered nowhere");
 });
+
+test("an event name this atmn doesn't know is a warning, never a refusal: the server checks it", () => {
+	const document = atmn({
+		webhooks: [
+			billing({
+				// A config pulled from a newer server; the type accepts any string.
+				events: ["billing.updated", "billing.from_the_future"],
+			}),
+		],
+	});
+	const { warnings, lists } = splitWire(document);
+	expect(warnings.map((warning) => warning.message)).toEqual([
+		"`billing.from_the_future` isn't known to this atmn version; the server will check it.",
+	]);
+	expect(lists.webhooks?.[0]?.events).toEqual([
+		"billing.updated",
+		"billing.from_the_future",
+	]);
+});
+
+test("vercel.* events can't share a webhook with other events", () => {
+	expect(
+		messages([
+			billing({ events: ["vercel.resources.provisioned", "billing.updated"] }),
+		]),
+	).toContain("vercel.* events can't be mixed with other events");
+	expect(
+		issuesOf([
+			billing({
+				events: ["vercel.resources.provisioned", "vercel.resources.deleted"],
+			}),
+		]),
+	).toEqual([]);
+});

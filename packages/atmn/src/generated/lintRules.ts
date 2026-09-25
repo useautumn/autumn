@@ -2239,11 +2239,38 @@ export const LINT_RULES: LintRules = {
 					"Autumn delivers from the internet, so localhost and private-network addresses can never be reached. Use a public URL or a tunnel (e.g. ngrok).",
 			},
 			{
+				kind: "uniformPrefix",
+				field: "events",
+				prefix: "vercel.",
+				because:
+					"vercel.* events can't be mixed with other events in one webhook: they're delivered from a separate app. Make one webhook for each.",
+			},
+			{
 				kind: "nonEmpty",
 				field: "url",
 				warning: true,
 				because:
 					"With no environment key the webhook is registered nowhere. Add `live`, `sandbox` or a sandbox's slug.",
+			},
+			{
+				kind: "knownValues",
+				field: "events",
+				values: [
+					"customer.products.updated",
+					"customer.threshold_reached",
+					"balances.usage_alert_triggered",
+					"balances.limit_reached",
+					"billing.auto_topup_failed",
+					"billing.auto_topup_succeeded",
+					"billing.updated",
+					"invoice.finalized",
+					"vercel.resources.deleted",
+					"vercel.resources.provisioned",
+					"vercel.resources.rotate_secrets",
+					"vercel.webhooks.event",
+				],
+				warning: true,
+				because: "isn't known to this atmn version; the server will check it.",
 			},
 		],
 	},

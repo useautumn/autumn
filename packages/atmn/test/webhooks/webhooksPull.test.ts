@@ -511,3 +511,19 @@ test("a dashboard webhook receiving every event is never written as events: []",
 		"⚠ billing  the dashboard webhook at this url receives every event; your next push narrows it to billing.updated",
 	]);
 });
+
+test("pull keeps event names this atmn doesn't know, verbatim", () => {
+	const { source } = pullInto({
+		source: `export default atmn({
+	webhooks: [],
+});
+`,
+		remoteList: [
+			remote("billing", "https://x.dev/h", {
+				events: ["billing.updated", "billing.from_the_future"] as never,
+			}),
+		],
+	});
+	expect(source).toContain('"billing.from_the_future"');
+	expect(source).toContain('"billing.updated"');
+});

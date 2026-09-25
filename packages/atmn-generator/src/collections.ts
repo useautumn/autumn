@@ -145,6 +145,9 @@ export type SyncedListMeta = {
 	/** Fields stated per environment as `{ live?, sandbox?, [sandboxSlug]? }`:
 	 * push sends the target env's value and skips an entry that has none. */
 	readonly envKeyed: readonly string[];
+	/** Enum-list fields a newer server may extend: the type accepts any string,
+	 * and lint only warns on a name this CLI doesn't know. */
+	readonly openEnums: readonly string[];
 	/** The builder's JSDoc. */
 	readonly describe: string;
 };
@@ -157,6 +160,7 @@ export const SYNCED_LISTS: Readonly<Record<string, SyncedListMeta>> = {
 		operationPath: "/v1/webhooks.sync",
 		wireKey: "webhooks",
 		envKeyed: ["url"],
+		openEnums: ["events"],
 		describe:
 			"An Autumn webhook, keyed by `id`. `atmn push` creates or updates it in the target environment and never deletes one; webhooks your config doesn't list are left alone. `url` is a map keyed by environment, so one config registers different URLs in prod and each sandbox, and an environment with no key skips the webhook. A newly created webhook's signing secret is written to your env file as `AUTUMN_WEBHOOK_<ID>_SECRET` (prod, in `.env.prod`) or `AUTUMN_WEBHOOK_<ID>_<ORG4>_SECRET` (sandboxes).",
 	},
