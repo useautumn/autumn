@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { CE_BALANCES_CACHE_PROJECTION } from "@autumn/shared";
-import {
-	CE_LAKE_TABLES,
-	ceBalanceTotalsSql,
-} from "@/external/motherduck/refreshCeBalancesCache.js";
+import { ceBalanceTotalsSql } from "@/external/motherduck/refreshCeBalancesCache.js";
 
 const META =
 	"s3://autumn-lake-prod-us-east-2/internal/customer_entitlements/warehouse/internal/customer_entitlements/metadata/08982-abc.metadata.json";
@@ -47,15 +44,6 @@ describe("ce_balance_totals build", () => {
 		}
 		expect(query.replace(/\s+/g, " ")).toContain(
 			"FROM b LEFT JOIN main.ent_allowances",
-		);
-	});
-
-	test("defaults to the 8 RisingWave shard tables", () => {
-		expect(CE_LAKE_TABLES).toEqual(
-			Array.from(
-				{ length: 8 },
-				(_, shard) => `customer_entitlements_s${shard}`,
-			),
 		);
 	});
 

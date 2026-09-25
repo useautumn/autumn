@@ -1,3 +1,4 @@
+import { getCeLakeTables } from "@autumn/ducklake/ceLakeTables";
 import { CE_BALANCES_CACHE_PROJECTION } from "@autumn/shared";
 import { GetTableCommand, GlueClient } from "@aws-sdk/client-glue";
 import { sql } from "drizzle-orm";
@@ -15,14 +16,6 @@ const metadataLocationPattern = (table: string) =>
 	);
 
 const glueClient = new GlueClient({ region: GLUE_REGION });
-
-/** RisingWave sinks customer_entitlements as disjoint hash shards; their union is the table.
- * `LAKE_CE_TABLES` (comma-separated) overrides for a reshard or rollback to the single table. */
-export const CE_LAKE_TABLES: string[] = process.env.LAKE_CE_TABLES
-	? process.env.LAKE_CE_TABLES.split(",")
-			.map((table) => table.trim())
-			.filter(Boolean)
-	: Array.from({ length: 8 }, (_, shard) => `customer_entitlements_s${shard}`);
 
 export const LIVE_LOOSE_BALANCE_CACHE_PREDICATE =
 	"b.balance != 0 OR b.unlimited IS TRUE OR a.feature_type = 'boolean'";
@@ -117,6 +110,7 @@ export const refreshCeBalancesCache = async ({
 
 	inFlight = (async () => {
 		const startedAt = performance.now();
+		const ceLakeTables = getCeLakeTables();
 		const [
 			ceMetadataLocations,
 			entMetadataLocation,
@@ -124,9 +118,7 @@ export const refreshCeBalancesCache = async ({
 			featureMetadataLocation,
 		] = await Promise.all([
 			Promise.all(
-				CE_LAKE_TABLES.map((table) =>
-					getCurrentLakeMetadataLocation({ table }),
-				),
+				ceLakeTables.map((table) => getCurrentLakeMetadataLocation({ table })),
 			),
 			getCurrentLakeMetadataLocation({ table: "entitlements" }),
 			getCurrentLakeMetadataLocation({ table: "customer_products" }),
@@ -176,7 +168,7 @@ export const refreshCeBalancesCache = async ({
 				type: "md_cache_refresh",
 				rowCount,
 				metadataLocations: Object.fromEntries(
-					CE_LAKE_TABLES.map((table, i) => [table, ceMetadataLocations[i]]),
+					ceLakeTables.map((table, i) => [table, ceMetadataLocations[i]]),
 				),
 				durationMs: Math.round(performance.now() - startedAt),
 			},
