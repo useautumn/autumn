@@ -135,7 +135,9 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 
 					{showProduction && (
 						<DropdownMenuGroup>
-							<DropdownMenuLabel className="px-2">Live</DropdownMenuLabel>
+							<DropdownMenuLabel className="px-2 text-tertiary-foreground">
+								Live
+							</DropdownMenuLabel>
 							<EnvironmentMenuItem
 								icon={<EnvironmentIcon isLive className="size-3.5" />}
 								name="Production"
@@ -147,7 +149,9 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 
 					{hasSandboxResults && (
 						<DropdownMenuGroup>
-							<DropdownMenuLabel className="px-2">Sandboxes</DropdownMenuLabel>
+							<DropdownMenuLabel className="px-2 text-tertiary-foreground">
+								Sandboxes
+							</DropdownMenuLabel>
 							{showLegacySandbox && (
 								<EnvironmentMenuItem
 									icon={<EnvironmentIcon className="size-3.5" />}

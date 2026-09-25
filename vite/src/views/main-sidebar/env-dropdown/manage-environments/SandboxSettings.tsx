@@ -1,6 +1,7 @@
 import { sandboxSlug, validateSandboxName } from "@autumn/shared";
 import {
 	Button,
+	DialogFooter,
 	FormLabel as FieldLabel,
 	Input,
 	ShortcutButton,
@@ -159,17 +160,18 @@ export const SandboxSettings = ({
 				/>
 			</div>
 
-			<div className="flex shrink-0 items-center justify-end gap-2 border-t px-4 py-3">
+			<DialogFooter className="shrink-0 border-t px-5 py-4">
 				<ShortcutButton
 					variant="primary"
 					onClick={handleSave}
 					isLoading={updateSandbox.isPending}
 					disabled={!trimmedName || !hasChanges}
 					metaShortcut="enter"
+					className="w-full"
 				>
 					Save changes
 				</ShortcutButton>
-			</div>
+			</DialogFooter>
 
 			{importOpen && (
 				<CopySandboxDialog
