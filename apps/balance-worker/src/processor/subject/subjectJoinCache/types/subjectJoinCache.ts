@@ -4,9 +4,9 @@ import type {
 	WorkerFullSubject,
 } from "@autumn/balance-engine";
 
-/** What one state was joined into under one catalog revision. */
+/** What one state was joined into while the catalog stood at one change count. */
 export type SubjectJoin = {
-	catalogRevision: number;
+	catalogChangeCount: number;
 	catalog: Catalog | null;
 	fullSubjectByEntityId: Map<string | null, WorkerFullSubject>;
 };

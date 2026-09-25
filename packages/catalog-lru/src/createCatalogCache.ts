@@ -47,23 +47,23 @@ export const createCatalogCache = ({
 				// decision on the same key fails exactly the way this is meant to
 				// prevent. The row survives until `ensure` replaces it.
 				noDeleteOnStaleGet: true,
-				// The invalidation index and the revision follow the LRU exactly: every insert and every removal.
+				// The invalidation index and the change count follow the LRU exactly: every insert and every removal.
 				onInsert: recordInsert,
 				dispose: recordRemoval,
 			}),
 			keysByScope,
 			inFlight: new Map(),
-			revision: 0,
+			changeCount: 0,
 		},
 	};
 
 	function recordInsert(row: CatalogRow, key: string): void {
-		scope.state.revision += 1;
+		scope.state.changeCount += 1;
 		indexCatalogRow({ keysByScope, key, row });
 	}
 
 	function recordRemoval(row: CatalogRow, key: string): void {
-		scope.state.revision += 1;
+		scope.state.changeCount += 1;
 		unindexCatalogRow({ keysByScope, key, row });
 	}
 
@@ -73,6 +73,6 @@ export const createCatalogCache = ({
 		put: ({ rows }) => putCatalogRows({ scope, rows }),
 		invalidate: ({ orgId, env }) => invalidateCatalog({ scope, orgId, env }),
 		size: () => scope.state.entries.size,
-		revision: () => scope.state.revision,
+		changeCount: () => scope.state.changeCount,
 	};
 };

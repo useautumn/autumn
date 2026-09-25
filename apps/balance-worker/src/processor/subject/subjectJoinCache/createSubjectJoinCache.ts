@@ -13,16 +13,16 @@ import type {
 export const createSubjectJoinCache = ({
 	ctx,
 }: {
-	ctx: { catalogCache: Pick<CatalogCache, "revision"> };
+	ctx: { catalogCache: Pick<CatalogCache, "changeCount"> };
 }): SubjectJoinCache => {
 	const joins = new WeakMap<SubjectState, SubjectJoin>();
 
 	function joinOf({ state }: { state: SubjectState }): SubjectJoin {
-		const catalogRevision = ctx.catalogCache.revision();
+		const catalogChangeCount = ctx.catalogCache.changeCount();
 		const existing = joins.get(state);
-		if (existing?.catalogRevision === catalogRevision) return existing;
+		if (existing?.catalogChangeCount === catalogChangeCount) return existing;
 		const join: SubjectJoin = {
-			catalogRevision,
+			catalogChangeCount,
 			catalog: null,
 			fullSubjectByEntityId: new Map(),
 		};

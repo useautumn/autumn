@@ -21,5 +21,5 @@ export type CatalogCache = {
 	invalidate(params: { orgId: string; env: string }): { expiredCount: number };
 	size(): number;
 	/** Changes whenever a stale-allowing read could answer differently: a row set, replaced or dropped. */
-	revision(): number;
+	changeCount(): number;
 };

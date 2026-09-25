@@ -26,7 +26,7 @@ export type CatalogCacheState = {
 	keysByScope: KeysByInvalidationScope;
 	inFlight: Map<string, Promise<void>>;
 	/** Moves on every insert and removal, so a view joined from these rows knows when to rejoin. */
-	revision: number;
+	changeCount: number;
 };
 
 export type CatalogCacheContext = {
