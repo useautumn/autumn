@@ -1,8 +1,8 @@
 import type {
-	AttachPreviewResponse,
 	BillingPlan,
 	CreateScheduleBillingContext,
 	CreateScheduleParamsV0,
+	SetPlansPreviewResponse,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCreateSchedulePlan } from "@/internal/billing/v2/actions/createSchedule/compute/computeCreateSchedulePlan";
@@ -13,13 +13,13 @@ import {
 } from "@/internal/billing/v2/actions/createSchedule/errors/handleCreateScheduleErrors";
 import { setupCreateScheduleBillingContext } from "@/internal/billing/v2/actions/createSchedule/setup/setupCreateScheduleBillingContext";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
-import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
+import { buildSetPlansPreview } from "./preview/buildSetPlansPreview";
 
 type PreviewSetPlansResult = {
 	billingContext: CreateScheduleBillingContext;
 	billingPlan: BillingPlan;
-	preview: AttachPreviewResponse;
+	preview: SetPlansPreviewResponse;
 };
 
 export const previewSetPlansWithContext = async ({
@@ -40,7 +40,7 @@ export const previewSetPlansWithContext = async ({
 		preview: true,
 	});
 
-	const { autumnBillingPlan, immediatePhaseTransition } =
+	const { autumnBillingPlan, phases, immediatePhaseTransition } =
 		computeCreateSchedulePlan({
 			ctx,
 			billingContext,
@@ -75,22 +75,25 @@ export const previewSetPlansWithContext = async ({
 	return {
 		billingContext,
 		billingPlan: billingPlanWithPreview,
-		preview: await billingPlanToAttachPreview({
+		preview: await buildSetPlansPreview({
 			ctx,
 			billingContext,
 			billingPlan: billingPlanWithPreview,
+			phases,
+			outgoingCustomerProducts:
+				immediatePhaseTransition.outgoingCustomerProducts,
 		}),
 	};
 };
 
-/** Preview the immediate-phase billing cost for a set_plans call. */
+/** Preview the phase-by-phase Autumn and Stripe changes for a set_plans call. */
 export const previewSetPlans = async ({
 	ctx,
 	params,
 }: {
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
-}): Promise<AttachPreviewResponse> => {
+}): Promise<SetPlansPreviewResponse> => {
 	const result = await previewSetPlansWithContext({
 		ctx,
 		params,
