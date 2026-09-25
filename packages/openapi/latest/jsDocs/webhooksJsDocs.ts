@@ -1,4 +1,4 @@
-export const createWebhookJsDoc = `Creates a webhook: a URL Autumn sends the listed events to, in the environment of the calling key. You choose the \`id\`, and it can't be changed later. Returns the signing secret once, in this response — store it, it cannot be read back. \`vercel.*\` events are only available to organizations using the Vercel integration.`;
+export const createWebhookJsDoc = `Creates a webhook: a URL Autumn sends the listed events to, in the environment of the calling key. You choose the \`id\`, and it can't be changed later. Returns the signing secret once, in this response — store it, it cannot be read back.`;
 
 export const getWebhookJsDoc = `Gets one webhook by ID. The signing secret is never returned here — only \`webhooks.create\` and \`webhooks.sync\` show one, when they create the webhook.`;
 
@@ -10,4 +10,4 @@ export const deleteWebhookJsDoc = `Permanently deletes a webhook. Autumn stops s
 
 export const previewSyncWebhooksJsDoc = `Shows what \`webhooks.sync\` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them.`;
 
-export const syncWebhooksJsDoc = `Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once.`;
+export const syncWebhooksJsDoc = `Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in \`errors\` while the rest still apply, and the request fails only when none could be applied.`;

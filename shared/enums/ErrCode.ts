@@ -50,7 +50,6 @@ export const ErrCode = {
 	// Webhooks
 	WebhookNotFound: "webhook_not_found",
 	DuplicateWebhookId: "duplicate_webhook_id",
-	WebhookEventNotAvailable: "webhook_event_not_available",
 	WebhooksUnavailable: "webhooks_unavailable",
 
 	// Internal

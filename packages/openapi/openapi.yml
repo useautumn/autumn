@@ -77747,8 +77747,7 @@ paths:
       description: "Creates a webhook: a URL Autumn sends the listed events to, in the
         environment of the calling key. You choose the `id`, and it can't be
         changed later. Returns the signing secret once, in this response — store
-        it, it cannot be read back. `vercel.*` events are only available to
-        organizations using the Vercel integration."
+        it, it cannot be read back."
       tags:
         - webhooks
       requestBody:
@@ -78610,7 +78609,9 @@ paths:
       description: "Makes the listed webhooks exist as described: creates missing ones
         and updates ones that differ. Webhooks not listed are left alone — sync
         never deletes. Returns the signing secret of each webhook it created,
-        once."
+        once. Each webhook is applied on its own: failures are listed in
+        `errors` while the rest still apply, and the request fails only when
+        none could be applied."
       tags:
         - webhooks
       requestBody:
@@ -78742,7 +78743,8 @@ paths:
                         - disabled
                         - created_at
                         - updated_at
-                    description: The listed webhooks as they stand after the sync.
+                    description: The listed webhooks as they stand after the sync, except those in
+                      `errors`.
                   secrets:
                     type: array
                     items:
@@ -78760,9 +78762,24 @@ paths:
                         - secret
                     description: Signing secrets for the webhooks this sync created, shown once.
                       Existing webhooks keep theirs.
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        message:
+                          type: string
+                      required:
+                        - id
+                        - message
+                    description: Webhooks that couldn't be created or updated. The others were still
+                      applied; the request fails only when none could be.
                 required:
                   - webhooks
                   - secrets
+                  - errors
                 title: SyncWebhooksResponse
                 examples:
                   - webhooks:
@@ -78778,6 +78795,7 @@ paths:
                     secrets:
                       - id: billing
                         secret: whsec_abc123
+                    errors: []
       x-speakeasy-name-override: sync
       parameters:
         - *a1

@@ -175,11 +175,18 @@ export const PreviewSyncWebhooksResponseSchema = z.object({
 export const SyncWebhooksResponseSchema = z.object({
 	webhooks: z
 		.array(WebhookSchema)
-		.describe("The listed webhooks as they stand after the sync."),
+		.describe(
+			"The listed webhooks as they stand after the sync, except those in `errors`.",
+		),
 	secrets: z
 		.array(z.object({ id: z.string(), secret: secretField }))
 		.describe(
 			"Signing secrets for the webhooks this sync created, shown once. Existing webhooks keep theirs.",
+		),
+	errors: z
+		.array(z.object({ id: z.string(), message: z.string() }))
+		.describe(
+			"Webhooks that couldn't be created or updated. The others were still applied; the request fails only when none could be.",
 		),
 });
 

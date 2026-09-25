@@ -194,6 +194,7 @@ export const syncWebhooksContract = route({
 				{
 					webhooks: [webhookExample],
 					secrets: [{ id: "billing", secret: "whsec_abc123" }],
+					errors: [],
 				},
 			],
 		}),

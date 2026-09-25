@@ -3,7 +3,9 @@
  * - preview reports create / update / unmanaged and writes nothing;
  * - sync creates missing, updates differing, never deletes the unmanaged one;
  * - secrets come back only for webhooks the sync created;
- * - a repeat preview of the same body shows nothing for the stated ids.
+ * - a repeat preview of the same body shows nothing for the stated ids;
+ * - items apply independently: one failing create doesn't hide another's
+ *   secret, and the request only fails when nothing could be applied.
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
@@ -14,7 +16,15 @@ import {
 } from "./utils/webhookTestUtils.js";
 
 const appId = testOrgSandboxAppId();
-const ids = ["it-sync-existing", "it-sync-new", "it-sync-unmanaged"];
+const ids = [
+	"it-sync-existing",
+	"it-sync-new",
+	"it-sync-unmanaged",
+	"it-sync-ok",
+	"it-sync-rejected",
+];
+// Our schema allows http, but this Svix env enforces https: a reliable per-item 4xx.
+const SVIX_REJECTED_URL = "http://example.com/it-sync-rejected";
 
 const stated = [
 	{
@@ -100,4 +110,51 @@ test("preview_sync then sync: create + update applied, unmanaged kept, secret on
 	expect(changesFor(again.body.changes)).toEqual({
 		"it-sync-unmanaged": "unmanaged",
 	});
+});
+
+test("sync: the second of two creates fails, the first still returns its secret", async () => {
+	const synced = await postWebhooks({
+		route: "sync",
+		body: {
+			webhooks: [
+				{
+					id: "it-sync-ok",
+					url: "https://example.com/it-sync-ok",
+					events: ["billing.updated"],
+				},
+				{
+					id: "it-sync-rejected",
+					url: SVIX_REJECTED_URL,
+					events: ["billing.updated"],
+				},
+			],
+		},
+	});
+	expect(synced.status).toBe(200);
+	expect(synced.body.webhooks.map((w: { id: string }) => w.id)).toEqual([
+		"it-sync-ok",
+	]);
+	expect(synced.body.secrets).toEqual([
+		{ id: "it-sync-ok", secret: expect.stringMatching(/^whsec_/) },
+	]);
+	expect(synced.body.errors).toEqual([
+		{ id: "it-sync-rejected", message: expect.stringContaining("https") },
+	]);
+});
+
+test("sync: when every item fails the request fails", async () => {
+	const synced = await postWebhooks({
+		route: "sync",
+		body: {
+			webhooks: [
+				{
+					id: "it-sync-rejected",
+					url: SVIX_REJECTED_URL,
+					events: ["billing.updated"],
+				},
+			],
+		},
+	});
+	expect(synced.status).toBe(400);
+	expect(synced.body.message).toContain("it-sync-rejected");
 });
