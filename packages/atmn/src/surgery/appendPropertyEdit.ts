@@ -1,5 +1,5 @@
 import type { Edit, SgNode } from "@ast-grep/napi";
-import { leadingIndentOfLine, lineStartOf } from "./fixtureEdit";
+import { leadingIndentOfLine, lineEndOf, lineStartOf } from "./fixtureEdit";
 
 const isMember = (child: SgNode): boolean =>
 	child.kind() === "pair" ||
@@ -49,9 +49,15 @@ export const appendPropertyEdit = ({
 		// Anchored to the last member itself, so a value whose closing brace shares
 		// the object's closing line can never push the insert outside the literal.
 		const indent = leadingIndentOfLine(source, last.range().start.index);
+		// A trailing `// comment` belongs to the member it follows: insert after it.
+		const restOfLine = source.slice(afterComma, lineEndOf(source, afterComma));
+		const at =
+			trailingComma && /^\s*\/\/.*$/.test(restOfLine)
+				? afterComma + restOfLine.length
+				: afterComma;
 		return {
-			startPos: afterComma,
-			endPos: afterComma,
+			startPos: at,
+			endPos: at,
 			insertedText: trailingComma
 				? `\n${indent}${pair},`
 				: `,\n${indent}${pair},`,

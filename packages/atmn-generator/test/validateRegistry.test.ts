@@ -5,15 +5,17 @@
 
 import { expect, test } from "bun:test";
 import type { JsonSchema } from "../src/casing/schemaKeyCasing";
+import { SYNCED_LISTS } from "../src/collections";
 import { LINT_REGISTRY } from "../src/lint/rules/registry";
 import { validateRegistry } from "../src/lint/validateRegistry";
 import { OVERLAY } from "../src/overlay/overlay";
 import { fieldsAtPath } from "../src/spec/fieldsAtPath";
-import { catalogUpdateSchema, loadSpec } from "../src/spec/loadSpec";
+import { loadSpec } from "../src/spec/loadSpec";
+import { lintEnvelope } from "../src/spec/syncedListSchema";
 
 const spec = loadSpec();
 const root = spec as unknown as JsonSchema;
-const schema = catalogUpdateSchema({ spec });
+const schema = lintEnvelope({ spec, lists: SYNCED_LISTS });
 
 const validate =
 	(registry: Parameters<typeof validateRegistry>[0]["registry"]) => () =>

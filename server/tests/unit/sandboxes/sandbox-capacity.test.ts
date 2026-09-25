@@ -154,7 +154,7 @@ describe("createSandboxForOrg enforces the cap before provisioning", () => {
 		seedSandboxes(2);
 		state.autumn = { allowed: false };
 		await expect(
-			createSandboxForOrg({ db, masterOrg, actorUser, name: "My Sandbox" }),
+			createSandboxForOrg({ db, masterOrg, actorUser, name: "My-Sandbox" }),
 		).rejects.toMatchObject({ code: ErrCode.FeatureLimitReached });
 		expect(state.provisionCalled).toBe(false);
 	});
@@ -166,7 +166,7 @@ describe("createSandboxForOrg enforces the cap before provisioning", () => {
 			db,
 			masterOrg,
 			actorUser,
-			name: "My Sandbox",
+			name: "My-Sandbox",
 		});
 		expect(state.provisionCalled).toBe(true);
 		expect(res.secret_key).toBe("am_sk_test_generated");
@@ -175,9 +175,9 @@ describe("createSandboxForOrg enforces the cap before provisioning", () => {
 
 	test("rejects a duplicate name and never provisions", async () => {
 		state.autumn = { allowed: true };
-		state.existing = [{ id: "s0", name: "My Sandbox" }];
+		state.existing = [{ id: "s0", name: "My-Sandbox" }];
 		await expect(
-			createSandboxForOrg({ db, masterOrg, actorUser, name: "My Sandbox" }),
+			createSandboxForOrg({ db, masterOrg, actorUser, name: "My-Sandbox" }),
 		).rejects.toMatchObject({ code: ErrCode.InvalidRequest });
 		expect(state.provisionCalled).toBe(false);
 	});
@@ -201,7 +201,7 @@ describe("createSandboxForOrg enforces the cap before provisioning", () => {
 	test("fetches the sandbox list once per create", async () => {
 		seedSandboxes(1);
 		state.autumn = { allowed: true };
-		await createSandboxForOrg({ db, masterOrg, actorUser, name: "My Sandbox" });
+		await createSandboxForOrg({ db, masterOrg, actorUser, name: "My-Sandbox" });
 		expect(state.listSandboxesCalls).toBe(1);
 	});
 });

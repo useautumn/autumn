@@ -86,17 +86,18 @@ test("push sends only the settings body to organization.update, and only when a 
 		write: (t) => (output += t),
 	});
 
-	// Settings are previewed and applied BEFORE the catalog is previewed: a flag
-	// like multi_currency changes what the catalog accepts.
+	// Both previews run together; after the settings write the catalog is
+	// previewed again, since a flag like multi_currency changes what it accepts.
 	const settingsCalls = calls.filter((call) => call.method !== "get");
 	expect(settingsCalls.map((call) => call.method)).toEqual([
 		"previewUpdateOrganization",
+		"previewUpdate",
 		"updateOrganization",
 		"previewUpdate",
 	]);
 	// The catalog body never carries settings; the settings body carries only the stated, renamed flags.
-	expect("settings" in (settingsCalls[2].body as object)).toBe(false);
-	expect(settingsCalls[1].body).toEqual({
+	expect("settings" in (settingsCalls[3].body as object)).toBe(false);
+	expect(settingsCalls[2].body).toEqual({
 		config: { multi_currency: true, persist_free_overage: true },
 	});
 	expect(output).toContain("~ Multi-currency: false -> true");

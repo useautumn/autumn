@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { AppEnv, organizations, type Organization } from "@autumn/shared";
+import { AppEnv, type Organization, organizations } from "@autumn/shared";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
-import chalk from "chalk";
 import type { User } from "better-auth";
+import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
@@ -37,59 +37,55 @@ const fetchOrg = async (orgId: string): Promise<Organization> => {
 };
 
 describe("sandbox sub-org: Stripe secret-key disconnect", () => {
-	test(
-		`${chalk.yellowBright("sandbox stripe: disconnecting a sub-org's secret key clears it on that sub-org")}`,
-		async () => {
-			const actorUser = (await db.query.user.findFirst()) as unknown as User;
+	test(`${chalk.yellowBright("sandbox stripe: disconnecting a sub-org's secret key clears it on that sub-org")}`, async () => {
+		const actorUser = (await db.query.user.findFirst()) as unknown as User;
 
-			const { org, secret_key } = await createSandboxForOrg({
-				db,
-				masterOrg: defaultCtx.org,
-				actorUser,
-				name: "QA Disconnect Sandbox",
-			});
-			createdOrg = org;
+		const { org, secret_key } = await createSandboxForOrg({
+			db,
+			masterOrg: defaultCtx.org,
+			actorUser,
+			name: "QA-Disconnect-Sandbox",
+		});
+		createdOrg = org;
 
-			await OrgService.update({
-				db,
-				orgId: org.id,
-				updates: {
-					stripe_config: {
-						...(org.stripe_config ?? {}),
-						test_api_key: encryptData("sk_test_disconnect_repro"),
-					},
+		await OrgService.update({
+			db,
+			orgId: org.id,
+			updates: {
+				stripe_config: {
+					...(org.stripe_config ?? {}),
+					test_api_key: encryptData("sk_test_disconnect_repro"),
 				},
-			});
+			},
+		});
 
-			const connected = await fetchOrg(org.id);
-			expect(
-				isStripeConnected({
-					org: connected,
-					env: AppEnv.Sandbox,
-					throughSecretKey: true,
-				}),
-			).toBe(true);
+		const connected = await fetchOrg(org.id);
+		expect(
+			isStripeConnected({
+				org: connected,
+				env: AppEnv.Sandbox,
+				throughSecretKey: true,
+			}),
+		).toBe(true);
 
-			const res = await fetch(`${apiBase}/organization/stripe`, {
-				method: "DELETE",
-				headers: {
-					Authorization: `Bearer ${secret_key}`,
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ channel: "secret_key" }),
-			});
-			expect(res.status).toBe(200);
+		const res = await fetch(`${apiBase}/organization/stripe`, {
+			method: "DELETE",
+			headers: {
+				Authorization: `Bearer ${secret_key}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ channel: "secret_key" }),
+		});
+		expect(res.status).toBe(200);
 
-			const after = await fetchOrg(org.id);
-			expect(after.stripe_config?.test_api_key ?? null).toBeNull();
-			expect(
-				isStripeConnected({
-					org: after,
-					env: AppEnv.Sandbox,
-					throughSecretKey: true,
-				}),
-			).toBe(false);
-		},
-		120_000,
-	);
+		const after = await fetchOrg(org.id);
+		expect(after.stripe_config?.test_api_key ?? null).toBeNull();
+		expect(
+			isStripeConnected({
+				org: after,
+				env: AppEnv.Sandbox,
+				throughSecretKey: true,
+			}),
+		).toBe(false);
+	}, 120_000);
 });

@@ -28,7 +28,7 @@ beforeAll(async () => {
 		db,
 		masterOrg,
 		actorUser,
-		name: "Delete IntTest Sandbox",
+		name: "Delete-IntTest-Sandbox",
 	});
 	sandboxId = org.id;
 }, 120_000);
