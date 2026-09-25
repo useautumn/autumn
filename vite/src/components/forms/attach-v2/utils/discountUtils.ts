@@ -42,6 +42,17 @@ export const updateDiscount = (
 	return newDiscounts;
 };
 
+export const toggleRemovedRewardId = ({
+	removedRewardIds,
+	rewardId,
+}: {
+	removedRewardIds: string[];
+	rewardId: string;
+}): string[] =>
+	removedRewardIds.includes(rewardId)
+		? removedRewardIds.filter((id) => id !== rewardId)
+		: [...removedRewardIds, rewardId];
+
 export const toggleDiscountMode = (
 	discounts: FormDiscount[],
 	index: number,

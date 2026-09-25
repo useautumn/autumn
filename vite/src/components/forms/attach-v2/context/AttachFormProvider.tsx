@@ -1,4 +1,5 @@
 import type {
+	ApiDiscount,
 	CusProduct,
 	CustomizePlanLicense,
 	Feature,
@@ -43,6 +44,7 @@ import {
 	type UseAttachAdditionalPlansReturn,
 	useAttachAdditionalPlans,
 } from "../hooks/useAttachAdditionalPlans";
+import { useAttachAppliedDiscounts } from "../hooks/useAttachAppliedDiscounts";
 import {
 	type UseAttachBillingOptionsStateReturn,
 	useAttachBillingOptionsState,
@@ -87,6 +89,7 @@ interface AttachFormContextValue {
 
 	hasActiveSubscription: boolean;
 	supportsTrialRevert: boolean;
+	appliedDiscounts: ApiDiscount[];
 	isAutoSelectingImmediateSchedule: boolean;
 	billingOptions: UseAttachBillingOptionsStateReturn;
 
@@ -305,6 +308,16 @@ export function AttachFormProvider({
 	});
 	const { isMultiPlan } = additionalPlans;
 
+	const { appliedDiscounts, appliedRemovedRewardIds } =
+		useAttachAppliedDiscounts({
+			customer: fullCustomer,
+			entityId,
+			product: effectiveProduct,
+			newBillingSubscription,
+			removedRewardIds: formValues.removedRewardIds,
+			enabled: !isMultiPlan,
+		});
+
 	// Reverting needs an existing subscription to fall back to, and multi-plan
 	// attaches don't support it — everywhere else the trial must bill on end.
 	const supportsTrialRevert = hasActiveSubscription && !isMultiPlan;
@@ -494,6 +507,7 @@ export function AttachFormProvider({
 		billingCycleAnchorMode,
 		billingCycleAnchorDate,
 		discounts,
+		removedRewardIds: appliedRemovedRewardIds,
 		noBillingChanges,
 		enablePlanImmediately,
 		carryOverBalances,
@@ -630,6 +644,7 @@ export function AttachFormProvider({
 			previewPrepaidOptions,
 			hasActiveSubscription,
 			supportsTrialRevert,
+			appliedDiscounts,
 			isAutoSelectingImmediateSchedule,
 			billingOptions,
 			additionalPlans,
@@ -665,6 +680,7 @@ export function AttachFormProvider({
 			previewPrepaidOptions,
 			hasActiveSubscription,
 			supportsTrialRevert,
+			appliedDiscounts,
 			isAutoSelectingImmediateSchedule,
 			billingOptions,
 			additionalPlans,
