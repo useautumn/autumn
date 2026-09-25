@@ -3,7 +3,6 @@ import { balanceLocks, ms } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { and, eq } from "drizzle-orm";
 import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
 const TOLERANCE_MS = ms.seconds(5);
 const DEFAULT_LOCK_LIFETIME_MS = ms.hours(24);
@@ -36,7 +35,22 @@ export const expectLockExpiryCorrect = async ({
 	checkedAt: number;
 	expiresAt?: number;
 }) => {
-	if (!isBalanceWorkerRolloutEnabled()) {
+	const [lock] = await ctx.db
+		.select({
+			expires_at: balanceLocks.expires_at,
+			expiry_action: balanceLocks.expiry_action,
+		})
+		.from(balanceLocks)
+		.where(
+			and(
+				eq(balanceLocks.org_id, ctx.org.id),
+				eq(balanceLocks.env, ctx.env),
+				eq(balanceLocks.lock_id, lockId),
+			),
+		);
+
+	// No worker row: the lock was taken on the legacy path and lives as a Redis receipt.
+	if (!lock) {
 		const { redisInstance, lockReceiptKey } = await fetchLockReceipt({
 			ctx,
 			lockId,
@@ -52,21 +66,6 @@ export const expectLockExpiryCorrect = async ({
 		return;
 	}
 
-	const [lock] = await ctx.db
-		.select({
-			expires_at: balanceLocks.expires_at,
-			expiry_action: balanceLocks.expiry_action,
-		})
-		.from(balanceLocks)
-		.where(
-			and(
-				eq(balanceLocks.org_id, ctx.org.id),
-				eq(balanceLocks.env, ctx.env),
-				eq(balanceLocks.lock_id, lockId),
-			),
-		);
-	expect(lock).toBeDefined();
-	if (!lock) return;
 	expect(lock.expiry_action).toBe(expiresAt ? "release" : "confirm");
 	expectWithin({
 		actual: lock.expires_at,

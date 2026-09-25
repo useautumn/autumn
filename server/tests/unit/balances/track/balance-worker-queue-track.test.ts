@@ -1,3 +1,4 @@
+import { toBatchTrackEntries } from "@/internal/balances/track/batchTrackEntries.js";
 import { describe, expect, spyOn, test } from "bun:test";
 import type { TrackCommand } from "@autumn/balance-engine";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
@@ -104,7 +105,7 @@ describe("runBalanceWorkerBatchTrack", () => {
 			const { ctx, client, queued, body } = fixture();
 			await runBalanceWorkerBatchTrack({
 				ctx,
-				body: [{ ...body, idempotency_key: "a" }, body],
+				entries: toBatchTrackEntries({ body: [{ ...body, idempotency_key: "a" }, body] }),
 				client,
 			});
 			expect(spies.claims).toEqual([]);
@@ -127,7 +128,7 @@ describe("runBalanceWorkerBatchTrack", () => {
 		await expect(
 			runBalanceWorkerBatchTrack({
 				ctx,
-				body: [body, { ...body, feature_id: "missing" }],
+				entries: toBatchTrackEntries({ body: [body, { ...body, feature_id: "missing" }] }),
 				client,
 			}),
 		).rejects.toMatchObject({ code: ErrCode.FeatureNotFound });
@@ -137,7 +138,7 @@ describe("runBalanceWorkerBatchTrack", () => {
 	test("a failed append is a 503", async () => {
 		const { ctx, client, body } = fixture({ failure: unavailable });
 		await expect(
-			runBalanceWorkerBatchTrack({ ctx, body: [body], client }),
+			runBalanceWorkerBatchTrack({ ctx, entries: toBatchTrackEntries({ body: [body] }), client }),
 		).rejects.toMatchObject({ statusCode: 503 });
 	});
 });

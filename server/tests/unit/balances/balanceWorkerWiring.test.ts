@@ -50,7 +50,7 @@ function readBalanceWorkerClientEnv() {
 
 function prepareBalanceWorkerConfig(): void {
 	balanceWorkerEnv = createClientEnv();
-	spyOn(rolloutAccess, "getBalanceWorkerRolloutEnabled").mockImplementation(
+	spyOn(rolloutAccess, "getBalanceWorkerRolloutOverride").mockImplementation(
 		() => rolloutEnabled,
 	);
 	spyOn(balanceWorkerConfig, "getBalanceWorkerClientEnv").mockImplementation(
@@ -103,7 +103,12 @@ function createContext({
 function gatesBalanceWorkerOnTheRolloutFlagAlone(): void {
 	for (const enabled of [true, false]) {
 		balanceWorkerEnv = createClientEnv({ rolloutEnabled: enabled });
-		expect(isBalanceWorkerRolloutEnabled()).toBe(enabled);
+		expect(
+			isBalanceWorkerRolloutEnabled({
+				ctx: { org: { id: "org_wiring" } } as never,
+				customerId: "customer",
+			}),
+		).toBe(enabled);
 	}
 }
 

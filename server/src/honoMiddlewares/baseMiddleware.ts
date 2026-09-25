@@ -11,7 +11,6 @@ import { db, dbGeneral } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { generateId } from "@/utils/genUtils.js";
 import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
 import { buildRequestLogContexts } from "@/utils/logging/requestLogContext.js";
@@ -143,9 +142,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 		// Query params
 		expand: [],
-		// TEMP: worker tracks commit to Postgres and never touch Redis, so cached reads would be stale.
 		skipCache:
-			isBalanceWorkerRolloutEnabled() ||
 			c.req.header("x-skip-cache") === "true" ||
 			c.req.query("skip_cache") === "true",
 

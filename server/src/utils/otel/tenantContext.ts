@@ -15,7 +15,7 @@ export type TenantAttrs = {
 	auth_type?: string;
 	api_version?: string;
 	region?: string;
-	full_subject_rollout_enabled?: boolean;
+	balance_worker_rollout_enabled?: boolean;
 };
 
 export const TENANT_CONTEXT_KEY = createContextKey("autumn.tenant");

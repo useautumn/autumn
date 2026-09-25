@@ -20,7 +20,7 @@ export const recalculateBalance = async ({
 	ctx: AutumnContext;
 	params: RecalculateBalanceParamsV0;
 }): Promise<void> => {
-	if (isBalanceWorkerRolloutEnabled()) {
+	if (isBalanceWorkerRolloutEnabled({ ctx, customerId: params.customer_id })) {
 		await runBalanceWorkerRecalculateBalance({ ctx, params, preview: false });
 		return;
 	}

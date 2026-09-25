@@ -72,14 +72,6 @@ const ctx = {
 	logger: {
 		warn: () => undefined,
 	},
-	rolloutSnapshot: {
-		rolloutId: "v2-cache",
-		enabled: true,
-		percent: 100,
-		previousPercent: 0,
-		changedAt: 1,
-		customerBucket: 10,
-	},
 } as unknown as AutumnContext;
 
 const body = {

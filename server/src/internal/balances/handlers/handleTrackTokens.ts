@@ -26,7 +26,9 @@ export const handleTrackTokens = createRoute({
 			input: body,
 		});
 
-		if (isBalanceWorkerRolloutEnabled()) {
+		if (
+			isBalanceWorkerRolloutEnabled({ ctx, customerId: trackBody.customer_id })
+		) {
 			const isAsync = trackBody.async === true;
 			return c.json(
 				await runBalanceWorkerTrack({ ctx, body: trackBody, isAsync }),

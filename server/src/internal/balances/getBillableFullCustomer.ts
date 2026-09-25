@@ -6,12 +6,12 @@ import {
 	RecaseError,
 	tryCatch,
 } from "@autumn/shared";
-import { getBalanceWorkerRolloutEnabled } from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { readBalanceWorkerSubject } from "@/internal/balanceWorker/subject/readBalanceWorkerSubject.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
 /** The worker's live view of the customer; one it cannot find is undefined. Fails open to Postgres, which throws if it fails too. */
 const readBillableFullCustomerFromWorker = async ({
@@ -52,7 +52,7 @@ export const getBillableFullCustomer = async ({
 	source: string;
 }): Promise<FullCustomer | undefined> => {
 	// The worker holds the live balances, so read them there rather than landing its writes and reading Postgres.
-	if (getBalanceWorkerRolloutEnabled())
+	if (isBalanceWorkerRolloutEnabled({ ctx, customerId }))
 		return readBillableFullCustomerFromWorker({ ctx, customerId });
 
 	// A Redis failure is just a cache miss here — the DB paths below cover it.

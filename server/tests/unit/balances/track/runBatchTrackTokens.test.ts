@@ -76,8 +76,12 @@ await mockModuleWithRestore(
 await mockModuleWithRestore(
 	"@/internal/balances/track/balanceWorker/runBalanceWorkerBatchTrack.js",
 	() => ({
-		runBalanceWorkerBatchTrack: async ({ body }: { body: unknown[] }) => {
-			mockState.workerBatches.push(body);
+		runBalanceWorkerBatchTrack: async ({
+			entries,
+		}: {
+			entries: { item: unknown }[];
+		}) => {
+			mockState.workerBatches.push(entries.map(({ item }) => item));
 		},
 	}),
 );

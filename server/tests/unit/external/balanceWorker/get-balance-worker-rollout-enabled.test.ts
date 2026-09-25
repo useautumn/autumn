@@ -1,20 +1,55 @@
 import { describe, expect, test } from "bun:test";
-import { parseBalanceWorkerRolloutEnabled } from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
+import { parseBalanceWorkerRolloutOverride } from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
 
-describe("parseBalanceWorkerRolloutEnabled", () => {
-	test("on unless the env says exactly false", () => {
-		expect(parseBalanceWorkerRolloutEnabled({ runtimeEnv: {} })).toBe(true);
-		for (const value of ["true", "1", "0", "FALSE", " false"]) {
+describe("parseBalanceWorkerRolloutOverride", () => {
+	test("an explicit value wins in every environment", () => {
+		for (const NODE_ENV of ["production", "development", "test", undefined]) {
 			expect(
-				parseBalanceWorkerRolloutEnabled({
-					runtimeEnv: { BALANCE_WORKER_ROLLOUT_ENABLED: value },
+				parseBalanceWorkerRolloutOverride({
+					runtimeEnv: { NODE_ENV, BALANCE_WORKER_ROLLOUT_ENABLED: "true" },
 				}),
 			).toBe(true);
+			expect(
+				parseBalanceWorkerRolloutOverride({
+					runtimeEnv: { NODE_ENV, BALANCE_WORKER_ROLLOUT_ENABLED: "false" },
+				}),
+			).toBe(false);
 		}
+	});
+
+	test("unset defers to the rollout config in production only", () => {
 		expect(
-			parseBalanceWorkerRolloutEnabled({
-				runtimeEnv: { BALANCE_WORKER_ROLLOUT_ENABLED: "false" },
+			parseBalanceWorkerRolloutOverride({
+				runtimeEnv: { NODE_ENV: "production" },
 			}),
-		).toBe(false);
+		).toBeUndefined();
+		for (const NODE_ENV of ["development", "test", undefined]) {
+			expect(
+				parseBalanceWorkerRolloutOverride({ runtimeEnv: { NODE_ENV } }),
+			).toBe(true);
+		}
+	});
+
+	test("config defers to the rollout config in every environment", () => {
+		for (const NODE_ENV of ["production", "development", "test", undefined]) {
+			expect(
+				parseBalanceWorkerRolloutOverride({
+					runtimeEnv: { NODE_ENV, BALANCE_WORKER_ROLLOUT_ENABLED: "config" },
+				}),
+			).toBeUndefined();
+		}
+	});
+
+	test("anything but the three literals counts as unset", () => {
+		for (const value of ["1", "0", "FALSE", " false", "TRUE"]) {
+			expect(
+				parseBalanceWorkerRolloutOverride({
+					runtimeEnv: {
+						NODE_ENV: "production",
+						BALANCE_WORKER_ROLLOUT_ENABLED: value,
+					},
+				}),
+			).toBeUndefined();
+		}
 	});
 });

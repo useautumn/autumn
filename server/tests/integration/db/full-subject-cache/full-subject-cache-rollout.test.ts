@@ -7,7 +7,12 @@ import {
 	setCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
-import { getCustomerBucket } from "@/internal/misc/rollouts/rolloutUtils.js";
+import { _setRolloutConfigForTesting } from "@/internal/misc/rollouts/rolloutConfigStore.js";
+import {
+	ACTIVE_ROLLOUT_ID,
+	getCustomerBucket,
+	ROLLOUT_SETTLE_MS,
+} from "@/internal/misc/rollouts/rolloutUtils.js";
 import { buildCustomerMeteredScenario } from "../full-subject/utils/fullSubjectScenarioBuilders.js";
 import { withInsertedScenario } from "../full-subject/utils/withInsertedScenario.js";
 
@@ -60,14 +65,19 @@ describe(`${chalk.yellowBright("fullSubject cache rollout staleness")}`, () => {
 				});
 				expect(result).toBe("OK");
 
-				ctx.rolloutSnapshot = {
-					customerBucket: getCustomerBucket({ customerId }),
-					rolloutId: "v2-cache",
-					enabled: true,
-					percent: 50,
-					previousPercent: 20,
-					changedAt: Date.now() + 1000,
-				};
+				// Settled a second ago, so the view written just above predates the flip.
+				_setRolloutConfigForTesting({
+					config: {
+						rollouts: {
+							[ACTIVE_ROLLOUT_ID]: {
+								percent: 50,
+								previousPercent: 20,
+								changedAt: Date.now() - ROLLOUT_SETTLE_MS - 1000,
+								orgs: {},
+							},
+						},
+					},
+				});
 
 				const cached = await getCachedFullSubject({
 					ctx,
@@ -86,7 +96,7 @@ describe(`${chalk.yellowBright("fullSubject cache rollout staleness")}`, () => {
 				);
 
 				expect(subjectExists ?? null).toBeNull();
-				ctx.rolloutSnapshot = undefined;
+				_setRolloutConfigForTesting({ config: { rollouts: {} } });
 			},
 		});
 	});

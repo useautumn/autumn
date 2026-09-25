@@ -2,8 +2,8 @@ import { AuthType } from "@autumn/shared";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import { getCustomerBucket } from "@/internal/misc/rollouts/rolloutUtils.js";
 import {
 	addAppContextToLogs,
 	addVercelEventToLogs,
@@ -31,16 +31,11 @@ export const buildVercelEventContext = (
 	};
 };
 
-export const enrichVercelAppLogger = ({
-	ctx,
-}: {
-	ctx: AutumnContext;
-}) => {
+export const enrichVercelAppLogger = ({ ctx }: { ctx: AutumnContext }) => {
 	const customerId = ctx.customerId;
-	const fullSubjectBucket =
-		customerId && ctx.rolloutSnapshot?.customerBucket !== undefined
-			? (ctx.rolloutSnapshot.customerBucket ?? undefined)
-			: undefined;
+	const fullSubjectBucket = customerId
+		? getCustomerBucket({ customerId })
+		: undefined;
 
 	return addAppContextToLogs({
 		logger: ctx.logger,
@@ -54,8 +49,8 @@ export const enrichVercelAppLogger = ({
 			api_version: ctx.apiVersion?.semver,
 			scopes: ctx.scopes,
 			full_subject_bucket: fullSubjectBucket,
-			full_subject_rollout_enabled: customerId
-				? isFullSubjectRolloutEnabled({ ctx })
+			balance_worker_rollout_enabled: customerId
+				? isBalanceWorkerRolloutEnabled({ ctx, customerId })
 				: undefined,
 		},
 	});
@@ -90,15 +85,7 @@ export const addVercelCustomerToContext = async ({
 	const nextCtx = {
 		...ctx,
 		fullCustomer: customer ?? undefined,
-		...(customerId
-			? {
-					customerId,
-					rolloutSnapshot: computeRolloutSnapshot({
-						orgId: ctx.org?.id,
-						customerId,
-					}),
-				}
-			: {}),
+		...(customerId ? { customerId } : {}),
 	};
 
 	const routedCtx = customerId

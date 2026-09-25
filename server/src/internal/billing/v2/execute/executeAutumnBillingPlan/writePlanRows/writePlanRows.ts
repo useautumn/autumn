@@ -97,6 +97,6 @@ export const writePlanRows = ({
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }): Promise<WrittenPlanRows> =>
-	billingPlanRoutesToWorker({ autumnBillingPlan })
+	billingPlanRoutesToWorker({ ctx, autumnBillingPlan })
 		? writePlanRowsThroughWorker({ ctx, autumnBillingPlan })
 		: writePlanRowsInPostgres({ ctx, autumnBillingPlan });

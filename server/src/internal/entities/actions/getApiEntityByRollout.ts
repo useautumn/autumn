@@ -8,7 +8,6 @@ import {
 	getOrSetCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { getApiEntityV2 } from "../entityUtils/getApiEntityV2/getApiEntityV2.js";
 
@@ -29,16 +28,13 @@ export const getApiEntityByRollout = async ({
 	singleflight?: boolean;
 	disableReplicaRead?: boolean;
 }): Promise<ApiEntityV2> => {
-	if (isBalanceWorkerRolloutEnabled()) {
+	if (isBalanceWorkerRolloutEnabled({ ctx, customerId })) {
 		const fullSubject = await readBalanceWorkerSubject({
 			ctx,
 			customerId,
 			entityId,
 		});
 		return getApiEntityV2({ ctx, fullSubject, withAutumnId });
-	}
-
-	if (isFullSubjectRolloutEnabled({ ctx })) {
 	}
 
 	const lookup = async ({ skipCache }: { skipCache: boolean }) => {

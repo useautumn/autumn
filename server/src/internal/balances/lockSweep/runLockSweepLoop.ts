@@ -1,7 +1,6 @@
 import { ms } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { CronContext } from "@/cron/utils/CronContext.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { isActiveSlot } from "@/queue/blueGreen/blueGreenGate.js";
 import {
 	type LockSweepBatchResult,
@@ -11,10 +10,9 @@ import {
 const ACTIVE_DELAY_MS = ms.seconds(1);
 const IDLE_DELAY_MS = ms.seconds(30);
 
+// Not gated on the rollout: a customer's locks live where they were taken, and an empty table is the off state.
 const shouldSweepLocks = (): boolean =>
-	process.env.DISABLE_CRON !== "true" &&
-	isBalanceWorkerRolloutEnabled() &&
-	isActiveSlot({ serviceName: "cron" });
+	process.env.DISABLE_CRON !== "true" && isActiveSlot({ serviceName: "cron" });
 
 /** A full last page means the deadline cut the pass short, so the loop comes straight back; otherwise it idles. */
 export const lockSweepResultToDelayMs = ({

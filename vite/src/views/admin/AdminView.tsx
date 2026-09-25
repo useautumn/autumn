@@ -70,7 +70,7 @@ export const AdminView = () => {
 					className="w-fit"
 				>
 					<Sliders className="w-4 h-4 mr-1.5" />
-					Rollouts
+					Balance worker rollout
 				</Button>
 				<Button
 					onClick={() => navigate(`${adminBasePath}/oauth`)}

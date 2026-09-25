@@ -31,7 +31,7 @@ export const getSubjectFullCustomer = async ({
 	source: string;
 }): Promise<FullCustomer> => {
 	const { data: fullSubject, error } = await tryCatch(
-		isBalanceWorkerRolloutEnabled()
+		isBalanceWorkerRolloutEnabled({ ctx, customerId })
 			? readBalanceWorkerSubject({ ctx, customerId, entityId })
 			: getOrSetCachedFullSubject({ ctx, customerId, entityId, source }),
 	);

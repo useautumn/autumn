@@ -4,7 +4,6 @@ import { expireTrialProductsForCustomer } from "@/cron/productCron/expireTrialPr
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import { resetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext.js";
 
 export const handleStripeTestClockReady = async ({
@@ -39,10 +38,6 @@ export const handleStripeTestClockReady = async ({
 			ctx: {
 				...ctx,
 				customerId: customer.id || customer.internal_id,
-				rolloutSnapshot: computeRolloutSnapshot({
-					orgId: ctx.org.id,
-					customerId: customer.id || customer.internal_id,
-				}),
 			},
 		});
 

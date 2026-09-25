@@ -21,7 +21,7 @@ export const handleSetUsage = createRoute({
 		const ctx = c.get("ctx");
 
 		// Legacy `/usage` creates a missing customer, so the worker path does too.
-		if (isBalanceWorkerRolloutEnabled()) {
+		if (isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id })) {
 			await withCreateIfMissing({
 				ctx,
 				customerId: body.customer_id,

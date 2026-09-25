@@ -13,8 +13,12 @@ const mockState = {
 await mockModuleWithRestore(
 	"@/internal/balances/track/balanceWorker/runBalanceWorkerBatchTrack.js",
 	() => ({
-		runBalanceWorkerBatchTrack: async ({ body }: { body: unknown }) => {
-			mockState.workerBatchTrackBodies.push(body);
+		runBalanceWorkerBatchTrack: async ({
+			entries,
+		}: {
+			entries: { item: unknown }[];
+		}) => {
+			mockState.workerBatchTrackBodies.push(entries.map(({ item }) => item));
 		},
 	}),
 );
@@ -22,8 +26,8 @@ await mockModuleWithRestore(
 await mockModuleWithRestore(
 	"@/internal/balances/track/runBatchTrack.js",
 	() => ({
-		runBatchTrack: async ({ body }: { body: unknown }) => {
-			mockState.batchTrackBodies.push(body);
+		runBatchTrack: async ({ entries }: { entries: { item: unknown }[] }) => {
+			mockState.batchTrackBodies.push(entries.map(({ item }) => item));
 		},
 	}),
 );
@@ -79,7 +83,7 @@ describe("batch track handlers", () => {
 		mockState.workerBatchTrackBodies = [];
 		mockState.batchTrackTokenBodies = [];
 		mockState.rolloutEnabled = false;
-		spyOn(rolloutAccess, "getBalanceWorkerRolloutEnabled").mockImplementation(
+		spyOn(rolloutAccess, "getBalanceWorkerRolloutOverride").mockImplementation(
 			() => mockState.rolloutEnabled,
 		);
 	});

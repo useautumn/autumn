@@ -1,3 +1,4 @@
+import { usesSubjectCache } from "../usesSubjectCache.js";
 import {
 	type CheckParams,
 	type FullSubject,
@@ -30,8 +31,8 @@ export const getOrCreateCachedFullSubject = async ({
 	readFrom?: SubjectReadFrom;
 	useDelayedPostgresBackupRead?: boolean;
 }): Promise<FullSubject> => {
-	const { skipCache, logger } = ctx;
-	const useRedis = !skipCache;
+	const { logger } = ctx;
+	const useRedis = usesSubjectCache({ ctx, customerId: params.customer_id });
 	const {
 		customer_id: customerId,
 		customer_data: customerData,

@@ -38,7 +38,7 @@ export const runQueuedTrack = async ({
 			routeGroup: RouteGroup.Balances,
 			// Claimed here, so the worker path must not claim it again.
 			run: () =>
-				isBalanceWorkerRolloutEnabled()
+				isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id })
 					? runBalanceWorkerTrack({
 							ctx,
 							body,

@@ -40,7 +40,7 @@ async function track(
 		body.async === true ||
 		isAsyncTrackEnabled({ orgId: ctx.org.id, orgSlug: ctx.org.slug });
 
-	if (isBalanceWorkerRolloutEnabled())
+	if (isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id }))
 		return c.json(
 			await runBalanceWorkerTrack({ ctx, body, isAsync }),
 			isAsync ? 202 : 200,

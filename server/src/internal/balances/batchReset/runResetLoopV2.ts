@@ -1,6 +1,7 @@
 import { ms } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { CronContext } from "@/cron/utils/CronContext.js";
+import { getBalanceWorkerRolloutOverride } from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
 import type {
 	ResetEligibleCustomerEntitlementRow,
 	ResetScanCursor,
@@ -10,7 +11,6 @@ import {
 	getResetJobV2Config,
 	isResetJobV2Enabled,
 } from "@/internal/misc/resetJobV2/resetJobV2Store.js";
-import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { isActiveSlot } from "@/queue/blueGreen/blueGreenGate.js";
 import {
 	waitForQueueBelowHighWater,
@@ -50,8 +50,12 @@ const newSweepState = (): SweepState => ({
 	messages: 0,
 });
 
+/**
+ * SQL until every customer is on the worker: its invalidation drops the Redis fields and queues a worker
+ * evict, so both populations rehydrate from Postgres. A worker reset would leave a legacy customer's Redis view stale.
+ */
 const chooseLane = (): ResetLane =>
-	isBalanceWorkerRolloutEnabled() ? "worker" : "sql";
+	getBalanceWorkerRolloutOverride() === true ? "worker" : "sql";
 
 /** Chunks one scanned page into compact ID-only SQS payloads. */
 export const pageToBatchResetPayloads = ({
