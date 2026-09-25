@@ -309,3 +309,67 @@ test.concurrent(
 	},
 	WEBHOOK_TEST_TIMEOUT_MS,
 );
+
+test.concurrent(
+	`${chalk.yellowBright("sync base quantity: Pro stepped 1 → 2, then swapped for Premium ×1, leaves one Premium")}`,
+	async () => {
+		const customerId = "sync-base-qty-step-then-switch";
+		const {
+			autumnV1,
+			autumnV2_3,
+			proPlan,
+			premiumPlan,
+			premiumPriceId,
+			subscription,
+		} = await setupSyncedSubscription({ customerId, proQuantity: 1 });
+
+		await setStripeItem({ subscription, quantity: 2 });
+		await expectPlanRowCounts({
+			ctx,
+			customerId,
+			productId: proPlan.id,
+			expected: { [CusProductStatus.Active]: 2 },
+		});
+
+		await autumnV1.track(
+			{
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: TRACKED,
+			},
+			{ timeout: 3000 },
+		);
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			featureId: TestFeature.Messages,
+			granted: PRO_INCLUDED * 2,
+			usage: TRACKED,
+		});
+
+		await setStripeItem({ subscription, price: premiumPriceId, quantity: 1 });
+
+		await expectPlanRowCounts({
+			ctx,
+			customerId,
+			productId: premiumPlan.id,
+			expected: { [CusProductStatus.Active]: 1 },
+		});
+		await expectPlanRowCounts({
+			ctx,
+			customerId,
+			productId: proPlan.id,
+			expected: { [CusProductStatus.Active]: 0 },
+			atLeast: { [CusProductStatus.Expired]: 2 },
+		});
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			featureId: TestFeature.Messages,
+			granted: PREMIUM_INCLUDED,
+			usage: TRACKED,
+		});
+		await expectVerifyClean({ customerId });
+	},
+	WEBHOOK_TEST_TIMEOUT_MS,
+);
