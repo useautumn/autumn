@@ -7,6 +7,7 @@ export const FORK_RECYCLE_DEFAULTS = {
 	minAgeMs: 30 * 60_000,
 	checkIntervalMs: 30_000,
 	drainTimeoutMs: 30_000,
+	drainGraceMs: 5_000,
 	maxDelayMs: 5 * 60_000,
 	// Replacement boots briefly saturate every core; the hourly burst is the
 	// one scheduled moment the serving forks cannot spare them.
@@ -110,6 +111,10 @@ export const getForkRecycleConfig = () => {
 		drainTimeoutMs: intervalOr(
 			process.env.FORK_RECYCLE_DRAIN_TIMEOUT_MS,
 			FORK_RECYCLE_DEFAULTS.drainTimeoutMs,
+		),
+		drainGraceMs: nonNegativeOr(
+			process.env.FORK_RECYCLE_DRAIN_GRACE_MS,
+			FORK_RECYCLE_DEFAULTS.drainGraceMs,
 		),
 		maxDelayMs: nonNegativeOr(
 			process.env.FORK_RECYCLE_MAX_DELAY_MS,
