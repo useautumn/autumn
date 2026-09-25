@@ -91,10 +91,12 @@ const fixture = ({
 	cause,
 	owned = true,
 	actualPartition = 2,
+	awaitHandoff,
 }: {
 	cause?: Error;
 	owned?: boolean;
 	actualPartition?: number;
+	awaitHandoff?: BalanceWorkerHttpContext["ownership"]["awaitHandoff"];
 } = {}) => {
 	const logs: unknown[][] = [];
 	function recordLog(...args: unknown[]): void {
@@ -161,7 +163,7 @@ const fixture = ({
 			: undefined;
 	};
 	const ctx: BalanceWorkerHttpContext = {
-		ownership: { findRuntime },
+		ownership: { findRuntime, awaitHandoff },
 		partitionResolver: { partitionForIdentity: () => actualPartition },
 		logger: {
 			debug: recordLog,
@@ -330,15 +332,6 @@ describe("Balance worker HTTP", () => {
 		{ ...request, route: { ...route, routeEpoch: "01" } },
 		{ ...request, route: { ...route, routeEpoch: 1 } },
 		{ route },
-		{ ...request, command: null },
-		{ ...request, command: {} },
-		{
-			...request,
-			command: {
-				...command,
-				identity: { ...command.identity, customerId: "" },
-			},
-		},
 		{ ...request, extra: true },
 	])("rejects invalid wire request %j", async (body) => {
 		const { post, submitted, lookups } = fixture();
@@ -348,20 +341,14 @@ describe("Balance worker HTTP", () => {
 		expect(submitted).toEqual([]);
 		expect(lookups).toEqual([]);
 	});
-	test.each([
-		{ ...command, schemaVersion: 2 },
-		{ ...command, type: "check" },
-	])(
-		"track handler rejects invalid commands after routing",
-		async (invalidCommand) => {
-			const { post, submitted, lookups } = fixture();
-			const response = await post({ route, command: invalidCommand });
-			expect(response.status).toBe(400);
-			expect((await response.json()).error.code).toBe("INVALID_REQUEST");
-			expect(lookups).toEqual([route]);
-			expect(submitted).toEqual([]);
-		},
-	);
+	test("hands the command to the processor exactly as our server sent it", async () => {
+		const { post, submitted, lookups } = fixture();
+		const sent = { ...command, properties: { plan: "pro" } };
+		const response = await post({ route, command: sent });
+		expect(response.status).toBe(200);
+		expect(lookups).toEqual([route]);
+		expect(submitted).toEqual([{ command: sent }]);
+	});
 	test("rejects malformed and empty JSON before routing", async () => {
 		const { app, submitted, lookups } = fixture();
 		for (const body of ["{", ""]) {
@@ -489,6 +476,31 @@ describe("Balance worker HTTP", () => {
 			expect((await response.json()).error.code).toBe("NOT_OWNER");
 			expect(submitted).toEqual([]);
 		}
+	});
+	test("a withdrawn route answers NOT_OWNER only once its handoff has settled", async () => {
+		const settled = Promise.withResolvers<void>();
+		let awaited = 0;
+		const { post, submitted } = fixture({
+			owned: false,
+			awaitHandoff: async () => {
+				awaited++;
+				await settled.promise;
+			},
+		});
+		let answered = false;
+		const response = (async () => {
+			const reply = await post();
+			answered = true;
+			return reply;
+		})();
+		await Bun.sleep(5);
+		expect(awaited).toBe(1);
+		expect(answered).toBe(false);
+		settled.resolve();
+		const reply = await response;
+		expect(reply.status).toBe(409);
+		expect((await reply.json()).error.code).toBe("NOT_OWNER");
+		expect(submitted).toEqual([]);
 	});
 	test("maps runtime readiness races centrally", async () => {
 		const { post } = fixture({

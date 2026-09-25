@@ -35,10 +35,9 @@ export function serializeMeteringRecord({
 }: {
 	record: MeteringRecord;
 }): { key: Buffer; value: Buffer } {
-	const payload = parseMeteringPayload({ type: record.type, payload: record });
 	return serializeTopicRecord({
-		key: meteringRecordToKey({ record: payload }),
-		record: payload,
+		key: meteringRecordToKey({ record }),
+		record,
 	});
 }
 

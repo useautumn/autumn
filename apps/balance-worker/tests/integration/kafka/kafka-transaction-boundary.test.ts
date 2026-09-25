@@ -1004,6 +1004,7 @@ test("prepares without fencing and activates from the committed tail", async fun
 				ctx: { producer: replacement },
 			}),
 			follower: replay,
+			preparationFollower: preparation,
 			bootstrapper,
 			partitionResolver: { partitionForIdentity: () => partition },
 			receiptPolicy: { retentionMs: 86_400_000, now: () => 1_700_000_000_000 },
@@ -1039,7 +1040,7 @@ test("prepares without fencing and activates from the committed tail", async fun
 			],
 		});
 		await seed.commit();
-		await runtime.prepare({ follower: preparation });
+		await runtime.prepare();
 		expect(runtime.getStatus()).toBe("prepared");
 		expect(local.store.readState({ identity: local.state.identity })).toEqual(
 			applyMutation({

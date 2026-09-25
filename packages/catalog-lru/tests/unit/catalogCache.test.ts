@@ -408,3 +408,37 @@ test("an expired row is hidden from a strict read and still available to a stale
 		"feat_stale",
 	]);
 });
+
+describe("catalog cache change count", () => {
+	test("moves when rows are set, expired or evicted; a read leaves it", () => {
+		const ent = entitlementRow({ id: "ent_1" });
+		const cache = createCache({ db: createFakeDb({ rows: [] }) });
+		const initial = cache.changeCount();
+
+		cache.put({ rows: [ent] });
+		const afterPut = cache.changeCount();
+		expect(afterPut).toBeGreaterThan(initial);
+
+		cache.read({ keys: [keyOf(ent)] });
+		expect(cache.changeCount()).toBe(afterPut);
+
+		cache.invalidate({ orgId: "org_1", env: "sandbox" });
+		expect(cache.changeCount()).toBeGreaterThan(afterPut);
+	});
+
+	test("an eviction moves it", () => {
+		const first = entitlementRow({ id: "ent_1" });
+		const second = entitlementRow({ id: "ent_2" });
+		const cache = createCache({
+			db: createFakeDb({ rows: [] }),
+			maxSizeBytes: JSON.stringify(first).length + 1,
+		});
+		cache.put({ rows: [first] });
+		const beforeEviction = cache.changeCount();
+
+		cache.put({ rows: [second] });
+
+		expect(cache.size()).toBe(1);
+		expect(cache.changeCount()).toBeGreaterThan(beforeEviction + 1);
+	});
+});

@@ -2,9 +2,14 @@ import { describe, expect, test } from "bun:test";
 import { Kafka, logLevel } from "kafkajs";
 import { createKafkaClient } from "../../src/client/createKafkaClient.js";
 import { createProducerSession } from "../../src/producer/createProducerSession.js";
-import { partitionProducerTransactionalIdOf } from "../../src/producer/producerConfig.js";
+import {
+	createIdempotentProducerConfig,
+	partitionProducerTransactionalIdOf,
+} from "../../src/producer/producerConfig.js";
 import { createOwnershipConsumer } from "../../src/topics/ownership/consumer/createOwnershipConsumer.js";
+import { createOwnershipTail } from "../../src/topics/ownership/consumer/createOwnershipTail.js";
 import type { OwnershipConsumer } from "../../src/topics/ownership/consumer/types/ownershipConsumer.js";
+import type { OwnershipTailRecord } from "../../src/topics/ownership/consumer/types/ownershipTail.js";
 import { createOwnershipPublisher } from "../../src/topics/ownership/publisher/createOwnershipPublisher.js";
 
 if (!process.env.KAFKA_BROKERS?.trim()) {
@@ -150,6 +155,141 @@ describe("ownership topic", () => {
 		}
 	});
 });
+
+describe("ownership tail", () => {
+	test("a worker's tail sees ready and claimed for its partition as they land", async () => {
+		const kafka = new Kafka(
+			createKafkaClient({
+				clientId: uniqueName({ prefix: "ownership-tail-test" }),
+				brokers,
+				transport: { logLevel: logLevel.NOTHING },
+				limits: {
+					connectionTimeoutMs: 3_000,
+					requestTimeoutMs: 10_000,
+					retryCount: 3,
+					initialRetryTimeMs: 100,
+					maxRetryTimeMs: 1_000,
+				},
+			}),
+		);
+		const admin = kafka.admin();
+		const topic = uniqueName({ prefix: "partition-owners" });
+		await admin.connect();
+		await admin.createTopics({
+			waitForLeaders: true,
+			topics: [
+				{
+					topic,
+					numPartitions: 2,
+					replicationFactor: 1,
+					configEntries: [{ name: "cleanup.policy", value: "compact" }],
+				},
+			],
+		});
+		const producer = createProducerSession({
+			ctx: { kafka },
+			config: {
+				transactionalId: partitionProducerTransactionalIdOf({
+					prefix: "autumn-balance-worker",
+					deploymentEnvironment: "test",
+					topic,
+					partition,
+				}),
+				limits: {
+					transactionTimeoutMs: 15_000,
+					retryCount: 3,
+					initialRetryTimeMs: 100,
+					maxRetryTimeMs: 1_000,
+				},
+			},
+		});
+		const sender = kafka.producer(
+			createIdempotentProducerConfig({
+				limits: {
+					retryCount: 3,
+					initialRetryTimeMs: 100,
+					maxRetryTimeMs: 1_000,
+				},
+			}),
+		);
+		await Promise.all([producer.connect(), sender.connect()]);
+		const ownershipPublisher = createOwnershipPublisher({
+			ctx: { producer, sender },
+			config: { topic },
+		});
+		const errors: unknown[] = [];
+		const tail = createOwnershipTail({
+			ctx: {
+				kafka,
+				onError: ({ cause }) => {
+					errors.push(cause);
+				},
+			},
+			config: { topic },
+		});
+		try {
+			// Written before the tail starts: a tail follows from the log end, never the history.
+			await ownershipPublisher.claim({
+				partition,
+				endpoint: "http://10.0.0.4:8080",
+				claimedAt: Date.now(),
+			});
+			await tail.start();
+			const seen: OwnershipTailRecord[] = [];
+			const controller = new AbortController();
+			tail.tailPartition({
+				partition,
+				onRecord: (entry) => {
+					seen.push(entry);
+				},
+				signal: controller.signal,
+			});
+
+			await ownershipPublisher.announceReady({
+				partition: 1,
+				endpoint: "http://10.0.0.9:8080",
+				readyAt: Date.now(),
+			});
+			await ownershipPublisher.announceReady({
+				partition,
+				endpoint: "http://10.0.0.8:8080",
+				readyAt: Date.now(),
+			});
+			const handedOff = await ownershipPublisher.claim({
+				partition,
+				endpoint: "http://10.0.0.8:8080",
+				claimedAt: Date.now(),
+			});
+			await waitFor(() => seen.length === 2);
+
+			expect(seen.map((entry) => entry.record.type)).toEqual([
+				"ready",
+				"claimed",
+			]);
+			expect(seen[0]?.record).toMatchObject({
+				partition,
+				endpoint: "http://10.0.0.8:8080",
+			});
+			expect(seen[1]?.offset.toString()).toBe(handedOff.routeEpoch);
+			expect(errors).toEqual([]);
+			controller.abort();
+		} finally {
+			await tail.stop();
+			await producer.disconnect();
+			await sender.disconnect();
+			await admin.deleteTopics({ topics: [topic] }).catch(() => undefined);
+			await admin.disconnect();
+		}
+	});
+});
+
+async function waitFor(condition: () => boolean): Promise<void> {
+	const deadline = Date.now() + 5000;
+	while (!condition()) {
+		if (Date.now() >= deadline) throw new Error("Condition was not reached");
+		await Bun.sleep(10);
+	}
+}
 
 async function waitForOwnership({
 	consumer,

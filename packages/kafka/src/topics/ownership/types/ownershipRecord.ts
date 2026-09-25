@@ -28,9 +28,21 @@ export const unownedOwnershipRecordSchema = z
 	})
 	.strict();
 
+/** A successor has prepared the partition and can take it; the owner table ignores it. */
+export const readyOwnershipRecordSchema = z
+	.object({
+		schemaVersion: z.literal(1),
+		type: z.literal("ready"),
+		partition: partitionSchema,
+		endpoint: nonEmptyStringSchema,
+		readyAt: z.number().int().nonnegative(),
+	})
+	.strict();
+
 export const ownershipRecordSchema = z.discriminatedUnion("type", [
 	claimedOwnershipRecordSchema,
 	unownedOwnershipRecordSchema,
+	readyOwnershipRecordSchema,
 ]);
 
 export type OwnershipRecord = z.infer<typeof ownershipRecordSchema>;

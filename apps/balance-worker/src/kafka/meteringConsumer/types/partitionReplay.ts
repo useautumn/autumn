@@ -22,6 +22,7 @@ export type PartitionReplay = {
 		partition: number;
 		targetNextOffset: bigint;
 		onUnavailable: RuntimeUnavailableListener;
+		fromBookmark?: boolean;
 	}): Promise<void>;
 	readProgress(position: PartitionPosition): PartitionProgress;
 	stop(): Promise<void>;

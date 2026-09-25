@@ -73,7 +73,7 @@ export type PartitionProcessor = {
 	recalculateBalance(params: {
 		command: RecalculateBalanceCommand;
 	}): Promise<RecalculateBalanceReply>;
-	/** Settles every accepted command; the runtime awaits this before disposal. */
+	/** Settles every accepted command and the store applies behind them; the runtime awaits this before disposal. */
 	drain(): Promise<void>;
 };
 

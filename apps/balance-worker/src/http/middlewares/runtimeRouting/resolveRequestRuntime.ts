@@ -1,6 +1,5 @@
-import { parseMeteringIdentity } from "@autumn/balance-engine";
+import type { MeteringIdentity } from "@autumn/balance-engine";
 import type { PartitionRoute } from "@autumn/balance-worker-client/protocol";
-import { z } from "zod/v4";
 import type {
 	BalanceWorkerHttpContext,
 	BalanceWorkerRequestContext,
@@ -10,9 +9,7 @@ import {
 	PartitionRouteNotOwnedError,
 } from "./runtimeRoutingErrors.js";
 
-const commandIdentitySchema = z.object({ identity: z.unknown() });
-
-export function resolveRequestRuntime({
+export async function resolveRequestRuntime({
 	ctx,
 	route,
 	command,
@@ -20,12 +17,14 @@ export function resolveRequestRuntime({
 	ctx: BalanceWorkerHttpContext;
 	route: PartitionRoute;
 	command: unknown;
-}): BalanceWorkerRequestContext["runtime"] {
-	const envelope = commandIdentitySchema.parse(command);
-	const identity = parseMeteringIdentity({ input: envelope.identity });
+}): Promise<BalanceWorkerRequestContext["runtime"]> {
+	// Our server builds the command; routing trusts its identity as sent.
+	const { identity } = command as { identity: MeteringIdentity };
 	const partition = ctx.partitionResolver.partitionForIdentity({ identity });
 	if (partition !== route.partition) throw new PartitionRouteMismatchError();
 	const runtime = ctx.ownership.findRuntime(route);
-	if (!runtime) throw new PartitionRouteNotOwnedError();
-	return runtime;
+	if (runtime) return runtime;
+	// Mid-handoff the successor is not named yet: answering now would send the caller back here.
+	await ctx.ownership.awaitHandoff?.({ partition });
+	throw new PartitionRouteNotOwnedError();
 }

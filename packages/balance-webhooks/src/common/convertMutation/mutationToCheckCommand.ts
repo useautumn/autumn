@@ -2,7 +2,6 @@ import type {
 	CheckCommand,
 	SubjectStateMutation,
 } from "@autumn/balance-engine";
-import { parseCheckCommand } from "@autumn/balance-engine";
 import type { Feature } from "@autumn/shared";
 
 /** Just over nothing, so a balance that is exactly empty is refused: what the API's own check asks after a track. */
@@ -39,18 +38,16 @@ export const mutationToCheckCommand = ({
 	const { command } = mutation;
 	if (!tracked || (command.type !== "track" && command.type !== "finalize"))
 		return null;
-	return parseCheckCommand({
-		input: {
-			schemaVersion: 1,
-			type: "check",
-			requestId: mutation.id,
-			identity: mutation.identity,
-			occurredAt: command.occurredAt,
-			org: command.org,
-			featureId: feature.id,
-			internalFeatureId: feature.internal_id,
-			requiredBalance: A_HAIR_ABOVE_ZERO,
-			properties: tracked.properties,
-		},
-	});
+	return {
+		schemaVersion: 1,
+		type: "check",
+		requestId: mutation.id,
+		identity: mutation.identity,
+		occurredAt: command.occurredAt,
+		org: command.org,
+		featureId: feature.id,
+		internalFeatureId: feature.internal_id,
+		requiredBalance: A_HAIR_ABOVE_ZERO,
+		properties: tracked.properties,
+	};
 };
