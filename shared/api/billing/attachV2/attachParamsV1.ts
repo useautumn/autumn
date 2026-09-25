@@ -7,6 +7,7 @@ import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { CustomLineItemSchema } from "../common/customLineItem";
 import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
+import { RemoveDiscountsSchema } from "../updateSubscription/removeDiscount";
 import { AttachDiscountSchema } from "./attachDiscount";
 
 export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
@@ -110,6 +111,10 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	remove_plan_ids: z.array(z.string()).optional().meta({
 		description:
 			"Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.",
+	}),
+
+	remove_discounts: RemoveDiscountsSchema.optional().meta({
+		internal: true,
 	}),
 });
 

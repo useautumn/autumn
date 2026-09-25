@@ -7,6 +7,7 @@ import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
 import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
+import { RemoveDiscountsSchema } from "../updateSubscription/removeDiscount";
 import { AttachDiscountSchema } from "./attachDiscount";
 
 export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
@@ -72,6 +73,8 @@ export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({
 		.optional(),
 
 	remove_plan_ids: z.array(z.string()).optional(),
+
+	remove_discounts: RemoveDiscountsSchema.optional(),
 });
 
 export type ExtAttachParamsV0 = z.input<typeof ExtAttachParamsV0Schema>;
