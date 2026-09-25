@@ -172,8 +172,74 @@ export function balancePartitions({
 		place({ memberId: chosen, entry, dealt, totals });
 	}
 	relieve({ memberIds, dealt, totals, weightOf, capacity });
+	evenOutCounts({ memberIds, dealt, totals, weightOf });
 	for (const owned of dealt.values()) owned.sort(ascending);
 	return dealt;
+}
+
+/**
+ * Load relief never moves a partition nobody has weighed, so a cold fleet
+ * that grew would keep every partition on the first members and leave the
+ * newcomers idle. While one member holds two more than another, its lightest
+ * partition moves to the emptiest member, unless that would make the
+ * emptiest member the heaviest.
+ */
+function evenOutCounts({
+	memberIds,
+	dealt,
+	totals,
+	weightOf,
+}: {
+	memberIds: readonly string[];
+	dealt: Map<string, number[]>;
+	totals: Map<string, number>;
+	weightOf: ReadonlyMap<number, number>;
+}): void {
+	function fullestFirst(a: string, b: string): number {
+		const difference =
+			(dealt.get(b)?.length ?? 0) - (dealt.get(a)?.length ?? 0);
+		if (difference !== 0) return difference;
+		const byLoad = (totals.get(b) ?? 0) - (totals.get(a) ?? 0);
+		return byLoad !== 0 ? byLoad : a.localeCompare(b);
+	}
+	function emptiestFirst(a: string, b: string): number {
+		const difference =
+			(dealt.get(a)?.length ?? 0) - (dealt.get(b)?.length ?? 0);
+		if (difference !== 0) return difference;
+		const byLoad = (totals.get(a) ?? 0) - (totals.get(b) ?? 0);
+		return byLoad !== 0 ? byLoad : a.localeCompare(b);
+	}
+	function lightestFirst(a: number, b: number): number {
+		const difference = (weightOf.get(a) ?? 0) - (weightOf.get(b) ?? 0);
+		return difference !== 0 ? difference : a - b;
+	}
+	for (let round = 0; round < weightOf.size; round++) {
+		const source = [...memberIds].sort(fullestFirst)[0];
+		const target = [...memberIds].sort(emptiestFirst)[0];
+		if (source === undefined || target === undefined) return;
+		const sourceOwned = dealt.get(source) ?? [];
+		const targetOwned = dealt.get(target) ?? [];
+		if (sourceOwned.length - targetOwned.length < 2) return;
+		const partition = [...sourceOwned].sort(lightestFirst)[0];
+		if (partition === undefined) return;
+		const weight = weightOf.get(partition) ?? 0;
+		const targetAfter = (totals.get(target) ?? 0) + weight;
+		let heaviestElsewhere = 0;
+		for (const memberId of memberIds) {
+			if (memberId === target) continue;
+			heaviestElsewhere = Math.max(
+				heaviestElsewhere,
+				totals.get(memberId) ?? 0,
+			);
+		}
+		if (targetAfter > heaviestElsewhere) return;
+		apply({
+			relief: { source, target, partition, peak: targetAfter },
+			dealt,
+			totals,
+			weightOf,
+		});
+	}
 }
 
 function place({

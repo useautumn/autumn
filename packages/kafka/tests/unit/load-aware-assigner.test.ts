@@ -257,3 +257,21 @@ test("balancing deals heaviest first to whoever carries least, within an even co
 	expect(skewed.get("c")).toEqual([2, 4, 6]);
 	expect(balancePartitions({ partitions: [], memberIds: [] }).size).toBe(0);
 });
+
+test("a cold fleet that grew hands newcomers a partition each instead of leaving them idle", async () => {
+	const byMember = await assignmentsOf(createAssigner(new Map()), [
+		memberOwning("a", [0, 1]),
+		memberOwning("b", [2, 3]),
+		memberOwning("c", [4, 5]),
+		memberOwning("d", [6, 7]),
+		{ memberId: "e", memberMetadata: Buffer.alloc(0) },
+		{ memberId: "f", memberMetadata: Buffer.alloc(0) },
+	]);
+	const events = (memberId: string) => byMember.get(memberId)?.events;
+	expect(events("e")).toEqual([0]);
+	expect(events("f")).toEqual([2]);
+	expect(events("a")).toEqual([1]);
+	expect(events("b")).toEqual([3]);
+	expect(events("c")).toEqual([4, 5]);
+	expect(events("d")).toEqual([6, 7]);
+});
