@@ -51,6 +51,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 			ctx,
 			customerId,
 			customerData: params.customer_data,
+			billingDetails,
 			entityId,
 			entityData: params.entity_data,
 			run: async () => {
