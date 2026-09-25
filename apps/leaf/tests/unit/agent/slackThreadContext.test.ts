@@ -44,6 +44,7 @@ const installation = ({
 		bot_access_token: "encrypted",
 		scopes: [],
 		auth_mode: null,
+		reply_mode: "all_messages",
 		default_env: AppEnv.Live,
 		sandbox_api_key_id: null,
 		sandbox_api_key: null,

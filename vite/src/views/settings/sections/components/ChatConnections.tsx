@@ -1,5 +1,10 @@
-import { AppEnv, ChatAuthMode, type ScopeString } from "@autumn/shared";
-import { Button } from "@autumn/ui";
+import {
+	AppEnv,
+	ChatAuthMode,
+	ChatReplyMode,
+	type ScopeString,
+} from "@autumn/shared";
+import { Button, Switch } from "@autumn/ui";
 import { faSlack } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,6 +23,7 @@ type SlackInstallation = {
 	workspace_name: string;
 	default_env: AppEnv;
 	auth_mode: ChatAuthMode | null;
+	reply_mode: ChatReplyMode;
 	agent_scopes: ScopeString[];
 	needs_reconnect?: boolean;
 	updated_at: number;
@@ -95,6 +101,20 @@ export const ChatConnections = () => {
 		},
 	});
 
+	const updateReplyMode = useMutation({
+		mutationFn: async (replyMode: ChatReplyMode) => {
+			await OrgService.updateChatSettings(axiosInstance, "slack", {
+				reply_mode: replyMode,
+			});
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey });
+		},
+		onError: (error) => {
+			toast.error(getBackendErr(error, "Failed to update chat settings"));
+		},
+	});
+
 	const installation = data?.installations.find(
 		(item) => item.provider === "slack",
 	);
@@ -108,48 +128,79 @@ export const ChatConnections = () => {
 				return (
 					<div
 						key={provider.id}
-						className="flex items-center justify-between gap-4 rounded-lg border bg-background p-4"
+						className="flex flex-col divide-y rounded-lg border bg-background"
 					>
-						<div className="flex items-center gap-3">
-							<FontAwesomeIcon
-								icon={provider.icon}
-								className="size-5 shrink-0 text-muted-foreground"
-							/>
-							<div className="flex flex-col gap-0.5">
-								<span className="text-sm font-medium">
-									{provider.name} chat
-								</span>
-								<span className="text-xs text-muted-foreground">
-									{installation
-										? installation.needs_reconnect
-											? `Reconnect required for ${installation.workspace_name}`
-											: `Connected to ${installation.workspace_name} (${installation.default_env})`
-										: provider.description}
-								</span>
+						<div className="flex items-center justify-between gap-4 p-4">
+							<div className="flex items-center gap-3">
+								<FontAwesomeIcon
+									icon={provider.icon}
+									className="size-5 shrink-0 text-muted-foreground"
+								/>
+								<div className="flex flex-col gap-0.5">
+									<span className="text-sm font-medium">
+										{provider.name} chat
+									</span>
+									<span className="text-xs text-muted-foreground">
+										{installation
+											? installation.needs_reconnect
+												? `Reconnect required for ${installation.workspace_name}`
+												: `Connected to ${installation.workspace_name} (${installation.default_env})`
+											: provider.description}
+									</span>
+								</div>
+							</div>
+							<div className="flex gap-2">
+								{installation && (
+									<Button
+										variant="secondary"
+										onClick={() => disconnect.mutate(provider.id)}
+										isLoading={isDisconnecting}
+									>
+										Disconnect
+									</Button>
+								)}
+								<Button
+									variant={
+										installation && !installation.needs_reconnect
+											? "secondary"
+											: "primary"
+									}
+									onClick={() => setSheetOpen(true)}
+									isLoading={isLoading}
+								>
+									{installation ? "Reconnect" : `Add ${provider.name}`}
+								</Button>
 							</div>
 						</div>
-						<div className="flex gap-2">
-							{installation && (
-								<Button
-									variant="secondary"
-									onClick={() => disconnect.mutate(provider.id)}
-									isLoading={isDisconnecting}
-								>
-									Disconnect
-								</Button>
-							)}
-							<Button
-								variant={
-									installation && !installation.needs_reconnect
-										? "secondary"
-										: "primary"
-								}
-								onClick={() => setSheetOpen(true)}
-								isLoading={isLoading}
-							>
-								{installation ? "Reconnect" : `Add ${provider.name}`}
-							</Button>
-						</div>
+						{installation && (
+							<div className="flex items-center justify-between gap-4 px-4 py-3">
+								<div className="flex flex-col gap-0.5">
+									<span className="text-sm font-medium">
+										Reply only when @-mentioned
+									</span>
+									<span className="text-xs text-muted-foreground">
+										In threads the agent has joined, skip replies that don't tag
+										it. It still reads them when it's next tagged.
+									</span>
+								</div>
+								<Switch
+									aria-label="Reply only when @-mentioned"
+									checked={
+										(updateReplyMode.isPending
+											? updateReplyMode.variables
+											: installation.reply_mode) === ChatReplyMode.MentionsOnly
+									}
+									disabled={updateReplyMode.isPending}
+									onCheckedChange={(checked) =>
+										updateReplyMode.mutate(
+											checked
+												? ChatReplyMode.MentionsOnly
+												: ChatReplyMode.AllMessages,
+										)
+									}
+								/>
+							</div>
+						)}
 					</div>
 				);
 			})}

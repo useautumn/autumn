@@ -1,6 +1,7 @@
 import type { Attachment } from "chat";
 import type {
 	AgentContextMessage,
+	AgentMissedMessages,
 	AgentTurnSpeaker,
 } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import { isTransientNetworkError } from "../../../internal/agentRuntime/eve/streamErrors.js";
@@ -41,6 +42,9 @@ type DispatchSlackAgentMessageInput = {
 	author?: { email?: string; name: string };
 	clientContext?: Readonly<Record<string, unknown>>;
 	channelId: string;
+	/** Loaded only when a new run starts; an injected follow-up leaves them for
+	 * the next run. */
+	missedMessages?: () => Promise<AgentMissedMessages | undefined>;
 	providerUserId: string;
 	raw: unknown;
 	react?: (input: { action: "add" | "remove"; emoji: string }) => Promise<void>;
@@ -103,6 +107,7 @@ const runAndReply = async ({
 	author,
 	channelId,
 	clientContext,
+	missedMessages: missedMessagesInput,
 	providerUserId,
 	raw,
 	react,
@@ -127,13 +132,14 @@ const runAndReply = async ({
 	try {
 		const workspaceId = getSlackWorkspaceId(raw);
 		const historyStartedAt = Date.now();
-		const [installation, recentMessages] = await Promise.all([
+		const [installation, recentMessages, missedMessages] = await Promise.all([
 			findSlackInstallationForWorkspace({ workspaceId }),
 			Promise.resolve(
 				typeof recentMessagesInput === "function"
 					? recentMessagesInput()
 					: recentMessagesInput,
 			),
+			missedMessagesInput?.(),
 		]);
 		historyMs = Date.now() - historyStartedAt;
 		if (!installation) {
@@ -217,6 +223,7 @@ const runAndReply = async ({
 			clientContext,
 			installation,
 			logger,
+			missedMessages,
 			onAction: logAction,
 			onReasoning: evePresenter.onReasoning,
 			// A turn that settled while a follow-up was still to be read: post it

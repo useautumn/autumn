@@ -8,10 +8,13 @@ const recentMessages = [
 	{ author: "Autumn", isBot: true, text: "How can I help?" },
 ];
 const getRecentMessages = mock(async () => recentMessages);
+let skipReply = false;
+const shouldSkipReply = mock(async (_input: unknown) => skipReply);
 
 const dependencies = {
 	dispatch: dispatchSlackAgentMessage,
 	getRecentMessages,
+	shouldSkipReply,
 };
 const {
 	handleSlackMessage,
@@ -21,21 +24,26 @@ const {
 
 const createMessage = ({
 	author,
+	id = "M1",
 	isBot = false,
+	text = "hello",
 }: {
 	author?: Partial<Message["author"]>;
+	id?: string;
 	isBot?: boolean;
+	text?: string;
 } = {}) =>
 	({
 		author: author ?? { isBot, userId: "U1" },
-		id: "M1",
+		id,
 		raw: { team_id: "T1" },
-		text: "hello",
+		text,
 	}) as Message;
 
-const createThread = () => {
+const createThread = (history: Message[] = []) => {
 	const addReaction = mock(async () => {});
 	const unsubscribe = mock(async () => {});
+	let state: Record<string, unknown> | null = null;
 	return {
 		addReaction,
 		thread: {
@@ -45,14 +53,31 @@ const createThread = () => {
 			},
 			channelId: "C1",
 			id: "slack:C1:1",
+			recentMessages: history,
+			setState: async (next: Record<string, unknown>) => {
+				state = { ...state, ...next };
+			},
+			get state() {
+				return Promise.resolve(state);
+			},
 			unsubscribe,
 		} as unknown as Thread,
 		unsubscribe,
 	};
 };
 
+type DispatchInput = {
+	missedMessages: () => Promise<unknown>;
+	recentMessages: () => Promise<unknown>;
+};
+
+const lastDispatchInput = () =>
+	dispatchSlackAgentMessage.mock.calls.at(-1)?.[0] as DispatchInput;
+
 beforeEach(() => {
 	disposition = "close";
+	skipReply = false;
+	shouldSkipReply.mockClear();
 	dispatchSlackAgentMessage.mockClear();
 	getRecentMessages.mockClear();
 });
@@ -126,6 +151,32 @@ describe("handleSubscribedSlackMessage", () => {
 		expect(unsubscribe).toHaveBeenCalledTimes(1);
 	});
 
+	test("skips an untagged reply without reacting, and replays it on the next tag", async () => {
+		disposition = "keep";
+		const skipped = createMessage({ id: "M2", text: "make it annual" });
+		const tagged = createMessage({ id: "M3", text: "<@U_BOT> do the above" });
+		const { addReaction, thread } = createThread([skipped, tagged]);
+
+		skipReply = true;
+		await handleSubscribedSlackMessage(thread, skipped);
+
+		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
+		expect(addReaction).not.toHaveBeenCalled();
+		expect(getRecentMessages).not.toHaveBeenCalled();
+
+		skipReply = false;
+		await handleSubscribedSlackMessage(thread, tagged);
+
+		expect(dispatchSlackAgentMessage).toHaveBeenCalledTimes(1);
+		expect(await lastDispatchInput().missedMessages()).toEqual({
+			messages: [{ author: "U1", isBot: false, text: "make it annual" }],
+			omittedCount: 0,
+		});
+		// The missed-message lookup reuses the history the run already loaded.
+		await lastDispatchInput().recentMessages();
+		expect(getRecentMessages).toHaveBeenCalledTimes(1);
+	});
+
 	test("ignores bot-authored messages", async () => {
 		const { thread } = createThread();
 
@@ -137,6 +188,34 @@ describe("handleSubscribedSlackMessage", () => {
 });
 
 describe("handleSlackMessage", () => {
+	test("a new thread never consults the reply mode", async () => {
+		skipReply = true;
+		const { thread } = createThread();
+
+		await handleSlackThreadStart(thread, createMessage());
+
+		expect(shouldSkipReply).not.toHaveBeenCalled();
+		expect(dispatchSlackAgentMessage).toHaveBeenCalledTimes(1);
+	});
+
+	test("a new thread hands over the discussion before the recent window", async () => {
+		const history = Array.from({ length: 9 }, (_, index) =>
+			createMessage({ id: `H${index}`, text: `message ${index}` }),
+		);
+		const current = createMessage({ id: "M9", text: "<@U_BOT> do the above" });
+		const { thread } = createThread([...history, current]);
+
+		await handleSlackThreadStart(thread, current);
+
+		expect(await lastDispatchInput().missedMessages()).toEqual({
+			messages: [
+				{ author: "U1", isBot: false, text: "message 0" },
+				{ author: "U1", isBot: false, text: "message 1" },
+			],
+			omittedCount: 0,
+		});
+	});
+
 	test("shows a run plan when a new Slack thread starts", async () => {
 		disposition = "keep";
 		const { thread } = createThread();

@@ -16,6 +16,7 @@ const installation = ({ botAccessToken }: { botAccessToken: string }) =>
 		bot_access_token: botAccessToken,
 		scopes: [],
 		auth_mode: ChatAuthMode.PerUser,
+		reply_mode: "all_messages",
 		default_env: AppEnv.Sandbox,
 		sandbox_api_key_id: null,
 		sandbox_api_key: null,
