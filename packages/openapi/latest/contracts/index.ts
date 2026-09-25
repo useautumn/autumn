@@ -21,6 +21,7 @@ import {
 	billingPreviewUpdateContract,
 	billingSetupPaymentContract,
 	billingUpdateContract,
+	billingVerifyContract,
 	legacyBillingAdvanceTestClockContract,
 } from "./billingContract.js";
 import {
@@ -154,6 +155,7 @@ export const v2_3ContractRouter = oc.router({
 	billingPreviewMultiUpdate: billingPreviewMultiUpdateContract,
 	billingOpenCustomerPortal: billingOpenCustomerPortalContract,
 	billingSetupPayment: billingSetupPaymentContract,
+	billingVerify: billingVerifyContract,
 
 	// DFU (customer imaging / live migration)
 	dfuFlash: dfuFlashContract,
