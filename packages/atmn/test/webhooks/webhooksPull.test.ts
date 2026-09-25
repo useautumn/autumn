@@ -486,7 +486,7 @@ test("a dashboard webhook receiving every event is never written as events: []",
 	],
 });
 `;
-	const { source, lines } = pullInto({
+	const { source, lines, warnings } = pullInto({
 		source: before,
 		remoteList: [
 			remote(DASHBOARD_ID, "https://x.dev/h", { events: [] }),
@@ -505,5 +505,9 @@ test("a dashboard webhook receiving every event is never written as events: []",
 	expect(source).toBe(before);
 	expect(lines).toEqual([
 		"· webhook ep_9Zz7c9LmNpRsTuVwXyZa1b3d4e5 receives every event; give it an event list in the dashboard, or add it to your config, to manage it here",
+	]);
+	// The config's narrower list is kept, but never silently: push would narrow the endpoint.
+	expect(warnings).toEqual([
+		"⚠ billing  the dashboard webhook at this url receives every event; your next push narrows it to billing.updated",
 	]);
 });

@@ -82,6 +82,10 @@ export const updateWebhook = ({
 	envKey: string;
 }): WebhookEditResult => {
 	const result: WebhookEditResult = { lines: [], warnings: [], unlocated: [] };
+	if (webhook.events.length === 0 && Array.isArray(stated.events))
+		result.warnings.push(
+			`⚠ ${webhook.id}  the dashboard webhook at this url receives every event; your next push narrows it to ${stated.events.join(", ")}`,
+		);
 	const located = locateWebhook({ pull, id: webhook.id });
 	if (located === null) {
 		result.unlocated.push({

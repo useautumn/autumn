@@ -29,7 +29,12 @@ export const applyWebhooks = async ({
 		envDirs,
 		cwd,
 	});
-	const failed = new Set(result.errors.map(({ id }) => id));
+	// A secret means the server created the webhook after all (its dashboard
+	// twin moved since the preview): only the rest were adopted.
+	const failed = new Set([
+		...result.errors.map(({ id }) => id),
+		...result.secrets.map(({ id }) => id),
+	]);
 	// An adopted webhook keeps its signing secret, so nothing is written for it.
 	const adopted = lane.preview.changes
 		.filter((change) => change.action === "adopt" && !failed.has(change.id))

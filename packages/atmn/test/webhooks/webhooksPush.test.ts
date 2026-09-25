@@ -515,3 +515,42 @@ test("preview_sync errors fail the push before any write, beside other lanes' er
 	);
 	expect(calls).toEqual([]);
 });
+
+test("a previewed adopt that the server created instead reports the saved secret, not an adoption", async () => {
+	const dir = projectWith({ body: `\tfeatures: [],\n${WEBHOOKS}` });
+	const url = "https://staging.example.com/autumn";
+	const client = {
+		previewUpdate: async () => ({ features: [], plans: [] }),
+		previewSyncWebhooks: async () => ({
+			errors: [],
+			changes: [
+				{
+					action: "adopt",
+					id: "billing",
+					before: dashboardState(url),
+					after: state(url),
+				},
+			],
+		}),
+		// The dashboard endpoint moved after the preview, so sync created one.
+		syncWebhooks: async () => ({
+			webhooks: [state(url)],
+			secrets: [{ id: "billing", secret: "whsec_new" }],
+			errors: [],
+		}),
+	};
+	let output = "";
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: client as any,
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+		webhookEnv: async () => SANDBOX,
+	});
+	expect(output).not.toContain("Adopted billing");
+	expect(output).toContain(
+		"Saved webhook secret as AUTUMN_WEBHOOK_BILLING_AB12_SECRET in .env",
+	);
+});
