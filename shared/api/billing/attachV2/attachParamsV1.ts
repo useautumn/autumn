@@ -114,7 +114,8 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	}),
 
 	remove_discounts: RemoveDiscountsSchema.optional().meta({
-		internal: true,
+		description:
+			"Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.",
 	}),
 });
 
