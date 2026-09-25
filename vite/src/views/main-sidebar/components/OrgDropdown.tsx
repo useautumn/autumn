@@ -4,6 +4,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuGroup,
 	DropdownMenuItem,
+	DropdownMenuLabel,
 	DropdownMenuPortal,
 	DropdownMenuSeparator,
 	DropdownMenuSub,
@@ -13,11 +14,13 @@ import {
 	Skeleton,
 } from "@autumn/ui";
 import {
+	Check,
 	ChevronsUpDown,
 	Monitor,
 	Moon,
-	PanelRight,
+	PanelLeft,
 	Plus,
+	Settings2,
 	Sun,
 } from "lucide-react";
 import { useState } from "react";
@@ -36,9 +39,32 @@ import { navigateTo } from "@/utils/genUtils";
 import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { useSidebarContext } from "../SidebarContext";
-import { AdminDropdownItems } from "./AdminDropdownItems";
+import { AdminSubmenu } from "./AdminSubmenu";
 import { CreateNewOrg } from "./CreateNewOrg";
 import { LogOutItem } from "./LogOutItem";
+import {
+	ORG_MENU_ICON_CLASS,
+	ORG_MENU_ICON_STROKE,
+	ORG_MENU_ITEM_CLASS,
+	ORG_MENU_LABEL_CLASS,
+} from "./orgMenuClass";
+
+const THEME_MODES = ["light", "dark", "system"] as const;
+
+const THEME_MODE_LABELS: Record<(typeof THEME_MODES)[number], string> = {
+	light: "Light",
+	dark: "Dark",
+	system: "System",
+};
+
+const THEME_MODE_ICONS = { light: Sun, dark: Moon, system: Monitor };
+
+const ThemeModeIcon = ({ mode }: { mode: (typeof THEME_MODES)[number] }) => {
+	const Icon = THEME_MODE_ICONS[mode];
+	return (
+		<Icon className={ORG_MENU_ICON_CLASS} strokeWidth={ORG_MENU_ICON_STROKE} />
+	);
+};
 
 export const OrgDropdown = () => {
 	const { org, isLoading, error } = useOrg();
@@ -94,7 +120,7 @@ export const OrgDropdown = () => {
 							className={cn(
 								"bg-transparent! border-0! h-8! w-full cursor-pointer items-center rounded-md",
 								expanded
-									? "shimmer-hover justify-start gap-2 px-1.5!"
+									? "shimmer-hover justify-start gap-2 px-1.5! data-[popup-open]:bg-black/[0.04]! dark:data-[popup-open]:bg-white/[0.04]!"
 									: "justify-center gap-0 px-0! hover:bg-transparent",
 							)}
 							variant="skeleton"
@@ -114,102 +140,116 @@ export const OrgDropdown = () => {
 						</Button>
 					</DropdownMenuTrigger>
 				</AdminHover>
-				<DropdownMenuContent align="start" className="w-48">
-					<AdminDropdownItems />
-					<DropdownMenuItem
-						className="flex justify-between w-full items-center gap-2 text-muted-foreground cursor-pointer"
-						onClick={() => {
-							navigateTo("/settings", navigate);
-							setDropdownOpen(false);
-						}}
-					>
-						<div className="flex flex-col">
-							<span>{session?.user?.name}</span>
-							<span className="text-xs text-zinc-500 break-all hyphens-auto">
-								{session?.user?.email}
-							</span>
-						</div>
-					</DropdownMenuItem>
+				<DropdownMenuContent align="start" className="w-60">
+					<DropdownMenuGroup>
+						<DropdownMenuLabel className={ORG_MENU_LABEL_CLASS}>
+							Organization
+						</DropdownMenuLabel>
+						<DropdownMenuItem
+							className={ORG_MENU_ITEM_CLASS}
+							onClick={() => {
+								navigateTo("/settings", navigate);
+								setDropdownOpen(false);
+							}}
+						>
+							<Settings2
+								className={ORG_MENU_ICON_CLASS}
+								strokeWidth={ORG_MENU_ICON_STROKE}
+							/>
+							Settings
+						</DropdownMenuItem>
+						{orgs && orgs.length > 0 && (
+							<DropdownMenuSub>
+								<DropdownMenuSubTrigger className={ORG_MENU_ITEM_CLASS}>
+									<ChevronsUpDown
+										className={ORG_MENU_ICON_CLASS}
+										strokeWidth={ORG_MENU_ICON_STROKE}
+									/>
+									Switch organization
+								</DropdownMenuSubTrigger>
+								<DropdownMenuPortal>
+									<DropdownMenuSubContent className="w-64 max-h-[min(28rem,calc(100vh-4rem))] overflow-y-auto">
+										{orgs.map((org) => (
+											<SwitchOrgItem
+												key={org.id}
+												org={org}
+												setDropdownOpen={setDropdownOpen}
+											/>
+										))}
+									</DropdownMenuSubContent>
+								</DropdownMenuPortal>
+							</DropdownMenuSub>
+						)}
+						<DropdownMenuItem
+							className={ORG_MENU_ITEM_CLASS}
+							onClick={() => setDialogType("create")}
+						>
+							<Plus
+								className={ORG_MENU_ICON_CLASS}
+								strokeWidth={ORG_MENU_ICON_STROKE}
+							/>
+							Create organization
+						</DropdownMenuItem>
+					</DropdownMenuGroup>
 					<DropdownMenuSeparator />
 					<DropdownMenuGroup>
-						<DropdownMenuItem onClick={() => setDialogType("create")}>
-							<div className="flex justify-between w-full items-center gap-2 text-muted-foreground">
-								<span>Create Organization</span>
-								<Plus size={14} />
-							</div>
-						</DropdownMenuItem>
+						<DropdownMenuLabel
+							className={cn(
+								ORG_MENU_LABEL_CLASS,
+								"flex items-baseline justify-between gap-3",
+							)}
+						>
+							Account
+							<span className="min-w-0 truncate font-[450]">
+								{session?.user?.email}
+							</span>
+						</DropdownMenuLabel>
 						<DropdownMenuSub>
-							<DropdownMenuSubTrigger className="text-muted-foreground">
-								<div className="flex justify-between w-full items-center gap-2">
-									<span>Theme</span>
-									{mode === "light" && <Sun size={14} />}
-									{mode === "dark" && <Moon size={14} />}
-									{mode === "system" && <Monitor size={14} />}
-								</div>
+							<DropdownMenuSubTrigger className={ORG_MENU_ITEM_CLASS}>
+								<ThemeModeIcon mode={mode} />
+								<span className="flex-1">Theme</span>
+								<span className="text-xs text-tertiary-foreground">
+									{THEME_MODE_LABELS[mode]}
+								</span>
 							</DropdownMenuSubTrigger>
 							<DropdownMenuPortal>
 								<DropdownMenuSubContent className="w-36">
-									<DropdownMenuItem
-										onClick={() => setMode("light")}
-										className="flex justify-between items-center"
-									>
-										<span className="text-muted-foreground">Light</span>
-										<Sun size={14} />
-									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={() => setMode("dark")}
-										className="flex justify-between items-center"
-									>
-										<span className="text-muted-foreground">Dark</span>
-										<Moon size={14} />
-									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={() => setMode("system")}
-										className="flex justify-between items-center"
-									>
-										<span className="text-muted-foreground">System</span>
-										<Monitor size={14} />
-									</DropdownMenuItem>
+									{THEME_MODES.map((themeMode) => (
+										<DropdownMenuItem
+											key={themeMode}
+											className={ORG_MENU_ITEM_CLASS}
+											onClick={() => setMode(themeMode)}
+										>
+											<ThemeModeIcon mode={themeMode} />
+											<span className="flex-1">
+												{THEME_MODE_LABELS[themeMode]}
+											</span>
+											{mode === themeMode && (
+												<Check className="size-3.5 text-foreground" />
+											)}
+										</DropdownMenuItem>
+									))}
 								</DropdownMenuSubContent>
 							</DropdownMenuPortal>
 						</DropdownMenuSub>
+						<AdminSubmenu />
 						{!expanded && (
 							<DropdownMenuItem
+								className={ORG_MENU_ITEM_CLASS}
 								onClick={() => {
 									setExpanded(true);
 									setDropdownOpen(false);
 								}}
 							>
-								<div className="flex justify-between w-full items-center gap-2 text-muted-foreground">
-									<span>Open Sidebar</span>
-									<PanelRight size={14} />
-								</div>
+								<PanelLeft
+									className={ORG_MENU_ICON_CLASS}
+									strokeWidth={ORG_MENU_ICON_STROKE}
+								/>
+								Open sidebar
 							</DropdownMenuItem>
 						)}
-						{orgs && orgs.length > 0 && (
-							<>
-								<DropdownMenuSeparator />
-								<DropdownMenuSub>
-									<DropdownMenuSubTrigger className="text-muted-foreground">
-										Switch Organization
-									</DropdownMenuSubTrigger>
-									<DropdownMenuPortal>
-										<DropdownMenuSubContent className="w-64 max-h-[min(28rem,calc(100vh-4rem))] overflow-y-auto">
-											{orgs.map((org) => (
-												<SwitchOrgItem
-													key={org.id}
-													org={org}
-													setDropdownOpen={setDropdownOpen}
-												/>
-											))}
-										</DropdownMenuSubContent>
-									</DropdownMenuPortal>
-								</DropdownMenuSub>
-							</>
-						)}
+						<LogOutItem />
 					</DropdownMenuGroup>
-					<DropdownMenuSeparator />
-					<LogOutItem />
 				</DropdownMenuContent>
 			</DropdownMenu>
 		</div>
@@ -263,9 +303,9 @@ const SwitchOrgItem = ({
 				setDropdownOpen(false);
 			}}
 			shimmer={loading}
-			className="flex justify-between"
+			className={ORG_MENU_ITEM_CLASS}
 		>
-			<span className={cn("text-muted-foreground")}>{org.name}</span>
+			<span className="truncate">{org.name}</span>
 		</DropdownMenuItem>
 	);
 };
