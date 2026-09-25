@@ -49,6 +49,8 @@ export type {
 	ResetRow,
 } from "./commands/reset/types/resetResult.js";
 export { computeTrack } from "./commands/track/computeTrack.js";
+export { deductTrack } from "./commands/track/deductTrack.js";
+export { trackOutcomeToMutation } from "./commands/track/trackOutcomeToMutation.js";
 export type {
 	OverageBehavior,
 	TrackCommand,
@@ -62,6 +64,8 @@ export type { DeductionContext } from "./deduction/types/deductionContext.js";
 export type { DeductionDelta } from "./deduction/types/deductionDelta.js";
 export type { DeductionOutcome } from "./deduction/types/deductionOutcome.js";
 export type { DeductionRow } from "./deduction/types/deductionRow.js";
+export { deductionOutcomeToMovedFeatures } from "./deduction/utils/deductionOutcomeToMovedFeatures.js";
+export { isFeatureFundedAfterDeduction } from "./deduction/utils/isFeatureFundedAfterDeduction.js";
 export type { UnsupportedCommandReason } from "./errors.js";
 // boundary
 export {
