@@ -23,8 +23,8 @@ const ids = [
 	"it-sync-ok",
 	"it-sync-rejected",
 ];
-// Our schema allows http, but this Svix env enforces https: a reliable per-item 4xx.
-const SVIX_REJECTED_URL = "http://example.com/it-sync-rejected";
+// Valid for our schema, but past Svix's URL length limit: a reliable per-item 4xx.
+const SVIX_REJECTED_URL = `https://example.com/${"x".repeat(70_000)}`;
 
 const stated = [
 	{
@@ -138,7 +138,7 @@ test("sync: the second of two creates fails, the first still returns its secret"
 		{ id: "it-sync-ok", secret: expect.stringMatching(/^whsec_/) },
 	]);
 	expect(synced.body.errors).toEqual([
-		{ id: "it-sync-rejected", message: expect.stringContaining("https") },
+		{ id: "it-sync-rejected", message: expect.stringContaining("too long") },
 	]);
 });
 

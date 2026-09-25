@@ -4,7 +4,7 @@
  * - the id is stored as the Svix uid, so a second create with it is a 409;
  * - duplicate URLs are allowed (Svix accepts them);
  * - update patches only stated fields and cannot rename;
- * - localhost URLs and empty events are 400s on the request path;
+ * - http, localhost URLs and empty events are 400s on the request path;
  * - write routes need organisation:write, read routes organisation:read.
  */
 
@@ -134,7 +134,7 @@ describe("webhooks CRUD", () => {
 		expect(gone.body.code).toBe(ErrCode.WebhookNotFound);
 	});
 
-	test("a second webhook may reuse a URL; localhost and empty events are 400s", async () => {
+	test("a second webhook may reuse a URL; http, localhost and empty events are 400s", async () => {
 		const first = await postWebhooks({
 			route: "create",
 			body: { id: "it-crud-dup-url", url: URL_A, events: ["billing.updated"] },
@@ -160,6 +160,17 @@ describe("webhooks CRUD", () => {
 		});
 		expect(localhost.status).toBe(400);
 		expect(localhost.body.message).toContain("private network");
+
+		const plainHttp = await postWebhooks({
+			route: "create",
+			body: {
+				id: "it-crud-local",
+				url: "http://example.com/hook",
+				events: ["billing.updated"],
+			},
+		});
+		expect(plainHttp.status).toBe(400);
+		expect(plainHttp.body.message).toContain("must use https");
 
 		const noEvents = await postWebhooks({
 			route: "create",

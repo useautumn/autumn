@@ -35,13 +35,14 @@ export const WebhookRefSchema = z
 	);
 
 export const WebhookUrlSchema = z
-	.url({ protocol: /^https?$/ })
+	.url()
+	.regex(/^https:\/\//, "Webhook URL must use https.")
 	.refine((url) => !isLocalWebhookUrl(url), {
 		message:
 			"Webhook URL can't point at localhost or a private network. Use a public URL or a tunnel (e.g. ngrok).",
 	})
 	.describe(
-		"The URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.",
+		"The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.",
 	);
 
 export const WebhookEventTypeSchema = z

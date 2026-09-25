@@ -76664,8 +76664,8 @@ paths:
                     changed after creation."
                 url:
                   type: string
-                  format: uri
-                  description: The URL Autumn sends events to. Localhost and private-network
+                  pattern: ^https:\/\/
+                  description: The https URL Autumn sends events to. Localhost and private-network
                     addresses are rejected; tunnels such as ngrok work.
                 events:
                   type: array
@@ -77013,8 +77013,8 @@ paths:
                     shown by `webhooks.list`.
                 url:
                   type: string
-                  format: uri
-                  description: The URL Autumn sends events to. Localhost and private-network
+                  pattern: ^https:\/\/
+                  description: The https URL Autumn sends events to. Localhost and private-network
                     addresses are rejected; tunnels such as ngrok work.
                 events:
                   type: array
@@ -77201,8 +77201,8 @@ paths:
                           changed after creation."
                       url:
                         type: string
-                        format: uri
-                        description: The URL Autumn sends events to. Localhost and private-network
+                        pattern: ^https:\/\/
+                        description: The https URL Autumn sends events to. Localhost and private-network
                           addresses are rejected; tunnels such as ngrok work.
                       events:
                         type: array
@@ -77556,8 +77556,8 @@ paths:
                           changed after creation."
                       url:
                         type: string
-                        format: uri
-                        description: The URL Autumn sends events to. Localhost and private-network
+                        pattern: ^https:\/\/
+                        description: The https URL Autumn sends events to. Localhost and private-network
                           addresses are rejected; tunnels such as ngrok work.
                       events:
                         type: array

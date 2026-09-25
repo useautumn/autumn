@@ -1,6 +1,7 @@
 /**
  * The webhook param schemas are the contract atmn's lint and the API share:
- * - URLs pointing at localhost/private networks are rejected in every env; tunnels pass.
+ * - URLs must be https, and ones pointing at localhost/private networks are
+ *   rejected in every env; tunnels pass.
  * - ids follow `[a-zA-Z0-9_-]` (Svix's uid rule minus `.`), 1..256; get/update/delete
  *   also accept the `ep_…` id list shows for dashboard-made endpoints.
  * - `events` is required and non-empty (empty would mean "all events" in Svix).
@@ -28,23 +29,23 @@ const accepts = (overrides: Record<string, unknown>) =>
 
 describe("isLocalWebhookUrl", () => {
 	test.each([
-		"http://localhost:3000/hook",
+		"https://localhost:3000/hook",
 		"https://LOCALHOST/hook",
 		"https://localhost./hook",
 		"https://api.localhost/hook",
 		"https://my-mac.local/hook",
-		"http://127.0.0.1/hook",
-		"http://127.8.9.10/hook",
-		"http://2130706433/hook",
-		"http://0.0.0.0:8080/hook",
-		"http://10.1.2.3/hook",
-		"http://172.16.0.1/hook",
-		"http://172.31.255.255/hook",
-		"http://192.168.1.10/hook",
-		"http://169.254.169.254/latest",
-		"http://[::1]:8080/hook",
-		"http://[fe80::1]/hook",
-		"http://[::ffff:127.0.0.1]/hook",
+		"https://127.0.0.1/hook",
+		"https://127.8.9.10/hook",
+		"https://2130706433/hook",
+		"https://0.0.0.0:8080/hook",
+		"https://10.1.2.3/hook",
+		"https://172.16.0.1/hook",
+		"https://172.31.255.255/hook",
+		"https://192.168.1.10/hook",
+		"https://169.254.169.254/latest",
+		"https://[::1]:8080/hook",
+		"https://[fe80::1]/hook",
+		"https://[::ffff:127.0.0.1]/hook",
 	])("rejects %s", (url) => {
 		expect(isLocalWebhookUrl(url)).toBe(true);
 	});
@@ -63,10 +64,12 @@ describe("isLocalWebhookUrl", () => {
 });
 
 describe("webhook params", () => {
-	test("url: localhost rejected, tunnel accepted, non-http rejected", () => {
-		expect(accepts({ url: "http://localhost:3000/hook" })).toBe(false);
+	test("url: https only; localhost rejected, tunnel accepted", () => {
+		expect(accepts({ url: "http://example.com/hook" })).toBe(false);
+		expect(accepts({ url: "https://localhost:3000/hook" })).toBe(false);
 		expect(accepts({ url: "https://abc.ngrok-free.app/hook" })).toBe(true);
 		expect(accepts({ url: "ftp://example.com/hook" })).toBe(false);
+		expect(accepts({ url: "https://example.com/hook" })).toBe(true);
 		expect(accepts({ url: "not a url" })).toBe(false);
 	});
 
