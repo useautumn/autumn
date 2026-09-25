@@ -92,16 +92,10 @@ export const computeSyncFuturePhases = ({
 			customPrices.push(...productContext.customPrices);
 			customEntitlements.push(...productContext.customEntitlements);
 
-			const replacedRows = [
-				...(productContext.currentCustomerProduct
-					? [productContext.currentCustomerProduct]
-					: []),
-				...(productContext.supersededInstances ?? []),
-			];
-			for (const replacedRow of replacedRows) {
+			if (productContext.currentCustomerProduct) {
 				updateCustomerProducts.push(
 					expireCustomerProduct({
-						customerProduct: replacedRow,
+						customerProduct: productContext.currentCustomerProduct,
 						currentEpochMs,
 					}),
 				);

@@ -98,6 +98,37 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 		});
 	});
 
+	describe("two entity-scoped cusEnts for the same entity", () => {
+		test("sums the entity's usage across them", () => {
+			const internalFeatureId = "internal_feature_a";
+			const entityScoped = ({ balance }: { balance: number }) =>
+				customerEntitlements.create({
+					internalFeatureId,
+					featureId: "feature_a",
+					featureName: "Feature A",
+					allowance: 100,
+					balance: 0,
+					entityFeatureId: "entity_feature_id",
+					entities: { entity1: { id: "entity1", balance, adjustment: 0 } },
+				});
+			const cusProduct = customerProducts.create({
+				customerEntitlements: [
+					entityScoped({ balance: 70 }),
+					entityScoped({ balance: 60 }),
+				],
+			});
+
+			const existingUsages = cusProductToExistingUsages({
+				cusProduct,
+				carryAllConsumableFeatures: true,
+			});
+
+			expect(existingUsages[internalFeatureId].entityUsages).toEqual({
+				entity1: 70,
+			});
+		});
+	});
+
 	describe("cusEnt with rollovers", () => {
 		test("usage calculation excludes rollover balance", () => {
 			const internalFeatureId = "internal_feature_a";

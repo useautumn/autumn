@@ -112,7 +112,11 @@ export const cusProductToExistingUsages = ({
 					.add(entityBalance.adjustment ?? 0)
 					.sub(entityBalance.balance)
 					.toNumber();
-				currentExistingUsage.entityUsages![entityId] = entityUsage;
+				currentExistingUsage.entityUsages![entityId] = new Decimal(
+					currentExistingUsage.entityUsages![entityId] ?? 0,
+				)
+					.add(entityUsage)
+					.toNumber();
 			}
 			continue;
 		}
