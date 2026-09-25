@@ -34,6 +34,7 @@ export type WorkerPartitionsContext = {
 	logger?: Pick<AutumnLogger, "info" | "warn">;
 	stateStore: StateStore;
 	createRuntime: KafkaPartitionRuntimeFactory;
+	served?: PartitionsDependencies["served"];
 	ownershipLink?: PartitionsDependencies["ownershipLink"];
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
 	onError: PartitionsDependencies["onError"];

@@ -104,6 +104,7 @@ export async function createBalanceWorker({
 				idempotencyKeys: resources.idempotencyKeys,
 				logger: dependencies.logger,
 				createRuntime,
+				served: partitionLoad,
 				ownershipLink: ownershipHandoff,
 				onError: dependencies.onError,
 				onUnhealthyPartition: dependencies.onError,

@@ -231,6 +231,7 @@ export function createWorkerPartitions({
 			progress: { readProgress, observeHighWatermark },
 			subscribePartitionChanges: subscribeChanges,
 			createRuntime,
+			served: ctx.served,
 			ownershipLink: ctx.ownershipLink,
 			awaitReadyAnnouncement: ctx.awaitReadyAnnouncement,
 			onError: ctx.onError,
