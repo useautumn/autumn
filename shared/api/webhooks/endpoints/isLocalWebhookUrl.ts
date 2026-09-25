@@ -25,6 +25,8 @@ const isPrivateIpv4 = (address: number) =>
 const isLocalIpv6 = (host: string) => {
 	if (host === "::1" || host === "::") return true;
 	if (/^fe[89ab][0-9a-f]:/.test(host)) return true;
+	// Unique-local fc00::/7, IPv6's private ranges
+	if (/^f[cd][0-9a-f]{0,2}:/.test(host)) return true;
 	// WHATWG URL rewrites ::ffff:127.0.0.1 to ::ffff:7f00:1
 	const [, high, low] =
 		host.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/) ?? [];

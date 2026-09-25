@@ -36,7 +36,9 @@ export const WebhookRefSchema = z
 
 export const WebhookUrlSchema = z
 	.url()
-	.regex(/^https:\/\//, "Webhook URL must use https.")
+	// Spelled out rather than `/i`: the spec pattern has no flags, and atmn's
+	// lint applies it to the URL as written.
+	.regex(/^[Hh][Tt][Tt][Pp][Ss]:\/\//, "Webhook URL must use https.")
 	.refine((url) => !isLocalWebhookUrl(url), {
 		message:
 			"Webhook URL can't point at localhost or a private network. Use a public URL or a tunnel (e.g. ngrok).",

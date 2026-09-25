@@ -17,8 +17,8 @@ const svixDetail = ({ body }: { body: SvixErrorBody | undefined }) => {
 	return undefined;
 };
 
-/** Svix's 4xx answers are the caller's mistake, so they surface as ours;
- * anything else stays a server error. */
+/** Svix rejecting the request's content is the caller's mistake, so it
+ * surfaces as ours; auth, permission and throttling failures are Autumn's. */
 export const withSvixErrors = async <T>({
 	webhookId,
 	run,
@@ -29,7 +29,8 @@ export const withSvixErrors = async <T>({
 	try {
 		return await run();
 	} catch (error) {
-		if (!(error instanceof ApiException) || error.code >= 500) throw error;
+		if (!(error instanceof ApiException)) throw error;
+		if (![400, 404, 409, 422].includes(error.code)) throw error;
 
 		if (error.code === 404) {
 			throw new RecaseError({

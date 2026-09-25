@@ -23,6 +23,13 @@ export const createWebhook = async ({
 				disabled: params.disabled,
 			}),
 	});
-	const { key } = await svix.endpoint.getSecret(appId, endpoint.id);
-	return { webhook: svixEndpointToWebhook({ endpoint }), secret: key };
+	try {
+		const { key } = await svix.endpoint.getSecret(appId, endpoint.id);
+		return { webhook: svixEndpointToWebhook({ endpoint }), secret: key };
+	} catch (error) {
+		// Without its secret the webhook can't be verified: undo it so a retry
+		// creates it again rather than hitting a duplicate id.
+		await svix.endpoint.delete(appId, endpoint.id).catch(() => {});
+		throw error;
+	}
 };

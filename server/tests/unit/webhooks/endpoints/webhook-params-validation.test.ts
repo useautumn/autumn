@@ -46,6 +46,8 @@ describe("isLocalWebhookUrl", () => {
 		"https://[::1]:8080/hook",
 		"https://[fe80::1]/hook",
 		"https://[::ffff:127.0.0.1]/hook",
+		"https://[fd12::1]/hook",
+		"https://[fc00::5]/hook",
 	])("rejects %s", (url) => {
 		expect(isLocalWebhookUrl(url)).toBe(true);
 	});

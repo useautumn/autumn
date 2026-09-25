@@ -77767,7 +77767,7 @@ paths:
                     changed after creation."
                 url:
                   type: string
-                  pattern: ^https:\/\/
+                  pattern: ^[Hh][Tt][Tt][Pp][Ss]:\/\/
                   description: The https URL Autumn sends events to. Localhost and private-network
                     addresses are rejected; tunnels such as ngrok work.
                 events:
@@ -78105,7 +78105,7 @@ paths:
                     shown by `webhooks.list`.
                 url:
                   type: string
-                  pattern: ^https:\/\/
+                  pattern: ^[Hh][Tt][Tt][Pp][Ss]:\/\/
                   description: The https URL Autumn sends events to. Localhost and private-network
                     addresses are rejected; tunnels such as ngrok work.
                 events:
@@ -78285,7 +78285,7 @@ paths:
                           changed after creation."
                       url:
                         type: string
-                        pattern: ^https:\/\/
+                        pattern: ^[Hh][Tt][Tt][Pp][Ss]:\/\/
                         description: The https URL Autumn sends events to. Localhost and private-network
                           addresses are rejected; tunnels such as ngrok work.
                       events:
@@ -78733,6 +78733,7 @@ paths:
                           disabled: false
                           created_at: 1781113864000
                           updated_at: 1781113864000
+                    errors: []
       x-speakeasy-name-override: previewSync
       parameters:
         - *a1
@@ -78768,7 +78769,7 @@ paths:
                           changed after creation."
                       url:
                         type: string
-                        pattern: ^https:\/\/
+                        pattern: ^[Hh][Tt][Tt][Pp][Ss]:\/\/
                         description: The https URL Autumn sends events to. Localhost and private-network
                           addresses are rejected; tunnels such as ngrok work.
                       events:

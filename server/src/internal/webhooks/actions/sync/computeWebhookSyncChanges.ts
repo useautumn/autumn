@@ -101,9 +101,19 @@ export const computeWebhookSyncChanges = ({
 	stated: WebhookParams[];
 	now: number;
 }): { changes: WebhookSyncChange[]; errors: WebhookSyncError[] } => {
-	const owned = remote.filter((webhook) => !uidlessIds.has(webhook.id));
-	const uidless = remote.filter((webhook) => uidlessIds.has(webhook.id));
-	const ownedById = new Map(owned.map((webhook) => [webhook.id, webhook]));
+	// A dashboard endpoint stated by its own `ep_…` id is addressed directly;
+	// only the ones the request doesn't name are up for adoption by URL.
+	const statedIds = new Set(stated.map((params) => params.id));
+	const ownedById = new Map(
+		remote
+			.filter(
+				(webhook) => !uidlessIds.has(webhook.id) || statedIds.has(webhook.id),
+			)
+			.map((webhook) => [webhook.id, webhook]),
+	);
+	const uidless = remote.filter(
+		(webhook) => uidlessIds.has(webhook.id) && !statedIds.has(webhook.id),
+	);
 
 	const { adoptions, errors } = planAdoptions({
 		newIds: stated.filter((params) => !ownedById.has(params.id)),
@@ -133,7 +143,6 @@ export const computeWebhookSyncChanges = ({
 		];
 	});
 
-	const statedIds = new Set(stated.map((params) => params.id));
 	const adoptedIds = new Set([...adoptions.values()].map(({ id }) => id));
 	const unmanaged = remote
 		.filter(

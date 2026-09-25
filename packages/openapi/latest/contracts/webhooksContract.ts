@@ -170,6 +170,7 @@ export const previewSyncWebhooksContract = route({
 					changes: [
 						{ action: "create", id: "billing", webhook: webhookExample },
 					],
+					errors: [],
 				},
 			],
 		}),

@@ -201,3 +201,22 @@ describe("adopting dashboard-made webhooks", () => {
 		]);
 	});
 });
+
+test("a stated ep_ id of a dashboard webhook updates it, even when its URL changes", () => {
+	const dashboard = remote({ id: "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5" });
+	const changes = computeWebhookSyncChanges({
+		remote: [dashboard],
+		uidlessIds: new Set([dashboard.id]),
+		stated: [stated({ id: dashboard.id, url: "https://example.com/moved" })],
+		now: NOW,
+	});
+	expect(changes.errors).toEqual([]);
+	expect(changes.changes).toEqual([
+		{
+			action: "update",
+			id: dashboard.id,
+			before: dashboard,
+			after: { ...dashboard, url: "https://example.com/moved" },
+		},
+	]);
+});
