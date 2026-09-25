@@ -30,6 +30,8 @@ export interface SyncProductContext {
 	entity?: Entity;
 	/** Existing active cusProduct in the same product group, if `expire_previous` was set. */
 	currentCustomerProduct?: FullCusProduct;
+	/** Other instances of the replaced plan with no new row to take their place: they expire, and their usage carries with `currentCustomerProduct`. */
+	supersededInstances?: FullCusProduct[];
 	accessStartsAt?: number;
 }
 

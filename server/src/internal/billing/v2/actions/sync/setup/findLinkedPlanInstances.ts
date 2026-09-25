@@ -1,24 +1,19 @@
-import {
-	cp,
-	type FullCusProduct,
-	type FullCustomer,
-	type SyncProductContext,
-} from "@autumn/shared";
+import { cp, type FullCusProduct, type FullCustomer } from "@autumn/shared";
 
-/** Active instances of the plan already linked to this Stripe subscription. */
+/** Active instances of a plan already linked to this Stripe subscription. */
 export const findLinkedPlanInstances = ({
 	fullCustomer,
-	fullProduct,
+	productId,
 	stripeSubscriptionId,
 	internalEntityId,
 }: {
 	fullCustomer: FullCustomer;
-	fullProduct: SyncProductContext["fullProduct"];
+	productId: string;
 	stripeSubscriptionId: string;
 	internalEntityId?: string;
 }): FullCusProduct[] =>
 	fullCustomer.customer_products.filter((customerProduct) => {
-		if (customerProduct.product?.id !== fullProduct.id) return false;
+		if (customerProduct.product?.id !== productId) return false;
 		if ((customerProduct.internal_entity_id ?? undefined) !== internalEntityId)
 			return false;
 		return cp(customerProduct)

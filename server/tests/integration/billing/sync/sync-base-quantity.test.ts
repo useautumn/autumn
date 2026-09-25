@@ -273,3 +273,35 @@ test.concurrent(
 	},
 	WEBHOOK_TEST_TIMEOUT_MS,
 );
+
+test.concurrent(
+	`${chalk.yellowBright("sync base quantity: a direct re-sync at a lower quantity expires the surplus rows")}`,
+	async () => {
+		const customerId = "sync-base-qty-resync-down";
+		const { autumnV1, proPlan, subscription } = await setupSyncedSubscription({
+			customerId,
+			proQuantity: 3,
+		});
+
+		await setStripeItem({ subscription, quantity: 2 });
+		await autumnV1.post("/billing.sync_v2", {
+			customer_id: customerId,
+			stripe_subscription_id: subscription.id,
+			phases: [
+				{
+					starts_at: "now",
+					plans: [{ plan_id: proPlan.id, quantity: 2, expire_previous: true }],
+				},
+			],
+		} satisfies SyncParamsV1);
+
+		await expectPlanRowCounts({
+			ctx,
+			customerId,
+			productId: proPlan.id,
+			expected: { [CusProductStatus.Active]: 2 },
+		});
+		await expectVerifyClean({ customerId });
+	},
+	WEBHOOK_TEST_TIMEOUT_MS,
+);

@@ -14,6 +14,7 @@ import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/com
 import { applyScheduleTimingToCustomerProductPlan } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { resolveSyncExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveSyncExistingUsagesConfig";
 import { initImmediateSyncCustomerProduct } from "./initImmediateSyncCustomerProduct";
+import { withSupersededUsage } from "./withSupersededUsage";
 
 type CustomerProductUpdate = NonNullable<
 	AutumnBillingPlan["updateCustomerProducts"]
@@ -99,19 +100,25 @@ const computeStartingNowProductContexts = ({
 			}
 		}
 
+		const carrySource = currentCustomerProduct
+			? withSupersededUsage({
+					customerProduct: currentCustomerProduct,
+					supersededInstances: productContext.supersededInstances,
+				})
+			: undefined;
 		const existingUsagesConfig =
-			carryOverUsage && currentCustomerProduct
+			carryOverUsage && carrySource
 				? resolveSyncExistingUsagesConfig({
 						ctx,
 						carryOverUsages,
-						currentCustomerProduct,
+						currentCustomerProduct: carrySource,
 					})
 				: undefined;
 
 		// Rollovers follow the features, not the plan: each one re-homes onto a
 		// matching feature on the new plan, or is dropped when none fits.
-		const existingRolloversConfig = currentCustomerProduct
-			? { fromCustomerProduct: currentCustomerProduct }
+		const existingRolloversConfig = carrySource
+			? { fromCustomerProduct: carrySource }
 			: undefined;
 
 		const insertedCustomerProduct = initImmediateSyncCustomerProduct({
@@ -138,12 +145,15 @@ const computeStartingNowProductContexts = ({
 		customEntitlements.push(...productContext.customEntitlements);
 		insertPlanLicenses.push(...(productContext.insertPlanLicenses ?? []));
 
-		if (productContext.currentCustomerProduct) {
+		const replacedRows = [
+			...(productContext.currentCustomerProduct
+				? [productContext.currentCustomerProduct]
+				: []),
+			...(productContext.supersededInstances ?? []),
+		];
+		for (const replacedRow of replacedRows) {
 			updateCustomerProducts.push(
-				expireCustomerProduct({
-					customerProduct: productContext.currentCustomerProduct,
-					currentEpochMs,
-				}),
+				expireCustomerProduct({ customerProduct: replacedRow, currentEpochMs }),
 			);
 		}
 	}

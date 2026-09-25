@@ -1,53 +1,43 @@
 import type { FullCusProduct, SyncPlanInstance } from "@autumn/shared";
+import type { MatchedPlan } from "../../detect/types";
+import { planExpandsByQuantity } from "../../utils/planExpandsByQuantity";
 import { linkedPlanInstances } from "./linkedPlanInstances";
 
-type PlanInstanceCountChange = {
-	/** The missing instances to attach, leaving existing ones in place. */
-	attach: SyncPlanInstance | null;
-	/** Surplus instances to expire. */
-	expire: FullCusProduct[];
-};
-
 /**
- * The same plan at a different Stripe quantity: how many instances to add or
- * expire so Autumn holds one row per unit. Null when the count already matches.
+ * The same plan at a different Stripe quantity, as the plan to sync. Missing
+ * instances attach alongside the existing ones; a smaller quantity re-syncs
+ * the whole group so surplus rows expire with their usage carried. Null when
+ * the count already matches.
  */
 export const planInstanceCountChange = ({
 	linkedCustomerProducts,
 	linkedProduct,
+	matchedPlan,
 	syncPlan,
 }: {
 	linkedCustomerProducts: FullCusProduct[];
 	linkedProduct: FullCusProduct;
+	matchedPlan: MatchedPlan;
 	syncPlan: SyncPlanInstance;
-}): PlanInstanceCountChange | null => {
+}): SyncPlanInstance | null => {
+	const expands = planExpandsByQuantity({
+		plan: syncPlan,
+		isAddOn: matchedPlan.product.is_add_on === true,
+	});
+	const desiredInstances = expands ? (syncPlan.quantity ?? 1) : 1;
 	const instances = linkedPlanInstances({
 		linkedCustomerProducts,
 		productId: linkedProduct.product.id,
 		syncPlan,
 	});
-	const desiredQuantity = syncPlan.quantity ?? 1;
 
-	if (instances.length < desiredQuantity) {
+	if (instances.length < desiredInstances) {
 		return {
-			attach: {
-				...syncPlan,
-				quantity: desiredQuantity - instances.length,
-				expire_previous: false,
-			},
-			expire: [],
+			...syncPlan,
+			quantity: desiredInstances - instances.length,
+			expire_previous: false,
 		};
 	}
-
-	if (instances.length > desiredQuantity) {
-		const surplusCount = instances.length - desiredQuantity;
-		return {
-			attach: null,
-			expire: instances
-				.filter((instance) => instance.id !== linkedProduct.id)
-				.slice(0, surplusCount),
-		};
-	}
-
+	if (instances.length > desiredInstances) return syncPlan;
 	return null;
 };

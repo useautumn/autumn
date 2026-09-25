@@ -568,7 +568,7 @@ describe("buildIncrementalSyncParams", () => {
 		expect(result.removedCustomerProducts).toEqual([]);
 	});
 
-	test("expires surplus main-plan instances when Stripe quantity falls", () => {
+	test("re-syncs the whole main-plan group when Stripe quantity falls", () => {
 		const pro = product({ id: "pro" });
 		const { match, params } = draft({
 			matchedPlans: [matchedPlan({ product: pro })],
@@ -586,14 +586,13 @@ describe("buildIncrementalSyncParams", () => {
 		});
 
 		if (!result.shouldSync) throw new Error(result.reason);
-		expect(result.params).toBeNull();
-		expect(result.removedCustomerProducts.map((row) => row.id)).toEqual([
-			"cp_pro_2",
-			"cp_pro_3",
+		expect(result.params?.phases?.[0]?.plans).toEqual([
+			syncPlan({ productId: pro.id, quantity: 1 }),
 		]);
+		expect(result.removedCustomerProducts).toEqual([]);
 	});
 
-	test("on a plan change, replaces one outgoing instance and expires the rest", () => {
+	test("on a plan change, leaves the outgoing instances to the sync", () => {
 		const pro = product({ id: "pro" });
 		const premium = product({ id: "premium" });
 		const { match, params } = draft({
@@ -614,8 +613,35 @@ describe("buildIncrementalSyncParams", () => {
 		expect(result.params?.phases?.[0]?.plans).toEqual([
 			syncPlan({ productId: premium.id, quantity: 1 }),
 		]);
-		expect(result.removedCustomerProducts.map((row) => row.id)).toEqual([
-			"cp_pro_2",
-		]);
+		expect(result.removedCustomerProducts).toEqual([]);
+	});
+
+	test("keeps one instance for a main plan with purchased units", () => {
+		const pro = product({ id: "pro" });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+			syncPlans: [
+				syncPlan({
+					productId: pro.id,
+					quantity: 2,
+					featureQuantities: [
+						{ feature_id: "messages", quantity: 500 } as never,
+					],
+				}),
+			],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [
+				linkedCustomerProduct({ product: pro, id: "cp_pro_1" }),
+			],
+		});
+
+		expect(result).toMatchObject({
+			shouldSync: false,
+			reason: "no_changed_targets",
+		});
 	});
 });

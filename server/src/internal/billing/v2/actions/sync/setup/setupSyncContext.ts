@@ -94,7 +94,7 @@ const buildProductContext = async ({
 			currentCustomerProduct = stripeSubscriptionId
 				? findLinkedPlanInstances({
 						fullCustomer,
-						fullProduct,
+						productId: fullProduct.id,
 						stripeSubscriptionId,
 						internalEntityId: entity?.internal_id,
 					})[0]

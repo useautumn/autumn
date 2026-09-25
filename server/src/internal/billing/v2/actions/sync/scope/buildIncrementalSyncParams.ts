@@ -9,7 +9,6 @@ import {
 import type { MatchedPlan, SubscriptionMatch } from "../detect/types";
 import { findLicenseQuantityDrifts } from "./findLicenseQuantityDrifts";
 import { linkedPlanInstances } from "./planInstances/linkedPlanInstances";
-import { outgoingInstancesToExpire } from "./planInstances/outgoingInstancesToExpire";
 import { planInstanceCountChange } from "./planInstances/planInstanceCountChange";
 import {
 	linkedCustomerProductsToTargetGroupMap,
@@ -157,7 +156,6 @@ export const buildIncrementalSyncParams = ({
 	}
 
 	const changedPlans: SyncPlanInstance[] = [];
-	const surplusInstances: FullCusProduct[] = [];
 	for (const syncPlan of phase.plans) {
 		const matchedPlan = matchedPlanMap.plansByProductId.get(syncPlan.plan_id);
 		if (!matchedPlan) {
@@ -218,27 +216,18 @@ export const buildIncrementalSyncParams = ({
 			linkedProduct.product.id !== target.productId ||
 			versionChanged
 		) {
-			if (linkedProduct) {
-				surplusInstances.push(
-					...outgoingInstancesToExpire({
-						linkedCustomerProducts,
-						replacedProduct: linkedProduct,
-						syncPlan,
-					}),
-				);
-			}
 			changedPlans.push(syncPlan);
 			continue;
 		}
 
-		const countChange = planInstanceCountChange({
+		const resizedPlan = planInstanceCountChange({
 			linkedCustomerProducts,
 			linkedProduct,
+			matchedPlan,
 			syncPlan,
 		});
-		if (countChange) {
-			if (countChange.attach) changedPlans.push(countChange.attach);
-			surplusInstances.push(...countChange.expire);
+		if (resizedPlan) {
+			changedPlans.push(resizedPlan);
 			continue;
 		}
 
@@ -263,14 +252,13 @@ export const buildIncrementalSyncParams = ({
 	const matchedPlanIds = new Set(
 		phaseMatch.plans.map((matchedPlan) => matchedPlan.product.id),
 	);
-	const removedAddOns = hasUnmatchedItems
+	const removedCustomerProducts = hasUnmatchedItems
 		? []
 		: linkedCustomerProducts.filter(
 				(linkedProduct) =>
 					isCustomerProductAddOn(linkedProduct) &&
 					!matchedPlanIds.has(linkedProduct.product.id),
 			);
-	const removedCustomerProducts = [...removedAddOns, ...surplusInstances];
 
 	if (changedPlans.length === 0 && removedCustomerProducts.length === 0) {
 		return {
