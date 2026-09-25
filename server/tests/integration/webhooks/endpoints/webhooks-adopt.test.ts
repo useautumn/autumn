@@ -133,3 +133,41 @@ test("an endpoint that already has a uid is never adopted: the new id is created
 		"it-adopt-owner",
 	]);
 });
+
+test("a dashboard webhook synced by its own ep_ id comes back in the response, changed or not", async () => {
+	const url = "https://example.com/it-adopt-by-ep-id";
+	const dashboard = await dashboardEndpoint({ url });
+	const unchanged = await postWebhooks({
+		route: "sync",
+		body: {
+			webhooks: [{ id: dashboard.id, url, events: ["invoice.finalized"] }],
+		},
+	});
+	expect(unchanged.status).toBe(200);
+	expect(unchanged.body.errors).toEqual([]);
+	expect(unchanged.body.webhooks.map((w: { id: string }) => w.id)).toEqual([
+		dashboard.id,
+	]);
+
+	const moved = await postWebhooks({
+		route: "sync",
+		body: {
+			webhooks: [
+				{
+					id: dashboard.id,
+					url: `${url}-moved`,
+					events: ["invoice.finalized"],
+				},
+			],
+		},
+	});
+	expect(moved.status).toBe(200);
+	expect(moved.body.webhooks).toMatchObject([
+		{ id: dashboard.id, url: `${url}-moved` },
+	]);
+	// Updated in place: no second endpoint appears for either URL.
+	expect(await endpointsAt({ url })).toHaveLength(0);
+	expect((await endpointsAt({ url: `${url}-moved` })).map((e) => e.id)).toEqual(
+		[dashboard.id],
+	);
+});

@@ -109,9 +109,13 @@ export const syncWebhooks = async ({
 		throwWhenNothingSucceeded({ failures, planned });
 	}
 
+	// A dashboard webhook the request names by its own `ep_…` id is listed too.
+	const statedIds = new Set(stated.map((params) => params.id));
 	const resultById = new Map<string, Webhook>(
 		remote
-			.filter((webhook) => !uidlessIds.has(webhook.id))
+			.filter(
+				(webhook) => !uidlessIds.has(webhook.id) || statedIds.has(webhook.id),
+			)
 			.map((webhook) => [webhook.id, webhook]),
 	);
 	for (const { webhook } of successes) resultById.set(webhook.id, webhook);
