@@ -166,7 +166,6 @@ export {
 	parseWorkerLock,
 } from "./parsers.js";
 export {
-	assembleCatalog,
 	catalogKeyToString,
 	catalogRowsToCatalog,
 	catalogRowToCatalogKey,

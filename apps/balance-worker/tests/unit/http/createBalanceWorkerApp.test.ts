@@ -351,15 +351,6 @@ describe("Balance worker HTTP", () => {
 		{ ...request, route: { ...route, routeEpoch: "01" } },
 		{ ...request, route: { ...route, routeEpoch: 1 } },
 		{ route },
-		{ ...request, command: null },
-		{ ...request, command: {} },
-		{
-			...request,
-			command: {
-				...command,
-				identity: { ...command.identity, customerId: "" },
-			},
-		},
 		{ ...request, extra: true },
 	])("rejects invalid wire request %j", async (body) => {
 		const { post, submitted, lookups } = fixture();
@@ -369,20 +360,14 @@ describe("Balance worker HTTP", () => {
 		expect(submitted).toEqual([]);
 		expect(lookups).toEqual([]);
 	});
-	test.each([
-		{ ...command, schemaVersion: 2 },
-		{ ...command, type: "check" },
-	])(
-		"track handler rejects invalid commands after routing",
-		async (invalidCommand) => {
-			const { post, submitted, lookups } = fixture();
-			const response = await post({ route, command: invalidCommand });
-			expect(response.status).toBe(400);
-			expect((await response.json()).error.code).toBe("INVALID_REQUEST");
-			expect(lookups).toEqual([route]);
-			expect(submitted).toEqual([]);
-		},
-	);
+	test("hands the command to the processor exactly as our server sent it", async () => {
+		const { post, submitted, lookups } = fixture();
+		const sent = { ...command, properties: { plan: "pro" } };
+		const response = await post({ route, command: sent });
+		expect(response.status).toBe(200);
+		expect(lookups).toEqual([route]);
+		expect(submitted).toEqual([{ command: sent }]);
+	});
 	test("rejects malformed and empty JSON before routing", async () => {
 		const { app, submitted, lookups } = fixture();
 		for (const body of ["{", ""]) {

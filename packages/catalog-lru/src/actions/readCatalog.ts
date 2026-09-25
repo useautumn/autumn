@@ -1,9 +1,9 @@
 import {
-	assembleCatalog,
 	type Catalog,
 	type CatalogKey,
 	type CatalogRow,
 	catalogKeyToString,
+	catalogRowsToCatalog,
 	parseCatalogRow,
 } from "@autumn/balance-engine";
 import type { CatalogCacheScope } from "../types/catalogCacheContext.js";
@@ -47,5 +47,5 @@ export const readCatalog = ({
 		});
 		if (row) rows.push(parsedRowOf({ row }));
 	}
-	return assembleCatalog({ rows });
+	return catalogRowsToCatalog({ rows });
 };

@@ -2,7 +2,6 @@ import type { Catalog } from "../../models/catalog/catalog.js";
 import type { CatalogKey } from "../../models/catalog/catalogKey.js";
 import type { CatalogRow } from "../../models/catalog/catalogRow.js";
 import type { SubjectState } from "../../models/subject/subjectState.js";
-import { parseCatalog } from "../../parsers.js";
 
 export const catalogKeyToString = ({ key }: { key: CatalogKey }): string =>
 	`${key.table}:${key.id}`;
@@ -99,8 +98,12 @@ export const planLicensesToItemCatalogKeys = ({
 	return [...keysByString.values()].sort(compareCatalogKeys);
 };
 
-/** Groups already-validated rows into a catalog; `catalogRowsToCatalog` for raw rows. */
-export const assembleCatalog = ({ rows }: { rows: CatalogRow[] }): Catalog => {
+/** Rows are parsed where they enter (Postgres, a request), so keying them is all that is left. */
+export const catalogRowsToCatalog = ({
+	rows,
+}: {
+	rows: CatalogRow[];
+}): Catalog => {
 	const catalog: Catalog = {
 		entitlements: {},
 		products: {},
@@ -134,9 +137,3 @@ export const assembleCatalog = ({ rows }: { rows: CatalogRow[] }): Catalog => {
 	}
 	return catalog;
 };
-
-export const catalogRowsToCatalog = ({
-	rows,
-}: {
-	rows: CatalogRow[];
-}): Catalog => parseCatalog({ input: assembleCatalog({ rows }) });

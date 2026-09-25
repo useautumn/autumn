@@ -3,7 +3,6 @@ import {
 	type Catalog,
 	computeTrack,
 	meteringIdentityToPartitionKey,
-	parseTrackCommand,
 	type SubjectState,
 	slimSubjectForFeatures,
 	type TrackCommand,
@@ -26,26 +25,25 @@ export async function track({
 	command: TrackCommand;
 }): Promise<TrackReply> {
 	const { ctx } = scope;
-	const parsed = parseTrackCommand({ input: command });
 	const customerKey = meteringIdentityToPartitionKey({
-		identity: parsed.identity,
+		identity: command.identity,
 	});
 	// Filled by the decision, which is the only place that knows which rows it was made against.
 	const decidedAgainst: { catalog?: Catalog } = {};
 	// Synchronous once ensured: `mutate` runs against the freshest state and the mutation is enqueued before it returns.
 	const decided = await withResidentSubject({
 		customerKey,
-		ensure: () => ensureSubjectCurrent({ scope, command: parsed }),
+		ensure: () => ensureSubjectCurrent({ scope, command }),
 		attempt: () =>
 			ctx.writer.decide<never>({
-				command: parsed,
+				command,
 				mutate: ({ state }) =>
 					timeSync({ label: "track.decide" }, () =>
 						decideTrack({
 							scope,
 							state,
 							customerKey,
-							command: parsed,
+							command,
 							decidedAgainst,
 						}),
 					),
@@ -67,7 +65,7 @@ export async function track({
 		...slimSubjectForFeatures({
 			state,
 			catalog,
-			featureIds: [parsed.featureId],
+			featureIds: [command.featureId],
 		}),
 	};
 }

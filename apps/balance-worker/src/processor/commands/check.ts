@@ -1,7 +1,6 @@
 import {
 	type CheckCommand,
 	computeCheck,
-	parseCheckCommand,
 	slimSubjectForFeatures,
 } from "@autumn/balance-engine";
 import type { CheckReply } from "@autumn/balance-worker-client/protocol";
@@ -17,17 +16,13 @@ export async function check({
 	scope: PartitionProcessorScope;
 	command: CheckCommand;
 }): Promise<CheckReply> {
-	const parsed = parseCheckCommand({ input: command });
-	const { state, catalog } = await readCurrentSubject({
-		scope,
-		command: parsed,
-	});
+	const { state, catalog } = await readCurrentSubject({ scope, command });
 	const result = timeSync({ label: "check.compute" }, () => {
 		const fullSubject = scope.ctx.subjectHydrator.readSubject({
 			state,
-			identity: parsed.identity,
+			identity: command.identity,
 		});
-		return computeCheck({ fullSubject, command: parsed });
+		return computeCheck({ fullSubject, command });
 	});
 	// The caller reports this feature's balance, so the reply carries the rows that fund it, not the whole customer.
 	return {
@@ -35,7 +30,7 @@ export async function check({
 		...slimSubjectForFeatures({
 			state,
 			catalog,
-			featureIds: [parsed.featureId],
+			featureIds: [command.featureId],
 		}),
 	};
 }

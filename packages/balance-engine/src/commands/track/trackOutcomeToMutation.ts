@@ -4,7 +4,6 @@ import type { DeductionOutcome } from "../../deduction/types/deductionOutcome.js
 import { fundingRowOf } from "../../deduction/utils/fundingRowOf.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
-import { parseSubjectStateMutation } from "../../parsers.js";
 import { trackLockToRowChange } from "./trackLockToRowChange.js";
 import type { TrackCommand } from "./types/trackCommand.js";
 
@@ -33,28 +32,26 @@ export const trackOutcomeToMutation = ({
 					}),
 				]
 			: [];
-	return parseSubjectStateMutation({
-		input: {
-			schemaVersion: 1,
-			type: "mutation",
-			id: command.commandId,
-			identity: command.identity,
-			subject: fullSubjectToMutationSubject({ fullSubject }),
-			revision: { before: revisionBefore, after: revisionBefore + 1 },
-			command,
-			changes: [...changes, ...lockChanges],
-			result: {
-				type: "track",
-				status: rejected ? "rejected" : "applied",
-				reason: rejected ? "insufficient_balance" : null,
+	return {
+		schemaVersion: 1,
+		type: "mutation",
+		id: command.commandId,
+		identity: command.identity,
+		subject: fullSubjectToMutationSubject({ fullSubject }),
+		revision: { before: revisionBefore, after: revisionBefore + 1 },
+		command,
+		changes: [...changes, ...lockChanges],
+		result: {
+			type: "track",
+			status: rejected ? "rejected" : "applied",
+			reason: rejected ? "insufficient_balance" : null,
+			deltas: rejected ? [] : outcome.deltas,
+			...deltasToUsageEventFields({
+				fullSubject,
 				deltas: rejected ? [] : outcome.deltas,
-				...deltasToUsageEventFields({
-					fullSubject,
-					deltas: rejected ? [] : outcome.deltas,
-				}),
-				fundingFeatureId: fundingRow?.featureId ?? command.featureId,
-				fundingCreditCost: fundingRow?.creditCost ?? 1,
-			},
+			}),
+			fundingFeatureId: fundingRow?.featureId ?? command.featureId,
+			fundingCreditCost: fundingRow?.creditCost ?? 1,
 		},
-	});
+	};
 };

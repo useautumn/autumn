@@ -25,6 +25,8 @@ export type CatalogCacheState = {
 	entries: LRUCache<string, CatalogRow>;
 	keysByScope: KeysByInvalidationScope;
 	inFlight: Map<string, Promise<void>>;
+	/** Moves on every insert and removal, so a view joined from these rows knows when to rejoin. */
+	changeCount: number;
 };
 
 export type CatalogCacheContext = {

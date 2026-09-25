@@ -36,8 +36,8 @@ const encodings = new WeakMap<MeteringRecord, { key: Buffer; value: Buffer }>();
 /**
  * Encodes a record once per object. The writer measures a record's size when
  * it is queued and the publisher sends the same object later, so a record is
- * only validated and walked once. Records are treated as immutable from the
- * first call on.
+ * only walked once; it was validated where it entered. Records are treated as
+ * immutable from the first call on.
  */
 export function serializeMeteringRecord({
 	record,
@@ -46,7 +46,8 @@ export function serializeMeteringRecord({
 }): { key: Buffer; value: Buffer } {
 	const cached = encodings.get(record);
 	if (cached) return cached;
-	parseMeteringPayload({ type: record.type, payload: record });
+	// The payload was validated where it entered; only the kind is checked here.
+	if (record.type !== "mutation") throw new InvalidRecordError();
 	const encoded = serializeTopicRecord({
 		key: meteringRecordToKey({ record }),
 		record,
