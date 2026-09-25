@@ -16,6 +16,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { CreateScheduleAdvancedSection } from "./CreateScheduleAdvancedSection";
 import { CreateScheduleGenerationBar } from "./CreateScheduleGenerationBar";
+import { SetPlansReviewChanges } from "./review/SetPlansReviewChanges";
 import { SchedulePhaseCard } from "./SchedulePhaseCard";
 import { SchedulePreview } from "./SchedulePreview";
 
@@ -149,6 +150,7 @@ export function CreateScheduleReviewContent() {
 			/>
 
 			<div className="flex-1 overflow-y-auto">
+				<SetPlansReviewChanges />
 				<CreateScheduleAdvancedSection />
 				<SchedulePreview />
 			</div>
