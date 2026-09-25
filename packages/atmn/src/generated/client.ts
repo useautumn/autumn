@@ -66,7 +66,7 @@ const post = async ({
 };
 
 export type CreateSandboxParams = {
-/** A name for the sandbox, unique within your organization. */
+/** A name for the sandbox, unique within your organization. No spaces, and it can't be `live` or `sandbox`. */
 name: string;
 /** Colour the dashboard uses to label the sandbox. Defaults to `gray`. */
 color?: "gray" | "blue" | "green" | "amber" | "red" | "pink";
@@ -86,6 +86,24 @@ id: string;
 };
 export type ResetSandboxParams = {
 
+};
+export type ListWebhooksParams = {
+
+};
+export type SyncWebhooksParams = {
+/** The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted. */
+webhooks: Array<{
+/** Your ID for the webhook: letters, digits, `-` and `_`. It can't be changed after creation. */
+id: string;
+/** The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work. */
+url: string;
+/** The events sent to this webhook. At least one. */
+events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** A note for your own reference. */
+description?: string;
+/** When true, no events are sent to the webhook. */
+disabled?: boolean;
+}>;
 };
 export type DiffCatalogResponse = {
 plans: Array<{
@@ -52404,6 +52422,132 @@ export type ResetSandboxResponse = {
 /** Always true when the sandbox was reset. */
 success: true;
 };
+export type ListWebhooksResponse = {
+/** The environment's webhooks. */
+list: Array<{
+/** The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID. */
+id: string;
+/** The URL Autumn sends events to. */
+url: string;
+/** A note for your own reference. */
+description: string | null;
+/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** When true, no events are sent to the webhook. */
+disabled: boolean;
+/** When the webhook was created, ms since epoch. */
+createdAt: number;
+/** When the webhook was last changed, ms since epoch. */
+updatedAt: number;
+}>;
+};
+export type PreviewSyncWebhooksResponse = {
+/** What `webhooks.sync` would do. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone. */
+changes: Array<{
+action: "create";
+id: string;
+webhook: {
+/** The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID. */
+id: string;
+/** The URL Autumn sends events to. */
+url: string;
+/** A note for your own reference. */
+description: string | null;
+/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** When true, no events are sent to the webhook. */
+disabled: boolean;
+/** When the webhook was created, ms since epoch. */
+createdAt: number;
+/** When the webhook was last changed, ms since epoch. */
+updatedAt: number;
+};
+} | {
+action: "update";
+id: string;
+before: {
+/** The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID. */
+id: string;
+/** The URL Autumn sends events to. */
+url: string;
+/** A note for your own reference. */
+description: string | null;
+/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** When true, no events are sent to the webhook. */
+disabled: boolean;
+/** When the webhook was created, ms since epoch. */
+createdAt: number;
+/** When the webhook was last changed, ms since epoch. */
+updatedAt: number;
+};
+after: {
+/** The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID. */
+id: string;
+/** The URL Autumn sends events to. */
+url: string;
+/** A note for your own reference. */
+description: string | null;
+/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** When true, no events are sent to the webhook. */
+disabled: boolean;
+/** When the webhook was created, ms since epoch. */
+createdAt: number;
+/** When the webhook was last changed, ms since epoch. */
+updatedAt: number;
+};
+} | {
+action: "unmanaged";
+id: string;
+webhook: {
+/** The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID. */
+id: string;
+/** The URL Autumn sends events to. */
+url: string;
+/** A note for your own reference. */
+description: string | null;
+/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** When true, no events are sent to the webhook. */
+disabled: boolean;
+/** When the webhook was created, ms since epoch. */
+createdAt: number;
+/** When the webhook was last changed, ms since epoch. */
+updatedAt: number;
+};
+}>;
+};
+export type SyncWebhooksResponse = {
+/** The listed webhooks as they stand after the sync, except those in `errors`. */
+webhooks: Array<{
+/** The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID. */
+id: string;
+/** The URL Autumn sends events to. */
+url: string;
+/** A note for your own reference. */
+description: string | null;
+/** The events sent to this webhook. Empty only for a webhook made in the dashboard that receives every event. */
+events: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
+/** When true, no events are sent to the webhook. */
+disabled: boolean;
+/** When the webhook was created, ms since epoch. */
+createdAt: number;
+/** When the webhook was last changed, ms since epoch. */
+updatedAt: number;
+}>;
+/** Signing secrets for the webhooks this sync created, shown once. Existing webhooks keep theirs. */
+secrets: Array<{
+id: string;
+/** The webhook's signing secret. Shown once, here: store it before you discard the response. */
+secret: string;
+}>;
+/** Webhooks that couldn't be created or updated. The others were still applied; the request fails only when none could be. */
+errors: Array<{
+id: string;
+message: string;
+}>;
+};
 const CREATESANDBOX_REQUEST_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
@@ -52425,6 +52569,21 @@ const CREATESANDBOXKEY_REQUEST_HINTS = hintsOf({
 	renamedPaths: {},
 });
 const RESETSANDBOX_REQUEST_HINTS = hintsOf({
+	recordPaths: [],
+	frozenPaths: [],
+	renamedPaths: {},
+});
+const LISTWEBHOOKS_REQUEST_HINTS = hintsOf({
+	recordPaths: [],
+	frozenPaths: [],
+	renamedPaths: {},
+});
+const PREVIEWSYNCWEBHOOKS_REQUEST_HINTS = hintsOf({
+	recordPaths: [],
+	frozenPaths: [],
+	renamedPaths: {},
+});
+const SYNCWEBHOOKS_REQUEST_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
 	renamedPaths: {},
@@ -52480,6 +52639,21 @@ const CREATESANDBOXKEY_RESPONSE_HINTS = hintsOf({
 	renamedPaths: {},
 });
 const RESETSANDBOX_RESPONSE_HINTS = hintsOf({
+	recordPaths: [],
+	frozenPaths: [],
+	renamedPaths: {},
+});
+const LISTWEBHOOKS_RESPONSE_HINTS = hintsOf({
+	recordPaths: [],
+	frozenPaths: [],
+	renamedPaths: {},
+});
+const PREVIEWSYNCWEBHOOKS_RESPONSE_HINTS = hintsOf({
+	recordPaths: [],
+	frozenPaths: [],
+	renamedPaths: {},
+});
+const SYNCWEBHOOKS_RESPONSE_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
 	renamedPaths: {},
@@ -52574,6 +52748,30 @@ export const createClient = (options: ClientOptions) => ({
 			path: "",
 			hints: RESETSANDBOX_RESPONSE_HINTS,
 		}) as ResetSandboxResponse,
+	listWebhooks: async (
+		body: ListWebhooksParams,
+	): Promise<ListWebhooksResponse> =>
+		toFixture({
+			value: await post({ options, path: "/v1/webhooks.list", body: toWire({ value: body, path: "", hints: LISTWEBHOOKS_REQUEST_HINTS }) }),
+			path: "",
+			hints: LISTWEBHOOKS_RESPONSE_HINTS,
+		}) as ListWebhooksResponse,
+	previewSyncWebhooks: async (
+		body: SyncWebhooksParams,
+	): Promise<PreviewSyncWebhooksResponse> =>
+		toFixture({
+			value: await post({ options, path: "/v1/webhooks.preview_sync", body: toWire({ value: body, path: "", hints: PREVIEWSYNCWEBHOOKS_REQUEST_HINTS }) }),
+			path: "",
+			hints: PREVIEWSYNCWEBHOOKS_RESPONSE_HINTS,
+		}) as PreviewSyncWebhooksResponse,
+	syncWebhooks: async (
+		body: SyncWebhooksParams,
+	): Promise<SyncWebhooksResponse> =>
+		toFixture({
+			value: await post({ options, path: "/v1/webhooks.sync", body: toWire({ value: body, path: "", hints: SYNCWEBHOOKS_REQUEST_HINTS }) }),
+			path: "",
+			hints: SYNCWEBHOOKS_RESPONSE_HINTS,
+		}) as SyncWebhooksResponse,
 });
 
 export type AutumnClient = ReturnType<typeof createClient>;

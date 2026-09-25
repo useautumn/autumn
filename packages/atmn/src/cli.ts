@@ -31,6 +31,7 @@ import {
 	staleSkillsHint,
 	updateSkills,
 } from "./actions/skills/skills";
+import { resolveWebhookEnv } from "./actions/webhooks/resolveWebhookEnv";
 import { configPackageName } from "./config/configPackageName";
 import { assertSandboxTarget } from "./env/assertSandboxTarget";
 import { loadEnvFiles } from "./env/loadEnv";
@@ -203,6 +204,20 @@ const pinnedSandboxName = async ({
 		return {};
 	}
 };
+
+/** The env a push or pull's webhook lane addresses, resolved only when asked. */
+const webhookEnvFor =
+	({ target, command }: { target: Target; command: Command }) =>
+	() =>
+		resolveWebhookEnv({
+			target,
+			prod: command.optsWithGlobals<GlobalFlags>().prod === true,
+			fetchOrgInfo: () =>
+				fetchOrgInfo({
+					baseUrl: targetBaseUrl({ target }),
+					secretKey: requireSecretKey({ target }),
+				}),
+		});
 
 /** `/organization/me` for the main key: what `sandbox use` and `init` report the org as. */
 const mainOrgInfo = ({ target }: { target: Target }) => {
@@ -389,6 +404,7 @@ Linking a keyless org to an account:
 					client: clientFor({ target }),
 					configPath: configFlagOf({ command }),
 					dryRun: !apply,
+					webhookEnv: webhookEnvFor({ target, command }),
 				});
 				if (!apply && !previewIsEmpty({ preview: result.preview }))
 					process.stdout.write(
@@ -482,6 +498,7 @@ Linking a keyless org to an account:
 					overwrite: options.overwrite === true,
 					yes: options.yes === true,
 					prompter: prompterFor({ command }),
+					webhookEnv: webhookEnvFor({ target, command }),
 				});
 				writeStaleSkillsHint({ command });
 			},

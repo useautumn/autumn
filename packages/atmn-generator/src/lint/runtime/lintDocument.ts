@@ -6,7 +6,8 @@
  * problem at once — a round trip per mistake is what makes one painful to write.
  */
 
-export type LintIssue = { path: string; message: string };
+/** A warning is reported but never refuses the config. */
+export type LintIssue = { path: string; message: string; warning?: true };
 
 export class ConfigError extends Error {
 	readonly issues: LintIssue[];
@@ -73,6 +74,8 @@ export type LintRule =
 			readonly field: string | readonly string[];
 			readonly alongside?: string;
 			readonly absentMeans?: string;
+			/** Compare as an env var name segment: uppercased, `-` read as `_`. */
+			readonly asEnvName?: true;
 			readonly because: string;
 	  }
 	| {
@@ -109,9 +112,19 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
-			/** A stated `field` must be a non-empty list; `null` is not checked here. */
+			/** A stated `field` must be a non-empty list or map; `null` is not checked here. */
 			readonly kind: "nonEmpty";
 			readonly field: string;
+			/** Reported without refusing the config. */
+			readonly warning?: true;
+			readonly because: string;
+	  }
+	| {
+			/** A stated string `field`, or every value of a map `field`, must not
+			 * satisfy the named `check` the caller supplies to `lintDocument`. */
+			readonly kind: "rejects";
+			readonly field: string;
+			readonly check: string;
 			readonly because: string;
 	  }
 	| {
@@ -176,6 +189,8 @@ export type NodeRules = ShapeRules & {
 	readonly idField?: string;
 	/** Record keys are user data; the spec constrains them via `propertyNames`. */
 	readonly keys?: FieldConstraints;
+	/** A record's scalar values, constrained by its `additionalProperties`. */
+	readonly values?: FieldConstraints;
 	readonly rules?: readonly LintRule[];
 	/** anyOf/oneOf alternatives, chosen by the value of `on`. */
 	readonly variants?: {
@@ -189,6 +204,9 @@ export type NodeRules = ShapeRules & {
 /** Keyed by fixture path with array indices elided — `features.creditSchema`. */
 export type LintRules = Readonly<Record<string, NodeRules>>;
 
+/** Predicates a `rejects` rule names: code the serialised rules cannot carry. */
+export type LintChecks = Readonly<Record<string, (value: string) => boolean>>;
+
 export type LintHints = {
 	readonly recordPaths: ReadonlySet<string>;
 	readonly frozenPaths: ReadonlySet<string>;
@@ -200,6 +218,7 @@ type Walk = {
 	readonly document: Entry;
 	readonly rules: LintRules;
 	readonly hints: LintHints;
+	readonly checks: LintChecks;
 	readonly issues: LintIssue[];
 };
 
@@ -424,11 +443,13 @@ const entryRuleFailures = ({
 	rule,
 	document,
 	parent,
+	checks,
 }: {
 	entry: Entry;
 	rule: LintRule;
 	document: Entry;
 	parent?: Entry;
+	checks: LintChecks;
 }): string[] => {
 	switch (rule.kind) {
 		case "requiredWhen": {
@@ -483,8 +504,28 @@ const entryRuleFailures = ({
 		}
 		case "nonEmpty": {
 			const value = entry[rule.field];
-			if (!Array.isArray(value) || value.length > 0) return [];
-			return [`${rule.field} is empty. ${rule.because}`];
+			const empty = Array.isArray(value)
+				? value.length === 0
+				: isEntry(value) && Object.keys(value).length === 0;
+			return empty ? [`${rule.field} is empty. ${rule.because}`] : [];
+		}
+		case "rejects": {
+			const value = entry[rule.field];
+			const check = checks[rule.check];
+			if (check === undefined) return [];
+			const stated =
+				typeof value === "string"
+					? [value]
+					: isEntry(value)
+						? Object.values(value).filter(
+								(item): item is string => typeof item === "string",
+							)
+						: [];
+			return stated
+				.filter((item) => check(item))
+				.map(
+					(item) => `${rule.field} ${show(item)} is refused. ${rule.because}`,
+				);
 		}
 		case "compare": {
 			const a = entry[rule.field];
@@ -555,7 +596,7 @@ const checkUnique = ({
 	trail,
 	issues,
 }: CollectionCheck<"unique">): void => {
-	const seen = new Set<string>();
+	const seen = new Map<string, string>();
 	for (const [index, entry] of entries.entries()) {
 		if (!isEntry(entry)) continue;
 		const value = firstValueAtPaths({ entry, paths: rule.field });
@@ -565,8 +606,22 @@ const checkUnique = ({
 		const pair =
 			rule.alongside === undefined ? undefined : entry[rule.alongside];
 		if (rule.alongside !== undefined && typeof pair !== "string") continue;
-		const composite = rule.alongside === undefined ? value : `${value}@${pair}`;
-		if (seen.has(composite)) {
+		const normalized = rule.asEnvName
+			? value.toUpperCase().replace(/-/g, "_")
+			: value;
+		const composite =
+			rule.alongside === undefined ? normalized : `${normalized}@${pair}`;
+		const first = seen.get(composite);
+		if (rule.asEnvName && first !== undefined) {
+			// Identical values are the plain unique rule's to report.
+			if (first !== value)
+				issues.push({
+					path: render([...trail, crumbFor({ node, key, entry, index })]),
+					message: `${fieldName} ${show(value)} and ${show(first)} both read as ${normalized} in an env var name. ${rule.because}`,
+				});
+			continue;
+		}
+		if (first !== undefined) {
 			const label =
 				rule.alongside === undefined
 					? `${fieldName} ${show(value)}`
@@ -576,7 +631,7 @@ const checkUnique = ({
 				message: `${label} is used more than once. ${rule.because}`,
 			});
 		}
-		seen.add(composite);
+		seen.set(composite, value);
 	}
 };
 
@@ -754,13 +809,15 @@ const checkEntry = ({
 		checkVariants({ entry, variants: node.variants, at, issues: walk.issues });
 	}
 	for (const rule of node.rules ?? []) {
+		const warning = rule.kind === "nonEmpty" && rule.warning === true;
 		for (const message of entryRuleFailures({
 			entry,
 			rule,
 			document: walk.document,
 			parent,
+			checks: walk.checks,
 		})) {
-			walk.issues.push({ path: at, message });
+			walk.issues.push({ path: at, message, ...(warning ? { warning } : {}) });
 		}
 	}
 };
@@ -841,7 +898,17 @@ const walkValue = ({
 	// values are still ours, one level down at `path.*`.
 	if (walk.hints.recordPaths.has(path)) {
 		const keys = walk.rules[path]?.keys;
+		const values = walk.rules[path]?.values;
 		for (const [recordKey, child] of Object.entries(value)) {
+			if (values && !isEntry(child) && !Array.isArray(child)) {
+				for (const message of constraintFailures({
+					name: `${key}.${recordKey}`,
+					value: child,
+					constraints: values,
+				})) {
+					walk.issues.push({ path: render(trail), message });
+				}
+			}
 			if (keys) {
 				for (const message of constraintFailures({
 					name: `${key} key ${show(recordKey)}`,
@@ -871,12 +938,14 @@ export const lintDocument = ({
 	document,
 	rules,
 	hints,
+	checks = {},
 }: {
 	document: Record<string, unknown>;
 	rules: LintRules;
 	hints: LintHints;
+	checks?: LintChecks;
 }): LintIssue[] => {
-	const walk: Walk = { document, rules, hints, issues: [] };
+	const walk: Walk = { document, rules, hints, checks, issues: [] };
 	walkEntry({ entry: document, path: "", trail: [], walk });
 	return walk.issues;
 };

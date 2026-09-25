@@ -3,6 +3,7 @@ import type {
 	CollectionBranchMeta,
 	NestedFixtureMeta,
 	SingletonMeta,
+	SyncedListMeta,
 } from "../collections";
 import { schemaDefaults, schemaPaths } from "../fuzz/schemaPaths";
 import {
@@ -17,6 +18,10 @@ import {
 	requestBodySchema,
 } from "../spec/loadSpec";
 import { resolveRef } from "../spec/resolveRef";
+import {
+	syncedListItemSchema,
+	syncedListsEnvelope,
+} from "../spec/syncedListSchema";
 import { branchBodySchema } from "./emitCollection";
 import { singletonFields } from "./emitSingleton";
 import { fixtureKeys, requiredFixturePaths } from "./fixtureKeys";
@@ -77,12 +82,14 @@ export const emitEmitModule = ({
 	collections,
 	nested,
 	singletons,
+	syncedLists,
 }: {
 	spec: OpenApiDocument;
 	overlay: Overlay;
 	collections: Readonly<Record<string, EmittedCollection>>;
 	nested: Readonly<Record<string, NestedFixtureMeta>>;
 	singletons: Readonly<Record<string, SingletonMeta>>;
+	syncedLists: Readonly<Record<string, SyncedListMeta>>;
 }): string => {
 	const root = spec as never;
 	const allPaths = schemaPaths({
@@ -107,7 +114,7 @@ export const emitEmitModule = ({
 		);
 	const lines: string[] = [
 		GENERATED_HEADER,
-		'import type { CollectionSpec, SingletonSpec } from "./emitRuntime";',
+		'import type { CollectionSpec, SingletonSpec, SyncedListSpec } from "./emitRuntime";',
 		"",
 		"export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {",
 	];
@@ -211,6 +218,47 @@ export const emitEmitModule = ({
 								schema: resolveRef({ schema, root }) ?? schema,
 								overlay,
 							}),
+						},
+					];
+				}),
+			),
+		)};`,
+	);
+	lines.push("");
+	const listPaths = schemaPaths({
+		schema: syncedListsEnvelope({ spec, lists: syncedLists }),
+		root,
+		overlay,
+	});
+	lines.push(
+		"/** Lists keyed by id outside the catalog, emitted like collection items. */",
+	);
+	lines.push(
+		`export const SYNCED_LISTS: Readonly<Record<string, SyncedListSpec>> = ${JSON.stringify(
+			Object.fromEntries(
+				Object.entries(syncedLists).map(([name, meta]) => {
+					const schema = syncedListItemSchema({ spec, meta });
+					const prefix = `${name}.`;
+					return [
+						name,
+						{
+							wireKey: meta.wireKey,
+							builder: meta.builder,
+							idField: meta.idField,
+							responseIdField: meta.idField,
+							keys: fixtureKeys({ schema, overlay, collection: name }),
+							required: requiredFixturePaths({
+								schema,
+								root,
+								overlay,
+								collection: name,
+							}),
+							paths: [...listPaths.keys()]
+								.filter((path) => path.startsWith(prefix))
+								.map((path) => path.slice(prefix.length))
+								.sort(),
+							pull: true,
+							envKeyed: meta.envKeyed,
 						},
 					];
 				}),

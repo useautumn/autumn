@@ -127,3 +127,37 @@ export const SINGLETONS: Readonly<Record<string, SingletonMeta>> = {
 		wireKey: "config",
 	},
 };
+
+/**
+ * A list keyed by id that lives outside the catalog: its own preview and sync
+ * operations, PATCH semantics (unlisted entries are left alone), and fields a
+ * config states once per environment. The item type is read off the sync body.
+ */
+export type SyncedListMeta = {
+	readonly builder: string;
+	readonly typeName: string;
+	/** Fixture field naming one entry. */
+	readonly idField: string;
+	/** The operation whose request body declares the item's shape. */
+	readonly operationPath: string;
+	/** The request-body array holding the items; the config's key is the map key. */
+	readonly wireKey: string;
+	/** Fields stated per environment as `{ live?, sandbox?, [sandboxSlug]? }`:
+	 * push sends the target env's value and skips an entry that has none. */
+	readonly envKeyed: readonly string[];
+	/** The builder's JSDoc. */
+	readonly describe: string;
+};
+
+export const SYNCED_LISTS: Readonly<Record<string, SyncedListMeta>> = {
+	webhooks: {
+		builder: "webhook",
+		typeName: "Webhook",
+		idField: "id",
+		operationPath: "/v1/webhooks.sync",
+		wireKey: "webhooks",
+		envKeyed: ["url"],
+		describe:
+			"An Autumn webhook, keyed by `id`. `atmn push` creates or updates it in the target environment and never deletes one; webhooks your config doesn't list are left alone. `url` is a map keyed by environment, so one config registers different URLs in prod and each sandbox, and an environment with no key skips the webhook. A newly created webhook's signing secret is written to your env file as `AUTUMN_WEBHOOK_<ID>_SECRET` (prod, in `.env.prod`) or `AUTUMN_WEBHOOK_<ID>_<ORG4>_SECRET` (sandboxes).",
+	},
+};

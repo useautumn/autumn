@@ -1,6 +1,7 @@
 import { loadConfig } from "../config/loadConfig";
 import { loadEnvFiles } from "../env/loadEnv";
 import type { AutumnClient } from "../generated/client";
+import type { LintIssue } from "../generated/lintRuntime";
 import { splitWire } from "../generated/wire";
 import { resolveProject } from "../project/resolveProject";
 import {
@@ -19,7 +20,11 @@ import {
 	deprecatedUsesIn,
 	renderDeprecatedUses,
 } from "./push/deprecatedFields";
+import { PushLanesError, settleLanes } from "./push/pushLanesError";
 import { withSettingsScopeHint } from "./sandbox/withSandboxScopeHint";
+import { applyWebhooks } from "./webhooks/applyWebhooks";
+import { previewWebhooks, type WebhooksLane } from "./webhooks/previewWebhooks";
+import type { WebhookEnv } from "./webhooks/types/webhookEnv";
 
 export type PushResult = {
 	configPath: string;
@@ -54,6 +59,8 @@ export type PushOptions = {
 	/** Where to write progress. Injected so tests can capture it. */
 	write?: (text: string) => void;
 	migrationLinkBase?: string;
+	/** The target env for the webhook lane; resolved only when the config states webhooks. */
+	webhookEnv?: () => Promise<WebhookEnv>;
 };
 
 type RewardBody = { id?: string; internal_id?: string };
@@ -185,71 +192,47 @@ export const configSearchDirs = ({
 	return [...new Set([project.configDir, cwd, ...project.envDirs])];
 };
 
+/** A lint warning never refuses the config; it is printed above the preview. */
+const renderLintWarnings = ({ warnings }: { warnings: LintIssue[] }): string =>
+	warnings
+		.map((warning) => `⚠ ${warning.path}\n  ${warning.message}`)
+		.join("\n");
+
 /**
- * Preview, then apply. The CLI decides nothing here — it sends the same
- * document twice and renders what comes back, which is why a clean preview is
- * a real guarantee rather than a guess.
+ * Settings, then the catalog: a flag like multi_currency changes what the
+ * catalog accepts, so after a settings write the catalog is previewed again
+ * against the settings as they now are, and applied only if work remains.
  */
-export const runPush = async ({
+const applySettingsThenCatalog = async ({
 	client,
-	cwd = process.cwd(),
-	configPath: configFlag,
-	dryRun = false,
-	write = (text) => process.stdout.write(text),
+	settingsBody,
+	settings,
+	catalogPreview,
+	wire,
+	configPath,
+	write,
 	migrationLinkBase,
-}: PushOptions): Promise<PushResult> => {
-	const project = resolveProject({ cwd, configFlag });
-	const dirs = configSearchDirs({ cwd, configPath: configFlag });
-	loadEnvFiles({ dirs: project.envDirs });
-
-	const { path: configPath, wire: document } = await loadConfig({
-		dirs,
-		...(project.configPath === null ? {} : { configPath: project.configPath }),
-	});
-	// One document, two operations: the catalog and each singleton go their own way.
-	const { catalog: wire, singletons } = splitWire(document);
-
-	const deprecated = deprecatedUsesIn({ wire });
-	if (deprecated.length > 0)
-		write(`${renderDeprecatedUses({ uses: deprecated })}\n\n`);
-
-	// Settings go first, on their own: a flag like multi_currency changes what
-	// the catalog accepts, so the catalog is previewed against the settings as
-	// they will be, and a settings write can never fail on the catalog's account.
-	const settingsBody = singletons.settings;
-	const settings = await previewSettings({ client, body: settingsBody });
-	const settingsWork =
-		settingsBody !== undefined && settingsHaveWork({ settings });
-	if (settingsWork) {
-		write(`${renderPreview({ preview: { settings } })}\n`);
-		if (!dryRun) {
-			try {
-				await client.updateOrganization(settingsBody);
-			} catch (error) {
-				throw withSettingsScopeHint({ error });
-			}
-			write("\nApplied settings.\n\n");
+}: {
+	client: AutumnClient;
+	settingsBody: Record<string, unknown> | undefined;
+	settings: SettingsPreview | undefined;
+	catalogPreview: CatalogPreview;
+	wire: Record<string, unknown>;
+	configPath: string;
+	write: (text: string) => void;
+	migrationLinkBase?: string;
+}): Promise<{ applied?: unknown; migrationIds: string[] }> => {
+	let preview = catalogPreview;
+	if (settingsBody !== undefined && settingsHaveWork({ settings })) {
+		try {
+			await client.updateOrganization(settingsBody);
+		} catch (error) {
+			throw withSettingsScopeHint({ error });
 		}
+		write("\nApplied settings.\n");
+		preview = (await client.previewUpdate(wire)) as CatalogPreview;
 	}
-
-	const catalogPreview = (await client.previewUpdate(wire)) as CatalogPreview;
-	// The settings lane is already printed when it applied; the unmanaged
-	// notes still belong beside the catalog's own rows.
-	const preview: CatalogPreview = {
-		...catalogPreview,
-		...(settingsWork ? {} : { settings }),
-	};
-
-	write(`${renderPreview({ preview, migrationLinkBase })}\n`);
-
-	const renameHint = possibleRenameHint({ preview, wire: wire as WireLike });
-	if (renameHint !== null) write(`${renameHint}\n\n`);
-
-	const fullPreview: CatalogPreview = { ...catalogPreview, settings };
-	if (previewIsEmpty({ preview: catalogPreview })) {
-		return { configPath, preview: fullPreview, migrationIds: [] };
-	}
-	if (dryRun) return { configPath, preview: fullPreview, migrationIds: [] };
+	if (previewIsEmpty({ preview })) return { migrationIds: [] };
 
 	const applied = (await client.update(wire)) as {
 		migrations?: { id?: string }[];
@@ -289,6 +272,104 @@ export const runPush = async ({
 	if (backfilled.length > 0 || slugged.length > 0) {
 		write(backfillSummary({ backfilled, slugged }));
 	}
+	return { applied, migrationIds };
+};
 
-	return { configPath, preview: fullPreview, applied, migrationIds };
+/**
+ * Preview, then apply. The CLI decides nothing here — it sends the same
+ * document twice and renders what comes back, which is why a clean preview is
+ * a real guarantee rather than a guess.
+ *
+ * Settings, catalog and webhooks preview together and render as one; every
+ * failing lane is reported at once. Applying runs settings → catalog as one
+ * chain and webhooks → secrets beside it.
+ */
+export const runPush = async ({
+	client,
+	cwd = process.cwd(),
+	configPath: configFlag,
+	dryRun = false,
+	write = (text) => process.stdout.write(text),
+	migrationLinkBase,
+	webhookEnv,
+}: PushOptions): Promise<PushResult> => {
+	const project = resolveProject({ cwd, configFlag });
+	const dirs = configSearchDirs({ cwd, configPath: configFlag });
+	loadEnvFiles({ dirs: project.envDirs });
+
+	const { path: configPath, wire: document } = await loadConfig({
+		dirs,
+		...(project.configPath === null ? {} : { configPath: project.configPath }),
+	});
+	// One document, three destinations: the catalog, each singleton and each synced list.
+	const { catalog: wire, singletons, lists, warnings } = splitWire(document);
+	if (warnings.length > 0) write(`${renderLintWarnings({ warnings })}\n\n`);
+
+	const deprecated = deprecatedUsesIn({ wire });
+	if (deprecated.length > 0)
+		write(`${renderDeprecatedUses({ uses: deprecated })}\n\n`);
+
+	const settingsBody = singletons.settings;
+	const previews = await settleLanes<{
+		settings: SettingsPreview | undefined;
+		catalog: CatalogPreview;
+		webhooks: WebhooksLane | undefined;
+	}>({
+		settings: previewSettings({ client, body: settingsBody }),
+		catalog: client.previewUpdate(wire) as Promise<CatalogPreview>,
+		webhooks: previewWebhooks({
+			client,
+			rows: lists.webhooks,
+			webhookEnv,
+		}),
+	});
+	if (previews.failures.length > 0)
+		throw new PushLanesError({ stage: "preview", failures: previews.failures });
+	const { settings, webhooks } = previews.values;
+	const catalogPreview = previews.values.catalog ?? {};
+
+	const preview: CatalogPreview = {
+		...catalogPreview,
+		settings,
+		...(webhooks === undefined ? {} : { webhooks: webhooks.preview }),
+	};
+	write(`${renderPreview({ preview, migrationLinkBase })}\n`);
+
+	const renameHint = possibleRenameHint({ preview, wire: wire as WireLike });
+	if (renameHint !== null) write(`${renameHint}\n\n`);
+
+	if (dryRun || previewIsEmpty({ preview }))
+		return { configPath, preview, migrationIds: [] };
+
+	const applied = await settleLanes<{
+		catalog: { applied?: unknown; migrationIds: string[] };
+		webhooks: unknown;
+	}>({
+		catalog: applySettingsThenCatalog({
+			client,
+			settingsBody,
+			settings,
+			catalogPreview,
+			wire,
+			configPath,
+			write,
+			migrationLinkBase,
+		}),
+		webhooks: applyWebhooks({
+			client,
+			lane: webhooks,
+			envDirs: project.envDirs,
+			cwd,
+			write,
+		}),
+	});
+	if (applied.failures.length > 0)
+		throw new PushLanesError({ stage: "apply", failures: applied.failures });
+
+	return {
+		configPath,
+		preview,
+		applied: applied.values.catalog?.applied,
+		migrationIds: applied.values.catalog?.migrationIds ?? [],
+	};
 };

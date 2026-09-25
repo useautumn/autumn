@@ -106,6 +106,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				description: "Miscellaneous configurations for the customer.",
 			},
 			{
+				name: "billing_details",
+				type: "json",
+				required: false,
+				description:
+					"Billing details to set on the Stripe customer. Creates the Stripe customer if needed.",
+			},
+			{
 				name: "expand",
 				type: "json",
 				required: false,
@@ -269,6 +276,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: false,
 				description: "Miscellaneous configurations for the customer.",
+			},
+			{
+				name: "billing_details",
+				type: "json",
+				required: false,
+				description:
+					"Billing details stored on the linked Stripe customer. Requires a Stripe customer.",
 			},
 			{
 				name: "new_customer_id",
@@ -1094,6 +1108,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				description:
 					"Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.",
 			},
+			{
+				name: "remove_discounts",
+				type: "json",
+				required: false,
+				description:
+					"Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.",
+			},
 		],
 	},
 	{
@@ -1552,6 +1573,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				description:
 					"Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.",
 			},
+			{
+				name: "remove_discounts",
+				type: "json",
+				required: false,
+				description:
+					"Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.",
+			},
 		],
 	},
 	{
@@ -1765,6 +1793,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
 			},
 			{
+				name: "remove_discounts",
+				type: "json",
+				required: false,
+				description:
+					"Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.",
+			},
+			{
 				name: "custom_line_items",
 				type: "json",
 				required: false,
@@ -1916,6 +1951,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
+			},
+			{
+				name: "remove_discounts",
+				type: "json",
+				required: false,
+				description:
+					"Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.",
 			},
 			{
 				name: "custom_line_items",
@@ -2280,6 +2322,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.",
+			},
+			{
+				name: "remove_discounts",
+				type: "json",
+				required: false,
+				description:
+					"Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.",
 			},
 		],
 	},
@@ -3032,6 +3081,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"Days until the invoice is due. Defaults to the template's terms, then the org default.",
 			},
 			{
+				name: "issue_date",
+				type: "number",
+				required: false,
+				description:
+					"Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future.",
+			},
+			{
+				name: "due_date",
+				type: "number",
+				required: false,
+				description:
+					"When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days.",
+			},
+			{
 				name: "tax_rate_id",
 				type: "string",
 				required: false,
@@ -3168,7 +3231,14 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "number",
 				required: false,
 				description:
-					"Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed.",
+					"Number of days the customer has to pay the replacement invoice. Defaults to the original invoice's due date; required when that date has already passed. A card-charged invoice has no due date and its replacement is charged immediately; setting this makes the replacement a send-invoice one instead.",
+			},
+			{
+				name: "preview",
+				type: "boolean",
+				required: false,
+				description:
+					"If true, returns the replacement invoice's lines and totals without voiding anything or issuing it.",
 			},
 			{
 				name: "update_customer_email",
@@ -3176,6 +3246,25 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Updates the customer's billing email before the replacement is issued, so Stripe sends the new invoice to this address.",
+			},
+			{
+				name: "invoice",
+				type: "json",
+				required: false,
+				description: "Changes that apply to the replacement invoice only.",
+			},
+			{
+				name: "customer",
+				type: "json",
+				required: false,
+				description:
+					"Changes written to the customer, which the replacement snapshots and later invoices inherit.",
+			},
+			{
+				name: "lines",
+				type: "json",
+				required: false,
+				description: "Add, change or drop lines relative to the original.",
 			},
 		],
 	},
@@ -3776,6 +3865,52 @@ export const API_ROUTES: readonly ApiRoute[] = [
 	},
 	{
 		group: "platform",
+		method: "get_stripe_connection",
+		path: "/v1/platform.get_stripe_connection",
+		description:
+			"Read a managed organization's Stripe OAuth connection, account ID, and authorization time in the selected environment.",
+		body: "object",
+		fields: [
+			{
+				name: "organization_slug",
+				type: "string",
+				required: true,
+				description:
+					"Public tenant organization slug, without the master organization suffix.",
+			},
+			{
+				name: "env",
+				type: "string",
+				required: true,
+				description: "Stripe connection environment to inspect or disconnect.",
+			},
+		],
+	},
+	{
+		group: "platform",
+		method: "disconnect_stripe",
+		path: "/v1/platform.disconnect_stripe",
+		description:
+			"Revoke Autumn's Stripe OAuth access for a managed organization in the selected environment. Does not delete the Stripe account or cancel subscriptions.",
+		body: "object",
+		fields: [
+			{
+				name: "organization_slug",
+				type: "string",
+				required: true,
+				description:
+					"Public tenant organization slug, without the master organization suffix.",
+			},
+			{
+				name: "env",
+				type: "string",
+				required: true,
+				description: "Stripe connection environment to inspect or disconnect.",
+			},
+		],
+	},
+	{
+		group: "platform",
 		method: "link_revenuecat",
 		path: "/v1/platform.link_revenuecat",
 		description:
@@ -3913,7 +4048,8 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				name: "name",
 				type: "string",
 				required: true,
-				description: "A name for the sandbox, unique within your organization.",
+				description:
+					"A name for the sandbox, unique within your organization. No spaces, and it can't be `live` or `sandbox`.",
 			},
 			{
 				name: "color",
@@ -3964,5 +4100,166 @@ export const API_ROUTES: readonly ApiRoute[] = [
 			"Wipes every customer, plan, feature and migration draft in the sandbox the calling key belongs to, leaving the sandbox itself, its secret keys and its settings in place. There is no id to pass: a sandbox's own key resets that sandbox, and an organization's test-mode key resets its default sandbox environment. Refused for live keys — only sandboxes can be reset. Cannot be undone.",
 		body: "none",
 		fields: [],
+	},
+	{
+		group: "webhooks",
+		method: "create",
+		path: "/v1/webhooks.create",
+		description:
+			"Creates a webhook: a URL Autumn sends the listed events to, in the environment of the calling key. You choose the `id`, and it can't be changed later. Returns the signing secret once, in this response — store it, it cannot be read back.",
+		body: "object",
+		fields: [
+			{
+				name: "id",
+				type: "string",
+				required: true,
+				description:
+					"Your ID for the webhook: letters, digits, `-` and `_`. It can't be changed after creation.",
+			},
+			{
+				name: "url",
+				type: "string",
+				required: true,
+				description:
+					"The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.",
+			},
+			{
+				name: "events",
+				type: "json",
+				required: true,
+				description: "The events sent to this webhook. At least one.",
+			},
+			{
+				name: "description",
+				type: "string",
+				required: false,
+				description: "A note for your own reference.",
+			},
+			{
+				name: "disabled",
+				type: "boolean",
+				required: false,
+				description: "When true, no events are sent to the webhook.",
+			},
+		],
+	},
+	{
+		group: "webhooks",
+		method: "get",
+		path: "/v1/webhooks.get",
+		description:
+			"Gets one webhook by ID. The signing secret is never returned here — only `webhooks.create` and `webhooks.sync` show one, when they create the webhook.",
+		body: "object",
+		fields: [
+			{
+				name: "id",
+				type: "string",
+				required: true,
+				description:
+					"The webhook's ID. Webhooks made in the dashboard use the `ep_…` ID shown by `webhooks.list`.",
+			},
+		],
+	},
+	{
+		group: "webhooks",
+		method: "list",
+		path: "/v1/webhooks.list",
+		description:
+			"Lists every webhook in the environment of the calling key, including ones made in the dashboard (these show their `ep_…` ID).",
+		body: "none",
+		fields: [],
+	},
+	{
+		group: "webhooks",
+		method: "update",
+		path: "/v1/webhooks.update",
+		description:
+			"Updates a webhook's URL, events, description or disabled state. Only the fields you pass change. The ID can't be changed — to rename, create a new webhook.",
+		body: "object",
+		fields: [
+			{
+				name: "id",
+				type: "string",
+				required: true,
+				description:
+					"The webhook's ID. Webhooks made in the dashboard use the `ep_…` ID shown by `webhooks.list`.",
+			},
+			{
+				name: "url",
+				type: "string",
+				required: false,
+				description:
+					"The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.",
+			},
+			{
+				name: "events",
+				type: "json",
+				required: false,
+				description: "The events sent to this webhook. At least one.",
+			},
+			{
+				name: "description",
+				type: "string",
+				required: false,
+				description: "A note for your own reference.",
+			},
+			{
+				name: "disabled",
+				type: "boolean",
+				required: false,
+				description: "When true, no events are sent to the webhook.",
+			},
+		],
+	},
+	{
+		group: "webhooks",
+		method: "delete",
+		path: "/v1/webhooks.delete",
+		description:
+			"Permanently deletes a webhook. Autumn stops sending it events immediately. Cannot be undone.",
+		body: "object",
+		fields: [
+			{
+				name: "id",
+				type: "string",
+				required: true,
+				description:
+					"The webhook's ID. Webhooks made in the dashboard use the `ep_…` ID shown by `webhooks.list`.",
+			},
+		],
+	},
+	{
+		group: "webhooks",
+		method: "preview_sync",
+		path: "/v1/webhooks.preview_sync",
+		description:
+			"Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them.",
+		body: "object",
+		fields: [
+			{
+				name: "webhooks",
+				type: "json",
+				required: true,
+				description:
+					"The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.",
+			},
+		],
+	},
+	{
+		group: "webhooks",
+		method: "sync",
+		path: "/v1/webhooks.sync",
+		description:
+			"Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.",
+		body: "object",
+		fields: [
+			{
+				name: "webhooks",
+				type: "json",
+				required: true,
+				description:
+					"The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.",
+			},
+		],
 	},
 ];

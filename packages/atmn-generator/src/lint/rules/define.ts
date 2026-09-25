@@ -87,3 +87,9 @@ export const nonEmpty = (rule: RuleOf<"nonEmpty">): LintRule => ({
 	kind: "nonEmpty",
 	...rule,
 });
+
+/** A stated string, or each value of a stated map, must not pass the named check. */
+export const rejects = (rule: RuleOf<"rejects">): LintRule => ({
+	kind: "rejects",
+	...rule,
+});
