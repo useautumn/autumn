@@ -15,6 +15,7 @@ import {
 	OWNER_EPOCH_HEADER,
 	sendIdempotentBatch,
 	sendTransactionalBatch,
+	sendTransactionalOffsets,
 } from "../../src/kafka.js";
 import { createState, createTrackMutation } from "../meteringFixtures.js";
 
@@ -496,5 +497,64 @@ describe("idempotent batches", () => {
 		expect(fake.records[0]?.messages[0]?.headers).toEqual({
 			[OWNER_EPOCH_HEADER]: "99",
 		});
+	});
+});
+
+describe("transactional senders on an idempotent session", () => {
+	const topic = "balance-partition-owners";
+	const partition = 5;
+	const message = { key: Buffer.from("k"), value: Buffer.from("v") };
+
+	test("a batch becomes one plain produce, so claims and releases work without a transaction", async () => {
+		const sends: ProducerRecord[] = [];
+		const producer: KafkaProducer = {
+			mode: "idempotent",
+			transaction: async () => {
+				throw new Error("An idempotent producer session has no transactions");
+			},
+			send: async (record) => {
+				sends.push(record);
+				return [
+					{ topicName: topic, partition, errorCode: 0, baseOffset: "88" },
+				];
+			},
+		};
+		const appended = await sendTransactionalBatch({
+			producer,
+			topic,
+			partition,
+			messages: [message],
+		});
+		expect(appended.baseOffset).toBe(88n);
+		expect(sends).toHaveLength(1);
+		expect(sends[0]?.acks).toBe(-1);
+	});
+
+	test("offsets are refused: they belong to the consumer group in this mode", async () => {
+		const producer: KafkaProducer = {
+			mode: "idempotent",
+			transaction: async () => {
+				throw new Error("no transactions");
+			},
+			send: async () => [
+				{ topicName: topic, partition, errorCode: 0, baseOffset: "1" },
+			],
+		};
+		const offsets = {
+			consumerGroupId: "g",
+			topics: [{ topic: "commands", partitions: [{ partition, offset: "3" }] }],
+		};
+		await expect(
+			sendTransactionalBatch({
+				producer,
+				topic,
+				partition,
+				messages: [message],
+				offsets,
+			}),
+		).rejects.toThrow(/consumer group/);
+		await expect(
+			sendTransactionalOffsets({ producer, offsets }),
+		).rejects.toThrow(/consumer group/);
 	});
 });

@@ -34,6 +34,8 @@ export type KafkaProducer = {
 	transaction(): Promise<KafkaTransaction>;
 	/** A plain idempotent send; absent on a producer that only speaks transactions. */
 	send?: KafkaSender["send"];
+	/** How this producer commits; absent means transactional. */
+	readonly mode?: KafkaCommitMode;
 };
 
 /** One request to a broker, as kafkajs instruments it. */
