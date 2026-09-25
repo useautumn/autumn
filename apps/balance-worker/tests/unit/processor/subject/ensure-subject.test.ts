@@ -25,6 +25,7 @@ import {
 	SubjectCatalogEvictedError,
 	SubjectNotFoundError,
 } from "../../../../src/processor/subject/subjectErrors.js";
+import { createSubjectViews } from "../../../../src/processor/subject/subjectViews/createSubjectViews.js";
 import type { SubjectScope } from "../../../../src/processor/subject/types/subject.js";
 import type { WorkerDb } from "../../../../src/types/workerDb.js";
 
@@ -200,7 +201,10 @@ const createScope = ({
 			},
 			receiptPolicy: { retentionMs: 1, now: () => 0 },
 		},
-		state: { inFlightLoads: createInFlightLoads() },
+		state: {
+			inFlightLoads: createInFlightLoads(),
+			views: createSubjectViews({ ctx: { catalogCache } }),
+		},
 	};
 	return { scope, calls, catalogCache };
 };

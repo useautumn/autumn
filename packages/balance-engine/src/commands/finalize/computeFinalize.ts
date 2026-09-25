@@ -10,7 +10,6 @@ import type { DeductionRequest } from "../../deduction/types/deductionRequest.js
 import { LockNotFoundError } from "../../errors.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
-import { parseSubjectStateMutation } from "../../parsers.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
 import { splitFinalize, unwoundLockToForwardValue } from "./splitFinalize.js";
 import type { FinalizeCommand } from "./types/finalizeCommand.js";
@@ -82,34 +81,32 @@ export const computeFinalize = ({
 	const outcome = deductionStateToOutcome({ context, deductionState, request });
 
 	const { rejected } = outcome;
-	return parseSubjectStateMutation({
-		input: {
-			schemaVersion: 1,
-			type: "mutation",
-			id: command.commandId,
-			identity: command.identity,
-			subject: fullSubjectToMutationSubject({ fullSubject }),
-			revision: {
-				before: fullSubject.revision,
-				after: fullSubject.revision + 1,
-			},
-			command,
-			// A rejected confirm moves nothing and leaves the lock open for another attempt.
-			changes: rejected
-				? []
-				: [...outcome.changes, { table: "locks", op: "delete", id: lock.id }],
-			result: {
-				type: "finalize",
-				status: rejected ? "rejected" : "applied",
-				reason: rejected ? "insufficient_balance" : null,
-				lockValue,
-				finalValue,
-				deltas: rejected ? [] : outcome.deltas,
-				...deltasToUsageEventFields({
-					fullSubject,
-					deltas: rejected ? [] : outcome.deltas,
-				}),
-			},
+	return {
+		schemaVersion: 1,
+		type: "mutation",
+		id: command.commandId,
+		identity: command.identity,
+		subject: fullSubjectToMutationSubject({ fullSubject }),
+		revision: {
+			before: fullSubject.revision,
+			after: fullSubject.revision + 1,
 		},
-	});
+		command,
+		// A rejected confirm moves nothing and leaves the lock open for another attempt.
+		changes: rejected
+			? []
+			: [...outcome.changes, { table: "locks", op: "delete", id: lock.id }],
+		result: {
+			type: "finalize",
+			status: rejected ? "rejected" : "applied",
+			reason: rejected ? "insufficient_balance" : null,
+			lockValue,
+			finalValue,
+			deltas: rejected ? [] : outcome.deltas,
+			...deltasToUsageEventFields({
+				fullSubject,
+				deltas: rejected ? [] : outcome.deltas,
+			}),
+		},
+	};
 };

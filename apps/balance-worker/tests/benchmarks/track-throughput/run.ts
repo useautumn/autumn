@@ -1,6 +1,7 @@
 import { performance } from "node:perf_hooks";
 import type { TrackCommand } from "@autumn/balance-engine";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
+import type { BalanceWorkerRequestContext } from "../../../src/http/types/balanceWorkerHttp.js";
 import { getBalanceWorkerLogger } from "../../../src/logging/getBalanceWorkerLogger.js";
 import {
 	createInitializeRequest,
@@ -51,16 +52,15 @@ for (const [i, identity] of identities.entries()) {
 }
 
 /** The worker's real Hono app and logger in front of the processor; only the socket is skipped. */
+const runtime: BalanceWorkerRequestContext["runtime"] = {
+	process: (run) => run(bench.processor),
+};
 const app = createBalanceWorkerApp({
 	ctx: {
-		ownership: {
-			findRuntime: () => ({
-				process: (run) => run(bench.processor),
-			}),
-		},
+		ownership: { findRuntime: () => runtime },
 		partitionResolver: { partitionForIdentity: () => 0 },
 		logger: getBalanceWorkerLogger(),
-	} as unknown as Parameters<typeof createBalanceWorkerApp>[0]["ctx"],
+	},
 });
 const trackOverHttp = async (command: TrackCommand) => {
 	const response = await app.request("/v1/track", {

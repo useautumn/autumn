@@ -1,4 +1,3 @@
-import type { SubjectState } from "@autumn/balance-engine";
 import { serializeMeteringRecord } from "@autumn/kafka";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import type { Committer } from "../../../src/committer/types/committer.js";
@@ -11,7 +10,7 @@ import {
 } from "../../fixtures/catalog.js";
 import type { Scenario } from "./scenarios.js";
 
-export type BenchLatency = { appendMs: number; applyMs: number };
+type BenchLatency = { appendMs: number; applyMs: number };
 
 const sleep = (ms: number) =>
 	ms <= 0 ? Promise.resolve() : new Promise((r) => setTimeout(r, ms));
@@ -103,6 +102,3 @@ export const createBenchProcessor = async ({
 		stats: () => ({ appended, serializedBytes }),
 	};
 };
-
-export type BenchProcessor = Awaited<ReturnType<typeof createBenchProcessor>>;
-export type SeedState = SubjectState;
