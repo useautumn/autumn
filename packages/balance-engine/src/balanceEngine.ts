@@ -82,6 +82,8 @@ export type {
 export type { RebalanceRequest } from "./common/rebalance/types/rebalanceRequest.js";
 // deduction
 export { deduct } from "./deduction/deduct.js";
+export { deductionOutcomeToMovedFeatures } from "./deduction/utils/deductionOutcomeToMovedFeatures.js";
+export { isFeatureFundedAfterDeduction } from "./deduction/utils/isFeatureFundedAfterDeduction.js";
 export type { DeductionContext } from "./deduction/types/deductionContext.js";
 export type { DeductionDelta } from "./deduction/types/deductionDelta.js";
 export type { DeductionOutcome } from "./deduction/types/deductionOutcome.js";
@@ -218,6 +220,7 @@ export {
 	splitSubjectState,
 } from "./utils/subjectStateUtils/convertSubjectStateUtils.js";
 export { createSubjectState } from "./utils/subjectStateUtils/createSubjectState.js";
+export { fullSubjectAfterChanges } from "./utils/subjectUtils/fullSubjectAfterChanges.js";
 export {
 	fullCustomerEntitlementToRow,
 	subjectStateToFullSubject,

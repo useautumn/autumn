@@ -1,8 +1,9 @@
-import type {
-	BalanceWebhookEffect,
-	DeductionOutcome,
-	SubjectStateMutation,
-	WorkerFullSubject,
+import {
+	type BalanceWebhookEffect,
+	type DeductionOutcome,
+	deductionOutcomeToMovedFeatures,
+	type SubjectStateMutation,
+	type WorkerFullSubject,
 } from "@autumn/balance-engine";
 import { isBalanceChange } from "./common/classifyChange/isBalanceChange.js";
 import { mutationToAffectedFeatures } from "./common/convertMutation/mutationToAffectedFeatures.js";
@@ -33,14 +34,21 @@ export const subjectsToBalanceWebhooks = ({
 	const tracked = mutationToTrackedFeature({ mutation });
 	if (!tracked || !mutation.changes.some(isBalanceChange)) return [];
 
-	const commands = mutationToAffectedFeatures({
-		mutation,
-		fullSubject: after,
-		trackedFeatureId: tracked.featureId,
-	}).flatMap((feature) => mutationToCheckCommand({ mutation, feature }) ?? []);
+	const movedFromDeduction = process.env.EXP_MOVED_FROM_DEDUCTION
+		? deductionOutcomeToMovedFeatures({ outcome: deduction })
+		: [];
+	const commands = (
+		movedFromDeduction.length > 0
+			? movedFromDeduction
+			: mutationToAffectedFeatures({
+					mutation,
+					fullSubject: after,
+					trackedFeatureId: tracked.featureId,
+				})
+	).flatMap((feature) => mutationToCheckCommand({ mutation, feature }) ?? []);
 
 	return commands.flatMap((command) => [
 		...checkLimitReached({ command, before, after, deduction }),
-		...checkUsageAlerts({ command, before, after }),
+		...(process.env.EXP_NOALERTS ? [] : checkUsageAlerts({ command, before, after })),
 	]);
 };

@@ -2,6 +2,7 @@ import {
 	applyMutation,
 	type Catalog,
 	deductTrack,
+	fullSubjectAfterChanges,
 	meteringIdentityToPartitionKey,
 	type SubjectState,
 	type TrackCommand,
@@ -80,10 +81,15 @@ function decideTrack({
 		fullSubject,
 	});
 	const nextState = applyMutation({ state, mutation });
-	const after = scope.ctx.subjectHydrator.readSubject({
-		state: nextState,
-		identity: command.identity,
-	});
+	if (process.env.EXP_NOEFFECTS) return { kind: "write", mutation, nextState, effects: [] };
+	const after =
+		(process.env.EXP_PATCH_AFTER
+			? fullSubjectAfterChanges({ fullSubject, changes: mutation.changes })
+			: null) ??
+		scope.ctx.subjectHydrator.readSubject({
+			state: nextState,
+			identity: command.identity,
+		});
 	return {
 		kind: "write",
 		mutation,

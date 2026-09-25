@@ -3,6 +3,7 @@ import {
 	deductOnContext,
 } from "../../deduction/deduct.js";
 import { deductionContextFor } from "../../deduction/setup/deductionContextFor.js";
+import { isFeatureFundedAfterDeduction } from "../../deduction/utils/isFeatureFundedAfterDeduction.js";
 import type { DeductionOutcome } from "../../deduction/types/deductionOutcome.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
@@ -28,6 +29,17 @@ export const checkRefusedByDeduction = ({
 	assertCommandSupported({ fullSubject, command });
 	// A refused deduction wrote nothing, so it cannot have refused anything else.
 	if (deduction.rejected) return null;
+	if (
+		process.env.EXP_FUNDED_SHORTCUT &&
+		deduction.request.featureId === command.featureId &&
+		isFeatureFundedAfterDeduction({
+			outcome: deduction,
+			featureId: command.featureId,
+			value: command.requiredBalance,
+			org: command.org,
+		})
+	)
+		return null;
 
 	const request = checkCommandToDeductionRequest({ command });
 	const context = deductionContextFor({

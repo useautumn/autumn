@@ -21,5 +21,5 @@ export const decideEffects = ({
 	deduction: DeductionOutcome;
 }): MutationEffect[] => [
 	...subjectsToBalanceWebhooks({ mutation, before, after, deduction }),
-	...decideAutoTopupEffects({ mutation, after }),
+	...(process.env.EXP_NOTOPUP ? [] : decideAutoTopupEffects({ mutation, after })),
 ];

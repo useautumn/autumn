@@ -84,7 +84,7 @@ const nextCommand = (): TrackCommand => {
 	return createTrackCommand({
 		identity,
 		commandId: `trk_${n}`,
-		featureId: scenario.features[n % scenario.features.length],
+		featureId: scenario.features[args.sameFeature ? 0 : n % scenario.features.length],
 		value: 1,
 		occurredAt: 1_700_000_000_000 + n,
 	});
