@@ -2252,7 +2252,7 @@ export const LINT_RULES: LintRules = {
 			pattern: "^[a-z0-9_-]+$",
 		},
 		values: {
-			pattern: "^https:\\/\\/",
+			pattern: "^[Hh][Tt][Tt][Pp][Ss]:\\/\\/",
 		},
 	},
 };

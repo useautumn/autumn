@@ -58,7 +58,7 @@ test("spec rules: id charset, https, and at least one event", () => {
 	);
 	expect(
 		messages([billing({ url: { sandbox: "http://example.com/autumn" } })]),
-	).toContain("url.sandbox must match ^https:");
+	).toContain("url.sandbox must match ^[Hh][Tt][Tt][Pp][Ss]:");
 	expect(messages([billing({ events: [] })])).toContain(
 		"events must have at least 1 entry",
 	);
@@ -69,6 +69,7 @@ test("localhost and private networks are refused in every env; a tunnel is not",
 		"https://localhost:3000/hook",
 		"https://api.local/hook",
 		"https://10.0.0.4/hook",
+		"https://[fd12::1]/hook",
 	]) {
 		expect(messages([billing({ url: { live: url } })])).toContain(
 			`url ${JSON.stringify(url)} is refused`,
@@ -89,6 +90,19 @@ test("ids must be unique, and must not collide once turned into an env var name"
 	expect(messages([billing({ id: "a-b" }), billing({ id: "a_b" })])).toContain(
 		'id "a_b" and "a-b" both read as A_B',
 	);
+});
+
+test("the https scheme is matched case-insensitively, as the server reads it", () => {
+	expect(
+		issuesOf([
+			billing({ url: { sandbox: "HTTPS://staging.example.com/autumn" } }),
+		]),
+	).toEqual([]);
+	expect(
+		messages([
+			billing({ url: { sandbox: "HTTP://staging.example.com/autumn" } }),
+		]),
+	).toContain("url.sandbox must match");
 });
 
 test("url keys are live, sandbox or a sandbox slug: no spaces, no capitals", () => {
