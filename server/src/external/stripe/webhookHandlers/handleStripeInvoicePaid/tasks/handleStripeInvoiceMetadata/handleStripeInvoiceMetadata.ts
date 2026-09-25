@@ -2,7 +2,7 @@ import { MetadataType } from "@autumn/shared";
 import { handleInvoiceActionRequiredCompleted } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/handleStripeInvoiceMetadata/handleInvoiceActionRequiredCompleted.js";
 import { handleInvoiceCheckoutPaid } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/handleStripeInvoiceMetadata/handleInvoiceCheckoutPaid.js";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext.js";
-import { executeClaimedDeferredInvoicePlan } from "@/internal/billing/v2/execute/executeClaimedDeferredInvoicePlan.js";
+import { executeDeferredInvoicePlanOnce } from "@/internal/billing/v2/execute/executeDeferredInvoicePlanOnce.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { MetadataService } from "@/internal/metadata/MetadataService.js";
@@ -29,7 +29,7 @@ export const handleStripeInvoiceMetadata = async ({
 
 	// Handle deferred billing plan (v2 flow)
 	if (metadata.type === MetadataType.DeferredInvoice) {
-		await executeClaimedDeferredInvoicePlan({
+		await executeDeferredInvoicePlanOnce({
 			ctx,
 			metadata,
 			stripeSubscription,

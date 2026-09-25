@@ -18,7 +18,7 @@ import { pollUntilAsserted } from "@tests/utils/genUtils";
 import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { executeClaimedDeferredInvoicePlan } from "@/internal/billing/v2/execute/executeClaimedDeferredInvoicePlan";
+import { executeDeferredInvoicePlanOnce } from "@/internal/billing/v2/execute/executeDeferredInvoicePlanOnce";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
@@ -149,8 +149,8 @@ test.concurrent(
 		);
 
 		await Promise.all([
-			executeClaimedDeferredInvoicePlan({ ctx, metadata, stripeInvoice }),
-			executeClaimedDeferredInvoicePlan({ ctx, metadata, stripeInvoice }),
+			executeDeferredInvoicePlanOnce({ ctx, metadata, stripeInvoice }),
+			executeDeferredInvoicePlanOnce({ ctx, metadata, stripeInvoice }),
 		]);
 
 		await expectSingleActiveRow({ ctx, internalCustomerId, productId: pro.id });

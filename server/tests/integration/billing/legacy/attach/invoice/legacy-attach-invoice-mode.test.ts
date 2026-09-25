@@ -287,7 +287,6 @@ test.concurrent(
 
 		expect(res.checkout_url).toBeFalsy();
 
-		// Premium waits on the draft; pro stays active
 		const customerBefore = await autumnV1.customers.get<ApiCustomerV3>(
 			customerId,
 			{ skip_cache: "true" },

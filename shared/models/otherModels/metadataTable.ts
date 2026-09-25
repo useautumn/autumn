@@ -8,7 +8,6 @@ export enum MetadataType {
 	CheckoutSessionCompleted = "checkout_session_completed",
 
 	DeferredInvoice = "deferred_invoice",
-	DeferredInvoiceProcessing = "deferred_invoice_processing",
 	CheckoutSessionV2 = "checkout_session_v2",
 	CheckoutSessionV2Processing = "checkout_session_v2_processing",
 	CheckoutSessionEnabledImmediately = "checkout_session_enabled_immediately",

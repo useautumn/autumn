@@ -77,7 +77,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: draft invoice holds the 
 		finalize_invoice: false,
 	});
 
-	// Draft holds the quantity change until it is finalized
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(
 		beforeBalance,
@@ -155,7 +154,7 @@ test.concurrent(`${chalk.yellowBright("update-quantity: finalizing the draft app
 
 	await ctx.stripeCli.invoices.finalizeInvoice(draftInvoice!.stripe_id);
 
-	// +5 units × 12 billing_units = +60 messages once finalized, no payment needed
+	// +5 units × 12 billing_units = +60 messages
 	await expectCustomerFeatureCorrect({
 		autumn: autumnV1,
 		customerId,

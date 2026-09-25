@@ -21,7 +21,6 @@ export const getDeferredBillingMetadataExpiresAt = ({
 }) => {
 	if (paymentMethod?.type === "custom") return null;
 
-	// A draft has no due date: its plan waits until the invoice is finalized or voided.
 	if (stripeInvoice?.status === "draft") return null;
 
 	if (deferredInvoiceMode) return finalizedInvoiceDueDateMs(stripeInvoice);

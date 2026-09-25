@@ -140,7 +140,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 1: new plan")}`,
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Pending until the draft is finalized
 	await expectCustomerProducts({
 		customer: customerBefore,
 		notPresent: [pro.id],
@@ -162,7 +161,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 1: new plan")}`,
 
 	await finalizeDraftInvoice({ stripeInvoiceId: result.invoice!.stripe_id });
 
-	// Finalizing activates the plan without waiting for payment
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
@@ -263,7 +261,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 2: upgrade")}`, 
 	);
 	expect(stripeInvoice.status).toBe("draft");
 
-	// Pro stays active while premium waits on the draft
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -589,7 +586,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 5: one-off on ex
 	);
 	expect(stripeInvoice.status).toBe("draft");
 
-	// Only pro's credits until the add-on's draft is finalized
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({

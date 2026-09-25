@@ -150,7 +150,6 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 2: upgrade with enabl
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Premium waits on the draft; pro stays active
 	await expectCustomerProducts({
 		customer: customerBefore,
 		active: [pro.id],
