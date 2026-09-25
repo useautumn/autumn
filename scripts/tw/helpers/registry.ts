@@ -176,13 +176,24 @@ export const addWebhook = async (
 		}
 	});
 
-/** Record the run's single dedicated Svix shard app id (plan §7). */
-export const setSvixApp = async (
-	runId: string,
-	svixAppId: string,
-): Promise<RegistryEntry> =>
+export const getSvixAppIds = (
+	entry: Pick<RegistryEntry, "svixAppId" | "svixAppIds">,
+): string[] => [
+	...new Set([
+		...(entry.svixAppIds ?? []),
+		...(entry.svixAppId ? [entry.svixAppId] : []),
+	]),
+];
+
+export const addSvixApp = async ({
+	runId,
+	svixAppId,
+}: {
+	runId: string;
+	svixAppId: string;
+}): Promise<RegistryEntry> =>
 	updateEntry(runId, (entry) => {
-		entry.svixAppId = svixAppId;
+		entry.svixAppIds = [...new Set([...getSvixAppIds(entry), svixAppId])];
 	});
 
 /** Mark a run cleanly torn down (plan §9a — clears the orphan signal). */

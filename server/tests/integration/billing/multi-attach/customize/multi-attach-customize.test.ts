@@ -118,21 +118,8 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 1: different custo
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 2: Custom items per plan (add feature + change included usage)
-//
-// Scenario:
-// - planA: Base ($20/mo) with messages (100 included) —
-//   customized to $50/mo, messages (500 included) + dashboard boolean
-// - planB: Base ($30/mo) with words (10 included) in group-b —
-//   customized to free (price null), words (50 included)
-//
-// Expected:
-// - Preview total = $50 ($50 + $0)
-// - Both products active
-// - Messages balance = 500, dashboard exists, words balance = 50
-// - Invoice total = $50
-// ═══════════════════════════════════════════════════════════════════
+// Separate groups allow both customized plans to remain active.
+// Purchased messages total 800; billable packs cost $40 + $120.
 test.concurrent(`${chalk.yellowBright("multi-attach customize 2: custom items per plan")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -140,12 +127,17 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 2: custom items pe
 		id: "addon",
 		items: [messagesItem, items.monthlyPrice({ price: 20 })],
 	});
+	const planB = products.base({
+		id: "plan-b",
+		items: [messagesItem, items.monthlyPrice({ price: 20 })],
+		group: "group-b",
+	});
 
 	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "ma-customize-items",
 		setup: [
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [addon] }),
+			s.products({ list: [addon, planB] }),
 		],
 		actions: [],
 	});
@@ -168,7 +160,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 2: custom items pe
 				],
 			},
 			{
-				plan_id: addon.id,
+				plan_id: planB.id,
 				customize: {
 					price: null,
 					items: [itemsV2.prepaidMessages({ included: 100, amount: 30 })],
@@ -180,7 +172,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 2: custom items pe
 		],
 	};
 
-	// 1. Preview — $50 (planA custom price) + $0 (planB price removed) = $50
+	// 1. Preview — two $20 packs + four $30 packs = $160.
 	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
 	expect(preview.total).toEqual(40 + 120);
 
@@ -192,10 +184,10 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 2: custom items pe
 
 	await expectCustomerProducts({
 		customer,
-		active: [addon.id],
+		active: [addon.id, planB.id],
 	});
 
-	// Messages: 500 included (customized up from 100)
+	// Messages: 300 + 500 purchased across the two plans.
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
