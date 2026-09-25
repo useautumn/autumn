@@ -25,6 +25,7 @@ import { completeInvoiceCheckoutV2 } from "@tests/utils/browserPool/completeInvo
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -107,8 +108,8 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 1: /checkout endpoint
 //
 // Expected:
 // - No checkout URL (auto-charged or draft)
-// - Premium product active immediately
 // - Invoice is draft with proration amount ($30)
+// - Premium pending until the draft is finalized, then active (no payment needed)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 2: upgrade with enable_product_immediately draft invoice")}`, async () => {
@@ -146,27 +147,41 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 2: upgrade with enabl
 	// No checkout URL when finalize_invoice: false
 	expect(res.checkout_url).toBeFalsy();
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Premium waits on the draft; pro stays active
+	await expectCustomerProducts({
+		customer: customerBefore,
+		active: [pro.id],
+		notPresent: [premium.id],
+	});
+
+	// 2 invoices: pro $20 (paid) + premium upgrade proration $30 (draft)
+	await expectCustomerInvoiceCorrect({
+		customer: customerBefore,
+		count: 2,
+		invoiceIndex: 0,
+		latestTotal: 30, // Premium $50 - Pro $20 proration
+		latestStatus: "draft",
+	});
+
+	const draftInvoice = customerBefore.invoices?.[0];
+	await ctx.stripeCli.invoices.finalizeInvoice(draftInvoice!.stripe_id);
 
 	await expectProductActive({
-		customer,
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		productId: premium.id,
 	});
 
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		balance: 250,
 		usage: 0,
-	});
-
-	// 2 invoices: pro $20 (paid) + premium upgrade proration $30 (draft)
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 2,
-		invoiceIndex: 0,
-		latestTotal: 30, // Premium $50 - Pro $20 proration
-		latestStatus: "draft",
 	});
 });
 

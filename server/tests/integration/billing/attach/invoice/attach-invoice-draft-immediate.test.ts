@@ -4,9 +4,10 @@
  * Tests for invoice mode with:
  * - invoice: true
  * - finalize_invoice: false (draft invoice)
- * - enable_product_immediately: true (default - product activates immediately)
+ * - enable_product_immediately: true
  *
- * Use case: Merchant wants to review invoice before finalizing, but product activates immediately.
+ * Use case: Merchant reviews the draft before sending it. The plan stays pending
+ * while the invoice is a draft and activates as soon as it is finalized (no payment needed).
  *
  * Scenarios:
  * 1. New plan (no product → pro)
@@ -17,12 +18,16 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, atmnToStripeAmount } from "@autumn/shared";
+import {
+	ALL_STATUSES,
+	type ApiCustomerV3,
+	atmnToStripeAmount,
+	CusProductStatus,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
 	expectCustomerProducts,
-	expectProductActive,
 	expectProductCanceling,
 	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -31,10 +36,39 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect"
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+
+const findCustomerProduct = async ({
+	internalCustomerId,
+	productId,
+}: {
+	internalCustomerId: string;
+	productId: string;
+}) => {
+	const customerProducts = await CusProductService.list({
+		db: ctx.db,
+		internalCustomerId,
+		inStatuses: ALL_STATUSES,
+	});
+	return customerProducts.find(
+		(customerProduct) => customerProduct.product.id === productId,
+	);
+};
+
+const finalizeDraftInvoice = async ({
+	stripeInvoiceId,
+}: {
+	stripeInvoiceId: string;
+}) => {
+	const finalizedInvoice =
+		await ctx.stripeCli.invoices.finalizeInvoice(stripeInvoiceId);
+	expect(finalizedInvoice.status).toBe("open");
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: New plan (draft, immediate)
@@ -46,9 +80,8 @@ import { addMonths } from "date-fns";
  * - Attach pro with invoice mode (draft, immediate)
  *
  * Expected Result:
- * - Draft invoice created
- * - Product activated immediately
- * - Balance correct
+ * - Draft invoice created, pending plan inserted
+ * - Finalizing the draft activates the plan without payment
  */
 test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 1: new plan")}`, async () => {
 	const customerId = "attach-inv-draft-imm-new-plan";
@@ -60,7 +93,7 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 1: new plan")}`,
 		items: [messagesItem, priceItem],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, customer: scenarioCustomer } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -104,15 +137,40 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 1: new plan")}`,
 		atmnToStripeAmount({ amount: preview.total, currency: "usd" }),
 	);
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active (immediate activation)
-	await expectProductActive({
-		customer,
-		productId: pro.id,
+	// Pending until the draft is finalized
+	await expectCustomerProducts({
+		customer: customerBefore,
+		notPresent: [pro.id],
+	});
+	expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
+	await expectCustomerInvoiceCorrect({
+		customer: customerBefore,
+		count: 1,
+		latestTotal: preview.total,
+		latestStatus: "draft",
 	});
 
-	// Verify balance is correct
+	const pendingCustomerProduct = await findCustomerProduct({
+		internalCustomerId: scenarioCustomer?.internal_id ?? "",
+		productId: pro.id,
+	});
+	expect(pendingCustomerProduct?.status).toBe(CusProductStatus.Pending);
+	expect(pendingCustomerProduct?.metadata_id).toBeTruthy();
+
+	await finalizeDraftInvoice({ stripeInvoiceId: result.invoice!.stripe_id });
+
+	// Finalizing activates the plan without waiting for payment
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+		active: [pro.id],
+	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -120,14 +178,20 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 1: new plan")}`,
 		balance: 100,
 		usage: 0,
 	});
-
-	// Verify invoice status in customer
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: preview.total,
-		latestStatus: "draft",
+		latestStatus: "open",
 	});
+
+	const activatedCustomerProduct = await findCustomerProduct({
+		internalCustomerId: scenarioCustomer?.internal_id ?? "",
+		productId: pro.id,
+	});
+	expect(activatedCustomerProduct?.id).toBe(pendingCustomerProduct?.id);
+	expect(activatedCustomerProduct?.status).toBe(CusProductStatus.Active);
+	expect(activatedCustomerProduct?.metadata_id).toBeNull();
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -141,7 +205,7 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 1: new plan")}`,
  *
  * Expected Result:
  * - Draft invoice for prorated difference
- * - Product switched immediately
+ * - Premium pending (pro stays active) until the draft is finalized
  */
 test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 2: upgrade")}`, async () => {
 	const customerId = "attach-inv-draft-imm-upgrade";
@@ -199,16 +263,33 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 2: upgrade")}`, 
 	);
 	expect(stripeInvoice.status).toBe("draft");
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Verify product states - premium active, pro removed
+	// Pro stays active while premium waits on the draft
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
-		customer,
+		customer: customerBefore,
+		active: [pro.id],
+		notPresent: [premium.id],
+	});
+	expectCustomerFeatureCorrect({
+		customer: customerBefore,
+		featureId: TestFeature.Messages,
+		includedUsage: 500,
+		balance: 500,
+		usage: 0,
+	});
+
+	await finalizeDraftInvoice({ stripeInvoiceId: result.invoice!.stripe_id });
+
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		active: [premium.id],
 		notPresent: [pro.id],
 	});
 
-	// Verify balance is premium's balance
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -217,12 +298,12 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 2: upgrade")}`, 
 		usage: 0,
 	});
 
-	// Verify invoices: pro ($20) + upgrade ($30 draft)
+	// Verify invoices: pro ($20) + upgrade ($30, finalized but unpaid)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
 		latestTotal: preview.total,
-		latestStatus: "draft",
+		latestStatus: "open",
 	});
 
 	// Verify Stripe subscription is correct
@@ -344,7 +425,7 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 3: downgrade")}`
  *
  * Expected Result:
  * - Draft invoice created
- * - Credits granted immediately
+ * - Credits granted once the draft is finalized
  */
 test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 4: one-off")}`, async () => {
 	const customerId = "attach-inv-draft-imm-oneoff";
@@ -401,28 +482,35 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 4: one-off")}`, 
 	);
 	expect(stripeInvoice.status).toBe("draft");
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer: customerBefore,
+		notPresent: [oneOff.id],
+	});
+	expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
 
-	// Verify product is active
-	await expectProductActive({
-		customer,
-		productId: oneOff.id,
+	await finalizeDraftInvoice({ stripeInvoiceId: result.invoice!.stripe_id });
+
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+		active: [oneOff.id],
 	});
 
-	// Verify credits granted immediately
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		balance: 100,
 		usage: 0,
 	});
-
-	// Verify invoice
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: preview.total,
-		latestStatus: "draft",
+		latestStatus: "open",
 	});
 });
 
@@ -438,7 +526,7 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 4: one-off")}`, 
  * Expected Result:
  * - Both products exist
  * - Draft invoice for one-off only
- * - Credits granted immediately
+ * - Add-on credits granted once the draft is finalized
  */
 test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 5: one-off on existing sub")}`, async () => {
 	const customerId = "attach-inv-draft-imm-oneoff-existing";
@@ -501,15 +589,32 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 5: one-off on ex
 	);
 	expect(stripeInvoice.status).toBe("draft");
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Verify both products are active
+	// Only pro's credits until the add-on's draft is finalized
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
-		customer,
+		customer: customerBefore,
+		active: [pro.id],
+		notPresent: [oneOffAddon.id],
+	});
+	expectCustomerFeatureCorrect({
+		customer: customerBefore,
+		featureId: TestFeature.Messages,
+		balance: 100,
+		usage: 0,
+	});
+
+	await finalizeDraftInvoice({ stripeInvoiceId: result.invoice!.stripe_id });
+
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		active: [pro.id, oneOffAddon.id],
 	});
 
-	// Verify combined balance (100 from pro + 50 from one-off = 150)
+	// Combined balance (100 from pro + 50 from one-off = 150)
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -517,11 +622,11 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-draft-imm 5: one-off on ex
 		usage: 0,
 	});
 
-	// Verify invoices: pro ($20 paid) + one-off ($15 draft)
+	// Verify invoices: pro ($20 paid) + one-off ($15, finalized but unpaid)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
 		latestTotal: preview.total,
-		latestStatus: "draft",
+		latestStatus: "open",
 	});
 });

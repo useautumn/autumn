@@ -3,6 +3,7 @@ import { storeRenewalLineItems } from "@/external/stripe/webhookHandlers/common"
 import { invoiceActions } from "@/internal/invoices/actions";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 import { setupInvoiceFinalizedContext } from "./setupInvoiceFinalizedContext";
+import { activatePendingPlanOnInvoiceFinalized } from "./tasks/activatePendingPlanOnInvoiceFinalized";
 
 /**
  * Handles invoice.finalized webhook.
@@ -17,6 +18,11 @@ export const handleStripeInvoiceFinalized = async ({
 	ctx: StripeWebhookContext;
 	event: Stripe.InvoiceFinalizedEvent;
 }) => {
+	await activatePendingPlanOnInvoiceFinalized({
+		ctx,
+		stripeInvoice: event.data.object,
+	});
+
 	const eventContext = await setupInvoiceFinalizedContext({ ctx, event });
 
 	if (!eventContext) {

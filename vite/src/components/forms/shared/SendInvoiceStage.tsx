@@ -29,7 +29,7 @@ export interface SendInvoiceSubmitParams {
 }
 
 const IMMEDIATE_ACTIVATION_DESCRIPTION =
-	"Plan activates now, payment is collected separately.";
+	"Plan activates once the invoice is finalized, payment is collected separately.";
 
 const DEFAULT_ACTIVATION_COPY = {
 	immediate: {
@@ -231,7 +231,11 @@ export function SendInvoiceStage({
 						? `Draft invoice for ${productName} created in Stripe`
 						: "Draft invoice created in Stripe"
 				}
-				message="Stripe should have opened in a new tab. If it was blocked, use the link below."
+				message={
+					enableImmediately
+						? "The plan activates once you finalize the invoice in Stripe. If Stripe didn't open in a new tab, use the link below."
+						: "The plan activates after the customer pays. If Stripe didn't open in a new tab, use the link below."
+				}
 				buttonLabel="Open in Stripe"
 				url={completedDraftUrl}
 			/>

@@ -40,10 +40,13 @@ export const classifyStripeWebhookAckMode = ({
 			return invoice.metadata?.autumn_metadata_id ? "sync" : "early";
 		}
 
-		// Vercel marketplace submission happens only in this webhook.
+		// Vercel marketplace submission and pending-plan activation happen only in this webhook.
 		case "invoice.finalized": {
 			const invoice = event.data.object;
-			return invoice.metadata?.vercel_installation_id ? "sync" : "early";
+			const isLoadBearing =
+				invoice.metadata?.vercel_installation_id ||
+				invoice.metadata?.autumn_metadata_id;
+			return isLoadBearing ? "sync" : "early";
 		}
 
 		// Cycle invoices own period-boundary balance resets + arrear billing.
