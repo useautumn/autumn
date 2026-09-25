@@ -924,6 +924,7 @@
         "@autumn/balance-webhooks": "workspace:*",
         "@autumn/balance-worker-client": "workspace:*",
         "@autumn/cache": "workspace:*",
+        "@autumn/catalog-lru": "workspace:*",
         "@autumn/ducklake": "workspace:*",
         "@autumn/dynamodb": "workspace:*",
         "@autumn/edge-config": "workspace:*",
@@ -1047,7 +1048,6 @@
         "zod": "^3.25.23",
       },
       "devDependencies": {
-        "@autumn/catalog-lru": "workspace:*",
         "@types/bun": "1.3.14",
         "@types/chai": "^5.0.1",
         "@types/chai-http": "^3.0.5",
@@ -1200,6 +1200,7 @@
   ],
   "patchedDependencies": {
     "@chat-adapter/slack@4.38.1": "patches/@chat-adapter%2Fslack@4.38.1.patch",
+    "kafkajs@2.2.4": "patches/kafkajs@2.2.4.patch",
   },
   "overrides": {
     "@better-auth/passkey": "1.6.25",

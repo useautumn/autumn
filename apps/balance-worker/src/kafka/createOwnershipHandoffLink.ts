@@ -33,9 +33,13 @@ export function createOwnershipHandoffLink({
 	function onError({ cause }: { cause: unknown }): void {
 		ctx.logger?.warn("Ownership tail reported an error", { error: cause });
 	}
+	// The tail reads the ownership log under the group prefix the worker's
+	// Kafka IAM role already grants for ownership-log readers. Under the tail's
+	// own default prefix the broker refuses the group, the first fetch never
+	// comes, and the worker exits on the tail's start timeout.
 	const tail = createOwnershipTail({
 		ctx: { kafka: ctx.kafka, onError },
-		config: { topic: config.topic },
+		config: { topic: config.topic, groupIdPrefix: "autumn-ownership-log" },
 	});
 
 	async function start(): Promise<void> {

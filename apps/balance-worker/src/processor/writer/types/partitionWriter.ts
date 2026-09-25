@@ -19,10 +19,14 @@ import type {
 export type PartitionWriter = {
 	/** Snapshot: waits for the current writes to reach the store, not writes enqueued later. */
 	waitForStore(): Promise<void>;
+	/** Resolves once every batch handed to the store so far has been applied or failed. */
+	waitForApplies(): Promise<void>;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
 	/** Snapshot: waits for the mutations pending for this customer when called, not ones enqueued later. */
 	waitForPendingCommits(params: { customerKey: string }): Promise<void>;
+	/** Throws once a commit has failed: the projection past it never became durable, so nothing may be read from it. */
+	assertCommitsHealthy(): void;
 	/** Pending projection first, then committed state: what the next decision for this customer would see. */
 	readFreshestState(params: {
 		identity: MeteringIdentity;
@@ -39,6 +43,8 @@ export type CommittedOutcomeAppender = {
 		partition: number;
 		nextOffset: bigint;
 	}): Promise<void>;
+	/** Bytes `appendCommitted` would put on the wire for this record; absent, the writer estimates from JSON. Measuring here lets the appender keep the encoding it later sends. */
+	encodedBytesOf?(params: { record: MeteringRecord }): number;
 	/** Atomically commits all mutations contiguously and returns the first record's offset. */
 	appendCommitted(params: {
 		topic: string;
@@ -67,6 +73,15 @@ export type PartitionWriterLimits = {
 	maxBatchSize: number;
 	maxPendingCommands: number;
 	maxPendingCommandsPerCustomer: number;
+	/** Encoded bytes one Kafka batch may carry; defaults to DEFAULT_MAX_BATCH_BYTES. */
+	maxBatchBytes?: number;
+	/** Committed batches allowed to wait for the store before committing pauses;
+	 *  defaults to DEFAULT_MAX_UNAPPLIED_BATCHES. */
+	maxUnappliedBatches?: number;
+	/** Resident customer state the partition keeps before the oldest is dropped; defaults to the map's own bound. */
+	subjectMapMaxBytes?: number;
+	/** On a busy partition, how long the writer waits for a batch to fill before committing it; unset or 0 commits at once. */
+	commitLingerMs?: number;
 };
 
 export type PartitionWriterConfig = {
@@ -97,7 +112,11 @@ export type PendingMutation = {
 	durability: MutationDurability;
 	/** Stamped on the log's copy, never the store's. */
 	effects?: MutationEffect[];
+	/** The record the log gets, built once: the appender measured this object and sends this object. */
+	loggedRecord: MeteringRecord;
 	settlement: PendingSettlement;
+	/** Bytes of `loggedRecord` on the wire, measured once when queued. */
+	encodedBytes: number;
 	/** What `waitForPendingCommits()` snapshots for this customer. */
 	committed: Promise<CommittedMutation>;
 };
@@ -110,8 +129,23 @@ export type PartitionWriterState = {
 	queue: PendingMutation[];
 	draining: boolean;
 	storeCompletion: Promise<void>;
+	/** Batches Kafka has but the store has not applied yet, oldest first. */
+	unapplied: UnappliedBatch[];
+	/** Resolves once every batch handed to the store so far has been applied, in log order. */
+	applyTail: Promise<void>;
+	/** Whether a store flush is running; the next one takes everything queued by then. */
+	applying: boolean;
 	drainScheduled: boolean;
 	recoveryError: Error | null;
+	/** Records in the last batch taken; more than one means arrivals outpace commits and a linger pays. */
+	lastBatchSize: number;
+	/** Set while the loop lingers; enqueue calls it once the queue holds a full batch. */
+	lingerWake: (() => void) | null;
+};
+
+export type UnappliedBatch = {
+	batch: PendingMutation[];
+	baseOffset: bigint;
 };
 
 export type PartitionWriterScope = {

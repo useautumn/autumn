@@ -1,5 +1,9 @@
+import type { RequestEvent } from "kafkajs";
 import type {
+	KafkaProducerClient,
 	KafkaProducerFactory,
+	KafkaRequestTiming,
+	KafkaSender,
 	KafkaTransaction,
 } from "../client/types/kafkaClient.js";
 import { createProducerConfig } from "./producerConfig.js";
@@ -14,12 +18,22 @@ export function createProducerSession({
 	ctx: dependencies,
 	config,
 }: {
-	ctx: { kafka: KafkaProducerFactory };
+	ctx: {
+		kafka: KafkaProducerFactory;
+		/** Called for every broker request this producer makes. Must not throw. */
+		onRequest?: (timing: KafkaRequestTiming) => void;
+	};
 	config: KafkaProducerSessionConfig;
 }): KafkaProducerSession {
+	const mode = config.mode ?? "transactional";
 	const ctx = {
 		producer: dependencies.kafka.producer(createProducerConfig(config)),
 	};
+	if (dependencies.onRequest)
+		observeRequests({
+			producer: ctx.producer,
+			onRequest: dependencies.onRequest,
+		});
 	const state: ProducerSessionState = {
 		initialized: false,
 		closed: false,
@@ -43,12 +57,28 @@ export function createProducerSession({
 	}
 
 	function transaction(): Promise<KafkaTransaction> {
+		if (mode === "idempotent")
+			throw new Error("An idempotent producer session has no transactions");
 		return beginProducerTransaction({ ctx, state });
+	}
+
+	function send(
+		...params: Parameters<KafkaSender["send"]>
+	): ReturnType<KafkaSender["send"]> {
+		if (!ctx.producer.send)
+			throw new Error("This producer offers no plain send");
+		if (!isUsable()) throw new Error("Producer session is not usable");
+		return ctx.producer.send(...params);
 	}
 
 	async function fence(): Promise<void> {
 		if (state.initialized)
 			throw new Error("Producer session was already initialized");
+		if (mode === "idempotent") {
+			// Nothing at the broker to bump: readers judge a stale owner by the epoch in its records.
+			state.initialized = true;
+			return;
+		}
 		try {
 			// Only startup initializes the epoch; cleanup must never fence a successor.
 			const current = await transaction();
@@ -70,5 +100,28 @@ export function createProducerSession({
 		await ctx.producer.disconnect();
 	}
 
-	return { connect, fence, transaction, isUsable, disconnect };
+	return { connect, fence, transaction, send, isUsable, disconnect, mode };
+}
+
+function observeRequests({
+	producer,
+	onRequest,
+}: {
+	producer: KafkaProducerClient;
+	onRequest: (timing: KafkaRequestTiming) => void;
+}): void {
+	if (!producer.on || !producer.events) return;
+	function report({ payload }: RequestEvent): void {
+		try {
+			onRequest({
+				apiName: payload.apiName,
+				broker: payload.broker,
+				durationMs: payload.duration,
+				pendingMs: payload.pendingDuration,
+			});
+		} catch {
+			// Timing is telemetry; it must never fail a produce.
+		}
+	}
+	producer.on(producer.events.REQUEST, report);
 }

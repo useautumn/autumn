@@ -7,6 +7,7 @@ import {
 	type SubjectState,
 } from "@autumn/balance-engine";
 import type { ConfirmExpiredLockReply } from "@autumn/balance-worker-client/protocol";
+import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type { MutationResult } from "../writer/types/mutation.js";
@@ -29,7 +30,14 @@ export async function confirmExpiredLock({
 	const decided = ctx.writer.decide<never>({
 		command: parsed,
 		mutate: ({ state }) =>
-			decideConfirmExpiredLock({ scope, state, customerKey, command: parsed }),
+			timeSync({ label: "confirmExpiredLock.decide" }, () =>
+				decideConfirmExpiredLock({
+					scope,
+					state,
+					customerKey,
+					command: parsed,
+				}),
+			),
 	});
 
 	const { mutation } = await decided.waitForCommit();

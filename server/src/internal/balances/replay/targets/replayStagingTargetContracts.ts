@@ -7,12 +7,12 @@ export const REPLAY_STAGING_BROKERS: readonly string[] = Object.freeze([
 	"b-4.tfmeteringstaging.jfuutw.c3.kafka.us-east-1.amazonaws.com:9098",
 ]);
 
-export const REPLAY_STAGING_DEPLOYMENT = "tf-balance-staging-v2-512";
+export const REPLAY_STAGING_DEPLOYMENT = "tf-balance-staging-v2-64";
 
 export const REPLAY_STAGING_OWNERSHIP_TOPIC =
-	"tf-balance-staging-v2-512-ownership";
+	"tf-balance-staging-v2-64-ownership";
 
-export const REPLAY_STAGING_PARTITION_COUNT = 512;
+export const REPLAY_STAGING_PARTITION_COUNT = 64;
 
 export const REPLAY_STAGING_REGION = "us-east-1";
 

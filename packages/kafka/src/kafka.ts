@@ -14,10 +14,12 @@ export {
 	parseKafkaOffset,
 } from "./client/kafkaOffsetUtils.js";
 export type {
+	KafkaCommitMode,
 	KafkaOffsetCommit,
 	KafkaProducer,
 	KafkaProducerClient,
 	KafkaProducerFactory,
+	KafkaRequestTiming,
 	KafkaSender,
 	KafkaTransaction,
 	KafkaTransportConfig,
@@ -32,6 +34,11 @@ export { KafkaPartitionOffsetsNotFoundError } from "./consumer/consumerErrors.js
 export { coPartitionedAssigner } from "./consumer/coPartitionedAssigner.js";
 export { createProgressTracker } from "./consumer/createProgressTracker.js";
 export { createTopicConsumer } from "./consumer/createTopicConsumer.js";
+export {
+	balancePartitions,
+	createLoadAwareAssigner,
+	type PartitionLoadSource,
+} from "./consumer/loadAwareAssigner.js";
 export {
 	readPartitionLogRange,
 	readPartitionOffsetAtTimestamp,
@@ -86,6 +93,10 @@ export {
 	partitionProducerTransactionalIdOf,
 } from "./producer/producerConfig.js";
 export { isKafkaProducerFencingCause } from "./producer/producerErrors.js";
+export {
+	OWNER_EPOCH_HEADER,
+	sendIdempotentBatch,
+} from "./producer/sendIdempotentBatch.js";
 export {
 	sendTransactionalBatch,
 	sendTransactionalOffsets,

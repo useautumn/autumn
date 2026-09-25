@@ -3,6 +3,8 @@ import { createMutationPublisher } from "../../kafka/createMutationPublisher.js"
 import { createOwnershipPublisher } from "../../kafka/createOwnershipPublisher.js";
 import { createWorkerProducer } from "../../kafka/createWorkerProducer.js";
 import { createPartitionCommitLogging } from "../../logging/createPartitionCommitLogging.js";
+import { kafkaRequestTimings } from "../../logging/kafkaRequestTimings.js";
+import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
 import { createPartitionRuntime } from "../../runtime/createPartitionRuntime.js";
 import type {
 	ConstructedPartitionRuntime,
@@ -41,21 +43,23 @@ export function createPartitionRuntimeFactory({
 		follower,
 		preparation,
 		recentCommands,
+		producedOffsets,
 	}: PartitionRuntimeFactoryInput): ConstructedPartitionRuntime {
 		const session = createProducerSession({
-			ctx: { kafka: ctx.kafka },
+			ctx: { kafka: ctx.kafka, onRequest: kafkaRequestTimings.record },
 			config: createWorkerProducerConfig({
 				deploymentEnvironment: config.deploymentEnvironment,
 				topic,
 				partition,
 				limits: config.producerLimits,
+				mode: config.commit?.mode,
 			}),
 		});
 		const producer = createWorkerProducer({
 			ctx: { session },
 			config: { topic, partition },
 		});
-		const publication = createOwnershipPublisher({
+		const ownership = createOwnershipPublisher({
 			ctx: {
 				session: producer,
 				partitionOffsets: ctx.ownershipOffsets,
@@ -63,8 +67,19 @@ export function createPartitionRuntimeFactory({
 			},
 			config: { ...config.ownership, partition },
 		});
+		// The epoch a claim hands back is what this writer's records are stamped with.
+		const { publication, ownerEpoch } = trackOwnerEpoch({
+			publication: ownership,
+		});
 		const appender = createMutationPublisher({
-			ctx: { producer },
+			ctx: {
+				producer,
+				producedOffsets,
+				partitionLoad: ctx.partitionLoad,
+				commit: config.commit,
+				ownerEpoch,
+				commandOffsets: ctx.commandOffsets,
+			},
 			config: config.commands,
 		});
 		const commitLogging = createPartitionCommitLogging({
@@ -77,6 +92,7 @@ export function createPartitionRuntimeFactory({
 		const runtime = createPartitionRuntime({
 			ctx: {
 				stateStore: commitLogging.stateStore,
+				logger: ctx.logger,
 				db: ctx.db,
 				catalogCache: ctx.catalogCache,
 				checkpointMaintenance: ctx.checkpointMaintenance,
@@ -102,4 +118,34 @@ export function createPartitionRuntimeFactory({
 		return { runtime, publication };
 	}
 	return createRuntime;
+}
+
+/** Remembers the route epoch of the latest claim this worker won for the partition, however it won it. */
+function trackOwnerEpoch({
+	publication,
+}: {
+	publication: PartitionOwnershipPublication;
+}): {
+	publication: PartitionOwnershipPublication;
+	ownerEpoch(): string | undefined;
+} {
+	let current: string | undefined;
+	async function claim(
+		...params: Parameters<PartitionOwnershipPublication["claim"]>
+	): ReturnType<PartitionOwnershipPublication["claim"]> {
+		const claimed = await publication.claim(...params);
+		current = claimed.routeEpoch;
+		return claimed;
+	}
+	async function awaitClaim(
+		...params: Parameters<PartitionOwnershipPublication["awaitClaim"]>
+	): ReturnType<PartitionOwnershipPublication["awaitClaim"]> {
+		const claimed = await publication.awaitClaim(...params);
+		current = claimed.routeEpoch;
+		return claimed;
+	}
+	function ownerEpoch(): string | undefined {
+		return current;
+	}
+	return { publication: { ...publication, claim, awaitClaim }, ownerEpoch };
 }

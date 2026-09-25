@@ -30,6 +30,12 @@ export const createSubjectJoinCache = ({
 		return join;
 	}
 
+	function peekCatalog({ state }: { state: SubjectState }): Catalog | null {
+		const existing = joins.get(state);
+		if (existing?.catalogChangeCount !== ctx.catalogCache.changeCount())
+			return null;
+		return existing.catalog;
+	}
 	function readCatalog({
 		state,
 		join,
@@ -59,5 +65,5 @@ export const createSubjectJoinCache = ({
 		return fullSubject;
 	}
 
-	return { readCatalog, readFullSubject };
+	return { peekCatalog, readCatalog, readFullSubject };
 };

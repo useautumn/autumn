@@ -89,6 +89,7 @@ function usesBoundedSettingsWithoutStarting(): void {
 				"autumn-balance-worker:staging%2Feu-west-1:metering-events-v1:3",
 			idempotent: true,
 			maxInFlightRequests: 1,
+			createPartitioner: expect.any(Function),
 			transactionTimeout: 15_000,
 			retry: {
 				retries: 3,
@@ -361,3 +362,76 @@ test(
 	"traverses nested errors without cycling or accepting unrelated causes",
 	traversesNestedAndCyclicCauses,
 );
+
+test("reports each broker request the producer makes, and survives a throwing listener", () => {
+	type RequestListener = (event: {
+		payload: {
+			apiName: string;
+			broker: string;
+			duration: number;
+			pendingDuration: number;
+		};
+	}) => void;
+	let listener: RequestListener | undefined;
+	const client = {
+		connect: async () => {},
+		disconnect: async () => {},
+		transaction: async (): Promise<KafkaTransaction> => {
+			throw new Error("unused");
+		},
+		events: { REQUEST: "producer.network.request" as const },
+		on: (_event: string, handler: RequestListener) => {
+			listener = handler;
+			return () => {};
+		},
+	};
+	const timings: unknown[] = [];
+	createProducerSession({
+		ctx: {
+			kafka: { producer: () => client as unknown as KafkaProducerClient },
+			onRequest: (timing) => {
+				timings.push(timing);
+				if (timings.length === 2) throw new Error("listener failed");
+			},
+		},
+		config,
+	});
+	const event = {
+		payload: {
+			apiName: "EndTxn",
+			broker: "b-1:9098",
+			duration: 41,
+			pendingDuration: 2,
+		},
+	};
+	listener?.(event);
+	expect(() => listener?.(event)).not.toThrow();
+	expect(timings[0]).toEqual({
+		apiName: "EndTxn",
+		broker: "b-1:9098",
+		durationMs: 41,
+		pendingMs: 2,
+	});
+});
+
+test("partition producers use the named partition without scanning topic metadata", () => {
+	const { receivedConfigs } = createProducerFixture();
+	const createPartitioner = receivedConfigs[0]?.createPartitioner;
+	expect(createPartitioner).toBeDefined();
+	const partitionOf = createPartitioner?.();
+	let metadataRead = false;
+	const partitionMetadata = new Proxy([], {
+		get(target, key) {
+			metadataRead = true;
+			return Reflect.get(target, key);
+		},
+	});
+	expect(
+		partitionOf?.({
+			topic: "events",
+			partitionMetadata,
+			message: { partition: 5, value: "x" },
+		}),
+	).toBe(5);
+	expect(metadataRead).toBe(false);
+});

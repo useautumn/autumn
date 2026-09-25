@@ -64,6 +64,7 @@ export function createPartitionEntries({
 			};
 			entries.push(entry);
 			state.entries.set(partition, entry);
+			ctx.served?.claim({ partition });
 			subscribeEntryUnavailable({ ctx, state, entry, allocationGeneration });
 		} catch (cause) {
 			reportPartitionError({ ctx, cause });

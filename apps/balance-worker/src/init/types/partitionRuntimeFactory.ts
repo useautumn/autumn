@@ -1,6 +1,8 @@
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type {
+	KafkaCommitMode,
 	KafkaConsumerGroupTimings,
+	KafkaOffsetCommit,
 	KafkaProducerFactory,
 	KafkaProducerLimits,
 } from "@autumn/kafka";
@@ -9,6 +11,8 @@ import type { Admin } from "kafkajs";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type { OwnershipHandoffLink } from "../../kafka/createOwnershipHandoffLink.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
+import type { PartitionLoad } from "../../processor/writer/partitionLoad/createPartitionLoad.js";
+import type { ProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
 import type { PartitionWriterLimits } from "../../processor/writer/types/partitionWriter.js";
 import type {
@@ -36,6 +40,8 @@ export type PartitionRuntimeFactoryInput = {
 	/** Read-only replay of the same partition for preparation; absent in a bare test. */
 	preparation?: PartitionOutcomeFollowerPort;
 	recentCommands: RecentCommands;
+	/** Offsets this runtime's writer produced; its consumer passes them unread. */
+	producedOffsets?: ProducedOffsets;
 };
 
 export type ConstructedPartitionRuntime = {
@@ -48,7 +54,8 @@ export type KafkaOwnedPartitionRuntimeFactory = (
 ) => ConstructedPartitionRuntime;
 
 export type PartitionRuntimeFactoryContext = {
-	logger?: Pick<AutumnLogger, "debug"> & Partial<Pick<AutumnLogger, "error">>;
+	logger?: Pick<AutumnLogger, "debug"> &
+		Partial<Pick<AutumnLogger, "error" | "warn">>;
 	kafka: KafkaProducerFactory;
 	ownershipOffsets: Pick<Admin, "fetchTopicOffsets">;
 	ownershipHandoff?: Pick<OwnershipHandoffLink, "tail" | "sender">;
@@ -59,6 +66,10 @@ export type PartitionRuntimeFactoryContext = {
 	bootstrapper: PartitionBootstrapper;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 	partitionResolver: MeteringPartitionResolver;
+	/** Shared by every partition runtime; the consumer group's assigner reads it on each rejoin. */
+	partitionLoad?: PartitionLoad;
+	/** Commits command offsets through the consumer group when no transaction carries them (idempotent commits). */
+	commandOffsets?: { commit(offsets: KafkaOffsetCommit): Promise<void> };
 };
 
 export type PartitionRuntimeFactoryConfig = {
@@ -70,5 +81,7 @@ export type PartitionRuntimeFactoryConfig = {
 	writerLimits: PartitionWriterLimits;
 	trackReceiptRetentionMs: number;
 	producerLimits: KafkaProducerLimits;
+	/** Defaults to transactional. */
+	commit?: { mode: KafkaCommitMode };
 	timings: KafkaBalanceWorkerTimings;
 };

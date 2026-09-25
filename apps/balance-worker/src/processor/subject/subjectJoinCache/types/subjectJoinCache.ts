@@ -13,6 +13,8 @@ export type SubjectJoin = {
 
 /** Each state's joins, kept until the state is replaced or the catalog moves. */
 export type SubjectJoinCache = {
+	/** The catalog already joined for this state at the catalog's current change count, or null. */
+	peekCatalog(params: { state: SubjectState }): Catalog | null;
 	readCatalog(params: { state: SubjectState; join: () => Catalog }): Catalog;
 	readFullSubject(params: {
 		state: SubjectState;

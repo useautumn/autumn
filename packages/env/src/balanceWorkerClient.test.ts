@@ -48,11 +48,11 @@ test.concurrent("the ownership topic derives from the deployment", () => {
 	const env = createBalanceWorkerClientEnv({
 		...localEnv,
 		KAFKA_BROKERS: "127.0.0.1:19092, localhost:29092",
-		BALANCE_WORKER_DEPLOYMENT: "tf-balance-staging-v2-512",
+		BALANCE_WORKER_DEPLOYMENT: "tf-balance-staging-v2-64",
 		BALANCE_WORKER_OWNERSHIP_TOPIC: "ignored",
 	});
 	expect(env.KAFKA_BROKERS).toEqual(["127.0.0.1:19092", "localhost:29092"]);
 	expect(env.BALANCE_WORKER_OWNERSHIP_TOPIC).toBe(
-		"tf-balance-staging-v2-512-ownership",
+		"tf-balance-staging-v2-64-ownership",
 	);
 });

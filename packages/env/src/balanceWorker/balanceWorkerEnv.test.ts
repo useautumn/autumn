@@ -20,20 +20,35 @@ describe("Balance worker environment", () => {
 		expect(env.BALANCE_WORKER_ENDPOINT).toBe("http://127.0.0.1:8082");
 		expect(env.BALANCE_WORKER_PARTITION_COUNT).toBe(4);
 	});
+	test("commits idempotently unless a deployment says otherwise", () => {
+		expect(createBalanceWorkerEnv(valid).BALANCE_WORKER_COMMIT_MODE).toBe(
+			"idempotent",
+		);
+		expect(
+			createBalanceWorkerEnv({
+				...valid,
+				BALANCE_WORKER_COMMIT_MODE: "transactional",
+			}).BALANCE_WORKER_COMMIT_MODE,
+		).toBe("transactional");
+		expect(() =>
+			createBalanceWorkerEnv({ ...valid, BALANCE_WORKER_COMMIT_MODE: "fast" }),
+		).toThrow();
+	});
+
 	test("derives every Kafka name from the deployment", () => {
 		const env = createBalanceWorkerEnv({
 			...valid,
-			BALANCE_WORKER_DEPLOYMENT: "tf-balance-staging-v2-512",
+			BALANCE_WORKER_DEPLOYMENT: "tf-balance-staging-v2-64",
 			BALANCE_WORKER_METERING_TOPIC: "ignored",
 		});
 		expect(env.BALANCE_WORKER_METERING_TOPIC).toBe(
-			"tf-balance-staging-v2-512-events",
+			"tf-balance-staging-v2-64-events",
 		);
 		expect(env.BALANCE_WORKER_OWNERSHIP_TOPIC).toBe(
-			"tf-balance-staging-v2-512-ownership",
+			"tf-balance-staging-v2-64-ownership",
 		);
 		expect(env.BALANCE_WORKER_GROUP_ID).toBe(
-			"tf-balance-staging-v2-512-workers",
+			"tf-balance-staging-v2-64-workers",
 		);
 	});
 	test("production requires a deployment", () => {

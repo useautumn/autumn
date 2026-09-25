@@ -308,3 +308,120 @@ describe("Kafka committed track outcome appender", () => {
 		expect(fake.lifecycle).toEqual([]);
 	});
 });
+
+test("an appended batch is remembered as this writer's own offsets", async () => {
+	const fake = createFakeProducer();
+	const remembered: { from: bigint; to: bigint }[] = [];
+	const appender = createMutationPublisher({
+		ctx: {
+			producer: fake.producer,
+			producedOffsets: {
+				remember: (range) => {
+					remembered.push(range);
+				},
+				has: () => false,
+				size: () => remembered.length,
+			},
+		},
+	});
+	const state = createState();
+	await appender.appendCommitted({
+		topic,
+		partition,
+		outcomes: [
+			createMutation({ state, commandId: "a" }),
+			createMutation({ state, commandId: "b" }),
+		],
+	});
+	// The fake producer reports baseOffset 41 for every batch.
+	expect(remembered).toEqual([{ from: 41n, to: 42n }]);
+});
+
+test("an appended batch adds its encoded bytes to the partition's load", async () => {
+	const fake = createFakeProducer();
+	const recorded: { partition: number; bytes: number }[] = [];
+	const appender = createMutationPublisher({
+		ctx: {
+			producer: fake.producer,
+			partitionLoad: {
+				record: (entry) => {
+					recorded.push(entry);
+				},
+				forget: () => undefined,
+				claim: () => undefined,
+				release: () => undefined,
+				owned: () => new Set(),
+				snapshot: () => new Map(),
+			},
+		},
+	});
+	const state = createState();
+	const outcomes = [
+		createMutation({ state, commandId: "a" }),
+		createMutation({ state, commandId: "b" }),
+	];
+	await appender.appendCommitted({ topic, partition, outcomes });
+	const expected = outcomes.reduce(
+		(sum, record) => sum + appender.encodedBytesOf({ record }),
+		0,
+	);
+	expect(recorded).toEqual([{ partition, bytes: expected }]);
+	expect(expected).toBeGreaterThan(0);
+});
+
+describe("idempotent commits", () => {
+	test("a batch is one plain produce stamped with the owner's epoch, and command offsets go through the group", async () => {
+		const sends: unknown[] = [];
+		const committed: unknown[] = [];
+		const producer: KafkaProducer = {
+			transaction: async () => {
+				throw new Error("no transactions in idempotent mode");
+			},
+			send: async (record) => {
+				sends.push(record);
+				return [
+					{ topicName: topic, partition, errorCode: 0, baseOffset: "41" },
+				];
+			},
+		};
+		let epoch: string | undefined;
+		const appender = createMutationPublisher({
+			ctx: {
+				producer,
+				commit: { mode: "idempotent" },
+				ownerEpoch: () => epoch,
+				commandOffsets: {
+					commit: async (offsets) => {
+						committed.push(offsets);
+					},
+				},
+			},
+			config: { commandTopic: "commands", groupId: "workers" },
+		});
+		epoch = "2516";
+		const appended = await appender.appendCommitted({
+			topic,
+			partition,
+			outcomes: [createMutation({ state: createState() })],
+		});
+		expect(appended.baseOffset).toBe(41n);
+		expect(sends).toHaveLength(1);
+		const record = sends[0] as {
+			acks: number;
+			messages: { headers?: Record<string, string> }[];
+		};
+		expect(record.acks).toBe(-1);
+		expect(record.messages[0]?.headers).toEqual({ ownerEpoch: "2516" });
+		expect(committed).toEqual([]);
+
+		await appender.commitCommandOffset({ topic, partition, nextOffset: 12n });
+		expect(committed).toEqual([
+			{
+				consumerGroupId: "workers",
+				topics: [
+					{ topic: "commands", partitions: [{ partition, offset: "12" }] },
+				],
+			},
+		]);
+	});
+});

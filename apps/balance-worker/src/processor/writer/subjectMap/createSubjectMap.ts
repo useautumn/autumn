@@ -25,6 +25,7 @@ export const createSubjectMap = ({
 }: {
 	maxBytes?: number;
 } = {}): SubjectMap => {
+	if (!(maxBytes > 0)) throw new RangeError("maxBytes must be positive");
 	// Insertion order is recency: a read re-inserts, eviction walks from the front.
 	const entries = new Map<string, Entry>();
 	// A customer's subject keys (its own and its entities'), so an evict never walks the partition.

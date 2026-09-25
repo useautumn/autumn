@@ -5,6 +5,8 @@ import type {
 	DurableMutationRecord,
 } from "../../../state/types/durableMutation.js";
 import {
+	maxBatchBytesOf,
+	maxUnappliedBatchesOf,
 	rejectAllPending,
 	removePendingMutation,
 } from "../pendingMutations.js";
@@ -17,6 +19,9 @@ import {
 	MutationBatchNotCommittedError,
 	PartitionWriterRecoveryRequiredError,
 } from "../writerErrors.js";
+
+/** Bounds one store flush; the committer writes a flush as a single statement. */
+const MAX_BATCHES_PER_FLUSH = 16;
 
 export function scheduleCommit({
 	scope,
@@ -33,7 +38,9 @@ export function scheduleCommit({
 	setImmediate(runScheduledDrain);
 }
 
-/** Kafka commit → store apply → settle waiters, one batch at a time until the queue empties. */
+/** Kafka commit → answer log callers → hand the batch to the store, then straight
+ *  on to the next batch. The store applies behind the log in order; the loop only
+ *  waits for it when too many batches are still unapplied. */
 async function commitOutcomes({
 	scope,
 }: {
@@ -44,14 +51,103 @@ async function commitOutcomes({
 	state.draining = true;
 	try {
 		while (state.queue.length > 0 && !state.recoveryError) {
-			const batch = state.queue.splice(0, config.limits.maxBatchSize);
+			while (
+				state.unapplied.length >=
+				maxUnappliedBatchesOf({ limits: config.limits })
+			) {
+				await state.unapplied[0]?.batch[0]?.settlement
+					.waitForStore()
+					.catch(() => undefined);
+				if (state.recoveryError) return;
+			}
+			await lingerForBatch({ scope });
+			if (state.recoveryError) return;
+			const batch = takeBatch({ scope });
+			state.lastBatchSize = batch.length;
 			const baseOffset = await appendBatch({ scope, batch });
 			if (baseOffset === null) return;
 			settleAppended({ scope, batch });
-			if (!(await applyBatch({ scope, batch, baseOffset }))) return;
+			queueApply({ scope, batch, baseOffset });
 		}
 	} finally {
 		state.draining = false;
+	}
+}
+
+/**
+ * Waits for more of the queue before the next commit, but only where it pays.
+ * A commit is three broker round trips whatever it carries, and on a busy
+ * partition the commits arrive back to back with one or two records each: the
+ * partition's throughput is then bounded by commits per second, and every track
+ * waits behind that stream. A short linger lets a busy partition carry several
+ * tracks per commit instead. A quiet partition, where the last batch held one
+ * record, never waits: a linger there gathers nothing and costs every track
+ * its length. A full batch ends the wait early.
+ */
+async function lingerForBatch({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): Promise<void> {
+	const { state, config } = scope;
+	const lingerMs = config.limits.commitLingerMs ?? 0;
+	if (lingerMs <= 0 || state.lastBatchSize <= 1) return;
+	if (state.queue.length >= config.limits.maxBatchSize) return;
+	await new Promise<void>((resolve) => {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		function wake(): void {
+			clearTimeout(timer);
+			state.lingerWake = null;
+			resolve();
+		}
+		state.lingerWake = wake;
+		timer = setTimeout(wake, lingerMs);
+	});
+}
+
+/** Hands a committed batch to the store. One flush runs at a time, and each takes
+ *  every batch queued behind the one before it, because a flush costs about the same
+ *  for one row as for hundreds. Order is the log's: batches join the queue in commit
+ *  order and a flush applies them in that order. */
+function queueApply({
+	scope,
+	batch,
+	baseOffset,
+}: {
+	scope: PartitionWriterScope;
+	batch: PendingMutation[];
+	baseOffset: bigint;
+}): void {
+	const { state } = scope;
+	state.unapplied.push({ batch, baseOffset });
+	if (state.applying) return;
+	state.applying = true;
+	state.applyTail = applyQueued({ scope });
+}
+
+async function applyQueued({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): Promise<void> {
+	const { state } = scope;
+	try {
+		while (state.unapplied.length > 0 && !state.recoveryError) {
+			const taken = state.unapplied.slice(0, MAX_BATCHES_PER_FLUSH);
+			const batch = taken.flatMap((entry) => entry.batch);
+			const records = taken.flatMap((entry) =>
+				durableRecordsOf({
+					scope,
+					batch: entry.batch,
+					baseOffset: entry.baseOffset,
+				}),
+			);
+			const ok = await applyBatch({ scope, batch, records });
+			state.unapplied.splice(0, taken.length);
+			if (!ok) return;
+		}
+	} finally {
+		state.applying = false;
 	}
 }
 
@@ -75,7 +171,13 @@ async function appendBatch({
 		}
 		return baseOffset;
 	} catch (cause) {
-		if (cause instanceof MutationBatchNotCommittedError) {
+		// Clearing speculative state is only safe when every committed batch is
+		// already in the store; otherwise memory holds rows the store lacks, so the
+		// partition rebuilds from the log instead.
+		if (
+			cause instanceof MutationBatchNotCommittedError &&
+			state.unapplied.length === 0
+		) {
 			rejectAllPending({
 				state,
 				batch,
@@ -130,14 +232,13 @@ function settlePending({
 async function applyBatch({
 	scope,
 	batch,
-	baseOffset,
+	records,
 }: {
 	scope: PartitionWriterScope;
 	batch: PendingMutation[];
-	baseOffset: bigint;
+	records: DurableMutationRecord[];
 }): Promise<boolean> {
 	try {
-		const records = durableRecordsOf({ scope, batch, baseOffset });
 		const results = await scope.ctx.stateStore.applyDurableMutations({
 			records,
 		});
@@ -187,6 +288,8 @@ async function applyBatch({
 	}
 }
 
+/** Every committed-but-unapplied batch still owns a store milestone, so recovery
+ *  rejects those along with whatever never reached Kafka. */
 function enterRecovery({
 	scope,
 	batch,
@@ -198,13 +301,35 @@ function enterRecovery({
 }): void {
 	const error = new PartitionWriterRecoveryRequiredError({ cause });
 	scope.state.recoveryError = error;
-	rejectAllPending({ state: scope.state, batch, error });
+	const owed = new Set<PendingMutation>(batch);
+	for (const unapplied of scope.state.unapplied)
+		for (const pending of unapplied.batch) owed.add(pending);
+	rejectAllPending({ state: scope.state, batch: [...owed], error });
 }
 
 // Only the log's copy carries the effects; the store, its receipts and checkpoints hold the record without them.
+/** Up to maxBatchSize records and maxBatchBytes, and never empty: enqueue already
+ *  refused any single record over the byte limit. */
+function takeBatch({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): PendingMutation[] {
+	const { state, config } = scope;
+	const maxBatchBytes = maxBatchBytesOf({ limits: config.limits });
+	let count = 0;
+	let bytes = 0;
+	for (const pending of state.queue) {
+		if (count >= config.limits.maxBatchSize) break;
+		if (count > 0 && bytes + pending.encodedBytes > maxBatchBytes) break;
+		bytes += pending.encodedBytes;
+		count++;
+	}
+	return state.queue.splice(0, count);
+}
+
 function mutationOf(pending: PendingMutation): MeteringRecord {
-	if (!pending.effects) return pending.mutation;
-	return { ...pending.mutation, effects: pending.effects };
+	return pending.loggedRecord;
 }
 
 function durableRecordsOf({

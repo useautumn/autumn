@@ -54,15 +54,13 @@ const isPostgresResponse = (
 /** The legacy `balances` map: each tracked feature and the credit systems that can fund it, null where the customer holds none. */
 const balancesOf = ({
 	ctx,
-	fullSubject,
-	featureIds,
+	subjects,
 }: {
 	ctx: AutumnContext;
-	fullSubject: WorkerFullSubject;
-	featureIds: string[];
+	subjects: { featureId: string; fullSubject: WorkerFullSubject }[];
 }): Record<string, ApiBalanceV1 | null> => {
 	const balances: Record<string, ApiBalanceV1 | null> = {};
-	for (const featureId of featureIds) {
+	for (const { featureId, fullSubject } of subjects) {
 		const relevantFeatures = fullSubjectToRelevantFeatures({
 			fullSubject,
 			featureId,
@@ -92,20 +90,30 @@ const workerResponseParts = ({
 	replies: FeatureTrackReply[];
 }): ResponseParts => {
 	const value = body.value ?? 1;
-	// Every reply carries the whole customer's rows and their catalog, so the last one is the freshest view of all features.
-	const { state, catalog } = replies[replies.length - 1].reply;
-	const fullSubject = workerReplyToFullSubject({
-		state,
-		catalog,
-		entityId: body.entity_id,
-	});
+	// Each reply carries only the rows that fund its own feature, so every feature is read off the reply that tracked it.
+	const subjects = replies.map(({ featureId, reply }) => ({
+		featureId,
+		fullSubject: workerReplyToFullSubject({
+			state: reply.state,
+			catalog: reply.catalog,
+			entityId: body.entity_id,
+		}),
+	}));
 	// The worker names the feature each balance is reported in: the tracked one, or the credit system funding it.
-	const fundingFeatureIds = [
-		...new Set(replies.map(({ reply }) => reply.result.fundingFeatureId)),
-	];
-	const fundingBalances = fundingFeatureIds.map((featureId) =>
-		workerStateToApiBalance({ ctx, fullSubject, featureId }),
-	);
+	const fundingFeatureIds: string[] = [];
+	const fundingBalances: ApiBalanceV1[] = [];
+	replies.forEach(({ reply }, index) => {
+		const featureId = reply.result.fundingFeatureId;
+		if (fundingFeatureIds.includes(featureId)) return;
+		fundingFeatureIds.push(featureId);
+		fundingBalances.push(
+			workerStateToApiBalance({
+				ctx,
+				fullSubject: subjects[index].fullSubject,
+				featureId,
+			}),
+		);
+	});
 
 	const rejectedIndex = replies.findIndex(
 		({ reply }) => reply.result.status === "rejected",
@@ -123,11 +131,7 @@ const workerResponseParts = ({
 
 	return {
 		fundingBalances,
-		balances: balancesOf({
-			ctx,
-			fullSubject,
-			featureIds: replies.map(({ featureId }) => featureId),
-		}),
+		balances: balancesOf({ ctx, subjects }),
 		// The worker reports the per-balance breakdown with its decision, the same one its usage event carries.
 		deductions: replies.flatMap(({ reply }) => reply.result.deductions),
 	};

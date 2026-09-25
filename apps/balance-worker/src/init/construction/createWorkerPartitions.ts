@@ -19,6 +19,7 @@ import type {
 	PartitionRuntimeResources,
 	Partitions,
 } from "../../partitions/types/partitions.js";
+import { createProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
 import { createRecentCommands } from "../../processor/writer/recentCommands/createRecentCommands.js";
 import type {
 	WorkerPartitionHighWatermarks,
@@ -97,9 +98,12 @@ export function createWorkerPartitions({
 			windowMs: BALANCE_WORKER_DEDUP_WINDOW_MS,
 			now: Date.now,
 		});
+		// Also one per runtime: the writer remembers what it produced, the replay passes those records unread.
+		const producedOffsets = createProducedOffsets();
 		const follower = meteringConsumer.createReplay({
 			partition,
 			recentCommands,
+			producedOffsets,
 		});
 		const preparation = meteringConsumer.createReplay({
 			partition,
@@ -112,6 +116,7 @@ export function createWorkerPartitions({
 			follower,
 			preparation,
 			recentCommands,
+			producedOffsets,
 		});
 		function markUnavailable(failure: PartitionFailure): void {
 			preparation.markUnavailable(failure);
@@ -226,6 +231,7 @@ export function createWorkerPartitions({
 			progress: { readProgress, observeHighWatermark },
 			subscribePartitionChanges: subscribeChanges,
 			createRuntime,
+			served: ctx.served,
 			ownershipLink: ctx.ownershipLink,
 			awaitReadyAnnouncement: ctx.awaitReadyAnnouncement,
 			onError: ctx.onError,

@@ -1031,3 +1031,41 @@ describe("partition allocation events", function allocationEvents() {
 		reportsInvalidAssignment,
 	);
 });
+
+test("a handler that declines a position gets the record passed without decoding it", async () => {
+	const fixture = createConsumerFixture();
+	const records = createMeteringRecords();
+	const applied: bigint[] = [];
+	const asked: bigint[] = [];
+	function shouldApply({ offset }: { offset: bigint }): boolean {
+		asked.push(offset);
+		return offset !== 1n;
+	}
+	function applyRecord({ position }: MeteringRecordApplication): void {
+		applied.push(position.offset);
+	}
+	const consumer = createMeteringConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, shouldApply, applyRecord },
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	await fixture.deliverBatch({
+		records: [
+			{
+				offset: "0",
+				...serializeMeteringRecord({ record: records.initialization }),
+			},
+			// Undecodable on purpose: a declined record must never be parsed.
+			{ offset: "1", key: Buffer.from("k"), value: Buffer.from("not json") },
+			{ offset: "2", ...serializeMeteringRecord({ record: records.outcome }) },
+		],
+	});
+	expect(asked).toEqual([0n, 1n, 2n]);
+	expect(applied).toEqual([0n, 2n]);
+	expect(fixture.commits).toEqual([[{ topic, partition, offset: "3" }]]);
+	await consumer.stop();
+});

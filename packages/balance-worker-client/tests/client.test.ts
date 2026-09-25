@@ -138,7 +138,12 @@ function createFixture({
 	}
 	const client = createBalanceWorkerClient({
 		ctx: { owners: { findOwner, refresh }, http: { postJson } },
-		config: { partitionCount: 1, timeoutMs, routeRefreshTimeoutMs },
+		config: {
+			partitionCount: 1,
+			timeoutMs,
+			routeRefreshTimeoutMs,
+			batchTracks: false,
+		},
 	});
 	return { client, stats, refreshed: refreshed.promise };
 }
@@ -214,6 +219,8 @@ async function doesNotRetryWorkerErrors(): Promise<void> {
 	for (const [status, code] of [
 		[400, "INVALID_REQUEST"],
 		[503, "NOT_READY"],
+		[429, "OVERLOADED"],
+		[422, "RECORD_TOO_LARGE"],
 		[500, "INTERNAL"],
 	] as const) {
 		const fixture = createFixture({

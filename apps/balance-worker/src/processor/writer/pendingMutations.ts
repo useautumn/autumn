@@ -5,6 +5,7 @@ import {
 	type SubjectState,
 	splitSubjectState,
 } from "@autumn/balance-engine";
+import type { MeteringRecord } from "@autumn/kafka";
 import { createSubjectMap } from "./subjectMap/createSubjectMap.js";
 import type {
 	CommittedMutation,
@@ -16,18 +17,30 @@ import type {
 	PendingMutation,
 	PendingSettlement,
 } from "./types/partitionWriter.js";
-import { PartitionWriterCapacityError } from "./writerErrors.js";
+import {
+	PartitionWriterCapacityError,
+	PartitionWriterRecordTooLargeError,
+} from "./writerErrors.js";
 
-export function createPartitionWriterState(): PartitionWriterState {
+export function createPartitionWriterState({
+	subjectMapMaxBytes,
+}: {
+	subjectMapMaxBytes?: number;
+} = {}): PartitionWriterState {
 	return {
-		subjects: createSubjectMap(),
+		subjects: createSubjectMap({ maxBytes: subjectMapMaxBytes }),
 		pendingByKey: new Map(),
 		pendingByCustomerKey: new Map(),
 		queue: [],
 		draining: false,
 		storeCompletion: Promise.resolve(),
+		unapplied: [],
+		applyTail: Promise.resolve(),
+		applying: false,
 		drainScheduled: false,
 		recoveryError: null,
+		lastBatchSize: 0,
+		lingerWake: null,
 	};
 }
 
@@ -92,6 +105,41 @@ export function createPendingSettlement(): PendingSettlement {
 	return { join, settle, waitForStore, settleStore, rejectCommit, reject };
 }
 
+/** Kafka refuses a batch over the topic's max.message.bytes (1 MiB by default).
+ *  gzip only saves about a quarter on these records, so the raw budget stays
+ *  well under the limit rather than counting on compression. */
+export const DEFAULT_MAX_BATCH_BYTES = 800_000;
+/** Key, envelope and Kafka's per-record framing beside the JSON payload. */
+export const RECORD_OVERHEAD_BYTES = 256;
+
+/** The record the log receives: the mutation plus its effects; the store, receipts and checkpoints hold it without them. */
+export function loggedRecordOf({
+	mutation,
+	effects,
+}: {
+	mutation: MutationRecord;
+	effects?: MutationEffect[];
+}): MeteringRecord {
+	if (!effects) return mutation;
+	return { ...mutation, effects };
+}
+
+/** Bounds how far the store may trail the log: each unapplied batch keeps its
+ *  store-durability callers waiting and its milestones in memory. */
+export const DEFAULT_MAX_UNAPPLIED_BATCHES = 16;
+
+export const maxUnappliedBatchesOf = ({
+	limits,
+}: {
+	limits: PartitionWriterScope["config"]["limits"];
+}): number => limits.maxUnappliedBatches ?? DEFAULT_MAX_UNAPPLIED_BATCHES;
+
+export const maxBatchBytesOf = ({
+	limits,
+}: {
+	limits: PartitionWriterScope["config"]["limits"];
+}): number => limits.maxBatchBytes ?? DEFAULT_MAX_BATCH_BYTES;
+
 /** A queued mutation owns both durability milestones, even after its log reply releases its pins. */
 export function enqueueMutation({
 	scope,
@@ -121,6 +169,18 @@ export function enqueueMutation({
 	) {
 		throw new PartitionWriterCapacityError();
 	}
+	// Refused before anything is projected: a record no batch can carry would
+	// otherwise fail at commit and take the partition, and its worker, with it.
+	const loggedRecord = loggedRecordOf({ mutation, effects });
+	const encodedBytes =
+		(scope.ctx.appender.encodedBytesOf?.({ record: loggedRecord }) ??
+			Buffer.byteLength(JSON.stringify(loggedRecord))) + RECORD_OVERHEAD_BYTES;
+	const maxBatchBytes = maxBatchBytesOf({ limits: config.limits });
+	if (encodedBytes > maxBatchBytes)
+		throw new PartitionWriterRecordTooLargeError({
+			bytes: encodedBytes,
+			maxBatchBytes,
+		});
 	const settlement = createPendingSettlement();
 	const committed = settlement.join({ kind: "new" });
 	const projectedStates =
@@ -135,7 +195,9 @@ export function enqueueMutation({
 		nextState,
 		durability,
 		effects,
+		loggedRecord,
 		settlement,
+		encodedBytes,
 		committed,
 	};
 	for (const [index, projected] of projectedStates.entries()) {
@@ -149,6 +211,10 @@ export function enqueueMutation({
 	state.pendingByCustomerKey.set(customerKey, customerPending);
 	state.queue.push(pending);
 	state.storeCompletion = settlement.waitForStore();
+	// A lingering commit loop has what it was waiting for.
+	if (state.lingerWake && state.queue.length >= config.limits.maxBatchSize) {
+		state.lingerWake();
+	}
 	return pending;
 }
 
