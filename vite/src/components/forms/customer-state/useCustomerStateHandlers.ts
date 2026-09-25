@@ -17,6 +17,9 @@ const clonePlans = (plans: CustomerStatePlan[]): CustomerStatePlan[] =>
 		...plan,
 		prepaidOptions: { ...plan.prepaidOptions },
 		items: plan.items ? [...plan.items] : null,
+		licenseQuantities: plan.licenseQuantities?.map((licenseQuantity) => ({
+			...licenseQuantity,
+		})),
 	}));
 
 /** The same plan in the phase before, preferring one at the same scope. Its

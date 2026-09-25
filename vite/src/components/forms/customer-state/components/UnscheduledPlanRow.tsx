@@ -8,6 +8,7 @@ import {
 } from "@/components/forms/shared";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useCustomerStateContext } from "../CustomerStateProvider";
+import { CustomerStatePlanLicenseRows } from "./CustomerStatePlanLicenseRows";
 import { NotFoundBadge } from "./NotFoundBadge";
 import { PlanPriceLabel } from "./PlanPriceLabel";
 
@@ -48,6 +49,10 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 		form.setFieldValue(`unscheduledPlans[${planIndex}].productId`, productId);
 		form.setFieldValue(`unscheduledPlans[${planIndex}].prepaidOptions`, {});
 		form.setFieldValue(`unscheduledPlans[${planIndex}].items`, null);
+		form.setFieldValue(
+			`unscheduledPlans[${planIndex}].licenseQuantities`,
+			undefined,
+		);
 		form.setFieldValue(`unscheduledPlans[${planIndex}].version`, undefined);
 	};
 
@@ -124,6 +129,11 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 						)}
 					</form.AppField>
 				)}
+			/>
+			<CustomerStatePlanLicenseRows
+				plan={plan}
+				planPath={`unscheduledPlans[${planIndex}]`}
+				currency={displayCurrency}
 			/>
 		</div>
 	);

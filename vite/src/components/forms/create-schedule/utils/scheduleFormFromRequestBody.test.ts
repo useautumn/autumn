@@ -107,6 +107,46 @@ describe("scheduleFormFromRequestBody", () => {
 		});
 	});
 
+	test("round trips per-phase license quantities", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const form = scheduleFormFromRequestBody({
+			phases: [
+				{
+					plans: [
+						{
+							license_quantities: [{ license_plan_id: "seat", quantity: 25 }],
+							plan_id: "gateway",
+						},
+					],
+					starts_at: now,
+				},
+				{
+					plans: [
+						{
+							license_quantities: [{ license_plan_id: "seat", quantity: 50 }],
+							plan_id: "gateway",
+						},
+					],
+					starts_at: now + 1,
+				},
+			],
+		});
+		const request = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			features: [],
+			nowMs: now,
+			phases: form?.phases ?? [],
+			products: [{ id: "gateway", items: [] } as ProductV2],
+		});
+
+		expect(
+			request?.phases.map((phase) => phase.plans[0]?.license_quantities),
+		).toEqual([
+			[{ license_plan_id: "seat", quantity: 25 }],
+			[{ license_plan_id: "seat", quantity: 50 }],
+		]);
+	});
+
 	test("preserves persisted phase identity after a generated edit", () => {
 		const startsAt = Date.UTC(2027, 0, 1);
 		const previousPhases = [0, 1].map((index) => ({
