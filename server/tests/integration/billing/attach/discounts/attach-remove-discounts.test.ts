@@ -5,6 +5,7 @@
  *   1. Upgrading onto a discounted subscription drops the removed coupon and keeps the rest.
  *   2. An add-on merging into a discounted subscription drops the removed coupon.
  *   3. Adding and removing the same reward in one request is rejected.
+ *   4. Removing discounts with no_billing_changes is rejected, since no Stripe write happens.
  *
  * Red (before):  `remove_discounts` is stripped as an unknown key, so the coupon carries over.
  * Green (after): removals drop the matching coupon from the subscription the plan lands on.
@@ -149,6 +150,58 @@ test.concurrent(
 					remove_discounts: [{ reward_id: launch.id }],
 				});
 			},
+		});
+	},
+	300_000,
+);
+
+test.concurrent(
+	`${chalk.yellowBright("attach-remove-discount 4: removing discounts with no_billing_changes is rejected")}`,
+	async () => {
+		const customerId = "att-remove-disc-no-billing";
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+		const premium = products.premium({
+			id: "premium",
+			items: [items.monthlyMessages({ includedUsage: 1000 })],
+		});
+
+		const { autumnV2_4 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const { stripeCli, subscription } = await getStripeSubscription({
+			customerId,
+		});
+		const launch = await createPercentCoupon({ stripeCli, percentOff: 30 });
+		await applySubscriptionDiscount({
+			stripeCli,
+			subscriptionId: subscription.id,
+			couponIds: [launch.id],
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: async () => {
+				await autumnV2_4.billing.attach<AttachParamsV1Input>({
+					customer_id: customerId,
+					plan_id: premium.id,
+					no_billing_changes: true,
+					remove_discounts: [{ reward_id: launch.id }],
+				});
+			},
+		});
+
+		await expectSubscriptionDiscountsCorrect({
+			customerId,
+			couponIds: [launch.id],
 		});
 	},
 	300_000,

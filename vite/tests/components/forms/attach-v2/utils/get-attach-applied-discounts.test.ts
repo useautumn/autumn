@@ -110,7 +110,7 @@ describe("getAttachAppliedDiscounts", () => {
 		).toEqual(["launch_30"]);
 	});
 
-	test("falls back to customer-level discounts when the plan starts a new subscription", () => {
+	test("offers nothing when the plan starts a new subscription", () => {
 		const customer = buildCustomer([
 			paidCustomerProduct({
 				id: "cp_main",
@@ -128,10 +128,10 @@ describe("getAttachAppliedDiscounts", () => {
 				newBillingSubscription: true,
 				discounts,
 			}).map(({ id }) => id),
-		).toEqual(["customer_wide"]);
+		).toEqual([]);
 	});
 
-	test("falls back to customer-level discounts when the target subscription has none", () => {
+	test("never offers customer-level discounts", () => {
 		const customer = buildCustomer([
 			paidCustomerProduct({
 				id: "cp_main",
@@ -149,7 +149,7 @@ describe("getAttachAppliedDiscounts", () => {
 				newBillingSubscription: false,
 				discounts,
 			}).map(({ id }) => id),
-		).toEqual(["customer_wide"]);
+		).toEqual([]);
 	});
 
 	test("prefers the selected entity's subscription", () => {

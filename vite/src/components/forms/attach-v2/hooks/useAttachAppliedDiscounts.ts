@@ -21,7 +21,7 @@ export function useAttachAppliedDiscounts({
 	appliedDiscounts: ApiDiscount[];
 	appliedRemovedRewardIds: string[];
 } {
-	const { discounts } = useCusRewardsQuery({ enabled });
+	const { discounts, isLoading, error } = useCusRewardsQuery({ enabled });
 
 	const appliedDiscounts = useMemo(
 		() =>
@@ -37,14 +37,16 @@ export function useAttachAppliedDiscounts({
 		[enabled, customer, entityId, product, newBillingSubscription, discounts],
 	);
 
-	// Removals for discounts no longer shown (e.g. after switching plans) are dropped.
-	const appliedRemovedRewardIds = useMemo(
-		() =>
-			removedRewardIds.filter((rewardId) =>
-				appliedDiscounts.some((discount) => discount.id === rewardId),
-			),
-		[removedRewardIds, appliedDiscounts],
-	);
+	const canVerifyRemovals = !isLoading && !error && !!customer && !!product;
+
+	// Stale removals (e.g. after switching plans) are only dropped once discounts have loaded.
+	const appliedRemovedRewardIds = useMemo(() => {
+		if (!enabled) return [];
+		if (!canVerifyRemovals) return removedRewardIds;
+		return removedRewardIds.filter((rewardId) =>
+			appliedDiscounts.some((discount) => discount.id === rewardId),
+		);
+	}, [enabled, canVerifyRemovals, removedRewardIds, appliedDiscounts]);
 
 	return { appliedDiscounts, appliedRemovedRewardIds };
 }

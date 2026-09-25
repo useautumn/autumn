@@ -315,7 +315,7 @@ export function AttachFormProvider({
 			product: effectiveProduct,
 			newBillingSubscription,
 			removedRewardIds: formValues.removedRewardIds,
-			enabled: !isMultiPlan,
+			enabled: !isMultiPlan && !noBillingChanges,
 		});
 
 	// Reverting needs an existing subscription to fall back to, and multi-plan

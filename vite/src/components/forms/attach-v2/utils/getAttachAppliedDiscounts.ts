@@ -38,7 +38,7 @@ const getTargetSubscriptionIds = ({
 	return targetCustomerProduct?.subscription_ids ?? [];
 };
 
-/** Mirrors the server: the target subscription's discounts, else the customer-level ones it inherits. */
+/** Discounts on the subscription the plan joins; customer-level coupons stay on the customer, so they are not removable here. */
 export const getAttachAppliedDiscounts = ({
 	customer,
 	entityId,
@@ -61,12 +61,9 @@ export const getAttachAppliedDiscounts = ({
 		newBillingSubscription,
 	});
 
-	const subscriptionDiscounts = discounts.filter(
+	return discounts.filter(
 		(discount) =>
 			discount.subscription_id &&
 			subscriptionIds.includes(discount.subscription_id),
 	);
-	if (subscriptionDiscounts.length > 0) return subscriptionDiscounts;
-
-	return discounts.filter((discount) => !discount.subscription_id);
 };

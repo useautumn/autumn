@@ -19,7 +19,7 @@ import { constructCoupon } from "@/utils/scriptUtils/createTestProducts";
  *
  *   seed-disc-upgrade         on Pro with LAUNCH30 + LOYALTY10 → attach Premium
  *   seed-disc-addon           on Pro with LAUNCH30             → attach the add-on
- *   seed-disc-customer-level  no plan, customer-level PARTNER15 → attach Pro
+ *   seed-disc-customer-level  no plan, customer-level PARTNER15 → attach Pro (not offered for removal)
  *   seed-disc-none            on Pro, no discounts             → attach Premium (control)
  */
 const PLAN_GROUP = "disc-remove";
