@@ -7,6 +7,17 @@ export const sandboxToDraft = (sandbox: SandboxSummary): SandboxDraft => ({
 	icon: sandbox.icon,
 });
 
+export const isSameDraft = ({
+	draft,
+	other,
+}: {
+	draft: SandboxDraft;
+	other: SandboxDraft;
+}) =>
+	draft.name === other.name &&
+	draft.color === other.color &&
+	draft.icon === other.icon;
+
 export const isDraftUnsaved = ({
 	draft,
 	sandbox,

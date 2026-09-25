@@ -40,7 +40,7 @@ export const SandboxSettings = ({
 	sandboxes: SandboxSummary[];
 	draft: SandboxDraft;
 	onDraftChange: (draft: SandboxDraft) => void;
-	onDraftSaved: () => void;
+	onDraftSaved: (saved: SandboxDraft) => void;
 }) => {
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -96,7 +96,7 @@ export const SandboxSettings = ({
 			if (movesActiveUrl) {
 				navigate(nextPath, { replace: true });
 			}
-			onDraftSaved();
+			onDraftSaved({ name: trimmedName, color, icon });
 			toast.success("Sandbox updated");
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to update sandbox"));

@@ -20,7 +20,6 @@ import {
 	Moon,
 	PanelLeft,
 	Plus,
-	Settings2,
 	Sun,
 } from "lucide-react";
 import { useState } from "react";
@@ -29,17 +28,12 @@ import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useOrg, useSwitchActiveOrg } from "@/hooks/common/useOrg";
-import {
-	authClient,
-	useListOrganizations,
-	useSession,
-} from "@/lib/auth-client";
+import { authClient, useListOrganizations } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import { navigateTo } from "@/utils/genUtils";
 import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { useSidebarContext } from "../SidebarContext";
-import { AdminSubmenu } from "./AdminSubmenu";
+import { AdminMenuItems } from "./AdminMenuItems";
 import { CreateNewOrg } from "./CreateNewOrg";
 import { LogOutItem } from "./LogOutItem";
 import {
@@ -70,7 +64,6 @@ export const OrgDropdown = () => {
 	const { org, isLoading, error } = useOrg();
 	const { expanded, setExpanded } = useSidebarContext();
 	const { mode, setMode } = useTheme();
-	const navigate = useNavigate();
 
 	const { data: orgsData } = useListOrganizations();
 	let orgs = Array.isArray(orgsData) ? orgsData : undefined;
@@ -83,8 +76,6 @@ export const OrgDropdown = () => {
 	const [dialogType, setDialogType] = useState<"create" | "manage" | null>(
 		null,
 	);
-
-	const { data: session } = useSession();
 
 	useMemberships();
 	const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -114,6 +105,7 @@ export const OrgDropdown = () => {
 						},
 					]}
 					asChild
+					triggerClassName="w-full"
 				>
 					<DropdownMenuTrigger asChild>
 						<Button
@@ -140,24 +132,14 @@ export const OrgDropdown = () => {
 						</Button>
 					</DropdownMenuTrigger>
 				</AdminHover>
-				<DropdownMenuContent align="start" className="w-60">
+				<DropdownMenuContent
+					align="start"
+					className={expanded ? "w-(--anchor-width)" : "w-60"}
+				>
 					<DropdownMenuGroup>
 						<DropdownMenuLabel className={ORG_MENU_LABEL_CLASS}>
 							Organization
 						</DropdownMenuLabel>
-						<DropdownMenuItem
-							className={ORG_MENU_ITEM_CLASS}
-							onClick={() => {
-								navigateTo("/settings", navigate);
-								setDropdownOpen(false);
-							}}
-						>
-							<Settings2
-								className={ORG_MENU_ICON_CLASS}
-								strokeWidth={ORG_MENU_ICON_STROKE}
-							/>
-							Settings
-						</DropdownMenuItem>
 						{orgs && orgs.length > 0 && (
 							<DropdownMenuSub>
 								<DropdownMenuSubTrigger className={ORG_MENU_ITEM_CLASS}>
@@ -165,7 +147,7 @@ export const OrgDropdown = () => {
 										className={ORG_MENU_ICON_CLASS}
 										strokeWidth={ORG_MENU_ICON_STROKE}
 									/>
-									Switch organization
+									<span className="min-w-0 flex-1 truncate">{org.name}</span>
 								</DropdownMenuSubTrigger>
 								<DropdownMenuPortal>
 									<DropdownMenuSubContent className="w-64 max-h-[min(28rem,calc(100vh-4rem))] overflow-y-auto">
@@ -193,16 +175,8 @@ export const OrgDropdown = () => {
 					</DropdownMenuGroup>
 					<DropdownMenuSeparator />
 					<DropdownMenuGroup>
-						<DropdownMenuLabel
-							className={cn(
-								ORG_MENU_LABEL_CLASS,
-								"flex items-baseline justify-between gap-3",
-							)}
-						>
+						<DropdownMenuLabel className={ORG_MENU_LABEL_CLASS}>
 							Account
-							<span className="min-w-0 truncate font-[450]">
-								{session?.user?.email}
-							</span>
 						</DropdownMenuLabel>
 						<DropdownMenuSub>
 							<DropdownMenuSubTrigger className={ORG_MENU_ITEM_CLASS}>
@@ -232,7 +206,7 @@ export const OrgDropdown = () => {
 								</DropdownMenuSubContent>
 							</DropdownMenuPortal>
 						</DropdownMenuSub>
-						<AdminSubmenu />
+						<AdminMenuItems />
 						{!expanded && (
 							<DropdownMenuItem
 								className={ORG_MENU_ITEM_CLASS}

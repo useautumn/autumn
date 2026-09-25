@@ -8,6 +8,10 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
 	IconButton,
 	TableCell,
 	TableRow,
@@ -15,12 +19,6 @@ import {
 import { EllipsisVertical, Key, Shield, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import {

@@ -7,7 +7,7 @@ import { useEnv } from "@/utils/envUtils";
 import { BuiltInEnvironmentSummary } from "./BuiltInEnvironmentSummary";
 import { EnvironmentList } from "./EnvironmentList";
 import { SandboxSettings } from "./SandboxSettings";
-import { isDraftUnsaved, sandboxToDraft } from "./sandboxDraft";
+import { isDraftUnsaved, isSameDraft, sandboxToDraft } from "./sandboxDraft";
 import type { EnvironmentSelection } from "./types/environmentSelection";
 import type { SandboxDraft } from "./types/sandboxDraft";
 
@@ -51,8 +51,22 @@ const ManageEnvironmentsPanel = ({
 				: rest;
 		});
 
-	const clearDraft = (sandboxId: string) =>
-		setDrafts(({ [sandboxId]: _cleared, ...rest }) => rest);
+	// Only drop the draft if nothing was typed while the save was in flight.
+	const clearSavedDraft = ({
+		sandboxId,
+		saved,
+	}: {
+		sandboxId: string;
+		saved: SandboxDraft;
+	}) =>
+		setDrafts((previous) => {
+			const current = previous[sandboxId];
+			if (!current || !isSameDraft({ draft: current, other: saved })) {
+				return previous;
+			}
+			const { [sandboxId]: _cleared, ...rest } = previous;
+			return rest;
+		});
 
 	const unsavedSandboxIds = new Set(
 		sandboxes
@@ -95,7 +109,9 @@ const ManageEnvironmentsPanel = ({
 						onDraftChange={(draft) =>
 							updateDraft({ sandbox: selectedSandbox, draft })
 						}
-						onDraftSaved={() => clearDraft(selectedSandbox.id)}
+						onDraftSaved={(saved) =>
+							clearSavedDraft({ sandboxId: selectedSandbox.id, saved })
+						}
 					/>
 				) : (
 					<BuiltInEnvironmentSummary

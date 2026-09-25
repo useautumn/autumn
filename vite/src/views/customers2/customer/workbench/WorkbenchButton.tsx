@@ -27,6 +27,8 @@ export const WorkbenchButton = () => {
 
 	return (
 		<button
+			aria-label={expanded ? undefined : "Workbench"}
+			title={expanded ? undefined : "Workbench"}
 			type="button"
 			onClick={(e) => {
 				e.currentTarget.blur();
