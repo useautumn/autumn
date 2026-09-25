@@ -13,6 +13,9 @@ import {
 	refreshCommandRoute,
 } from "./workerRequestPolicy.js";
 
+/** One send, then up to three more after an ownership refresh each; the deadline cuts it short. */
+const MAX_ROUTE_ATTEMPTS = 4;
+
 /** The command picks the owner; `payload` rides beside it in the envelope. */
 export async function sendToOwner<Response>({
 	ctx,
@@ -36,7 +39,10 @@ export async function sendToOwner<Response>({
 	let outcome: WorkerRequestOutcome = "not_submitted";
 	let failureCode: BalanceWorkerClientErrorCode = "OWNERSHIP_UNAVAILABLE";
 	try {
-		for (let attempt = 0; attempt < 2; attempt++) {
+		// A partition mid-handoff answers NOT_OWNER until its successor is named; the
+		// route is refreshed and tried again while the request's budget allows, so a
+		// move of a second or two costs the caller latency, not an error.
+		for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; attempt++) {
 			failureCode = "OWNERSHIP_UNAVAILABLE";
 			assertRequestDeadline({ deadline, outcome });
 			if (attempt > 0)

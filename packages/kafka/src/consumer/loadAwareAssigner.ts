@@ -9,6 +9,10 @@ const USER_DATA_VERSION = 2;
  * light partition off it gains a few percent and rehydrates a customer.
  */
 const MIN_IMPROVEMENT = 0.2;
+/** Only a member carrying this many times the mean load is relieved: the rest is unevenness, not a hot pair. */
+const RELIEF_LOAD_RATIO = 1.25;
+/** A membership change moves the leaver's partitions and at most this many more, so a rebalance stays a small event. */
+const MAX_RELIEF_MOVES = 4;
 
 /** What a member knows about the recent cost of the partitions it has served, and which it serves now. */
 export type PartitionLoadSource = {
@@ -266,7 +270,7 @@ type Relief = {
 	peak: number;
 };
 
-/** Moves single partitions off the heaviest members while a move still clearly lowers what they carry. */
+/** Moves single partitions off members carrying well over the mean, a few per rebalance, while a move still clearly lowers what they carry. */
 function relieve({
 	memberIds,
 	dealt,
@@ -284,9 +288,16 @@ function relieve({
 		const difference = (totals.get(b) ?? 0) - (totals.get(a) ?? 0);
 		return difference !== 0 ? difference : a.localeCompare(b);
 	}
-	const budget = weightOf.size * 2;
-	for (let round = 0; round < budget; round++) {
-		const sources = [...memberIds].sort(heaviestMemberFirst);
+	let total = 0;
+	for (const memberId of memberIds) total += totals.get(memberId) ?? 0;
+	const threshold = (total / memberIds.length) * RELIEF_LOAD_RATIO;
+	function carriesWellOverMean(memberId: string): boolean {
+		return (totals.get(memberId) ?? 0) > threshold;
+	}
+	for (let round = 0; round < MAX_RELIEF_MOVES; round++) {
+		const sources = [...memberIds]
+			.sort(heaviestMemberFirst)
+			.filter(carriesWellOverMean);
 		let relief: Relief | undefined;
 		for (const source of sources) {
 			relief = bestReliefFrom({

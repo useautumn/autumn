@@ -7,6 +7,7 @@ import {
 	type SubjectRowUpdate,
 	subjectRowIdOf,
 } from "@autumn/postgres";
+import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
 import {
 	StaleSubjectRowsError,
@@ -263,7 +264,9 @@ export const runFlush = async ({
 		});
 		if (bookmark) bookmarks.push(bookmark);
 	}
-	const { changes, recordOf } = collectChanges({ flush });
+	const { changes, recordOf } = timeSync({ label: "flush.collect" }, () =>
+		collectChanges({ flush }),
+	);
 
 	const { applied } = await ctx.db.flush({ changes, bookmarks });
 	const staleIds = changes

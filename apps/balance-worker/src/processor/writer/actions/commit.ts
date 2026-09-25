@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import type { MeteringRecord } from "@autumn/kafka";
+import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
 import type {
 	DurableMutationApplyResult,
 	DurableMutationRecord,
@@ -135,12 +136,14 @@ async function applyQueued({
 		while (state.unapplied.length > 0 && !state.recoveryError) {
 			const taken = state.unapplied.slice(0, MAX_BATCHES_PER_FLUSH);
 			const batch = taken.flatMap((entry) => entry.batch);
-			const records = taken.flatMap((entry) =>
-				durableRecordsOf({
-					scope,
-					batch: entry.batch,
-					baseOffset: entry.baseOffset,
-				}),
+			const records = timeSync({ label: "writer.apply.build" }, () =>
+				taken.flatMap((entry) =>
+					durableRecordsOf({
+						scope,
+						batch: entry.batch,
+						baseOffset: entry.baseOffset,
+					}),
+				),
 			);
 			const ok = await applyBatch({ scope, batch, records });
 			state.unapplied.splice(0, taken.length);

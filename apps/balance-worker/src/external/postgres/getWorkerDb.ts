@@ -12,6 +12,7 @@ import {
 	readPartitionProgress,
 	sumPooledContributionGrants,
 } from "@autumn/postgres";
+import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import type { CommitterDb } from "../../types/committerDb.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 
@@ -93,8 +94,13 @@ export const createCommitterDb = ({
 		insertPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
 	flush: (request) =>
 		commitFlush({
-			ctx: { db: ctx.postgres.db },
+			ctx: { db: ctx.postgres.db, timing: timeFlushSection },
 			request,
 			statementTimeoutMs: FLUSH_STATEMENT_TIMEOUT_MS,
 		}),
 });
+
+/** The flush's synchronous work shows up in the stall sections beside the request path's. */
+function timeFlushSection<Value>(label: string, run: () => Value): Value {
+	return timeSync({ label }, run);
+}
