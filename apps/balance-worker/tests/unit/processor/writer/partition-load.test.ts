@@ -30,3 +30,14 @@ test("a released partition is forgotten and bad input is refused", () => {
 		RangeError,
 	);
 });
+
+test("a claimed partition is owned until released; its weight outlives the release", () => {
+	const load = createPartitionLoad({ now: () => 0 });
+	load.claim({ partition: 4 });
+	load.claim({ partition: 9 });
+	load.record({ partition: 9, bytes: 50 });
+	expect([...load.owned()].sort()).toEqual([4, 9]);
+	load.release({ partition: 9 });
+	expect([...load.owned()]).toEqual([4]);
+	expect(load.snapshot().get(9)).toBe(50);
+});

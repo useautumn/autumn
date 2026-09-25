@@ -76,6 +76,8 @@ export function createPartitionRuntimeFactory({
 				endpoint: config.ownership.endpoint,
 			},
 		});
+		// Owned from construction to stop: what this worker reports as its own when the group rebalances.
+		ctx.partitionLoad?.claim({ partition });
 		const runtime = createPartitionRuntime({
 			ctx: {
 				stateStore: commitLogging.stateStore,
@@ -102,6 +104,15 @@ export function createPartitionRuntimeFactory({
 				recoveryDrainTimeoutMs: config.timings.recoveryDrainTimeoutMs,
 			},
 		});
+		const stopRuntime = runtime.stop;
+		async function stopAndRelease(): Promise<void> {
+			try {
+				await stopRuntime();
+			} finally {
+				ctx.partitionLoad?.release({ partition });
+			}
+		}
+		runtime.stop = stopAndRelease;
 		return { runtime, publication };
 	}
 	return createRuntime;

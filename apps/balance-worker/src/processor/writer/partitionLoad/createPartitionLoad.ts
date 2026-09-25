@@ -13,6 +13,11 @@ const DEFAULT_HALF_LIFE_MS = 5 * 60_000;
 export type PartitionLoad = PartitionLoadSource & {
 	record(entry: { partition: number; bytes: number }): void;
 	forget(entry: { partition: number }): void;
+	/** This worker serves the partition now; the assigner keeps it here unless balance needs it elsewhere. */
+	claim(entry: { partition: number }): void;
+	/** The partition left this worker; its weight stays so the leader still knows its cost. */
+	release(entry: { partition: number }): void;
+	owned(): ReadonlySet<number>;
 };
 
 export function createPartitionLoad({
@@ -49,6 +54,20 @@ export function createPartitionLoad({
 		loads.delete(partition);
 	}
 
+	const served = new Set<number>();
+
+	function claim({ partition }: { partition: number }): void {
+		served.add(partition);
+	}
+
+	function release({ partition }: { partition: number }): void {
+		served.delete(partition);
+	}
+
+	function owned(): ReadonlySet<number> {
+		return new Set(served);
+	}
+
 	function snapshot(): ReadonlyMap<number, number> {
 		const at = now();
 		const weights = new Map<number, number>();
@@ -58,5 +77,5 @@ export function createPartitionLoad({
 		return weights;
 	}
 
-	return { record, forget, snapshot };
+	return { record, forget, snapshot, claim, release, owned };
 }

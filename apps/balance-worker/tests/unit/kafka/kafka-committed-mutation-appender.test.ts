@@ -348,6 +348,9 @@ test("an appended batch adds its encoded bytes to the partition's load", async (
 					recorded.push(entry);
 				},
 				forget: () => undefined,
+				claim: () => undefined,
+				release: () => undefined,
+				owned: () => new Set(),
 				snapshot: () => new Map(),
 			},
 		},
