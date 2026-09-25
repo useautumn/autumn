@@ -9,7 +9,10 @@
 #   herald          -> bun herald          (cwd /app/server)
 #   leaf            -> bun leaf            (cwd /app/server; serves chat + MCP routes)
 #   ducklake        -> bun src/ducklake.ts (cwd /app/server; FC job-scheduler one-shot)
-FROM oven/bun:1.3.14 AS deps
+ARG BUN_VERSION=1.4.2
+
+FROM oven/bun:${BUN_VERSION} AS deps
+ARG BUN_VERSION
 WORKDIR /app
 
 # Copy the committed lockfile + every workspace manifest. Installing against the
@@ -75,10 +78,11 @@ RUN mkdir -p scripts && touch scripts/preload-env.ts
 
 # Install the full workspace (runtime source imports cross package boundaries).
 # --frozen-lockfile pins bun.lock exactly; --ignore-scripts blocks postinstall hooks.
-RUN --mount=type=cache,target=/root/.bun/install/cache \
+# Cache keyed per Bun version so two runtimes never share one install cache.
+RUN --mount=type=cache,id=bun-install-${BUN_VERSION},target=/root/.bun/install/cache \
 	bun install --ignore-scripts --frozen-lockfile
 
-FROM oven/bun:1.3.14
+FROM oven/bun:${BUN_VERSION}
 WORKDIR /app
 ENV NODE_ENV=production
 

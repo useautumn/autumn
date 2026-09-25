@@ -322,8 +322,8 @@ describe("updateBalanceV2 async routing", () => {
 		_setAsyncBalanceUpdateConfigForTesting({
 			config: { enabledOrgIds: ["org_123"] },
 		});
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = undefined;
-		process.env.UPDATE_BALANCE_SQS_QUEUE_URL = undefined;
+		delete process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+		delete process.env.UPDATE_BALANCE_SQS_QUEUE_URL;
 
 		await expect(
 			updateBalanceV2({
