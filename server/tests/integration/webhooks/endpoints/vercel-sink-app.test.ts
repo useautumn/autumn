@@ -82,6 +82,7 @@ test("opening the sandbox sink creates only the sandbox app and keeps the stored
 
 	expect(vercel?.svix?.sandbox_id).toMatch(/^app_/);
 	expect(vercel?.client_integration_id).toBe("keep_me");
+	createdByRun.push(vercel?.svix?.sandbox_id);
 });
 
 test("with no Vercel apps yet, opening the live sink stores the live app it shows", async () => {
