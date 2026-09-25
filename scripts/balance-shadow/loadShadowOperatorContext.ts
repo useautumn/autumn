@@ -10,7 +10,6 @@ import { getCtxWithCustomerRedis } from "@server/external/redis/customerRedisRou
 import { resolveRedisV2 } from "@server/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv.js";
 import type { BalanceShadowCustomer } from "@server/internal/balances/shadow/operator/runBalanceShadowCohort.js";
-import { computeRolloutSnapshot } from "@server/internal/misc/rollouts/rolloutUtils.js";
 import { OrgService } from "@server/internal/orgs/OrgService.js";
 
 export async function loadShadowOperatorContext({
@@ -44,7 +43,6 @@ export async function loadShadowOperatorContext({
 		scopes: [],
 		skipCache: false,
 		extraLogs: {},
-		rolloutSnapshot: computeRolloutSnapshot({ orgId: customer.orgId }),
 	};
 	return getCtxWithCustomerRedis({ ctx, customerId: customer.customerId }).ctx;
 }
