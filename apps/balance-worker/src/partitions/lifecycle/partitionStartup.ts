@@ -197,8 +197,17 @@ async function awaitHandoffClaim({
 	const signal = AbortSignal.any([entry.handoffAbort.signal, timeout.signal]);
 	// Listen before announcing: the claim can only follow the announcement, so nothing is missed.
 	const claim = entry.publication.awaitClaim({ signal });
-	void Promise.allSettled([claim]);
-	const timer = setTimeout(expire, ctx.config.handoffClaimTimeoutMs);
+	const draining = entry.publication.awaitDraining({ signal });
+	void Promise.allSettled([claim, draining]);
+	let timer = setTimeout(expire, ctx.config.handoffClaimTimeoutMs);
+	// The timeout covers silence: a predecessor that says it is draining is alive and
+	// gets the longer cap, so its committing tracks are not fenced from under it.
+	function holdForDrain(): void {
+		if (timeout.signal.aborted) return;
+		clearTimeout(timer);
+		timer = setTimeout(expire, ctx.config.handoffDrainCapMs);
+	}
+	void draining.then(holdForDrain, noop);
 	try {
 		await entry.publication.announceReady();
 		const { routeEpoch } = await claim;
@@ -214,6 +223,8 @@ async function awaitHandoffClaim({
 		timeout.abort(new Error("Handoff claim wait settled"));
 	}
 }
+
+function noop(): void {}
 
 export function reportPartitionStartupFailures({
 	ctx,

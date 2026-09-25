@@ -1,8 +1,10 @@
+import { announceDraining } from "./announceDraining.js";
 import { announceReady } from "./announceReady.js";
 import { claimPartition } from "./claimPartition.js";
 import { releasePartition } from "./releasePartition.js";
 import type {
 	OwnershipClaim,
+	OwnershipDraining,
 	OwnershipPublication,
 	OwnershipPublisher,
 	OwnershipPublisherContext,
@@ -35,5 +37,20 @@ export function createOwnershipPublisher({
 		});
 	}
 
-	return { claim, release, announceReady: announce };
+	async function announceDrain(params: OwnershipDraining): Promise<void> {
+		if (!ctx.sender)
+			throw new Error("Ownership draining requires a plain producer");
+		await announceDraining({
+			ctx: { sender: ctx.sender },
+			topic: config.topic,
+			...params,
+		});
+	}
+
+	return {
+		claim,
+		release,
+		announceReady: announce,
+		announceDraining: announceDrain,
+	};
 }

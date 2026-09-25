@@ -77,6 +77,20 @@ describe("ownershipRecords", function ownershipRecordsTests() {
 			).toThrow(RecordKeyMismatchError);
 		});
 
+		test("round-trips a draining record keyed apart from ready and the owner", () => {
+			const record = {
+				schemaVersion: 1 as const,
+				type: "draining" as const,
+				partition: 7,
+				endpoint: "http://10.0.0.4:8080",
+				drainingAt: 1_700_000_000_300,
+			};
+			const serialized = ownershipTopic.serialize({ record });
+
+			expect(serialized.key.toString("utf8")).toBe("7:draining");
+			expect(ownershipTopic.parse(serialized)).toEqual(record);
+		});
+
 		test("rejects a record whose Kafka key names another partition", () => {
 			const serialized = ownershipTopic.serialize({ record: claimed });
 
@@ -276,6 +290,51 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 		});
 	}
 
+	async function announcesDrainingOutsideTransactions(): Promise<void> {
+		const fake = createFakeProducer();
+		const sent: ProducerRecord[] = [];
+		async function send(record: ProducerRecord): Promise<RecordMetadata[]> {
+			sent.push(record);
+			return [];
+		}
+		const producer = createOwnershipPublisher({
+			ctx: { producer: fake.producer, sender: { send } },
+			config: { topic },
+		});
+
+		await producer.announceDraining({
+			partition,
+			endpoint: "http://10.0.0.4:8080",
+			drainingAt: 1_700_000_000_300,
+		});
+
+		expect(fake.records).toEqual([]);
+		expect(sent[0]).toMatchObject({ topic, acks: -1 });
+		expect(sent[0]?.messages[0]).toMatchObject({ partition });
+		expect(
+			ownershipTopic.parse({
+				key: Buffer.isBuffer(sent[0]?.messages[0]?.key)
+					? sent[0].messages[0].key
+					: null,
+				value: Buffer.isBuffer(sent[0]?.messages[0]?.value)
+					? sent[0].messages[0].value
+					: null,
+			}),
+		).toEqual({
+			schemaVersion: 1,
+			type: "draining",
+			partition,
+			endpoint: "http://10.0.0.4:8080",
+			drainingAt: 1_700_000_000_300,
+		});
+		await expect(
+			createOwnershipPublisher({
+				ctx: { producer: fake.producer },
+				config: { topic },
+			}).announceDraining({ partition, endpoint: "http://x", drainingAt: 1 }),
+		).rejects.toThrow("plain producer");
+	}
+
 	async function refusesReadyWithoutSender(): Promise<void> {
 		const fake = createFakeProducer();
 		const producer = createOwnershipPublisher({
@@ -303,6 +362,11 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 	test(
 		"announces readiness with a plain send, never a transaction",
 		announcesReadyOutsideTransactions,
+	);
+
+	test(
+		"announces draining with a plain send, never a transaction",
+		announcesDrainingOutsideTransactions,
 	);
 
 	test(
@@ -563,14 +627,24 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 		applyOwnershipMessage({ state, message: ready, partition, offset: 1n });
 		expect(state.owners.has(partition)).toBe(false);
 		expect(state.lastAppliedOffsets.get(partition)).toBe(1n);
+		const draining = ownershipTopic.serialize({
+			record: {
+				schemaVersion: 1,
+				type: "draining",
+				partition,
+				endpoint: "http://worker:8080",
+				drainingAt: 3,
+			},
+		});
 		applyOwnershipMessage({ state, message: claim, partition, offset: 2n });
 		applyOwnershipMessage({ state, message: ready, partition, offset: 3n });
+		applyOwnershipMessage({ state, message: draining, partition, offset: 4n });
 		expect(state.owners.get(partition)).toEqual({
 			partition,
 			endpoint: "http://worker:8080",
 			routeEpoch: "2",
 		});
-		expect(state.lastAppliedOffsets.get(partition)).toBe(3n);
+		expect(state.lastAppliedOffsets.get(partition)).toBe(4n);
 	}
 
 	function preservesReleaseOrdering(): void {
@@ -740,7 +814,7 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 		preservesReleaseOrdering,
 	);
 	test(
-		"ready records advance the offset without touching the owner table",
+		"ready and draining records advance the offset without touching the owner table",
 		ignoresReadyRecordsInTheOwnerTable,
 	);
 	test(

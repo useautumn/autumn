@@ -50,8 +50,9 @@ export function applyOwnershipMessage({
 	} else if (releaseApplies({ record, current: state.owners.get(partition) })) {
 		state.owners.delete(partition);
 	}
-	// The offset advances even for a release that was ignored or a `ready` that
-	// only workers act on, so replay does not keep reconsidering a settled record.
+	// The offset advances even for a release that was ignored or a handoff signal
+	// (`ready`, `draining`) that only workers act on, so replay does not keep
+	// reconsidering a settled record.
 	state.lastAppliedOffsets.set(partition, offset);
 }
 

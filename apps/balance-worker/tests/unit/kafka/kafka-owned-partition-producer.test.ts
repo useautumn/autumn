@@ -432,12 +432,21 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 			type,
 			endpoint,
 		}: {
-			type: "ready" | "claimed";
+			type: "ready" | "claimed" | "draining";
 			endpoint: string;
-		}): OwnershipRecord =>
-			type === "ready"
-				? { schemaVersion: 1, type, partition: 2, endpoint, readyAt: 1 }
-				: { schemaVersion: 1, type, partition: 2, endpoint, claimedAt: 1 };
+		}): OwnershipRecord => {
+			if (type === "ready")
+				return { schemaVersion: 1, type, partition: 2, endpoint, readyAt: 1 };
+			if (type === "draining")
+				return {
+					schemaVersion: 1,
+					type,
+					partition: 2,
+					endpoint,
+					drainingAt: 1,
+				};
+			return { schemaVersion: 1, type, partition: 2, endpoint, claimedAt: 1 };
+		};
 
 		test("claim names the successor when asked, this worker otherwise", async () => {
 			const f = fixture();
@@ -466,6 +475,45 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 					},
 				},
 			]);
+		});
+		test("announces draining through the plain producer and awaitDraining hears only another worker's", async () => {
+			const f = fixture({ withHandoff: true });
+			await f.publication.announceDraining();
+			expect(f.events).toEqual([]);
+			expect(f.sent).toEqual([
+				{
+					topic: "owners",
+					partition: 2,
+					record: {
+						schemaVersion: 1,
+						type: "draining",
+						partition: 2,
+						endpoint: "http://worker.test",
+						drainingAt: expect.any(Number),
+					},
+				},
+			]);
+			const controller = new AbortController();
+			const draining = f.publication.awaitDraining({
+				signal: controller.signal,
+			});
+			f.deliver({
+				partition: 2,
+				offset: 1n,
+				record: record({ type: "ready", endpoint: "http://other.test" }),
+			});
+			f.deliver({
+				partition: 2,
+				offset: 2n,
+				record: record({ type: "draining", endpoint: "http://worker.test" }),
+			});
+			f.deliver({
+				partition: 2,
+				offset: 3n,
+				record: record({ type: "draining", endpoint: "http://other.test" }),
+			});
+			expect(await draining).toEqual({ endpoint: "http://other.test" });
+			expect(f.listenerCount()).toBe(0);
 		});
 		test("awaitReady resolves on another worker's ready, ignoring its own and other record types", async () => {
 			const f = fixture({ withHandoff: true });

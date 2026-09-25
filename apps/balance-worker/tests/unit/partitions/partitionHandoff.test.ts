@@ -30,6 +30,7 @@ const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 5));
 
 type OwnershipEvent =
 	| { type: "ready"; partition: number; endpoint: string }
+	| { type: "draining"; partition: number; endpoint: string }
 	| { type: "claimed"; partition: number; endpoint: string; routeEpoch: string }
 	| { type: "unowned"; partition: number; endpoint: string };
 
@@ -165,6 +166,20 @@ const createWorker = ({
 				record("announce");
 				log.publish({ type: "ready", partition, endpoint });
 			},
+			announceDraining: async () => {
+				record("draining");
+				log.publish({ type: "draining", partition, endpoint });
+			},
+			awaitDraining: ({ signal }) =>
+				log.await({
+					signal,
+					match: (event) =>
+						event.type === "draining" &&
+						event.partition === partition &&
+						event.endpoint !== endpoint
+							? { endpoint: event.endpoint }
+							: undefined,
+				}),
 			awaitReady: ({ signal }) =>
 				log.await({
 					signal,
@@ -407,6 +422,70 @@ describe("partition handoff", () => {
 			).toBeDefined();
 			expect(B.errors).toEqual([]);
 		} finally {
+			await B.ownership.stop();
+		}
+	});
+
+	test("a slow predecessor that announced draining is not fenced by the claim timeout", async () => {
+		const log = createOwnershipLog();
+		const drain = deferred();
+		const A = createWorker({ name: "A", log, drainGate: drain.promise });
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 5_000 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => A.has("draining:2"));
+			expect(A.index("withdraw:2")).toBeLessThan(A.index("draining:2"));
+			// Well past the claim timeout: B heard A draining and keeps waiting.
+			await Bun.sleep(60);
+			expect(B.has("activate:2")).toBe(false);
+			expect(B.status(2)).toBe("prepared");
+
+			drain.resolve();
+			await waitFor(() => B.status(2) === "ready");
+			expect(A.index("drained:2")).toBeLessThan(A.index("claim:B:2"));
+			expect(A.index("claim:B:2")).toBeLessThan(B.index("activate:2"));
+			expect(B.has("claim:B:2")).toBe(false);
+			expect(A.errors).toEqual([]);
+			expect(B.errors).toEqual([]);
+		} finally {
+			drain.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("the drain cap bounds how long a draining predecessor can hold the successor", async () => {
+		const log = createOwnershipLog();
+		const drain = deferred();
+		const A = createWorker({ name: "A", log, drainGate: drain.promise });
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 100 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => A.has("draining:2"));
+			await Bun.sleep(50);
+			expect(B.status(2)).toBe("prepared");
+			// The predecessor never finishes: past the cap the successor claims for itself, as it would in silence.
+			await waitFor(() => B.status(2) === "ready", 1_000);
+			expect(B.index("activate:2")).toBeLessThan(B.index("claim:B:2"));
+			expect(A.has("claim:B:2")).toBe(false);
+			expect(B.errors).toEqual([]);
+		} finally {
+			drain.resolve();
+			await A.ownership.stop();
 			await B.ownership.stop();
 		}
 	});

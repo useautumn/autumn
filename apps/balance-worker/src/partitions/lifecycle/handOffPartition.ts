@@ -88,6 +88,8 @@ async function handOffPartition({
 	state.handoffSettlements.set(partition, settlement.promise);
 	closePartitionAdmission({ entry });
 	try {
+		// Tells the successor this worker is alive and working, so its claim timeout only covers silence.
+		if (successor) await announceDraining({ ctx, entry });
 		const drained = await entry.drain;
 		if (!drained?.ok) return;
 		// The claim is the successor's signal to fence: it must follow the drain, never precede it.
@@ -111,6 +113,21 @@ async function handOffPartition({
 					state.handingOff.delete(partition);
 			}
 		}
+	}
+}
+
+/** Best effort: without it the successor falls back to the claim timeout, as before. */
+async function announceDraining({
+	ctx,
+	entry,
+}: {
+	ctx: PartitionsContext;
+	entry: PartitionEntry;
+}): Promise<void> {
+	try {
+		await entry.publication.announceDraining();
+	} catch (cause) {
+		reportPartitionError({ ctx, cause });
 	}
 }
 

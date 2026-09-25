@@ -39,10 +39,24 @@ export const readyOwnershipRecordSchema = z
 	})
 	.strict();
 
+/** The owner has withdrawn and is draining for the successor named by `ready`;
+ *  the successor holds its claim timeout while the owner is alive and working.
+ *  The owner table ignores it. */
+export const drainingOwnershipRecordSchema = z
+	.object({
+		schemaVersion: z.literal(1),
+		type: z.literal("draining"),
+		partition: partitionSchema,
+		endpoint: nonEmptyStringSchema,
+		drainingAt: z.number().int().nonnegative(),
+	})
+	.strict();
+
 export const ownershipRecordSchema = z.discriminatedUnion("type", [
 	claimedOwnershipRecordSchema,
 	unownedOwnershipRecordSchema,
 	readyOwnershipRecordSchema,
+	drainingOwnershipRecordSchema,
 ]);
 
 export type OwnershipRecord = z.infer<typeof ownershipRecordSchema>;

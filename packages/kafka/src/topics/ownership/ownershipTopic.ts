@@ -10,6 +10,7 @@ import type {
 } from "../../lib/types/topicSchema.js";
 import {
 	claimedOwnershipRecordSchema,
+	drainingOwnershipRecordSchema,
 	type OwnershipRecord,
 	readyOwnershipRecordSchema,
 	unownedOwnershipRecordSchema,
@@ -47,10 +48,20 @@ function parseReady({
 
 /** Key scheme on a compacted topic: `claimed` and `unowned` share the
  *  partition's key, so compaction keeps only the latest word on who owns it.
- *  A handoff signal such as `ready` is keyed `<partition>:<type>` so it only
+ *  A handoff signal (`ready`, `draining`) is keyed `<partition>:<type>` so it only
  *  ever compacts against its own kind; under the owner's key it would replace
  *  the current `claimed` once a segment rolled, and a cold-starting owner
  *  table would see no owner while the predecessor was still serving. */
+function parseDraining({
+	input,
+}: {
+	input: unknown;
+}): Extract<OwnershipRecord, { type: "draining" }> {
+	const parsed = drainingOwnershipRecordSchema.safeParse(input);
+	if (!parsed.success) throw new InvalidRecordError({ cause: parsed.error });
+	return parsed.data;
+}
+
 function ownershipRecordToKey({ record }: { record: OwnershipRecord }): string {
 	if (record.type === "claimed" || record.type === "unowned")
 		return record.partition.toString();
@@ -68,6 +79,8 @@ function parseOwnershipPayload({
 			return parseUnowned({ input: payload });
 		case "ready":
 			return parseReady({ input: payload });
+		case "draining":
+			return parseDraining({ input: payload });
 		default:
 			throw new InvalidRecordError();
 	}

@@ -107,6 +107,11 @@ export const BALANCE_WORKER_HANDOFF_READY_TIMEOUT_MS = 5_000;
  *  track latency; past this it is dead or stuck and the successor claims for
  *  itself, which fences whatever pen the predecessor still holds. */
 export const BALANCE_WORKER_HANDOFF_CLAIM_TIMEOUT_MS = 3_000;
+/** How long a successor keeps waiting once the predecessor has said it is
+ *  `draining`: the claim timeout only covers silence, and a live owner mid-drain
+ *  must not be fenced with tracks still committing. Bounded so a predecessor
+ *  that dies after announcing cannot hold the partition dark forever. */
+export const BALANCE_WORKER_HANDOFF_DRAIN_CAP_MS = 30_000;
 /** How long a request may wait at a successor that has been named owner but is
  *  still fencing and catching up. The activation is a fence plus a bookmark
  *  read; holding the request for it turns a NOT_READY into a 200. */

@@ -76,6 +76,15 @@ export function createOwnershipPublisher({
 		});
 	}
 
+	async function announceDraining(): Promise<void> {
+		if (!ctx.handoff) return;
+		await publisher.announceDraining({
+			partition: config.partition,
+			endpoint: config.endpoint,
+			drainingAt: Date.now(),
+		});
+	}
+
 	/** Resolves on the first tail record `match` accepts; rejects with the signal's reason. */
 	function awaitRecord<Result>({
 		signal,
@@ -121,6 +130,19 @@ export function createOwnershipPublisher({
 		return awaitRecord({ signal, match: matchReady });
 	}
 
+	function awaitDraining({
+		signal,
+	}: {
+		signal: AbortSignal;
+	}): Promise<{ endpoint: string }> {
+		function matchDraining({ record }: OwnershipTailRecord) {
+			if (record.type !== "draining" || record.endpoint === config.endpoint)
+				return undefined;
+			return { endpoint: record.endpoint };
+		}
+		return awaitRecord({ signal, match: matchDraining });
+	}
+
 	function awaitClaim({
 		signal,
 	}: {
@@ -134,5 +156,13 @@ export function createOwnershipPublisher({
 		return awaitRecord({ signal, match: matchClaim });
 	}
 
-	return { claim, release, announceReady, awaitReady, awaitClaim };
+	return {
+		claim,
+		release,
+		announceReady,
+		announceDraining,
+		awaitReady,
+		awaitDraining,
+		awaitClaim,
+	};
 }
