@@ -7,7 +7,9 @@ const runsAgainstProduction = ({
 }: {
 	runtimeEnv: Record<string, string | undefined>;
 }): boolean =>
-	runtimeEnv.NODE_ENV === "production" || runtimeEnv.ENV_FILE === ".env.prod";
+	(runtimeEnv.NODE_ENV === "production" ||
+		runtimeEnv.ENV_FILE === ".env.prod") &&
+	runtimeEnv.STAGING_ENVIRONMENT !== "true";
 
 /**
  * The env override: "true" forces the worker, "false" forces the legacy path, "config" defers to the rollout

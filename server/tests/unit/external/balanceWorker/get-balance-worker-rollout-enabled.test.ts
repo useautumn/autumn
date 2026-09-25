@@ -11,6 +11,7 @@ const LOCAL_ENVS = [
 	{ NODE_ENV: "development", ENV_FILE: ".env" },
 	{},
 ];
+const STAGING_ENV = { NODE_ENV: "production", STAGING_ENVIRONMENT: "true" };
 
 describe("parseBalanceWorkerRolloutOverride", () => {
 	test("true and false force the answer everywhere", () => {
@@ -50,8 +51,8 @@ describe("parseBalanceWorkerRolloutOverride", () => {
 		}
 	});
 
-	test("unset is the local default on a local stack", () => {
-		for (const runtimeEnv of LOCAL_ENVS) {
+	test("unset is the local default on a local stack and on staging", () => {
+		for (const runtimeEnv of [...LOCAL_ENVS, STAGING_ENV]) {
 			expect(parseBalanceWorkerRolloutOverride({ runtimeEnv })).toBe(true);
 		}
 	});
