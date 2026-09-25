@@ -65,6 +65,7 @@ const pullWith = async ({
 }) => {
 	const { runPull } = await import("../../src/actions/pull");
 	const listed: string[] = [];
+	const orgLookups: string[] = [];
 	let output = "";
 	await runPull({
 		// biome-ignore lint/suspicious/noExplicitAny: a fake client
@@ -82,17 +83,31 @@ const pullWith = async ({
 					if (list instanceof Error) throw list;
 					return { list: list ?? [] };
 				},
-				fetchOrgInfo: async ({ secretKey }) => ({
-					id: "org_qa",
-					name: secretKey === "sk_qa" ? "QA Team" : "Other",
-					slug: "qa",
-					env: "sandbox",
-				}),
+				targetKeyName: "AUTUMN_SECRET_KEY",
+				fetchOrgInfo: async ({ secretKey }) => {
+					orgLookups.push(secretKey);
+					if (secretKey === "sk_qa")
+						return {
+							id: "org_qa",
+							name: "QA Team",
+							slug: "qa-team",
+							env: "sandbox",
+							is_sandbox: true,
+							created_by: "org_main",
+						};
+					return {
+						id: secretKey === "sk_foreign" ? "org_other" : "org_main",
+						name: "Acme",
+						slug: "acme",
+						env: secretKey === "sk_sandbox" ? "sandbox" : "live",
+					};
+				},
 			}),
 	});
 	return {
 		output,
 		listed,
+		orgLookups,
 		source: readFileSync(join(dir, "autumn.config.ts"), "utf8"),
 	};
 };
@@ -196,7 +211,7 @@ test("only the default key: reads the default sandbox alone, exactly as before",
 		}),
 	],`,
 	});
-	const { source, listed, output } = await pullWith({
+	const { source, listed, output, orgLookups } = await pullWith({
 		dir,
 		env: { AUTUMN_SECRET_KEY: "sk_sandbox" },
 		lists: {
@@ -204,7 +219,76 @@ test("only the default key: reads the default sandbox alone, exactly as before",
 		},
 	});
 	expect(listed).toEqual(["sk_sandbox"]);
+	expect(orgLookups).toEqual([]);
 	expect(output).not.toContain("skipped");
 	expect(source).toContain(`sandbox: "https://new.example.com/autumn"`);
+	expect(source).toContain(`live: "https://example.com/autumn"`);
+});
+
+test("a prod key for another org is skipped with a warning, and its webhooks never land in live", async () => {
+	const dir = projectWith({
+		webhooks: `	webhooks: [
+		webhook({
+			id: "billing",
+			events: ["billing.updated"],
+			url: { live: "https://example.com/autumn" },
+		}),
+	],`,
+	});
+	const { source, output } = await pullWith({
+		dir,
+		env: {
+			AUTUMN_SECRET_KEY: "sk_sandbox",
+			AUTUMN_PROD_SECRET_KEY: "sk_foreign",
+		},
+		lists: {
+			sk_sandbox: [],
+			sk_foreign: [remote("other", "https://other.example.com/hook")],
+		},
+	});
+	expect(output).toContain(
+		"⚠ webhooks: skipped live (AUTUMN_PROD_SECRET_KEY belongs to another org)",
+	);
+	expect(source).not.toContain("other.example.com");
+	expect(source).toContain(`url: { live: "https://example.com/autumn" }`);
+});
+
+test("a dashboard webhook at the same URL in two envs becomes one webhook with both keys", async () => {
+	const dir = projectWith({ webhooks: "" });
+	const dashboard = (id: string) => remote(id, "https://example.com/autumn");
+	const { source } = await pullWith({
+		dir,
+		env: { AUTUMN_SECRET_KEY: "sk_sandbox", AUTUMN_PROD_SECRET_KEY: "sk_live" },
+		lists: {
+			sk_sandbox: [dashboard("ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5")],
+			sk_live: [dashboard("ep_9Zy8x7WvUtSrQpOnMlKj6h5g4f3")],
+		},
+	});
+	expect(source.match(/webhook\(\{/g)?.length).toBe(1);
+	expect(source).toContain(`sandbox: "https://example.com/autumn"`);
+	expect(source).toContain(`live: "https://example.com/autumn"`);
+});
+
+test("a url left as code in one env is not re-appended by the next env", async () => {
+	process.env.ATMN_TEST_HOOK_URL = "https://staging.example.com/autumn";
+	const dir = projectWith({
+		webhooks: `	webhooks: [
+		webhook({
+			id: "billing",
+			events: ["billing.updated"],
+			url: { sandbox: process.env.ATMN_TEST_HOOK_URL },
+		}),
+	],`,
+	});
+	const { source } = await pullWith({
+		dir,
+		env: { AUTUMN_SECRET_KEY: "sk_sandbox", AUTUMN_PROD_SECRET_KEY: "sk_live" },
+		lists: {
+			sk_sandbox: [],
+			sk_live: [remote("billing", "https://example.com/autumn")],
+		},
+	});
+	expect(source.match(/webhook\(\{/g)?.length).toBe(1);
+	expect(source).toContain("process.env.ATMN_TEST_HOOK_URL");
 	expect(source).toContain(`live: "https://example.com/autumn"`);
 });

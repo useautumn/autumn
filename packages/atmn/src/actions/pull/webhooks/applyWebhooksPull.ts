@@ -75,11 +75,20 @@ export const applyWebhooksPull = ({
 		if (fromDashboard(webhook)) {
 			// Vercel and other webhooks live in separate apps: a URL only
 			// matches within one.
-			const represented = (stated ?? []).find(
-				(row) =>
-					row.url?.[envKey] === webhook.url &&
-					isVercelWebhook(row.events) === isVercelWebhook(webhook.events),
-			);
+			const sameApp = (row: StatedWebhook) =>
+				isVercelWebhook(row.events) === isVercelWebhook(webhook.events);
+			// Another env's copy of this URL fills in this env's key rather than
+			// becoming a second webhook.
+			const represented =
+				(stated ?? []).find(
+					(row) => row.url?.[envKey] === webhook.url && sameApp(row),
+				) ??
+				(stated ?? []).find(
+					(row) =>
+						row.url?.[envKey] === undefined &&
+						Object.values(row.url ?? {}).includes(webhook.url) &&
+						sameApp(row),
+				);
 			if (represented !== undefined) {
 				present.add(represented.id);
 				next.set(
@@ -138,7 +147,10 @@ export const applyWebhooksPull = ({
 
 	for (const row of stated ?? []) {
 		if (present.has(row.id) || row.url?.[envKey] === undefined) continue;
-		merge(result, removeWebhookEnv({ pull, stated: row, envKey }));
+		const removed = removeWebhookEnv({ pull, stated: row, envKey });
+		merge(result, removed);
+		// A key left in the source (code, or unlocated) is still the config's.
+		if (removed.lines.length === 0) continue;
 		const { [envKey]: _removed, ...url } = row.url;
 		if (Object.keys(url).length === 0) next.delete(row.id);
 		else next.set(row.id, { ...row, url });

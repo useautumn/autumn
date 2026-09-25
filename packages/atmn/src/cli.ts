@@ -503,6 +503,7 @@ Linking a keyless org to an account:
 					prompter: prompterFor({ command }),
 					webhookEnvs: () =>
 						webhookPullEnvs({
+							targetKeyName: target.secretKeyName,
 							listWebhooks: ({ secretKey }) =>
 								createClient({
 									secretKey,
