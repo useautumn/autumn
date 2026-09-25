@@ -117,7 +117,8 @@ export function createOwnershipTail({
 			});
 			await consumer.run({ autoCommit: false, eachBatch });
 			await firstFetch.promise;
-			state.status = "started";
+			// A stop that landed meanwhile wins; started must not overwrite it.
+			if (state.status === "starting") state.status = "started";
 		} catch (cause) {
 			await stop();
 			throw cause;

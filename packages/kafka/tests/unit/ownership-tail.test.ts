@@ -238,6 +238,37 @@ describe("ownershipTail", function ownershipTailTests() {
 		expect(fixture.readSubscription().lifecycle).toContain("disconnect");
 	});
 
+	test("a stop that lands while start awaits the first fetch wins", async () => {
+		const fixture = createFakeTailKafka();
+		const tail = createOwnershipTail({
+			ctx: { kafka: fixture.kafka },
+			config: { topic, startTimeoutMs: 1_000 },
+		});
+		const starting = tail.start();
+		while (!fixture.readSubscription().lifecycle.includes("run"))
+			await Promise.resolve();
+		// The fetch has been observed but start has not resumed yet when stop runs.
+		fixture.fetched();
+		const stopping = tail.stop();
+		await starting;
+		await stopping;
+		function follow(): void {
+			tail.tailPartition({
+				partition: 3,
+				onRecord: () => undefined,
+				signal: new AbortController().signal,
+			});
+		}
+		expect(follow).toThrow("stopped");
+		expect(fixture.readSubscription().lifecycle).toEqual([
+			"connect",
+			"subscribe",
+			"run",
+			"stop",
+			"disconnect",
+		]);
+	});
+
 	test("delivers a partition's records in order to its listeners only", async () => {
 		const fixture = createFakeTailKafka();
 		const { tail, errors } = await startTail(fixture);
