@@ -127,7 +127,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 				<DropdownMenuContent
 					side="bottom"
 					align="start"
-					className="w-(--anchor-width) min-w-52"
+					className={expanded ? "w-(--anchor-width)" : "w-52"}
 				>
 					{isSearchable && (
 						<EnvironmentMenuSearch query={query} onQueryChange={setQuery} />
@@ -192,7 +192,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 						onClick={() => setManageOpen(true)}
 					>
 						<SlidersHorizontal className="size-3.5" />
-						Manage environments
+						Manage sandboxes
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
