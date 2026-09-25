@@ -74,4 +74,7 @@ const proc = spawn(resolveCommand(parseArgs({ argv: process.argv.slice(2) })), {
 	stdio: ["inherit", "inherit", "inherit"],
 	env: process.env,
 });
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+	process.on(signal, () => proc.kill(signal));
+}
 process.exit(await proc.exited);
