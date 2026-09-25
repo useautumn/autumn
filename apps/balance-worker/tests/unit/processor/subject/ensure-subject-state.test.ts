@@ -13,7 +13,7 @@ import {
 	SubjectLoadOvertakenError,
 	SubjectNotFoundError,
 } from "../../../../src/processor/subject/subjectErrors.js";
-import { createSubjectViews } from "../../../../src/processor/subject/subjectViews/createSubjectViews.js";
+import { createSubjectJoinCache } from "../../../../src/processor/subject/subjectJoinCache/createSubjectJoinCache.js";
 import type { SubjectScope } from "../../../../src/processor/subject/types/subject.js";
 import { commandToFingerprint } from "../../../../src/processor/writer/receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../../../../src/processor/writer/receipt/mutationToRecord.js";
@@ -132,7 +132,7 @@ const createScope = ({
 		},
 		state: {
 			inFlightLoads: createInFlightLoads(),
-			views: createSubjectViews({ ctx: { catalogCache } }),
+			joinCache: createSubjectJoinCache({ ctx: { catalogCache } }),
 		},
 	};
 	return {

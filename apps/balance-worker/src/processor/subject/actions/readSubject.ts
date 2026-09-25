@@ -46,7 +46,7 @@ export const readSubjectCatalog = ({
 	scope: SubjectScope;
 	state: SubjectState;
 }): Catalog =>
-	scope.state.views.readCatalog({
+	scope.state.joinCache.readCatalog({
 		state,
 		join: () => joinSubjectCatalog({ scope, state }),
 	});
@@ -61,7 +61,7 @@ export const readSubject = ({
 	state: SubjectState;
 	identity: MeteringIdentity;
 }): WorkerFullSubject =>
-	scope.state.views.readFullSubject({
+	scope.state.joinCache.readFullSubject({
 		state,
 		entityId: identity.entityId,
 		join: () =>

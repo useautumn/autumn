@@ -4,27 +4,30 @@ import type {
 	WorkerFullSubject,
 } from "@autumn/balance-engine";
 import type { CatalogCache } from "@autumn/catalog-lru";
-import type { SubjectView, SubjectViews } from "./types/subjectViews.js";
+import type {
+	SubjectJoin,
+	SubjectJoinCache,
+} from "./types/subjectJoinCache.js";
 
 /** A join is pure over (state, catalog) and states are replaced, never edited, so one join per state serves every read until the catalog moves. */
-export const createSubjectViews = ({
+export const createSubjectJoinCache = ({
 	ctx,
 }: {
 	ctx: { catalogCache: Pick<CatalogCache, "revision"> };
-}): SubjectViews => {
-	const views = new WeakMap<SubjectState, SubjectView>();
+}): SubjectJoinCache => {
+	const joins = new WeakMap<SubjectState, SubjectJoin>();
 
-	function viewOf({ state }: { state: SubjectState }): SubjectView {
+	function joinOf({ state }: { state: SubjectState }): SubjectJoin {
 		const catalogRevision = ctx.catalogCache.revision();
-		const existing = views.get(state);
+		const existing = joins.get(state);
 		if (existing?.catalogRevision === catalogRevision) return existing;
-		const view: SubjectView = {
+		const join: SubjectJoin = {
 			catalogRevision,
 			catalog: null,
 			fullSubjectByEntityId: new Map(),
 		};
-		views.set(state, view);
-		return view;
+		joins.set(state, join);
+		return join;
 	}
 
 	function readCatalog({
@@ -34,9 +37,9 @@ export const createSubjectViews = ({
 		state: SubjectState;
 		join: () => Catalog;
 	}): Catalog {
-		const view = viewOf({ state });
-		view.catalog ??= join();
-		return view.catalog;
+		const cached = joinOf({ state });
+		cached.catalog ??= join();
+		return cached.catalog;
 	}
 
 	function readFullSubject({
@@ -48,11 +51,11 @@ export const createSubjectViews = ({
 		entityId: string | null;
 		join: () => WorkerFullSubject;
 	}): WorkerFullSubject {
-		const view = viewOf({ state });
-		const existing = view.fullSubjectByEntityId.get(entityId);
+		const cached = joinOf({ state });
+		const existing = cached.fullSubjectByEntityId.get(entityId);
 		if (existing) return existing;
 		const fullSubject = join();
-		view.fullSubjectByEntityId.set(entityId, fullSubject);
+		cached.fullSubjectByEntityId.set(entityId, fullSubject);
 		return fullSubject;
 	}
 
