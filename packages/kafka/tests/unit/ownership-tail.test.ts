@@ -8,7 +8,11 @@ import type { OwnershipRecord } from "../../src/topics/ownership/types/ownership
 
 const topic = "balance-partition-owners";
 
-function createFakeTailKafka() {
+function createFakeTailKafka({
+	connectGate,
+}: {
+	connectGate?: Promise<void>;
+} = {}) {
 	const listeners = new Map<string, Set<(event: unknown) => void>>();
 	const lifecycle: string[] = [];
 	let runConfig: ConsumerRunConfig | undefined;
@@ -17,6 +21,7 @@ function createFakeTailKafka() {
 	let running = false;
 
 	async function connect(): Promise<void> {
+		await connectGate;
 		lifecycle.push("connect");
 	}
 	async function subscribe(params: {
@@ -236,6 +241,30 @@ describe("ownershipTail", function ownershipTailTests() {
 		});
 		await expect(tail.start()).rejects.toThrow("did not fetch");
 		expect(fixture.readSubscription().lifecycle).toContain("disconnect");
+	});
+
+	test("a start timeout that fires during connect is not an unhandled rejection", async () => {
+		const connected = Promise.withResolvers<void>();
+		const fixture = createFakeTailKafka({ connectGate: connected.promise });
+		const tail = createOwnershipTail({
+			ctx: { kafka: fixture.kafka },
+			config: { topic, startTimeoutMs: 5 },
+		});
+		const unhandled: unknown[] = [];
+		function onUnhandled(reason: unknown): void {
+			unhandled.push(reason);
+		}
+		process.on("unhandledRejection", onUnhandled);
+		try {
+			const starting = tail.start();
+			await Bun.sleep(20);
+			connected.resolve();
+			await expect(starting).rejects.toThrow("did not fetch");
+			await Bun.sleep(5);
+			expect(unhandled).toEqual([]);
+		} finally {
+			process.off("unhandledRejection", onUnhandled);
+		}
 	});
 
 	test("a stop that lands while start awaits the first fetch wins", async () => {

@@ -103,6 +103,16 @@ export function createOwnershipTail({
 		function onStartTimeout(): void {
 			firstFetch.reject(new Error("Ownership tail did not fetch in time"));
 		}
+		// The timeout can fire while connect or subscribe is still pending, before
+		// the promise is awaited; without an observer that is an unhandled rejection.
+		async function observeFirstFetch(): Promise<void> {
+			try {
+				await firstFetch.promise;
+			} catch {
+				// Surfaces where start awaits it.
+			}
+		}
+		void observeFirstFetch();
 		state.removeListeners.push(
 			consumer.on(consumer.events.CRASH, onCrash),
 			consumer.on(consumer.events.FETCH, onFetch),
