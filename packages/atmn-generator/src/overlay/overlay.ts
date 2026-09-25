@@ -247,6 +247,14 @@ export const OVERLAY: Overlay = {
 					"The flag's effect is that resets and top-ups pay down unbilled overages; the wire name describes the mechanism, not the outcome.",
 			},
 		},
+		webhooks: {
+			url: {
+				describe:
+					"One URL per environment: `live` is used by `atmn push -p`, `sandbox` by the default sandbox, and a named sandbox's slug (its name, lowercased, e.g. `qa-team`) when that sandbox is targeted. An environment with no key skips this webhook there: nothing is registered and nothing fails.",
+				reason:
+					"The sync body takes one URL; the config states one per environment so a sandbox URL can never be pushed to prod.",
+			},
+		},
 	},
 };
 

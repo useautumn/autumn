@@ -7,6 +7,7 @@ import {
 	referralProgramRules,
 	rewardRules,
 } from "./rewards";
+import { webhookRules } from "./webhooks";
 
 /**
  * Hand-written rules and names, keyed by fixture path with array indices
@@ -56,4 +57,5 @@ export const LINT_REGISTRY: Record<string, RegistryEntry> = {
 		idField: "id",
 		rules: referralProgramRules,
 	},
+	webhooks: { label: "webhook", idField: "id", rules: webhookRules },
 };

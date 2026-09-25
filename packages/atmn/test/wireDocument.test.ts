@@ -260,6 +260,6 @@ test("a config from another version of the CLI is refused, not silently trimmed"
 
 	const typo = issuesOf(() => atmn({ products: [] } as unknown as AtmnConfig));
 	expect(typo[0]?.message).toBe(
-		"products is not a config field. The fields are features, plans, rewards, referralPrograms, settings.",
+		"products is not a config field. The fields are features, plans, rewards, referralPrograms, settings, webhooks.",
 	);
 });
