@@ -5,6 +5,7 @@ import { dispatchSlackAgentMessage } from "../actions/dispatchSlackAgentMessage.
 import { getSlackWorkspaceId } from "../context.js";
 import { slackMessageMentionsUser } from "../events.js";
 import { findSlackInstallationForWorkspace } from "../installations.js";
+import { controlMessageFrom } from "../routing/controlMessage.js";
 import { shouldSkipUntaggedReply } from "../routing/replyMode.js";
 import {
 	getEarlierThreadMessages,
@@ -33,17 +34,16 @@ const shouldSkipMessage = (message: Message) => {
 const unsubscribe = (thread: Thread) =>
 	thread.unsubscribe().catch(logUnsubscribeFailure);
 
-/** Whether the raw Slack message @-mentions this workspace's agent. Any
- * doubt (no installation, no bot user id) counts as a mention, matching
- * `slackMessageMentionsUser`. */
+/** Whether the raw Slack message @-mentions this workspace's agent. Without
+ * a known bot user id nothing counts as a mention, so an ordinary edit never
+ * pulls the agent into a thread it does not follow. */
 const messageMentionsAgent = async ({ message }: { message: Message }) => {
 	const installation = await findSlackInstallationForWorkspace({
 		workspaceId: getSlackWorkspaceId(message.raw),
 	});
-	return slackMessageMentionsUser({
-		raw: message.raw,
-		userId: installation?.bot_user_id,
-	});
+	const botUserId = installation?.bot_user_id;
+	if (!botUserId) return false;
+	return slackMessageMentionsUser({ raw: message.raw, userId: botUserId });
 };
 
 /** An edit reaches the agent as a new turn that says what changed, so it can
@@ -245,10 +245,14 @@ export const createSlackMessageHandlers = ({
 		if (thread.adapter.name !== "slack") return;
 		if (shouldSkipMessage(message)) return;
 		if (previousMessage && previousMessage.text === message.text) return;
-		const text = editedMessageText({
-			previousText: previousMessage?.text,
-			text: message.text,
-		});
+		// "stop" edited in is a control command, which is only recognised as
+		// the whole message, so it goes through without the edit framing.
+		const text = controlMessageFrom(message.text)
+			? message.text
+			: editedMessageText({
+					previousText: previousMessage?.text,
+					text: message.text,
+				});
 		rootLogger.info("Handling edited Slack message", {
 			event: "leaf.slack_message_edited",
 		});

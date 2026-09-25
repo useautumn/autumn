@@ -305,6 +305,18 @@ describe("handleEditedSlackMessage", () => {
 		);
 	});
 
+	test("an edit to a stop command reaches dispatch unframed", async () => {
+		const { thread } = createThread();
+
+		await handleEditedSlackMessage(
+			thread,
+			createMessage({ text: "stop replying" }),
+			createMessage({ text: "make it annual" }),
+		);
+
+		expect(dispatchedText()).toBe("stop replying");
+	});
+
 	test("an edit in a followed thread still respects mentions-only mode", async () => {
 		skipReply = true;
 		const { thread } = createThread();
