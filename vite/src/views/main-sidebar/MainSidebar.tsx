@@ -125,9 +125,9 @@ export const MainSidebar = ({
 					// its own content out of view.
 					`relative flex h-full flex-col justify-between overflow-x-hidden overflow-y-auto px-2.5 py-3.5 transition-all duration-150`,
 					isMobileSheet
-						? "min-w-[220px]"
+						? "min-w-[200px]"
 						: expanded
-							? "min-w-[220px] max-w-[220px]"
+							? "min-w-[200px] max-w-[200px]"
 							: "min-w-[52px] max-w-[52px]",
 				)}
 			>
