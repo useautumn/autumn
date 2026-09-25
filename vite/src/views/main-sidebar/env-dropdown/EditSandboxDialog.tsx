@@ -59,7 +59,7 @@ export const EditSandboxDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="w-[400px] bg-card">
+			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Edit sandbox</DialogTitle>
 				</DialogHeader>

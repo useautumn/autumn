@@ -260,7 +260,7 @@ export function CustomerBlockDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-5xl bg-card">
+			<DialogContent className="max-w-5xl">
 				<DialogHeader>
 					<DialogTitle className="text-balance">Customer Blocking</DialogTitle>
 					<DialogDescription className="text-pretty">

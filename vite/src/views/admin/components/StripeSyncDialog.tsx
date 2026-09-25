@@ -37,7 +37,7 @@ export function StripeSyncDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-5xl bg-card">
+			<DialogContent className="max-w-5xl">
 				<DialogHeader>
 					<DialogTitle className="text-balance">Stripe Sync</DialogTitle>
 					<DialogDescription className="text-pretty">

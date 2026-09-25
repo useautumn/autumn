@@ -50,7 +50,7 @@ export function TestClockDialog({
 			open
 			onOpenChange={(open) => !advanceClock.isPending && setOpen(open)}
 		>
-			<DialogContent className="w-[440px] bg-card">
+			<DialogContent className="w-[440px]">
 				<DialogHeader>
 					<DialogTitle>Test clock</DialogTitle>
 					<DialogDescription>

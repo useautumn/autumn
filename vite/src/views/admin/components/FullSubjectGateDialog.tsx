@@ -37,7 +37,7 @@ export function FullSubjectGateDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-xl bg-card">
+			<DialogContent className="max-w-xl">
 				<DialogHeader>
 					<DialogTitle className="text-balance">
 						FullSubject Concurrency Gate

@@ -1,12 +1,12 @@
-import { IconButton } from "@autumn/ui";
-import { EllipsisVertical } from "lucide-react";
-import { useState } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	IconButton,
 } from "@autumn/ui";
+import { EllipsisVertical } from "lucide-react";
+import { useState } from "react";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 
 export function FeatureListMenuButton() {
@@ -24,7 +24,7 @@ export function FeatureListMenuButton() {
 					className="h-7!"
 				/>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="text-muted-foreground">
+			<DropdownMenuContent align="end">
 				<DropdownMenuItem
 					className="flex items-center cursor-pointer"
 					onClick={() => {

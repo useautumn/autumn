@@ -74,7 +74,7 @@ export const InvitePopover = () => {
 					}
 				}}
 			>
-				<DialogContent className="w-[400px] bg-card">
+				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Invite Member</DialogTitle>
 						<DialogDescription>

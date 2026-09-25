@@ -5,6 +5,11 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@autumn/ui/components/ui/dialog";
+import {
+	overlayItemLayoutClassName,
+	overlaySeparatorClassName,
+	overlayShortcutClassName,
+} from "@autumn/ui/lib/overlay-classes";
 import { cn } from "@autumn/ui/lib/utils";
 import { Command as CommandPrimitive } from "cmdk";
 import type * as React from "react";
@@ -17,7 +22,7 @@ function Command({
 		<CommandPrimitive
 			data-slot="command"
 			className={cn(
-				"bg-interactive-secondary text-muted-foreground flex h-full w-full flex-col overflow-hidden rounded-lg",
+				"bg-overlay text-muted-foreground flex h-full w-full flex-col overflow-hidden rounded-xl",
 				className,
 			)}
 			{...props}
@@ -46,10 +51,7 @@ function CommandDialog({
 				<DialogDescription>{description}</DialogDescription>
 			</DialogHeader>
 			<DialogContent
-				className={cn(
-					"overflow-hidden p-0 bg-interactive-secondary",
-					className,
-				)}
+				className={cn("overflow-hidden p-0 bg-overlay", className)}
 				showCloseButton={showCloseButton}
 			>
 				<Command shouldFilter={false}>{children}</Command>
@@ -65,12 +67,12 @@ function CommandInput({
 	return (
 		<div
 			data-slot="command-input-wrapper"
-			className="flex h-10 items-center gap-2 border-b border-border px-3"
+			className="flex h-9 items-center gap-2 border-b border-overlay-separator px-3 [&_svg]:size-3.5 [&_svg]:text-tertiary-foreground"
 		>
 			<CommandPrimitive.Input
 				data-slot="command-input"
 				className={cn(
-					"placeholder:text-muted-foreground flex h-full w-full bg-transparent text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
+					"placeholder:text-tertiary-foreground flex h-full w-full bg-transparent text-sm text-foreground outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
 					className,
 				)}
 				{...props}
@@ -102,7 +104,10 @@ function CommandEmpty({
 	return (
 		<CommandPrimitive.Empty
 			data-slot="command-empty"
-			className={cn("py-6 text-center text-sm", className)}
+			className={cn(
+				"py-6 text-center text-sm text-tertiary-foreground",
+				className,
+			)}
 			{...props}
 		/>
 	);
@@ -116,8 +121,8 @@ function CommandGroup({
 		<CommandPrimitive.Group
 			data-slot="command-group"
 			className={cn(
-				"text-foreground [&_[cmdk-group-heading]]:text-muted-foreground overflow-hidden p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium",
-				"!p-1",
+				"overflow-hidden !p-1 text-muted-foreground",
+				"[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-tertiary-foreground [&_[cmdk-group-heading]]:text-xs",
 				className,
 			)}
 			{...props}
@@ -132,7 +137,7 @@ function CommandSeparator({
 	return (
 		<CommandPrimitive.Separator
 			data-slot="command-separator"
-			className={cn("bg-border -mx-1 h-px", className)}
+			className={cn(overlaySeparatorClassName, "my-0", className)}
 			{...props}
 		/>
 	);
@@ -146,7 +151,8 @@ function CommandItem({
 		<CommandPrimitive.Item
 			data-slot="command-item"
 			className={cn(
-				"data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground relative flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				overlayItemLayoutClassName,
+				"data-[selected=true]:bg-overlay-hover data-[selected=true]:text-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
 				className,
 			)}
 			{...props}
@@ -161,10 +167,7 @@ function CommandShortcut({
 	return (
 		<span
 			data-slot="command-shortcut"
-			className={cn(
-				"text-muted-foreground ml-auto text-xs tracking-widest",
-				className,
-			)}
+			className={cn(overlayShortcutClassName, className)}
 			{...props}
 		/>
 	);

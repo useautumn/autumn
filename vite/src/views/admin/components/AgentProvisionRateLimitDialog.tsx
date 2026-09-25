@@ -35,7 +35,7 @@ export function AgentProvisionRateLimitDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-xl bg-card">
+			<DialogContent className="max-w-xl">
 				<DialogHeader>
 					<DialogTitle className="text-balance">
 						Agent Provision Rate Limit

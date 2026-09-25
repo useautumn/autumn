@@ -18,6 +18,7 @@
 @import "./custom.css";
 
 @source "../components";
+@source "../lib";
 @source "../../../../vite/src";
 
 @plugin "tailwindcss-animate";
@@ -83,6 +84,15 @@ html {
 	--border-sheet: #eaeae9;
 	--border-table: #e5e5e5;
 	--card-border: #d1d1d1;
+
+	--overlay: #ffffff;
+	--overlay-dialog: #ffffff;
+	--overlay-border: #e5e5e5;
+	--overlay-separator: #efefef;
+	--overlay-hover: rgb(0 0 0 / 0.045);
+	--overlay-shadow: 0 12px 32px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.05);
+	--overlay-dialog-shadow:
+		0 24px 64px rgb(0 0 0 / 0.16), 0 2px 8px rgb(0 0 0 / 0.06);
 
 	--input: #dddddd;
 
@@ -167,6 +177,18 @@ html {
 	--card: #121212;
 	--border: #222222;
 
+	--placeholder: #6b6b6b;
+	--input: #2a2a2a;
+
+	--overlay: #1a1a1a;
+	--overlay-dialog: #171717;
+	--overlay-border: #2a2a2a;
+	--overlay-separator: #262626;
+	--overlay-hover: rgb(255 255 255 / 0.06);
+	--overlay-shadow: 0 12px 32px rgb(0 0 0 / 0.65), 0 2px 6px rgb(0 0 0 / 0.4);
+	--overlay-dialog-shadow:
+		0 24px 64px rgb(0 0 0 / 0.7), 0 2px 8px rgb(0 0 0 / 0.5);
+
 	--chart-grid-stroke: #262626;
 
 	--card-foreground: oklch(0.985 0 0);
@@ -179,7 +201,6 @@ html {
 	--accent-foreground: oklch(0.985 0 0);
 	--destructive: oklch(0.396 0.141 25.723);
 	--destructive-foreground: oklch(0.637 0.237 25.331);
-	--input: oklch(0.274 0.006 286.033);
 	--ring: oklch(0.442 0.017 285.786);
 	--sidebar: oklch(0.21 0.006 285.885);
 	--sidebar-foreground: oklch(0.985 0 0);
@@ -519,6 +540,11 @@ html {
 
 	--color-border: var(--border);
 	--color-border-table: var(--border-table);
+	--color-overlay: var(--overlay);
+	--color-overlay-dialog: var(--overlay-dialog);
+	--color-overlay-border: var(--overlay-border);
+	--color-overlay-separator: var(--overlay-separator);
+	--color-overlay-hover: var(--overlay-hover);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
 	--color-chart-1: var(--chart-1);
@@ -551,6 +577,8 @@ html {
 	--shadow-lg:
 		0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 	--shadow-card: 0 0 8px rgba(0, 0, 0, 0.04);
+	--shadow-overlay: var(--overlay-shadow);
+	--shadow-overlay-dialog: var(--overlay-dialog-shadow);
 
 	--color-yellow-50: #fefce8;
 	--color-yellow-100: #fdedd3;

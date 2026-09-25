@@ -1,15 +1,16 @@
 import type { Reward } from "@autumn/shared";
 import { RewardType } from "@autumn/shared";
-import { SmallSpinner, ToolbarButton } from "@autumn/ui";
-import { ArrowSquareOut, Trash } from "@phosphor-icons/react";
-import { useState } from "react";
-import { toast } from "sonner";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	SmallSpinner,
+	ToolbarButton,
 } from "@autumn/ui";
+import { ArrowSquareOut, Trash } from "@phosphor-icons/react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { RewardService } from "@/services/products/RewardService";
@@ -62,7 +63,7 @@ export const RewardRowToolbar = ({ reward }: { reward: Reward }) => {
 			<DropdownMenuTrigger asChild>
 				<ToolbarButton />
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className="text-muted-foreground" align="end">
+			<DropdownMenuContent align="end">
 				{isDiscountReward && reward.id && (
 					<DropdownMenuItem
 						className="flex items-center"

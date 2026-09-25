@@ -1,13 +1,13 @@
 import type { ApiKey } from "@autumn/shared";
-import { ToolbarButton } from "@autumn/ui";
-import { Delete } from "lucide-react";
-import { useState } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	ToolbarButton,
 } from "@autumn/ui";
+import { Delete } from "lucide-react";
+import { useState } from "react";
 import { DeleteApiKeyDialog } from "./DeleteApiKeyDialog";
 
 const APIKeyToolbarItems = ({
@@ -46,7 +46,7 @@ export const APIKeyToolbar = ({ apiKey }: { apiKey: ApiKey }) => {
 				<DropdownMenuTrigger asChild>
 					<ToolbarButton />
 				</DropdownMenuTrigger>
-				<DropdownMenuContent className="text-muted-foreground" align="end">
+				<DropdownMenuContent align="end">
 					<APIKeyToolbarItems setDeleteOpen={setDeleteOpen} />
 				</DropdownMenuContent>
 			</DropdownMenu>

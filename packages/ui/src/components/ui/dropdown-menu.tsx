@@ -5,6 +5,16 @@ import {
 	type ShortcutEntry,
 	useMenuShortcuts,
 } from "@autumn/ui/hooks/use-dropdown-shortcut";
+import {
+	overlayItemClassName,
+	overlayItemHighlightClassName,
+	overlayItemIndicatorClassName,
+	overlayLabelClassName,
+	overlayMotionClassName,
+	overlaySeparatorClassName,
+	overlayShortcutClassName,
+	overlaySurfaceClassName,
+} from "@autumn/ui/lib/overlay-classes";
 import { cn } from "@autumn/ui/lib/utils";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { cva, type VariantProps } from "class-variance-authority";
@@ -22,17 +32,16 @@ const DropdownMenuContext = React.createContext<{
 });
 
 const dropdownMenuItemVariants = cva(
-	"group/dropdown-menu-item relative flex cursor-default select-none items-center gap-1.5 rounded-md px-1.5 py-1 text-sm text-muted-foreground outline-hidden data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+	cn("group/dropdown-menu-item", overlayItemClassName),
 	{
 		variants: {
 			variant: {
-				default:
-					"focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground",
+				default: overlayItemHighlightClassName,
 				destructive:
-					"text-destructive focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20",
+					"text-red-600 focus:bg-red-500/10 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400 [&_svg:not([class*='text-'])]:text-current",
 			},
 			inset: {
-				true: "pl-7",
+				true: "pl-8",
 				false: "",
 			},
 		},
@@ -124,15 +133,17 @@ const DropdownMenuSubTrigger = React.forwardRef<
 			ref={ref}
 			data-slot="dropdown-menu-sub-trigger"
 			className={cn(
-				"flex cursor-default gap-1.5 select-none items-center rounded-md px-1.5 py-1 text-sm text-muted-foreground outline-hidden focus:bg-accent focus:text-accent-foreground data-popup-open:bg-accent data-popup-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-				inset && "pl-7",
+				overlayItemClassName,
+				overlayItemHighlightClassName,
+				"data-popup-open:bg-overlay-hover data-popup-open:text-foreground",
+				inset && "pl-8",
 				className,
 			)}
 			{...rest}
 		>
 			{children}
 			{withIcon && (
-				<ChevronRight className="ml-auto size-3.5 text-tertiary-foreground" />
+				<ChevronRight className="-mr-0.5 ml-auto size-3.5 text-tertiary-foreground" />
 			)}
 		</MenuPrimitive.SubmenuTrigger>
 	);
@@ -158,8 +169,9 @@ const DropdownMenuSubContent = React.forwardRef<
 					ref={ref}
 					data-slot="dropdown-menu-sub-content"
 					className={cn(
-						"min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-lg bg-interactive-secondary p-1 text-muted-foreground shadow-lg ring-1 ring-foreground/10 duration-100 origin-(--transform-origin)",
-						"data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+						"min-w-40 overflow-x-hidden overflow-y-auto p-1",
+						overlaySurfaceClassName,
+						overlayMotionClassName,
 						className,
 					)}
 					{...rest}
@@ -203,8 +215,9 @@ const DropdownMenuContent = React.forwardRef<
 					ref={ref}
 					data-slot="dropdown-menu-content"
 					className={cn(
-						"max-h-(--available-height) min-w-32 overflow-x-hidden overflow-y-auto rounded-lg bg-interactive-secondary p-1 text-muted-foreground shadow-md ring-1 ring-foreground/10 duration-100 origin-(--transform-origin)",
-						"data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+						"max-h-(--available-height) min-w-40 overflow-x-hidden overflow-y-auto p-1",
+						overlaySurfaceClassName,
+						overlayMotionClassName,
 						className,
 					)}
 					{...rest}
@@ -313,15 +326,17 @@ const DropdownMenuCheckboxItem = React.forwardRef<
 			data-inset={inset}
 			closeOnClick={false}
 			className={cn(
-				"relative flex cursor-default select-none items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				overlayItemClassName,
+				overlayItemHighlightClassName,
+				"pr-8 data-inset:pl-8",
 				className,
 			)}
 			{...rest}
 		>
 			{children}
-			<span className="pointer-events-none absolute right-2 flex items-center justify-center">
+			<span className={overlayItemIndicatorClassName}>
 				<MenuPrimitive.CheckboxItemIndicator>
-					<Check className="size-4" />
+					<Check className="text-foreground" />
 				</MenuPrimitive.CheckboxItemIndicator>
 			</span>
 		</MenuPrimitive.CheckboxItem>
@@ -339,14 +354,16 @@ const DropdownMenuRadioItem = React.forwardRef<
 			data-slot="dropdown-menu-radio-item"
 			data-inset={inset}
 			className={cn(
-				"relative flex cursor-default select-none items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				overlayItemClassName,
+				overlayItemHighlightClassName,
+				"pr-8 data-inset:pl-8",
 				className,
 			)}
 			{...rest}
 		>
-			<span className="pointer-events-none absolute right-2 flex items-center justify-center">
+			<span className={overlayItemIndicatorClassName}>
 				<MenuPrimitive.RadioItemIndicator>
-					<Check className="size-4" />
+					<Check className="text-foreground" />
 				</MenuPrimitive.RadioItemIndicator>
 			</span>
 			{children}
@@ -368,10 +385,7 @@ const DropdownMenuLabel = React.forwardRef<
 			ref={ref}
 			data-slot="dropdown-menu-label"
 			data-inset={inset}
-			className={cn(
-				"px-1.5 py-1 text-xs font-medium text-muted-foreground data-inset:pl-7",
-				className,
-			)}
+			className={cn(overlayLabelClassName, "data-inset:pl-8", className)}
 			{...rest}
 		/>
 	);
@@ -386,7 +400,7 @@ const DropdownMenuSeparator = React.forwardRef<
 		<MenuPrimitive.Separator
 			ref={ref}
 			data-slot="dropdown-menu-separator"
-			className={cn("-mx-1 my-1 h-px bg-border", className)}
+			className={cn(overlaySeparatorClassName, className)}
 			{...rest}
 		/>
 	);
@@ -399,10 +413,7 @@ function DropdownMenuShortcut(props: DropdownMenuShortcutProps) {
 	return (
 		<span
 			data-slot="dropdown-menu-shortcut"
-			className={cn(
-				"ml-auto text-xs tracking-widest text-muted-foreground group-focus/dropdown-menu-item:text-accent-foreground",
-				className,
-			)}
+			className={cn(overlayShortcutClassName, className)}
 			{...rest}
 		/>
 	);
