@@ -28,9 +28,9 @@ function Command({
 
 // Palette-only sizing, applied through data-slots so inline pickers keep their compact rows.
 const COMMAND_DIALOG_SLOT_STYLES = [
-	"[&_[data-slot=command-input-wrapper]]:h-13 [&_[data-slot=command-input-wrapper]]:gap-3 [&_[data-slot=command-input-wrapper]]:px-4",
+	"[&_[data-slot=command-input-wrapper]]:h-13 [&_[data-slot=command-input-wrapper]]:shrink-0 [&_[data-slot=command-input-wrapper]]:gap-3 [&_[data-slot=command-input-wrapper]]:px-4",
 	"[&_[data-slot=command-input]]:text-md",
-	"[&_[data-slot=command-list]]:max-h-[360px]",
+	"[&_[data-slot=command-list]]:max-h-[360px] [&_[data-slot=command-list]]:min-h-0 [&_[data-slot=command-list]]:flex-1",
 	"[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-tertiary-foreground",
 	"[&_[data-slot=command-item]]:h-9 [&_[data-slot=command-item]]:gap-2.5 [&_[data-slot=command-item]]:rounded-lg [&_[data-slot=command-item]]:px-2.5",
 	"[&_[data-slot=command-item][data-selected=true]]:bg-foreground/6",
@@ -58,7 +58,7 @@ function CommandDialog({
 			</DialogHeader>
 			<DialogContent
 				className={cn(
-					"top-[18%] max-w-[640px] translate-y-0 gap-0 overflow-hidden rounded-xl bg-interactive-secondary p-0 shadow-2xl ring-foreground/8",
+					"top-[18%] flex max-h-[calc(82dvh-1rem)] max-w-[640px] translate-y-0 flex-col gap-0 overflow-hidden rounded-xl bg-interactive-secondary p-0 shadow-2xl ring-foreground/8",
 					className,
 				)}
 				overlayClassName="dark:bg-black/60"
@@ -66,7 +66,7 @@ function CommandDialog({
 			>
 				<Command
 					shouldFilter={false}
-					className={cn("rounded-none", COMMAND_DIALOG_SLOT_STYLES)}
+					className={cn("min-h-0 rounded-none", COMMAND_DIALOG_SLOT_STYLES)}
 				>
 					{children}
 				</Command>

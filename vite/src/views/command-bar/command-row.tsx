@@ -16,12 +16,16 @@ interface CommandRowProps {
 	value?: string;
 }
 
+// Symbol keys read naturally together (⌘1); word keys need a separator (Ctrl+Shift+P).
+const formatShortcut = (keys: string[]) =>
+	keys.join(keys.every((key) => key.length === 1) ? "" : "+");
+
 const getShortcutLabel = ({
 	shortcutKey,
 	customShortcuts,
 }: Pick<CommandRowProps, "shortcutKey" | "customShortcuts">) => {
-	if (customShortcuts?.length) return customShortcuts.join("");
-	if (shortcutKey) return `${getMetaKey()}${shortcutKey}`;
+	if (customShortcuts?.length) return formatShortcut(customShortcuts);
+	if (shortcutKey) return formatShortcut([getMetaKey(), shortcutKey]);
 	return null;
 };
 
