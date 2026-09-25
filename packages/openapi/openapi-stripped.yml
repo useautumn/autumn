@@ -77442,6 +77442,121 @@ paths:
                         - type: object
                           properties:
                             action:
+                              const: adopt
+                            id:
+                              type: string
+                            before:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                                    ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    enum:
+                                      - customer.products.updated
+                                      - customer.threshold_reached
+                                      - balances.usage_alert_triggered
+                                      - balances.limit_reached
+                                      - billing.auto_topup_failed
+                                      - billing.auto_topup_succeeded
+                                      - billing.updated
+                                      - invoice.finalized
+                                      - vercel.resources.deleted
+                                      - vercel.resources.provisioned
+                                      - vercel.resources.rotate_secrets
+                                      - vercel.webhooks.event
+                                    type: string
+                                    description: An event type the webhook receives.
+                                  description: The events sent to this webhook. Empty only for a webhook made in
+                                    the dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                            after:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: The webhook's ID. Webhooks made in the dashboard show their `ep_…`
+                                    ID.
+                                url:
+                                  type: string
+                                  description: The URL Autumn sends events to.
+                                description:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: A note for your own reference.
+                                events:
+                                  type: array
+                                  items:
+                                    enum:
+                                      - customer.products.updated
+                                      - customer.threshold_reached
+                                      - balances.usage_alert_triggered
+                                      - balances.limit_reached
+                                      - billing.auto_topup_failed
+                                      - billing.auto_topup_succeeded
+                                      - billing.updated
+                                      - invoice.finalized
+                                      - vercel.resources.deleted
+                                      - vercel.resources.provisioned
+                                      - vercel.resources.rotate_secrets
+                                      - vercel.webhooks.event
+                                    type: string
+                                    description: An event type the webhook receives.
+                                  description: The events sent to this webhook. Empty only for a webhook made in
+                                    the dashboard that receives every event.
+                                disabled:
+                                  type: boolean
+                                  description: When true, no events are sent to the webhook.
+                                created_at:
+                                  type: number
+                                  description: When the webhook was created, ms since epoch.
+                                updated_at:
+                                  type: number
+                                  description: When the webhook was last changed, ms since epoch.
+                              required:
+                                - id
+                                - url
+                                - description
+                                - events
+                                - disabled
+                                - created_at
+                                - updated_at
+                          required:
+                            - action
+                            - id
+                            - before
+                            - after
+                        - type: object
+                          properties:
+                            action:
                               const: unmanaged
                             id:
                               type: string
@@ -77501,10 +77616,27 @@ paths:
                             - action
                             - id
                             - webhook
-                    description: What `webhooks.sync` would do. `unmanaged` webhooks exist but
-                      aren't listed, so sync leaves them alone.
+                    description: What `webhooks.sync` would do. `adopt` takes over a webhook made in
+                      the dashboard with the same URL, keeping its signing
+                      secret. `unmanaged` webhooks exist but aren't listed, so
+                      sync leaves them alone.
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        message:
+                          type: string
+                      required:
+                        - id
+                        - message
+                    description: Listed webhooks `webhooks.sync` would refuse, e.g. when several
+                      dashboard webhooks share the URL.
                 required:
                   - changes
+                  - errors
                 title: PreviewSyncWebhooksResponse
                 examples:
                   - &a158

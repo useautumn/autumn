@@ -1,8 +1,8 @@
 import { Scopes, SyncWebhooksParamsSchema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ensureSvixAppId } from "../actions/ensureSvixAppId.js";
-import { listWebhooks } from "../actions/listWebhooks.js";
 import { computeWebhookSyncChanges } from "../actions/sync/computeWebhookSyncChanges.js";
+import { listSyncRemote } from "../actions/sync/listSyncRemote.js";
 
 /** What webhooks.sync would change, without writing. Same body. */
 export const handlePreviewSyncWebhooks = createRoute({
@@ -13,14 +13,15 @@ export const handlePreviewSyncWebhooks = createRoute({
 		const { webhooks } = c.req.valid("json");
 
 		const appId = await ensureSvixAppId({ ctx });
-		const remote = await listWebhooks({ appId });
+		const { remote, uidlessIds } = await listSyncRemote({ appId });
 
-		return c.json({
-			changes: computeWebhookSyncChanges({
+		return c.json(
+			computeWebhookSyncChanges({
 				remote,
+				uidlessIds,
 				stated: webhooks,
 				now: Date.now(),
 			}),
-		});
+		);
 	},
 });

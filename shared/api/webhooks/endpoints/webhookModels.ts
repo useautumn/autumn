@@ -159,18 +159,33 @@ export const WebhookSyncChangeSchema = z.discriminatedUnion("action", [
 		after: WebhookSchema,
 	}),
 	z.object({
+		action: z.literal("adopt"),
+		id: z.string(),
+		before: WebhookSchema,
+		after: WebhookSchema,
+	}),
+	z.object({
 		action: z.literal("unmanaged"),
 		id: z.string(),
 		webhook: WebhookSchema,
 	}),
 ]);
 
+const WebhookSyncErrorsSchema = z
+	.array(z.object({ id: z.string(), message: z.string() }))
+	.describe(
+		"Webhooks that couldn't be created or updated. The others were still applied; the request fails only when none could be.",
+	);
+
 export const PreviewSyncWebhooksResponseSchema = z.object({
 	changes: z
 		.array(WebhookSyncChangeSchema)
 		.describe(
-			"What `webhooks.sync` would do. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone.",
+			"What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone.",
 		),
+	errors: WebhookSyncErrorsSchema.describe(
+		"Listed webhooks `webhooks.sync` would refuse, e.g. when several dashboard webhooks share the URL.",
+	),
 });
 
 export const SyncWebhooksResponseSchema = z.object({
@@ -184,11 +199,7 @@ export const SyncWebhooksResponseSchema = z.object({
 		.describe(
 			"Signing secrets for the webhooks this sync created, shown once. Existing webhooks keep theirs.",
 		),
-	errors: z
-		.array(z.object({ id: z.string(), message: z.string() }))
-		.describe(
-			"Webhooks that couldn't be created or updated. The others were still applied; the request fails only when none could be.",
-		),
+	errors: WebhookSyncErrorsSchema,
 });
 
 export type Webhook = z.infer<typeof WebhookSchema>;
@@ -201,6 +212,7 @@ export type UpdateWebhookParams = z.infer<typeof UpdateWebhookParamsSchema>;
 export type DeleteWebhookParams = z.infer<typeof DeleteWebhookParamsSchema>;
 export type SyncWebhooksParams = z.infer<typeof SyncWebhooksParamsSchema>;
 export type WebhookSyncChange = z.infer<typeof WebhookSyncChangeSchema>;
+export type WebhookSyncError = z.infer<typeof WebhookSyncErrorsSchema>[number];
 export type PreviewSyncWebhooksResponse = z.infer<
 	typeof PreviewSyncWebhooksResponseSchema
 >;

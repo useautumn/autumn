@@ -1,4 +1,9 @@
-import type { Webhook, WebhookParams, WebhookSyncChange } from "@autumn/shared";
+import type {
+	Webhook,
+	WebhookParams,
+	WebhookSyncChange,
+	WebhookSyncError,
+} from "@autumn/shared";
 
 const sameEvents = ({ a, b }: { a: string[]; b: string[] }) => {
 	const setA = new Set(a);
@@ -16,6 +21,7 @@ const applyStated = ({
 	stated: WebhookParams;
 }): Webhook => ({
 	...webhook,
+	id: stated.id,
 	url: stated.url,
 	events: sameEvents({ a: webhook.events, b: stated.events })
 		? webhook.events
@@ -33,46 +39,108 @@ const isUnchanged = ({ before, after }: { before: Webhook; after: Webhook }) =>
 	before.disabled === after.disabled &&
 	sameEvents({ a: before.events, b: after.events });
 
-/** What webhooks.sync would do: create missing, update differing, and report
- * every remote webhook the request doesn't state as unmanaged. Never deletes. */
+const createdWebhook = ({
+	params,
+	now,
+}: {
+	params: WebhookParams;
+	now: number;
+}): Webhook => ({
+	id: params.id,
+	url: params.url,
+	description: params.description || null,
+	events: params.events,
+	disabled: params.disabled ?? false,
+	created_at: now,
+	updated_at: now,
+});
+
+/** Which dashboard-made endpoint each new id takes over. A URL shared by several
+ * dashboard endpoints, or claimed by several new ids, is refused, never created. */
+const planAdoptions = ({
+	newIds,
+	uidless,
+}: {
+	newIds: WebhookParams[];
+	uidless: Webhook[];
+}) => {
+	const adoptions = new Map<string, Webhook>();
+	const errors: WebhookSyncError[] = [];
+
+	for (const params of newIds) {
+		const matches = uidless.filter((webhook) => webhook.url === params.url);
+		const claimants = newIds.filter((other) => other.url === params.url);
+		if (matches.length > 1) {
+			errors.push({
+				id: params.id,
+				message: `${matches.length} dashboard webhooks use this URL; delete the extras or give one an id in the dashboard`,
+			});
+		} else if (matches.length === 1 && claimants.length > 1) {
+			errors.push({
+				id: params.id,
+				message: `${claimants.length} listed webhooks use the URL of one dashboard webhook; give them different URLs or list only one`,
+			});
+		} else if (matches.length === 1 && matches[0]) {
+			adoptions.set(params.id, matches[0]);
+		}
+	}
+	return { adoptions, errors };
+};
+
+/** What webhooks.sync would do: create missing, adopt a dashboard-made webhook
+ * with the same URL, update differing, and report every remote webhook the
+ * request doesn't state as unmanaged. Never deletes. */
 export const computeWebhookSyncChanges = ({
 	remote,
+	uidlessIds = new Set(),
 	stated,
 	now,
 }: {
 	remote: Webhook[];
+	uidlessIds?: Set<string>;
 	stated: WebhookParams[];
 	now: number;
-}): WebhookSyncChange[] => {
-	const remoteById = new Map(remote.map((webhook) => [webhook.id, webhook]));
-	const statedIds = new Set(stated.map((params) => params.id));
+}): { changes: WebhookSyncChange[]; errors: WebhookSyncError[] } => {
+	const owned = remote.filter((webhook) => !uidlessIds.has(webhook.id));
+	const uidless = remote.filter((webhook) => uidlessIds.has(webhook.id));
+	const ownedById = new Map(owned.map((webhook) => [webhook.id, webhook]));
+
+	const { adoptions, errors } = planAdoptions({
+		newIds: stated.filter((params) => !ownedById.has(params.id)),
+		uidless,
+	});
+	const failedIds = new Set(errors.map((error) => error.id));
 
 	const statedChanges = stated.flatMap((params): WebhookSyncChange[] => {
-		const before = remoteById.get(params.id);
-		if (!before) {
-			return [
-				{
-					action: "create",
-					id: params.id,
-					webhook: {
-						id: params.id,
-						url: params.url,
-						description: params.description || null,
-						events: params.events,
-						disabled: params.disabled ?? false,
-						created_at: now,
-						updated_at: now,
-					},
-				},
-			];
+		if (failedIds.has(params.id)) return [];
+		const existing = ownedById.get(params.id);
+		if (existing) {
+			const after = applyStated({ webhook: existing, stated: params });
+			if (isUnchanged({ before: existing, after })) return [];
+			return [{ action: "update", id: params.id, before: existing, after }];
 		}
-		const after = applyStated({ webhook: before, stated: params });
-		if (isUnchanged({ before, after })) return [];
-		return [{ action: "update", id: params.id, before, after }];
+		const adopted = adoptions.get(params.id);
+		if (adopted) {
+			const after = applyStated({ webhook: adopted, stated: params });
+			return [{ action: "adopt", id: params.id, before: adopted, after }];
+		}
+		return [
+			{
+				action: "create",
+				id: params.id,
+				webhook: createdWebhook({ params, now }),
+			},
+		];
 	});
 
+	const statedIds = new Set(stated.map((params) => params.id));
+	const adoptedIds = new Set([...adoptions.values()].map(({ id }) => id));
 	const unmanaged = remote
-		.filter((webhook) => !statedIds.has(webhook.id))
+		.filter(
+			(webhook) =>
+				!(ownedById.has(webhook.id) && statedIds.has(webhook.id)) &&
+				!adoptedIds.has(webhook.id),
+		)
 		.map(
 			(webhook): WebhookSyncChange => ({
 				action: "unmanaged",
@@ -81,5 +149,5 @@ export const computeWebhookSyncChanges = ({
 			}),
 		);
 
-	return [...statedChanges, ...unmanaged];
+	return { changes: [...statedChanges, ...unmanaged], errors };
 };

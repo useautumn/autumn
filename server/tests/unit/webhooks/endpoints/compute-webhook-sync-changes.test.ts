@@ -4,10 +4,13 @@
  * - a stated id whose url/events/description/disabled differ is an `update`
  *   (events compared as a set; omitted description/disabled are left alone);
  * - a remote webhook the request doesn't state is `unmanaged`, never deleted;
- * - a stated webhook that already matches produces no change.
+ * - a stated webhook that already matches produces no change;
+ * - a new id whose URL matches exactly one uid-less (dashboard-made) endpoint
+ *   adopts it; several matches are an error, never a create; an endpoint with
+ *   a uid is never adopted.
  */
 
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import type { Webhook, WebhookEventType } from "@autumn/shared";
 import { computeWebhookSyncChanges } from "@/internal/webhooks/actions/sync/computeWebhookSyncChanges";
 
@@ -37,7 +40,8 @@ test("a stated id with no remote webhook is a create", () => {
 		stated: [stated({ description: "prod billing" })],
 		now: NOW,
 	});
-	expect(changes).toEqual([
+	expect(changes.errors).toEqual([]);
+	expect(changes.changes).toEqual([
 		{
 			action: "create",
 			id: "billing",
@@ -60,7 +64,7 @@ test("same fields in another event order is no change; omitted description/disab
 		stated: [stated()],
 		now: NOW,
 	});
-	expect(changes).toEqual([]);
+	expect(changes.changes).toEqual([]);
 });
 
 test("a differing url, events, description or disabled is an update with before and after", () => {
@@ -77,7 +81,7 @@ test("a differing url, events, description or disabled is an update with before 
 		],
 		now: NOW,
 	});
-	expect(changes).toEqual([
+	expect(changes.changes).toEqual([
 		{
 			action: "update",
 			id: "billing",
@@ -96,7 +100,7 @@ test("a differing url, events, description or disabled is an update with before 
 		stated: [stated({ url: "https://example.com/moved" })],
 		now: NOW,
 	});
-	expect(urlOnly.map((change) => change.action)).toEqual(["update"]);
+	expect(urlOnly.changes.map((change) => change.action)).toEqual(["update"]);
 });
 
 test("a remote webhook the request doesn't state is unmanaged", () => {
@@ -106,11 +110,94 @@ test("a remote webhook the request doesn't state is unmanaged", () => {
 		stated: [stated({ id: "other" })],
 		now: NOW,
 	});
-	expect(changes).toEqual([
+	expect(changes.changes).toEqual([
 		{
 			action: "unmanaged",
 			id: "ep_3JouCXZ8St4UOFxRDgqmbGBlaez",
 			webhook: dashboardMade,
 		},
 	]);
+});
+
+describe("adopting dashboard-made webhooks", () => {
+	const dashboard = (id: string, url = "https://example.com/hook") =>
+		remote({ id, url, events: ["invoice.finalized"] as WebhookEventType[] });
+
+	test("a new id whose URL matches exactly one uid-less endpoint adopts it", () => {
+		const before = dashboard("ep_dash1");
+		const other = dashboard("ep_dash2", "https://example.com/other");
+		const result = computeWebhookSyncChanges({
+			remote: [before, other],
+			uidlessIds: new Set(["ep_dash1", "ep_dash2"]),
+			stated: [stated({ description: "adopted" })],
+			now: NOW,
+		});
+		expect(result.errors).toEqual([]);
+		expect(result.changes).toEqual([
+			{
+				action: "adopt",
+				id: "billing",
+				before,
+				after: {
+					...before,
+					id: "billing",
+					events: [
+						"invoice.finalized",
+						"billing.updated",
+					] as WebhookEventType[],
+					description: "adopted",
+				},
+			},
+			{ action: "unmanaged", id: "ep_dash2", webhook: other },
+		]);
+	});
+
+	test("several uid-less endpoints with the URL is an error, never a create", () => {
+		const result = computeWebhookSyncChanges({
+			remote: [dashboard("ep_dash1"), dashboard("ep_dash2")],
+			uidlessIds: new Set(["ep_dash1", "ep_dash2"]),
+			stated: [stated()],
+			now: NOW,
+		});
+		expect(result.changes.map((change) => change.action)).toEqual([
+			"unmanaged",
+			"unmanaged",
+		]);
+		expect(result.errors).toEqual([
+			{
+				id: "billing",
+				message: expect.stringContaining("2 dashboard webhooks"),
+			},
+		]);
+	});
+
+	test("two new ids with the URL of one uid-less endpoint are both errors", () => {
+		const result = computeWebhookSyncChanges({
+			remote: [dashboard("ep_dash1")],
+			uidlessIds: new Set(["ep_dash1"]),
+			stated: [stated(), stated({ id: "billing-2" })],
+			now: NOW,
+		});
+		expect(result.changes.map((change) => change.action)).toEqual([
+			"unmanaged",
+		]);
+		expect(result.errors.map((error) => error.id)).toEqual([
+			"billing",
+			"billing-2",
+		]);
+	});
+
+	test("an endpoint that already has a uid is never adopted: the new id is created", () => {
+		const owned = remote({ id: "someone-else" });
+		const result = computeWebhookSyncChanges({
+			remote: [owned],
+			uidlessIds: new Set(),
+			stated: [stated()],
+			now: NOW,
+		});
+		expect(result.changes.map((change) => change.action)).toEqual([
+			"create",
+			"unmanaged",
+		]);
+	});
 });
