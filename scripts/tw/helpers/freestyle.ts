@@ -33,6 +33,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import chalk from "chalk";
+import { BALANCE_SYNC_SQS_QUEUE_URL } from "../worker/prepareBalanceSyncQueue.js";
 import { Freestyle } from "freestyle";
 import {
 	DATABASE_CRITICAL_URL,
@@ -43,6 +44,7 @@ import {
 	REDIS_URL,
 	SERVER_PORT,
 	SQS_QUEUE_URL_V2,
+	STRIPE_WEBHOOK_SQS_QUEUE_URL,
 	TRACK_ASYNC_SQS_QUEUE_URL,
 	TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
 	TRACK_SQS_QUEUE_URL,
@@ -335,7 +337,9 @@ const warmServerEnv = (): Record<string, string> => {
 		REDIS_URL,
 		MISC_CACHE_DRAGONFLY_PUBLIC_URL: REDIS_URL,
 		CACHE_V2_DRAGONFLY_URL: REDIS_URL,
+		BALANCE_SYNC_SQS_QUEUE_URL,
 		SQS_QUEUE_URL_V2,
+		STRIPE_WEBHOOK_SQS_QUEUE_URL,
 		TRACK_SQS_QUEUE_URL,
 		TRACK_ASYNC_SQS_QUEUE_URL,
 		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
@@ -350,11 +354,7 @@ const warmServerEnv = (): Record<string, string> => {
 		AUTUMN_EDGE_CONFIG_OVERRIDE_B64: EDGE_CONFIG_OVERRIDE_B64,
 		TW_WORKER_MODE: "1",
 	};
-	// Baked unconditionally: only the svix shard binds an app, so it's inert
-	// on every other worker but present when that shard's server sends.
-	if (process.env.SVIX_API_KEY) {
-		env.SVIX_API_KEY = process.env.SVIX_API_KEY;
-	}
+
 	return env;
 };
 
@@ -875,6 +875,7 @@ export const freestyleProvider: ProviderImpl = {
 				`mkdir -p ${TW_PREFIX}/logs`,
 				`printf '%s' ${shellQuote(serverEnv.STRIPE_SANDBOX_SECRET_KEY)} > ${STRIPE_KEY_FILE}`,
 				`chmod 600 ${STRIPE_KEY_FILE}`,
+				`cd ${REPO_ROOT} && bun scripts/tw/worker/prepareBalanceSyncQueue.ts`,
 				`cd ${REPO_ROOT}/server`,
 				`nohup bun src/index.ts > ${TW_PREFIX}/logs/server.log 2>&1 &`,
 				`nohup bun src/workers.ts > ${TW_PREFIX}/logs/workers.log 2>&1 &`,

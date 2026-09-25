@@ -81,14 +81,13 @@ test.concurrent(
 			],
 		};
 
-		// ── Contract: exact credit for the immediate plan only; premium B is
-		// canceling at cycle end so nothing renews ────────────────────────────────
+		// Premium B's scheduled cancellation still has a preview, with nothing to bill.
 		const preview = await expectMultiUpdatePreviewCorrect({
 			autumn: autumnV2_3,
 			params: multiUpdateParams,
 			total: -20,
 			subscriptions: [
-				{ planIds: [proA.id, premiumB.id], total: -20, nextCycleTotal: null },
+				{ planIds: [proA.id, premiumB.id], total: -20, nextCycleTotal: 0 },
 			],
 		});
 

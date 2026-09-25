@@ -81,6 +81,7 @@ const runSyncToPastDue = () => {
 			customerProducts: [customerProduct],
 			fullCustomer: { internal_id: "internal_cus_test", id: "cus_test" },
 			previousAttributes: { status: "past_due" },
+			results: { errors: [] },
 		} as never,
 	});
 };

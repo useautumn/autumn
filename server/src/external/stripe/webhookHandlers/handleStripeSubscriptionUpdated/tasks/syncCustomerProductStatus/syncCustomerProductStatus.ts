@@ -203,13 +203,14 @@ export const syncCustomerProductStatus = async ({
 	}
 
 	// Safety net: fix any customer products with unexpected statuses
-	await fixUnexpectedStatuses({
-		ctx,
-		stripeSubscription,
-		fullCustomer,
-		autumnStatus,
-		trialEndsAt,
-		collectionMethod,
-		previousAttributes,
-	});
+	subscriptionUpdatedContext.results.repairedCustomerProducts =
+		await fixUnexpectedStatuses({
+			ctx,
+			stripeSubscription,
+			fullCustomer,
+			autumnStatus,
+			trialEndsAt,
+			collectionMethod,
+			previousAttributes,
+		});
 };

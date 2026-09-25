@@ -29,6 +29,7 @@ export const applyPooledBalanceCustomerProductTransitions = async ({
 		ctx,
 		customerId,
 		source: "pooled-balance-lifecycle-before-reset",
+		flushBalances: true,
 	});
 	const duePooledCustomerEntitlements = (
 		refreshedBeforeReset.pooled_customer_entitlements ?? []
@@ -79,12 +80,14 @@ const refreshFullCustomer = async ({
 	ctx,
 	customerId,
 	source,
+	flushBalances = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	source: string;
+	flushBalances?: boolean;
 }) => {
-	await deleteCachedFullCustomer({ ctx, customerId, source });
+	await deleteCachedFullCustomer({ ctx, customerId, source, flushBalances });
 	return CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,

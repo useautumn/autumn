@@ -11,8 +11,10 @@ import { getExpandedStripeSubscription } from "@/external/stripe/subscriptions";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { stripeInvoiceToStripeSubscriptionId } from "../../invoices/utils/convertStripeInvoice";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
+import type { StripeInvoicePaidResults } from "./types/stripeInvoicePaidResults";
 
 export interface StripeInvoicePaidContext {
+	results: StripeInvoicePaidResults;
 	stripeInvoice: ExpandedStripeInvoice<
 		["discounts.source.coupon", "payments", "total_discount_amounts"]
 	>;
@@ -71,6 +73,11 @@ export const setupStripeInvoicePaidContext = async ({
 	}
 
 	return {
+		results: {
+			updatedCustomerProductIds: [],
+			appliedBillingPlan: false,
+			invoiceCache: null,
+		},
 		stripeInvoice,
 		stripeSubscriptionId,
 		customerProducts,

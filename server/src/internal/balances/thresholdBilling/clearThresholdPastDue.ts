@@ -11,19 +11,22 @@ export const clearThresholdPastDue = async ({
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	customerProductId?: string;
-}): Promise<void> => {
+}): Promise<string[]> => {
 	const customerId = fullCustomer.id;
-	if (!customerId) return;
+	if (!customerId) return [];
+
+	const customerProducts = selectThresholdBlockedProducts({
+		fullCustomer,
+		customerProductId,
+	});
 
 	await applyThresholdBlock({
 		ctx,
 		customerId,
-		customerProducts: selectThresholdBlockedProducts({
-			fullCustomer,
-			customerProductId,
-		}),
+		customerProducts,
 		fullCustomer,
 		status: CusProductStatus.Active,
 		source: "threshold-billing-recovered",
 	});
+	return customerProducts.map((customerProduct) => customerProduct.id);
 };
