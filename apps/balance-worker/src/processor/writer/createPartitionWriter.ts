@@ -47,6 +47,10 @@ export function createPartitionWriter({
 		return waitForCustomerCommits({ scope, customerKey });
 	}
 
+	function assertCommitsHealthy(): void {
+		if (scope.state.recoveryError) throw scope.state.recoveryError;
+	}
+
 	function readFreshestState({
 		identity,
 	}: Parameters<PartitionWriter["readFreshestState"]>[0]) {
@@ -75,6 +79,7 @@ export function createPartitionWriter({
 		waitForApplies,
 		decide,
 		waitForPendingCommits,
+		assertCommitsHealthy,
 		readFreshestState,
 		evict,
 		adopt,

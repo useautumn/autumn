@@ -25,6 +25,8 @@ export type PartitionWriter = {
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
 	/** Snapshot: waits for the mutations pending for this customer when called, not ones enqueued later. */
 	waitForPendingCommits(params: { customerKey: string }): Promise<void>;
+	/** Throws once a commit has failed: the projection past it never became durable, so nothing may be read from it. */
+	assertCommitsHealthy(): void;
 	/** Pending projection first, then committed state: what the next decision for this customer would see. */
 	readFreshestState(params: {
 		identity: MeteringIdentity;

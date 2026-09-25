@@ -338,7 +338,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	"checks and drain wait for an accepted initialization to commit",
+	"a check answers from an accepted initialization before it commits; drain still waits",
 	async () => {
 		const gate = Promise.withResolvers<void>();
 		const fixture = createFixture({ commitGate: gate.promise });
@@ -360,16 +360,15 @@ test.concurrent(
 			const draining = fixture.processor.drain().then(() => {
 				drained = true;
 			});
-			await new Promise<void>((resolve) => setImmediate(resolve));
-			expect(settled).toBe(false);
-			expect(drained).toBe(false);
-			expect(fixture.store.readState({ identity })).toBeNull();
-			gate.resolve();
-			expect((await initializePromise).status).toBe(200);
 			expect(await (await checkPromise).json()).toMatchObject({
 				result: { allowed: true },
 				state: { revision: 1, customerEntitlements: [{ balance: 10 }] },
 			});
+			expect(settled).toBe(true);
+			expect(drained).toBe(false);
+			expect(fixture.store.readState({ identity })).toBeNull();
+			gate.resolve();
+			expect((await initializePromise).status).toBe(200);
 			await draining;
 		} finally {
 			gate.resolve();

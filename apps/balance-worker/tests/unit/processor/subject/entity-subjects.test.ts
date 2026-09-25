@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
 	createSubjectState,
 	type MeteringIdentity,
+	parseCheckCommand,
 	type SubjectState,
 	type WorkerEntity,
 } from "@autumn/balance-engine";
@@ -13,6 +14,7 @@ import type { MeteringRecord } from "@autumn/kafka";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
 import { createCustomerPlans } from "../../../../src/processor/commands/applyBillingPlan/customerPlans/customerPlans.js";
+import { check } from "../../../../src/processor/commands/check.js";
 import { track } from "../../../../src/processor/commands/track.js";
 import { createAcceptedCommands } from "../../../../src/processor/common/acceptedCommands.js";
 import { createSubjectHydrator } from "../../../../src/processor/subject/createSubjectHydrator.js";
@@ -34,6 +36,8 @@ import {
 	createTrackCommand,
 	testIdentity as identity,
 	restoreSubjectStates,
+	testOccurredAt,
+	testOrg,
 } from "../../../fixtures/mutations.js";
 
 const topic = "entity-subjects";
@@ -106,6 +110,8 @@ const entityEnvelope: SubjectRowsEnvelope = {
 class ControlledAppender implements CommittedOutcomeAppender {
 	readonly batches: MeteringRecord[][] = [];
 	hold = false;
+	/** Set to make every append fail the way a broker that stopped answering would. */
+	failWith: Error | null = null;
 	private held: Array<() => void> = [];
 	private nextOffset = 0n;
 
@@ -116,6 +122,7 @@ class ControlledAppender implements CommittedOutcomeAppender {
 		partition: number;
 		outcomes: readonly MeteringRecord[];
 	}): Promise<{ baseOffset: bigint }> {
+		if (this.failWith) return Promise.reject(this.failWith);
 		this.batches.push([...outcomes]);
 		const baseOffset = this.nextOffset;
 		this.nextOffset += BigInt(outcomes.length);
@@ -199,6 +206,24 @@ const createFixture = () => {
 		subjectRowsCalls,
 		track: (command: Parameters<typeof createTrackCommand>[0]) =>
 			track({ scope, command: createTrackCommand(command) }),
+		check: () =>
+			check({
+				scope,
+				command: parseCheckCommand({
+					input: {
+						schemaVersion: 1,
+						type: "check",
+						org: testOrg,
+						requestId: "req_check",
+						identity,
+						featureId: "messages",
+						internalFeatureId: "feat_messages",
+						requiredBalance: 1,
+						properties: null,
+						occurredAt: testOccurredAt,
+					},
+				}),
+			}),
 		close: () => {
 			store.close();
 			rmSync(directory, { recursive: true, force: true });
@@ -339,6 +364,56 @@ describe("entity subjects", () => {
 				unknown,
 			);
 			expect(fixture.appender.batches).toEqual([]);
+		} finally {
+			fixture.close();
+		}
+	});
+});
+
+describe("reads while commits are in flight", () => {
+	const messagesBalanceOf = (reply: { state: SubjectState }) =>
+		reply.state.customerEntitlements.find(
+			(row) => row.id === "messages_monthly",
+		)?.balance;
+
+	test("a check answers from the projection while the customer's track is still committing", async () => {
+		const fixture = createFixture();
+		try {
+			await fixture.track({ value: 1, commandId: "warm" });
+			fixture.appender.hold = true;
+			const pendingTrack = fixture.track({ value: 2, commandId: "held" });
+			await waitForTurn();
+			expect(fixture.store.readOwnState({ identity })?.revision).toBe(1);
+
+			// Nothing releases the commit until after the check has answered.
+			const reply = await Promise.race([
+				fixture.check(),
+				new Promise<never>((_, reject) =>
+					setTimeout(
+						() => reject(new Error("check waited for the commit")),
+						500,
+					),
+				),
+			]);
+			expect(reply.state.revision).toBe(2);
+			expect(messagesBalanceOf(reply)).toBe(7);
+			expect(fixture.store.readOwnState({ identity })?.revision).toBe(1);
+
+			fixture.appender.release();
+			expect((await pendingTrack).state.revision).toBe(2);
+		} finally {
+			fixture.close();
+		}
+	});
+
+	test("a read after a failed commit fails rather than answering from a projection that never landed", async () => {
+		const fixture = createFixture();
+		try {
+			fixture.appender.failWith = new Error("broker stopped answering");
+			await expect(
+				fixture.track({ value: 1, commandId: "doomed" }),
+			).rejects.toThrow();
+			await expect(fixture.check()).rejects.toThrow();
 		} finally {
 			fixture.close();
 		}
