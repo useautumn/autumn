@@ -27,21 +27,32 @@ import { SandboxColorSwatches } from "../SandboxColorSwatches";
 import { EnvironmentDetailHeader } from "./EnvironmentDetailHeader";
 import { renamedSandboxPath } from "./renamedSandboxPath";
 import { SandboxSettingRow } from "./SandboxSettingRow";
+import type { SandboxDraft } from "./types/sandboxDraft";
 
 export const SandboxSettings = ({
 	sandbox,
 	sandboxes,
+	draft,
+	onDraftChange,
+	onDraftSaved,
 }: {
 	sandbox: SandboxSummary;
 	sandboxes: SandboxSummary[];
+	draft: SandboxDraft;
+	onDraftChange: (draft: SandboxDraft) => void;
+	onDraftSaved: () => void;
 }) => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const activeSandbox = useActiveSandbox();
 	const updateSandbox = useUpdateSandbox();
-	const [name, setName] = useState(sandbox.name);
-	const [color, setColor] = useState(sandbox.color);
-	const [icon, setIcon] = useState(sandbox.icon);
+	const { name, color, icon } = draft;
+	const setName = (nextName: string) =>
+		onDraftChange({ ...draft, name: nextName });
+	const setColor = (nextColor: string) =>
+		onDraftChange({ ...draft, color: nextColor });
+	const setIcon = (nextIcon: string) =>
+		onDraftChange({ ...draft, icon: nextIcon });
 	const [importOpen, setImportOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -85,6 +96,7 @@ export const SandboxSettings = ({
 			if (movesActiveUrl) {
 				navigate(nextPath, { replace: true });
 			}
+			onDraftSaved();
 			toast.success("Sandbox updated");
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to update sandbox"));

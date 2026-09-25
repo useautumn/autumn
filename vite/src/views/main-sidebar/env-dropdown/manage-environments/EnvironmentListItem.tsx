@@ -5,11 +5,13 @@ export const EnvironmentListItem = ({
 	icon,
 	name,
 	isSelected,
+	hasUnsavedChanges = false,
 	onSelect,
 }: {
 	icon: ReactNode;
 	name: string;
 	isSelected: boolean;
+	hasUnsavedChanges?: boolean;
 	onSelect: () => void;
 }) => (
 	<button
@@ -25,5 +27,14 @@ export const EnvironmentListItem = ({
 	>
 		{icon}
 		<span className="min-w-0 flex-1 truncate">{name}</span>
+		{hasUnsavedChanges && (
+			<>
+				<span
+					aria-hidden="true"
+					className="size-1.5 shrink-0 rounded-full bg-primary"
+				/>
+				<span className="sr-only">Unsaved changes</span>
+			</>
+		)}
 	</button>
 );

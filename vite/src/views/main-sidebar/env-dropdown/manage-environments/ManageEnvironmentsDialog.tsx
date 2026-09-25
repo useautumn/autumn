@@ -7,7 +7,9 @@ import { useEnv } from "@/utils/envUtils";
 import { BuiltInEnvironmentSummary } from "./BuiltInEnvironmentSummary";
 import { EnvironmentList } from "./EnvironmentList";
 import { SandboxSettings } from "./SandboxSettings";
+import { isDraftUnsaved, sandboxToDraft } from "./sandboxDraft";
 import type { EnvironmentSelection } from "./types/environmentSelection";
+import type { SandboxDraft } from "./types/sandboxDraft";
 
 const useCurrentEnvironmentSelection = (): EnvironmentSelection => {
 	const env = useEnv();
@@ -32,6 +34,34 @@ const ManageEnvironmentsPanel = ({
 	const currentSelection = useCurrentEnvironmentSelection();
 	const [selection, setSelection] =
 		useState<EnvironmentSelection>(currentSelection);
+	// Drafts outlive the selected form so switching sandboxes keeps unsaved edits.
+	const [drafts, setDrafts] = useState<Record<string, SandboxDraft>>({});
+
+	const updateDraft = ({
+		sandbox,
+		draft,
+	}: {
+		sandbox: SandboxSummary;
+		draft: SandboxDraft;
+	}) =>
+		setDrafts((previous) => {
+			const { [sandbox.id]: _replaced, ...rest } = previous;
+			return isDraftUnsaved({ draft, sandbox })
+				? { ...rest, [sandbox.id]: draft }
+				: rest;
+		});
+
+	const clearDraft = (sandboxId: string) =>
+		setDrafts(({ [sandboxId]: _cleared, ...rest }) => rest);
+
+	const unsavedSandboxIds = new Set(
+		sandboxes
+			.filter((sandbox) => {
+				const draft = drafts[sandbox.id];
+				return draft !== undefined && isDraftUnsaved({ draft, sandbox });
+			})
+			.map((sandbox) => sandbox.id),
+	);
 
 	const selectedSandbox =
 		selection.kind === "sandbox"
@@ -49,6 +79,7 @@ const ManageEnvironmentsPanel = ({
 				sandboxes={sandboxes}
 				isDeployed={isDeployed}
 				selection={resolvedSelection}
+				unsavedSandboxIds={unsavedSandboxIds}
 				onSelect={setSelection}
 				onCreateSandbox={onCreateSandbox}
 			/>
@@ -58,6 +89,13 @@ const ManageEnvironmentsPanel = ({
 						key={selectedSandbox.id}
 						sandbox={selectedSandbox}
 						sandboxes={sandboxes}
+						draft={
+							drafts[selectedSandbox.id] ?? sandboxToDraft(selectedSandbox)
+						}
+						onDraftChange={(draft) =>
+							updateDraft({ sandbox: selectedSandbox, draft })
+						}
+						onDraftSaved={() => clearDraft(selectedSandbox.id)}
 					/>
 				) : (
 					<BuiltInEnvironmentSummary
@@ -89,7 +127,7 @@ export const ManageEnvironmentsDialog = ({
 	<Dialog open={open} onOpenChange={onOpenChange}>
 		<DialogContent
 			showCloseButton={false}
-			className="flex h-[min(520px,calc(100vh-2rem))] w-[calc(100vw-2rem)] max-w-[760px] flex-col gap-0 overflow-hidden bg-card p-0 sm:flex-row"
+			className="flex h-[min(520px,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[760px] flex-col gap-0 overflow-hidden bg-card p-0 sm:flex-row"
 		>
 			<ManageEnvironmentsPanel
 				sandboxes={sandboxes}

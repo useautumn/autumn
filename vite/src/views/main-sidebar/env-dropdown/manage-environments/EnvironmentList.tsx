@@ -9,12 +9,14 @@ export const EnvironmentList = ({
 	sandboxes,
 	isDeployed,
 	selection,
+	unsavedSandboxIds,
 	onSelect,
 	onCreateSandbox,
 }: {
 	sandboxes: SandboxSummary[];
 	isDeployed: boolean;
 	selection: EnvironmentSelection;
+	unsavedSandboxIds: Set<string>;
 	onSelect: (selection: EnvironmentSelection) => void;
 	onCreateSandbox: () => void;
 }) => {
@@ -24,7 +26,7 @@ export const EnvironmentList = ({
 	return (
 		<nav
 			aria-label="Environments"
-			className="flex max-h-60 w-full shrink-0 flex-col border-b bg-background sm:max-h-none sm:w-56 sm:border-r sm:border-b-0"
+			className="flex max-h-[40%] w-full shrink-0 flex-col border-b bg-background sm:max-h-none sm:w-56 sm:border-r sm:border-b-0"
 		>
 			<DialogTitle className="px-4 pt-4 pb-3 text-sm font-semibold text-foreground">
 				Environments
@@ -55,6 +57,7 @@ export const EnvironmentList = ({
 						icon={<EnvironmentIcon sandbox={sandbox} className="size-3.5" />}
 						name={sandbox.name}
 						isSelected={isSelectedSandbox(sandbox.id)}
+						hasUnsavedChanges={unsavedSandboxIds.has(sandbox.id)}
 						onSelect={() =>
 							onSelect({ kind: "sandbox", sandboxId: sandbox.id })
 						}
