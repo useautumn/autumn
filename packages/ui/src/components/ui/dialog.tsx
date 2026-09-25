@@ -87,26 +87,32 @@ const DialogContent = React.forwardRef<
 	HTMLDivElement,
 	DialogPrimitive.Popup.Props & {
 		showCloseButton?: boolean;
+		overlayClassName?: string;
 	}
->(({ className, children, showCloseButton = true, ...props }, ref) => (
-	<DialogPortal data-slot="dialog-portal">
-		<DialogOverlay />
-		<DialogPrimitive.Popup
-			ref={ref}
-			data-slot="dialog-content"
-			className={cn(
-				"data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 fixed top-[50%] left-[50%] z-[180] grid translate-x-[-50%] translate-y-[-50%] rounded-lg shadow-lg ring-1 ring-foreground/10 duration-200",
-				"w-full max-w-md gap-3 bg-background",
-				"p-4",
-				className,
-			)}
-			{...props}
-		>
-			{children}
-			{showCloseButton && <DialogCloseButton />}
-		</DialogPrimitive.Popup>
-	</DialogPortal>
-));
+>(
+	(
+		{ className, children, showCloseButton = true, overlayClassName, ...props },
+		ref,
+	) => (
+		<DialogPortal data-slot="dialog-portal">
+			<DialogOverlay className={overlayClassName} />
+			<DialogPrimitive.Popup
+				ref={ref}
+				data-slot="dialog-content"
+				className={cn(
+					"data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 fixed top-[50%] left-[50%] z-[180] grid translate-x-[-50%] translate-y-[-50%] rounded-lg shadow-lg ring-1 ring-foreground/10 duration-200",
+					"w-full max-w-md gap-3 bg-background",
+					"p-4",
+					className,
+				)}
+				{...props}
+			>
+				{children}
+				{showCloseButton && <DialogCloseButton />}
+			</DialogPrimitive.Popup>
+		</DialogPortal>
+	),
+);
 DialogContent.displayName = "DialogContent";
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {

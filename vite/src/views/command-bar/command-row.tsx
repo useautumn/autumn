@@ -1,54 +1,30 @@
-import { CommandItem } from "@autumn/ui";
+import { CommandItem, CommandShortcut } from "@autumn/ui";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-/**
- * Get the platform-specific meta key symbol
- */
-const getMetaKey = () => {
-	if (navigator.userAgent.includes("Mac")) {
-		return "⌘";
-	}
-	return "Ctrl";
-};
+const getMetaKey = () => (navigator.userAgent.includes("Mac") ? "⌘" : "Ctrl");
 
-/**
- * Render a keyboard shortcut key
- */
-const KeystrokeContainer = ({ keyStroke }: { keyStroke: string }) => {
-	return (
-		<div className="flex items-center justify-center size-4 rounded-md text-tiny font-medium bg-muted text-body-secondary border">
-			<span>{keyStroke}</span>
-		</div>
-	);
-};
-
-/**
- * Props for CommandRow.
- * Supports an optional `value` prop for cmdk row identification.
- */
 interface CommandRowProps {
-	/** Icon to display (React node) */
 	icon?: React.ReactNode;
-	/** Main title text */
 	title: string;
-	/** Optional subtext to display next to title */
 	subtext?: string;
-	/** Keyboard shortcut number (1-9). Will automatically prepend meta key */
+	/** Digit paired with the platform meta key, e.g. "1" renders ⌘1 */
 	shortcutKey?: string;
-	/** Custom keyboard shortcuts (for complex combinations) */
 	customShortcuts?: string[];
-	/** Click handler */
 	onSelect: () => void;
-	/** Additional className for the CommandItem */
 	className?: string;
-	/** Optional value identifier for cmdk row lookup */
 	value?: string;
 }
 
-/**
- * Consistent command row component for command palette
- */
+const getShortcutLabel = ({
+	shortcutKey,
+	customShortcuts,
+}: Pick<CommandRowProps, "shortcutKey" | "customShortcuts">) => {
+	if (customShortcuts?.length) return customShortcuts.join("");
+	if (shortcutKey) return `${getMetaKey()}${shortcutKey}`;
+	return null;
+};
+
 export const CommandRow = React.forwardRef<HTMLDivElement, CommandRowProps>(
 	(
 		{
@@ -63,65 +39,37 @@ export const CommandRow = React.forwardRef<HTMLDivElement, CommandRowProps>(
 		},
 		ref,
 	) => {
-		const renderIcon = (icon: React.ReactNode) => {
-			if (!icon) return null;
-
-			// Clone the icon and add consistent sizing and lighter stroke weight
-			if (React.isValidElement(icon)) {
-				return React.cloneElement(icon, {
-					className: cn(
-						"mr-1 size-3.5 text-tertiary-foreground",
-						icon.props.className,
-					),
-					strokeWidth: icon.props.strokeWidth ?? 1.5,
-				} as React.HTMLAttributes<HTMLElement>);
-			}
-
-			return icon;
-		};
-
-		const renderShortcuts = () => {
-			// Custom shortcuts take precedence
-			if (customShortcuts && customShortcuts.length > 0) {
-				return (
-					<span className="flex items-center gap-0.5">
-						{customShortcuts.map((key, index) => (
-							<KeystrokeContainer key={index} keyStroke={key} />
-						))}
-					</span>
-				);
-			}
-
-			// Standard meta+number shortcut
-			if (shortcutKey) {
-				return (
-					<span className="flex items-center gap-0.5">
-						<KeystrokeContainer keyStroke={getMetaKey()} />
-						<KeystrokeContainer keyStroke={shortcutKey} />
-					</span>
-				);
-			}
-
-			return null;
-		};
+		const shortcutLabel = getShortcutLabel({ shortcutKey, customShortcuts });
 
 		return (
 			<CommandItem
 				ref={ref}
 				value={value}
 				onSelect={onSelect}
-				className={cn("flex justify-between items-center", className)}
+				className={cn("flex items-center justify-between", className)}
 			>
-				<div className="flex items-center gap-2 min-w-0 flex-1">
-					{renderIcon(icon)}
-					<span className="text-sm truncate shrink-0 max-w-[50%]">{title}</span>
+				<div className="flex min-w-0 flex-1 items-center gap-2.5">
+					{React.isValidElement<
+						React.HTMLAttributes<HTMLElement> & { strokeWidth?: number }
+					>(icon)
+						? React.cloneElement(icon, {
+								className: cn(
+									"size-4 text-tertiary-foreground",
+									icon.props.className,
+								),
+								strokeWidth: icon.props.strokeWidth ?? 1.5,
+							})
+						: icon}
+					<span className="max-w-[50%] shrink-0 truncate text-sm text-foreground">
+						{title}
+					</span>
 					{subtext && (
-						<span className="text-xs truncate text-muted-foreground">
+						<span className="truncate text-xs text-tertiary-foreground">
 							{subtext}
 						</span>
 					)}
 				</div>
-				{renderShortcuts()}
+				{shortcutLabel && <CommandShortcut>{shortcutLabel}</CommandShortcut>}
 			</CommandItem>
 		);
 	},

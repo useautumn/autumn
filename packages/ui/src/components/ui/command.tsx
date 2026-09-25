@@ -6,6 +6,7 @@ import {
 	DialogTitle,
 } from "@autumn/ui/components/ui/dialog";
 import { cn } from "@autumn/ui/lib/utils";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { Command as CommandPrimitive } from "cmdk";
 import type * as React from "react";
 
@@ -24,6 +25,16 @@ function Command({
 		/>
 	);
 }
+
+// Palette-only sizing, applied through data-slots so inline pickers keep their compact rows.
+const COMMAND_DIALOG_SLOT_STYLES = [
+	"[&_[data-slot=command-input-wrapper]]:h-13 [&_[data-slot=command-input-wrapper]]:gap-3 [&_[data-slot=command-input-wrapper]]:px-4",
+	"[&_[data-slot=command-input]]:text-md",
+	"[&_[data-slot=command-list]]:max-h-[360px]",
+	"[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-tertiary-foreground",
+	"[&_[data-slot=command-item]]:h-9 [&_[data-slot=command-item]]:gap-2.5 [&_[data-slot=command-item]]:rounded-lg [&_[data-slot=command-item]]:px-2.5",
+	"[&_[data-slot=command-item][data-selected=true]]:bg-foreground/6",
+];
 
 function CommandDialog({
 	title = "Command Palette",
@@ -47,12 +58,18 @@ function CommandDialog({
 			</DialogHeader>
 			<DialogContent
 				className={cn(
-					"overflow-hidden p-0 bg-interactive-secondary",
+					"top-[18%] max-w-[640px] translate-y-0 gap-0 overflow-hidden rounded-xl bg-interactive-secondary p-0 shadow-2xl ring-foreground/8",
 					className,
 				)}
+				overlayClassName="dark:bg-black/60"
 				showCloseButton={showCloseButton}
 			>
-				<Command shouldFilter={false}>{children}</Command>
+				<Command
+					shouldFilter={false}
+					className={cn("rounded-none", COMMAND_DIALOG_SLOT_STYLES)}
+				>
+					{children}
+				</Command>
 			</DialogContent>
 		</Dialog>
 	);
@@ -67,6 +84,7 @@ function CommandInput({
 			data-slot="command-input-wrapper"
 			className="flex h-10 items-center gap-2 border-b border-border px-3"
 		>
+			<MagnifyingGlassIcon className="size-4 shrink-0 text-tertiary-foreground" />
 			<CommandPrimitive.Input
 				data-slot="command-input"
 				className={cn(
@@ -162,7 +180,46 @@ function CommandShortcut({
 		<span
 			data-slot="command-shortcut"
 			className={cn(
-				"text-muted-foreground ml-auto text-xs tracking-widest",
+				"ml-auto shrink-0 text-xs text-tertiary-foreground tabular-nums",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+function CommandKbd({ className, ...props }: React.ComponentProps<"kbd">) {
+	return (
+		<kbd
+			data-slot="command-kbd"
+			className={cn(
+				"flex h-5 min-w-5 items-center justify-center rounded-[5px] bg-foreground/5 px-1 font-sans text-[11px] text-tertiary-foreground",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+function CommandFooter({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="command-footer"
+			className={cn(
+				"flex h-10 shrink-0 items-center justify-between border-t border-border bg-foreground/2 px-3.5",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+function CommandHint({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="command-hint"
+			className={cn(
+				"flex items-center gap-1 text-xs text-tertiary-foreground",
 				className,
 			)}
 			{...props}
@@ -172,6 +229,9 @@ function CommandShortcut({
 
 export {
 	Command,
+	CommandFooter,
+	CommandHint,
+	CommandKbd,
 	CommandDialog,
 	CommandEmpty,
 	CommandGroup,

@@ -2,8 +2,11 @@ import { AppEnv, type Customer } from "@autumn/shared";
 import {
 	CommandDialog,
 	CommandEmpty,
+	CommandFooter,
 	CommandGroup,
+	CommandHint,
 	CommandInput,
+	CommandKbd,
 	CommandList,
 	Skeleton,
 } from "@autumn/ui";
@@ -596,7 +599,7 @@ const CommandBar = () => {
 	const renderMainPage = () => (
 		<>
 			{filteredNavigationItems.length > 0 && (
-				<CommandGroup className="p-1.5">
+				<CommandGroup heading="Suggestions" className="p-1.5">
 					{filteredNavigationItems.map((item) => (
 						<CommandRow
 							key={item.title}
@@ -1025,6 +1028,15 @@ const CommandBar = () => {
 					? lastRenderedContentRef.current
 					: currentContent}
 			</CommandList>
+			<CommandFooter>
+				<CommandHint>
+					Navigate <CommandKbd>↑</CommandKbd>
+					<CommandKbd>↓</CommandKbd>
+				</CommandHint>
+				<CommandHint>
+					Open <CommandKbd>↵</CommandKbd>
+				</CommandHint>
+			</CommandFooter>
 		</CommandDialog>
 	);
 };
