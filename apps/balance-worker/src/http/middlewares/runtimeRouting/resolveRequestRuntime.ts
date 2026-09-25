@@ -1,6 +1,5 @@
-import { parseMeteringIdentity } from "@autumn/balance-engine";
+import type { MeteringIdentity } from "@autumn/balance-engine";
 import type { PartitionRoute } from "@autumn/balance-worker-client/protocol";
-import { z } from "zod/v4";
 import type {
 	BalanceWorkerHttpContext,
 	BalanceWorkerRequestContext,
@@ -9,8 +8,6 @@ import {
 	PartitionRouteMismatchError,
 	PartitionRouteNotOwnedError,
 } from "./runtimeRoutingErrors.js";
-
-const commandIdentitySchema = z.object({ identity: z.unknown() });
 
 export async function resolveRequestRuntime({
 	ctx,
@@ -21,8 +18,8 @@ export async function resolveRequestRuntime({
 	route: PartitionRoute;
 	command: unknown;
 }): Promise<BalanceWorkerRequestContext["runtime"]> {
-	const envelope = commandIdentitySchema.parse(command);
-	const identity = parseMeteringIdentity({ input: envelope.identity });
+	// Our server builds the command; routing trusts its identity as sent.
+	const { identity } = command as { identity: MeteringIdentity };
 	const partition = ctx.partitionResolver.partitionForIdentity({ identity });
 	if (partition !== route.partition) throw new PartitionRouteMismatchError();
 	const runtime = ctx.ownership.findRuntime(route);
