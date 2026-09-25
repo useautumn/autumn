@@ -34,7 +34,7 @@ export function createOwnershipTail({
 	const state: OwnershipTailState = {
 		status: "created",
 		listenersByPartition: new Map(),
-		removeListeners: [],
+		removeListeners: new Set(),
 		stopping: null,
 	};
 
@@ -113,10 +113,9 @@ export function createOwnershipTail({
 			}
 		}
 		void observeFirstFetch();
-		state.removeListeners.push(
-			consumer.on(consumer.events.CRASH, onCrash),
-			consumer.on(consumer.events.FETCH, onFetch),
-		);
+		state.removeListeners
+			.add(consumer.on(consumer.events.CRASH, onCrash))
+			.add(consumer.on(consumer.events.FETCH, onFetch));
 		const timer = setTimeout(onStartTimeout, startTimeoutMs);
 		try {
 			await consumer.connect();
@@ -155,18 +154,23 @@ export function createOwnershipTail({
 		listeners.add(onRecord);
 		state.listenersByPartition.set(partition, listeners);
 		function remove(): void {
+			signal.removeEventListener("abort", remove);
+			state.removeListeners.delete(remove);
 			listeners.delete(onRecord);
 			if (listeners.size === 0) state.listenersByPartition.delete(partition);
 		}
-		signal.addEventListener("abort", remove, { once: true });
+		signal.addEventListener("abort", remove);
+		// Tracked so stop() detaches from the caller's signal, which may outlive the tail.
+		state.removeListeners.add(remove);
 	}
 
 	function stop(): Promise<void> {
 		if (state.stopping) return state.stopping;
 		const started = state.status !== "created";
 		state.status = "stopped";
+		for (const remove of [...state.removeListeners]) remove();
+		state.removeListeners.clear();
 		state.listenersByPartition.clear();
-		for (const remove of state.removeListeners.splice(0)) remove();
 		state.stopping = started ? closeTail() : Promise.resolve();
 		return state.stopping;
 	}

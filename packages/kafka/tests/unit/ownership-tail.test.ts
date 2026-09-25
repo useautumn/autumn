@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import type { ConsumerConfig, ConsumerRunConfig } from "kafkajs";
 import type { KafkaConsumerClient } from "../../src/consumer/types/consumer.js";
 import { createOwnershipTail } from "../../src/topics/ownership/consumer/createOwnershipTail.js";
@@ -393,6 +393,42 @@ describe("ownershipTail", function ownershipTailTests() {
 		} finally {
 			await tail.stop();
 		}
+	});
+
+	test("stop removes the abort listeners it put on callers' signals", async () => {
+		const fixture = createFakeTailKafka();
+		const { tail } = await startTail(fixture);
+		const controller = new AbortController();
+		const removed = spyOn(controller.signal, "removeEventListener");
+		tail.tailPartition({
+			partition: 3,
+			onRecord: () => undefined,
+			signal: controller.signal,
+		});
+		tail.tailPartition({
+			partition: 4,
+			onRecord: () => undefined,
+			signal: controller.signal,
+		});
+		await tail.stop();
+		expect(removed).toHaveBeenCalledTimes(2);
+		expect(removed.mock.calls.map(([type]) => type)).toEqual([
+			"abort",
+			"abort",
+		]);
+		// A listener that ended on its own signal is detached once, not again at stop.
+		const second = createFakeTailKafka();
+		const started = await startTail(second);
+		const own = new AbortController();
+		const ownRemoved = spyOn(own.signal, "removeEventListener");
+		started.tail.tailPartition({
+			partition: 3,
+			onRecord: () => undefined,
+			signal: own.signal,
+		});
+		own.abort();
+		await started.tail.stop();
+		expect(ownRemoved).toHaveBeenCalledTimes(1);
 	});
 
 	test("reports an unreadable record or a crash and keeps following", async () => {
