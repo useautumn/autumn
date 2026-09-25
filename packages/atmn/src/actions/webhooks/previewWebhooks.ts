@@ -24,11 +24,11 @@ export const previewWebhooks = async ({
 	if (webhookEnv === undefined)
 		throw new Error("webhooks need the target environment to pick each url.");
 	const env = await webhookEnv();
-	const { webhooks, skipped } = resolveWebhooksForEnv({
+	const webhooks = resolveWebhooksForEnv({
 		rows,
 		envKey: env.key,
 	});
 	const body = { webhooks };
 	const { changes } = await client.previewSyncWebhooks(body);
-	return { preview: { envKey: env.key, changes, skipped }, body, env };
+	return { preview: { changes }, body, env };
 };

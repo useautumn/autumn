@@ -166,7 +166,9 @@ test("the three previews run together and render as one preview", async () => {
 	expect(output).toContain(
 		"billing url: https://old.example.com/autumn → https://staging.example.com/autumn",
 	);
-	expect(output).toContain("audit  skipped (no url for sandbox)");
+	// A webhook with no url for this env is simply not sent, and never mentioned.
+	expect(output).not.toContain("audit");
+	expect(output).not.toContain("skipped");
 });
 
 test("--yes: settings apply before the catalog, and webhooks sync alongside, saving their secret", async () => {

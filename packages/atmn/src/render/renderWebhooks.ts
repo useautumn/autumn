@@ -4,13 +4,9 @@ import type { PreviewSyncWebhooksResponse } from "../generated/client";
 type WebhookChange = PreviewSyncWebhooksResponse["changes"][number];
 type WebhookState = Extract<WebhookChange, { action: "create" }>["webhook"];
 
-/** One push's webhook lane: the server's diff plus the entries this env skips. */
+/** One push's webhook lane: the server's diff for the target env. */
 export type WebhooksPreview = {
-	/** The `url` key the push targets. */
-	envKey: string;
 	changes: WebhookChange[];
-	/** Config ids with no url for this env. */
-	skipped: string[];
 };
 
 export const webhooksHaveWork = ({
@@ -80,12 +76,7 @@ export const renderWebhooks = ({
 }: {
 	webhooks: WebhooksPreview;
 }): string | null => {
-	const rows = [
-		...webhooks.changes.flatMap((change) => renderChange({ change })),
-		...webhooks.skipped.map((id) =>
-			chalk.dim(`  · ${id}  skipped (no url for ${webhooks.envKey})`),
-		),
-	];
+	const rows = webhooks.changes.flatMap((change) => renderChange({ change }));
 	if (rows.length === 0) return null;
 	const count = webhooks.changes.filter(
 		(change) => change.action !== "unmanaged",

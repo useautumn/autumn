@@ -76,8 +76,8 @@ test("a named sandbox reads its slug, from one lookup of its own org", async () 
 	expect(calls.count).toBe(1);
 });
 
-test("a webhook with no url for the env is skipped, the rest are sent as that env's url", () => {
-	const { webhooks, skipped } = resolveWebhooksForEnv({
+test("a webhook with no url for the env is not sent, the rest are sent as that env's url", () => {
+	const webhooks = resolveWebhooksForEnv({
 		rows: [
 			{
 				id: "billing",
@@ -95,7 +95,6 @@ test("a webhook with no url for the env is skipped, the rest are sent as that en
 	expect(webhooks).toEqual([
 		{ id: "billing", url: "https://s.dev/h", events: ["billing.updated"] },
 	]);
-	expect(skipped).toEqual(["prod-only"]);
 });
 
 test("secret names: prod has no org suffix; a sandbox adds ORG4; - becomes _", () => {

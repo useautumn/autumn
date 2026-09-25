@@ -4170,7 +4170,7 @@ export default atmn({
 - Keys: `live` for `-p`, `sandbox` for the default sandbox, or a named sandbox's slug (its name lowercased; no spaces). Never copy a sandbox URL into `live`: ask the user for the production URL, or leave `live` out.
 - Every URL must be https and publicly reachable; localhost and private networks are refused, tunnels such as ngrok work. `events` needs at least one entry.
 - `id` is permanent: changing it registers a new webhook. Two ids that differ only by case or `-`/`_` are refused.
-- The preview gives a changed URL its own line (`billing url: old → new`) and lists `skipped (no url for <env>)` for webhooks with no key in the target env. Read both out to the user before `--yes`.
+- The preview gives a changed URL its own line (`billing url: old → new`). Read it out to the user before `--yes`.
 - `push --yes` writes each new webhook's signing secret once and prints exactly where: `AUTUMN_WEBHOOK_<ID>_SECRET` in `.env.prod` for `-p`, `AUTUMN_WEBHOOK_<ID>_<ORG4>_SECRET` in `.env.local` (or `.env`) for a sandbox. Relay the variable name and file; never print or read the secret.
 - `pull` edits only the target env's key: it adds webhooks it finds, sets a changed URL, removes the env's key when the server no longer has that webhook, and deletes a webhook whose map ends up empty. A URL written as code (`process.env.X`) is never rewritten; pull warns when it differs from the server. Webhooks made in the dashboard are left out.
 
