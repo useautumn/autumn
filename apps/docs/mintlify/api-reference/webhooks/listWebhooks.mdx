@@ -1,0 +1,67 @@
+---
+title: "List Webhooks"
+openapi: "openapi POST /v1/webhooks.list"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  The environment's webhooks.
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="url" type="string">
+      The URL Autumn sends events to.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="description" type="string | null">
+      A note for your own reference.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="events" type="string[]">
+      The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="disabled" type="boolean">
+      When true, no events are sent to the webhook.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      When the webhook was created, ms since epoch.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="updated_at" type="number">
+      When the webhook was last changed, ms since epoch.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "list": [
+    {
+      "id": "billing",
+      "url": "https://example.com/webhooks/autumn",
+      "events": [
+        "billing.updated",
+        "invoice.finalized"
+      ],
+      "description": "Plan changes and invoices",
+      "disabled": false,
+      "created_at": 1781113864000,
+      "updated_at": 1781113864000
+    }
+  ]
+}
+```
+</ResponseExample>
