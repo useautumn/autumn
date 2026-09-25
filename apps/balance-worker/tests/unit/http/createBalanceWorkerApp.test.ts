@@ -218,7 +218,8 @@ async function logsCompletedRequest(): Promise<void> {
 			id: "req",
 			method: "POST",
 			path: "/v1/track",
-			body: expect.objectContaining({ commandId: "cmd" }),
+			// A success reports its outcome; the command body is logged only when the request failed.
+			body: undefined,
 		},
 		res: trackReply,
 		statusCode: 200,

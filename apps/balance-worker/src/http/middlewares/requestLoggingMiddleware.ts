@@ -48,6 +48,8 @@ function logRequestResult({
 	const statusCode = context.res.status;
 	const identity = command?.identity ?? batch?.identity;
 	const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
+	// A batch answers 200 around its commands' failures; the worst of them sets the level.
+	const severity = Math.max(statusCode, batch?.worstStatus ?? 0);
 	const event = {
 		event: "balance_worker.request",
 		statusCode,
@@ -66,7 +68,9 @@ function logRequestResult({
 			id: command?.requestId ?? requestLog.id,
 			method: context.req.method,
 			path: context.req.path,
-			body: command && loggedCommandOf({ command }),
+			// The command is a large object the logger walks and serialises on every call; a success reports its outcome fields instead.
+			body:
+				severity >= 400 && command ? loggedCommandOf({ command }) : undefined,
 		},
 		res: shouldLogResponse() ? (response ?? null) : undefined,
 		data: {
@@ -79,8 +83,6 @@ function logRequestResult({
 		},
 	};
 	const message = `[${statusCode}] ${context.req.method} ${context.req.path} ${durationMs}ms${error ? ` — ${error.name}` : ""}`;
-	// A batch answers 200 around its commands' failures; the worst of them sets the level.
-	const severity = Math.max(statusCode, batch?.worstStatus ?? 0);
 	if (severity >= 500) ctx.logger.error(event, message);
 	else if (severity >= 400) ctx.logger.warn(event, message);
 	else ctx.logger.info(event, message);

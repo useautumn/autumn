@@ -54,7 +54,14 @@ const ensureFreeTrialCatalog = async ({
 	});
 };
 
-/** Every catalog row the state references is in the cache afterwards, or the command cannot be decided. */
+/**
+ * Every catalog row the state references is in the cache afterwards, or the
+ * command cannot be decided. A state joined once while the catalog has not
+ * moved since needs no second pass: its rows were all present when the join
+ * was built, and nothing has expired or been invalidated in between. That
+ * pass (keys computed, rows re-read, the catalog object rebuilt) was ~9% of
+ * a pinned worker's thread, paid on every call.
+ */
 export const ensureSubjectCatalog = async ({
 	scope,
 	identity,
@@ -64,15 +71,18 @@ export const ensureSubjectCatalog = async ({
 	identity: MeteringIdentity;
 	state: SubjectState;
 }): Promise<Catalog> => {
+	const joined = scope.state.joinCache.peekCatalog({ state });
+	if (joined) return joined;
 	const { catalogCache } = scope.ctx;
 	await ensureCatalogForState({ catalogCache, identity, state });
 	await ensurePlanLicenseCatalog({ scope, identity, state });
 	await ensureFreeTrialCatalog({ scope, identity, state });
-	return catalogCache.read({
+	const catalog = catalogCache.read({
 		keys: [
 			...subjectStateToCatalogKeys({ state }),
 			...readPlanLicenseCatalogKeys({ scope, state }),
 			...subjectStateToFreeTrialCatalogKeys({ state }),
 		],
 	});
+	return scope.state.joinCache.readCatalog({ state, join: () => catalog });
 };

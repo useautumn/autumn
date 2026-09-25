@@ -1,4 +1,4 @@
-import { parseTrackCommand, type TrackCommand } from "@autumn/balance-engine";
+import type { TrackCommand } from "@autumn/balance-engine";
 import {
 	type PartitionRoute,
 	parseTrackBatchRequest,
@@ -7,6 +7,7 @@ import {
 	type TrackReply,
 } from "@autumn/balance-worker-client/protocol";
 import type { Context } from "hono";
+import { HTTPException } from "hono/http-exception";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import { readJsonRequestBody } from "../middlewares/requestValidationMiddleware.js";
 import {
@@ -77,7 +78,10 @@ async function runTrack({
 	input: unknown;
 	route: { partition: number };
 }): Promise<TrackReply> {
-	const command = parseTrackCommand({ input });
+	// Our server builds and validates each command; re-parsing them here is pure cost, the same as on /v1/track.
+	// A command that is not even shaped like a track fails alone, as its schema failure did.
+	if (!looksLikeTrackCommand(input)) throw new HTTPException(400);
+	const command = input;
 	const partition = ctx.partitionResolver.partitionForIdentity({
 		identity: command.identity,
 	});
@@ -86,6 +90,24 @@ async function runTrack({
 		return processor.track({ command });
 	}
 	return runtime.process(track);
+}
+
+function looksLikeTrackCommand(input: unknown): input is TrackCommand {
+	if (typeof input !== "object" || input === null) return false;
+	const command = input as Partial<TrackCommand>;
+	const identity = command.identity as
+		| Partial<TrackCommand["identity"]>
+		| undefined;
+	return (
+		command.schemaVersion === 1 &&
+		command.type === "track" &&
+		typeof command.commandId === "string" &&
+		typeof identity === "object" &&
+		identity !== null &&
+		typeof identity.orgId === "string" &&
+		typeof identity.env === "string" &&
+		typeof identity.customerId === "string"
+	);
 }
 
 /** Failures are counted by code; only one unexpected cause is kept, so a bad batch costs one stack. */
