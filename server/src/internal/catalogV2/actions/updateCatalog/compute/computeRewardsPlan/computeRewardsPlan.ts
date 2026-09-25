@@ -19,7 +19,8 @@ const comparableState = (state: CatalogRewardState): Record<string, unknown> =>
 		? comparableCoupon(state.coupon)
 		: comparableFeatureGrant(state.featureGrant);
 
-/** The row an entry addresses: its stable id first, else its public id. */
+/** The row an entry addresses: its stable id when this env holds it, else its
+ * public id. A pulled config carries another env's stable ids. */
 const currentFor = ({
 	internalId,
 	rewardId,
@@ -29,9 +30,8 @@ const currentFor = ({
 	rewardId: string;
 	rewards: CatalogRewardState[];
 }): CatalogRewardState | undefined =>
-	internalId === undefined
-		? rewards.find((reward) => reward.id === rewardId)
-		: rewards.find((reward) => reward.internalId === internalId);
+	rewards.find((reward) => reward.internalId === internalId) ??
+	rewards.find((reward) => reward.id === rewardId);
 
 export const computeUpsertRewardsPlan = ({
 	params,

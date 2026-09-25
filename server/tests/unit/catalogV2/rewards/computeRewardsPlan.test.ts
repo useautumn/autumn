@@ -100,6 +100,30 @@ describe("catalogV2 reward compute", () => {
 		expect(changed[0]?.previousAttributes).toEqual({ value: 20 });
 	});
 
+	test("an internal_id this env does not hold falls back to the reward id", () => {
+		const foreignCoupon = (id: string) => ({
+			coupon: {
+				...couponParams({ id, value: 20 }).coupon,
+				internal_id: "rw_other_env",
+			},
+		});
+
+		const plan = computeUpsertRewardsPlan({
+			params: paramsWith({
+				rewards: [foreignCoupon("sale"), foreignCoupon("new_sale")],
+			}),
+			rewardStatesContext: context({
+				rewards: [couponState({ internalId: "rw_1", id: "sale", value: 20 })],
+			}),
+		});
+		expect(
+			plan.map(({ rewardId, internalId }) => ({ rewardId, internalId })),
+		).toEqual([
+			{ rewardId: "sale", internalId: "rw_1" },
+			{ rewardId: "new_sale", internalId: null },
+		]);
+	});
+
 	test("a reward the config never states is removed only under full state", () => {
 		const rewardStatesContext = context({
 			rewards: [couponState({ internalId: "rw_1", id: "sale", value: 20 })],

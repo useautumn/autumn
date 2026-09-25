@@ -52,7 +52,8 @@ const assertIdsNotHeldByUnstatableRewards = ({
 	}
 };
 
-/** A stated stable id must name a row, and must agree with the id beside it. */
+/** A stated stable id this env holds must agree with the id beside it. An id it
+ * does not hold came from another env, so the entry is matched by id instead. */
 const assertRewardIdentitiesAgree = ({
 	params,
 	catalogContext,
@@ -68,13 +69,7 @@ const assertRewardIdentitiesAgree = ({
 		const current = rewards.find(
 			(reward) => reward.internalId === body.internal_id,
 		);
-		if (!current)
-			throw new RecaseError({
-				message: `Reward ${body.id} states an internalId no reward has.`,
-				code: ErrCode.RewardNotFound,
-				statusCode: 404,
-			});
-		if (current.id !== body.id)
+		if (current && current.id !== body.id)
 			invalid(
 				`Reward ${current.id} cannot be renamed to ${body.id}. Reward ids are fixed; remove the reward and create a new one instead.`,
 			);
@@ -85,11 +80,7 @@ const assertRewardIdentitiesAgree = ({
 		const current = programs.find(
 			(state) => state.internalId === entry.internal_id,
 		);
-		if (!current)
-			invalid(
-				`Referral program ${entry.id} states an internalId no program has.`,
-			);
-		else if (current.program.id !== entry.id)
+		if (current && current.program.id !== entry.id)
 			invalid(
 				`Referral program ${current.program.id} cannot be renamed to ${entry.id}. Program ids are fixed; remove the program and create a new one instead.`,
 			);
