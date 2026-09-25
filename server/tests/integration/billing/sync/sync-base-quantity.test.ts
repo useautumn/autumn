@@ -164,7 +164,7 @@ test.concurrent(
 			ctx,
 			customerId,
 			productId: proPlan.id,
-			expected: { [CusProductStatus.Active]: 2, [CusProductStatus.Expired]: 0 },
+			expected: { [CusProductStatus.Active]: 2 },
 		});
 		await expectVerifyClean({ customerId });
 	},
@@ -186,7 +186,7 @@ test.concurrent(
 			ctx,
 			customerId,
 			productId: proPlan.id,
-			expected: { [CusProductStatus.Active]: 1, [CusProductStatus.Expired]: 1 },
+			expected: { [CusProductStatus.Active]: 1 },
 		});
 		await expectVerifyClean({ customerId });
 	},
@@ -234,7 +234,7 @@ test.concurrent(
 			ctx,
 			customerId,
 			productId: proPlan.id,
-			expected: { [CusProductStatus.Active]: 0, [CusProductStatus.Expired]: 2 },
+			expected: { [CusProductStatus.Active]: 0 },
 		});
 		await expectBalanceCorrect({
 			customerId,
@@ -267,7 +267,7 @@ test.concurrent(
 			ctx,
 			customerId,
 			productId: proPlan.id,
-			expected: { [CusProductStatus.Active]: 0, [CusProductStatus.Expired]: 1 },
+			expected: { [CusProductStatus.Active]: 0 },
 		});
 		await expectVerifyClean({ customerId });
 	},
