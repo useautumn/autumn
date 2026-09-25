@@ -43,7 +43,8 @@ export const writeWebhookSecrets = async ({
 	if (env.live) {
 		path = prodEnvPath({ envDirs });
 		const content = existsSync(path) ? readFileSync(path, "utf8") : "";
-		writeFileSync(path, upsertEnvContent({ content, values }));
+		// A new prod file holds a live signing secret: owner-only from the start.
+		writeFileSync(path, upsertEnvContent({ content, values }), { mode: 0o600 });
 	} else {
 		path = writeEnvValues({ dirs: envDirs, values });
 	}

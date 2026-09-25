@@ -12,6 +12,7 @@ import {
 	mkdirSync,
 	readFileSync,
 	rmSync,
+	statSync,
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -125,6 +126,7 @@ test("prod secrets go to .env.prod and never touch .env.local", async () => {
 	expect(readFileSync(join(dir, ".env.prod"), "utf8")).toBe(
 		"AUTUMN_WEBHOOK_BILLING_SECRET=whsec_live\n",
 	);
+	expect(statSync(join(dir, ".env.prod")).mode & 0o777).toBe(0o600);
 	expect(readFileSync(join(dir, ".env.local"), "utf8")).toBe(
 		"AUTUMN_SECRET_KEY=sk_test\n",
 	);

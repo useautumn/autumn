@@ -124,11 +124,16 @@ export const removeWebhookEnv = ({
 	}
 	if (patched.source === located.source) return result;
 	pull.files.set(located.file, patched.source);
-	if (
-		urlMapIsEmpty({ pull, id: stated.id }) &&
-		deleteWebhook({ pull, id: stated.id })
-	) {
-		result.lines.push(`- webhook ${stated.id}`);
+	if (urlMapIsEmpty({ pull, id: stated.id })) {
+		if (deleteWebhook({ pull, id: stated.id })) {
+			result.lines.push(`- webhook ${stated.id}`);
+			return result;
+		}
+		// Only a literal can be deleted; saying so beats leaving `url: {}` behind.
+		result.unlocated.push({
+			id: stated.id,
+			action: "delete the webhook by hand: its url map is now empty",
+		});
 		return result;
 	}
 	result.lines.push(`- webhook ${stated.id} url.${envKey}`);

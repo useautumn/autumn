@@ -361,3 +361,57 @@ export default atmn({
 	]);
 	expect(output).toContain("your config: https://sandbox.myapp.com/api/autumn");
 });
+
+test("a config id shaped like a Svix endpoint id is still the config's", () => {
+	const id = "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5";
+	const before = `export default atmn({
+	webhooks: [
+		webhook({ id: "${id}", events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } }),
+	],
+});
+`;
+	const { source, lines } = pullInto({
+		source: before,
+		remoteList: [remote(id, "https://x.dev/h")],
+		stated: [
+			{ id, events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } },
+		],
+	});
+	expect(source).toBe(before);
+	expect(lines).toEqual([]);
+});
+
+test("pull never appends webhooks after a root spread, and never deletes a computed webhook half-way", () => {
+	const spread = `export default atmn({ ...shared });
+`;
+	const appended = pullInto({
+		source: spread,
+		remoteList: [remote("billing", "https://x.dev/h")],
+	});
+	expect(appended.source).toBe(spread);
+	expect(appended.unlocated[0]?.action).toContain("atmn() spreads `shared`");
+
+	const computed = `export default atmn({
+	webhooks: [
+		webhook({ id: "billing", events: EVENTS, url: { sandbox: "https://x.dev/h" } }),
+	],
+});
+`;
+	const removed = pullInto({
+		source: computed,
+		remoteList: [],
+		stated: [
+			{
+				id: "billing",
+				events: ["billing.updated"],
+				url: { sandbox: "https://x.dev/h" },
+			},
+		],
+	});
+	expect(removed.unlocated).toEqual([
+		{
+			id: "billing",
+			action: "delete the webhook by hand: its url map is now empty",
+		},
+	]);
+});

@@ -33,9 +33,12 @@ export const applyWebhooksPull = ({
 }): WebhookEditResult => {
 	const result: WebhookEditResult = { lines: [], warnings: [], unlocated: [] };
 	const statedById = new Map((stated ?? []).map((row) => [row.id, row]));
-	const managed = remote.filter((webhook) => !isDashboardWebhook(webhook));
+	// An id the config states is the config's, whatever its shape.
+	const fromDashboard = (webhook: RemoteWebhook): boolean =>
+		!statedById.has(webhook.id) && isDashboardWebhook(webhook);
+	const managed = remote.filter((webhook) => !fromDashboard(webhook));
 
-	for (const webhook of remote.filter(isDashboardWebhook))
+	for (const webhook of remote.filter(fromDashboard))
 		result.lines.push(
 			`· webhook ${webhook.id} was made in the dashboard; your config doesn't manage it`,
 		);

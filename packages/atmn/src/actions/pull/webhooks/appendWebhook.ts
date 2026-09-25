@@ -3,7 +3,10 @@ import { emitFixture } from "../../../generated/emitRuntime";
 import { appendToBinding } from "../../../surgery/appendToBinding";
 import { appendToCollection } from "../../../surgery/appendToCollection";
 import { ensureBuilderImport } from "../../../surgery/ensureBuilderImport";
-import { insertCollection } from "../../../surgery/insertCollection";
+import {
+	insertCollection,
+	rootSpreadNames,
+} from "../../../surgery/insertCollection";
 import { resolveCollectionTarget } from "../resolveCollectionTarget";
 import type { PullFiles, RemoteWebhook } from "./types";
 
@@ -36,12 +39,17 @@ export const appendWebhook = ({
 	envKey: string;
 }): string | null => {
 	const { configPath, files } = pull;
+	const configSource = files.get(configPath) ?? "";
 	const withKey = insertCollection({
-		source: files.get(configPath) ?? "",
+		source: configSource,
 		collection: COLLECTION,
 	});
 	if (withKey === null)
 		return "append to `webhooks` by hand: no atmn({...}) call";
+	// A spread may already hold `webhooks`; a second key after it would override it.
+	const spreads = rootSpreadNames({ source: configSource });
+	if (withKey !== configSource && spreads.length > 0)
+		return `append to \`webhooks\` by hand: atmn() spreads \`${spreads.join("`, `")}\`, which may already hold it`;
 	files.set(configPath, withKey);
 	const target = resolveCollectionTarget({
 		configPath,
