@@ -110,6 +110,45 @@ describe("runRegistry", () => {
 		closeRun({ key: "k1e", run });
 	});
 
+	test("a turn start covers only follow-ups eve had already accepted", async () => {
+		const accepts: Array<() => void> = [];
+		const run = registerRun({
+			key: "k1f",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendUserMessage: () =>
+				new Promise<void>((resolve) => {
+					accepts.push(resolve);
+				}),
+		});
+		run.resolveSessionId("sesn_1");
+
+		const accepted = run.injectFollowUp({ text: "folded" });
+		const inFlight = run.injectFollowUp({ text: "still posting" });
+		await Bun.sleep(0);
+		accepts[0]?.();
+		await accepted;
+
+		// The accepted one is in the turn that starts now; the other may not be.
+		run.coverAcceptedFollowUps();
+		expect(run.pendingTurns).toBe(1);
+
+		// A claim hands the in-flight post to the reader. Its accept landing
+		// afterwards was already counted, so a later turn start must not use it
+		// to cover a message injected after the claim.
+		expect(run.claimFollowUpsOrSettle()).toBe(true);
+		accepts[1]?.();
+		await inFlight;
+		const later = run.injectFollowUp({ text: "after the claim" });
+		await Bun.sleep(0);
+		run.coverAcceptedFollowUps();
+		expect(run.pendingTurns).toBe(1);
+
+		accepts[2]?.();
+		await later;
+		closeRun({ key: "k1f", run });
+	});
+
 	test("close ignores entries replaced by a newer run", () => {
 		const first = registerRun({
 			key: "k2",

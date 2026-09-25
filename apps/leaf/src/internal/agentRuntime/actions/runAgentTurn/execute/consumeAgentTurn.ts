@@ -157,6 +157,8 @@ const streamPassEvents = async ({
 				};
 			}
 
+			if (event.type === "turn.started") run?.coverAcceptedFollowUps();
+
 			const result = await applyEveEvent({ ...turn, event, progress });
 			progress = result.progress;
 			if (result.outcome) {

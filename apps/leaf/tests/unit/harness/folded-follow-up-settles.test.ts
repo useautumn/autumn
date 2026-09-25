@@ -1,7 +1,9 @@
 /** A follow-up that lands mid-turn is folded by eve into the replacement turn,
- * so the reply the reader posts already answers it. The reader still counts it
- * as owed and waits on a quiet stream for a turn that never comes; that wait
- * must end by the settle deadline, not run past the caller's backstop.
+ * so the reply the reader gets already answers it. eve starts a turn only after
+ * taking in every message it holds, so a follow-up accepted before that start
+ * is covered by it and the reader stops at the reply. A post still in flight
+ * at the start stays owed, and that rare wait must end by the settle deadline,
+ * not run past the caller's backstop.
  *
  * Prod 2026-09-24 (Slack C0B9L4G35U2, wrun_01M39A6KHF3QWFZ47SC0RWGPRS): the
  * merged reply posted at 08:58:44Z, a full 120s idle window opened at
@@ -49,8 +51,8 @@ const advanceClock = (byMs: number) => {
 let streamPasses: EveEvent[][] = [];
 let streamCallCount = 0;
 let idleWindows: number[] = [];
-/** Runs just before the event at this index is yielded on the first pass. */
-let beforeEventAt: { index: number; run: () => void } | undefined;
+/** Run just before the event at their index is yielded on the first pass. */
+let beforeEventAt = new Map<number, () => void>();
 
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/client.js",
@@ -70,11 +72,11 @@ await mockLeafModule({
 			streamCallCount += 1;
 			let index = 0;
 			for (const event of events) {
-				if (beforeEventAt?.index === index) {
-					const hook = beforeEventAt;
-					beforeEventAt = undefined;
-					hook.run();
-					// Let the post land before eve reports the steer.
+				const hook = beforeEventAt.get(index);
+				if (hook) {
+					beforeEventAt.delete(index);
+					hook();
+					// Let a post that can land do so before the next event.
 					await Bun.sleep(1);
 				}
 				index += 1;
@@ -135,10 +137,34 @@ const steeredIntoOneReply = [
 	event({ type: "session.waiting" }),
 ];
 
+const FOLLOW_UP = "can you update a customer's address?";
+
+const consume = ({
+	run,
+	settled,
+}: {
+	run: ReturnType<typeof registerRun>;
+	settled: unknown[];
+}) =>
+	consumeAgentTurn({
+		auth: {} as never,
+		deadlineAt: turnDeadlineFrom({ startedAt: TURN_START.getTime() }),
+		env: AppEnv.Sandbox,
+		logger: { error: () => {}, info: () => {}, warn: () => {} } as never,
+		onSettledTurn: (settledOutcome: unknown) => {
+			settled.push(settledOutcome);
+		},
+		orgId: "org_1",
+		run,
+		session: session(),
+		token: "t",
+	} as never);
+
 describe("a follow-up folded into the reply it was waiting for", () => {
 	beforeEach(() => {
 		streamCallCount = 0;
 		idleWindows = [];
+		beforeEventAt = new Map();
 		nowMs = TURN_START.getTime();
 		setSystemTime(TURN_START);
 	});
@@ -147,7 +173,7 @@ describe("a follow-up folded into the reply it was waiting for", () => {
 		setSystemTime();
 	});
 
-	test("settles silently by the deadline, inside the caller's backstop", async () => {
+	test("is covered by the turn that starts after eve accepts it", async () => {
 		const run = registerRun({
 			key: "folded-follow-up-1",
 			kind: "message",
@@ -156,28 +182,40 @@ describe("a follow-up folded into the reply it was waiting for", () => {
 		});
 		run.resolveSessionId("eve_session_1");
 		streamPasses = [steeredIntoOneReply];
-		beforeEventAt = {
-			index: 1,
-			run: () =>
-				void run.injectFollowUp({
-					text: "can you update a customer's address?",
-				}),
-		};
+		// Accepted while turn_1 runs, so eve folds it into turn_2.
+		beforeEventAt.set(1, () => void run.injectFollowUp({ text: FOLLOW_UP }));
 		const settled: unknown[] = [];
 
-		const outcome = await consumeAgentTurn({
-			auth: {} as never,
-			deadlineAt: turnDeadlineFrom({ startedAt: TURN_START.getTime() }),
-			env: AppEnv.Sandbox,
-			logger: { error: () => {}, info: () => {}, warn: () => {} } as never,
-			onSettledTurn: (settledOutcome: unknown) => {
-				settled.push(settledOutcome);
-			},
-			orgId: "org_1",
-			run,
-			session: session(),
-			token: "t",
-		} as never);
+		const outcome = await consume({ run, settled });
+
+		// The merged reply is the read's own answer, returned at once rather
+		// than handed off while the reader waits for a turn that never comes.
+		expect(outcome).toMatchObject({ kind: "answered", text: MERGED_REPLY });
+		expect(settled).toEqual([]);
+		expect(idleWindows).toEqual([]);
+		expect(run.pendingTurns).toBe(0);
+	});
+
+	test("still in flight at the turn start, it ends by the deadline", async () => {
+		// eve took the message before starting turn_2, but its accept had not
+		// reached leaf yet, so leaf cannot tell it was folded in.
+		let acceptPost = () => {};
+		const run = registerRun({
+			key: "folded-follow-up-2",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendUserMessage: () =>
+				new Promise<void>((resolve) => {
+					acceptPost = resolve;
+				}),
+		});
+		run.resolveSessionId("eve_session_1");
+		streamPasses = [steeredIntoOneReply];
+		beforeEventAt.set(1, () => void run.injectFollowUp({ text: FOLLOW_UP }));
+		beforeEventAt.set(4, () => acceptPost());
+		const settled: unknown[] = [];
+
+		const outcome = await consume({ run, settled });
 
 		// The merged reply reached the thread once...
 		expect(settled).toEqual([{ kind: "answered", text: MERGED_REPLY }]);
