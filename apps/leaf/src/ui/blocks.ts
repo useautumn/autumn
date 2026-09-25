@@ -322,24 +322,49 @@ const actionPhrases = ({
 		switch (name) {
 			case "attach": {
 				const target = `${planLabel} to ${customerLabel}${entitySuffix}`;
-				const removedLabels = removedPlansFromPreview(preview)
-					.map((change) =>
-						autumnDashboardLabel({
-							env,
-							id: change.planId,
-							label: change.name,
-							resource: "products",
-						}),
-					)
-					.join(", ");
+				// Plans named in remove_plan_ids are expired even under a revert
+				// trial; only the replaced plan is paused and handed back.
+				const explicitRemovals = new Set(
+					Array.isArray(request.remove_plan_ids)
+						? request.remove_plan_ids.filter(
+								(planId): planId is string => typeof planId === "string",
+							)
+						: [],
+				);
 				const pausing = attachPausesOutgoing(request);
-				const outgoing = (verb: string) =>
-					removedLabels ? ` and ${verb} ${removedLabels}` : "";
+				const outgoingLabels = ({ paused }: { paused: boolean }) =>
+					removedPlansFromPreview(preview)
+						.filter(
+							(change) =>
+								(pausing && !explicitRemovals.has(change.planId)) === paused,
+						)
+						.map((change) =>
+							autumnDashboardLabel({
+								env,
+								id: change.planId,
+								label: change.name,
+								resource: "products",
+							}),
+						)
+						.join(", ");
+				const pausedLabels = outgoingLabels({ paused: true });
+				const removedLabels = outgoingLabels({ paused: false });
+				const outgoing = ({
+					pause,
+					remove,
+				}: {
+					pause: string;
+					remove: string;
+				}) =>
+					[
+						pausedLabels ? ` and ${pause} ${pausedLabels}` : "",
+						removedLabels ? ` and ${remove} ${removedLabels}` : "",
+					].join("");
 				return {
-					done: `Attached ${target}${outgoing(pausing ? "paused" : "removed")}`,
+					done: `Attached ${target}${outgoing({ pause: "paused", remove: "removed" })}`,
 					failed: `Couldn't attach ${target}`,
-					pending: `Attach ${target}${outgoing(pausing ? "pause" : "remove")}`,
-					running: `Attaching ${target}${outgoing(pausing ? "pausing" : "removing")}`,
+					pending: `Attach ${target}${outgoing({ pause: "pause", remove: "remove" })}`,
+					running: `Attaching ${target}${outgoing({ pause: "pausing", remove: "removing" })}`,
 				};
 			}
 			case "updateSubscription": {

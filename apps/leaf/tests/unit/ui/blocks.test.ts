@@ -130,6 +130,43 @@ describe("approval card", () => {
 		);
 	});
 
+	// remove_plan_ids plans are expired, never handed back after the trial.
+	test("a revert-on-end trial still removes extra plans", () => {
+		const card = JSON.stringify(
+			approvalCard({
+				id: "approval_1",
+				env: AppEnv.Sandbox,
+				toolName: "attach",
+				toolArgs: {
+					request: {
+						...attachArgs.request,
+						free_trial: {
+							duration_length: 14,
+							duration_type: "day",
+							on_end: "revert",
+						},
+						remove_plan_ids: ["addon"],
+					},
+				},
+				preview: wrapMcpResult({
+					preview: {
+						currency: "usd",
+						incoming: [{ plan_id: "scale", plan: { name: "Scale" } }],
+						outgoing: [
+							{ plan_id: "launch", plan: { name: "Launch" } },
+							{ plan_id: "addon", plan: { name: "Add-on" } },
+						],
+						total: 0,
+					},
+				}),
+			}),
+		);
+
+		expect(card).toContain(
+			"and pausing **<https://app.useautumn.com/sandbox/products/launch|Launch>** and removing **<https://app.useautumn.com/sandbox/products/addon|Add-on>**",
+		);
+	});
+
 	test("an in-place plan update is not shown as a removal", () => {
 		const card = approvalCard({
 			id: "approval_1",
