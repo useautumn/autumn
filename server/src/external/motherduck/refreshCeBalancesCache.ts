@@ -1,3 +1,4 @@
+import { CE_LAKE_TABLES } from "@autumn/ducklake/ceLakeTables";
 import { CE_BALANCES_CACHE_PROJECTION } from "@autumn/shared";
 import { GetTableCommand, GlueClient } from "@aws-sdk/client-glue";
 import { sql } from "drizzle-orm";
@@ -47,16 +48,20 @@ export const getCurrentLakeMetadataLocation = async ({
 /** Reads the lake in one pass: the `ce_balances` intermediate this replaced was
  * 114M rows rewritten per run for a table nothing else ever queried. */
 export const ceBalanceTotalsSql = ({
-	ceMetadataLocation,
+	ceMetadataLocations,
 	totalsTable = "ce_balance_totals",
 }: {
-	ceMetadataLocation: string;
+	ceMetadataLocations: string[];
 	totalsTable?: string;
 }): string => `
 	CREATE OR REPLACE TABLE main.${totalsTable} AS
 	WITH b AS (
-		SELECT ${CE_BALANCES_CACHE_PROJECTION}
-		FROM iceberg_scan('${ceMetadataLocation}')
+		${ceMetadataLocations
+			.map(
+				(location) => `SELECT ${CE_BALANCES_CACHE_PROJECTION}
+		FROM iceberg_scan('${location}')`,
+			)
+			.join("\n\t\tUNION ALL\n\t\t")}
 	)
 	SELECT
 		b.internal_customer_id,
@@ -106,12 +111,16 @@ export const refreshCeBalancesCache = async ({
 	inFlight = (async () => {
 		const startedAt = performance.now();
 		const [
-			ceMetadataLocation,
+			ceMetadataLocations,
 			entMetadataLocation,
 			cpMetadataLocation,
 			featureMetadataLocation,
 		] = await Promise.all([
-			getCurrentLakeMetadataLocation({ table: "customer_entitlements" }),
+			Promise.all(
+				CE_LAKE_TABLES.map((table) =>
+					getCurrentLakeMetadataLocation({ table }),
+				),
+			),
 			getCurrentLakeMetadataLocation({ table: "entitlements" }),
 			getCurrentLakeMetadataLocation({ table: "customer_products" }),
 			getCurrentLakeMetadataLocation({ table: "features" }),
@@ -139,7 +148,7 @@ export const refreshCeBalancesCache = async ({
 					`),
 				);
 				await db.execute(
-					sql.raw(ceBalanceTotalsSql({ ceMetadataLocation, totalsTable })),
+					sql.raw(ceBalanceTotalsSql({ ceMetadataLocations, totalsTable })),
 				);
 				const countResult = (await db.execute(
 					sql.raw(
@@ -159,7 +168,9 @@ export const refreshCeBalancesCache = async ({
 			{
 				type: "md_cache_refresh",
 				rowCount,
-				metadataLocation: ceMetadataLocation,
+				metadataLocations: Object.fromEntries(
+					CE_LAKE_TABLES.map((table, i) => [table, ceMetadataLocations[i]]),
+				),
 				durationMs: Math.round(performance.now() - startedAt),
 			},
 			"[refreshCeBalancesCache] rebuilt balance cache tables (rowCount = totals rows)",
