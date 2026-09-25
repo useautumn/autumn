@@ -259,6 +259,31 @@ const attachPausesOutgoing = (request: Record<string, unknown>) => {
 	);
 };
 
+/** The one outgoing plan a revert trial pauses: like the server's
+ * findMainActiveCustomerProductByGroup, the main (non-add-on) plan in the
+ * incoming plan's group. Read from the preview's resolved plans, so request
+ * aliases never matter; any other outgoing plan is expired. */
+const pausedPlanIdFromPreview = (preview: unknown) => {
+	const body = getPreviewBody(preview);
+	const plansOf = (value: unknown) =>
+		(Array.isArray(value) ? value : []).map((entry) => {
+			const record = getRecord(entry);
+			const plan = getRecord(record.plan);
+			return {
+				addOn: plan.add_on === true,
+				group: getString(plan.group),
+				planId: getString(record.plan_id),
+			};
+		});
+	const incoming = plansOf(body.incoming).find(({ addOn }) => !addOn);
+	if (!incoming) return null;
+	return (
+		plansOf(body.outgoing).find(
+			({ addOn, group }) => !addOn && group === incoming.group,
+		)?.planId ?? null
+	);
+};
+
 // Tier 1 of the card hierarchy: customer and plan are the subject of the
 // action, so they render as a sentence — never as label/value fields.
 const actionPhrases = ({
@@ -322,22 +347,12 @@ const actionPhrases = ({
 		switch (name) {
 			case "attach": {
 				const target = `${planLabel} to ${customerLabel}${entitySuffix}`;
-				// Plans named in remove_plan_ids are expired even under a revert
-				// trial; only the replaced plan is paused and handed back.
-				const explicitRemovals = new Set(
-					Array.isArray(request.remove_plan_ids)
-						? request.remove_plan_ids.filter(
-								(planId): planId is string => typeof planId === "string",
-							)
-						: [],
-				);
-				const pausing = attachPausesOutgoing(request);
+				const pausedPlanId = attachPausesOutgoing(request)
+					? pausedPlanIdFromPreview(preview)
+					: null;
 				const outgoingLabels = ({ paused }: { paused: boolean }) =>
 					removedPlansFromPreview(preview)
-						.filter(
-							(change) =>
-								(pausing && !explicitRemovals.has(change.planId)) === paused,
-						)
+						.filter((change) => (change.planId === pausedPlanId) === paused)
 						.map((change) =>
 							autumnDashboardLabel({
 								env,

@@ -130,7 +130,8 @@ describe("approval card", () => {
 		);
 	});
 
-	// remove_plan_ids plans are expired, never handed back after the trial.
+	// remove_plan_ids plans are expired, never handed back after the trial —
+	// even when the request names them by an alias the preview resolved.
 	test("a revert-on-end trial still removes extra plans", () => {
 		const card = JSON.stringify(
 			approvalCard({
@@ -145,7 +146,8 @@ describe("approval card", () => {
 							duration_type: "day",
 							on_end: "revert",
 						},
-						remove_plan_ids: ["addon"],
+						// The replaced plan listed here is still paused, not removed.
+						remove_plan_ids: ["launch", "addon-alias"],
 					},
 				},
 				preview: wrapMcpResult({
@@ -154,7 +156,7 @@ describe("approval card", () => {
 						incoming: [{ plan_id: "scale", plan: { name: "Scale" } }],
 						outgoing: [
 							{ plan_id: "launch", plan: { name: "Launch" } },
-							{ plan_id: "addon", plan: { name: "Add-on" } },
+							{ plan_id: "addon", plan: { name: "Add-on", add_on: true } },
 						],
 						total: 0,
 					},
