@@ -264,16 +264,20 @@ export default atmn({
 	expect(lines).toEqual(["- webhook audit", "- webhook billing url.sandbox"]);
 });
 
-test("rule 5: a dashboard webhook is skipped with one line, and a webhook with no key for this env is left alone", () => {
+const DASHBOARD_ID = "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5";
+const WH_ID = /^wh_[0-9A-Za-z]{27}$/;
+
+test("rule 5: a dashboard webhook is appended under a fresh wh_ id, and a second pull adds nothing", () => {
 	const before = `export default atmn({
 	webhooks: [
 		webhook({ id: "billing", events: ["billing.updated"], url: { live: "https://example.com/a" } }),
 	],
 });
 `;
-	const { source, lines } = pullInto({
+	const dashboard = remote(DASHBOARD_ID, "https://x.dev/h");
+	const first = pullInto({
 		source: before,
-		remoteList: [remote("ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5", "https://x.dev/h")],
+		remoteList: [dashboard],
 		stated: [
 			{
 				id: "billing",
@@ -282,10 +286,69 @@ test("rule 5: a dashboard webhook is skipped with one line, and a webhook with n
 			},
 		],
 	});
-	expect(source).toBe(before);
-	expect(lines).toEqual([
-		"· webhook ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5 was made in the dashboard; your config doesn't manage it",
+	const id = /webhook (wh_\S+)/.exec(first.lines[0] ?? "")?.[1] ?? "";
+	expect(id).toMatch(WH_ID);
+	expect(first.lines).toEqual([
+		`+ webhook ${id} (made in the dashboard; push adopts it by URL)`,
 	]);
+	expect(first.source).toContain(`id: "${id}",`);
+	expect(first.source).toContain('sandbox: "https://x.dev/h",');
+	expect(first.source).not.toContain(DASHBOARD_ID);
+
+	// Nothing was pushed: the server still holds the uid-less endpoint.
+	const second = pullInto({
+		source: first.source ?? "",
+		remoteList: [dashboard],
+		stated: [
+			{
+				id: "billing",
+				events: ["billing.updated"],
+				url: { live: "https://example.com/a" },
+			},
+			{ id, events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } },
+		],
+	});
+	expect(second.source).toBe(first.source);
+	expect(second.lines).toEqual([]);
+});
+
+test("rule 5: a dashboard webhook whose URL the config already states updates that webhook, and keeps its url", () => {
+	const before = `export default atmn({
+	webhooks: [
+		webhook({
+			id: "billing",
+			events: ["billing.updated"],
+			url: { sandbox: "https://x.dev/h" },
+		}),
+	],
+});
+`;
+	const { source, lines } = pullInto({
+		source: before,
+		remoteList: [
+			remote(DASHBOARD_ID, "https://x.dev/h", {
+				events: ["billing.updated", "invoice.finalized"],
+			}),
+		],
+		stated: [
+			{
+				id: "billing",
+				events: ["billing.updated"],
+				url: { sandbox: "https://x.dev/h" },
+			},
+		],
+	});
+	expect(source).toBe(`export default atmn({
+	webhooks: [
+		webhook({
+			id: "billing",
+			events: ["billing.updated", "invoice.finalized"],
+			url: { sandbox: "https://x.dev/h" },
+		}),
+	],
+});
+`);
+	expect(lines).toEqual(["~ webhook billing"]);
 });
 
 test("runPull lists webhooks in the same parallel batch and prints the code-url warning", async () => {
