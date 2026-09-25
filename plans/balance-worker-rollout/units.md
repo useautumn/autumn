@@ -12,6 +12,28 @@ Each unit is end to end and ends on a passing test; stop for review after each.
 
 Order: 1 → 2 → 3 → 4 → 5. Unit 2 is the big diff and should land in two stacked branches (request-path gates, then cron/webhook gates).
 
+## Status, 2026-09-25
+
+Units 1, 2, 3, 5 landed (commit `6e2b90c07d` plus the review fixes below); 4 deferred. The design drifted from the
+rows above in three ways: there is no request snapshot (every gate resolves from the store, `customerId`
+required), the settle window is 15s in production and 5s locally, and one rollout id `balance-worker` covers
+both envs.
+
+Review fixes after an adversarial pass over the landed diff: the invalidation flush (`flushBalances`) skips
+routed customers; trigger polls the rollout store through `startEdgeConfigPolling({ stores })`; the env
+override is `true` / `false` / `config`, unset meaning the config against production (`NODE_ENV=production`
+or `ENV_FILE=.env.prod`) and the local default elsewhere; every percent change goes through
+`scheduleRolloutPercent`, so a new org override inherits the global percent; removing an override just
+deletes it; the stale check reads a pruned list of `decreases`, so a bucket is evicted once by the decrease
+that sent it back however many changes follow; the two log-field sites guard on `ctx.org`.
+
+Accepted, not built: a Redis lock still open when its customer flips forward settles on the old Redis hash
+and its sync is dropped, so a release's refund never reaches Postgres. Only locks open across the flip
+instant. The fix, if ever wanted, is a routed branch in `runFinalizeLockV2` that calls the existing
+`runPostgresFinalizeLockV2` and evicts the worker. Also left: stale reads on the dashboard customer page
+(`getCusUsageLimitsWithUsage` caches by internal id) and Slack unfurls; batch-track lanes are not atomic;
+a shadow operator script imports the removed snapshot; `packages/logging` still names the old log field.
+
 ## Folder structure
 
 ```

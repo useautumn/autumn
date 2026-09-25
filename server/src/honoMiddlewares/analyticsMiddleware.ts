@@ -101,9 +101,10 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			api_version: ctx.apiVersion?.semver,
 			scopes: ctx.scopes,
 			full_subject_bucket: fullSubjectBucket ?? undefined,
-			balance_worker_rollout_enabled: customerId
-				? isBalanceWorkerRolloutEnabled({ ctx, customerId })
-				: undefined,
+			balance_worker_rollout_enabled:
+				ctx.org && customerId
+					? isBalanceWorkerRolloutEnabled({ ctx, customerId })
+					: undefined,
 		},
 	});
 

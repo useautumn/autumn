@@ -1,4 +1,5 @@
 import { timeout } from "@tests/utils/genUtils.js";
+import { getBalanceWorkerRolloutOverride } from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
 import {
 	removeRolloutOrg,
 	updateRolloutPercent,
@@ -23,10 +24,9 @@ const EDGE_CONFIG_OVERRIDDEN = Boolean(
 	process.env.AUTUMN_EDGE_CONFIG_OVERRIDE_B64,
 );
 
-/** The server routes by the config only when its override says so; the test process shares the env file. */
+/** The server routes by the config only when nothing forces the answer; the test process shares the env file. */
 export const serverRoutesByRolloutConfig = (): boolean =>
-	!EDGE_CONFIG_OVERRIDDEN &&
-	process.env.BALANCE_WORKER_ROLLOUT_ENABLED === "config";
+	!EDGE_CONFIG_OVERRIDDEN && getBalanceWorkerRolloutOverride() === undefined;
 
 /** Sets the org's balance-worker percent and waits until the server has flipped to it; a no-op when the override decides. */
 export const setOrgRolloutPercent = async ({

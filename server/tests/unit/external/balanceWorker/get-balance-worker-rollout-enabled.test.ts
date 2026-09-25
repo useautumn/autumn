@@ -1,47 +1,63 @@
 import { describe, expect, test } from "bun:test";
 import { parseBalanceWorkerRolloutOverride } from "@/external/balanceWorker/getBalanceWorkerRolloutEnabled.js";
 
+const PRODUCTION_ENVS = [
+	{ NODE_ENV: "production" },
+	{ NODE_ENV: "development", ENV_FILE: ".env.prod" },
+];
+const LOCAL_ENVS = [
+	{ NODE_ENV: "development" },
+	{ NODE_ENV: "test" },
+	{ NODE_ENV: "development", ENV_FILE: ".env" },
+	{},
+];
+
 describe("parseBalanceWorkerRolloutOverride", () => {
-	test("an explicit value wins in every environment", () => {
-		for (const NODE_ENV of ["production", "development", "test", undefined]) {
+	test("true and false force the answer everywhere", () => {
+		for (const runtimeEnv of [...PRODUCTION_ENVS, ...LOCAL_ENVS]) {
 			expect(
 				parseBalanceWorkerRolloutOverride({
-					runtimeEnv: { NODE_ENV, BALANCE_WORKER_ROLLOUT_ENABLED: "true" },
+					runtimeEnv: { ...runtimeEnv, BALANCE_WORKER_ROLLOUT_ENABLED: "true" },
 				}),
 			).toBe(true);
 			expect(
 				parseBalanceWorkerRolloutOverride({
-					runtimeEnv: { NODE_ENV, BALANCE_WORKER_ROLLOUT_ENABLED: "false" },
+					runtimeEnv: {
+						...runtimeEnv,
+						BALANCE_WORKER_ROLLOUT_ENABLED: "false",
+					},
 				}),
 			).toBe(false);
 		}
 	});
 
-	test("unset defers to the rollout config in production only", () => {
-		expect(
-			parseBalanceWorkerRolloutOverride({
-				runtimeEnv: { NODE_ENV: "production" },
-			}),
-		).toBeUndefined();
-		for (const NODE_ENV of ["development", "test", undefined]) {
-			expect(
-				parseBalanceWorkerRolloutOverride({ runtimeEnv: { NODE_ENV } }),
-			).toBe(true);
-		}
-	});
-
-	test("config defers to the rollout config in every environment", () => {
-		for (const NODE_ENV of ["production", "development", "test", undefined]) {
+	test("config defers to the rollout config everywhere", () => {
+		for (const runtimeEnv of [...PRODUCTION_ENVS, ...LOCAL_ENVS]) {
 			expect(
 				parseBalanceWorkerRolloutOverride({
-					runtimeEnv: { NODE_ENV, BALANCE_WORKER_ROLLOUT_ENABLED: "config" },
+					runtimeEnv: {
+						...runtimeEnv,
+						BALANCE_WORKER_ROLLOUT_ENABLED: "config",
+					},
 				}),
 			).toBeUndefined();
 		}
 	});
 
-	test("anything but the three literals counts as unset", () => {
-		for (const value of ["1", "0", "FALSE", " false", "TRUE"]) {
+	test("unset defers to the config against production, incl. prod-secret scripts on NODE_ENV=development", () => {
+		for (const runtimeEnv of PRODUCTION_ENVS) {
+			expect(parseBalanceWorkerRolloutOverride({ runtimeEnv })).toBeUndefined();
+		}
+	});
+
+	test("unset is the local default on a local stack", () => {
+		for (const runtimeEnv of LOCAL_ENVS) {
+			expect(parseBalanceWorkerRolloutOverride({ runtimeEnv })).toBe(true);
+		}
+	});
+
+	test("anything else counts as unset", () => {
+		for (const value of ["1", "0", "TRUE", " false"]) {
 			expect(
 				parseBalanceWorkerRolloutOverride({
 					runtimeEnv: {

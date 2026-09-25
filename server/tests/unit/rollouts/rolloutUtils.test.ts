@@ -41,7 +41,18 @@ const configWith = ({
 	orgs?: RolloutConfig["rollouts"][string]["orgs"];
 	rolloutId?: string;
 }): RolloutConfig => ({
-	rollouts: { [rolloutId]: { percent, previousPercent, changedAt, orgs } },
+	rollouts: {
+		[rolloutId]: {
+			percent,
+			previousPercent,
+			changedAt,
+			decreases:
+				percent < previousPercent
+					? [{ from: previousPercent, to: percent, at: changedAt }]
+					: [],
+			orgs,
+		},
+	},
 });
 
 const bucket40s = customerInBucketRange({ min: 40, max: 50 });
@@ -119,7 +130,12 @@ describe("isRolloutEnabled", () => {
 			percent: 0,
 			previousPercent: 0,
 			orgs: {
-				[ORG_ID]: { percent: 100, previousPercent: 0, changedAt: CHANGED_AT },
+				[ORG_ID]: {
+					percent: 100,
+					previousPercent: 0,
+					changedAt: CHANGED_AT,
+					decreases: [],
+				},
 			},
 		});
 		expect(enabledFor({ customerId: bucket40s, now: SETTLED, config })).toBe(
@@ -163,51 +179,9 @@ describe("isRolloutEnabled", () => {
 });
 
 describe("isRolloutCacheStale", () => {
-	const forward = configWith({ percent: 100, previousPercent: 0 });
 	const back = configWith({ percent: 0, previousPercent: 100 });
 
-	test("a crossed bucket with a cache older than the settle instant is stale", () => {
-		expect(
-			staleFor({
-				customerId: bucket40s,
-				cachedAt: SETTLED - 1,
-				now: SETTLED,
-				config: forward,
-			}),
-		).toBe(true);
-	});
-
-	test("a rebuilt cache, stamped at or after the settle instant, is fresh", () => {
-		expect(
-			staleFor({
-				customerId: bucket40s,
-				cachedAt: SETTLED,
-				now: SETTLED,
-				config: forward,
-			}),
-		).toBe(false);
-		expect(
-			staleFor({
-				customerId: bucket40s,
-				cachedAt: SETTLED + 1,
-				now: SETTLED + 60_000,
-				config: forward,
-			}),
-		).toBe(false);
-	});
-
-	test("nothing is stale before the change settles", () => {
-		expect(
-			staleFor({
-				customerId: bucket40s,
-				cachedAt: 1,
-				now: UNSETTLED,
-				config: forward,
-			}),
-		).toBe(false);
-	});
-
-	test("rolling back crosses the same bucket the other way", () => {
+	test("a view from before the bucket came back to legacy is stale", () => {
 		expect(
 			staleFor({
 				customerId: bucket40s,
@@ -218,69 +192,131 @@ describe("isRolloutCacheStale", () => {
 		).toBe(true);
 	});
 
-	test("forward then back: each flip evicts exactly once", () => {
-		const rebuiltAfterForward = SETTLED + 1_000;
+	test("a view rebuilt after the bucket came back is fresh", () => {
 		expect(
 			staleFor({
 				customerId: bucket40s,
-				cachedAt: rebuiltAfterForward,
-				now: rebuiltAfterForward,
-				config: forward,
+				cachedAt: SETTLED,
+				now: SETTLED,
+				config: back,
 			}),
 		).toBe(false);
-
-		const rollbackAt = SETTLED + 60_000;
-		const backAgain = configWith({
-			percent: 0,
-			previousPercent: 100,
-			changedAt: rollbackAt,
-		});
-		const rollbackSettled = rollbackAt + ROLLOUT_SETTLE_MS;
 		expect(
 			staleFor({
 				customerId: bucket40s,
-				cachedAt: rebuiltAfterForward,
-				now: rollbackSettled,
-				config: backAgain,
-			}),
-		).toBe(true);
-		expect(
-			staleFor({
-				customerId: bucket40s,
-				cachedAt: rollbackSettled,
-				now: rollbackSettled + 1,
-				config: backAgain,
+				cachedAt: SETTLED + 1,
+				now: SETTLED + 60_000,
+				config: back,
 			}),
 		).toBe(false);
 	});
 
-	test.each([
-		{ customerId: bucket10s, label: "was on, still on" },
-		{ customerId: bucket70s, label: "was off, still off" },
-	])("20 -> 50, $label: not stale", ({ customerId }) => {
+	test("nothing is stale before the decrease settles", () => {
 		expect(
 			staleFor({
-				customerId,
+				customerId: bucket40s,
 				cachedAt: 1,
-				now: SETTLED,
-				config: configWith({ percent: 50, previousPercent: 20 }),
+				now: UNSETTLED,
+				config: back,
 			}),
 		).toBe(false);
+	});
+
+	test("a bucket that was never on the worker is never stale", () => {
+		const halfBack = configWith({ percent: 0, previousPercent: 50 });
+		expect(
+			staleFor({
+				customerId: bucket70s,
+				cachedAt: 1,
+				now: SETTLED,
+				config: halfBack,
+			}),
+		).toBe(false);
+		expect(
+			staleFor({
+				customerId: bucket10s,
+				cachedAt: 1,
+				now: SETTLED,
+				config: halfBack,
+			}),
+		).toBe(true);
+	});
+
+	test("an increase evicts nothing", () => {
+		const forward = configWith({ percent: 100, previousPercent: 0 });
+		expect(
+			staleFor({
+				customerId: bucket40s,
+				cachedAt: 1,
+				now: SETTLED,
+				config: forward,
+			}),
+		).toBe(false);
+	});
+
+	test("stepwise rollback: each bucket is evicted once, by the decrease that sent it back", () => {
+		const day = 86_400_000;
+		const config: RolloutConfig = {
+			rollouts: {
+				[ACTIVE_ROLLOUT_ID]: {
+					percent: 0,
+					previousPercent: 50,
+					changedAt: CHANGED_AT + day,
+					decreases: [
+						{ from: 100, to: 50, at: CHANGED_AT },
+						{ from: 50, to: 0, at: CHANGED_AT + day },
+					],
+					orgs: {},
+				},
+			},
+		};
+		const afterBoth = CHANGED_AT + day + ROLLOUT_SETTLE_MS;
+		const rebuiltAfterDayOne = CHANGED_AT + ROLLOUT_SETTLE_MS;
+		// bucket 70 left on day one: a view from before is stale, one rebuilt after day one is not.
+		expect(
+			staleFor({
+				customerId: bucket70s,
+				cachedAt: CHANGED_AT - 1,
+				now: afterBoth,
+				config,
+			}),
+		).toBe(true);
+		expect(
+			staleFor({
+				customerId: bucket70s,
+				cachedAt: rebuiltAfterDayOne,
+				now: afterBoth,
+				config,
+			}),
+		).toBe(false);
+		// bucket 10 left on day two: a view rebuilt after day one is still stale.
+		expect(
+			staleFor({
+				customerId: bucket10s,
+				cachedAt: rebuiltAfterDayOne,
+				now: afterBoth,
+				config,
+			}),
+		).toBe(true);
 	});
 
 	test("a crossed bucket with no cache timestamp is stale", () => {
 		expect(
-			staleFor({ customerId: bucket40s, now: SETTLED, config: forward }),
+			staleFor({ customerId: bucket40s, now: SETTLED, config: back }),
 		).toBe(true);
 	});
 
-	test("an entry that never changed, or no entry at all, is never stale", () => {
+	test("an entry that never decreased, or no entry at all, is never stale", () => {
 		expect(
 			staleFor({
 				customerId: bucket40s,
 				cachedAt: 1,
 				now: SETTLED,
-				config: configWith({ percent: 100, previousPercent: 0, changedAt: 0 }),
+				config: configWith({
+					percent: 100,
+					previousPercent: 100,
+					changedAt: 0,
+				}),
 			}),
 		).toBe(false);
 		expect(

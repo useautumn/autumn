@@ -65,14 +65,17 @@ describe(`${chalk.yellowBright("fullSubject cache rollout staleness")}`, () => {
 				});
 				expect(result).toBe("OK");
 
-				// Settled a second ago, so the view written just above predates the flip.
+				// Rolled back from 50 to 20 a second past settling: this bucket left the worker,
+				// so the view written just above predates its return and must go.
+				const rolledBackAt = Date.now() - ROLLOUT_SETTLE_MS - 1000;
 				_setRolloutConfigForTesting({
 					config: {
 						rollouts: {
 							[ACTIVE_ROLLOUT_ID]: {
-								percent: 50,
-								previousPercent: 20,
-								changedAt: Date.now() - ROLLOUT_SETTLE_MS - 1000,
+								percent: 20,
+								previousPercent: 50,
+								changedAt: rolledBackAt,
+								decreases: [{ from: 50, to: 20, at: rolledBackAt }],
 								orgs: {},
 							},
 						},

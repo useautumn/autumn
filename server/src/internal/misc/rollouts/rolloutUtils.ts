@@ -18,7 +18,7 @@ export const rolloutEffectiveAt = ({
 }): number => changedAt + ROLLOUT_SETTLE_MS;
 
 /** The percent that routes at `now`: the previous one until the change has settled. */
-const routingPercentAt = ({
+export const routingPercentAt = ({
 	rollout,
 	now,
 }: {
@@ -86,9 +86,8 @@ export const isRolloutEnabled = ({
 };
 
 /**
- * A cache entry written before the subject crossed the rollout boundary describes the other path.
- * Stale only once the change has settled, only for a bucket that actually crossed, and only for an
- * entry older than the settle instant (no timestamp counts as older).
+ * A legacy customer's Redis view is stale when a settled decrease sent their bucket back to legacy after
+ * the view was built. A view with no timestamp counts as older than any decrease.
  */
 export const isRolloutCacheStale = ({
 	rolloutId,
@@ -106,22 +105,14 @@ export const isRolloutCacheStale = ({
 	config?: RolloutConfig;
 }): boolean => {
 	const rollout = resolveRolloutPercent({ rolloutId, orgId, config });
-	if (!rollout || !rollout.changedAt) return false;
-
-	const effectiveAt = rolloutEffectiveAt({ changedAt: rollout.changedAt });
-	if (now < effectiveAt) return false;
+	if (!rollout) return false;
 
 	const customerBucket = getCustomerBucket({ customerId });
-	const wasEnabled = isEnabledAtPercent({
-		percent: rollout.previousPercent,
-		customerBucket,
+	return rollout.decreases.some(({ from, to, at }) => {
+		const sentThisBucketBack = customerBucket >= to && customerBucket < from;
+		const cameBackAt = rolloutEffectiveAt({ changedAt: at });
+		return (
+			sentThisBucketBack && now >= cameBackAt && (cachedAt ?? 0) < cameBackAt
+		);
 	});
-	const isEnabled = isEnabledAtPercent({
-		percent: rollout.percent,
-		customerBucket,
-	});
-	if (wasEnabled === isEnabled) return false;
-
-	if (!cachedAt) return true;
-	return cachedAt < effectiveAt;
 };
