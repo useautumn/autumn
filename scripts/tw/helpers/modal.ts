@@ -688,12 +688,8 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 		async createIngressSandbox(
 			opts: CreateSandboxOptions,
 		): Promise<ProviderSandbox> {
-			if (!opts.source) {
-				throw new Error("modal: createIngressSandbox requires a git source");
-			}
-			// Ingress runs only a built-ins-only http server — a tiny debian+bun
-			// image, NOT the full services base (which is slow and can fail on its
-			// own, taking the whole run down before fan-out).
+			// Ingress runs only a built-ins-only http server shipped inline — a tiny
+			// debian+bun image with no repo clone, NOT the full services base.
 			const image = await getIngressImage();
 			const sandbox = await createFromImage(
 				image,
@@ -708,7 +704,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 				},
 				v2,
 			);
-			await cloneRepo(sandbox, opts.source);
 			return wrap(opts.name, sandbox);
 		},
 
@@ -741,7 +736,12 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 				if (!targetSha) {
 					throw new Error("modal: stale worker needs TW_TARGET_SHA in env");
 				}
+				const checkoutStartedAt = Date.now();
 				await fastForwardCheckout(sandbox, targetSha, `worker-ff ${opts.name}`);
+				return {
+					...wrap(opts.name, sandbox),
+					checkoutMs: Date.now() - checkoutStartedAt,
+				};
 			}
 			return wrap(opts.name, sandbox);
 		},

@@ -10,15 +10,15 @@
  * AND no 16-worker cap.
  *
  * Unlike the worker sandboxes (forked from the warm parent), the ingress sandbox
- * is created fresh from the same git source — it only runs a node http server, so
- * it needs NO build-base (no µVM services). It is a RECORDED sandbox, so the
- * existing teardown sandbox-deletion loop tears it down.
+ * needs no repo: `server.mjs` is built-ins-only, so its source is shipped inline
+ * (`bun -e`). It is a RECORDED sandbox, so the existing teardown
+ * sandbox-deletion loop tears it down.
  */
 
 import { randomUUID } from "node:crypto";
 import chalk from "chalk";
-import { resolveGitSource } from "../commands/run.ts";
 import { INGRESS_PORT, TW_ENV, WORKER_TIMEOUT_MS } from "../constants.ts";
+import { readInlineBunScript } from "./inlineBunScript.ts";
 import { sinkLine } from "./logSink.ts";
 import {
 	createIngressSandbox,
@@ -26,11 +26,11 @@ import {
 	isSandboxStreamClosed,
 	type ProviderSandbox,
 	runDetached,
-	sandboxRepoRoot,
 } from "./provider.ts";
 
-/** Path to the ingress http server, relative to the in-sandbox repo root. */
 const INGRESS_SCRIPT = "scripts/tw/ingress/server.mjs";
+/** The ingress sandbox has no repo checkout; any existing dir works as cwd. */
+const INGRESS_CWD = "/tmp";
 
 /** How long to wait for the ingress `/health` to come up after boot. */
 const INGRESS_HEALTH_TIMEOUT_MS = 90_000;
@@ -53,32 +53,27 @@ export type CreateIngressResult = {
 };
 
 /**
- * Stand up the ingress sandbox: create a lightweight node24 sandbox from the same
- * git source/ref (NO build-base — it only runs the http server), launch the
- * ingress server detached, and poll `/health` until it's up. Returns the sandbox
+ * Stand up the ingress sandbox: create a lightweight bun sandbox (no repo, no
+ * services), launch the inline ingress server detached, and poll `/health` until
+ * it's up. Returns the sandbox
  * (record it for teardown), its public URL (the Connect webhook target), and the
  * generated INGRESS_TOKEN that authenticates map writes.
  */
 export const createIngress = async ({
 	owner,
 	runId,
-	ref,
 	signal,
 }: {
 	owner: string;
 	runId: string;
-	ref: string;
 	signal: AbortSignal;
 }): Promise<CreateIngressResult> => {
 	const name = `tw-ingress-${runId}`;
 	const token = randomUUID();
 
-	const source = resolveGitSource(ref);
-
 	log(`ingress: creating sandbox ${name}`);
 	const sandbox = await createIngressSandbox({
 		name,
-		source,
 		ports: [INGRESS_PORT],
 		timeout: WORKER_TIMEOUT_MS,
 		vcpus: 1,
@@ -98,12 +93,16 @@ export const createIngress = async ({
 	// output through the shared log sink, so during the RUN phase (Ink mounted) the
 	// `[ingress] …` firehose lands in the run log file instead of fighting the TUI
 	// for stdout.
-	const ingressCommand = await runDetached(sandbox, ["bun", INGRESS_SCRIPT], {
-		cwd: sandboxRepoRoot(),
-		onChunk: (text) =>
-			sinkLine(chalk.gray(`[ingress] ${text.replace(/\n$/, "")}`)),
-		signal,
-	});
+	const ingressCommand = await runDetached(
+		sandbox,
+		["bun", "-e", readInlineBunScript(INGRESS_SCRIPT)],
+		{
+			cwd: INGRESS_CWD,
+			onChunk: (text) =>
+				sinkLine(chalk.gray(`[ingress] ${text.replace(/\n$/, "")}`)),
+			signal,
+		},
+	);
 
 	// The ingress server is detached and streams logs for the whole run; we never
 	// await its completion. When teardown deletes the ingress sandbox the log
