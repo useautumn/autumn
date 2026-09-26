@@ -46,6 +46,8 @@ export const slimSubjectForFeatures = ({
 		replaceables: state.replaceables.filter((row) =>
 			keptRowIds.has(row.cus_ent_id),
 		),
+		// No caller reads them, and they grow with every lock the customer holds.
+		openLocks: [],
 	};
 	return {
 		state: slimState,

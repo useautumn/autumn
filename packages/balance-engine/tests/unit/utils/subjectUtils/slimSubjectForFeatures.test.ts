@@ -189,4 +189,29 @@ describe("slimSubjectForFeatures", () => {
 			"storage_monthly",
 		]);
 	});
+
+	test("a reply's size does not grow with the customer's open locks", () => {
+		const { state, catalog } = createFixture();
+		const openLocks = Array.from({ length: 500 }, (_, index) => ({
+			id: `lck_${index}`,
+			lock_id: `lock_${index}`,
+		}));
+		const replyBytes = (subject: typeof state) =>
+			JSON.stringify(
+				slimSubjectForFeatures({
+					state: subject,
+					catalog,
+					featureIds: ["messages"],
+				}),
+			).length;
+
+		expect(replyBytes({ ...state, openLocks })).toBe(replyBytes(state));
+		expect(
+			slimSubjectForFeatures({
+				state: { ...state, openLocks },
+				catalog,
+				featureIds: ["messages"],
+			}).state.openLocks,
+		).toEqual([]);
+	});
 });
