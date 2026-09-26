@@ -1,0 +1,26 @@
+# `tesser dev autumn`: scripts/dev.ts on one box, on top of the local Postgres,
+# Redis, ClickHouse and ElasticMQ from scripts/setup/agent-services.sh. Open the
+# http://<box_id>.localhost:3000 URL it prints.
+#
+# Team secrets come from Infisical dev once the machine identity Claude cloud
+# sessions use is set (each command reads its value from stdin):
+#   tesser env set autumn CODING_AGENT_CLIENT_ID
+#   tesser env set autumn CODING_AGENT_CLIENT_SECRET
+# Without it the box starts on an empty database with Stripe, Trigger.dev and
+# email off, and the sign-in code prints in `tesser logs`.
+#
+# Typecheck on the workbench (`tesser exec -- bun ts`): tsgo needs ~6 GB and is
+# OOM-killed next to the stack. Tests need this box's Postgres:
+#   tesser exec <box_id> -- bash scripts/setup/claude-cloud/with-env.sh server -- bun test <file>
+
+ports = [3000, 8080, 3001] # dashboard, API, checkout
+size = "large"
+box_address = true # sign-ins live on http://<box_id>.localhost, so bare localhost pages move there
+
+[run]
+setup = "bash scripts/tesser/setup.sh"
+dev = "bash scripts/tesser/dev.sh"
+
+[health]
+path = "/"
+timeout = "20m"

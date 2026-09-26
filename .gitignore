@@ -146,9 +146,12 @@ TAKEHOME.md
 .pi-subagents/
 .cursor/*
 !.cursor/environment.json
-# Keep the cloud SessionStart hook; other local Claude files stay ignored.
+# Keep the cloud SessionStart hook and the Tesser manifest; other local Claude files stay ignored.
 .claude/*
 !.claude/settings.json
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/tesser/
 .codex/
 .agents/
 .mcp.json
