@@ -1,8 +1,12 @@
-import type { ProductItem, ProductV2 } from "@autumn/shared";
+import type { Feature, ProductItem, ProductV2 } from "@autumn/shared";
 import { isFeatureItem, isFeaturePriceItem } from "@/utils/product/getItemType";
 
+/** One selectable option per Stripe product a coupon can be scoped to. */
 export type StripeProductGroup = {
 	key: string;
+	kind: "plan" | "feature";
+	/** Feature name for usage groups; plan groups are named after their lead plan. */
+	featureName?: string;
 	products: ProductV2[];
 	priceIds: string[];
 };
@@ -14,8 +18,8 @@ export const priceItemsOf = (product: ProductV2) =>
 	);
 
 /**
- * Mirrors the server: fixed prices scope to the plan's Stripe product, usage
- * prices to the feature's, which is shared org-wide.
+ * Mirrors the server: fixed prices scope to the plan's Stripe product (shared
+ * by its variants), usage prices to the feature's, which is shared org-wide.
  */
 const stripeScopeOfItem = ({
 	product,
@@ -25,44 +29,18 @@ const stripeScopeOfItem = ({
 	item: ProductItem;
 }) =>
 	isFeaturePriceItem(item)
-		? `feature:${item.feature_id}`
-		: `plan:${product.stripe_id ?? product.base_id ?? product.id}`;
-
-/** Plans reachable through a shared scope must be selected together. */
-const buildScopeUnion = ({ products }: { products: ProductV2[] }) => {
-	const parents = new Map<string, string>();
-
-	const find = (scope: string): string => {
-		const parent = parents.get(scope);
-		if (parent === undefined || parent === scope) {
-			parents.set(scope, scope);
-			return scope;
-		}
-		const root = find(parent);
-		parents.set(scope, root);
-		return root;
-	};
-
-	const union = (a: string, b: string) => {
-		const rootA = find(a);
-		const rootB = find(b);
-		if (rootA !== rootB) parents.set(rootB, rootA);
-	};
-
-	for (const product of products) {
-		const scopes = priceItemsOf(product).map((item) =>
-			stripeScopeOfItem({ product, item }),
-		);
-		for (const scope of scopes) union(scopes[0], scope);
-	}
-
-	return find;
-};
+		? { key: `feature:${item.feature_id}`, kind: "feature" as const }
+		: {
+				key: `plan:${product.stripe_id ?? product.base_id ?? product.id}`,
+				kind: "plan" as const,
+			};
 
 export const buildStripeProductGroups = ({
 	products,
+	features,
 }: {
 	products: ProductV2[];
+	features: Feature[];
 }): StripeProductGroup[] => {
 	const seenProducts = new Set<string>();
 	// A plan can arrive from both the latest-versions list and the by-price-id lookup.
@@ -73,19 +51,36 @@ export const buildStripeProductGroups = ({
 		return priceItemsOf(product).length > 0;
 	});
 
-	const find = buildScopeUnion({ products: unique });
 	const groupsByKey = new Map<string, StripeProductGroup>();
 
 	for (const product of unique) {
-		const items = priceItemsOf(product);
-		const key = find(stripeScopeOfItem({ product, item: items[0] }));
-		const group = groupsByKey.get(key) ?? { key, products: [], priceIds: [] };
-		group.products.push(product);
-		group.priceIds.push(...items.map((item) => item.price_id));
-		groupsByKey.set(key, group);
+		for (const item of priceItemsOf(product)) {
+			const { key, kind } = stripeScopeOfItem({ product, item });
+			const group = groupsByKey.get(key) ?? {
+				key,
+				kind,
+				featureName:
+					kind === "feature"
+						? (features.find(({ id }) => id === item.feature_id)?.name ??
+							item.feature_id ??
+							undefined)
+						: undefined,
+				products: [],
+				priceIds: [],
+			};
+			// Older versions of a plan share its prices' scope but aren't extra plans.
+			if (!group.products.some(({ id }) => id === product.id))
+				group.products.push(product);
+			group.priceIds.push(item.price_id);
+			groupsByKey.set(key, group);
+		}
 	}
 
-	return [...groupsByKey.values()];
+	const groups = [...groupsByKey.values()];
+	return [
+		...groups.filter(({ kind }) => kind === "plan"),
+		...groups.filter(({ kind }) => kind === "feature"),
+	];
 };
 
 export const findGroupForPriceId = ({
@@ -110,10 +105,15 @@ const isVariantFamily = ({ group }: { group: StripeProductGroup }) => {
 };
 
 export const groupLabel = ({ group }: { group: StripeProductGroup }) =>
-	leadProduct({ group }).name;
+	group.featureName ?? leadProduct({ group }).name;
 
 /** The muted "+ N variants" suffix, or null when a group is a single plan. */
 export const groupSuffix = ({ group }: { group: StripeProductGroup }) => {
+	if (group.kind === "feature") {
+		const count = group.products.length;
+		return `usage · ${count} plan${count > 1 ? "s" : ""}`;
+	}
+
 	const extra = group.products.length - 1;
 	if (extra < 1) return null;
 
@@ -123,6 +123,12 @@ export const groupSuffix = ({ group }: { group: StripeProductGroup }) => {
 
 /** Lists the plans a coupon would reach, base first, one per line. */
 export const sharedProductHint = ({ group }: { group: StripeProductGroup }) => {
+	if (group.kind === "feature")
+		return [
+			`Discounts ${group.featureName} usage on:`,
+			...group.products.map(({ name }) => `  • ${name}`),
+		].join("\n");
+
 	const lead = leadProduct({ group });
 	const names = [
 		lead.name,
