@@ -35,6 +35,11 @@ import type { OwnerTag } from "../types.js";
 import { sinkLine } from "./logSink.js";
 import { stripeMetadata } from "./owner.js";
 import {
+	isKeyKnownHealthy,
+	loadKeyHealthCache,
+	saveHealthyKeys,
+} from "./stripeKeyHealth.js";
+import {
 	allPoolKeys,
 	decodeSubAccount,
 	restrictPoolTo,
@@ -42,6 +47,10 @@ import {
 	stripeKeyByIndex,
 	stripeKeyPoolSize,
 } from "./stripeKeyPool.js";
+import {
+	STRIPE_REQUEST_OPTIONS,
+	withStripeRequestSlot,
+} from "./stripeRequestBudget.js";
 
 /** Flatten a logger's varargs into one line (strings as-is; errors → message). */
 const formatLogArgs = (args: unknown[]): string =>
@@ -186,20 +195,28 @@ export const createSandboxSubAccount = async ({
 	const account = await getSubAccountCreateLimit()(() =>
 		withRateLimitRetry(async () => {
 			await paceCreate();
-			return stripe.v2.core.accounts.create({
-				contact_email: ownerEmail,
-				display_name: orgName,
-				dashboard: "full",
-				metadata: { ...stripeMetadata(owner, runId, orgId), ...extraMetadata },
-				identity: { country: "us" },
-				configuration: { merchant: {} },
-				defaults: {
-					responsibilities: {
-						losses_collector: "stripe",
-						fees_collector: "stripe",
+			return withStripeRequestSlot(() =>
+				stripe.v2.core.accounts.create(
+					{
+						contact_email: ownerEmail,
+						display_name: orgName,
+						dashboard: "full",
+						metadata: {
+							...stripeMetadata(owner, runId, orgId),
+							...extraMetadata,
+						},
+						identity: { country: "us" },
+						configuration: { merchant: {} },
+						defaults: {
+							responsibilities: {
+								losses_collector: "stripe",
+								fees_collector: "stripe",
+							},
+						},
 					},
-				},
-			});
+					STRIPE_REQUEST_OPTIONS,
+				),
+			);
 		}, "accounts.create"),
 	);
 
@@ -212,29 +229,51 @@ export const createSandboxSubAccount = async ({
  * probe is a read (`v2.core.accounts.list`) which fails with "The API method
  * cannot be found." on platforms that don't have Connect / the v2 Accounts API
  * enabled — the exact gate that breaks {@link createSandboxSubAccount} — so no
- * throwaway accounts are created. Returns the usable count + the dropped keys (by
- * prefix + reason) for a clear report.
+ * throwaway accounts are created. Keys that passed within the health-cache TTL
+ * skip the probe. Returns the usable count + the dropped keys (by prefix + reason).
  */
 export const validateStripeKeyPool = async (): Promise<{
 	usable: number;
 	dropped: { keyPrefix: string; reason: string }[];
+	probed: number;
 }> => {
+	const cache = loadKeyHealthCache();
 	const probes = await Promise.all(
-		allPoolKeys().map(async (key) => {
-			try {
-				await stripeClientForKey(key).v2.core.accounts.list({ limit: 1 });
-				return { key, ok: true as const };
-			} catch (error) {
-				return { key, ok: false as const, reason: (error as Error).message };
+		allPoolKeys().map((key) => {
+			if (isKeyKnownHealthy({ cache, key })) {
+				return { key, ok: true as const, cached: true };
 			}
+			return withStripeRequestSlot(async () => {
+				try {
+					await stripeClientForKey(key).v2.core.accounts.list(
+						{ limit: 1 },
+						STRIPE_REQUEST_OPTIONS,
+					);
+					return { key, ok: true as const, cached: false };
+				} catch (error) {
+					return {
+						key,
+						ok: false as const,
+						reason: (error as Error).message,
+					};
+				}
+			});
 		}),
 	);
 
 	const usable = probes.filter((probe) => probe.ok).map((probe) => probe.key);
 	restrictPoolTo(usable);
+	saveHealthyKeys({
+		cache,
+		healthyKeys: probes
+			.filter((probe) => probe.ok && !probe.cached)
+			.map((probe) => probe.key),
+	});
 
 	return {
 		usable: usable.length,
+		probed: probes.filter((probe) => !("cached" in probe && probe.cached))
+			.length,
 		dropped: probes
 			.filter((probe) => !probe.ok)
 			.map((probe) => ({
@@ -272,11 +311,16 @@ export const registerConnectIngressWebhook = async (
 	// platform key only delivers events for the accounts it owns.
 	const stripeCli = stripeClientForKey(secretKey);
 
-	const endpoint = await stripeCli.webhookEndpoints.create({
-		url: `${ingressUrl}/ingress/connect/${TW_ENV}`,
-		enabled_events: WEBHOOK_EVENTS,
-		connect: true,
-	});
+	const endpoint = await withStripeRequestSlot(() =>
+		stripeCli.webhookEndpoints.create(
+			{
+				url: `${ingressUrl}/ingress/connect/${TW_ENV}`,
+				enabled_events: WEBHOOK_EVENTS,
+				connect: true,
+			},
+			STRIPE_REQUEST_OPTIONS,
+		),
+	);
 
 	return endpoint.id;
 };

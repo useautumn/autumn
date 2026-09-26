@@ -40,7 +40,6 @@ import { connect } from "node:net";
 import { join } from "node:path";
 import { type Subprocess, spawn } from "bun";
 import chalk from "chalk";
-import { prepareBalanceSyncQueue } from "./prepareBalanceSyncQueue.js";
 import {
 	DRAGONFLY_PORT,
 	DYNAMODB_PORT,
@@ -49,6 +48,7 @@ import {
 	SERVER_PORT,
 	TW_ENV,
 } from "../constants.js";
+import { prepareBalanceSyncQueue } from "./prepareBalanceSyncQueue.js";
 
 /** The READY sentinel the orchestrator scans stdout for. Plan §9 step 5. */
 export const READY_SENTINEL = "TW_WORKER_READY";
@@ -314,6 +314,7 @@ const main = async (): Promise<void> => {
 			},
 		),
 	]);
+	log("native services healthy");
 
 	await prepareBalanceSyncQueue();
 
@@ -371,6 +372,7 @@ const main = async (): Promise<void> => {
 	}
 
 	// 4. Bind the Stripe sub-account into the localhost DB (§6a step 2 / §9a).
+	log(`binding Stripe sub-account ${stripeAccountId}`);
 	const { bindStripeAccount } = await import("./bindStripeAccount.js");
 	await bindStripeAccount({ orgId, stripeAccountId });
 

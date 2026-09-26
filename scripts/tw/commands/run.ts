@@ -26,7 +26,7 @@
  * signal → force-exit (registry + tags persist for `bun tw kill`).
  */
 
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { readdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { deleteSvixApp as serverDeleteSvixApp } from "@server/external/svix/svixHelpers.js";
 import {
@@ -35,7 +35,6 @@ import {
 	resolveTestPaths,
 } from "@tests/_groups/index.ts";
 import chalk from "chalk";
-import { BALANCE_SYNC_SQS_QUEUE_URL } from "../worker/prepareBalanceSyncQueue.js";
 import pLimit from "p-limit";
 import { TEST_ORG_CONFIG } from "../../setupTestUtils/createTestOrg.ts";
 import {
@@ -68,12 +67,29 @@ import {
 	startDashboardServer,
 } from "../dashboard/server.ts";
 import {
+	formatBootSummary,
+	recordBootOutput,
+	resetBootTraces,
+	startBootTrace,
+	summarizeBootTraces,
+} from "../helpers/bootTimings.ts";
+import {
 	type CostEstimate,
 	estimateCost,
 	formatCost,
 	formatWall,
 } from "../helpers/cost.ts";
-import { createIngress, pushWorkerMapping } from "../helpers/ingress.ts";
+import {
+	type DurationStats,
+	formatDurations,
+	summarizeDurations,
+} from "../helpers/durationStats.ts";
+import {
+	type CreateIngressResult,
+	createIngress,
+	pushWorkerMapping,
+} from "../helpers/ingress.ts";
+import { readInlineBunScript } from "../helpers/inlineBunScript.ts";
 import { withGlobalLock } from "../helpers/lock.ts";
 import {
 	disableQuietMode,
@@ -109,6 +125,14 @@ import {
 } from "../helpers/provider.ts";
 import * as registry from "../helpers/registry.ts";
 import { RemoteExecutor } from "../helpers/remoteExecutor.ts";
+import {
+	elapsedMs,
+	formatSetupTimeline,
+	getSetupTimeline,
+	markPhase,
+	resetSetupTimeline,
+	timePhase,
+} from "../helpers/setupTimeline.ts";
 import {
 	createSandboxSubAccount,
 	deleteConnectWebhook,
@@ -153,6 +177,7 @@ import {
 } from "../tui/store.ts";
 import type { TwRunArgs, WorkerHandle } from "../types.ts";
 import { READY_SENTINEL } from "../worker/boot.ts";
+import { BALANCE_SYNC_SQS_QUEUE_URL } from "../worker/prepareBalanceSyncQueue.js";
 
 /**
  * The repo root INSIDE the µVM. Vercel Sandbox sessions default their cwd to
@@ -276,8 +301,10 @@ const SIGINT_EXIT_CODE = 130;
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
+const elapsedTag = (): string => `+${(elapsedMs() / 1000).toFixed(1)}s`;
+
 const log = (message: string): void => {
-	sinkLine(chalk.cyan(`[tw] ${message}`));
+	sinkLine(chalk.cyan(`[tw] ${elapsedTag()} ${message}`));
 };
 
 /**
@@ -287,15 +314,15 @@ const log = (message: string): void => {
  * snapshot / fan-out. Use sparingly: lifecycle transitions, not the firehose.
  */
 const milestone = (message: string): void => {
-	narrate(chalk.cyan.bold(`[tw] ${message}`));
+	narrate(chalk.cyan.bold(`[tw] ${elapsedTag()} ${message}`));
 };
 
 const warn = (message: string): void => {
-	sinkLine(chalk.yellow(`[tw] ${message}`));
+	sinkLine(chalk.yellow(`[tw] ${elapsedTag()} ${message}`));
 };
 
 const errorLog = (message: string): void => {
-	sinkLine(chalk.red(`[tw] ${message}`));
+	sinkLine(chalk.red(`[tw] ${elapsedTag()} ${message}`));
 };
 
 /** Copy text to the OS clipboard (best-effort, platform-aware). */
@@ -809,10 +836,12 @@ type ProvisionedWorker = {
 	sandbox: ProviderSandbox;
 	/** Timings (ms since fan-out start) for benchmarking the provisioning phase. */
 	timing: {
-		/** When this worker's Stripe sub-account finished creating. */
+		/** When this worker's Stripe sub-account was available (claimed/created). */
 		stripeMs: number;
 		/** When the `create`/fork call returned (sandbox object in hand). */
 		createMs: number;
+		/** Part of the fork call spent fast-forwarding the source (stale warm). */
+		checkoutMs: number;
 		/** When `getPublicUrl`/`tunnels()` resolved — i.e. the sandbox is actually
 		 * RUNNING (this is where snapshot-restore/start wait shows up). */
 		tunnelMs: number;
@@ -851,6 +880,7 @@ const waitForReady = async ({
 	// worker's per-request server logs (incl. noisy `[Redis] Connection error`
 	// retries × 50 workers) are pure noise during the run.
 	const onBootChunk = (text: string): void => {
+		recordBootOutput({ worker: name, text });
 		// Dashboard: capture the worker's server output for its WHOLE life (the
 		// per-worker view shows this); no-op unless the dashboard is enabled.
 		appendWorkerOutput(name, text);
@@ -866,6 +896,7 @@ const waitForReady = async ({
 
 	// Detached: the boot command (services + the long-lived server) must keep
 	// running for the whole test run, so we don't await its completion here.
+	startBootTrace(name);
 	const command = await runDetached(sandbox, ["bun", BOOT_SCRIPT], {
 		cwd: sandboxRepoRoot(),
 		onChunk: onBootChunk,
@@ -904,12 +935,44 @@ const waitForReady = async ({
 	await Promise.race([readyPromise, exitedFirst, deadline]);
 };
 
+/** A worker's pre-claimed pool account, or a fresh one RECORDED before it is returned
+ * so a fork/boot failure can never orphan an untracked Stripe account (§9a). */
+const resolveWorkerAccount = async ({
+	idx,
+	name,
+	runId,
+	owner,
+	ownerEmail,
+	pooledAccounts,
+}: {
+	idx: number;
+	name: string;
+	runId: string;
+	owner: string;
+	ownerEmail: string;
+	pooledAccounts: Promise<string[] | undefined>;
+}): Promise<string> => {
+	const pooledAccount = (await pooledAccounts)?.[idx];
+	if (pooledAccount) {
+		return decodeSubAccount(pooledAccount).accountId;
+	}
+	const { key: stripeSecretKey, keyIndex } = stripeKeyForWorker(idx);
+	const accountId = await createSandboxSubAccount({
+		orgName: `${TEST_ORG_CONFIG.name} (${name})`,
+		ownerEmail,
+		owner,
+		runId,
+		orgId: TEST_ORG_CONFIG.id,
+		secretKey: stripeSecretKey,
+	});
+	await registry.addSubAccount(runId, encodeSubAccount(accountId, keyIndex));
+	return accountId;
+};
+
 /**
- * Provision one worker: fork from the warm snapshot, read its public URL,
- * orchestrator-create + RECORD the Stripe sub-account BEFORE the worker does
- * anything that can fail (§9a), then run the detached boot, wait READY, and push
- * the `{ accountId → workerUrl }` mapping to the shared ingress so the one Connect
- * webhook can route this worker's events to it (replaces the per-worker webhook).
+ * Provision one worker: take its Stripe sub-account, fork from the warm snapshot,
+ * run the detached boot, wait READY, and push the `{ accountId → workerUrl }`
+ * mapping to the shared ingress so the one Connect webhook routes its events here.
  */
 const provisionWorker = async ({
 	idx,
@@ -918,11 +981,10 @@ const provisionWorker = async ({
 	warmName,
 	isSvixShard,
 	ownerEmail,
-	ingressUrl,
-	ingressToken,
+	pooledAccounts,
+	ingress,
 	fanoutStart,
 	signal,
-	pooledAccount,
 }: {
 	idx: number;
 	owner: string;
@@ -930,10 +992,9 @@ const provisionWorker = async ({
 	warmName: string;
 	isSvixShard: boolean;
 	ownerEmail: string;
-	ingressUrl: string;
-	ingressToken: string;
-	/** Pre-claimed pool account (encoded `acct_*::keyIndex`) — skips creation. */
-	pooledAccount?: string;
+	/** The run's pool claim (encoded `acct_*::keyIndex` per worker idx), if pooled. */
+	pooledAccounts: Promise<string[] | undefined>;
+	ingress: Promise<CreateIngressResult>;
 	/** Epoch ms when the fan-out phase began, for per-worker provisioning timings. */
 	fanoutStart: number;
 	signal: AbortSignal;
@@ -943,26 +1004,18 @@ const provisionWorker = async ({
 	// This worker's Stripe pool key (round-robin). The sub-account is CREATED on
 	// this key and the worker's server USES this key, so they share one platform
 	// rate-limit bucket — sharding workers across keys multiplies the ceiling.
-	const { key: stripeSecretKey, keyIndex } = stripeKeyForWorker(idx);
+	const { key: stripeSecretKey } = stripeKeyForWorker(idx);
 
-	// 1. Bind a pre-claimed pool account (already recorded + marked dirty at
-	//    claim time), or orchestrator-create + RECORD a fresh sub-account before
-	//    the worker exists so a fork/boot failure can never orphan an untracked
-	//    Stripe account (§9a).
-	let accountId: string;
-	if (pooledAccount) {
-		accountId = decodeSubAccount(pooledAccount).accountId;
-	} else {
-		accountId = await createSandboxSubAccount({
-			orgName: `${TEST_ORG_CONFIG.name} (${name})`,
-			ownerEmail,
-			owner,
-			runId,
-			orgId,
-			secretKey: stripeSecretKey,
-		});
-		await registry.addSubAccount(runId, encodeSubAccount(accountId, keyIndex));
-	}
+	// Claimed/created concurrently with the warm lookup; the account and ingress feed
+	// the worker env, which boot AND tests read.
+	const accountId = await resolveWorkerAccount({
+		idx,
+		name,
+		runId,
+		owner,
+		ownerEmail,
+		pooledAccounts,
+	});
 	bumpStripeDone();
 	const stripeMs = Date.now() - fanoutStart;
 
@@ -972,8 +1025,9 @@ const provisionWorker = async ({
 		await registry.addSvixApp({ runId, svixAppId });
 	}
 
-	// 2. Fork the worker with its per-worker env (fork does NOT copy env). The SDK
-	//    forks from the warm parent's NAME (its current snapshot is the warm one).
+	const { publicUrl: ingressUrl, token: ingressToken } = await ingress;
+
+	// Fork with the per-worker env (fork does NOT copy env) from the warm image.
 	const sandbox = await forkWorker({
 		sourceSandbox: warmName,
 		name,
@@ -991,24 +1045,19 @@ const provisionWorker = async ({
 	await registry.addSandbox(runId, { name: sandbox.name, id: sandbox.id });
 	const createMs = Date.now() - fanoutStart;
 
-	// 3. Resolve the public URL (the worker's connect-route target). On Modal this
-	//    `tunnels()` call blocks until the sandbox is actually RUNNING, so the
-	//    create→tunnel slice captures the snapshot-restore/start wait.
+	// On Modal `tunnels()` blocks until the sandbox is actually RUNNING, so the
+	// create→tunnel slice captures the snapshot-restore/start wait.
 	const publicUrl = await getPublicUrl(sandbox, SERVER_PORT);
 	const tunnelMs = Date.now() - fanoutStart;
 
-	// 4. Boot the worker (detached) and wait for READY.
 	log(`worker ${name}: booting${isSvixShard ? " (svix shard)" : ""}`);
 	await waitForReady({ sandbox, name, signal });
 	log(`worker ${name}: READY`);
 	bumpWorkerReady();
 	const readyMs = Date.now() - fanoutStart;
 
-	// 5. Push the `{ accountId → workerUrl }` mapping to the shared ingress so the
-	//    one platform Connect webhook routes THIS sub-account's events here. Because
-	//    the RUN phase only starts after all provisionTasks resolve, every mapping is
-	//    in place before any test fires events — no race (replaces the per-worker
-	//    Connect webhook + its 16-worker cap, §6a).
+	// The RUN phase only starts after every provisionTask resolves, so each
+	// mapping is in place before any test fires Stripe events.
 	await pushWorkerMapping({
 		ingressUrl,
 		token: ingressToken,
@@ -1025,10 +1074,89 @@ const provisionWorker = async ({
 		inFlight: 0,
 	};
 
-	return { handle, sandbox, timing: { stripeMs, createMs, tunnelMs, readyMs } };
+	return {
+		handle,
+		sandbox,
+		timing: {
+			stripeMs,
+			createMs,
+			checkoutMs: sandbox.checkoutMs ?? 0,
+			tunnelMs,
+			readyMs,
+		},
+	};
 };
 
 const provisionSvixApp = pLimit(10);
+
+/** Register the per-key platform Connect webhooks pointed at the ingress. */
+const registerIngressWebhooks = async ({
+	runId,
+	ingress,
+	usedKeys,
+}: {
+	runId: string;
+	ingress: CreateIngressResult;
+	usedKeys: number;
+}): Promise<void> => {
+	const registerIngress = pLimit(10);
+	const registrations = await Promise.allSettled(
+		Array.from({ length: usedKeys }, (_, keyIndex) =>
+			registerIngress(async () => {
+				const webhookId = await registerConnectIngressWebhook(
+					ingress.publicUrl,
+					stripeKeyByIndex(keyIndex),
+				);
+				await registry.addWebhook(runId, {
+					sandboxName: ingress.sandbox.name,
+					accountId: webhookKeyTag(keyIndex),
+					webhookId,
+				});
+			}),
+		),
+	);
+	// Finish recording concurrent successes before a failure starts teardown.
+	for (const registration of registrations) {
+		if (registration.status === "rejected") throw registration.reason;
+	}
+};
+
+/** Claim the run's pooled sub-accounts under the `stripe-pool` global lock, recorded in
+ * one registry write so a crash can't orphan them. Returns encoded accounts by idx. */
+const claimAndRecordPoolAccounts = async ({
+	count,
+	owner,
+	runId,
+	ownerEmail,
+}: {
+	count: number;
+	owner: string;
+	runId: string;
+	ownerEmail: string;
+}): Promise<string[]> => {
+	const claimStart = Date.now();
+	const claim = await withGlobalLock({
+		name: "stripe-pool",
+		meta: { owner, startedAt: Date.now(), runId },
+		log: (line) => log(line),
+		fn: () =>
+			claimPoolAccounts({
+				count,
+				owner,
+				runId,
+				ownerEmail,
+				orgId: TEST_ORG_CONFIG.id,
+				orgNameForIdx: (idx) =>
+					`${TEST_ORG_CONFIG.name} (${sandboxName(owner, runId, idx)})`,
+				log: (line) => log(line),
+			}),
+	});
+	await registry.addSubAccounts(runId, claim.byWorker);
+	milestone(
+		`stripe pool: ${claim.reused} reused + ${claim.created} created in ${Date.now() - claimStart}ms`,
+	);
+	return claim.byWorker;
+};
 
 // ============================================================================
 // Teardown (§9a — idempotent, orchestrator-driven from the registry)
@@ -1044,7 +1172,7 @@ const stripePoolEnabled = (): boolean =>
 	providerName().startsWith("modal") &&
 	process.env.TW_DISABLE_STRIPE_POOL !== "1";
 
-const NUKE_MAIN_GUARD = "if (import.meta.main)";
+const NUKE_SCRIPT = "scripts/tw/image/nuke-accounts.mjs";
 
 /**
  * Fire-and-forget the teardown nuke sandbox: it cleans each used account's
@@ -1057,19 +1185,7 @@ const spawnNukeSandbox = async (
 	encodedAccounts: string[],
 ): Promise<boolean> => {
 	try {
-		const scriptPath = join(
-			PROJECT_ROOT,
-			"scripts",
-			"tw",
-			"image",
-			"nuke-accounts.mjs",
-		);
-		const source = readFileSync(scriptPath, "utf8");
-		if (!source.includes(NUKE_MAIN_GUARD)) {
-			throw new Error(`main guard not found in ${scriptPath}`);
-		}
-		// `bun -e` runs the script with import.meta.main=false — force main().
-		const script = source.replace(NUKE_MAIN_GUARD, "if (true)");
+		const script = readInlineBunScript(NUKE_SCRIPT);
 		const targets = encodedAccounts.map((encoded) => {
 			const { accountId, keyIndex } = decodeSubAccount(encoded);
 			return { accountId, keyIndex };
@@ -1201,6 +1317,88 @@ const teardown = async ({
 	log("teardown complete");
 };
 
+const statFor = ({
+	provisioned,
+	pick,
+}: {
+	provisioned: ProvisionedWorker[];
+	pick: (timing: ProvisionedWorker["timing"]) => number;
+}): DurationStats =>
+	summarizeDurations(provisioned.map(({ timing }) => pick(timing)));
+
+/**
+ * Setup timeline + per-worker fan-out splits, shown on the terminal and saved to
+ * `<runId>-timings.json` so runs can be compared.
+ */
+const reportFanoutBenchmark = ({
+	provisioned,
+	effectiveWorkers,
+	logFile,
+	runId,
+}: {
+	provisioned: ProvisionedWorker[];
+	effectiveWorkers: number;
+	logFile: string;
+	runId: string;
+}): void => {
+	const fanout = {
+		ready: statFor({ provisioned, pick: (t) => t.readyMs }),
+		accountWait: statFor({ provisioned, pick: (t) => t.stripeMs }),
+		create: statFor({
+			provisioned,
+			pick: (t) => t.createMs - t.stripeMs - t.checkoutMs,
+		}),
+		checkout: statFor({ provisioned, pick: (t) => t.checkoutMs }),
+		restore: statFor({ provisioned, pick: (t) => t.tunnelMs - t.createMs }),
+		boot: statFor({ provisioned, pick: (t) => t.readyMs - t.tunnelMs }),
+	};
+	const bootSteps = summarizeBootTraces();
+
+	milestone("setup timeline (since invocation):");
+	for (const line of formatSetupTimeline()) {
+		milestone(line);
+	}
+	milestone(
+		`fan-out benchmark (${provisioned.length}/${effectiveWorkers} workers, ${WORKER_VCPUS} vCPU each):`,
+	);
+	milestone(`  · READY (from fan-out start): ${formatDurations(fanout.ready)}`);
+	milestone(
+		`      ├─ wait for stripe acct:  ${formatDurations(fanout.accountWait)}`,
+	);
+	milestone(
+		`      ├─ create (fork call):    ${formatDurations(fanout.create)}`,
+	);
+	milestone(
+		`      ├─ source fast-forward:   ${formatDurations(fanout.checkout)}`,
+	);
+	milestone(
+		`      ├─ restore (tunnel):      ${formatDurations(fanout.restore)}`,
+	);
+	milestone(`      └─ boot (exec → READY):   ${formatDurations(fanout.boot)}`);
+	for (const line of formatBootSummary(bootSteps)) {
+		milestone(line);
+	}
+
+	try {
+		writeFileSync(
+			logFile.replace(/\.log$/, "-timings.json"),
+			JSON.stringify(
+				{
+					runId,
+					workers: provisioned.length,
+					setupTimeline: getSetupTimeline(),
+					fanout,
+					bootSteps,
+				},
+				null,
+				2,
+			),
+		);
+	} catch {
+		// best-effort — the terminal lines above carry the same numbers.
+	}
+};
+
 // ============================================================================
 // Main run
 // ============================================================================
@@ -1219,9 +1417,14 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	// to stdout. The file keeps the full firehose for `bun tw` to point the user at.
 	const runLogFile = join(REGISTRY_DIR, "runs", `${runId}.log`);
 	setLogFile(runLogFile);
+	resetSetupTimeline();
+	resetBootTraces();
 
 	log(`resolving test files for: ${args.groupsOrPatterns.join(" ") || "core"}`);
-	const allFiles = await resolveTestFiles(args.groupsOrPatterns);
+	const allFiles = await timePhase({
+		name: "resolve test files",
+		fn: () => resolveTestFiles(args.groupsOrPatterns),
+	});
 	if (allFiles.length === 0) {
 		throw new Error("no test files resolved — nothing to run");
 	}
@@ -1232,7 +1435,10 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	// mid-fan-out failures). Read-only + fast; runs before the expensive warm-up.
 	if (stripeKeyPoolSize() > 1) {
 		milestone(`validating ${stripeKeyPoolSize()} Stripe pool key(s)…`);
-		const { usable, dropped } = await validateStripeKeyPool();
+		const { usable, dropped } = await timePhase({
+			name: "validate stripe keys",
+			fn: validateStripeKeyPool,
+		});
 		for (const badKey of dropped) {
 			warn(`Stripe key ${badKey.keyPrefix} unusable — ${badKey.reason}`);
 		}
@@ -1378,97 +1584,79 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	let teardownDone = false;
 
 	try {
-		// ----- WARM-UP (cached per ref-sha) -----------------------------------
+		// ----- SHARED SETUP (concurrent) ---------------------------------------
+		// Warm lookup, ingress (+ its Connect webhooks) and the Stripe pool claim are
+		// independent. Workers fork as soon as the warm image is known; each awaits
+		// its account right before boot and the ingress right before its map push.
 		const refSha = resolveRefSha(args.ref);
 		resolvedTargetSha = refSha;
-		const warmName = await getOrBuildWarmParent({
-			ref: args.ref,
-			sha: refSha,
-			signal,
+		const warmPromise = timePhase({
+			name: "warm parent",
+			fn: () => getOrBuildWarmParent({ ref: args.ref, sha: refSha, signal }),
 		});
 
-		// ----- INGRESS --------------------------------------------------------
-		// Stand up the ONE shared Connect webhook ingress before fanning out: a
-		// lightweight sandbox running the ingress http server, plus the single
-		// platform Connect webhook pointed at it. Workers push their
-		// `{ accountId → workerUrl }` mapping to it as they come up; Stripe → the one
-		// Connect webhook → ingress → the owning worker, routed by `event.account`.
-		// Both are recorded so teardown drops them (the ingress sandbox via the
-		// sandbox loop, the platform webhook explicitly — it is NOT cascade-deleted
-		// by sub-account deletion). Replaces the per-worker webhook + its 16-cap (§6a).
+		// ONE shared Connect webhook ingress: Stripe → the platform Connect webhook →
+		// ingress → the owning worker, routed by `event.account` (replaces the
+		// per-worker webhook + its 16-cap, §6a). Recorded so teardown drops it.
 		log("creating shared Connect webhook ingress");
-		const ingress = await createIngress({
-			owner,
-			runId,
-			ref: args.ref,
-			signal,
-		});
-		await registry.addSandbox(runId, {
-			name: ingress.sandbox.name,
-			id: ingress.sandbox.id,
+		const ingressPromise = timePhase({
+			name: "ingress sandbox",
+			fn: async () => {
+				const created = await createIngress({ owner, runId, signal });
+				await registry.addSandbox(runId, {
+					name: created.sandbox.name,
+					id: created.sandbox.id,
+				});
+				return created;
+			},
 		});
 		// One Connect webhook PER pool key actually in use (each platform key only
-		// delivers events for the accounts it owns). The ingress routes every event
-		// to the owning worker by `event.account` regardless of which key sent it.
+		// delivers events for the accounts it owns). Only needed before tests run.
 		const usedKeys = Math.min(stripeKeyPoolSize(), effectiveWorkers);
-		const registerIngress = pLimit(10);
-		const registrations = await Promise.allSettled(
-			Array.from({ length: usedKeys }, (_, keyIndex) =>
-				registerIngress(async () => {
-					const webhookId = await registerConnectIngressWebhook(
-						ingress.publicUrl,
-						stripeKeyByIndex(keyIndex),
-					);
-					await registry.addWebhook(runId, {
-						sandboxName: ingress.sandbox.name,
-						accountId: webhookKeyTag(keyIndex),
-						webhookId,
-					});
-				}),
-			),
+		const webhooksPromise = ingressPromise.then((ingress) =>
+			timePhase({
+				name: "connect webhooks",
+				fn: () =>
+					registerIngressWebhooks({
+						runId,
+						ingress,
+						usedKeys,
+					}),
+			}),
 		);
-		// Finish recording concurrent successes before a failure starts teardown.
-		for (const registration of registrations) {
-			if (registration.status === "rejected") throw registration.reason;
-		}
-		log(
-			`ingress ready (${ingress.publicUrl}), ${usedKeys} platform Connect webhook(s) registered across the key pool`,
-		);
-
-		// ----- FAN-OUT --------------------------------------------------------
 
 		// Claim pooled Stripe sub-accounts (reuse clean, create the shortfall) under
 		// the cross-machine git-ref lock — Stripe metadata read-modify-write is racy
-		// when teammates fan out concurrently. Held for the claim only (seconds).
-		let pooledAccounts: string[] = [];
-		if (stripePoolEnabled()) {
-			const claimStart = Date.now();
-			const claim = await withGlobalLock({
-				name: "stripe-pool",
-				meta: { owner, startedAt: Date.now(), runId },
-				log: (line) => log(line),
-				fn: () =>
-					claimPoolAccounts({
-						count: effectiveWorkers,
-						owner,
-						runId,
-						ownerEmail,
-						orgId: TEST_ORG_CONFIG.id,
-						orgNameForIdx: (idx) =>
-							`${TEST_ORG_CONFIG.name} (${sandboxName(owner, runId, idx)})`,
-						log: (line) => log(line),
-					}),
-			});
-			pooledAccounts = claim.byWorker;
-			// Record BEFORE fan-out so a crash can never orphan an untracked account.
-			for (const encoded of pooledAccounts) {
-				await registry.addSubAccount(runId, encoded);
-			}
-			milestone(
-				`stripe pool: ${claim.reused} reused + ${claim.created} created in ${Date.now() - claimStart}ms`,
-			);
+		// when teammates fan out concurrently. Recorded before any worker boots.
+		const pooledAccountsPromise: Promise<string[] | undefined> =
+			stripePoolEnabled()
+				? timePhase({
+						name: "stripe pool claim",
+						fn: () =>
+							claimAndRecordPoolAccounts({
+								count: effectiveWorkers,
+								owner,
+								runId,
+								ownerEmail,
+							}),
+					})
+				: Promise.resolve(undefined);
+
+		const sharedSetup = Promise.allSettled([
+			ingressPromise,
+			webhooksPromise,
+			pooledAccountsPromise,
+		]);
+		let warmName: string;
+		try {
+			warmName = await warmPromise;
+		} catch (error) {
+			// Let in-flight shared resources get recorded before teardown reads them.
+			await sharedSetup;
+			throw error;
 		}
 
+		// ----- FAN-OUT --------------------------------------------------------
 		milestone(
 			`fan-out: provisioning ${effectiveWorkers} worker(s) from the warm snapshot`,
 		);
@@ -1493,11 +1681,10 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 					warmName,
 					isSvixShard,
 					ownerEmail,
-					ingressUrl: ingress.publicUrl,
-					ingressToken: ingress.token,
+					pooledAccounts: pooledAccountsPromise,
+					ingress: ingressPromise,
 					fanoutStart,
 					signal,
-					pooledAccount: pooledAccounts[idx],
 				}).catch((error: unknown) => {
 					// Surface the provision failure (red dot + reason, `N failed` counter)
 					// instead of the worker silently never appearing.
@@ -1508,11 +1695,19 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 				}),
 			);
 		}
-		// Wait for ALL provisionWorker tasks to SETTLE (not just bail on the first
-		// rejection) so every sub-account/sandbox is recorded before teardown reads
-		// the registry. Otherwise a peer still creating an account AFTER another's
-		// failure leaks it — and the create/delete interleaving is ugly.
-		const settled = await Promise.allSettled(provisionTasks);
+		// Wait for ALL provisionWorker tasks AND the shared setup to SETTLE (not just
+		// bail on the first rejection) so every sub-account/sandbox/webhook is
+		// recorded before teardown reads the registry.
+		const settled = await timePhase({
+			name: "fan-out (all workers READY)",
+			fn: () => Promise.allSettled(provisionTasks),
+		});
+		for (const result of await sharedSetup) {
+			if (result.status === "rejected") throw result.reason;
+		}
+		log(
+			`ingress ready (${(await ingressPromise).publicUrl}), ${usedKeys} platform Connect webhook(s) registered across the key pool`,
+		);
 		const provisioned = settled
 			.filter(
 				(r): r is PromiseFulfilledResult<ProvisionedWorker> =>
@@ -1557,42 +1752,12 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			);
 		}
 
-		// Fan-out benchmark. All timings are ms from fan-out start. `stripeMs` is
-		// when a worker's account finished; `readyMs` is when it hit READY (fork +
-		// boot done). The fork→ready slice per worker is `readyMs - stripeMs`.
-		const stat = (xs: number[]): { avg: number; min: number; max: number } => ({
-			avg: xs.reduce((sum, x) => sum + x, 0) / Math.max(1, xs.length),
-			min: Math.min(...xs),
-			max: Math.max(...xs),
+		reportFanoutBenchmark({
+			provisioned,
+			effectiveWorkers,
+			logFile: runLogFile,
+			runId,
 		});
-		const stripe = stat(provisioned.map((p) => p.timing.stripeMs));
-		const ready = stat(provisioned.map((p) => p.timing.readyMs));
-		const forkBoot = stat(
-			provisioned.map((p) => p.timing.readyMs - p.timing.stripeMs),
-		);
-		// Per-worker phase splits (the instrumentation): create (fork call),
-		// restore (create→tunnel: sandbox actually starts from the snapshot), and
-		// boot (tunnel→READY: services + server + health).
-		const createPhase = stat(
-			provisioned.map((p) => p.timing.createMs - p.timing.stripeMs),
-		);
-		const restorePhase = stat(
-			provisioned.map((p) => p.timing.tunnelMs - p.timing.createMs),
-		);
-		const bootPhase = stat(
-			provisioned.map((p) => p.timing.readyMs - p.timing.tunnelMs),
-		);
-		const fmt = (s: { avg: number; min: number; max: number }): string =>
-			`avg ${formatWall(s.avg)} · min ${formatWall(s.min)} · max ${formatWall(s.max)}`;
-		log(
-			`fan-out benchmark (${provisioned.length}/${effectiveWorkers} workers, ${WORKER_VCPUS} vCPU each):`,
-		);
-		log(`  · stripe accounts: all created in ${formatWall(stripe.max)}`);
-		log(`  · all workers READY in ${formatWall(ready.max)} from fan-out start`);
-		log(`  · per-worker fork→READY: ${fmt(forkBoot)}`);
-		log(`      ├─ create (fork call):        ${fmt(createPhase)}`);
-		log(`      ├─ restore (sandbox starting): ${fmt(restorePhase)}`);
-		log(`      └─ boot (services+server):     ${fmt(bootPhase)}`);
 
 		// `--fanout-bench`: we only wanted the fan-out timings — skip the test run
 		// and tear straight down (saves the test compute/credits). The finally still
@@ -1639,6 +1804,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		);
 
 		const stopCulling = startCulling(normalPool, resolveSandbox);
+		markPhase("first test dispatched");
 		milestone(
 			"run: executing tests across both pools — live progress in the dashboard",
 		);
