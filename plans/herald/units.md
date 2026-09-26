@@ -20,21 +20,31 @@ Thin slices, each ending in a test that runs.
 - A job with no saved place starts at the newest record. A record herald cannot read is logged (`herald_record_skipped`) and skipped.
 - Scaling is more copies of herald in the same consumer group; Kafka splits the 512 partitions between them.
 
-## Parked: `customer.threshold_reached`
+## `customer.threshold_reached` on the worker path (API server, not herald)
 
 The old event (`handleThresholdReached`, deprecated) fires only for orgs on API < 2.1 and carries a
-full `ApiCustomer` rendered at that org's version. Herald does not send it: the record has no API
-version, and the payload needs the whole customer render. Options:
+full `ApiCustomer` rendered at the request's version. Herald cannot send it (no API version on the
+record, whole-customer payload), so the API server sends it from the sync track reply.
 
-1. Do not port it. Before the worker rollout reaches an org, check its Svix endpoints for a
-   `customer.threshold_reached` subscription (`packages/svix` `endpointsSubscribeToEvent`) and keep
-   such orgs on the legacy path until they move to `balances.limit_reached`.
-2. Port it: stamp the org's API version on the record and render the customer from `after` with
-   the shared renderers. Doable, but it keeps a deprecated event alive on the new path.
+2026-09-22 parked it (gate subscribing orgs off the worker). Reversed 2026-09-26: a large live org
+subscribes by name and receives it daily, so gating would keep it off the worker.
 
-Decided (2026-09-22): option 1, parked. Not ported; the rollout gate must exclude orgs whose Svix
-endpoints subscribe to `customer.threshold_reached` until they move to `balances.limit_reached`.
-Revisit only if such an org cannot migrate.
+Design:
+
+- The worker knows nothing of the event: `TrackReply.effects` carries what the decision caused
+  (empty on a retry, which never re-decides). The server does the rest, in
+  `server/src/internal/balances/trackWebhooks/thresholdReached/`, after responding, API < 2.1 only.
+- Crossings are judged at the tracked identity (like `balances.limit_reached`, not legacy's customer total):
+  - `limit_reached`: the reply carries a `balances.limit_reached` effect for the feature.
+  - `allowance_used`: included balance crosses below one funding unit while overage continues: the
+    funding balance (granted − usage) after the track, plus what `result.deltas` took, before it.
+    Fires once at the crossing (legacy re-fires on every overage track).
+- On a crossing, the server reads the full subject from the worker (the reply holds only the tracked
+  feature's rows), renders it at `ctx.apiVersion` and sends.
+- Not covered: queued/async tracks (no reply). Legacy `handleThresholdReached` is left as is.
+
+Units: (1) `limit_reached`, (2) `allowance_used`; both done, covered by
+`server/tests/integration/billing/autumn-webhooks/threshold-reached/`.
 
 ## Parked for the end (balance worker, not herald)
 

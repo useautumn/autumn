@@ -18,6 +18,7 @@ import {
 import { withPaidAllocatedFallback } from "@/internal/balanceWorker/subject/withPaidAllocatedFallback.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
+import { fireThresholdsReached } from "../../trackWebhooks/thresholdReached/fireThresholdsReached.js";
 import { getTrackFeatureDeductions } from "../utils/getFeatureDeductions.js";
 import { getQueuedTrackResponse } from "../utils/getQueuedTrackResponse.js";
 import { runPostgresTrackV3 } from "../v3/runPostgresTrackV3.js";
@@ -140,6 +141,24 @@ const customerOf = ({
 		: first.customer;
 };
 
+/** Behind the response: the deprecated webhook must never delay or fail the track that crossed it. */
+const fireReplyThresholdsReached = ({
+	ctx,
+	body,
+	outcomes,
+}: {
+	ctx: AutumnContext;
+	body: TrackParams;
+	outcomes: FeatureTrackOutcome[];
+}): void => {
+	const replies = outcomes.flatMap((outcome) =>
+		outcome.engine === "worker" ? [outcome.reply] : [],
+	);
+	fireThresholdsReached({ ctx, body, replies }).catch((error) => {
+		ctx.logger.error(`[runBalanceWorkerTrack] fireThresholdsReached: ${error}`);
+	});
+};
+
 /** Applied on the worker and answered, or queued for it and answered with the queued response when async. */
 export async function runBalanceWorkerTrack({
 	ctx,
@@ -179,6 +198,7 @@ export async function runBalanceWorkerTrack({
 				entityData: body.entity_data,
 				run: async () => {
 					const outcomes = await trackEachFeature({ ctx, body, client });
+					fireReplyThresholdsReached({ ctx, body, outcomes });
 					return {
 						result: trackOutcomesToApiResponse({ ctx, body, outcomes }),
 						customer: customerOf({ outcomes }),

@@ -2,6 +2,7 @@ import {
 	applyMutation,
 	type Catalog,
 	computeTrackDecision,
+	type MutationEffect,
 	meteringIdentityToPartitionKey,
 	type SubjectState,
 	slimSubjectForFeatures,
@@ -28,8 +29,8 @@ export async function track({
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: command.identity,
 	});
-	// Filled by the decision, which is the only place that knows which rows it was made against.
-	const decidedAgainst: { catalog?: Catalog } = {};
+	// Filled by the decision, the only place that knows its rows and effects; a retry never runs it.
+	const decidedAgainst: DecidedAgainst = {};
 	// Synchronous once ensured: `mutate` runs against the freshest state and the mutation is enqueued before it returns.
 	const decided = await withResidentSubject({
 		customerKey,
@@ -67,8 +68,14 @@ export async function track({
 			catalog,
 			featureIds: [command.featureId],
 		}),
+		effects: decidedAgainst.effects ?? [],
 	};
 }
+
+type DecidedAgainst = {
+	catalog?: Catalog;
+	effects?: MutationEffect[];
+};
 
 /** Runs inside the writer's critical section: no await, no I/O. */
 function decideTrack({
@@ -81,7 +88,7 @@ function decideTrack({
 	scope: PartitionProcessorScope;
 	state: SubjectState | null;
 	customerKey: string;
-	decidedAgainst: { catalog?: Catalog };
+	decidedAgainst: DecidedAgainst;
 	command: TrackCommand;
 }): MutationResult<never> {
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
@@ -102,10 +109,7 @@ function decideTrack({
 		catalog,
 		identity: command.identity,
 	});
-	return {
-		kind: "write",
-		mutation,
-		nextState,
-		effects: decideEffects({ decision, before: fullSubject, after }),
-	};
+	const effects = decideEffects({ decision, before: fullSubject, after });
+	decidedAgainst.effects = effects;
+	return { kind: "write", mutation, nextState, effects };
 }
