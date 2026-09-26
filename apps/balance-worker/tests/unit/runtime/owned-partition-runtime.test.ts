@@ -24,7 +24,10 @@ import {
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
-import { MutationBatchAppendError } from "../../../src/processor/writer/writerErrors.js";
+import {
+	MutationBatchAppendError,
+	PartitionWriterRecoveryRequiredError,
+} from "../../../src/processor/writer/writerErrors.js";
 import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
 import type {
 	PartitionBootstrapper as OwnedPartitionBootstrapPort,
@@ -1297,6 +1300,39 @@ test("drain waits for the store apply behind a log-durability reply", async () =
 		storeApply.resolve(undefined);
 		await draining;
 		expect(fixture.store.readState({ identity })?.revision).toBe(1);
+	} finally {
+		storeApply.resolve(undefined);
+		await runtime.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
+test("drain rejects when the store refuses the apply behind a log-durability reply", async () => {
+	const fixture = createStoreFixture();
+	const storeApply = createDeferred<void>();
+	const producer = createFakeProducer();
+	const runtime = createRuntime({
+		store: fixture.store,
+		producer: producer.producer,
+		follower: createFollower().follower,
+		storeApplyGate: storeApply.promise,
+	});
+	try {
+		await runtime.start();
+		await runtime.process((processor) =>
+			processor.track({
+				command: createTrackCommand({ commandId: "cmd_store_refused" }),
+			}),
+		);
+		const draining = runtime.drain();
+		storeApply.reject(new Error("postgres refused the row"));
+		// The verdict is the store's: a successor must not be named over rows that never landed.
+		await expect(draining).rejects.toBeInstanceOf(
+			PartitionWriterRecoveryRequiredError,
+		);
+		await runtime.stop();
+		expect(producer.lifecycle.at(-1)).toBe("producer:disconnect");
+		await runtime.waitForQuiescence();
 	} finally {
 		storeApply.resolve(undefined);
 		await runtime.stop();

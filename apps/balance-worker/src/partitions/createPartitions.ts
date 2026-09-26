@@ -1,5 +1,6 @@
 import {
 	BALANCE_WORKER_HANDOFF_CLAIM_TIMEOUT_MS,
+	BALANCE_WORKER_HANDOFF_DRAIN_CAP_MS,
 	BALANCE_WORKER_HANDOFF_READY_TIMEOUT_MS,
 } from "@autumn/env/balanceWorkerConstants";
 import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
@@ -68,12 +69,15 @@ function resolvePartitionConfig(
 			config.handoffReadyTimeoutMs ?? BALANCE_WORKER_HANDOFF_READY_TIMEOUT_MS,
 		handoffClaimTimeoutMs:
 			config.handoffClaimTimeoutMs ?? BALANCE_WORKER_HANDOFF_CLAIM_TIMEOUT_MS,
+		handoffDrainCapMs:
+			config.handoffDrainCapMs ?? BALANCE_WORKER_HANDOFF_DRAIN_CAP_MS,
 	};
 	for (const name of [
 		"healthRefreshIntervalMs",
 		"partitionBootstrapRetryIntervalMs",
 		"handoffReadyTimeoutMs",
 		"handoffClaimTimeoutMs",
+		"handoffDrainCapMs",
 	] as const) {
 		if (!Number.isSafeInteger(options[name]) || options[name] <= 0) {
 			throw new RangeError(`${name} must be a positive safe integer`);

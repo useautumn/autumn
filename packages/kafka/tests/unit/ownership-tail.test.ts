@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import type { ConsumerConfig, ConsumerRunConfig } from "kafkajs";
 import type { KafkaConsumerClient } from "../../src/consumer/types/consumer.js";
 import { createOwnershipTail } from "../../src/topics/ownership/consumer/createOwnershipTail.js";
@@ -8,7 +8,11 @@ import type { OwnershipRecord } from "../../src/topics/ownership/types/ownership
 
 const topic = "balance-partition-owners";
 
-function createFakeTailKafka() {
+function createFakeTailKafka({
+	connectGate,
+}: {
+	connectGate?: Promise<void>;
+} = {}) {
 	const listeners = new Map<string, Set<(event: unknown) => void>>();
 	const lifecycle: string[] = [];
 	let runConfig: ConsumerRunConfig | undefined;
@@ -17,6 +21,7 @@ function createFakeTailKafka() {
 	let running = false;
 
 	async function connect(): Promise<void> {
+		await connectGate;
 		lifecycle.push("connect");
 	}
 	async function subscribe(params: {
@@ -238,6 +243,61 @@ describe("ownershipTail", function ownershipTailTests() {
 		expect(fixture.readSubscription().lifecycle).toContain("disconnect");
 	});
 
+	test("a start timeout that fires during connect is not an unhandled rejection", async () => {
+		const connected = Promise.withResolvers<void>();
+		const fixture = createFakeTailKafka({ connectGate: connected.promise });
+		const tail = createOwnershipTail({
+			ctx: { kafka: fixture.kafka },
+			config: { topic, startTimeoutMs: 5 },
+		});
+		const unhandled: unknown[] = [];
+		function onUnhandled(reason: unknown): void {
+			unhandled.push(reason);
+		}
+		process.on("unhandledRejection", onUnhandled);
+		try {
+			const starting = tail.start();
+			await Bun.sleep(20);
+			connected.resolve();
+			await expect(starting).rejects.toThrow("did not fetch");
+			await Bun.sleep(5);
+			expect(unhandled).toEqual([]);
+		} finally {
+			process.off("unhandledRejection", onUnhandled);
+		}
+	});
+
+	test("a stop that lands while start awaits the first fetch wins", async () => {
+		const fixture = createFakeTailKafka();
+		const tail = createOwnershipTail({
+			ctx: { kafka: fixture.kafka },
+			config: { topic, startTimeoutMs: 1_000 },
+		});
+		const starting = tail.start();
+		while (!fixture.readSubscription().lifecycle.includes("run"))
+			await Promise.resolve();
+		// The fetch has been observed but start has not resumed yet when stop runs.
+		fixture.fetched();
+		const stopping = tail.stop();
+		await starting;
+		await stopping;
+		function follow(): void {
+			tail.tailPartition({
+				partition: 3,
+				onRecord: () => undefined,
+				signal: new AbortController().signal,
+			});
+		}
+		expect(follow).toThrow("stopped");
+		expect(fixture.readSubscription().lifecycle).toEqual([
+			"connect",
+			"subscribe",
+			"run",
+			"stop",
+			"disconnect",
+		]);
+	});
+
 	test("delivers a partition's records in order to its listeners only", async () => {
 		const fixture = createFakeTailKafka();
 		const { tail, errors } = await startTail(fixture);
@@ -333,6 +393,42 @@ describe("ownershipTail", function ownershipTailTests() {
 		} finally {
 			await tail.stop();
 		}
+	});
+
+	test("stop removes the abort listeners it put on callers' signals", async () => {
+		const fixture = createFakeTailKafka();
+		const { tail } = await startTail(fixture);
+		const controller = new AbortController();
+		const removed = spyOn(controller.signal, "removeEventListener");
+		tail.tailPartition({
+			partition: 3,
+			onRecord: () => undefined,
+			signal: controller.signal,
+		});
+		tail.tailPartition({
+			partition: 4,
+			onRecord: () => undefined,
+			signal: controller.signal,
+		});
+		await tail.stop();
+		expect(removed).toHaveBeenCalledTimes(2);
+		expect(removed.mock.calls.map(([type]) => type)).toEqual([
+			"abort",
+			"abort",
+		]);
+		// A listener that ended on its own signal is detached once, not again at stop.
+		const second = createFakeTailKafka();
+		const started = await startTail(second);
+		const own = new AbortController();
+		const ownRemoved = spyOn(own.signal, "removeEventListener");
+		started.tail.tailPartition({
+			partition: 3,
+			onRecord: () => undefined,
+			signal: own.signal,
+		});
+		own.abort();
+		await started.tail.stop();
+		expect(ownRemoved).toHaveBeenCalledTimes(1);
 	});
 
 	test("reports an unreadable record or a crash and keeps following", async () => {

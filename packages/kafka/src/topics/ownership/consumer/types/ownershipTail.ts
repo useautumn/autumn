@@ -44,6 +44,7 @@ export type OwnershipTailConfig = {
 export type OwnershipTailState = {
 	status: "created" | "starting" | "started" | "stopped";
 	listenersByPartition: Map<number, Set<OwnershipTailListener>>;
-	removeListeners: (() => void)[];
+	/** Consumer event listeners and abort listeners on callers' signals; every one is removed by stop. */
+	removeListeners: Set<() => void>;
 	stopping: Promise<void> | null;
 };
