@@ -37,10 +37,10 @@ const stripeScopeOfItem = ({
 
 export const buildStripeProductGroups = ({
 	products,
-	features,
+	features = [],
 }: {
 	products: ProductV2[];
-	features: Feature[];
+	features?: Feature[];
 }): StripeProductGroup[] => {
 	const seenProducts = new Set<string>();
 	// A plan can arrive from both the latest-versions list and the by-price-id lookup.
