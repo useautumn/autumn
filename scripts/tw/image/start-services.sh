@@ -135,7 +135,7 @@ if [ -x "$FAKECLOUD_BIN" ]; then
   # fakecloud serves SQS on the same port + account, and its Scheduler can deliver into those queues.
   sqs_label="fakecloud"
   sqs_log="$LOG_DIR/fakecloud.log"
-  goaws_ready_probe="\"$FAKECLOUD_BIN\" healthcheck --addr 127.0.0.1:$ELASTICMQ_PORT"
+  goaws_ready_probe="curl -fsS -o /dev/null http://127.0.0.1:$ELASTICMQ_PORT/_fakecloud/health"
   if eval "$goaws_ready_probe" >/dev/null 2>&1; then
     log "fakecloud already running"
   else
