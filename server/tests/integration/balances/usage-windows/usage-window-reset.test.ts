@@ -16,6 +16,7 @@ import chalk from "chalk";
 import { sql } from "drizzle-orm";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { createHonoApp } from "@/initHono.js";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { CHECK_DB_HYDRATION_BUDGET_MS } from "@/internal/balances/check/getCheckDataV2.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { setCustomerUsageLimit } from "../utils/usage-limit-utils/customerUsageLimitUtils.js";
@@ -143,8 +144,7 @@ const fetchWindowRows = async ({
 // GET /customers (skip_cache) — DB path lazy reset
 // ─────────────────────────────────────────────────────────────────
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
-test.concurrent.skipIf(isBalanceWorkerRoute())(
+test.concurrent(
 	`${chalk.yellowBright("usage-window-reset1 (DB): skip_cache GET prunes an expired window")}`,
 	async () => {
 		const freePlan = products.base({
@@ -201,6 +201,10 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			limit: 5,
 		});
 
+		// The worker writes its roll to Postgres after replying.
+		if (isBalanceWorkerRoute())
+			await flushBalanceWorkerCustomer({ ctx, customerId });
+
 		// The row PERSISTS, rolled in place: usage zeroed, bounds advanced to the
 		// current derivation (the messages ent's cycle).
 		const messagesEnt = await fetchActivePlanCusEnt({
@@ -220,6 +224,8 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 		);
 
 		// The cache field is rolled too (the DB-path roll patches both stores).
+		// Worker-routed customers have no Redis subject cache.
+		if (isBalanceWorkerRoute()) return;
 		const balanceKey = buildSharedFullSubjectBalanceKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
