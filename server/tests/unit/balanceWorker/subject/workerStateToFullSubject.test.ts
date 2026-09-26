@@ -411,6 +411,44 @@ describe("workerStateToFullSubject: flags", () => {
 			loose: ["flag_loose"],
 		});
 	});
+
+	test("a pooled flag renders even when an active plan's source row feeds it", () => {
+		const source = {
+			...booleanGrant({ id: "flag_source", customerProductId: "cp_active" }),
+			pooled_contribution_id: "share_1",
+		};
+		const active = product({ id: "cp_active", grants: [source] });
+		const pooled = {
+			...booleanGrant({ id: "flag_pool", customerProductId: null }),
+			is_pooled_balance: true,
+		};
+		const state = customerMemory({
+			customerProducts: [active],
+			looseGrants: [pooled],
+		});
+		const catalog = catalogRowsToCatalog({
+			rows: autumnBillingPlanToCatalogRows({
+				autumnBillingPlan: {
+					customerId: "cus_test",
+					insertCustomerProducts: [active],
+				},
+			}),
+		});
+		const fullSubject = workerStateToFullSubject({
+			state,
+			catalog,
+			subscriptions: [],
+			invoices: [],
+		});
+		expect(
+			fullSubject.pooled_customer_entitlements.map(({ id }) => id),
+		).toEqual(["flag_pool"]);
+		expect(
+			fullSubject.customer_products[0]?.customer_entitlements.map(
+				({ id }) => id,
+			),
+		).toEqual([]);
+	});
 });
 
 describe("workerStateToFullSubject: free trials", () => {
