@@ -1,5 +1,10 @@
 import { type CatalogStripePrice, formatAmount } from "@autumn/shared";
-import { SearchableSelect, SmallSpinner } from "@autumn/ui";
+import {
+	InfoTooltip,
+	SearchableSelect,
+	Skeleton,
+	SmallSpinner,
+} from "@autumn/ui";
 import { CheckIcon } from "lucide-react";
 import { useState } from "react";
 import {
@@ -28,6 +33,13 @@ const priceHeadline = ({ price }: { price: CatalogStripePrice }) => {
 	return `${amount} / ${every}`;
 };
 
+/** Tiered and metered prices carry no single unit amount, so name the kind instead. */
+const foundPriceHeadline = ({ price }: { price: CatalogStripePrice }) => {
+	if (price.unit_amount !== null) return priceHeadline({ price });
+	const label = price.nickname ?? "Usage-based";
+	return price.interval ? `${label} / ${price.interval}` : label;
+};
+
 /** Null while a price is unresolved — the headline is already its id. */
 const priceSubtext = ({
 	price,
@@ -50,36 +62,65 @@ const unresolvedPrice = ({ id }: { id: string }): CatalogStripePrice => ({
 	product_name: null,
 });
 
+const CREATE_PRICE_VALUE = "__create";
+
+const createPriceOption = ({
+	label,
+}: {
+	label: string;
+}): CatalogStripePrice => ({
+	...unresolvedPrice({ id: CREATE_PRICE_VALUE }),
+	nickname: label,
+});
+
+const isCreateOption = (price: CatalogStripePrice) =>
+	price.id === CREATE_PRICE_VALUE;
+
 /**
- * Picks the Stripe price this Autumn price bills as. Search takes an exact
- * price id, or a product id to list everything under it — Stripe cannot match
- * price ids by substring, so there is nothing to type-ahead.
+ * Picks the Stripe price this Autumn price bills as. With a product id it lists
+ * that product's prices; otherwise search takes an exact price or product id.
+ * `null` means Autumn creates the price.
  */
 export const StripePriceSelect = ({
 	value,
 	onChange,
+	stripeProductId,
+	createLabel = "No price",
 	disabled,
 }: {
 	value: string | null;
-	onChange: (stripePriceId: string) => void;
+	onChange: (stripePriceId: string | null) => void;
+	stripeProductId?: string | null;
+	createLabel?: string;
 	disabled?: boolean;
 }) => {
 	const [search, setSearch] = useState("");
 	const debouncedSearch = useDebounce({ value: search, delayMs: 250 });
+	const lookup = debouncedSearch.trim() || stripeProductId || "";
 	const { stripePrices, isFetching } = useStripePricesSearchQuery({
-		search: debouncedSearch,
+		search: lookup,
 	});
 	// The mapped id is resolved up front so it reads like any searched result
 	// rather than a bare id. Same query key as searching it, so it is a cache hit.
 	const { stripePrices: mappedPrices, isFetching: isResolvingMapped } =
 		useStripePricesSearchQuery({ search: value ?? "" });
 
-	const selected =
-		stripePrices.find((price) => price.id === value) ??
-		mappedPrices.find((price) => price.id === value) ??
-		(value ? unresolvedPrice({ id: value }) : undefined);
+	const createOption = createPriceOption({ label: createLabel });
+	const isFoundInStripe =
+		stripePrices.some((price) => price.id === value) ||
+		mappedPrices.some((price) => price.id === value);
+	const isMissingFromStripe =
+		Boolean(value) && !isResolvingMapped && !isFoundInStripe;
+	const selected = value
+		? (stripePrices.find((price) => price.id === value) ??
+			mappedPrices.find((price) => price.id === value) ??
+			unresolvedPrice({ id: value }))
+		: createOption;
+	const isLoadingSelected =
+		Boolean(value) && isResolvingMapped && !isFoundInStripe;
 	const options = [
-		...(selected && !stripePrices.some((price) => price.id === value)
+		createOption,
+		...(value && !stripePrices.some((price) => price.id === value)
 			? [selected]
 			: []),
 		...stripePrices,
@@ -98,30 +139,42 @@ export const StripePriceSelect = ({
 					</div>
 				) : undefined
 			}
-			getOptionLabel={(price) => priceSubtext({ price }) ?? price.id}
+			getOptionLabel={(price) =>
+				isCreateOption(price)
+					? createLabel
+					: (priceSubtext({ price }) ?? price.id)
+			}
 			getOptionValue={(price) => price.id}
 			isLoading={isFetching || isResolvingMapped}
 			onSearchChange={setSearch}
-			onValueChange={onChange}
+			onValueChange={(nextValue) =>
+				onChange(nextValue === CREATE_PRICE_VALUE ? null : nextValue)
+			}
 			options={options}
-			placeholder="Not mapped"
+			placeholder={createLabel}
 			renderOption={(price, isSelected) => (
 				<>
-					<div className="flex min-w-0 flex-1 flex-col gap-0.5">
-						<span className="flex items-center gap-2 truncate">
-							{priceHeadline({ price })}
-							{!price.active && (
-								<span className="shrink-0 text-[10px] text-amber-500">
-									inactive
+					{isCreateOption(price) ? (
+						<span className="flex-1 text-tertiary-foreground">
+							{createLabel}
+						</span>
+					) : (
+						<div className="flex min-w-0 flex-1 flex-col gap-0.5">
+							<span className="flex items-center gap-2 truncate">
+								{priceHeadline({ price })}
+								{!price.active && (
+									<span className="shrink-0 text-[10px] text-amber-500">
+										inactive
+									</span>
+								)}
+							</span>
+							{priceSubtext({ price }) && (
+								<span className="truncate font-mono text-tertiary-foreground text-xs">
+									{priceSubtext({ price })}
 								</span>
 							)}
-						</span>
-						{priceSubtext({ price }) && (
-							<span className="truncate font-mono text-tertiary-foreground text-xs">
-								{priceSubtext({ price })}
-							</span>
-						)}
-					</div>
+						</div>
+					)}
 					<CheckIcon
 						className={cn(
 							"size-4 shrink-0 transition-opacity",
@@ -131,23 +184,34 @@ export const StripePriceSelect = ({
 				</>
 			)}
 			renderValue={(price) =>
-				price ? (
+				price && !isCreateOption(price) ? (
 					<span className="flex min-w-0 items-center gap-2">
-						<span className="truncate">{priceHeadline({ price })}</span>
-						{priceSubtext({ price }) && (
-							<span className="shrink-0 font-mono text-tertiary-foreground text-xs">
-								{price.id}
+						{isLoadingSelected ? (
+							<Skeleton className="h-3.5 w-24 shrink-0" />
+						) : isMissingFromStripe ? (
+							<span className="shrink-0 text-amber-500">
+								Not found in Stripe
 							</span>
+						) : (
+							<span className="shrink-0">{foundPriceHeadline({ price })}</span>
 						)}
+						<span className="truncate font-mono text-tertiary-foreground text-xs">
+							{price.id}
+						</span>
 					</span>
 				) : (
-					<span className="text-tertiary-foreground">Not mapped</span>
+					<span className="flex items-center gap-1.5 text-tertiary-foreground">
+						{createLabel}
+						<InfoTooltip>
+							This will be created in Stripe on first attach.
+						</InfoTooltip>
+					</span>
 				)
 			}
 			searchPlaceholder="Enter a price_ or prod_ ID"
 			searchable
 			triggerClassName="h-input"
-			value={value}
+			value={value ?? CREATE_PRICE_VALUE}
 		/>
 	);
 };
