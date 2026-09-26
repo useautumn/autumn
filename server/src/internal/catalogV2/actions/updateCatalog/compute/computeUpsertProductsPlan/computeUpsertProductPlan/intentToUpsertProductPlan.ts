@@ -41,11 +41,13 @@ export const intentToUpsertProductPlan = ({
 	ctx,
 	intent,
 	productStatesContext,
+	originalProductStatesContext,
 	declaredVariants,
 }: {
 	ctx: AutumnContext;
 	intent: ProductUpsertIntent;
 	productStatesContext: ProductStatesContext;
+	originalProductStatesContext: ProductStatesContext;
 	declaredVariants?: DeclaredVariantsMap;
 }): UpsertProductPlan => {
 	const { productKey, source, baseInternalProductId } = intent;
@@ -240,7 +242,7 @@ export const intentToUpsertProductPlan = ({
 						})
 					: customerUsage.hasVersionableCustomerProducts,
 			planHadLiveVersions:
-				(productStatesContext.versionsByPlanId[productKey.planId] ?? [])
+				(originalProductStatesContext.versionsByPlanId[productKey.planId] ?? [])
 					.length > 0,
 		},
 	};
