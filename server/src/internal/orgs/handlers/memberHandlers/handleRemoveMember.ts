@@ -54,6 +54,22 @@ export const handleRemoveMember = createRoute({
 			});
 		}
 
+		if (removingOwner) {
+			const orgMembers = await db.query.member.findMany({
+				where: eq(member.organizationId, org.id),
+			});
+			const ownerCount = orgMembers.filter((orgMember) =>
+				orgMember.role.split(",").includes("owner"),
+			).length;
+			if (ownerCount <= 1) {
+				throw new RecaseError({
+					message: "An organization must keep at least one owner",
+					code: "LAST_OWNER",
+					statusCode: 400,
+				});
+			}
+		}
+
 		// Remove member from database using the found member
 		await db
 			.delete(member)
