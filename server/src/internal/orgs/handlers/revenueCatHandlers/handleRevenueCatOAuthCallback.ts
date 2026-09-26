@@ -127,7 +127,7 @@ export const handleRevenueCatOAuthCallback = async (c: Context<HonoEnv>) => {
 			redirectUrl = redirect_uri
 				? new URL(redirect_uri)
 				: new URL(
-						`${frontendUrl}${env === AppEnv.Sandbox ? "/sandbox" : ""}/dev?tab=revenuecat`,
+						`${frontendUrl}${env === AppEnv.Sandbox ? "/sandbox" : ""}/settings?tab=revenuecat`,
 					);
 		}
 

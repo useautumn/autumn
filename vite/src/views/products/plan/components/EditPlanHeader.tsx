@@ -20,7 +20,6 @@ import { useNavigate } from "react-router";
 import { AdminHover } from "@/components/general/AdminHover";
 import V2Breadcrumb from "@/components/v2/breadcrumb";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
-import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useRCMappings } from "@/hooks/queries/revcat/useRCMappings";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -62,7 +61,6 @@ export const EditPlanHeader = () => {
 	);
 	const navigate = useNavigate();
 	const isCusPlanEditor = useIsCusPlanEditor();
-	const flags = useAutumnFlags();
 	const { mappings } = useRCMappings();
 	const { org } = useOrg({ skipSandbox: false });
 	const env = useEnv();
@@ -87,7 +85,7 @@ export const EditPlanHeader = () => {
 	});
 
 	const hasRCMapping =
-		flags.revenuecat &&
+		!!org?.processor_configs?.revenuecat.connected &&
 		mappings.some(
 			(m) =>
 				m.autumn_product_id === product.id &&
@@ -100,7 +98,7 @@ export const EditPlanHeader = () => {
 			? vercelConfig?.allowed_product_ids_live
 			: vercelConfig?.allowed_product_ids_sandbox;
 	const hasVercelLink =
-		flags.vercel &&
+		!!vercelConfig?.connected &&
 		!!vercelAllowedIds?.length &&
 		vercelAllowedIds.includes(product.id);
 

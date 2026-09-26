@@ -32,7 +32,7 @@ export const handleGetOAuthUrl = createRoute({
 		const envPath = env === AppEnv.Sandbox ? "/sandbox" : "";
 
 		const redirectUri =
-			redirect_url || `${frontendUrl}${envPath}/dev?tab=stripe`;
+			redirect_url || `${frontendUrl}${envPath}/settings?tab=stripe`;
 
 		const stateKey = await generateOAuthState({
 			organizationSlug: org.slug,

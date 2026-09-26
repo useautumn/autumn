@@ -82,9 +82,14 @@ export const OrgDropdown = () => {
 
 	if (isLoading)
 		return (
-			<div className="h-7 w-32 px-4 flex items-center gap-2">
-				<Skeleton className="min-w-5 h-5" />
-				<Skeleton className="w-32 h-5" />
+			<div
+				className={cn(
+					"flex h-8 items-center gap-2",
+					expanded ? "px-1.5" : "justify-center",
+				)}
+			>
+				<Skeleton className="size-5 shrink-0 rounded-md" />
+				{expanded && <Skeleton className="h-4 w-28" />}
 			</div>
 		);
 
@@ -124,10 +129,6 @@ export const OrgDropdown = () => {
 								<span className="max-w-28 truncate text-[13px] font-[550] leading-4 tracking-[-0.005em] text-foreground dark:text-[#EDEDED]">
 									{org?.name}
 								</span>
-								<ChevronsUpDown
-									className="size-3.5 text-[#8A8A8A] dark:text-[#6B6B6B]"
-									strokeWidth={1.75}
-								/>
 							</div>
 						</Button>
 					</DropdownMenuTrigger>

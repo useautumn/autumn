@@ -1,13 +1,16 @@
 import { Scopes } from "@autumn/shared";
 import { BooksIcon, ListChecksIcon } from "@phosphor-icons/react";
+import { ChartColumn, Workflow } from "lucide-react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router";
-import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useScopes } from "@/hooks/useScopes";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
-import { buildDevSubTabs } from "@/views/main-sidebar/MainSidebar";
-import { FLAGGED_TABS, SETTINGS_GROUPS } from "@/views/settings/SettingsView";
+import { DEV_SUB_TABS } from "@/views/main-sidebar/MainSidebar";
+import {
+	SETTINGS_GROUPS,
+	useIsSettingsTabEnabled,
+} from "@/views/settings/SettingsView";
 
 export interface PageCommand {
 	title: string;
@@ -26,15 +29,12 @@ export interface PageCommand {
  * being registered anywhere else.
  */
 export const usePageCommands = (): PageCommand[] => {
-	const flags = useAutumnFlags();
 	const { has } = useScopes();
+	const isSettingsTabEnabled = useIsSettingsTabEnabled();
 
 	const settings = SETTINGS_GROUPS.flatMap((group) =>
 		group.items
-			.filter((tab) => {
-				const flag = FLAGGED_TABS[tab.id];
-				return flag ? Boolean(flags[flag]) : true;
-			})
+			.filter((tab) => isSettingsTabEnabled(tab.id))
 			.map((tab) => ({
 				title: tab.label,
 				section: "Settings",
@@ -44,7 +44,7 @@ export const usePageCommands = (): PageCommand[] => {
 	);
 
 	const developer = has(Scopes.ApiKeys.Read)
-		? buildDevSubTabs({ flags }).map((tab) => ({
+		? DEV_SUB_TABS.map((tab) => ({
 				title: tab.title,
 				section: "Developer",
 				icon: tab.icon,
@@ -58,6 +58,18 @@ export const usePageCommands = (): PageCommand[] => {
 			section: "Get started",
 			icon: <ListChecksIcon className="size-4" />,
 			path: "/onboarding",
+		},
+		{
+			title: "Migrations",
+			section: "Customers",
+			icon: <Workflow className="size-4" />,
+			path: "/migrations",
+		},
+		{
+			title: "Analytics",
+			section: "Customers",
+			icon: <ChartColumn className="size-4" />,
+			path: "/analytics",
 		},
 		{
 			title: "Docs",

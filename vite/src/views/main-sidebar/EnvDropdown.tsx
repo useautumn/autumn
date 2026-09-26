@@ -58,6 +58,23 @@ export const useEnvChange = () => {
 	return handleEnvChange;
 };
 
+export const useSelectSandbox = () => {
+	const handleEnvChange = useEnvChange();
+
+	// null selects the default (unnamed) sandbox.
+	return (sandbox: SandboxSummary | null) => {
+		setActiveSandbox(
+			sandbox && {
+				id: sandbox.id,
+				name: sandbox.name,
+				color: sandbox.color,
+				icon: sandbox.icon,
+			},
+		);
+		handleEnvChange(AppEnv.Sandbox);
+	};
+};
+
 export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	const { org, isLoading } = useOrg();
 	const activeSandbox = useActiveSandbox();
@@ -70,6 +87,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	const [createOpen, setCreateOpen] = useState(false);
 	const [manageOpen, setManageOpen] = useState(false);
 	const handleEnvChange = useEnvChange();
+	const selectSandbox = useSelectSandbox();
 	const { expanded } = useSidebarContext();
 
 	const isResolving = isLoading || !org;
@@ -93,16 +111,6 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	const selectMainEnv = (target: AppEnv) => {
 		setActiveSandbox(null);
 		handleEnvChange(target);
-	};
-
-	const selectSandbox = (sandbox: SandboxSummary) => {
-		setActiveSandbox({
-			id: sandbox.id,
-			name: sandbox.name,
-			color: sandbox.color,
-			icon: sandbox.icon,
-		});
-		handleEnvChange(AppEnv.Sandbox);
 	};
 
 	const isDeployed = !!org?.deployed;
