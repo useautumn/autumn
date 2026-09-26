@@ -64,7 +64,7 @@ export function MigrationRunProgress({
 					}}
 					transition={shouldReduceMotion ? { duration: 0 } : ENTER_TRANSITION}
 				>
-					<div className="mx-auto flex w-full max-w-5xl flex-col gap-1.5 px-4 pt-3 pb-4 sm:px-10">
+					<div className="mx-auto flex w-full max-w-[1600px] flex-col gap-1.5 px-4 pt-3 pb-4 sm:px-10">
 						<div className="flex items-center justify-between gap-3 text-xs">
 							<span className="flex items-center gap-2 text-foreground">
 								<UsersIcon

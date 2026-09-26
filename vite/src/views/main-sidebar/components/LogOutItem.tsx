@@ -1,5 +1,6 @@
 import { DropdownMenuItem } from "@autumn/ui";
 import { LogOut } from "lucide-react";
+import { clearCachedScopes } from "@/hooks/useScopes";
 import { authClient } from "@/lib/auth-client";
 import {
 	ORG_MENU_ICON_CLASS,
@@ -9,6 +10,7 @@ import {
 
 const signOut = async () => {
 	try {
+		clearCachedScopes();
 		await authClient.signOut();
 	} catch (error) {
 		console.error("Error signing out:", error);

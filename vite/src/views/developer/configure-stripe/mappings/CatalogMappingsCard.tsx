@@ -1,14 +1,8 @@
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-	Skeleton,
-} from "@autumn/ui";
+import { Skeleton } from "@autumn/ui";
 import { useState } from "react";
 import { useCatalogMappings } from "@/hooks/queries/catalog/useCatalogMappings";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { SettingsGroup } from "@/views/settings/components/SettingsGroup";
 import { CatalogMappingsTable } from "./CatalogMappingsTable";
 import { PlanMappingDetailSheet } from "./PlanMappingDetailSheet";
 
@@ -27,16 +21,11 @@ export const CatalogMappingsCard = () => {
 
 	return (
 		<>
-			<Card className="bg-interactive-secondary shadow-none">
-				<CardHeader>
-					<CardTitle className="text-base">Stripe product mappings</CardTitle>
-					<CardDescription>
-						Link each Autumn plan to a Stripe product. A plan's product is
-						shared by all of its versions and variants; individual prices are
-						mapped per version on the plan itself.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="flex flex-col gap-3 pt-0">
+			<SettingsGroup
+				title="Product mappings"
+				description="Each Autumn plan links to one Stripe product, shared by all its versions and variants."
+			>
+				<div className="flex flex-col gap-3">
 					{mappings && !mappings.stripe_connected && (
 						<div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-tertiary-foreground text-xs">
 							Stripe is not connected, so saved mappings cannot be verified yet.
@@ -54,8 +43,8 @@ export const CatalogMappingsCard = () => {
 							/>
 						)
 					)}
-				</CardContent>
-			</Card>
+				</div>
+			</SettingsGroup>
 
 			<PlanMappingDetailSheet
 				onOpenChange={(open) => !open && setSelectedPlanId(null)}

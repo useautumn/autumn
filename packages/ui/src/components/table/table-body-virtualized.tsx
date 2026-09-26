@@ -176,6 +176,7 @@ export function TableBodyVirtualized() {
 	const columns = table.getVisibleLeafColumns().map((col) => ({
 		id: col.id,
 		size: col.getSize(),
+		grow: col.columnDef.meta?.grow,
 		skeleton: col.columnDef.meta?.skeleton,
 	}));
 

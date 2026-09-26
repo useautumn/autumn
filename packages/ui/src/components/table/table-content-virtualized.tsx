@@ -13,9 +13,12 @@ import React, { useMemo, useState } from "react";
 export function TableContentVirtualized({
 	children,
 	className,
+	footer,
 }: {
 	children: React.ReactNode;
 	className?: string;
+	/** Sits inside the table border, below the scroll area, so it never scrolls away. */
+	footer?: React.ReactNode;
 }) {
 	const context = useTableContext();
 	const isFlexFill = context.virtualization?.containerHeight === "100%";
@@ -70,7 +73,12 @@ export function TableContentVirtualized({
 	};
 
 	if (showMobileCards) {
-		return <TableMobileCards />;
+		return (
+			<>
+				<TableMobileCards />
+				{footer}
+			</>
+		);
 	}
 
 	return (
@@ -128,6 +136,7 @@ export function TableContentVirtualized({
 						)}
 					</Table>
 				</div>
+				{footer}
 			</div>
 		</TableContext.Provider>
 	);

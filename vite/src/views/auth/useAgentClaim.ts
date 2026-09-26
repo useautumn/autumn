@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
+import { clearCachedScopes } from "@/hooks/useScopes";
 import {
 	authClient,
 	useListOrganizations,
@@ -54,6 +55,7 @@ export const useAgentClaim = ({ token }: { token: string }) => {
 	const signInPath = `/sign-in?next=${encodeURIComponent(claimPath({ token }))}`;
 
 	const switchAccount = async () => {
+		clearCachedScopes();
 		await authClient.signOut();
 		window.location.href = signInPath;
 	};

@@ -1,8 +1,4 @@
-import {
-	CusProductStatus,
-	type FullCusProduct,
-	isCustomerProductTrialing,
-} from "@autumn/shared";
+import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
 import {
 	DropdownMenuItem,
 	Tooltip,
@@ -24,14 +20,14 @@ import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
 import { AdminHover } from "../../../../../components/general/AdminHover";
 import { getCusProductHoverTexts } from "../../../../admin/adminUtils";
 import { CustomerProductPrice } from "./CustomerProductPrice";
-import { CustomerProductsStatus } from "./CustomerProductsStatus";
+import { PlanStatusChip } from "./PlanStatusChip";
 
 export const CustomerProductsColumns = [
 	{
 		header: "Name",
 		accessorKey: "name",
 		size: 150,
-		meta: { skeleton: nameWithIconSkeleton },
+		meta: { skeleton: nameWithIconSkeleton, grow: true },
 		cell: ({ row }: { row: Row<FullCusProduct> }) => {
 			const quantity = row.original.quantity;
 			const showQuantity = quantity && quantity > 1;
@@ -62,7 +58,7 @@ export const CustomerProductsColumns = [
 	{
 		header: "Price",
 		accessorKey: "price",
-		size: 120,
+		size: 180,
 		cell: ({ row }: { row: Row<FullCusProduct> }) => {
 			return <CustomerProductPrice cusProduct={row.original} />;
 		},
@@ -70,7 +66,7 @@ export const CustomerProductsColumns = [
 	{
 		header: "Status",
 		accessorKey: "status",
-		size: 110,
+		size: 220,
 		meta: { skeleton: statusSkeleton },
 		cell: ({
 			row,
@@ -82,14 +78,10 @@ export const CustomerProductsColumns = [
 			const nowMs = (table.options.meta as { nowMs?: number })?.nowMs;
 
 			return (
-				<CustomerProductsStatus
-					status={row.original.status}
-					starts_at={row.original.starts_at ?? undefined}
-					canceled={row.original.canceled}
-					canceled_at={row.original.canceled_at ?? undefined}
-					trialing={isCustomerProductTrialing(row.original, { nowMs }) || false}
-					trial_ends_at={row.original.trial_ends_at ?? undefined}
+				<PlanStatusChip
+					customerProduct={row.original}
 					nowMs={nowMs}
+					display="status"
 				/>
 			);
 		},
@@ -100,7 +92,7 @@ export const CustomerProductsColumns = [
 			accessorKey: "created_at",
 			withYear: true,
 		}),
-		size: 150,
+		size: 130,
 	},
 	{
 		id: "actions",
