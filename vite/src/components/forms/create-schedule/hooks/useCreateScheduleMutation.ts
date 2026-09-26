@@ -26,10 +26,10 @@ export function useCreateScheduleMutation({
 		CreateScheduleResponse
 	>({
 		customerId,
-		path: BILLING_OPERATIONS.createSchedule.path,
+		path: BILLING_OPERATIONS.setPlans.path,
 		buildRequestBody,
-		successMessage: "Schedule created successfully",
-		errorMessage: "Failed to create schedule",
+		successMessage: "Plans set successfully",
+		errorMessage: "Failed to set plans",
 		onApplied,
 		onCheckoutRedirect,
 		onSuccess,

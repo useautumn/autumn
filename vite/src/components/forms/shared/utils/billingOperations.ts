@@ -11,8 +11,8 @@ export const BILLING_OPERATIONS = {
 		path: "/v1/billing.multi_attach",
 		previewPath: "/v1/billing.preview_multi_attach",
 	},
-	createSchedule: {
-		path: "/v1/billing.create_schedule",
-		previewPath: "/v1/billing.preview_create_schedule",
+	setPlans: {
+		path: "/v1/billing.set_plans",
+		previewPath: "/v1/billing.preview_set_plans",
 	},
 } as const;
