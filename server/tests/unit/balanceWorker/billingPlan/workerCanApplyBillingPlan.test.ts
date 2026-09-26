@@ -182,6 +182,25 @@ describe("workerCanApplyBillingPlan", () => {
 				customer_license_link_id: "license_link_1",
 			}),
 		).toBe(false);
+		// A released seat's update carries the bare row, without grants.
+		const { customer_entitlements: _grants, ...bareSeat } = {
+			...defaultProduct(),
+			customer_license_link_id: "license_link_1",
+		};
+		expect(
+			workerCanApplyBillingPlan({
+				autumnBillingPlan: {
+					customerId: "cus_test",
+					insertCustomerProducts: [],
+					updateCustomerProducts: [
+						{
+							customerProduct: bareSeat as ReturnType<typeof defaultProduct>,
+							updates: { internal_entity_id: "ent_internal_2" },
+						},
+					],
+				},
+			}),
+		).toBe(false);
 		expect(
 			withProduct({
 				...defaultProduct(),
