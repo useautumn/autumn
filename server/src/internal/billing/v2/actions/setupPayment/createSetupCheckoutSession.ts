@@ -9,7 +9,10 @@ import { addDays } from "date-fns";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { buildCheckoutSessionParams } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildCheckoutSessionParams";
+import {
+	buildCheckoutSessionParams,
+	getDefaultCheckoutSessionLifetimeSeconds,
+} from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildCheckoutSessionParams";
 import { createStripeSessionWithCardFallback } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/createStripeSessionWithCardFallback";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils";
@@ -77,6 +80,9 @@ export const createSetupCheckoutSession = async ({
 			| undefined,
 		currency: resolveCustomerCurrency({ customer, org }),
 		autumnMetadataId: metadata?.id,
+		defaultSessionLifetimeSeconds: getDefaultCheckoutSessionLifetimeSeconds({
+			authType: ctx.authType,
+		}),
 	});
 
 	// 3. Create session with card-type fallback
