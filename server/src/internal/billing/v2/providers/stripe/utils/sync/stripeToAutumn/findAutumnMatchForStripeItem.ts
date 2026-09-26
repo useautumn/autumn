@@ -15,10 +15,13 @@ export const findAutumnMatchForStripeItem = ({
 	item,
 	fullProducts,
 	org,
+	linkedInternalProductIds,
 }: {
 	item: StripeItemSnapshot;
 	fullProducts: FullProduct[];
 	org?: Organization;
+	/** Products already linked to the item's subscription (tie-break only). */
+	linkedInternalProductIds?: ReadonlySet<string>;
 }): ItemDiff => {
 	for (const product of fullProducts) {
 		for (const price of product.prices) {
@@ -64,6 +67,7 @@ export const findAutumnMatchForStripeItem = ({
 		item,
 		candidates: productCandidates,
 		org,
+		linkedInternalProductIds,
 	});
 	if (!productMatch) return { stripe: item, match: { kind: "none" } };
 

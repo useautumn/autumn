@@ -1,6 +1,8 @@
 import {
+	CusProductStatus,
 	type FullCusProduct,
 	type FullProduct,
+	filterCustomerProductsByStripeSubscriptionId,
 	type SyncParamsV1,
 	type SyncPhase,
 	type SyncPlanInstance,
@@ -23,6 +25,45 @@ import type {
 	SubscriptionMatch,
 } from "./detect/types";
 import { stampEntityFromExistingLinks } from "./scope/stampEntityFromExistingLinks";
+
+/** Statuses of a product live in the subscription's current phase — excludes
+ * scheduled (future-phase) and expired (previously linked) rows. */
+const CURRENT_LINKED_STATUSES = new Set<CusProductStatus>([
+	CusProductStatus.Active,
+	CusProductStatus.PastDue,
+	CusProductStatus.Trialing,
+]);
+
+const scheduleToSubscriptionId = ({
+	schedule,
+}: {
+	schedule?: Stripe.SubscriptionSchedule;
+}): string | undefined =>
+	typeof schedule?.subscription === "string"
+		? schedule.subscription
+		: schedule?.subscription?.id;
+
+/** Products currently on this subscription — detection keeps an unclaimed
+ * item on one of these rather than swapping to a sibling plan. */
+const currentLinkedInternalProductIds = ({
+	customerProducts,
+	stripeSubscriptionId,
+}: {
+	customerProducts: FullCusProduct[];
+	stripeSubscriptionId?: string;
+}): Set<string> | undefined => {
+	if (!stripeSubscriptionId) return undefined;
+	return new Set(
+		filterCustomerProductsByStripeSubscriptionId({
+			customerProducts,
+			stripeSubscriptionId,
+		})
+			.filter((customerProduct) =>
+				CURRENT_LINKED_STATUSES.has(customerProduct.status),
+			)
+			.map((customerProduct) => customerProduct.internal_product_id),
+	);
+};
 
 const matchedPlanToSyncPlan = ({
 	matchedPlan,
@@ -134,12 +175,20 @@ export const subscriptionToSyncParams = async ({
 		}
 	}
 
+	const linkedInternalProductIds = currentLinkedInternalProductIds({
+		customerProducts: resolvedCustomerProducts,
+		stripeSubscriptionId:
+			resolvedSubscription?.id ??
+			scheduleToSubscriptionId({ schedule: resolvedSchedule }),
+	});
+
 	const match = await detectSubscriptionMatch({
 		ctx,
 		subscription: resolvedSubscription,
 		schedule: resolvedSchedule,
 		billingCurrency: fullCustomer?.currency,
 		fullProducts,
+		linkedInternalProductIds,
 	});
 
 	const detectedPhases: SyncPhase[] = match.phaseMatches
