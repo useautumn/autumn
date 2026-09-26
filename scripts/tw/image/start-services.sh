@@ -31,10 +31,6 @@ LOG_DIR="${TW_LOG_DIR:-$TW_PREFIX/logs}"
 REDPANDA_HOME="${REDPANDA_HOME:-/opt/redpanda}"
 REDPANDA_DIR="${REDPANDA_DIR:-$TW_PREFIX/redpanda}"
 REDPANDA_IMAGE="${REDPANDA_IMAGE:-docker.redpanda.com/redpandadata/redpanda:v26.2.3}"
-# Apache kafka-native (Modal images): Redpanda's Seastar aborts under gVisor, which has no /proc/sys/fs/aio-max-nr.
-KAFKA_HOME="${KAFKA_HOME:-/opt/kafka}"
-KAFKA_DIR="${KAFKA_DIR:-$TW_PREFIX/kafka}"
-KAFKA_CONTROLLER_PORT="${KAFKA_CONTROLLER_PORT:-19093}"
 
 PG_PORT="${PG_PORT:-5432}"
 DRAGONFLY_PORT="${DRAGONFLY_PORT:-6379}"
@@ -219,58 +215,8 @@ ensure_redpanda() {
   rm -rf "$TMP_RP"
 }
 
-# Single-node KRaft; data under $KAFKA_DIR so the warm snapshot bakes warmup.sh's topics.
-# env -i: the native wrapper reads KAFKA_* env as broker config, and workers export KAFKA_BROKERS.
-start_kafka_native() {
-  local kafka_env=(env -i PATH="$PATH" HOME="${HOME:-/root}")
-  mkdir -p "$KAFKA_DIR/defaults" "$KAFKA_DIR/mounted" "$KAFKA_DIR/config" "$LOG_DIR/kafka"
-  cp "$KAFKA_HOME"/docker/*log4j2.yaml "$KAFKA_DIR/defaults/"
-  cat >"$KAFKA_DIR/defaults/server.properties" <<PROPS
-process.roles=broker,controller
-node.id=1
-controller.quorum.voters=1@127.0.0.1:$KAFKA_CONTROLLER_PORT
-listeners=PLAINTEXT://127.0.0.1:$KAFKA_PORT,CONTROLLER://127.0.0.1:$KAFKA_CONTROLLER_PORT
-advertised.listeners=PLAINTEXT://127.0.0.1:$KAFKA_PORT
-controller.listener.names=CONTROLLER
-inter.broker.listener.name=PLAINTEXT
-listener.security.protocol.map=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
-log.dirs=$KAFKA_DIR/data
-offsets.topic.replication.factor=1
-transaction.state.log.replication.factor=1
-transaction.state.log.min.isr=1
-group.initial.rebalance.delay.ms=0
-auto.create.topics.enable=false
-PROPS
-  if [ ! -f "$KAFKA_DIR/data/meta.properties" ]; then
-    "${kafka_env[@]}" CLUSTER_ID="${KAFKA_CLUSTER_ID:-MkU3OEVBNTcwNTJENDM2Qk}" "$KAFKA_HOME/kafka.Kafka" setup \
-      --default-configs-dir "$KAFKA_DIR/defaults" --mounted-configs-dir "$KAFKA_DIR/mounted" \
-      --final-configs-dir "$KAFKA_DIR/config" >"$LOG_DIR/kafka-setup.log" 2>&1 \
-      || { tail -20 "$LOG_DIR/kafka-setup.log" >&2; die "Kafka storage format failed"; }
-  else
-    cp "$KAFKA_DIR/defaults/"* "$KAFKA_DIR/config/"
-  fi
-  log "Starting Kafka (kafka-native) on :$KAFKA_PORT (data $KAFKA_DIR/data)"
-  nohup "${kafka_env[@]}" "$KAFKA_HOME/kafka.Kafka" start --config "$KAFKA_DIR/config/server.properties" \
-    -Xmx512m -Dkafka.logs.dir="$LOG_DIR/kafka" \
-    -Dlog4j2.configurationFile="file:$KAFKA_DIR/config/log4j2.yaml" \
-    >"$LOG_DIR/kafka.log" 2>&1 &
-  disown || true
-}
-
 redpanda_ready_probe="\"$REDPANDA_HOME/bin/rpk\" cluster health -X brokers=127.0.0.1:$KAFKA_PORT -X admin.hosts=127.0.0.1:$REDPANDA_ADMIN_PORT 2>/dev/null | grep -q 'Leaderless partitions (0)'"
-kafka_label="Redpanda"
-kafka_ready_probe="$redpanda_ready_probe"
-kafka_log="$LOG_DIR/redpanda.log"
-if [ -x "$KAFKA_HOME/kafka.Kafka" ]; then
-  kafka_label="Kafka"
-  kafka_ready_probe="(echo > /dev/tcp/127.0.0.1/$KAFKA_PORT)"
-  kafka_log="$LOG_DIR/kafka.log"
-  if eval "$kafka_ready_probe" >/dev/null 2>&1; then
-    log "Kafka already running"
-  else
-    start_kafka_native
-  fi
-elif eval "$redpanda_ready_probe" >/dev/null 2>&1; then
+if eval "$redpanda_ready_probe" >/dev/null 2>&1; then
   log "Redpanda already running"
 elif ensure_redpanda; then
   log "Starting Redpanda on :$KAFKA_PORT (data $REDPANDA_DIR/data)"
@@ -310,7 +256,7 @@ done
 if [ "${DYNOXIDE_DISABLED:-0}" != "1" ]; then
   wait_for "dynoxide" "$dynoxide_ready_probe" 60 "$LOG_DIR/dynoxide.log"
 fi
-wait_for "$kafka_label" "$kafka_ready_probe" 240 "$kafka_log"
+wait_for "Redpanda" "$redpanda_ready_probe" 240 "$LOG_DIR/redpanda.log"
 
 # ---------------------------------------------------------------------------
 # 4. ClickHouse (optional).

@@ -93,10 +93,6 @@ else
   log "ref '$REF' is not a local branch/tag — assuming the clone is already at it"
 fi
 log "HEAD at $(git rev-parse --short HEAD)"
-# A sha ref pins the snapshot: a lagging remote must never bake a different commit under this tag.
-if [[ "$REF" =~ ^[0-9a-f]{7,40}$ ]] && [[ "$(git rev-parse HEAD)" != "$REF"* ]]; then
-  die "HEAD $(git rev-parse --short HEAD) is not the requested $REF"
-fi
 
 # ---------------------------------------------------------------------------
 # 2. bun install --frozen-lockfile (delta only — deps baked into base)
