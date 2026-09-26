@@ -587,6 +587,12 @@ test.concurrent(
 		expect(initialInvoiceV5.currency).toBe("usd");
 		expect(initialInvoiceV5.status).toBe("paid");
 
+		const [initialInvoiceRow] = await ctx.db
+			.select({ paidAt: invoices.paid_at })
+			.from(invoices)
+			.where(eq(invoices.stripe_id, initialTxId));
+		expect(initialInvoiceRow?.paidAt).toBe(initialPurchasedAt);
+
 		// ─── Assertion 2: RENEWAL with new transaction_id writes a second row ──
 		const renewalTxId = "rc3_tx_renewal_002";
 		const renewalPrice = 9.99;
