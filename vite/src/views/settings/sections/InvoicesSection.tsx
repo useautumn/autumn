@@ -1,5 +1,6 @@
 import { SettingsSection } from "../SettingsSection";
 import { AllowedPaymentMethodsSubsection } from "./components/AllowedPaymentMethodsSubsection";
+import { ConvertToChargeAutomaticallySubsection } from "./components/ConvertToChargeAutomaticallySubsection";
 import { DefaultNetTermsSubsection } from "./components/DefaultNetTermsSubsection";
 import { InvoiceTemplatesSubsection } from "./components/InvoiceTemplatesSubsection";
 
@@ -12,6 +13,7 @@ export const InvoicesSection = () => {
 			<InvoiceTemplatesSubsection />
 			<AllowedPaymentMethodsSubsection />
 			<DefaultNetTermsSubsection />
+			<ConvertToChargeAutomaticallySubsection />
 		</SettingsSection>
 	);
 };
