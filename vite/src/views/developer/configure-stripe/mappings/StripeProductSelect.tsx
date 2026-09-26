@@ -4,23 +4,16 @@ import { CheckIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NO_PRODUCT_VALUE = "__none";
+/** Emitted when the user picks the "create a new Stripe product" option. */
+export const CREATE_STRIPE_PRODUCT = "__create";
 
-type StripeProductOption =
-	| CatalogStripeProduct
-	| {
-			id: typeof NO_PRODUCT_VALUE;
-			name: string;
-			active: true;
-	  };
+type StripeProductOption = CatalogStripeProduct;
 
-const noProductOption: StripeProductOption = {
-	id: NO_PRODUCT_VALUE,
-	name: "No Stripe product",
-	active: true,
-};
+const isPlaceholderOption = (product: StripeProductOption) =>
+	product.id === NO_PRODUCT_VALUE || product.id === CREATE_STRIPE_PRODUCT;
 
 const getProductLabel = (product: StripeProductOption) => {
-	if (product.id === NO_PRODUCT_VALUE) return product.name;
+	if (isPlaceholderOption(product)) return product.name ?? "";
 	return product.name ? `${product.name} ${product.id}` : product.id;
 };
 
@@ -32,6 +25,10 @@ export const StripeProductSelect = ({
 	onSearchChange,
 	isLoading,
 	disabled,
+	noneLabel = "No Stripe product",
+	createLabel,
+	isResolving = false,
+	defaultProductId = null,
 }: {
 	value: string | null;
 	products: CatalogStripeProduct[];
@@ -42,18 +39,42 @@ export const StripeProductSelect = ({
 	onSearchChange: (search: string) => void;
 	isLoading?: boolean;
 	disabled?: boolean;
+	/** Label for the `null` choice, e.g. "Same as Pro" when null means inherit. */
+	noneLabel?: string;
+	createLabel?: string;
+	/** While true, an unknown selected id is still loading rather than missing. */
+	isResolving?: boolean;
+	/** Tags this product's row so it's clear which one the default choice uses. */
+	defaultProductId?: string | null;
 }) => {
+	const noProductOption: StripeProductOption = {
+		id: NO_PRODUCT_VALUE,
+		name: noneLabel,
+		active: true,
+	};
+	const createOptions: StripeProductOption[] = createLabel
+		? [{ id: CREATE_STRIPE_PRODUCT, name: createLabel, active: true }]
+		: [];
 	const selectedProduct =
 		products.find((product) => product.id === value) ??
 		knownProducts.find((product) => product.id === value);
 	const selectedOption =
-		value && !selectedProduct
-			? [{ id: value, name: null, active: true } satisfies CatalogStripeProduct]
-			: value && !products.some((product) => product.id === value)
-				? [selectedProduct as CatalogStripeProduct]
-				: [];
+		value === CREATE_STRIPE_PRODUCT
+			? []
+			: value && !selectedProduct
+				? [
+						{
+							id: value,
+							name: null,
+							active: true,
+						} satisfies CatalogStripeProduct,
+					]
+				: value && !products.some((product) => product.id === value)
+					? [selectedProduct as CatalogStripeProduct]
+					: [];
 	const options: StripeProductOption[] = [
 		noProductOption,
+		...createOptions,
 		...selectedOption,
 		...products,
 	];
@@ -69,7 +90,7 @@ export const StripeProductSelect = ({
 			getOptionLabel={getProductLabel}
 			placeholder="Select Stripe product"
 			searchable
-			searchPlaceholder="Search Stripe products..."
+			searchPlaceholder="Search by name or prod_ ID..."
 			emptyText="No Stripe products found"
 			onSearchChange={onSearchChange}
 			isLoading={isLoading}
@@ -83,18 +104,37 @@ export const StripeProductSelect = ({
 			}
 			disabled={disabled}
 			triggerClassName="h-input"
+			contentClassName="min-w-90"
 			renderValue={(product) => {
-				if (!product || product.id === NO_PRODUCT_VALUE) {
+				if (!product || isPlaceholderOption(product)) {
 					return (
-						<span className="text-tertiary-foreground">No Stripe product</span>
+						<span className="text-tertiary-foreground">
+							{product?.name ?? noneLabel}
+						</span>
+					);
+				}
+
+				// Resolved products always carry a name; a nameless one Stripe never returned.
+				if (!product.name && !isResolving) {
+					return (
+						<span className="flex min-w-0 items-center gap-2">
+							<span className="shrink-0 text-amber-500">
+								Not found in Stripe
+							</span>
+							<span className="min-w-0 truncate font-mono text-tertiary-foreground text-xs">
+								{product.id}
+							</span>
+						</span>
 					);
 				}
 
 				return (
 					<span className="flex min-w-0 items-center gap-2">
-						<span className="truncate">{product.name ?? product.id}</span>
+						<span className="max-w-[70%] shrink-0 truncate">
+							{product.name ?? product.id}
+						</span>
 						{product.name && (
-							<span className="shrink-0 font-mono text-xs text-tertiary-foreground">
+							<span className="min-w-0 truncate font-mono text-tertiary-foreground text-xs">
 								{product.id}
 							</span>
 						)}
@@ -102,11 +142,11 @@ export const StripeProductSelect = ({
 				);
 			}}
 			renderOption={(product, isSelected) => {
-				if (product.id === NO_PRODUCT_VALUE) {
+				if (isPlaceholderOption(product)) {
 					return (
 						<>
 							<span className="flex-1 text-tertiary-foreground">
-								No Stripe product
+								{product.name}
 							</span>
 							{isSelected && <CheckIcon className="size-4 shrink-0" />}
 						</>
@@ -115,19 +155,22 @@ export const StripeProductSelect = ({
 
 				return (
 					<>
-						<div className="flex min-w-0 flex-1 items-center gap-2">
+						<div className="flex min-w-0 flex-1 flex-col gap-0.5">
 							<span className="truncate">{product.name ?? product.id}</span>
 							{product.name && (
-								<span className="shrink-0 font-mono text-xs text-tertiary-foreground">
+								<span className="truncate font-mono text-tertiary-foreground text-xs">
 									{product.id}
 								</span>
 							)}
-							{!product.active && (
-								<span className="shrink-0 text-[10px] text-amber-500">
-									inactive
-								</span>
-							)}
 						</div>
+						{!product.active && (
+							<span className="shrink-0 text-amber-500 text-xs">Inactive</span>
+						)}
+						{product.id === defaultProductId && (
+							<span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-tertiary-foreground text-xs">
+								Default
+							</span>
+						)}
 						<CheckIcon
 							className={cn(
 								"size-4 shrink-0 transition-opacity",

@@ -1,5 +1,5 @@
 import type { CatalogGetMappingsResponse, ProductV2 } from "@autumn/shared";
-import { CopyButton, Skeleton } from "@autumn/ui";
+import { Skeleton } from "@autumn/ui";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { useStripeProductsResolveQuery } from "@/hooks/queries/useStripeProductsResolveQuery";
 import {
@@ -63,17 +63,11 @@ export const CatalogMappingsTable = ({
 						key={group.base.id}
 						onClick={() => onSelectPlan(group.base.id)}
 					>
-						<TableCell className="pl-4">
+						<TableCell className="max-w-0 pr-6 pl-4">
 							<span className="flex min-w-0 items-center gap-2">
 								<span className="truncate font-medium text-foreground text-sm">
 									{group.base.name}
 								</span>
-								<CopyButton
-									className="shrink-0 text-tertiary-foreground"
-									innerClassName="max-w-30 text-tiny-id truncate"
-									size="mini"
-									text={group.base.id}
-								/>
 								{group.variants.length > 0 && (
 									<span className="shrink-0 text-tertiary-foreground text-xs">
 										{group.variants.length} variant
@@ -82,7 +76,7 @@ export const CatalogMappingsTable = ({
 								)}
 							</span>
 						</TableCell>
-						<TableCell className="truncate text-sm">
+						<TableCell className="max-w-0 truncate pr-6 text-sm">
 							{baseStripeProductId
 								? (stripeProductsById.get(baseStripeProductId)?.name ??
 									baseStripeProductId)
