@@ -1,153 +1,105 @@
-"use client";
-
 import type { CustomerWithProducts } from "@autumn/shared";
-import {
-	Button,
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-	IconButton,
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@autumn/ui";
-import { CaretDownIcon } from "@phosphor-icons/react";
-import { debounce } from "lodash";
-import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { SearchableSelect } from "@autumn/ui";
+import { CheckIcon } from "lucide-react";
+import { type ReactNode, useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
+import { cn } from "@/lib/utils";
 import { useCusSearchQueryV2 } from "@/views/customers/hooks/useCusSearchQuery";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsFilterState } from "../hooks/useAnalyticsFilterState";
 
-export function CustomerComboBox() {
-	const { setFilterStates } = useAnalyticsFilterState();
-	const { customer, setHasCleared } = useAnalyticsContext();
-	const [open, setOpen] = useState(false);
-	const [value, setValue] = useState("");
-	const [isSearching, setIsSearching] = useState(false);
+const ALL_CUSTOMERS = "__all_customers__";
+const SEARCH_PAGE_SIZE = 25;
 
-	const { customers: data, refetch: mutate } = useCusSearchQueryV2({
-		search: value || "",
-		filters: {},
-		page_size: 25,
+type CustomerOption = {
+	id: string;
+	name: string;
+	secondary: string | null;
+};
+
+const toCustomerOption = ({
+	customer,
+}: {
+	customer: Pick<CustomerWithProducts, "id" | "internal_id" | "name" | "email">;
+}): CustomerOption => {
+	const id = customer.id || customer.internal_id;
+	return {
+		id,
+		name: customer.name || customer.email || id,
+		secondary: customer.name && customer.email ? customer.email : id,
+	};
+};
+
+const ALL_CUSTOMERS_OPTION: CustomerOption = {
+	id: ALL_CUSTOMERS,
+	name: "All customers",
+	secondary: null,
+};
+
+export function CustomerComboBox({
+	renderTrigger,
+}: {
+	/** Draws the button that opens the picker, given the chosen customer's name. */
+	renderTrigger: (label: string) => ReactNode;
+}) {
+	const { customer } = useAnalyticsContext();
+	const { setFilterStates } = useAnalyticsFilterState();
+	const [search, setSearch] = useState("");
+	const debouncedSearch = useDebounce({ value: search, delayMs: 300 });
+
+	const { customers, isFetchingUncached } = useCusSearchQueryV2({
+		search: debouncedSearch,
+		page_size: SEARCH_PAGE_SIZE,
 	});
 
-	const debouncedSearch = useCallback(
-		debounce(async () => {
-			setIsSearching(true);
-			try {
-				await mutate();
-			} catch (error) {
-				console.error("Search failed:", error);
-			} finally {
-				setIsSearching(false);
-			}
-		}, 300),
-		[mutate],
-	);
+	const selectedOption = customer ? toCustomerOption({ customer }) : null;
+	const searchedOptions = ((customers ?? []) as CustomerWithProducts[])
+		.map((result) => toCustomerOption({ customer: result }))
+		.filter((option) => option.id !== selectedOption?.id);
+	const options = [
+		ALL_CUSTOMERS_OPTION,
+		...(selectedOption ? [selectedOption] : []),
+		...searchedOptions,
+	];
 
-	useEffect(() => {
-		if (value) {
-			debouncedSearch();
-		} else {
-			setIsSearching(false);
-		}
-
-		return () => {
-			debouncedSearch.cancel();
-		};
-	}, [value, debouncedSearch]);
+	const selectCustomer = (value: string) =>
+		setFilterStates({
+			customer_id: value === ALL_CUSTOMERS ? null : value,
+			entity_id: null,
+		});
 
 	return (
-		<Popover open={open} onOpenChange={setOpen}>
-			<PopoverTrigger asChild>
-				<IconButton
-					variant="secondary"
-					size="default"
-					icon={<CaretDownIcon size={12} weight="bold" className="shrink-0" />}
-					iconOrientation="right"
-					className="max-w-64 min-w-0"
-					title={customer?.name || customer?.id || "All customers"}
-					onClick={() => {
-						setValue("");
-					}}
-				>
-					<span className="w-full min-w-0 truncate">
-						{customer?.name || customer?.id || "All customers"}
-					</span>
-				</IconButton>
-			</PopoverTrigger>
-			<PopoverContent className="w-[300px] p-0" align="start">
-				<Command filter={() => 1}>
-					<CommandInput
-						placeholder="Search customer..."
-						className="h-9"
-						onValueChange={(e) => setValue(e)}
-					/>
-					<CommandList>
-						{isSearching ? (
-							<div className="flex items-center justify-center py-4">
-								<Loader2
-									className="animate-spin text-tertiary-foreground"
-									size={14}
-								/>
-								<span className="ml-2 text-sm text-muted-foreground">
-									Searching...
-								</span>
-							</div>
-						) : (
-							<>
-								<CommandEmpty className="py-2 text-center">
-									<p className="mb-2 text-sm text-muted-foreground">
-										{value ? "No customer found." : "Search for a customer"}
-									</p>
-									<Button
-										variant="secondary"
-										size="sm"
-										className="mx-auto"
-										onClick={() => {
-											setFilterStates({ customer_id: null });
-											setOpen(false);
-											setHasCleared(false);
-										}}
-									>
-										Or select all customers
-									</Button>
-								</CommandEmpty>
-								<CommandGroup>
-									{value &&
-										data?.map((c: CustomerWithProducts, idx: number) => {
-											if (c.name === customer?.name) {
-												return null;
-											}
-											return (
-												<CommandItem
-													key={idx}
-													value={c.id || c.internal_id}
-													onSelect={() => {
-														setFilterStates({
-															customer_id: c.id || c.internal_id || "",
-														});
-														setOpen(false);
-													}}
-													className="w-full"
-												>
-													{c.name || c.email}{" "}
-													<span className="text-xs text-tertiary-foreground">
-														{c.id && `(${c.id.slice(0, 10)}...)`}
-													</span>
-												</CommandItem>
-											);
-										})}
-								</CommandGroup>
-							</>
+		<SearchableSelect<CustomerOption>
+			value={selectedOption?.id ?? ALL_CUSTOMERS}
+			onValueChange={selectCustomer}
+			options={options}
+			getOptionValue={(option) => option.id}
+			getOptionLabel={(option) => option.name}
+			searchable
+			searchPlaceholder="Search by name, email or ID..."
+			onSearchChange={setSearch}
+			isLoading={isFetchingUncached}
+			emptyText="No customers found"
+			trigger={renderTrigger(selectedOption?.name ?? "All customers")}
+			contentClassName="min-w-[280px]"
+			renderOption={(option, isSelected) => (
+				<>
+					<div className="flex min-w-0 flex-1 flex-col">
+						<span className="truncate">{option.name}</span>
+						{option.secondary && (
+							<span className="truncate font-mono text-tertiary-foreground text-xs">
+								{option.secondary}
+							</span>
 						)}
-					</CommandList>
-				</Command>
-			</PopoverContent>
-		</Popover>
+					</div>
+					<CheckIcon
+						className={cn(
+							"size-4 shrink-0 transition-opacity",
+							isSelected ? "opacity-100" : "opacity-0",
+						)}
+					/>
+				</>
+			)}
+		/>
 	);
 }

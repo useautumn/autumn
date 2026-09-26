@@ -11,6 +11,7 @@ import {
 	groupValueLabel,
 	RESERVED_GROUP,
 } from "./displayLabels";
+import { isOtherSeries, OTHER_SERIES_COLOR } from "./seriesColors";
 
 /**
  * Chart series configuration
@@ -21,6 +22,8 @@ export interface ChartSeriesConfig {
 	type: "bar";
 	stacked: boolean;
 	yName: string;
+	/** Group and feature halves of a grouped series' name, for two-line labels. */
+	nameParts?: { group: string; feature: string };
 	fill: string;
 	/** Set only when grouping by customer, for a real customer id. */
 	customerId?: string;
@@ -28,22 +31,6 @@ export interface ChartSeriesConfig {
 	entityId?: string;
 	entityCustomerId?: string;
 }
-
-/**
- * Chart colors palette - more distinct colors for groups
- */
-const CHART_COLORS = [
-	"#9c5aff", // purple
-	"#27a7ff", // blue
-	"#10b981", // green
-	"#f59e0b", // orange
-	"#ef4444", // red
-	"#ec4899", // pink
-	"#06b6d4", // cyan
-	"#8b5cf6", // violet
-	"#14b8a6", // teal
-	"#f97316", // orange-dark
-];
 
 /**
  * Gets feature name for a given event/feature key
@@ -89,9 +76,24 @@ export function parseSeriesKey({
 	};
 }
 
+const sumSeriesColumn = ({
+	events,
+	column,
+}: {
+	events: EventsData;
+	column: string;
+}): number =>
+	events.data.reduce((total, row) => total + Number(row[column] ?? 0), 0);
+
+/** The feature's catch-all column a trimmed grouped series folds into. */
+const otherColumnFor = ({ column }: { column: string }): string | null => {
+	const parsed = parseSeriesKey({ name: column });
+	return parsed ? `${parsed.featureKey}__${RESERVED_GROUP}` : null;
+};
+
 /**
- * Keeps only the top-N series by total volume and orders them so the
- * largest renders last (top of a stacked bar chart).
+ * Keeps the top-N series by total volume, folding the rest into their
+ * feature's "Other" series so period totals stay intact.
  */
 export function trimToTopSeries({
 	events,
@@ -104,25 +106,40 @@ export function trimToTopSeries({
 		.filter((m) => m.name !== "period")
 		.map((m) => m.name);
 
-	const totals = new Map<string, number>();
-	for (const col of seriesCols) totals.set(col, 0);
-	for (const row of events.data) {
-		for (const col of seriesCols) {
-			totals.set(col, (totals.get(col) ?? 0) + Number(row[col] ?? 0));
-		}
+	// Sorted ascending so the largest series is last → top of stack
+	const rankedGroups = seriesCols
+		.filter((key) => !isOtherSeries({ key }))
+		.map((column) => ({
+			column,
+			total: sumSeriesColumn({ events, column }),
+		}))
+		.sort((a, b) => a.total - b.total)
+		.map(({ column }) => column);
+	const keptGroups = rankedGroups.slice(-maxSeries);
+	const droppedGroups = rankedGroups.slice(0, -maxSeries);
+
+	const otherCols = new Set(seriesCols.filter((key) => isOtherSeries({ key })));
+	for (const column of droppedGroups) {
+		const otherColumn = otherColumnFor({ column });
+		if (otherColumn) otherCols.add(otherColumn);
 	}
 
-	// Sorted ascending so the largest series is last → top of stack
-	const sorted = [...totals.entries()].sort((a, b) => a[1] - b[1]);
-	const kept = sorted.length > maxSeries ? sorted.slice(-maxSeries) : sorted;
-	const orderedCols = kept.map(([col]) => col);
-
-	const meta = [{ name: "period" }, ...orderedCols.map((name) => ({ name }))];
 	const data = events.data.map((row) => {
 		const slim: EventRow = { period: row.period };
-		for (const col of orderedCols) slim[col] = row[col] ?? 0;
+		for (const col of keptGroups) slim[col] = row[col] ?? 0;
+		for (const col of otherCols) slim[col] = row[col] ?? 0;
+		for (const column of droppedGroups) {
+			const otherColumn = otherColumnFor({ column });
+			if (!otherColumn) continue;
+			slim[otherColumn] =
+				Number(slim[otherColumn] ?? 0) + Number(row[column] ?? 0);
+		}
 		return slim;
 	});
+
+	// The catch-all bucket always caps the stack, whatever its volume.
+	const orderedCols = [...keptGroups, ...otherCols];
+	const meta = [{ name: "period" }, ...orderedCols.map((name) => ({ name }))];
 
 	return { meta, rows: data.length, data };
 }
@@ -242,13 +259,14 @@ export function transformGroupedData({
 }
 
 /**
- * Generates chart configuration with different colors per group.
+ * Generates chart configuration. Colors come from `seriesColors`, keyed by
+ * series, so hiding one series never repaints the rest.
  */
 export function generateChartConfig({
 	events,
 	features,
 	groupBy,
-	originalColors,
+	seriesColors,
 	entityNames,
 	customerNames,
 	planNames,
@@ -256,30 +274,28 @@ export function generateChartConfig({
 	events: EventsData;
 	features: Feature[];
 	groupBy: string | null;
-	originalColors: string[];
+	seriesColors: Record<string, string>;
 	entityNames?: Record<string, EntityDisplayInfo>;
 	customerNames?: Record<string, CustomerDisplayInfo>;
 	planNames?: Record<string, string>;
 }): ChartSeriesConfig[] {
-	const colorsToUse = groupBy ? CHART_COLORS : originalColors;
+	const colorFor = (key: string) => seriesColors[key] ?? OTHER_SERIES_COLOR;
 
 	if (!groupBy) {
-		// Non-grouped: original behavior
 		return events.meta
 			.filter((m) => m.name !== "period")
-			.map((m, index) => ({
+			.map((m) => ({
 				xKey: "period",
 				yKey: m.name,
 				type: "bar" as const,
 				stacked: true,
 				yName: getFeatureName({ key: m.name, features }),
-				fill: colorsToUse[index % colorsToUse.length],
+				fill: colorFor(m.name),
 			}));
 	}
 
 	// Grouped: create series for each feature__group combination
 	const config: ChartSeriesConfig[] = [];
-	let colorIndex = 0;
 
 	for (const meta of events.meta) {
 		if (meta.name === "period") continue;
@@ -311,6 +327,7 @@ export function generateChartConfig({
 				entityNames,
 				customerNames,
 				planNames,
+				features,
 			});
 		}
 
@@ -332,14 +349,20 @@ export function generateChartConfig({
 			yKey: meta.name,
 			type: "bar",
 			stacked: true,
-			yName: `${featureName} (${displayGroupValue})`,
-			fill: colorsToUse[colorIndex % colorsToUse.length],
+			// A balance deducted by its own feature would otherwise read "Emails (Emails)".
+			yName:
+				featureName === displayGroupValue
+					? featureName
+					: `${featureName} (${displayGroupValue})`,
+			nameParts:
+				featureName === displayGroupValue
+					? undefined
+					: { group: displayGroupValue, feature: featureName },
+			fill: colorFor(meta.name),
 			customerId: isRealCustomerGroup ? groupValue : undefined,
 			entityId: entityCustomerId ? baseEntityId : undefined,
 			entityCustomerId,
 		});
-
-		colorIndex++;
 	}
 
 	return config;

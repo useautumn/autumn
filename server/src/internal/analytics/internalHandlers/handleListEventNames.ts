@@ -5,6 +5,8 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { eventActions } from "../actions/eventActions.js";
 
 const ListEventNamesSchema = z.object({
+	customer_id: z.string().optional(),
+	entity_id: z.string().optional(),
 	limit: z.coerce.number().optional(),
 	interval: z.string().optional(),
 	bin_size: z.enum(["day", "hour", "week", "month"]).optional(),
@@ -13,7 +15,7 @@ const ListEventNamesSchema = z.object({
 });
 
 /**
- * List all distinct event names for the org sorted by popularity
+ * List distinct event names for the org (or one customer) sorted by popularity
  */
 export const handleListEventNames = createRoute({
 	scopes: [Scopes.Analytics.Read],
@@ -21,7 +23,8 @@ export const handleListEventNames = createRoute({
 	handler: async (c) => {
 		assertTinybirdAvailable();
 		const ctx = c.get("ctx");
-		const { limit, interval, bin_size, start, end } = c.req.valid("query");
+		const { customer_id, entity_id, limit, interval, bin_size, start, end } =
+			c.req.valid("query");
 
 		const customRange =
 			interval === "custom" && start !== undefined && end !== undefined
@@ -30,6 +33,8 @@ export const handleListEventNames = createRoute({
 
 		const eventNames = await eventActions.listEventNames({
 			ctx,
+			customerId: customer_id,
+			entityId: entity_id,
 			limit,
 			interval,
 			binSize: bin_size,

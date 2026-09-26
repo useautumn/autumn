@@ -127,7 +127,9 @@ export function TableColumnVisibility() {
 								className="text-tertiary-foreground"
 							/>
 						}
-					/>
+					>
+						<span className="hidden md:inline">Display</span>
+					</IconButton>
 				) : (
 					<Button
 						variant="skeleton"

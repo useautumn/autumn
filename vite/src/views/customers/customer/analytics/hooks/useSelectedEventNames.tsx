@@ -9,7 +9,12 @@ import { type EventNameWithCount, useEventNames } from "./useEventNames";
  * active window by default. Shared by the chart and the events table. */
 export const useSelectedEventNames = () => {
 	const { filterStates } = useAnalyticsFilterState();
-	const { feature_ids: featureIds, event_names: eventNames } = filterStates;
+	const {
+		feature_ids: featureIds,
+		event_names: eventNames,
+		customer_id: customerId,
+		entity_id: entityId,
+	} = filterStates;
 
 	const { queryStates } = useAnalyticsQueryState();
 	const { interval, start, end } = queryStates;
@@ -19,7 +24,7 @@ export const useSelectedEventNames = () => {
 	});
 
 	const { eventNames: cachedEventNames, isLoading: eventNamesLoading } =
-		useEventNames({ interval, binSize, start, end });
+		useEventNames({ customerId, entityId, interval, binSize, start, end });
 	const { features: featuresData, isLoading: featuresLoading } =
 		useFeaturesQuery();
 

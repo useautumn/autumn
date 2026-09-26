@@ -1,5 +1,5 @@
-import { Decimal } from "decimal.js";
 import type { ClickHouseResult } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 
 export const collapsePlanIdGroups = ({
 	events,
@@ -15,7 +15,7 @@ export const collapsePlanIdGroups = ({
 		const collapsedId =
 			planId === "" || planId === "AUTUMN_RESERVED"
 				? planId
-				: internalIdToPublicId[planId] ?? planId;
+				: (internalIdToPublicId[planId] ?? planId);
 
 		const key = `${row.period}|${collapsedId}`;
 		const existing = collapsed.get(key);

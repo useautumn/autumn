@@ -57,6 +57,10 @@ export const ExtEventsAggregateParamsSchema = z.object({
 			description:
 				"Custom time range to aggregate events for. If provided, range must not be provided",
 		}),
+	timezone: z.string().optional().meta({
+		description:
+			'IANA timezone (e.g. "America/New_York") that day, week and month bins are aligned to. Hour bins are always UTC. Defaults to UTC',
+	}),
 	filter_by: z.record(z.string(), z.string()).optional().meta({
 		description:
 			'Filter events by property values, e.g. {"model": "gpt-4", "region": "us"}. Maximum 5 filters.',

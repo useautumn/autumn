@@ -52,6 +52,22 @@ export function formatPeriodLabel({
 	return interval === "24h" ? formatHourMinute(date) : formatDateShort(date);
 }
 
+/** Labels a predicted bin start the way formatPeriodLabel labels the real bucket. */
+export function formatBinStartLabel({
+	binStart,
+	interval,
+}: {
+	binStart: number;
+	interval: string | null;
+}): string {
+	const date = new Date(binStart);
+	if (interval === "24h") return formatHourMinute(date);
+	// Predicted day bins are UTC-aligned; real ones are local days with the same date.
+	return formatDateShort(
+		new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+	);
+}
+
 export function formatCompactNumber(value: number): string {
 	const absValue = Math.abs(value);
 	if (absValue >= 1_000_000_000)
@@ -60,5 +76,8 @@ export function formatCompactNumber(value: number): string {
 		return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
 	if (absValue >= 1_000)
 		return `${(value / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
-	return value.toString();
+	// Fractional usage (e.g. AI cost) would otherwise print every float digit.
+	if (Number.isInteger(value)) return value.toString();
+	if (absValue < 0.01) return value > 0 ? "<0.01" : ">-0.01";
+	return value.toFixed(absValue >= 10 ? 1 : 2).replace(/\.?0+$/, "");
 }

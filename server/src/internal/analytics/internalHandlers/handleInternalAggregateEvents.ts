@@ -24,7 +24,7 @@ import {
 	getStandardIntervalWindow,
 	isMonthRange,
 } from "../analyticsUtils.js";
-import { collapsePlanIdGroups } from "./utils/collapsePlanIdGroups.js";
+import { collapsePlanIdGroups } from "../utils/collapsePlanIdGroups.js";
 
 const InternalAggregateEventsSchema = z.object({
 	interval: z.string().nullish(),
@@ -234,6 +234,7 @@ export const handleInternalAggregateEvents = createRoute({
 
 			if (entityIds.length > 0) {
 				entityNames = await getEntityNames({
+					db,
 					entityIds,
 					orgId: org.id,
 					env,
@@ -255,6 +256,7 @@ export const handleInternalAggregateEvents = createRoute({
 
 			if (customerIds.length > 0) {
 				customerNames = await getCustomerNames({
+					db,
 					customerIds,
 					orgId: org.id,
 					env,

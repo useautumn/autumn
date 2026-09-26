@@ -1,57 +1,39 @@
-import type { EntityDisplayInfo } from "@autumn/shared";
-import { getClickhouseClient } from "@/external/tinybird/initClickhouse.js";
-import { escapeChString } from "../clickhouseUtils.js";
+import { type EntityDisplayInfo, entities } from "@autumn/shared";
+import { and, eq, inArray } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle";
 
-// Mirrors the ClickHouse `entities` columns: `id` is the entity's own public
-// id, `internal_customer_id` is the customer that owns it.
-type EntityNameRow = {
-	id: string;
-	name: string | null;
-	internal_customer_id: string;
-};
-
-/** Looks up entity display fields from the entities datasource. Returns a map of entity id -> { name, internal_customer_id }; entity ids with no row are omitted. */
+/** Looks up entity display fields by public id. Entity ids with no row are omitted. */
 export const getEntityNames = async ({
+	db,
 	entityIds,
 	orgId,
 	env,
 }: {
+	db: DrizzleCli;
 	entityIds: string[];
 	orgId: string;
 	env: string;
 }): Promise<Record<string, EntityDisplayInfo>> => {
 	if (entityIds.length === 0) return {};
 
-	const ch = getClickhouseClient();
-
-	// Build the IN list as escaped literals to avoid URI-too-large
-	// when the array is serialized as a query parameter.
-	const inList = entityIds
-		.map((id) => `'${escapeChString({ value: id })}'`)
-		.join(",");
-
-	const query = `
-		SELECT id, name, internal_customer_id
-		FROM entities FINAL
-		WHERE org_id = {org_id:String}
-			AND env = {env:String}
-			AND id IN (${inList})
-			AND deleted = 0
-	`;
-
-	const result = await ch.query({
-		query,
-		query_params: {
-			org_id: orgId,
-			env,
-		},
-		format: "JSON",
-	});
-
-	const resultJson = (await result.json()) as { data: EntityNameRow[] };
+	const rows = await db
+		.select({
+			id: entities.id,
+			name: entities.name,
+			internal_customer_id: entities.internal_customer_id,
+		})
+		.from(entities)
+		.where(
+			and(
+				eq(entities.org_id, orgId),
+				eq(entities.env, env),
+				inArray(entities.id, entityIds),
+				eq(entities.deleted, false),
+			),
+		);
 
 	const displayMap: Record<string, EntityDisplayInfo> = {};
-	for (const row of resultJson.data) {
+	for (const row of rows) {
 		if (!row.id) continue;
 		displayMap[row.id] = {
 			name: row.name || null,
