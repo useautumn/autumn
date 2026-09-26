@@ -63,7 +63,7 @@ export function MigrationView() {
 				transition={SHEET_ANIMATION}
 			>
 				<div className="flex flex-col overflow-y-auto absolute inset-0 pb-8">
-					<div className="flex flex-col h-fit w-full max-w-5xl mx-auto pt-4 sm:pt-8">
+					<div className="flex flex-col h-fit w-full max-w-[1600px] mx-auto pt-4 sm:pt-8">
 						<div className="px-4 sm:px-10 flex flex-col gap-2">
 							<Breadcrumb className="text-tertiary-foreground flex">
 								<BreadcrumbList className="text-tertiary-foreground text-xs w-full">

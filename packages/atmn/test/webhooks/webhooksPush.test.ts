@@ -554,3 +554,46 @@ test("a previewed adopt that the server created instead reports the saved secret
 		"Saved webhook secret as AUTUMN_WEBHOOK_BILLING_AB12_SECRET in .env",
 	);
 });
+
+test("push syncs only the targeted env, even with live and named-sandbox keys in the env files", async () => {
+	const dir = projectWith({ body: `\tfeatures: [],\n${WEBHOOKS}` });
+	writeFileSync(
+		join(dir, ".env"),
+		"AUTUMN_PROD_SECRET_KEY=sk_live\nAUTUMN_SANDBOX_QA_SECRET_KEY=sk_qa\n",
+	);
+	const calls: string[] = [];
+	const sent: unknown[] = [];
+	const client = {
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
+		previewUpdate: async () => ({ features: [], plans: [] }),
+		previewSyncWebhooks: async (body: unknown) => {
+			calls.push("previewSyncWebhooks");
+			sent.push(body);
+			return { errors: [], changes: [] };
+		},
+		listWebhooks: async () => {
+			calls.push("listWebhooks");
+			return { list: [] };
+		},
+	};
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: client as any,
+		cwd: dir,
+		dryRun: true,
+		write: () => {},
+		webhookEnv: async () => SANDBOX,
+	});
+	expect(calls).toEqual(["previewSyncWebhooks"]);
+	expect(sent).toEqual([
+		{
+			webhooks: [
+				{
+					id: "billing",
+					url: "https://staging.example.com/autumn",
+					events: ["billing.updated"],
+				},
+			],
+		},
+	]);
+});

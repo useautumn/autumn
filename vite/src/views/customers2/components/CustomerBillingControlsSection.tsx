@@ -1,13 +1,7 @@
 import {
-	BILLING_CONTROL_KEYS,
 	type BillingControlKey,
 	billingControlsFromColumns,
-	type CustomerBillingControls,
-	type DbUsageLimit,
 	type Entity,
-	type Feature,
-	type FullCustomer,
-	getPlanBillingControlProducts,
 } from "@autumn/shared";
 import {
 	Button,
@@ -19,147 +13,108 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@autumn/ui";
-import { CubeIcon, GavelIcon, PlusIcon } from "@phosphor-icons/react";
-import { useMemo } from "react";
+import {
+	CaretDownIcon,
+	CubeIcon,
+	DotsThreeVerticalIcon,
+	GavelIcon,
+	PlusIcon,
+	UserIcon,
+} from "@phosphor-icons/react";
+import { type ReactNode, useMemo } from "react";
 import {
 	BillingControlsList,
 	hasBillingControls,
 } from "@/components/billing-controls/BillingControlsDisplay";
-import { BILLING_CONTROL_EDIT_SHEETS } from "@/components/billing-controls/billingControlSheets";
+import {
+	BILLING_CONTROL_ADD_SHEETS,
+	BILLING_CONTROL_EDIT_SHEETS,
+} from "@/components/billing-controls/billingControlSheets";
+import type { BillingControlOrigin } from "@/components/billing-controls/resolveDisplayedBillingControls";
 import { Table } from "@/components/general/table";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../customer/CustomerContext";
-import { decoratePlanUsageLimits } from "./decoratePlanUsageLimits";
 import { EmptyState } from "./table/EmptyState";
+import { useDisplayedBillingControls } from "./useDisplayedBillingControls";
 
-const PlanBadge = ({ planName }: { planName: string }) => (
+const ADD_MENU_ITEMS: Array<{ key: BillingControlKey; label: string }> = [
+	{ key: "auto_topups", label: "Auto top-up" },
+	{ key: "spend_limits", label: "Spend limit" },
+	{ key: "usage_limits", label: "Usage limit" },
+	{ key: "usage_alerts", label: "Usage alert" },
+	{ key: "overage_allowed", label: "Overage allowed" },
+];
+
+const SourceBadge = ({
+	icon,
+	label,
+	tooltip,
+}: {
+	icon: ReactNode;
+	label: string;
+	tooltip: string;
+}) => (
 	<Tooltip>
 		<TooltipTrigger asChild>
 			<span className="flex max-w-[10rem] shrink-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-tertiary-foreground">
-				<CubeIcon
-					className="size-3 shrink-0 text-violet-500"
-					weight="duotone"
-				/>
-				<span className="truncate">{planName}</span>
+				{icon}
+				<span className="truncate">{label}</span>
 			</span>
 		</TooltipTrigger>
-		<TooltipContent>Inherited from {planName}</TooltipContent>
+		<TooltipContent>{tooltip}</TooltipContent>
 	</Tooltip>
 );
 
+const PlanCubeIcon = () => (
+	<CubeIcon className="size-3 shrink-0 text-violet-500" weight="duotone" />
+);
+
+const entityHasBillingControls = (entity: Entity) =>
+	hasBillingControls(billingControlsFromColumns(entity));
+
+const entityLabel = (entity: Entity) => entity.name || entity.id;
+
 export function CustomerBillingControlsSection() {
-	const { customer, features, isLoading } = useCusQuery();
-	const { entityId } = useCustomerContext();
+	const {
+		billingControls,
+		origins,
+		fullCustomer,
+		selectedEntity,
+		featureNameById,
+		isLoading,
+	} = useDisplayedBillingControls();
+	const { setEntityId } = useCustomerContext();
 	const setSheet = useSheetStore((s) => s.setSheet);
-
-	const fullCustomer = customer as FullCustomer | undefined;
-
-	const selectedEntity = useMemo(() => {
-		if (!entityId) return null;
-		return (
-			fullCustomer?.entities.find(
-				(entity: Entity) =>
-					entity.id === entityId || entity.internal_id === entityId,
-			) ?? null
-		);
-	}, [entityId, fullCustomer?.entities]);
-
-	const featureNameById = useMemo(
-		() =>
-			new Map(
-				(features ?? []).map((feature: Feature) => [feature.id, feature.name]),
-			),
-		[features],
-	);
-
-	const billingControls = billingControlsFromColumns(
-		selectedEntity ?? fullCustomer,
-	);
-
-	const entitiesWithControlsCount =
-		fullCustomer?.entities?.filter(
-			(entity: Entity) =>
-				(entity.spend_limits?.length ?? 0) > 0 ||
-				(entity.usage_limits?.length ?? 0) > 0 ||
-				(entity.usage_alerts?.length ?? 0) > 0 ||
-				(entity.overage_allowed?.length ?? 0) > 0,
-		).length ?? 0;
 	const isEntityView = !!selectedEntity;
 
-	const planControlSource = useMemo(() => {
-		const source = new Map<
-			string,
-			{ customerProductId: string; planName: string }
-		>();
-		if (isEntityView) return source;
+	const entitiesWithControls = useMemo(
+		() => (fullCustomer?.entities ?? []).filter(entityHasBillingControls),
+		[fullCustomer?.entities],
+	);
 
-		const planProducts = getPlanBillingControlProducts({
-			customerProducts: fullCustomer?.customer_products ?? [],
-		});
-		for (const planProduct of planProducts) {
-			for (const key of BILLING_CONTROL_KEYS) {
-				for (const control of planProduct.product[key] ?? []) {
-					const overridden = (billingControls[key] ?? []).some(
-						(editable) => editable.feature_id === control.feature_id,
-					);
-					const sourceKey = `${key}:${control.feature_id ?? ""}`;
-					if (!overridden && !source.has(sourceKey)) {
-						source.set(sourceKey, {
-							customerProductId: planProduct.id,
-							planName: planProduct.product.name,
-						});
-					}
-				}
-			}
-		}
-		return source;
-	}, [fullCustomer?.customer_products, billingControls, isEntityView]);
-
-	const mergedControls = useMemo((): CustomerBillingControls => {
-		const merged: CustomerBillingControls = {};
-		const planProducts = getPlanBillingControlProducts({
-			customerProducts: fullCustomer?.customer_products ?? [],
-		});
-		for (const key of BILLING_CONTROL_KEYS) {
-			const customerItems = billingControls[key] ?? [];
-			const planItems = isEntityView
-				? []
-				: planProducts
-						.flatMap((planProduct) => planProduct.product[key] ?? [])
-						.filter((control) =>
-							planControlSource.has(`${key}:${control.feature_id ?? ""}`),
-						);
-			const inheritedItems =
-				key === "usage_limits"
-					? decoratePlanUsageLimits({
-							planUsageLimits: planItems as DbUsageLimit[],
-							decoratedPlanUsageLimits: fullCustomer?.plan_usage_limits,
-						})
-					: planItems;
-			const items = [...customerItems, ...inheritedItems];
-			if (items.length) {
-				merged[key] = items as CustomerBillingControls[typeof key];
-			}
-		}
-		return merged;
-	}, [
-		billingControls,
-		fullCustomer?.customer_products,
-		fullCustomer?.plan_usage_limits,
-		isEntityView,
-		planControlSource,
-	]);
-
-	const hasAnyMergedControls = hasBillingControls(mergedControls);
-
-	const planSourceFor = ({
+	const originOf = ({
 		key,
-		item,
+		index,
 	}: {
 		key: BillingControlKey;
-		item: { feature_id?: string };
-	}) => planControlSource.get(`${key}:${item.feature_id ?? ""}`);
+		index: number;
+	}) => origins[key]?.[index];
+
+	const openAddSheet = ({
+		key,
+		featureId,
+	}: {
+		key: BillingControlKey;
+		featureId?: string;
+	}) =>
+		setSheet({
+			type: BILLING_CONTROL_ADD_SHEETS[key],
+			data: featureId ? { item: { feature_id: featureId } } : null,
+		});
+
+	const addMenuItems = ADD_MENU_ITEMS.filter(
+		(menuItem) => !(isEntityView && menuItem.key === "auto_topups"),
+	);
 
 	const addControlMenu = (
 		<DropdownMenu>
@@ -170,101 +125,185 @@ export function CustomerBillingControlsSection() {
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
-				{!selectedEntity && (
+				{addMenuItems.map((menuItem) => (
 					<DropdownMenuItem
-						onClick={() => setSheet({ type: "billing-auto-topup-add" })}
+						key={menuItem.key}
+						onClick={() => openAddSheet({ key: menuItem.key })}
 					>
-						Auto top-up
+						{menuItem.label}
 					</DropdownMenuItem>
-				)}
-				<DropdownMenuItem
-					onClick={() => setSheet({ type: "billing-spend-limit-add" })}
-				>
-					Spend limit
-				</DropdownMenuItem>
-				<DropdownMenuItem
-					onClick={() => setSheet({ type: "billing-usage-limit-add" })}
-				>
-					Usage limit
-				</DropdownMenuItem>
-				<DropdownMenuItem
-					onClick={() => setSheet({ type: "billing-usage-alert-add" })}
-				>
-					Usage alert
-				</DropdownMenuItem>
-				<DropdownMenuItem
-					onClick={() => setSheet({ type: "billing-overage-allowed-add" })}
-				>
-					Overage allowed
-				</DropdownMenuItem>
+				))}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);
 
-	if (!isLoading && !hasAnyMergedControls && !isEntityView) {
-		const customerEmptyText =
-			entitiesWithControlsCount > 0
-				? `No customer-level billing controls — billing controls exist on ${entitiesWithControlsCount} ${entitiesWithControlsCount === 1 ? "entity" : "entities"}`
-				: "No billing controls configured";
+	const renderFeatureAddMenu = ({
+		featureId,
+	}: {
+		featureId: string | undefined;
+	}) => (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<button
+					type="button"
+					aria-label="Feature actions"
+					className="flex size-6 cursor-pointer items-center justify-center rounded-md text-tertiary-foreground hover:bg-muted"
+				>
+					<DotsThreeVerticalIcon size={14} weight="bold" />
+				</button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end">
+				{addMenuItems.map((menuItem) => (
+					<DropdownMenuItem
+						key={menuItem.key}
+						onClick={() => openAddSheet({ key: menuItem.key, featureId })}
+					>
+						Add {menuItem.label.toLowerCase()}
+					</DropdownMenuItem>
+				))}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
 
+	const heading = (
+		<Table.Heading>
+			<GavelIcon size={16} weight="fill" className="text-subtle" />
+			Billing controls
+			{selectedEntity ? (
+				<>
+					<span className="font-normal text-tertiary-foreground">
+						· {entityLabel(selectedEntity)}
+					</span>
+					<span className="rounded-md bg-active-primary px-1.5 py-0.5 text-xs font-medium text-primary">
+						Entity level
+					</span>
+				</>
+			) : (
+				entitiesWithControls.length > 0 && (
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<button
+								type="button"
+								className="flex cursor-pointer items-center gap-1 font-normal text-tertiary-foreground hover:text-foreground"
+							>
+								· {entitiesWithControls.length}{" "}
+								{entitiesWithControls.length === 1 ? "entity" : "entities"}
+								<CaretDownIcon className="size-3" />
+							</button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="start">
+							{entitiesWithControls.map((entity) => (
+								<DropdownMenuItem
+									key={entity.internal_id}
+									onClick={() => setEntityId(entity.id || entity.internal_id)}
+								>
+									{entityLabel(entity)}
+								</DropdownMenuItem>
+							))}
+						</DropdownMenuContent>
+					</DropdownMenu>
+				)
+			)}
+		</Table.Heading>
+	);
+
+	const toolbar = (
+		<Table.Toolbar>
+			{heading}
+			<Table.Actions>{addControlMenu}</Table.Actions>
+		</Table.Toolbar>
+	);
+
+	if (!isLoading && !hasBillingControls(billingControls)) {
 		return (
 			<Table.Container>
-				<Table.Toolbar>
-					<Table.Heading>
-						<GavelIcon size={16} weight="fill" className="text-subtle" />
-						Billing controls
-					</Table.Heading>
-					<Table.Actions>{addControlMenu}</Table.Actions>
-				</Table.Toolbar>
-				<EmptyState text={customerEmptyText} />
+				{toolbar}
+				<EmptyState
+					text={
+						isEntityView
+							? "No billing controls apply to this entity"
+							: "No billing controls configured"
+					}
+				/>
 			</Table.Container>
 		);
 	}
 
+	const badgeFor = (origin: BillingControlOrigin | undefined) => {
+		if (origin?.type === "plan") {
+			return (
+				<SourceBadge
+					icon={<PlanCubeIcon />}
+					label={origin.planName}
+					tooltip={`Inherited from ${origin.planName}`}
+				/>
+			);
+		}
+		if (origin?.type === "customer") {
+			return (
+				<SourceBadge
+					icon={<UserIcon className="size-3 shrink-0" />}
+					label="Customer"
+					tooltip="Set on the customer. Click to edit it there."
+				/>
+			);
+		}
+		return null;
+	};
+
 	return (
 		<Table.Container>
-			<Table.Toolbar>
-				<Table.Heading>
-					<GavelIcon size={16} weight="fill" className="text-subtle" />
-					Billing controls
-				</Table.Heading>
-				<Table.Actions>{addControlMenu}</Table.Actions>
-			</Table.Toolbar>
+			{toolbar}
 
 			{isLoading ? (
 				<EmptyState text="Loading billing controls" />
 			) : (
 				<BillingControlsList
-					billingControls={mergedControls}
+					billingControls={billingControls}
 					featureNameById={featureNameById}
-					emptyText={
-						isEntityView
-							? "No billing controls set on this entity"
-							: "No billing controls configured"
+					getRowBadge={({ key, index }) => badgeFor(originOf({ key, index }))}
+					getAlertIcon={({ key, index }) =>
+						originOf({ key, index })?.type === "plan" ? <PlanCubeIcon /> : null
 					}
-					getRowBadge={({ key, item }) => {
-						const planSource = planSourceFor({ key, item });
-						return planSource ? (
-							<PlanBadge planName={planSource.planName} />
-						) : null;
+					renderFeatureActions={renderFeatureAddMenu}
+					getSharedSourceBadge={({ controls }) => {
+						const [first, ...rest] = controls.map((control) =>
+							originOf(control),
+						);
+						const sharesSource = rest.every((origin) =>
+							origin?.type === "plan" && first?.type === "plan"
+								? origin.customerProductId === first.customerProductId
+								: origin?.type === first?.type,
+						);
+						return sharesSource ? badgeFor(first) : null;
 					}}
+					onOpenAlerts={({ featureId }) =>
+						setSheet({
+							type: "billing-usage-alerts-feature",
+							data: { featureId: featureId ?? null },
+						})
+					}
 					onEdit={({ key, index, item }) => {
-						const planSource = planSourceFor({ key, item });
-						if (planSource) {
+						const origin = originOf({ key, index });
+						if (origin?.type === "customer") {
+							setEntityId(null);
+							return;
+						}
+						if (origin?.type === "plan") {
 							setSheet({
 								type: "billing-control-plan-managed",
 								data: {
 									key,
 									item,
-									planName: planSource.planName,
-									customerProductId: planSource.customerProductId,
+									planName: origin.planName,
+									customerProductId: origin.customerProductId,
 								},
 							});
 							return;
 						}
 						setSheet({
 							type: BILLING_CONTROL_EDIT_SHEETS[key],
-							data: { index, item },
+							data: { index: origin?.index ?? index, item },
 						});
 					}}
 				/>

@@ -4,68 +4,57 @@ import type {
 	AutoTopupResponse,
 	BillingControlKey,
 	CustomerBillingControls,
-	DbOverageAllowed,
 	DbSpendLimit,
 	DbUsageAlert,
 	DbUsageLimit,
+	UsageAlertBasis,
 } from "@autumn/shared";
 import { DEFAULT_USAGE_ALERT_BASIS } from "@autumn/shared";
-import {
-	SectionTag,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@autumn/ui";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
+import { CaretRightIcon, FunnelSimpleIcon } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { motion } from "motion/react";
-import { createContext, Fragment, type ReactNode, useContext } from "react";
+import { Fragment, type ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/views/customers2/components/table/EmptyState";
-import { skipOverageBillingLabel } from "./overageBillingOptions";
-import { USAGE_ALERT_BASIS_LABELS } from "./usageAlertBasisOptions";
-import { USAGE_ALERT_THRESHOLD_TYPE_LABELS } from "./usageAlertThresholdTypeOptions";
 
-const ROW_SWAP_TRANSITION = {
-	duration: 0.2,
-	ease: [0.32, 0.72, 0, 1] as const,
+type BillingControlItem = NonNullable<
+	CustomerBillingControls[BillingControlKey]
+>[number];
+
+type ControlRef = { key: BillingControlKey; index: number };
+
+type ControlLine = ControlRef & { item: BillingControlItem };
+
+type FeatureLine =
+	| { kind: "single"; control: ControlLine }
+	| { kind: "alerts"; alerts: Array<ControlLine & { item: DbUsageAlert }> };
+
+type FeatureCard = { featureId: string | undefined; lines: FeatureLine[] };
+
+const KEY_ORDER: readonly BillingControlKey[] = [
+	"usage_limits",
+	"spend_limits",
+	"usage_alerts",
+	"overage_allowed",
+	"auto_topups",
+];
+
+const LINE_LABELS: Record<BillingControlKey, string> = {
+	usage_limits: "Usage limit",
+	spend_limits: "Spend limit",
+	usage_alerts: "Alerts",
+	overage_allowed: "Overage",
+	auto_topups: "Auto top-up",
 };
 
-const rowClassName =
-	"flex flex-col justify-center gap-1 rounded-lg border px-3 py-2.5 min-w-0 transition-none bg-interactive-secondary";
-
-const SlimContext = createContext(false);
-
-type MetaEntry = { label: string; value: ReactNode };
-
-const RowMeta = ({ entries }: { entries: MetaEntry[] }) => {
-	const visible = entries.filter((entry) => entry.value != null);
-	if (!visible.length) return null;
-
-	return (
-		<div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-tertiary-foreground">
-			{visible.map((entry, index) => (
-				<Fragment key={`${entry.label}-${index}`}>
-					{index > 0 && <span className="text-tertiary-foreground/40">·</span>}
-					<span className="whitespace-nowrap">
-						{entry.label && (
-							<span className="text-tertiary-foreground/70">
-								{entry.label}{" "}
-							</span>
-						)}
-						<span className="text-foreground/80">{entry.value}</span>
-					</span>
-				</Fragment>
-			))}
-		</div>
-	);
+const ALERT_BASIS_SHORT_LABELS: Record<UsageAlertBasis, string> = {
+	balance: "Balance",
+	included: "Plan allowance",
+	recurring: "Recurring",
+	usage_limit: "Limit cap",
 };
 
-type EditableRowProps<T> = {
-	item: T;
-	featureNameById: Map<string, string>;
-	rowBadge?: ReactNode;
-	onClick?: () => void;
-};
+const FILTER_VALUE_DISPLAY_LENGTH = 24;
 
 export const getBillingControlsCount = (
 	billingControls?: CustomerBillingControls | null,
@@ -106,103 +95,147 @@ export const getFeatureLabel = ({
 	return featureNameById.get(featureId) ?? featureId;
 };
 
-const StatusPill = ({ enabled }: { enabled: boolean }) => (
-	<span
-		className={cn(
-			"shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium",
-			enabled
-				? "bg-green-500/10 text-green-600"
-				: "bg-muted text-tertiary-foreground",
-		)}
-	>
-		{enabled ? "Enabled" : "Disabled"}
+const isControlEnabled = (item: BillingControlItem) =>
+	!("enabled" in item) || item.enabled !== false;
+
+const filterText = (filter?: { properties?: Record<string, unknown> }) => {
+	const entries = Object.entries(filter?.properties ?? {});
+	if (!entries.length) return null;
+	return entries.map(([key, value]) => `${key} = ${value}`).join(", ");
+};
+
+const truncateFilterText = (text: string) =>
+	text.length > FILTER_VALUE_DISPLAY_LENGTH
+		? `${text.slice(0, FILTER_VALUE_DISPLAY_LENGTH - 1)}…`
+		: text;
+
+const alertThresholdLabel = (alert: DbUsageAlert) => {
+	switch (alert.threshold_type) {
+		case "usage_percentage":
+			return `${alert.threshold}%`;
+		case "remaining_percentage":
+			return `${alert.threshold}% left`;
+		case "remaining":
+			return `${alert.threshold.toLocaleString()} left`;
+		default:
+			return alert.threshold.toLocaleString();
+	}
+};
+
+const buildFeatureCards = ({
+	billingControls,
+	featureNameById,
+}: {
+	billingControls: CustomerBillingControls;
+	featureNameById: Map<string, string>;
+}): FeatureCard[] => {
+	const cardsByFeature = new Map<string, FeatureCard>();
+	const cardFor = (featureId: string | undefined) => {
+		const cardKey = featureId ?? "";
+		const existing = cardsByFeature.get(cardKey);
+		if (existing) return existing;
+		const card: FeatureCard = { featureId, lines: [] };
+		cardsByFeature.set(cardKey, card);
+		return card;
+	};
+
+	for (const key of KEY_ORDER) {
+		const items = (billingControls[key] ?? []) as BillingControlItem[];
+		items.forEach((item, index) => {
+			const card = cardFor(item.feature_id);
+			if (key !== "usage_alerts") {
+				card.lines.push({ kind: "single", control: { key, index, item } });
+				return;
+			}
+			const alertLine = card.lines.find((line) => line.kind === "alerts");
+			const alert = { key, index, item: item as DbUsageAlert };
+			if (alertLine?.kind === "alerts") alertLine.alerts.push(alert);
+			else card.lines.push({ kind: "alerts", alerts: [alert] });
+		});
+	}
+
+	const featureName = (card: FeatureCard) =>
+		getFeatureLabel({ featureId: card.featureId, featureNameById });
+	return [...cardsByFeature.values()].sort((left, right) => {
+		if (!left.featureId) return -1;
+		if (!right.featureId) return 1;
+		return featureName(left).localeCompare(featureName(right));
+	});
+};
+
+const OffPill = () => (
+	<span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-tertiary-foreground">
+		Off
 	</span>
 );
 
-const RowHeader = ({
-	enabled,
-	name,
-	badge,
-}: {
-	enabled: boolean;
-	name: string;
-	badge?: ReactNode;
-}) => (
-	<div className="flex min-w-0 items-center gap-2">
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<span className="truncate text-sm font-medium text-foreground">
-					{name}
-				</span>
-			</TooltipTrigger>
-			<TooltipContent>{name}</TooltipContent>
-		</Tooltip>
-		{badge}
-		<div className="ml-auto shrink-0">
-			<StatusPill enabled={enabled} />
-		</div>
-	</div>
+const Muted = ({ children }: { children: ReactNode }) => (
+	<span className="text-tertiary-foreground">{children}</span>
 );
 
-export const BillingControlsGroup = ({
-	title,
-	count,
-	children,
+const FilterNote = ({
+	filter,
 }: {
-	title: string;
-	count?: number;
-	children: ReactNode;
+	filter?: { properties?: Record<string, unknown> };
 }) => {
-	const slim = useContext(SlimContext);
-	const label = count == null ? title : `${title} · ${count}`;
+	const text = filterText(filter);
+	if (!text) return null;
 	return (
-		<div className="flex flex-col">
-			{slim ? (
-				<div className="mb-1.5 px-0.5 text-xs text-tertiary-foreground">
-					{label}
-				</div>
-			) : (
-				<SectionTag>{label}</SectionTag>
-			)}
-			{children}
-		</div>
+		<span title={text} className="text-tertiary-foreground">
+			where {truncateFilterText(text)}
+		</span>
 	);
 };
 
-const RowButton = ({
-	children,
-	enabled = true,
-	onClick,
+const UsageLimitSummary = ({
+	usageLimit,
 }: {
-	children: ReactNode;
-	enabled?: boolean;
-	onClick?: () => void;
+	usageLimit: ApiUsageLimit | DbUsageLimit;
 }) => {
-	const dimClassName = enabled ? "" : "opacity-60";
+	const usage = "usage" in usageLimit ? usageLimit.usage : undefined;
 
-	return onClick ? (
-		<button
-			type="button"
-			className={cn(
-				rowClassName,
-				dimClassName,
-				"w-full text-left cursor-pointer hover:bg-interactive-secondary-hover",
+	return (
+		<>
+			<span className="font-medium text-foreground">
+				{usageLimit.limit.toLocaleString()} per {usageLimit.interval}
+			</span>
+			<FilterNote filter={usageLimit.filter} />
+			{usage != null && (
+				<Muted>
+					· {usage.toLocaleString()} used this {usageLimit.interval}
+				</Muted>
 			)}
-			onClick={onClick}
-		>
-			{children}
-		</button>
-	) : (
-		<div className={cn(rowClassName, dimClassName)}>{children}</div>
+		</>
 	);
 };
 
-export const AutoTopupRow = ({
-	item: autoTopup,
-	featureNameById,
-	rowBadge,
-	onClick,
-}: EditableRowProps<AutoTopup | AutoTopupResponse>) => {
+const spendCapLabel = (spendLimit: DbSpendLimit) => {
+	if (spendLimit.overage_limit === undefined) return "no overage cap";
+	const cap =
+		spendLimit.limit_type === "usage_percentage"
+			? `${spendLimit.overage_limit.toLocaleString()}%`
+			: spendLimit.overage_limit.toLocaleString();
+	return `overage capped at ${cap}`;
+};
+
+const SpendLimitSummary = ({ spendLimit }: { spendLimit: DbSpendLimit }) => (
+	<>
+		<span className="font-medium text-foreground first-letter:uppercase">
+			{spendCapLabel(spendLimit)}
+		</span>
+		{spendLimit.skip_overage_billing !== undefined && (
+			<Muted>
+				· overage {spendLimit.skip_overage_billing ? "not billed" : "billed"}
+			</Muted>
+		)}
+	</>
+);
+
+const AutoTopupSummary = ({
+	autoTopup,
+}: {
+	autoTopup: AutoTopup | AutoTopupResponse;
+}) => {
 	const purchaseLimit = autoTopup.purchase_limit;
 	const hasExpandedLimit = purchaseLimit && "count" in purchaseLimit;
 	const hasPurchaseLimit =
@@ -211,334 +244,474 @@ export const AutoTopupRow = ({
 		purchaseLimit.interval != null;
 
 	return (
-		<RowButton enabled={autoTopup.enabled} onClick={onClick}>
-			<RowHeader
-				enabled={autoTopup.enabled}
-				name={getFeatureLabel({
-					featureId: autoTopup.feature_id,
-					featureNameById,
-				})}
-				badge={rowBadge}
-			/>
-			<RowMeta
-				entries={[
-					{ label: "Threshold", value: autoTopup.threshold.toLocaleString() },
-					{ label: "Qty", value: autoTopup.quantity.toLocaleString() },
-					{
-						label: "Limit",
-						value: hasPurchaseLimit
-							? hasExpandedLimit
-								? `${purchaseLimit.count}/${purchaseLimit.limit} per ${purchaseLimit.interval}`
-								: `${purchaseLimit.limit} per ${purchaseLimit.interval}`
-							: null,
-					},
-					{
-						label: "Resets",
-						value:
-							hasExpandedLimit && purchaseLimit.next_reset_at
-								? format(new Date(purchaseLimit.next_reset_at), "MMM d")
-								: null,
-					},
-				]}
-			/>
-		</RowButton>
+		<>
+			<span className="font-medium text-foreground">
+				Add {autoTopup.quantity.toLocaleString()} when below{" "}
+				{autoTopup.threshold.toLocaleString()}
+			</span>
+			{hasPurchaseLimit && (
+				<Muted>
+					·{" "}
+					{hasExpandedLimit
+						? `${purchaseLimit.count}/${purchaseLimit.limit}`
+						: purchaseLimit.limit}{" "}
+					per {purchaseLimit.interval}
+					{hasExpandedLimit && purchaseLimit.next_reset_at
+						? `, resets ${format(new Date(purchaseLimit.next_reset_at), "MMM d")}`
+						: ""}
+				</Muted>
+			)}
+		</>
 	);
 };
 
-export const SpendLimitRow = ({
-	item: spendLimit,
-	featureNameById,
-	rowBadge,
-	onClick,
-}: EditableRowProps<DbSpendLimit>) => {
-	const isPercent = spendLimit.limit_type === "usage_percentage";
-	const overageLimitValue =
-		spendLimit.overage_limit === undefined
-			? "none"
-			: isPercent
-				? `${spendLimit.overage_limit.toLocaleString()}%`
-				: spendLimit.overage_limit.toLocaleString();
-
-	return (
-		<RowButton enabled={spendLimit.enabled} onClick={onClick}>
-			<RowHeader
-				enabled={spendLimit.enabled}
-				name={getFeatureLabel({
-					featureId: spendLimit.feature_id,
-					featureNameById,
-				})}
-				badge={rowBadge}
-			/>
-			<RowMeta
-				entries={[
-					{ label: "Type", value: isPercent ? "Usage %" : "Absolute" },
-					{ label: "Overage limit", value: overageLimitValue },
-					{
-						label: "Overage billing",
-						value: skipOverageBillingLabel(spendLimit.skip_overage_billing),
-					},
-				]}
-			/>
-		</RowButton>
-	);
+const ControlSummary = ({ control }: { control: ControlLine }) => {
+	switch (control.key) {
+		case "usage_limits":
+			return (
+				<UsageLimitSummary
+					usageLimit={control.item as ApiUsageLimit | DbUsageLimit}
+				/>
+			);
+		case "spend_limits":
+			return <SpendLimitSummary spendLimit={control.item as DbSpendLimit} />;
+		case "auto_topups":
+			return (
+				<AutoTopupSummary
+					autoTopup={control.item as AutoTopup | AutoTopupResponse}
+				/>
+			);
+		case "overage_allowed":
+			return <span className="font-medium text-foreground">Allowed</span>;
+		default:
+			return null;
+	}
 };
 
-const FILTER_VALUE_DISPLAY_LENGTH = 24;
-
-const filterSummary = (entries: Array<[string, unknown]>) =>
-	entries.length ? (
-		<span title={entries.map(([key, value]) => `${key} = ${value}`).join(", ")}>
-			{entries
-				.map(([key, value]) => `${key} = ${truncateFilterValue(String(value))}`)
-				.join(", ")}
-		</span>
-	) : null;
-
-const truncateFilterValue = (value: string) =>
-	value.length > FILTER_VALUE_DISPLAY_LENGTH
-		? `${value.slice(0, FILTER_VALUE_DISPLAY_LENGTH - 1)}…`
-		: value;
-
-export const UsageLimitRow = ({
-	item: usageLimit,
-	featureNameById,
-	rowBadge,
-	onClick,
-}: EditableRowProps<ApiUsageLimit | DbUsageLimit>) => {
-	const usage = "usage" in usageLimit ? usageLimit.usage : undefined;
-	const enabled = "enabled" in usageLimit ? usageLimit.enabled : true;
-	const filterProperties = usageLimit.filter?.properties;
-	const filterEntries = Object.entries(filterProperties ?? {});
-	return (
-		<RowButton enabled={enabled} onClick={onClick}>
-			<RowHeader
-				enabled={enabled}
-				name={getFeatureLabel({
-					featureId: usageLimit.feature_id,
-					featureNameById,
-				})}
-				badge={rowBadge}
-			/>
-			<RowMeta
-				entries={[
-					{
-						label: "Limit",
-						value: `${usageLimit.limit.toLocaleString()} / ${usageLimit.interval}`,
-					},
-					{
-						label: "Filter",
-						value: filterSummary(filterEntries),
-					},
-					{
-						label: "Usage",
-						value:
-							usage != null
-								? `${usage.toLocaleString()} / ${usageLimit.limit.toLocaleString()} this ${usageLimit.interval}`
-								: null,
-					},
-				]}
-			/>
-		</RowButton>
-	);
+type ListCallbacks = {
+	onEdit?: (args: ControlRef & { item: BillingControlItem }) => void;
+	onOpenAlerts?: (args: { featureId: string | undefined }) => void;
+	getRowBadge?: (args: ControlRef & { item: BillingControlItem }) => ReactNode;
+	getAlertIcon?: (args: ControlRef & { item: DbUsageAlert }) => ReactNode;
 };
 
-export const UsageAlertRow = ({
-	item: usageAlert,
-	featureNameById,
-	rowBadge,
+const SubRow = ({
+	label,
+	slim,
+	dimmed,
+	trailing,
 	onClick,
-}: EditableRowProps<DbUsageAlert>) => {
-	const isPercentageType =
-		usageAlert.threshold_type === "usage_percentage" ||
-		usageAlert.threshold_type === "remaining_percentage";
-
-	const thresholdLabel = isPercentageType
-		? `${usageAlert.threshold}%`
-		: usageAlert.threshold.toLocaleString();
-
-	const basis = usageAlert.basis ?? DEFAULT_USAGE_ALERT_BASIS;
-	const filterEntries = Object.entries(usageAlert.filter?.properties ?? {});
-
-	return (
-		<RowButton enabled={usageAlert.enabled} onClick={onClick}>
-			<RowHeader
-				enabled={usageAlert.enabled}
-				name={getFeatureLabel({
-					featureId: usageAlert.feature_id,
-					featureNameById,
-				})}
-				badge={rowBadge}
-			/>
-			<RowMeta
-				entries={[
-					{ label: "At", value: thresholdLabel },
-					{
-						label: "Type",
-						value: USAGE_ALERT_THRESHOLD_TYPE_LABELS[usageAlert.threshold_type],
-					},
-					{ label: "Of", value: USAGE_ALERT_BASIS_LABELS[basis] },
-					{
-						label: "Filter",
-						value: filterSummary(filterEntries),
-					},
-					{ label: "Name", value: usageAlert.name || null },
-				]}
-			/>
-		</RowButton>
-	);
-};
-
-export const OverageAllowedRow = ({
-	item: overageAllowed,
-	featureNameById,
-	rowBadge,
-	onClick,
-}: EditableRowProps<DbOverageAllowed>) => (
-	<RowButton enabled={overageAllowed.enabled} onClick={onClick}>
-		<RowHeader
-			enabled={overageAllowed.enabled}
-			name={getFeatureLabel({
-				featureId: overageAllowed.feature_id,
-				featureNameById,
-			})}
-			badge={rowBadge}
-		/>
-	</RowButton>
-);
-
-type BillingControlItem = NonNullable<
-	CustomerBillingControls[BillingControlKey]
->[number];
-
-type BillingControlGroupConfig = {
-	key: BillingControlKey;
-	title: string;
-	Row: (props: EditableRowProps<BillingControlItem>) => ReactNode;
-	getKey: (item: BillingControlItem, index: number) => string;
-};
-
-const BILLING_CONTROL_GROUPS: readonly BillingControlGroupConfig[] = [
-	{
-		key: "auto_topups",
-		title: "Auto top-ups",
-		Row: AutoTopupRow as BillingControlGroupConfig["Row"],
-		getKey: (item, index) => `auto-topup-${item.feature_id}-${index}`,
-	},
-	{
-		key: "spend_limits",
-		title: "Spend limits",
-		Row: SpendLimitRow as BillingControlGroupConfig["Row"],
-		getKey: (item, index) =>
-			`spend-limit-${item.feature_id ?? "global"}-${index}`,
-	},
-	{
-		key: "usage_limits",
-		title: "Usage limits",
-		Row: UsageLimitRow as BillingControlGroupConfig["Row"],
-		getKey: (item, index) => `usage-limit-${item.feature_id}-${index}`,
-	},
-	{
-		key: "usage_alerts",
-		title: "Usage alerts",
-		Row: UsageAlertRow as BillingControlGroupConfig["Row"],
-		getKey: (item, index) =>
-			`usage-alert-${item.feature_id ?? "global"}-${item.name ?? index}`,
-	},
-	{
-		key: "overage_allowed",
-		title: "Overage allowed",
-		Row: OverageAllowedRow as BillingControlGroupConfig["Row"],
-		getKey: (item, index) => `overage-allowed-${item.feature_id}-${index}`,
-	},
-];
-
-function BillingControlRowSlot({
-	isEditing,
-	editingContent,
 	children,
 }: {
-	isEditing: boolean;
-	editingContent?: () => ReactNode;
+	label: string;
+	slim: boolean;
+	dimmed?: boolean;
+	trailing?: ReactNode;
+	onClick?: () => void;
 	children: ReactNode;
-}) {
-	return (
-		<motion.div
-			animate={{ height: "auto" }}
-			transition={ROW_SWAP_TRANSITION}
-			className="overflow-hidden"
-		>
-			{isEditing && editingContent ? editingContent() : children}
-		</motion.div>
+}) => {
+	const className = cn(
+		"flex min-h-9 w-full min-w-0 items-center text-left text-sm",
+		onClick && "cursor-pointer hover:bg-interactive-secondary-hover",
 	);
-}
+	const content = (
+		<>
+			<span
+				className={cn(
+					"shrink-0 pr-2 text-xs text-tertiary-foreground",
+					slim ? "w-36 pl-4" : "w-80 pl-[38px]",
+				)}
+			>
+				{label}
+			</span>
+			<span
+				className={cn(
+					"flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 px-2 py-1.5",
+					dimmed && "opacity-60",
+				)}
+			>
+				{children}
+			</span>
+			{trailing && (
+				<span className="flex shrink-0 items-center gap-1.5 pr-4">
+					{trailing}
+				</span>
+			)}
+		</>
+	);
+
+	return onClick ? (
+		<button type="button" className={className} onClick={onClick}>
+			{content}
+		</button>
+	) : (
+		<div className={className}>{content}</div>
+	);
+};
+
+const AlertTag = ({
+	alert,
+	icon,
+	onClick,
+}: {
+	alert: DbUsageAlert;
+	icon?: ReactNode;
+	onClick?: () => void;
+}) => {
+	const filter = filterText(alert.filter);
+	const tooltip = [
+		alert.name,
+		filter && `Where ${filter}`,
+		!alert.enabled && "Off",
+	]
+		.filter(Boolean)
+		.join(" · ");
+	const className = cn(
+		"inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-foreground",
+		!alert.enabled && "opacity-50",
+		onClick && "cursor-pointer hover:bg-muted/70",
+	);
+	const content = (
+		<>
+			{icon}
+			{alertThresholdLabel(alert)}
+			{filter && (
+				<FunnelSimpleIcon className="size-3 text-tertiary-foreground" />
+			)}
+		</>
+	);
+	const tag = onClick ? (
+		<button
+			type="button"
+			className={className}
+			onClick={(event) => {
+				event.stopPropagation();
+				onClick();
+			}}
+		>
+			{content}
+		</button>
+	) : (
+		<span className={className}>{content}</span>
+	);
+
+	if (!tooltip) return tag;
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>{tag}</TooltipTrigger>
+			<TooltipContent>{tooltip}</TooltipContent>
+		</Tooltip>
+	);
+};
+
+const AlertTagGroups = ({
+	alerts,
+	getAlertIcon,
+	onEditAlert,
+}: {
+	alerts: Array<ControlRef & { item: DbUsageAlert }>;
+	getAlertIcon?: ListCallbacks["getAlertIcon"];
+	onEditAlert?: (alert: ControlRef & { item: DbUsageAlert }) => void;
+}) => {
+	const alertsByBasis = new Map<UsageAlertBasis, typeof alerts>();
+	for (const alert of alerts) {
+		const basis = alert.item.basis ?? DEFAULT_USAGE_ALERT_BASIS;
+		alertsByBasis.set(basis, [...(alertsByBasis.get(basis) ?? []), alert]);
+	}
+
+	return [...alertsByBasis.entries()].map(([basis, basisAlerts]) => (
+		<span key={basis} className="flex shrink-0 items-center gap-1">
+			<span className="mr-0.5 text-xs text-tertiary-foreground">
+				{ALERT_BASIS_SHORT_LABELS[basis]}
+			</span>
+			{basisAlerts.map((alert) => (
+				<AlertTag
+					key={alert.index}
+					alert={alert.item}
+					icon={getAlertIcon?.(alert)}
+					onClick={onEditAlert ? () => onEditAlert(alert) : undefined}
+				/>
+			))}
+		</span>
+	));
+};
+
+const AlertsLine = ({
+	featureId,
+	alerts,
+	slim,
+	badge,
+	onEdit,
+	onOpenAlerts,
+	getAlertIcon,
+}: {
+	featureId: string | undefined;
+	alerts: Array<ControlRef & { item: DbUsageAlert }>;
+	slim: boolean;
+	/** When every alert shares one source, the row badge replaces per-tag icons. */
+	badge?: ReactNode;
+} & ListCallbacks) => (
+	<SubRow
+		label={LINE_LABELS.usage_alerts}
+		slim={slim}
+		trailing={badge || undefined}
+		onClick={onOpenAlerts ? () => onOpenAlerts({ featureId }) : undefined}
+	>
+		<AlertTagGroups
+			alerts={alerts}
+			getAlertIcon={badge ? undefined : getAlertIcon}
+			onEditAlert={!onOpenAlerts ? onEdit : undefined}
+		/>
+	</SubRow>
+);
+
+const isEditingLine = ({
+	line,
+	editingRow,
+}: {
+	line: FeatureLine;
+	editingRow?: ControlRef;
+}) => {
+	if (!editingRow) return false;
+	if (line.kind === "single") {
+		return (
+			line.control.key === editingRow.key &&
+			line.control.index === editingRow.index
+		);
+	}
+	return line.alerts.some(
+		(alert) => alert.key === editingRow.key && alert.index === editingRow.index,
+	);
+};
+
+const COUNT_LABELS: Record<
+	Exclude<BillingControlKey, "overage_allowed">,
+	[string, string]
+> = {
+	usage_limits: ["usage limit", "usage limits"],
+	spend_limits: ["spend limit", "spend limits"],
+	usage_alerts: ["usage alert", "usage alerts"],
+	auto_topups: ["auto top-up", "auto top-ups"],
+};
+
+const featureSummary = (card: FeatureCard) => {
+	const counts = new Map<BillingControlKey, number>();
+	for (const control of cardControls(card)) {
+		counts.set(control.key, (counts.get(control.key) ?? 0) + 1);
+	}
+	return KEY_ORDER.flatMap((key) => {
+		const count = counts.get(key);
+		if (!count) return [];
+		if (key === "overage_allowed") {
+			const allowsOverage = cardControls(card).some(
+				(control) =>
+					control.key === "overage_allowed" && isControlEnabled(control.item),
+			);
+			return allowsOverage ? "overage allowed" : "overage not allowed";
+		}
+		const [singular, plural] = COUNT_LABELS[key];
+		return `${count} ${count === 1 ? singular : plural}`;
+	}).join(" · ");
+};
+
+const cardControls = (card: FeatureCard): ControlLine[] =>
+	card.lines.flatMap((line) =>
+		line.kind === "alerts" ? line.alerts : [line.control],
+	);
+
+const cardKey = (card: FeatureCard) => card.featureId ?? "all-features";
+
+const FeatureRow = ({
+	card,
+	featureNameById,
+	isExpanded,
+	slim,
+	onToggle,
+	actions,
+}: {
+	card: FeatureCard;
+	featureNameById: Map<string, string>;
+	isExpanded: boolean;
+	slim: boolean;
+	onToggle: () => void;
+	actions?: ReactNode;
+}) => {
+	const featureName = getFeatureLabel({
+		featureId: card.featureId,
+		featureNameById,
+	});
+
+	return (
+		// biome-ignore lint/a11y/useSemanticElements: row holds a nested actions button
+		<div
+			role="button"
+			tabIndex={0}
+			className="flex h-10 w-full min-w-0 cursor-pointer items-center text-left text-sm hover:bg-interactive-secondary-hover"
+			onClick={onToggle}
+			onKeyDown={(event) => {
+				if (event.key === "Enter" || event.key === " ") onToggle();
+			}}
+		>
+			<span
+				className={cn(
+					"flex shrink-0 items-center gap-2 pr-2 pl-4",
+					slim ? "w-36" : "w-80",
+				)}
+			>
+				<CaretRightIcon
+					size={14}
+					weight="bold"
+					className={cn(
+						"shrink-0 text-tertiary-foreground transition-transform duration-200",
+						isExpanded && "rotate-90",
+					)}
+				/>
+				<span
+					title={featureName}
+					className="truncate font-medium text-foreground"
+				>
+					{featureName}
+				</span>
+			</span>
+			<span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-2">
+				<span className="truncate text-tertiary-foreground">
+					{featureSummary(card)}
+				</span>
+			</span>
+			<span
+				className="flex w-11 shrink-0 justify-center"
+				onClick={(event) => event.stopPropagation()}
+				onKeyDown={(event) => event.stopPropagation()}
+			>
+				{actions}
+			</span>
+		</div>
+	);
+};
 
 export function BillingControlsList({
 	billingControls,
 	featureNameById,
 	onEdit,
+	onOpenAlerts,
+	renderFeatureActions,
 	editingRow,
 	renderEditingRow,
 	getRowBadge,
+	getAlertIcon,
+	getSharedSourceBadge,
 	slim = false,
+	defaultExpanded = false,
 	emptyText = "No billing controls configured",
 }: {
 	billingControls?: CustomerBillingControls | null;
 	featureNameById: Map<string, string>;
-	onEdit?: (args: {
-		key: BillingControlKey;
-		index: number;
-		item: NonNullable<CustomerBillingControls[BillingControlKey]>[number];
-	}) => void;
-	editingRow?: { key: BillingControlKey; index: number };
+	/** When set, a feature's alerts row opens one view instead of editing each alert. */
+	onOpenAlerts?: ListCallbacks["onOpenAlerts"];
+	renderFeatureActions?: (args: { featureId: string | undefined }) => ReactNode;
+	/** Badge for an alerts row whose alerts all share one source. */
+	getSharedSourceBadge?: (args: { controls: ControlLine[] }) => ReactNode;
+	editingRow?: ControlRef;
 	renderEditingRow?: () => ReactNode;
-	getRowBadge?: (args: {
-		key: BillingControlKey;
-		item: BillingControlItem;
-	}) => ReactNode;
 	slim?: boolean;
+	defaultExpanded?: boolean;
 	emptyText?: string;
-}) {
-	if (!hasBillingControls(billingControls)) {
+} & Omit<ListCallbacks, "onOpenAlerts">) {
+	const [toggled, setToggled] = useState<Set<string>>(() => new Set());
+
+	if (!billingControls || !hasBillingControls(billingControls)) {
 		return <EmptyState className="h-12 min-h-0" text={emptyText} />;
 	}
 
-	return (
-		<SlimContext.Provider value={slim}>
-			<div className={cn("flex flex-col", slim ? "gap-2" : "gap-4")}>
-				{BILLING_CONTROL_GROUPS.map(({ key, title, Row, getKey }) => {
-					const items = billingControls?.[key];
-					if (!items?.length) return null;
+	const cards = buildFeatureCards({ billingControls, featureNameById });
+	const toggle = (key: string) =>
+		setToggled((previous) => {
+			const next = new Set(previous);
+			if (next.has(key)) next.delete(key);
+			else next.add(key);
+			return next;
+		});
 
-					return (
-						<BillingControlsGroup key={key} title={title} count={items.length}>
-							<div className="flex flex-col gap-2 rounded-lg">
-								{items.map((item, index) => {
-									const isEditing =
-										editingRow?.key === key && editingRow.index === index;
+	return (
+		<div className="flex flex-col divide-y overflow-hidden rounded-lg border bg-interactive-secondary">
+			{cards.map((card) => {
+				const key = cardKey(card);
+				const hasEditingLine =
+					!!renderEditingRow &&
+					card.lines.some((line) => isEditingLine({ line, editingRow }));
+				const isExpanded =
+					hasEditingLine || defaultExpanded !== toggled.has(key);
+
+				return (
+					<div key={key} className="flex flex-col">
+						<FeatureRow
+							card={card}
+							featureNameById={featureNameById}
+							isExpanded={isExpanded}
+							slim={slim}
+							onToggle={() => toggle(key)}
+							actions={renderFeatureActions?.({ featureId: card.featureId })}
+						/>
+						{isExpanded && (
+							<div className="flex flex-col border-t bg-card py-1">
+								{card.lines.map((line) => {
+									const lineKey =
+										line.kind === "alerts"
+											? "alerts"
+											: `${line.control.key}-${line.control.index}`;
+									const editing =
+										renderEditingRow && isEditingLine({ line, editingRow });
+									const badge =
+										line.kind === "single" ? getRowBadge?.(line.control) : null;
+									const isOff =
+										line.kind === "single" &&
+										!isControlEnabled(line.control.item);
+
 									return (
-										<BillingControlRowSlot
-											key={getKey(item, index)}
-											isEditing={Boolean(isEditing && renderEditingRow)}
-											editingContent={renderEditingRow}
-										>
-											<Row
-												item={item}
-												featureNameById={featureNameById}
-												rowBadge={getRowBadge?.({ key, item })}
-												onClick={
-													onEdit
-														? () => onEdit({ key, index, item })
-														: undefined
-												}
-											/>
-										</BillingControlRowSlot>
+										<Fragment key={lineKey}>
+											{line.kind === "alerts" ? (
+												<AlertsLine
+													featureId={card.featureId}
+													alerts={line.alerts}
+													slim={slim}
+													badge={getSharedSourceBadge?.({
+														controls: line.alerts,
+													})}
+													onEdit={onEdit}
+													onOpenAlerts={onOpenAlerts}
+													getAlertIcon={getAlertIcon}
+												/>
+											) : (
+												<SubRow
+													label={LINE_LABELS[line.control.key]}
+													slim={slim}
+													dimmed={isOff}
+													trailing={
+														badge || isOff ? (
+															<>
+																{badge}
+																{isOff && <OffPill />}
+															</>
+														) : undefined
+													}
+													onClick={
+														onEdit ? () => onEdit(line.control) : undefined
+													}
+												>
+													<ControlSummary control={line.control} />
+												</SubRow>
+											)}
+											{editing && (
+												<div className="px-2 py-1">{renderEditingRow()}</div>
+											)}
+										</Fragment>
 									);
 								})}
 							</div>
-						</BillingControlsGroup>
-					);
-				})}
-			</div>
-		</SlimContext.Provider>
+						)}
+					</div>
+				);
+			})}
+		</div>
 	);
 }

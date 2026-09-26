@@ -333,7 +333,7 @@ export const ConfigureVercel = () => {
 						This is the base URL for connecting to your Vercel project. You
 						should provide this to Vercel as the Webhook URL and Base URL.
 					</p>
-					<CodeGroup value={env}>
+					<CodeGroup value={env} className="min-w-0">
 						<CodeGroupList>
 							<CodeGroupTab value={env}>
 								{env === "live" ? "Live" : "Sandbox"}
@@ -352,7 +352,7 @@ export const ConfigureVercel = () => {
 							copyText={`https://api.useautumn.com/webhooks/vercel/${org?.id}/${env}`}
 							className="p-2 border-t-0"
 						>
-							<CodeGroupCodeSolidColour className="text-primary">{`https://api.useautumn.com/webhooks/vercel/${org?.id}/${env}`}</CodeGroupCodeSolidColour>
+							<CodeGroupCodeSolidColour className="text-primary text-sm whitespace-pre-wrap break-all">{`https://api.useautumn.com/webhooks/vercel/${org?.id}/${env}`}</CodeGroupCodeSolidColour>
 						</CodeGroupContent>
 					</CodeGroup>
 				</div>

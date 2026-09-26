@@ -14,6 +14,7 @@ import {
 	runKeylessLogin,
 } from "./actions/login/keyless";
 import { runPull } from "./actions/pull";
+import { webhookPullEnvs } from "./actions/pull/webhooks/webhookPullEnvs";
 import { pushExitCode, runPush } from "./actions/push";
 import { runReset } from "./actions/reset/runReset";
 import { runSandboxCreate } from "./actions/sandbox/createSandbox";
@@ -500,7 +501,18 @@ Linking a keyless org to an account:
 					overwrite: options.overwrite === true,
 					yes: options.yes === true,
 					prompter: prompterFor({ command }),
-					webhookEnv: webhookEnvFor({ target, command }),
+					webhookEnvs: () =>
+						webhookPullEnvs({
+							targetKeyName: target.secretKeyName,
+							listWebhooks: ({ secretKey }) =>
+								createClient({
+									secretKey,
+									fetch: autumnFetch,
+									...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
+								}).listWebhooks({}),
+							fetchOrgInfo: ({ secretKey }) =>
+								fetchOrgInfo({ baseUrl: targetBaseUrl({ target }), secretKey }),
+						}),
 				});
 				writeStaleSkillsHint({ command });
 			},
