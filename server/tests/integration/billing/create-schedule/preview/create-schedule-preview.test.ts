@@ -987,7 +987,7 @@ test.concurrent(
 		const preview = await previewCreateSchedule({ autumnV1, params });
 		const response = await autumnV1.billing.createSchedule(params);
 
-		expect(response.status).toBe("created");
+		expect(response.status).toBe("pending_payment");
 		expect(response.invoice?.total).toBe(preview.total);
 
 		const stripeInvoice = await ctx.stripeCli.invoices.retrieve(

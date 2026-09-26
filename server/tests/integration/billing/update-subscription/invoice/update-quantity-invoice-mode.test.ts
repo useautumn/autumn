@@ -1,9 +1,11 @@
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, CustomerExpand } from "@autumn/shared";
+import type { ApiCustomerV3 } from "@autumn/shared";
+import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckoutV2";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -16,13 +18,13 @@ const billingUnits = 12;
  * Invoice Mode Tests
  *
  * These tests verify different invoice mode configurations:
- * - Default: draft invoice with immediate entitlements
- * - Draft invoice with immediate entitlements (explicit)
+ * - Draft invoice with enable immediately: change held until the draft is finalized
+ * - Draft invoice with enable immediately: finalizing applies the change
  * - Finalized invoice with immediate entitlements
  * - Entitlements after payment (via checkout)
  */
 
-test.concurrent(`${chalk.yellowBright("update-quantity: default invoice mode (draft, immediate entitlements)")}`, async () => {
+test.concurrent(`${chalk.yellowBright("update-quantity: draft invoice holds the change until finalized")}`, async () => {
 	const customerId = "inv-mode-default";
 
 	const product = products.base({
@@ -75,31 +77,18 @@ test.concurrent(`${chalk.yellowBright("update-quantity: default invoice mode (dr
 		finalize_invoice: false,
 	});
 
-	const afterUpdate = await CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-		expand: [CustomerExpand.Invoices],
-	});
-
-	const afterCustomerProduct = afterUpdate.customer_products.find(
-		(cp) => cp.product.id === product.id,
-	);
-	const afterEntitlement = afterCustomerProduct?.customer_entitlements.find(
-		(ent) => ent.entitlement.feature_id === TestFeature.Messages,
-	);
-	const afterBalance = afterEntitlement?.balance || 0;
-
-	expect(afterBalance).toBe(beforeBalance + 60);
-
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	const feature = customer.features?.[TestFeature.Messages];
-	expect(feature?.balance).toBe(180);
+	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(
+		beforeBalance,
+	);
 
-	const draftInvoice = customer.invoices?.find((inv) => inv.status === "draft");
+	const draftInvoice = customer.invoices?.find(
+		(inv) => inv.status === "draft",
+	);
 	expect(draftInvoice).toBeDefined();
 });
 
-test.concurrent(`${chalk.yellowBright("update-quantity: draft invoice with immediate entitlements (explicit)")}`, async () => {
+test.concurrent(`${chalk.yellowBright("update-quantity: finalizing the draft applies the change")}`, async () => {
 	const customerId = "inv-mode-draft-explicit";
 
 	const product = products.base({
@@ -152,30 +141,27 @@ test.concurrent(`${chalk.yellowBright("update-quantity: draft invoice with immed
 		enable_product_immediately: true,
 	});
 
-	// Entitlements should be updated immediately
-	const afterUpdate = await CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-	});
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expect(customerBefore.features?.[TestFeature.Messages]?.balance).toBe(
+		beforeBalance,
+	);
 
-	const afterCustomerProduct = afterUpdate.customer_products.find(
-		(cp) => cp.product.id === product.id,
+	const draftInvoice = customerBefore.invoices?.find(
+		(inv) => inv.status === "draft",
 	);
-	const afterEntitlement = afterCustomerProduct?.customer_entitlements.find(
-		(ent) => ent.entitlement.feature_id === TestFeature.Messages,
-	);
-	const afterBalance = afterEntitlement?.balance || 0;
+	expect(draftInvoice).toBeDefined();
+
+	await ctx.stripeCli.invoices.finalizeInvoice(draftInvoice!.stripe_id);
 
 	// +5 units × 12 billing_units = +60 messages
-	expect(afterBalance).toBe(beforeBalance + 60);
-
-	// Verify via API that balance is updated and invoice is draft
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	const feature = customer.features?.[TestFeature.Messages];
-	expect(feature?.balance).toBe(180); // 15 units × 12 = 180
-
-	const draftInvoice = customer.invoices?.find((inv) => inv.status === "draft");
-	expect(draftInvoice).toBeDefined();
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+		featureId: TestFeature.Messages,
+		balance: beforeBalance + 60,
+	});
 });
 
 test.concurrent(`${chalk.yellowBright("update-quantity: finalized invoice with immediate entitlements")}`, async () => {
