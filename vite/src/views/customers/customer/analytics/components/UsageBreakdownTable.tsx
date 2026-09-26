@@ -68,13 +68,13 @@ const orderSeriesForTable = ({
 const SeriesName = ({ series }: { series: ChartSeriesConfig }) => {
 	if (!series.nameParts) {
 		return (
-			<span className="block truncate text-foreground" title={series.yName}>
+			<span className="block truncate text-foreground">
 				{series.yName}
 			</span>
 		);
 	}
 	return (
-		<span className="flex min-w-0 flex-col leading-tight" title={series.yName}>
+		<span className="flex min-w-0 flex-col leading-tight">
 			<span className="truncate text-foreground">{series.nameParts.group}</span>
 			<span className="truncate text-xs text-tertiary-foreground">
 				{series.nameParts.feature}
