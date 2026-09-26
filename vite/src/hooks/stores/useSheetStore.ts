@@ -40,6 +40,7 @@ export type SheetType =
 	| "billing-usage-limit-edit"
 	| "billing-usage-alert-add"
 	| "billing-usage-alert-edit"
+	| "billing-usage-alerts-feature"
 	| "billing-overage-allowed-add"
 	| "billing-overage-allowed-edit"
 	| "billing-control-plan-managed"

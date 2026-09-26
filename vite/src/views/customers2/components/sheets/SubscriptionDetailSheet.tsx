@@ -388,6 +388,7 @@ export function SubscriptionDetailSheet() {
 						billingControls={planBillingControls}
 						featureNameById={featureNameById}
 						slim
+						defaultExpanded
 					/>
 				</SheetSection>
 			)}

@@ -6,7 +6,7 @@ import {
 	toggleFilterValue,
 } from "./FilterCheckboxSubMenu";
 
-const STATUS_OPTIONS: FilterCheckboxOption[] = [
+export const STATUS_OPTIONS: FilterCheckboxOption[] = [
 	"active",
 	"past_due",
 	"canceled",

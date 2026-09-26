@@ -214,6 +214,20 @@ export function hasActiveCustomerFilters(queryStates: QueryStates[0]) {
 	);
 }
 
+export const CLEARED_CUSTOMER_FILTERS: Partial<QueryStates[0]> = {
+	status: [],
+	version: [],
+	none: false,
+	processor: [],
+	interval: [],
+	balanceFeature: "",
+	balanceOp: ">",
+	balanceValue: "",
+	balanceBasis: "usage",
+	joinedFrom: null,
+	joinedTo: null,
+};
+
 export function buildCustomerFilterPayload(queryStates: QueryStates[0]) {
 	const { joinedFrom, joinedTo } = queryStates;
 	const hasJoinedRange = joinedFrom !== null || joinedTo !== null;

@@ -1,4 +1,4 @@
-import { CusProductStatus, formatMsToDate } from "@autumn/shared";
+import { type CusProductStatus, formatMsToDate } from "@autumn/shared";
 import {
 	Tooltip,
 	TooltipContent,
@@ -18,6 +18,7 @@ import {
 	XIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { resolvePlanStatus } from "./resolvePlanStatus";
 
 type StatusConfig = {
 	icon: React.ElementType;
@@ -67,25 +68,6 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
 		iconClassName: "bg-zinc-400 dark:bg-zinc-500",
 	},
 };
-
-function resolveStatus({
-	status,
-	canceled,
-	trialing,
-}: {
-	status?: CusProductStatus;
-	canceled?: boolean;
-	trialing?: boolean;
-}): string {
-	if (status === CusProductStatus.Paused) return "paused";
-	if (status === CusProductStatus.Expired) return "expired";
-	if (status === CusProductStatus.Scheduled) return "scheduled";
-	if (status === CusProductStatus.Pending) return "pending";
-	if (canceled) return "canceling";
-	if (trialing || status === CusProductStatus.Trialing) return "trialing";
-	if (status === CusProductStatus.PastDue) return "past_due";
-	return "active";
-}
 
 function getSubtext({
 	resolvedStatus,
@@ -147,7 +129,7 @@ export function CustomerProductsStatus({
 	nowMs?: number;
 }) {
 	const effectiveNowMs = nowMs ?? Date.now();
-	const resolvedStatus = resolveStatus({ status, canceled, trialing });
+	const resolvedStatus = resolvePlanStatus({ status, canceled, trialing });
 	const config = STATUS_CONFIG[resolvedStatus];
 
 	if (!config) return <div>Unknown</div>;
