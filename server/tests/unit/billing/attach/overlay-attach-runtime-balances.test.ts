@@ -36,6 +36,12 @@ import {
 } from "@/internal/billing/v2/actions/attach/setup/overlayAttachRuntimeBalances.js";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
+// Routing reads ctx.org, so the context needs a real org.
+const attachContext = (): AutumnContext => ({
+	...contexts.create({}),
+	skipCache: false,
+});
+
 describe("attach runtime balance overlay", () => {
 	test("keeps Postgres structure but takes mutable balance state from Redis", () => {
 		const postgresCustomerEntitlement = customerEntitlements.create({
@@ -98,7 +104,7 @@ describe("attach runtime balance overlay", () => {
 		});
 
 		const result = await overlayAttachRuntimeBalances({
-			ctx: { skipCache: false } as AutumnContext,
+			ctx: attachContext(),
 			fullCustomer: postgresFullCustomer,
 		});
 
@@ -140,7 +146,7 @@ describe("attach runtime balance overlay", () => {
 			],
 		});
 		const overlaidCustomer = await overlayAttachRuntimeBalances({
-			ctx: { skipCache: false } as AutumnContext,
+			ctx: attachContext(),
 			fullCustomer: customers.create({ customerProducts: [sourceProduct] }),
 		});
 
@@ -201,7 +207,7 @@ test("with the balance worker on, the Postgres customer is used as-is", async ()
 		const fullCustomer = customers.create({});
 		const calledBefore = cachedSubjectCalls.length;
 		const result = await overlayAttachRuntimeBalances({
-			ctx: { skipCache: false } as AutumnContext,
+			ctx: attachContext(),
 			fullCustomer,
 		});
 		expect(result).toBe(fullCustomer);
