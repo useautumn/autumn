@@ -8,7 +8,7 @@ import {
 	toggleFilterValue,
 } from "./FilterCheckboxSubMenu";
 
-const PROCESSOR_OPTIONS: FilterCheckboxOption[] = [
+export const PROCESSOR_OPTIONS: FilterCheckboxOption[] = [
 	{
 		value: "stripe",
 		label: "Stripe",
