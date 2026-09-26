@@ -1,4 +1,4 @@
-import { Button, FormLabel } from "@autumn/ui";
+import { Button } from "@autumn/ui";
 import axios from "axios";
 import { ImageIcon } from "lucide-react";
 import type React from "react";
@@ -8,6 +8,7 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { SettingsListRow } from "@/views/settings/components/SettingsListRow";
 import { FetchLogoPopover } from "./FetchLogoPopover";
 
 const MAX_SIZE_MB = 10;
@@ -136,58 +137,59 @@ const OrgLogoUploader: React.FC = () => {
 		return () => document.removeEventListener("paste", handlePaste);
 	}, [uploadFile, uploading]);
 
-	return (
-		<div className="flex flex-col gap-1">
-			<FormLabel>
-				<span className="text-muted-foreground">Logo</span>
-			</FormLabel>
-			<div className="flex items-center gap-3">
-				<input
-					ref={inputRef}
-					type="file"
-					accept="image/*"
-					className="hidden"
-					onChange={handleUploading}
-				/>
-				{org.logo ? (
-					<img
-						src={org.logo}
-						alt="Organization logo"
-						className="w-10 h-10 rounded-md object-cover border border-border"
-					/>
-				) : (
-					<div className="w-10 h-10 rounded-md flex items-center justify-center border border-border border-dashed text-subtle">
-						<ImageIcon className="size-4" />
-					</div>
-				)}
-				<div className="flex items-center gap-2">
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={handleUploadClick}
-						isLoading={uploading}
-					>
-						Upload
-					</Button>
-					<FetchLogoPopover onFetched={saveLogoUrl} disabled={uploading} />
-					{org.logo && (
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={handleRemove}
-							isLoading={removing}
-							className="text-destructive"
-						>
-							Remove
-						</Button>
-					)}
-				</div>
-				<span className="text-xs text-subtle">
-					1:1, up to {MAX_SIZE_MB}MB · or paste an image
-				</span>
-			</div>
-			{error && <span className="text-xs text-destructive">{error}</span>}
+	const logoPreview = org.logo ? (
+		<img
+			src={org.logo}
+			alt="Organization logo"
+			className="size-9 shrink-0 rounded-md border object-cover"
+		/>
+	) : (
+		<div className="flex size-9 shrink-0 items-center justify-center rounded-md border border-dashed text-subtle">
+			<ImageIcon className="size-4" />
 		</div>
+	);
+
+	return (
+		<SettingsListRow
+			title="Logo"
+			leading={logoPreview}
+			description={
+				error ? (
+					<span className="text-destructive">{error}</span>
+				) : (
+					`1:1, up to ${MAX_SIZE_MB}MB · or paste an image`
+				)
+			}
+		>
+			<input
+				ref={inputRef}
+				type="file"
+				accept="image/*"
+				className="hidden"
+				onChange={handleUploading}
+			/>
+			<div className="flex shrink-0 items-center gap-2">
+				{org.logo && (
+					<Button
+						variant="skeleton"
+						onClick={handleRemove}
+						isLoading={removing}
+						className="text-tertiary-foreground"
+					>
+						Remove
+					</Button>
+				)}
+				<FetchLogoPopover onFetched={saveLogoUrl} disabled={uploading} />
+				<Button
+					variant="secondary"
+					onClick={handleUploadClick}
+					isLoading={uploading}
+					className="w-24"
+				>
+					Upload
+				</Button>
+			</div>
+		</SettingsListRow>
 	);
 };
 

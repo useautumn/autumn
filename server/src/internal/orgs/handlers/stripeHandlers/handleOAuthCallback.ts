@@ -87,7 +87,7 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 			redirectUrl = redirect_uri
 				? new URL(redirect_uri)
 				: new URL(
-						`${frontendUrl}${env === AppEnv.Sandbox ? "/sandbox" : ""}/dev?tab=stripe`,
+						`${frontendUrl}${env === AppEnv.Sandbox ? "/sandbox" : ""}/settings?tab=stripe`,
 					);
 		}
 

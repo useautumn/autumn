@@ -88,6 +88,6 @@ export const createStripeCli = ({
 	}
 
 	throw new RecaseError({
-		message: `There is no Stripe account linked to this organization. Please connect it here: https://app.useautumn.com${env === AppEnv.Sandbox ? "/sandbox" : ""}/dev?tab=stripe`,
+		message: `There is no Stripe account linked to this organization. Please connect it here: https://app.useautumn.com${env === AppEnv.Sandbox ? "/sandbox" : ""}/settings?tab=stripe`,
 	});
 };

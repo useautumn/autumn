@@ -1,113 +1,67 @@
 import type { Entity } from "@autumn/shared";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-	IconButton,
-} from "@autumn/ui";
-import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
-import { Check } from "lucide-react";
-import { useState } from "react";
+import { SearchableSelect } from "@autumn/ui";
+import { CheckIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsFilterState } from "../hooks/useAnalyticsFilterState";
 
-export const SelectEntityDropdown = () => {
-	const [open, setOpen] = useState(false);
-	const [searchValue, setSearchValue] = useState("");
+const ALL_ENTITIES = "__all_entities__";
+const SEARCH_THRESHOLD = 5;
 
+type EntityOption = { id: string; name: string };
+
+export const SelectEntityDropdown = ({
+	renderTrigger,
+}: {
+	/** Draws the button that opens the picker, given the chosen entity's name. */
+	renderTrigger: (label: string) => ReactNode;
+}) => {
 	const { filterStates, setFilterStates } = useAnalyticsFilterState();
-
 	const { customer } = useAnalyticsContext();
-
 	const entities: Entity[] = customer?.entities || [];
 
 	if (!customer || entities.length === 0) {
 		return null;
 	}
 
-	const currentEntityId = filterStates.entity_id ?? "";
-
-	const filteredEntities = entities.filter((entity) => {
-		const label = entity.name || entity.id || "";
-		return label.toLowerCase().includes(searchValue.toLowerCase());
-	});
-
-	const handleSelect = ({ entityId }: { entityId: string | null }) => {
-		setFilterStates({ entity_id: entityId });
-		setOpen(false);
-	};
-
-	const currentEntity = entities.find((e) => e.id === currentEntityId);
-	const displayLabel = currentEntity
-		? `Entity: ${currentEntity.name || currentEntity.id}`
-		: "Entity";
+	const options: EntityOption[] = [
+		{ id: ALL_ENTITIES, name: `All entities (${entities.length})` },
+		...entities.map((entity) => ({
+			id: entity.id,
+			name: entity.name || entity.id,
+		})),
+	];
 
 	return (
-		<DropdownMenu open={open} onOpenChange={setOpen}>
-			<DropdownMenuTrigger asChild>
-				<IconButton
-					variant="secondary"
-					size="default"
-					icon={<CaretDownIcon size={12} weight="bold" />}
-					iconOrientation="right"
-					className={cn(open && "btn-secondary-active")}
-				>
-					{displayLabel}
-				</IconButton>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="w-[200px]">
-				{entities.length > 5 && (
-					<div className="flex items-center gap-2 px-2 py-1.5 border-b border-border">
-						<MagnifyingGlassIcon className="size-4 text-subtle" />
-						<input
-							type="text"
-							placeholder="Search entities..."
-							value={searchValue}
-							onChange={(e) => setSearchValue(e.target.value)}
-							onKeyDown={(e) => e.stopPropagation()}
-							className="flex-1 bg-transparent text-sm outline-none placeholder:text-subtle"
-						/>
-					</div>
-				)}
-
-				<div className="max-h-[300px] overflow-y-auto pt-1">
-					<DropdownMenuItem
-						onClick={() => handleSelect({ entityId: null })}
-						className="flex items-center justify-between"
-					>
-						<span className="text-xs">All entities</span>
-						{!currentEntityId && (
-							<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
+		<SearchableSelect<EntityOption>
+			value={filterStates.entity_id ?? ALL_ENTITIES}
+			onValueChange={(value) =>
+				setFilterStates({ entity_id: value === ALL_ENTITIES ? null : value })
+			}
+			options={options}
+			getOptionValue={(option) => option.id}
+			getOptionLabel={(option) => option.name}
+			searchable={entities.length > SEARCH_THRESHOLD}
+			searchPlaceholder="Search entities..."
+			emptyText="No entities found"
+			trigger={renderTrigger(
+				entities.find((entity) => entity.id === filterStates.entity_id)?.name ??
+					filterStates.entity_id ??
+					"All entities",
+			)}
+			contentClassName="min-w-[220px]"
+			renderOption={(option, isSelected) => (
+				<>
+					<span className="flex-1 truncate min-w-0">{option.name}</span>
+					<CheckIcon
+						className={cn(
+							"size-4 shrink-0 transition-opacity",
+							isSelected ? "opacity-100" : "opacity-0",
 						)}
-					</DropdownMenuItem>
-
-					{entities.length > 0 && <DropdownMenuSeparator />}
-
-					{filteredEntities.length === 0 && entities.length > 0 && (
-						<div className="py-4 text-center text-sm text-subtle">
-							No entities found
-						</div>
-					)}
-
-					{filteredEntities.map((entity) => (
-						<DropdownMenuItem
-							key={entity.id}
-							onClick={() => handleSelect({ entityId: entity.id })}
-							className="flex items-center justify-between"
-						>
-							<span className="text-xs font-mono truncate max-w-[150px]">
-								{entity.name || entity.id}
-							</span>
-							{currentEntityId === entity.id && (
-								<Check className="ml-2 h-3 w-3 text-tertiary-foreground shrink-0" />
-							)}
-						</DropdownMenuItem>
-					))}
-				</div>
-			</DropdownMenuContent>
-		</DropdownMenu>
+					/>
+				</>
+			)}
+		/>
 	);
 };
