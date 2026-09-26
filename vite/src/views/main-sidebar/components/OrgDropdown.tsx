@@ -82,9 +82,14 @@ export const OrgDropdown = () => {
 
 	if (isLoading)
 		return (
-			<div className="h-7 w-32 px-4 flex items-center gap-2">
-				<Skeleton className="min-w-5 h-5" />
-				<Skeleton className="w-32 h-5" />
+			<div
+				className={cn(
+					"flex h-8 items-center gap-2",
+					expanded ? "px-1.5" : "justify-center",
+				)}
+			>
+				<Skeleton className="size-5 shrink-0 rounded-md" />
+				{expanded && <Skeleton className="h-4 w-28" />}
 			</div>
 		);
 

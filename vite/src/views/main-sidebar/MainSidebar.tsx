@@ -7,15 +7,11 @@ import {
 	Layers,
 	Package,
 	PanelLeft,
-	RefreshCw,
-	Settings2,
-	Triangle,
 	Users,
 	Webhook,
+	Workflow,
 } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
-import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
@@ -28,59 +24,21 @@ import SidebarBottom from "./SidebarBottom";
 import { SidebarContext } from "./SidebarContext";
 import { SidebarRail } from "./SidebarRail";
 import { SidebarSearchButton } from "./SidebarSearchButton";
-import { StripeLineIcon } from "./StripeLineIcon";
 import { SIDEBAR_ICON_STROKE as ICON_STROKE } from "./sidebarRowClass";
 
 /** Exported so the command bar can offer the same tabs without a second list. */
-export const buildDevSubTabs = ({
-	flags,
-}: {
-	flags: {
-		webhooks: boolean;
-		vercel: boolean;
-		revenuecat: boolean;
-	};
-}) => {
-	return [
-		{
-			title: "API keys",
-			value: "api_keys",
-			icon: <KeyRound strokeWidth={ICON_STROKE} />,
-		},
-		{
-			title: "Stripe",
-			value: "stripe",
-			icon: <StripeLineIcon />,
-		},
-		...(flags.vercel
-			? [
-					{
-						title: "Vercel",
-						value: "vercel",
-						icon: <Triangle strokeWidth={ICON_STROKE} />,
-					},
-				]
-			: []),
-		...(flags.revenuecat
-			? [
-					{
-						title: "RevenueCat",
-						value: "revenuecat",
-						icon: <RevenueCatIcon size={64} />,
-					},
-				]
-			: []),
-		...(flags.webhooks
-			? [
-					{
-						title: "Webhooks",
-						value: "webhooks",
-						icon: <Webhook strokeWidth={ICON_STROKE} />,
-					},
-				]
-			: []),
-	];
-};
+export const DEV_SUB_TABS = [
+	{
+		title: "API keys",
+		value: "api_keys",
+		icon: <KeyRound strokeWidth={ICON_STROKE} />,
+	},
+	{
+		title: "Webhooks",
+		value: "webhooks",
+		icon: <Webhook strokeWidth={ICON_STROKE} />,
+	},
+];
 
 export const MainSidebar = ({
 	onNavigate,
@@ -89,10 +47,8 @@ export const MainSidebar = ({
 } = {}) => {
 	const env = useEnv();
 
-	const flags = useAutumnFlags();
 	const { has } = useScopes();
 	const canSeeDev = has(Scopes.ApiKeys.Read);
-	const canSeeMigrations = has(Scopes.Migrations.Read);
 
 	const [storedExpanded, setExpanded] = useLocalStorage<boolean>(
 		"sidebar.expanded",
@@ -106,15 +62,6 @@ export const MainSidebar = ({
 	useHotkeys(["meta+b", "ctrl+b"], () => {
 		setExpanded((prev) => !prev);
 	});
-
-	const settingsButton = (
-		<NavButton
-			value="settings"
-			icon={<Settings2 strokeWidth={ICON_STROKE} />}
-			title="Settings"
-			env={env}
-		/>
-	);
 
 	return (
 		<SidebarContext.Provider value={{ expanded, setExpanded, onNavigate }}>
@@ -181,22 +128,20 @@ export const MainSidebar = ({
 							<NavButton
 								value="customers"
 								icon={<Users strokeWidth={ICON_STROKE} />}
-								title="All customers"
+								title="Customers"
 								env={env}
 							/>
-							{canSeeMigrations && (
-								<NavButton
-									value="migrations"
-									icon={<RefreshCw strokeWidth={ICON_STROKE} />}
-									title="Migrations"
-									badge={
-										<span className="ml-auto text-[10px] font-medium leading-3 tracking-[0.04em] text-[#8A8A8A] dark:text-[#7A7A7A]">
-											BETA
-										</span>
-									}
-									env={env}
-								/>
-							)}
+							<NavButton
+								value="migrations"
+								icon={<Workflow strokeWidth={ICON_STROKE} />}
+								title="Migrations"
+								badge={
+									<span className="ml-auto text-[10px] font-medium leading-3 tracking-[0.04em] text-[#8A8A8A] dark:text-[#7A7A7A]">
+										BETA
+									</span>
+								}
+								env={env}
+							/>
 							<NavButton
 								value="analytics"
 								icon={<ChartColumn strokeWidth={ICON_STROKE} />}
@@ -204,9 +149,9 @@ export const MainSidebar = ({
 								env={env}
 							/>
 						</NavSection>
-						{canSeeDev ? (
-							<NavSection title="Developers">
-								{buildDevSubTabs({ flags }).map((devTab) => (
+						{canSeeDev && (
+							<NavSection title="Developer">
+								{DEV_SUB_TABS.map((devTab) => (
 									<NavButton
 										key={devTab.value}
 										value="dev"
@@ -217,10 +162,7 @@ export const MainSidebar = ({
 										env={env}
 									/>
 								))}
-								{settingsButton}
 							</NavSection>
-						) : (
-							<NavSection>{settingsButton}</NavSection>
 						)}
 					</nav>
 				</div>

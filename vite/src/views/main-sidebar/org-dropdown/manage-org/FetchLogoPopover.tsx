@@ -71,12 +71,12 @@ export const FetchLogoPopover = ({
 	return (
 		<Popover open={open} onOpenChange={handleOpenChange}>
 			<PopoverTrigger asChild>
-				<Button variant="secondary" size="sm" disabled={disabled}>
+				<Button variant="secondary" disabled={disabled}>
 					<GlobeIcon className="size-3" />
 					Fetch from URL
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent align="start" className="w-72">
+			<PopoverContent align="end" className="w-72">
 				<form onSubmit={handleFetch} className="flex flex-col gap-3 text-sm">
 					<p className="text-tertiary-foreground">
 						Pull the logo from your website

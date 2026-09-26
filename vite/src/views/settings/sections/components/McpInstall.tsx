@@ -1,14 +1,5 @@
-import {
-	Button,
-	Card,
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@autumn/ui";
+import { Button, CopyTextButton } from "@autumn/ui";
 import { useState } from "react";
-import { CopyTextButton } from "@autumn/ui";
 import {
 	CodeGroup,
 	CodeGroupCode,
@@ -17,6 +8,12 @@ import {
 	CodeGroupList,
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
+import { cn } from "@/lib/utils";
+import { sidebarRowClass } from "@/views/main-sidebar/sidebarRowClass";
+import {
+	SETTINGS_LIST_CLASS,
+	SettingsGroup,
+} from "../../components/SettingsGroup";
 
 const MCP_NAME = "autumn";
 const MCP_URL = "https://mcp.useautumn.com/mcp";
@@ -92,7 +89,7 @@ const clients: Client[] = [
 ];
 
 const CommandBar = ({ text }: { text: string }) => (
-	<div className="flex items-center gap-2 rounded-lg border bg-interactive-secondary py-1 pr-1 pl-3">
+	<div className="flex items-center gap-2 rounded-lg border bg-background py-1 pr-1 pl-3">
 		<code className="flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs text-secondary-foreground">
 			{text}
 		</code>
@@ -119,34 +116,37 @@ export const McpInstall = () => {
 	const client = clients.find((item) => item.id === activeId) ?? clients[0];
 
 	return (
-		<div className="flex flex-col gap-3 pb-6">
-			<div className="flex flex-col gap-0.5">
-				<span className="text-sm font-medium text-foreground">
-					Install in your editor
-				</span>
-				<span className="text-xs text-tertiary-foreground">
-					Connect Autumn's MCP tools to your AI client. Sign-in happens in your
-					editor — no API key needed.
-				</span>
-			</div>
+		<SettingsGroup
+			title="Use in your editor"
+			description="Add Autumn's MCP server to your AI client. You sign in from the editor, no API key needed."
+		>
+			<div className={SETTINGS_LIST_CLASS}>
+				<div role="tablist" className="flex flex-wrap gap-0.5 px-2 py-1.5">
+					{clients.map((item) => (
+						<button
+							key={item.id}
+							type="button"
+							role="tab"
+							aria-selected={item.id === activeId}
+							onClick={() => setActiveId(item.id)}
+							className={cn(
+								sidebarRowClass({ isActive: item.id === activeId }),
+								"h-[26px] w-auto font-medium text-xs",
+							)}
+						>
+							{item.label}
+						</button>
+					))}
+				</div>
 
-			<Card className="gap-3 p-4">
-				<div className="flex items-center justify-between gap-2">
-					<Select value={activeId} onValueChange={setActiveId}>
-						<SelectTrigger className="h-7 w-48">
-							<SelectValue>{client.label}</SelectValue>
-						</SelectTrigger>
-						<SelectContent>
-							{clients.map((item) => (
-								<SelectItem key={item.id} value={item.id}>
-									{item.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-
+				<div className="flex flex-col gap-2.5 px-4 py-3.5">
+					{client.hint && (
+						<span className="text-tertiary-foreground text-xs">
+							{client.hint}
+						</span>
+					)}
 					{client.install && (
-						<Button variant="primary" size="default" asChild>
+						<Button variant="secondary" className="w-fit" asChild>
 							<a
 								href={client.install.href}
 								target="_blank"
@@ -156,18 +156,10 @@ export const McpInstall = () => {
 							</a>
 						</Button>
 					)}
-				</div>
-
-				<div className="flex flex-col gap-2.5">
-					{client.hint && (
-						<span className="text-xs text-tertiary-foreground">
-							{client.hint}
-						</span>
-					)}
 					{client.command && <CommandBar text={client.command} />}
 					{client.manual && <ManualConfigBlock config={client.manual} />}
 				</div>
-			</Card>
-		</div>
+			</div>
+		</SettingsGroup>
 	);
 };

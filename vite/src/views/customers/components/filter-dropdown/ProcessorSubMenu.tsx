@@ -1,6 +1,6 @@
 import { CoinVerticalIcon, TriangleIcon } from "@phosphor-icons/react";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
-import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
 import {
 	type FilterCheckboxOption,
@@ -27,14 +27,15 @@ const PROCESSOR_OPTIONS: FilterCheckboxOption[] = [
 ];
 
 export const ProcessorSubMenu = ({ onChange }: { onChange?: () => void }) => {
-	const flags = useAutumnFlags();
+	const { org } = useOrg();
+	const processorConfigs = org?.processor_configs;
 	const { queryStates, setFilters } = useCustomerFilters();
 	const selected = queryStates.processor || [];
 
 	const visibleOptions = PROCESSOR_OPTIONS.filter(({ value }) => {
 		if (value === "stripe") return true;
-		if (value === "revenuecat") return flags.revenuecat;
-		if (value === "vercel") return flags.vercel;
+		if (value === "revenuecat") return !!processorConfigs?.revenuecat.connected;
+		if (value === "vercel") return !!processorConfigs?.vercel.connected;
 		return false;
 	});
 

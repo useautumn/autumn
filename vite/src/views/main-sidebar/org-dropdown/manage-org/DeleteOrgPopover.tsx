@@ -71,11 +71,11 @@ export const DeleteOrgPopover = () => {
 	return (
 		<Popover>
 			<PopoverTrigger asChild>
-				<Button variant="destructive" className="w-fit">
-					Delete Organization
+				<Button variant="destructive" className="w-24">
+					Delete
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent align="start">
+			<PopoverContent align="end">
 				<div className="flex flex-col gap-4 text-sm w-fit">
 					<p className="text-tertiary-foreground">
 						Are you sure you want to delete this organization?

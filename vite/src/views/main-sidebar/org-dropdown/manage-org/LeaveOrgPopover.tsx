@@ -62,11 +62,11 @@ export const LeaveOrgPopover = () => {
 	return (
 		<Popover>
 			<PopoverTrigger asChild>
-				<Button variant="secondary" className="w-fit">
-					Leave Organization
+				<Button variant="secondary" className="w-24">
+					Leave
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent align="start">
+			<PopoverContent align="end">
 				<div className="flex flex-col gap-4 text-sm w-fit">
 					<p className="text-tertiary-foreground">
 						Are you sure you want to leave this organization?

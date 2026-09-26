@@ -76,7 +76,7 @@ const WebhookCodeBlock = ({
 					copyText={tab.text}
 					className="p-2 border-t-0 overflow-x-auto"
 				>
-					<CodeGroupCodeSolidColour className="text-primary break-all">
+					<CodeGroupCodeSolidColour className="text-primary text-sm whitespace-pre-wrap break-all">
 						{tab.text}
 					</CodeGroupCodeSolidColour>
 				</CodeGroupContent>

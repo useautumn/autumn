@@ -1,27 +1,34 @@
 "use client";
 
-import { TriangleIcon, WebhooksLogoIcon } from "@phosphor-icons/react";
+import { WebhooksLogoIcon } from "@phosphor-icons/react";
 import "svix-react/style.css";
 import { PageContainer, PageHeader } from "@autumn/ui";
+import { Navigate, useLocation } from "react-router";
 import { AppPortal } from "svix-react";
-import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import LoadingScreen from "../general/LoadingScreen";
 import { ApiKeysPage } from "./api-keys/ApiKeysPage";
-import { ConfigureRevenueCat } from "./configure-revenuecat/ConfigureRevenueCat";
-import { ConfigureStripe } from "./configure-stripe/ConfigureStripe";
-import { ConfigureVercel } from "./configure-vercel/ConfigureVercel";
 import { PublishableKeySection } from "./publishable-key";
 
+const INTEGRATION_TABS = ["stripe", "vercel", "revenuecat"];
+
 export default function DevScreen() {
-	const { apiKeys, svixDashboardUrl, isLoading, error } = useDevQuery();
+	const location = useLocation();
+	const { svixDashboardUrl, isLoading } = useDevQuery();
 	const { queryStates } = useAppQueryStates({ defaultTab: "api_keys" });
 
 	const tab = queryStates.tab;
-	const { pkey, webhooks, vercel } = useAutumnFlags();
+	const { pkey, webhooks } = useAutumnFlags();
+
+	// Integrations moved to settings; old links and OAuth callbacks still land here.
+	const requestedTab = new URLSearchParams(location.search).get("tab");
+	if (requestedTab && INTEGRATION_TABS.includes(requestedTab)) {
+		const settingsPath = location.pathname.replace(/\/dev\/?$/, "/settings");
+		return <Navigate to={`${settingsPath}${location.search}`} replace />;
+	}
 
 	if (isLoading) return <LoadingScreen />;
 
@@ -31,15 +38,6 @@ export default function DevScreen() {
 				<div className="flex flex-col gap-16">
 					<ApiKeysPage />
 					{pkey && <PublishableKeySection />}
-				</div>
-			)}
-			{tab === "stripe" && (
-				<div className="flex flex-col">
-					<PageHeader
-						icon={<StripeIcon size={16} className="text-subtle" />}
-						title="Stripe"
-					/>
-					<ConfigureStripe />
 				</div>
 			)}
 			{tab === "webhooks" && webhooks && svixDashboardUrl && (
@@ -57,18 +55,6 @@ export default function DevScreen() {
 					<ConfigureWebhookSection dashboardUrl={svixDashboardUrl} />
 				</div>
 			)}
-			{tab === "vercel" && vercel && (
-				<div className="flex flex-col">
-					<PageHeader
-						icon={
-							<TriangleIcon size={16} weight="fill" className="text-subtle" />
-						}
-						title="Vercel"
-					/>
-					<ConfigureVercel />
-				</div>
-			)}
-			{tab === "revenuecat" && <ConfigureRevenueCat />}
 		</PageContainer>
 	);
 }

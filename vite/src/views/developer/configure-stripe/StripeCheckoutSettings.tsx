@@ -1,13 +1,4 @@
-import {
-	Button,
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-	Input,
-} from "@autumn/ui";
+import { Button, Input } from "@autumn/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -17,6 +8,10 @@ import { cn } from "@/lib/utils";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import {
+	SETTINGS_LIST_CLASS,
+	SettingsGroup,
+} from "@/views/settings/components/SettingsGroup";
 
 const isValidUrl = (url: string) =>
 	!url || url.startsWith("http://") || url.startsWith("https://");
@@ -50,60 +45,64 @@ export const StripeCheckoutSettings = () => {
 	});
 
 	return (
-		<Card className="bg-interactive-secondary shadow-none">
-			<CardHeader>
-				<CardTitle className="text-base">Checkout settings</CardTitle>
-				<CardDescription>
-					Defaults applied to every checkout session. Both settings can be
-					overridden through the API.
-				</CardDescription>
-			</CardHeader>
-
-			<CardContent className="flex flex-col gap-4">
-				<div className="flex flex-col gap-1.5">
-					<span className="text-foreground text-sm font-medium">
-						Success URL
-					</span>
-					<span className="text-sm text-tertiary-foreground">
-						The URL users are redirected to after a successful checkout session.
-					</span>
+		<SettingsGroup
+			title="Checkout defaults"
+			description="Applied to every checkout session. Both can be overridden through the API."
+			trailing={
+				isDirty && (
+					<Button
+						size="sm"
+						disabled={!canSave}
+						onClick={() => save.mutate()}
+						isLoading={save.isPending}
+					>
+						Save
+					</Button>
+				)
+			}
+		>
+			<div className={SETTINGS_LIST_CLASS}>
+				<CheckoutSettingRow
+					title="Success URL"
+					description="Where customers land after paying"
+				>
 					<Input
 						value={successUrl}
 						onChange={(e) => setSuccessUrl(e.target.value)}
 						placeholder="eg. https://useautumn.com"
-						className={cn("mt-1 !bg-background", urlError && "border-red-500")}
+						className={cn("!bg-background", urlError && "border-red-500")}
 					/>
-					{urlError && <p className="text-red-500 text-sm">{urlError}</p>}
-				</div>
-
-				<div className="flex flex-col gap-1.5">
-					<span className="text-foreground text-sm font-medium">
-						Default currency
-					</span>
-					<span className="text-sm text-tertiary-foreground">
-						The currency your prices are created in. Shared between sandbox and
-						production.
-					</span>
-					<div className="mt-1">
-						<CurrencySelect
-							className="!bg-background"
-							defaultCurrency={currency.toUpperCase()}
-							setDefaultCurrency={setCurrency}
-						/>
-					</div>
-				</div>
-			</CardContent>
-
-			<CardFooter className="justify-end">
-				<Button
-					className="w-36"
-					disabled={!canSave}
-					onClick={() => save.mutate()}
-					isLoading={save.isPending}
+					{urlError && <p className="text-red-500 text-xs">{urlError}</p>}
+				</CheckoutSettingRow>
+				<CheckoutSettingRow
+					title="Default currency"
+					description="Shared between sandbox and production"
 				>
-					Save
-				</Button>
-			</CardFooter>
-		</Card>
+					<CurrencySelect
+						className="!bg-background"
+						defaultCurrency={currency.toUpperCase()}
+						setDefaultCurrency={setCurrency}
+					/>
+				</CheckoutSettingRow>
+			</div>
+		</SettingsGroup>
 	);
 };
+
+const CheckoutSettingRow = ({
+	title,
+	description,
+	children,
+}: {
+	title: string;
+	description: string;
+	children: React.ReactNode;
+}) => (
+	<div className="flex items-center gap-6 px-4 py-3.5">
+		<div className="flex min-w-0 flex-1 flex-col gap-0.5">
+			<span className="font-medium text-foreground text-sm">{title}</span>
+			<span className="text-tertiary-foreground text-xs">{description}</span>
+		</div>
+		<div className="flex w-[280px] shrink-0 flex-col gap-1">{children}</div>
+	</div>
+);
