@@ -30,10 +30,7 @@ export const periodToEpoch = ({
 	).getTime();
 };
 
-/**
- * Convert event periods from pipe strings to epoch timestamps.
- * @returns The current time as an epoch timestamp for filtering.
- */
+/** Convert event periods from pipe strings to epoch timestamps, in place. */
 export function convertPeriodsToEpoch({
 	events,
 	timezone,
@@ -42,8 +39,7 @@ export function convertPeriodsToEpoch({
 	events: Array<Record<string, string | number>>;
 	timezone?: string;
 	binSize?: string;
-}): number {
-	const currentTime = new UTCDate().getTime();
+}): void {
 	for (const event of events) {
 		event.period = periodToEpoch({
 			period: event.period as string,
@@ -51,7 +47,6 @@ export function convertPeriodsToEpoch({
 			binSize,
 		});
 	}
-	return currentTime;
 }
 
 /**
