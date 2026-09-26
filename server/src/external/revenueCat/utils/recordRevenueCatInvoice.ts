@@ -71,6 +71,7 @@ export const recordRevenueCatInvoice = async ({
 		hosted_invoice_url: null,
 		total,
 		amount_paid: total,
+		paid_at: createdAt,
 		refunded_amount: 0,
 		currency,
 		discounts: [],

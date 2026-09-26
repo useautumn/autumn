@@ -26,6 +26,7 @@ import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { resolvedProductIdsForColumn } from "./repos/utils/resolvedProductIdsSql.js";
+import { stripeInvoiceToPaidAt } from "./utils/stripeInvoiceToPaidAt.js";
 
 export const processInvoice = ({
 	invoice,
@@ -389,6 +390,7 @@ export class InvoiceService {
 			// Stripe stuff
 			total: atmnTotal,
 			amount_paid: atmnAmountPaid,
+			paid_at: stripeInvoiceToPaidAt({ stripeInvoice }),
 			refunded_amount: 0,
 			currency: stripeInvoice.currency,
 			discounts: getInvoiceDiscounts({
@@ -484,6 +486,7 @@ export class InvoiceService {
 					discounts: invoice.discounts,
 					total: invoice.total,
 					amount_paid: invoice.amount_paid,
+					paid_at: sql`COALESCE(excluded.paid_at, ${invoices.paid_at})`,
 					product_ids: invoice.product_ids?.length
 						? sql`CASE
 							WHEN ${invoices.product_ids} IS NULL OR cardinality(${invoices.product_ids}) = 0
