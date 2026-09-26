@@ -1,6 +1,7 @@
 import {
 	type BillingControlKey,
 	type CustomerBillingControls,
+	type DbSpendLimit,
 	type DbUsageAlert,
 	type DbUsageLimit,
 	type FullCusProduct,
@@ -49,11 +50,13 @@ const resolveByIdentity = ({
 	ownItems,
 	customerItems,
 	planProducts,
+	normalizeForCompare,
 }: {
 	key: BillingControlKey;
 	ownItems: BillingControlItem[];
 	customerItems: BillingControlItem[];
 	planProducts: FullCusProduct[];
+	normalizeForCompare?: (control: BillingControlItem) => BillingControlItem;
 }): ResolvedEntry[] => {
 	const entries: ResolvedEntry[] = ownItems.map((item, index) => ({
 		item,
@@ -89,6 +92,7 @@ const resolveByIdentity = ({
 			customerProducts: planProducts,
 			controlKey: key,
 			matches: (control) => identityOf({ key, control }) === identity,
+			normalizeForCompare,
 		});
 		if (!resolved) continue;
 		entries.push({
@@ -143,11 +147,14 @@ export const resolveDisplayedBillingControls = ({
 	ownControls,
 	customerControls,
 	customerProducts,
+	normalizeSpendLimitForCompare,
 }: {
 	ownControls: CustomerBillingControls;
 	/** Set only for an entity: the customer's own controls it inherits. */
 	customerControls?: CustomerBillingControls;
 	customerProducts: FullCusProduct[];
+	/** Resolves percentage caps to units so plans compare like the server does. */
+	normalizeSpendLimitForCompare?: (control: DbSpendLimit) => DbSpendLimit;
 }): DisplayedBillingControls => {
 	const isEntity = !!customerControls;
 	const planProducts = getPlanBillingControlProducts({ customerProducts });
@@ -164,6 +171,9 @@ export const resolveDisplayedBillingControls = ({
 			ownItems: ownControls.spend_limits ?? [],
 			customerItems: customerControls?.spend_limits ?? [],
 			planProducts,
+			normalizeForCompare: normalizeSpendLimitForCompare as
+				| ((control: BillingControlItem) => BillingControlItem)
+				| undefined,
 		}),
 		usage_limits: resolveByIdentity({
 			key: "usage_limits",

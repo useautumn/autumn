@@ -7,6 +7,7 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import { useMemo } from "react";
+import { buildNormalizeSpendLimitForDisplay } from "@/components/billing-controls/buildNormalizeSpendLimitForDisplay";
 import { resolveDisplayedBillingControls } from "@/components/billing-controls/resolveDisplayedBillingControls";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../customer/CustomerContext";
@@ -48,6 +49,12 @@ export const useDisplayedBillingControls = () => {
 					!customerProduct.internal_entity_id ||
 					customerProduct.internal_entity_id === selectedEntity?.internal_id,
 			),
+			normalizeSpendLimitForCompare: fullCustomer
+				? buildNormalizeSpendLimitForDisplay({
+						fullCustomer,
+						entity: selectedEntity ?? undefined,
+					})
+				: undefined,
 		});
 
 		const usageLimitOrigins = resolved.origins.usage_limits ?? [];

@@ -255,10 +255,14 @@ export function CustomerListTable({
 					</div>
 				</div>
 				{!hasRows && hasActiveFiltersOrSearch && !isFetchingUncached ? (
-					<EmptyState
-						type="no-customers-found"
-						actionButton={<CustomerListCreateButton />}
-					/>
+					<>
+						<EmptyState
+							type="no-customers-found"
+							actionButton={<CustomerListCreateButton />}
+						/>
+						{/* Keeps page size and back-navigation reachable when a page comes back empty. */}
+						<CustomerListPaginationFooter />
+					</>
 				) : (
 					<Table.Container>
 						<Table.VirtualizedContent footer={<CustomerListPaginationFooter />}>
