@@ -149,6 +149,44 @@ describe("applyBillingPlanToSubjects", () => {
 		]);
 	});
 
+	test("a customer product inserted without internal_entity_id stays in the customer's part", () => {
+		const { internal_entity_id: _absent, ...customerLevelProduct } = productOn({
+			id: "cp_created",
+			internalEntityId: null,
+		});
+		const { projectedStates } = applyBillingPlanToSubjects({
+			command: planOf({
+				entityIds: [],
+				ops: [
+					{ op: "insert", table: "customer", row: createState().customer },
+					{
+						op: "insert",
+						table: "customerProducts",
+						row: customerLevelProduct,
+					},
+					{
+						op: "insert",
+						table: "customerEntitlements",
+						row: {
+							...createCustomerEntitlement({ id: "messages_created" }),
+							customer_product_id: "cp_created",
+						},
+					},
+				],
+			}),
+			customer: null,
+			entityParts: [],
+		});
+
+		const [customerPart] = projectedStates;
+		expect(customerPart?.customerProducts.map(({ id }) => id)).toEqual([
+			"cp_created",
+		]);
+		expect(customerPart?.customerEntitlements.map(({ id }) => id)).toEqual([
+			"messages_created",
+		]);
+	});
+
 	test("an entity the plan creates but does not name gets no part, so its rows are refused", () => {
 		const createsUnnamed = (ops: ApplyBillingPlanCommand["ops"]) =>
 			refusalOf(() =>
