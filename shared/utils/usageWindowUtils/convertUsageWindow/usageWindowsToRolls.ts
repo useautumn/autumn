@@ -1,21 +1,9 @@
-import {
-	findUsageWindowLimitByWindow,
-	type UsageWindow,
-	type UsageWindowLimit,
-} from "@autumn/shared";
-
-export type UsageWindowRoll = {
-	id: string;
-	feature_id: string;
-	internal_entity_id: string | null;
-	filter_key: string | null;
-	/** True when the stored window closed: the count must zero. A roll never
-	 *  writes a count otherwise, so it can't clobber a concurrent deduction. */
-	zero_usage: boolean;
-	window_start_at: number;
-	window_end_at: number;
-	anchor_customer_entitlement_id: string | null;
-};
+import type {
+	UsageWindowLimit,
+	UsageWindowRoll,
+} from "../../../models/cusProductModels/cusEntModels/usageWindowModels.js";
+import type { UsageWindow } from "../../../models/cusProductModels/cusEntModels/usageWindowTable.js";
+import { findUsageWindowLimitByWindow } from "../findUsageWindow/findUsageWindowLimitByWindow.js";
 
 /**
  * Decides, per counter row, whether it needs rolling. A count is only valid
@@ -35,7 +23,7 @@ export type UsageWindowRoll = {
  * limit in v1, so their bounds can't re-derive -- but an expired count must
  * still zero.
  */
-export const computeUsageWindowRolls = ({
+export const usageWindowsToRolls = ({
 	usageWindows,
 	limits,
 	now,

@@ -5,8 +5,9 @@ import { fullSubjectToDueRows } from "../../utils/subjectUtils/fullSubjectToDueR
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
 import { customerEntitlementToResetChanges } from "./customerEntitlementToResetChanges.js";
 import type { ResetCommand } from "./types/resetCommand.js";
+import { usageWindowRollChanges } from "./usageWindowRollChanges.js";
 
-/** Refills every row due by `occurredAt` in one mutation; null when nothing is due, so nothing is written. */
+/** Refills every row due by `occurredAt` and rolls the counters it moves, in one mutation; null when nothing changes. */
 export const computeReset = ({
 	fullSubject,
 	command,
@@ -16,12 +17,16 @@ export const computeReset = ({
 }): SubjectStateMutation | null => {
 	assertCommandSupported({ fullSubject, command });
 	const asOf = command.occurredAt;
-	const dueRows = fullSubjectToDueRows({ fullSubject, asOf });
-	if (dueRows.length === 0) return null;
-
-	const resets = dueRows.map((row) =>
+	const resets = fullSubjectToDueRows({ fullSubject, asOf }).map((row) =>
 		customerEntitlementToResetChanges({ row, command }),
 	);
+	const refilledRows = resets.map((reset) => reset.row);
+	const rollChanges = usageWindowRollChanges({
+		fullSubject,
+		command,
+		refilledRows,
+	});
+	if (resets.length === 0 && rollChanges.length === 0) return null;
 	return {
 		schemaVersion: 1,
 		type: "mutation",
@@ -33,7 +38,7 @@ export const computeReset = ({
 			after: fullSubject.revision + 1,
 		},
 		command,
-		changes: resets.flatMap((reset) => reset.changes),
-		result: { type: "reset", rows: resets.map((reset) => reset.row) },
+		changes: [...resets.flatMap((reset) => reset.changes), ...rollChanges],
+		result: { type: "reset", rows: refilledRows },
 	};
 };
