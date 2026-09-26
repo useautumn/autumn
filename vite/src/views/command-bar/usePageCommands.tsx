@@ -59,12 +59,16 @@ export const usePageCommands = (): PageCommand[] => {
 			icon: <ListChecksIcon className="size-4" />,
 			path: "/onboarding",
 		},
-		{
-			title: "Migrations",
-			section: "Customers",
-			icon: <Workflow className="size-4" />,
-			path: "/migrations",
-		},
+		...(has(Scopes.Migrations.Read)
+			? [
+					{
+						title: "Migrations",
+						section: "Customers",
+						icon: <Workflow className="size-4" />,
+						path: "/migrations",
+					},
+				]
+			: []),
 		{
 			title: "Analytics",
 			section: "Customers",

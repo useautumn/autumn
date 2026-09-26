@@ -19,6 +19,13 @@ const writeCachedScopes = (scopes: string[]) => {
 	} catch {}
 };
 
+/** Call on sign-out so the next user doesn't briefly inherit these scopes. */
+export const clearCachedScopes = () => {
+	try {
+		window.localStorage.removeItem(CACHED_SCOPES_KEY);
+	} catch {}
+};
+
 /**
  * React wrapper around `makeScopeChecker` that reads scopes from the
  * current dashboard session. Scopes are injected onto the session by the

@@ -62,13 +62,6 @@ export const CatalogMappingsTable = ({
 						className={`${SETTINGS_ROW_CLASS} group cursor-pointer`}
 						key={group.base.id}
 						onClick={() => onSelectPlan(group.base.id)}
-						onKeyDown={(event) => {
-							if (event.key === "Enter" || event.key === " ") {
-								event.preventDefault();
-								onSelectPlan(group.base.id);
-							}
-						}}
-						tabIndex={0}
 					>
 						<TableCell className="pl-4">
 							<span className="flex min-w-0 items-center gap-2">
@@ -103,10 +96,17 @@ export const CatalogMappingsTable = ({
 							)}
 						</TableCell>
 						<TableCell>
-							<CaretRightIcon
-								className="size-4 text-tertiary-foreground group-hover:text-foreground"
-								size={14}
-							/>
+							{/* Keyboard access for the row; its click bubbles to the row handler. */}
+							<button
+								aria-label={`Open ${group.base.name} mapping`}
+								className="flex rounded-sm"
+								type="button"
+							>
+								<CaretRightIcon
+									className="size-4 text-tertiary-foreground group-hover:text-foreground"
+									size={14}
+								/>
+							</button>
 						</TableCell>
 					</TableRow>
 				);

@@ -1,5 +1,14 @@
 import { Scopes } from "@autumn/shared";
 import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue,
+} from "@autumn/ui";
+import {
 	ArrowRightLeftIcon,
 	BellIcon,
 	BotIcon,
@@ -188,8 +197,9 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 };
 
 /** Tabs that only render while their feature flag is on. */
-const FLAGGED_TABS: Partial<Record<SettingsTab, "sso">> = {
+const FLAGGED_TABS: Partial<Record<SettingsTab, "sso" | "vercel">> = {
 	sso: "sso",
+	vercel: "vercel",
 };
 
 /** Integrations were previously behind the developer page's scope. */
@@ -226,23 +236,24 @@ export const SettingsView = () => {
 		group.items.some((tab) => tab.id === activeTab),
 	);
 
+	const enabledGroups = SETTINGS_GROUPS.map((group) => ({
+		...group,
+		items: group.items.filter((tab) => isTabEnabled(tab.id)),
+	})).filter((group) => group.items.length > 0);
+
 	return (
 		<div className="flex h-full min-h-0">
 			<nav className="hidden sm:flex w-[232px] shrink-0 flex-col gap-[22px] overflow-y-auto border-r px-3 py-7">
 				<span className="px-2.5 font-semibold text-foreground text-md tracking-tight">
 					Settings
 				</span>
-				{SETTINGS_GROUPS.map((group) => {
-					const enabledItems = group.items.filter((tab) =>
-						isTabEnabled(tab.id),
-					);
-					if (enabledItems.length === 0) return null;
+				{enabledGroups.map((group) => {
 					return (
 						<div key={group.label} className="flex flex-col gap-px">
 							<span className="px-2.5 pb-1.5 font-medium text-[#8A8A8A] text-xs leading-4 dark:text-[#6B6B6B]">
 								{group.label}
 							</span>
-							{enabledItems.map((tab) => (
+							{group.items.map((tab) => (
 								<button
 									key={tab.id}
 									type="button"
@@ -261,6 +272,31 @@ export const SettingsView = () => {
 			</nav>
 			<div className="min-w-0 flex-1 overflow-y-auto px-4 py-8 sm:px-[72px] sm:py-14">
 				<div className="mx-auto max-w-[680px]">
+					<Select
+						value={activeTab}
+						onValueChange={(tab) => handleTabChange(tab as SettingsTab)}
+						items={Object.fromEntries(
+							enabledGroups.flatMap((group) =>
+								group.items.map((tab) => [tab.id, tab.label]),
+							),
+						)}
+					>
+						<SelectTrigger className="mb-6 w-full sm:hidden">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{enabledGroups.map((group) => (
+								<SelectGroup key={group.label}>
+									<SelectLabel>{group.label}</SelectLabel>
+									{group.items.map((tab) => (
+										<SelectItem key={tab.id} value={tab.id}>
+											{tab.label}
+										</SelectItem>
+									))}
+								</SelectGroup>
+							))}
+						</SelectContent>
+					</Select>
 					<SettingsGroupContext.Provider value={activeGroup?.label}>
 						<ActiveSection />
 					</SettingsGroupContext.Provider>

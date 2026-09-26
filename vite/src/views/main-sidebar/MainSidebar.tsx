@@ -49,6 +49,7 @@ export const MainSidebar = ({
 
 	const { has } = useScopes();
 	const canSeeDev = has(Scopes.ApiKeys.Read);
+	const canSeeMigrations = has(Scopes.Migrations.Read);
 
 	const [storedExpanded, setExpanded] = useLocalStorage<boolean>(
 		"sidebar.expanded",
@@ -131,17 +132,19 @@ export const MainSidebar = ({
 								title="Customers"
 								env={env}
 							/>
-							<NavButton
-								value="migrations"
-								icon={<Workflow strokeWidth={ICON_STROKE} />}
-								title="Migrations"
-								badge={
-									<span className="ml-auto text-[10px] font-medium leading-3 tracking-[0.04em] text-[#8A8A8A] dark:text-[#7A7A7A]">
-										BETA
-									</span>
-								}
-								env={env}
-							/>
+							{canSeeMigrations && (
+								<NavButton
+									value="migrations"
+									icon={<Workflow strokeWidth={ICON_STROKE} />}
+									title="Migrations"
+									badge={
+										<span className="ml-auto text-[10px] font-medium leading-3 tracking-[0.04em] text-[#8A8A8A] dark:text-[#7A7A7A]">
+											BETA
+										</span>
+									}
+									env={env}
+								/>
+							)}
 							<NavButton
 								value="analytics"
 								icon={<ChartColumn strokeWidth={ICON_STROKE} />}

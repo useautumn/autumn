@@ -32,16 +32,13 @@ export const ProcessorSubMenu = ({ onChange }: { onChange?: () => void }) => {
 	const { queryStates, setFilters } = useCustomerFilters();
 	const selected = queryStates.processor || [];
 
+	// Selected options stay listed so a disconnected processor's filter can be cleared.
 	const visibleOptions = PROCESSOR_OPTIONS.filter(({ value }) => {
-		if (value === "stripe") return true;
+		if (value === "stripe" || selected.includes(value)) return true;
 		if (value === "revenuecat") return !!processorConfigs?.revenuecat.connected;
 		if (value === "vercel") return !!processorConfigs?.vercel.connected;
 		return false;
 	});
-
-	// Keep it visible while a filter is applied so it can still be cleared.
-	const hasChoice = visibleOptions.length > 1 || selected.length > 0;
-	if (!hasChoice) return null;
 
 	return (
 		<FilterCheckboxSubMenu
