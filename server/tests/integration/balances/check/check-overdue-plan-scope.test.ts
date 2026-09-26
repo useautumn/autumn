@@ -50,7 +50,8 @@ const checkMessages = async ({
 		...(entityId ? { entity_id: entityId } : {}),
 	});
 
-test.concurrent(
+// Serial: each test flips the shared org's block_overdue_entitlements and restores it in `finally`.
+test(
 	"overdue access: custom plan exemption can be added and removed",
 	async () => {
 		const standard = products.base({
@@ -105,7 +106,7 @@ test.concurrent(
 	{ timeout: 120_000 },
 );
 
-test.concurrent(
+test(
 	"overdue access: entity plans keep exemptions isolated",
 	async () => {
 		const standard = products.base({
@@ -164,7 +165,7 @@ test.concurrent(
 	{ timeout: 120_000 },
 );
 
-test.concurrent(
+test(
 	"overdue access: boolean and customized license plans",
 	async () => {
 		const parent = products.base({
@@ -233,12 +234,13 @@ test.concurrent(
 					entityId: entities[1].id,
 				}),
 			).toMatchObject({ allowed: false });
+			// The parent is past due and not exempt, so its flag is blocked (see unit overdue-entitlements.test.ts).
 			expect(
 				await autumn.check<CheckResponseV3>({
 					customer_id: customerId,
 					feature_id: TestFeature.Dashboard,
 				}),
-			).toMatchObject({ allowed: true });
+			).toMatchObject({ allowed: false });
 		} finally {
 			await autumn.patch("/organization/config", {
 				block_overdue_entitlements: ctx.org.config.block_overdue_entitlements,
