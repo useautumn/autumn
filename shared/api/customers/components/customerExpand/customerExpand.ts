@@ -8,6 +8,7 @@ export enum CustomerExpand {
 	Rewards = "rewards",
 	Entities = "entities",
 	Referrals = "referrals",
+	ReferredBy = "referred_by",
 	PaymentMethod = "payment_method",
 	BillingDetails = "billing_details",
 	SubscriptionsPlan = "subscriptions.plan",

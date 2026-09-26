@@ -1,8 +1,8 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { queryRelationshipRedemptions } from "./queryRelationshipRedemptions.js";
 
-/** Find redemptions where the given customer is the referrer */
-export const getRedemptionsByReferrer = async ({
+/** Find redemptions where the given customer is the redeemer */
+export const getRedemptionsByRedeemer = async ({
 	db,
 	internalCustomerId,
 	withRewardProgram = false,
@@ -16,13 +16,13 @@ export const getRedemptionsByReferrer = async ({
 	const data = await queryRelationshipRedemptions({
 		db,
 		internalCustomerId,
-		direction: "referrer",
+		direction: "redeemer",
 		withRewardProgram,
 		limit,
 	});
 
 	return data.map(({ related_customer, ...d }) => ({
 		...d,
-		customer: related_customer,
+		referrer: related_customer,
 	}));
 };
