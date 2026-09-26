@@ -5,6 +5,7 @@ import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect.js";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -58,9 +59,12 @@ test.concurrent(
 			autumnV1.entities.get<ApiEntityV0>(customerId, entities[1].id),
 		]);
 
+		// The balance worker doesn't aggregate entity data onto the customer.
 		await expectCustomerProducts({
 			customer,
-			active: [customerPlan.id, inheritedPlan.id, explicitPlan.id],
+			active: isBalanceWorkerRoute()
+				? [customerPlan.id]
+				: [customerPlan.id, inheritedPlan.id, explicitPlan.id],
 		});
 		await expectCustomerInvoiceCorrect({
 			customer,
