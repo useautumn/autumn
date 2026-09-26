@@ -6,6 +6,7 @@ import {
 	DropdownMenuSeparator,
 } from "@autumn/ui";
 import { useEffect } from "react";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsByPriceIdsQuery } from "@/hooks/queries/useProductsByPriceIdsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
@@ -33,6 +34,7 @@ export function ProductPriceSelector({
 	setReward,
 }: ProductPriceSelectorProps) {
 	const { products } = useProductsQuery();
+	const { features } = useFeaturesQuery();
 
 	const config = reward.discount_config!;
 	const priceIds = config.price_ids ?? [];
@@ -44,6 +46,7 @@ export function ProductPriceSelector({
 
 	const groups = buildStripeProductGroups({
 		products: [...products, ...linkedProductVersions],
+		features,
 	});
 
 	const setPriceIds = (nextPriceIds: string[]) =>

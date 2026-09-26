@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ProductV2 } from "@autumn/shared";
+import type { Feature, ProductV2 } from "@autumn/shared";
 import {
 	buildStripeProductGroups,
 	expandToFullGroups,
@@ -204,8 +204,19 @@ const usagePlan = ({
 		items: [{ price_id: priceId, price: 5, feature_id: featureId }],
 	}) as unknown as ProductV2;
 
-describe("usage prices share a feature-level Stripe product", () => {
-	test("unrelated plans charging the same feature form one group", () => {
+const proWithUsage = {
+	id: "pro",
+	name: "pro",
+	stripe_id: "prod_pro",
+	base_id: null,
+	items: [
+		{ price_id: "pro_base", price: 20 },
+		{ price_id: "pro_usage", price: 5, feature_id: "messages" },
+	],
+} as unknown as ProductV2;
+
+describe("usage prices get their own feature-level group", () => {
+	test("unrelated plans charging the same feature share one feature group", () => {
 		const groups = buildStripeProductGroups({
 			products: [
 				usagePlan({ id: "pro", stripeId: "prod_pro", featureId: "messages" }),
@@ -214,6 +225,7 @@ describe("usage prices share a feature-level Stripe product", () => {
 		});
 
 		expect(groups).toHaveLength(1);
+		expect(groups[0].kind).toBe("feature");
 		expect(groups[0].priceIds.sort()).toEqual([
 			"pro_usage_price",
 			"team_usage_price",
@@ -231,29 +243,33 @@ describe("usage prices share a feature-level Stripe product", () => {
 		expect(groups).toHaveLength(2);
 	});
 
-	test("a fixed price bridges its plan into the feature group", () => {
+	test("a shared feature does not merge plans' base prices", () => {
 		const groups = buildStripeProductGroups({
 			products: [
-				{
-					id: "pro",
-					name: "pro",
-					stripe_id: "prod_pro",
-					base_id: null,
-					items: [
-						{ price_id: "pro_base", price: 20 },
-						{ price_id: "pro_usage", price: 5, feature_id: "messages" },
-					],
-				} as unknown as ProductV2,
+				proWithUsage,
 				usagePlan({ id: "team", stripeId: "prod_team", featureId: "messages" }),
 			],
 		});
 
-		expect(groups).toHaveLength(1);
-		expect(groups[0].priceIds.sort()).toEqual([
-			"pro_base",
-			"pro_usage",
-			"team_usage_price",
+		expect(groups.map(({ kind, priceIds }) => ({ kind, priceIds }))).toEqual([
+			{ kind: "plan", priceIds: ["pro_base"] },
+			{ kind: "feature", priceIds: ["pro_usage", "team_usage_price"] },
 		]);
+	});
+
+	test("a feature group is labelled with the feature name", () => {
+		const groups = buildStripeProductGroups({
+			products: [proWithUsage],
+			features: [{ id: "messages", name: "Messages" } as Feature],
+		});
+
+		expect(groupLabel({ group: groups[1] })).toBe("Messages");
+	});
+
+	test("a feature group falls back to the feature id", () => {
+		const groups = buildStripeProductGroups({ products: [proWithUsage] });
+
+		expect(groupLabel({ group: groups[1] })).toBe("messages");
 	});
 });
 
@@ -283,14 +299,17 @@ describe("groupSuffix wording", () => {
 		expect(groupSuffix({ group })).toBe("+ 1 variant");
 	});
 
-	test("unrelated plans sharing a feature count plans", () => {
+	test("a feature group counts the plans billing it", () => {
 		const [group] = buildStripeProductGroups({
 			products: [
 				usagePlan({ id: "pro", stripeId: "prod_pro", featureId: "messages" }),
 				usagePlan({ id: "team", stripeId: "prod_team", featureId: "messages" }),
 			],
 		});
-		expect(groupSuffix({ group })).toBe("+ 1 plan");
+		expect(groupSuffix({ group })).toBe("usage · 2 plans");
+		expect(sharedProductHint({ group })).toBe(
+			"Discounts messages usage on:\n  • pro\n  • team",
+		);
 	});
 });
 
@@ -313,33 +332,21 @@ describe("after a split", () => {
 	});
 });
 
-describe("groups chained across several Stripe products", () => {
-	test("a plan's fixed price links a variant while its usage price links an unrelated plan", () => {
+describe("a plan with variants and a shared feature", () => {
+	test("the variant family and the feature usage are separate options", () => {
 		const groups = buildStripeProductGroups({
 			products: [
-				{
-					id: "pro",
-					name: "pro",
-					stripe_id: "prod_pro",
-					base_id: null,
-					items: [
-						{ price_id: "pro_base", price: 20 },
-						{ price_id: "pro_usage", price: 5, feature_id: "messages" },
-					],
-				} as unknown as ProductV2,
+				proWithUsage,
 				plan({ id: "pro-yearly", stripeId: "prod_pro", baseId: "pro" }),
 				usagePlan({ id: "team", stripeId: "prod_team", featureId: "messages" }),
 			],
 		});
 
-		expect(groups).toHaveLength(1);
-		expect(groups[0].products.map((p) => p.id).sort()).toEqual([
-			"pro",
-			"pro-yearly",
-			"team",
-		]);
-		// Not a variant family: team is unrelated, so the suffix counts plans.
-		expect(groupSuffix({ group: groups[0] })).toBe("+ 2 plans");
+		expect(groups).toHaveLength(2);
+		const [planGroup, featureGroup] = groups;
+		expect(planGroup.priceIds).toEqual(["pro_base", "pro-yearly_price"]);
+		expect(groupSuffix({ group: planGroup })).toBe("+ 1 variant");
+		expect(featureGroup.products.map(({ id }) => id)).toEqual(["pro", "team"]);
 	});
 });
 
