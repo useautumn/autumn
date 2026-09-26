@@ -39,6 +39,10 @@ export const ProcessorSubMenu = ({ onChange }: { onChange?: () => void }) => {
 		return false;
 	});
 
+	// Keep it visible while a filter is applied so it can still be cleared.
+	const hasChoice = visibleOptions.length > 1 || selected.length > 0;
+	if (!hasChoice) return null;
+
 	return (
 		<FilterCheckboxSubMenu
 			label="Processors"

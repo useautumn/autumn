@@ -1,5 +1,6 @@
 import { Scopes } from "@autumn/shared";
 import { BooksIcon, ListChecksIcon } from "@phosphor-icons/react";
+import { ChartColumn, Workflow } from "lucide-react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { useScopes } from "@/hooks/useScopes";
@@ -57,6 +58,18 @@ export const usePageCommands = (): PageCommand[] => {
 			section: "Get started",
 			icon: <ListChecksIcon className="size-4" />,
 			path: "/onboarding",
+		},
+		{
+			title: "Migrations",
+			section: "Customers",
+			icon: <Workflow className="size-4" />,
+			path: "/migrations",
+		},
+		{
+			title: "Analytics",
+			section: "Customers",
+			icon: <ChartColumn className="size-4" />,
+			path: "/analytics",
 		},
 		{
 			title: "Docs",
