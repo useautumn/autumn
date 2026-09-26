@@ -13,7 +13,6 @@ import {
 	type AttachBodyV0,
 	type AttachLicenseParamsV0,
 	type AttachParamsV0Input,
-	type AttachPreviewResponse,
 	type BillingDetailsParams,
 	type CancelBody,
 	type CatalogPreviewUpdateResponse,
@@ -62,6 +61,7 @@ import {
 	type RestoreParamsV1,
 	type RestoreResponse,
 	type RewardRedemption,
+	type SetPlansPreviewResponse,
 	type SetUsageParams,
 	type SetupPaymentParamsV1,
 	type TrackParams,
@@ -1532,7 +1532,7 @@ export class AutumnInt {
 
 		previewSetPlans: async <TInput = CreateScheduleParamsV0Input>(
 			params: TInput,
-		): Promise<AttachPreviewResponse> =>
+		): Promise<SetPlansPreviewResponse> =>
 			await this.post(`/billing.preview_set_plans`, params),
 
 		multiAttach: async (
