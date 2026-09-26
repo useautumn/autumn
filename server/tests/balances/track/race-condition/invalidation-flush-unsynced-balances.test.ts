@@ -19,6 +19,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ApiCustomer, ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -54,85 +55,89 @@ const getMessagesRemaining = (customer: ApiCustomer) => {
 	return balance.remaining ?? balance.current_balance;
 };
 
-describe(`${chalk.yellowBright("invalidation-flush: invalidation must not lose unsynced deductions")}`, () => {
-	const customerId = testCase;
-	const autumnV2 = new AutumnInt({ version: ApiVersion.V2_1 });
+// Exercises the legacy Redis balance path, which worker-routed customers never use.
+describe.skipIf(isBalanceWorkerRoute())(
+	`${chalk.yellowBright("invalidation-flush: invalidation must not lose unsynced deductions")}`,
+	() => {
+		const customerId = testCase;
+		const autumnV2 = new AutumnInt({ version: ApiVersion.V2_1 });
 
-	beforeAll(async () => {
-		await waitForRedisReady(ctx.redisV2, "customer-redis", 5000);
+		beforeAll(async () => {
+			await waitForRedisReady(ctx.redisV2, "customer-redis", 5000);
 
-		await initCustomerV3({
-			ctx,
-			customerId,
-			withTestClock: true,
-			attachPm: "success",
+			await initCustomerV3({
+				ctx,
+				customerId,
+				withTestClock: true,
+				attachPm: "success",
+			});
+
+			await initProductsV0({
+				ctx,
+				products: [pro],
+				prefix: testCase,
+			});
+
+			await autumnV2.attach({
+				customer_id: customerId,
+				product_id: pro.id,
+			});
 		});
 
-		await initProductsV0({
-			ctx,
-			products: [pro],
-			prefix: testCase,
+		test("flushes unsynced Redis balances to Postgres during invalidation", async () => {
+			const fullSubject = await getOrSetCachedFullSubject({
+				ctx,
+				customerId,
+				source: "test-setup",
+			});
+
+			const messagesFeature = ctx.features.find(
+				(feature) => feature.id === TestFeature.Messages,
+			)!;
+
+			// Deduct 5 in Redis WITHOUT queuing sync — stands in for a /track whose
+			// async syncItemV4 has not landed yet.
+			await executeRedisDeductionV2({
+				ctx,
+				deductions: [{ feature: messagesFeature, deduction: 5 }],
+				fullSubject,
+				deductionOptions: { overageBehaviour: "cap" },
+			});
+
+			const cachedBeforeInvalidation =
+				await autumnV2.customers.get<ApiCustomer>(customerId);
+			expect(getMessagesRemaining(cachedBeforeInvalidation)).toBe(95);
+
+			// flushBalances opt-in mirrors customers.update and Stripe webhook refresh.
+			await invalidateCachedFullSubject({
+				ctx,
+				customerId,
+				source: "test-invalidation",
+				flushBalances: true,
+			});
+
+			// ── Contract: invalidation semantics preserved ───────────────────────
+			// The balance hash fields must still be deleted.
+			const balanceKey = buildSharedFullSubjectBalanceKey({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId,
+				featureId: TestFeature.Messages,
+			});
+			expect(await ctx.redisV2.hlen(balanceKey)).toBe(0);
+
+			// ── Contract: deduction flushed to Postgres ──────────────────────────
+			// Pre-fix: HDEL wiped the unsynced deduction, DB shows 100.
+			// Post-fix: destructive read + sync_balances_v2 flush, DB shows 95.
+			const dbCustomer = await autumnV2.customers.get<ApiCustomer>(customerId, {
+				skip_cache: "true",
+			});
+			expect(getMessagesRemaining(dbCustomer)).toBe(95);
+
+			// ── Contract: rebuilt cache reflects the flushed balance ─────────────
+			const rebuiltCustomer =
+				await autumnV2.customers.get<ApiCustomer>(customerId);
+			expect(getMessagesRemaining(rebuiltCustomer)).toBe(95);
 		});
-
-		await autumnV2.attach({
-			customer_id: customerId,
-			product_id: pro.id,
-		});
-	});
-
-	test("flushes unsynced Redis balances to Postgres during invalidation", async () => {
-		const fullSubject = await getOrSetCachedFullSubject({
-			ctx,
-			customerId,
-			source: "test-setup",
-		});
-
-		const messagesFeature = ctx.features.find(
-			(feature) => feature.id === TestFeature.Messages,
-		)!;
-
-		// Deduct 5 in Redis WITHOUT queuing sync — stands in for a /track whose
-		// async syncItemV4 has not landed yet.
-		await executeRedisDeductionV2({
-			ctx,
-			deductions: [{ feature: messagesFeature, deduction: 5 }],
-			fullSubject,
-			deductionOptions: { overageBehaviour: "cap" },
-		});
-
-		const cachedBeforeInvalidation =
-			await autumnV2.customers.get<ApiCustomer>(customerId);
-		expect(getMessagesRemaining(cachedBeforeInvalidation)).toBe(95);
-
-		// flushBalances opt-in mirrors customers.update and Stripe webhook refresh.
-		await invalidateCachedFullSubject({
-			ctx,
-			customerId,
-			source: "test-invalidation",
-			flushBalances: true,
-		});
-
-		// ── Contract: invalidation semantics preserved ───────────────────────
-		// The balance hash fields must still be deleted.
-		const balanceKey = buildSharedFullSubjectBalanceKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
-		expect(await ctx.redisV2.hlen(balanceKey)).toBe(0);
-
-		// ── Contract: deduction flushed to Postgres ──────────────────────────
-		// Pre-fix: HDEL wiped the unsynced deduction, DB shows 100.
-		// Post-fix: destructive read + sync_balances_v2 flush, DB shows 95.
-		const dbCustomer = await autumnV2.customers.get<ApiCustomer>(customerId, {
-			skip_cache: "true",
-		});
-		expect(getMessagesRemaining(dbCustomer)).toBe(95);
-
-		// ── Contract: rebuilt cache reflects the flushed balance ─────────────
-		const rebuiltCustomer =
-			await autumnV2.customers.get<ApiCustomer>(customerId);
-		expect(getMessagesRemaining(rebuiltCustomer)).toBe(95);
-	});
-});
+	},
+);

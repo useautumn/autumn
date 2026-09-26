@@ -8,6 +8,7 @@ import {
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { expectUsageLimitCorrect } from "@tests/integration/utils/expectUsageLimitCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
@@ -231,7 +232,8 @@ test.concurrent(
 // succeeds and the window simply restarts from zero. This documents the
 // accepted trade-off -- a lost counter field grants fresh headroom rather than
 // erroring. Stale-cache guards may return in a future iteration.
-test.concurrent(
+// Exercises the legacy Redis balance path, which worker-routed customers never use.
+test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("usage-window-persistence4: missing _usage_windows field fails open (counter restarts)")}`,
 	async () => {
 		const freePlan = products.base({
@@ -340,7 +342,8 @@ test.concurrent(
 // Lazy roll: a counter whose stored window closed must zero IN PLACE on any
 // subject read -- and two CONCURRENT reads must both succeed (the roll is
 // idempotent: PG update by id, atomic Lua cache patch).
-test.concurrent(
+// Exercises the legacy Redis balance path, which worker-routed customers never use.
+test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("usage-window-persistence5: an expired counter rolls to zero on (concurrent) reads")}`,
 	async () => {
 		const freePlan = products.base({

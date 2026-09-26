@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -31,7 +32,8 @@ const HOUR_MS = 60 * 60 * 1000;
 // Storage shape: the counter lives in the capped feature's balance hash under
 // the reserved '_usage_windows' field (customer-scoped rows), NOT inside any
 // customer-entitlement blob.
-test.concurrent(
+// Exercises the legacy Redis balance path, which worker-routed customers never use.
+test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("usage-window-sync1: counter lives in the _usage_windows hash field, not the cus-ent blob")}`,
 	async () => {
 		const customerProduct = products.base({
@@ -108,7 +110,8 @@ test.concurrent(
 
 // Write-through: the Redis counter must reach the customer-scoped
 // usage_windows table via the shared sync.
-test.concurrent(
+// Exercises the legacy Redis balance path, which worker-routed customers never use.
+test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("usage-window-sync2: window counter writes through to the usage_windows table")}`,
 	async () => {
 		const customerProduct = products.base({
@@ -229,7 +232,8 @@ test.concurrent(
  *   - ROLL FORWARD: a snapshot with advanced bounds moves the SAME row's
  *     window_start_at/window_end_at in place (one mutable row per scope).
  */
-test.concurrent(
+// Exercises the legacy Redis balance path, which worker-routed customers never use.
+test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("usage-window-sync3: PG mirror upserts on the scope key, race-safe on create")}`,
 	async () => {
 		const customerProduct = products.base({
