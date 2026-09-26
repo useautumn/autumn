@@ -5,9 +5,11 @@ import type {
 	CustomerEntitlementRowView,
 	CustomerProductWithPricesView,
 } from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
-import type { UsageWindowLimit } from "../../../models/cusProductModels/cusEntModels/usageWindowModels.js";
+import type {
+	UsageWindowFeature,
+	UsageWindowLimit,
+} from "../../../models/cusProductModels/cusEntModels/usageWindowModels.js";
 import type { CusProductStatus } from "../../../models/cusProductModels/cusProductEnums.js";
-import type { Feature } from "../../../models/featureModels/featureModels.js";
 import type { PlanControlCustomerProduct } from "../../fullSubjectUtils/planBillingControlUtils.js";
 import { resetIntvToEntIntv } from "../../productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
 import { buildUsageWindowKey } from "../buildUsageWindowKey.js";
@@ -43,7 +45,7 @@ export const usageLimitToUsageWindowLimit = <
 }: {
 	fullSubject: BillingControlSubjectView<CE, CP>;
 	usageLimit: DbUsageLimit;
-	feature: Feature;
+	feature: UsageWindowFeature;
 	now: number;
 	inStatuses?: CusProductStatus[];
 	entityScope?: UsageWindowEntityScope | null;

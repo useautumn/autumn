@@ -1,6 +1,8 @@
 import {
+	FeatureType,
 	fullSubjectToUsageWindowLimits,
 	isUnlimitedCustomerEntitlement,
+	type UsageWindowFeature,
 	type UsageWindowLimit,
 	usageLimitFilterMatchesProperties,
 } from "@autumn/shared";
@@ -9,6 +11,31 @@ import type {
 	WorkerFullSubject,
 } from "../../models/subject/workerFullSubject.js";
 import type { DeductionSelection } from "../types/deductionRequest.js";
+
+/** A feature funded only through credit systems has no row of its own, so the catalog never joined it: it is their metered member. */
+const usageWindowFeaturesOf = ({
+	selection,
+	customerEntitlements,
+}: {
+	selection: DeductionSelection;
+	customerEntitlements: WorkerFullCustomerEntitlementWithProduct[];
+}): UsageWindowFeature[] => {
+	const rowFeatures = customerEntitlements.map(
+		(customerEntitlement) => customerEntitlement.entitlement.feature,
+	);
+	const fundedOnlyByCreditSystems =
+		rowFeatures.length > 0 &&
+		!rowFeatures.some((feature) => feature.id === selection.featureId);
+	if (!fundedOnlyByCreditSystems) return rowFeatures;
+	return [
+		...rowFeatures,
+		{
+			id: selection.featureId,
+			internal_id: selection.internalFeatureId,
+			type: FeatureType.Metered,
+		},
+	];
+};
 
 /** The caps this selection counts against: none when an unlimited row funds it; filtered caps only when the event matches. Overflow skips the gate in the draw, not the caps. */
 export const resolveUsageWindowLimits = ({
@@ -28,9 +55,7 @@ export const resolveUsageWindowLimits = ({
 	)
 		return [];
 
-	const features = customerEntitlements.map(
-		(customerEntitlement) => customerEntitlement.entitlement.feature,
-	);
+	const features = usageWindowFeaturesOf({ selection, customerEntitlements });
 	return fullSubjectToUsageWindowLimits({
 		fullSubject,
 		featureIds: [

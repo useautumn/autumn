@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { UsageLimitAnchorSchema } from "../../cusModels/billingControls/usageLimit.js";
+import type { Feature } from "../../featureModels/featureModels.js";
 import { EntInterval } from "../../productModels/intervals/entitlementInterval.js";
 
 /**
@@ -59,3 +60,6 @@ export const UsageWindowLimitSchema = z.object({
 });
 
 export type UsageWindowLimit = z.infer<typeof UsageWindowLimitSchema>;
+
+/** The feature facts a cap resolves from: which counter it keys and which dimension it counts. */
+export type UsageWindowFeature = Pick<Feature, "id" | "internal_id" | "type">;

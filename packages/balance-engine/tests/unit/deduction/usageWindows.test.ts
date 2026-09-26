@@ -340,5 +340,64 @@ describe("usage windows", () => {
 		},
 	);
 
-	/** A `credits` pool whose schema prices messages; the catalog's feature row is what makes it a credit system. */
+	test.concurrent(
+		"a cap on a feature funded only by credits counts its tracked units",
+		() => {
+			const outcome = deduct({
+				fullSubject: creditPoolSubject({ customer: dailyCap({ limit: 5 }) }),
+				request: createDeductionRequest({ org, value: 8 }),
+			});
+
+			// 5 of the 8 units fit the cap: 5 × 0.2 = 1 credit drawn.
+			expect(outcome).toMatchObject({ appliedValue: 5, remaining: 3 });
+			expect(windowChangesOf(outcome)).toEqual([
+				expect.objectContaining({
+					row: expect.objectContaining({ feature_id: "messages", usage: 5 }),
+				}),
+			]);
+		},
+	);
+
+	test.concurrent(
+		"a cap on a credit-funded feature leaves direct credit draws alone",
+		() => {
+			const outcome = deduct({
+				fullSubject: creditPoolSubject({ customer: dailyCap({ limit: 5 }) }),
+				request: createDeductionRequest({
+					featureId: "credits",
+					org,
+					value: 10,
+				}),
+			});
+
+			expect(outcome).toMatchObject({ appliedValue: 10, remaining: 0 });
+			expect(windowChangesOf(outcome)).toEqual([]);
+		},
+	);
 });
+
+/** A `credits` pool whose schema prices messages; the catalog's feature row is what makes it a credit system. */
+const creditPoolSubject = ({ customer }: { customer: WorkerCustomer }) => {
+	const state = createSubjectState({
+		identity,
+		customer,
+		customerProducts: [createCustomerProduct()],
+		customerEntitlements: [
+			createCustomerEntitlement({
+				id: "credits_row",
+				featureId: "credits",
+				balance: 100,
+			}),
+		],
+	});
+	const catalog = createCatalogFor({ state });
+	const credits = catalog.features.feat_credits;
+	if (!credits) throw new Error("credits feature row missing");
+	credits.type = FeatureType.CreditSystem;
+	credits.config = {
+		schema: [
+			{ metered_feature_id: "messages", feature_amount: 1, credit_amount: 0.2 },
+		],
+	};
+	return subjectStateToFullSubject({ state, catalog });
+};

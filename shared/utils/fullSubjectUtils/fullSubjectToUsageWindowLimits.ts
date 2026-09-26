@@ -5,9 +5,11 @@ import type {
 	CustomerEntitlementRowView,
 	CustomerProductWithPricesView,
 } from "../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
-import type { UsageWindowLimit } from "../../models/cusProductModels/cusEntModels/usageWindowModels.js";
+import type {
+	UsageWindowFeature,
+	UsageWindowLimit,
+} from "../../models/cusProductModels/cusEntModels/usageWindowModels.js";
 import type { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
-import type { Feature } from "../../models/featureModels/featureModels.js";
 import { usageLimitToUsageWindowLimit } from "../usageWindowUtils/convertUsageWindow/usageLimitToUsageWindowLimit.js";
 import {
 	fullSubjectToPlanProducts,
@@ -35,7 +37,7 @@ export const fullSubjectToUsageWindowLimits = <
 }: {
 	fullSubject: BillingControlSubjectView<CE, CP>;
 	featureIds: string[];
-	features: Feature[];
+	features: UsageWindowFeature[];
 	now: number;
 	// Status filter for entitlement lookups; pass the caller's orgToInStatuses so
 	// the cap's anchor resolution matches what the deduction can act on.

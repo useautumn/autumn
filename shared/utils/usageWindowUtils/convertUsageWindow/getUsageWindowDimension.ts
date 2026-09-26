@@ -1,5 +1,7 @@
-import type { UsageWindowDimension } from "../../../models/cusProductModels/cusEntModels/usageWindowModels.js";
-import type { Feature } from "../../../models/featureModels/featureModels.js";
+import type {
+	UsageWindowDimension,
+	UsageWindowFeature,
+} from "../../../models/cusProductModels/cusEntModels/usageWindowModels.js";
 import { isAnyCreditSystem } from "../../featureUtils/classifyFeature/isAnyCreditSystem.js";
 
 /**
@@ -12,7 +14,7 @@ import { isAnyCreditSystem } from "../../featureUtils/classifyFeature/isAnyCredi
 export const getUsageWindowDimension = ({
 	feature,
 }: {
-	feature: Feature;
+	feature: UsageWindowFeature;
 }): {
 	dimensionType: UsageWindowDimension;
 	dimensionFeatureId: string | null;
