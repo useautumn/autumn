@@ -68,6 +68,7 @@ export const checkAfterDeduction = ({
 			fullSubject,
 			command,
 			outcome: { ...drawn, deltas: drawn.deltas.slice(moved.length) },
+			precedingDeltas: moved,
 		});
 	};
 

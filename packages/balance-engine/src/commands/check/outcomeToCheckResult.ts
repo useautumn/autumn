@@ -1,8 +1,9 @@
 import { FeatureType, fullSubjectToCustomerEntitlements } from "@autumn/shared";
-import { Decimal } from "decimal.js";
+import type { DeductionDelta } from "../../deduction/types/deductionDelta.js";
 import type { DeductionOutcome } from "../../deduction/types/deductionOutcome.js";
 import { fundingRowOf } from "../../deduction/utils/fundingRowOf.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
+import { requiredBalanceInFundingUnits } from "./requiredBalanceInFundingUnits.js";
 import type { CheckCommand } from "./types/checkCommand.js";
 import type { CheckResult } from "./types/checkResult.js";
 
@@ -11,10 +12,13 @@ export const outcomeToCheckResult = ({
 	fullSubject,
 	command,
 	outcome,
+	precedingDeltas = [],
 }: {
 	fullSubject: WorkerFullSubject;
 	command: CheckCommand;
 	outcome: DeductionOutcome;
+	/** Deltas already on the rows before the check's own draw, such as the track a check follows. */
+	precedingDeltas?: DeductionDelta[];
 }): CheckResult => {
 	const [firstEntitlement] = outcome.context.customerEntitlements;
 	if (!firstEntitlement && !outcome.context.overdueBlocked) {
@@ -56,9 +60,12 @@ export const outcomeToCheckResult = ({
 		allowed,
 		reason: allowed ? null : "insufficient_balance",
 		limitType: allowed ? null : outcome.limitType,
-		requiredBalance: new Decimal(command.requiredBalance)
-			.mul(fundingRow?.creditCost ?? 1)
-			.toNumber(),
+		requiredBalance: requiredBalanceInFundingUnits({
+			context: outcome.context,
+			fundingRow,
+			requiredBalance: command.requiredBalance,
+			precedingDeltas,
+		}),
 		fundingFeatureId: fundingRow?.featureId ?? feature?.id ?? command.featureId,
 		isFlag: false,
 	};
