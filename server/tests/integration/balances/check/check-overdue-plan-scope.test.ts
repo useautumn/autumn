@@ -79,14 +79,14 @@ test.concurrent(
 				allowed: false,
 			});
 			await autumn.products.update(standard.id, {
-				config: { ignorePastDue: true, allowOverdueEntitlements: true },
+				config: { ignore_past_due: true },
 			});
 			await markPastDue({ ctx, customerId });
 			expect(await checkMessages({ autumn, customerId })).toMatchObject({
 				allowed: true,
 			});
 			await autumn.products.update(standard.id, {
-				config: { ignorePastDue: false },
+				config: { ignore_past_due: false },
 			});
 			await invalidateCachedFullSubject({
 				ctx,
