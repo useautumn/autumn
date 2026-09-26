@@ -139,7 +139,8 @@ export const stripeWebhookRefreshMiddleware = async (
 			}
 
 			await deleteCachedFullCustomer({
-				customerId: customer.id!,
+				// An id-less customer is read, and cached, by its internal id.
+				customerId: customer.id ?? customer.internal_id,
 				ctx,
 				source: `stripeWebhookRefreshMiddleware: ${eventType}`,
 				// Attach-echo invoices are balance-neutral. Cycle handlers bump
