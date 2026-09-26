@@ -1,5 +1,6 @@
 import { ms } from "@autumn/shared";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import type { EdgeConfigStatus } from "./edgeConfigStore.js";
 import {
 	readEdgeConfigTimestamp,
 	writeEdgeConfigTimestamp,
@@ -7,6 +8,7 @@ import {
 
 type EdgeConfigLifecycle = {
 	refresh: (options?: { logger?: Logger }) => Promise<void>;
+	getStatus: () => Pick<EdgeConfigStatus, "healthy">;
 };
 
 export const createEdgeConfigRegistry = ({
@@ -43,6 +45,9 @@ export const createEdgeConfigRegistry = ({
 		await Promise.all(stores.map((store) => store.refresh({ logger })));
 	};
 
+	const allStoresHealthy = () =>
+		stores.every((store) => store.getStatus().healthy);
+
 	const warnTimestampError = ({
 		error,
 		logger,
@@ -73,6 +78,8 @@ export const createEdgeConfigRegistry = ({
 			if (timestamp === lastTimestamp && timestamp !== null) return;
 
 			await refreshAll({ logger });
+			// A failed refresh must not consume the change, or recovery waits for the backstop.
+			if (!allStoresHealthy()) return;
 			lastTimestamp = timestamp ?? (await ensureTimestamp());
 		} catch (error) {
 			warnTimestampError({ error, logger });
@@ -95,6 +102,7 @@ export const createEdgeConfigRegistry = ({
 			warnTimestampError({ error, logger });
 		}
 		await refreshAll({ logger });
+		if (!allStoresHealthy()) lastTimestamp = undefined;
 
 		pollLogger = logger;
 		pollTimer = setInterval(() => {
