@@ -18,6 +18,7 @@ import { createSvixCli } from "@server/external/svix/svixUtils.js";
 import { createRoute } from "@server/honoMiddlewares/routeHandler.js";
 import { decryptData, encryptData } from "@server/utils/encryptUtils.js";
 import { mask } from "@server/utils/genUtils.js";
+import type { ApplicationOut } from "svix";
 import { OrgService } from "../OrgService.js";
 
 const generateWebhookSecret = generateRevenuecatWebhookSecret;
@@ -207,82 +208,5 @@ export const handleUpsertRevenueCatConfig = createRoute({
 		return c.json({
 			success: true,
 		});
-	},
-});
-
-const handleGetVercelSink = createRoute({
-	scopes: [Scopes.Organisation.Read],
-	handler: async (c) => {
-		const { db, org, env } = c.get("ctx");
-		const vercelConfig = org.processor_configs?.vercel;
-		const svixCli = createSvixCli();
-		let liveApp: { id: string } | undefined;
-		let sandboxApp: { id: string } | undefined;
-
-		if (!vercelConfig) {
-			throw new InternalError({
-				message: `Vercel config not found for org ${org.id}`,
-			});
-		}
-
-		if (!vercelConfig?.svix?.live_id || !vercelConfig?.svix?.sandbox_id) {
-			liveApp = await createSvixApp({
-				name: `${org.slug}_live_vercel_sink`,
-				orgId: org.id,
-				env: AppEnv.Live,
-			});
-		}
-
-		if (!vercelConfig?.svix?.sandbox_id) {
-			sandboxApp = await createSvixApp({
-				name: `${org.slug}_sandbox_vercel_sink`,
-				orgId: org.id,
-				env: AppEnv.Sandbox,
-			});
-		}
-
-		const updates = {
-			...(liveApp
-				? { svix: { ...(vercelConfig?.svix || {}), live_id: liveApp.id } }
-				: {}),
-			...(sandboxApp
-				? { svix: { ...(vercelConfig?.svix || {}), sandbox_id: sandboxApp.id } }
-				: {}),
-		};
-
-		await OrgService.update({
-			db,
-			orgId: org.id,
-			updates: {
-				processor_configs: {
-					...org.processor_configs,
-					vercel: { ...(vercelConfig || {}), ...updates },
-				},
-			},
-		});
-
-		let url: string | undefined;
-
-		if (env === AppEnv.Live) {
-			url = (
-				await svixCli.authentication.appPortalAccess(
-					liveApp?.id || vercelConfig?.svix?.live_id || "",
-					{
-						featureFlags: ["vercel"],
-					},
-				)
-			).url;
-		} else {
-			url = (
-				await svixCli.authentication.appPortalAccess(
-					sandboxApp?.id || vercelConfig?.svix?.sandbox_id || "",
-					{
-						featureFlags: ["vercel"],
-					},
-				)
-			).url;
-		}
-
-		return c.json({ url });
 	},
 });

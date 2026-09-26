@@ -1,6 +1,6 @@
 # atmn catalog flows
 
-Contents: commands · when to use it · the config is the catalog's state (versions, renames, drafts) · variants and licenses · config shapes · splitting the config · update loop · pull · sandboxes and keys · what to show the user.
+Contents: commands · when to use it · the config is the catalog's state (versions, renames, drafts) · variants and licenses · config shapes · splitting the config · update loop · pull · webhooks · sandboxes and keys · what to show the user.
 
 Use `atmn` when a project has or should have an `autumn.config.ts` source of truth.
 
@@ -147,6 +147,37 @@ Two notes push prints that are worth relaying: a plan removed while an id-less p
 `atmn pull` writes the server's catalog back into the config in place: it flips `active` where the dashboard promoted a version, appends versions the config never mentioned, and backfills `internalId` and `versionSlug`. Run it after anyone touches the dashboard, and before editing a config you did not write. With no config yet, `pull` asks which folder to create it in; headless, it prints the `-c <dir>` hint and stops, so run `atmn init` or pass `-c` instead.
 
 `atmn pull --overwrite` is different: it rewrites `autumn.config.ts` and the `features.ts`, `plans.ts` and `rewards.ts` beside it from the server. It never deletes a file, and it leaves alone any file that does not import the package. It needs `--yes`, and it is the right move only when the config describes a different org than the key — the tell is `Your config no longer matches this org's catalog`. Anywhere else, a plain `pull` is what you want.
+
+## Webhooks
+
+`webhooks` in the config lists the Autumn webhooks it manages, keyed by `id`. Unlike the catalog it is never a deletion list: `push` creates or updates the webhooks it states and leaves every other webhook alone (the preview shows them as `unmanaged`).
+
+`url` is a map keyed by environment, never one string. A missing key means "don't register this webhook there", which is not an error:
+
+```ts
+import { atmn, webhook } from "atmn";
+
+export default atmn({
+  webhooks: [
+    webhook({
+      id: "billing",
+      events: ["billing.updated", "balances.limit_reached"],
+      url: {
+        live: "https://myapp.com/api/autumn",            // atmn push -p
+        sandbox: "https://staging.myapp.com/api/autumn", // the default sandbox
+        "qa-team": "https://qa.myapp.com/api/autumn",    // atmn sandbox use qa-team
+      },
+    }),
+  ],
+});
+```
+
+- Keys: `live` for `-p`, `sandbox` for the default sandbox, or a named sandbox's slug (its name lowercased; no spaces). Never copy a sandbox URL into `live`: ask the user for the production URL, or leave `live` out.
+- Every URL must be https and publicly reachable; localhost and private networks are refused, tunnels such as ngrok work. `events` needs at least one entry.
+- `id` is permanent: changing it registers a new webhook. Two ids that differ only by case or `-`/`_` are refused.
+- The preview gives a changed URL its own line (`billing url: old → new`). Read it out to the user before `--yes`.
+- `push --yes` writes each new webhook's signing secret once and prints exactly where: `AUTUMN_WEBHOOK_<ID>_SECRET` in `.env.prod` for `-p`, `AUTUMN_WEBHOOK_<ID>_<ORG4>_SECRET` in `.env.local` (or `.env`) for a sandbox. Relay the variable name and file; never print or read the secret.
+- `pull` reads webhooks from every env with a key in your env files (`AUTUMN_SECRET_KEY` → `sandbox`, `AUTUMN_PROD_SECRET_KEY` → `live`, each `AUTUMN_SANDBOX_<id>_SECRET_KEY` → its slug), whatever the target; a key that's rejected or belongs to another org skips its env with a warning and leaves that env's keys alone. Per env it adds webhooks it finds, sets a changed URL, removes the env's key when the server no longer has that webhook, and deletes a webhook whose map ends up empty. A URL written as code (`process.env.X`) is never rewritten; pull warns when it differs from the server. Webhooks already in the dashboard will be pulled and be editable in the config once you pull as usual. Since the dashboard doesn't let you set an ID, a permanent ID will be assigned to this for future reference.
 
 ## Sandboxes and keys
 

@@ -54,7 +54,7 @@ beforeAll(async () => {
 		db,
 		masterOrg: defaultCtx.org,
 		actorUser,
-		name: "API Isolation Sandbox",
+		name: "API-Isolation-Sandbox",
 	});
 	sandbox = created.org;
 	sandboxId = created.org.id;

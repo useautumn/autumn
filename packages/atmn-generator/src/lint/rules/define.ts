@@ -87,3 +87,21 @@ export const nonEmpty = (rule: RuleOf<"nonEmpty">): LintRule => ({
 	kind: "nonEmpty",
 	...rule,
 });
+
+/** A stated string, or each value of a stated map, must not pass the named check. */
+export const rejects = (rule: RuleOf<"rejects">): LintRule => ({
+	kind: "rejects",
+	...rule,
+});
+
+/** Names outside `values` are reported: a warning when a newer server may know them. */
+export const knownValues = (rule: RuleOf<"knownValues">): LintRule => ({
+	kind: "knownValues",
+	...rule,
+});
+
+/** A list holds only names with `prefix`, or none of them. */
+export const uniformPrefix = (rule: RuleOf<"uniformPrefix">): LintRule => ({
+	kind: "uniformPrefix",
+	...rule,
+});

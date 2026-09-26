@@ -45,7 +45,7 @@ const listSandboxIds = async (): Promise<string[]> => {
 	return list.map((sandbox) => sandbox.id);
 };
 
-const sandboxName = `Secret Key Lifecycle ${crypto.randomUUID()}`;
+const sandboxName = `Secret-Key-Lifecycle-${crypto.randomUUID()}`;
 let created: Sandbox & { secret_key: string };
 
 afterAll(async () => {

@@ -26,11 +26,19 @@ import {
 	stripeKeyByIndex,
 	stripeKeyForWorker,
 } from "./stripeKeyPool.js";
+import {
+	STRIPE_REQUEST_OPTIONS,
+	withStripeRequestSlot,
+} from "./stripeRequestBudget.js";
 
-const CLAIM_CONCURRENCY = 16;
+/** Stripe rate-limits per platform key, so claim writes are bounded per key. */
+const CLAIM_CONCURRENCY_PER_KEY = 4;
 const POOL_LIST_PAGE = 100;
 /** Stop paging a key once this many pages yield no clean pool accounts. */
 const MAX_POOL_LIST_PAGES = 10;
+/** `accounts.list` latency scales with page size (~0.8s at 3, ~8s at 100) and pool
+ * accounts list first, so page one is sized to the claim plus dirty/nuking headroom. */
+const FIRST_PAGE_HEADROOM = 5;
 
 export const POOL_TAG = "autumn_tw_pool";
 export const POOL_STATE_TAG = "autumn_tw_pool_state";
@@ -71,14 +79,31 @@ const scanPoolAccounts = async (
 	const clean: string[] = [];
 	let nukingInProgress = 0;
 	let scanned = 0;
-	for await (const account of stripe.accounts.list({ limit: POOL_LIST_PAGE })) {
-		const metadata = account.metadata as Record<string, string> | null;
-		if (metadata?.[POOL_TAG] === "1") {
+	let startingAfter: string | undefined;
+	// Newest-first and pool accounts are recent; cap the scan so a huge legacy
+	// platform account can't stall the claim.
+	while (scanned < MAX_POOL_LIST_PAGES * POOL_LIST_PAGE) {
+		const limit =
+			scanned === 0
+				? Math.min(POOL_LIST_PAGE, want + FIRST_PAGE_HEADROOM)
+				: POOL_LIST_PAGE;
+		const page = await withStripeRequestSlot(() =>
+			stripe.accounts.list(
+				{ limit, starting_after: startingAfter },
+				STRIPE_REQUEST_OPTIONS,
+			),
+		);
+		for (const account of page.data) {
+			scanned++;
+			const metadata = account.metadata as Record<string, string> | null;
+			if (metadata?.[POOL_TAG] !== "1") {
+				continue;
+			}
 			const state = metadata?.[POOL_STATE_TAG];
 			if (state === "clean") {
 				clean.push(account.id);
 				if (clean.length >= want) {
-					break;
+					return { clean, nukingInProgress };
 				}
 			} else if (
 				state === "nuking" &&
@@ -87,12 +112,11 @@ const scanPoolAccounts = async (
 				nukingInProgress++;
 			}
 		}
-		// Newest-first and pool accounts are recent; cap the scan so a huge
-		// legacy platform account can't stall the claim.
-		scanned++;
-		if (scanned >= MAX_POOL_LIST_PAGES * POOL_LIST_PAGE) {
+		const lastAccount = page.data.at(-1);
+		if (!page.has_more || !lastAccount) {
 			break;
 		}
+		startingAfter = lastAccount.id;
 	}
 	return { clean, nukingInProgress };
 };
@@ -237,10 +261,9 @@ export const claimPoolAccounts = async ({
 	const byWorker: string[] = new Array(count);
 	let reused = 0;
 	let created = 0;
-	const limit = pLimit(CLAIM_CONCURRENCY);
-
 	await Promise.all(
 		[...idxByKey.entries()].map(async ([keyIndex, idxs]) => {
+			const limit = pLimit(CLAIM_CONCURRENCY_PER_KEY);
 			const clean = await listCleanAccountsWaitingForNuke(
 				keyIndex,
 				idxs.length,
@@ -253,9 +276,13 @@ export const claimPoolAccounts = async ({
 					limit(async () => {
 						const existing = clean[position];
 						if (existing) {
-							await stripe.accounts.update(existing, {
-								metadata: dirtyPatch(owner, runId),
-							});
+							await withStripeRequestSlot(() =>
+								stripe.accounts.update(
+									existing,
+									{ metadata: dirtyPatch(owner, runId) },
+									STRIPE_REQUEST_OPTIONS,
+								),
+							);
 							byWorker[idx] = encodeSubAccount(existing, keyIndex);
 							reused++;
 							return;

@@ -1,8 +1,6 @@
-import { SANDBOX_COLORS } from "@autumn/shared";
 import { FormLabel as FieldLabel, Input } from "@autumn/ui";
-import { sandboxColorClass } from "@/hooks/sandbox/sandboxDisplay";
-import { cn } from "@/lib/utils";
 import { IconPicker } from "@/views/settings/sections/components/IconPicker";
+import { SandboxColorSwatches } from "./SandboxColorSwatches";
 
 export const SandboxFormFields = ({
 	name,
@@ -31,30 +29,7 @@ export const SandboxFormFields = ({
 			</div>
 			<div>
 				<FieldLabel>Color</FieldLabel>
-				<div className="flex flex-wrap gap-2">
-					{SANDBOX_COLORS.map((token) => (
-						<button
-							aria-label={`Color ${token}`}
-							aria-pressed={color === token}
-							className={cn(
-								"flex h-7 w-7 items-center justify-center rounded-md border transition-colors",
-								color === token
-									? "border-primary ring-1 ring-primary"
-									: "border-border hover:border-primary/50",
-							)}
-							key={token}
-							onClick={() => onColorChange(token)}
-							type="button"
-						>
-							<span
-								className={cn(
-									"h-3.5 w-3.5 rounded-full bg-current",
-									sandboxColorClass(token),
-								)}
-							/>
-						</button>
-					))}
-				</div>
+				<SandboxColorSwatches color={color} onColorChange={onColorChange} />
 			</div>
 			<div>
 				<FieldLabel>Icon</FieldLabel>

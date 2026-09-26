@@ -21,6 +21,7 @@ export const emitCollectionModule = ({
 	schema,
 	overlay,
 	path = "",
+	describe,
 }: {
 	name: string;
 	builder: string;
@@ -29,6 +30,8 @@ export const emitCollectionModule = ({
 	overlay: Overlay;
 	/** Item-rooted path when the fixture nests inside a collection item. */
 	path?: string;
+	/** The builder's JSDoc. */
+	describe?: string;
 }): string =>
 	[
 		GENERATED_HEADER,
@@ -39,7 +42,7 @@ export const emitCollectionModule = ({
 			overlay,
 			path,
 		}),
-		`export const ${builder} = (input: ${typeName}): ${typeName} => input;\n`,
+		`${describe === undefined ? "" : `/** ${describe} */\n`}export const ${builder} = (input: ${typeName}): ${typeName} => input;\n`,
 	].join("\n");
 
 /**

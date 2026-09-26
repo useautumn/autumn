@@ -1,3 +1,4 @@
+import { CE_LAKE_TABLES } from "./ceLakeTables.js";
 import { getLakeMetadataLocation } from "./lakeMetadata.js";
 import type { DuckDbConnection } from "./localDuckDb.js";
 
@@ -10,19 +11,21 @@ export const SCRATCH_BASE =
  * (refreshCeBalancesCache.ts) which this job replaces: finite-only
  * remaining/granted, all-rows usage incl. entity-held unlimited deductions,
  * finite_rows guard column, zone-map-friendly ordering. */
-const ceBalanceTotalsSql = ({
-	ceMeta,
+export const ceBalanceTotalsSql = ({
+	ceMetas,
 	entMeta,
 	featureMeta,
 	cpMeta,
 }: {
-	ceMeta: string;
+	ceMetas: readonly string[];
 	entMeta: string;
 	featureMeta: string;
 	cpMeta: string;
 }): string => `
 	WITH b AS (
-		SELECT
+		${ceMetas
+			.map(
+				(ceMeta) => `SELECT
 			internal_customer_id,
 			internal_feature_id,
 			balance,
@@ -36,7 +39,9 @@ const ceBalanceTotalsSql = ({
 					k -> CAST(json_extract(entities, '$."' || k || '".balance') AS DOUBLE))), 0)
 				ELSE 0
 			END AS entities_balance
-		FROM iceberg_scan('${ceMeta}')
+		FROM iceberg_scan('${ceMeta}')`,
+			)
+			.join("\n\t\tUNION ALL\n\t\t")}
 	),
 	a AS (
 		SELECT e.id, e.allowance, f.type AS feature_type
@@ -81,8 +86,10 @@ export const buildCeBalanceTotalsParquet = async ({
 	connection: DuckDbConnection;
 	runId: string;
 }): Promise<{ parquetUrl: string }> => {
-	const [ceMeta, entMeta, featureMeta, cpMeta] = await Promise.all([
-		getLakeMetadataLocation({ table: "customer_entitlements" }),
+	const [ceMetas, entMeta, featureMeta, cpMeta] = await Promise.all([
+		Promise.all(
+			CE_LAKE_TABLES.map((table) => getLakeMetadataLocation({ table })),
+		),
 		getLakeMetadataLocation({ table: "entitlements" }),
 		getLakeMetadataLocation({ table: "features" }),
 		getLakeMetadataLocation({ table: "customer_products" }),
@@ -90,7 +97,7 @@ export const buildCeBalanceTotalsParquet = async ({
 
 	const parquetUrl = `${SCRATCH_BASE}/${runId}/ce_balance_totals.parquet`;
 	await connection.run(`
-		COPY (${ceBalanceTotalsSql({ ceMeta, entMeta, featureMeta, cpMeta })})
+		COPY (${ceBalanceTotalsSql({ ceMetas, entMeta, featureMeta, cpMeta })})
 		TO '${parquetUrl}' (FORMAT PARQUET, COMPRESSION ZSTD)
 	`);
 	return { parquetUrl };

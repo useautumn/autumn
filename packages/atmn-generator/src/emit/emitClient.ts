@@ -167,8 +167,15 @@ export const emitClientModule = ({
 		wireImport({ operations }),
 		`\nconst DEFAULT_BASE_URL = ${JSON.stringify(baseUrl)};`,
 		RUNTIME,
-		...operations.flatMap((operation) =>
-			operation.request === undefined
+		// Operations sharing one body (preview and apply) share its type.
+		...operations.flatMap((operation, index) =>
+			operation.request === undefined ||
+			operations
+				.slice(0, index)
+				.some(
+					(earlier) =>
+						earlier.request?.typeName === operation.request?.typeName,
+				)
 				? []
 				: [
 						`export type ${operation.request.typeName} = ${typeExpression({

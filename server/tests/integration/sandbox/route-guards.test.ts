@@ -42,7 +42,7 @@ const post = async (path: string, body: unknown) =>
 const postStatus = async (path: string, body: unknown) =>
 	(await post(path, body)).status;
 
-const createdSandboxName = `Route Guard Sandbox ${crypto.randomUUID()}`;
+const createdSandboxName = `Route-Guard-Sandbox-${crypto.randomUUID()}`;
 let createdSandboxId: string | undefined;
 
 let liveKey: string | undefined;
@@ -70,6 +70,20 @@ describe("sandbox route guards (zod + actor wiring on the request path)", () => 
 			icon: "Flask",
 		});
 		expect(status).toBe(400);
+	});
+
+	test("create rejects a name with a space, and names whose slug is live or sandbox (400)", async () => {
+		for (const [name, message] of [
+			["My Sandbox", "spaces"],
+			["Live", "environment names"],
+			["SANDBOX", "environment names"],
+		]) {
+			const res = await post("/sandboxes.create", { name });
+			expect(res.status).toBe(400);
+			expect(((await res.json()) as { message: string }).message).toContain(
+				message,
+			);
+		}
 	});
 
 	test("update with an id-only body fails the at-least-one-field refine (400)", async () => {
