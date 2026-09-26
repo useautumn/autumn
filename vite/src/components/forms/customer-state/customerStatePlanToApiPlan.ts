@@ -11,8 +11,8 @@ export const customerStatePlanToApiPlan = ({
 	plan: CustomerStatePlan;
 	products: ProductV2[];
 	features: Feature[];
-}) =>
-	buildBillingPlan({
+}) => ({
+	...buildBillingPlan({
 		productId: plan.productId,
 		prepaidOptions: plan.prepaidOptions,
 		items: plan.items,
@@ -22,4 +22,8 @@ export const customerStatePlanToApiPlan = ({
 		entityId: plan.entityId ?? null,
 		product: products.find((product) => product.id === plan.productId),
 		features,
-	});
+	}),
+	...(plan.licenseQuantities?.length
+		? { license_quantities: plan.licenseQuantities }
+		: {}),
+});

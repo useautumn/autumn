@@ -323,6 +323,7 @@ export function CreateScheduleFormProvider({
 				existingPlans={existingPlans}
 				// Updating a schedule can't attach new plans, so only a new one can.
 				canMakeUnscheduled={!hasSchedule}
+				showLicenseQuantities
 			>
 				{children}
 			</CustomerStateProvider>

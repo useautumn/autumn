@@ -1,8 +1,8 @@
 import {
 	BillingBehaviorSchema,
 	type CustomizePlanLicense,
+	type LicenseQuantityParams,
 	type ProductItem,
-	type SyncPlanInstance,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 
@@ -15,13 +15,12 @@ export const CustomerStatePlanSchema = z.object({
 	version: z.number().positive().optional(),
 	// Only meaningful on the first phase — later phases inherit its scope.
 	entityId: z.string().nullable().optional(),
+	/** Seat totals per license, inclusive of included seats. */
+	licenseQuantities: z.custom<LicenseQuantityParams[]>().optional(),
 
 	// Sync only — carried over from what Stripe bills.
 	/** Add-on instances to create from this row. */
 	quantity: z.number().int().min(1).optional(),
-	licenseQuantities: z
-		.custom<NonNullable<SyncPlanInstance["license_quantities"]>>()
-		.optional(),
 });
 
 export type CustomerStatePlan = z.infer<typeof CustomerStatePlanSchema>;

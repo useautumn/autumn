@@ -28,6 +28,8 @@ type CustomerStateContextValue = CustomerStateHandlers & {
 	/** The customer's active plans, offered as a starting point for phase one. */
 	existingPlans: CustomerStatePlan[];
 	canMakeUnscheduled: boolean;
+	/** Renders editable seat totals under each plan's licenses. */
+	showLicenseQuantities: boolean;
 	/** Why a plan has no Stripe item after the sync; empty when it does. */
 	planNotFoundReasons: (location: PlanLocation) => string[];
 	editingPlan: PlanLocation | null;
@@ -53,6 +55,7 @@ export function CustomerStateProvider({
 	nowMs,
 	existingPlans = NO_EXISTING_PLANS,
 	canMakeUnscheduled,
+	showLicenseQuantities = false,
 	planNotFoundReasons = NEVER_NOT_FOUND,
 	children,
 }: {
@@ -60,6 +63,7 @@ export function CustomerStateProvider({
 	nowMs: number;
 	existingPlans?: CustomerStatePlan[];
 	canMakeUnscheduled: boolean;
+	showLicenseQuantities?: boolean;
 	planNotFoundReasons?: (location: PlanLocation) => string[];
 	children: ReactNode;
 }) {
@@ -98,6 +102,7 @@ export function CustomerStateProvider({
 			features,
 			existingPlans,
 			canMakeUnscheduled,
+			showLicenseQuantities,
 			planNotFoundReasons,
 			editingPlan,
 			editingPlanValue,
@@ -112,6 +117,7 @@ export function CustomerStateProvider({
 			features,
 			existingPlans,
 			canMakeUnscheduled,
+			showLicenseQuantities,
 			planNotFoundReasons,
 			editingPlan,
 			editingPlanValue,

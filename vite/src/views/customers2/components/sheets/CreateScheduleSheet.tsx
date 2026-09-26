@@ -27,10 +27,32 @@ import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoi
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { customerLicenseTotals } from "@/utils/billing/licenseQuantityUtils";
 import { useEnv } from "@/utils/envUtils";
 import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
 import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+
+/** A saved plan as a schedule row, seeded with its current seat totals so
+ * resaving a schedule doesn't drop them. */
+function customerProductToSchedulePlan({
+	cusProduct,
+	products,
+}: {
+	cusProduct: FullCustomer["customer_products"][number];
+	products: ProductV2[];
+}): CustomerStatePlan {
+	const totals = customerLicenseTotals({
+		customerLicenses: cusProduct.customer_licenses,
+	});
+	const licenseQuantities = Object.entries(totals).map(
+		([license_plan_id, quantity]) => ({ license_plan_id, quantity }),
+	);
+	return {
+		...customerProductToCustomerStatePlan({ cusProduct, products }),
+		...(licenseQuantities.length > 0 && { licenseQuantities }),
+	};
+}
 
 type MergedSchedulePhase = {
 	starts_at: number;
@@ -100,7 +122,7 @@ export function getActiveCustomerPlans({
 		customer?.customer_products
 			.filter((cp) => cp.status === CusProductStatus.Active && !cp.canceled_at)
 			.map((cp) =>
-				customerProductToCustomerStatePlan({ cusProduct: cp, products }),
+				customerProductToSchedulePlan({ cusProduct: cp, products }),
 			) ?? []
 	);
 }
@@ -129,7 +151,7 @@ export function buildInitialValues({
 					customerProductId: cpId,
 				});
 				return cusProduct
-					? [customerProductToCustomerStatePlan({ cusProduct, products })]
+					? [customerProductToSchedulePlan({ cusProduct, products })]
 					: [];
 			}),
 		}))

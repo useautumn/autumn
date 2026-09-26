@@ -15,6 +15,7 @@ import { pairCustomerProducts } from "@/internal/billing/v2/compute/pairCustomer
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import type { ImmediatePhaseTransition } from "../compute/computeCreateSchedulePlan";
+import { handleCreateScheduleLicenseQuantityErrors } from "./handleCreateScheduleLicenseQuantityErrors";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 
 export const handleCreateScheduleErrors = async ({
@@ -38,6 +39,7 @@ export const handleCreateScheduleErrors = async ({
 	}
 
 	handleFirstPhaseStartDateErrors({ billingContext, preview });
+	handleCreateScheduleLicenseQuantityErrors({ billingContext });
 
 	if (isRevertTrialContext({ trialContext: billingContext.trialContext })) {
 		throw new RecaseError({

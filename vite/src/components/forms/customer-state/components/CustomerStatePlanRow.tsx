@@ -13,6 +13,7 @@ import type { PlanRowAction } from "@/components/forms/shared/PlanRowActionsMenu
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { cn } from "@/lib/utils";
 import { useCustomerStateContext } from "../CustomerStateProvider";
+import { CustomerStatePlanLicenseRows } from "./CustomerStatePlanLicenseRows";
 import { NotFoundBadge } from "./NotFoundBadge";
 import { PlanPriceLabel } from "./PlanPriceLabel";
 
@@ -79,6 +80,10 @@ export function CustomerStatePlanRow({
 			{},
 		);
 		form.setFieldValue(`phases[${phaseIndex}].plans[${planIndex}].items`, null);
+		form.setFieldValue(
+			`phases[${phaseIndex}].plans[${planIndex}].licenseQuantities`,
+			undefined,
+		);
 		form.setFieldValue(
 			`phases[${phaseIndex}].plans[${planIndex}].version`,
 			undefined,
@@ -200,6 +205,12 @@ export function CustomerStatePlanRow({
 						)}
 					</form.AppField>
 				)}
+			/>
+			<CustomerStatePlanLicenseRows
+				plan={plan}
+				planPath={`phases[${phaseIndex}].plans[${planIndex}]`}
+				currency={displayCurrency}
+				readOnly={isLocked}
 			/>
 		</div>
 	);
