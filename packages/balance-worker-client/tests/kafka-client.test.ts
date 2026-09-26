@@ -106,7 +106,7 @@ const command = {
 	value: 1,
 	overageBehavior: "reject" as const,
 	properties: null,
-	usageEvent: { name: "messages" },
+	usageEvent: { name: "messages", idempotencyKey: null, id: null },
 	occurredAt: 0,
 };
 

@@ -30,7 +30,7 @@ const command: TrackCommand = {
 	value: 5,
 	overageBehavior: "cap",
 	properties: null,
-	usageEvent: { name: "messages" },
+	usageEvent: { name: "messages", idempotencyKey: null, id: null },
 	occurredAt: 1_800_000_000_000,
 };
 const source = { kind: "returned" } as const;

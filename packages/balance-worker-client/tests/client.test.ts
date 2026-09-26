@@ -39,7 +39,7 @@ const command: TrackCommand = {
 	value: 1,
 	overageBehavior: "reject",
 	properties: null,
-	usageEvent: { name: "feature" },
+	usageEvent: { name: "feature", idempotencyKey: null, id: null },
 	occurredAt: 0,
 };
 const initialState = createSubjectState({

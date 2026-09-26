@@ -265,7 +265,7 @@ export const createTrackCommand = ({
 			value,
 			overageBehavior,
 			properties: null,
-			usageEvent: { name: featureId },
+			usageEvent: { name: featureId, idempotencyKey: null, id: null },
 			occurredAt,
 		},
 	});

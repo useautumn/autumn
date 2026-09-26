@@ -154,7 +154,7 @@ describe("Real balance worker HTTP service", () => {
 					value: 3,
 					overageBehavior: "reject",
 					properties: null,
-					usageEvent: { name: "messages" },
+					usageEvent: { name: "messages", idempotencyKey: null, id: null },
 					occurredAt: Date.now(),
 				},
 			});

@@ -34,7 +34,7 @@ const track: TrackCommand = parseTrackCommand({
 		value: 2,
 		overageBehavior: "reject",
 		properties: null,
-		usageEvent: { name: "messages" },
+		usageEvent: { name: "messages", idempotencyKey: null, id: null },
 		occurredAt: 1_700_000_000_000,
 	},
 });

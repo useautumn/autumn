@@ -257,7 +257,7 @@ async function trackOnce(
 			value: 1,
 			overageBehavior: "reject",
 			properties: null,
-			usageEvent: { name: customer.featureId },
+			usageEvent: { name: customer.featureId, idempotencyKey: null, id: null },
 			occurredAt: Date.now(),
 		},
 	});

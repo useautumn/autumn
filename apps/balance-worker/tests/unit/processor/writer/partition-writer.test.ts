@@ -118,7 +118,7 @@ const createCommand = ({
 			value,
 			overageBehavior: "reject",
 			properties,
-			usageEvent: { name: featureId },
+			usageEvent: { name: featureId, idempotencyKey: null, id: null },
 			occurredAt: 1_700_000_000_000,
 		},
 	});

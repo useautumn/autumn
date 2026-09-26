@@ -27,16 +27,22 @@ const commandIdOf = ({
 
 /** Legacy writes one event per request, named by its feature id or else its event name. */
 const usageEventOf = ({
+	ctx,
 	body,
 	isFanOut,
 	recordsUsageEvent,
 }: {
+	ctx: BalanceWorkerRequestContext;
 	body: TrackParams;
 	isFanOut: boolean;
 	recordsUsageEvent: boolean;
 }): TrackUsageEvent | null => {
 	if (body.skip_event || !recordsUsageEvent) return null;
-	return { name: (isFanOut ? body.event_name : body.feature_id) ?? "" };
+	return {
+		name: (isFanOut ? body.event_name : body.feature_id) ?? "",
+		idempotencyKey: body.idempotency_key || null,
+		id: ctx.testOptions?.eventId || null,
+	};
 };
 
 export function trackParamsToTrackCommand({
@@ -77,7 +83,7 @@ export function trackParamsToTrackCommand({
 		value: body.value ?? 1,
 		overageBehavior: body.overage_behavior ?? "cap",
 		properties: body.properties ?? null,
-		usageEvent: usageEventOf({ body, isFanOut, recordsUsageEvent }),
+		usageEvent: usageEventOf({ ctx, body, isFanOut, recordsUsageEvent }),
 		...(enforceOverdueBlock && { enforceOverdueBlock }),
 		...(lock?.enabled && {
 			lock: lockParamsToTrackLock({ lock, occurredAt }),

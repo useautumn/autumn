@@ -193,7 +193,7 @@ function createReplayTrackCommand(): TrackCommand {
 			value: TRACKED_VALUE,
 			overageBehavior: "reject",
 			properties: null,
-			usageEvent: { name: FEATURE_ID },
+			usageEvent: { name: FEATURE_ID, idempotencyKey: null, id: null },
 			occurredAt: BASELINE_CAPTURED_AT_MS,
 		},
 	});

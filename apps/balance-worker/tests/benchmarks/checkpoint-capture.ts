@@ -136,7 +136,7 @@ for (const customers of sizes) {
 					value: 5,
 					overageBehavior: "reject",
 					properties: null,
-					usageEvent: { name: "messages" },
+					usageEvent: { name: "messages", idempotencyKey: null, id: null },
 					occurredAt: now,
 				},
 			});
@@ -222,7 +222,7 @@ for (const customers of sizes) {
 					value: 1,
 					overageBehavior: "reject",
 					properties: null,
-					usageEvent: { name: "messages" },
+					usageEvent: { name: "messages", idempotencyKey: null, id: null },
 					occurredAt: Date.now(),
 				},
 			});

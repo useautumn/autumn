@@ -185,7 +185,7 @@ function commandContract() {
 		value: 3,
 		overageBehavior: "cap",
 		properties: null,
-		usageEvent: { name: "messages" },
+		usageEvent: { name: "messages", idempotencyKey: null, id: null },
 		occurredAt: ctx.timestamp,
 	});
 	expect(
@@ -212,7 +212,15 @@ function commandContract() {
 		properties: { model: "model" },
 		overageBehavior: "reject",
 		occurredAt: 500,
+		// The event row carries the caller's key as sent, as legacy's does.
+		usageEvent: { name: "messages", idempotencyKey: "stable", id: null },
 	});
+	expect(
+		trackParamsToTrackCommand({
+			ctx: { ...ctx, testOptions: { eventId: "evt_caller" } },
+			body,
+		}).usageEvent,
+	).toEqual({ name: "messages", idempotencyKey: null, id: "evt_caller" });
 	for (const value of [0, -1]) {
 		expect(
 			trackParamsToTrackCommand({ ctx, body: { ...body, value } }).value,
@@ -374,7 +382,10 @@ async function eventNameContract() {
 			usageEvent,
 		})),
 	).toEqual([
-		{ featureId: "messages", usageEvent: { name: "chat" } },
+		{
+			featureId: "messages",
+			usageEvent: { name: "chat", idempotencyKey: null, id: null },
+		},
 		{ featureId: "words", usageEvent: null },
 	]);
 	expect(

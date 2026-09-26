@@ -179,7 +179,9 @@ describe("recordToUsageEvent", () => {
 			record: trackRecord({
 				balance: 10,
 				value: 5,
-				overrides: { usageEvent: { name: "chat_message" } },
+				overrides: {
+					usageEvent: { name: "chat_message", idempotencyKey: null, id: null },
+				},
 			}),
 		});
 		expect(recorded).toMatchObject({ event_name: "chat_message", value: 5 });
@@ -193,6 +195,35 @@ describe("recordToUsageEvent", () => {
 				}),
 			}),
 		).toBeNull();
+	});
+
+	test("the caller's idempotency key and event id land on the event, as legacy writes them", () => {
+		const event = recordToUsageEvent({
+			position,
+			record: trackRecord({
+				balance: 10,
+				value: 5,
+				overrides: {
+					usageEvent: {
+						name: "messages",
+						idempotencyKey: "key_1",
+						id: "evt_caller",
+					},
+				},
+			}),
+		});
+		expect(event).toMatchObject({
+			id: "evt_caller",
+			idempotency_key: "key_1",
+			event_name: "messages",
+		});
+		// Without a caller id the event is named by its place in the log, and a key-less track stores null.
+		expect(
+			recordToUsageEvent({
+				position,
+				record: trackRecord({ balance: 10, value: 5 }),
+			}),
+		).toMatchObject({ id: "local-events:3:44", idempotency_key: null });
 	});
 
 	test("a record written before it named its subject makes no event", () => {

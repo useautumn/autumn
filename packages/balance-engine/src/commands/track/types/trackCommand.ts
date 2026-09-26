@@ -42,6 +42,10 @@ export const trackUsageEventSchema = z
 	.object({
 		/** The request's feature id, or its event name when it named an event instead. */
 		name: nonEmptyStringSchema,
+		/** The caller's own key, unprefixed, as the event row stores it; null when it sent none. */
+		idempotencyKey: nonEmptyStringSchema.nullable(),
+		/** A caller-named event id (`x-event-id`); null lets the event be named by its place in the log. */
+		id: nonEmptyStringSchema.nullable(),
 	})
 	.strict();
 

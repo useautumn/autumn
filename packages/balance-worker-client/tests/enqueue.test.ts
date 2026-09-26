@@ -24,7 +24,7 @@ const trackFor = ({ customerId }: { customerId: string }): TrackCommand => ({
 	value: 1,
 	overageBehavior: "reject",
 	properties: null,
-	usageEvent: { name: "feature" },
+	usageEvent: { name: "feature", idempotencyKey: null, id: null },
 	occurredAt: 0,
 });
 
