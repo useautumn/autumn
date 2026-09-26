@@ -6,12 +6,14 @@ import {
 	findFeatureById,
 	fullSubjectToCustomerEntitlements,
 	getApiFlag,
+	scopeExpandForCtx,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	workerReplyToFullSubject,
 	workerStateToApiBalance,
 } from "../../balanceWorker/workerStateToApiBalance.js";
+import { workerSubjectsToApiBalances } from "../../balanceWorker/workerSubjectsToApiBalances.js";
 import type { WorkerCheckAnswer } from "./runDeductingCheck.js";
 
 /** The one place a worker's answer becomes the API's check response, whether it came from a check or a track. */
@@ -19,10 +21,13 @@ export function checkAnswerToApiResponse({
 	ctx,
 	command,
 	answer,
+	deducted = false,
 }: {
 	ctx: AutumnContext;
 	command: CheckCommand;
 	answer: WorkerCheckAnswer;
+	/** The check deducted (`send_event` or a lock), so it also answers with the legacy track `balances` map. */
+	deducted?: boolean;
 }): CheckResponseV3 {
 	const { result, state, catalog } = answer;
 	// The worker names the feature that answers: the checked one, or the credit system funding it.
@@ -52,7 +57,8 @@ export function checkAnswerToApiResponse({
 	const flag =
 		fullSubject && result.isFlag
 			? getApiFlag({
-					ctx,
+					// Same scoping as the legacy subject's flags, so `flag.feature` expands the flag's feature.
+					ctx: scopeExpandForCtx({ ctx, prefix: ["flags", "flag"] }),
 					cusEnts: fullSubjectToCustomerEntitlements({
 						fullSubject,
 						featureIds: [featureToUse.id],
@@ -60,6 +66,13 @@ export function checkAnswerToApiResponse({
 					feature: featureToUse,
 				}).data
 			: null;
+	const balances =
+		deducted && result.allowed && fullSubject
+			? workerSubjectsToApiBalances({
+					ctx,
+					subjects: [{ featureId: command.featureId, fullSubject }],
+				})
+			: {};
 	return applyResponseVersionChanges<CheckResponseV3>({
 		ctx,
 		targetVersion: ctx.apiVersion,
@@ -71,6 +84,7 @@ export function checkAnswerToApiResponse({
 			required_balance: result.requiredBalance,
 			flag,
 			balance,
+			balances: Object.keys(balances).length < 2 ? undefined : balances,
 		},
 		legacyData: { noCusEnts: !isAttached, featureToUse },
 	});

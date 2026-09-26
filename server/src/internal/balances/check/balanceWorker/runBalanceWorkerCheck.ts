@@ -37,7 +37,12 @@ export async function runBalanceWorkerCheck({
 	const answerToResult = (
 		answer: WorkerCheckAnswer,
 	): RunWithCustomer<CheckResponseV3> => ({
-		result: checkAnswerToApiResponse({ ctx, command, answer }),
+		result: checkAnswerToApiResponse({
+			ctx,
+			command,
+			answer,
+			deducted: deducts,
+		}),
 		customer: answer.state?.customer ?? null,
 	});
 	// Only a plain check tops up here: a deducting check is a track whose record reaches herald, which dispatches.
