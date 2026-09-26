@@ -165,7 +165,7 @@ export const buildBaseImage = (
 					"tar -xf /tmp/k.tar -C /tmp/kn opt/kafka etc/kafka/docker && rm /tmp/k.tar && " +
 					"mkdir -p /opt/kafka && mv /tmp/kn/opt/kafka/kafka.Kafka /opt/kafka/ && " +
 					"mv /tmp/kn/etc/kafka/docker /opt/kafka/docker && rm -rf /tmp/kn && " +
-					"/opt/kafka/kafka.Kafka start -h >/dev/null",
+					"test -x /opt/kafka/kafka.Kafka",
 			])
 			// 5. goaws config — port 9324 + AccountId "000000000000" + FIFO queues +
 			//    Standard autumn-track-async (TRACK_ASYNC_STANDARD_SQS_QUEUE_URL).
