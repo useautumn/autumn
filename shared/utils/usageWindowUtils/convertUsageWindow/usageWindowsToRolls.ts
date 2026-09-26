@@ -3,17 +3,19 @@ import type {
 	UsageWindowRoll,
 } from "../../../models/cusProductModels/cusEntModels/usageWindowModels.js";
 import type { UsageWindow } from "../../../models/cusProductModels/cusEntModels/usageWindowTable.js";
+import { isSameUsageWindow } from "../classifyUsageWindow/isSameUsageWindow.js";
 import { findUsageWindowLimitByWindow } from "../findUsageWindow/findUsageWindowLimitByWindow.js";
 
 /**
  * Decides, per counter row, whether it needs rolling. A count is only valid
- * within the exact window stamped on it; the anchor is provenance, so an
- * anchor-only re-point keeps the count:
+ * within the window stamped on it (isSameUsageWindow); the anchor is
+ * provenance, so an anchor-only re-point keeps the count:
  *
  *   expired | window moved | anchor moved | result
  *   --------+--------------+--------------+---------------------------------
  *   no      | no           | no           | no roll (the common case)
  *   no      | no           | yes          | re-point anchor, count kept
+ *   no      | drifted      | any          | re-bound, count kept (isSameUsageWindow)
  *   no      | yes          | any          | re-bound, count zeroed (plan change)
  *   yes     | any          | any          | re-bound, count zeroed (period over)
  *   yes     | (no limit)   | --           | bounds kept, count zeroed (entity rows, v1)
@@ -52,14 +54,15 @@ export const usageWindowsToRolls = ({
 						usageWindow.anchor_customer_entitlement_id ?? null,
 				};
 
-		const windowMoved =
+		const boundsChanged =
 			Number(usageWindow.window_start_at) !== target.window_start_at ||
 			Number(usageWindow.window_end_at) !== target.window_end_at;
+		const windowMoved = !isSameUsageWindow({ usageWindow, window: target });
 		const anchorMoved =
 			(usageWindow.anchor_customer_entitlement_id ?? null) !==
 			target.anchor_customer_entitlement_id;
 
-		if (!expired && !windowMoved && !anchorMoved) continue;
+		if (!expired && !boundsChanged && !anchorMoved) continue;
 
 		rolls.push({
 			id: usageWindow.id,

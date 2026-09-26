@@ -161,7 +161,7 @@ local function update_in_memory_usage_window(params)
       }
       table.insert(feature_windows.windows, existing)
     elseif safe_number(existing.window_end_at) <= now
-        or safe_number(existing.window_start_at) ~= limit.window_start_at
+        or not is_same_usage_window(existing, limit)
     then
       -- A count never survives its stamped window: zero on expiry AND on any
       -- bounds re-derivation mismatch (plan change).

@@ -309,6 +309,7 @@ export * from "./utils/rewardUtils/rewardMigrationUtils";
 export * from "./utils/scopeDefinitions";
 // Utils
 export * from "./utils/usageWindowUtils/buildUsageWindowKey";
+export * from "./utils/usageWindowUtils/classifyUsageWindow/isSameUsageWindow";
 export * from "./utils/usageWindowUtils/classifyUsageWindow/usageWindowMatchesLimit";
 export * from "./utils/usageWindowUtils/convertUsageWindow/getUsageWindowDimension";
 export * from "./utils/usageWindowUtils/convertUsageWindow/usageLimitToUsageWindowLimit";

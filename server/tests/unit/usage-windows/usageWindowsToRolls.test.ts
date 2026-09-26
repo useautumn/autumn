@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	getCurrentUsageWindowUsage,
 	type UsageWindow,
 	type UsageWindowLimit,
 	usageWindowsToRolls,
@@ -41,6 +42,41 @@ describe("usageWindowsToRolls", () => {
 			now: NOW,
 		});
 		expect(rolls).toHaveLength(0);
+	});
+
+	test("a cycle recomputed from Stripe's anchor drifts a second: re-bound, count kept", () => {
+		const drift = 1169;
+		const rolls = usageWindowsToRolls({
+			usageWindows: [row({})],
+			limits: [
+				limit({
+					window_start_at: NOW - HOUR + drift,
+					window_end_at: NOW + HOUR + drift,
+					anchor_customer_entitlement_id: "ce_new",
+				}),
+			],
+			now: NOW,
+		});
+		expect(rolls).toHaveLength(1);
+		expect(rolls[0]).toMatchObject({
+			zero_usage: false,
+			window_start_at: NOW - HOUR + drift,
+			window_end_at: NOW + HOUR + drift,
+			anchor_customer_entitlement_id: "ce_new",
+		});
+	});
+
+	test("the drifted counter still counts on a read", () => {
+		expect(
+			getCurrentUsageWindowUsage({
+				usageWindows: [row({})],
+				limit: limit({
+					window_start_at: NOW - HOUR + 1169,
+					window_end_at: NOW + HOUR + 1169,
+				}),
+				now: NOW,
+			}),
+		).toBe(3);
 	});
 
 	test("plan change (bounds moved, not expired): re-bound, count zeroed", () => {

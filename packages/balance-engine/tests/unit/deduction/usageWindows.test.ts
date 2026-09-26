@@ -79,6 +79,26 @@ const windowChangesOf = (outcome: DeductionOutcome) =>
 
 describe("usage windows", () => {
 	test.concurrent(
+		"a counter whose window drifted a second from the cap's still binds the cap",
+		() => {
+			const drift = 1169;
+			const drifted = deductFrom({
+				customer: dailyCap({ limit: 5 }),
+				customerEntitlements: [createCustomerEntitlement({ balance: 10 })],
+				usageWindows: [
+					counterRow({
+						usage: 5,
+						windowStartAt: today.windowStartAt - drift,
+						windowEndAt: today.windowEndAt - drift,
+					}),
+				],
+				value: 5,
+			});
+			expect(drifted).toMatchObject({ appliedValue: 0, changes: [] });
+		},
+	);
+
+	test.concurrent(
 		"two customers with the same cap on the same day get counters of their own",
 		() => {
 			const counterIdFor = ({ internalId }: { internalId: string }) => {

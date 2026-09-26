@@ -1,3 +1,4 @@
+import { USAGE_WINDOW_BOUND_TOLERANCE_MS } from "@autumn/shared";
 // ============================================================================
 // HELPER MODULES (imported as text — works with both Bun and esbuild)
 // ============================================================================
@@ -79,6 +80,7 @@ ${updateCustomerProductV2MainScript}`;
 export const DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT = `${LUA_UTILS}
 ${CREDIT_RATE_UTILS}
 ${READ_SUBJECT_BALANCES}
+local USAGE_WINDOW_BOUND_TOLERANCE_MS = ${USAGE_WINDOW_BOUND_TOLERANCE_MS}
 ${READ_USAGE_WINDOWS}
 ${CONTEXT_UTILS_V2}
 ${GET_TOTAL_BALANCE}
