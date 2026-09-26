@@ -6,6 +6,7 @@ import {
 	type TrackResponseV2,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -97,38 +98,42 @@ describe(`${chalk.yellowBright("track-breakdown-mixed-entity: per-entity + entit
 		}
 	});
 
-	test("initial: customer has 300 total with 3 breakdown items", async () => {
-		// Per-entity: 100 * 2 entities = 200
-		// Entity products: 50 * 2 = 100
-		// Total: 300
+	// The balance worker doesn't aggregate entity data onto the customer.
+	test.skipIf(isBalanceWorkerRoute())(
+		"initial: customer has 300 total with 3 breakdown items",
+		async () => {
+			// Per-entity: 100 * 2 entities = 200
+			// Entity products: 50 * 2 = 100
+			// Total: 300
 
-		const res = (await autumnV2.check<CheckResponseV2>({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponseV2;
+			const res = (await autumnV2.check<CheckResponseV2>({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+			})) as unknown as CheckResponseV2;
 
-		expect(res.balance).toMatchObject({
-			granted_balance: 300,
-			current_balance: 300,
-			usage: 0,
-		});
+			expect(res.balance).toMatchObject({
+				granted_balance: 300,
+				current_balance: 300,
+				usage: 0,
+			});
 
-		// // Should have 3 breakdown items:
-		// // 1 for per-entity (aggregated, 200 total)
-		// // 2 for entity products (50 each)
-		// expect(res.balance?.breakdown).toHaveLength(3);
+			// // Should have 3 breakdown items:
+			// // 1 for per-entity (aggregated, 200 total)
+			// // 2 for entity products (50 each)
+			// expect(res.balance?.breakdown).toHaveLength(3);
 
-		// const breakdowns = res.balance?.breakdown ?? [];
-		// const balances = breakdowns
-		// 	.map((b) => b.granted_balance)
-		// 	.sort((a, b) => (a ?? 0) - (b ?? 0));
-		// expect(balances).toEqual([50, 50, 200]);
+			// const breakdowns = res.balance?.breakdown ?? [];
+			// const balances = breakdowns
+			// 	.map((b) => b.granted_balance)
+			// 	.sort((a, b) => (a ?? 0) - (b ?? 0));
+			// expect(balances).toEqual([50, 50, 200]);
 
-		// // All IDs should be unique (different customer_entitlement_ids)
-		// const ids = breakdowns.map((b) => b.id);
-		// const uniqueIds = new Set(ids);
-		// expect(uniqueIds.size).toBe(3);
-	});
+			// // All IDs should be unique (different customer_entitlement_ids)
+			// const ids = breakdowns.map((b) => b.id);
+			// const uniqueIds = new Set(ids);
+			// expect(uniqueIds.size).toBe(3);
+		},
+	);
 
 	test("entity-1: has 150 total with 2 breakdown items", async () => {
 		// Per-entity portion: 100
@@ -185,11 +190,14 @@ describe(`${chalk.yellowBright("track-breakdown-mixed-entity: per-entity + entit
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		expect(customerRes.balance).toMatchObject({
-			granted_balance: 300,
-			current_balance: 220,
-			usage: 80,
-		});
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expect(customerRes.balance).toMatchObject({
+				granted_balance: 300,
+				current_balance: 220,
+				usage: 80,
+			});
+		}
 
 		// // Customer still has 3 breakdowns
 		// expect(customerRes.balance?.breakdown).toHaveLength(3);

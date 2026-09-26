@@ -6,6 +6,7 @@ import {
 	type TrackResponseV2,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -79,31 +80,35 @@ describe(`${chalk.yellowBright("track-breakdown-cus-and-entity-prod: customer + 
 		});
 	});
 
-	test("customer level: 200 total with 2 breakdown items", async () => {
-		const res = (await autumnV2.check<CheckResponseV2>({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponseV2;
+	// The balance worker doesn't aggregate entity data onto the customer.
+	test.skipIf(isBalanceWorkerRoute())(
+		"customer level: 200 total with 2 breakdown items",
+		async () => {
+			const res = (await autumnV2.check<CheckResponseV2>({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+			})) as unknown as CheckResponseV2;
 
-		expect(res.balance).toMatchObject({
-			granted_balance: 200,
-			current_balance: 200,
-			usage: 0,
-		});
+			expect(res.balance).toMatchObject({
+				granted_balance: 200,
+				current_balance: 200,
+				usage: 0,
+			});
 
-		// // Should have 2 breakdown items (customer + entity)
-		// expect(res.balance?.breakdown).toHaveLength(2);
+			// // Should have 2 breakdown items (customer + entity)
+			// expect(res.balance?.breakdown).toHaveLength(2);
 
-		// // Both should have 100 each
-		// for (const breakdown of res.balance?.breakdown ?? []) {
-		// 	expect(breakdown.granted_balance).toBe(100);
-		// 	expect(breakdown.current_balance).toBe(100);
-		// }
+			// // Both should have 100 each
+			// for (const breakdown of res.balance?.breakdown ?? []) {
+			// 	expect(breakdown.granted_balance).toBe(100);
+			// 	expect(breakdown.current_balance).toBe(100);
+			// }
 
-		// IDs should be unique
-		// const ids = res.balance?.breakdown?.map((b) => b.id) ?? [];
-		// expect(new Set(ids).size).toBe(2);
-	});
+			// IDs should be unique
+			// const ids = res.balance?.breakdown?.map((b) => b.id) ?? [];
+			// expect(new Set(ids).size).toBe(2);
+		},
+	);
 
 	test("entity level: 200 total with 2 breakdown items (inherits customer)", async () => {
 		const res = (await autumnV2.check<CheckResponseV2>({
@@ -142,8 +147,11 @@ describe(`${chalk.yellowBright("track-breakdown-cus-and-entity-prod: customer + 
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		expect(customerRes.balance?.current_balance).toBe(150);
-		expect(customerRes.balance?.usage).toBe(50);
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expect(customerRes.balance?.current_balance).toBe(150);
+			expect(customerRes.balance?.usage).toBe(50);
+		}
 
 		// // Still 2 breakdowns
 		// expect(customerRes.balance?.breakdown).toHaveLength(2);

@@ -10,13 +10,15 @@ import {
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { expireAllCusEntsForReset } from "@tests/utils/cusProductUtils/resetTestUtils.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 
-test.concurrent(
+// The balance worker doesn't aggregate entity data onto the customer.
+test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("get-customer: entity product rollovers contribute to granted")}`,
 	async () => {
 		const customerId = "get-customer-entity-rollover-granted";

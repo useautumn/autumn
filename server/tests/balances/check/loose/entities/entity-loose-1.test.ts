@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, type CheckResponseV2 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -83,14 +84,18 @@ describe(`${chalk.yellowBright(`${testCase}: basic entity loose entitlement chec
 		expect(res.balance?.current_balance).toBe(500);
 	});
 
-	test("v2: customer-level check should see merged entity balance", async () => {
-		const res = (await autumnV2.check({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			// No entity_id - checking at customer level
-		})) as unknown as CheckResponseV2;
+	// The balance worker doesn't aggregate entity data onto the customer.
+	test.skipIf(isBalanceWorkerRoute())(
+		"v2: customer-level check should see merged entity balance",
+		async () => {
+			const res = (await autumnV2.check({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				// No entity_id - checking at customer level
+			})) as unknown as CheckResponseV2;
 
-		// Customer should see merged entity balances
-		expect(res.balance?.current_balance).toBe(500);
-	});
+			// Customer should see merged entity balances
+			expect(res.balance?.current_balance).toBe(500);
+		},
+	);
 });

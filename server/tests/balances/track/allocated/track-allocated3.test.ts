@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, ProductItemFeatureType } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -96,7 +97,10 @@ describe(`${chalk.yellowBright(
 
 		const customer = await autumnV1.customers.get(customerId);
 
-		expect(customer.features[TestFeature.Workflows].balance).toBe(20); // 10 + 5 * 2
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expect(customer.features[TestFeature.Workflows].balance).toBe(20); // 10 + 5 * 2
+		}
 
 		// Verify entity balances
 		for (const entity of entities) {
@@ -180,9 +184,12 @@ Total workflows to use: ${numCustomerWorkflows + numEntity1Workflows + numEntity
 		// expect(customer.features[TestFeature.Messages].balance).toBe(
 		// 	expectedCustomerTotalMessages,
 		// );
-		expect(customer.features[TestFeature.Workflows].balance).toBe(
-			expectedCusWorkflows + expectedEnt1Workflows + expectedEnt2Workflows,
-		);
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expect(customer.features[TestFeature.Workflows].balance).toBe(
+				expectedCusWorkflows + expectedEnt1Workflows + expectedEnt2Workflows,
+			);
+		}
 
 		// Check entity balances
 		const entity1 = await autumnV1.entities.get(customerId, entity1Id);
@@ -198,9 +205,11 @@ Total workflows to use: ${numCustomerWorkflows + numEntity1Workflows + numEntity
 		const nonCachedCustomer = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",
 		});
-		expect(nonCachedCustomer.features[TestFeature.Workflows].balance).toBe(
-			expectedCusWorkflows + expectedEnt1Workflows + expectedEnt2Workflows,
-		);
+		if (!isBalanceWorkerRoute()) {
+			expect(nonCachedCustomer.features[TestFeature.Workflows].balance).toBe(
+				expectedCusWorkflows + expectedEnt1Workflows + expectedEnt2Workflows,
+			);
+		}
 		const nonCachedEntity1 = await autumnV1.entities.get(
 			customerId,
 			entity1Id,
