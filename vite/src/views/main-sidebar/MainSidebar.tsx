@@ -181,7 +181,7 @@ export const MainSidebar = ({
 							<NavButton
 								value="customers"
 								icon={<Users strokeWidth={ICON_STROKE} />}
-								title="All customers"
+								title="Customers"
 								env={env}
 							/>
 							{canSeeMigrations && (
