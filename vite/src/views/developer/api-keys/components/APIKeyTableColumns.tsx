@@ -1,4 +1,4 @@
-import { type ApiKey, groupAndFormatScopes } from "@autumn/shared";
+import { type ApiKeyListItem, groupAndFormatScopes } from "@autumn/shared";
 import { Badge, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import {
@@ -11,7 +11,7 @@ import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { APIKeyToolbar } from "./APIKeyToolbar";
 
 // Parse meta to get source info
-function getSourceInfo(meta: ApiKey["meta"]): {
+function getSourceInfo(meta: ApiKeyListItem["meta"]): {
 	type: "cli" | "dashboard" | "autumn_support" | null;
 	author?: string;
 } {
@@ -32,12 +32,15 @@ function getSourceInfo(meta: ApiKey["meta"]): {
 	return { type: null };
 }
 
-export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
+export const createAPIKeyTableColumns = (): ColumnDef<
+	ApiKeyListItem,
+	unknown
+>[] => [
 	{
 		size: 120,
 		header: "Name",
 		accessorKey: "name",
-		cell: ({ row }: { row: Row<ApiKey> }) => {
+		cell: ({ row }: { row: Row<ApiKeyListItem> }) => {
 			return (
 				<Tooltip>
 					<TooltipTrigger asChild>
@@ -54,7 +57,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 		header: "Preview",
 		size: 150,
 		accessorKey: "prefix",
-		cell: ({ row }: { row: Row<ApiKey> }) => {
+		cell: ({ row }: { row: Row<ApiKeyListItem> }) => {
 			const apiKey = row.original;
 			return (
 				<div className="font-mono justify-start flex w-full group overflow-hidden">
@@ -71,7 +74,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 		header: "Source",
 		size: 100,
 		accessorKey: "meta",
-		cell: ({ row }: { row: Row<ApiKey> }) => {
+		cell: ({ row }: { row: Row<ApiKeyListItem> }) => {
 			const source = getSourceInfo(row.original.meta);
 
 			if (source.type === "cli") {
@@ -115,7 +118,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 		accessorKey: "scopes",
 		size: 150,
 		enableSorting: false,
-		cell: ({ row }: { row: Row<ApiKey> }) => {
+		cell: ({ row }: { row: Row<ApiKeyListItem> }) => {
 			const scopes = row.original.scopes;
 			if (!scopes || scopes.length === 0) {
 				return <Badge variant="muted">Full access (unrestricted)</Badge>;
@@ -163,7 +166,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 		),
 		accessorKey: "created_at",
 		size: 120,
-		cell: ({ row }: { row: Row<ApiKey> }) => {
+		cell: ({ row }: { row: Row<ApiKeyListItem> }) => {
 			const { date, time } = formatUnixToDateTime(row.original.created_at);
 			return (
 				<div className="text-xs text-tertiary-foreground pr-4 w-full">
@@ -177,7 +180,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 		accessorKey: "actions",
 		size: 40,
 		enableSorting: false,
-		cell: ({ row }: { row: Row<ApiKey> }) => {
+		cell: ({ row }: { row: Row<ApiKeyListItem> }) => {
 			return (
 				<div
 					className="flex justify-end w-full pr-2"

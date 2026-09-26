@@ -43,11 +43,11 @@ const getTestHelpers = async (): Promise<TestHelpers> => {
  */
 export const createDashboardSession = async (
 	ctx: DashboardCtx,
-	{ role = "owner" }: { role?: string } = {},
+	{ role = "owner", globalRole }: { role?: string; globalRole?: string } = {},
 ): Promise<DashboardSession> => {
 	const test = await getTestHelpers();
 
-	const user = await test.saveUser(test.createUser());
+	const user = await test.saveUser(test.createUser({ role: globalRole }));
 	await test.addMember?.({
 		userId: user.id,
 		organizationId: ctx.org.id,

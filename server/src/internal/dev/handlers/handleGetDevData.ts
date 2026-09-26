@@ -12,6 +12,7 @@ export const handleGetDevData = createRoute({
 			db,
 			orgId: org.id,
 			env,
+			visibility: "visible",
 		});
 
 		const dashboardUrl = await getSvixDashboardUrl({
