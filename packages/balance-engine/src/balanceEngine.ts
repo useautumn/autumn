@@ -92,6 +92,7 @@ export type { DeductionDecision } from "./deduction/types/deductionDecision.js";
 export type { DeductionDelta } from "./deduction/types/deductionDelta.js";
 export type { DeductionOutcome } from "./deduction/types/deductionOutcome.js";
 export type { DeductionRow } from "./deduction/types/deductionRow.js";
+export { usageWindowFeaturesOf } from "./deduction/utils/limits/usageWindowFeaturesOf.js";
 export type { UnsupportedCommandReason } from "./errors.js";
 // boundary
 export {

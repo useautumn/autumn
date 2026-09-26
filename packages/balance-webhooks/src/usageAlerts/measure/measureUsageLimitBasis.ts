@@ -6,7 +6,6 @@ import type {
 import {
 	type DbUsageAlert,
 	type Feature,
-	fullSubjectToCustomerEntitlements,
 	fullSubjectToUsageWindowLimits,
 	getCurrentUsageWindowUsage,
 	orgToInStatuses,
@@ -14,6 +13,7 @@ import {
 	usageLimitFilterKey,
 	usageWindowLimitToWebhookBlock,
 } from "@autumn/shared";
+import { fullSubjectToUsageWindowFeatures } from "../../common/convertSubject/fullSubjectToUsageWindowFeatures.js";
 import type {
 	BeforeAfter,
 	TrackedSubjects,
@@ -61,9 +61,12 @@ const findUsageWindowLimitForAlert = ({
 	const filterKey = usageLimitFilterKey(alert.filter);
 	const readsCustomerCountersOnly = !entityId;
 	const now = command.occurredAt;
-	const features = fullSubjectToCustomerEntitlements({ fullSubject, now }).map(
-		(customerEntitlement) => customerEntitlement.entitlement.feature,
-	);
+	const features = fullSubjectToUsageWindowFeatures({
+		fullSubject,
+		featureId: feature.id,
+		internalFeatureId: feature.internal_id,
+		now,
+	});
 	return fullSubjectToUsageWindowLimits({
 		fullSubject,
 		featureIds: [feature.id],

@@ -1,7 +1,6 @@
 import type { CheckCommand, WorkerFullSubject } from "@autumn/balance-engine";
 import {
 	type BalancesLimitReached,
-	fullSubjectToCustomerEntitlements,
 	fullSubjectToUsageWindowLimits,
 	getCurrentUsageWindowUsage,
 	orgToInStatuses,
@@ -9,6 +8,7 @@ import {
 	usageLimitFilterMatchesProperties,
 	usageWindowLimitToWebhookBlock,
 } from "@autumn/shared";
+import { fullSubjectToUsageWindowFeatures } from "../common/convertSubject/fullSubjectToUsageWindowFeatures.js";
 
 type BlockingUsageLimit = Pick<BalancesLimitReached, "filter" | "usage_limit">;
 
@@ -21,10 +21,12 @@ export const findBlockingUsageLimit = ({
 	fullSubject: WorkerFullSubject;
 }): BlockingUsageLimit | null => {
 	const now = command.occurredAt;
-	const features = fullSubjectToCustomerEntitlements({
+	const features = fullSubjectToUsageWindowFeatures({
 		fullSubject,
+		featureId: command.featureId,
+		internalFeatureId: command.internalFeatureId,
 		now,
-	}).map((customerEntitlement) => customerEntitlement.entitlement.feature);
+	});
 	const measured = fullSubjectToUsageWindowLimits({
 		fullSubject,
 		featureIds: [command.featureId],
