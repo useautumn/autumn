@@ -33,7 +33,7 @@ export const streamCustomerExportCsv = async ({
 		progress,
 		onPageProcessed: async (page) => {
 			rowCount += page.rowCount;
-			await onCustomersProcessed?.(page.customerCount);
+			await onCustomersProcessed?.(page.candidateCount ?? page.customerCount);
 		},
 	});
 
