@@ -11,7 +11,7 @@
  *     db `autumn` created with `CREATE EXTENSION pg_trgm` on an EMPTY schema
  *   - Dragonfly  → /opt/autumn-tw/bin/dragonfly
  *   - goaws (native Go SQS, via crane) → /opt/autumn-tw/bin/goaws
- *   - Redpanda (native Kafka, via crane) → /opt/redpanda (its wrappers hardcode it)
+ *   - Kafka (Apache kafka-native, via crane) → /opt/kafka (+ its docker config under /opt/kafka/docker)
  *   - goaws config → /opt/autumn-tw/goaws/goaws.yaml (port 9324, AccountId
  *     "000000000000", EnableDuplicates env-level, queues autumn.fifo +
  *     autumn-track.fifo + autumn-track-async)
@@ -82,8 +82,9 @@ const CRANE_URL =
 const GOAWS_IMAGE = "admiralpiett/goaws:latest";
 const DYNOXIDE_URL =
 	"https://github.com/nubo-db/dynoxide/releases/download/v0.13.0/dynoxide-x86_64-unknown-linux-musl.tar.gz";
-/** Pinned with build-base.sh / freestyle-base.sh; the balance worker's log. */
-const REDPANDA_IMAGE = "docker.redpanda.com/redpandadata/redpanda:v26.2.3";
+/** The balance worker's log. Redpanda can't run here: Seastar aborts under gVisor (no
+ * /proc/sys/fs/aio-max-nr). Google's mirror: Docker Hub rate-limits Modal's builders. */
+const KAFKA_NATIVE_IMAGE = "mirror.gcr.io/apache/kafka-native:4.1.0";
 
 /** Fixed layout — must match build-base.sh / start-services.sh exactly. */
 const TW_PREFIX = "/opt/autumn-tw";
@@ -157,14 +158,14 @@ export const buildBaseImage = (
 					"install -m0755 \"$(find /tmp -type f -name 'dynoxide*' ! -name '*.tar.gz' | head -1)\" " +
 					`${TW_PREFIX}/bin/dynoxide && rm -f /tmp/dx.tar.gz`,
 			])
-			// 4c. Redpanda (native Kafka) for the balance worker. apache/kafka is a
-			//     JVM app; Redpanda's /opt/redpanda tree is self-contained (bundled
-			//     libs) and its wrapper scripts hardcode that path, so it is
-			//     extracted whole via crane.
+			// 4c. Kafka for the balance worker: a single native binary, no JVM.
+			//     start-services.sh formats and starts it from /opt/kafka.
 			.dockerfileCommands([
-				`RUN crane export ${REDPANDA_IMAGE} /tmp/rp.tar && ` +
-					"tar -xf /tmp/rp.tar -C / opt/redpanda && rm /tmp/rp.tar && " +
-					"/opt/redpanda/bin/rpk version >/dev/null",
+				`RUN crane export ${KAFKA_NATIVE_IMAGE} /tmp/k.tar && mkdir -p /tmp/kn && ` +
+					"tar -xf /tmp/k.tar -C /tmp/kn opt/kafka etc/kafka/docker && rm /tmp/k.tar && " +
+					"mkdir -p /opt/kafka && mv /tmp/kn/opt/kafka/kafka.Kafka /opt/kafka/ && " +
+					"mv /tmp/kn/etc/kafka/docker /opt/kafka/docker && rm -rf /tmp/kn && " +
+					"/opt/kafka/kafka.Kafka start -h >/dev/null",
 			])
 			// 5. goaws config — port 9324 + AccountId "000000000000" + FIFO queues +
 			//    Standard autumn-track-async (TRACK_ASYNC_STANDARD_SQS_QUEUE_URL).
@@ -242,7 +243,7 @@ export const buildBaseImage = (
 					"apt-get update && " +
 					`bun x playwright@${playwrightVersion} install --with-deps chromium && ` +
 					"rm -rf /var/lib/apt/lists/* && " +
-					'test -x "$(ls -d /root/.cache/ms-playwright/chromium-*/chrome-linux/chrome | head -1)"',
+					'test -x "$(ls -d /root/.cache/ms-playwright/chromium-*/chrome-linux*/chrome | head -1)"',
 			])
 			.build(app)
 	);
