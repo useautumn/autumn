@@ -1,6 +1,7 @@
 import {
 	Button,
 	Input,
+	MiniCopyButton,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
@@ -80,9 +81,18 @@ export const DeleteOrgPopover = () => {
 					<p className="text-tertiary-foreground">
 						Are you sure you want to delete this organization?
 					</p>
+					<div className="flex items-center gap-1 flex-wrap text-tertiary-foreground">
+						<span>Type</span>
+						<MiniCopyButton
+							text={org?.name ?? ""}
+							innerClassName="font-bold text-foreground"
+							iconClassName="opacity-100 text-muted-foreground hover:text-foreground transition-colors"
+						/>
+						<span>to confirm.</span>
+					</div>
 					<Input
 						variant="destructive"
-						placeholder={`Type "${org?.name}" to confirm`}
+						placeholder={org?.name}
 						value={confirmText}
 						onChange={(e) => setConfirmText(e.target.value)}
 					/>

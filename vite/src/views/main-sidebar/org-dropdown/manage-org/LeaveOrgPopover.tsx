@@ -1,6 +1,7 @@
 import {
 	Button,
 	Input,
+	MiniCopyButton,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
@@ -71,8 +72,17 @@ export const LeaveOrgPopover = () => {
 					<p className="text-tertiary-foreground">
 						Are you sure you want to leave this organization?
 					</p>
+					<div className="flex items-center gap-1 flex-wrap text-tertiary-foreground">
+						<span>Type</span>
+						<MiniCopyButton
+							text={org?.name ?? ""}
+							innerClassName="font-bold text-foreground"
+							iconClassName="opacity-100 text-muted-foreground hover:text-foreground transition-colors"
+						/>
+						<span>to confirm.</span>
+					</div>
 					<Input
-						placeholder={`Type "${org?.name}" to confirm`}
+						placeholder={org?.name}
 						value={confirmText}
 						onChange={(e) => setConfirmText(e.target.value)}
 					/>
