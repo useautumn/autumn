@@ -129,10 +129,6 @@ export const OrgDropdown = () => {
 								<span className="max-w-28 truncate text-[13px] font-[550] leading-4 tracking-[-0.005em] text-foreground dark:text-[#EDEDED]">
 									{org?.name}
 								</span>
-								<ChevronsUpDown
-									className="size-3.5 text-[#8A8A8A] dark:text-[#6B6B6B]"
-									strokeWidth={1.75}
-								/>
 							</div>
 						</Button>
 					</DropdownMenuTrigger>
