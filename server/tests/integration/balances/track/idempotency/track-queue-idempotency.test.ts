@@ -28,6 +28,10 @@ import {
 } from "../../../db/full-subject/utils/fullSubjectScenarioBuilders.js";
 import { withInsertedScenario } from "../../../db/full-subject/utils/withInsertedScenario.js";
 
+// In-process calls drive the legacy Redis lane (Lua replay keys, runTrackV3 409s); HTTP cases still hit the worker.
+const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+
 // Scenario tests all run on V2_1 — pinned once at module scope (restored
 // in afterAll) so tests can run concurrently without racing per-test
 // mutation of the shared ctx.
@@ -35,6 +39,9 @@ const originalApiVersion = ctx.apiVersion;
 ctx.apiVersion = new ApiVersionClass(ApiVersion.V2_1);
 afterAll(() => {
 	ctx.apiVersion = originalApiVersion;
+	if (previousRollout === undefined)
+		delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
 });
 
 test.concurrent(

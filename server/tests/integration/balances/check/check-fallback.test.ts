@@ -8,6 +8,10 @@ import chalk from "chalk";
 import { createHonoApp } from "@/initHono.js";
 import type { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 
+// The in-process app injects hydration failures the worker route never reaches; its fail-open is not built yet.
+const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+
 const GET_FULL_SUBJECT_MODULE =
 	"@/internal/customers/repos/getFullSubject/index.js";
 
@@ -57,6 +61,9 @@ afterAll(() => {
 	fatalCustomerIds.clear();
 	observedBackupReadOptIn.clear();
 	mock.module(GET_FULL_SUBJECT_MODULE, () => realGetFullSubjectModule);
+	if (previousRollout === undefined)
+		delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
 });
 
 test(`${chalk.yellowBright("check-errors: a non-transient hydration failure remains an HTTP 500")}`, async () => {
