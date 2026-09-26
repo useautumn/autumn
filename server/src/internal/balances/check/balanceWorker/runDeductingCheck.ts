@@ -29,8 +29,11 @@ export type WorkerCheckAnswer = {
 	catalog: Catalog | null;
 };
 
-const requiredBalanceOf = ({ body }: { body: ParsedCheckParams }): number =>
-	body.required_balance ?? body.required_quantity ?? 1;
+export const requiredBalanceOf = ({
+	body,
+}: {
+	body: ParsedCheckParams;
+}): number => body.required_balance ?? body.required_quantity ?? 1;
 
 /** The legacy path refuses these before deducting, so the worker path does too. */
 const assertCheckCanDeduct = ({
