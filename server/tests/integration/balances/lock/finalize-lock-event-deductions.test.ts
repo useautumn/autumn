@@ -24,6 +24,7 @@ import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLo
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -89,12 +90,14 @@ test.concurrent(
 			override_value: 4,
 		});
 
-		// Wait for event batching to flush, then read events (newest-first).
+		// Settle so a late extra event is caught, then poll: herald lands worker events seconds late under load.
 		await timeout(3000);
-		const eventRows = await getFullCustomerEvents({ customerId });
-
 		// eventRows[0] = finalize delta (4 - 10 = -6), eventRows[1] = check track (10)
-		expect(eventRows).toHaveLength(2);
+		const eventRows = await pollUntilAsserted({
+			fetch: () => getFullCustomerEvents({ customerId }),
+			assert: (rows) => expect(rows).toHaveLength(2),
+			timeoutMs: 30_000,
+		});
 		const finalizeEvent = eventRows[0];
 		expect(finalizeEvent.value).toBe(-6);
 
