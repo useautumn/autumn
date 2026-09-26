@@ -40,7 +40,7 @@ const configFor = ({
 		events: eventsFor(columns),
 		features: [],
 		groupBy,
-		originalColors: [],
+		seriesColors: {},
 		customerNames,
 		entityNames,
 		planNames,
@@ -137,7 +137,7 @@ test("falls back to raw ids when no name maps are loaded", () => {
 		events: eventsFor(["messages_count__cus_named"]),
 		features: [],
 		groupBy: "customer_id",
-		originalColors: [],
+		seriesColors: {},
 	});
 
 	expect(config[0].yName).toBe("messages (cus_named)");
