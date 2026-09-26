@@ -26,6 +26,10 @@ GOAWS_DIR="${GOAWS_DIR:-$TW_PREFIX/goaws}"
 GOAWS_CONF="${GOAWS_CONF:-$GOAWS_DIR/goaws.yaml}"
 BIN_DIR="${TW_BIN_DIR:-$TW_PREFIX/bin}"
 GOAWS_BIN="${GOAWS_BIN:-$BIN_DIR/goaws}"
+FAKECLOUD_BIN="${FAKECLOUD_BIN:-$BIN_DIR/fakecloud}"
+# The account + region the queue URLs and derived scheduler ARNs assume (DEFAULT_AWS_REGION).
+SQS_ACCOUNT_ID="000000000000"
+SQS_REGION="us-east-2"
 LOG_DIR="${TW_LOG_DIR:-$TW_PREFIX/logs}"
 # Redpanda's own wrapper scripts hardcode /opt/redpanda, so it lives there, not under $BIN_DIR.
 REDPANDA_HOME="${REDPANDA_HOME:-/opt/redpanda}"
@@ -125,7 +129,22 @@ fi
 #    `GET /` returns HTTP 400 (no Action), but a successful connection means it's
 #    bound and serving — sufficient readiness probe (no `-f`).
 goaws_ready_probe="curl -s -o /dev/null http://localhost:$ELASTICMQ_PORT/"
-if eval "$goaws_ready_probe" >/dev/null 2>&1; then
+sqs_label="goaws"
+sqs_log="$LOG_DIR/goaws.log"
+if [ -x "$FAKECLOUD_BIN" ]; then
+  # fakecloud serves SQS on the same port + account, and its Scheduler can deliver into those queues.
+  sqs_label="fakecloud"
+  sqs_log="$LOG_DIR/fakecloud.log"
+  goaws_ready_probe="\"$FAKECLOUD_BIN\" healthcheck --addr 127.0.0.1:$ELASTICMQ_PORT"
+  if eval "$goaws_ready_probe" >/dev/null 2>&1; then
+    log "fakecloud already running"
+  else
+    log "Starting fakecloud (SQS + Scheduler) on :$ELASTICMQ_PORT"
+    nohup "$FAKECLOUD_BIN" --addr "127.0.0.1:$ELASTICMQ_PORT" --region "$SQS_REGION" \
+      --account-id "$SQS_ACCOUNT_ID" --log-level warn >"$sqs_log" 2>&1 &
+    disown || true
+  fi
+elif eval "$goaws_ready_probe" >/dev/null 2>&1; then
   log "goaws already running"
 else
   [ -x "$GOAWS_BIN" ] || die "goaws binary missing at $GOAWS_BIN (run build-base.sh)"
@@ -293,9 +312,24 @@ fi
 # Wait for all five (started above) concurrently — readiness overlaps.
 wait_for "PostgreSQL" "pg_isready -h localhost -p $PG_PORT" 60 "$LOG_DIR/pg.log"
 wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING" 60 "$LOG_DIR/dragonfly.log"
-wait_for "goaws" "$goaws_ready_probe" 120 "$LOG_DIR/goaws.log"
+wait_for "$sqs_label" "$goaws_ready_probe" 120 "$sqs_log"
+# fakecloud has no queue config, and keeps state in memory: create every queue on each start.
+create_fakecloud_queue() {
+  local queue_name="$1" attributes=""
+  [[ "$queue_name" == *.fifo ]] && attributes=',"Attributes":{"FifoQueue":"true","ContentBasedDeduplication":"true"}'
+  curl -fsS -o /dev/null -X POST "http://localhost:${ELASTICMQ_PORT}/" \
+    -H "Content-Type: application/x-amz-json-1.0" -H "X-Amz-Target: AmazonSQS.CreateQueue" \
+    -d "{\"QueueName\":\"${queue_name}\"${attributes}}" \
+    || die "fakecloud CreateQueue ${queue_name} failed"
+}
+if [ "$sqs_label" = "fakecloud" ]; then
+  for queue_name in autumn.fifo autumn-track.fifo autumn-stripe-webhook.fifo autumn-track-async; do
+    create_fakecloud_queue "$queue_name"
+  done
+fi
 # Cached base images may predate queues added to the worker environment.
 for queue_name in autumn-track-async autumn-stripe-webhook.fifo; do
+  [ "$sqs_label" = "fakecloud" ] && break
   queue_attributes=""
   if [[ "$queue_name" == *.fifo ]]; then
     queue_attributes="&Attribute.1.Name=FifoQueue&Attribute.1.Value=true"
@@ -333,4 +367,4 @@ else
   log "Skipping ClickHouse (set TW_START_CLICKHOUSE=1 to start it)"
 fi
 
-log "All services ready (pg:$PG_PORT dragonfly:$DRAGONFLY_PORT goaws:$ELASTICMQ_PORT dynoxide:$DYNAMODB_PORT)"
+log "All services ready (pg:$PG_PORT dragonfly:$DRAGONFLY_PORT $sqs_label:$ELASTICMQ_PORT dynoxide:$DYNAMODB_PORT)"

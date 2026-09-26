@@ -583,6 +583,9 @@ const buildWorkerEnv = ({
 		TRACK_ASYNC_SQS_QUEUE_URL,
 		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
 		DYNAMODB_ENDPOINT,
+		// fakecloud never evaluates the role; the Scheduler just requires a well-formed ARN.
+		AWS_EVENTBRIDGE_SCHEDULER_ROLE_ARN:
+			"arn:aws:iam::000000000000:role/fakecloud-scheduler",
 		// The µVM's own Redpanda and balance worker (started by boot.ts); the
 		// `local` deployment names the topics warmup.sh created.
 		KAFKA_BROKERS,

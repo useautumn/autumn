@@ -74,6 +74,7 @@ fi
 #    on-disk state needs preserving. Match the binary path to avoid killing the
 #    pkill/script itself (the config path contains "goaws").
 # ---------------------------------------------------------------------------
+pkill -TERM -f "$BIN_DIR/fakecloud" 2>/dev/null && log "SIGTERM fakecloud"
 if pgrep -f "$BIN_DIR/goaws" >/dev/null 2>&1; then
   log "SIGTERM goaws"
   pkill -TERM -f "$BIN_DIR/goaws" || true

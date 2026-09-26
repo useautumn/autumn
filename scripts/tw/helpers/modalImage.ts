@@ -85,6 +85,9 @@ const DYNOXIDE_URL =
 /** The balance worker's log. Redpanda can't run here: Seastar aborts under gVisor (no
  * /proc/sys/fs/aio-max-nr). Google's mirror: Docker Hub rate-limits Modal's builders. */
 const KAFKA_NATIVE_IMAGE = "mirror.gcr.io/apache/kafka-native:4.1.0";
+/** Same pin as `bun dw` (scripts/setup/dw.compose.yml): SQS plus the EventBridge Scheduler that fires lock expiries. */
+const FAKECLOUD_IMAGE =
+	"ghcr.io/faiscadev/fakecloud:0.45.0@sha256:78844f091be86081d3d11b056e3d56e6ea0ace4ce607e55fa4255fc759d39279";
 
 /** Fixed layout — must match build-base.sh / start-services.sh exactly. */
 const TW_PREFIX = "/opt/autumn-tw";
@@ -244,6 +247,13 @@ export const buildBaseImage = (
 					`bun x playwright@${playwrightVersion} install --with-deps chromium && ` +
 					"rm -rf /var/lib/apt/lists/* && " +
 					'test -x "$(ls -d /root/.cache/ms-playwright/chromium-*/chrome-linux*/chrome | head -1)"',
+			])
+			// 10. fakecloud → $TW_PREFIX/bin/fakecloud; start-services.sh prefers it over goaws.
+			.dockerfileCommands([
+				`RUN crane export ${FAKECLOUD_IMAGE} /tmp/fc.tar && ` +
+					"tar -xf /tmp/fc.tar -C /tmp usr/local/bin/fakecloud && " +
+					`install -m0755 /tmp/usr/local/bin/fakecloud ${TW_PREFIX}/bin/fakecloud && ` +
+					`rm -rf /tmp/fc.tar /tmp/usr && ${TW_PREFIX}/bin/fakecloud --help >/dev/null`,
 			])
 			.build(app)
 	);
