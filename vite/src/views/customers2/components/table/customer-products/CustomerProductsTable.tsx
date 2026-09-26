@@ -26,6 +26,7 @@ function createScopeColumn(
 	return {
 		header: "Scope",
 		accessorKey: "scope",
+		size: 200,
 		cell: ({ row }: { row: Row<FullCusProduct> }) => {
 			const product = row.original;
 
@@ -48,9 +49,9 @@ function createScopeColumn(
 						e.stopPropagation();
 						setEntityId(entity.internal_id);
 					}}
-					className="font-medium hover:text-purple-600 cursor-pointer max-w-full px-0! hover:bg-transparent active:bg-transparent active:border-none"
+					className="font-medium hover:text-purple-600 cursor-pointer max-w-full justify-start px-0! hover:bg-transparent active:bg-transparent active:border-none"
 				>
-					<span className="truncate w-full">
+					<span className="truncate min-w-0 text-left">
 						{entity.name || entity.internal_id || "PENDING"}
 					</span>
 				</Button>
@@ -101,14 +102,13 @@ export function CustomerProductsTable() {
 	const hasEntities = customer.entities.length > 0;
 
 	const columns = useMemo(() => {
-		const baseColumns = [CustomerProductsColumns[0]];
+		const baseColumns = [CustomerProductsColumns[0], CustomerProductsColumns[1]];
 
 		if (hasEntities) {
 			baseColumns.push(createScopeColumn(customer.entities, setEntityId));
 		}
 
 		baseColumns.push(
-			CustomerProductsColumns[1],
 			CustomerProductsColumns[2],
 			CustomerProductsColumns[3],
 			CustomerProductsColumns[4],

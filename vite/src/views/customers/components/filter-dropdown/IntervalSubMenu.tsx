@@ -6,7 +6,7 @@ import {
 	toggleFilterValue,
 } from "./FilterCheckboxSubMenu";
 
-const INTERVAL_OPTIONS: FilterCheckboxOption[] = [
+export const INTERVAL_OPTIONS: FilterCheckboxOption[] = [
 	{ value: BillingInterval.Week, label: "Weekly" },
 	{ value: BillingInterval.Month, label: "Monthly" },
 	{ value: BillingInterval.Quarter, label: "Quarterly" },

@@ -23,10 +23,7 @@ import type { CustomerWithProducts } from "./CustomerListColumns";
 import { CustomerListCreateButton } from "./CustomerListCreateButton";
 import { CustomerListExportMenu } from "./CustomerListExportMenu";
 import { CustomerListFilterButton } from "./CustomerListFilterButton";
-import {
-	CustomerListPageSizeSelector,
-	CustomerListPagination,
-} from "./CustomerListPagination";
+import { CustomerListPaginationFooter } from "./CustomerListPagination";
 import { CustomerListSearchBar } from "./CustomerListSearchBar";
 import { CustomerListSortButton } from "./CustomerListSortButton";
 
@@ -39,7 +36,8 @@ export function CustomerListTable({
 }) {
 	const { org } = useOrg();
 
-	const tableContainerHeight = "calc(100vh - 190px)";
+	// Leaves room for the pinned pagination footer under the scroll area.
+	const tableContainerHeight = "calc(100vh - 211px)";
 
 	const { features } = useFeaturesQuery();
 	const { queryStates, setFilters, currentCursor } = useCustomerFilters();
@@ -255,10 +253,6 @@ export function CustomerListTable({
 					<div className="order-1 w-full md:order-4 md:w-auto md:flex-1 md:min-w-0">
 						<CustomerListSearchBar />
 					</div>
-					<div className="order-5 ml-auto flex items-center gap-2 shrink-0">
-						<CustomerListPagination />
-						<CustomerListPageSizeSelector />
-					</div>
 				</div>
 				{!hasRows && hasActiveFiltersOrSearch && !isFetchingUncached ? (
 					<EmptyState
@@ -267,7 +261,7 @@ export function CustomerListTable({
 					/>
 				) : (
 					<Table.Container>
-						<Table.VirtualizedContent>
+						<Table.VirtualizedContent footer={<CustomerListPaginationFooter />}>
 							<Table.VirtualizedBody />
 						</Table.VirtualizedContent>
 					</Table.Container>

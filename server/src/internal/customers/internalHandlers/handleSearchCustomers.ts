@@ -75,7 +75,11 @@ export const handleSearchCustomers = createRoute({
 				// Live plan id from the joined product (stays correct across renames),
 				// not the denormalized customer_products.product_id snapshot.
 				product_id: cp.product?.id ?? cp.product_id,
+				canceled: cp.canceled,
 				canceled_at: cp.canceled_at,
+				ended_at: cp.ended_at,
+				starts_at: cp.starts_at,
+				quantity: cp.quantity,
 				status: cp.status,
 				trial_ends_at: cp.trial_ends_at,
 				created_at: cp.created_at,

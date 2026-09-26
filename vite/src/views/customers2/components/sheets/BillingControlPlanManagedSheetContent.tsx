@@ -99,6 +99,7 @@ export function BillingControlPlanManagedSheetContent() {
 						billingControls={previewControls}
 						featureNameById={featureNameById}
 						slim
+						defaultExpanded
 					/>
 				</SheetSection>
 

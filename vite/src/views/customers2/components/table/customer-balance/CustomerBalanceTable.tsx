@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { BalanceRecalculateDialog } from "./BalanceRecalculateDialog";
@@ -52,6 +53,17 @@ export function CustomerBalanceTable({
 			return ent;
 		});
 	}, [allEnts, aggregatedMap]);
+
+	const subRowEnts = useMemo(
+		() => new WeakSet(rowData.flatMap((row) => row.subRows ?? [])),
+		[rowData],
+	);
+	// Sub-rows read as one block, so only the last one keeps a divider.
+	const innerSubRowEnts = useMemo(
+		() =>
+			new WeakSet(rowData.flatMap((row) => row.subRows?.slice(0, -1) ?? [])),
+		[rowData],
+	);
 
 	const columns = useMemo(
 		() =>
@@ -162,10 +174,13 @@ export function CustomerBalanceTable({
 					rowClassName: "h-10 py-0",
 					// No click target, so it must not inherit the table's pointer.
 					getRowClassName: (balance: CustomerBalanceRowData) =>
-						isCusEntDisplayExpired({ cusEnt: balance }) &&
-						(balance.subRows?.length ?? 0) === 0
-							? "cursor-default!"
-							: undefined,
+						cn(
+							subRowEnts.has(balance) && "bg-card",
+							innerSubRowEnts.has(balance) && "border-b-0",
+							isCusEntDisplayExpired({ cusEnt: balance }) &&
+								(balance.subRows?.length ?? 0) === 0 &&
+								"cursor-default!",
+						) || undefined,
 				}}
 			>
 				<Table.Container>

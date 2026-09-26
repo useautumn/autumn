@@ -62,7 +62,7 @@ const getClickedDay = ({
 	return isSameDay(from, anchor.from) ? to : from;
 };
 
-const getJoinedLabel = ({ from, to }: JoinedBounds): string | null => {
+export const getJoinedLabel = ({ from, to }: JoinedBounds): string | null => {
 	if (from !== null && to !== null) {
 		return isSameDay(from, to)
 			? format(from, "MMM d, yyyy")
