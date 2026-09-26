@@ -39,62 +39,65 @@ import chalk from "chalk";
  * - First invoice after trial: $20 base only (no $15 overage charge for trial usage)
  * - Balance should be reset to 100 (included usage)
  */
-test.concurrent(`${chalk.yellowBright("invoice.created trial: customer-level overage during trial → no charge after trial ends")}`, async () => {
-	const customerId = "inv-trial-cus-overage";
+test.concurrent(
+	`${chalk.yellowBright("invoice.created trial: customer-level overage during trial → no charge after trial ends")}`,
+	async () => {
+		const customerId = "inv-trial-cus-overage";
 
-	const consumableItem = items.consumableMessages({ includedUsage: 100 });
+		const consumableItem = items.consumableMessages({ includedUsage: 100 });
 
-	const proTrial = products.proWithTrial({
-		id: "pro-trial",
-		items: [consumableItem],
-		trialDays: 14,
-	});
+		const proTrial = products.proWithTrial({
+			id: "pro-trial",
+			items: [consumableItem],
+			trialDays: 14,
+		});
 
-	const { autumnV1, advancedTo } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [proTrial] }),
-		],
-		actions: [
-			s.attach({ productId: proTrial.id }),
-			s.track({ featureId: TestFeature.Messages, value: 250 }), // 150 overage
-			s.advanceTestClock({ days: 16 }), // Advance past trial end
-		],
-	});
+		const { autumnV1, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [proTrial] }),
+			],
+			actions: [
+				s.attach({ productId: proTrial.id }),
+				s.track({ featureId: TestFeature.Messages, value: 250 }), // 150 overage
+				s.advanceTestClock({ days: 16 }), // Advance past trial end
+			],
+		});
 
-	// Verify customer state after trial ends
-	const customerAfterTrialEnd =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Verify customer state after trial ends
+		const customerAfterTrialEnd =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Product should be active (not trialing anymore)
-	await expectProductActive({
-		customer: customerAfterTrialEnd,
-		productId: proTrial.id,
-	});
+		// Product should be active (not trialing anymore)
+		await expectProductActive({
+			customer: customerAfterTrialEnd,
+			productId: proTrial.id,
+		});
 
-	await expectProductNotTrialing({
-		customer: customerAfterTrialEnd,
-		productId: proTrial.id,
-		nowMs: advancedTo,
-	});
+		await expectProductNotTrialing({
+			customer: customerAfterTrialEnd,
+			productId: proTrial.id,
+			nowMs: advancedTo,
+		});
 
-	// Balance should be reset to 100 (included usage) after trial ends
-	expectCustomerFeatureCorrect({
-		customer: customerAfterTrialEnd,
-		featureId: TestFeature.Messages,
-		balance: -150, // trial ending doesn't reset consumable balance.
-	});
+		// Balance should be reset to 100 (included usage) after trial ends
+		expectCustomerFeatureCorrect({
+			customer: customerAfterTrialEnd,
+			featureId: TestFeature.Messages,
+			balance: -150, // trial ending doesn't reset consumable balance.
+		});
 
-	// Should have 1 invoice: first real invoice after trial = $20 base only
-	// NO overage charge for the 150 messages tracked during trial
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterTrialEnd,
-		count: 2,
-		latestTotal: 20, // Only base price, no overage
-		latestInvoiceProductId: proTrial.id,
-	});
-});
+		// Should have 1 invoice: first real invoice after trial = $20 base only
+		// NO overage charge for the 150 messages tracked during trial
+		expectCustomerInvoiceCorrect({
+			customer: customerAfterTrialEnd,
+			count: 2,
+			latestTotal: 20, // Only base price, no overage
+			latestInvoiceProductId: proTrial.id,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Entity-level - Trial ends with overage → no consumable charge
@@ -111,93 +114,94 @@ test.concurrent(`${chalk.yellowBright("invoice.created trial: customer-level ove
  * - First invoice after trial: $20 base only (no $10 overage charge)
  * - Entity balance should be reset to 100
  */
-test.concurrent(`${chalk.yellowBright("invoice.created trial: entity-level overage during trial → no charge after trial ends")}`, async () => {
-	const customerId = "inv-trial-ent-overage";
+test.concurrent(
+	`${chalk.yellowBright("invoice.created trial: entity-level overage during trial → no charge after trial ends")}`,
+	async () => {
+		const customerId = "inv-trial-ent-overage";
 
-	const consumableItem = items.consumableMessages({ includedUsage: 100 });
+		const consumableItem = items.consumableMessages({ includedUsage: 100 });
 
-	const monthlyPriceItem = items.monthlyPrice();
-	const proTrial = products.base({
-		id: "pro-trial",
-		items: [monthlyPriceItem],
-		trialDays: 14,
-	});
+		const monthlyPriceItem = items.monthlyPrice();
+		const proTrial = products.base({
+			id: "pro-trial",
+			items: [monthlyPriceItem],
+			trialDays: 14,
+		});
 
-	let { autumnV1, advancedTo, entities, ctx, testClockId } = await initScenario(
-		{
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [proTrial] }),
-				s.entities({ count: 1, featureId: TestFeature.Users }),
-			],
-			actions: [s.attach({ productId: proTrial.id, entityIndex: 0 })],
-		},
-	);
+		let { autumnV1, advancedTo, entities, ctx, testClockId } =
+			await initScenario({
+				customerId,
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [proTrial] }),
+					s.entities({ count: 1, featureId: TestFeature.Users }),
+				],
+				actions: [s.attach({ productId: proTrial.id, entityIndex: 0 })],
+			});
 
-	await autumnV1.subscriptions.update(
-		{
+		await autumnV1.subscriptions.update(
+			{
+				customer_id: customerId,
+				product_id: proTrial.id,
+				entity_id: entities[0].id,
+				items: [consumableItem, monthlyPriceItem],
+			},
+			{
+				timeout: 5000,
+			},
+		);
+
+		await autumnV1.track({
 			customer_id: customerId,
-			product_id: proTrial.id,
+			feature_id: TestFeature.Messages,
+			value: 200,
 			entity_id: entities[0].id,
-			items: [consumableItem, monthlyPriceItem],
-		},
-		{
-			timeout: 5000,
-		},
-	);
+		});
 
-	await autumnV1.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		value: 200,
-		entity_id: entities[0].id,
-	});
+		advancedTo = await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			numberOfDays: 20,
+		});
 
-	advancedTo = await advanceTestClock({
-		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
-		numberOfDays: 20,
-	});
+		const entityId = entities[0].id;
 
-	const entityId = entities[0].id;
+		// Verify entity state after trial ends
+		const entityAfterTrialEnd = await autumnV1.entities.get(
+			customerId,
+			entityId,
+		);
 
-	// Verify entity state after trial ends
-	const entityAfterTrialEnd = await autumnV1.entities.get(customerId, entityId);
+		// Product should be active (not trialing anymore)
+		await expectProductActive({
+			customer: entityAfterTrialEnd,
+			productId: proTrial.id,
+		});
 
-	// Product should be active (not trialing anymore)
-	await expectProductActive({
-		customer: entityAfterTrialEnd,
-		productId: proTrial.id,
-	});
+		await expectProductNotTrialing({
+			customer: entityAfterTrialEnd,
+			productId: proTrial.id,
+			nowMs: advancedTo,
+		});
 
-	await expectProductNotTrialing({
-		customer: entityAfterTrialEnd,
-		productId: proTrial.id,
-		nowMs: advancedTo,
-	});
+		// Balance should NOT be reset to 100 after trial ends (since it wasn't charged for)
+		expectCustomerFeatureCorrect({
+			customer: entityAfterTrialEnd,
+			featureId: TestFeature.Messages,
+			balance: -100,
+		});
 
-	// Balance should NOT be reset to 100 after trial ends (since it wasn't charged for)
-	expectCustomerFeatureCorrect({
-		customer: entityAfterTrialEnd,
-		featureId: TestFeature.Messages,
-		balance: -100,
-	});
-
-	// Check invoices at customer level
-	const customerAfterTrialEnd =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// After first update to add consumable, a $0 invoice is created.
-	// For second udpate, NO OVERAGE CHARGES.
-	// NO overage charge for the 100 messages overage tracked during trial
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterTrialEnd,
-		count: 3,
-		latestTotal: 20, // Only base price, no overage
-		latestInvoiceProductId: proTrial.id,
-	});
-});
+		// $0 trial attach + trial-end base charge; a $0 in-trial item update invoices nothing (as in update-quantity-with-trial).
+		// NO overage charge for the 100 messages overage tracked during trial
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			autumn: autumnV1,
+			count: 2,
+			latestTotal: 20, // Only base price, no overage
+			latestInvoiceProductId: proTrial.id,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: Multiple entities with trial → no consumable charge on any
@@ -217,83 +221,94 @@ test.concurrent(`${chalk.yellowBright("invoice.created trial: entity-level overa
  * - NO overage charges for either entity's trial usage
  * - Both entity balances should be reset to 100
  */
-test.concurrent(`${chalk.yellowBright("invoice.created trial: multiple entities with overage during trial → no charge after trial ends")}`, async () => {
-	const customerId = "inv-trial-multi-ent";
+test.concurrent(
+	`${chalk.yellowBright("invoice.created trial: multiple entities with overage during trial → no charge after trial ends")}`,
+	async () => {
+		const customerId = "inv-trial-multi-ent";
 
-	const consumableItem = items.consumableMessages({ includedUsage: 100 });
+		const consumableItem = items.consumableMessages({ includedUsage: 100 });
 
-	const proTrial = products.proWithTrial({
-		id: "pro-trial",
-		items: [consumableItem],
-		trialDays: 14,
-	});
+		const proTrial = products.proWithTrial({
+			id: "pro-trial",
+			items: [consumableItem],
+			trialDays: 14,
+		});
 
-	const { autumnV1, advancedTo, entities } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [proTrial] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.attach({ productId: proTrial.id, entityIndex: 0 }),
-			s.attach({ productId: proTrial.id, entityIndex: 1, timeout: 4000 }),
-			s.track({ featureId: TestFeature.Messages, value: 200, entityIndex: 0 }), // 100 overage
-			s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 1 }), // 150 overage
-			s.advanceTestClock({ days: 20 }), // Advance past trial end
-		],
-	});
+		const { autumnV1, advancedTo, entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [proTrial] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.attach({ productId: proTrial.id, entityIndex: 0 }),
+				s.attach({ productId: proTrial.id, entityIndex: 1, timeout: 4000 }),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: 200,
+					entityIndex: 0,
+				}), // 100 overage
+				s.track({
+					featureId: TestFeature.Messages,
+					value: 250,
+					entityIndex: 1,
+				}), // 150 overage
+				s.advanceTestClock({ days: 20 }), // Advance past trial end
+			],
+		});
 
-	// Verify entity 0 state after trial ends
-	const entity0AfterTrialEnd = await autumnV1.entities.get(
-		customerId,
-		entities[0].id,
-	);
-	await expectProductActive({
-		customer: entity0AfterTrialEnd,
-		productId: proTrial.id,
-	});
-	await expectProductNotTrialing({
-		customer: entity0AfterTrialEnd,
-		productId: proTrial.id,
-		nowMs: advancedTo,
-	});
-	expectCustomerFeatureCorrect({
-		customer: entity0AfterTrialEnd,
-		featureId: TestFeature.Messages,
-		balance: -100,
-	});
+		// Verify entity 0 state after trial ends
+		const entity0AfterTrialEnd = await autumnV1.entities.get(
+			customerId,
+			entities[0].id,
+		);
+		await expectProductActive({
+			customer: entity0AfterTrialEnd,
+			productId: proTrial.id,
+		});
+		await expectProductNotTrialing({
+			customer: entity0AfterTrialEnd,
+			productId: proTrial.id,
+			nowMs: advancedTo,
+		});
+		expectCustomerFeatureCorrect({
+			customer: entity0AfterTrialEnd,
+			featureId: TestFeature.Messages,
+			balance: -100,
+		});
 
-	// Verify entity 1 state after trial ends
-	const entity1AfterTrialEnd = await autumnV1.entities.get(
-		customerId,
-		entities[1].id,
-	);
-	await expectProductActive({
-		customer: entity1AfterTrialEnd,
-		productId: proTrial.id,
-	});
-	await expectProductNotTrialing({
-		customer: entity1AfterTrialEnd,
-		productId: proTrial.id,
-		nowMs: advancedTo,
-	});
-	expectCustomerFeatureCorrect({
-		customer: entity1AfterTrialEnd,
-		featureId: TestFeature.Messages,
-		balance: -150,
-	});
+		// Verify entity 1 state after trial ends
+		const entity1AfterTrialEnd = await autumnV1.entities.get(
+			customerId,
+			entities[1].id,
+		);
+		await expectProductActive({
+			customer: entity1AfterTrialEnd,
+			productId: proTrial.id,
+		});
+		await expectProductNotTrialing({
+			customer: entity1AfterTrialEnd,
+			productId: proTrial.id,
+			nowMs: advancedTo,
+		});
+		expectCustomerFeatureCorrect({
+			customer: entity1AfterTrialEnd,
+			featureId: TestFeature.Messages,
+			balance: -150,
+		});
 
-	// Check invoices at customer level
-	const customerAfterTrialEnd =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Check invoices at customer level
+		const customerAfterTrialEnd =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Should have 1 invoice (both entities share subscription during trial)
-	// First real invoice = $40 base ($20 x 2) only
-	// NO overage charges for either entity's trial usage ($10 + $15 = $25 would be charged if not trial)
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterTrialEnd,
-		count: 3,
-		latestTotal: 40, // Only base price for both entities, no overage
-	});
-});
+		// Should have 1 invoice (both entities share subscription during trial)
+		// First real invoice = $40 base ($20 x 2) only
+		// NO overage charges for either entity's trial usage ($10 + $15 = $25 would be charged if not trial)
+		expectCustomerInvoiceCorrect({
+			customer: customerAfterTrialEnd,
+			count: 3,
+			latestTotal: 40, // Only base price for both entities, no overage
+		});
+	},
+);
