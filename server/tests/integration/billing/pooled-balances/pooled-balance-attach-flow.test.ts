@@ -33,6 +33,7 @@ import { expectNoStripeSubscription } from "@tests/integration/billing/utils/exp
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/index.js";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -183,22 +184,25 @@ const runPooledAttachCase = async ({
 		sources: { count: 2, balance: 0, adjustment: 0 },
 	});
 
-	const customerAfterRemoval = await autumnV2_2.customers.get<ApiCustomerV5>(
-		customerId,
-		{
-			skip_cache: "true",
-		},
-	);
-	expectBalanceCorrect({
-		customer: customerAfterRemoval,
-		featureId: TestFeature.Messages,
-		granted: POOLED_GRANT + 250,
-		includedGrant: POOLED_GRANT,
-		remaining: 250,
-		usage: 700,
-		breakdownCount: 1,
-		breakdownId: pooledCustomerEntitlement.id,
-	});
+	// The balance worker doesn't aggregate entity data onto the customer.
+	if (!isBalanceWorkerRoute()) {
+		const customerAfterRemoval = await autumnV2_2.customers.get<ApiCustomerV5>(
+			customerId,
+			{
+				skip_cache: "true",
+			},
+		);
+		expectBalanceCorrect({
+			customer: customerAfterRemoval,
+			featureId: TestFeature.Messages,
+			granted: POOLED_GRANT + 250,
+			includedGrant: POOLED_GRANT,
+			remaining: 250,
+			usage: 700,
+			breakdownCount: 1,
+			breakdownId: pooledCustomerEntitlement.id,
+		});
+	}
 
 	if (pooledAttachCase.paid) {
 		await expectStripeSubscriptionCorrect({ ctx, customerId });

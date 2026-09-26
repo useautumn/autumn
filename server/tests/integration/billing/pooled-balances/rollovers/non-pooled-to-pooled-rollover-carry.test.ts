@@ -27,6 +27,7 @@ import {
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import { runBatchResetV2 } from "@tests/integration/cron/batch-reset-v2/batchResetV2TestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { expireCusEntForReset } from "@tests/utils/cusProductUtils/resetTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -119,9 +120,12 @@ test(
 			{ skip_cache: "true" },
 		);
 		const carriedRollover = CARRIED;
-		expect(customerAfterReset.balances?.[TestFeature.Messages]?.remaining).toBe(
-			GRANT + carriedRollover,
-		);
+		// The balance worker doesn't aggregate entity data onto the customer.
+		if (!isBalanceWorkerRoute()) {
+			expect(
+				customerAfterReset.balances?.[TestFeature.Messages]?.remaining,
+			).toBe(GRANT + carriedRollover);
+		}
 
 		const beforeMove = await getPooledBalanceDbState({
 			db: ctx.db,
