@@ -145,7 +145,7 @@ export const EditPlanHeader = () => {
 				pastVersions={pastVersionsWithCustomers}
 				versionCounts={versionCounts}
 			/>
-			<div className="flex flex-col gap-2 p-4 pb-3  border-none shadow-none w-full max-w-5xl mx-auto pt-4 sm:pt-8 px-4 sm:px-12">
+			<div className="flex flex-col gap-2 p-4 pb-3  border-none shadow-none w-full max-w-[1600px] mx-auto pt-4 sm:pt-8 px-4 sm:px-12">
 				{isCusPlanEditor ? (
 					<CustomerBreadcrumbs />
 				) : (

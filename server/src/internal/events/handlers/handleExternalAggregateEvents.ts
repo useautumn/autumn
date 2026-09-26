@@ -9,9 +9,13 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { sanitizeTimezone } from "@/internal/analytics/actions/aggregate.js";
 import { aggregateDeductions } from "@/internal/analytics/actions/aggregateDeductions.js";
 import { eventActions } from "@/internal/analytics/actions/eventActions.js";
+import { getStandardIntervalWindow } from "@/internal/analytics/analyticsUtils.js";
+import { collapsePlanIdGroups } from "@/internal/analytics/utils/collapsePlanIdGroups.js";
 import { CusService } from "@/internal/customers/CusService";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import {
 	backfillMissingGroupValues,
@@ -36,7 +40,9 @@ export const handleExternalAggregateEvents = createRoute({
 			filter_by,
 			max_groups,
 			aggregate_on,
+			timezone,
 		} = c.req.valid("json");
+		const safeTimezone = sanitizeTimezone({ timezone });
 
 		if (aggregate_on && !customer_id) {
 			throw new RecaseError({
@@ -84,6 +90,21 @@ export const handleExternalAggregateEvents = createRoute({
 		}
 
 		const featureIds = Array.isArray(feature_id) ? feature_id : [feature_id];
+		const binSize = bin_size ?? "day";
+
+		// Resolve standard ranges to one window so the timeseries and `total`
+		// cover identical, bin-aligned spans. Billing-cycle ranges resolve per customer.
+		const standardWindow = getStandardIntervalWindow({
+			interval: range,
+			binSize,
+		});
+		const customRange =
+			custom_range ??
+			(standardWindow && {
+				start: standardWindow.start.getTime(),
+				end: standardWindow.end.getTime(),
+			});
+		const interval = customRange ? undefined : range;
 
 		let resolvedGroupBy = group_by;
 		if (group_by === "$customer_id") {
@@ -96,36 +117,55 @@ export const handleExternalAggregateEvents = createRoute({
 			resolvedGroupBy = undefined;
 		}
 
+		const isPlanIdGrouping = resolvedGroupBy === "plan_id";
+		const internalIdToPublicId: Record<string, string> = {};
+		let planMaxGroups: number | undefined;
+
+		// The pipe groups by internal plan id, so each version is its own group
+		// until collapsed onto the public id.
+		if (isPlanIdGrouping) {
+			const allPlanVersions = await ProductService.listCachedAllVersions({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			});
+			for (const plan of allPlanVersions) {
+				internalIdToPublicId[plan.internal_id] = plan.id;
+			}
+			planMaxGroups = Math.max(allPlanVersions.length + 1, max_groups ?? 0, 10);
+		}
+
 		const [eventsResult, total] = await Promise.all([
 			eventActions.aggregate({
 				ctx,
 				params: {
 					aggregateAll,
-					interval: range,
+					interval,
 					event_names: featureIds,
 					customer_id: customer_id,
 					entity_id,
 					no_count: true,
 					customer,
 					group_by: resolvedGroupBy,
-					bin_size: bin_size ?? "day",
-					custom_range,
+					bin_size: binSize,
+					custom_range: customRange,
 					enforceGroupLimit: true,
 					filter_by,
-					max_groups,
+					max_groups: planMaxGroups ?? max_groups,
+					timezone: safeTimezone,
 				},
 			}),
 			eventActions.getCountAndSum({
 				ctx,
 				params: {
 					aggregateAll,
-					interval: range,
+					interval,
 					event_names: featureIds,
 					customer_id: customer_id,
 					entity_id,
 					customer,
-					custom_range,
-					bin_size: bin_size ?? "day",
+					custom_range: customRange,
+					bin_size: binSize,
 					filter_by,
 				},
 			}),
@@ -141,7 +181,15 @@ export const handleExternalAggregateEvents = createRoute({
 			});
 		}
 
-		const currentTime = convertPeriodsToEpoch(events.data);
+		if (isPlanIdGrouping) {
+			collapsePlanIdGroups({ events, internalIdToPublicId });
+		}
+
+		const currentTime = convertPeriodsToEpoch({
+			events: events.data,
+			timezone: safeTimezone,
+			binSize,
+		});
 
 		let usageList = (events.data as ProcessedEventRow[]).filter(
 			(event) => event.period <= currentTime,
@@ -202,10 +250,11 @@ export const handleExternalAggregateEvents = createRoute({
 							featureIds,
 							groupBy:
 								group_by === "$feature_id" ? "source_feature_id" : group_by,
-							interval: range,
-							customRange: custom_range,
-							binSize: bin_size ?? "day",
+							interval,
+							customRange,
+							binSize,
 							maxGroups: max_groups,
+							timezone: safeTimezone,
 						},
 					})
 				: undefined;

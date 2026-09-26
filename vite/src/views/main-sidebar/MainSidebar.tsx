@@ -132,6 +132,12 @@ export const MainSidebar = ({
 								title="Customers"
 								env={env}
 							/>
+							<NavButton
+								value="analytics"
+								icon={<ChartColumn strokeWidth={ICON_STROKE} />}
+								title="Usage"
+								env={env}
+							/>
 							{canSeeMigrations && (
 								<NavButton
 									value="migrations"
@@ -145,12 +151,6 @@ export const MainSidebar = ({
 									env={env}
 								/>
 							)}
-							<NavButton
-								value="analytics"
-								icon={<ChartColumn strokeWidth={ICON_STROKE} />}
-								title="Analytics"
-								env={env}
-							/>
 						</NavSection>
 						{canSeeDev && (
 							<NavSection title="Developer">

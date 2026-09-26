@@ -16,12 +16,12 @@ import {
 	isAnyCreditSystem,
 	notNullish,
 } from "@autumn/shared";
-import { UTCDate } from "@date-fns/utc";
 import type { AggregateDeductionsPipeRow } from "@/external/tinybird/initTinybird.js";
 import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
 import { assertDeductionGroupingUnambiguous } from "@/external/tinybird/pipes/aggregateDeductionsPipe.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { periodToEpoch } from "@/internal/events/eventUtils.js";
 import {
 	getCreditCost,
 	getCreditRateCard,
@@ -298,6 +298,8 @@ export const aggregateDeductions = async ({
 	return pivotRows({
 		rows,
 		ctx,
+		timezone: params.timezone,
+		binSize: params.binSize,
 		grouped: groupColumn !== undefined || propertyKey !== undefined,
 		groupColumn,
 		pinnedSource,
@@ -317,6 +319,8 @@ export const aggregateDeductions = async ({
 const pivotRows = ({
 	rows,
 	ctx,
+	timezone,
+	binSize,
 	grouped,
 	groupColumn,
 	pinnedSource,
@@ -326,6 +330,8 @@ const pivotRows = ({
 }: {
 	rows: AggregateDeductionsPipeRow[];
 	ctx: AutumnContext;
+	timezone?: string;
+	binSize: BinSizeEnum;
 	grouped: boolean;
 	groupColumn?: GroupColumn;
 	pinnedSource?: string;
@@ -338,7 +344,7 @@ const pivotRows = ({
 	const balanceAcc = new Map<string, DeductionBalance>();
 
 	for (const row of rows) {
-		const period = new UTCDate(row.period).getTime();
+		const period = periodToEpoch({ period: row.period, timezone, binSize });
 
 		let periodEntry = byPeriod.get(period);
 		if (!periodEntry) {

@@ -80,6 +80,11 @@ interface CopyButtonProps extends IconButtonProps {
 	iconClassName?: string;
 }
 
+interface MiniCopyButtonProps extends CopyButtonProps {
+	/** Shown instead of `text`; the full `text` is still copied. */
+	displayText?: string;
+}
+
 export const CopyButton = ({
 	text,
 	side = "right",
@@ -173,9 +178,10 @@ export const MiniCopyButton = ({
 	innerClassName = "",
 	iconOrientation = "right",
 	iconClassName,
+	displayText,
 	children,
 	...props
-}: CopyButtonProps) => {
+}: MiniCopyButtonProps) => {
 	const copyIcon = (
 		<CopyIconButton
 			text={text}
@@ -192,7 +198,7 @@ export const MiniCopyButton = ({
 			<span
 				className={cn("text-sm text-tiny-id w-full truncate", innerClassName)}
 			>
-				{text}
+				{displayText ?? text}
 			</span>
 			{iconOrientation === "right" && copyIcon}
 		</div>
