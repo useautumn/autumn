@@ -5,7 +5,10 @@ import {
 	isCustomerProductOnStripeSubscription,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import { isAutumnOriginatedStripeEvent } from "@/external/stripe/common/autumnStripeIdempotency.js";
+import {
+	isAutumnOriginatedStripeEvent,
+	isStripeDunningSubscriptionDeletion,
+} from "@/external/stripe/common/autumnStripeIdempotency.js";
 import {
 	type ExpandedStripeCustomer,
 	getExpandedStripeCustomer,
@@ -87,8 +90,11 @@ export const setupStripeSubscriptionDeletedContext = async ({
 		return null;
 	}
 
-	// 2. Skip Autumn's own deletion echo
-	if (isAutumnOriginatedStripeEvent({ event })) {
+	// 2. Skip Autumn's own deletion echo (dunning cancels only look like one)
+	if (
+		isAutumnOriginatedStripeEvent({ event }) &&
+		!isStripeDunningSubscriptionDeletion({ event })
+	) {
 		logger.info(
 			`[sub.deleted] Skipping - autumn-originated deletion ${stripeSubscriptionId}`,
 		);

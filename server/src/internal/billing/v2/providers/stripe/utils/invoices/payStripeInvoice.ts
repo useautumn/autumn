@@ -1,6 +1,9 @@
 import { type PaymentFailureCode, tryCatch } from "@autumn/shared";
 import type Stripe from "stripe";
-import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
+import {
+	AUTUMN_INVOICE_PAY_SOURCE,
+	autumnStripeRequestOptions,
+} from "@/external/stripe/common/autumnStripeIdempotency";
 import { handleInvoicePaymentFailure } from "./handleInvoicePaymentFailure";
 
 // ============================================
@@ -66,7 +69,7 @@ export const payStripeInvoice = async ({
 			{
 				payment_method: paymentMethod.id,
 			},
-			autumnStripeRequestOptions({ source: "invoice.pay" }),
+			autumnStripeRequestOptions({ source: AUTUMN_INVOICE_PAY_SOURCE }),
 		),
 	);
 
