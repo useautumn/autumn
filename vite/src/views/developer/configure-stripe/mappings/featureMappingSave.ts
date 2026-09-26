@@ -112,11 +112,10 @@ export const buildFeatureSheetSave = ({
 			];
 		}
 		const productId = rowEffectiveProductId({ row, values, initialDefaultId });
-		// A price with no product bills under the feature's default, including a new one.
-		if (productId === CREATE_STRIPE_PRODUCT) {
+		// A price with no product bills under the feature's default, including a new or empty one.
+		if (!productId || productId === CREATE_STRIPE_PRODUCT) {
 			return [{ price_id: row.priceId, stripe_product_id: null }];
 		}
-		if (!productId) return [];
 		return [
 			{
 				price_id: row.priceId,

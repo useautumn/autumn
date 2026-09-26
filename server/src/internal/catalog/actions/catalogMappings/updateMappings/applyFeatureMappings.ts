@@ -32,6 +32,18 @@ const findMappedFeature = ({
 	});
 };
 
+/** Explicit item and price mappings outrank a feature's default. */
+const hasExplicitMapping = ({
+	priceId,
+	priceTargets,
+	priceMappedIds,
+}: {
+	priceId: string;
+	priceTargets: PriceTargets;
+	priceMappedIds: Set<string>;
+}) =>
+	priceMappedIds.has(priceId) || priceTargets.get(priceId)?.source === "item";
+
 /** Prices already on another product were chosen on purpose, so only the old default's move. */
 const targetFeaturePricesOnPreviousDefault = ({
 	ctx,
@@ -40,6 +52,7 @@ const targetFeaturePricesOnPreviousDefault = ({
 	previousStripeProductId,
 	stripeProductId,
 	priceTargets,
+	priceMappedIds,
 }: {
 	ctx: AutumnContext;
 	products: FullProduct[];
@@ -47,6 +60,7 @@ const targetFeaturePricesOnPreviousDefault = ({
 	previousStripeProductId: string | null;
 	stripeProductId: string | null;
 	priceTargets: PriceTargets;
+	priceMappedIds: Set<string>;
 }) => {
 	for (const product of products) {
 		const context = buildProductMappingContext({
@@ -60,6 +74,15 @@ const targetFeaturePricesOnPreviousDefault = ({
 			const currentStripeProductId =
 				entry.price.config.stripe_product_id ?? null;
 			if (currentStripeProductId !== previousStripeProductId) continue;
+			if (
+				hasExplicitMapping({
+					priceId: entry.price.id,
+					priceTargets,
+					priceMappedIds,
+				})
+			) {
+				continue;
+			}
 
 			setPriceTarget({
 				targets: priceTargets,
@@ -74,6 +97,21 @@ const targetFeaturePricesOnPreviousDefault = ({
 	}
 };
 
+export const assertMappedFeaturesExist = ({
+	ctx,
+	params,
+}: {
+	ctx: AutumnContext;
+	params: CatalogUpdateMappingsParams;
+}) => {
+	for (const mapping of params.feature_mappings) {
+		findMappedFeature({
+			features: ctx.features,
+			featureId: mapping.feature_id,
+		});
+	}
+};
+
 export const applyFeatureMappings = async ({
 	ctx,
 	params,
@@ -85,6 +123,9 @@ export const applyFeatureMappings = async ({
 	products: FullProduct[];
 	priceTargets: PriceTargets;
 }) => {
+	const priceMappedIds = new Set(
+		params.price_mappings.map((mapping) => mapping.price_id),
+	);
 	for (const mapping of params.feature_mappings) {
 		const feature = findMappedFeature({
 			features: ctx.features,
@@ -109,6 +150,7 @@ export const applyFeatureMappings = async ({
 			previousStripeProductId,
 			stripeProductId,
 			priceTargets,
+			priceMappedIds,
 		});
 	}
 };

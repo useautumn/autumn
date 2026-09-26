@@ -142,56 +142,27 @@ const newStripeProductName = ({
 		: mapped.product.name;
 };
 
-const resolveMappedStripeProductId = async ({
-	ctx,
-	mapping,
-	mapped,
-}: {
-	ctx: AutumnContext;
-	mapping: PriceMapping;
-	mapped: MappedPrice;
-}) => {
-	if (!mapping.create_stripe_product) {
-		return normalizeStripeProductId(mapping.stripe_product_id);
-	}
-	if (mapping.stripe_price_id) {
-		throw new RecaseError({
-			message: `Price ${mapping.price_id} can't use Stripe price ${mapping.stripe_price_id} on a new Stripe product`,
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
-	return createMappingStripeProduct({
-		ctx,
-		name: newStripeProductName({ ctx, mapped }),
-	});
-};
+type AdoptedStripePrices = Map<string, Stripe.Price>;
 
 const buildMappedPriceConfig = async ({
 	stripeCli,
 	mapped,
 	stripeProductId,
-	stripePriceId,
+	stripePrice,
 }: {
 	stripeCli: Stripe | null;
 	mapped: MappedPrice;
 	stripeProductId: string | null;
-	stripePriceId: string | null;
+	stripePrice: Stripe.Price | undefined;
 }) => {
 	const config = clearDependentStripePriceFields({
 		price: mapped.price,
 		stripeProductId,
 	});
-	if (!stripePriceId || !stripeCli) return config;
+	if (!stripePrice || !stripeCli) return config;
 
-	const stripePrice = await fetchAdoptableStripePrice({
-		stripeCli,
-		mapped,
-		stripeProductId,
-		stripePriceId,
-	});
 	const slotConfig = config as unknown as StripeIdConfig;
-	slotConfig[stripePriceSlot({ price: mapped.price })] = stripePriceId;
+	slotConfig[stripePriceSlot({ price: mapped.price })] = stripePrice.id;
 	await applyMeterDecision({
 		stripeCli,
 		decision: meterDecision({ stripePrice, config: slotConfig }),
@@ -201,7 +172,19 @@ const buildMappedPriceConfig = async ({
 	return config;
 };
 
-export const applyPriceMappings = async ({
+const stripeCliForMappings = ({
+	ctx,
+	params,
+}: {
+	ctx: AutumnContext;
+	params: CatalogUpdateMappingsParams;
+}) =>
+	params.price_mappings.some((mapping: PriceMapping) => mapping.stripe_price_id)
+		? createStripeCli({ org: ctx.org, env: ctx.env })
+		: null;
+
+/** Rejects a bad price mapping before any mapping write lands; returns the Stripe prices to adopt. */
+export const validatePriceMappings = async ({
 	ctx,
 	params,
 	products,
@@ -209,32 +192,69 @@ export const applyPriceMappings = async ({
 	ctx: AutumnContext;
 	params: CatalogUpdateMappingsParams;
 	products: FullProduct[];
-}) => {
-	if (params.price_mappings.length === 0) return;
-
+}): Promise<AdoptedStripePrices> => {
+	const adopted: AdoptedStripePrices = new Map();
 	const pricesById = indexPricesById({ products });
-	const needsStripe = params.price_mappings.some(
-		(mapping: PriceMapping) => mapping.stripe_price_id,
-	);
-	const stripeCli = needsStripe
-		? createStripeCli({ org: ctx.org, env: ctx.env })
-		: null;
+	const stripeCli = stripeCliForMappings({ ctx, params });
 
 	for (const mapping of params.price_mappings) {
 		const mapped = findMappedPrice({ pricesById, priceId: mapping.price_id });
-		const stripeProductId = await resolveMappedStripeProductId({
-			ctx,
-			mapping,
-			mapped,
-		});
 		const stripePriceId = mapping.stripe_price_id?.trim() || null;
-		if (!stripeProductId && stripePriceId) {
+		if (!stripePriceId || !stripeCli) continue;
+		if (mapping.create_stripe_product) {
+			throw new RecaseError({
+				message: `Price ${mapping.price_id} can't use Stripe price ${stripePriceId} on a new Stripe product`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		const stripeProductId = normalizeStripeProductId(mapping.stripe_product_id);
+		if (!stripeProductId) {
 			throw new RecaseError({
 				message: `Price ${mapping.price_id} needs a Stripe product to use Stripe price ${stripePriceId}`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});
 		}
+		adopted.set(
+			mapping.price_id,
+			await fetchAdoptableStripePrice({
+				stripeCli,
+				mapped,
+				stripeProductId,
+				stripePriceId,
+			}),
+		);
+	}
+	return adopted;
+};
+
+export const applyPriceMappings = async ({
+	ctx,
+	params,
+	products,
+	adoptedStripePrices,
+}: {
+	ctx: AutumnContext;
+	params: CatalogUpdateMappingsParams;
+	products: FullProduct[];
+	adoptedStripePrices: AdoptedStripePrices;
+}) => {
+	if (params.price_mappings.length === 0) return;
+
+	const pricesById = indexPricesById({ products });
+	const stripeCli = stripeCliForMappings({ ctx, params });
+
+	for (const mapping of params.price_mappings) {
+		const mapped = findMappedPrice({ pricesById, priceId: mapping.price_id });
+		const stripeProductId = mapping.create_stripe_product
+			? await createMappingStripeProduct({
+					ctx,
+					name: newStripeProductName({ ctx, mapped }),
+				})
+			: normalizeStripeProductId(mapping.stripe_product_id);
+		const stripePriceId = mapping.stripe_price_id?.trim() || null;
 		if (isUnchanged({ price: mapped.price, stripeProductId, stripePriceId })) {
 			continue;
 		}
@@ -247,7 +267,7 @@ export const applyPriceMappings = async ({
 					stripeCli,
 					mapped,
 					stripeProductId,
-					stripePriceId,
+					stripePrice: adoptedStripePrices.get(mapping.price_id),
 				}),
 			},
 		});
