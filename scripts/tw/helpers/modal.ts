@@ -458,17 +458,27 @@ const fastForwardCheckout = async (
 	}
 };
 
-/** A `:latest` published from a ref whose base image has no Kafka can't run the balance worker. */
-const assertKafkaBaked = async (sandbox: Sandbox): Promise<void> => {
-	const proc = await withExecRetry("warm kafka check", () =>
-		sandbox.exec(["test", "-x", "/opt/kafka/kafka.Kafka"], {
-			stdout: "pipe",
-			stderr: "pipe",
-			workdir: "/",
-		}),
+/** Binaries the current base image bakes; a `:latest` published from an older base lacks them. */
+const REQUIRED_WARM_BINARIES = [
+	"/opt/kafka/kafka.Kafka",
+	"/opt/autumn-tw/bin/fakecloud",
+];
+
+const assertWarmServicesBaked = async (sandbox: Sandbox): Promise<void> => {
+	const proc = await withExecRetry("warm services check", () =>
+		sandbox.exec(
+			[
+				"bash",
+				"-c",
+				REQUIRED_WARM_BINARIES.map((bin) => `test -x ${bin}`).join(" && "),
+			],
+			{ stdout: "pipe", stderr: "pipe", workdir: "/" },
+		),
 	);
 	if ((await proc.wait()) !== 0) {
-		throw new Error("modal: warm image has no Kafka (/opt/kafka)");
+		throw new Error(
+			`modal: warm image predates the base image (needs ${REQUIRED_WARM_BINARIES.join(", ")})`,
+		);
 	}
 };
 
@@ -659,7 +669,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 							},
 							v2,
 						);
-						await assertKafkaBaked(sandbox);
+						await assertWarmServicesBaked(sandbox);
 						await fastForwardCheckout(
 							sandbox,
 							opts.source.revision,
