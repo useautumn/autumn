@@ -10,6 +10,7 @@ import {
 import type { Context } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { withBalanceWorkerFailOpen } from "@/internal/balances/balanceWorker/failOpen/withBalanceWorkerFailOpen.js";
 import { runBalanceWorkerTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js";
 import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
@@ -40,11 +41,18 @@ async function track(
 		body.async === true ||
 		isAsyncTrackEnabled({ orgId: ctx.org.id, orgSlug: ctx.org.slug });
 
-	if (isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id }))
-		return c.json(
-			await runBalanceWorkerTrack({ ctx, body, isAsync }),
-			isAsync ? 202 : 200,
-		);
+	if (isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id })) {
+		if (isAsync)
+			return c.json(await runBalanceWorkerTrack({ ctx, body, isAsync }), 202);
+		const { result, failedOpen } = await withBalanceWorkerFailOpen({
+			ctx,
+			source: "track",
+			run: () => runBalanceWorkerTrack({ ctx, body }),
+			// Queued on the command log, applied once the worker is back; each feature keeps its command id, so none applies twice.
+			fallback: () => runBalanceWorkerTrack({ ctx, body, isAsync: true }),
+		});
+		return c.json(result, failedOpen ? 202 : 200);
+	}
 
 	const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
 
