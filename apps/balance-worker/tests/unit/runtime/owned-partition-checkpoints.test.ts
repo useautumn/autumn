@@ -270,6 +270,7 @@ describe("owned partition checkpoints", () => {
 							value: 5,
 							overageBehavior: "reject",
 							properties: null,
+							usageEvent: { name: "messages" },
 							occurredAt: fixture.clock.now(),
 						},
 					}),

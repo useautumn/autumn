@@ -14,6 +14,7 @@ import {
 	workerReplyToFullSubject,
 	workerStateToApiBalance,
 } from "@/internal/balances/balanceWorker/workerStateToApiBalance.js";
+import { isFeatureHeld } from "@/internal/balances/balanceWorker/workerSubjectsToApiBalances.js";
 import { readBalanceWorkerSubject } from "@/internal/balanceWorker/subject/readBalanceWorkerSubject.js";
 import { sendThresholdsReached } from "./sendThresholdsReached.js";
 
@@ -49,13 +50,15 @@ const replyToThresholdsReached = ({
 		catalog: reply.catalog,
 		entityId: body.entity_id,
 	});
+	const featureId = reply.result.fundingFeatureId;
+	if (!isFeatureHeld({ fullSubject, featureId })) return [];
 	return trackToThresholdsReached({
 		effects: reply.effects ?? [],
 		result: reply.result,
 		fundingBalance: workerStateToApiBalance({
 			ctx,
 			fullSubject,
-			featureId: reply.result.fundingFeatureId,
+			featureId,
 		}),
 	});
 };

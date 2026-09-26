@@ -104,6 +104,7 @@ export function createTrackCommand({
 		value,
 		overageBehavior: "reject",
 		properties: null,
+		usageEvent: { name: "messages" },
 		occurredAt,
 	};
 }

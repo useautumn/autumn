@@ -74,6 +74,7 @@ export type {
 	TrackCommand,
 	TrackIdempotency,
 	TrackLock,
+	TrackUsageEvent,
 } from "./commands/track/types/trackCommand.js";
 export type { TrackResult } from "./commands/track/types/trackResult.js";
 export { computeUpdateBalance } from "./commands/updateBalance/computeUpdateBalance.js";

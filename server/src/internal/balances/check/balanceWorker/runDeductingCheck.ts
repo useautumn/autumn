@@ -146,6 +146,7 @@ export async function runDeductingCheck({
 			feature_id: body.feature_id,
 			value: requiredBalanceOf({ body }),
 			properties: body.properties,
+			skip_event: body.skip_event,
 			// A lock keeps its overage behaviour for a later confirm above the lock.
 			overage_behavior: body.lock?.overage_behavior ?? "reject",
 		},

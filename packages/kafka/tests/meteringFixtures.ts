@@ -180,6 +180,7 @@ export const createTrackMutation = ({
 				value,
 				overageBehavior: "reject",
 				properties: null,
+				usageEvent: { name: "messages" },
 				occurredAt,
 			},
 		}),

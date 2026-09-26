@@ -118,6 +118,7 @@ const createCommand = ({
 			value,
 			overageBehavior: "reject",
 			properties,
+			usageEvent: { name: featureId },
 			occurredAt: 1_700_000_000_000,
 		},
 	});
@@ -1903,9 +1904,13 @@ describe("partition writer", () => {
 				limits: defaultLimits,
 			});
 
+			// A deducting check nothing funds is refused; a plain track would apply as a no-op.
 			await expect(
 				writer.submitTrack({
-					command: createCommand({ commandId: "cmd_1", featureId: "unknown" }),
+					command: {
+						...createCommand({ commandId: "cmd_1", featureId: "unknown" }),
+						enforceOverdueBlock: true,
+					},
 				}),
 			).rejects.toEqual(
 				new UnsupportedCommandError({ reason: "feature_not_found" }),

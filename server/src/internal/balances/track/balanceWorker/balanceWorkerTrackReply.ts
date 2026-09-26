@@ -14,6 +14,7 @@ import {
 	workerStateToApiBalance,
 } from "../../balanceWorker/workerStateToApiBalance.js";
 import {
+	isFeatureHeld,
 	isFlagFeatureId,
 	workerSubjectsToApiBalances,
 } from "../../balanceWorker/workerSubjectsToApiBalances.js";
@@ -77,13 +78,11 @@ const workerResponseParts = ({
 		const featureId = reply.result.fundingFeatureId;
 		if (fundingBalances.has(featureId)) return;
 		if (isFlagFeatureId({ ctx, featureId })) return;
+		const { fullSubject } = subjects[index];
+		if (!isFeatureHeld({ fullSubject, featureId })) return;
 		fundingBalances.set(
 			featureId,
-			workerStateToApiBalance({
-				ctx,
-				fullSubject: subjects[index].fullSubject,
-				featureId,
-			}),
+			workerStateToApiBalance({ ctx, fullSubject, featureId }),
 		);
 	});
 

@@ -246,6 +246,7 @@ describe("Real ownership admission", () => {
 					value: 5,
 					overageBehavior: "reject",
 					properties: null,
+					usageEvent: { name: "messages" },
 					occurredAt: Date.now(),
 				},
 			});
@@ -625,6 +626,7 @@ describe("Partition handoff under load", () => {
 					value: 1,
 					overageBehavior: "reject",
 					properties: null,
+					usageEvent: { name: "messages" },
 					occurredAt: Date.now(),
 				},
 			});

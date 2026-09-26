@@ -21,7 +21,8 @@ export const isFlagFeatureId = ({
 	return feature ? isBooleanFeature({ feature }) : false;
 };
 
-const isFeatureHeld = ({
+/** The subject holds a grant for the feature; legacy reports no balance, not an error, when it does not. */
+export const isFeatureHeld = ({
 	fullSubject,
 	featureId,
 }: {

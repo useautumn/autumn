@@ -46,6 +46,7 @@ const trackFor = ({ customerId }: { customerId: string }): TrackCommand =>
 			value: 1,
 			overageBehavior: "reject",
 			properties: null,
+			usageEvent: { name: "messages" },
 			occurredAt: 1_700_000_000_000,
 		},
 	});

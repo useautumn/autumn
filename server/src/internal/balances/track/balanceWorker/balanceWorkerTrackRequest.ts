@@ -1,4 +1,8 @@
-import { orgToCommandOrg, type TrackCommand } from "@autumn/balance-engine";
+import {
+	orgToCommandOrg,
+	type TrackCommand,
+	type TrackUsageEvent,
+} from "@autumn/balance-engine";
 import { type LockParams, RecaseError, type TrackParams } from "@autumn/shared";
 import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
 import { featureToInternalFeatureId } from "../../balanceWorker/featureToInternalFeatureId.js";
@@ -21,10 +25,25 @@ const commandIdOf = ({
 	return [ctx.id, ...scope].join(":");
 };
 
+/** Legacy writes one event per request, named by its feature id or else its event name. */
+const usageEventOf = ({
+	body,
+	isFanOut,
+	recordsUsageEvent,
+}: {
+	body: TrackParams;
+	isFanOut: boolean;
+	recordsUsageEvent: boolean;
+}): TrackUsageEvent | null => {
+	if (body.skip_event || !recordsUsageEvent) return null;
+	return { name: (isFanOut ? body.event_name : body.feature_id) ?? "" };
+};
+
 export function trackParamsToTrackCommand({
 	ctx,
 	body,
 	isFanOut = false,
+	recordsUsageEvent = true,
 	enforceOverdueBlock = false,
 	lock,
 }: {
@@ -32,6 +51,8 @@ export function trackParamsToTrackCommand({
 	body: TrackParams;
 	/** The request named an event, and this command is one of the features it maps to. */
 	isFanOut?: boolean;
+	/** False for a fan-out's features after the first, so the request records its one event once. */
+	recordsUsageEvent?: boolean;
 	/** A check that deducts honours the org's overdue block, as a plain check does. */
 	enforceOverdueBlock?: boolean;
 	/** Only a check takes a lock; a plain track never does. */
@@ -56,6 +77,7 @@ export function trackParamsToTrackCommand({
 		value: body.value ?? 1,
 		overageBehavior: body.overage_behavior ?? "cap",
 		properties: body.properties ?? null,
+		usageEvent: usageEventOf({ body, isFanOut, recordsUsageEvent }),
 		...(enforceOverdueBlock && { enforceOverdueBlock }),
 		...(lock?.enabled && {
 			lock: lockParamsToTrackLock({ lock, occurredAt }),
@@ -92,11 +114,12 @@ export const trackParamsToTrackCommands = ({
 	body: TrackParams;
 }): TrackCommand[] => {
 	const isFanOut = !body.feature_id;
-	return trackedFeatureIdsOf({ ctx, body }).map((featureId) =>
+	return trackedFeatureIdsOf({ ctx, body }).map((featureId, index) =>
 		trackParamsToTrackCommand({
 			ctx,
 			body: { ...body, feature_id: featureId },
 			isFanOut,
+			recordsUsageEvent: index === 0,
 		}),
 	);
 };

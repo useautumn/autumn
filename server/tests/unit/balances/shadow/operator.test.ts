@@ -107,6 +107,7 @@ test.concurrent(
 					value: 5,
 					overageBehavior: "cap",
 					properties: null,
+					usageEvent: { name: "messages" },
 					occurredAt: fixture.ctx.timestamp,
 				},
 			});

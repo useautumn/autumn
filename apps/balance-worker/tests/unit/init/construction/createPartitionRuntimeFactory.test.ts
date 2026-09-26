@@ -148,6 +148,7 @@ describe("Kafka owned partition runtime factory", () => {
 						value: 5,
 						overageBehavior: "reject",
 						properties: null,
+						usageEvent: { name: "messages" },
 						occurredAt: 1_700_000_000_000,
 					},
 				});

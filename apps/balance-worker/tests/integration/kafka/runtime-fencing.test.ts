@@ -163,6 +163,7 @@ async function replacementFencesPreviousRuntime(): Promise<void> {
 				value: 5,
 				overageBehavior: "reject",
 				properties: null,
+				usageEvent: { name: "messages" },
 				occurredAt: 1_700_000_000_000,
 			},
 		});

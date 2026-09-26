@@ -363,6 +363,7 @@ describe("automatic checkpoint recovery", () => {
 						value: 5,
 						overageBehavior: "reject",
 						properties: null,
+						usageEvent: { name: "messages" },
 						occurredAt: Date.now(),
 					},
 				});

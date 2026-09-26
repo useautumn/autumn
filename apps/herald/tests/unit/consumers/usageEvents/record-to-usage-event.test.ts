@@ -7,6 +7,7 @@ import {
 	type MutationRecord,
 	type SubjectState,
 	subjectStateToFullSubject,
+	type TrackCommand,
 } from "@autumn/balance-engine";
 import {
 	createCatalogFor,
@@ -20,18 +21,21 @@ import { recordToUsageEvent } from "../../../../src/consumers/usageEvents/action
 
 const position = { topic: "local-events", partition: 3, offset: 44n };
 
-/** A real track through the engine, stamped the way the writer stamps it. */
+/** A real track through the engine, stamped the way the writer stamps it; `balance: null` holds no grant. */
 const trackRecord = ({
 	balance,
 	value,
+	overrides = {},
 }: {
-	balance: number;
+	balance: number | null;
 	value: number;
+	overrides?: Partial<TrackCommand>;
 }): MutationRecord => {
 	const state = createSubjectState({
 		identity,
 		customerProducts: [createCustomerProduct()],
-		customerEntitlements: [createCustomerEntitlement({ balance })],
+		customerEntitlements:
+			balance === null ? [] : [createCustomerEntitlement({ balance })],
 	});
 	const mutation = computeTrack({
 		fullSubject: subjectStateToFullSubject({
@@ -41,6 +45,7 @@ const trackRecord = ({
 		command: {
 			...createTrackCommand({ value }),
 			properties: { model: "x" },
+			...overrides,
 		},
 	});
 	return { ...mutation, receipt: { fingerprint: "f", expiresAt: 1 } };
@@ -144,6 +149,48 @@ describe("recordToUsageEvent", () => {
 			recordToUsageEvent({
 				position,
 				record: trackRecord({ balance: 3, value: 5 }),
+			}),
+		).toBeNull();
+	});
+
+	test("a track nothing funds still makes its event, with no breakdown, as legacy does", () => {
+		const event = recordToUsageEvent({
+			position,
+			record: trackRecord({
+				balance: null,
+				value: 5,
+				overrides: { overageBehavior: "cap" },
+			}),
+		});
+		expect(event).toMatchObject({
+			id: "local-events:3:44",
+			customer_id: identity.customerId,
+			event_name: "messages",
+			value: 5,
+			properties: { model: "x" },
+			internal_product_id: null,
+			deductions: null,
+		});
+	});
+
+	test("an event-name track is named by its event, and only the command that records it makes one", () => {
+		const recorded = recordToUsageEvent({
+			position,
+			record: trackRecord({
+				balance: 10,
+				value: 5,
+				overrides: { usageEvent: { name: "chat_message" } },
+			}),
+		});
+		expect(recorded).toMatchObject({ event_name: "chat_message", value: 5 });
+		expect(
+			recordToUsageEvent({
+				position,
+				record: trackRecord({
+					balance: 10,
+					value: 5,
+					overrides: { usageEvent: null },
+				}),
 			}),
 		).toBeNull();
 	});

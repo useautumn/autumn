@@ -62,6 +62,7 @@ const command = parseTrackCommand({
 		value: 2,
 		overageBehavior: "reject",
 		properties: null,
+		usageEvent: { name: "messages" },
 		occurredAt: 1,
 	},
 });

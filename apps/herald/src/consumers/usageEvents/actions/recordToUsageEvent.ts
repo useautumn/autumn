@@ -16,14 +16,14 @@ export const positionToUsageEventId = ({
 /** What the usage a record reports amounts to: which feature, how much, and under which properties. */
 type ReportedUsage = {
 	orgSlug: string | undefined;
-	featureId: string;
+	eventName: string;
 	value: number;
 	properties: Record<string, unknown> | null;
 	deductions: EventInsert["deductions"];
 	internalProductId: string | null;
 };
 
-/** Null when the record reports no usage: it was refused, or it is a command that moves none. */
+/** Null when the record reports no usage: it was refused, records no event, or is a command that moves none. */
 const recordToReportedUsage = ({
 	record,
 }: {
@@ -32,10 +32,11 @@ const recordToReportedUsage = ({
 	const { command, result } = record;
 
 	if (command.type === "track" && result.type === "track") {
-		if (result.status !== "applied") return null;
+		// A track that funds nothing still applies, deducting nothing, and records its event like legacy.
+		if (result.status !== "applied" || !command.usageEvent) return null;
 		return {
 			orgSlug: command.org.slug,
-			featureId: command.featureId,
+			eventName: command.usageEvent.name,
 			value: command.value,
 			properties: command.properties,
 			deductions: result.deductions,
@@ -50,7 +51,7 @@ const recordToReportedUsage = ({
 		if (difference.isZero()) return null;
 		return {
 			orgSlug: command.org.slug,
-			featureId: command.lock.feature_id,
+			eventName: command.lock.feature_id,
 			value: difference.toNumber(),
 			properties: command.properties ?? command.lock.properties,
 			deductions: result.deductions,
@@ -80,7 +81,7 @@ export const recordToUsageEvent = ({
 		internal_customer_id: subject.internalCustomerId,
 		entity_id: identity.entityId,
 		internal_entity_id: subject.internalEntityId,
-		event_name: usage.featureId,
+		event_name: usage.eventName,
 		value: usage.value,
 		properties: usage.properties ?? {},
 		// The caller's instant when it gave one, so both columns agree the way the API server writes them.

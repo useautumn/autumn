@@ -470,6 +470,7 @@ describe("Kafka transaction boundary", () => {
 					value: 5,
 					overageBehavior: "reject",
 					properties: null,
+					usageEvent: { name: "messages" },
 					occurredAt: 1_700_000_000_000,
 				},
 			});
@@ -844,6 +845,7 @@ describe("Kafka transaction boundary", () => {
 					value: 5,
 					overageBehavior: "reject",
 					properties: null,
+					usageEvent: { name: "messages" },
 					occurredAt: 1_700_000_000_000,
 				},
 			});
@@ -1094,6 +1096,7 @@ test("prepares without fencing and activates from the committed tail", async fun
 				value: 5,
 				overageBehavior: "reject",
 				properties: null,
+				usageEvent: { name: "messages" },
 				occurredAt: 1_700_000_000_000,
 			},
 		});
