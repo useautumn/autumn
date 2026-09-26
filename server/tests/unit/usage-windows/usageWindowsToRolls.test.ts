@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type { UsageWindow, UsageWindowLimit } from "@autumn/shared";
-import { computeUsageWindowRolls } from "@/internal/customers/actions/resetUsageWindows/computeUsageWindowRolls.js";
+import {
+	type UsageWindow,
+	type UsageWindowLimit,
+	usageWindowsToRolls,
+} from "@autumn/shared";
 
 const NOW = Date.UTC(2026, 5, 15, 12, 0, 0);
 const HOUR = 60 * 60 * 1000;
@@ -30,9 +33,9 @@ const limit = (overrides: Partial<UsageWindowLimit>): UsageWindowLimit =>
 		...overrides,
 	}) as UsageWindowLimit;
 
-describe("computeUsageWindowRolls", () => {
+describe("usageWindowsToRolls", () => {
 	test("live row matching its limit's derivation: no roll", () => {
-		const rolls = computeUsageWindowRolls({
+		const rolls = usageWindowsToRolls({
 			usageWindows: [row({})],
 			limits: [limit({})],
 			now: NOW,
@@ -41,7 +44,7 @@ describe("computeUsageWindowRolls", () => {
 	});
 
 	test("plan change (bounds moved, not expired): re-bound, count zeroed", () => {
-		const rolls = computeUsageWindowRolls({
+		const rolls = usageWindowsToRolls({
 			usageWindows: [row({})],
 			limits: [
 				limit({
@@ -63,7 +66,7 @@ describe("computeUsageWindowRolls", () => {
 	});
 
 	test("anchor-only re-point (same window, ent recreated): count kept", () => {
-		const rolls = computeUsageWindowRolls({
+		const rolls = usageWindowsToRolls({
 			usageWindows: [row({})],
 			limits: [limit({ anchor_customer_entitlement_id: "ce_recreated" })],
 			now: NOW,
@@ -78,7 +81,7 @@ describe("computeUsageWindowRolls", () => {
 	});
 
 	test("expired row: re-bound to the current derivation, count zeroed", () => {
-		const rolls = computeUsageWindowRolls({
+		const rolls = usageWindowsToRolls({
 			usageWindows: [
 				row({ window_start_at: NOW - 3 * HOUR, window_end_at: NOW - HOUR }),
 			],
@@ -94,7 +97,7 @@ describe("computeUsageWindowRolls", () => {
 	});
 
 	test("expired row with no resolvable limit (entity scope, v1): zero-only, bounds kept", () => {
-		const rolls = computeUsageWindowRolls({
+		const rolls = usageWindowsToRolls({
 			usageWindows: [
 				row({
 					internal_entity_id: "ient_1",

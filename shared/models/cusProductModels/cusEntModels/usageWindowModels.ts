@@ -61,5 +61,19 @@ export const UsageWindowLimitSchema = z.object({
 
 export type UsageWindowLimit = z.infer<typeof UsageWindowLimitSchema>;
 
+/** How a counter row moves to its limit's current derivation: new bounds and anchor, and whether its count zeroes. */
+export type UsageWindowRoll = {
+	id: string;
+	feature_id: string;
+	internal_entity_id: string | null;
+	filter_key: string | null;
+	/** True when the stored window closed: the count must zero. A roll never
+	 *  writes a count otherwise, so it can't clobber a concurrent deduction. */
+	zero_usage: boolean;
+	window_start_at: number;
+	window_end_at: number;
+	anchor_customer_entitlement_id: string | null;
+};
+
 /** The feature facts a cap resolves from: which counter it keys and which dimension it counts. */
 export type UsageWindowFeature = Pick<Feature, "id" | "internal_id" | "type">;

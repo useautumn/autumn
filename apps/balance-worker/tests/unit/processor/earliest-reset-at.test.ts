@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test";
+import type { WorkerUsageWindow } from "@autumn/balance-engine";
+import { CusProductStatus } from "@autumn/shared";
 import {
 	earliestResetAt,
 	resetMayBeDue,
@@ -40,4 +42,81 @@ test("a state with no cycle ends is never due, and the answer is memoised per st
 	};
 	expect(earliestResetAt({ state: later })).toBe(5);
 	expect(earliestResetAt({ state })).toBeNull();
+});
+
+const usageWindow = ({
+	windowEndAt = 10_000,
+	anchorCustomerEntitlementId = "a",
+}: {
+	windowEndAt?: number;
+	anchorCustomerEntitlementId?: string | null;
+} = {}): WorkerUsageWindow => ({
+	id: "uw_1",
+	internal_customer_id: "cus_internal_1",
+	internal_entity_id: null,
+	feature_id: "messages",
+	internal_feature_id: "feat_messages",
+	filter_key: null,
+	anchor_customer_entitlement_id: anchorCustomerEntitlementId,
+	window_start_at: 0,
+	window_end_at: windowEndAt,
+	usage: 1,
+	updated_at: 0,
+});
+
+const stateWithWindow = ({
+	window,
+	productStatus = CusProductStatus.Active,
+}: {
+	window: WorkerUsageWindow;
+	productStatus?: CusProductStatus;
+}) => {
+	const state = createState({
+		customerEntitlements: [
+			{ ...createCustomerEntitlement({ id: "a" }), next_reset_at: null },
+		],
+	});
+	return {
+		...state,
+		customerProducts: state.customerProducts.map((product) => ({
+			...product,
+			status: productStatus,
+		})),
+		usageWindows: [window],
+	};
+};
+
+test("a usage-window counter falls due when its window closes", () => {
+	const state = stateWithWindow({
+		window: usageWindow({ windowEndAt: 1_000 }),
+	});
+	expect(resetMayBeDue({ state, asOf: 999 })).toBe(false);
+	// A window's end is exclusive: the counter rolls at its end, not after it.
+	expect(resetMayBeDue({ state, asOf: 1_000 })).toBe(true);
+});
+
+test("a counter anchored to a row that left the subject or ended with its plan falls due", () => {
+	expect(
+		resetMayBeDue({
+			state: stateWithWindow({
+				window: usageWindow({ anchorCustomerEntitlementId: "gone" }),
+			}),
+			asOf: 1,
+		}),
+	).toBe(true);
+	expect(
+		resetMayBeDue({
+			state: stateWithWindow({
+				window: usageWindow(),
+				productStatus: CusProductStatus.Expired,
+			}),
+			asOf: 1,
+		}),
+	).toBe(true);
+	expect(
+		resetMayBeDue({
+			state: stateWithWindow({ window: usageWindow() }),
+			asOf: 1,
+		}),
+	).toBe(false);
 });
