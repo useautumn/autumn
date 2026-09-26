@@ -9,6 +9,7 @@ import { TooltipItem, tooltipItemHref } from "./components/TooltipItem";
 import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
 import { usePinnedChartTooltip } from "./hooks/usePinnedChartTooltip";
 import {
+	BAR_CATEGORY_GAP,
 	CHART_MARGIN,
 	type PlotInsets,
 	Y_AXIS_WIDTH,
@@ -17,6 +18,11 @@ import { formatCompactNumber, formatPeriodLabel } from "./utils/parseTimestamp";
 import type { ChartSeriesConfig } from "./utils/transformGroupedChartData";
 
 const MAX_TOOLTIP_ITEMS = 5;
+// Busy stacks get a hairline gap so small segments keep their colour.
+const SEGMENT_GAP = 2;
+const BUSY_SEGMENT_GAP = 1;
+const BUSY_SERIES_COUNT = 20;
+const TOP_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
 const CHART_STYLE = { cursor: "default" } as const;
 const BAR_STYLE = { cursor: "pointer" } as const;
 const X_TICK = { fontSize: 11, fill: "#666" } as const;
@@ -31,7 +37,7 @@ const Y_TICK = {
 export const EventsBarChart = memo(function EventsBarChart({
 	data,
 	chartConfig,
-	domainMax,
+	ticks,
 	onGeometry,
 }: {
 	data: {
@@ -40,7 +46,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 		data: Row[];
 	};
 	chartConfig: ChartSeriesConfig[];
-	domainMax?: number;
+	ticks?: number[];
 	onGeometry?: (insets: PlotInsets) => void;
 }) {
 	const { queryStates } = useAnalyticsQueryState();
@@ -81,6 +87,12 @@ export const EventsBarChart = memo(function EventsBarChart({
 	const overflowSum = overflowItems.reduce((sum, item) => sum + item.value, 0);
 
 	// Memoized so tooltip-driven re-renders never touch the recharts tree.
+	// Recharts stacks bars in mount order, so a changed series set must remount to restack.
+	const seriesSetKey = chartConfig.map((series) => series.yKey).join("|");
+
+	const segmentGap =
+		chartConfig.length >= BUSY_SERIES_COUNT ? BUSY_SEGMENT_GAP : SEGMENT_GAP;
+
 	const chart = useMemo(
 		() => (
 			<ChartContainer
@@ -93,10 +105,11 @@ export const EventsBarChart = memo(function EventsBarChart({
 				)}
 			>
 				<BarChart
+					key={seriesSetKey}
 					data={data.data}
 					className="pt-3 pr-2"
 					margin={CHART_MARGIN}
-					barCategoryGap="10%"
+					barCategoryGap={BAR_CATEGORY_GAP}
 					style={CHART_STYLE}
 					throttleDelay="raf"
 				>
@@ -120,8 +133,8 @@ export const EventsBarChart = memo(function EventsBarChart({
 						axisLine={false}
 						width={Y_AXIS_WIDTH}
 						tickMargin={0}
-						tickCount={5}
-						domain={domainMax != null ? [0, domainMax] : undefined}
+						ticks={ticks}
+						domain={ticks ? [0, ticks[ticks.length - 1]] : undefined}
 						tick={Y_TICK}
 						tickFormatter={formatCompactNumber}
 					/>
@@ -131,6 +144,10 @@ export const EventsBarChart = memo(function EventsBarChart({
 							dataKey={series.yKey}
 							stackId="a"
 							fill={series.fill}
+							// A background-colored stroke reads as a gap between stacked segments.
+							stroke="var(--background)"
+							strokeWidth={segmentGap}
+							radius={si === chartConfig.length - 1 ? TOP_RADIUS : undefined}
 							activeBar={false}
 							style={BAR_STYLE}
 							onMouseEnter={barHandlers[si]}
@@ -142,10 +159,12 @@ export const EventsBarChart = memo(function EventsBarChart({
 			</ChartContainer>
 		),
 		[
+			seriesSetKey,
+			segmentGap,
 			data,
 			rechartsConfig,
 			chartConfig,
-			domainMax,
+			ticks,
 			formatXAxis,
 			barHandlers,
 			handleBarMouseLeave,

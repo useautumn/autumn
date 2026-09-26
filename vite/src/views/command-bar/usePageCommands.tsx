@@ -6,6 +6,7 @@ import { useNavigate } from "react-router";
 import { useScopes } from "@/hooks/useScopes";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
+import { LogsIcon } from "@/views/event-logs/LogsIcon";
 import { DEV_SUB_TABS } from "@/views/main-sidebar/MainSidebar";
 import {
 	SETTINGS_GROUPS,
@@ -66,10 +67,16 @@ export const usePageCommands = (): PageCommand[] => {
 			path: "/migrations",
 		},
 		{
-			title: "Analytics",
+			title: "Usage",
 			section: "Customers",
 			icon: <ChartColumn className="size-4" />,
 			path: "/analytics",
+		},
+		{
+			title: "Logs",
+			section: "Customers",
+			icon: <LogsIcon className="size-4" />,
+			path: "/logs",
 		},
 		{
 			title: "Docs",

@@ -132,6 +132,12 @@ export const MainSidebar = ({
 								env={env}
 							/>
 							<NavButton
+								value="analytics"
+								icon={<ChartColumn strokeWidth={ICON_STROKE} />}
+								title="Usage"
+								env={env}
+							/>
+							<NavButton
 								value="migrations"
 								icon={<Workflow strokeWidth={ICON_STROKE} />}
 								title="Migrations"
@@ -140,12 +146,6 @@ export const MainSidebar = ({
 										BETA
 									</span>
 								}
-								env={env}
-							/>
-							<NavButton
-								value="analytics"
-								icon={<ChartColumn strokeWidth={ICON_STROKE} />}
-								title="Analytics"
 								env={env}
 							/>
 						</NavSection>

@@ -1,5 +1,4 @@
 import { MONTH_RANGES, type MonthRangeEnum } from "@autumn/shared";
-import type { CSSProperties } from "react";
 import { type Granularity, getEffectiveBinSize } from "./intervals";
 
 /**
@@ -25,46 +24,11 @@ export const TOP_INSET = CHART_MARGIN.top + CHART_PAD.top;
 export const BOTTOM_INSET = X_AXIS_HEIGHT + CHART_MARGIN.bottom;
 export const RIGHT_INSET = CHART_MARGIN.right + CHART_PAD.right;
 
-/** `barCategoryGap="10%"` on the BarChart: bar = 90% of the band, centered. */
-export const BAR_CATEGORY_GAP = 0.1;
+/** Share of each band a bar fills, matching the mockup. */
+export const BAR_WIDTH_FRACTION = 0.62;
 
-/**
- * CSS grid styles that reproduce recharts' band layout: each bar is 90% of its
- * band with 5% outer padding and 10% inter-bar gaps. Percentages resolve
- * against the plot width, so no width measurement is needed.
- */
-export const bandGridStyle = (count: number): CSSProperties => ({
-	display: "grid",
-	gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`,
-	columnGap: `${(BAR_CATEGORY_GAP * 100) / count}%`,
-	paddingInline: `${(BAR_CATEGORY_GAP * 50) / count}%`,
-	alignItems: "end",
-});
-
-/** Per-bar geometry + timing for the loading wave. Heights are a scaleY
- * fraction (0-1) of the full plot height. */
-export interface SkeletonBarConfig {
-	peak: number;
-	low: number;
-	duration: number;
-	delay: number;
-	shimmerDelay: number;
-	shimmerDuration: number;
-}
-
-/** Randomised, stable bar configs for the loading wave. */
-export const buildSkeletonBars = (count: number): SkeletonBarConfig[] =>
-	Array.from({ length: count }, () => {
-		const peak = 0.22 + Math.random() * 0.73;
-		return {
-			peak,
-			low: peak * (0.35 + Math.random() * 0.2),
-			duration: 2.6 + Math.random() * 1.8,
-			delay: Math.random() * 1.4,
-			shimmerDelay: -Math.random() * 3,
-			shimmerDuration: 2.6 + Math.random() * 1.6,
-		};
-	});
+/** recharts applies `barCategoryGap` to both sides of a bar, so halve the slack. */
+export const BAR_CATEGORY_GAP = `${((1 - BAR_WIDTH_FRACTION) / 2) * 100}%`;
 
 /** Pixel insets of the plot area from each edge of the chart body. */
 export interface PlotInsets {
@@ -102,7 +66,6 @@ export const plotInsetsEqual = (a: PlotInsets, b: PlotInsets): boolean =>
 const MS_PER_HOUR = 3_600_000;
 const MS_PER_DAY = 86_400_000;
 const MS_PER_WEEK = 7 * MS_PER_DAY;
-const MIN_BARS = 6;
 const MAX_BARS = 366;
 
 const STANDARD_INTERVAL_DAYS: Record<string, number> = {
@@ -114,27 +77,20 @@ const STANDARD_INTERVAL_DAYS: Record<string, number> = {
 	"3bc": 90,
 };
 
-/** Rounds a value up to a nice axis maximum (1/2/2.5/5/10 × 10^n), matching
- * the headroom recharts leaves above the data so bar heights line up. */
-export const niceCeil = (value: number): number => {
-	if (!Number.isFinite(value) || value <= 0) {
-		return 1;
-	}
-	const magnitude = 10 ** Math.floor(Math.log10(value));
-	const fraction = value / magnitude;
-	const niceFraction = (() => {
-		if (fraction <= 1) {
-			return 1;
-		}
-		if (fraction <= 2) {
-			return 2;
-		}
-		if (fraction <= 5) {
-			return 5;
-		}
-		return 10;
-	})();
-	return niceFraction * magnitude;
+const NICE_STEP_FRACTIONS = [1, 2, 2.5, 5, 10];
+const MAX_AXIS_INTERVALS = 4;
+
+/** Y-axis ticks on an even, readable step (1/2/2.5/5 × 10^n) with at most
+ * four intervals, so the top tick sits just above the tallest bar. */
+export const niceAxisTicks = ({ max }: { max: number }): number[] => {
+	if (!Number.isFinite(max) || max <= 0) return [0, 1];
+	const roughStep = max / MAX_AXIS_INTERVALS;
+	const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+	const fraction =
+		NICE_STEP_FRACTIONS.find((nice) => nice * magnitude >= roughStep) ?? 10;
+	const step = fraction * magnitude;
+	const intervals = Math.max(1, Math.ceil(max / step));
+	return Array.from({ length: intervals + 1 }, (_, i) => i * step);
 };
 
 /** Truncates a timestamp down to the start of its bin, matching the backend. */
@@ -195,22 +151,24 @@ const monthRangeStart = ({
 	);
 };
 
-/**
- * Predicts how many bars the chart will render, replicating the backend's
- * `generateAllPeriods` (bin-aligned start, inclusive bins up to end). Used only
- * for the pre-data loading frames; once data arrives the real count is used.
- */
-export const predictBarCount = ({
-	interval,
-	binSize,
-	start,
-	end,
-}: {
+interface RangeParams {
 	interval: string;
 	binSize: string | null;
 	start: number | null;
 	end: number | null;
-}): number => {
+}
+
+/**
+ * Predicts the start of every bin the backend will return, replicating its
+ * `generateAllPeriods` (bin-aligned start, inclusive bins up to end). Used only
+ * for the pre-data loading frames; once data arrives the real bins are used.
+ */
+export const predictBinStarts = ({
+	interval,
+	binSize,
+	start,
+	end,
+}: RangeParams): number[] => {
 	const bin = getEffectiveBinSize({ interval, binSize });
 	const rangeEnd = interval === "custom" && end ? end : Date.now();
 	const months = Object.hasOwn(MONTH_RANGES, interval)
@@ -223,22 +181,21 @@ export const predictBarCount = ({
 				? monthRangeStart({ rangeEnd, months, binSize: bin })
 				: rangeEnd - (STANDARD_INTERVAL_DAYS[interval] ?? 30) * MS_PER_DAY;
 
-	const alignedStart = alignDown({ ms: rangeStart, binSize: bin });
-
-	let count: number;
-	if (bin === "month") {
-		count = 0;
-		const cursor = new Date(alignedStart);
-		while (cursor.getTime() <= rangeEnd) {
-			count++;
+	const binStarts: number[] = [];
+	const cursor = new Date(alignDown({ ms: rangeStart, binSize: bin }));
+	while (cursor.getTime() <= rangeEnd && binStarts.length < MAX_BARS) {
+		binStarts.push(cursor.getTime());
+		if (bin === "month") {
 			cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+		} else {
+			const step =
+				bin === "hour"
+					? MS_PER_HOUR
+					: bin === "week"
+						? MS_PER_WEEK
+						: MS_PER_DAY;
+			cursor.setTime(cursor.getTime() + step);
 		}
-	} else if (bin === "week") {
-		count = Math.floor((rangeEnd - alignedStart) / MS_PER_WEEK) + 1;
-	} else {
-		const step = bin === "hour" ? MS_PER_HOUR : MS_PER_DAY;
-		count = Math.floor((rangeEnd - alignedStart) / step) + 1;
 	}
-
-	return Math.min(Math.max(count, MIN_BARS), MAX_BARS);
+	return binStarts;
 };

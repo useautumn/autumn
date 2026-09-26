@@ -1,19 +1,8 @@
-import { ErrCode } from "@autumn/shared";
-import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
 import { useParams } from "react-router";
-import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
+import { useEventsTimeseries } from "@/views/customers/customer/analytics/hooks/useEventsTimeseries";
 
-/** Gets the user's IANA timezone (e.g., "America/New_York") */
-const getUserTimezone = (): string => {
-	try {
-		return Intl.DateTimeFormat().resolvedOptions().timeZone;
-	} catch {
-		return "UTC";
-	}
-};
+const DEFAULT_SERIES_COUNT = 5;
 
 export const useCustomerTimeseriesEvents = ({
 	interval = "30d",
@@ -28,49 +17,38 @@ export const useCustomerTimeseriesEvents = ({
 	/** External customer ID override. Falls back to the `customer_id` URL param. */
 	customerId?: string;
 }) => {
-	const axiosInstance = useAxiosInstance();
-	const buildKey = useQueryKeyFactory();
 	const { customer_id } = useParams();
 	const customerIdToUse = providedCustomerId ?? customer_id;
+	const hasProvidedEventNames = Boolean(providedEventNames?.length);
 
-	const timezone = useMemo(() => getUserTimezone(), []);
-
-	const { eventNames: cachedEventNames } = useEventNames();
-	const eventNames = providedEventNames?.length
-		? providedEventNames
-		: cachedEventNames.slice(0, 3).map((e) => e.event_name);
-
-	const postBody = {
-		customer_id: customerIdToUse || null,
-		interval,
-		event_names: eventNames,
-		timezone,
-	};
-
-	const { data, isLoading, error } = useQuery({
-		queryKey: buildKey([
-			"customer-timeseries-events",
-			customerIdToUse,
+	// The customer's busiest events in the window, so the chart needn't wait on the event list.
+	const { eventNames: topEventNames, isLoading: eventNamesLoading } =
+		useEventNames({
+			customerId: customerIdToUse,
 			interval,
-			timezone,
-			...eventNames.sort(),
-		]),
-		queryFn: async () => {
-			const { data } = await axiosInstance.post("/query/events", postBody);
-			return data;
-		},
+			limit: DEFAULT_SERIES_COUNT,
+			enabled: enabled && !hasProvidedEventNames && Boolean(customerIdToUse),
+		});
+	const eventNames = hasProvidedEventNames
+		? (providedEventNames ?? [])
+		: topEventNames.map((e) => e.event_name);
+
+	const timeseries = useEventsTimeseries({
+		customerId: customerIdToUse,
+		interval,
+		eventNames,
 		enabled,
 	});
 
+	// A window with no usage keeps the chart's empty state instead of flat zero bars.
+	const hasUsage = Object.values(timeseries.totals ?? {}).some(
+		({ sum }) => sum !== 0,
+	);
+
 	return {
-		timeseriesEvents: data?.events,
-		totals: data?.totals as
-			| Record<string, { count: number; sum: number }>
-			| undefined,
-		isLoading,
-		error:
-			error && (error as any)?.code === ErrCode.ClickHouseDisabled
-				? null
-				: error,
+		...timeseries,
+		timeseriesEvents: hasUsage ? timeseries.timeseriesEvents : undefined,
+		isLoading:
+			(!hasProvidedEventNames && eventNamesLoading) || timeseries.isLoading,
 	};
 };

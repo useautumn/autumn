@@ -136,6 +136,17 @@ html {
 
 	--chart-grid-stroke: #d1d1d190;
 
+	/* Categorical series slots; order is colorblind-validated, never reorder or skip. */
+	--chart-series-1: #8838ff;
+	--chart-series-2: #eb6834;
+	--chart-series-3: #1baf7a;
+	--chart-series-4: #eda100;
+	--chart-series-5: #e87ba4;
+	--chart-series-6: #008300;
+	--chart-series-7: #2a78d6;
+	--chart-series-8: #e34948;
+	--chart-series-other: #b5b5b5;
+
 	--sidebar: oklch(0.985 0 0);
 	--sidebar-foreground: oklch(0.141 0.005 285.823);
 	--sidebar-primary: oklch(0.21 0.006 285.885);
@@ -168,6 +179,16 @@ html {
 	--border: #222222;
 
 	--chart-grid-stroke: #262626;
+
+	--chart-series-1: #9c5aff;
+	--chart-series-2: #d95926;
+	--chart-series-3: #199e70;
+	--chart-series-4: #c98500;
+	--chart-series-5: #d55181;
+	--chart-series-6: #008300;
+	--chart-series-7: #3987e5;
+	--chart-series-8: #e66767;
+	--chart-series-other: #525252;
 
 	--card-foreground: oklch(0.985 0 0);
 	--popover: oklch(0.141 0.005 285.823);

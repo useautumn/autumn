@@ -1,8 +1,26 @@
 import type { EventRow, EventsData } from "../components/analytics-types";
 
+/** The last bucket starting at or before `period`, or the first bucket. */
+const bucketFor = ({
+	period,
+	buckets,
+}: {
+	period: string;
+	buckets: string[];
+}): string => {
+	let match = buckets[0];
+	for (const bucket of buckets) {
+		if (bucket > period) break;
+		match = bucket;
+	}
+	return match;
+};
+
 /**
- * Adds an all-zero row for every period in `periods` the data is missing, so a
- * bucket with no usage still gets an x-axis slot. Rows outside `periods` are kept.
+ * Lays `events` onto exactly the given `periods`: every bucket gets a row
+ * (zero-filled when idle), and a row stamped between buckets — e.g. a period
+ * string in another zone — folds into the bucket it falls in rather than adding
+ * a slot, which would squeeze every bar.
  */
 export function fillMissingPeriods({
 	events,
@@ -11,28 +29,30 @@ export function fillMissingPeriods({
 	events: EventsData;
 	periods: string[];
 }): EventsData {
+	// Period strings are "yyyy-MM-dd HH:mm:ss", so lexical order is chronological.
+	const buckets = [...new Set(periods)].sort();
+	if (buckets.length === 0) return events;
+
 	const seriesColumns = events.meta
 		.filter(({ name }) => name !== "period")
 		.map(({ name }) => name);
 
-	const rowByPeriod = new Map<string, EventRow>();
-	for (const row of events.data) rowByPeriod.set(String(row.period), row);
-
-	let added = 0;
-	for (const period of periods) {
-		if (rowByPeriod.has(period)) continue;
-		const zeroRow: EventRow = { period };
+	const rowByBucket = new Map<string, EventRow>();
+	for (const bucket of buckets) {
+		const zeroRow: EventRow = { period: bucket };
 		for (const column of seriesColumns) zeroRow[column] = 0;
-		rowByPeriod.set(period, zeroRow);
-		added++;
+		rowByBucket.set(bucket, zeroRow);
 	}
 
-	if (added === 0) return events;
+	for (const row of events.data) {
+		const bucket = bucketFor({ period: String(row.period), buckets });
+		const target = rowByBucket.get(bucket);
+		if (!target) continue;
+		for (const column of seriesColumns) {
+			target[column] = Number(target[column] ?? 0) + Number(row[column] ?? 0);
+		}
+	}
 
-	// Period strings are "yyyy-MM-dd HH:mm:ss", so lexical order is chronological.
-	const data = [...rowByPeriod.values()].sort((a, b) =>
-		String(a.period).localeCompare(String(b.period)),
-	);
-
+	const data = buckets.map((bucket) => rowByBucket.get(bucket) as EventRow);
 	return { ...events, rows: data.length, data };
 }

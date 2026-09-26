@@ -1,16 +1,55 @@
+import { TZDate } from "@date-fns/tz";
 import { UTCDate } from "@date-fns/utc";
 
+/** Epoch ms of a pipe's "%F %T" bucket start. Hour buckets are always UTC;
+ * day/week/month buckets are wall-clock times in `timezone`. */
+export const periodToEpoch = ({
+	period,
+	timezone,
+	binSize,
+}: {
+	period: string;
+	timezone?: string;
+	binSize?: string;
+}): number => {
+	if (!timezone || timezone === "UTC" || binSize === "hour") {
+		return new UTCDate(period).getTime();
+	}
+
+	const [datePart, timePart = "00:00:00"] = period.split(" ");
+	const [year, month, day] = datePart.split("-").map(Number);
+	const [hours, minutes, seconds] = timePart.split(":").map(Number);
+	return new TZDate(
+		year,
+		month - 1,
+		day,
+		hours,
+		minutes,
+		seconds,
+		timezone,
+	).getTime();
+};
+
 /**
- * Convert event periods from ISO strings to epoch timestamps.
- * @param events - The events to convert.
+ * Convert event periods from pipe strings to epoch timestamps.
  * @returns The current time as an epoch timestamp for filtering.
  */
-export function convertPeriodsToEpoch(
-	events: Array<Record<string, string | number>>,
-): number {
+export function convertPeriodsToEpoch({
+	events,
+	timezone,
+	binSize,
+}: {
+	events: Array<Record<string, string | number>>;
+	timezone?: string;
+	binSize?: string;
+}): number {
 	const currentTime = new UTCDate().getTime();
 	for (const event of events) {
-		event.period = new UTCDate(event.period as string).getTime();
+		event.period = periodToEpoch({
+			period: event.period as string,
+			timezone,
+			binSize,
+		});
 	}
 	return currentTime;
 }

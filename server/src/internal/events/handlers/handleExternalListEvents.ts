@@ -8,10 +8,14 @@ import {
 	ApiEventsListParamsSchema,
 	ApiEventsListV2_3ParamsSchema,
 	ApiVersion,
+	ErrCode,
+	RecaseError,
 	Scopes,
 } from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { eventActions } from "@/internal/analytics/actions/eventActions.js";
+import { resolveRangeToCustomRange } from "@/internal/analytics/utils/resolveRangeToCustomRange.js";
 
 export const handleExternalListEvents = createRoute({
 	scopes: [Scopes.Analytics.Read],
@@ -31,13 +35,30 @@ export const handleExternalListEvents = createRoute({
 					: [body.feature_id]
 				: undefined;
 
+			if (body.range && body.custom_range) {
+				throw new RecaseError({
+					message: "Only one of range or custom_range may be provided",
+					code: ErrCode.InvalidRequest,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+
+			const customRange = body.range
+				? await resolveRangeToCustomRange({
+						ctx,
+						range: body.range,
+						customerId: body.customer_id,
+						featureIds,
+					})
+				: body.custom_range;
+
 			const result = await eventActions.listByCursor({
 				ctx,
 				params: {
 					customer_id: body.customer_id,
 					entity_id: body.entity_id,
 					feature_ids: featureIds,
-					custom_range: body.custom_range,
+					custom_range: customRange,
 					start_cursor: body.start_cursor,
 					limit: body.limit,
 					filter_by: body.filter_by,
