@@ -772,7 +772,7 @@ const getOrBuildWarmParent = async ({
 		name: warmName,
 		tags: { kind: "bun-tw-warm", sha: sha.slice(0, 12) },
 		env: buildWarmEnv(),
-		source: resolveGitSource(ref),
+		source: { ...resolveGitSource(ref), revision: sha },
 		signal,
 	});
 
@@ -817,7 +817,7 @@ const getOrBuildWarmParent = async ({
 	);
 	const warmRun = await runStreaming(
 		warm,
-		["bash", WARMUP_SCRIPT, ref],
+		["bash", WARMUP_SCRIPT, sha],
 		(text) => sink(text),
 		{ signal, swallowStreamClose: true },
 	);

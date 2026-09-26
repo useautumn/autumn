@@ -208,6 +208,27 @@ export const startBalanceWorker = (repoRoot: string): Subprocess => {
 };
 
 /**
+ * Starts herald (`apps/herald`): it follows the balance worker's log and delivers
+ * webhooks, auto top-ups and usage-event rows. It joins at the log's end, so it
+ * must be up before the server takes traffic.
+ */
+export const startHerald = (repoRoot: string): Subprocess => {
+	log(`starting herald (bun src/main.ts), brokers ${KAFKA_BROKERS}`);
+	return spawn(["bun", "--config=./bunfig.toml", "src/main.ts"], {
+		cwd: join(repoRoot, "apps/herald"),
+		stdout: "inherit",
+		stderr: "inherit",
+		env: {
+			...process.env,
+			NODE_ENV: "development",
+			KAFKA_BROKERS,
+			KAFKA_AUTH_MODE: "none",
+			BALANCE_WORKER_DEPLOYMENT: "local",
+		} as Record<string, string>,
+	});
+};
+
+/**
  * Spawns the image start script that brings up the native services. The script
  * lives in the image layer (`scripts/tw/image/start-services.sh`) and is resolved
  * against the in-sandbox repo root. Throws loudly if it exits non-zero.
@@ -451,6 +472,12 @@ const main = async (): Promise<void> => {
 			}
 		});
 		await waitForBalanceWorkerHealth(BALANCE_WORKER_HEALTH_TIMEOUT_MS);
+		const heraldProc = startHerald(repoRoot);
+		void heraldProc.exited.then((code) => {
+			console.error(
+				chalk.red(`[tw-boot] herald exited early with code ${code}`),
+			);
+		});
 	} else {
 		log("balance worker rollout off — server keeps the Postgres path");
 	}

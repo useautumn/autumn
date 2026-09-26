@@ -458,6 +458,20 @@ const fastForwardCheckout = async (
 	}
 };
 
+/** A `:latest` published from a ref whose base image has no Kafka can't run the balance worker. */
+const assertKafkaBaked = async (sandbox: Sandbox): Promise<void> => {
+	const proc = await withExecRetry("warm kafka check", () =>
+		sandbox.exec(["test", "-x", "/opt/kafka/kafka.Kafka"], {
+			stdout: "pipe",
+			stderr: "pipe",
+			workdir: "/",
+		}),
+	);
+	if ((await proc.wait()) !== 0) {
+		throw new Error("modal: warm image has no Kafka (/opt/kafka)");
+	}
+};
+
 /** Shared stream-closed classifier (used by runStreaming + the provider method). */
 const isSandboxStreamClosed = (error: unknown): boolean => {
 	const message = error instanceof Error ? error.message : String(error);
@@ -630,8 +644,9 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					const ffDone = stage(
 						`fast-forward warm ${opts.name} from ${WARM_IMAGE_REPO}:latest`,
 					);
+					let sandbox: Sandbox | undefined;
 					try {
-						const sandbox = await createFromImage(
+						sandbox = await createFromImage(
 							latest,
 							{
 								name: opts.name,
@@ -644,6 +659,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 							},
 							v2,
 						);
+						await assertKafkaBaked(sandbox);
 						await fastForwardCheckout(
 							sandbox,
 							opts.source.revision,
@@ -653,6 +669,10 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 						return wrap(opts.name, sandbox);
 					} catch (error) {
 						ffDone();
+						// Frees the warm name for the full build below.
+						await sandbox?.terminate().catch(() => {
+							/* best-effort */
+						});
 						narrate(
 							chalk.yellow(
 								`[modal] warm fast-forward failed (${(error as Error).message?.slice(0, 120)}) — falling back to full build`,
