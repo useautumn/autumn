@@ -25,6 +25,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { balanceLocks } from "@autumn/shared";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
 import { setCustomerUsageLimit } from "@tests/integration/balances/utils/usage-limit-utils/customerUsageLimitUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -34,7 +35,8 @@ import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { z } from "zod/v4";
 import { getRedisV2OrgCleanupCandidates } from "@/external/redis/orgRedisUtils/orgRedisMigrationUtils.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
@@ -105,6 +107,61 @@ const fetchRawLockReceipt = async ({
 		if (payload) return JSON.parse(payload) as LockReceipt;
 	}
 	return null;
+};
+
+const workerLockDeltasSchema = z.array(
+	z.object({ table: z.string(), id: z.string(), balanceDelta: z.number() }),
+);
+
+type LockBalanceMove = {
+	balanceDelta: number;
+	customerEntitlementId: string | null;
+};
+
+/** The balance moves a lock recorded: the worker's balance_locks row, else the legacy Redis receipt. */
+const fetchLockBalanceMoves = async ({
+	ctx,
+	lockId,
+}: {
+	ctx: TestContext;
+	lockId: string;
+}): Promise<{ featureId: string; moves: LockBalanceMove[] } | null> => {
+	const [lock] = await ctx.db
+		.select({
+			feature_id: balanceLocks.feature_id,
+			deltas: balanceLocks.deltas,
+		})
+		.from(balanceLocks)
+		.where(
+			and(
+				eq(balanceLocks.org_id, ctx.org.id),
+				eq(balanceLocks.env, ctx.env),
+				eq(balanceLocks.lock_id, lockId),
+			),
+		);
+	if (lock) {
+		return {
+			featureId: lock.feature_id,
+			moves: workerLockDeltasSchema.parse(lock.deltas).map((delta) => ({
+				balanceDelta: delta.balanceDelta,
+				customerEntitlementId:
+					delta.table === "customerEntitlements" ? delta.id : null,
+			})),
+		};
+	}
+
+	const receipt = await fetchRawLockReceipt({ ctx, lockId });
+	if (!receipt) return null;
+	return {
+		featureId: receipt.feature_id,
+		moves: receipt.items.map((item) => ({
+			balanceDelta: item.balance_delta,
+			customerEntitlementId:
+				item.target_type === "customer_entitlement"
+					? item.customer_entitlement_id
+					: null,
+		})),
+	};
 };
 
 const makeUnlimitedProduct = () =>
@@ -288,27 +345,26 @@ test.concurrent(
 		});
 		expect(granted.allowed).toBe(true);
 
-		const receipt = await fetchRawLockReceipt({ ctx, lockId });
-		expect(receipt).not.toBeNull();
-		expect(receipt?.feature_id).toBe(TestFeature.Messages);
+		// The worker's lock row lands with its flush, so wait for either record.
+		const lock = await pollUntilAsserted({
+			fetch: () => fetchLockBalanceMoves({ ctx, lockId }),
+			assert: (value) => expect(value).not.toBeNull(),
+			timeoutMs: 20_000,
+		});
+		expect(lock?.featureId).toBe(TestFeature.Messages);
 
-		// RED: today unlimited receipts are saved with items: [] and an
-		// overrideLockValue; real deduction must record real mutation items
-		// whose balance deltas sum to the locked value.
-		const receiptItems = receipt?.items ?? [];
-		expect(receiptItems.length).toBeGreaterThan(0);
-		const totalBalanceDelta = receiptItems.reduce(
-			(sum, item) => sum + item.balance_delta,
+		// Unlimited locks must record real balance moves (not empty items +
+		// overrideLockValue) whose deltas sum to the locked value.
+		const moves = lock?.moves ?? [];
+		expect(moves.length).toBeGreaterThan(0);
+		const totalBalanceDelta = moves.reduce(
+			(sum, move) => sum + move.balanceDelta,
 			0,
 		);
 		expect(totalBalanceDelta).toBe(-5);
-		expect(
-			receiptItems.every(
-				(item) =>
-					item.target_type === "customer_entitlement" &&
-					item.customer_entitlement_id !== null,
-			),
-		).toBe(true);
+		expect(moves.every((move) => move.customerEntitlementId !== null)).toBe(
+			true,
+		);
 
 		// Clean up so re-runs and finalize-path tests never trip on this lock.
 		await autumnV2_3.balances.finalize({ lock_id: lockId, action: "release" });
