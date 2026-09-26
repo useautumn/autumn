@@ -43,6 +43,12 @@ const assertCheckCanDeduct = ({
 	ctx: AutumnContext;
 	body: ParsedCheckParams;
 }): void => {
+	if (ctx.isPublic)
+		throw new RecaseError({
+			message:
+				"Can't use send_event: true with a publishable key. Use your secret API key instead.",
+			statusCode: 400,
+		});
 	const feature = findFeatureById({
 		features: ctx.features,
 		featureId: body.feature_id ?? "",
