@@ -98,17 +98,6 @@ else
   log "Redpanda not running"
 fi
 
-# 3c. kafka-native (Modal images) — same quiesce-before-snapshot contract.
-if pgrep -f 'kafka.Kafka start' >/dev/null 2>&1; then
-  log "SIGTERM Kafka"
-  pkill -TERM -f 'kafka.Kafka start' || true
-  for _ in $(seq 1 60); do
-    pgrep -f 'kafka.Kafka start' >/dev/null 2>&1 || break
-    sleep 0.5
-  done
-  pgrep -f 'kafka.Kafka start' >/dev/null 2>&1 && log "WARN: Kafka still running after 30s"
-fi
-
 # ---------------------------------------------------------------------------
 # 4. ClickHouse (optional) — graceful SIGTERM if present.
 # ---------------------------------------------------------------------------
