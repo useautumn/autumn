@@ -38,6 +38,8 @@ export async function track({
 		attempt: () =>
 			ctx.writer.decide<never>({
 				command,
+				// A finalize finds its lock by reading Postgres, so the caller hears of a lock only once its row is there.
+				durability: command.lock ? "store" : "log",
 				mutate: ({ state }) =>
 					timeSync({ label: "track.decide" }, () =>
 						decideTrack({
