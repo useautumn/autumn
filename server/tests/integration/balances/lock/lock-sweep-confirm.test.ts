@@ -8,6 +8,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { runLockSweepBatch } from "@/internal/balances/lockSweep/runLockSweepBatch.js";
 
 test(`${chalk.yellowBright("lock-sweep-confirm: a lock past its 24 hour default is confirmed, and its id is free again")}`, async () => {
@@ -41,6 +42,8 @@ test(`${chalk.yellowBright("lock-sweep-confirm: a lock past its 24 hour default 
 	await ctx.db.update(balanceLocks).set({ expires_at: 1 }).where(thisLock);
 
 	await runLockSweepBatch({ ctx });
+	// The worker answers once its log has the delete; Postgres takes it just after.
+	await flushBalanceWorkerCustomer({ ctx, customerId });
 
 	expect(await ctx.db.select().from(balanceLocks).where(thisLock)).toEqual([]);
 	// Confirmed, not released: the 5 the lock took stay taken.
