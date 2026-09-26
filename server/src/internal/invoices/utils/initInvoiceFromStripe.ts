@@ -12,6 +12,7 @@ import { getInvoiceDiscounts } from "@/external/stripe/stripeInvoiceUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils";
 import { generateId } from "@/utils/genUtils";
+import { stripeInvoiceToPaidAt } from "./stripeInvoiceToPaidAt";
 
 /**
  * Creates an Invoice object from a Stripe invoice.
@@ -69,6 +70,7 @@ export const initInvoiceFromStripe = async ({
 		internal_entity_id: internalEntityId || null,
 		total: atmnTotal,
 		amount_paid: atmnAmountPaid,
+		paid_at: stripeInvoiceToPaidAt({ stripeInvoice }),
 		currency: stripeInvoice.currency,
 		discounts: getInvoiceDiscounts({ expandedInvoice: stripeInvoice }),
 		items: autumnInvoiceItems,

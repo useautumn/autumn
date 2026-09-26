@@ -430,6 +430,7 @@ const buildInvoice = ({
 	internalEntityId?: string | null;
 }): InvoiceRow => ({
 	amount_paid: 1000,
+	paid_at: null,
 	refunded_amount: 0,
 	id: `inv_${key}_${suffix}`,
 	created_at: now,
