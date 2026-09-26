@@ -61150,6 +61150,871 @@ paths:
       x-speakeasy-name-override: setupPayment
       parameters:
         - *a1
+  /v1/billing.verify:
+    post:
+      operationId: verify
+      description: >-
+        Checks a customer's Stripe subscriptions against Autumn's record of
+        their plans and reports any drift. Read-only: it never changes Autumn or
+        Stripe.
+
+
+        Use this endpoint to audit that a customer's Stripe subscriptions,
+        items, quantities, prices, schedules and cancellation state match what
+        Autumn expects, for example after a migration or a manual change in
+        Stripe.
+
+
+        @example
+
+        ```typescript
+
+        // Verify every subscription for a customer
+
+        const response = await client.billing.verify({ customerId: "cus_123" });
+
+        ```
+
+
+        @example
+
+        ```typescript
+
+        // Verify specific subscriptions in strict mode
+
+        const response = await client.billing.verify({ customerId: "cus_123",
+        subscriptionIds: ["sub_1234"], strict: true });
+
+        ```
+
+
+        @param customerId - Autumn customer whose Stripe subscriptions should be
+        checked against Autumn's customer_products.
+
+        @param subscriptionIds - Optional whitelist of Stripe subscription IDs
+        to verify. Defaults to every subscription linked to the customer's
+        plans, plus any other active Stripe subscription on the customer, which
+        is reported as not linked to Autumn. (optional)
+
+        @param strict - When true, report missing usage-based items and
+        unexpected metered Stripe items. Defaults to false. (optional)
+
+
+        @returns A verify response with account-level mismatches and a
+        per-subscription status (correct or mismatched) with the mismatches
+        found.
+      tags:
+        - billing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: Autumn customer whose Stripe subscriptions should be checked
+                    against Autumn's customer_products.
+                subscription_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional whitelist of Stripe subscription IDs to verify. Defaults
+                    to every subscription linked to the customer's plans, plus
+                    any other active Stripe subscription on the customer, which
+                    is reported as not linked to Autumn.
+                strict:
+                  type: boolean
+                  description: When true, report missing usage-based items and unexpected metered
+                    Stripe items. Defaults to false.
+              required:
+                - customer_id
+              title: VerifyParams
+              examples:
+                - customer_id: cus_123
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                  customer_mismatches:
+                    type: array
+                    items:
+                      anyOf:
+                        - type: object
+                          properties:
+                            type:
+                              const: base_price_mismatch
+                            message:
+                              type: string
+                              description: Human-readable one-line description of the mismatch.
+                            severity:
+                              enum:
+                                - error
+                                - warning
+                              type: string
+                              description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                subscription) can be deliberate.
+                            reason:
+                              enum:
+                                - missing
+                                - unexpected
+                                - amount_mismatch
+                              type: string
+                            expected_price_id:
+                              type: string
+                            actual_price_id:
+                              type: string
+                            expected_amount:
+                              type: string
+                            actual_amount:
+                              type: string
+                            plan_name:
+                              type: string
+                            plan_id:
+                              type: string
+                              description: The Autumn plan this mismatch belongs to, when resolvable.
+                            price_amount:
+                              type: number
+                            price_interval:
+                              type: string
+                            price_interval_count:
+                              type: number
+                            expected_quantity:
+                              type: number
+                            phase_starts_at:
+                              type: number
+                          required:
+                            - type
+                            - reason
+                        - type: object
+                          properties:
+                            type:
+                              const: item_mismatch
+                            message:
+                              type: string
+                              description: Human-readable one-line description of the mismatch.
+                            severity:
+                              enum:
+                                - error
+                                - warning
+                              type: string
+                              description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                subscription) can be deliberate.
+                            reason:
+                              enum:
+                                - missing
+                                - unexpected
+                                - quantity_mismatch
+                                - price_mismatch
+                              type: string
+                            expected_price_id:
+                              type: string
+                            actual_price_id:
+                              type: string
+                            price_type:
+                              enum:
+                                - usage
+                                - prepaid
+                                - allocated
+                                - fixed
+                              type: string
+                            feature_id:
+                              type: string
+                            expected_quantity:
+                              type: number
+                            actual_quantity:
+                              type: number
+                            plan_name:
+                              type: string
+                            plan_id:
+                              type: string
+                              description: The Autumn plan this mismatch belongs to, when resolvable.
+                            price_amount:
+                              type: number
+                            price_interval:
+                              type: string
+                            price_interval_count:
+                              type: number
+                            phase_starts_at:
+                              type: number
+                              description: Present when the mismatch is inside a future scheduled phase rather
+                                than the current subscription.
+                          required:
+                            - type
+                            - reason
+                        - type: object
+                          properties:
+                            type:
+                              const: prepaid_quantity_mismatch
+                            message:
+                              type: string
+                              description: Human-readable one-line description of the mismatch.
+                            severity:
+                              enum:
+                                - error
+                                - warning
+                              type: string
+                              description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                subscription) can be deliberate.
+                            actual_price_id:
+                              type: string
+                              description: The Stripe price of the item this mismatch is about.
+                            feature_id:
+                              type: string
+                            plan_id:
+                              type: string
+                              description: The Autumn plan this mismatch belongs to, when resolvable.
+                            expected_quantity:
+                              type: number
+                            actual_quantity:
+                              type: number
+                            phase_starts_at:
+                              type: number
+                          required:
+                            - type
+                            - feature_id
+                            - expected_quantity
+                            - actual_quantity
+                        - type: object
+                          properties:
+                            type:
+                              const: prepaid_price_mismatch
+                            message:
+                              type: string
+                              description: Human-readable one-line description of the mismatch.
+                            severity:
+                              enum:
+                                - error
+                                - warning
+                              type: string
+                              description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                subscription) can be deliberate.
+                            actual_price_id:
+                              type: string
+                              description: The Stripe price of the item this mismatch is about.
+                            feature_id:
+                              type: string
+                            expected_unit_amount:
+                              type: string
+                            actual_unit_amount:
+                              type: string
+                            phase_starts_at:
+                              type: number
+                          required:
+                            - type
+                            - feature_id
+                            - expected_unit_amount
+                            - actual_unit_amount
+                        - type: object
+                          properties:
+                            type:
+                              const: schedule_mismatch
+                            message:
+                              type: string
+                              description: Human-readable one-line description of the mismatch.
+                            severity:
+                              enum:
+                                - error
+                                - warning
+                              type: string
+                              description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                subscription) can be deliberate.
+                            reason:
+                              enum:
+                                - missing_schedule
+                                - unexpected_schedule
+                                - phase_count_mismatch
+                                - phase_start_mismatch
+                                - billing_cycle_anchor_mismatch
+                              type: string
+                            expected_phase_count:
+                              type: number
+                            actual_phase_count:
+                              type: number
+                            actual_phase_starts_at:
+                              type: array
+                              items:
+                                type: number
+                            phase_starts_at:
+                              type: number
+                          required:
+                            - type
+                            - reason
+                        - type: object
+                          properties:
+                            type:
+                              const: cancel_state_mismatch
+                            message:
+                              type: string
+                              description: Human-readable one-line description of the mismatch.
+                            severity:
+                              enum:
+                                - error
+                                - warning
+                              type: string
+                              description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                subscription) can be deliberate.
+                            expected_canceling:
+                              type: boolean
+                            actual_canceling:
+                              type: boolean
+                          required:
+                            - type
+                            - expected_canceling
+                            - actual_canceling
+                        - type: object
+                          properties:
+                            type:
+                              const: reward_mismatch
+                            message:
+                              type: string
+                              description: Human-readable one-line description of the mismatch.
+                            severity:
+                              enum:
+                                - error
+                                - warning
+                              type: string
+                              description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                subscription) can be deliberate.
+                            missing_reward_ids:
+                              type: array
+                              items:
+                                type: string
+                            unexpected_reward_ids:
+                              type: array
+                              items:
+                                type: string
+                          required:
+                            - type
+                            - missing_reward_ids
+                            - unexpected_reward_ids
+                        - type: object
+                          properties:
+                            type:
+                              const: stripe_sub_not_in_autumn
+                            message:
+                              type: string
+                              description: Human-readable one-line description of the mismatch.
+                            severity:
+                              enum:
+                                - error
+                                - warning
+                              type: string
+                              description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                subscription) can be deliberate.
+                          required:
+                            - type
+                        - type: object
+                          properties:
+                            type:
+                              const: plan_on_ending_subscription
+                            message:
+                              type: string
+                              description: Human-readable one-line description of the mismatch.
+                            severity:
+                              enum:
+                                - error
+                                - warning
+                              type: string
+                              description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                subscription) can be deliberate.
+                            ending_subscription_id:
+                              type: string
+                          required:
+                            - type
+                            - ending_subscription_id
+                        - type: object
+                          properties:
+                            type:
+                              const: stale_subscription_link
+                            message:
+                              type: string
+                              description: Human-readable one-line description of the mismatch.
+                            severity:
+                              enum:
+                                - error
+                                - warning
+                              type: string
+                              description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                subscription) can be deliberate.
+                          required:
+                            - type
+                        - type: object
+                          properties:
+                            type:
+                              const: expected_state_error
+                            message:
+                              type: string
+                              description: Human-readable one-line description of the mismatch.
+                            severity:
+                              enum:
+                                - error
+                                - warning
+                              type: string
+                              description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                subscription) can be deliberate.
+                            error:
+                              type: string
+                          required:
+                            - type
+                            - error
+                        - type: object
+                          properties:
+                            type:
+                              const: shared_stripe_customer
+                            message:
+                              type: string
+                              description: Human-readable one-line description of the mismatch.
+                            severity:
+                              enum:
+                                - error
+                                - warning
+                              type: string
+                              description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                subscription) can be deliberate.
+                            stripe_customer_id:
+                              type: string
+                            other_customer_ids:
+                              type: array
+                              items:
+                                type: string
+                            other_customers:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                  name:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                  email:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                required:
+                                  - id
+                                  - name
+                                  - email
+                          required:
+                            - type
+                            - stripe_customer_id
+                            - other_customer_ids
+                  subscriptions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        stripe_subscription_id:
+                          type: string
+                        status:
+                          enum:
+                            - correct
+                            - mismatched
+                          type: string
+                        mismatches:
+                          type: array
+                          items:
+                            anyOf:
+                              - type: object
+                                properties:
+                                  type:
+                                    const: base_price_mismatch
+                                  message:
+                                    type: string
+                                    description: Human-readable one-line description of the mismatch.
+                                  severity:
+                                    enum:
+                                      - error
+                                      - warning
+                                    type: string
+                                    description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                      subscription) can be deliberate.
+                                  reason:
+                                    enum:
+                                      - missing
+                                      - unexpected
+                                      - amount_mismatch
+                                    type: string
+                                  expected_price_id:
+                                    type: string
+                                  actual_price_id:
+                                    type: string
+                                  expected_amount:
+                                    type: string
+                                  actual_amount:
+                                    type: string
+                                  plan_name:
+                                    type: string
+                                  plan_id:
+                                    type: string
+                                    description: The Autumn plan this mismatch belongs to, when resolvable.
+                                  price_amount:
+                                    type: number
+                                  price_interval:
+                                    type: string
+                                  price_interval_count:
+                                    type: number
+                                  expected_quantity:
+                                    type: number
+                                  phase_starts_at:
+                                    type: number
+                                required:
+                                  - type
+                                  - reason
+                              - type: object
+                                properties:
+                                  type:
+                                    const: item_mismatch
+                                  message:
+                                    type: string
+                                    description: Human-readable one-line description of the mismatch.
+                                  severity:
+                                    enum:
+                                      - error
+                                      - warning
+                                    type: string
+                                    description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                      subscription) can be deliberate.
+                                  reason:
+                                    enum:
+                                      - missing
+                                      - unexpected
+                                      - quantity_mismatch
+                                      - price_mismatch
+                                    type: string
+                                  expected_price_id:
+                                    type: string
+                                  actual_price_id:
+                                    type: string
+                                  price_type:
+                                    enum:
+                                      - usage
+                                      - prepaid
+                                      - allocated
+                                      - fixed
+                                    type: string
+                                  feature_id:
+                                    type: string
+                                  expected_quantity:
+                                    type: number
+                                  actual_quantity:
+                                    type: number
+                                  plan_name:
+                                    type: string
+                                  plan_id:
+                                    type: string
+                                    description: The Autumn plan this mismatch belongs to, when resolvable.
+                                  price_amount:
+                                    type: number
+                                  price_interval:
+                                    type: string
+                                  price_interval_count:
+                                    type: number
+                                  phase_starts_at:
+                                    type: number
+                                    description: Present when the mismatch is inside a future scheduled phase rather
+                                      than the current subscription.
+                                required:
+                                  - type
+                                  - reason
+                              - type: object
+                                properties:
+                                  type:
+                                    const: prepaid_quantity_mismatch
+                                  message:
+                                    type: string
+                                    description: Human-readable one-line description of the mismatch.
+                                  severity:
+                                    enum:
+                                      - error
+                                      - warning
+                                    type: string
+                                    description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                      subscription) can be deliberate.
+                                  actual_price_id:
+                                    type: string
+                                    description: The Stripe price of the item this mismatch is about.
+                                  feature_id:
+                                    type: string
+                                  plan_id:
+                                    type: string
+                                    description: The Autumn plan this mismatch belongs to, when resolvable.
+                                  expected_quantity:
+                                    type: number
+                                  actual_quantity:
+                                    type: number
+                                  phase_starts_at:
+                                    type: number
+                                required:
+                                  - type
+                                  - feature_id
+                                  - expected_quantity
+                                  - actual_quantity
+                              - type: object
+                                properties:
+                                  type:
+                                    const: prepaid_price_mismatch
+                                  message:
+                                    type: string
+                                    description: Human-readable one-line description of the mismatch.
+                                  severity:
+                                    enum:
+                                      - error
+                                      - warning
+                                    type: string
+                                    description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                      subscription) can be deliberate.
+                                  actual_price_id:
+                                    type: string
+                                    description: The Stripe price of the item this mismatch is about.
+                                  feature_id:
+                                    type: string
+                                  expected_unit_amount:
+                                    type: string
+                                  actual_unit_amount:
+                                    type: string
+                                  phase_starts_at:
+                                    type: number
+                                required:
+                                  - type
+                                  - feature_id
+                                  - expected_unit_amount
+                                  - actual_unit_amount
+                              - type: object
+                                properties:
+                                  type:
+                                    const: schedule_mismatch
+                                  message:
+                                    type: string
+                                    description: Human-readable one-line description of the mismatch.
+                                  severity:
+                                    enum:
+                                      - error
+                                      - warning
+                                    type: string
+                                    description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                      subscription) can be deliberate.
+                                  reason:
+                                    enum:
+                                      - missing_schedule
+                                      - unexpected_schedule
+                                      - phase_count_mismatch
+                                      - phase_start_mismatch
+                                      - billing_cycle_anchor_mismatch
+                                    type: string
+                                  expected_phase_count:
+                                    type: number
+                                  actual_phase_count:
+                                    type: number
+                                  actual_phase_starts_at:
+                                    type: array
+                                    items:
+                                      type: number
+                                  phase_starts_at:
+                                    type: number
+                                required:
+                                  - type
+                                  - reason
+                              - type: object
+                                properties:
+                                  type:
+                                    const: cancel_state_mismatch
+                                  message:
+                                    type: string
+                                    description: Human-readable one-line description of the mismatch.
+                                  severity:
+                                    enum:
+                                      - error
+                                      - warning
+                                    type: string
+                                    description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                      subscription) can be deliberate.
+                                  expected_canceling:
+                                    type: boolean
+                                  actual_canceling:
+                                    type: boolean
+                                required:
+                                  - type
+                                  - expected_canceling
+                                  - actual_canceling
+                              - type: object
+                                properties:
+                                  type:
+                                    const: reward_mismatch
+                                  message:
+                                    type: string
+                                    description: Human-readable one-line description of the mismatch.
+                                  severity:
+                                    enum:
+                                      - error
+                                      - warning
+                                    type: string
+                                    description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                      subscription) can be deliberate.
+                                  missing_reward_ids:
+                                    type: array
+                                    items:
+                                      type: string
+                                  unexpected_reward_ids:
+                                    type: array
+                                    items:
+                                      type: string
+                                required:
+                                  - type
+                                  - missing_reward_ids
+                                  - unexpected_reward_ids
+                              - type: object
+                                properties:
+                                  type:
+                                    const: stripe_sub_not_in_autumn
+                                  message:
+                                    type: string
+                                    description: Human-readable one-line description of the mismatch.
+                                  severity:
+                                    enum:
+                                      - error
+                                      - warning
+                                    type: string
+                                    description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                      subscription) can be deliberate.
+                                required:
+                                  - type
+                              - type: object
+                                properties:
+                                  type:
+                                    const: plan_on_ending_subscription
+                                  message:
+                                    type: string
+                                    description: Human-readable one-line description of the mismatch.
+                                  severity:
+                                    enum:
+                                      - error
+                                      - warning
+                                    type: string
+                                    description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                      subscription) can be deliberate.
+                                  ending_subscription_id:
+                                    type: string
+                                required:
+                                  - type
+                                  - ending_subscription_id
+                              - type: object
+                                properties:
+                                  type:
+                                    const: stale_subscription_link
+                                  message:
+                                    type: string
+                                    description: Human-readable one-line description of the mismatch.
+                                  severity:
+                                    enum:
+                                      - error
+                                      - warning
+                                    type: string
+                                    description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                      subscription) can be deliberate.
+                                required:
+                                  - type
+                              - type: object
+                                properties:
+                                  type:
+                                    const: expected_state_error
+                                  message:
+                                    type: string
+                                    description: Human-readable one-line description of the mismatch.
+                                  severity:
+                                    enum:
+                                      - error
+                                      - warning
+                                    type: string
+                                    description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                      subscription) can be deliberate.
+                                  error:
+                                    type: string
+                                required:
+                                  - type
+                                  - error
+                              - type: object
+                                properties:
+                                  type:
+                                    const: shared_stripe_customer
+                                  message:
+                                    type: string
+                                    description: Human-readable one-line description of the mismatch.
+                                  severity:
+                                    enum:
+                                      - error
+                                      - warning
+                                    type: string
+                                    description: How serious the mismatch is — warnings (e.g. a Stripe-only
+                                      subscription) can be deliberate.
+                                  stripe_customer_id:
+                                    type: string
+                                  other_customer_ids:
+                                    type: array
+                                    items:
+                                      type: string
+                                  other_customers:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        id:
+                                          type: string
+                                        name:
+                                          anyOf:
+                                            - type: string
+                                            - type: "null"
+                                        email:
+                                          anyOf:
+                                            - type: string
+                                            - type: "null"
+                                      required:
+                                        - id
+                                        - name
+                                        - email
+                                required:
+                                  - type
+                                  - stripe_customer_id
+                                  - other_customer_ids
+                      required:
+                        - stripe_subscription_id
+                        - status
+                        - mismatches
+                required:
+                  - customer_id
+                  - customer_mismatches
+                  - subscriptions
+                title: VerifyResponse
+                examples:
+                  - customer_id: cus_123
+                    customer_mismatches: []
+                    subscriptions:
+                      - stripe_subscription_id: sub_1234
+                        status: mismatched
+                        mismatches:
+                          - type: prepaid_quantity_mismatch
+                            message: Prepaid seats quantity differs — expected 10, Stripe has 5
+                            severity: error
+                            actual_price_id: price_1234
+                            feature_id: seats
+                            plan_id: pro_plan
+                            expected_quantity: 10
+                            actual_quantity: 5
+                      - stripe_subscription_id: sub_5678
+                        status: correct
+                        mismatches: []
+      x-speakeasy-name-override: verify
+      parameters:
+        - *a1
   /v1/billing.import:
     post:
       operationId: import

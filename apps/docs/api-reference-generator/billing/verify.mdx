@@ -1,0 +1,43 @@
+---
+title: "Verify"
+openapi: "openapi POST /v1/billing.verify"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+<Note>
+    Verify checks a customer's Stripe subscriptions against the plans Autumn
+    has on record and reports any drift, such as missing or unexpected items,
+    quantity or price differences, schedule mismatches and cancellation state.
+    It is read-only and never changes Autumn or Stripe.
+</Note>
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Verify all subscriptions
+const response = await autumn.billing.verify({
+    customerId: "cus_123",
+});
+
+const drifted = response.subscriptions.filter(
+    (subscription) => subscription.status === "mismatched",
+);
+```
+
+```typescript Verify specific subscriptions in strict mode
+const response = await autumn.billing.verify({
+    customerId: "cus_123",
+    subscriptionIds: ["sub_1234"],
+    strict: true,
+});
+```
+
+</CodeGroup>
+
+Each mismatch carries a `message` you can show as-is and a `severity`. Warnings,
+like a Stripe subscription with no Autumn plan linked to it, can be deliberate;
+errors mean Stripe will bill differently from what Autumn expects.

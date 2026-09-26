@@ -16,6 +16,8 @@ import {
 	OpenCustomerPortalResponseSchema,
 	SetupPaymentParamsV1Schema,
 	SetupPaymentResponseV1Schema,
+	VerifyParamsV1Schema,
+	VerifyResponseSchema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
 import {
@@ -28,6 +30,7 @@ import {
 	billingPreviewMultiUpdateJsDoc,
 	billingPreviewUpdateJsDoc,
 	billingUpdateJsDoc,
+	billingVerifyJsDoc,
 } from "../jsDocs/billingJsDocs";
 import { advanceTestClockDescription } from "./customersContract";
 
@@ -502,5 +505,63 @@ export const billingPreviewMultiAttachContract = oc
 	.output(
 		ExtAttachPreviewResponseSchema.meta({
 			examples: [BILLING_PREVIEW_RESPONSE_EXAMPLE],
+		}),
+	);
+
+export const billingVerifyContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/billing.verify",
+		operationId: "verify",
+		tags: ["billing"],
+		description: billingVerifyJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "verify",
+		}),
+	})
+	.input(
+		VerifyParamsV1Schema.meta({
+			title: "VerifyParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+				},
+			],
+		}),
+	)
+	.output(
+		VerifyResponseSchema.meta({
+			title: "VerifyResponse",
+			examples: [
+				{
+					customer_id: "cus_123",
+					customer_mismatches: [],
+					subscriptions: [
+						{
+							stripe_subscription_id: "sub_1234",
+							status: "mismatched",
+							mismatches: [
+								{
+									type: "prepaid_quantity_mismatch",
+									message:
+										"Prepaid seats quantity differs — expected 10, Stripe has 5",
+									severity: "error",
+									actual_price_id: "price_1234",
+									feature_id: "seats",
+									plan_id: "pro_plan",
+									expected_quantity: 10,
+									actual_quantity: 5,
+								},
+							],
+						},
+						{
+							stripe_subscription_id: "sub_5678",
+							status: "correct",
+							mismatches: [],
+						},
+					],
+				},
+			],
 		}),
 	);

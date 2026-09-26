@@ -191,6 +191,7 @@
 							"api-reference/billing/previewMultiUpdate",
 							"api-reference/billing/multiUpdate",
 							"api-reference/billing/createSchedule",
+							"api-reference/billing/verify",
 							"api-reference/billing/import",
 							{
 								"group": "Licenses",

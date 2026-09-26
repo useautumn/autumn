@@ -243,6 +243,9 @@ Use this endpoint to cancel or uncancel several plans atomically in one call —
 Use this endpoint to show customers the credits and next-cycle changes of canceling multiple plans before confirming.
 * [open_customer_portal](docs/sdks/billing/README.md#open_customer_portal) - Create a billing portal session for a customer to manage their subscription.
 * [setup_payment](docs/sdks/billing/README.md#setup_payment) - Create a payment setup session for a customer to add or update their payment method.
+* [verify](docs/sdks/billing/README.md#verify) - Checks a customer's Stripe subscriptions against Autumn's record of their plans and reports any drift. Read-only: it never changes Autumn or Stripe.
+
+Use this endpoint to audit that a customer's Stripe subscriptions, items, quantities, prices, schedules and cancellation state match what Autumn expects, for example after a migration or a manual change in Stripe.
 * [import_](docs/sdks/billing/README.md#import_) - Import
 
 ### [Customers](docs/sdks/customers/README.md)

@@ -575,6 +575,28 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/billing.verify"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.billing.verify({
+                customerId: "cus_123",
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/customers.advance_test_clock"]["post"]
     update:
       x-codeSamples:
