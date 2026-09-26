@@ -8,6 +8,8 @@
  *   R2  an unknown internal_id on a reward and program that already exist by id
  *       updates them in place rather than failing or duplicating
  *   R3  a known internal_id stated under a different id is still a refused rename
+ *   R4  an internal_id held by a reward or program the catalog hides is refused,
+ *       not mistaken for a foreign one
  *
  * Red (current):  any unknown internal_id is rejected with a 404.
  * Green (after):  an unknown internal_id falls back to matching by id, as plans do.
@@ -30,6 +32,14 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
+import {
+	rewardProgramRepo,
+	rewardRepo,
+} from "@/internal/rewards/repos/index.js";
+import {
+	constructReward,
+	constructRewardProgram,
+} from "@/internal/rewards/rewardUtils.js";
 
 const ids = {
 	coupon: "launch",
@@ -95,6 +105,30 @@ const listRewards = async ({
 	autumn: AutumnInt;
 }): Promise<ApiRewardsListV0> =>
 	ApiRewardsListV0Schema.parse(await autumn.post("/rewards.list", {}));
+
+const listPrograms = async ({
+	autumn,
+}: {
+	autumn: AutumnInt;
+}): Promise<{ id: string; max_redemptions: number | null }[]> =>
+	(
+		(await autumn.post("/referral_programs.list", {})) as {
+			list: { id: string; max_redemptions: number | null }[];
+		}
+	).list;
+
+const coupon = ({ id, internalId }: { id: string; internalId?: string }) => ({
+	coupon: {
+		id,
+		internal_id: internalId,
+		name: id,
+		type: RewardType.PercentageDiscount,
+		value: 10,
+		duration: { type: CouponDurationType.Months, length: 1 },
+		plan_ids: null,
+		promo_codes: [],
+	},
+});
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 rewards: a foreign internal_id creates, then updates by id")}`,
@@ -166,32 +200,24 @@ test.concurrent(
 			rewards.feature_grants.find(({ id }) => id === ids.grant)?.grants[0]
 				?.included,
 		).toBe(999);
+		const programs = (await listPrograms({ autumn: autumnV2_3 })).filter(
+			({ id }) => id === ids.program,
+		);
+		expect(programs.map(({ max_redemptions }) => max_redemptions)).toEqual([7]);
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 rewards: a known internal_id under another id is still a rename")}`,
+	`${chalk.yellowBright("catalogV2 rewards: internal_ids this env holds are never treated as foreign")}`,
 	async () => {
-		const { autumnV2_3 } = await initScenario({
-			customerId: "cv2-reward-known-iid-rename",
+		const { autumnV2_3, ctx } = await initScenario({
+			customerId: "cv2-reward-known-iid",
 			setup: [s.platform.create({ setupDefaultFeatures: true })],
 			actions: [],
 		});
 
 		const created = await autumnV2_3.catalogV2.update({
-			rewards: [
-				{
-					coupon: {
-						id: "summer",
-						name: "Summer",
-						type: RewardType.PercentageDiscount,
-						value: 10,
-						duration: { type: CouponDurationType.Months, length: 1 },
-						plan_ids: null,
-						promo_codes: [],
-					},
-				},
-			],
+			rewards: [coupon({ id: "summer" })],
 		});
 		const summerInternalId = created.results.rewards[0]?.internal_id;
 		expect(summerInternalId).toBeString();
@@ -203,17 +229,62 @@ test.concurrent(
 			func: () =>
 				autumnV2_3.catalogV2.previewUpdate({
 					rewards: [
+						coupon({ id: "winter", internalId: summerInternalId ?? undefined }),
+					],
+				}),
+		});
+
+		// R4: a free-product reward and its program, both hidden from the catalog.
+		const [legacyReward] = await rewardRepo.insert({
+			db: ctx.db,
+			data: constructReward({
+				reward: {
+					id: "legacy_free",
+					name: "Legacy Free Product",
+					type: RewardType.FreeProduct,
+					free_product_id: "legacy_plan",
+					promo_codes: [{ code: "LEGACYFREE" }],
+				},
+				orgId: ctx.org.id,
+				env: ctx.env,
+			}),
+		});
+		const legacyProgram = await rewardProgramRepo.insert({
+			db: ctx.db,
+			data: constructRewardProgram({
+				rewardProgramData: {
+					id: "legacy_program",
+					when: RewardTriggerEvent.CustomerCreation,
+					received_by: RewardReceivedBy.Referrer,
+					internal_reward_id: legacyReward!.internal_id,
+				},
+				orgId: ctx.org.id,
+				env: ctx.env,
+			}),
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "states the internal_id of a free product",
+			func: () =>
+				autumnV2_3.catalogV2.previewUpdate({
+					rewards: [
+						coupon({ id: "summer", internalId: legacyReward!.internal_id }),
+					],
+				}),
+		});
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "states the internal_id of a program",
+			func: () =>
+				autumnV2_3.catalogV2.previewUpdate({
+					referral_programs: [
 						{
-							coupon: {
-								id: "winter",
-								internal_id: summerInternalId ?? undefined,
-								name: "Winter",
-								type: RewardType.PercentageDiscount,
-								value: 10,
-								duration: { type: CouponDurationType.Months, length: 1 },
-								plan_ids: null,
-								promo_codes: [],
-							},
+							id: "friends",
+							internal_id: legacyProgram.internal_id,
+							reward_id: "summer",
+							redeem_on: RewardTriggerEvent.CustomerCreation,
+							received_by: RewardReceivedBy.All,
 						},
 					],
 				}),

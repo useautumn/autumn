@@ -71,8 +71,10 @@ const context = (
 ): RewardStatesContext => ({
 	rewards: [],
 	unstatableIds: new Set(),
+	unstatableInternalIds: new Set(),
 	programs: [],
 	hiddenProgramIds: new Set(),
+	hiddenProgramInternalIds: new Set(),
 	...overrides,
 });
 

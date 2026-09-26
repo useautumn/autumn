@@ -44,15 +44,21 @@ export type RewardStatesContext = {
 	rewards: CatalogRewardState[];
 	/** Ids held by rewards the config cannot express (free product, invoice credits). */
 	unstatableIds: Set<string>;
+	/** Stable ids of those rewards, so a config cannot claim one as foreign. */
+	unstatableInternalIds: Set<string>;
 	/** Empty when the payload never stated referral programs. */
 	programs: ReferralProgramState[];
 	/** Ids of programs the catalog hides because their reward is unstatable. */
 	hiddenProgramIds: Set<string>;
+	/** Stable ids of those programs, so a config cannot claim one as foreign. */
+	hiddenProgramInternalIds: Set<string>;
 };
 
 export const emptyRewardStatesContext = (): RewardStatesContext => ({
 	rewards: [],
 	unstatableIds: new Set(),
+	unstatableInternalIds: new Set(),
 	programs: [],
 	hiddenProgramIds: new Set(),
+	hiddenProgramInternalIds: new Set(),
 });

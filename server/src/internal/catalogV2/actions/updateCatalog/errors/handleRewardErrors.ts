@@ -61,11 +61,16 @@ const assertRewardIdentitiesAgree = ({
 	params: UpdateCatalogParams;
 	catalogContext: UpdateCatalogContext;
 }) => {
-	const { rewards, programs } = catalogContext.rewardStatesContext;
+	const { rewards, programs, unstatableInternalIds, hiddenProgramInternalIds } =
+		catalogContext.rewardStatesContext;
 
 	for (const entry of params.rewards ?? []) {
 		const { body } = rewardBranchOf(entry);
 		if (body.internal_id === undefined) continue;
+		if (unstatableInternalIds.has(body.internal_id))
+			invalid(
+				`Reward ${body.id} states the internal_id of a free product or invoice credit reward, which a config cannot state. Remove the internal_id from your config.`,
+			);
 		const current = rewards.find(
 			(reward) => reward.internalId === body.internal_id,
 		);
@@ -77,6 +82,10 @@ const assertRewardIdentitiesAgree = ({
 
 	for (const entry of params.referral_programs ?? []) {
 		if (entry.internal_id === undefined) continue;
+		if (hiddenProgramInternalIds.has(entry.internal_id))
+			invalid(
+				`Referral program ${entry.id} states the internal_id of a program on a free product or invoice credit reward, which a config cannot state. Remove the internal_id from your config.`,
+			);
 		const current = programs.find(
 			(state) => state.internalId === entry.internal_id,
 		);
