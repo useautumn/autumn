@@ -34,7 +34,7 @@ describe("subjectRowUpdateSql", () => {
 			}),
 		);
 		expect(flatten(query.sql)).toBe(
-			'UPDATE "customer_entitlements" SET "balance" = "balance" + $1 WHERE "id" = $2 RETURNING "id"',
+			'UPDATE "customer_entitlements" SET "balance" = "balance" + $1::numeric WHERE "id" = $2 RETURNING "id"',
 		);
 		expect(query.params).toEqual([-5, "ce_1"]);
 	});
@@ -50,7 +50,7 @@ describe("subjectRowUpdateSql", () => {
 			}),
 		);
 		expect(flatten(query.sql)).toBe(
-			'UPDATE "pooled_balances" SET "granted" = "granted" + $1 WHERE "id" = $2 RETURNING "id"',
+			'UPDATE "pooled_balances" SET "granted" = "granted" + $1::numeric WHERE "id" = $2 RETURNING "id"',
 		);
 		expect(query.params).toEqual([100, "pool_1"]);
 	});
@@ -71,7 +71,7 @@ describe("subjectRowUpdateSql", () => {
 			}),
 		);
 		expect(flatten(query.sql)).toBe(
-			'UPDATE "usage_windows" SET "usage" = "usage" + $1 WHERE "id" = $2 AND abs("window_start_at" - $3) < $4 AND abs("window_end_at" - $5) < $6 AND "anchor_customer_entitlement_id" IS NOT DISTINCT FROM $7 RETURNING "id"',
+			'UPDATE "usage_windows" SET "usage" = "usage" + $1::numeric WHERE "id" = $2 AND abs("window_start_at" - $3) < $4 AND abs("window_end_at" - $5) < $6 AND "anchor_customer_entitlement_id" IS NOT DISTINCT FROM $7 RETURNING "id"',
 		);
 		expect(query.params).toEqual([5, "uw_1", 1, 1e-9, 2, 1e-9, null]);
 	});
@@ -132,8 +132,8 @@ describe("subjectRowUpdateSql", () => {
 		expect(flatten(query.sql)).toBe(
 			'UPDATE "customer_entitlements" SET "entities" = jsonb_set(coalesce("entities", \'{}\'::jsonb), ARRAY[$1]::text[], ' +
 				"coalesce(\"entities\" -> $2, jsonb_build_object('id', $3::text, 'balance', 0, 'adjustment', 0)) || jsonb_build_object(" +
-				'$4::text, to_jsonb(coalesce(("entities" -> $5 ->> $6)::numeric, 0) + $7), ' +
-				'$8::text, to_jsonb(coalesce(("entities" -> $9 ->> $10)::numeric, 0) + $11))) ' +
+				'$4::text, to_jsonb(coalesce(("entities" -> $5 ->> $6)::numeric, 0) + $7::numeric), ' +
+				'$8::text, to_jsonb(coalesce(("entities" -> $9 ->> $10)::numeric, 0) + $11::numeric))) ' +
 				'WHERE "id" = $12 RETURNING "id"',
 		);
 		expect(query.params).toEqual([
@@ -166,7 +166,7 @@ describe("subjectRowUpdateSql", () => {
 			}),
 		);
 		const sql = flatten(query.sql);
-		expect(sql).toContain('"balance" = "balance" + $1');
+		expect(sql).toContain('"balance" = "balance" + $1::numeric');
 		expect(sql).toContain(
 			'"usage_attribution" = CASE WHEN ((coalesce("usage_attribution" -> $2, \'{"units":0,"credits":0}\'::jsonb) || jsonb_build_object(',
 		);
@@ -192,7 +192,7 @@ describe("subjectRowUpdateSql", () => {
 			}),
 		);
 		expect(flatten(query.sql)).toBe(
-			'UPDATE "usage_windows" SET "usage" = $1 + $2, "window_start_at" = $3 WHERE "id" = $4 RETURNING "id"',
+			'UPDATE "usage_windows" SET "usage" = $1::numeric + $2::numeric, "window_start_at" = $3 WHERE "id" = $4 RETURNING "id"',
 		);
 		expect(query.params).toEqual([0, 5, 2, "uw_1"]);
 	});

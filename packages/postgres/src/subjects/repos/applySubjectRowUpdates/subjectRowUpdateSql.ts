@@ -23,6 +23,9 @@ import type {
 /** Balances are numeric read as JS numbers; the engine rounds at 1e-10, so equality is a tolerance. */
 const NUMERIC_TOLERANCE = 1e-9;
 
+/** Bun.sql binds JS numbers as float8, which would turn `numeric + $n` into float arithmetic. */
+const numericSql = (value: unknown): SQL => sql`${value}::numeric`;
+
 type ColumnInfo = {
 	name: string;
 	columnType: string;
@@ -159,7 +162,7 @@ const addSql = ({
 		});
 	}
 	const identifier = sql.identifier(info.name);
-	return sql`${identifier} = ${identifier} + ${delta}`;
+	return sql`${identifier} = ${identifier} + ${numericSql(delta)}`;
 };
 
 type MapEntryBehaviour = { seed: (key: string) => SQL; prunesAtZero: boolean };
@@ -212,7 +215,7 @@ const entryAfterAddSql = ({
 	const stored = sql`${sql.identifier(column)} -> ${key}`;
 	const moved = Object.entries(fields).map(
 		([field, delta]) =>
-			sql`${field}::text, to_jsonb(coalesce((${stored} ->> ${field})::numeric, 0) + ${delta})`,
+			sql`${field}::text, to_jsonb(coalesce((${stored} ->> ${field})::numeric, 0) + ${numericSql(delta)})`,
 	);
 	return sql`coalesce(${stored}, ${seed(key)}) || jsonb_build_object(${sql.join(moved, sql`, `)})`;
 };
@@ -271,7 +274,7 @@ const assignmentsOf = ({ update }: { update: SubjectRowUpdate }): SQL[] => {
 		assignments.push(
 			delta === undefined
 				? sql`${sql.identifier(info.name)} = ${valueSql({ info, value })}`
-				: sql`${sql.identifier(info.name)} = ${value} + ${delta}`,
+				: sql`${sql.identifier(info.name)} = ${numericSql(value)} + ${numericSql(delta)}`,
 		);
 	}
 	for (const [column, delta] of Object.entries(update.add)) {
