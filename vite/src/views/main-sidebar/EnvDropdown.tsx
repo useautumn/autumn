@@ -117,6 +117,8 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	const inLegacySandbox = env === AppEnv.Sandbox && !activeSandbox;
 	const environmentCount = sandboxes.length + (isDeployed ? 2 : 1);
 	const isSearchable = environmentCount >= SEARCHABLE_ENVIRONMENT_COUNT;
+	// The default sandbox always exists, so any named sandbox makes it multiple.
+	const hasMultipleSandboxes = sandboxes.length > 0;
 
 	const showProduction =
 		isDeployed && matchesQuery({ name: "Production", query });
@@ -197,13 +199,15 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 						<Plus className="size-3.5" />
 						New sandbox
 					</DropdownMenuItem>
-					<DropdownMenuItem
-						className="h-7 gap-2 px-2"
-						onClick={() => setManageOpen(true)}
-					>
-						<SlidersHorizontal className="size-3.5" />
-						Manage sandboxes
-					</DropdownMenuItem>
+					{hasMultipleSandboxes && (
+						<DropdownMenuItem
+							className="h-7 gap-2 px-2"
+							onClick={() => setManageOpen(true)}
+						>
+							<SlidersHorizontal className="size-3.5" />
+							Manage sandboxes
+						</DropdownMenuItem>
+					)}
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<CreateSandboxDialog open={createOpen} onOpenChange={setCreateOpen} />
