@@ -1,16 +1,14 @@
 import {
 	type CarryOverUsages,
-	EntInterval,
 	type EntitlementPrice,
 	type EntitlementWithFeature,
 	entsAreSame,
 	entsHaveSamePooledIdentity,
-	entToPooledBalanceIdentity,
 	type InitCustomerEntitlementContext,
 	type InitFullCustomerProductOptions,
 	isBooleanEntitlement,
-	PooledBalanceResetMode,
 } from "@autumn/shared";
+import { shouldCarryOverUsage } from "@/internal/billing/v2/utils/handleCarryOvers/shouldCarryOverUsage";
 import { initCustomerEntitlementFields } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlementFields";
 import type {
 	AddEntitlementPriceOperation,
@@ -25,7 +23,6 @@ import type {
 import {
 	computeCustomerEntitlementInitialState,
 	computeCustomerEntitlementPatch,
-	shouldCarryOverUsage,
 } from "./computeCustomerEntitlementPatch";
 
 const findCandidateEntitlementIds = ({
@@ -119,11 +116,13 @@ const computeAddOperation = ({
 	entitlementPrice,
 	initContext,
 	initOptions,
+	pooledBalanceIds,
 }: {
 	candidateOutgoingEntitlements: EntitlementWithFeature[];
 	entitlementPrice: EntitlementPrice;
 	initContext: InitCustomerEntitlementContext;
 	initOptions: InitFullCustomerProductOptions;
+	pooledBalanceIds?: Record<string, string>;
 }): AddEntitlementPriceOperation => {
 	const existingEntitlementIds = findCandidateEntitlementIds({
 		candidateOutgoingEntitlements,
@@ -154,12 +153,10 @@ const computeAddOperation = ({
 	}
 
 	const initialState = computeCustomerEntitlementInitialState({ entitlement });
-	const entIdentity = entToPooledBalanceIdentity({ entitlement });
-	const resetMode =
-		entIdentity.interval === EntInterval.Lifetime
-			? PooledBalanceResetMode.Lifetime
-			: PooledBalanceResetMode.Lazy;
-	const isLifetimeReset = resetMode === PooledBalanceResetMode.Lifetime;
+	const pooledBalanceId = pooledBalanceIds?.[entitlement.id];
+	if (!pooledBalanceId) {
+		throw new Error("Pooled entitlement addition requires a prepared pool ID");
+	}
 	return {
 		type: "add",
 		entitlementPrice,
@@ -170,21 +167,7 @@ const computeAddOperation = ({
 		},
 		pooledAdd: {
 			contributionAmount: initialState.granted,
-			nextResetAt: isLifetimeReset
-				? null
-				: (customerEntitlement.next_reset_at ?? null),
-			featureId: entitlement.feature.id,
-			rollover: entitlement.rollover ?? null,
-			identity: {
-				...entIdentity,
-				internalCustomerId: customerEntitlement.internal_customer_id,
-				resetCycleAnchor: isLifetimeReset
-					? null
-					: (customerEntitlement.reset_cycle_anchor ?? null),
-				resetMode,
-				stripeSubscriptionId: null,
-				customerLicenseLinkId,
-			},
+			pooledBalanceId,
 		},
 	};
 };
@@ -211,12 +194,14 @@ const computeTransitionOperations = ({
 	initContext,
 	initOptions,
 	carryOverUsages,
+	pooledBalanceIds,
 }: {
 	candidateOutgoingEntitlements: EntitlementWithFeature[];
 	transition: EntitlementPriceTransition;
 	initContext: InitCustomerEntitlementContext;
 	initOptions: InitFullCustomerProductOptions;
 	carryOverUsages?: CarryOverUsages;
+	pooledBalanceIds?: Record<string, string>;
 }): EntitlementPriceOperation[] => {
 	const fromEntitlement = transition.fromEntitlementPrice.entitlement;
 	const toEntitlement = transition.toEntitlementPrice.entitlement;
@@ -248,6 +233,7 @@ const computeTransitionOperations = ({
 			entitlementPrice: transition.toEntitlementPrice,
 			initContext,
 			initOptions,
+			pooledBalanceIds,
 		}),
 	);
 	return operations;
@@ -262,12 +248,14 @@ export const computeEntitlementPriceOperations = ({
 	customerEntitlementInitContext,
 	customerEntitlementInitOptions,
 	carryOverUsages,
+	pooledBalanceIds,
 }: {
 	candidateOutgoingEntitlements: EntitlementWithFeature[];
 	entitlementPriceTransitions: ComputedEntitlementPriceTransitions;
 	customerEntitlementInitContext: InitCustomerEntitlementContext;
 	customerEntitlementInitOptions: InitFullCustomerProductOptions;
 	carryOverUsages?: CarryOverUsages;
+	pooledBalanceIds?: Record<string, string>;
 }): {
 	operations: EntitlementPriceOperation[];
 	unhandled: ComputedEntitlementPriceTransitions;
@@ -296,12 +284,14 @@ export const computeEntitlementPriceOperations = ({
 				initContext: customerEntitlementInitContext,
 				initOptions: customerEntitlementInitOptions,
 				carryOverUsages,
+				pooledBalanceIds,
 			}),
 		);
 	}
 
 	for (const transition of entitlementPriceTransitions.retained) {
 		if (
+			transition.toEntitlementPrice.entitlement.pooled === true ||
 			isBooleanEntitlement({
 				entitlement: transition.toEntitlementPrice.entitlement,
 			})
@@ -344,6 +334,7 @@ export const computeEntitlementPriceOperations = ({
 				entitlementPrice,
 				initContext: customerEntitlementInitContext,
 				initOptions: customerEntitlementInitOptions,
+				pooledBalanceIds,
 			}),
 		);
 	}

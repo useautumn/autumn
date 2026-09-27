@@ -63,23 +63,17 @@ const addPooledContributionsCtes = ({
 		updated_pools AS (
 			UPDATE pooled_balances AS pool
 			SET
-				granted = CASE
-					WHEN pool.customer_license_link_id IS NOT NULL THEN pool.granted
-					ELSE pool.granted + (${contributionAmount} * pool_deltas.contribution_count)
-				END,
+				granted = pool.granted + (${contributionAmount} * pool_deltas.contribution_count),
 				updated_at = ${now}
 			FROM pool_deltas
 			WHERE pool.id = ${pooledBalanceId}
+				AND pool.customer_license_link_id IS NULL
 			RETURNING pool.customer_license_link_id, pool_deltas.contribution_count
 		),
 		updated_synthetic AS (
 			UPDATE customer_entitlements AS synthetic
 			SET
-				balance = CASE
-					WHEN updated_pools.customer_license_link_id IS NOT NULL
-						THEN synthetic.balance
-					ELSE COALESCE(synthetic.balance, 0) + (${contributionAmount} * updated_pools.contribution_count)
-				END,
+				balance = COALESCE(synthetic.balance, 0) + (${contributionAmount} * updated_pools.contribution_count),
 				cache_version = COALESCE(synthetic.cache_version, 0) + 1
 			FROM updated_pools
 			WHERE synthetic.pooled_balance_id = ${pooledBalanceId}

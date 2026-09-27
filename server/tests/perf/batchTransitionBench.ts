@@ -5,6 +5,7 @@ import { mock } from "bun:test";
 import {
 	AllowanceType,
 	AppEnv,
+	CusProductStatus,
 	type CustomerLicenseTransition,
 	EntInterval,
 	type EntitlementWithFeature,
@@ -219,15 +220,23 @@ const fullCustomer = {
 } as unknown as FullCustomer;
 const parentCustomerProduct = {
 	id: PARENT_CUSTOMER_PRODUCT_ID,
+	status: CusProductStatus.Active,
 } as FullCusProduct;
 
 const setupModulePath = import.meta.resolve(
 	"../../src/internal/billing/v2/actions/batchTransition/setup/setupBatchTransitionContext.ts",
 );
 mock.module(setupModulePath, () => ({
-	setupBatchTransitionContext: async () => ({
+	setupBatchTransitionContext: async ({
+		customerLicense,
+	}: {
+		customerLicense: CustomerLicenseTransition["incomingCustomerLicense"];
+	}) => ({
 		fullCustomer,
-		parentCustomerProduct,
+		parentCustomerProduct: {
+			...parentCustomerProduct,
+			customer_licenses: [customerLicense],
+		},
 		currentEpochMs: NOW,
 		resetCycleAnchorMs: NOW,
 	}),
@@ -379,6 +388,9 @@ const customerLicenseTransition = ({
 			planLicense: { product: from },
 		},
 		incomingCustomerLicense: {
+			id: `customer_license_${linkId}`,
+			link_id: linkId,
+			plan_license_id: `plan_license_${to.internal_id}`,
 			internal_customer_id: INTERNAL_CUSTOMER_ID,
 			parent_customer_product_id: PARENT_CUSTOMER_PRODUCT_ID,
 			planLicense: { product: to },

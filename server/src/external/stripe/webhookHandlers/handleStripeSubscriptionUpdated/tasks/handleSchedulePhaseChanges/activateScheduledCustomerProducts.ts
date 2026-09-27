@@ -71,14 +71,16 @@ export const activateScheduledCustomerProducts = async ({
 				? [stripeSubscriptionSchedule.id]
 				: [];
 
-		const { updates } = await customerProductActions.activateScheduled({
-			ctx,
-			customerProduct,
-			fullCustomer,
-			subscriptionIds,
-			scheduledIds,
-			activatedAt: nowMs,
-		});
+		const { updates, customerLicenseTransitions } =
+			await customerProductActions.activateScheduled({
+				ctx,
+				customerProduct,
+				fullCustomer,
+				subscriptionIds,
+				scheduledIds,
+				activatedAt: nowMs,
+			});
+		eventContext.customerLicenseTransitions.push(...customerLicenseTransitions);
 
 		trackCustomerProductUpdate({
 			eventContext,

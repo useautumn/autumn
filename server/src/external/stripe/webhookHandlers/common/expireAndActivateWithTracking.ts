@@ -44,6 +44,9 @@ export const expireAndActivateWithTracking = async ({
 	});
 
 	if (activation) {
+		eventContext.customerLicenseTransitions.push(
+			...activation.customerLicenseTransitions,
+		);
 		trackCustomerProductUpdate({
 			eventContext,
 			customerProduct: activation.before,

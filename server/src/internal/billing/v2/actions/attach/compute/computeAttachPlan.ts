@@ -141,12 +141,16 @@ export const computeAttachPlan = ({
 				})
 			: { allLineItems: [], updateCustomerEntitlements: [] };
 
-	const { customerProduct: preparedNewCustomerProduct, pooledBalancePlan } =
-		computeAttachPooledBalancePlan({
-			ctx,
-			attachBillingContext,
-			newCustomerProduct,
-		});
+	const {
+		customerProduct: preparedNewCustomerProduct,
+		pooledBalancePlan,
+		customerLicenseTransitions: preparedCustomerLicenseTransitions,
+	} = computeAttachPooledBalancePlan({
+		ctx,
+		attachBillingContext,
+		newCustomerProduct,
+		customerLicenseTransitions,
+	});
 
 	// Lock the customer's currency on the first paid attach (only when they have
 	// none yet). Free attaches don't commit a currency. Applied conditionally at execute.
@@ -181,7 +185,7 @@ export const computeAttachPlan = ({
 		],
 		customFreeTrial: trialContext?.customFreeTrial,
 		insertPlanLicenses: attachBillingContext.insertPlanLicenses,
-		customerLicenseTransitions,
+		customerLicenseTransitions: preparedCustomerLicenseTransitions,
 		lineItems,
 		insertCustomerEntitlements: [
 			...(carriedOverCustomerEntitlements ?? []),

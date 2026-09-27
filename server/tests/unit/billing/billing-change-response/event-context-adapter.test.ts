@@ -38,6 +38,7 @@ const makeUpdatedContext = ({
 		updatedCustomerProducts: updated,
 		deletedCustomerProducts: deleted,
 		oneOffPrepaidCarryOvers: [],
+		customerLicenseTransitions: [],
 		billingChangeTags: new Set<string>(),
 	};
 };

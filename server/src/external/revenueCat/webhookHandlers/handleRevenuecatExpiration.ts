@@ -7,6 +7,7 @@ import {
 } from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
+import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 
@@ -48,15 +49,28 @@ export const handleExpiration = async ({
 		});
 	}
 
-	await customerProductActions.expireAndActivateDefault({
+	const { activation, insertedCustomerProduct } =
+		await customerProductActions.expireAndActivateDefault({
+			ctx: customerCtx,
+			customerProduct: curSameProduct,
+			fullCustomer: customer,
+			updates: {
+				ended_at: event.expiration_at_ms,
+				canceled: !!curSameProduct.canceled_at,
+			},
+			emitBillingUpdated: true,
+		});
+	await applyPooledBalanceCustomerProductTransitions({
 		ctx: customerCtx,
-		customerProduct: curSameProduct,
 		fullCustomer: customer,
-		updates: {
-			ended_at: event.expiration_at_ms,
-			canceled: !!curSameProduct.canceled_at,
-		},
-		emitBillingUpdated: true,
+		outgoingCustomerProducts: [curSameProduct],
+		incomingCustomerProducts: activation
+			? [activation.after]
+			: insertedCustomerProduct
+				? [insertedCustomerProduct]
+				: [],
+		customerLicenseTransitions: activation?.customerLicenseTransitions,
+		now: event.expiration_at_ms,
 	});
 
 	logger.info(`Expired cus_product: ${curSameProduct.id}`);

@@ -95,6 +95,7 @@ export const setupCustomerEntitlementBatchTransition = async ({
 				customerLicenseLinkId: transition.updates.linkId,
 			},
 			carryOverUsages: transition.carryOverUsages,
+			pooledBalanceIds: transition.pooledBalanceIds,
 		},
 	);
 

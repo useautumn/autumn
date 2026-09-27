@@ -1,4 +1,5 @@
 import {
+	type CustomerLicenseTransition,
 	EntInterval,
 	type EntitlementWithFeature,
 	entToPooledBalanceIdentity,
@@ -12,6 +13,7 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { shouldCarryOverUsage } from "@/internal/billing/v2/utils/handleCarryOvers/shouldCarryOverUsage";
 import { addInsertedPooledBalanceToComputeContext } from "../context/pooledBalanceComputeContextUtils";
 import type { PooledBalanceComputeContext } from "../types/pooledBalanceComputeTypes";
 import { addToUpdatePoolBalances } from "../utils/pooledBalancePlanUtils";
@@ -94,11 +96,13 @@ const licensePooledIdentity = ({
 			? PooledBalanceResetMode.Lifetime
 			: PooledBalanceResetMode.Lazy;
 	const resetCycleAnchor =
-		resetMode === PooledBalanceResetMode.Lifetime
+		resetMode === PooledBalanceResetMode.Lifetime ||
+		isBooleanEntitlement({ entitlement }) ||
+		isUnlimitedEntitlement({ entitlement })
 			? null
 			: (existingResetCycleAnchor ?? now);
 	const nextResetAt =
-		resetMode === PooledBalanceResetMode.Lifetime
+		resetCycleAnchor === null
 			? null
 			: getCycleEnd({
 					anchor: existingResetCycleAnchor ?? now,
@@ -124,19 +128,41 @@ export const applyLicensePooledGranted = ({
 	ctx,
 	computeContext,
 	customerLicenses,
+	outgoingCustomerLicenses = [],
+	customerLicenseTransitions = [],
 	now,
 }: {
 	ctx: AutumnContext;
 	computeContext: PooledBalanceComputeContext;
 	customerLicenses: FullCustomerLicense[];
+	outgoingCustomerLicenses?: FullCustomerLicense[];
+	customerLicenseTransitions?: CustomerLicenseTransition[];
 	now: number;
-}) => {
-	const customerLicenseLinkIds = new Set<string>();
+}): Record<string, Record<string, string>> => {
+	const customerLicenseLinkIds = new Set(
+		outgoingCustomerLicenses.map((customerLicense) => customerLicense.link_id),
+	);
 	const retainedPoolIds = new Set<string>();
+	const pooledBalanceIds: Record<string, Record<string, string>> = {};
+	const transitionsByLinkId = new Map(
+		customerLicenseTransitions.map((transition) => [
+			transition.updates.linkId,
+			transition,
+		]),
+	);
 
 	for (const customerLicense of customerLicenses) {
 		if (!customerLicense.planLicense) continue;
 		customerLicenseLinkIds.add(customerLicense.link_id);
+		const licensePoolIds: Record<string, string> = {};
+		pooledBalanceIds[customerLicense.link_id] = licensePoolIds;
+		const transition = transitionsByLinkId.get(customerLicense.link_id);
+		const changesLicenseDefinition =
+			transition !== undefined &&
+			(transition.outgoingCustomerLicense.id !==
+				transition.incomingCustomerLicense.id ||
+				transition.outgoingCustomerLicense.plan_license_id !==
+					transition.incomingCustomerLicense.plan_license_id);
 
 		for (const entitlement of licensePooledEntitlements({ customerLicense })) {
 			const targetGranted = licensePooledGranted({
@@ -167,7 +193,7 @@ export const applyLicensePooledGranted = ({
 				);
 
 			if (!existing) {
-				if (targetGranted <= 0) continue;
+				if (customerLicense.granted <= 0 && !transition) continue;
 				const inserted = initLicensePooledBalanceGraph({
 					ctx,
 					customerLicense,
@@ -182,19 +208,28 @@ export const applyLicensePooledGranted = ({
 					pooledCustomerEntitlement: inserted,
 				});
 				retainedPoolIds.add(inserted.pooled_balance.id);
+				licensePoolIds[entitlement.id] = inserted.pooled_balance.id;
 				continue;
 			}
 
 			retainedPoolIds.add(existing.pooled_balance.id);
-			if (existing.pooled_balance.granted === targetGranted) continue;
+			licensePoolIds[entitlement.id] = existing.pooled_balance.id;
 
 			const grantedDelta = new Decimal(targetGranted)
 				.sub(existing.pooled_balance.granted)
 				.toNumber();
-			const nextBalance = Math.max(
-				0,
-				new Decimal(existing.balance ?? 0).plus(grantedDelta).toNumber(),
-			);
+			const resetsUsage =
+				changesLicenseDefinition &&
+				!shouldCarryOverUsage({
+					toEntitlement: entitlement,
+					carryOverUsages: transition?.carryOverUsages,
+				});
+			const nextBalance = resetsUsage
+				? targetGranted
+				: Math.max(
+						0,
+						new Decimal(existing.balance ?? 0).plus(grantedDelta).toNumber(),
+					);
 
 			addToUpdatePoolBalances({
 				pooledBalancePlan: computeContext.plan,
@@ -211,4 +246,5 @@ export const applyLicensePooledGranted = ({
 		retainedPoolIds,
 		now,
 	});
+	return pooledBalanceIds;
 };

@@ -3,6 +3,7 @@ import { getInvoiceSubscriptionId } from "@/external/vercel/misc/vercelInvoiceUt
 import { ensureVercelInvoiceModeSubscription } from "@/external/vercel/misc/vercelStripeInvoiceMode.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
 import { CusService } from "@/internal/customers/CusService.js";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
@@ -134,19 +135,31 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 				idOrInternalId: customerInternalId,
 			});
 			if (fullCustomer) {
-				const existingCusProducts =
-					await customerProductRepo.getByStripeSubId({
-						db,
-						stripeSubId: subscription.id,
-						orgId: org.id,
-						env,
-					});
+				const existingCusProducts = await customerProductRepo.getByStripeSubId({
+					db,
+					stripeSubId: subscription.id,
+					orgId: org.id,
+					env,
+				});
 
 				if (existingCusProducts.length > 0) {
-					await customerProductActions.expireAndActivateDefault({
+					const { activation, insertedCustomerProduct } =
+						await customerProductActions.expireAndActivateDefault({
+							ctx,
+							customerProduct: existingCusProducts[0],
+							fullCustomer,
+						});
+					await applyPooledBalanceCustomerProductTransitions({
 						ctx,
-						customerProduct: existingCusProducts[0],
 						fullCustomer,
+						outgoingCustomerProducts: [existingCusProducts[0]],
+						incomingCustomerProducts: activation
+							? [activation.after]
+							: insertedCustomerProduct
+								? [insertedCustomerProduct]
+								: [],
+						customerLicenseTransitions: activation?.customerLicenseTransitions,
+						now: Date.now(),
 					});
 				} else {
 					logger.info(

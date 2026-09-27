@@ -38,13 +38,15 @@ export const computePatchCustomerProductPlan = ({
 
 	// Same-row license transitions: outgoing = the pristine original,
 	// incoming = the patched working copy (converged pools).
-	const customerLicenseTransitions = computeCustomerLicenseTransitions({
-		outgoingCustomerProducts: [patchContext.originalCustomerProduct],
-		incomingCustomerProducts: [finalCustomerProduct],
-		customerLicenseBillingContext:
-			updateSubscriptionContext.customerLicenseBillingContext,
-		carryOverUsages: updateSubscriptionContext.carryOverUsages,
-	});
+	const customerLicenseTransitions = isUpdatingScheduledProduct
+		? []
+		: computeCustomerLicenseTransitions({
+				outgoingCustomerProducts: [patchContext.originalCustomerProduct],
+				incomingCustomerProducts: [finalCustomerProduct],
+				customerLicenseBillingContext:
+					updateSubscriptionContext.customerLicenseBillingContext,
+				carryOverUsages: updateSubscriptionContext.carryOverUsages,
+			});
 
 	// A scheduled cusProduct hasn't started billing yet, so there's nothing to
 	// prorate — its future phase item swap is applied wholesale via

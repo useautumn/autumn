@@ -44,6 +44,7 @@ export const CustomerLicenseTransitionSchema = z.object({
 	carryOverUsages: CarryOverUsagesSchema,
 	// Parent subscription anchor used to align assigned entitlement cycles.
 	billingCycleAnchorMs: z.number().optional(),
+	pooledBalanceIds: z.record(z.string(), z.string()).optional(),
 });
 export type CustomerLicenseTransition = z.infer<
 	typeof CustomerLicenseTransitionSchema

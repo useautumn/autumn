@@ -6,6 +6,7 @@ import {
 	type SyncBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe";
 import { syncContextToCurrencyLock } from "../utils/syncContextUtils";
@@ -77,13 +78,22 @@ export const computeSyncPlan = ({
 			outgoingCustomerProducts.push(customerProduct);
 		}
 	}
-	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
-		ctx,
-		fullCustomer: syncContext.fullCustomer,
+	const computedCustomerLicenseTransitions = computeCustomerLicenseTransitions({
 		outgoingCustomerProducts,
 		incomingCustomerProducts: immediate.insertCustomerProducts,
-		now: syncContext.currentEpochMs,
+		carryOverUsages: syncContext.carryOverUsage
+			? (syncContext.carryOverUsages ?? { enabled: true })
+			: { enabled: false },
 	});
+	const { pooledBalancePlan, customerLicenseTransitions } =
+		computePooledBalanceTransitionPlan({
+			ctx,
+			fullCustomer: syncContext.fullCustomer,
+			outgoingCustomerProducts,
+			incomingCustomerProducts: immediate.insertCustomerProducts,
+			customerLicenseTransitions: computedCustomerLicenseTransitions,
+			now: syncContext.currentEpochMs,
+		});
 	const preparedImmediateCustomerProducts = immediate.insertCustomerProducts;
 
 	const { stripeSubscription } = syncContext;
@@ -133,6 +143,7 @@ export const computeSyncPlan = ({
 		lockCustomerCurrency: syncContextToCurrencyLock({ syncContext }),
 		upsertSubscriptions,
 		pooledBalancePlan,
+		customerLicenseTransitions,
 	};
 
 	// Single-phase sync (no schedule) → don't materialize any Autumn schedule.

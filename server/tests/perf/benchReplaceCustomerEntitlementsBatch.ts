@@ -542,10 +542,10 @@ const pooledOperation = ({ patchType }: { patchType: "increment" | "set" }) =>
 
 const pooledAddOperation = ({
 	customerInternalId,
-	linkId,
+	pooledBalanceId,
 }: {
 	customerInternalId: string;
-	linkId: string;
+	pooledBalanceId: string;
 }) =>
 	({
 		type: "add",
@@ -580,21 +580,7 @@ const pooledAddOperation = ({
 		},
 		pooledAdd: {
 			contributionAmount: OLD_GRANT,
-			identity: {
-				internalCustomerId: customerInternalId,
-				internalFeatureId: FEATURE_INTERNAL_ID,
-				unlimited: false,
-				interval: "month",
-				intervalCount: 1,
-				resetCycleAnchor: null,
-				resetMode: "lazy",
-				stripeSubscriptionId: null,
-				customerLicenseLinkId: linkId,
-				rolloverSignature: "none",
-			},
-			nextResetAt: null,
-			featureId: FEATURE_ID,
-			rollover: null,
+			pooledBalanceId,
 		},
 	}) as AddEntitlementPriceOperation;
 
@@ -741,7 +727,7 @@ try {
 				),
 				operation: pooledAddOperation({
 					customerInternalId: pooledAdd.customerInternalId,
-					linkId: pooledAdd.linkId,
+					pooledBalanceId: pooledAdd.poolId,
 				}),
 				batchSize: rowCount,
 				pooledBalanceId: pooledAdd.poolId,

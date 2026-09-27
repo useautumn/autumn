@@ -15,6 +15,7 @@ import { logBatchTransitionContext } from "./logs/logBatchTransitionContext";
 import { logBatchTransitionOperations } from "./logs/logBatchTransitionOperations";
 import { logBatchTransitionProductTransitions } from "./logs/logBatchTransitionProductTransitions";
 import { logBatchTransitionResult } from "./logs/logBatchTransitionResult";
+import { assertBatchTransitionTargets } from "./setup/assertBatchTransitionTargets";
 import { setupBatchTransitionContext } from "./setup/setupBatchTransitionContext";
 import { setupCustomerEntitlementBatchTransition } from "./setup/setupCustomerEntitlementBatchTransition";
 import type { BatchTransitionExecutionScope } from "./types/types";
@@ -52,6 +53,13 @@ export const batchTransition = async ({
 
 	const customerProductTransition = productTransitions.customerProduct;
 	if (!hasBatchOperations && !customerProductTransition) return;
+	const batchTransitionContext = await setupBatchTransitionContext({
+		ctx,
+		customerLicense: transition.incomingCustomerLicense,
+		billingCycleAnchorMs: transition.billingCycleAnchorMs,
+	});
+	assertBatchTransitionTargets({ ctx, transition, batchTransitionContext });
+	logBatchTransitionContext({ ctx, batchTransitionContext });
 
 	const assignmentCounts = await withStatementTimeout(
 		ctx.db,
@@ -74,13 +82,6 @@ export const batchTransition = async ({
 	};
 	let customerEntitlementCyclesAligned = 0;
 	if (hasBatchOperations) {
-		const batchTransitionContext = await setupBatchTransitionContext({
-			ctx,
-			customerLicense: transition.incomingCustomerLicense,
-			billingCycleAnchorMs: transition.billingCycleAnchorMs,
-		});
-		logBatchTransitionContext({ ctx, batchTransitionContext });
-
 		const computedBatchTransition =
 			await setupCustomerEntitlementBatchTransition({
 				ctx,

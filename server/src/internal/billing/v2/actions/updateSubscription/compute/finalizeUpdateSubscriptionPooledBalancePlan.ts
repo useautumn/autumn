@@ -64,20 +64,23 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 					autumnBillingPlan: plan,
 				})
 			: plan.insertCustomerProducts;
-	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
-		ctx,
-		fullCustomer: billingContext.fullCustomer,
-		// Quantity update keeps the same parent CP; only license counters change.
-		outgoingCustomerProducts: movesLicensePools
-			? []
-			: [billingContext.customerProduct],
-		incomingCustomerProducts: incomingCustomerProductSnapshots,
-		stripeSubscriptionId: billingContext.stripeSubscription?.id,
-		now: billingContext.currentEpochMs,
-	});
+	const { pooledBalancePlan, customerLicenseTransitions } =
+		computePooledBalanceTransitionPlan({
+			ctx,
+			fullCustomer: billingContext.fullCustomer,
+			// Quantity update keeps the same parent CP; only license counters change.
+			outgoingCustomerProducts: movesLicensePools
+				? []
+				: [billingContext.customerProduct],
+			incomingCustomerProducts: incomingCustomerProductSnapshots,
+			customerLicenseTransitions: plan.customerLicenseTransitions,
+			stripeSubscriptionId: billingContext.stripeSubscription?.id,
+			now: billingContext.currentEpochMs,
+		});
 
 	return {
 		...plan,
+		customerLicenseTransitions,
 		pooledBalancePlan: mergePooledBalancePlans({
 			base: plan.pooledBalancePlan,
 			incoming: pooledBalancePlan,

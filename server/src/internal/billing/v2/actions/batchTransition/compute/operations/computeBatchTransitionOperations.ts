@@ -22,6 +22,7 @@ export const computeBatchTransitionOperations = ({
 	customerEntitlementInitContext,
 	customerEntitlementInitOptions,
 	carryOverUsages,
+	pooledBalanceIds,
 }: {
 	candidateOutgoingEntitlements: EntitlementWithFeature[];
 	candidateOutgoingBasePrices: Price[];
@@ -29,6 +30,7 @@ export const computeBatchTransitionOperations = ({
 	customerEntitlementInitContext: InitCustomerEntitlementContext;
 	customerEntitlementInitOptions: InitFullCustomerProductOptions;
 	carryOverUsages?: CarryOverUsages;
+	pooledBalanceIds?: Record<string, string>;
 }): Pick<
 	CustomerEntitlementBatchTransition,
 	"operations" | "unhandledTransitions"
@@ -40,6 +42,7 @@ export const computeBatchTransitionOperations = ({
 			customerEntitlementInitContext,
 			customerEntitlementInitOptions,
 			carryOverUsages,
+			pooledBalanceIds,
 		});
 	const basePriceOperation = computeBasePriceOperation({
 		basePriceTransition: productTransitions.basePrice,
