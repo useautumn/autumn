@@ -11,12 +11,13 @@ const requireEnv = (name: string): string => {
 	return value;
 };
 
-/** Meters Autumn's own usage for the hour that just closed. Sandbox key only until metering is live. */
+/** Meters Autumn's own usage for the hour that just closed. Sandbox key only until metering is live.
+ * Retries re-send the same hour; idempotency keys make that safe. */
 export const pushHourlyMetersTask = schedules.task({
 	id: "push-hourly-meters",
 	cron: "10 * * * *",
 	maxDuration: 600,
-	retry: { maxAttempts: 1 },
+	retry: { maxAttempts: 3 },
 	run: async (payload) => {
 		const logger = createDualLogger();
 		const axiom = createAxiomClient({
@@ -34,9 +35,12 @@ export const pushHourlyMetersTask = schedules.task({
 		const db = dbReplicaSlow;
 		if (!db) throw new Error("DATABASE_REPLICA_URL is not set");
 
-		return pushHourlyMeters({
+		const report = await pushHourlyMeters({
 			ctx: { logger, axiom, db, fx, autumn },
 			nowMs: payload.timestamp.getTime(),
 		});
+		const failed = report.apiCalls.failed + report.paymentVolume.failed;
+		if (failed > 0) throw new Error(`${failed} track items failed to push`);
+		return report;
 	},
 });
