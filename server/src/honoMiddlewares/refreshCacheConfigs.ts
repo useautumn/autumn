@@ -160,12 +160,6 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 
 	route({
 		method: "POST",
-		url: "/entities.update",
-		flushBalances: true,
-	}),
-
-	route({
-		method: "POST",
 		url: "/entities.delete",
 	}),
 

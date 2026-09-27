@@ -8,11 +8,15 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
+import { evictBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/evictBalanceWorkerCustomer.js";
 import { assertEntityUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertEntityUsageLimitAlertsResolvable.js";
 import { getUsageLimitConfigUpdate } from "@/internal/customers/actions/update/getUsageLimitConfigUpdate.js";
 import { prepareUsageLimitUsage } from "@/internal/customers/actions/update/prepareUsageLimitUsage.js";
+import { updateCachedEntityData } from "@/internal/customers/cache/fullSubject/actions/updateCachedEntityData.js";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
 import { usageWindowRepo } from "@/internal/customers/usageWindows/repos/index.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
 export const updateEntity = async ({
 	ctx,
@@ -94,5 +98,26 @@ export const updateEntity = async ({
 				});
 		});
 	}
+	if (isBalanceWorkerRolloutEnabled({ ctx, customerId })) {
+		// The worker holds the entity's controls and usage windows, so it reloads them.
+		if (hasConfigUpdates || usageWindows.length > 0)
+			await evictBalanceWorkerCustomer({ ctx, customerId });
+		return entity.id ?? entity.internal_id;
+	}
+	if (hasConfigUpdates)
+		await updateCachedEntityData({
+			ctx,
+			customerId,
+			entityId,
+			updates: filteredUpdates,
+		});
+	if (usageWindows.length > 0)
+		await invalidateCachedFullSubject({
+			ctx,
+			customerId,
+			entityId,
+			source: "updateEntity:usage",
+		});
+
 	return entity.id ?? entity.internal_id;
 };
