@@ -1,0 +1,46 @@
+import type { PartitionCheckpointLease } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
+import type { OwnedPartitionRecoveryRequiredError } from "../runtimeErrors.js";
+
+import type {
+	PartitionOutcomeFollowerPort,
+	PartitionRuntimeContext,
+	RuntimeUnavailableListener,
+} from "./partitionRuntime.js";
+
+export type PartitionRuntimeStatus =
+	| "created"
+	| "preparing"
+	| "prepared"
+	/** Named owner and fencing, bootstrapping, catching up; a command waits briefly rather than failing. */
+	| "activating"
+	| "fencing"
+	| "bootstrapping"
+	| "catching_up"
+	| "ready"
+	| "draining"
+	| "stopped"
+	| "recovery_required";
+
+export type PartitionRuntimeScope = {
+	ctx: PartitionRuntimeContext;
+	state: PartitionRuntimeState;
+};
+
+export type PartitionRuntimeState = {
+	preparationFollower: PartitionOutcomeFollowerPort | null;
+	preparationStopPromise: Promise<void> | null;
+	drainPromise: Promise<void> | null;
+	status: PartitionRuntimeStatus;
+	terminalError: OwnedPartitionRecoveryRequiredError | null;
+	failureReason: string | null;
+	producerConnectionAttempted: boolean;
+	followerStartAttempted: boolean;
+	startPromise: Promise<void> | null;
+	stopPromise: Promise<void> | null;
+	stopFollowerPromise: Promise<void> | null;
+	disconnectProducerPromise: Promise<void> | null;
+	recoveryPromise: Promise<OwnedPartitionRecoveryRequiredError> | null;
+	startupAbortController: AbortController;
+	checkpointLease: PartitionCheckpointLease | null;
+	unavailableListeners: Set<RuntimeUnavailableListener>;
+};
