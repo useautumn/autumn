@@ -6,7 +6,7 @@
  *
  * Reads AXIOM_ADMIN_TOKEN / AXIOM_ORG_ID (prod log, read-only),
  * DATABASE_REPLICA_URL (paid invoices, read-only), OPEN_EXCHANGE_RATES_APP_ID,
- * and AUTUMN_METERING_SECRET_KEY (must be a sandbox key; live keys are refused).
+ * and AUTUMN_SECRET_KEY (the live org key; --push writes to production).
  */
 
 import { createAxiomClient } from "@autumn/axiom";
@@ -75,7 +75,10 @@ const recordingAutumn = (): AutumnClient => ({
 
 const autumn = push
 	? createAutumnClient({
-			config: { secretKey: requireEnv("AUTUMN_METERING_SECRET_KEY") },
+			config: {
+				secretKey: requireEnv("AUTUMN_SECRET_KEY"),
+				allowLiveKey: true,
+			},
 		})
 	: recordingAutumn();
 
