@@ -15,7 +15,6 @@ import {
 } from "@/external/revenueCat/misc/RCMappingService";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
-import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { ProductService } from "@/internal/products/ProductService";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { getOrCreateCustomer } from "../../../internal/customers/cusUtils/getOrCreateCustomer";
@@ -552,10 +551,6 @@ export const resolveRevenuecatResources = async ({
 	);
 
 	ctx.customerId = customer.id ?? "";
-	ctx.rolloutSnapshot = computeRolloutSnapshot({
-		orgId: ctx.org.id,
-		customerId: ctx.customerId,
-	});
 	const { ctx: routedCtx } = getCtxWithCustomerRedis({
 		ctx,
 		customerId: ctx.customerId,
