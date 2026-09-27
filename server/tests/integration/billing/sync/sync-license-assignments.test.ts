@@ -4,7 +4,11 @@
  */
 
 import { expect, test } from "bun:test";
-import { CusProductStatus, type SyncParamsV1 } from "@autumn/shared";
+import {
+	BillingInterval,
+	CusProductStatus,
+	type SyncParamsV1,
+} from "@autumn/shared";
 import {
 	listLicenseAssignments,
 	listLicensePools,
@@ -15,6 +19,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
+import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
 
 const SEAT_QUANTITY = 3;
 
@@ -108,6 +113,68 @@ test.concurrent(
 			license_plan_id: seat.id,
 			granted: SEAT_QUANTITY,
 			usage: entities.length,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("sync-v2: re-syncing without license_quantities keeps purchased seats")}`,
+	async () => {
+		const customerId = "sync-license-purchased-seats";
+		const pro = products.pro({ id: "pro", items: [items.dashboard()] });
+		const seat = products.base({
+			id: "paid-seat",
+			items: [
+				constructPriceItem({ price: 10, interval: BillingInterval.Month }),
+			],
+		});
+
+		const { ctx, autumnV1, autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [pro, seat] }),
+			],
+			actions: [
+				s.licenses.link({
+					parentProductId: pro.id,
+					licenseProductId: seat.id,
+					included: 1,
+				}),
+				s.billing.attach({
+					productId: pro.id,
+					licenseQuantities: [
+						{ licenseProductId: seat.id, quantity: SEAT_QUANTITY },
+					],
+				}),
+			],
+		});
+
+		const before = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const subscriptionId = before.customer_products.find(
+			(customerProduct) => customerProduct.product_id === pro.id,
+		)?.subscription_ids?.[0];
+		if (!subscriptionId) throw new Error("no Pro subscription");
+
+		await autumnV1.post("/billing.sync_v2", {
+			customer_id: customerId,
+			stripe_subscription_id: subscriptionId,
+			phases: [
+				{
+					starts_at: "now",
+					plans: [{ plan_id: pro.id, expire_previous: true }],
+				},
+			],
+		} satisfies SyncParamsV1);
+
+		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
+		expect(pools).toHaveLength(1);
+		expect(pools[0]).toMatchObject({
+			license_plan_id: seat.id,
+			granted: SEAT_QUANTITY,
 		});
 	},
 );

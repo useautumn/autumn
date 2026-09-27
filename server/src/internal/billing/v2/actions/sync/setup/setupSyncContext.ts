@@ -91,10 +91,6 @@ const buildProductContext = async ({
 		insertPlanLicenses,
 	} = await setupAttachProductContext({ ctx, params: plan });
 
-	const customerLicenseQuantities = setupCustomerLicenseQuantityContext({
-		params: plan,
-	});
-
 	const featureQuantities = setupFeatureQuantitiesContext({
 		ctx,
 		featureQuantitiesParams: { feature_quantities: plan.feature_quantities },
@@ -130,6 +126,12 @@ const buildProductContext = async ({
 			currentCustomerProduct = transition.currentCustomerProduct;
 		}
 	}
+	// Seats the request leaves out keep what the replaced plan had purchased.
+	const customerLicenseQuantities = setupCustomerLicenseQuantityContext({
+		params: plan,
+		fullProduct,
+		customerProduct: currentCustomerProduct,
+	});
 	const preparedCustomBase = prepareSyncedCustomBasePrice({
 		currentCustomerProduct,
 		fullProduct,
