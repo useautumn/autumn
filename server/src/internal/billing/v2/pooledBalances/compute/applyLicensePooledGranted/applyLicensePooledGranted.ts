@@ -15,6 +15,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addInsertedPooledBalanceToComputeContext } from "../context/pooledBalanceComputeContextUtils";
 import type { PooledBalanceComputeContext } from "../types/pooledBalanceComputeTypes";
 import { addToUpdatePoolBalances } from "../utils/pooledBalancePlanUtils";
+import { expireRemovedLicensePools } from "./expireRemovedLicensePools";
 import { initLicensePooledBalanceGraph } from "./initLicensePooledBalanceGraph";
 
 const licensePooledEntitlements = ({
@@ -130,8 +131,12 @@ export const applyLicensePooledGranted = ({
 	customerLicenses: FullCustomerLicense[];
 	now: number;
 }) => {
+	const customerLicenseLinkIds = new Set<string>();
+	const retainedPoolIds = new Set<string>();
+
 	for (const customerLicense of customerLicenses) {
 		if (!customerLicense.planLicense) continue;
+		customerLicenseLinkIds.add(customerLicense.link_id);
 
 		for (const entitlement of licensePooledEntitlements({ customerLicense })) {
 			const targetGranted = licensePooledGranted({
@@ -176,9 +181,11 @@ export const applyLicensePooledGranted = ({
 					computeContext,
 					pooledCustomerEntitlement: inserted,
 				});
+				retainedPoolIds.add(inserted.pooled_balance.id);
 				continue;
 			}
 
+			retainedPoolIds.add(existing.pooled_balance.id);
 			if (existing.pooled_balance.granted === targetGranted) continue;
 
 			const grantedDelta = new Decimal(targetGranted)
@@ -197,4 +204,11 @@ export const applyLicensePooledGranted = ({
 			});
 		}
 	}
+
+	expireRemovedLicensePools({
+		computeContext,
+		customerLicenseLinkIds,
+		retainedPoolIds,
+		now,
+	});
 };
