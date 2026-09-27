@@ -75,9 +75,10 @@ export const useSlackInvite = () => {
 	};
 
 	const mutation = useMutation({
-		mutationFn: async () => {
+		mutationFn: async ({ channelName }: { channelName: string }) => {
 			const { data } = await axiosInstance.post<{ email: string }>(
 				"/slack_connect/invite",
+				{ channel_name: channelName },
 			);
 			return data;
 		},

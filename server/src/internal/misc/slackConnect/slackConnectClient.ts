@@ -15,7 +15,7 @@ const TEAM_USER_IDS = (process.env.AUTUMN_SUPPORT_SLACK_TEAM_USER_IDS ?? "")
 	.map((userId) => userId.trim())
 	.filter(Boolean);
 
-const CHANNEL_PREFIX = "autumn-";
+export const SLACK_CHANNEL_PREFIX = "autumn-";
 /** Slack caps channel names at 80 characters. */
 const MAX_CHANNEL_NAME_LENGTH = 80;
 const INVALID_CHANNEL_NAME_CHARS = /[^a-z0-9_-]+/g;
@@ -61,11 +61,20 @@ export const getSlackConnectClient = async ({
 	};
 };
 
-export const toSlackChannelName = ({ orgSlug }: { orgSlug: string }) =>
-	`${CHANNEL_PREFIX}${orgSlug.toLowerCase().replace(INVALID_CHANNEL_NAME_CHARS, "-")}`.slice(
-		0,
-		MAX_CHANNEL_NAME_LENGTH,
-	);
+export const toSlackChannelName = ({ name }: { name: string }) => {
+	const sanitized = name.toLowerCase().replace(INVALID_CHANNEL_NAME_CHARS, "-");
+	const prefixed = sanitized.startsWith(SLACK_CHANNEL_PREFIX)
+		? sanitized
+		: `${SLACK_CHANNEL_PREFIX}${sanitized}`;
+	return prefixed.slice(0, MAX_CHANNEL_NAME_LENGTH);
+};
+
+/** Thrown when the requested name belongs to a channel another org owns. */
+export class SlackChannelNameTakenError extends Error {}
+
+// Stamped into the channel purpose so a typed name can't reuse another org's channel.
+const orgChannelPurpose = ({ orgId }: { orgId: string }) =>
+	`Shared support channel with Autumn (${orgId})`;
 
 const getSlackErrorCode = (error: unknown): string | undefined => {
 	if (typeof error !== "object" || error === null || !("data" in error)) {
@@ -75,13 +84,13 @@ const getSlackErrorCode = (error: unknown): string | undefined => {
 	return data?.error;
 };
 
-const findChannelIdByName = async ({
+const findChannelByName = async ({
 	client,
 	name,
 }: {
 	client: SlackConnectClient;
 	name: string;
-}): Promise<string | undefined> => {
+}) => {
 	let cursor: string | undefined;
 	do {
 		const response = await client.slack.conversations.list({
@@ -92,25 +101,33 @@ const findChannelIdByName = async ({
 		const channel = response.channels?.find(
 			(candidate) => candidate.name === name,
 		);
-		if (channel?.id) return channel.id;
+		if (channel?.id) return channel;
 		cursor = response.response_metadata?.next_cursor || undefined;
 	} while (cursor);
 	return undefined;
 };
 
-/** Channel names are deterministic per org, so the channel doubles as the
- * record: a second request finds it by name instead of needing a DB row. */
+/** The channel purpose doubles as the ownership record, so a repeat request
+ * finds the org's channel by name instead of needing a DB row. */
 const getOrCreateChannel = async ({
 	client,
 	name,
+	orgId,
 }: {
 	client: SlackConnectClient;
 	name: string;
+	orgId: string;
 }): Promise<string> => {
+	const purpose = orgChannelPurpose({ orgId });
 	try {
 		const response = await client.slack.conversations.create({ name });
 		const channelId = response.channel?.id;
 		if (!channelId) throw new Error("Slack returned no channel id");
+
+		await client.slack.conversations.setPurpose({
+			channel: channelId,
+			purpose,
+		});
 
 		if (client.teamUserIds.length > 0) {
 			await client.slack.conversations.invite({
@@ -122,8 +139,12 @@ const getOrCreateChannel = async ({
 	} catch (error) {
 		if (getSlackErrorCode(error) !== "name_taken") throw error;
 
-		const channelId = await findChannelIdByName({ client, name });
-		if (!channelId) throw error;
+		const channel = await findChannelByName({ client, name });
+		if (!channel?.id) throw error;
+		if (channel.purpose?.value !== purpose) {
+			throw new SlackChannelNameTakenError(`#${name} is already taken`);
+		}
+		const channelId = channel.id;
 
 		// An archived channel still holds its name; bring it back.
 		try {
@@ -141,15 +162,21 @@ const getOrCreateChannel = async ({
  * `email`. Slack delivers the invite by email. */
 export const inviteToOrgSlackChannel = async ({
 	client,
-	orgSlug,
+	orgId,
+	requestedName,
 	email,
 }: {
 	client: SlackConnectClient;
-	orgSlug: string;
+	orgId: string;
+	requestedName: string;
 	email: string;
 }): Promise<{ channelName: string }> => {
-	const channelName = toSlackChannelName({ orgSlug });
-	const channelId = await getOrCreateChannel({ client, name: channelName });
+	const channelName = toSlackChannelName({ name: requestedName });
+	const channelId = await getOrCreateChannel({
+		client,
+		name: channelName,
+		orgId,
+	});
 
 	await client.slack.conversations.inviteShared({
 		channel: channelId,

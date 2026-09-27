@@ -1,5 +1,7 @@
 import { Button } from "@autumn/ui";
+import { useState } from "react";
 import { useSlackInvite } from "../hooks/useSlackInvite";
+import { SlackChannelNamePopover } from "./SlackChannelNamePopover";
 
 export function SlackLogo({ className = "size-7" }: { className?: string }) {
 	return (
@@ -32,8 +34,8 @@ export function SlackLogo({ className = "size-7" }: { className?: string }) {
 /** Offers a Slack Connect channel with the Autumn team. The invite itself is
  * emailed by Slack, so once it's sent the card just points at the inbox. */
 export function SlackInviteCard() {
-	const { isReady, state, requestInvite, isRequesting, dismiss } =
-		useSlackInvite();
+	const { isReady, state, dismiss } = useSlackInvite();
+	const [channelNameOpen, setChannelNameOpen] = useState(false);
 
 	if (!isReady || state.status === "dismissed") return null;
 
@@ -67,14 +69,15 @@ export function SlackInviteCard() {
 					Dismiss
 				</Button>
 				{!isRequested && (
-					<Button
-						variant="primary"
-						size="sm"
-						onClick={() => requestInvite().catch(() => {})}
-						isLoading={isRequesting}
-					>
-						Request invite
-					</Button>
+					<SlackChannelNamePopover
+						open={channelNameOpen}
+						onOpenChange={setChannelNameOpen}
+						trigger={
+							<Button variant="primary" size="sm">
+								Request invite
+							</Button>
+						}
+					/>
 				)}
 			</div>
 		</div>
