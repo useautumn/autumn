@@ -78,6 +78,13 @@ export const applyPooledBalancePlanToFullCustomer = ({
 			structuredClone(update.pooledCustomerEntitlement),
 		);
 	}
+	for (const {
+		pooledCustomerEntitlement,
+	} of pooledBalancePlan.expirePoolBalanceCandidates) {
+		if (pooledCustomerEntitlement.pooled_balance?.customer_license_link_id) {
+			pooledCustomerEntitlementById.delete(pooledCustomerEntitlement.id);
+		}
+	}
 
 	fullCustomer.pooled_customer_entitlements = Array.from(
 		pooledCustomerEntitlementById.values(),
