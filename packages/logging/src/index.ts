@@ -22,6 +22,10 @@ export {
 	withLogPrefix,
 } from "./logger/loggerWrappers.js";
 export {
+	errorToObject,
+	normalizeErrorValues,
+} from "./logger/normalizeErrors.js";
+export {
 	resolveDeployment,
 	resolveLoggerOptions,
 } from "./logger/resolveLoggerOptions.js";
