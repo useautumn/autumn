@@ -53,6 +53,11 @@ export const invoices = pgTable(
 			sql`${table.created_at} DESC`,
 			sql`${table.id} DESC`,
 		),
+		// Paid rows only: collected-volume metering scans an hour of paid_at.
+		index("idx_invoices_paid_at")
+			.on(table.paid_at)
+			.where(sql`${table.paid_at} IS NOT NULL`)
+			.concurrently(),
 		// Serves the entities.internal_id delete cascade (both default collation).
 		index("idx_invoices_internal_entity_id")
 			.on(table.internal_entity_id)

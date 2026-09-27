@@ -2814,6 +2814,10 @@ components:
               description: If true, entitlements attached to this plan will still reset on
                 schedule even when the customer's product is in a past_due
                 state.
+            anchor_to_month_start:
+              type: boolean
+              description: Anchor billing and reset cycles to the 1st of the month (UTC).
+              default: false
           description: Miscellaneous plan-level configuration flags.
         billing_controls:
           type: object
@@ -12503,6 +12507,10 @@ paths:
                         schedule even when the customer's product is in a
                         past_due state.
                       default: false
+                    anchor_to_month_start:
+                      type: boolean
+                      description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                      default: false
                   description: Miscellaneous plan-level configuration flags.
                 billing_controls:
                   type: object
@@ -13692,6 +13700,10 @@ paths:
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
+                      anchor_to_month_start:
+                        type: boolean
+                        description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -16705,6 +16717,10 @@ paths:
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
+                      anchor_to_month_start:
+                        type: boolean
+                        description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -19702,6 +19718,10 @@ paths:
                               description: If true, entitlements attached to this plan will still reset on
                                 schedule even when the customer's product is in
                                 a past_due state.
+                            anchor_to_month_start:
+                              type: boolean
+                              description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                              default: false
                           description: Miscellaneous plan-level configuration flags.
                         billing_controls:
                           type: object
@@ -25086,6 +25106,10 @@ paths:
                                         description: If true, entitlements attached to this plan will still reset on
                                           schedule even when the customer's
                                           product is in a past_due state.
+                                      anchor_to_month_start:
+                                        type: boolean
+                                        description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                                        default: false
                                     description: Miscellaneous plan-level configuration flags.
                                   billing_controls:
                                     type: object
@@ -26968,6 +26992,10 @@ paths:
                       description: If true, entitlements attached to this plan will still reset on
                         schedule even when the customer's product is in a
                         past_due state.
+                      default: false
+                    anchor_to_month_start:
+                      type: boolean
+                      description: Anchor billing and reset cycles to the 1st of the month (UTC).
                       default: false
                   description: Miscellaneous plan-level configuration flags.
                 billing_controls:
@@ -29999,6 +30027,10 @@ paths:
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
+                      anchor_to_month_start:
+                        type: boolean
+                        description: Anchor billing and reset cycles to the 1st of the month (UTC).
+                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -65397,13 +65429,14 @@ paths:
       operationId: batchTrack
       description: Enqueue up to 1000 usage events for asynchronous processing. Items
         are validated synchronously up front; validated items are then enqueued
-        via SQS for background deduction by workers. The response returns 202
-        immediately and does not include balance information. On partial enqueue
-        failure (some items fail to enqueue, others succeed), the endpoint still
-        returns 202 and logs the failures server-side; clients should NOT retry,
-        because retrying re-enqueues the already-succeeded items. A 503 is
-        returned only when zero items were successfully enqueued (queue entirely
-        unavailable) — that case is safe to retry.
+        via SQS for background deduction by workers. The response returns 200
+        (or 202) immediately and does not include balance information. On
+        partial enqueue failure (some items fail to enqueue, others succeed),
+        the endpoint still returns 200 (or 202) and logs the failures
+        server-side; clients should NOT retry, because retrying re-enqueues the
+        already-succeeded items. A 503 is returned only when zero items were
+        successfully enqueued (queue entirely unavailable) — that case is safe
+        to retry.
       requestBody:
         required: true
         content:
@@ -65441,6 +65474,10 @@ paths:
                       type: string
                     additionalProperties: {}
                     description: Additional properties to attach to this usage event.
+                  idempotency_key:
+                    type: string
+                    description: "Deduplicates this item: a second track with the same key within 24
+                      hours is ignored."
                   timestamp:
                     type: integer
                     minimum: 0
@@ -65492,12 +65529,25 @@ paths:
                     event_name: message.sent
                     value: 1
       responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                required:
+                  - success
+                examples:
+                  - success: true
         "202":
           description: "Batch accepted. All items passed synchronous validation. Enqueue
             is best-effort: partial failures (some items enqueued, some not) are
             logged server-side and are NOT surfaced in the response body;
-            clients must not retry on 202. See the endpoint description for full
-            partial-failure semantics."
+            clients must not retry on success. See the endpoint description for
+            full partial-failure semantics."
           content:
             application/json:
               schema:
@@ -80629,6 +80679,8 @@ webhooks:
                                           product is in a past_due state.
                                         default: false
                                         type: boolean
+                                      anchor_to_month_start:
+                                        type: boolean
                                     required:
                                       - ignore_past_due
                                     additionalProperties: false
@@ -82802,6 +82854,8 @@ webhooks:
                                                   customer's product is in a
                                                   past_due state.
                                                 default: false
+                                                type: boolean
+                                              anchor_to_month_start:
                                                 type: boolean
                                             required:
                                               - ignore_past_due
@@ -86955,6 +87009,8 @@ webhooks:
                                                 past_due state.
                                               default: false
                                               type: boolean
+                                            anchor_to_month_start:
+                                              type: boolean
                                           required:
                                             - ignore_past_due
                                           additionalProperties: false
@@ -90109,6 +90165,8 @@ webhooks:
                                                         a past_due state.
                                                       default: false
                                                       type: boolean
+                                                    anchor_to_month_start:
+                                                      type: boolean
                                                   required:
                                                     - ignore_past_due
                                                   additionalProperties: false
@@ -92327,6 +92385,8 @@ webhooks:
                                                                 product is in a
                                                                 past_due state.
                                                               default: false
+                                                              type: boolean
+                                                            anchor_to_month_start:
                                                               type: boolean
                                                           required:
                                                             - ignore_past_due

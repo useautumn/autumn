@@ -2725,6 +2725,8 @@ class CreatePlanConfigRequestBodyTypedDict(TypedDict):
 
     ignore_past_due: NotRequired[bool]
     r"""If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state."""
+    anchor_to_month_start: NotRequired[bool]
+    r"""Anchor billing and reset cycles to the 1st of the month (UTC)."""
 
 
 class CreatePlanConfigRequestBody(BaseModel):
@@ -2733,9 +2735,12 @@ class CreatePlanConfigRequestBody(BaseModel):
     ignore_past_due: Optional[bool] = False
     r"""If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state."""
 
+    anchor_to_month_start: Optional[bool] = False
+    r"""Anchor billing and reset cycles to the 1st of the month (UTC)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["ignore_past_due"])
+        optional_fields = set(["ignore_past_due", "anchor_to_month_start"])
         serialized = handler(self)
         m = {}
 
