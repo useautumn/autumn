@@ -7,7 +7,6 @@ export const useAutumnFlags = () => {
 	const { data: customer } = useCustomer();
 
 	const [flags, setFlags] = useLocalStorage("autumn.flags", {
-		pkey: false,
 		stripe_key: false,
 		platform: false,
 		vercel: false,
@@ -19,7 +18,6 @@ export const useAutumnFlags = () => {
 		if (!customer?.flags) return;
 
 		const nextFlags = {
-			pkey: notNullish(customer.flags.pkey),
 			stripe_key: notNullish(customer.flags.stripe_key),
 			platform: notNullish(customer.flags.platform),
 			vercel: notNullish(customer.flags.vercel),
@@ -29,7 +27,6 @@ export const useAutumnFlags = () => {
 
 		// Only update storage/state when values actually change
 		if (
-			flags.pkey !== nextFlags.pkey ||
 			flags.stripe_key !== nextFlags.stripe_key ||
 			flags.platform !== nextFlags.platform ||
 			flags.vercel !== nextFlags.vercel ||
