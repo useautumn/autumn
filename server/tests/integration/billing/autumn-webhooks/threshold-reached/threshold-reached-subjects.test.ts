@@ -15,6 +15,7 @@ import {
 	type WebhookTestSetup,
 } from "@tests/integration/utils/svixWebhookTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -85,7 +86,8 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
+// Legacy only evaluates the tracked feature, never the credit system funding it.
+test.concurrent.skipIf(!isBalanceWorkerRoute())(
 	`${chalk.yellowBright("threshold-subject2: a credit-funded track that exhausts the credits names the credit system")}`,
 	async () => {
 		const credits = products.base({

@@ -10,6 +10,7 @@
 import { expect, test } from "bun:test";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import {
 	expireAllCusEntsForReset,
 	expireCusEntForReset,
@@ -29,6 +30,9 @@ import {
 const INCLUDED_USAGE = 100;
 const POLL_ATTEMPTS = 200;
 const POLL_INTERVAL_MS = 50;
+
+/** Legacy resets due rows through the SQL lane; this lane only exists on the worker route. */
+const workerLaneTest = test.concurrent.skipIf(!isBalanceWorkerRoute());
 
 const initWorkerLaneScenario = async ({
 	customerId,
@@ -114,7 +118,7 @@ const waitForNextResetAtAfter = async ({
 	return row;
 };
 
-test.concurrent(
+workerLaneTest(
 	`${chalk.yellowBright("batch-reset-v2 worker lane: a due row is refilled by the worker, once per sweep")}`,
 	async () => {
 		const customerId = "batch-reset-v2-worker-lane";
@@ -158,7 +162,7 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
+workerLaneTest(
 	`${chalk.yellowBright("batch-reset-v2 worker lane: a track racing the cron's reset refills the row exactly once")}`,
 	async () => {
 		const customerId = "batch-reset-v2-worker-lane-race";
@@ -206,7 +210,7 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
+workerLaneTest(
 	`${chalk.yellowBright("batch-reset-v2 worker lane: an entity's own due rows are reset under the entity's subject, once each")}`,
 	async () => {
 		const customerId = "batch-reset-v2-worker-lane-entities";

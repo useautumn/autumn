@@ -174,6 +174,7 @@ test.concurrent(
 				s.attach({ productId: customerProd.id }),
 				s.attach({ productId: entityProd.id, entityIndex: 0 }),
 				s.attach({ productId: entityProd.id, entityIndex: 1 }),
+				s.warmEntityCaches(),
 			],
 		});
 

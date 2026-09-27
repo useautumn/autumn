@@ -29,9 +29,10 @@ import { balanceLocks } from "@autumn/shared";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
 import { setCustomerUsageLimit } from "@tests/integration/balances/utils/usage-limit-utils/customerUsageLimitUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { pollUntilAsserted } from "@tests/utils/genUtils.js";
+import { pollUntilAsserted, timeout } from "@tests/utils/genUtils.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -41,6 +42,9 @@ import { getRedisV2OrgCleanupCandidates } from "@/external/redis/orgRedisUtils/o
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
+
+/** Legacy SyncV4 dedups a customer entitlement's syncs per 2.5s bucket, so the next write must land in a later one. */
+const LEGACY_SYNC_DEDUP_BUCKET_MS = 2_500;
 
 // biome-ignore lint/suspicious/noExplicitAny: raw SQL rows are untyped
 const queryRows = (result: unknown): any[] =>
@@ -78,6 +82,7 @@ const expectRawDbBalance = async ({
 		},
 		timeoutMs: 20_000,
 	});
+	if (!isBalanceWorkerRoute()) await timeout(LEGACY_SYNC_DEDUP_BUCKET_MS);
 };
 
 interface LockReceipt {
