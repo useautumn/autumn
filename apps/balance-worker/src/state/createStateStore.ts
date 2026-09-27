@@ -1,0 +1,77 @@
+import type { Database } from "bun:sqlite";
+import {
+	mergeSubjectStates,
+	meteringIdentityToSubjectKey,
+} from "@autumn/balance-engine";
+import { applyDurableMutations } from "./actions/applyDurableMutations/applyDurableMutations.js";
+import { capturePartitionCheckpoint } from "./actions/checkpoint/capturePartitionCheckpoint.js";
+import { restorePartitionCheckpoint } from "./actions/checkpoint/restorePartitionCheckpoint.js";
+import { initializePartition } from "./actions/initializePartition.js";
+import { pruneExpiredReceipts } from "./actions/pruneExpiredReceipts.js";
+import { assertPartition, assertTopic } from "./assertKafkaPosition.js";
+import { readReceipt } from "./repos/mutationReceipts/mutationReceipts.js";
+import { readNextOffset } from "./repos/partitionProgress.js";
+import {
+	readStoredState,
+	readStoredStates,
+} from "./repos/subjectStates/subjectStates.js";
+import type { SqliteStateStore } from "./types/stateStore.js";
+import type { StateStoreContext } from "./types/stateStoreContext.js";
+
+type CaptureParams = Parameters<
+	SqliteStateStore["capturePartitionCheckpoint"]
+>[0];
+type PruneParams = Parameters<SqliteStateStore["pruneExpiredReceipts"]>[0];
+
+export const createStateStore = ({
+	sqliteDb,
+}: {
+	sqliteDb: Database;
+}): SqliteStateStore => {
+	const ctx: StateStoreContext = { sqliteDb };
+
+	const captureCheckpoint = (params: CaptureParams) => {
+		assertTopic({ topic: params.topic });
+		assertPartition({ partition: params.partition });
+		return capturePartitionCheckpoint({ ctx, ...params });
+	};
+
+	const pruneReceipts = (params: PruneParams) => {
+		assertTopic({ topic: params.topic });
+		assertPartition({ partition: params.partition });
+		return pruneExpiredReceipts({ ctx, ...params });
+	};
+
+	return {
+		baseline: "log",
+		initializePartition: (params) => initializePartition({ ctx, ...params }),
+		restorePartitionCheckpoint: (params) =>
+			restorePartitionCheckpoint({ ctx, ...params }),
+		capturePartitionCheckpoint: captureCheckpoint,
+		pruneExpiredReceipts: pruneReceipts,
+		readState: ({ identity }) => {
+			const stored = readStoredStates({ ctx, identity });
+			return stored
+				? mergeSubjectStates({
+						customer: stored.customer,
+						entity: stored.entity,
+					})
+				: null;
+		},
+		readOwnState: ({ identity }) =>
+			readStoredState({
+				ctx,
+				subjectKey: meteringIdentityToSubjectKey({ identity }),
+			})?.state ?? null,
+		readReceipt: ({ identity, mutationId }) =>
+			readReceipt({ ctx, identity, mutationId })?.mutation ?? null,
+		readNextOffset: (params) => readNextOffset({ ctx, ...params }),
+		readCommandNextOffset: () => null,
+		advanceCommandNextOffset: () => {
+			throw new Error("Command bookmarks require the Postgres backend");
+		},
+		applyDurableMutations: ({ records }) =>
+			applyDurableMutations({ ctx, records }),
+		close: () => sqliteDb.close(true),
+	};
+};

@@ -1,0 +1,64 @@
+export class PartitionWriterCapacityError extends Error {
+	constructor() {
+		super("Partition writer pending capacity reached");
+		this.name = "PartitionWriterCapacityError";
+	}
+}
+
+/** One record alone is bigger than a batch may be, so no batch can ever carry it. */
+export class PartitionWriterRecordTooLargeError extends Error {
+	constructor({
+		bytes,
+		maxBatchBytes,
+	}: { bytes: number; maxBatchBytes: number }) {
+		super(
+			`Mutation record of ${bytes} bytes exceeds the ${maxBatchBytes} byte batch limit`,
+		);
+		this.name = "PartitionWriterRecordTooLargeError";
+	}
+}
+
+export class PartitionWriterStateNotFoundError extends Error {
+	constructor({ customerKey }: { customerKey: string }) {
+		super(`Partition writer state not found: ${customerKey}`);
+		this.name = "PartitionWriterStateNotFoundError";
+	}
+}
+
+/** The same commandId was reused for a different request. */
+/** The same request again, but the original record is only on the log: nothing to reply with. */
+export class PartitionWriterDuplicateCommandError extends Error {
+	constructor({ commandId }: { commandId: string }) {
+		super(`Command already applied: ${commandId}`);
+		this.name = "PartitionWriterDuplicateCommandError";
+	}
+}
+
+export class PartitionWriterCommandConflictError extends Error {
+	constructor({ commandId }: { commandId: string }) {
+		super(`Command id reused with different input: ${commandId}`);
+		this.name = "PartitionWriterCommandConflictError";
+	}
+}
+
+/** May be thrown only when the appender proves that nothing was committed. */
+export class MutationBatchNotCommittedError extends Error {
+	constructor({ cause }: { cause: unknown }) {
+		super("Mutation batch was not committed", { cause });
+		this.name = "MutationBatchNotCommittedError";
+	}
+}
+
+export class MutationBatchAppendError extends Error {
+	constructor({ cause }: { cause: unknown }) {
+		super("Mutation batch was not durably appended", { cause });
+		this.name = "MutationBatchAppendError";
+	}
+}
+
+export class PartitionWriterRecoveryRequiredError extends Error {
+	constructor({ cause }: { cause: unknown }) {
+		super("Partition writer requires recovery", { cause });
+		this.name = "PartitionWriterRecoveryRequiredError";
+	}
+}
