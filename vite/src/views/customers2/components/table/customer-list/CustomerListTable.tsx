@@ -40,7 +40,8 @@ export function CustomerListTable({
 	const tableContainerHeight = "calc(100vh - 211px)";
 
 	const { features } = useFeaturesQuery();
-	const { queryStates, setFilters, currentCursor } = useCustomerFilters();
+	const { queryStates, setFilters, currentCursor, currentPage } =
+		useCustomerFilters();
 	const buildKey = useQueryKeyFactory();
 
 	const {
@@ -260,8 +261,8 @@ export function CustomerListTable({
 							type="no-customers-found"
 							actionButton={<CustomerListCreateButton />}
 						/>
-						{/* Keeps page size and back-navigation reachable when a page comes back empty. */}
-						<CustomerListPaginationFooter />
+						{/* Keeps back-navigation reachable when a later page comes back empty. */}
+						{currentPage > 1 && <CustomerListPaginationFooter />}
 					</>
 				) : (
 					<Table.Container>
