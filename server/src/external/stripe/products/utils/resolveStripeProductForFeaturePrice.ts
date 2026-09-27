@@ -7,16 +7,19 @@ import { buildStripeFeatureProductIdempotencyKey } from "../../prices/utils/buil
 import { retrieveLiveStripeProduct } from "./retrieveLiveStripeProduct.js";
 
 /** The Stripe Product the price's plan already bills this feature under, e.g. a
- * custom Enterprise price inherits "Enterprise - Emails". Same interval wins. */
+ * custom Enterprise price inherits "Enterprise - Emails". Same entity scope only;
+ * same interval first, then newest. */
 const retrievePlanFeatureStripeProduct = async ({
 	db,
 	stripeCli,
 	feature,
+	entityFeatureId,
 	price,
 }: {
 	db: DrizzleCli;
 	stripeCli: Stripe;
 	feature: Feature;
+	entityFeatureId: string | null;
 	price: Price;
 }): Promise<Stripe.Product | null> => {
 	if (!price.internal_product_id) return null;
@@ -26,6 +29,7 @@ const retrievePlanFeatureStripeProduct = async ({
 		db,
 		internalProductId: price.internal_product_id,
 		internalFeatureId: feature.internal_id,
+		entityFeatureId,
 	});
 
 	const sameIntervalFirst = catalogPrices
@@ -56,11 +60,14 @@ export const resolveStripeProductForFeaturePrice = async ({
 	db,
 	stripeCli,
 	feature,
+	entityFeatureId = null,
 	price,
 }: {
 	db: DrizzleCli;
 	stripeCli: Stripe;
 	feature: Feature;
+	/** Entity scope of the price's entitlement; only same-scope plan prices are inherited. */
+	entityFeatureId?: string | null;
 	price: Price;
 }): Promise<string> => {
 	const config = price.config as UsagePriceConfig;
@@ -75,6 +82,7 @@ export const resolveStripeProductForFeaturePrice = async ({
 		db,
 		stripeCli,
 		feature,
+		entityFeatureId,
 		price,
 	});
 	if (planProduct) {

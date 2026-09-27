@@ -1,5 +1,6 @@
 import {
 	type DbPrice,
+	entitlements,
 	type FixedPriceConfig,
 	type Price,
 	type Product,
@@ -8,7 +9,7 @@ import {
 } from "@autumn/shared";
 import { buildConflictUpdateColumns } from "@server/db/dbUtils";
 import type { DrizzleCli } from "@server/db/initDrizzle";
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 export class PriceService {
 	static async get({ db, id }: { db: DrizzleCli; id: string }) {
@@ -91,23 +92,35 @@ export class PriceService {
 			.where(inArray(prices.id, ids));
 	}
 
-	/** A plan's catalog (non-custom) prices for one feature. Retired prices are custom. */
+	/** A plan's catalog (non-custom) prices for one feature and entity scope,
+	 * newest first. Retired prices are custom. */
 	static async listCatalogForFeature({
 		db,
 		internalProductId,
 		internalFeatureId,
+		entityFeatureId,
 	}: {
 		db: DrizzleCli;
 		internalProductId: string;
 		internalFeatureId: string;
+		entityFeatureId: string | null;
 	}) {
-		return (await db.query.prices.findMany({
-			where: and(
-				eq(prices.internal_product_id, internalProductId),
-				eq(prices.is_custom, false),
-				sql`${prices.config} ->> 'internal_feature_id' = ${internalFeatureId}`,
-			),
-		})) as Price[];
+		const rows = await db
+			.select({ price: prices })
+			.from(prices)
+			.leftJoin(entitlements, eq(entitlements.id, prices.entitlement_id))
+			.where(
+				and(
+					eq(prices.internal_product_id, internalProductId),
+					eq(prices.is_custom, false),
+					sql`${prices.config} ->> 'internal_feature_id' = ${internalFeatureId}`,
+					entityFeatureId
+						? eq(entitlements.entity_feature_id, entityFeatureId)
+						: isNull(entitlements.entity_feature_id),
+				),
+			)
+			.orderBy(desc(prices.created_at));
+		return rows.map((row) => row.price as Price);
 	}
 
 	static async getByStripeId({
