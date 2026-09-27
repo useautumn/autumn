@@ -8,6 +8,11 @@ import { safeParse } from "../lib/schemas.js";
 import { ClosedEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
+import {
+  CustomerData,
+  CustomerData$Outbound,
+  CustomerData$outboundSchema,
+} from "./customer-data.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type BatchTrackGlobals = {
@@ -69,6 +74,10 @@ export type RequestBody = {
    */
   properties?: { [k: string]: any } | undefined;
   /**
+   * Deduplicates the event: a second track with the same key within 24 hours is ignored.
+   */
+  idempotencyKey?: string | undefined;
+  /**
    * Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
    */
   timestamp?: number | undefined;
@@ -76,6 +85,10 @@ export type RequestBody = {
    * How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
    */
   overageBehavior?: BatchTrackOverageBehavior | undefined;
+  /**
+   * Customer details to set when creating a customer
+   */
+  customerData?: CustomerData | undefined;
   /**
    * If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
    */
@@ -132,8 +145,10 @@ export type RequestBody$Outbound = {
   event_name?: string | undefined;
   value?: number | undefined;
   properties?: { [k: string]: any } | undefined;
+  idempotency_key?: string | undefined;
   timestamp?: number | undefined;
   overage_behavior?: string | undefined;
+  customer_data?: CustomerData$Outbound | undefined;
   async?: boolean | undefined;
   lock?: BatchTrackLock$Outbound | undefined;
 };
@@ -150,8 +165,10 @@ export const RequestBody$outboundSchema: z.ZodMiniType<
     eventName: z.optional(z.string()),
     value: z.optional(z.number()),
     properties: z.optional(z.record(z.string(), z.any())),
+    idempotencyKey: z.optional(z.string()),
     timestamp: z.optional(z.int()),
     overageBehavior: z.optional(BatchTrackOverageBehavior$outboundSchema),
+    customerData: z.optional(CustomerData$outboundSchema),
     async: z.optional(z.boolean()),
     lock: z.optional(z.lazy(() => BatchTrackLock$outboundSchema)),
   }),
@@ -161,7 +178,9 @@ export const RequestBody$outboundSchema: z.ZodMiniType<
       featureId: "feature_id",
       entityId: "entity_id",
       eventName: "event_name",
+      idempotencyKey: "idempotency_key",
       overageBehavior: "overage_behavior",
+      customerData: "customer_data",
     });
   }),
 );

@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY "idx_invoices_paid_at" ON "invoices" USING btree ("paid_at") WHERE "invoices"."paid_at" IS NOT NULL;
