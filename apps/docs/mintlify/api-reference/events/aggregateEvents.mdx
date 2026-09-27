@@ -282,6 +282,10 @@ The seat-owned balances appear in `grouped_values` too, but for them the owner a
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="timezone" type="string">
+  IANA timezone (e.g. "America/New_York") that day, week and month bins are aligned to. Hour bins are always UTC. Defaults to UTC
+</DynamicParamField>
+
 <DynamicParamField body="filter_by.{key}" type="string">
   Filter events by property values, e.g. \{"model": "gpt-4", "region": "us"\}. Maximum 5 filters.
 </DynamicParamField>

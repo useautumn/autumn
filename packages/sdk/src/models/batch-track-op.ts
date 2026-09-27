@@ -8,11 +8,7 @@ import { safeParse } from "../lib/schemas.js";
 import { ClosedEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
-import {
-  CustomerData,
-  CustomerData$Outbound,
-  CustomerData$outboundSchema,
-} from "./customer-data.js";
+import { smartUnion } from "../types/smart-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type BatchTrackGlobals = {
@@ -74,7 +70,7 @@ export type RequestBody = {
    */
   properties?: { [k: string]: any } | undefined;
   /**
-   * Deduplicates the event: a second track with the same key within 24 hours is ignored.
+   * Deduplicates this item: a second track with the same key within 24 hours is ignored.
    */
   idempotencyKey?: string | undefined;
   /**
@@ -86,10 +82,6 @@ export type RequestBody = {
    */
   overageBehavior?: BatchTrackOverageBehavior | undefined;
   /**
-   * Customer details to set when creating a customer
-   */
-  customerData?: CustomerData | undefined;
-  /**
    * If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
    */
   async?: boolean | undefined;
@@ -97,11 +89,22 @@ export type RequestBody = {
 };
 
 /**
- * Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on 202. See the endpoint description for full partial-failure semantics.
+ * Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on success. See the endpoint description for full partial-failure semantics.
  */
-export type BatchTrackResponse = {
+export type BatchTrackResponseBody2 = {
   success: true;
 };
+
+/**
+ * OK
+ */
+export type BatchTrackResponseBody1 = {
+  success: true;
+};
+
+export type BatchTrackResponse =
+  | BatchTrackResponseBody1
+  | BatchTrackResponseBody2;
 
 /** @internal */
 export const BatchTrackOverageBehavior$outboundSchema: z.ZodMiniEnum<
@@ -148,7 +151,6 @@ export type RequestBody$Outbound = {
   idempotency_key?: string | undefined;
   timestamp?: number | undefined;
   overage_behavior?: string | undefined;
-  customer_data?: CustomerData$Outbound | undefined;
   async?: boolean | undefined;
   lock?: BatchTrackLock$Outbound | undefined;
 };
@@ -168,7 +170,6 @@ export const RequestBody$outboundSchema: z.ZodMiniType<
     idempotencyKey: z.optional(z.string()),
     timestamp: z.optional(z.int()),
     overageBehavior: z.optional(BatchTrackOverageBehavior$outboundSchema),
-    customerData: z.optional(CustomerData$outboundSchema),
     async: z.optional(z.boolean()),
     lock: z.optional(z.lazy(() => BatchTrackLock$outboundSchema)),
   }),
@@ -180,7 +181,6 @@ export const RequestBody$outboundSchema: z.ZodMiniType<
       eventName: "event_name",
       idempotencyKey: "idempotency_key",
       overageBehavior: "overage_behavior",
-      customerData: "customer_data",
     });
   }),
 );
@@ -190,12 +190,49 @@ export function requestBodyToJSON(requestBody: RequestBody): string {
 }
 
 /** @internal */
-export const BatchTrackResponse$inboundSchema: z.ZodMiniType<
-  BatchTrackResponse,
+export const BatchTrackResponseBody2$inboundSchema: z.ZodMiniType<
+  BatchTrackResponseBody2,
   unknown
 > = z.object({
   success: types.literal(true),
 });
+
+export function batchTrackResponseBody2FromJSON(
+  jsonString: string,
+): SafeParseResult<BatchTrackResponseBody2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BatchTrackResponseBody2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BatchTrackResponseBody2' from JSON`,
+  );
+}
+
+/** @internal */
+export const BatchTrackResponseBody1$inboundSchema: z.ZodMiniType<
+  BatchTrackResponseBody1,
+  unknown
+> = z.object({
+  success: types.literal(true),
+});
+
+export function batchTrackResponseBody1FromJSON(
+  jsonString: string,
+): SafeParseResult<BatchTrackResponseBody1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BatchTrackResponseBody1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BatchTrackResponseBody1' from JSON`,
+  );
+}
+
+/** @internal */
+export const BatchTrackResponse$inboundSchema: z.ZodMiniType<
+  BatchTrackResponse,
+  unknown
+> = smartUnion([
+  z.lazy(() => BatchTrackResponseBody1$inboundSchema),
+  z.lazy(() => BatchTrackResponseBody2$inboundSchema),
+]);
 
 export function batchTrackResponseFromJSON(
   jsonString: string,

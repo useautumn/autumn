@@ -242,7 +242,7 @@ const response = await client.trackTokens({
 @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
 
 @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
-* [batchTrack](docs/sdks/autumn/README.md#batchtrack) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
+* [batchTrack](docs/sdks/autumn/README.md#batchtrack) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 200 (or 202) immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 200 (or 202) and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
 
 ### [Balances](docs/sdks/balances/README.md)
 
@@ -889,6 +889,16 @@ const response = await client.features.delete({ featureId: "old-feature" });
 * [delete](docs/sdks/sandboxes/README.md#delete) - Permanently deletes a sandbox and everything inside it: its catalog, customers and secret key. Cannot be undone.
 * [reset](docs/sdks/sandboxes/README.md#reset) - Wipes every customer, plan, feature and migration draft in the sandbox the calling key belongs to, leaving the sandbox itself, its secret keys and its settings in place. There is no id to pass: a sandbox's own key resets that sandbox, and an organization's test-mode key resets its default sandbox environment. Refused for live keys — only sandboxes can be reset. Cannot be undone.
 
+### [Webhooks](docs/sdks/webhooks/README.md)
+
+* [create](docs/sdks/webhooks/README.md#create) - Creates a webhook: a URL Autumn sends the listed events to, in the environment of the calling key. You choose the `id`, and it can't be changed later. Returns the signing secret once, in this response — store it, it cannot be read back.
+* [get](docs/sdks/webhooks/README.md#get) - Gets one webhook by ID. The signing secret is never returned here — only `webhooks.create` and `webhooks.sync` show one, when they create the webhook.
+* [list](docs/sdks/webhooks/README.md#list) - Lists every webhook in the environment of the calling key, including ones made in the dashboard (these show their `ep_…` ID).
+* [update](docs/sdks/webhooks/README.md#update) - Updates a webhook's URL, events, description or disabled state. Only the fields you pass change. The ID can't be changed — to rename, create a new webhook.
+* [delete](docs/sdks/webhooks/README.md#delete) - Permanently deletes a webhook. Autumn stops sending it events immediately. Cannot be undone.
+* [previewSync](docs/sdks/webhooks/README.md#previewsync) - Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them.
+* [sync](docs/sdks/webhooks/README.md#sync) - Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.
+
 </details>
 <!-- End Available Resources and Operations [operations] -->
 
@@ -911,7 +921,7 @@ To read more about standalone functions, check [FUNCTIONS.md](./FUNCTIONS.md).
 - [`balancesDelete`](docs/sdks/balances/README.md#delete) - Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
 - [`balancesFinalize`](docs/sdks/balances/README.md#finalize) - Finalize a previously locked balance. Use 'confirm' to commit the deduction, or 'release' to return the held balance.
 - [`balancesUpdate`](docs/sdks/balances/README.md#update) - Update a customer balance.
-- [`batchTrack`](docs/sdks/autumn/README.md#batchtrack) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
+- [`batchTrack`](docs/sdks/autumn/README.md#batchtrack) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 200 (or 202) immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 200 (or 202) and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
 - [`billingAttach`](docs/sdks/billing/README.md#attach) - Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
 
 Use this endpoint to subscribe a customer to a plan, upgrade/downgrade between plans, or add an add-on product.
@@ -1601,6 +1611,13 @@ const response = await client.trackTokens({
 @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
 
 @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
+- [`webhooksCreate`](docs/sdks/webhooks/README.md#create) - Creates a webhook: a URL Autumn sends the listed events to, in the environment of the calling key. You choose the `id`, and it can't be changed later. Returns the signing secret once, in this response — store it, it cannot be read back.
+- [`webhooksDelete`](docs/sdks/webhooks/README.md#delete) - Permanently deletes a webhook. Autumn stops sending it events immediately. Cannot be undone.
+- [`webhooksGet`](docs/sdks/webhooks/README.md#get) - Gets one webhook by ID. The signing secret is never returned here — only `webhooks.create` and `webhooks.sync` show one, when they create the webhook.
+- [`webhooksList`](docs/sdks/webhooks/README.md#list) - Lists every webhook in the environment of the calling key, including ones made in the dashboard (these show their `ep_…` ID).
+- [`webhooksPreviewSync`](docs/sdks/webhooks/README.md#previewsync) - Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them.
+- [`webhooksSync`](docs/sdks/webhooks/README.md#sync) - Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.
+- [`webhooksUpdate`](docs/sdks/webhooks/README.md#update) - Updates a webhook's URL, events, description or disabled state. Only the fields you pass change. The ID can't be changed — to rename, create a new webhook.
 
 </details>
 <!-- End Standalone functions [standalone-funcs] -->

@@ -794,6 +794,10 @@ export type PlanConfig = {
    * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
    */
   ignorePastDue: boolean;
+  /**
+   * Anchor billing and reset cycles to the 1st of the month (UTC).
+   */
+  anchorToMonthStart: boolean;
 };
 
 /**
@@ -3413,10 +3417,12 @@ export const PlanConfig$inboundSchema: z.ZodMiniType<PlanConfig, unknown> = z
   .pipe(
     z.object({
       ignore_past_due: z._default(types.boolean(), false),
+      anchor_to_month_start: z._default(types.boolean(), false),
     }),
     z.transform((v) => {
       return remap$(v, {
         "ignore_past_due": "ignorePastDue",
+        "anchor_to_month_start": "anchorToMonthStart",
       });
     }),
   );

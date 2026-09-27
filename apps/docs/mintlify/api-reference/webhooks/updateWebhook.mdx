@@ -1,0 +1,79 @@
+---
+title: "Update Webhook"
+openapi: "openapi POST /v1/webhooks.update"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="id" type="string" required>
+  The webhook's ID. Webhooks made in the dashboard use the `ep_…` ID shown by `webhooks.list`.
+</DynamicParamField>
+
+<DynamicParamField body="url" type="string">
+  The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work.
+</DynamicParamField>
+
+<DynamicParamField body="events" type="('customer.products.updated' | 'customer.threshold_reached' | 'balances.usage_alert_triggered' | 'balances.limit_reached' | 'billing.auto_topup_failed' | 'billing.auto_topup_succeeded' | 'billing.updated' | 'invoice.finalized' | 'vercel.resources.deleted' | 'vercel.resources.provisioned' | 'vercel.resources.rotate_secrets' | 'vercel.webhooks.event')[]">
+  The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.
+</DynamicParamField>
+
+<DynamicParamField body="description" type="string">
+  A note for your own reference.
+</DynamicParamField>
+
+<DynamicParamField body="disabled" type="boolean">
+  When true, no events are sent to the webhook.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="id" type="string">
+  The webhook's ID. Webhooks made in the dashboard show their `ep_…` ID.
+</DynamicResponseField>
+
+<DynamicResponseField name="url" type="string">
+  The URL Autumn sends events to.
+</DynamicResponseField>
+
+<DynamicResponseField name="description" type="string | null">
+  A note for your own reference.
+</DynamicResponseField>
+
+<DynamicResponseField name="events" type="string[]">
+  The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.
+</DynamicResponseField>
+
+<DynamicResponseField name="disabled" type="boolean">
+  When true, no events are sent to the webhook.
+</DynamicResponseField>
+
+<DynamicResponseField name="created_at" type="number">
+  When the webhook was created, ms since epoch.
+</DynamicResponseField>
+
+<DynamicResponseField name="updated_at" type="number">
+  When the webhook was last changed, ms since epoch.
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "id": "billing",
+  "url": "https://example.com/webhooks/autumn",
+  "events": [
+    "billing.updated",
+    "invoice.finalized"
+  ],
+  "description": "Plan changes and invoices",
+  "disabled": true,
+  "created_at": 1781113864000,
+  "updated_at": 1781113864000
+}
+```
+</ResponseExample>
