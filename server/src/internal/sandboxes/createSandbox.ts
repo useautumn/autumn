@@ -11,7 +11,6 @@ import {
 	sandboxSlug,
 	validateSandboxName,
 } from "@autumn/shared";
-import { Autumn } from "autumn-js";
 import type { User } from "better-auth";
 import { generateId } from "better-auth";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -56,59 +55,6 @@ export const assertNotSandboxContext = (org: {
 				"Sandboxes are managed from your main organization, not from within a sandbox",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
-		});
-	}
-};
-
-const MAX_SANDBOXES_FEATURE_ID = "max_sandboxes";
-
-type SandboxCapacityCheck = (args: {
-	customerId: string;
-	requiredBalance: number;
-}) => Promise<{ allowed?: boolean }>;
-
-const defaultSandboxCapacityCheck: SandboxCapacityCheck = async ({
-	customerId,
-	requiredBalance,
-}) => {
-	if (!process.env.AUTUMN_SECRET_KEY) {
-		return { allowed: true };
-	}
-	try {
-		const autumn = new Autumn();
-		const { allowed } = await autumn.check({
-			customerId,
-			featureId: MAX_SANDBOXES_FEATURE_ID,
-			requiredBalance,
-		});
-		return { allowed };
-	} catch {
-		return { allowed: true };
-	}
-};
-
-export const assertSandboxCapacity = async ({
-	db,
-	masterOrgId,
-	checkCapacity = defaultSandboxCapacityCheck,
-	existing,
-}: {
-	db: DrizzleCli;
-	masterOrgId: string;
-	checkCapacity?: SandboxCapacityCheck;
-	existing?: Awaited<ReturnType<typeof OrgService.listSandboxes>>;
-}): Promise<void> => {
-	const sandboxes =
-		existing ?? (await OrgService.listSandboxes({ db, masterOrgId }));
-	const { allowed } = await checkCapacity({
-		customerId: masterOrgId,
-		requiredBalance: sandboxes.length + 1,
-	});
-	if (allowed === false) {
-		throw new RecaseError({
-			message: "You've reached your sandbox limit. Contact us to raise it.",
-			code: ErrCode.FeatureLimitReached,
-			statusCode: 403,
 		});
 	}
 };
@@ -176,7 +122,6 @@ export const createSandboxForOrg = async ({
 		db,
 		masterOrgId: masterOrg.id,
 	});
-	await assertSandboxCapacity({ db, masterOrgId: masterOrg.id, existing });
 	await assertSandboxNameUnique({
 		db,
 		masterOrgId: masterOrg.id,
