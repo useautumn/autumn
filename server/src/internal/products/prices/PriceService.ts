@@ -91,6 +91,25 @@ export class PriceService {
 			.where(inArray(prices.id, ids));
 	}
 
+	/** A plan's catalog (non-custom) prices for one feature. Retired prices are custom. */
+	static async listCatalogForFeature({
+		db,
+		internalProductId,
+		internalFeatureId,
+	}: {
+		db: DrizzleCli;
+		internalProductId: string;
+		internalFeatureId: string;
+	}) {
+		return (await db.query.prices.findMany({
+			where: and(
+				eq(prices.internal_product_id, internalProductId),
+				eq(prices.is_custom, false),
+				sql`${prices.config} ->> 'internal_feature_id' = ${internalFeatureId}`,
+			),
+		})) as Price[];
+	}
+
 	static async getByStripeId({
 		db,
 		stripePriceId,
