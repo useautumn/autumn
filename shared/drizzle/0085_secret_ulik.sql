@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_customer_entitlements_pooled_balance_id" ON "customer_entitlements" USING btree ("pooled_balance_id") WHERE "customer_entitlements"."pooled_balance_id" IS NOT NULL;
