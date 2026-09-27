@@ -12,8 +12,6 @@ import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import LoadingScreen from "../general/LoadingScreen";
 import { ApiKeysPage } from "./api-keys/ApiKeysPage";
 
-// import { PublishableKeySection } from "./publishable-key";
-
 const INTEGRATION_TABS = ["stripe", "vercel", "revenuecat"];
 
 export default function DevScreen() {
@@ -38,7 +36,6 @@ export default function DevScreen() {
 			{(tab === "api_keys" || !tab) && (
 				<div className="flex flex-col gap-16">
 					<ApiKeysPage />
-					{/* <PublishableKeySection /> */}
 				</div>
 			)}
 			{tab === "webhooks" && webhooks && svixDashboardUrl && (

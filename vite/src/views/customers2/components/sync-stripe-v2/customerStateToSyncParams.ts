@@ -35,7 +35,6 @@ const toSyncPlan = ({
 		customize: apiPlan.customize as SyncPlanInstance["customize"],
 		entity_id: plan.entityId ?? undefined,
 		quantity: plan.quantity,
-		license_quantities: plan.licenseQuantities,
 		expire_previous: expirePrevious,
 		enable_plan_immediately: enableImmediately ? true : undefined,
 	};
