@@ -11,7 +11,6 @@ import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import LoadingScreen from "../general/LoadingScreen";
 import { ApiKeysPage } from "./api-keys/ApiKeysPage";
-import { PublishableKeySection } from "./publishable-key";
 
 const INTEGRATION_TABS = ["stripe", "vercel", "revenuecat"];
 
@@ -21,7 +20,7 @@ export default function DevScreen() {
 	const { queryStates } = useAppQueryStates({ defaultTab: "api_keys" });
 
 	const tab = queryStates.tab;
-	const { pkey, webhooks } = useAutumnFlags();
+	const { webhooks } = useAutumnFlags();
 
 	// Integrations moved to settings; old links and OAuth callbacks still land here.
 	const requestedTab = new URLSearchParams(location.search).get("tab");
@@ -37,7 +36,6 @@ export default function DevScreen() {
 			{(tab === "api_keys" || !tab) && (
 				<div className="flex flex-col gap-16">
 					<ApiKeysPage />
-					{pkey && <PublishableKeySection />}
 				</div>
 			)}
 			{tab === "webhooks" && webhooks && svixDashboardUrl && (

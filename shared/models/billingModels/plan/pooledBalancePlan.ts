@@ -11,8 +11,8 @@ export const PooledBalanceUpdateSchema = z.object({
 	grantedDelta: z.number(),
 });
 
-/** A pool that lost a contribution and may now be empty. Execution expires it
- * only if no contributions remain — the count is unbounded, so only the DB knows. */
+/** License pools expire when their grant is removed; other pools expire only
+ * when the DB confirms no contributions remain. */
 export const PooledBalanceExpiryCandidateSchema = z.object({
 	pooledCustomerEntitlement: z.custom<FullCustomerEntitlement>(),
 	expiresAt: z.number(),
