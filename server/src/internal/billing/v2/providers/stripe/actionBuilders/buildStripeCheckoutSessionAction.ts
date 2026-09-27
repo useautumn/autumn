@@ -10,6 +10,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildStripeCheckoutSessionItems } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildStripeCheckoutSessionItems";
 import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { stripeDiscountsToCheckoutParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
+import { buildStripeNewSubscriptionAnchorParams } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeNewSubscriptionAnchorParams";
 
 export const buildStripeCheckoutSessionAction = ({
 	ctx,
@@ -69,6 +70,7 @@ export const buildStripeCheckoutSessionAction = ({
 		mode === "subscription"
 			? {
 					trial_end: trialEnd,
+					...buildStripeNewSubscriptionAnchorParams({ billingContext }),
 					...(trialContext?.cardRequired && {
 						trial_settings: {
 							end_behavior: { missing_payment_method: "cancel" },

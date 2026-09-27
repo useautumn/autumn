@@ -1,4 +1,5 @@
-import { notNullish } from "@autumn/shared";
+import { notNullish, secondsToMs } from "@autumn/shared";
+import { UTCDate } from "@date-fns/utc";
 import type Stripe from "stripe";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 
@@ -134,3 +135,11 @@ export const isStripeSubscriptionPastDueTransition = ({
 	const statusChanged = !!previousAttributes && "status" in previousAttributes;
 	return statusChanged && isStripeSubscriptionPastDue(stripeSubscription);
 };
+
+/** Day-of-month only: legacy anchors sit at 12:00 UTC on the 1st and still count. */
+export const isStripeSubscriptionAnchoredToMonthStart = (
+	stripeSubscription: Stripe.Subscription,
+): boolean =>
+	new UTCDate(
+		secondsToMs(stripeSubscription.billing_cycle_anchor),
+	).getUTCDate() === 1;
