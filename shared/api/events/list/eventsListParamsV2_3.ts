@@ -4,6 +4,7 @@ import {
 	createCursorLimitSchema,
 	PaginationDefaults,
 } from "../../common/cursorPaginationSchemas.js";
+import { RangeEnum } from "../components/rangeEnum.js";
 
 export const ApiEventsListV2_3ParamsSchema = z.object({
 	start_cursor: CursorRequestFieldSchema,
@@ -37,6 +38,9 @@ export const ApiEventsListV2_3ParamsSchema = z.object({
 		})
 		.optional()
 		.describe("Filter events by time range"),
+	range: RangeEnum.optional().describe(
+		"Preset time range to filter events by, resolved the same way as in events.aggregate. Cannot be combined with custom_range",
+	),
 	filter_by: z
 		.record(z.string(), z.string())
 		.refine((val) => Object.keys(val).length <= 5, {

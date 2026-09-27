@@ -75,6 +75,29 @@ export const CatalogUpdateMappingsParamsSchema = z.object({
 			}),
 		)
 		.default([]),
+	/** Sets a feature's default Stripe product; prices still on the old default move with it. */
+	feature_mappings: z
+		.array(
+			z.object({
+				feature_id: z.string(),
+				stripe_product_id: z.string().nullable(),
+				/** Creates a new Stripe product for the feature, ignoring `stripe_product_id`. */
+				create_stripe_product: z.boolean().default(false),
+			}),
+		)
+		.default([]),
+	/** Pins one Autumn price to a Stripe product, and optionally an existing Stripe price. */
+	price_mappings: z
+		.array(
+			z.object({
+				price_id: z.string(),
+				stripe_product_id: z.string().nullable(),
+				stripe_price_id: z.string().nullable().default(null),
+				/** Creates a new Stripe product for this price, ignoring `stripe_product_id`. */
+				create_stripe_product: z.boolean().default(false),
+			}),
+		)
+		.default([]),
 });
 
 export const CatalogUpdateMappingsResponseSchema =
@@ -89,6 +112,9 @@ export type CatalogGetMappingsResponse = z.infer<
 	typeof CatalogGetMappingsResponseSchema
 >;
 export type CatalogUpdateMappingsParams = z.infer<
+	typeof CatalogUpdateMappingsParamsSchema
+>;
+export type CatalogUpdateMappingsParamsInput = z.input<
 	typeof CatalogUpdateMappingsParamsSchema
 >;
 export type CatalogUpdateMappingsResponse = z.infer<

@@ -2,7 +2,7 @@
   "name": "atmn",
   "version": "2.0.0",
   "license": "MIT",
-  "description": "The CLI for Autumn — define your pricing in code, sync it to Autumn, and keep everything in version control.",
+  "description": "The CLI for Autumn \u2014 define your pricing in code, sync it to Autumn, and keep everything in version control.",
   "bin": {
     "atmn": "dist/bin.js"
   },
@@ -50,6 +50,7 @@
     "yaml": "2.9.0"
   },
   "devDependencies": {
+    "@autumn/ksuid": "workspace:*",
     "@types/bun": "latest",
     "@typescript/native-preview": "catalog:"
   }

@@ -18,9 +18,9 @@ export const updateSandboxForOrg = async ({
 	sandboxId: string;
 	updates: { name?: string; color?: SandboxColor; icon?: SandboxIcon };
 }): Promise<void> => {
-	await getOwnedSandbox({ db, masterOrg, sandboxId });
+	const sandbox = await getOwnedSandbox({ db, masterOrg, sandboxId });
 
-	if (updates.name !== undefined) {
+	if (updates.name !== undefined && updates.name !== sandbox.name) {
 		assertSandboxNameValid({ name: updates.name });
 		await assertSandboxNameUnique({
 			db,

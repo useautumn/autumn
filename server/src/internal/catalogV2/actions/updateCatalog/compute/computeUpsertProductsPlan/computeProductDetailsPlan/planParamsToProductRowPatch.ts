@@ -50,6 +50,10 @@ export const planParamsToProductRowPatch = ({
 				planParams.config.ignore_past_due ??
 				current?.config?.ignore_past_due ??
 				false,
+			anchor_to_month_start:
+				planParams.config.anchor_to_month_start ??
+				current?.config?.anchor_to_month_start ??
+				false,
 		};
 	}
 	if (planParams.metadata !== undefined) patch.metadata = planParams.metadata;

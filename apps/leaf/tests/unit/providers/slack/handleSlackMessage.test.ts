@@ -10,6 +10,8 @@ const recentMessages = [
 const getRecentMessages = mock(async () => recentMessages);
 let skipReply = false;
 const shouldSkipReply = mock(async (_input: unknown) => skipReply);
+let mentionsAgentResult = false;
+const mentionsAgent = mock(async (_input: unknown) => mentionsAgentResult);
 
 let lists = new Map<string, unknown[]>();
 const state = {
@@ -23,9 +25,11 @@ const dependencies = {
 	dispatch: dispatchSlackAgentMessage,
 	getRecentMessages,
 	getState: () => state,
+	mentionsAgent,
 	shouldSkipReply,
 };
 const {
+	handleEditedSlackMessage,
 	handleSlackMessage,
 	handleSlackThreadStart,
 	handleSubscribedSlackMessage,
@@ -49,19 +53,32 @@ const createMessage = ({
 		text,
 	}) as Message;
 
-const createThread = (history: Message[] = []) => {
+const createThread = (
+	history: Message[] = [],
+	{
+		adapterName = "slack",
+		isDM = false,
+		subscribed = true,
+	}: { adapterName?: string; isDM?: boolean; subscribed?: boolean } = {},
+) => {
 	const addReaction = mock(async () => {});
+	const subscribe = mock(async () => {});
 	const unsubscribe = mock(async () => {});
 	return {
 		addReaction,
+		subscribe,
 		thread: {
 			adapter: {
 				addReaction,
+				name: adapterName,
 				removeReaction: mock(async () => {}),
 			},
 			channelId: "C1",
 			id: "slack:C1:1",
+			isDM,
+			isSubscribed: async () => subscribed,
 			recentMessages: history,
+			subscribe,
 			unsubscribe,
 		} as unknown as Thread,
 		unsubscribe,
@@ -79,6 +96,8 @@ const lastDispatchInput = () =>
 
 beforeEach(() => {
 	disposition = "close";
+	mentionsAgentResult = false;
+	mentionsAgent.mockClear();
 	skipReply = false;
 	shouldSkipReply.mockClear();
 	lists = new Map();
@@ -263,5 +282,121 @@ describe("handleSlackMessage", () => {
 
 		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
 		expect(unsubscribe).not.toHaveBeenCalled();
+	});
+});
+
+describe("handleEditedSlackMessage", () => {
+	const dispatchedText = () =>
+		(dispatchSlackAgentMessage.mock.calls.at(-1)?.[0] as { text: string }).text;
+
+	test("sends an edit in a followed thread to the agent with before and after", async () => {
+		disposition = "keep";
+		const { thread } = createThread();
+
+		await handleEditedSlackMessage(
+			thread,
+			createMessage({ text: "deployment abc123" }),
+			createMessage({ text: "deployment abc12" }),
+		);
+
+		expect(dispatchSlackAgentMessage).toHaveBeenCalledTimes(1);
+		expect(dispatchedText()).toBe(
+			"(I edited my earlier message.)\nBefore: deployment abc12\nNow: deployment abc123",
+		);
+	});
+
+	test("an edit to a stop command reaches dispatch unframed", async () => {
+		const { thread } = createThread();
+
+		await handleEditedSlackMessage(
+			thread,
+			createMessage({ text: "stop replying" }),
+			createMessage({ text: "make it annual" }),
+		);
+
+		expect(dispatchedText()).toBe("stop replying");
+	});
+
+	test("an edit in a followed thread still respects mentions-only mode", async () => {
+		skipReply = true;
+		const { thread } = createThread();
+
+		await handleEditedSlackMessage(
+			thread,
+			createMessage({ text: "new" }),
+			createMessage({ text: "old" }),
+		);
+
+		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
+	});
+
+	test("ignores an update whose text did not change", async () => {
+		const { thread } = createThread();
+
+		await handleEditedSlackMessage(
+			thread,
+			createMessage({ text: "same" }),
+			createMessage({ text: "same" }),
+		);
+
+		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
+	});
+
+	test("ignores bot edits and non-Slack adapters", async () => {
+		await handleEditedSlackMessage(
+			createThread().thread,
+			createMessage({ isBot: true, text: "new" }),
+			createMessage({ text: "old" }),
+		);
+		await handleEditedSlackMessage(
+			createThread([], { adapterName: "web" }).thread,
+			createMessage({ text: "new" }),
+			createMessage({ text: "old" }),
+		);
+
+		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
+	});
+
+	test("answers an edit in a DM", async () => {
+		const { thread } = createThread([], { isDM: true, subscribed: false });
+
+		await handleEditedSlackMessage(
+			thread,
+			createMessage({ text: "new" }),
+			createMessage({ text: "old" }),
+		);
+
+		expect(mentionsAgent).not.toHaveBeenCalled();
+		expect(dispatchSlackAgentMessage).toHaveBeenCalledTimes(1);
+	});
+
+	test("starts a thread when an edit tags the agent in an unfollowed thread", async () => {
+		disposition = "keep";
+		mentionsAgentResult = true;
+		const { subscribe, thread } = createThread([], { subscribed: false });
+
+		await handleEditedSlackMessage(
+			thread,
+			createMessage({ text: "<@U_BOT> start a trial" }),
+			createMessage({ text: "start a trial" }),
+		);
+
+		expect(subscribe).toHaveBeenCalledTimes(1);
+		expect(dispatchSlackAgentMessage).toHaveBeenCalledWith(
+			expect.objectContaining({ showRunPlan: true }),
+		);
+	});
+
+	test("leaves an untagged edit in an unfollowed thread alone", async () => {
+		const { subscribe, thread } = createThread([], { subscribed: false });
+
+		await handleEditedSlackMessage(
+			thread,
+			createMessage({ text: "new" }),
+			createMessage({ text: "old" }),
+		);
+
+		expect(subscribe).not.toHaveBeenCalled();
+		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
 	});
 });

@@ -4,16 +4,14 @@ import { CustomerStatePlanPicker } from "@/components/forms/customer-state/compo
 import { getUsedGroupKeys } from "@/components/forms/customer-state/customerStateUtils";
 import { findPreviousPhasePlan } from "@/components/forms/customer-state/useCustomerStateHandlers";
 import {
-	PlanPrepaidQuantityFields,
 	ScopedPlanRow,
 	SelectedPlanRow,
 	usePlanScopeField,
 } from "@/components/forms/shared";
 import type { PlanRowAction } from "@/components/forms/shared/PlanRowActionsMenu";
-import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { cn } from "@/lib/utils";
 import { useCustomerStateContext } from "../CustomerStateProvider";
-import { CustomerStatePlanLicenseRows } from "./CustomerStatePlanLicenseRows";
+import { CustomerStatePlanQuantities } from "./CustomerStatePlanQuantities";
 import { NotFoundBadge } from "./NotFoundBadge";
 import { PlanPriceLabel } from "./PlanPriceLabel";
 
@@ -35,8 +33,9 @@ export function CustomerStatePlanRow({
 		setEditingPlan,
 		canMakeUnscheduled,
 		planNotFoundReasons,
+		handleSelectPlanProduct,
 	} = useCustomerStateContext();
-	const { displayCurrency } = useCustomerDisplayCurrency();
+	const location = { location: "phase", phaseIndex, planIndex } as const;
 
 	const plan = formValues.phases[phaseIndex]?.plans[planIndex];
 	const isOpeningPhase = phaseIndex === 0;
@@ -70,25 +69,8 @@ export function CustomerStatePlanRow({
 			.filter(Boolean),
 	);
 
-	const handleProductChange = (productId: string) => {
-		form.setFieldValue(
-			`phases[${phaseIndex}].plans[${planIndex}].productId`,
-			productId,
-		);
-		form.setFieldValue(
-			`phases[${phaseIndex}].plans[${planIndex}].prepaidOptions`,
-			{},
-		);
-		form.setFieldValue(`phases[${phaseIndex}].plans[${planIndex}].items`, null);
-		form.setFieldValue(
-			`phases[${phaseIndex}].plans[${planIndex}].licenseQuantities`,
-			undefined,
-		);
-		form.setFieldValue(
-			`phases[${phaseIndex}].plans[${planIndex}].version`,
-			undefined,
-		);
-	};
+	const handleProductChange = (productId: string) =>
+		handleSelectPlanProduct({ location, productId });
 
 	if (!plan.productId) {
 		// Group conflicts are per scope, so the scope has to be pickable before a
@@ -184,32 +166,10 @@ export function CustomerStatePlanRow({
 					onRemove={() => handleRemovePlan({ phaseIndex, planIndex })}
 				/>
 			</ScopedPlanRow>
-			<PlanPrepaidQuantityFields
-				items={plan.items ?? selectedProduct?.items}
-				quantities={plan.prepaidOptions}
-				currency={displayCurrency}
-				readOnly={isLocked}
-				renderField={({ featureId, step, stops }) => (
-					<form.AppField
-						name={`phases[${phaseIndex}].plans[${planIndex}].prepaidOptions.${featureId}`}
-					>
-						{(field) => (
-							<field.QuantityField
-								fullWidth
-								hideFieldInfo
-								label=""
-								min={0}
-								step={step}
-								stops={stops}
-							/>
-						)}
-					</form.AppField>
-				)}
-			/>
-			<CustomerStatePlanLicenseRows
+			<CustomerStatePlanQuantities
+				location={location}
 				plan={plan}
-				planPath={`phases[${phaseIndex}].plans[${planIndex}]`}
-				currency={displayCurrency}
+				product={selectedProduct}
 				readOnly={isLocked}
 			/>
 		</div>

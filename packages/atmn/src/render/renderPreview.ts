@@ -1,5 +1,10 @@
 import chalk from "chalk";
 import { PREVIOUS_ATTRIBUTE_LABELS } from "../generated/labels";
+import {
+	renderWebhooks,
+	type WebhooksPreview,
+	webhooksHaveWork,
+} from "./renderWebhooks";
 
 /**
  * Headless rendering only, for now — the shape a CI log or a piped terminal
@@ -128,6 +133,8 @@ export type CatalogPreview = {
 	migrations?: PlannedMigration[];
 	/** Absent when the config states no `settings`. */
 	settings?: SettingsPreview;
+	/** Absent when the config states no `webhooks`. */
+	webhooks?: WebhooksPreview;
 };
 
 const MARKERS: Record<
@@ -835,13 +842,18 @@ export const renderPreview = ({
 	const referralPrograms = (preview.referralPrograms ?? []).filter(rowHasWork);
 	const migrations = preview.migrations ?? [];
 	const settings = settingChanges(preview.settings);
+	const webhooks =
+		preview.webhooks === undefined
+			? null
+			: renderWebhooks({ webhooks: preview.webhooks });
 
 	if (
 		features.length === 0 &&
 		plans.length === 0 &&
 		rewards.length === 0 &&
 		referralPrograms.length === 0 &&
-		settings.length === 0
+		settings.length === 0 &&
+		webhooks === null
 	) {
 		return chalk.dim("No changes. Your catalog matches your config.");
 	}
@@ -923,6 +935,8 @@ export const renderPreview = ({
 		);
 	}
 
+	if (webhooks !== null) sections.push(webhooks);
+
 	if (migrations.length > 0) {
 		// The server saying customers would need moving. Nothing is drafted by a
 		// preview; the applied block after --yes carries the ids and links.
@@ -942,4 +956,5 @@ export const previewIsEmpty = ({
 	!(preview.plans ?? []).some(rowHasWork) &&
 	!(preview.rewards ?? []).some(rowHasWork) &&
 	!(preview.referralPrograms ?? []).some(rowHasWork) &&
-	!settingsHaveWork({ settings: preview.settings });
+	!settingsHaveWork({ settings: preview.settings }) &&
+	!webhooksHaveWork({ webhooks: preview.webhooks });

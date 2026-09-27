@@ -6,6 +6,7 @@ import {
 	type SyncBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe";
 import { syncContextToCurrencyLock } from "../utils/syncContextUtils";
@@ -50,6 +51,13 @@ const combineStartingNowResults = (
 	customerLicenseUpdates: results.flatMap((r) => r.customerLicenseUpdates),
 });
 
+const expiredCustomerProducts = (
+	updates: ImmediatePhaseResult["updateCustomerProducts"],
+): FullCusProduct[] =>
+	updates.flatMap(({ customerProduct, updates: { status } }) =>
+		status === CusProductStatus.Expired ? [customerProduct] : [],
+	);
+
 /** Compose the AutumnBillingPlan from the immediate + future phase computations. */
 export const computeSyncPlan = ({
 	ctx,
@@ -68,15 +76,21 @@ export const computeSyncPlan = ({
 	immediate.updateCustomerProducts.push(
 		...computeUnlistedCustomerProductExpiries({ syncContext }),
 	);
-	const outgoingCustomerProducts: FullCusProduct[] = [];
-	for (const { customerProduct, updates } of [
-		...immediate.updateCustomerProducts,
-		...future.updateCustomerProducts,
-	]) {
-		if (updates.status === CusProductStatus.Expired) {
-			outgoingCustomerProducts.push(customerProduct);
-		}
-	}
+	const immediateOutgoingCustomerProducts = expiredCustomerProducts(
+		immediate.updateCustomerProducts,
+	);
+	const outgoingCustomerProducts = [
+		...immediateOutgoingCustomerProducts,
+		...expiredCustomerProducts(future.updateCustomerProducts),
+	];
+	// Replacements start now, so seat pools and their assignments move over now.
+	const customerLicenseTransitions = computeCustomerLicenseTransitions({
+		outgoingCustomerProducts: immediateOutgoingCustomerProducts,
+		incomingCustomerProducts: immediate.insertCustomerProducts,
+		carryOverUsages: syncContext.carryOverUsage
+			? syncContext.carryOverUsages
+			: undefined,
+	});
 	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
 		ctx,
 		fullCustomer: syncContext.fullCustomer,
@@ -121,6 +135,10 @@ export const computeSyncPlan = ({
 		customerLicenseUpdates:
 			immediate.customerLicenseUpdates.length > 0
 				? immediate.customerLicenseUpdates
+				: undefined,
+		customerLicenseTransitions:
+			customerLicenseTransitions.length > 0
+				? customerLicenseTransitions
 				: undefined,
 		// Saving the new schedule replaces the old one and the plans it had queued,
 		// so the old schedule's phases must not be re-pointed at this sync's plans.

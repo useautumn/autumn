@@ -1,7 +1,6 @@
 import type {
 	BillingBehavior,
 	CustomizePlanLicense,
-	LicenseQuantityParams,
 	ProductItem,
 } from "@autumn/shared";
 import { addMonths, addYears } from "date-fns";
@@ -37,11 +36,6 @@ const upsertLicensesFrom = (plan: Record<string, unknown>) => {
 		: null;
 };
 
-const licenseQuantitiesFrom = (plan: Record<string, unknown>) =>
-	Array.isArray(plan.license_quantities)
-		? (plan.license_quantities as LicenseQuantityParams[])
-		: undefined;
-
 const planFrom = (value: unknown): CustomerStatePlan | undefined => {
 	const plan = requestRecord(value);
 	if (!plan || typeof plan.plan_id !== "string") return undefined;
@@ -51,9 +45,10 @@ const planFrom = (value: unknown): CustomerStatePlan | undefined => {
 		isCustom: Array.isArray(plan.items),
 		items: overrides.items ?? null,
 		addLicenses: upsertLicensesFrom(plan),
-		licenseQuantities: licenseQuantitiesFrom(plan),
 		prepaidOptions:
 			readQuantities("feature_quantities", "feature_id")(plan) ?? {},
+		licenseQuantities:
+			readQuantities("license_quantities", "license_plan_id")(plan) ?? {},
 		productId: plan.plan_id,
 		version: overrides.version,
 	};

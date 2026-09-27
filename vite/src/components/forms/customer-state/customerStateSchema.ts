@@ -1,7 +1,6 @@
 import {
 	BillingBehaviorSchema,
 	type CustomizePlanLicense,
-	type LicenseQuantityParams,
 	type ProductItem,
 } from "@autumn/shared";
 import { z } from "zod/v4";
@@ -9,14 +8,14 @@ import { z } from "zod/v4";
 export const CustomerStatePlanSchema = z.object({
 	productId: z.string().min(1),
 	prepaidOptions: z.record(z.string(), z.number().nonnegative()),
+	/** Total seats per license plan, included seats counted. */
+	licenseQuantities: z.record(z.string(), z.number().int().nonnegative()),
 	items: z.custom<ProductItem[]>().nullable(),
 	addLicenses: z.custom<CustomizePlanLicense[]>().nullable(),
 	isCustom: z.boolean(),
 	version: z.number().positive().optional(),
 	// Only meaningful on the first phase — later phases inherit its scope.
 	entityId: z.string().nullable().optional(),
-	/** Seat totals per license, inclusive of included seats. */
-	licenseQuantities: z.custom<LicenseQuantityParams[]>().optional(),
 
 	// Sync only — carried over from what Stripe bills.
 	/** Add-on instances to create from this row. */
@@ -28,6 +27,7 @@ export type CustomerStatePlan = z.infer<typeof CustomerStatePlanSchema>;
 export const EMPTY_CUSTOMER_STATE_PLAN: CustomerStatePlan = {
 	productId: "",
 	prepaidOptions: {},
+	licenseQuantities: {},
 	items: null,
 	addLicenses: null,
 	isCustom: false,
@@ -40,6 +40,11 @@ export const EMPTY_CUSTOMER_STATE_PLAN: CustomerStatePlan = {
 export type PlanLocation =
 	| { location: "phase"; phaseIndex: number; planIndex: number }
 	| { location: "unscheduled"; planIndex: number };
+
+export const planLocationToFieldPath = (location: PlanLocation) =>
+	location.location === "unscheduled"
+		? (`unscheduledPlans[${location.planIndex}]` as const)
+		: (`phases[${location.phaseIndex}].plans[${location.planIndex}]` as const);
 
 export const CustomerStatePhaseSchema = z.object({
 	startsAt: z.number().nullable(),

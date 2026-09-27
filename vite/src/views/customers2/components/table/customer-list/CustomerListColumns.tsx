@@ -4,7 +4,6 @@ import {
 	type CustomerSchema,
 	type FullCusProduct,
 	type FullCustomer,
-	isCustomerProductTrialing,
 } from "@autumn/shared";
 import {
 	MiniCopyButton,
@@ -16,14 +15,14 @@ import {
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { z } from "zod/v4";
 import {
-	dateSkeleton,
 	hiddenSkeleton,
 	idSkeleton,
 	statusSkeleton,
 } from "@/components/general/table";
 import { useOrg } from "@/hooks/common/useOrg";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { CustomerProductsStatus } from "../customer-products/CustomerProductsStatus";
+import { truncateMiddle } from "@/utils/formatUtils/formatTextUtils";
+import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
+import { PlanStatusChip } from "../customer-products/PlanStatusChip";
 import { CustomerListRowToolbar } from "./CustomerListRowToolbar";
 import { FeatureUsageCell } from "./FeatureUsageCell";
 
@@ -96,30 +95,14 @@ const getCusProductsInfo = ({
 				.map((cusProduct: (typeof activeProducts)[number], index: number) => {
 					return (
 						<div key={index} className="flex items-center gap-2 w-full min-w-0">
-							<span className="text-tertiary-foreground truncate min-w-0">
-								{(cusProduct as FullCusProduct).product.name}
-							</span>
-							<CustomerProductsStatus
-								status={(cusProduct as FullCusProduct).status}
-								canceled={
-									(cusProduct as FullCusProduct).canceled_at ? true : undefined
-								}
-								canceled_at={
-									(cusProduct as FullCusProduct).canceled_at ?? undefined
-								}
-								tooltip={true}
-								trialing={
-									isCustomerProductTrialing(cusProduct as FullCusProduct, {
-										nowMs: Date.now(),
-									}) || false
-								}
-								trial_ends_at={
-									(cusProduct as FullCusProduct).trial_ends_at ?? undefined
-								}
+							<PlanStatusChip
+								customerProduct={cusProduct as FullCusProduct}
+								display="icon"
+								className="min-w-0"
 							/>
 							{extraCount > 0 && (
 								<TooltipProvider>
-									<Tooltip delayDuration={0}>
+									<Tooltip delayDuration={150}>
 										<TooltipTrigger>
 											<span className="ml-1 bg-muted text-tertiary-foreground px-1 py-0.5 rounded-md font-medium shrink-0">
 												+{extraCount}
@@ -155,9 +138,12 @@ export const createCustomerListColumns = (): ColumnDef<
 		header: "Name",
 		accessorKey: "name",
 		size: 130,
+		meta: { grow: true },
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			return (
-				<div className="font-medium text-foreground">{row.original.name}</div>
+				<div className="truncate pr-4 font-medium text-foreground">
+					{row.original.name}
+				</div>
 			);
 		},
 	},
@@ -165,14 +151,17 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "customer_id",
 		header: "ID",
 		accessorKey: "id",
-		size: 130,
+		size: 140,
 		meta: { skeleton: idSkeleton },
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			const customer = row.original;
 			return (
 				<div className="font-mono justify-start flex w-full group">
 					{customer.id ? (
-						<MiniCopyButton text={customer.id} />
+						<MiniCopyButton
+							text={customer.id}
+							displayText={truncateMiddle({ text: customer.id })}
+						/>
 					) : (
 						<span className="px-1 text-tertiary-foreground">PENDING</span>
 					)}
@@ -184,7 +173,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "email",
 		header: "Email",
 		accessorKey: "email",
-		size: 120,
+		size: 220,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			const email = row.original.email;
 			if (!email) return null;
@@ -199,7 +188,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "customer_products",
 		header: "Products",
 		accessorKey: "customer_products",
-		size: 110,
+		size: 260,
 		meta: { skeleton: statusSkeleton },
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			return getCusProductsInfo({
@@ -208,20 +197,13 @@ export const createCustomerListColumns = (): ColumnDef<
 		},
 	},
 	{
+		...createDateTimeColumn<CustomerWithProducts>({
+			header: "Created At",
+			accessorKey: "created_at",
+		}),
 		id: "created_at",
-		header: "Created At",
-		accessorKey: "created_at",
-		size: 100,
+		size: 110,
 		enableSorting: true,
-		meta: { skeleton: dateSkeleton },
-		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
-			const { date, time } = formatUnixToDateTime(row.original.created_at);
-			return (
-				<div className="text-xs text-subtle pr-4 w-full">
-					{date} <span className=" truncate">{time}</span>
-				</div>
-			);
-		},
 	},
 	{
 		id: "actions",

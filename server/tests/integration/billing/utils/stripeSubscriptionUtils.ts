@@ -95,9 +95,6 @@ export const getStripeSubscription = async ({
 	let billingPeriod: { start: number; end: number };
 	if (interval) {
 		const anchorMs = secondsToMs(subscription.billing_cycle_anchor);
-		const subCreatedMs = subscription.created
-			? secondsToMs(subscription.created)
-			: undefined;
 		const nowMs = Date.now();
 
 		billingPeriod = {
@@ -106,7 +103,6 @@ export const getStripeSubscription = async ({
 				interval,
 				intervalCount,
 				now: nowMs,
-				floor: subCreatedMs,
 			}),
 			end: getCycleEnd({
 				anchor: anchorMs,

@@ -1,5 +1,6 @@
 import type { FullCustomer, ProductV2 } from "@autumn/shared";
 import { reconstructCustomItems } from "@/components/forms/shared/utils/reconstructCustomItems";
+import { customerLicenseTotals } from "@/utils/billing/licenseQuantityUtils";
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import {
 	type CustomerStatePlan,
@@ -41,6 +42,9 @@ export function customerProductToCustomerStatePlan({
 		productId: cusProduct.product_id,
 		version: cusProduct.product.version,
 		prepaidOptions,
+		licenseQuantities: customerLicenseTotals({
+			customerLicenses: cusProduct.customer_licenses,
+		}),
 		items,
 		isCustom,
 		// Plans span entities, so each row carries its own scope.

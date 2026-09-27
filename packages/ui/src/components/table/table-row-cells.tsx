@@ -12,7 +12,7 @@ import {
 import { cn } from "@autumn/ui/lib/utils";
 import type { Row } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
-import { memo, type ReactNode } from "react";
+import { type CSSProperties, memo, type ReactNode } from "react";
 
 interface TableRowCellsProps<T> {
 	row: Row<T>;
@@ -73,12 +73,11 @@ function TableRowCellsInner<T>({
 					cell.column.columnDef.cell,
 					cell.getContext(),
 				);
-				const cellStyle = flexibleTableColumns
-					? {
-							width: `${cell.column.getSize()}px`,
-							maxWidth: `${cell.column.getSize()}px`,
-						}
-					: { width: `${cell.column.getSize()}px` };
+				const cellStyle = getColumnWidthStyle({
+					size: cell.column.getSize(),
+					flexible: flexibleTableColumns,
+					grow: cell.column.columnDef.meta?.grow,
+				});
 
 				return (
 					<TableCell
@@ -129,6 +128,20 @@ export const TableRowCells = memo(
 
 const SKELETON_WIDTHS = ["w-3/5", "w-1/2", "w-2/3", "w-2/5", "w-3/4", "w-1/2"];
 
+export function getColumnWidthStyle({
+	size,
+	flexible,
+	grow,
+}: {
+	size: number;
+	flexible?: boolean;
+	grow?: boolean;
+}): CSSProperties {
+	if (grow) return { minWidth: `${size}px` };
+	if (flexible) return { width: `${size}px`, maxWidth: `${size}px` };
+	return { width: `${size}px` };
+}
+
 export type ColumnSkeletonMeta = {
 	skeleton?: ReactNode | ((rowIndex: number) => ReactNode);
 	hidden?: boolean;
@@ -141,7 +154,12 @@ export function TableSkeletonRows({
 	flexibleTableColumns,
 	asFragment = false,
 }: {
-	columns: { id: string; size: number; skeleton?: ColumnSkeletonMeta }[];
+	columns: {
+		id: string;
+		size: number;
+		grow?: boolean;
+		skeleton?: ColumnSkeletonMeta;
+	}[];
 	rowCount?: number;
 	rowClassName?: string;
 	flexibleTableColumns?: boolean;
@@ -157,9 +175,11 @@ export function TableSkeletonRows({
 		>
 			{columns.map((col, colIndex) => {
 				const meta = col.skeleton;
-				const cellStyle = flexibleTableColumns
-					? { width: `${col.size}px`, maxWidth: `${col.size}px` }
-					: { width: `${col.size}px` };
+				const cellStyle = getColumnWidthStyle({
+					size: col.size,
+					flexible: flexibleTableColumns,
+					grow: col.grow,
+				});
 
 				if (meta?.hidden) {
 					return (

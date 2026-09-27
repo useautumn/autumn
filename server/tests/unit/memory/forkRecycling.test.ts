@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
+import net from "node:net";
 import {
 	createRecycleCoordinator,
 	type RecycleCoordinator,
@@ -38,6 +41,7 @@ describe("getForkRecycleConfig", () => {
 		"FORK_RECYCLE_MIN_AGE_MS",
 		"FORK_RECYCLE_CHECK_INTERVAL_MS",
 		"FORK_RECYCLE_DRAIN_TIMEOUT_MS",
+		"FORK_RECYCLE_DRAIN_GRACE_MS",
 		"FORK_RECYCLE_DISABLED",
 	] as const;
 	const saved = new Map<string, string | undefined>();
@@ -62,6 +66,16 @@ describe("getForkRecycleConfig", () => {
 		expect(config.enabled).toBe(true);
 		expect(config.rssThresholdBytes).toBe(2000 * MB);
 		expect(config.minAgeMs).toBe(30 * 60_000);
+		expect(config.drainGraceMs).toBe(5_000);
+	});
+
+	test("FORK_RECYCLE_DRAIN_GRACE_MS overrides the grace, and 0 disables it", () => {
+		process.env.FORK_RECYCLE_DRAIN_GRACE_MS = "2500";
+		expect(getForkRecycleConfig().drainGraceMs).toBe(2500);
+		process.env.FORK_RECYCLE_DRAIN_GRACE_MS = "0";
+		expect(getForkRecycleConfig().drainGraceMs).toBe(0);
+		process.env.FORK_RECYCLE_DRAIN_GRACE_MS = "-1";
+		expect(getForkRecycleConfig().drainGraceMs).toBe(5_000);
 	});
 
 	test("valid overrides are honored", () => {
@@ -493,6 +507,7 @@ describe("createWorkerDrainer", () => {
 				exits.push(code);
 			},
 			drainTimeoutMs: 5_000,
+			graceMs: 0,
 			idleSweepIntervalMs: 10,
 			log: () => {},
 		});
@@ -520,6 +535,7 @@ describe("createWorkerDrainer", () => {
 				exits.push(code);
 			},
 			drainTimeoutMs: 30,
+			graceMs: 0,
 			idleSweepIntervalMs: 10,
 			log: () => {},
 		});
@@ -541,6 +557,7 @@ describe("createWorkerDrainer", () => {
 				exits.push(code);
 			},
 			drainTimeoutMs: 20,
+			graceMs: 0,
 			maxDrainMs: 5_000,
 			idleSweepIntervalMs: 10,
 			getActiveRequestCount: () => activeCount,
@@ -566,6 +583,7 @@ describe("createWorkerDrainer", () => {
 				exits.push(code);
 			},
 			drainTimeoutMs: 20,
+			graceMs: 0,
 			maxDrainMs: 50,
 			idleSweepIntervalMs: 10,
 			getActiveRequestCount: () => 1,
@@ -577,7 +595,7 @@ describe("createWorkerDrainer", () => {
 		expect(exits).toEqual([0]);
 	});
 
-	test("onDrainStart fires before the server begins closing", () => {
+	test("onDrainStart fires immediately, but the server stays open for the grace period", async () => {
 		const order: string[] = [];
 		const server: FakeServer = {
 			close: () => {
@@ -589,6 +607,7 @@ describe("createWorkerDrainer", () => {
 			server,
 			exit: () => {},
 			drainTimeoutMs: 5_000,
+			graceMs: 40,
 			idleSweepIntervalMs: 10,
 			onDrainStart: () => {
 				order.push("drainStart");
@@ -597,7 +616,40 @@ describe("createWorkerDrainer", () => {
 		});
 
 		drainer.drain();
+		expect(order).toEqual(["drainStart"]);
+
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		expect(order).toEqual(["drainStart"]);
+
+		await new Promise((resolve) => setTimeout(resolve, 40));
 		expect(order).toEqual(["drainStart", "close"]);
+	});
+
+	test("the drain deadline starts after the grace period, so it cannot exit first", async () => {
+		const order: string[] = [];
+		const server: FakeServer = {
+			close: () => {
+				order.push("close");
+			},
+		};
+
+		const drainer = createWorkerDrainer({
+			server,
+			exit: () => {
+				order.push("exit");
+			},
+			drainTimeoutMs: 10,
+			graceMs: 40,
+			idleSweepIntervalMs: 10,
+			log: () => {},
+		});
+
+		drainer.drain();
+		await new Promise((resolve) => setTimeout(resolve, 25));
+		expect(order).toEqual([]);
+
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		expect(order).toEqual(["close", "exit"]);
 	});
 
 	test("drain is idempotent — a second call neither double-closes nor double-exits", async () => {
@@ -614,15 +666,76 @@ describe("createWorkerDrainer", () => {
 				exits.push(code);
 			},
 			drainTimeoutMs: 5_000,
+			graceMs: 0,
 			idleSweepIntervalMs: 10,
 			log: () => {},
 		});
 
 		drainer.drain();
 		drainer.drain();
+		await new Promise((resolve) => setTimeout(resolve, 10));
 		closeCallbacks[0]?.();
 
 		expect(closeCallbacks).toHaveLength(1);
 		expect(exits).toEqual([0]);
+	});
+
+	test("a request already queued on an idle keep-alive socket at drain start is answered, not reset", async () => {
+		let draining = false;
+		const server = http.createServer((_request, response) => {
+			if (draining) response.setHeader("connection", "close");
+			response.end("ok");
+		});
+		await new Promise<void>((resolve) =>
+			server.listen(0, "127.0.0.1", () => resolve()),
+		);
+		const { port } = server.address() as AddressInfo;
+
+		const waitUntil = async (condition: () => boolean) => {
+			const deadline = Date.now() + 2_000;
+			while (!condition() && Date.now() < deadline) {
+				await new Promise((resolve) => setTimeout(resolve, 5));
+			}
+		};
+
+		const socket = net.connect(port, "127.0.0.1");
+		let received = "";
+		let closed = false;
+		socket.on("data", (chunk) => {
+			received += chunk.toString();
+		});
+		socket.on("close", () => {
+			closed = true;
+		});
+		socket.on("error", () => {});
+		const request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+		socket.write(request);
+		await waitUntil(() => received.endsWith("ok"));
+		expect(received).toStartWith("HTTP/1.1 200 OK");
+		received = "";
+
+		const drainer = createWorkerDrainer({
+			server,
+			exit: (code) => {
+				exits.push(code);
+			},
+			drainTimeoutMs: 1_000,
+			graceMs: 50,
+			idleSweepIntervalMs: 10,
+			onDrainStart: () => {
+				draining = true;
+			},
+			log: () => {},
+		});
+
+		socket.write(request);
+		drainer.drain();
+
+		await waitUntil(() => closed);
+		socket.destroy();
+
+		expect(received).toStartWith("HTTP/1.1 200 OK");
+		expect(received.toLowerCase()).toContain("connection: close");
 	});
 });

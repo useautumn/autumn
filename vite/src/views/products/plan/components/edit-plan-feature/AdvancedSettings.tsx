@@ -22,7 +22,6 @@ import { PooledBalanceConfig } from "./advanced-settings/PooledBalanceConfig";
 import { ProrationConfig } from "./advanced-settings/ProrationConfig";
 import { ResetIntervalConfig } from "./advanced-settings/ResetIntervalConfig";
 import { RolloverConfig } from "./advanced-settings/RolloverConfig";
-import { StripePriceConfig } from "./advanced-settings/StripePriceConfig";
 import { ThresholdBillingConfig } from "./advanced-settings/ThresholdBillingConfig";
 import { showsThresholdBilling } from "./advanced-settings/thresholdBillingItem";
 import { UsageLimit } from "./advanced-settings/UsageLimit";
@@ -70,10 +69,6 @@ export function AdvancedSettings() {
 		usageType === FeatureUsageType.Single &&
 		!isOneOff;
 
-	// Prepaid maps into the v2 slot, usage-based into v1; the meter comes from
-	// the adopted price rather than being mapped.
-	const showStripePrice = isPriced;
-
 	return (
 		<SheetAccordion type="single" withSeparator={false} collapsible={true}>
 			<SheetAccordionItem
@@ -107,9 +102,6 @@ export function AdvancedSettings() {
 
 					{/* Reset Interval Config */}
 					{showResetInterval && <ResetIntervalConfig />}
-
-					{/* Stripe price mapping */}
-					{showStripePrice && <StripePriceConfig />}
 				</div>
 			</SheetAccordionItem>
 		</SheetAccordion>

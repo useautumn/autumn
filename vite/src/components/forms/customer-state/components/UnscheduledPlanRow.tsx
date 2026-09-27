@@ -1,14 +1,12 @@
 import { CustomerStatePlanPicker } from "@/components/forms/customer-state/components/CustomerStatePlanPicker";
 import { getUnscheduledUsedGroupKeys } from "@/components/forms/customer-state/customerStateUtils";
 import {
-	PlanPrepaidQuantityFields,
 	ScopedPlanRow,
 	SelectedPlanRow,
 	usePlanScopeField,
 } from "@/components/forms/shared";
-import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useCustomerStateContext } from "../CustomerStateProvider";
-import { CustomerStatePlanLicenseRows } from "./CustomerStatePlanLicenseRows";
+import { CustomerStatePlanQuantities } from "./CustomerStatePlanQuantities";
 import { NotFoundBadge } from "./NotFoundBadge";
 import { PlanPriceLabel } from "./PlanPriceLabel";
 
@@ -20,8 +18,9 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 		handleRemoveUnscheduledPlan,
 		setEditingPlan,
 		planNotFoundReasons,
+		handleSelectPlanProduct,
 	} = useCustomerStateContext();
-	const { displayCurrency } = useCustomerDisplayCurrency();
+	const location = { location: "unscheduled", planIndex } as const;
 
 	const plan = formValues.unscheduledPlans[planIndex];
 	const { scope } = usePlanScopeField({
@@ -45,16 +44,8 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 		entityId: plan.entityId ?? null,
 	});
 
-	const handleProductChange = (productId: string) => {
-		form.setFieldValue(`unscheduledPlans[${planIndex}].productId`, productId);
-		form.setFieldValue(`unscheduledPlans[${planIndex}].prepaidOptions`, {});
-		form.setFieldValue(`unscheduledPlans[${planIndex}].items`, null);
-		form.setFieldValue(
-			`unscheduledPlans[${planIndex}].licenseQuantities`,
-			undefined,
-		);
-		form.setFieldValue(`unscheduledPlans[${planIndex}].version`, undefined);
-	};
+	const handleProductChange = (productId: string) =>
+		handleSelectPlanProduct({ location, productId });
 
 	if (!plan.productId) {
 		// Group conflicts are per scope, so the scope has to be pickable before a
@@ -109,31 +100,10 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 					onRemove={() => handleRemoveUnscheduledPlan({ planIndex })}
 				/>
 			</ScopedPlanRow>
-			<PlanPrepaidQuantityFields
-				items={plan.items ?? selectedProduct?.items}
-				quantities={plan.prepaidOptions}
-				currency={displayCurrency}
-				renderField={({ featureId, step, stops }) => (
-					<form.AppField
-						name={`unscheduledPlans[${planIndex}].prepaidOptions.${featureId}`}
-					>
-						{(field) => (
-							<field.QuantityField
-								fullWidth
-								hideFieldInfo
-								label=""
-								min={0}
-								step={step}
-								stops={stops}
-							/>
-						)}
-					</form.AppField>
-				)}
-			/>
-			<CustomerStatePlanLicenseRows
+			<CustomerStatePlanQuantities
+				location={location}
 				plan={plan}
-				planPath={`unscheduledPlans[${planIndex}]`}
-				currency={displayCurrency}
+				product={selectedProduct}
 			/>
 		</div>
 	);

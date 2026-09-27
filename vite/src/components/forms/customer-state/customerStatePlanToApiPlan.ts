@@ -1,5 +1,9 @@
 import type { Feature, ProductV2 } from "@autumn/shared";
 import { buildBillingPlan } from "@/components/forms/shared/utils/buildPlanCustomize";
+import {
+	clampLicenseQuantitiesToIncluded,
+	convertLicenseQuantitiesToParams,
+} from "@/utils/billing/licenseQuantityUtils";
 import type { CustomerStatePlan } from "./customerStateSchema";
 
 /** A customer-state row as an API plan: plan id, scope, quantities, customize. */
@@ -11,19 +15,26 @@ export const customerStatePlanToApiPlan = ({
 	plan: CustomerStatePlan;
 	products: ProductV2[];
 	features: Feature[];
-}) => ({
-	...buildBillingPlan({
-		productId: plan.productId,
-		prepaidOptions: plan.prepaidOptions,
-		items: plan.items,
-		addLicenses: plan.addLicenses,
-		version: plan.version,
-		isCustom: plan.isCustom,
-		entityId: plan.entityId ?? null,
-		product: products.find((product) => product.id === plan.productId),
-		features,
-	}),
-	...(plan.licenseQuantities?.length
-		? { license_quantities: plan.licenseQuantities }
-		: {}),
-});
+}) => {
+	const licenseQuantities = convertLicenseQuantitiesToParams({
+		licenseQuantities: clampLicenseQuantitiesToIncluded({
+			licenseQuantities: plan.licenseQuantities,
+			upsertLicenses: plan.addLicenses ?? [],
+		}),
+	});
+
+	return {
+		...buildBillingPlan({
+			productId: plan.productId,
+			prepaidOptions: plan.prepaidOptions,
+			items: plan.items,
+			addLicenses: plan.addLicenses,
+			version: plan.version,
+			isCustom: plan.isCustom,
+			entityId: plan.entityId ?? null,
+			product: products.find((product) => product.id === plan.productId),
+			features,
+		}),
+		...(licenseQuantities ? { license_quantities: licenseQuantities } : {}),
+	};
+};
