@@ -3,10 +3,10 @@ import {
 	type ApiEntityV2,
 	applyResponseVersionChanges,
 	type FullSubject,
+	getApiEntityBaseV2,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiEntityExpand } from "../apiEntityUtils/getApiEntityExpand.js";
-import { getApiEntityBaseV2 } from "./getApiEntityBaseV2.js";
 
 export const getApiEntityV2 = async ({
 	ctx,

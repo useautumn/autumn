@@ -22,6 +22,7 @@ import {
 	type SortOrder,
 	StandardCursor,
 	type StandardCursorFields,
+	shouldAggregateEntityData,
 } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import { isMotherDuckConfigured } from "@/external/motherduck/initMotherDuck.js";
@@ -35,7 +36,6 @@ import { triggerBatchResetCustomerEntitlements } from "./actions/resetCustomerEn
 import { CusSearchService } from "./CusSearchService.js";
 import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
-import { shouldAggregateEntityData } from "./cusUtils/customerEntityData.js";
 import {
 	getPaginatedFullCusQuery,
 	parseDashboardIntervalFilter,

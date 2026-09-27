@@ -1,6 +1,6 @@
 import { type BillingContext, BillingVersion } from "@autumn/shared";
-import { getOrCreateStripeCustomer } from "@/external/stripe/customers/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { linkStripeCustomer } from "@/internal/customers/actions/linkStripeCustomer.js";
 import type { CreateCustomerContext } from "../createCustomerContext.js";
 
 /**
@@ -19,7 +19,7 @@ export const setupCreateCustomerBillingContext = async ({
 }): Promise<BillingContext> => {
 	const { fullCustomer, fullProducts, trialContext } = context;
 
-	const stripeCustomer = await getOrCreateStripeCustomer({
+	const stripeCustomer = await linkStripeCustomer({
 		ctx,
 		customer: fullCustomer,
 	});
