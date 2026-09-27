@@ -2,7 +2,6 @@ import {
 	customerEntitlements,
 	entitlements,
 	type InsertCustomerEntitlement,
-	type InsertDbEntitlement,
 	InternalError,
 	type PooledBalancePlan,
 	pooledBalanceContributions,
@@ -32,7 +31,7 @@ export const executePooledBalancePlan = async ({
 	await ctx.db.transaction(async (tx) => {
 		for (const fullCustomerEntitlement of pooledBalancePlan.insertPoolBalances) {
 			const {
-				entitlement: fullEntitlement,
+				entitlement: _entitlement,
 				replaceables: _replaceables,
 				rollovers: _rollovers,
 				pooled_balance: pooledBalance,
@@ -46,15 +45,12 @@ export const executePooledBalancePlan = async ({
 				});
 			}
 
-			const { feature: _feature, ...fullEntitlementFields } = fullEntitlement;
-			const entitlement: InsertDbEntitlement = fullEntitlementFields;
 			const syntheticCustomerEntitlement: InsertCustomerEntitlement = {
 				...customerEntitlement,
 				balance: customerEntitlement.balance ?? 0,
 				pooled_balance_id: pooledBalance.id,
 				pooled_contribution_id: null,
 			};
-			await tx.insert(entitlements).values(entitlement);
 			await tx
 				.insert(customerEntitlements)
 				.values(syntheticCustomerEntitlement);
