@@ -2,6 +2,7 @@ import {
 	ACTIVE_STATUSES,
 	type EntityRolloverBalance,
 	type FullCustomer,
+	fullCustomerToFullSubject,
 	InternalError,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
@@ -248,7 +249,7 @@ export const executePostgresDeduction = async ({
 			if (resolvedOptions.triggerAutoTopUp) {
 				triggerAutoTopUp({
 					ctx,
-					newFullCus: fullCustomer,
+					fullSubject: fullCustomerToFullSubject({ fullCustomer }),
 					feature: deduction.feature,
 				}).catch((error) => {
 					ctx.logger.error(
