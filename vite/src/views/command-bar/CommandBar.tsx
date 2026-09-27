@@ -13,6 +13,7 @@ import {
 import {
 	ArrowsClockwiseIcon,
 	AtIcon,
+	CursorClickIcon,
 	FingerprintIcon,
 	GearIcon,
 	StarIcon,
@@ -33,6 +34,7 @@ import { useTheme } from "@/contexts/ThemeProvider";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useSandboxesQuery } from "@/hooks/queries/useSandboxesQuery";
 import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";
 import { useImpersonationFavouritesStore } from "@/hooks/stores/useImpersonationFavouritesStore";
 import { useListOrganizations } from "@/lib/auth-client";
@@ -49,7 +51,11 @@ import {
 	usePageCommands,
 } from "@/views/command-bar/usePageCommands";
 import { useOrgSwitch } from "@/views/main-sidebar/components/OrgDropdown";
-import { useEnvChange } from "@/views/main-sidebar/EnvDropdown";
+import {
+	useEnvChange,
+	useSelectSandbox,
+} from "@/views/main-sidebar/EnvDropdown";
+import { EnvironmentIcon } from "@/views/main-sidebar/env-dropdown/EnvironmentIcon";
 
 type User = {
 	id: string;
@@ -106,7 +112,12 @@ const CommandBar = () => {
 	const buildKey = useQueryKeyFactory();
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const axiosInstance = useAxiosInstance();
-	const { isAdmin, isCurrentlyImpersonating } = useAdmin();
+	const {
+		isAdmin,
+		isCurrentlyImpersonating,
+		adminHoverEnabled,
+		setAdminHoverEnabled,
+	} = useAdmin();
 	const { org } = useOrg();
 	const { theme, setTheme } = useTheme();
 
@@ -171,6 +182,8 @@ const CommandBar = () => {
 	const { products, isLoading: productsLoading } = useProductsQuery();
 	const pageCommands = usePageCommands();
 	const goToPage = usePageCommandNavigate();
+	const { sandboxes } = useSandboxesQuery({ enabled: !!org });
+	const selectSandbox = useSelectSandbox();
 
 	// Debounce search for backend query
 	useEffect(() => {
@@ -573,8 +586,25 @@ const CommandBar = () => {
 			: []),
 	];
 
+	const searchOnlyAdminItems = isAdmin
+		? [
+				{
+					title: "Toggle admin hover",
+					subtext: adminHoverEnabled ? "On" : "Off",
+					icon: <CursorClickIcon />,
+					onSelect: () => {
+						setAdminHoverEnabled(!adminHoverEnabled);
+						toast.success(
+							`Admin hover ${adminHoverEnabled ? "disabled" : "enabled"}`,
+						);
+						closeDialog();
+					},
+				},
+			]
+		: [];
+
 	const filteredNavigationItems = showResults
-		? navigationItems.filter((item) =>
+		? [...navigationItems, ...searchOnlyAdminItems].filter((item) =>
 				item.title.toLowerCase().includes(search.toLowerCase()),
 			)
 		: navigationItems;
@@ -596,6 +626,28 @@ const CommandBar = () => {
 			.slice(0, 6);
 	}, [pageCommands, search, currentPage]);
 
+	const matchedSandboxes = useMemo(() => {
+		if (!search || currentPage !== "main") return [];
+		return [
+			{ key: "default", name: "Sandbox", sandbox: null },
+			...sandboxes.map((sandbox) => ({
+				key: sandbox.id,
+				name: sandbox.name,
+				sandbox,
+			})),
+		]
+			.map((option) => ({
+				...option,
+				score: Math.min(
+					calculateRelevanceScore(search, option.name),
+					calculateRelevanceScore(search, `sandbox ${option.name}`),
+				),
+			}))
+			.filter(({ score }) => score < 100)
+			.sort((a, b) => a.score - b.score)
+			.slice(0, 6);
+	}, [sandboxes, search, currentPage]);
+
 	const renderMainPage = () => (
 		<>
 			{filteredNavigationItems.length > 0 && (
@@ -605,7 +657,8 @@ const CommandBar = () => {
 							key={item.title}
 							icon={item.icon}
 							title={item.title}
-							shortcutKey={item.shortcutKey}
+							subtext={"subtext" in item ? item.subtext : undefined}
+							shortcutKey={"shortcutKey" in item ? item.shortcutKey : undefined}
 							onSelect={item.onSelect}
 						/>
 					))}
@@ -622,6 +675,23 @@ const CommandBar = () => {
 							subtext={page.section}
 							onSelect={() => {
 								goToPage({ page });
+								closeDialog();
+							}}
+						/>
+					))}
+				</CommandGroup>
+			)}
+
+			{showResults && matchedSandboxes.length > 0 && (
+				<CommandGroup heading="Sandboxes">
+					{matchedSandboxes.map(({ key, name, sandbox }) => (
+						<CommandRow
+							key={key}
+							icon={<EnvironmentIcon sandbox={sandbox} />}
+							title={name}
+							subtext="Sandbox"
+							onSelect={() => {
+								selectSandbox(sandbox);
 								closeDialog();
 							}}
 						/>
@@ -699,7 +769,8 @@ const CommandBar = () => {
 
 					{!isLoading &&
 						sortedResults.length === 0 &&
-						matchedPages.length === 0 && (
+						matchedPages.length === 0 &&
+						matchedSandboxes.length === 0 && (
 							<CommandEmpty>No results found.</CommandEmpty>
 						)}
 				</>

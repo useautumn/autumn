@@ -1,257 +1,263 @@
-import type { CatalogGetMappingsResponse, ProductV2 } from "@autumn/shared";
-import {
-	Button,
-	CopyButton,
-	IconTooltipButton,
-	Sheet,
-	SheetContent,
-	ShortcutButton,
-} from "@autumn/ui";
-import { GitBranchIcon } from "@phosphor-icons/react";
-import { useStore } from "@tanstack/react-form";
-import { AnimatePresence, motion } from "motion/react";
+import type {
+	CatalogGetMappingsResponse,
+	CatalogStripeProduct,
+	ProductV2,
+} from "@autumn/shared";
+import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import { useState } from "react";
-import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
+import { StripePriceSelect } from "@/components/v2/selects/StripePriceSelect";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import { useAppForm } from "@/hooks/form/form";
 import { useCatalogMappings } from "@/hooks/queries/catalog/useCatalogMappings";
-import { useCreatePlanInStripe } from "@/hooks/queries/catalog/useCreatePlanInStripe";
-import { useSplitVariantStripeProduct } from "@/hooks/queries/catalog/useSplitVariantStripeProduct";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useStripeProductsResolveQuery } from "@/hooks/queries/useStripeProductsResolveQuery";
 import { CatalogMappingSaveConfirmDialog } from "./CatalogMappingSaveConfirmDialog";
 import {
-	buildPlanDetailFormValues,
-	buildPlanProcessorsUpdate,
 	type CatalogPlanMapping,
 	collectPlanStripeProductIds,
 	findPlanMapping,
-	getAffectedCatalogPriceIds,
 	groupPlanMappings,
 	resolveMapping,
 } from "./catalogMappingsForm";
 import { MappingField } from "./MappingField";
 import { PlanMappingDetailSkeleton } from "./PlanMappingDetailSkeleton";
-import { useStripeProductLink } from "./useStripeProductLink";
+import { PriceMappingAccordion } from "./PriceMappingAccordion";
+import {
+	affectedPlanPriceIds,
+	buildPlanSheetSave,
+	buildPlanSheetValues,
+	displayedStripePriceId,
+	effectivePlanProductId,
+	type PlanSheetValues,
+} from "./planMappingSave";
+import { basePriceMappingRows, groupRowsByPlan } from "./priceMappingRows";
+import { CREATE_STRIPE_PRODUCT } from "./StripeProductSelect";
 import { useStripeProductSearch } from "./useStripeProductSearch";
 
-const VariantList = ({
-	base,
-	variants,
+const isDirty = ({
+	values,
+	initial,
 }: {
-	base: ProductV2;
-	variants: ProductV2[];
+	values: PlanSheetValues;
+	initial: PlanSheetValues;
+}) => JSON.stringify(values) !== JSON.stringify(initial);
+
+const priceGroupSummary = ({
+	productId,
+	productsById,
+}: {
+	productId: string | null;
+	productsById: Map<string, CatalogStripeProduct>;
 }) => {
-	const splitVariant = useSplitVariantStripeProduct();
-	const getStripeProductHref = useStripeProductLink();
-
-	const sharesBaseProduct = (variant: ProductV2) =>
-		!variant.stripe_id || variant.stripe_id === base.stripe_id;
-
-	const sharedVariants = variants.filter(sharesBaseProduct);
-
-	return (
-		<div className="flex flex-col gap-1 pt-1 pl-5">
-			{variants.map((variant) => (
-				<div
-					className="flex min-w-0 items-center gap-2 text-xs"
-					key={variant.id}
-				>
-					<span className="text-tertiary-foreground">└</span>
-					<span className="truncate text-foreground">{variant.name}</span>
-					{sharesBaseProduct(variant) ? (
-						<Button
-							className="ml-auto h-auto shrink-0 px-0 text-xs"
-							disabled={splitVariant.isPending}
-							onClick={() => splitVariant.mutate([variant.id])}
-							variant="muted"
-						>
-							Create separate Stripe product
-						</Button>
-					) : (
-						<span className="ml-auto flex shrink-0 items-center gap-1">
-							<CopyButton
-								className="text-tertiary-foreground"
-								innerClassName="max-w-40 text-tiny-id truncate"
-								size="mini"
-								text={variant.stripe_id as string}
-							/>
-							<IconTooltipButton
-								icon={<StripeIcon size={12} />}
-								onClick={() =>
-									window.open(
-										getStripeProductHref(variant.stripe_id as string),
-										"_blank",
-										"noopener,noreferrer",
-									)
-								}
-								tooltip="Open in Stripe"
-							/>
-						</span>
-					)}
-				</div>
-			))}
-			{sharedVariants.length > 1 && (
-				<Button
-					className="mt-1 w-full justify-start gap-2 text-xs"
-					disabled={splitVariant.isPending}
-					onClick={() =>
-						splitVariant.mutate(sharedVariants.map((variant) => variant.id))
-					}
-					variant="muted"
-				>
-					<GitBranchIcon size={13} />
-					Split all variants
-				</Button>
-			)}
-		</div>
-	);
+	if (productId === CREATE_STRIPE_PRODUCT) return "New product on save";
+	if (!productId) return "No Stripe product";
+	return `Under ${productsById.get(productId)?.name ?? productId}`;
 };
 
 const PlanMappingDetailForm = ({
 	base,
 	variants,
-	products,
+	allVersions,
 	planMapping,
 	mappings,
 	onClose,
 }: {
 	base: ProductV2;
 	variants: ProductV2[];
-	products: ProductV2[];
+	allVersions: ProductV2[];
 	planMapping: CatalogPlanMapping;
 	mappings: CatalogGetMappingsResponse;
 	onClose: () => void;
 }) => {
-	const { updateMappings, isSaving } = useCatalogMappings();
-	const createInStripe = useCreatePlanInStripe();
-	const [variantsExpanded, setVariantsExpanded] = useState(false);
+	const { saveMappings, isSaving } = useCatalogMappings();
+	const { features } = useFeaturesQuery();
+	const [initial] = useState(() =>
+		buildPlanSheetValues({ planMapping, base, variants }),
+	);
+	const [values, setValues] = useState(initial);
 	const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
+
 	const {
 		stripeProducts,
 		isResolving,
 		isLoading: isResolvingInitial,
 	} = useStripeProductsResolveQuery({
-		stripeProductIds: collectPlanStripeProductIds(planMapping),
+		stripeProductIds: [
+			...collectPlanStripeProductIds(planMapping),
+			...Object.values(initial.variant_product_ids).filter((id): id is string =>
+				Boolean(id),
+			),
+		],
 		enabled: mappings.stripe_connected,
 	});
 	const { setSearch, knownStripeProducts, selectStripeProducts, isSearching } =
 		useStripeProductSearch({ knownProducts: stripeProducts, enabled: true });
-	const hasVariants = variants.length > 0;
-	const productVersions = products.length > 0 ? products : [base, ...variants];
-
-	const form = useAppForm({
-		defaultValues: buildPlanDetailFormValues(planMapping),
-		onSubmit: async ({ value }) => {
-			await updateMappings(
-				buildPlanProcessorsUpdate({ planMapping, values: value }),
-			);
-			setConfirmSaveOpen(false);
-			onClose();
-		},
-	});
-
-	const stripeProductId = useStore(
-		form.store,
-		(state) => state.values.stripe_product_id,
+	const knownProductsById = new Map(
+		knownStripeProducts.map((product) => [product.id, product]),
 	);
 
-	const resolved = resolveMapping({
-		stripeProductId,
-		backendStatus: planMapping.mapping.status,
-		stripeConnected: mappings.stripe_connected,
-		stripeProductsById: new Map(
-			knownStripeProducts.map((product) => [product.id, product]),
-		),
-		isResolving,
+	const rows = basePriceMappingRows({
+		products: allVersions,
+		planIds: [base.id, ...variants.map((variant) => variant.id)],
+		features,
 	});
+	const plans = [base, ...variants];
+
+	const resolveStatus = (productId: string | null) =>
+		resolveMapping({
+			stripeProductId: productId === CREATE_STRIPE_PRODUCT ? null : productId,
+			backendStatus: planMapping.mapping.status,
+			stripeConnected: mappings.stripe_connected,
+			stripeProductsById: knownProductsById,
+			isResolving,
+		});
+
+	const setPlanProductId = ({
+		planId,
+		productId,
+	}: {
+		planId: string;
+		productId: string | null;
+	}) =>
+		setValues((current) =>
+			planId === base.id
+				? { ...current, stripe_product_id: productId }
+				: {
+						...current,
+						variant_product_ids: {
+							...current.variant_product_ids,
+							[planId]: productId,
+						},
+					},
+		);
+
+	const handleSave = async () => {
+		await saveMappings(
+			buildPlanSheetSave({ planMapping, values, initial, rows }),
+		);
+		setConfirmSaveOpen(false);
+		onClose();
+	};
 
 	if (isResolvingInitial) {
-		return (
-			<>
-				<PlanMappingDetailSkeleton />
-				<SheetFooter>
-					<ShortcutButton
-						className="w-full"
-						onClick={onClose}
-						singleShortcut="escape"
-						variant="secondary"
-					>
-						Cancel
-					</ShortcutButton>
-					<ShortcutButton className="w-full" disabled>
-						Save mapping
-					</ShortcutButton>
-				</SheetFooter>
-			</>
-		);
+		return <PlanMappingDetailSkeleton />;
 	}
 
 	return (
 		<>
 			<div className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 py-4">
-				<div className="flex flex-col gap-2">
-					<MappingField
-						expanded={variantsExpanded}
-						isSearching={isSearching}
-						knownProducts={knownStripeProducts}
-						label={base.name}
-						onSearchChange={setSearch}
-						onStripeProductChange={(value) =>
-							form.setFieldValue("stripe_product_id", value)
-						}
-						onToggleExpanded={
-							hasVariants
-								? () => setVariantsExpanded((value) => !value)
-								: undefined
-						}
-						status={resolved.status}
-						statusPending={resolved.pending}
-						stripeProductId={stripeProductId}
-						stripeProducts={selectStripeProducts}
-						sublabel={
-							hasVariants ? (
-								<span className="shrink-0 text-tertiary-foreground text-xs">
-									{variants.length} variant{variants.length === 1 ? "" : "s"}
-								</span>
-							) : undefined
-						}
-					/>
-					{hasVariants && (
-						<AnimatePresence initial={false}>
-							{variantsExpanded && (
-								<motion.div
-									animate={{ height: "auto", opacity: 1 }}
-									className="overflow-hidden"
-									exit={{ height: 0, opacity: 0 }}
-									initial={{ height: 0, opacity: 0 }}
-									transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-								>
-									<VariantList base={base} variants={variants} />
-								</motion.div>
-							)}
-						</AnimatePresence>
-					)}
-					{resolved.status === "unmapped" && (
-						<Button
-							className="w-full justify-start gap-2 text-xs"
-							disabled={createInStripe.isPending}
-							onClick={() => createInStripe.mutate(base.id)}
-							variant="muted"
-						>
-							<StripeIcon size={13} />
-							Create in Stripe
-						</Button>
-					)}
+				<div className="flex flex-col divide-y divide-border">
+					{plans.map((plan) => {
+						const isBase = plan.id === base.id;
+						const productId = isBase
+							? values.stripe_product_id
+							: (values.variant_product_ids[plan.id] ?? null);
+						// Creating only runs for a plan without its own product, so otherwise it'd do nothing.
+						const savedProductId = isBase
+							? initial.stripe_product_id
+							: (initial.variant_product_ids[plan.id] ?? null);
+						const status = resolveStatus(
+							effectivePlanProductId({
+								values,
+								basePlanId: base.id,
+								planId: plan.id,
+							}),
+						);
+
+						return (
+							<div className="py-4 first:pt-0" key={plan.id}>
+								<MappingField
+									isResolving={isResolving || !mappings.stripe_connected}
+									createLabel={
+										savedProductId
+											? undefined
+											: isBase
+												? "Create new Stripe product"
+												: `Create new product · ${plan.name}`
+									}
+									isSearching={isSearching}
+									knownProducts={knownStripeProducts}
+									label={plan.name}
+									noneLabel={
+										isBase ? "No Stripe product" : `Same as ${base.name}`
+									}
+									onSearchChange={setSearch}
+									onStripeProductChange={(value) =>
+										setPlanProductId({ planId: plan.id, productId: value })
+									}
+									status={status.status}
+									statusPending={status.pending}
+									stripeProductId={productId}
+									stripeProducts={selectStripeProducts}
+									sublabel={
+										<span className="shrink-0 text-tertiary-foreground text-xs">
+											{isBase ? "Base plan" : "Variant"}
+										</span>
+									}
+								/>
+							</div>
+						);
+					})}
 				</div>
 
-				<p className="text-tertiary-foreground text-xs">
-					Individual prices are mapped on the plan itself, where each version
-					can point at its own Stripe price.
-				</p>
+				{rows.length > 0 && (
+					<div className="flex flex-col gap-3 border-border border-t pt-4">
+						<div className="flex flex-col gap-0.5">
+							<span className="font-medium text-sm">Base prices</span>
+							<span className="text-tertiary-foreground text-xs">
+								Point any version at a Stripe price you already have. Leave it
+								empty and Autumn creates one.
+							</span>
+						</div>
+						{groupRowsByPlan({ rows }).map((group) => {
+							const productId = effectivePlanProductId({
+								values,
+								basePlanId: base.id,
+								planId: group.planId,
+							});
+							const canPickPrice =
+								Boolean(productId) && productId !== CREATE_STRIPE_PRODUCT;
+
+							return (
+								<PriceMappingAccordion
+									columns={["Version", "Stripe price"]}
+									group={group}
+									key={group.planId}
+									renderRow={(row) => (
+										<div className="min-w-0 flex-1">
+											<StripePriceSelect
+												disabled={!canPickPrice}
+												onChange={(stripePriceId) =>
+													setValues((current) => ({
+														...current,
+														price_ids: {
+															...current.price_ids,
+															[row.priceId]: stripePriceId,
+														},
+													}))
+												}
+												stripeProductId={canPickPrice ? productId : null}
+												value={displayedStripePriceId({
+													row,
+													values,
+													initial,
+													basePlanId: base.id,
+												})}
+											/>
+										</div>
+									)}
+									summary={priceGroupSummary({
+										productId,
+										productsById: knownProductsById,
+									})}
+								/>
+							);
+						})}
+					</div>
+				)}
 			</div>
 
 			<SheetFooter>
@@ -264,30 +270,26 @@ const PlanMappingDetailForm = ({
 				>
 					Cancel
 				</ShortcutButton>
-				<form.Subscribe selector={(state) => state.isDirty}>
-					{(isDirty) => (
-						<ShortcutButton
-							className="w-full"
-							disabled={!isDirty || isSaving}
-							isLoading={isSaving}
-							metaShortcut="enter"
-							onClick={() => setConfirmSaveOpen(true)}
-						>
-							Save mapping
-						</ShortcutButton>
-					)}
-				</form.Subscribe>
+				<ShortcutButton
+					className="w-full"
+					disabled={!isDirty({ values, initial }) || isSaving}
+					isLoading={isSaving}
+					metaShortcut="enter"
+					onClick={() => setConfirmSaveOpen(true)}
+				>
+					Save mapping
+				</ShortcutButton>
 			</SheetFooter>
 
 			<CatalogMappingSaveConfirmDialog
-				affectedPriceIds={getAffectedCatalogPriceIds({
-					base,
-					products: productVersions,
-					planMapping,
-					values: { stripe_product_id: stripeProductId },
+				affectedPriceIds={affectedPlanPriceIds({
+					values,
+					initial,
+					rows,
+					basePlanId: base.id,
 				})}
 				isSaving={isSaving}
-				onConfirm={() => form.handleSubmit()}
+				onConfirm={handleSave}
 				onOpenChange={setConfirmSaveOpen}
 				open={confirmSaveOpen}
 			/>
@@ -304,7 +306,7 @@ export const PlanMappingDetailSheet = ({
 }) => {
 	const { mappings } = useCatalogMappings();
 	const { products } = useProductsQuery();
-	const { products: allProducts } = useProductsQuery({ allVersions: true });
+	const { products: allVersions } = useProductsQuery({ allVersions: true });
 
 	const group = planId
 		? groupPlanMappings(products).find((entry) => entry.base.id === planId)
@@ -315,17 +317,18 @@ export const PlanMappingDetailSheet = ({
 	return (
 		<Sheet onOpenChange={onOpenChange} open={Boolean(planId)}>
 			{planId && group && planMapping && mappings && (
-				<SheetContent className="flex flex-col overflow-hidden sm:max-w-xl">
+				<SheetContent className="flex flex-col overflow-hidden md:max-w-2xl">
 					<SheetHeader
-						description="Map this plan to a Stripe product. Saving updates every version and variant."
+						description="Pick the Stripe product each plan bills under, and any existing Stripe prices. Changes apply to every version."
 						title={group.base.name}
 					/>
 					<PlanMappingDetailForm
+						allVersions={allVersions}
 						base={group.base}
+						key={planId}
 						mappings={mappings}
 						onClose={() => onOpenChange(false)}
 						planMapping={planMapping}
-						products={allProducts}
 						variants={group.variants.map((variant) => variant.plan)}
 					/>
 				</SheetContent>

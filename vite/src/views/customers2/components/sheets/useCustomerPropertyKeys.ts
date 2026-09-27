@@ -1,7 +1,9 @@
+import { LATEST_VERSION } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { fetchEventsList } from "@/views/customers/customer/analytics/api/fetchEventsList";
 
 export type CustomerPropertySuggestions = {
 	propertyKeys: string[];
@@ -62,21 +64,21 @@ export function useCustomerPropertyKeys({
 }: {
 	customerId?: string;
 }): CustomerPropertySuggestions {
-	const axiosInstance = useAxiosInstance();
+	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const buildKey = useQueryKeyFactory();
 
 	const { data } = useQuery({
 		enabled: !!customerId,
 		queryKey: buildKey(["customer-property-keys", customerId]),
-		queryFn: async () => {
-			const { data } = await axiosInstance.post("/query/raw", {
-				customer_id: customerId,
+		queryFn: () =>
+			fetchEventsList({
+				axiosInstance,
+				customerId,
 				interval: "90d",
-			});
-			return data;
-		},
+				limit: MAX_EVENTS_TO_SCAN,
+			}),
 		staleTime: 60_000,
 	});
 
-	return useMemo(() => extractSuggestions(data?.rawEvents?.data), [data]);
+	return useMemo(() => extractSuggestions(data?.events), [data]);
 }

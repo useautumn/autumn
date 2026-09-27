@@ -1,4 +1,11 @@
-import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from "@autumn/ui";
+import {
+	Button,
+	Switch,
+	Tabs,
+	TabsContent,
+	TabsList,
+	TabsTrigger,
+} from "@autumn/ui";
 import { Globe, Sliders } from "@phosphor-icons/react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useNavigate } from "react-router";
@@ -31,7 +38,8 @@ type AdminTab = (typeof ADMIN_TAB_IDS)[number];
 export const AdminView = () => {
 	const navigate = useNavigate();
 	const env = useEnv();
-	const { isAdmin, isPending } = useAdmin();
+	const { isAdmin, isPending, adminHoverEnabled, setAdminHoverEnabled } =
+		useAdmin();
 	const adminBasePath = getRedirectUrl("/admin", env);
 	const [activeTab, setActiveTab] = useQueryState<AdminTab>(
 		"tab",
@@ -63,7 +71,7 @@ export const AdminView = () => {
 
 	return (
 		<div className="flex flex-col p-6 gap-8">
-			<div className="flex flex-wrap justify-end gap-2 md:absolute md:top-10 md:right-10">
+			<div className="flex flex-wrap justify-end gap-2">
 				<CreateUser />
 				<Button
 					onClick={() => navigate(`${adminBasePath}/edge-config`)}
@@ -97,16 +105,31 @@ export const AdminView = () => {
 				value={activeTab}
 				onValueChange={(value) => setActiveTab(value as AdminTab)}
 			>
-				<TabsList className="max-w-full justify-start overflow-x-auto">
-					<TabsTrigger value="orgs">Organizations</TabsTrigger>
-					<TabsTrigger value="users">Users</TabsTrigger>
-					<TabsTrigger value="slack-bot">Slack Bot</TabsTrigger>
-					<TabsTrigger value="edge-config">Edge Config</TabsTrigger>
-					<TabsTrigger value="queue-cron-configs">
-						Queue / Cron configs
-					</TabsTrigger>
-					<TabsTrigger value="caches">Caches</TabsTrigger>
-				</TabsList>
+				<div className="flex items-center justify-between gap-4">
+					<TabsList className="min-w-0 max-w-full justify-start overflow-x-auto">
+						<TabsTrigger value="orgs">Organizations</TabsTrigger>
+						<TabsTrigger value="users">Users</TabsTrigger>
+						<TabsTrigger value="slack-bot">Slack Bot</TabsTrigger>
+						<TabsTrigger value="edge-config">Edge Config</TabsTrigger>
+						<TabsTrigger value="queue-cron-configs">
+							Queue / Cron configs
+						</TabsTrigger>
+						<TabsTrigger value="caches">Caches</TabsTrigger>
+					</TabsList>
+					<div className="flex shrink-0 items-center gap-2">
+						<Switch
+							id="admin-hover-toggle"
+							checked={adminHoverEnabled}
+							onCheckedChange={setAdminHoverEnabled}
+						/>
+						<label
+							htmlFor="admin-hover-toggle"
+							className="text-sm text-foreground"
+						>
+							Admin hover
+						</label>
+					</div>
+				</div>
 
 				<TabsContent value="orgs" className="mt-4">
 					<AdminOrgTable />

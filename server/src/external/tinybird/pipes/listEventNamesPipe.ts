@@ -15,6 +15,8 @@ export type ListEventNamesPipeRow = z.infer<
 export const listEventNamesPipeParamsSchema = z.object({
 	org_id: z.string(),
 	env: z.string(),
+	customer_id: z.string().optional(),
+	entity_id: z.string().optional(),
 	limit: z.number().optional(),
 	start_date: z.string().optional(),
 	end_date: z.string().optional(),

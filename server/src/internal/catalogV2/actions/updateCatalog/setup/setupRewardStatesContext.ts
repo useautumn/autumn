@@ -37,12 +37,18 @@ export const setupRewardStatesContext = async ({
 				idByInternalId: loaded.idByInternalId,
 				statableInternalIds: loaded.statableInternalIds,
 			})
-		: { programs: [], hiddenProgramIds: new Set<string>() };
+		: {
+				programs: [],
+				hiddenProgramIds: new Set<string>(),
+				hiddenProgramInternalIds: new Set<string>(),
+			};
 
 	return {
 		rewards: loaded.rewards,
 		unstatableIds: loaded.unstatableIds,
+		unstatableInternalIds: loaded.unstatableInternalIds,
 		programs: loadedPrograms.programs,
 		hiddenProgramIds: loadedPrograms.hiddenProgramIds,
+		hiddenProgramInternalIds: loadedPrograms.hiddenProgramInternalIds,
 	};
 };

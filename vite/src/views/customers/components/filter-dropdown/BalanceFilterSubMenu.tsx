@@ -39,6 +39,18 @@ const BASIS_LABELS: Record<FeatureBalanceSortBasis, string> = {
 	usage: "Usage",
 };
 
+export const getBalanceFilterLabel = ({
+	basis,
+	featureName,
+	op,
+	value,
+}: {
+	basis: FeatureBalanceSortBasis;
+	featureName: string;
+	op: BalanceFilterOp;
+	value: string;
+}) => `${BASIS_LABELS[basis]} ${featureName} ${op} ${value}`;
+
 export const BalanceFilterSubMenu = ({
 	onChange,
 }: {
@@ -74,7 +86,12 @@ export const BalanceFilterSubMenu = ({
 		(feature) => feature.id === queryStates.balanceFeature,
 	);
 	const label = isActive
-		? `${BASIS_LABELS[queryStates.balanceBasis]} ${selectedFeature?.name ?? queryStates.balanceFeature} ${queryStates.balanceOp} ${queryStates.balanceValue}`
+		? getBalanceFilterLabel({
+				basis: queryStates.balanceBasis,
+				featureName: selectedFeature?.name ?? queryStates.balanceFeature,
+				op: queryStates.balanceOp,
+				value: queryStates.balanceValue,
+			})
 		: null;
 
 	const commitValue = (raw: string) => {
