@@ -165,29 +165,16 @@ const otherPlans = [
 		config: {
 			anchorToMonthStart: true,
 		},
+		billingControls: {
+			overageAllowed: [
+				{ featureId: "usd_volume", enabled: true },
+				{ featureId: "api_requests", enabled: true },
+				{ featureId: "customers_and_entities", enabled: true },
+			],
+		},
 		versionSlug: "new-v1",
 	}),
-	plan({
-		planId: "free",
-		internalId: "prod_3B7uLJD2NszYK42kycW9EXELBrV",
-		name: "Free",
-		autoEnable: false,
-		active: false,
-		items: [
-			{
-				featureId: "CONCURRENCY",
-				included: 2,
-			},
-			{
-				featureId: "CREDITS",
-				included: 500,
-				reset: {
-					interval: "one_off",
-				},
-			},
-		],
-		versionSlug: "v29",
-	}),
+
 	plan({
 		planId: "growth",
 		internalId: "prod_3B7Ww8QLMGx7SfTpnQcSv2uWLXF",
