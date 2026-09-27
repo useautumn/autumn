@@ -19,9 +19,13 @@ import { useSlackInvite } from "../hooks/useSlackInvite";
 
 const CHANNEL_PREFIX = "autumn-";
 const INVALID_CHANNEL_NAME_CHARS = /[^a-z0-9_-]+/g;
+const MAX_SUFFIX_LENGTH = 20;
 
 const toChannelSuffix = (value: string) =>
-	value.toLowerCase().replace(INVALID_CHANNEL_NAME_CHARS, "-");
+	value
+		.toLowerCase()
+		.replace(INVALID_CHANNEL_NAME_CHARS, "-")
+		.slice(0, MAX_SUFFIX_LENGTH);
 
 type SlackChannelNamePopoverProps = {
 	open: boolean;
@@ -83,17 +87,24 @@ function SlackChannelNameForm({
 	};
 
 	return (
-		<form onSubmit={handleSubmit} className="flex flex-col gap-3">
-			<span className="text-sm font-medium text-foreground">
-				Enter channel name
-			</span>
+		<form onSubmit={handleSubmit} className="flex flex-col gap-3 text-sm">
+			<div className="flex flex-col gap-1">
+				<span className="font-medium text-foreground">Name your channel</span>
+				<span className="text-xs text-tertiary-foreground">
+					We'll create it in our Slack and email you an invite.
+				</span>
+			</div>
 			<InputGroup>
-				<InputGroupAddon>
-					<InputGroupText>{CHANNEL_PREFIX}</InputGroupText>
+				<InputGroupAddon className="pl-0">
+					<InputGroupText className="font-normal text-tertiary-foreground">
+						#{CHANNEL_PREFIX}
+					</InputGroupText>
 				</InputGroupAddon>
 				<InputGroupInput
 					autoFocus
 					aria-label="Slack channel name"
+					className="!pl-0"
+					maxLength={MAX_SUFFIX_LENGTH}
 					value={suffix}
 					onChange={(event) => setSuffix(toChannelSuffix(event.target.value))}
 				/>
@@ -102,6 +113,7 @@ function SlackChannelNameForm({
 				type="submit"
 				variant="primary"
 				size="sm"
+				className="self-end"
 				isLoading={isRequesting}
 				disabled={!suffix}
 			>

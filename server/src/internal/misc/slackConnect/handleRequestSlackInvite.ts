@@ -10,7 +10,8 @@ import {
 export const handleRequestSlackInvite = createRoute({
 	scopes: [Scopes.Public],
 	body: z.object({
-		channel_name: z.string().trim().min(1).max(80).optional(),
+		// "autumn-" plus the 20-character name the popover allows.
+		channel_name: z.string().trim().min(1).max(27).optional(),
 	}),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
