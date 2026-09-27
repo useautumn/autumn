@@ -1,0 +1,33 @@
+{
+	"name": "@autumn/kafka",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		"./partitioning": "./src/partitioning/meteringIdentityToPartition.ts",
+		".": {
+			"types": "./src/kafka.ts",
+			"import": "./src/kafka.ts",
+			"default": "./src/kafka.ts"
+		}
+	},
+	"scripts": {
+		"test": "bun test --config ./bunfig.toml tests/unit",
+		"test:unit": "bun test --config ./bunfig.toml tests/unit",
+		"test:kafka": "bun ../../scripts/devServices/runKafkaTests.ts tests/integration",
+		"ts": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@autumn/balance-engine": "workspace:*",
+		"aws-msk-iam-sasl-signer-js": "^1.0.3",
+		"kafkajs": "^2.2.4",
+		"zod": "^3.25.23"
+	},
+	"devDependencies": {
+		"@autumn/shared": "workspace:*",
+		"@types/bun": "1.4.2",
+		"@types/node": "^24.9.1",
+		"typescript": "~5.8.3"
+	}
+}
