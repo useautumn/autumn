@@ -185,15 +185,13 @@ export const handleExternalAggregateEvents = createRoute({
 			collapsePlanIdGroups({ events, internalIdToPublicId });
 		}
 
-		const currentTime = convertPeriodsToEpoch({
+		convertPeriodsToEpoch({
 			events: events.data,
 			timezone: safeTimezone,
 			binSize,
 		});
 
-		let usageList = (events.data as ProcessedEventRow[]).filter(
-			(event) => event.period <= currentTime,
-		) as AggregatedEventRow[];
+		let usageList = events.data as ProcessedEventRow[] as AggregatedEventRow[];
 
 		if (resolvedGroupBy) {
 			const ungroupedData = usageList as ProcessedEventRow[];

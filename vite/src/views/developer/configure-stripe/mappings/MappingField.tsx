@@ -8,7 +8,10 @@ import type { ReactNode } from "react";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { cn } from "@/lib/utils";
 import { MappingStatusBadge } from "./MappingStatusBadge";
-import { StripeProductSelect } from "./StripeProductSelect";
+import {
+	CREATE_STRIPE_PRODUCT,
+	StripeProductSelect,
+} from "./StripeProductSelect";
 import { useStripeProductLink } from "./useStripeProductLink";
 
 export const MappingField = ({
@@ -27,6 +30,9 @@ export const MappingField = ({
 	onToggleExpanded,
 	onRemove,
 	removeTooltip = "Remove",
+	noneLabel,
+	createLabel,
+	isResolving,
 }: {
 	label: ReactNode;
 	sublabel?: ReactNode;
@@ -43,6 +49,9 @@ export const MappingField = ({
 	onToggleExpanded?: () => void;
 	onRemove?: () => void;
 	removeTooltip?: string;
+	noneLabel?: string;
+	createLabel?: string;
+	isResolving?: boolean;
 }) => {
 	const getStripeProductHref = useStripeProductLink();
 
@@ -82,16 +91,19 @@ export const MappingField = ({
 			<div className="flex items-center gap-2">
 				<div className="min-w-0 flex-1">
 					<StripeProductSelect
+						createLabel={createLabel}
 						disabled={disabled}
 						isLoading={isSearching}
+						isResolving={isResolving}
 						knownProducts={knownProducts}
+						noneLabel={noneLabel}
 						onChange={onStripeProductChange}
 						onSearchChange={onSearchChange}
 						products={stripeProducts}
 						value={stripeProductId}
 					/>
 				</div>
-				{stripeProductId && (
+				{stripeProductId && stripeProductId !== CREATE_STRIPE_PRODUCT && (
 					<IconTooltipButton
 						icon={<StripeIcon size={14} />}
 						onClick={() =>

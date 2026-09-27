@@ -91,9 +91,17 @@ function getStatusDetail({
 
 	if (planStatus === "trialing" && trial_ends_at) {
 		const daysLeft = differenceInCalendarDays(trial_ends_at, nowMs);
+		const daysLeftText =
+			daysLeft > 0
+				? `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`
+				: "ends today";
+		const trialStartedAt = starts_at ?? customerProduct.created_at;
 		return {
 			shortText: daysLeft > 0 ? `${daysLeft}d left` : "Ends today",
-			tooltipText: `Trial ends ${format(trial_ends_at, LONG_DATE)}`,
+			tooltipText: `Trial ends ${format(trial_ends_at, LONG_DATE)} · ${daysLeftText}`,
+			tooltipSubtext: trialStartedAt
+				? `Started ${format(trialStartedAt, LONG_DATE)}`
+				: undefined,
 		};
 	}
 	if (planStatus === "canceling") {

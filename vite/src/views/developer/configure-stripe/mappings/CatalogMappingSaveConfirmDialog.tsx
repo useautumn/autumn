@@ -1,3 +1,4 @@
+import type { Reward } from "@autumn/shared";
 import {
 	Dialog,
 	DialogContent,
@@ -7,7 +8,6 @@ import {
 	DialogTitle,
 	ShortcutButton,
 } from "@autumn/ui";
-import type { Reward } from "@autumn/shared";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
@@ -32,9 +32,7 @@ const getAffectedScopedRewards = ({
 
 const formatRewardList = (rewards: Reward[]) => {
 	const visibleRewards = rewards.slice(0, 3);
-	const rewardNames = visibleRewards.map(
-		(reward) => reward.name || reward.id,
-	);
+	const rewardNames = visibleRewards.map((reward) => reward.name || reward.id);
 	const remainingCount = rewards.length - visibleRewards.length;
 
 	return remainingCount > 0
@@ -55,37 +53,29 @@ export const CatalogMappingSaveConfirmDialog = ({
 	onOpenChange: (open: boolean) => void;
 	onConfirm: () => void;
 }) => {
-	const { rewards, isLoading } = useRewardsQuery();
+	const { rewards } = useRewardsQuery();
 	const affectedScopedRewards = getAffectedScopedRewards({
 		rewards,
 		affectedPriceIds,
 	});
-	const rewardWarning =
-		affectedScopedRewards.length > 0
-			? ` Scoped rewards may need review: ${formatRewardList(
-					affectedScopedRewards,
-				)}.`
-			: "";
-	const loadingWarning =
-		isLoading && affectedPriceIds.length > 0 ? " Checking scoped rewards." : "";
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>Save Stripe product mappings?</DialogTitle>
+					<DialogTitle>Save mapping?</DialogTitle>
 					<DialogDescription>
-						Confirm these mappings before Autumn updates the catalog state.
+						New checkouts will use these Stripe products and prices. Existing
+						customers and custom plans stay as they are.
 					</DialogDescription>
 				</DialogHeader>
 
-				<InfoBox variant="warning">
-					Saving updates all base and variant versions. Existing customers' Stripe
-					state is unchanged; new Stripe products are used only going forward.
-					Prices on custom plans are not affected.
-					{loadingWarning}
-					{rewardWarning}
-				</InfoBox>
+				{affectedScopedRewards.length > 0 && (
+					<InfoBox variant="warning">
+						These coupons only apply to prices you're changing, so check them
+						after saving: {formatRewardList(affectedScopedRewards)}.
+					</InfoBox>
+				)}
 
 				<DialogFooter>
 					<ShortcutButton
@@ -102,7 +92,7 @@ export const CatalogMappingSaveConfirmDialog = ({
 						metaShortcut="enter"
 						onClick={onConfirm}
 					>
-						Save mappings
+						Save
 					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>

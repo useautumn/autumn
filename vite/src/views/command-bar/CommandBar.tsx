@@ -13,6 +13,7 @@ import {
 import {
 	ArrowsClockwiseIcon,
 	AtIcon,
+	CursorClickIcon,
 	FingerprintIcon,
 	GearIcon,
 	StarIcon,
@@ -111,7 +112,12 @@ const CommandBar = () => {
 	const buildKey = useQueryKeyFactory();
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const axiosInstance = useAxiosInstance();
-	const { isAdmin, isCurrentlyImpersonating } = useAdmin();
+	const {
+		isAdmin,
+		isCurrentlyImpersonating,
+		adminHoverEnabled,
+		setAdminHoverEnabled,
+	} = useAdmin();
 	const { org } = useOrg();
 	const { theme, setTheme } = useTheme();
 
@@ -580,8 +586,25 @@ const CommandBar = () => {
 			: []),
 	];
 
+	const searchOnlyAdminItems = isAdmin
+		? [
+				{
+					title: "Toggle admin hover",
+					subtext: adminHoverEnabled ? "On" : "Off",
+					icon: <CursorClickIcon />,
+					onSelect: () => {
+						setAdminHoverEnabled(!adminHoverEnabled);
+						toast.success(
+							`Admin hover ${adminHoverEnabled ? "disabled" : "enabled"}`,
+						);
+						closeDialog();
+					},
+				},
+			]
+		: [];
+
 	const filteredNavigationItems = showResults
-		? navigationItems.filter((item) =>
+		? [...navigationItems, ...searchOnlyAdminItems].filter((item) =>
 				item.title.toLowerCase().includes(search.toLowerCase()),
 			)
 		: navigationItems;
@@ -634,7 +657,8 @@ const CommandBar = () => {
 							key={item.title}
 							icon={item.icon}
 							title={item.title}
-							shortcutKey={item.shortcutKey}
+							subtext={"subtext" in item ? item.subtext : undefined}
+							shortcutKey={"shortcutKey" in item ? item.shortcutKey : undefined}
 							onSelect={item.onSelect}
 						/>
 					))}
