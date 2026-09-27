@@ -1,0 +1,6 @@
+{
+  "instructions": "This PR is one review-only slice of a larger stacked change (a Kafka-backed balance worker). Callers of these packages may live in later PRs of the stack, so do not flag code as unused, unwired or unregistered. Report correctness bugs only: data loss, races, wrong results, broken invariants, security issues. Do not report style, naming, missing tests, documentation or refactoring suggestions.",
+  "commentTypes": ["logic"],
+  "ignorePatterns": "**/tests/**\n**/*.test.ts\n**/*.spec.ts\n**/*.md\nbun.lock\nplans/**",
+  "strictness": 2
+}
