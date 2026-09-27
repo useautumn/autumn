@@ -1,13 +1,13 @@
 import { Decimal } from "decimal.js";
 import { getRolloverFields, notNullish } from "../../..";
 import type { ApiBalanceRollover } from "../../../api/customers/cusFeatures/apiBalance";
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { CustomerEntitlementWithPricesView } from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView";
 
 export const cusEntsToRollovers = ({
 	cusEnts,
 	entityId,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	entityId?: string;
 }): ApiBalanceRollover[] | undefined => {
 	// If all cus ents no rollover, return undefined

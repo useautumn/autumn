@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { CustomerEntitlementWithPricesView } from "../../../models/cusProductModels/cusEntModels/fullCustomerEntitlementView";
 import { nullish } from "../../utils";
 import { cusEntsToBalance } from "./cusEntsToBalance";
 import { cusEntsToPrepaidQuantity } from "./cusEntsToPrepaidQuantity";
@@ -9,7 +9,7 @@ export const cusEntsToUsage = ({
 	cusEnts,
 	entityId,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: CustomerEntitlementWithPricesView[];
 	entityId?: string;
 }) => {
 	const grantedBalance = cusEntsToGrantedBalance({ cusEnts, entityId });
