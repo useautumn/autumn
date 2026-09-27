@@ -1,14 +1,15 @@
 import {
 	AttachScenario,
 	CusProductStatus,
+	type CustomerLicenseTransition,
 	type CustomerProductUpdate,
 	type FullCusProduct,
 	type FullCustomer,
-	type InsertCustomerProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions.js";
+import { persistCustomerLicenseTransitions } from "@/internal/billing/v2/execute/executeAutumnActions/persistCustomerLicenseTransitions";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/findTransitionSourceCustomerProduct";
@@ -32,7 +33,14 @@ export const activateScheduledCustomerProduct = async ({
 	subscriptionIds?: string[];
 	scheduledIds?: string[];
 	activatedAt: number;
-}): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
+}): Promise<{
+	updates: Pick<
+		FullCusProduct,
+		"status" | "subscription_ids" | "scheduled_ids" | "starts_at"
+	>;
+	customerLicenseTransitions: CustomerLicenseTransition[];
+	fromCustomerProduct?: FullCusProduct;
+}> => {
 	const { org, env, logger } = ctx;
 
 	logger.info(
@@ -56,7 +64,7 @@ export const activateScheduledCustomerProduct = async ({
 		fullCustomer,
 	});
 
-	const updates: Partial<InsertCustomerProduct> = {
+	const updates = {
 		status: CusProductStatus.Active,
 		subscription_ids: subscriptionIds,
 		scheduled_ids: scheduledIds,
@@ -75,6 +83,7 @@ export const activateScheduledCustomerProduct = async ({
 			})
 		: [];
 
+	await persistCustomerLicenseTransitions({ ctx, customerLicenseTransitions });
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: {
@@ -86,7 +95,6 @@ export const activateScheduledCustomerProduct = async ({
 					updates: updates as CustomerProductUpdate["updates"],
 				},
 			],
-			customerLicenseTransitions,
 		},
 	});
 
@@ -101,5 +109,9 @@ export const activateScheduledCustomerProduct = async ({
 		cusProduct: customerProduct,
 	});
 
-	return { updates };
+	return {
+		updates,
+		customerLicenseTransitions,
+		fromCustomerProduct: transitionSource,
+	};
 };

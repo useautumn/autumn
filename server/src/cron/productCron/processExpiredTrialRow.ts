@@ -101,16 +101,13 @@ export const processExpiredTrialRow = async ({
 		},
 	});
 
-	// Default activation already executes the outgoing and incoming transition together.
-	if (!activatedDefault) {
-		await applyPooledBalanceCustomerProductTransitions({
-			ctx,
-			fullCustomer: originalFullCustomer,
-			outgoingCustomerProducts: [trialFullCusProduct],
-			incomingCustomerProducts: [],
-			now: Date.now(),
-		});
-	}
+	await applyPooledBalanceCustomerProductTransitions({
+		ctx,
+		fullCustomer: originalFullCustomer,
+		outgoingCustomerProducts: [trialFullCusProduct],
+		incomingCustomerProducts: activatedDefault ? [activatedDefault] : [],
+		now: Date.now(),
+	});
 
 	await deleteCachedFullCustomer({
 		ctx,

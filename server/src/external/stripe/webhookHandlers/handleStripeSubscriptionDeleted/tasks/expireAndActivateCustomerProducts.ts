@@ -91,6 +91,7 @@ export const expireAndActivateCustomerProducts = async ({
 		fullCustomer,
 		outgoingCustomerProducts,
 		incomingCustomerProducts,
+		customerLicenseTransitions: eventContext.customerLicenseTransitions,
 		now: eventContext.nowMs,
 	});
 

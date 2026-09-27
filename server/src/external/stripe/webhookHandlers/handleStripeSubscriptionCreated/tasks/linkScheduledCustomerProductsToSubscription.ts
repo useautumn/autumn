@@ -1,7 +1,12 @@
-import { hasCustomerProductStarted } from "@autumn/shared";
+import {
+	type CustomerLicenseTransition,
+	type FullCusProduct,
+	hasCustomerProductStarted,
+} from "@autumn/shared";
 import { fromUnixTime } from "date-fns";
 import type Stripe from "stripe";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
@@ -32,6 +37,9 @@ const executeLinkScheduledCustomerProductsToSubscription = async ({
 		subscription.start_date ?? subscription.created,
 	).getTime();
 	let linkedCount = 0;
+	const outgoingCustomerProducts: FullCusProduct[] = [];
+	const incomingCustomerProducts: FullCusProduct[] = [];
+	const customerLicenseTransitions: CustomerLicenseTransition[] = [];
 
 	for (const cusProduct of cusProducts) {
 		const subscriptionIds = cusProduct.subscription_ids ?? [];
@@ -43,7 +51,7 @@ const executeLinkScheduledCustomerProductsToSubscription = async ({
 		});
 
 		if (hasStarted && ctx.fullCustomer) {
-			await customerProductActions.activateScheduled({
+			const activation = await customerProductActions.activateScheduled({
 				ctx,
 				customerProduct: cusProduct,
 				fullCustomer: ctx.fullCustomer,
@@ -53,6 +61,11 @@ const executeLinkScheduledCustomerProductsToSubscription = async ({
 					: [scheduleId],
 				activatedAt: subscriptionStartMs,
 			});
+			if (activation.fromCustomerProduct) {
+				outgoingCustomerProducts.push(activation.fromCustomerProduct);
+			}
+			incomingCustomerProducts.push({ ...cusProduct, ...activation.updates });
+			customerLicenseTransitions.push(...activation.customerLicenseTransitions);
 			linkedCount++;
 			continue;
 		}
@@ -72,6 +85,17 @@ const executeLinkScheduledCustomerProductsToSubscription = async ({
 			},
 		});
 		linkedCount++;
+	}
+
+	if (ctx.fullCustomer && incomingCustomerProducts.length > 0) {
+		await applyPooledBalanceCustomerProductTransitions({
+			ctx,
+			fullCustomer: ctx.fullCustomer,
+			outgoingCustomerProducts,
+			incomingCustomerProducts,
+			customerLicenseTransitions,
+			now: subscriptionStartMs,
+		});
 	}
 
 	if (linkedCount > 0) {

@@ -1,4 +1,5 @@
 import type {
+	CustomerLicenseTransition,
 	FullCusProduct,
 	FullCustomer,
 	PooledBalancePlan,
@@ -17,6 +18,7 @@ export const computePooledBalanceTransitionPlan = ({
 	outgoingCustomerProducts = [],
 	incomingCustomerProducts: inputIncomingCustomerProducts = [],
 	stripeSubscriptionId,
+	customerLicenseTransitions = [],
 	now,
 }: {
 	ctx: AutumnContext;
@@ -24,9 +26,11 @@ export const computePooledBalanceTransitionPlan = ({
 	outgoingCustomerProducts?: FullCusProduct[];
 	incomingCustomerProducts?: FullCusProduct[];
 	stripeSubscriptionId?: string;
+	customerLicenseTransitions?: CustomerLicenseTransition[];
 	now: number;
 }): {
 	pooledBalancePlan?: PooledBalancePlan;
+	customerLicenseTransitions: CustomerLicenseTransition[];
 } => {
 	const incomingCustomerProducts: FullCusProduct[] = [];
 	const incomingCustomerProductIds = new Set<string>();
@@ -73,23 +77,14 @@ export const computePooledBalanceTransitionPlan = ({
 	const incomingCustomerLicenses = incomingCustomerProducts.flatMap(
 		(customerProduct) => customerProduct.customer_licenses ?? [],
 	);
-	const incomingLicenseLinkIds = new Set(
-		incomingCustomerLicenses.map((customerLicense) => customerLicense.link_id),
-	);
-	applyLicensePooledGranted({
+	const pooledBalanceIds = applyLicensePooledGranted({
 		ctx,
 		computeContext,
-		customerLicenses: [
-			...incomingCustomerLicenses,
-			...outgoingCustomerProducts.flatMap((customerProduct) =>
-				incomingCustomerProductIds.has(customerProduct.id)
-					? []
-					: (customerProduct.customer_licenses ?? []).filter(
-							(customerLicense) =>
-								!incomingLicenseLinkIds.has(customerLicense.link_id),
-						),
-			),
-		],
+		customerLicenseTransitions,
+		customerLicenses: incomingCustomerLicenses,
+		outgoingCustomerLicenses: outgoingCustomerProducts.flatMap(
+			(customerProduct) => customerProduct.customer_licenses ?? [],
+		),
 		now,
 	});
 
@@ -102,5 +97,13 @@ export const computePooledBalanceTransitionPlan = ({
 		pooledBalancePlan,
 	});
 
-	return { pooledBalancePlan };
+	return {
+		pooledBalancePlan,
+		customerLicenseTransitions: customerLicenseTransitions.map(
+			(transition) => ({
+				...transition,
+				pooledBalanceIds: pooledBalanceIds[transition.updates.linkId] ?? {},
+			}),
+		),
+	};
 };

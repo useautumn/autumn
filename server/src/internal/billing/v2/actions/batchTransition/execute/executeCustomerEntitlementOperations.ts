@@ -12,7 +12,6 @@ import { BATCH_TRANSITION_OPERATION_CONCURRENCY } from "../utils/batchTransition
 import { executeBatchedMutation } from "./executeBatchedMutation";
 import { addCustomerEntitlementsBatch } from "./sql/addCustomerEntitlementsBatch";
 import { deleteCustomerEntitlementsBatch } from "./sql/deleteCustomerEntitlementsBatch";
-import { insertPooledBalanceGraph } from "./sql/insertPooledBalanceGraph";
 import { replaceCustomerEntitlementsBatch } from "./sql/replaceCustomerEntitlementsBatch";
 
 const executeReplacement = async ({
@@ -52,16 +51,7 @@ const executeAddition = async ({
 		db: ctx.db,
 		operationName: "Customer entitlement addition",
 		executeBatch: async ({ db, batchSize }) => {
-			const pooledBalanceId = operation.pooledAdd
-				? await insertPooledBalanceGraph({
-						db,
-						pooledAdd: operation.pooledAdd,
-						customerId: operation.customerEntitlement.customer_id ?? null,
-						orgId: ctx.org.id,
-						env: ctx.env,
-						now: Date.now(),
-					})
-				: undefined;
+			const pooledBalanceId = operation.pooledAdd?.pooledBalanceId;
 
 			return addCustomerEntitlementsBatch({
 				db,

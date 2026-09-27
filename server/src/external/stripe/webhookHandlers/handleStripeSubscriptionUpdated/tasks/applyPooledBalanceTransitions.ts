@@ -24,7 +24,13 @@ export const applyPooledBalanceTransitions = async ({
 	const autumnOriginated = isAutumnOriginatedStripeEvent({
 		event: ctx.stripeEvent,
 	});
-	if (autumnOriginated && !hasPools && !hasTransitions) return;
+	if (
+		autumnOriginated &&
+		!hasPools &&
+		!hasTransitions &&
+		eventContext.customerLicenseTransitions.length === 0
+	)
+		return;
 
 	eventContext.results.pooledBalances =
 		await applyPooledBalanceCustomerProductTransitions({
@@ -32,6 +38,7 @@ export const applyPooledBalanceTransitions = async ({
 			fullCustomer: eventContext.fullCustomer,
 			outgoingCustomerProducts,
 			incomingCustomerProducts,
+			customerLicenseTransitions: eventContext.customerLicenseTransitions,
 			now: eventContext.nowMs,
 		});
 };

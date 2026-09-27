@@ -1,10 +1,12 @@
 import {
+	type CustomerLicenseTransition,
 	type FullCusProduct,
 	type FullCustomer,
 	findCustomerProductById,
 	PooledBalanceResetMode,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { dispatchCustomerLicenseTransitions } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseTransitions";
 import { CusService } from "@/internal/customers/CusService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { computePooledBalanceTransitionPlan } from "../compute/computePooledBalanceTransitionPlan";
@@ -16,12 +18,14 @@ export const applyPooledBalanceCustomerProductTransitions = async ({
 	fullCustomer,
 	outgoingCustomerProducts,
 	incomingCustomerProducts,
+	customerLicenseTransitions = [],
 	now,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	outgoingCustomerProducts: FullCusProduct[];
 	incomingCustomerProducts: FullCusProduct[];
+	customerLicenseTransitions?: CustomerLicenseTransition[];
 	now: number;
 }): Promise<FullCustomer> => {
 	const customerId = fullCustomer.id || fullCustomer.internal_id;
@@ -59,16 +63,24 @@ export const applyPooledBalanceCustomerProductTransitions = async ({
 		fullCustomer: refreshedFullCustomer,
 		customerProducts: incomingCustomerProducts,
 	});
-	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
-		ctx,
-		fullCustomer: refreshedFullCustomer,
-		outgoingCustomerProducts: refreshedOutgoingCustomerProducts,
-		incomingCustomerProducts: refreshedIncomingCustomerProducts,
-		now,
-	});
-	if (!pooledBalancePlan) return refreshedFullCustomer;
+	const { pooledBalancePlan, customerLicenseTransitions: preparedTransitions } =
+		computePooledBalanceTransitionPlan({
+			ctx,
+			fullCustomer: refreshedFullCustomer,
+			outgoingCustomerProducts: refreshedOutgoingCustomerProducts,
+			incomingCustomerProducts: refreshedIncomingCustomerProducts,
+			customerLicenseTransitions,
+			now,
+		});
 
 	await executePooledBalancePlan({ ctx, pooledBalancePlan });
+	await dispatchCustomerLicenseTransitions({
+		ctx,
+		customerLicenseTransitions: preparedTransitions,
+	});
+	if (!pooledBalancePlan && preparedTransitions.length === 0) {
+		return refreshedFullCustomer;
+	}
 	return refreshFullCustomer({
 		ctx,
 		customerId,

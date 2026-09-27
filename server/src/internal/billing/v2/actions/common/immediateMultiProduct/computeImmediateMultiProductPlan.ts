@@ -7,6 +7,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachNewCustomerProduct } from "@/internal/billing/v2/actions/attach/compute/computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "@/internal/billing/v2/actions/attach/compute/computeAttachTransitionUpdates";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { productContextToAttachBillingContext } from "@/internal/billing/v2/utils/billingContext/productContextToAttachBillingContext";
@@ -49,14 +50,21 @@ export const computeImmediateMultiProductPlan = ({
 		}
 	}
 
-	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
-		ctx,
-		fullCustomer: billingContext.fullCustomer,
+	const computedCustomerLicenseTransitions = computeCustomerLicenseTransitions({
 		outgoingCustomerProducts,
 		incomingCustomerProducts: insertCustomerProducts,
-		stripeSubscriptionId: billingContext.stripeSubscription?.id,
-		now: billingContext.currentEpochMs,
+		customerLicenseBillingContext: billingContext.customerLicenseBillingContext,
 	});
+	const { pooledBalancePlan, customerLicenseTransitions } =
+		computePooledBalanceTransitionPlan({
+			ctx,
+			fullCustomer: billingContext.fullCustomer,
+			outgoingCustomerProducts,
+			incomingCustomerProducts: insertCustomerProducts,
+			customerLicenseTransitions: computedCustomerLicenseTransitions,
+			stripeSubscriptionId: billingContext.stripeSubscription?.id,
+			now: billingContext.currentEpochMs,
+		});
 
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
@@ -86,6 +94,10 @@ export const computeImmediateMultiProductPlan = ({
 		updateCustomerEntitlements,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
 		pooledBalancePlan,
+		customerLicenseTransitions,
+		insertPlanLicenses: billingContext.productContexts.flatMap(
+			(productContext) => productContext.insertPlanLicenses ?? [],
+		),
 	};
 
 	billingPlan.lineItems = finalizeLineItems({

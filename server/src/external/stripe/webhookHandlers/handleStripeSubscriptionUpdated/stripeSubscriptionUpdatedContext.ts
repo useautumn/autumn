@@ -1,4 +1,5 @@
 import type {
+	CustomerLicenseTransition,
 	FullCusProduct,
 	FullCustomer,
 	InsertCustomerProduct,
@@ -47,6 +48,7 @@ export interface StripeSubscriptionUpdatedContext {
 	deletedCustomerProducts: FullCusProduct[];
 	/** Tracks all insertions (new customer products created) during this handler */
 	insertedCustomerProducts: FullCusProduct[];
+	customerLicenseTransitions: CustomerLicenseTransition[];
 	/**
 	 * Tracks one-off prepaid lifetime cusEnts persisted by
 	 * `customerProductActions.preserveOneOffPrepaid` as each outgoing cusProduct

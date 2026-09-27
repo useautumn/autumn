@@ -65,13 +65,14 @@ export const activateFreeSuccessorProduct = async ({
 		scheduledCustomerProduct &&
 		isCustomerProductFree(scheduledCustomerProduct)
 	) {
-		const { updates } = await activateScheduledCustomerProduct({
-			ctx,
-			fromCustomerProduct,
-			customerProduct: scheduledCustomerProduct,
-			fullCustomer,
-			activatedAt,
-		});
+		const { updates, customerLicenseTransitions } =
+			await activateScheduledCustomerProduct({
+				ctx,
+				fromCustomerProduct,
+				customerProduct: scheduledCustomerProduct,
+				fullCustomer,
+				activatedAt,
+			});
 		const activatedCustomerProduct = {
 			...scheduledCustomerProduct,
 			...updates,
@@ -85,6 +86,7 @@ export const activateFreeSuccessorProduct = async ({
 			activation: {
 				before: scheduledCustomerProduct,
 				after: activatedCustomerProduct,
+				customerLicenseTransitions,
 			},
 		};
 	}
