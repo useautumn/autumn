@@ -21,13 +21,13 @@ export function checkAnswerToApiResponse({
 	ctx,
 	command,
 	answer,
-	deducted = false,
+	isDeductingCheck = false,
 }: {
 	ctx: AutumnContext;
 	command: CheckCommand;
 	answer: WorkerCheckAnswer;
-	/** The check deducted (`send_event` or a lock), so it also answers with the legacy track `balances` map. */
-	deducted?: boolean;
+	/** The check deducts (`send_event` or a lock), so it also answers with the legacy track `balances` map. */
+	isDeductingCheck?: boolean;
 }): CheckResponseV3 {
 	const { result, state, catalog } = answer;
 	// The worker names the feature that answers: the checked one, or the credit system funding it.
@@ -67,7 +67,7 @@ export function checkAnswerToApiResponse({
 				}).data
 			: null;
 	const balances =
-		deducted && result.allowed && fullSubject
+		isDeductingCheck && result.allowed && fullSubject
 			? workerSubjectsToApiBalances({
 					ctx,
 					subjects: [{ featureId: command.featureId, fullSubject }],

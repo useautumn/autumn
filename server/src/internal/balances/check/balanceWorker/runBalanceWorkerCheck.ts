@@ -33,7 +33,7 @@ export async function runBalanceWorkerCheck({
 	// Validates the lock, gives it an id when the caller sent none, and drops a disabled one.
 	const body = parseCheckParamsForLock({ params: rawBody });
 	const command = checkParamsToCheckCommand({ ctx, body });
-	const deducts = body.send_event === true || body.lock !== undefined;
+	const isDeductingCheck = body.send_event === true || body.lock !== undefined;
 	const answerToResult = (
 		answer: WorkerCheckAnswer,
 	): RunWithCustomer<CheckResponseV3> => ({
@@ -41,7 +41,7 @@ export async function runBalanceWorkerCheck({
 			ctx,
 			command,
 			answer,
-			deducted: deducts,
+			isDeductingCheck,
 		}),
 		customer: answer.state?.customer ?? null,
 	});
@@ -71,7 +71,7 @@ export async function runBalanceWorkerCheck({
 		});
 	const checkOnWorker = async (): Promise<RunWithCustomer<CheckResponseV3>> => {
 		try {
-			return deducts ? await deductingCheck() : await plainCheck();
+			return isDeductingCheck ? await deductingCheck() : await plainCheck();
 		} catch (cause) {
 			rethrowBalanceWorkerError({ cause });
 		}
