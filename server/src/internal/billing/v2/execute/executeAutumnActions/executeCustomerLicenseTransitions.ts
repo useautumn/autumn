@@ -1,6 +1,7 @@
 import type { CustomerLicenseTransition } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { batchTransition } from "@/internal/billing/v2/actions/batchTransition/batchTransition";
+import { batchTransitionInBackground } from "@/internal/billing/v2/actions/batchTransition/batchTransitionInBackground";
 import { batchTransitionTask } from "@/internal/billing/v2/actions/batchTransition/tasks/batchTransitionTask";
 import { SYNC_BATCH_TRANSITION_MAX_ENTITIES } from "@/internal/billing/v2/actions/batchTransition/utils/batchTransitionConstants";
 import { isSameRowTransition } from "@/internal/billing/v2/compute/customerLicenseTransitions/isSameRowTransition";
@@ -106,16 +107,18 @@ export const startBatchTransitions = async ({
 		}
 
 		if (shouldRunTriggerTasksInline()) {
-			void batchTransition({ ctx, transition, executionScope }).catch(
-				(error) => {
-					ctx.logger.error("[licenseTransitions] batch transition failed", {
-						data: {
-							customerLicenseLinkId: transition.updates.linkId,
-							error: error instanceof Error ? error.message : String(error),
-						},
-					});
-				},
-			);
+			void batchTransitionInBackground({
+				ctx,
+				transition,
+				executionScope,
+			}).catch((error) => {
+				ctx.logger.error("[licenseTransitions] batch transition failed", {
+					data: {
+						customerLicenseLinkId: transition.updates.linkId,
+						error: error instanceof Error ? error.message : String(error),
+					},
+				});
+			});
 			continue;
 		}
 
