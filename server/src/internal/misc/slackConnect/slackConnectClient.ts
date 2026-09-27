@@ -1,35 +1,64 @@
+import { chatInstallations } from "@autumn/shared";
+import { SLACK_CONNECT_ADMIN_SCOPES } from "@autumn/shared/utils/auth/slackScopes";
 import { WebClient } from "@slack/web-api";
+import { eq } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+	decryptChatToken,
+	getSlackAdminProvider,
+} from "@/internal/chat/chatUtils.js";
 
-/**
- * Slack Connect config for the per-org support channels in Autumn's own Slack
- * workspace. Kept off the bare `SLACK_*` names, which belong to other apps in
- * the shared vault.
- *
- * The bot needs `channels:manage`, `channels:read` and
- * `conversations.connect:write` (plus `channels:write.invites` when
- * `AUTUMN_SUPPORT_SLACK_TEAM_USER_IDS` is set), on a paid Slack plan.
- */
-const env = {
-	botToken: process.env.AUTUMN_SUPPORT_SLACK_BOT_TOKEN ?? "",
-	/** Comma-separated Slack user ids added to every new channel. */
-	teamUserIds: (process.env.AUTUMN_SUPPORT_SLACK_TEAM_USER_IDS ?? "")
-		.split(",")
-		.map((userId) => userId.trim())
-		.filter(Boolean),
-};
+/** Comma-separated Slack user ids added to every new channel. Defaults to
+ * whoever installed the admin bot, so a new channel is never unattended. */
+const TEAM_USER_IDS = (process.env.AUTUMN_SUPPORT_SLACK_TEAM_USER_IDS ?? "")
+	.split(",")
+	.map((userId) => userId.trim())
+	.filter(Boolean);
 
 const CHANNEL_PREFIX = "autumn-";
 /** Slack caps channel names at 80 characters. */
 const MAX_CHANNEL_NAME_LENGTH = 80;
 const INVALID_CHANNEL_NAME_CHARS = /[^a-z0-9_-]+/g;
 
-let client: WebClient | null = null;
+/**
+ * The per-org support channels live in Autumn's own workspace, so they're
+ * driven by the internal admin install of the Slack agent app (Admin → Slack
+ * admin bot). That install requests `SLACK_CONNECT_ADMIN_SCOPES` on top of the
+ * agent's scopes; returns null until it's installed with them.
+ */
+type SlackConnectClient = {
+	slack: WebClient;
+	teamUserIds: string[];
+};
 
-export const isSlackConnectConfigured = (): boolean => env.botToken !== "";
+export const getSlackConnectClient = async ({
+	db,
+}: {
+	db: DrizzleCli;
+}): Promise<SlackConnectClient | null> => {
+	if (!process.env.SLACK_CLIENT_ID) return null;
 
-const getClient = (): WebClient => {
-	client ??= new WebClient(env.botToken);
-	return client;
+	const installation = await db.query.chatInstallations.findFirst({
+		where: eq(chatInstallations.provider, getSlackAdminProvider()),
+	});
+	if (!installation) return null;
+
+	const granted = new Set(installation.scopes);
+	const hasScopes = SLACK_CONNECT_ADMIN_SCOPES.every((scope) =>
+		granted.has(scope),
+	);
+	if (!hasScopes) return null;
+
+	const installerUserId = installation.installed_by_provider_user_id;
+	return {
+		slack: new WebClient(
+			decryptChatToken({ token: installation.bot_access_token }),
+		),
+		teamUserIds:
+			TEAM_USER_IDS.length > 0 || !installerUserId
+				? TEAM_USER_IDS
+				: [installerUserId],
+	};
 };
 
 export const toSlackChannelName = ({ orgSlug }: { orgSlug: string }) =>
@@ -47,13 +76,15 @@ const getSlackErrorCode = (error: unknown): string | undefined => {
 };
 
 const findChannelIdByName = async ({
+	client,
 	name,
 }: {
+	client: SlackConnectClient;
 	name: string;
 }): Promise<string | undefined> => {
 	let cursor: string | undefined;
 	do {
-		const response = await getClient().conversations.list({
+		const response = await client.slack.conversations.list({
 			types: "public_channel",
 			limit: 1000,
 			cursor,
@@ -70,31 +101,33 @@ const findChannelIdByName = async ({
 /** Channel names are deterministic per org, so the channel doubles as the
  * record: a second request finds it by name instead of needing a DB row. */
 const getOrCreateChannel = async ({
+	client,
 	name,
 }: {
+	client: SlackConnectClient;
 	name: string;
 }): Promise<string> => {
 	try {
-		const response = await getClient().conversations.create({ name });
+		const response = await client.slack.conversations.create({ name });
 		const channelId = response.channel?.id;
 		if (!channelId) throw new Error("Slack returned no channel id");
 
-		if (env.teamUserIds.length > 0) {
-			await getClient().conversations.invite({
+		if (client.teamUserIds.length > 0) {
+			await client.slack.conversations.invite({
 				channel: channelId,
-				users: env.teamUserIds.join(","),
+				users: client.teamUserIds.join(","),
 			});
 		}
 		return channelId;
 	} catch (error) {
 		if (getSlackErrorCode(error) !== "name_taken") throw error;
 
-		const channelId = await findChannelIdByName({ name });
+		const channelId = await findChannelIdByName({ client, name });
 		if (!channelId) throw error;
 
 		// An archived channel still holds its name; bring it back.
 		try {
-			await getClient().conversations.unarchive({ channel: channelId });
+			await client.slack.conversations.unarchive({ channel: channelId });
 		} catch (unarchiveError) {
 			if (getSlackErrorCode(unarchiveError) !== "not_archived") {
 				throw unarchiveError;
@@ -107,16 +140,18 @@ const getOrCreateChannel = async ({
 /** Creates (or reuses) the org's channel and sends a Slack Connect invite to
  * `email`. Slack delivers the invite by email. */
 export const inviteToOrgSlackChannel = async ({
+	client,
 	orgSlug,
 	email,
 }: {
+	client: SlackConnectClient;
 	orgSlug: string;
 	email: string;
 }): Promise<{ channelName: string }> => {
 	const channelName = toSlackChannelName({ orgSlug });
-	const channelId = await getOrCreateChannel({ name: channelName });
+	const channelId = await getOrCreateChannel({ client, name: channelName });
 
-	await getClient().conversations.inviteShared({
+	await client.slack.conversations.inviteShared({
 		channel: channelId,
 		emails: [email],
 	});

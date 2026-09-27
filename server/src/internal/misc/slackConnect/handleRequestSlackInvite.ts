@@ -1,8 +1,8 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
+	getSlackConnectClient,
 	inviteToOrgSlackChannel,
-	isSlackConnectConfigured,
 } from "./slackConnectClient.js";
 
 export const handleRequestSlackInvite = createRoute({
@@ -21,7 +21,11 @@ export const handleRequestSlackInvite = createRoute({
 			});
 		}
 
-		if (!isSlackConnectConfigured()) {
+		const client = await getSlackConnectClient({ db: ctx.db });
+		if (!client) {
+			ctx.logger.warn(
+				"Slack invite requested, but the Slack admin bot isn't installed with the Slack Connect scopes",
+			);
 			throw new RecaseError({
 				message: "Slack invites are not available right now",
 				code: ErrCode.InternalError,
@@ -31,6 +35,7 @@ export const handleRequestSlackInvite = createRoute({
 
 		try {
 			const { channelName } = await inviteToOrgSlackChannel({
+				client,
 				orgSlug: ctx.org.slug,
 				email,
 			});
