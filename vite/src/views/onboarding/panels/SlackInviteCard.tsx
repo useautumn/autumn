@@ -1,47 +1,11 @@
 import { Button } from "@autumn/ui";
-import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
-import { toast } from "sonner";
-import { useOrg } from "@/hooks/common/useOrg";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
+import { useSlackInvite } from "../hooks/useSlackInvite";
 
-type SlackInviteState =
-	| { status: "idle" }
-	| { status: "requested"; email: string }
-	| { status: "dismissed" };
-
-const storageKey = ({ orgId }: { orgId: string }) =>
-	`autumn_slack_invite_${orgId}`;
-
-const readInviteState = ({ orgId }: { orgId: string }): SlackInviteState => {
-	try {
-		const raw = localStorage.getItem(storageKey({ orgId }));
-		return raw ? (JSON.parse(raw) as SlackInviteState) : { status: "idle" };
-	} catch {
-		return { status: "idle" };
-	}
-};
-
-const writeInviteState = ({
-	orgId,
-	state,
-}: {
-	orgId: string;
-	state: SlackInviteState;
-}) => {
-	try {
-		localStorage.setItem(storageKey({ orgId }), JSON.stringify(state));
-	} catch {
-		// Losing the flag only costs us a re-shown card.
-	}
-};
-
-function SlackLogo() {
+export function SlackLogo({ className = "size-7" }: { className?: string }) {
 	return (
 		<svg
 			viewBox="0 0 54 54"
-			className="size-7 shrink-0"
+			className={`shrink-0 ${className}`}
 			aria-hidden="true"
 			focusable="false"
 		>
@@ -68,43 +32,12 @@ function SlackLogo() {
 /** Offers a Slack Connect channel with the Autumn team. The invite itself is
  * emailed by Slack, so once it's sent the card just points at the inbox. */
 export function SlackInviteCard() {
-	const { org } = useOrg();
-	const axiosInstance = useAxiosInstance();
-	const orgId = org?.id;
-	// Keyed by org, so switching orgs re-reads instead of carrying state over.
-	const [stateByOrg, setStateByOrg] = useState<
-		Record<string, SlackInviteState>
-	>({});
+	const { isReady, state, requestInvite, isRequesting, dismiss } =
+		useSlackInvite();
 
-	const inviteMutation = useMutation({
-		mutationFn: async () => {
-			const { data } = await axiosInstance.post<{ email: string }>(
-				"/slack_connect/invite",
-			);
-			return data;
-		},
-		onSuccess: ({ email }) => {
-			updateState({ status: "requested", email });
-		},
-		onError: (error) => {
-			toast.error(getBackendErr(error, "Failed to send the Slack invite"));
-		},
-	});
-
-	if (!orgId) return null;
-
-	const state = stateByOrg[orgId] ?? readInviteState({ orgId });
-
-	function updateState(next: SlackInviteState) {
-		if (!orgId) return;
-		writeInviteState({ orgId, state: next });
-		setStateByOrg((previous) => ({ ...previous, [orgId]: next }));
-	}
-
-	if (state.status === "dismissed") return null;
+	if (!isReady || state.status === "dismissed") return null;
 
 	const isRequested = state.status === "requested";
-	const dismiss = () => updateState({ status: "dismissed" });
 
 	return (
 		<div className="flex flex-col gap-4 rounded-lg border bg-interactive-secondary px-4 py-3.5 sm:flex-row sm:items-center">
@@ -137,8 +70,8 @@ export function SlackInviteCard() {
 					<Button
 						variant="primary"
 						size="sm"
-						onClick={() => inviteMutation.mutate()}
-						isLoading={inviteMutation.isPending}
+						onClick={() => requestInvite().catch(() => {})}
+						isLoading={isRequesting}
 					>
 						Request invite
 					</Button>

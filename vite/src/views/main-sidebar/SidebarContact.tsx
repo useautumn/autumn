@@ -25,6 +25,8 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { useOnboardingVisibility } from "@/views/onboarding/hooks/useOnboardingProgress";
+import { useSlackInvite } from "@/views/onboarding/hooks/useSlackInvite";
+import { SlackLogo } from "@/views/onboarding/panels/SlackInviteCard";
 import { NavButton } from "./NavButton";
 
 export function SidebarContact() {
@@ -36,6 +38,16 @@ export function SidebarContact() {
 	const [feedbackOpen, setFeedbackOpen] = useState(false);
 	const [feedback, setFeedback] = useState("");
 	const [loading, setLoading] = useState(false);
+	const slackInvite = useSlackInvite();
+
+	const handleJoinSlack = async () => {
+		try {
+			const { email } = await slackInvite.requestInvite();
+			toast.success(`Slack invite sent to ${email}. Check your inbox.`);
+		} catch {
+			// The hook already surfaced the error.
+		}
+	};
 
 	const handleSubmitFeedback = async () => {
 		if (!feedback.trim()) return;
@@ -103,6 +115,16 @@ export function SidebarContact() {
 							</span>
 						</Link>
 					</DropdownMenuItem>
+					{slackInvite.isReady && (
+						<DropdownMenuItem
+							onClick={handleJoinSlack}
+							disabled={slackInvite.isRequesting}
+							className="cursor-pointer"
+						>
+							<SlackLogo className="size-3.5" />
+							Join our Slack channel
+						</DropdownMenuItem>
+					)}
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						onClick={() => setFeedbackOpen(true)}
