@@ -28,28 +28,33 @@ test("inserts zero rows for grid periods the deductions are missing", () => {
 	expect(result.rows).toBe(3);
 });
 
-test("returns the same object when every grid period is already present", () => {
+test("keeps rows unchanged when every grid period is already present", () => {
 	const events = {
 		meta: [{ name: "period" }, { name: "ai_credits__chat" }],
 		rows: 3,
 		data: gridPeriods.map((period) => ({ period, ai_credits__chat: 1 })),
 	};
 
-	expect(fillMissingPeriods({ events, periods: gridPeriods })).toBe(events);
+	expect(fillMissingPeriods({ events, periods: gridPeriods })).toEqual(events);
 });
 
-test("keeps periods outside the grid rather than dropping them", () => {
+test("folds rows stamped off the grid into their bucket instead of adding a slot", () => {
 	const result = fillMissingPeriods({
 		events: {
 			meta: [{ name: "period" }, { name: "ai_credits__chat" }],
-			rows: 1,
-			data: [{ period: "2026-08-19 00:00:00", ai_credits__chat: 4 }],
+			rows: 3,
+			data: [
+				{ period: "2026-08-19 00:00:00", ai_credits__chat: 4 },
+				{ period: "2026-08-21 00:00:00", ai_credits__chat: 2 },
+				{ period: "2026-08-21 05:00:00", ai_credits__chat: 3 },
+			],
 		},
 		periods: gridPeriods,
 	});
 
-	expect(result.data.map((row) => row.period)).toEqual([
-		"2026-08-19 00:00:00",
-		...gridPeriods,
+	expect(result.data).toEqual([
+		{ period: "2026-08-20 00:00:00", ai_credits__chat: 4 },
+		{ period: "2026-08-21 00:00:00", ai_credits__chat: 5 },
+		{ period: "2026-08-22 00:00:00", ai_credits__chat: 0 },
 	]);
 });

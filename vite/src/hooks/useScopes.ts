@@ -1,6 +1,30 @@
 import { makeScopeChecker } from "@autumn/shared";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useSession } from "@/lib/auth-client";
+
+const CACHED_SCOPES_KEY = "autumn.scopes";
+
+const readCachedScopes = (): string[] => {
+	try {
+		const cached = window.localStorage.getItem(CACHED_SCOPES_KEY);
+		return cached ? (JSON.parse(cached) as string[]) : [];
+	} catch {
+		return [];
+	}
+};
+
+const writeCachedScopes = (scopes: string[]) => {
+	try {
+		window.localStorage.setItem(CACHED_SCOPES_KEY, JSON.stringify(scopes));
+	} catch {}
+};
+
+/** Call on sign-out so the next user doesn't briefly inherit these scopes. */
+export const clearCachedScopes = () => {
+	try {
+		window.localStorage.removeItem(CACHED_SCOPES_KEY);
+	} catch {}
+};
 
 /**
  * React wrapper around `makeScopeChecker` that reads scopes from the
@@ -11,10 +35,17 @@ import { useSession } from "@/lib/auth-client";
  *   `{ expanded, isAdmin, isSuperuser, has, hasAny, hasAll, check }`
  */
 export function useScopes() {
-	const { data: session } = useSession();
+	const { data: session, isPending } = useSession();
+	const sessionScopes = (session as any)?.scopes as string[] | undefined;
+
+	// Last known scopes let gated UI render instantly while the session loads.
+	useEffect(() => {
+		if (!isPending) writeCachedScopes(sessionScopes ?? []);
+	}, [isPending, sessionScopes]);
 
 	return useMemo(() => {
-		const raw = ((session as any)?.scopes ?? []) as string[];
+		const raw =
+			isPending && !session ? readCachedScopes() : (sessionScopes ?? []);
 		return makeScopeChecker(raw);
-	}, [session]);
+	}, [isPending, session, sessionScopes]);
 }

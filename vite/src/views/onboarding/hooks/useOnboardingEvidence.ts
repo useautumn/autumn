@@ -1,7 +1,8 @@
-import type {
-	Feature,
-	FullCustomer,
-	RawEventFromClickHouse,
+import {
+	type Feature,
+	type FullCustomer,
+	LATEST_VERSION,
+	type RawEventFromClickHouse,
 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
@@ -11,6 +12,7 @@ import {
 	useProductsQuery,
 } from "@/hooks/queries/useProductsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { fetchEventsList } from "@/views/customers/customer/analytics/api/fetchEventsList";
 
 const isCapyDev = import.meta.env.VITE_CAPY_DEV === "1";
 const CUSTOMER_LIMIT = 20;
@@ -32,6 +34,7 @@ export interface OnboardingEvidence {
  */
 export const useOnboardingEvidence = (): OnboardingEvidence => {
 	const axiosInstance = useAxiosInstance();
+	const latestAxiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const buildKey = useQueryKeyFactory();
 
 	const { products, isLoading: productsLoading } = useProductsQuery();
@@ -50,25 +53,21 @@ export const useOnboardingEvidence = (): OnboardingEvidence => {
 		},
 	});
 
-	const { data: eventsData, isLoading: eventsLoading } = useQuery<{
-		rawEvents: { data: RawEventFromClickHouse[] };
-	}>({
+	const { data: eventsData, isLoading: eventsLoading } = useQuery({
 		queryKey: buildKey(["onboarding-events"]),
 		enabled: !isCapyDev,
-		queryFn: async () => {
-			const { data } = await axiosInstance.post("/query/raw", {
-				customer_id: null,
+		queryFn: () =>
+			fetchEventsList({
+				axiosInstance: latestAxiosInstance,
 				interval: "30d",
-			});
-			return data;
-		},
+			}),
 	});
 
 	return {
 		products: products as ProductListItem[],
 		features,
 		customers: customersData?.fullCustomers ?? [],
-		events: eventsData?.rawEvents?.data ?? [],
+		events: eventsData?.events ?? [],
 		isCatalogLoading: productsLoading || featuresLoading,
 		isCustomersLoading: customersLoading,
 		isEventsLoading: eventsLoading,

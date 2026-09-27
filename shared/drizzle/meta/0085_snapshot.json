@@ -1,5 +1,5 @@
 {
-  "id": "289ff8ec-6bce-4efd-8cb9-d9cf767fcf9b",
+  "id": "0b755eb5-8c53-4aab-9483-ca5f8a88048c",
   "prevId": "91d2012a-ee1d-4665-88d2-84e2dea5a364",
   "version": "7",
   "dialect": "postgresql",
@@ -2009,6 +2009,22 @@
           ],
           "isUnique": false,
           "where": "\"customer_entitlements\".\"expired\" IS NOT TRUE AND \"customer_entitlements\".\"next_reset_at\" IS NOT NULL",
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_entitlements_pooled_balance_id": {
+          "name": "idx_customer_entitlements_pooled_balance_id",
+          "columns": [
+            {
+              "expression": "pooled_balance_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"customer_entitlements\".\"pooled_balance_id\" IS NOT NULL",
           "concurrently": true,
           "method": "btree",
           "with": {}
@@ -5667,12 +5683,6 @@
         },
         "amount_paid": {
           "name": "amount_paid",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "paid_at": {
-          "name": "paid_at",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false

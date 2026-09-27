@@ -1,8 +1,7 @@
 "use client";
 
 import { AppEnv } from "@autumn/shared";
-import { Button, Progress } from "@autumn/ui";
-import { ListChecksIcon } from "@phosphor-icons/react";
+import { ArrowRightIcon, ListChecksIcon } from "@phosphor-icons/react";
 import { X } from "lucide-react";
 import { Link } from "react-router";
 import { cn } from "@/lib/utils";
@@ -43,7 +42,9 @@ export function OnboardingCard() {
 		<div
 			className={cn(
 				"mb-2 rounded-lg",
-				expanded ? "border bg-card p-2" : "border border-transparent p-0",
+				expanded
+					? "border bg-interactive-secondary p-2"
+					: "border border-transparent p-0",
 			)}
 		>
 			{/* Relative so the trailing controls can be pinned rather than laid out:
@@ -63,7 +64,7 @@ export function OnboardingCard() {
 							: "pointer-events-none w-0 -translate-x-2 opacity-0",
 					)}
 				>
-					Onboarding
+					Setup
 				</span>
 				<span
 					className={cn(
@@ -96,22 +97,37 @@ export function OnboardingCard() {
 					expanded ? "max-h-40 pb-1 opacity-100" : "max-h-0 pb-0 opacity-0",
 				)}
 			>
-				{/* No transition on the bar itself: on reload it would otherwise sweep
-				    up from zero as the query resolves, reading as a loading animation. */}
-				<Progress
-					value={(completedCount / totalCount) * 100}
-					className="mt-1 gap-0 [&_[data-slot=progress-indicator]]:transition-none"
-				/>
+				{/* Per step rather than a count, since steps can finish out of order. */}
+				<div className="mt-1 flex gap-1">
+					{ONBOARDING_STEPS.map((step) => (
+						<span
+							key={step.id}
+							className={cn(
+								"h-1 flex-1 rounded-full",
+								completed[step.id] ? "bg-primary" : "bg-foreground/10",
+							)}
+						/>
+					))}
+				</div>
 
 				{nextStep && (
-					<p className="mt-2 truncate text-tiny text-muted-foreground">
-						{nextStep.shortTitle}
-					</p>
+					<div className="mt-3">
+						<p className="truncate text-xs font-medium text-foreground">
+							{nextStep.shortTitle}
+						</p>
+						<p className="mt-0.5 line-clamp-2 text-tiny text-tertiary-foreground">
+							{nextStep.description}
+						</p>
+					</div>
 				)}
 
-				<Button variant="primary" size="sm" className="mt-2.5 w-full" asChild>
-					<Link to={onboardingPath}>Continue setup</Link>
-				</Button>
+				<Link
+					to={onboardingPath}
+					className="mt-2.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary-btn-hover"
+				>
+					Continue
+					<ArrowRightIcon size={12} weight="bold" />
+				</Link>
 			</div>
 		</div>
 	);

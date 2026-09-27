@@ -19,6 +19,7 @@ import { ProductsSubMenu } from "@/views/customers/components/filter-dropdown/Pr
 import { SaveViewPopover } from "@/views/customers/components/filter-dropdown/SavedViewPopover";
 import { SavedViews } from "@/views/customers/components/filter-dropdown/SavedViews";
 import {
+	CLEARED_CUSTOMER_FILTERS,
 	hasActiveCustomerFilters,
 	useCustomerFilters,
 } from "@/views/customers/hooks/useCustomerFilters";
@@ -54,19 +55,7 @@ export function CustomerListFilterButton({
 	const views = data?.views || [];
 
 	const clearFilters = () => {
-		setFilters({
-			status: [],
-			version: [],
-			none: false,
-			processor: [],
-			interval: [],
-			balanceFeature: "",
-			balanceOp: ">",
-			balanceValue: "",
-			balanceBasis: "usage",
-			joinedFrom: null,
-			joinedTo: null,
-		});
+		setFilters(CLEARED_CUSTOMER_FILTERS);
 		onFilterChange?.();
 		onClearExtra?.();
 	};
@@ -88,7 +77,9 @@ export function CustomerListFilterButton({
 					icon={
 						<FunnelSimpleIcon size={14} className="text-tertiary-foreground" />
 					}
-				/>
+				>
+					<span className="hidden md:inline">Filter</span>
+				</IconButton>
 				{hasActiveFilters && (
 					<span className="absolute top-0 right-0 h-2.5 w-2.5 translate-x-1/3 -translate-y-1/3 rounded-full bg-primary" />
 				)}

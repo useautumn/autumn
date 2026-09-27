@@ -3,6 +3,7 @@ import { msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
+import { buildStripeNewSubscriptionAnchorParams } from "./buildStripeNewSubscriptionAnchorParams";
 import { willStripeSubscriptionInvoiceEndOfCycle } from "./willStripeSubscriptionInvoiceEndOfCycle";
 
 export const buildStripeSubscriptionCreateAction = ({
@@ -52,7 +53,8 @@ export const buildStripeSubscriptionCreateAction = ({
 
 		collection_method: "charge_automatically",
 
-		payment_behavior: billingContext.paymentBehaviorIntent ??
+		payment_behavior:
+			billingContext.paymentBehaviorIntent ??
 			(!paymentMethod || isCustomPaymentMethod
 				? "default_incomplete"
 				: "allow_incomplete"),
@@ -62,6 +64,8 @@ export const buildStripeSubscriptionCreateAction = ({
 			: addInvoiceItems,
 
 		trial_end: trialEndsAt ? msToSeconds(trialEndsAt) : undefined,
+
+		...buildStripeNewSubscriptionAnchorParams({ billingContext }),
 
 		cancel_at: subscriptionCancelAt,
 
