@@ -5,12 +5,12 @@ import {
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
 	fullSubjectToRelevantFeatures,
+	getApiSubject,
 	InternalError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCheckSubject } from "@/internal/balances/check/getCheckSubject.js";
-import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubject.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 import { deductionToBalancesResponseV2 } from "./deductionToBalancesResponseV2.js";
