@@ -3,20 +3,20 @@ import {
 	fullSubjectToUsageWindowLimits,
 	type NormalizedFullSubject,
 	orgToInStatuses,
+	usageWindowsToRolls,
 } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { usageWindowRepo } from "@/internal/customers/usageWindows/repos/index.js";
 import { applyUsageWindowRollsToSubject } from "./applyUsageWindowRollsToSubject.js";
-import { computeUsageWindowRolls } from "./computeUsageWindowRolls.js";
 import { rollUsageWindowsCache } from "./rollUsageWindowsCache.js";
 
 /**
  * Lazily ROLLS the subject's usage-window counters on every subject read:
  * zero counts whose stored window closed, and re-align bounds/anchor to the
  * current derivation (this is where a plan change lands in the DB). The
- * decision table lives in computeUsageWindowRolls.
+ * decision table lives in usageWindowsToRolls.
  *
  * Best-effort, like lazyResetSubjectEntitlements: reads and the deduction
  * script both derive a closed count as 0 and stamp fresh bounds on write, so
@@ -49,7 +49,7 @@ export const lazyResetSubjectUsageWindows = async ({
 			inStatuses: orgToInStatuses({ org: ctx.org }),
 		});
 
-		const rolls = computeUsageWindowRolls({ usageWindows, limits, now });
+		const rolls = usageWindowsToRolls({ usageWindows, limits, now });
 		if (rolls.length === 0) return false;
 
 		const didRoll = await usageWindowRepo.rollWindows({
