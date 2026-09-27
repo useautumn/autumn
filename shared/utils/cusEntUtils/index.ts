@@ -30,7 +30,11 @@ export * from "./classifyCusEnt/cusEntsHaveUsageAllowed";
 export * from "./classifyCusEnt/customerEntitlementFundsFeature";
 export * from "./classifyCusEnt/isCusEntDisplayExpired";
 export * from "./classifyCusEnt/isCusEntExpired";
+export * from "./classifyCusEnt/isCustomerEntitlementInOverage";
+export * from "./classifyCusEnt/isInvoiceCreditCustomerEntitlement";
+export * from "./classifyCusEnt/isLiveLooseCustomerEntitlement";
 export * from "./classifyCusEnt/isPooledBalanceCustomerEntitlement";
+export * from "./classifyCusEnt/isUnlimitedCustomerEntitlement";
 // Classify utils
 export * from "./classifyCusEntUtils";
 // Convert utils barrel
@@ -52,6 +56,7 @@ export * from "./convertCusEntUtils/resolveSpendLimitOverageLimit";
 export * from "./cusEntUtils";
 export * from "./filterCusEntUtils";
 export * from "./filterCustomerEntitlements/filterCustomerEntitlementsByPooledBalanceSource";
+export * from "./filterCustomerEntitlements/filterPerEntityCustomerEntitlementsByFeature";
 export * from "./findCustomerEntitlement/findCustomerEntitlementByFeature";
 // Find utils
 export * from "./findCustomerEntitlement/findCustomerEntitlementById";
@@ -63,6 +68,17 @@ export * from "./getStartingBalance";
 export * from "./overageUtils/cusEntToInvoiceOverage";
 export * from "./overageUtils/cusEntToInvoiceUsage";
 export * from "./overageUtils/cusEntToOptions";
+// Reset utils
+export * from "./resetUtils/clampNextResetAtToPendingBillingCycleAnchor";
+export * from "./resetUtils/customerEntitlementToNextResetAt";
+export * from "./resetUtils/getNextResetAt";
+export * from "./resetUtils/getResetBalancesUpdate";
+// Rollover utils
+export * from "./rolloverUtils/clearRolloversOverMax";
+export * from "./rolloverUtils/cusEntToEffectiveRolloverMax";
+export * from "./rolloverUtils/getRolloverUpdates";
+export * from "./rolloverUtils/performMaximumClearing";
 export * from "./sortCusEntsForDeduction";
+export * from "./sortCusEntsForPaydown";
 export * from "./usageAttribution/buildUsageAttributionKey";
 export * from "./usageAttribution/parseUsageAttributionKey";

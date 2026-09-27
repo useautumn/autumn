@@ -1,6 +1,6 @@
 import type { ApiBalanceBreakdownPrice } from "@api/customers/cusFeatures/apiBalanceV1.js";
 import { BillingMethod } from "@api/products/components/billingMethod.js";
-import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { CustomerEntitlementWithPricesView } from "@models/cusProductModels/cusEntModels/fullCustomerEntitlementView.js";
 import {
 	TierBehavior,
 	type UsagePriceConfig,
@@ -18,7 +18,7 @@ import { addIncludedToTiers } from "@utils/productV2Utils/productItemUtils/tierU
 export const customerEntitlementToBalancePrice = ({
 	customerEntitlement,
 }: {
-	customerEntitlement: FullCusEntWithFullCusProduct;
+	customerEntitlement: CustomerEntitlementWithPricesView;
 }): ApiBalanceBreakdownPrice | null => {
 	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
 
