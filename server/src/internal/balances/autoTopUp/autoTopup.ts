@@ -1,3 +1,4 @@
+import type { AutoTopupJobPayload } from "@autumn/auto-topup";
 import { AppEnv, ms } from "@autumn/shared";
 import {
 	clearAutoTopupPendingKey,
@@ -10,10 +11,8 @@ import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBilling
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan.js";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult.js";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan.js";
-import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
 import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct.js";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import type { AutoTopUpPayload } from "@/queue/workflows.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import type { AutoTopupContext } from "./autoTopupContext.js";
 import { computeAutoTopupPlan } from "./compute/computeAutoTopupPlan.js";
 import { buildAutoTopUpLockKey } from "./helpers/autoTopUpUtils.js";
@@ -36,7 +35,7 @@ export const autoTopup = async ({
 	payload,
 }: {
 	ctx: AutumnContext;
-	payload: AutoTopUpPayload;
+	payload: AutoTopupJobPayload;
 }) => {
 	const { org, env, logger } = ctx;
 	const { customerId, featureId } = payload;
@@ -176,19 +175,12 @@ export const autoTopup = async ({
 			return;
 		}
 
-		// A loose grant is a new row, not a patch: nothing else refreshes the
-		// cached subject, so drop it or the credits stay invisible.
-		if (autumnBillingPlan.insertCustomerEntitlements?.length) {
-			await invalidateCachedFullSubject({ ctx, customerId });
-			await deleteCachedFullCustomer({
-				ctx,
-				customerId,
-				source: "auto-topup-expiring-grant",
-			});
-		}
-
+		// Through the worker the options land in its memory; the Redis cache only matters off it.
 		const customerProductUpdate = autumnBillingPlan.updateCustomerProduct;
-		if (customerProductUpdate?.updates.options) {
+		if (
+			customerProductUpdate?.updates.options &&
+			!isBalanceWorkerRolloutEnabled({ ctx, customerId })
+		) {
 			const customerProductId = customerProductUpdate.customerProduct.id;
 			await updateCachedCustomerProductV2({
 				ctx,
