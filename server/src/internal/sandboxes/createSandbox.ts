@@ -11,6 +11,7 @@ import {
 	sandboxSlug,
 	validateSandboxName,
 } from "@autumn/shared";
+import { Autumn } from "autumn-js";
 import type { User } from "better-auth";
 import { generateId } from "better-auth";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -59,19 +60,57 @@ export const assertNotSandboxContext = (org: {
 	}
 };
 
-const MAX_SANDBOXES_PER_ORG = 100;
+const MAX_SANDBOXES_FEATURE_ID = "max_sandboxes";
 
-export const assertSandboxCapacity = ({
+type SandboxCapacityCheck = (args: {
+	customerId: string;
+	requiredBalance: number;
+}) => Promise<{ allowed?: boolean }>;
+
+const defaultSandboxCapacityCheck: SandboxCapacityCheck = async ({
+	customerId,
+	requiredBalance,
+}) => {
+	if (!process.env.AUTUMN_SECRET_KEY) {
+		return { allowed: true };
+	}
+	try {
+		const autumn = new Autumn();
+		const { allowed } = await autumn.check({
+			customerId,
+			featureId: MAX_SANDBOXES_FEATURE_ID,
+			requiredBalance,
+		});
+		return { allowed };
+	} catch {
+		return { allowed: true };
+	}
+};
+
+export const assertSandboxCapacity = async ({
+	db,
+	masterOrgId,
+	checkCapacity = defaultSandboxCapacityCheck,
 	existing,
 }: {
-	existing: Awaited<ReturnType<typeof OrgService.listSandboxes>>;
-}): void => {
-	if (existing.length < MAX_SANDBOXES_PER_ORG) return;
-	throw new RecaseError({
-		message: `You've reached the limit of ${MAX_SANDBOXES_PER_ORG} sandboxes. Contact us to raise it.`,
-		code: ErrCode.FeatureLimitReached,
-		statusCode: 403,
+	db: DrizzleCli;
+	masterOrgId: string;
+	checkCapacity?: SandboxCapacityCheck;
+	existing?: Awaited<ReturnType<typeof OrgService.listSandboxes>>;
+}): Promise<void> => {
+	const sandboxes =
+		existing ?? (await OrgService.listSandboxes({ db, masterOrgId }));
+	const { allowed } = await checkCapacity({
+		customerId: masterOrgId,
+		requiredBalance: sandboxes.length + 1,
 	});
+	if (allowed === false) {
+		throw new RecaseError({
+			message: "You've reached your sandbox limit. Contact us to raise it.",
+			code: ErrCode.FeatureLimitReached,
+			statusCode: 403,
+		});
+	}
 };
 
 export const assertSandboxNameUnique = async ({
@@ -137,7 +176,7 @@ export const createSandboxForOrg = async ({
 		db,
 		masterOrgId: masterOrg.id,
 	});
-	assertSandboxCapacity({ existing });
+	await assertSandboxCapacity({ db, masterOrgId: masterOrg.id, existing });
 	await assertSandboxNameUnique({
 		db,
 		masterOrgId: masterOrg.id,
