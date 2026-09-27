@@ -59,6 +59,21 @@ export const assertNotSandboxContext = (org: {
 	}
 };
 
+const MAX_SANDBOXES_PER_ORG = 100;
+
+export const assertSandboxCapacity = ({
+	existing,
+}: {
+	existing: Awaited<ReturnType<typeof OrgService.listSandboxes>>;
+}): void => {
+	if (existing.length < MAX_SANDBOXES_PER_ORG) return;
+	throw new RecaseError({
+		message: `You've reached the limit of ${MAX_SANDBOXES_PER_ORG} sandboxes. Contact us to raise it.`,
+		code: ErrCode.FeatureLimitReached,
+		statusCode: 403,
+	});
+};
+
 export const assertSandboxNameUnique = async ({
 	db,
 	masterOrgId,
@@ -122,6 +137,7 @@ export const createSandboxForOrg = async ({
 		db,
 		masterOrgId: masterOrg.id,
 	});
+	assertSandboxCapacity({ existing });
 	await assertSandboxNameUnique({
 		db,
 		masterOrgId: masterOrg.id,

@@ -70,7 +70,21 @@ beforeEach(() => {
 	state.listSandboxesCalls = 0;
 });
 
-describe("createSandboxForOrg guards names before provisioning", () => {
+describe("createSandboxForOrg guards capacity and names before provisioning", () => {
+	test("rejects the 101st sandbox and never provisions", async () => {
+		seedSandboxes(100);
+		await expect(
+			createSandboxForOrg({ db, masterOrg, actorUser, name: "My-Sandbox" }),
+		).rejects.toMatchObject({ code: ErrCode.FeatureLimitReached });
+		expect(state.provisionCalled).toBe(false);
+	});
+
+	test("provisions the 100th sandbox", async () => {
+		seedSandboxes(99);
+		await createSandboxForOrg({ db, masterOrg, actorUser, name: "My-Sandbox" });
+		expect(state.provisionCalled).toBe(true);
+	});
+
 	test("provisions a valid name", async () => {
 		seedSandboxes(1);
 		const res = await createSandboxForOrg({
