@@ -29,9 +29,14 @@ const slackError = (code: string) =>
 const createFakeSlack = ({
 	channels = [],
 	privateNames = [],
+	failSetPurpose = false,
+	racedChannel,
 }: {
 	channels?: FakeChannel[];
 	privateNames?: string[];
+	failSetPurpose?: boolean;
+	/** Appears just before `create` runs, as if a concurrent request made it. */
+	racedChannel?: FakeChannel;
 }) => {
 	const calls: { method: string; args: Record<string, unknown> }[] = [];
 	const record = (method: string, args: Record<string, unknown>) =>
@@ -45,6 +50,7 @@ const createFakeSlack = ({
 			},
 			create: async (args: { name: string }) => {
 				record("create", args);
+				if (racedChannel) channels.push(racedChannel);
 				const taken =
 					privateNames.includes(args.name) ||
 					channels.some((channel) => channel.name === args.name);
@@ -59,12 +65,21 @@ const createFakeSlack = ({
 			},
 			setPurpose: async (args: { channel: string; purpose: string }) => {
 				record("setPurpose", args);
+				if (failSetPurpose) throw slackError("ratelimited");
 				const channel = channels.find((c) => c.id === args.channel);
 				if (channel) channel.purpose = { value: args.purpose };
 				return {};
 			},
 			invite: async (args: Record<string, unknown>) => {
 				record("invite", args);
+				return {};
+			},
+			rename: async (args: Record<string, unknown>) => {
+				record("rename", args);
+				return {};
+			},
+			archive: async (args: Record<string, unknown>) => {
+				record("archive", args);
 				return {};
 			},
 			unarchive: async (args: { channel: string }) => {
@@ -81,7 +96,6 @@ const createFakeSlack = ({
 	return {
 		client: {
 			slack: slack as unknown as WebClient,
-			botUserId: BOT_USER_ID,
 			teamUserIds: ["U_TEAM"],
 		},
 		calls,
@@ -246,32 +260,47 @@ describe("inviteToOrgSlackChannel", () => {
 		expect(result.channelName).toBe("autumn-acme");
 	});
 
-	test("claims a channel the bot created but never stamped", async () => {
+	test("treats an unstamped channel as taken, even one the bot created", async () => {
 		const fake = createFakeSlack({
 			channels: [{ id: "C1", name: "autumn-acme", creator: BOT_USER_ID }],
-		});
-
-		await invite({ client: fake.client, requestedName: "acme" });
-
-		expect(fake.methods()).toEqual([
-			"list",
-			"setPurpose",
-			"invite",
-			"inviteShared",
-		]);
-		expect(fake.calls[1].args).toEqual({
-			channel: "C1",
-			purpose: orgPurpose(ORG_ID),
-		});
-	});
-
-	test("won't claim an unstamped channel someone else created", async () => {
-		const fake = createFakeSlack({
-			channels: [{ id: "C1", name: "autumn-acme", creator: "U_HUMAN" }],
 		});
 
 		await expect(
 			invite({ client: fake.client, requestedName: "acme" }),
 		).rejects.toBeInstanceOf(SlackChannelNameTakenError);
+		expect(fake.methods()).toEqual(["list"]);
+	});
+
+	test("frees the name when stamping a new channel fails", async () => {
+		const fake = createFakeSlack({ failSetPurpose: true });
+
+		await expect(
+			invite({ client: fake.client, requestedName: "acme" }),
+		).rejects.toThrow("ratelimited");
+		expect(fake.methods()).toEqual([
+			"list",
+			"create",
+			"setPurpose",
+			"rename",
+			"archive",
+		]);
+		expect(fake.calls[3].args).toEqual({
+			channel: "C_autumn-acme",
+			name: "autumn-unused-c_autumn-acme",
+		});
+	});
+
+	test("reuses the channel when a concurrent request just created it", async () => {
+		const fake = createFakeSlack({
+			racedChannel: {
+				id: "C1",
+				name: "autumn-acme",
+				purpose: { value: orgPurpose(ORG_ID) },
+			},
+		});
+
+		await invite({ client: fake.client, requestedName: "acme" });
+
+		expect(fake.methods()).toEqual(["list", "create", "list", "inviteShared"]);
 	});
 });

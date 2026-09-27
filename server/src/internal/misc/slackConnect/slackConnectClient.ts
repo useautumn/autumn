@@ -30,7 +30,6 @@ export const MAX_SLACK_CHANNELS_PER_ORG = 2;
  */
 type SlackConnectClient = {
 	slack: WebClient;
-	botUserId: string | null;
 	teamUserIds: string[];
 };
 
@@ -57,7 +56,6 @@ export const getSlackConnectClient = async ({
 		slack: new WebClient(
 			decryptChatToken({ token: installation.bot_access_token }),
 		),
-		botUserId: installation.bot_user_id,
 		teamUserIds:
 			TEAM_USER_IDS.length > 0 || !installerUserId
 				? TEAM_USER_IDS
@@ -114,36 +112,24 @@ const listPublicChannels = async ({
 	return channels;
 };
 
-/** A channel the bot created but never stamped, because setup failed right
- * after `conversations.create`. Nobody was invited to it, so the next org to
- * request the name can safely claim it. */
-const isUnclaimedBotChannel = ({
-	client,
-	channel,
-}: {
-	client: SlackConnectClient;
-	channel: SlackChannel;
-}) =>
-	!!client.botUserId &&
-	channel.creator === client.botUserId &&
-	!channel.purpose?.value;
-
-const setUpChannel = async ({
+/** Renames and archives a channel whose setup failed before it was stamped,
+ * so its name is free for the next request instead of being held by a
+ * channel no org owns. Best effort: the caller rethrows the setup error. */
+const releaseUnstampedChannel = async ({
 	client,
 	channelId,
-	purpose,
 }: {
 	client: SlackConnectClient;
 	channelId: string;
-	purpose: string;
 }) => {
-	await client.slack.conversations.setPurpose({ channel: channelId, purpose });
-
-	if (client.teamUserIds.length > 0) {
-		await client.slack.conversations.invite({
+	try {
+		await client.slack.conversations.rename({
 			channel: channelId,
-			users: client.teamUserIds.join(","),
+			name: `${SLACK_CHANNEL_PREFIX}unused-${channelId.toLowerCase()}`,
 		});
+		await client.slack.conversations.archive({ channel: channelId });
+	} catch {
+		// Leave it; someone can free the name by hand.
 	}
 };
 
@@ -161,6 +147,30 @@ const unarchiveChannel = async ({
 	}
 };
 
+/** Returns the channel if the org owns it (unarchiving it if needed), throws
+ * if someone else holds the name, and returns undefined if the name is free. */
+const reuseOwnedChannel = async ({
+	client,
+	channel,
+	name,
+	purpose,
+}: {
+	client: SlackConnectClient;
+	channel: SlackChannel | undefined;
+	name: string;
+	purpose: string;
+}): Promise<string | undefined> => {
+	if (!channel) return undefined;
+	if (!channel.id || channel.purpose?.value !== purpose) {
+		throw new SlackChannelNameTakenError(`#${name} is already taken`);
+	}
+	// An archived channel still holds its name; bring it back.
+	if (channel.is_archived) {
+		await unarchiveChannel({ client, channelId: channel.id });
+	}
+	return channel.id;
+};
+
 /** The channel purpose doubles as the ownership record, so both the reuse
  * check and the per-org limit read it from Slack instead of a DB row. */
 const getOrCreateChannel = async ({
@@ -174,23 +184,18 @@ const getOrCreateChannel = async ({
 }): Promise<string> => {
 	const purpose = orgChannelPurpose({ orgId });
 	const channels = await listPublicChannels({ client });
+
+	const ownedChannelId = await reuseOwnedChannel({
+		client,
+		channel: channels.find((channel) => channel.name === name),
+		name,
+		purpose,
+	});
+	if (ownedChannelId) return ownedChannelId;
+
 	const orgChannels = channels.filter(
 		(channel) => channel.purpose?.value === purpose,
 	);
-
-	const existing = channels.find((channel) => channel.name === name);
-	if (existing?.id && existing.purpose?.value === purpose) {
-		// An archived channel still holds its name; bring it back.
-		if (existing.is_archived) {
-			await unarchiveChannel({ client, channelId: existing.id });
-		}
-		return existing.id;
-	}
-
-	if (existing && !isUnclaimedBotChannel({ client, channel: existing })) {
-		throw new SlackChannelNameTakenError(`#${name} is already taken`);
-	}
-
 	if (orgChannels.length >= MAX_SLACK_CHANNELS_PER_ORG) {
 		const names = orgChannels.map((channel) => `#${channel.name}`).join(", ");
 		throw new SlackChannelLimitError(
@@ -198,28 +203,43 @@ const getOrCreateChannel = async ({
 		);
 	}
 
-	if (existing?.id) {
-		if (existing.is_archived) {
-			await unarchiveChannel({ client, channelId: existing.id });
-		}
-		await setUpChannel({ client, channelId: existing.id, purpose });
-		return existing.id;
-	}
-
 	let channelId: string | undefined;
 	try {
 		const response = await client.slack.conversations.create({ name });
 		channelId = response.channel?.id;
 	} catch (error) {
-		// Not among the public channels, so a private channel holds the name.
-		if (getSlackErrorCode(error) === "name_taken") {
-			throw new SlackChannelNameTakenError(`#${name} is already taken`);
-		}
-		throw error;
+		if (getSlackErrorCode(error) !== "name_taken") throw error;
+		// Either a concurrent request just created it (reuse it if it's this
+		// org's), or a private channel we can't list holds the name.
+		const racedChannelId = await reuseOwnedChannel({
+			client,
+			channel: (await listPublicChannels({ client })).find(
+				(channel) => channel.name === name,
+			),
+			name,
+			purpose,
+		});
+		if (racedChannelId) return racedChannelId;
+		throw new SlackChannelNameTakenError(`#${name} is already taken`);
 	}
 	if (!channelId) throw new Error("Slack returned no channel id");
 
-	await setUpChannel({ client, channelId, purpose });
+	try {
+		await client.slack.conversations.setPurpose({
+			channel: channelId,
+			purpose,
+		});
+	} catch (error) {
+		await releaseUnstampedChannel({ client, channelId });
+		throw error;
+	}
+
+	if (client.teamUserIds.length > 0) {
+		await client.slack.conversations.invite({
+			channel: channelId,
+			users: client.teamUserIds.join(","),
+		});
+	}
 	return channelId;
 };
 
