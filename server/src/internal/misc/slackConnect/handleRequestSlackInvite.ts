@@ -4,6 +4,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getSlackConnectClient,
 	inviteToOrgSlackChannel,
+	SlackChannelLimitError,
 	SlackChannelNameTakenError,
 } from "./slackConnectClient.js";
 
@@ -57,6 +58,13 @@ export const handleRequestSlackInvite = createRoute({
 					message: `${error.message}, please pick another name`,
 					code: ErrCode.InvalidRequest,
 					statusCode: 409,
+				});
+			}
+			if (error instanceof SlackChannelLimitError) {
+				throw new RecaseError({
+					message: error.message,
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
 				});
 			}
 			ctx.logger.error("Failed to send Slack Connect invite", { error });
