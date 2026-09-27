@@ -33,7 +33,10 @@
 			"packages/gateway",
 			"packages/render",
 			"packages/ui",
-			"packages/ducklake"
+			"packages/ducklake",
+			"packages/axiom",
+			"packages/billing",
+			"packages/fx"
 		],
 		"catalog": {
 			"stripe": "19.3.0-beta.1",
@@ -201,7 +204,8 @@
 		"js:publish-dry": "bun js:build && cd packages/autumn-js && npm publish --dry-run",
 		"js:version": "git fetch --tags origin && git tag -l 'autumn-js-v*' --sort=-v:refname | head -1",
 		"stripe-sync:migrate": "bun packages/stripe-sync/scripts/migrate.ts",
-		"stripe-sync:migrate:prod": "NODE_ENV=production infisical run --env=prod --recursive -- bun packages/stripe-sync/scripts/migrate.ts"
+		"stripe-sync:migrate:prod": "NODE_ENV=production infisical run --env=prod --recursive -- bun packages/stripe-sync/scripts/migrate.ts",
+		"atmn": "atmn -c \"packages/billing/config/autumn.config.ts\""
 	},
 	"dependencies": {
 		"@aws-sdk/client-sqs": "^3.985.0",
@@ -238,5 +242,8 @@
 	],
 	"patchedDependencies": {
 		"@chat-adapter/slack@4.38.1": "patches/@chat-adapter%2Fslack@4.38.1.patch"
+	},
+	"atmn": {
+		"config": "packages/billing/config/autumn.config.ts"
 	}
 }
