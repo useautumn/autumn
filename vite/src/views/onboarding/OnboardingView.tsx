@@ -22,6 +22,7 @@ import { CustomersPanel } from "./panels/CustomersPanel";
 import { DeployPanel } from "./panels/DeployPanel";
 import { EventsPanel } from "./panels/EventsPanel";
 import { SetupPromptPanel } from "./panels/SetupPromptPanel";
+import { SlackInviteCard } from "./panels/SlackInviteCard";
 
 type StepContent = { action?: ReactNode; panel?: ReactNode; wide?: boolean };
 
@@ -99,6 +100,7 @@ function OnboardingView() {
 					className="w-24 gap-0 [&_[data-slot=progress-indicator]]:transition-none"
 				/>
 			</PageHeader>
+			<SlackInviteCard />
 			{/* overflow-clip, not hidden: the rows' own background is square, so it
 				needs to be trimmed to the rounded border, and `hidden` would make this
 				a scroll container. */}
