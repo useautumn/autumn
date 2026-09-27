@@ -37,7 +37,7 @@ export const pushHourlyMetersTask = schedules.task({
 
 		const report = await pushHourlyMeters({
 			ctx: { logger, axiom, db, fx, autumn },
-			nowMs: payload.timestamp.getTime(),
+			nowMs: new Date(payload.timestamp).getTime(),
 		});
 		const failed = report.apiCalls.failed + report.paymentVolume.failed;
 		if (failed > 0) throw new Error(`${failed} track items failed to push`);
