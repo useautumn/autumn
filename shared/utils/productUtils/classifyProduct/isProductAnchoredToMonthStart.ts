@@ -1,9 +1,20 @@
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
+import { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import type { FullProduct } from "@models/productModels/productModels";
 import { getSmallestInterval } from "@utils/intervalUtils/priceIntervalUtils";
 import { isOneOffProduct } from "@utils/productUtils/classifyProduct/classifyProductUtils";
 
-/** One-off and weekly plans ignore the flag: they have no monthly cycle to anchor. */
+const MONTHLY_OR_LONGER_RESET_INTERVALS: ReadonlySet<EntInterval> = new Set([
+	EntInterval.Month,
+	EntInterval.Quarter,
+	EntInterval.SemiAnnual,
+	EntInterval.Year,
+]);
+
+/**
+ * The flag needs a monthly-or-longer cycle to anchor: the billing interval when the
+ * plan is paid, otherwise a reset interval. Weekly cycles keep their own day.
+ */
 export const isProductAnchoredToMonthStart = ({
 	product,
 }: {
@@ -16,5 +27,13 @@ export const isProductAnchoredToMonthStart = ({
 		prices: product.prices,
 		excludeOneOff: true,
 	});
-	return smallestInterval?.interval !== BillingInterval.Week;
+	if (smallestInterval) {
+		return smallestInterval.interval !== BillingInterval.Week;
+	}
+
+	return product.entitlements.some(
+		(entitlement) =>
+			entitlement.interval != null &&
+			MONTHLY_OR_LONGER_RESET_INTERVALS.has(entitlement.interval),
+	);
 };
