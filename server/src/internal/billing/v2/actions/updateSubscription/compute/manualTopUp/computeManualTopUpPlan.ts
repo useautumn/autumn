@@ -130,21 +130,31 @@ export const computeManualTopUpPlan = ({
 		});
 	}
 
-	const { deltas, customEntitlements, insertCustomerEntitlements } =
-		routeRemainderToExpiringGrant({
-			deltas: rebalance.deltas,
-			customerEntitlement: prepaidCusEnt,
-			source: "manual_topup",
-			orgId: org.id,
-			now: currentEpochMs ?? Date.now(),
-		});
+	const {
+		deltas,
+		customEntitlements,
+		insertCustomerEntitlements,
+		creditedCustomerEntitlementId,
+	} = routeRemainderToExpiringGrant({
+		deltas: rebalance.deltas,
+		customerEntitlement: prepaidCusEnt,
+		source: "manual_topup",
+		orgId: org.id,
+		now: currentEpochMs ?? Date.now(),
+	});
 
 	return {
 		customerId: fullCustomer?.id ?? "",
 		insertCustomerProducts: [],
 		lineItems,
 		updateCustomerEntitlements: [],
-		autoTopupRebalance: { deltas },
+		autoTopupRebalance: {
+			deltas,
+			customerEntitlementId: prepaidCusEnt.id,
+			featureId,
+			quantity,
+			creditedCustomerEntitlementId,
+		},
 		...(customEntitlements.length ? { customEntitlements } : {}),
 		...(insertCustomerEntitlements.length
 			? { insertCustomerEntitlements }

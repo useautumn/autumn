@@ -8,6 +8,7 @@ import {
 	type FullCusProduct,
 	fullCustomerToSkipOverageBilling,
 	getCycleEnd,
+	getResetBalancesUpdate,
 	invoiceCreditCustomerEntitlementToLineItems,
 	isAllocatedV2CustomerEntitlement,
 	isConsumablePrice,
@@ -17,7 +18,6 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
 import { isInvoiceCreditCustomerEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditCustomerEntitlement.js";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 

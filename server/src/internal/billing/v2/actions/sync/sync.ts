@@ -25,7 +25,7 @@ import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductServ
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { ProductService } from "@/internal/products/ProductService";
 import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe";
-import { executeAutumnBillingPlan } from "../../execute/executeAutumnBillingPlan";
+import { executeAutumnBillingPlan } from "../../execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 import {
 	getCancelFieldsFromStripe,
 	getTrialEndsAtFromStripe,
