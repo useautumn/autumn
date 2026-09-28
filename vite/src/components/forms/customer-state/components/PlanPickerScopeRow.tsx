@@ -23,10 +23,10 @@ function ScopeTab({
 			type="button"
 			onClick={onClick}
 			className={cn(
-				"flex h-5.5 min-w-0 shrink-0 cursor-pointer items-center rounded-sm border px-2 text-xs font-medium transition-colors",
+				"flex h-5.5 min-w-0 shrink-0 cursor-pointer items-center rounded-sm border px-2 text-[11.5px] font-medium transition-colors",
 				isActive
-					? "border-border bg-interactive-secondary-hover text-foreground"
-					: "border-border/60 text-tertiary-foreground hover:text-foreground",
+					? "border-foreground/15 bg-foreground/10 text-foreground"
+					: "border-foreground/10 bg-transparent text-tertiary-foreground hover:text-foreground",
 			)}
 		>
 			<span className="max-w-24 truncate">{label}</span>
@@ -42,7 +42,7 @@ function MoreEntitiesButton({
 		<button
 			type="button"
 			{...props}
-			className="flex h-5.5 shrink-0 cursor-pointer items-center gap-1 rounded-sm border border-border/60 pr-1.5 pl-2 text-xs font-medium text-tertiary-foreground transition-colors hover:text-foreground data-popup-open:border-border data-popup-open:bg-interactive-secondary-hover data-popup-open:text-foreground"
+			className="flex h-5.5 shrink-0 cursor-pointer items-center gap-1 rounded-sm border border-foreground/10 pr-1.5 pl-2 text-[11.5px] font-medium text-tertiary-foreground transition-colors hover:text-foreground data-popup-open:border-foreground/15 data-popup-open:bg-foreground/10 data-popup-open:text-foreground"
 		>
 			{count} more
 			<CaretRightIcon size={11} />
