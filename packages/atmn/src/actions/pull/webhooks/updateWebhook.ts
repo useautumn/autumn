@@ -121,12 +121,22 @@ export const updateWebhook = ({
 	}
 	const shared = fieldAssignments({ webhook, stated });
 	const frozen = unreadEnvKeys.length > 0;
-	if (frozen && shared.length > 0)
+	// `events: []` and no list both mean every event: only a normalisation.
+	const differing = shared.filter(
+		({ path }) =>
+			!(
+				path[0] === "events" &&
+				Array.isArray(stated.events) &&
+				stated.events.length === 0 &&
+				webhook.events.length === 0
+			),
+	);
+	if (frozen && differing.length > 0)
 		result.frozen.push({
 			id: webhook.id,
 			warning: frozenFieldsWarning({
 				id: webhook.id,
-				fields: shared.map(({ path }) => path.join(".")),
+				fields: differing.map(({ path }) => path.join(".")),
 				envKey,
 				unreadEnvKeys,
 			}),

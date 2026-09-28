@@ -360,3 +360,26 @@ test("a pull that never read live stays quiet when shared fields already match",
 	expect(source).toContain(`events: ["billing.updated"]`);
 	expect(output).not.toContain("⚠");
 });
+
+test("a pull that never read live stays quiet when the config's events: [] already means every event", async () => {
+	const dir = projectWith({
+		webhooks: `	webhooks: [
+		webhook({
+			id: "billing",
+			events: [],
+			url: {
+				sandbox: "https://staging.example.com/autumn",
+				live: "https://example.com/autumn",
+			},
+		}),
+	],`,
+	});
+	const { output } = await pullWith({
+		dir,
+		env: { AUTUMN_SECRET_KEY: "sk_sandbox" },
+		lists: {
+			sk_sandbox: [everyEvent("https://staging.example.com/autumn")],
+		},
+	});
+	expect(output).not.toContain("⚠");
+});
