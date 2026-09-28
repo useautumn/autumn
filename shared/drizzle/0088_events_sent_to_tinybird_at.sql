@@ -1,1 +1,0 @@
-ALTER TABLE "events" ADD COLUMN "sent_to_tinybird_at" timestamp with time zone;

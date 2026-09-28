@@ -13,8 +13,10 @@ DESCRIPTION >
       - events_hourly_mv:                    arbitrary properties or filtered queries
     Every monthly branch reads complete UTC months from the monthly rollup and the partial months at
     either end from that branch's hourly rollup, so a partial-month edge stays exact.
-    Uses PER-BIN TOP N groups + "AUTUMN_RESERVED" bucket ((N+1) max total per bin).
+    Keeps the TOP N groups + an "AUTUMN_RESERVED" bucket ((N+1) max total per bin).
     N is controlled by the max_groups parameter (default 9).
+    group_ranking picks where the top N is ranked: 'bin' (default) ranks each bin on its own,
+    'window' ranks once over the whole window so every bin keeps the same groups.
     Returns unpivoted data: (period, event_name, group_value, total_value, _truncated)
 
 TOKEN "aggregate_groupable_read" READ
@@ -601,12 +603,41 @@ SQL >
     )
     GROUP BY period, event_name, group_value
 
+NODE window_ranked
+DESCRIPTION >
+    Rank each event's groups by their total over the WHOLE window. Only read when group_ranking = 'window'.
+SQL >
+    SELECT
+        event_name,
+        group_value,
+        row_number() OVER (
+            PARTITION BY event_name
+            ORDER BY sum(total_value) DESC, group_value ASC
+        ) as rn
+    FROM base
+    GROUP BY event_name, group_value
+
 NODE ranked
 SQL >
+    %
+    {% if String(group_ranking, 'bin') == 'window' %}
+    SELECT
+        base.period as period,
+        base.event_name as event_name,
+        base.group_value as group_value,
+        base.total_value as total_value,
+        base.event_count as event_count,
+        window_ranked.rn as rn
+    FROM base
+    INNER JOIN window_ranked
+        ON base.event_name = window_ranked.event_name
+        AND base.group_value = window_ranked.group_value
+    {% else %}
     SELECT
         *,
         row_number() OVER (PARTITION BY period, event_name ORDER BY total_value DESC) as rn
     FROM base
+    {% end %}
 
 NODE endpoint
 TYPE endpoint

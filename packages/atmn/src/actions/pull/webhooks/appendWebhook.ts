@@ -23,7 +23,8 @@ const fixtureRowOf = ({
 }): Record<string, unknown> => ({
 	id: webhook.id,
 	url: { [envKey]: webhook.url },
-	events: webhook.events,
+	// No list is every event; `events` is left out rather than written as `[]`.
+	...(webhook.events.length > 0 ? { events: webhook.events } : {}),
 	...(webhook.description ? { description: webhook.description } : {}),
 	...(webhook.disabled ? { disabled: true } : {}),
 });

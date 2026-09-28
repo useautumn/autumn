@@ -50,7 +50,7 @@ r"""Colour the dashboard uses to label the sandbox. Defaults to `gray`."""
 
 class CreateSandboxParamsTypedDict(TypedDict):
     name: str
-    r"""A name for the sandbox, unique within your organization."""
+    r"""A name for the sandbox, unique within your organization. No spaces, and it can't be `live` or `sandbox`."""
     color: NotRequired[ColorRequest]
     r"""Colour the dashboard uses to label the sandbox. Defaults to `gray`."""
     icon: NotRequired[str]
@@ -59,7 +59,7 @@ class CreateSandboxParamsTypedDict(TypedDict):
 
 class CreateSandboxParams(BaseModel):
     name: str
-    r"""A name for the sandbox, unique within your organization."""
+    r"""A name for the sandbox, unique within your organization. No spaces, and it can't be `live` or `sandbox`."""
 
     color: Optional[ColorRequest] = None
     r"""Colour the dashboard uses to label the sandbox. Defaults to `gray`."""

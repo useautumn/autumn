@@ -19,7 +19,7 @@ export const webhooksHaveWork = ({
 const DETAIL_INDENT = "      ";
 
 const list = (values: readonly string[]): string =>
-	values.length === 0 ? "(none)" : values.join(", ");
+	values.length === 0 ? "every event" : values.join(", ");
 
 /** Every field that moved, one line each; the URL first, since it is the one that bites. */
 const updateDetails = ({

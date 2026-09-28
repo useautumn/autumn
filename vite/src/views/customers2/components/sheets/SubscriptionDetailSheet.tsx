@@ -176,6 +176,7 @@ export function SubscriptionDetailSheet() {
 						<SubscriptionLicenseRow
 							key={customerLicense.id}
 							planLicense={planLicense}
+							paidQuantity={customerLicense.paid_quantity}
 						/>
 					))}
 				</SheetSection>

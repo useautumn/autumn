@@ -791,6 +791,10 @@ await autumn.plans.update({
       If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
     </DynamicParamField>
 
+    <DynamicParamField body="anchor_to_month_start" type="boolean">
+      Anchor billing and reset cycles to the 1st of the month (UTC).
+    </DynamicParamField>
+
   </Expandable>
 </DynamicParamField>
 
@@ -2477,6 +2481,10 @@ await autumn.plans.update({
   <Expandable title="properties">
     <DynamicResponseField name="ignore_past_due" type="boolean">
       If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="anchor_to_month_start" type="boolean">
+      Anchor billing and reset cycles to the 1st of the month (UTC).
     </DynamicResponseField>
 
   </Expandable>

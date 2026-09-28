@@ -6,8 +6,8 @@ from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
 from pydantic.functional_validators import AfterValidator
-from typing import Any, Dict, Literal, Optional
-from typing_extensions import Annotated, NotRequired, TypedDict
+from typing import Any, Dict, Literal, Optional, Union
+from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
 class BatchTrackGlobalsTypedDict(TypedDict):
@@ -97,6 +97,8 @@ class RequestBodyTypedDict(TypedDict):
     r"""The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat)."""
     properties: NotRequired[Dict[str, Any]]
     r"""Additional properties to attach to this usage event."""
+    idempotency_key: NotRequired[str]
+    r"""Deduplicates this item: a second track with the same key within 24 hours is ignored."""
     timestamp: NotRequired[int]
     r"""Unix timestamp in milliseconds to use for the usage event. Defaults to the current time."""
     overage_behavior: NotRequired[BatchTrackOverageBehavior]
@@ -125,6 +127,9 @@ class RequestBody(BaseModel):
     properties: Optional[Dict[str, Any]] = None
     r"""Additional properties to attach to this usage event."""
 
+    idempotency_key: Optional[str] = None
+    r"""Deduplicates this item: a second track with the same key within 24 hours is ignored."""
+
     timestamp: Optional[int] = None
     r"""Unix timestamp in milliseconds to use for the usage event. Defaults to the current time."""
 
@@ -145,6 +150,7 @@ class RequestBody(BaseModel):
                 "event_name",
                 "value",
                 "properties",
+                "idempotency_key",
                 "timestamp",
                 "overage_behavior",
                 "async",
@@ -165,19 +171,45 @@ class RequestBody(BaseModel):
         return m
 
 
-class BatchTrackResponseTypedDict(TypedDict):
-    r"""Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on 202. See the endpoint description for full partial-failure semantics."""
+class BatchTrackResponseBody2TypedDict(TypedDict):
+    r"""Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on success. See the endpoint description for full partial-failure semantics."""
 
     success: Literal[True]
 
 
-class BatchTrackResponse(BaseModel):
-    r"""Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on 202. See the endpoint description for full partial-failure semantics."""
+class BatchTrackResponseBody2(BaseModel):
+    r"""Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on success. See the endpoint description for full partial-failure semantics."""
 
     success: Annotated[
         Annotated[Literal[True], AfterValidator(validate_const(True))],
         pydantic.Field(alias="success"),
     ] = True
+
+
+class BatchTrackResponseBody1TypedDict(TypedDict):
+    r"""OK"""
+
+    success: Literal[True]
+
+
+class BatchTrackResponseBody1(BaseModel):
+    r"""OK"""
+
+    success: Annotated[
+        Annotated[Literal[True], AfterValidator(validate_const(True))],
+        pydantic.Field(alias="success"),
+    ] = True
+
+
+BatchTrackResponseTypedDict = TypeAliasType(
+    "BatchTrackResponseTypedDict",
+    Union[BatchTrackResponseBody1TypedDict, BatchTrackResponseBody2TypedDict],
+)
+
+
+BatchTrackResponse = TypeAliasType(
+    "BatchTrackResponse", Union[BatchTrackResponseBody1, BatchTrackResponseBody2]
+)
 
 
 try:
@@ -189,6 +221,10 @@ try:
 except NameError:
     pass
 try:
-    BatchTrackResponse.model_rebuild()
+    BatchTrackResponseBody2.model_rebuild()
+except NameError:
+    pass
+try:
+    BatchTrackResponseBody1.model_rebuild()
 except NameError:
     pass

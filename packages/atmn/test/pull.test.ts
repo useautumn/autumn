@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runPull } from "../src/actions/pull";
@@ -15,6 +16,11 @@ const tempDir = ({ name }: { name: string }): string => {
 	const dir = join(import.meta.dir, ".tmp", `pull-${name}`);
 	mkdirSync(dir, { recursive: true });
 	return dir;
+};
+
+/** Its own git toplevel, so the monorepo's root `atmn` marker stays out of reach. */
+const isolateFromRepo = ({ dir }: { dir: string }): void => {
+	execFileSync("git", ["init", "-q"], { cwd: dir });
 };
 
 const writeConfig = ({ dir, text }: { dir: string; text: string }): string => {
@@ -655,6 +661,7 @@ test("a first pull scaffolds the config and fills it from the server", async () 
 	rmSync(dir, { recursive: true, force: true });
 	const { mkdirSync } = await import("node:fs");
 	mkdirSync(dir, { recursive: true });
+	isolateFromRepo({ dir });
 
 	const client = {
 		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
@@ -871,6 +878,7 @@ test("--overwrite --yes leaves a collection file alone when it is not atmn's, an
 
 test("--overwrite --yes with no config is a first pull: scaffold, delete nothing", async () => {
 	const dir = tempDir({ name: "overwrite-no-config" });
+	isolateFromRepo({ dir });
 	const appPath = join(dir, "app.ts");
 	writeFileSync(appPath, "export const app = true;\n", "utf8");
 

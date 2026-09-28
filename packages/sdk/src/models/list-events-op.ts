@@ -6,7 +6,7 @@ import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import * as openEnums from "../types/enums.js";
-import { OpenEnum } from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -35,6 +35,23 @@ export type ListEventsCustomRange = {
   end?: number | undefined;
 };
 
+/**
+ * Preset time range to filter events by, resolved the same way as in events.aggregate. Cannot be combined with custom_range
+ */
+export const ListEventsRange = {
+  TwentyFourh: "24h",
+  Sevend: "7d",
+  Thirtyd: "30d",
+  Ninetyd: "90d",
+  LastCycle: "last_cycle",
+  Onebc: "1bc",
+  Threebc: "3bc",
+} as const;
+/**
+ * Preset time range to filter events by, resolved the same way as in events.aggregate. Cannot be combined with custom_range
+ */
+export type ListEventsRange = ClosedEnum<typeof ListEventsRange>;
+
 export type EventsListParams = {
   /**
    * Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
@@ -60,6 +77,10 @@ export type EventsListParams = {
    * Filter events by time range
    */
   customRange?: ListEventsCustomRange | undefined;
+  /**
+   * Preset time range to filter events by, resolved the same way as in events.aggregate. Cannot be combined with custom_range
+   */
+  range?: ListEventsRange | undefined;
 };
 
 export const ListEventsIntervalEnum = {
@@ -204,6 +225,11 @@ export function listEventsCustomRangeToJSON(
 }
 
 /** @internal */
+export const ListEventsRange$outboundSchema: z.ZodMiniEnum<
+  typeof ListEventsRange
+> = z.enum(ListEventsRange);
+
+/** @internal */
 export type EventsListParams$Outbound = {
   start_cursor: string;
   limit: number;
@@ -211,6 +237,7 @@ export type EventsListParams$Outbound = {
   entity_id?: string | undefined;
   feature_id?: string | Array<string> | undefined;
   custom_range?: ListEventsCustomRange$Outbound | undefined;
+  range?: string | undefined;
 };
 
 /** @internal */
@@ -225,6 +252,7 @@ export const EventsListParams$outboundSchema: z.ZodMiniType<
     entityId: z.optional(z.string()),
     featureId: z.optional(smartUnion([z.string(), z.array(z.string())])),
     customRange: z.optional(z.lazy(() => ListEventsCustomRange$outboundSchema)),
+    range: z.optional(ListEventsRange$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {

@@ -15,17 +15,6 @@ export const listEventsCustomRangeSchema = z.object({
 	end: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const eventsListParamsSchema = z.object({
-	startCursor: z.union([z.string(), z.undefined()]).optional(),
-	limit: z.union([z.number(), z.undefined()]).optional(),
-	customerId: z.union([z.string(), z.undefined()]).optional(),
-	entityId: z.union([z.string(), z.undefined()]).optional(),
-	featureId: z
-		.union([z.string(), z.array(z.string()), z.undefined()])
-		.optional(),
-	customRange: z.union([listEventsCustomRangeSchema, z.undefined()]).optional(),
-});
-
 export const listEventsFeatureIdOutboundSchema = z.union([
 	z.string(),
 	z.array(z.string()),
@@ -47,9 +36,26 @@ export const eventsListParamsOutboundSchema = z.object({
 	custom_range: z
 		.union([listEventsCustomRangeOutboundSchema, z.undefined()])
 		.optional(),
+	range: z.union([z.string(), z.undefined()]).optional(),
 });
 
+const closedEnumSchema = z.any();
+
 const openEnumSchema = z.any();
+
+export const listEventsRangeSchema = closedEnumSchema;
+
+export const eventsListParamsSchema = z.object({
+	startCursor: z.union([z.string(), z.undefined()]).optional(),
+	limit: z.union([z.number(), z.undefined()]).optional(),
+	customerId: z.union([z.string(), z.undefined()]).optional(),
+	entityId: z.union([z.string(), z.undefined()]).optional(),
+	featureId: z
+		.union([z.string(), z.array(z.string()), z.undefined()])
+		.optional(),
+	customRange: z.union([listEventsCustomRangeSchema, z.undefined()]).optional(),
+	range: z.union([listEventsRangeSchema, z.undefined()]).optional(),
+});
 
 export const listEventsIntervalEnumSchema = openEnumSchema;
 

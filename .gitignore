@@ -39,6 +39,9 @@ apps/balance-worker/.data/
 !apps/leaf/tests
 !packages/render/tests
 !packages/ducklake/tests
+!packages/axiom/tests
+!packages/billing/tests
+!packages/fx/tests
 !vite/tests
 .secrets
 

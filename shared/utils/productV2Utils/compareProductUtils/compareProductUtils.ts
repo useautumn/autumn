@@ -115,6 +115,12 @@ export const compareConfig = ({
 			condition: !!newConfig?.ignore_past_due === !!curConfig?.ignore_past_due,
 			message: `Ignore past due different: ${newConfig?.ignore_past_due} !== ${curConfig?.ignore_past_due}`,
 		},
+		anchor_to_month_start: {
+			condition:
+				!!newConfig?.anchor_to_month_start ===
+				!!curConfig?.anchor_to_month_start,
+			message: `Anchor to month start different: ${newConfig?.anchor_to_month_start} !== ${curConfig?.anchor_to_month_start}`,
+		},
 	};
 
 	const detailsSame = Object.values(checks).every((d) => d.condition);

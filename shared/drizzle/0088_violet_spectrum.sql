@@ -20,9 +20,12 @@ CREATE TABLE "partition_progress" (
 	"partition_id" integer NOT NULL,
 	"next_offset" bigint NOT NULL,
 	"command_next_offset" bigint,
+	"owner_epoch" bigint,
+	"owner_fence_offset" bigint,
 	CONSTRAINT "partition_progress_pkey" PRIMARY KEY("topic","partition_id")
 );
 --> statement-breakpoint
+ALTER TABLE "events" ADD COLUMN "sent_to_tinybird_at" timestamp with time zone;--> statement-breakpoint
 ALTER TABLE "balance_locks" ADD CONSTRAINT "balance_locks_internal_customer_id_fkey" FOREIGN KEY ("internal_customer_id") REFERENCES "public"."customers"("internal_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX CONCURRENTLY "balance_locks_org_env_lock_id_key" ON "balance_locks" USING btree ("org_id","env","lock_id");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_balance_locks_internal_customer_id" ON "balance_locks" USING btree ("internal_customer_id");--> statement-breakpoint

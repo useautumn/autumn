@@ -1,4 +1,8 @@
-import { notNullish } from "@autumn/shared";
+import {
+	isOneOffProductV2,
+	notNullish,
+	type ProductConfig,
+} from "@autumn/shared";
 import {
 	Input,
 	Select,
@@ -55,6 +59,10 @@ export const MoreSettingsSection = () => {
 		setProduct({ ...product, base_id: pendingBasePlanId });
 	};
 
+	const setConfig = (patch: Partial<ProductConfig>) =>
+		setProduct({ ...product, config: { ...product.config, ...patch } });
+	const isRecurringPlan = !isOneOffProductV2({ items: product.items });
+
 	const hasMetadata = Object.keys(product.metadata ?? {}).length > 0;
 	const [metadataOpened, setMetadataOpened] = useState(false);
 	const showMetadata = hasMetadata || metadataOpened;
@@ -107,14 +115,26 @@ export const MoreSettingsSection = () => {
 							<Switch
 								checked={!!product.config?.ignore_past_due}
 								onCheckedChange={(checked) =>
-									setProduct({
-										...product,
-										config: { ...product.config, ignore_past_due: checked },
-									})
+									setConfig({ ignore_past_due: checked })
 								}
 							/>
 						}
 					/>
+
+					{isRecurringPlan && (
+						<ConfigRow
+							title="Anchor to month start"
+							description="Bill and reset on the 1st of each month (UTC). The first period is prorated."
+							action={
+								<Switch
+									checked={!!product.config?.anchor_to_month_start}
+									onCheckedChange={(checked) =>
+										setConfig({ anchor_to_month_start: checked })
+									}
+								/>
+							}
+						/>
+					)}
 
 					{!isCustomPlan && (
 						<ConfigRow

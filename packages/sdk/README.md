@@ -242,7 +242,7 @@ const response = await client.trackTokens({
 @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
 
 @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
-* [batchTrack](docs/sdks/autumn/README.md#batchtrack) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
+* [batchTrack](docs/sdks/autumn/README.md#batchtrack) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 200 (or 202) immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 200 (or 202) and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
 
 ### [Balances](docs/sdks/balances/README.md)
 
@@ -569,6 +569,27 @@ const response = await client.billing.previewMultiUpdate({ customerId: "cus_123"
 @returns A preview with the combined total plus one entry per subscription, each with its own line items, totals, and next-cycle preview.
 * [openCustomerPortal](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
 * [setupPayment](docs/sdks/billing/README.md#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
+* [verify](docs/sdks/billing/README.md#verify) - Checks a customer's Stripe subscriptions against Autumn's record of their plans and reports any drift. Read-only: it never changes Autumn or Stripe.
+
+Use this endpoint to audit that a customer's Stripe subscriptions, items, quantities, prices, schedules and cancellation state match what Autumn expects, for example after a migration or a manual change in Stripe.
+
+@example
+```typescript
+// Verify every subscription for a customer
+const response = await client.billing.verify({ customerId: "cus_123" });
+```
+
+@example
+```typescript
+// Verify specific subscriptions in strict mode
+const response = await client.billing.verify({ customerId: "cus_123", subscriptionIds: ["sub_1234"], strict: true });
+```
+
+@param customerId - Autumn customer whose Stripe subscriptions should be checked against Autumn's customer_products.
+@param subscriptionIds - Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. (optional)
+@param strict - When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false. (optional)
+
+@returns A verify response with account-level mismatches and a per-subscription status (correct or mismatched) with the mismatches found.
 * [import](docs/sdks/billing/README.md#import) - Import
 
 ### [Customers](docs/sdks/customers/README.md)
@@ -889,6 +910,16 @@ const response = await client.features.delete({ featureId: "old-feature" });
 * [delete](docs/sdks/sandboxes/README.md#delete) - Permanently deletes a sandbox and everything inside it: its catalog, customers and secret key. Cannot be undone.
 * [reset](docs/sdks/sandboxes/README.md#reset) - Wipes every customer, plan, feature and migration draft in the sandbox the calling key belongs to, leaving the sandbox itself, its secret keys and its settings in place. There is no id to pass: a sandbox's own key resets that sandbox, and an organization's test-mode key resets its default sandbox environment. Refused for live keys — only sandboxes can be reset. Cannot be undone.
 
+### [Webhooks](docs/sdks/webhooks/README.md)
+
+* [create](docs/sdks/webhooks/README.md#create) - Creates a webhook: a URL Autumn sends the listed events to, in the environment of the calling key. You choose the `id`, and it can't be changed later. Returns the signing secret once, in this response — store it, it cannot be read back.
+* [get](docs/sdks/webhooks/README.md#get) - Gets one webhook by ID. The signing secret is never returned here — only `webhooks.create` and `webhooks.sync` show one, when they create the webhook.
+* [list](docs/sdks/webhooks/README.md#list) - Lists every webhook in the environment of the calling key, including ones made in the dashboard (these show their `ep_…` ID).
+* [update](docs/sdks/webhooks/README.md#update) - Updates a webhook's URL, events, description or disabled state. Only the fields you pass change. The ID can't be changed — to rename, create a new webhook.
+* [delete](docs/sdks/webhooks/README.md#delete) - Permanently deletes a webhook. Autumn stops sending it events immediately. Cannot be undone.
+* [previewSync](docs/sdks/webhooks/README.md#previewsync) - Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them.
+* [sync](docs/sdks/webhooks/README.md#sync) - Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.
+
 </details>
 <!-- End Available Resources and Operations [operations] -->
 
@@ -911,7 +942,7 @@ To read more about standalone functions, check [FUNCTIONS.md](./FUNCTIONS.md).
 - [`balancesDelete`](docs/sdks/balances/README.md#delete) - Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
 - [`balancesFinalize`](docs/sdks/balances/README.md#finalize) - Finalize a previously locked balance. Use 'confirm' to commit the deduction, or 'release' to return the held balance.
 - [`balancesUpdate`](docs/sdks/balances/README.md#update) - Update a customer balance.
-- [`batchTrack`](docs/sdks/autumn/README.md#batchtrack) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
+- [`batchTrack`](docs/sdks/autumn/README.md#batchtrack) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 200 (or 202) immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 200 (or 202) and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
 - [`billingAttach`](docs/sdks/billing/README.md#attach) - Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
 
 Use this endpoint to subscribe a customer to a plan, upgrade/downgrade between plans, or add an add-on product.
@@ -1229,6 +1260,27 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param licenseQuantities - Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
+- [`billingVerify`](docs/sdks/billing/README.md#verify) - Checks a customer's Stripe subscriptions against Autumn's record of their plans and reports any drift. Read-only: it never changes Autumn or Stripe.
+
+Use this endpoint to audit that a customer's Stripe subscriptions, items, quantities, prices, schedules and cancellation state match what Autumn expects, for example after a migration or a manual change in Stripe.
+
+@example
+```typescript
+// Verify every subscription for a customer
+const response = await client.billing.verify({ customerId: "cus_123" });
+```
+
+@example
+```typescript
+// Verify specific subscriptions in strict mode
+const response = await client.billing.verify({ customerId: "cus_123", subscriptionIds: ["sub_1234"], strict: true });
+```
+
+@param customerId - Autumn customer whose Stripe subscriptions should be checked against Autumn's customer_products.
+@param subscriptionIds - Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. (optional)
+@param strict - When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false. (optional)
+
+@returns A verify response with account-level mismatches and a per-subscription status (correct or mismatched) with the mismatches found.
 - [`check`](docs/sdks/autumn/README.md#check) - Checks whether a customer currently has enough balance to use a feature.
 
 Use this to gate access before a feature action. Enable sendEvent when you want to check and consume balance atomically in one request.
@@ -1601,6 +1653,13 @@ const response = await client.trackTokens({
 @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
 
 @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
+- [`webhooksCreate`](docs/sdks/webhooks/README.md#create) - Creates a webhook: a URL Autumn sends the listed events to, in the environment of the calling key. You choose the `id`, and it can't be changed later. Returns the signing secret once, in this response — store it, it cannot be read back.
+- [`webhooksDelete`](docs/sdks/webhooks/README.md#delete) - Permanently deletes a webhook. Autumn stops sending it events immediately. Cannot be undone.
+- [`webhooksGet`](docs/sdks/webhooks/README.md#get) - Gets one webhook by ID. The signing secret is never returned here — only `webhooks.create` and `webhooks.sync` show one, when they create the webhook.
+- [`webhooksList`](docs/sdks/webhooks/README.md#list) - Lists every webhook in the environment of the calling key, including ones made in the dashboard (these show their `ep_…` ID).
+- [`webhooksPreviewSync`](docs/sdks/webhooks/README.md#previewsync) - Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them.
+- [`webhooksSync`](docs/sdks/webhooks/README.md#sync) - Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.
+- [`webhooksUpdate`](docs/sdks/webhooks/README.md#update) - Updates a webhook's URL, events, description or disabled state. Only the fields you pass change. The ID can't be changed — to rename, create a new webhook.
 
 </details>
 <!-- End Standalone functions [standalone-funcs] -->

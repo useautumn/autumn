@@ -10,6 +10,7 @@ import {
 	isOneOffProduct,
 	isPastStartDate,
 	isProductPaidAndRecurring,
+	type LicenseQuantityParams,
 	type MultiAttachBillingContext,
 	type MultiAttachParamsV0,
 	type MultiAttachProductContext,
@@ -28,9 +29,11 @@ import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
+import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup/setupCustomerLicenseQuantityContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
+import { setupRequestedBillingCycleAnchor } from "@/internal/billing/v2/setup/setupRequestedBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import {
 	applyProductTrialConfig,
@@ -38,7 +41,10 @@ import {
 } from "@/internal/billing/v2/setup/trialContext";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 
-type ImmediateMultiProductParams = MultiAttachParamsV0 & {
+export type ImmediateMultiProductParams = Omit<MultiAttachParamsV0, "plans"> & {
+	plans: (MultiAttachParamsV0["plans"][number] & {
+		license_quantities?: LicenseQuantityParams[];
+	})[];
 	no_billing_changes?: boolean;
 };
 
@@ -222,11 +228,18 @@ export const setupImmediateMultiProductBillingContext = async ({
 				initializeUndefinedQuantities: true,
 			});
 
+			const customerLicenseQuantities = setupCustomerLicenseQuantityContext({
+				params: plan,
+				fullProduct,
+				customerProduct: currentCustomerProduct,
+			});
+
 			return {
 				fullProduct,
 				customPrices: customPrices ?? [],
 				customEnts: customEnts ?? [],
 				featureQuantities,
+				customerLicenseQuantities,
 				insertPlanLicenses,
 				fullCustomer: scopedFullCustomer,
 				currentCustomerProduct,
@@ -312,13 +325,22 @@ export const setupImmediateMultiProductBillingContext = async ({
 		currentEpochMs,
 	});
 
+	const requestedBillingCycleAnchor = setupRequestedBillingCycleAnchor({
+		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		fullProducts,
+		stripeSubscription,
+		trialContext,
+		currentEpochMs,
+		startsNow: billingStartsAt === undefined,
+	});
+
 	let billingCycleAnchorMs = setupBillingCycleAnchor({
 		stripeSubscription,
 		customerProduct: undefined,
 		newFullProduct: firstProduct,
 		trialContext,
 		currentEpochMs,
-		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		requestedBillingCycleAnchor,
 		billingStartsAt,
 		billingStartsAtToleranceMs,
 	});
@@ -389,7 +411,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		billingStartsAt,
 		subscriptionBackdateStartMs,
 		requestedProrationBehavior: params.billing_behavior,
-		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		requestedBillingCycleAnchor,
 		// Multi-attach has no carry_over_balances param, so there is no reset
 		// cycle to round the refund to — only the no-partial-refund flag applies.
 		anchorResetRefund: setupAnchorResetRefund({

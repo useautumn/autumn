@@ -36,6 +36,7 @@ export const computeAttachPlan = ({
 	const {
 		currentCustomerProduct,
 		carryOverSourceCustomerProduct,
+		licenseTransitionSourceCustomerProduct,
 		scheduledCustomerProduct,
 		planTiming,
 		customPrices,
@@ -83,17 +84,29 @@ export const computeAttachPlan = ({
 	});
 
 	// Customer licenses follow the incoming definitions on immediate swaps;
-	// scheduled swaps transition at activation instead.
-	const computedCustomerLicenseTransitions = currentCustomerProduct
-		? computeCustomerLicenseTransitions({
-				outgoingCustomerProducts: [currentCustomerProduct],
-				incomingCustomerProducts: [newCustomerProduct],
-				customerLicenseBillingContext:
-					attachBillingContext.customerLicenseBillingContext,
-				carryCustomerLicenseState: planTiming === "immediate",
-				carryOverUsages: params.carry_over_usages,
-			})
-		: [];
+	// scheduled swaps transition at activation instead. A cross-group source
+	// (a plan removed via remove_plan_ids) is paired explicitly, since
+	// same-group successor pairing would never match it.
+	const computedCustomerLicenseTransitions =
+		licenseTransitionSourceCustomerProduct
+			? computeCustomerLicenseTransitions({
+					outgoingCustomerProducts: [licenseTransitionSourceCustomerProduct],
+					incomingCustomerProducts: [newCustomerProduct],
+					customerProductPairs: currentCustomerProduct
+						? undefined
+						: [
+								{
+									outgoingCustomerProduct:
+										licenseTransitionSourceCustomerProduct,
+									incomingCustomerProduct: newCustomerProduct,
+								},
+							],
+					customerLicenseBillingContext:
+						attachBillingContext.customerLicenseBillingContext,
+					carryCustomerLicenseState: planTiming === "immediate",
+					carryOverUsages: params.carry_over_usages,
+				})
+			: [];
 	const customerLicenseTransitions =
 		planTiming === "immediate" ? computedCustomerLicenseTransitions : [];
 

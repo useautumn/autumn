@@ -16,15 +16,18 @@ import {
 	DropdownMenuTrigger,
 	LongInput,
 } from "@autumn/ui";
-import { ChatCircleTextIcon } from "@phosphor-icons/react";
+import { ChatCircleTextIcon, DiscordLogoIcon } from "@phosphor-icons/react";
 import { CircleQuestionMark, GraduationCap } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { useOnboardingVisibility } from "@/views/onboarding/hooks/useOnboardingProgress";
+import { useSlackInvite } from "@/views/onboarding/hooks/useSlackInvite";
+import { SlackChannelNamePopover } from "@/views/onboarding/panels/SlackChannelNamePopover";
+import { SlackLogo } from "@/views/onboarding/panels/SlackInviteCard";
 import { NavButton } from "./NavButton";
 
 export function SidebarContact() {
@@ -36,6 +39,9 @@ export function SidebarContact() {
 	const [feedbackOpen, setFeedbackOpen] = useState(false);
 	const [feedback, setFeedback] = useState("");
 	const [loading, setLoading] = useState(false);
+	const slackInvite = useSlackInvite();
+	const [slackChannelOpen, setSlackChannelOpen] = useState(false);
+	const contactButtonRef = useRef<HTMLDivElement>(null);
 
 	const handleSubmitFeedback = async () => {
 		if (!feedback.trim()) return;
@@ -57,7 +63,10 @@ export function SidebarContact() {
 	return (
 		<>
 			<DropdownMenu>
-				<DropdownMenuTrigger render={<div />} nativeButton={false}>
+				<DropdownMenuTrigger
+					render={<div ref={contactButtonRef} />}
+					nativeButton={false}
+				>
 					<NavButton
 						env={env}
 						icon={<CircleQuestionMark strokeWidth={1.5} />}
@@ -96,13 +105,19 @@ export function SidebarContact() {
 						asChild
 					>
 						<Link to="https://discord.gg/STqxY92zuS" target="_blank">
-							We're online on Discord
-							<span className="relative flex h-2 w-2">
-								<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
-								<span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500"></span>
-							</span>
+							<DiscordLogoIcon size={14} weight="fill" color="#5865F2" />
+							Join our Discord
 						</Link>
 					</DropdownMenuItem>
+					{slackInvite.isReady && (
+						<DropdownMenuItem
+							onClick={() => setSlackChannelOpen(true)}
+							className="cursor-pointer"
+						>
+							<SlackLogo className="size-3.5" />
+							Join a Slack channel
+						</DropdownMenuItem>
+					)}
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						onClick={() => setFeedbackOpen(true)}
@@ -127,6 +142,16 @@ export function SidebarContact() {
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
+			<SlackChannelNamePopover
+				open={slackChannelOpen}
+				onOpenChange={setSlackChannelOpen}
+				anchor={contactButtonRef}
+				side="right"
+				align="end"
+				onRequested={({ email }) =>
+					toast.success(`Slack invite sent to ${email}. Check your inbox.`)
+				}
+			/>
 			<Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
 				<DialogContent>
 					<DialogHeader>

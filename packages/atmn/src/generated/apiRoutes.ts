@@ -2334,6 +2334,37 @@ export const API_ROUTES: readonly ApiRoute[] = [
 	},
 	{
 		group: "billing",
+		method: "verify",
+		path: "/v1/billing.verify",
+		description:
+			"Checks a customer's Stripe subscriptions against Autumn's record of their plans and reports any drift. Read-only: it never changes Autumn or Stripe.",
+		body: "object",
+		fields: [
+			{
+				name: "customer_id",
+				type: "string",
+				required: true,
+				description:
+					"Autumn customer whose Stripe subscriptions should be checked against Autumn's customer_products.",
+			},
+			{
+				name: "subscription_ids",
+				type: "json",
+				required: false,
+				description:
+					"Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn.",
+			},
+			{
+				name: "strict",
+				type: "boolean",
+				required: false,
+				description:
+					"When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false.",
+			},
+		],
+	},
+	{
+		group: "billing",
 		method: "import",
 		path: "/v1/billing.import",
 		description:
@@ -2873,7 +2904,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 		method: "batch_track",
 		path: "/v1/balances.batch_track",
 		description:
-			"Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.",
+			"Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 200 (or 202) immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 200 (or 202) and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.",
 		body: "array",
 		fields: [],
 	},
@@ -2923,6 +2954,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: false,
 				description: "Filter events by time range",
+			},
+			{
+				name: "range",
+				type: "string",
+				required: false,
+				description:
+					"Preset time range to filter events by, resolved the same way as in events.aggregate. Cannot be combined with custom_range",
 			},
 		],
 	},
@@ -2980,6 +3018,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Custom time range to aggregate events for. If provided, range must not be provided",
+			},
+			{
+				name: "timezone",
+				type: "string",
+				required: false,
+				description:
+					'IANA timezone (e.g. "America/New_York") that day, week and month bins are aligned to. Hour bins are always UTC. Defaults to UTC',
 			},
 			{
 				name: "filter_by",
@@ -4126,9 +4171,9 @@ export const API_ROUTES: readonly ApiRoute[] = [
 			{
 				name: "events",
 				type: "json",
-				required: true,
+				required: false,
 				description:
-					"The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.",
+					"The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events.",
 			},
 			{
 				name: "description",
@@ -4197,7 +4242,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: false,
 				description:
-					"The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.",
+					"The events sent to this webhook. Pass `[]` to send every event; omit it to keep the current list. `vercel.*` events can't be mixed with other events.",
 			},
 			{
 				name: "description",

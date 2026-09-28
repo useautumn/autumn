@@ -25,8 +25,11 @@ const fieldAssignments = ({
 	stated: StatedWebhook;
 }): Assignment[] => {
 	const assignments: Assignment[] = [];
-	// `[]` is a dashboard webhook receiving every event: not a list a config can state.
-	if (webhook.events.length > 0 && !sameEvents(stated.events, webhook.events))
+	// No list is every event, which a config states by leaving `events` out.
+	if (webhook.events.length === 0) {
+		if (stated.events !== undefined)
+			assignments.push({ path: ["events"], text: null });
+	} else if (!sameEvents(stated.events, webhook.events))
 		assignments.push({
 			path: ["events"],
 			text: `[${webhook.events.map((event) => JSON.stringify(event)).join(", ")}]`,
@@ -43,6 +46,24 @@ const fieldAssignments = ({
 		});
 	return assignments;
 };
+
+const listed = (items: string[]): string =>
+	items.length === 1
+		? items[0]
+		: `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+
+const frozenFieldsWarning = ({
+	id,
+	fields,
+	envKey,
+	unreadEnvKeys,
+}: {
+	id: string;
+	fields: string[];
+	envKey: string;
+	unreadEnvKeys: string[];
+}): string =>
+	`⚠ ${id}: ${listed(fields)} ${fields.length === 1 && fields[0] !== "events" ? "differs" : "differ"} in ${envKey}; ${listed(unreadEnvKeys)} ${unreadEnvKeys.length === 1 ? "wasn't" : "weren't"} read, so left unchanged`;
 
 /** Rule 3's wording: what the server holds against what the code evaluates to. */
 export const nonLiteralUrlWarning = ({
@@ -75,17 +96,21 @@ export const updateWebhook = ({
 	webhook,
 	stated,
 	envKey,
+	unreadEnvKeys,
 }: {
 	pull: PullFiles;
 	webhook: RemoteWebhook;
 	stated: StatedWebhook;
 	envKey: string;
+	/** Url-map envs this pull didn't read: shared fields then stay as stated. */
+	unreadEnvKeys: string[];
 }): WebhookEditResult => {
-	const result: WebhookEditResult = { lines: [], warnings: [], unlocated: [] };
-	if (webhook.events.length === 0 && Array.isArray(stated.events))
-		result.warnings.push(
-			`⚠ ${webhook.id}  the dashboard webhook at this url receives every event; your next push narrows it to ${stated.events.join(", ")}`,
-		);
+	const result: WebhookEditResult = {
+		lines: [],
+		warnings: [],
+		unlocated: [],
+		frozen: [],
+	};
 	const located = locateWebhook({ pull, id: webhook.id });
 	if (located === null) {
 		result.unlocated.push({
@@ -94,6 +119,28 @@ export const updateWebhook = ({
 		});
 		return result;
 	}
+	const shared = fieldAssignments({ webhook, stated });
+	const frozen = unreadEnvKeys.length > 0;
+	// `events: []` and no list both mean every event: only a normalisation.
+	const differing = shared.filter(
+		({ path }) =>
+			!(
+				path[0] === "events" &&
+				Array.isArray(stated.events) &&
+				stated.events.length === 0 &&
+				webhook.events.length === 0
+			),
+	);
+	if (frozen && differing.length > 0)
+		result.frozen.push({
+			id: webhook.id,
+			warning: frozenFieldsWarning({
+				id: webhook.id,
+				fields: differing.map(({ path }) => path.join(".")),
+				envKey,
+				unreadEnvKeys,
+			}),
+		});
 	const patched = patchFixturePaths({
 		source: located.source,
 		builder: SPEC.builder,
@@ -101,7 +148,7 @@ export const updateWebhook = ({
 		id: webhook.id,
 		assignments: [
 			{ path: ["url", envKey], text: JSON.stringify(webhook.url) },
-			...fieldAssignments({ webhook, stated }),
+			...(frozen ? [] : shared),
 		],
 		bareKeys: true,
 	});

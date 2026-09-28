@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import {
 	DEFAULT_SLACK_BOT_SCOPES,
@@ -69,14 +70,37 @@ const getSlackBotScopes = () => {
 	return [...new Set([...base, ...REQUIRED_USER_RESOLUTION_SCOPES])];
 };
 
-export const createSlackInstallUrl = (state: string) => {
+export const createSlackInstallUrl = (
+	state: string,
+	{ extraScopes = [] }: { extraScopes?: readonly string[] } = {},
+) => {
 	const params = new URLSearchParams({
 		client_id: getRequiredChatEnv("SLACK_CLIENT_ID"),
-		scope: getSlackBotScopes().join(","),
+		scope: [...new Set([...getSlackBotScopes(), ...extraScopes])].join(","),
 		state,
 	});
 	if (process.env.SLACK_REDIRECT_URI) {
 		params.set("redirect_uri", process.env.SLACK_REDIRECT_URI);
 	}
 	return `https://slack.com/oauth/v2/authorize?${params}`;
+};
+
+/** Decrypts chat tokens stored by leaf (`apps/leaf/src/lib/crypto.ts`). */
+export const decryptChatToken = ({ token }: { token: string }) => {
+	const key = crypto
+		.createHash("sha256")
+		.update(process.env.ENCRYPTION_PASSWORD ?? "")
+		.digest();
+	const buffer = Buffer.from(token, "base64");
+	if (buffer[0] !== 1) throw new Error("Unsupported encrypted payload");
+	const decipher = crypto.createDecipheriv(
+		"aes-256-gcm",
+		key,
+		buffer.subarray(1, 13),
+	);
+	decipher.setAuthTag(buffer.subarray(13, 29));
+	return Buffer.concat([
+		decipher.update(buffer.subarray(29)),
+		decipher.final(),
+	]).toString("utf8");
 };

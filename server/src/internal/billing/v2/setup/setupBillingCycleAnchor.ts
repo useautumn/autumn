@@ -35,7 +35,11 @@ export const setupBillingCycleAnchor = ({
 	billingStartsAt?: number;
 	billingStartsAtToleranceMs?: number;
 }): number | "now" => {
-	if (requestedBillingCycleAnchor !== undefined) {
+	if (requestedBillingCycleAnchor === "now") return "now";
+
+	// A new subscription is created on the requested anchor. An existing one keeps
+	// its cycle and moves to the anchor later via a scheduled reset.
+	if (typeof requestedBillingCycleAnchor === "number" && !stripeSubscription) {
 		return requestedBillingCycleAnchor;
 	}
 

@@ -68,6 +68,9 @@ COPY packages/render/package.json packages/render/
 COPY packages/svix/package.json packages/svix/
 COPY packages/tinybird/package.json packages/tinybird/
 COPY packages/ducklake/package.json packages/ducklake/
+COPY packages/axiom/package.json packages/axiom/
+COPY packages/billing/package.json packages/billing/
+COPY packages/fx/package.json packages/fx/
 COPY packages/sdk/package.json packages/sdk/
 COPY packages/stripe-sync/package.json packages/stripe-sync/
 COPY packages/ui/package.json packages/ui/

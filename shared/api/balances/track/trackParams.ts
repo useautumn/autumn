@@ -13,7 +13,13 @@ export const TrackQuerySchema = z.object({
 });
 
 // Track Schemas
-export const TrackParamsSchema = BalanceParamsBaseSchema.extend({
+const hasExactlyOneOfFeatureIdOrEventName = {
+	check: (data: { feature_id?: string; event_name?: string }) =>
+		Boolean(data.feature_id) !== Boolean(data.event_name),
+	message: "Either feature_id or event_name must be provided",
+};
+
+const TrackParamsBaseSchema = BalanceParamsBaseSchema.extend({
 	feature_id: z.string().optional().meta({
 		description:
 			"The ID of the feature to track usage for. Required if event_name is not provided.",
@@ -53,28 +59,28 @@ export const TrackParamsSchema = BalanceParamsBaseSchema.extend({
 		description:
 			"If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.",
 	}),
-}).refine(
-	(data) => {
-		if (data.feature_id && data.event_name) {
-			return false;
-		}
+});
 
-		if (!data.feature_id && !data.event_name) {
-			return false;
-		}
-
-		return true;
-	},
-	{
-		message: "Either feature_id or event_name must be provided",
-	},
+export const TrackParamsSchema = TrackParamsBaseSchema.refine(
+	hasExactlyOneOfFeatureIdOrEventName.check,
+	{ message: hasExactlyOneOfFeatureIdOrEventName.message },
 );
 
 export type TrackParams = z.infer<typeof TrackParamsSchema>;
 export type TrackQuery = z.infer<typeof TrackQuerySchema>;
 
+// Only batch track exposes the key: each item dedups on its own.
+export const BatchTrackItemSchema = TrackParamsBaseSchema.extend({
+	idempotency_key: z.string().optional().meta({
+		description:
+			"Deduplicates this item: a second track with the same key within 24 hours is ignored.",
+	}),
+}).refine(hasExactlyOneOfFeatureIdOrEventName.check, {
+	message: hasExactlyOneOfFeatureIdOrEventName.message,
+});
+
 export const BatchTrackParamsSchema = z
-	.array(TrackParamsSchema)
+	.array(BatchTrackItemSchema)
 	.min(1)
 	.max(1000);
 export type BatchTrackParams = z.infer<typeof BatchTrackParamsSchema>;

@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from autumn_sdk.referrals import Referrals
     from autumn_sdk.rewards_sdk import RewardsSDK
     from autumn_sdk.sandboxes import Sandboxes
+    from autumn_sdk.webhooks import Webhooks
 
 
 class Autumn(BaseSDK):
@@ -60,6 +61,7 @@ class Autumn(BaseSDK):
     platform: "Platform"
     keys: "Keys"
     sandboxes: "Sandboxes"
+    webhooks: "Webhooks"
     _sub_sdk_map = {
         "customers": ("autumn_sdk.customers", "Customers"),
         "plans": ("autumn_sdk.plans", "Plans"),
@@ -76,6 +78,7 @@ class Autumn(BaseSDK):
         "platform": ("autumn_sdk.platform", "Platform"),
         "keys": ("autumn_sdk.keys", "Keys"),
         "sandboxes": ("autumn_sdk.sandboxes", "Sandboxes"),
+        "webhooks": ("autumn_sdk.webhooks", "Webhooks"),
     }
 
     def __init__(
@@ -992,7 +995,7 @@ class Autumn(BaseSDK):
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.BatchTrackResponse:
-        r"""Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
+        r"""Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 200 (or 202) immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 200 (or 202) and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
 
         :param request: The request object to send.
         :param retries: Override the default retry configuration for this method
@@ -1058,8 +1061,10 @@ class Autumn(BaseSDK):
             retry_config=retry_config,
         )
 
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.BatchTrackResponseBody1, http_res)
         if utils.match_response(http_res, "202", "application/json"):
-            return unmarshal_json_response(models.BatchTrackResponse, http_res)
+            return unmarshal_json_response(models.BatchTrackResponseBody2, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = utils.stream_to_text(http_res)
             raise errors.AutumnDefaultError(
@@ -1082,7 +1087,7 @@ class Autumn(BaseSDK):
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.BatchTrackResponse:
-        r"""Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
+        r"""Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 200 (or 202) immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 200 (or 202) and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
 
         :param request: The request object to send.
         :param retries: Override the default retry configuration for this method
@@ -1148,8 +1153,10 @@ class Autumn(BaseSDK):
             retry_config=retry_config,
         )
 
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.BatchTrackResponseBody1, http_res)
         if utils.match_response(http_res, "202", "application/json"):
-            return unmarshal_json_response(models.BatchTrackResponse, http_res)
+            return unmarshal_json_response(models.BatchTrackResponseBody2, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(

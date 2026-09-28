@@ -36,6 +36,7 @@ export const computeScheduledCustomerProducts = ({
 				entity: productContext.entity,
 				fullProduct: productContext.fullProduct,
 				featureQuantities: productContext.featureQuantities,
+				customerLicenseQuantities: productContext.customerLicenseQuantities,
 				startsAt: phaseContext.startsAt,
 				endsAt: phaseContext.endsAt,
 				currentEpochMs: billingContext.currentEpochMs,

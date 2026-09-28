@@ -1,6 +1,6 @@
 {
-  "id": "6392c17e-6efa-41a3-b2ba-1b16587a05be",
-  "prevId": "452e9a65-b1eb-489b-8628-4b7b7567808f",
+  "id": "a8955958-7361-44ac-80c7-209d2af6df22",
+  "prevId": "2111d06a-f3a8-44d7-8357-5c0c43bc2d44",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -5862,6 +5862,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "paid_at": {
+          "name": "paid_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
         "refunded_amount": {
           "name": "refunded_amount",
           "type": "numeric",
@@ -5916,6 +5922,22 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_invoices_paid_at": {
+          "name": "idx_invoices_paid_at",
+          "columns": [
+            {
+              "expression": "paid_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"invoices\".\"paid_at\" IS NOT NULL",
+          "concurrently": true,
           "method": "btree",
           "with": {}
         },

@@ -1,4 +1,5 @@
 import type {
+	CustomerLicenseQuantity,
 	Entitlement,
 	Entity,
 	FeatureOptions,
@@ -17,6 +18,7 @@ export interface ScheduledProductContext {
 	customPrices: Price[];
 	customEntitlements: Entitlement[];
 	featureQuantities: FeatureOptions[];
+	customerLicenseQuantities?: CustomerLicenseQuantity[];
 	insertPlanLicenses?: InsertPlanLicenseSpec[];
 	/** User-provided subscription ID for this scheduled product. */
 	externalId?: string;

@@ -55,6 +55,7 @@ export * from "./pooledBalanceUtils/index";
 export * from "./productUtils/classifyProduct/classifyProductUtils";
 export * from "./productUtils/classifyProduct/hasMissingStripeResourcesForProduct";
 export * from "./productUtils/classifyProduct/isEligibleDefaultProduct";
+export * from "./productUtils/classifyProduct/isProductAnchoredToMonthStart";
 export * from "./productUtils/classifyProduct/isProductPaidAndRecurring";
 export * from "./productUtils/classifyProduct/isTrialCardRequired";
 export * from "./productUtils/compareProduct/productDetailsAreSame";

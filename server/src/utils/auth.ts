@@ -28,6 +28,7 @@ import type { AccessControl } from "better-auth/plugins/access";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { deleteMarketingContacts } from "@/external/resend/deleteMarketingContacts.js";
 import { createLoopsContact } from "@/external/resend/loopsUtils.js";
 import { getOAuthValidAudiences } from "@/internal/auth/oauth/oauthResourceAudiences.js";
 import { SSO_VERIFICATION_PREFIX } from "@/internal/auth/sso/ssoDomainUtils.js";
@@ -167,19 +168,10 @@ const options = {
 	}),
 
 	user: {
+		// Account deletion goes through DELETE /account, which also tears down
+		// the user's orgs. The built-in endpoint would skip that cleanup.
 		deleteUser: {
-			enabled: true,
-			sendDeleteAccountVerification: async ({
-				user,
-				url,
-				token,
-			}: {
-				user: User;
-				url: string;
-				token: string;
-			}) => {
-				console.log("Delete account verification", { user, url, token });
-			},
+			enabled: false,
 		},
 	},
 	databaseHooks: {
@@ -191,6 +183,13 @@ const options = {
 						name: user.name,
 						email: user.email,
 					});
+				},
+			},
+			delete: {
+				// Runs for every user deletion path (DELETE /account, admin removeUser)
+				// so deleted users never receive marketing emails.
+				after: async (user) => {
+					await deleteMarketingContacts({ email: user.email });
 				},
 			},
 		},

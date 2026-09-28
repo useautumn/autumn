@@ -52,16 +52,19 @@ test("a clean webhook lints clean and rides the wire with its url map intact", (
 	});
 });
 
-test("spec rules: id charset, https, and at least one event", () => {
+test("spec rules: id charset and https", () => {
 	expect(messages([billing({ id: "bill ing" })])).toContain(
 		"id must match ^[a-zA-Z0-9_-]+$",
 	);
 	expect(
 		messages([billing({ url: { sandbox: "http://example.com/autumn" } })]),
 	).toContain("url.sandbox must match ^[Hh][Tt][Tt][Pp][Ss]:");
-	expect(messages([billing({ events: [] })])).toContain(
-		"events must have at least 1 entry",
-	);
+});
+
+test("an omitted events list lints clean: the webhook receives every event", () => {
+	expect(
+		issuesOf([webhook({ id: "billing", url: { sandbox: "https://x.dev/h" } })]),
+	).toEqual([]);
 });
 
 test("localhost and private networks are refused in every env; a tunnel is not", () => {

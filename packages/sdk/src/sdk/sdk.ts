@@ -24,6 +24,7 @@ import { Platform } from "./platform.js";
 import { Referrals } from "./referrals.js";
 import { Rewards } from "./rewards.js";
 import { Sandboxes } from "./sandboxes.js";
+import { Webhooks } from "./webhooks.js";
 
 export class Autumn extends ClientSDK {
   private _customers?: Customers;
@@ -99,6 +100,11 @@ export class Autumn extends ClientSDK {
   private _sandboxes?: Sandboxes;
   get sandboxes(): Sandboxes {
     return (this._sandboxes ??= new Sandboxes(this._options));
+  }
+
+  private _webhooks?: Webhooks;
+  get webhooks(): Webhooks {
+    return (this._webhooks ??= new Webhooks(this._options));
   }
 
   /**
@@ -234,7 +240,7 @@ export class Autumn extends ClientSDK {
   }
 
   /**
-   * Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
+   * Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 200 (or 202) immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 200 (or 202) and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
    */
   async batchTrack(
     request: Array<models.RequestBody>,

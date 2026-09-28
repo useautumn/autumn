@@ -5,7 +5,7 @@ import {
 	useQueryStates,
 } from "nuqs";
 
-const DEFAULT_MAX_GROUPS = 10;
+const DEFAULT_MAX_GROUPS = 25;
 const MIN_MAX_GROUPS = 1;
 const MAX_MAX_GROUPS = 250;
 

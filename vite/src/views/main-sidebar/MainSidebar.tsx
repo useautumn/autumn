@@ -1,16 +1,16 @@
 import { Scopes } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import {
-	ChartColumn,
-	Gift,
-	KeyRound,
-	Layers,
-	Package,
-	PanelLeft,
-	Users,
-	Webhook,
-	Workflow,
-} from "lucide-react";
+	ArrowsSplitIcon,
+	ChartBarIcon,
+	GiftIcon,
+	KeyIcon,
+	PackageIcon,
+	StackIcon,
+	UsersIcon,
+	WebhooksLogoIcon,
+} from "@phosphor-icons/react";
+import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
@@ -31,12 +31,12 @@ export const DEV_SUB_TABS = [
 	{
 		title: "API keys",
 		value: "api_keys",
-		icon: <KeyRound strokeWidth={ICON_STROKE} />,
+		icon: <KeyIcon weight="bold" />,
 	},
 	{
 		title: "Webhooks",
 		value: "webhooks",
-		icon: <Webhook strokeWidth={ICON_STROKE} />,
+		icon: <WebhooksLogoIcon weight="bold" />,
 	},
 ];
 
@@ -106,21 +106,21 @@ export const MainSidebar = ({
 								value="products"
 								subValue="products"
 								isDefaultSubValue
-								icon={<Package strokeWidth={ICON_STROKE} />}
+								icon={<PackageIcon weight="bold" />}
 								title="Plans"
 								env={env}
 							/>
 							<NavButton
 								value="products"
 								subValue="features"
-								icon={<Layers strokeWidth={ICON_STROKE} />}
+								icon={<StackIcon weight="bold" />}
 								title="Features"
 								env={env}
 							/>
 							<NavButton
 								value="products"
 								subValue="rewards"
-								icon={<Gift strokeWidth={ICON_STROKE} />}
+								icon={<GiftIcon weight="bold" />}
 								title="Rewards"
 								env={env}
 							/>
@@ -128,23 +128,23 @@ export const MainSidebar = ({
 						<NavSection title="Customers">
 							<NavButton
 								value="customers"
-								icon={<Users strokeWidth={ICON_STROKE} />}
+								icon={<UsersIcon weight="bold" />}
 								title="Customers"
 								env={env}
 							/>
 							<NavButton
 								value="analytics"
-								icon={<ChartColumn strokeWidth={ICON_STROKE} />}
+								icon={<ChartBarIcon weight="bold" />}
 								title="Usage"
 								env={env}
 							/>
 							{canSeeMigrations && (
 								<NavButton
 									value="migrations"
-									icon={<Workflow strokeWidth={ICON_STROKE} />}
+									icon={<ArrowsSplitIcon weight="bold" />}
 									title="Migrations"
 									badge={
-										<span className="ml-auto text-[10px] font-medium leading-3 tracking-[0.04em] text-[#8A8A8A] dark:text-[#7A7A7A]">
+										<span className="ml-auto rounded border border-black/10 px-[5px] text-[10px] font-medium leading-[15px] tracking-[0.04em] text-[#8A8A8A] dark:border-[#262626] dark:text-[#6A6A6A]">
 											BETA
 										</span>
 									}

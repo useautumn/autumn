@@ -19,6 +19,7 @@ export const productContextToAttachBillingContext = ({
 	attachProduct: productContext.fullProduct,
 	fullProducts: [productContext.fullProduct],
 	featureQuantities: productContext.featureQuantities,
+	customerLicenseQuantities: productContext.customerLicenseQuantities,
 	customPrices: productContext.customPrices,
 	customEnts: productContext.customEnts,
 	currentCustomerProduct:

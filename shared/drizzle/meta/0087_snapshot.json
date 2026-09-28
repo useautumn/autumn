@@ -1,6 +1,6 @@
 {
-  "id": "452e9a65-b1eb-489b-8628-4b7b7567808f",
-  "prevId": "44c3c9a9-f140-49e7-822c-186016cc42a4",
+  "id": "2111d06a-f3a8-44d7-8357-5c0c43bc2d44",
+  "prevId": "8fb957dc-d90f-4007-affa-685208674bcb",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -643,175 +643,6 @@
         "auto_topup_limits_internal_customer_id_fkey": {
           "name": "auto_topup_limits_internal_customer_id_fkey",
           "tableFrom": "auto_topup_limit_states",
-          "tableTo": "customers",
-          "columnsFrom": [
-            "internal_customer_id"
-          ],
-          "columnsTo": [
-            "internal_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.balance_locks": {
-      "name": "balance_locks",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "org_id": {
-          "name": "org_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "env": {
-          "name": "env",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "lock_id": {
-          "name": "lock_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "internal_customer_id": {
-          "name": "internal_customer_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "customer_id": {
-          "name": "customer_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "entity_id": {
-          "name": "entity_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "feature_id": {
-          "name": "feature_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "overage_behavior": {
-          "name": "overage_behavior",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "properties": {
-          "name": "properties",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "deltas": {
-          "name": "deltas",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expiry_action": {
-          "name": "expiry_action",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "balance_locks_org_env_lock_id_key": {
-          "name": "balance_locks_org_env_lock_id_key",
-          "columns": [
-            {
-              "expression": "org_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "env",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "lock_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_balance_locks_internal_customer_id": {
-          "name": "idx_balance_locks_internal_customer_id",
-          "columns": [
-            {
-              "expression": "internal_customer_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_balance_locks_expires_at": {
-          "name": "idx_balance_locks_expires_at",
-          "columns": [
-            {
-              "expression": "expires_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "balance_locks_internal_customer_id_fkey": {
-          "name": "balance_locks_internal_customer_id_fkey",
-          "tableFrom": "balance_locks",
           "tableTo": "customers",
           "columnsFrom": [
             "internal_customer_id"
@@ -5856,6 +5687,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "paid_at": {
+          "name": "paid_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
         "refunded_amount": {
           "name": "refunded_amount",
           "type": "numeric",
@@ -5910,6 +5747,22 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_invoices_paid_at": {
+          "name": "idx_invoices_paid_at",
+          "columns": [
+            {
+              "expression": "paid_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"invoices\".\"paid_at\" IS NOT NULL",
+          "concurrently": true,
           "method": "btree",
           "with": {}
         },
@@ -8103,63 +7956,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.partition_progress": {
-      "name": "partition_progress",
-      "schema": "",
-      "columns": {
-        "topic": {
-          "name": "topic",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "partition_id": {
-          "name": "partition_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "next_offset": {
-          "name": "next_offset",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "command_next_offset": {
-          "name": "command_next_offset",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "owner_epoch": {
-          "name": "owner_epoch",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "owner_fence_offset": {
-          "name": "owner_fence_offset",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "partition_progress_pkey": {
-          "name": "partition_progress_pkey",
-          "columns": [
-            "topic",
-            "partition_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.passkey": {
       "name": "passkey",
       "schema": "",
@@ -8542,22 +8338,6 @@
             }
           ],
           "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_pooled_balance_contributions_pending": {
-          "name": "idx_pooled_balance_contributions_pending",
-          "columns": [
-            {
-              "expression": "pooled_balance_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"pooled_balance_contributions\".\"effective_at\" IS NOT NULL",
           "concurrently": true,
           "method": "btree",
           "with": {}

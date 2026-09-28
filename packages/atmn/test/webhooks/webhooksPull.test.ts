@@ -482,20 +482,23 @@ test("pull never appends webhooks after a root spread, and never deletes a compu
 	]);
 });
 
-test("a dashboard webhook receiving every event is never written as events: []", () => {
-	const before = `export default atmn({
+test("a webhook receiving every event is written with no events key, and pull drops a stated list for it", () => {
+	const { source, warnings } = pullInto({
+		source: `import { atmn, webhook } from "atmn";
+
+export default atmn({
 	webhooks: [
-		webhook({ id: "billing", events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } }),
+		webhook({
+			id: "billing",
+			events: ["billing.updated"],
+			url: { sandbox: "https://x.dev/h" },
+		}),
 	],
 });
-`;
-	const { source, lines, warnings } = pullInto({
-		source: before,
+`,
 		remoteList: [
-			remote(DASHBOARD_ID, "https://x.dev/h", { events: [] }),
-			remote("ep_9Zz7c9LmNpRsTuVwXyZa1b3d4e5", "https://x.dev/all", {
-				events: [],
-			}),
+			remote("billing", "https://x.dev/h", { events: [] }),
+			remote("everything", "https://x.dev/all", { events: [] }),
 		],
 		stated: [
 			{
@@ -505,13 +508,37 @@ test("a dashboard webhook receiving every event is never written as events: []",
 			},
 		],
 	});
-	expect(source).toBe(before);
+	expect(source).toBe(`import { atmn, webhook } from "atmn";
+
+export default atmn({
+	webhooks: [
+		webhook({
+			id: "billing",
+			url: { sandbox: "https://x.dev/h" },
+		}),
+		webhook({
+			id: "everything",
+			url: {
+				sandbox: "https://x.dev/all",
+			},
+		}),
+	],
+});
+`);
+	expect(warnings).toEqual([]);
+});
+
+test("a dashboard webhook receiving every event is appended with no events key", () => {
+	const { source, lines } = pullInto({
+		source: `export default atmn({
+	webhooks: [],
+});
+`,
+		remoteList: [remote(DASHBOARD_ID, "https://x.dev/all", { events: [] })],
+	});
+	expect(source).not.toContain("events");
 	expect(lines).toEqual([
-		"· webhook ep_9Zz7c9LmNpRsTuVwXyZa1b3d4e5 receives every event; give it an event list in the dashboard, or add it to your config, to manage it here",
-	]);
-	// The config's narrower list is kept, but never silently: push would narrow the endpoint.
-	expect(warnings).toEqual([
-		"⚠ billing  the dashboard webhook at this url receives every event; your next push narrows it to billing.updated",
+		expect.stringContaining("(made in the dashboard; push adopts it by URL)"),
 	]);
 });
 

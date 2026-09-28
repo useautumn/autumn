@@ -36,11 +36,9 @@ export function CustomerListTable({
 }) {
 	const { org } = useOrg();
 
-	// Leaves room for the pinned pagination footer under the scroll area.
-	const tableContainerHeight = "calc(100vh - 211px)";
-
 	const { features } = useFeaturesQuery();
-	const { queryStates, setFilters, currentCursor } = useCustomerFilters();
+	const { queryStates, setFilters, currentCursor, currentPage } =
+		useCustomerFilters();
 	const buildKey = useQueryKeyFactory();
 
 	const {
@@ -224,12 +222,12 @@ export function CustomerListTable({
 				onColumnVisibilitySave: saveColumnVisibility,
 				columnVisibilityInToolbar: true,
 				flexibleTableColumns: true,
-				virtualization: {
-					containerHeight: tableContainerHeight,
-				},
+				// No fixed height: the table fills the space left below the toolbar
+				// (see the flex chain below) so only the table body scrolls.
+				virtualization: {},
 			}}
 		>
-			<div>
+			<div className="flex flex-col flex-1 min-h-0">
 				<Table.Toolbar>
 					<Table.Heading>
 						<UsersIcon size={16} weight="fill" className="text-subtle" />
@@ -260,12 +258,17 @@ export function CustomerListTable({
 							type="no-customers-found"
 							actionButton={<CustomerListCreateButton />}
 						/>
-						{/* Keeps page size and back-navigation reachable when a page comes back empty. */}
-						<CustomerListPaginationFooter />
+						{/* Keeps back-navigation reachable when a later page comes back empty. */}
+						{currentPage > 1 && <CustomerListPaginationFooter />}
 					</>
 				) : (
-					<Table.Container>
-						<Table.VirtualizedContent footer={<CustomerListPaginationFooter />}>
+					// min-h floor (table + pinned footer): on very short viewports the page
+					// scrolls instead of squeezing the table.
+					<Table.Container className="flex-1 min-h-[460px]">
+						<Table.VirtualizedContent
+							className="flex flex-col min-h-0"
+							footer={<CustomerListPaginationFooter />}
+						>
 							<Table.VirtualizedBody />
 						</Table.VirtualizedContent>
 					</Table.Container>
