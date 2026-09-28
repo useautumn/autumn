@@ -211,6 +211,8 @@ export async function createBalanceWorker({
 							...resources.edgeConfigs.adminBucket,
 							gate: slotGate,
 							readPartitions: partitions.partitions,
+							isAdmitted: partitions.isAdmitted,
+							readAssignmentSettled: partitions.hasAssignment,
 							readStoreHealthy: readSlotStoreHealthy,
 							probes: { kafka: probeKafka, postgres: probePostgres },
 							logger: dependencies.logger,

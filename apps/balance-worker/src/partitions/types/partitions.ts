@@ -171,6 +171,10 @@ export type Partitions = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
 	partitions(): OwnedPartitionHealth[];
+	/** Running and dealt at least one assignment by the group; false while booting. */
+	hasAssignment(): boolean;
+	/** Claimed and admitted to the route directory, so requests can be served. */
+	isAdmitted(target: PartitionTarget): boolean;
 	findRuntime(route: PartitionRoute): PartitionRuntimePort | undefined;
 	/** Settles once a partition mid-handoff has named its successor, so a caller can refresh its route once. */
 	awaitHandoff(target: PartitionTarget): Promise<void>;
