@@ -319,6 +319,8 @@ export type Plan = {
 	config?: {
 		/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 		ignorePastDue?: boolean;
+		/** Anchor billing and reset cycles to the 1st of the month (UTC). Defaults to false. */
+		anchorToMonthStart?: boolean;
 	};
 	/** Plan-level billing controls used as customer defaults. */
 	billingControls?: {

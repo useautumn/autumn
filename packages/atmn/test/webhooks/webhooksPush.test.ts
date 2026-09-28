@@ -8,6 +8,7 @@ import { expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { applyWebhooksPull } from "../../src/actions/pull/webhooks/applyWebhooksPull";
 import { pushExitCode, runPush } from "../../src/actions/push";
 import type { WebhookEnv } from "../../src/actions/webhooks/types/webhookEnv";
 
@@ -596,4 +597,44 @@ test("push syncs only the targeted env, even with live and named-sandbox keys in
 			],
 		},
 	]);
+});
+
+test("pull then push of a webhook receiving every event sends no events, so the server keeps it receiving every event", async () => {
+	const dir = projectWith({
+		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "billing", events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } }),\n\t],`,
+	});
+	const configPath = join(dir, "autumn.config.ts");
+	const files = new Map([[configPath, readFileSync(configPath, "utf8")]]);
+	applyWebhooksPull({
+		pull: { configPath, files },
+		remote: [{ ...state("https://x.dev/h"), events: [] }],
+		stated: [
+			{
+				id: "billing",
+				events: ["billing.updated"],
+				url: { sandbox: "https://x.dev/h" },
+			},
+		],
+		envKey: "sandbox",
+	});
+	writeFileSync(configPath, files.get(configPath) ?? "");
+
+	let sent: unknown;
+	const client = {
+		previewUpdate: async () => ({ features: [], plans: [] }),
+		previewSyncWebhooks: async (body: unknown) => {
+			sent = body;
+			return { errors: [], changes: [] };
+		},
+	};
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: client as any,
+		cwd: dir,
+		write: () => {},
+		webhookEnv: async () => SANDBOX,
+	});
+	expect(sent).toEqual({
+		webhooks: [{ id: "billing", url: "https://x.dev/h" }],
+	});
 });

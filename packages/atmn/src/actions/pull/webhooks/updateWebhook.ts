@@ -25,8 +25,11 @@ const fieldAssignments = ({
 	stated: StatedWebhook;
 }): Assignment[] => {
 	const assignments: Assignment[] = [];
-	// `[]` is a dashboard webhook receiving every event: not a list a config can state.
-	if (webhook.events.length > 0 && !sameEvents(stated.events, webhook.events))
+	// No list is every event, which a config states by leaving `events` out.
+	if (webhook.events.length === 0) {
+		if (stated.events !== undefined)
+			assignments.push({ path: ["events"], text: null });
+	} else if (!sameEvents(stated.events, webhook.events))
 		assignments.push({
 			path: ["events"],
 			text: `[${webhook.events.map((event) => JSON.stringify(event)).join(", ")}]`,
@@ -82,10 +85,6 @@ export const updateWebhook = ({
 	envKey: string;
 }): WebhookEditResult => {
 	const result: WebhookEditResult = { lines: [], warnings: [], unlocated: [] };
-	if (webhook.events.length === 0 && Array.isArray(stated.events))
-		result.warnings.push(
-			`⚠ ${webhook.id}  the dashboard webhook at this url receives every event; your next push narrows it to ${stated.events.join(", ")}`,
-		);
 	const located = locateWebhook({ pull, id: webhook.id });
 	if (located === null) {
 		result.unlocated.push({

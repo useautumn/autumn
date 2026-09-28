@@ -2904,7 +2904,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 		method: "batch_track",
 		path: "/v1/balances.batch_track",
 		description:
-			"Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.",
+			"Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 200 (or 202) immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 200 (or 202) and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.",
 		body: "array",
 		fields: [],
 	},
@@ -2954,6 +2954,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: false,
 				description: "Filter events by time range",
+			},
+			{
+				name: "range",
+				type: "string",
+				required: false,
+				description:
+					"Preset time range to filter events by, resolved the same way as in events.aggregate. Cannot be combined with custom_range",
 			},
 		],
 	},
@@ -3011,6 +3018,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Custom time range to aggregate events for. If provided, range must not be provided",
+			},
+			{
+				name: "timezone",
+				type: "string",
+				required: false,
+				description:
+					'IANA timezone (e.g. "America/New_York") that day, week and month bins are aligned to. Hour bins are always UTC. Defaults to UTC',
 			},
 			{
 				name: "filter_by",
@@ -4157,9 +4171,9 @@ export const API_ROUTES: readonly ApiRoute[] = [
 			{
 				name: "events",
 				type: "json",
-				required: true,
+				required: false,
 				description:
-					"The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.",
+					"The events sent to this webhook. Leave it out to send every event, including ones added later (`[]` means the same). `vercel.*` events can't be mixed with other events, and a webhook with every event is not a Vercel one.",
 			},
 			{
 				name: "description",
@@ -4228,7 +4242,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: false,
 				description:
-					"The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.",
+					"The events sent to this webhook. Pass `[]` to send every event; omit it to keep the current list. `vercel.*` events can't be mixed with other events.",
 			},
 			{
 				name: "description",

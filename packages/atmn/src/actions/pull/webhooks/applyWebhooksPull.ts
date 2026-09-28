@@ -30,7 +30,7 @@ const statedFrom = ({
 	...row,
 	id: webhook.id,
 	url: { ...row?.url, [envKey]: webhook.url },
-	events: webhook.events.length > 0 ? webhook.events : row?.events,
+	events: webhook.events.length > 0 ? webhook.events : undefined,
 	description: webhook.description,
 	disabled: webhook.disabled,
 });
@@ -107,12 +107,6 @@ export const applyWebhooksPull = ({
 						stated: represented,
 						envKey,
 					}),
-				);
-				continue;
-			}
-			if (webhook.events.length === 0) {
-				result.lines.push(
-					`· webhook ${webhook.id} receives every event; give it an event list in the dashboard, or add it to your config, to manage it here`,
 				);
 				continue;
 			}

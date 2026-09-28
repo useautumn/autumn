@@ -54,7 +54,6 @@ export const WebhookEventTypeSchema = z
 
 export const WebhookEventsSchema = z
 	.array(WebhookEventTypeSchema)
-	.min(1, "List at least one event; an empty list isn't allowed.")
 	.refine(
 		(events) => events.every(isVercelEvent) || !events.some(isVercelEvent),
 		{
@@ -63,8 +62,13 @@ export const WebhookEventsSchema = z
 		},
 	)
 	.describe(
-		"The events sent to this webhook. At least one. `vercel.*` events can't be mixed with other events.",
+		"The events sent to this webhook. Empty means every event. `vercel.*` events can't be mixed with other events.",
 	);
+
+/** Omitting `events` on create or sync means every event, the same as `[]`. */
+const statedEventsField = WebhookEventsSchema.default([]).describe(
+	"The events sent to this webhook. Leave it out to send every event, including ones added later (`[]` means the same). `vercel.*` events can't be mixed with other events, and a webhook with every event is not a Vercel one.",
+);
 
 const descriptionField = z.string().describe("A note for your own reference.");
 
@@ -83,7 +87,7 @@ export const WebhookSchema = z.object({
 	events: z
 		.array(z.string())
 		.describe(
-			"The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty only for a webhook made in the dashboard that receives every event.",
+			"The events sent to this webhook, as `WebhookEventType` names; a type newer than your client is returned as-is. Empty means the webhook receives every event.",
 		),
 	disabled: z
 		.boolean()
@@ -106,7 +110,7 @@ const secretField = z
 export const WebhookParamsSchema = z.object({
 	id: WebhookIdSchema,
 	url: WebhookUrlSchema,
-	events: WebhookEventsSchema,
+	events: statedEventsField,
 	description: descriptionField.optional(),
 	disabled: disabledField.optional(),
 });
@@ -132,7 +136,9 @@ export const ListWebhooksResponseSchema = z.object({
 export const UpdateWebhookParamsSchema = z.object({
 	id: WebhookRefSchema,
 	url: WebhookUrlSchema.optional(),
-	events: WebhookEventsSchema.optional(),
+	events: WebhookEventsSchema.optional().describe(
+		"The events sent to this webhook. Pass `[]` to send every event; omit it to keep the current list. `vercel.*` events can't be mixed with other events.",
+	),
 	description: descriptionField.optional(),
 	disabled: disabledField.optional(),
 });
