@@ -1,6 +1,6 @@
 import type { ProductV2 } from "@autumn/shared";
 import { SearchableSelect } from "@autumn/ui";
-import { type ComponentProps, type ReactNode, useState } from "react";
+import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { PlanPickerScopeRow } from "./PlanPickerScopeRow";
@@ -28,13 +28,17 @@ export function CustomerStatePlanPicker({
 }) {
 	const { shouldOpenPickerImmediately } = useCustomerStateContext();
 	const [open, setOpen] = useState(shouldOpenPickerImmediately);
+	const hasSelected = useRef(false);
 	const isGroupUsed = (product: ProductV2) =>
 		usedKeys.has(getProductGroupKey({ productId: product.id, products }));
 
 	return (
 		<SearchableSelect
 			value={null}
-			onValueChange={onSelect}
+			onValueChange={(productId) => {
+				hasSelected.current = true;
+				onSelect(productId);
+			}}
 			options={products}
 			getOptionValue={(product) => product.id}
 			getOptionLabel={(product) => product.name}
@@ -66,7 +70,7 @@ export function CustomerStatePlanPicker({
 			open={open}
 			onOpenChange={(isOpen) => {
 				setOpen(isOpen);
-				if (!isOpen) onDismiss?.();
+				if (!(isOpen || hasSelected.current)) onDismiss?.();
 			}}
 			disabled={disabled}
 		/>

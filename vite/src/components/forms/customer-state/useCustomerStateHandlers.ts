@@ -82,16 +82,6 @@ export function useCustomerStateHandlers({
 		});
 	}, [form, defaultStartsAt, newEmptyPlan]);
 
-	const handleInsertPhase = useCallback(
-		({ afterIndex }: { afterIndex: number }) => {
-			form.insertFieldValue("phases", afterIndex + 1, {
-				startsAt: defaultStartsAt({ afterIndex }),
-				plans: [newEmptyPlan()],
-			});
-		},
-		[form, defaultStartsAt, newEmptyPlan],
-	);
-
 	const handleRemovePhase = useCallback(
 		({ phaseIndex }: { phaseIndex: number }) => {
 			if (isPhaseLocked({ phaseIndex })) return;
@@ -273,7 +263,6 @@ export function useCustomerStateHandlers({
 			isPhaseLocked,
 			shouldOpenPickerImmediately,
 			handleAddPhase,
-			handleInsertPhase,
 			handleRemovePhase,
 			handleAddPlan,
 			handleRemovePlan,
@@ -290,7 +279,6 @@ export function useCustomerStateHandlers({
 			isPhaseLocked,
 			shouldOpenPickerImmediately,
 			handleAddPhase,
-			handleInsertPhase,
 			handleRemovePhase,
 			handleAddPlan,
 			handleRemovePlan,

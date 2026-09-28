@@ -24,7 +24,6 @@ export function CustomerStatePlanRow({
 	planIndex: number;
 }) {
 	const {
-		form,
 		formValues,
 		products,
 		handleRemovePlan,
@@ -86,13 +85,7 @@ export function CustomerStatePlanRow({
 				onSelect={(productId) =>
 					handleSelectPlanProduct({ location, productId })
 				}
-				onDismiss={() => {
-					const current =
-						form.store.state.values.phases[phaseIndex]?.plans[planIndex];
-					if (current && !current.productId) {
-						handleRemovePlan({ phaseIndex, planIndex });
-					}
-				}}
+				onDismiss={() => handleRemovePlan({ phaseIndex, planIndex })}
 			/>
 		);
 	}
