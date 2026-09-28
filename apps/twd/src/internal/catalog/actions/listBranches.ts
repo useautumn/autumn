@@ -85,7 +85,7 @@ export const listBranches = async ({
 		listRemoteHeads(),
 		getRepoSlug().then((slug) => listOpenPullsCached({ ctx, slug })),
 	]);
-	// One entry per branch: a PR whose head is dev/main adds its number to the base entry.
+	// One entry per branch name (a release PR's head is dev itself).
 	const byName = new Map<
 		string,
 		{ name: string; sha: string; prNumber: number | null }
@@ -103,7 +103,8 @@ export const listBranches = async ({
 	])
 		byName.set(branch.name, {
 			...branch,
-			prNumber: branch.prNumber ?? byName.get(branch.name)?.prNumber ?? null,
+			// dev/main only carry release PRs; their number is noise in the picker.
+			prNumber: BASE_BRANCHES.includes(branch.name) ? null : branch.prNumber,
 		});
 	const branches = [...byName.values()];
 	const warm = new Map(
