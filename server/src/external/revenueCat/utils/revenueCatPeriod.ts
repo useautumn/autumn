@@ -4,7 +4,6 @@ import {
 	ProcessorType,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 
 export type RevenueCatPeriodEvent = {
@@ -13,18 +12,16 @@ export type RevenueCatPeriodEvent = {
 };
 
 /**
- * Merges the event's store period into the RevenueCat customer product's `processor` (DB, then cache from the DB result).
- * Only moves the period forward, so redelivered older events are ignored. Returns the applied updates, or {} if skipped.
+ * Merges the event's store period into `processor`, only moving it forward. Returns the applied updates, or {} if skipped.
+ * DB only: the RevenueCat webhook refresh middleware invalidates the cached customer afterwards.
  */
 export const storeRevenueCatPeriod = async ({
 	ctx,
 	customerProduct,
-	customerId,
 	event,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
-	customerId: string;
 	event: RevenueCatPeriodEvent;
 }): Promise<Partial<InsertCustomerProduct>> => {
 	if (!event.purchased_at_ms || !event.expiration_at_ms) return {};
@@ -39,17 +36,7 @@ export const storeRevenueCatPeriod = async ({
 		},
 		periodEndAtLeast: event.expiration_at_ms,
 	});
-	if (!processor) return {};
-
-	const updates = { processor };
-	await updateCachedCustomerProductV2({
-		ctx,
-		customerId,
-		customerProductId: customerProduct.id,
-		updates,
-	});
-
-	return updates;
+	return processor ? { processor } : {};
 };
 
 /** The store period stored on a RevenueCat customer product, in ms; null when it's not a RevenueCat plan or has none yet. */

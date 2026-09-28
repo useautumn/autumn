@@ -250,7 +250,6 @@ test.concurrent(
 		await storeRevenueCatPeriod({
 			ctx,
 			customerProduct: snapshot!,
-			customerId,
 			event: {
 				purchased_at_ms: purchasedAtMs,
 				expiration_at_ms: expirationAtMs,

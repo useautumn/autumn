@@ -56,7 +56,6 @@ export const handleRenewal = async ({
 		const updates = await storeRevenueCatPeriod({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
-			customerId: customer.id ?? "",
 			event,
 		});
 
@@ -97,7 +96,6 @@ export const handleRenewal = async ({
 		await storeRevenueCatPeriod({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
-			customerId: customer.id ?? "",
 			event,
 		});
 
@@ -124,7 +122,6 @@ export const handleRenewal = async ({
 		await storeRevenueCatPeriod({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
-			customerId: customer.id ?? "",
 			event,
 		});
 

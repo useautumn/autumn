@@ -23,7 +23,7 @@ import {
 } from "@/external/revenueCat/utils/revenueCatPeriod";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { attach } from "@/internal/billing/v2/actions/attach/attach";
-import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 
 type MatchedRcItem = { id: string; active: boolean; timestamp: number };
@@ -140,20 +140,17 @@ export const storeRevenueCatProcessorId = async ({
 		}
 
 		// Merge, not replace: the period stamped at provisioning must survive this async write.
-		const processor = await customerProductRepo.mergeProcessor({
+		await customerProductRepo.mergeProcessor({
 			db,
 			cusProductId: cusProduct.id,
 			processor: { type: ProcessorType.RevenueCat, id: matchedId },
 		});
-		// A cache rebuilt before this landed would otherwise keep the id-less processor.
-		if (processor) {
-			await updateCachedCustomerProductV2({
-				ctx,
-				customerId: cusProduct.customer_id ?? "",
-				customerProductId: cusProduct.id,
-				updates: { processor },
-			});
-		}
+		// Invalidate rather than patch: this lands after the webhook, and a whole-processor patch could regress the cache.
+		await invalidateCachedFullSubject({
+			ctx,
+			customerId: cusProduct.customer_id ?? "",
+			source: "storeRevenueCatProcessorId",
+		});
 
 		logExtras({
 			attempted: true,
@@ -261,7 +258,6 @@ export const provisionRevenueCatCusProduct = async ({
 		await storeRevenueCatPeriod({
 			ctx,
 			customerProduct: cusProduct,
-			customerId: customer.id ?? "",
 			event: periodEvent,
 		});
 	}

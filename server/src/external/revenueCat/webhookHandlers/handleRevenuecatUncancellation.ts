@@ -58,7 +58,6 @@ export const handleUncancellation = async ({
 	await storeRevenueCatPeriod({
 		ctx: customerCtx,
 		customerProduct: cusProduct,
-		customerId: customer.id ?? "",
 		event,
 	});
 
