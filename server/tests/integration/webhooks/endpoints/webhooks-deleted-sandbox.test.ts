@@ -1,7 +1,7 @@
 /**
  * A deleted sandbox takes its Svix app with it:
  * - its key stops authenticating at once, not after the secret-key cache TTL;
- * - an org whose Svix app is gone lists no webhooks instead of a 500.
+ * - an org whose Svix app is gone gets a 404 from list, never a 500 or an empty list.
  */
 
 import { afterAll, describe, expect, test } from "bun:test";
@@ -69,7 +69,7 @@ describe("webhooks after a sandbox's Svix app is gone", () => {
 		expect(listed.status).toBe(401);
 	}, 120_000);
 
-	test("an org whose Svix app was deleted lists no webhooks", async () => {
+	test("an org whose Svix app was deleted gets a 404, not an empty list", async () => {
 		const { id, key } = await createSandbox();
 		await createHook({ key });
 		const org = await OrgService.get({ db, orgId: id });
@@ -78,8 +78,8 @@ describe("webhooks after a sandbox's Svix app is gone", () => {
 		await createSvixCli().application.delete(appId as string);
 
 		const listed = await postWebhooks({ route: "list", body: {}, key });
-		expect(listed.status).toBe(200);
-		expect(listed.body.list).toEqual([]);
+		expect(listed.status).toBe(404);
+		expect(listed.body.code).toBe("org_not_found");
 
 		const fetched = await postWebhooks({
 			route: "get",
