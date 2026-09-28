@@ -1,37 +1,36 @@
 import type { CustomerExportResponse } from "@autumn/shared";
-import { Badge } from "@autumn/ui";
+import { StatusChip, StatusChipIcon } from "@autumn/ui";
 import {
-	CheckCircleIcon,
+	CheckIcon,
 	ClockClockwiseIcon,
 	type Icon,
 	SpinnerIcon,
-	XCircleIcon,
+	XIcon,
 } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
 
 const STATUS_CONFIG = {
 	queued: {
 		label: "Queued",
 		icon: ClockClockwiseIcon,
-		className: "bg-muted text-tertiary-foreground border-border/50",
+		className: "bg-zinc-400 dark:bg-zinc-500",
 		iconClassName: "",
 	},
 	running: {
 		label: "Running",
 		icon: SpinnerIcon,
-		className: "bg-amber-500/10 text-amber-500 border-transparent",
+		className: "bg-amber-500",
 		iconClassName: "animate-spin",
 	},
 	completed: {
 		label: "Completed",
-		icon: CheckCircleIcon,
-		className: "bg-green-500/10 text-green-500 border-transparent",
+		icon: CheckIcon,
+		className: "bg-green-500",
 		iconClassName: "",
 	},
 	failed: {
 		label: "Failed",
-		icon: XCircleIcon,
-		className: "bg-red-500/10 text-red-500 border-transparent",
+		icon: XIcon,
+		className: "bg-red-500",
 		iconClassName: "",
 	},
 } satisfies Record<
@@ -48,9 +47,15 @@ export function CustomerExportStatusBadge({
 	const StatusIcon = config.icon;
 
 	return (
-		<Badge variant="muted" size="sm" className={cn("gap-1", config.className)}>
-			<StatusIcon size={11} weight="fill" className={config.iconClassName} />
+		<StatusChip
+			indicator={
+				<StatusChipIcon
+					icon={<StatusIcon weight="bold" className={config.iconClassName} />}
+					className={config.className}
+				/>
+			}
+		>
 			{config.label}
-		</Badge>
+		</StatusChip>
 	);
 }

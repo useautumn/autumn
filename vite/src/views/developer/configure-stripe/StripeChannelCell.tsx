@@ -1,3 +1,6 @@
+import { StatusChip, StatusChipIcon } from "@autumn/ui";
+import { CheckIcon } from "@phosphor-icons/react";
+
 export const StripeChannelCell = ({
 	title,
 	meta,
@@ -24,12 +27,18 @@ export const StripeChannelCell = ({
 					{subtitle}
 				</span>
 			</div>
-			<span className="flex w-[84px] shrink-0">
+			<span className="flex w-24 shrink-0">
 				{connected && (
-					<span className="flex items-center gap-1.5 font-medium text-emerald-500 text-xs">
-						<span className="size-1.5 rounded-full bg-emerald-500" />
+					<StatusChip
+						indicator={
+							<StatusChipIcon
+								icon={<CheckIcon weight="bold" />}
+								className="bg-green-500"
+							/>
+						}
+					>
 						Connected
-					</span>
+					</StatusChip>
 				)}
 			</span>
 			<div className="flex w-24 shrink-0">{action}</div>

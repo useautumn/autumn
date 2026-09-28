@@ -1,49 +1,51 @@
 import type { CatalogStripeMapping } from "@autumn/shared";
-import { Badge } from "@autumn/ui";
+import { StatusChip, StatusChipIcon } from "@autumn/ui";
 import {
-	CheckCircleIcon,
+	CheckIcon,
 	CircleDashedIcon,
 	ClockClockwiseIcon,
-	WarningCircleIcon,
+	ExclamationMarkIcon,
+	type Icon,
 } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
+
+const NEUTRAL_ICON_CLASS = "bg-zinc-400 dark:bg-zinc-500";
 
 const statusConfig = {
 	ok: {
 		label: "Verified",
-		icon: CheckCircleIcon,
-		className: "bg-green-500/10 text-green-500 border-transparent",
+		icon: CheckIcon,
+		className: "bg-green-500",
 	},
 	unmapped: {
 		label: "Unmapped",
 		icon: CircleDashedIcon,
-		className: "bg-muted text-tertiary-foreground border-border/50",
+		className: NEUTRAL_ICON_CLASS,
 	},
 	unchecked: {
 		label: "Unchecked",
 		icon: ClockClockwiseIcon,
-		className: "bg-muted text-tertiary-foreground border-border/50",
+		className: NEUTRAL_ICON_CLASS,
 	},
 	missing: {
 		label: "Missing",
-		icon: WarningCircleIcon,
-		className: "bg-red-500/10 text-red-500 border-transparent",
+		icon: ExclamationMarkIcon,
+		className: "bg-red-500",
 	},
 	inactive: {
 		label: "Inactive",
-		icon: WarningCircleIcon,
-		className: "bg-amber-500/10 text-amber-500 border-transparent",
+		icon: ExclamationMarkIcon,
+		className: "bg-amber-500",
 	},
 	conflict: {
 		label: "Mixed",
-		icon: WarningCircleIcon,
-		className: "bg-amber-500/10 text-amber-500 border-transparent",
+		icon: ExclamationMarkIcon,
+		className: "bg-amber-500",
 	},
 } satisfies Record<
 	CatalogStripeMapping["status"],
 	{
 		label: string;
-		icon: typeof CheckCircleIcon;
+		icon: Icon;
 		className: string;
 	}
 >;
@@ -56,20 +58,19 @@ export const MappingStatusBadge = ({
 	className?: string;
 }) => {
 	const config = statusConfig[status];
-	const Icon = config.icon;
+	const StatusIcon = config.icon;
 
 	return (
-		<Badge
-			variant="muted"
-			size="sm"
-			className={cn(
-				"gap-1 transition-colors duration-150",
-				config.className,
-				className,
-			)}
+		<StatusChip
+			className={className}
+			indicator={
+				<StatusChipIcon
+					icon={<StatusIcon weight="bold" />}
+					className={config.className}
+				/>
+			}
 		>
-			<Icon size={11} weight="fill" />
 			{config.label}
-		</Badge>
+		</StatusChip>
 	);
 };

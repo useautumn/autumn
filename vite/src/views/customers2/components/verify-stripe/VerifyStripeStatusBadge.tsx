@@ -1,30 +1,29 @@
 import type { SubscriptionVerifyResult } from "@autumn/shared";
-import { Badge } from "@autumn/ui";
+import { StatusChip, StatusChipIcon } from "@autumn/ui";
 import {
-	CheckCircleIcon,
+	CheckIcon,
+	ExclamationMarkIcon,
 	type Icon,
-	WarningCircleIcon,
-	XCircleIcon,
+	XIcon,
 } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
 
 export type VerifyDisplayStatus = "in_sync" | "warning" | "mismatched";
 
 const STATUS_CONFIG = {
 	in_sync: {
 		label: "In sync",
-		icon: CheckCircleIcon,
-		className: "bg-green-500/10 text-green-500 border-transparent",
+		icon: CheckIcon,
+		className: "bg-green-500",
 	},
 	warning: {
 		label: "Warning",
-		icon: WarningCircleIcon,
-		className: "bg-amber-500/10 text-amber-500 border-transparent",
+		icon: ExclamationMarkIcon,
+		className: "bg-amber-500",
 	},
 	mismatched: {
 		label: "Mismatched",
-		icon: XCircleIcon,
-		className: "bg-red-500/10 text-red-500 border-transparent",
+		icon: XIcon,
+		className: "bg-red-500",
 	},
 } satisfies Record<
 	VerifyDisplayStatus,
@@ -50,9 +49,15 @@ export function VerifyStripeStatusBadge({
 	const StatusIcon = config.icon;
 
 	return (
-		<Badge variant="muted" size="sm" className={cn("gap-1", config.className)}>
-			<StatusIcon size={11} weight="fill" />
+		<StatusChip
+			indicator={
+				<StatusChipIcon
+					icon={<StatusIcon weight="bold" />}
+					className={config.className}
+				/>
+			}
+		>
 			{config.label}
-		</Badge>
+		</StatusChip>
 	);
 }
