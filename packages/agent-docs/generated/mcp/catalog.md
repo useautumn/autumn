@@ -4168,7 +4168,9 @@ export default atmn({
 ```
 
 - Keys: `live` for `-p`, `sandbox` for the default sandbox, or a named sandbox's slug (its name lowercased; no spaces). Never copy a sandbox URL into `live`: ask the user for the production URL, or leave `live` out.
-- Every URL must be https and publicly reachable; localhost and private networks are refused, tunnels such as ngrok work. `events` needs at least one entry.
+- Every URL must be https and publicly reachable; localhost and private networks are refused, tunnels such as ngrok work.
+- Leave `events` out to receive every event. Don't write `events: []`.
+- Vercel webhooks require their own distinct webhook and are a mutually exclusive variant to the rest. It can only listen to Vercel events and cannot later be changed to listen to non-Vercel events.
 - `id` is permanent: changing it registers a new webhook. Two ids that differ only by case or `-`/`_` are refused.
 - The preview gives a changed URL its own line (`billing url: old → new`). Read it out to the user before `--yes`.
 - `push --yes` writes each new webhook's signing secret once and prints exactly where: `AUTUMN_WEBHOOK_<ID>_SECRET` in `.env.prod` for `-p`, `AUTUMN_WEBHOOK_<ID>_<ORG4>_SECRET` in `.env.local` (or `.env`) for a sandbox. Relay the variable name and file; never print or read the secret.
