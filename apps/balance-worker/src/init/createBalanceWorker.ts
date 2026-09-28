@@ -1,4 +1,7 @@
 import type { KafkaOffsetCommit } from "@autumn/kafka";
+import { createSlotGate } from "../blueGreen/createSlotGate.js";
+import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
+import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
@@ -43,6 +46,10 @@ export async function createBalanceWorker({
 	const { env } = config;
 	const checkpointConfig = createWorkerCheckpointConfig({ env });
 	const address = await resolveWorkerAddress({ env });
+	const identity = await resolveTaskIdentity({
+		ctx: { logger: dependencies.logger },
+		env,
+	});
 	const runtimeConfig = balanceWorkerEnvToRuntimeConfig({
 		env,
 		endpoint: address.endpoint,
@@ -58,6 +65,20 @@ export async function createBalanceWorker({
 		},
 	});
 	try {
+		// A prepared partition announces `ready` only once the slot record names this fleet; off ECS it never waits.
+		const slotGate = resources.edgeConfigs
+			? createSlotGate({
+					ctx: {
+						identity,
+						activeSlot: resources.edgeConfigs.activeSlot,
+						logger: dependencies.logger,
+					},
+				})
+			: undefined;
+		if (identity.serviceArn)
+			dependencies.logger.info(
+				`Blue-green slot ${env.BALANCE_WORKER_SLOT}: service ${identity.serviceArn}, build ${identity.imageSha ?? "unknown"}`,
+			);
 		// Every partition runtime records what it commits here; the consumer group reports it when it rejoins.
 		const partitionLoad = createPartitionLoad({ now: Date.now });
 		const consumer = resources.kafka.consumer(
@@ -103,6 +124,14 @@ export async function createBalanceWorker({
 			config: runtimeConfig,
 		});
 
+		function awaitReadyAnnouncement({
+			signal,
+		}: {
+			signal: AbortSignal;
+		}): Promise<void> {
+			return slotGate ? slotGate.awaitActive({ signal }) : Promise.resolve();
+		}
+
 		function createRuntime(
 			params: PartitionRuntimeFactoryInput,
 		): ConstructedPartitionRuntime {
@@ -120,6 +149,7 @@ export async function createBalanceWorker({
 				createRuntime,
 				served: partitionLoad,
 				ownershipLink: ownershipHandoff,
+				awaitReadyAnnouncement,
 				onError: dependencies.onError,
 				onUnhealthyPartition: dependencies.onError,
 				onServiceStopped: dependencies.onServiceStopped,
@@ -170,6 +200,38 @@ export async function createBalanceWorker({
 			},
 		});
 		const reportsHealth = process.env.NODE_ENV === "production";
+		// Only a task with an ECS identity is part of a fleet the dashboard can swap.
+		const slotHeartbeat =
+			slotGate && resources.edgeConfigs && identity.serviceArn
+				? createSlotHeartbeat({
+						ctx: {
+							...resources.edgeConfigs.adminBucket,
+							gate: slotGate,
+							readPartitions: partitions.partitions,
+							readStoreHealthy: readSlotStoreHealthy,
+							probes: { kafka: probeKafka, postgres: probePostgres },
+							logger: dependencies.logger,
+						},
+						config: {
+							deployment: env.BALANCE_WORKER_DEPLOYMENT,
+							slot: env.BALANCE_WORKER_SLOT,
+							endpoint: address.endpoint,
+							identity,
+						},
+					})
+				: undefined;
+		function readSlotStoreHealthy(): boolean {
+			return resources.edgeConfigs?.activeSlot.getStatus().healthy ?? false;
+		}
+		async function probeKafka(): Promise<void> {
+			await resources.admin.fetchTopicOffsets(
+				env.BALANCE_WORKER_OWNERSHIP_TOPIC,
+			);
+		}
+		async function probePostgres(): Promise<void> {
+			if (!resources.postgres.client) throw new Error("No Postgres pool");
+			await resources.postgres.client`select 1`;
+		}
 		const stallMonitor = createEventLoopStallMonitor({
 			ctx: { logger: dependencies.logger, recorder: syncSections },
 			config: {
@@ -190,6 +252,7 @@ export async function createBalanceWorker({
 		});
 		function startTelemetry(): void {
 			healthReporter.start();
+			void slotHeartbeat?.start();
 			if (!reportsHealth) return;
 			stallMonitor.start();
 			kafkaRequestReporter.start();
@@ -197,6 +260,7 @@ export async function createBalanceWorker({
 		function stopTelemetry(): void {
 			kafkaRequestReporter.stop();
 			stallMonitor.stop();
+			slotHeartbeat?.stop();
 			healthReporter.stop();
 		}
 		const ctx: WorkerLifecycleContext = {

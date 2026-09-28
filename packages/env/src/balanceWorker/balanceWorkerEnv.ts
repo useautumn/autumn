@@ -13,8 +13,10 @@ import {
 	BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES,
 } from "./balanceWorkerConstants.js";
 import {
+	type BalanceWorkerSlot,
 	balanceWorkerDeploymentToKafkaNames,
 	getBalanceWorkerDeployment,
+	getBalanceWorkerSlot,
 } from "./balanceWorkerDeployment.js";
 import {
 	booleanFlag,
@@ -34,6 +36,9 @@ const kafka = z.object({
 
 const listener = z.object({
 	ECS_CONTAINER_METADATA_URI_V4: z.string().url().optional(),
+	/** Which build is running, for the blue-green heartbeat; Flightcontrol sets the first, plain ECS the second. */
+	FC_GIT_COMMIT_SHA: z.string().trim().min(1).optional(),
+	IMAGE_TAG: z.string().trim().min(1).optional(),
 	BALANCE_WORKER_HOST: loopbackHost.default("127.0.0.1"),
 	BALANCE_WORKER_PORT: positiveInteger.max(65535).default(8082),
 	BALANCE_WORKER_ENDPOINT: z.string().url().optional(),
@@ -99,13 +104,15 @@ export function createBalanceWorkerEnv(
 			runtimeEnv.DATABASE_URL ?? runtimeEnv.BALANCE_WORKER_DATABASE_URL,
 	});
 	const deployment = getBalanceWorkerDeployment({ runtimeEnv });
-	const kafkaNames = balanceWorkerDeploymentToKafkaNames({ deployment });
+	const slot = getBalanceWorkerSlot({ runtimeEnv });
+	const kafkaNames = balanceWorkerDeploymentToKafkaNames({ deployment, slot });
 	const host =
 		env.BALANCE_WORKER_HOST === "::1" ? "[::1]" : env.BALANCE_WORKER_HOST;
 	return {
 		...env,
 		...createKafkaAuthEnv({ runtimeEnv }),
 		BALANCE_WORKER_DEPLOYMENT: deployment,
+		BALANCE_WORKER_SLOT: slot,
 		BALANCE_WORKER_METERING_TOPIC: kafkaNames.meteringTopic,
 		BALANCE_WORKER_OWNERSHIP_TOPIC: kafkaNames.ownershipTopic,
 		BALANCE_WORKER_COMMAND_TOPIC: kafkaNames.commandTopic,
@@ -128,6 +135,7 @@ export function createBalanceWorkerEnv(
 }
 
 export type BalanceWorkerEnv = ReturnType<typeof createBalanceWorkerEnv>;
+export type { BalanceWorkerSlot };
 
 let balanceWorkerEnv: BalanceWorkerEnv | undefined;
 

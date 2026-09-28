@@ -33,7 +33,11 @@ export function receiveTrackBatch({ ctx }: { ctx: BalanceWorkerHttpContext }) {
 		const input = await readJsonRequestBody(context);
 		const { route, commands } = parseTrackBatchRequest({ input });
 		const owner = ctx.ownership.findRuntime(route);
-		if (!owner) throw new PartitionRouteNotOwnedError();
+		if (!owner) {
+			// Mid-handoff the successor is not named yet: answering now would send the caller back here.
+			await ctx.ownership.awaitHandoff?.({ partition: route.partition });
+			throw new PartitionRouteNotOwnedError();
+		}
 		const runtime: Runtime = owner;
 
 		function runCommand(input: unknown): Promise<TrackReply> {

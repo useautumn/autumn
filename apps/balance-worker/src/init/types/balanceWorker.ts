@@ -60,7 +60,9 @@ export type WorkerResourcesContext = {
 	kafka: Pick<Kafka, "producer" | "consumer" | "admin">;
 	admin: Pick<Admin, "disconnect" | "fetchTopicOffsets">;
 	stateStore: StateStore;
-	postgres: Pick<PostgresClient, "close">;
+	/** `client` is the raw pool, for the heartbeat's probe; a test's stand-in has none. */
+	postgres: Pick<PostgresClient, "close"> &
+		Partial<Pick<PostgresClient, "client">>;
 	db: WorkerDb;
 	dynamo: Pick<DynamoClient, "close">;
 	idempotencyKeys: IdempotencyKeyStore;

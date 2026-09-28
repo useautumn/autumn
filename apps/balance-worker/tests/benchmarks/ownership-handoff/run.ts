@@ -8,8 +8,18 @@
  *
  *   cd apps/balance-worker
  *   KAFKA_BROKERS=127.0.0.1:19092 NODE_ENV=test bun tests/benchmarks/ownership-handoff/run.ts [--runs 3] [--backend sqlite]
+ *
+ * --slots runs the blue-green scenario instead: two fleets in their own consumer
+ * groups, a slot record in a temp directory the workers poll like S3, and the six
+ * steps of plans/balance-worker-blue-green/overview.md. One pass per invocation.
  */
-import { mkdtempSync, rmSync } from "node:fs";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
@@ -30,6 +40,12 @@ import {
 } from "@autumn/kafka";
 import { Kafka, logLevel } from "kafkajs";
 import {
+	SLOT_HEARTBEAT_KEY_PREFIX,
+	type SlotHeartbeat,
+	SlotHeartbeatSchema,
+} from "../../../src/blueGreen/types/slotHeartbeat.js";
+import { BALANCE_WORKER_ACTIVE_SLOT_KEY } from "../../../src/edgeConfig/activeSlotEdgeConfig.js";
+import {
 	openFixturePostgres,
 	type SeededCustomer,
 	seedCustomer,
@@ -42,9 +58,11 @@ const { values: args } = parseArgs({
 		// Back-to-back requests per partition to catch requests in flight at the withdraw. Off by default: it multiplies
 		// the metering log volume, and replay re-reads the last ten minutes of it, so it inflates the very window being measured.
 		probe: { type: "boolean", default: false },
+		slots: { type: "boolean", default: false },
 	},
 });
 const RUNS = Number(args.runs);
+const SLOTS = args.slots;
 const BACKEND = args.backend as "sqlite" | "postgres";
 if (BACKEND !== "postgres")
 	throw new Error(
@@ -185,13 +203,14 @@ const client = createBalanceWorkerClient({
 		http: {
 			async postJson({ url, body, signal }) {
 				const sentAt = Date.now();
-				const { route, command } = body as {
+				// Tracks travel batched per partition now; the lane is the batch's, and every batch here is one lane.
+				const { route, command, commands } = body as {
 					route: { partition: number };
-					command: { requestId: string };
+					command?: { requestId: string };
+					commands?: { requestId: string }[];
 				};
-				const lane = command.requestId.startsWith("probe-")
-					? "probe"
-					: "hammer";
+				const requestId = command?.requestId ?? commands?.[0]?.requestId ?? "";
+				const lane = requestId.startsWith("probe-") ? "probe" : "hammer";
 				const endpoint = new URL(url).origin;
 				try {
 					const response = await fetch(url, {
@@ -213,6 +232,8 @@ const client = createBalanceWorkerClient({
 					});
 					return { status: response.status, body: json };
 				} catch (cause) {
+					if (process.env.BENCH_DEBUG)
+						console.error(`worker transport error ${url}: ${cause}`);
 					rawHttp.push({
 						lane,
 						partition: route.partition,
@@ -274,6 +295,10 @@ async function trackOnce(
 					? `${cause.code}:${cause.workerCode}`
 					: cause.code
 				: `THROW:${(cause as Error).name}`;
+		if (process.env.BENCH_DEBUG)
+			console.error(
+				`track ${outcome} on partition ${partition}: ${(cause as Error).message} <- ${(cause as Error).cause}`,
+			);
 	}
 	(lane === "probe" ? probeOutcomes : outcomes).push({
 		partition,
@@ -323,6 +348,50 @@ type Worker = {
 const workersByEndpoint = new Map<string, string>();
 const nameOf = (endpoint: string | undefined) =>
 	(endpoint && workersByEndpoint.get(endpoint)) ?? "?";
+
+// Two fleets with synthetic ECS service ARNs; the slot record names one of them.
+type Fleet = { slot: "blue" | "green"; serviceArn: string };
+const fleets: Record<Fleet["slot"], Fleet> = {
+	blue: {
+		slot: "blue",
+		serviceArn: `arn:aws:ecs:local:0:service/${deployment}/balance-workers-blue`,
+	},
+	green: {
+		slot: "green",
+		serviceArn: `arn:aws:ecs:local:0:service/${deployment}/balance-workers-green`,
+	},
+};
+const edgeConfigDir = SLOTS
+	? mkdtempSync(join(tmpdir(), `bench-edge-${deployment}-`))
+	: undefined;
+async function writeSlotRecord({
+	fleet,
+	reason,
+}: {
+	fleet: Fleet;
+	reason: string;
+}): Promise<number> {
+	if (!edgeConfigDir) throw new Error("Slot records need --slots");
+	const path = join(edgeConfigDir, BALANCE_WORKER_ACTIVE_SLOT_KEY);
+	mkdirSync(join(path, ".."), { recursive: true });
+	const writtenAt = Date.now();
+	await Bun.write(
+		path,
+		JSON.stringify(
+			{
+				activeTaskDefinitionArn: null,
+				activeImageSha: null,
+				flightcontrolBlueArn: fleet.serviceArn,
+				updatedAt: new Date(writtenAt).toISOString(),
+				updatedBy: "ownership-handoff benchmark",
+				reason,
+			},
+			null,
+			2,
+		),
+	);
+	return writtenAt;
+}
 async function reservePort(): Promise<number> {
 	const server = Bun.serve({
 		port: 0,
@@ -334,7 +403,45 @@ async function reservePort(): Promise<number> {
 	if (port === undefined) throw new Error("No port");
 	return port;
 }
-async function spawnWorker(name: string): Promise<Worker> {
+/** What the dashboard would read: every heartbeat object a fleet's tasks have written. */
+function readHeartbeats({ fleet }: { fleet: Fleet }): SlotHeartbeat[] {
+	if (!edgeConfigDir) return [];
+	const dir = join(edgeConfigDir, SLOT_HEARTBEAT_KEY_PREFIX, fleet.slot);
+	const heartbeats: SlotHeartbeat[] = [];
+	for (const file of readdirSync(dir, { recursive: false })) {
+		heartbeats.push(
+			SlotHeartbeatSchema.parse(
+				JSON.parse(readFileSync(join(dir, String(file)), "utf8")),
+			),
+		);
+	}
+	return heartbeats;
+}
+/** Summed over the fleet's live tasks, the way the swap preflight will read it: a dead task's last object goes stale. */
+const HEARTBEAT_FRESH_MS = 10_000;
+function fleetHeartbeat({ fleet }: { fleet: Fleet }) {
+	let heartbeats: SlotHeartbeat[];
+	try {
+		heartbeats = readHeartbeats({ fleet }).filter(
+			(heartbeat) =>
+				Date.now() - Date.parse(heartbeat.writtenAt) < HEARTBEAT_FRESH_MS,
+		);
+	} catch {
+		return null;
+	}
+	const sum = { prepared: 0, ready: 0, admitted: 0, total: 0 };
+	for (const heartbeat of heartbeats)
+		for (const key of Object.keys(sum) as (keyof typeof sum)[])
+			sum[key] += heartbeat.partitions[key];
+	return {
+		tasks: heartbeats.length,
+		declaredActive: heartbeats.map((h) => h.declaredActive),
+		ok: heartbeats.every((h) => h.ok),
+		...sum,
+	};
+}
+
+async function spawnWorker(name: string, fleet?: Fleet): Promise<Worker> {
 	const port = await reservePort();
 	const dir = mkdtempSync(join(tmpdir(), `bench-${name}-`));
 	const env = {
@@ -346,17 +453,24 @@ async function spawnWorker(name: string): Promise<Worker> {
 			BALANCE_WORKER_PORT: String(port),
 			BALANCE_WORKER_SQLITE_PATH: join(dir, "state.sqlite"),
 			BALANCE_WORKER_DEPLOYMENT: deployment,
+			...(fleet && { BALANCE_WORKER_SLOT: fleet.slot }),
 		}),
 		BENCH_NAME: name,
 		BENCH_BACKEND: BACKEND,
+		...(fleet && {
+			BENCH_SERVICE_ARN: fleet.serviceArn,
+			BENCH_EDGE_CONFIG_DIR: edgeConfigDir,
+		}),
 	};
+	// The override serves edge configs from memory and never polls, so a fleet member reads the directory instead.
+	const { AUTUMN_EDGE_CONFIG_OVERRIDE_B64: _, ...inherited } = process.env;
 	const child = Bun.spawn(
 		["bun", new URL("./benchWorker.ts", import.meta.url).pathname],
 		{
 			env: {
-				...process.env,
+				...inherited,
 				NODE_ENV: "test",
-				AUTUMN_EDGE_CONFIG_OVERRIDE_B64: "e30=",
+				...(fleet ? {} : { AUTUMN_EDGE_CONFIG_OVERRIDE_B64: "e30=" }),
 				BENCH_WORKER_ENV: JSON.stringify(env),
 			},
 			stdout: "pipe",
@@ -527,6 +641,19 @@ type Sample = {
 	}[];
 	leaver: Record<string, number | null> | null;
 	reconciliation?: Reconciliation[];
+	slots?: SlotStepAnalysis;
+};
+type SlotStepAnalysis = {
+	/** Every record the ownership topic carried during the step, by type. */
+	ownershipRecords: Record<string, number>;
+	/** `claimed` records by the fleet they name. */
+	claimsByFleet: Record<string, number>;
+	/** Slowest hammer 200 that took the 409 → refresh → resend detour past the old owner. */
+	longestDetourMs: number | null;
+	/** Record write → each green task observing the flip, min / max over partitions. */
+	flipObservedMs: { min: number; max: number } | null;
+	greenPreparedPartitions: number;
+	heartbeats: Record<string, ReturnType<typeof fleetHeartbeat>>;
 };
 const samples: Sample[] = [];
 
@@ -743,24 +870,131 @@ function analyze({
 	};
 }
 
+function fleetOf(endpoint: string | undefined): string {
+	const name = nameOf(endpoint);
+	return name.split("-")[0] ?? name;
+}
+function analyzeSlotStep({
+	t0,
+	tEnd,
+}: {
+	t0: number;
+	tEnd: number;
+}): SlotStepAnalysis {
+	const records = ownershipEvents.filter(
+		(e) => e.seenAt >= t0 && e.seenAt <= tEnd,
+	);
+	const ownershipRecords: Record<string, number> = {};
+	const claimsByFleet: Record<string, number> = {};
+	for (const record of records) {
+		ownershipRecords[record.type] = (ownershipRecords[record.type] ?? 0) + 1;
+		if (record.type === "claimed") {
+			const fleet = fleetOf(record.endpoint);
+			claimsByFleet[fleet] = (claimsByFleet[fleet] ?? 0) + 1;
+		}
+	}
+	// A detour is a 200 whose partition saw a 409 while it was in flight: it was resent to the new owner.
+	let longestDetourMs: number | null = null;
+	const notOwner = rawHttp.filter(
+		(r) => r.lane === "hammer" && r.status === 409 && r.sentAt >= t0,
+	);
+	for (const o of outcomes) {
+		if (o.outcome !== "200" || o.sentAt < t0 || o.sentAt > tEnd) continue;
+		const detoured = notOwner.some(
+			(r) =>
+				r.partition === o.partition &&
+				r.sentAt >= o.sentAt &&
+				r.doneAt <= o.doneAt,
+		);
+		if (!detoured) continue;
+		longestDetourMs = Math.max(longestDetourMs ?? 0, o.doneAt - o.sentAt);
+	}
+	const observed = workerEvents
+		.filter(
+			(e) =>
+				e.event === "slot.active" &&
+				e.t >= t0 &&
+				e.t <= tEnd &&
+				e.worker.startsWith("green"),
+		)
+		.map((e) => e.t - t0);
+	const greenPreparedPartitions = new Set(
+		workerEvents
+			.filter(
+				(e) =>
+					e.event === "runtime.prepared" &&
+					e.t <= tEnd &&
+					e.worker.startsWith("green"),
+			)
+			.map((e) => e.partition),
+	).size;
+	return {
+		ownershipRecords,
+		claimsByFleet,
+		longestDetourMs,
+		flipObservedMs: observed.length
+			? { min: Math.min(...observed), max: Math.max(...observed) }
+			: null,
+		greenPreparedPartitions,
+		heartbeats: {
+			blue: fleetHeartbeat({ fleet: fleets.blue }),
+			green: fleetHeartbeat({ fleet: fleets.green }),
+		},
+	};
+}
+/** Quiet on the ownership log for a while and every partition served a 200 since the last record. */
+function slotSettled({
+	t0,
+	claimsExpected,
+	quietMs = 1_500,
+}: {
+	t0: number;
+	claimsExpected: number;
+	quietMs?: number;
+}): boolean {
+	if (claimsAfter(t0).size < claimsExpected) return false;
+	const lastRecord = Math.max(
+		t0,
+		...ownershipEvents.filter((e) => e.seenAt >= t0).map((e) => e.seenAt),
+	);
+	if (Date.now() - lastRecord < quietMs) return false;
+	for (const partition of customers.keys())
+		if (
+			!outcomes.some(
+				(o) =>
+					o.partition === partition &&
+					o.outcome === "200" &&
+					o.sentAt >= lastRecord,
+			)
+		)
+			return false;
+	return true;
+}
+function heldFor({ t0, holdMs }: { t0: number; holdMs: number }): boolean {
+	return Date.now() - t0 >= holdMs;
+}
+
 async function runScenario({
 	scenario,
 	run,
 	trigger,
+	isSettled = settled,
 }: {
 	scenario: string;
 	run: number;
 	trigger: () => Promise<number>;
+	isSettled?: (t0: number) => boolean;
 }) {
 	const stopProbe = args.probe ? startProbe() : () => undefined;
 	await Bun.sleep(200);
 	const t0 = await trigger();
-	await waitFor(() => settled(t0), 120_000, `${scenario} to settle`);
+	await waitFor(() => isSettled(t0), 120_000, `${scenario} to settle`);
 	stopProbe();
 	// Let the tail of the traffic land before slicing.
 	await Bun.sleep(1_500);
 	const tEnd = Date.now();
 	const sample = analyze({ scenario, run, t0, tEnd });
+	if (SLOTS) sample.slots = analyzeSlotStep({ t0, tEnd });
 	// Rows land asynchronously through the committer; give the last flush a moment, then compare what Postgres
 	// holds against every 200 the client has seen so far, so a discrepancy can be pinned to a scenario.
 	await Bun.sleep(1_000);
@@ -770,78 +1004,223 @@ async function runScenario({
 	await Bun.sleep(2_000);
 }
 
-const started = Date.now();
-const A = await spawnWorker("A");
-await waitFor(
-	() => claimsAfter(A.spawnedAt).size === PARTITION_COUNT,
-	60_000,
-	"worker A to own everything",
-);
-for (const partition of customers.keys()) {
-	const outcome = await trackOnce(partition);
-	if (outcome !== "200")
-		throw new Error(`Partition ${partition} not serving: ${outcome}`);
-}
-console.error(
-	`A owns and serves all ${PARTITION_COUNT} partitions after ${Date.now() - started}ms`,
-);
-startHammer();
-await Bun.sleep(2_000);
+async function runRollingScenarios(): Promise<Worker[]> {
+	const started = Date.now();
+	const A = await spawnWorker("A");
+	await waitFor(
+		() => claimsAfter(A.spawnedAt).size === PARTITION_COUNT,
+		60_000,
+		"worker A to own everything",
+	);
+	for (const partition of customers.keys()) {
+		const outcome = await trackOnce(partition);
+		if (outcome !== "200")
+			throw new Error(`Partition ${partition} not serving: ${outcome}`);
+	}
+	console.error(
+		`A owns and serves all ${PARTITION_COUNT} partitions after ${Date.now() - started}ms`,
+	);
+	startHammer();
+	await Bun.sleep(2_000);
 
-for (let run = 1; run <= RUNS; run++) {
-	let B = await (async () => {
-		let worker!: Worker;
+	for (let run = 1; run <= RUNS; run++) {
+		let B = await (async () => {
+			let worker!: Worker;
+			await runScenario({
+				scenario: "JOIN",
+				run,
+				trigger: async () => {
+					worker = await spawnWorker("B");
+					return worker.spawnedAt;
+				},
+			});
+			return worker;
+		})();
 		await runScenario({
-			scenario: "JOIN",
+			scenario: "GRACEFUL_LEAVE",
 			run,
 			trigger: async () => {
-				worker = await spawnWorker("B");
-				return worker.spawnedAt;
+				const t0 = Date.now();
+				B.child.kill("SIGTERM");
+				return t0;
 			},
 		});
-		return worker;
-	})();
-	await runScenario({
-		scenario: "GRACEFUL_LEAVE",
-		run,
-		trigger: async () => {
-			const t0 = Date.now();
-			B.child.kill("SIGTERM");
-			return t0;
-		},
-	});
-	await B.child.exited;
-	rmSync(B.dir, { recursive: true, force: true });
-	B = await (async () => {
-		let worker!: Worker;
+		await B.child.exited;
+		rmSync(B.dir, { recursive: true, force: true });
+		B = await (async () => {
+			let worker!: Worker;
+			await runScenario({
+				scenario: "JOIN",
+				run: run + RUNS,
+				trigger: async () => {
+					worker = await spawnWorker("B");
+					return worker.spawnedAt;
+				},
+			});
+			return worker;
+		})();
 		await runScenario({
-			scenario: "JOIN",
-			run: run + RUNS,
+			scenario: "HARD_KILL",
+			run,
 			trigger: async () => {
-				worker = await spawnWorker("B");
-				return worker.spawnedAt;
+				const t0 = Date.now();
+				B.child.kill("SIGKILL");
+				return t0;
 			},
 		});
-		return worker;
-	})();
+		await B.child.exited;
+		rmSync(B.dir, { recursive: true, force: true });
+	}
+	return [A];
+}
+
+/** The six steps of the blue-green plan; asserts are checked once the numbers are in, so a failed step still leaves data. */
+async function runSlotScenario(): Promise<Worker[]> {
+	const started = Date.now();
+	await writeSlotRecord({ fleet: fleets.blue, reason: "blue is live" });
+	const blue = [
+		await spawnWorker("blue-1", fleets.blue),
+		await spawnWorker("blue-2", fleets.blue),
+	];
+	// Two members join back to back: wait for the roster to settle between them, not just for four claims.
+	await waitFor(
+		() =>
+			claimsAfter(started).size === PARTITION_COUNT &&
+			Date.now() - Math.max(...ownershipEvents.map((e) => e.seenAt)) > 3_000,
+		60_000,
+		"blue to own everything",
+	);
+	for (const partition of customers.keys()) {
+		let outcome = "";
+		for (let attempt = 0; attempt < 5 && outcome !== "200"; attempt++)
+			outcome = await trackOnce(partition);
+		if (outcome !== "200")
+			throw new Error(`Partition ${partition} not serving: ${outcome}`);
+	}
+	console.error(
+		`blue owns and serves all ${PARTITION_COUNT} partitions after ${Date.now() - started}ms`,
+	);
+	startHammer();
+	await Bun.sleep(2_000);
+
 	await runScenario({
-		scenario: "HARD_KILL",
-		run,
+		scenario: "S1_BLUE_SERVING",
+		run: 1,
+		trigger: async () => Date.now(),
+		isSettled: (t0) => heldFor({ t0, holdMs: 3_000 }),
+	});
+
+	const green: Worker[] = [];
+	await runScenario({
+		scenario: "S2_GREEN_PREPARES",
+		run: 1,
 		trigger: async () => {
-			const t0 = Date.now();
-			B.child.kill("SIGKILL");
-			return t0;
+			green.push(await spawnWorker("green-1", fleets.green));
+			green.push(await spawnWorker("green-2", fleets.green));
+			return green[0]?.spawnedAt ?? Date.now();
+		},
+		isSettled: (t0) => {
+			const green = fleetHeartbeat({ fleet: fleets.green });
+			return (
+				green?.tasks === 2 &&
+				green.prepared === PARTITION_COUNT &&
+				green.total === PARTITION_COUNT &&
+				heldFor({ t0, holdMs: 8_000 })
+			);
 		},
 	});
-	await B.child.exited;
-	rmSync(B.dir, { recursive: true, force: true });
+
+	await runScenario({
+		scenario: "S3_FLIP_TO_GREEN",
+		run: 1,
+		trigger: () =>
+			writeSlotRecord({ fleet: fleets.green, reason: "swap to green" }),
+		isSettled: (t0) => slotSettled({ t0, claimsExpected: PARTITION_COUNT }),
+	});
+
+	// Rollback with blue still running: blue's re-prepared partitions announce and green hands them back.
+	await runScenario({
+		scenario: "S3B_ROLLBACK_TO_BLUE",
+		run: 1,
+		trigger: () =>
+			writeSlotRecord({ fleet: fleets.blue, reason: "rollback to blue" }),
+		isSettled: (t0) => slotSettled({ t0, claimsExpected: PARTITION_COUNT }),
+	});
+	await runScenario({
+		scenario: "S3C_FLIP_TO_GREEN_AGAIN",
+		run: 1,
+		trigger: () =>
+			writeSlotRecord({ fleet: fleets.green, reason: "swap to green again" }),
+		isSettled: (t0) => slotSettled({ t0, claimsExpected: PARTITION_COUNT }),
+	});
+
+	await runScenario({
+		scenario: "S4_BLUE_SIGTERM",
+		run: 1,
+		trigger: async () => {
+			const t0 = Date.now();
+			for (const worker of blue) worker.child.kill("SIGTERM");
+			return t0;
+		},
+		isSettled: (t0) =>
+			blue.every((worker) => worker.child.exitCode !== null) &&
+			heldFor({ t0, holdMs: 3_000 }),
+	});
+	for (const worker of blue)
+		rmSync(worker.dir, { recursive: true, force: true });
+
+	await runScenario({
+		scenario: "S5_RECORD_TO_BLUE",
+		run: 1,
+		trigger: () =>
+			writeSlotRecord({
+				fleet: fleets.blue,
+				reason: "rollback to a fleet that is gone",
+			}),
+		isSettled: (t0) => heldFor({ t0, holdMs: 5_000 }),
+	});
+	// Back to green before the kill: a survivor whose record names the gone fleet would hold at the gate forever.
+	await writeSlotRecord({ fleet: fleets.green, reason: "green is live" });
+	await Bun.sleep(3_000);
+
+	const victim = green[1];
+	const survivor = green[0];
+	if (!victim || !survivor) throw new Error("green fleet incomplete");
+	const victimPartitions = [...customers.keys()].filter(
+		(partition) =>
+			[...ownershipEvents]
+				.reverse()
+				.find((e) => e.type === "claimed" && e.partition === partition)
+				?.endpoint === victim.endpoint,
+	);
+	if (victimPartitions.length === 0)
+		throw new Error(`${victim.name} owns nothing to lose`);
+	await runScenario({
+		scenario: "S6_GREEN_SIGKILL",
+		run: 1,
+		trigger: async () => {
+			const t0 = Date.now();
+			victim.child.kill("SIGKILL");
+			return t0;
+		},
+		isSettled: (t0) =>
+			slotSettled({ t0, claimsExpected: victimPartitions.length }),
+	});
+	await victim.child.exited;
+	rmSync(victim.dir, { recursive: true, force: true });
+	return [survivor];
 }
+
+const survivors = SLOTS ? await runSlotScenario() : await runRollingScenarios();
 
 hammering = false;
 await Bun.sleep(1_500);
-A.child.kill("SIGTERM");
-await A.child.exited;
-rmSync(A.dir, { recursive: true, force: true });
+for (const worker of survivors) {
+	worker.child.kill("SIGTERM");
+	await worker.child.exited;
+	rmSync(worker.dir, { recursive: true, force: true });
+}
+if (edgeConfigDir) rmSync(edgeConfigDir, { recursive: true, force: true });
 const reconciliation = await reconcile();
 await routing.stop();
 await watcher.disconnect();
