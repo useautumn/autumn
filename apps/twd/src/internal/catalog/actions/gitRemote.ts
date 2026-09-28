@@ -1,9 +1,16 @@
 import { TwdError } from "../../../http/apiError.ts";
 import { REPO_ROOT } from "../repoPaths.ts";
 
-const runGit = async ({ args }: { args: string[] }) => {
+/** Runs git in `cwd` (default: twd's checkout); TwdError `git_remote_unreachable` on failure. */
+export const runGit = async ({
+	args,
+	cwd = REPO_ROOT,
+}: {
+	args: string[];
+	cwd?: string;
+}) => {
 	const proc = Bun.spawn(["git", ...args], {
-		cwd: REPO_ROOT,
+		cwd,
 		stdout: "pipe",
 		stderr: "pipe",
 		env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },

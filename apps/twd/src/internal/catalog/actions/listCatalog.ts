@@ -1,19 +1,34 @@
-import { getAllGroups, getAllSuites } from "@tests/_groups/index.ts";
+import { relative } from "node:path";
 import { createTestFileResolver } from "@tw/testDiscovery/createTestFileResolver.ts";
 import { readTestFileIndex } from "@tw/testDiscovery/readTestFileIndex.ts";
 import type { Catalog } from "../../../api/contract.ts";
 import { fileBaselines } from "../../../db/schema/results.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
-import { TESTS_DIR, toTestId } from "../repoPaths.ts";
+import { getTestTreeAtSha } from "./getTestTreeAtSha.ts";
+import { resolveBranchSha } from "./gitRemote.ts";
 
-/** Every group/suite with its files, plus every test file with its baseline p90. */
+/**
+ * Every group/suite with its files, plus every test file with its baseline p90,
+ * as of `sha` (else the head of `branch`, else `dev`).
+ */
 export const listCatalog = async ({
 	ctx,
+	branch,
+	sha,
 }: {
 	ctx: TwdContext;
+	branch?: string;
+	sha?: string;
 }): Promise<Catalog> => {
-	const resolver = await createTestFileResolver({ rootDir: TESTS_DIR });
-	const { files: allFiles } = await readTestFileIndex({ rootDir: TESTS_DIR });
+	const { testsDir, groups } = await getTestTreeAtSha({
+		ctx,
+		sha: sha ?? (await resolveBranchSha({ branch: branch ?? "dev" })),
+	});
+	const { getAllGroups, getAllSuites } = groups;
+	const toTestId = ({ absolutePath }: { absolutePath: string }) =>
+		relative(testsDir, absolutePath);
+	const resolver = await createTestFileResolver({ rootDir: testsDir });
+	const { files: allFiles } = await readTestFileIndex({ rootDir: testsDir });
 
 	const filesOf = (paths: string[]) =>
 		new Set(

@@ -6,7 +6,13 @@ import type { TwdHono } from "../types/twdHono.ts";
 
 export const catalogRoutes = new Hono<TwdHono>()
 	.get("/catalog", async (c) =>
-		c.json(await listCatalog({ ctx: c.get("ctx") })),
+		c.json(
+			await listCatalog({
+				ctx: c.get("ctx"),
+				branch: c.req.query("branch") || undefined,
+				sha: c.req.query("sha") || undefined,
+			}),
+		),
 	)
 	.get("/branches", async (c) =>
 		c.json(await listBranches({ ctx: c.get("ctx") })),

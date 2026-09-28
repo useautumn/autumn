@@ -16,7 +16,7 @@ import { runShardTests } from "@tw/tui/runShardTests.ts";
 import { getTuiState, type TuiTestFile } from "@tw/tui/store.ts";
 import pLimit from "p-limit";
 import type { RunFile } from "../../../../api/contract.ts";
-import { toTestId } from "../../../catalog/repoPaths.ts";
+import { TESTS_DIR, toTestId } from "../../../catalog/repoPaths.ts";
 import type {
 	SwarmChildMessage,
 	SwarmInit,
@@ -25,6 +25,7 @@ import {
 	loadTwModules,
 	type ProviderSandbox,
 	type TestExecutor,
+	type TwModules,
 	type WorkerHandle,
 } from "./twModules.ts";
 
@@ -185,7 +186,7 @@ const main = async (init: SwarmInit) => {
 		);
 	}
 
-	const { svixFiles, normalFiles } = await tw.svix.partitionShards(init.files);
+	const { svixFiles, normalFiles } = await partitionAtSha({ tw, init });
 	const { totalWorkers, svixWorkers } = planShardWorkers({
 		workers: init.accounts.length,
 		normalFileCount: normalFiles.length,
@@ -380,3 +381,24 @@ process.once("message", (init: SwarmInit) => {
 		});
 });
 process.send?.({ type: "ready" });
+
+/** Svix detection reads file contents, so read them at the run's sha, then hand back twd-local paths. */
+const partitionAtSha = async ({
+	tw,
+	init,
+}: {
+	tw: TwModules;
+	init: SwarmInit;
+}) => {
+	const toShaPath = (file: string) =>
+		file.replace(TESTS_DIR, init.testsDirAtSha);
+	const toLocalPath = (file: string) =>
+		file.replace(init.testsDirAtSha, TESTS_DIR);
+	const { svixFiles, normalFiles } = await tw.svix.partitionShards(
+		init.files.map(toShaPath),
+	);
+	return {
+		svixFiles: svixFiles.map(toLocalPath),
+		normalFiles: normalFiles.map(toLocalPath),
+	};
+};

@@ -28,7 +28,7 @@ export type TestExecutor = {
 
 export type WorkerPool = { readonly size: number; close(): void };
 
-type TwModules = {
+export type TwModules = {
 	provider: {
 		setProvider(name: "modalv2"): Promise<void>;
 		forkWorker(opts: {

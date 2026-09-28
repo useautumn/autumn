@@ -1,20 +1,25 @@
 import { readFile } from "node:fs/promises";
-import { resolveTestPaths } from "@tests/_groups/index.ts";
+import { relative } from "node:path";
 import { createTestFileResolver } from "@tw/testDiscovery/createTestFileResolver.ts";
 import type { RunSelection } from "../../../db/schema/runs.ts";
 import { TwdError } from "../../../http/apiError.ts";
-import { TESTS_DIR, toTestId } from "../repoPaths.ts";
+import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { getTestTreeAtSha } from "./getTestTreeAtSha.ts";
 
 const CATALOG_HINT =
 	"GET /catalog (or the list_catalog MCP tool) lists every group and file name.";
 
 /**
- * Selection → sorted server/tests-relative files, using the same `_groups` + path
- * resolution as `bun tw`. A grep-only selection searches the `core` group.
+ * Selection → sorted server/tests-relative files at `sha`, using that commit's
+ * `_groups` + `bun tw` path resolution. A grep-only selection searches `core`.
  */
 export const resolveTestSelection = async ({
+	ctx,
+	sha,
 	selection,
 }: {
+	ctx: TwdContext;
+	sha: string;
 	selection: RunSelection;
 }): Promise<string[]> => {
 	const groups = selection.groups ?? [];
@@ -27,13 +32,14 @@ export const resolveTestSelection = async ({
 			next: CATALOG_HINT,
 		});
 	}
-	const resolver = await createTestFileResolver({ rootDir: TESTS_DIR });
+	const { testsDir, groups: testGroups } = await getTestTreeAtSha({ ctx, sha });
+	const resolver = await createTestFileResolver({ rootDir: testsDir });
 	const files = new Set<string>();
 
 	for (const group of groups.length === 0 && paths.length === 0
 		? ["core"]
 		: groups) {
-		const groupPaths = resolveTestPaths({ name: group });
+		const groupPaths = testGroups.resolveTestPaths({ name: group });
 		if (!groupPaths) {
 			throw new TwdError({
 				status: 400,
@@ -94,5 +100,7 @@ export const resolveTestSelection = async ({
 			next: `Widen the selection or fix the grep. ${CATALOG_HINT}`,
 		});
 	}
-	return selected.map((absolutePath) => toTestId({ absolutePath })).sort();
+	return selected
+		.map((absolutePath) => relative(testsDir, absolutePath))
+		.sort();
 };

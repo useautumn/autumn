@@ -11,6 +11,7 @@ import {
 	claimAccountsForRun,
 	releaseRunAccounts,
 } from "../../accounts/actions/accountLedger.ts";
+import { getTestTreeAtSha } from "../../catalog/actions/getTestTreeAtSha.ts";
 import { toAbsoluteTestPath } from "../../catalog/repoPaths.ts";
 import { deleteIngressRoute } from "../../ingress/actions/ingressRoutes.ts";
 import { enqueueJob } from "../../jobs/actions/enqueueJob.ts";
@@ -269,6 +270,7 @@ export const handleSwarmJob: JobHandler = async ({
 			runId,
 			sha: run.sha,
 			files: files.map((testId) => toAbsoluteTestPath({ testId })),
+			testsDirAtSha: (await getTestTreeAtSha({ ctx, sha: run.sha })).testsDir,
 			grep: run.selection.grep,
 			accounts: accounts.map(({ accountId, secretKey }) => ({
 				accountId,

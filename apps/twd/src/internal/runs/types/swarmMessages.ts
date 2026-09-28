@@ -7,6 +7,8 @@ export type SwarmInit = {
 	sha: string;
 	/** Absolute local paths, already ordered longest-first. */
 	files: string[];
+	/** server/tests extracted at `sha`; read file contents here, not from twd's checkout. */
+	testsDirAtSha: string;
 	grep?: string;
 	accounts: { accountId: string; secretKey: string }[];
 	ingressUrl: string;

@@ -53,7 +53,11 @@ export const createRun = async ({
 		});
 	}
 	const sha = body.sha ?? (await resolveBranchSha({ branch: body.branch }));
-	const files = await resolveTestSelection({ selection: body.selection });
+	const files = await resolveTestSelection({
+		ctx,
+		sha,
+		selection: body.selection,
+	});
 
 	const progress: RunProgress = { phase: "queued", plannedFiles: files };
 	const [run] = await ctx.db
@@ -62,6 +66,7 @@ export const createRun = async ({
 			id: `run_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`,
 			branch: body.branch,
 			sha,
+			pinnedSha: body.sha !== undefined,
 			selection: body.selection,
 			purpose: body.purpose,
 			reservationId: body.reservationId ?? null,
