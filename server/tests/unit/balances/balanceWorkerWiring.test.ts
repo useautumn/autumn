@@ -140,6 +140,7 @@ async function startsAndMemoizesWhateverTheRolloutSays(): Promise<void> {
 			reset: queueNothing,
 			updateBalance: queueNothing,
 			evict: queueNothing,
+			finalize: queueNothing,
 		},
 		catalog: { invalidateOrgCatalog: queueNothing },
 		start: async () => {

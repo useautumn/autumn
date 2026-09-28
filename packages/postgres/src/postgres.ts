@@ -4,6 +4,12 @@ export type {
 	CatalogRowsEnvelope,
 } from "./catalog/types/catalogRowsEnvelope.js";
 export { parseRows, RowsInvalidError } from "./common/parseRows.js";
+export {
+	isPostgresConnectionFailure,
+	isTransientPostgresError,
+	PostgresSqlState,
+	postgresSqlStateOf,
+} from "./common/postgresErrors.js";
 export { createPostgresClient } from "./createPostgresClient.js";
 export { getBillingCycleAnchors } from "./customerProducts/repos/getBillingCycleAnchors.js";
 export { claimCustomerByEmail } from "./customers/repos/claimCustomerByEmail.js";

@@ -41,6 +41,9 @@ export enum TestFeature {
 	Orbs = "orbs", // credit system that wraps an AI credit system (1000 orbs per $1)
 	EventSeats = "event_seats", // cont use, tracked by "seat-event" beside EventActions
 	EventActions = "event_actions", // single use, tracked by "seat-event" beside EventSeats
+	SharedAction1 = "shared_action1", // single use, tracked by "shared-credit-event" beside SharedAction2
+	SharedAction2 = "shared_action2", // single use, tracked by "shared-credit-event" beside SharedAction1
+	SharedCredits = "shared_credits", // credit system funding both shared actions
 }
 
 export const getFeatures = ({ orgId }: { orgId: string }) => ({
@@ -138,6 +141,29 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 				metered_feature_id: TestFeature.Action2,
 				credit_cost: 0.6,
 			},
+		],
+	}),
+	[TestFeature.SharedAction1]: constructMeteredFeature({
+		featureId: TestFeature.SharedAction1,
+		orgId,
+		env: AppEnv.Sandbox,
+		usageType: FeatureUsageType.Single,
+		eventNames: ["shared-credit-event"],
+	}),
+	[TestFeature.SharedAction2]: constructMeteredFeature({
+		featureId: TestFeature.SharedAction2,
+		orgId,
+		env: AppEnv.Sandbox,
+		usageType: FeatureUsageType.Single,
+		eventNames: ["shared-credit-event"],
+	}),
+	[TestFeature.SharedCredits]: constructCreditSystem({
+		featureId: TestFeature.SharedCredits,
+		orgId,
+		env: AppEnv.Sandbox,
+		schema: [
+			{ metered_feature_id: TestFeature.SharedAction1, credit_cost: 1 },
+			{ metered_feature_id: TestFeature.SharedAction2, credit_cost: 2 },
 		],
 	}),
 	[TestFeature.Credits2]: constructCreditSystem({

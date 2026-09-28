@@ -73,17 +73,15 @@ const workerResponseParts = ({
 		}),
 	}));
 	// The worker names the feature each balance is reported in: the tracked one, or the credit system funding it.
+	// Replies land in order, so a balance two features share is read off the later one, after both deductions.
 	const fundingBalances = new Map<string, ApiBalanceV1>();
 	replies.forEach(({ reply }, index) => {
 		const featureId = reply.result.fundingFeatureId;
-		if (fundingBalances.has(featureId)) return;
 		if (isFlagFeatureId({ ctx, featureId })) return;
 		const { fullSubject } = subjects[index];
 		if (!isFeatureHeld({ fullSubject, featureId })) return;
-		fundingBalances.set(
-			featureId,
-			workerStateToApiBalance({ ctx, fullSubject, featureId }),
-		);
+		const balance = workerStateToApiBalance({ ctx, fullSubject, featureId });
+		if (balance) fundingBalances.set(featureId, balance);
 	});
 
 	const rejected = replies.find(
@@ -154,6 +152,7 @@ export function trackOutcomesToApiResponse({
 		input: {
 			customer_id: body.customer_id,
 			entity_id: body.entity_id ?? undefined,
+			event_name: body.event_name,
 			value: body.value ?? 1,
 			balance: fundingBalances.length === 1 ? fundingBalances[0] : null,
 			balances: Object.keys(balances).length < 2 ? undefined : balances,

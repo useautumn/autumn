@@ -80,7 +80,13 @@ const refuseEntitiesForFeature = ({
 		}
 
 		const usageLimit = customerEntitlement.entitlement.usage_limit;
-		const balanceAfter = (customerEntitlement.balance ?? 0) - inserted.length;
+		// New seats reuse paid-for replaceables first; each gives its seat back.
+		const reusedSeats = customerEntitlement.replaceables.slice(
+			0,
+			inserted.length,
+		).length;
+		const balanceAfter =
+			(customerEntitlement.balance ?? 0) - inserted.length + reusedSeats;
 		if (notNullish(usageLimit) && balanceAfter < -usageLimit) {
 			throw new RecaseError({
 				message: `Cannot create ${inserted.length} entities for feature ${feature.name} as it would exceed the usage limit.`,

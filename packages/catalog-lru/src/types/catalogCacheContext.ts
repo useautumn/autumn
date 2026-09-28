@@ -24,9 +24,13 @@ export type KeysByInvalidationScope = Map<string, Set<string>>;
 export type CatalogCacheState = {
 	entries: LRUCache<string, CatalogRow>;
 	keysByScope: KeysByInvalidationScope;
-	inFlight: Map<string, Promise<void>>;
+	inFlight: Map<string, Promise<CatalogRow[]>>;
 	/** Moves on every insert and removal, so a view joined from these rows knows when to rejoin. */
 	changeCount: number;
+	/** Invalidations received per scope (an org, or an org in one env). */
+	catalogVersions: Map<string, number>;
+	/** The version of its scope each cached row was read under; older than the scope's current version means stale. */
+	rowVersions: WeakMap<CatalogRow, number>;
 };
 
 export type CatalogCacheContext = {

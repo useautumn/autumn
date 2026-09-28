@@ -44,7 +44,7 @@ const assertBalanceExists = ({
 	throw balanceNotFoundError({ params });
 };
 
-const validateBalanceMutation = ({
+export const validateBalanceMutation = ({
 	params,
 	targetBalance,
 	fullSubject,

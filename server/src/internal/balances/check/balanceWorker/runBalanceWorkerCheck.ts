@@ -1,7 +1,8 @@
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
-import type { CheckParams, CheckResponseV3 } from "@autumn/shared";
+import type { CheckParams } from "@autumn/shared";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { CheckResponseWithPreview } from "@/internal/api/check/getCheckPreview.js";
 import {
 	apiVersionCreatesCustomer,
 	type RunWithCustomer,
@@ -29,30 +30,31 @@ export async function runBalanceWorkerCheck({
 	ctx: AutumnContext;
 	body: CheckParams;
 	client?: Pick<BalanceWorkerClient, "check" | "track">;
-}): Promise<CheckResponseV3> {
+}): Promise<CheckResponseWithPreview> {
 	// Validates the lock, gives it an id when the caller sent none, and drops a disabled one.
 	const body = parseCheckParamsForLock({ params: rawBody });
 	const command = checkParamsToCheckCommand({ ctx, body });
 	const isDeductingCheck = body.send_event === true || body.lock !== undefined;
-	const answerToResult = (
+	const answerToResult = async (
 		answer: WorkerCheckAnswer,
-	): RunWithCustomer<CheckResponseV3> => ({
-		result: checkAnswerToApiResponse({
+	): Promise<RunWithCustomer<CheckResponseWithPreview>> => ({
+		result: await checkAnswerToApiResponse({
 			ctx,
 			command,
 			answer,
 			isDeductingCheck,
+			withPreview: body.with_preview,
 		}),
 		customer: answer.state?.customer ?? null,
 	});
 	// Only a plain check tops up here: a deducting check is a track whose record reaches herald, which dispatches.
-	const plainCheck = async (): Promise<RunWithCustomer<CheckResponseV3>> => {
+	const plainCheck = async (): Promise<RunWithCustomer<CheckResponseWithPreview>> => {
 		const answer = await client.check({ command });
 		triggerAutoTopupFromCheckAnswer({ ctx, command, answer });
 		return answerToResult(answer);
 	};
 	// Deducts on the same engine a track would: Postgres when the worker refuses a v1 paid allocated grant.
-	const deductingCheck = (): Promise<RunWithCustomer<CheckResponseV3>> =>
+	const deductingCheck = (): Promise<RunWithCustomer<CheckResponseWithPreview>> =>
 		withPaidAllocatedFallback({
 			ctx,
 			customerId: body.customer_id,
@@ -69,7 +71,7 @@ export async function runBalanceWorkerCheck({
 				customer: fullSubject.customer,
 			}),
 		});
-	const checkOnWorker = async (): Promise<RunWithCustomer<CheckResponseV3>> => {
+	const checkOnWorker = async (): Promise<RunWithCustomer<CheckResponseWithPreview>> => {
 		try {
 			return isDeductingCheck ? await deductingCheck() : await plainCheck();
 		} catch (cause) {

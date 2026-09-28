@@ -13,6 +13,7 @@ import {
 	FeatureType,
 	FreeTrialDuration,
 } from "@autumn/shared";
+import { ensureCatalogForKeys } from "../../src/actions/ensureCatalogForKeys.js";
 import { createCatalogCache } from "../../src/createCatalogCache.js";
 import type { CatalogRowsSource } from "../../src/types/catalogCacheContext.js";
 
@@ -128,10 +129,12 @@ const freeTrialRow = ({
 	id,
 	productId = "prod_internal_1",
 	env = AppEnv.Sandbox,
+	length = 7,
 }: {
 	id: string;
 	productId?: string;
 	env?: AppEnv;
+	length?: number;
 }): CatalogRow => ({
 	table: "freeTrials",
 	row: {
@@ -139,7 +142,7 @@ const freeTrialRow = ({
 		created_at: 1,
 		internal_product_id: productId,
 		duration: FreeTrialDuration.Day,
-		length: 7,
+		length,
 		unique_fingerprint: false,
 		is_custom: false,
 		card_required: true,
@@ -469,5 +472,101 @@ describe("catalog cache change count", () => {
 
 		expect(cache.size()).toBe(1);
 		expect(cache.changeCount()).toBeGreaterThan(beforeEviction + 1);
+	});
+});
+
+/** Serves the next edit of one free trial per read; `duringRead` runs while that read is in flight. */
+const createEditedTrialSource = ({
+	lengths,
+	duringRead = () => {},
+}: {
+	lengths: number[];
+	duringRead?: (params: { read: number }) => void;
+}) => {
+	let reads = 0;
+	return {
+		reads: () => reads,
+		getCatalogRows: async () => {
+			const length = lengths[Math.min(reads, lengths.length - 1)];
+			reads += 1;
+			duringRead({ read: reads });
+			const trial = freeTrialRow({ id: "ft_1", length });
+			return {
+				entitlements: [],
+				products: [],
+				features: [],
+				prices: [],
+				plan_licenses: [],
+				free_trials: trial.table === "freeTrials" ? [trial.row] : [],
+			};
+		},
+	};
+};
+
+const trialKeys = [keyOf(freeTrialRow({ id: "ft_1" }))];
+
+describe("catalog cache: a read raced by an invalidation", () => {
+	test("answers its own request, and the next strict read refetches the edit", async () => {
+		let cache: ReturnType<typeof createCache> | undefined;
+		const source = createEditedTrialSource({
+			lengths: [7, 14],
+			duringRead: ({ read }) => {
+				if (read === 1) cache?.invalidate({ orgId: "org_1", env: "sandbox" });
+			},
+		});
+		cache = createCache({ db: source });
+
+		const raced = await ensureCatalogForKeys({
+			catalogCache: cache,
+			identity,
+			keys: trialKeys,
+		});
+		expect(raced.freeTrials.ft_1?.length).toBe(7);
+		expect(cache.read({ keys: trialKeys }).freeTrials).toEqual({});
+
+		const next = await ensureCatalogForKeys({
+			catalogCache: cache,
+			identity,
+			keys: trialKeys,
+		});
+		expect(next.freeTrials.ft_1?.length).toBe(14);
+		expect(source.reads()).toBe(2);
+	});
+
+	test("an unraced read stays cached: the next ensure does not refetch", async () => {
+		const source = createEditedTrialSource({ lengths: [7, 14] });
+		const cache = createCache({ db: source });
+
+		await ensureCatalogForKeys({
+			catalogCache: cache,
+			identity,
+			keys: trialKeys,
+		});
+		const next = await ensureCatalogForKeys({
+			catalogCache: cache,
+			identity,
+			keys: trialKeys,
+		});
+
+		expect(next.freeTrials.ft_1?.length).toBe(7);
+		expect(source.reads()).toBe(1);
+	});
+
+	test("another org's invalidation leaves the row current", async () => {
+		let cache: ReturnType<typeof createCache> | undefined;
+		const source = createEditedTrialSource({
+			lengths: [7, 14],
+			duringRead: () =>
+				cache?.invalidate({ orgId: "org_other", env: "sandbox" }),
+		});
+		cache = createCache({ db: source });
+
+		await ensureCatalogForKeys({
+			catalogCache: cache,
+			identity,
+			keys: trialKeys,
+		});
+
+		expect(cache.read({ keys: trialKeys }).freeTrials.ft_1?.length).toBe(7);
 	});
 });

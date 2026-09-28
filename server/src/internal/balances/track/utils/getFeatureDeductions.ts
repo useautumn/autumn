@@ -86,7 +86,6 @@ export const getTrackFeatureDeductionsForBody = ({
 		? getTrackFeatureDeductions({
 				ctx,
 				featureId: body.feature_id,
-				lock: body.lock,
 				value: body.value,
 			})
 		: getTrackEventNameDeductions({

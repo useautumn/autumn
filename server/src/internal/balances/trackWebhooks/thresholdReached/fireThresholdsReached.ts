@@ -52,14 +52,16 @@ const replyToThresholdsReached = ({
 	});
 	const featureId = reply.result.fundingFeatureId;
 	if (!isFeatureHeld({ fullSubject, featureId })) return [];
+	const fundingBalance = workerStateToApiBalance({
+		ctx,
+		fullSubject,
+		featureId,
+	});
+	if (!fundingBalance) return [];
 	return trackToThresholdsReached({
 		effects: reply.effects ?? [],
 		result: reply.result,
-		fundingBalance: workerStateToApiBalance({
-			ctx,
-			fullSubject,
-			featureId,
-		}),
+		fundingBalance,
 	});
 };
 

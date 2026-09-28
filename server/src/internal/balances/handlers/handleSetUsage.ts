@@ -1,16 +1,11 @@
-import {
-	fullSubjectToCustomerEntitlements,
-	RouteGroup,
-	Scopes,
-	SetUsageParamsSchema,
-} from "@autumn/shared";
+import { RouteGroup, Scopes, SetUsageParamsSchema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { withCreateIfMissing } from "@/internal/balanceWorker/subject/withCreateIfMissing.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { runBalanceWorkerUpdateBalance } from "../updateBalance/balanceWorker/runBalanceWorkerUpdateBalance.js";
+import { validateBalanceMutation } from "../updateBalance/v2/updateBalanceOnCacheV2.js";
 import { updateUsageV2 } from "../updateBalance/v2/updateUsageV2.js";
-import { validateInvoiceCreditBalanceMutationForFeature } from "../utils/validateInvoiceCreditBalanceMutation.js";
 
 export const handleSetUsage = createRoute({
 	scopes: [Scopes.Balances.Write],
@@ -52,24 +47,15 @@ export const handleSetUsage = createRoute({
 			source: "handleSetUsage",
 		});
 
-		validateInvoiceCreditBalanceMutationForFeature({
-			customerEntitlements: fullSubjectToCustomerEntitlements({
-				fullSubject,
-				featureIds: [body.feature_id],
-			}),
-			featureId: body.feature_id,
-		});
+		const params = {
+			customer_id: body.customer_id,
+			feature_id: body.feature_id,
+			usage: body.value,
+			entity_id: body.entity_id,
+		};
+		validateBalanceMutation({ params, fullSubject });
 
-		await updateUsageV2({
-			ctx,
-			fullSubject,
-			params: {
-				customer_id: body.customer_id,
-				feature_id: body.feature_id,
-				usage: body.value,
-				entity_id: body.entity_id,
-			},
-		});
+		await updateUsageV2({ ctx, fullSubject, params });
 
 		return c.json({ success: true });
 	},

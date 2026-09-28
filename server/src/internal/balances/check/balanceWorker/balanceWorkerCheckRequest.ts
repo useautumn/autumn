@@ -20,10 +20,6 @@ export function checkParamsToCheckCommand({
 		throw new BalanceWorkerUnsupportedError({
 			reason: "product_check_not_supported",
 		});
-	if (body.with_preview)
-		throw new BalanceWorkerUnsupportedError({
-			reason: "preview_not_supported",
-		});
 	return parseCheckCommand({
 		input: {
 			...requestContextToCommandBase({

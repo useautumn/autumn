@@ -44,6 +44,7 @@ test.concurrent(`${chalk.yellowBright("track-event-name1: track with event_name 
 		value: deductValue,
 	});
 
+	expect(trackRes.event_name).toBe("action-event");
 	expect(trackRes.balance).toBeDefined();
 	expect(trackRes.balance?.feature_id).toBe(TestFeature.Action1);
 	expect(trackRes.balance?.current_balance).toBe(expectedBalance);
@@ -109,6 +110,7 @@ test.concurrent(`${chalk.yellowBright("track-event-name2: track with event_name 
 		value: deductValue,
 	});
 
+	expect(trackRes.event_name).toBe("action-event");
 	expect(trackRes.value).toBe(deductValue);
 	expect(trackRes.balance).toBeNull();
 	expect(trackRes.balances).toBeDefined();
