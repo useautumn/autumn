@@ -23,7 +23,7 @@ export function PhaseTimeline() {
 				<PhaseTimelineRow
 					key={`phase-${phaseIndex}`}
 					showsRail={showsRail}
-					className="group/phase-row pb-5"
+					className="group/phase-row"
 					rail={
 						<PhaseTimelineRail
 							phaseIndex={phaseIndex}
@@ -33,7 +33,9 @@ export function PhaseTimeline() {
 						/>
 					}
 				>
-					<SchedulePhaseCard phaseIndex={phaseIndex} />
+					<div className="pb-5">
+						<SchedulePhaseCard phaseIndex={phaseIndex} />
+					</div>
 				</PhaseTimelineRow>
 			))}
 			<AddPhaseButton alignsWithRail={showsRail} onClick={handleAddPhase} />
