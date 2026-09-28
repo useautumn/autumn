@@ -18,7 +18,7 @@ import type { EventsData } from "./analytics-types";
 import { SeriesNameHoverCard } from "./SeriesNameHoverCard";
 
 const HEADER_ROW =
-	"flex items-center h-8 text-xs font-normal text-tertiary-foreground";
+	"flex items-center h-7 text-xs font-normal text-tertiary-foreground";
 const SERIES_ROW =
 	"flex items-center h-11 border-b border-table-row-divider last:border-b-0";
 const TOTAL_ROW = "flex items-center h-11";

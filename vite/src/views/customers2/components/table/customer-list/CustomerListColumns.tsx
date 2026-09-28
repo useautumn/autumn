@@ -105,7 +105,7 @@ const getCusProductsInfo = ({
 								<TooltipProvider>
 									<Tooltip delayDuration={150}>
 										<TooltipTrigger>
-											<StatusChip className="px-1.5 text-tertiary-foreground tabular-nums">
+											<StatusChip className="shrink-0 px-1.5 text-tertiary-foreground tabular-nums">
 												+{extraCount}
 											</StatusChip>
 										</TooltipTrigger>

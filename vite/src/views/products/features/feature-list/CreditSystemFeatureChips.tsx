@@ -17,14 +17,12 @@ export function CreditSystemFeatureChips({ labels }: { labels: string[] }) {
 	return (
 		<div className="flex min-w-0 items-center gap-1">
 			{labels.slice(0, VISIBLE_CHIP_COUNT).map((label) => (
-				<StatusChip key={label} className="min-w-0">
-					<span className="truncate">{label}</span>
-				</StatusChip>
+				<StatusChip key={label}>{label}</StatusChip>
 			))}
 			{hiddenLabels.length > 0 && (
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<StatusChip className="px-1.5 text-tertiary-foreground tabular-nums">
+						<StatusChip className="shrink-0 px-1.5 text-tertiary-foreground tabular-nums">
 							+{hiddenLabels.length}
 						</StatusChip>
 					</TooltipTrigger>

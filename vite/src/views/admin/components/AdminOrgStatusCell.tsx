@@ -1,8 +1,7 @@
-import { Badge } from "@autumn/ui";
-import { cn } from "@/lib/utils";
+import { StatusChip, type StatusGlyph, type StatusTone } from "@autumn/ui";
 import type { AdminOrg } from "../AdminOrgColumns";
 
-type StatusBadge = { label: string; className: string };
+type StatusBadge = { label: string; tone: StatusTone; glyph: StatusGlyph };
 
 const requestBlockBadge = ({
 	blockAll,
@@ -11,12 +10,14 @@ const requestBlockBadge = ({
 	if (blockAll)
 		return {
 			label: "Blocked",
-			className: "bg-red-50 text-red-700 border-red-200",
+			tone: "red",
+			glyph: "ban",
 		};
 	if (ruleCount > 0)
 		return {
 			label: `${ruleCount} rule${ruleCount === 1 ? "" : "s"}`,
-			className: "bg-amber-50 text-amber-700 border-amber-200",
+			tone: "amber",
+			glyph: "alert",
 		};
 	return null;
 };
@@ -29,16 +30,19 @@ const redisBadge = (
 	if (migrationPercent === 0)
 		return {
 			label: "Redis 0%",
-			className: "bg-amber-50 text-amber-700 border-amber-200",
+			tone: "amber",
+			glyph: "minus",
 		};
 	if (migrationPercent === 100)
 		return {
 			label: "Redis 100%",
-			className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+			tone: "green",
+			glyph: "check",
 		};
 	return {
 		label: `Redis ${migrationPercent}%`,
-		className: "bg-blue-50 text-blue-700 border-blue-200",
+		tone: "blue",
+		glyph: "refresh",
 	};
 };
 
@@ -57,13 +61,9 @@ export const AdminOrgStatusCell = ({ org }: { org: AdminOrg }) => {
 	return (
 		<div className="flex flex-wrap items-center gap-1">
 			{badges.map((badge) => (
-				<Badge
-					className={cn("shrink-0", badge.className)}
-					key={badge.label}
-					size="sm"
-				>
+				<StatusChip key={badge.label} tone={badge.tone} glyph={badge.glyph}>
 					{badge.label}
-				</Badge>
+				</StatusChip>
 			))}
 		</div>
 	);

@@ -44,7 +44,7 @@ export const createFeatureListColumns = ({
 	},
 	{
 		header: "Type",
-		size: 120,
+		size: 150,
 		accessorKey: "type",
 		cell: ({ row }: { row: Row<Feature> }) => {
 			const feature = row.original;

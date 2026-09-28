@@ -2,6 +2,7 @@ import {
 	CursorPagination,
 	PageSizeSelector,
 } from "@autumn/ui/components/table/cursor-pagination";
+import { TABLE_TRAY_FOOTER_CLASS } from "@autumn/ui/components/table/table-tray-classes";
 import { cn } from "@autumn/ui/lib/utils";
 
 const numberFormat = new Intl.NumberFormat("en-US");
@@ -44,19 +45,16 @@ export function TablePaginationFooter({
 		: currentPage * pageSize;
 
 	return (
-		<div
-			className={cn(
-				"flex h-11 shrink-0 items-center justify-between gap-2 pr-1.5 pl-3",
-				className,
+		<div className={cn(TABLE_TRAY_FOOTER_CLASS, className)}>
+			{hasTotal && (
+				<span className="min-w-0 truncate text-xs text-tertiary-foreground tabular-nums">
+					<span className="hidden sm:inline">Showing </span>
+					{`${numberFormat.format(firstRowNumber)}–${numberFormat.format(lastRowNumber)} of ${isTotalCountApproximate ? "~" : ""}${numberFormat.format(totalCount)}`}
+				</span>
 			)}
-		>
-			<span className="text-xs text-tertiary-foreground tabular-nums">
-				{hasTotal &&
-					`Showing ${numberFormat.format(firstRowNumber)}–${numberFormat.format(lastRowNumber)} of ${isTotalCountApproximate ? "~" : ""}${numberFormat.format(totalCount)}`}
-			</span>
-			<div className="flex items-center gap-3">
+			<div className="ml-auto flex items-center gap-3">
 				<div className="flex items-center gap-1.5 text-xs text-tertiary-foreground">
-					<span>Rows</span>
+					<span className="hidden sm:inline">Rows</span>
 					<PageSizeSelector
 						pageSize={pageSize}
 						options={pageSizeOptions}

@@ -1,11 +1,11 @@
-import { Badge, Button, DialogFooter, Input } from "@autumn/ui";
+import { Button, DialogFooter, Input } from "@autumn/ui";
 import Editor from "@monaco-editor/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { ConfigHealthChip } from "./ConfigHealthChip";
 import {
 	buildEditableJsonText,
 	RATE_LIMIT_REDIS_ALLOWLIST_QUERY_KEY,
@@ -193,16 +193,7 @@ export const RateLimitRedisAllowlistForm = ({
 
 					<div className="flex flex-col gap-3 rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
 						<div className="flex flex-wrap items-center gap-2">
-							<Badge
-								variant="muted"
-								className={cn(
-									config.configHealthy
-										? "border-emerald-200 bg-emerald-50 text-emerald-700"
-										: "border-amber-200 bg-amber-50 text-amber-700",
-								)}
-							>
-								{config.configHealthy ? "Config healthy" : "Config unavailable"}
-							</Badge>
+							<ConfigHealthChip healthy={config.configHealthy} />
 							{config.lastSuccessAt && (
 								<span className="tabular-nums">
 									Last refresh:{" "}
