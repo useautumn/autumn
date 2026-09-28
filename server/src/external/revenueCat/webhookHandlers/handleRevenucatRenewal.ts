@@ -8,6 +8,10 @@ import {
 import { provisionRevenueCatCusProduct } from "@/external/revenueCat/misc/provisionRevenueCatCusProduct";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
+import {
+	revenueCatEventToPeriodUpdates,
+	storeRevenueCatPeriod,
+} from "@/external/revenueCat/utils/revenueCatPeriod";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
@@ -45,9 +49,8 @@ export const handleRenewal = async ({
 		cusProducts,
 	});
 
-	// Same active product: pure side-effect (webhook + invoice record). No DB
-	// mutation on the cusProduct; the cycle anchor is owned by the app store.
-	// Active only — past-due must fall through to the recovery branch below.
+	// Same active product: store the new period and send webhooks; the cycle
+	// anchor is owned by the app store. Past-due falls through to recovery below.
 	if (curSameProduct && curSameProduct.status === CusProductStatus.Active) {
 		logger.info(
 			`Renewal for existing active product ${product.id}, sending webhook`,
@@ -57,6 +60,10 @@ export const handleRenewal = async ({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
+			updates: revenueCatEventToPeriodUpdates({
+				customerProduct: curSameProduct,
+				event,
+			}),
 		});
 
 		await recordRevenueCatInvoice({
@@ -86,6 +93,13 @@ export const handleRenewal = async ({
 			fullCustomer: customer,
 		});
 
+		await storeRevenueCatPeriod({
+			ctx: customerCtx,
+			customerProduct: curSameProduct,
+			customerId: customer.id ?? "",
+			event,
+		});
+
 		logger.info(`Marked past due product as active: ${curSameProduct.id}`);
 
 		await recordRevenueCatInvoice({
@@ -104,6 +118,13 @@ export const handleRenewal = async ({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
+		});
+
+		await storeRevenueCatPeriod({
+			ctx: customerCtx,
+			customerProduct: curSameProduct,
+			customerId: customer.id ?? "",
+			event,
 		});
 
 		logger.info(`Reactivated cus_product: ${curSameProduct.id}`);
@@ -125,6 +146,7 @@ export const handleRenewal = async ({
 		customer,
 		product,
 		appUserId: app_user_id,
+		periodEvent: event,
 	});
 
 	logger.info(`Created RC cus_product for ${product.id} (renewal transition)`);

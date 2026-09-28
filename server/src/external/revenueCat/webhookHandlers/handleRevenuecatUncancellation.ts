@@ -6,6 +6,7 @@ import {
 	getRevenueCatOverrideCustomerId,
 } from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
+import { storeRevenueCatPeriod } from "@/external/revenueCat/utils/revenueCatPeriod";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 
@@ -52,6 +53,13 @@ export const handleUncancellation = async ({
 		ctx: customerCtx,
 		customerProduct: cusProduct,
 		fullCustomer: customer,
+	});
+
+	await storeRevenueCatPeriod({
+		ctx: customerCtx,
+		customerProduct: cusProduct,
+		customerId: customer.id ?? "",
+		event,
 	});
 
 	logger.info(`Uncancelled cus_product ${cusProduct.id}`);
