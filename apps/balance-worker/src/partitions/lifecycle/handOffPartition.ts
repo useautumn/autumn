@@ -5,6 +5,7 @@ import type {
 	PartitionsContext,
 	PartitionsState,
 } from "../types/partitionState.js";
+import { startPartitions } from "./startPartitions.js";
 import { closePartitionAdmission } from "./stopPartitions.js";
 
 export class HandoffReadyTimeoutError extends Error {
@@ -74,15 +75,43 @@ export function watchForSuccessor({
 			entry.claimed &&
 			!entry.withdrawn;
 		if (signal.aborted || !stillServing) return;
+		const generation = state.generation;
 		state.entries.delete(entry.partition);
 		state.handingOff.set(entry.partition, entry);
 		entry.retirement = handOffPartition({ ctx, state, entry, successor });
 		void watchHandoffRetirement({ ctx, state, retirement: entry.retirement });
+		await entry.retirement.catch(noop);
+		prepareForReturn({ ctx, state, partition: entry.partition, generation });
 	}
 	function onReadyRecord({ endpoint }: { endpoint: string }): void {
 		void onReady({ successor: endpoint });
 	}
 	void entry.publication.awaitReady({ signal }).then(onReadyRecord, noop);
+}
+
+/** The roster still deals this partition here, so it is prepared again and held at the gate; a reverse
+ *  flip brings it back through the normal handoff. Without a gate it would announce at once and take the
+ *  partition straight back, so it stays stopped. An allocation change since the handoff owns it instead. */
+function prepareForReturn({
+	ctx,
+	state,
+	partition,
+	generation,
+}: {
+	ctx: PartitionsContext;
+	state: PartitionsState;
+	partition: number;
+	generation: number;
+}): void {
+	if (!ctx.awaitReadyAnnouncement) return;
+	if (state.status !== "running" || state.generation !== generation) return;
+	if (state.entries.has(partition) || state.handingOff.has(partition)) return;
+	void startPartitions({
+		ctx,
+		state,
+		allocationGeneration: generation,
+		partitions: [partition],
+	}).catch((cause) => reportPartitionError({ ctx, cause }));
 }
 
 /** Back into service: the roster handed the partition to this worker again before it stopped serving. */

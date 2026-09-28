@@ -847,6 +847,115 @@ describe("partition handoff", () => {
 		}
 	});
 
+	test("a partition handed to another fleet is prepared again and returns on a reverse flip", async () => {
+		// Each fleet's gate is a deferred the test swaps: resolved means the record names that fleet.
+		const log = createOwnershipLog();
+		const open = () => {
+			const gate = deferred();
+			gate.resolve();
+			return gate;
+		};
+		const gates = { blue: open(), green: deferred() };
+		// Like the real hook: resolves when the gate opens, rejects with the signal's reason on a revoke.
+		const heldAt =
+			(fleet: keyof typeof gates) =>
+			({ signal }: { signal: AbortSignal }) =>
+				new Promise<void>((resolve, reject) => {
+					if (signal.aborted) return reject(signal.reason);
+					signal.addEventListener("abort", () => reject(signal.reason), {
+						once: true,
+					});
+					void gates[fleet].promise.then(resolve);
+				});
+		const blue = createWorker({
+			name: "A",
+			log,
+			awaitReadyAnnouncement: heldAt("blue"),
+		});
+		const green = createWorker({
+			name: "B",
+			log,
+			awaitReadyAnnouncement: heldAt("green"),
+			config: { handoffClaimTimeoutMs: 5_000 },
+		});
+		try {
+			await ownAlone(blue, [2]);
+			await green.ownership.start();
+			green.assign([2]);
+			await waitFor(() => green.status(2) === "prepared");
+
+			// Flip to green: blue hands off, then prepares the partition again and holds at its (now closed) gate.
+			gates.blue = deferred();
+			gates.green.resolve();
+			await waitFor(() => green.status(2) === "ready");
+			await waitFor(() => blue.has("stop:2"));
+			await waitFor(
+				() => blue.events.filter((e) => e === "A:prepare:2").length === 2,
+			);
+			await waitFor(() => blue.status(2) === "prepared");
+			await settle();
+			expect(blue.events.filter((e) => e === "A:announce:2")).toHaveLength(1);
+			expect(blue.ownership.findOwnedRuntime({ partition: 2 })).toBeUndefined();
+			// Its own roster dealing it the partition again changes nothing: it stays prepared and silent.
+			blue.revoke();
+			blue.assign([2]);
+			await waitFor(() => blue.status(2) === "prepared");
+			await settle();
+			expect(blue.events.filter((e) => e === "A:announce:2")).toHaveLength(1);
+			expect(green.status(2)).toBe("ready");
+
+			// Flip back to blue: blue announces, green hands off and names blue, blue serves again.
+			gates.green = deferred();
+			gates.blue.resolve();
+			await waitFor(() => blue.status(2) === "ready");
+			expect(green.index("drained:2")).toBeLessThan(green.index("claim:A:2"));
+			expect(green.has("release:2")).toBe(false);
+			// Named by green, never claimed for itself a second time.
+			expect(blue.events.filter((e) => e === "A:claim:A:2")).toHaveLength(1);
+			expect(green.has("claim:A:2")).toBe(true);
+			expect(blue.ownership.findOwnedRuntime({ partition: 2 })).toBeDefined();
+			// Green in turn is prepared again for the next flip.
+			await waitFor(() => green.status(2) === "prepared");
+			// The revoke above interrupted a held startup, which is reported the way any revoke mid-startup is.
+			expect(blue.errors.map(String)).toEqual(["Error: Partition retired"]);
+			expect(green.errors).toEqual([]);
+		} finally {
+			gates.blue.resolve();
+			gates.green.resolve();
+			await blue.ownership.stop();
+			await green.ownership.stop();
+		}
+	});
+
+	test("without a gate a partition handed to another fleet is not prepared again", async () => {
+		const log = createOwnershipLog();
+		const slotFlip = deferred();
+		const blue = createWorker({ name: "A", log });
+		const green = createWorker({
+			name: "B",
+			log,
+			awaitReadyAnnouncement: () => slotFlip.promise,
+			config: { handoffClaimTimeoutMs: 5_000 },
+		});
+		try {
+			await ownAlone(blue, [2]);
+			await green.ownership.start();
+			green.assign([2]);
+			await waitFor(() => green.status(2) === "prepared");
+			slotFlip.resolve();
+			await waitFor(() => green.status(2) === "ready");
+			await waitFor(() => blue.has("stop:2"));
+			await settle();
+			expect(blue.events.filter((e) => e === "A:prepare:2")).toHaveLength(1);
+			expect(blue.status(2)).toBe("stopped");
+			expect(green.status(2)).toBe("ready");
+		} finally {
+			slotFlip.resolve();
+			await blue.ownership.stop();
+			await green.ownership.stop();
+		}
+	});
+
 	test("a partition handed back to its owner still hands off to a later foreign ready", async () => {
 		const log = createOwnershipLog();
 		const A = createWorker({ name: "A", log });
