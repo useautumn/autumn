@@ -67,7 +67,7 @@ export const WebhookEventsSchema = z
 
 /** Omitting `events` on create or sync means every event, the same as `[]`. */
 const statedEventsField = WebhookEventsSchema.default([]).describe(
-	"The events sent to this webhook. Leave it out to send every event, including ones added later (`[]` means the same). `vercel.*` events can't be mixed with other events, and a webhook with every event is not a Vercel one.",
+	"The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events.",
 );
 
 const descriptionField = z.string().describe("A note for your own reference.");

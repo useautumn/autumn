@@ -78780,10 +78780,8 @@ paths:
                       - vercel.webhooks.event
                     type: string
                     description: An event type the webhook receives.
-                  description: The events sent to this webhook. Leave it out to send every event,
-                    including ones added later (`[]` means the same). `vercel.*`
-                    events can't be mixed with other events, and a webhook with
-                    every event is not a Vercel one.
+                  description: The events sent to this webhook. Leave it out to send every event.
+                    `vercel.*` events can't be mixed with other events.
                   default: []
                 description:
                   type: string
@@ -79249,10 +79247,8 @@ paths:
                             - vercel.webhooks.event
                           type: string
                           description: An event type the webhook receives.
-                        description: The events sent to this webhook. Leave it out to send every event,
-                          including ones added later (`[]` means the same).
-                          `vercel.*` events can't be mixed with other events,
-                          and a webhook with every event is not a Vercel one.
+                        description: The events sent to this webhook. Leave it out to send every event.
+                          `vercel.*` events can't be mixed with other events.
                         default: []
                       description:
                         type: string
@@ -79663,10 +79659,8 @@ paths:
                             - vercel.webhooks.event
                           type: string
                           description: An event type the webhook receives.
-                        description: The events sent to this webhook. Leave it out to send every event,
-                          including ones added later (`[]` means the same).
-                          `vercel.*` events can't be mixed with other events,
-                          and a webhook with every event is not a Vercel one.
+                        description: The events sent to this webhook. Leave it out to send every event.
+                          `vercel.*` events can't be mixed with other events.
                         default: []
                       description:
                         type: string

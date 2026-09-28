@@ -4173,7 +4173,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: false,
 				description:
-					"The events sent to this webhook. Leave it out to send every event, including ones added later (`[]` means the same). `vercel.*` events can't be mixed with other events, and a webhook with every event is not a Vercel one.",
+					"The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events.",
 			},
 			{
 				name: "description",

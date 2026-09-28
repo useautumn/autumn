@@ -97,7 +97,7 @@ webhooks: Array<{
 id: string;
 /** The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work. */
 url: string;
-/** The events sent to this webhook. Leave it out to send every event, including ones added later (`[]` means the same). `vercel.*` events can't be mixed with other events, and a webhook with every event is not a Vercel one. Defaults to []. */
+/** The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events. Defaults to []. */
 events?: Array<"customer.products.updated" | "customer.threshold_reached" | "balances.usage_alert_triggered" | "balances.limit_reached" | "billing.auto_topup_failed" | "billing.auto_topup_succeeded" | "billing.updated" | "invoice.finalized" | "vercel.resources.deleted" | "vercel.resources.provisioned" | "vercel.resources.rotate_secrets" | "vercel.webhooks.event">;
 /** A note for your own reference. */
 description?: string;

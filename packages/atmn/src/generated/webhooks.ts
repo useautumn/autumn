@@ -10,7 +10,7 @@ export type Webhook = {
 		sandbox?: string;
 		[sandboxSlug: string]: string | undefined;
 	};
-	/** The events sent to this webhook. Leave it out to send every event, including ones added later (`[]` means the same). `vercel.*` events can't be mixed with other events, and a webhook with every event is not a Vercel one. Defaults to []. */
+	/** The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events. Defaults to []. */
 	events?: Array<
 		| "customer.products.updated"
 		| "customer.threshold_reached"
