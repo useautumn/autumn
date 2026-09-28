@@ -10,28 +10,34 @@ import { cn } from "@/lib/utils";
 const EASE_DRAWER = [0.32, 0.72, 0, 1] as const;
 const HEIGHT_TRANSITION: Transition = { duration: 0.22, ease: EASE_DRAWER };
 
-const ENTER_TRANSITION: Transition = {
-	height: HEIGHT_TRANSITION,
-	opacity: { duration: 0.18, delay: 0.04, ease: "easeOut" },
-};
+const enterTransition = (delay: number): Transition => ({
+	height: { ...HEIGHT_TRANSITION, delay },
+	opacity: { duration: 0.18, delay: delay + 0.04, ease: "easeOut" },
+});
 const EXIT_TRANSITION: Transition = {
 	height: HEIGHT_TRANSITION,
 	opacity: { duration: 0.12, ease: "easeOut" },
 };
 
 const COLLAPSED = { height: 0, opacity: 0, transition: EXIT_TRANSITION };
-const EXPANDED = { height: "auto", opacity: 1, transition: ENTER_TRANSITION };
 const FADED = { opacity: 0, transition: EXIT_TRANSITION };
 
 export function PlanRowPresence({
 	children,
 	itemClassName,
+	enterDelay = 0,
 }: {
 	children: ReactNode;
 	itemClassName?: string;
+	enterDelay?: number;
 }) {
 	const reduceMotion = useReducedMotion();
 	const hidden = reduceMotion ? FADED : COLLAPSED;
+	const expanded = {
+		height: "auto",
+		opacity: 1,
+		transition: enterTransition(enterDelay),
+	};
 
 	return (
 		<AnimatePresence initial={false}>
@@ -40,7 +46,7 @@ export function PlanRowPresence({
 					<motion.div
 						key={child.key}
 						initial={hidden}
-						animate={EXPANDED}
+						animate={expanded}
 						exit={hidden}
 						className={cn("overflow-hidden", itemClassName)}
 					>

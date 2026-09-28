@@ -19,6 +19,9 @@ function PlanScopeLabel({ entityId }: { entityId: string | null }) {
 	);
 }
 
+// A new scope table only appears when a row moves into it, so it lands after the row leaves.
+const NEW_SCOPE_ENTER_DELAY = 0.18;
+
 type ScopedPlan = { productId: string; entityId?: string | null };
 
 const groupPlanIndexesByScope = ({ plans }: { plans: ScopedPlan[] }) => {
@@ -65,7 +68,7 @@ export function PlanScopeGroups({
 	if (groups.length === 0) return rows(pickerPlanIndexes);
 
 	return (
-		<PlanRowPresence>
+		<PlanRowPresence enterDelay={NEW_SCOPE_ENTER_DELAY}>
 			{groups.map(([entityId, planIndexes], groupIndex) => (
 				<div key={entityId ?? "customer"} className="pb-1">
 					<PlanScopeLabel entityId={entityId} />
