@@ -22,6 +22,13 @@
 			"when": 1790607576143,
 			"tag": "0002_account_broken_reason",
 			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1790607864599,
+			"tag": "0003_run_pinned_sha",
+			"breakpoints": true
 		}
 	]
 }

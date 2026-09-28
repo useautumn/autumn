@@ -51,6 +51,7 @@ export const toRunSummary = ({
 	createdAt: run.createdAt.toISOString(),
 	startedAt: run.startedAt?.toISOString() ?? null,
 	finishedAt: run.finishedAt?.toISOString() ?? null,
+	pinnedSha: run.pinnedSha,
 });
 
 export const getRunWithEmail = async ({

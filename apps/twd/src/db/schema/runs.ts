@@ -1,4 +1,5 @@
 import {
+	boolean,
 	index,
 	integer,
 	jsonb,
@@ -31,6 +32,7 @@ export const runs = pgTable(
 		id: text("id").primaryKey(),
 		branch: text("branch").notNull(),
 		sha: text("sha").notNull(),
+		pinnedSha: boolean("pinned_sha").notNull().default(false),
 		selection: jsonb("selection").$type<RunSelection>().notNull(),
 		status: text("status").$type<RunStatus>().notNull().default("queued"),
 		/** baseline = scheduled/merge run on dev that feeds the baseline. */

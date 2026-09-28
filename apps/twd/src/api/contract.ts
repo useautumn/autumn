@@ -139,6 +139,8 @@ export const RunSummary = z.object({
 	id: z.string(),
 	branch: z.string(),
 	sha: z.string(),
+	/** True when the caller pinned `sha` directly; the UI then labels the run by commit, not branch. */
+	pinnedSha: z.boolean(),
 	status: RunStatus,
 	purpose: z.enum(["adhoc", "baseline"]),
 	selection: RunSelection,
