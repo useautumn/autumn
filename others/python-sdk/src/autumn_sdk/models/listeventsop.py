@@ -82,6 +82,18 @@ class ListEventsCustomRange(BaseModel):
         return m
 
 
+ListEventsRange = Literal[
+    "24h",
+    "7d",
+    "30d",
+    "90d",
+    "last_cycle",
+    "1bc",
+    "3bc",
+]
+r"""Preset time range to filter events by, resolved the same way as in events.aggregate. Cannot be combined with custom_range"""
+
+
 class EventsListParamsTypedDict(TypedDict):
     start_cursor: NotRequired[str]
     r"""Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages."""
@@ -95,6 +107,8 @@ class EventsListParamsTypedDict(TypedDict):
     r"""Filter by specific feature ID(s)"""
     custom_range: NotRequired[ListEventsCustomRangeTypedDict]
     r"""Filter events by time range"""
+    range: NotRequired[ListEventsRange]
+    r"""Preset time range to filter events by, resolved the same way as in events.aggregate. Cannot be combined with custom_range"""
 
 
 class EventsListParams(BaseModel):
@@ -116,6 +130,9 @@ class EventsListParams(BaseModel):
     custom_range: Optional[ListEventsCustomRange] = None
     r"""Filter events by time range"""
 
+    range: Optional[ListEventsRange] = None
+    r"""Preset time range to filter events by, resolved the same way as in events.aggregate. Cannot be combined with custom_range"""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -126,6 +143,7 @@ class EventsListParams(BaseModel):
                 "entity_id",
                 "feature_id",
                 "custom_range",
+                "range",
             ]
         )
         serialized = handler(self)

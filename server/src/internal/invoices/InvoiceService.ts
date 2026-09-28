@@ -21,11 +21,11 @@ import {
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { getInvoiceDiscounts } from "@server/external/stripe/stripeInvoiceUtils.js";
 import { generateId } from "@server/utils/genUtils.js";
-import { Autumn } from "autumn-js";
 import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { resolvedProductIdsForColumn } from "./repos/utils/resolvedProductIdsSql.js";
+import { stripeInvoiceToPaidAt } from "./utils/stripeInvoiceToPaidAt.js";
 
 export const processInvoice = ({
 	invoice,
@@ -346,7 +346,6 @@ export class InvoiceService {
 		internalProductIds,
 		status,
 		org,
-		sendRevenueEvent = true,
 		items = [],
 	}: {
 		db: DrizzleCli;
@@ -357,7 +356,6 @@ export class InvoiceService {
 		internalProductIds: string[];
 		status?: InvoiceStatus | null;
 		org: Organization;
-		sendRevenueEvent?: boolean;
 		items?: InvoiceItem[];
 	}) {
 		// Convert product ids to unique product ids
@@ -389,6 +387,7 @@ export class InvoiceService {
 			// Stripe stuff
 			total: atmnTotal,
 			amount_paid: atmnAmountPaid,
+			paid_at: stripeInvoiceToPaidAt({ stripeInvoice }),
 			refunded_amount: 0,
 			currency: stripeInvoice.currency,
 			discounts: getInvoiceDiscounts({
@@ -416,23 +415,6 @@ export class InvoiceService {
 				console.error("   ❌ Error inserting Stripe invoice: ", error);
 				throw error;
 			}
-		}
-
-		// Send monthly_revenue event
-		try {
-			if (!stripeInvoice.livemode || !sendRevenueEvent) {
-				return newInvoice;
-			}
-
-			const autumn = new Autumn();
-			await autumn.track({
-				customerId: org.id,
-				eventName: "revenue",
-				value: atmnTotal,
-			});
-			console.log("   ✅ Sent revenue event");
-		} catch (error) {
-			console.log("Failed to send revenue event", error);
 		}
 
 		return newInvoice;
@@ -484,6 +466,7 @@ export class InvoiceService {
 					discounts: invoice.discounts,
 					total: invoice.total,
 					amount_paid: invoice.amount_paid,
+					paid_at: sql`COALESCE(excluded.paid_at, ${invoices.paid_at})`,
 					product_ids: invoice.product_ids?.length
 						? sql`CASE
 							WHEN ${invoices.product_ids} IS NULL OR cardinality(${invoices.product_ids}) = 0

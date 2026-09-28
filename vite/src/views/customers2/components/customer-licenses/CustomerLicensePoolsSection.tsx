@@ -58,12 +58,10 @@ export function CustomerLicensePoolsSection() {
 		[customer.customer_products],
 	);
 
+	const hasEntities = customer.entities.length > 0;
 	const columns = useMemo(
-		() =>
-			createCustomerLicensePoolColumns({
-				hasEntities: customer.entities.length > 0,
-			}),
-		[customer.entities.length],
+		() => createCustomerLicensePoolColumns({ hasEntities }),
+		[hasEntities],
 	);
 
 	const table = useCustomerTable({ data: rows, columns });
@@ -80,7 +78,6 @@ export function CustomerLicensePoolsSection() {
 					enableSorting: false,
 					isLoading: false,
 					emptyStateChildren: "No licenses",
-					flexibleTableColumns: true,
 					mobileCards: true,
 					selectedItemId,
 					onRowClick: (row: CustomerLicensePoolRow) => {

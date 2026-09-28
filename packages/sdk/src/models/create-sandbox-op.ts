@@ -33,7 +33,7 @@ export type ColorRequest = ClosedEnum<typeof ColorRequest>;
 
 export type CreateSandboxParams = {
   /**
-   * A name for the sandbox, unique within your organization.
+   * A name for the sandbox, unique within your organization. No spaces, and it can't be `live` or `sandbox`.
    */
   name: string;
   /**

@@ -1,12 +1,12 @@
 import { AppEnv } from "@autumn/shared";
-import { IconButton, SandboxBanner } from "@autumn/ui";
-import { ArrowRightIcon } from "@phosphor-icons/react";
+import { SandboxBanner, SandboxBannerAction } from "@autumn/ui";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Outlet } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { SandboxFavicon } from "@/components/general/SandboxFavicon";
+import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
@@ -14,6 +14,11 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { sandboxColorValue } from "@/hooks/sandbox/sandboxDisplay";
+import {
+	setActiveSandbox,
+	useActiveSandbox,
+} from "@/hooks/sandbox/useActiveSandbox";
 import { useSyncSandboxFromUrl } from "@/hooks/sandbox/useSyncSandboxFromUrl";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { cn } from "@/lib/utils";
@@ -24,6 +29,7 @@ import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEve
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 import { DeployToProdDialog } from "@/views/main-sidebar/components/deploy-button/DeployToProdDialog";
+import { useEnvChange } from "@/views/main-sidebar/EnvDropdown";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
 import { MobileSidebar } from "@/views/main-sidebar/MobileSidebar";
 import { MobileTopBar } from "@/views/main-sidebar/MobileTopBar";
@@ -112,8 +118,10 @@ const MainContent = ({
 	onOpenMobileSidebar: () => void;
 }) => {
 	const env = useEnv();
+	const activeSandbox = useActiveSandbox();
 	const { org, isLoading: orgLoading } = useOrg();
 	const [showDeployDialog, setShowDeployDialog] = useState(false);
+	const handleEnvChange = useEnvChange();
 	const isCapyDev = import.meta.env.VITE_CAPY_DEV === "1";
 
 	useDevQuery();
@@ -124,6 +132,11 @@ const MainContent = ({
 	useEventNames({ enabled: !isCapyDev });
 
 	const showLoading = orgLoading || !org;
+
+	const switchToProduction = () => {
+		setActiveSandbox(null);
+		handleEnvChange(AppEnv.Live);
+	};
 
 	return (
 		<AppContext.Provider value={{}}>
@@ -139,18 +152,30 @@ const MainContent = ({
 					className="w-full h-full flex flex-col overflow-hidden sm:rounded-xl sm:border relative"
 				>
 					{env === AppEnv.Sandbox && (
-						<SandboxBanner>
-							{!org?.deployed && (
-								<IconButton
-									variant="secondary"
-									size="sm"
-									icon={<ArrowRightIcon />}
-									iconOrientation="right"
-									onClick={() => setShowDeployDialog(true)}
-									className="border-sandbox/50 animate-in fade-in-0 duration-300 slide-in-from-right-2"
-								>
-									Deploy to Production
-								</IconButton>
+						<SandboxBanner
+							label={activeSandbox?.name}
+							icon={
+								activeSandbox?.icon ? (
+									<PhosphorIcon name={activeSandbox.icon} className="size-3" />
+								) : undefined
+							}
+							color={
+								activeSandbox
+									? sandboxColorValue(activeSandbox.color)
+									: undefined
+							}
+							className={
+								activeSandbox?.color === "amber" ? "text-black" : undefined
+							}
+						>
+							{org?.deployed ? (
+								<SandboxBannerAction onClick={switchToProduction}>
+									Production
+								</SandboxBannerAction>
+							) : (
+								<SandboxBannerAction onClick={() => setShowDeployDialog(true)}>
+									Deploy to production
+								</SandboxBannerAction>
 							)}
 						</SandboxBanner>
 					)}

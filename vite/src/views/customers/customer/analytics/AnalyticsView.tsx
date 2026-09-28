@@ -1,38 +1,52 @@
 import { ErrCode } from "@autumn/shared";
 import { PageContainer } from "@autumn/ui";
 import { ChartBarIcon } from "@phosphor-icons/react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { AnimatePresence, motion } from "motion/react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useEnv } from "@/utils/envUtils";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsBarChart } from "./AnalyticsGraph";
-import { colors, type EventRow } from "./components/analytics-types";
-import { ChartLegend, type ChartLegendEntry } from "./components/ChartLegend";
+import type { EventRow, EventsData } from "./components/analytics-types";
 import { ChartSkeleton } from "./components/ChartSkeleton";
-import { EventsTable } from "./components/EventsTable";
-import { QueryTopbar } from "./components/QueryTopbar";
+import { FirstLoadNotice } from "./components/FirstLoadNotice";
+import { QueryStrip } from "./components/query/QueryStrip";
+import { UpdatingBar } from "./components/UpdatingBar";
+import {
+	type TablePlaceholder,
+	UsageBreakdownTable,
+} from "./components/UsageBreakdownTable";
+import { UsagePageHeader } from "./components/UsagePageHeader";
 import {
 	useAnalyticsData,
 	useRawAnalyticsData,
 } from "./hooks/useAnalyticsData";
+import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
+import { type ShownChart, useLastShownChart } from "./hooks/useLastShownChart";
+import { useResetQuery } from "./hooks/useResetQuery";
 import { RevenueMetricsSection } from "./revenue/RevenueMetricsSection";
 import {
 	DEFAULT_PLOT_INSETS,
 	getCachedPlotInsets,
-	niceCeil,
+	niceAxisTicks,
 	type PlotInsets,
 	plotInsetsEqual,
+	predictBinStarts,
 	setCachedPlotInsets,
 } from "./utils/chartGeometry";
-import {
-	CUSTOMER_BALANCE_SUFFIX,
-	deductionsToEventsData,
-} from "./utils/deductionsToEventsData";
+import { deductionsToEventsData } from "./utils/deductionsToEventsData";
+import { SOURCE_FEATURE_GROUP } from "./utils/displayLabels";
 import { dropZeroRowsKeepingPeriods } from "./utils/dropZeroRowsKeepingPeriods";
 import { extractPropertyKeys } from "./utils/extractPropertyKeys";
 import { fillMissingPeriods } from "./utils/fillMissingPeriods";
+import { groupByToColumn } from "./utils/groupByColumn";
+import {
+	deductionGroupValues,
+	hideGroupRows,
+	hideGroupSeries,
+} from "./utils/hideGroupValues";
+import { formatBinStartLabel } from "./utils/parseTimestamp";
+import { assignSeriesColors } from "./utils/seriesColors";
 import {
 	generateChartConfig,
 	parseSeriesKey,
@@ -40,17 +54,48 @@ import {
 	trimToTopSeries,
 } from "./utils/transformGroupedChartData";
 
+// Quick cross-fade: a staged reveal read as the chart vanishing and popping back.
+const CHART_FADE = { duration: 0.2, ease: [0.23, 1, 0.32, 1] } as const;
+const MAX_CHART_SERIES = 30;
+const STALE_OPACITY = 0.35;
+// Matches the default of charting the top three events.
+const PLACEHOLDER_TABLE_ROWS = 3;
+
+/** Pivots aggregate rows into one column per group×feature, top series only. */
+const toChartSeries = ({
+	events,
+	groupBy,
+	chartGroupBy,
+}: {
+	events: EventsData;
+	groupBy: string | null;
+	chartGroupBy: string | null;
+}): EventsData => {
+	// Dropping all-zero rows first skips ~95% of a grouped response before the pivot.
+	const nonZeroEvents = dropZeroRowsKeepingPeriods({
+		events,
+		groupColumn: groupBy ? groupByToColumn({ groupBy }) : null,
+	});
+	const pivoted = transformGroupedData({
+		events: nonZeroEvents,
+		groupBy: chartGroupBy,
+	});
+	return trimToTopSeries({ events: pivoted, maxSeries: MAX_CHART_SERIES });
+};
+
 export const AnalyticsView = () => {
 	const [eventNames, setEventNames] = useState<string[]>([]);
 	const [featureIds, setFeatureIds] = useState<string[]>([]);
 	const [clickHouseDisabled, setClickHouseDisabled] = useState(false);
 	const [hasCleared, setHasCleared] = useState(false);
-	const [groupFilter, setGroupFilter] = useState<string | null>(null);
-	const [planDeselected, setPlanDeselected] = useState<Set<string>>(new Set());
+	const [hiddenGroupValues, setHiddenGroupValues] = useState<Set<string>>(
+		new Set(),
+	);
 
 	const env = useEnv();
+	const resetQuery = useResetQuery();
+	const { queryStates } = useAnalyticsQueryState();
 	const { flags, isLoading: isFeatureFlagsLoading } = useFeatureFlags();
-	const reduceMotion = useReducedMotion();
 	const [plotInsets, setPlotInsets] = useState<PlotInsets>(
 		() => getCachedPlotInsets() ?? DEFAULT_PLOT_INSETS,
 	);
@@ -69,50 +114,52 @@ export const AnalyticsView = () => {
 		error,
 		bcExclusionFlag,
 		groupBy,
-		truncated,
+		utcPeriods,
 		entityNames,
 		customerNames,
 		planNames,
-		totals,
 		eventNames: responseEventNames,
 	} = useAnalyticsData({ hasCleared });
 
 	const isDeducted = aggregateOn === "deducted";
+
 	// Own-vs-borrowed only means something per entity; other groupings ignore it.
 	const splitSpillover = groupBy === "entity_id";
 
-	// Show toast when data is truncated due to too many unique group values
-	const hasShownTruncationToast = useRef(false);
 	useEffect(() => {
-		if (truncated && groupBy && !hasShownTruncationToast.current) {
-			toast.error(
-				`Too many unique values for '${groupBy}'. Showing top 10 by volume.`,
-			);
-			hasShownTruncationToast.current = true;
-		}
-		if (!truncated || !groupBy) {
-			hasShownTruncationToast.current = false;
-		}
-	}, [truncated, groupBy]);
+		setHiddenGroupValues(new Set());
+	}, [groupBy, isDeducted]);
 
-	useEffect(() => {
-		setGroupFilter(null);
-		setPlanDeselected(new Set());
-	}, [groupBy]);
+	// The deductions pipe only emits buckets it has rows for; the events
+	// aggregation beside it is already zero-filled over the same window.
+	const deductionEvents = useMemo(
+		() =>
+			isDeducted && deductions?.length
+				? fillMissingPeriods({
+						events: deductionsToEventsData({
+							deductions,
+							utc: utcPeriods,
+							splitSpillover,
+						}),
+						periods: (events?.data ?? []).map((row: EventRow) =>
+							String(row.period),
+						),
+					})
+				: null,
+		[isDeducted, deductions, splitSpillover, events, utcPeriods],
+	);
 
 	// Extract unique group values from events data for filtering
 	const availableGroupValues = useMemo(() => {
+		// Deduction rows are pre-pivoted, so their groups live in the series keys.
+		if (isDeducted) {
+			return deductionGroupValues({ events: deductionEvents });
+		}
 		if (!groupBy || !events?.data) {
 			return [];
 		}
 
-		// Handle special case for column-based operators (not a property)
-		const groupByColumn =
-			groupBy === "customer_id" ||
-			groupBy === "entity_id" ||
-			groupBy === "plan_id"
-				? groupBy
-				: `properties.${groupBy}`;
+		const groupByColumn = groupByToColumn({ groupBy });
 		// plan_id treats empty-string as a meaningful "no plan" bucket; for
 		// property grouping, empty means the property is absent and we drop it.
 		const allowEmpty = groupBy === "plan_id";
@@ -126,130 +173,63 @@ export const AnalyticsView = () => {
 		}
 
 		return Array.from(uniqueValues).sort();
-	}, [groupBy, events?.data]);
+	}, [groupBy, events?.data, isDeducted, deductionEvents]);
 
-	const { rawEvents, queryLoading: rawQueryLoading } = useRawAnalyticsData();
+	const { rawEvents } = useRawAnalyticsData();
 
 	// Extract property keys from raw events for the group by dropdown
 	const propertyKeys = useMemo(() => {
 		return extractPropertyKeys({ rawEvents: rawEvents?.data });
 	}, [rawEvents?.data]);
 
+	// Deducted mode reuses the whole pipeline below: deductionsToEventsData
+	// emits pre-pivoted feature__group columns, transformGroupedData no-ops
+	// on them (no raw group column), and generateChartConfig parses the
+	// names it already knows. Grouping defaults to the source feature — the
+	// question the mode exists to answer.
+	const chartGroupBy = isDeducted ? (groupBy ?? SOURCE_FEATURE_GROUP) : groupBy;
+	const chartSource = isDeducted ? deductionEvents : events;
+
+	// Ranked before hiding groups, so hiding one never repaints the others.
+	const seriesColors = useMemo(() => {
+		if (!chartSource) return {};
+		return assignSeriesColors({
+			events: toChartSeries({ events: chartSource, groupBy, chartGroupBy }),
+		});
+	}, [chartSource, groupBy, chartGroupBy]);
+
 	// Transform and configure chart data
 	const { chartData, chartConfig } = useMemo(() => {
-		// Deducted mode reuses the whole pipeline below: deductionsToEventsData
-		// emits pre-pivoted feature__group columns, transformGroupedData no-ops
-		// on them (no raw group column), and generateChartConfig parses the
-		// names it already knows. Grouping defaults to the source feature — the
-		// question the mode exists to answer.
-		const chartGroupBy = isDeducted
-			? (groupBy ?? "source_feature_id")
-			: groupBy;
-		// The deductions pipe only emits buckets it has rows for; the events
-		// aggregation beside it is already zero-filled over the same window.
-		const deductionEvents =
-			isDeducted && deductions?.length
-				? fillMissingPeriods({
-						events: deductionsToEventsData({ deductions, splitSpillover }),
-						periods: (events?.data ?? []).map((row: EventRow) =>
-							String(row.period),
-						),
-					})
-				: null;
-		const chartSource = isDeducted ? deductionEvents : events;
-
 		if (!chartSource) {
 			return { chartData: null, chartConfig: null };
 		}
 
+		const hasHiddenGroups = hiddenGroupValues.size > 0;
 		let filteredEvents = chartSource;
-		if (isDeducted) {
-			// The row filters below reference raw group columns, which the
-			// pre-pivoted deduction rows no longer carry (planDeselected stays
-			// skipped — plan grouping is disabled in deducted mode). "Filter by
-			// value" instead filters COLUMNS: keep `period` plus the series whose
-			// group value — the suffix parseSeriesKey extracts, matching how
-			// generateChartConfig labels them — equals the selected value.
-			if (groupFilter !== null) {
-				const keptMeta = chartSource.meta.filter(
-					({ name }: { name: string }) => {
-						if (name === "period") return true;
-						const groupValue = parseSeriesKey({ name })?.groupValue;
-						if (groupValue === undefined) return false;
-						// An entity's spillover series belongs to that entity's filter.
-						const base = groupValue.endsWith(CUSTOMER_BALANCE_SUFFIX)
-							? groupValue.slice(0, -CUSTOMER_BALANCE_SUFFIX.length)
-							: groupValue;
-						return base === groupFilter;
-					},
-				);
-				const keptColumns = keptMeta.map(({ name }: { name: string }) => name);
-				const filteredData = chartSource.data.map((row: EventRow) => {
-					const slim: EventRow = {};
-					for (const column of keptColumns) {
-						slim[column] = row[column];
-					}
-					return slim;
-				});
-				filteredEvents = {
-					...chartSource,
-					meta: keptMeta,
-					data: filteredData,
-				};
-			}
-		} else if (groupBy === "plan_id" && planDeselected.size > 0) {
-			const filteredData = chartSource.data.filter(
-				(row: EventRow) => !planDeselected.has(String(row.plan_id ?? "")),
-			);
-			filteredEvents = {
-				...chartSource,
-				data: filteredData,
-				rows: filteredData.length,
-			};
-		} else if (groupBy && groupBy !== "plan_id" && groupFilter !== null) {
-			const groupByColumn =
-				groupBy === "customer_id" || groupBy === "entity_id"
-					? groupBy
-					: `properties.${groupBy}`;
-			const filteredData = chartSource.data.filter(
-				(row: EventRow) => String(row[groupByColumn]) === groupFilter,
-			);
-			filteredEvents = {
-				...chartSource,
-				data: filteredData,
-				rows: filteredData.length,
-			};
+		if (hasHiddenGroups && isDeducted) {
+			filteredEvents = hideGroupSeries({
+				events: chartSource,
+				hiddenGroupValues,
+			});
+		} else if (hasHiddenGroups && groupBy) {
+			filteredEvents = hideGroupRows({
+				events: chartSource,
+				groupBy,
+				hiddenGroupValues,
+			});
 		}
 
-		// 1. Drop all-zero rows before the pivot — ~95% of the grouped response,
-		//    so the pivot runs on hundreds of rows rather than thousands.
-		const groupCol =
-			groupBy === "customer_id" ||
-			groupBy === "entity_id" ||
-			groupBy === "plan_id"
-				? groupBy
-				: groupBy
-					? `properties.${groupBy}`
-					: null;
-		const nonZeroEvents = dropZeroRowsKeepingPeriods({
+		const trimmed = toChartSeries({
 			events: filteredEvents,
-			groupColumn: groupCol,
+			groupBy,
+			chartGroupBy,
 		});
-
-		// 2. Pivot into one column per group×feature
-		const transformed = transformGroupedData({
-			events: nonZeroEvents,
-			groupBy: chartGroupBy,
-		});
-
-		// 3. Keep only top 30 series by volume so Recharts renders ≤30 <Bar>s
-		const trimmed = trimToTopSeries({ events: transformed, maxSeries: 30 });
 
 		const config = generateChartConfig({
 			events: trimmed,
 			features,
 			groupBy: chartGroupBy,
-			originalColors: colors,
+			seriesColors,
 			entityNames,
 			customerNames,
 			planNames,
@@ -257,24 +237,21 @@ export const AnalyticsView = () => {
 
 		return { chartData: trimmed, chartConfig: config };
 	}, [
-		events,
-		deductions,
-		aggregateOn,
-		splitSpillover,
+		chartSource,
+		chartGroupBy,
+		isDeducted,
 		features,
 		groupBy,
-		groupFilter,
-		planDeselected,
+		hiddenGroupValues,
+		seriesColors,
 		entityNames,
 		customerNames,
 		planNames,
 	]);
 
-	const { barFractions, chartDomainMax } = useMemo(() => {
+	const chartTicks = useMemo(() => {
 		const rows = chartData?.data;
-		if (!rows || rows.length === 0 || !chartConfig) {
-			return { barFractions: null, chartDomainMax: undefined };
-		}
+		if (!rows || rows.length === 0 || !chartConfig) return undefined;
 		const totals = rows.map((row) =>
 			chartConfig.reduce(
 				(sum, series) =>
@@ -282,56 +259,33 @@ export const AnalyticsView = () => {
 				0,
 			),
 		);
-		const domainMax = niceCeil(Math.max(...totals, 1));
-		return {
-			barFractions: totals.map((total) => total / domainMax),
-			chartDomainMax: domainMax,
-		};
+		return niceAxisTicks({ max: Math.max(...totals, 1) });
 	}, [chartData, chartConfig]);
 
-	// Build legend entries (sorted desc, zero-values filtered). The
-	// width-aware overflow logic lives in ChartLegend.
-	const legendEntries: ChartLegendEntry[] = useMemo(() => {
-		if (!chartData || chartData.data.length === 0) return [];
-		let entries: ChartLegendEntry[] = [];
-		// Deducted mode is always series-shaped (grouping defaults server-side),
-		// so its legend must come from the chart config, not raw event totals.
-		if ((groupBy || isDeducted) && chartConfig) {
-			entries = chartConfig.map((s) => {
-				const sum = chartData.data.reduce(
-					(acc, row) => acc + Number((row as EventRow)[s.yKey] ?? 0),
-					0,
-				);
-				return {
-					key: s.yKey,
-					label: s.yName,
-					color: s.fill,
-					value: sum,
-					title: `${s.yName}: ${sum.toLocaleString()}`,
-				};
-			});
-		} else {
-			entries = responseEventNames.map((name) => {
-				const entry = totals?.[name] ?? { count: 0, sum: 0 };
-				const primary = entry.sum !== entry.count ? entry.sum : entry.count;
-				const series = chartConfig?.find(
-					(c) => c.yKey === `${name}_count` || c.yKey === name,
-				);
-				return {
-					key: name,
-					label: name,
-					color: series?.fill,
-					value: primary,
-					title: `${name}: ${entry.count.toLocaleString()} events${
-						entry.sum !== entry.count
-							? ` · Σ ${entry.sum.toLocaleString()}`
-							: ""
-					}`,
-				};
-			});
+	// Only an ungrouped chart has one colour per event; grouped series belong to groups.
+	const eventColors = useMemo(() => {
+		const colorsByEvent: Record<string, string> = {};
+		if (groupBy || isDeducted || !chartConfig) return colorsByEvent;
+		for (const name of responseEventNames) {
+			const series = chartConfig.find(
+				(c) => c.yKey === `${name}_count` || c.yKey === name,
+			);
+			if (series) colorsByEvent[name] = series.fill;
 		}
-		return entries.filter((e) => e.value > 0).sort((a, b) => b.value - a.value);
-	}, [chartData, chartConfig, groupBy, isDeducted, responseEventNames, totals]);
+		return colorsByEvent;
+	}, [chartConfig, groupBy, isDeducted, responseEventNames]);
+
+	// A group can own several series (one per event); its first colour stands for it.
+	const groupColors = useMemo(() => {
+		const colorsByGroup: Record<string, string> = {};
+		for (const series of chartConfig ?? []) {
+			const groupValue = parseSeriesKey({ name: series.yKey })?.groupValue;
+			if (groupValue !== undefined && !colorsByGroup[groupValue]) {
+				colorsByGroup[groupValue] = series.fill;
+			}
+		}
+		return colorsByGroup;
+	}, [chartConfig]);
 
 	useEffect(() => {
 		if (
@@ -361,14 +315,14 @@ export const AnalyticsView = () => {
 			hasCleared,
 			setHasCleared,
 			propertyKeys,
-			groupFilter,
-			setGroupFilter,
-			planDeselected,
-			setPlanDeselected,
+			hiddenGroupValues,
+			setHiddenGroupValues,
 			availableGroupValues,
 			entityNames,
 			customerNames,
 			planNames,
+			eventColors,
+			groupColors,
 		}),
 		[
 			customer,
@@ -378,12 +332,13 @@ export const AnalyticsView = () => {
 			bcExclusionFlag,
 			hasCleared,
 			propertyKeys,
-			groupFilter,
-			planDeselected,
+			hiddenGroupValues,
 			availableGroupValues,
 			entityNames,
 			customerNames,
 			planNames,
+			eventColors,
+			groupColors,
 		],
 	);
 
@@ -402,100 +357,145 @@ export const AnalyticsView = () => {
 		!isFeatureFlagsLoading &&
 		!flags.maintenanceModes.analytics.disableRevenueMetrics;
 
-	const hasChart = !queryLoading && !!chartData && chartData.data.length > 0;
-	const isEmpty = !queryLoading && !hasChart;
-	const chartRevealDelay = reduceMotion ? 0 : 0.85;
+	const freshChart = useMemo<ShownChart | null>(
+		() =>
+			!queryLoading && chartData && chartConfig && chartData.data.length > 0
+				? {
+						chartData,
+						chartConfig,
+						chartTicks,
+						interval: queryStates.interval,
+					}
+				: null,
+		[queryLoading, chartData, chartConfig, chartTicks, queryStates.interval],
+	);
+	const { displayedChart, isStale } = useLastShownChart({
+		chart: freshChart,
+		isLoading: queryLoading,
+	});
+	const isFirstLoad = queryLoading && !displayedChart;
+
+	// Fixed shape so the table changes once, when names and numbers land together.
+	const tablePlaceholder = useMemo<TablePlaceholder | null>(() => {
+		if (!isFirstLoad) return null;
+		const { interval, bin_size, start, end } = queryStates;
+		return {
+			rowCount: PLACEHOLDER_TABLE_ROWS,
+			periodLabels: predictBinStarts({
+				interval,
+				binSize: bin_size,
+				start,
+				end,
+			}).map((binStart) => formatBinStartLabel({ binStart, interval })),
+		};
+	}, [isFirstLoad, queryStates]);
+	const isEmpty = !queryLoading && !freshChart;
+
+	const emptyMessage =
+		eventNames.length === 0
+			? "Start sending events to view usage data."
+			: "No events found for these filters.";
 
 	return (
 		<AnalyticsContext.Provider value={contextValue}>
-			<PageContainer className="text-sm h-full overflow-hidden">
-				{showRevenueMetrics && <RevenueMetricsSection />}
-				<div className="pb-6 shrink-0">
-					<div className="flex justify-between pb-4 h-10">
-						<div className="text-tertiary-foreground text-md flex gap-2 items-center">
-							<ChartBarIcon size={16} weight="fill" className="text-subtle" />
-							Usage
-						</div>
-						<QueryTopbar />
-					</div>
-					<div className="relative flex flex-col bg-interactive-secondary border rounded-lg aspect-[3/1] overflow-hidden">
-						{(queryLoading || hasChart) && (
-							<div className="absolute inset-0 flex flex-col">
-								<ChartSkeleton
-									targets={hasChart ? barFractions : null}
-									geometry={plotInsets}
-								/>
-							</div>
+			<div className="flex h-full min-h-0">
+				<PageContainer className="text-sm h-full min-w-0 overflow-hidden">
+					<UsagePageHeader activeTab="overview">
+						{isStale && (
+							<span className="text-xs text-tertiary-foreground">
+								Updating…
+							</span>
 						)}
-						<AnimatePresence>
-							{hasChart && (
-								<motion.div
-									key="chart"
-									className="absolute inset-0 flex flex-col bg-interactive-secondary"
-									initial={{ opacity: 0 }}
-									animate={{
-										opacity: 1,
-										transition: {
-											duration: 0.85,
-											delay: chartRevealDelay,
-											ease: [0.23, 1, 0.32, 1],
-										},
-									}}
-									exit={{
-										opacity: 0,
-										transition: { duration: 0.2, ease: [0.23, 1, 0.32, 1] },
-									}}
-								>
-									<ChartLegend
-										entries={legendEntries}
-										showLabels={
-											!!groupBy || isDeducted || legendEntries.length <= 3
-										}
-									/>
-									<div className="flex-1 min-h-0">
-										<EventsBarChart
-											data={
-												chartData as Parameters<
-													typeof EventsBarChart
-												>[0]["data"]
-											}
-											chartConfig={chartConfig}
-											domainMax={chartDomainMax}
-											onGeometry={handlePlotGeometry}
+						<button
+							type="button"
+							onClick={resetQuery}
+							className="text-xs text-tertiary-foreground hover:text-foreground"
+						>
+							Reset filters
+						</button>
+					</UsagePageHeader>
+					<QueryStrip propertyKeys={propertyKeys} />
+					{showRevenueMetrics && <RevenueMetricsSection />}
+					<div className="flex flex-col flex-1 min-h-0 min-w-0">
+						<div className="pb-8 shrink-0">
+							<div className="relative flex flex-col h-[300px]">
+								{isStale && <UpdatingBar />}
+								<AnimatePresence initial={false}>
+									{isFirstLoad && (
+										<motion.div
+											key="skeleton"
+											className="absolute inset-0 flex flex-col"
+											exit={{ opacity: 0, transition: CHART_FADE }}
+										>
+											<ChartSkeleton geometry={plotInsets} />
+										</motion.div>
+									)}
+								</AnimatePresence>
+								<AnimatePresence>
+									{displayedChart && (
+										<motion.div
+											key="chart"
+											className="absolute inset-0 flex flex-col"
+											initial={{ opacity: 0 }}
+											animate={{
+												opacity: isStale ? STALE_OPACITY : 1,
+												transition: CHART_FADE,
+											}}
+											exit={{ opacity: 0, transition: CHART_FADE }}
+											inert={isStale}
+										>
+											<div className="flex-1 min-h-0">
+												<EventsBarChart
+													data={
+														displayedChart.chartData as Parameters<
+															typeof EventsBarChart
+														>[0]["data"]
+													}
+													chartConfig={displayedChart.chartConfig}
+													ticks={displayedChart.chartTicks}
+													onGeometry={handlePlotGeometry}
+												/>
+											</div>
+										</motion.div>
+									)}
+								</AnimatePresence>
+								<FirstLoadNotice active={isFirstLoad} />
+								{isEmpty && (
+									<div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+										<ChartBarIcon
+											size={28}
+											weight="duotone"
+											className="text-muted-foreground/50"
 										/>
+										<p className="text-muted-foreground text-sm">
+											{emptyMessage}
+										</p>
 									</div>
-								</motion.div>
-							)}
-						</AnimatePresence>
-						{isEmpty && (
-							<div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-								<ChartBarIcon
-									size={28}
-									weight="duotone"
-									className="text-muted-foreground/50"
-								/>
-								<p className="text-muted-foreground text-sm">
-									{eventNames.length === 0
-										? "Start sending events to view usage data."
-										: "No events found for these filters."}
-								</p>
+								)}
 							</div>
-						)}
-					</div>
-				</div>
+						</div>
 
-				<div className="flex-1 min-h-[200px] pb-2">
-					<EventsTable
-						data={rawEvents?.data ?? []}
-						isLoading={rawQueryLoading}
-						emptyMessage={
-							eventNames.length === 0
-								? "Start sending events to view usage data."
-								: "No events found for these filters."
-						}
-					/>
-				</div>
-			</PageContainer>
+						<div className="flex-1 min-h-0 overflow-y-auto pb-2">
+							<motion.div
+								key={isFirstLoad ? "table-placeholder" : "table"}
+								initial={{ opacity: 0 }}
+								animate={{ opacity: isStale ? STALE_OPACITY : 1 }}
+								transition={CHART_FADE}
+								inert={isStale}
+							>
+								<UsageBreakdownTable
+									chartData={displayedChart?.chartData ?? chartData}
+									chartConfig={displayedChart?.chartConfig ?? chartConfig}
+									interval={displayedChart?.interval ?? queryStates.interval}
+									nameHeader={chartGroupBy ? "Series" : "Event"}
+									isLoading={isFirstLoad}
+									placeholder={tablePlaceholder}
+								/>
+							</motion.div>
+						</div>
+					</div>
+				</PageContainer>
+			</div>
 		</AnalyticsContext.Provider>
 	);
 };

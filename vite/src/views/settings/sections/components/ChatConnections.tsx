@@ -15,6 +15,11 @@ import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
+import {
+	SETTINGS_LIST_CLASS,
+	SettingsGroup,
+} from "../../components/SettingsGroup";
+import { SettingsListRow } from "../../components/SettingsListRow";
 import { SlackScopesSheet } from "./SlackScopesSheet";
 
 type SlackInstallation = {
@@ -119,37 +124,45 @@ export const ChatConnections = () => {
 		(item) => item.provider === "slack",
 	);
 
+	const isConnected = !!installation && !installation.needs_reconnect;
+
 	return (
-		<div className="flex flex-col gap-3">
-			<span className="text-sm font-medium text-foreground">Connections</span>
+		<SettingsGroup
+			title="Connections"
+			description="Chat with the agent from your team's workspace."
+		>
 			{providers.map((provider) => {
 				const isDisconnecting =
 					disconnect.isPending && disconnect.variables === provider.id;
 				return (
-					<div
-						key={provider.id}
-						className="flex flex-col divide-y rounded-lg border bg-background"
-					>
-						<div className="flex items-center justify-between gap-4 p-4">
-							<div className="flex items-center gap-3">
-								<FontAwesomeIcon
-									icon={provider.icon}
-									className="size-5 shrink-0 text-muted-foreground"
-								/>
-								<div className="flex flex-col gap-0.5">
-									<span className="text-sm font-medium">
-										{provider.name} chat
+					<div key={provider.id} className={SETTINGS_LIST_CLASS}>
+						<SettingsListRow
+							title={provider.name}
+							leading={
+								<span className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-background">
+									<FontAwesomeIcon
+										icon={provider.icon}
+										className="size-4 text-muted-foreground"
+									/>
+								</span>
+							}
+							description={
+								installation
+									? installation.needs_reconnect
+										? `Reconnect required for ${installation.workspace_name}`
+										: `${installation.workspace_name} · ${installation.default_env}`
+									: provider.description
+							}
+						>
+							<span className="flex w-[84px] shrink-0">
+								{isConnected && (
+									<span className="flex items-center gap-1.5 font-medium text-emerald-500 text-xs">
+										<span className="size-1.5 rounded-full bg-emerald-500" />
+										Connected
 									</span>
-									<span className="text-xs text-muted-foreground">
-										{installation
-											? installation.needs_reconnect
-												? `Reconnect required for ${installation.workspace_name}`
-												: `Connected to ${installation.workspace_name} (${installation.default_env})`
-											: provider.description}
-									</span>
-								</div>
-							</div>
-							<div className="flex gap-2">
+								)}
+							</span>
+							<div className="flex shrink-0 gap-2">
 								{installation && (
 									<Button
 										variant="secondary"
@@ -160,29 +173,19 @@ export const ChatConnections = () => {
 									</Button>
 								)}
 								<Button
-									variant={
-										installation && !installation.needs_reconnect
-											? "secondary"
-											: "primary"
-									}
+									variant={isConnected ? "secondary" : "primary"}
 									onClick={() => setSheetOpen(true)}
 									isLoading={isLoading}
 								>
 									{installation ? "Reconnect" : `Add ${provider.name}`}
 								</Button>
 							</div>
-						</div>
+						</SettingsListRow>
 						{installation && (
-							<div className="flex items-center justify-between gap-4 px-4 py-3">
-								<div className="flex flex-col gap-0.5">
-									<span className="text-sm font-medium">
-										Reply only when @-mentioned
-									</span>
-									<span className="text-xs text-muted-foreground">
-										In threads the agent has joined, skip replies that don't tag
-										it. It still reads them when it's next tagged.
-									</span>
-								</div>
+							<SettingsListRow
+								title="Reply only when @-mentioned"
+								description="In threads it has joined, the agent stays quiet unless tagged. It still reads along."
+							>
 								<Switch
 									aria-label="Reply only when @-mentioned"
 									checked={
@@ -199,7 +202,7 @@ export const ChatConnections = () => {
 										)
 									}
 								/>
-							</div>
+							</SettingsListRow>
 						)}
 					</div>
 				);
@@ -215,6 +218,6 @@ export const ChatConnections = () => {
 				isSubmitting={install.isPending}
 				onConfirm={(args) => install.mutate(args)}
 			/>
-		</div>
+		</SettingsGroup>
 	);
 };

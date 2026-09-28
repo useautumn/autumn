@@ -56,7 +56,7 @@ AggregateEventsFeatureID = TypeAliasType(
 r"""Feature ID(s) to aggregate events for"""
 
 
-Range = Literal[
+AggregateEventsRange = Literal[
     "24h",
     "7d",
     "30d",
@@ -105,12 +105,14 @@ class EventsAggregateParamsTypedDict(TypedDict):
     r"""Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)"""
     group_by: NotRequired[str]
     r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" / \"$plan_id\" to group by those columns. When aggregate_on is \"deducted\", \"$feature_id\" groups deductions by the tracked feature that consumed each balance."""
-    range: NotRequired[Range]
+    range: NotRequired[AggregateEventsRange]
     r"""Time range to aggregate events for. Either range or custom_range must be provided"""
     bin_size: NotRequired[BinSize]
     r"""Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day"""
     custom_range: NotRequired[AggregateEventsCustomRangeTypedDict]
     r"""Custom time range to aggregate events for. If provided, range must not be provided"""
+    timezone: NotRequired[str]
+    r"""IANA timezone (e.g. \"America/New_York\") that day, week and month bins are aligned to. Hour bins are always UTC. Defaults to UTC"""
     filter_by: NotRequired[Dict[str, str]]
     r"""Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters."""
     max_groups: NotRequired[int]
@@ -132,7 +134,7 @@ class EventsAggregateParams(BaseModel):
     group_by: Optional[str] = None
     r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" / \"$plan_id\" to group by those columns. When aggregate_on is \"deducted\", \"$feature_id\" groups deductions by the tracked feature that consumed each balance."""
 
-    range: Optional[Range] = None
+    range: Optional[AggregateEventsRange] = None
     r"""Time range to aggregate events for. Either range or custom_range must be provided"""
 
     bin_size: Optional[BinSize] = "day"
@@ -140,6 +142,9 @@ class EventsAggregateParams(BaseModel):
 
     custom_range: Optional[AggregateEventsCustomRange] = None
     r"""Custom time range to aggregate events for. If provided, range must not be provided"""
+
+    timezone: Optional[str] = None
+    r"""IANA timezone (e.g. \"America/New_York\") that day, week and month bins are aligned to. Hour bins are always UTC. Defaults to UTC"""
 
     filter_by: Optional[Dict[str, str]] = None
     r"""Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters."""
@@ -160,6 +165,7 @@ class EventsAggregateParams(BaseModel):
                 "range",
                 "bin_size",
                 "custom_range",
+                "timezone",
                 "filter_by",
                 "max_groups",
                 "aggregate_on",

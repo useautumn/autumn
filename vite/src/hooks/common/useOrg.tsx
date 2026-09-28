@@ -2,6 +2,7 @@ import { AppEnv, type FrontendOrg } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
 import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
+import { clearCachedScopes } from "@/hooks/useScopes";
 import {
 	authClient,
 	useListOrganizations,
@@ -86,6 +87,7 @@ export const useOrg = (params?: { env?: AppEnv; skipSandbox?: boolean }) => {
 	useEffect(() => {
 		const handleNoActiveOrg = async () => {
 			if (!orgList || orgList.length === 0) {
+				clearCachedScopes();
 				await authClient.signOut();
 				window.location.href = "/sign-in";
 				return;

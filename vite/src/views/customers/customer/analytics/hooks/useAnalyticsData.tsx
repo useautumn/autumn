@@ -1,33 +1,32 @@
-import type {
-	CustomerDisplayInfo,
-	DeductionPeriod,
-	EntityDisplayInfo,
-} from "@autumn/shared";
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, LATEST_VERSION } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { fetchEventsAggregate } from "../api/fetchEventsAggregate";
+import { fetchEventsList } from "../api/fetchEventsList";
+import { fetchGroupDisplayNames } from "../api/fetchGroupDisplayNames";
+import { aggregateListToEventsData } from "../utils/aggregateListToEventsData";
+import { SOURCE_FEATURE_GROUP } from "../utils/displayLabels";
+import { isUtcBin } from "../utils/epochToPeriodString";
+import { getUserTimezone } from "../utils/getUserTimezone";
+import { groupByToColumn } from "../utils/groupByColumn";
 import { getEffectiveBinSize } from "../utils/intervals";
+import { useAnalyticsCustomer } from "./useAnalyticsCustomer";
 import { useAnalyticsFilterState } from "./useAnalyticsFilterState";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 import { useSelectedEventNames } from "./useSelectedEventNames";
 
-/** Gets the user's IANA timezone (e.g., "America/New_York") */
-const getUserTimezone = (): string => {
-	try {
-		return Intl.DateTimeFormat().resolvedOptions().timeZone;
-	} catch {
-		return "UTC";
-	}
-};
+const isAnalyticsDisabledError = (error: unknown) =>
+	(error as { code?: string } | null)?.code === ErrCode.ClickHouseDisabled;
 
 export const useAnalyticsData = ({
 	hasCleared = false,
 }: {
 	hasCleared?: boolean;
 }) => {
-	const axiosInstance = useAxiosInstance();
+	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
+	const internalAxiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
 	const { filterStates } = useAnalyticsFilterState();
@@ -37,6 +36,8 @@ export const useAnalyticsData = ({
 		group_by: groupBy,
 		max_groups: maxGroups,
 	} = filterStates;
+
+	const { customer, bcExclusionFlag } = useAnalyticsCustomer({ customerId });
 
 	const { queryStates } = useAnalyticsQueryState();
 	const { interval, start, end } = queryStates;
@@ -65,92 +66,102 @@ export const useAnalyticsData = ({
 	// Month bins are requested in UTC so they can be served from the monthly
 	// rollups, which key on UTC month starts; a local month never aligns with one.
 	const effectiveTimezone = binSize === "month" ? "UTC" : timezone;
+	const utcPeriods = isUtcBin({ binSize, timezone: effectiveTimezone });
 
 	// Deducted mode defaults to splitting by which tracked feature caused the
 	// deduction — the story the mode exists to tell. An explicit group_by wins.
 	const effectiveGroupBy =
-		!groupBy && aggregateOn ? "source_feature_id" : groupBy;
-	const formattedGroupBy = effectiveGroupBy
-		? effectiveGroupBy === "customer_id" ||
-			effectiveGroupBy === "entity_id" ||
-			effectiveGroupBy === "plan_id" ||
-			effectiveGroupBy === "source_feature_id"
-			? effectiveGroupBy
-			: `properties.${effectiveGroupBy}`
-		: undefined;
+		!groupBy && aggregateOn ? SOURCE_FEATURE_GROUP : groupBy;
+	// Source-feature grouping only splits the deductions; the usage series stays whole.
+	const eventsGroupColumn =
+		effectiveGroupBy && effectiveGroupBy !== SOURCE_FEATURE_GROUP
+			? groupByToColumn({ groupBy: effectiveGroupBy })
+			: undefined;
 
-	const postBody = {
-		customer_id: customerId || undefined,
-		entity_id: entityId || undefined,
-		interval: customRange ? undefined : interval,
-		custom_range: customRange,
-		event_names: selectedEventNames,
-		group_by: formattedGroupBy,
-		bin_size: binSize,
-		timezone: effectiveTimezone,
-		max_groups: formattedGroupBy ? maxGroups : undefined,
-		aggregate_on: aggregateOn,
-	};
-
-	const isReady = !eventNamesLoading && !featuresLoading;
+	const isReady =
+		!eventNamesLoading && !featuresLoading && selectedEventNames.length > 0;
 
 	const { data, isLoading, error } = useQuery({
 		enabled: isReady,
 		queryKey: buildKey([
-			"query-events",
+			"events-aggregate",
 			customerId,
 			entityId,
 			interval,
 			binSize,
 			String(start ?? ""),
 			String(end ?? ""),
-			...selectedEventNames.sort(),
-			groupBy,
-			timezone,
+			...[...selectedEventNames].sort(),
+			effectiveGroupBy,
+			effectiveTimezone,
 			String(maxGroups),
 			aggregateOn ?? "",
 		]),
+		// Names load in the same step as the chart so rows never flash raw ids.
 		queryFn: async () => {
-			const { data } = await axiosInstance.post("/query/events", postBody);
-			return data;
+			const aggregate = await fetchEventsAggregate({
+				axiosInstance,
+				customerId,
+				entityId,
+				featureIds: selectedEventNames,
+				interval,
+				binSize,
+				customRange,
+				groupBy: effectiveGroupBy,
+				maxGroups,
+				aggregateOn,
+				timezone: effectiveTimezone,
+			});
+			const displayNames = await fetchGroupDisplayNames({
+				axiosInstance: internalAxiosInstance,
+				groupBy: eventsGroupColumn ? effectiveGroupBy : null,
+				list: aggregate.list,
+			});
+			return { ...aggregate, displayNames };
 		},
 		staleTime: 30 * 1000,
 		refetchOnWindowFocus: true,
 	});
 
-	const queryLoading = !isReady || isLoading;
+	const events = useMemo(
+		() =>
+			data
+				? aggregateListToEventsData({
+						list: data.list,
+						featureIds: selectedEventNames,
+						groupColumn: eventsGroupColumn,
+						utc: utcPeriods,
+					})
+				: undefined,
+		[data, selectedEventNames, eventsGroupColumn, utcPeriods],
+	);
+
+	const { customerNames, entityNames, planNames } = data?.displayNames ?? {};
+
+	const queryLoading = eventNamesLoading || featuresLoading || isLoading;
 
 	return {
-		customer: data?.customer,
-		deductions:
-			(data?.deductions as DeductionPeriod[] | undefined) ?? undefined,
+		customer,
+		deductions: data?.deductions,
 		aggregateOn,
 		features: featuresData || [],
 		featuresLoading,
 		queryLoading,
-		events: data?.events,
-		error:
-			error && (error as any)?.code === ErrCode.ClickHouseDisabled
-				? null
-				: error,
-		bcExclusionFlag: data?.bcExclusionFlag ?? false,
+		events,
+		utcPeriods,
+		error: isAnalyticsDisabledError(error) ? null : error,
+		bcExclusionFlag,
 		groupBy,
-		truncated: data?.truncated ?? false,
-		entityNames:
-			(data?.entityNames as Record<string, EntityDisplayInfo>) ?? undefined,
-		customerNames:
-			(data?.customerNames as Record<string, CustomerDisplayInfo>) ?? undefined,
-		planNames: (data?.planNames as Record<string, string>) ?? undefined,
-		totals:
-			(data?.totals as
-				| Record<string, { count: number; sum: number }>
-				| undefined) ?? undefined,
-		eventNames: (data?.eventNames as string[] | undefined) ?? [],
+		entityNames,
+		customerNames,
+		planNames,
+		totals: data?.total,
+		eventNames: selectedEventNames,
 	};
 };
 
 export const useRawAnalyticsData = () => {
-	const axiosInstance = useAxiosInstance();
+	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const buildKey = useQueryKeyFactory();
 
 	const { filterStates } = useAnalyticsFilterState();
@@ -178,31 +189,28 @@ export const useRawAnalyticsData = () => {
 
 	const tableEventNames = hasExplicitSelection ? selectedEventNames : undefined;
 
-	const postBody = {
-		customer_id: customerId || undefined,
-		entity_id: entityId || undefined,
-		interval: customRange ? undefined : interval,
-		bin_size: binSize,
-		custom_range: customRange,
-		event_names: tableEventNames,
-	};
-
 	const { data, isLoading, error } = useQuery({
 		enabled: isReady,
 		queryKey: buildKey([
-			"query-raw-events",
+			"events-list",
 			customerId,
 			entityId,
 			interval,
 			binSize,
 			String(start ?? ""),
 			String(end ?? ""),
-			...(tableEventNames ?? []).sort(),
+			...[...(tableEventNames ?? [])].sort(),
 		]),
-		queryFn: async () => {
-			const { data } = await axiosInstance.post("/query/raw", postBody);
-			return data;
-		},
+		queryFn: () =>
+			fetchEventsList({
+				axiosInstance,
+				customerId,
+				entityId,
+				featureIds: tableEventNames,
+				interval,
+				binSize,
+				customRange,
+			}),
 		staleTime: 30 * 1000,
 		refetchOnWindowFocus: true,
 	});
@@ -210,14 +218,10 @@ export const useRawAnalyticsData = () => {
 	const queryLoading = !isReady || isLoading;
 
 	return {
-		customer: data?.customer,
 		features: featuresData || [],
 		featuresLoading,
 		queryLoading,
-		rawEvents: data?.rawEvents,
-		error:
-			error && (error as any)?.code === ErrCode.ClickHouseDisabled
-				? null
-				: error,
+		rawEvents: data ? { data: data.events } : undefined,
+		error: isAnalyticsDisabledError(error) ? null : error,
 	};
 };

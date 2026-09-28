@@ -122,6 +122,9 @@ const importConfigModule = async ({
 	const result = spawnSync(process.execPath, importConfigArgs({ path }), {
 		cwd: dirname(path),
 		encoding: "utf8",
+		// Bun hands a child its startup env, not process.env: without this, a
+		// config reading a value atmn loaded from .env sees undefined.
+		env: process.env,
 	});
 	if (result.status !== 0 || result.stdout.length === 0) {
 		throw new Error(result.stderr.trim() || `Failed to load ${path}`);

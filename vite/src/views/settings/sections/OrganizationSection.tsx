@@ -1,17 +1,15 @@
 import { OrgDetails } from "@/views/main-sidebar/components/OrgDetails";
 import { SettingsSection } from "../SettingsSection";
+import { OrgDangerZone } from "./components/OrgDangerZone";
 
 export const OrganizationSection = () => {
 	return (
 		<SettingsSection
 			title="Organization"
-			description="Manage your organization name, logo, and settings"
-			card={{
-				title: "General",
-				description: "Update your organization details and branding",
-			}}
+			description="Your organization's name, logo and identifiers."
 		>
 			<OrgDetails />
+			<OrgDangerZone />
 		</SettingsSection>
 	);
 };

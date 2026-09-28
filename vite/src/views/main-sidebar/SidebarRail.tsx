@@ -8,7 +8,8 @@ export const SidebarRail = React.forwardRef<
 >(({ className, ...props }, ref) => {
 	const { setExpanded } = useSidebarContext();
 
-	const toggleSidebar = () => {
+	const toggleSidebar = (event: React.MouseEvent<HTMLButtonElement>) => {
+		event.currentTarget.blur();
 		setExpanded((prev: boolean) => !prev);
 	};
 
@@ -38,8 +39,7 @@ export const SidebarRail = React.forwardRef<
 				"hover:after:bg-border",
 				// Hover background
 				"hover:bg-border/10",
-				// Focus styles for accessibility
-				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+				"outline-none focus-visible:after:bg-border",
 				className,
 			)}
 			{...props}

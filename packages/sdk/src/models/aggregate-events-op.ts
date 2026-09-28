@@ -24,7 +24,7 @@ export type AggregateEventsFeatureId = string | Array<string>;
 /**
  * Time range to aggregate events for. Either range or custom_range must be provided
  */
-export const Range = {
+export const AggregateEventsRange = {
   TwentyFourh: "24h",
   Sevend: "7d",
   Thirtyd: "30d",
@@ -36,7 +36,7 @@ export const Range = {
 /**
  * Time range to aggregate events for. Either range or custom_range must be provided
  */
-export type Range = ClosedEnum<typeof Range>;
+export type AggregateEventsRange = ClosedEnum<typeof AggregateEventsRange>;
 
 /**
  * Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
@@ -91,7 +91,7 @@ export type EventsAggregateParams = {
   /**
    * Time range to aggregate events for. Either range or custom_range must be provided
    */
-  range?: Range | undefined;
+  range?: AggregateEventsRange | undefined;
   /**
    * Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
    */
@@ -100,6 +100,10 @@ export type EventsAggregateParams = {
    * Custom time range to aggregate events for. If provided, range must not be provided
    */
   customRange?: AggregateEventsCustomRange | undefined;
+  /**
+   * IANA timezone (e.g. "America/New_York") that day, week and month bins are aligned to. Hour bins are always UTC. Defaults to UTC
+   */
+  timezone?: string | undefined;
   /**
    * Filter events by property values, e.g. {"model": "gpt-4", "region": "us"}. Maximum 5 filters.
    */
@@ -250,7 +254,9 @@ export function aggregateEventsFeatureIdToJSON(
 }
 
 /** @internal */
-export const Range$outboundSchema: z.ZodMiniEnum<typeof Range> = z.enum(Range);
+export const AggregateEventsRange$outboundSchema: z.ZodMiniEnum<
+  typeof AggregateEventsRange
+> = z.enum(AggregateEventsRange);
 
 /** @internal */
 export const BinSize$outboundSchema: z.ZodMiniEnum<typeof BinSize> = z.enum(
@@ -293,6 +299,7 @@ export type EventsAggregateParams$Outbound = {
   range?: string | undefined;
   bin_size: string;
   custom_range?: AggregateEventsCustomRange$Outbound | undefined;
+  timezone?: string | undefined;
   filter_by?: { [k: string]: string } | undefined;
   max_groups?: number | undefined;
   aggregate_on?: string | undefined;
@@ -308,11 +315,12 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
     entityId: z.optional(z.string()),
     featureId: smartUnion([z.string(), z.array(z.string())]),
     groupBy: z.optional(z.string()),
-    range: z.optional(Range$outboundSchema),
+    range: z.optional(AggregateEventsRange$outboundSchema),
     binSize: z._default(BinSize$outboundSchema, "day"),
     customRange: z.optional(
       z.lazy(() => AggregateEventsCustomRange$outboundSchema),
     ),
+    timezone: z.optional(z.string()),
     filterBy: z.optional(z.record(z.string(), z.string())),
     maxGroups: z.optional(z.int()),
     aggregateOn: z.optional(AggregateOn$outboundSchema),

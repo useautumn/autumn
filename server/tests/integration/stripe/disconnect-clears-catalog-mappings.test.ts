@@ -105,7 +105,7 @@ describe("Stripe disconnect catalog cleanup", () => {
 			db,
 			masterOrg: defaultCtx.org,
 			actorUser,
-			name: "QA Disconnect Catalog Mappings",
+			name: "QA-Disconnect-Catalog-Mappings",
 		});
 		createdOrgs.push(org);
 

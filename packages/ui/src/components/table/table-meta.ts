@@ -7,5 +7,7 @@ declare module "@tanstack/react-table" {
 		skeleton?: ColumnSkeletonMeta;
 		mobileCard?: "hidden" | "full";
 		mobileCardCell?: (row: Row<TData>) => ReactNode;
+		/** Takes all spare table width; `size` becomes its minimum. At most one per table. */
+		grow?: boolean;
 	}
 }

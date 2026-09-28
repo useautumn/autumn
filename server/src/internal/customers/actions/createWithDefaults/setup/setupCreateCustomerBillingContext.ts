@@ -1,6 +1,7 @@
 import { type BillingContext, BillingVersion } from "@autumn/shared";
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getMonthStartAnchorMs } from "@/internal/billing/v2/utils/cycleAnchor/getMonthStartAnchorMs";
 import type { CreateCustomerContext } from "../createCustomerContext.js";
 
 /**
@@ -17,7 +18,14 @@ export const setupCreateCustomerBillingContext = async ({
 	ctx: AutumnContext;
 	context: CreateCustomerContext;
 }): Promise<BillingContext> => {
-	const { fullCustomer, fullProducts, trialContext } = context;
+	const { fullCustomer, fullProducts, trialContext, currentEpochMs } = context;
+
+	const billingCycleAnchorMs =
+		getMonthStartAnchorMs({
+			fullProducts,
+			startsAt: currentEpochMs,
+			trialEndsAt: trialContext?.trialEndsAt,
+		}) ?? ("now" as const);
 
 	const stripeCustomer = await getOrCreateStripeCustomer({
 		ctx,
@@ -33,9 +41,9 @@ export const setupCreateCustomerBillingContext = async ({
 		stripeCustomer,
 		fullProducts,
 		featureQuantities: [],
-		currentEpochMs: Date.now(),
-		billingCycleAnchorMs: "now" as const,
-		resetCycleAnchorMs: "now" as const,
+		currentEpochMs,
+		billingCycleAnchorMs,
+		resetCycleAnchorMs: billingCycleAnchorMs,
 		trialContext,
 		customPrices: [],
 		customEnts: [],

@@ -127,6 +127,7 @@ export const startWorkerForkRecycling = ({
 		server,
 		exit: () => exitGracefully(),
 		drainTimeoutMs: config.drainTimeoutMs,
+		graceMs: config.drainGraceMs,
 		getActiveRequestCount,
 		onDrainStart,
 		log: (message) => console.log(message),

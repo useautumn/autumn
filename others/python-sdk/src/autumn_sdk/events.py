@@ -22,6 +22,7 @@ class Events(BaseSDK):
         custom_range: Optional[
             Union[models.ListEventsCustomRange, models.ListEventsCustomRangeTypedDict]
         ] = None,
+        range: Optional[models.ListEventsRange] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -35,6 +36,7 @@ class Events(BaseSDK):
         :param entity_id: Filter events by entity ID (e.g., per-seat or per-resource)
         :param feature_id: Filter by specific feature ID(s)
         :param custom_range: Filter events by time range
+        :param range: Preset time range to filter events by, resolved the same way as in events.aggregate. Cannot be combined with custom_range
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -59,6 +61,7 @@ class Events(BaseSDK):
             custom_range=utils.get_pydantic_model(
                 custom_range, Optional[models.ListEventsCustomRange]
             ),
+            range=range,
         )
 
         req = self._build_request(
@@ -133,6 +136,7 @@ class Events(BaseSDK):
         custom_range: Optional[
             Union[models.ListEventsCustomRange, models.ListEventsCustomRangeTypedDict]
         ] = None,
+        range: Optional[models.ListEventsRange] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -146,6 +150,7 @@ class Events(BaseSDK):
         :param entity_id: Filter events by entity ID (e.g., per-seat or per-resource)
         :param feature_id: Filter by specific feature ID(s)
         :param custom_range: Filter events by time range
+        :param range: Preset time range to filter events by, resolved the same way as in events.aggregate. Cannot be combined with custom_range
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -170,6 +175,7 @@ class Events(BaseSDK):
             custom_range=utils.get_pydantic_model(
                 custom_range, Optional[models.ListEventsCustomRange]
             ),
+            range=range,
         )
 
         req = self._build_request_async(
@@ -240,7 +246,7 @@ class Events(BaseSDK):
         customer_id: Optional[str] = None,
         entity_id: Optional[str] = None,
         group_by: Optional[str] = None,
-        range: Optional[models.Range] = None,
+        range: Optional[models.AggregateEventsRange] = None,
         bin_size: Optional[models.BinSize] = "day",
         custom_range: Optional[
             Union[
@@ -248,6 +254,7 @@ class Events(BaseSDK):
                 models.AggregateEventsCustomRangeTypedDict,
             ]
         ] = None,
+        timezone: Optional[str] = None,
         filter_by: Optional[Dict[str, str]] = None,
         max_groups: Optional[int] = None,
         aggregate_on: Optional[models.AggregateOn] = None,
@@ -265,6 +272,7 @@ class Events(BaseSDK):
         :param range: Time range to aggregate events for. Either range or custom_range must be provided
         :param bin_size: Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
         :param custom_range: Custom time range to aggregate events for. If provided, range must not be provided
+        :param timezone: IANA timezone (e.g. \"America/New_York\") that day, week and month bins are aligned to. Hour bins are always UTC. Defaults to UTC
         :param filter_by: Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters.
         :param max_groups: Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
         :param aggregate_on: Set to \"deducted\" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.
@@ -293,6 +301,7 @@ class Events(BaseSDK):
             custom_range=utils.get_pydantic_model(
                 custom_range, Optional[models.AggregateEventsCustomRange]
             ),
+            timezone=timezone,
             filter_by=filter_by,
             max_groups=max_groups,
             aggregate_on=aggregate_on,
@@ -366,7 +375,7 @@ class Events(BaseSDK):
         customer_id: Optional[str] = None,
         entity_id: Optional[str] = None,
         group_by: Optional[str] = None,
-        range: Optional[models.Range] = None,
+        range: Optional[models.AggregateEventsRange] = None,
         bin_size: Optional[models.BinSize] = "day",
         custom_range: Optional[
             Union[
@@ -374,6 +383,7 @@ class Events(BaseSDK):
                 models.AggregateEventsCustomRangeTypedDict,
             ]
         ] = None,
+        timezone: Optional[str] = None,
         filter_by: Optional[Dict[str, str]] = None,
         max_groups: Optional[int] = None,
         aggregate_on: Optional[models.AggregateOn] = None,
@@ -391,6 +401,7 @@ class Events(BaseSDK):
         :param range: Time range to aggregate events for. Either range or custom_range must be provided
         :param bin_size: Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
         :param custom_range: Custom time range to aggregate events for. If provided, range must not be provided
+        :param timezone: IANA timezone (e.g. \"America/New_York\") that day, week and month bins are aligned to. Hour bins are always UTC. Defaults to UTC
         :param filter_by: Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters.
         :param max_groups: Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
         :param aggregate_on: Set to \"deducted\" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.
@@ -419,6 +430,7 @@ class Events(BaseSDK):
             custom_range=utils.get_pydantic_model(
                 custom_range, Optional[models.AggregateEventsCustomRange]
             ),
+            timezone=timezone,
             filter_by=filter_by,
             max_groups=max_groups,
             aggregate_on=aggregate_on,

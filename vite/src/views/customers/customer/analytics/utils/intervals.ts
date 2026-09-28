@@ -1,3 +1,5 @@
+import { format } from "date-fns";
+
 export type Granularity = "hour" | "day" | "week" | "month";
 
 export const CUSTOM_INTERVAL = "custom";
@@ -58,4 +60,34 @@ export const getEffectiveBinSize = ({
 	return binSize && granularities.some((g) => g === binSize)
 		? (binSize as Granularity)
 		: granularities[0];
+};
+
+// Compact labels for the preset chips in the query rail.
+export const INTERVAL_SHORT_LABELS: Record<string, string> = {
+	"24h": "24h",
+	"7d": "7d",
+	"30d": "30d",
+	"1bc": "This cycle",
+	"90d": "90d",
+	"3bc": "3 cycles",
+	"6m": "6m",
+	"12m": "12m",
+};
+
+export const describeInterval = ({
+	interval,
+	binSize,
+	start,
+	end,
+}: {
+	interval: string;
+	binSize: Granularity;
+	start?: number | null;
+	end?: number | null;
+}): string => {
+	const rangeLabel =
+		interval === CUSTOM_INTERVAL && start && end
+			? `${format(start, "MMM d")} – ${format(end, "MMM d")}`
+			: (INTERVAL_LABELS[interval] ?? interval);
+	return `${rangeLabel}, ${GRANULARITY_LABELS[binSize]}`;
 };
