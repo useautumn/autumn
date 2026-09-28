@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import { SYNCED_LISTS } from "../../../generated/emit";
 import { patchFixturePaths } from "../../../surgery/patchFixturePaths";
-import { locateWebhook } from "./locateWebhook";
+import { locateWebhook, webhookWhere } from "./locateWebhook";
 import type {
 	PullFiles,
 	RemoteWebhook,
@@ -47,26 +47,8 @@ const fieldAssignments = ({
 	return assignments;
 };
 
-const listed = (items: string[]): string =>
-	items.length === 1
-		? items[0]
-		: `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
-
-const frozenFieldsWarning = ({
-	id,
-	fields,
-	envKey,
-	unreadEnvKeys,
-}: {
-	id: string;
-	fields: string[];
-	envKey: string;
-	unreadEnvKeys: string[];
-}): string =>
-	`⚠ ${id}: ${listed(fields)} ${fields.length === 1 && fields[0] !== "events" ? "differs" : "differ"} in ${envKey}; ${listed(unreadEnvKeys)} ${unreadEnvKeys.length === 1 ? "wasn't" : "weren't"} read, so left unchanged`;
-
-/** Rule 3's wording: what the server holds against what the code evaluates to. */
-export const nonLiteralUrlWarning = ({
+/** What the server holds against what the code evaluates to. */
+const nonLiteralUrlWarning = ({
 	id,
 	envKey,
 	server,
@@ -74,112 +56,78 @@ export const nonLiteralUrlWarning = ({
 }: {
 	id: string;
 	envKey: string;
-	server: string | undefined;
+	server: string;
 	config: unknown;
 }): string => {
 	const pad = " ".repeat(id.length + 4);
 	return [
-		`⚠ ${id}  url.${envKey} isn't a plain string, so pull left it untouched`,
-		`${pad}server:      ${server ?? "(not registered)"}`,
+		`⚠ ${id} (${envKey})  url isn't a plain string, so pull left it untouched`,
+		`${pad}server:      ${server}`,
 		`${pad}your config: ${typeof config === "string" ? config : "(no value)"}`,
 		`${pad}Update it by hand, or make it a string and pull will manage it.`,
 	].join("\n");
 };
 
 /**
- * Rules 2 and 3: set or replace `url[envKey]` when it is a string literal (or
- * absent), and bring the other fields in line. Code is never rewritten; a
- * value that evaluates differently from the server earns a warning instead.
+ * Set a string-literal url and bring the other fields in line with the server.
+ * Code is never rewritten; a value that evaluates differently earns a warning.
  */
 export const updateWebhook = ({
 	pull,
 	webhook,
 	stated,
 	envKey,
-	unreadEnvKeys,
 }: {
 	pull: PullFiles;
 	webhook: RemoteWebhook;
 	stated: StatedWebhook;
 	envKey: string;
-	/** Url-map envs this pull didn't read: shared fields then stay as stated. */
-	unreadEnvKeys: string[];
 }): WebhookEditResult => {
-	const result: WebhookEditResult = {
-		lines: [],
-		warnings: [],
-		unlocated: [],
-		frozen: [],
-	};
-	const located = locateWebhook({ pull, id: webhook.id });
-	if (located === null) {
+	const result: WebhookEditResult = { lines: [], warnings: [], unlocated: [] };
+	const label = `${webhook.id} (${envKey})`;
+	const located = locateWebhook({ pull, id: webhook.id, envKey });
+	const patched =
+		located === null
+			? null
+			: patchFixturePaths({
+					source: located.source,
+					builder: SPEC.builder,
+					idField: SPEC.idField,
+					id: webhook.id,
+					where: webhookWhere({ envKey }),
+					assignments: [
+						{ path: ["url"], text: JSON.stringify(webhook.url) },
+						...fieldAssignments({ webhook, stated }),
+					],
+					bareKeys: true,
+				});
+	if (located === null || patched === null) {
 		result.unlocated.push({
 			id: webhook.id,
-			action: "update from the server by hand",
-		});
-		return result;
-	}
-	const shared = fieldAssignments({ webhook, stated });
-	const frozen = unreadEnvKeys.length > 0;
-	// `events: []` and no list both mean every event: only a normalisation.
-	const differing = shared.filter(
-		({ path }) =>
-			!(
-				path[0] === "events" &&
-				Array.isArray(stated.events) &&
-				stated.events.length === 0 &&
-				webhook.events.length === 0
-			),
-	);
-	if (frozen && differing.length > 0)
-		result.frozen.push({
-			id: webhook.id,
-			warning: frozenFieldsWarning({
-				id: webhook.id,
-				fields: differing.map(({ path }) => path.join(".")),
-				envKey,
-				unreadEnvKeys,
-			}),
-		});
-	const patched = patchFixturePaths({
-		source: located.source,
-		builder: SPEC.builder,
-		idField: SPEC.idField,
-		id: webhook.id,
-		assignments: [
-			{ path: ["url", envKey], text: JSON.stringify(webhook.url) },
-			...(frozen ? [] : shared),
-		],
-		bareKeys: true,
-	});
-	if (patched === null) {
-		result.unlocated.push({
-			id: webhook.id,
-			action: "update from the server by hand",
+			action: `update the ${envKey} webhook from the server by hand`,
 		});
 		return result;
 	}
 	for (const { path } of patched.skipped) {
 		const field = path.join(".");
-		if (field !== `url.${envKey}`) {
+		if (field !== "url") {
 			result.warnings.push(
-				`⚠ ${webhook.id}  ${field} isn't a plain literal, so pull left it untouched`,
+				`⚠ ${label}  ${field} isn't a plain literal, so pull left it untouched`,
 			);
 			continue;
 		}
-		const config = stated.url?.[envKey];
-		if (config === webhook.url) continue;
+		if (stated.url === webhook.url) continue;
 		result.warnings.push(
 			nonLiteralUrlWarning({
 				id: webhook.id,
 				envKey,
 				server: webhook.url,
-				config,
+				config: stated.url,
 			}),
 		);
 	}
 	if (patched.source === located.source) return result;
 	pull.files.set(located.file, patched.source);
-	result.lines.push(`~ webhook ${webhook.id}`);
+	result.lines.push(`~ webhook ${label}`);
 	return result;
 };

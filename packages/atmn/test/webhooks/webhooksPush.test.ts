@@ -38,13 +38,15 @@ const projectWith = ({ body }: { body: string }): string => {
 const WEBHOOKS = `	webhooks: [
 		webhook({
 			id: "billing",
+			env: "sandbox",
+			url: "https://staging.example.com/autumn",
 			events: ["billing.updated"],
-			url: { sandbox: "https://staging.example.com/autumn" },
 		}),
 		webhook({
 			id: "audit",
+			env: "live",
+			url: "https://example.com/audit",
 			events: ["billing.updated"],
-			url: { live: "https://example.com/audit" },
 		}),
 	],`;
 
@@ -606,15 +608,9 @@ test("a previewed adopt that the server created instead reports the saved secret
 });
 
 const SHARED_URL = `	webhooks: [
-		webhook({
-			id: "billing",
-			events: ["billing.updated"],
-			url: {
-				live: "https://example.com/autumn",
-				sandbox: "https://sbx.example.com/autumn",
-				staging: "https://stg-2.example.com/autumn",
-			},
-		}),
+		webhook({ id: "billing", env: "live", url: "https://example.com/autumn", events: ["billing.updated"] }),
+		webhook({ id: "billing", env: "sandbox", url: "https://sbx.example.com/autumn", events: ["billing.updated"] }),
+		webhook({ id: "billing", env: "staging", url: "https://stg-2.example.com/autumn", events: ["billing.updated"] }),
 	],`;
 
 const catalogClean = {
@@ -696,7 +692,7 @@ test("plain push: a staging-only url change previews and syncs staging, with its
 	);
 	expect(output).not.toContain("No changes");
 	expect(calls).toContain(
-		`staging:preview ${JSON.stringify({ webhooks: [{ id: "billing", events: ["billing.updated"], url: "https://stg-2.example.com/autumn" }] })}`,
+		`staging:preview ${JSON.stringify({ webhooks: [{ id: "billing", url: "https://stg-2.example.com/autumn", events: ["billing.updated"] }] })}`,
 	);
 	expect(calls).toContain("staging:sync");
 	expect(calls).not.toContain("sandbox:sync");
@@ -965,7 +961,7 @@ test("a failing sandbox preview still names the envs whose keys were skipped", a
 
 test("two sandboxes whose slugs name the same secret variable refuse the push before any write", async () => {
 	const dir = projectWith({
-		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "billing", url: { "qa-team": "https://qa.example.com/a", qa_team: "https://qa2.example.com/a" } }),\n\t],`,
+		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "billing", env: "qa-team", url: "https://qa.example.com/a" }),\n\t\twebhook({ id: "billing", env: "qa_team", url: "https://qa2.example.com/a" }),\n\t],`,
 	});
 	const calls: string[] = [];
 	const create = (url: string) => [
@@ -1053,42 +1049,143 @@ test("a deleted sandbox (404) is skipped with a warning, the way pull skips it",
 	expect(calls).toContain("sandbox:sync");
 });
 
-test("pull then push of a webhook receiving every event sends no events, so the server keeps it receiving every event", async () => {
-	const dir = projectWith({
-		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "billing", events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } }),\n\t],`,
-	});
-	const configPath = join(dir, "autumn.config.ts");
-	const files = new Map([[configPath, readFileSync(configPath, "utf8")]]);
-	applyWebhooksPull({
-		pull: { configPath, files },
-		remote: [{ ...state("https://x.dev/h"), events: [] }],
-		stated: [
-			{
-				id: "billing",
-				events: ["billing.updated"],
-				url: { sandbox: "https://x.dev/h" },
+/** A fake env whose preview diffs the sent body against what it holds, as the server does. */
+const serverEnv = ({ held }: { held: ReturnType<typeof state>[] }) => {
+	const sent: unknown[] = [];
+	return {
+		sent,
+		client: {
+			previewSyncWebhooks: async (body: {
+				webhooks: { id: string; url: string; events?: string[] }[];
+			}) => {
+				sent.push(body);
+				const changes = body.webhooks.flatMap((stated): unknown[] => {
+					const before = held.find((webhook) => webhook.id === stated.id);
+					const after = {
+						...(before ?? state(stated.url)),
+						id: stated.id,
+						url: stated.url,
+						events: (stated.events ?? []) as never,
+					};
+					if (before === undefined)
+						return [{ action: "create", id: stated.id, webhook: after }];
+					const same =
+						before.url === after.url &&
+						[...before.events].sort().join() ===
+							[...after.events].sort().join();
+					return same
+						? []
+						: [{ action: "update", id: stated.id, before, after }];
+				});
+				return { errors: [], changes };
 			},
-		],
-		envKey: "sandbox",
-	});
-	writeFileSync(configPath, files.get(configPath) ?? "");
-
-	let sent: unknown;
-	const client = {
-		previewUpdate: async () => ({ features: [], plans: [] }),
-		previewSyncWebhooks: async (body: unknown) => {
-			sent = body;
-			return { errors: [], changes: [] };
+			syncWebhooks: async () => ({ webhooks: [], secrets: [], errors: [] }),
 		},
 	};
+};
+
+test("pull then push is a no-op: every env's entries match what the server holds", async () => {
+	const dir = projectWith({ body: `\tfeatures: [],\n\twebhooks: [],` });
+	const configPath = join(dir, "autumn.config.ts");
+	const files = new Map([[configPath, readFileSync(configPath, "utf8")]]);
+	const held = {
+		sandbox: [
+			{ ...state("https://x.dev/h"), events: [] },
+			{ ...state("https://x.dev/d"), id: "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5" },
+		],
+		staging: [{ ...state("https://x.dev/h"), events: [] }],
+	};
+	let stated: Record<string, unknown>[] | undefined;
+	for (const [envKey, remote] of Object.entries(held))
+		stated = applyWebhooksPull({
+			pull: { configPath, files },
+			remote,
+			stated: stated as never,
+			envKey,
+		}).stated;
+	writeFileSync(configPath, files.get(configPath) ?? "");
+
+	const sandbox = serverEnv({ held: held.sandbox });
+	const staging = serverEnv({ held: held.staging });
+	let output = "";
 	await runPush({
 		// biome-ignore lint/suspicious/noExplicitAny: a fake client
-		client: client as any,
+		client: catalogClean as any,
 		cwd: dir,
-		write: () => {},
-		...sandboxOnly(client),
+		write: (text) => {
+			output += text;
+		},
+		...envsWith({
+			env: THREE_KEYS,
+			orgs: THREE_ORGS,
+			clients: {
+				sk_sandbox: sandbox.client,
+				sk_stg: staging.client,
+				sk_live: serverEnv({ held: [] }).client,
+			},
+		}),
 	});
-	expect(sent).toEqual({
-		webhooks: [{ id: "billing", url: "https://x.dev/h" }],
+	expect(output).toContain("No changes.");
+	expect(sandbox.sent).toEqual([
+		{
+			webhooks: [
+				{ id: "billing", url: "https://x.dev/h" },
+				{
+					id: "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5",
+					url: "https://x.dev/d",
+					events: ["billing.updated"],
+				},
+			],
+		},
+	]);
+});
+
+test("editing a staging url pushes an update of that endpoint, never a second one", async () => {
+	const dir = projectWith({
+		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5", env: "staging", url: "https://stg-2.example.com/autumn" }),\n\t],`,
 	});
+	const staging = serverEnv({
+		held: [
+			{
+				...state("https://stg.example.com/autumn"),
+				id: "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5",
+				events: [],
+			},
+		],
+	});
+	let output = "";
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: catalogClean as any,
+		cwd: dir,
+		dryRun: true,
+		write: (text) => {
+			output += text;
+		},
+		...envsWith({
+			env: {
+				AUTUMN_SECRET_KEY: "sk_sandbox",
+				AUTUMN_SANDBOX_STG_SECRET_KEY: "sk_stg",
+			},
+			orgs: THREE_ORGS,
+			clients: {
+				sk_sandbox: serverEnv({ held: [] }).client,
+				sk_stg: staging.client,
+			},
+		}),
+	});
+	expect(staging.sent).toEqual([
+		{
+			webhooks: [
+				{
+					id: "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5",
+					url: "https://stg-2.example.com/autumn",
+				},
+			],
+		},
+	]);
+	expect(output).toContain(
+		"ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5 url: https://stg.example.com/autumn → https://stg-2.example.com/autumn",
+	);
+	expect(output).not.toContain("+ ep_");
 });

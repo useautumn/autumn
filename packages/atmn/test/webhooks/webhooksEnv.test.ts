@@ -76,19 +76,17 @@ test("a named sandbox reads its slug, from one lookup of its own org", async () 
 	expect(calls.count).toBe(1);
 });
 
-test("a webhook with no url for the env is not sent, the rest are sent as that env's url", () => {
+test("each env is sent only its own entries, without the env field", () => {
 	const webhooks = resolveWebhooksForEnv({
 		rows: [
+			{ id: "billing", env: "live", url: "https://a.dev/h" },
 			{
 				id: "billing",
-				url: { live: "https://a.dev/h", sandbox: "https://s.dev/h" },
+				env: "sandbox",
+				url: "https://s.dev/h",
 				events: ["billing.updated"],
 			},
-			{
-				id: "prod-only",
-				url: { live: "https://a.dev/p" },
-				events: ["billing.updated"],
-			},
+			{ id: "prod-only", env: "live", url: "https://a.dev/p" },
 		],
 		envKey: "sandbox",
 	});

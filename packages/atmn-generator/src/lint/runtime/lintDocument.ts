@@ -129,6 +129,12 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
+			/** A stated `field` must be a plain value, never an object map. */
+			readonly kind: "notMap";
+			readonly field: string;
+			readonly because: string;
+	  }
+	| {
 			/** List `field` holds names starting with `prefix` only, or none of them. */
 			readonly kind: "uniformPrefix";
 			readonly field: string;
@@ -534,6 +540,10 @@ const entryRuleFailures = ({
 						typeof item === "string" && !rule.values.includes(item),
 				)
 				.map((item) => `\`${item}\` ${rule.because}`);
+		}
+		case "notMap": {
+			const value = entry[rule.field];
+			return isEntry(value) ? [`${rule.field} is a map. ${rule.because}`] : [];
 		}
 		case "uniformPrefix": {
 			const value = entry[rule.field];

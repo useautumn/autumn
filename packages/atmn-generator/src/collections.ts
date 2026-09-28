@@ -130,8 +130,8 @@ export const SINGLETONS: Readonly<Record<string, SingletonMeta>> = {
 
 /**
  * A list keyed by id that lives outside the catalog: its own preview and sync
- * operations, PATCH semantics (unlisted entries are left alone), and fields a
- * config states once per environment. The item type is read off the sync body.
+ * operations, PATCH semantics (unlisted entries are left alone), and one entry
+ * per environment. The item type is the sync body's item plus the env field.
  */
 export type SyncedListMeta = {
 	readonly builder: string;
@@ -142,9 +142,9 @@ export type SyncedListMeta = {
 	readonly operationPath: string;
 	/** The request-body array holding the items; the config's key is the map key. */
 	readonly wireKey: string;
-	/** Fields stated per environment as `{ live?, sandbox?, [sandboxSlug]? }`:
-	 * push sends the target env's value and skips an entry that has none. */
-	readonly envKeyed: readonly string[];
+	/** The fixture field naming the entry's env (`live`, `sandbox` or a sandbox
+	 * slug): push sends each env its own entries, without this field. */
+	readonly envField: string;
 	/** Enum-list fields a newer server may extend: the type accepts any string,
 	 * and lint only warns on a name this CLI doesn't know. */
 	readonly openEnums: readonly string[];
@@ -159,9 +159,9 @@ export const SYNCED_LISTS: Readonly<Record<string, SyncedListMeta>> = {
 		idField: "id",
 		operationPath: "/v1/webhooks.sync",
 		wireKey: "webhooks",
-		envKeyed: ["url"],
+		envField: "env",
 		openEnums: ["events"],
 		describe:
-			"An Autumn webhook, keyed by `id`. `atmn push` creates or updates it in the target environment and never deletes one; webhooks your config doesn't list are left alone. `url` is a map keyed by environment, so one config registers different URLs in prod and each sandbox, and an environment with no key skips the webhook. A newly created webhook's signing secret is written to your env file as `AUTUMN_WEBHOOK_<ID>_SECRET` (prod, in `.env.prod`) or `AUTUMN_WEBHOOK_<ID>_<SANDBOX_SLUG>_SECRET` (sandboxes; `SANDBOX` for the default one).",
+			"One Autumn webhook endpoint in one environment, keyed by `env` and `id`. `atmn push` creates or updates it and never deletes one; webhooks your config doesn't list are left alone. Register a webhook in several environments with one `webhook()` per environment; the same `id` may repeat across them. A newly created webhook's signing secret is written to your env file as `AUTUMN_WEBHOOK_<ID>_SECRET` (prod, in `.env.prod`) or `AUTUMN_WEBHOOK_<ID>_<SANDBOX_SLUG>_SECRET` (sandboxes; `SANDBOX` for the default one).",
 	},
 };

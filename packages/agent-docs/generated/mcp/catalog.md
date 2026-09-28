@@ -4145,38 +4145,37 @@ Two notes push prints that are worth relaying: a plan removed while an id-less p
 
 ## Webhooks
 
-`webhooks` in the config lists the Autumn webhooks it manages, keyed by `id`. Unlike the catalog it is never a deletion list: `push` creates or updates the webhooks it states and leaves every other webhook alone (the preview shows them as `unmanaged`).
+`webhooks` in the config lists the Autumn webhooks it manages. Each `webhook()` is one endpoint in one environment, keyed by `env` and `id`. Unlike the catalog it is never a deletion list: `push` creates or updates the webhooks it states and leaves every other webhook alone (the preview shows them as `unmanaged`).
 
-`url` is a map keyed by environment, never one string. A missing key means "don't register this webhook there", which is not an error:
+To register a webhook in several environments, write one `webhook()` per environment. The same `id` may repeat across environments:
 
 ```ts
 import { atmn, webhook } from "atmn";
 
+const events = ["billing.updated", "balances.limit_reached"];
+
 export default atmn({
   webhooks: [
-    webhook({
-      id: "billing",
-      events: ["billing.updated", "balances.limit_reached"],
-      url: {
-        live: "https://myapp.com/api/autumn",            // atmn push -p
-        sandbox: "https://staging.myapp.com/api/autumn", // the default sandbox
-        "qa-team": "https://qa.myapp.com/api/autumn",    // the sandbox named qa-team
-      },
-    }),
+    webhook({ id: "billing", env: "live", url: "https://myapp.com/api/autumn", events }),              // atmn push -p
+    webhook({ id: "billing", env: "sandbox", url: "https://staging.myapp.com/api/autumn", events }),   // the default sandbox
+    webhook({ id: "billing", env: "qa-team", url: "https://qa.myapp.com/api/autumn", events }),        // the sandbox named qa-team
   ],
 });
 ```
 
-- Keys: `live` for `-p`, `sandbox` for the default sandbox, or a named sandbox's slug (its name lowercased; no spaces). Never copy a sandbox URL into `live`: ask the user for the production URL, or leave `live` out.
+- `env`: `live` for `-p`, `sandbox` for the default sandbox, or a named sandbox's slug (its name lowercased; no spaces). An environment with no entry has nothing registered. Never copy a sandbox URL into a `live` entry: ask the user for the production URL, or leave `live` out.
+- One `id` may appear once per `env`; a repeat in the same env is refused.
+- Configs from atmn 2.0.36–2.0.42 stated `url` as a map (`url: { live, sandbox }`). That shape is refused: split it into one `webhook()` per env.
 - Every URL must be https and publicly reachable; localhost and private networks are refused, tunnels such as ngrok work.
 - Leave `events` out to receive every event. Don't write `events: []`.
 - Vercel webhooks require their own distinct webhook and are a mutually exclusive variant to the rest. It can only listen to Vercel events and cannot later be changed to listen to non-Vercel events.
-- `id` is permanent: changing it registers a new webhook. Two ids that differ only by case or `-`/`_` are refused.
+- `id` is permanent: changing it registers a new webhook. In one env, two ids that differ only by case or `-`/`_` are refused.
+- A webhook made in the dashboard has no id of its own, so its entry uses the `ep_…` id `pull` writes. Keep that id: push updates that endpoint by it.
 - `push` syncs webhooks to every sandbox with a key in your env files (`AUTUMN_SECRET_KEY` → `sandbox`, each `AUTUMN_SANDBOX_<id>_SECRET_KEY` → its slug), each through its own key, whichever sandbox is pinned. The preview shows one `Webhooks · <env>` block per env with changes. A key that's rejected or belongs to another org skips its env with a warning. The catalog and settings still go to the targeted env only.
 - Production webhooks change only with `-p`, which syncs `live` and no sandbox. When `AUTUMN_PROD_SECRET_KEY` is set, a plain push also previews `live` read-only, and if production would change it prints `Production webhooks differ from your config (<ids>). Run atmn push -p to update production.` Relay that line, and run `-p` only when the user asks.
 - The preview gives a changed URL its own line (`billing url: old → new`). Read it out to the user before `--yes`.
 - `push --yes` writes each new webhook's signing secret once and prints exactly where: `AUTUMN_WEBHOOK_<ID>_SECRET` in `.env.prod` for `-p`, `AUTUMN_WEBHOOK_<ID>_<SANDBOX_SLUG>_SECRET` in `.env.local` (or `.env`) for each sandbox (`AUTUMN_WEBHOOK_BILLING_SANDBOX_SECRET` for the default sandbox, `AUTUMN_WEBHOOK_BILLING_QA_TEAM_SECRET` for `qa-team`). Secrets saved earlier keep their existing names. If two sandboxes' names differ only by punctuation (`qa-team`, `qa_team`), they would share a variable, so push refuses before writing; ask the user to rename one. Relay the variable name and file; never print or read the secret.
-- `pull` reads webhooks from every env with a key in your env files (`AUTUMN_SECRET_KEY` → `sandbox`, `AUTUMN_PROD_SECRET_KEY` → `live`, each `AUTUMN_SANDBOX_<id>_SECRET_KEY` → its slug), whatever the target; a key that's rejected or belongs to another org skips its env with a warning and leaves that env's keys alone. Per env it adds webhooks it finds, sets a changed URL, removes the env's key when the server no longer has that webhook, and deletes a webhook whose map ends up empty. A URL written as code (`process.env.X`) is never rewritten; pull warns when it differs from the server. `events`, `description` and `disabled` are shared by every env, so pull only updates them when it read every env in that webhook's `url` map; otherwise it leaves them and warns if the server differs. Webhooks already in the dashboard will be pulled and be editable in the config once you pull as usual. Since the dashboard doesn't let you set an ID, a permanent ID will be assigned to this for future reference.
+- `pull` reads webhooks from every env with a key in your env files (`AUTUMN_SECRET_KEY` → `sandbox`, `AUTUMN_PROD_SECRET_KEY` → `live`, each `AUTUMN_SANDBOX_<id>_SECRET_KEY` → its slug), whatever the target. A key that's rejected, belongs to another org, or whose sandbox is gone skips its env with a warning, and that env's entries stay. For each env it read, pull writes one entry per endpoint: it adds new ones (dashboard ones under their `ep_…` id), updates changed fields, and deletes an entry the server no longer has in that env. A value written as code (`process.env.X`) is never rewritten; pull warns when it differs from the server.
 
 ## Sandboxes and keys
 

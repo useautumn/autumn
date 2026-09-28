@@ -375,23 +375,17 @@ export const runPull = async ({
 
 	const webhookWarnings = [...webhooks.skipped];
 	let stated = lists.webhooks as StatedWebhook[] | undefined;
-	const readEnvKeys = new Set(webhooks.read.map(({ envKey }) => envKey));
-	// One warning per webhook, however many read envs differ from the config.
-	const frozenWarnings = new Map<string, string>();
-	// Only an env whose list succeeded may remove its urls from the config.
+	// Only an env whose list succeeded may remove its entries from the config.
 	for (const { envKey, list } of webhooks.read) {
 		const applied = applyWebhooksPull({
 			pull: { configPath, files },
 			remote: list,
 			stated,
 			envKey,
-			readEnvKeys,
 		});
 		stated = applied.stated;
 		lines.push(...applied.lines);
 		webhookWarnings.push(...applied.warnings);
-		for (const { id, warning } of applied.frozen)
-			if (!frozenWarnings.has(id)) frozenWarnings.set(id, warning);
 		unlocated.push(
 			...applied.unlocated.map((entry) => ({
 				collection: "webhooks",
@@ -399,8 +393,6 @@ export const runPull = async ({
 			})),
 		);
 	}
-
-	webhookWarnings.push(...frozenWarnings.values());
 
 	if (includeMappings) {
 		const managedCatalog = Object.fromEntries(

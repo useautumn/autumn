@@ -4,12 +4,10 @@
 export type Webhook = {
 	/** Your ID for the webhook: letters, digits, `-` and `_`. It can't be changed after creation. */
 	id: string;
-	/** The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work. One URL per environment: `live` is used by `atmn push -p`, `sandbox` by the default sandbox, and a named sandbox's slug (its name, lowercased, e.g. `qa-team`) when that sandbox is targeted. An environment with no key skips this webhook there: nothing is registered and nothing fails. */
-	url: {
-		live?: string;
-		sandbox?: string;
-		[sandboxSlug: string]: string | undefined;
-	};
+	/** The environment this webhook is registered in: `live` (`atmn push -p`), `sandbox` (the default sandbox), or a named sandbox's slug (its name lowercased, e.g. `qa-team`). */
+	env: string;
+	/** The https URL Autumn sends events to. Localhost and private-network addresses are rejected; tunnels such as ngrok work. */
+	url: string;
 	/** The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events. Defaults to []. */
 	events?: Array<
 		| "customer.products.updated"
@@ -32,5 +30,5 @@ export type Webhook = {
 	disabled?: boolean;
 };
 
-/** An Autumn webhook, keyed by `id`. `atmn push` creates or updates it in the target environment and never deletes one; webhooks your config doesn't list are left alone. `url` is a map keyed by environment, so one config registers different URLs in prod and each sandbox, and an environment with no key skips the webhook. A newly created webhook's signing secret is written to your env file as `AUTUMN_WEBHOOK_<ID>_SECRET` (prod, in `.env.prod`) or `AUTUMN_WEBHOOK_<ID>_<SANDBOX_SLUG>_SECRET` (sandboxes; `SANDBOX` for the default one). */
+/** One Autumn webhook endpoint in one environment, keyed by `env` and `id`. `atmn push` creates or updates it and never deletes one; webhooks your config doesn't list are left alone. Register a webhook in several environments with one `webhook()` per environment; the same `id` may repeat across them. A newly created webhook's signing secret is written to your env file as `AUTUMN_WEBHOOK_<ID>_SECRET` (prod, in `.env.prod`) or `AUTUMN_WEBHOOK_<ID>_<SANDBOX_SLUG>_SECRET` (sandboxes; `SANDBOX` for the default one). */
 export const webhook = (input: Webhook): Webhook => input;
