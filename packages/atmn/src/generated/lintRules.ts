@@ -310,6 +310,10 @@ export const LINT_RULES: LintRules = {
 			minLength: 1,
 			maxLength: 64,
 		},
+		values: {
+			minLength: 1,
+			maxLength: 128,
+		},
 	},
 	"plans.billingControls.usageLimits": {
 		required: ["featureId", "interval", "limit"],
@@ -332,6 +336,10 @@ export const LINT_RULES: LintRules = {
 		keys: {
 			minLength: 1,
 			maxLength: 64,
+		},
+		values: {
+			minLength: 1,
+			maxLength: 128,
 		},
 	},
 	"plans.freeTrial": {
@@ -1315,6 +1323,10 @@ export const LINT_RULES: LintRules = {
 			minLength: 1,
 			maxLength: 64,
 		},
+		values: {
+			minLength: 1,
+			maxLength: 128,
+		},
 	},
 	"plans.variants.customize.billingControls.usageLimits": {
 		required: ["featureId", "interval", "limit"],
@@ -1337,6 +1349,10 @@ export const LINT_RULES: LintRules = {
 		keys: {
 			minLength: 1,
 			maxLength: 64,
+		},
+		values: {
+			minLength: 1,
+			maxLength: 128,
 		},
 	},
 	"plans.variants.customize.freeTrial": {
@@ -2185,6 +2201,85 @@ export const LINT_RULES: LintRules = {
 				maximum: 9007199254740991,
 				exclusiveMinimum: 0,
 			},
+		},
+	},
+	webhooks: {
+		label: "webhook",
+		idField: "id",
+		required: ["events", "id", "url"],
+		fields: {
+			id: {
+				minLength: 1,
+				maxLength: 256,
+				pattern: "^[a-zA-Z0-9_-]+$",
+			},
+			events: {
+				minItems: 1,
+			},
+		},
+		rules: [
+			{
+				kind: "unique",
+				field: "id",
+				because:
+					"Two webhooks claiming one id race to define the same endpoint.",
+			},
+			{
+				kind: "unique",
+				field: "id",
+				asEnvName: true,
+				because:
+					"Each webhook's signing secret is saved as AUTUMN_WEBHOOK_<ID>_SECRET, so these two would overwrite each other's secret. Rename one.",
+			},
+			{
+				kind: "rejects",
+				field: "url",
+				check: "isLocalWebhookUrl",
+				because:
+					"Autumn delivers from the internet, so localhost and private-network addresses can never be reached. Use a public URL or a tunnel (e.g. ngrok).",
+			},
+			{
+				kind: "uniformPrefix",
+				field: "events",
+				prefix: "vercel.",
+				because:
+					"vercel.* events can't be mixed with other events in one webhook: they're delivered from a separate app. Make one webhook for each.",
+			},
+			{
+				kind: "nonEmpty",
+				field: "url",
+				warning: true,
+				because:
+					"With no environment key the webhook is registered nowhere. Add `live`, `sandbox` or a sandbox's slug.",
+			},
+			{
+				kind: "knownValues",
+				field: "events",
+				values: [
+					"customer.products.updated",
+					"customer.threshold_reached",
+					"balances.usage_alert_triggered",
+					"balances.limit_reached",
+					"billing.auto_topup_failed",
+					"billing.auto_topup_succeeded",
+					"billing.updated",
+					"invoice.finalized",
+					"vercel.resources.deleted",
+					"vercel.resources.provisioned",
+					"vercel.resources.rotate_secrets",
+					"vercel.webhooks.event",
+				],
+				warning: true,
+				because: "isn't known to this atmn version; the server will check it.",
+			},
+		],
+	},
+	"webhooks.url": {
+		keys: {
+			pattern: "^[a-z0-9_-]+$",
+		},
+		values: {
+			pattern: "^[Hh][Tt][Tt][Pp][Ss]:\\/\\/",
 		},
 	},
 };

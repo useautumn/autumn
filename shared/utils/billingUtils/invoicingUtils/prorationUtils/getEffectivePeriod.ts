@@ -6,7 +6,8 @@ import type { BillingPeriod } from "../../../../models/billingModels/lineItem/li
  * The effective period is the actual time range being charged or refunded,
  * accounting for mid-cycle changes.
  *
- * - In-arrear: billing for past usage (start → now)
+ * - In-arrear: billing for past usage (start → now), clipped at `startFloor`
+ *   (the subscription's creation) since nothing was used before it existed
  * - In-advance: billing for future usage (now → end)
  *
  * @example
@@ -23,14 +24,19 @@ export const getEffectivePeriod = ({
 	now,
 	billingPeriod,
 	billingTiming,
+	startFloor,
 }: {
 	now: number;
 	billingPeriod: BillingPeriod;
 	billingTiming: "in_arrear" | "in_advance";
+	startFloor?: number;
 }): BillingPeriod => {
 	if (billingTiming === "in_arrear") {
-		// Billing for past usage: start → now
-		return { start: billingPeriod.start, end: now };
+		const start =
+			startFloor === undefined
+				? billingPeriod.start
+				: Math.max(billingPeriod.start, startFloor);
+		return { start, end: now };
 	}
 	// Billing for future usage: now → end
 	return { start: now, end: billingPeriod.end };

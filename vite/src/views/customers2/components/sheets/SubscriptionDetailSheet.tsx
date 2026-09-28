@@ -176,6 +176,7 @@ export function SubscriptionDetailSheet() {
 						<SubscriptionLicenseRow
 							key={customerLicense.id}
 							planLicense={planLicense}
+							paidQuantity={customerLicense.paid_quantity}
 						/>
 					))}
 				</SheetSection>
@@ -388,6 +389,7 @@ export function SubscriptionDetailSheet() {
 						billingControls={planBillingControls}
 						featureNameById={featureNameById}
 						slim
+						defaultExpanded
 					/>
 				</SheetSection>
 			)}

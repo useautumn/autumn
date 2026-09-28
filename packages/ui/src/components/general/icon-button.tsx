@@ -12,7 +12,7 @@ const iconButtonVariants = cva(
 			iconOrientation: {
 				left: "flex-row",
 				center: "flex-row justify-center",
-				right: "flex-row-reverse",
+				right: "flex-row",
 			},
 		},
 		compoundVariants: [
@@ -93,8 +93,8 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
 				case "right":
 					return (
 						<>
-							{renderIcon(icon)}
 							{children}
+							{renderIcon(icon)}
 							{renderIcon(rightIcon)}
 						</>
 					);

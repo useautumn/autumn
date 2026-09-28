@@ -47,6 +47,8 @@ const planFrom = (value: unknown): CustomerStatePlan | undefined => {
 		addLicenses: upsertLicensesFrom(plan),
 		prepaidOptions:
 			readQuantities("feature_quantities", "feature_id")(plan) ?? {},
+		licenseQuantities:
+			readQuantities("license_quantities", "license_plan_id")(plan) ?? {},
 		productId: plan.plan_id,
 		version: overrides.version,
 	};

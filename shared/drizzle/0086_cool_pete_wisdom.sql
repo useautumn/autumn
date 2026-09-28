@@ -1,0 +1,1 @@
+ALTER TABLE "invoices" ADD COLUMN "paid_at" numeric;

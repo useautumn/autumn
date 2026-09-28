@@ -19,6 +19,7 @@ import { organizationRpcRouter } from "@/internal/orgs/organizationRpcRouter";
 import { platformRpcRouter } from "@/internal/platform/platformBeta/platformRpcRouter";
 import { plansRpcRouter } from "@/internal/products/productRouter";
 import { sandboxesRpcRouter } from "@/internal/sandboxes/sandboxesRouter";
+import { webhooksRpcRouter } from "@/internal/webhooks/webhooksRouter";
 import type { HonoEnv } from "../honoUtils/HonoEnv";
 import { customerRpcRouter } from "../internal/customers/cusRouter";
 
@@ -56,3 +57,4 @@ rpcRouter.route("", migrationRpcRouter);
 rpcRouter.route("", platformRpcRouter);
 rpcRouter.route("", sandboxesRpcRouter);
 rpcRouter.route("", organizationRpcRouter);
+rpcRouter.route("", webhooksRpcRouter);

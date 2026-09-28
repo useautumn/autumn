@@ -1,16 +1,19 @@
-import { Button, FormLabel, Input, Separator } from "@autumn/ui";
-import { useMemo, useState } from "react";
+import { Button, CopyButton, Input } from "@autumn/ui";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import OrgLogoUploader from "@/views/main-sidebar/org-dropdown/manage-org/OrgLogoUploader";
-import { useCurrentMembership } from "../org-dropdown/hooks/useCurrentMembership";
-import { DeleteOrgPopover } from "../org-dropdown/manage-org/DeleteOrgPopover";
-import { LeaveOrgPopover } from "../org-dropdown/manage-org/LeaveOrgPopover";
+import {
+	SETTINGS_LIST_CLASS,
+	SettingsGroup,
+} from "@/views/settings/components/SettingsGroup";
+import { SettingsListRow } from "@/views/settings/components/SettingsListRow";
+
+const FIELD_CLASS = "w-[280px] shrink-0";
 
 export const OrgDetails = () => {
 	const { org, mutate } = useOrg();
-	const { isOwner } = useCurrentMembership();
 
 	const [inputs, setInputs] = useState({
 		name: org?.name,
@@ -19,14 +22,12 @@ export const OrgDetails = () => {
 
 	const [saving, setSaving] = useState(false);
 
-	const canSave = useMemo(() => {
-		return inputs.name !== org?.name || inputs.slug !== org?.slug;
-	}, [inputs, org]);
+	const isDirty = inputs.name !== org?.name || inputs.slug !== org?.slug;
 
 	const handleSave = async () => {
 		try {
 			setSaving(true);
-			const { data, error } = await authClient.organization.update({
+			const { error } = await authClient.organization.update({
 				data: {
 					name: inputs.name,
 					slug: inputs.slug,
@@ -47,41 +48,51 @@ export const OrgDetails = () => {
 	};
 
 	return (
-		<div className="w-full flex flex-col gap-4">
-			<OrgLogoUploader />
-			<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-				<div className="flex flex-col">
-					<FormLabel>
-						<span className="text-muted-foreground">Name</span>
-					</FormLabel>
+		<SettingsGroup
+			title="General"
+			description="How your organization shows up across Autumn."
+			trailing={
+				isDirty && (
+					<Button size="sm" onClick={handleSave} isLoading={saving}>
+						Save
+					</Button>
+				)
+			}
+		>
+			<div className={SETTINGS_LIST_CLASS}>
+				<OrgLogoUploader />
+				<SettingsListRow
+					title="Name"
+					description="Shown to everyone in your organization"
+				>
 					<Input
 						value={inputs.name}
 						onChange={(e) => setInputs({ ...inputs, name: e.target.value })}
+						className={`${FIELD_CLASS} !bg-background`}
 					/>
-				</div>
-				<div className="flex flex-col">
-					<FormLabel>
-						<span className="text-muted-foreground">Slug</span>
-					</FormLabel>
+				</SettingsListRow>
+				<SettingsListRow
+					title="Slug"
+					description="Lowercase letters, numbers and dashes"
+				>
 					<Input
 						value={inputs.slug}
 						onChange={(e) => setInputs({ ...inputs, slug: e.target.value })}
+						className={`${FIELD_CLASS} !bg-background`}
 					/>
-				</div>
-			</div>
-			<div>
-				<Button
-					variant="primary"
-					disabled={!canSave}
-					onClick={handleSave}
-					isLoading={saving}
-					className="min-w-20"
+				</SettingsListRow>
+				<SettingsListRow
+					title="Organization ID"
+					description="Share this with support when asking for help"
 				>
-					Save
-				</Button>
+					<CopyButton
+						text={org.id}
+						size="mini"
+						className="shrink-0 text-tertiary-foreground"
+						innerClassName="max-w-56 text-tiny-id truncate !font-normal"
+					/>
+				</SettingsListRow>
 			</div>
-			<Separator className="my-2" />
-			{isOwner ? <DeleteOrgPopover /> : <LeaveOrgPopover />}
-		</div>
+		</SettingsGroup>
 	);
 };

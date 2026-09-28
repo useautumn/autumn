@@ -165,6 +165,21 @@ export const addSubAccount = async (
 		}
 	});
 
+/** Record many sub-accounts in one registry write (idempotent). */
+export const addSubAccounts = async (
+	runId: string,
+	accountIds: string[],
+): Promise<RegistryEntry> =>
+	updateEntry(runId, (entry) => {
+		const known = new Set(entry.subAccounts);
+		for (const accountId of accountIds) {
+			if (!known.has(accountId)) {
+				known.add(accountId);
+				entry.subAccounts.push(accountId);
+			}
+		}
+	});
+
 /** Record a Stripe webhook endpoint for a run (idempotent on `webhookId`). */
 export const addWebhook = async (
 	runId: string,
@@ -196,10 +211,33 @@ export const addSvixApp = async ({
 		entry.svixAppIds = [...new Set([...getSvixAppIds(entry), svixAppId])];
 	});
 
+/**
+ * Completed runs own no live resources, so only recent ones are kept (for `bun tw
+ * list`); an unbounded history makes every registry write re-serialize megabytes.
+ */
+const COMPLETED_RUNS_RETAINED = 20;
+
+const pruneCompletedRuns = (registry: Registry): void => {
+	const completed = Object.values(registry)
+		.filter((entry) => entry.status === "completed")
+		.sort((a, b) => b.startedAt - a.startedAt);
+	for (const entry of completed.slice(COMPLETED_RUNS_RETAINED)) {
+		delete registry[entry.runId];
+	}
+};
+
 /** Mark a run cleanly torn down (plan §9a — clears the orphan signal). */
 export const markCompleted = async (runId: string): Promise<RegistryEntry> =>
-	updateEntry(runId, (entry) => {
+	enqueueWrite(async () => {
+		const registry = await load();
+		const entry = registry[runId];
+		if (!entry) {
+			throw new Error(`tw registry: no entry for runId ${runId}`);
+		}
 		entry.status = "completed";
+		pruneCompletedRuns(registry);
+		await save(registry);
+		return entry;
 	});
 
 /** Mark a run cancelled (e.g. Ctrl+C before teardown finished). */

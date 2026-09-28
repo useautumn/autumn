@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
-import type { AttachParamsV1Input } from "@autumn/shared";
+import { type AttachParamsV1Input, secondsToMs } from "@autumn/shared";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
+import { getStripeSubscription } from "@tests/integration/billing/utils/stripeSubscriptionUtils";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import {
@@ -34,6 +35,12 @@ test(`${chalk.yellowBright("attach scheduled anchor checkout: schedule attaches 
 
 	expect(result.payment_url).toContain("checkout.stripe.com");
 	await completeStripeCheckoutFormV2({ url: result.payment_url! });
+
+	// Checkout creates the subscription on the anchor itself, not via a schedule.
+	const { subscription } = await getStripeSubscription({ customerId });
+	expect(secondsToMs(subscription.billing_cycle_anchor)).toBe(
+		Math.floor(scheduledAnchorMs / 1000) * 1000,
+	);
 	await expectBalanceCorrect({
 		customerId,
 		autumn: autumnV2_3,

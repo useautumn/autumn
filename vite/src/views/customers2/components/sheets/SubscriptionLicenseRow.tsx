@@ -9,11 +9,15 @@ import { getProductItemHoverTexts } from "@/views/admin/adminUtils";
  * an item row of the parent plan ("$20 per Dev Seat per month"). */
 export function SubscriptionLicenseRow({
 	planLicense,
+	paidQuantity,
 }: {
 	planLicense: FullPlanLicense;
+	paidQuantity: number;
 }) {
 	const { displayCurrency } = useCustomerDisplayCurrency();
 	const license = mapToProductV2({ product: planLicense.product });
+	// Matches prepaid rows: the badge counts included + purchased seats.
+	const totalQuantity = planLicense.included + paidQuantity;
 
 	return (
 		<div className="flex items-center w-full py-1">
@@ -28,6 +32,11 @@ export function SubscriptionLicenseRow({
 						</AdminHover>
 					)}
 				/>
+				{totalQuantity > 0 && (
+					<span className="bg-muted px-1.5 py-0.5 rounded-md text-xs">
+						x{parseFloat(Number(totalQuantity).toFixed(2))}
+					</span>
+				)}
 			</div>
 		</div>
 	);

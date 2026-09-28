@@ -36,6 +36,7 @@
 				"src/utils/scriptUtils/getAll/getAllAutumnCustomers.ts",
 				"src/utils/scriptUtils/getAll/getAllOrgs.ts",
 				"src/internal/billing/v2/providers/stripe/utils/sync/**/*.ts",
+				"src/trigger/metering/pushHourlyMetersTask.ts",
 				"tests/**/*.ts"
 			],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
@@ -115,9 +116,17 @@
 		"packages/ksuid": {
 			"project": ["src/**/*.ts"]
 		},
+		"packages/billing": {
+			"entry": ["config/autumn.config.ts", "scripts/**/*.ts", "tests/**/*.test.ts"],
+			"project": ["src/**/*.ts", "config/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"]
+		},
 		"packages/stripe-sync": {
 			"entry": ["scripts/**/*.ts"],
 			"project": ["src/**/*.ts", "scripts/**/*.ts"]
+		},
+		"packages/ducklake": {
+			"entry": ["tests/**/*.test.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
 		"packages/render": {
 			"project": ["src/**/*.ts"]

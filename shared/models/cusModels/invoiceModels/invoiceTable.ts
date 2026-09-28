@@ -30,6 +30,7 @@ export const invoices = pgTable(
 		hosted_invoice_url: text("hosted_invoice_url"),
 		total: numeric({ mode: "number" }).notNull().default(0),
 		amount_paid: numeric({ mode: "number" }),
+		paid_at: numeric({ mode: "number" }),
 		refunded_amount: numeric({ mode: "number" }).notNull().default(0),
 		currency: text("currency").notNull().default("usd"),
 		discounts: jsonb("discounts").$type<InvoiceDiscount>().array().default([]),
@@ -52,6 +53,11 @@ export const invoices = pgTable(
 			sql`${table.created_at} DESC`,
 			sql`${table.id} DESC`,
 		),
+		// Paid rows only: collected-volume metering scans an hour of paid_at.
+		index("idx_invoices_paid_at")
+			.on(table.paid_at)
+			.where(sql`${table.paid_at} IS NOT NULL`)
+			.concurrently(),
 		// Serves the entities.internal_id delete cascade (both default collation).
 		index("idx_invoices_internal_entity_id")
 			.on(table.internal_entity_id)

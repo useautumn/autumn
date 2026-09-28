@@ -306,6 +306,18 @@
 						]
 					},
 					{
+						"group": "Webhooks",
+						"pages": [
+							"api-reference/webhooks/getWebhook",
+							"api-reference/webhooks/listWebhooks",
+							"api-reference/webhooks/createWebhook",
+							"api-reference/webhooks/updateWebhook",
+							"api-reference/webhooks/deleteWebhook",
+							"api-reference/webhooks/previewSyncWebhooks",
+							"api-reference/webhooks/syncWebhooks"
+						]
+					},
+					{
 						"group": "Webhook Events",
 						"pages": [
 							{

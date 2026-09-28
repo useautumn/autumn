@@ -40,28 +40,6 @@ const withAcceptedResponse = <TSpec extends SpecWithResponses>(
 	},
 });
 
-const withOnlyAcceptedResponse = <TSpec extends SpecWithResponses>(
-	spec: TSpec,
-	nameOverride: string,
-	description: string,
-) => {
-	const responses = { ...spec.responses };
-	const successResponse = responses["200"];
-	delete responses["200"];
-
-	return {
-		...spec,
-		"x-speakeasy-name-override": nameOverride,
-		responses: {
-			...responses,
-			202: {
-				...successResponse,
-				description,
-			},
-		},
-	};
-};
-
 const BatchTrackResponseSchema = z.object({
 	success: z.literal(true),
 });
@@ -222,12 +200,12 @@ export const balancesBatchTrackContract = oc
 		path: "/v1/balances.batch_track",
 		operationId: "batchTrack",
 		description:
-			"Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.",
+			"Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 200 (or 202) immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 200 (or 202) and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.",
 		spec: (spec) =>
-			withOnlyAcceptedResponse(
+			withAcceptedResponse(
 				spec,
 				"batchTrack",
-				"Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on 202. See the endpoint description for full partial-failure semantics.",
+				"Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on success. See the endpoint description for full partial-failure semantics.",
 			),
 	})
 	.input(

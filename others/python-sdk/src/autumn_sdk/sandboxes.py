@@ -22,7 +22,7 @@ class Sandboxes(BaseSDK):
     ) -> models.CreateSandboxResponse:
         r"""Creates a sandbox: an isolated copy of your organization with its own catalog, customers and secret key. Returns the sandbox's secret key once, in this response — store it, it cannot be read back. Authenticated with your organization's secret key (a sandbox's own key cannot create sandboxes).
 
-        :param name: A name for the sandbox, unique within your organization.
+        :param name: A name for the sandbox, unique within your organization. No spaces, and it can't be `live` or `sandbox`.
         :param color: Colour the dashboard uses to label the sandbox. Defaults to `gray`.
         :param icon: Icon the dashboard uses to label the sandbox. Defaults to `Flask`.
         :param retries: Override the default retry configuration for this method
@@ -118,7 +118,7 @@ class Sandboxes(BaseSDK):
     ) -> models.CreateSandboxResponse:
         r"""Creates a sandbox: an isolated copy of your organization with its own catalog, customers and secret key. Returns the sandbox's secret key once, in this response — store it, it cannot be read back. Authenticated with your organization's secret key (a sandbox's own key cannot create sandboxes).
 
-        :param name: A name for the sandbox, unique within your organization.
+        :param name: A name for the sandbox, unique within your organization. No spaces, and it can't be `live` or `sandbox`.
         :param color: Colour the dashboard uses to label the sandbox. Defaults to `gray`.
         :param icon: Icon the dashboard uses to label the sandbox. Defaults to `Flask`.
         :param retries: Override the default retry configuration for this method
