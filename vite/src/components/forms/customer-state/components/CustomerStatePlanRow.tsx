@@ -1,4 +1,8 @@
-import { CopySimpleIcon, InfinityIcon } from "@phosphor-icons/react";
+import {
+	ArrowsLeftRightIcon,
+	CopySimpleIcon,
+	InfinityIcon,
+} from "@phosphor-icons/react";
 import { CopyExistingPlansButton } from "@/components/forms/customer-state/components/CopyExistingPlansButton";
 import { getUsedGroupKeys } from "@/components/forms/customer-state/customerStateUtils";
 import { findPreviousPhasePlan } from "@/components/forms/customer-state/useCustomerStateHandlers";
@@ -9,6 +13,7 @@ import {
 } from "@/components/forms/shared/PlanRowActionsMenu";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { PlanPickerTrayRow } from "./tray/PlanPickerTrayRow";
+import { ScopeMenuAnchor } from "./tray/ScopeMenuAnchor";
 import { SelectedPlanTrayRow } from "./tray/SelectedPlanTrayRow";
 
 export function CustomerStatePlanRow({
@@ -35,10 +40,11 @@ export function CustomerStatePlanRow({
 	const plan = formValues.phases[phaseIndex]?.plans[planIndex];
 	const isOpeningPhase = phaseIndex === 0;
 	const isLocked = isPhaseLocked({ phaseIndex });
-	const { scope, hasEntities, selectedLabel } = usePlanScopeField({
+	const { scope, hasEntities, selectedLabel, openScope } = usePlanScopeField({
 		planEntityId: plan?.entityId,
 		disabled: isLocked,
 		disabledReason: "this phase has started",
+		trigger: <ScopeMenuAnchor />,
 		onChange: (nextEntityId) =>
 			form.setFieldValue(
 				`phases[${phaseIndex}].plans[${planIndex}].entityId`,
@@ -64,7 +70,6 @@ export function CustomerStatePlanRow({
 
 		return (
 			<PlanPickerTrayRow
-				scope={scope}
 				products={products.filter((product) => !product.archived)}
 				usedKeys={usedKeys}
 				siblingProductIds={selectedProductIdsInPhase}
@@ -99,6 +104,15 @@ export function CustomerStatePlanRow({
 						icon: <CopySimpleIcon size={ROW_ACTION_ICON_SIZE} />,
 						onSelect: () =>
 							handleCopyFromPreviousPhase({ phaseIndex, planIndex }),
+					},
+				]
+			: []),
+		...(!isLocked && hasEntities
+			? [
+					{
+						label: "Move to…",
+						icon: <ArrowsLeftRightIcon size={ROW_ACTION_ICON_SIZE} />,
+						onSelect: openScope,
 					},
 				]
 			: []),

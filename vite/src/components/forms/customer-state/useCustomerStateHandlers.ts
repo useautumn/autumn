@@ -106,10 +106,17 @@ export function useCustomerStateHandlers({
 	);
 
 	const handleAddPlan = useCallback(
-		({ phaseIndex }: { phaseIndex: number }) => {
+		({
+			phaseIndex,
+			entityId = null,
+		}: {
+			phaseIndex: number;
+			entityId?: string | null;
+		}) => {
 			if (isPhaseLocked({ phaseIndex })) return;
 			form.pushFieldValue(`phases[${phaseIndex}].plans`, {
 				...EMPTY_CUSTOMER_STATE_PLAN,
+				entityId,
 			});
 		},
 		[form, isPhaseLocked],
@@ -130,9 +137,15 @@ export function useCustomerStateHandlers({
 		[form, isPhaseLocked],
 	);
 
-	const handleAddUnscheduledPlan = useCallback(() => {
-		form.pushFieldValue("unscheduledPlans", { ...EMPTY_CUSTOMER_STATE_PLAN });
-	}, [form]);
+	const handleAddUnscheduledPlan = useCallback(
+		({ entityId = null }: { entityId?: string | null }) => {
+			form.pushFieldValue("unscheduledPlans", {
+				...EMPTY_CUSTOMER_STATE_PLAN,
+				entityId,
+			});
+		},
+		[form],
+	);
 
 	const handleRemoveUnscheduledPlan = useCallback(
 		({ planIndex }: { planIndex: number }) => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { PlanEntityScopeSelector } from "./PlanEntityScopeSelector";
 import { PlanScopeChip } from "./PlanScopeChip";
@@ -15,6 +15,7 @@ export function usePlanScopeField({
 	onChange,
 	disabled,
 	disabledReason,
+	trigger,
 }: {
 	/** Undefined follows `defaultEntityId`; null is an explicit customer level. */
 	planEntityId?: string | null;
@@ -22,6 +23,8 @@ export function usePlanScopeField({
 	onChange: (entityId: string | null | undefined) => void;
 	disabled?: boolean;
 	disabledReason?: string;
+	/** Replaces the scope chip, e.g. with an anchor opened from a menu. */
+	trigger?: ReactNode;
 }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const effectiveEntityId = resolvePlanEntityId({
@@ -58,12 +61,14 @@ export function usePlanScopeField({
 						onSearchChange={setSearch}
 						open={isOpen}
 						trigger={
-							<PlanScopeChip
-								disabled={disabled}
-								disabledReason={disabledReason}
-								isEntityScoped={!!effectiveEntityId}
-								label={chipLabel}
-							/>
+							trigger ?? (
+								<PlanScopeChip
+									disabled={disabled}
+									disabledReason={disabledReason}
+									isEntityScoped={!!effectiveEntityId}
+									label={chipLabel}
+								/>
+							)
 						}
 						value={pickerValue}
 					/>

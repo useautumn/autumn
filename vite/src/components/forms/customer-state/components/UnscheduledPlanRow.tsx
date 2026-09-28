@@ -1,7 +1,10 @@
+import { ArrowsLeftRightIcon } from "@phosphor-icons/react";
 import { getUnscheduledUsedGroupKeys } from "@/components/forms/customer-state/customerStateUtils";
 import { usePlanScopeField } from "@/components/forms/shared";
+import { ROW_ACTION_ICON_SIZE } from "@/components/forms/shared/PlanRowActionsMenu";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { PlanPickerTrayRow } from "./tray/PlanPickerTrayRow";
+import { ScopeMenuAnchor } from "./tray/ScopeMenuAnchor";
 import { SelectedPlanTrayRow } from "./tray/SelectedPlanTrayRow";
 
 export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
@@ -16,8 +19,9 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 	const location = { location: "unscheduled", planIndex } as const;
 
 	const plan = formValues.unscheduledPlans[planIndex];
-	const { scope } = usePlanScopeField({
+	const { scope, hasEntities, openScope } = usePlanScopeField({
 		planEntityId: plan?.entityId,
+		trigger: <ScopeMenuAnchor />,
 		onChange: (nextEntityId) =>
 			form.setFieldValue(
 				`unscheduledPlans[${planIndex}].entityId`,
@@ -44,7 +48,6 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 
 		return (
 			<PlanPickerTrayRow
-				scope={scope}
 				products={products.filter((product) => !product.archived)}
 				usedKeys={usedKeys}
 				siblingProductIds={siblingProductIds}
@@ -60,6 +63,17 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 			location={location}
 			plan={plan}
 			scope={scope}
+			actions={
+				hasEntities
+					? [
+							{
+								label: "Move to…",
+								icon: <ArrowsLeftRightIcon size={ROW_ACTION_ICON_SIZE} />,
+								onSelect: openScope,
+							},
+						]
+					: []
+			}
 			onCustomize={() => setEditingPlan(location)}
 			onRemove={() => handleRemoveUnscheduledPlan({ planIndex })}
 		/>

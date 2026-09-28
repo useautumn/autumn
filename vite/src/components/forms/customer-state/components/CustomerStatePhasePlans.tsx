@@ -3,10 +3,12 @@ import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUti
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { getUsedGroupKeys } from "../customerStateUtils";
 import { CustomerStatePlanRow } from "./CustomerStatePlanRow";
+import { PlanScopeGroups } from "./tray/PlanScopeGroups";
 import { PlanSection } from "./tray/PlanSection";
 import { PlanTrayAddRow } from "./tray/PlanTrayAddRow";
+import { useAddPlanScope } from "./tray/useAddPlanScope";
 
-/** A phase's declared plans on one surface, closed by "Add plan". */
+/** A phase's declared plans grouped by scope, closed by "Add plan". */
 export function CustomerStatePhasePlans({
 	phaseIndex,
 	header,
@@ -16,33 +18,43 @@ export function CustomerStatePhasePlans({
 }) {
 	const { formValues, products, isPhaseLocked, handleAddPlan } =
 		useCustomerStateContext();
+	const isLocked = isPhaseLocked({ phaseIndex });
+	const addScope = useAddPlanScope({ disabled: isLocked });
 
 	const phase = formValues.phases[phaseIndex];
 	if (!phase) return null;
 
-	// A new row starts customer-level, so that's the scope that can run out of plans.
-	const customerLevelKeys = getUsedGroupKeys({ plans: phase.plans, products });
+	const usedKeys = getUsedGroupKeys({
+		plans: phase.plans,
+		products,
+		entityId: addScope.entityId,
+	});
 	const allPlansAdded = products
 		.filter((product) => !product.archived)
 		.every((product) =>
-			customerLevelKeys.has(
-				getProductGroupKey({ productId: product.id, products }),
-			),
+			usedKeys.has(getProductGroupKey({ productId: product.id, products })),
 		);
 
 	return (
 		<PlanSection header={header}>
-			{phase.plans.map((plan, planIndex) => (
-				<CustomerStatePlanRow
-					key={`plan-${phaseIndex}-${planIndex}-${plan.productId || "empty"}`}
-					phaseIndex={phaseIndex}
-					planIndex={planIndex}
-				/>
-			))}
+			<PlanScopeGroups
+				plans={phase.plans}
+				showHeaders={addScope.hasEntities}
+				renderPlan={(planIndex) => (
+					<CustomerStatePlanRow
+						key={`plan-${phaseIndex}-${planIndex}-${phase.plans[planIndex]?.productId || "empty"}`}
+						phaseIndex={phaseIndex}
+						planIndex={planIndex}
+					/>
+				)}
+			/>
 			<PlanTrayAddRow
 				label="Add plan"
-				onClick={() => handleAddPlan({ phaseIndex })}
-				disabled={allPlansAdded || isPhaseLocked({ phaseIndex })}
+				scope={addScope.picker}
+				onClick={() =>
+					handleAddPlan({ phaseIndex, entityId: addScope.entityId })
+				}
+				disabled={allPlansAdded || isLocked}
 			/>
 		</PlanSection>
 	);

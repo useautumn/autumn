@@ -61,11 +61,11 @@ export function SelectedPlanTrayRow({
 				productId={plan.productId}
 				product={product}
 				items={plan.items}
-				isCustom={plan.isCustom}
-				scope={scope?.picker}
+				anchor={scope?.picker}
 				badge={<NotFoundBadge reasons={planNotFoundReasons(location)} />}
 				controls={
 					<PlanRowControls
+						isCustom={plan.isCustom}
 						onCustomize={onCustomize}
 						actions={buildRowActions({ onRemove, actions })}
 					/>

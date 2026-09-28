@@ -2,7 +2,6 @@ import type { ProductV2 } from "@autumn/shared";
 import { SearchableSelect } from "@autumn/ui";
 import { ChevronDownIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
-import { PlanIcon } from "@/components/forms/shared/SelectedPlanRow";
 import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
 
 /** Full-bleed row trigger, so the popover anchors to the whole row. */
@@ -13,7 +12,6 @@ function PlanPickerTrigger(props: ComponentProps<"button">) {
 			{...props}
 			className="flex min-h-11 w-full min-w-0 cursor-pointer items-center gap-2 px-3 text-left text-sm text-tertiary-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground disabled:cursor-not-allowed data-popup-open:text-foreground"
 		>
-			<PlanIcon isAddOn={false} />
 			<span className="min-w-0 flex-1 truncate">Select a plan…</span>
 			<ChevronDownIcon className="size-4 shrink-0 opacity-50" />
 		</button>
