@@ -826,6 +826,86 @@ test("a rejected sandbox key skips that env with a warning; the others still syn
 	expect(calls.filter((call) => call.startsWith("staging:"))).toEqual([]);
 });
 
+test("a live preview that fails only warns: the sandbox push still applies", async () => {
+	const dir = projectWith({ body: `\tfeatures: [],\n${SHARED_URL}` });
+	const calls: string[] = [];
+	let output = "";
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: catalogClean as any,
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+		...envsWith({
+			env: {
+				AUTUMN_SECRET_KEY: "sk_sandbox",
+				AUTUMN_PROD_SECRET_KEY: "sk_live",
+			},
+			orgs: THREE_ORGS,
+			clients: {
+				sk_sandbox: envClient({
+					name: "sandbox",
+					calls,
+					changes: [
+						urlUpdate(
+							"https://old.example.com/autumn",
+							"https://sbx.example.com/autumn",
+						),
+					],
+				}),
+				sk_live: {
+					previewSyncWebhooks: async () => {
+						throw new Error("503 Service Unavailable");
+					},
+				},
+			},
+		}),
+	});
+	expect(output).toContain(
+		"⚠ webhooks: couldn't check live for changes (503 Service Unavailable)",
+	);
+	expect(calls).toContain("sandbox:sync");
+});
+
+test("a failing sandbox preview still names the envs whose keys were skipped", async () => {
+	const dir = projectWith({ body: `\tfeatures: [],\n${SHARED_URL}` });
+	const calls: string[] = [];
+	const push = runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: catalogClean as any,
+		cwd: dir,
+		write: () => {},
+		...envsWith({
+			env: {
+				AUTUMN_SECRET_KEY: "sk_sandbox",
+				AUTUMN_SANDBOX_STG_SECRET_KEY: "sk_stg",
+			},
+			orgs: {
+				sk_sandbox: orgInfo({ id: "org_ab12cd34" }),
+				sk_stg: new AutumnApiError({
+					status: 401,
+					body: { message: "Invalid secret key" },
+					path: "/organization/me",
+				}),
+			},
+			clients: {
+				sk_sandbox: {
+					...envClient({ name: "sandbox", calls }),
+					previewSyncWebhooks: async () => ({
+						changes: [],
+						errors: [{ id: "billing", message: "Webhook URL must use https." }],
+					}),
+				},
+			},
+		}),
+	});
+	await expect(push).rejects.toThrow("billing: Webhook URL must use https.");
+	await expect(push).rejects.toThrow(
+		"⚠ webhooks: skipped sandbox stg (AUTUMN_SANDBOX_STG_SECRET_KEY was rejected)",
+	);
+});
+
 test("pull then push of a webhook receiving every event sends no events, so the server keeps it receiving every event", async () => {
 	const dir = projectWith({
 		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "billing", events: ["billing.updated"], url: { sandbox: "https://x.dev/h" } }),\n\t],`,

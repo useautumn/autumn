@@ -100,7 +100,9 @@ export const previewWebhookEnvs = async ({
 		Promise.allSettled(
 			synced.map((env) => previewEnv({ env, rows, clientFor })),
 		),
-		Promise.all(probed.map((env) => previewEnv({ env, rows, clientFor }))),
+		Promise.allSettled(
+			probed.map((env) => previewEnv({ env, rows, clientFor })),
+		),
 	]);
 
 	const lanes: WebhooksLane[] = [];
@@ -129,10 +131,23 @@ export const previewWebhookEnvs = async ({
 					.join("\n"),
 			});
 	});
-	throwWebhookEnvFailures({ failures, envCount: synced.length });
+	throwWebhookEnvFailures({
+		failures,
+		envCount: synced.length,
+		warnings: skipped,
+	});
 
 	const productionDiffers: string[] = [];
-	for (const preview of probedResults) {
+	// Live is only read here, so its failure is a warning, never a blocked sandbox push.
+	probedResults.forEach((result, index) => {
+		if (result.status === "rejected")
+			skipped.push(
+				`⚠ webhooks: couldn't check ${probed[index]?.label ?? "live"} for changes (${messageOf(result.reason)})`,
+			);
+	});
+	for (const result of probedResults) {
+		if (result.status === "rejected") continue;
+		const preview = result.value;
 		if (preview === undefined) continue;
 		if ("skipped" in preview) {
 			skipped.push(preview.skipped);

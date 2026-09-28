@@ -5,17 +5,21 @@ export type WebhookEnvFailure = { env: string; message: string };
 export const throwWebhookEnvFailures = ({
 	failures,
 	envCount,
+	warnings = [],
 }: {
 	failures: WebhookEnvFailure[];
 	envCount: number;
+	/** Skipped-env warnings the failure would otherwise swallow. */
+	warnings?: string[];
 }): void => {
 	if (failures.length === 0) return;
 	throw new Error(
-		failures
-			.map(({ env, message }) =>
+		[
+			...failures.map(({ env, message }) =>
 				envCount > 1 ? message.replace(/^/gm, `${env}: `) : message,
-			)
-			.join("\n"),
+			),
+			...warnings,
+		].join("\n"),
 	);
 };
 
