@@ -24,6 +24,13 @@ export type {
 	RedisClientConfig,
 	RedisClientContext,
 } from "./client/types/redisClient.js";
+export {
+	buildCustomerInvoicesCacheKey,
+	CUSTOMER_INVOICES_CACHE_TTL_SECONDS,
+	getCachedCustomerInvoices,
+	invalidateCustomerInvoicesCache,
+	setCachedCustomerInvoices,
+} from "./invoices/customerInvoicesCache.js";
 export { createMiscCache } from "./misc/createMiscCache.js";
 export { getRequestBucket } from "./misc/requestBucket.js";
 export type {
@@ -32,6 +39,7 @@ export type {
 	MiscCacheContext,
 	MiscCacheTarget,
 } from "./misc/types/miscCache.js";
+export type { ReadThroughCacheContext } from "./misc/types/readThroughCacheContext.js";
 export {
 	isConnectionLevelRedisError,
 	isTransientRedisError,
@@ -40,3 +48,10 @@ export {
 } from "./ops/redisErrors.js";
 export { runRedisOp, tryRedisOp } from "./ops/runRedisOp.js";
 export { tryRedisNx } from "./ops/tryRedisNx.js";
+export {
+	buildSubscriptionCacheKey,
+	getCachedSubscriptions,
+	invalidateSubscriptionCache,
+	SUBSCRIPTION_CACHE_TTL_SECONDS,
+	setCachedSubscriptions,
+} from "./subscriptions/subscriptionCache.js";

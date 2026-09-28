@@ -30,7 +30,6 @@
 				"src/workers.ts",
 				"src/ducklake.ts",
 				"src/internal/customers/cusUtils/createNewCustomer.ts",
-				"src/utils/importUtils/addProductFromSubs.ts",
 				"src/utils/scriptUtils/readOnlyStripe.ts",
 				"src/utils/scriptUtils/scriptUtils.ts",
 				"src/utils/scriptUtils/getAll/getAllAutumnCustomers.ts",
@@ -101,11 +100,7 @@
 				"tests/**/*.test.ts",
 				"src/grading/inspectWorkspaceConfigScript.ts"
 			],
-			"project": [
-				"src/**/*.ts",
-				"cases/**/*.ts",
-				"tests/**/*.ts"
-			]
+			"project": ["src/**/*.ts", "cases/**/*.ts", "tests/**/*.ts"]
 		},
 		"packages/gateway": {
 			"entry": ["tests/**/*.test.ts"],
