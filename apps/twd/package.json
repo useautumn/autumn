@@ -10,7 +10,8 @@
 		"web:build": "vite build --config web/vite.config.ts",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "bun src/db/migrate.ts",
-		"ts": "bunx tsgo --noEmit -p tsconfig.json"
+		"ts": "bunx tsgo --noEmit -p tsconfig.json",
+		"web:mock": "VITE_TWD_MOCK=1 vite --config web/vite.config.ts"
 	},
 	"dependencies": {
 		"@autumn/shared": "workspace:*",

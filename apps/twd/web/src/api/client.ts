@@ -38,8 +38,8 @@ export type Transport = {
 	signInUrl: string;
 };
 
-export const isMock =
-	import.meta.env.VITE_TWD_MOCK === "1" || !import.meta.env.VITE_TWD_URL;
+/** Opt-in only; the served build always talks to the real twd on its own origin. */
+export const isMock = import.meta.env.VITE_TWD_MOCK === "1";
 
 const apiBase = import.meta.env.VITE_TWD_API_BASE ?? "/api";
 
