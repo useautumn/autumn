@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   publish:
-    runs-on: "peak"
+    runs-on: ubuntu-latest
     permissions:
       contents: read
 

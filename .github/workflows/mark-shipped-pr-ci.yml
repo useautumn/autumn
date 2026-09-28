@@ -31,7 +31,7 @@ jobs:
   sync-ci:
     name: Sync shipped PR CI
     if: ${{ github.event_name != 'check_run' || github.event.check_run.app.slug != 'github-actions' }}
-    runs-on: "peak"
+    runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:

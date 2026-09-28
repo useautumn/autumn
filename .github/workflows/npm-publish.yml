@@ -55,7 +55,7 @@ jobs:
   publish:
     name: Build and Publish
     # GitHub-hosted: npm --provenance rejects self-hosted/Blacksmith runners
-    runs-on: "peak"
+    runs-on: ubuntu-latest
 
     concurrency:
       group: npm-publish-${{ inputs.publish-name-override || inputs.package-dir }}
