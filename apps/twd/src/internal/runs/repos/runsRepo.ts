@@ -37,9 +37,20 @@ export const queuePositionSql = sql<
 	Number,
 );
 
+/** Distinct worker sandboxes a run booted; shown once it's finished and has released them. */
+const workersUsedSql =
+	sql<number>`(select count(*) from run_workers w where w.run_id = ${runs.id})`.mapWith(
+		Number,
+	);
+
 const selectRuns = ({ ctx }: { ctx: TwdContext }) =>
 	ctx.db
-		.select({ run: runs, email: users.email, queuePosition: queuePositionSql })
+		.select({
+			run: runs,
+			email: users.email,
+			queuePosition: queuePositionSql,
+			workersUsed: workersUsedSql,
+		})
 		.from(runs)
 		.leftJoin(users, eq(users.id, runs.createdBy));
 
@@ -47,10 +58,12 @@ export const toRunSummary = ({
 	run,
 	email,
 	queuePosition = null,
+	workersUsed,
 }: {
 	run: RunRow;
 	email: string | null;
 	queuePosition?: number | null;
+	workersUsed?: number;
 }): RunSummary => ({
 	id: run.id,
 	branch: run.branch,
@@ -59,7 +72,10 @@ export const toRunSummary = ({
 	purpose: run.purpose,
 	selection: run.selection,
 	fileCount: run.fileCount,
-	workerCount: run.workerCount,
+	workerCount:
+		isTerminalRunStatus({ status: run.status }) && workersUsed !== undefined
+			? workersUsed
+			: run.workerCount,
 	workersWanted: run.workersWanted,
 	queuePosition,
 	cost: {

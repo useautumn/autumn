@@ -67,7 +67,7 @@ const CostChart = ({
 	const data = costs.buckets.map((b) => ({
 		label: dayLabel(b.start),
 		...Object.fromEntries(
-			users.map((u, i) => [`u${i}`, b.byUser[u.userId] ?? 0]),
+			users.map((u, i) => [`u${i}`, b.byUser[u.email] ?? 0]),
 		),
 		[WARM_KEY]: b.warmUsd,
 	}));
@@ -314,7 +314,7 @@ export const CostsScreen = () => {
 						</span>
 						<span>
 							· {num(data.totals.runs)} runs ·{" "}
-							{num(Math.round(data.totals.workerSeconds / 3600))} worker-hours ·{" "}
+							{formatWorkerTime(data.totals.workerSeconds)} ·{" "}
 							{usd(data.totals.warmUsd)} warm builds · last {range} days
 						</span>
 						<Tooltip content={<RatesLine rates={data.rates} />}>
@@ -353,3 +353,8 @@ export const CostsScreen = () => {
 		</>
 	);
 };
+
+const formatWorkerTime = (seconds: number) =>
+	seconds < 3600
+		? `${Math.round(seconds / 60)} worker-minutes`
+		: `${num(Math.round(seconds / 3600))} worker-hours`;

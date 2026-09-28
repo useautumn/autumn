@@ -94,7 +94,8 @@ export const getCosts = async ({
 			slot.usd += row.usd;
 			slot.warmUsd += row.warm_usd;
 			slot.runs += row.runs;
-			slot.byUser[email] = (slot.byUser[email] ?? 0) + row.usd;
+			// Warm builds are their own chart series; byUser + warmUsd stacks to usd.
+			slot.byUser[email] = (slot.byUser[email] ?? 0) + row.usd - row.warm_usd;
 		}
 		const user = users.get(row.user_id) ?? {
 			userId: row.user_id,

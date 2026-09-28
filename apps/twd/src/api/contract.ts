@@ -389,6 +389,7 @@ export const Costs = z.object({
 			usd: z.number(),
 			warmUsd: z.number(),
 			runs: z.number(),
+			/** email → run cost (excludes warm builds, which are `warmUsd`). */
 			byUser: z.record(z.number()),
 		}),
 	),
