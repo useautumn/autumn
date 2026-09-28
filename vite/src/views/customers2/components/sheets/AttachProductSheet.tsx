@@ -22,7 +22,7 @@ import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFo
 import { isFutureStartDate } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 import {
 	DisabledTooltipButton,
-	PlanScopeToggleButton,
+	PlanScopeChip,
 } from "@/components/forms/shared";
 import {
 	GenerateCheckoutStageWithPreview,
@@ -200,11 +200,9 @@ function SelectContent() {
 			open={rootScopeOpen}
 			scopeEntityId={entityId ?? undefined}
 			trigger={
-				<PlanScopeToggleButton
+				<PlanScopeChip
 					isEntityScoped={!!entityId}
-					selectedLabel={
-						entityId ? (fullEntity?.name ?? entityId) : "Customer-level"
-					}
+					label={entityId ? (fullEntity?.name ?? entityId) : "Customer-level"}
 				/>
 			}
 		/>

@@ -50,7 +50,6 @@ export function SelectedPlanTrayRow({
 	location,
 	plan,
 	scope,
-	scopeLabel,
 	readOnly = false,
 	onCustomize,
 	onRemove,
@@ -59,7 +58,6 @@ export function SelectedPlanTrayRow({
 	location: PlanLocation;
 	plan: CustomerStatePlan;
 	scope?: PlanRowScope;
-	scopeLabel?: string;
 	readOnly?: boolean;
 	onCustomize?: () => void;
 	onRemove?: () => void;
@@ -75,15 +73,12 @@ export function SelectedPlanTrayRow({
 				product={product}
 				items={plan.items}
 				isCustom={plan.isCustom}
-				scopeLabel={scopeLabel}
+				scope={scope?.picker}
 				badge={<NotFoundBadge reasons={planNotFoundReasons(location)} />}
 				controls={
-					<>
-						{scope?.picker}
-						<PlanRowActionsMenu
-							actions={buildRowActions({ onCustomize, onRemove, actions })}
-						/>
-					</>
+					<PlanRowActionsMenu
+						actions={buildRowActions({ onCustomize, onRemove, actions })}
+					/>
 				}
 			/>
 			<CustomerStatePlanQuantities

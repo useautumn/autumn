@@ -118,7 +118,6 @@ export function CustomerStatePlanRow({
 			location={location}
 			plan={plan}
 			scope={scope}
-			scopeLabel={plan.entityId ? selectedLabel : undefined}
 			readOnly={isLocked}
 			actions={rowActions}
 			onCustomize={isLocked ? undefined : () => setEditingPlan(location)}

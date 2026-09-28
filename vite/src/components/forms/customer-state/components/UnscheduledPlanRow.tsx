@@ -16,7 +16,7 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 	const location = { location: "unscheduled", planIndex } as const;
 
 	const plan = formValues.unscheduledPlans[planIndex];
-	const { scope, selectedLabel } = usePlanScopeField({
+	const { scope } = usePlanScopeField({
 		planEntityId: plan?.entityId,
 		onChange: (nextEntityId) =>
 			form.setFieldValue(
@@ -60,7 +60,6 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 			location={location}
 			plan={plan}
 			scope={scope}
-			scopeLabel={plan.entityId ? selectedLabel : undefined}
 			onCustomize={() => setEditingPlan(location)}
 			onRemove={() => handleRemoveUnscheduledPlan({ planIndex })}
 		/>

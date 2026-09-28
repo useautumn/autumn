@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { PlanEntityScopeSelector } from "./PlanEntityScopeSelector";
-import { PlanScopeToggleButton } from "./PlanScopeToggleButton";
+import { PlanScopeChip } from "./PlanScopeChip";
 import type { PlanRowScope } from "./ScopedPlanRow";
 import { resolvePlanEntityId } from "./utils/resolvePlanEntityId";
 
@@ -40,6 +40,12 @@ export function usePlanScopeField({
 			? "Customer-level"
 			: (selectedEntity?.name ?? planEntityId);
 
+	const chipLabel =
+		selectedLabel ??
+		(effectiveEntityId
+			? (selectedEntity?.name ?? effectiveEntityId)
+			: "Customer-level");
+
 	const scope: PlanRowScope | undefined = hasEntities
 		? {
 				picker: (
@@ -52,11 +58,11 @@ export function usePlanScopeField({
 						onSearchChange={setSearch}
 						open={isOpen}
 						trigger={
-							<PlanScopeToggleButton
+							<PlanScopeChip
 								disabled={disabled}
 								disabledReason={disabledReason}
 								isEntityScoped={!!effectiveEntityId}
-								selectedLabel={selectedLabel}
+								label={chipLabel}
 							/>
 						}
 						value={pickerValue}

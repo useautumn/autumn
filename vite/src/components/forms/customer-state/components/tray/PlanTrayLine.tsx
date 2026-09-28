@@ -1,5 +1,4 @@
 import type { ProductItem, ProductV2 } from "@autumn/shared";
-import { StatusChip } from "@autumn/ui";
 import type { ReactNode } from "react";
 import { PlanIcon } from "@/components/forms/shared/SelectedPlanRow";
 import { PlanPriceLabel } from "../PlanPriceLabel";
@@ -10,7 +9,7 @@ export function PlanTrayLine({
 	product,
 	items,
 	isCustom,
-	scopeLabel,
+	scope,
 	badge,
 	controls,
 }: {
@@ -18,7 +17,7 @@ export function PlanTrayLine({
 	product: ProductV2 | undefined;
 	items: ProductItem[] | null;
 	isCustom?: boolean;
-	scopeLabel?: string;
+	scope?: ReactNode;
 	badge?: ReactNode;
 	controls?: ReactNode;
 }) {
@@ -28,11 +27,7 @@ export function PlanTrayLine({
 			<span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
 				{product?.name ?? productId}
 			</span>
-			{scopeLabel && (
-				<StatusChip className="max-w-32 text-tertiary-foreground">
-					<span className="truncate">{scopeLabel}</span>
-				</StatusChip>
-			)}
+			{scope}
 			{badge}
 			{product && <PlanPriceLabel product={product} items={items} />}
 			{controls}
