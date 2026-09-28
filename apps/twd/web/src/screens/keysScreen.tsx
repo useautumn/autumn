@@ -11,19 +11,29 @@ import {
 	Check,
 	Loader2,
 	MoreHorizontal,
+	Plus,
 	RefreshCw,
 	ShieldAlert,
+	Trash2,
 	X,
 } from "lucide-react";
 import { useState } from "react";
 import type { Job, StripeKey } from "../../../src/api/contract.ts";
-import { useJobs, useKeys, useProbeKeys, useReinitKeys } from "../api/hooks.ts";
+import {
+	useImportKeys,
+	useJobs,
+	useKeys,
+	useProbeKeys,
+	useReinitKeys,
+	useRemoveKey,
+} from "../api/hooks.ts";
 import { useLiveTopics } from "../api/live.ts";
 import { ErrorCallout, Pill } from "../components/status.tsx";
 import {
 	Button,
 	ConfirmDialog,
 	DataTable,
+	Dialog,
 	PageHeader,
 	SearchInput,
 	Segmented,
@@ -78,6 +88,9 @@ export const KeysScreen = () => {
 	const [query, setQuery] = useState("");
 	const [limit, setLimit] = useState(PAGE);
 	const [nuking, setNuking] = useState<StripeKey | null>(null);
+	const [removing, setRemoving] = useState<StripeKey | null>(null);
+	const [importing, setImporting] = useState(false);
+	const remove = useRemoveKey();
 	const jobs = useJobs();
 	useLiveTopics("keys", "jobs");
 
@@ -273,6 +286,13 @@ export const KeysScreen = () => {
 								<Bomb className="size-3.5" />
 								Full Nuke…
 							</DropdownMenuItem>
+							<DropdownMenuItem
+								disabled={!k.present || k.accounts.inUse > 0}
+								onClick={() => setRemoving(k)}
+							>
+								<Trash2 className="size-3.5" />
+								Remove key…
+							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</span>
@@ -286,6 +306,9 @@ export const KeysScreen = () => {
 				icon={<KeyIcon size={16} weight="fill" />}
 				title="Stripe keys"
 			>
+				<Button variant="primary" onClick={() => setImporting(true)}>
+					<Plus className="size-3.5" /> Import keys
+				</Button>
 				<Button
 					variant="secondary"
 					disabled={draining}
@@ -411,6 +434,28 @@ export const KeysScreen = () => {
 				stripeKey={nuking}
 				onOpenChange={(o) => !o && setNuking(null)}
 			/>
+			<ImportKeysDialog open={importing} onOpenChange={setImporting} />
+			<ConfirmDialog
+				open={removing !== null}
+				onOpenChange={(open) => !open && setRemoving(null)}
+				title="Remove this key from twd?"
+				confirmLabel="Remove key"
+				destructive
+				pending={remove.isPending}
+				onConfirm={() =>
+					removing &&
+					remove.mutate(removing.platformAccountId, {
+						onSuccess: () => setRemoving(null),
+					})
+				}
+			>
+				<p>
+					<span className="text-tiny-id">{removing?.keyHint}</span> stops being
+					used for runs and its stored secret is deleted. Nothing changes in
+					Stripe; re-import the key to use it again.
+				</p>
+				<ErrorCallout error={remove.error} className="mt-3" />
+			</ConfirmDialog>
 			<ConfirmDialog
 				open={confirm}
 				onOpenChange={setConfirm}
@@ -445,5 +490,94 @@ export const KeysScreen = () => {
 				</p>
 			</ConfirmDialog>
 		</>
+	);
+};
+
+const ImportKeysDialog = ({
+	open,
+	onOpenChange,
+}: {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+}) => {
+	const importKeys = useImportKeys();
+	const [text, setText] = useState("");
+	const result = importKeys.data;
+	const close = (next: boolean) => {
+		onOpenChange(next);
+		if (!next) {
+			setText("");
+			importKeys.reset();
+		}
+	};
+	return (
+		<Dialog
+			open={open}
+			onOpenChange={close}
+			title="Import Stripe keys"
+			description="Paste platform secret keys separated by commas, spaces, or new lines. Keys twd already has are skipped, so you can paste the same list again safely."
+			footer={
+				result ? (
+					<Button variant="primary" onClick={() => close(false)}>
+						Done
+					</Button>
+				) : (
+					<>
+						<Button variant="secondary" onClick={() => close(false)}>
+							Cancel
+						</Button>
+						<Button
+							variant="primary"
+							disabled={text.trim().length === 0}
+							isLoading={importKeys.isPending}
+							onClick={() => importKeys.mutate(text)}
+						>
+							Import
+						</Button>
+					</>
+				)
+			}
+		>
+			{result ? (
+				<div className="flex flex-col gap-2 text-sm">
+					<p className="text-foreground">
+						Added {result.added} · {result.usable} usable ·{" "}
+						{result.alreadyPresent} already in twd
+					</p>
+					{result.unusable.length > 0 && (
+						<ul className="max-h-40 overflow-auto rounded-md border border-border p-2 text-xs">
+							{result.unusable.map((key) => (
+								<li key={key.keyHint} className="flex gap-2">
+									<span className="text-tiny-id">{key.keyHint}</span>
+									<span className="text-red-600 dark:text-red-400">
+										{key.reason}
+									</span>
+								</li>
+							))}
+						</ul>
+					)}
+					<p className="text-xs text-subtle">
+						Run Re-initialise so new keys get their Connect webhook and
+						accounts.
+					</p>
+				</div>
+			) : (
+				<>
+					<textarea
+						value={text}
+						onChange={(event) => setText(event.target.value)}
+						placeholder="sk_test_…, sk_test_…"
+						spellCheck={false}
+						className="h-40 w-full resize-none rounded-md border border-border bg-transparent p-2 font-mono text-xs outline-none focus:border-primary"
+					/>
+					{importKeys.isPending && (
+						<p className="mt-2 text-xs text-subtle">
+							Probing each new key with Stripe…
+						</p>
+					)}
+					<ErrorCallout error={importKeys.error} className="mt-3" />
+				</>
+			)}
+		</Dialog>
 	);
 };

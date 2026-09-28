@@ -3,7 +3,7 @@ import { stripeKeys } from "../../../db/schema/keys.ts";
 import type { TwdDb } from "../../../lib/getDb.ts";
 import type { TwdTx } from "../../accounts/repos/cleanAccountsRepo.ts";
 
-/** Every lock reason starts with this; syncKeysFromEnv never overwrites a locked key. */
+/** Every lock reason starts with this; syncKeys never overwrites a locked key. */
 const FULL_NUKE_PREFIX = "full nuke";
 export const FULL_NUKE_IN_PROGRESS = `${FULL_NUKE_PREFIX} in progress`;
 
@@ -63,7 +63,7 @@ export const releaseFullNukeLock = async ({
 	if (!key) return;
 	const reason = key.present
 		? unusableReasonFromProbe({ probe: key.probe ?? null })
-		: "key no longer in TW_V3_KEYS";
+		: "key removed from twd";
 	await db
 		.update(stripeKeys)
 		.set({

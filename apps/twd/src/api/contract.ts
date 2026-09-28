@@ -219,6 +219,14 @@ export const KeyGate = z.object({
 	reason: z.string().nullable(),
 	jobId: z.string().nullable(),
 });
+export const ImportKeysBody = z.object({ text: z.string().min(1) });
+export const ImportKeysResponse = z.object({
+	parsed: z.number(),
+	added: z.number(),
+	alreadyPresent: z.number(),
+	usable: z.number(),
+	unusable: z.array(z.object({ keyHint: z.string(), reason: z.string() })),
+});
 export const KeysOverview = z.object({
 	gate: KeyGate,
 	keys: z.array(StripeKey),
@@ -443,6 +451,10 @@ export const ROUTES = {
 	keys: "GET /keys",
 	probeKeys: "POST /keys/probe",
 	reinitKeys: "POST /keys/reinit",
+	/** Additive paste: any-separator list of sk_test_ keys; existing ones are skipped. */
+	importKeys: "POST /keys/import",
+	/** Drops the stored secret; Stripe untouched. Refused while accounts on it are in use. */
+	removeKey: "DELETE /keys/:platformAccountId",
 	/** Deletes every connected account + webhook on one key (rate-limited), re-registers, tops up. */
 	fullNukeKey: "POST /keys/:platformAccountId/full-nuke",
 
@@ -485,6 +497,7 @@ export type RunEvent = z.infer<typeof RunEvent>;
 export type WorkerState = z.infer<typeof WorkerState>;
 export type Drift = z.infer<typeof Drift>;
 export type StripeKey = z.infer<typeof StripeKey>;
+export type ImportKeysResponse = z.infer<typeof ImportKeysResponse>;
 export type KeysOverview = z.infer<typeof KeysOverview>;
 export type StripeAccount = z.infer<typeof StripeAccount>;
 export type Capacity = z.infer<typeof Capacity>;

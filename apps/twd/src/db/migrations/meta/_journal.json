@@ -36,6 +36,13 @@
 			"when": 1790609941968,
 			"tag": "0004_elastic_pool_and_costs",
 			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1790613933778,
+			"tag": "0005_stored_key_secrets",
+			"breakpoints": true
 		}
 	]
 }

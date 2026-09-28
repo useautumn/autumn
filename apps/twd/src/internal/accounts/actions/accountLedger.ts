@@ -22,7 +22,7 @@ import { enqueueNukeJobs } from "./enqueueNukeJobs.ts";
 export type ClaimedAccount = {
 	accountId: string;
 	platformAccountId: string;
-	/** Secret for this account's platform key, resolved from TW_V3_KEYS. */
+	/** Secret for this account's platform key, stored in twd. */
 	secretKey: string;
 };
 

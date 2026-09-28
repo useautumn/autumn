@@ -14,6 +14,7 @@ import {
 	CreateApiKeyResponse,
 	type CreateRunBody,
 	EnqueueResponse,
+	ImportKeysResponse,
 	Job,
 	KeysOverview,
 	Me,
@@ -251,6 +252,33 @@ export const useProbeKeys = () => {
 		mutationFn: () =>
 			api({ method: "POST", path: "/keys/probe", schema: KeysOverview }),
 		onSuccess: (data) => qc.setQueryData(qk.keys, data),
+	});
+};
+
+export const useImportKeys = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (text: string) =>
+			api({
+				method: "POST",
+				path: "/keys/import",
+				body: { text },
+				schema: ImportKeysResponse,
+			}),
+		onSuccess: () => qc.invalidateQueries({ queryKey: qk.keys }),
+	});
+};
+
+export const useRemoveKey = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (platformAccountId: string) =>
+			api({
+				method: "DELETE",
+				path: `/keys/${encodeURIComponent(platformAccountId)}`,
+				schema: z.object({ platformAccountId: z.string() }),
+			}),
+		onSuccess: () => qc.invalidateQueries({ queryKey: qk.keys }),
 	});
 };
 

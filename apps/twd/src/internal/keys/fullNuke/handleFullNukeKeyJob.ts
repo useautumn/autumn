@@ -19,7 +19,7 @@ import {
 } from "../actions/connectWebhooks.ts";
 import { DEFAULT_FULL_NUKE_TARGET_PER_KEY } from "../actions/enqueueFullNukeKey.ts";
 import { resolveKeySecret } from "../actions/resolveKeySecret.ts";
-import { syncKeysFromEnv } from "../actions/syncKeysFromEnv.ts";
+import { syncKeys } from "../actions/syncKeys.ts";
 import { topUpAccounts } from "../actions/topUpAccounts.ts";
 import {
 	lockKeyForFullNuke,
@@ -222,7 +222,7 @@ export const handleFullNukeKeyJob: JobHandler = async ({
 		}
 
 		await enter("probe");
-		await syncKeysFromEnv({ ctx });
+		await syncKeys({ ctx });
 		await releaseFullNukeLock({ db: ctx.db, platformAccountId });
 	} catch (error) {
 		if (!(error instanceof PermanentJobError)) {

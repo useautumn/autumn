@@ -6,7 +6,10 @@ const TwdEnvSchema = z.object({
 	/** Public origin of this daemon; Stripe Connect webhooks + worker callbacks target it. */
 	TWD_PUBLIC_URL: z.string().url().default("http://localhost:4100"),
 	/** Comma-separated Stripe platform secret keys. The ONLY key source. */
+	/** Optional bootstrap: keys here are imported into the DB on boot (additive). */
 	TW_V3_KEYS: z.string().default(""),
+	/** Encrypts Stripe keys stored in the DB. Changing it makes stored keys unreadable. */
+	TWD_KEY_ENCRYPTION_SECRET: z.string().min(32).optional(),
 	GOOGLE_CLIENT_ID: z.string().default(""),
 	GOOGLE_CLIENT_SECRET: z.string().default(""),
 	/** HMAC secret for session cookies. */

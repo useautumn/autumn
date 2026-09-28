@@ -1280,6 +1280,40 @@ export const handle = ({
 		}
 	}
 
+	if (route === "POST /keys/import") {
+		const text = String((body as { text?: string } | undefined)?.text ?? "");
+		const parsed = [
+			...new Set(
+				text.split(/[\s,;]+/).filter((t) => /^(sk|rk)_test_\w+$/.test(t)),
+			),
+		];
+		return ok({
+			parsed: parsed.length,
+			added: parsed.length,
+			alreadyPresent: 0,
+			usable: Math.max(0, parsed.length - 1),
+			unusable: parsed.length
+				? [
+						{
+							keyHint: `${parsed[0].slice(0, 8)}…${parsed[0].slice(-4)}`,
+							reason: "Connect is not enabled on this platform account",
+						},
+					]
+				: [],
+		});
+	}
+	if (method === "DELETE" && seg[0] === "keys" && seg[1]) {
+		const k = keys.find(
+			(x) => x.platformAccountId === decodeURIComponent(seg[1]),
+		);
+		if (k)
+			Object.assign(k, {
+				present: false,
+				usable: false,
+				unusableReason: "removed from twd",
+			});
+		return ok({ platformAccountId: decodeURIComponent(seg[1]) });
+	}
 	if (route === "POST /keys/probe") {
 		for (const k of keys) k.probedAt = iso(Date.now());
 		return ok(keysOverview());

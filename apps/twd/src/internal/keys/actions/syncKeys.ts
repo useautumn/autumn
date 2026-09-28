@@ -2,9 +2,10 @@ import {
 	STRIPE_REQUEST_OPTIONS,
 	withStripeRequestSlot,
 } from "@tw/helpers/stripeRequestBudget.ts";
-import { and, eq, like, notInArray, sql } from "drizzle-orm";
+import { and, eq, isNotNull, like, sql } from "drizzle-orm";
 import pLimit from "p-limit";
 import { stripeKeys } from "../../../db/schema/keys.ts";
+import { openSecret, sealSecret } from "../../../lib/secretBox.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import {
 	forgetKeySecretsExcept,
@@ -68,29 +69,60 @@ const probeKey = async ({ secret }: { secret: string }) => {
 
 let inFlight: Promise<void> | undefined;
 
-/**
- * Resolve + probe every TW_V3_KEYS key, upsert stripe_keys by platform account,
- * mark vanished keys present=false, refresh the in-memory secret map.
- */
-export const syncKeysFromEnv = ({
-	ctx,
-}: {
-	ctx: TwdContext;
-}): Promise<void> => {
-	inFlight ??= runSync({ ctx }).finally(() => {
-		inFlight = undefined;
-	});
+/** Stored keys (decrypted) plus any TW_V3_KEYS bootstrap keys, deduped. */
+export const loadKnownSecrets = async ({ ctx }: { ctx: TwdContext }) => {
+	const rows = await ctx.db
+		.select({ sealed: stripeKeys.secretCiphertext })
+		.from(stripeKeys)
+		.where(isNotNull(stripeKeys.secretCiphertext));
+	const stored = rows.flatMap(({ sealed }) =>
+		sealed ? [openSecret({ sealed })] : [],
+	);
+	return parseKeyList({ text: [ctx.env.TW_V3_KEYS, ...stored].join(",") });
+};
+
+/** Any separator (commas, whitespace, newlines); only `sk_`/`rk_` tokens, deduped. */
+export const parseKeyList = ({ text }: { text: string }) => [
+	...new Set(
+		text
+			.split(/[\s,;]+/)
+			.filter((token) => /^(sk|rk)_(test|live)_\w+$/.test(token)),
+	),
+];
+
+/** Probe + upsert every known key (DB + TW_V3_KEYS) and refresh the in-memory secret map. */
+export const syncKeys = ({ ctx }: { ctx: TwdContext }): Promise<void> => {
+	inFlight ??= loadKnownSecrets({ ctx })
+		.then(async (secrets) => {
+			const { resolvedIds } = await probeAndStoreKeys({ ctx, secrets });
+			forgetKeySecretsExcept({ platformAccountIds: resolvedIds });
+		})
+		.finally(() => {
+			inFlight = undefined;
+		});
 	return inFlight;
 };
 
-const runSync = async ({ ctx }: { ctx: TwdContext }): Promise<void> => {
-	const secrets = [
-		...new Set(
-			ctx.env.TW_V3_KEYS.split(",")
-				.map((key) => key.trim())
-				.filter(Boolean),
-		),
-	];
+const sealIfConfigured = ({
+	ctx,
+	secret,
+}: {
+	ctx: TwdContext;
+	secret: string;
+}) =>
+	ctx.env.TWD_KEY_ENCRYPTION_SECRET ? sealSecret({ plaintext: secret }) : null;
+
+/** Probe the given secrets and upsert their rows (secret stored encrypted). */
+export const probeAndStoreKeys = async ({
+	ctx,
+	secrets,
+	storeUnresolved = true,
+}: {
+	ctx: TwdContext;
+	secrets: string[];
+	/** false: keys Stripe won't authenticate are reported, not stored. */
+	storeUnresolved?: boolean;
+}) => {
 	const limit = pLimit(PROBE_CONCURRENCY);
 	const probed = await Promise.all(
 		secrets.map((secret) =>
@@ -101,6 +133,7 @@ const runSync = async ({ ctx }: { ctx: TwdContext }): Promise<void> => {
 	const resolvedIds = new Set<string>();
 	const now = new Date();
 	for (const result of probed) {
+		if (!storeUnresolved && !result.platformAccountId) continue;
 		const keyHash = hashKey({ secret: result.secret });
 		const platformAccountId =
 			result.platformAccountId ??
@@ -112,6 +145,7 @@ const runSync = async ({ ctx }: { ctx: TwdContext }): Promise<void> => {
 		const fields = {
 			keyHash,
 			keyHint: keyHint({ secret: result.secret }),
+			secretCiphertext: sealIfConfigured({ ctx, secret: result.secret }),
 			displayName: result.displayName,
 			usable: result.unusableReason === null,
 			unusableReason: result.unusableReason,
@@ -151,20 +185,5 @@ const runSync = async ({ ctx }: { ctx: TwdContext }): Promise<void> => {
 			});
 		}
 	}
-
-	const presentHashes = secrets.map((secret) => hashKey({ secret }));
-	await ctx.db
-		.update(stripeKeys)
-		.set({
-			present: false,
-			usable: false,
-			unusableReason: "key no longer in TW_V3_KEYS",
-			updatedAt: now,
-		})
-		.where(
-			presentHashes.length
-				? notInArray(stripeKeys.keyHash, presentHashes)
-				: sql`true`,
-		);
-	forgetKeySecretsExcept({ platformAccountIds: resolvedIds });
+	return { probed, resolvedIds };
 };

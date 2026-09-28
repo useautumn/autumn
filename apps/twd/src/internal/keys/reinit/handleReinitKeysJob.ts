@@ -10,7 +10,7 @@ import {
 	registerConnectWebhook,
 } from "../actions/connectWebhooks.ts";
 import { discoverPoolAccounts } from "../actions/discoverPoolAccounts.ts";
-import { syncKeysFromEnv } from "../actions/syncKeysFromEnv.ts";
+import { syncKeys } from "../actions/syncKeys.ts";
 import { topUpAccounts } from "../actions/topUpAccounts.ts";
 import { knownKeySecrets, peekKeySecret } from "../keySecrets.ts";
 import { isFullNukeLockReason } from "../repos/fullNukeLockRepo.ts";
@@ -69,7 +69,7 @@ const countBlockers = async ({ ctx }: { ctx: TwdContext }) => {
 
 /**
  * payload: { targetPerKey? }. Gate draining → wait for live runs + nukes → wipe webhooks on every
- * TW_V3_KEYS key → one Connect webhook per usable key → discover/top-up accounts → re-probe → open.
+ * stored key → one Connect webhook per usable key → discover/top-up accounts → re-probe → open.
  */
 export const handleReinitKeysJob: JobHandler = async ({
 	ctx,
@@ -99,10 +99,10 @@ export const handleReinitKeysJob: JobHandler = async ({
 	});
 
 	try {
-		await syncKeysFromEnv({ ctx });
+		await syncKeys({ ctx });
 		if (knownKeySecrets().length === 0) {
 			throw new Error(
-				"no TW_V3_KEYS key resolves to a Stripe account — ask a twd admin to fix TW_V3_KEYS",
+				"no stored key resolves to a Stripe account — import keys on the Stripe keys page",
 			);
 		}
 
@@ -180,14 +180,14 @@ export const handleReinitKeysJob: JobHandler = async ({
 		}
 
 		await enter("probe");
-		await syncKeysFromEnv({ ctx });
+		await syncKeys({ ctx });
 		const [usable] = await ctx.db
 			.select({ n: count() })
 			.from(stripeKeys)
 			.where(and(eq(stripeKeys.usable, true), eq(stripeKeys.present, true)));
 		if (usable.n === 0) {
 			throw new Error(
-				"re-probe found no usable keys (Connect / v2 Accounts API) — ask a twd admin to check TW_V3_KEYS",
+				"re-probe found no usable keys (Connect / v2 Accounts API) — check the keys on the Stripe keys page",
 			);
 		}
 	} catch (error) {

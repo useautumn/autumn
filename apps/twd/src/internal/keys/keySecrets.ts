@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-/** platformAccountId → secret, filled by syncKeysFromEnv. Secrets never touch the DB. */
+/** platformAccountId → secret, filled by syncKeys. Secrets never touch the DB. */
 const secretsByPlatformAccount = new Map<string, string>();
 
 export const hashKey = ({ secret }: { secret: string }): string =>

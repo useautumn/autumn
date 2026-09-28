@@ -319,7 +319,7 @@ export const handleSwarmJob: JobHandler = async ({
 			throw new Error(
 				files.length === 0
 					? "run has no planned files"
-					: "no usable Stripe keys — ask a twd admin to fix TW_V3_KEYS / run POST /keys/reinit",
+					: "no usable Stripe keys — import keys on the Stripe keys page, then Re-initialise",
 			);
 		}
 		await waitForWarm({ ctx, run, signal: abort.signal });

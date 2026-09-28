@@ -33,7 +33,9 @@ dashboard, the `bun tw` thin client, and agents.
   warmup, runner, parser, Stripe budget) is reused from `scripts/tw`. A swarm
   runs in a **child process** (`internal/runs/swarmProcess/`) because
   `scripts/tw` keeps module-level state (hub, TUI store, registry).
-- **Keys come only from `TW_V3_KEYS`.** A key is identified by its platform
+- **Keys live in the DB**, imported by pasting on the Stripe keys page (additive, deduped) and
+  stored AES-256-GCM under `TWD_KEY_ENCRYPTION_SECRET`. `TW_V3_KEYS` is an optional boot-time
+  import. **Legacy note:** keys used to come only from `TW_V3_KEYS`. A key is identified by its platform
   account id (`keys.platform_account_id`), never by list position.
 - **Account ledger:** `clean → in_use → nuking → clean`. No reservations: runs
   get accounts implicitly (see Allocation).

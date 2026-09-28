@@ -37,9 +37,9 @@ export const enqueueFullNukeKey = async ({
 		throw new TwdError({
 			status: 409,
 			code: "key_missing",
-			message: `The key for ${platformAccountId} is no longer in TW_V3_KEYS.`,
+			message: `The key for ${platformAccountId} is no longer stored in twd.`,
 			next: "Nothing to nuke with; POST /keys/probe after the key is restored.",
-			escalate: `Ask a twd admin to add the key for ${platformAccountId} back to TW_V3_KEYS.`,
+			escalate: `Ask a twd admin to re-import the key for ${platformAccountId} on the Stripe keys page.`,
 		});
 	}
 	const gate = await getKeyGate({ db: ctx.db });

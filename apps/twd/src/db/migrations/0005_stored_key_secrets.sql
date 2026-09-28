@@ -1,0 +1,1 @@
+ALTER TABLE "stripe_keys" ADD COLUMN "secret_ciphertext" text;
