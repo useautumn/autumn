@@ -1,7 +1,7 @@
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { PlanScopeGroups } from "./tray/PlanScopeGroups";
-import { PlanSection, PlanSectionTitle } from "./tray/PlanSection";
+import { PlanSectionTitle } from "./tray/PlanSection";
 import { PlanTrayAddRow } from "./tray/PlanTrayAddRow";
 import { UnscheduledPlanRow } from "./UnscheduledPlanRow";
 
@@ -15,30 +15,29 @@ export function CustomerStateUnscheduledPlans() {
 	if (!canMakeUnscheduled && unscheduledPlans.length === 0) return null;
 
 	return (
-		<PlanSection
-			header={
-				<PlanSectionTitle
-					title="Ongoing plans"
-					hint="Billed now & kept across every phase"
+		<div className="flex flex-col gap-1.5">
+			<PlanSectionTitle
+				title="Ongoing plans"
+				hint="Billed now & kept across every phase"
+			/>
+			<div className="flex flex-col gap-1">
+				<PlanScopeGroups
+					plans={unscheduledPlans}
+					showHeaders={hasEntities}
+					renderPlan={(planIndex) => (
+						<UnscheduledPlanRow
+							key={`unscheduled-${planIndex}-${unscheduledPlans[planIndex]?.productId || "empty"}`}
+							planIndex={planIndex}
+						/>
+					)}
 				/>
-			}
-		>
-			<PlanScopeGroups
-				plans={unscheduledPlans}
-				showHeaders={hasEntities}
-				renderPlan={(planIndex) => (
-					<UnscheduledPlanRow
-						key={`unscheduled-${planIndex}-${unscheduledPlans[planIndex]?.productId || "empty"}`}
-						planIndex={planIndex}
+				{canMakeUnscheduled && (
+					<PlanTrayAddRow
+						label="Add ongoing plan"
+						onClick={handleAddUnscheduledPlan}
 					/>
 				)}
-			/>
-			{canMakeUnscheduled && (
-				<PlanTrayAddRow
-					label="Add ongoing plan"
-					onClick={handleAddUnscheduledPlan}
-				/>
-			)}
-		</PlanSection>
+			</div>
+		</div>
 	);
 }

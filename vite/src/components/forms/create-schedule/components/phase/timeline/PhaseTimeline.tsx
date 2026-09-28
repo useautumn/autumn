@@ -1,44 +1,22 @@
 import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
-import { getCurrentCreateSchedulePhaseIndex } from "@/components/forms/customer-state/customerStateSchema";
 import { SchedulePhaseCard } from "../../SchedulePhaseCard";
 import { AddPhaseButton } from "../AddPhaseButton";
-import { PhaseTimelineRail } from "./PhaseTimelineRail";
-import { PhaseTimelineRow } from "./PhaseTimelineRow";
 
-const MIN_PHASES_FOR_RAIL = 2;
-
-/** Phases stacked in order, joined by a rail once there's more than one. */
 export function PhaseTimeline() {
-	const { formValues, nowMs, handleAddPhase } = useCustomerStateContext();
-	const { phases } = formValues;
-
-	const showsRail = phases.length >= MIN_PHASES_FOR_RAIL;
-	const currentPhaseIndex =
-		getCurrentCreateSchedulePhaseIndex({ phases, nowMs }) ?? 0;
-	const lastPhaseIndex = phases.length - 1;
+	const { formValues, handleAddPhase } = useCustomerStateContext();
 
 	return (
-		<div className="flex flex-col">
-			{phases.map((_phase, phaseIndex) => (
-				<PhaseTimelineRow
-					key={`phase-${phaseIndex}`}
-					showsRail={showsRail}
-					className="group/phase-row"
-					rail={
-						<PhaseTimelineRail
-							phaseIndex={phaseIndex}
-							isCurrent={phaseIndex === currentPhaseIndex}
-							isLast={phaseIndex === lastPhaseIndex}
-							connectsToNext
-						/>
-					}
-				>
-					<div className="pb-5">
-						<SchedulePhaseCard phaseIndex={phaseIndex} />
-					</div>
-				</PhaseTimelineRow>
+		<div className="relative flex flex-col">
+			<span
+				aria-hidden
+				className="absolute top-4 bottom-4 left-4 w-px -translate-x-1/2 bg-border"
+			/>
+			{formValues.phases.map((_phase, phaseIndex) => (
+				<div key={`phase-${phaseIndex}`} className="pb-5">
+					<SchedulePhaseCard phaseIndex={phaseIndex} />
+				</div>
 			))}
-			<AddPhaseButton alignsWithRail={showsRail} onClick={handleAddPhase} />
+			<AddPhaseButton onClick={handleAddPhase} />
 		</div>
 	);
 }

@@ -27,12 +27,14 @@ export function PhaseHeader({ phaseIndex }: { phaseIndex: number }) {
 	return (
 		<div>
 			<div className={PLAN_SECTION_HEADER_CLASS}>
-				<PhaseDateControl
-					phaseIndex={phaseIndex}
-					hasStarted={hasStarted}
-					isLocked={isLocked}
-					hasTimingError={timingError !== null}
-				/>
+				<div className="relative z-10">
+					<PhaseDateControl
+						phaseIndex={phaseIndex}
+						hasStarted={hasStarted}
+						isLocked={isLocked}
+						hasTimingError={timingError !== null}
+					/>
+				</div>
 				<span className="flex-1" />
 				{recurringTotal && (
 					<span className="tabular-nums text-tertiary-foreground">

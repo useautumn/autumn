@@ -1,19 +1,17 @@
-import { BuildingsIcon, UserIcon } from "@phosphor-icons/react";
 import { Fragment, type ReactNode } from "react";
+import { TABLE_TRAY_SURFACE_CLASS } from "@/components/general/table";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 
-function PlanScopeGroupHeader({ entityId }: { entityId: string | null }) {
+function PlanScopeLabel({ entityId }: { entityId: string | null }) {
 	const { selectedEntity } = useScopeEntitySearch({
 		selectedEntityId: entityId ?? undefined,
 	});
-	const Icon = entityId ? BuildingsIcon : UserIcon;
 	const label = entityId ? selectedEntity?.name || entityId : "Customer-level";
 
 	return (
-		<div className="flex h-8 items-center gap-1.5 border-b border-table-row-divider bg-table-tray/50 px-3 text-xs font-medium text-muted-foreground">
-			<Icon className="shrink-0 text-tertiary-foreground" size={12} />
-			<span className="truncate">{label}</span>
-		</div>
+		<p className="truncate px-2 pt-1.5 text-xs font-medium text-tertiary-foreground">
+			{label}
+		</p>
 	);
 }
 
@@ -30,8 +28,8 @@ const groupPlanIndexesByScope = ({ plans }: { plans: ScopedPlan[] }) => {
 };
 
 /**
- * Plan rows grouped under a header per customer or entity scope. Rows still
- * picking a plan stay below the groups, so choosing their scope doesn't move them.
+ * One surface of plan rows per customer or entity scope. Rows still picking a
+ * plan get their own surface below, so choosing their scope doesn't move them.
  */
 export function PlanScopeGroups({
 	plans,
@@ -42,7 +40,15 @@ export function PlanScopeGroups({
 	showHeaders: boolean;
 	renderPlan: (planIndex: number) => ReactNode;
 }) {
-	if (!showHeaders) return plans.map((_, planIndex) => renderPlan(planIndex));
+	if (plans.length === 0) return null;
+
+	if (!showHeaders) {
+		return (
+			<div className={TABLE_TRAY_SURFACE_CLASS}>
+				{plans.map((_, planIndex) => renderPlan(planIndex))}
+			</div>
+		);
+	}
 
 	const pickerPlanIndexes = [...plans.keys()].filter(
 		(planIndex) => !plans[planIndex]?.productId,
@@ -52,11 +58,17 @@ export function PlanScopeGroups({
 		<>
 			{groupPlanIndexesByScope({ plans }).map(([entityId, planIndexes]) => (
 				<Fragment key={entityId ?? "customer"}>
-					<PlanScopeGroupHeader entityId={entityId} />
-					{planIndexes.map(renderPlan)}
+					<PlanScopeLabel entityId={entityId} />
+					<div className={TABLE_TRAY_SURFACE_CLASS}>
+						{planIndexes.map(renderPlan)}
+					</div>
 				</Fragment>
 			))}
-			{pickerPlanIndexes.map(renderPlan)}
+			{pickerPlanIndexes.length > 0 && (
+				<div className={TABLE_TRAY_SURFACE_CLASS}>
+					{pickerPlanIndexes.map(renderPlan)}
+				</div>
+			)}
 		</>
 	);
 }

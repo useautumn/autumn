@@ -5,7 +5,6 @@ import { useCustomerStateContext } from "../CustomerStateProvider";
 import { getUsedGroupKeys } from "../customerStateUtils";
 import { CustomerStatePlanRow } from "./CustomerStatePlanRow";
 import { PlanScopeGroups } from "./tray/PlanScopeGroups";
-import { PlanSection } from "./tray/PlanSection";
 import { PlanTrayAddRow } from "./tray/PlanTrayAddRow";
 
 /** A phase's declared plans grouped by scope, closed by "Add plan". */
@@ -35,23 +34,26 @@ export function CustomerStatePhasePlans({
 		);
 
 	return (
-		<PlanSection header={header}>
-			<PlanScopeGroups
-				plans={phase.plans}
-				showHeaders={hasEntities}
-				renderPlan={(planIndex) => (
-					<CustomerStatePlanRow
-						key={`plan-${phaseIndex}-${planIndex}-${phase.plans[planIndex]?.productId || "empty"}`}
-						phaseIndex={phaseIndex}
-						planIndex={planIndex}
-					/>
-				)}
-			/>
-			<PlanTrayAddRow
-				label="Add plan"
-				onClick={() => handleAddPlan({ phaseIndex })}
-				disabled={isLocked || (!hasEntities && allPlansAdded)}
-			/>
-		</PlanSection>
+		<div className="flex flex-col gap-1.5">
+			{header}
+			<div className="flex flex-col gap-1 pl-8.5">
+				<PlanScopeGroups
+					plans={phase.plans}
+					showHeaders={hasEntities}
+					renderPlan={(planIndex) => (
+						<CustomerStatePlanRow
+							key={`plan-${phaseIndex}-${planIndex}-${phase.plans[planIndex]?.productId || "empty"}`}
+							phaseIndex={phaseIndex}
+							planIndex={planIndex}
+						/>
+					)}
+				/>
+				<PlanTrayAddRow
+					label="Add plan"
+					onClick={() => handleAddPlan({ phaseIndex })}
+					disabled={isLocked || (!hasEntities && allPlansAdded)}
+				/>
+			</div>
+		</div>
 	);
 }
