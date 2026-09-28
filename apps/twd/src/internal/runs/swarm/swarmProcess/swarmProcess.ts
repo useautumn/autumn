@@ -153,11 +153,24 @@ const main = async (init: SwarmInit) => {
 		status: WorkerState["status"],
 		file: string | null,
 	): WorkerState => ({ name, status, file, boot: bootOf.get(name) ?? null });
-	// Worker server output is chatty: coalesce per worker instead of one IPC message per chunk.
-	const outputBuffer = new Map<string, string>();
+	// Test and server output arrive as thousands of tiny chunks: coalesce per stream before IPC.
+	const outputBuffer = new Map<
+		string,
+		{ file: string | null; worker: string | null; text: string }
+	>();
+	const bufferOutput = (
+		file: string | null,
+		worker: string | null,
+		text: string,
+	) => {
+		const key = `${file}\u0000${worker}`;
+		const pending = outputBuffer.get(key);
+		if (pending) pending.text += text;
+		else outputBuffer.set(key, { file, worker, text });
+	};
 	const flushOutput = () => {
-		for (const [worker, text] of outputBuffer)
-			send({ type: "log", file: null, worker, text });
+		for (const { file, worker, text } of outputBuffer.values())
+			send({ type: "log", file, worker, text });
 		outputBuffer.clear();
 	};
 	const outputTimer = setInterval(flushOutput, OUTPUT_FLUSH_MS);
@@ -166,18 +179,14 @@ const main = async (init: SwarmInit) => {
 	const shardOf = new Map<string, Shard>();
 	onHubEvent((event) => {
 		if (event.type === "fileOutput") {
-			send({
-				type: "log",
-				file: toTestId({ absolutePath: event.file }),
-				worker: getWorkerOf(event.file) ?? null,
-				text: event.chunk,
-			});
+			bufferOutput(
+				toTestId({ absolutePath: event.file }),
+				getWorkerOf(event.file) ?? null,
+				event.chunk,
+			);
 		} else if (event.type === "workerOutput") {
 			boot.recordOutput(event.worker, event.chunk);
-			outputBuffer.set(
-				event.worker,
-				(outputBuffer.get(event.worker) ?? "") + event.chunk,
-			);
+			bufferOutput(null, event.worker, event.chunk);
 		} else if (event.type === "workerStatus") {
 			workerFile.delete(event.worker);
 			if (event.status === "ready") boot.mark(event.worker, "ready");
@@ -490,6 +499,7 @@ const main = async (init: SwarmInit) => {
 
 	const lastSent = new Map<string, string>();
 	const flushFiles = () => {
+		flushOutput();
 		for (const tuiFile of getTuiState().files.values()) {
 			const { file, final } = toRunFile(tuiFile);
 			const key = JSON.stringify(file);

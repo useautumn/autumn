@@ -53,45 +53,38 @@ const matches = (run: RunSummary, filter: RunsFilter) =>
 const byNewest = (a: RunSummary, b: RunSummary) =>
 	Date.parse(b.createdAt) - Date.parse(a.createdAt);
 
-const applyRunEvent = (run: RunDetail, event: RunEvent): RunDetail => {
-	switch (event.type) {
-		case "status":
-			return {
-				...run,
-				status: event.status,
-				phase: event.phase,
-				finishedAt:
-					TERMINAL.has(event.status) && !run.finishedAt
-						? new Date().toISOString()
-						: run.finishedAt,
-			};
-		case "worker": {
-			const known = run.workers.some((w) => w.name === event.worker.name);
-			return {
-				...run,
-				workers: known
-					? run.workers.map((w) =>
-							w.name === event.worker.name ? event.worker : w,
-						)
-					: [...run.workers, event.worker],
-			};
+/** Folds a batch of events into one new RunDetail: O(events + workers + files), one render. */
+const applyRunEvents = (run: RunDetail, events: RunEvent[]): RunDetail => {
+	let { status, phase, finishedAt } = run;
+	const workers = new Map(run.workers.map((w) => [w.name, w]));
+	const files = new Map(run.files.map((f) => [f.file, f]));
+	let touchedFiles = false;
+	for (const event of events) {
+		if (event.type === "status") {
+			status = event.status;
+			phase = event.phase;
+			if (TERMINAL.has(status) && !finishedAt)
+				finishedAt = new Date().toISOString();
+		} else if (event.type === "worker") {
+			workers.set(event.worker.name, event.worker);
+		} else if (event.type === "file") {
+			files.set(event.file.file, event.file);
+			touchedFiles = true;
 		}
-		case "file": {
-			const files = upsert(
-				run.files,
-				event.file,
-				(f) => f.file === event.file.file,
-			);
-			return {
-				...run,
-				files,
-				passed: count(files, "passed"),
-				failed: count(files, "failed") + count(files, "crashed"),
-			};
-		}
-		case "log":
-			return run;
 	}
+	const fileList = touchedFiles ? [...files.values()] : run.files;
+	return {
+		...run,
+		status,
+		phase,
+		finishedAt,
+		workers: [...workers.values()],
+		files: fileList,
+		...(touchedFiles && {
+			passed: count(fileList, "passed"),
+			failed: count(fileList, "failed") + count(fileList, "crashed"),
+		}),
+	};
 };
 
 /** Live-patches cached run pages: in-place updates everywhere; entries and exits only on first pages. */
@@ -141,6 +134,64 @@ const applySnapshot = (
 	if (topic === "warm") return qc.invalidateQueries({ queryKey: qk.branches });
 };
 
+type RunBatch = { events: RunEvent[]; lines: LogLine[] };
+const runBatches = new Map<string, RunBatch>();
+const FLUSH_MS = 150;
+let flushTimer: ReturnType<typeof setTimeout> | undefined;
+let flushQc: QueryClient | undefined;
+
+const queueRunEvent = (runId: string, event: RunEvent) => {
+	let batch = runBatches.get(runId);
+	if (!batch) {
+		batch = { events: [], lines: [] };
+		runBatches.set(runId, batch);
+	}
+	if (event.type === "log")
+		batch.lines.push({
+			file: event.file,
+			worker: event.worker,
+			text: event.text,
+		});
+	else batch.events.push(event);
+	flushTimer ??= setTimeout(flushRunBatches, FLUSH_MS);
+};
+
+/** Busy runs emit thousands of events a second; applying them per frame-ish batch keeps the UI current. */
+const flushRunBatches = () => {
+	flushTimer = undefined;
+	const qc = flushQc;
+	if (!qc) return;
+	for (const [runId, { events, lines }] of runBatches) {
+		if (lines.length) {
+			qc.setQueryData<LogLine[]>(qk.liveLog(runId), (prev = []) =>
+				[...prev, ...lines].slice(-MAX_LOG_LINES),
+			);
+			const byFile = new Map<string, string[]>();
+			for (const line of lines)
+				if (line.file)
+					byFile.set(line.file, [...(byFile.get(line.file) ?? []), line.text]);
+			for (const [file, texts] of byFile)
+				qc.setQueryData<string>(qk.fileLog(runId, file), (log) =>
+					log === undefined ? log : `${log}\n${texts.join("\n")}`,
+				);
+		}
+		if (events.length) {
+			qc.setQueryData<RunDetail>(qk.run(runId), (run) =>
+				run ? applyRunEvents(run, events) : run,
+			);
+			const settled = new Set(
+				events.flatMap((e) => (e.type === "file" ? [e.file.file] : [])),
+			);
+			for (const file of settled)
+				qc.invalidateQueries({
+					queryKey: qk.fileLog(runId, file),
+					refetchType: "active",
+				});
+		}
+	}
+	runBatches.clear();
+};
+
 const applyEvent = (qc: QueryClient, event: LiveEvent) => {
 	switch (event.type) {
 		case "run.updated": {
@@ -151,29 +202,9 @@ const applyEvent = (qc: QueryClient, event: LiveEvent) => {
 			);
 			return;
 		}
-		case "run.event": {
-			const { runId, event: e } = event;
-			if (e.type === "log") {
-				qc.setQueryData<LogLine[]>(qk.liveLog(runId), (prev = []) => [
-					...prev.slice(-(MAX_LOG_LINES - 1)),
-					{ file: e.file, worker: e.worker, text: e.text },
-				]);
-				if (e.file)
-					qc.setQueryData<string>(qk.fileLog(runId, e.file), (log) =>
-						log === undefined ? log : `${log}\n${e.text}`,
-					);
-				return;
-			}
-			qc.setQueryData<RunDetail>(qk.run(runId), (run) =>
-				run ? applyRunEvent(run, e) : run,
-			);
-			if (e.type === "file")
-				qc.invalidateQueries({
-					queryKey: qk.fileLog(runId, e.file.file),
-					refetchType: "active",
-				});
+		case "run.event":
+			queueRunEvent(event.runId, event.event);
 			return;
-		}
 		case "job.updated":
 			qc.setQueryData<Job[]>(qk.jobs, (jobs) =>
 				jobs ? upsert(jobs, event.job, (j) => j.id === event.job.id) : jobs,
@@ -208,7 +239,11 @@ const applyEvent = (qc: QueryClient, event: LiveEvent) => {
 /** Routes every socket message into the react-query cache. Call once. */
 export const connectLiveCache = (qc: QueryClient) =>
 	liveSocket.listen((msg) => {
-		if (msg.type === "snapshot") applySnapshot(qc, msg.topic, msg.data);
+		flushQc = qc;
+		if (msg.type === "snapshot") {
+			flushRunBatches();
+			applySnapshot(qc, msg.topic, msg.data);
+		}
 		if (msg.type === "event") applyEvent(qc, msg.event);
 		if (msg.type === "error")
 			console.warn("twd live:", msg.error.code, msg.error.message);
