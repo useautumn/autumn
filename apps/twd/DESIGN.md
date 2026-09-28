@@ -27,6 +27,7 @@ dashboard, the `bun tw` thin client, and agents.
   | `swarm`       | `swarm:<runId>`        |
   | `nuke`        | `nuke:<accountId>` (one row per account in the set) |
   | `reinit_keys` | `reinit_keys`          |
+| `full_nuke_key` | `full_nuke_key:<platformAccountId>` |
 
 - **John's fixes are untouched.** Everything inside the sandbox (image, boot,
   warmup, runner, parser, Stripe budget) is reused from `scripts/tw`. A swarm

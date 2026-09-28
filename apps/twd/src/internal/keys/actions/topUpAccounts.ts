@@ -7,25 +7,35 @@ import { and, count, eq, ne } from "drizzle-orm";
 import { stripeAccounts } from "../../../db/schema/accounts.ts";
 import { stripeKeys } from "../../../db/schema/keys.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
-import { POOL_STATE_TAG, POOL_TAG, stripeForKey } from "../stripeForKey.ts";
+import { stripeForKey } from "../stripeForKey.ts";
 import { resolveKeySecret } from "./resolveKeySecret.ts";
+import { twdPoolMetadata } from "./setTwdPoolState.ts";
 
 const POOL_ORG_NAME = "Unit Test Org (twd pool)";
 const POOL_ORG_ID = "twd_pool";
 
 /** Same v2 create body as scripts/tw createSandboxSubAccount (that one pulls the server graph).
- * Creates clean pool accounts until every usable key holds `targetPerKey` non-broken accounts. */
+ * Tops every usable key (or just `platformAccountId`, locked or not) up to `targetPerKey` non-broken accounts. */
 export const topUpAccounts = async ({
 	ctx,
 	targetPerKey,
+	platformAccountId: onlyKey,
 }: {
 	ctx: TwdContext;
 	targetPerKey: number;
+	platformAccountId?: string;
 }): Promise<{ created: number }> => {
 	const keys = await ctx.db
 		.select({ platformAccountId: stripeKeys.platformAccountId })
 		.from(stripeKeys)
-		.where(and(eq(stripeKeys.usable, true), eq(stripeKeys.present, true)));
+		.where(
+			onlyKey
+				? and(
+						eq(stripeKeys.platformAccountId, onlyKey),
+						eq(stripeKeys.present, true),
+					)
+				: and(eq(stripeKeys.usable, true), eq(stripeKeys.present, true)),
+		);
 
 	let created = 0;
 	await Promise.all(
@@ -48,11 +58,10 @@ export const topUpAccounts = async ({
 								contact_email: ctx.actor?.email ?? "system@useautumn.com",
 								display_name: POOL_ORG_NAME,
 								dashboard: "full",
-								metadata: {
-									...stripeMetadata("twd", "pool", POOL_ORG_ID),
-									[POOL_TAG]: "1",
-									[POOL_STATE_TAG]: "clean",
-								},
+								metadata: twdPoolMetadata({
+									existing: stripeMetadata("twd", "pool", POOL_ORG_ID),
+									state: "clean",
+								}),
 								identity: { country: "us" },
 								configuration: { merchant: {} },
 								defaults: {

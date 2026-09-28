@@ -5,9 +5,12 @@ import {
 import { STRIPE_REQUEST_OPTIONS } from "@tw/helpers/stripeRequestBudget.ts";
 import Stripe from "stripe";
 
-/** Tag scripts/tw/helpers/stripePool.ts stamps on pool accounts; twd keeps it for legacy interop. */
-export const POOL_TAG = "autumn_tw_pool";
-export const POOL_STATE_TAG = "autumn_tw_pool_state";
+/** twd's own pool tags. Legacy `bun tw` claims anything tagged autumn_tw_pool, so twd never writes it. */
+export const TWD_POOL_TAG = "autumn_twd_pool";
+export const TWD_STATE_TAG = "autumn_twd_state";
+/** scripts/tw/helpers/stripePool.ts tags: discovery still adopts these, then strips them. */
+export const LEGACY_POOL_TAG = "autumn_tw_pool";
+export const LEGACY_POOL_STATE_TAG = "autumn_tw_pool_state";
 /** Same list scripts/tw registerConnectIngressWebhook subscribes to. */
 export const CONNECT_WEBHOOK_EVENTS = [
 	...MAIN_STRIPE_EVENT_TYPES,

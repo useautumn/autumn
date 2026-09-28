@@ -1,4 +1,4 @@
-import { count } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import type { AccountState } from "../../../db/schema/accounts.ts";
 import { stripeAccounts } from "../../../db/schema/accounts.ts";
 import type { TwdDb } from "../../../lib/getDb.ts";
@@ -48,4 +48,26 @@ export const countAccountsByKey = async ({
 		byKey.set(row.platformAccountId, counts);
 	}
 	return byKey;
+};
+
+export const HELD_ACCOUNT_STATES = ["in_use", "reserved"] as const;
+
+/** Accounts on one key held by a run or reservation. */
+export const countHeldAccountsOnKey = async ({
+	db,
+	platformAccountId,
+}: {
+	db: TwdDb;
+	platformAccountId: string;
+}): Promise<number> => {
+	const [held] = await db
+		.select({ n: count() })
+		.from(stripeAccounts)
+		.where(
+			and(
+				eq(stripeAccounts.platformAccountId, platformAccountId),
+				inArray(stripeAccounts.state, [...HELD_ACCOUNT_STATES]),
+			),
+		);
+	return held.n;
 };

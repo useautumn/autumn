@@ -1,7 +1,3 @@
-import {
-	STRIPE_REQUEST_OPTIONS,
-	withStripeRequestSlot,
-} from "@tw/helpers/stripeRequestBudget.ts";
 import { and, count, eq, inArray } from "drizzle-orm";
 import pLimit from "p-limit";
 import { jobs } from "../../../db/schema/jobs.ts";
@@ -9,12 +5,16 @@ import { stripeKeys } from "../../../db/schema/keys.ts";
 import { runs } from "../../../db/schema/runs.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import type { JobHandler } from "../../jobs/types/jobHandler.ts";
+import {
+	deleteAllWebhooks,
+	registerConnectWebhook,
+} from "../actions/connectWebhooks.ts";
 import { discoverPoolAccounts } from "../actions/discoverPoolAccounts.ts";
 import { syncKeysFromEnv } from "../actions/syncKeysFromEnv.ts";
 import { topUpAccounts } from "../actions/topUpAccounts.ts";
 import { knownKeySecrets, peekKeySecret } from "../keySecrets.ts";
+import { isFullNukeLockReason } from "../repos/fullNukeLockRepo.ts";
 import { setKeyGate } from "../repos/keyGateRepo.ts";
-import { CONNECT_WEBHOOK_EVENTS, stripeForKey } from "../stripeForKey.ts";
 
 const PHASES = [
 	"drain",
@@ -65,25 +65,6 @@ const countBlockers = async ({ ctx }: { ctx: TwdContext }) => {
 			),
 	]);
 	return { liveRuns: liveRuns.n, liveNukes: liveNukes.n };
-};
-
-/** Every endpoint on the key goes, not just ours: stale ones from old `bun tw` runs pile up to Stripe's cap. */
-const deleteAllWebhooks = async ({ secret }: { secret: string }) => {
-	const stripe = stripeForKey({ secret });
-	const ids: string[] = [];
-	for await (const endpoint of stripe.webhookEndpoints.list({ limit: 100 })) {
-		ids.push(endpoint.id);
-	}
-	for (const id of ids) {
-		try {
-			await withStripeRequestSlot(() =>
-				stripe.webhookEndpoints.del(id, undefined, STRIPE_REQUEST_OPTIONS),
-			);
-		} catch (error) {
-			if ((error as { code?: string }).code !== "resource_missing") throw error;
-		}
-	}
-	return ids.length;
 };
 
 /**
@@ -140,10 +121,10 @@ export const handleReinitKeysJob: JobHandler = async ({
 			}
 		}
 
-		const keys = await ctx.db
-			.select()
-			.from(stripeKeys)
-			.where(eq(stripeKeys.present, true));
+		// A full nuke owns its key's webhooks until it finishes.
+		const keys = (
+			await ctx.db.select().from(stripeKeys).where(eq(stripeKeys.present, true))
+		).filter((key) => !isFullNukeLockReason(key.unusableReason));
 
 		if (reached("delete_webhooks")) {
 			await enter("delete_webhooks");
@@ -154,11 +135,11 @@ export const handleReinitKeysJob: JobHandler = async ({
 							platformAccountId: key.platformAccountId,
 						});
 						if (!secret) return;
-						const deleted = await deleteAllWebhooks({ secret });
-						await ctx.db
-							.update(stripeKeys)
-							.set({ connectWebhookId: null, updatedAt: new Date() })
-							.where(eq(stripeKeys.platformAccountId, key.platformAccountId));
+						const deleted = await deleteAllWebhooks({
+							ctx,
+							platformAccountId: key.platformAccountId,
+							secret,
+						});
 						key.connectWebhookId = null;
 						ctx.logger.info("twd reinit_keys webhooks deleted", {
 							platformAccountId: key.platformAccountId,
@@ -171,7 +152,6 @@ export const handleReinitKeysJob: JobHandler = async ({
 
 		if (reached("register_webhooks")) {
 			await enter("register_webhooks");
-			const publicUrl = ctx.env.TWD_PUBLIC_URL.replace(/\/+$/, "");
 			await Promise.all(
 				keys.map((key) =>
 					keyLimit(async () => {
@@ -179,20 +159,11 @@ export const handleReinitKeysJob: JobHandler = async ({
 							platformAccountId: key.platformAccountId,
 						});
 						if (!key.usable || !secret || key.connectWebhookId) return;
-						const endpoint = await withStripeRequestSlot(() =>
-							stripeForKey({ secret }).webhookEndpoints.create(
-								{
-									url: `${publicUrl}/ingress/connect/sandbox`,
-									enabled_events: CONNECT_WEBHOOK_EVENTS,
-									connect: true,
-								},
-								STRIPE_REQUEST_OPTIONS,
-							),
-						);
-						await ctx.db
-							.update(stripeKeys)
-							.set({ connectWebhookId: endpoint.id, updatedAt: new Date() })
-							.where(eq(stripeKeys.platformAccountId, key.platformAccountId));
+						await registerConnectWebhook({
+							ctx,
+							platformAccountId: key.platformAccountId,
+							secret,
+						});
 					}),
 				),
 			);

@@ -12,28 +12,15 @@ import {
 	keyHint,
 	rememberKeySecret,
 } from "../keySecrets.ts";
+import {
+	fullNukeLocked,
+	unusableReasonFromProbe,
+} from "../repos/fullNukeLockRepo.ts";
+import { describeStripeError } from "../stripeErrors.ts";
 import { stripeForKey } from "../stripeForKey.ts";
 
 const PROBE_CONCURRENCY = 8;
 export const UNRESOLVED_KEY_PREFIX = "unresolved:";
-
-/** Same fields scripts/tw/probe-stripe-keys.ts prints for a failing key. */
-const describeStripeError = (error: unknown): string => {
-	const e = error as {
-		message?: string;
-		type?: string;
-		code?: string;
-		statusCode?: number;
-		requestId?: string;
-	};
-	const parts = [
-		e?.type && `type=${e.type}`,
-		e?.statusCode && `status=${e.statusCode}`,
-		e?.code && `code=${e.code}`,
-		e?.requestId && `req=${e.requestId}`,
-	].filter(Boolean);
-	return `${e?.message ?? String(error)}${parts.length ? ` [${parts.join(" ")}]` : ""}`;
-};
 
 /** GET /v1/account (who owns the key) + GET /v2/core/accounts (can it mint sub-accounts).
  * rawRequest, not v2 list(): list() leaves a dangling auto-pager rejection that would crash the daemon. */
@@ -70,16 +57,12 @@ const probeKey = async ({ secret }: { secret: string }) => {
 		v2Error = describeStripeError(error);
 	}
 
-	const unusableReason = retrieveError
-		? `account.retrieve failed: ${retrieveError}`
-		: v2Error
-			? `v2.core.accounts.list failed (Connect / v2 Accounts API not enabled?): ${v2Error}`
-			: null;
+	const probe = { retrieve: retrieveError ?? "ok", v2List: v2Error ?? "ok" };
 	return {
 		platformAccountId,
 		displayName,
-		unusableReason,
-		probe: { retrieve: retrieveError ?? "ok", v2List: v2Error ?? "ok" },
+		unusableReason: unusableReasonFromProbe({ probe }),
+		probe,
 	};
 };
 
@@ -152,7 +135,12 @@ const runSync = async ({ ctx }: { ctx: TwdContext }): Promise<void> => {
 				.values({ platformAccountId, ...fields })
 				.onConflictDoUpdate({
 					target: stripeKeys.platformAccountId,
-					set: fields,
+					// A running full nuke keeps its key locked until it releases it.
+					set: {
+						...fields,
+						usable: sql`case when ${fullNukeLocked} then false else ${fields.usable} end`,
+						unusableReason: sql`case when ${fullNukeLocked} then ${stripeKeys.unusableReason} else ${fields.unusableReason} end`,
+					},
 				});
 		});
 		if (result.unusableReason) {

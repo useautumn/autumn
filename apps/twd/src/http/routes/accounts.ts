@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { CreateReservationBody } from "../../api/contract.ts";
+import { forgetAccount } from "../../internal/accounts/actions/forgetAccount.ts";
 import { listAccounts } from "../../internal/accounts/actions/listAccounts.ts";
 import { nukeAccounts } from "../../internal/accounts/actions/nukeAccounts.ts";
 import {
@@ -82,4 +83,9 @@ export const accountsRoutes = new Hono<TwdHono>()
 			await nukeAccounts({ ctx: c.get("ctx"), accountIds: body.accountIds }),
 			202,
 		);
-	});
+	})
+	.delete("/accounts/:id", async (c) =>
+		c.json(
+			await forgetAccount({ ctx: c.get("ctx"), accountId: c.req.param("id") }),
+		),
+	);
