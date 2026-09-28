@@ -1,39 +1,28 @@
-import { PencilSimpleIcon, XIcon } from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react";
 import type {
 	CustomerStatePlan,
 	PlanLocation,
 } from "@/components/forms/customer-state/customerStateSchema";
 import {
 	type PlanRowAction,
-	PlanRowActionsMenu,
 	ROW_ACTION_ICON_SIZE,
 } from "@/components/forms/shared/PlanRowActionsMenu";
 import type { PlanRowScope } from "@/components/forms/shared/ScopedPlanRow";
 import { useCustomerStateContext } from "../../CustomerStateProvider";
 import { CustomerStatePlanQuantities } from "../CustomerStatePlanQuantities";
 import { NotFoundBadge } from "../NotFoundBadge";
+import { PlanRowControls } from "./PlanRowControls";
 import { PlanTrayLine } from "./PlanTrayLine";
 import { PlanTrayRow } from "./PlanTrayRow";
 
-/** Customize leads and remove closes the row menu, with location-specific actions between. */
+/** Location-specific actions first, remove last. */
 const buildRowActions = ({
-	onCustomize,
 	onRemove,
 	actions,
 }: {
-	onCustomize?: () => void;
 	onRemove?: () => void;
 	actions: PlanRowAction[];
 }): PlanRowAction[] => [
-	...(onCustomize
-		? [
-				{
-					label: "Customize",
-					icon: <PencilSimpleIcon size={ROW_ACTION_ICON_SIZE} />,
-					onSelect: onCustomize,
-				},
-			]
-		: []),
 	...actions,
 	...(onRemove
 		? [
@@ -76,8 +65,9 @@ export function SelectedPlanTrayRow({
 				scope={scope?.picker}
 				badge={<NotFoundBadge reasons={planNotFoundReasons(location)} />}
 				controls={
-					<PlanRowActionsMenu
-						actions={buildRowActions({ onCustomize, onRemove, actions })}
+					<PlanRowControls
+						onCustomize={onCustomize}
+						actions={buildRowActions({ onRemove, actions })}
 					/>
 				}
 			/>
