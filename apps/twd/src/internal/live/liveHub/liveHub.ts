@@ -36,6 +36,24 @@ const deliver = ({
 export const hasLiveSubscribers = ({ topic }: { topic: string }) =>
 	(subscribers.get(topic)?.size ?? 0) > 0;
 
+const lastPayloads = new Map<string, string>();
+
+/** Publishes only when the payload differs from the last one with the same key. */
+export const publishLiveIfChanged = ({
+	key,
+	topic,
+	event,
+}: {
+	key: string;
+	topic: string;
+	event: LiveEvent;
+}) => {
+	const payload = JSON.stringify(event);
+	if (lastPayloads.get(key) === payload) return;
+	lastPayloads.set(key, payload);
+	publishLive({ topic, event });
+};
+
 export const publishLive = ({
 	topic,
 	event,

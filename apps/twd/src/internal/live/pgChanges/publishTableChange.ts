@@ -6,7 +6,11 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { getCapacity } from "../../capacity/actions/getCapacity.ts";
 import { selectApiJobs } from "../../jobs/repos/selectApiJobs.ts";
 import { getRunWithEmail, toRunSummary } from "../../runs/repos/runsRepo.ts";
-import { hasLiveSubscribers, publishLive } from "../liveHub/liveHub.ts";
+import {
+	hasLiveSubscribers,
+	publishLive,
+	publishLiveIfChanged,
+} from "../liveHub/liveHub.ts";
 
 const CAPACITY_DEBOUNCE_MS = 250;
 let capacityTimer: ReturnType<typeof setTimeout> | undefined;
@@ -60,8 +64,8 @@ const publishRun = async ({
 		type: "run.updated" as const,
 		run: toRunSummary(await getRunWithEmail({ ctx, runId })),
 	};
-	publishLive({ topic: "runs", event });
-	publishLive({ topic: runTopic, event });
+	publishLiveIfChanged({ key: `runs:${runId}`, topic: "runs", event });
+	publishLiveIfChanged({ key: runTopic, topic: runTopic, event });
 };
 
 const publishJob = async ({
