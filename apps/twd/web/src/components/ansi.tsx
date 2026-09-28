@@ -11,22 +11,22 @@ type Style = {
 type Span = { text: string; style: Style };
 
 const COLORS: Record<number, string> = {
-	30: "var(--faint)",
-	31: "var(--bad)",
-	32: "var(--ok)",
-	33: "var(--warn)",
-	34: "var(--info)",
+	30: "var(--subtle)",
+	31: "#ef4444",
+	32: "#22c55e",
+	33: "#f59e0b",
+	34: "#3b82f6",
 	35: "#b877db",
 	36: "#3ea8b8",
-	37: "var(--fg)",
-	90: "var(--faint)",
-	91: "var(--bad)",
-	92: "var(--ok)",
-	93: "var(--warn)",
-	94: "var(--info)",
+	37: "var(--foreground)",
+	90: "var(--subtle)",
+	91: "#ef4444",
+	92: "#22c55e",
+	93: "#f59e0b",
+	94: "#3b82f6",
 	95: "#c792ea",
 	96: "#56c3d3",
-	97: "var(--fg)",
+	97: "var(--foreground)",
 };
 
 const applyCodes = (style: Style, codes: number[]): Style => {
@@ -87,7 +87,7 @@ export const AnsiLog = ({
 }) => (
 	<pre
 		className={cn(
-			"font-mono text-[12px] leading-[1.6] whitespace-pre-wrap break-words text-fg",
+			"font-mono text-[12px] leading-[1.6] whitespace-pre-wrap break-words text-foreground",
 			className,
 		)}
 	>

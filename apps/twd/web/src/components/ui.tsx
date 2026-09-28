@@ -1,71 +1,49 @@
-import { AlertDialog } from "@base-ui/react/alert-dialog";
-import { Checkbox as BaseCheckbox } from "@base-ui/react/checkbox";
-import { Dialog as BaseDialog } from "@base-ui/react/dialog";
-import { Radio } from "@base-ui/react/radio";
-import { RadioGroup } from "@base-ui/react/radio-group";
-import { Tooltip as BaseTooltip } from "@base-ui/react/tooltip";
-import { Check, Minus, X } from "lucide-react";
-import { type ComponentProps, type ReactNode, useId } from "react";
+import { GroupedTabButton } from "@autumn/ui/components/general/grouped-tab-button";
+import { Table } from "@autumn/ui/components/table";
+import { Button } from "@autumn/ui/components/ui/button";
+import { Checkbox as AutumnCheckbox } from "@autumn/ui/components/ui/checkbox";
+import {
+	Dialog as AutumnDialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@autumn/ui/components/ui/dialog";
+import { Input } from "@autumn/ui/components/ui/input";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+} from "@autumn/ui/components/ui/sheet";
+import {
+	Tooltip as AutumnTooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui/components/ui/tooltip";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
+import {
+	type ColumnDef,
+	getCoreRowModel,
+	useReactTable,
+} from "@tanstack/react-table";
+import {
+	type ComponentProps,
+	type ReactElement,
+	type ReactNode,
+	useId,
+} from "react";
+import { Link } from "react-router-dom";
 import { cn } from "../lib/format.ts";
 
-// ---- button ---------------------------------------------------------------
-
-const BUTTON_VARIANTS = {
-	primary:
-		"bg-accent text-accent-fg hover:opacity-90 border border-transparent",
-	secondary:
-		"bg-surface text-fg border border-line hover:bg-hover hover:border-line-strong shadow-xs",
-	ghost: "text-muted hover:text-fg hover:bg-hover border border-transparent",
-	danger: "bg-bad text-white hover:opacity-90 border border-transparent",
-} as const;
-
-const BUTTON_SIZES = {
-	sm: "h-7 px-2.5 text-xs gap-1.5",
-	md: "h-8 px-3 text-[13px] gap-2",
-	icon: "size-7 justify-center",
-} as const;
-
-type ButtonStyle = {
-	variant?: keyof typeof BUTTON_VARIANTS;
-	size?: keyof typeof BUTTON_SIZES;
-};
-
-/** Button look for non-button elements (router links). */
-export const buttonClass = ({
-	variant = "secondary",
-	size = "sm",
-}: ButtonStyle = {}) =>
-	cn(
-		"inline-flex shrink-0 cursor-pointer items-center rounded-md font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-info/50 disabled:pointer-events-none disabled:opacity-45 [&_svg]:size-3.5 [&_svg]:shrink-0",
-		BUTTON_VARIANTS[variant],
-		BUTTON_SIZES[size],
-	);
-
-export const Button = ({
-	variant,
-	size,
-	className,
-	type = "button",
-	...props
-}: ComponentProps<"button"> & ButtonStyle) => (
-	<button
-		type={type}
-		className={cn(buttonClass({ variant, size }), className)}
-		{...props}
-	/>
-);
+export { SectionTag } from "@autumn/ui/components/general/section-tag";
+export { Button } from "@autumn/ui/components/ui/button";
+export { Input } from "@autumn/ui/components/ui/input";
+export { Skeleton } from "@autumn/ui/components/ui/skeleton";
+export { TooltipProvider } from "@autumn/ui/components/ui/tooltip";
 
 // ---- inputs ---------------------------------------------------------------
-
-export const Input = ({ className, ...props }: ComponentProps<"input">) => (
-	<input
-		className={cn(
-			"h-8 w-full min-w-0 rounded-md border border-line bg-surface px-2.5 text-[13px] text-fg outline-none transition-colors placeholder:text-faint focus:border-line-strong focus-visible:ring-2 focus-visible:ring-info/30",
-			className,
-		)}
-		{...props}
-	/>
-);
 
 export const Field = ({
 	label,
@@ -80,17 +58,53 @@ export const Field = ({
 }) => {
 	const id = useId();
 	return (
-		<div className={cn("space-y-1.5", className)}>
-			<label htmlFor={id} className="block text-[11px] font-medium text-muted">
-				{label} {hint && <span className="font-normal text-faint">{hint}</span>}
+		<div className={cn("flex flex-col gap-1.5", className)}>
+			<label htmlFor={id} className="text-sm text-tertiary-foreground">
+				{label} {hint && <span className="text-subtle">{hint}</span>}
 			</label>
 			<Input id={id} className={inputClassName} {...props} />
 		</div>
 	);
 };
 
+/** Autumn's list search bar (customers/products toolbar). */
+export const SearchInput = ({
+	value,
+	onChange,
+	placeholder,
+	className,
+	onKeyDown,
+}: {
+	value: string;
+	onChange: (value: string) => void;
+	placeholder: string;
+	className?: string;
+	onKeyDown?: ComponentProps<"input">["onKeyDown"];
+}) => (
+	<div
+		className={cn(
+			"flex h-input min-w-0 cursor-text items-center gap-1.5 rounded-lg py-0 pr-1 pl-2.5 input-base input-shadow-default input-state-focus-within",
+			className,
+		)}
+	>
+		<MagnifyingGlassIcon
+			size={14}
+			className="pointer-events-none shrink-0 text-tertiary-foreground"
+		/>
+		<Input
+			variant="headless"
+			value={value}
+			onChange={(e) => onChange(e.target.value)}
+			onKeyDown={onKeyDown}
+			placeholder={placeholder}
+			aria-label={placeholder}
+			className="h-full min-w-0 flex-1 text-sm"
+		/>
+	</div>
+);
+
 export const Kbd = ({ children }: { children: ReactNode }) => (
-	<kbd className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded border border-line bg-raised px-1 font-mono text-[10px] text-muted">
+	<kbd className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded border bg-muted px-1 font-mono text-[10px] text-tertiary-foreground">
 		{children}
 	</kbd>
 );
@@ -106,105 +120,136 @@ export const Checkbox = ({
 	onCheckedChange: (checked: boolean) => void;
 	label: string;
 }) => (
-	<BaseCheckbox.Root
-		checked={checked}
-		indeterminate={indeterminate}
-		onCheckedChange={(value) => onCheckedChange(value)}
+	<AutumnCheckbox
+		checked={checked || !!indeterminate}
+		onCheckedChange={(value) => onCheckedChange(!checked && value)}
 		aria-label={label}
-		className="flex size-3.5 shrink-0 cursor-pointer items-center justify-center rounded-[4px] border border-line-strong bg-surface outline-none transition-colors focus-visible:ring-2 focus-visible:ring-info/40 data-[checked]:border-accent data-[checked]:bg-accent data-[indeterminate]:border-accent data-[indeterminate]:bg-accent"
-	>
-		<BaseCheckbox.Indicator className="text-accent-fg">
-			{indeterminate ? (
-				<Minus className="size-2.5" strokeWidth={3} />
-			) : (
-				<Check className="size-2.5" strokeWidth={3} />
-			)}
-		</BaseCheckbox.Indicator>
-	</BaseCheckbox.Root>
+		className={cn(indeterminate && !checked && "opacity-50")}
+	/>
 );
 
-/** Compact single-choice filter (accessible radio group). */
+/** Compact single-choice filter: Autumn's grouped tab button. */
 export const Segmented = <T extends string>({
 	value,
 	onChange,
 	options,
-	label,
 	className,
 }: {
 	value: T;
 	onChange: (value: T) => void;
 	options: readonly { value: T; label: ReactNode }[];
-	label: string;
+	label?: string;
 	className?: string;
 }) => (
-	<RadioGroup
+	<GroupedTabButton
 		value={value}
 		onValueChange={(v) => onChange(v as T)}
-		aria-label={label}
-		className={cn(
-			"flex items-center gap-0.5 rounded-md border border-line bg-surface p-0.5",
-			className,
-		)}
-	>
-		{options.map((o) => (
-			<Radio.Root
-				key={o.value}
-				value={o.value}
-				className="flex h-6 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded px-2 text-xs whitespace-nowrap text-muted transition-colors outline-none hover:text-fg focus-visible:ring-2 focus-visible:ring-info/40 data-[checked]:bg-raised data-[checked]:text-fg"
-			>
-				{o.label}
-			</Radio.Root>
-		))}
-	</RadioGroup>
+		options={[...options]}
+		className={cn("w-fit", className)}
+	/>
 );
 
-// ---- surfaces -------------------------------------------------------------
+// ---- page chrome ----------------------------------------------------------
 
-export const Card = ({ className, ...props }: ComponentProps<"div">) => (
+/** Autumn page header: filled icon + title in muted text, actions right. */
+export const PageHeader = ({
+	icon,
+	title,
+	children,
+}: {
+	icon: ReactNode;
+	title: ReactNode;
+	children?: ReactNode;
+}) => (
+	<Table.Toolbar>
+		<Table.Heading>
+			<span className="flex text-subtle">{icon}</span>
+			{title}
+		</Table.Heading>
+		{children && <Table.Actions>{children}</Table.Actions>}
+	</Table.Toolbar>
+);
+
+export const Panel = ({ className, ...props }: ComponentProps<"div">) => (
 	<div
-		className={cn("rounded-lg border border-line bg-surface", className)}
+		className={cn("rounded-lg border bg-interactive-secondary", className)}
 		{...props}
 	/>
 );
 
-export const SectionTitle = ({
+// ---- table ----------------------------------------------------------------
+
+/** packages/ui Table (the customers/plans list) over a plain column list. */
+export const DataTable = <T,>({
+	data,
+	columns,
+	isLoading = false,
+	emptyText,
+	getRowHref,
+	onRowClick,
+	getRowClassName,
+	rowClassName = "h-10",
+	footer,
+}: {
+	data: T[] | undefined;
+	// biome-ignore lint/suspicious/noExplicitAny: tanstack column values vary per column
+	columns: ColumnDef<T, any>[];
+	isLoading?: boolean;
+	emptyText: string;
+	getRowHref?: (row: T) => string;
+	onRowClick?: (row: T) => void;
+	getRowClassName?: (row: T) => string | undefined;
+	rowClassName?: string;
+	footer?: ReactNode;
+}) => {
+	const table = useReactTable({
+		data: data ?? [],
+		columns,
+		getCoreRowModel: getCoreRowModel(),
+	});
+	return (
+		<Table.Provider
+			config={{
+				table,
+				numberOfColumns: columns.length,
+				isLoading: isLoading && !data,
+				skeletonRowCount: 3,
+				getRowHref,
+				onRowClick,
+				getRowClassName,
+				linkComponent: Link,
+				emptyStateText: emptyText,
+				rowClassName,
+			}}
+		>
+			<Table.Container>
+				<Table.Content>
+					<Table.Header />
+					<Table.Body />
+				</Table.Content>
+				{footer}
+			</Table.Container>
+		</Table.Provider>
+	);
+};
+
+export const TableMore = ({
+	onClick,
 	children,
-	right,
-	className,
 }: {
+	onClick: () => void;
 	children: ReactNode;
-	right?: ReactNode;
-	className?: string;
 }) => (
-	<div className={cn("flex h-8 items-center justify-between gap-3", className)}>
-		<h2 className="text-xs font-medium text-muted">{children}</h2>
-		{right}
-	</div>
-);
-
-export const Skeleton = ({ className }: { className?: string }) => (
-	<div className={cn("twd-pulse rounded bg-raised", className)} />
-);
-
-export const Empty = ({
-	title,
-	body,
-	action,
-}: {
-	title: string;
-	body?: string;
-	action?: ReactNode;
-}) => (
-	<div className="flex flex-col items-center gap-1.5 px-6 py-10 text-center">
-		<p className="text-[13px] font-medium text-fg">{title}</p>
-		{body && <p className="max-w-sm text-xs text-pretty text-muted">{body}</p>}
-		{action && <div className="mt-2">{action}</div>}
-	</div>
+	<button
+		type="button"
+		onClick={onClick}
+		className="mt-2 cursor-pointer self-center rounded-md px-2 py-0.5 text-xs text-tertiary-foreground hover:bg-muted hover:text-foreground"
+	>
+		{children}
+	</button>
 );
 
 // ---- tooltip --------------------------------------------------------------
-
-export const TooltipProvider = BaseTooltip.Provider;
 
 export const Tooltip = ({
 	content,
@@ -212,25 +257,18 @@ export const Tooltip = ({
 	side = "top",
 }: {
 	content: ReactNode;
-	children: ComponentProps<typeof BaseTooltip.Trigger>["render"];
+	children: ReactElement;
 	side?: "top" | "bottom" | "left" | "right";
 }) => (
-	<BaseTooltip.Root>
-		<BaseTooltip.Trigger render={children} />
-		<BaseTooltip.Portal>
-			<BaseTooltip.Positioner side={side} sideOffset={6} className="z-50">
-				<BaseTooltip.Popup className="max-w-sm rounded-md border border-line bg-surface px-2 py-1 text-xs text-fg shadow-md">
-					{content}
-				</BaseTooltip.Popup>
-			</BaseTooltip.Positioner>
-		</BaseTooltip.Portal>
-	</BaseTooltip.Root>
+	<AutumnTooltip delayDuration={150}>
+		<TooltipTrigger render={children} />
+		<TooltipContent side={side} className="max-w-sm">
+			{content}
+		</TooltipContent>
+	</AutumnTooltip>
 );
 
 // ---- dialogs --------------------------------------------------------------
-
-const backdrop =
-	"fixed inset-0 z-40 bg-black/40 transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0";
 
 export const Dialog = ({
 	open,
@@ -247,23 +285,16 @@ export const Dialog = ({
 	children?: ReactNode;
 	footer?: ReactNode;
 }) => (
-	<BaseDialog.Root open={open} onOpenChange={onOpenChange}>
-		<BaseDialog.Portal>
-			<BaseDialog.Backdrop className={backdrop} />
-			<BaseDialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-line bg-surface p-5 shadow-xl outline-none transition-[opacity,transform] duration-150 ease-out data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0">
-				<BaseDialog.Title className="text-sm font-semibold text-balance">
-					{title}
-				</BaseDialog.Title>
-				{description && (
-					<BaseDialog.Description className="mt-1.5 text-[13px] text-pretty text-muted">
-						{description}
-					</BaseDialog.Description>
-				)}
-				{children && <div className="mt-4">{children}</div>}
-				{footer && <div className="mt-5 flex justify-end gap-2">{footer}</div>}
-			</BaseDialog.Popup>
-		</BaseDialog.Portal>
-	</BaseDialog.Root>
+	<AutumnDialog open={open} onOpenChange={onOpenChange}>
+		<DialogContent>
+			<DialogHeader>
+				<DialogTitle className="text-sm">{title}</DialogTitle>
+				{description && <DialogDescription>{description}</DialogDescription>}
+			</DialogHeader>
+			{children}
+			{footer && <DialogFooter className="mt-1">{footer}</DialogFooter>}
+		</DialogContent>
+	</AutumnDialog>
 );
 
 export const ConfirmDialog = ({
@@ -285,32 +316,26 @@ export const ConfirmDialog = ({
 	pending?: boolean;
 	destructive?: boolean;
 }) => (
-	<AlertDialog.Root open={open} onOpenChange={onOpenChange}>
-		<AlertDialog.Portal>
-			<AlertDialog.Backdrop className={backdrop} />
-			<AlertDialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-line bg-surface p-5 shadow-xl outline-none transition-[opacity,transform] duration-150 ease-out data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0">
-				<AlertDialog.Title className="text-sm font-semibold text-balance">
-					{title}
-				</AlertDialog.Title>
-				<AlertDialog.Description
-					render={<div />}
-					className="mt-2 text-[13px] text-pretty text-muted"
+	<Dialog
+		open={open}
+		onOpenChange={onOpenChange}
+		title={title}
+		description={<span className="block">{children}</span>}
+		footer={
+			<>
+				<Button variant="secondary" onClick={() => onOpenChange(false)}>
+					Cancel
+				</Button>
+				<Button
+					variant={destructive ? "destructive" : "primary"}
+					isLoading={pending}
+					onClick={onConfirm}
 				>
-					{children}
-				</AlertDialog.Description>
-				<div className="mt-5 flex justify-end gap-2">
-					<AlertDialog.Close render={<Button>Cancel</Button>} />
-					<Button
-						variant={destructive ? "danger" : "primary"}
-						disabled={pending}
-						onClick={onConfirm}
-					>
-						{confirmLabel}
-					</Button>
-				</div>
-			</AlertDialog.Popup>
-		</AlertDialog.Portal>
-	</AlertDialog.Root>
+					{confirmLabel}
+				</Button>
+			</>
+		}
+	/>
 );
 
 export const Drawer = ({
@@ -326,29 +351,17 @@ export const Drawer = ({
 	subtitle?: ReactNode;
 	children: ReactNode;
 }) => (
-	<BaseDialog.Root open={open} onOpenChange={onOpenChange}>
-		<BaseDialog.Portal>
-			<BaseDialog.Backdrop className={backdrop} />
-			<BaseDialog.Popup className="fixed inset-y-0 right-0 z-50 flex w-[min(52rem,100vw)] flex-col border-l border-line bg-surface shadow-2xl outline-none transition-transform duration-200 ease-out data-[ending-style]:translate-x-full data-[starting-style]:translate-x-full">
-				<div className="flex items-start justify-between gap-4 border-b border-line px-4 py-3">
-					<div className="min-w-0">
-						<BaseDialog.Title className="truncate font-mono text-[13px] font-medium">
-							{title}
-						</BaseDialog.Title>
-						{subtitle && (
-							<div className="mt-0.5 text-xs text-muted">{subtitle}</div>
-						)}
-					</div>
-					<BaseDialog.Close
-						render={
-							<Button variant="ghost" size="icon" aria-label="Close">
-								<X />
-							</Button>
-						}
-					/>
-				</div>
-				<div className="min-h-0 flex-1 overflow-auto">{children}</div>
-			</BaseDialog.Popup>
-		</BaseDialog.Portal>
-	</BaseDialog.Root>
+	<Sheet open={open} onOpenChange={onOpenChange}>
+		<SheetContent className="md:max-w-3xl">
+			<SheetHeader className="border-b pr-10">
+				<SheetTitle className="truncate font-mono text-sm font-medium">
+					{title}
+				</SheetTitle>
+				{subtitle && (
+					<div className="text-xs text-tertiary-foreground">{subtitle}</div>
+				)}
+			</SheetHeader>
+			<div className="min-h-0 flex-1 overflow-auto">{children}</div>
+		</SheetContent>
+	</Sheet>
 );

@@ -17,17 +17,24 @@ export class ApiRequestError extends Error {
 
 export type Method = "GET" | "POST" | "DELETE";
 
+export type LiveHandlers = {
+	onOpen: () => void;
+	onMessage: (text: string) => void;
+	onClose: () => void;
+};
+export type LiveConnection = {
+	send: (text: string) => void;
+	close: () => void;
+};
+
 export type Transport = {
 	request: (args: {
 		method: Method;
 		path: string;
 		body?: unknown;
 	}) => Promise<{ status: number; contentType: string; data: unknown }>;
-	subscribe: (args: {
-		path: string;
-		onMessage: (data: unknown) => void;
-		onError: () => void;
-	}) => () => void;
+	/** Opens the live socket (GET /ws); messages are raw JSON text either way. */
+	openLive: (handlers: LiveHandlers) => LiveConnection;
 	signInUrl: string;
 };
 
@@ -56,13 +63,22 @@ const httpTransport: Transport = {
 			: await res.text();
 		return { status: res.status, contentType, data };
 	},
-	subscribe: ({ path, onMessage, onError }) => {
-		const source = new EventSource(`${apiBase}${path}`, {
-			withCredentials: true,
-		});
-		source.onmessage = (event) => onMessage(JSON.parse(event.data));
-		source.onerror = onError;
-		return () => source.close();
+	openLive: ({ onOpen, onMessage, onClose }) => {
+		const url = new URL(`${apiBase}/ws`, window.location.href);
+		url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+		const socket = new WebSocket(url);
+		socket.onopen = onOpen;
+		socket.onmessage = (event) => onMessage(String(event.data));
+		socket.onclose = onClose;
+		return {
+			send: (text) => {
+				if (socket.readyState === WebSocket.OPEN) socket.send(text);
+			},
+			close: () => {
+				socket.onclose = null;
+				socket.close();
+			},
+		};
 	},
 };
 

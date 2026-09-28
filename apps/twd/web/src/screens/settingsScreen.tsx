@@ -1,4 +1,7 @@
-import { Check, Copy, KeyRound, Plus } from "lucide-react";
+import { CopyIconButton } from "@autumn/ui/components/general/copy-button";
+import { GearIcon } from "@phosphor-icons/react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import type { ApiKey } from "../../../src/api/contract.ts";
 import { twdOrigin } from "../api/client.ts";
@@ -8,65 +11,36 @@ import {
 	useMe,
 	useRevokeApiKey,
 } from "../api/hooks.ts";
-import { PageHeader } from "../components/appShell.tsx";
 import { ErrorCallout, Pill } from "../components/status.tsx";
 import {
 	Button,
-	Card,
 	ConfirmDialog,
+	DataTable,
 	Dialog,
-	Empty,
 	Field,
-	SectionTitle,
-	Skeleton,
+	PageHeader,
+	Panel,
+	SectionTag,
 } from "../components/ui.tsx";
-import { cn, formatDate, timeAgo } from "../lib/format.ts";
+import { formatDate, timeAgo } from "../lib/format.ts";
 
-const useCopy = () => {
-	const [copied, setCopied] = useState<string | null>(null);
-	const copy = (id: string, text: string) =>
-		navigator.clipboard.writeText(text).then(() => {
-			setCopied(id);
-			setTimeout(() => setCopied((c) => (c === id ? null : c)), 1_500);
-		});
-	return { copied, copy };
-};
-
-const CopyButton = ({
-	copyKey,
-	text,
-	copier,
-}: {
-	copyKey: string;
-	text: string;
-	copier: ReturnType<typeof useCopy>;
-}) => (
-	<Button
-		variant="ghost"
-		size="icon"
-		aria-label="Copy"
-		onClick={() => copier.copy(copyKey, text)}
-	>
-		{copier.copied === copyKey ? <Check className="text-ok" /> : <Copy />}
-	</Button>
-);
-
-const CodeBlock = ({
-	copyKey,
-	code,
-	copier,
-}: {
-	copyKey: string;
-	code: string;
-	copier: ReturnType<typeof useCopy>;
-}) => (
-	<div className="group relative">
-		<pre className="rounded-md border border-line bg-bg px-3 py-2.5 pr-10 font-mono break-all whitespace-pre-wrap text-[11.5px] leading-relaxed text-fg">
+const CodeBlock = ({ code }: { code: string }) => (
+	<div className="relative">
+		<pre className="rounded-lg border bg-card px-3 py-2 pr-9 font-mono break-all whitespace-pre-wrap text-[11px] leading-relaxed text-foreground">
 			{code}
 		</pre>
-		<div className="absolute top-1.5 right-1.5">
-			<CopyButton copyKey={copyKey} text={code} copier={copier} />
+		<div className="absolute top-1.5 right-2">
+			<CopyIconButton text={code} />
 		</div>
+	</div>
+);
+
+const CopyField = ({ text }: { text: string }) => (
+	<div className="flex h-input items-center gap-2 rounded-lg border bg-card pr-2 pl-2.5">
+		<code className="min-w-0 flex-1 truncate text-tiny-id text-foreground">
+			{text}
+		</code>
+		<CopyIconButton text={text} />
 	</div>
 );
 
@@ -78,7 +52,6 @@ const CreateKeyDialog = ({
 	onOpenChange: (o: boolean) => void;
 }) => {
 	const create = useCreateApiKey();
-	const copier = useCopy();
 	const [name, setName] = useState("");
 	const close = (o: boolean) => {
 		onOpenChange(o);
@@ -100,16 +73,7 @@ const CreateKeyDialog = ({
 					</Button>
 				}
 			>
-				<div className="flex items-center gap-2 rounded-md border border-line bg-bg py-1 pr-1 pl-3">
-					<code className="min-w-0 flex-1 truncate font-mono text-xs">
-						{create.data.secret}
-					</code>
-					<CopyButton
-						copyKey="secret"
-						text={create.data.secret}
-						copier={copier}
-					/>
-				</div>
+				<CopyField text={create.data.secret} />
 			</Dialog>
 		);
 	return (
@@ -120,13 +84,16 @@ const CreateKeyDialog = ({
 			description="Keys act as you: every run or reservation made with it is recorded as yours, via this key."
 			footer={
 				<>
-					<Button onClick={() => close(false)}>Cancel</Button>
+					<Button variant="secondary" onClick={() => close(false)}>
+						Cancel
+					</Button>
 					<Button
 						variant="primary"
-						disabled={!name.trim() || create.isPending}
+						disabled={!name.trim()}
+						isLoading={create.isPending}
 						onClick={() => create.mutate(name.trim())}
 					>
-						{create.isPending ? "Creating…" : "Create key"}
+						Create key
 					</Button>
 				</>
 			}
@@ -155,7 +122,6 @@ export const SettingsScreen = () => {
 	const me = useMe();
 	const keys = useApiKeys();
 	const revoke = useRevokeApiKey();
-	const copier = useCopy();
 	const [creating, setCreating] = useState(false);
 	const [revoking, setRevoking] = useState<ApiKey | null>(null);
 	const origin = twdOrigin;
@@ -163,121 +129,137 @@ export const SettingsScreen = () => {
 		(a, b) => Number(!!a.revokedAt) - Number(!!b.revokedAt),
 	);
 
+	const columns: ColumnDef<ApiKey>[] = [
+		{
+			id: "name",
+			header: "Name",
+			size: 200,
+			meta: { grow: true },
+			cell: ({ row: { original: k } }) => (
+				<span className="flex min-w-0 items-center gap-2">
+					<span className="truncate font-medium text-foreground">{k.name}</span>
+					{k.revokedAt && <Pill>revoked</Pill>}
+				</span>
+			),
+		},
+		{
+			id: "prefix",
+			header: "Key",
+			size: 110,
+			cell: ({ row: { original: k } }) => (
+				<span className="text-tiny-id text-tertiary-foreground">
+					{k.prefix}…
+				</span>
+			),
+		},
+		{
+			id: "owner",
+			header: "Owner",
+			size: 170,
+			cell: ({ row: { original: k } }) => (
+				<span className="block truncate text-xs">{k.ownerEmail}</span>
+			),
+		},
+		{
+			id: "used",
+			header: "Last used",
+			size: 110,
+			cell: ({ row: { original: k } }) => (
+				<span className="text-xs text-subtle tabular-nums">
+					{k.revokedAt
+						? `revoked ${timeAgo(k.revokedAt)}`
+						: timeAgo(k.lastUsedAt)}
+				</span>
+			),
+		},
+		{
+			id: "created",
+			header: "Created",
+			size: 120,
+			cell: ({ row: { original: k } }) => (
+				<span className="text-xs text-subtle tabular-nums">
+					{formatDate(k.createdAt)}
+				</span>
+			),
+		},
+		{
+			id: "actions",
+			header: "",
+			size: 80,
+			cell: ({ row: { original: k } }) =>
+				!k.revokedAt && (
+					<span className="flex justify-end">
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() => setRevoking(k)}
+						>
+							Revoke
+						</Button>
+					</span>
+				),
+		},
+	];
+
 	return (
 		<>
-			<PageHeader
-				title="Settings"
-				description={me.data ? `Signed in as ${me.data.email}` : undefined}
-			/>
-			<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
-				<section>
-					<SectionTitle
-						right={
-							<Button variant="primary" onClick={() => setCreating(true)}>
-								<Plus /> Create key
-							</Button>
-						}
-					>
-						API keys
-					</SectionTitle>
-					<Card className="overflow-hidden">
-						{keys.isLoading ? (
-							<div className="space-y-2 p-4">
-								<Skeleton className="h-8 w-full" />
-								<Skeleton className="h-8 w-full" />
-							</div>
-						) : sorted.length === 0 ? (
-							<Empty
-								title="No API keys yet"
-								body="Create one for an agent or CI job to call twd as you."
-								action={
-									<Button onClick={() => setCreating(true)}>Create key</Button>
-								}
-							/>
-						) : (
-							sorted.map((k) => (
-								<div
-									key={k.id}
-									className={cn(
-										"flex items-center gap-4 border-t border-line px-4 py-3 first:border-t-0 ",
-										k.revokedAt && "text-muted",
-									)}
-								>
-									<KeyRound className="size-4 shrink-0 text-faint" />
-									<div className="min-w-0 flex-1">
-										<p className="flex items-center gap-2 text-[13px] font-medium">
-											{k.name}
-											{k.revokedAt && <Pill>revoked</Pill>}
-										</p>
-										<p className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted">
-											<span className="font-mono">{k.prefix}…</span>
-											<span>{k.ownerEmail}</span>
-											<span>created {formatDate(k.createdAt)}</span>
-											<span>
-												{k.revokedAt
-													? `revoked ${timeAgo(k.revokedAt)}`
-													: `last used ${timeAgo(k.lastUsedAt)}`}
-											</span>
-										</p>
-									</div>
-									{!k.revokedAt && (
-										<Button variant="ghost" onClick={() => setRevoking(k)}>
-											Revoke
-										</Button>
-									)}
-								</div>
-							))
-						)}
-					</Card>
+			<PageHeader icon={<GearIcon size={16} weight="fill" />} title="Settings">
+				{me.data && (
+					<span className="text-xs text-subtle">
+						Signed in as {me.data.email}
+					</span>
+				)}
+			</PageHeader>
+			<div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+				<section className="min-w-0">
+					<div className="flex items-center justify-between pb-2">
+						<SectionTag className="mb-0">API keys</SectionTag>
+						<Button variant="primary" onClick={() => setCreating(true)}>
+							<Plus className="size-3.5" /> Create key
+						</Button>
+					</div>
+					<DataTable
+						data={keys.data ? sorted : undefined}
+						isLoading={keys.isLoading}
+						columns={columns}
+						getRowClassName={(k) => (k.revokedAt ? "opacity-60" : undefined)}
+						emptyText="No API keys yet. Create one for an agent or CI job to call twd as you."
+					/>
 					<ErrorCallout error={keys.error ?? revoke.error} className="mt-3" />
 				</section>
 
 				<section>
-					<SectionTitle>For agents</SectionTitle>
-					<Card className="space-y-4 p-4 text-[13px]">
-						<p className="text-pretty text-muted">
+					<SectionTag>For agents</SectionTag>
+					<Panel className="flex flex-col gap-3 p-3 text-sm">
+						<p className="text-pretty text-tertiary-foreground">
 							twd speaks MCP over streamable HTTP with the same auth and actions
 							as the REST API. Errors carry a{" "}
-							<span className="font-mono text-fg">next</span> step and an{" "}
-							<span className="font-mono text-fg">escalate</span> note when a
-							human is needed.
+							<span className="text-tiny-id text-foreground">next</span> step
+							and an{" "}
+							<span className="text-tiny-id text-foreground">escalate</span>{" "}
+							note when a human is needed.
 						</p>
-						<div>
-							<p className="mb-1.5 text-[11px] font-medium text-muted">
-								MCP server URL
-							</p>
-							<div className="flex items-center gap-2 rounded-md border border-line bg-bg py-1 pr-1 pl-3">
-								<code className="min-w-0 flex-1 truncate font-mono text-xs">
-									{origin}/mcp
-								</code>
-								<CopyButton
-									copyKey="mcp"
-									text={`${origin}/mcp`}
-									copier={copier}
-								/>
-							</div>
+						<div className="flex flex-col gap-1.5">
+							<span className="text-xs text-subtle">MCP server URL</span>
+							<CopyField text={`${origin}/mcp`} />
 						</div>
-						<div>
-							<p className="mb-1.5 text-[11px] font-medium text-muted">
-								Start a run with curl
-							</p>
+						<div className="flex flex-col gap-1.5">
+							<span className="text-xs text-subtle">Start a run with curl</span>
 							<CodeBlock
-								copyKey="curl"
-								copier={copier}
 								code={`curl -X POST ${origin}/runs \\
   -H "Authorization: Bearer $TWD_API_KEY" \\
   -H "content-type: application/json" \\
   -d '{"branch":"my-branch","selection":{"groups":["core"]}}'`}
 							/>
 						</div>
-						<p className="text-xs text-faint">
+						<p className="text-xs text-subtle">
 							Tools:{" "}
-							<span className="font-mono">
+							<span className="text-tiny-id">
 								get_capacity · start_run · wait_for_run · get_run ·
 								reserve_accounts · list_catalog
 							</span>
 						</p>
-					</Card>
+					</Panel>
 				</section>
 			</div>
 
@@ -295,8 +277,8 @@ export const SettingsScreen = () => {
 				}
 			>
 				Anything using{" "}
-				<span className="font-mono text-fg">{revoking?.prefix}…</span> gets 401
-				on its next request. This can't be undone.
+				<span className="font-mono text-foreground">{revoking?.prefix}…</span>{" "}
+				gets 401 on its next request. This can't be undone.
 			</ConfirmDialog>
 		</>
 	);

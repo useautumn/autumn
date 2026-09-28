@@ -21,12 +21,16 @@ import {
 	StripeAccount,
 } from "../../../src/api/contract.ts";
 import { api, apiText } from "./client.ts";
+import { whileDisconnected } from "./live.ts";
+import type { LogLine } from "./liveCache.ts";
 
 export const qk = {
 	me: ["me"] as const,
 	runs: (filter: RunsFilter) => ["runs", filter] as const,
 	run: (id: string) => ["run", id] as const,
 	fileLog: (id: string, file: string) => ["run", id, "log", file] as const,
+	liveLog: (id: string) => ["run", id, "live-log"] as const,
+	jobs: ["jobs"] as const,
 	catalog: ["catalog"] as const,
 	branches: ["branches"] as const,
 	capacity: ["capacity"] as const,
@@ -66,7 +70,7 @@ export const useRuns = (filter: RunsFilter) =>
 				path: `/runs${qs({ status: filter.status, branch: filter.branch, limit: 100 })}`,
 				schema: z.array(RunSummary),
 			}),
-		refetchInterval: filter.status === "finished" ? 30_000 : 3_000,
+		refetchInterval: whileDisconnected,
 		placeholderData: keepPreviousData,
 	});
 
@@ -74,7 +78,21 @@ export const useRun = (id: string) =>
 	useQuery({
 		queryKey: qk.run(id),
 		queryFn: () => api({ path: `/runs/${id}`, schema: RunDetail }),
+		refetchInterval: whileDisconnected,
 	});
+
+/** Live log tail for a run; filled only by run.event log frames. */
+export const useLiveLog = (id: string) => {
+	const qc = useQueryClient();
+	return (
+		useQuery({
+			queryKey: qk.liveLog(id),
+			queryFn: () => qc.getQueryData<LogLine[]>(qk.liveLog(id)) ?? [],
+			staleTime: Number.POSITIVE_INFINITY,
+			gcTime: 5 * 60_000,
+		}).data ?? []
+	);
+};
 
 export const useFileLog = ({
 	runId,
@@ -103,35 +121,35 @@ export const useBranches = () =>
 	useQuery({
 		queryKey: qk.branches,
 		queryFn: () => api({ path: "/branches", schema: z.array(Branch) }),
-		refetchInterval: 15_000,
+		refetchInterval: whileDisconnected,
 	});
 
 export const useCapacity = () =>
 	useQuery({
 		queryKey: qk.capacity,
 		queryFn: () => api({ path: "/capacity", schema: Capacity }),
-		refetchInterval: 5_000,
+		refetchInterval: whileDisconnected,
 	});
 
 export const useKeys = () =>
 	useQuery({
 		queryKey: qk.keys,
 		queryFn: () => api({ path: "/keys", schema: KeysOverview }),
-		refetchInterval: 5_000,
+		refetchInterval: whileDisconnected,
 	});
 
 export const useAccounts = () =>
 	useQuery({
 		queryKey: qk.accounts,
 		queryFn: () => api({ path: "/accounts", schema: z.array(StripeAccount) }),
-		refetchInterval: 10_000,
+		refetchInterval: whileDisconnected,
 	});
 
 export const useReservations = () =>
 	useQuery({
 		queryKey: qk.reservations,
 		queryFn: () => api({ path: "/reservations", schema: z.array(Reservation) }),
-		refetchInterval: 10_000,
+		refetchInterval: whileDisconnected,
 	});
 
 export const useApiKeys = () =>

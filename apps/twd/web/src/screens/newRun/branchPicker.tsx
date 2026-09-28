@@ -40,24 +40,22 @@ export const BranchPicker = ({
 			<Combobox.Input
 				placeholder="Search branches…"
 				aria-label="Branch"
-				className="h-9 w-full rounded-md border border-line bg-surface pr-40 pl-3 font-mono text-[13px] outline-none transition-colors placeholder:font-sans placeholder:text-faint focus:border-line-strong focus-visible:ring-2 focus-visible:ring-info/30"
+				className="h-input w-full rounded-lg input-base input-shadow-default input-state-focus pr-40 font-mono text-[13px] text-foreground outline-none placeholder:font-sans"
 			/>
 			<div className="pointer-events-none absolute inset-y-0 right-2 flex items-center gap-2">
 				{value && (
 					<>
 						{value.prNumber && (
-							<span className="flex items-center gap-1 text-xs text-muted">
+							<span className="flex items-center gap-1 text-xs text-tertiary-foreground">
 								<GitPullRequest className="size-3" />#{value.prNumber}
 							</span>
 						)}
-						<span className="font-mono text-[11px] text-faint">
-							{sha7(value.sha)}
-						</span>
+						<span className="text-tiny-id text-subtle">{sha7(value.sha)}</span>
 					</>
 				)}
 				<Combobox.Trigger
 					aria-label="Show branches"
-					className="pointer-events-auto flex size-6 cursor-pointer items-center justify-center rounded text-faint hover:text-fg"
+					className="pointer-events-auto flex size-6 cursor-pointer items-center justify-center rounded text-subtle hover:text-foreground"
 				>
 					<ChevronsUpDown className="size-3.5" />
 				</Combobox.Trigger>
@@ -66,10 +64,10 @@ export const BranchPicker = ({
 		<Combobox.Portal>
 			<Combobox.Positioner
 				sideOffset={4}
-				className="z-50 w-[var(--anchor-width)]"
+				className="isolate z-[300] w-[var(--anchor-width)]"
 			>
-				<Combobox.Popup className="max-h-80 overflow-auto rounded-lg border border-line bg-surface p-1 shadow-lg outline-none">
-					<Combobox.Empty className="px-2 py-3 text-center text-xs text-muted empty:hidden">
+				<Combobox.Popup className="max-h-80 overflow-auto rounded-lg bg-interactive-secondary p-1 text-muted-foreground shadow-md ring-1 ring-foreground/10 outline-none">
+					<Combobox.Empty className="px-2 py-3 text-center text-xs text-tertiary-foreground empty:hidden">
 						No branch matches. Push it first — twd only sees branches on origin.
 					</Combobox.Empty>
 					<Combobox.List>
@@ -78,7 +76,7 @@ export const BranchPicker = ({
 								key={b.name}
 								value={b}
 								className={cn(
-									"grid cursor-pointer grid-cols-[1rem_minmax(0,1fr)_auto_auto_4rem] items-center gap-3 rounded-md px-2 py-1.5 text-[13px] outline-none data-[highlighted]:bg-hover",
+									"grid cursor-pointer grid-cols-[1rem_minmax(0,1fr)_auto_auto_4rem] items-center gap-3 rounded-md px-1.5 py-1 text-sm outline-none data-[highlighted]:bg-interactive-secondary-hover data-[highlighted]:text-foreground",
 								)}
 							>
 								<span className="flex size-4 items-center">
@@ -86,12 +84,14 @@ export const BranchPicker = ({
 										<Check className="size-3.5" />
 									</Combobox.ItemIndicator>
 								</span>
-								<span className="truncate font-mono">{b.name}</span>
-								<span className="text-xs text-muted tabular-nums">
+								<span className="truncate text-tiny-id text-foreground">
+									{b.name}
+								</span>
+								<span className="text-xs text-tertiary-foreground tabular-nums">
 									{b.prNumber ? `#${b.prNumber}` : ""}
 								</span>
 								<WarmBadge warm={b.warm} />
-								<span className="text-right font-mono text-[11px] text-faint">
+								<span className="text-right text-tiny-id text-subtle">
 									{sha7(b.sha)}
 								</span>
 							</Combobox.Item>

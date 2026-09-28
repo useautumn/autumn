@@ -1,3 +1,5 @@
+import { UsersIcon } from "@phosphor-icons/react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import type { Reservation } from "../../../src/api/contract.ts";
@@ -8,16 +10,17 @@ import {
 	useReleaseReservation,
 	useReservations,
 } from "../api/hooks.ts";
-import { PageHeader } from "../components/appShell.tsx";
+import { useLiveTopics } from "../api/live.ts";
 import { Actor, ErrorCallout, Pill, StatusDot } from "../components/status.tsx";
 import {
 	Button,
-	Card,
 	ConfirmDialog,
+	DataTable,
 	Dialog,
-	Empty,
 	Field,
-	SectionTitle,
+	PageHeader,
+	Panel,
+	SectionTag,
 	Segmented,
 	Skeleton,
 } from "../components/ui.tsx";
@@ -25,11 +28,11 @@ import { cn, formatDate, num, timeAgo } from "../lib/format.ts";
 import { useNow } from "../lib/useNow.ts";
 
 const STATES = [
-	{ key: "clean", label: "Clean", tone: "ok", bar: "bg-ok" },
-	{ key: "reserved", label: "Reserved", tone: "info", bar: "bg-info" },
-	{ key: "inUse", label: "In use", tone: "info", bar: "bg-info/50" },
-	{ key: "nuking", label: "Nuking", tone: "warn", bar: "bg-warn" },
-	{ key: "broken", label: "Broken", tone: "bad", bar: "bg-bad" },
+	{ key: "clean", label: "Clean", tone: "ok", bar: "bg-green-500" },
+	{ key: "reserved", label: "Reserved", tone: "info", bar: "bg-blue-500" },
+	{ key: "inUse", label: "In use", tone: "info", bar: "bg-blue-500/50" },
+	{ key: "nuking", label: "Nuking", tone: "warn", bar: "bg-orange-400" },
+	{ key: "broken", label: "Broken", tone: "bad", bar: "bg-red-500" },
 ] as const;
 
 const TTLS = ["30m", "1h", "2h", "6h", "12h", "24h"];
@@ -67,19 +70,22 @@ const CreateReservationDialog = ({
 			description="Pin clean accounts so your runs or local debugging always have them. They're released automatically at expiry."
 			footer={
 				<>
-					<Button onClick={() => onOpenChange(false)}>Cancel</Button>
+					<Button variant="secondary" onClick={() => onOpenChange(false)}>
+						Cancel
+					</Button>
 					<Button
 						variant="primary"
-						disabled={!valid || create.isPending}
+						disabled={!valid}
+						isLoading={create.isPending}
 						onClick={submit}
 					>
-						{create.isPending ? "Reserving…" : `Reserve ${valid ? num(n) : ""}`}
+						Reserve {valid ? num(n) : ""}
 					</Button>
 				</>
 			}
 		>
 			<form
-				className="space-y-4"
+				className="flex flex-col gap-3"
 				onSubmit={(e) => {
 					e.preventDefault();
 					if (valid) submit();
@@ -95,8 +101,8 @@ const CreateReservationDialog = ({
 						onChange={(e) => setCount(e.target.value)}
 						inputClassName="tabular-nums"
 					/>
-					<div className="space-y-1.5">
-						<span className="text-[11px] font-medium text-muted">
+					<div className="flex flex-col gap-1.5">
+						<span className="text-sm text-tertiary-foreground">
 							Expires after
 						</span>
 						<Segmented
@@ -104,7 +110,7 @@ const CreateReservationDialog = ({
 							value={ttl}
 							onChange={setTtl}
 							options={TTLS.map((t) => ({ value: t, label: t }))}
-							className="h-8 tabular-nums"
+							className="h-input tabular-nums [&>button]:h-input"
 						/>
 					</div>
 				</div>
@@ -114,64 +120,12 @@ const CreateReservationDialog = ({
 					onChange={(e) => setNote(e.target.value)}
 					placeholder="What is this for?"
 				/>
-				<p className="text-xs text-faint tabular-nums">
+				<p className="text-xs text-subtle tabular-nums">
 					{num(maxClean)} clean accounts available.
 				</p>
 				<ErrorCallout error={create.error} />
 			</form>
 		</Dialog>
-	);
-};
-
-const ReservationRow = ({
-	r,
-	now,
-	onRelease,
-}: {
-	r: Reservation;
-	now: number;
-	onRelease: () => void;
-}) => {
-	const expired = Date.parse(r.expiresAt) < now;
-	const active = !r.releasedAt && !expired;
-	return (
-		<div
-			className={cn(
-				"grid grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)_5rem_9rem_7rem] items-center gap-4 border-t border-line px-4 py-2.5 text-xs ",
-				!active && "text-muted",
-			)}
-		>
-			<Actor actor={r.owner} />
-			<div className="min-w-0">
-				<p className="truncate">
-					{r.note ?? <span className="text-faint">No note</span>}
-				</p>
-				<p className="truncate font-mono text-[11px] text-faint">{r.id}</p>
-			</div>
-			<span className="text-right font-medium tabular-nums">
-				{num(r.accountIds.length)}
-			</span>
-			<span className="tabular-nums">
-				{r.releasedAt ? (
-					<span className="text-faint">
-						released {timeAgo(r.releasedAt, now)}
-					</span>
-				) : expired ? (
-					<Pill>expired</Pill>
-				) : (
-					<span title={formatDate(r.expiresAt)}>
-						expires <span className="text-fg">{timeAgo(r.expiresAt, now)}</span>
-					</span>
-				)}
-			</span>
-			<span className="text-right">
-				{active && (
-					<Button variant="ghost" onClick={onRelease}>
-						Release
-					</Button>
-				)}
-			</span>
-		</div>
 	);
 };
 
@@ -183,6 +137,7 @@ export const AccountsScreen = () => {
 	const now = useNow({ intervalMs: 30_000 });
 	const [creating, setCreating] = useState(false);
 	const [releasing, setReleasing] = useState<Reservation | null>(null);
+	useLiveTopics("accounts");
 
 	const counts = capacity.data?.accounts;
 	const total = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
@@ -191,56 +146,125 @@ export const AccountsScreen = () => {
 			Number(!!a.releasedAt) - Number(!!b.releasedAt) ||
 			Date.parse(b.createdAt) - Date.parse(a.createdAt),
 	);
+	const isActive = (r: Reservation) =>
+		!r.releasedAt && Date.parse(r.expiresAt) >= now;
 	const brokenAccounts =
 		accounts.data?.filter((a) => a.state === "broken") ?? [];
 
+	const columns: ColumnDef<Reservation>[] = [
+		{
+			id: "owner",
+			header: "Owner",
+			size: 170,
+			cell: ({ row: { original: r } }) => <Actor actor={r.owner} />,
+		},
+		{
+			id: "note",
+			header: "Note",
+			size: 280,
+			meta: { grow: true },
+			cell: ({ row: { original: r } }) => (
+				<span className="flex min-w-0 items-center gap-2 pr-2">
+					<span className="truncate text-foreground">
+						{r.note ?? <span className="text-subtle">No note</span>}
+					</span>
+					<span className="truncate text-tiny-id text-subtle">{r.id}</span>
+				</span>
+			),
+		},
+		{
+			id: "accounts",
+			header: "Accounts",
+			size: 90,
+			cell: ({ row: { original: r } }) => (
+				<span className="tabular-nums">{num(r.accountIds.length)}</span>
+			),
+		},
+		{
+			id: "expiry",
+			header: "Expiry",
+			size: 150,
+			cell: ({ row: { original: r } }) => (
+				<span className="text-xs tabular-nums">
+					{r.releasedAt ? (
+						<span className="text-subtle">
+							released {timeAgo(r.releasedAt, now)}
+						</span>
+					) : isActive(r) ? (
+						<span title={formatDate(r.expiresAt)}>
+							expires{" "}
+							<span className="text-foreground">
+								{timeAgo(r.expiresAt, now)}
+							</span>
+						</span>
+					) : (
+						<Pill>expired</Pill>
+					)}
+				</span>
+			),
+		},
+		{
+			id: "actions",
+			header: "",
+			size: 90,
+			cell: ({ row: { original: r } }) =>
+				isActive(r) && (
+					<span className="flex justify-end">
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() => setReleasing(r)}
+						>
+							Release
+						</Button>
+					</span>
+				),
+		},
+	];
+
 	return (
 		<>
-			<PageHeader
-				title="Accounts"
-				description="Connected Stripe test accounts: clean → reserved → in use → nuking → clean."
-				actions={
-					<Button variant="primary" onClick={() => setCreating(true)}>
-						<Plus /> Reserve accounts
-					</Button>
-				}
-			/>
+			<PageHeader icon={<UsersIcon size={16} weight="fill" />} title="Accounts">
+				<Button variant="primary" onClick={() => setCreating(true)}>
+					<Plus className="size-3.5" /> Reserve accounts
+				</Button>
+			</PageHeader>
 			<ErrorCallout
 				error={capacity.error ?? reservations.error}
-				className="mb-5"
+				className="mb-4"
 			/>
 
-			<Card className="mb-8 p-4">
+			<SectionTag>Pool</SectionTag>
+			<Panel className="mb-6 px-3 py-2.5">
 				{counts ? (
-					<>
-						<div className="flex h-2 overflow-hidden rounded-full bg-raised">
+					<div className="flex flex-col gap-2">
+						<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-tertiary-foreground tabular-nums">
+							{STATES.map((s) => (
+								<span key={s.key} className="flex items-center gap-1.5">
+									<StatusDot tone={s.tone} />
+									{s.label}
+									<span className="font-medium text-foreground">
+										{num(counts[s.key])}
+									</span>
+								</span>
+							))}
+							<span className="ml-auto text-subtle">{num(total)} total</span>
+						</div>
+						<div className="flex h-1 overflow-hidden rounded-full bg-muted">
 							{STATES.map((s) => (
 								<div
 									key={s.key}
-									className={s.bar}
+									className={cn(s.bar, "transition-[width] duration-500")}
 									style={{
 										width: `${(counts[s.key] / Math.max(total, 1)) * 100}%`,
 									}}
 								/>
 							))}
 						</div>
-						<div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-5">
-							{STATES.map((s) => (
-								<div key={s.key}>
-									<p className="flex items-center gap-1.5 text-[11px] text-muted">
-										<StatusDot tone={s.tone} />
-										{s.label}
-									</p>
-									<p className="mt-1 text-lg font-semibold tabular-nums">
-										{num(counts[s.key])}
-									</p>
-								</div>
-							))}
-						</div>
 						{brokenAccounts.length > 0 && (
-							<p className="mt-4 border-t border-line pt-3 text-xs text-muted">
+							<p className="text-xs text-tertiary-foreground">
 								Broken:{" "}
-								<span className="font-mono text-[11px]">
+								<span className="text-tiny-id">
 									{brokenAccounts
 										.slice(0, 6)
 										.map((a) => a.id)
@@ -251,47 +275,20 @@ export const AccountsScreen = () => {
 								. These need a manual nuke or a key re-initialise.
 							</p>
 						)}
-					</>
-				) : (
-					<Skeleton className="h-20 w-full" />
-				)}
-			</Card>
-
-			<SectionTitle>Reservations</SectionTitle>
-			<Card className="overflow-hidden">
-				<div className="grid h-8 grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)_5rem_9rem_7rem] items-center gap-4 bg-raised/50 px-4 text-[11px] font-medium text-muted">
-					<span>Owner</span>
-					<span>Note</span>
-					<span className="text-right">Accounts</span>
-					<span>Expiry</span>
-					<span />
-				</div>
-				{reservations.isLoading ? (
-					<div className="space-y-2 p-4">
-						<Skeleton className="h-8 w-full" />
-						<Skeleton className="h-8 w-full" />
 					</div>
-				) : sorted.length === 0 ? (
-					<Empty
-						title="No reservations"
-						body="Reserve accounts to pin them for a debugging session or a batch of agent runs."
-						action={
-							<Button onClick={() => setCreating(true)}>
-								Reserve accounts
-							</Button>
-						}
-					/>
 				) : (
-					sorted.map((r) => (
-						<ReservationRow
-							key={r.id}
-							r={r}
-							now={now}
-							onRelease={() => setReleasing(r)}
-						/>
-					))
+					<Skeleton className="h-8 w-full" />
 				)}
-			</Card>
+			</Panel>
+
+			<SectionTag>Reservations</SectionTag>
+			<DataTable
+				data={reservations.data ? sorted : undefined}
+				isLoading={reservations.isLoading}
+				columns={columns}
+				getRowClassName={(r) => (isActive(r) ? undefined : "opacity-60")}
+				emptyText="No reservations. Reserve accounts to pin them for a debugging session or a batch of agent runs."
+			/>
 			<ErrorCallout error={release.error} className="mt-3" />
 
 			<CreateReservationDialog

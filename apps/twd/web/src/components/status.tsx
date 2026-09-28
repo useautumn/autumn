@@ -1,4 +1,17 @@
-import { AlertTriangle, Bot, CircleAlert, UserRound } from "lucide-react";
+import {
+	AlertTriangle,
+	Ban,
+	Bot,
+	Check,
+	CircleAlert,
+	Flame,
+	Hourglass,
+	LoaderCircle,
+	type LucideIcon,
+	Minus,
+	UserRound,
+	X,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import type { z } from "zod";
 import type {
@@ -10,56 +23,55 @@ import { ApiRequestError } from "../api/client.ts";
 import { cn, handle, isAgentVia } from "../lib/format.ts";
 import { Tooltip } from "./ui.tsx";
 
-type Tone = "ok" | "bad" | "warn" | "info" | "idle";
+export type Tone = "ok" | "bad" | "warn" | "info" | "idle";
 
-const DOT: Record<Tone, string> = {
-	ok: "bg-ok",
-	bad: "bg-bad",
-	warn: "bg-warn",
-	info: "bg-info",
-	idle: "bg-faint",
+export const TONE_TEXT: Record<Tone, string> = {
+	ok: "text-green-600 dark:text-green-500",
+	bad: "text-red-600 dark:text-red-400",
+	warn: "text-orange-600 dark:text-orange-400",
+	info: "text-blue-600 dark:text-blue-400",
+	idle: "text-subtle",
 };
-const TEXT: Record<Tone, string> = {
-	ok: "text-ok",
-	bad: "text-bad",
-	warn: "text-warn",
-	info: "text-info",
-	idle: "text-muted",
+export const TONE_BG: Record<Tone, string> = {
+	ok: "bg-green-500",
+	bad: "bg-red-500",
+	warn: "bg-orange-400",
+	info: "bg-blue-500",
+	idle: "bg-subtle/60",
 };
 
-const RUN_TONE: Record<z.infer<typeof RunStatus>, Tone> = {
-	queued: "idle",
-	warming: "warn",
-	provisioning: "info",
-	running: "info",
-	tearing_down: "info",
-	passed: "ok",
-	failed: "bad",
-	cancelled: "idle",
-	errored: "bad",
+const RUN_STATUS: Record<
+	z.infer<typeof RunStatus>,
+	{ tone: Tone; icon: LucideIcon }
+> = {
+	queued: { tone: "idle", icon: Hourglass },
+	warming: { tone: "warn", icon: Flame },
+	provisioning: { tone: "info", icon: LoaderCircle },
+	running: { tone: "info", icon: LoaderCircle },
+	tearing_down: { tone: "info", icon: LoaderCircle },
+	passed: { tone: "ok", icon: Check },
+	failed: { tone: "bad", icon: X },
+	cancelled: { tone: "idle", icon: Ban },
+	errored: { tone: "bad", icon: AlertTriangle },
 };
-const FILE_TONE: Record<z.infer<typeof FileResultStatus>, Tone> = {
-	queued: "idle",
-	running: "info",
-	passed: "ok",
-	failed: "bad",
-	crashed: "bad",
-	skipped: "idle",
+const FILE_STATUS: Record<
+	z.infer<typeof FileResultStatus>,
+	{ tone: Tone; icon: LucideIcon }
+> = {
+	queued: { tone: "idle", icon: Hourglass },
+	running: { tone: "info", icon: LoaderCircle },
+	passed: { tone: "ok", icon: Check },
+	failed: { tone: "bad", icon: X },
+	crashed: { tone: "bad", icon: AlertTriangle },
+	skipped: { tone: "idle", icon: Minus },
 };
-const LIVE = new Set([
-	"queued",
-	"warming",
-	"provisioning",
-	"running",
-	"tearing_down",
-]);
 
 export const StatusDot = ({ tone, pulse }: { tone: Tone; pulse?: boolean }) => (
 	<span
 		aria-hidden
 		className={cn(
 			"inline-block size-1.5 shrink-0 rounded-full",
-			DOT[tone],
+			TONE_BG[tone],
 			pulse && "twd-pulse",
 		)}
 	/>
@@ -67,37 +79,50 @@ export const StatusDot = ({ tone, pulse }: { tone: Tone; pulse?: boolean }) => (
 
 const label = (s: string) => s.replace(/_/g, " ");
 
+/** Autumn's plan status chip: bordered, tone-coloured icon + label. */
 export const RunStatusBadge = ({
 	status,
 }: {
 	status: z.infer<typeof RunStatus>;
-}) => (
-	<span
-		className={cn(
-			"inline-flex items-center gap-1.5 text-xs font-medium",
-			TEXT[RUN_TONE[status]],
-		)}
-	>
-		<StatusDot tone={RUN_TONE[status]} pulse={LIVE.has(status)} />
-		{label(status)}
-	</span>
-);
+}) => {
+	const { tone, icon: Icon } = RUN_STATUS[status];
+	return (
+		<span
+			className={cn(
+				"inline-flex h-[22px] shrink-0 items-center gap-1 rounded-[5px] border bg-background px-1.5 text-xs font-medium capitalize",
+				TONE_TEXT[tone],
+			)}
+		>
+			<Icon
+				className={cn("size-3", Icon === LoaderCircle && "animate-spin")}
+				strokeWidth={2.25}
+			/>
+			{label(status)}
+		</span>
+	);
+};
 
 export const FileStatusBadge = ({
 	status,
 }: {
 	status: z.infer<typeof FileResultStatus>;
-}) => (
-	<span
-		className={cn(
-			"inline-flex items-center gap-1.5 text-xs",
-			TEXT[FILE_TONE[status]],
-		)}
-	>
-		<StatusDot tone={FILE_TONE[status]} />
-		{status}
-	</span>
-);
+}) => {
+	const { tone, icon: Icon } = FILE_STATUS[status];
+	return (
+		<span
+			className={cn(
+				"inline-flex items-center gap-1 text-xs font-medium capitalize",
+				TONE_TEXT[tone],
+			)}
+		>
+			<Icon
+				className={cn("size-3", Icon === LoaderCircle && "animate-spin")}
+				strokeWidth={2.25}
+			/>
+			{status}
+		</span>
+	);
+};
 
 export const Pill = ({
 	tone = "idle",
@@ -110,12 +135,8 @@ export const Pill = ({
 }) => (
 	<span
 		className={cn(
-			"inline-flex h-5 items-center gap-1 rounded px-1.5 text-[11px] font-medium whitespace-nowrap",
-			tone === "ok" && "bg-ok-soft text-ok",
-			tone === "bad" && "bg-bad-soft text-bad",
-			tone === "warn" && "bg-warn-soft text-warn",
-			tone === "info" && "bg-info-soft text-info",
-			tone === "idle" && "bg-raised text-muted",
+			"inline-flex h-5 items-center gap-1 rounded-md bg-muted px-1.5 text-[11px] font-medium whitespace-nowrap",
+			tone === "idle" ? "text-tertiary-foreground" : TONE_TEXT[tone],
 			className,
 		)}
 	>
@@ -146,13 +167,13 @@ export const RunProgress = ({
 			aria-valuemax={t}
 			aria-valuenow={passed + failed}
 			className={cn(
-				"flex h-1.5 w-full overflow-hidden rounded-full bg-raised",
+				"flex h-1 w-full overflow-hidden rounded-full bg-muted",
 				className,
 			)}
 		>
-			<div className="h-full bg-ok" style={{ width: pct(passed) }} />
-			<div className="h-full bg-bad" style={{ width: pct(failed) }} />
-			<div className="h-full bg-info/40" style={{ width: pct(running) }} />
+			<div className="h-full bg-green-500" style={{ width: pct(passed) }} />
+			<div className="h-full bg-red-500" style={{ width: pct(failed) }} />
+			<div className="h-full bg-blue-500/40" style={{ width: pct(running) }} />
 		</div>
 	);
 };
@@ -174,15 +195,15 @@ export const Actor = ({
 				</span>
 			}
 		>
-			<span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-fg">
+			<span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-tertiary-foreground">
 				<span
 					className={cn(
 						"flex size-4.5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold uppercase",
 						agent
-							? "bg-info-soft text-info"
+							? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
 							: system
-								? "bg-raised text-muted"
-								: "bg-raised text-fg",
+								? "bg-muted text-tertiary-foreground"
+								: "bg-muted text-foreground",
 					)}
 				>
 					{agent ? (
@@ -195,7 +216,7 @@ export const Actor = ({
 				</span>
 				<span className="truncate">{handle(actor.email)}</span>
 				{!compact && agent && (
-					<span className="truncate font-mono text-[11px] text-faint">
+					<span className="truncate font-mono text-[11px] text-subtle">
 						{actor.via.replace("api_key:", "key:")}
 					</span>
 				)}
@@ -226,28 +247,28 @@ export const ErrorCallout = ({
 		<div
 			role="alert"
 			className={cn(
-				"rounded-lg border border-bad/25 bg-bad-soft px-3 py-2.5 text-[13px]",
+				"rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-sm",
 				className,
 			)}
 		>
 			<div className="flex items-start gap-2">
-				<CircleAlert className="mt-0.5 size-3.5 shrink-0 text-bad" />
+				<CircleAlert className="mt-0.5 size-3.5 shrink-0 text-red-600 dark:text-red-400" />
 				<div className="min-w-0 space-y-1">
-					<p className="font-medium text-pretty text-fg">
+					<p className="font-medium text-pretty text-foreground">
 						{body.message}{" "}
-						<span className="font-mono text-[11px] font-normal text-faint">
+						<span className="font-mono text-[11px] font-normal text-subtle">
 							{body.code}
 						</span>
 					</p>
-					<p className="text-pretty text-muted">
-						<span className="text-fg">Next:</span> {body.next}
+					<p className="text-pretty text-tertiary-foreground">
+						<span className="text-foreground">Next:</span> {body.next}
 					</p>
 				</div>
 			</div>
 			{body.escalate && (
-				<div className="mt-2 flex items-start gap-2 rounded-md border border-warn/25 bg-warn-soft px-2.5 py-2 text-xs">
-					<AlertTriangle className="mt-px size-3.5 shrink-0 text-warn" />
-					<p className="text-pretty text-fg">
+				<div className="mt-2 flex items-start gap-2 rounded-md border border-orange-400/25 bg-orange-400/10 px-2.5 py-2 text-xs">
+					<AlertTriangle className="mt-px size-3.5 shrink-0 text-orange-600 dark:text-orange-400" />
+					<p className="text-pretty text-foreground">
 						<span className="font-medium">Needs a human:</span> {body.escalate}
 					</p>
 				</div>

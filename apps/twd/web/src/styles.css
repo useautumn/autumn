@@ -1,105 +1,19 @@
-@import "tailwindcss";
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/jetbrains-mono";
+/* Autumn's own stylesheet: tokens, @theme, fonts, button/input presets. */
+@import "../../../../packages/ui/src/styles/index.css";
 
 /* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind v4 directive */
-@custom-variant dark (&:where(.dark, .dark *));
-
-:root {
-	--bg: #fbfbfb;
-	--surface: #ffffff;
-	--raised: #f4f4f5;
-	--hover: #efeff1;
-	--line: #e7e7ea;
-	--line-strong: #d7d7dc;
-	--fg: #18181b;
-	--muted: #62626b;
-	--faint: #9a9aa3;
-	--accent: #18181b;
-	--accent-fg: #fafafa;
-	--ok: #1f8a4c;
-	--ok-soft: #e7f5ec;
-	--bad: #cf2f3a;
-	--bad-soft: #fcebec;
-	--warn: #b26a00;
-	--warn-soft: #fdf3e2;
-	--info: #2f6fd6;
-	--info-soft: #e9f0fc;
-	--idle: #c9c9cf;
-}
-
-.dark {
-	--bg: #0b0b0c;
-	--surface: #111113;
-	--raised: #18181b;
-	--hover: #1d1d21;
-	--line: #232327;
-	--line-strong: #303036;
-	--fg: #ededef;
-	--muted: #9a9aa3;
-	--faint: #62626b;
-	--accent: #ededef;
-	--accent-fg: #0b0b0c;
-	--ok: #3fb56f;
-	--ok-soft: #122419;
-	--bad: #ef5b63;
-	--bad-soft: #2a1416;
-	--warn: #e0a23a;
-	--warn-soft: #2a2011;
-	--info: #5b95f0;
-	--info-soft: #121d2e;
-	--idle: #3a3a41;
-}
-
-/* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind v4 directive */
-@theme inline {
-	--font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-	--font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", monospace;
-	--color-bg: var(--bg);
-	--color-surface: var(--surface);
-	--color-raised: var(--raised);
-	--color-hover: var(--hover);
-	--color-line: var(--line);
-	--color-line-strong: var(--line-strong);
-	--color-fg: var(--fg);
-	--color-muted: var(--muted);
-	--color-faint: var(--faint);
-	--color-accent: var(--accent);
-	--color-accent-fg: var(--accent-fg);
-	--color-ok: var(--ok);
-	--color-ok-soft: var(--ok-soft);
-	--color-bad: var(--bad);
-	--color-bad-soft: var(--bad-soft);
-	--color-warn: var(--warn);
-	--color-warn-soft: var(--warn-soft);
-	--color-info: var(--info);
-	--color-info-soft: var(--info-soft);
-	--color-idle: var(--idle);
-}
+@source "./**/*.tsx";
 
 html,
 body,
 #root {
 	height: 100%;
+	background-color: var(--outer-background);
 }
 
 body {
-	background: var(--bg);
-	color: var(--fg);
-	font-family: var(--font-sans);
-	font-size: 13px;
-	line-height: 1.45;
-	-webkit-font-smoothing: antialiased;
-	font-feature-settings: "cv11", "ss01";
-}
-
-::selection {
-	background: color-mix(in oklab, var(--info) 30%, transparent);
-}
-
-* {
-	scrollbar-width: thin;
-	scrollbar-color: var(--line-strong) transparent;
+	overflow: hidden;
+	color: var(--foreground);
 }
 
 @keyframes twd-pulse {

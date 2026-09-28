@@ -1,4 +1,5 @@
 import { isMock, transport } from "../api/client.ts";
+import { Button } from "../components/ui.tsx";
 
 const GoogleMark = () => (
 	<svg viewBox="0 0 24 24" className="size-4" role="img" aria-label="Google">
@@ -29,36 +30,34 @@ export const SignInScreen = () => {
 		window.location.assign("/");
 	};
 	return (
-		<div className="flex min-h-dvh items-center justify-center px-6">
+		<div className="flex min-h-dvh items-center justify-center bg-background px-6">
 			<div className="w-full max-w-[340px]">
-				<div className="flex items-center gap-2 font-mono text-sm font-semibold">
-					<span className="flex size-6 items-center justify-center rounded bg-accent text-[11px] text-accent-fg">
+				<div className="flex items-center gap-2 text-[13px] font-[550] text-foreground">
+					<span className="flex size-5 items-center justify-center rounded-md bg-foreground font-mono text-[10px] text-background">
 						tw
 					</span>
 					twd
 				</div>
-				<h1 className="mt-6 text-xl font-semibold text-balance">
+				<h1 className="mt-6 text-md font-semibold text-balance text-foreground">
 					Sign in to the test swarm
 				</h1>
-				<p className="mt-1.5 text-[13px] text-pretty text-muted">
+				<p className="mt-1 text-sm text-pretty text-tertiary-foreground">
 					Start and watch <span className="font-mono">bun tw</span> runs, manage
 					Stripe keys and account reservations.
 				</p>
-				<button
-					type="button"
-					onClick={signIn}
-					className="mt-6 flex h-9 w-full cursor-pointer items-center justify-center gap-2.5 rounded-md border border-line bg-surface text-[13px] font-medium shadow-xs transition-colors outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-info/40"
-				>
+				<Button variant="secondary" onClick={signIn} className="mt-6 w-full">
 					<GoogleMark />
 					Continue with Google
-				</button>
-				<p className="mt-3 text-center text-xs text-faint">
+				</Button>
+				<p className="mt-3 text-center text-xs text-subtle">
 					Restricted to verified{" "}
 					<span className="font-mono">@useautumn.com</span> accounts.
 				</p>
-				<div className="mt-10 border-t border-line pt-4 text-xs text-muted">
+				<div className="mt-8 border-t pt-3 text-xs text-tertiary-foreground">
 					Agents and CI: use an API key with{" "}
-					<span className="font-mono text-fg">Authorization: Bearer twd_…</span>
+					<span className="font-mono text-foreground">
+						Authorization: Bearer twd_…
+					</span>
 				</div>
 			</div>
 		</div>

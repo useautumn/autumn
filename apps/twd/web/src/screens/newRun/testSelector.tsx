@@ -1,7 +1,7 @@
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import type { Catalog } from "../../../../src/api/contract.ts";
-import { Checkbox, Input, Kbd } from "../../components/ui.tsx";
+import { Checkbox, Kbd, SearchInput } from "../../components/ui.tsx";
 import { cn, formatMs, num } from "../../lib/format.ts";
 import { fuzzyMatch } from "./estimate.ts";
 import type { RunSelectionState } from "./useRunSelection.ts";
@@ -25,10 +25,10 @@ const Highlight = ({ text, indexes }: { text: string; indexes: number[] }) => {
 					key={i}
 					className={cn(
 						hit.has(i)
-							? "text-fg underline decoration-info/60 underline-offset-2"
+							? "text-foreground underline decoration-blue-500/60 underline-offset-2"
 							: i < dir
-								? "text-muted"
-								: "text-fg",
+								? "text-tertiary-foreground"
+								: "text-foreground",
 					)}
 				>
 					{ch}
@@ -56,7 +56,7 @@ const FileRow = ({
 	// biome-ignore lint/a11y/noLabelWithoutControl: Base UI Checkbox renders the native input inside
 	<label
 		className={cn(
-			"flex h-7 cursor-pointer items-center gap-2.5 pr-3 font-mono text-[12px] hover:bg-hover",
+			"flex h-7 cursor-pointer items-center gap-2.5 pr-3 text-tiny-id hover:bg-interactive-secondary-hover",
 			indent ? "pl-10" : "pl-3",
 		)}
 	>
@@ -65,13 +65,13 @@ const FileRow = ({
 			<Highlight text={path} indexes={indexes} />
 		) : (
 			<span className="truncate">
-				<span className="text-muted">
+				<span className="text-tertiary-foreground">
 					{path.slice(0, path.lastIndexOf("/") + 1)}
 				</span>
 				{path.slice(path.lastIndexOf("/") + 1)}
 			</span>
 		)}
-		<span className="ml-auto shrink-0 pl-3 font-sans text-[11px] text-faint tabular-nums">
+		<span className="ml-auto shrink-0 pl-3 font-sans text-[11px] text-subtle tabular-nums">
 			{p90 === null ? "new" : `p90 ${formatMs(p90)}`}
 		</span>
 	</label>
@@ -121,7 +121,7 @@ export const TestSelector = ({
 			.filter((f) => sel.selectedSet.has(f)).length;
 		return (
 			<div key={name}>
-				<div className="group flex h-9 items-center gap-2.5 pr-3 pl-3 hover:bg-hover">
+				<div className="group flex h-8 items-center gap-2.5 pr-3 pl-3 hover:bg-interactive-secondary-hover">
 					<Checkbox
 						checked={state === "checked"}
 						indeterminate={state === "partial"}
@@ -136,24 +136,26 @@ export const TestSelector = ({
 					>
 						<ChevronRight
 							className={cn(
-								"size-3.5 shrink-0 text-faint transition-transform duration-150",
+								"size-3.5 shrink-0 text-subtle transition-transform duration-150",
 								expanded && "rotate-90",
 							)}
 						/>
-						<span className="shrink-0 font-mono text-[12.5px] font-medium">
+						<span className="shrink-0 text-tiny-id text-foreground">
 							{name}
 						</span>
-						<span className="truncate text-xs text-muted">{description}</span>
+						<span className="truncate text-xs text-tertiary-foreground">
+							{description}
+						</span>
 					</button>
-					<span className="shrink-0 text-xs text-faint tabular-nums">
+					<span className="shrink-0 text-xs text-subtle tabular-nums">
 						{picked > 0 && state !== "checked" ? (
-							<span className="text-fg">{picked} / </span>
+							<span className="text-foreground">{picked} / </span>
 						) : null}
 						{num(fileCount)}
 					</span>
 				</div>
 				{expanded && (
-					<div className="border-y border-line bg-bg/60 py-1">
+					<div className="border-y bg-background py-1">
 						{sel.filesOf(name).map((path) => (
 							<FileRow
 								key={path}
@@ -175,15 +177,12 @@ export const TestSelector = ({
 
 	return (
 		<div className="flex min-h-0 flex-col">
-			<div className="relative border-b border-line p-2">
-				<Search className="pointer-events-none absolute top-1/2 left-4.5 size-3.5 -translate-y-1/2 text-faint" />
-				<Input
+			<div className="relative border-b p-2">
+				<SearchInput
 					value={query}
-					onChange={(e) => setQuery(e.target.value)}
+					onChange={setQuery}
 					onKeyDown={(e) => e.key === "Escape" && setQuery("")}
 					placeholder={`Fuzzy search ${num(catalog.files.length)} files and ${catalog.groups.length} groups`}
-					aria-label="Search tests"
-					className="border-transparent bg-transparent pl-8 focus:border-transparent focus-visible:ring-0"
 				/>
 				{query && (
 					<span className="absolute top-1/2 right-4 -translate-y-1/2">
@@ -191,18 +190,18 @@ export const TestSelector = ({
 					</span>
 				)}
 			</div>
-			<div className="max-h-[calc(100dvh-19rem)] min-h-80 overflow-auto">
+			<div className="max-h-[calc(100dvh-16rem)] min-h-80 overflow-auto">
 				{deferred ? (
 					<>
 						{groupHits.length > 0 && (
-							<div className="border-b border-line pb-1">
-								<p className="px-3 pt-2 pb-1 text-[11px] font-medium text-faint">
+							<div className="border-b border-border pb-1">
+								<p className="px-3 pt-2 pb-1 text-[11px] font-medium text-subtle">
 									Groups
 								</p>
 								{groupHits.map(renderGroup)}
 							</div>
 						)}
-						<p className="flex items-center justify-between px-3 pt-2 pb-1 text-[11px] font-medium text-faint">
+						<p className="flex items-center justify-between px-3 pt-2 pb-1 text-[11px] font-medium text-subtle">
 							<span>Files</span>
 							<span className="tabular-nums">
 								{results.length > MAX_RESULTS
@@ -221,7 +220,7 @@ export const TestSelector = ({
 							/>
 						))}
 						{results.length === 0 && (
-							<p className="px-3 py-8 text-center text-xs text-muted">
+							<p className="px-3 py-8 text-center text-xs text-tertiary-foreground">
 								No file path matches “{deferred}”.
 							</p>
 						)}
@@ -233,9 +232,9 @@ export const TestSelector = ({
 						return (
 							<div
 								key={tier}
-								className="border-b border-line pb-1 last:border-b-0"
+								className="border-b border-border pb-1 last:border-b-0"
 							>
-								<p className="px-3 pt-2.5 pb-1 text-[11px] font-medium text-faint">
+								<p className="px-3 pt-2.5 pb-1 text-[11px] font-medium text-subtle">
 									{label}
 								</p>
 								{groups.map(renderGroup)}

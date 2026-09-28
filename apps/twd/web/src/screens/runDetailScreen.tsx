@@ -1,10 +1,13 @@
+import { MiniCopyButton } from "@autumn/ui/components/general/copy-button";
 import {
-	ArrowLeft,
-	GitCommitHorizontal,
-	RotateCcw,
-	Search,
-	Square,
-} from "lucide-react";
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbSeparator,
+} from "@autumn/ui/components/ui/breadcrumb";
+import type { ColumnDef } from "@tanstack/react-table";
+import { GitCommitHorizontal, RotateCcw, Square } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Drift, RunDetail, RunFile } from "../../../src/api/contract.ts";
@@ -12,10 +15,12 @@ import {
 	useCancelRun,
 	useCatalog,
 	useFileLog,
+	useLiveLog,
 	useRerunFailed,
 	useRun,
 } from "../api/hooks.ts";
-import { type LogLine, useRunEvents } from "../api/useRunEvents.ts";
+import { useLiveTopics } from "../api/live.ts";
+import type { LogLine } from "../api/liveCache.ts";
 import { AnsiLog, AnsiText } from "../components/ansi.tsx";
 import {
 	Actor,
@@ -28,14 +33,15 @@ import {
 } from "../components/status.tsx";
 import {
 	Button,
-	Card,
 	ConfirmDialog,
+	DataTable,
 	Drawer,
-	Empty,
-	Input,
-	SectionTitle,
+	Panel,
+	SearchInput,
+	SectionTag,
 	Segmented,
 	Skeleton,
+	TableMore,
 	Tooltip,
 } from "../components/ui.tsx";
 import { cn, elapsed, formatDate, formatMs, num, sha7 } from "../lib/format.ts";
@@ -50,12 +56,12 @@ const isFailure = (f: RunFile) =>
 	f.status === "failed" || f.status === "crashed";
 
 const WORKER_COLOR: Record<RunDetail["workers"][number]["status"], string> = {
-	provisioning: "bg-idle",
-	booting: "bg-warn/60",
-	ready: "bg-ok/35",
-	busy: "bg-info",
-	dead: "bg-idle/60",
-	failed: "bg-bad",
+	provisioning: "bg-subtle/40",
+	booting: "bg-orange-400/60",
+	ready: "bg-green-500/35",
+	busy: "bg-blue-500",
+	dead: "bg-subtle/60",
+	failed: "bg-red-500",
 };
 
 const DriftBadge = ({ drift }: { drift: Drift }) =>
@@ -86,27 +92,31 @@ const DurationCell = ({
 	ms: number | null;
 	p90: number | null;
 }) => {
-	if (ms === null) return <span className="text-right text-faint">—</span>;
+	if (ms === null) return <span className="text-right text-subtle">—</span>;
 	const ratio = p90 ? ms / p90 : null;
 	return (
 		<span className="flex items-center justify-end gap-2 tabular-nums">
 			<span
-				className={cn(ratio !== null && ratio > 1.5 ? "text-warn" : "text-fg")}
+				className={cn(
+					ratio !== null && ratio > 1.5
+						? "text-orange-600 dark:text-orange-400"
+						: "text-foreground",
+				)}
 			>
 				{formatMs(ms)}
 			</span>
-			<span className="relative h-1 w-12 overflow-hidden rounded-full bg-raised">
+			<span className="relative h-1 w-12 overflow-hidden rounded-full bg-muted">
 				{ratio !== null && (
 					<span
 						className={cn(
 							"absolute inset-y-0 left-0 rounded-full",
-							ratio > 1.5 ? "bg-warn" : "bg-faint/60",
+							ratio > 1.5 ? "bg-orange-400" : "bg-subtle/60",
 						)}
 						style={{ width: `${Math.min(ratio / 2, 1) * 100}%` }}
 					/>
 				)}
 				{ratio !== null && (
-					<span className="absolute inset-y-0 left-1/2 w-px bg-muted" />
+					<span className="absolute inset-y-0 left-1/2 w-px bg-tertiary-foreground/60" />
 				)}
 			</span>
 		</span>
@@ -128,7 +138,7 @@ const WorkerGrid = ({ workers }: { workers: RunDetail["workers"] }) => {
 							<span>
 								<span className="font-mono">{w.name}</span> · {w.status}
 								{w.file && (
-									<span className="mt-0.5 block font-mono text-muted">
+									<span className="mt-0.5 block font-mono text-tertiary-foreground">
 										{w.file}
 									</span>
 								)}
@@ -147,7 +157,7 @@ const WorkerGrid = ({ workers }: { workers: RunDetail["workers"] }) => {
 					</Tooltip>
 				))}
 			</div>
-			<div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted tabular-nums">
+			<div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-tertiary-foreground tabular-nums">
 				{Object.entries(counts).map(([status, n]) => (
 					<span key={status} className="flex items-center gap-1.5">
 						<span
@@ -171,9 +181,9 @@ const LiveLog = ({
 	lines: LogLine[];
 	onOpen: (file: string) => void;
 }) => (
-	<div className="h-56 overflow-auto rounded-md bg-bg px-2.5 py-2 font-mono text-[11px] leading-[1.7]">
+	<div className="h-64 overflow-auto rounded-lg border bg-card px-2.5 py-2 font-mono text-[11px] leading-[1.7]">
 		{lines.length === 0 ? (
-			<p className="text-faint">Waiting for output…</p>
+			<p className="text-subtle">Waiting for output…</p>
 		) : (
 			lines
 				.slice(-120)
@@ -184,9 +194,9 @@ const LiveLog = ({
 						key={i}
 						type="button"
 						onClick={() => l.file && onOpen(l.file)}
-						className="block w-full cursor-pointer truncate text-left hover:bg-hover"
+						className="block w-full cursor-pointer truncate text-left hover:bg-muted"
 					>
-						{l.worker && <span className="text-faint">{l.worker} </span>}
+						{l.worker && <span className="text-subtle">{l.worker} </span>}
 						<AnsiText text={l.text} />
 					</button>
 				))
@@ -201,63 +211,71 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 	const [confirmCancel, setConfirmCancel] = useState(false);
 	const live = !TERMINAL.has(run.status);
 	return (
-		<div className="mb-5">
-			<Link
-				to="/"
-				className="inline-flex items-center gap-1 text-xs text-muted hover:text-fg"
-			>
-				<ArrowLeft className="size-3" /> Runs
-			</Link>
-			<div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-				<div className="min-w-0">
-					<div className="flex items-center gap-3">
-						<h1 className="truncate text-lg font-semibold">{run.branch}</h1>
-						<RunStatusBadge status={run.status} />
-						{run.purpose === "baseline" && <Pill tone="info">baseline</Pill>}
-					</div>
-					<div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-						<span className="flex items-center gap-1 font-mono">
-							<GitCommitHorizontal className="size-3.5" />
-							{sha7(run.sha)}
-						</span>
-						<Actor actor={run.createdBy} />
-						<span className="tabular-nums">
-							Created {formatDate(run.createdAt)}
-						</span>
-						<span className="tabular-nums">
-							{live ? "Running for " : "Took "}
-							<span className="text-fg">
-								{elapsed({
-									from: run.startedAt ?? run.createdAt,
-									to: run.finishedAt,
-									now,
-								})}
-							</span>
-						</span>
-						<span className="font-mono text-faint">{run.id}</span>
-					</div>
-				</div>
+		<div className="flex flex-col gap-2 pb-4">
+			<div className="flex items-center justify-between gap-4">
+				<Breadcrumb>
+					<BreadcrumbList className="text-xs text-tertiary-foreground sm:gap-1.5">
+						<BreadcrumbItem>
+							<BreadcrumbLink asChild>
+								<Link to="/">Runs</Link>
+							</BreadcrumbLink>
+						</BreadcrumbItem>
+						<BreadcrumbSeparator />
+						<BreadcrumbItem className="max-w-60 truncate">
+							{run.branch}
+						</BreadcrumbItem>
+					</BreadcrumbList>
+				</Breadcrumb>
 				<div className="flex items-center gap-2">
 					{run.failed > 0 && (
 						<Button
-							disabled={rerun.isPending}
+							variant="secondary"
+							isLoading={rerun.isPending}
 							onClick={() =>
 								rerun.mutate(undefined, {
 									onSuccess: (next) => navigate(`/runs/${next.id}`),
 								})
 							}
 						>
-							<RotateCcw /> Rerun {run.failed} failed
+							<RotateCcw className="size-3.5" /> Rerun {run.failed} failed
 						</Button>
 					)}
 					{live && (
-						<Button onClick={() => setConfirmCancel(true)}>
-							<Square /> Cancel
+						<Button variant="secondary" onClick={() => setConfirmCancel(true)}>
+							<Square className="size-3.5" /> Cancel
 						</Button>
 					)}
 				</div>
 			</div>
-			<ErrorCallout error={rerun.error ?? cancel.error} className="mt-3" />
+			<div className="flex min-w-0 items-center gap-2">
+				<h3 className="truncate text-md font-semibold text-foreground">
+					{run.branch}
+				</h3>
+				<RunStatusBadge status={run.status} />
+				{run.purpose === "baseline" && <Pill tone="info">baseline</Pill>}
+			</div>
+			<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-tertiary-foreground">
+				<span className="flex items-center gap-1 text-tiny-id">
+					<GitCommitHorizontal className="size-3.5 text-subtle" />
+					{sha7(run.sha)}
+				</span>
+				<Actor actor={run.createdBy} />
+				<span className="tabular-nums">
+					Created {formatDate(run.createdAt)}
+				</span>
+				<span className="tabular-nums">
+					{live ? "Running for " : "Took "}
+					<span className="text-foreground">
+						{elapsed({
+							from: run.startedAt ?? run.createdAt,
+							to: run.finishedAt,
+							now,
+						})}
+					</span>
+				</span>
+				<MiniCopyButton text={run.id} />
+			</div>
+			<ErrorCallout error={rerun.error ?? cancel.error} className="mt-1" />
 			<ConfirmDialog
 				open={confirmCancel}
 				onOpenChange={setConfirmCancel}
@@ -276,12 +294,15 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 	);
 };
 
+type AttentionRow = { file: RunFile; drift: Drift | undefined };
+
 export const RunDetailScreen = () => {
 	const { id = "" } = useParams();
 	const run = useRun(id);
 	const catalog = useCatalog();
 	const live = !!run.data && !TERMINAL.has(run.data.status);
-	const { log } = useRunEvents({ id, live });
+	useLiveTopics(id && `run:${id}`);
+	const log = useLiveLog(id);
 	const now = useNow({ active: live });
 	const [filter, setFilter] = useState<Filter>("all");
 	const [query, setQuery] = useState("");
@@ -292,10 +313,10 @@ export const RunDetailScreen = () => {
 	if (run.error) return <ErrorCallout error={run.error} />;
 	if (!run.data)
 		return (
-			<div className="space-y-4">
-				<Skeleton className="h-10 w-80" />
-				<Skeleton className="h-24 w-full" />
-				<Skeleton className="h-96 w-full" />
+			<div className="flex flex-col gap-3">
+				<Skeleton className="h-4 w-40" />
+				<Skeleton className="h-6 w-80" />
+				<Skeleton className="h-64 w-full" />
 			</div>
 		);
 
@@ -307,7 +328,7 @@ export const RunDetailScreen = () => {
 	const failures = r.files.filter(isFailure);
 	const running = r.files.filter((f) => f.status === "running").length;
 	const total = r.fileCount ?? r.files.length;
-	const attention = [
+	const attention: AttentionRow[] = [
 		...failures.map((f) => ({ file: f, drift: driftByFile.get(f.file) })),
 		...r.drift
 			.filter((d) => d.kind === "slow")
@@ -354,227 +375,246 @@ export const RunDetailScreen = () => {
 	};
 	const opened = r.files.find((f) => f.file === openFile);
 
+	const fileColumns: ColumnDef<RunFile>[] = [
+		{
+			id: "status",
+			header: "Status",
+			size: 90,
+			cell: ({ row: { original: f } }) => <FileStatusBadge status={f.status} />,
+		},
+		{
+			id: "file",
+			header: "File",
+			size: 320,
+			meta: { grow: true },
+			cell: ({ row: { original: f } }) => {
+				const drift = driftByFile.get(f.file);
+				return (
+					<span className="flex min-w-0 items-center gap-2 pr-2">
+						<span className="truncate text-tiny-id text-foreground">
+							{f.file}
+						</span>
+						{drift && <DriftBadge drift={drift} />}
+					</span>
+				);
+			},
+		},
+		{
+			id: "duration",
+			header: "Duration vs p90",
+			size: 140,
+			cell: ({ row: { original: f } }) => (
+				<DurationCell ms={f.durationMs} p90={p90.get(f.file) ?? null} />
+			),
+		},
+		{
+			id: "worker",
+			header: "Worker",
+			size: 80,
+			cell: ({ row: { original: f } }) => (
+				<span className="text-tiny-id text-tertiary-foreground">
+					{f.worker ?? "—"}
+				</span>
+			),
+		},
+		{
+			id: "tries",
+			header: "Tries",
+			size: 60,
+			cell: ({ row: { original: f } }) => (
+				<span
+					className={cn(
+						"text-xs tabular-nums",
+						f.attempt > 1
+							? "text-orange-600 dark:text-orange-400"
+							: "text-subtle",
+					)}
+				>
+					{f.attempt}
+				</span>
+			),
+		},
+	];
+
+	const attentionColumns: ColumnDef<AttentionRow>[] = [
+		{
+			id: "status",
+			header: "Status",
+			size: 90,
+			cell: ({ row: { original: a } }) => (
+				<FileStatusBadge status={a.file.status} />
+			),
+		},
+		{
+			id: "file",
+			header: "File",
+			size: 300,
+			meta: { grow: true },
+			cell: ({ row: { original: a } }) => (
+				<span className="flex min-w-0 flex-col pr-2">
+					<span className="truncate text-tiny-id text-foreground">
+						{a.file.file}
+					</span>
+					{a.file.failureSummary && (
+						<span className="truncate text-tiny-id text-subtle">
+							{a.file.failureSummary.split("\n")[0]}
+						</span>
+					)}
+				</span>
+			),
+		},
+		{
+			id: "flags",
+			header: "",
+			size: 150,
+			cell: ({ row: { original: a } }) => (
+				<span className="flex items-center justify-end gap-1.5">
+					{a.drift && <DriftBadge drift={a.drift} />}
+					{a.file.attempt > 1 && <Pill>attempt {a.file.attempt}</Pill>}
+				</span>
+			),
+		},
+	];
+
 	return (
 		<>
 			<Header run={r} now={now} />
 
-			<Card className="mb-5 px-4 py-3.5">
-				<div className="flex flex-wrap items-baseline justify-between gap-3 text-xs">
-					<div className="flex items-baseline gap-5 tabular-nums">
+			<div className="mb-5 flex flex-col gap-2">
+				<div className="flex flex-wrap items-center justify-between gap-3 text-xs tabular-nums text-tertiary-foreground">
+					<div className="flex items-center gap-3">
 						<span>
-							<span className="text-base font-semibold text-ok">
+							<span className="font-medium text-green-600 dark:text-green-500">
 								{num(r.passed)}
 							</span>{" "}
-							<span className="text-muted">passed</span>
+							passed
 						</span>
 						<span>
 							<span
 								className={cn(
-									"text-base font-semibold",
-									r.failed ? "text-bad" : "text-faint",
+									"font-medium",
+									r.failed ? "text-red-600 dark:text-red-400" : "text-subtle",
 								)}
 							>
 								{num(r.failed)}
 							</span>{" "}
-							<span className="text-muted">failed</span>
+							failed
 						</span>
 						{running > 0 && (
 							<span>
-								<span className="text-base font-semibold text-info">
+								<span className="font-medium text-blue-600 dark:text-blue-400">
 									{num(running)}
 								</span>{" "}
-								<span className="text-muted">running</span>
+								running
 							</span>
 						)}
-						<span className="text-muted">
-							of <span className="text-fg">{num(total)}</span> files
-						</span>
+						<span className="text-subtle">of {num(total)} files</span>
 					</div>
 					{r.phase && (
-						<span className="flex items-center gap-2 font-mono text-[11px] text-muted">
+						<span className="flex items-center gap-2 text-tiny-id text-tertiary-foreground">
 							<StatusDot tone="info" pulse />
 							{r.phase}
 						</span>
 					)}
 				</div>
 				<RunProgress
-					className="mt-3 h-2"
 					passed={r.passed}
 					failed={r.failed}
 					running={running}
 					total={total}
 				/>
-			</Card>
+			</div>
 
-			<div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
-				<div className="min-w-0 space-y-5">
+			<div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+				<div className="flex min-w-0 flex-col gap-6">
 					{attention.length > 0 && (
 						<section>
-							<SectionTitle>
+							<SectionTag>
 								Needs attention{" "}
-								<span className="ml-1 text-faint tabular-nums">
+								<span className="text-subtle tabular-nums">
 									{attention.length}
 								</span>
-							</SectionTitle>
-							<Card className="divide-y divide-line overflow-hidden">
-								{attention.slice(0, 8).map(({ file, drift }) => (
-									<button
-										key={file.file}
-										type="button"
-										onClick={() => setOpenFile(file.file)}
-										className="grid w-full cursor-pointer grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-x-2 px-4 py-2 text-left transition-colors outline-none hover:bg-hover focus-visible:bg-hover"
-									>
-										<FileStatusBadge status={file.status} />
-										<div className="flex min-w-0 items-center gap-2.5">
-											<span className="min-w-0 truncate font-mono text-[12px]">
-												{file.file}
-											</span>
-											<span className="ml-auto flex shrink-0 items-center gap-1.5">
-												{drift && <DriftBadge drift={drift} />}
-												{file.attempt > 1 && (
-													<Pill>attempt {file.attempt}</Pill>
-												)}
-											</span>
-										</div>
-										{file.failureSummary && (
-											<span className="col-start-2 mt-0.5 truncate font-mono text-[11px] text-muted">
-												{file.failureSummary.split("\n")[0]}
-											</span>
-										)}
-									</button>
-								))}
-								{attention.length > 8 && (
-									<button
-										type="button"
-										onClick={() => setFilter("failed")}
-										className="block w-full cursor-pointer px-4 py-2 text-left text-xs text-muted hover:bg-hover hover:text-fg"
-									>
-										{attention.length - 8} more in the file table
-									</button>
-								)}
-							</Card>
+							</SectionTag>
+							<DataTable
+								data={attention.slice(0, 8)}
+								columns={attentionColumns}
+								onRowClick={(a) => setOpenFile(a.file.file)}
+								emptyText="Nothing needs attention."
+							/>
+							{attention.length > 8 && (
+								<TableMore onClick={() => setFilter("failed")}>
+									{attention.length - 8} more in the file table
+								</TableMore>
+							)}
 						</section>
 					)}
 
-					<section>
-						<SectionTitle
-							right={
-								<div className="flex items-center gap-2">
-									<Segmented
-										label="File filter"
-										value={filter}
-										onChange={(f) => {
-											setFilter(f);
-											setLimit(PAGE);
-										}}
-										options={FILTERS.map((f) => ({
-											value: f,
-											label: (
-												<>
-													<span className="capitalize">{f}</span>
-													<span className="text-faint tabular-nums">
-														{counts[f]}
-													</span>
-												</>
-											),
-										}))}
-									/>
-									<div className="relative w-52">
-										<Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-faint" />
-										<Input
-											value={query}
-											onChange={(e) => setQuery(e.target.value)}
-											placeholder="Filter files"
-											aria-label="Filter files"
-											className="h-7 pl-8 text-xs"
-										/>
-									</div>
-								</div>
-							}
-						>
-							Files
-						</SectionTitle>
-						<Card className="overflow-hidden">
-							<div className="grid h-8 grid-cols-[6rem_minmax(0,1fr)_9rem_4.5rem_3.5rem] items-center gap-3 bg-raised/50 px-4 text-[11px] font-medium text-muted">
-								<span>Status</span>
-								<span>File</span>
-								<span className="text-right">Duration vs p90</span>
-								<span>Worker</span>
-								<span className="text-right">Tries</span>
-							</div>
-							{rows.length === 0 ? (
-								<Empty title="No files match" body="Try another filter." />
-							) : (
-								rows.slice(0, limit).map((f) => (
-									<button
-										key={f.file}
-										type="button"
-										onClick={() => setOpenFile(f.file)}
-										className="grid h-8 w-full cursor-pointer grid-cols-[6rem_minmax(0,1fr)_9rem_4.5rem_3.5rem] items-center gap-3 border-t border-line px-4 text-left text-xs transition-colors outline-none  hover:bg-hover focus-visible:bg-hover"
-									>
-										<FileStatusBadge status={f.status} />
-										<span className="flex min-w-0 items-center gap-2">
-											<span className="truncate font-mono text-[12px]">
-												{f.file}
+					<section className="flex flex-col">
+						<div className="flex flex-wrap items-center gap-2 pb-2">
+							<SectionTag className="mb-0">Files</SectionTag>
+							<Segmented
+								label="File filter"
+								value={filter}
+								onChange={(f) => {
+									setFilter(f);
+									setLimit(PAGE);
+								}}
+								options={FILTERS.map((f) => ({
+									value: f,
+									label: (
+										<>
+											<span className="capitalize">{f}</span>{" "}
+											<span className="text-subtle tabular-nums">
+												{counts[f]}
 											</span>
-											{driftByFile.get(f.file) && (
-												<DriftBadge drift={driftByFile.get(f.file) as Drift} />
-											)}
-										</span>
-										<DurationCell
-											ms={f.durationMs}
-											p90={p90.get(f.file) ?? null}
-										/>
-										<span className="font-mono text-[11px] text-muted">
-											{f.worker ?? "—"}
-										</span>
-										<span
-											className={cn(
-												"text-right tabular-nums",
-												f.attempt > 1 ? "text-warn" : "text-faint",
-											)}
-										>
-											{f.attempt}
-										</span>
-									</button>
-								))
-							)}
-							{rows.length > limit && (
-								<button
-									type="button"
-									onClick={() => setLimit((l) => l + PAGE)}
-									className="block w-full cursor-pointer border-t border-line px-4 py-2 text-center text-xs text-muted hover:bg-hover hover:text-fg"
-								>
-									Show {Math.min(PAGE, rows.length - limit)} more of{" "}
-									{num(rows.length - limit)}
-								</button>
-							)}
-						</Card>
+										</>
+									),
+								}))}
+								className="ml-auto"
+							/>
+							<SearchInput
+								value={query}
+								onChange={setQuery}
+								placeholder="Filter files"
+								className="w-52"
+							/>
+						</div>
+						<DataTable
+							data={rows.slice(0, limit)}
+							columns={fileColumns}
+							onRowClick={(f) => setOpenFile(f.file)}
+							rowClassName="h-8"
+							emptyText="No files match. Try another filter."
+						/>
+						{rows.length > limit && (
+							<TableMore onClick={() => setLimit((l) => l + PAGE)}>
+								Show {Math.min(PAGE, rows.length - limit)} more of{" "}
+								{num(rows.length - limit)}
+							</TableMore>
+						)}
 					</section>
 				</div>
 
-				<aside className="space-y-5 xl:sticky xl:top-18">
+				<aside className="flex flex-col gap-6 xl:sticky xl:top-0">
 					<section>
-						<SectionTitle>
+						<SectionTag>
 							Workers{" "}
-							<span className="ml-1 text-faint tabular-nums">
+							<span className="text-subtle tabular-nums">
 								{r.workers.length}
 							</span>
-						</SectionTitle>
-						<Card className="p-3.5">
+						</SectionTag>
+						<Panel className="p-3">
 							{r.workers.length ? (
 								<WorkerGrid workers={r.workers} />
 							) : (
-								<p className="text-xs text-muted">No workers yet.</p>
+								<p className="text-xs text-subtle">No workers yet.</p>
 							)}
-						</Card>
+						</Panel>
 					</section>
 					{live && (
 						<section>
-							<SectionTitle>Live output</SectionTitle>
-							<Card className="p-1.5">
-								<LiveLog lines={log} onOpen={setOpenFile} />
-							</Card>
+							<SectionTag>Live output</SectionTag>
+							<LiveLog lines={log} onOpen={setOpenFile} />
 						</section>
 					)}
 				</aside>
@@ -595,7 +635,7 @@ export const RunDetailScreen = () => {
 								p90 {formatMs(p90.get(opened.file))}
 							</span>
 							{opened.worker && (
-								<span className="font-mono">{opened.worker}</span>
+								<span className="text-tiny-id">{opened.worker}</span>
 							)}
 							<span className="tabular-nums">
 								{opened.passedTests} pass · {opened.failedTests} fail
@@ -611,7 +651,7 @@ export const RunDetailScreen = () => {
 					{fileLog.error ? (
 						<ErrorCallout error={fileLog.error} />
 					) : fileLog.data === undefined ? (
-						<div className="space-y-2">
+						<div className="flex flex-col gap-2">
 							{[0, 1, 2, 3, 4].map((i) => (
 								<Skeleton key={i} className="h-4 w-full" />
 							))}

@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ApiRequestError } from "./api/client.ts";
+import { connectLiveCache } from "./api/liveCache.ts";
 import { AppShell } from "./components/appShell.tsx";
 import { TooltipProvider } from "./components/ui.tsx";
 import { AccountsScreen } from "./screens/accountsScreen.tsx";
@@ -24,6 +25,8 @@ const queryClient = new QueryClient({
 	},
 });
 
+connectLiveCache(queryClient);
+
 const router = createBrowserRouter([
 	{ path: "/sign-in", element: <SignInScreen /> },
 	{
@@ -44,7 +47,7 @@ if (root)
 	createRoot(root).render(
 		<StrictMode>
 			<QueryClientProvider client={queryClient}>
-				<TooltipProvider delay={250}>
+				<TooltipProvider delay={150}>
 					<RouterProvider router={router} />
 				</TooltipProvider>
 			</QueryClientProvider>

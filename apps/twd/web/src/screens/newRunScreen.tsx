@@ -1,3 +1,4 @@
+import { PlusCircleIcon } from "@phosphor-icons/react";
 import { Flame, Play, X } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -9,13 +10,14 @@ import {
 	useCreateRun,
 	useWarmBranch,
 } from "../api/hooks.ts";
-import { PageHeader } from "../components/appShell.tsx";
+import { useLiveTopics } from "../api/live.ts";
 import { ErrorCallout, StatusDot } from "../components/status.tsx";
 import {
 	Button,
-	Card,
 	Field,
-	SectionTitle,
+	PageHeader,
+	Panel,
+	SectionTag,
 	Skeleton,
 } from "../components/ui.tsx";
 import { cn, formatMs, num } from "../lib/format.ts";
@@ -52,19 +54,10 @@ const capacityCheck = ({
 	};
 };
 
-const Stat = ({
-	label,
-	value,
-	hint,
-}: {
-	label: string;
-	value: string;
-	hint?: string;
-}) => (
-	<div>
-		<p className="text-[11px] text-muted">{label}</p>
-		<p className="mt-0.5 text-lg font-semibold tabular-nums">{value}</p>
-		{hint && <p className="text-[11px] text-faint">{hint}</p>}
+const SummaryRow = ({ label, value }: { label: string; value: string }) => (
+	<div className="flex items-center justify-between text-sm">
+		<span className="text-tertiary-foreground">{label}</span>
+		<span className="font-medium text-foreground tabular-nums">{value}</span>
 	</div>
 );
 
@@ -77,6 +70,7 @@ export const NewRunScreen = () => {
 	const warm = useWarmBranch();
 	const sel = useRunSelection({ catalog: catalog.data });
 	const [branchName, setBranchName] = useState<string | null>(null);
+	useLiveTopics("warm");
 
 	const branch: Branch | null =
 		branches.data?.find((b) => b.name === branchName) ?? null;
@@ -119,13 +113,13 @@ export const NewRunScreen = () => {
 	return (
 		<>
 			<PageHeader
+				icon={<PlusCircleIcon size={16} weight="fill" />}
 				title="New run"
-				description="Pick a branch and the tests to fan out on Modal."
 			/>
-			<div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
-				<div className="min-w-0 space-y-5">
+			<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+				<div className="flex min-w-0 flex-col gap-5">
 					<section>
-						<SectionTitle>Branch</SectionTitle>
+						<SectionTag>Branch</SectionTag>
 						{branches.data ? (
 							<BranchPicker
 								branches={branches.data}
@@ -133,12 +127,12 @@ export const NewRunScreen = () => {
 								onChange={(b) => setBranchName(b?.name ?? null)}
 							/>
 						) : (
-							<Skeleton className="h-9 w-full" />
+							<Skeleton className="h-input w-full" />
 						)}
 						<ErrorCallout error={branches.error} className="mt-2" />
 						{branch && branch.warm !== "ready" && (
-							<div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface px-3 py-2 text-xs">
-								<span className="flex items-center gap-2 text-muted">
+							<div className="mt-2 flex items-center justify-between gap-3 rounded-lg border bg-interactive-secondary px-3 py-1.5 text-xs">
+								<span className="flex items-center gap-2 text-tertiary-foreground">
 									<WarmBadge warm={branch.warm} />
 									{branch.warm === "building"
 										? "Image is building; the run waits for it (usually under a minute)."
@@ -148,10 +142,12 @@ export const NewRunScreen = () => {
 								</span>
 								{branch.warm !== "building" && (
 									<Button
-										disabled={warm.isPending}
+										variant="secondary"
+										size="sm"
+										isLoading={warm.isPending}
 										onClick={() => warm.mutate(branch.name)}
 									>
-										<Flame /> Warm now
+										<Flame className="size-3" /> Warm now
 									</Button>
 								)}
 							</div>
@@ -160,78 +156,78 @@ export const NewRunScreen = () => {
 					</section>
 
 					<section>
-						<SectionTitle
-							right={
-								fileCount > 0 && (
-									<Button variant="ghost" onClick={sel.clear}>
-										<X /> Clear selection
-									</Button>
-								)
-							}
-						>
-							Tests
-						</SectionTitle>
-						<Card className="overflow-hidden">
+						<div className="flex items-center justify-between">
+							<SectionTag>Tests</SectionTag>
+							{fileCount > 0 && (
+								<button
+									type="button"
+									onClick={sel.clear}
+									className="mb-2 flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-tertiary-foreground hover:bg-muted hover:text-foreground"
+								>
+									<X className="size-3" /> Clear selection
+								</button>
+							)}
+						</div>
+						<Panel className="overflow-hidden">
 							{catalog.data ? (
 								<TestSelector catalog={catalog.data} sel={sel} />
 							) : (
-								<div className="space-y-2 p-3">
+								<div className="flex flex-col gap-2 p-3">
 									{[0, 1, 2, 3, 4, 5].map((i) => (
-										<Skeleton key={i} className="h-7 w-full" />
+										<Skeleton key={i} className="h-6 w-full" />
 									))}
 								</div>
 							)}
-						</Card>
+						</Panel>
 						<ErrorCallout error={catalog.error} className="mt-2" />
 					</section>
 				</div>
 
-				<aside className="lg:sticky lg:top-18 lg:mt-8">
-					<Card className="p-4">
-						<div className="grid grid-cols-3 gap-3">
-							<Stat label="Files" value={num(fileCount)} />
-							<Stat
+				<aside className="lg:sticky lg:top-0">
+					<SectionTag>Summary</SectionTag>
+					<Panel className="flex flex-col gap-3 p-3">
+						<div className="flex flex-col gap-1.5">
+							<SummaryRow label="Files" value={num(fileCount)} />
+							<SummaryRow
 								label="Workers"
 								value={fileCount ? `~${num(workers)}` : "0"}
 							/>
-							<Stat
-								label="Est."
+							<SummaryRow
+								label="Estimate"
 								value={estimate ? `~${formatMs(estimate)}` : "—"}
 							/>
 						</div>
-						<p className="mt-3 text-[11px] text-pretty text-faint">
+						<p className="text-xs text-pretty text-subtle">
 							From dev baseline p90, longest-first, plus ~2 min fan-out.
 							{unseen > 0 &&
 								` ${unseen} file${unseen === 1 ? " has" : "s have"} no baseline yet (counted as 1 min).`}
 						</p>
 
-						<div className="mt-4 border-t border-line pt-4">
-							<Field
-								label="Path filter"
-								hint="(optional grep)"
-								value={sel.selection.grep}
-								onChange={(e) => sel.setGrep(e.target.value)}
-								placeholder="e.g. multi-currency"
-								inputClassName="font-mono text-xs"
-							/>
-						</div>
+						<Field
+							label="Path filter"
+							hint="(optional grep)"
+							value={sel.selection.grep}
+							onChange={(e) => sel.setGrep(e.target.value)}
+							placeholder="e.g. multi-currency"
+							inputClassName="font-mono text-xs"
+						/>
 
 						{sel.selection.groups.length + sel.selection.files.length > 0 && (
-							<div className="mt-4 flex flex-wrap gap-1">
+							<div className="flex flex-wrap gap-1">
 								{sel.selection.groups.map((g) => (
 									<button
 										key={g}
 										type="button"
 										onClick={() => sel.toggleGroup(g, false)}
-										className="inline-flex h-5.5 cursor-pointer items-center gap-1 rounded bg-raised px-1.5 font-mono text-[11px] text-fg hover:bg-hover"
+										className="inline-flex h-5 cursor-pointer items-center gap-1 rounded-md bg-muted px-1.5 text-tiny-id text-foreground hover:bg-interactive-secondary-hover"
 										aria-label={`Remove ${g}`}
 									>
 										{g}
-										<X className="size-3 text-faint" />
+										<X className="size-3 text-subtle" />
 									</button>
 								))}
 								{sel.selection.files.length > 0 && (
-									<span className="inline-flex h-5.5 items-center rounded bg-raised px-1.5 text-[11px] text-muted">
+									<span className="inline-flex h-5 items-center rounded-md bg-muted px-1.5 text-[11px] text-tertiary-foreground">
 										+{num(sel.selection.files.length)} file
 										{sel.selection.files.length === 1 ? "" : "s"}
 									</span>
@@ -240,13 +236,15 @@ export const NewRunScreen = () => {
 						)}
 
 						{check && (
-							<div className="mt-4 flex items-start gap-2 text-xs text-pretty">
+							<div className="flex items-start gap-2 text-xs text-pretty">
 								<span className="mt-1.5">
 									<StatusDot tone={check.tone} />
 								</span>
 								<span
 									className={cn(
-										check.tone === "bad" ? "text-bad" : "text-muted",
+										check.tone === "bad"
+											? "text-red-600 dark:text-red-400"
+											: "text-tertiary-foreground",
 									)}
 								>
 									{check.text}
@@ -256,25 +254,25 @@ export const NewRunScreen = () => {
 
 						<Button
 							variant="primary"
-							size="md"
-							className="mt-4 w-full justify-center"
+							className="w-full"
 							disabled={!canStart}
+							isLoading={createRun.isPending}
 							onClick={start}
 						>
-							<Play /> {createRun.isPending ? "Starting…" : "Start run"}
+							<Play className="size-3.5" /> Start run
 						</Button>
 						{!branch && (
-							<p className="mt-2 text-center text-[11px] text-faint">
+							<p className="-mt-1 text-center text-xs text-subtle">
 								Choose a branch to start.
 							</p>
 						)}
 						{branch && fileCount === 0 && (
-							<p className="mt-2 text-center text-[11px] text-faint">
+							<p className="-mt-1 text-center text-xs text-subtle">
 								Select at least one group or file.
 							</p>
 						)}
-						<ErrorCallout error={createRun.error} className="mt-3" />
-					</Card>
+						<ErrorCallout error={createRun.error} />
+					</Panel>
 				</aside>
 			</div>
 		</>

@@ -1,9 +1,11 @@
-import { Search } from "lucide-react";
-import type { ReactNode } from "react";
+import { buttonVariants } from "@autumn/ui/components/ui/button";
+import { PlayIcon } from "@phosphor-icons/react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Plus } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { RunSummary } from "../../../src/api/contract.ts";
 import { type RunsFilter, useRuns } from "../api/hooks.ts";
-import { PageHeader } from "../components/appShell.tsx";
+import { useLiveTopics } from "../api/live.ts";
 import {
 	Actor,
 	ErrorCallout,
@@ -12,13 +14,11 @@ import {
 	RunStatusBadge,
 } from "../components/status.tsx";
 import {
-	buttonClass,
-	Card,
-	Empty,
-	Input,
-	SectionTitle,
+	DataTable,
+	PageHeader,
+	SearchInput,
+	SectionTag,
 	Segmented,
-	Skeleton,
 } from "../components/ui.tsx";
 import { cn, elapsed, num, sha7, timeAgo } from "../lib/format.ts";
 import { useNow } from "../lib/useNow.ts";
@@ -38,111 +38,110 @@ const selectionLabel = (run: RunSummary) => {
 	return parts.join(" · ") || "—";
 };
 
-const GRID =
-	"grid grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1.6fr)_7rem_5.5rem] items-center gap-4";
-
-const RunRow = ({ run, now }: { run: RunSummary; now: number }) => {
-	const total = run.fileCount ?? 0;
-	const live = !run.finishedAt;
-	return (
-		<Link
-			to={`/runs/${run.id}`}
-			className={cn(
-				GRID,
-				"border-t border-line px-4 py-2.5 transition-colors outline-none  hover:bg-hover focus-visible:bg-hover",
-			)}
-		>
-			<div className="min-w-0">
-				<div className="flex min-w-0 items-center gap-2">
-					<span className="truncate font-medium">{run.branch}</span>
-					<span className="shrink-0 font-mono text-[11px] text-faint">
-						{sha7(run.sha)}
-					</span>
-					{run.purpose === "baseline" && <Pill tone="info">baseline</Pill>}
-				</div>
-				<div className="mt-0.5 truncate font-mono text-[11px] text-muted">
-					{selectionLabel(run)}
-				</div>
+const runColumns = (now: number): ColumnDef<RunSummary>[] => [
+	{
+		id: "branch",
+		header: "Branch",
+		size: 260,
+		meta: { grow: true },
+		cell: ({ row: { original: run } }) => (
+			<div className="flex min-w-0 items-center gap-2 pr-4">
+				<span className="truncate font-medium text-foreground">
+					{run.branch}
+				</span>
+				<span className="shrink-0 text-tiny-id text-subtle">
+					{sha7(run.sha)}
+				</span>
+				{run.purpose === "baseline" && <Pill tone="info">baseline</Pill>}
 			</div>
-			<div className="min-w-0">
-				<Actor actor={run.createdBy} />
-			</div>
-			<div className="min-w-0">
-				<div className="flex items-center justify-between gap-2 text-xs">
-					<RunStatusBadge status={run.status} />
-					<span className="text-muted tabular-nums">
-						<span className={run.passed ? "text-ok" : "text-faint"}>
+		),
+	},
+	{
+		id: "tests",
+		header: "Tests",
+		size: 180,
+		cell: ({ row: { original: run } }) => (
+			<span className="block truncate text-tiny-id text-tertiary-foreground">
+				{selectionLabel(run)}
+			</span>
+		),
+	},
+	{
+		id: "status",
+		header: "Status",
+		size: 130,
+		cell: ({ row: { original: run } }) => (
+			<RunStatusBadge status={run.status} />
+		),
+	},
+	{
+		id: "progress",
+		header: "Progress",
+		size: 220,
+		cell: ({ row: { original: run } }) => {
+			const total = run.fileCount ?? 0;
+			return (
+				<div className="flex items-center gap-2.5">
+					<RunProgress
+						className="w-16 shrink-0"
+						passed={run.passed}
+						failed={run.failed}
+						total={total}
+					/>
+					<span className="text-xs text-subtle tabular-nums">
+						<span
+							className={cn(run.passed && "text-green-600 dark:text-green-500")}
+						>
 							{num(run.passed)}
 						</span>
 						{run.failed > 0 && (
-							<span className="text-bad"> · {num(run.failed)}</span>
-						)}
-						<span className="text-faint"> / {total ? num(total) : "—"}</span>
+							<span className="text-red-600 dark:text-red-400">
+								{" "}
+								· {num(run.failed)}
+							</span>
+						)}{" "}
+						/ {total ? num(total) : "—"}
 					</span>
 				</div>
-				<RunProgress
-					className="mt-1.5"
-					passed={run.passed}
-					failed={run.failed}
-					total={total}
-				/>
-			</div>
-			<div className="text-right text-xs text-muted tabular-nums">
+			);
+		},
+	},
+	{
+		id: "by",
+		header: "Started by",
+		size: 150,
+		cell: ({ row: { original: run } }) => (
+			<Actor actor={run.createdBy} compact />
+		),
+	},
+	{
+		id: "elapsed",
+		header: "Elapsed",
+		size: 90,
+		cell: ({ row: { original: run } }) => (
+			<span className="text-xs tabular-nums">
 				{elapsed({
 					from: run.startedAt ?? run.createdAt,
 					to: run.finishedAt,
 					now,
 				})}
-				{live && run.workerCount ? (
-					<div className="text-[11px] text-faint">
-						{run.workerCount} workers
-					</div>
+				{!run.finishedAt && run.workerCount ? (
+					<span className="text-subtle"> · {run.workerCount}w</span>
 				) : null}
-			</div>
-			<div className="text-right text-xs text-faint tabular-nums">
+			</span>
+		),
+	},
+	{
+		id: "created",
+		header: "Created",
+		size: 90,
+		cell: ({ row: { original: run } }) => (
+			<span className="text-xs text-subtle tabular-nums">
 				{timeAgo(run.createdAt, now)}
-			</div>
-		</Link>
-	);
-};
-
-const RunTable = ({
-	runs,
-	loading,
-	now,
-	empty,
-}: {
-	runs: RunSummary[] | undefined;
-	loading: boolean;
-	now: number;
-	empty: ReactNode;
-}) => (
-	<Card className="overflow-hidden">
-		<div
-			className={cn(
-				GRID,
-				"h-8 bg-raised/50 px-4 text-[11px] font-medium text-muted",
-			)}
-		>
-			<span>Branch</span>
-			<span>Started by</span>
-			<span>Progress</span>
-			<span className="text-right">Elapsed</span>
-			<span className="text-right">Created</span>
-		</div>
-		{loading && !runs ? (
-			<div className="space-y-3 p-4">
-				{[0, 1, 2].map((i) => (
-					<Skeleton key={i} className="h-8 w-full" />
-				))}
-			</div>
-		) : runs?.length ? (
-			runs.map((run) => <RunRow key={run.id} run={run} now={now} />)
-		) : (
-			empty
-		)}
-	</Card>
-);
+			</span>
+		),
+	},
+];
 
 export const RunsScreen = () => {
 	const [params, setParams] = useSearchParams();
@@ -152,6 +151,7 @@ export const RunsScreen = () => {
 	const live = useRuns(filter);
 	const finished = useRuns({ ...filter, status: "finished" });
 	const now = useNow();
+	useLiveTopics("runs");
 
 	const setParam = (key: string, value: string) => {
 		const next = new URLSearchParams(params);
@@ -166,74 +166,67 @@ export const RunsScreen = () => {
 			r.status === finishedFilter ||
 			(finishedFilter === "failed" && r.status === "errored"),
 	);
+	const columns = runColumns(now);
+	const href = (run: RunSummary) => `/runs/${run.id}`;
 
 	return (
 		<>
-			<PageHeader
-				title="Runs"
-				description="Every swarm run across branches, humans and agents."
-				actions={
-					<div className="relative w-64">
-						<Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-faint" />
-						<Input
-							value={branch}
-							onChange={(e) => setParam("branch", e.target.value)}
-							placeholder="Filter by branch"
-							aria-label="Filter by branch"
-							className="pl-8"
-						/>
-					</div>
-				}
-			/>
+			<PageHeader icon={<PlayIcon size={16} weight="fill" />} title="Runs">
+				<Link to="/runs/new" className={buttonVariants({ variant: "primary" })}>
+					<span className="relative z-10 inline-flex items-center gap-2">
+						<Plus className="size-3.5" /> New run
+					</span>
+				</Link>
+			</PageHeader>
+			<div className="flex flex-wrap items-center gap-2 pb-4">
+				<SearchInput
+					value={branch}
+					onChange={(v) => setParam("branch", v)}
+					placeholder="Filter by branch"
+					className="flex-1"
+				/>
+				<Segmented
+					label="Finished status"
+					value={finishedFilter}
+					onChange={(f) => setParam("status", f)}
+					options={FINISHED_FILTERS.map((f) => ({
+						value: f,
+						label: <span className="capitalize">{f}</span>,
+					}))}
+				/>
+			</div>
 			<ErrorCallout error={live.error ?? finished.error} className="mb-4" />
 
-			<SectionTitle>
+			<SectionTag>
 				Live{" "}
-				<span className="ml-1 text-faint tabular-nums">
+				<span className="text-subtle tabular-nums">
 					{live.data?.length ?? ""}
 				</span>
-			</SectionTitle>
-			<RunTable
-				runs={live.data}
-				loading={live.isLoading}
-				now={now}
-				empty={
-					<Empty
-						title={branch ? `No live runs on “${branch}”` : "Nothing running"}
-						body="Runs appear here the moment they are queued."
-						action={
-							<Link to="/runs/new" className={buttonClass()}>
-								Start a run
-							</Link>
-						}
-					/>
+			</SectionTag>
+			<DataTable
+				data={live.data}
+				isLoading={live.isLoading}
+				columns={columns}
+				getRowHref={href}
+				emptyText={
+					branch
+						? `No live runs on “${branch}”`
+						: "Nothing running. Runs appear here the moment they are queued."
 				}
 			/>
 
-			<SectionTitle
-				className="mt-8"
-				right={
-					<Segmented
-						label="Status filter"
-						value={finishedFilter}
-						onChange={(f) => setParam("status", f)}
-						options={FINISHED_FILTERS.map((f) => ({ value: f, label: f }))}
-						className="capitalize"
-					/>
-				}
-			>
-				Finished
-			</SectionTitle>
-			<RunTable
-				runs={finishedRuns}
-				loading={finished.isLoading}
-				now={now}
-				empty={
-					<Empty
-						title="No finished runs match"
-						body="Clear the branch or status filter to see more."
-					/>
-				}
+			<SectionTag className="mt-6">
+				Finished{" "}
+				<span className="text-subtle tabular-nums">
+					{finishedRuns?.length ?? ""}
+				</span>
+			</SectionTag>
+			<DataTable
+				data={finishedRuns}
+				isLoading={finished.isLoading}
+				columns={columns}
+				getRowHref={href}
+				emptyText="No finished runs match. Clear the branch or status filter to see more."
 			/>
 		</>
 	);

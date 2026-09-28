@@ -7,6 +7,9 @@ import type {
 	EnqueueResponse,
 	Job,
 	KeysOverview,
+	LiveClientMessage,
+	LiveEvent,
+	LiveServerMessage,
 	Me,
 	Reservation,
 	RunDetail,
@@ -390,10 +393,8 @@ const enqueue = (kind: Job["kind"], singletonKey: string): EnqueueResponse => {
 type Sim = { queue: string[]; logSeq: number };
 const runs: RunDetail[] = [];
 const sims = new Map<string, Sim>();
-const listeners = new Map<string, Set<(e: RunEvent) => void>>();
-const emit = (runId: string, event: RunEvent) => {
-	for (const l of listeners.get(runId) ?? []) l(event);
-};
+const emit = (runId: string, event: RunEvent) =>
+	publish(`run:${runId}`, { type: "run.event", runId, event });
 
 const TERMINAL = new Set(["passed", "failed", "cancelled", "errored"]);
 const isLive = (r: RunSummary) => !TERMINAL.has(r.status);
@@ -917,7 +918,13 @@ export const handle = ({
 				"Only you can push this branch.",
 			);
 		b.warm = "building";
-		return ok(enqueue("warm", `warm:${b.sha}`));
+		const res = enqueue("warm", `warm:${b.sha}`);
+		setTimeout(() => {
+			b.warm = "ready";
+			res.job.status = "succeeded";
+			res.job.finishedAt = iso(Date.now());
+		}, 8_000);
+		return ok(res);
 	}
 
 	if (route === "GET /runs") {
@@ -1138,16 +1145,97 @@ export const handle = ({
 	);
 };
 
-export const subscribe = ({
-	path,
-	onMessage,
-}: {
-	path: string;
-	onMessage: (data: unknown) => void;
-}) => {
-	const runId = path.split("/")[2];
-	const set = listeners.get(runId) ?? new Set();
-	listeners.set(runId, set);
-	set.add(onMessage);
-	return () => set.delete(onMessage);
+// ---- live (WebSocket /ws) -------------------------------------------------
+
+type LiveConn = {
+	topics: Set<string>;
+	emit: (topic: string, e: LiveEvent) => void;
+};
+const conns = new Set<LiveConn>();
+
+const publish = (topic: string, event: LiveEvent) => {
+	for (const c of conns) c.emit(topic, event);
+};
+
+const snapshotOf = (topic: string) => {
+	if (topic === "runs") return runs.map(summary);
+	if (topic === "jobs") return jobs;
+	if (topic === "capacity") return capacity();
+	if (topic.startsWith("run:"))
+		return runs.find((r) => r.id === topic.slice(4)) ?? null;
+	return null;
+};
+
+/** Diffs server state once a tick and publishes what moved, like the real hub. */
+const seen = new Map<string, string>();
+let primed = false;
+const changed = (key: string, value: unknown) => {
+	const next = JSON.stringify(value);
+	const prev = seen.get(key);
+	seen.set(key, next);
+	return primed && prev !== next;
+};
+export const flush = () => {
+	for (const run of runs)
+		if (changed(`run:${run.id}`, summary(run)))
+			publish("runs", { type: "run.updated", run: summary(run) });
+	for (const job of jobs)
+		if (changed(`job:${job.id}`, job))
+			publish("jobs", { type: "job.updated", job });
+	const cap = capacity();
+	if (changed("capacity", cap))
+		publish("capacity", { type: "capacity.updated", capacity: cap });
+	if (changed("keys", keysOverview()))
+		publish("keys", { type: "keys.changed" });
+	if (changed("accounts", [accounts, reservations]))
+		publish("accounts", { type: "accounts.changed" });
+	for (const b of branches)
+		if (changed(`warm:${b.name}`, b.warm) && b.warm !== "none")
+			publish("warm", {
+				type: "warm.updated",
+				sha: b.sha,
+				branch: b.name,
+				status: b.warm,
+			});
+};
+flush();
+primed = true;
+setInterval(flush, 1_000);
+
+/** One fake socket: same LiveClientMessage in, same LiveServerMessage out. */
+export const connectLive = (send: (msg: LiveServerMessage) => void) => {
+	let seq = 0;
+	const conn: LiveConn = {
+		topics: new Set(),
+		emit: (topic, event) => {
+			if (conn.topics.has(topic))
+				send({ type: "event", topic, seq: ++seq, event });
+		},
+	};
+	conns.add(conn);
+	send({
+		type: "hello",
+		connectionId: id("conn"),
+		actor: { userId: ME.userId, email: ME.email, via: ME.via },
+	});
+	return {
+		receive: (msg: LiveClientMessage) => {
+			if (msg.type === "ping") return send({ type: "pong" });
+			for (const topic of msg.topics) {
+				if (msg.type === "unsubscribe") {
+					conn.topics.delete(topic);
+					continue;
+				}
+				conn.topics.add(topic);
+				send({
+					type: "snapshot",
+					topic,
+					data: structuredClone(snapshotOf(topic)),
+				} as LiveServerMessage);
+			}
+		},
+		close: () => {
+			conns.delete(conn);
+		},
+	};
 };

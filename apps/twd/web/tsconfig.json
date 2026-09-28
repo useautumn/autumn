@@ -14,8 +14,10 @@
 		"noFallthroughCasesInSwitch": true,
 		"types": ["vite/client", "node"],
 		"paths": {
+			"@autumn/ui/*": ["../../../packages/ui/src/*"],
 			"react": ["../node_modules/@types/react"],
-			"react/*": ["../node_modules/@types/react/*"]
+			"react/*": ["../node_modules/@types/react/*"],
+			"@tanstack/react-table": ["../node_modules/@tanstack/react-table"]
 		}
 	},
 	"include": ["src", "vite.config.ts"]
