@@ -1,10 +1,11 @@
+import type { z } from "zod";
 import type { CostRates } from "../../../api/contract.ts";
 
 /** Modal list prices (2026); override per deploy without a code change. */
 const DEFAULT_USD_PER_CORE_SECOND = 0.0000131;
 const DEFAULT_USD_PER_GIB_SECOND = 0.00000222;
 
-export const getCostRates = (): CostRates => ({
+export const getCostRates = (): z.infer<typeof CostRates> => ({
 	usdPerCoreSecond: Number(
 		process.env.TWD_USD_PER_CORE_SECOND ?? DEFAULT_USD_PER_CORE_SECOND,
 	),

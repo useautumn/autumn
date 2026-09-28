@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { recordWarmCost } from "../../costs/repos/warmCostRepo.ts";
 import type { JobHandler } from "../../jobs/types/jobHandler.ts";
 import { warmImageExists, warmImageTag } from "../modal/modalClient.ts";
 import {
@@ -11,6 +12,8 @@ import type { WarmChildMessage } from "../types/swarmMessages.ts";
 
 const WARM_ENTRY = resolve(import.meta.dir, "warmProcess/warmProcess.ts");
 const LOG_TAIL_LINES = 40;
+/** scripts/tw's milestone right before it creates the warm sandbox; absent on a cache hit. */
+const BUILD_START_MARKER = "warm-up: building warm parent";
 
 /** payload: { sha, branch }. Builds + publishes tw-warm:<sha12>. Exact image → ready at once. */
 export const handleWarmJob: JobHandler = async ({ ctx, job, signal }) => {
@@ -32,6 +35,8 @@ export const handleWarmJob: JobHandler = async ({ ctx, job, signal }) => {
 	});
 	const tail: string[] = [];
 	let done: Extract<WarmChildMessage, { type: "done" }> | undefined;
+	let buildStartedAt: number | undefined;
+	let buildEndedAt: number | undefined;
 	const { exitCode } = await spawnTwChild<WarmChildMessage>({
 		entry: WARM_ENTRY,
 		init: { type: "init", sha },
@@ -42,12 +47,28 @@ export const handleWarmJob: JobHandler = async ({ ctx, job, signal }) => {
 		onMessage: (message) => {
 			if (message.type === "done") {
 				done = message;
+				buildEndedAt = Date.now();
 				return;
 			}
+			if (
+				buildStartedAt === undefined &&
+				message.text.includes(BUILD_START_MARKER)
+			)
+				buildStartedAt = Date.now();
 			tail.push(message.text);
 			if (tail.length > LOG_TAIL_LINES) tail.shift();
 		},
 	});
+	// Warm sandbox lifetime: create → snapshot+terminate (or delete on failure), which precedes `done`.
+	const warmCost = {
+		ctx,
+		sha,
+		buildSeconds:
+			buildStartedAt === undefined
+				? 0
+				: ((buildEndedAt ?? Date.now()) - buildStartedAt) / 1000,
+		createdBy: job.createdBy,
+	};
 
 	if (done?.ok && exitCode === 0) {
 		await upsertWarmImage({
@@ -58,6 +79,7 @@ export const handleWarmJob: JobHandler = async ({ ctx, job, signal }) => {
 			jobId: job.id,
 			imageTag,
 		});
+		await recordWarmCost(warmCost);
 		return;
 	}
 	const error = signal.aborted
@@ -74,5 +96,6 @@ export const handleWarmJob: JobHandler = async ({ ctx, job, signal }) => {
 		jobId: job.id,
 		error,
 	});
+	await recordWarmCost(warmCost);
 	throw new Error(error);
 };

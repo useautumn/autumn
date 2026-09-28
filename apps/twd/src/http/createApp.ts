@@ -6,6 +6,7 @@ import { accountsRoutes } from "./routes/accounts.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { capacityRoutes } from "./routes/capacity.ts";
 import { catalogRoutes } from "./routes/catalog.ts";
+import { costsRoutes } from "./routes/costs.ts";
 import { ingressRoutes } from "./routes/ingress.ts";
 import { jobsRoutes } from "./routes/jobs.ts";
 import { keysRoutes } from "./routes/keys.ts";
@@ -32,6 +33,7 @@ export const createApp = () =>
 		.route("/", jobsRoutes)
 		.route("/", resultsRoutes)
 		.route("/", capacityRoutes)
+		.route("/", costsRoutes)
 		.route("/", mcpRoutes)
 		.route("/", liveRoutes)
 		.onError((error, c) =>

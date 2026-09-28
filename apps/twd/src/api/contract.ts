@@ -480,5 +480,7 @@ export type LiveClientMessage = z.infer<typeof LiveClientMessage>;
 export type LiveServerMessage = z.infer<typeof LiveServerMessage>;
 export type RunCost = z.infer<typeof RunCost>;
 export type Costs = z.infer<typeof Costs>;
+export type CostRates = z.infer<typeof CostRates>;
+export type CostsQuery = z.infer<typeof CostsQuery>;
 export type Job = z.infer<typeof Job>;
 export type EnqueueResponse = z.infer<typeof EnqueueResponse>;
