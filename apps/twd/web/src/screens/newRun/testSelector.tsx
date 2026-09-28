@@ -1,9 +1,10 @@
 import { ChevronRight } from "lucide-react";
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import type { Catalog } from "../../../../src/api/contract.ts";
 import { Checkbox, Kbd, SearchInput } from "../../components/ui.tsx";
 import { cn, formatMs, num } from "../../lib/format.ts";
 import { fuzzyMatch } from "./estimate.ts";
+import { buildGroupTree } from "./groupTree.ts";
 import type { RunSelectionState } from "./useRunSelection.ts";
 
 const TIERS = [
@@ -51,14 +52,14 @@ const FileRow = ({
 	checked,
 	p90,
 	onToggle,
-	indent,
+	indent = 0,
 }: {
 	path: string;
 	indexes?: number[];
 	checked: boolean;
 	p90: number | null;
 	onToggle: (on: boolean) => void;
-	indent?: boolean;
+	indent?: number;
 }) => (
 	<div
 		role="checkbox"
@@ -81,10 +82,8 @@ const FileRow = ({
 				onToggle(!checked);
 			}
 		}}
-		className={cn(
-			"flex h-7 cursor-pointer select-none items-center gap-2.5 pr-3 text-tiny-id hover:bg-interactive-secondary-hover",
-			indent ? "pl-10" : "pl-3",
-		)}
+		style={{ paddingLeft: `${0.75 + indent * 1.75}rem` }}
+		className="flex h-7 cursor-pointer select-none items-center gap-2.5 pr-3 text-tiny-id hover:bg-interactive-secondary-hover"
 	>
 		<span className="pointer-events-none flex">
 			<Checkbox checked={checked} onCheckedChange={() => {}} label={path} />
@@ -116,6 +115,7 @@ export const TestSelector = ({
 	const [open, setOpen] = useState<Set<string>>(new Set());
 	const deferred = useDeferredValue(query.trim());
 	const byPath = new Map(catalog.files.map((f) => [f.path, f]));
+	const tree = useMemo(() => buildGroupTree(catalog), [catalog]);
 
 	const results = deferred
 		? catalog.files
@@ -137,11 +137,11 @@ export const TestSelector = ({
 			return next;
 		});
 
-	const renderGroup = ({
-		name,
-		description,
-		fileCount,
-	}: Catalog["groups"][number]) => {
+	const renderGroup = (
+		{ name, description, fileCount }: Catalog["groups"][number],
+		depth = 0,
+		nested = true,
+	) => {
 		const state = sel.groupState(name);
 		const expanded = open.has(name);
 		const picked = sel
@@ -149,7 +149,10 @@ export const TestSelector = ({
 			.filter((f) => sel.selectedSet.has(f)).length;
 		return (
 			<div key={name}>
-				<div className="group flex h-8 items-center gap-2.5 pr-3 pl-3 hover:bg-interactive-secondary-hover">
+				<div
+					style={{ paddingLeft: `${0.75 + depth * 1.75}rem` }}
+					className="group flex h-8 items-center gap-2.5 pr-3 hover:bg-interactive-secondary-hover"
+				>
 					<Checkbox
 						checked={state === "checked"}
 						indeterminate={state === "partial"}
@@ -183,12 +186,19 @@ export const TestSelector = ({
 					</span>
 				</div>
 				{expanded && (
-					<div className="border-y bg-background py-1">
-						{sel.filesOf(name).map((path) => (
+					<div className={cn(depth === 0 && "border-y bg-background py-1")}>
+						{nested &&
+							tree.children
+								.get(name)
+								?.map((child) => renderGroup(child, depth + 1))}
+						{(nested
+							? (tree.looseFiles.get(name) ?? [])
+							: sel.filesOf(name)
+						).map((path) => (
 							<FileRow
 								key={path}
 								path={path}
-								indent
+								indent={depth + 1}
 								checked={sel.selectedSet.has(path)}
 								p90={byPath.get(path)?.baselineP90Ms ?? null}
 								onToggle={(on) => {
@@ -204,7 +214,7 @@ export const TestSelector = ({
 	};
 
 	return (
-		<div className="flex min-h-0 flex-col">
+		<div className="flex min-h-0 flex-1 flex-col">
 			<div className="relative border-b p-2">
 				<SearchInput
 					value={query}
@@ -226,7 +236,7 @@ export const TestSelector = ({
 					</button>
 				)}
 			</div>
-			<div className="max-h-[calc(100dvh-16rem)] min-h-80 overflow-auto">
+			<div className="max-h-[70dvh] min-h-80 overflow-auto lg:max-h-none lg:min-h-0 lg:flex-1">
 				{deferred ? (
 					<>
 						{groupHits.length > 0 && (
@@ -234,7 +244,7 @@ export const TestSelector = ({
 								<p className="px-3 pt-2 pb-1 text-[11px] font-medium text-subtle">
 									Groups
 								</p>
-								{groupHits.map(renderGroup)}
+								{groupHits.map((g) => renderGroup(g, 0, false))}
 							</div>
 						)}
 						<p className="flex items-center justify-between px-3 pt-2 pb-1 text-[11px] font-medium text-subtle">
@@ -281,7 +291,7 @@ export const TestSelector = ({
 					</>
 				) : (
 					TIERS.map(({ tier, label }) => {
-						const groups = catalog.groups.filter((g) => g.tier === tier);
+						const groups = tree.roots.filter((g) => g.tier === tier);
 						if (!groups.length) return null;
 						return (
 							<div
@@ -291,7 +301,7 @@ export const TestSelector = ({
 								<p className="px-3 pt-2.5 pb-1 text-[11px] font-medium text-subtle">
 									{label}
 								</p>
-								{groups.map(renderGroup)}
+								{groups.map((g) => renderGroup(g))}
 							</div>
 						);
 					})

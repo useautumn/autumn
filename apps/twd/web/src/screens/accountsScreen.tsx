@@ -14,6 +14,7 @@ import {
 	Button,
 	ConfirmDialog,
 	DataTable,
+	PagedDataTable,
 	PageHeader,
 	Panel,
 	SectionTag,
@@ -170,7 +171,8 @@ export const AccountsScreen = () => {
 			</Panel>
 
 			<SectionTag>Broken accounts</SectionTag>
-			<DataTable
+			<PagedDataTable
+				resetKey=""
 				data={brokenAccounts}
 				isLoading={accounts.isLoading}
 				columns={brokenColumns}

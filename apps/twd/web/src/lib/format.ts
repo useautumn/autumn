@@ -8,9 +8,10 @@ export const sha7 = (sha: string) => sha.slice(0, 7);
 export const formatMs = (ms: number | null | undefined) => {
 	if (ms === null || ms === undefined) return "—";
 	if (ms < 1_000) return `${ms}ms`;
-	if (ms < 60_000) return `${(ms / 1_000).toFixed(ms < 10_000 ? 1 : 0)}s`;
-	const m = Math.floor(ms / 60_000);
-	const s = Math.round((ms % 60_000) / 1_000);
+	if (ms < 59_500) return `${(ms / 1_000).toFixed(ms < 10_000 ? 1 : 0)}s`;
+	const total = Math.round(ms / 1_000);
+	const m = Math.floor(total / 60);
+	const s = total % 60;
 	if (m < 60) return s ? `${m}m ${s}s` : `${m}m`;
 	return `${Math.floor(m / 60)}h ${m % 60}m`;
 };

@@ -37,10 +37,10 @@ import {
 	ConfirmDialog,
 	DataTable,
 	Dialog,
+	PagedDataTable,
 	PageHeader,
 	SearchInput,
 	Segmented,
-	TableMore,
 	Tooltip,
 } from "../components/ui.tsx";
 import { cn, elapsed, num, timeAgo } from "../lib/format.ts";
@@ -49,7 +49,6 @@ import { FullNukeDialog } from "./keys/fullNukeDialog.tsx";
 
 const FILTERS = ["all", "unusable", "no webhook", "missing"] as const;
 type Filter = (typeof FILTERS)[number];
-const PAGE = 100;
 
 const isFullNuking = (k: StripeKey) =>
 	!k.usable &&
@@ -89,7 +88,6 @@ export const KeysScreen = () => {
 	const [confirm, setConfirm] = useState(false);
 	const [filter, setFilter] = useState<Filter>("all");
 	const [query, setQuery] = useState("");
-	const [limit, setLimit] = useState(PAGE);
 	const [nuking, setNuking] = useState<StripeKey | null>(null);
 	const [removing, setRemoving] = useState<StripeKey | null>(null);
 	const [importing, setImporting] = useState(false);
@@ -409,7 +407,6 @@ export const KeysScreen = () => {
 					value={filter}
 					onChange={(f) => {
 						setFilter(f);
-						setLimit(PAGE);
 					}}
 					options={FILTERS.map((f) => ({
 						value: f,
@@ -431,21 +428,15 @@ export const KeysScreen = () => {
 				/>
 			</div>
 
-			<DataTable
-				data={keys.data ? rows.slice(0, limit) : undefined}
+			<PagedDataTable
+				resetKey={`${filter}|${query}`}
+				data={keys.data ? rows : undefined}
 				isLoading={keys.isLoading}
 				columns={columns}
 				rowClassName="h-8"
 				getRowClassName={(k) => (k.present ? undefined : "opacity-60")}
 				emptyText="No keys match. Clear the search or pick another filter."
 			/>
-			{rows.length > limit && (
-				<div className="flex justify-center">
-					<TableMore onClick={() => setLimit((l) => l + PAGE)}>
-						Show more ({num(rows.length - limit)} left)
-					</TableMore>
-				</div>
-			)}
 
 			<FullNukeDialog
 				stripeKey={nuking}

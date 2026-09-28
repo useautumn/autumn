@@ -10,6 +10,7 @@ import type {
 	RunEvent,
 	RunFile,
 	RunSummary,
+	RunsPage,
 } from "../../../src/api/contract.ts";
 import { qk, type RunsFilter } from "./hooks.ts";
 import { liveSocket } from "./live.ts";
@@ -22,7 +23,6 @@ export type LogLine = {
 
 const TERMINAL = new Set(["passed", "failed", "cancelled", "errored"]);
 const MAX_LOG_LINES = 400;
-const RUNS_LIMIT = 100;
 
 const upsert = <T>(list: T[], item: T, same: (a: T) => boolean) => {
 	const i = list.findIndex(same);
@@ -35,10 +35,20 @@ const upsert = <T>(list: T[], item: T, same: (a: T) => boolean) => {
 const count = (files: RunFile[], status: RunFile["status"]) =>
 	files.filter((f) => f.status === status).length;
 
+const OUTCOMES: Record<string, string[]> = {
+	passed: ["passed"],
+	failed: ["failed", "errored"],
+	cancelled: ["cancelled"],
+};
+
 const matches = (run: RunSummary, filter: RunsFilter) =>
 	(filter.status === "all" ||
 		(filter.status === "live") === !TERMINAL.has(run.status)) &&
-	(!filter.branch || run.branch.includes(filter.branch));
+	(!filter.outcome ||
+		filter.outcome === "all" ||
+		!!OUTCOMES[filter.outcome]?.includes(run.status)) &&
+	(!filter.branch ||
+		run.branch.toLowerCase().includes(filter.branch.toLowerCase()));
 
 const byNewest = (a: RunSummary, b: RunSummary) =>
 	Date.parse(b.createdAt) - Date.parse(a.createdAt);
@@ -84,15 +94,32 @@ const applyRunEvent = (run: RunDetail, event: RunEvent): RunDetail => {
 	}
 };
 
-const forEachRunsQuery = (
-	qc: QueryClient,
-	fn: (filter: RunsFilter, list: RunSummary[]) => RunSummary[],
-) => {
-	for (const [key, list] of qc.getQueriesData<RunSummary[]>({
+/** Live-patches cached run pages: in-place updates everywhere; entries and exits only on first pages. */
+const patchRunPages = (qc: QueryClient, run: RunSummary) => {
+	for (const [key, page] of qc.getQueriesData<RunsPage>({
 		queryKey: ["runs"],
 	})) {
-		if (!list) continue;
-		qc.setQueryData(key, fn(key[1] as RunsFilter, list));
+		if (!page) continue;
+		const filter = key[1] as RunsFilter;
+		const present = page.runs.some((r) => r.id === run.id);
+		const fits = matches(run, filter);
+		if (filter.cursor) {
+			if (present && fits)
+				qc.setQueryData<RunsPage>(key, {
+					...page,
+					runs: page.runs.map((r) => (r.id === run.id ? run : r)),
+				});
+			else if (present) qc.invalidateQueries({ queryKey: key });
+			continue;
+		}
+		const rest = page.runs.filter((r) => r.id !== run.id);
+		const runs = fits ? [run, ...rest].sort(byNewest) : rest;
+		qc.setQueryData<RunsPage>(key, {
+			runs: runs.slice(0, filter.limit),
+			nextCursor: page.nextCursor,
+			total:
+				page.total + (fits && !present ? 1 : 0) - (!fits && present ? 1 : 0),
+		});
 	}
 };
 
@@ -101,13 +128,7 @@ const applySnapshot = (
 	topic: string,
 	data: Extract<LiveServerMessage, { type: "snapshot" }>["data"],
 ) => {
-	if (topic === "runs" && Array.isArray(data))
-		return forEachRunsQuery(qc, (filter) =>
-			(data as RunSummary[])
-				.filter((r) => matches(r, filter))
-				.sort(byNewest)
-				.slice(0, RUNS_LIMIT),
-		);
+	if (topic === "runs") return qc.invalidateQueries({ queryKey: ["runs"] });
 	if (topic.startsWith("run:") && data)
 		return qc.setQueryData(qk.run(topic.slice(4)), data as RunDetail);
 	if (topic === "jobs" && Array.isArray(data))
@@ -124,12 +145,7 @@ const applyEvent = (qc: QueryClient, event: LiveEvent) => {
 	switch (event.type) {
 		case "run.updated": {
 			const { run } = event;
-			forEachRunsQuery(qc, (filter, list) => {
-				const rest = list.filter((r) => r.id !== run.id);
-				return matches(run, filter)
-					? [run, ...rest].sort(byNewest).slice(0, RUNS_LIMIT)
-					: rest;
-			});
+			patchRunPages(qc, run);
 			qc.setQueryData<RunDetail>(qk.run(run.id), (detail) =>
 				detail ? { ...detail, ...run } : detail,
 			);

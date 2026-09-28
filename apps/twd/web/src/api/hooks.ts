@@ -21,6 +21,7 @@ import {
 	Me,
 	RunDetail,
 	RunSummary,
+	RunsPage,
 	StripeAccount,
 } from "../../../src/api/contract.ts";
 import { api, apiText } from "./client.ts";
@@ -47,7 +48,10 @@ export type CostsFilter = { from: string; bucket: "day" | "week" };
 
 export type RunsFilter = {
 	status: "live" | "finished" | "all";
+	outcome?: "all" | "passed" | "failed" | "cancelled";
 	branch?: string;
+	cursor?: string;
+	limit: number;
 };
 
 const qs = (params: Record<string, string | number | undefined>) => {
@@ -72,8 +76,8 @@ export const useRuns = (filter: RunsFilter) =>
 		queryKey: qk.runs(filter),
 		queryFn: () =>
 			api({
-				path: `/runs${qs({ status: filter.status, branch: filter.branch, limit: 100 })}`,
-				schema: z.array(RunSummary),
+				path: `/runs${qs({ ...filter })}`,
+				schema: RunsPage,
 			}),
 		refetchInterval: whileDisconnected,
 		placeholderData: keepPreviousData,

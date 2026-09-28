@@ -1,7 +1,10 @@
+import { TablePaginationFooter } from "@autumn/ui/components/table/table-pagination-footer";
+import { useCursorPagination } from "@autumn/ui/components/table/use-cursor-pagination";
 import { buttonVariants } from "@autumn/ui/components/ui/button";
 import { PlayIcon } from "@phosphor-icons/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { RunSummary } from "../../../src/api/contract.ts";
 import { type RunsFilter, useRuns } from "../api/hooks.ts";
@@ -171,13 +174,50 @@ const runColumns = (now: number): ColumnDef<RunSummary>[] => [
 	},
 ];
 
+const PAGE_SIZES = [25, 50, 100] as const;
+
+/** One cursor-paged runs query plus its footer; resets to page 1 when the filter changes. */
+const usePagedRuns = (filter: Omit<RunsFilter, "cursor" | "limit">) => {
+	const [pageSize, setPageSize] = useState<number>(25);
+	const pager = useCursorPagination({
+		pageSize,
+		resetKey: JSON.stringify(filter),
+	});
+	const query = useRuns({
+		...filter,
+		cursor: pager.currentCursor || undefined,
+		limit: pageSize,
+	});
+	const page = query.data;
+	const footer = page && page.total > pageSize && (
+		<TablePaginationFooter
+			currentPage={pager.currentPage}
+			totalPages={Math.max(1, Math.ceil(page.total / pageSize))}
+			totalCount={page.total}
+			canGoPrev={pager.canPrev}
+			canGoNext={!!page.nextCursor}
+			onPrev={pager.popCursor}
+			onNext={() => page.nextCursor && pager.pushCursor(page.nextCursor)}
+			pageSize={pageSize}
+			pageSizeOptions={PAGE_SIZES}
+			onPageSizeChange={setPageSize}
+			disabled={query.isFetching}
+			className="pt-3"
+		/>
+	);
+	return { query, page, footer };
+};
+
 export const RunsScreen = () => {
 	const [params, setParams] = useSearchParams();
 	const branch = params.get("branch") ?? "";
 	const finishedFilter = (params.get("status") ?? "all") as FinishedFilter;
-	const filter: RunsFilter = { status: "live", branch: branch || undefined };
-	const live = useRuns(filter);
-	const finished = useRuns({ ...filter, status: "finished" });
+	const live = usePagedRuns({ status: "live", branch: branch || undefined });
+	const finished = usePagedRuns({
+		status: "finished",
+		outcome: finishedFilter,
+		branch: branch || undefined,
+	});
 	const now = useNow();
 	useLiveTopics("runs");
 
@@ -188,12 +228,6 @@ export const RunsScreen = () => {
 		setParams(next, { replace: true });
 	};
 
-	const finishedRuns = finished.data?.filter(
-		(r) =>
-			finishedFilter === "all" ||
-			r.status === finishedFilter ||
-			(finishedFilter === "failed" && r.status === "errored"),
-	);
 	const columns = runColumns(now);
 	const href = (run: RunSummary) => `/runs/${run.id}`;
 
@@ -223,17 +257,20 @@ export const RunsScreen = () => {
 					}))}
 				/>
 			</div>
-			<ErrorCallout error={live.error ?? finished.error} className="mb-4" />
+			<ErrorCallout
+				error={live.query.error ?? finished.query.error}
+				className="mb-4"
+			/>
 
 			<SectionTag>
 				Live{" "}
 				<span className="text-subtle tabular-nums">
-					{live.data?.length ?? ""}
+					{live.page ? num(live.page.total) : ""}
 				</span>
 			</SectionTag>
 			<DataTable
-				data={live.data}
-				isLoading={live.isLoading}
+				data={live.page?.runs}
+				isLoading={live.query.isLoading}
 				columns={columns}
 				getRowHref={href}
 				emptyText={
@@ -242,20 +279,22 @@ export const RunsScreen = () => {
 						: "Nothing running. Runs appear here the moment they are queued."
 				}
 			/>
+			{live.footer}
 
 			<SectionTag className="mt-6">
 				Finished{" "}
 				<span className="text-subtle tabular-nums">
-					{finishedRuns?.length ?? ""}
+					{finished.page ? num(finished.page.total) : ""}
 				</span>
 			</SectionTag>
 			<DataTable
-				data={finishedRuns}
-				isLoading={finished.isLoading}
+				data={finished.page?.runs}
+				isLoading={finished.query.isLoading}
 				columns={columns}
 				getRowHref={href}
 				emptyText="No finished runs match. Clear the branch or status filter to see more."
 			/>
+			{finished.footer}
 		</>
 	);
 };

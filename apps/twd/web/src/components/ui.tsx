@@ -1,5 +1,6 @@
 import { GroupedTabButton } from "@autumn/ui/components/general/grouped-tab-button";
 import { Table } from "@autumn/ui/components/table";
+import { TablePaginationFooter } from "@autumn/ui/components/table/table-pagination-footer";
 import { Button } from "@autumn/ui/components/ui/button";
 import { Checkbox as AutumnCheckbox } from "@autumn/ui/components/ui/checkbox";
 import {
@@ -34,6 +35,7 @@ import {
 	type ReactElement,
 	type ReactNode,
 	useId,
+	useState,
 } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "../lib/format.ts";
@@ -238,6 +240,51 @@ export const DataTable = <T,>({
 				</Table.Container>
 			</div>
 		</Table.Provider>
+	);
+};
+
+const PAGE_SIZES = [25, 50, 100, 200] as const;
+
+/** DataTable with numbered pages over rows already in memory (live-patched lists); resets on resetKey. */
+export const PagedDataTable = <T,>({
+	data,
+	resetKey,
+	...props
+}: ComponentProps<typeof DataTable<T>> & { resetKey: string }) => {
+	const rows = data ?? [];
+	const [pageSize, setPageSize] = useState(50);
+	const [page, setPage] = useState({ resetKey, index: 0 });
+	const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+	const index = Math.min(
+		page.resetKey === resetKey ? page.index : 0,
+		totalPages - 1,
+	);
+	const go = (next: number) => setPage({ resetKey, index: next });
+	return (
+		<>
+			<DataTable
+				{...props}
+				data={data && rows.slice(index * pageSize, (index + 1) * pageSize)}
+			/>
+			{rows.length > PAGE_SIZES[0] && (
+				<TablePaginationFooter
+					currentPage={index + 1}
+					totalPages={totalPages}
+					totalCount={rows.length}
+					canGoPrev={index > 0}
+					canGoNext={index < totalPages - 1}
+					onPrev={() => go(index - 1)}
+					onNext={() => go(index + 1)}
+					pageSize={pageSize}
+					pageSizeOptions={PAGE_SIZES}
+					onPageSizeChange={(size) => {
+						setPageSize(size);
+						go(0);
+					}}
+					className="pt-3"
+				/>
+			)}
+		</>
 	);
 };
 

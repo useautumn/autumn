@@ -121,13 +121,13 @@ export const NewRunScreen = () => {
 	};
 
 	return (
-		<>
+		<div className="flex flex-col lg:min-h-0 lg:flex-1 lg:basis-0">
 			<PageHeader
 				icon={<PlusCircleIcon size={16} weight="fill" />}
 				title="New run"
 			/>
-			<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-				<div className="flex min-w-0 flex-col gap-5">
+			<div className="grid grid-cols-1 gap-6 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_18rem] lg:grid-rows-[minmax(0,1fr)]">
+				<div className="flex min-w-0 flex-col gap-5 lg:min-h-0">
 					<section>
 						<SectionTag>Branch</SectionTag>
 						{branches.data ? (
@@ -165,7 +165,7 @@ export const NewRunScreen = () => {
 						<ErrorCallout error={warm.error} className="mt-2" />
 					</section>
 
-					<section>
+					<section className="flex flex-col lg:min-h-0 lg:flex-1">
 						<div className="flex items-center justify-between">
 							<SectionTag>Tests</SectionTag>
 							{fileCount > 0 && (
@@ -178,7 +178,7 @@ export const NewRunScreen = () => {
 								</button>
 							)}
 						</div>
-						<Panel className="overflow-hidden">
+						<Panel className="flex flex-col overflow-hidden lg:min-h-0 lg:flex-1">
 							{catalog.data ? (
 								<TestSelector catalog={catalog.data} sel={sel} />
 							) : (
@@ -193,7 +193,7 @@ export const NewRunScreen = () => {
 					</section>
 				</div>
 
-				<aside className="lg:sticky lg:top-0">
+				<aside className="self-start">
 					<SectionTag>Summary</SectionTag>
 					<Panel className="flex flex-col gap-3 p-3">
 						<div className="flex flex-col gap-1.5">
@@ -303,6 +303,6 @@ export const NewRunScreen = () => {
 					</Panel>
 				</aside>
 			</div>
-		</>
+		</div>
 	);
 };

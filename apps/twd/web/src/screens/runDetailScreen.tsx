@@ -48,6 +48,7 @@ import {
 	ConfirmDialog,
 	DataTable,
 	Drawer,
+	PagedDataTable,
 	Panel,
 	SearchInput,
 	SectionTag,
@@ -62,7 +63,6 @@ import { useNow } from "../lib/useNow.ts";
 const TERMINAL = new Set(["passed", "failed", "cancelled", "errored"]);
 const FILTERS = ["all", "failed", "drift", "running", "passed"] as const;
 type Filter = (typeof FILTERS)[number];
-const PAGE = 200;
 
 const isFailure = (f: RunFile) =>
 	f.status === "failed" || f.status === "crashed";
@@ -394,7 +394,6 @@ export const RunDetailScreen = () => {
 	const now = useNow({ active: live });
 	const [filter, setFilter] = useState<Filter>("all");
 	const [query, setQuery] = useState("");
-	const [limit, setLimit] = useState(PAGE);
 	const [openFile, setOpenFile] = useState<string | null>(null);
 	const fileLog = useFileLog({ runId: id, file: openFile });
 	const [openWorker, setOpenWorker] = useState<string | null>(null);
@@ -647,7 +646,6 @@ export const RunDetailScreen = () => {
 								value={filter}
 								onChange={(f) => {
 									setFilter(f);
-									setLimit(PAGE);
 								}}
 								options={FILTERS.map((f) => ({
 									value: f,
@@ -669,19 +667,14 @@ export const RunDetailScreen = () => {
 								className="w-52"
 							/>
 						</div>
-						<DataTable
-							data={rows.slice(0, limit)}
+						<PagedDataTable
+							resetKey={`${filter}|${query}`}
+							data={rows}
 							columns={fileColumns}
 							onRowClick={(f) => setOpenFile(f.file)}
 							rowClassName="h-8"
 							emptyText="No files match. Try another filter."
 						/>
-						{rows.length > limit && (
-							<TableMore onClick={() => setLimit((l) => l + PAGE)}>
-								Show {Math.min(PAGE, rows.length - limit)} more of{" "}
-								{num(rows.length - limit)}
-							</TableMore>
-						)}
 					</section>
 				</div>
 

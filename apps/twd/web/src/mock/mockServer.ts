@@ -1171,8 +1171,21 @@ export const handle = ({
 				status === "all" ? true : status === "live" ? isLive(r) : !isLive(r),
 			)
 			.filter((r) => !branch || r.branch.includes(branch))
-			.slice(0, Number(url.searchParams.get("limit") ?? 50));
-		return ok(list);
+			.filter((r) => {
+				const outcome = url.searchParams.get("outcome") ?? "all";
+				if (outcome === "all") return true;
+				if (outcome === "failed")
+					return r.status === "failed" || r.status === "errored";
+				return r.status === outcome;
+			});
+		const limit = Number(url.searchParams.get("limit") ?? 50);
+		const start = Number(url.searchParams.get("cursor") ?? 0);
+		const end = start + limit;
+		return ok({
+			runs: list.slice(start, end),
+			nextCursor: end < list.length ? String(end) : null,
+			total: list.length,
+		});
 	}
 
 	if (route === "POST /runs") {

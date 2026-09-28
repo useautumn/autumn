@@ -12,7 +12,7 @@ import type { RunStatus } from "../../db/schema/runs.ts";
 import { cancelRun } from "../../internal/runs/actions/cancelRun.ts";
 import { createRun } from "../../internal/runs/actions/createRun.ts";
 import { getRun } from "../../internal/runs/actions/getRun.ts";
-import { listRuns } from "../../internal/runs/actions/listRuns.ts";
+import { listRunsPage } from "../../internal/runs/actions/listRuns.ts";
 import { rerunFailed } from "../../internal/runs/actions/rerunFailed.ts";
 import {
 	getLiveRun,
@@ -55,7 +55,7 @@ const parse = <S extends ZodTypeAny>({
 export const runsRoutes = new Hono<TwdHono>()
 	.get("/runs", async (c) =>
 		c.json(
-			await listRuns({
+			await listRunsPage({
 				ctx: c.get("ctx"),
 				...parse({ schema: ListRunsQuery, input: c.req.query() }),
 			}),

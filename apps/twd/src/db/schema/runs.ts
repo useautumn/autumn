@@ -68,6 +68,7 @@ export const runs = pgTable(
 	(t) => [
 		index("runs_status_idx").on(t.status, t.createdAt),
 		index("runs_branch_idx").on(t.branch, t.createdAt),
+		index("runs_created_idx").on(t.createdAt, t.id),
 	],
 );
 

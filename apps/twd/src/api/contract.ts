@@ -175,10 +175,21 @@ export const RunDetail = RunSummary.extend({
 	drift: z.array(Drift),
 });
 
+export const RunOutcome = z.enum(["all", "passed", "failed", "cancelled"]);
 export const ListRunsQuery = z.object({
 	status: z.enum(["live", "finished", "all"]).default("live"),
+	/** Narrows finished runs; "failed" includes errored. */
+	outcome: RunOutcome.default("all"),
+	/** Substring match on branch name. */
 	branch: z.string().optional(),
-	limit: z.coerce.number().max(200).default(50),
+	/** Opaque `nextCursor` from the previous page. */
+	cursor: z.string().optional(),
+	limit: z.coerce.number().int().min(1).max(200).default(50),
+});
+export const RunsPage = z.object({
+	runs: z.array(RunSummary),
+	nextCursor: z.string().nullable(),
+	total: z.number(),
 });
 
 /** SSE event on GET /runs/:id/events. */
@@ -511,6 +522,7 @@ export type Catalog = z.infer<typeof Catalog>;
 export type Branch = z.infer<typeof Branch>;
 export type CreateRunBody = z.infer<typeof CreateRunBody>;
 export type RunSummary = z.infer<typeof RunSummary>;
+export type RunsPage = z.infer<typeof RunsPage>;
 export type RunDetail = z.infer<typeof RunDetail>;
 export type RunFile = z.infer<typeof RunFile>;
 export type RunEvent = z.infer<typeof RunEvent>;

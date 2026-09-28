@@ -3,8 +3,12 @@ import {
 	and,
 	desc,
 	eq,
+	ilike,
 	inArray,
+	lt,
 	notInArray,
+	or,
+	type SQL,
 	sql,
 } from "drizzle-orm";
 import type { RunSummary } from "../../../api/contract.ts";
@@ -50,6 +54,8 @@ const selectRuns = ({ ctx }: { ctx: TwdContext }) =>
 			email: users.email,
 			queuePosition: queuePositionSql,
 			workersUsed: workersUsedSql,
+			/** Full µs precision; a JS Date would truncate it and skip rows in keyset paging. */
+			createdAtRaw: sql<string>`${runs.createdAt}::text`,
 		})
 		.from(runs)
 		.leftJoin(users, eq(users.id, runs.createdBy));
@@ -117,30 +123,75 @@ export const getRunWithEmail = async ({
 	return found;
 };
 
+export type RunsFilter = {
+	status: "live" | "finished" | "all";
+	outcome?: "all" | "passed" | "failed" | "cancelled";
+	branch?: string;
+};
+export type RunsCursor = { createdAt: string; id: string };
+
+const OUTCOME_STATUSES: Record<"passed" | "failed" | "cancelled", RunStatus[]> =
+	{
+		passed: ["passed"],
+		failed: ["failed", "errored"],
+		cancelled: ["cancelled"],
+	};
+
+const runsFilterSql = ({ status, outcome = "all", branch }: RunsFilter) =>
+	and(
+		status === "live"
+			? inArray(runs.status, LIVE_RUN_STATUSES)
+			: status === "finished"
+				? notInArray(runs.status, LIVE_RUN_STATUSES)
+				: undefined,
+		outcome === "all"
+			? undefined
+			: inArray(runs.status, OUTCOME_STATUSES[outcome]),
+		branch
+			? ilike(runs.branch, `%${branch.replace(/[\\%_]/g, "\\$&")}%`)
+			: undefined,
+	);
+
+/** Keyset page ordered newest first; ties on created_at break by id. */
 export const listRunsWithEmail = async ({
 	ctx,
-	status,
-	branch,
+	filter,
+	cursor,
 	limit,
 }: {
 	ctx: TwdContext;
-	status: "live" | "finished" | "all";
-	branch?: string;
+	filter: RunsFilter;
+	cursor?: RunsCursor;
 	limit: number;
-}) =>
-	selectRuns({ ctx })
-		.where(
-			and(
-				status === "live"
-					? inArray(runs.status, LIVE_RUN_STATUSES)
-					: status === "finished"
-						? notInArray(runs.status, LIVE_RUN_STATUSES)
-						: undefined,
-				branch ? eq(runs.branch, branch) : undefined,
-			),
-		)
-		.orderBy(desc(runs.createdAt))
+}) => {
+	const after: SQL | undefined = cursor
+		? or(
+				lt(runs.createdAt, sql`${cursor.createdAt}::timestamptz`),
+				and(
+					eq(runs.createdAt, sql`${cursor.createdAt}::timestamptz`),
+					lt(runs.id, cursor.id),
+				),
+			)
+		: undefined;
+	return selectRuns({ ctx })
+		.where(and(runsFilterSql(filter), after))
+		.orderBy(desc(runs.createdAt), desc(runs.id))
 		.limit(limit);
+};
+
+export const countRuns = async ({
+	ctx,
+	filter,
+}: {
+	ctx: TwdContext;
+	filter: RunsFilter;
+}) =>
+	(
+		await ctx.db
+			.select({ n: sql<number>`count(*)::int` })
+			.from(runs)
+			.where(runsFilterSql(filter))
+	)[0]?.n ?? 0;
 
 export const updateRun = async ({
 	ctx,

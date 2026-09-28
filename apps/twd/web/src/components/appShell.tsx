@@ -309,8 +309,8 @@ export const AppShell = () => {
 						data-main-content
 						className="relative h-full w-full overflow-auto bg-background"
 					>
-						<PageContainer>
-							<div>
+						<PageContainer className="min-h-full">
+							<div className="flex flex-1 flex-col">
 								{me.error ? <ErrorCallout error={me.error} /> : <Outlet />}
 							</div>
 						</PageContainer>
