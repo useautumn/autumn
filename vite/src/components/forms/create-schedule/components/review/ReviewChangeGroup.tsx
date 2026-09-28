@@ -1,7 +1,9 @@
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@autumn/ui";
-import { TABLE_TRAY_CLASS } from "@/components/general/table";
 import type { ReviewChangeSection } from "../../utils/review/types/reviewChange";
-import { ReviewChangePhaseBlock } from "./ReviewChangePhaseBlock";
+import {
+	REVIEW_PHASE_LIST_CLASS,
+	ReviewChangePhaseBlock,
+} from "./ReviewChangePhaseBlock";
 import { ReviewGroupTitle } from "./ReviewGroupTitle";
 import { ReviewStripeIdsPopover } from "./ReviewStripeIdsPopover";
 import type { ReviewChangeSystem } from "./ReviewSystemMark";
@@ -32,7 +34,7 @@ export function ReviewChangeGroup({
 				</span>
 			</AccordionTrigger>
 			<AccordionContent className="pb-4">
-				<div className={TABLE_TRAY_CLASS}>
+				<div className={REVIEW_PHASE_LIST_CLASS}>
 					{section.phases.map((phase) => (
 						<ReviewChangePhaseBlock
 							key={phase.key}

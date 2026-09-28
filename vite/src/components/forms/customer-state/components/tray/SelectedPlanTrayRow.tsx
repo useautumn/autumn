@@ -10,7 +10,6 @@ import {
 } from "@/components/forms/shared/PlanRowActionsMenu";
 import type { PlanRowScope } from "@/components/forms/shared/ScopedPlanRow";
 import { useCustomerStateContext } from "../../CustomerStateProvider";
-import type { PlanStatus } from "../../utils/planStatusConfig";
 import { CustomerStatePlanQuantities } from "../CustomerStatePlanQuantities";
 import { NotFoundBadge } from "../NotFoundBadge";
 import { PlanTrayLine } from "./PlanTrayLine";
@@ -50,7 +49,6 @@ const buildRowActions = ({
 export function SelectedPlanTrayRow({
 	location,
 	plan,
-	status,
 	scope,
 	scopeLabel,
 	readOnly = false,
@@ -60,7 +58,6 @@ export function SelectedPlanTrayRow({
 }: {
 	location: PlanLocation;
 	plan: CustomerStatePlan;
-	status?: PlanStatus;
 	scope?: PlanRowScope;
 	scopeLabel?: string;
 	readOnly?: boolean;
@@ -79,7 +76,6 @@ export function SelectedPlanTrayRow({
 				items={plan.items}
 				isCustom={plan.isCustom}
 				scopeLabel={scopeLabel}
-				status={status}
 				badge={<NotFoundBadge reasons={planNotFoundReasons(location)} />}
 				controls={
 					<>

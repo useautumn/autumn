@@ -8,18 +8,15 @@ import {
 	ROW_ACTION_ICON_SIZE,
 } from "@/components/forms/shared/PlanRowActionsMenu";
 import { useCustomerStateContext } from "../CustomerStateProvider";
-import type { PhasePlanStatus } from "../utils/phasePlanStatus";
 import { PlanPickerTrayRow } from "./tray/PlanPickerTrayRow";
 import { SelectedPlanTrayRow } from "./tray/SelectedPlanTrayRow";
 
 export function CustomerStatePlanRow({
 	phaseIndex,
 	planIndex,
-	status,
 }: {
 	phaseIndex: number;
 	planIndex: number;
-	status?: PhasePlanStatus;
 }) {
 	const {
 		form,
@@ -120,7 +117,6 @@ export function CustomerStatePlanRow({
 		<SelectedPlanTrayRow
 			location={location}
 			plan={plan}
-			status={status}
 			scope={scope}
 			scopeLabel={plan.entityId ? selectedLabel : undefined}
 			readOnly={isLocked}

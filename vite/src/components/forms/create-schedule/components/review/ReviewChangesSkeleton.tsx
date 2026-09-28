@@ -1,11 +1,12 @@
 import { Skeleton } from "@autumn/ui";
 import { ChevronDownIcon } from "lucide-react";
-import {
-	TABLE_TRAY_CLASS,
-	TABLE_TRAY_SURFACE_CLASS,
-	TABLE_TRAY_SURFACE_ROW_CLASS,
-} from "@/components/general/table";
+import { PlanSection } from "@/components/forms/customer-state/components/tray/PlanSection";
 import { cn } from "@/lib/utils";
+import {
+	REVIEW_PHASE_HEADER_CLASS,
+	REVIEW_PHASE_LIST_CLASS,
+} from "./ReviewChangePhaseBlock";
+import { REVIEW_ROW_CLASS } from "./ReviewChangeRowItem";
 import { ReviewGroupTitle } from "./ReviewGroupTitle";
 import type { ReviewChangeSystem } from "./ReviewSystemMark";
 
@@ -42,12 +43,7 @@ function SkeletonGroupHeader({
 
 function SkeletonRow({ titleWidth }: { titleWidth: string }) {
 	return (
-		<div
-			className={cn(
-				"flex min-h-11 items-center gap-3 px-3 py-[7px]",
-				TABLE_TRAY_SURFACE_ROW_CLASS,
-			)}
-		>
+		<div className={REVIEW_ROW_CLASS}>
 			<div className="min-w-0 flex-1">
 				<Skeleton className={cn("h-3.5", titleWidth)} />
 			</div>
@@ -66,16 +62,19 @@ export function ReviewChangesSkeleton() {
 	return (
 		<div className="flex flex-col px-4 pt-1">
 			<SkeletonGroupHeader system="autumn" title="Plans" isOpen />
-			<div className={cn(TABLE_TRAY_CLASS, "mb-4")}>
-				<div className="flex items-center justify-between px-2 pt-2 pb-1.5">
-					<Skeleton className="h-3 w-10" />
-					<Skeleton className="h-3 w-14" />
-				</div>
-				<div className={TABLE_TRAY_SURFACE_CLASS}>
+			<div className={cn(REVIEW_PHASE_LIST_CLASS, "pb-4")}>
+				<PlanSection
+					header={
+						<div className={REVIEW_PHASE_HEADER_CLASS}>
+							<Skeleton className="h-3 w-10" />
+							<Skeleton className="h-3 w-14" />
+						</div>
+					}
+				>
 					{SKELETON_TITLE_WIDTHS.map((titleWidth) => (
 						<SkeletonRow key={titleWidth} titleWidth={titleWidth} />
 					))}
-				</div>
+				</PlanSection>
 			</div>
 			{COLLAPSED_GROUPS.map((group) => (
 				<SkeletonGroupHeader

@@ -1,5 +1,5 @@
 import { useCustomerStateContext } from "../CustomerStateProvider";
-import { PlanTray, PlanTrayTitle } from "./tray/PlanTray";
+import { PlanSection, PlanSectionTitle } from "./tray/PlanSection";
 import { PlanTrayAddRow } from "./tray/PlanTrayAddRow";
 import { UnscheduledPlanRow } from "./UnscheduledPlanRow";
 
@@ -12,9 +12,9 @@ export function CustomerStateUnscheduledPlans() {
 	if (!canMakeUnscheduled && unscheduledPlans.length === 0) return null;
 
 	return (
-		<PlanTray
+		<PlanSection
 			header={
-				<PlanTrayTitle
+				<PlanSectionTitle
 					title="Ongoing plans"
 					hint="Billed now · kept across every phase"
 				/>
@@ -32,6 +32,6 @@ export function CustomerStateUnscheduledPlans() {
 					onClick={handleAddUnscheduledPlan}
 				/>
 			)}
-		</PlanTray>
+		</PlanSection>
 	);
 }

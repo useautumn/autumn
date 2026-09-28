@@ -1,6 +1,5 @@
 import { Button } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
-import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
 import { CustomerStateUnscheduledPlans } from "@/components/forms/customer-state/components/CustomerStateUnscheduledPlans";
 import { DisabledTooltipButton } from "@/components/forms/shared";
 import { BillingFooter } from "@/components/forms/shared/BillingFooter";
@@ -15,14 +14,12 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { CreateScheduleAdvancedSection } from "./CreateScheduleAdvancedSection";
 import { CreateScheduleGenerationBar } from "./CreateScheduleGenerationBar";
-import { AddPhaseButton } from "./phase/AddPhaseButton";
+import { PhaseTimeline } from "./phase/timeline/PhaseTimeline";
 import { SetPlansReviewChanges } from "./review/SetPlansReviewChanges";
-import { SchedulePhaseCard } from "./SchedulePhaseCard";
 import { SchedulePreview } from "./SchedulePreview";
 
 export function CreateScheduleSheetContent() {
-	const { form, formValues } = useCreateScheduleFormContext();
-	const { handleAddPhase } = useCustomerStateContext();
+	const { form } = useCreateScheduleFormContext();
 	const { closeSheet, setSheet } = useSheetStore();
 
 	const canSubmit = useStore(form.store, (state) => state.canSubmit);
@@ -44,15 +41,7 @@ export function CreateScheduleSheetContent() {
 					<CreateScheduleGenerationBar />
 				</SheetSection>
 				<SheetSection title="Phases" withSeparator>
-					<div className="space-y-3">
-						{formValues.phases.map((_phase, phaseIndex) => (
-							<SchedulePhaseCard
-								key={`phase-${phaseIndex}`}
-								phaseIndex={phaseIndex}
-							/>
-						))}
-						<AddPhaseButton onClick={handleAddPhase} />
-					</div>
+					<PhaseTimeline />
 				</SheetSection>
 
 				<SheetSection withSeparator={false}>

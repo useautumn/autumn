@@ -3,6 +3,11 @@ import { cn } from "@/lib/utils";
 import type { ReviewChangeRow } from "../../utils/review/types/reviewChange";
 import { ReviewStatusChip } from "./ReviewStatusChip";
 
+export const REVIEW_ROW_CLASS = cn(
+	"flex min-h-11 items-center gap-3 px-3 py-[7px]",
+	TABLE_TRAY_SURFACE_ROW_CLASS,
+);
+
 /** Status sits in a fixed column and value in a minimum-width one, so chips line up and amounts never clip. */
 export function ReviewChangeRowItem({
 	row,
@@ -12,12 +17,7 @@ export function ReviewChangeRowItem({
 	showsStatus: boolean;
 }) {
 	return (
-		<div
-			className={cn(
-				"flex min-h-11 items-center gap-3 px-3 py-[7px]",
-				TABLE_TRAY_SURFACE_ROW_CLASS,
-			)}
-		>
+		<div className={REVIEW_ROW_CLASS}>
 			<div className="flex min-w-0 flex-1 flex-col gap-0.5">
 				<span
 					className={cn(

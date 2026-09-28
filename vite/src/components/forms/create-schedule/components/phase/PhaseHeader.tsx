@@ -1,5 +1,5 @@
 import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
-import { PLAN_TRAY_HEADER_CLASS } from "@/components/forms/customer-state/components/tray/PlanTray";
+import { PLAN_SECTION_HEADER_CLASS } from "@/components/forms/customer-state/components/tray/PlanSection";
 import {
 	getPhaseTimingError,
 	hasCreateSchedulePhaseStarted,
@@ -8,7 +8,7 @@ import { usePhaseRecurringTotal } from "../../hooks/usePhaseRecurringTotal";
 import { PhaseActionsMenu } from "./PhaseActionsMenu";
 import { PhaseDateControl } from "./PhaseDateControl";
 
-export function PhaseTrayHeader({ phaseIndex }: { phaseIndex: number }) {
+export function PhaseHeader({ phaseIndex }: { phaseIndex: number }) {
 	const { formValues, nowMs, isPhaseLocked } = useCustomerStateContext();
 	const recurringTotal = usePhaseRecurringTotal({ phaseIndex });
 
@@ -26,7 +26,7 @@ export function PhaseTrayHeader({ phaseIndex }: { phaseIndex: number }) {
 
 	return (
 		<div>
-			<div className={PLAN_TRAY_HEADER_CLASS}>
+			<div className={PLAN_SECTION_HEADER_CLASS}>
 				<PhaseDateControl
 					phaseIndex={phaseIndex}
 					hasStarted={hasStarted}
@@ -46,7 +46,7 @@ export function PhaseTrayHeader({ phaseIndex }: { phaseIndex: number }) {
 				/>
 			</div>
 			{timingError && (
-				<p className="px-2 pb-1.5 text-xs text-destructive">{timingError}</p>
+				<p className="pt-1 text-xs text-destructive">{timingError}</p>
 			)}
 		</div>
 	);

@@ -59,7 +59,6 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 		<SelectedPlanTrayRow
 			location={location}
 			plan={plan}
-			status="ongoing"
 			scope={scope}
 			scopeLabel={plan.entityId ? selectedLabel : undefined}
 			onCustomize={() => setEditingPlan(location)}
