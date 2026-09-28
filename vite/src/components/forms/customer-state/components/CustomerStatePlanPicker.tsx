@@ -1,7 +1,24 @@
 import type { ProductV2 } from "@autumn/shared";
 import { SearchableSelect } from "@autumn/ui";
+import { ChevronDownIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { PlanIcon } from "@/components/forms/shared/SelectedPlanRow";
 import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
+
+/** Borderless full-width trigger that lines up with the selected plan rows around it. */
+function PlanPickerTrigger({ disabled }: { disabled?: boolean }) {
+	return (
+		<button
+			type="button"
+			disabled={disabled}
+			className="flex min-h-8 w-full min-w-0 cursor-pointer items-center gap-2 pl-1 text-left text-sm text-tertiary-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground disabled:cursor-not-allowed data-popup-open:text-foreground"
+		>
+			<PlanIcon isAddOn={false} />
+			<span className="min-w-0 flex-1 truncate">Select a plan…</span>
+			<ChevronDownIcon className="size-4 shrink-0 opacity-50" />
+		</button>
+	);
+}
 
 /** The empty plan row: a product picker that greys out conflicting groups. */
 export function CustomerStatePlanPicker({
@@ -44,10 +61,10 @@ export function CustomerStatePlanPicker({
 				</>
 			)}
 			header={header}
-			placeholder="Select product..."
+			trigger={<PlanPickerTrigger disabled={disabled} />}
 			searchable
-			searchPlaceholder="Search products..."
-			emptyText="No products found"
+			searchPlaceholder="Search plans..."
+			emptyText="No plans found"
 			defaultOpen
 			disabled={disabled}
 		/>
