@@ -1,13 +1,26 @@
 import { PlusIcon } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 
-export function AddPhaseButton({ onClick }: { onClick: () => void }) {
+export function AddPhaseButton({
+	onClick,
+	alignsWithRail,
+}: {
+	onClick: () => void;
+	alignsWithRail: boolean;
+}) {
 	return (
 		<button
 			type="button"
 			onClick={onClick}
-			className="flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-table-tray-border text-sm text-tertiary-foreground transition-colors hover:border-primary hover:text-foreground"
+			className="group/add-phase flex h-8 w-fit items-center gap-3 text-sm text-tertiary-foreground transition-colors hover:text-foreground"
 		>
-			<PlusIcon size={12} />
+			<span
+				className={cn("flex shrink-0 justify-center", alignsWithRail && "w-2")}
+			>
+				<span className="flex size-4 shrink-0 items-center justify-center rounded-full border border-dashed border-tertiary-foreground bg-card transition-colors group-hover/add-phase:border-solid group-hover/add-phase:border-primary">
+					<PlusIcon size={9} weight="bold" />
+				</span>
+			</span>
 			Add phase
 		</button>
 	);

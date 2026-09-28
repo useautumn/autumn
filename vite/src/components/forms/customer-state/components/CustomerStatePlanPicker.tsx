@@ -33,7 +33,6 @@ export function CustomerStatePlanPicker({
 	usedKeys: Set<string>;
 	siblingProductIds: Set<string>;
 	header?: ReactNode;
-	/** The new plan's scope, chosen from a row above the plan list. */
 	scope?: ComponentProps<typeof PlanPickerScopeRow>;
 	disabled?: boolean;
 	onSelect: (productId: string) => void;

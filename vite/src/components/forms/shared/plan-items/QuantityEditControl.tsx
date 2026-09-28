@@ -34,7 +34,6 @@ export function QuantityEditControl({
 	title?: string;
 	/** Helper line under the stepper, e.g. the billing-unit step. */
 	hint?: string;
-	/** "chip" folds the quantity and pencil into one clickable chip. */
 	trigger?: QuantityTrigger;
 	children: ReactNode;
 }) {

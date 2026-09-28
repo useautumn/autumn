@@ -7,17 +7,19 @@ export function PhaseTimelineRail({
 	phaseIndex,
 	isCurrent,
 	isLast,
+	connectsToNext = !isLast,
 }: {
 	phaseIndex: number;
 	isCurrent: boolean;
 	isLast: boolean;
+	connectsToNext?: boolean;
 }) {
 	const { isPhaseLocked, handleInsertPhase } = useCustomerStateContext();
 	const canInsertAfter = !isLast && !isPhaseLocked({ phaseIndex });
 
 	return (
 		<>
-			{!isLast && (
+			{connectsToNext && (
 				<span
 					aria-hidden
 					className="absolute top-4 -bottom-4 left-1/2 w-px -translate-x-1/2 bg-border"

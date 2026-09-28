@@ -26,7 +26,6 @@ export function PlanRowActionsMenu({
 }: {
 	actions: PlanRowAction[];
 	label?: string;
-	/** "secondary" when the trigger sits in a bordered button group. */
 	variant?: "muted" | "secondary";
 }) {
 	if (actions.length === 0) return null;

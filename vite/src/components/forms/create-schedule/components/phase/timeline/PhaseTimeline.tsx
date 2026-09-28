@@ -29,15 +29,14 @@ export function PhaseTimeline() {
 							phaseIndex={phaseIndex}
 							isCurrent={phaseIndex === currentPhaseIndex}
 							isLast={phaseIndex === lastPhaseIndex}
+							connectsToNext
 						/>
 					}
 				>
 					<SchedulePhaseCard phaseIndex={phaseIndex} />
 				</PhaseTimelineRow>
 			))}
-			<PhaseTimelineRow showsRail={showsRail}>
-				<AddPhaseButton onClick={handleAddPhase} />
-			</PhaseTimelineRow>
+			<AddPhaseButton alignsWithRail={showsRail} onClick={handleAddPhase} />
 		</div>
 	);
 }
