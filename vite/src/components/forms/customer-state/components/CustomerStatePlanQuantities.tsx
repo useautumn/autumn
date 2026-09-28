@@ -50,6 +50,7 @@ export function CustomerStatePlanQuantities({
 				quantities={plan.prepaidOptions}
 				currency={displayCurrency}
 				readOnly={readOnly}
+				trigger="chip"
 				renderField={({ featureId, step, stops }) => (
 					<form.AppField name={`${path}.prepaidOptions.${featureId}`}>
 						{(field) => (

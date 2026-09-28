@@ -1,8 +1,10 @@
 import { type ProductItem, UsageModel } from "@autumn/shared";
 import type { ReactNode } from "react";
 import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
+import { cn } from "@/lib/utils";
 import { prepaidTierStops } from "@/utils/billing/prepaidQuantityUtils";
 import { PrepaidQuantityControl } from "./plan-items/PrepaidQuantityControl";
+import type { QuantityTrigger } from "./plan-items/QuantityEditControl";
 
 const DEFAULT_USAGE_MODELS = [UsageModel.Prepaid];
 
@@ -12,6 +14,7 @@ export function PlanPrepaidQuantityFields({
 	currency,
 	readOnly = false,
 	usageModels = DEFAULT_USAGE_MODELS,
+	trigger = "button",
 	renderField,
 }: {
 	items?: ProductItem[] | null;
@@ -20,6 +23,7 @@ export function PlanPrepaidQuantityFields({
 	readOnly?: boolean;
 	/** Standalone invoices bill usage-based items too, not just prepaid. */
 	usageModels?: UsageModel[];
+	trigger?: QuantityTrigger;
 	renderField: (params: {
 		featureId: string;
 		step: number;
@@ -49,7 +53,13 @@ export function PlanPrepaidQuantityFields({
 				const step = item.billing_units ?? 1;
 				const stops = prepaidTierStops({ item });
 				return (
-					<div className="flex items-center gap-2" key={featureId}>
+					<div
+						className={cn(
+							"flex items-center gap-2",
+							trigger === "chip" && "flex-row-reverse",
+						)}
+						key={featureId}
+					>
 						<div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
 							<PlanItemLabel
 								currency={currency}
@@ -62,6 +72,7 @@ export function PlanPrepaidQuantityFields({
 							featureId={featureId}
 							quantity={quantities[featureId]}
 							readOnly={readOnly}
+							trigger={trigger}
 						>
 							{renderField({ featureId, step, stops })}
 						</PrepaidQuantityControl>
