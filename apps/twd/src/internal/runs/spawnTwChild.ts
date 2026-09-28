@@ -31,7 +31,9 @@ export const spawnTwChild = async <
 }): Promise<{ exitCode: number | null }> => {
 	const child = Bun.spawn([process.execPath, entry], {
 		cwd: REPO_ROOT,
-		env: { ...process.env, ...env },
+		// scripts/tw sizes a Stripe budget from its key-pool env at import time; twd passes real
+		// per-account keys over IPC, so a placeholder only satisfies that import-time check.
+		env: { STRIPE_SANDBOX_SECRET_KEY: "sk_test_twd_placeholder", ...process.env, ...env },
 		stdin: "ignore",
 		stdout: "pipe",
 		stderr: "pipe",
