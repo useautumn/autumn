@@ -5,6 +5,7 @@ import type { CustomerStatePlan } from "@/components/forms/customer-state/custom
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { balanceChangesToReviewSection } from "../utils/review/balanceChangesToReviewSection";
+import { customerStatePlansToReviewPlans } from "../utils/review/customerStatePlansToReviewPlans";
 import { planChangesToReviewSection } from "../utils/review/planChangesToReviewSection";
 import { processorItemsToReviewSection } from "../utils/review/processorItemsToReviewSection";
 import { recurringTotalLabel } from "../utils/review/recurringTotalLabel";
@@ -18,12 +19,9 @@ export type SetPlansReviewSections = {
 	processor: ReviewChangeSection;
 };
 
-const toPlanIds = (plans: CustomerStatePlan[]) =>
-	plans.map((plan) => plan.productId).filter(Boolean);
-
 /** Per-phase plan, balance and Stripe changes from the set_plans preview. */
 export function useSetPlansReviewSections(): SetPlansReviewSections | null {
-	const { preview, error, products, features, formValues } =
+	const { preview, error, products, features, formValues, nowMs } =
 		useCreateScheduleFormContext();
 	const { existingPlans } = useCustomerStateContext();
 	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
@@ -31,37 +29,42 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 	return useMemo(() => {
 		if (!preview || error) return null;
 
-		const unscheduledPlanIds = toPlanIds(formValues.unscheduledPlans);
-		const priceLabelFor = (product: ProductV2) =>
-			reviewPlanPriceLabel({
-				product: productForDisplay(product),
-				features,
-				currency: displayCurrency,
-			});
-		const phaseTotalFor = (planIds: string[]) =>
-			recurringTotalLabel({
-				products: products
-					.filter((product) => planIds.includes(product.id))
-					.map(productForDisplay),
-				currency: displayCurrency,
-			});
+		const displayProducts = products.map(productForDisplay);
+		const toReviewPlans = (plans: CustomerStatePlan[]) =>
+			customerStatePlansToReviewPlans({ plans, products, productForDisplay });
+		const unscheduledPlans = toReviewPlans(formValues.unscheduledPlans);
 
 		return {
 			warnings: preview.warnings,
 			plans: planChangesToReviewSection({
 				preview,
-				declaredPlanIdsByPhase: formValues.phases.map((phase) => [
-					...toPlanIds(phase.plans),
-					...unscheduledPlanIds,
+				declaredPlansByPhase: formValues.phases.map((phase) => [
+					...toReviewPlans(phase.plans),
+					...unscheduledPlans,
 				]),
-				existingPlanIds: toPlanIds(existingPlans),
-				context: { products, priceLabelFor, phaseTotalFor },
+				existingPlans: toReviewPlans(existingPlans),
+				nowMs,
+				context: {
+					products: displayProducts,
+					priceLabelFor: (product: ProductV2) =>
+						reviewPlanPriceLabel({
+							product,
+							features,
+							currency: displayCurrency,
+						}),
+					phaseTotalFor: (phaseProducts: ProductV2[]) =>
+						recurringTotalLabel({
+							products: phaseProducts,
+							currency: displayCurrency,
+						}),
+				},
 			}),
 			balances: balanceChangesToReviewSection({
 				phases: preview.phases,
 				features,
+				nowMs,
 			}),
-			processor: processorItemsToReviewSection({ preview }),
+			processor: processorItemsToReviewSection({ preview, nowMs }),
 		};
 	}, [
 		preview,
@@ -70,6 +73,7 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 		existingPlans,
 		products,
 		features,
+		nowMs,
 		displayCurrency,
 		productForDisplay,
 	]);

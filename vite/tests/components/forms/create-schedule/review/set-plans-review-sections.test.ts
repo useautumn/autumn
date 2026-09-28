@@ -10,6 +10,7 @@ import type {
 import { balanceChangesToReviewSection } from "@/components/forms/create-schedule/utils/review/balanceChangesToReviewSection";
 import { planChangesToReviewSection } from "@/components/forms/create-schedule/utils/review/planChangesToReviewSection";
 import { processorItemsToReviewSection } from "@/components/forms/create-schedule/utils/review/processorItemsToReviewSection";
+import type { ReviewPlan } from "@/components/forms/create-schedule/utils/review/types/reviewChange";
 
 const NOW = Date.UTC(2026, 8, 25);
 const NOV_1 = Date.UTC(2026, 10, 1);
@@ -21,6 +22,27 @@ const products = [
 ] as ProductV2[];
 
 const features = [{ id: "credits", name: "API Credits" }] as Feature[];
+
+const reviewPlan = (
+	planId: string,
+	overrides: Partial<ReviewPlan> = {},
+): ReviewPlan => ({
+	planId,
+	entityId: null,
+	product: products.find((product) => product.id === planId),
+	...overrides,
+});
+
+const reviewPlans = (planIds: string[]) =>
+	planIds.map((planId) => reviewPlan(planId));
+
+const context = {
+	products,
+	priceLabelFor: (product: ProductV2) =>
+		`$${product.items?.[0]?.price ?? product.id.length}/mo`,
+	phaseTotalFor: (phaseProducts: ProductV2[]) =>
+		`${phaseProducts.length} plans`,
+};
 
 const subscriptionChange = (planId: string, action: string) =>
 	({
@@ -71,16 +93,13 @@ test("plan rows mark starting, ending and kept plans per phase", () => {
 				}),
 			],
 		}),
-		declaredPlanIdsByPhase: [
-			["premium", "seats"],
-			["premium", "seats"],
+		declaredPlansByPhase: [
+			reviewPlans(["premium", "seats"]),
+			reviewPlans(["premium", "seats"]),
 		],
-		existingPlanIds: ["pro", "seats"],
-		context: {
-			products,
-			priceLabelFor: (product) => `$${product.id.length}/mo`,
-			phaseTotalFor: (planIds) => `${planIds.length} plans`,
-		},
+		existingPlans: reviewPlans(["pro", "seats"]),
+		nowMs: NOW,
+		context,
 	});
 
 	expect(
@@ -124,6 +143,7 @@ test("plan rows mark starting, ending and kept plans per phase", () => {
 test("balance rows classify reset and carried-over usage", () => {
 	const section = balanceChangesToReviewSection({
 		features,
+		nowMs: NOW,
 		phases: [
 			phase(NOW, {
 				balance_changes: [
@@ -224,6 +244,7 @@ test("Stripe rows list the end state per phase, named by plan", () => {
 	});
 
 	const section = processorItemsToReviewSection({
+		nowMs: NOW,
 		preview: preview({
 			processor_changes: [
 				{
@@ -293,4 +314,263 @@ test("Stripe rows list the end state per phase, named by plan", () => {
 		"price_legacy",
 		"price_seats",
 	]);
+});
+
+const entityChange = (planId: string, action: string, entityId: string) =>
+	({
+		...subscriptionChange(planId, action),
+		entity_id: entityId,
+	}) as SetPlansPreviewPhase["plan_changes"][number];
+
+const planRows = (section: ReturnType<typeof planChangesToReviewSection>) =>
+	section.phases.flatMap((phase) =>
+		phase.rows.map((row) => [
+			row.title,
+			row.description,
+			row.status,
+			row.value,
+		]),
+	);
+
+test("a credit shared by one plan ending on several entities isn't repeated per row", () => {
+	const section = planChangesToReviewSection({
+		preview: preview({
+			line_items: [
+				{ plan_id: "pro", total: -10 },
+				{ plan_id: "pro", total: -10 },
+			] as SetPlansPreviewResponse["line_items"],
+			phases: [
+				phase(NOW, {
+					plan_changes: [
+						entityChange("pro", "expired", "ent_a"),
+						entityChange("pro", "expired", "ent_b"),
+					],
+				}),
+			],
+		}),
+		declaredPlansByPhase: [[]],
+		existingPlans: [],
+		nowMs: NOW,
+		context,
+	});
+
+	expect(planRows(section)).toEqual([
+		[
+			"Pro",
+			"Unused time credited · -$20.00 across 2 entities · Entity ent_a",
+			"ends",
+			undefined,
+		],
+		[
+			"Pro",
+			"Unused time credited · -$20.00 across 2 entities · Entity ent_b",
+			"ends",
+			undefined,
+		],
+	]);
+});
+
+test("an ending plan's credit ignores charges for the same plan starting on another entity", () => {
+	const section = planChangesToReviewSection({
+		preview: preview({
+			line_items: [
+				{ plan_id: "pro", total: -10 },
+				{ plan_id: "pro", total: 20 },
+			] as SetPlansPreviewResponse["line_items"],
+			phases: [
+				phase(NOW, {
+					plan_changes: [
+						entityChange("pro", "expired", "ent_a"),
+						entityChange("pro", "activated", "ent_b"),
+					],
+				}),
+			],
+		}),
+		declaredPlansByPhase: [[reviewPlan("pro", { entityId: "ent_b" })]],
+		existingPlans: [reviewPlan("pro", { entityId: "ent_a" })],
+		nowMs: NOW,
+		context,
+	});
+
+	expect(planRows(section)).toEqual([
+		[
+			"Pro",
+			"Unused time credited · Entity ent_a",
+			"ends",
+			{ amount: "-$10.00", suffix: "credit" },
+		],
+		["Pro", "Entity ent_b", "starts", { amount: "$3", suffix: "/mo" }],
+	]);
+});
+
+const customProduct = (planId: string, price: number) =>
+	({
+		...products.find((product) => product.id === planId),
+		items: [{ price }],
+	}) as ProductV2;
+
+test("starting and kept plans show their own custom price, not the catalog's", () => {
+	const section = planChangesToReviewSection({
+		preview: preview({
+			phases: [
+				phase(NOW, {
+					plan_changes: [subscriptionChange("premium", "activated")],
+				}),
+			],
+		}),
+		declaredPlansByPhase: [
+			[
+				reviewPlan("premium", { product: customProduct("premium", 99) }),
+				reviewPlan("seats"),
+			],
+		],
+		existingPlans: [
+			reviewPlan("seats", { product: customProduct("seats", 42) }),
+		],
+		nowMs: NOW,
+		context,
+	});
+
+	expect(planRows(section)).toEqual([
+		["Premium", undefined, "starts", { amount: "$99", suffix: "/mo" }],
+		["Seats", undefined, "kept", { amount: "$42", suffix: "/mo" }],
+	]);
+});
+
+test("a plan declared for several entities counts once per entity in the total", () => {
+	const phaseTotals: number[] = [];
+	const section = planChangesToReviewSection({
+		preview: preview({ phases: [phase(NOW, {})] }),
+		declaredPlansByPhase: [
+			[
+				reviewPlan("pro", { entityId: "ent_a" }),
+				reviewPlan("pro", { entityId: "ent_b" }),
+			],
+		],
+		existingPlans: [
+			reviewPlan("pro", { entityId: "ent_a" }),
+			reviewPlan("pro", { entityId: "ent_b" }),
+		],
+		nowMs: NOW,
+		context: {
+			...context,
+			phaseTotalFor: (phaseProducts) => {
+				phaseTotals.push(phaseProducts.length);
+				return undefined;
+			},
+		},
+	});
+
+	expect(phaseTotals).toEqual([2]);
+	expect(section.phases[0]?.rows.map((row) => [row.key, row.status])).toEqual([
+		["plan-0-pro-ent_a-kept-0", "kept"],
+		["plan-0-pro-ent_b-kept-1", "kept"],
+	]);
+});
+
+test("a backdated first phase is labelled with its date, not Now", () => {
+	const SEP_1 = Date.UTC(2026, 8, 1);
+	const section = planChangesToReviewSection({
+		preview: preview({
+			phases: [
+				phase(SEP_1, {
+					plan_changes: [subscriptionChange("premium", "activated")],
+				}),
+			],
+		}),
+		declaredPlansByPhase: [reviewPlans(["premium"])],
+		existingPlans: [],
+		nowMs: NOW,
+		context,
+	});
+
+	expect(section.phases[0]?.label).toBe("Sep 1, 2026");
+	expect(section.summary).toBe("1 on Sep 1, 2026");
+});
+
+const unlimitedBalanceChange = ({
+	unlimitedBefore,
+}: {
+	unlimitedBefore: boolean;
+}) => ({
+	feature_id: "credits",
+	balance: {
+		granted: 0,
+		remaining: 0,
+		usage: 0,
+		unlimited: !unlimitedBefore,
+		next_reset_at: null,
+	},
+	previous_attributes: { unlimited: unlimitedBefore },
+});
+
+test("granting or removing unlimited access reads as added or removed", () => {
+	const section = balanceChangesToReviewSection({
+		features,
+		nowMs: NOW,
+		phases: [
+			phase(NOW, {
+				balance_changes: [unlimitedBalanceChange({ unlimitedBefore: false })],
+			}),
+			phase(NOV_1, {
+				balance_changes: [unlimitedBalanceChange({ unlimitedBefore: true })],
+			}),
+		],
+	});
+
+	expect(
+		section.phases.map((phase) => phase.rows.map((row) => row.status)),
+	).toEqual([["added"], ["removed"]]);
+	expect(section.summary).toBe("1 new · 1 removed");
+});
+
+test("a canceled subscription shows as ending, not as zero items", () => {
+	const section = processorItemsToReviewSection({
+		nowMs: NOW,
+		preview: preview({
+			processor_changes: [
+				{
+					type: "subscription",
+					processor: "stripe",
+					id: "sub_1",
+					action: "canceled",
+				},
+			],
+			phases: [phase(NOW, {})],
+		}),
+	});
+
+	expect(
+		section.phases.map((phase) =>
+			phase.rows.map((row) => [row.title, row.description, row.status]),
+		),
+	).toEqual([[["Subscription", "No items left to bill", "ends"]]]);
+	expect(section.summary).toBe("Canceled");
+});
+
+test("a schedule that ends into no items shows the subscription ending on that date", () => {
+	const premium: ProcessorItem = {
+		item_id: null,
+		price_id: "price_premium",
+		plan_id: "premium",
+		feature_id: null,
+		display_name: "Premium",
+		feature_name: null,
+		quantity: 1,
+		price: monthly(50),
+		amount: 50,
+		creates_price: false,
+		managed_by_autumn: true,
+	};
+	const section = processorItemsToReviewSection({
+		nowMs: NOW,
+		preview: preview({
+			phases: [phase(NOW, { processor_items: [premium] }), phase(NOV_1, {})],
+		}),
+	});
+
+	expect(
+		section.phases.map((phase) => phase.rows.map((row) => row.status)),
+	).toEqual([[undefined], ["ends"]]);
+	expect(section.summary).toBe("1 item now · Canceled on Nov 1, 2026");
 });

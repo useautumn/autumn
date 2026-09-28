@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import type { ReviewChangeRow } from "../../utils/review/types/reviewChange";
 import { ReviewStatusChip } from "./ReviewStatusChip";
 
-/** Status and value sit in fixed columns so chips line up across rows. */
+/** Status sits in a fixed column and value in a minimum-width one, so chips line up and amounts never clip. */
 export function ReviewChangeRowItem({
 	row,
 	showsStatus,
@@ -38,7 +38,7 @@ export function ReviewChangeRowItem({
 					{row.status && <ReviewStatusChip status={row.status} />}
 				</div>
 			)}
-			<span className="flex w-[104px] shrink-0 items-baseline justify-end gap-[3px] whitespace-nowrap">
+			<span className="flex min-w-[104px] shrink-0 items-baseline justify-end gap-[3px] whitespace-nowrap">
 				{row.value && (
 					<>
 						<span className="text-sm font-medium tabular-nums text-foreground">

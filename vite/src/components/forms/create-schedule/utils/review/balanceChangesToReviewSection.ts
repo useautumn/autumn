@@ -53,6 +53,10 @@ const classifyBalanceChange = ({
 	before: PreviewBalance;
 	after: PreviewBalance;
 }): BalanceBehavior => {
+	if (!before.unlimited && after.unlimited) return "added";
+	if (before.unlimited && !after.unlimited && after.granted === 0) {
+		return "removed";
+	}
 	if (before.granted === 0 && before.usage === 0 && after.granted > 0) {
 		return "added";
 	}
@@ -137,13 +141,15 @@ const balanceChangeToRow = ({
 export const balanceChangesToReviewSection = ({
 	phases,
 	features,
+	nowMs,
 }: {
 	phases: SetPlansPreviewPhase[];
 	features: Feature[];
+	nowMs: number;
 }): ReviewChangeSection => {
 	const phaseRows = phases.map((phase, phaseIndex) => ({
 		key: `balances-${phaseIndex}`,
-		label: phaseLabel({ phaseIndex, startsAt: phase.starts_at }),
+		label: phaseLabel({ phaseIndex, startsAt: phase.starts_at, nowMs }),
 		rows: phase.balance_changes.map((change) =>
 			balanceChangeToRow({ change, phaseIndex, features }),
 		),

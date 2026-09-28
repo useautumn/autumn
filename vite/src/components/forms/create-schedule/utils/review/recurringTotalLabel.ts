@@ -1,11 +1,11 @@
 import {
-	formatAmount,
 	formatInterval,
 	type PriceItem,
 	type ProductV2,
 	productV2ToBasePrice,
 } from "@autumn/shared";
 import { compactPriceLabel } from "./compactPriceLabel";
+import { formatMoney } from "./formatMoney";
 
 const intervalKey = (price: PriceItem) =>
 	`${price.interval}-${price.interval_count ?? 1}`;
@@ -29,10 +29,9 @@ export const recurringTotalLabel = ({
 	);
 	if (!sharesInterval) return undefined;
 
-	const total = formatAmount({
+	const total = formatMoney({
 		amount: basePrices.reduce((sum, price) => sum + price.price, 0),
 		currency,
-		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 	});
 	const interval = formatInterval({
 		interval: firstPrice.interval ?? undefined,

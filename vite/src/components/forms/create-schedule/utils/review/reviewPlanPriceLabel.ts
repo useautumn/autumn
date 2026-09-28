@@ -1,7 +1,6 @@
 import {
 	type Feature,
 	findFeatureById,
-	formatAmount,
 	getFeatureName,
 	isFeaturePriceItem,
 	type ProductItem,
@@ -10,6 +9,7 @@ import {
 import { getBasePriceLabel } from "@/components/forms/customer-state/customerStatePlanPrice";
 import { PRICE_VARIES_LABEL } from "@/utils/product/basePriceDisplayUtils";
 import { compactPriceLabel } from "./compactPriceLabel";
+import { formatMoney } from "./formatMoney";
 
 const firstUnitAmount = (item: ProductItem) =>
 	item.price ?? item.tiers?.[0]?.amount ?? null;
@@ -47,11 +47,7 @@ const featureUnitPriceLabel = ({
 	const amount = item ? firstUnitAmount(item) : null;
 	if (!item || amount === null) return undefined;
 
-	const price = formatAmount({
-		amount,
-		currency,
-		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-	});
+	const price = formatMoney({ amount, currency });
 	const isTiered = (item.tiers?.length ?? 0) > 1;
 	const otherPricedCount = pricedItems.length - 1;
 

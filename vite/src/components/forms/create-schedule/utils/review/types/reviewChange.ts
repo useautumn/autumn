@@ -1,3 +1,5 @@
+import type { ProductV2 } from "@autumn/shared";
+
 export type ReviewChangeStatus =
 	| "starts"
 	| "ends"
@@ -39,4 +41,11 @@ export type ReviewChangeSection = {
 	phases: ReviewChangePhase[];
 	summary: string;
 	stripeIds: ReviewStripeId[];
+};
+
+/** A plan the form declares or the customer already has, priced with its own items. */
+export type ReviewPlan = {
+	planId: string;
+	entityId: string | null;
+	product: ProductV2 | undefined;
 };

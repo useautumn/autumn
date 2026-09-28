@@ -1,8 +1,5 @@
-import {
-	formatAmount,
-	type ProcessorItem,
-	type ProcessorItemPrice,
-} from "@autumn/shared";
+import type { ProcessorItem, ProcessorItemPrice } from "@autumn/shared";
+import { formatMoney } from "./formatMoney";
 import type { ReviewChangeValue } from "./types/reviewChange";
 
 const INTERVAL_ABBREVIATION: Record<
@@ -16,22 +13,12 @@ const INTERVAL_ABBREVIATION: Record<
 };
 
 const ONE_OFF_SUFFIX = "one-off";
+const USAGE_TOTAL_SUFFIX = " + usage";
 
-export const formatMoney = ({
-	amount,
-	currency,
-}: {
-	amount: number;
-	currency: string;
-}) =>
-	formatAmount({
-		amount,
-		currency,
-		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-	});
+type PricedProcessorItem = ProcessorItem & { price: ProcessorItemPrice };
 
 /** "/mo", "/3 mo", or "one-off" for a price without a recurring interval. */
-export const priceIntervalSuffix = (price: ProcessorItemPrice) => {
+const priceIntervalSuffix = (price: ProcessorItemPrice) => {
 	if (!price.interval) return ONE_OFF_SUFFIX;
 	const unit = INTERVAL_ABBREVIATION[price.interval];
 	return price.interval_count > 1
@@ -89,22 +76,28 @@ export const processorItemValue = (
 	return undefined;
 };
 
+const isPricedItem = (item: ProcessorItem): item is PricedProcessorItem =>
+	item.price !== null;
+
 /** Sum of fixed charges in a phase, when every priced item shares one interval and currency. */
 export const processorItemsTotal = (items: ProcessorItem[]) => {
-	const pricedItems = items.filter(
-		(item): item is ProcessorItem & { price: ProcessorItemPrice } =>
-			item.price !== null && item.amount !== null,
-	);
-	const [first] = pricedItems;
+	const pricedItems = items.filter(isPricedItem);
+	const fixedItems = pricedItems.filter((item) => item.amount !== null);
+	const [first] = fixedItems;
 	if (!first) return undefined;
 
-	const sharesBilling = pricedItems.every(
+	const sharesBilling = fixedItems.every(
 		(item) =>
 			item.price.currency === first.price.currency &&
 			priceIntervalSuffix(item.price) === priceIntervalSuffix(first.price),
 	);
 	if (!sharesBilling) return undefined;
 
-	const total = pricedItems.reduce((sum, item) => sum + (item.amount ?? 0), 0);
-	return `${formatMoney({ amount: total, currency: first.price.currency })}${priceIntervalSuffix(first.price)}`;
+	const total = fixedItems.reduce((sum, item) => sum + (item.amount ?? 0), 0);
+	const hasVariableItems = fixedItems.length < pricedItems.length;
+	return [
+		formatMoney({ amount: total, currency: first.price.currency }),
+		priceIntervalSuffix(first.price),
+		hasVariableItems ? USAGE_TOTAL_SUFFIX : "",
+	].join("");
 };

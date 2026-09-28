@@ -1,26 +1,28 @@
-import {
-	type CustomerPlanChange,
-	formatAmount,
-	type PreviewLineItem,
-	type ProductV2,
-	type SetPlansPreviewPhase,
-	type SetPlansPreviewResponse,
+import type {
+	CustomerPlanChange,
+	ProductV2,
+	SetPlansPreviewPhase,
+	SetPlansPreviewResponse,
 } from "@autumn/shared";
+import { immediatePlanCredit } from "./immediatePlanCredit";
+import { matchPlanChangesToDeclaredPlans } from "./matchPlanChangesToDeclaredPlans";
 import {
 	formatPhaseDate,
 	isImmediatePhase,
 	joinDetail,
 	phaseLabel,
+	phaseSummaryLabel,
 	summarizeCounts,
 	withoutEmptyPhases,
 } from "./phaseTiming";
+import { planChangePlanId } from "./planChangePlanId";
 import { splitPriceLabel } from "./splitPriceLabel";
 import type {
 	ReviewChangePhase,
 	ReviewChangeRow,
 	ReviewChangeSection,
 	ReviewChangeStatus,
-	ReviewChangeValue,
+	ReviewPlan,
 } from "./types/reviewChange";
 
 type PlanChangeStatus = Extract<
@@ -38,16 +40,11 @@ const PLAN_CHANGE_STATUS: Record<
 	updated: "updated",
 };
 
-const CREDIT_DESCRIPTION = "Unused time credited";
-
 type PlanRowContext = {
 	products: ProductV2[];
 	priceLabelFor: (product: ProductV2) => string;
-	phaseTotalFor: (planIds: string[]) => string | undefined;
+	phaseTotalFor: (products: ProductV2[]) => string | undefined;
 };
-
-const planChangePlanId = (change: CustomerPlanChange) =>
-	change.subscription?.plan_id ?? change.purchase?.plan_id ?? "";
 
 const findProduct = ({
 	products,
@@ -56,32 +53,6 @@ const findProduct = ({
 	products: ProductV2[];
 	planId: string;
 }) => products.find((product) => product.id === planId);
-
-/** Net credit on the immediate invoice for a plan that ends now. */
-const immediateCredit = ({
-	preview,
-	planId,
-}: {
-	preview: SetPlansPreviewResponse;
-	planId: string;
-}): ReviewChangeValue | undefined => {
-	const credit = preview.line_items
-		.filter((lineItem: PreviewLineItem) => lineItem.plan_id === planId)
-		.reduce(
-			(sum: number, lineItem: PreviewLineItem) => sum + lineItem.total,
-			0,
-		);
-	if (credit >= 0) return undefined;
-
-	const amount = formatAmount({
-		amount: credit,
-		currency: preview.currency,
-		minFractionDigits: 2,
-		maxFractionDigits: 2,
-		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-	});
-	return { amount, suffix: "credit" };
-};
 
 const planChangeExtras = ({
 	change,
@@ -110,118 +81,141 @@ const productPrice = ({
 
 const planChangeToRow = ({
 	preview,
+	phase,
 	change,
+	declaredPlan,
 	phaseIndex,
 	context,
 }: {
 	preview: SetPlansPreviewResponse;
+	phase: SetPlansPreviewPhase;
 	change: CustomerPlanChange;
+	declaredPlan: ReviewPlan | undefined;
 	phaseIndex: number;
 	context: PlanRowContext;
 }): ReviewChangeRow => {
 	const planId = planChangePlanId(change);
-	const product = findProduct({ products: context.products, planId });
+	const product =
+		declaredPlan?.product ??
+		findProduct({ products: context.products, planId });
 	const status = PLAN_CHANGE_STATUS[change.action];
 	const credit =
 		status === "ends" && isImmediatePhase({ phaseIndex })
-			? immediateCredit({ preview, planId })
+			? immediatePlanCredit({
+					preview,
+					planId,
+					immediateChanges: phase.plan_changes,
+				})
 			: undefined;
 
 	return {
 		key: `plan-${phaseIndex}-${planId}-${change.entity_id ?? ""}-${change.action}`,
 		title: product?.name ?? planId,
 		description: joinDetail([
-			credit ? CREDIT_DESCRIPTION : undefined,
+			credit?.description,
 			...planChangeExtras({ change, status }),
 		]),
 		status,
-		value: planRowValue({ status, credit, product, context }),
+		value:
+			status === "ends" ? credit?.value : productPrice({ product, context }),
 	};
 };
 
-/** Ending plans show their credit, if any; live plans show their price. */
-const planRowValue = ({
-	status,
-	credit,
-	product,
-	context,
+const findPreviousPlan = ({
+	plan,
+	previousPlans,
 }: {
-	status: PlanChangeStatus;
-	credit: ReviewChangeValue | undefined;
-	product: ProductV2 | undefined;
-	context: PlanRowContext;
-}) => {
-	if (status === "ends") return credit;
-	return productPrice({ product, context });
-};
+	plan: ReviewPlan;
+	previousPlans: ReviewPlan[];
+}) =>
+	previousPlans.find(
+		(previous) =>
+			previous.planId === plan.planId && previous.entityId === plan.entityId,
+	) ?? previousPlans.find((previous) => previous.planId === plan.planId);
 
-/** Declared plans that were already active and have no change in this phase. */
+/** Declared plans with no change this phase that were already active, priced as they stand. */
 const keptPlanRows = ({
 	phaseIndex,
-	declaredPlanIds,
-	previousPlanIds,
-	changedPlanIds,
+	unchangedPlans,
+	previousPlans,
 	context,
 }: {
 	phaseIndex: number;
-	declaredPlanIds: string[];
-	previousPlanIds: string[];
-	changedPlanIds: Set<string>;
+	unchangedPlans: ReviewPlan[];
+	previousPlans: ReviewPlan[];
 	context: PlanRowContext;
 }): ReviewChangeRow[] =>
-	declaredPlanIds
-		.filter(
-			(planId) =>
-				previousPlanIds.includes(planId) && !changedPlanIds.has(planId),
-		)
-		.map((planId) => {
-			const product = findProduct({ products: context.products, planId });
-			return {
-				key: `plan-${phaseIndex}-${planId}-kept`,
-				title: product?.name ?? planId,
+	unchangedPlans.flatMap((plan, planIndex) => {
+		const previousPlan = findPreviousPlan({ plan, previousPlans });
+		if (!previousPlan) return [];
+
+		const product = previousPlan.product ?? plan.product;
+		return [
+			{
+				key: `plan-${phaseIndex}-${plan.planId}-${plan.entityId ?? ""}-kept-${planIndex}`,
+				title: product?.name ?? plan.planId,
 				status: "kept",
 				value: productPrice({ product, context }),
-			};
-		});
+			},
+		];
+	});
 
 type PlanPhase = {
 	changeCount: number;
+	startsAt: number;
 	phase: ReviewChangePhase;
 };
 
 export const planChangesToReviewSection = ({
 	preview,
-	declaredPlanIdsByPhase,
-	existingPlanIds,
+	declaredPlansByPhase,
+	existingPlans,
+	nowMs,
 	context,
 }: {
 	preview: SetPlansPreviewResponse;
-	declaredPlanIdsByPhase: string[][];
-	existingPlanIds: string[];
+	declaredPlansByPhase: ReviewPlan[][];
+	existingPlans: ReviewPlan[];
+	nowMs: number;
 	context: PlanRowContext;
 }): ReviewChangeSection => {
 	const phases: PlanPhase[] = preview.phases.map(
 		(phase: SetPlansPreviewPhase, phaseIndex: number) => {
-			const declaredPlanIds = declaredPlanIdsByPhase[phaseIndex] ?? [];
-			const changeRows = phase.plan_changes.map((change: CustomerPlanChange) =>
-				planChangeToRow({ preview, change, phaseIndex, context }),
+			const declaredPlans = declaredPlansByPhase[phaseIndex] ?? [];
+			const { matchedPlans, unmatchedPlans } = matchPlanChangesToDeclaredPlans({
+				changes: phase.plan_changes,
+				declaredPlans,
+			});
+			const changeRows = phase.plan_changes.map(
+				(change: CustomerPlanChange, changeIndex: number) =>
+					planChangeToRow({
+						preview,
+						phase,
+						change,
+						declaredPlan: matchedPlans[changeIndex],
+						phaseIndex,
+						context,
+					}),
 			);
 			const keptRows = keptPlanRows({
 				phaseIndex,
-				declaredPlanIds,
-				previousPlanIds: isImmediatePhase({ phaseIndex })
-					? existingPlanIds
-					: (declaredPlanIdsByPhase[phaseIndex - 1] ?? []),
-				changedPlanIds: new Set(phase.plan_changes.map(planChangePlanId)),
+				unchangedPlans: unmatchedPlans,
+				previousPlans: isImmediatePhase({ phaseIndex })
+					? existingPlans
+					: (declaredPlansByPhase[phaseIndex - 1] ?? []),
 				context,
 			});
+			const declaredProducts = declaredPlans.flatMap((plan) =>
+				plan.product ? [plan.product] : [],
+			);
 
 			return {
 				changeCount: changeRows.length,
+				startsAt: phase.starts_at,
 				phase: {
 					key: `plans-${phaseIndex}`,
-					label: phaseLabel({ phaseIndex, startsAt: phase.starts_at }),
-					total: context.phaseTotalFor(declaredPlanIds),
+					label: phaseLabel({ phaseIndex, startsAt: phase.starts_at, nowMs }),
+					total: context.phaseTotalFor(declaredProducts),
 					rows: [...changeRows, ...keptRows],
 				},
 			};
@@ -231,8 +225,8 @@ export const planChangesToReviewSection = ({
 	return {
 		phases: withoutEmptyPhases(phases.map(({ phase }) => phase)),
 		summary: summarizeCounts({
-			counts: phases.map(({ phase, changeCount }, phaseIndex) => [
-				isImmediatePhase({ phaseIndex }) ? "now" : `on ${phase.label}`,
+			counts: phases.map(({ startsAt, changeCount }, phaseIndex) => [
+				phaseSummaryLabel({ phaseIndex, startsAt, nowMs }),
 				changeCount,
 			]),
 			emptyLabel: "No changes",
