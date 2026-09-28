@@ -26,6 +26,7 @@ export const detectSubscriptionMatch = async ({
 	billingCurrency,
 	nowSec,
 	fullProducts: preloadedFullProducts,
+	linkedInternalProductIds,
 }: {
 	ctx: AutumnContext;
 	subscription?: Stripe.Subscription;
@@ -35,6 +36,10 @@ export const detectSubscriptionMatch = async ({
 	/** Optional pre-fetched catalog (callers matching many subscriptions pass
 	 * this to avoid a per-call fetch). */
 	fullProducts?: FullProduct[];
+	/** Products currently linked to the subscription — an item no plan claims
+	 * in the current phase stays on these instead of falling back to another
+	 * plan. */
+	linkedInternalProductIds?: ReadonlySet<string>;
 }): Promise<SubscriptionMatch> => {
 	if (!subscription && !schedule) {
 		throw new Error(
@@ -67,7 +72,16 @@ export const detectSubscriptionMatch = async ({
 	const phaseMatches: PhaseMatch[] = phaseSnapshots.map((snapshot) => {
 		const itemDiffs = rematchFeaturesWithinAnchoredPlans({
 			itemDiffs: snapshot.items.map((item) =>
-				findAutumnMatchForStripeItem({ item, fullProducts, org: ctx.org }),
+				findAutumnMatchForStripeItem({
+					item,
+					fullProducts,
+					org: ctx.org,
+					// Linked products are current-phase state; future phases match
+					// on the catalog alone.
+					linkedInternalProductIds: snapshot.is_current
+						? linkedInternalProductIds
+						: undefined,
+				}),
 			),
 			org: ctx.org,
 		});
