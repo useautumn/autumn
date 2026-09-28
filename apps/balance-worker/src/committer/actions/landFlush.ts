@@ -30,12 +30,26 @@ const TRANSIENT_SOCKET_CODES = new Set([
 	"EPIPE",
 	"ETIMEDOUT",
 ]);
+/** The driver ending or losing the connection under a statement: Postgres never judged the record, so it is retried. */
+const TRANSIENT_CLIENT_CODES = new Set([
+	"ERR_POSTGRES_CONNECTION_CLOSED",
+	"ERR_POSTGRES_CONNECTION_FAILED",
+	"ERR_POSTGRES_CONNECTION_REFUSED",
+	"ERR_POSTGRES_CONNECTION_TIMEOUT",
+	"ERR_POSTGRES_IDLE_TIMEOUT",
+	"ERR_POSTGRES_LIFETIME_TIMEOUT",
+	"ERR_POSTGRES_QUERY_CANCELLED",
+	"ERR_POSTGRES_TLS_NOT_AVAILABLE",
+	"ERR_POSTGRES_TLS_UPGRADE_FAILED",
+	"ERR_POSTGRES_UNEXPECTED_MESSAGE",
+]);
 
 const isTransientFailure = (cause: unknown): boolean => {
 	if (!(cause instanceof Error)) return false;
 	const { errno, code } = cause as Error & { errno?: unknown; code?: unknown };
 	if (typeof errno === "string" && TRANSIENT_SQLSTATE.test(errno)) return true;
-	return typeof code === "string" && TRANSIENT_SOCKET_CODES.has(code);
+	if (typeof code !== "string") return false;
+	return TRANSIENT_SOCKET_CODES.has(code) || TRANSIENT_CLIENT_CODES.has(code);
 };
 
 /** Another writer moved this partition's bookmark: the record is fine, this worker no longer owns it. */

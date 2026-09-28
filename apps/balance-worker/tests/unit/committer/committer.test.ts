@@ -27,12 +27,16 @@ function createGatedDb({
 	failWhen,
 	staleIds = new Set<string>(),
 	transientFailures = 0,
+	transientError = () =>
+		Object.assign(new Error("connection reset"), { errno: "08006" }),
 }: {
 	failWhen?: (updates: readonly SubjectRowChange[]) => Error | null;
 	/** Rows whose guard no longer matches: the flush rolls back and reports them unapplied. */
 	staleIds?: Set<string>;
 	/** How many leading flushes fail with a retryable SQLSTATE before Postgres "recovers". */
 	transientFailures?: number;
+	/** What those leading flushes throw; a retryable SQLSTATE unless the test says otherwise. */
+	transientError?: () => Error;
 } = {}) {
 	let remainingTransient = transientFailures;
 	const transactions: {
@@ -52,7 +56,7 @@ function createGatedDb({
 			if (!open) await gate.promise;
 			if (remainingTransient > 0) {
 				remainingTransient -= 1;
-				throw Object.assign(new Error("connection reset"), { errno: "08006" });
+				throw transientError();
 			}
 			const failure = failWhen?.(request.changes);
 			if (failure) throw failure;
@@ -238,6 +242,50 @@ describe("committer", () => {
 		expect(
 			fake.transactions.map((transaction) => transaction.partitions),
 		).toEqual([[0], [0], [0], [1]]);
+		await committer.drain();
+	});
+
+	test("the driver dropping the connection under a flush is retried, never taken as Postgres refusing the record", async () => {
+		// The pool ends a connection at its idle or lifetime limit while a statement is out; nothing was judged.
+		const lifecycle = [
+			Object.assign(new Error("Idle timeout reached after 30s"), {
+				code: "ERR_POSTGRES_IDLE_TIMEOUT",
+			}),
+			Object.assign(new Error("Max lifetime timeout reached after 30m"), {
+				code: "ERR_POSTGRES_LIFETIME_TIMEOUT",
+			}),
+			Object.assign(new Error("Connection closed"), {
+				code: "ERR_POSTGRES_CONNECTION_CLOSED",
+			}),
+		];
+		const fake = createGatedDb({
+			transientFailures: lifecycle.length,
+			transientError: () => lifecycle.shift() ?? new Error("unexpected"),
+		});
+		fake.openGate();
+		const errors: string[] = [];
+		const committer = createCommitter({
+			ctx: {
+				db: fake.db,
+				logger: {
+					info() {},
+					warn() {},
+					error: (message) => errors.push(message),
+				},
+			},
+			config: { concurrency: 1, maxRowsPerFlush: 500, retry },
+		});
+		const outcome = await committer.apply({
+			topic,
+			partition: 0,
+			expectedOffset: 0n,
+			records: [record({ partition: 0, offset: 0n, commandId: "a" })],
+		});
+		expect(outcome.nextOffset).toBe(1n);
+		expect(outcome.failure).toBeUndefined();
+		expect(outcome.rejections ?? []).toEqual([]);
+		expect(fake.transactions).toHaveLength(4);
+		expect(errors.some((message) => message.includes("skipped"))).toBe(false);
 		await committer.drain();
 	});
 
