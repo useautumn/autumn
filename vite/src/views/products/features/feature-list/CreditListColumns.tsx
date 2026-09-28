@@ -1,14 +1,14 @@
 import {
 	type Feature,
-	isAiCreditSystem,
 	type ModelsDevProvider,
 	splitModelId,
 } from "@autumn/shared";
 import { MiniCopyButton } from "@autumn/ui";
-import { CoinsIcon, CpuIcon } from "@phosphor-icons/react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { getFeatureHoverTexts } from "@/views/admin/adminUtils";
+import { FeatureTypeChip } from "../components/FeatureTypeChip";
+import { CreditSystemFeatureChips } from "./CreditSystemFeatureChips";
 import { FeatureListRowToolbar } from "./FeatureListRowToolbar";
 
 function resolveModelName(
@@ -20,9 +20,13 @@ function resolveModelName(
 	return providers[provider]?.models[modelKey]?.name ?? fullId;
 }
 
-export const createCreditListColumns = (
-	providers: Record<string, ModelsDevProvider>,
-): ColumnDef<Feature, unknown>[] => [
+export const createCreditListColumns = ({
+	providers,
+	features,
+}: {
+	providers: Record<string, ModelsDevProvider>;
+	features: Feature[];
+}): ColumnDef<Feature, unknown>[] => [
 	{
 		size: 150,
 		header: "Name",
@@ -58,24 +62,9 @@ export const createCreditListColumns = (
 		header: "Type",
 		size: 160,
 		accessorKey: "type",
-		cell: ({ row }: { row: Row<Feature> }) => {
-			const isAi = isAiCreditSystem(row.original.type);
-			return (
-				<div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-					{isAi ? (
-						<>
-							<CpuIcon size={14} weight="fill" className="text-yellow-500" />
-							AI Credit System
-						</>
-					) : (
-						<>
-							<CoinsIcon size={14} weight="fill" className="text-pink-500" />
-							Credit System
-						</>
-					)}
-				</div>
-			);
-		},
+		cell: ({ row }: { row: Row<Feature> }) => (
+			<FeatureTypeChip featureType={row.original.type} />
+		),
 	},
 	{
 		header: "Features",
@@ -86,22 +75,17 @@ export const createCreditListColumns = (
 			const modelMarkupEntries = creditSystem.model_markups
 				? Object.entries(creditSystem.model_markups)
 				: null;
-			const featureIds =
+			const labels =
 				modelMarkupEntries && modelMarkupEntries.length > 0
-					? modelMarkupEntries
-							.map(([fullId]) => resolveModelName(fullId, providers))
-							.join(", ")
-					: creditSystem.config?.schema
-							?.map(
-								(schema: { metered_feature_id: string }) =>
-									schema.metered_feature_id,
-							)
-							.join(", ") || "—";
-			return (
-				<div className="text-muted-foreground truncate font-mono text-xs">
-					{featureIds}
-				</div>
-			);
+					? modelMarkupEntries.map(([fullId]) =>
+							resolveModelName(fullId, providers),
+						)
+					: (creditSystem.config?.schema ?? []).map(
+							({ metered_feature_id }: { metered_feature_id: string }) =>
+								features.find((feature) => feature.id === metered_feature_id)
+									?.name ?? metered_feature_id,
+						);
+			return <CreditSystemFeatureChips labels={labels} />;
 		},
 	},
 	{

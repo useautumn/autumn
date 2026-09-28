@@ -14,7 +14,7 @@ import {
 	type PlanUpdatePreviewVariant,
 	type PlanUpdatePreviewVariantConflict,
 } from "@autumn/shared";
-import { Badge } from "@autumn/ui";
+import { StatusChip } from "@autumn/ui";
 import { GitForkIcon, UsersIcon, WarningIcon } from "@phosphor-icons/react";
 import { PlanDiffBody } from "@/components/v2/PlanDiffBody";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -336,12 +336,8 @@ function VariantRow({
 				<span className="min-w-0 flex-1 truncate font-medium text-foreground text-xs">
 					{variant.name}
 				</span>
-				<Badge size="sm" variant="muted">
-					v{variant.version}
-				</Badge>
-				<Badge size="sm" variant="muted">
-					{source}
-				</Badge>
+				<StatusChip>v{variant.version}</StatusChip>
+				<StatusChip>{source}</StatusChip>
 				{variant.customer_count > 0 && (
 					<span className="flex items-center gap-1 text-tertiary-foreground text-xs">
 						<UsersIcon size={11} />
@@ -387,14 +383,10 @@ function VariantSummary({
 			<div className="flex flex-wrap items-center gap-1.5 text-xs">
 				<span className="font-medium text-tertiary-foreground">Variants</span>
 				{directCount > 0 && (
-					<Badge size="sm" variant="muted">
-						{plural(directCount, "direct")}
-					</Badge>
+					<StatusChip>{plural(directCount, "direct")}</StatusChip>
 				)}
 				{propagatedCount > 0 && (
-					<Badge size="sm" variant="muted">
-						{plural(propagatedCount, "propagated")}
-					</Badge>
+					<StatusChip>{plural(propagatedCount, "propagated")}</StatusChip>
 				)}
 				{conflictCount > 0 && (
 					<span className="flex items-center gap-1 text-amber-600 dark:text-amber-500">
@@ -447,14 +439,8 @@ function PlanChangeRow({
 					)}
 				</div>
 				<div className="flex shrink-0 flex-wrap justify-end gap-1.5">
-					<Badge size="sm" variant="muted">
-						{actionLabel(plan.action, plan.will_archive)}
-					</Badge>
-					{createsVersion && (
-						<Badge size="sm" variant="muted">
-							Version
-						</Badge>
-					)}
+					<StatusChip>{actionLabel(plan.action, plan.will_archive)}</StatusChip>
+					{createsVersion && <StatusChip>Version</StatusChip>}
 					{customerCount > 0 && (
 						<span className="flex items-center gap-1 text-tertiary-foreground text-xs">
 							<UsersIcon size={11} />
@@ -501,21 +487,13 @@ function PreviewSummary({
 	const migrationCount = plans.filter((plan) => plan.migration).length;
 	return (
 		<div className="flex flex-wrap gap-1.5">
-			<Badge size="sm" variant="muted">
-				{plural(changedFeatures.length, "feature")}
-			</Badge>
-			<Badge size="sm" variant="muted">
-				{plural(changedPlans.length, "plan")}
-			</Badge>
+			<StatusChip>{plural(changedFeatures.length, "feature")}</StatusChip>
+			<StatusChip>{plural(changedPlans.length, "plan")}</StatusChip>
 			{variantCount > 0 && (
-				<Badge size="sm" variant="muted">
-					{plural(variantCount, "variant")}
-				</Badge>
+				<StatusChip>{plural(variantCount, "variant")}</StatusChip>
 			)}
 			{migrationCount > 0 && (
-				<Badge size="sm" variant="muted">
-					{plural(migrationCount, "migration")}
-				</Badge>
+				<StatusChip>{plural(migrationCount, "migration")}</StatusChip>
 			)}
 		</div>
 	);

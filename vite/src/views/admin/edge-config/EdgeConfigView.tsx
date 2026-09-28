@@ -1,5 +1,4 @@
 import {
-	Badge,
 	Button,
 	Card,
 	CardContent,
@@ -7,6 +6,7 @@ import {
 	CardTitle,
 	IconButton,
 	Input,
+	StatusChip,
 } from "@autumn/ui";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -25,6 +25,7 @@ import { useEnv } from "@/utils/envUtils";
 import { getBackendErr, getRedirectUrl } from "@/utils/genUtils";
 import { DefaultView } from "../../DefaultView";
 import LoadingScreen from "../../general/LoadingScreen";
+import { ConfigHealthChip } from "../components/ConfigHealthChip";
 import { useAdmin } from "../hooks/useAdmin";
 import { RolloutCreateDialog } from "./RolloutCreateDialog";
 import { RolloutOrgDialog } from "./RolloutOrgDialog";
@@ -212,13 +213,11 @@ const RolloutCard = ({
 						<div className="min-w-0">
 							<CardTitle className="font-mono text-sm">{rolloutId}</CardTitle>
 							<div className="mt-2 flex flex-wrap items-center gap-2">
-								<Badge variant="muted">
-									Global {formatPercent(entry.percent)}
-								</Badge>
-								<Badge variant="muted">
+								<StatusChip>Global {formatPercent(entry.percent)}</StatusChip>
+								<StatusChip>
 									{orgEntries.length} org override
 									{orgEntries.length === 1 ? "" : "s"}
-								</Badge>
+								</StatusChip>
 								<span className="text-[11px] text-muted-foreground">
 									prev: {formatPercent(entry.previousPercent)} | changed:{" "}
 									{formatTimestamp(entry.changedAt)}
@@ -501,10 +500,10 @@ export const EdgeConfigView = () => {
 				</div>
 				<div className="flex items-center gap-2">
 					{data && (
-						<Badge variant="muted" className="h-7 px-2 text-xs">
+						<ConfigHealthChip healthy={data.configHealthy}>
 							{data.configHealthy ? "Healthy" : "Unhealthy"} | Last sync:{" "}
 							{data.lastSuccessAt ?? "never"}
-						</Badge>
+						</ConfigHealthChip>
 					)}
 					<IconButton
 						icon={<RefreshCw className="w-4 h-4" />}

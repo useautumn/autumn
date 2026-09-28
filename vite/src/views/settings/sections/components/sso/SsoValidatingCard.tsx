@@ -1,4 +1,4 @@
-import { Badge, Button, StepBadge } from "@autumn/ui";
+import { Button, StatusChip, StepBadge } from "@autumn/ui";
 import { toast } from "sonner";
 import {
 	buildSsoCallbackUrl,
@@ -47,7 +47,9 @@ export const SsoValidatingCard = ({
 					<span className="text-sm font-medium text-foreground">
 						{connection.domain}
 					</span>
-					<Badge variant="muted">Last step: test sign-in</Badge>
+					<StatusChip tone="blue" glyph="user">
+						Last step: test sign-in
+					</StatusChip>
 				</div>
 				<p className="text-sm text-tertiary-foreground">
 					Domain verified. One test sign-in left — sign in through your provider

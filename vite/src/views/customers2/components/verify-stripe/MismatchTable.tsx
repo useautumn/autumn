@@ -19,7 +19,7 @@ export function MismatchTable({
 	});
 
 	return (
-		<div className="rounded-lg border shadow-card overflow-hidden">
+		<div>
 			<Table.Provider
 				config={{
 					table,
@@ -30,7 +30,7 @@ export function MismatchTable({
 				}}
 			>
 				<Table.Container>
-					<Table.Content className="!rounded-none !border-0 !shadow-none">
+					<Table.Content>
 						<Table.Header />
 						<Table.Body />
 					</Table.Content>

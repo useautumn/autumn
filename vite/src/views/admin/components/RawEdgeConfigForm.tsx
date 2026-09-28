@@ -1,5 +1,4 @@
 import {
-	Badge,
 	Button,
 	DialogFooter,
 	Separator,
@@ -14,8 +13,10 @@ import Editor from "@monaco-editor/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
+import { TABLE_TRAY_CLASS } from "@/components/general/table";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { ConfigHealthChip } from "./ConfigHealthChip";
 import {
 	RAW_REQUEST_BLOCK_QUERY_KEY,
 	type RequestBlockFullConfig,
@@ -93,7 +94,7 @@ export const RawEdgeConfigForm = ({
 							No orgs are blocked right now.
 						</p>
 					) : (
-						<div className="overflow-hidden rounded-lg border border-border">
+						<div className={TABLE_TRAY_CLASS}>
 							<Table className="text-xs">
 								<TableHeader>
 									<TableRow>
@@ -124,9 +125,7 @@ export const RawEdgeConfigForm = ({
 					<div className="flex flex-col gap-3 text-xs text-tertiary-foreground">
 						<Separator />
 						<div className="flex flex-wrap items-center gap-2">
-							<Badge variant="muted">
-								{config.configHealthy ? "Config healthy" : "Config unavailable"}
-							</Badge>
+							<ConfigHealthChip healthy={config.configHealthy} />
 							{config.lastSuccessAt && (
 								<span className="tabular-nums">
 									Last refresh:{" "}

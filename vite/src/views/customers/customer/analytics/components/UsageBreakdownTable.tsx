@@ -6,6 +6,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { TABLE_TRAY_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import {
 	formatCompactNumber,
@@ -16,9 +17,13 @@ import type { ChartSeriesConfig } from "../utils/transformGroupedChartData";
 import type { EventsData } from "./analytics-types";
 import { SeriesNameHoverCard } from "./SeriesNameHoverCard";
 
-const HEADER_ROW = "flex items-center h-8 border-b bg-interactive-secondary";
-const SERIES_ROW = "flex items-center h-11 border-b bg-background";
-const TOTAL_ROW = "flex items-center h-11 bg-interactive-secondary";
+const HEADER_ROW =
+	"flex items-center h-7 text-xs font-normal text-tertiary-foreground";
+const SERIES_ROW =
+	"flex items-center h-11 border-b border-table-row-divider last:border-b-0";
+const TOTAL_ROW = "flex items-center h-11";
+/** Each column draws its slice of the raised surface; together they read as one. */
+const SURFACE_SLICE = "border-y border-table-surface-border bg-table-surface";
 const PERIOD_CELL = "w-[88px] shrink-0 px-3 text-right tabular-nums";
 const PINNED_LEFT_SHADOW = "shadow-[6px_0_8px_-4px_rgba(0,0,0,0.18)]";
 const PINNED_RIGHT_SHADOW = "shadow-[-6px_0_8px_-4px_rgba(0,0,0,0.18)]";
@@ -68,9 +73,7 @@ const orderSeriesForTable = ({
 const SeriesName = ({ series }: { series: ChartSeriesConfig }) => {
 	if (!series.nameParts) {
 		return (
-			<span className="block truncate text-foreground">
-				{series.yName}
-			</span>
+			<span className="block truncate text-foreground">{series.yName}</span>
 		);
 	}
 	return (
@@ -219,22 +222,27 @@ export const UsageBreakdownTable = ({
 		: "font-semibold text-foreground tabular-nums";
 
 	return (
-		<div className="flex rounded-lg border overflow-hidden bg-background text-[13px]">
+		<div className={cn(TABLE_TRAY_CLASS, "flex overflow-hidden text-[13px]")}>
 			{/* Pinned name column: sits above the scroller so its shadow falls on the numbers. */}
 			<div
 				className={cn(
-					"relative z-10 w-[220px] shrink-0 border-r bg-background transition-shadow",
+					"relative z-10 w-[220px] shrink-0 bg-table-tray transition-shadow",
 					edges.left && PINNED_LEFT_SHADOW,
 				)}
 			>
-				<div className={cn(HEADER_ROW, "pl-4 text-xs font-medium text-subtle")}>
-					{nameHeader}
+				<div className={cn(HEADER_ROW, "pl-4")}>{nameHeader}</div>
+				<div
+					className={cn(
+						SURFACE_SLICE,
+						"rounded-l-lg border-l border-r border-r-table-row-divider",
+					)}
+				>
+					{model.seriesRows.map((row) => (
+						<div key={row.key} className={cn(SERIES_ROW, "gap-2.5 pl-4 pr-3")}>
+							{row.name}
+						</div>
+					))}
 				</div>
-				{model.seriesRows.map((row) => (
-					<div key={row.key} className={cn(SERIES_ROW, "gap-2.5 pl-4 pr-3")}>
-						{row.name}
-					</div>
-				))}
 				{/* Indented to line up with series names, past the colour swatch. */}
 				<div className={cn(TOTAL_ROW, "pl-9 text-tertiary-foreground")}>
 					Total
@@ -247,31 +255,28 @@ export const UsageBreakdownTable = ({
 				className="min-w-0 flex-1 overflow-x-auto"
 			>
 				<div className="flex flex-col w-max min-w-full">
-					<div
-						className={cn(
-							HEADER_ROW,
-							"justify-end text-xs font-medium text-subtle",
-						)}
-					>
+					<div className={cn(HEADER_ROW, "justify-end")}>
 						{model.periodLabels.map((label, index) => (
 							<span key={index} className={PERIOD_CELL}>
 								{label}
 							</span>
 						))}
 					</div>
-					{model.seriesRows.map((row) => (
-						<div key={row.key} className={cn(SERIES_ROW, "justify-end")}>
-							{row.cells.map((cell, index) => (
-								<span
-									key={index}
-									className={cn(PERIOD_CELL, valueTone)}
-									title={cell.title}
-								>
-									{cell.text}
-								</span>
-							))}
-						</div>
-					))}
+					<div className={SURFACE_SLICE}>
+						{model.seriesRows.map((row) => (
+							<div key={row.key} className={cn(SERIES_ROW, "justify-end")}>
+								{row.cells.map((cell, index) => (
+									<span
+										key={index}
+										className={cn(PERIOD_CELL, valueTone)}
+										title={cell.title}
+									>
+										{cell.text}
+									</span>
+								))}
+							</div>
+						))}
+					</div>
 					<div
 						className={cn(
 							TOTAL_ROW,
@@ -292,27 +297,27 @@ export const UsageBreakdownTable = ({
 
 			<div
 				className={cn(
-					"relative z-10 w-[112px] shrink-0 border-l bg-background transition-shadow",
+					"relative z-10 w-[112px] shrink-0 bg-table-tray transition-shadow",
 					edges.right && PINNED_RIGHT_SHADOW,
 				)}
 			>
+				<div className={cn(HEADER_ROW, "justify-end pr-4")}>Total</div>
 				<div
 					className={cn(
-						HEADER_ROW,
-						"justify-end pr-4 text-xs font-medium text-tertiary-foreground",
+						SURFACE_SLICE,
+						"rounded-r-lg border-r border-l border-l-table-row-divider",
 					)}
 				>
-					Total
+					{model.seriesRows.map((row) => (
+						<div
+							key={row.key}
+							className={cn(SERIES_ROW, "justify-end pr-4", totalTone)}
+							title={row.total.title}
+						>
+							{row.total.text}
+						</div>
+					))}
 				</div>
-				{model.seriesRows.map((row) => (
-					<div
-						key={row.key}
-						className={cn(SERIES_ROW, "justify-end pr-4", totalTone)}
-						title={row.total.title}
-					>
-						{row.total.text}
-					</div>
-				))}
 				<div
 					className={cn(TOTAL_ROW, "justify-end pr-4", totalTone)}
 					title={model.totalRow.total.title}

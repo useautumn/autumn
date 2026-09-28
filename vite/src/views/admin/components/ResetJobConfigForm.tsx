@@ -1,10 +1,11 @@
-import { Badge, Button, DialogFooter, Separator, Switch } from "@autumn/ui";
+import { Button, DialogFooter, Separator, Switch } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAppForm } from "@/hooks/form/form";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { ConfigHealthChip } from "./ConfigHealthChip";
 import {
 	RESET_JOB_QUERY_KEY,
 	type ResetJobConfig,
@@ -88,9 +89,7 @@ export const ResetJobConfigForm = ({
 				<div className="flex flex-col gap-3 text-xs text-tertiary-foreground">
 					<Separator />
 					<div className="flex flex-wrap items-center gap-2">
-						<Badge variant="muted">
-							{config.configHealthy ? "Config healthy" : "Config unavailable"}
-						</Badge>
+						<ConfigHealthChip healthy={config.configHealthy} />
 						{config.lastSuccessAt && (
 							<span className="tabular-nums">
 								Last refresh: {new Date(config.lastSuccessAt).toLocaleString()}

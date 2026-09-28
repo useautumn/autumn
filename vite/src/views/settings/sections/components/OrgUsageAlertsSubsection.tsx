@@ -7,7 +7,7 @@ import {
 	type OrgConfig,
 	usageAlertIdentity,
 } from "@autumn/shared";
-import { Button } from "@autumn/ui";
+import { Button, StatusChip } from "@autumn/ui";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -20,9 +20,6 @@ import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { OrgUsageAlertDialog } from "./OrgUsageAlertDialog";
-
-const pillClassName =
-	"rounded-md bg-muted px-1.5 py-0.5 text-xs text-tertiary-foreground whitespace-nowrap";
 
 const formatThreshold = (alert: DbUsageAlert) => {
 	const isPct =
@@ -158,16 +155,13 @@ export const OrgUsageAlertsSubsection = () => {
 								className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer"
 								onClick={() => handleEditClick(index)}
 							>
-								<span
-									className={cn(
-										"shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium",
-										alert.enabled
-											? "bg-green-500/10 text-green-600"
-											: "bg-muted text-tertiary-foreground",
-									)}
-								>
-									{alert.enabled ? "Enabled" : "Disabled"}
-								</span>
+								{alert.enabled ? (
+									<StatusChip tone="green" glyph="check">
+										Enabled
+									</StatusChip>
+								) : (
+									<StatusChip glyph="minus">Disabled</StatusChip>
+								)}
 								<span className="truncate text-sm font-medium">
 									{alert.feature_id
 										? (featureNameById.get(alert.feature_id) ??
@@ -180,19 +174,17 @@ export const OrgUsageAlertsSubsection = () => {
 									</span>
 								)}
 								<div className="ml-auto flex items-center gap-1.5 shrink-0">
-									<span className={pillClassName}>
-										At: {formatThreshold(alert)}
-									</span>
-									<span className={cn(pillClassName, "hidden sm:inline")}>
+									<StatusChip>At: {formatThreshold(alert)}</StatusChip>
+									<StatusChip className="hidden sm:inline-flex">
 										{USAGE_ALERT_THRESHOLD_TYPE_LABELS[alert.threshold_type]}
-									</span>
-									<span className={cn(pillClassName, "hidden sm:inline")}>
+									</StatusChip>
+									<StatusChip className="hidden sm:inline-flex">
 										{
 											USAGE_ALERT_BASIS_LABELS[
 												alert.basis ?? DEFAULT_USAGE_ALERT_BASIS
 											]
 										}
-									</span>
+									</StatusChip>
 								</div>
 							</button>
 							<Button
