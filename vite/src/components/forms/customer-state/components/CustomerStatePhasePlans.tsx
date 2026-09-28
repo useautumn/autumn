@@ -25,12 +25,11 @@ export function CustomerStatePhasePlans({
 	if (!phase) return null;
 
 	const allPlansAdded = areAllPlansAdded({ plans: phase.plans, products });
-	const pickerPlanIndex = phase.plans.findIndex((plan) => !plan.productId);
 
 	return (
 		<div className="flex flex-col gap-1.5">
 			{header}
-			<div className={cn("flex flex-col", insetForRail && "pl-8.5")}>
+			<div className={cn(insetForRail && "pl-8.5")}>
 				<PlanScopeGroups
 					plans={phase.plans}
 					showHeaders={hasEntities}
@@ -41,20 +40,14 @@ export function CustomerStatePhasePlans({
 							planIndex={planIndex}
 						/>
 					)}
+					addRow={
+						<PlanTrayAddRow
+							label="Add plan"
+							onClick={() => handleAddPlan({ phaseIndex })}
+							disabled={isLocked || (!hasEntities && allPlansAdded)}
+						/>
+					}
 				/>
-				{pickerPlanIndex === -1 ? (
-					<PlanTrayAddRow
-						label="Add plan"
-						onClick={() => handleAddPlan({ phaseIndex })}
-						disabled={isLocked || (!hasEntities && allPlansAdded)}
-					/>
-				) : (
-					<CustomerStatePlanRow
-						key={`plan-${phaseIndex}-${pickerPlanIndex}`}
-						phaseIndex={phaseIndex}
-						planIndex={pickerPlanIndex}
-					/>
-				)}
 			</div>
 		</div>
 	);

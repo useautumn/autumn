@@ -5,11 +5,19 @@ import {
 	isFeaturePriceItem,
 	type ProductItem,
 	type ProductV2,
+	productV2ToBasePrice,
+	productV2ToFrontendProduct,
 } from "@autumn/shared";
-import { getBasePriceLabel } from "@/components/forms/customer-state/customerStatePlanPrice";
-import { PRICE_VARIES_LABEL } from "@/utils/product/basePriceDisplayUtils";
-import { compactPriceLabel } from "./compactPriceLabel";
+import {
+	intervalSuffix,
+	isAbbreviatedInterval,
+} from "@/utils/formatUtils/intervalSuffix";
+import {
+	getBasePriceDisplay,
+	PRICE_VARIES_LABEL,
+} from "@/utils/product/basePriceDisplayUtils";
 import { formatMoney } from "./formatMoney";
+import type { ReviewChangeValue } from "./types/reviewChange";
 
 const firstUnitAmount = (item: ProductItem) =>
 	item.price ?? item.tiers?.[0]?.amount ?? null;
@@ -33,7 +41,7 @@ const unitLabel = ({
 };
 
 /** A plan with no base price shows its first feature's unit price, e.g. "From $10/seat +1". */
-const featureUnitPriceLabel = ({
+const featureUnitPrice = ({
 	product,
 	features,
 	currency,
@@ -41,7 +49,7 @@ const featureUnitPriceLabel = ({
 	product: ProductV2;
 	features: Feature[];
 	currency: string;
-}) => {
+}): ReviewChangeValue | undefined => {
 	const pricedItems = product.items.filter(isFeaturePriceItem);
 	const [item] = pricedItems;
 	const amount = item ? firstUnitAmount(item) : null;
@@ -51,14 +59,13 @@ const featureUnitPriceLabel = ({
 	const isTiered = (item.tiers?.length ?? 0) > 1;
 	const otherPricedCount = pricedItems.length - 1;
 
-	return [
-		isTiered ? "From " : "",
-		`${price}/${unitLabel({ item, features })}`,
-		otherPricedCount > 0 ? ` +${otherPricedCount}` : "",
-	].join("");
+	return {
+		amount: `${isTiered ? "From " : ""}${price}`,
+		suffix: `/${unitLabel({ item, features })}${otherPricedCount > 0 ? ` +${otherPricedCount}` : ""}`,
+	};
 };
 
-export const reviewPlanPriceLabel = ({
+export const reviewPlanPrice = ({
 	product,
 	features,
 	currency,
@@ -66,11 +73,29 @@ export const reviewPlanPriceLabel = ({
 	product: ProductV2;
 	features: Feature[];
 	currency: string;
-}) => {
-	const baseLabel = getBasePriceLabel({ product, currency });
-	if (baseLabel !== PRICE_VARIES_LABEL) return compactPriceLabel(baseLabel);
+}): ReviewChangeValue => {
+	const display = getBasePriceDisplay({
+		product: productV2ToFrontendProduct({ product }),
+		currency,
+	});
+	if (display.type === "variable") {
+		return (
+			featureUnitPrice({ product, features, currency }) ?? {
+				amount: PRICE_VARIES_LABEL,
+			}
+		);
+	}
 
-	return (
-		featureUnitPriceLabel({ product, features, currency }) ?? PRICE_VARIES_LABEL
-	);
+	const basePrice = productV2ToBasePrice({ product });
+	const interval = basePrice?.interval;
+	if (display.formattedAmount && interval && isAbbreviatedInterval(interval)) {
+		return {
+			amount: display.formattedAmount,
+			suffix: intervalSuffix({
+				interval,
+				intervalCount: basePrice.interval_count ?? 1,
+			}),
+		};
+	}
+	return { amount: display.displayText };
 };

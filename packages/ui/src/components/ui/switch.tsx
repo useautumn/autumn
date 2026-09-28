@@ -37,15 +37,12 @@ function SwitchSizeProvider({
 function Switch({
 	className,
 	thumbClassName,
-	size,
 	onKeyDown,
 	...props
 }: SwitchPrimitive.Root.Props & {
 	thumbClassName?: string;
-	size?: SwitchSize;
 }) {
-	const contextSize = useContext(SwitchSizeContext);
-	const sizeClasses = SWITCH_SIZE_CLASSES[size ?? contextSize];
+	const sizeClasses = SWITCH_SIZE_CLASSES[useContext(SwitchSizeContext)];
 
 	const handleKeyDown: SwitchPrimitive.Root.Props["onKeyDown"] = (event) => {
 		// Stop base-ui's Enter activation so cmd/ctrl+enter only triggers
@@ -79,4 +76,4 @@ function Switch({
 	);
 }
 
-export { Switch, SwitchSizeProvider, type SwitchSize };
+export { Switch, SwitchSizeProvider };

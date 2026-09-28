@@ -51,12 +51,11 @@ export const buildStripePriceLookup = async ({
 		}
 	}
 
-	const liveIncompletePriceIds = (stripeSubscription?.items.data ?? [])
-		.map((liveItem) => liveItem.price.id)
-		.filter((priceId) => !stripePrices.has(priceId));
 	const missingPriceIds = [
 		...new Set([
-			...liveIncompletePriceIds,
+			...(stripeSubscription?.items.data ?? []).map(
+				(liveItem) => liveItem.price.id,
+			),
 			...stripeBillingPlanToPriceIds(stripeBillingPlan),
 		]),
 	].filter(

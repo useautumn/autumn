@@ -5,7 +5,7 @@ import {
 	ProductItemInterval,
 	type ProductV2,
 } from "@autumn/shared";
-import { reviewPlanPriceLabel } from "@/components/forms/create-schedule/utils/review/reviewPlanPriceLabel";
+import { reviewPlanPrice } from "@/components/forms/create-schedule/utils/review/reviewPlanPrice";
 
 const features = [
 	{
@@ -26,19 +26,19 @@ const plan = (items: Partial<ProductItem>[]) =>
 
 test("a plan with no base price shows its first feature's unit price", () => {
 	expect(
-		reviewPlanPriceLabel({
+		reviewPlanPrice({
 			product: plan([
 				{ feature_id: "seats", price: 10, interval: ProductItemInterval.Month },
 			]),
 			features,
 			currency: "usd",
 		}),
-	).toBe("$10/seat");
+	).toEqual({ amount: "$10", suffix: "/seat" });
 });
 
 test("tiered and multi-feature plans say so", () => {
 	expect(
-		reviewPlanPriceLabel({
+		reviewPlanPrice({
 			product: plan([
 				{
 					feature_id: "credits",
@@ -54,5 +54,5 @@ test("tiered and multi-feature plans say so", () => {
 			features,
 			currency: "usd",
 		}),
-	).toBe("From $5/100 credits +1");
+	).toEqual({ amount: "From $5", suffix: "/100 credits +1" });
 });

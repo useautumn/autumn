@@ -37,8 +37,10 @@ const reviewPlans = (planIds: string[]) =>
 
 const context = {
 	products,
-	priceLabelFor: (product: ProductV2) =>
-		`$${product.items?.[0]?.price ?? product.id.length}/mo`,
+	priceFor: (product: ProductV2) => ({
+		amount: `$${product.items?.[0]?.price ?? product.id.length}`,
+		suffix: "/mo",
+	}),
 };
 
 const subscriptionChange = (planId: string, action: string) =>

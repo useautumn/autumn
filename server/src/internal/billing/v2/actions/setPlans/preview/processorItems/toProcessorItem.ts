@@ -85,3 +85,24 @@ export const toProcessorItem = ({
 			isFreePhasePlaceholderItem({ metadata }),
 	};
 };
+
+/** Subscription, schedule and checkout item params share these price fields. */
+export const itemParamsToProcessorItem = ({
+	item,
+	context,
+}: {
+	item: {
+		price?: string;
+		price_data?: InlinePriceData;
+		metadata?: StripeItemMetadata;
+		quantity?: number;
+	};
+	context: ProcessorItemContext;
+}): ProcessorItem =>
+	toProcessorItem({
+		stripePriceId: item.price,
+		inlinePriceData: item.price_data,
+		metadata: item.metadata,
+		quantity: item.quantity,
+		context,
+	});

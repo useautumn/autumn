@@ -23,15 +23,17 @@ export function PlanScopeGroups({
 	plans,
 	showHeaders,
 	renderPlan,
+	addRow,
 }: {
 	plans: ScopedPlan[];
 	showHeaders: boolean;
 	renderPlan: (planIndex: number) => ReactNode;
+	addRow: ReactNode;
 }) {
 	const chosenPlanIndexes = [...plans.keys()].filter(
 		(planIndex) => plans[planIndex]?.productId,
 	);
-	if (chosenPlanIndexes.length === 0) return null;
+	const pickerPlanIndex = plans.findIndex((plan) => !plan.productId);
 
 	const rows = (planIndexes: number[]) => (
 		<div className={TABLE_TRAY_SURFACE_CLASS}>
@@ -39,16 +41,20 @@ export function PlanScopeGroups({
 		</div>
 	);
 
-	if (!showHeaders) return rows(chosenPlanIndexes);
-
 	return (
-		<>
-			{groupPlanIndexesByScope({ plans }).map(([entityId, planIndexes]) => (
-				<div key={entityId ?? "customer"} className="pb-1">
-					<PlanScopeLabel entityId={entityId} />
-					{rows(planIndexes)}
-				</div>
-			))}
-		</>
+		<div className="flex flex-col">
+			{chosenPlanIndexes.length > 0 &&
+				(showHeaders
+					? groupPlanIndexesByScope({ plans }).map(
+							([entityId, planIndexes]) => (
+								<div key={entityId ?? "customer"} className="pb-1">
+									<PlanScopeLabel entityId={entityId} />
+									{rows(planIndexes)}
+								</div>
+							),
+						)
+					: rows(chosenPlanIndexes))}
+			{pickerPlanIndex === -1 ? addRow : renderPlan(pickerPlanIndex)}
+		</div>
 	);
 }

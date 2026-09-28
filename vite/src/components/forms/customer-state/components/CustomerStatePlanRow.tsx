@@ -1,9 +1,7 @@
 import { CopySimpleIcon, InfinityIcon } from "@phosphor-icons/react";
 import { CopyExistingPlansButton } from "@/components/forms/customer-state/components/CopyExistingPlansButton";
 import {
-	filterUnarchivedProducts,
 	findPreviousPhasePlan,
-	getSiblingProductIds,
 	getUsedGroupKeys,
 } from "@/components/forms/customer-state/customerStateUtils";
 import { usePlanScopeField } from "@/components/forms/shared";
@@ -32,7 +30,6 @@ export function CustomerStatePlanRow({
 		isPhaseLocked,
 		setEditingPlan,
 		canMakeUnscheduled,
-		handleSelectPlanProduct,
 		handleSelectPlanScope,
 	} = useCustomerStateContext();
 	const location = { location: "phase", phaseIndex, planIndex } as const;
@@ -61,16 +58,10 @@ export function CustomerStatePlanRow({
 
 		return (
 			<PlanPickerTrayRow
-				scope={{
-					value: plan.entityId ?? null,
-					onChange: (entityId) => handleSelectPlanScope({ location, entityId }),
-				}}
-				products={filterUnarchivedProducts({ products })}
+				location={location}
+				plan={plan}
+				plans={phasePlans}
 				usedKeys={usedKeys}
-				siblingProductIds={getSiblingProductIds({
-					plans: phasePlans,
-					planIndex,
-				})}
 				header={
 					isOpeningPhase ? (
 						<CopyExistingPlansButton
@@ -82,9 +73,6 @@ export function CustomerStatePlanRow({
 					) : undefined
 				}
 				disabled={isLocked}
-				onSelect={(productId) =>
-					handleSelectPlanProduct({ location, productId })
-				}
 				onDismiss={() => handleRemovePlan({ phaseIndex, planIndex })}
 			/>
 		);

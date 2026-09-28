@@ -1,8 +1,4 @@
-import {
-	filterUnarchivedProducts,
-	getSiblingProductIds,
-	getUnscheduledUsedGroupKeys,
-} from "@/components/forms/customer-state/customerStateUtils";
+import { getUnscheduledUsedGroupKeys } from "@/components/forms/customer-state/customerStateUtils";
 import { usePlanScopeField } from "@/components/forms/shared";
 import { buildMoveToAction } from "@/components/forms/shared/PlanRowActionsMenu";
 import { useCustomerStateContext } from "../CustomerStateProvider";
@@ -15,7 +11,6 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 		products,
 		handleRemoveUnscheduledPlan,
 		setEditingPlan,
-		handleSelectPlanProduct,
 		handleSelectPlanScope,
 	} = useCustomerStateContext();
 	const location = { location: "unscheduled", planIndex } as const;
@@ -40,19 +35,10 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 
 		return (
 			<PlanPickerTrayRow
-				scope={{
-					value: plan.entityId ?? null,
-					onChange: (entityId) => handleSelectPlanScope({ location, entityId }),
-				}}
-				products={filterUnarchivedProducts({ products })}
+				location={location}
+				plan={plan}
+				plans={formValues.unscheduledPlans}
 				usedKeys={usedKeys}
-				siblingProductIds={getSiblingProductIds({
-					plans: formValues.unscheduledPlans,
-					planIndex,
-				})}
-				onSelect={(productId) =>
-					handleSelectPlanProduct({ location, productId })
-				}
 				onDismiss={() => handleRemoveUnscheduledPlan({ planIndex })}
 			/>
 		);

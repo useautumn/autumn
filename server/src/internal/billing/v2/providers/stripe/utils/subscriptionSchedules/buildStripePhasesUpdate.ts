@@ -101,8 +101,7 @@ const findRecurringStripeInterval = (customerProduct: FullCusProduct) => {
 	};
 };
 
-export const FREE_PHASE_PLACEHOLDER_METADATA_KEY =
-	"autumn_free_phase_placeholder";
+const FREE_PHASE_PLACEHOLDER_METADATA_KEY = "autumn_free_phase_placeholder";
 
 export const isFreePhasePlaceholderItem = (item: {
 	metadata?: Stripe.Emptyable<Stripe.MetadataParam> | null;

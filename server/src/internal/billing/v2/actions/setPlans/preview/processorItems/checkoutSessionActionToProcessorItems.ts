@@ -2,7 +2,7 @@ import type {
 	ProcessorItem,
 	StripeCheckoutSessionAction,
 } from "@autumn/shared";
-import { toProcessorItem } from "./toProcessorItem";
+import { itemParamsToProcessorItem } from "./toProcessorItem";
 import type { ProcessorItemContext } from "./types/processorItemContext";
 
 const isOneOffItem = (item: ProcessorItem) => item.price?.interval === null;
@@ -18,13 +18,6 @@ export const checkoutSessionActionToProcessorItems = ({
 	if (checkoutSessionAction?.params.mode !== "subscription") return [];
 
 	return (checkoutSessionAction.params.line_items ?? [])
-		.map((lineItem) =>
-			toProcessorItem({
-				stripePriceId: lineItem.price,
-				inlinePriceData: lineItem.price_data,
-				quantity: lineItem.quantity,
-				context,
-			}),
-		)
+		.map((item) => itemParamsToProcessorItem({ item, context }))
 		.filter((item) => !isOneOffItem(item));
 };

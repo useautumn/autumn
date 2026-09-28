@@ -6,7 +6,7 @@ const INTERVAL_ABBREVIATIONS = {
 	year: "yr",
 } as const;
 
-export type AbbreviatedInterval = keyof typeof INTERVAL_ABBREVIATIONS;
+type AbbreviatedInterval = keyof typeof INTERVAL_ABBREVIATIONS;
 
 export const isAbbreviatedInterval = (
 	interval: string,

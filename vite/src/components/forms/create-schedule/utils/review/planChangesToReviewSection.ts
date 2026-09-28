@@ -18,12 +18,12 @@ import {
 	summarizeCounts,
 	withoutEmptyPhases,
 } from "./reviewSectionText";
-import { splitPriceLabel } from "./splitPriceLabel";
 import type {
 	ReviewChangePhase,
 	ReviewChangeRow,
 	ReviewChangeSection,
 	ReviewChangeStatus,
+	ReviewChangeValue,
 	ReviewPlan,
 } from "./types/reviewChange";
 
@@ -44,7 +44,7 @@ const PLAN_CHANGE_STATUS: Record<
 
 type PlanRowContext = {
 	products: ProductV2[];
-	priceLabelFor: (product: ProductV2) => string;
+	priceFor: (product: ProductV2) => ReviewChangeValue;
 };
 
 const findProduct = ({
@@ -78,7 +78,7 @@ const productPrice = ({
 }: {
 	product: ProductV2 | undefined;
 	context: PlanRowContext;
-}) => (product ? splitPriceLabel(context.priceLabelFor(product)) : undefined);
+}) => (product ? context.priceFor(product) : undefined);
 
 const planChangeToRow = ({
 	preview,

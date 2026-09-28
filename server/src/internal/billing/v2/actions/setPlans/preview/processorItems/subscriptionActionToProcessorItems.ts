@@ -4,27 +4,12 @@ import {
 	liveItemToProcessorItem,
 	stripeSubscriptionToProcessorItems,
 } from "./stripeSubscriptionToProcessorItems";
-import { toProcessorItem } from "./toProcessorItem";
+import { itemParamsToProcessorItem } from "./toProcessorItem";
 import type { ProcessorItemContext } from "./types/processorItemContext";
 
 type SubscriptionItemParams =
 	| Stripe.SubscriptionCreateParams.Item
 	| Stripe.SubscriptionUpdateParams.Item;
-
-const newItemToProcessorItem = ({
-	item,
-	context,
-}: {
-	item: SubscriptionItemParams;
-	context: ProcessorItemContext;
-}): ProcessorItem =>
-	toProcessorItem({
-		stripePriceId: item.price,
-		inlinePriceData: item.price_data,
-		metadata: item.metadata,
-		quantity: item.quantity,
-		context,
-	});
 
 const itemParamsId = (item: SubscriptionItemParams) =>
 	"id" in item ? item.id : undefined;
@@ -63,7 +48,7 @@ const applyUpdateToLiveItems = ({
 
 	const addedItems = updateItems
 		.filter((item) => !itemParamsId(item))
-		.map((item) => newItemToProcessorItem({ item, context }));
+		.map((item) => itemParamsToProcessorItem({ item, context }));
 
 	return [...keptLiveItems, ...addedItems];
 };
@@ -81,7 +66,7 @@ export const subscriptionActionToProcessorItems = ({
 	switch (subscriptionAction?.type) {
 		case "create":
 			return (subscriptionAction.params.items ?? []).map((item) =>
-				newItemToProcessorItem({ item, context }),
+				itemParamsToProcessorItem({ item, context }),
 			);
 		case "update":
 			return applyUpdateToLiveItems({

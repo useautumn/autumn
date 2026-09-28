@@ -11,7 +11,6 @@ export function CustomerStateUnscheduledPlans() {
 		useCustomerStateContext();
 	const { hasEntities } = useScopeEntitySearch({ selectedEntityId: undefined });
 	const { unscheduledPlans } = formValues;
-	const pickerPlanIndex = unscheduledPlans.findIndex((plan) => !plan.productId);
 
 	if (!canMakeUnscheduled && unscheduledPlans.length === 0) return null;
 
@@ -21,31 +20,24 @@ export function CustomerStateUnscheduledPlans() {
 				title="Ongoing plans"
 				hint="Billed now & kept across every phase"
 			/>
-			<div className="flex flex-col">
-				<PlanScopeGroups
-					plans={unscheduledPlans}
-					showHeaders={hasEntities}
-					renderPlan={(planIndex) => (
-						<UnscheduledPlanRow
-							key={`unscheduled-${planIndex}`}
-							planIndex={planIndex}
-						/>
-					)}
-				/>
-				{pickerPlanIndex === -1 ? (
+			<PlanScopeGroups
+				plans={unscheduledPlans}
+				showHeaders={hasEntities}
+				renderPlan={(planIndex) => (
+					<UnscheduledPlanRow
+						key={`unscheduled-${planIndex}`}
+						planIndex={planIndex}
+					/>
+				)}
+				addRow={
 					canMakeUnscheduled && (
 						<PlanTrayAddRow
 							label="Add ongoing plan"
 							onClick={handleAddUnscheduledPlan}
 						/>
 					)
-				) : (
-					<UnscheduledPlanRow
-						key={`unscheduled-${pickerPlanIndex}`}
-						planIndex={pickerPlanIndex}
-					/>
-				)}
-			</div>
+				}
+			/>
 		</div>
 	);
 }

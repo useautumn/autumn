@@ -4,6 +4,8 @@ import {
 	isFixedPrice,
 	type Price,
 	type ProcessorItemPrice,
+	priceAmountsForCurrency,
+	priceToStripeTiersMode,
 	type UsageTier,
 } from "@autumn/shared";
 import { billingIntervalToStripe } from "@/external/stripe/stripePriceUtils";
@@ -26,7 +28,7 @@ export const autumnPriceToProcessorItemPrice = ({
 	currency: string;
 }): ProcessorItemPrice => {
 	const { config } = price;
-	const currencyOverride = config.currencies?.[currency.toLowerCase()];
+	const amounts = priceAmountsForCurrency({ config, currency });
 	const stripeRecurring = billingIntervalToStripe({
 		interval: config.interval,
 		intervalCount: config.interval_count,
@@ -39,7 +41,7 @@ export const autumnPriceToProcessorItemPrice = ({
 	if (isFixedPrice(price)) {
 		return {
 			currency,
-			unit_amount: currencyOverride?.amount ?? price.config.amount,
+			unit_amount: amounts.amount ?? price.config.amount,
 			...recurrence,
 			usage_type: "licensed",
 			tiers_mode: null,
@@ -48,7 +50,7 @@ export const autumnPriceToProcessorItemPrice = ({
 		};
 	}
 
-	const tiers = currencyOverride?.usage_tiers ?? config.usage_tiers ?? [];
+	const tiers = amounts.usage_tiers ?? config.usage_tiers ?? [];
 	const singleUnitTier = isSingleUnitTier(tiers);
 
 	return {
@@ -56,7 +58,7 @@ export const autumnPriceToProcessorItemPrice = ({
 		unit_amount: singleUnitTier ? (tiers[0].amount ?? null) : null,
 		...recurrence,
 		usage_type: isConsumablePrice(price) ? "metered" : "licensed",
-		tiers_mode: singleUnitTier ? null : (price.tier_behavior ?? "graduated"),
+		tiers_mode: singleUnitTier ? null : priceToStripeTiersMode({ price }),
 		tiers: singleUnitTier ? null : tiers.map(usageTierToProcessorItemTier),
 		units_per_quantity: config.billing_units ?? null,
 	};

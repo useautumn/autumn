@@ -12,7 +12,10 @@ export type InlinePriceData = {
 	} | null;
 };
 
-const inlineUnitAmount = (priceData: InlinePriceData) => {
+export const inlineUnitAmount = (priceData: {
+	unit_amount?: number | null;
+	unit_amount_decimal?: string | null;
+}) => {
 	if (typeof priceData.unit_amount === "number") return priceData.unit_amount;
 	if (priceData.unit_amount_decimal)
 		return Number(priceData.unit_amount_decimal);

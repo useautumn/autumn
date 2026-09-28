@@ -1,5 +1,6 @@
 import type { ProcessorItemPrice } from "@autumn/shared";
 import type Stripe from "stripe";
+import { inlineUnitAmount } from "./inlinePriceDataToProcessorItemPrice";
 import { stripeAmountToMajorUnits } from "./stripeAmountToMajorUnits";
 
 const stripeTierToProcessorItemTier = ({
@@ -10,7 +11,10 @@ const stripeTierToProcessorItemTier = ({
 	currency: string;
 }) => ({
 	up_to: tier.up_to,
-	unit_amount: stripeAmountToMajorUnits({ amount: tier.unit_amount, currency }),
+	unit_amount: stripeAmountToMajorUnits({
+		amount: inlineUnitAmount(tier),
+		currency,
+	}),
 	flat_amount: stripeAmountToMajorUnits({ amount: tier.flat_amount, currency }),
 });
 
@@ -24,7 +28,10 @@ export const stripePriceToProcessorItemPrice = (
 		currency,
 		unit_amount: isTiered
 			? null
-			: stripeAmountToMajorUnits({ amount: stripePrice.unit_amount, currency }),
+			: stripeAmountToMajorUnits({
+					amount: inlineUnitAmount(stripePrice),
+					currency,
+				}),
 		interval: stripePrice.recurring?.interval ?? null,
 		interval_count: stripePrice.recurring?.interval_count ?? 1,
 		usage_type: stripePrice.recurring?.usage_type ?? "licensed",

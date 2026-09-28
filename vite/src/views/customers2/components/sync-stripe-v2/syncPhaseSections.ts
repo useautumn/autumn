@@ -1,4 +1,5 @@
 import type { SyncPhase, SyncProposalV2 } from "@autumn/shared";
+import { format, secondsToMilliseconds } from "date-fns";
 import type Stripe from "stripe";
 import { formatStripeItemPrice } from "./formatStripeItemPrice";
 
@@ -22,72 +23,37 @@ const withQuantity = ({
 	quantity?: number | null;
 }) => (quantity && quantity > 1 ? `${label} × ${quantity}` : label);
 
-const itemsFromStripeSubscription = ({
-	sub,
+const stripePriceToDisplayItem = ({
+	key,
+	price,
+	quantity,
 }: {
-	sub: Stripe.Subscription;
-}): DisplayItem[] =>
-	sub.items.data.map((item) => {
-		const product = item.price?.product;
-		const productName =
-			typeof product === "object" && product && "name" in product
-				? (product as { name: string }).name
-				: (item.price?.id ?? "Unknown");
-		return {
-			key: item.id,
-			name: productName,
-			stripePriceId: item.price?.id ?? "",
-			priceLabel: withQuantity({
-				label: formatStripeItemPrice({ price: item.price }),
-				quantity: item.quantity,
-			}),
-		};
-	});
-
-const itemsFromSchedulePhase = ({
-	phase,
-	phaseIndex,
-}: {
-	phase: Stripe.SubscriptionSchedule.Phase;
-	phaseIndex: number;
-}): DisplayItem[] =>
-	phase.items.map((item, itemIndex) => {
-		const price = item.price as
-			| string
-			| (Stripe.Price & { product?: string | Stripe.Product })
-			| undefined;
-		const expanded = typeof price === "object" ? price : null;
-		const priceId = typeof price === "string" ? price : (expanded?.id ?? "");
-		const product = expanded?.product;
-		const productName =
-			typeof product === "object" && product && "name" in product
-				? product.name
-				: priceId || "Unknown";
-		return {
-			key: `${phaseIndex}:${itemIndex}`,
-			name: productName,
-			stripePriceId: priceId,
-			priceLabel: withQuantity({
-				label: formatStripeItemPrice({ price: expanded }),
-				quantity: item.quantity,
-			}),
-		};
-	});
-
-export const formatPhaseStart = (startsAt: SyncPhase["starts_at"]): string => {
-	if (startsAt === "now") return "Starts now";
-	return `Starts ${new Date(startsAt).toLocaleDateString(undefined, {
-		month: "short",
-		day: "numeric",
-		year: "numeric",
-	})}`;
+	key: string;
+	price: string | Stripe.Price | null | undefined;
+	quantity?: number | null;
+}): DisplayItem => {
+	const expanded = typeof price === "object" ? price : null;
+	const priceId = typeof price === "string" ? price : (expanded?.id ?? "");
+	const product = expanded?.product;
+	const productName =
+		typeof product === "object" && product && "name" in product
+			? product.name
+			: priceId || "Unknown";
+	return {
+		key,
+		name: productName,
+		stripePriceId: priceId,
+		priceLabel: withQuantity({
+			label: formatStripeItemPrice({ price: expanded }),
+			quantity,
+		}),
+	};
 };
 
-const findScheduleStartDateMs = ({
-	phase,
-}: {
-	phase: Stripe.SubscriptionSchedule.Phase;
-}) => phase.start_date * 1000;
+export const formatPhaseStart = (startsAt: SyncPhase["starts_at"]): string =>
+	startsAt === "now"
+		? "Starts now"
+		: `Starts ${format(startsAt, "MMM d, yyyy")}`;
 
 export const buildPhaseSections = ({
 	proposal,
@@ -103,16 +69,15 @@ export const buildPhaseSections = ({
 			? schedule.phases.find((schedulePhase) => {
 					if (phase.starts_at === "now") {
 						const endMs = schedulePhase.end_date
-							? schedulePhase.end_date * 1000
+							? secondsToMilliseconds(schedulePhase.end_date)
 							: Number.POSITIVE_INFINITY;
 						return (
-							findScheduleStartDateMs({ phase: schedulePhase }) <= Date.now() &&
+							secondsToMilliseconds(schedulePhase.start_date) <= Date.now() &&
 							Date.now() < endMs
 						);
 					}
 					return (
-						findScheduleStartDateMs({ phase: schedulePhase }) ===
-						phase.starts_at
+						secondsToMilliseconds(schedulePhase.start_date) === phase.starts_at
 					);
 				})
 			: undefined;
@@ -121,15 +86,27 @@ export const buildPhaseSections = ({
 			const phaseIndex = schedule.phases.indexOf(matchingSchedulePhase);
 			return {
 				phase,
-				displayItems: itemsFromSchedulePhase({
-					phase: matchingSchedulePhase,
-					phaseIndex,
-				}),
+				displayItems: matchingSchedulePhase.items.map((item, itemIndex) =>
+					stripePriceToDisplayItem({
+						key: `${phaseIndex}:${itemIndex}`,
+						price: item.price as string | Stripe.Price | undefined,
+						quantity: item.quantity,
+					}),
+				),
 			};
 		}
 
 		if (phase.starts_at === "now" && sub) {
-			return { phase, displayItems: itemsFromStripeSubscription({ sub }) };
+			return {
+				phase,
+				displayItems: sub.items.data.map((item) =>
+					stripePriceToDisplayItem({
+						key: item.id,
+						price: item.price,
+						quantity: item.quantity,
+					}),
+				),
+			};
 		}
 
 		return { phase, displayItems: [] };

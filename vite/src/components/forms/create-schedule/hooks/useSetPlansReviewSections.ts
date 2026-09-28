@@ -5,13 +5,12 @@ import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCur
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { balanceChangesToReviewSection } from "../utils/review/balanceChangesToReviewSection";
 import { customerStatePlansToReviewPlans } from "../utils/review/customerStatePlansToReviewPlans";
-import { phaseReviewPlans } from "../utils/review/phaseReviewPlans";
 import { planChangesToReviewSection } from "../utils/review/planChangesToReviewSection";
 import { processorItemsToReviewSection } from "../utils/review/processorItemsToReviewSection";
-import { reviewPlanPriceLabel } from "../utils/review/reviewPlanPriceLabel";
+import { reviewPlanPrice } from "../utils/review/reviewPlanPrice";
 import type { ReviewChangeSection } from "../utils/review/types/reviewChange";
 
-export type SetPlansReviewSections = {
+type SetPlansReviewSections = {
 	warnings: SetPlansPreviewWarning[];
 	plans: ReviewChangeSection;
 	balances: ReviewChangeSection;
@@ -34,9 +33,8 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 			plans: planChangesToReviewSection({
 				preview,
 				declaredPlansByPhase: formValues.phases.map((phase) =>
-					phaseReviewPlans({
-						phasePlans: phase.plans,
-						unscheduledPlans: formValues.unscheduledPlans,
+					customerStatePlansToReviewPlans({
+						plans: [...phase.plans, ...formValues.unscheduledPlans],
 						products,
 						productForDisplay,
 					}),
@@ -49,8 +47,8 @@ export function useSetPlansReviewSections(): SetPlansReviewSections | null {
 				nowMs,
 				context: {
 					products: displayProducts,
-					priceLabelFor: (product: ProductV2) =>
-						reviewPlanPriceLabel({
+					priceFor: (product: ProductV2) =>
+						reviewPlanPrice({
 							product,
 							features,
 							currency: displayCurrency,

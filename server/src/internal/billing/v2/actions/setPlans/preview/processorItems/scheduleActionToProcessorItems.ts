@@ -6,7 +6,7 @@ import {
 import type Stripe from "stripe";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/createSchedule/types/schedulePhasePlan";
 import { scheduleActionToParams } from "../scheduleActionToParams";
-import { toProcessorItem } from "./toProcessorItem";
+import { itemParamsToProcessorItem } from "./toProcessorItem";
 import type { ProcessorItemContext } from "./types/processorItemContext";
 
 type SchedulePhase = Stripe.SubscriptionScheduleUpdateParams.Phase;
@@ -70,13 +70,7 @@ export const scheduleActionToProcessorItems = ({
 		});
 
 		return (stripePhase?.items ?? []).map((item) =>
-			toProcessorItem({
-				stripePriceId: item.price,
-				inlinePriceData: item.price_data,
-				metadata: item.metadata,
-				quantity: item.quantity,
-				context,
-			}),
+			itemParamsToProcessorItem({ item, context }),
 		);
 	});
 };

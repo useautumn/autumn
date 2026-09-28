@@ -4,6 +4,7 @@ import type {
 	SetPlansPreviewPhase,
 	SetPlansPreviewResponse,
 } from "@autumn/shared";
+import { uniqBy } from "lodash";
 import {
 	isImmediatePhase,
 	phaseLabel,
@@ -141,12 +142,6 @@ const priceStripeIds = (items: ProcessorItem[]): ReviewStripeId[] =>
 			: [],
 	);
 
-const uniqueStripeIds = (stripeIds: ReviewStripeId[]) =>
-	stripeIds.filter(
-		(stripeId, index) =>
-			stripeIds.findIndex((other) => other.id === stripeId.id) === index,
-	);
-
 type ProcessorPhase = {
 	reviewPhase: ReviewChangePhase;
 	summary: string;
@@ -188,13 +183,16 @@ export const processorItemsToReviewSection = ({
 	return {
 		phases: withoutEmptyPhases(phases.map(({ reviewPhase }) => reviewPhase)),
 		summary: phases.map(({ summary }) => summary).join(" · "),
-		stripeIds: uniqueStripeIds([
-			...processorStripeIds(preview.processor_changes),
-			...priceStripeIds(
-				preview.phases.flatMap(
-					(phase: SetPlansPreviewPhase) => phase.processor_items,
+		stripeIds: uniqBy(
+			[
+				...processorStripeIds(preview.processor_changes),
+				...priceStripeIds(
+					preview.phases.flatMap(
+						(phase: SetPlansPreviewPhase) => phase.processor_items,
+					),
 				),
-			),
-		]),
+			],
+			"id",
+		),
 	};
 };
