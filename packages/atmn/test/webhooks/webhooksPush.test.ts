@@ -622,10 +622,12 @@ const envClient = ({
 	name,
 	calls,
 	changes = [],
+	secrets = [],
 }: {
 	name: string;
 	calls: string[];
 	changes?: unknown[];
+	secrets?: { id: string; secret: string }[];
 }) => ({
 	previewSyncWebhooks: async (body: unknown) => {
 		calls.push(`${name}:preview ${JSON.stringify(body)}`);
@@ -633,7 +635,7 @@ const envClient = ({
 	},
 	syncWebhooks: async () => {
 		calls.push(`${name}:sync`);
-		return { webhooks: [], secrets: [], errors: [] };
+		return { webhooks: [], secrets, errors: [] };
 	},
 });
 
@@ -922,7 +924,14 @@ test("a failed live check never reads as No changes, and survives a failing sand
 });
 
 /** qa-team already has `orders`; a push creates `orders` in qa_team. */
-const pushOrdersIntoQaTeam = ({ savedEnv }: { savedEnv: string }) => {
+const pushOrdersIntoQaTeam = ({
+	savedEnv,
+	qaTeam = {},
+}: {
+	savedEnv: string;
+	/** qa-team's own preview and sync; by default it has nothing to change. */
+	qaTeam?: { changes?: unknown[]; secrets?: { id: string; secret: string }[] };
+}) => {
 	const dir = projectWith({
 		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "orders", env: "qa-team", url: "https://qa.example.com/a" }),\n\t\twebhook({ id: "orders", env: "qa_team", url: "https://qa2.example.com/a" }),\n\t],`,
 	});
@@ -945,7 +954,7 @@ const pushOrdersIntoQaTeam = ({ savedEnv }: { savedEnv: string }) => {
 				sk_qa2: orgInfo({ id: "org_qa222222", name: "qa_team" }),
 			},
 			clients: {
-				sk_qa1: envClient({ name: "qa1", calls }),
+				sk_qa1: envClient({ name: "qa1", calls, ...qaTeam }),
 				sk_qa2: envClient({
 					name: "qa2",
 					calls,
@@ -956,11 +965,12 @@ const pushOrdersIntoQaTeam = ({ savedEnv }: { savedEnv: string }) => {
 							webhook: state("https://qa2.example.com/a"),
 						},
 					],
+					secrets: [{ id: "orders", secret: "whsec_qa2" }],
 				}),
 			},
 		}),
 	});
-	return { push, calls };
+	return { push, calls, dir };
 };
 
 test("a create refuses when another sandbox's secret is already saved under the same name", async () => {
@@ -979,14 +989,41 @@ test("a create refuses when another sandbox's secret is already saved under the 
 
 test("a secret saved under its legacy org-id name never blocks the create", async () => {
 	try {
-		const { push, calls } = pushOrdersIntoQaTeam({
+		const { push, calls, dir } = pushOrdersIntoQaTeam({
 			savedEnv: "AUTUMN_WEBHOOK_ORDERS_QA11_SECRET=whsec_legacy\n",
 		});
 		await push;
 		expect(calls).toContain("qa2:sync");
+		const saved = readFileSync(join(dir, ".env"), "utf8");
+		expect(saved).toContain("AUTUMN_WEBHOOK_ORDERS_QA11_SECRET=whsec_legacy");
+		expect(saved).toContain("AUTUMN_WEBHOOK_ORDERS_QA_TEAM_SECRET=whsec_qa2");
 	} finally {
 		delete process.env.AUTUMN_WEBHOOK_ORDERS_QA11_SECRET;
 	}
+});
+
+test("a sandbox whose previewed update the server created instead never overwrites another sandbox's new secret", async () => {
+	const { push, dir } = pushOrdersIntoQaTeam({
+		savedEnv: "",
+		// qa-team's `orders` was deleted after the preview, so sync creates it too.
+		qaTeam: {
+			changes: [
+				{
+					action: "update",
+					id: "orders",
+					before: state("https://old.example.com/a"),
+					after: state("https://qa.example.com/a"),
+				},
+			],
+			secrets: [{ id: "orders", secret: "whsec_qa1" }],
+		},
+	});
+	await expect(push).rejects.toThrow(
+		"qa-team and qa_team both created orders, but only one signing secret fits AUTUMN_WEBHOOK_ORDERS_QA_TEAM_SECRET: kept qa-team's. Rename one of those sandboxes, then rotate qa_team's orders secret in the dashboard.",
+	);
+	const saved = readFileSync(join(dir, ".env"), "utf8");
+	expect(saved).toContain("AUTUMN_WEBHOOK_ORDERS_QA_TEAM_SECRET=whsec_qa1");
+	expect(saved).not.toContain("whsec_qa2");
 });
 
 test("a skipped live key never reads as No changes", async () => {
