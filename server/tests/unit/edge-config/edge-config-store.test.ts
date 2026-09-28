@@ -94,7 +94,7 @@ describe("createEdgeConfigStore", () => {
 		});
 	});
 
-	describe("fail-open behavior", () => {
+	describe("before first successful load", () => {
 		test("returns defaultValue when S3 throws a network error", async () => {
 			const mockClient = createMockS3Client({
 				getResponse: () => {
@@ -249,31 +249,126 @@ describe("createEdgeConfigStore", () => {
 			expect(store.get().message).toBe("second");
 			expect(store.get().enabled).toBe(true);
 		});
+	});
 
-		test("retains cached config on refresh error when configured", async () => {
+	describe("stale-while-revalidate", () => {
+		const createStoreWithSequence = ({
+			responses,
+			schema = TestConfigSchema,
+		}: {
+			responses: (() => ReturnType<typeof makeBody>)[];
+			schema?: z.ZodType<TestConfig>;
+		}) => {
 			let callCount = 0;
 			const mockClient = createMockS3Client({
 				getResponse: () => {
-					if (callCount++ === 0) {
-						return makeBody({ enabled: true, message: "cached" });
-					}
-					throw new Error("NetworkingError");
+					const next = responses[Math.min(callCount, responses.length - 1)]!;
+					callCount++;
+					return next();
 				},
 			});
 
-			store = createEdgeConfigStore<TestConfig>({
+			return createEdgeConfigStore<TestConfig>({
 				s3Key: "admin/test-config.json",
-				schema: TestConfigSchema,
+				schema,
 				defaultValue: defaultConfig,
-				retainOnError: true,
 				s3Client: mockClient,
+			});
+		};
+
+		const cached = { enabled: true, message: "cached" };
+
+		test("retains last good config when a refresh throws", async () => {
+			store = createStoreWithSequence({
+				responses: [
+					() => makeBody(cached),
+					() => {
+						throw new Error("NetworkingError: 503 Service Unavailable");
+					},
+				],
+			});
+
+			await store.startPolling();
+			const { lastSuccessAt } = store.getStatus();
+			await store.refresh();
+
+			expect(store.get()).toEqual(cached);
+			expect(store.getStatus().healthy).toBe(false);
+			expect(store.getStatus().error).toContain("NetworkingError");
+			expect(store.getStatus().lastSuccessAt).toBe(lastSuccessAt);
+		});
+
+		test("retains last good config when a refresh returns invalid JSON", async () => {
+			store = createStoreWithSequence({
+				responses: [
+					() => makeBody(cached),
+					() => ({
+						Body: { transformToString: async () => "not-valid-json{{{" },
+					}),
+				],
 			});
 
 			await store.startPolling();
 			await store.refresh();
 
-			expect(store.get()).toEqual({ enabled: true, message: "cached" });
+			expect(store.get()).toEqual(cached);
 			expect(store.getStatus().healthy).toBe(false);
+		});
+
+		test("retains last good config when a refresh fails schema validation", async () => {
+			store = createStoreWithSequence({
+				schema: z.object({
+					enabled: z.boolean(),
+					message: z.string(),
+				}) as unknown as z.ZodType<TestConfig>,
+				responses: [
+					() => makeBody(cached),
+					() => makeBody({ enabled: "yes", message: 42 }),
+				],
+			});
+
+			await store.startPolling();
+			await store.refresh();
+
+			expect(store.get()).toEqual(cached);
+			expect(store.getStatus().healthy).toBe(false);
+		});
+
+		test("recovers to the new config once refresh succeeds again", async () => {
+			store = createStoreWithSequence({
+				responses: [
+					() => makeBody(cached),
+					() => {
+						throw new Error("NetworkingError");
+					},
+					() => makeBody({ enabled: false, message: "fresh" }),
+				],
+			});
+
+			await store.startPolling();
+			await store.refresh();
+			await store.refresh();
+
+			expect(store.get()).toEqual({ enabled: false, message: "fresh" });
+			expect(store.getStatus().healthy).toBe(true);
+			expect(store.getStatus().error).toBeUndefined();
+		});
+
+		test("resets to defaultValue when the key is deleted (NoSuchKey)", async () => {
+			store = createStoreWithSequence({
+				responses: [
+					() => makeBody(cached),
+					() => {
+						throw makeNoSuchKeyError();
+					},
+				],
+			});
+
+			await store.startPolling();
+			await store.refresh();
+
+			expect(store.get()).toEqual(defaultConfig());
+			expect(store.getStatus().healthy).toBe(true);
 		});
 	});
 

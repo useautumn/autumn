@@ -3,6 +3,18 @@ import { createEdgeConfigRegistry } from "@/internal/misc/edgeConfig/edgeConfigR
 
 const registries: ReturnType<typeof createEdgeConfigRegistry>[] = [];
 
+const healthy = () => ({ healthy: true });
+
+/** Fake store whose health follows each refresh outcome in order. */
+const createFlakyStore = ({ outcomes }: { outcomes: boolean[] }) => {
+	let refreshIndex = 0;
+	let isHealthy = false;
+	const refresh = jest.fn(async () => {
+		isHealthy = outcomes[Math.min(refreshIndex++, outcomes.length - 1)]!;
+	});
+	return { refresh, getStatus: () => ({ healthy: isHealthy }) };
+};
+
 const createRegistry = ({
 	timestamps,
 	writeTimestamp = jest.fn(async () => "created"),
@@ -22,7 +34,7 @@ const createRegistry = ({
 		pollIntervalMs: 60_000,
 	});
 	const refresh = jest.fn(async () => {});
-	registry.register({ store: { refresh } });
+	registry.register({ store: { refresh, getStatus: healthy } });
 	registries.push(registry);
 
 	return { readTimestamp, refresh, registry, writeTimestamp };
@@ -62,7 +74,9 @@ describe("edge config registry", () => {
 			timestamps: ["v1", "v2"],
 		});
 		const secondRefresh = jest.fn(async () => {});
-		registry.register({ store: { refresh: secondRefresh } });
+		registry.register({
+			store: { refresh: secondRefresh, getStatus: healthy },
+		});
 		await registry.start();
 
 		await registry.checkForChanges();
@@ -71,12 +85,41 @@ describe("edge config registry", () => {
 		expect(secondRefresh).toHaveBeenCalledTimes(2);
 	});
 
+	test("retries a timestamp change until the refresh succeeds", async () => {
+		const { registry } = createRegistry({
+			timestamps: ["v1", "v2", "v2", "v2"],
+		});
+		const flaky = createFlakyStore({ outcomes: [true, false, true] });
+		registry.register({ store: flaky });
+		await registry.start();
+
+		await registry.checkForChanges();
+		await registry.checkForChanges();
+		await registry.checkForChanges();
+
+		expect(flaky.refresh).toHaveBeenCalledTimes(3);
+		expect(flaky.getStatus().healthy).toBe(true);
+	});
+
+	test("retries after a failed startup load without a timestamp change", async () => {
+		const { registry } = createRegistry({ timestamps: ["v1", "v1", "v1"] });
+		const flaky = createFlakyStore({ outcomes: [false, true] });
+		registry.register({ store: flaky });
+		await registry.start();
+
+		await registry.checkForChanges();
+		await registry.checkForChanges();
+
+		expect(flaky.refresh).toHaveBeenCalledTimes(2);
+		expect(flaky.getStatus().healthy).toBe(true);
+	});
+
 	test("loads a config registered after polling started", async () => {
 		const { registry } = createRegistry({ timestamps: ["v1", "v1"] });
 		await registry.start();
 		const lateRefresh = jest.fn(async () => {});
 
-		registry.register({ store: { refresh: lateRefresh } });
+		registry.register({ store: { refresh: lateRefresh, getStatus: healthy } });
 		await Promise.resolve();
 
 		expect(lateRefresh).toHaveBeenCalledTimes(1);
@@ -151,7 +194,7 @@ describe("edge config registry", () => {
 			pollIntervalMs: 60_000,
 			backstopIntervalMs: 20,
 		});
-		registry.register({ store: { refresh } });
+		registry.register({ store: { refresh, getStatus: healthy } });
 		registries.push(registry);
 		await registry.start();
 

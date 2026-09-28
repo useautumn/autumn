@@ -10,7 +10,6 @@ const store = createEdgeConfigStore<AsyncTrackConfig>({
 	s3Key: ADMIN_ASYNC_TRACK_CONFIG_KEY,
 	schema: AsyncTrackConfigSchema,
 	defaultValue: () => AsyncTrackConfigSchema.parse({}),
-	retainOnError: true,
 });
 
 registerEdgeConfig({ store });
