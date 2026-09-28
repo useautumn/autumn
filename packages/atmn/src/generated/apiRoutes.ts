@@ -4280,7 +4280,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 		method: "preview_sync",
 		path: "/v1/webhooks.preview_sync",
 		description:
-			"Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them.",
+			"Shows what `webhooks.sync` would do with the same body, without changing anything: which webhooks it would create, update or delete, and which existing ones it would leave alone because the body doesn't list them.",
 		body: "object",
 		fields: [
 			{
@@ -4288,7 +4288,14 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: true,
 				description:
-					"The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.",
+					"The webhooks to create or update. Webhooks not listed are left alone unless `skip_deletions` is false.",
+			},
+			{
+				name: "skip_deletions",
+				type: "boolean",
+				required: false,
+				description:
+					"When false, `webhooks` is the environment's complete set: every webhook not listed is deleted, including ones made in the dashboard. Defaults true, which leaves unlisted webhooks alone.",
 			},
 		],
 	},
@@ -4297,7 +4304,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 		method: "sync",
 		path: "/v1/webhooks.sync",
 		description:
-			"Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.",
+			"Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone, unless `skip_deletions` is false: then every webhook not listed is deleted, including ones made in the dashboard. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in `errors` while the rest still apply, and the request fails only when none could be applied.",
 		body: "object",
 		fields: [
 			{
@@ -4305,7 +4312,14 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: true,
 				description:
-					"The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.",
+					"The webhooks to create or update. Webhooks not listed are left alone unless `skip_deletions` is false.",
+			},
+			{
+				name: "skip_deletions",
+				type: "boolean",
+				required: false,
+				description:
+					"When false, `webhooks` is the environment's complete set: every webhook not listed is deleted, including ones made in the dashboard. Defaults true, which leaves unlisted webhooks alone.",
 			},
 		],
 	},

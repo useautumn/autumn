@@ -3,7 +3,8 @@
  * - a stated id with no remote webhook is a `create`;
  * - a stated id whose url/events/description/disabled differ is an `update`
  *   (events compared as a set; omitted description/disabled are left alone);
- * - a remote webhook the request doesn't state is `unmanaged`, never deleted;
+ * - a remote webhook the request doesn't state is `unmanaged`, or a `delete`
+ *   under skipDeletions: false;
  * - a stated webhook that already matches produces no change;
  * - a new id whose URL matches exactly one uid-less (dashboard-made) endpoint
  *   adopts it; several matches are an error, never a create; an endpoint with
@@ -304,4 +305,48 @@ test("two new webhooks at one URL in different apps each adopt their own dashboa
 		["billing", main.id],
 		["provisioning", vercel.id],
 	]);
+});
+
+describe("skipDeletions: false", () => {
+	const dashboard = remote({ id: "ep_2Qx7c9LmNpRsTuVwXyZa1b3d4e5" });
+	const unstated = remote({ id: "old-hook", url: "https://example.com/old" });
+
+	test("every unstated remote webhook, id'd or dashboard-made, is a delete", () => {
+		const changes = computeWebhookSyncChanges({
+			remote: [unstated, dashboard],
+			uidlessIds: new Set([dashboard.id]),
+			stated: [],
+			skipDeletions: false,
+			now: NOW,
+		});
+		expect(changes.errors).toEqual([]);
+		expect(changes.changes).toEqual([
+			{ action: "delete", id: "old-hook", webhook: unstated },
+			{ action: "delete", id: dashboard.id, webhook: dashboard },
+		]);
+	});
+
+	test("a dashboard webhook a new id adopts is taken over, not deleted", () => {
+		const changes = computeWebhookSyncChanges({
+			remote: [dashboard],
+			uidlessIds: new Set([dashboard.id]),
+			stated: [stated({ id: "billing" })],
+			skipDeletions: false,
+			now: NOW,
+		});
+		expect(changes.changes.map((change) => change.action)).toEqual(["adopt"]);
+	});
+
+	test("by default an unstated webhook stays unmanaged", () => {
+		const changes = computeWebhookSyncChanges({
+			remote: [unstated, dashboard],
+			uidlessIds: new Set([dashboard.id]),
+			stated: [],
+			now: NOW,
+		});
+		expect(changes.changes.map((change) => change.action)).toEqual([
+			"unmanaged",
+			"unmanaged",
+		]);
+	});
 });
