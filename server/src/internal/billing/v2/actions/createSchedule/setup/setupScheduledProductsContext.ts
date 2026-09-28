@@ -5,6 +5,7 @@ import type {
 	ScheduledPhaseContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup/setupCustomerLicenseQuantityContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupAttachProductContext } from "../../attach/setup/setupAttachProductContext";
 import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedulePhasePlans";
@@ -56,6 +57,9 @@ export const setupScheduledProductsContext = async ({
 						customPrices,
 						customEntitlements,
 						featureQuantities,
+						customerLicenseQuantities: setupCustomerLicenseQuantityContext({
+							params: plan,
+						}),
 						insertPlanLicenses,
 						externalId: plan.subscription_id,
 						entity: computeScopeForScheduledProduct({

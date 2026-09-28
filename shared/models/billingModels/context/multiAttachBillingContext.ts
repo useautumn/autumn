@@ -1,4 +1,5 @@
 import type {
+	CustomerLicenseQuantity,
 	Entitlement,
 	FeatureOptions,
 	FullCusProduct,
@@ -15,6 +16,7 @@ export interface MultiAttachProductContext {
 	customPrices: Price[];
 	customEnts: Entitlement[];
 	featureQuantities: FeatureOptions[];
+	customerLicenseQuantities?: CustomerLicenseQuantity[];
 	insertPlanLicenses?: InsertPlanLicenseSpec[];
 	fullCustomer: FullCustomer;
 	/** The existing active product in the same group and scope. */

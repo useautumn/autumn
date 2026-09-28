@@ -5,7 +5,10 @@ import type {
 	FullCusProduct,
 } from "@autumn/shared";
 import { computeProductTransitions } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computeProductTransitions.js";
-import { pairCustomerProducts } from "../pairCustomerProducts.js";
+import {
+	type CustomerProductPair,
+	pairCustomerProducts,
+} from "../pairCustomerProducts.js";
 import { applyCustomerLicenseTransitions } from "./applyCustomerLicenseTransitions.js";
 import { customerLicensePairToTransition } from "./customerLicensePairToTransition.js";
 import { isSameRowTransition } from "./isSameRowTransition.js";
@@ -46,26 +49,32 @@ const isNoopTransition = (transition: CustomerLicenseTransition): boolean => {
 };
 
 /** Computes license transitions across customer products.
- * Carrying pool state is independent from billing projection. */
+ * Carrying pool state is independent from billing projection.
+ * Pairs default to same-group successors; pass `customerProductPairs` when the
+ * caller already knows the pairing (e.g. a cross-group swap). */
 export const computeCustomerLicenseTransitions = ({
 	outgoingCustomerProducts,
 	incomingCustomerProducts,
+	customerProductPairs: explicitCustomerProductPairs,
 	customerLicenseBillingContext,
 	carryCustomerLicenseState = true,
 	carryOverUsages,
 }: {
 	outgoingCustomerProducts: FullCusProduct[];
 	incomingCustomerProducts: FullCusProduct[];
+	customerProductPairs?: CustomerProductPair[];
 	customerLicenseBillingContext?: CustomerLicenseBillingContext;
 	carryCustomerLicenseState?: boolean;
 	carryOverUsages?: CarryOverUsages;
 }): CustomerLicenseTransition[] => {
 	const customerLicenseTransitions: CustomerLicenseTransition[] = [];
 
-	const customerProductPairs = pairCustomerProducts({
-		outgoingCustomerProducts,
-		incomingCustomerProducts,
-	});
+	const customerProductPairs =
+		explicitCustomerProductPairs ??
+		pairCustomerProducts({
+			outgoingCustomerProducts,
+			incomingCustomerProducts,
+		});
 
 	for (const {
 		outgoingCustomerProduct,
