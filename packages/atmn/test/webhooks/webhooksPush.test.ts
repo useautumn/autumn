@@ -925,6 +925,85 @@ test("a failed live check never reads as No changes, and survives a failing sand
 	);
 });
 
+test("a create in one sandbox refuses when another sandbox already states that id under the same secret name", async () => {
+	const dir = projectWith({
+		body: `\tfeatures: [],\n\twebhooks: [\n\t\twebhook({ id: "billing", url: { "qa-team": "https://qa.example.com/a", qa_team: "https://qa2.example.com/a" } }),\n\t],`,
+	});
+	const calls: string[] = [];
+	const push = runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: catalogClean as any,
+		cwd: dir,
+		write: () => {},
+		...envsWith({
+			env: {
+				AUTUMN_SECRET_KEY: "sk_sandbox",
+				AUTUMN_SANDBOX_QA1_SECRET_KEY: "sk_qa1",
+				AUTUMN_SANDBOX_QA2_SECRET_KEY: "sk_qa2",
+			},
+			orgs: {
+				sk_sandbox: orgInfo({ id: "org_ab12cd34" }),
+				sk_qa1: orgInfo({ id: "org_qa111111", name: "qa-team" }),
+				sk_qa2: orgInfo({ id: "org_qa222222", name: "qa_team" }),
+			},
+			clients: {
+				// qa-team's billing already exists, so its secret is already saved.
+				sk_qa1: envClient({ name: "qa1", calls }),
+				sk_qa2: envClient({
+					name: "qa2",
+					calls,
+					changes: [
+						{
+							action: "create",
+							id: "billing",
+							webhook: state("https://stg-2.example.com/autumn"),
+						},
+					],
+				}),
+			},
+		}),
+	});
+	await expect(push).rejects.toThrow(
+		"qa-team and qa_team would both save billing's signing secret as AUTUMN_WEBHOOK_BILLING_QA_TEAM_SECRET",
+	);
+	expect(calls.filter((call) => call.endsWith(":sync"))).toEqual([]);
+});
+
+test("a skipped live key never reads as No changes", async () => {
+	const dir = projectWith({ body: `\tfeatures: [],\n${SHARED_URL}` });
+	let output = "";
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: catalogClean as any,
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+		...envsWith({
+			env: {
+				AUTUMN_SECRET_KEY: "sk_sandbox",
+				AUTUMN_PROD_SECRET_KEY: "sk_live",
+			},
+			orgs: THREE_ORGS,
+			clients: {
+				sk_sandbox: envClient({ name: "sandbox", calls: [] }),
+				sk_live: {
+					previewSyncWebhooks: async () => {
+						throw new AutumnApiError({
+							status: 404,
+							body: { message: "Webhooks not found" },
+							path: "/v1/webhooks.preview_sync",
+						});
+					},
+				},
+			},
+		}),
+	});
+	expect(output).toContain("⚠ webhooks: skipped live");
+	expect(output).not.toContain("No changes");
+	expect(output).toContain("Production webhooks weren't checked");
+});
+
 test("a failing sandbox preview still names the envs whose keys were skipped", async () => {
 	const dir = projectWith({ body: `\tfeatures: [],\n${SHARED_URL}` });
 	const calls: string[] = [];
