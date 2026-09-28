@@ -3,9 +3,13 @@
  * but with the partition runtime and the group consumer instrumented so every
  * lifecycle step lands on stdout as a JSON line with a wall-clock timestamp.
  * SIGTERM runs worker.stop() (the main.ts path); SIGKILL from the orchestrator
- * is the hard-kill scenario.
+ * is the hard-kill scenario. With BENCH_SERVICE_ARN and BENCH_EDGE_CONFIG_DIR
+ * set, the worker is one task of a blue-green fleet: it polls the slot record
+ * from that directory and holds its ready announcements until the record names it.
  */
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
+import { createSlotGate } from "../../../src/blueGreen/createSlotGate.js";
+import { createSlotHeartbeat } from "../../../src/blueGreen/createSlotHeartbeat.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "../../../src/init/construction/createWorkerPartitions.js";
@@ -19,9 +23,15 @@ import {
 import { openWorkerResources } from "../../../src/init/workerResources.js";
 import { createOwnershipHandoffLink } from "../../../src/kafka/createOwnershipHandoffLink.js";
 import type { StateBackend } from "../../../src/state/stateBackend.js";
+import { createDirectoryEdgeConfigClient } from "./directoryEdgeConfigClient.js";
 
 const env = JSON.parse(process.env.BENCH_WORKER_ENV ?? "null") as
-	| (BalanceWorkerEnv & { BENCH_NAME: string; BENCH_BACKEND: StateBackend })
+	| (BalanceWorkerEnv & {
+			BENCH_NAME: string;
+			BENCH_BACKEND: StateBackend;
+			BENCH_SERVICE_ARN?: string;
+			BENCH_EDGE_CONFIG_DIR?: string;
+	  })
 	| null;
 if (!env) throw new Error("BENCH_WORKER_ENV is required");
 const name = env.BENCH_NAME;
@@ -55,7 +65,14 @@ const runtimeConfig = balanceWorkerEnvToRuntimeConfig({
 	endpoint: address.endpoint,
 });
 const resources = await openWorkerResources({
-	ctx: { logger },
+	ctx: {
+		logger,
+		edgeConfigS3Client: env.BENCH_EDGE_CONFIG_DIR
+			? createDirectoryEdgeConfigClient({
+					directory: env.BENCH_EDGE_CONFIG_DIR,
+				})
+			: undefined,
+	},
 	config: { env, stateBackend: env.BENCH_BACKEND },
 	checkpointConfig,
 	bootstrap: {
@@ -180,6 +197,29 @@ consumer.on(consumer.events.CRASH, (event) =>
 	emit("consumer.crash", { error: describe(event.payload.error) }),
 );
 
+/** Same gate createBalanceWorker builds, with the fleet's identity handed in instead of read from ECS. */
+const slotGate =
+	env.BENCH_SERVICE_ARN && resources.edgeConfigs
+		? createSlotGate({
+				ctx: {
+					identity: { serviceArn: env.BENCH_SERVICE_ARN, imageSha: null },
+					activeSlot: resources.edgeConfigs.activeSlot,
+				},
+			})
+		: undefined;
+async function awaitReadyAnnouncement({
+	partition,
+	signal,
+}: {
+	partition: number;
+	signal: AbortSignal;
+}): Promise<void> {
+	if (!slotGate) return;
+	if (!slotGate.isActive()) emit("slot.hold", { partition });
+	await slotGate.awaitActive({ signal });
+	emit("slot.active", { partition });
+}
+
 const partitions = createWorkerPartitions({
 	ctx: {
 		consumer,
@@ -189,6 +229,7 @@ const partitions = createWorkerPartitions({
 		logger,
 		createRuntime,
 		ownershipLink: ownershipHandoff,
+		awaitReadyAnnouncement,
 		onError: ({ cause }) => emit("error", { cause: describe(cause) }),
 		onUnhealthyPartition: ({ cause }) =>
 			emit("unhealthy", { cause: describe(cause) }),
@@ -209,6 +250,43 @@ const app = createBalanceWorkerApp({
 	},
 });
 
+/** The production heartbeat every 2s instead of 20s, so the orchestrator can assert on it between steps. */
+const slotHeartbeat =
+	slotGate && resources.edgeConfigs && env.BENCH_SERVICE_ARN
+		? createSlotHeartbeat({
+				ctx: {
+					...resources.edgeConfigs.adminBucket,
+					gate: slotGate,
+					readPartitions: partitions.partitions,
+					readStoreHealthy: () =>
+						resources.edgeConfigs?.activeSlot.getStatus().healthy ?? false,
+					probes: {
+						kafka: async () => {
+							await resources.admin.fetchTopicOffsets(
+								env.BALANCE_WORKER_OWNERSHIP_TOPIC,
+							);
+						},
+						postgres: async () => {
+							if (!resources.postgres.client)
+								throw new Error("No Postgres pool");
+							await resources.postgres.client`select 1`;
+						},
+					},
+					logger,
+					schedule: ({ run }) => {
+						const timer = setInterval(run, 2_000);
+						return () => clearInterval(timer);
+					},
+				},
+				config: {
+					deployment: env.BALANCE_WORKER_DEPLOYMENT,
+					slot: env.BALANCE_WORKER_SLOT,
+					endpoint: address.endpoint,
+					identity: { serviceArn: env.BENCH_SERVICE_ARN, imageSha: null },
+				},
+			})
+		: undefined;
+
 emit("worker.starting");
 await resources.edgeConfigs?.start();
 await resources.catalogInvalidations?.start();
@@ -221,12 +299,14 @@ const listener = Bun.serve({
 });
 emit("consumer.start");
 await partitions.start();
+void slotHeartbeat?.start();
 emit("worker.started");
 
 let stopping: Promise<void> | undefined;
 function stop(): Promise<void> {
 	stopping ??= (async () => {
 		emit("stop.begin");
+		slotHeartbeat?.stop();
 		await partitions.stop();
 		emit("stop.partitions_stopped");
 		await listener.stop();

@@ -64,14 +64,56 @@ describe("Balance worker environment", () => {
 		expect(env.BALANCE_WORKER_OWNERSHIP_TOPIC).toBe(
 			"tf-balance-staging-v2-64-ownership",
 		);
+		expect(env.BALANCE_WORKER_SLOT).toBe("blue");
 		expect(env.BALANCE_WORKER_GROUP_ID).toBe(
 			"tf-balance-staging-v2-64-workers",
 		);
+	});
+	test("only the consumer group carries the slot; topics stay shared by both fleets", () => {
+		const blue = createBalanceWorkerEnv({
+			...valid,
+			BALANCE_WORKER_DEPLOYMENT: "tf-balance-staging-v2-64",
+			BALANCE_WORKER_SLOT: "blue",
+		});
+		const green = createBalanceWorkerEnv({
+			...valid,
+			BALANCE_WORKER_DEPLOYMENT: "tf-balance-staging-v2-64",
+			BALANCE_WORKER_SLOT: "green",
+		});
+		expect(green.BALANCE_WORKER_SLOT).toBe("green");
+		expect(green.BALANCE_WORKER_GROUP_ID).toBe(
+			"tf-balance-staging-v2-64-green-workers",
+		);
+		// Blue is the group the fleet already runs in; only green gets a slot in its name.
+		expect(blue.BALANCE_WORKER_GROUP_ID).toBe(
+			"tf-balance-staging-v2-64-workers",
+		);
+		for (const name of [
+			"BALANCE_WORKER_DEPLOYMENT",
+			"BALANCE_WORKER_METERING_TOPIC",
+			"BALANCE_WORKER_OWNERSHIP_TOPIC",
+			"BALANCE_WORKER_COMMAND_TOPIC",
+			"BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC",
+			"BALANCE_WORKER_CHECKPOINT_PREFIX",
+		] as const)
+			expect(green[name]).toBe(blue[name]);
+		expect(() =>
+			createBalanceWorkerEnv({ ...valid, BALANCE_WORKER_SLOT: "red" }),
+		).toThrow("BALANCE_WORKER_SLOT must be blue or green");
 	});
 	test("production requires a deployment", () => {
 		expect(() =>
 			createBalanceWorkerEnv({ ...valid, NODE_ENV: "production" }),
 		).toThrow("BALANCE_WORKER_DEPLOYMENT is required in production");
+	});
+	test("production requires a slot", () => {
+		expect(() =>
+			createBalanceWorkerEnv({
+				...valid,
+				NODE_ENV: "production",
+				BALANCE_WORKER_DEPLOYMENT: "tf-balance-prod",
+			}),
+		).toThrow("BALANCE_WORKER_SLOT is required in production");
 	});
 	test("reads the database URL under the name deployed workers still receive", () => {
 		expect(

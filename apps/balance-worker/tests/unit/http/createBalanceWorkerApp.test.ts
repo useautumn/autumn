@@ -806,6 +806,32 @@ describe("Track batches", () => {
 		}
 	});
 
+	test("a withdrawn route holds the batch until its handoff has settled, like /v1/track", async () => {
+		const settled = Promise.withResolvers<void>();
+		let awaited = 0;
+		const { postBatch, submitted } = fixture({
+			owned: false,
+			awaitHandoff: async () => {
+				awaited++;
+				await settled.promise;
+			},
+		});
+		let answered = false;
+		const response = (async () => {
+			const reply = await postBatch({ route, commands: [commandWithId("a")] });
+			answered = true;
+			return reply;
+		})();
+		await Bun.sleep(5);
+		expect(awaited).toBe(1);
+		expect(answered).toBe(false);
+		settled.resolve();
+		const reply = await response;
+		expect(reply.status).toBe(409);
+		expect((await reply.json()).error.code).toBe("NOT_OWNER");
+		expect(submitted).toEqual([]);
+	});
+
 	test.each([
 		null,
 		{},

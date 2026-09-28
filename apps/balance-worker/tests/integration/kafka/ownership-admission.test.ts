@@ -13,6 +13,10 @@ import {
 	createBalanceWorkerClient,
 } from "@autumn/balance-worker-client";
 import {
+	createEdgeConfigStore,
+	type EdgeConfigS3Client,
+} from "@autumn/edge-config";
+import {
 	createOwnershipConsumer,
 	createProducerSession,
 	meteringIdentityToPartition,
@@ -20,6 +24,8 @@ import {
 	serializeMeteringRecord,
 } from "@autumn/kafka";
 import { Kafka, logLevel } from "kafkajs";
+import { createSlotGate } from "../../../src/blueGreen/createSlotGate.js";
+import { activeSlotEdgeConfig } from "../../../src/edgeConfig/activeSlotEdgeConfig.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "../../../src/init/construction/createWorkerPartitions.js";
@@ -30,6 +36,7 @@ import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
+import type { PartitionsDependencies } from "../../../src/partitions/types/partitions.js";
 import { createPartitionBootstrapper } from "../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
 import {
@@ -372,6 +379,8 @@ describe("Partition handoff under load", () => {
 		owners,
 		events,
 		errors,
+		groupId = id,
+		awaitReadyAnnouncement,
 	}: {
 		name: string;
 		kafka: Kafka;
@@ -381,6 +390,9 @@ describe("Partition handoff under load", () => {
 		owners: string;
 		events: string[];
 		errors: unknown[];
+		/** Its own group makes the worker a member of another fleet. */
+		groupId?: string;
+		awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
 	}) {
 		const directory = mkdtempSync(join(tmpdir(), `handoff-${name}-`));
 		const store = openStateStore({
@@ -449,11 +461,12 @@ describe("Partition handoff under load", () => {
 		const partitions = createWorkerPartitions({
 			ctx: {
 				consumer: kafka.consumer(
-					createWorkerConsumerConfig({ groupId: id, timings }),
+					createWorkerConsumerConfig({ groupId, timings }),
 				),
 				partitionOffsets: kafka.admin(),
 				stateStore: store,
 				idempotencyKeys: createFakeIdempotencyKeys().keys,
+				awaitReadyAnnouncement,
 				createRuntime: (params) => {
 					const resources = factory(params);
 					const { publication } = resources;
@@ -517,6 +530,292 @@ describe("Partition handoff under load", () => {
 		}
 		return { name, endpoint, partitions, stop, ownedPartitions };
 	}
+
+	/** One customer per partition, initialized on the log so any worker can rebuild it. */
+	async function seedCustomers({
+		kafka,
+		topic,
+	}: {
+		kafka: Kafka;
+		topic: string;
+	}) {
+		const customers = new Map<number, ReturnType<typeof createSubjectState>>();
+		for (let index = 0; customers.size < partitionCount; index++) {
+			const identity = {
+				orgId: "org_1",
+				env: "sandbox",
+				customerId: `cus_${index}`,
+				entityId: null,
+			} as const;
+			const partition = meteringIdentityToPartition({
+				identity,
+				partitionCount,
+			});
+			if (customers.has(partition)) continue;
+			customers.set(
+				partition,
+				createSubjectState({
+					identity,
+					customerEntitlements: [
+						createCustomerEntitlement({
+							id: "balance",
+							featureId: "messages",
+							balance: 1_000_000,
+						}),
+					],
+				}),
+			);
+		}
+		const seed = kafka.producer();
+		await seed.connect();
+		for (const [partition, state] of customers)
+			await seed.send({
+				topic,
+				messages: [
+					{
+						partition,
+						...serializeMeteringRecord({
+							record: createInitializeMutation({
+								state,
+								commandId: `init_${partition}`,
+							}),
+						}),
+					},
+				],
+			});
+		await seed.disconnect();
+		return customers;
+	}
+
+	/** An S3 with one object per key, so the record a test writes is what the store reads. */
+	function createMemoryS3Client(): EdgeConfigS3Client {
+		const objects = new Map<string, string>();
+		return {
+			send: async (command) => {
+				const { Key, Body } = command.input as { Key?: string; Body?: string };
+				if (Body !== undefined) {
+					objects.set(Key ?? "", Body);
+					return {};
+				}
+				const stored = objects.get(Key ?? "");
+				if (stored === undefined) {
+					const missing = new Error("NoSuchKey");
+					missing.name = "NoSuchKey";
+					throw missing;
+				}
+				return { Body: { transformToString: async () => stored } };
+			},
+		};
+	}
+
+	test("a slot flip hands every partition from the blue fleet to the green one under a track hammer", async () => {
+		const id = crypto.randomUUID();
+		const topic = `slots-worker-${id}`;
+		const owners = `${topic}-owners`;
+		const kafka = new Kafka({
+			clientId: id,
+			brokers,
+			logLevel: logLevel.NOTHING,
+		});
+		const admin = kafka.admin();
+		await admin.connect();
+		await admin.createTopics({
+			waitForLeaders: true,
+			topics: [
+				{ topic, numPartitions: partitionCount, replicationFactor: 1 },
+				{
+					topic: owners,
+					numPartitions: partitionCount,
+					replicationFactor: 1,
+					configEntries: [{ name: "cleanup.policy", value: "compact" }],
+				},
+			],
+		});
+		const customers = await seedCustomers({ kafka, topic });
+		const arns = {
+			blue: `arn:aws:ecs:test:0:service/${id}/balance-workers-blue`,
+			green: `arn:aws:ecs:test:0:service/${id}/balance-workers-green`,
+		};
+		const activeSlot = createEdgeConfigStore({
+			ctx: {
+				location: () => ({ bucket: "test", region: "us-east-2" }),
+				s3Client: createMemoryS3Client(),
+			},
+			s3Key: activeSlotEdgeConfig.key,
+			schema: activeSlotEdgeConfig.schema,
+			defaultValue: activeSlotEdgeConfig.defaultValue,
+		});
+		const slotRecord = (flightcontrolBlueArn: string) => ({
+			activeTaskDefinitionArn: null,
+			activeImageSha: null,
+			flightcontrolBlueArn,
+			updatedAt: new Date().toISOString(),
+		});
+		await activeSlot.writeToSource({ config: slotRecord(arns.blue) });
+		const greenGate = createSlotGate({
+			ctx: { identity: { serviceArn: arns.green, imageSha: null }, activeSlot },
+		});
+
+		const events: string[] = [];
+		const errors: unknown[] = [];
+		const outcomes: { partition: number; outcome: string }[] = [];
+		const routing = createOwnershipConsumer({
+			ctx: { kafka },
+			config: { topic: owners },
+		});
+		const client = createBalanceWorkerClient({
+			ctx: { owners: routing },
+			config: {
+				partitionCount,
+				timeoutMs: 1_000,
+				routeRefreshTimeoutMs: 200,
+			},
+		});
+		async function trackOnce(partition: number): Promise<void> {
+			const state = customers.get(partition);
+			if (!state) throw new Error(`No customer on partition ${partition}`);
+			const commandId = crypto.randomUUID();
+			const command = parseTrackCommand({
+				input: {
+					schemaVersion: 1,
+					type: "track",
+					org: {
+						config: {
+							reverse_deduction_order: false,
+							block_overdue_entitlements: false,
+							include_past_due: true,
+						},
+					},
+					commandId,
+					requestId: commandId,
+					identity: state.identity,
+					featureId: "messages",
+					internalFeatureId: "feat_messages",
+					value: 1,
+					overageBehavior: "reject",
+					properties: null,
+					usageEvent: { name: "messages", idempotencyKey: null, id: null },
+					occurredAt: Date.now(),
+				},
+			});
+			let outcome = "200";
+			try {
+				await client.track({ command });
+			} catch (cause) {
+				outcome =
+					cause instanceof BalanceWorkerClientError
+						? `${cause.code}${cause.workerCode ? `:${cause.workerCode}` : ""}`
+						: `THROW:${String(cause)}`;
+			}
+			outcomes.push({ partition, outcome });
+		}
+		let hammering = false;
+		const hammers: Promise<void>[] = [];
+		const workerContext = { kafka, admin, id, topic, owners, events, errors };
+		const blue = await startWorker({
+			name: "A",
+			...workerContext,
+			groupId: `${id}-workers`,
+		});
+		let green: LiveWorker | undefined;
+		try {
+			await waitFor(() => blue.ownedPartitions().length === partitionCount);
+			await routing.start();
+			for (const partition of customers.keys()) await trackOnce(partition);
+			expect(outcomes.map(({ outcome }) => outcome)).toEqual([
+				"200",
+				"200",
+				"200",
+			]);
+			hammering = true;
+			for (const partition of customers.keys())
+				hammers.push(
+					(async () => {
+						while (hammering) {
+							void trackOnce(partition);
+							await Bun.sleep(50);
+						}
+					})(),
+				);
+			await Bun.sleep(300);
+
+			// Green joins its own group, prepares everything and holds: nothing on the ownership log, blue keeps serving.
+			const blueClaims = events.length;
+			green = await startWorker({
+				name: "B",
+				...workerContext,
+				groupId: `${id}-green-workers`,
+				awaitReadyAnnouncement: ({ signal }) =>
+					greenGate.awaitActive({ signal }),
+			});
+			const joined = green;
+			await waitFor(
+				() =>
+					joined.partitions
+						.partitions()
+						.filter(({ status }) => status === "prepared").length ===
+					partitionCount,
+			);
+			await Bun.sleep(500);
+			expect(events.slice(blueClaims)).toEqual([]);
+			expect(blue.ownedPartitions().length).toBe(partitionCount);
+
+			// The flip: every partition moves by handoff, blue names green, green never claims for itself.
+			await activeSlot.writeToSource({ config: slotRecord(arns.green) });
+			await waitFor(
+				() =>
+					joined.ownedPartitions().length === partitionCount &&
+					blue.ownedPartitions().length === 0,
+			);
+			for (const partition of customers.keys()) {
+				expect(events).toContain(`A:claim:${partition}:${joined.endpoint}`);
+				expect(events).not.toContain(`A:release:${partition}`);
+				expect(events).not.toContain(`B:claim:${partition}:${joined.endpoint}`);
+			}
+			await Bun.sleep(1_000);
+			hammering = false;
+			await Promise.all(hammers);
+			await Bun.sleep(1_500);
+
+			const failures = outcomes.filter(({ outcome }) => outcome !== "200");
+			expect(failures).toEqual([]);
+			expect(outcomes.length).toBeGreaterThan(60);
+			for (const [partition, state] of customers) {
+				const reply = await client.readSubjectState({
+					command: parseReadSubjectStateCommand({
+						input: {
+							schemaVersion: 1,
+							type: "readSubjectState",
+							requestId: crypto.randomUUID(),
+							identity: state.identity,
+							occurredAt: Date.now(),
+							org: {
+								config: {
+									reverse_deduction_order: false,
+									block_overdue_entitlements: false,
+									include_past_due: true,
+								},
+							},
+						},
+					}),
+				});
+				const balance = reply.state.customerEntitlements[0]?.balance;
+				const served = outcomes.filter(
+					(outcome) => outcome.partition === partition,
+				).length;
+				expect(balance).toBe(1_000_000 - served);
+			}
+			expect(errors).toEqual([]);
+		} finally {
+			hammering = false;
+			await Promise.allSettled(hammers);
+			await blue.stop();
+			await green?.stop();
+			await routing.stop();
+			await admin.deleteTopics({ topics: [topic, owners] });
+			await admin.disconnect();
+		}
+	}, 120_000);
 
 	test("join and graceful leave under a track hammer: every track is a 200 and lands exactly once", async () => {
 		const id = crypto.randomUUID();

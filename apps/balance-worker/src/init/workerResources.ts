@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import type { MeteringIdentity } from "@autumn/balance-engine";
 import { createCatalogCache } from "@autumn/catalog-lru";
 import { createIdempotencyKeyStore } from "@autumn/dynamodb";
+import type { EdgeConfigS3Client } from "@autumn/edge-config";
 import {
 	createKafkaClient,
 	createKafkaTransport,
@@ -57,7 +58,11 @@ export async function openWorkerResources({
 	checkpointConfig,
 	bootstrap,
 }: {
-	ctx?: { logger?: Pick<AutumnLogger, "info" | "warn" | "error"> };
+	ctx?: {
+		logger?: Pick<AutumnLogger, "info" | "warn" | "error">;
+		/** Stands in for the admin bucket; the benchmark polls a directory through it. */
+		edgeConfigS3Client?: EdgeConfigS3Client;
+	};
 	config: BalanceWorkerConfig;
 	checkpointConfig: WorkerCheckpointConfig;
 	bootstrap: WorkerBootstrapConfig;
@@ -108,7 +113,10 @@ export async function openWorkerResources({
 			},
 		});
 		const edgeConfigs = createWorkerEdgeConfigs({
-			ctx: { logger: dependencies.logger },
+			ctx: {
+				logger: dependencies.logger,
+				s3Client: dependencies.edgeConfigS3Client,
+			},
 			config: { location: { bucket: env.S3_BUCKET, region: env.S3_REGION } },
 		});
 		function readCommitterControl() {

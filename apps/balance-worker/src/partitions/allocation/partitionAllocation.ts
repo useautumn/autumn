@@ -1,6 +1,7 @@
 import {
 	beginPartitionHandoffs,
 	cancelPartitionHandoff,
+	watchForSuccessor,
 } from "../lifecycle/handOffPartition.js";
 import { subscribeEntryUnavailable } from "../lifecycle/partitionStartup.js";
 import { clearPartitionRetries } from "../lifecycle/retryPartition.js";
@@ -102,6 +103,7 @@ function keepHandoffsForOwnPartitions({
 		const entry = state.handingOff.get(partition);
 		if (entry && cancelPartitionHandoff({ state, entry })) {
 			subscribeEntryUnavailable({ ctx, state, entry, allocationGeneration });
+			watchForSuccessor({ ctx, state, entry });
 			continue;
 		}
 		if (entry?.retirement) blockers.push(entry.retirement);
