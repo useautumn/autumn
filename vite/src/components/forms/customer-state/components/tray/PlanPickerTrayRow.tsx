@@ -1,8 +1,5 @@
 import type { ComponentProps } from "react";
-import {
-	type PlanRowScope,
-	ScopedPlanRow,
-} from "@/components/forms/shared/ScopedPlanRow";
+import type { PlanRowScope } from "@/components/forms/shared/ScopedPlanRow";
 import { cn } from "@/lib/utils";
 import { CustomerStatePlanPicker } from "../CustomerStatePlanPicker";
 import { PlanTrayRow } from "./PlanTrayRow";
@@ -17,17 +14,13 @@ export function PlanPickerTrayRow({
 	...pickerProps
 }: ComponentProps<typeof CustomerStatePlanPicker> & { scope?: PlanRowScope }) {
 	return (
-		<PlanTrayRow>
-			<ScopedPlanRow scope={scope}>
-				<div
-					className={cn(
-						"group relative min-w-0 flex-1",
-						disabled && "opacity-60",
-					)}
-				>
+		<PlanTrayRow flush>
+			<div className="flex items-center">
+				<div className={cn("min-w-0 flex-1", disabled && "opacity-60")}>
 					<CustomerStatePlanPicker {...pickerProps} disabled={disabled} />
 				</div>
-			</ScopedPlanRow>
+				{scope && <div className="shrink-0 pr-2">{scope.picker}</div>}
+			</div>
 		</PlanTrayRow>
 	);
 }
