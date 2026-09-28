@@ -51,6 +51,40 @@ async function watchHandoffRetirement({
 	}
 }
 
+/** An owner the roster left alone still hands off when another fleet's worker announces `ready` for its partition. */
+export function watchForSuccessor({
+	ctx,
+	state,
+	entry,
+}: {
+	ctx: PartitionsContext;
+	state: PartitionsState;
+	entry: PartitionEntry;
+}): void {
+	const signal = entry.handoffAbort.signal;
+	async function onReady({ successor }: { successor: string }): Promise<void> {
+		try {
+			await entry.startup;
+		} catch {
+			return;
+		}
+		const stillServing =
+			state.status === "running" &&
+			state.entries.get(entry.partition) === entry &&
+			entry.claimed &&
+			!entry.withdrawn;
+		if (signal.aborted || !stillServing) return;
+		state.entries.delete(entry.partition);
+		state.handingOff.set(entry.partition, entry);
+		entry.retirement = handOffPartition({ ctx, state, entry, successor });
+		void watchHandoffRetirement({ ctx, state, retirement: entry.retirement });
+	}
+	function onReadyRecord({ endpoint }: { endpoint: string }): void {
+		void onReady({ successor: endpoint });
+	}
+	void entry.publication.awaitReady({ signal }).then(onReadyRecord, noop);
+}
+
 /** Back into service: the roster handed the partition to this worker again before it stopped serving. */
 export function cancelPartitionHandoff({
 	state,
@@ -72,17 +106,22 @@ async function handOffPartition({
 	ctx,
 	state,
 	entry,
+	successor: announced,
 }: {
 	ctx: PartitionsContext;
 	state: PartitionsState;
 	entry: PartitionEntry;
+	/** Already known when a foreign `ready` started this handoff; a revoke waits for one. */
+	successor?: string;
 }): Promise<void> {
 	const { partition } = entry;
 	const cancel = entry.handoffAbort.signal;
-	const successor = await awaitSuccessor({ ctx, entry, cancel });
+	const successor = announced ?? (await awaitSuccessor({ ctx, entry, cancel }));
 	if (cancel.aborted) return;
 	entry.withdrawn = true;
 	state.directory.withdraw({ partition });
+	// The roster still assigns this partition here; without a revoke nothing else stops its commands being fetched.
+	if (announced) pauseHandedOffCommands({ ctx, partition });
 	state.retiringEntries.set(partition, entry);
 	const settlement = Promise.withResolvers<void>();
 	state.handoffSettlements.set(partition, settlement.promise);
@@ -116,6 +155,26 @@ async function handOffPartition({
 		}
 	}
 }
+
+function pauseHandedOffCommands({
+	ctx,
+	partition,
+}: {
+	ctx: PartitionsContext;
+	partition: number;
+}): void {
+	if (!ctx.config.commandTopic) return;
+	try {
+		ctx.consumer.pause({
+			topic: ctx.config.commandTopic,
+			partitions: [partition],
+		});
+	} catch (cause) {
+		reportPartitionError({ ctx, cause });
+	}
+}
+
+function noop(): void {}
 
 /** Best effort: without it the successor falls back to the claim timeout, as before. */
 async function announceDraining({

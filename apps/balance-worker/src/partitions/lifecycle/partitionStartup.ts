@@ -15,6 +15,7 @@ import type {
 	PartitionsState,
 } from "../types/partitionState.js";
 import type { PartitionFailure } from "../types/partitions.js";
+import { watchForSuccessor } from "./handOffPartition.js";
 import { clearPartitionRetry } from "./retryPartition.js";
 
 /** Commands resume only after replay has restored their durable bookmark. */
@@ -133,6 +134,8 @@ export async function startPartition({
 
 		const handedOff = await awaitHandoffClaim({ ctx, entry });
 		if (!isStillStarting()) return;
+		// Listening from here on: a successor from another fleet may announce before this worker has even admitted.
+		watchForSuccessor({ ctx, state, entry });
 
 		const activation = entry.runtime.activate();
 		try {

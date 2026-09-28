@@ -112,6 +112,8 @@ type WorkerOptions = {
 	prepareGate?: Promise<void>;
 	activateGate?: Promise<void>;
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
+	/** Never hears a successor's `ready`: stands in for an owner that is dead or wedged. */
+	deaf?: boolean;
 };
 
 const createWorker = ({
@@ -123,6 +125,7 @@ const createWorker = ({
 	prepareGate,
 	activateGate,
 	awaitReadyAnnouncement,
+	deaf = false,
 }: WorkerOptions) => {
 	const { events } = log;
 	const errors: unknown[] = [];
@@ -232,6 +235,7 @@ const createWorker = ({
 				log.await({
 					signal,
 					match: (event) =>
+						!deaf &&
 						event.type === "ready" &&
 						event.partition === partition &&
 						event.endpoint !== endpoint
@@ -553,7 +557,7 @@ describe("partition handoff", () => {
 	test("a late draining record from a past owner does not hold the next successor", async () => {
 		const log = createOwnershipLog();
 		const A = createWorker({ name: "A", log });
-		const B = createWorker({ name: "B", log });
+		const B = createWorker({ name: "B", log, deaf: true });
 		const C = createWorker({
 			name: "C",
 			log,
@@ -565,7 +569,7 @@ describe("partition handoff", () => {
 			await B.ownership.start();
 			B.assign([2]);
 			await waitFor(() => B.status(2) === "ready");
-			// B owns it and never answers (it is not revoked here, standing in for a dead owner).
+			// B owns it and never answers (deaf to C's ready, standing in for a dead owner).
 			await C.ownership.start();
 			C.assign([2]);
 			await waitFor(() => C.has("announce:2"));
@@ -799,6 +803,74 @@ describe("partition handoff", () => {
 			expect(B.index("prepare:2")).toBeLessThan(B.index("announce:2"));
 		} finally {
 			release.resolve();
+			await B.ownership.stop();
+		}
+	});
+
+	test("an admitted owner hands off to a successor that announces ready, with no revoke of its own", async () => {
+		// Two fleets, two rosters: green is assigned the partition by its own group while blue keeps it in its group.
+		const log = createOwnershipLog();
+		const slotFlip = deferred();
+		const blue = createWorker({ name: "A", log });
+		const green = createWorker({
+			name: "B",
+			log,
+			awaitReadyAnnouncement: () => slotFlip.promise,
+			config: { handoffClaimTimeoutMs: 5_000 },
+		});
+		try {
+			await ownAlone(blue, [2]);
+			await green.ownership.start();
+			green.assign([2]);
+			await waitFor(() => green.status(2) === "prepared");
+			await settle();
+			expect(blue.has("withdraw:2")).toBe(false);
+			expect(blue.status(2)).toBe("ready");
+
+			slotFlip.resolve();
+			await waitFor(() => green.status(2) === "ready");
+			expect(blue.index("withdraw:2")).toBeLessThan(blue.index("drained:2"));
+			expect(blue.index("drained:2")).toBeLessThan(blue.index("claim:B:2"));
+			expect(blue.index("claim:B:2")).toBeLessThan(green.index("activate:2"));
+			expect(blue.has("release:2")).toBe(false);
+			expect(green.has("claim:B:2")).toBe(false);
+			// Blue's roster still deals it the partition, so blue itself stops fetching its commands.
+			expect(blue.pauses).toContain("commands:2");
+			await waitFor(() => blue.has("stop:2"));
+			expect(blue.ownership.findOwnedRuntime({ partition: 2 })).toBeUndefined();
+			expect(blue.errors).toEqual([]);
+			expect(green.errors).toEqual([]);
+		} finally {
+			slotFlip.resolve();
+			await blue.ownership.stop();
+			await green.ownership.stop();
+		}
+	});
+
+	test("a partition handed back to its owner still hands off to a later foreign ready", async () => {
+		const log = createOwnershipLog();
+		const A = createWorker({ name: "A", log });
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 5_000 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			A.assign([2]);
+			await settle();
+			expect(A.has("withdraw:2")).toBe(false);
+
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.status(2) === "ready");
+			expect(A.index("drained:2")).toBeLessThan(A.index("claim:B:2"));
+			expect(A.has("release:2")).toBe(false);
+			expect(A.errors).toEqual([]);
+			expect(B.errors).toEqual([]);
+		} finally {
+			await A.ownership.stop();
 			await B.ownership.stop();
 		}
 	});
