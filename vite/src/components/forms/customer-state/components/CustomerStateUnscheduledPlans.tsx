@@ -19,7 +19,7 @@ export function CustomerStateUnscheduledPlans() {
 			header={
 				<PlanSectionTitle
 					title="Ongoing plans"
-					hint="Billed now · kept across every phase"
+					hint="Billed now & kept across every phase"
 				/>
 			}
 		>
