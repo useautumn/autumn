@@ -2,13 +2,19 @@ import { AutumnApiError } from "../../../generated/client";
 import type { RemoteWebhook } from "./types";
 import { ForeignOrgKeyError, type WebhookPullEnv } from "./webhookPullEnvs";
 
-const isRejectedKey = (error: unknown): boolean =>
-	error instanceof AutumnApiError &&
-	(error.status === 401 || error.status === 403);
+/** Why a 4xx skips its env; null when the failure should fail the pull. */
+const skipReason = (error: unknown): string | null => {
+	if (error instanceof ForeignOrgKeyError) return "belongs to another org";
+	if (!(error instanceof AutumnApiError)) return null;
+	if (error.status === 401 || error.status === 403) return "was rejected";
+	if (error.status < 400 || error.status >= 500) return null;
+	const { message } = (error.body ?? {}) as { message?: unknown };
+	return `failed: ${typeof message === "string" ? message : error.status}`;
+};
 
 /**
- * Lists every env in parallel. A rejected key, or one for another org, skips
- * its env with one warning; any other failure fails the pull.
+ * Lists every env in parallel. A rejected key, one for another org, or any
+ * other 4xx (a deleted sandbox) skips its env with one warning; a 5xx fails the pull.
  */
 export const readWebhookEnvs = async ({
 	envs,
@@ -27,10 +33,9 @@ export const readWebhookEnvs = async ({
 				]);
 				return { envKey, list };
 			} catch (error) {
-				if (error instanceof ForeignOrgKeyError)
-					return `⚠ webhooks: skipped ${env.label} (${env.keyName} belongs to another org)`;
-				if (!isRejectedKey(error)) throw error;
-				return `⚠ webhooks: skipped ${env.label} (${env.keyName} was rejected)`;
+				const reason = skipReason(error);
+				if (reason === null) throw error;
+				return `⚠ webhooks: skipped ${env.label} (${env.keyName} ${reason})`;
 			}
 		}),
 	);

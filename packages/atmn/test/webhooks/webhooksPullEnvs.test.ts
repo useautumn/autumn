@@ -179,6 +179,41 @@ test("a rejected prod key warns, the other envs still pull, and the config's liv
 	expect(source).toContain(`url: { live: "https://example.com/audit" }`);
 });
 
+test("a named sandbox whose webhooks list 404s warns, the pull succeeds, and its urls stay", async () => {
+	const dir = projectWith({
+		webhooks: `	webhooks: [
+		webhook({
+			id: "billing",
+			events: ["billing.updated"],
+			url: {
+				sandbox: "https://old.example.com/autumn",
+				"qa-team": "https://qa.example.com/autumn",
+			},
+		}),
+	],`,
+	});
+	const { source, output } = await pullWith({
+		dir,
+		env: {
+			AUTUMN_SECRET_KEY: "sk_sandbox",
+			AUTUMN_SANDBOX_QA_TEAM_SECRET_KEY: "sk_qa",
+		},
+		lists: {
+			sk_sandbox: [remote("billing", "https://new.example.com/autumn")],
+			sk_qa: new AutumnApiError({
+				status: 404,
+				body: { message: "Webhooks not found" },
+				path: "/v1/webhooks.list",
+			}),
+		},
+	});
+	expect(output).toContain(
+		"⚠ webhooks: skipped sandbox qa_team (AUTUMN_SANDBOX_QA_TEAM_SECRET_KEY failed: Webhooks not found)",
+	);
+	expect(source).toContain(`sandbox: "https://new.example.com/autumn"`);
+	expect(source).toContain(`"qa-team": "https://qa.example.com/autumn"`);
+});
+
 test("a server error other than a rejected key still fails the pull", async () => {
 	const dir = projectWith({ webhooks: "" });
 	const failure = new AutumnApiError({
