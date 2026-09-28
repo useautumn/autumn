@@ -275,8 +275,8 @@ test("Stripe rows list the end state per phase, named by plan", () => {
 			],
 		],
 	]);
-	expect(section.summary).toBe("2 items now · 2 on Nov 1, 2026");
-	expect(section.stripeIds.map((stripeId) => stripeId.id)).toEqual([
+	expect(section.summary).toBe("2 items now · 2 items on Nov 1, 2026");
+	expect(section.stripeIds?.map((stripeId) => stripeId.id)).toEqual([
 		"sub_1",
 		"price_premium",
 		"price_legacy",

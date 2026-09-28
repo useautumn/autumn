@@ -1,4 +1,8 @@
-import type { ProcessorItem, ProcessorItemPrice } from "@autumn/shared";
+import {
+	numberWithCommas,
+	type ProcessorItem,
+	type ProcessorItemPrice,
+} from "@autumn/shared";
 import { intervalSuffix } from "@/utils/formatUtils/intervalSuffix";
 import { formatMoney } from "./formatMoney";
 import type { ReviewChangeValue } from "./types/reviewChange";
@@ -27,7 +31,7 @@ export const unitPriceDetail = ({
 			price.tiers_mode === "volume" ? "Volume tiers" : "Graduated tiers";
 		return quantity === null
 			? tierLabel
-			: `${quantity.toLocaleString()} × ${tierLabel}`;
+			: `${numberWithCommas(quantity)} × ${tierLabel}`;
 	}
 	if (price.unit_amount === null) return undefined;
 
@@ -38,7 +42,7 @@ export const unitPriceDetail = ({
 	const unitsPerQuantity = price.units_per_quantity ?? 1;
 	const unitLabel =
 		unitsPerQuantity > 1
-			? `${unitPrice} per ${unitsPerQuantity.toLocaleString()}`
+			? `${unitPrice} per ${numberWithCommas(unitsPerQuantity)}`
 			: unitPrice;
 
 	if (price.usage_type === "metered") {
@@ -47,7 +51,7 @@ export const unitPriceDetail = ({
 	}
 	return quantity === null
 		? `${unitLabel} each`
-		: `${quantity.toLocaleString()} × ${unitLabel}`;
+		: `${numberWithCommas(quantity)} × ${unitLabel}`;
 };
 
 /** What the item costs each interval, or how it's billed when that depends on usage. */

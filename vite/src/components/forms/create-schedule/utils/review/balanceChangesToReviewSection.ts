@@ -1,6 +1,7 @@
 import {
 	type Feature,
 	findFeatureById,
+	numberWithCommas,
 	type PreviewBalance,
 	type PreviewBalanceChange,
 	type SetPlansPreviewPhase,
@@ -25,21 +26,13 @@ type BalanceBehavior = Extract<
 	"added" | "removed" | "reset" | "carried" | "updated"
 >;
 
-const BEHAVIOR_ORDER: BalanceBehavior[] = [
-	"reset",
-	"carried",
-	"added",
-	"removed",
-	"updated",
+const BEHAVIOR_SUMMARY_LABELS: [BalanceBehavior, string][] = [
+	["reset", "reset"],
+	["carried", "carried over"],
+	["added", "new"],
+	["removed", "removed"],
+	["updated", "updated"],
 ];
-
-const BEHAVIOR_SUMMARY_LABEL: Record<BalanceBehavior, string> = {
-	added: "new",
-	removed: "removed",
-	reset: "reset",
-	carried: "carried over",
-	updated: "updated",
-};
 
 /** `previous_attributes` is sparse — overlay it on the after-state for the before-state. */
 const balanceBefore = (change: PreviewBalanceChange): PreviewBalance => ({
@@ -64,12 +57,10 @@ const classifyBalanceChange = ({
 	return "updated";
 };
 
-const formatQuantity = (value: number) => value.toLocaleString();
-
 const describeGranted = ({ before, after }: BalanceTransition) =>
 	before.granted === after.granted || before.granted === 0
-		? `${formatQuantity(after.granted)} granted`
-		: `${formatQuantity(before.granted)} → ${formatQuantity(after.granted)} granted`;
+		? `${numberWithCommas(after.granted)} granted`
+		: `${numberWithCommas(before.granted)} → ${numberWithCommas(after.granted)} granted`;
 
 const describeReset = ({ before, after }: BalanceTransition) => {
 	if (before.next_reset_at === after.next_reset_at) return undefined;
@@ -82,7 +73,7 @@ const describeBalance = ({ before, after }: BalanceTransition) => {
 	if (after.unlimited) return "Unlimited";
 	return joinDetail([
 		describeGranted({ before, after }),
-		`${formatQuantity(after.usage)} used`,
+		`${numberWithCommas(after.usage)} used`,
 		describeReset({ before, after }),
 	]);
 };
@@ -90,8 +81,8 @@ const describeBalance = ({ before, after }: BalanceTransition) => {
 const balanceValue = (balance: PreviewBalance): ReviewChangeValue => {
 	if (balance.unlimited) return { amount: "Unlimited" };
 	return {
-		amount: formatQuantity(balance.remaining),
-		suffix: `of ${formatQuantity(balance.granted)} left`,
+		amount: numberWithCommas(balance.remaining),
+		suffix: `of ${numberWithCommas(balance.granted)} left`,
 	};
 };
 
@@ -139,12 +130,11 @@ export const balanceChangesToReviewSection = ({
 	return {
 		phases: withoutEmptyPhases(phaseRows),
 		summary: summarizeCounts({
-			counts: BEHAVIOR_ORDER.map((behavior) => [
-				BEHAVIOR_SUMMARY_LABEL[behavior],
+			counts: BEHAVIOR_SUMMARY_LABELS.map(([behavior, label]) => [
+				label,
 				rows.filter((row) => row.status === behavior).length,
 			]),
 			emptyLabel: "No changes",
 		}),
-		stripeIds: [],
 	};
 };

@@ -7,7 +7,7 @@ import {
 import { CaretDownIcon } from "@phosphor-icons/react";
 import type { MouseEvent } from "react";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
-import { shortStripeId } from "../../utils/review/shortStripeId";
+import { truncateMiddle } from "@/utils/formatUtils/formatTextUtils";
 import type { ReviewStripeId } from "../../utils/review/types/reviewChange";
 
 const stopAccordionToggle = (event: MouseEvent) => event.stopPropagation();
@@ -28,7 +28,10 @@ export function ReviewStripeIdsPopover({
 				onClick={stopAccordionToggle}
 				className="flex h-5 shrink-0 cursor-pointer items-center gap-1 rounded-md border border-border/50 bg-muted px-1.5 font-mono text-[11px] text-tertiary-foreground transition-colors hover:text-muted-foreground data-popup-open:border-border"
 			>
-				{shortStripeId(primaryId.id)}
+				{truncateMiddle({
+					text: primaryId.id,
+					headLength: primaryId.id.indexOf("_") + 1,
+				})}
 				<CaretDownIcon size={10} className="text-subtle" />
 			</PopoverTrigger>
 			<PopoverContent

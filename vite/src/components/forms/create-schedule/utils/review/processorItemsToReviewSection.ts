@@ -77,10 +77,7 @@ const phaseItemSummary = ({
 			? CANCELED_LABEL
 			: `${CANCELED_LABEL} ${phaseSummaryLabel(timing)}`;
 	}
-	const count = phase.processor_items.length;
-	return startsNow(timing)
-		? `${pluralizeItems(count)} now`
-		: `${count} ${phaseSummaryLabel(timing)}`;
+	return `${pluralizeItems(phase.processor_items.length)} ${phaseSummaryLabel(timing)}`;
 };
 
 /** A phase that leaves Stripe billing nothing after a canceled subscription or items before it. */

@@ -41,7 +41,7 @@ export type ReviewStripeId = {
 export type ReviewChangeSection = {
 	phases: ReviewChangePhase[];
 	summary: string;
-	stripeIds: ReviewStripeId[];
+	stripeIds?: ReviewStripeId[];
 };
 
 /** A plan the form declares or the customer already has, priced with its own items. */

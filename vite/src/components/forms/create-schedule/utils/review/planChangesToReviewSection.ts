@@ -47,14 +47,6 @@ type PlanRowContext = {
 	priceFor: (product: ProductV2) => ReviewChangeValue;
 };
 
-const findProduct = ({
-	products,
-	planId,
-}: {
-	products: ProductV2[];
-	planId: string;
-}) => products.find((product) => product.id === planId);
-
 const planChangeExtras = ({
 	change,
 	status,
@@ -71,14 +63,6 @@ const planChangeExtras = ({
 		endsLater ? `Ends ${formatPhaseDate({ startsAt: expiresAt })}` : undefined,
 	];
 };
-
-const productPrice = ({
-	product,
-	context,
-}: {
-	product: ProductV2 | undefined;
-	context: PlanRowContext;
-}) => (product ? context.priceFor(product) : undefined);
 
 const planChangeToRow = ({
 	preview,
@@ -98,7 +82,7 @@ const planChangeToRow = ({
 	const planId = planChangePlanId(change);
 	const product =
 		declaredPlan?.product ??
-		findProduct({ products: context.products, planId });
+		context.products.find((candidate) => candidate.id === planId);
 	const status = PLAN_CHANGE_STATUS[change.action];
 	const credit =
 		status === "ends" && isImmediatePhase({ phaseIndex })
@@ -118,7 +102,7 @@ const planChangeToRow = ({
 		]),
 		status,
 		value:
-			status === "ends" ? credit?.value : productPrice({ product, context }),
+			status === "ends" ? credit?.value : product && context.priceFor(product),
 	};
 };
 
@@ -156,7 +140,7 @@ const keptPlanRows = ({
 				key: `plan-${phaseIndex}-${plan.planId}-${plan.entityId ?? ""}-kept-${planIndex}`,
 				title: product?.name ?? plan.planId,
 				status: "kept",
-				value: productPrice({ product, context }),
+				value: product && context.priceFor(product),
 			},
 		];
 	});
@@ -228,6 +212,5 @@ export const planChangesToReviewSection = ({
 			]),
 			emptyLabel: "No changes",
 		}),
-		stripeIds: [],
 	};
 };

@@ -3,6 +3,7 @@ import {
 	findFeatureById,
 	getFeatureName,
 	isFeaturePriceItem,
+	numberWithCommas,
 	type ProductItem,
 	type ProductV2,
 	productV2ToBasePrice,
@@ -37,7 +38,7 @@ const unitLabel = ({
 		getFeatureName({ feature, units: billingUnits }).toLowerCase() ||
 		(item.feature_id ?? "");
 
-	return billingUnits > 1 ? `${billingUnits.toLocaleString()} ${name}` : name;
+	return billingUnits > 1 ? `${numberWithCommas(billingUnits)} ${name}` : name;
 };
 
 /** A plan with no base price shows its first feature's unit price, e.g. "From $10/seat +1". */

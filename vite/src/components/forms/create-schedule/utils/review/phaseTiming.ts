@@ -37,15 +37,5 @@ export const phaseLabel = ({
 		: formatPhaseDate({ startsAt });
 
 /** "now" or "on Nov 1, 2026", for section summaries. */
-export const phaseSummaryLabel = ({
-	phaseIndex,
-	startsAt,
-	nowMs,
-}: {
-	phaseIndex: number;
-	startsAt: number;
-	nowMs: number;
-}) =>
-	startsNow({ phaseIndex, startsAt, nowMs })
-		? "now"
-		: `on ${formatPhaseDate({ startsAt })}`;
+export const phaseSummaryLabel = (timing: Parameters<typeof phaseLabel>[0]) =>
+	startsNow(timing) ? "now" : `on ${formatPhaseDate(timing)}`;
