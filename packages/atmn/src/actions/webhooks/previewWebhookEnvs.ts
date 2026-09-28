@@ -44,30 +44,40 @@ type EnvPreview =
 const isLive = (env: WebhookPullEnv): boolean =>
 	env.keyName === "AUTUMN_PROD_SECRET_KEY";
 
-/** Two slugs like `qa-team` and `qa_team` name one variable: refuse before either secret overwrites the other. */
+/**
+ * Two slugs like `qa-team` and `qa_team` name one variable. A create in one
+ * refuses when another synced env states the same id: its saved secret would be overwritten.
+ */
 const assertDistinctSecretNames = ({
 	lanes,
 }: {
 	lanes: WebhooksLane[];
 }): void => {
-	const writers = new Map<string, string>();
-	const clashes: string[] = [];
-	for (const { env, preview } of lanes) {
-		for (const change of preview.changes) {
+	const secretName = ({ lane, id }: { lane: WebhooksLane; id: string }) =>
+		webhookSecretName({
+			id,
+			...(lane.env.live ? {} : { envKey: lane.env.key }),
+		});
+	const clashes = new Map<string, string>();
+	for (const lane of lanes) {
+		for (const change of lane.preview.changes) {
 			if (change.action !== "create") continue;
-			const name = webhookSecretName({
-				id: change.id,
-				...(env.live ? {} : { envKey: env.key }),
-			});
-			const other = writers.get(name);
-			if (other === undefined) writers.set(name, env.key);
-			else
-				clashes.push(
-					`${other} and ${env.key} would both save ${change.id}'s signing secret as ${name}. Rename one of those sandboxes so their names differ by more than punctuation.`,
+			const name = secretName({ lane, id: change.id });
+			for (const other of lanes) {
+				if (other === lane) continue;
+				const shares = other.body.webhooks.some(
+					(webhook) => secretName({ lane: other, id: webhook.id }) === name,
 				);
+				if (!shares) continue;
+				const [first, second] = [other.env.key, lane.env.key].sort();
+				clashes.set(
+					`${first}|${second}|${name}`,
+					`${first} and ${second} would both save ${change.id}'s signing secret as ${name}. Rename one of those sandboxes so their names differ by more than punctuation.`,
+				);
+			}
 		}
 	}
-	if (clashes.length > 0) throw new Error(clashes.join("\n"));
+	if (clashes.size > 0) throw new Error([...clashes.values()].join("\n"));
 };
 
 /** Undefined when the config registers nothing in this env: there is nothing to preview. */
@@ -143,8 +153,11 @@ export const previewWebhookEnvs = async ({
 				`⚠ webhooks: couldn't check ${probed[index]?.label ?? "live"} for changes (${messageOf(result.reason)})`,
 			);
 	});
+	// A skipped live key (rejected, deleted, another org's) leaves production unchecked too.
 	const productionUnchecked = probedResults.some(
-		(result) => result.status === "rejected",
+		(result) =>
+			result.status === "rejected" ||
+			(result.value !== undefined && "skipped" in result.value),
 	);
 	// Refused items (several dashboard webhooks on one URL, say) fail the lane
 	// here, beside every other lane's errors, rather than at apply.
