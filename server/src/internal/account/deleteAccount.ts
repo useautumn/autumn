@@ -7,7 +7,7 @@ import {
 	organizations,
 	RecaseError,
 } from "@autumn/shared";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import {
@@ -118,7 +118,21 @@ export const deleteAccount = async ({
 		}
 	}
 
+	// Each org is re-validated right before deletion (membership here, live
+	// customers inside deleteOrg). If one fails midway, only orgs the user
+	// solely owned are gone and the account survives, so a retry picks up.
 	for (const org of orgsToDelete) {
+		const otherMember = await db.query.member.findFirst({
+			where: and(eq(member.organizationId, org.id), ne(member.userId, userId)),
+		});
+		if (otherMember) {
+			throw new RecaseError({
+				message: `Someone just joined ${org.name}. Please try again.`,
+				code: "MEMBERSHIP_CHANGED",
+				statusCode: 409,
+			});
+		}
+
 		logger.info(`Deleting org ${org.id} (${org.slug}) for account deletion`);
 		await deleteOrg({ db, org, logger, deleteOrgFromDb: true });
 	}
