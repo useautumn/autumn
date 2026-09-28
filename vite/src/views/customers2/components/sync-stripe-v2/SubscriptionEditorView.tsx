@@ -13,13 +13,17 @@ import { useCustomerStateForm } from "@/components/forms/customer-state/useCusto
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useVerifyStripeQuery } from "@/views/customers2/components/verify-stripe/hooks/useVerifyStripeQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { customerStateToSyncParams } from "./customerStateToSyncParams";
 import { usePreviewSyncV2 } from "./hooks/usePreviewSyncV2";
+import { useTodayMismatches } from "./hooks/useTodayMismatches";
 import { findMissingPlanPrices } from "./previewMismatches";
 import { StripeSourceTable } from "./StripeSourceTable";
-import { type SyncOptions, SyncOptionsTable } from "./SyncOptionsTable";
+import {
+	DEFAULT_SYNC_OPTIONS,
+	type SyncOptions,
+	SyncOptionsTable,
+} from "./SyncOptionsTable";
 import { buildPhaseSections, formatPhaseStart } from "./syncPhaseSections";
 import { syncProposalToCustomerState } from "./syncProposalToCustomerState";
 
@@ -79,10 +83,7 @@ function SubscriptionEditor({
 	);
 	const form = useCustomerStateForm({ initialValues });
 	const formValues = useStore(form.store, (state) => state.values);
-	const [options, setOptions] = useState<SyncOptions>({
-		expirePrevious: true,
-		carryOverUsage: true,
-	});
+	const [options, setOptions] = useState<SyncOptions>(DEFAULT_SYNC_OPTIONS);
 
 	const syncParams = customerStateToSyncParams({
 		customerId,
@@ -95,11 +96,7 @@ function SubscriptionEditor({
 	const { mismatches: previewMismatches } = usePreviewSyncV2({
 		params: syncParams,
 	});
-	const { subscriptions: verifiedSubscriptions } = useVerifyStripeQuery();
-	const todayMismatches = verifiedSubscriptions.find(
-		(subscription) =>
-			subscription.stripe_subscription_id === proposal.stripe_subscription_id,
-	)?.mismatches;
+	const todayMismatches = useTodayMismatches({ proposal });
 
 	const handlePlanNotFoundReasons = useCallback(
 		(location: PlanLocation) => {

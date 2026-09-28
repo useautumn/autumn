@@ -7,6 +7,11 @@ export type SyncOptions = {
 	carryOverUsage: boolean;
 };
 
+export const DEFAULT_SYNC_OPTIONS: SyncOptions = {
+	expirePrevious: true,
+	carryOverUsage: true,
+};
+
 export function SyncOptionsTable({
 	options,
 	onOptionsChange,

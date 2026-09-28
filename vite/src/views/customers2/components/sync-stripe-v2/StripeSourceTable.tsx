@@ -1,22 +1,13 @@
 import type { SubscriptionMismatch, SyncProposalV2 } from "@autumn/shared";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { Fragment } from "react";
-import {
-	TABLE_TRAY_SURFACE_CLASS,
-	TABLE_TRAY_SURFACE_ROW_CLASS,
-} from "@/components/general/table";
+import { TABLE_TRAY_SURFACE_CLASS } from "@/components/general/table";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
-import { cn } from "@/lib/utils";
 import { useOpenInStripe } from "./hooks/useOpenInStripe";
 import { stripeItemMark } from "./previewMismatches";
-import { StripeItemMatchChip } from "./StripeItemMatchChip";
+import { STRIPE_ROW_CLASS, StripeItemRow } from "./StripeItemRow";
 import { StripeStatusBadge } from "./StripeStatusBadge";
 import { formatPhaseStart, type PhaseSection } from "./syncPhaseSections";
-
-const ROW_CLASS = cn(
-	"flex min-h-9 items-center gap-2 px-3 text-sm",
-	TABLE_TRAY_SURFACE_ROW_CLASS,
-);
 
 export function StripeSourceTable({
 	proposal,
@@ -35,7 +26,7 @@ export function StripeSourceTable({
 
 	return (
 		<div className={TABLE_TRAY_SURFACE_CLASS}>
-			<div className={ROW_CLASS}>
+			<div className={STRIPE_ROW_CLASS}>
 				<StripeIcon size={14} className="shrink-0 text-indigo-500" />
 				<code className="truncate font-mono text-xs text-foreground">
 					{proposal.stripe_subscription_id ?? proposal.stripe_schedule_id}
@@ -62,22 +53,16 @@ export function StripeSourceTable({
 						</div>
 					)}
 					{section.displayItems.map((item) => (
-						<div key={item.key} className={ROW_CLASS}>
-							<span className="min-w-0 flex-1 truncate text-foreground">
-								{item.name}
-							</span>
-							<StripeItemMatchChip
-								mark={stripeItemMark({
-									todayMismatches,
-									previewMismatches,
-									stripePriceId: item.stripePriceId,
-									startsAt: section.phase.starts_at,
-								})}
-							/>
-							<span className="shrink-0 tabular-nums text-tertiary-foreground">
-								{item.priceLabel}
-							</span>
-						</div>
+						<StripeItemRow
+							key={item.key}
+							item={item}
+							mark={stripeItemMark({
+								todayMismatches,
+								previewMismatches,
+								stripePriceId: item.stripePriceId,
+								startsAt: section.phase.starts_at,
+							})}
+						/>
 					))}
 				</Fragment>
 			))}

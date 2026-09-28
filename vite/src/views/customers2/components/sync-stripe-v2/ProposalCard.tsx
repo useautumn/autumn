@@ -1,14 +1,13 @@
 import type { SubscriptionMismatch, SyncProposalV2 } from "@autumn/shared";
-import { ArrowRightIcon, CaretRightIcon } from "@phosphor-icons/react";
-import {
-	TABLE_TRAY_SURFACE_CLASS,
-	TABLE_TRAY_SURFACE_ROW_CLASS,
-} from "@/components/general/table";
+import { CaretRightIcon } from "@phosphor-icons/react";
+import { TABLE_TRAY_SURFACE_CLASS } from "@/components/general/table";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { cn } from "@/lib/utils";
+import { useProposalItemMarks } from "./hooks/useProposalItemMarks";
 import { ProposalSyncStateChip } from "./ProposalSyncStateChip";
 import { ProposalSyncStateIcon } from "./ProposalSyncStateIcon";
 import { proposalSyncSummary } from "./proposalSyncSummary";
+import { STRIPE_ROW_CLASS, StripeItemRow } from "./StripeItemRow";
 import { buildPhaseSections } from "./syncPhaseSections";
 
 export function ProposalCard({
@@ -29,9 +28,8 @@ export function ProposalCard({
 		mismatches,
 		productNamesById,
 	});
-	const stripeItems = (buildPhaseSections({ proposal })[0]?.displayItems ?? [])
-		.map(({ name, priceLabel }) => `${name} · ${priceLabel}`)
-		.join(", ");
+	const [section] = buildPhaseSections({ proposal });
+	const itemMark = useProposalItemMarks({ proposal, section });
 
 	return (
 		<button
@@ -42,12 +40,7 @@ export function ProposalCard({
 				"w-full cursor-pointer text-left transition-colors hover:border-foreground/20",
 			)}
 		>
-			<div
-				className={cn(
-					"flex min-h-9 items-center gap-2 px-3",
-					TABLE_TRAY_SURFACE_ROW_CLASS,
-				)}
-			>
+			<div className={STRIPE_ROW_CLASS}>
 				<StripeIcon size={14} className="shrink-0 text-indigo-500" />
 				<code className="truncate font-mono text-xs text-tertiary-foreground">
 					{objectId}
@@ -56,11 +49,15 @@ export function ProposalCard({
 				<ProposalSyncStateChip state={state} />
 				<CaretRightIcon size={12} className="shrink-0 text-subtle" />
 			</div>
-			<div className="flex min-h-9 min-w-0 items-center gap-2 border-b border-table-row-divider px-3 text-sm">
-				<span className="min-w-0 truncate text-foreground">
-					{stripeItems || "No Stripe items"}
-				</span>
-				<ArrowRightIcon size={12} className="shrink-0 text-subtle" />
+			{section?.displayItems.map((item) => (
+				<StripeItemRow
+					key={item.key}
+					item={item}
+					mark={itemMark(item.stripePriceId)}
+				/>
+			))}
+			<div className={STRIPE_ROW_CLASS}>
+				<span className="text-xs text-tertiary-foreground">Links to</span>
 				<span
 					className={cn(
 						"min-w-0 truncate font-medium",
