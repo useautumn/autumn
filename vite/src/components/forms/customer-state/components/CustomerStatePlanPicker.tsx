@@ -3,6 +3,7 @@ import { SearchableSelect } from "@autumn/ui";
 import { ChevronDownIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
+import { PlanPickerScopeRow } from "./PlanPickerScopeRow";
 
 /** Full-bleed row trigger, so the popover anchors to the whole row. */
 function PlanPickerTrigger(props: ComponentProps<"button">) {
@@ -24,6 +25,7 @@ export function CustomerStatePlanPicker({
 	usedKeys,
 	siblingProductIds,
 	header,
+	scope,
 	disabled,
 	onSelect,
 }: {
@@ -31,6 +33,8 @@ export function CustomerStatePlanPicker({
 	usedKeys: Set<string>;
 	siblingProductIds: Set<string>;
 	header?: ReactNode;
+	/** The new plan's scope, chosen from a row above the plan list. */
+	scope?: ComponentProps<typeof PlanPickerScopeRow>;
 	disabled?: boolean;
 	onSelect: (productId: string) => void;
 }) {
@@ -58,7 +62,12 @@ export function CustomerStatePlanPicker({
 					)}
 				</>
 			)}
-			header={header}
+			header={
+				<>
+					{scope && <PlanPickerScopeRow {...scope} />}
+					{header}
+				</>
+			}
 			trigger={<PlanPickerTrigger disabled={disabled} />}
 			searchable
 			searchPlaceholder="Search plans..."

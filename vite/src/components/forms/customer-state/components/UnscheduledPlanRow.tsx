@@ -46,6 +46,14 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 
 		return (
 			<PlanPickerTrayRow
+				scope={{
+					value: plan.entityId ?? null,
+					onChange: (entityId) =>
+						form.setFieldValue(
+							`unscheduledPlans[${planIndex}].entityId`,
+							entityId,
+						),
+				}}
 				products={products.filter((product) => !product.archived)}
 				usedKeys={usedKeys}
 				siblingProductIds={siblingProductIds}

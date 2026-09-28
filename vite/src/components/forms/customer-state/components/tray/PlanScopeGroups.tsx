@@ -17,35 +17,46 @@ function PlanScopeGroupHeader({ entityId }: { entityId: string | null }) {
 	);
 }
 
-const groupPlanIndexesByScope = ({
-	plans,
-}: {
-	plans: { entityId?: string | null }[];
-}) => {
+type ScopedPlan = { productId: string; entityId?: string | null };
+
+const groupPlanIndexesByScope = ({ plans }: { plans: ScopedPlan[] }) => {
 	const groups = new Map<string | null, number[]>();
 	for (const [planIndex, plan] of plans.entries()) {
+		if (!plan.productId) continue;
 		const entityId = plan.entityId ?? null;
 		groups.set(entityId, [...(groups.get(entityId) ?? []), planIndex]);
 	}
 	return [...groups.entries()];
 };
 
-/** Plan rows grouped under a header per customer or entity scope. */
+/**
+ * Plan rows grouped under a header per customer or entity scope. Rows still
+ * picking a plan stay below the groups, so choosing their scope doesn't move them.
+ */
 export function PlanScopeGroups({
 	plans,
 	showHeaders,
 	renderPlan,
 }: {
-	plans: { entityId?: string | null }[];
+	plans: ScopedPlan[];
 	showHeaders: boolean;
 	renderPlan: (planIndex: number) => ReactNode;
 }) {
 	if (!showHeaders) return plans.map((_, planIndex) => renderPlan(planIndex));
 
-	return groupPlanIndexesByScope({ plans }).map(([entityId, planIndexes]) => (
-		<Fragment key={entityId ?? "customer"}>
-			<PlanScopeGroupHeader entityId={entityId} />
-			{planIndexes.map(renderPlan)}
-		</Fragment>
-	));
+	const pickerPlanIndexes = [...plans.keys()].filter(
+		(planIndex) => !plans[planIndex]?.productId,
+	);
+
+	return (
+		<>
+			{groupPlanIndexesByScope({ plans }).map(([entityId, planIndexes]) => (
+				<Fragment key={entityId ?? "customer"}>
+					<PlanScopeGroupHeader entityId={entityId} />
+					{planIndexes.map(renderPlan)}
+				</Fragment>
+			))}
+			{pickerPlanIndexes.map(renderPlan)}
+		</>
+	);
 }

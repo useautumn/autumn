@@ -68,6 +68,14 @@ export function CustomerStatePlanRow({
 
 		return (
 			<PlanPickerTrayRow
+				scope={{
+					value: plan.entityId ?? null,
+					onChange: (entityId) =>
+						form.setFieldValue(
+							`phases[${phaseIndex}].plans[${planIndex}].entityId`,
+							entityId,
+						),
+				}}
 				products={products.filter((product) => !product.archived)}
 				usedKeys={usedKeys}
 				siblingProductIds={selectedProductIdsInPhase}
