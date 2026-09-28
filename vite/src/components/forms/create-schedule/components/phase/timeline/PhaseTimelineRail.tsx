@@ -3,22 +3,14 @@ import { useCustomerStateContext } from "@/components/forms/customer-state/Custo
 import { cn } from "@/lib/utils";
 
 /** The dot sits level with the phase header; the connector runs on to the next phase's dot. */
-export type PhaseTimelineStatus = "past" | "current" | "scheduled";
-
-const CONNECTOR_CLASS: Record<PhaseTimelineStatus, string> = {
-	past: "w-px bg-border",
-	current: "w-px bg-primary",
-	scheduled: "w-0 border-l border-dashed border-border",
-};
-
 export function PhaseTimelineRail({
 	phaseIndex,
-	status,
+	isCurrent,
 	isLast,
 	connectsToNext = !isLast,
 }: {
 	phaseIndex: number;
-	status: PhaseTimelineStatus;
+	isCurrent: boolean;
 	isLast: boolean;
 	connectsToNext?: boolean;
 }) {
@@ -30,17 +22,14 @@ export function PhaseTimelineRail({
 			{connectsToNext && (
 				<span
 					aria-hidden
-					className={cn(
-						"absolute top-4 -bottom-4 left-1/2 -translate-x-1/2",
-						CONNECTOR_CLASS[status],
-					)}
+					className="absolute top-4 -bottom-4 left-1/2 w-px -translate-x-1/2 bg-border"
 				/>
 			)}
 			<span
 				aria-hidden
 				className={cn(
 					"absolute top-4 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full",
-					status === "current"
+					isCurrent
 						? "bg-primary"
 						: "border border-tertiary-foreground bg-card",
 				)}
