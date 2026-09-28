@@ -8,7 +8,6 @@ import {
 	BALANCE_WORKER_COMMIT_MODE,
 	BALANCE_WORKER_DATABASE_POOL_SIZE,
 	BALANCE_WORKER_MAX_REQUEST_BYTES,
-	BALANCE_WORKER_PARTITION_COUNT,
 	BALANCE_WORKER_RECEIPT_RETENTION_MS,
 	BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
 	BALANCE_WORKER_SUBJECT_MAP_MAX_BYTES,
@@ -17,6 +16,7 @@ import {
 	balanceWorkerDeploymentToKafkaNames,
 	getBalanceWorkerDeployment,
 } from "./balanceWorkerDeployment.js";
+import { getBalanceWorkerPartitionCount } from "./balanceWorkerPartitionCount.js";
 import {
 	booleanFlag,
 	brokerList,
@@ -121,7 +121,9 @@ export function createBalanceWorkerEnv(
 		BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC:
 			kafkaNames.catalogInvalidationTopic,
 		BALANCE_WORKER_GROUP_ID: kafkaNames.consumerGroup,
-		BALANCE_WORKER_PARTITION_COUNT,
+		BALANCE_WORKER_PARTITION_COUNT: getBalanceWorkerPartitionCount({
+			runtimeEnv,
+		}),
 		BALANCE_WORKER_MAX_REQUEST_BYTES,
 		BALANCE_WORKER_RECEIPT_RETENTION_MS,
 		BALANCE_WORKER_CHECKPOINT_PREFIX,

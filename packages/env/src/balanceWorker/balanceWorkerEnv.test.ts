@@ -20,6 +20,14 @@ describe("Balance worker environment", () => {
 		expect(env.BALANCE_WORKER_ENDPOINT).toBe("http://127.0.0.1:8082");
 		expect(env.BALANCE_WORKER_PARTITION_COUNT).toBe(4);
 	});
+	test("routes over the deployment's configured partition count", () => {
+		expect(
+			createBalanceWorkerEnv({
+				...valid,
+				BALANCE_WORKER_PARTITION_COUNT: "128",
+			}).BALANCE_WORKER_PARTITION_COUNT,
+		).toBe(128);
+	});
 	test("samples successful request logs at one in twenty unless a deployment says otherwise", () => {
 		expect(
 			createBalanceWorkerEnv(valid).BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,

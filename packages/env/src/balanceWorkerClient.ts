@@ -2,12 +2,17 @@ import {
 	balanceWorkerDeploymentToKafkaNames,
 	getBalanceWorkerDeployment,
 } from "./balanceWorker/balanceWorkerDeployment.js";
+import { getBalanceWorkerPartitionCount } from "./balanceWorker/balanceWorkerPartitionCount.js";
 import { brokerList } from "./balanceWorker/primitives.js";
 import { createKafkaAuthEnv } from "./kafkaAuth.js";
 
 const LOCAL_KAFKA_BROKERS = "127.0.0.1:19092";
 
-export { balanceWorkerDeploymentToKafkaNames, getBalanceWorkerDeployment };
+export {
+	balanceWorkerDeploymentToKafkaNames,
+	getBalanceWorkerDeployment,
+	getBalanceWorkerPartitionCount,
+};
 
 /** What a server reads to reach its workers: the Kafka cluster, the deployment's ownership topic, and the topic it queues commands on. */
 export function createBalanceWorkerClientEnv(
@@ -31,6 +36,9 @@ export function createBalanceWorkerClientEnv(
 		BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC:
 			balanceWorkerDeploymentToKafkaNames({ deployment })
 				.catalogInvalidationTopic,
+		BALANCE_WORKER_PARTITION_COUNT: getBalanceWorkerPartitionCount({
+			runtimeEnv,
+		}),
 	};
 }
 

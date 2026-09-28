@@ -41,6 +41,7 @@ test.concurrent("local development needs no balance worker settings", () => {
 		BALANCE_WORKER_OWNERSHIP_TOPIC: "local-ownership",
 		BALANCE_WORKER_COMMAND_TOPIC: "local-commands",
 		BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC: "local-catalog-invalidations",
+		BALANCE_WORKER_PARTITION_COUNT: 4,
 	});
 });
 
