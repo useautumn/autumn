@@ -51,7 +51,6 @@ export function CustomerStatePlanPicker({
 			renderOption={(product) => (
 				<>
 					<span className="flex-1 truncate min-w-0">{product.name}</span>
-					</span>
 					{siblingProductIds.has(product.id) && (
 						<span className="text-xs text-subtle shrink-0">
 							Already selected
