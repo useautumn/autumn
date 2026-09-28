@@ -2,7 +2,11 @@ import type { CustomerExportResponse } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
-import { CursorPagination, Table } from "@/components/general/table";
+import {
+	CursorPagination,
+	TABLE_TRAY_FOOTER_CLASS,
+	Table,
+} from "@/components/general/table";
 import { useDownloadCustomerExport } from "../../hooks/useCustomerExports";
 import { createCustomerExportColumns } from "./CustomerExportColumns";
 
@@ -81,28 +85,30 @@ export function CustomerExportJobList({
 			}}
 		>
 			<Table.Container>
-				<Table.Content>
+				<Table.Content
+					footer={
+						totalPages > 1 && (
+							<div className={TABLE_TRAY_FOOTER_CLASS}>
+								<span className="text-tertiary-foreground text-xs tabular-nums">
+									{totalExports} total
+								</span>
+								<CursorPagination
+									currentPage={page}
+									totalPages={totalPages}
+									canGoPrev={page > 1}
+									canGoNext={page < totalPages}
+									onPrev={() => onPageChange(page - 1)}
+									onNext={() => onPageChange(page + 1)}
+									disabled={isLoading}
+								/>
+							</div>
+						)
+					}
+				>
 					<Table.Header />
 					<Table.Body />
 				</Table.Content>
 			</Table.Container>
-
-			{totalPages > 1 && (
-				<div className="flex items-center justify-between gap-2 pt-3">
-					<span className="text-tertiary-foreground text-xs tabular-nums">
-						{totalExports} total
-					</span>
-					<CursorPagination
-						currentPage={page}
-						totalPages={totalPages}
-						canGoPrev={page > 1}
-						canGoNext={page < totalPages}
-						onPrev={() => onPageChange(page - 1)}
-						onNext={() => onPageChange(page + 1)}
-						disabled={isLoading}
-					/>
-				</div>
-			)}
 		</Table.Provider>
 	);
 }

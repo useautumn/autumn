@@ -1,18 +1,20 @@
-import { Button } from "@autumn/ui";
+import {
+	Button,
+	StatusChip,
+	type StatusGlyph,
+	type StatusTone,
+} from "@autumn/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import type { EdgeConfigCardDef, EdgeConfigCardTone } from "./edgeConfigCards";
 
-const TONE_DOT: Record<EdgeConfigCardTone, string> = {
-	neutral: "bg-zinc-300 dark:bg-zinc-600",
-	active: "bg-green-500",
-	warning: "bg-amber-500",
-};
-
-const TONE_TEXT: Record<EdgeConfigCardTone, string> = {
-	neutral: "text-tertiary-foreground",
-	active: "text-foreground",
-	warning: "text-foreground",
+const STATUS_INDICATORS: Record<
+	EdgeConfigCardTone,
+	{ tone: StatusTone; glyph: StatusGlyph }
+> = {
+	neutral: { tone: "neutral", glyph: "minus" },
+	active: { tone: "green", glyph: "check" },
+	warning: { tone: "amber", glyph: "alert" },
 };
 
 export const edgeConfigStatusQueryKey = ({ configId }: { configId: string }) =>
@@ -63,22 +65,13 @@ export function EdgeConfigCard<Id extends string>({
 				)}
 
 				{!isPending && isError && (
-					<span className="flex items-center gap-1.5 text-xs text-tertiary-foreground">
-						<span className="size-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-						Unavailable
-					</span>
+					<StatusChip glyph="x">Unavailable</StatusChip>
 				)}
 
 				{!isPending && status && (
-					<span
-						className={`flex min-w-0 items-center gap-1.5 text-xs ${TONE_TEXT[status.tone]}`}
-						title={status.label}
-					>
-						<span
-							className={`size-1.5 shrink-0 rounded-full ${TONE_DOT[status.tone]}`}
-						/>
-						<span className="truncate">{status.label}</span>
-					</span>
+					<StatusChip {...STATUS_INDICATORS[status.tone]}>
+						{status.label}
+					</StatusChip>
 				)}
 
 				<div className="flex shrink-0 items-center gap-2">

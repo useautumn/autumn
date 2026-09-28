@@ -110,25 +110,28 @@ export function MigrationListTable() {
 				at support@useautumn.com
 			</InfoBox>
 			<Table.Container>
-				<Table.Content>
+				<Table.Content
+					footer={
+						showPagination && (
+							<Table.PaginationFooter
+								currentPage={currentPage}
+								totalPages={totalPages}
+								totalCount={filteredMigrations.length}
+								canGoPrev={canGoPrev}
+								canGoNext={canGoNext}
+								onPrev={goToPrevPage}
+								onNext={goToNextPage}
+								pageSize={pageSize}
+								pageSizeOptions={MIGRATION_LIST_PAGE_SIZE_OPTIONS}
+								onPageSizeChange={changePageSize}
+								enableHotkeys
+							/>
+						)
+					}
+				>
 					<Table.Header />
 					<Table.Body />
 				</Table.Content>
-				{showPagination && (
-					<Table.PaginationFooter
-						currentPage={currentPage}
-						totalPages={totalPages}
-						totalCount={filteredMigrations.length}
-						canGoPrev={canGoPrev}
-						canGoNext={canGoNext}
-						onPrev={goToPrevPage}
-						onNext={goToNextPage}
-						pageSize={pageSize}
-						pageSizeOptions={MIGRATION_LIST_PAGE_SIZE_OPTIONS}
-						onPageSizeChange={changePageSize}
-						enableHotkeys
-					/>
-				)}
 			</Table.Container>
 		</Table.Provider>
 	);

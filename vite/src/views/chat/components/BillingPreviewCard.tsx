@@ -11,7 +11,7 @@ import {
 	type BillingPreviewChange,
 	type BillingPreviewResponse,
 } from "@autumn/shared";
-import { Badge } from "@autumn/ui";
+import { Badge, StatusChip } from "@autumn/ui";
 import {
 	ArrowUpRightIcon,
 	MinusCircleIcon,
@@ -26,6 +26,9 @@ import { useEnv } from "@/utils/envUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { BillingCustomizeDiff } from "./BillingCustomizeDiff";
 import { PlanPreviewCard, PlansBackdrop } from "./PlanPreviewCard";
+
+const ACTIVE_OPTION_CHIP = { tone: "green", glyph: "check" } as const;
+const INACTIVE_OPTION_CHIP = { tone: "red", glyph: "x" } as const;
 
 const asString = (value: unknown): string | undefined =>
 	typeof value === "string" && value ? value : undefined;
@@ -214,18 +217,12 @@ export function BillingPreviewCard({
 			{badges.length > 0 && (
 				<div className="flex flex-wrap gap-1.5">
 					{badges.map((badge) => (
-						<Badge
-							className={
-								badge.active
-									? "border-transparent bg-green-500/10 text-green-500"
-									: "border-transparent bg-red-500/10 text-red-500"
-							}
+						<StatusChip
 							key={badge.label}
-							size="sm"
-							variant="muted"
+							{...(badge.active ? ACTIVE_OPTION_CHIP : INACTIVE_OPTION_CHIP)}
 						>
 							{badge.label}
-						</Badge>
+						</StatusChip>
 					))}
 				</div>
 			)}

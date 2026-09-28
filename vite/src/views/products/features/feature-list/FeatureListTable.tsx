@@ -60,8 +60,8 @@ export function FeatureListTable() {
 		[hasEventNames],
 	);
 	const creditColumns = useMemo(
-		() => createCreditListColumns(providers),
-		[providers],
+		() => createCreditListColumns({ providers, features: features ?? [] }),
+		[providers, features],
 	);
 
 	const featureTable = useProductTable({

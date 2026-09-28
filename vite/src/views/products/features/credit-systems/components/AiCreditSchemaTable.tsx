@@ -94,7 +94,7 @@ export function AiCreditSchemaTable({
 					onMarkupChange={(markup) => setProviderMarkup(providerKey, markup)}
 				/>
 
-				<div className="rounded-lg border shadow-card overflow-hidden">
+				<div>
 					<Table.Provider
 						config={{
 							table,
@@ -109,7 +109,7 @@ export function AiCreditSchemaTable({
 						}}
 					>
 						<Table.Container>
-							<Table.Content className="!rounded-none !border-0 !shadow-none">
+							<Table.Content>
 								<Table.Header />
 								<Table.Body />
 							</Table.Content>

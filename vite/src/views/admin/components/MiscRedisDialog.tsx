@@ -1,5 +1,4 @@
 import {
-	Badge,
 	Button,
 	Dialog,
 	DialogContent,
@@ -12,6 +11,7 @@ import {
 } from "@autumn/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { ConfigHealthChip } from "./ConfigHealthChip";
 import { EdgeConfigDialogBody } from "./EdgeConfigDialogBody";
 import { MiscRedisBackupForm } from "./MiscRedisBackupForm";
 import { MiscRedisInstanceForm } from "./MiscRedisInstanceForm";
@@ -82,11 +82,7 @@ export function MiscRedisDialog({
 							/>
 
 							<div className="flex flex-wrap items-center gap-2 text-xs text-tertiary-foreground">
-								<Badge variant="muted">
-									{config.configHealthy
-										? "Config healthy"
-										: "Config unavailable"}
-								</Badge>
+								<ConfigHealthChip healthy={config.configHealthy} />
 								{config.lastSuccessAt && (
 									<span className="tabular-nums">
 										Last refresh:{" "}
