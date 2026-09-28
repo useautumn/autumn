@@ -214,6 +214,25 @@ test("a named sandbox whose webhooks list 404s warns, the pull succeeds, and its
 	expect(source).toContain(`"qa-team": "https://qa.example.com/autumn"`);
 });
 
+test("a throttled env (429) fails the pull rather than being skipped", async () => {
+	const dir = projectWith({ webhooks: "" });
+	const throttled = new AutumnApiError({
+		status: 429,
+		body: { message: "Too many requests" },
+		path: "/v1/webhooks.list",
+	});
+	await expect(
+		pullWith({
+			dir,
+			env: {
+				AUTUMN_SECRET_KEY: "sk_sandbox",
+				AUTUMN_PROD_SECRET_KEY: "sk_live",
+			},
+			lists: { sk_sandbox: [], sk_live: throttled },
+		}),
+	).rejects.toThrow("Too many requests");
+});
+
 test("a server error other than a rejected key still fails the pull", async () => {
 	const dir = projectWith({ webhooks: "" });
 	const failure = new AutumnApiError({

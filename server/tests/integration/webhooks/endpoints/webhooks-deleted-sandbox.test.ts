@@ -41,8 +41,18 @@ const createHook = async ({ key }: { key: string }) => {
 	expect(res.status).toBe(200);
 };
 
+// A test that fails before its own teardown still leaves no Svix apps behind.
 afterAll(async () => {
+	const svix = createSvixCli();
 	for (const id of sandboxIds) {
+		const org = await OrgService.get({ db, orgId: id }).catch(() => null);
+		const appIds = [
+			org?.svix_config?.sandbox_app_id,
+			org?.svix_config?.live_app_id,
+		].filter((appId): appId is string => Boolean(appId));
+		await Promise.all(
+			appIds.map((appId) => svix.application.delete(appId).catch(() => {})),
+		);
 		await db
 			.delete(organizations)
 			.where(eq(organizations.id, id))
@@ -72,7 +82,7 @@ describe("webhooks after a sandbox's Svix app is gone", () => {
 	test("an org whose Svix app was deleted gets a 404, not an empty list", async () => {
 		const { id, key } = await createSandbox();
 		await createHook({ key });
-		const org = await OrgService.get({ db, orgId: id });
+		const org = await OrgService.get({ db, orgId: id }).catch(() => null);
 		const appId = org?.svix_config?.sandbox_app_id;
 		expect(appId).toBeTruthy();
 		await createSvixCli().application.delete(appId as string);
