@@ -2,7 +2,7 @@ import type { CatalogRow } from "@autumn/balance-engine";
 import type { KeysByInvalidationScope } from "../types/catalogCacheContext.js";
 
 /** Entitlements and prices carry no env, so an org's edit in any env reaches them; custom ones belong to one customer and are never edited. */
-const scopeOf = ({ row }: { row: CatalogRow }): string | null => {
+export const scopeOf = ({ row }: { row: CatalogRow }): string | null => {
 	switch (row.table) {
 		case "entitlements":
 		case "prices":

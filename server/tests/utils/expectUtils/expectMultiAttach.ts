@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { expect } from "chai";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -32,6 +33,7 @@ export const expectMultiAttachCorrect = async ({
 	rewards,
 	expectedRewards,
 	attachParams,
+	ctx,
 	db,
 	org,
 	env,
@@ -49,6 +51,7 @@ export const expectMultiAttachCorrect = async ({
 	rewards?: string[];
 	expectedRewards?: string[];
 	attachParams?: any;
+	ctx: TestContext;
 	db: DrizzleCli;
 	org: Organization;
 	env: AppEnv;
@@ -74,6 +77,8 @@ export const expectMultiAttachCorrect = async ({
 		if (attachParams?.invoice) {
 			await completeInvoiceCheckout({
 				url: attachRes.checkout_url,
+				ctx,
+				customerId,
 			});
 		}
 		await completeStripeCheckoutForm({ url: attachRes.checkout_url });

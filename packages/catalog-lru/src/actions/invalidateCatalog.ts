@@ -1,4 +1,5 @@
 import type { CatalogCacheScope } from "../types/catalogCacheContext.js";
+import { bumpCatalogVersions } from "./catalogVersions.js";
 import { orgEnvScope, orgScope } from "./invalidationIndex.js";
 
 /** Expired, not deleted: a strict read refetches, while a decision already past `ensure` still reads its stale row. */
@@ -14,6 +15,7 @@ export const invalidateCatalog = ({
 	orgId: string;
 	env: string;
 }): { expiredCount: number } => {
+	bumpCatalogVersions({ scope, orgId, env });
 	const { entries, keysByScope } = scope.state;
 	const keys = [
 		...(keysByScope.get(orgScope({ orgId })) ?? []),

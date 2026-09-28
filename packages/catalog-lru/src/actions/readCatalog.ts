@@ -7,6 +7,7 @@ import {
 	parseCatalogRow,
 } from "@autumn/balance-engine";
 import type { CatalogCacheScope } from "../types/catalogCacheContext.js";
+import { isCatalogRowCurrent } from "./catalogVersions.js";
 
 /** Every check and track reads the catalog, so a stored row is validated once and
  *  the result reused while that row stays cached; a replaced row is parsed afresh.
@@ -45,7 +46,9 @@ export const readCatalog = ({
 		const row = scope.state.entries.get(catalogKeyToString({ key }), {
 			allowStale,
 		});
-		if (row) rows.push(parsedRowOf({ row }));
+		if (!row) continue;
+		if (!allowStale && !isCatalogRowCurrent({ scope, row })) continue;
+		rows.push(parsedRowOf({ row }));
 	}
 	return catalogRowsToCatalog({ rows });
 };

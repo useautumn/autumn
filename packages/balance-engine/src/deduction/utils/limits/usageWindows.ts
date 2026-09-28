@@ -110,19 +110,20 @@ export const consumeUsageWindows = ({
 	deductionState,
 	row,
 	units,
+	credits,
 }: {
 	context: DeductionContext;
 	deductionState: DeductionState;
 	row: DeductionRow | null;
 	units: Decimal;
+	/** What the draw cost in the row's balance: a rate card prices by tier, so it is not units × a flat cost. */
+	credits: Decimal;
 }): void => {
 	if (units.lte(0)) return;
 	for (const limit of context.usageWindowLimits) {
 		if (!appliesTo({ limit, row })) continue;
 		const consumed =
-			limit.dimension_type === "balance" && row
-				? units.times(row.creditCost)
-				: units;
+			limit.dimension_type === "balance" && row ? credits : units;
 		deductionState.usageWindowConsumed.set(
 			limit.key,
 			(

@@ -75,17 +75,21 @@ export function createStreamConsumer({
 		return records;
 	}
 
-	// Offsets resolve and commit only after this returns; landRecords never throws, so a bad record cannot crash the consumer.
+	// A bad record cannot crash the consumer: landRecords throws only when Kafka refuses its heartbeat.
 	async function handleBatch({
 		batch,
 		heartbeat,
+		resolveOffset,
 	}: EachBatchPayload): Promise<void> {
 		const records = parseBatch({ batch });
-		await landRecords({
-			ctx: { logger: ctx.logger, signal: stopping.signal },
+		const settled = await landRecords({
+			ctx: { logger: ctx.logger, signal: stopping.signal, heartbeat },
 			job: streamConsumer,
 			records,
 		});
+		// Stopped mid-batch: left unresolved, so the next owner lands it again.
+		if (!settled) return;
+		resolveOffset(batch.lastOffset());
 		await heartbeat();
 	}
 
@@ -95,7 +99,7 @@ export function createStreamConsumer({
 		await consumer.subscribe({ topics: [config.topic], fromBeginning: false });
 		await consumer.run({
 			partitionsConsumedConcurrently: PARTITIONS_CONSUMED_CONCURRENTLY,
-			eachBatchAutoResolve: true,
+			eachBatchAutoResolve: false,
 			eachBatch: handleBatch,
 		});
 	}

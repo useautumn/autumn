@@ -54,6 +54,8 @@ export const createCatalogCache = ({
 			keysByScope,
 			inFlight: new Map(),
 			changeCount: 0,
+			catalogVersions: new Map(),
+			rowVersions: new WeakMap(),
 		},
 	};
 

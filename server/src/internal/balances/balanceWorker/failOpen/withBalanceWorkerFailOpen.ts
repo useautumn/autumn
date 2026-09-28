@@ -8,7 +8,13 @@ export type BalanceWorkerFailOpenResult<Result> = {
 	failedOpen: boolean;
 };
 
-/** Runs a worker request; when the worker was unreachable and nothing was submitted, `fallback` answers instead. */
+/** Why the fallback answered instead of the worker. */
+export type BalanceWorkerFailOpenReason =
+	| "org_rate_limit"
+	| "balance_worker_unavailable";
+
+/** Runs a worker request; `fallback` answers instead when the org is over its rate cap, or when the worker was
+ *  unreachable and nothing was submitted. */
 export const withBalanceWorkerFailOpen = async <Result>({
 	ctx,
 	source,
@@ -18,8 +24,19 @@ export const withBalanceWorkerFailOpen = async <Result>({
 	ctx: AutumnContext;
 	source: string;
 	run: () => Promise<Result>;
-	fallback: ({ error }: { error: unknown }) => Promise<Result>;
+	fallback: (params: {
+		error: unknown;
+		reason: BalanceWorkerFailOpenReason;
+	}) => Promise<Result>;
 }): Promise<BalanceWorkerFailOpenResult<Result>> => {
+	if (ctx.orgRateLimitDegraded)
+		return {
+			result: await fallback({
+				error: new Error("org aggregate rate cap exceeded"),
+				reason: "org_rate_limit",
+			}),
+			failedOpen: true,
+		};
 	try {
 		return { result: await run(), failedOpen: false };
 	} catch (error) {
@@ -30,6 +47,9 @@ export const withBalanceWorkerFailOpen = async <Result>({
 			error,
 		});
 		addToExtraLogs({ ctx, extras: { balanceWorkerFailOpen: source } });
-		return { result: await fallback({ error }), failedOpen: true };
+		return {
+			result: await fallback({ error, reason: "balance_worker_unavailable" }),
+			failedOpen: true,
+		};
 	}
 };

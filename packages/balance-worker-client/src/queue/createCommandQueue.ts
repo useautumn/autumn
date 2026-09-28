@@ -1,5 +1,6 @@
 import type {
 	EvictCommand,
+	FinalizeCommand,
 	ResetCommand,
 	TrackCommand,
 	UpdateBalanceCommand,
@@ -53,5 +54,15 @@ export function createCommandQueue({
 		return enqueueCommands({ ctx, commands, signal });
 	}
 
-	return { track, reset, updateBalance, evict };
+	function finalize({
+		commands,
+		signal,
+	}: {
+		commands: readonly FinalizeCommand[];
+		signal?: AbortSignal;
+	}) {
+		return enqueueCommands({ ctx, commands, signal });
+	}
+
+	return { track, reset, updateBalance, evict, finalize };
 }

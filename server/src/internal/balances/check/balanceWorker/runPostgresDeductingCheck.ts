@@ -14,6 +14,10 @@ import {
 	UsageLimitExceededError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	type CheckResponseWithPreview,
+	getCheckPreview,
+} from "@/internal/api/check/getCheckPreview.js";
 import { getTrackFeatureDeductions } from "../../track/utils/getFeatureDeductions.js";
 import { runPostgresTrackV3 } from "../../track/v3/runPostgresTrackV3.js";
 
@@ -54,7 +58,7 @@ export async function runPostgresDeductingCheck({
 	body: ParsedCheckParams;
 	requiredBalance: number;
 	fullSubject: FullSubject;
-}): Promise<CheckResponseV3> {
+}): Promise<CheckResponseWithPreview> {
 	const feature = findFeatureById({
 		features: ctx.features,
 		featureId: body.feature_id ?? "",
@@ -91,7 +95,7 @@ export async function runPostgresDeductingCheck({
 		balance = fullSubjectToApiBalance({ ctx, fullSubject, feature });
 	}
 
-	return applyResponseVersionChanges<CheckResponseV3>({
+	const response = applyResponseVersionChanges<CheckResponseV3>({
 		ctx,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Check,
@@ -105,4 +109,15 @@ export async function runPostgresDeductingCheck({
 		},
 		legacyData: { noCusEnts: balance === null, featureToUse: feature },
 	});
+	const preview = body.with_preview
+		? await getCheckPreview({
+				ctx,
+				allowed,
+				apiBalance: balance,
+				feature,
+				customerId: body.customer_id,
+				entityId: body.entity_id ?? undefined,
+			})
+		: undefined;
+	return { ...response, preview };
 }
