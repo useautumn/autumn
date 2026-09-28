@@ -9,7 +9,7 @@ import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { cn } from "@/lib/utils";
 import { useOpenInStripe } from "./hooks/useOpenInStripe";
 import { stripeItemMark } from "./previewMismatches";
-import { StripeItemMarkDot } from "./StripeItemMarkDot";
+import { StripeItemMatchChip } from "./StripeItemMatchChip";
 import { StripeStatusBadge } from "./StripeStatusBadge";
 import { formatPhaseStart, type PhaseSection } from "./syncPhaseSections";
 
@@ -63,8 +63,10 @@ export function StripeSourceTable({
 					)}
 					{section.displayItems.map((item) => (
 						<div key={item.key} className={ROW_CLASS}>
-							<span className="truncate text-foreground">{item.name}</span>
-							<StripeItemMarkDot
+							<span className="min-w-0 flex-1 truncate text-foreground">
+								{item.name}
+							</span>
+							<StripeItemMatchChip
 								mark={stripeItemMark({
 									todayMismatches,
 									previewMismatches,
@@ -72,7 +74,6 @@ export function StripeSourceTable({
 									startsAt: section.phase.starts_at,
 								})}
 							/>
-							<span className="flex-1" />
 							<span className="shrink-0 tabular-nums text-tertiary-foreground">
 								{item.priceLabel}
 							</span>
