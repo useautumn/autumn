@@ -3,10 +3,8 @@ import {
 	createBalanceWorkerKafka,
 	createOwnersFromKafka,
 } from "@autumn/balance-worker-client";
-import {
-	BALANCE_WORKER_PARTITION_COUNT,
-	BALANCE_WORKER_REQUEST_TIMEOUT_MS,
-} from "@autumn/env/balanceWorkerConstants";
+import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
+import { BALANCE_WORKER_REQUEST_TIMEOUT_MS } from "@autumn/env/balanceWorkerConstants";
 import { initDrizzle } from "@server/db/initDrizzle.js";
 import { readBalanceWorkerKafkaConfig } from "@server/external/balanceWorker/balanceWorkerKafkaConfig.js";
 import { logger } from "@server/external/logtail/logtailUtils.js";
@@ -63,7 +61,8 @@ export async function runShadowOperator({
 	const client = createBalanceWorkerClient({
 		ctx: { owners },
 		config: {
-			partitionCount: BALANCE_WORKER_PARTITION_COUNT,
+			partitionCount:
+				getBalanceWorkerClientEnv().BALANCE_WORKER_PARTITION_COUNT,
 			timeoutMs: BALANCE_WORKER_REQUEST_TIMEOUT_MS,
 		},
 	});

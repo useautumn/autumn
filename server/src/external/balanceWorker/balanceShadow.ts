@@ -3,10 +3,8 @@ import {
 	createBalanceWorkerKafka,
 	createOwnersFromKafka,
 } from "@autumn/balance-worker-client";
-import {
-	BALANCE_WORKER_PARTITION_COUNT,
-	BALANCE_WORKER_REQUEST_TIMEOUT_MS,
-} from "@autumn/env/balanceWorkerConstants";
+import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
+import { BALANCE_WORKER_REQUEST_TIMEOUT_MS } from "@autumn/env/balanceWorkerConstants";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { balanceShadowStore } from "@/internal/balances/shadow/balanceShadowStore.js";
 import { createBalanceShadowController } from "@/internal/balances/shadow/createBalanceShadowController.js";
@@ -33,7 +31,8 @@ const controller = createBalanceShadowController({
 		const client = createBalanceWorkerClient({
 			ctx: { owners },
 			config: {
-				partitionCount: BALANCE_WORKER_PARTITION_COUNT,
+				partitionCount:
+					getBalanceWorkerClientEnv().BALANCE_WORKER_PARTITION_COUNT,
 				timeoutMs: BALANCE_WORKER_REQUEST_TIMEOUT_MS,
 			},
 		});

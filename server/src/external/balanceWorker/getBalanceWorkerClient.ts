@@ -6,7 +6,6 @@ import {
 import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
 import {
 	BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS,
-	BALANCE_WORKER_PARTITION_COUNT,
 	BALANCE_WORKER_REQUEST_TIMEOUT_MS,
 	BALANCE_WORKER_ROUTE_REFRESH_TIMEOUT_MS,
 } from "@autumn/env/balanceWorkerConstants";
@@ -32,7 +31,7 @@ function balanceWorkerClientConfig(): KafkaBalanceWorkerClientConfig {
 		commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,
 		catalogInvalidationTopic: env.BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC,
 		groupIdPrefix: "autumn-server-ownership",
-		partitionCount: BALANCE_WORKER_PARTITION_COUNT,
+		partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
 		timeoutMs: BALANCE_WORKER_REQUEST_TIMEOUT_MS,
 		// This client serves customer check and track calls, so a partition in
 		// the middle of moving has to fail quickly rather than hold the request.
