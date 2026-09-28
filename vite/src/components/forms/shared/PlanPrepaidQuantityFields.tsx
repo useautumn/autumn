@@ -48,7 +48,12 @@ export function PlanPrepaidQuantityFields({
 	if (prepaidItems.length === 0) return null;
 
 	return (
-		<div className="ml-4 space-y-1 border-l border-border/40 pl-3">
+		<div
+			className={cn(
+				"space-y-1",
+				trigger === "chip" ? "pl-1" : "ml-4 border-l border-border/40 pl-3",
+			)}
+		>
 			{prepaidItems.map(({ featureId, item }) => {
 				const step = item.billing_units ?? 1;
 				const stops = prepaidTierStops({ item });
@@ -62,6 +67,7 @@ export function PlanPrepaidQuantityFields({
 					>
 						<div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
 							<PlanItemLabel
+								compact={trigger === "chip"}
 								currency={currency}
 								item={item}
 								showFeatureIcons={false}
