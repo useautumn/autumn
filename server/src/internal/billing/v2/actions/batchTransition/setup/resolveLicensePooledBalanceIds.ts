@@ -89,19 +89,23 @@ export const resolveLicensePooledBalanceIds = async ({
 
 	pooledAddOperations.forEach((operation, index) => {
 		const match = matches[index];
+		// Billing's step just ran, so no exact pool means the license no longer
+		// grants this item (a newer plan change won): skip the stale add.
 		if (!match?.isExactMatch) {
 			ctx.logger.warn(
-				"[batchTransition] no exact license pool for pooled seat addition",
+				"[batchTransition] skipping stale pooled seat addition — no exact license pool",
 				{
 					data: {
 						customerLicenseLinkId:
 							operation.pooledAdd.identity.customerLicenseLinkId,
 						internalFeatureId: operation.pooledAdd.identity.internalFeatureId,
-						fallbackPooledBalanceId: match?.pooledBalanceId ?? null,
+						nearestPooledBalanceId: match?.pooledBalanceId ?? null,
 					},
 				},
 			);
 		}
-		operation.pooledAdd.pooledBalanceId = match?.pooledBalanceId;
+		operation.pooledAdd.pooledBalanceId = match?.isExactMatch
+			? match.pooledBalanceId
+			: undefined;
 	});
 };
