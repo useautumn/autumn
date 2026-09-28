@@ -4,11 +4,13 @@ import { sandboxSlug } from "../../../generated/sandboxName";
 import type { OrgInfo } from "../../env/types/orgInfo";
 import type { RemoteWebhook } from "./types";
 
-/** One env a pull reads webhooks from, through that env's own key. */
+/** One env a pull reads webhooks from, or a push syncs them to, through that env's own key. */
 export type WebhookPullEnv = {
 	keyName: SecretKeyName;
 	/** How a skipped-env warning names it, before its key is known to work. */
 	label: string;
+	/** This env's own key: push syncs each env through it. */
+	secretKey: string;
 	/** The `url` map key; a named sandbox's slug costs one lookup. */
 	envKey: () => Promise<string>;
 	listWebhooks: () => Promise<{ list: RemoteWebhook[] }>;
@@ -21,10 +23,7 @@ export class ForeignOrgKeyError extends Error {}
 const mainOrgIdOf = (info: OrgInfo): string =>
 	info.is_sandbox && info.created_by ? info.created_by : info.id;
 
-/**
- * Every env the loaded env files hold a key for, live last. Shared fields like
- * `events` move only when every env in a webhook's url map was read.
- */
+/** Every env the loaded env files hold a key for, live last. */
 export const webhookPullEnvs = ({
 	env = process.env,
 	targetKeyName,
@@ -76,6 +75,7 @@ export const webhookPullEnvs = ({
 			{
 				keyName,
 				label,
+				secretKey,
 				envKey,
 				listWebhooks: () => listWebhooks({ secretKey }),
 			},

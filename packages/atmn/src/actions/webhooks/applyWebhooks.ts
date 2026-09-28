@@ -1,28 +1,28 @@
-import type { AutumnClient } from "../../generated/client";
 import { webhooksHaveWork } from "../../render/renderWebhooks";
-import type { WebhooksLane } from "./previewWebhooks";
+import type { WebhooksLane } from "./previewWebhookEnvs";
+import {
+	messageOf,
+	throwWebhookEnvFailures,
+	type WebhookEnvFailure,
+} from "./webhookEnvFailures";
 import { writeWebhookSecrets } from "./writeWebhookSecrets";
 
 /**
  * Sync, then save every secret it returned — before reporting any per-item
  * failure, since a created webhook's secret is shown once and only here.
  */
-export const applyWebhooks = async ({
-	client,
+const applyLane = async ({
 	lane,
 	envDirs,
 	cwd,
 	write,
 }: {
-	client: AutumnClient;
-	lane: WebhooksLane | undefined;
+	lane: WebhooksLane;
 	envDirs: string[];
 	cwd: string;
 	write: (text: string) => void;
 }): Promise<void> => {
-	if (lane === undefined || !webhooksHaveWork({ webhooks: lane.preview }))
-		return;
-	const result = await client.syncWebhooks(lane.body);
+	const result = await lane.client.syncWebhooks(lane.body);
 	const saved = await writeWebhookSecrets({
 		secrets: result.secrets,
 		env: lane.env,
@@ -43,10 +43,41 @@ export const applyWebhooks = async ({
 				`Adopted ${change.id} (existing dashboard webhook); its signing secret is unchanged, nothing written`,
 		);
 	write(
-		`\nApplied webhooks.\n${[...adopted, ...saved].map((line) => `${line}\n`).join("")}`,
+		`\nApplied webhooks to ${lane.env.key}.\n${[...adopted, ...saved].map((line) => `${line}\n`).join("")}`,
 	);
 	if (result.errors.length > 0)
 		throw new Error(
 			result.errors.map(({ id, message }) => `${id}: ${message}`).join("\n"),
 		);
+};
+
+/** Every env with work syncs in parallel; one env failing never stops another saving its secrets. */
+export const applyWebhooks = async ({
+	lanes,
+	envDirs,
+	cwd,
+	write,
+}: {
+	lanes: WebhooksLane[];
+	envDirs: string[];
+	cwd: string;
+	write: (text: string) => void;
+}): Promise<void> => {
+	const withWork = lanes.filter((lane) =>
+		webhooksHaveWork({ webhooks: lane.preview }),
+	);
+	const results = await Promise.allSettled(
+		withWork.map((lane) => applyLane({ lane, envDirs, cwd, write })),
+	);
+	const failures: WebhookEnvFailure[] = results.flatMap((result, index) =>
+		result.status === "rejected"
+			? [
+					{
+						env: withWork[index]?.env.key ?? "",
+						message: messageOf(result.reason),
+					},
+				]
+			: [],
+	);
+	throwWebhookEnvFailures({ failures, envCount: withWork.length });
 };

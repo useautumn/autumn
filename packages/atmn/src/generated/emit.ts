@@ -1216,11 +1216,11 @@ export const SYNCED_LISTS: Readonly<Record<string, SyncedListSpec>> = {
 		builder: "webhook",
 		idField: "id",
 		responseIdField: "id",
-		keys: ["id", "url", "events", "description", "disabled"],
-		required: ["id", "url"],
-		paths: ["description", "disabled", "events", "id", "url"],
+		keys: ["id", "env", "url", "events", "description", "disabled"],
+		required: ["env", "id", "url"],
+		paths: ["description", "disabled", "env", "events", "id", "url"],
 		pull: true,
-		envKeyed: ["url"],
+		envField: "env",
 	},
 };
 

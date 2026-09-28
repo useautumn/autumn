@@ -13,7 +13,7 @@ import type { PullFiles, RemoteWebhook } from "./types";
 const SPEC = SYNCED_LISTS.webhooks;
 const COLLECTION = "webhooks";
 
-/** The fixture a remote webhook reads as from one env: its url under that env alone. */
+/** The fixture one env's remote endpoint reads as. */
 const fixtureRowOf = ({
 	webhook,
 	envKey,
@@ -22,14 +22,15 @@ const fixtureRowOf = ({
 	envKey: string;
 }): Record<string, unknown> => ({
 	id: webhook.id,
-	url: { [envKey]: webhook.url },
+	[SPEC.envField]: envKey,
+	url: webhook.url,
 	// No list is every event; `events` is left out rather than written as `[]`.
 	...(webhook.events.length > 0 ? { events: webhook.events } : {}),
 	...(webhook.description ? { description: webhook.description } : {}),
 	...(webhook.disabled ? { disabled: true } : {}),
 });
 
-/** Rule 1: a remote webhook the config never names is appended for this env. */
+/** An endpoint the config never names is appended as this env's entry. */
 export const appendWebhook = ({
 	pull,
 	webhook,

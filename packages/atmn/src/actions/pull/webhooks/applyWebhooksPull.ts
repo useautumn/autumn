@@ -1,7 +1,5 @@
-import { isDashboardWebhook } from "../../webhooks/isDashboardWebhook";
-import { newWebhookId } from "../../webhooks/newWebhookId";
 import { appendWebhook } from "./appendWebhook";
-import { removeWebhookEnv } from "./removeWebhookEnv";
+import { deleteWebhook } from "./deleteWebhook";
 import type {
 	PullFiles,
 	RemoteWebhook,
@@ -10,182 +8,75 @@ import type {
 } from "./types";
 import { updateWebhook } from "./updateWebhook";
 
-const isVercelWebhook = (events: unknown): boolean =>
-	Array.isArray(events) &&
-	events.length > 0 &&
-	events.every(
-		(event) => typeof event === "string" && event.startsWith("vercel."),
-	);
-
-/** The config as it reads once this env's remote webhook is written into it. */
+/** The config entry as it reads once this env's endpoint is written into it. */
 const statedFrom = ({
-	row,
 	webhook,
 	envKey,
-	keepShared,
 }: {
-	row: StatedWebhook | undefined;
 	webhook: RemoteWebhook;
 	envKey: string;
-	keepShared: boolean;
 }): StatedWebhook => ({
-	...row,
 	id: webhook.id,
-	url: { ...row?.url, [envKey]: webhook.url },
-	...(!keepShared && {
-		events: webhook.events.length > 0 ? webhook.events : undefined,
-		description: webhook.description,
-		disabled: webhook.disabled,
-	}),
+	env: envKey,
+	url: webhook.url,
+	events: webhook.events.length > 0 ? webhook.events : undefined,
+	description: webhook.description,
+	disabled: webhook.disabled,
 });
 
 const merge = (target: WebhookEditResult, source: WebhookEditResult): void => {
 	target.lines.push(...source.lines);
 	target.warnings.push(...source.warnings);
 	target.unlocated.push(...source.unlocated);
-	target.frozen.push(...source.frozen);
 };
 
 /**
- * One env's webhooks written back into the config. Only `url[envKey]` is
- * touched on the url map; every other env's key, comment and ordering stays.
- * A dashboard webhook is matched to the config by URL, never duplicated: the
- * next push adopts it by that URL, keeping its signing secret.
+ * One env's endpoints written back into the config, one entry each, found by
+ * `(env, id)`. A dashboard endpoint is its own `ep_` id; other envs' entries,
+ * comments and ordering stay.
  */
 export const applyWebhooksPull = ({
 	pull,
 	remote,
 	stated,
 	envKey,
-	readEnvKeys,
-	newId = newWebhookId,
 }: {
 	pull: PullFiles;
 	remote: RemoteWebhook[];
 	/** The config's webhooks as evaluated; absent when it states none. */
 	stated: StatedWebhook[] | undefined;
 	envKey: string;
-	/** Every env this pull read; absent counts every url-map env as read. */
-	readEnvKeys?: ReadonlySet<string>;
-	/** Mints the id a dashboard webhook is written under. */
-	newId?: () => string;
 }): WebhookEditResult & { stated: StatedWebhook[] } => {
-	const result: WebhookEditResult = {
-		lines: [],
-		warnings: [],
-		unlocated: [],
-		frozen: [],
-	};
-	const statedById = new Map((stated ?? []).map((row) => [row.id, row]));
-	// What the next env pulled into the same files sees as the config.
-	const next = new Map(statedById);
-	// An id the config states is the config's, whatever its shape.
-	const fromDashboard = (webhook: RemoteWebhook): boolean =>
-		!statedById.has(webhook.id) && isDashboardWebhook(webhook);
-	const present = new Set<string>();
-	// Shared fields hold for every env, so only a pull that read them all moves them.
-	const unreadEnvKeysOf = (row: StatedWebhook): string[] =>
-		Object.keys(row.url ?? {}).filter(
-			(key) => readEnvKeys !== undefined && !readEnvKeys.has(key),
-		);
+	const result: WebhookEditResult = { lines: [], warnings: [], unlocated: [] };
+	const rows = stated ?? [];
+	const inEnv = new Map(
+		rows.filter((row) => row.env === envKey).map((row) => [row.id, row]),
+	);
+	const next = rows.filter((row) => row.env !== envKey);
 
 	for (const webhook of remote) {
-		if (fromDashboard(webhook)) {
-			// Vercel and other webhooks live in separate apps: a URL only
-			// matches within one.
-			const sameApp = (row: StatedWebhook) =>
-				isVercelWebhook(row.events) === isVercelWebhook(webhook.events);
-			// Another env's copy of this URL fills in this env's key rather than
-			// becoming a second webhook.
-			const represented =
-				(stated ?? []).find(
-					(row) => row.url?.[envKey] === webhook.url && sameApp(row),
-				) ??
-				(stated ?? []).find(
-					(row) =>
-						row.url?.[envKey] === undefined &&
-						Object.values(row.url ?? {}).includes(webhook.url) &&
-						sameApp(row),
-				);
-			if (represented !== undefined) {
-				present.add(represented.id);
-				const unreadEnvKeys = unreadEnvKeysOf(represented);
-				next.set(
-					represented.id,
-					statedFrom({
-						row: represented,
-						webhook: { ...webhook, id: represented.id },
-						envKey,
-						keepShared: unreadEnvKeys.length > 0,
-					}),
-				);
-				merge(
-					result,
-					updateWebhook({
-						pull,
-						webhook: { ...webhook, id: represented.id },
-						stated: represented,
-						envKey,
-						unreadEnvKeys,
-					}),
-				);
-				continue;
-			}
-			const id = newId();
-			const failure = appendWebhook({
-				pull,
-				webhook: { ...webhook, id },
-				envKey,
-			});
-			if (failure === null) {
-				next.set(
-					id,
-					statedFrom({
-						row: undefined,
-						webhook: { ...webhook, id },
-						envKey,
-						keepShared: false,
-					}),
-				);
-				result.lines.push(
-					`+ webhook ${id} (made in the dashboard; push adopts it by URL)`,
-				);
-			} else result.unlocated.push({ id, action: failure });
-			continue;
-		}
-		present.add(webhook.id);
-		const row = statedById.get(webhook.id);
-		const unreadEnvKeys = row === undefined ? [] : unreadEnvKeysOf(row);
-		next.set(
-			webhook.id,
-			statedFrom({
-				row,
-				webhook,
-				envKey,
-				keepShared: unreadEnvKeys.length > 0,
-			}),
-		);
+		const row = inEnv.get(webhook.id);
 		if (row !== undefined) {
-			merge(
-				result,
-				updateWebhook({ pull, webhook, stated: row, envKey, unreadEnvKeys }),
-			);
+			merge(result, updateWebhook({ pull, webhook, stated: row, envKey }));
+			next.push(statedFrom({ webhook, envKey }));
 			continue;
 		}
 		const failure = appendWebhook({ pull, webhook, envKey });
-		if (failure === null) result.lines.push(`+ webhook ${webhook.id}`);
-		else result.unlocated.push({ id: webhook.id, action: failure });
+		if (failure !== null) {
+			result.unlocated.push({ id: webhook.id, action: failure });
+			continue;
+		}
+		result.lines.push(`+ webhook ${webhook.id} (${envKey})`);
+		next.push(statedFrom({ webhook, envKey }));
 	}
 
-	for (const row of stated ?? []) {
-		if (present.has(row.id) || row.url?.[envKey] === undefined) continue;
-		const removed = removeWebhookEnv({ pull, stated: row, envKey });
+	const remoteIds = new Set(remote.map(({ id }) => id));
+	for (const row of inEnv.values()) {
+		if (remoteIds.has(row.id)) continue;
+		const removed = deleteWebhook({ pull, stated: row, envKey });
 		merge(result, removed);
-		// A key left in the source (code, or unlocated) is still the config's.
-		if (removed.lines.length === 0) continue;
-		const { [envKey]: _removed, ...url } = row.url;
-		if (Object.keys(url).length === 0) next.delete(row.id);
-		else next.set(row.id, { ...row, url });
+		// An entry left in the source (unlocated) is still the config's.
+		if (removed.lines.length === 0) next.push(row);
 	}
-	return { ...result, stated: [...next.values()] };
+	return { ...result, stated: next };
 };
