@@ -6,7 +6,7 @@ import { getCustomerEvents } from "./getCustomerEvents.js";
 /** Long enough for a late extra event to show up before the first matching read. */
 const EVENTS_SETTLE_MS = 3000;
 /** Herald writes worker events to Tinybird before Postgres, so under load they land seconds late. */
-const EVENTS_ARRIVAL_TIMEOUT_MS = 30_000;
+export const EVENTS_ARRIVAL_TIMEOUT_MS = 30_000;
 
 type ExpectedEvent = {
 	value: number;

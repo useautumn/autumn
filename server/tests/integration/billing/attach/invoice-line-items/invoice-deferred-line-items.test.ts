@@ -63,7 +63,7 @@ test.concurrent(`${chalk.yellowBright("deferred-line-items A: invoice mode (fina
 		items: [prepaidMessages],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, ctx: testCtx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -110,7 +110,11 @@ test.concurrent(`${chalk.yellowBright("deferred-line-items A: invoice mode (fina
 	});
 
 	// Complete payment
-	await completeInvoiceCheckout({ url: result.payment_url! });
+	await completeInvoiceCheckout({
+		url: result.payment_url!,
+		ctx: testCtx,
+		customerId,
+	});
 
 	// Wait for webhook processing
 	await timeout(5000);

@@ -40,6 +40,7 @@ import { UTCDate } from "@date-fns/utc";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expireCusEntForReset } from "@tests/utils/cusProductUtils/resetTestUtils.js";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { add } from "date-fns";
@@ -131,12 +132,17 @@ test.concurrent(
 		const t5Balance = await checkBalance(autumnV2, customerId);
 		expect(t5Balance).toBe(50);
 
-		const t5CusEnt = await findCustomerEntitlement({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
+		// The balance worker lands the reset in Postgres just after it answers.
+		const t5CusEnt = await pollUntilAsserted({
+			fetch: () =>
+				findCustomerEntitlement({
+					ctx,
+					customerId,
+					featureId: TestFeature.Messages,
+				}),
+			assert: (cusEnt) =>
+				expect(cusEnt!.next_reset_at).toBeGreaterThan(Date.now()),
 		});
-		expect(t5CusEnt!.next_reset_at).toBeGreaterThan(Date.now());
 
 		// Anchored on the prior boundary + one interval (≈ t15)…
 		const expectedNext = add(new UTCDate(pastBoundary), {

@@ -24,9 +24,11 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 
-/** An org that renders only active plans; the shared test org counts past-due ones. */
-const activeOnlyOrg = () =>
+/** An org that renders only active plans; the shared test org counts past-due ones.
+ *  Each gets its own owner: concurrent sub-orgs under the default owner race to create the same user. */
+const activeOnlyOrg = ({ customerId }: { customerId: string }) =>
 	s.platform.create({
+		userEmail: `${customerId}@autumn.test`,
 		configOverrides: {
 			include_past_due: false,
 			block_overdue_entitlements: false,
@@ -92,7 +94,7 @@ test.concurrent(
 		const { ctx, autumnV2_3 } = await initScenario({
 			customerId,
 			setup: [
-				activeOnlyOrg(),
+				activeOnlyOrg({ customerId }),
 				s.customer({ testClock: false }),
 				s.products({ list: [base, addOn] }),
 			],
@@ -123,7 +125,7 @@ test.concurrent(
 		const { ctx, autumnV2_3 } = await initScenario({
 			customerId,
 			setup: [
-				activeOnlyOrg(),
+				activeOnlyOrg({ customerId }),
 				s.customer({ testClock: false }),
 				s.products({ list: [addOn] }),
 			],
