@@ -50,7 +50,12 @@ export function CustomerStatePlanPicker({
 			getOptionDisabled={isGroupUsed}
 			renderOption={(product) => (
 				<>
-					<span className="flex-1 truncate min-w-0">{product.name}</span>
+					<span className="flex min-w-0 flex-1 items-center gap-2">
+						<span className="truncate">{product.name}</span>
+						<span className="shrink-0 rounded-sm border border-border/60 bg-muted/40 px-1 font-mono text-[10.5px] text-tertiary-foreground">
+							{product.id}
+						</span>
+					</span>
 					{siblingProductIds.has(product.id) && (
 						<span className="text-xs text-subtle shrink-0">
 							Already selected

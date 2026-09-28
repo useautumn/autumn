@@ -1,5 +1,5 @@
 import type { Entity } from "@autumn/shared";
-import { BuildingsIcon, CaretRightIcon, UserIcon } from "@phosphor-icons/react";
+import { CaretRightIcon } from "@phosphor-icons/react";
 import { type ComponentProps, useState } from "react";
 import { PlanEntityScopeSelector } from "@/components/forms/shared/PlanEntityScopeSelector";
 import { cn } from "@/lib/utils";
@@ -11,28 +11,24 @@ const entityKey = (entity: Entity) => entity.id || entity.internal_id;
 
 function ScopeTab({
 	label,
-	isEntity,
 	isActive,
 	onClick,
 }: {
 	label: string;
-	isEntity: boolean;
 	isActive: boolean;
 	onClick: () => void;
 }) {
-	const Icon = isEntity ? BuildingsIcon : UserIcon;
 	return (
 		<button
 			type="button"
 			onClick={onClick}
 			className={cn(
-				"flex h-6 min-w-0 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors",
+				"flex h-5.5 min-w-0 shrink-0 cursor-pointer items-center rounded-sm border px-2 text-xs font-medium transition-colors",
 				isActive
-					? "border-border bg-interactive-secondary-hover text-foreground shadow-xs"
-					: "border-transparent text-tertiary-foreground hover:text-foreground",
+					? "border-border bg-interactive-secondary-hover text-foreground"
+					: "border-border/60 text-tertiary-foreground hover:text-foreground",
 			)}
 		>
-			<Icon className="shrink-0" size={12} />
 			<span className="max-w-24 truncate">{label}</span>
 		</button>
 	);
@@ -46,7 +42,7 @@ function MoreEntitiesButton({
 		<button
 			type="button"
 			{...props}
-			className="flex h-6 shrink-0 items-center gap-1 rounded-md border border-transparent pr-1.5 pl-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground data-popup-open:border-border data-popup-open:bg-muted data-popup-open:text-foreground"
+			className="flex h-5.5 shrink-0 cursor-pointer items-center gap-1 rounded-sm border border-border/60 pr-1.5 pl-2 text-xs font-medium text-tertiary-foreground transition-colors hover:text-foreground data-popup-open:border-border data-popup-open:bg-interactive-secondary-hover data-popup-open:text-foreground"
 		>
 			{count} more
 			<CaretRightIcon size={11} />
@@ -81,13 +77,12 @@ export function PlanPickerScopeRow({
 	const hiddenCount = knownEntities.length - tabEntities.length;
 
 	return (
-		<div className="flex items-center gap-0.5 overflow-hidden border-b border-border/50 px-2 py-1">
+		<div className="flex items-center gap-1 overflow-hidden border-b border-border/50 px-2 py-1">
 			<span className="shrink-0 px-1 text-[11px] font-medium text-subtle">
 				For
 			</span>
 			<ScopeTab
 				label="Customer-level"
-				isEntity={false}
 				isActive={value === null}
 				onClick={() => onChange(null)}
 			/>
@@ -95,7 +90,6 @@ export function PlanPickerScopeRow({
 				<ScopeTab
 					key={entityKey(entity)}
 					label={entity.name || entityKey(entity)}
-					isEntity
 					isActive={entityKey(entity) === value}
 					onClick={() => onChange(entityKey(entity))}
 				/>
