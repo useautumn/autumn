@@ -53,7 +53,7 @@ export function PlanEntityScopeSelector({
 	onOpenChange?: (nextOpen: boolean) => void;
 }) {
 	const options: EntityOption[] = [
-		...(inheritLabel ? [INHERITED_VALUE as const] : []),
+		...(inheritLabel ? ([INHERITED_VALUE] as const) : []),
 		null,
 		...entities,
 	];

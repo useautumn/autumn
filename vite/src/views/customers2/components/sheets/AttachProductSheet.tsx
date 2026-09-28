@@ -18,6 +18,7 @@ import {
 	AttachUpdatesSection,
 	useAttachFormContext,
 } from "@/components/forms/attach-v2";
+import type { AttachForm } from "@/components/forms/attach-v2/attachFormSchema";
 import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFooterV3";
 import { isFutureStartDate } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 import {
