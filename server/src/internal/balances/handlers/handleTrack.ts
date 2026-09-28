@@ -48,7 +48,8 @@ async function track(
 			ctx,
 			source: "track",
 			run: () => runBalanceWorkerTrack({ ctx, body }),
-			// Queued on the command log, applied once the worker is back; each feature keeps its command id, so none applies twice.
+			// Queued on the command log, applied once the worker has room; each feature keeps its command id, so a
+			// command the worker did take before going quiet is a no-op on replay, never a second deduction.
 			fallback: () => runBalanceWorkerTrack({ ctx, body, isAsync: true }),
 		});
 		return c.json(result, failedOpen ? 202 : 200);

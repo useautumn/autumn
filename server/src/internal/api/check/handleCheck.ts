@@ -102,12 +102,12 @@ export const handleCheck = createRoute({
 				ctx,
 				source: "check",
 				run: runOnWorker,
-				fallback: async ({ error }) =>
+				fallback: async ({ error, reason }) =>
 					checkFailOpenResponse({
 						ctx,
 						params: rawBody,
 						error,
-						reason: "balance_worker_unavailable",
+						reason,
 					}),
 			});
 			return c.json(result, failedOpen ? 202 : 200);

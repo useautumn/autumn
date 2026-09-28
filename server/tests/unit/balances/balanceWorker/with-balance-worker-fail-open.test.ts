@@ -35,16 +35,47 @@ describe("withBalanceWorkerFailOpen", () => {
 		});
 	});
 
-	test("a command that may already have applied propagates instead of falling back", async () => {
+	test("a command the worker never confirmed falls back, and the fallback learns it may have applied", async () => {
 		const unconfirmed = new BalanceWorkerClientError({
 			code: "DEADLINE",
 			outcome: "unknown",
 			message: "timed out after the send",
 		});
-		await expect(
-			failOpen({ run: failingWith(unconfirmed) }),
-		).rejects.toMatchObject({
-			code: "balance_worker_result_unknown",
+		const reasons: string[] = [];
+		const outcome = await withBalanceWorkerFailOpen({
+			ctx: contexts.create({}),
+			source: "test",
+			run: failingWith(unconfirmed),
+			fallback: async ({ reason }) => {
+				reasons.push(reason);
+				return "fallback";
+			},
+		});
+		expect(outcome).toEqual({ result: "fallback", failedOpen: true });
+		expect(reasons).toEqual(["balance_worker_result_unknown"]);
+	});
+	test("a command the worker shed as overloaded falls back instead of a 429", async () => {
+		const overloaded = new BalanceWorkerClientError({
+			code: "WORKER_ERROR",
+			outcome: "not_submitted",
+			message: "at capacity for this customer",
+			workerCode: "OVERLOADED",
+		});
+		expect(await failOpen({ run: failingWith(overloaded) })).toEqual({
+			result: "fallback",
+			failedOpen: true,
+		});
+	});
+	test("a partition that is not ready falls back", async () => {
+		const notReady = new BalanceWorkerClientError({
+			code: "WORKER_ERROR",
+			outcome: "not_submitted",
+			message: "partition cannot accept this request",
+			workerCode: "NOT_READY",
+		});
+		expect(await failOpen({ run: failingWith(notReady) })).toEqual({
+			result: "fallback",
+			failedOpen: true,
 		});
 	});
 
