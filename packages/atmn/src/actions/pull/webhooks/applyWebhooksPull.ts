@@ -79,6 +79,8 @@ export const applyWebhooksPull = ({
 	const fromDashboard = (webhook: RemoteWebhook): boolean =>
 		!statedById.has(webhook.id) && isDashboardWebhook(webhook);
 	const present = new Set<string>();
+	// An `ep_…` row naming an endpoint in this env is that endpoint, never another's.
+	const remoteIds = new Set(remote.map(({ id }) => id));
 	// Shared fields hold for every env, so only a pull that read them all moves them.
 	const unreadEnvKeysOf = (row: StatedWebhook): string[] =>
 		Object.keys(row.url ?? {}).filter(
@@ -91,14 +93,13 @@ export const applyWebhooksPull = ({
 			// matches within one.
 			const sameApp = (row: StatedWebhook) =>
 				isVercelWebhook(row.events) === isVercelWebhook(webhook.events);
-			// An `ep_…` row is its own endpoint in this env, never another's.
 			// Another env's copy of this URL fills in this env's key rather than
 			// becoming a second webhook.
 			const represented =
 				(stated ?? []).find(
 					(row) =>
 						row.url?.[envKey] === webhook.url &&
-						!isDashboardWebhook(row) &&
+						!(isDashboardWebhook(row) && remoteIds.has(row.id)) &&
 						sameApp(row),
 				) ??
 				(stated ?? []).find(

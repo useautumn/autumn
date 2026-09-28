@@ -308,6 +308,29 @@ test("rule 5: a dashboard webhook is appended under its own ep_ id, and a second
 	expect(second.lines).toEqual([]);
 });
 
+test("a second pull of a URL two envs' dashboards share changes nothing", () => {
+	const pullBoth = (source: string, stated?: StatedWebhook[]) => {
+		const sandbox = pullInto({
+			source,
+			remoteList: [remote(DASHBOARD_ID, "https://x.dev/h")],
+			stated,
+		});
+		return pullInto({
+			source: sandbox.source ?? "",
+			remoteList: [remote(OTHER_DASHBOARD_ID, "https://x.dev/h")],
+			stated: sandbox.stated,
+			envKey: "staging",
+		});
+	};
+	const first = pullBoth(`export default atmn({
+	webhooks: [],
+});
+`);
+	const second = pullBoth(first.source ?? "", first.stated);
+	expect(second.source).toBe(first.source);
+	expect(second.stated.map(({ id }) => id)).toEqual([DASHBOARD_ID]);
+});
+
 test("two dashboard webhooks on one URL in one env are both kept, each under its own id", () => {
 	const { stated } = pullInto({
 		source: `export default atmn({
