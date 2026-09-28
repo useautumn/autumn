@@ -9,6 +9,8 @@ import {
 	type WebhookSyncError,
 	webhookAppKindOf,
 } from "@autumn/shared";
+import { withSvixErrors } from "@/external/svix/endpoints/withSvixErrors.js";
+import { createSvixCli } from "@/external/svix/svixUtils.js";
 import type { WebhookApp } from "../apps/webhookApps.js";
 import { createWebhook } from "../createWebhook.js";
 import { updateWebhook } from "../updateWebhook.js";
@@ -17,8 +19,27 @@ import { computeWebhookSyncChanges } from "./computeWebhookSyncChanges.js";
 import { listSyncRemote, type SyncRemote } from "./listSyncRemote.js";
 
 type ItemOutcome =
-	| { ok: true; webhook: Webhook; secret?: string }
+	| { ok: true; webhook?: Webhook; secret?: string }
 	| { ok: false; id: string; error: unknown };
+
+const deleteChange = async ({
+	remote,
+	id,
+}: {
+	remote: SyncRemote;
+	id: string;
+}): Promise<ItemOutcome> => {
+	try {
+		const appId = remote.appIdOf.get(id) as string;
+		await withSvixErrors({
+			webhookId: id,
+			run: () => createSvixCli().endpoint.delete(appId, id),
+		});
+		return { ok: true };
+	} catch (error) {
+		return { ok: false, id, error };
+	}
+};
 
 const applyChange = async ({
 	remote,
@@ -28,7 +49,7 @@ const applyChange = async ({
 }: {
 	remote: SyncRemote;
 	appIdForKind: (kind: WebhookAppKind) => Promise<string>;
-	change: Exclude<WebhookSyncChange, { action: "unmanaged" }>;
+	change: Exclude<WebhookSyncChange, { action: "unmanaged" | "delete" }>;
 	params: WebhookParams;
 }): Promise<ItemOutcome> => {
 	try {
@@ -86,29 +107,34 @@ const throwWhenNothingSucceeded = ({
 	});
 };
 
-/** Applies preview_sync's creates, adoptions and updates. Unmanaged webhooks are
- * left alone, and only newly created ones return a secret. */
+/** Applies preview_sync's creates, adoptions, updates and deletes. Unmanaged
+ * webhooks are left alone, and only newly created ones return a secret. */
 export const syncWebhooks = async ({
 	apps,
 	appIdForKind,
 	stated,
+	skipDeletions = true,
 }: {
 	apps: WebhookApp[];
 	/** The app a created webhook goes to, created on first use. */
 	appIdForKind: (kind: WebhookAppKind) => Promise<string>;
 	stated: WebhookParams[];
+	skipDeletions?: boolean;
 }): Promise<SyncWebhooksResponse> => {
 	const synced = await listSyncRemote({ apps });
 	const { remote, uidlessIds } = synced;
 	const { changes, errors: planned } = computeWebhookSyncChanges({
 		...synced,
 		stated,
+		skipDeletions,
 		now: Date.now(),
 	});
 	const statedById = new Map(stated.map((params) => [params.id, params]));
 
 	const outcomes = await Promise.all(
 		changes.flatMap((change) => {
+			if (change.action === "delete")
+				return [deleteChange({ remote: synced, id: change.id })];
 			const params = statedById.get(change.id);
 			if (!params || change.action === "unmanaged") return [];
 			return [applyChange({ remote: synced, appIdForKind, change, params })];
@@ -118,7 +144,10 @@ export const syncWebhooks = async ({
 	const successes = outcomes.filter((outcome) => outcome.ok);
 	const failures = outcomes.filter((outcome) => !outcome.ok);
 	const failedCount = failures.length + planned.length;
-	if (failedCount > 0 && failedCount === stated.length) {
+	const deleteCount = changes.filter(
+		(change) => change.action === "delete",
+	).length;
+	if (failedCount > 0 && failedCount === stated.length + deleteCount) {
 		throwWhenNothingSucceeded({ failures, planned });
 	}
 
@@ -131,7 +160,8 @@ export const syncWebhooks = async ({
 			)
 			.map((webhook) => [webhook.id, webhook]),
 	);
-	for (const { webhook } of successes) resultById.set(webhook.id, webhook);
+	for (const { webhook } of successes)
+		if (webhook) resultById.set(webhook.id, webhook);
 	const errors: WebhookSyncError[] = [
 		...planned,
 		...failures.map((failure) => ({
@@ -146,7 +176,7 @@ export const syncWebhooks = async ({
 			failedIds.has(params.id) ? [] : (resultById.get(params.id) ?? []),
 		),
 		secrets: successes.flatMap(({ webhook, secret }) =>
-			secret ? [{ id: webhook.id, secret }] : [],
+			webhook && secret ? [{ id: webhook.id, secret }] : [],
 		),
 		errors,
 	};

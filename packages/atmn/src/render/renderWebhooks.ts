@@ -72,6 +72,10 @@ const renderChange = ({ change }: { change: WebhookChange }): string[] => {
 				after: change.after,
 			}),
 		];
+	if (change.action === "delete")
+		return [
+			`  ${chalk.red(`- ${change.id}`)}  ${chalk.bold("delete")}${chalk.dim(`  ${change.webhook.url}`)}`,
+		];
 	return [
 		chalk.dim(
 			`  · ${change.id}  unmanaged (not in your config; atmn leaves it alone)`,

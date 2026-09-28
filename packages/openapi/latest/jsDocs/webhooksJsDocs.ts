@@ -8,6 +8,6 @@ export const updateWebhookJsDoc = `Updates a webhook's URL, events, description 
 
 export const deleteWebhookJsDoc = `Permanently deletes a webhook. Autumn stops sending it events immediately. Cannot be undone.`;
 
-export const previewSyncWebhooksJsDoc = `Shows what \`webhooks.sync\` would do with the same body, without changing anything: which webhooks it would create or update, and which existing ones it would leave alone because the body doesn't list them.`;
+export const previewSyncWebhooksJsDoc = `Shows what \`webhooks.sync\` would do with the same body, without changing anything: which webhooks it would create, update or delete, and which existing ones it would leave alone because the body doesn't list them.`;
 
-export const syncWebhooksJsDoc = `Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone — sync never deletes. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in \`errors\` while the rest still apply, and the request fails only when none could be applied.`;
+export const syncWebhooksJsDoc = `Makes the listed webhooks exist as described: creates missing ones and updates ones that differ. Webhooks not listed are left alone, unless \`skip_deletions\` is false: then every webhook not listed is deleted, including ones made in the dashboard. Returns the signing secret of each webhook it created, once. Each webhook is applied on its own: failures are listed in \`errors\` while the rest still apply, and the request fails only when none could be applied.`;

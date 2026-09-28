@@ -160,7 +160,14 @@ export const SyncWebhooksParamsSchema = z.object({
 			{ message: "Each webhook id may appear only once." },
 		)
 		.describe(
-			"The webhooks to create or update. Webhooks not listed are left alone; nothing is deleted.",
+			"The webhooks to create or update. Webhooks not listed are left alone unless `skip_deletions` is false.",
+		),
+	skip_deletions: z
+		.boolean()
+		.optional()
+		.default(true)
+		.describe(
+			"When false, `webhooks` is the environment's complete set: every webhook not listed is deleted, including ones made in the dashboard. Defaults true, which leaves unlisted webhooks alone.",
 		),
 });
 
@@ -187,19 +194,24 @@ export const WebhookSyncChangeSchema = z.discriminatedUnion("action", [
 		id: z.string(),
 		webhook: WebhookSchema,
 	}),
+	z.object({
+		action: z.literal("delete"),
+		id: z.string(),
+		webhook: WebhookSchema,
+	}),
 ]);
 
 const WebhookSyncErrorsSchema = z
 	.array(z.object({ id: z.string(), message: z.string() }))
 	.describe(
-		"Webhooks that couldn't be created or updated. The others were still applied; the request fails only when none could be.",
+		"Webhooks that couldn't be created, updated or deleted. The others were still applied; the request fails only when none could be.",
 	);
 
 export const PreviewSyncWebhooksResponseSchema = z.object({
 	changes: z
 		.array(WebhookSyncChangeSchema)
 		.describe(
-			"What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone.",
+			"What `webhooks.sync` would do. `adopt` takes over a webhook made in the dashboard with the same URL, keeping its signing secret. `unmanaged` webhooks exist but aren't listed, so sync leaves them alone. `delete` webhooks aren't listed and `skip_deletions` is false, so sync deletes them.",
 		),
 	errors: WebhookSyncErrorsSchema.describe(
 		"Listed webhooks `webhooks.sync` would refuse, e.g. when several dashboard webhooks share the URL.",
