@@ -288,6 +288,51 @@ export const ApiError = z.object({
 	}),
 });
 
+// ---- live (WebSocket GET /ws) ---------------------------------------------
+
+/**
+ * Topics: "runs" (every run's summary), "run:<id>" (that run's worker/file/log stream),
+ * "jobs", "keys", "accounts", "capacity", "warm". Subscribing sends a snapshot first.
+ */
+export const LiveTopic = z.string().regex(/^(runs|jobs|keys|accounts|capacity|warm|run:[\w-]+)$/);
+
+export const LiveEvent = z.discriminatedUnion("type", [
+	z.object({ type: z.literal("run.updated"), run: RunSummary }),
+	z.object({ type: z.literal("run.event"), runId: z.string(), event: RunEvent }),
+	z.object({ type: z.literal("job.updated"), job: Job }),
+	z.object({ type: z.literal("capacity.updated"), capacity: Capacity }),
+	/** Refetch GET /keys; debounced, sent after probes, reinit steps, gate changes. */
+	z.object({ type: z.literal("keys.changed") }),
+	/** Refetch GET /accounts + /reservations; debounced. */
+	z.object({ type: z.literal("accounts.changed") }),
+	z.object({
+		type: z.literal("warm.updated"),
+		sha: z.string(),
+		branch: z.string(),
+		status: z.enum(["building", "ready", "failed"]),
+	}),
+]);
+
+export const LiveClientMessage = z.discriminatedUnion("type", [
+	z.object({ type: z.literal("subscribe"), topics: z.array(LiveTopic).min(1) }),
+	z.object({ type: z.literal("unsubscribe"), topics: z.array(LiveTopic).min(1) }),
+	z.object({ type: z.literal("ping") }),
+]);
+
+export const LiveServerMessage = z.discriminatedUnion("type", [
+	z.object({ type: z.literal("hello"), connectionId: z.string(), actor: ActorRef }),
+	/** Full state of a topic, sent on subscribe and after the server drops events for a slow client. */
+	z.object({
+		type: z.literal("snapshot"),
+		topic: LiveTopic,
+		data: z.union([z.array(RunSummary), RunDetail, z.array(Job), Capacity, z.null()]),
+	}),
+	/** seq is per-connection and gap-free; a gap means reconnect + resubscribe. */
+	z.object({ type: z.literal("event"), topic: LiveTopic, seq: z.number(), event: LiveEvent }),
+	z.object({ type: z.literal("pong") }),
+	z.object({ type: z.literal("error"), error: ApiError.shape.error }),
+]);
+
 // ---- route table ----------------------------------------------------------
 
 /**
@@ -344,6 +389,7 @@ export const ROUTES = {
 	// capacity + MCP (http/routes/capacity.ts, http/routes/mcp.ts)
 	capacity: "GET /capacity",
 	mcp: "POST /mcp",
+	live: "GET /ws (WebSocket; cookie, Authorization: Bearer, or ?token=twd_…)",
 
 	// unauthenticated machine endpoints
 	githubWebhook: "POST /webhooks/github",
@@ -368,5 +414,9 @@ export type StripeAccount = z.infer<typeof StripeAccount>;
 export type Reservation = z.infer<typeof Reservation>;
 export type Capacity = z.infer<typeof Capacity>;
 export type ApiError = z.infer<typeof ApiError>;
+export type LiveTopic = z.infer<typeof LiveTopic>;
+export type LiveEvent = z.infer<typeof LiveEvent>;
+export type LiveClientMessage = z.infer<typeof LiveClientMessage>;
+export type LiveServerMessage = z.infer<typeof LiveServerMessage>;
 export type Job = z.infer<typeof Job>;
 export type EnqueueResponse = z.infer<typeof EnqueueResponse>;
