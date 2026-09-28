@@ -1,5 +1,5 @@
 import type { ProductV2 } from "@autumn/shared";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
 	type CustomerStatePlan,
 	EMPTY_CUSTOMER_STATE_PLAN,
@@ -79,22 +79,31 @@ export function useCustomerStateHandlers({
 		[form.store, products, nowMs],
 	);
 
+	const lastSelectedEntityId = useRef<string | null>(null);
+	const newEmptyPlan = useCallback(
+		(): CustomerStatePlan => ({
+			...EMPTY_CUSTOMER_STATE_PLAN,
+			entityId: lastSelectedEntityId.current,
+		}),
+		[],
+	);
+
 	const handleAddPhase = useCallback(() => {
 		const phases = form.store.state.values.phases;
 		form.pushFieldValue("phases", {
 			startsAt: defaultStartsAt({ afterIndex: phases.length - 1 }),
-			plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN }],
+			plans: [newEmptyPlan()],
 		});
-	}, [form, defaultStartsAt]);
+	}, [form, defaultStartsAt, newEmptyPlan]);
 
 	const handleInsertPhase = useCallback(
 		({ afterIndex }: { afterIndex: number }) => {
 			form.insertFieldValue("phases", afterIndex + 1, {
 				startsAt: defaultStartsAt({ afterIndex }),
-				plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN }],
+				plans: [newEmptyPlan()],
 			});
 		},
-		[form, defaultStartsAt],
+		[form, defaultStartsAt, newEmptyPlan],
 	);
 
 	const handleRemovePhase = useCallback(
@@ -106,20 +115,11 @@ export function useCustomerStateHandlers({
 	);
 
 	const handleAddPlan = useCallback(
-		({
-			phaseIndex,
-			entityId = null,
-		}: {
-			phaseIndex: number;
-			entityId?: string | null;
-		}) => {
+		({ phaseIndex }: { phaseIndex: number }) => {
 			if (isPhaseLocked({ phaseIndex })) return;
-			form.pushFieldValue(`phases[${phaseIndex}].plans`, {
-				...EMPTY_CUSTOMER_STATE_PLAN,
-				entityId,
-			});
+			form.pushFieldValue(`phases[${phaseIndex}].plans`, newEmptyPlan());
 		},
-		[form, isPhaseLocked],
+		[form, isPhaseLocked, newEmptyPlan],
 	);
 
 	const handleRemovePlan = useCallback(
@@ -127,25 +127,20 @@ export function useCustomerStateHandlers({
 			if (isPhaseLocked({ phaseIndex })) return;
 			const plans = form.store.state.values.phases[phaseIndex]?.plans;
 			if (plans && plans.length === 1) {
-				form.setFieldValue(`phases[${phaseIndex}].plans[${planIndex}]`, {
-					...EMPTY_CUSTOMER_STATE_PLAN,
-				});
+				form.setFieldValue(
+					`phases[${phaseIndex}].plans[${planIndex}]`,
+					newEmptyPlan(),
+				);
 			} else {
 				form.removeFieldValue(`phases[${phaseIndex}].plans`, planIndex);
 			}
 		},
-		[form, isPhaseLocked],
+		[form, isPhaseLocked, newEmptyPlan],
 	);
 
-	const handleAddUnscheduledPlan = useCallback(
-		({ entityId = null }: { entityId?: string | null }) => {
-			form.pushFieldValue("unscheduledPlans", {
-				...EMPTY_CUSTOMER_STATE_PLAN,
-				entityId,
-			});
-		},
-		[form],
-	);
+	const handleAddUnscheduledPlan = useCallback(() => {
+		form.pushFieldValue("unscheduledPlans", newEmptyPlan());
+	}, [form, newEmptyPlan]);
 
 	const handleRemoveUnscheduledPlan = useCallback(
 		({ planIndex }: { planIndex: number }) => {
@@ -233,6 +228,23 @@ export function useCustomerStateHandlers({
 	);
 
 	// Quantities and customizations belong to the old plan, so they reset with it.
+	const handleSelectPlanScope = useCallback(
+		({
+			location,
+			entityId,
+		}: {
+			location: PlanLocation;
+			entityId: string | null;
+		}) => {
+			lastSelectedEntityId.current = entityId;
+			form.setFieldValue(
+				`${planLocationToFieldPath(location)}.entityId`,
+				entityId,
+			);
+		},
+		[form],
+	);
+
 	const handleSelectPlanProduct = useCallback(
 		({
 			location,
@@ -283,6 +295,7 @@ export function useCustomerStateHandlers({
 			handleCopyFromPreviousPhase,
 			handleMakeUnscheduled,
 			handleCopyExistingPlans,
+			handleSelectPlanScope,
 			handleSelectPlanProduct,
 			handlePlanEditSave,
 		}),
@@ -298,6 +311,7 @@ export function useCustomerStateHandlers({
 			handleCopyFromPreviousPhase,
 			handleMakeUnscheduled,
 			handleCopyExistingPlans,
+			handleSelectPlanScope,
 			handleSelectPlanProduct,
 			handlePlanEditSave,
 		],

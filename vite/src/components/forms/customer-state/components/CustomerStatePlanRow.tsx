@@ -23,7 +23,6 @@ export function CustomerStatePlanRow({
 	planIndex: number;
 }) {
 	const {
-		form,
 		formValues,
 		products,
 		handleRemovePlan,
@@ -33,6 +32,7 @@ export function CustomerStatePlanRow({
 		setEditingPlan,
 		canMakeUnscheduled,
 		handleSelectPlanProduct,
+		handleSelectPlanScope,
 	} = useCustomerStateContext();
 	const location = { location: "phase", phaseIndex, planIndex } as const;
 
@@ -44,10 +44,7 @@ export function CustomerStatePlanRow({
 		disabled: isLocked,
 		disabledReason: "this phase has started",
 		onChange: (nextEntityId) =>
-			form.setFieldValue(
-				`phases[${phaseIndex}].plans[${planIndex}].entityId`,
-				nextEntityId ?? null,
-			),
+			handleSelectPlanScope({ location, entityId: nextEntityId ?? null }),
 	});
 
 	if (!plan) return null;
@@ -70,11 +67,7 @@ export function CustomerStatePlanRow({
 			<PlanPickerTrayRow
 				scope={{
 					value: plan.entityId ?? null,
-					onChange: (entityId) =>
-						form.setFieldValue(
-							`phases[${phaseIndex}].plans[${planIndex}].entityId`,
-							entityId,
-						),
+					onChange: (entityId) => handleSelectPlanScope({ location, entityId }),
 				}}
 				products={products.filter((product) => !product.archived)}
 				usedKeys={usedKeys}

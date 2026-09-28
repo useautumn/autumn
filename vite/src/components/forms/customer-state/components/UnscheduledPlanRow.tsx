@@ -8,12 +8,12 @@ import { SelectedPlanTrayRow } from "./tray/SelectedPlanTrayRow";
 
 export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 	const {
-		form,
 		formValues,
 		products,
 		handleRemoveUnscheduledPlan,
 		setEditingPlan,
 		handleSelectPlanProduct,
+		handleSelectPlanScope,
 	} = useCustomerStateContext();
 	const location = { location: "unscheduled", planIndex } as const;
 
@@ -21,10 +21,7 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 	const { hasEntities, scopeMenu } = usePlanScopeField({
 		planEntityId: plan?.entityId,
 		onChange: (nextEntityId) =>
-			form.setFieldValue(
-				`unscheduledPlans[${planIndex}].entityId`,
-				nextEntityId ?? null,
-			),
+			handleSelectPlanScope({ location, entityId: nextEntityId ?? null }),
 	});
 
 	if (!plan) return null;
@@ -48,11 +45,7 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 			<PlanPickerTrayRow
 				scope={{
 					value: plan.entityId ?? null,
-					onChange: (entityId) =>
-						form.setFieldValue(
-							`unscheduledPlans[${planIndex}].entityId`,
-							entityId,
-						),
+					onChange: (entityId) => handleSelectPlanScope({ location, entityId }),
 				}}
 				products={products.filter((product) => !product.archived)}
 				usedKeys={usedKeys}

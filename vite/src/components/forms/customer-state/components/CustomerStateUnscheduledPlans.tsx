@@ -36,7 +36,7 @@ export function CustomerStateUnscheduledPlans() {
 			{canMakeUnscheduled && (
 				<PlanTrayAddRow
 					label="Add ongoing plan"
-					onClick={() => handleAddUnscheduledPlan({})}
+					onClick={handleAddUnscheduledPlan}
 				/>
 			)}
 		</PlanSection>
