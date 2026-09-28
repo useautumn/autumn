@@ -13,7 +13,7 @@ import type { Kafka } from "kafkajs";
 export type OwnershipHandoffLink = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
-	tail: Pick<OwnershipTail, "tailPartition">;
+	tail: Pick<OwnershipTail, "tailPartition" | "readView">;
 	sender: KafkaSender;
 };
 

@@ -198,16 +198,27 @@ async function awaitHandoffClaim({
 	// Listen before announcing: the claim can only follow the announcement, so nothing is missed.
 	const claim = entry.publication.awaitClaim({ signal });
 	const draining = entry.publication.awaitDraining({ signal });
-	void Promise.allSettled([claim, draining]);
+	const foreignClaim = entry.publication.awaitForeignClaim({ signal });
+	void Promise.allSettled([claim, draining, foreignClaim]);
 	let timer = setTimeout(expire, ctx.config.handoffClaimTimeoutMs);
+	function rearm({ afterMs }: { afterMs: number }): void {
+		if (timeout.signal.aborted) return;
+		clearTimeout(timer);
+		timer = setTimeout(expire, afterMs);
+	}
 	// The timeout covers silence: a predecessor that says it is draining is alive and
 	// gets the longer cap, so its committing tracks are not fenced from under it.
 	function holdForDrain(): void {
-		if (timeout.signal.aborted) return;
-		clearTimeout(timer);
-		timer = setTimeout(expire, ctx.config.handoffDrainCapMs);
+		rearm({ afterMs: ctx.config.handoffDrainCapMs });
 	}
+	// The owner handed to someone else (the roster moved this partition mid-drain). That
+	// worker either hands on to this one shortly or was already retired; silence decides.
+	function restartSilence(): void {
+		rearm({ afterMs: ctx.config.handoffClaimTimeoutMs });
+	}
+	if (entry.publication.readActiveDrain()) holdForDrain();
 	void draining.then(holdForDrain, noop);
+	void foreignClaim.then(restartSilence, noop);
 	try {
 		await entry.publication.announceReady();
 		const { routeEpoch } = await claim;

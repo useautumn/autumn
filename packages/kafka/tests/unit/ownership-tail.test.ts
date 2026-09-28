@@ -298,6 +298,76 @@ describe("ownershipTail", function ownershipTailTests() {
 		]);
 	});
 
+	test("keeps a view of each partition's owner and its unfinished drain, listeners or not", async () => {
+		const fixture = createFakeTailKafka();
+		const { tail, errors } = await startTail(fixture);
+		try {
+			const drainingBySuccessor: OwnershipRecord = {
+				schemaVersion: 1,
+				type: "draining",
+				partition: 3,
+				endpoint: "http://successor:8080",
+				successor: "http://third:8080",
+				drainingAt: 3,
+			};
+			const drainingByStranger: OwnershipRecord = {
+				...drainingBySuccessor,
+				endpoint: "http://stranger:8080",
+			};
+			const released: OwnershipRecord = {
+				schemaVersion: 1,
+				type: "unowned",
+				partition: 3,
+				endpoint: "http://successor:8080",
+				releasedAt: 5,
+			};
+			expect(tail.readView({ partition: 3 })).toBeNull();
+			// A drain before any known owner says nothing; a claim sets the owner.
+			await fixture.deliver({
+				partition: 3,
+				messages: [
+					serialized({ record: drainingBySuccessor, offset: 9n }),
+					serialized({ record: ready, offset: 10n }),
+					serialized({ record: claimed, offset: 11n }),
+				],
+			});
+			expect(tail.readView({ partition: 3 })).toEqual({
+				owner: "http://successor:8080",
+				activeDrain: null,
+			});
+			// Only the owner's own drain counts; a stranger's is a late record.
+			await fixture.deliver({
+				partition: 3,
+				messages: [serialized({ record: drainingByStranger, offset: 12n })],
+			});
+			expect(tail.readView({ partition: 3 })?.activeDrain).toBeNull();
+			await fixture.deliver({
+				partition: 3,
+				messages: [serialized({ record: drainingBySuccessor, offset: 13n })],
+			});
+			expect(tail.readView({ partition: 3 })).toEqual({
+				owner: "http://successor:8080",
+				activeDrain: {
+					endpoint: "http://successor:8080",
+					successor: "http://third:8080",
+				},
+			});
+			// A claim or release concludes the drain.
+			await fixture.deliver({
+				partition: 3,
+				messages: [serialized({ record: released, offset: 14n })],
+			});
+			expect(tail.readView({ partition: 3 })).toEqual({
+				owner: null,
+				activeDrain: null,
+			});
+			expect(tail.readView({ partition: 4 })).toBeNull();
+			expect(errors).toEqual([]);
+		} finally {
+			await tail.stop();
+		}
+	});
+
 	test("delivers a partition's records in order to its listeners only", async () => {
 		const fixture = createFakeTailKafka();
 		const { tail, errors } = await startTail(fixture);

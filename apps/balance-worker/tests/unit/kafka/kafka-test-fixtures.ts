@@ -215,13 +215,17 @@ export const noHandoffPublication: Pick<
 	| "announceReady"
 	| "announceDraining"
 	| "awaitReady"
+	| "readActiveDrain"
 	| "awaitDraining"
+	| "awaitForeignClaim"
 	| "awaitClaim"
 > = {
 	announceReady: announceNothing,
 	announceDraining: announceNothing,
 	awaitReady: awaitSignal,
+	readActiveDrain: () => null,
 	awaitDraining: awaitSignal,
+	awaitForeignClaim: awaitSignal,
 	awaitClaim: awaitSignal,
 };
 export type KafkaOwnedPartitionGroupConsumerPort = KafkaConsumerClient;

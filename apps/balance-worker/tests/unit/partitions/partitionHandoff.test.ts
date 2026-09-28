@@ -68,12 +68,37 @@ const createOwnershipLog = () => {
 			listeners.add(listener);
 			signal.addEventListener("abort", abort, { once: true });
 		});
+	/** The latest claim or release for a partition, as the tail would have seen it. */
+	const owner = ({ partition }: { partition: number }) => {
+		for (let i = records.length - 1; i >= 0; i--) {
+			const event = records[i];
+			if (!event || event.partition !== partition) continue;
+			if (event.type === "claimed") return event.endpoint;
+			if (event.type === "unowned") return null;
+		}
+		return undefined;
+	};
+	/** A drain by the current owner not yet concluded by a claim. */
+	const activeDrain = ({ partition }: { partition: number }) => {
+		for (let i = records.length - 1; i >= 0; i--) {
+			const event = records[i];
+			if (!event || event.partition !== partition) continue;
+			if (event.type === "claimed" || event.type === "unowned") return null;
+			if (event.type === "draining")
+				return event.endpoint === owner({ partition })
+					? { endpoint: event.endpoint }
+					: null;
+		}
+		return null;
+	};
 	return {
 		records,
 		events,
 		nextEpoch: () => String(++offset),
 		publish,
 		await: await_,
+		owner,
+		activeDrain,
 	};
 };
 
@@ -174,13 +199,32 @@ const createWorker = ({
 				await announceDrainingGate;
 				log.publish({ type: "draining", partition, endpoint, successor });
 			},
+			readActiveDrain: () => {
+				const drain = log.activeDrain({ partition });
+				return drain && drain.endpoint !== endpoint ? drain : null;
+			},
 			awaitDraining: ({ signal }) =>
 				log.await({
 					signal,
+					match: (event) => {
+						if (event.type !== "draining" || event.partition !== partition)
+							return undefined;
+						if (event.endpoint === endpoint) return undefined;
+						if (event.successor === endpoint)
+							return { endpoint: event.endpoint };
+						const owner = log.owner({ partition });
+						return owner === undefined || owner === event.endpoint
+							? { endpoint: event.endpoint }
+							: undefined;
+					},
+				}),
+			awaitForeignClaim: ({ signal }) =>
+				log.await({
+					signal,
 					match: (event) =>
-						event.type === "draining" &&
+						event.type === "claimed" &&
 						event.partition === partition &&
-						event.successor === endpoint
+						event.endpoint !== endpoint
 							? { endpoint: event.endpoint }
 							: undefined,
 				}),
@@ -465,7 +509,7 @@ describe("partition handoff", () => {
 		}
 	});
 
-	test("a draining record naming another successor does not hold this one past the claim timeout", async () => {
+	test("the partition moves on mid-drain: the replacement waits out the drain, then claims after silence", async () => {
 		const log = createOwnershipLog();
 		const drain = deferred();
 		const A = createWorker({ name: "A", log, drainGate: drain.promise });
@@ -485,11 +529,59 @@ describe("partition handoff", () => {
 			B.revoke();
 			await C.ownership.start();
 			C.assign([2]);
-			// A's drain is addressed to B: C hears nothing for itself and claims after its own timeout.
+			await waitFor(() => C.has("announce:2"));
+			// A's drain names B, but A still owns the partition: C must not fence it at its own timeout.
+			await Bun.sleep(60);
+			expect(C.has("activate:2")).toBe(false);
+			expect(C.has("claim:C:2")).toBe(false);
+
+			// A finishes and names B, who is gone. Silence follows, so C claims for itself.
+			drain.resolve();
+			await waitFor(() => A.has("claim:B:2"));
 			await waitFor(() => C.has("claim:C:2"));
+			expect(A.index("drained:2")).toBeLessThan(C.index("claim:C:2"));
+			expect(B.has("activate:2")).toBe(false);
 			expect(C.errors).toEqual([]);
 		} finally {
 			drain.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+			await C.ownership.stop();
+		}
+	});
+
+	test("a late draining record from a past owner does not hold the next successor", async () => {
+		const log = createOwnershipLog();
+		const A = createWorker({ name: "A", log });
+		const B = createWorker({ name: "B", log });
+		const C = createWorker({
+			name: "C",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 5_000 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.status(2) === "ready");
+			// B owns it and never answers (it is not revoked here, standing in for a dead owner).
+			await C.ownership.start();
+			C.assign([2]);
+			await waitFor(() => C.has("announce:2"));
+			const announcedAt = Date.now();
+			// A's drain record lands late: A is a past owner, so it says nothing about B being alive.
+			log.publish({
+				type: "draining",
+				partition: 2,
+				endpoint: "http://A",
+				successor: "http://B",
+			});
+			await waitFor(() => C.has("claim:C:2"));
+			// Silence timeout, not the drain cap.
+			expect(Date.now() - announcedAt).toBeLessThan(1_000);
+			expect(C.errors).toEqual([]);
+		} finally {
 			await A.ownership.stop();
 			await B.ownership.stop();
 			await C.ownership.stop();

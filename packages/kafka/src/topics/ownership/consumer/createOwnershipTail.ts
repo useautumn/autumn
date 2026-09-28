@@ -8,6 +8,7 @@ import type {
 	OwnershipTailContext,
 	OwnershipTailListener,
 	OwnershipTailState,
+	OwnershipTailView,
 } from "./types/ownershipTail.js";
 
 export function createOwnershipTail({
@@ -34,12 +35,43 @@ export function createOwnershipTail({
 	const state: OwnershipTailState = {
 		status: "created",
 		listenersByPartition: new Map(),
+		viewByPartition: new Map(),
 		removeListeners: new Set(),
 		stopping: null,
 	};
 
 	function report({ cause }: { cause: unknown }): void {
 		ctx.onError?.({ cause });
+	}
+
+	/** A drain counts only while its author still owns the partition; a claim or release ends it. */
+	function remember({ record }: Parameters<OwnershipTailListener>[0]): void {
+		const view = state.viewByPartition.get(record.partition);
+		if (record.type === "claimed") {
+			state.viewByPartition.set(record.partition, {
+				owner: record.endpoint,
+				activeDrain: null,
+			});
+		} else if (record.type === "unowned") {
+			state.viewByPartition.set(record.partition, {
+				owner: null,
+				activeDrain: null,
+			});
+		} else if (record.type === "draining" && view?.owner === record.endpoint) {
+			view.activeDrain = {
+				endpoint: record.endpoint,
+				successor: record.successor,
+			};
+		}
+	}
+
+	function readView({
+		partition,
+	}: {
+		partition: number;
+	}): OwnershipTailView | null {
+		const view = state.viewByPartition.get(partition);
+		return view ? { ...view } : null;
 	}
 
 	function deliver({
@@ -49,8 +81,6 @@ export function createOwnershipTail({
 		partition: number;
 		message: { offset: string; key: Buffer | null; value: Buffer | null };
 	}): void {
-		const listeners = state.listenersByPartition.get(partition);
-		if (!listeners || listeners.size === 0) return;
 		let entry: Parameters<OwnershipTailListener>[0];
 		try {
 			entry = {
@@ -63,6 +93,9 @@ export function createOwnershipTail({
 			report({ cause });
 			return;
 		}
+		remember(entry);
+		const listeners = state.listenersByPartition.get(partition);
+		if (!listeners || listeners.size === 0) return;
 		for (const listener of [...listeners]) {
 			try {
 				listener(entry);
@@ -183,5 +216,5 @@ export function createOwnershipTail({
 		}
 	}
 
-	return { start, stop, tailPartition };
+	return { start, stop, tailPartition, readView };
 }
