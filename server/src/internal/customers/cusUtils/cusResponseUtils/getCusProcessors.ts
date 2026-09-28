@@ -16,8 +16,10 @@ import {
  * Vercel: only the public-safe subset (`installation_id`, `account_id`).
  * NEVER include `access_token` or `custom_payment_method_id`.
  *
- * RevenueCat: surfaces only when the customer has at least one ACTIVE
- * customer_product whose processor type is RevenueCat.
+ * RevenueCat: prefer the stored `processors.revenuecat` row when present;
+ * otherwise surface only when the customer has at least one ACTIVE
+ * customer_product whose processor type is RevenueCat (id falls back to
+ * `customer.id`).
  */
 export const getCusProcessors = ({
 	customer,
@@ -42,9 +44,10 @@ export const getCusProcessors = ({
 		customerProducts: customer_products,
 		processorType: ProcessorType.RevenueCat,
 	}).filter(customerProductHasActiveStatus);
-	const revenuecat =
-		rcProducts.length > 0
-			? { id: customer.processors?.revenuecat?.id ?? customer.id ?? null }
+	const revenuecat = customer.processors?.revenuecat
+		? { id: customer.processors.revenuecat.id }
+		: rcProducts.length > 0
+			? { id: customer.id ?? null }
 			: undefined;
 
 	if (!stripe && !vercel && !revenuecat) return undefined;
