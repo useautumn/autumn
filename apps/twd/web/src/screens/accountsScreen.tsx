@@ -13,7 +13,6 @@ import { ErrorCallout, StatusDot } from "../components/status.tsx";
 import {
 	Button,
 	ConfirmDialog,
-	DataTable,
 	PagedDataTable,
 	PageHeader,
 	Panel,

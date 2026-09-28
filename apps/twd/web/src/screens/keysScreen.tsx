@@ -35,7 +35,6 @@ import { ErrorCallout, Pill } from "../components/status.tsx";
 import {
 	Button,
 	ConfirmDialog,
-	DataTable,
 	Dialog,
 	PagedDataTable,
 	PageHeader,
@@ -722,8 +721,7 @@ const PickKeysDialog = ({
 				k.keyHint.toLowerCase().includes(q) ||
 				k.platformAccountId.toLowerCase().includes(q) ||
 				(k.displayName ?? "").toLowerCase().includes(q),
-		)
-		.slice(0, 200);
+		);
 	const toggle = (id: string) =>
 		setPicked((prev) => {
 			const next = new Set(prev);

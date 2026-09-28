@@ -46,7 +46,6 @@ import {
 import {
 	Button,
 	ConfirmDialog,
-	DataTable,
 	Drawer,
 	PagedDataTable,
 	Panel,
@@ -54,7 +53,6 @@ import {
 	SectionTag,
 	Segmented,
 	Skeleton,
-	TableMore,
 	Tooltip,
 } from "../components/ui.tsx";
 import { cn, elapsed, formatDate, formatMs, num, sha7 } from "../lib/format.ts";
@@ -624,17 +622,14 @@ export const RunDetailScreen = () => {
 									{attention.length}
 								</span>
 							</SectionTag>
-							<DataTable
-								data={attention.slice(0, 8)}
+							<PagedDataTable
+								resetKey=""
+								pageSizes={[5, 10, 25]}
+								data={attention}
 								columns={attentionColumns}
 								onRowClick={(a) => setOpenFile(a.file.file)}
 								emptyText="Nothing needs attention."
 							/>
-							{attention.length > 8 && (
-								<TableMore onClick={() => setFilter("failed")}>
-									{attention.length - 8} more in the file table
-								</TableMore>
-							)}
 						</section>
 					)}
 

@@ -249,10 +249,14 @@ const PAGE_SIZES = [25, 50, 100, 200] as const;
 export const PagedDataTable = <T,>({
 	data,
 	resetKey,
+	pageSizes = PAGE_SIZES,
 	...props
-}: ComponentProps<typeof DataTable<T>> & { resetKey: string }) => {
+}: ComponentProps<typeof DataTable<T>> & {
+	resetKey: string;
+	pageSizes?: readonly number[];
+}) => {
 	const rows = data ?? [];
-	const [pageSize, setPageSize] = useState(50);
+	const [pageSize, setPageSize] = useState(pageSizes[1] ?? pageSizes[0] ?? 50);
 	const [page, setPage] = useState({ resetKey, index: 0 });
 	const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
 	const index = Math.min(
@@ -266,7 +270,7 @@ export const PagedDataTable = <T,>({
 				{...props}
 				data={data && rows.slice(index * pageSize, (index + 1) * pageSize)}
 			/>
-			{rows.length > PAGE_SIZES[0] && (
+			{rows.length > Math.min(pageSize, pageSizes[0] ?? pageSize) && (
 				<TablePaginationFooter
 					currentPage={index + 1}
 					totalPages={totalPages}
@@ -276,7 +280,7 @@ export const PagedDataTable = <T,>({
 					onPrev={() => go(index - 1)}
 					onNext={() => go(index + 1)}
 					pageSize={pageSize}
-					pageSizeOptions={PAGE_SIZES}
+					pageSizeOptions={pageSizes}
 					onPageSizeChange={(size) => {
 						setPageSize(size);
 						go(0);
@@ -287,22 +291,6 @@ export const PagedDataTable = <T,>({
 		</>
 	);
 };
-
-export const TableMore = ({
-	onClick,
-	children,
-}: {
-	onClick: () => void;
-	children: ReactNode;
-}) => (
-	<button
-		type="button"
-		onClick={onClick}
-		className="mt-2 cursor-pointer self-center rounded-md px-2 py-0.5 text-xs text-tertiary-foreground hover:bg-muted hover:text-foreground"
-	>
-		{children}
-	</button>
-);
 
 // ---- tooltip --------------------------------------------------------------
 
