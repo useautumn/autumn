@@ -46,7 +46,7 @@ export function BillingPromptBar({
 					"pointer-events-none absolute top-1.5 left-2.5 size-4 transition-colors duration-150",
 					isGenerating
 						? "animate-spin text-foreground"
-						: "text-muted-foreground",
+						: "text-tertiary-foreground",
 				)}
 			/>
 			<textarea
