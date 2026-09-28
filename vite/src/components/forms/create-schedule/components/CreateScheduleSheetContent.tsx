@@ -1,5 +1,4 @@
-import { Button, InlineAction } from "@autumn/ui";
-import { PlusIcon } from "@phosphor-icons/react";
+import { Button } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
 import { CustomerStateUnscheduledPlans } from "@/components/forms/customer-state/components/CustomerStateUnscheduledPlans";
@@ -16,6 +15,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { CreateScheduleAdvancedSection } from "./CreateScheduleAdvancedSection";
 import { CreateScheduleGenerationBar } from "./CreateScheduleGenerationBar";
+import { AddPhaseButton } from "./phase/AddPhaseButton";
 import { SetPlansReviewChanges } from "./review/SetPlansReviewChanges";
 import { SchedulePhaseCard } from "./SchedulePhaseCard";
 import { SchedulePreview } from "./SchedulePreview";
@@ -44,23 +44,15 @@ export function CreateScheduleSheetContent() {
 					<CreateScheduleGenerationBar />
 				</SheetSection>
 				<SheetSection title="Phases" withSeparator>
-					<div className="space-y-4">
+					<div className="space-y-3">
 						{formValues.phases.map((_phase, phaseIndex) => (
 							<SchedulePhaseCard
 								key={`phase-${phaseIndex}`}
 								phaseIndex={phaseIndex}
-								hasConnector={phaseIndex < formValues.phases.length - 1}
 							/>
 						))}
+						<AddPhaseButton onClick={handleAddPhase} />
 					</div>
-
-					<InlineAction
-						icon={<PlusIcon size={11} />}
-						onClick={handleAddPhase}
-						className="mt-3"
-					>
-						Add phase
-					</InlineAction>
 				</SheetSection>
 
 				<SheetSection withSeparator={false}>

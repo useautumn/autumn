@@ -1,13 +1,16 @@
-import type { StatusGlyph, StatusTone } from "@autumn/ui";
+import {
+	PLAN_STATUS_CONFIG,
+	type StatusChipConfig,
+} from "@/components/forms/customer-state/utils/planStatusConfig";
 import type { ReviewChangeStatus } from "../../utils/review/types/reviewChange";
 
 export const REVIEW_STATUS_CONFIG: Record<
 	ReviewChangeStatus,
-	{ label: string; tone: StatusTone; glyph: StatusGlyph }
+	StatusChipConfig
 > = {
-	starts: { label: "Starts", tone: "green", glyph: "check" },
-	ends: { label: "Ends", tone: "red", glyph: "x" },
-	kept: { label: "Kept", tone: "neutral", glyph: "check" },
+	starts: PLAN_STATUS_CONFIG.starts,
+	ends: PLAN_STATUS_CONFIG.ends,
+	kept: PLAN_STATUS_CONFIG.kept,
 	updated: { label: "Updated", tone: "blue", glyph: "pencil" },
 	added: { label: "Added", tone: "green", glyph: "check" },
 	removed: { label: "Removed", tone: "red", glyph: "minus" },

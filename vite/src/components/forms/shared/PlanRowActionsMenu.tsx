@@ -8,6 +8,8 @@ import {
 import { DotsThreeIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 
+export const ROW_ACTION_ICON_SIZE = 14;
+
 export type PlanRowAction = {
 	label: string;
 	icon: ReactNode;
@@ -15,14 +17,20 @@ export type PlanRowAction = {
 };
 
 /** Row-level actions behind a "…" button, sitting next to the scope picker. */
-export function PlanRowActionsMenu({ actions }: { actions: PlanRowAction[] }) {
+export function PlanRowActionsMenu({
+	actions,
+	label = "Plan actions",
+}: {
+	actions: PlanRowAction[];
+	label?: string;
+}) {
 	if (actions.length === 0) return null;
 
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<IconButton
-					aria-label="Plan actions"
+					aria-label={label}
 					className="size-6 shrink-0 text-tertiary-foreground"
 					icon={<DotsThreeIcon />}
 					size="sm"

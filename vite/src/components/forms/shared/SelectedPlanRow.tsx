@@ -15,7 +15,7 @@ import { getSelectedPlanPriceProduct } from "./selectedPlanRowUtils";
 const TOOLTIP_DELAY_MS = 250;
 
 /** A custom plan's icon turns green in place of a "Custom" tag. */
-function PlanIcon({
+export function PlanIcon({
 	isAddOn,
 	isCustom,
 }: {

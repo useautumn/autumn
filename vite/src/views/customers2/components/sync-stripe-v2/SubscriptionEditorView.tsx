@@ -15,6 +15,7 @@ import { CustomerStateProvider } from "@/components/forms/customer-state/Custome
 import { CustomerStatePhasePlans } from "@/components/forms/customer-state/components/CustomerStatePhasePlans";
 import { CustomerStatePlanEditor } from "@/components/forms/customer-state/components/CustomerStatePlanEditor";
 import { CustomerStateUnscheduledPlans } from "@/components/forms/customer-state/components/CustomerStateUnscheduledPlans";
+import { PlanTrayTitle } from "@/components/forms/customer-state/components/tray/PlanTray";
 import type { PlanLocation } from "@/components/forms/customer-state/customerStateSchema";
 import { useCustomerStateForm } from "@/components/forms/customer-state/useCustomerStateForm";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
@@ -437,12 +438,10 @@ function SubscriptionEditor({
 								</div>
 							)}
 
-							<div className="space-y-2">
-								<div className="text-xs text-tertiary-foreground">
-									Autumn plans
-								</div>
-								<CustomerStatePhasePlans phaseIndex={phaseIndex} />
-							</div>
+							<CustomerStatePhasePlans
+								phaseIndex={phaseIndex}
+								header={<PlanTrayTitle title="Autumn plans" />}
+							/>
 						</div>
 					))}
 
